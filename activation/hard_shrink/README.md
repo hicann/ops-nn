@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：完成HardShrink激活函数计算，将输入张量中绝对值小于等于阈值lambd的元素置零，大于阈值的元素保持不变。
+- 算子功能：完成HardShrink激活函数计算，将输入张量中绝对值小于等于阈值lambd的元素置零，绝对值大于阈值的元素保持不变。
 
 - 计算公式：
 
@@ -42,7 +42,7 @@ $$
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>input_x</td>
       <td>输入</td>
       <td>输入张量，对应公式中的x。支持0-8维，支持空Tensor。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
@@ -50,15 +50,15 @@ $$
     </tr>
     <tr>
       <td>lambd</td>
-      <td>输入</td>
-      <td>阈值参数，对应公式中的λ，float类型标量，默认值0.5。</td>
+      <td>属性</td>
+      <td>阈值参数，对应公式中的λ，float类型标量；负值等效于0，即输入原样输出。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>output_y</td>
       <td>输出</td>
-      <td>输出张量，与self同shape同dtype。</td>
+      <td>输出张量，对应公式中的HardShrink(x)。与input_x同shape、同dtype。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -66,14 +66,15 @@ $$
 
 ## 约束说明
 
-- self与out的数据类型必须一致，支持FLOAT、FLOAT16、BFLOAT16。
-- self与out的shape必须一致，不涉及广播。
-- self支持0-8维。
-- self支持空Tensor（0元素），此时out也为空Tensor，不执行计算。
-- lambd为float类型标量，取值无限制。
+- input_x与output_y的数据类型必须一致，支持FLOAT、FLOAT16、BFLOAT16。
+- input_x与output_y的shape必须一致，不涉及广播。
+- input_x支持0-8维。
+- input_x支持空Tensor（0元素），此时output_y也为空Tensor，不执行计算。
+- lambd为float类型标量，取值无限制；负值等效于0，输入原样输出。
 
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_hard_shrink](./examples/arch35/test_aclnn_hard_shrink.cpp) | 通过[aclnnHardshrink](./docs/aclnnHardshrink.md)接口方式调用Hardshrink算子。    |
+| aclnn调用 | [test_aclnn_hard_shrink](./examples/test_aclnn_hard_shrink.cpp) | 通过[aclnnHardshrink](./docs/aclnnHardshrink.md)接口方式调用HardShrink算子。    |
+| GE图模式 | [hard_shrink_proto.h](./op_graph/hard_shrink_proto.h) | 通过`REG_OP(HardShrink)`图算子原型在GE图中调用HardShrink算子。    |

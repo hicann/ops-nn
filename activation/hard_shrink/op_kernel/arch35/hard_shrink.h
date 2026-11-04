@@ -118,6 +118,8 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE>::Init(GM_ADDR input_x, GM_ADDR
     pipe.InitBuffer(cmpMaskBuf, maskBytes);
 
     // 一次性填充 lambd / 0 常量
+    // lambd 是 FLOAT 属性，按 float32 精度参与比较（与算子声明一致）；
+    // fp16/bf16 输入升精到 fp32 后与本阈值比较，不做输入 dtype 舍入。
     LocalTensor<COMPUTE_T> lambdLocal = lambdBuf.Get<COMPUTE_T>();
     LocalTensor<COMPUTE_T> zeroLocal = negLambdBuf.Get<COMPUTE_T>();
     AscendC::Duplicate(lambdLocal, static_cast<COMPUTE_T>(lambd_), ubLength_);
@@ -128,12 +130,9 @@ template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardShrink<T, BUFFER_MODE>::CopyIn(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> inputLocal = inputQueue.template AllocTensor<IO_T>();
-    AscendC::DataCopyParams copyParams;
-    copyParams.blockCount = 1;
-    copyParams.blockLen = currentNum * sizeof(IO_T);
-    copyParams.srcStride = 0;
-    copyParams.dstStride = 0;
-    AscendC::DataCopyPad(inputLocal, selfGM[progress * ubLength_], copyParams, {false, 0, 0, 0});
+    AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(currentNum * sizeof(IO_T)), 0, 0, 0};
+    AscendC::DataCopyPadExtParams<IO_T> padParams{false, 0, 0, 0};
+    AscendC::DataCopyPad(inputLocal, selfGM[progress * ubLength_], copyParams, padParams);
     inputQueue.EnQue(inputLocal);
 }
 
@@ -149,13 +148,19 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE>::Compute(int64_t currentNum)
     AscendC::LocalTensor<COMPUTE_T> absLocal = tmpBuf.Get<COMPUTE_T>();       // 放 |x|（Select 后可覆盖）
     AscendC::LocalTensor<uint8_t> maskLocal = cmpMaskBuf.Get<uint8_t>();
 
-    // 对齐 currentNum 到 256B 边界用于 Compare/Select（硬件要求 count 所占空间 256B 对齐）
+    // 对齐 currentNum 到 256B 边界用于 Compare（硬件要求 count 所占空间 256B 对齐）
     // 升精路径 (fp16/bf16 NEED_UPCAST=1)：COMPUTE_T=float(4B)，对齐粒度 = 256/4 = 64
     // 直通路径 (fp32 NEED_UPCAST=0)：     COMPUTE_T=float(4B)，对齐粒度 = 256/4 = 64
     int64_t alignElems = 256 / static_cast<int64_t>(sizeof(COMPUTE_T));
     int64_t alignedNum = (currentNum + alignElems - 1) / alignElems * alignElems;
     if (alignedNum > ubLength_) {
         alignedNum = ubLength_;
+    }
+
+    // 尾块对齐读：Compare 按 alignedNum 访问 absLocal，先把 [currentNum, alignedNum) 的
+    // padding lane 置 0；Select 只处理 currentNum，不读取未写入的输入 lane。
+    if (alignedNum > currentNum) {
+        AscendC::Duplicate(absLocal, static_cast<COMPUTE_T>(0), alignedNum);
     }
 
     if constexpr (NEED_UPCAST == 1) {
@@ -174,7 +179,7 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE>::Compute(int64_t currentNum)
         AscendC::Abs(absLocal, floatInLocal, currentNum);
         AscendC::Compare(maskLocal, absLocal, lambdLocal, AscendC::CMPMODE::LE, alignedNum);
         AscendC::Select(absLocal, maskLocal, zeroLocal, floatInLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                        alignedNum);
+                        currentNum);
 
         // Cast fp32 result → IO_T output
         // 对 bfloat16_t 使用 CAST_RINT（round-to-nearest-even），对 half 使用 CAST_NONE（默认 RTNE）
@@ -190,7 +195,7 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE>::Compute(int64_t currentNum)
         AscendC::Abs(absLocal, inputLocal, currentNum);
         AscendC::Compare(maskLocal, absLocal, lambdLocal, AscendC::CMPMODE::LE, alignedNum);
         AscendC::Select(outputLocal, maskLocal, zeroLocal, inputLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                        alignedNum);
+                        currentNum);
     }
 
     outputQueue.template EnQue<IO_T>(outputLocal);
@@ -201,11 +206,7 @@ template <typename T, int BUFFER_MODE>
 __aicore__ inline void HardShrink<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> outputLocal = outputQueue.template DeQue<IO_T>();
-    AscendC::DataCopyParams copyParams;
-    copyParams.blockCount = 1;
-    copyParams.blockLen = currentNum * sizeof(IO_T);
-    copyParams.srcStride = 0;
-    copyParams.dstStride = 0;
+    AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(currentNum * sizeof(IO_T)), 0, 0, 0};
     AscendC::DataCopyPad(outGM[progress * ubLength_], outputLocal, copyParams);
     outputQueue.FreeTensor(outputLocal);
 }

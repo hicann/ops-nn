@@ -60,7 +60,7 @@ static inline uint16_t Float2Half(float f)
     uint32_t x;
     std::memcpy(&x, &f, sizeof(x));
     uint32_t sign = (x >> 31) & 0x1;
-    int32_t  exp  = ((x >> 23) & 0xff) - 127 + 15;
+    int32_t exp = ((x >> 23) & 0xff) - 127 + 15;
     uint32_t mant = x & 0x7fffff;
     uint16_t h;
     if (exp <= 0) {
@@ -133,68 +133,66 @@ protected:
 // Launch helper: allocate 9 inputs + 1 output (var alias), fill tiling, run kernel.
 // outVar/outMg/outMs/outMom hold the in-place-updated state for the caller.
 template <typename T>
-static void LaunchOnce(
-    size_t totalNum,
-    float lrVal, float rhoVal, float momentumVal, float epsilonVal,
-    float varVal, float mgVal, float msVal, float momVal, float gradVal,
-    std::vector<uint8_t>& outVar,
-    std::vector<uint8_t>& outMg,
-    std::vector<uint8_t>& outMs,
-    std::vector<uint8_t>& outMom)
+static void LaunchOnce(size_t totalNum, float lrVal, float rhoVal, float momentumVal, float epsilonVal, float varVal,
+                       float mgVal, float msVal, float momVal, float gradVal, std::vector<uint8_t>& outVar,
+                       std::vector<uint8_t>& outMg, std::vector<uint8_t>& outMs, std::vector<uint8_t>& outMom)
 {
     constexpr size_t kElemSize = sizeof(T);
-    const size_t mainBytes   = (totalNum > 0 ? totalNum : 1) * kElemSize;
+    const size_t mainBytes = (totalNum > 0 ? totalNum : 1) * kElemSize;
     const size_t scalarBytes = 1 * kElemSize;
 
-    uint8_t* var      = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* mg       = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* ms       = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* mom      = (uint8_t*)AscendC::GmAlloc(mainBytes);
-    uint8_t* lr       = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* rho      = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* var = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* mg = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* ms = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* mom = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* lr = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* rho = (uint8_t*)AscendC::GmAlloc(scalarBytes);
     uint8_t* momentum = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* epsilon  = (uint8_t*)AscendC::GmAlloc(scalarBytes);
-    uint8_t* grad     = (uint8_t*)AscendC::GmAlloc(mainBytes);
+    uint8_t* epsilon = (uint8_t*)AscendC::GmAlloc(scalarBytes);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(mainBytes);
     // 1 output var aliases input var (in-place); mg/ms/mom written back in-place.
     uint8_t* varOut = var;
 
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
-    uint8_t* tiling    = (uint8_t*)AscendC::GmAlloc(sizeof(ApplyCenteredRMSPropTilingData));
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(ApplyCenteredRMSPropTilingData));
 
     size_t fillN = totalNum > 0 ? totalNum : 1;
-    FillArray<T>(var,  fillN, varVal);
-    FillArray<T>(mg,   fillN, mgVal);
-    FillArray<T>(ms,   fillN, msVal);
-    FillArray<T>(mom,  fillN, momVal);
+    FillArray<T>(var, fillN, varVal);
+    FillArray<T>(mg, fillN, mgVal);
+    FillArray<T>(ms, fillN, msVal);
+    FillArray<T>(mom, fillN, momVal);
     FillArray<T>(grad, fillN, gradVal);
-    FillScalar<T>(lr,       lrVal);
-    FillScalar<T>(rho,      rhoVal);
+    FillScalar<T>(lr, lrVal);
+    FillScalar<T>(rho, rhoVal);
     FillScalar<T>(momentum, momentumVal);
-    FillScalar<T>(epsilon,  epsilonVal);
+    FillScalar<T>(epsilon, epsilonVal);
 
     auto* td = reinterpret_cast<ApplyCenteredRMSPropTilingData*>(tiling);
-    td->totalNum    = static_cast<int64_t>(totalNum);
-    td->blockFactor = static_cast<int64_t>(totalNum > 0 ? totalNum : 1);
-    td->ubFactor    = static_cast<int64_t>(totalNum >= 256 ? 256 : (totalNum > 0 ? totalNum : 1));
-    td->lr = 0; td->rho = 0; td->momentum = 0; td->epsilon = 0;
-    td->scalarsValid = 0;  // force GM scalar fallback path
+    td->totalNum = static_cast<int64_t>(totalNum);
+    // Mirror the tiling function: the empty-tensor fast path returns before the
+    // split is computed, so totalNum/blockFactor/ubFactor stay 0 (memset value).
+    td->blockFactor = static_cast<int64_t>(totalNum > 0 ? totalNum : 0);
+    // Real tiling always publishes an element-aligned ubFactor (independent
+    // of totalNum); 256 is aligned for all three dtypes and keeps the
+    // padded tail inside the allocated UB buffers.
+    td->ubFactor = static_cast<int64_t>(totalNum > 0 ? 256 : 0);
+    td->lr = 0;
+    td->rho = 0;
+    td->momentum = 0;
+    td->epsilon = 0;
+    td->scalarsValid = 0; // force GM scalar fallback path
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     uint32_t blockDim = 1;
-    auto Kernel = [](GM_ADDR a, GM_ADDR b, GM_ADDR c, GM_ADDR d,
-                     GM_ADDR e, GM_ADDR f, GM_ADDR g, GM_ADDR h,
-                     GM_ADDR i, GM_ADDR j,
-                     GM_ADDR ws, GM_ADDR t) {
-        ::apply_centered_rms_prop<T>(a, b, c, d, e, f, g, h, i, j, ws, t);
-    };
-    ICPU_RUN_KF(Kernel, blockDim,
-                var, mg, ms, mom, lr, rho, momentum, epsilon, grad,
-                varOut, workspace, tiling);
+    auto Kernel = [](GM_ADDR a, GM_ADDR b, GM_ADDR c, GM_ADDR d, GM_ADDR e, GM_ADDR f, GM_ADDR g, GM_ADDR h, GM_ADDR i,
+                     GM_ADDR j, GM_ADDR ws,
+                     GM_ADDR t) { ::apply_centered_rms_prop<T>(a, b, c, d, e, f, g, h, i, j, ws, t); };
+    ICPU_RUN_KF(Kernel, blockDim, var, mg, ms, mom, lr, rho, momentum, epsilon, grad, varOut, workspace, tiling);
 
     outVar.assign(var, var + mainBytes);
-    outMg.assign(mg,   mg + mainBytes);
-    outMs.assign(ms,   ms + mainBytes);
+    outMg.assign(mg, mg + mainBytes);
+    outMs.assign(ms, ms + mainBytes);
     outMom.assign(mom, mom + mainBytes);
 
     AscendC::GmFree(var);
@@ -215,8 +213,7 @@ TEST_F(apply_centered_rms_prop_kernel_test, test_fp32_small)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> v, mg, ms, mom;
-    LaunchOnce<float>(totalNum, 0.01f, 0.9f, 0.1f, 1e-7f,
-                      1.0f, 0.05f, 0.5f, 0.0f, 0.2f, v, mg, ms, mom);
+    LaunchOnce<float>(totalNum, 0.01f, 0.9f, 0.1f, 1e-7f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, v, mg, ms, mom);
     EXPECT_EQ(v.size(), totalNum * sizeof(float));
 }
 
@@ -225,8 +222,7 @@ TEST_F(apply_centered_rms_prop_kernel_test, test_fp32_large)
 {
     constexpr size_t totalNum = 2048;
     std::vector<uint8_t> v, mg, ms, mom;
-    LaunchOnce<float>(totalNum, 0.001f, 0.9f, 0.5f, 1e-7f,
-                      2.0f, 0.1f, 1.0f, 0.1f, 0.5f, v, mg, ms, mom);
+    LaunchOnce<float>(totalNum, 0.001f, 0.9f, 0.5f, 1e-7f, 2.0f, 0.1f, 1.0f, 0.1f, 0.5f, v, mg, ms, mom);
     EXPECT_EQ(v.size(), totalNum * sizeof(float));
 }
 
@@ -235,8 +231,7 @@ TEST_F(apply_centered_rms_prop_kernel_test, test_fp16_cast_path)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> v, mg, ms, mom;
-    LaunchOnce<half>(totalNum, 0.01f, 0.9f, 0.1f, 1e-3f,
-                     1.0f, 0.05f, 0.5f, 0.0f, 0.2f, v, mg, ms, mom);
+    LaunchOnce<half>(totalNum, 0.01f, 0.9f, 0.1f, 1e-3f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, v, mg, ms, mom);
     EXPECT_EQ(v.size(), totalNum * sizeof(half));
 }
 
@@ -245,8 +240,7 @@ TEST_F(apply_centered_rms_prop_kernel_test, test_bf16_cast_path)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> v, mg, ms, mom;
-    LaunchOnce<bfloat16_t>(totalNum, 0.01f, 0.9f, 0.1f, 1e-3f,
-                           1.0f, 0.05f, 0.5f, 0.0f, 0.2f, v, mg, ms, mom);
+    LaunchOnce<bfloat16_t>(totalNum, 0.01f, 0.9f, 0.1f, 1e-3f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, v, mg, ms, mom);
     EXPECT_EQ(v.size(), totalNum * sizeof(bfloat16_t));
 }
 
@@ -256,16 +250,44 @@ TEST_F(apply_centered_rms_prop_kernel_test, test_9in_1out_inplace)
 {
     constexpr size_t totalNum = 256;
     std::vector<uint8_t> v, mg, ms, mom;
-    LaunchOnce<float>(totalNum, 0.1f, 0.5f, 0.5f, 1e-3f,
-                      1.0f, 0.1f, 0.5f, 0.1f, 0.7f, v, mg, ms, mom);
-    // All 4 state buffers must come back the right size. Numerical value of the
-    // in-place write-back is not asserted: ICPU DataCopyPad write-back is not
-    // guaranteed to mutate the shared GM in CPU debug mode (precision is owned
-    // by ttk / ST tests on real hardware).
-    EXPECT_EQ(v.size(),   totalNum * sizeof(float));
-    EXPECT_EQ(mg.size(),  totalNum * sizeof(float));
-    EXPECT_EQ(ms.size(),  totalNum * sizeof(float));
+    LaunchOnce<float>(totalNum, 0.1f, 0.5f, 0.5f, 1e-3f, 1.0f, 0.1f, 0.5f, 0.1f, 0.7f, v, mg, ms, mom);
+    // All 4 state buffers must come back the right size.
+    EXPECT_EQ(v.size(), totalNum * sizeof(float));
+    EXPECT_EQ(mg.size(), totalNum * sizeof(float));
+    EXPECT_EQ(ms.size(), totalNum * sizeof(float));
     EXPECT_EQ(mom.size(), totalNum * sizeof(float));
+}
+
+// T05b In-place state values: mg/ms/mom are inputs, not declared outputs, so the
+// black-box routes can only compare var. Assert the optimizer-state update here
+// (the single channel that observes the mg/ms/mom write-back).
+TEST_F(apply_centered_rms_prop_kernel_test, test_9in_1out_inplace_values)
+{
+    constexpr size_t totalNum = 64;
+    constexpr float lr = 1.0f, rho = 0.1f, momentum = 0.5f, epsilon = 1e-3f;
+    constexpr float var0 = 0.1f, mg0 = 0.5f, ms0 = 0.5f, mom0 = 0.1f, grad = 0.7f;
+    std::vector<uint8_t> v, mg, ms, mom;
+    LaunchOnce<float>(totalNum, lr, rho, momentum, epsilon, var0, mg0, ms0, mom0, grad, v, mg, ms, mom);
+
+    const float oneMinusRho = 1.0f - rho;
+    const float mgExp = mg0 + oneMinusRho * (grad - mg0);
+    const float msExp = ms0 + oneMinusRho * (grad * grad - ms0);
+    const float denom = std::sqrt(msExp - mgExp * mgExp + epsilon);
+    const float momExp = momentum * mom0 + lr * grad / denom;
+    const float varExp = var0 - momExp;
+
+    const float* vf = reinterpret_cast<const float*>(v.data());
+    const float* mgf = reinterpret_cast<const float*>(mg.data());
+    const float* msf = reinterpret_cast<const float*>(ms.data());
+    const float* momf = reinterpret_cast<const float*>(mom.data());
+    EXPECT_NEAR(vf[0], varExp, 1e-4f);
+    EXPECT_NEAR(mgf[0], mgExp, 1e-5f);
+    EXPECT_NEAR(msf[0], msExp, 1e-5f);
+    EXPECT_NEAR(momf[0], momExp, 1e-4f);
+    EXPECT_NEAR(vf[totalNum - 1], varExp, 1e-4f);
+    EXPECT_NEAR(mgf[totalNum - 1], mgExp, 1e-5f);
+    EXPECT_NEAR(msf[totalNum - 1], msExp, 1e-5f);
+    EXPECT_NEAR(momf[totalNum - 1], momExp, 1e-4f);
 }
 
 // T06 Scalar GM read robustness: distinct lr/rho/momentum/epsilon at distinct
@@ -274,8 +296,7 @@ TEST_F(apply_centered_rms_prop_kernel_test, test_scalar_gm_reads)
 {
     constexpr size_t totalNum = 64;
     std::vector<uint8_t> v, mg, ms, mom;
-    LaunchOnce<float>(totalNum, 0.123f, 0.456f, 0.789f, 0.001f,
-                      1.0f, 0.2f, 2.0f, 3.0f, 0.5f, v, mg, ms, mom);
+    LaunchOnce<float>(totalNum, 0.123f, 0.456f, 0.789f, 0.001f, 1.0f, 0.2f, 2.0f, 3.0f, 0.5f, v, mg, ms, mom);
     // No-crash with distinct scalar GM addresses; output sized correctly.
     EXPECT_EQ(v.size(), totalNum * sizeof(float));
 }
@@ -284,8 +305,63 @@ TEST_F(apply_centered_rms_prop_kernel_test, test_scalar_gm_reads)
 TEST_F(apply_centered_rms_prop_kernel_test, test_empty_no_op)
 {
     std::vector<uint8_t> v, mg, ms, mom;
-    LaunchOnce<float>(0, 0.01f, 0.9f, 0.1f, 1e-7f,
-                      0.0f, 0.0f, 0.0f, 0.0f, 0.0f, v, mg, ms, mom);
+    LaunchOnce<float>(0, 0.01f, 0.9f, 0.1f, 1e-7f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, v, mg, ms, mom);
     // Backing of 1 element allocated; run completes without crash.
     EXPECT_EQ(v.size(), 1 * sizeof(float));
+}
+
+// T08-T10 Unaligned tail: CopyIn/CopyOut must keep the valid prefix identical
+// to an aligned run with the same element inputs. This exercises rightPad > 0
+// (the DataCopyPad ExtParams path) for every dtype without depending on host
+// half/bf16 decoding: the reference is the same kernel's aligned output.
+static void ExpectPrefixEqual(const std::vector<uint8_t>& aligned, const std::vector<uint8_t>& unaligned, size_t bytes)
+{
+    ASSERT_GE(aligned.size(), bytes);
+    ASSERT_GE(unaligned.size(), bytes);
+    EXPECT_EQ(std::memcmp(aligned.data(), unaligned.data(), bytes), 0);
+}
+
+TEST_F(apply_centered_rms_prop_kernel_test, test_fp32_unaligned_tail)
+{
+    constexpr size_t alignedNum = 256;
+    constexpr size_t unalignedNum = 255; // 8-element vector align: rightPad = 1
+    std::vector<uint8_t> av, amg, ams, amom, uv, umg, ums, umom;
+    LaunchOnce<float>(alignedNum, 0.01f, 0.9f, 0.1f, 1e-7f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, av, amg, ams, amom);
+    LaunchOnce<float>(unalignedNum, 0.01f, 0.9f, 0.1f, 1e-7f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, uv, umg, ums, umom);
+    const size_t bytes = unalignedNum * sizeof(float);
+    ASSERT_EQ(uv.size(), bytes);
+    ExpectPrefixEqual(av, uv, bytes);
+    ExpectPrefixEqual(amg, umg, bytes);
+    ExpectPrefixEqual(ams, ums, bytes);
+    ExpectPrefixEqual(amom, umom, bytes);
+}
+
+TEST_F(apply_centered_rms_prop_kernel_test, test_fp16_unaligned_tail)
+{
+    constexpr size_t alignedNum = 256;
+    constexpr size_t unalignedNum = 241; // 16-element vector align: rightPad = 15
+    std::vector<uint8_t> av, amg, ams, amom, uv, umg, ums, umom;
+    LaunchOnce<half>(alignedNum, 0.01f, 0.9f, 0.1f, 1e-3f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, av, amg, ams, amom);
+    LaunchOnce<half>(unalignedNum, 0.01f, 0.9f, 0.1f, 1e-3f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, uv, umg, ums, umom);
+    const size_t bytes = unalignedNum * sizeof(half);
+    ASSERT_EQ(uv.size(), bytes);
+    ExpectPrefixEqual(av, uv, bytes);
+    ExpectPrefixEqual(amg, umg, bytes);
+    ExpectPrefixEqual(ams, ums, bytes);
+    ExpectPrefixEqual(amom, umom, bytes);
+}
+
+TEST_F(apply_centered_rms_prop_kernel_test, test_bf16_unaligned_tail)
+{
+    constexpr size_t alignedNum = 256;
+    constexpr size_t unalignedNum = 241; // 16-element vector align: rightPad = 15
+    std::vector<uint8_t> av, amg, ams, amom, uv, umg, ums, umom;
+    LaunchOnce<bfloat16_t>(alignedNum, 0.01f, 0.9f, 0.1f, 1e-3f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, av, amg, ams, amom);
+    LaunchOnce<bfloat16_t>(unalignedNum, 0.01f, 0.9f, 0.1f, 1e-3f, 1.0f, 0.05f, 0.5f, 0.0f, 0.2f, uv, umg, ums, umom);
+    const size_t bytes = unalignedNum * sizeof(bfloat16_t);
+    ASSERT_EQ(uv.size(), bytes);
+    ExpectPrefixEqual(av, uv, bytes);
+    ExpectPrefixEqual(amg, umg, bytes);
+    ExpectPrefixEqual(ams, ums, bytes);
+    ExpectPrefixEqual(amom, umom, bytes);
 }

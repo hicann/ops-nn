@@ -57,6 +57,18 @@ static inline bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
+// 检查阈值标量是否为 FLOAT/DOUBLE（Python float 以 DOUBLE 传入，内部统一按 float32 取值）
+static inline bool CheckLambdDtypeValid(const aclScalar* lambd)
+{
+    auto dtype = lambd->GetDataType();
+    if (dtype != op::DataType::DT_FLOAT && dtype != op::DataType::DT_DOUBLE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "lambd expected FLOAT or DOUBLE, but found %s.",
+                op::ToString(dtype).GetString());
+        return false;
+    }
+    return true;
+}
+
 // 检查输入和输出是否是空指针
 static inline bool CheckNotNull(const aclTensor* self, const aclScalar* lambd, const aclTensor* out)
 {
@@ -100,6 +112,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclScalar* lambd, co
     CHECK_RET(CheckNotNull(self, lambd, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckLambdDtypeValid(lambd), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查输入的数据的值是否合理
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
     // 4. Check private format.

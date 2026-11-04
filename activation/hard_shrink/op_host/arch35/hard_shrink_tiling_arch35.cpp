@@ -77,6 +77,17 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context, HardShrinkInpu
     auto inputSelf = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputSelf);
     auto inputShape = EnsureNotScalar(inputSelf->GetStorageShape());
+
+    // Kernel/GEIR 直接入口不经过 aclnn 的 out shape 校验，这里补齐，避免 out 缓冲区
+    // 小于输入元素数时越界写。
+    auto outputY = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputY);
+    auto outputShape = EnsureNotScalar(outputY->GetStorageShape());
+    OP_CHECK_IF(inputShape.GetShapeSize() != outputShape.GetShapeSize(),
+                OP_LOGE(context, "HardShrink: input and output shape size mismatch: input=%ld, output=%ld",
+                        inputShape.GetShapeSize(), outputShape.GetShapeSize()),
+                return ge::GRAPH_FAILED);
+
     info.totalNum = inputShape.GetShapeSize();
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
@@ -99,8 +110,12 @@ static float GetLambdAttr(gert::TilingContext* context)
             lambd = *lambdPtr;
         }
     }
-    if (std::isnan(lambd) || std::isinf(lambd)) {
-        OP_LOGW(context, "lambd is special value (nan/inf): %f, output may be all zeros", lambd);
+    if (std::isnan(lambd)) {
+        OP_LOGW(context, "lambd is NaN: comparisons are false, all inputs pass through unchanged");
+    } else if (std::isinf(lambd)) {
+        OP_LOGW(context, "lambd is %s: %s", lambd > 0.0f ? "+inf" : "-inf",
+                lambd > 0.0f ? "|x| <= lambd always true, output will be all zeros" :
+                               "|x| <= lambd always false, inputs pass through unchanged");
     }
     return lambd;
 }

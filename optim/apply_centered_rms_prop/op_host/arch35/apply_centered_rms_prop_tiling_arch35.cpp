@@ -78,6 +78,18 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
     auto varShape = EnsureNotScalar(inputVar->GetStorageShape());
 
+    // Reject unresolved dimensions before the shape is reduced to an element
+    // count: GetShapeSize() is a plain product, so [-1, -1] yields 1 and
+    // [-2, -2] yields 4, which would otherwise be tiled as a concrete 1/4-element
+    // tensor while the kernel only updates the first few elements.
+    for (size_t i = 0; i < varShape.GetDimNum(); ++i) {
+        OP_CHECK_IF(
+            varShape.GetDim(i) < 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var", Ops::Base::ToString(varShape).c_str(),
+                                                  "runtime shape must have non-negative dimensions"),
+            return ge::GRAPH_FAILED);
+    }
+
     // Verify all ND inputs have identical shape and dtype.
     auto varDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
@@ -121,11 +133,22 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
                     return ge::GRAPH_FAILED);
     }
 
+    // lr/rho/momentum/epsilon are logically rank-0 scalars, but the storage shape is
+    // not always rank-0: GE normalizes a rank-0 input to storage shape {1} (the origin
+    // shape keeps the user's rank 0), and some graph builders pass an explicit
+    // 1-element {1} tensor. Accept both, reject anything with more than one element
+    // or with rank > 1 (e.g. {2}, (1,1)).
     for (int idx : {4, 5, 6, 7}) {
         auto scalarShape = context->GetInputShape(idx);
         OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
-        OP_CHECK_IF(scalarShape->GetStorageShape().GetDimNum() != 0,
-                    OP_LOGE(context, "scalar input[%d] must be a 0-D tensor", idx), return ge::GRAPH_FAILED);
+        const gert::Shape& shape = scalarShape->GetStorageShape();
+        const bool isScalarShape = shape.GetDimNum() == 0 || (shape.GetDimNum() == 1 && shape.GetDim(0) == 1);
+        OP_CHECK_IF(!isScalarShape,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context->GetNodeName(), inputNames[idx], Ops::Base::ToString(shape).c_str(),
+                        "Scalar parameter must be a 0-D tensor or a 1-element {1} tensor (GE normalizes "
+                        "rank-0 to {1})"),
+                    return ge::GRAPH_FAILED);
     }
     auto outputDesc = context->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
@@ -133,10 +156,14 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
                 OP_LOGE(context, "output var must have the same dtype as all inputs"), return ge::GRAPH_FAILED);
     const auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
+        // use_locking is a TensorFlow scheduling hint only ("if True, the variables are
+        // updated under a lock"). This op performs one sequential variable update inside
+        // a single kernel launch, so there is no concurrent update to protect and the
+        // flag has no numerical meaning: true and false take the same path. Kept as
+        // informational only, consistent with apply_adadelta / inplace_apply_adadelta.
         const bool* locking = attrs->GetBool(0);
-        OP_CHECK_IF(locking != nullptr && *locking,
-                    OP_LOGE(context, "use_locking=true is unsupported by this implementation"),
-                    return ge::GRAPH_FAILED);
+        OP_LOGD(context->GetNodeName(), "use_locking=%d is informational only, no locking is enforced",
+                static_cast<int32_t>(locking != nullptr && *locking));
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -210,6 +237,19 @@ static ge::graphStatus ApplyCenteredRMSPropTilingFunc(gert::TilingContext* conte
     if (totalIdx == 0) {
         context->SetBlockDim(1);
         return ge::GRAPH_SUCCESS;
+    }
+
+    // A negative element count means the dimension product overflowed int64
+    // (GetShapeSize returns kInvalidDimValue) or the shape is not concrete yet.
+    // Neither can be split into blocks; reject instead of publishing garbage tiling.
+    if (totalIdx < 0) {
+        auto varInput = context->GetInputShape(0);
+        OP_CHECK_NULL_WITH_CONTEXT(context, varInput);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var",
+                                              Ops::Base::ToString(varInput->GetStorageShape()).c_str(),
+                                              "Element count must be non-negative (shape product overflow or "
+                                              "non-concrete shape)");
+        return ge::GRAPH_FAILED;
     }
 
     // 5. Calculate UB tile size

@@ -124,6 +124,12 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Init(GM_ADDR var, GM_ADDR mg, GM
                                                      const ApplyCenteredRMSPropTilingData* tilingData)
 {
     InitGmBuffers(var, mg, ms, mom, grad, tilingData);
+    // Empty tensor: the tiling fast path publishes totalNum/blockFactor/ubFactor
+    // as 0, so there is no element to process. Skip the UB queues because
+    // InitBuffer rejects a zero length (CPU debug asserts len > 0).
+    if (blockLength <= 0 || ubLength <= 0) {
+        return;
+    }
     LoadScalars(lr, rho, momentum, epsilon, tilingData);
     InitUbBuffers();
 }
@@ -244,9 +250,9 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::CopyIn(int64_t progress, int64_t
     AscendC::LocalTensor<T> momLocal = momInQ.template AllocTensor<T>();
     AscendC::LocalTensor<T> gradLocal = gradInQ.template AllocTensor<T>();
 
-    AscendC::DataCopyParams copyParams;
+    AscendC::DataCopyExtParams copyParams;
     copyParams.blockCount = 1;
-    copyParams.blockLen = currentNum * sizeof(T);
+    copyParams.blockLen = static_cast<uint32_t>(currentNum * sizeof(T));
     copyParams.srcStride = 0;
     copyParams.dstStride = 0;
 
@@ -255,11 +261,10 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::CopyIn(int64_t progress, int64_t
     // the padded element count without reading garbage from UB.
     int64_t alignedNum = CeilAlignElem(currentNum);
     int64_t rightPad = alignedNum - currentNum;
-    AscendC::DataCopyPadParams padParams;
+    AscendC::DataCopyPadExtParams<T> padParams;
     padParams.isPad = (rightPad > 0);
     padParams.leftPadding = 0;
     padParams.rightPadding = static_cast<uint8_t>(rightPad);
-    padParams.paddingValue = 0;
 
     AscendC::DataCopyPad(varLocal, varGM[progress * ubLength], copyParams, padParams);
     AscendC::DataCopyPad(mgLocal, mgGM[progress * ubLength], copyParams, padParams);
@@ -419,9 +424,9 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::CopyOut(int64_t progress, int64_
     AscendC::LocalTensor<T> msOut = msOutQ.template DeQue<T>();
     AscendC::LocalTensor<T> momOut = momOutQ.template DeQue<T>();
 
-    AscendC::DataCopyParams copyParams;
+    AscendC::DataCopyExtParams copyParams;
     copyParams.blockCount = 1;
-    copyParams.blockLen = currentNum * sizeof(T);
+    copyParams.blockLen = static_cast<uint32_t>(currentNum * sizeof(T));
     copyParams.srcStride = 0;
     copyParams.dstStride = 0;
 
@@ -443,8 +448,8 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::CopyOut(int64_t progress, int64_
 template <typename T>
 __aicore__ inline void ApplyCenteredRMSProp<T>::Process()
 {
-    if (blockLength == 0) {
-        return; // Empty tensor, nothing to do
+    if (blockLength <= 0 || ubLength <= 0) {
+        return; // Empty tensor or degenerate tiling, nothing to do
     }
 
     int64_t loopCount = (blockLength + ubLength - 1) / ubLength;

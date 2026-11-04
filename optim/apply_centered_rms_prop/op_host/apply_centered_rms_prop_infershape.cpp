@@ -17,6 +17,7 @@
  * Single output var has the same shape and dtype as var (input 0).
  */
 #include <set>
+#include <string>
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
@@ -27,10 +28,65 @@ using namespace ge;
 
 namespace ops {
 
+namespace {
+const char* const kInputNames[] = {"var", "mg", "ms", "mom", "lr", "rho", "momentum", "epsilon", "grad"};
+
+// -1/-2 dims describe at least one concrete runtime shape; shape consistency is
+// checked by Tiling with the resolved shapes, so it cannot be judged here.
+bool HasUnknownDim(const gert::Shape& shape)
+{
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        if (shape.GetDim(i) < 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Matches the Tiling rule: a GE-normalized rank-0 tensor has storage shape {1}.
+bool IsScalarShape(const gert::Shape& shape)
+{
+    return shape.GetDimNum() == 0 || (shape.GetDimNum() == 1 && shape.GetDim(0) == 1);
+}
+} // namespace
+
 static ge::graphStatus InferShape4ApplyCenteredRMSProp(gert::InferShapeContext* context)
 {
     const gert::Shape* varShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+
+    // mg/ms/mom/grad must share var's shape, as documented. Dynamic inputs keep
+    // their late check in Tiling, where the concrete shapes are available.
+    bool staticShapes = !HasUnknownDim(*varShape);
+    for (int idx : {1, 2, 3, 8}) {
+        const gert::Shape* inputShape = context->GetInputShape(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+        staticShapes = staticShapes && !HasUnknownDim(*inputShape);
+    }
+    if (staticShapes) {
+        for (int idx : {1, 2, 3, 8}) {
+            const gert::Shape* inputShape = context->GetInputShape(idx);
+            OP_CHECK_IF(*inputShape != *varShape,
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            context->GetNodeName(), (std::string("var and ") + kInputNames[idx]).c_str(),
+                            (Ops::Base::ToString(*varShape) + ", " + Ops::Base::ToString(*inputShape)).c_str(),
+                            "The shapes of var, mg, ms, mom and grad must be identical"),
+                        return ge::GRAPH_FAILED);
+        }
+    }
+
+    // Scalar form is known without resolving var's dynamic dims, so it is always
+    // validated; otherwise a concrete invalid scalar would slip through whenever
+    // var carries a dynamic dim.
+    for (int idx : {4, 5, 6, 7}) {
+        const gert::Shape* scalarShape = context->GetInputShape(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
+        OP_CHECK_IF(!IsScalarShape(*scalarShape),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), kInputNames[idx],
+                                                          Ops::Base::ToString(*scalarShape).c_str(),
+                                                          "Scalar inputs must be 0-D tensors or 1-element {1} tensors"),
+                    return ge::GRAPH_FAILED);
+    }
 
     // Single output var has the same shape as input var
     gert::Shape* outShape = context->GetOutputShape(0);
@@ -45,16 +101,21 @@ static ge::graphStatus InferShape4ApplyCenteredRMSProp(gert::InferShapeContext* 
 static ge::graphStatus InferDataType4ApplyCenteredRMSProp(gert::InferDataTypeContext* context)
 {
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
-    const char* inputNames[] = {"var", "mg", "ms", "mom", "lr", "rho", "momentum", "epsilon", "grad"};
+    ge::DataType varDt = context->GetInputDataType(0);
     for (size_t idx = 0; idx < 9; idx++) {
         ge::DataType dt = context->GetInputDataType(idx);
         OP_CHECK_IF(supportedDtype.count(dt) == 0,
-                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), inputNames[idx],
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), kInputNames[idx],
                                                           Ops::Base::ToString(dt).c_str(),
                                                           "The dtype must be one of DT_FLOAT16, DT_FLOAT or DT_BF16"),
                     return ge::GRAPH_FAILED);
+        // All inputs share one dtype; Tiling also rejects mixed dtypes at compile time.
+        OP_CHECK_IF(dt != varDt,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), kInputNames[idx],
+                                                          Ops::Base::ToString(dt).c_str(),
+                                                          "All inputs must have the same dtype as var"),
+                    return ge::GRAPH_FAILED);
     }
-    ge::DataType varDt = context->GetInputDataType(0);
     context->SetOutputDataType(0, varDt);
     return ge::GRAPH_SUCCESS;
 }

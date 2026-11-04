@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include <cmath>
 #include <map>
 #include "assert.h"
 
@@ -91,8 +92,8 @@ uint32_t GetDataTypeSize(DataType dt)
     return typeSize;
 }
 
-int32_t GenFloatData(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type, float value)
+int32_t GenFloatData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
+                     float value)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -114,9 +115,8 @@ int32_t GenFloatData(
 }
 
 template <typename SetterFn>
-int32_t AddDataInput(
-    int placeholderIndex, SetterFn portSetter, DataType dtype, const vector<int64_t>& shape, float fillValue,
-    Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
+int32_t AddDataInput(int placeholderIndex, SetterFn portSetter, DataType dtype, const vector<int64_t>& shape,
+                     float fillValue, Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs)
 {
     std::string name = "placeholder" + std::to_string(placeholderIndex);
     auto data = op::Data(name.c_str()).set_attr_index(placeholderIndex);
@@ -137,9 +137,8 @@ int32_t AddDataInput(
     return SUCCESS;
 }
 
-int CreateOppInGraph(
-    DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-    Graph& graph)
+int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
+                     std::vector<Operator>& outputs, Graph& graph)
 {
     auto centered = op::ApplyCenteredRMSProp("apply_centered_rms_prop1");
 
@@ -148,24 +147,42 @@ int CreateOppInGraph(
 
     int idx = 0;
     // 9 inputs — order must match REG_OP(ApplyCenteredRMSProp) .INPUT order
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_var(d); }, inDtype, tensorShape, 1.0f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_mg(d); }, inDtype, tensorShape, 0.05f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_ms(d); }, inDtype, tensorShape, 0.1f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_mom(d); }, inDtype, tensorShape, 0.0f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_lr(d); }, inDtype, scalarShape, 0.01f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_rho(d); }, inDtype, scalarShape, 0.9f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_momentum(d); }, inDtype, scalarShape, 0.0f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_epsilon(d); }, inDtype, scalarShape, 1e-7f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
-    if (AddDataInput(idx++, [&](Operator& d) { centered.set_input_grad(d); }, inDtype, tensorShape, 0.2f,
-                     graph, input, inputs) != SUCCESS) return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_var(d); }, inDtype, tensorShape, 1.0f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_mg(d); }, inDtype, tensorShape, 0.05f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_ms(d); }, inDtype, tensorShape, 0.1f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_mom(d); }, inDtype, tensorShape, 0.0f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_lr(d); }, inDtype, scalarShape, 0.01f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_rho(d); }, inDtype, scalarShape, 0.9f, graph, input, inputs) !=
+        SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_momentum(d); }, inDtype, scalarShape, 0.0f, graph, input,
+            inputs) != SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_epsilon(d); }, inDtype, scalarShape, 1e-7f, graph, input,
+            inputs) != SUCCESS)
+        return FAILED;
+    if (AddDataInput(
+            idx++, [&](Operator& d) { centered.set_input_grad(d); }, inDtype, tensorShape, 0.2f, graph, input,
+            inputs) != SUCCESS)
+        return FAILED;
 
     // 1 output (var); mg/ms/mom updated in-place
     TensorDesc varOutDesc = TensorDesc(ge::Shape(tensorShape), FORMAT_ND, inDtype);
@@ -181,8 +198,13 @@ int main(int argc, char* argv[])
     Graph graph(graph_name);
     std::vector<ge::Tensor> input;
 
+    // Device id comes from argv[1]; "0" keeps the historical default.
+    const std::string deviceId = (argc > 1) ? argv[1] : "0";
+    std::cout << "device id: " << deviceId << std::endl;
+
     printf("%s - INFO - [XIR]: Start to initialize ge using ge global options\n", GetTime().c_str());
-    std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
+    std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", deviceId.c_str()},
+                                                           {"ge.graphRunMode", "1"}};
     Status ret = ge::GEInitialize(global_options);
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Initialize ge using ge global options failed\n", GetTime().c_str());
@@ -193,16 +215,13 @@ int main(int argc, char* argv[])
     std::vector<Operator> inputs{};
     std::vector<Operator> outputs{};
 
-    if (argc > 1) {
-        std::cout << "device id arg: " << argv[1] << std::endl;
-    }
-
     DataType inDtype = DT_FLOAT;
     std::cout << "input dtype: " << inDtype << std::endl;
 
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        GEFinalize();
         return FAILED;
     }
 
@@ -218,6 +237,7 @@ int main(int argc, char* argv[])
 
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Create ir session using build options success\n", GetTime().c_str());
@@ -256,7 +276,23 @@ int main(int argc, char* argv[])
     ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
     std::string warning_str(warning_msg.GetString());
     std::cout << "Warning message: " << warning_str << std::endl;
-    printf("%s - INFO - [XIR]: Precision is ok\n", GetTime().c_str());
+
+    // Single output var (fp32). Inputs: var=1.0, mg=0.05, ms=0.1, mom=0.0,
+    // lr=0.01, rho=0.9, momentum=0.0, epsilon=1e-7, grad=0.2:
+    //   mg' = 0.9*0.05 + 0.1*0.2            = 0.065
+    //   ms' = 0.9*0.1  + 0.1*0.2^2          = 0.094
+    //   var' = 1.0 - lr*grad/sqrt(ms'-mg'^2+epsilon) = 0.993325
+    bool precisionOk = false;
+    if (output.size() == 1 && output[0].GetData() != nullptr && output[0].GetSize() >= sizeof(float)) {
+        const float* outData = reinterpret_cast<const float*>(output[0].GetData());
+        constexpr float expected = 0.993325f;
+        constexpr float tolerance = 1e-3f;
+        printf("%s - INFO - [XIR]: output var[0]=%f expected=%f\n", GetTime().c_str(), outData[0], expected);
+        precisionOk = (std::fabs(outData[0] - expected) <= tolerance);
+    } else {
+        printf("%s - ERROR - [XIR]: unexpected output tensor count=%zu\n", GetTime().c_str(), output.size());
+    }
+
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
     delete session;
     ret = ge::GEFinalize();
@@ -265,5 +301,10 @@ int main(int argc, char* argv[])
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Finalize ir graph session success\n", GetTime().c_str());
+    if (!precisionOk) {
+        printf("%s - ERROR - [XIR]: Precision check failed\n", GetTime().c_str());
+        return FAILED;
+    }
+    printf("%s - INFO - [XIR]: Precision is ok\n", GetTime().c_str());
     return SUCCESS;
 }

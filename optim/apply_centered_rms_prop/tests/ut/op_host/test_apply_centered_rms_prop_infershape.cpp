@@ -21,8 +21,9 @@
  *   Outputs (1): var (inferred from var, input 0; mg/ms/mom updated in-place)
  *   Attrs   (1): use_locking (optional bool, default false)
  *
- * The InferShape impl copies var.shape to the single output var and
- * has no rank validation, so each case asserts the lone output.
+ * The InferShape impl copies var.shape to the single output var and validates
+ * the documented input contract (mg/ms/mom/grad share var.shape, lr/rho/
+ * momentum/epsilon are 0-D or 1-element {1}, all nine dtypes identical).
  */
 
 #include <gtest/gtest.h>
@@ -34,21 +35,16 @@
 
 class ApplyCenteredRMSProp : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "ApplyCenteredRMSProp SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "ApplyCenteredRMSProp SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "ApplyCenteredRMSProp TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "ApplyCenteredRMSProp TearDown" << std::endl; }
 };
 
 static std::vector<int64_t> ShapeToVec(const gert::Shape* s)
 {
     std::vector<int64_t> v;
-    if (s == nullptr) return v;
+    if (s == nullptr)
+        return v;
     for (size_t i = 0; i < s->GetDimNum(); ++i) {
         v.push_back(s->GetDim(i));
     }
@@ -58,10 +54,8 @@ static std::vector<int64_t> ShapeToVec(const gert::Shape* s)
 // Drive InferShape via the Faker holder, then read the single output shape back
 // through the holder's context (writes inside InferShape don't propagate to
 // caller-side StorageShape arguments — they must be read from the context).
-static ge::graphStatus RunAndGetOutputShapes(
-    gert::StorageShape& tensorShape,
-    gert::StorageShape& scalarShape,
-    std::vector<std::vector<int64_t>>& outputDims)
+static ge::graphStatus RunAndGetOutputShapes(gert::StorageShape& tensorShape, gert::StorageShape& scalarShape,
+                                             std::vector<std::vector<int64_t>>& outputDims)
 {
     auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCenteredRMSProp");
     if (opImpl == nullptr) {
@@ -76,10 +70,8 @@ static ge::graphStatus RunAndGetOutputShapes(
     auto holder = gert::InferShapeContextFaker()
                       .NodeIoNum(9, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes(
-                          {&tensorShape, &tensorShape, &tensorShape, &tensorShape,
-                           &scalarShape, &scalarShape, &scalarShape, &scalarShape,
-                           &tensorShape})
+                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &scalarShape, &tensorShape})
                       .OutputShapes({&o0})
                       .Build();
 
@@ -90,6 +82,56 @@ static ge::graphStatus RunAndGetOutputShapes(
         outputDims.push_back(ShapeToVec(ctx->GetOutputShape(0)));
     }
     return status;
+}
+
+// Run InferShape with explicit per-input shapes (var, mg, ms, mom, lr, rho,
+// momentum, epsilon, grad) for the contract-violation cases.
+static ge::graphStatus RunInferShapeCase(const std::vector<gert::StorageShape*>& inputs)
+{
+    auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCenteredRMSProp");
+    if (opImpl == nullptr || opImpl->infer_shape == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    gert::StorageShape o0 = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(9, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(inputs)
+                      .OutputShapes({&o0})
+                      .Build();
+    return opImpl->infer_shape(holder.GetContext<gert::InferShapeContext>());
+}
+
+// Run InferDataType with nine explicit input dtypes.
+static ge::graphStatus RunInferDataTypeCase(const std::vector<ge::DataType>& dtypes)
+{
+    auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCenteredRMSProp");
+    if (opImpl == nullptr || opImpl->infer_datatype == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    std::vector<ge::DataType> inputs = dtypes;
+    std::vector<void*> inputPtrs;
+    for (auto& dtype : inputs) {
+        inputPtrs.push_back(&dtype);
+    }
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(9, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .NodeInputTd(0, dtypes[0], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dtypes[1], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, dtypes[2], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, dtypes[3], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, dtypes[4], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, dtypes[5], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, dtypes[6], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(7, dtypes[7], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(8, dtypes[8], ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputDataTypes(inputPtrs)
+                      .OutputDataTypes({&outputDtype})
+                      .Build();
+    return opImpl->infer_datatype(holder.GetContext<gert::InferDataTypeContext>());
 }
 
 // case_0: 2D shape, single output shares var shape.
@@ -188,4 +230,111 @@ TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_infershape_case_6_3d)
     EXPECT_EQ(outDims[0][0], 8);
     EXPECT_EQ(outDims[0][1], 32);
     EXPECT_EQ(outDims[0][2], 64);
+}
+
+// ---------------------------------------------------------------------------
+// Input contract: mg/ms/mom/grad share var.shape, scalars are 0-D or {1},
+// all nine dtypes identical. Violations must be rejected at InferShape/
+// InferDataType instead of falling through to Tiling.
+// ---------------------------------------------------------------------------
+
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_infershape_mg_shape_mismatch)
+{
+    gert::StorageShape varShape = {{96, 256}, {96, 256}};
+    gert::StorageShape badShape = {{96, 128}, {96, 128}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+
+    EXPECT_EQ(RunInferShapeCase({&varShape, &badShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                 &scalarShape, &varShape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_infershape_grad_shape_mismatch)
+{
+    gert::StorageShape varShape = {{8, 32}, {8, 32}};
+    gert::StorageShape badShape = {{8, 16}, {8, 16}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+
+    EXPECT_EQ(RunInferShapeCase({&varShape, &varShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                 &scalarShape, &badShape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_infershape_scalar_two_elements_rejected)
+{
+    gert::StorageShape varShape = {{64}, {64}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape badScalar = {{2}, {2}};
+
+    EXPECT_EQ(RunInferShapeCase({&varShape, &varShape, &varShape, &varShape, &badScalar, &scalarShape, &scalarShape,
+                                 &scalarShape, &varShape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_infershape_scalar_rank2_rejected)
+{
+    gert::StorageShape varShape = {{64}, {64}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape badScalar = {{1, 1}, {1, 1}};
+
+    EXPECT_EQ(RunInferShapeCase({&varShape, &varShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                 &badScalar, &varShape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_infershape_scalar_rank0_accepted)
+{
+    gert::StorageShape varShape = {{64}, {64}};
+    gert::StorageShape scalarShape = {{}, {}};
+
+    EXPECT_EQ(RunInferShapeCase({&varShape, &varShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                 &scalarShape, &varShape}),
+              ge::GRAPH_SUCCESS);
+}
+
+// Dynamic dims are checked by Tiling with the resolved shapes; InferShape must
+// not reject them.
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_infershape_dynamic_dims_accepted)
+{
+    gert::StorageShape varShape = {{-1, 256}, {-1, 256}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+
+    EXPECT_EQ(RunInferShapeCase({&varShape, &varShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                 &scalarShape, &varShape}),
+              ge::GRAPH_SUCCESS);
+}
+
+// Dynamic var must not disable the scalar-form check: the scalar descriptor is
+// concrete even when var is not.
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_infershape_dynamic_var_invalid_scalar_rejected)
+{
+    gert::StorageShape varShape = {{-1, 256}, {-1, 256}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape badScalar = {{2}, {2}};
+
+    EXPECT_EQ(RunInferShapeCase({&varShape, &varShape, &varShape, &varShape, &badScalar, &scalarShape, &scalarShape,
+                                 &scalarShape, &varShape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_inferdtype_mixed_dtype_rejected)
+{
+    std::vector<ge::DataType> dtypes(9, ge::DT_FLOAT);
+    dtypes[1] = ge::DT_FLOAT16;
+
+    EXPECT_EQ(RunInferDataTypeCase(dtypes), ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_inferdtype_unsupported_dtype_rejected)
+{
+    std::vector<ge::DataType> dtypes(9, ge::DT_INT32);
+
+    EXPECT_EQ(RunInferDataTypeCase(dtypes), ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCenteredRMSProp, ApplyCenteredRMSProp_inferdtype_uniform_dtype_accepted)
+{
+    std::vector<ge::DataType> dtypes(9, ge::DT_BF16);
+
+    EXPECT_EQ(RunInferDataTypeCase(dtypes), ge::GRAPH_SUCCESS);
 }

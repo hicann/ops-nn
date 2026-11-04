@@ -343,3 +343,29 @@ TEST_F(l2_hardshrink_test, case_26)
     // SAMPLE: precision simulate
     // ut.TestPrecision();
 }
+
+TEST_F(l2_hardshrink_test, case_27)
+{
+    auto tensor_desc = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-20, 20);
+    auto lambd = ScalarDesc(1.0);
+    auto out_tensor_desc = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnHardshrink, INPUT(tensor_desc, lambd), OUTPUT(out_tensor_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_hardshrink_test, case_28)
+{
+    auto tensor_desc = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-20, 20);
+    auto lambd = ScalarDesc(1);
+    auto out_tensor_desc = TensorDesc({1, 2, 3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnHardshrink, INPUT(tensor_desc, lambd), OUTPUT(out_tensor_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

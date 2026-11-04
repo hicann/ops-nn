@@ -4,12 +4,12 @@
 
 | 产品 | 是否支持 |
 | :----------------------------------------- | :------:|
-| Ascend 950PR&950DT系列产品 | √ |
-| Atlas A3系列产品 | √ |
-| Atlas A2系列产品 | √ |
-| Atlas 200I/500 A2推理产品 | √ |
-| Atlas推理系列产品 | √ |
-| Atlas训练系列产品 | √ |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | √ |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | √ |
 
 ## 功能说明
 
@@ -118,28 +118,28 @@
   <tr>
     <td>lr</td>
     <td>输入</td>
-    <td>学习率。必须为0-D标量Tensor。</td>
+    <td>学习率。必须为0-D标量Tensor，兼容单元素一维（{1}）形式。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>rho</td>
     <td>输入</td>
-    <td>衰减系数。必须为0-D标量Tensor。</td>
+    <td>衰减系数。必须为0-D标量Tensor，兼容单元素一维（{1}）形式。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>momentum</td>
     <td>输入</td>
-    <td>动量系数。必须为0-D标量Tensor。</td>
+    <td>动量系数。必须为0-D标量Tensor，兼容单元素一维（{1}）形式。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>epsilon</td>
     <td>输入</td>
-    <td>数值稳定性常数。必须为0-D标量Tensor。</td>
+    <td>数值稳定性常数。必须为0-D标量Tensor，兼容单元素一维（{1}）形式。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -153,7 +153,7 @@
   <tr>
     <td>use_locking</td>
     <td>属性</td>
-    <td>可选属性，是否对更新加锁。默认值为false。</td>
+    <td>可选属性，兼容占位；NPU 单 kernel 顺序更新，取值不改变计算结果。默认值为false。</td>
     <td>BOOL</td>
     <td>-</td>
   </tr>
@@ -169,13 +169,14 @@
 ## 约束说明
 
 - var、mg、ms、mom、grad五个ND Tensor的shape必须完全一致。
-- lr、rho、momentum、epsilon必须为0-D标量Tensor。
+- lr、rho、momentum、epsilon必须为0-D标量Tensor，兼容单元素一维（{1}）形式。
 - 所有输入和输出的数据类型必须相同（FLOAT、FLOAT16或BFLOAT16）。
 - 算子仅声明1个输出var，与输入var共享存储；mg/ms/mom在输入上原地更新。
 - 不支持稀疏梯度。
 - FLOAT16/BFLOAT16输入时，内部走FP32混合精度计算路径，最终Cast回原始dtype。
 - fp16上溢边界：grad值接近fp16最大值65504时，内部FP32计算路径可防止中间溢出，但最终Cast回fp16时若结果超出范围则饱和截断。
-- ACLNN接口对非连续输入执行 `AutoContiguous()` 连续化；GE图通路按注册约束使用ND格式。
+- `epsilon` 建议取正值：分母为 `sqrt(ms - mg² + epsilon)`，当 `ms - mg² + epsilon < 0` 时平方根产生NaN并传播到`mom`与`var`，与TensorFlow语义一致，实现不做钳位。
+- 算子原型为各输入注册了 `AutoContiguous()`，非连续ND输入由框架在进入算子前连续化；输入输出数据格式为ND。本算子不提供独立的ACLNN接口。
 
 ## 调用说明
 

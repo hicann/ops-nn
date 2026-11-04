@@ -31,9 +31,12 @@
  * Dtype dispatch is handled by the framework via DTYPE_VAR; no tilingKey
  * is set for dtype selection.
  *
- * Validation: shape mismatch on mg/ms/mom/grad -> FAILED. Empty tensor ->
- * SUCCESS fast path with blockDim 1. No scalar-form / dtype-uniformity checks
- * (mirrors the actual tiling impl, which intentionally omits them).
+ * Validation: shape or dtype mismatch on mg/ms/mom/grad -> FAILED. Scalar inputs
+ * lr/rho/momentum/epsilon must have a rank-0 storage shape or a 1-element {1}
+ * storage shape (GE normalizes rank-0 tensors to {1}) -> otherwise FAILED.
+ * Receiver dtype outside {FP16, FP32, BF16} -> FAILED. use_locking is accepted
+ * both as false and true (informational only). Empty tensor -> SUCCESS fast path
+ * with blockDim 1.
  */
 
 #include <gtest/gtest.h>
@@ -91,7 +94,19 @@ struct ApplyCenteredRMSPropTilingResult {
     int32_t scalarsValid;
 };
 
+// use_locking attr probing: ABSENT keeps the historical UT form (no NodeAttrs,
+// i.e. context->GetAttrs() == nullptr); the other two inject an explicit bool.
+constexpr int32_t LOCKING_ATTR_ABSENT = -1;
+constexpr int32_t LOCKING_ATTR_FALSE = 0;
+constexpr int32_t LOCKING_ATTR_TRUE = 1;
+
 // Per-input shape overrides; dtype override allows mixed-dtype probes.
+//
+// The four *StorageShape members are optional overrides of the *storage* shape of
+// the scalar inputs lr/rho/momentum/epsilon: an empty list keeps the legacy
+// behaviour of reusing the origin shape above. They exist because GE normalizes a
+// rank-0 tensor to storage shape {1} while the origin shape stays {}, a form the
+// TilingContextFaker cannot express through lrShape/rhoShape/... alone.
 struct ApplyCenteredRMSPropTilingArgs {
     std::initializer_list<int64_t> varShape;
     std::initializer_list<int64_t> mgShape;
@@ -104,7 +119,23 @@ struct ApplyCenteredRMSPropTilingArgs {
     std::initializer_list<int64_t> gradShape;
     ge::DataType tensorDtype;
     ge::Format inputFormat;
+    std::initializer_list<int64_t> lrStorageShape;
+    std::initializer_list<int64_t> rhoStorageShape;
+    std::initializer_list<int64_t> momentumStorageShape;
+    std::initializer_list<int64_t> epsilonStorageShape;
+    int32_t lockingAttr = LOCKING_ATTR_ABSENT;
 };
+
+// Build a StorageShape whose storage shape is overridden when the caller supplied
+// one, and equals the origin shape otherwise.
+static gert::StorageShape MakeStorageShape(const std::initializer_list<int64_t>& originShape,
+                                           const std::initializer_list<int64_t>& storageShapeOverride)
+{
+    if (storageShapeOverride.size() == 0U) {
+        return gert::StorageShape(originShape, originShape);
+    }
+    return gert::StorageShape(originShape, storageShapeOverride);
+}
 
 static ApplyCenteredRMSPropTilingResult DoTilingCase(const ApplyCenteredRMSPropTilingArgs& args)
 {
@@ -137,36 +168,37 @@ static ApplyCenteredRMSPropTilingResult DoTilingCase(const ApplyCenteredRMSPropT
     gert::StorageShape mgStorage = {args.mgShape, args.mgShape};
     gert::StorageShape msStorage = {args.msShape, args.msShape};
     gert::StorageShape momStorage = {args.momShape, args.momShape};
-    gert::StorageShape lrStorage = {args.lrShape, args.lrShape};
-    gert::StorageShape rhoStorage = {args.rhoShape, args.rhoShape};
-    gert::StorageShape momentumStorage = {args.momentumShape, args.momentumShape};
-    gert::StorageShape epsilonStorage = {args.epsilonShape, args.epsilonShape};
+    gert::StorageShape lrStorage = MakeStorageShape(args.lrShape, args.lrStorageShape);
+    gert::StorageShape rhoStorage = MakeStorageShape(args.rhoShape, args.rhoStorageShape);
+    gert::StorageShape momentumStorage = MakeStorageShape(args.momentumShape, args.momentumStorageShape);
+    gert::StorageShape epsilonStorage = MakeStorageShape(args.epsilonShape, args.epsilonStorageShape);
     gert::StorageShape gradStorage = {args.gradShape, args.gradShape};
 
     ApplyCenteredRMSPropUtCompileInfo compileInfo;
 
-    auto holder = gert::TilingContextFaker()
-                      .SetOpType(opType)
-                      .NodeIoNum(9, 1)
-                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&varStorage, &mgStorage, &msStorage, &momStorage, &lrStorage, &rhoStorage,
-                                    &momentumStorage, &epsilonStorage, &gradStorage})
-                      .OutputShapes({&varStorage})
-                      .CompileInfo(&compileInfo)
-                      .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
-                      .NodeInputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat)  // var
-                      .NodeInputTd(1, args.tensorDtype, args.inputFormat, args.inputFormat)  // mg
-                      .NodeInputTd(2, args.tensorDtype, args.inputFormat, args.inputFormat)  // ms
-                      .NodeInputTd(3, args.tensorDtype, args.inputFormat, args.inputFormat)  // mom
-                      .NodeInputTd(4, args.tensorDtype, args.inputFormat, args.inputFormat)  // lr
-                      .NodeInputTd(5, args.tensorDtype, args.inputFormat, args.inputFormat)  // rho
-                      .NodeInputTd(6, args.tensorDtype, args.inputFormat, args.inputFormat)  // momentum
-                      .NodeInputTd(7, args.tensorDtype, args.inputFormat, args.inputFormat)  // epsilon
-                      .NodeInputTd(8, args.tensorDtype, args.inputFormat, args.inputFormat)  // grad
-                      .NodeOutputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat) // var
-                      .TilingData(param.get())
-                      .Workspace(ws_size)
-                      .Build();
+    gert::TilingContextFaker faker;
+    faker.SetOpType(opType)
+        .NodeIoNum(9, 1)
+        .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
+        .InputShapes({&varStorage, &mgStorage, &msStorage, &momStorage, &lrStorage, &rhoStorage, &momentumStorage,
+                      &epsilonStorage, &gradStorage})
+        .OutputShapes({&varStorage})
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
+        .NodeInputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat)   // var
+        .NodeInputTd(1, args.tensorDtype, args.inputFormat, args.inputFormat)   // mg
+        .NodeInputTd(2, args.tensorDtype, args.inputFormat, args.inputFormat)   // ms
+        .NodeInputTd(3, args.tensorDtype, args.inputFormat, args.inputFormat)   // mom
+        .NodeInputTd(4, args.tensorDtype, args.inputFormat, args.inputFormat)   // lr
+        .NodeInputTd(5, args.tensorDtype, args.inputFormat, args.inputFormat)   // rho
+        .NodeInputTd(6, args.tensorDtype, args.inputFormat, args.inputFormat)   // momentum
+        .NodeInputTd(7, args.tensorDtype, args.inputFormat, args.inputFormat)   // epsilon
+        .NodeInputTd(8, args.tensorDtype, args.inputFormat, args.inputFormat)   // grad
+        .NodeOutputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat); // var
+    if (args.lockingAttr != LOCKING_ATTR_ABSENT) {
+        faker.NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(args.lockingAttr == LOCKING_ATTR_TRUE)}});
+    }
+    auto holder = faker.TilingData(param.get()).Workspace(ws_size).Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     EXPECT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -197,6 +229,36 @@ static ApplyCenteredRMSPropTilingResult DoValidCase(const std::initializer_list<
     ApplyCenteredRMSPropTilingArgs args{tensorShape, tensorShape, tensorShape, tensorShape, {},           {},
                                         {},          {},          tensorShape, tensorDtype, ge::FORMAT_ND};
     return DoTilingCase(args);
+}
+
+// Build a case where the four scalar inputs carry their own origin/storage shapes
+// and an optional use_locking attribute. An empty storage list means "same as the
+// origin list"; pass an empty origin list for a rank-0 origin.
+static ApplyCenteredRMSPropTilingResult DoScalarCase(const std::initializer_list<int64_t>& tensorShape,
+                                                     const std::initializer_list<int64_t>& scalarOrigin,
+                                                     const std::initializer_list<int64_t>& lrStorageShape,
+                                                     const std::initializer_list<int64_t>& rhoStorageShape,
+                                                     const std::initializer_list<int64_t>& momentumStorageShape,
+                                                     const std::initializer_list<int64_t>& epsilonStorageShape,
+                                                     int32_t lockingAttr, ge::DataType tensorDtype = ge::DT_FLOAT)
+{
+    ApplyCenteredRMSPropTilingArgs args{tensorShape,     tensorShape,          tensorShape,         tensorShape,
+                                        scalarOrigin,    scalarOrigin,         scalarOrigin,        scalarOrigin,
+                                        tensorShape,     tensorDtype,          ge::FORMAT_ND,       lrStorageShape,
+                                        rhoStorageShape, momentumStorageShape, epsilonStorageShape, lockingAttr};
+    return DoTilingCase(args);
+}
+
+// Same as above but all four scalars share one origin/storage pair (the TF path and
+// the in-repo GEIR example both give all four the same form).
+static ApplyCenteredRMSPropTilingResult DoUniformScalarCase(const std::initializer_list<int64_t>& tensorShape,
+                                                            const std::initializer_list<int64_t>& scalarOrigin,
+                                                            const std::initializer_list<int64_t>& scalarStorage,
+                                                            int32_t lockingAttr,
+                                                            ge::DataType tensorDtype = ge::DT_FLOAT)
+{
+    return DoScalarCase(tensorShape, scalarOrigin, scalarStorage, scalarStorage, scalarStorage, scalarStorage,
+                        lockingAttr, tensorDtype);
 }
 
 // T01 FP32 small shape
@@ -333,4 +395,165 @@ TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_rank_8)
     auto r = DoValidCase({2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT);
     ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(r.totalNum, 256);
+}
+
+// ---------------------------------------------------------------------------
+// T18-T33 Scalar-form and use_locking coverage (RC-1 / RC-2 of the issue).
+//
+// Real graph paths hand the tiling function shapes the TilingContextFaker cannot
+// express through the origin shape alone:
+//   * TF path (_001 / _061): origin {} but GE-normalized storage {1};
+//   * in-repo GEIR example:  origin {1} / storage {1}.
+// Before the fix the tiling only accepted storage rank 0, so both forms were
+// rejected at apply_centered_rms_prop_tiling_arch35.cpp:128.
+// ---------------------------------------------------------------------------
+
+// T18 TF form (origin 0-D, storage {1}), no use_locking attr -> SUCCESS.
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_tf_form_no_attr)
+{
+    auto r = DoUniformScalarCase({256}, {}, {1}, LOCKING_ATTR_ABSENT);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 256);
+}
+
+// T19 TF form + use_locking=false -> SUCCESS.
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_tf_form_locking_false)
+{
+    auto r = DoUniformScalarCase({256}, {}, {1}, LOCKING_ATTR_FALSE);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 256);
+}
+
+// T20 TF form + use_locking=true -> SUCCESS (issue case _001 form: RC-1 + RC-2).
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_tf_form_locking_true)
+{
+    auto r = DoUniformScalarCase({256}, {}, {1}, LOCKING_ATTR_TRUE);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 256);
+}
+
+// T21 GEIR example form (origin {1}, storage {1}), no attr -> SUCCESS (RC-1).
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_geir_1d_no_attr)
+{
+    auto r = DoUniformScalarCase({256}, {1}, {}, LOCKING_ATTR_ABSENT);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 256);
+}
+
+// T22 GEIR 1-D form + use_locking=true -> SUCCESS.
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_geir_1d_locking_true)
+{
+    auto r = DoUniformScalarCase({256}, {1}, {}, LOCKING_ATTR_TRUE);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 256);
+}
+
+// T23 0-D storage (legacy faker form) + use_locking=true -> SUCCESS (RC-2 alone).
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_0d_locking_true)
+{
+    auto r = DoUniformScalarCase({256}, {}, {}, LOCKING_ATTR_TRUE);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 256);
+}
+
+// T24 0-D storage + use_locking=false -> SUCCESS.
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_0d_locking_false)
+{
+    auto r = DoUniformScalarCase({256}, {}, {}, LOCKING_ATTR_FALSE);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 256);
+}
+
+// T25 TF form with a 1-element var (size-1 boundary) -> SUCCESS.
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_tf_form_var_size1)
+{
+    auto r = DoUniformScalarCase({1}, {}, {1}, LOCKING_ATTR_ABSENT);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 1);
+}
+
+// T26 TF form with an empty var -> SUCCESS fast path (totalNum == 0).
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_tf_form_empty_var)
+{
+    auto r = DoUniformScalarCase({0}, {}, {1}, LOCKING_ATTR_ABSENT);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 0);
+}
+
+// T27 TF form with fp16 (issue dtype) -> SUCCESS.
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_tf_form_fp16)
+{
+    auto r = DoUniformScalarCase({2048}, {}, {1}, LOCKING_ATTR_TRUE, ge::DT_FLOAT16);
+    ASSERT_EQ(r.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(r.totalNum, 2048);
+}
+
+// T28-T31 Multi-element scalar storage is still rejected, checked per input index
+// (lr=4, rho=5, momentum=6, epsilon=7).
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_lr_storage_2_rejected)
+{
+    auto r = DoScalarCase({256}, {}, {2}, {}, {}, {}, LOCKING_ATTR_ABSENT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_rho_storage_2_rejected)
+{
+    auto r = DoScalarCase({256}, {}, {}, {2}, {}, {}, LOCKING_ATTR_ABSENT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_momentum_storage_2_rejected)
+{
+    auto r = DoScalarCase({256}, {}, {}, {}, {2}, {}, LOCKING_ATTR_ABSENT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_epsilon_storage_2_rejected)
+{
+    auto r = DoScalarCase({256}, {}, {}, {}, {}, {2}, LOCKING_ATTR_ABSENT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+// T32 rank-2 (1,1) scalar storage is rejected (rank > 1 is never a scalar).
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_storage_1x1_rejected)
+{
+    auto r = DoUniformScalarCase({256}, {}, {1, 1}, LOCKING_ATTR_ABSENT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+// T33 rank-2 (1,2) scalar storage is rejected (not a single element).
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_scalar_storage_1x2_rejected)
+{
+    auto r = DoUniformScalarCase({256}, {}, {1, 2}, LOCKING_ATTR_ABSENT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+// T34 int64 dimension-product overflow (GetShapeSize returns kInvalidDimValue)
+// must be rejected instead of publishing a negative block split.
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_overflow_shape_rejected)
+{
+    auto r = DoValidCase({4294967296, 4294967296}, ge::DT_FLOAT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+// T35-T36 Non-concrete dims whose product stays positive must be rejected per
+// dimension: GetShapeSize() is a plain product, so [-1, -1] reads as 1 element
+// and [-2, -2] as 4, which would otherwise be tiled as a concrete 1/4-element
+// tensor while the kernel only updates the first few elements.
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_unknown_dims_pair_rejected)
+{
+    auto r = DoValidCase({-1, -1}, ge::DT_FLOAT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_unknown_dims_minus_two_pair_rejected)
+{
+    auto r = DoValidCase({-2, -2}, ge::DT_FLOAT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestApplyCenteredRMSPropTiling, apply_centered_rms_prop_single_unknown_dim_rejected)
+{
+    auto r = DoValidCase({256, -1}, ge::DT_FLOAT);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
 }
