@@ -81,6 +81,8 @@
 - y_grad和features的数据类型必须相同。
 - y_grad和features的shape必须满足广播规则，广播后的rank不超过8。
 - 支持空Tensor（元素数为0时返回空输出）。
+- y_grad、features、x_grad仅支持ND格式。
+- negative_slope、scale取值范围为[-1e38, 1e38]，不支持Inf、NaN。
 
 ## 调用说明
 

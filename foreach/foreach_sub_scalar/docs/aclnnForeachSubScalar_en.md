@@ -46,7 +46,7 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
 aclnnStatus aclnnForeachSubScalarGetWorkspaceSize(
   const aclTensorList      *x,
   const aclTensor          *scalar,
-  const aclTensorList      *out,
+  aclTensorList            *out,
   uint64_t                 *workspaceSize,
   aclOpExecutor           **executor)
 ```
@@ -109,7 +109,7 @@ aclnnStatus aclnnForeachSubScalar(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list indicating subtraction, corresponding to `y` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type and data format are the same as those of input `x`, and the shape size is greater than or equal to the shape size of `x`.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type and data format are the same as those of input `x`, and the shape size is equal to the shape size of `x`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -163,15 +163,13 @@ aclnnStatus aclnnForeachSubScalar(
       <td>x, scalar, and out are null pointers.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>The data types of x, scalar, and out are not within the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td></tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="4">561002</td>
       <td>The shapes of x and out do not meet the constraints.</td>
     </tr>
     <tr>
@@ -180,6 +178,17 @@ aclnnStatus aclnnForeachSubScalar(
       <td>The dimensions of the tensors in x or out exceed 8.</td></tr>
     <tr>
       <td>The number of elements in scalar is not 1.</td>
+    </tr>
+    <tr>
+      <td>The number of tensors in x is different from that in out.</td>
+    </tr>
+    <tr>
+      <td>A null pointer tensor exists in the tensor list of x or out.</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>The number of tensors in a single tensor list of x or out exceeds 256.</td>
     </tr>
   </tbody></table>
 
@@ -228,6 +237,8 @@ aclnnStatus aclnnForeachSubScalar(
 
 ## Constraints
 
+- The number of tensors in a single tensor list of x/out cannot exceed 256.
+- If x and out contain 0 tensors (empty list), the API directly returns success without computation.
 - Deterministic computation:
   - aclnnForeachSubScalar defaults to a deterministic implementation.
 

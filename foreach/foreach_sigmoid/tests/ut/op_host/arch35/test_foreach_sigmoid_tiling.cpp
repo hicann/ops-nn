@@ -35,7 +35,8 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachSigmoidTilingTest TearDown" << std::endl; }
 };
 
-static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint64_t expectKey)
+static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dtX, std::initializer_list<int64_t> yShape,
+                   ge::DataType dtY, ge::graphStatus expectStatus, uint64_t expectKey = 0)
 {
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
     string compile_info_string = R"({
@@ -85,7 +86,7 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     ASSERT_EQ(tilingParseFn(kh.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     gert::StorageShape xS = {xShape, xShape};
-    gert::StorageShape yS = {xShape, xShape};
+    gert::StorageShape yS = {yShape, yShape};
     auto param = gert::TilingData::CreateCap(4096);
     auto wsh = gert::ContinuousVector::Create<size_t>(4096);
     auto th = gert::TilingContextFaker()
@@ -95,8 +96,8 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
                   .OutputShapes({&yS})
                   .CompileInfo(&ci)
                   .PlatformInfo(reinterpret_cast<char*>(&pf))
-                  .NodeInputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .NodeOutputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeInputTd(0, dtX, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeOutputTd(0, dtY, ge::FORMAT_ND, ge::FORMAT_ND)
                   .TilingData(param.get())
                   .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
                   .Build();
@@ -105,12 +106,43 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     ctx->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-    EXPECT_EQ(tilingFn(ctx), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+    EXPECT_EQ(tilingFn(ctx), expectStatus);
+    if (expectStatus == ge::GRAPH_SUCCESS) {
+        EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+    }
 }
 
-TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_float16) { DoCase({4, 4}, ge::DT_FLOAT16, 0); }
+TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_float16)
+{
+    DoCase({4, 4}, ge::DT_FLOAT16, {4, 4}, ge::DT_FLOAT16, ge::GRAPH_SUCCESS, 0);
+}
 
-TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_float32) { DoCase({4, 4}, ge::DT_FLOAT, 1); }
+TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_float32)
+{
+    DoCase({4, 4}, ge::DT_FLOAT, {4, 4}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, 1);
+}
 
-TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_bfloat16) { DoCase({4, 4}, ge::DT_BF16, 2); }
+TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_bfloat16)
+{
+    DoCase({4, 4}, ge::DT_BF16, {4, 4}, ge::DT_BF16, ge::GRAPH_SUCCESS, 2);
+}
+
+TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_out_shape_mismatch)
+{
+    DoCase({4, 4}, ge::DT_FLOAT, {4, 5}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_out_dtype_mismatch)
+{
+    DoCase({4, 4}, ge::DT_FLOAT, {4, 4}, ge::DT_FLOAT16, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_unsupported_dtype)
+{
+    DoCase({4, 4}, ge::DT_INT8, {4, 4}, ge::DT_INT8, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachSigmoidTilingTest, foreach_sigmoid_dim_exceed)
+{
+    DoCase({2, 2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT, {2, 2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}

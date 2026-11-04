@@ -18,6 +18,7 @@
 #include <iostream>
 #include <string>
 #include <cstdint>
+#include <cstdlib>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "../../../../foreach_abs/tests/ut/op_kernel/foreach_abs_tiling_function.h"
@@ -31,13 +32,20 @@ protected:
     static void TearDownTestCase() { std::cout << "foreach_sigmoid_test TearDown\n" << std::endl; }
 };
 
+// 数据脚本与比较脚本的退出码必须 gate 用例，否则比较结果被丢弃、数值不符也会 PASS
+#define RUN_SCRIPT(cmd, expectDesc)                                                     \
+    do {                                                                                \
+        int rc = std::system(cmd);                                                      \
+        ASSERT_EQ(rc, 0) << (expectDesc) << " failed: cmd=[" << (cmd) << "] rc=" << rc; \
+    } while (false)
+
 TEST_F(foreach_sigmoid_test, test_case_float_1)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
     system("cp -rf "
            "../../../../foreach/foreach_sigmoid/tests/ut/op_kernel/sigmoid_data ./");
     system("chmod -R 755 ./sigmoid_data/");
-    system("cd ./sigmoid_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float32'");
+    RUN_SCRIPT("cd ./sigmoid_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float32'", "gen_data");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 4;
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
@@ -61,7 +69,7 @@ TEST_F(foreach_sigmoid_test, test_case_float_1)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./sigmoid_data/ && python3 compare_data.py 'float32'");
+    RUN_SCRIPT("cd ./sigmoid_data/ && python3 compare_data.py 'float32'", "compare_data");
 }
 
 TEST_F(foreach_sigmoid_test, test_case_float16_2)
@@ -70,7 +78,7 @@ TEST_F(foreach_sigmoid_test, test_case_float16_2)
     system("cp -rf "
            "../../../../foreach/foreach_sigmoid/tests/ut/op_kernel/sigmoid_data ./");
     system("chmod -R 755 ./sigmoid_data/");
-    system("cd ./sigmoid_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float16'");
+    RUN_SCRIPT("cd ./sigmoid_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'float16'", "gen_data");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 4;
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
@@ -94,7 +102,7 @@ TEST_F(foreach_sigmoid_test, test_case_float16_2)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./sigmoid_data/ && python3 compare_data.py 'float16'");
+    RUN_SCRIPT("cd ./sigmoid_data/ && python3 compare_data.py 'float16'", "compare_data");
 }
 
 TEST_F(foreach_sigmoid_test, test_case_bfloat16_3)
@@ -103,7 +111,8 @@ TEST_F(foreach_sigmoid_test, test_case_bfloat16_3)
     system("cp -rf "
            "../../../../foreach/foreach_sigmoid/tests/ut/op_kernel/sigmoid_data ./");
     system("chmod -R 755 ./sigmoid_data/");
-    system("cd ./sigmoid_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'bfloat16_t'");
+    RUN_SCRIPT("cd ./sigmoid_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'bfloat16_t'",
+               "gen_data");
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 4;
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
@@ -127,5 +136,5 @@ TEST_F(foreach_sigmoid_test, test_case_bfloat16_3)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./sigmoid_data/ && python3 compare_data.py 'bfloat16_t'");
+    RUN_SCRIPT("cd ./sigmoid_data/ && python3 compare_data.py 'bfloat16_t'", "compare_data");
 }

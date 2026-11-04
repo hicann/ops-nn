@@ -141,6 +141,9 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
     CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
+    // self 与 out 列表长度必须一致，避免 CheckShape/CheckFormat 按 self->Size() 索引 (*out)[p] 越界读取
+    OP_CHECK_TENSORLIST_SIZE_EQUAL(self, out, return ACLNN_ERR_PARAM_INVALID);
+
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束

@@ -24,6 +24,8 @@
 #include "../../../../op_kernel/arch35/foreach_sub_scalar_tiling_data.h"
 #include "../../../../op_kernel/arch35/foreach_sub_scalar_tiling_key.h"
 
+using namespace ut_util;
+
 class foreach_sub_scalar_tiling_arch35_test : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "foreach_sub_scalar_tiling_arch35_test SetUp" << std::endl; }
@@ -36,3 +38,130 @@ TEST_F(foreach_sub_scalar_tiling_arch35_test, test_ascend950_tiling_registration
     std::string op_type("ForeachSubScalar");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
 }
+
+static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType xDt, std::initializer_list<int64_t> scalarShape,
+                   ge::DataType scalarDt, std::initializer_list<int64_t> yShape, ge::DataType yDt,
+                   ge::graphStatus expectStatus)
+{
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+    string compile_info_string = R"({
+                                    "hardware_info": {
+                                        "BT_SIZE": 0,
+                                        "load3d_constraints": "1",
+                                        "Intrinsic_fix_pipe_l0c2out": false,
+                                        "Intrinsic_data_move_l12ub": true,
+                                        "Intrinsic_data_move_l0c2ub": true,
+                                        "Intrinsic_data_move_out2l1_nd2nz": false,
+                                        "UB_SIZE": 262144,
+                                        "L2_SIZE": 33554432,
+                                        "L1_SIZE": 524288,
+                                        "L0A_SIZE": 65536,
+                                        "L0B_SIZE": 65536,
+                                        "L0C_SIZE": 131072,
+                                        "CORE_NUM": 64
+                                    }
+                                })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos pf;
+    pf.Init();
+
+    struct ForeachSubScalarCompileInfo {
+    } ci;
+    auto opType = std::string("ForeachSubScalar");
+    auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    auto tilingParseFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_NE(tilingFn, nullptr);
+    ASSERT_NE(tilingParseFn, nullptr);
+
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
+    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
+    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    ASSERT_EQ(tilingParseFn(kh.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    gert::StorageShape xS = {xShape, xShape};
+    gert::StorageShape scS = {scalarShape, scalarShape};
+    gert::StorageShape yS = {yShape, yShape};
+    auto param = gert::TilingData::CreateCap(4096);
+    auto wsh = gert::ContinuousVector::Create<size_t>(4096);
+    auto th = gert::TilingContextFaker()
+                  .NodeIoNum(2, 1)
+                  .IrInstanceNum({1, 1})
+                  .InputShapes({&xS, &scS})
+                  .OutputShapes({&yS})
+                  .CompileInfo(&ci)
+                  .PlatformInfo(reinterpret_cast<char*>(&pf))
+                  .NodeInputTd(0, xDt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeInputTd(1, scalarDt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeOutputTd(0, yDt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .TilingData(param.get())
+                  .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
+                  .Build();
+    auto* ctx = th.GetContext<gert::TilingContext>();
+    ctx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    ctx->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    ctx->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    EXPECT_EQ(tilingFn(ctx), expectStatus);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_float32)
+{
+    DoCase({4, 4}, ge::DT_FLOAT, {1}, ge::DT_FLOAT, {4, 4}, ge::DT_FLOAT, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_bf16_scalar_float)
+{
+    DoCase({4, 4}, ge::DT_BF16, {1}, ge::DT_FLOAT, {4, 4}, ge::DT_BF16, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_int32)
+{
+    DoCase({4, 4}, ge::DT_INT32, {1}, ge::DT_INT32, {4, 4}, ge::DT_INT32, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_out_shape_mismatch)
+{
+    DoCase({4, 4}, ge::DT_FLOAT, {1}, ge::DT_FLOAT, {4, 5}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_out_dtype_mismatch)
+{
+    DoCase({4, 4}, ge::DT_FLOAT, {1}, ge::DT_FLOAT, {4, 4}, ge::DT_FLOAT16, ge::GRAPH_FAILED);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_unsupported_x_dtype)
+{
+    DoCase({4, 4}, ge::DT_INT8, {1}, ge::DT_INT32, {4, 4}, ge::DT_INT8, ge::GRAPH_FAILED);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_numel_invalid)
+{
+    DoCase({4, 4}, ge::DT_FLOAT, {2}, ge::DT_FLOAT, {4, 4}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_dtype_mismatch)
+{
+    DoCase({4, 4}, ge::DT_FLOAT16, {1}, ge::DT_FLOAT, {4, 4}, ge::DT_FLOAT16, ge::GRAPH_FAILED);
+}
+
+TEST_F(foreach_sub_scalar_tiling_arch35_test, foreach_sub_scalar_dim_exceed)
+{
+    DoCase({2, 2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT, {1}, ge::DT_FLOAT, {2, 2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT,
+           ge::GRAPH_FAILED);
+}
+
+// NOTE on coverage: driving a list with >=2 tensors is not possible with the tiling-context faker
+// (it returns a nil PlatformInfo/CompileInfo for any IR input with instance num >= 2), so the
+// multi-tensor paths of ValidateForeachSubScalar (in-list dtype consistency, x/y pairing) stay
+// covered by tests/ut/op_host/test_foreach_sub_scalar_infershape.cpp and npusim/TTK cases instead.

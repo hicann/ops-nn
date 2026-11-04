@@ -97,7 +97,7 @@ aclnnStatus aclnnForeachSigmoid(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list for the Sigmoid function operation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape size is greater than or equal to the shape size of input parameter `x`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape size is equal to the shape size of input parameter `x`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -151,21 +151,30 @@ aclnnStatus aclnnForeachSigmoid(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data type of x or out is not within the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td></tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
       <td>The shapes of x and out do not meet the constraints.</td>
     </tr>
     <tr>
       <td>The data types of tensors in x or out are inconsistent.</td></tr>
     <tr>
       <td>The dimensions of tensors in x or out exceed 8.</td></tr>
+    <tr>
+      <td>The number of tensors in x is different from that in out.</td>
+    </tr>
+    <tr>
+      <td>A null pointer tensor exists in the tensor list of x or out.</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>The number of tensors in a single tensor list of x or out exceeds 256.</td>
+    </tr>
   </tbody></table>
 
 ## aclnnForeachSigmoid
@@ -213,6 +222,8 @@ aclnnStatus aclnnForeachSigmoid(
 
 ## Constraints
 
+- The number of tensors in a single tensor list of x/out cannot exceed 256.
+- If x and out contain 0 tensors (empty list), the API directly returns success without computation.
 - deterministic computation:
   - aclnnForeachSigmoid defaults to a deterministic implementation.
 

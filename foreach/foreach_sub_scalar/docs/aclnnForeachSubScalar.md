@@ -44,7 +44,7 @@
 aclnnStatus aclnnForeachSubScalarGetWorkspaceSize(
   const aclTensorList      *x,
   const aclTensor          *scalar,
-  const aclTensorList      *out,
+  aclTensorList            *out,
   uint64_t                 *workspaceSize,
   aclOpExecutor           **executor)
 ```
@@ -107,7 +107,7 @@ aclnnStatus aclnnForeachSubScalar(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示减法运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size等于入参`x`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -161,15 +161,13 @@ aclnnStatus aclnnForeachSubScalar(
       <td>传入的x、scalar、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>x、scalar、out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td></tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="4">561002</td>
       <td>x与out的shape不满足约束。</td>
     </tr>
     <tr>
@@ -178,6 +176,17 @@ aclnnStatus aclnnForeachSubScalar(
       <td>x或out中的Tensor维度超过8维。</td></tr>
     <tr>
       <td>scalar元素个数不为1。</td>
+    </tr>
+    <tr>
+      <td>x与out的Tensor数量不一致。</td>
+    </tr>
+    <tr>
+      <td>x或out的Tensor列表中存在空指针的Tensor。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>x或out中单个Tensor列表的Tensor数量超过256。</td>
     </tr>
   </tbody></table>
 
@@ -226,6 +235,8 @@ aclnnStatus aclnnForeachSubScalar(
 
 ## 约束说明
 
+- x/out中单个Tensor列表的Tensor数量不能超过256。
+- x与out数量为0（空列表）时，接口直接返回成功，不执行计算。
 - 确定性计算：
   - aclnnForeachSubScalar默认确定性实现。
 

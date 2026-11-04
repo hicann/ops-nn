@@ -20,6 +20,8 @@
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include "graph/utils/type_utils.h"
+#include <cmath>
 #include "../../op_kernel/arch35/fused_bias_leaky_relu_grad_tiling_struct.h"
 #include "../../op_kernel/arch35/fused_bias_leaky_relu_grad_struct.h"
 
@@ -308,16 +310,28 @@ static ge::graphStatus ReadContextShapes(gert::TilingContext* context, std::vect
     ge::DataType dtype1 = inputDesc1->GetDataType();
 
     if (dtype0 != dtype1) {
-        OP_LOGE(context, "dtype mismatch: y_grad=%d, features=%d (requires same dtype)", static_cast<int>(dtype0),
-                static_cast<int>(dtype1));
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "y_grad",
+                                              ge::TypeUtils::DataTypeToSerialString(dtype0).c_str(),
+                                              "The dtype of y_grad must be the same as features");
         return ge::GRAPH_FAILED;
     }
 
     dtype = dtype0;
     if (dtype != ge::DT_FLOAT16 && dtype != ge::DT_FLOAT) {
-        OP_LOGE(context, "Unsupported dtype: %d", static_cast<int>(dtype));
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y_grad",
+                                  ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "DT_FLOAT16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
+
+    auto outDesc0 = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outDesc0);
+
+    OP_CHECK_IF(
+        outDesc0->GetDataType() != dtype,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x_grad",
+                                              ge::TypeUtils::DataTypeToSerialString(outDesc0->GetDataType()).c_str(),
+                                              "The dtype of x_grad must be the same as y_grad"),
+        return ge::GRAPH_FAILED);
 
     auto toVec = [](const gert::Shape& shape) {
         std::vector<int64_t> v;
@@ -339,7 +353,9 @@ static ge::graphStatus ReadContextShapes(gert::TilingContext* context, std::vect
     size_t max_rank = std::max(rank0, rank1);
 
     if (max_rank > 8) {
-        OP_LOGE(context, "rank exceeds limit: %zu > 8", max_rank);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "y_grad", std::to_string(max_rank).c_str(),
+            "The rank of y_grad and features after broadcast should be less than or equal to 8");
         return ge::GRAPH_FAILED;
     }
 
@@ -351,8 +367,11 @@ static ge::graphStatus ReadContextShapes(gert::TilingContext* context, std::vect
             continue;
 
         if (d0 != d1 && d0 != 1 && d1 != 1) {
-            OP_LOGE(context, "broadcast incompatible at axis %zu: y_grad[%ld] vs features[%ld]", max_rank - 1 - i, d0,
-                    d1);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), "y_grad",
+                ("axis " + std::to_string(max_rank - 1 - i) + ": " + std::to_string(d0) + " vs " + std::to_string(d1))
+                    .c_str(),
+                "The shapes of y_grad and features are not broadcast-compatible");
             return ge::GRAPH_FAILED;
         }
     }
@@ -409,6 +428,16 @@ static ge::graphStatus TilingFuncFusedBiasLeakyReluGrad(gert::TilingContext* con
     float negativeSlope = (negSlopePtr != nullptr) ? *negSlopePtr : kDefaultNegativeSlope;
     const float* scalePtr = attrs->GetAttrPointer<float>(1);
     float scale = (scalePtr != nullptr) ? *scalePtr : kDefaultScale;
+
+    constexpr float kAttrValueLimit = 1.0e38f;
+    OP_CHECK_IF(std::isnan(negativeSlope) || std::isinf(negativeSlope) || std::fabs(negativeSlope) > kAttrValueLimit,
+                OP_LOGE_WITH_INVALID_ATTR(context->GetNodeName(), "negative_slope",
+                                          std::to_string(negativeSlope).c_str(), "[-1e38, 1e38]"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        std::isnan(scale) || std::isinf(scale) || std::fabs(scale) > kAttrValueLimit,
+        OP_LOGE_WITH_INVALID_ATTR(context->GetNodeName(), "scale", std::to_string(scale).c_str(), "[-1e38, 1e38]"),
+        return ge::GRAPH_FAILED);
 
     std::vector<int64_t> maximum_bro_shape;
     std::vector<std::vector<int64_t>> normal_input_shapes, normal_output_shapes;

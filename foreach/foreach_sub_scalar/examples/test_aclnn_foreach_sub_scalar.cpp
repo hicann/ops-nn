@@ -56,7 +56,12 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
     // 调用aclrtMemcpy将host侧数据复制到device侧内存上
     ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret);
+        aclrtFree(*deviceAddr);
+        *deviceAddr = nullptr;
+        return ret;
+    }
 
     // 计算连续tensor的strides
     std::vector<int64_t> strides(shape.size(), 1);
@@ -67,6 +72,12 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
+    if (*tensor == nullptr) {
+        LOG_PRINT("aclCreateTensor failed.\n");
+        aclrtFree(*deviceAddr);
+        *deviceAddr = nullptr;
+        return ACL_ERROR_FAILURE;
+    }
     return 0;
 }
 

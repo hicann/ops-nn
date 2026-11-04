@@ -26,15 +26,9 @@
 // VF fusion function: Compare(features>0) + Select(1.0/neg_slope) + Mul(y_grad) + Muls(scale)
 // ===========================================================================
 template <typename T>
-__simd_vf__ inline void FusedBiasLeakyReluGradVF(
-    __ubuf__ T* dstAddr,
-    __ubuf__ T* yGradAddr,
-    __ubuf__ T* featuresAddr,
-    uint32_t count,
-    uint32_t oneRepeatSize,
-    uint16_t repeatTimes,
-    float negativeSlope,
-    float scaleVal)
+__simd_vf__ inline void FusedBiasLeakyReluGradVF(__ubuf__ T* dstAddr, __ubuf__ T* yGradAddr, __ubuf__ T* featuresAddr,
+                                                 uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes,
+                                                 float negativeSlope, float scaleVal)
 {
     using namespace AscendC;
     using namespace AscendC::Reg;
@@ -75,8 +69,8 @@ __simd_vf__ inline void FusedBiasLeakyReluGradVF(
 
 constexpr int64_t kMaxRank = FUSED_BIAS_LEAKY_RELU_GRAD_RANK_8;
 constexpr int64_t kMaxNdDmaDims = 5;
-__aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail,
-    int64_t& start, int64_t& end)
+__aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail, int64_t& start,
+                                    int64_t& end)
 {
     if (core_id < cores_tail) {
         start = core_id * (tiles_main + 1);
@@ -87,18 +81,18 @@ __aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t
     }
 }
 
-__aicore__ inline int64_t GetUBSplitRange(
-    int64_t a_o_off, int64_t a_o, int64_t a_i, int64_t a_i_tail)
+__aicore__ inline int64_t GetUBSplitRange(int64_t a_o_off, int64_t a_o, int64_t a_i, int64_t a_i_tail)
 {
     return (a_o_off == a_o - 1) ? a_i_tail : a_i;
 }
 
-__aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro_shape,
-    int64_t rank, int64_t split_axis, int64_t a_i, int64_t a_o, int64_t* eff_coord)
+__aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro_shape, int64_t rank,
+                                            int64_t split_axis, int64_t a_i, int64_t a_o, int64_t* eff_coord)
 {
     for (int64_t d = 0; d < rank; d++)
         eff_coord[d] = 0;
-    if (a_o == 0) return false;
+    if (a_o == 0)
+        return false;
     int64_t a_o_off = flat % a_o;
     int64_t outer = flat / a_o;
     for (int64_t d = split_axis - 1; d >= 0; d--) {
@@ -109,8 +103,7 @@ __aicore__ inline bool FlatToEffectiveCoord(int64_t flat, const int64_t* max_bro
     return true;
 }
 
-__aicore__ inline int64_t CalcInputOffset(
-    const int64_t* eff_coord, const int64_t* strides, int64_t rank)
+__aicore__ inline int64_t CalcInputOffset(const int64_t* eff_coord, const int64_t* strides, int64_t rank)
 {
     int64_t offset = 0;
     for (int64_t d = 0; d < rank; d++)
@@ -118,8 +111,7 @@ __aicore__ inline int64_t CalcInputOffset(
     return offset;
 }
 
-__aicore__ inline int64_t CalcOutputOffset(
-    const int64_t* eff_coord, const int64_t* strides, int64_t rank)
+__aicore__ inline int64_t CalcOutputOffset(const int64_t* eff_coord, const int64_t* strides, int64_t rank)
 {
     int64_t offset = 0;
     for (int64_t d = 0; d < rank; d++)
@@ -127,8 +119,8 @@ __aicore__ inline int64_t CalcOutputOffset(
     return offset;
 }
 
-__aicore__ inline int64_t CalcOutputTransferCount(
-    const int64_t* output_shape, int64_t rank, int64_t split_axis, int64_t a_i_seg)
+__aicore__ inline int64_t CalcOutputTransferCount(const int64_t* output_shape, int64_t rank, int64_t split_axis,
+                                                  int64_t a_i_seg)
 {
     int64_t count = a_i_seg;
     for (int64_t d = split_axis + 1; d < rank; d++)
@@ -148,7 +140,7 @@ class FusedBiasLeakyReluGradKernel {
     AscendC::GlobalTensor<T> gmIn_[kMaxInputSlots];
     AscendC::GlobalTensor<T> gmOut_[kMaxOutputSlots];
     AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[kPhysNodes];
-    AscendC::MultiCopyParams<T, ND> nddmaParams_[kMaxInputSlots];
+    AscendC::MultiCopyParams<T, ND> nddmaParams_[kMaxInputSlots] = {};
     int64_t nddmaOuterIters_[kMaxInputSlots];
     int64_t nddma_dims_;
 
@@ -158,27 +150,23 @@ public:
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void CopyInBrc(
-        const int64_t* coord, int inputIdx, int slot, int64_t a_i_seg);
-    __aicore__ inline void CopyOutOne(
-        const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg);
-    __aicore__ inline int64_t PrepareTile(int64_t flat, int64_t start, int64_t inner_count,
-        int64_t* coord, int32_t evMTE3toMTE2, int32_t evMTE2toV);
-    __aicore__ inline void ProcessFloat32Loop(int64_t start, int64_t end,
-        int64_t inner_count, int64_t* coord,
-        int32_t evMTE2toV, int32_t evVtoMTE3, int32_t evMTE3toMTE2);
-    __aicore__ inline void ProcessFloat16Loop(int64_t start, int64_t end,
-        int64_t inner_count, int64_t* coord,
-        int32_t evMTE2toV, int32_t evVtoMTE3, int32_t evMTE3toMTE2);
+    __aicore__ inline void CopyInBrc(const int64_t* coord, int inputIdx, int slot, int64_t a_i_seg);
+    __aicore__ inline void CopyOutOne(const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg);
+    __aicore__ inline int64_t PrepareTile(int64_t flat, int64_t start, int64_t inner_count, int64_t* coord,
+                                          int32_t evMTE3toMTE2, int32_t evMTE2toV);
+    __aicore__ inline void ProcessFloat32Loop(int64_t start, int64_t end, int64_t inner_count, int64_t* coord,
+                                              int32_t evMTE2toV, int32_t evVtoMTE3, int32_t evMTE3toMTE2);
+    __aicore__ inline void ProcessFloat16Loop(int64_t start, int64_t end, int64_t inner_count, int64_t* coord,
+                                              int32_t evMTE2toV, int32_t evVtoMTE3, int32_t evMTE3toMTE2);
 };
 
 // ===========================================================================
 // Init
 // ===========================================================================
 template <typename T, int64_t RANK>
-__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::Init(
-    GM_ADDR inputs[kMaxInputSlots], GM_ADDR outputs[kMaxOutputSlots],
-    const FusedBiasLeakyReluGradTilingData<RANK>* td)
+__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::Init(GM_ADDR inputs[kMaxInputSlots],
+                                                                   GM_ADDR outputs[kMaxOutputSlots],
+                                                                   const FusedBiasLeakyReluGradTilingData<RANK>* td)
 {
     td_ = td;
 
@@ -201,20 +189,20 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::Init(
         int64_t inner = 1;
         int64_t nd = 0;
         for (int64_t d = RANK - 1; d >= k && nd < ND; d--) {
-            nddmaParams_[inp].loopInfo.loopSize[nd]      = (d == k) ? 0 : dstShape[d];
-            nddmaParams_[inp].loopInfo.loopSrcStride[nd]  = td_->input_strides[inp][d];
-            nddmaParams_[inp].loopInfo.loopDstStride[nd]  = inner;
-            nddmaParams_[inp].loopInfo.loopLpSize[nd]     = 0;
-            nddmaParams_[inp].loopInfo.loopRpSize[nd]     = 0;
+            nddmaParams_[inp].loopInfo.loopSize[nd] = (d == k) ? 0 : dstShape[d];
+            nddmaParams_[inp].loopInfo.loopSrcStride[nd] = td_->input_strides[inp][d];
+            nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
+            nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
+            nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
             inner *= (d == k) ? td_->split.a_i : dstShape[d];
             nd++;
         }
         for (; nd < ND; nd++) {
-            nddmaParams_[inp].loopInfo.loopSize[nd]      = 1;
-            nddmaParams_[inp].loopInfo.loopSrcStride[nd]  = 0;
-            nddmaParams_[inp].loopInfo.loopDstStride[nd]  = inner;
-            nddmaParams_[inp].loopInfo.loopLpSize[nd]     = 0;
-            nddmaParams_[inp].loopInfo.loopRpSize[nd]     = 0;
+            nddmaParams_[inp].loopInfo.loopSize[nd] = 1;
+            nddmaParams_[inp].loopInfo.loopSrcStride[nd] = 0;
+            nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
+            nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
+            nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
         }
         nddmaOuterIters_[inp] = 1;
         for (int64_t d = k; d < RANK - nddma_dims_; d++)
@@ -226,8 +214,8 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::Init(
 // CopyInBrc
 // ===========================================================================
 template <typename T, int64_t RANK>
-__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::CopyInBrc(
-    const int64_t* coord, int inputIdx, int slot, int64_t a_i_seg)
+__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::CopyInBrc(const int64_t* coord, int inputIdx, int slot,
+                                                                        int64_t a_i_seg)
 {
     int64_t k = td_->split.axis;
     int64_t off = CalcInputOffset(coord, td_->input_strides[inputIdx], RANK);
@@ -237,17 +225,17 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::CopyInBrc(
     int64_t k_nd = RANK - 1 - k;
     int64_t inner = 1;
     for (int64_t nd = 0; nd < ND; nd++) {
-        if (nd == k_nd) params.loopInfo.loopSize[nd] = a_i_seg;
+        if (nd == k_nd)
+            params.loopInfo.loopSize[nd] = a_i_seg;
         params.loopInfo.loopDstStride[nd] = inner;
         inner *= params.loopInfo.loopSize[nd];
     }
 
-    static constexpr AscendC::NdDmaConfig cfg = { false, AscendC::NdDmaConfig::unsetPad,
-                                                   AscendC::NdDmaConfig::unsetPad, false };
+    static constexpr AscendC::NdDmaConfig cfg = {false, AscendC::NdDmaConfig::unsetPad, AscendC::NdDmaConfig::unsetPad,
+                                                 false};
 
     if constexpr (RANK <= kMaxNdDmaDims) {
-        AscendC::DataCopy<T, ND, cfg>(
-            buf_[slot].template Get<T>(), gmIn_[inputIdx][off], params);
+        AscendC::DataCopy<T, ND, cfg>(buf_[slot].template Get<T>(), gmIn_[inputIdx][off], params);
     } else {
         AscendC::LocalTensor<T> buf = buf_[slot].template Get<T>();
         int64_t elem_base = off;
@@ -258,8 +246,7 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::CopyInBrc(
                 elem_adj += (tmp % sz) * td_->input_strides[inputIdx][d];
                 tmp /= sz;
             }
-            AscendC::DataCopy<T, ND, cfg>(
-                buf[oi * inner], gmIn_[inputIdx][elem_base + elem_adj], params);
+            AscendC::DataCopy<T, ND, cfg>(buf[oi * inner], gmIn_[inputIdx][elem_base + elem_adj], params);
         }
     }
 }
@@ -268,17 +255,16 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::CopyInBrc(
 // CopyOutOne
 // ===========================================================================
 template <typename T, int64_t RANK>
-__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::CopyOutOne(
-    const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg)
+__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::CopyOutOne(const int64_t* coord, int outputIdx, int slot,
+                                                                         int64_t a_i_seg)
 {
     int64_t off = CalcOutputOffset(coord, td_->output_strides[outputIdx], RANK);
-    int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK,
-                                          td_->split.axis, a_i_seg);
+    int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK, td_->split.axis, a_i_seg);
     AscendC::DataCopyExtParams extParams;
     extParams.blockCount = 1;
-    extParams.blockLen   = cnt * sizeof(T);
-    extParams.srcStride  = 0;
-    extParams.dstStride  = 0;
+    extParams.blockLen = cnt * sizeof(T);
+    extParams.srcStride = 0;
+    extParams.dstStride = 0;
     AscendC::DataCopyPad(gmOut_[outputIdx][off], buf_[slot].template Get<T>(), extParams);
 }
 
@@ -286,16 +272,15 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::CopyOutOne(
 // PrepareTile: common tile preamble (eliminates duplicate code)
 // ===========================================================================
 template <typename T, int64_t RANK>
-__aicore__ inline int64_t FusedBiasLeakyReluGradKernel<T, RANK>::PrepareTile(
-    int64_t flat, int64_t start, int64_t inner_count,
-    int64_t* coord, int32_t evMTE3toMTE2, int32_t evMTE2toV)
+__aicore__ inline int64_t FusedBiasLeakyReluGradKernel<T, RANK>::PrepareTile(int64_t flat, int64_t start,
+                                                                             int64_t inner_count, int64_t* coord,
+                                                                             int32_t evMTE3toMTE2, int32_t evMTE2toV)
 {
     constexpr int IN_Y_GRAD = 0, B0 = 0;
-    int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o,
-                                      td_->split.a_i, td_->split.a_i_tail);
-    FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK,
-                         td_->split.axis, td_->split.a_i, td_->split.a_o, coord);
-    if (flat != start) AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
+    int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o, td_->split.a_i, td_->split.a_i_tail);
+    FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK, td_->split.axis, td_->split.a_i, td_->split.a_o, coord);
+    if (flat != start)
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
     CopyInBrc(coord, IN_Y_GRAD, B0, a_i_seg);
     AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
     AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
@@ -306,9 +291,10 @@ __aicore__ inline int64_t FusedBiasLeakyReluGradKernel<T, RANK>::PrepareTile(
 // ProcessFloat32Loop: float32 path (direct compute, no Cast)
 // ===========================================================================
 template <typename T, int64_t RANK>
-__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::ProcessFloat32Loop(
-    int64_t start, int64_t end, int64_t inner_count, int64_t* coord,
-    int32_t evMTE2toV, int32_t evVtoMTE3, int32_t evMTE3toMTE2)
+__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::ProcessFloat32Loop(int64_t start, int64_t end,
+                                                                                 int64_t inner_count, int64_t* coord,
+                                                                                 int32_t evMTE2toV, int32_t evVtoMTE3,
+                                                                                 int32_t evMTE3toMTE2)
 {
     constexpr int B0 = 0, B1 = 1, B2 = 2;
     constexpr int IN_FEATURES = 1, OUT_X_GRAD = 0;
@@ -323,11 +309,10 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::ProcessFloat32Loop
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
 
         uint16_t repeatTimes = static_cast<uint16_t>((count + VL - 1) / VL);
-        asc_vf_call<FusedBiasLeakyReluGradVF<float>>(
-            (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-            (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-            (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
-            count, VL, repeatTimes, td_->negative_slope, td_->scale);
+        asc_vf_call<FusedBiasLeakyReluGradVF<float>>((__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
+                                                     (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                                     (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
+                                                     count, VL, repeatTimes, td_->negative_slope, td_->scale);
 
         AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
         AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
@@ -341,22 +326,21 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::ProcessFloat32Loop
 // ProcessFloat16Loop: fp16 path (Cast->VF->Cast)
 // ===========================================================================
 template <typename T, int64_t RANK>
-__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::ProcessFloat16Loop(
-    int64_t start, int64_t end, int64_t inner_count, int64_t* coord,
-    int32_t evMTE2toV, int32_t evVtoMTE3, int32_t evMTE3toMTE2)
+__aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::ProcessFloat16Loop(int64_t start, int64_t end,
+                                                                                 int64_t inner_count, int64_t* coord,
+                                                                                 int32_t evMTE2toV, int32_t evVtoMTE3,
+                                                                                 int32_t evMTE3toMTE2)
 {
     constexpr int B0 = 0, B1 = 1, B2 = 2;
     constexpr int IN_FEATURES = 1, OUT_X_GRAD = 0;
     constexpr uint32_t VL_F32 = AscendC::GetVecLen() / sizeof(float);
-    int32_t evVtoMTE2 = static_cast<int32_t>(
-        GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
+    int32_t evVtoMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
 
     for (int64_t flat = start; flat < end; flat++) {
         int64_t a_i_seg = PrepareTile(flat, start, inner_count, coord, evMTE3toMTE2, evMTE2toV);
         int64_t count = a_i_seg * inner_count;
 
-        AscendC::Cast(buf_[B1].template Get<float>(), buf_[B0].template Get<T>(),
-                      AscendC::RoundMode::CAST_NONE, count);
+        AscendC::Cast(buf_[B1].template Get<float>(), buf_[B0].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
         AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
         AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
 
@@ -364,20 +348,17 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::ProcessFloat16Loop
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
 
-        AscendC::Cast(buf_[B2].template Get<float>(), buf_[B0].template Get<T>(),
-                      AscendC::RoundMode::CAST_NONE, count);
+        AscendC::Cast(buf_[B2].template Get<float>(), buf_[B0].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
         AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
         AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
 
         uint16_t repeatTimes = static_cast<uint16_t>((count + VL_F32 - 1) / VL_F32);
-        asc_vf_call<FusedBiasLeakyReluGradVF<float>>(
-            (__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
-            (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
-            (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-            count, VL_F32, repeatTimes, td_->negative_slope, td_->scale);
+        asc_vf_call<FusedBiasLeakyReluGradVF<float>>((__ubuf__ float*)buf_[B0].template Get<float>().GetPhyAddr(),
+                                                     (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
+                                                     (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
+                                                     count, VL_F32, repeatTimes, td_->negative_slope, td_->scale);
 
-        AscendC::Cast(buf_[B1].template Get<T>(), buf_[B0].template Get<float>(),
-                      AscendC::RoundMode::CAST_RINT, count);
+        AscendC::Cast(buf_[B1].template Get<T>(), buf_[B0].template Get<float>(), AscendC::RoundMode::CAST_RINT, count);
         AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
         AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
         CopyOutOne(coord, OUT_X_GRAD, B1, a_i_seg);
@@ -392,16 +373,12 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::ProcessFloat16Loop
 template <typename T, int64_t RANK>
 __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::Process()
 {
-    int32_t evMTE2toV    = static_cast<int32_t>(
-        GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
-    int32_t evVtoMTE3    = static_cast<int32_t>(
-        GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
-    int32_t evMTE3toMTE2 = static_cast<int32_t>(
-        GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
+    int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
+    int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
+    int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
 
     int64_t start, end;
-    GetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tiles_main,
-                 td_->multicore.cores_tail, start, end);
+    GetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tiles_main, td_->multicore.cores_tail, start, end);
 
     int64_t inner_count = 1;
     for (int64_t d = td_->split.axis + 1; d < RANK; d++)
@@ -410,10 +387,8 @@ __aicore__ inline void FusedBiasLeakyReluGradKernel<T, RANK>::Process()
     int64_t coord[kMaxRank] = {};
 
     if constexpr (std::is_same_v<T, float>) {
-        ProcessFloat32Loop(start, end, inner_count, coord,
-                           evMTE2toV, evVtoMTE3, evMTE3toMTE2);
+        ProcessFloat32Loop(start, end, inner_count, coord, evMTE2toV, evVtoMTE3, evMTE3toMTE2);
     } else {
-        ProcessFloat16Loop(start, end, inner_count, coord,
-                           evMTE2toV, evVtoMTE3, evMTE3toMTE2);
+        ProcessFloat16Loop(start, end, inner_count, coord, evMTE2toV, evVtoMTE3, evMTE3toMTE2);
     }
 }
