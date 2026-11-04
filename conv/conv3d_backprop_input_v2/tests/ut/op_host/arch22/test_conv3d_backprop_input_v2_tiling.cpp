@@ -29,6 +29,7 @@
 #include "register/op_impl_registry.h"
 #include "../../../../../common/op_host/op_tiling/conv_platform_util.h"
 #include "test_cube_util.h"
+#include "../../../../op_host/op_tiling/common/conv_backprop_input_context_utils_internal.h"
 
 #define SUCCESS 0
 
@@ -1296,3 +1297,48 @@ INSTANTIATE_TEST_CASE_P(MilanBinary2, Conv3DBackpropInputV2TilingRunTime2,
                         testing::ValuesIn(general_24_core_num_cases_params));
 
 } // namespace
+
+TEST(FrameworkAttrsContract, InputImplMode)
+{
+    (void)error_message::ErrMgrInit(error_message::ErrorMessageMode::INTERNAL_MODE);
+    (void)error_message::GetErrMgrRawErrorMessages();
+    // A real framework context with no ComputeNodeInfo models the broken framework contract.
+    gert::TilingContext contextStorage{};
+    auto context = &contextStorage;
+    ASSERT_EQ(context->GetAttrs(), nullptr);
+    Ops::NN::Conv::Conv3dBpInputV2RunInfo info{};
+    EXPECT_FALSE(
+        Ops::NN::Conv::GetImplMode(info, "Conv3DBackpropInputV2", context, optiling::OpTypeV2::kConv3DBackpropInputV2));
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    ASSERT_EQ(errors.size(), 1U);
+    ASSERT_NE(errors[0].error_id, nullptr);
+    EXPECT_STREQ(errors[0].error_id.get(), "EZ9999");
+    ASSERT_NE(errors[0].error_message, nullptr);
+    const std::string message(errors[0].error_message.get());
+    EXPECT_NE(message.find("GetImplMode"), std::string::npos) << message;
+    EXPECT_NE(message.find("ComputeNodeInfo"), std::string::npos) << message;
+    EXPECT_NE(message.find("RuntimeAttrs"), std::string::npos) << message;
+    EXPECT_TRUE(error_message::GetErrMgrRawErrorMessages().empty());
+}
+
+TEST(FrameworkAttrsContract, InputTranspose)
+{
+    (void)error_message::ErrMgrInit(error_message::ErrorMessageMode::INTERNAL_MODE);
+    (void)error_message::GetErrMgrRawErrorMessages();
+    // A real framework context with no ComputeNodeInfo models the broken framework contract.
+    gert::TilingContext contextStorage{};
+    auto context = &contextStorage;
+    ASSERT_EQ(context->GetAttrs(), nullptr);
+
+    EXPECT_FALSE(Ops::NN::Conv::CheckTranspose("Conv3DTranspose", context));
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    ASSERT_EQ(errors.size(), 1U);
+    ASSERT_NE(errors[0].error_id, nullptr);
+    EXPECT_STREQ(errors[0].error_id.get(), "EZ9999");
+    ASSERT_NE(errors[0].error_message, nullptr);
+    const std::string message(errors[0].error_message.get());
+    EXPECT_NE(message.find("CheckTranspose"), std::string::npos) << message;
+    EXPECT_NE(message.find("ComputeNodeInfo"), std::string::npos) << message;
+    EXPECT_NE(message.find("RuntimeAttrs"), std::string::npos) << message;
+    EXPECT_TRUE(error_message::GetErrMgrRawErrorMessages().empty());
+}
