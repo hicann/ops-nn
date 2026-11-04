@@ -42,7 +42,7 @@
 ```Cpp
 aclnnStatus aclnnForeachCoshGetWorkspaceSize(
   const aclTensorList *x,
-  const aclTensorList *out,
+  aclTensorList *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -85,7 +85,7 @@ aclnnStatus aclnnForeachCosh(
       <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行双曲余弦函数运算的输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>TensorList成员数量上限为256。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnForeachCosh(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行双曲余弦函数运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，`x`与`out`的列表成员数量必须相等，逐成员shape需与入参`x`对应成员shape完全相等。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -146,19 +146,20 @@ aclnnStatus aclnnForeachCosh(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x或out是空指针。</td>
+      <td>传入的x或out列表指针为空。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td>x与out的成员数量不一致。</td>
+    </tr>
+    <tr>
       <td>x与out的shape不满足约束。</td>
     </tr>
     <tr>
@@ -166,6 +167,12 @@ aclnnStatus aclnnForeachCosh(
     </tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>x或out的列表成员中存在空指针。</td>
+    </tr>
+    <tr>
+      <td>x或out使用了私有数据格式。</td>
     </tr>
   </tbody></table>
 
@@ -216,6 +223,10 @@ aclnnStatus aclnnForeachCosh(
 
 - 确定性计算：
   - aclnnForeachCosh默认确定性实现。
+- 空TensorList：`x`与`out`的成员数量为0时视为无操作，第一段接口返回成功且`workspaceSize=0`，不写入任何输出。
+- 维度：`x`与`out`中每个Tensor支持0-8维；超过8维返回161002。
+- TensorList成员上限为256。
+- 数据格式：支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW；私有格式返回161002。
 
 ## 调用示例
 
