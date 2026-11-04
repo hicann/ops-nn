@@ -10,7 +10,7 @@
 
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
-    DEPENDENCIES mat_mul_v3 fused_mat_mul
+    DEPENDENCIES mat_mul_v3 fused_mat_mul mat_mul_v2
 )
 
 add_kernel_sources(
