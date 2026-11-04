@@ -49,7 +49,7 @@ public:
 private:
     __aicore__ inline void CopyInX(int64_t nRows, int64_t rowOff, int64_t colOff, int64_t curLen);
     __aicore__ inline void CopyInWS(int64_t colOff, int64_t curLen);
-    __aicore__ inline void CopyInAS(int64_t rowOff, int64_t nRows);
+    __aicore__ inline void CopyInAS(int64_t rowOff, int64_t nRows, int64_t curLen);
     __aicore__ inline void CopyInBias(int64_t colOff, int64_t curLen);
     __aicore__ inline void CopyOutY(int64_t nRows, int64_t rowOff, int64_t colOff, int64_t curLen);
     __aicore__ inline void Compute(int64_t nRows, int64_t curLen);
@@ -62,7 +62,7 @@ private:
     template <typename dtypeCopyIn>
     __aicore__ inline void CopyInNddmaReplicateCols(TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue,
                                                     GlobalTensor<dtypeCopyIn>& inGm, int64_t paramOffset,
-                                                    int64_t paramLen);
+                                                    int64_t paramLen, int64_t nRows);
 
     TPipe pipe_;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX_;
@@ -117,7 +117,8 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
         return;
     }
 
-    int64_t alignLen = Align16(tiling_.baseLen);
+    int64_t maxTileLen = (tiling_.baseLen > tiling_.baseLenTail) ? tiling_.baseLen : tiling_.baseLenTail;
+    int64_t alignLen = Align16(maxTileLen);
     int64_t tb = tiling_.baseN * alignLen;
     pipe_.InitBuffer(inQueueX_, BUFFER_NUM, tb * sizeof(int32_t));
     pipe_.InitBuffer(inQueueWS_, BUFFER_NUM, tb * sizeof(DTYPE_WS));
@@ -187,7 +188,7 @@ template <typename dtypeCopyIn>
 __aicore__ inline void
 DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInNddmaReplicateCols(
     TQue<QuePosition::VECIN, BUFFER_NUM>& inQueue, GlobalTensor<dtypeCopyIn>& inGm, int64_t paramOffset,
-    int64_t paramLen)
+    int64_t paramLen, int64_t nRows)
 {
     auto paramLocal = inQueue.template AllocTensor<dtypeCopyIn>();
     static constexpr AscendC::MultiCopyConfig copyConfig = {false, 0, 0, false};
@@ -198,7 +199,7 @@ DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::
     int64_t alignLen = (paramLen + 15) / 16 * 16;
     mc.loopDstStride[1] = alignLen;
     mc.loopSize[0] = alignLen;
-    mc.loopSize[1] = tiling_.baseN;
+    mc.loopSize[1] = nRows;
     dtypeCopyIn constValue = 0;
     AscendC::MultiCopyParams<dtypeCopyIn, MULTI_COPY_DIM> params = {mc, constValue};
     AscendC::DataCopy<dtypeCopyIn, MULTI_COPY_DIM, copyConfig>(paramLocal, inGm[paramOffset], params);
@@ -208,9 +209,9 @@ DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::
 template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
           uint64_t HAS_ACTIVATE>
 __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HAS_BIAS, HAS_ACTIVATE>::CopyInAS(
-    int64_t rowOff, int64_t nRows)
+    int64_t rowOff, int64_t nRows, int64_t curLen)
 {
-    CopyInNddmaReplicateCols<float>(inQueueAS_, asGm_, rowOff, Align16(tiling_.baseLen));
+    CopyInNddmaReplicateCols<float>(inQueueAS_, asGm_, rowOff, Align16(curLen), nRows);
 }
 
 template <typename DTYPE_X, typename DTYPE_WS, typename DTYPE_B, typename DTYPE_Y, uint64_t HAS_BIAS,
@@ -358,7 +359,7 @@ __aicore__ inline void DequantBiasKernel<DTYPE_X, DTYPE_WS, DTYPE_B, DTYPE_Y, HA
             CopyInX(cb, batch, co, cl);
             CopyInWS(co, cl);
             if constexpr (HAS_ACTIVATE)
-                CopyInAS(gr, cb);
+                CopyInAS(gr, cb, cl);
             if constexpr (HAS_BIAS)
                 CopyInBias(co, cl);
             Compute(cb, cl);

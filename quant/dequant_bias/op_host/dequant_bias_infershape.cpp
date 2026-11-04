@@ -29,7 +29,7 @@ static constexpr int64_t SIZE_27 = 27;
 
 static ge::graphStatus InferShape4DequantBias(gert::InferShapeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin to do InferShape4AddRmsNorm");
+    OP_LOGD(context->GetNodeName(), "Begin to do InferShape4DequantBias");
 
     // get input shapes
     const gert::Shape* xShape = context->GetInputShape(IDX_0);
@@ -55,10 +55,22 @@ static ge::graphStatus InferShape4DequantBias(gert::InferShapeContext* context)
         return ge::GRAPH_FAILED;
     };
 
+    if (Ops::Base::IsUnknownRank(*xShape)) {
+        Ops::Base::SetUnknownRank(*yShape);
+        return ge::GRAPH_SUCCESS;
+    }
+
     size_t xDimNum = xShape->GetDimNum();
+    if (xDimNum != DIM_TWO) {
+        const std::string msgOpName = std::string(
+            ((context) == nullptr || (context)->GetNodeName() == nullptr ? "dequant_bias" : (context)->GetNodeName()));
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(msgOpName.c_str(), "x", std::to_string(xDimNum),
+                                                 "Dims of input x should be 2.");
+        return ge::GRAPH_FAILED;
+    }
     yShape->SetDimNum(DIM_TWO);
     for (size_t i = 0; i < DIM_TWO; i++) {
-        int64_t dim = (xDimNum == 1U) ? -1 : xShape->GetDim(i);
+        int64_t dim = xShape->GetDim(i);
         yShape->SetDim(i, dim);
     }
 
@@ -89,6 +101,12 @@ static graphStatus InferDataType4DequantBias(gert::InferDataTypeContext* context
         context->SetOutputDataType(0, DT_FLOAT16);
     } else if (outdtype == SIZE_27) {
         context->SetOutputDataType(0, DT_BF16);
+    } else {
+        const std::string msgOpName = std::string(
+            ((context) == nullptr || (context)->GetNodeName() == nullptr ? "dequant_bias" : (context)->GetNodeName()));
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(msgOpName.c_str(), "output_dtype", std::to_string(outdtype),
+                                              "Attr outputDtype should be 1 or 27.");
+        return ge::GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "End to do InferDataType4DequantBias");
     return GRAPH_SUCCESS;

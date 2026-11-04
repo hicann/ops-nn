@@ -228,6 +228,8 @@ static void DoTilingCase(int64_t numBits, bool narrowRange, const gert::StorageS
             EXPECT_GT(td.blockTailFactor, 0);
             EXPECT_LE(td.blockTailFactor, td.blockFactor);
             EXPECT_GT(td.baseLen, 0);
+            // baseLen must cover the arch35 VF full-register load width (VECTOR_REG_WIDTH/sizeof(float))
+            EXPECT_GE(td.baseLen, 64);
             // Multi-core splitting invariant: blockFactor*(numCore-1) + blockTailFactor == totalLen
             EXPECT_EQ(td.blockFactor * (td.numCore - 1) + td.blockTailFactor, td.totalLen);
         }
@@ -663,4 +665,65 @@ TEST_F(FakeQuantWithMinMaxVarsGradientTilingTest, tiling_fail_4_num_bits_negativ
     gert::StorageShape minShape = {{1}, {1}};
     gert::StorageShape maxShape = {{1}, {1}};
     DoTilingCase(-1, false, gradShape, xShape, minShape, maxShape, ge::GRAPH_FAILED);
+}
+
+// case_20: small shape totalLen=56 (< VL=64), baseLen must be clamped up to 64 so that
+// UB buffers cover the arch35 VF full-register load width
+TEST_F(FakeQuantWithMinMaxVarsGradientTilingTest, tiling_case_20_small_shape_baselen_floor)
+{
+    gert::StorageShape gradShape = {{56}, {56}};
+    gert::StorageShape xShape = {{56}, {56}};
+    gert::StorageShape minShape = {{1}, {1}};
+    gert::StorageShape maxShape = {{1}, {1}};
+    DoTilingCase(8, false, gradShape, xShape, minShape, maxShape, ge::GRAPH_SUCCESS, true);
+}
+
+// case_21: single element (totalLen=1), baseLen still clamped to 64
+TEST_F(FakeQuantWithMinMaxVarsGradientTilingTest, tiling_case_21_single_element_baselen_floor)
+{
+    gert::StorageShape gradShape = {{1}, {1}};
+    gert::StorageShape xShape = {{1}, {1}};
+    gert::StorageShape minShape = {{1}, {1}};
+    gert::StorageShape maxShape = {{1}, {1}};
+    DoTilingCase(8, false, gradShape, xShape, minShape, maxShape, ge::GRAPH_SUCCESS, true);
+}
+
+// fail_5: min concrete shape is not (1,) — rejected by tiling shape validation
+TEST_F(FakeQuantWithMinMaxVarsGradientTilingTest, tiling_fail_5_min_shape_not_one)
+{
+    gert::StorageShape gradShape = {{1024}, {1024}};
+    gert::StorageShape xShape = {{1024}, {1024}};
+    gert::StorageShape minShape = {{5}, {5}};
+    gert::StorageShape maxShape = {{1}, {1}};
+    DoTilingCase(8, false, gradShape, xShape, minShape, maxShape, ge::GRAPH_FAILED);
+}
+
+// fail_6: max concrete rank is not 1 — rejected by tiling shape validation
+TEST_F(FakeQuantWithMinMaxVarsGradientTilingTest, tiling_fail_6_max_rank_not_one)
+{
+    gert::StorageShape gradShape = {{1024}, {1024}};
+    gert::StorageShape xShape = {{1024}, {1024}};
+    gert::StorageShape minShape = {{1}, {1}};
+    gert::StorageShape maxShape = {{1, 1}, {1, 1}};
+    DoTilingCase(8, false, gradShape, xShape, minShape, maxShape, ge::GRAPH_FAILED);
+}
+
+// fail_7: gradients and x concrete shapes differ — rejected by tiling shape validation
+TEST_F(FakeQuantWithMinMaxVarsGradientTilingTest, tiling_fail_7_grad_x_shape_mismatch)
+{
+    gert::StorageShape gradShape = {{2, 3, 4}, {2, 3, 4}};
+    gert::StorageShape xShape = {{2, 3, 5}, {2, 3, 5}};
+    gert::StorageShape minShape = {{1}, {1}};
+    gert::StorageShape maxShape = {{1}, {1}};
+    DoTilingCase(8, false, gradShape, xShape, minShape, maxShape, ge::GRAPH_FAILED);
+}
+
+// case_22: min/max fed as rank-0 scalars (TF-native graphs) — accepted, mirrors InferShape
+TEST_F(FakeQuantWithMinMaxVarsGradientTilingTest, tiling_case_22_scalar_min_max)
+{
+    gert::StorageShape gradShape = {{1024}, {1024}};
+    gert::StorageShape xShape = {{1024}, {1024}};
+    gert::StorageShape minShape = {{}, {}};
+    gert::StorageShape maxShape = {{}, {}};
+    DoTilingCase(8, false, gradShape, xShape, minShape, maxShape, ge::GRAPH_SUCCESS, true);
 }

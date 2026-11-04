@@ -15,7 +15,8 @@
  * Key differences from args version:
  *  - min/max are tensor inputs, NOT read in Tiling
  *  - No CalcNudge() — nudgedMin/nudgedMax computed on Device side
- *  - Workspace = 0 (multi-core reduce via SetAtomicAdd, no workspace needed)
+ *  - Multi-core reduce via SetAtomicAdd direct to output GM; a small legacy workspace
+ *    (2 * max(numCore, 1) * sizeof(float)) is still requested but never read/written
  *  - TilingData includes numBits and narrowRange (NOT nudgedMin/nudgedMax)
  */
 
@@ -32,12 +33,17 @@ namespace optiling {
 
 constexpr size_t INPUT_GRAD_INDEX = 0;
 constexpr size_t INPUT_X_INDEX = 1;
+constexpr size_t INPUT_MIN_INDEX = 2;
+constexpr size_t INPUT_MAX_INDEX = 3;
 constexpr size_t ATTR_NUM_BITS_INDEX = 0;
 constexpr size_t ATTR_NARROW_RANGE_INDEX = 1;
 constexpr int64_t DEFAULT_BASE_LEN = 8192;
 constexpr int64_t BLOCK_ALIGN_FP32 = 8;
 constexpr int64_t BUFF_NUM = 2;
 constexpr int64_t MIN_BLOCK_FACTOR = 64;
+// arch35 VF 整寄存器装载宽度（VECTOR_REG_WIDTH 256B / sizeof(float)）：无谓词 vlds 固定读满
+// 256B，UB 单块缓冲必须不小于该宽度，否则小形状下装载越出缓冲（SAFE.01）。
+constexpr int64_t VECTOR_LEN_FP32 = 64;
 
 ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::GetCompileInfo()
 {
@@ -67,6 +73,47 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::GetOpParam()
         OP_LOGE(context_->GetNodeName(), "Invalid input shape, total len %ld.", totalLen_);
         return ge::GRAPH_FAILED;
     }
+
+    // Validate gradients and x have identical concrete storage shape; tiling runs per execution
+    // with materialized shapes, so graphs whose InferShape pass only saw descriptors are
+    // deterministically rejected here.
+    auto gradShape = context_->GetInputShape(INPUT_GRAD_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gradShape);
+    const gert::Shape& gradStorage = gradShape->GetStorageShape();
+    OP_CHECK_IF((gradStorage.GetDimNum() != shape.GetDimNum()),
+                OP_LOGE(context_->GetNodeName(),
+                        "FakeQuantWithMinMaxVarsGradient gradients and x must have identical shape, rank %zu vs %zu.",
+                        gradStorage.GetDimNum(), shape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        OP_CHECK_IF((gradStorage.GetDim(i) != shape.GetDim(i)),
+                    OP_LOGE(context_->GetNodeName(),
+                            "FakeQuantWithMinMaxVarsGradient gradients and x must have identical shape, "
+                            "dim %zu: %ld vs %ld.",
+                            i, gradStorage.GetDim(i), shape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // Validate min/max: rank-0 scalar or shape (1,); concrete storage shapes at tiling
+    // time, mirroring the InferShape acceptance (TF-native scalar min/max)
+    auto minShape = context_->GetInputShape(INPUT_MIN_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, minShape);
+    auto maxShape = context_->GetInputShape(INPUT_MAX_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, maxShape);
+    const gert::Shape& minStorage = minShape->GetStorageShape();
+    const gert::Shape& maxStorage = maxShape->GetStorageShape();
+    OP_CHECK_IF((minStorage.GetDimNum() > 1 || (minStorage.GetDimNum() == 1 && minStorage.GetDim(0) != 1)),
+                OP_LOGE(context_->GetNodeName(),
+                        "FakeQuantWithMinMaxVarsGradient min must be a scalar or have shape (1,), "
+                        "got dimNum %zu dim0 %ld.",
+                        minStorage.GetDimNum(), minStorage.GetDim(0)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((maxStorage.GetDimNum() > 1 || (maxStorage.GetDimNum() == 1 && maxStorage.GetDim(0) != 1)),
+                OP_LOGE(context_->GetNodeName(),
+                        "FakeQuantWithMinMaxVarsGradient max must be a scalar or have shape (1,), "
+                        "got dimNum %zu dim0 %ld.",
+                        maxStorage.GetDimNum(), maxStorage.GetDim(0)),
+                return ge::GRAPH_FAILED);
 
     // Validate dtypes
     auto gDesc = context_->GetInputDesc(INPUT_GRAD_INDEX);
@@ -113,16 +160,16 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::CalcTiling()
     // Approximate as 7 slots × baseLen × sizeof(float) (conservative)
     int64_t ubAvail = static_cast<int64_t>(ubSize_) - 2048;
     int64_t maxBaseLen = ubAvail / (7 * static_cast<int64_t>(sizeof(float)));
-    maxBaseLen = (maxBaseLen / BLOCK_ALIGN_FP32) * BLOCK_ALIGN_FP32;
+    maxBaseLen = (maxBaseLen / VECTOR_LEN_FP32) * VECTOR_LEN_FP32;
     if (maxBaseLen <= 0) {
         OP_LOGE(context_->GetNodeName(), "UB size %lu too small for fake_quant_with_min_max_vars_gradient.", ubSize_);
         return ge::GRAPH_FAILED;
     }
     baseLen_ = (DEFAULT_BASE_LEN < maxBaseLen) ? DEFAULT_BASE_LEN : maxBaseLen;
     if (baseLen_ > totalLen_) {
-        baseLen_ = ((totalLen_ + BLOCK_ALIGN_FP32 - 1) / BLOCK_ALIGN_FP32) * BLOCK_ALIGN_FP32;
-        if (baseLen_ == 0) {
-            baseLen_ = BLOCK_ALIGN_FP32;
+        baseLen_ = ((totalLen_ + VECTOR_LEN_FP32 - 1) / VECTOR_LEN_FP32) * VECTOR_LEN_FP32;
+        if (baseLen_ > maxBaseLen) {
+            baseLen_ = maxBaseLen;
         }
     }
 

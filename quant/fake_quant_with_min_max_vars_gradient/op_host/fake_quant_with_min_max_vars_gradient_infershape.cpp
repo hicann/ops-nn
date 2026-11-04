@@ -48,33 +48,42 @@ static graphStatus InferShapeForFakeQuantWithMinMaxVarsGradient(gert::InferShape
     OP_CHECK_NULL_WITH_CONTEXT(context, maxShape);
 
     // Validate gradients and x have identical shape
-    OP_CHECK_IF(gradShape->GetDimNum() != xShape->GetDimNum(),
-                OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
-    for (size_t i = 0; i < xShape->GetDimNum(); ++i) {
-        OP_CHECK_IF(gradShape->GetDim(i) != xShape->GetDim(i),
+    if (!Ops::Base::IsUnknownRank(*gradShape) && !Ops::Base::IsUnknownRank(*xShape)) {
+        OP_CHECK_IF(gradShape->GetDimNum() != xShape->GetDimNum(),
                     OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
+        for (size_t i = 0; i < xShape->GetDimNum(); ++i) {
+            const int64_t gradDim = gradShape->GetDim(i);
+            const int64_t xDim = xShape->GetDim(i);
+            OP_CHECK_IF(gradDim >= 0 && xDim >= 0 && gradDim != xDim,
+                        OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
+        }
     }
 
-    // Validate min and max have shape (1,)
-    OP_CHECK_IF(minShape->GetDimNum() != 1 || minShape->GetDim(0) != 1, OP_LOGE(context, "min must have shape (1,)."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(maxShape->GetDimNum() != 1 || maxShape->GetDim(0) != 1, OP_LOGE(context, "max must have shape (1,)."),
-                return ge::GRAPH_FAILED);
+    // Validate min and max: rank-0 scalar (TF-native graphs feed scalars) or shape (1,);
+    // unknown descriptors (-1/-2) are exempted and deferred to runtime as before.
+    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*minShape) &&
+                    (minShape->GetDimNum() > 1 ||
+                     (minShape->GetDimNum() == 1 && minShape->GetDim(0) >= 0 && minShape->GetDim(0) != 1)),
+                OP_LOGE(context, "min must be a scalar or have shape (1,)."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*maxShape) &&
+                    (maxShape->GetDimNum() > 1 ||
+                     (maxShape->GetDimNum() == 1 && maxShape->GetDim(0) >= 0 && maxShape->GetDim(0) != 1)),
+                OP_LOGE(context, "max must be a scalar or have shape (1,)."), return ge::GRAPH_FAILED);
 
     // Set output shapes
     gert::Shape* yShape = context->GetOutputShape(OUTPUT_IDX_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
     *yShape = *xShape; // backprops_wrt_x shape = x shape
 
+    // backprop_wrt_min/max follow the min/max input shape (aligned with the canndev
+    // baseline and TF-native semantics): scalar in -> scalar out, (1,) in -> (1,) out.
     gert::Shape* minOutShape = context->GetOutputShape(OUTPUT_IDX_MIN);
     OP_CHECK_NULL_WITH_CONTEXT(context, minOutShape);
-    minOutShape->SetDimNum(1);
-    minOutShape->SetDim(0, 1);
+    *minOutShape = *minShape;
 
     gert::Shape* maxOutShape = context->GetOutputShape(OUTPUT_IDX_MAX);
     OP_CHECK_NULL_WITH_CONTEXT(context, maxOutShape);
-    maxOutShape->SetDimNum(1);
-    maxOutShape->SetDim(0, 1);
+    *maxOutShape = *maxShape;
 
     OP_LOGI(context->GetNodeName(), "FakeQuantWithMinMaxVarsGradient output shapes: y=%s, min=%s, max=%s.",
             Ops::Base::ToString(*yShape).c_str(), Ops::Base::ToString(*minOutShape).c_str(),

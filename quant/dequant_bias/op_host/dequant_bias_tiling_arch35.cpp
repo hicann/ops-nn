@@ -18,6 +18,7 @@
 #include "tiling/tiling_api.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include <cstdint>
 
 using namespace ge;
 
@@ -54,7 +55,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
         return ge::GRAPH_FAILED);
 
     *vectorLength = Ops::Base::GetVRegSize(context);
-    OP_CHECK_IF((*vectorLength <= 0),
+    OP_CHECK_IF((*vectorLength < SIZE_FLOAT),
                 OP_LOGE(context->GetNodeName(), "Get vector Length failed, vector Length: %u",
                         static_cast<uint32_t>(*vectorLength)),
                 return ge::GRAPH_FAILED);
@@ -118,7 +119,7 @@ static void CalcUbCut(DequantBiasArch35TilingData* td, int64_t N, int64_t ubSize
         baseLenTail = N;
     }
 
-    int64_t alignLenVal = (baseLen + ALIGN_ELEM - 1) / ALIGN_ELEM * ALIGN_ELEM;
+    int64_t alignLenVal = ((baseLen > baseLenTail ? baseLen : baseLenTail) + ALIGN_ELEM - 1) / ALIGN_ELEM * ALIGN_ELEM;
     int64_t maxElemsPerRow = alignLenVal * bytesPerElem;
     int64_t baseN = (maxElemsPerRow > 0) ? (availableUB / maxElemsPerRow) : 1;
     baseN = std::min(baseN, td->blockFactor);
@@ -167,18 +168,43 @@ static ge::graphStatus DequantBiasTilingFunc(gert::TilingContext* context)
     auto xShapePtr = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
-    OP_TILING_CHECK(xShape.GetDimNum() < 2,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Dims of input should be greater than 2."),
+    OP_TILING_CHECK(xShape.GetDimNum() != 2,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Dims of input x should be 2, got %zu.",
+                                                    xShape.GetDimNum()),
                     return ge::GRAPH_FAILED);
 
     int64_t M = xShape.GetDim(0);
     int64_t N = xShape.GetDim(1);
+    OP_TILING_CHECK(
+        N > INT32_MAX,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "N of input x exceeds the supported range, N=%ld.", N),
+        return ge::GRAPH_FAILED);
+
+    auto wsShapePtr = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, wsShapePtr);
+    auto wsShape = wsShapePtr->GetStorageShape();
+    OP_TILING_CHECK(wsShape.GetShapeSize() != N,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        context->GetNodeName(), "Length of weight_scale must equal N of x, weight_scale=%ld, N=%ld.",
+                        wsShape.GetShapeSize(), N),
+                    return ge::GRAPH_FAILED);
 
     auto asShapePtr = context->GetOptionalInputShape(2);
-    bool hasActivate = (asShapePtr != nullptr);
+    bool hasActivate = (asShapePtr != nullptr) && (asShapePtr->GetStorageShape().GetShapeSize() > 0);
+    OP_TILING_CHECK(hasActivate && asShapePtr->GetStorageShape().GetShapeSize() != M,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
+                                                    "Length of activate_scale must equal M of x, activate_scale=%ld, "
+                                                    "M=%ld.",
+                                                    asShapePtr->GetStorageShape().GetShapeSize(), M),
+                    return ge::GRAPH_FAILED);
 
     auto biasShapePtr = context->GetOptionalInputShape(3);
-    bool hasBias = (biasShapePtr != nullptr);
+    bool hasBias = (biasShapePtr != nullptr) && (biasShapePtr->GetStorageShape().GetShapeSize() > 0);
+    OP_TILING_CHECK(
+        hasBias && biasShapePtr->GetStorageShape().GetShapeSize() != N,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Length of bias must equal N of x, bias=%ld, N=%ld.",
+                                        biasShapePtr->GetStorageShape().GetShapeSize(), N),
+        return ge::GRAPH_FAILED);
     ge::DataType biasDtype = ge::DT_FLOAT;
     if (hasBias) {
         auto biasDesc = context->GetOptionalInputDesc(3);

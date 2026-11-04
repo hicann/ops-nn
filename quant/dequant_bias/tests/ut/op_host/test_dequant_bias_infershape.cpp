@@ -26,7 +26,10 @@ TEST_F(DequantBias, DequantBias_infershape_case_0)
 {
     ge::op::DequantBias op;
     op.UpdateInputDesc("x", create_desc({4, 256}, ge::DT_FLOAT16));
+    op.SetAttr("output_dtype", int64_t(1));
 
-    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(InferDataTypeTest(op), ge::GRAPH_SUCCESS);
+    Runtime2TestParam param;
+    param.attrs = {"output_dtype"};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferDataTypeTest(op, param), ge::GRAPH_SUCCESS);
 }

@@ -21,6 +21,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "op_host/tiling_util.h"
 #include "util/math_util.h"
+#include <cstdint>
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
@@ -362,9 +363,16 @@ ge::graphStatus DequantBiasTiling::GetShapeAttrsInfo()
     }
 
     // 设置tilingData基本参数
-    M = xShape.GetDim(0);
-    N = xShape.GetDim(1);
-    nAlign = (N * sizeof(float) + 63) / 64 * 64 / sizeof(float); // 63, 64 , align with 64 bytes
+    const int64_t mVal = xShape.GetDim(0);
+    const int64_t nVal = xShape.GetDim(1);
+    OP_CHECK_IF(mVal > INT32_MAX || nVal > INT32_MAX,
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "x",
+                                                           std::to_string(mVal) + "," + std::to_string(nVal),
+                                                           "M and N of x must not exceed 2147483647"),
+                return ge::GRAPH_FAILED);
+    M = static_cast<uint32_t>(mVal);
+    N = static_cast<uint32_t>(nVal);
+    nAlign = std::max(Ops::Base::CeilAlign(N, 16u), 1u); // 64 字节对齐 = 16 个 float
 
     asExist = (activateScaleShape == nullptr || activateScaleShape->GetStorageShape().GetShapeSize() == 0) ? 0 : 1;
     biasExist = (biasShape == nullptr || biasShape->GetStorageShape().GetShapeSize() == 0) ? 0 : 1;
@@ -488,9 +496,9 @@ void DequantBiasTiling::TilingSplitCore()
     tilingKey_ = 10000UL;
 
     uint32_t M_ = dequantBiasTilingData.get_M();
-    uint32_t perCoreRow = Ops::Base::CeilDiv(M_, aivNum);           // 单核处理最大行
-    uint32_t needCoreNum = Ops::Base::CeilDiv(M_, perCoreRow);      // 实际使用核数
-    uint32_t set_tailCoreRow = M_ - (needCoreNum - 1) * perCoreRow; // 尾核处理行
+    uint32_t perCoreRow = std::max(Ops::Base::CeilDiv(M_, aivNum), 1u); // 单核处理最大行
+    uint32_t needCoreNum = Ops::Base::CeilDiv(M_, perCoreRow);          // 实际使用核数
+    uint32_t set_tailCoreRow = M_ - (needCoreNum - 1) * perCoreRow;     // 尾核处理行
 
     dequantBiasTilingData.set_needCoreNum(needCoreNum);
     dequantBiasTilingData.set_perCoreRow(perCoreRow);
@@ -542,8 +550,10 @@ ge::graphStatus DequantBiasTiling::TilingGradCompute()
     }
 
     uint32_t releaseUbSizeForX = aicoreParams_.ubSize - (weightScaleBuffSize + asBuffSize + biasBuffSize);
-    perCoreLoopRow = std::min(releaseUbSizeForX / inBuffSize, perCoreRow);
-    tailCoreLoopRow = std::min(releaseUbSizeForX / inBuffSize, tailCoreRow);
+    if (N <= PART_LEN) {
+        perCoreLoopRow = std::min(releaseUbSizeForX / inBuffSize, perCoreRow);
+        tailCoreLoopRow = std::min(releaseUbSizeForX / inBuffSize, tailCoreRow);
+    }
     perCoreLoops = Ops::Base::CeilDiv(perCoreRow, perCoreLoopRow);
     perCoreTailLoopRow = perCoreRow - perCoreLoopRow * (perCoreLoops - 1);
     tailCoreLoops = Ops::Base::CeilDiv(tailCoreRow, tailCoreLoopRow);

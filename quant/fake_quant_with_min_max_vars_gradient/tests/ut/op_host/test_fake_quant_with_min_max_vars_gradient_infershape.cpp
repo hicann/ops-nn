@@ -504,6 +504,126 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_fail_5_max_rank)
 }
 
 // ============================================================
+// InferShape: dynamic shape descriptor cases (unknown dim -1 / unknown rank -2)
+// ============================================================
+
+// dyn_0: min/max declared with unknown dim (-1,) — exempted, deferred to runtime
+TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_dyn_0_min_max_unknown_dim)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient"), nullptr);
+
+    gert::StorageShape gradShape = {{4, 256}, {4, 256}};
+    gert::StorageShape xShape = {{4, 256}, {4, 256}};
+    gert::StorageShape minShape = {{-1}, {-1}};
+    gert::StorageShape maxShape = {{-1}, {-1}};
+    std::vector<int64_t> outYDims, outMinDims, outMaxDims;
+
+    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
+              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outYDims.size(), 2u);
+    EXPECT_EQ(outYDims[0], 4);
+    EXPECT_EQ(outYDims[1], 256);
+    ASSERT_EQ(outMinDims.size(), 1u);
+    EXPECT_EQ(outMinDims[0], -1);
+    ASSERT_EQ(outMaxDims.size(), 1u);
+    EXPECT_EQ(outMaxDims[0], -1);
+}
+
+// dyn_1: min/max declared with unknown rank (-2,) — exempted, deferred to runtime
+TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_dyn_1_min_max_unknown_rank)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient"), nullptr);
+
+    gert::StorageShape gradShape = {{4, 256}, {4, 256}};
+    gert::StorageShape xShape = {{4, 256}, {4, 256}};
+    gert::StorageShape minShape = {{-2}, {-2}};
+    gert::StorageShape maxShape = {{-2}, {-2}};
+    std::vector<int64_t> outYDims, outMinDims, outMaxDims;
+
+    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
+              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outYDims.size(), 2u);
+    ASSERT_EQ(outMinDims.size(), 1u);
+    EXPECT_EQ(outMinDims[0], -2);
+    ASSERT_EQ(outMaxDims.size(), 1u);
+    EXPECT_EQ(outMaxDims[0], -2);
+}
+
+// dyn_2: gradients carries unknown dim, x concrete — per-dim comparison exempted, y propagates x
+TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_dyn_2_grad_unknown_dim)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient"), nullptr);
+
+    gert::StorageShape gradShape = {{-1, 256}, {-1, 256}};
+    gert::StorageShape xShape = {{4, 256}, {4, 256}};
+    gert::StorageShape minShape = {{1}, {1}};
+    gert::StorageShape maxShape = {{1}, {1}};
+    std::vector<int64_t> outYDims, outMinDims, outMaxDims;
+
+    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
+              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outYDims.size(), 2u);
+    EXPECT_EQ(outYDims[0], 4);
+    EXPECT_EQ(outYDims[1], 256);
+}
+
+// dyn_3: x declared with unknown rank (-2,) — equality check skipped, y propagates (-2,)
+TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_dyn_3_x_unknown_rank)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient"), nullptr);
+
+    gert::StorageShape gradShape = {{-2}, {-2}};
+    gert::StorageShape xShape = {{-2}, {-2}};
+    gert::StorageShape minShape = {{1}, {1}};
+    gert::StorageShape maxShape = {{1}, {1}};
+    std::vector<int64_t> outYDims, outMinDims, outMaxDims;
+
+    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
+              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outYDims.size(), 1u);
+    EXPECT_EQ(outYDims[0], -2);
+    ASSERT_EQ(outMinDims.size(), 1u);
+    EXPECT_EQ(outMinDims[0], 1);
+    ASSERT_EQ(outMaxDims.size(), 1u);
+    EXPECT_EQ(outMaxDims[0], 1);
+}
+
+// dyn_4 (guard): unknown dim on gradients does not exempt a concrete mismatch on another dim
+TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_dyn_4_guard_concrete_mismatch)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient"), nullptr);
+
+    gert::StorageShape gradShape = {{-1, 4}, {-1, 4}};
+    gert::StorageShape xShape = {{4, 256}, {4, 256}};
+    gert::StorageShape minShape = {{1}, {1}};
+    gert::StorageShape maxShape = {{1}, {1}};
+    std::vector<int64_t> outYDims, outMinDims, outMaxDims;
+
+    EXPECT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims), ge::GRAPH_FAILED);
+}
+
+// scalar_0: min/max fed as rank-0 scalars (TF-native graphs) — accepted, outputs follow
+// the input shape (scalar in -> scalar out), aligned with the canndev baseline
+TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_scalar_min_max)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient"), nullptr);
+
+    gert::StorageShape gradShape = {{4, 256}, {4, 256}};
+    gert::StorageShape xShape = {{4, 256}, {4, 256}};
+    gert::StorageShape minShape = {{}, {}};
+    gert::StorageShape maxShape = {{}, {}};
+    std::vector<int64_t> outYDims, outMinDims, outMaxDims;
+
+    ASSERT_EQ(RunInferShape(gradShape, xShape, minShape, maxShape, outYDims, outMinDims, outMaxDims),
+              ge::GRAPH_SUCCESS);
+    ASSERT_EQ(outYDims.size(), 2u);
+    EXPECT_EQ(outYDims[0], 4);
+    EXPECT_EQ(outYDims[1], 256);
+    ASSERT_EQ(outMinDims.size(), 0u);
+    ASSERT_EQ(outMaxDims.size(), 0u);
+}
+
+// ============================================================
 // InferDataType test
 // ============================================================
 
