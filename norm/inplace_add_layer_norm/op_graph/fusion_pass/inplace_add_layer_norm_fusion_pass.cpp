@@ -27,6 +27,7 @@
 #include "graph/operator_factory.h"
 #include "platform/platform_info.h"
 #include "version/ge-compiler_version.h"
+#include "norm/common/op_graph/fusion_report_utils.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 
 namespace ops {
@@ -388,7 +389,7 @@ bool RemoveOldNode(Graph& graph, GNode& oldNode, size_t inputNum)
 }
 
 // 单节点替换：建点 -> 接输入 -> 改接输出 -> 搬控制边 -> 断旧边删旧点
-bool ReplaceOneNode(Graph& graph, GNode& oldNode)
+bool ReplaceOneNode(Graph& graph, GNode& oldNode, CustomPassContext& passContext)
 {
     const size_t inputNum = oldNode.GetInputsSize();
 
@@ -404,6 +405,9 @@ bool ReplaceOneNode(Graph& graph, GNode& oldNode)
     }
     if (!RewireControlEdges(graph, oldNode, newNode)) {
         return false;
+    }
+    if (ops::fusion::ReportFuseNodes({oldNode}, {newNode}, passContext) != SUCCESS) {
+        OPS_LOG_W(kPassName.c_str(), "Failed to report fusion result.");
     }
     if (!RemoveOldNode(graph, oldNode, inputNum)) {
         return false;
@@ -457,11 +461,14 @@ Status ZInplaceAddLayerNormFusionPass::Run(GraphPtr& graph, CustomPassContext& p
     Graph originGraph = *graph;
     bool changed = false;
     for (auto& node : candidates) {
+        if (ops::fusion::ReportMatchNodes({node}, passContext) != SUCCESS) {
+            OPS_LOG_W(kPassName.c_str(), "Failed to report matched node.");
+        }
         if (!MeetGuards(node, l2Size)) {
             continue;
         }
 
-        if (!ReplaceOneNode(*graph, node)) {
+        if (!ReplaceOneNode(*graph, node, passContext)) {
             OPS_LOG_E(kPassName.c_str(), "Replacement failed, rollback whole graph.");
             passContext.SetErrorMessage(AscendString("ZInplaceAddLayerNormFusionPass replacement failed."));
             *graph = originGraph;

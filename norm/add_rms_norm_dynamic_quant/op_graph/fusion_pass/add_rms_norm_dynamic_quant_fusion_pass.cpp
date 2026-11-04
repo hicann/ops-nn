@@ -4,14 +4,14 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
 #include "acl/acl_rt.h"
 #include "es_nn_ops.h"
 #include "es_math_ops.h"
 #include "arch_utils.h"
 #include "common/inc/error_util.h"
 #include "ge/ge_utils.h"
-#include <set>
-#include "ge/fusion/graph_rewriter.h"
+#include "norm/common/op_graph/fusion_report_utils.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 #include "version/ge-compiler_version.h"
 
@@ -412,7 +412,8 @@ ge::Status AddRmsNormDynamicQuantFusionPass::Run(ge::GraphPtr& graph, ge::Custom
             OPS_LOG_E(kPass.c_str(), "Cannot build replacement for %s.", Name(node).c_str());
             return ge::FAILED;
         }
-        if (SubgraphRewriter::Replace(*boundary, *replacement) != ge::SUCCESS) {
+        const auto status = ops::fusion::ReplaceSubgraphWithReport(*boundary, *replacement, context);
+        if (status != ge::SUCCESS) {
             OPS_LOG_E(kPass.c_str(), "Cannot replace %s.", Name(node).c_str());
             return ge::FAILED;
         }

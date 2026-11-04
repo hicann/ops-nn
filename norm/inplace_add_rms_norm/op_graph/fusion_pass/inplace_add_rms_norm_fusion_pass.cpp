@@ -21,7 +21,7 @@
 #include "common/inc/error_util.h"
 #include "es_nn_ops.h"
 #include "ge/ge_utils.h"
-#include "ge/fusion/graph_rewriter.h"
+#include "norm/common/op_graph/fusion_report_utils.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 #include "version/ge-compiler_version.h"
 
@@ -190,7 +190,7 @@ std::unique_ptr<ge::Graph> MakeReplacement(const ge::GNode& norm, bool with_cast
     return graph;
 }
 
-ge::Status Rewrite(const ge::GNode& norm)
+ge::Status Rewrite(const ge::GNode& norm, ge::CustomPassContext& context)
 {
     if (norm.GetInputsSize() != kInputCount || norm.GetOutputsSize() != kOutputCount) {
         OPS_LOG_D(kPassName.c_str(), "guard_rejected : invalid AddRmsNorm arity.");
@@ -231,7 +231,7 @@ ge::Status Rewrite(const ge::GNode& norm)
         OPS_LOG_E(kPassName.c_str(), "Replacement construction failed.");
         return ge::FAILED;
     }
-    const auto status = ge::fusion::SubgraphRewriter::Replace(boundary, *replacement);
+    const auto status = ops::fusion::ReplaceSubgraphWithReport(boundary, *replacement, context);
     if (status != ge::SUCCESS) {
         OPS_LOG_E(kPassName.c_str(), "Replacement failed, status=%u.", static_cast<unsigned int>(status));
         return status;
@@ -259,7 +259,7 @@ ge::Status InplaceAddRmsNormFusionPass::Run(ge::GraphPtr& graph, ge::CustomPassC
         }
     }
     for (const auto& norm : candidates) {
-        if (Rewrite(norm) != ge::SUCCESS) {
+        if (Rewrite(norm, context) != ge::SUCCESS) {
             OPS_LOG_E(kPassName.c_str(), "Rewrite failed.");
             return ge::FAILED;
         }

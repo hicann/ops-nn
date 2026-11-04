@@ -27,7 +27,7 @@
 #include "ge/es_graph_builder.h"
 #include "ge/ge_utils.h"
 #include "graph/operator_factory.h"
-#include "ge/fusion/graph_rewriter.h"
+#include "norm/common/op_graph/fusion_report_utils.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "version/ge-compiler_version.h"
@@ -1132,7 +1132,7 @@ std::unique_ptr<Graph> BuildReplacement(const Candidate& candidate)
     return graph;
 }
 
-Status ReplaceCandidate(Graph& graph, const Candidate& candidate)
+Status ReplaceCandidate(Graph& graph, const Candidate& candidate, CustomPassContext& passContext)
 {
     (void)graph;
     auto boundary = BuildBoundary(candidate);
@@ -1142,7 +1142,7 @@ Status ReplaceCandidate(Graph& graph, const Candidate& candidate)
     }
     // Replace inherits external execution dependencies for the entire
     // replacement. Keep its control relays, including dependencies on Cast/Fill.
-    return SubgraphRewriter::Replace(*boundary, *replacement);
+    return ops::fusion::ReplaceSubgraphWithReport(*boundary, *replacement, passContext);
 }
 
 } // namespace
@@ -1232,7 +1232,7 @@ Status AddLayerNormFusionPass::Run(GraphPtr& graph, CustomPassContext& passConte
             if (!matched) {
                 continue;
             }
-            const Status status = ReplaceCandidate(*graph, candidate);
+            const Status status = ReplaceCandidate(*graph, candidate, passContext);
             if (status != SUCCESS) {
                 OPS_LOG_E(kPassName.c_str(), "Failed to replace candidate %s.", NodeName(node).c_str());
                 return status;
