@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include "../../../../../common/inc/op_host/op_const_def_nn.h"
 #include <gtest/gtest.h>
 #include <iostream>
 #include <vector>
@@ -23,6 +24,20 @@ constexpr int32_t CASE1_X_M = 16;
 constexpr int32_t CASE1_X_N = 256;
 constexpr int32_t CASE0_X_M = 4;
 constexpr int32_t CASE0_X_N = 64;
+constexpr int32_t DIMENSION_3 = 3;
+constexpr int32_t AICORE_CNT_960DT = 64;
+constexpr int32_t HIF4_X_M = 4;
+constexpr int32_t HIF4_X_N_64 = 64;
+constexpr int32_t HIF4_X_N_128 = 128;
+constexpr int32_t HIF4_3D_M1 = 2;
+constexpr int32_t CEILDIV_64_64 = 1;
+constexpr int32_t CEILDIV_128_64 = 2;
+constexpr int32_t HIF4_SCALE_LAST_DIM = 1;
+constexpr int32_t MXFP_SCALE_LAST_DIM = 2;
+constexpr int32_t SCALE_DIM_NUM_2D = 3;
+constexpr int32_t SCALE_DIM_NUM_3D = 4;
+constexpr int32_t DIM_IDX_2 = 2;
+constexpr int32_t DIM_IDX_3 = 3;
 
 class RotateQuantInferShape : public testing::Test {
 protected:
@@ -318,4 +333,311 @@ TEST_F(RotateQuantInferShape, OptionalAlphaPreservesOrdinaryAndGroupedInputs)
         CheckOptionalAlphaInferShape(true, groupNum, 0, ge::GRAPH_FAILED);
         CheckOptionalAlphaInferShape(true, groupNum, 2, ge::GRAPH_FAILED);
     }
+}
+
+// ==================== ascend960dt (v121) platform mock ====================
+static void SetPlatform960DT()
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = AICORE_CNT_960DT;
+    platformInfo.str_info.short_soc_version = "Ascend960DT";
+    optiCompilationInfo.soc_version = "Ascend960DT";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend960DT"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+}
+
+// hif4 infershape: 2D x, scale shape = (M, CeilDiv(N,64), 1)
+TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_2d_k64)
+{
+    SetPlatform960DT();
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape x_shape = {{4, 64}, {4, 64}};
+    gert::StorageShape rot_shape = {{64, 64}, {64, 64}};
+    gert::StorageShape y_shape = {{}, {}};
+    gert::StorageShape scale_shape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x_shape, &rot_shape})
+                      .OutputShapes({&y_shape, &scale_shape})
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, Ops::NN::DT_HIFLOAT4, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, Ops::NN::DT_HIFLOAT4_SCALE, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"y_dtype",
+                                   Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(Ops::NN::DT_HIFLOAT4))},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+    auto yShape = context->GetOutputShape(0);
+    auto scaleShape = context->GetOutputShape(1);
+    ASSERT_NE(yShape, nullptr);
+    ASSERT_NE(scaleShape, nullptr);
+
+    EXPECT_EQ(yShape->GetDimNum(), DIMENSION_2);
+    EXPECT_EQ(yShape->GetDim(0), HIF4_X_M);
+    EXPECT_EQ(yShape->GetDim(1), HIF4_X_N_64);
+
+    EXPECT_EQ(scaleShape->GetDimNum(), SCALE_DIM_NUM_2D);
+    EXPECT_EQ(scaleShape->GetDim(0), HIF4_X_M);
+    EXPECT_EQ(scaleShape->GetDim(1), CEILDIV_64_64);               // CeilDiv(64,64)=1
+    EXPECT_EQ(scaleShape->GetDim(DIM_IDX_2), HIF4_SCALE_LAST_DIM); // hif4 last dim = 1
+}
+
+// hif4 infershape: 2D x, K=128, scale shape = (M, CeilDiv(N,64), 1) = (4, 2, 1)
+TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_2d_k128)
+{
+    SetPlatform960DT();
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape x_shape = {{4, 128}, {4, 128}};
+    gert::StorageShape rot_shape = {{128, 128}, {128, 128}};
+    gert::StorageShape y_shape = {{}, {}};
+    gert::StorageShape scale_shape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x_shape, &rot_shape})
+                      .OutputShapes({&y_shape, &scale_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, Ops::NN::DT_HIFLOAT4, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, Ops::NN::DT_HIFLOAT4_SCALE, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"y_dtype",
+                                   Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(Ops::NN::DT_HIFLOAT4))},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+    auto yShape = context->GetOutputShape(0);
+    auto scaleShape = context->GetOutputShape(1);
+    ASSERT_NE(yShape, nullptr);
+    ASSERT_NE(scaleShape, nullptr);
+
+    EXPECT_EQ(yShape->GetDimNum(), DIMENSION_2);
+    EXPECT_EQ(yShape->GetDim(0), HIF4_X_M);
+    EXPECT_EQ(yShape->GetDim(1), HIF4_X_N_128);
+
+    EXPECT_EQ(scaleShape->GetDimNum(), SCALE_DIM_NUM_2D);
+    EXPECT_EQ(scaleShape->GetDim(0), HIF4_X_M);
+    EXPECT_EQ(scaleShape->GetDim(1), CEILDIV_128_64);              // CeilDiv(128,64)=2
+    EXPECT_EQ(scaleShape->GetDim(DIM_IDX_2), HIF4_SCALE_LAST_DIM); // hif4 last dim = 1
+}
+
+// mxfp4 infershape: 2D x, K=64, scale shape = (M, CeilDiv(N,64), 2)
+TEST_F(RotateQuantInferShape, RotateQuant_infershape_mxfp4_2d_k64)
+{
+    SetPlatform960DT();
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape x_shape = {{4, 64}, {4, 64}};
+    gert::StorageShape rot_shape = {{64, 64}, {64, 64}};
+    gert::StorageShape y_shape = {{}, {}};
+    gert::StorageShape scale_shape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x_shape, &rot_shape})
+                      .OutputShapes({&y_shape, &scale_shape})
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"y_dtype",
+                                   Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(ge::DT_FLOAT4_E2M1))},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+    auto yShape = context->GetOutputShape(0);
+    auto scaleShape = context->GetOutputShape(1);
+    ASSERT_NE(yShape, nullptr);
+    ASSERT_NE(scaleShape, nullptr);
+
+    EXPECT_EQ(yShape->GetDimNum(), DIMENSION_2);
+    EXPECT_EQ(yShape->GetDim(0), HIF4_X_M);
+    EXPECT_EQ(yShape->GetDim(1), HIF4_X_N_64);
+
+    EXPECT_EQ(scaleShape->GetDimNum(), SCALE_DIM_NUM_2D);
+    EXPECT_EQ(scaleShape->GetDim(0), HIF4_X_M);
+    EXPECT_EQ(scaleShape->GetDim(1), CEILDIV_64_64);               // CeilDiv(64,64)=1
+    EXPECT_EQ(scaleShape->GetDim(DIM_IDX_2), MXFP_SCALE_LAST_DIM); // mxfp4 last dim = 2
+}
+
+// mxfp8 infershape: 2D x, K=128, scale shape = (M, CeilDiv(N,64), 2) = (4, 2, 2)
+TEST_F(RotateQuantInferShape, RotateQuant_infershape_mxfp8_2d_k128)
+{
+    SetPlatform960DT();
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape x_shape = {{4, 128}, {4, 128}};
+    gert::StorageShape rot_shape = {{128, 128}, {128, 128}};
+    gert::StorageShape y_shape = {{}, {}};
+    gert::StorageShape scale_shape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x_shape, &rot_shape})
+                      .OutputShapes({&y_shape, &scale_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"y_dtype",
+                                   Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(ge::DT_FLOAT8_E4M3FN))},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+    auto yShape = context->GetOutputShape(0);
+    auto scaleShape = context->GetOutputShape(1);
+    ASSERT_NE(yShape, nullptr);
+    ASSERT_NE(scaleShape, nullptr);
+
+    EXPECT_EQ(yShape->GetDimNum(), DIMENSION_2);
+    EXPECT_EQ(yShape->GetDim(0), HIF4_X_M);
+    EXPECT_EQ(yShape->GetDim(1), HIF4_X_N_128);
+
+    EXPECT_EQ(scaleShape->GetDimNum(), SCALE_DIM_NUM_2D);
+    EXPECT_EQ(scaleShape->GetDim(0), HIF4_X_M);
+    EXPECT_EQ(scaleShape->GetDim(1), CEILDIV_128_64);              // CeilDiv(128,64)=2
+    EXPECT_EQ(scaleShape->GetDim(DIM_IDX_2), MXFP_SCALE_LAST_DIM); // mxfp8 last dim = 2
+}
+
+// hif4 infershape: 3D x (M1, M2, N), scale shape = (M1, M2, CeilDiv(N,64), 1)
+TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_3d_k64)
+{
+    SetPlatform960DT();
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape x_shape = {{2, 4, 64}, {2, 4, 64}};
+    gert::StorageShape rot_shape = {{64, 64}, {64, 64}};
+    gert::StorageShape y_shape = {{}, {}};
+    gert::StorageShape scale_shape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x_shape, &rot_shape})
+                      .OutputShapes({&y_shape, &scale_shape})
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, Ops::NN::DT_HIFLOAT4, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, Ops::NN::DT_HIFLOAT4_SCALE, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"y_dtype",
+                                   Ops::NN::AnyValue::CreateFrom<int64_t>(static_cast<int64_t>(Ops::NN::DT_HIFLOAT4))},
+                                  {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+    auto yShape = context->GetOutputShape(0);
+    auto scaleShape = context->GetOutputShape(1);
+    ASSERT_NE(yShape, nullptr);
+    ASSERT_NE(scaleShape, nullptr);
+
+    EXPECT_EQ(yShape->GetDimNum(), DIMENSION_3);
+    EXPECT_EQ(yShape->GetDim(0), HIF4_3D_M1);
+    EXPECT_EQ(yShape->GetDim(1), HIF4_X_M);
+    EXPECT_EQ(yShape->GetDim(DIM_IDX_2), HIF4_X_N_64);
+
+    EXPECT_EQ(scaleShape->GetDimNum(), SCALE_DIM_NUM_3D);
+    EXPECT_EQ(scaleShape->GetDim(0), HIF4_3D_M1);
+    EXPECT_EQ(scaleShape->GetDim(1), HIF4_X_M);
+    EXPECT_EQ(scaleShape->GetDim(DIM_IDX_2), CEILDIV_64_64);       // CeilDiv(64,64)=1
+    EXPECT_EQ(scaleShape->GetDim(DIM_IDX_3), HIF4_SCALE_LAST_DIM); // hif4 last dim = 1
+}
+
+// InferDataType: HIFLOAT4 output -> HIFLOAT4_SCALE
+TEST_F(RotateQuantInferShape, RotateQuant_InferDtype_hif4)
+{
+    SetPlatform960DT();
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_datatype;
+    ASSERT_NE(data_type_func, nullptr);
+
+    ge::DataType input_x_ref = ge::DT_BF16;
+    ge::DataType input_rot_ref = ge::DT_BF16;
+    ge::DataType output_y_ref = Ops::NN::DT_HIFLOAT4;
+    ge::DataType output_scale_ref = Ops::NN::DT_HIFLOAT4_SCALE;
+    auto context_holder = gert::InferDataTypeContextFaker()
+                              .IrInputNum(2)
+                              .NodeIoNum(2, 2)
+                              .IrInstanceNum({1, 1})
+                              .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(0, Ops::NN::DT_HIFLOAT4, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(1, Ops::NN::DT_HIFLOAT4_SCALE, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeAttrs({{"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(
+                                                          static_cast<int64_t>(Ops::NN::DT_HIFLOAT4))},
+                                          {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                              .InputDataTypes({&input_x_ref, &input_rot_ref})
+                              .OutputDataTypes({&output_y_ref, &output_scale_ref})
+                              .Build();
+    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+    EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+    ASSERT_NE(context, nullptr);
+
+    EXPECT_EQ(context->GetOutputDataType(0), output_y_ref);
+    EXPECT_EQ(context->GetOutputDataType(1), output_scale_ref);
+}
+
+// InferDataType: mxfp4 (FLOAT4_E2M1) output -> FLOAT8_E8M0 scale
+TEST_F(RotateQuantInferShape, RotateQuant_InferDtype_mxfp4)
+{
+    SetPlatform960DT();
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_datatype;
+    ASSERT_NE(data_type_func, nullptr);
+
+    ge::DataType input_x_ref = ge::DT_FLOAT16;
+    ge::DataType input_rot_ref = ge::DT_FLOAT16;
+    ge::DataType output_y_ref = ge::DT_FLOAT4_E2M1;
+    ge::DataType output_scale_ref = ge::DT_FLOAT8_E8M0;
+    auto context_holder = gert::InferDataTypeContextFaker()
+                              .IrInputNum(2)
+                              .NodeIoNum(2, 2)
+                              .IrInstanceNum({1, 1})
+                              .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeAttrs({{"y_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(
+                                                          static_cast<int64_t>(ge::DT_FLOAT4_E2M1))},
+                                          {"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)}})
+                              .InputDataTypes({&input_x_ref, &input_rot_ref})
+                              .OutputDataTypes({&output_y_ref, &output_scale_ref})
+                              .Build();
+    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+    EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+    ASSERT_NE(context, nullptr);
+
+    EXPECT_EQ(context->GetOutputDataType(0), output_y_ref);
+    EXPECT_EQ(context->GetOutputDataType(1), output_scale_ref);
 }

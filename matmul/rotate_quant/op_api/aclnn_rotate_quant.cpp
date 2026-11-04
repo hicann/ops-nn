@@ -58,12 +58,12 @@ constexpr uint32_t MAX_ROT_DIM_NUM = 3;
 constexpr int64_t MIN_GROUP_NUM = 1;
 constexpr int64_t MAX_GROUP_NUM = 1024;
 constexpr int64_t MX_SCALE_CEIL_NUM = 64;
+constexpr int64_t MX_SCALE_LAST_SIZE = 2;
 constexpr int64_t ROT_K_SIZE_32 = 32;
 constexpr int64_t ROT_K_SIZE_64 = 64;
 constexpr int64_t ROT_K_SIZE_128 = 128;
 constexpr int64_t ROT_K_SIZE_256 = 256;
 constexpr std::array<int64_t, 4> SUPPORTED_ROT_K_SIZES = {ROT_K_SIZE_32, ROT_K_SIZE_64, ROT_K_SIZE_128, ROT_K_SIZE_256};
-constexpr int64_t HIF4_BLOCK_SIZE = 64;
 constexpr int64_t HIF4_SCALE_LAST_SIZE = 1;
 
 static const std::initializer_list<op::DataType> EMPTY_LIST = {};
@@ -278,7 +278,8 @@ static bool CheckMxRotationShape(const aclTensor* x, const aclTensor* rotation)
     return true;
 }
 
-static bool CheckMxOutputShape(const aclTensor* x, const aclTensor* yOut, const aclTensor* scaleOut)
+// MX/HIF4输出共用: yOut与x同shape(仅dtype位宽不同); scaleOut为(*, CeilDiv(N,64), scaleLastDim)
+static bool CheckOutputShape(const aclTensor* x, const aclTensor* yOut, const aclTensor* scaleOut, int64_t scaleLastDim)
 {
     auto xShape = x->GetViewShape();
     int64_t N = xShape.GetDim(xShape.GetDimNum() - 1);
@@ -291,7 +292,7 @@ static bool CheckMxOutputShape(const aclTensor* x, const aclTensor* yOut, const 
     }
     op::Shape expectScaleShape = xShape;
     expectScaleShape.SetDim(expectScaleShape.GetDimNum() - 1, (N + MX_SCALE_CEIL_NUM - 1) / MX_SCALE_CEIL_NUM);
-    expectScaleShape.AppendDim(2);
+    expectScaleShape.AppendDim(scaleLastDim);
     if (scaleOut->GetViewShape() != expectScaleShape) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             kOpName, "scaleOut", op::ToString(scaleOut->GetViewShape()).GetString(),
@@ -304,7 +305,7 @@ static bool CheckMxOutputShape(const aclTensor* x, const aclTensor* yOut, const 
 static bool CheckMxShape(const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut,
                          const aclTensor* scaleOut)
 {
-    return CheckMxRotationShape(x, rotation) && CheckMxOutputShape(x, yOut, scaleOut);
+    return CheckMxRotationShape(x, rotation) && CheckOutputShape(x, yOut, scaleOut, MX_SCALE_LAST_SIZE);
 }
 
 static bool CheckHif4RotKSize(int64_t k)
@@ -333,22 +334,19 @@ static bool CheckHif4RotMatrixShape(const op::Shape& rotShape, int64_t k)
     return true;
 }
 
-static bool CheckHif4ScaleShape(const op::Shape& xShape, const aclTensor* scaleOut, int64_t n)
-{
-    op::Shape expectScaleShape = xShape;
-    expectScaleShape.SetDim(expectScaleShape.GetDimNum() - 1, (n + HIF4_BLOCK_SIZE - 1) / HIF4_BLOCK_SIZE);
-    expectScaleShape.AppendDim(HIF4_SCALE_LAST_SIZE);
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(scaleOut, expectScaleShape, return false);
-    return true;
-}
-
 static bool CheckHif4Shape(const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut,
                            const aclTensor* scaleOut, int64_t n, int64_t k)
 {
     if (!CheckHif4RotKSize(k)) {
         return false;
     }
-    return CheckHif4RotMatrixShape(rotation->GetViewShape(), k) && CheckHif4ScaleShape(x->GetViewShape(), scaleOut, n);
+    OP_CHECK(n % k == 0,
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                 kOpName, "N", FormatString("%ld", n).c_str(),
+                 FormatString("The value of %s must be divisible by %s", "N", "K").c_str()),
+             return false);
+    return CheckHif4RotMatrixShape(rotation->GetViewShape(), k) &&
+           CheckOutputShape(x, yOut, scaleOut, HIF4_SCALE_LAST_SIZE);
 }
 
 static bool CheckIntRotationShape(const aclTensor* x, const aclTensor* rotation)
@@ -680,7 +678,7 @@ static bool CheckGroupShape(const aclTensor* x, const aclTensor* rotation, const
                                                    .c_str(),
                                                "rotation dim1 must equal N/K for 4D grouped rotation"),
         return false);
-    return CheckMxOutputShape(x, yOut, scaleOut);
+    return CheckOutputShape(x, yOut, scaleOut, MX_SCALE_LAST_SIZE);
 }
 
 static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* rotation, const aclTensor* alpha,
