@@ -209,6 +209,7 @@ aclnnStatus aclnnDynamicBlockQuantV2(
 
   <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
+    - 参数`x`的数据类型仅支持FLOAT16、BFLOAT16。
     - 参数`roundModeOptional`只支持rint。
     - 参数`dstType`仅支持取值2，代表INT8。
     - 参数`rowBlockSize`仅支持取值1。
