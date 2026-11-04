@@ -43,6 +43,11 @@
   mask = (qval >= quant\_min)   \&  (qval <= quant\_max)
   $$
 
+- 特殊值语义（与 PyTorch `fake_quantize_per_channel_affine_cachemask` 对齐，scale/zero\_point 取对应通道值）：
+  - NaN：out = (quant\_min - zero\_point) * scale，mask = False
+  - +Inf：out = (quant\_max - zero\_point) * scale，mask = False
+  - -Inf：out = (quant\_min - zero\_point) * scale，mask = False
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnFakeQuantPerChannelAffineCachemask”接口执行计算。

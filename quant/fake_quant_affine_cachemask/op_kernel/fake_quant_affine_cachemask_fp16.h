@@ -120,16 +120,20 @@ private:
         Select(curHf16Temp, maskTemp, oneTensor, zeroTensor, SELMODE::VSEL_TENSOR_TENSOR_MODE, this->mask, repeatTimes,
                repeatParams);
         Mul(curHf16Temp, selectTemp, curHf16Temp, calCount);
-        Cast(maskLocal, curHf16Temp, RoundMode::CAST_RINT, calCount);
+        // NaN is not in range, even though its qval may have been rounded to 0 above.
+        Compare(maskTemp, xLocal, xLocal, CMPMODE::EQ, calCount);
+        Select(selectTemp, maskTemp, curHf16Temp, static_cast<yType>(0.0f), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+               this->mask, repeatTimes, repeatParams);
+        Cast(maskLocal, selectTemp, RoundMode::CAST_RINT, calCount);
 
         // output = (Mins(Maxs(tmp, quant_min), quant_max) - zero_point) * scale
         Cast(curInt32Temp, curTemp, RoundMode::CAST_RINT, calCount);
         Maxs(curInt32Temp, curInt32Temp, static_cast<int32_t>(this->quantMin), calCount);
         Mins(curInt32Temp, curInt32Temp, static_cast<int32_t>(this->quantMax), calCount);
         Cast(curTemp, curInt32Temp, RoundMode::CAST_ROUND, calCount);
-        Compare(maskTemp, xLocal, xLocal, CMPMODE::EQ, calCount);
-        Select(curTemp, maskTemp, curTemp, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, this->mask, repeatTimes,
-               repeatParams);
+        // PyTorch semantics: NaN is clamped to quant_min instead of being propagated.
+        Select(curTemp, maskTemp, curTemp, static_cast<float>(this->quantMin), SELMODE::VSEL_TENSOR_SCALAR_MODE,
+               this->mask, repeatTimes, repeatParams);
         Adds(curTemp, curTemp, static_cast<float>(-1 * static_cast<float>(zeroPointValue)), calCount);
         Muls(curTemp, curTemp, static_cast<float>(scaleValue), calCount);
         Cast(yLocal, curTemp, RoundMode::CAST_RINT, calCount);

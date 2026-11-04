@@ -45,6 +45,11 @@
   mask = (qval >= quant\_min)   \&  (qval <= quant\_max)
   $$
 
+- Special-value semantics (aligned with PyTorch `fake_quantize_per_tensor_affine_cachemask`):
+  - NaN: out = (quant\_min - zero\_point) * scale, mask = False
+  - +Inf: out = (quant\_max - zero\_point) * scale, mask = False
+  - -Inf: out = (quant\_min - zero\_point) * scale, mask = False
+
 ## Function Prototype
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). Call "aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize" first to obtain the input parameters and calculate the required workspace size based on the workflow, and then call "aclnnFakeQuantPerChannelAffineCachemask" to perform the computation.
