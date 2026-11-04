@@ -23,9 +23,10 @@ namespace ge {
  * @par Inputs:
  * Two inputs:
  * @li x1: A tensor list containing multiple tensors
- * @li x2: Another tensor list containing multiple tensorsr
+ * @li x2: Another tensor list containing multiple tensors
  * @par Outputs:
- * @li y: A tensor list which store the tensors whose value are maximum with the scalars in scalar list
+ * @li y: A tensor list which stores the tensors whose values are the element-wise maximum of the corresponding tensors
+ * in x1 and x2
  */
 REG_OP(ForeachMaximumList)
     .DYNAMIC_INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16}))

@@ -62,7 +62,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示取最大值运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示取最大值运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，成员数与逐成员shape均与入参`x1`一致。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -72,11 +72,16 @@
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+- 非连续Tensor：aclnn接口支持非连续输入/输出（内部先连续化计算，再回写输出）；图模式/kernel直连的描述符不含stride，仅支持连续Tensor。
+- 数据格式仅支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW，不支持私有格式，否则第一段接口返回参数错误。
+- x1、x2、y三个张量列表的成员数必须相等，且逐个成员的shape、数据类型、数据格式必须一致。
+- 单个张量列表的成员数不超过256。
+- 支持空Tensor：shape中含0的成员按逐元素计算，输出shape与输入一致。
+- 成员Tensor的维度范围为0~8维，超过8维返回参数错误。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_foreach_maximum_list](examples/test_aclnn_foreach_maximum_list.cpp) | 通过[aclnnForeachMaximumList](docs/aclnnForeachMaximumList.md)接口方式调用ForeachMaximumList算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_maximum_list_proto.h)构图方式调用ForeachMaximumList算子。         |
+| aclnn API | [test_aclnn_foreach_maximum_list](examples/test_aclnn_foreach_maximum_list.cpp) | 通过[aclnnForeachMaximumList](docs/aclnnForeachMaximumList.md)接口方式调用ForeachMaximumList算子。 |
+| GE图模式 | - | 通过[算子IR](op_graph/foreach_maximum_list_proto.h)构图方式调用ForeachMaximumList算子。         |

@@ -43,7 +43,7 @@
 aclnnStatus aclnnForeachMaximumListGetWorkspaceSize(
   const aclTensorList *x1,
   const aclTensorList *x2,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -106,7 +106,7 @@ aclnnStatus aclnnForeachMaximumList(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示取最大值运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，成员数与逐成员shape均与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -160,23 +160,24 @@ aclnnStatus aclnnForeachMaximumList(
       <td>传入的x1、x2、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x1、x2、out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>x1、x2、out的数据类型不一致。</td>
+      <td>x1、x2、out的数据类型不一致（含列表内Tensor数据类型不一致）。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>x1、x2、out的shape不满足约束。</td>
-    </tr>
-    <tr>
-      <td>x1、x2或out中的Tensor的数据类型不一致。</td>
+      <td>x1、x2、out的成员数不一致或shape不满足约束。</td>
     </tr>
     <tr>
       <td>x1、x2或out中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>x1、x2或out的成员数超过256。</td>
+    </tr>
+    <tr>
+      <td>数据格式不支持（仅支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW）。</td>
     </tr>
   </tbody></table>
 
@@ -225,6 +226,9 @@ aclnnStatus aclnnForeachMaximumList(
 
 ## 约束说明
 
+- x1、x2、out三个张量列表的成员数必须相等，且逐个成员的shape、数据类型、数据格式必须一致。
+- 单个张量列表的成员数不超过256。
+- 数据格式仅支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW。
 - 确定性计算：
   - aclnnForeachMaximumList默认确定性实现。
 
@@ -301,7 +305,7 @@ int main() {
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. 构造输入与输出，需要根据API的接口自定义构造
+  // 2.构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> selfShape1 = {2, 3};
   std::vector<int64_t> selfShape2 = {1, 3};
   std::vector<int64_t> otherShape1 = {2, 3};

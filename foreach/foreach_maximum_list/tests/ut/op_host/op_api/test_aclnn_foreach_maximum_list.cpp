@@ -44,3 +44,65 @@ TEST_F(l2_foreach_maximum_list_test, ascend910B2_foreach_maximum_list_test_non_c
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
+
+// 成员数不一致：x1两个成员，x2一个成员，第一段接口应返回ACLNN_ERR_PARAM_INVALID
+TEST_F(l2_foreach_maximum_list_test, ascend910B2_foreach_maximum_list_test_member_count_mismatch)
+{
+    vector<int64_t> dims = {2, 4};
+    auto t1 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND);
+    auto t2 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND);
+    auto t3 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND);
+    auto x1List = TensorListDesc({t1, t2});
+    auto x2List = TensorListDesc({t3});
+    auto outList = TensorListDesc({t1, t2});
+
+    auto ut = OP_API_UT(aclnnForeachMaximumList, INPUT(x1List, x2List), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 成员数超过256：第一段接口应返回ACLNN_ERR_PARAM_INVALID
+TEST_F(l2_foreach_maximum_list_test, ascend910B2_foreach_maximum_list_test_member_count_over_limit)
+{
+    vector<int64_t> dims = {2, 4};
+    auto t = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND);
+    auto x1List = TensorListDesc(257, t);
+    auto x2List = TensorListDesc(257, t);
+    auto outList = TensorListDesc(257, t);
+
+    auto ut = OP_API_UT(aclnnForeachMaximumList, INPUT(x1List, x2List), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// rank超过8：第一段接口应返回ACLNN_ERR_PARAM_INVALID
+TEST_F(l2_foreach_maximum_list_test, ascend910B2_foreach_maximum_list_test_rank_over_limit)
+{
+    vector<int64_t> dims = {1, 1, 1, 1, 1, 1, 1, 1, 2};
+    auto t = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND);
+    auto x1List = TensorListDesc({t});
+    auto x2List = TensorListDesc({t});
+    auto outList = TensorListDesc({t});
+
+    auto ut = OP_API_UT(aclnnForeachMaximumList, INPUT(x1List, x2List), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 私有格式：第一段接口应返回ACLNN_ERR_PARAM_INVALID
+TEST_F(l2_foreach_maximum_list_test, ascend910B2_foreach_maximum_list_test_private_format)
+{
+    vector<int64_t> dims = {2, 4};
+    auto t = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ);
+    auto x1List = TensorListDesc({t});
+    auto x2List = TensorListDesc({t});
+    auto outList = TensorListDesc({t});
+
+    auto ut = OP_API_UT(aclnnForeachMaximumList, INPUT(x1List, x2List), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}

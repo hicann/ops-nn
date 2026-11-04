@@ -31,6 +31,8 @@ static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPP
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
+static constexpr uint64_t MAX_TENSOR_COUNT = 256;
+
 static inline bool CheckNotNull(const aclTensorList* x1, const aclTensorList* x2, const aclTensorList* out)
 {
     OP_CHECK_NULL(x1, return false);
@@ -98,8 +100,15 @@ static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, 
 {
     // tensorlist size检查
     if (x1->Size() != x2->Size() || x1->Size() != out->Size()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor lists must have the same number of tensors, got %lu and %lu",
-                x1->Size(), x2->Size());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Tensor lists must have the same number of tensors, got x1=%lu, x2=%lu, out=%lu", x1->Size(),
+                x2->Size(), out->Size());
+        return false;
+    }
+    // 成员数上限与arch35 Tiling的MAX_TENSOR_NUM保持一致，保证各形态均在第一段接口以161002拒绝
+    if (x1->Size() > MAX_TENSOR_COUNT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors in each tensor list must not exceed %lu, got %lu",
+                MAX_TENSOR_COUNT, x1->Size());
         return false;
     }
 
@@ -108,7 +117,7 @@ static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, 
         OP_CHECK_SHAPE_NOT_EQUAL((*x1)[i], (*x2)[i], return false);
     }
 
-    // tensor 维度检查
+    // tensor维度检查
     for (uint64_t i = 0; i < x1->Size(); i++) {
         OP_CHECK_MAX_DIM((*x1)[i], MAX_SUPPORT_DIMS_NUMS, return false);
     }

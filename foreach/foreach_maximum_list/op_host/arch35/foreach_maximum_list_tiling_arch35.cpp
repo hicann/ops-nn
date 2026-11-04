@@ -22,6 +22,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/foreach_maximum_list_tiling_data.h"
 #include "../../op_kernel/arch35/foreach_maximum_list_tiling_key.h"
+#include "op_api/op_api_def_nn.h"
 
 namespace optiling {
 
@@ -29,6 +30,7 @@ using namespace Ops::NN::Optiling;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int32_t INPUT_IDX_0 = 0;
+constexpr int32_t INPUT_IDX_1 = 1;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t ALIGN_SIZE = 32;
 constexpr int32_t MAX_TENSOR_NUM = 256;
@@ -49,6 +51,28 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
+static bool IsSupportedPublicFormat(ge::Format format)
+{
+    // 对外支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW，仅拒绝以下11个私有格式；
+    // 其余公开格式（含aclnn内部连续化使用的FORMAT_NCL）放行。
+    switch (format) {
+        case ge::FORMAT_NC1HWC0:
+        case ge::FORMAT_FRACTAL_Z:
+        case ge::FORMAT_NDC1HWC0:
+        case ge::FORMAT_FRACTAL_Z_3D:
+        case ge::FORMAT_FRACTAL_NZ:
+        case ge::FORMAT_NC1HWC0_C04:
+        case ge::FORMAT_FRACTAL_NZ_C0_16:
+        case ge::FORMAT_FRACTAL_NZ_C0_32:
+        case ge::FORMAT_FRACTAL_NZ_C0_2:
+        case ge::FORMAT_FRACTAL_NZ_C0_4:
+        case ge::FORMAT_FRACTAL_NZ_C0_8:
+            return false;
+        default:
+            return true;
+    }
+}
+
 static ge::graphStatus ForeachMaximumListTilingFunc(gert::TilingContext* context)
 {
     uint64_t ubSize;
@@ -61,6 +85,16 @@ static ge::graphStatus ForeachMaximumListTilingFunc(gert::TilingContext* context
     auto idxInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(INPUT_IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
+    // GEIR/图模式不经aclnn，必须在此校验x2列表与x1一致，否则kernel以x1
+    // 派生偏移访问x2会越界读。空列表沿用既有空处理，不做成员校验。
+    if (tensorNum > 0) {
+        auto idxInstanceInfoX2Ptr = computeNodeInfoPtr->GetInputInstanceInfo(INPUT_IDX_1);
+        OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoX2Ptr);
+        OP_CHECK_IF(idxInstanceInfoX2Ptr->GetInstanceNum() != tensorNum,
+                    OP_LOGE(context, "x1 instance num[%lu] is not equal to x2 instance num[%lu]", tensorNum,
+                            idxInstanceInfoX2Ptr->GetInstanceNum()),
+                    return ge::GRAPH_FAILED);
+    }
 
     auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
@@ -78,6 +112,31 @@ static ge::graphStatus ForeachMaximumListTilingFunc(gert::TilingContext* context
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
+        auto x2ShapePtr = context->GetDynamicInputShape(INPUT_IDX_1, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x2ShapePtr);
+        OP_CHECK_IF(shapePtr->GetStorageShape().GetDimNum() > op::MAX_SUPPORT_DIMS_NUMS,
+                    OP_LOGE(context, "x1[%lu] dim num %zu exceeds the max support dim num %zu", i,
+                            shapePtr->GetStorageShape().GetDimNum(), op::MAX_SUPPORT_DIMS_NUMS),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shapePtr->GetStorageShape() != x2ShapePtr->GetStorageShape(),
+                    OP_LOGE(context, "x1[%lu] and x2[%lu] storage shape mismatch", i, i), return ge::GRAPH_FAILED);
+        auto x1DescPtr = context->GetDynamicInputDesc(INPUT_IDX_0, i);
+        auto x2DescPtr = context->GetDynamicInputDesc(INPUT_IDX_1, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1DescPtr);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x2DescPtr);
+        // TilingKey由x1[0]的dtype决定；同一x1列表内混用dtype会让其余成员按错误
+        // 的schMode解释（如float32成员被当作half读写），必须逐成员校验一致。
+        OP_CHECK_IF(x1DescPtr->GetDataType() != dataType,
+                    OP_LOGE(context, "x1[%lu] dtype[%d] is not equal to x1[0] dtype[%d]", i,
+                            static_cast<int32_t>(x1DescPtr->GetDataType()), static_cast<int32_t>(dataType)),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(x1DescPtr->GetDataType() != x2DescPtr->GetDataType(),
+                    OP_LOGE(context, "x1[%lu] and x2[%lu] dtype mismatch", i, i), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            !IsSupportedPublicFormat(x1DescPtr->GetFormat().GetStorageFormat()) ||
+                !IsSupportedPublicFormat(x2DescPtr->GetFormat().GetStorageFormat()),
+            OP_LOGE(context, "x1[%lu]/x2[%lu] format is private, only ND/NCHW/NHWC/HWCN/NDHWC/NCDHW supported", i, i),
+            return ge::GRAPH_FAILED);
         auto storageShape = shapePtr->GetStorageShape();
         int64_t numel = storageShape.GetShapeSize();
         tiling->tensorSizes[i] = numel;
@@ -86,17 +145,26 @@ static ge::graphStatus ForeachMaximumListTilingFunc(gert::TilingContext* context
     tiling->tensorNum = static_cast<int32_t>(tensorNum);
     tiling->totalElements = totalElements;
 
+    auto outDesc = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outDesc);
+    OP_CHECK_IF(!IsSupportedPublicFormat(outDesc->GetFormat().GetStorageFormat()),
+                OP_LOGE(context, "output format is private, only ND/NCHW/NHWC/HWCN/NDHWC/NCDHW supported"),
+                return ge::GRAPH_FAILED);
+
     if (totalElements == 0) {
         tiling->needCoreNum = 1;
         tiling->perCoreElements = 0;
         tiling->lastCoreElements = 0;
         context->SetBlockDim(1);
     } else {
-        tiling->perCoreElements = std::min(static_cast<int64_t>(65536), Ops::Base::CeilDiv(totalElements, coreNum));
-        tiling->perCoreElements = Ops::Base::CeilAlign(tiling->perCoreElements, ALIGN_SIZE);
-        tiling->needCoreNum = Ops::Base::CeilDiv(totalElements, tiling->perCoreElements);
-        tiling->lastCoreElements = totalElements - tiling->perCoreElements * (tiling->needCoreNum - 1);
-        context->SetBlockDim(tiling->needCoreNum);
+        int64_t perCoreElements = Ops::Base::CeilAlign(Ops::Base::CeilDiv(totalElements, coreNum), ALIGN_SIZE);
+        int64_t needCoreNum = Ops::Base::CeilDiv(totalElements, perCoreElements);
+        needCoreNum = std::max<int64_t>(needCoreNum, 1);
+        needCoreNum = std::min<int64_t>(needCoreNum, coreNum);
+        tiling->perCoreElements = perCoreElements;
+        tiling->needCoreNum = static_cast<int32_t>(needCoreNum);
+        tiling->lastCoreElements = totalElements - perCoreElements * (needCoreNum - 1);
+        context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
     }
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
