@@ -50,14 +50,14 @@
       <td>输入</td>
       <td>表示按元素以e为底做对数函数运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
       <td>表示按元素以e为底做对数函数运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW</td>
     </tr>
   </tbody></table>
 
@@ -65,7 +65,12 @@
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+- `x`、`y`均为必选参数，缺失时构图失败。
+- Tensor维度不超过8。
+- 输入、输出支持非连续Tensor：aclnn接口内部先转换为连续Tensor再计算，输出结果再回写原Tensor；图模式构图时请保证输入为连续Tensor。
+- 输入/输出张量列表的成员个数必须一致；单个TensorList最多256个成员。
+- 数据格式支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW；不支持其他格式。
+- 支持空Tensor（含零个元素的Tensor）；成员数为0的空TensorList在aclnn接口直接返回成功、workspaceSize为0。
 
 ## 调用说明
 
