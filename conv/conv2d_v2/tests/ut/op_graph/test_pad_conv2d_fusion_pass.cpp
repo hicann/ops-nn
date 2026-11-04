@@ -55,6 +55,10 @@ struct PadConvOptions {
     std::vector<int32_t> paddings = {0, 0, 3, 3, 3, 3, 0, 0};
     std::vector<int64_t> paddingsConstDims = PADDINGS_CONST_DIMS;
     std::vector<int64_t> convPads = {0, 0, 0, 0};
+    std::string convPadding;
+    std::string convAutoPad;
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::vector<int64_t> dilations = {1, 1, 1, 1};
     bool paddingsContiguous = true;
     bool paddingsInt64 = false;
     bool paddingsAsFloat = false;
@@ -146,8 +150,8 @@ protected:
                                        {"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""}})
                          .IrDefOutputs({{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                          .Build();
-        std::vector<int64_t> strides = {1, 2, 2, 1};
-        std::vector<int64_t> dilations = {1, 1, 1, 1};
+        std::vector<int64_t> strides = opt.strides;
+        std::vector<int64_t> dilations = opt.dilations;
         std::vector<int64_t> pads = opt.convPads;
         int64_t groups = 1;
         AscendString dataFormat(opt.fmt == FORMAT_NHWC ? "NHWC" : "NCHW");
@@ -156,6 +160,14 @@ protected:
         node.SetAttr(AscendString("pads"), pads);
         node.SetAttr(AscendString("groups"), groups);
         node.SetAttr(AscendString("data_format"), dataFormat);
+        if (!opt.convPadding.empty()) {
+            AscendString padding(opt.convPadding.c_str());
+            node.SetAttr(AscendString("padding"), padding);
+        }
+        if (!opt.convAutoPad.empty()) {
+            AscendString autoPad(opt.convAutoPad.c_str());
+            node.SetAttr(AscendString("auto_pad"), autoPad);
+        }
         node.UpdateInputDesc(0, BuildTensorDesc(opt.dtype, opt.fmt, opt.padOutShape));
         node.UpdateInputDesc(1, BuildTensorDesc(opt.dtype, opt.filterFmt, opt.filterShape));
         node.UpdateOutputDesc(0, BuildTensorDesc(opt.dtype, opt.fmt, opt.convOutShape));
@@ -623,6 +635,92 @@ TEST_F(PadConv2dFusionPassTest, conv_pads_accumulated)
     ExpectFusedCubeFmap(graph, "conv2d", opt.dataShape);
 }
 
+// ==========================================================================================
+// Same padding: conv padding=SAME with un-materialized pads [0,0,0,0] (TF parser layout)
+// same pads on padded input 230x230 (k=7, s=2): H/W total=5 -> (2,3,2,3)
+// expect fused pads = paddings(3,3,3,3) + samePads(2,3,2,3) = (5,6,5,6)
+// ==========================================================================================
+TEST_F(PadConv2dFusionPassTest, same_padding_fused_pads)
+{
+    SetupSoc(SOC_ASCEND950);
+    PadConvOptions opt;
+    opt.graphName = "same_padding_fused_pads";
+    opt.convPadding = "SAME";
+    opt.convPads = {0, 0, 0, 0};
+    auto graph = BuildPadConvGraph(opt);
+    TestTotalPass(opt.graphName, graph, SUCCESS);
+
+    EXPECT_FALSE(GraphChecker::HasNode(graph, opt.padType));
+    ExpectConvPads(graph, "conv2d", {5, 6, 5, 6});
+    ExpectFusedCubeFmap(graph, "conv2d", opt.dataShape);
+}
+
+// ==========================================================================================
+// onnx layout: auto_pad=SAME_UPPER/SAME_LOWER with un-materialized pads [0,0,0,0]
+// same pads on padded input 230x230 (k=7, s=2): H/W total=5 -> upper (2,3,2,3) / lower (3,2,3,2)
+// expect fused pads = paddings(3,3,3,3) + samePads -> upper (5,6,5,6) / lower (6,5,6,5)
+// ==========================================================================================
+TEST_F(PadConv2dFusionPassTest, same_upper_auto_pad_fused_pads)
+{
+    SetupSoc(SOC_ASCEND950);
+    PadConvOptions opt;
+    opt.graphName = "same_upper_auto_pad_fused_pads";
+    opt.convAutoPad = "SAME_UPPER";
+    opt.convPads = {0, 0, 0, 0};
+    auto graph = BuildPadConvGraph(opt);
+    TestTotalPass(opt.graphName, graph, SUCCESS);
+
+    EXPECT_FALSE(GraphChecker::HasNode(graph, opt.padType));
+    ExpectConvPads(graph, "conv2d", {5, 6, 5, 6});
+    ExpectFusedCubeFmap(graph, "conv2d", opt.dataShape);
+}
+
+TEST_F(PadConv2dFusionPassTest, same_lower_auto_pad_fused_pads)
+{
+    SetupSoc(SOC_ASCEND950);
+    PadConvOptions opt;
+    opt.graphName = "same_lower_auto_pad_fused_pads";
+    opt.convAutoPad = "SAME_LOWER";
+    opt.convPads = {0, 0, 0, 0};
+    auto graph = BuildPadConvGraph(opt);
+    TestTotalPass(opt.graphName, graph, SUCCESS);
+
+    EXPECT_FALSE(GraphChecker::HasNode(graph, opt.padType));
+    ExpectConvPads(graph, "conv2d", {6, 5, 6, 5});
+    ExpectFusedCubeFmap(graph, "conv2d", opt.dataShape);
+}
+
+TEST_F(PadConv2dFusionPassTest, auto_pad_overrides_padding)
+{
+    SetupSoc(SOC_ASCEND950);
+    PadConvOptions opt;
+    opt.graphName = "auto_pad_overrides_padding";
+    opt.convPadding = "EXPLICIT";
+    opt.convAutoPad = "SAME_UPPER";
+    opt.convPads = {0, 0, 0, 0};
+    auto graph = BuildPadConvGraph(opt);
+    TestTotalPass(opt.graphName, graph, SUCCESS);
+
+    EXPECT_FALSE(GraphChecker::HasNode(graph, opt.padType));
+    ExpectConvPads(graph, "conv2d", {5, 6, 5, 6});
+    ExpectFusedCubeFmap(graph, "conv2d", opt.dataShape);
+}
+
+TEST_F(PadConv2dFusionPassTest, auto_pad_notset_uses_pads_attr)
+{
+    SetupSoc(SOC_ASCEND950);
+    PadConvOptions opt;
+    opt.graphName = "auto_pad_notset_uses_pads_attr";
+    opt.convAutoPad = "NOTSET";
+    opt.convPads = {1, 2, 3, 4};
+    auto graph = BuildPadConvGraph(opt);
+    TestTotalPass(opt.graphName, graph, SUCCESS);
+
+    EXPECT_FALSE(GraphChecker::HasNode(graph, opt.padType));
+    ExpectConvPads(graph, "conv2d", {4, 5, 6, 7});
+    ExpectFusedCubeFmap(graph, "conv2d", opt.dataShape);
+}
+
 TEST_F(PadConv2dFusionPassTest, combined_pad_eq_255_success)
 {
     SetupSoc(SOC_ASCEND950);
@@ -819,6 +917,20 @@ TEST_F(PadConv2dFusionPassTest, no_fusion)
          []() {
              PadConvOptions opt;
              opt.skipPadNode = true;
+             return opt;
+         }},
+        {"same_padding_zero_stride",
+         []() {
+             PadConvOptions opt;
+             opt.convPadding = "SAME";
+             opt.strides = {1, 0, 2, 1};
+             return opt;
+         }},
+        {"same_padding_negative_dilation",
+         []() {
+             PadConvOptions opt;
+             opt.convPadding = "SAME";
+             opt.dilations = {1, -1, 1, 1};
              return opt;
          }},
     };

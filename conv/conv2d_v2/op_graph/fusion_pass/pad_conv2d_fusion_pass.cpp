@@ -10,6 +10,9 @@
 
 #include "pad_conv2d_fusion_pass.h"
 
+#include <algorithm>
+#include <utility>
+
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
 #include "graph/graph.h"
 #include "platform/platform_info.h"
@@ -22,6 +25,21 @@ using namespace Conv;
 using namespace ConvFusionUtils;
 using namespace PadConv2dFusion;
 using namespace ge;
+
+namespace {
+// SAME/SAME_UPPER: extra pad goes to the tail side; SAME_LOWER: extra pad goes to the head side,
+// aligned with InferConv2DPadsWithPadding/AutoPad of Conv2D infershape.
+std::pair<int64_t, int64_t> CalcSamePad(int64_t inputDim, int64_t kernel, int64_t stride, int64_t dilation,
+                                        bool sameLower)
+{
+    int64_t outputDim = (inputDim + stride - 1) / stride;
+    int64_t effectiveKernel = (kernel - 1) * dilation + 1;
+    int64_t totalPad = std::max((outputDim - 1) * stride + effectiveKernel - inputDim, static_cast<int64_t>(0));
+    int64_t padBefore = sameLower ? (totalPad + 1) / VALUE_2 : totalPad / VALUE_2;
+    int64_t padAfter = totalPad - padBefore;
+    return {padBefore, padAfter};
+}
+} // namespace
 
 void PadConv2dFusionPass::InitMember()
 {
@@ -306,8 +324,20 @@ bool PadConv2dFusionPass::ValidateAndComputePads(const GNode& convNode)
 
     std::vector<int64_t> padSides = {paddings[hIdx][INDEX_0], paddings[hIdx][INDEX_1], paddings[wIdx][INDEX_0],
                                      paddings[wIdx][INDEX_1]};
+    std::vector<int64_t> convPadsToAdd = convPads;
+    AscendString convPadMode;
+    (void)convNode.GetAttr(PADDING, convPadMode);
+    AscendString convAutoPadMode;
+    (void)convNode.GetAttr(AUTO_PAD, convAutoPadMode);
+    // Conv2D infershape derives pads from "auto_pad" first (when set), then "padding"; the pass list attr
+    // stays un-materialized for SAME-family modes, so the same value must be calculated here.
+    bool sameLower = convAutoPadMode == SAME_LOWER;
+    bool sameUpper = convAutoPadMode == SAME_UPPER || (!sameLower && convPadMode == SAME);
+    if (sameUpper || sameLower) {
+        FUSION_PASS_CHECK_NOLOG(!CalcSamePaddingForConv(convNode, convPadsToAdd, sameLower), return false);
+    }
     for (size_t idx = INDEX_0; idx < DIM_NUM4; ++idx) {
-        combinedPads.emplace_back(padSides[idx] + convPads[idx]);
+        combinedPads.emplace_back(padSides[idx] + convPadsToAdd[idx]);
         FUSION_PASS_CHECK(
             padSides[idx] < MIN_PADDING_VALUE || combinedPads[idx] > MAX_PADDING_VALUE,
             OP_LOGD(convDescInfo.nodeNameStr, "Pad value [%ld] < %ld or combined pad [%ld] > %ld, no fusion.",
@@ -316,6 +346,68 @@ bool PadConv2dFusionPass::ValidateAndComputePads(const GNode& convNode)
     }
 
     FUSION_PASS_CHECK_NOLOG(!CheckFilterHeight(), return false);
+    return true;
+}
+
+bool PadConv2dFusionPass::CalcSamePaddingForConv(const GNode& convNode, std::vector<int64_t>& convPads,
+                                                 bool sameLower) const
+{
+    TensorDesc convInputDesc;
+    FUSION_PASS_CHECK(convNode.GetInputDesc(INPUT_FMAP_INDEX, convInputDesc) != GRAPH_SUCCESS,
+                      OP_LOGE(convDescInfo.nodeNameStr, "Get Conv input desc failed."), return false);
+    std::vector<int64_t> inputShape = convInputDesc.GetOriginShape().GetDims();
+    if (inputShape.size() != DIM_NUM4) {
+        return true;
+    }
+    Format inputFormat = convInputDesc.GetOriginFormat();
+    size_t hIdx = INDEX_2;
+    size_t wIdx = INDEX_3;
+    if (inputFormat == FORMAT_NHWC) {
+        hIdx = INDEX_1;
+        wIdx = INDEX_2;
+    } else if (inputFormat != FORMAT_NCHW) {
+        return true;
+    }
+
+    std::vector<int64_t> filterShape = convDescInfo.filterDesc.GetOriginShape().GetDims();
+    if (filterShape.size() != DIM_NUM4) {
+        return true;
+    }
+    Format filterFormat = convDescInfo.filterDesc.GetOriginFormat();
+    size_t filterHIdx = INDEX_0;
+    size_t filterWIdx = INDEX_1;
+    if (filterFormat == FORMAT_NCHW) {
+        filterHIdx = INDEX_2;
+        filterWIdx = INDEX_3;
+    } else if (filterFormat == FORMAT_NHWC) {
+        filterHIdx = INDEX_1;
+        filterWIdx = INDEX_2;
+    } else if (filterFormat != FORMAT_HWCN) {
+        return true;
+    }
+
+    std::vector<int64_t> strides;
+    FUSION_PASS_CHECK(convNode.GetAttr(STRIDES, strides) != GRAPH_SUCCESS,
+                      OP_LOGE(convDescInfo.nodeNameStr, "Get Conv strides failed."), return false);
+    std::vector<int64_t> dilations;
+    FUSION_PASS_CHECK(convNode.GetAttr(DILATIONS, dilations) != GRAPH_SUCCESS,
+                      OP_LOGE(convDescInfo.nodeNameStr, "Get Conv dilations failed."), return false);
+    int64_t strideH = (strides.size() == DIM_NUM4) ? strides[hIdx] : 1;
+    int64_t strideW = (strides.size() == DIM_NUM4) ? strides[wIdx] : 1;
+    int64_t dilationH = (dilations.size() == DIM_NUM4) ? dilations[hIdx] : 1;
+    int64_t dilationW = (dilations.size() == DIM_NUM4) ? dilations[wIdx] : 1;
+    FUSION_PASS_CHECK(
+        strideH <= 0 || strideW <= 0 || dilationH <= 0 || dilationW <= 0,
+        OP_LOGD(convDescInfo.nodeNameStr, "Conv2D strides [%ld, %ld] or dilations [%ld, %ld] is invalid, no fusion.",
+                strideH, strideW, dilationH, dilationW),
+        return false);
+
+    auto padH = CalcSamePad(inputShape[hIdx], filterShape[filterHIdx], strideH, dilationH, sameLower);
+    auto padW = CalcSamePad(inputShape[wIdx], filterShape[filterWIdx], strideW, dilationW, sameLower);
+    convPads[INDEX_0] = padH.first;
+    convPads[INDEX_1] = padH.second;
+    convPads[INDEX_2] = padW.first;
+    convPads[INDEX_3] = padW.second;
     return true;
 }
 

@@ -39,6 +39,8 @@ const ge::AscendString INPUT_SIZE = "input_size";
 const ge::AscendString CONSTANT = "constant";
 const ge::AscendString EXPLICIT = "EXPLICIT";
 const ge::AscendString SAME = "SAME";
+const ge::AscendString SAME_UPPER = "SAME_UPPER";
+const ge::AscendString SAME_LOWER = "SAME_LOWER";
 const ge::AscendString NOTSET = "NOTSET";
 
 const std::string FUSION_NAME = "PadConv2dFusionPass";
@@ -58,6 +60,7 @@ constexpr size_t DIM_NUM4 = 4;
 constexpr size_t DIRECTION_COUNT = 2;
 constexpr size_t SINGLE_CONSUMER_CNT = 1;
 constexpr int64_t SINGLE_CUBE_CNT = 1;
+constexpr int64_t VALUE_2 = 2;
 constexpr int64_t MIN_PADDING_VALUE = 0;
 constexpr int64_t MAX_PADDING_VALUE = 255;
 constexpr uint32_t PLATFORM_INFO_OK = 0;
@@ -82,6 +85,7 @@ private:
     bool CheckPadV3ConstantValue() const;
     bool ExtractPaddingsData(const ge::Tensor& padTensor, std::vector<int64_t>& padValue) const;
     bool ValidateAndComputePads(const ge::GNode& convNode);
+    bool CalcSamePaddingForConv(const ge::GNode& convNode, std::vector<int64_t>& convPads, bool sameLower) const;
     bool CheckFilterHeight() const;
     bool DiscoverAndCheckBackward();
     bool HandleBackwardPath(ge::Graph& graph);
