@@ -11,4 +11,3 @@
 # 显式声明子目录，避免 file(GLOB) 对新增目录不敏感导致静默跳过编译
 add_subdirectory(op_host)
 add_subdirectory(op_graph)
-add_subdirectory(framework)
