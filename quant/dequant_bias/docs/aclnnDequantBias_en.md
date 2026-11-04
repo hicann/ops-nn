@@ -204,7 +204,7 @@ The first-phase API performs input parameter validation and returns an error in 
   <tr>
     <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
     <td rowspan="2">561002</td>
-    <td>The data type of inputs activateScaleOptional and biasOptional is not in the supported range.</td>
+    <td>The data type of inputs activateScaleOptional and biasOptional is not in the supported range(for example,M is greater than 25000).</td>
   </tr>
   <tr>
     <td>The values of N and M in the shapes of the input and output do not meet the parameter requirements and constraints.</td>

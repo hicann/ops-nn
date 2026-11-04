@@ -164,8 +164,8 @@ aclnnStatus aclnnLogSoftmax(
       <td>self or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
     </tr>
     <tr>
       <td>dim is not within the dimension range of self.</td>

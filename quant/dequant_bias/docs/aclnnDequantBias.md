@@ -205,7 +205,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>输入activateScaleOptional、biasOptional的数据类型不在支持的范围内。</td>
   </tr>
   <tr>
-    <td>输入和输出的shape中N和M的取值不满足参数要求和约束。</td>
+    <td>输入和输出的shape中N和M的取值不满足参数要求和约束（例如M>25000）。</td>
   </tr>
 </tbody>
 </table>
