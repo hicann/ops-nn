@@ -171,7 +171,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>输出y的类型对应的枚举值。</td>
-      <td><ul><li>如果输出y类型为INT8，则为2；y类型为INT4时，则为29；y类型为INT32时，则为3。</li></ul></td>
+      <td><ul><li>输入范围为{2, 3, 29, 34, 35, 36}，分别对应输出yOut的数据类型为{2:INT8, 3:INT32, 29:INT4, 34:HIFLOAT8, 35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN}。</li><li>INT32实际为8个INT4拼接。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
