@@ -20,6 +20,8 @@ Two build methods are supported: building through `build.sh` and building direct
 
 #### Method 1: Building through build.sh (recommended)
 
+> **Working directory: the repository root** (`build.sh` is located in the root directory, and the artifacts are output to `build_out/`).
+
 ```sh
 # Build the full package (contains all operators)
 bash build.sh --torch_extension
@@ -56,7 +58,12 @@ After the build completes, the wheel package is automatically copied to the `bui
 
 #### Method 2: Building directly with python3 -m build
 
+> **Working directory: `torch_extension/`** (the packaging configuration `setup.py` is located in this directory and cannot be run from the repository root; the artifacts are output to `torch_extension/dist/`).
+
 ```sh
+# Switch to the torch_extension directory first
+cd torch_extension
+
 # Install dependencies
 python3 -m pip install -r requirements.txt
 
@@ -70,11 +77,15 @@ TORCH_EXTENSION_OPS=swiglu_group TORCH_EXTENSION_VENDOR=custom python3 -m build 
 ### Installation
 
 ```sh
-# Install the full package
+# Install the Method 2 artifact (in the torch_extension/ directory)
 python3 -m pip install dist/cann_ops_nn-*.whl
 
-# Install a single-operator package
+# Install the Method 2 artifact (single-operator package)
 python3 -m pip install dist/cann_ops_nn_custom-*.whl
+
+# Install the Method 1 artifact (in the repository root; the wheel files are located in build_out/)
+python3 -m pip install build_out/cann_ops_nn-*.whl
+python3 -m pip install build_out/cann_ops_nn_custom-*.whl
 ```
 
 ### Coexistence Mechanism of the Full Package and Sub-packages
@@ -100,8 +111,8 @@ pip uninstall cann-ops-nn-custom
 ## Directory Structure
 
 ```
+├── build.sh                                  # Build script (supports the --torch_extension parameter)
 ├── torch_extension
-│   ├── build.sh                              # Build script (supports the --torch_extension parameter)
 │   ├── setup.py                              # Wheel packaging configuration (automatically collects distributed operators)
 │   ├── requirements.txt
 │   └── cann_ops_nn                           # Full package installation directory (common framework part)

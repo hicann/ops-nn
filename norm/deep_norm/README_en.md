@@ -17,16 +17,19 @@ English | [简体中文](./README.md)
 
 ## Function
 
-- Operator function: Performs deep normalization on the elements of input tensor x. By computing the mean and standard deviation, it normalizes each element into an output tensor with zero mean and unit variance.
+- Operator function: Performs deep normalization on the elements of input tensor x. By computing the mean and standard deviation, it normalizes each element into an output tensor with zero mean and unit variance. Specifically, the input tensor `x` is first multiplied by the weight `alpha` and then added to `gx` to obtain the intermediate tensor `x'`. Then the mean `mean` and the reciprocal of the standard deviation `rstd` of `x'` are computed along the normalization dimensions to complete the normalization, and the output tensor `y` is obtained through `gamma` scaling and `beta` bias. The operator outputs `mean`, `rstd`, and `y` at the same time.
 - Formula:
 
   $$
-  DeepNorm(x_i^{\prime}) = (x_i^{\prime} - \bar{x^{\prime}}) * rstd * gamma + beta,
+  \begin{aligned}
+  x_i^{\prime} &= \mathrm{alpha} \cdot x_i + \mathrm{gx}_i \\
+  \mathrm{mean} &= \frac{1}{n}\sum_{i=1}^{n}x_i^{\prime} \\
+  \mathrm{rstd} &= \frac{1}{\sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i^{\prime} - \mathrm{mean})^2 + \mathrm{epsilon}}} \\
+  y_i &= (x_i^{\prime} - \mathrm{mean}) \cdot \mathrm{rstd} \cdot \mathrm{gamma}_i + \mathrm{beta}_i
+  \end{aligned}
   $$
 
-  $$
-  \text { where } rstd = \frac{1}{\sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + eps}} , \quad x^{\prime}_i = alpha * x_i + gx_i
-  $$
+  where the normalization dimensions are the trailing dimensions of `x` corresponding to the shape of `gamma`, and `n` is the product of the sizes of these dimensions. The preceding formulas apply to a group of data with a fixed leading dimension index, and `i` is the element index of the group after the normalization dimensions are flattened. `gamma` and `beta` are shared across different groups. `x'` is the intermediate tensor in the computation process, `mean` and `rstd` are the statistics of each group of data, `y` is the final output, and `epsilon` is the numerical stability term added to the variance.
 
 ## Parameters
 
@@ -56,7 +59,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>gx</td>
       <td>Input</td>
-      <td>Empty tensors are not supported. The gradient of the input data, used for backpropagation, input `gx` in the formula. The data type is the same as that of input `x`, and the shape is the same as that of input `x`.</td>
+      <td>Empty tensors are not supported. The input data that is added element-wise to the weighted `x`, corresponding to `gx` in the formula. The data type is the same as that of input `x`, and the shape is the same as that of input `x`.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -84,36 +87,35 @@ English | [简体中文](./README.md)
     <tr>
       <td>epsilon</td>
       <td>Optional attribute</td>
-      <td>Value added to the denominator to ensure numerical stability and to prevent division-by-zero errors, corresponding to eps in the formula. The default value is 1e-06f.</td>
+      <td>The numerical stability term added to the variance of `x'` when computing `rstd`, used to prevent division-by-zero errors, corresponding to `epsilon` in the formula. The default value is 1e-06f.</td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>Output</td>
-      <td>Empty tensors are not supported. The computed output mean, used for the normalization operation, output `mean` in the formula. The shape satisfies the broadcast relationship with input `x` (the leading dimensions (the dimensions that do not require normalization) are the same as those of input `x`, and the remaining dimensions are 1).</td>
+      <td>Empty tensors are not supported. The mean computed for the intermediate tensor `x'` along the normalization dimensions, corresponding to the output `mean` in the formula, used to compute `rstd` and `y`. The shape satisfies the broadcast relationship with input `x` (the leading dimensions (the dimensions that do not require normalization) are the same as those of input `x`, and the remaining dimensions are 1).</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>Output</td>
-      <td>Empty tensors are not supported. The computed reciprocal of the standard deviation, used for the normalization operation, output `rstd` in the formula. The shape satisfies the broadcast relationship with input `x` (the leading dimensions (the dimensions that do not require normalization) are the same as those of input `x`, and the remaining dimensions are 1).</td>
+      <td>Empty tensors are not supported. The reciprocal obtained by computing the variance of the intermediate tensor `x'` along the normalization dimensions, adding `epsilon`, and taking the square root, corresponding to the output `rstd` in the formula, used to compute `y`. The shape satisfies the broadcast relationship with input `x` (the leading dimensions (the dimensions that do not require normalization) are the same as those of input `x`, and the remaining dimensions are 1).</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Empty tensors are not supported. The normalized output data, output `y` in the formula. The data type is the same as that of input `x`, and the shape is the same as that of input `x`.</td>
+      <td>Empty tensors are not supported. The result of the intermediate tensor `x'` after normalization, `gamma` scaling, and `beta` bias, corresponding to the output `y` in the formula. The data type is the same as that of input `x`, and the shape is the same as that of input `x`.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-  - <term>Atlas inference products</term>: The data types of all input parameters and the output parameter y do not support BFLOAT16.
-
-  - <term>Kirin X90 processor series products</term>, <term>Kirin 9030 processor series products</term>: The data types of all input parameters and the output parameter y do not support BFLOAT16.
+- <term>Atlas inference products</term>: The data types of all input parameters and the output parameter y do not support BFLOAT16.
+- <term>Kirin X90 processor series products</term>, <term>Kirin 9030 processor series products</term>: The data types of all input parameters and the output parameter y do not support BFLOAT16.
 
 ## Constraints
 

@@ -8,7 +8,7 @@ Release date: 2026-03-30
 
 This version delivers multiple new features, bug fixes, and performance improvements, and supports the latest 950 hardware.
 We sincerely welcome community feedback to further improve the stability and functional completeness of ops-nn.
-For usage, refer to the [official documentation](https://gitcode.com/cann/ops-nn/blob/master/README.md).
+For usage, refer to the [official documentation](https://gitcode.com/cann/ops-nn/blob/master/README_en.md).
 
 [CANN 9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/)
 
@@ -73,7 +73,7 @@ Release date: 2025-12-30
 The first Beta version v8.5.0-beta.1 of ops-nn operators is now released.
 This version introduces multiple new features, bug fixes, and performance improvements, and it is still in the testing stage.
 We sincerely welcome community feedback to further improve the stability and functional completeness of ops-nn.
-For usage, refer to the [official documentation](https://gitcode.com/cann/ops-nn/blob/master/README.md).
+For usage, refer to the [official documentation](https://gitcode.com/cann/ops-nn/blob/master/README_en.md).
 
 ### 🔗 Version Address
 

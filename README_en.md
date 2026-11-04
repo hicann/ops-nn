@@ -7,7 +7,7 @@ English | [简体中文](./README.md)
 [![CANNcommunity](https://img.shields.io/badge/docs-社区全量算子-brightgreen.svg?style=flat)](https://www.hiascend.com/document/redirect/CannCommunityOplist)
 [![repo](https://img.shields.io/badge/docs-项目文档-green.svg?style=flat)](docs)
 [![license](https://img.shields.io/badge/license-CANN_Open_2.0-blue.svg)](LICENSE)
-[![contributing](https://img.shields.io/badge/贡献指南-teal)](CONTRIBUTING.md)
+[![contributing](https://img.shields.io/badge/贡献指南-teal)](CONTRIBUTING_en.md)
 [![SIG](https://img.shields.io/badge/SIG-ops_nn-yellow)](https://gitcode.com/cann/community/blob/master/CANN/sigs/ops-nn/README.md)
 [![Zread](https://img.shields.io/badge/Zread-Ask_AI-_.svg?style=flat&color=0052D9&labelColor=000000&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQuOTYxNTYgMS42MDAxSDIuMjQxNTZDMS44ODgxIDEuNjAwMSAxLjYwMTU2IDEuODg2NjQgMS42MDE1NiAyLjI0MDFWNC45NjAxQzEuNjAxNTYgNS4zMTM1NiAxLjg4ODEgNS42MDAxIDIuMjQxNTYgNS42MDAxSDQuOTYxNTZDNS4zMTUwMiA1LjYwMDEgNS42MDE1NiA1LjMxMzU2IDUuNjAxNTYgNC45NjAxVjIuMjQwMUM1LjYwMTU2IDEuODg2NjQgNS4zMTUwMiAxLjYwMDEgNC45NjE1NiAxLjYwMDFaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00Ljk2MTU2IDEwLjM5OTlIMi4yNDE1NkMxLjg4ODEgMTAuMzk5OSAxLjYwMTU2IDEwLjY4NjQgMS42MDE1NiAxMS4wMzk5VjEzLjc1OTlDMS42MDE1NiAxNC4xMTM0IDEuODg4MSAxNC4zOTk5IDIuMjQxNTYgMTQuMzk5OUg0Ljk2MTU2QzUuMzE1MDIgMTQuMzk5OSA1LjYwMTU2IDE0LjExMzQgNS42MDE1NiAxMy43NTk5VjExLjAzOTlDNS42MDE1NiAxMC42ODY0IDUuMzE1MDIgMTAuMzk5OSA0Ljk2MTU2IDEwLjM5OTlaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik0xMy43NTg0IDEuNjAwMUgxMS4wMzg0QzEwLjY4NSAxLjYwMDEgMTAuMzk4NCAxLjg4NjY0IDEwLjM5ODQgMi4yNDAxVjQuOTYwMUMxMC4zOTg0IDUuMzEzNTYgMTAuNjg1IDUuNjAwMSAxMS4wMzg0IDUuNjAwMUgxMy43NTg0QzE0LjExMTkgNS42MDAxIDE0LjM5ODQgNS4zMTM1NiAxNC4zOTg0IDQuOTYwMVYyLjI0MDFDMTQuMzk4NCAxLjg4NjY0IDE0LjExMTkgMS42MDAxIDEzLjc1ODQgMS42MDAxWiIgZmlsbD0iI2ZmZiIvPgo8cGF0aCBkPSJNNCAxMkwxMiA0TDQgMTJaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00IDEyTDEyIDQiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K&logoColor=ffffff)](https://zread.ai/hicann/ops-nn)
 
@@ -27,7 +27,7 @@ English | [简体中文](./README.md)
 - [2026/01] Added [QuickStart](docs/QUICKSTART.md), which guides beginners to get started with operator project deployment from scratch (Docker environment supported) and with the operator development and contribution workflows.
 - [2025/12] Open-source operators support the Ascend 950PR&950DT products/KirinX90, and you can develop and debug them with the [NPU Simulator](./docs/zh/debug/npu_sim.md) simulation tool. Optimization guide documents are improved, focusing on the [operator development guide](docs/zh/develop/aicore_develop_guide.md), clarifying the minimum deliverables and key sample code, and providing guidance for migrating operators from the Ascend/samples repository to this project. The newly supported [sparse 4:2 quantization matmul operator](matmul/sparse4to2quant_matmul) enables hardware acceleration for sparse matrices.
 - [2025/11] Newly supported operators: [index_fill](index/index_fill/), [masked_scatter](index/masked_scatter/), [scatter](index/scatter/), [tf_scatter_add](index/tf_scatter_add/), [fused_cross_entropy_loss_with_max_sum](loss/fused_cross_entropy_loss_with_max_sum/).
-- [2025/10] Added the experimental directory and improved the [贡献指南](CONTRIBUTING.md), so that developers can debug and contribute custom operators.
+- [2025/10] Added the experimental directory and improved the [contribution guide](CONTRIBUTING_en.md), so that developers can debug and contribute custom operators.
 - [2025/09] The ops-nn project went online for the first time, with open-source operators supporting the Atlas A2/A3 products.
 
 ## 🚀Overview
@@ -64,8 +64,8 @@ git clone -b 9.0.0 https://gitcode.com/cann/ops-nn.git
 ## 💬Related Information
 
 - [Directory structure](docs/zh/install/dir_structure.md)
-- [贡献指南](CONTRIBUTING.md)
-- [安全声明](SECURITY.md)
+- [contribution guide](CONTRIBUTING_en.md)
+- [Security Statement](SECURITY_en.md)
 - [License](LICENSE)
 - [SIG](https://gitcode.com/cann/community/tree/master/CANN/sigs/ops-nn)
 - [Committer list](https://gitcode.com/cann/community/blob/master/CANN/sigs/ops-nn/README.md#committer%E5%88%97%E8%A1%A8)

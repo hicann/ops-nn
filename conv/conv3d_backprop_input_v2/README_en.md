@@ -37,7 +37,7 @@ English | [简体中文](./README.md)
 | data_format  | Optional attribute | <ul><li>A string whose value must be one of ["NDHWC","NCDHW"], with the default value "NDHWC". The correspondence is batch (N), depth (D), height (H), width (W), and channels (C).</li><li>Specifies the data layout format of 'out_backprop' and 'y'.</li></ul> | STRING | - |
 | y  | Output | <ul><li>5D tensor in the same format as 'out_backprop', that is, $\frac{\partial L}{\partial x_{n, c_{in}, d, i, j}}$ in the formula.</li></ul> | FLOAT16, BFLOAT16, FLOAT32 | NDHWC, NCDHW |
 
-- Feature map: the [输入特征图'x'](../conv3d_v2/README.md) in the forward convolution.
+- Feature map: the [input feature map 'x'](../conv3d_v2/README_en.md) in the forward convolution.
 - Combinations of different groups values and dtypes
 
     | groups |        dtype           | out_backprop format | filter format |     y format   |

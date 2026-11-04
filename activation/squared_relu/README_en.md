@@ -76,6 +76,7 @@ English | [简体中文](./README.md)
 - If the input value is NaN, the output is also NaN. If the input is Inf, the output is also Inf.
 - If the input is -Inf, the output is 0.
 - The input shape supports only 1 to 8 dimensions. An error is reported when the value is out of the range.
+- out supports non-contiguous tensors. The computation result is written to the logical view of out.
 
 ## Invocation Description
 

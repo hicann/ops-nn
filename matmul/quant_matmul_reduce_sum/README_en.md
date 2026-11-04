@@ -22,7 +22,7 @@ English | [简体中文](./README.md)
   out = \sum_{i=0}^{batch}(x1_i @ x2_i) * x1Scale * x2Scale
   $$
 
-  Here, $x1$, $x2$, and $out$ are matrices with dimensions $(batch, M, K)$, $(batch, K, N)$, and $(M, N)$ respectively. $x1Scale$ and $x2Scale$ are vectors with dimensions $(batch, M)$ and $(N,)$ respectively.
+  Here, $x1$, $x2$, and $out$ are matrices with dimensions $(batch, M, K)$, $(batch, K, N)$, and $(M, N)$ respectively. $x1Scale$ is a two-dimensional scaling tensor with the shape $(batch, M)$, providing a scaling value for each row of each batch; $x2Scale$ is a one-dimensional scaling vector with the shape $(N,)$.
 
 ## Parameters
 
@@ -59,7 +59,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>x1Scale</td>
       <td>Input</td>
-      <td>The one-dimensional vector that row-scales the matrix multiplication result.</td>
+      <td>The two-dimensional scaling tensor with the shape (batch, M), which provides a scaling value for each row of each batch.</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

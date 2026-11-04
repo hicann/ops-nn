@@ -59,7 +59,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>scalars</td>
       <td>Input</td>
-      <td>Denotes the input scalar list for the maximum value computation, corresponding to `scalars` in the formula. The number of elements equals the number of tensors in `x`. The data type has a certain correspondence with the data type of the input `x`: when the data type of the input parameter `x` is FLOAT32, FLOAT16, or BFLOAT16, the data type of `scalars` supports FLOAT32; when the data type of the input parameter `x` is INT32, the data type of `scalars` supports only INT64.</td>
+      <td>Denotes the input scalar list for the maximum value computation, corresponding to `scalars` in the formula. The number of elements equals the number of tensors in `x`. The data types are paired according to the dtype of `x`: when `x` is FLOAT32, FLOAT16, or BFLOAT16, `scalars` supports FLOAT32; when `x` is INT32, `scalars` supports INT64. The aclnn interface additionally supports DOUBLE (`x` is of a floating-point type, which is internally converted to FLOAT32 before participating in the computation) and INT32 (`x` is INT32, which is internally converted to INT64 before participating in the computation).</td>
       <td>FLOAT32, INT64</td>
       <td>ND</td>
     </tr>
@@ -76,7 +76,14 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- The maximum number of tensors contained in the input `x` and the output `y` is 256 for each, and the TensorList length of `y` must equal the TensorList length of `x`.
+- The shape size of the output `y` must be greater than or equal to the shape size of the tensor at the corresponding position in `x`.
+- The ScalarList length of the input `scalars` must equal the TensorList length of `x`, and the maximum number of supported elements is 256.
+- `scalars` is constrained only by the number of elements (ScalarList length) and the dtype, and its tensor rank is not limited. The kernel reads the i-th element by the flattened index.
+- Empty TensorLists are supported: when the TensorList lengths of both `x` and `y` are 0, the aclnn interface and kernel/graph-mode direct invocation directly return success (no-op).
+- Non-contiguous tensor support: the aclnn interface supports non-contiguous input `x` and output `y` (non-contiguous inputs are first converted to contiguous tensors to participate in the computation, and non-contiguous outputs are written back with the contiguous results). In graph mode, non-contiguous tensors are handled by the operator prototype `AutoContiguous` at the framework layer. Kernel direct invocation supports only contiguous tensors.
+- The DOUBLE data type of the input `scalars` is supported only in the aclnn interface path (internally converted to FLOAT32 to participate in the computation). When `x` is INT32, the INT32 data type of `scalars` is also supported only in the aclnn interface path (internally converted to INT64 to participate in the computation). In graph mode (operator IR), `scalars` supports only FLOAT32 and INT64.
+- The preceding constraints on length, dtype, shape, and so on return ACLNN_ERR_PARAM_INVALID in the aclnn interface path. In non-aclnn paths such as graph mode and operator direct invocation, they are uniformly validated by tiling, and a failure returns a tiling error (corresponding to the ACLNN_ERR_INNER_TILING_ERROR semantics).
 
 ## Invocation Description
 

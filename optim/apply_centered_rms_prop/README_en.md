@@ -6,12 +6,12 @@ English | [简体中文](./README.md)
 
 | Product | Support |
 | :----------------------------------------- | :------:|
-| Ascend 950PR&950DT products | √ |
-| Atlas A3 products | √ |
-| Atlas A2 products | √ |
-| Atlas 200I/500 A2 inference products | √ |
-| Atlas inference products | √ |
-| Atlas training products | √ |
+| <term>Ascend 950PR&950DT products</term> | √ |
+| <term>Atlas A3 products</term> | √ |
+| <term>Atlas A2 products</term> | √ |
+| <term>Atlas 200I/500 A2 inference products</term> | √ |
+| <term>Atlas inference products</term> | √ |
+| <term>Atlas training products</term> | √ |
 
 ## Function
 
@@ -120,28 +120,28 @@ English | [简体中文](./README.md)
   <tr>
     <td>lr</td>
     <td>Input</td>
-    <td>Learning rate. Must be a 0-D scalar tensor.</td>
+    <td>Learning rate. Must be a 0-D scalar tensor, compatible with the single-element 1-D ({1}) form.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>rho</td>
     <td>Input</td>
-    <td>Decay coefficient. Must be a 0-D scalar tensor.</td>
+    <td>Decay coefficient. Must be a 0-D scalar tensor, compatible with the single-element 1-D ({1}) form.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>momentum</td>
     <td>Input</td>
-    <td>Momentum coefficient. Must be a 0-D scalar tensor.</td>
+    <td>Momentum coefficient. Must be a 0-D scalar tensor, compatible with the single-element 1-D ({1}) form.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>epsilon</td>
     <td>Input</td>
-    <td>Numerical stability constant. Must be a 0-D scalar tensor.</td>
+    <td>Numerical stability constant. Must be a 0-D scalar tensor, compatible with the single-element 1-D ({1}) form.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -155,7 +155,7 @@ English | [简体中文](./README.md)
   <tr>
     <td>use_locking</td>
     <td>Attribute</td>
-    <td>Optional attribute that specifies whether to lock the update. Default value: false.</td>
+    <td>Optional attribute kept as a placeholder. The NPU performs sequential updates in a single kernel, so the value does not change the computation result. The default value is false.</td>
     <td>BOOL</td>
     <td>-</td>
   </tr>
@@ -171,13 +171,14 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The shapes of the five ND tensors var, mg, ms, mom, and grad must be exactly the same.
-- lr, rho, momentum, and epsilon must be 0-D scalar tensors.
+- lr, rho, momentum, and epsilon must be 0-D scalar tensors, compatible with the single-element 1-D ({1}) form.
 - The data types of all inputs and outputs must be the same (FLOAT, FLOAT16, or BFLOAT16).
 - The operator declares only one output, var, which shares storage with the input var; mg/ms/mom are updated in place on the inputs.
 - Sparse gradients are not supported.
 - For FLOAT16/BFLOAT16 inputs, the internal computation uses the FP32 mixed-precision path and finally casts back to the original dtype.
 - fp16 overflow boundary: when grad values approach the fp16 maximum 65504, the internal FP32 computation path prevents intermediate overflow, but if the result exceeds the range when finally cast back to fp16, it is saturated and truncated.
-- The ACLNN interface executes `AutoContiguous()` to make non-contiguous inputs contiguous; the GE graph path uses the ND format according to the registration constraints.
+- It is recommended that `epsilon` be a positive value: the denominator is `sqrt(ms - mg² + epsilon)`. When `ms - mg² + epsilon < 0`, the square root produces NaN, which propagates to `mom` and `var`. This is consistent with the TensorFlow semantics, and the implementation does not perform clamping.
+- The operator prototype registers `AutoContiguous()` for each input. Non-contiguous ND inputs are made contiguous by the framework before entering the operator. The data format of inputs and outputs is ND. This operator does not provide a standalone ACLNN interface.
 
 ## Invocation Description
 

@@ -83,7 +83,7 @@ ${op_class}                    # Operator classification
 
 | Type | Requirement | Reference |
 |------|------|---------|
-| Code deliverables | Provide the operator Kernel implementation and operator test files | [fast_kernel_launch_example](examples/fast_kernel_launch_example/README.md) |
+| Code deliverables | Provide the operator Kernel implementation and operator test files | [fast_kernel_launch_example](examples/fast_kernel_launch_example/README_en.md) |
 | Documentation deliverables | The operator README document is mandatory; provide other documents as needed | [Documentation contribution guide](docs/CONTRIBUTING_DOCS.md) |
 | Accuracy requirements | Newly contributed operators must meet the accuracy standards | [Open-source accuracy standard for ecosystem operators](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/mixed_tolerance_standard.md) |
 

@@ -51,28 +51,28 @@ English | [简体中文](./README.md)
     <tr>
       <td>x1</td>
       <td>Input</td>
-      <td>Denotes the first input tensor list for linear interpolation computation, corresponding to `x1` in the formula. The data types of all tensors in this parameter are consistent.</td>
+      <td>Denotes the first input tensor list for linear interpolation computation, corresponding to <code>x1</code> in the formula. Empty tensors are supported. The data types of all tensors in this parameter are consistent.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>Input</td>
-      <td>Denotes the second input tensor list for linear interpolation computation, corresponding to `x2` in the formula. The data type, data format, and shape are consistent with those of the input parameter `x1`. The data types of all tensors in this parameter are consistent.</td>
+      <td>Denotes the second input tensor list for linear interpolation computation, corresponding to <code>x2</code> in the formula. Empty tensors are supported. The data type, data format, and shape are consistent with those of the input parameter <code>x1</code>. The data types of all tensors in this parameter are consistent.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight</td>
       <td>Input</td>
-      <td>Denotes the interpolation coefficient tensor list for linear interpolation computation, corresponding to `weight` in the formula. The data type, data format, and shape are consistent with those of the input parameter `x1`. The data types of all tensors in this parameter are consistent.</td>
+      <td>Denotes the interpolation coefficient tensor list for linear interpolation computation, corresponding to <code>weight</code> in the formula. Empty tensors are supported. The data type, data format, and shape are consistent with those of the input parameter <code>x1</code>. The data types of all tensors in this parameter are consistent.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Denotes the output tensor list for linear interpolation computation, corresponding to `y` in the formula. The data type and data format are consistent with those of the input parameter `x1`, and the shape size is greater than or equal to the shape size of the input parameter `x1`. The data types of all tensors in this parameter are consistent.</td>
+      <td>Denotes the output tensor list for linear interpolation computation, corresponding to <code>y</code> in the formula. Empty tensors are supported. The data type and data format are consistent with those of the input parameter <code>x1</code>, the shape is consistent with that of the input parameter <code>x1</code>, and the storage shape size is not less than the storage shape size of the input parameter <code>x1</code>. The data types of all tensors in this parameter are consistent.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -82,7 +82,10 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- Non-contiguous tensors: only the aclnn interface supports non-contiguous input and output. The interface first converts non-contiguous tensors to contiguous tensors for computation, and then writes the output result back to the original output view through ViewCopy. The graph mode (IR) and kernel direct-invocation paths do not support non-contiguous tensors.
+- The dimensions of x1, x2, weight, and y range from 0 to 8.
+- The shape of out must be consistent with that of x1, and the storage shape size of out must not be less than that of x1.
+- The maximum length of a TensorList is 256.
 
 ## Invocation Description
 

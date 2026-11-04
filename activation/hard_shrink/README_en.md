@@ -15,7 +15,7 @@ English | [简体中文](./README.md)
 
 ## Function
 
-- Operator function: completes the HardShrink activation function computation. It sets the elements in the input tensor whose absolute values are less than or equal to the threshold lambd to zero, and keeps the elements greater than the threshold unchanged.
+- Operator function: completes the HardShrink activation function computation. It sets the elements in the input tensor whose absolute values are less than or equal to the threshold lambd to zero, and keeps the elements whose absolute values are greater than the threshold unchanged.
 
 - Formula:
 
@@ -44,7 +44,7 @@ where x is the input tensor, and $\lambda$ is the threshold parameter lambd.
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>input_x</td>
       <td>Input</td>
       <td>Input tensor, corresponding to x in the formula. It supports 0-8 dimensions and empty tensors.</td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
@@ -52,15 +52,15 @@ where x is the input tensor, and $\lambda$ is the threshold parameter lambd.
     </tr>
     <tr>
       <td>lambd</td>
-      <td>Input</td>
-      <td>Threshold parameter, corresponding to λ in the formula. It is a scalar of the float type, with the default value 0.5.</td>
+      <td>Attribute</td>
+      <td>Threshold parameter, corresponding to λ in the formula. It is a scalar of the float type. Negative values are equivalent to 0, that is, the input is output as is.</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>output_y</td>
       <td>Output</td>
-      <td>Output tensor, with the same shape and dtype as self.</td>
+      <td>Output tensor, corresponding to HardShrink(x) in the formula. It has the same shape and dtype as input_x.</td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -68,14 +68,15 @@ where x is the input tensor, and $\lambda$ is the threshold parameter lambd.
 
 ## Constraints
 
-- The data types of self and out must be consistent, supporting FLOAT, FLOAT16, and BFLOAT16.
-- The shapes of self and out must be consistent, and broadcasting is not involved.
-- self supports 0-8 dimensions.
-- self supports empty tensors (with 0 elements). In this case, out is also an empty tensor, and the computation is not executed.
-- lambd is a scalar of the float type, and its value has no restriction.
+- The data types of input_x and output_y must be consistent, supporting FLOAT, FLOAT16, and BFLOAT16.
+- The shapes of input_x and output_y must be consistent, and broadcasting is not involved.
+- input_x supports 0-8 dimensions.
+- input_x supports empty tensors (with 0 elements). In this case, output_y is also an empty tensor, and the computation is not executed.
+- lambd is a scalar of the float type, and its value has no restriction. Negative values are equivalent to 0, and the input is output as is.
 
 ## Invocation Description
 
 | Invocation method | Invocation sample                                                                   | Description                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn invocation | [test_aclnn_hard_shrink](./examples/arch35/test_aclnn_hard_shrink.cpp) | Invokes the Hardshrink operator through the [aclnnHardshrink](./docs/aclnnHardshrink_en.md) interface.    |
+| aclnn invocation | [test_aclnn_hard_shrink](./examples/test_aclnn_hard_shrink.cpp) | Invokes the HardShrink operator through the [aclnnHardshrink](./docs/aclnnHardshrink_en.md) interface.    |
+| GE graph mode | [hard_shrink_proto.h](./op_graph/hard_shrink_proto.h) | Invokes the HardShrink operator in the GE graph through the `REG_OP(HardShrink)` graph operator prototype.    |
