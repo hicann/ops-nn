@@ -96,8 +96,8 @@ aclnnStatus aclnnSoftshrink(
       <td>lambd（aclScalar*）</td>
       <td>输入</td>
       <td>输入的标量，公式中的输入λ。</td>
-      <td>数值要求大于等于0。</td>
-      <td>FLOAT</td>
+      <td>数值要求大于等于0。接口内部将标量转换为FLOAT参与计算，非FLOAT类型存在精度转换（如DOUBLE按IEEE754舍入到FLOAT、超出FLOAT表示范围的整数会丢失精度），阈值精度敏感场景建议直接传入FLOAT标量。</td>
+      <td>除COMPLEX64、COMPLEX128外的数值标量类型</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -166,7 +166,7 @@ aclnnStatus aclnnSoftshrink(
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>self、lambd或out的数据类型不在支持的范围之内。</td>
+      <td>self或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>self和out的shape不一致。</td>
@@ -230,6 +230,7 @@ aclnnStatus aclnnSoftshrink(
 - 数据格式仅支持ND；out的dtype与self一致。
 - self支持0~8维输入；0维标量输入会被视作shape为(1,)的1维tensor处理。
 - lambd取值范围为[0, +∞)，不允许为负数或nan。
+- lambd支持除复数外的数值标量类型，接口内部统一转换为FLOAT后参与计算；非FLOAT标量存在精度转换，阈值精度敏感场景建议直接使用FLOAT标量。
 - 支持空Tensor（元素个数为0），直接返回同shape的空输出。
 - 支持动态shape（含-1维度）：tiling在运行期按实际shape计算切分，无需重新编译。
 

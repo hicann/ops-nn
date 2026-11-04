@@ -57,21 +57,21 @@
       <td>输入</td>
       <td>支持空Tensor。表示输入张量，公式中的输入gradOutput。shape需要与self、out相同，数据类型需要与self、out相同。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC</td>
     </tr>
     <tr>
       <td>self</td>
       <td>输入</td>
       <td>支持空Tensor。输入数据。公式中的self。shape需要与gradOutput、out相同，数据类型需要与gradOutput、out相同。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
       <td>支持空Tensor。表示输出张量，公式中的out。shape需要与gradOutput、self相同，数据类型需要与gradOutput、self相同。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC</td>
     </tr>
     </tbody>
   </table>
@@ -81,6 +81,7 @@
 ## 约束说明
 
 - `gradOutput`、`self`、`out`的shape维度不超过8维。
+- `gradOutput`、`self`、`out`的数据格式需保持一致，支持ND、NCHW、NHWC。
 
 ## 调用说明
 

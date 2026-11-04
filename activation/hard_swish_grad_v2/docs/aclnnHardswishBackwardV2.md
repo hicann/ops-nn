@@ -97,7 +97,7 @@ aclnnStatus aclnnHardswishBackwardV2(
       <td>表示输入张量，公式中的输入gradOutput。</td>
       <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -107,7 +107,7 @@ aclnnStatus aclnnHardswishBackwardV2(
       <td>输入数据。公式中的self。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与gradOutput、out相同。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -117,7 +117,7 @@ aclnnStatus aclnnHardswishBackwardV2(
       <td>表示输出张量，公式中的out。</td>
       <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -235,6 +235,8 @@ aclnnStatus aclnnHardswishBackwardV2(
 
 - 确定性计算：
   - aclnnHardswishBackwardV2默认确定性实现。
+
+- gradOutput、self、out的数据格式需保持一致，支持ND、NCHW、NHWC。
 
 ## 调用示例
 

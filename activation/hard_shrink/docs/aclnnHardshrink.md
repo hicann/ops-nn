@@ -38,6 +38,8 @@
 
 其中，x为输入张量，$\lambda$为阈值参数。
 
+**特殊值说明**：输入为NaN时，输出为NaN。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnHardshrinkGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnHardshrink”接口执行计算。
@@ -109,7 +111,7 @@ aclnnStatus aclnnHardshrink(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的Hardshrink(x)。</td>
-      <td><ul><li>当输入x > λ或者x < -λ时，输出为x，其他情况输出0。</li><li>shape需要与self一致。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>当输入x > λ或者x < -λ时，输出为x，其他情况输出0；x为NaN时输出NaN。</li><li>shape需要与self一致。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -229,6 +231,8 @@ aclnnStatus aclnnHardshrink(
 - lambd取值无限制，为负时等效于0，结果与不收缩一致。
 - lambd为+inf时输出全为0；lambd为-inf或NaN时，`|x| <= lambd`恒为假，输入原样输出。
 - self与out的数据类型均在支持列表内即可，允许二者不同，内部按out的dtype转换。
+
+- 输入为NaN时，输出为NaN；如需输出0，需在调用前对输入做预处理。
 
 ## 调用示例
 
