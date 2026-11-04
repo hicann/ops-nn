@@ -109,7 +109,7 @@ bool PadDepthwiseConv2dFusionPass::GetPaddingsFromConst()
             padValue.push_back(int64Ptr[i]);
         }
     } else {
-        OP_LOGW(convDescInfo.nodeNameStr, "Padding dtype is not int32 or int64, can not fusion.");
+        OP_LOGW(convDescInfo.nodeNameStr, "Padding dtype is not int32 or int64, cannot be fused.");
         return false;
     }
 
@@ -117,11 +117,11 @@ bool PadDepthwiseConv2dFusionPass::GetPaddingsFromConst()
         paddings.push_back({padValue[i - 1], padValue[i]});
     }
     FUSION_PASS_CHECK(paddings.size() < static_cast<size_t>(DIM_NUM4),
-                      OP_LOGI(convDescInfo.nodeNameStr, "The number of paddings not valid, can not fusion."),
+                      OP_LOGI(convDescInfo.nodeNameStr, "The number of paddings is not valid, cannot be fused."),
                       return false);
     for (size_t i = 0; i < static_cast<size_t>(DIM_NUM4); ++i) {
         FUSION_PASS_CHECK(paddings[i].size() < static_cast<size_t>(DIRECTION_COUNT),
-                          OP_LOGI(convDescInfo.nodeNameStr, "The number of paddings not valid, can not fusion."),
+                          OP_LOGI(convDescInfo.nodeNameStr, "The number of paddings is not valid, cannot be fused."),
                           return false);
     }
     return true;
@@ -135,25 +135,27 @@ bool PadDepthwiseConv2dFusionPass::ExtractPaddingByFormat()
 
     Format primaryFormat = padInDesc.GetOriginFormat();
     if (primaryFormat == ge::FORMAT_NCHW) {
-        FUSION_PASS_CHECK(paddings[NCHW_NC_PAIR_INDEX][0] != 0 || paddings[NCHW_NC_PAIR_INDEX][1] != 0 ||
-                              paddings[NCHW_C_AXIS_INDEX][0] != 0 || paddings[NCHW_C_AXIS_INDEX][1] != 0,
-                          OP_LOGI(convDescInfo.nodeNameStr, "Pad and DepthwiseConv2d fusion can only on H and W."),
-                          return false);
+        FUSION_PASS_CHECK(
+            paddings[NCHW_NC_PAIR_INDEX][0] != 0 || paddings[NCHW_NC_PAIR_INDEX][1] != 0 ||
+                paddings[NCHW_C_AXIS_INDEX][0] != 0 || paddings[NCHW_C_AXIS_INDEX][1] != 0,
+            OP_LOGI(convDescInfo.nodeNameStr, "Paddings on N or C axis are not supported, only H and W can be padded."),
+            return false);
         paddingsT = paddings[NCHW_PAD_H_INDEX][0];
         paddingsB = paddings[NCHW_PAD_H_INDEX][1];
         paddingsL = paddings[NCHW_PAD_W_INDEX][0];
         paddingsR = paddings[NCHW_PAD_W_INDEX][1];
     } else if (primaryFormat == ge::FORMAT_NHWC) {
-        FUSION_PASS_CHECK(paddings[NHWC_N_AXIS_INDEX][0] != 0 || paddings[NHWC_N_AXIS_INDEX][1] != 0 ||
-                              paddings[NHWC_C_AXIS_INDEX][0] != 0 || paddings[NHWC_C_AXIS_INDEX][1] != 0,
-                          OP_LOGI(convDescInfo.nodeNameStr, "Pad and DepthwiseConv2d fusion can only on H and W."),
-                          return false);
+        FUSION_PASS_CHECK(
+            paddings[NHWC_N_AXIS_INDEX][0] != 0 || paddings[NHWC_N_AXIS_INDEX][1] != 0 ||
+                paddings[NHWC_C_AXIS_INDEX][0] != 0 || paddings[NHWC_C_AXIS_INDEX][1] != 0,
+            OP_LOGI(convDescInfo.nodeNameStr, "Paddings on N or C axis are not supported, only H and W can be padded."),
+            return false);
         paddingsT = paddings[NHWC_PAD_H_INDEX][0];
         paddingsB = paddings[NHWC_PAD_H_INDEX][1];
         paddingsL = paddings[NHWC_PAD_W_INDEX][0];
         paddingsR = paddings[NHWC_PAD_W_INDEX][1];
     } else {
-        OP_LOGI(convDescInfo.nodeNameStr, "Pad input format is not NCHW or NHWC, can not fusion.");
+        OP_LOGI(convDescInfo.nodeNameStr, "Pad input format is not NCHW or NHWC, cannot be fused.");
         return false;
     }
     return true;
@@ -165,7 +167,7 @@ bool PadDepthwiseConv2dFusionPass::CheckPaddingRange() const
         paddingsT < MIN_PADDING_VALUE || paddingsT > MAX_PADDING_VALUE || paddingsB < MIN_PADDING_VALUE ||
             paddingsB > MAX_PADDING_VALUE || paddingsL < MIN_PADDING_VALUE || paddingsL > MAX_PADDING_VALUE ||
             paddingsR < MIN_PADDING_VALUE || paddingsR > MAX_PADDING_VALUE,
-        OP_LOGI(convDescInfo.nodeNameStr, "Paddings value not in [0,255], can not fusion."), return false);
+        OP_LOGI(convDescInfo.nodeNameStr, "Paddings value is not in [0,255], cannot be fused."), return false);
     return true;
 }
 
@@ -175,19 +177,29 @@ bool PadDepthwiseConv2dFusionPass::CheckFilterVsPadding(const GNode& convNode) c
     // filter desc 由基类 Run() 中的 GetConvDescInfo 填充（conv_fusion_base_pass.cpp:63）
     const TensorDesc& filterDesc = convDescInfo.filterDesc;
     FUSION_PASS_CHECK(filterDesc.GetShape().GetDimNum() < static_cast<size_t>(DIM_NUM4),
-                      OP_LOGI(convDescInfo.nodeNameStr, "Filter shape is not 4D, can not fusion."), return false);
+                      OP_LOGI(convDescInfo.nodeNameStr, "Filter shape is not 4D, cannot be fused."), return false);
 
     Format filterFormat = filterDesc.GetOriginFormat();
     if (filterFormat == ge::FORMAT_NCHW) {
         FUSION_PASS_CHECK(filterDesc.GetShape().GetDim(NCHW_H_INDEX) <= paddingsT ||
                               filterDesc.GetShape().GetDim(NCHW_H_INDEX) <= paddingsB,
-                          OP_LOGI(convDescInfo.nodeNameStr, "Filter_H more than pad_H, can not fusion."), return false);
+                          OP_LOGI(convDescInfo.nodeNameStr,
+                                  "Filter height [%ld] must be greater than top [%ld] and bottom [%ld] padding, "
+                                  "cannot be fused.",
+                                  static_cast<long>(filterDesc.GetShape().GetDim(NCHW_H_INDEX)),
+                                  static_cast<long>(paddingsT), static_cast<long>(paddingsB)),
+                          return false);
     } else if (filterFormat == ge::FORMAT_HWCN) {
         FUSION_PASS_CHECK(filterDesc.GetShape().GetDim(HWCN_H_INDEX) <= paddingsT ||
                               filterDesc.GetShape().GetDim(HWCN_H_INDEX) <= paddingsB,
-                          OP_LOGI(convDescInfo.nodeNameStr, "Filter_H more than pad_H, can not fusion."), return false);
+                          OP_LOGI(convDescInfo.nodeNameStr,
+                                  "Filter height [%ld] must be greater than top [%ld] and bottom [%ld] padding, "
+                                  "cannot be fused.",
+                                  static_cast<long>(filterDesc.GetShape().GetDim(HWCN_H_INDEX)),
+                                  static_cast<long>(paddingsT), static_cast<long>(paddingsB)),
+                          return false);
     } else {
-        OP_LOGI(convDescInfo.nodeNameStr, "Filter format is not NCHW or HWCN, can not fusion.");
+        OP_LOGI(convDescInfo.nodeNameStr, "Filter format is not NCHW or HWCN, cannot be fused.");
         return false;
     }
     return true;
@@ -203,7 +215,7 @@ bool PadDepthwiseConv2dFusionPass::CheckPadOutputsAllDepthwise() const
         FUSION_PASS_CHECK(consumerPair.first->GetType(consumerType) != GRAPH_SUCCESS,
                           OP_LOGE(convDescInfo.nodeNameStr, "Get Pad output consumer type failed."), return false);
         FUSION_PASS_CHECK(consumerType != DEPTHWISE_CONV2D,
-                          OP_LOGI(convDescInfo.nodeNameStr, "Output node is not DepthwiseConv2D, can not fusion."),
+                          OP_LOGI(convDescInfo.nodeNameStr, "Output node is not DepthwiseConv2D, cannot be fused."),
                           return false);
     }
     return true;
@@ -250,7 +262,7 @@ bool PadDepthwiseConv2dFusionPass::MeetRequirements(const GNode& convNode)
     }
     FUSION_PASS_CHECK(
         convCount > 1,
-        OP_LOGI(convDescInfo.nodeNameStr, "Pad node has multiple depthwise_conv2d outputs, can not fusion."),
+        OP_LOGI(convDescInfo.nodeNameStr, "Pad node has multiple depthwise_conv2d outputs, cannot be fused."),
         return false);
 
     FUSION_PASS_CHECK_NOLOG(!GetPaddingsFromConst(), return false);
@@ -262,7 +274,7 @@ bool PadDepthwiseConv2dFusionPass::MeetRequirements(const GNode& convNode)
     }
 
     FUSION_PASS_CHECK(!padNode->GetOutControlNodes().empty(),
-                      OP_LOGI(convDescInfo.nodeNameStr, "Pad node has control edge, can not fusion."), return false);
+                      OP_LOGI(convDescInfo.nodeNameStr, "Pad node has control edge, cannot be fused."), return false);
     FUSION_PASS_CHECK_NOLOG(!CheckPadOutputsAllDepthwise(), return false);
     FUSION_PASS_CHECK_NOLOG(!BuildPadsVector(), return false);
 

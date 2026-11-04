@@ -32,9 +32,10 @@ using namespace test_conv_fusion_framework;
 namespace {
 const Status kConvNotChanged = static_cast<Status>(CONV_NOT_CHANGED);
 
-DepthwiseConv2DConfig MakeDepthwiseConfig(const char *nodeName, DataType dtype, Format fmapFormat,
-    const std::vector<int64_t> &fmapShape, const std::vector<int64_t> &filterShape, Format filterOriginFormat,
-    const std::vector<int64_t> &outputShape)
+DepthwiseConv2DConfig MakeDepthwiseConfig(const char* nodeName, DataType dtype, Format fmapFormat,
+                                          const std::vector<int64_t>& fmapShape,
+                                          const std::vector<int64_t>& filterShape, Format filterOriginFormat,
+                                          const std::vector<int64_t>& outputShape)
 {
     TensorDesc fmapDesc = BuildTensorDesc(dtype, fmapFormat, fmapShape, fmapFormat, fmapShape);
     TensorDesc filterDesc = BuildTensorDesc(dtype, filterOriginFormat, filterShape, filterOriginFormat, filterShape);
@@ -43,49 +44,49 @@ DepthwiseConv2DConfig MakeDepthwiseConfig(const char *nodeName, DataType dtype, 
     DepthwiseConv2DConfig config;
     config.SetName(nodeName)
         .AddInput(TensorInfo(dtype, fmapFormat, fmapShape, std::string(nodeName) + "_x").SetDesc(fmapDesc))
-        .AddInput(TensorInfo(dtype, filterOriginFormat, filterShape, std::string(nodeName) + "_filter")
-            .SetDesc(filterDesc))
+        .AddInput(
+            TensorInfo(dtype, filterOriginFormat, filterShape, std::string(nodeName) + "_filter").SetDesc(filterDesc))
         .AddOutput(TensorInfo(dtype, fmapFormat, outputShape, "y").SetDesc(outputDesc))
         .SetAttr("data_format", fmapFormat == FORMAT_NHWC ? "NHWC" : "NCHW");
     return config;
 }
 
-DepthwiseConv2DConfig MakeHwcnConfig(const std::string &nodeName, const std::vector<int64_t> &filterShape,
-    DataType dtype = DT_FLOAT)
+DepthwiseConv2DConfig MakeHwcnConfig(const std::string& nodeName, const std::vector<int64_t>& filterShape,
+                                     DataType dtype = DT_FLOAT)
 {
     return MakeDepthwiseConfig(nodeName.c_str(), dtype, FORMAT_NCHW, {1, 16, 256, 256}, filterShape, FORMAT_HWCN,
-        {1, 4, 256, 256});
+                               {1, 4, 256, 256});
 }
 
-DepthwiseConv2DConfig MakeNchwConfig(const std::string &nodeName, const std::vector<int64_t> &filterShape,
-    DataType dtype = DT_FLOAT)
+DepthwiseConv2DConfig MakeNchwConfig(const std::string& nodeName, const std::vector<int64_t>& filterShape,
+                                     DataType dtype = DT_FLOAT)
 {
     return MakeDepthwiseConfig(nodeName.c_str(), dtype, FORMAT_NCHW, {1, 16, 256, 256}, filterShape, FORMAT_NCHW,
-        {1, 4, 256, 256});
+                               {1, 4, 256, 256});
 }
 
-DepthwiseConv2DConfig MakeNhwcConfig(const std::string &nodeName, const std::vector<int64_t> &filterShape)
+DepthwiseConv2DConfig MakeNhwcConfig(const std::string& nodeName, const std::vector<int64_t>& filterShape)
 {
     return MakeDepthwiseConfig(nodeName.c_str(), DT_FLOAT, FORMAT_NHWC, {1, 256, 256, 16}, filterShape, FORMAT_NHWC,
-        {1, 256, 256, 4});
+                               {1, 256, 256, 4});
 }
 
-GraphPtr BuildDepthwiseGraph(const char *graphName, const DepthwiseConv2DConfig &cfg)
+GraphPtr BuildDepthwiseGraph(const char* graphName, const DepthwiseConv2DConfig& cfg)
 {
     TestGraph builder(graphName);
     builder.SetSocAscend950();
     return builder.AddDepthwiseConv2D(cfg).SetOutput(cfg.name).Build();
 }
 
-GraphPtr BuildDepthwiseWithFilterBranch(const char *graphName, const DepthwiseConv2DConfig &cfg, bool withRelu = true)
+GraphPtr BuildDepthwiseWithFilterBranch(const char* graphName, const DepthwiseConv2DConfig& cfg, bool withRelu = true)
 {
     TestGraph builder(graphName);
     builder.SetSocAscend950();
     return builder.AddDepthwiseConv2DWithFilterBranch(cfg, withRelu).SetOutput(cfg.name).Build();
 }
 
-void ExpectReshapeFusion(GraphPtr &graph, const std::vector<int64_t> &expIn, const std::vector<int64_t> &expOut,
-    const std::vector<int64_t> &expAttr = {})
+void ExpectReshapeFusion(GraphPtr& graph, const std::vector<int64_t>& expIn, const std::vector<int64_t>& expOut,
+                         const std::vector<int64_t>& expAttr = {})
 {
     GNode reshapeNode;
     ASSERT_TRUE(GraphChecker::FindNodeByNameSuffix(graph, "/Reshape_1", reshapeNode));
@@ -102,7 +103,7 @@ void ExpectReshapeFusion(GraphPtr &graph, const std::vector<int64_t> &expIn, con
     }
 }
 
-void ExpectDepthwiseFilterShape(GraphPtr &graph, const std::vector<int64_t> &expFilterShape)
+void ExpectDepthwiseFilterShape(GraphPtr& graph, const std::vector<int64_t>& expFilterShape)
 {
     GNode depthwise;
     ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "DepthwiseConv2D", depthwise));
@@ -117,8 +118,7 @@ protected:
     static void SetUpTestCase() { std::cout << "ADepthwiseFusionPassTest SetUp" << std::endl; }
     static void TearDownTestCase() { std::cout << "ADepthwiseFusionPassTest TearDown" << std::endl; }
 
-    void TestTotalPass(const std::string &passName, GraphPtr &graph, Status expectRes,
-        int32_t depthwiseCountBefore = 1)
+    void TestTotalPass(const std::string& passName, GraphPtr& graph, Status expectRes, int32_t depthwiseCountBefore = 1)
     {
         CustomPassContext passContext;
         passContext.SetPassName(passName.c_str());
@@ -145,7 +145,7 @@ protected:
 TEST_F(ADepthwiseFusionPassTest, hwcn_reshape_success)
 {
     struct Point {
-        const char *pointName;
+        const char* pointName;
         std::vector<int64_t> filterShape;
         std::vector<int64_t> expIn;
         std::vector<int64_t> expOut;
@@ -155,13 +155,13 @@ TEST_F(ADepthwiseFusionPassTest, hwcn_reshape_success)
         {"dynamic", {-1, -1, 16, -1}, {-1, -1, 16, -1}, {-1, -1, 1, -16}, true},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         std::string name = std::string("hwcn_reshape_success_") + p.pointName;
         GraphPtr graph;
         if (p.useDynamicFmap) {
             auto cfg = MakeDepthwiseConfig(name.c_str(), DT_FLOAT, FORMAT_NCHW, {-1, -1, -1, -1}, p.filterShape,
-                FORMAT_HWCN, {-1, -1, -1, -1});
+                                           FORMAT_HWCN, {-1, -1, -1, -1});
             graph = BuildDepthwiseWithFilterBranch(name.c_str(), cfg);
         } else {
             auto cfg = MakeHwcnConfig(name, p.filterShape);
@@ -176,7 +176,7 @@ TEST_F(ADepthwiseFusionPassTest, hwcn_reshape_success)
 TEST_F(ADepthwiseFusionPassTest, nchw_reshape_success)
 {
     struct Point {
-        const char *pointName;
+        const char* pointName;
         std::vector<int64_t> filterShape;
         std::vector<int64_t> expIn;
         std::vector<int64_t> expOut;
@@ -185,7 +185,7 @@ TEST_F(ADepthwiseFusionPassTest, nchw_reshape_success)
         {"dynamic", {-1, 16, -1, -1}, {-1, 16, -1, -1}, {-16, 1, -1, -1}},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         std::string name = std::string("nchw_reshape_success_") + p.pointName;
         auto cfg = MakeNchwConfig(name, p.filterShape);
@@ -199,48 +199,55 @@ TEST_F(ADepthwiseFusionPassTest, nchw_reshape_success)
 TEST_F(ADepthwiseFusionPassTest, a_depthwise_fusion_no_change)
 {
     struct Point {
-        const char *pointName;
+        const char* pointName;
         std::function<GraphPtr()> build;
         bool skipDepthwiseCheck = false;
     } const points[] = {
-        {"nhwc_format", []() {
-             auto cfg = MakeDepthwiseConfig("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {1, 16, 256, 256},
-                 {4, 1, 1, 16}, FORMAT_NHWC, {1, 4, 256, 256});
+        {"nhwc_format",
+         []() {
+             auto cfg = MakeDepthwiseConfig("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {1, 16, 256, 256}, {4, 1, 1, 16},
+                                            FORMAT_NHWC, {1, 4, 256, 256});
              return BuildDepthwiseWithFilterBranch("a_depthwise_fusion_no_change_nhwc", cfg);
          }},
-        {"nchw_c_already_one", []() {
-             auto cfg = MakeDepthwiseConfig("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {1, 1, 256, 256},
-                 {4, 1, 1, 16}, FORMAT_NCHW, {1, 4, 256, 256});
+        {"nchw_c_already_one",
+         []() {
+             auto cfg = MakeDepthwiseConfig("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {1, 1, 256, 256}, {4, 1, 1, 16},
+                                            FORMAT_NCHW, {1, 4, 256, 256});
              return BuildDepthwiseWithFilterBranch("a_depthwise_fusion_no_change_nchw_c1", cfg);
          }},
-        {"hwcn_c_already_one", []() {
-             auto cfg = MakeDepthwiseConfig("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {1, 1, 256, 256},
-                 {4, 1, 1, 16}, FORMAT_HWCN, {1, 4, 256, 256});
+        {"hwcn_c_already_one",
+         []() {
+             auto cfg = MakeDepthwiseConfig("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {1, 1, 256, 256}, {4, 1, 1, 16},
+                                            FORMAT_HWCN, {1, 4, 256, 256});
              return BuildDepthwiseWithFilterBranch("a_depthwise_fusion_no_change_hwcn_c1", cfg);
          }},
-        {"filter_not_4d_skipped", []() {
+        {"filter_not_4d_skipped",
+         []() {
              auto cfg = MakeHwcnConfig("depthwise_conv2d", {1, 1, 16, 4});
              cfg.inputs[1].shape = {1, 1, 16, 4, 1};
-             cfg.inputs[1].tensorDesc =
-                 BuildTensorDesc(DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4, 1}, FORMAT_HWCN, {1, 1, 16, 4, 1});
+             cfg.inputs[1].tensorDesc = BuildTensorDesc(DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4, 1}, FORMAT_HWCN,
+                                                        {1, 1, 16, 4, 1});
              return BuildDepthwiseGraph("filter_not_4d_skipped", cfg);
          }},
-        {"filter_format_nd", []() {
+        {"filter_format_nd",
+         []() {
              auto cfg = MakeHwcnConfig("depthwise_conv2d", {1, 1, 16, 4});
              cfg.inputs[1].format = FORMAT_ND;
-             cfg.inputs[1].tensorDesc =
-                 BuildTensorDesc(DT_FLOAT, FORMAT_ND, {1, 1, 16, 4}, FORMAT_ND, {1, 1, 16, 4});
+             cfg.inputs[1].tensorDesc = BuildTensorDesc(DT_FLOAT, FORMAT_ND, {1, 1, 16, 4}, FORMAT_ND, {1, 1, 16, 4});
              return BuildDepthwiseGraph("filter_format_nd", cfg);
          }},
-        {"empty_graph_no_match", []() {
-             return TestGraph("empty_graph_no_match").SetSocAscend950()
+        {"empty_graph_no_match",
+         []() {
+             return TestGraph("empty_graph_no_match")
+                 .SetSocAscend950()
                  .AddRelu(ReluConfig::Basic("relu", DT_FLOAT16), true)
                  .SetOutput("relu")
                  .Build();
-         }, true},
+         },
+         true},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         auto graph = p.build();
         std::string passName = std::string("a_depthwise_fusion_no_change_") + p.pointName;
@@ -259,12 +266,14 @@ TEST_F(ADepthwiseFusionPassTest, a_depthwise_fusion_no_change)
 TEST_F(ADepthwiseFusionPassTest, ascend_weight_quant_hwcn)
 {
     auto graph = TestGraph("ascend_weight_quant_hwcn")
-        .SetSocAscend950()
-        .AddNode(AscendWeightQuantConfig::Basic("ascend_weight_quant", DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}), {0})
-        .AddDepthwiseConv2D(MakeHwcnConfig("depthwise_conv2d", {1, 1, 16, 4}), true, false)
-        .Connect("ascend_weight_quant", 0, "depthwise_conv2d", 1)
-        .SetOutput("depthwise_conv2d")
-        .Build();
+                     .SetSocAscend950()
+                     .AddNode(
+                         AscendWeightQuantConfig::Basic("ascend_weight_quant", DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}),
+                         {0})
+                     .AddDepthwiseConv2D(MakeHwcnConfig("depthwise_conv2d", {1, 1, 16, 4}), true, false)
+                     .Connect("ascend_weight_quant", 0, "depthwise_conv2d", 1)
+                     .SetOutput("depthwise_conv2d")
+                     .Build();
 
     TestTotalPass("ascend_weight_quant_hwcn", graph, SUCCESS);
     const std::vector<int64_t> kExpShape = {1, 1, 1, 64};
@@ -287,12 +296,14 @@ TEST_F(ADepthwiseFusionPassTest, ascend_weight_quant_hwcn)
 TEST_F(ADepthwiseFusionPassTest, ascend_weight_quant_nchw)
 {
     auto graph = TestGraph("ascend_weight_quant_nchw")
-        .SetSocAscend950()
-        .AddNode(AscendWeightQuantConfig::Basic("ascend_weight_quant", DT_FLOAT, FORMAT_NCHW, {4, 16, 1, 1}), {0})
-        .AddDepthwiseConv2D(MakeNchwConfig("depthwise_conv2d", {4, 16, 1, 1}), true, false)
-        .Connect("ascend_weight_quant", 0, "depthwise_conv2d", 1)
-        .SetOutput("depthwise_conv2d")
-        .Build();
+                     .SetSocAscend950()
+                     .AddNode(
+                         AscendWeightQuantConfig::Basic("ascend_weight_quant", DT_FLOAT, FORMAT_NCHW, {4, 16, 1, 1}),
+                         {0})
+                     .AddDepthwiseConv2D(MakeNchwConfig("depthwise_conv2d", {4, 16, 1, 1}), true, false)
+                     .Connect("ascend_weight_quant", 0, "depthwise_conv2d", 1)
+                     .SetOutput("depthwise_conv2d")
+                     .Build();
 
     TestTotalPass("ascend_weight_quant_nchw", graph, SUCCESS);
     GNode reshapeNode;
@@ -328,10 +339,11 @@ TEST_F(ADepthwiseFusionPassTest, downstream_quant_bias_optimization)
 TEST_F(ADepthwiseFusionPassTest, a_depthwise_fusion_reshape_topology)
 {
     struct Point {
-        const char *pointName;
+        const char* pointName;
         std::function<void()> run;
     } const points[] = {
-        {"filter_to_reshape_to_depthwise", []() {
+        {"filter_to_reshape_to_depthwise",
+         []() {
              auto cfg = MakeHwcnConfig("depthwise_conv2d", {1, 1, 16, 4});
              auto graph = BuildDepthwiseGraph("filter_to_reshape_to_depthwise", cfg);
              CustomPassContext passContext;
@@ -347,7 +359,8 @@ TEST_F(ADepthwiseFusionPassTest, a_depthwise_fusion_reshape_topology)
              EXPECT_EQ(producerType, "Reshape");
              EXPECT_TRUE(GraphChecker::HasOutEdgeTo(reshape, 0, depthwise, 1));
          }},
-        {"non_target_consumer_no_reshape", []() {
+        {"non_target_consumer_no_reshape",
+         []() {
              auto cfg = MakeHwcnConfig("depthwise_conv2d", {1, 1, 16, 4});
              TensorInfo filterInfo(DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}, "filter_src");
              filterInfo.SetDesc(BuildTensorDesc(DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}, FORMAT_HWCN, {1, 1, 16, 4}));
@@ -373,7 +386,7 @@ TEST_F(ADepthwiseFusionPassTest, a_depthwise_fusion_reshape_topology)
          }},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         p.run();
     }
@@ -407,12 +420,12 @@ TEST_F(ADepthwiseFusionPassTest, anchor_depthwise_unchanged)
 TEST_F(ADepthwiseFusionPassTest, multi_depthwise_same_graph)
 {
     auto graph = TestGraph("multi_depthwise_same_graph")
-        .SetSocAscend950()
-        .AddDepthwiseConv2D(MakeHwcnConfig("dw1", {1, 1, 16, 4}))
-        .AddDepthwiseConv2D(MakeNchwConfig("dw2", {4, 16, 1, 1}))
-        .SetOutput("dw1")
-        .SetOutput("dw2")
-        .Build();
+                     .SetSocAscend950()
+                     .AddDepthwiseConv2D(MakeHwcnConfig("dw1", {1, 1, 16, 4}))
+                     .AddDepthwiseConv2D(MakeNchwConfig("dw2", {4, 16, 1, 1}))
+                     .SetOutput("dw1")
+                     .SetOutput("dw2")
+                     .Build();
 
     TestTotalPass("multi_depthwise_same_graph", graph, SUCCESS, 2);
     EXPECT_EQ(GraphChecker::CountNodes(graph, "DepthwiseConv2D"), 2);
@@ -422,7 +435,7 @@ TEST_F(ADepthwiseFusionPassTest, multi_depthwise_same_graph)
 TEST_F(ADepthwiseFusionPassTest, multi_soc_no_filter)
 {
     struct Point {
-        const char *pointName;
+        const char* pointName;
         SocConfig socConfig;
     } const points[] = {
         {"ascend950", SocConfig::Ascend950()},
@@ -430,7 +443,7 @@ TEST_F(ADepthwiseFusionPassTest, multi_soc_no_filter)
         {"non_nd", SocConfig("Ascend910B", "Ascend910B1")},
     };
 
-    for (const auto &p : points) {
+    for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         std::string name = std::string("multi_soc_") + p.pointName;
         auto cfg = MakeHwcnConfig("depthwise_conv2d", {1, 1, 16, 4});

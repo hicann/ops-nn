@@ -1099,6 +1099,16 @@
     <td>DeformableOffsets算子的目的是根据offsets（ kernel采样点的偏移值）来收集用于卷积的特征采样点，并对其进行重组，方便Conv2d算子进行卷积计算。而DeformableOffsetsGrad即为这一过程的反向。</td>
   </tr>
   <tr>
+    <td>conv</td>
+    <td><a href="../../conv/depthwise_conv2d/README.md">depthwise_conv2d</a></td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现2D深度卷积功能，每个输入通道独立卷积，等价于groups为通道数的Conv2D，经融合pass替换为Conv2D执行。</td>
+  </tr>
+  <tr>
     <td>foreach</td>
     <td><a href="../../foreach/foreach_abs/README.md">foreach_abs</a></td>
     <td>✓</td>

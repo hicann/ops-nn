@@ -28,11 +28,16 @@ const std::string FUSION_NAME = "DepthwiseToConv2dFusionPass";
 constexpr int32_t MAX_DIM_NUM = 4;
 constexpr int32_t FMAP_CHANNEL_NCHW_INDEX = 1;
 constexpr int32_t FMAP_CHANNEL_NHWC_INDEX = 3;
+constexpr int32_t FILTER_CHANNEL_NCHW_INDEX = 1;
+constexpr int32_t FILTER_CHANNEL_NHWC_INDEX = 3;
+constexpr int32_t FILTER_CHANNEL_HWCN_INDEX = 2;
 
 const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
                                                     {"Ascend350", NpuArch::DAV_3510},
                                                     {"Ascend960DT", NpuArch::DAV_9201},
                                                     {"Ascend960PR", NpuArch::DAV_9202}};
+const char* const PRIVATE_PADDING = "_padding";
+constexpr size_t PADS_ATTR_SIZE = 4;
 } // namespace DepthwiseToConv2dFusion
 
 class __attribute__((visibility("default"))) DepthwiseToConv2dFusionPass : public ge::fusion::DecomposePass {
@@ -53,6 +58,7 @@ private:
 
     NpuArch npuArch = NpuArch::DAV_RESV;
     bool isNdSoc = false;
+    bool hasPrivatePads = false;
     int64_t fmapChannel = 0;
     ConvFusionUtils::ConvDescInfo convDescInfo = {};
     ConvFusionUtils::ConvBaseAttrs depthwiseAttrs = {};

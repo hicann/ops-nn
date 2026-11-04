@@ -163,11 +163,19 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_no_fusion)
          GRAPH_NOT_CHANGED, 1},
         {"unknown_fmap_channel",
          []() {
-             return BuildDepthwiseGraph(
-                 "depthwise_to_conv2d_no_fusion_unknown_channel",
-                 DepthwiseConv2DConfig::Basic("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {-1, -1, 256, 256}));
+             return BuildDepthwiseGraph("depthwise_to_conv2d_no_fusion_unknown_channel",
+                                        DepthwiseConv2DConfig::Basic("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW,
+                                                                     {-1, -1, 256, 256}, {-1, -1, -1, 64}));
          },
          GRAPH_NOT_CHANGED, 1},
+        {"unknown_fmap_channel_completed_on_nd_soc",
+         []() {
+             // ND SoC 上动态 C 由静态 filter C 补全后完成替换
+             return BuildDepthwiseGraph(
+                 "depthwise_to_conv2d_fusion_unknown_channel_completed",
+                 DepthwiseConv2DConfig::Basic("depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {-1, -1, 256, 256}));
+         },
+         SUCCESS, 0},
         {"fmap_not_4d",
          []() {
              DepthwiseConv2DConfig cfg = DepthwiseConv2DConfig::Basic("depthwise_conv2d");
@@ -352,6 +360,67 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_replacement_attr_and
              AscendString paddingVal;
              EXPECT_NE(fused.GetAttr(PADDING, paddingVal), GRAPH_SUCCESS);
          }},
+        {"attr_private_padding_overrides_pads",
+         []() {
+             DepthwiseConv2DConfig cfg = DepthwiseConv2DConfig::Basic("depthwise_conv2d");
+             cfg.SetAttr("pads", std::vector<int64_t>{1, 1, 1, 1});
+             cfg.SetAttr("_padding", std::vector<int64_t>{2, 2, 2, 2});
+             return BuildDepthwiseGraph("depthwise_to_conv2d_attr_private_padding_overrides_pads", cfg);
+         },
+         [](GNode& fused) {
+             std::vector<int64_t> pads;
+             ASSERT_EQ(fused.GetAttr(PADS, pads), GRAPH_SUCCESS);
+             EXPECT_EQ(pads, (std::vector<int64_t>{2, 2, 2, 2}));
+         }},
+        {"attr_same_padding_materialized",
+         []() {
+             // SAME 解析值物化进 pads：x{1,16,240,352} k3 s1 → SAME pads={1,1,1,1}
+             DepthwiseConv2DConfig cfg = DepthwiseConv2DConfig::Basic(
+                 "depthwise_conv2d", DT_FLOAT, FORMAT_NCHW, {1, 16, 240, 352}, {3, 3, 16, 1}, {1, 16, 240, 352});
+             cfg.SetAttr("padding", std::string("SAME"));
+             cfg.SetAttr("pads", std::vector<int64_t>{0, 0, 0, 0});
+             return BuildDepthwiseGraph("depthwise_to_conv2d_attr_same_materialized", cfg);
+         },
+         [](GNode& fused) {
+             std::vector<int64_t> pads;
+             ASSERT_EQ(fused.GetAttr(PADS, pads), GRAPH_SUCCESS);
+             EXPECT_EQ(pads, (std::vector<int64_t>{1, 1, 1, 1}));
+             AscendString paddingVal;
+             ASSERT_EQ(fused.GetAttr(PADDING, paddingVal), GRAPH_SUCCESS);
+             EXPECT_STREQ(paddingVal.GetString(), "SAME");
+         }},
+        {"attr_valid_pads_materialized_zero",
+         []() {
+             // VALID 物化 pads 为全零，串仍透传
+             DepthwiseConv2DConfig cfg = DepthwiseConv2DConfig::Basic("depthwise_conv2d");
+             cfg.SetAttr("padding", std::string("VALID"));
+             cfg.SetAttr("pads", std::vector<int64_t>{1, 1, 1, 1});
+             return BuildDepthwiseGraph("depthwise_to_conv2d_attr_valid_materialized", cfg);
+         },
+         [](GNode& fused) {
+             std::vector<int64_t> pads;
+             ASSERT_EQ(fused.GetAttr(PADS, pads), GRAPH_SUCCESS);
+             EXPECT_EQ(pads, (std::vector<int64_t>{0, 0, 0, 0}));
+             AscendString paddingVal;
+             ASSERT_EQ(fused.GetAttr(PADDING, paddingVal), GRAPH_SUCCESS);
+             EXPECT_STREQ(paddingVal.GetString(), "VALID");
+         }},
+        {"attr_private_padding_with_padding_str_forwarded",
+         []() {
+             // _padding 解析进 pads，串仍透传
+             DepthwiseConv2DConfig cfg = DepthwiseConv2DConfig::Basic("depthwise_conv2d");
+             cfg.SetAttr("_padding", std::vector<int64_t>{2, 2, 2, 2});
+             cfg.SetAttr("padding", std::string("SAME"));
+             return BuildDepthwiseGraph("depthwise_to_conv2d_attr_private_padding_with_padding_str", cfg);
+         },
+         [](GNode& fused) {
+             std::vector<int64_t> pads;
+             ASSERT_EQ(fused.GetAttr(PADS, pads), GRAPH_SUCCESS);
+             EXPECT_EQ(pads, (std::vector<int64_t>{2, 2, 2, 2}));
+             AscendString paddingVal;
+             ASSERT_EQ(fused.GetAttr(PADDING, paddingVal), GRAPH_SUCCESS);
+             EXPECT_STREQ(paddingVal.GetString(), "SAME");
+         }},
         {"offset_x_on_nd_soc",
          []() {
              DepthwiseConv2DConfig cfg = DepthwiseConv2DConfig::Basic("depthwise_conv2d");
@@ -473,8 +542,8 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_graph_topology)
              auto graph = TestGraph("depthwise_to_conv2d_multi_depthwise_mixed_eligibility")
                               .SetSocAscend950()
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw_ok"))
-                              .AddDepthwiseConv2D(
-                                  DepthwiseConv2DConfig::Basic("dw_bad", DT_FLOAT, FORMAT_NCHW, {-1, -1, 256, 256}))
+                              .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw_bad", DT_FLOAT, FORMAT_NCHW,
+                                                                               {-1, -1, 256, 256}, {-1, -1, -1, 64}))
                               .SetOutput("dw_ok")
                               .SetOutput("dw_bad")
                               .Build();
@@ -484,6 +553,39 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_graph_topology)
              EXPECT_EQ(pass.Run(graph, passContext), SUCCESS);
              EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2D"), 1);
              EXPECT_EQ(GraphChecker::CountNodes(graph, "DepthwiseConv2D"), 1);
+         }},
+        {"dynamic_channel_completed_by_filter_on_nd_soc",
+         [](DepthwiseToConv2dFusionPassTest&) {
+             // ND SoC 上动态 fmap channel 由静态 filter C 补全后仍完成替换
+             auto graph = TestGraph("depthwise_to_conv2d_dynamic_channel_completed")
+                              .SetSocAscend950()
+                              .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw_dyn_c", DT_FLOAT, FORMAT_NCHW,
+                                                                               {-1, -1, 256, 256}, {1, 1, 64, 1}))
+                              .SetOutput("dw_dyn_c")
+                              .Build();
+             CustomPassContext passContext;
+             passContext.SetPassName("depthwise_to_conv2d_dynamic_channel_completed");
+             DepthwiseToConv2dFusionPass pass({DEPTHWISE_CONV2D});
+             EXPECT_EQ(pass.Run(graph, passContext), SUCCESS);
+             EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2D"), 1);
+             EXPECT_EQ(GraphChecker::CountNodes(graph, "DepthwiseConv2D"), 0);
+             GNode convNode;
+             bool found = false;
+             for (auto node : graph->GetAllNodes()) {
+                 AscendString nodeName;
+                 if (node.GetName(nodeName) != GRAPH_SUCCESS) {
+                     continue;
+                 }
+                 if (std::string(nodeName.GetString()).find("_To_Conv2D") != std::string::npos) {
+                     convNode = node;
+                     found = true;
+                     break;
+                 }
+             }
+             ASSERT_TRUE(found);
+             int64_t groups = 0;
+             ASSERT_EQ(convNode.GetAttr(GROUPS, groups), GRAPH_SUCCESS);
+             EXPECT_EQ(groups, int64_t{64});
          }},
         {"downstream_consumer_preserved",
          [](DepthwiseToConv2dFusionPassTest& self) {
