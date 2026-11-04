@@ -64,8 +64,8 @@ namespace ge {
  *     Should be from a Variable().
  *
  * @par Attributes:
- * @li amsgrad: An optional bool. Specifying using max_grad_norm in the calculation. Defaults to "False", only support
- * "False".
+ * @li amsgrad: An optional bool. Specifying using max_grad_norm in the calculation. Defaults to "False".
+ * When "True", the AMSGrad update path is used.
  * @li maximize: An optional bool. Specifying maximize the objective with respect to the params, instead of minimizing.
  * Defaults to "False".
  *
