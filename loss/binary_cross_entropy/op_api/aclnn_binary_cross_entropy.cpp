@@ -64,19 +64,20 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, cons
     OP_CHECK_DTYPE_NOT_SUPPORT(target, supportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
 
-    if (weight != nullptr && !CheckType(weight->GetDataType(), supportList)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weight dtype %s should be in dtype support list [%s].",
-                op::ToString(weight->GetDataType()).GetString(), op::ToString(supportList).GetString());
-        return false;
-    }
+    // self/target/out 一致性与 weight 是否为空无关，必须无条件校验。
+    OP_CHECK_DTYPE_NOT_MATCH(self, target->GetDataType(), return false);
+    OP_CHECK_DTYPE_NOT_MATCH(self, out->GetDataType(), return false);
 
     if (weight == nullptr) {
         return true;
     }
 
-    OP_CHECK_DTYPE_NOT_MATCH(self, target->GetDataType(), return false);
+    if (!CheckType(weight->GetDataType(), supportList)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weight dtype %s should be in dtype support list [%s].",
+                op::ToString(weight->GetDataType()).GetString(), op::ToString(supportList).GetString());
+        return false;
+    }
     OP_CHECK_DTYPE_NOT_MATCH(self, weight->GetDataType(), return false);
-    OP_CHECK_DTYPE_NOT_MATCH(self, out->GetDataType(), return false);
 
     return true;
 }
@@ -91,7 +92,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, c
                                const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, target, out), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CheckNotNull(self, target, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(self, target, weight, out), ACLNN_ERR_PARAM_INVALID);

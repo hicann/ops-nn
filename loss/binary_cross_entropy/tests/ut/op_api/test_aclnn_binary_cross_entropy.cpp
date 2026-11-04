@@ -27,7 +27,7 @@ protected:
     static void TearDownTestCase() { std::cout << "binary_cross_entropy_test TearDown" << std::endl; }
 };
 
-//空指针1
+// 空指针1
 TEST_F(l2_binary_cross_entropy_test, case_nullptr_1)
 {
     auto target = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -38,10 +38,10 @@ TEST_F(l2_binary_cross_entropy_test, case_nullptr_1)
     auto ut = OP_API_UT(aclnnBinaryCrossEntropy, INPUT(nullptr, target, weight, reduction), OUTPUT(out));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-//空指针2
+// 空指针2
 TEST_F(l2_binary_cross_entropy_test, case_nullptr_2)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -53,10 +53,10 @@ TEST_F(l2_binary_cross_entropy_test, case_nullptr_2)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-//空指针3
+// 空指针3
 TEST_F(l2_binary_cross_entropy_test, case_nullptr_3)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -68,10 +68,10 @@ TEST_F(l2_binary_cross_entropy_test, case_nullptr_3)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-//异常数据类型1
+// 异常数据类型1
 TEST_F(l2_binary_cross_entropy_test, case_double_1)
 {
     auto self = TensorDesc({5, 5}, ACL_DOUBLE, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -87,7 +87,7 @@ TEST_F(l2_binary_cross_entropy_test, case_double_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//异常数据类型2
+// 异常数据类型2
 TEST_F(l2_binary_cross_entropy_test, case_double_2)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -103,7 +103,7 @@ TEST_F(l2_binary_cross_entropy_test, case_double_2)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//异常数据类型3
+// 异常数据类型3
 TEST_F(l2_binary_cross_entropy_test, case_double_3)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -119,7 +119,7 @@ TEST_F(l2_binary_cross_entropy_test, case_double_3)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//异常数据类型4
+// 异常数据类型4
 TEST_F(l2_binary_cross_entropy_test, case_double_4)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -135,7 +135,7 @@ TEST_F(l2_binary_cross_entropy_test, case_double_4)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//异常输入数据1
+// 异常输入数据1
 TEST_F(l2_binary_cross_entropy_test, case_reduction_3)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -151,7 +151,7 @@ TEST_F(l2_binary_cross_entropy_test, case_reduction_3)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//输入shape不一致
+// 输入shape不一致
 TEST_F(l2_binary_cross_entropy_test, case_shape_abnormal)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -167,7 +167,7 @@ TEST_F(l2_binary_cross_entropy_test, case_shape_abnormal)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//空tensor float Reduction::None
+// 空tensor float Reduction::None
 TEST_F(l2_binary_cross_entropy_test, case_fp_empty_tensor_none)
 {
     auto self = TensorDesc({0, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -185,7 +185,7 @@ TEST_F(l2_binary_cross_entropy_test, case_fp_empty_tensor_none)
     // ut.TestPrecision();
 }
 
-//空tensor float16 Reduction::None
+// 空tensor float16 Reduction::None
 TEST_F(l2_binary_cross_entropy_test, case_fp16_empty_tensor_none)
 {
     auto self = TensorDesc({0, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -203,7 +203,7 @@ TEST_F(l2_binary_cross_entropy_test, case_fp16_empty_tensor_none)
     // ut.TestPrecision();
 }
 
-//输入输出dtype不一致
+// 输入输出dtype不一致
 TEST_F(l2_binary_cross_entropy_test, case_dtype_inconsistent)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
@@ -214,6 +214,20 @@ TEST_F(l2_binary_cross_entropy_test, case_dtype_inconsistent)
 
     auto ut = OP_API_UT(aclnnBinaryCrossEntropy, INPUT(self, target, weight, reduction), OUTPUT(out));
 
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// weight 为空时仍校验 self/target/out 的 dtype 一致性
+TEST_F(l2_binary_cross_entropy_test, case_dtype_inconsistent_weight_nullptr)
+{
+    auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto target = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto out = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t reduction = Reduction::None;
+
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropy, INPUT(self, target, (aclTensor*)nullptr, reduction), OUTPUT(out));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
