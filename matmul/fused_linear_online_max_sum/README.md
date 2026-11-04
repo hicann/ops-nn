@@ -183,4 +183,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_fused_linear_online_max_sum.cpp](examples/arch22/test_aclnn_fused_linear_online_max_sum.cpp) | 通过[aclnnFusedLinearOnlineMaxSum](docs/aclnnFusedLinearOnlineMaxSum.md)接口方式调用FusedLinearOnlineMaxSum算子。 |
+| aclnn接口  | [test_aclnn_fused_linear_online_max_sum.cpp](examples/test_aclnn_fused_linear_online_max_sum.cpp) | 通过[aclnnFusedLinearOnlineMaxSum](docs/aclnnFusedLinearOnlineMaxSum.md)接口方式调用FusedLinearOnlineMaxSum算子。 |
+| torch_npu接口 | [test_e2e_fused_linear_online_max_sum.py](examples/test_e2e_fused_linear_online_max_sum.py) | 通过[torch_npu.npu_fused_linear_online_max_sum](https://gitcode.com/ascend/op-plugin/blob/master/docs/zh/custom_APIs/torch_npu/torch_npu-npu_fused_linear_online_max_sum.md)接口方式调用FusedLinearOnlineMaxSum算子。 |
