@@ -443,7 +443,14 @@ aclnnStatus BatchNormPost(op::Shape& inputShape, aclTensor* bnGradInput, aclTens
         auto viewCopyResult = l0op::ViewCopy(bnGradInputReformat, gradInput, executor);
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        auto viewCopyResult = l0op::ViewCopy(bnGradInput, gradInput, executor);
+        // 4D/5D ND输入经ReFormat为NCHW/NCDHW计算后，写回前需对齐回用户的原始格式，
+        // ViewCopy要求源与目标格式一致（issue#7036）
+        auto bnGradInputAligned = (const aclTensor*)bnGradInput;
+        if (bnGradInput->GetStorageFormat() != gradInput->GetStorageFormat()) {
+            bnGradInputAligned = l0op::ReFormat(bnGradInput, gradInput->GetStorageFormat());
+            CHECK_RET(bnGradInputAligned != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        auto viewCopyResult = l0op::ViewCopy(bnGradInputAligned, gradInput, executor);
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
@@ -852,6 +859,27 @@ aclnnStatus BatchNormBackwardRegbase(const aclTensor* gradOut, const aclTensor* 
     return ACLNN_SUCCESS;
 }
 
+// 空tensor早退发生在参数校验之前，访问outputMask与输出指针前需自行判空防越界；
+// 空batch时gradWeight/gradBias数学上恒为0，需清零输出，避免调用方读到未初始化显存（issue#7033）。
+static aclnnStatus FillGradWeightGradBiasWithZero(const aclBoolArray* outputMask, aclTensor* gradWeight,
+                                                  aclTensor* gradBias, aclOpExecutor* executor)
+{
+    if (outputMask == nullptr) {
+        return ACLNN_SUCCESS;
+    }
+    if (outputMask->Size() > GRAD_WEIGHT_INDEX && (*outputMask)[GRAD_WEIGHT_INDEX] && gradWeight != nullptr &&
+        !gradWeight->IsEmpty()) {
+        auto ret = op::ProcessEmptyTensorWithValue(gradWeight, 0, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
+    if (outputMask->Size() > GRAD_BIAS_INDEX && (*outputMask)[GRAD_BIAS_INDEX] && gradBias != nullptr &&
+        !gradBias->IsEmpty()) {
+        auto ret = op::ProcessEmptyTensorWithValue(gradBias, 0, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnBatchNormBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
                                                    const aclTensor* weight, const aclTensor* runningMean,
                                                    const aclTensor* runningVar, const aclTensor* saveMean,
@@ -872,7 +900,9 @@ aclnnStatus aclnnBatchNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
     CHECK_RET(CheckInputNotNull(gradOut, input), ACLNN_ERR_PARAM_NULLPTR);
 
     if (input->IsEmpty() || gradOut->IsEmpty()) {
-        *workspaceSize = 0UL;
+        auto fillRet = FillGradWeightGradBiasWithZero(outputMask, gradWeight, gradBias, batchNormUniqueExecutor.get());
+        CHECK_RET(fillRet == ACLNN_SUCCESS, fillRet);
+        *workspaceSize = batchNormUniqueExecutor->GetWorkspaceSize();
         batchNormUniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
@@ -904,6 +934,18 @@ aclnnStatus aclnnBatchNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
         batchNormGradOutContigous = l0op::Reshape(batchNormGradOutContigous, batchNormShapeArray,
                                                   batchNormUniqueExecutor.get());
         batchNormGradOutContigous = l0op::ReFormat(batchNormGradOutContigous, Format::FORMAT_NCDHW);
+    } else if ((inputShape.GetDimNum() == BN2D_INPUT_DIMS) && (input->GetStorageFormat() == Format::FORMAT_ND)) {
+        // 4D ND与NCHW布局等价，ReFormat为物理格式统一走NCHW路径（issue#7036）
+        batchNormInputContiguous = l0op::ReFormat(batchNormInputContiguous, Format::FORMAT_NCHW);
+        CHECK_RET(batchNormInputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        batchNormGradOutContigous = l0op::ReFormat(batchNormGradOutContigous, Format::FORMAT_NCHW);
+        CHECK_RET(batchNormGradOutContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if ((inputShape.GetDimNum() == MAX_BN_DIMS) && (input->GetStorageFormat() == Format::FORMAT_ND)) {
+        // 5D ND与NCDHW布局等价，ReFormat为物理格式统一走NCDHW路径（issue#7036）
+        batchNormInputContiguous = l0op::ReFormat(batchNormInputContiguous, Format::FORMAT_NCDHW);
+        CHECK_RET(batchNormInputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        batchNormGradOutContigous = l0op::ReFormat(batchNormGradOutContigous, Format::FORMAT_NCDHW);
+        CHECK_RET(batchNormGradOutContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     aclTensor* bnGradInput = nullptr;

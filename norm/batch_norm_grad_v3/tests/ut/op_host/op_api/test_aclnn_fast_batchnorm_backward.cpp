@@ -737,7 +737,8 @@ TEST_F(l2FastBatchNormBackwardTest, l2_batch_norm_backward_empty_mask)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+    // outputMask长度非法（含0）统一返回161002，不再误报161001（issue#7080第3项）
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 
     // ut.TestPrecision();
 }
@@ -781,12 +782,155 @@ TEST_F(l2FastBatchNormBackwardTest, arch3510_l2_batch_norm_backward_shape_error)
         INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, false, 1e-5, output_mask, 0),
         OUTPUT(gradInDesc, outputErrDesc, gradBiasDesc));
     getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+    // gradWeight shape 非{C}现由CheckOtherShape前置拦截，返回参数错误而非内部错误码（issue#7080）
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 
     ut = OP_API_UT(
         aclnnFastBatchNormBackward,
         INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, false, 1e-5, output_mask, 0),
         OUTPUT(gradInDesc, gradWeightDesc, outputErrDesc));
     getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_INNER_NULLPTR);
+    // gradBias shape 非{C}现由CheckOtherShape前置拦截，返回参数错误而非内部错误码（issue#7080）
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2FastBatchNormBackwardTest, l2_batch_norm_backward_empty_tensor_fill_grad_outputs)
+{
+    auto gradOutDesc = TensorDesc({0, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
+    auto selfDesc = TensorDesc({0, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
+
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto sMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto sVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+
+    auto gradInDesc = TensorDesc({0, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto gradWeightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnFastBatchNormBackward,
+        INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, true, 1e-5, output_mask, 0),
+        OUTPUT(gradInDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    // 冒烟断言：空tensor早退路径不报错（issue#7080）。
+    // 清零Fill的实际下发与写出已在本仓A2真机验证（gradWeight/gradBias回读全零）；
+    // Fill类算子workspace可能为0，不能以workspaceSize>0作为行为判据，stub环境无输出值校验能力。
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2FastBatchNormBackwardTest, l2_batch_norm_backward_output_mask_size_2_failed)
+{
+    auto gradOutDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
+    auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
+
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto sMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto sVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto output_mask = BoolArrayDesc(vector<bool>{true, true});
+
+    auto gradInDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto gradWeightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnFastBatchNormBackward,
+        INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, true, 1e-5, output_mask, 0),
+        OUTPUT(gradInDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    // outputMask长度非3应返回参数错误，且不得越界读mask[2]（issue#7080）
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2FastBatchNormBackwardTest, l2_batch_norm_backward_save_mean_shape_failed)
+{
+    auto gradOutDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
+    auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
+
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto sMeanDesc = TensorDesc({6}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0, 0});
+    auto sVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+
+    auto gradInDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto gradWeightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnFastBatchNormBackward,
+        INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, true, 1e-5, output_mask, 0),
+        OUTPUT(gradInDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    // saveMean长度非C应返回参数错误而非泄漏内部错误码（issue#7080）
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2FastBatchNormBackwardTest, l2_batch_norm_backward_aux_dtype_mismatch_failed)
+{
+    // dtype口径与同族aclnnBatchNormBackward一致：辅助输入与gradOut同型或DT_FLOAT均可
+    // （fp16主+fp32辅助为AMP常规传参，既有float16_*用例覆盖）；fp32主+fp16辅助等
+    // 跨型混搭应返回参数错误（issue#7080）
+    auto gradOutDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
+    auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 10);
+
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto sMeanDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto sVarDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+
+    auto gradInDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto gradWeightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnFastBatchNormBackward,
+        INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, true, 1e-5, output_mask, 0),
+        OUTPUT(gradInDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2FastBatchNormBackwardTest, l2_batch_norm_backward_4d_nd_reformat_success)
+{
+    auto gradOutDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 10);
+
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto sMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto sVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+
+    auto gradInDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradWeightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradBiasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnFastBatchNormBackward,
+        INPUT(gradOutDesc, selfDesc, weightDesc, rMeanDesc, rVarDesc, sMeanDesc, sVarDesc, true, 1e-5, output_mask, 0),
+        OUTPUT(gradInDesc, gradWeightDesc, gradBiasDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    // 4维ND与NCHW布局等价，op_api内ReFormat为NCHW统一处理，应正常执行而非段错误（issue#7080）
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }

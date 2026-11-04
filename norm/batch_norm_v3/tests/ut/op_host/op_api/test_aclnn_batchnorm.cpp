@@ -785,3 +785,72 @@ TEST_F(l2BatchNormTest, l2_batch_norm_infer_empty_input_with_save_mean_var)
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
+
+TEST_F(l2BatchNormTest, l2_batch_norm_4d_nd_train_success)
+{
+    auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto biasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+
+    auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto meanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValidCount(0);
+    auto varDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValidCount(0);
+
+    auto ut = OP_API_UT(aclnnBatchNorm, INPUT(selfDesc, weightDesc, biasDesc, rMeanDesc, rVarDesc, true, 0.1, 1e-5),
+                        OUTPUT(outDesc, meanDesc, varDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    // 4维ND与NCHW布局等价，op_api内ReFormat为NCHW统一处理，不再流入内置tiling崩溃（issue#7146）
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2BatchNormTest, l2_batch_norm_4d_nd_infer_success)
+{
+    auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto biasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+
+    auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto meanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValidCount(0);
+    auto varDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValidCount(0);
+
+    auto ut = OP_API_UT(aclnnBatchNorm, INPUT(selfDesc, weightDesc, biasDesc, rMeanDesc, rVarDesc, false, 0.1, 1e-5),
+                        OUTPUT(outDesc, meanDesc, varDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    // 4维ND推理态同样经ReFormat统一处理，不再返回内部错误码（issue#7146）
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2BatchNormTest, l2_batch_norm_5d_nd_train_success)
+{
+    auto selfDesc = TensorDesc({3, 5, 3, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto biasDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+
+    auto outDesc = TensorDesc({3, 5, 3, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto meanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValidCount(0);
+    auto varDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).ValidCount(0);
+
+    auto ut = OP_API_UT(aclnnBatchNorm, INPUT(selfDesc, weightDesc, biasDesc, rMeanDesc, rVarDesc, true, 0.1, 1e-5),
+                        OUTPUT(outDesc, meanDesc, varDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    // 5维ND与NCDHW布局等价，op_api内ReFormat为NCDHW统一处理（issue#7146）
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}

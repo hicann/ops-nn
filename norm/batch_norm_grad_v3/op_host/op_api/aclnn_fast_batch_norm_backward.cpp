@@ -60,6 +60,7 @@ extern "C" {
 // batch norm backward constants
 constexpr size_t GRAD_WEIGHT_INDEX = 1;
 constexpr size_t GRAD_BIAS_INDEX = 2;
+constexpr size_t FAST_BN_GRAD_RESULT_CNT = 3;
 constexpr size_t MIN_BN_DIMS = 2;
 constexpr size_t MAX_BN_DIMS = 5;
 constexpr size_t BN2D_INPUT_DIMS = 4;
@@ -102,16 +103,26 @@ static inline bool isBatchNormSupportAscendC(void)
     return socVersionSupport;
 }
 
+// outputMask长度必须为3，且需在访问mask[0..2]之前完成校验，防止越界读（issue#7080）。
+// null返回161001，长度非法返回161002，与文档错误码表一致。
+static aclnnStatus CheckOutputMask(const aclBoolArray* fastOutputMask)
+{
+    OP_CHECK(fastOutputMask != nullptr, ReportNullPointerError(__func__, "fastOutputMask"),
+             return ACLNN_ERR_PARAM_NULLPTR);
+    if (fastOutputMask->Size() != FAST_BN_GRAD_RESULT_CNT) {
+        OP_LOGE_FOR_INVALID_LISTSIZE("aclnnFastBatchNormBackward", "fastOutputMask",
+                                     std::to_string(fastOutputMask->Size()).c_str(),
+                                     std::to_string(FAST_BN_GRAD_RESULT_CNT).c_str());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    return ACLNN_SUCCESS;
+}
+
 static bool CheckMaskNotNull(const aclTensor* fastGradInput, const aclTensor* fastGradWeight,
                              const aclTensor* fastGradBias, const aclBoolArray* fastOutputMask)
 {
     // fast batch norm backward: check output mask validity
     OP_CHECK(fastOutputMask != nullptr, ReportNullPointerError(__func__, "fastOutputMask"), return false);
-    if (fastOutputMask->Size() < GRAD_WEIGHT_INDEX) {
-        OP_LOGE_FOR_INVALID_LISTSIZE("aclnnFastBatchNormBackward", "fastOutputMask",
-                                     std::to_string(fastOutputMask->Size()).c_str(), "at least 1");
-        return false;
-    }
     if ((*fastOutputMask)[0]) {
         OP_CHECK(fastGradInput != nullptr, ReportNullPointerError(__func__, "fastGradInput"), return false);
     }
@@ -243,8 +254,11 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
     return true;
 }
 
-static bool CheckOtherShape(int64_t fastDimC, const aclTensor* fastWeight, const aclTensor* fastRunningMean,
-                            const aclTensor* fastRunningVar)
+static bool CheckOtherShape(bool training, int64_t fastDimC, const aclTensor* fastWeight,
+                            const aclTensor* fastRunningMean, const aclTensor* fastRunningVar,
+                            const aclTensor* fastSaveMean, const aclTensor* fastSaveInvstd,
+                            const aclTensor* fastGradWeight, const aclTensor* fastGradBias,
+                            const aclBoolArray* fastOutputMask)
 {
     if (fastWeight != nullptr &&
         (fastWeight->GetViewShape().GetDimNum() != 1 || fastWeight->GetViewShape()[0] != fastDimC)) {
@@ -267,6 +281,72 @@ static bool CheckOtherShape(int64_t fastDimC, const aclTensor* fastWeight, const
             (std::string("shape should be [") + std::to_string(fastDimC) + "]").c_str());
         return false;
     }
+    // 1D辅助tensor长度非C时原样流入内核会泄漏内部错误码，需在此按文档返回161002（issue#7080）。
+    // 推理态不使用这两个张量（非AscendC路径忽略、AscendC路径由FillScalar覆盖），故仅在训练态校验。
+    if (training) {
+        if (fastSaveMean != nullptr &&
+            (fastSaveMean->GetViewShape().GetDimNum() != 1 || fastSaveMean->GetViewShape()[0] != fastDimC)) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                "aclnnFastBatchNormBackward", "fastSaveMean", op::ToString(fastSaveMean->GetViewShape()).GetString(),
+                (std::string("shape should be [") + std::to_string(fastDimC) + "]").c_str());
+            return false;
+        }
+        if (fastSaveInvstd != nullptr &&
+            (fastSaveInvstd->GetViewShape().GetDimNum() != 1 || fastSaveInvstd->GetViewShape()[0] != fastDimC)) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                "aclnnFastBatchNormBackward", "fastSaveInvstd",
+                op::ToString(fastSaveInvstd->GetViewShape()).GetString(),
+                (std::string("shape should be [") + std::to_string(fastDimC) + "]").c_str());
+            return false;
+        }
+    }
+    if ((*fastOutputMask)[GRAD_WEIGHT_INDEX] && fastGradWeight != nullptr &&
+        (fastGradWeight->GetViewShape().GetDimNum() != 1 || fastGradWeight->GetViewShape()[0] != fastDimC)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            "aclnnFastBatchNormBackward", "fastGradWeight", op::ToString(fastGradWeight->GetViewShape()).GetString(),
+            (std::string("shape should be [") + std::to_string(fastDimC) + "]").c_str());
+        return false;
+    }
+    if ((*fastOutputMask)[GRAD_BIAS_INDEX] && fastGradBias != nullptr &&
+        (fastGradBias->GetViewShape().GetDimNum() != 1 || fastGradBias->GetViewShape()[0] != fastDimC)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            "aclnnFastBatchNormBackward", "fastGradBias", op::ToString(fastGradBias->GetViewShape()).GetString(),
+            (std::string("shape should be [") + std::to_string(fastDimC) + "]").c_str());
+        return false;
+    }
+    return true;
+}
+
+// 辅助输入dtype口径与同族 aclnnBatchNormBackward 的 CheckDtypeMatchReferenceOrFloat 对齐：
+// 与 gradOut 同型或 DT_FLOAT 均可（AscendC路径已将辅助输入Cast到FLOAT，fp32辅助张量为框架AMP
+// 常规传参）；gradInput经ViewCopy写出不支持混型，保持与gradOut强一致（issue#7080）。
+static bool CheckDtypeMatchReferenceOrFloat(const aclTensor* tensor, const aclTensor* reference, const char* tensorName,
+                                            const char* referenceName)
+{
+    if (tensor == nullptr || reference == nullptr) {
+        return true;
+    }
+    if (tensor->GetDataType() != reference->GetDataType() && tensor->GetDataType() != op::DataType::DT_FLOAT) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            "aclnnFastBatchNormBackward", tensorName, op::ToString(tensor->GetDataType()).GetString(),
+            (std::string("dtype should be float or the same as ") + referenceName).c_str());
+        return false;
+    }
+    return true;
+}
+
+static bool CheckAuxDtypeSame(const aclTensor* gradOut, const aclTensor* gradInput, const aclTensor* weight,
+                              const aclTensor* runningMean, const aclTensor* runningVar, const aclTensor* saveMean,
+                              const aclTensor* saveInvstd, const aclBoolArray* outputMask)
+{
+    CHECK_RET(CheckDtypeMatchReferenceOrFloat(weight, gradOut, "weight", "gradOut"), false);
+    CHECK_RET(CheckDtypeMatchReferenceOrFloat(runningMean, gradOut, "runningMean", "gradOut"), false);
+    CHECK_RET(CheckDtypeMatchReferenceOrFloat(runningVar, gradOut, "runningVar", "gradOut"), false);
+    CHECK_RET(CheckDtypeMatchReferenceOrFloat(saveMean, gradOut, "saveMean", "gradOut"), false);
+    CHECK_RET(CheckDtypeMatchReferenceOrFloat(saveInvstd, gradOut, "saveInvstd", "gradOut"), false);
+    if ((*outputMask)[0]) {
+        OP_CHECK_DTYPE_NOT_SAME(gradInput, gradOut, return false);
+    }
     return true;
 }
 
@@ -279,18 +359,25 @@ static int64_t GetDimC(const aclTensor* input)
 static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input, const aclTensor* gradInput,
                                const aclTensor* gradWeight, const aclTensor* gradBias, const aclBoolArray* outputMask,
                                const aclTensor* weight, const aclTensor* runningMean, const aclTensor* runningVar,
-                               const aclTensor* saveMean, const aclTensor* saveInvstd)
+                               const aclTensor* saveMean, const aclTensor* saveInvstd, bool training)
 {
+    auto maskRet = CheckOutputMask(outputMask);
+    CHECK_RET(maskRet == ACLNN_SUCCESS, maskRet);
+
     CHECK_RET(CheckMaskNotNull(gradInput, gradWeight, gradBias, outputMask), ACLNN_ERR_PARAM_NULLPTR);
 
     CHECK_RET(CheckDtypeValid(gradOut, input), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckGradDtypeValid(gradInput, gradWeight, gradBias, outputMask), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckOtherDtypeValid(weight, runningMean, runningVar, saveMean, saveInvstd), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckAuxDtypeSame(gradOut, gradInput, weight, runningMean, runningVar, saveMean, saveInvstd, outputMask),
+              ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFormat(gradOut, input, gradInput, outputMask), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckShape(gradOut, input, gradInput, outputMask), ACLNN_ERR_PARAM_INVALID);
     int64_t dimC = GetDimC(input);
-    CHECK_RET(CheckOtherShape(dimC, weight, runningMean, runningVar), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckOtherShape(training, dimC, weight, runningMean, runningVar, saveMean, saveInvstd, gradWeight,
+                              gradBias, outputMask),
+              ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -310,7 +397,14 @@ aclnnStatus FastBatchNormPost(op::Shape& inputShape, aclTensor* bnGradInput, acl
         auto viewCopyResult = l0op::ViewCopy(bnGradInputReformat, gradInput, executor);
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        auto viewCopyResult = l0op::ViewCopy(bnGradInput, gradInput, executor);
+        // 4D/5D ND输入经ReFormat为NCHW/NCDHW计算后，写回前需对齐回用户的原始格式，
+        // ViewCopy要求源与目标格式一致（issue#7080）
+        auto bnGradInputAligned = (const aclTensor*)bnGradInput;
+        if (bnGradInput->GetStorageFormat() != gradInput->GetStorageFormat()) {
+            bnGradInputAligned = l0op::ReFormat(bnGradInput, gradInput->GetStorageFormat());
+            CHECK_RET(bnGradInputAligned != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        auto viewCopyResult = l0op::ViewCopy(bnGradInputAligned, gradInput, executor);
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
@@ -624,6 +718,27 @@ aclnnStatus FastBatchNormBackwardWeightAndBiasPost(const aclBoolArray* outputMas
     return ACLNN_SUCCESS;
 }
 
+// 空tensor早退发生在参数校验之前，访问outputMask与输出指针前需自行判空防越界；
+// 空batch时gradWeight/gradBias数学上恒为0，需清零输出，避免调用方读到未初始化显存（issue#7080）。
+static aclnnStatus FillGradWeightGradBiasWithZero(const aclBoolArray* outputMask, aclTensor* gradWeight,
+                                                  aclTensor* gradBias, aclOpExecutor* executor)
+{
+    if (outputMask == nullptr) {
+        return ACLNN_SUCCESS;
+    }
+    if (outputMask->Size() > GRAD_WEIGHT_INDEX && (*outputMask)[GRAD_WEIGHT_INDEX] && gradWeight != nullptr &&
+        !gradWeight->IsEmpty()) {
+        auto ret = op::ProcessEmptyTensorWithValue(gradWeight, 0, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
+    if (outputMask->Size() > GRAD_BIAS_INDEX && (*outputMask)[GRAD_BIAS_INDEX] && gradBias != nullptr &&
+        !gradBias->IsEmpty()) {
+        auto ret = op::ProcessEmptyTensorWithValue(gradBias, 0, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    }
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(const aclTensor* gradOut, const aclTensor* input,
                                                        const aclTensor* weight, const aclTensor* runningMean,
                                                        const aclTensor* runningVar, const aclTensor* saveMean,
@@ -644,13 +759,15 @@ aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(const aclTensor* gradOut,
     CHECK_RET(CheckInputNotNull(gradOut, input), ACLNN_ERR_PARAM_NULLPTR);
 
     if (input->IsEmpty() || gradOut->IsEmpty()) {
-        *workspaceSize = 0UL;
+        auto fillRet = FillGradWeightGradBiasWithZero(outputMask, gradWeight, gradBias, uniqueExecutor.get());
+        CHECK_RET(fillRet == ACLNN_SUCCESS, fillRet);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
     auto ret = CheckParams(gradOut, input, gradInput, gradWeight, gradBias, outputMask, weight, runningMean, runningVar,
-                           saveMean, saveInvstd);
+                           saveMean, saveInvstd, training);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto inputContiguous = l0op::Contiguous(input, uniqueExecutor.get());
@@ -666,6 +783,18 @@ aclnnStatus aclnnFastBatchNormBackwardGetWorkspaceSize(const aclTensor* gradOut,
         inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
         gradOutContigous = l0op::Reshape(gradOutContigous, shapeArray, uniqueExecutor.get());
         gradOutContigous = l0op::ReFormat(gradOutContigous, Format::FORMAT_NCDHW);
+    } else if ((inputShape.GetDimNum() == BN2D_INPUT_DIMS) && (input->GetStorageFormat() == Format::FORMAT_ND)) {
+        // 4D ND与NCHW布局等价，ReFormat为物理格式，避免ND流入内置tiling段错误（issue#7080）
+        inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCHW);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        gradOutContigous = l0op::ReFormat(gradOutContigous, Format::FORMAT_NCHW);
+        CHECK_RET(gradOutContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if ((inputShape.GetDimNum() == MAX_BN_DIMS) && (input->GetStorageFormat() == Format::FORMAT_ND)) {
+        // 5D ND与NCDHW布局等价，ReFormat为物理格式统一走NCDHW路径
+        inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        gradOutContigous = l0op::ReFormat(gradOutContigous, Format::FORMAT_NCDHW);
+        CHECK_RET(gradOutContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     aclTensor* bnGradInput = nullptr;

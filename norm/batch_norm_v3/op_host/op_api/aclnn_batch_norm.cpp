@@ -177,13 +177,16 @@ static bool CheckFormat(const aclTensor* input, const aclTensor* out)
             return false;
         }
     } else {
-        if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) && (input->GetStorageFormat() != Format::FORMAT_NCDHW)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDHW, when input dim is 5.");
+        // 5维ND放行，由主流程ReFormat为NCDHW自动处理（issue#7146）；其余非NCDHW格式维持原有校验
+        if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) && (inputFormat != Format::FORMAT_NCDHW) &&
+            (inputFormat != Format::FORMAT_ND)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDHW or ND, when input dim is 5.");
             return false;
         }
 
-        if ((out->GetViewShape().GetDimNum() == MAX_BN_DIMS) && (out->GetStorageFormat() != Format::FORMAT_NCDHW)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDHW, when input dim is 5.");
+        if ((out->GetViewShape().GetDimNum() == MAX_BN_DIMS) && (outputFormat != Format::FORMAT_NCDHW) &&
+            (outputFormat != Format::FORMAT_ND)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDHW or ND, when input dim is 5.");
             return false;
         }
     }
@@ -329,6 +332,14 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(const aclTensor* input, const aclTens
         CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
         CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if ((inputDims == BN2D_INPUT_DIMS) && (input->GetStorageFormat() == Format::FORMAT_ND)) {
+        // 4D ND与NCHW布局等价，ReFormat为物理格式，避免ND流入内置tiling崩溃（issue#7146）
+        inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCHW);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if ((inputDims == MAX_BN_DIMS) && (input->GetStorageFormat() == Format::FORMAT_ND)) {
+        // 5D ND与NCDHW布局等价，ReFormat为物理格式统一走NCDHW路径
+        inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     aclTensor* bnOutput = nullptr;
@@ -347,7 +358,14 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(const aclTensor* input, const aclTens
         auto viewCopyResult = l0op::ViewCopy(bnOutputReformat, output, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        auto viewCopyResult = l0op::ViewCopy(bnOutput, output, uniqueExecutor.get());
+        // 4D/5D ND输入经ReFormat为NCHW/NCDHW计算后，写回前需对齐回用户的原始格式，
+        // ViewCopy要求源与目标格式一致（issue#7146）
+        auto bnOutputAligned = (const aclTensor*)bnOutput;
+        if (bnOutput->GetStorageFormat() != output->GetStorageFormat()) {
+            bnOutputAligned = l0op::ReFormat(bnOutput, output->GetStorageFormat());
+            CHECK_RET(bnOutputAligned != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        auto viewCopyResult = l0op::ViewCopy(bnOutputAligned, output, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
