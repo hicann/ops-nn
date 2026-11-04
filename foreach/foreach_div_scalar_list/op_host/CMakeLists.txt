@@ -11,4 +11,4 @@
 
 message(STATUS "=== Debug: start ops.foreach.foreach_div_scalar_list.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_div_scalar_list ACLNNTYPE aclnn DEPENDENCIES foreach_utils)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_div_scalar_list ACLNNTYPE aclnn_exclude DEPENDENCIES foreach_utils)
