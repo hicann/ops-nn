@@ -650,10 +650,57 @@ ge::graphStatus DequantSwigluQuantDskTiling::GetShapeAttrsInfoInner()
         return ge::GRAPH_FAILED;
     };
     const gert::Shape& outputShapeY = shapeY->GetStorageShape();
+    // y 的 rank 必须与 x 一致，否则下面按 x 的 rank 取 y 的尾轴会越界读
+    OP_CHECK_IF(outputShapeY.GetDimNum() != inputShapeXRank,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context_->GetNodeName(), "x and y",
+                    (std::to_string(inputShapeXRank) + " and " + std::to_string(outputShapeY.GetDimNum())).c_str(),
+                    "The shape of y must be equal to the shape of x except the last dimension"),
+                return ge::GRAPH_FAILED);
+    // 前导维必须逐维相等：内核按 inDimx_*outDimy_ 写满 y，只比尾维时前导维被压缩
+    // （例如 x=[96,3072] 配 y=[48,1536]）仍会静默越界写
+    for (int64_t i = 0; i < inputShapeXRank - 1; i++) {
+        OP_CHECK_IF(
+            outputShapeY.GetDim(i) != inputShapeX.GetDim(i),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "x and y",
+                (std::to_string(inputShapeX.GetDim(i)) + " and " + std::to_string(outputShapeY.GetDim(i))).c_str(),
+                ("dim[" + std::to_string(i) + "] of y must be equal to dim[" + std::to_string(i) + "] of x").c_str()),
+            return ge::GRAPH_FAILED);
+    }
     outDimy_ = outputShapeY.GetDim(inputShapeXRank - 1);
+    // 内核按 x 推导的 outDimy_ 写满 y，出参声明小于推导尺寸会静默越界写
+    OP_CHECK_IF(
+        outDimy_ * SWI_FACTOR != inDimy_,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y",
+                                               (std::to_string(inDimy_) + " and " + std::to_string(outDimy_)).c_str(),
+                                               "The last dimension of y must be half of the last dimension of x"),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(inDimy_ % (BLOCK_SIZE * SWI_FACTOR) != 0,
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", std::to_string(inDimy_).c_str(),
                                                       "The last dimension of x must be exactly divisible by 64"),
+                return ge::GRAPH_FAILED);
+
+    auto shapeScale = context_->GetOutputShape(1);
+    if (shapeScale == nullptr) {
+        const std::string msgOpName = std::string(((context_) == nullptr || (context_)->GetNodeName() == nullptr ?
+                                                       "dequant_swiglu_quant" :
+                                                       (context_)->GetNodeName()));
+        OP_LOGE_WITHOUT_REPORT(msgOpName.c_str(), "%s",
+                               "Tiling framework object shapeScale is unavailable; check the operator registration "
+                               "and context construction.");
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{msgOpName.c_str(), "Tiling framework object shapeScale is unavailable; check "
+                                                         "the operator registration and context construction."}));
+        return ge::GRAPH_FAILED;
+    };
+    const gert::Shape& outputShapeScale = shapeScale->GetStorageShape();
+    // 内核按 inDimx_ 个元素写 scale，出参声明小于推导尺寸会静默越界写
+    OP_CHECK_IF(outputShapeScale.GetShapeSize() != inDimx_,
+                OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "scale_out",
+                                              std::to_string(outputShapeScale.GetShapeSize()).c_str(),
+                                              (std::to_string(inDimx_) + " (the number of rows of x)").c_str()),
                 return ge::GRAPH_FAILED);
 
     // set the relevant param of group, hasGroupIndex_, groupNum_ and speGroupType_

@@ -655,12 +655,27 @@ ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfoInner()
         std::string incorrectDims = std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum());
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "x and y", incorrectDims.c_str(),
                                                   "The shape of y must be equal to the shape of x");
+        return ge::GRAPH_FAILED;
+    }
+
+    // 前导维必须逐维相等：内核按 rowLen*colLen 写满 y，只比尾维时前导维被压缩
+    // （例如 x=[4,128] 配 y=[2,64]）仍会静默越界写
+    for (int32_t i = 0; i < dimNum - 1; i++) {
+        if (xShape.GetDim(i) != yShape.GetDim(i)) {
+            std::string incorrectDims = std::to_string(xShape.GetDim(i)) + " and " + std::to_string(yShape.GetDim(i));
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                opName, "x and y", incorrectDims.c_str(),
+                ("dim[" + std::to_string(i) + "] of y must be equal to dim[" + std::to_string(i) + "] of x").c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
 
     if (xShape.GetDim(dimNum - 1) != yShape.GetDim(dimNum - 1) * 2) {
-        std::string incorrectDims = std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum());
+        std::string incorrectDims = std::to_string(xShape.GetDim(dimNum - 1)) + " and " +
+                                    std::to_string(yShape.GetDim(dimNum - 1));
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName, "x and y", incorrectDims.c_str(),
                                                "The last dimension of x must be twice the last dimension of y.");
+        return ge::GRAPH_FAILED;
     }
 
     auto scaleShapePtr = context_->GetOutputShape(1);
@@ -684,6 +699,7 @@ ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfoInner()
         std::string reason = "The numbers of elements in scale must be equal to the total number of elements in all "
                              "axes of x except the last one";
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName, "scale", incorrectSize.c_str(), reason.c_str());
+        return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
