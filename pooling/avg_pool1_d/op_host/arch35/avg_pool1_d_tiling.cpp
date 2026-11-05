@@ -137,7 +137,7 @@ static void DumpTilingData(gert::TilingContext* context, const AvgPool1dTilingDa
 {
     OP_LOGD(context,
             "AvgPool1dTilingData: needCoreNum=%d, totalOutputElements=%ld, L=%ld, L_out=%ld, "
-            "ksize=%d, strides=%d, pad_left=%d, pad_right=%d, count_include_pad=%d",
+            "ksize=%ld, strides=%ld, pad_left=%ld, pad_right=%ld, count_include_pad=%d",
             tiling->needCoreNum, tiling->totalOutputElements, tiling->L, tiling->L_out, tiling->ksize, tiling->strides,
             tiling->pad_left, tiling->pad_right, tiling->count_include_pad);
 }
@@ -180,11 +180,12 @@ static int64_t ComputeLOut(int64_t L, int64_t ksize, int64_t strides, int64_t pa
     if (L == 0) {
         return 0;
     }
-    int64_t LOut;
-    if (ceilMode) {
-        LOut = FloorDiv(L + padLeft + padRight - ksize + strides - 1, strides) + 1;
-    } else {
-        LOut = FloorDiv(L + padLeft + padRight - ksize, strides) + 1;
+    // 等价于 ceil/floor((L + pads - ksize) / strides) + 1，但先做整除再对余数补 1，
+    // 避免 strides 接近 INT64_MAX 时 "+ strides - 1" 溢出（超大 stride 边界用例）。
+    int64_t numerator = L + padLeft + padRight - ksize;
+    int64_t LOut = FloorDiv(numerator, strides) + 1;
+    if (ceilMode && numerator % strides != 0) {
+        LOut += 1;
     }
     // ceil_mode 末窗口修正（需求 §4.5.2）：仅当 padLeft > 0 时生效，确保最后一个窗口的起始点
     // 落在图像内；padLeft == 0 时有意不做该修正（与 PyTorch 的 ceil_mode 行为不同）。
@@ -237,10 +238,10 @@ static ge::graphStatus ParseShapeAndAttrs(gert::TilingContext* context, AvgPool1
     int64_t LOut = ComputeLOut(L, ksize, strides, padLeft, padRight, ceilMode);
     tiling->L_out = LOut;
     tiling->totalOutputElements = nc * LOut;
-    tiling->ksize = static_cast<int32_t>(ksize);
-    tiling->strides = static_cast<int32_t>(strides);
-    tiling->pad_left = static_cast<int32_t>(padLeft);
-    tiling->pad_right = static_cast<int32_t>(padRight);
+    tiling->ksize = ksize;
+    tiling->strides = strides;
+    tiling->pad_left = padLeft;
+    tiling->pad_right = padRight;
     tiling->count_include_pad = countIncludePad ? 1 : 0;
     return ge::GRAPH_SUCCESS;
 }

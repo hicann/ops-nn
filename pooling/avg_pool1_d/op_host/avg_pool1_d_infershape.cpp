@@ -46,11 +46,12 @@ static int64_t ComputeLOut(int64_t L, int64_t ksize, int64_t strides, int64_t pa
     if (L == 0) {
         return 0;
     }
-    int64_t LOut;
-    if (ceilMode) {
-        LOut = FloorDiv(L + padLeft + padRight - ksize + strides - 1, strides) + 1;
-    } else {
-        LOut = FloorDiv(L + padLeft + padRight - ksize, strides) + 1;
+    // 等价于 ceil/floor((L + pads - ksize) / strides) + 1，但先做整除再对余数补 1，
+    // 避免 strides 接近 INT64_MAX 时 "+ strides - 1" 溢出（超大 stride 边界用例）。
+    int64_t numerator = L + padLeft + padRight - ksize;
+    int64_t LOut = FloorDiv(numerator, strides) + 1;
+    if (ceilMode && numerator % strides != 0) {
+        LOut += 1;
     }
     // ceil_mode 末窗口修正（需求 §4.5.2）：仅当 padLeft > 0 时生效，确保最后一个窗口的起始点
     // 落在图像内；padLeft == 0 时有意不做该修正（与 PyTorch 的 ceil_mode 行为不同）。

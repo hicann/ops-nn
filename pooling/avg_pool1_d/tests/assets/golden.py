@@ -72,6 +72,57 @@ def _compute_l_out(L, ksize, strides, pad_left, pad_right, ceil_mode):
     return max(L_out, 0)
 
 
+# PyTorch pooling APIs take C int (int32) for ksize/stride/padding and raise
+# "integer out of range" for larger values.  For those boundary cases the window
+# count is tiny, so an explicit reference loop is both exact and cheap.
+_POOL_API_INT_MAX = 2**31 - 1
+_MANUAL_LOOP_MAX_OUT = 4096
+
+
+def _needs_manual_pool(ksize, strides, pad_left, pad_right, L_out):
+    return (
+        max(ksize, strides, pad_left, pad_right) > _POOL_API_INT_MAX
+        and L_out <= _MANUAL_LOOP_MAX_OUT
+    )
+
+
+def _manual_avg_pool1d(
+    x, L, L_out, ksize, strides, pad_left, pad_right, count_include_pad
+):
+    """Explicit avg_pool1d reference, mirroring op_kernel window semantics.
+
+    x: (..., L) float32 tensor.  Used when the parameter values exceed the
+    PyTorch C-int API range (e.g. stride = INT64_MAX boundary cases).
+    """
+    lead = tuple(x.shape[:-1])
+    y = x.new_zeros(lead + (L_out,))
+    L_padded = L + pad_left + pad_right
+    for w in range(L_out):
+        start = strides * w
+        end = start + ksize
+        if count_include_pad:
+            lo = start
+            hi = min(end, L_padded)
+        else:
+            lo = max(start, pad_left)
+            hi = min(end, pad_left + L)
+        divisor = hi - lo
+        if divisor <= 0:
+            divisor = 1
+            lo = hi = 0
+        vlo = max(lo, pad_left)
+        vhi = min(hi, pad_left + L)
+        if vhi > vlo:
+            seg = x[..., vlo - pad_left : vhi - pad_left]
+            # The spec fixes the accumulation order (left to right, float32);
+            # a tree reduction would drift on cancellation-heavy windows.
+            acc = torch.zeros(seg.shape[:-1], dtype=seg.dtype, device=seg.device)
+            for j in range(seg.shape[-1]):
+                acc = acc + seg[..., j]
+            y[..., w] = acc / divisor
+    return y
+
+
 def _torch_compute(
     x, ksize, strides, pad_left, pad_right, ceil_mode, count_include_pad
 ):
@@ -94,6 +145,7 @@ def _torch_compute(
     """
     orig_ndim = x.ndim
     orig_shape = list(x.shape)
+    orig_dtype = x.dtype
 
     L = orig_shape[-1]
     L_out = _compute_l_out(L, ksize, strides, pad_left, pad_right, ceil_mode)
@@ -114,7 +166,21 @@ def _torch_compute(
     elif orig_ndim == 2:
         x = x.unsqueeze(0)
 
-    if pad_left == pad_right and pad_left <= ksize / 2:
+    # Compute in float32: the operator accumulates in float32 and rounds to the
+    # output dtype once.  Doing the reference math in the input dtype (half)
+    # loses precision and overflows on the count_include_pad=False rescale path
+    # (y_with_pad * divisor_padded can exceed the half range).
+    work_dtype = (
+        torch.float32 if orig_dtype in (torch.float16, torch.bfloat16) else orig_dtype
+    )
+    if x.dtype != work_dtype:
+        x = x.to(work_dtype)
+
+    if _needs_manual_pool(ksize, strides, pad_left, pad_right, L_out):
+        y = _manual_avg_pool1d(
+            x, L, L_out, ksize, strides, pad_left, pad_right, count_include_pad
+        )
+    elif pad_left == pad_right and pad_left <= ksize / 2:
         # ===== paddingpad_left == pad_right=====
         # padding PyTorch avg_pool1d
         # PyTorch padding parameters int
@@ -214,6 +280,10 @@ def _torch_compute(
         y = y[..., :L_out]
     elif y.shape[-1] < L_out:
         y = torch.cat([y, y.new_zeros(*y.shape[:-1], L_out - y.shape[-1])], dim=-1)
+
+    # Reference math runs in float32; round once to the operator output dtype.
+    if y.dtype != orig_dtype:
+        y = y.to(orig_dtype)
 
     # Restore original ndim: reshape back to original shape
     if orig_ndim > 3:

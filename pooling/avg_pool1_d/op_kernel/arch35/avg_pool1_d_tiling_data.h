@@ -22,10 +22,10 @@ struct AvgPool1dTilingData {
     int64_t totalOutputElements = 0; // 总输出元素数 N*C*L_out
     int64_t L = 0;                   // 输入最后一维长度
     int64_t L_out = 0;               // 输出最后一维长度
-    int32_t ksize = 0;               // 池化窗口大小
-    int32_t strides = 0;             // 滑动步长
-    int32_t pad_left = 0;            // 左 padding
-    int32_t pad_right = 0;           // 右 padding
+    int64_t ksize = 0;               // 池化窗口大小
+    int64_t strides = 0;             // 滑动步长
+    int64_t pad_left = 0;            // 左 padding
+    int64_t pad_right = 0;           // 右 padding
     int32_t count_include_pad = 0;   // 0=false, 1=true（VF 参数不支持 bool，用 int32_t 替代）
 };
 

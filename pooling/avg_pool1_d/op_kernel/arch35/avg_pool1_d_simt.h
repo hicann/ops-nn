@@ -45,22 +45,29 @@ static constexpr uint32_t THREAD_NUM = 1024;
  * \tparam T  Input/output type (float or half)
  */
 template <typename T>
-__simt_callee__ inline void ProcessOneElement(uint64_t idx, int64_t L, int32_t ksize, int32_t strides, int32_t pad_left,
-                                              int32_t pad_right, int32_t count_include_pad, uint32_t lOut,
-                                              uint32_t magic, uint32_t shift, __gm__ T* x_gm, __gm__ T* y_gm)
+__simt_callee__ inline void ProcessOneElement(uint64_t idx, int64_t L, int64_t ksize, int64_t strides, int64_t pad_left,
+                                              int64_t pad_right, int32_t count_include_pad, uint64_t lOut,
+                                              uint64_t magic, uint64_t shift, __gm__ T* x_gm, __gm__ T* y_gm)
 {
     // 1. 索引分解：idx -> (n_c_idx, w)，UintDiv 快除
-    uint32_t n_c_idx = Simt::UintDiv<uint32_t>(static_cast<uint32_t>(idx), magic, shift);
-    uint32_t w = static_cast<uint32_t>(idx) - n_c_idx * lOut;
+    uint64_t n_c_idx = Simt::UintDiv<uint64_t>(idx, magic, shift);
+    uint64_t w = idx - n_c_idx * lOut;
 
     // 2. 计算输入基址
     int64_t input_base = static_cast<int64_t>(n_c_idx) * L;
 
     // 3. 计算窗口范围 [start, end)（MDE §5.2）
-    int32_t start = strides * static_cast<int32_t>(w);
-    int32_t end = start + ksize;
+    // strides 可达 int64 上限：窗口完全落在 padded 范围外时，钳到边界与真实位置同为零输出，
+    // 同时避免 strides * w 在 int64 上溢出。
+    int64_t paddedLen = L + pad_left + pad_right;
+    int64_t start;
+    if (w != 0 && static_cast<uint64_t>(strides) > static_cast<uint64_t>(paddedLen + ksize) / w) {
+        start = paddedLen + ksize;
+    } else {
+        start = strides * static_cast<int64_t>(w);
+    }
+    int64_t end = start + ksize;
     if (count_include_pad != 0) {
-        int32_t paddedLen = static_cast<int32_t>(L) + pad_left + pad_right;
         if (end > paddedLen) {
             end = paddedLen;
         }
@@ -68,21 +75,21 @@ __simt_callee__ inline void ProcessOneElement(uint64_t idx, int64_t L, int32_t k
         if (start < pad_left) {
             start = pad_left;
         }
-        int32_t validEnd = static_cast<int32_t>(L) + pad_left;
+        int64_t validEnd = L + pad_left;
         if (end > validEnd) {
             end = validEnd;
         }
     }
-    int32_t divisor = end - start;
+    int64_t divisor = end - start;
     if (divisor <= 0) {
         divisor = 1;
     }
 
     // 4. 窗口内顺序累加（float32 精度，MDE §1.3）
     float sum = 0.0f;
-    for (int32_t i = start; i < end; i++) {
-        int32_t real_idx = i - pad_left;
-        if (real_idx >= 0 && real_idx < static_cast<int32_t>(L)) {
+    for (int64_t i = start; i < end; i++) {
+        int64_t real_idx = i - pad_left;
+        if (real_idx >= 0 && real_idx < L) {
             if constexpr (std::is_same_v<T, half>) {
                 sum += __half2float(x_gm[input_base + real_idx]);
             } else {
@@ -107,13 +114,13 @@ __simt_callee__ inline void ProcessOneElement(uint64_t idx, int64_t L, int32_t k
  */
 template <typename T>
 __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpAvgPool1DSimtKernel(
-    int64_t totalOutputElements, int64_t L, int32_t ksize, int32_t strides, int32_t pad_left, int32_t pad_right,
-    int32_t count_include_pad, __gm__ T* x_gm, __gm__ T* y_gm, __ubuf__ uint32_t* uintDivUB)
+    int64_t totalOutputElements, int64_t L, int64_t ksize, int64_t strides, int64_t pad_left, int64_t pad_right,
+    int32_t count_include_pad, __gm__ T* x_gm, __gm__ T* y_gm, __ubuf__ uint64_t* uintDivUB)
 {
     // 从 UB 读取 UintDiv 参数
-    const uint32_t lOut = uintDivUB[0];
-    const uint32_t magic = uintDivUB[1];
-    const uint32_t shift = uintDivUB[2];
+    const uint64_t lOut = uintDivUB[0];
+    const uint64_t magic = uintDivUB[1];
+    const uint64_t shift = uintDivUB[2];
 
     // Grid-Stride 循环遍历输出元素
     for (uint64_t idx = static_cast<uint64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -142,27 +149,27 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const AvgPool1dTilingData* 
 
     int64_t L = tilingData->L;
     int64_t L_out = tilingData->L_out;
-    int32_t ksize = tilingData->ksize;
-    int32_t strides = tilingData->strides;
-    int32_t pad_left = tilingData->pad_left;
-    int32_t pad_right = tilingData->pad_right;
+    int64_t ksize = tilingData->ksize;
+    int64_t strides = tilingData->strides;
+    int64_t pad_left = tilingData->pad_left;
+    int64_t pad_right = tilingData->pad_right;
     int32_t count_include_pad = tilingData->count_include_pad;
 
     // UintDiv 预计算（device scalar 作用域，MDE §4.3）
     LocalMemAllocator<AscendC::Hardware::UB> ubAlloc;
-    constexpr uint32_t UB_ELEMS = 8; // 3 个 uint32_t 对齐到 32B
-    LocalTensor<uint32_t> uintDivUB = ubAlloc.Alloc<uint32_t>(UB_ELEMS);
+    constexpr uint32_t UB_ELEMS = 4; // 3 个 uint64_t 对齐到 32B
+    LocalTensor<uint64_t> uintDivUB = ubAlloc.Alloc<uint64_t>(UB_ELEMS);
 
-    uint32_t magic = 0;
-    uint32_t shift = 0;
-    GetUintDivMagicAndShift<uint32_t>(magic, shift, static_cast<uint32_t>(L_out));
-    uintDivUB.SetValue(0, static_cast<uint32_t>(L_out));
+    uint64_t magic = 0;
+    uint64_t shift = 0;
+    GetUintDivMagicAndShift<uint64_t>(magic, shift, static_cast<uint64_t>(L_out));
+    uintDivUB.SetValue(0, static_cast<uint64_t>(L_out));
     uintDivUB.SetValue(1, magic);
     uintDivUB.SetValue(2, shift);
 
     // Scalar → VF 同步（UB 写可见性）
     DataSyncBarrier<MemDsbT::UB>();
-    __ubuf__ uint32_t* ubPtr = (__ubuf__ uint32_t*)(uintDivUB.GetPhyAddr());
+    __ubuf__ uint64_t* ubPtr = (__ubuf__ uint64_t*)(uintDivUB.GetPhyAddr());
 
     // 启动 VF
     asc_vf_call<OpAvgPool1DSimtKernel<T>>(dim3(THREAD_NUM), totalOutputElements, L, ksize, strides, pad_left, pad_right,
