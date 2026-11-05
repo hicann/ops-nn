@@ -107,7 +107,7 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
       <tr>
       <td>loss（aclTensor*）</td>
       <td>输出</td>
-      <td>表示softmax和cross entropy的交叉熵损失，公式中loss。</td>
+      <td>表示softmax和cross entropy的交叉熵损失，公式中loss。shape必须为[features第0维大小]。</td>
       <td><ul><li>数据类型与features一致。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
       <tr>
       <td>backprop（aclTensor*）</td>
       <td>输出</td>
-      <td>表示输入logits的反向梯度，公式中backprop。</td>
+      <td>表示输入logits的反向梯度，公式中backprop。shape必须与features相同。</td>
       <td><ul><li>数据类型与features一致。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
     <tr>
       <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="1">161002</td>
-      <td>features和labels的数据类型不在支持的范围之内。</td>
+      <td>features和labels的数据类型不在支持的范围之内，或二者的shape不一致。</td>
     </tr>
   </tbody></table>
 

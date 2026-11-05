@@ -87,10 +87,18 @@ static bool CheckShape(const aclTensor* features, const aclTensor* labels, const
 
     int64_t dimNum = features->GetViewShape().GetDimNum();
     int64_t dimNum_2 = labels->GetViewShape().GetDimNum();
-    if (dimNum != dim_2 || dimNum_2 != dim_2) {
-        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "dimNum is %ld, must be 2, but check failed.", dimNum);
+    int64_t lossDimNum = loss->GetViewShape().GetDimNum();
+    int64_t backpropDimNum = backprop->GetViewShape().GetDimNum();
+    if (dimNum != dim_2 || dimNum_2 != dim_2 || lossDimNum != 1 || backpropDimNum != dim_2) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected features, labels and backprop to be 2D and loss to be 1D, but got %ld, %ld, %ld and %ld.",
+                dimNum, dimNum_2, lossDimNum, backpropDimNum);
         return false;
     }
+    op::Shape expectedLossShape({features->GetViewShape().GetDim(0)});
+    OP_CHECK_SHAPE_NOT_EQUAL(features, labels, return false);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(loss, expectedLossShape, return false);
+    OP_CHECK_SHAPE_NOT_EQUAL(backprop, features, return false);
     return true;
 }
 
@@ -120,12 +128,6 @@ aclnnStatus ExecSoftmaxCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* f
 
     // 空Tensor处理
     if (features->IsEmpty()) {
-        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
-    }
-
-    if (labels->IsEmpty()) {
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
