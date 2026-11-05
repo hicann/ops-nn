@@ -329,8 +329,8 @@ aclnnStatus aclnnFlatQuantV3(
       <td>The required inputs (x, kroneckerP1, kroneckerP2) or required outputs (out, quantScale) in the input parameters are null pointers.</td>
     </tr>
     <tr>
-      <td rowspan="13">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="13">161002</td>
+      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="12">161002</td>
       <td>The data type or data format of x, kroneckerP1, kroneckerP2, out, or quantScale is not within the supported range.</td>
     </tr>
     <tr>
@@ -359,9 +359,6 @@ aclnnStatus aclnnFlatQuantV3(
     </tr>
     <tr>
       <td>If the data type of out is INT4, the tail axis size of the shape of x is not an even number, or the shape of x does not match the shape of out.</td>
-    </tr>
-    <tr>
-      <td>If the data type of out is INT32, the tail axis of the shape of x is not 8 times the tail axis size of the shape of out, or the sizes of the non-tail axes of the shapes of x and out do not match.</td>
     </tr>
     <tr>
       <td>If the data type of out is INT32, the tail axis of the shape of x is not 8 times the tail axis size of the shape of out, or the sizes of the non-tail axes of the shapes of x and out do not match.</td>

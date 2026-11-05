@@ -135,7 +135,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>dst_dtype</td>
       <td>Optional attribute</td>
-      <td><ul><li>Controls the quantization mode. The value DT_FLOAT4_E2M1 indicates the pergroup quantization mode, and the value DT_INT32 indicates the pertoken quantization mode.</li><li>The default value is DT_INT32.</li></ul></td>
+      <td><ul><li>Controls the quantization mode. The value DT_FLOAT4_E2M1 indicates the pergroup quantization mode, and the value DT_INT32 indicates the pertoken quantization mode.</li><li>The default value is DT_INT4.</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>

@@ -327,8 +327,8 @@ aclnnStatus aclnnFlatQuantV3(
       <td>传入参数中的必选输入（x、kroneckerP1、kroneckerP2）、必选输出（out、quantScale）是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="13">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="13">161002</td>
+      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="12">161002</td>
       <td>x、kroneckerP1、kroneckerP2、out、quantScale的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -357,9 +357,6 @@ aclnnStatus aclnnFlatQuantV3(
     </tr>
     <tr>
       <td>out的数据类型为INT4时，x的shape尾轴大小不是偶数，或者x的shape与out的shape不一致。</td>
-    </tr>
-    <tr>
-      <td>out的数据类型为INT32时，x的shape尾轴不是out的shape尾轴大小的8倍，或者x与out的shape的非尾轴的大小不一致。</td>
     </tr>
     <tr>
       <td>out的数据类型为INT32时，x的shape尾轴不是out的shape尾轴大小的8倍，或者x与out的shape的非尾轴的大小不一致。</td>

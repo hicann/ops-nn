@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachCopy(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list for content copy, corresponding to `y` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>The data format is the same as that of input `x`, and the shape size is greater than or equal to that of input `x`.</li><li>The data type corresponds to the data type of input `x` as follows:<ul><li>If the data type of input `x` is FLOAT32, the output data type can be FLOAT16 or BFLOAT16.</li><li>If the data type of input `x` is FLOAT16, the output data type can be FLOAT32.</li><li>If the data type of input `x` is not FLOAT32 or FLOAT16, the output data type is the same as that of input `x`.</li></ul></li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>The data format is the same as that of input `x`, and the shape size is greater than or equal to that of input `x`.</li><li>The data type corresponds to the data type of input `x` as follows:<ul><li>If the data type of input `x` is FLOAT32, the output data type can be FLOAT16 or BFLOAT16.</li><li>If the data type of input `x` is FLOAT16, the output data type can be FLOAT32.</li><li>If the data type of input `x` is BFLOAT16, the output data type can be FLOAT32 or BFLOAT16.</li><li>If the data type of input `x` is not FLOAT32, BFLOAT16 or FLOAT16, the output data type is the same as that of input `x`.</li></ul></li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT8, UINT8, INT16, UINT16, INT32, UINT32, INT64, DOUBLE, BOOL</td>
       <td>ND</td>
       <td>0-8</td>

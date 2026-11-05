@@ -216,7 +216,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
     </table>
 
   <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：参数`totalSum`、`totalSquareSum`、`mean`、`variance`、`batchMean`、`batchInvstd`的数据类型不支持BFLOAT16。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：参数`totalSum`、`totalSquareSum`、`sampleCount`、`mean`、`variance`、`batchMean`、`batchInvstd`的数据类型不支持BFLOAT16。
   <!-- end id7 -->
 
 - **返回值**

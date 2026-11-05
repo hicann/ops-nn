@@ -28,7 +28,7 @@
 - Description: Computes the group normalization result out, mean meanOut, and reciprocal of standard deviation rstdOut for the input self.
 - Formula:
 
-  Let $x=self$, where $E[x] = \bar{x}$ denotes the mean of $x$, and $Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$ denotes the sample variance of $x$. Then
+  Let $x=self$, where $E[x] = \bar{x}$ denotes the mean of $x$, and $Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$ denotes the population variance of $x$. Then
 
   $$
   out = \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta

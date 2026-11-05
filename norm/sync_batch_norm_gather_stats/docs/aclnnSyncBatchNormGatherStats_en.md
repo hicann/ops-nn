@@ -218,7 +218,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
     </table>
 
   <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A3 products</term>, <term>Atlas A2 products</term>: The data type of the parameters `totalSum`, `totalSquareSum`, `mean`, `variance`, `batchMean`, and `batchInvstd` does not support BFLOAT16.
+  - <term>Atlas A3 products</term>, <term>Atlas A2 products</term>: The data type of the parameters `totalSum`, `totalSquareSum`, `sampleCount`, `mean`, `variance`, `batchMean`, and `batchInvstd` does not support BFLOAT16.
   <!-- end id7 -->
 
 - **Return Value**
