@@ -36,8 +36,9 @@ static constexpr int64_t PIPE_META_RESERVE = 8512; // TPipe/TQue 元数据与事
 static constexpr int64_t STAT_STAGING_BYTES = 5 * CHUNK_CHANNELS *
                                               FLOAT_BYTES; // diff_scale/diff_offset/scale/batch_mean/batch_variance
                                                            // staging（5 队列）
-static constexpr int64_t COEFF_PRECOMPUTE_BYTES = 3 * MERGE_CHANNELS *
-                                                  FLOAT_BYTES; // multiplier/addend/mulScale 预计算 TBuf（256 项槽位）
+static constexpr int64_t COEFF_PRECOMPUTE_BYTES = 4 * MERGE_CHANNELS *
+                                                  FLOAT_BYTES; // multiplier/addend/mulScale/batch_mean
+                                                               // 预计算/staging TBuf（256 项槽位）
 static constexpr int64_t MISC_RESERVE = 2048;                  // 对齐余量
 static constexpr int64_t RESERVED_UB = PIPE_META_RESERVE + STAT_STAGING_BYTES + COEFF_PRECOMPUTE_BYTES + MISC_RESERVE;
 

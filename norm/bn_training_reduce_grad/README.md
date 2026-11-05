@@ -28,7 +28,7 @@
   $$
 
   $$
-  addend = {batch\_mean\over sqrtVar} * {diff\_scale\over num} + diff\_offset * (-{1\over num})
+  addend = diff\_offset * (-{1\over num})
   $$
 
   $$
@@ -36,10 +36,11 @@
   $$
 
   $$
-  y = ((grads + multiplier * x) + addend) * mulScale
+  y = ((grads + multiplier * (x - batch\_mean)) + addend) * mulScale
   $$
 
   `multiplier`/`addend`/`mulScale`均为长度C的向量，沿C维广播。fp16/bf16输入在算子内升fp32计算、单次舍入写回。
+  主循环采用先差后乘的等价形式：`multiplier*x + (batch_mean/sqrtVar)*(diff_scale/num)`与`multiplier*(x-batch_mean)+diff_offset*(-1/num)`为代数恒等式，后者规避`|diff_scale|`极大（如±FLT_MAX）且`x==batch_mean`时两个~1e37量级项相减的灾难性抵消（fp32下舍入噪声~1e30会淹没真值，issue #147）。
 
 ## 参数说明
 

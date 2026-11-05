@@ -15,20 +15,23 @@
  *        negNumRecip = -numRecip（host 下发，fp32 取负精确）
  *        sqrtVar[c]    = sqrt(batch_variance[c] + epsilon)
  *        multiplier[c] = (diff_scale[c] * negNumRecip) / sqrtVar[c]
- *        addend[c]     = (batch_mean[c] / sqrtVar[c]) * (diff_scale[c] * numRecip)
- *                        + (diff_offset[c] * negNumRecip)
+ *        addend[c]     = diff_offset[c] * negNumRecip
  *        mulScale[c]   = scale[c] / sqrtVar[c]
- *        y[n,c,r]      = ((grads[n,c,r] + multiplier[c] * x[n,c,r]) + addend[c]) * mulScale[c]
- *        与 910b TBE（bn_training_reduce_grad.py）语义与运算顺序一致
- *        （sqrt 后走 IEEE Div 而非乘倒数；coef 组合序 vmul→vadd(grads)→vadd(addend)）；
+ *        y[n,c,r]      = ((grads[n,c,r] + multiplier[c] * (x[n,c,r] - batch_mean[c])) + addend[c]) * mulScale[c]
+ *        与 910b TBE（bn_training_reduce_grad.py）数学语义一致（sqrt 后走 IEEE Div 而非乘倒数）；
+ *        运算序按代数恒等式 (batch_mean/sqrtVar)*(diff_scale/num) == -batch_mean*multiplier 重排为
+ *        「先差后乘」：|diff_scale| 极大（如 ±FLT_MAX）且 x==batch_mean 时，旧序 A*x 与 addend 首项
+ *        -mean*A 两个 ~1e37 量级项相减，fp32 舍入噪声（~1e30）淹没真值，输出纯噪声（issue #147）；
+ *        新序先算 (x - batch_mean)（fp32 近差 Sterbenz 精确），再乘 multiplier，无抵消放大。
  *        fp16/bf16 输入 UB 内紧凑存放、reg 内解包升 fp32 计算，单次舍入（CAST_RINT）写回。
  *
  *        性能要点：
  *        - 统计量（diff_scale/diff_offset/scale/batch_mean/batch_variance 每 channel 一个 fp32 标量）
  *          按 channel 对齐的 segment（plane 区间按 c=p%C 回绕切分）+ CHUNK_CHANNELS 粒度一次性
  *          MTE2 搬入 UB，主循环内 DIST_BRC_B32 广播进寄存器，零重复 GM 访存；
- *        - multiplier/addend/mulScale 按 64-channel chunk 一次向量化预计算进 TBuf（64 lane 全利用），
- *          tile 前导仅 3 次广播 load，主循环每 VL 仅 Mul→Add→Add→Mul 4 条 VF 指令，
+ *        - multiplier/addend/mulScale/batch_mean 按 64-channel chunk 一次向量化预计算/staging 进
+ *          4 路 TBuf（64 lane 全利用），tile 前导仅 4 次广播 load，主循环每 VL 仅
+ *          Sub→Mul→Add→Add→Mul 5 条 VF 指令，
  *          寄存器直通、无中间 tensor 物化，纯带宽 bound；
  *        - 小 R 退化形态（R==1/R==2）多 plane 合并 tile，与同族 bn_training_update_v3 同手法：
  *          R==1 时最多 4 个 chunk（256 channel）的系数一次 staging/预计算进 256 项 TBuf，
@@ -151,6 +154,7 @@ public:
         pipe_->InitBuffer(multiplierBuf_, MERGE_CHANNELS * sizeof(float));
         pipe_->InitBuffer(addendBuf_, MERGE_CHANNELS * sizeof(float));
         pipe_->InitBuffer(mulScaleBuf_, MERGE_CHANNELS * sizeof(float));
+        pipe_->InitBuffer(meanBuf_, MERGE_CHANNELS * sizeof(float));
     }
 
     __aicore__ inline void Process()
@@ -210,12 +214,13 @@ private:
             __ubuf__ float* multiplierAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
             __ubuf__ float* addendAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
             __ubuf__ float* mulScaleAddr = (__ubuf__ float*)mulScaleBuf_.Get<float>().GetPhyAddr();
+            __ubuf__ float* meanAddr = (__ubuf__ float*)meanBuf_.Get<float>().GetPhyAddr();
             if (tl_->innerSize == 2 && cnt == CHUNK_CHANNELS && tl_->ubTileSize >= 2 * CHUNK_CHANNELS) {
                 ProcessMergedR2(pos + off);
             } else {
                 for (int64_t j = 0; j < cnt; j++) {
                     int64_t p = pos + off + j;
-                    ProcessPlane(p, static_cast<uint32_t>(j), multiplierAddr, addendAddr, mulScaleAddr);
+                    ProcessPlane(p, static_cast<uint32_t>(j), multiplierAddr, addendAddr, mulScaleAddr, meanAddr);
                 }
             }
         }
@@ -254,10 +259,13 @@ private:
 
     // 每 chunk 一次：sqrtVar = sqrt(batch_variance + eps)；
     // multiplier = (diff_scale * negNumRecip) / sqrtVar；
-    // addend = (batch_mean / sqrtVar) * (diff_scale * numRecip) + diff_offset * negNumRecip；
-    // mulScale = scale / sqrtVar。运算序逐条对齐 A2 TBE（vmuls→vdiv→vmul→vadd）；
-    // 向量化预计算到三个系数 TBuf 的 dstOffset 槽位（TBuf，同 V pipe 程序序，无需事件；
-    // R==1 合并路径下最多 4 个 chunk 连续写入 256 项缓冲）；tile 前导仅 3 次广播 load
+    // addend = diff_offset * negNumRecip（旧序 (batch_mean/sqrtVar)*(diff_scale*numRecip) + ... 按
+    // 代数恒等式折进主循环的 multiplier*(x - batch_mean)，规避 ±FLT_MAX diff_scale 下
+    // x==batch_mean 处两 ~1e37 量级项相减的灾难性抵消，见文件头注）；
+    // mulScale = scale / sqrtVar。运算序逐条对齐 A2 TBE（vmuls→vdiv）；
+    // multiplier/addend/mulScale 向量化预计算、batch_mean 原样 staging 到 4 路 TBuf 的
+    // dstOffset 槽位（TBuf，同 V pipe 程序序，无需事件；R==1 合并路径下最多 4 个 chunk
+    // 连续写入 256 项缓冲）；tile 前导仅 4 次广播 load
     __aicore__ inline void PrecomputeCoeffs(__ubuf__ float* diffScaleAddr, __ubuf__ float* diffOffsetAddr,
                                             __ubuf__ float* scaleAddr, __ubuf__ float* batchMeanAddr,
                                             __ubuf__ float* batchVarAddr, int64_t cnt, uint32_t dstOffset)
@@ -265,10 +273,11 @@ private:
         __ubuf__ float* multiplierAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr() + dstOffset;
         __ubuf__ float* addendAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr() + dstOffset;
         __ubuf__ float* mulScaleAddr = (__ubuf__ float*)mulScaleBuf_.Get<float>().GetPhyAddr() + dstOffset;
+        __ubuf__ float* meanAddr = (__ubuf__ float*)meanBuf_.Get<float>().GetPhyAddr() + dstOffset;
         __VEC_SCOPE__
         {
             RegTensor<float> diffScaleReg, diffOffsetReg, scaleReg, meanReg, varReg;
-            RegTensor<float> multReg, addReg, mulScaleReg, tmpReg, tmp2Reg;
+            RegTensor<float> multReg, addReg, mulScaleReg, tmpReg;
             // 尾 chunk（cnt<64）staging 尾段 [cnt,64) 无有效数据：DIST_NORM 无掩码 load
             // 会带进无效 lane，全程 UpdateMask 屏蔽（计算与写回均不参与）；
             // 系数 TBuf 尾段永远不会被 bcast 读取（j<cnt）
@@ -284,23 +293,21 @@ private:
             // multiplier = (diff_scale * negNumRecip) / sqrtVar
             Muls(tmpReg, diffScaleReg, negNumRecip_, validMask);
             Div(multReg, tmpReg, varReg, validMask);
-            // addend = (batch_mean / sqrtVar) * (diff_scale * numRecip) + diff_offset * negNumRecip
-            Div(tmpReg, meanReg, varReg, validMask);
-            Muls(tmp2Reg, diffScaleReg, numRecip_, validMask);
-            Mul(tmpReg, tmpReg, tmp2Reg, validMask);
-            Muls(tmp2Reg, diffOffsetReg, negNumRecip_, validMask);
-            Add(addReg, tmpReg, tmp2Reg, validMask);
+            // addend = diff_offset * negNumRecip
+            Muls(addReg, diffOffsetReg, negNumRecip_, validMask);
             // mulScale = scale / sqrtVar
             Div(mulScaleReg, scaleReg, varReg, validMask);
             DataCopy<float, StoreDist::DIST_NORM>(multiplierAddr, multReg, validMask);
             DataCopy<float, StoreDist::DIST_NORM>(addendAddr, addReg, validMask);
             DataCopy<float, StoreDist::DIST_NORM>(mulScaleAddr, mulScaleReg, validMask);
+            DataCopy<float, StoreDist::DIST_NORM>(meanAddr, meanReg, validMask);
         }
     }
 
     // 单 plane 的 R 维流式计算：grads/x/y 三路双缓冲流水，tile 内寄存器直通
     __aicore__ inline void ProcessPlane(int64_t p, uint32_t j, __ubuf__ float* multiplierAddr,
-                                        __ubuf__ float* addendAddr, __ubuf__ float* mulScaleAddr)
+                                        __ubuf__ float* addendAddr, __ubuf__ float* mulScaleAddr,
+                                        __ubuf__ float* meanAddr)
     {
         int64_t gmBase = p * tl_->innerSize + rStart_;
         int64_t ubTile = tl_->ubTileSize;
@@ -322,7 +329,7 @@ private:
 
             LocalTensor<T> yUb = yQue_.AllocTensor<T>();
             ComputeTile((__ubuf__ T*)gradsUb.GetPhyAddr(), (__ubuf__ T*)xUb.GetPhyAddr(), (__ubuf__ T*)yUb.GetPhyAddr(),
-                        j, extent, multiplierAddr, addendAddr, mulScaleAddr);
+                        j, extent, multiplierAddr, addendAddr, mulScaleAddr, meanAddr);
 
             yQue_.EnQue(yUb);
             yUb = yQue_.DeQue<T>();
@@ -333,12 +340,13 @@ private:
         }
     }
 
-    // 单 tile 主计算：tile 前导广播 load 预计算的 multiplier/addend/mulScale（每 chunk 一次，
-    // 见 PrecomputeCoeffs），随后满块 for + 尾块 0/1 次 for（VF 内无 if）；
-    // 每 VL：tmp = mult*x → tmp = grads + tmp → tmp = tmp + addend → y = tmp * mulScale
+    // 单 tile 主计算：tile 前导广播 load 预计算的 multiplier/addend/mulScale/batch_mean（每 chunk
+    // 一次，见 PrecomputeCoeffs），随后满块 for + 尾块 0/1 次 for（VF 内无 if）；
+    // 每 VL：tmp = x-mean → tmp = mult*tmp → tmp = grads + tmp → tmp = tmp + addend → y = tmp*mulScale
+    // （x-mean 先算：fp32 近差精确，杜绝 mult*x 与 -mean*mult 两大数相减的灾难性抵消，issue #147）
     __aicore__ inline void ComputeTile(__ubuf__ T* gradsAddr, __ubuf__ T* xAddr, __ubuf__ T* yAddr, uint32_t j,
                                        int64_t extent, __ubuf__ float* multiplierAddr, __ubuf__ float* addendAddr,
-                                       __ubuf__ float* mulScaleAddr)
+                                       __ubuf__ float* mulScaleAddr, __ubuf__ float* meanAddr)
     {
         uint16_t fullLoops = static_cast<uint16_t>(extent / static_cast<int64_t>(VL_FP32));
         uint16_t totalLoops = static_cast<uint16_t>((extent + static_cast<int64_t>(VL_FP32) - 1) /
@@ -346,16 +354,18 @@ private:
         uint32_t tailCount = static_cast<uint32_t>(extent) - fullLoops * VL_FP32;
         __VEC_SCOPE__
         {
-            RegTensor<float> multReg, addReg, mulScaleReg, gradsReg, xReg, yReg;
+            RegTensor<float> multReg, addReg, mulScaleReg, meanReg, gradsReg, xReg, yReg;
             MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
-            // tile 前导：channel j 预计算的三系数广播进寄存器
+            // tile 前导：channel j 预计算的三系数与 batch_mean 广播进寄存器
             DataCopy<float, LoadDist::DIST_BRC_B32>(multReg, multiplierAddr + j);
             DataCopy<float, LoadDist::DIST_BRC_B32>(addReg, addendAddr + j);
             DataCopy<float, LoadDist::DIST_BRC_B32>(mulScaleReg, mulScaleAddr + j);
+            DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + j);
             for (uint16_t i = 0; i < fullLoops; i++) {
                 uint32_t offset = i * VL_FP32;
                 LoadToFp32(gradsAddr, gradsReg, fullMask, offset);
                 LoadToFp32(xAddr, xReg, fullMask, offset);
+                Sub(xReg, xReg, meanReg, fullMask);
                 Mul(yReg, xReg, multReg, fullMask);
                 Add(yReg, gradsReg, yReg, fullMask);
                 Add(yReg, yReg, addReg, fullMask);
@@ -368,6 +378,7 @@ private:
                 uint32_t offset = i * VL_FP32;
                 LoadToFp32(gradsAddr, gradsReg, tailMask, offset);
                 LoadToFp32(xAddr, xReg, tailMask, offset);
+                Sub(xReg, xReg, meanReg, tailMask);
                 Mul(yReg, xReg, multReg, tailMask);
                 Add(yReg, gradsReg, yReg, tailMask);
                 Add(yReg, yReg, addReg, tailMask);
@@ -419,8 +430,9 @@ private:
     TQue<QuePosition::VECIN, 1> batchMeanQue_;
     TQue<QuePosition::VECIN, 1> batchVarQue_;
     TBuf<> multiplierBuf_; // 每 chunk 预计算的 multiplier，256 fp32 槽位
-    TBuf<> addendBuf_;     // 每 chunk 预计算的 addend，256 fp32 槽位
+    TBuf<> addendBuf_;     // 每 chunk 预计算的 addend（diff_offset*negNumRecip），256 fp32 槽位
     TBuf<> mulScaleBuf_;   // 每 chunk 预计算的 mulScale，256 fp32 槽位
+    TBuf<> meanBuf_;       // 每 chunk staging 的 batch_mean（主循环 (x-mean) 基准），256 fp32 槽位
 };
 
 #include "bn_training_reduce_grad_merged.h"

@@ -17,10 +17,18 @@ computes per channel ``c``::
 
     sqrt_var[c]    = sqrt(batch_variance[c] + epsilon)
     multiplier[c]  = (diff_scale[c] * (-1/num)) / sqrt_var[c]
-    addend[c]      = (batch_mean[c] / sqrt_var[c]) * (diff_scale[c] * (1/num))
-                     + diff_offset[c] * (-1/num)
+    addend[c]      = diff_offset[c] * (-1/num)
     mul_scale[c]   = scale[c] / sqrt_var[c]
-    y[n, c, r]     = ((grads[n, c, r] + multiplier[c] * x[n, c, r]) + addend[c]) * mul_scale[c]
+    y[n, c, r]     = ((grads[n, c, r] + multiplier[c] * (x[n, c, r] - batch_mean[c]))
+                      + addend[c]) * mul_scale[c]
+
+``multiplier * x + (batch_mean / sqrt_var) * (diff_scale / num)`` is rewritten via
+the algebraic identity ``(batch_mean / sqrt_var) * (diff_scale / num) ==
+-batch_mean * multiplier`` into ``multiplier * (x - batch_mean)``.  Both forms are
+mathematically identical, but with ``|diff_scale|`` near FLT_MAX the old form
+subtracts two ~1e37 terms when ``x == batch_mean`` and drowns the true value in
+rounding noise (fp32 ~1e32, fp64 ~1e23); subtracting first is exact for close
+fp32 values (Sterbenz) and immune to the cancellation (issue #147).
 
 The CPU true-value path is a Torch competitor composition.  It lifts fp16/bf16
 to at least fp32 and preserves fp64 inputs supplied by TTK Promote; promoted
@@ -29,8 +37,8 @@ values are never narrowed.  ``numRecip`` is quantized to fp32 before use (and
 (fp64 computed then cast to fp32, matching the A2 TBE ``tvm.const`` semantics).
 The independent third-party composition mirrors the arch35 kernel's float32
 arithmetic and operation order (sqrt followed by IEEE division, coefficient
-combination order mul -> add(grads) -> add(addend) -> mul(mul_scale)) before
-casting ``y`` back to the input dtype.
+combination order sub(x, batch_mean) -> mul -> add(grads) -> add(addend) ->
+mul(mul_scale)) before casting ``y`` back to the input dtype.
 """
 
 import numpy as np
@@ -161,21 +169,23 @@ def _compute(
 
     sqrt_var = torch.sqrt(torch.add(batch_variance_compute, epsilon_tensor))
     multiplier = torch.div(torch.mul(diff_scale_compute, neg_num_recip), sqrt_var)
-    addend = torch.add(
-        torch.mul(
-            torch.div(batch_mean_compute, sqrt_var),
-            torch.mul(diff_scale_compute, num_recip),
-        ),
-        torch.mul(diff_offset_compute, neg_num_recip),
-    )
+    addend = torch.mul(diff_offset_compute, neg_num_recip)
     mul_scale = torch.div(scale_compute, sqrt_var)
 
     broadcast_shape = (1, c) + (1,) * (grads_tensor.ndim - 2)
+    # Numerically stable rearrangement: multiplier*(x - batch_mean) instead of
+    # multiplier*x + (batch_mean/sqrt_var)*(diff_scale/num); algebraically identical
+    # ((batch_mean/sqrt_var)*(diff_scale/num) == -batch_mean*multiplier), but the
+    # old form cancels two |diff_scale|/sqrt_var/num-scale terms and drowns the
+    # true value in rounding noise at x == batch_mean (issue #147).
+    x_centered = torch.sub(
+        x_compute, torch.reshape(batch_mean_compute, broadcast_shape)
+    )
     y = torch.mul(
         torch.add(
             torch.add(
                 grads_compute,
-                torch.mul(torch.reshape(multiplier, broadcast_shape), x_compute),
+                torch.mul(torch.reshape(multiplier, broadcast_shape), x_centered),
             ),
             torch.reshape(addend, broadcast_shape),
         ),
@@ -301,19 +311,16 @@ class _BNTrainingReduceGradCompose:
 
         sqrt_var = torch.sqrt(torch.add(batch_variance_f32, epsilon_f32))
         multiplier = torch.div(torch.mul(diff_scale_f32, neg_num_recip), sqrt_var)
-        addend = torch.add(
-            torch.mul(
-                torch.div(batch_mean_f32, sqrt_var),
-                torch.mul(diff_scale_f32, num_recip),
-            ),
-            torch.mul(diff_offset_f32, neg_num_recip),
-        )
+        addend = torch.mul(diff_offset_f32, neg_num_recip)
         mul_scale = torch.div(scale_f32, sqrt_var)
+        # Mirror the arch35 kernel's stable op order: (x - batch_mean) first
+        # (exact for close fp32 values), then mul/add/add/mul (issue #147).
+        x_centered = torch.sub(x_f32, torch.reshape(batch_mean_f32, broadcast_shape))
         y_f32 = torch.mul(
             torch.add(
                 torch.add(
                     grads_f32,
-                    torch.mul(torch.reshape(multiplier, broadcast_shape), x_f32),
+                    torch.mul(torch.reshape(multiplier, broadcast_shape), x_centered),
                 ),
                 torch.reshape(addend, broadcast_shape),
             ),

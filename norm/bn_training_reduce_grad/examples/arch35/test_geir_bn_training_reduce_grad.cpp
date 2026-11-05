@@ -14,12 +14,12 @@
  *
  * 算子功能：sqrtVar = sqrt(batch_variance + epsilon)；num = N*R（R 为 grads 后导维展平长度）
  *           multiplier = (diff_scale * (-1/num)) / sqrtVar
- *           addend     = (batch_mean / sqrtVar) * (diff_scale * (1/num)) + diff_offset * (-1/num)
+ *           addend     = diff_offset * (-1/num)
  *           mulScale   = scale / sqrtVar
- *           y          = ((grads + multiplier * x) + addend) * mulScale
+ *           y          = ((grads + multiplier * (x - batch_mean)) + addend) * mulScale
  *
  * 本示例构造两张仅含 op::BNTrainingReduceGrad 节点的计算图并在 ascend950 上执行。
- * 两个 case 均取 multiplier*x 与 addend 首项相消的常量数据，期望值为：
+ * 两个 case 均取 x == batch_mean 的常量数据（multiplier*(x-batch_mean)==0），期望值为：
  *   y = (grads + diff_offset * (-1/num)) * scale / sqrt(batch_variance + epsilon)
  *   case1：grads/x{2,3,4,5}=1.0，diff_scale=2.0，diff_offset=0.5，scale=2.0，
  *          batch_mean=1.0，batch_variance=1.0，epsilon=1e-5，num=40
@@ -197,7 +197,8 @@ int32_t RunGraphCase(const char* graphName, const vector<int64_t>& mainShape, in
     }
     LOG_PRINT("%s - INFO - [XIR]: RunGraph success, outputs=%zu\n", GetTime().c_str(), output.size());
 
-    // 期望值：multiplier*x 与 addend 首项相消 => y = (grads + diff_offset*(-1/num)) * scale/sqrt(var+eps)
+    // 期望值：x == batch_mean => multiplier*(x-batch_mean)==0
+    // => y = (grads + diff_offset*(-1/num)) * scale/sqrt(var+eps)
     int64_t num = mainShape[0];
     for (size_t i = 2; i < mainShape.size(); i++) {
         num *= mainShape[i];

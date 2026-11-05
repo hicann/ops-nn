@@ -46,8 +46,8 @@ __aicore__ inline void BNTrainingReduceGradKernel<T>::ProcessMergedR1(int64_t p0
 }
 
 // R==1 合并 tile 主计算：系数即 per-element 向量（channel c 的元素就在位置 c），
-// 每个 VL 直接 DIST_NORM 加载三系数对应切片（无需广播），满块 for + 尾块 0/1 次 for；
-// 运算序与逐 plane 路径完全一致（Mul→Add→Add→Mul，同一预计算系数），位级一致
+// 每个 VL 直接 DIST_NORM 加载四系数对应切片（无需广播），满块 for + 尾块 0/1 次 for；
+// 运算序与逐 plane 路径完全一致（Sub(x-mean)→Mul→Add→Add→Mul，同一预计算系数），位级一致
 template <typename T>
 __aicore__ inline void BNTrainingReduceGradKernel<T>::ComputeTileMergedR1(__ubuf__ T* gradsAddr, __ubuf__ T* xAddr,
                                                                           __ubuf__ T* yAddr, int64_t extent)
@@ -55,13 +55,14 @@ __aicore__ inline void BNTrainingReduceGradKernel<T>::ComputeTileMergedR1(__ubuf
     __ubuf__ float* multiplierAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
     __ubuf__ float* addendAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
     __ubuf__ float* mulScaleAddr = (__ubuf__ float*)mulScaleBuf_.Get<float>().GetPhyAddr();
+    __ubuf__ float* meanAddr = (__ubuf__ float*)meanBuf_.Get<float>().GetPhyAddr();
     uint16_t fullLoops = static_cast<uint16_t>(extent / static_cast<int64_t>(VL_FP32));
     uint16_t totalLoops = static_cast<uint16_t>((extent + static_cast<int64_t>(VL_FP32) - 1) /
                                                 static_cast<int64_t>(VL_FP32));
     uint32_t tailCount = static_cast<uint32_t>(extent) - fullLoops * VL_FP32;
     __VEC_SCOPE__
     {
-        RegTensor<float> multReg, addReg, mulScaleReg, gradsReg, xReg, yReg;
+        RegTensor<float> multReg, addReg, mulScaleReg, meanReg, gradsReg, xReg, yReg;
         MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
         for (uint16_t i = 0; i < fullLoops; i++) {
             uint32_t offset = i * VL_FP32;
@@ -70,6 +71,8 @@ __aicore__ inline void BNTrainingReduceGradKernel<T>::ComputeTileMergedR1(__ubuf
             DataCopy<float, LoadDist::DIST_NORM>(multReg, multiplierAddr + offset);
             DataCopy<float, LoadDist::DIST_NORM>(addReg, addendAddr + offset);
             DataCopy<float, LoadDist::DIST_NORM>(mulScaleReg, mulScaleAddr + offset);
+            DataCopy<float, LoadDist::DIST_NORM>(meanReg, meanAddr + offset);
+            Sub(xReg, xReg, meanReg, fullMask);
             Mul(yReg, xReg, multReg, fullMask);
             Add(yReg, gradsReg, yReg, fullMask);
             Add(yReg, yReg, addReg, fullMask);
@@ -83,10 +86,12 @@ __aicore__ inline void BNTrainingReduceGradKernel<T>::ComputeTileMergedR1(__ubuf
             LoadToFp32(gradsAddr, gradsReg, tailMask, offset);
             LoadToFp32(xAddr, xReg, tailMask, offset);
             // 系数无掩码整行加载（缓冲 256 项恒不越界），无效 lane 为陈旧值，
-            // 经 tailMask 的 Mul/Add(ZEROING)/store 全部屏蔽，不进输出
+            // 经 tailMask 的 Sub/Mul/Add(ZEROING)/store 全部屏蔽，不进输出
             DataCopy<float, LoadDist::DIST_NORM>(multReg, multiplierAddr + offset);
             DataCopy<float, LoadDist::DIST_NORM>(addReg, addendAddr + offset);
             DataCopy<float, LoadDist::DIST_NORM>(mulScaleReg, mulScaleAddr + offset);
+            DataCopy<float, LoadDist::DIST_NORM>(meanReg, meanAddr + offset);
+            Sub(xReg, xReg, meanReg, tailMask);
             Mul(yReg, xReg, multReg, tailMask);
             Add(yReg, gradsReg, yReg, tailMask);
             Add(yReg, yReg, addReg, tailMask);
@@ -131,7 +136,7 @@ __aicore__ inline void BNTrainingReduceGradKernel<T>::ProcessMergedR2(int64_t p0
 // R==2 合并 tile 主计算：128 连续元素 = 64 plane 交错排布（plane p 占位置 2p/2p+1）。
 // grads/x 各自两个 64 元素寄存器 DeInterleave 成 r=0/r=1 两路后，两路共用同一组
 // per-plane 系数（直接 DIST_NORM 加载，无需系数展开），算完 Interleave 还原交错布局
-// 写回；运算序与逐 plane 路径一致（Mul→Add→Add→Mul，同一预计算系数），位级一致
+// 写回；运算序与逐 plane 路径一致（Sub(x-mean)→Mul→Add→Add→Mul，同一预计算系数），位级一致
 template <typename T>
 __aicore__ inline void BNTrainingReduceGradKernel<T>::ComputeTileMergedR2(__ubuf__ T* gradsAddr, __ubuf__ T* xAddr,
                                                                           __ubuf__ T* yAddr)
@@ -139,9 +144,10 @@ __aicore__ inline void BNTrainingReduceGradKernel<T>::ComputeTileMergedR2(__ubuf
     __ubuf__ float* multiplierAddr = (__ubuf__ float*)multiplierBuf_.Get<float>().GetPhyAddr();
     __ubuf__ float* addendAddr = (__ubuf__ float*)addendBuf_.Get<float>().GetPhyAddr();
     __ubuf__ float* mulScaleAddr = (__ubuf__ float*)mulScaleBuf_.Get<float>().GetPhyAddr();
+    __ubuf__ float* meanAddr = (__ubuf__ float*)meanBuf_.Get<float>().GetPhyAddr();
     __VEC_SCOPE__
     {
-        RegTensor<float> multReg, addReg, mulScaleReg;
+        RegTensor<float> multReg, addReg, mulScaleReg, meanReg;
         RegTensor<float> xReg0, xReg1, xEven, xOdd, gReg0, gReg1, gEven, gOdd;
         RegTensor<float> yEven, yOdd, yReg0, yReg1;
         MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
@@ -154,6 +160,9 @@ __aicore__ inline void BNTrainingReduceGradKernel<T>::ComputeTileMergedR2(__ubuf
         DataCopy<float, LoadDist::DIST_NORM>(multReg, multiplierAddr);
         DataCopy<float, LoadDist::DIST_NORM>(addReg, addendAddr);
         DataCopy<float, LoadDist::DIST_NORM>(mulScaleReg, mulScaleAddr);
+        DataCopy<float, LoadDist::DIST_NORM>(meanReg, meanAddr);
+        Sub(xEven, xEven, meanReg, fullMask);
+        Sub(xOdd, xOdd, meanReg, fullMask);
         Mul(yEven, xEven, multReg, fullMask);
         Add(yEven, gEven, yEven, fullMask);
         Add(yEven, yEven, addReg, fullMask);
