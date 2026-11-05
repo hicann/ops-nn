@@ -279,14 +279,90 @@ def __golden_non_zero_with_value(x, **kwargs):
     return _golden_impl(x, **kwargs)
 
 
-__spec__ = {"non_zero_with_value": "NonZeroWithValueSpec"}
+class _NzvTfCompose:
+    """tf 三方标杆(e2e-tf): stock TF 拼接(tf.where 出坐标 + tf.gather_nd 出值 +
+    count), 在远端 TF 端点执行。stock TF 无 NonZeroWithValue 算子(华为自定义
+    OriginOpType), 拼接体是等价语义腿。三输出精确搬运, 与 NPU 应逐位一致。"""
+
+    def __init__(self, x, **_):
+        import tensorflow as tf  # 惰性导入: 仅 tf 通路需要
+
+        self._tf = tf
+        self.x = tf.convert_to_tensor(x)
+
+    def __call__(self):
+        tf = self._tf
+        x = self.x
+        numel = int(np.prod(x.shape.as_list()))
+        coord = tf.where(tf.not_equal(x, tf.zeros_like(x)))  # [N, 2] 行主序(bool 兼容)
+        n = tf.shape(coord)[0]
+        rows = tf.cast(coord[:, 0], tf.int32)
+        cols = tf.cast(coord[:, 1], tf.int32)
+        value_valid = tf.gather_nd(x, coord)  # 前 N 段非零值(行主序)
+        pad_v = numel - n
+        value = tf.concat([value_valid, tf.zeros([pad_v], x.dtype)], axis=0)
+        index = tf.concat(
+            [rows, tf.zeros([pad_v], tf.int32), cols, tf.zeros([pad_v], tf.int32)],
+            axis=0,
+        )  # [0:N] 行号, [numel:numel+N] 列号
+        count = tf.reshape(n, [1])
+        return [value, index, count]
+
+
+class NonZeroWithValueTfSpec(NonZeroWithValueSpec):
+    """e2e-tf 通路 spec(tf.raw_ops.NonZeroWithValue / npu_aicore_ops.nonzerowithvalue)。
+
+    与父类(kernel/GEIR)唯一差别是接参与三方腿框架: e2e 通路 golden 收 CPU 侧
+    torch.Tensor, 先转 numpy 进 _golden_impl; 三方腿由 torch 拼接换成 tf 拼接
+    (_NzvTfCompose)。判据(有效前缀 binary_equal)与 compare 钩子整份继承。
+
+    【精度红线 · GE 会插 Cast(从 batch_nzv.py 验证结论迁移)】atc/GE 的 precision_mode
+    默认 force_fp16: 会把 fp32 计算节点降级到 fp16 并在前后插 Cast(实测 .om 图内含
+    fp32→fp16→fp32 Cast)。对算术算子是推理优化, 但对本算子这种"精确搬运/索引"语义
+    是语义破坏——绝对值 < 2^-24(≈6e-8) 的 fp32 非零值被舍成 0(漏检→count/index 错),
+    大值溢出成 inf; 且零性能收益。GE 对本算子无内置 keep-dtype 豁免(high_performance.ini
+    无此算子), 所以验证/交付必须显式指定, 不能依赖默认值: atc 用
+    --precision_mode=must_keep_origin_dtype; e2e/adapter 路线须确认图编译按原始 dtype
+    下发。这是通路配置问题, 不是 kernel 精度问题——排查 fp32 用例计数不符时先查图里
+    有无 Cast。(e2e 实测: ±1e-7 小值档 5/5 PASS → 本路径未发生破坏性降级。)
+    """
+
+    @staticmethod
+    def golden(x, *args, **kwargs):
+        # e2e 按 API 签名把属性位(transpose/output_type)一并装配进来, 可能是
+        # 位置参数也可能是关键字参数; golden 只吃首个张量 x, 其余忽略。
+        # x 可能是 torch.Tensor(torch 通路)或 tf.Tensor(tf 通路), 两者都有 .numpy()。
+        arr = x.numpy() if hasattr(x, "numpy") else np.asarray(x)
+        return _golden_impl(arr)
+
+    @staticmethod
+    def customize_inputs(*args, **kwargs):
+        """e2e 路径把 (x, transpose, output_type) 一并传入, 与父类(kernel/GEIR 单 x)签名不同。
+
+        父类的非有限值注入只服务 GEIR `_nonfinite` 用例; e2e 用例集不含该后缀,
+        这里保持输入原样。独立覆盖, 不改父类契约(不影响 kernel/GEIR 现有通路)。
+        """
+        return None
+
+    third_party = {"tf": _NzvTfCompose}
+
+
+__spec__ = {
+    "non_zero_with_value": "NonZeroWithValueSpec",
+    # TF 通路三个等价 API 名：原生 raw_ops 形态 + Adapter 对外接口（npu_device 新包 /
+    # npu_bridge 旧包）。Adapter 接口是当前环境可直接解析执行的正式调用面。
+    "tf.raw_ops.NonZeroWithValue": "NonZeroWithValueTfSpec",
+    "npu_device.compat.v1.estimator.npu_aicore_ops.nonzerowithvalue": "NonZeroWithValueTfSpec",
+    "npu_bridge.estimator.npu_aicore_ops.nonzerowithvalue": "NonZeroWithValueTfSpec",
+}
 __golden__ = {"kernel": {"non_zero_with_value": "__golden_non_zero_with_value"}}
 
 # 【不存在】aclnn 通路：canndev/ops-nn 均无 NonZeroWithValue aclnn（普通 NonZero 才有，01 §3.3）。
-# 【不存在】e2e 通路：torch_npu 无本算子绑定；aten::nonzero 是不同算子（dispatcher 权威判定，01 §3.3）。
+# 【torch e2e 不存在】torch_npu 无本算子绑定；aten::nonzero 是不同算子（dispatcher 权威判定，01 §3.3）。
+# 【tf e2e 存在】tf_plugin/nonzero_with_value_plugin.cc + tf_adapter 注册；api_name 走
+#  npu_device/npu_bridge 的 npu_aicore_ops.nonzerowithvalue（等价 raw op 名也注册），
+#  spec 见 NonZeroWithValueTfSpec。历史 atc .pb 验证面保留为交付证据。
 # 【不存在】onnx / caffe 通路：onnx_plugin 仅映射普通 NonZero，caffe 无（01 §3.3）。
-#  tf 通路存在（tf_plugin/nonzero_with_value_plugin.cc），其验证走 aclgrphParseTensorFlow
-#  预生成 .pb，不在 TTK invoke_path 格式内（01 §3.3）。
-#  【三方腿为何不加 tf】OriginOpType "NonZeroWithValue" 是华为自定义 TF 类型，stock TF 无此
-#  算子，tf 腿只能用 tf.where/tf.gather_nd 拼等价语义；拼接体不是"TF 的那一个算子"，精度上
-#  相对现有 torch 拼接无增量，性能腿量的是一串算子总时延、与被测单算子不可比，故保持 torch。
+#  【三方腿】kernel/GEIR 保持 torch 拼接（同一竞品语义，远端 GPU 执行）；tf e2e 用 tf 拼接
+#  (tf.where/tf.gather_nd)，因为 e2e-tf 的第三腿必须由 tf provider 执行。stock TF 无该自定义
+#  算子，拼接体不是"TF 的那一个算子"，性能腿不可比——只作精度三方腿，不用于性能结论。

@@ -73,6 +73,18 @@ def _work_dtype(x):
     return np.float64 if dt == np.float64 else np.float32
 
 
+def _to_np(t):
+    """aclnn 通路 golden 入参是 torch.Tensor, 统一转 numpy(kernel/geir 本就是 numpy, 直通)。
+    bf16 经 uint16 按位 view 到 ml_dtypes(np.asarray 对 torch bf16 抛 TypeError)。"""
+    if t is None or isinstance(t, np.ndarray) or not isinstance(t, torch.Tensor):
+        return t
+    if t.dtype == torch.bfloat16:
+        if _bf16 is None:
+            raise RuntimeError("bfloat16 input requires ml_dtypes")
+        return t.view(torch.uint16).numpy().view(_bf16)
+    return t.numpy()
+
+
 def _as_work(a, work):
     return np.asarray(a).astype(work)
 
@@ -676,7 +688,16 @@ class AclnnGroupNormSiluQuantSpec(GroupNormSiluQuantSpec):
             kwargs.setdefault("eps", pos[1])
         if len(pos) > 2:
             kwargs.setdefault("activate_silu", pos[2])
-        return _golden_impl(self, gammaOptional, betaOptional, quantScale, **kwargs)
+        # aclnn 通路收 torch.Tensor 且本算子 tolerance(quant/stat_rel_err)不触发
+        # Promote: bf16 原样送达, _golden_impl 的 np.asarray 对 torch bf16 直接
+        # 抛 TypeError(实测 L0_002 GOLDEN_FAILURE), 入口先统一转 numpy
+        return _golden_impl(
+            _to_np(self),
+            _to_np(gammaOptional),
+            _to_np(betaOptional),
+            _to_np(quantScale),
+            **kwargs,
+        )
 
 
 __spec__ = {
