@@ -237,8 +237,9 @@ static bool IsSupportNonContiguous(const aclTensor* varRef, int64_t indexAxisNum
 }
 
 // 执行 ScatterNdUpdate 算子计算（公共实现）
-static aclnnStatus ExecuteScatterNdUpdate(const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
-                                          bool needViewCopy, uint64_t* workspaceSize, aclOpExecutor** executor,
+static aclnnStatus ExecuteScatterNdUpdate(const aclTensor* varRefContiguous, const aclTensor* varRef,
+                                          const aclTensor* indices, const aclTensor* updates, bool needViewCopy,
+                                          uint64_t* workspaceSize, aclOpExecutor** executor,
                                           UniqueExecutor& uniqueExecutor)
 {
     // 将 indices 转换成连续的 tensor
@@ -250,11 +251,11 @@ static aclnnStatus ExecuteScatterNdUpdate(const aclTensor* varRef, const aclTens
     CHECK_RET(updatesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 执行 L0 算子
-    auto scatterUpdateRes = l0op::ScatterNdUpdate(varRef, indicesContiguous, updatesContiguous, false,
+    auto scatterUpdateRes = l0op::ScatterNdUpdate(varRefContiguous, indicesContiguous, updatesContiguous, false,
                                                   uniqueExecutor.get());
     CHECK_RET(scatterUpdateRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 如果需要，将计算结果拷贝到输出 data 上
+    // 如果需要，按原始 varRef 的 stride 和 offset 写回连续副本的更新
     if (needViewCopy) {
         auto viewCopyResult = l0op::ViewCopy(scatterUpdateRes, varRef, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -303,7 +304,7 @@ static aclnnStatus ProcessContiguousCase(aclTensor* varRef, const aclTensor* ind
     CHECK_RET(varRefContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     bool needViewCopy = !IsContiguous(varRef);
-    return ExecuteScatterNdUpdate(varRefContiguous, indices, updates, needViewCopy, workspaceSize, executor,
+    return ExecuteScatterNdUpdate(varRefContiguous, varRef, indices, updates, needViewCopy, workspaceSize, executor,
                                   uniqueExecutor);
 }
 
