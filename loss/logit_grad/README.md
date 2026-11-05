@@ -79,11 +79,11 @@ $$
 - eps的取值对x和输出的影响：
   - eps小于0时，x取值范围不在[0, 1]，输出NaN。
   - eps大于等于0时，x取值范围不在[eps, 1 - eps]，输出0。
-  - eps大于1时，输出NaN，取值为1时为Inf。
+  - eps大于等于1时，有效区间[eps, 1 - eps]为空，任意x取值均在区间外，输出0。
   - eps取值为Inf时，输出0。
   - eps取值为NaN时，输出NaN。
 - x取值对输出的影响：
-  - x取值0和1时，输出Inf。
+  - x取值0和1时，eps小于等于0时输出Inf，eps大于0时x在有效区间外，输出0。
   - x为Inf或NaN时，输出为NaN。
 - dy为Inf或NaN时，输出为Inf或NaN。
 

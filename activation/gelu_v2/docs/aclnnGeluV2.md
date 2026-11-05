@@ -31,6 +31,12 @@
   y_{i}=GeluV2(x_{i})=x_{i}×Φ(x_{i})
   $$
 
+  当approximate取值为1时，采用tanh近似计算：
+
+  $$
+  y_{i}=GeluV2(x_{i})=0.5x_{i}(1+tanh(\sqrt{2/\pi}(x_{i}+0.044715x_{i}^{3})))
+  $$
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGeluV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeluV2”接口执行计算。
@@ -159,8 +165,8 @@ aclnnStatus aclnnGeluV2(
       <td>传入的x或y是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>x和y的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -168,6 +174,9 @@ aclnnStatus aclnnGeluV2(
     </tr>
     <tr>
       <td>x和y的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>approximate的数值不在支持的范围之内。</td>
     </tr>
   </tbody></table>
 

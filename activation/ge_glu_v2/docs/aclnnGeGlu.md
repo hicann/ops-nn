@@ -183,8 +183,8 @@ aclnnStatus aclnnGeGlu(
       <td>参数self、out、outGelu是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>参数self、out、outGelu的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
@@ -198,6 +198,9 @@ aclnnStatus aclnnGeGlu(
     </tr>
     <tr>
       <td>out、outGelu在dim维的size不等于self在dim维size的1/2。</td>
+    </tr>
+    <tr>
+      <td>参数approximate的取值范围不是0和1。</td>
     </tr>
   </tbody></table>
 

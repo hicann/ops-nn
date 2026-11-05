@@ -646,3 +646,36 @@ TEST_F(l2_geglu_test, gegluv_empty_tensor_2)
         ut.TestPrecision();
     }
 }
+
+TEST_F(l2_geglu_test, geglu_empty_tensor_dtype_mismatch)
+{
+    auto self_tensor_desc = TensorDesc({0, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-20, 20);
+    auto out_tensor_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_gelu_tensor_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    int64_t dim = -1;
+    int64_t approximate = 1;
+    auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
+                        OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_geglu_test, gegluv_empty_tensor_dtype_mismatch)
+{
+    auto self_tensor_desc = TensorDesc({0, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-20, 20);
+    auto out_tensor_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_gelu_tensor_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    int64_t dim = -1;
+    int64_t approximate = 1;
+    bool activateLefts[2] = {true, false};
+    for (auto activateLeft : activateLefts) {
+        auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
+                            OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    }
+}

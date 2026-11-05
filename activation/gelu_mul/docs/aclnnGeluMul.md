@@ -134,7 +134,7 @@ aclnnStatus aclnnGeluMul(
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
        <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -184,9 +184,32 @@ aclnnStatus aclnnGeluMul(
       <td>传入的input或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
-      <td>input的数据类型不在支持的范围之内。</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
+      <td>input或out的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>out的数据类型与input不一致。</td>
+    </tr>
+    <tr>
+      <td>out声明的shape与推导值不一致（其他维度与input一致，最后一维为input最后一维的1/2）。</td>
+    </tr>
+    <tr>
+      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="5">561002</td>
+      <td>input的维数小于2。</td>
+    </tr>
+    <tr>
+      <td>input最后一维的值不是偶数。</td>
+    </tr>
+    <tr>
+      <td>input最后一维的值大于1024。</td>
+    </tr>
+    <tr>
+      <td>input其他维度的乘积大于200000。</td>
+    </tr>
+    <tr>
+      <td>approximate的取值不是"none"和"tanh"。</td>
     </tr>
   </tbody></table>
 

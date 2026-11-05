@@ -201,8 +201,8 @@ aclnnStatus aclnnGeGluV3(
       <td>参数self、out、outGelu为空指针。</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>参数self、out、outGelu的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
@@ -216,6 +216,9 @@ aclnnStatus aclnnGeGluV3(
     </tr>
     <tr>
       <td>out、outGelu的shape跟self的shape除了dim指定的轴外需要保持一致，dim指定的轴为self的shape对应轴的一半。</td>
+    </tr>
+    <tr>
+      <td>参数approximate的取值范围不是0和1。</td>
     </tr>
   </tbody></table>
 

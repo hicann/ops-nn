@@ -44,7 +44,7 @@ extern "C" {
  * device侧的aclTensor，数据类型支持FLOAT32、FLOAT16、BFLOAT16（910B支持），支持
  * [非连续的Tensor](#)，数据格式支持ND([参考](#))。
  * @param [in] dim：可选入参，设定的slice轴，数据类型支持INT64。
- * @param [in] approximate：可选入参，GeGlu计算使用的激活函数索引，0表示使用`tanh`，1表示使用`none`，数据类型支持INT64。
+ * @param [in] approximate：可选入参，GeGlu计算使用的激活函数索引，0表示使用`none`，1表示使用`tanh`，数据类型支持INT64。
  * @param [in] out: GeGlu计算的出参，npu
  * device侧的aclTensor，数据类型需要与self一致，支持[非连续的Tensor](#)，数据格式支持ND([参考](#))。
  * @param [in] outGelu: Gelu(B)计算的出参，npu
@@ -63,7 +63,7 @@ ACLNN_API aclnnStatus aclnnGeGluGetWorkspaceSize(const aclTensor* self, int64_t 
  * device侧的aclTensor，数据类型支持FLOAT32、FLOAT16、BFLOAT16（910B支持），支持
  * [非连续的Tensor](#)，数据格式支持ND([参考](#))。
  * @param [in] dim：可选入参，设定的slice轴，数据类型支持INT64。
- * @param [in] approximate：可选入参，GeGlu计算使用的激活函数索引，0表示使用`tanh`，1表示使用`none`，数据类型支持INT64。
+ * @param [in] approximate：可选入参，GeGlu计算使用的激活函数索引，0表示使用`none`，1表示使用`tanh`，数据类型支持INT64。
  * @param [in] out: GeGlu计算的出参，npu
  * device侧的aclTensor，数据类型需要与self一致，支持[非连续的Tensor](#)，数据格式支持ND([参考](#))。
  * @param [in] activateLeft:

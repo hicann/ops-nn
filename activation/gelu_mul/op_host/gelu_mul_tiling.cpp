@@ -48,6 +48,7 @@ public:
 
 private:
     ge::graphStatus ShapeCheck();
+    ge::graphStatus OutShapeCheck();
     ge::DataType dataType = ge::DT_UNDEFINED;
     gert::TilingContext* tilingContext = nullptr;
     gert::Shape inputShape;
@@ -112,6 +113,57 @@ ge::graphStatus GeluMulTiling::ShapeCheck()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus GeluMulTiling::OutShapeCheck()
+{
+    // 直调aclnn两段式接口时，tiling上下文的输出shape为用户声明的out；图模式执行时为推导结果，天然一致。
+    // 声明值与推导值不一致时拒绝，避免kernel按输入推导的元素数写入导致越界。
+    auto outShapePtr = tilingContext->GetOutputShape(0);
+    if (outShapePtr == nullptr) {
+        const std::string msgOpName = std::string(
+            ((tilingContext) == nullptr || (tilingContext)->GetNodeName() == nullptr ? "gelu_mul" :
+                                                                                       (tilingContext)->GetNodeName()));
+        OP_LOGE_WITHOUT_REPORT(msgOpName.c_str(), "%s",
+                               "Tiling framework object outShape is unavailable; check the operator registration and "
+                               "context construction.");
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{msgOpName.c_str(), "Tiling framework object outShape is unavailable; check the "
+                                                         "operator registration and context construction."}));
+        return ge::GRAPH_FAILED;
+    };
+    const gert::Shape& outShape = outShapePtr->GetStorageShape();
+    size_t outDimNum = outShape.GetDimNum();
+    // 含未知维（动态shape）时不校验
+    for (size_t idx = 0; idx < outDimNum; idx++) {
+        if (outShape.GetDim(idx) < 0) {
+            return ge::GRAPH_SUCCESS;
+        }
+    }
+    size_t inputShapeDim = inputShape.GetDimNum();
+    OP_CHECK_IF(
+        (outDimNum != inputShapeDim),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            tilingContext->GetNodeName(), "input,output",
+            std::to_string(inputShapeDim) + "," + std::to_string(outDimNum),
+            ("The dims of output should be equal to the dims of input, but got " + std::to_string(outDimNum) + ".")),
+        return ge::GRAPH_FAILED);
+    for (size_t idx = 0; idx + 1 < inputShapeDim; idx++) {
+        OP_CHECK_IF((outShape.GetDim(idx) != inputShape.GetDim(idx)),
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        tilingContext->GetNodeName(), "output", std::to_string(outShape.GetDim(idx)),
+                        ("Except the last dim, the output shape should be the same with input shape, but got dim[" +
+                         std::to_string(idx) + "] = " + std::to_string(outShape.GetDim(idx)) + ".")),
+                    return ge::GRAPH_FAILED);
+    }
+    OP_CHECK_IF((outShape.GetDim(inputShapeDim - 1) != inputShape.GetDim(inputShapeDim - 1) / SIZE_2),
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    tilingContext->GetNodeName(), "output", std::to_string(outShape.GetDim(inputShapeDim - 1)),
+                    ("The last dim of output should be half of the input's last dim, but got " +
+                     std::to_string(outShape.GetDim(inputShapeDim - 1)) + ".")),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus GeluMulTiling::RunBigKernelTiling()
 {
     // 获取输入矩阵
@@ -171,13 +223,17 @@ ge::graphStatus GeluMulTiling::RunBigKernelTiling()
 
     batchSize = inputShapeSize / lastDimSize;
 
+    // 形状约束校验需先于分核计算：末维为1时GetNeedCoreNum中dAlign为0，先校验末维合法性避免整除零
+    OP_CHECK_IF((ShapeCheck() == ge::GRAPH_FAILED),
+                OP_LOGE_WITHOUT_REPORT(tilingContext->GetNodeName(), "ShapeCheck failed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((OutShapeCheck() == ge::GRAPH_FAILED),
+                OP_LOGE_WITHOUT_REPORT(tilingContext->GetNodeName(), "OutShapeCheck failed!"), return ge::GRAPH_FAILED);
+
     auto platformInfo = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
     int32_t needCoreNum = GetNeedCoreNum(platformInfo.GetCoreNumAiv());
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = static_cast<size_t>(workspaceSize_);
-    OP_CHECK_IF((ShapeCheck() == ge::GRAPH_FAILED),
-                OP_LOGE_WITHOUT_REPORT(tilingContext->GetNodeName(), "ShapeCheck failed!"), return ge::GRAPH_FAILED);
     tilingData.set_lastDimSize(lastDimSize);
     tilingData.set_batchSize(batchSize);
     tilingData.set_approximateMode(approximateMode);

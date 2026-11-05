@@ -65,10 +65,8 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out, const a
     // 检查outGelu的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(outGelu, supportList, return false);
 
-    // 检查输入和输出的数据类型是否一致
-    if (self->IsEmpty() || self->GetViewShape().GetDimNum() == 0) {
-        return true;
-    }
+    // 检查输入和输出的数据类型是否一致（空Tensor与rank-0不豁免dtype一致性校验，
+    // 形状类约束仍由CheckShape与执行侧空Tensor早退处理）
     OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(outGelu, self->GetDataType(), return false);
 
@@ -87,7 +85,7 @@ static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out,
     }
 
     if ((-dimNum > dim) || ((dimNum - 1) < dim)) {
-        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "Expected aclnnGeGlu dim value %ld to be in range [%ld, %ld] but check failed.", dim, -dimNum,
                 dimNum - 1);
         return false;
