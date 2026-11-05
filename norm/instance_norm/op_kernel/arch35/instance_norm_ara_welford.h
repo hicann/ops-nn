@@ -265,7 +265,7 @@ private:
             for (uint16_t i = 0; i < loopCount; i++) {
                 pregLoop = plt_b32(sreg0, POST_UPDATE);
                 LoadOneTensorForDtypeT(x1Local, x1, pregLoop, i * VL_F32);
-                Duplicate(tmpMean, 0.0, pregLoop);
+                Duplicate(tmpMean, 0.0f, pregLoop);
                 // delata1 = x1 - mean
                 Sub(delta1, x1, tmpMean, pregLoop);
                 // delta2 = delta1 * scale
@@ -274,7 +274,7 @@ private:
                 Add(tmpMean, tmpMean, delta2, pregLoop);
                 StoreAlign(tmpMeanLocal + i * VL_F32, tmpMean, pregLoop);
 
-                Duplicate(tmpVar, 0.0, pregLoop);
+                Duplicate(tmpVar, 0.0f, pregLoop);
                 // delta3 = x1 - mean
                 Sub(delta3, x1, tmpMean, pregLoop);
                 // delta4 = delta1 * delta3
@@ -740,7 +740,7 @@ private:
             MaskReg cmpRegInf;
             MaskReg pregLoop;
 
-            Duplicate(one, 1.0, pregMain);
+            Duplicate(one, 1.0f, pregMain);
             uint32_t sreg0 = static_cast<uint32_t>(currentANum);
             for (uint16_t a = 0; a < aLoop; a++) {
                 pregLoop = UpdateMask<float>(sreg0);

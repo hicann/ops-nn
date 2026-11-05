@@ -45,10 +45,11 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .ExtendCfgInfo("opFile.value", "ascend_quant_apt");
+            .ExtendCfgInfo("opFile.value", "ascend_quant");
         this->AICore().AddConfig("ascend950", config_950);
         this->AICore().AddConfig("ascend350", config_950);
         this->AICore().AddConfig("ascend960dt", config_950);
+        this->AICore().AddConfig("ascend5162", config_950);
     }
 };
 

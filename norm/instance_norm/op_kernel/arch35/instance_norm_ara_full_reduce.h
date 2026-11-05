@@ -430,7 +430,7 @@ public:
             uint32_t sreg0 = curTileA0Len;
             for (uint16_t k = 0; k < aLoopCount; k++) {
                 pregLoop = UpdateMask<float>(sreg0);
-                Duplicate(sum, 0.0, pregLoop);
+                Duplicate(sum, 0.0f, pregLoop);
                 for (uint16_t i = 0; i < rLoopCount; i++) {
                     LoadAlign(xld, ((__ubuf__ float*)xInUb + i * rStride + k * VL_FP32));
                     Muls(xmuls, xld, n, pregLoop);
@@ -465,7 +465,7 @@ public:
 
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             RegTensor<float> zero;
-            Duplicate(zero, 0.0, pregMain);
+            Duplicate(zero, 0.0f, pregMain);
 
             MaskReg pregLoop;
             uint32_t sreg0 = curTileA0Len;
@@ -512,7 +512,7 @@ public:
 
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             RegTensor<float> zero;
-            Duplicate(zero, 0.0, pregMain);
+            Duplicate(zero, 0.0f, pregMain);
 
             MaskReg pregLoop;
             uint32_t sreg0 = curTileA0Len;
@@ -589,7 +589,7 @@ public:
 
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             RegTensor<float> zero;
-            Duplicate(zero, 0.0, pregMain);
+            Duplicate(zero, 0.0f, pregMain);
 
             MaskReg pregLoop;
             uint32_t sreg0 = curTileA0Len;
@@ -709,7 +709,7 @@ public:
             uint32_t sreg0 = curTileA0Len;
             for (uint16_t k = 0; k < aLoopCount; k++) {
                 pregLoop = UpdateMask<float>(sreg0);
-                Duplicate(sum, 0.0, pregLoop);
+                Duplicate(sum, 0.0f, pregLoop);
                 LoadAlign(mean, ((__ubuf__ float*)meanOutUbAddr + k * VL_FP32));
                 for (uint16_t i = 0; i < rLoopCount; i++) {
                     LoadAlign(xld, ((__ubuf__ float*)xInUb + i * rStride + k * VL_FP32));
@@ -977,7 +977,7 @@ public:
             MaskReg cmpRegInf;
             MaskReg pregLoop;
 
-            Duplicate(one, 1.0, pregMain);
+            Duplicate(one, 1.0f, pregMain);
             uint32_t sreg0 = static_cast<uint32_t>(curTileA0Len);
             for (uint16_t a = 0; a < aLoop; a++) {
                 pregLoop = UpdateMask<float>(sreg0);

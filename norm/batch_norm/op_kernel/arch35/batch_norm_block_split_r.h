@@ -336,8 +336,8 @@ private:
             RegTensor<float> tmpMean;
             RegTensor<float> tmpM2;
             MaskReg mask0 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
-            Duplicate(tmpMean, 0.0, mask0);
-            Duplicate(tmpM2, 0.0, mask0);
+            Duplicate(tmpMean, 0.0f, mask0);
+            Duplicate(tmpM2, 0.0f, mask0);
             MaskReg mask1;
             uint32_t sreg0 = len;
             for (uint16_t i = 0; i < loopCount; i++) {

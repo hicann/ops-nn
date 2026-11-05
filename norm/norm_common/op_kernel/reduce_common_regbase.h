@@ -30,7 +30,7 @@ using AscendC::Reg::UpdateMask;
 namespace NormCommonRegbase {
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
-#if __CCE_AICORE__ == 310
+#if __CCE_AICORE__ == 310 || __NPU_ARCH__ == 5162
     return AscendC::VECTOR_REG_WIDTH;
 #else
     return 256U;
@@ -68,7 +68,7 @@ __aicore__ inline T Aligned(T value, T alignment)
 
 constexpr int32_t VL_SIZE = NormCommonRegbase::GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / static_cast<int32_t>(sizeof(float)));
-constexpr uint32_t ONCE_VECTOR_SIZE = 256;
+constexpr uint32_t ONCE_VECTOR_SIZE = NormCommonRegbase::GetVRegSize();
 constexpr uint16_t DICHOTOMY_ADD_COEFF = 2;
 
 constexpr AscendC::Reg::CastTrait castTraitB162B32 = {

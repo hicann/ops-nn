@@ -1206,8 +1206,8 @@ endfunction()
 # get target dir of different socVersions
 ###################################################################################################
 function(get_target_dir compute_unit_long target_dir)
-  set(compute_unit_long_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend950pr_9599" "ascend350_355e" "mc62cm12aa" "ascend960dt" "ascend960pr")
-  set(target_dir_values "arch22" "arch22" "arch22" "arch35" "arch35" "arch35" "arch35" "arch35")
+  set(compute_unit_long_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend950pr_9599" "ascend350_355e" "mc62cm12aa" "ascend960dt" "ascend960pr" "ascend5162")
+  set(target_dir_values "arch22" "arch22" "arch22" "arch35" "arch35" "arch35" "arch35" "arch35" "arch35")
   list(FIND compute_unit_long_values ${compute_unit_long} index)
   if(NOT index EQUAL -1)
         list(GET target_dir_values ${index} mapped_value)

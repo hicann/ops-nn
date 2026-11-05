@@ -393,7 +393,7 @@ private:
             MaskReg cmpRegZero;
             MaskReg cmpRegInf;
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            Duplicate(one, 1.0, pregOne);
+            Duplicate(one, 1.0f, pregOne);
 
             LoadAlign<float, LoadDist::DIST_BRC_B32>(var, ((__ubuf__ float*)batchVarTensorAddr + offset));
             Duplicate(scalar1, float(0.5), pregOne);

@@ -598,7 +598,7 @@ private:
             MaskReg cmpRegInf;
             MaskReg pregLoop;
 
-            Duplicate(one, 1.0, pregMain);
+            Duplicate(one, 1.0f, pregMain);
             uint32_t sreg2 = currentANum;
             for (uint16_t k = 0; k < aLoop; k++) {
                 pregLoop = UpdateMask<float>(sreg2);

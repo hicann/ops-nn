@@ -26,7 +26,7 @@ __aicore__ inline constexpr uint32_t GetUbBlockSize() { return 32U; }
  */
 __aicore__ inline constexpr uint32_t GetVRegSize()
 {
-#if __CCE_AICORE__ == 310 || __CCE_AICORE__ == 920
+#if __CCE_AICORE__ == 310 || __CCE_AICORE__ == 920 || __NPU_ARCH__ == 5162
     return AscendC::VECTOR_REG_WIDTH;
 #else
     return 256U;

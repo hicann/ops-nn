@@ -62,6 +62,7 @@ public:
         this->AICore().AddConfig("ascend350", regbaseCfg);
         this->AICore().AddConfig("ascend960dt", regbaseCfg);
         this->AICore().AddConfig("ascend960pr", regbaseCfg);
+        this->AICore().AddConfig("ascend5162", regbaseCfg);
     }
 };
 

@@ -77,6 +77,7 @@ public:
         this->AICore().AddConfig("ascend350", config_regbase);
         this->AICore().AddConfig("ascend960dt", config_regbase);
         this->AICore().AddConfig("ascend960pr", config_regbase);
+        this->AICore().AddConfig("ascend5162", config_regbase);
 
         OpAICoreConfig config_without_bf16;
         config_without_bf16.Input("x")
