@@ -96,8 +96,7 @@ void ExecuteInferShapeCase(const InferShapeCase& testCase)
     }
 
     gert::InferShapeContextFaker contextFaker;
-    contextFaker.NodeIoNum(inputShapes.size(), OUTPUT_NUM)
-        .IrInstanceNum(inputInstanceNum, outputInstanceNum)
+    contextFaker.IrInstanceNum(inputInstanceNum, outputInstanceNum)
         .InputShapes(inputShapes)
         .OutputShapes({&gradXShape, &gradWeightShape})
         .NodeInputTd(0, testCase.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
