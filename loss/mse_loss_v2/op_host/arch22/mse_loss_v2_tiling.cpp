@@ -60,15 +60,23 @@ static inline uint64_t Mod(uint64_t a, uint64_t b)
 static ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
 {
     auto inputDesc = context->GetInputDesc(INPUT_DATA_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    OP_CHECK_IF(inputDesc == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "inputDesc",
+                                                         "CheckInputDtype: inputDesc is nullptr"),
+                return ge::GRAPH_FAILED);
     auto inputDtype = inputDesc->GetDataType();
 
     auto targetDesc = context->GetInputDesc(INPUT_TARGET_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, targetDesc);
+    OP_CHECK_IF(targetDesc == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "targetDesc",
+                                                         "CheckInputDtype: targetDesc is nullptr"),
+                return ge::GRAPH_FAILED);
     auto targetDtype = targetDesc->GetDataType();
 
     OP_CHECK_IF(inputDtype != targetDtype,
-                OP_LOGE(context->GetNodeName(), "Input dtype and target dtype should be consistent."),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "input and target",
+                                                       Ops::Base::ToString(inputDtype).c_str(),
+                                                       "Input dtype and target dtype should be consistent."),
                 return ge::GRAPH_FAILED);
 
     optiling::dtype = inputDtype;
@@ -88,7 +96,10 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
             break;
 
         default:
-            OP_LOGE(context->GetNodeName(), "The input or target dtype must be one of float32, float16, or bfloat16.");
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "input and target",
+                                                   Ops::Base::ToString(inputDtype).c_str(),
+                                                   "The input or target dtype must be one of float32, float16, or "
+                                                   "bfloat16.");
             return ge::GRAPH_FAILED;
     }
 
@@ -98,7 +109,10 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context)
 static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
 {
     auto* attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    OP_CHECK_IF(attrs == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "attrs",
+                                                         "GetTilingAttr: GetAttrs returned nullptr"),
+                return ge::GRAPH_FAILED);
 
     optiling::reduction = attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX);
     if (optiling::reduction == optiling::REDUCTION_NONE) {
@@ -110,7 +124,8 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
         optiling::tilingKey += TILING_KEY_ATTR_MEAN;
         context->SetScheduleMode(BATCH_MODE);
     } else {
-        OP_LOGD(context, "The reduction attribute must be 'none', 'mean', or 'sum'.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "reduction", optiling::reduction.c_str(),
+                                              "The reduction attribute must be 'none', 'mean', or 'sum'.");
         return ge::GRAPH_FAILED;
     }
 
@@ -120,7 +135,10 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
 static void CoreSplit(gert::TilingContext* context, const platform_ascendc::PlatformAscendC* ascendcPlatform)
 {
     uint64_t totalLength = context->GetInputShape(INPUT_DATA_IDX)->GetStorageShape().GetShapeSize();
-    OP_CHECK_IF(totalLength == 0, OP_LOGE(context->GetNodeName(), "The shape size of input should not be 0"), return);
+    OP_CHECK_IF(totalLength == 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "input", "0",
+                                                          "The shape size of input should not be 0"),
+                return);
     double scale = 1. / totalLength;
     optiling::mseLossV2TilingData.set_scale(static_cast<float>(scale));
 
@@ -211,7 +229,10 @@ static ge::graphStatus GetTilingData(gert::TilingContext* context)
     optiling::TileSplit();
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    OP_CHECK_IF(currentWorkspace == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "currentWorkspace",
+                                                         "GetTilingData: GetWorkspaceSizes(1) returned nullptr"),
+                return ge::GRAPH_FAILED);
 
     if (optiling::reduction == optiling::REDUCTION_NONE) {
         currentWorkspace[0] = 0u;
@@ -254,13 +275,13 @@ ge::graphStatus Tiling4MSELossV2(gert::TilingContext* context)
     optiling::tailBlocks = 0ULL;
 
     OP_CHECK_IF(CheckInputDtype(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "CheckInputDtype failed."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "CheckInputDtype failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetTilingAttr(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "GetTilingAttr failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingAttr(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetTilingAttr failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetTilingData(context) != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "GetTilingData failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetTilingData(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetTilingData failed."), return ge::GRAPH_FAILED);
 
     context->GetRawTilingData()->SetDataSize(optiling::mseLossV2TilingData.GetDataSize());
     context->SetTilingKey(optiling::tilingKey);

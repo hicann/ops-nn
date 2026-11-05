@@ -18,6 +18,7 @@
 using namespace ge;
 
 namespace ops {
+
 static constexpr size_t INPUT_INDEX = 0;
 static constexpr size_t TARGET_INDEX = 1;
 static constexpr size_t OUTPUT_INDEX = 0;
@@ -26,11 +27,20 @@ graphStatus InferShapeForMSELossV2(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "Begin to do InferShapeForMSELossV2.");
     const gert::Shape* input = context->GetInputShape(INPUT_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, input);
+    OP_CHECK_IF(
+        input == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "input", "InferShape: input shape is nullptr"),
+        return GRAPH_FAILED);
     const gert::Shape* target = context->GetInputShape(TARGET_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, target);
+    OP_CHECK_IF(target == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "target",
+                                                         "InferShape: target shape is nullptr"),
+                return GRAPH_FAILED);
     gert::Shape* output = context->GetOutputShape(OUTPUT_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, output);
+    OP_CHECK_IF(output == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "output",
+                                                         "InferShape: output shape is nullptr"),
+                return GRAPH_FAILED);
     std::string reduction = context->GetAttrs()->GetAttrPointer<char>(0);
     if (reduction == "none") {
         *output = *input;

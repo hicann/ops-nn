@@ -133,7 +133,8 @@ struct MseLossGradCompileInfo {};
 static ge::graphStatus TilingParse4MseLossGrad(gert::TilingParseContext* context)
 {
     if (context == nullptr) {
-        OP_LOGE(context, "TilingParse4MseLossGrad got context is nullptr.");
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON("MseLossGradV2", "context",
+                                                 "TilingParse4MseLossGrad got context is nullptr.");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

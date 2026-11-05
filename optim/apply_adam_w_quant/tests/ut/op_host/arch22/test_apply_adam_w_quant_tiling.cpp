@@ -12,8 +12,9 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "../../../op_host/apply_adam_w_quant_tiling_def.h"
+#include "../../../../op_host/apply_adam_w_quant_tiling_def.h"
 #include "log/log.h"
+#include "base/err_mgr.h"
 #include "ut_op_common.h"
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"
@@ -29,12 +30,52 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
+// 芯片型号宏注入自 CMakeLists(仅ascend950构建注入), 用于区分错误路径UT的期望EZ码
+#define UT_SOC_STR_IMPL(x) #x
+#define UT_SOC_STR(x) UT_SOC_STR_IMPL(x)
+
 class ApplyAdamWQuantTiling : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "ApplyAdamWQuantTiling SetUp" << std::endl; }
 
     static void TearDownTestCase() { std::cout << "ApplyAdamWQuantTiling TearDown" << std::endl; }
 };
+
+// EZ码采集辅助: 验证错误路径不再产生EZ9999内部码, 而是上报预定义EZ码
+static std::vector<std::string> g_ezCodes;
+static bool g_ezCodesLoaded = false;
+
+static void InitErrMgr()
+{
+    (void)error_message::ErrMgrInit(error_message::ErrorMessageMode::INTERNAL_MODE);
+    (void)error_message::GetErrMgrErrorMessage();
+    g_ezCodes.clear();
+    g_ezCodesLoaded = false;
+}
+
+static void LoadEZCodes()
+{
+    if (g_ezCodesLoaded) {
+        return;
+    }
+    g_ezCodes.clear();
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    for (const auto& e : errors) {
+        g_ezCodes.push_back(e.error_id == nullptr ? std::string() : std::string(e.error_id.get()));
+    }
+    g_ezCodesLoaded = true;
+}
+
+static bool HasEZCode(const std::string& code)
+{
+    LoadEZCodes();
+    for (const auto& id : g_ezCodes) {
+        if (id == code) {
+            return true;
+        }
+    }
+    return false;
+}
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
 {
@@ -308,4 +349,112 @@ TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_tilingkey_300)
                absmaxm_shape, absmaxv_shape, step_shape, lr, beta1, beta2, weight_decay, eps, gnorm_scale, block_size,
                mode, 9, 5, ge::DT_BF16, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status,
                tilingKeyValue);
+}
+
+// 错误路径UT: attr block_size 非 256 时上报EZ0026(VALUE类预定义码), 不产生EZ9999
+TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_block_size_invalid)
+{
+    std::initializer_list<int64_t> var_shape = {96, 256};
+    std::initializer_list<int64_t> grad_shape = {96, 256};
+    std::initializer_list<int64_t> m_ref_shape = {96, 256};
+    std::initializer_list<int64_t> v_ref_shape = {96, 256};
+    std::initializer_list<int64_t> qmapm_shape = {256};
+    std::initializer_list<int64_t> qmapv_shape = {256};
+    std::initializer_list<int64_t> absmaxm_shape = {96};
+    std::initializer_list<int64_t> absmaxv_shape = {96};
+    std::initializer_list<int64_t> step_shape = {1};
+    int64_t block_size = 128; // 非法值, 期望上报EZ0026
+    std::string mode = "BLOCKWISE";
+    const ge::graphStatus status = ge::GRAPH_FAILED;
+
+    InitErrMgr();
+    TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
+               absmaxm_shape, absmaxv_shape, step_shape, 0.1f, 0.9f, 0.9f, 0.9f, 0.0001f, 0.9f, block_size, mode, 9, 5,
+               ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, 0);
+    EXPECT_FALSE(HasEZCode("EZ9999"));
+    EXPECT_TRUE(HasEZCode("EZ0026"));
+}
+
+// 错误路径UT: var/grad/m/v shape 不一致时上报EZ0010(SHAPES类预定义码), 不产生EZ9999
+TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_var_grad_shape_mismatch)
+{
+    std::initializer_list<int64_t> var_shape = {96, 256};
+    std::initializer_list<int64_t> grad_shape = {96, 255}; // 与var不一致
+    std::initializer_list<int64_t> m_ref_shape = {96, 256};
+    std::initializer_list<int64_t> v_ref_shape = {96, 256};
+    std::initializer_list<int64_t> qmapm_shape = {256};
+    std::initializer_list<int64_t> qmapv_shape = {256};
+    std::initializer_list<int64_t> absmaxm_shape = {96};
+    std::initializer_list<int64_t> absmaxv_shape = {96};
+    std::initializer_list<int64_t> step_shape = {1};
+    std::string mode = "BLOCKWISE";
+    const ge::graphStatus status = ge::GRAPH_FAILED;
+
+    InitErrMgr();
+    TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
+               absmaxm_shape, absmaxv_shape, step_shape, 0.1f, 0.9f, 0.9f, 0.9f, 0.0001f, 0.9f, 256, mode, 9, 5,
+               ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, 0);
+    EXPECT_FALSE(HasEZCode("EZ9999"));
+    // 910b走arch22(本次改动)上报EZ0010; 950走arch35原版上报EZ0026
+    if (string(UT_SOC_STR(BUILD_SOC_VERSION)) == "ascend950") {
+        EXPECT_TRUE(HasEZCode("EZ0026"));
+    } else {
+        EXPECT_TRUE(HasEZCode("EZ0010"));
+    }
+}
+
+// 错误路径UT: qmap shape 非[256]时上报SHAPES类预定义码, 不产生EZ9999
+TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_qmap_shape_invalid)
+{
+    std::initializer_list<int64_t> var_shape = {96, 256};
+    std::initializer_list<int64_t> grad_shape = {96, 256};
+    std::initializer_list<int64_t> m_ref_shape = {96, 256};
+    std::initializer_list<int64_t> v_ref_shape = {96, 256};
+    std::initializer_list<int64_t> qmapm_shape = {128}; // 非法大小, 期望256
+    std::initializer_list<int64_t> qmapv_shape = {256};
+    std::initializer_list<int64_t> absmaxm_shape = {96};
+    std::initializer_list<int64_t> absmaxv_shape = {96};
+    std::initializer_list<int64_t> step_shape = {1};
+    std::string mode = "BLOCKWISE";
+    const ge::graphStatus status = ge::GRAPH_FAILED;
+
+    InitErrMgr();
+    TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
+               absmaxm_shape, absmaxv_shape, step_shape, 0.1f, 0.9f, 0.9f, 0.9f, 0.0001f, 0.9f, 256, mode, 9, 5,
+               ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, 0);
+    EXPECT_FALSE(HasEZCode("EZ9999"));
+    // 910b走arch22(本次改动)上报EZ0010; 950走arch35原版上报EZ0026
+    if (string(UT_SOC_STR(BUILD_SOC_VERSION)) == "ascend950") {
+        EXPECT_TRUE(HasEZCode("EZ0026"));
+    } else {
+        EXPECT_TRUE(HasEZCode("EZ0010"));
+    }
+}
+
+// 错误路径UT: step 非单元素时上报SHAPE类预定义码, 不产生EZ9999
+TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_step_shape_invalid)
+{
+    std::initializer_list<int64_t> var_shape = {96, 256};
+    std::initializer_list<int64_t> grad_shape = {96, 256};
+    std::initializer_list<int64_t> m_ref_shape = {96, 256};
+    std::initializer_list<int64_t> v_ref_shape = {96, 256};
+    std::initializer_list<int64_t> qmapm_shape = {256};
+    std::initializer_list<int64_t> qmapv_shape = {256};
+    std::initializer_list<int64_t> absmaxm_shape = {96};
+    std::initializer_list<int64_t> absmaxv_shape = {96};
+    std::initializer_list<int64_t> step_shape = {2}; // 非法, 期望单元素
+    std::string mode = "BLOCKWISE";
+    const ge::graphStatus status = ge::GRAPH_FAILED;
+
+    InitErrMgr();
+    TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
+               absmaxm_shape, absmaxv_shape, step_shape, 0.1f, 0.9f, 0.9f, 0.9f, 0.0001f, 0.9f, 256, mode, 9, 5,
+               ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, 0);
+    EXPECT_FALSE(HasEZCode("EZ9999"));
+    // 910b走arch22(本次改动)上报EZ0009; 950走arch35原版上报EZ0026
+    if (string(UT_SOC_STR(BUILD_SOC_VERSION)) == "ascend950") {
+        EXPECT_TRUE(HasEZCode("EZ0026"));
+    } else {
+        EXPECT_TRUE(HasEZCode("EZ0009"));
+    }
 }

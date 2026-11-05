@@ -29,27 +29,52 @@ static constexpr int64_t OUT_IDX_1 = 1; // OUTPUT_STATE_M
 static constexpr int64_t OUT_IDX_2 = 2; // OUTPUT_STATE_V
 static constexpr int64_t OUT_IDX_3 = 3; // OUTPUT_ABSMAX_M
 static constexpr int64_t OUT_IDX_4 = 4; // OUTPUT_ABSMAX_V
+
 static ge::graphStatus InferShape4ApplyAdamWQuant(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "Begin to do InferShape4ApplyAdamWQuant");
 
     // get input shapes
     auto varShape = context->GetInputShape(IDX_0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+    OP_CHECK_IF(
+        varShape == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "var", "InferShape: var shape is nullptr"),
+        return ge::GRAPH_FAILED);
     auto gradShape = context->GetInputShape(IDX_1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    OP_CHECK_IF(
+        gradShape == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "grad", "InferShape: grad shape is nullptr"),
+        return ge::GRAPH_FAILED);
     auto stateMShape = context->GetInputShape(IDX_2);
-    OP_CHECK_NULL_WITH_CONTEXT(context, stateMShape);
+    OP_CHECK_IF(stateMShape == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "state_m",
+                                                         "InferShape: state_m shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto stateVShape = context->GetInputShape(IDX_3);
-    OP_CHECK_NULL_WITH_CONTEXT(context, stateVShape);
+    OP_CHECK_IF(stateVShape == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "state_v",
+                                                         "InferShape: state_v shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto qmapMShape = context->GetInputShape(IDX_4);
-    OP_CHECK_NULL_WITH_CONTEXT(context, qmapMShape);
+    OP_CHECK_IF(qmapMShape == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "qmap_m",
+                                                         "InferShape: qmap_m shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto qmapVShape = context->GetInputShape(IDX_5);
-    OP_CHECK_NULL_WITH_CONTEXT(context, qmapVShape);
+    OP_CHECK_IF(qmapVShape == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "qmap_v",
+                                                         "InferShape: qmap_v shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto absMShape = context->GetInputShape(IDX_6);
-    OP_CHECK_NULL_WITH_CONTEXT(context, absMShape);
+    OP_CHECK_IF(absMShape == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "absmax_m",
+                                                         "InferShape: absmax_m shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto absVShape = context->GetInputShape(IDX_7);
-    OP_CHECK_NULL_WITH_CONTEXT(context, absVShape);
+    OP_CHECK_IF(absVShape == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "absmax_v",
+                                                         "InferShape: absmax_v shape is nullptr"),
+                return ge::GRAPH_FAILED);
 
     // get output shapes
     auto y1Shape = context->GetOutputShape(OUT_IDX_0);
@@ -57,11 +82,26 @@ static ge::graphStatus InferShape4ApplyAdamWQuant(gert::InferShapeContext* conte
     auto y3Shape = context->GetOutputShape(OUT_IDX_2);
     auto y4Shape = context->GetOutputShape(OUT_IDX_3);
     auto y5Shape = context->GetOutputShape(OUT_IDX_4);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y2Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y3Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y4Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, y5Shape);
+    OP_CHECK_IF(
+        y1Shape == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "y1", "InferShape: y1 shape is nullptr"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        y2Shape == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "y2", "InferShape: y2 shape is nullptr"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        y3Shape == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "y3", "InferShape: y3 shape is nullptr"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        y4Shape == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "y4", "InferShape: y4 shape is nullptr"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        y5Shape == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "y5", "InferShape: y5 shape is nullptr"),
+        return ge::GRAPH_FAILED);
 
     *y1Shape = *varShape;
     *y2Shape = *stateMShape;

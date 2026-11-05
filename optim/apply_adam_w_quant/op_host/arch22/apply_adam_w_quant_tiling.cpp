@@ -93,36 +93,63 @@ static ge::graphStatus GetTilingAttr(const gert::TilingContext* context, ApplyAd
 {
     // get attrs of lr, beta1, beta2, weight_decay, eps, gnorm_scale and block_size
     auto* attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    OP_CHECK_IF(attrs == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "attrs",
+                                                         "GetTilingAttr: GetAttrs returned nullptr"),
+                return ge::GRAPH_FAILED);
 
     auto* attrLr = attrs->GetAttrPointer<float>(INDEX_ATTR_LR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrLr);
+    OP_CHECK_IF(
+        attrLr == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "lr", "GetTilingAttr: attr lr is nullptr"),
+        return ge::GRAPH_FAILED);
     tilingParam.lr = static_cast<float>(*attrLr);
 
     auto* attrBeta1 = attrs->GetAttrPointer<float>(INDEX_ATTR_BETA1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrBeta1);
+    OP_CHECK_IF(attrBeta1 == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "beta1",
+                                                         "GetTilingAttr: attr beta1 is nullptr"),
+                return ge::GRAPH_FAILED);
     tilingParam.beta1 = static_cast<float>(*attrBeta1);
 
     auto* attrBeta2 = attrs->GetAttrPointer<float>(INDEX_ATTR_BETA2);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrBeta2);
+    OP_CHECK_IF(attrBeta2 == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "beta2",
+                                                         "GetTilingAttr: attr beta2 is nullptr"),
+                return ge::GRAPH_FAILED);
     tilingParam.beta2 = static_cast<float>(*attrBeta2);
 
     auto* attrWeightDecay = attrs->GetAttrPointer<float>(INDEX_ATTR_WEIGHT_DECAY);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrWeightDecay);
+    OP_CHECK_IF(attrWeightDecay == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "weight_decay",
+                                                         "GetTilingAttr: attr weight_decay is nullptr"),
+                return ge::GRAPH_FAILED);
     tilingParam.weight_decay = static_cast<float>(*attrWeightDecay);
 
     auto* attrEps = attrs->GetAttrPointer<float>(INDEX_ATTR_EPS);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrEps);
+    OP_CHECK_IF(
+        attrEps == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "eps", "GetTilingAttr: attr eps is nullptr"),
+        return ge::GRAPH_FAILED);
     tilingParam.eps = static_cast<float>(*attrEps);
 
     auto* attrGnormScale = attrs->GetAttrPointer<float>(INDEX_ATTR_GNORM_SCALE);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrGnormScale);
+    OP_CHECK_IF(attrGnormScale == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "gnorm_scale",
+                                                         "GetTilingAttr: attr gnorm_scale is nullptr"),
+                return ge::GRAPH_FAILED);
     tilingParam.gnorm_scale = static_cast<float>(*attrGnormScale);
 
     auto* attrBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSize);
+    OP_CHECK_IF(attrBlockSize == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "block_size",
+                                                         "GetTilingAttr: attr block_size is nullptr"),
+                return ge::GRAPH_FAILED);
     tilingParam.block_size = static_cast<int64_t>(*attrBlockSize);
-    OP_CHECK_IF(tilingParam.block_size != BLOCKSIZE, OP_LOGE(context, "attr block_size should be 256, please check."),
+    OP_CHECK_IF(tilingParam.block_size != BLOCKSIZE,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size",
+                                                      std::to_string(tilingParam.block_size).c_str(),
+                                                      "attr block_size should be 256, please check."),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -153,44 +180,78 @@ static bool CheckZero(uint64_t num)
 static ge::graphStatus CheckInputShape(const gert::TilingContext* context)
 {
     auto varShapePtr = context->GetInputShape(INDEX_IN_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varShapePtr);
+    OP_CHECK_IF(varShapePtr == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "var",
+                                                         "CheckInputShape: var shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto varShape = varShapePtr->GetStorageShape();
 
     auto gradShapePtr = context->GetInputShape(INDEX_IN_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShapePtr);
+    OP_CHECK_IF(gradShapePtr == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "grad",
+                                                         "CheckInputShape: grad shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto gradShape = gradShapePtr->GetStorageShape();
 
     auto mShapePtr = context->GetInputShape(INDEX_IN_M);
-    OP_CHECK_NULL_WITH_CONTEXT(context, mShapePtr);
+    OP_CHECK_IF(
+        mShapePtr == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "m", "CheckInputShape: m shape is nullptr"),
+        return ge::GRAPH_FAILED);
     auto mShape = mShapePtr->GetStorageShape();
 
     auto vShapePtr = context->GetInputShape(INDEX_IN_V);
-    OP_CHECK_NULL_WITH_CONTEXT(context, vShapePtr);
+    OP_CHECK_IF(
+        vShapePtr == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "v", "CheckInputShape: v shape is nullptr"),
+        return ge::GRAPH_FAILED);
     auto vShape = vShapePtr->GetStorageShape();
 
     auto qmapMShapePtr = context->GetInputShape(INDEX_IN_QMAP_M);
-    OP_CHECK_NULL_WITH_CONTEXT(context, qmapMShapePtr);
+    OP_CHECK_IF(qmapMShapePtr == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "qmapM",
+                                                         "CheckInputShape: qmapM shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto qmapMShape = qmapMShapePtr->GetStorageShape();
     auto qmapMSize = qmapMShapePtr->GetStorageShape().GetShapeSize();
 
     auto qmapVShapePtr = context->GetInputShape(INDEX_IN_QMAP_V);
-    OP_CHECK_NULL_WITH_CONTEXT(context, qmapVShapePtr);
+    OP_CHECK_IF(qmapVShapePtr == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "qmapV",
+                                                         "CheckInputShape: qmapV shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto qmapVShape = qmapVShapePtr->GetStorageShape();
 
     auto stepShapePtr = context->GetInputShape(INDEX_IN_STEP);
-    OP_CHECK_NULL_WITH_CONTEXT(context, stepShapePtr);
+    OP_CHECK_IF(stepShapePtr == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "step",
+                                                         "CheckInputShape: step shape is nullptr"),
+                return ge::GRAPH_FAILED);
     auto stepShape = stepShapePtr->GetStorageShape();
 
     bool isDiffShape = !IsSameShape(varShape, gradShape) || !IsSameShape(varShape, mShape) ||
                        !IsSameShape(varShape, vShape);
     bool isqmapDiffShape = !IsSameShape(qmapMShape, qmapVShape) || qmapMSize != QMAP_SIZE;
-    OP_CHECK_IF(isDiffShape, OP_LOGE(context, "var,grad,m,v should have same shape, please check."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(isqmapDiffShape, OP_LOGE(context, "qmapM and qmapV should be same shape,shape is [256], please check."),
+    OP_CHECK_IF(
+        isDiffShape,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "var, grad, m, v",
+                                               (Ops::Base::ToString(varShape) + ", " + Ops::Base::ToString(gradShape) +
+                                                ", " + Ops::Base::ToString(mShape) + ", " + Ops::Base::ToString(vShape))
+                                                   .c_str(),
+                                               "var,grad,m,v should have same shape, please check."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(isqmapDiffShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "qmapM, qmapV",
+                    (Ops::Base::ToString(qmapMShape) + ", " + Ops::Base::ToString(qmapVShape)).c_str(),
+                    "qmapM and qmapV should be same shape, shape is [256], please check."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(stepShape.GetDimNum() != 1 || stepShape.GetDim(0) != 1,
-                OP_LOGE(context, "step should have only one element, please check."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        stepShape.GetDimNum() != 1 || stepShape.GetDim(0) != 1,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "step", Ops::Base::ToString(stepShape).c_str(),
+                                              "step should have only one element, please check."),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -200,24 +261,32 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, ApplyAdamWQu
     const auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint64_t aivNum = ascendcPlatform.GetCoreNumAiv();
     auto shapePtr = context->GetInputShape(INDEX_IN_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
+    OP_CHECK_IF(
+        shapePtr == nullptr,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "var", "DoTiling: var shape is nullptr"),
+        return ge::GRAPH_FAILED);
     uint64_t one_block_size = tilingParam.block_size *
                                   (SIZE_OF_FLOAT * ONE_BLOCK_NEED_BUF + SIZE_OF_FLOAT16 + SIZE_OF_FLOAT) +
                               (PER_BLOCK_OF_MAX_NUM + PER_BLOCK_OF_MAX_NUM) * SIZE_OF_FLOAT;
     bool check_one_block_size_zero = CheckZero(one_block_size);
-    OP_CHECK_IF(check_one_block_size_zero, OP_LOGE(context, "one core max size can not be 0, please check."),
+    OP_CHECK_IF(check_one_block_size_zero,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "one_block_size",
+                                                         "DoTiling: one core max size is 0"),
                 return ge::GRAPH_FAILED);
     uint64_t per_core_do_block_num = (max_ub_size - QMAP_SIZE * SIZE_OF_FLOAT * NUM_OF_QMAP) / one_block_size;
     uint64_t totalDataNum = shapePtr->GetStorageShape().GetShapeSize();
     uint64_t block_num = (totalDataNum + tilingParam.block_size - 1) / tilingParam.block_size;
     bool check_per_core_do_block_num = CheckZero(per_core_do_block_num);
-    OP_CHECK_IF(check_per_core_do_block_num, OP_LOGE(context, "one core do block num can not be 0, please check."),
+    OP_CHECK_IF(check_per_core_do_block_num,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "per_core_do_block_num",
+                                                         "DoTiling: one core do block num is 0"),
                 return ge::GRAPH_FAILED);
     uint64_t total_use_num_core = (block_num + per_core_do_block_num - 1) / per_core_do_block_num;
     uint64_t last_core_last_block = block_num - (total_use_num_core - 1) * per_core_do_block_num;
     uint64_t use_num_core = CeilDiv(total_use_num_core, CeilDiv(total_use_num_core, aivNum));
     if (use_num_core <= 0) {
-        OP_LOGE(context, "use_num_core can't be smaller than 0.");
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "use_num_core",
+                                                 "DoTiling: use_num_core can't be smaller than 0");
         return ge::GRAPH_FAILED;
     }
 
@@ -260,13 +329,17 @@ ge::graphStatus Tiling4ApplyAdamWQuant(gert::TilingContext* context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, max_ub_size);
 
     OP_CHECK_IF(GetTilingAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Tiling4ApplyAdamWQuant GetTilingAttr fail."), return ge::GRAPH_FAILED);
-
-    OP_CHECK_IF(CheckInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "input shape check failed."),
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "Tiling4ApplyAdamWQuant GetTilingAttr fail."),
                 return ge::GRAPH_FAILED);
 
+    OP_CHECK_IF(CheckInputShape(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "input shape check failed."), return ge::GRAPH_FAILED);
+
     auto dtypePtr = context->GetInputDesc(INDEX_IN_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
+    OP_CHECK_IF(dtypePtr == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "var",
+                                                         "Tiling4ApplyAdamWQuant: var desc is nullptr"),
+                return ge::GRAPH_FAILED);
     auto dtype = dtypePtr->GetDataType();
 
     uint64_t tilingKey = 0;
@@ -281,13 +354,16 @@ ge::graphStatus Tiling4ApplyAdamWQuant(gert::TilingContext* context)
     context->SetTilingKey(tilingKey);
 
     OP_CHECK_IF(DoTiling(context, tilingParam, max_ub_size) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Tiling4ApplyAdamWQuant DoTiling fail."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "Tiling4ApplyAdamWQuant DoTiling fail."),
+                return ge::GRAPH_FAILED);
 
     ApplyAdamWQuantTilingData tilingData;
     tilingData.set_tiling_key(tilingKey);
     GetTilingData(tilingData, tilingParam);
     OP_CHECK_IF(ApplyAdamWQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Tiling4ApplyAdamWQuantSetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "tilingData",
+                                                         "Tiling4ApplyAdamWQuantSetTilingData: set tiling data fail"),
+                return ge::GRAPH_FAILED);
     context->SetBlockDim(tilingData.get_use_num_core());
 
     PrintTilingData(tilingData);

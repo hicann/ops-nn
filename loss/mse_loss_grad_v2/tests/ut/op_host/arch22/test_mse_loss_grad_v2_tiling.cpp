@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 #include "../../../../op_host/arch22/mse_loss_grad_v2_tiling.h"
 #include "log/log.h"
+#include "base/err_mgr.h"
 #include "ut_op_common.h"
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"
@@ -31,6 +32,42 @@ protected:
 
     static void TearDownTestCase() { std::cout << "MseLossGradV2Tiling TearDown" << std::endl; }
 };
+
+// EZ码采集辅助: 验证错误路径不再产生EZ9999内部码, 而是上报预定义EZ码
+static std::vector<std::string> g_ezCodes;
+static bool g_ezCodesLoaded = false;
+
+static void InitErrMgr()
+{
+    (void)error_message::ErrMgrInit(error_message::ErrorMessageMode::INTERNAL_MODE);
+    (void)error_message::GetErrMgrErrorMessage();
+    g_ezCodes.clear();
+    g_ezCodesLoaded = false;
+}
+
+static void LoadEZCodes()
+{
+    if (g_ezCodesLoaded) {
+        return;
+    }
+    g_ezCodes.clear();
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    for (const auto& e : errors) {
+        g_ezCodes.push_back(e.error_id == nullptr ? std::string() : std::string(e.error_id.get()));
+    }
+    g_ezCodesLoaded = true;
+}
+
+static bool HasEZCode(const std::string& code)
+{
+    LoadEZCodes();
+    for (const auto& id : g_ezCodes) {
+        if (id == code) {
+            return true;
+        }
+    }
+    return false;
+}
 
 TEST_F(MseLossGradV2Tiling, test_tiling_mean_fp16_001)
 {
@@ -202,4 +239,18 @@ TEST_F(MseLossGradV2Tiling, test_tiling_mean_bp16_001)
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 3);
+}
+
+// 错误路径UT: TilingParse收到nullptr context时上报EZ0037(ARGUMENT类预定义码), 不产生EZ9999
+TEST_F(MseLossGradV2Tiling, test_tiling_parse_context_null_report_ez0037)
+{
+    std::string op_type("MseLossGradV2");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    ASSERT_NE(tiling_parse_func, nullptr);
+
+    InitErrMgr();
+    EXPECT_EQ(tiling_parse_func(nullptr), ge::GRAPH_FAILED);
+    EXPECT_FALSE(HasEZCode("EZ9999"));
+    EXPECT_TRUE(HasEZCode("EZ0037"));
 }
