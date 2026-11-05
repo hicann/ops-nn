@@ -379,3 +379,57 @@ TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_empty_indices_success)
     std::vector<size_t> expectWorkspaces = {16777216};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
+
+// indices dtype must be int32/int64, float32 should fail before kernel launch
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_indices_float_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_FLOAT, ge::FORMAT_ND},           // input 4: indices (invalid dtype)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}
+
+// var dtype must be float32; float16 should fail before kernel launch
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_var_float16_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // input 0: var (invalid dtype)
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},             // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}

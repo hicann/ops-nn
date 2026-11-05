@@ -18,7 +18,7 @@
  *   R-01: var/accum/linear must have the same shape and dtype
  *   R-02: grad.shape[0] == indices.shape[0], grad.shape[1:] == var.shape[1:]
  *   R-03: indices must be 1-D
- *   R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape size 1
+ *   R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape [1]
  *   R-07: var must be >= 2-D
  */
 
@@ -75,6 +75,9 @@ static ge::graphStatus CheckSparseApplyFtrlShapeAndType(gert::TilingContext* con
     auto varDesc = context->GetInputDesc(IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
     auto varDtype = varDesc->GetDataType();
+    OP_CHECK_IF(varDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(nodeName, "var", Ops::Base::ToString(varDtype).c_str(), "float32"),
+                return ge::GRAPH_FAILED);
 
     // R-07: var must be >= 2-D
     OP_CHECK_IF(varDimNum < MIN_VAR_DIM_NUM,
@@ -88,6 +91,14 @@ static ge::graphStatus CheckSparseApplyFtrlShapeAndType(gert::TilingContext* con
     OP_CHECK_IF(
         indicesStorage.GetDimNum() != 1,
         OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "indices", std::to_string(indicesStorage.GetDimNum()).c_str(), "1"),
+        return ge::GRAPH_FAILED);
+
+    auto indicesDesc = context->GetInputDesc(INDICES_INPUT_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
+    auto indicesDtype = indicesDesc->GetDataType();
+    OP_CHECK_IF(
+        indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64,
+        OP_LOGE_FOR_INVALID_DTYPE(nodeName, "indices", Ops::Base::ToString(indicesDtype).c_str(), "int32 or int64"),
         return ge::GRAPH_FAILED);
 
     // R-01: var/accum/linear must have the same shape and dtype
@@ -157,15 +168,17 @@ static ge::graphStatus CheckSparseApplyFtrlShapeAndType(gert::TilingContext* con
                                                        "The dtypes of input grad and var must be the same"),
                 return ge::GRAPH_FAILED);
 
-    // R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape size 1, and same dtype as var
+    // R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape [1]
     for (const auto& item : SCALAR_INPUT_LIST) {
         auto scalarShape = context->GetInputShape(item.first);
         OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
         auto scalarStorage = scalarShape->GetStorageShape();
+        bool scalarShapeValid = scalarStorage.IsScalar() ||
+                                (scalarStorage.GetDimNum() == 1 && scalarStorage.GetDim(0) == 1);
         OP_CHECK_IF(
-            !scalarStorage.IsScalar() && scalarStorage.GetShapeSize() != 1,
+            !scalarShapeValid,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, item.second, Ops::Base::ToString(scalarStorage).c_str(),
-                                                  "The param must be a scalar(0D) or have shape size 1"),
+                                                  "The param must be a scalar(0D) or have shape [1]"),
             return ge::GRAPH_FAILED);
         auto scalarDesc = context->GetInputDesc(item.first);
         OP_CHECK_NULL_WITH_CONTEXT(context, scalarDesc);
@@ -196,6 +209,9 @@ static ge::graphStatus SetupSparseApplyFtrlTilingData(gert::TilingContext* conte
     tilingPtr->varDim0 = firstDim;
 
     context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
+    const ge::graphStatus scheduleStatus = context->SetScheduleMode(1);
+    OP_CHECK_IF(scheduleStatus != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetScheduleMode(1) failed"),
+                return ge::GRAPH_FAILED);
 
     auto indicesDesc = context->GetInputDesc(INDICES_INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);

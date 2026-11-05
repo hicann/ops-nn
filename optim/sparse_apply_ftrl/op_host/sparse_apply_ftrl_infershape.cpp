@@ -25,7 +25,7 @@
  *   R-01: var/accum/linear must have the same shape
  *   R-02: grad.shape[0] == indices.shape[0], grad.shape[1:] == var.shape[1:]
  *   R-03: indices must be 1-D
- *   R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape size 1
+ *   R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape [1]; dynamic (-1)/(-2) allowed
  *   R-07: var must be >= 2-D
  */
 
@@ -165,22 +165,24 @@ static ge::graphStatus InferShapeSparseApplyFtrl(gert::InferShapeContext* contex
                     return GRAPH_FAILED);
     }
 
-    // R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape size 1
+    // R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape [1]; dynamic scalar (-1)/(-2) allowed
     const std::vector<std::pair<int32_t, const char*>> scalarInputs = {
         {IDX_LR, "lr"}, {IDX_L1, "l1"}, {IDX_L2, "l2"}, {IDX_LR_POWER, "lr_power"}};
     for (const auto& item : scalarInputs) {
         const gert::Shape* scalarShape = context->GetInputShape(item.first);
         OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
-        // 标量输入 rank 未知(-2)时跳过标量形态校验
+        // 标量输入 rank 未知(-2)时按动态 shape 处理
         if (Ops::Base::IsUnknownRank(*scalarShape)) {
             continue;
         }
         auto scalarDimNum = scalarShape->GetDimNum();
-        auto scalarShapeSize = scalarShape->GetShapeSize();
+        // 允许 rank 0，或 rank 1 且 dim 为 1 / 动态未知(-1)；显式拒绝 (1,1) 等高维形态
+        bool scalarShapeValid = scalarDimNum == 0 || (scalarDimNum == 1 && (scalarShape->GetDim(0) == 1 ||
+                                                                            scalarShape->GetDim(0) == UNKNOWN_DIM));
         OP_CHECK_IF(
-            scalarDimNum != 0 && scalarShapeSize != 1,
+            !scalarShapeValid,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, item.second, Ops::Base::ToString(*scalarShape).c_str(),
-                                                  "The param must be a scalar(0D) or have shape size 1"),
+                                                  "The param must be a scalar(0D) or have shape [1]"),
             return GRAPH_FAILED);
     }
 
