@@ -19,8 +19,19 @@
 #include "log/log.h"
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
+#include <vector>
 
 namespace optiling {
+namespace {
+void ReportInplaceScatterAddTilingError(const char* opName, const char* reason)
+{
+    const char* name = (opName == nullptr || opName[0] == '\0') ? "InplaceScatterAdd" : opName;
+    OP_LOGE_WITHOUT_REPORT(name, "%s", reason);
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {name, reason};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+}
+} // namespace
 constexpr int32_t BYTE_BLOCK = 32;
 constexpr size_t SYS_WORK_SPACE_SIZE = 16 * 1024 * 1024;
 constexpr int32_t SMALL_TAIL = 128;
@@ -42,8 +53,8 @@ struct TilingDataStructInplaceScatterAdd {
 
 class InplaceScatterAddTilingOp {
 public:
-    explicit InplaceScatterAddTilingOp(gert::TilingContext* context_) : context(context_){};
-    void Init();
+    explicit InplaceScatterAddTilingOp(gert::TilingContext* context_) : context(context_) {};
+    ge::graphStatus Init();
 
 private:
     void SetKernelTiling();
@@ -100,8 +111,12 @@ void InplaceScatterAddTilingOp::SetKernelTiling()
     context->GetRawTilingData()->SetDataSize(kernelTiling.GetDataSize());
 }
 
-void InplaceScatterAddTilingOp::Init()
+ge::graphStatus InplaceScatterAddTilingOp::Init()
 {
+    if (context == nullptr) {
+        ReportInplaceScatterAddTilingError("InplaceScatterAdd", "tiling context is null");
+        return ge::GRAPH_FAILED;
+    }
     const gert::StorageShape* var_shape = context->GetInputShape(0);
     tilingData.M = var_shape->GetStorageShape().GetDim(0);
     tilingData.N = 1;
@@ -115,10 +130,10 @@ void InplaceScatterAddTilingOp::Init()
     OP_LOGD(context, "ascendcPlatform CoreNum: %d.", coreNum);
 
     if (coreNum == 0) {
-        OP_LOGE(context, "CoreNum got is 0!");
-    } else {
-        tilingData.tailCoreIndicesNum = tilingData.K / coreNum;
+        ReportInplaceScatterAddTilingError(context->GetNodeName(), "platform core count is zero");
+        return ge::GRAPH_FAILED;
     }
+    tilingData.tailCoreIndicesNum = tilingData.K / coreNum;
     if (tilingData.tailCoreIndicesNum == 0) {
         tilingData.frontCoreIndicesNum = 1;
         tilingData.frontCoreNum = tilingData.K;
@@ -144,31 +159,46 @@ void InplaceScatterAddTilingOp::Init()
 
     SetKernelTiling();
     TilingDataPrint();
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus InplaceScatterAddTilingFunc(gert::TilingContext* context)
 {
     OP_LOGD(context, "Tiling for InplaceScatterAdd start.");
     InplaceScatterAddTilingOp tilingOp(context);
-    tilingOp.Init();
+    if (tilingOp.Init() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "Tiling for InplaceScatterAdd end.");
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus TilingPrepareForInplaceScatterAdd(gert::TilingParseContext* context)
 {
+    if (context == nullptr) {
+        ReportInplaceScatterAddTilingError("InplaceScatterAdd", "tiling parse context is null");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "Tiling Prepare For InplaceScatterAdd start.");
     auto compileInfo = context->GetCompiledInfo<InplaceScatterAddCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    if (compileInfo == nullptr) {
+        ReportInplaceScatterAddTilingError(context->GetNodeName(), "compiled tiling information is null");
+        return ge::GRAPH_FAILED;
+    }
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    if (platformInfo == nullptr) {
+        ReportInplaceScatterAddTilingError(context->GetNodeName(), "platform information is null");
+        return ge::GRAPH_FAILED;
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    uint64_t ubSizePlatForm;
+    uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->ubSizePlatForm <= 0) {
+        ReportInplaceScatterAddTilingError(context->GetNodeName(), "failed to obtain a positive UB size");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     OP_LOGD(context, "Tiling Prepare For InplaceScatterAdd end.");
     return ge::GRAPH_SUCCESS;

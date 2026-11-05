@@ -294,10 +294,10 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* index, co
                                const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_COND(CheckNotNull(self, index, src, out), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");
+    CHECK_RET(CheckNotNull(self, index, src, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查参数的数据类型是否符合预期
-    CHECK_COND(CheckDtypeValid(self, index, src, out), ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
+    CHECK_RET(CheckDtypeValid(self, index, src, out), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查参数的数据格式
     if (self->GetStorageFormat() != Format::FORMAT_ND || index->GetStorageFormat() != Format::FORMAT_ND ||
@@ -312,16 +312,16 @@ static aclnnStatus CheckParams2(const aclTensor* self, const aclTensor* index, c
                                 const aclTensor* out, int64_t dim)
 {
     // 3. self/index/src的维度数应该一致
-    CHECK_COND(CheckTensorDim(self, index, src), ACLNN_ERR_PARAM_INVALID, "CheckTensorDim failed!");
+    CHECK_RET(CheckTensorDim(self, index, src), ACLNN_ERR_PARAM_INVALID);
 
     // 4. Tensor updates must cover index.shape in every dimension.
     CHECK_COND(CompareTensorShape(index, src), ACLNN_ERR_PARAM_INVALID,
                "Expect index shape %s should be smaller than src shape %s in each dimension.",
                op::ToString(index->GetViewShape()).GetString(), op::ToString(src->GetViewShape()).GetString());
-    CHECK_COND(CheckShape(self, index, out, dim), ACLNN_ERR_PARAM_INVALID, "checkshape failed!");
+    CHECK_RET(CheckShape(self, index, out, dim), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查dim是否为 [-N, N-1] 范围内
-    CHECK_COND(CheckDimRange(self, dim), ACLNN_ERR_PARAM_INVALID, "dim must in [-N, N-1]!");
+    CHECK_RET(CheckDimRange(self, dim), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -374,14 +374,16 @@ static aclnnStatus ExecScatterNoTranspose(const aclTensor* self, int64_t dim, co
                                                            executor, includeSelf);
         CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
-        CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+        OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
         return ACLNN_SUCCESS;
     }
     auto scatterRes = l0op::ScatterElementsNoTranspose(selfContiguous, indexContiguous, srcContiguous, dim, reduction,
                                                        executor, includeSelf);
     CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
-    CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+    OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
 
@@ -585,13 +587,17 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
     int64_t squeezeDim = 0;
 
     auto selfContiguous = InitializeTensor(self, executor);
-    CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "InitializeTensor self failed!");
+    OP_CHECK(selfContiguous != nullptr,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "InitializeTensor self failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
     auto srcContiguous = InitializeTensor(src, executor);
-    CHECK_COND(srcContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "InitializeTensor src failed!");
+    OP_CHECK(srcContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "InitializeTensor src failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     if (index->IsEmpty()) {
         auto viewCopyResult = l0op::ViewCopy(selfContiguous, out, executor);
-        CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy self failed!");
+        OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy self failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
         return ACLNN_SUCCESS;
     }
 
@@ -613,9 +619,11 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
         // 转换BF16数据类型为FP32，因算子暂不支持BF16
         if (selfType == op::DataType::DT_BF16 || srcContiguous->GetDataType() == op::DataType::DT_BF16) {
             selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
-            CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast self failed!");
+            OP_CHECK(selfContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "cast self failed!"),
+                     return ACLNN_ERR_INNER_NULLPTR);
             srcContiguous = l0op::Cast(srcContiguous, op::DataType::DT_FLOAT, executor);
-            CHECK_COND(srcContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast src failed!");
+            OP_CHECK(srcContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "cast src failed!"),
+                     return ACLNN_ERR_INNER_NULLPTR);
         }
         aicoreSupport = CheckType(selfContiguous->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
     }
@@ -647,13 +655,17 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
     if (expandFlag) {
         if (selfType == op::DataType::DT_UINT8) {
             selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_INT32, executor);
-            CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast self failed!");
+            OP_CHECK(selfContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "cast self failed!"),
+                     return ACLNN_ERR_INNER_NULLPTR);
             srcContiguous = l0op::Cast(srcContiguous, op::DataType::DT_INT32, executor);
-            CHECK_COND(srcContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast src failed!");
+            OP_CHECK(srcContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "cast src failed!"),
+                     return ACLNN_ERR_INNER_NULLPTR);
         }
         auto scatterRes = DoScatterAddWithSorted(selfContiguous, index, srcContiguous, out, reduction, dimFinal,
                                                  executor);
-        CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterAddWithSorted failed!");
+        OP_CHECK(scatterRes != nullptr,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "DoScatterAddWithSorted failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
         return ACLNN_SUCCESS;
     }
 
@@ -694,14 +706,17 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
         CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         scatterRes = needUnsqueeze ? l0op::SqueezeNd(scatterRes, squeezeDim, executor) : scatterRes;
-        CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "squeeze output failed!");
+        OP_CHECK(scatterRes != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "squeeze output failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
 
         // 转换scatter数据类型和out保持一致
         scatterRes = l0op::Cast(scatterRes, out->GetDataType(), executor);
-        CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast output failed!");
+        OP_CHECK(scatterRes != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "cast output failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
 
         auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
-        CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+        OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
 
         return ACLNN_SUCCESS;
     }
@@ -722,20 +737,25 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
         CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         scatterRes = needUnsqueeze ? l0op::SqueezeNd(scatterRes, squeezeDim, executor) : scatterRes;
-        CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "squeeze output failed!");
+        OP_CHECK(scatterRes != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "squeeze output failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
 
         // 转换scatter数据类型和out保持一致
         scatterRes = l0op::Cast(scatterRes, out->GetDataType(), executor);
-        CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast output failed!");
+        OP_CHECK(scatterRes != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "cast output failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
 
         auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
-        CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+        OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
 
         return ACLNN_SUCCESS;
     }
 
     const aclTensor* indexContiguous = InitializeTensor(index, executor);
-    CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "InitializeTensor index failed!");
+    OP_CHECK(indexContiguous != nullptr,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "InitializeTensor index failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     CHECK_COND(selfDimNum - 1 >= 0, ACLNN_ERR_PARAM_INVALID, "self dim num must be greater than 0");
     std::vector<int64_t> perm(selfDimNum);
@@ -744,44 +764,54 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
     }
     std::swap(perm[dimFinal], perm[selfDimNum - 1]);
     auto valuePerm = executor->AllocIntArray(perm.data(), selfDimNum);
-    CHECK_COND(valuePerm != nullptr, ACLNN_ERR_INNER_NULLPTR, "alloc intarray failed!");
+    OP_CHECK(valuePerm != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "alloc intarray failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     int64_t dimInput = dimFinal;
     // 310P统一走aicpu,无需Transpose
     bool needTranspose = (dimFinal != (selfDimNum - 1)) && aicoreSupport && (!Ops::NN::AclnnUtil::IsRegbase(curArch));
     if (needTranspose) {
         selfContiguous = l0op::Transpose(selfContiguous, valuePerm, executor);
-        CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "transpose self failed!");
+        OP_CHECK(selfContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "transpose self failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
         indexContiguous = l0op::Transpose(indexContiguous, valuePerm, executor);
-        CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "transpose index failed!");
+        OP_CHECK(indexContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "transpose index failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
         srcContiguous = l0op::Transpose(srcContiguous, valuePerm, executor);
-        CHECK_COND(srcContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "transpose src failed!");
+        OP_CHECK(srcContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "transpose src failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
         dimInput = selfDimNum - 1;
     }
 
     if (aicore910b) {
         // linear index，转换负数索引并输出int32索引
         indexContiguous = l0op::LinearIndex(indexContiguous, selfContiguous, -1, false, executor);
-        CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "LinearIndex failed!");
+        OP_CHECK(indexContiguous != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "LinearIndex failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
     }
 
     bool isCopy = (flagRebase || aicore910b) && self->GetData() != out->GetData();
     const aclTensor* scatterRes = DoScatterElements(selfContiguous, indexContiguous, srcContiguous, dimInput, isCopy,
                                                     reduction, executor, includeSelf);
-    CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterElements failed!");
+    OP_CHECK(scatterRes != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "DoScatterElements failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     scatterRes = needTranspose ? l0op::Transpose(scatterRes, valuePerm, executor) : scatterRes;
-    CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "transpose output failed!");
+    OP_CHECK(scatterRes != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "transpose output failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     scatterRes = needUnsqueeze ? l0op::SqueezeNd(scatterRes, squeezeDim, executor) : scatterRes;
-    CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "squeeze output failed!");
+    OP_CHECK(scatterRes != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "squeeze output failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     // 转换scatter数据类型和out保持一致
     scatterRes = l0op::Cast(scatterRes, out->GetDataType(), executor);
-    CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "cast output failed!");
+    OP_CHECK(scatterRes != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "cast output failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
-    CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+    OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
 
     return ACLNN_SUCCESS;
 }
@@ -802,7 +832,9 @@ static aclnnStatus ExecScatterGetWorkspaceSize(const aclTensor* self, int64_t di
                                                bool includeSelf = true)
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_COND(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!");
+    OP_CHECK(uniqueExecutor.get() != nullptr,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!"),
+             return ACLNN_ERR_INNER_CREATE_EXECUTOR);
     bool supportNoTranspose = includeSelf && l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
     aclnnStatus ret;
     if (supportNoTranspose) {
@@ -855,7 +887,9 @@ static aclnnStatus ExecScatterReduceGetWorkspaceSize(const aclTensor* self, int6
                                                             src->GetViewShape(), dim,
                                                             GetCurrentPlatformInfo().GetVectorCoreNum())) {
         auto uniqueExecutor = CREATE_EXECUTOR();
-        CHECK_COND(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!");
+        OP_CHECK(uniqueExecutor.get() != nullptr,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!"),
+                 return ACLNN_ERR_INNER_CREATE_EXECUTOR);
         auto ret = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get(), includeSelf);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
@@ -886,8 +920,8 @@ static aclnnStatus ExecScatterScalar(const aclTensor* self, int64_t dim, const a
 {
     auto ret = CheckParams(self, index, src, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    CHECK_COND(CheckShape(self, index, out, dim), ACLNN_ERR_PARAM_INVALID, "checkshape failed!");
-    CHECK_COND(CheckDimRange(self, dim), ACLNN_ERR_PARAM_INVALID, "dim must in [-N, N-1]!");
+    CHECK_RET(CheckShape(self, index, out, dim), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDimRange(self, dim), ACLNN_ERR_PARAM_INVALID);
 
     auto selfContiguous = InitializeTensor(self, executor);
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -904,7 +938,8 @@ static aclnnStatus ExecScatterScalar(const aclTensor* self, int64_t dim, const a
         CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
-    CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
+    OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
 
@@ -913,7 +948,9 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(const aclTensor* self, int64
                                                     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_COND(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!");
+    OP_CHECK(uniqueExecutor.get() != nullptr,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!"),
+             return ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // index为nullptr直接报错返回
     CHECK_COND(((self != nullptr) && (index != nullptr) && (value != nullptr) && (out != nullptr)),
@@ -927,10 +964,13 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(const aclTensor* self, int64
 
     if (index->IsEmpty()) {
         auto selfContiguous = InitializeTensor(self, uniqueExecutor.get());
-        CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "InitializeTensor self failed!");
+        OP_CHECK(selfContiguous != nullptr,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "InitializeTensor self failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
 
         auto viewCopyResult = l0op::ViewCopy(selfContiguous, out, uniqueExecutor.get());
-        CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy self failed!");
+        OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy self failed!"),
+                 return ACLNN_ERR_INNER_NULLPTR);
 
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
@@ -938,7 +978,8 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(const aclTensor* self, int64
     }
 
     auto src = uniqueExecutor.get()->ConvertToTensor(value, self->GetDataType());
-    CHECK_COND(src != nullptr, ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor value failed!");
+    OP_CHECK(src != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor value failed!"),
+             return ACLNN_ERR_INNER_NULLPTR);
     aclnnStatus res;
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
         l0op::UseScatterElementsV2(self, index, src, dim, self->GetViewShape().GetDimNum(), GetReduceStr(reduce))) {
@@ -948,9 +989,11 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(const aclTensor* self, int64
         bool supportNoTranspose = l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
         if (self->GetViewShape().GetDimNum() != 0 && !supportNoTranspose) {
             auto indexShape = GetTensorShape(index, uniqueExecutor.get());
-            CHECK_COND(indexShape != nullptr, ACLNN_ERR_INNER_NULLPTR, "get indexShape failed!");
+            OP_CHECK(indexShape != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "get indexShape failed!"),
+                     return ACLNN_ERR_INNER_NULLPTR);
             src = l0op::BroadcastTo(src, indexShape, uniqueExecutor.get());
-            CHECK_COND(src != nullptr, ACLNN_ERR_INNER_NULLPTR, "value broadcast failed!");
+            OP_CHECK(src != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "value broadcast failed!"),
+                     return ACLNN_ERR_INNER_NULLPTR);
         }
 
         if (supportNoTranspose) {

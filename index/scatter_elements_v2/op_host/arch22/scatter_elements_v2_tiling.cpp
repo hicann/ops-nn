@@ -21,11 +21,21 @@
 #include "op_host/tiling_templates_registry.h"
 #include "scatter_elements_v2_tiling.h"
 #include "../../common/scatter_elements_v2_low_memory_policy.h"
+#include <vector>
 
 using namespace std;
 using Ops::NN::Optiling::TilingRegistry;
 
 namespace {
+void ReportScatterElementsV2TilingError(const char* opName, const char* reason)
+{
+    const char* name = (opName == nullptr || opName[0] == '\0') ? "ScatterElementsV2" : opName;
+    OP_LOGE_WITHOUT_REPORT(name, "%s", reason);
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {name, reason};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+}
+
 const int INPUT_TYPE = 100;
 const int INDIC_TYPE = 10;
 const int OPERATOR_TYPE = 1;
@@ -207,20 +217,23 @@ ge::graphStatus ScatterElementsV2Tiling310P::Init()
     auto attrs = context->GetAttrs();
 
     int64_t axis = *(attrs->GetAttrPointer<int64_t>(0));
+    const int64_t originalAxis = axis;
     const char* reduce = attrs->GetAttrPointer<char>(1);
     if (strcmp(reduce, "none") == 0) {
         tilingData.computeMode = 0;
     } else if (strcmp(reduce, "add") == 0) {
         tilingData.computeMode = 1;
     } else {
-        OP_LOGE(context->GetNodeName(), "reduction only support none or add.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "reduction", reduce,
+                                              "supported reductions on the 310P tiling path are none and add");
         return ge::GRAPH_FAILED;
     }
 
     size_t varDims = static_cast<size_t>(varShape->GetStorageShape().GetDimNum());
     axis = axis >= 0 ? axis : axis + varDims; // do not support 0dim tensor.
     if (axis != static_cast<int>(varDims) - 1) {
-        OP_LOGE(context->GetNodeName(), "only support last dim.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "dim", std::to_string(originalAxis).c_str(),
+                                              "only the last dimension is supported on the 310P tiling path");
         return ge::GRAPH_FAILED;
     }
 
@@ -343,15 +356,18 @@ private:
 ge::graphStatus ScatterElementsV2Tiling::Init()
 {
     if (tilingContext == nullptr) {
-        OP_LOGE("ScatterElementsV2", "tilingContext is nullptr.");
+        ReportScatterElementsV2TilingError("ScatterElementsV2", "tiling context is null");
         return ge::GRAPH_FAILED;
     }
 
     auto compileInfo = tilingContext->GetCompileInfo<ScatterElementsV2CompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
+    if (compileInfo == nullptr) {
+        ReportScatterElementsV2TilingError(tilingContext->GetNodeName(), "compiled tiling information is null");
+        return ge::GRAPH_FAILED;
+    }
     uint32_t coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
     if (coreNum == 0) {
-        OP_LOGE(tilingContext, "coreNum must be greater than 0.");
+        ReportScatterElementsV2TilingError(tilingContext->GetNodeName(), "platform core count is zero");
         return ge::GRAPH_FAILED;
     }
     workspaceSize = compileInfo->workspaceSize;
@@ -362,8 +378,10 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     auto attrs = tilingContext->GetAttrs();
     if (attrs == nullptr || tilingContext->GetInputShape(INPUT_0) == nullptr ||
         tilingContext->GetInputShape(INPUT_1) == nullptr || tilingContext->GetInputShape(INPUT_2) == nullptr ||
-        tilingContext->GetInputDesc(INPUT_0) == nullptr || tilingContext->GetRawTilingData() == nullptr) {
-        OP_LOGE(tilingContext, "tilingContext inputshape or outputshape is nullptr.");
+        tilingContext->GetInputDesc(INPUT_0) == nullptr || tilingContext->GetInputDesc(INPUT_1) == nullptr ||
+        tilingContext->GetRawTilingData() == nullptr) {
+        ReportScatterElementsV2TilingError(tilingContext->GetNodeName(),
+                                           "attributes, input shapes/descriptors or raw tiling storage are null");
         return ge::GRAPH_FAILED;
     }
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
@@ -387,7 +405,9 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
         tilingKey += INPUT_TYPE * DT_BF16_TYPE;
         inputSize = SIZE_OF_BF16;
     } else {
-        OP_LOGE(tilingContext, "var only support float, float16, int32, uint8, int8, bf16.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "var",
+                                              Ops::Base::ToString(inputDtype).c_str(),
+                                              "supported dtypes are FLOAT, FLOAT16, INT32, UINT8, INT8 and BF16");
         return ge::GRAPH_FAILED;
     }
     uint32_t indicesSize = 0;
@@ -399,7 +419,9 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
         tilingKey += INDIC_TYPE * DT_INT64_INDEX_TYPE;
         indicesSize = SIZE_OF_INT64;
     } else {
-        OP_LOGE(tilingContext, "indices only support int64, int32.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "indices",
+                                              Ops::Base::ToString(indicesDtype).c_str(),
+                                              "supported dtypes are INT64 and INT32");
         return ge::GRAPH_FAILED;
     }
 
@@ -408,9 +430,16 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     uint32_t indexDataAlign = dataAlign / indicesSize;
 
     const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, dim);
+    if (dim == nullptr) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(tilingContext->GetNodeName(), "dim", "required attribute is missing");
+        return ge::GRAPH_FAILED;
+    }
     const char* reduce = attrs->GetAttrPointer<char>(1);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, reduce);
+    if (reduce == nullptr) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(tilingContext->GetNodeName(), "reduction",
+                                                 "required attribute is missing");
+        return ge::GRAPH_FAILED;
+    }
     isDeterministic = IsArch22DeterministicMode(tilingContext, reduce);
     const bool* includeSelfAttr = attrs->GetAttrPointer<bool>(2);
     includeSelf = includeSelfAttr == nullptr ? 1 : static_cast<uint64_t>(*includeSelfAttr);
@@ -431,13 +460,19 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     } else if (strcmp(reduce, "mul") == 0) {
         mode = MUL;
     } else {
-        OP_LOGE(tilingContext, "scatter_elements_v2 only support none, add, prod, min, max, mean.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "reduction", reduce,
+                                              "supported reductions are none, add, mul, min, max and mean");
         return ge::GRAPH_FAILED;
     }
 
     if (inputDimNum != indicesShape.GetDimNum() ||
         inputDimNum != tilingContext->GetInputShape(INPUT_2)->GetStorageShape().GetDimNum()) {
-        OP_LOGE(tilingContext, "the dimNum of input must equal the dimNum of indices.");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            tilingContext->GetNodeName(), "var, indices, updates",
+            (std::to_string(inputDimNum) + ", " + std::to_string(indicesShape.GetDimNum()) + ", " +
+             std::to_string(tilingContext->GetInputShape(INPUT_2)->GetStorageShape().GetDimNum()))
+                .c_str(),
+            "all inputs must have the same rank");
         return ge::GRAPH_FAILED;
     }
 
@@ -448,7 +483,8 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     }
 
     if (realDim != inputDimNum - 1) {
-        OP_LOGE(tilingContext, "scatter_elements_v2 not support dim != -1.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "dim", std::to_string(*dim).c_str(),
+                                              "only the last dimension is supported");
         return ge::GRAPH_FAILED;
     }
 
@@ -457,7 +493,10 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
         auto dimIndices = indicesShape.GetDim(i);
         auto dimUpdates = updatesShape.GetDim(i);
         if (dimUpdates < dimIndices) {
-            OP_LOGE(tilingContext, "the dim of updates must be greater than or equal to the dim of indices.");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                tilingContext->GetNodeName(), "updates, indices",
+                (std::to_string(dimUpdates) + ", " + std::to_string(dimIndices)).c_str(),
+                "updates size must be at least indices size in every dimension");
             return ge::GRAPH_FAILED;
         }
         if (realDim == i) {
@@ -472,7 +511,11 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
 
     if (inputOneTime == 0 || indicesOneTime == 0 || updatesOneTime == 0 || inputCount == 0 || indicesCount == 0 ||
         updatesCount == 0) {
-        OP_LOGE(tilingContext, "shape cannot equal 0.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext->GetNodeName(), "var, indices, updates",
+            (std::to_string(inputCount) + ", " + std::to_string(indicesCount) + ", " + std::to_string(updatesCount))
+                .c_str(),
+            "shape size and last-dimension size must be greater than zero");
         return ge::GRAPH_FAILED;
     }
 
@@ -681,15 +724,25 @@ bool ScatterElementsV2Tiling::CacheOpSupport()
     }
 
     auto attrs = tilingContext->GetAttrs();
+    if (attrs == nullptr || tilingContext->GetInputDesc(INPUT_0) == nullptr ||
+        tilingContext->GetInputShape(INPUT_0) == nullptr || tilingContext->GetInputShape(INPUT_1) == nullptr ||
+        tilingContext->GetInputShape(INPUT_2) == nullptr) {
+        return false;
+    }
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
     const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, dim);
+    if (dim == nullptr) {
+        return false;
+    }
     auto indicesShape = tilingContext->GetInputShape(INPUT_1)->GetStorageShape();
     auto inputDimNum = indicesShape.GetDimNum();
     realDim = (*dim < 0 ? *dim + inputDimNum : *dim);
 
     auto xShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
     const char* reduce = attrs->GetAttrPointer<char>(1);
+    if (reduce == nullptr) {
+        return false;
+    }
     if (IsArch22DeterministicMode(tilingContext, reduce)) {
         OP_LOGD("ScatterElementsV2", "cache-op disabled in deterministic mode on arch22.");
         return false;
@@ -1067,8 +1120,15 @@ ge::graphStatus ScatterElementsV2Tiling::RunCacheOpTiling()
 
 ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
 {
+    if (context == nullptr) {
+        ReportScatterElementsV2TilingError("ScatterElementsV2", "tiling context is null");
+        return ge::GRAPH_FAILED;
+    }
     auto compile_info = reinterpret_cast<const ScatterElementsV2CompileInfo*>(context->GetCompileInfo());
-    OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
+    if (compile_info == nullptr) {
+        ReportScatterElementsV2TilingError(context->GetNodeName(), "compiled tiling information is null");
+        return ge::GRAPH_FAILED;
+    }
     if (compile_info->is_regbase) {
         return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
     }
@@ -1094,19 +1154,31 @@ ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepareForScatterElementsV2(gert::TilingParseContext* context)
 {
+    if (context == nullptr) {
+        ReportScatterElementsV2TilingError("ScatterElementsV2", "tiling parse context is null");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "TilingPrepareForScatterElementsV2 start.");
     auto compileInfo = context->GetCompiledInfo<ScatterElementsV2CompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    if (compileInfo == nullptr) {
+        ReportScatterElementsV2TilingError(context->GetNodeName(), "compiled tiling information is null");
+        return ge::GRAPH_FAILED;
+    }
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    if (platformInfo == nullptr) {
+        ReportScatterElementsV2TilingError(context->GetNodeName(), "platform information is null");
+        return ge::GRAPH_FAILED;
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     compileInfo->workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    uint64_t ubSizePlatForm;
+    uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->ubSizePlatForm <= 0) {
+        ReportScatterElementsV2TilingError(context->GetNodeName(), "failed to obtain a positive UB size");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

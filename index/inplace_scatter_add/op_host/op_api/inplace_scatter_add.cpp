@@ -32,8 +32,7 @@ const aclTensor* InplaceScatterAddAiCore(const aclTensor* self, const aclTensor*
     L0_DFX(InplaceScatterAddAiCore, self, index, source);
     auto scatterAddOut = const_cast<aclTensor*>(self);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(InplaceScatterAdd, OP_INPUT(self, index, source), OP_OUTPUT(scatterAddOut));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceScatterAddAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE_WITHOUT_REPORT(ret, "InplaceScatterAddAiCore launcher failed, ret=%d.", ret),
              return nullptr);
     return scatterAddOut;
 }

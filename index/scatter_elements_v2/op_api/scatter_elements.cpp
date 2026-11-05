@@ -728,6 +728,7 @@ const aclTensor* ScatterElements(const aclTensor* data, const aclTensor* indices
     if (dataDimSize > AXIS_LIMIT) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor data dimension size must be in range [0, 8]. Current size is %ld.",
                 dataDimSize);
+        return nullptr;
     }
     if (!isBaseReduction && !isExtendedV2Reduction) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "reduction must be one of [none, add, mul, min, max, mean].");
@@ -741,16 +742,14 @@ const aclTensor* ScatterElements(const aclTensor* data, const aclTensor* indices
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ScatterElementsV2, OP_INPUT(data, indices, updates), OP_OUTPUT(selfOut),
                                                OP_ATTR(axis, reduction, includeSelf));
         OP_CHECK(ret == ACLNN_SUCCESS,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterElementsV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-                 return nullptr);
+                 OP_LOGE_WITHOUT_REPORT(ret, "ScatterElementsV2AiCore launcher failed, ret=%d.", ret), return nullptr);
         return selfOut;
     } else if (includeSelf && isBaseReduction && UseScatterElements(data, indices, updates, axis, reduction)) {
         OP_LOGD("Use AICORE for ScatterElements.");
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ScatterElements, OP_INPUT(data, indices, updates), OP_OUTPUT(out),
                                                OP_ATTR(axis, reduction));
         OP_CHECK(ret == ACLNN_SUCCESS,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterElementsAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-                 return nullptr);
+                 OP_LOGE_WITHOUT_REPORT(ret, "ScatterElementsAiCore launcher failed, ret=%d.", ret), return nullptr);
     } else {
         OP_LOGD("Use AICPU for ScatterElements.");
         static internal::AicpuTaskSpace space("ScatterElements");
@@ -772,8 +771,7 @@ const aclTensor* ScatterElementsNoTranspose(const aclTensor* data, const aclTens
     auto selfOut = const_cast<aclTensor*>(data);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ScatterElementsV2, OP_INPUT(data, indices, updates), OP_OUTPUT(selfOut),
                                            OP_ATTR(axis, reduction, includeSelf));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterElementsV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+    OP_CHECK(ret == ACLNN_SUCCESS, OP_LOGE_WITHOUT_REPORT(ret, "ScatterElementsV2AiCore launcher failed, ret=%d.", ret),
              return nullptr);
     return selfOut;
 }
