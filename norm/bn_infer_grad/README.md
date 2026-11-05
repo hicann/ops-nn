@@ -80,7 +80,7 @@
 - grads的逻辑C维（NCHW的第二维、NHWC的最后一维）必须等于scale和batch_variance的长度。
 - scale和batch_variance仅支持FLOAT。
 - 原型中grads和x_backprop的逻辑格式支持NHWC、NCHW或NC1HWC0；scale和batch_variance为一维ND。
-- Ascend950 Vector分支的grads和x_backprop仅支持NCHW和NHWC；不支持NC1HWC0。
+- <term>Ascend 950PR&950DT系列产品</term>：grads和x_backprop仅支持NCHW和NHWC；不支持NC1HWC0。
 - x_backprop的shape、数据类型和数据格式与grads一致。
 - epsilon仅限定为FLOAT标量，无额外范围、枚举或步长约束。
 

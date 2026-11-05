@@ -418,12 +418,12 @@ bool CheckHardwareSupport()
 
     LOG_PRINT("Current SOC: %s\n", socName);
 
-    // 该算子仅支持Ascend950
+    // 该算子仅支持Ascend 950PR&950DT系列产品
     if (strstr(socName, "Ascend950") != nullptr || strstr(socName, "ascend950") != nullptr) {
         return true;
     }
 
-    LOG_PRINT("Warning: This operator only supports Ascend950, current SOC '%s' is not supported. Skip test.\n",
+    LOG_PRINT("Warning: This operator only supports Ascend 950PR&950DT products, current SOC '%s' is not supported. Skip test.\n",
               socName);
     return false;
 }
