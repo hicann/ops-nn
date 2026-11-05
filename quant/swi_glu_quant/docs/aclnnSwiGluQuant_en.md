@@ -32,13 +32,13 @@
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}[0\colon g[0],\colon] = Act[0\colon g[0],\colon] * smooth\_scales[0,\colon], i=0 \\
     Y_{tmp}[g[i]\colon g[i+1], \colon] = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[i+1, \colon], i \in (0, G) \cap \mathbb{Z}\\
-    scale=127/row\_max(abs(Y_{tmp}))
+    scale=dstTypeScale/row\_max(abs(Y_{tmp}))
   $$
 
   $
     Y = Cast(Mul(Y_{tmp}, Scale))
   $
-     where A represents the first half of input x, B represents the second half of input x, g represents group_index, and G is the number of groups in group_index.
+     where A represents the first half of input x, B represents the second half of input x, g represents group_index, and G is the number of groups in group_index. When quantizing to int8, $dstTypeScale = 127$ (the maximum value of int8); when quantizing to int4, $dstTypeScale = 7$ (the maximum value of int4). INT4 output packs two values per byte and ranges from -8 to 7.
 
 - Static quantization formula:
 
@@ -168,8 +168,8 @@ aclnnStatus aclnnSwiGluQuant(
       <td>yOut (aclTensor*)</td>
       <td>Output</td>
       <td>Output tensor.</td>
-      <td>The size of the last dimension of output yOut is half that of the last dimension of input x, and the other dimensions keep consistent with x.</td>
-      <td>INT8</td>
+      <td>The size of the last dimension of output yOut is half that of the last dimension of input x, and the other dimensions keep consistent with x. When yOut is INT4, the last dimension of x must be divisible by 4.</td>
+      <td>INT8, INT4</td>
       <td>ND</td>
       <td>-</td>
       <td>×</td>

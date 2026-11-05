@@ -30,13 +30,13 @@
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}[0\colon g[0],\colon] = Act[0\colon g[0],\colon] * smooth\_scales[0,\colon], i=0 \\
     Y_{tmp}[g[i]\colon g[i+1], \colon] = Act[g[i]\colon g[i+1], \colon] *  smooth\_scales[i+1, \colon], i \in (0, G) \cap \mathbb{Z}\\
-    scale=127/row\_max(abs(Y_{tmp}))
+    scale=dstTypeScale/row\_max(abs(Y_{tmp}))
   $$
 
   $$
     Y = Cast(Mul(Y_{tmp}, Scale))
   $$
-     其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。
+     其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。int8量化时，$dstTypeScale = 127$（127是int8的最大值）；int4量化时，$dstTypeScale = 7$（7是int4的最大值）。INT4输出时每字节打包2个值，取值范围为[-8, 7]。
 
 - 静态量化计算公式：
 
@@ -166,8 +166,8 @@ aclnnStatus aclnnSwiGluQuant(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>输出张量。</td>
-      <td>计算输出yOut的shape最后一维大小为计算输入x最后一维的二分之一，其余维度与x保持一致。</td>
-      <td>INT8</td>
+      <td>计算输出yOut的shape最后一维大小为计算输入x最后一维的二分之一，其余维度与x保持一致。当yOut的数据类型为INT4时，x的最后一维必须能被4整除。</td>
+      <td>INT8、INT4</td>
       <td>ND</td>
       <td>-</td>
       <td>×</td>
