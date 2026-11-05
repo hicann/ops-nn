@@ -13,3 +13,7 @@ lpnorm_smoke_group_bf16,lp_norm_reduce,"((2,65536),)","('bfloat16',)","((2,),)",
 lpnorm_smoke_group_f32,lp_norm_reduce,"((2,65536),)","('float32',)","((2,),)","('float32',)","{'p':2,'axes':[1]}","((10,1000),)"
 lpnorm_group_overflow_f32,lp_norm_reduce,"((2,65536),)","('float32',)","((2,),)","('float32',)","{'p': 2, 'axes': [1]}","((1e20,1e20),)"
 infnan_group_f32,lp_norm_reduce,"((2,65536),)","('float32',)","((2,),)","('float32',)","{'p': 1, 'axes': [1]}","((1,1),)"
+lpnorm_power16_f32,lp_norm_reduce,"((1,1,64),)","('float32',)","((1,64),)","('float32',)","{'p':16,'axes':[1]}","((-2,-1),)"
+lpnorm_power3_overflow_boundary_f32,lp_norm_reduce,"((1,1,8),)","('float32',)","((1,8),)","('float32',)","{'p':3,'axes':[1]}","((6981463572480,6981463572480),)"
+lpnorm_power16_overflow_f32,lp_norm_reduce,"((2,32),)","('float32',)","((2,),)","('float32',)","{'p':16,'axes':[1]}","((1000,1000),)"
+infnan_power16_f32,lp_norm_reduce,"((2,33),)","('float32',)","((2,),)","('float32',)","{'p':16,'axes':[1]}","((1,1),)"

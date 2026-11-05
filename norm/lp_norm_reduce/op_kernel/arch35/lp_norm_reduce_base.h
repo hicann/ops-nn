@@ -128,7 +128,53 @@ __aicore__ inline float PadValueOf(int64_t pOrder)
 // padded 整 tile 覆盖：R 方向 pad 由清零 VF 在 Reduce 前清为 pad_value，
 // A 方向 garbage 由 lane 隔离（Kernel.md §9.4）。
 // =============================================================================
-template <typename DType, bool HugeFiniteP>
+// Carry the rounding residual through integer-power products. MulAddDst is
+// fused for fp32, so a*b-rounded(a*b) recovers the low part of the product.
+__simd_callee__ inline void MultiplyPowerPair(AscendC::Reg::RegTensor<float>& dstHigh,
+                                              AscendC::Reg::RegTensor<float>& dstLow,
+                                              AscendC::Reg::RegTensor<float>& aHigh,
+                                              AscendC::Reg::RegTensor<float>& aLow,
+                                              AscendC::Reg::RegTensor<float>& bHigh,
+                                              AscendC::Reg::RegTensor<float>& bLow, AscendC::Reg::MaskReg& mask)
+{
+    AscendC::Reg::RegTensor<float> product;
+    AscendC::Reg::RegTensor<float> error;
+    AscendC::Reg::RegTensor<float> rounded;
+    AscendC::Reg::RegTensor<float> zero;
+    AscendC::Reg::RegTensor<float> scaledHigh;
+    AscendC::Reg::RegTensor<float> scaledLow;
+    AscendC::Reg::MaskReg finite;
+    AscendC::Reg::MaskReg overflow;
+    AscendC::Reg::Duplicate(zero, 0.0f);
+    AscendC::Reg::Mul(product, aHigh, bHigh, mask);
+    // The rounded high parts can overflow even when their corrected product
+    // is finite. Halve one operand in those lanes and rescale after rounding.
+    AscendC::Reg::Compares<float, AscendC::CMPMODE::EQ>(overflow, product, __builtin_huge_valf(), mask);
+    AscendC::Reg::Muls(scaledHigh, aHigh, 0.5f, mask);
+    AscendC::Reg::Muls(scaledLow, aLow, 0.5f, mask);
+    AscendC::Reg::Select(scaledHigh, scaledHigh, aHigh, overflow);
+    AscendC::Reg::Select(scaledLow, scaledLow, aLow, overflow);
+    AscendC::Reg::Mul(product, scaledHigh, bHigh, mask);
+    AscendC::Reg::Sub(error, zero, product, mask);
+    AscendC::Reg::MulAddDst(error, scaledHigh, bHigh, mask);
+    AscendC::Reg::MulAddDst(error, scaledHigh, bLow, mask);
+    AscendC::Reg::MulAddDst(error, scaledLow, bHigh, mask);
+    // Positive powers may overflow. Keep Inf/NaN in the high part and clear
+    // their residual so a later Inf*0 correction cannot poison a valid Inf.
+    AscendC::Reg::Compares<float, AscendC::CMPMODE::LT>(finite, product, __builtin_huge_valf(), mask);
+    AscendC::Reg::Select(error, error, zero, finite);
+    AscendC::Reg::Add(dstHigh, product, error, mask);
+    AscendC::Reg::Sub(rounded, dstHigh, product, mask);
+    AscendC::Reg::Sub(dstLow, error, rounded, mask);
+    AscendC::Reg::Muls(rounded, dstHigh, 2.0f, mask);
+    AscendC::Reg::Select(dstHigh, rounded, dstHigh, overflow);
+    AscendC::Reg::Muls(rounded, dstLow, 2.0f, mask);
+    AscendC::Reg::Select(dstLow, rounded, dstLow, overflow);
+    AscendC::Reg::Compares<float, AscendC::CMPMODE::LT>(finite, dstHigh, __builtin_huge_valf(), mask);
+    AscendC::Reg::Select(dstLow, dstLow, zero, finite);
+}
+
+template <typename DType, bool HugeFiniteP, bool AccuratePower = false>
 __simd_vf__ inline void PreElewiseVfImpl(__ubuf__ DType* src, __ubuf__ float* dst, uint32_t totalElems,
                                          uint16_t repeatTime, int64_t pOrder)
 {
@@ -188,20 +234,33 @@ __simd_vf__ inline void PreElewiseVfImpl(__ubuf__ DType* src, __ubuf__ float* ds
             // 为运行时标量，轮数由其二进制位数决定，与 tile 元素数无关）。
             // ⛔ +inf 哨兵 2147483647 仍须排除——它按 §9.1 取值表走「直通 |x| +
             // ReduceMax」，落入本分支会污染 max 语义。
-            // 顺序乘法 → 二进制幂的浮点结合次序变化在 fp32 计算域容差内，且与
-            // changwei 参考实现求值次序一致（codex 审查缺陷 #1：原 p−1 次线性
-            // 乘法在合法大 p 下 ~21 亿轮/ tile，表现为 kernel 超时）。
+            // FP32 p>2 retains a low part across the same binary-power steps;
+            // other types and p=2 use the original multiplication path.
             AscendC::Reg::RegTensor<float> absReg;
+            AscendC::Reg::RegTensor<float> resultLow;
+            AscendC::Reg::RegTensor<float> baseLow;
             AscendC::Reg::Abs(absReg, f32Reg, mask); // base = |x|（Abs 幂等）
             AscendC::Reg::Duplicate(f32Reg, 1.0f);   // result = 1
+            if constexpr (AccuratePower) {
+                AscendC::Reg::Duplicate(resultLow, 0.0f);
+                AscendC::Reg::Duplicate(baseLow, 0.0f);
+            }
             uint64_t exp = static_cast<uint64_t>(pOrder);
             while (exp != 0UL) {
                 if ((exp & 1UL) != 0UL) {
-                    AscendC::Reg::Mul(f32Reg, f32Reg, absReg, mask); // result *= base
+                    if constexpr (AccuratePower) {
+                        MultiplyPowerPair(f32Reg, resultLow, f32Reg, resultLow, absReg, baseLow, mask);
+                    } else {
+                        AscendC::Reg::Mul(f32Reg, f32Reg, absReg, mask); // result *= base
+                    }
                 }
                 exp >>= 1UL;
                 if (exp != 0UL) {
-                    AscendC::Reg::Mul(absReg, absReg, absReg, mask); // base *= base
+                    if constexpr (AccuratePower) {
+                        MultiplyPowerPair(absReg, baseLow, absReg, baseLow, absReg, baseLow, mask);
+                    } else {
+                        AscendC::Reg::Mul(absReg, absReg, absReg, mask); // base *= base
+                    }
                 }
             }
         }
@@ -960,6 +1019,12 @@ __aicore__ inline void LpNormReduceBaseKernel<DType>::PreElewiseVf(__ubuf__ DT* 
     if (td_->pOrder >= HUGE_FINITE_P_THRESHOLD) {
         asc_vf_call<PreElewiseVfImpl<DT, true>>(src, dst, totalElems, repeatTime, td_->pOrder);
     } else {
+        if constexpr (std::is_same_v<DT, float>) {
+            if (td_->pOrder > 2 && td_->pOrder < P_INF_SENTINEL) {
+                asc_vf_call<PreElewiseVfImpl<DT, false, true>>(src, dst, totalElems, repeatTime, td_->pOrder);
+                return;
+            }
+        }
         asc_vf_call<PreElewiseVfImpl<DT, false>>(src, dst, totalElems, repeatTime, td_->pOrder);
     }
 }
