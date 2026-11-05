@@ -46,6 +46,8 @@ ge::graphStatus BatchMatMulV3Tiling::ValidateBias()
             Ops::NN::FormatString("%s of %s must be equal to %d", "M-axis", "bias", 1).c_str());
         return ge::GRAPH_FAILED;
     }
+    // bias with batch-axis should not merge batch into M axis, otherwise batch-axis check of bias will fail
+    batchInfo_.biasWithBatch = biasDims > NO_BATCH_SHAPE_DIM;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -185,7 +187,7 @@ std::vector<int32_t> BatchMatMulV3Tiling::GetRegistryPriorities(NpuArch npuArch)
 
 void BatchMatMulV3Tiling::MergeBatchAndMAxis(MatMulV3BatchInfo& batchInfo)
 {
-    if (batchInfo.batchB != 1UL || args_.isATrans) {
+    if (batchInfo.biasWithBatch || batchInfo.batchB != 1UL || args_.isATrans) {
         return;
     }
     if (batchInfo.batchA > static_cast<uint64_t>(INT32_MAX) / args_.mValue) {

@@ -88,6 +88,7 @@ struct MatMulV3BatchInfo {
     uint64_t batchC2 = 1UL;
     uint64_t batchC3 = 1UL;
     uint64_t batchBias = 1UL;
+    bool biasWithBatch = false; // bias has batch-axis, should not merge batch into M axis
 };
 
 struct MatMulV3Args {
