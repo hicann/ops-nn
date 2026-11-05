@@ -215,7 +215,8 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
         typename std::conditional<sizeof(DTYPE_VAR) == 2, uint16_t,
                                   typename std::conditional<sizeof(DTYPE_VAR) == 4, uint32_t, uint64_t>::type>::type>::
         type;
-    LaunchScatterSmallShapeNone<FastDataT, DTYPE_INDICES>(var, indices, updates, tiling);
+    GET_TILING_DATA_WITH_STRUCT(ScatterElementsV2SmallShapeTilingData, smallTilingData, tiling);
+    LaunchScatterSmallShapeNone<FastDataT, DTYPE_INDICES>(var, indices, updates, &smallTilingData, tiling);
     return;
 #endif
     if (workspace == nullptr) {

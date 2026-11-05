@@ -33,7 +33,6 @@
 #include "platform/platform_infos_def.h"
 #include "../../../../op_host/arch35/scatter_elements_v2_base_tiling.h"
 #include "../../../../op_host/arch35/scatter_elements_v2_asc_tiling.h"
-#include "../../../../op_kernel/arch35/scatter_elements_v2_small_shape_tiling.h"
 
 using namespace std;
 using namespace ge;
@@ -44,13 +43,31 @@ protected:
     static void TearDownTestCase() { std::cout << "ScatterElementsV2WithSortedTiling TearDown" << std::endl; }
 };
 
+// Serialized wire layout, checked independently of the host tiling class.
+struct ScatterElementsV2SmallShapeTiling {
+    uint32_t allAxis;
+    uint32_t rank;
+    uint32_t dim;
+    uint32_t threads;
+    // Keep the low-rank scalar arguments together in the first 32 bytes.
+    uint32_t dataStride;
+    uint32_t indicesStride;
+    uint32_t updatesStride;
+    uint32_t axisStride;
+    uint32_t targetStrides[8];
+    uint32_t indicesStrides[7];
+    uint32_t updatesStrides[7];
+    uint32_t reserved[2];
+};
+static_assert(sizeof(ScatterElementsV2SmallShapeTiling) == 128);
+
 struct WithSortedTilingResult {
     ge::graphStatus status = ge::GRAPH_FAILED;
     uint64_t tilingKey = 0;
     uint32_t blockDim = 0;
     size_t workspaceSize = 0;
     size_t rawTilingSize = 0;
-    ScatterElements::ScatterElementsV2SmallShapeTiling smallShape{};
+    ScatterElementsV2SmallShapeTiling smallShape{};
     uint64_t indicesTotalNum = 0;
     int64_t baseS = 0;
     int64_t baseA = 0;
@@ -948,4 +965,16 @@ TEST_F(ScatterElementsV2WithSortedTiling, small_none_nd_limit_and_fallbacks)
     RunWithSortedTilingCase(DT_FLOAT, DT_INT32, DT_FLOAT, largeData, index, src, -1, "none", 0, result);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.tilingKey / 1000000, 1UL);
+}
+
+TEST_F(ScatterElementsV2WithSortedTiling, small_none_registered_tiling_layout)
+{
+    const uint64_t keys[] = {3000001, 3000002, 3000004, 3000008, 3001001, 3001002, 3001004, 3001008};
+    for (const auto key : keys) {
+        const auto name = std::string("ScatterElementsV2_") + std::to_string(key);
+        auto data = optiling::CTilingDataClassFactory::GetInstance().CreateTilingDataInstance(name.c_str());
+        ASSERT_NE(data, nullptr);
+        EXPECT_STREQ(data->GetTilingClassName(), "ScatterElementsV2SmallShapeTilingData");
+        EXPECT_EQ(data->GetDataSize(), 128U);
+    }
 }

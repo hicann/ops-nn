@@ -30,6 +30,30 @@ namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 constexpr int16_t TILING_ARRAY_LEN = 7;
 
+BEGIN_TILING_DATA_DEF(ScatterElementsV2SmallShapeTilingData)
+TILING_DATA_FIELD_DEF(uint32_t, allAxis);
+TILING_DATA_FIELD_DEF(uint32_t, rank);
+TILING_DATA_FIELD_DEF(uint32_t, dim);
+TILING_DATA_FIELD_DEF(uint32_t, threads);
+TILING_DATA_FIELD_DEF(uint32_t, dataStride);
+TILING_DATA_FIELD_DEF(uint32_t, indicesStride);
+TILING_DATA_FIELD_DEF(uint32_t, updatesStride);
+TILING_DATA_FIELD_DEF(uint32_t, axisStride);
+TILING_DATA_FIELD_DEF_ARR(uint32_t, 8, targetStrides);
+TILING_DATA_FIELD_DEF_ARR(uint32_t, 7, indicesStrides);
+TILING_DATA_FIELD_DEF_ARR(uint32_t, 7, updatesStrides);
+TILING_DATA_FIELD_DEF_ARR(uint32_t, 2, reserved);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2_3000001, ScatterElementsV2SmallShapeTilingData)
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2_3000002, ScatterElementsV2SmallShapeTilingData)
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2_3000004, ScatterElementsV2SmallShapeTilingData)
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2_3000008, ScatterElementsV2SmallShapeTilingData)
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2_3001001, ScatterElementsV2SmallShapeTilingData)
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2_3001002, ScatterElementsV2SmallShapeTilingData)
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2_3001004, ScatterElementsV2SmallShapeTilingData)
+REGISTER_TILING_DATA_CLASS(ScatterElementsV2_3001008, ScatterElementsV2SmallShapeTilingData)
+
 BEGIN_TILING_DATA_DEF(ScatterElementsV2SortTilingData)
 TILING_DATA_FIELD_DEF(int64_t, indicesTotalNum);  // 索引总数 N（排序模板切核依据）
 TILING_DATA_FIELD_DEF(int64_t, keySize);          // Sort key 字节宽 2/4/8

@@ -21,8 +21,6 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "error_util.h"
 #include "scatter_elements_v2_base_tiling.h"
-#include "../../op_kernel/arch35/scatter_elements_v2_small_shape_tiling.h"
-#include <cstring>
 
 using namespace AscendC;
 namespace optiling {
@@ -57,6 +55,8 @@ constexpr int64_t MIN_SORT_ELEMENTS_PER_CORE = 1024;
 constexpr int64_t MIN_INDEX_BYTES_PER_CORE = 1024;
 constexpr int64_t SMALL_SHAPE_SIMT_LANES = 64;
 constexpr int64_t SMALL_SHAPE_MAX_UPDATES = 8192;
+constexpr int16_t SMALL_SHAPE_MAX_RANK = 8;
+constexpr int64_t SMALL_SHAPE_LOW_RANK_MAX_THREADS = 1024;
 constexpr int64_t SIMT_UB_RES_SIZE = 640;
 constexpr uint32_t MAX_SORT_SPACE = 10240;
 constexpr int64_t PHASE_THREAD_NUM = 1024; // Phase1/Phase3 每核 stride-loop 粒度（按索引总数切核）
@@ -576,7 +576,7 @@ void ScatterElementsV2AscTiling::ComputeSmallShapeLaunch()
         coreNum = warpCount;
     }
     coreNum = std::min(coreNum, totalCoreNum_);
-    const int64_t maxThreads = ScatterElements::SMALL_SHAPE_THREAD_LIMITS[rank_ - 1];
+    const int64_t maxThreads = rank_ <= 2 ? SMALL_SHAPE_LOW_RANK_MAX_THREADS : MAX_THREAD_NUM;
     smallShapeThreadNum_ = std::min(
         maxThreads, Ops::Base::CeilAlign(Ops::Base::CeilDiv(allAxis_, coreNum), SMALL_SHAPE_SIMT_LANES));
     // Thread alignment can leave whole cores idle, especially at the hardware
@@ -783,9 +783,8 @@ ge::graphStatus ScatterElementsV2AscTiling::DoLibApiTiling() { return ge::GRAPH_
 bool ScatterElementsV2AscTiling::CanUseSmallShapeFast() const
 {
     return !isScalarUpdates_ && !context_->GetDeterministic() && reduction_ == REDUCTION_NONE && rank_ >= 1 &&
-           rank_ <= static_cast<int16_t>(ScatterElements::SMALL_SHAPE_MAX_RANK) && allAxis_ > 0 &&
-           allAxis_ <= SMALL_SHAPE_MAX_UPDATES && dataAxis_ > 0 && dataAxis_ <= MAX_INT32_NUM && updatesAxis_ > 0 &&
-           updatesAxis_ <= MAX_INT32_NUM;
+           rank_ <= SMALL_SHAPE_MAX_RANK && allAxis_ > 0 && allAxis_ <= SMALL_SHAPE_MAX_UPDATES && dataAxis_ > 0 &&
+           dataAxis_ <= MAX_INT32_NUM && updatesAxis_ > 0 && updatesAxis_ <= MAX_INT32_NUM;
 }
 
 uint64_t ScatterElementsV2AscTiling::GetTilingKey() const
@@ -858,28 +857,34 @@ ge::graphStatus ScatterElementsV2AscTiling::PostTiling()
     }
     context_->SetScheduleMode(1);
     if (CanUseSmallShapeFast()) {
-        ScatterElements::ScatterElementsV2SmallShapeTiling fastTiling{};
-        fastTiling.allAxis = static_cast<uint32_t>(allAxis_);
-        fastTiling.rank = static_cast<uint32_t>(rank_);
-        fastTiling.dim = static_cast<uint32_t>(dim_);
-        fastTiling.threads = static_cast<uint32_t>(smallShapeThreadNum_);
-        fastTiling.dataStride = static_cast<uint32_t>(dataStride_[0]);
-        fastTiling.indicesStride = static_cast<uint32_t>(indicesStride_[0]);
-        fastTiling.updatesStride = static_cast<uint32_t>(updatesStride_[0]);
-        fastTiling.axisStride = dim_ == rank_ - 1 ? 1 : static_cast<uint32_t>(dataStride_[dim_]);
+        ScatterElementsV2SmallShapeTilingData fastTiling;
+        fastTiling.set_allAxis(static_cast<uint32_t>(allAxis_));
+        fastTiling.set_rank(static_cast<uint32_t>(rank_));
+        fastTiling.set_dim(static_cast<uint32_t>(dim_));
+        fastTiling.set_threads(static_cast<uint32_t>(smallShapeThreadNum_));
+        fastTiling.set_dataStride(static_cast<uint32_t>(dataStride_[0]));
+        fastTiling.set_indicesStride(static_cast<uint32_t>(indicesStride_[0]));
+        fastTiling.set_updatesStride(static_cast<uint32_t>(updatesStride_[0]));
+        fastTiling.set_axisStride(dim_ == rank_ - 1 ? 1 : static_cast<uint32_t>(dataStride_[dim_]));
+        uint32_t targetStrides[8] = {};
+        uint32_t indicesStrides[7] = {};
+        uint32_t updatesStrides[7] = {};
         for (int16_t d = 0; d < rank_; ++d) {
             const uint32_t stride = d == rank_ - 1 ? 1 : static_cast<uint32_t>(dataStride_[d]);
-            fastTiling.targetStrides[d] = d == dim_ ? 0 : stride;
+            targetStrides[d] = d == dim_ ? 0 : stride;
             if (d < rank_ - 1) {
-                fastTiling.indicesStrides[d] = static_cast<uint32_t>(indicesStride_[d]);
-                fastTiling.updatesStrides[d] = static_cast<uint32_t>(updatesStride_[d]);
+                indicesStrides[d] = static_cast<uint32_t>(indicesStride_[d]);
+                updatesStrides[d] = static_cast<uint32_t>(updatesStride_[d]);
             }
         }
-        if (context_->GetRawTilingData()->GetCapacity() < sizeof(fastTiling)) {
+        fastTiling.set_targetStrides(targetStrides);
+        fastTiling.set_indicesStrides(indicesStrides);
+        fastTiling.set_updatesStrides(updatesStrides);
+        if (context_->GetRawTilingData()->GetCapacity() < fastTiling.GetDataSize()) {
             return ge::GRAPH_FAILED;
         }
-        std::memcpy(context_->GetRawTilingData()->GetData(), &fastTiling, sizeof(fastTiling));
-        context_->GetRawTilingData()->SetDataSize(sizeof(fastTiling));
+        fastTiling.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+        context_->GetRawTilingData()->SetDataSize(fastTiling.GetDataSize());
         return context_->SetLocalMemorySize(ubSize_ + SIMT_UB_RES_SIZE);
     }
     int64_t localMemorySize = isSortDeterm_ ? globalSortLocalMemorySize_ : ubSize_ + SIMT_UB_RES_SIZE;
