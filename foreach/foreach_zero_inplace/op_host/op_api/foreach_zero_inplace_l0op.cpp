@@ -21,8 +21,8 @@ OP_TYPE_REGISTER(ForeachZeroInplace);
 aclnnStatus ForeachZeroInplace(const aclTensorList* x, aclOpExecutor* executor)
 {
     L0_DFX(ForeachZeroInplace, x);
-    // The kernel updates the input GM addresses and has no output arguments.
-    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachZeroInplace, OP_INPUT(x), OP_OUTPUT());
+    // Preserve in-place behavior by passing the same list as input and graph ref output.
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ForeachZeroInplace, OP_INPUT(x), OP_OUTPUT(x));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ret, "Failed to add ForeachZeroInplace to the launcher list.");
     }

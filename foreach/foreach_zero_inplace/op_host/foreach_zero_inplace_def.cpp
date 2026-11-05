@@ -29,6 +29,12 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
+        this->Output("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list)
+            .Format(format_list)
+            .UnknownShapeFormat(format_list)
+            .AutoContiguous();
         this->AICore().AddConfig("ascend950");
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");
@@ -51,6 +57,12 @@ private:
         std::vector<ge::DataType> tensor_dtype_list_kirin = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT16};
         std::vector<ge::Format> format_list_kirin(tensor_dtype_list_kirin.size(), ge::FORMAT_ND);
         config_kirin.Input("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_kirin)
+            .Format(format_list_kirin)
+            .UnknownShapeFormat(format_list_kirin)
+            .AutoContiguous();
+        config_kirin.Output("x")
             .ParamType(DYNAMIC)
             .DataType(tensor_dtype_list_kirin)
             .Format(format_list_kirin)

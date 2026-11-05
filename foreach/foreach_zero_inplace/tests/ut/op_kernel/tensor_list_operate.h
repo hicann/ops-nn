@@ -56,15 +56,27 @@ uint8_t* CreateTensorListForeachZeroInplace(const std::vector<std::vector<uint64
         uint8_t* dataPtr = (uint8_t*)AscendC::GmAlloc(CeilA2B(dataSize, 32) * 32);
         std::stringstream fileName;
         fileName << "./zero_inplace_data/" << d_type << "_input_t_foreach_zero_inplace_" << i << ".bin";
-        ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
+        if (!ReadFile(fileName.str(), dataSize, dataPtr, dataSize)) {
+            uint8_t* dataAddr = reinterpret_cast<uint8_t*>(tensorListDesc) + *tensorListDesc;
+            for (size_t j = 0; j < i; j++) {
+                AscendC::GmFree(reinterpret_cast<void*>(*(reinterpret_cast<uint64_t*>(dataAddr) + j)));
+            }
+            AscendC::GmFree(dataPtr);
+            AscendC::GmFree(tensorListDesc);
+            return nullptr;
+        }
         *(tensorListDesc + addrIndex) = (uint64_t)dataPtr;
     }
     return (uint8_t*)tensorListDesc;
 }
 
 template <typename T>
-void FreeTensorListForeachZeroInplace(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type)
+void FreeTensorListForeachZeroInplace(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type,
+                                      bool writeOutput = true)
 {
+    if (addr == nullptr) {
+        return;
+    }
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;
     for (size_t i = 0; i < shapeInfos.size(); i++) {
@@ -73,9 +85,11 @@ void FreeTensorListForeachZeroInplace(uint8_t* addr, const std::vector<std::vect
             shapeSize *= shapeInfos[i][j];
         }
         uint8_t* tensorAddr = (uint8_t*)(*((uint64_t*)(dataAddr) + i));
-        std::stringstream fileName;
-        fileName << "./zero_inplace_data/" << d_type << "_output_t_foreach_zero_inplace_" << i << ".bin";
-        WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
+        if (writeOutput) {
+            std::stringstream fileName;
+            fileName << "./zero_inplace_data/" << d_type << "_output_t_foreach_zero_inplace_" << i << ".bin";
+            WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
+        }
         AscendC::GmFree((void*)(tensorAddr));
     }
 

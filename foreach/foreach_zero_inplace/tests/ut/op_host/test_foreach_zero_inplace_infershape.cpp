@@ -26,84 +26,142 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachZeroInplace TearDown" << std::endl; }
 };
 
-TEST_F(ForeachZeroInplaceTest, infer_shape_known_success)
+TEST_F(ForeachZeroInplaceTest, infer_callbacks_registered)
 {
-    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace")->infer_shape;
-    ASSERT_NE(infer_shape_func, nullptr);
+    const auto impl = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace");
+    ASSERT_NE(impl, nullptr);
+    EXPECT_NE(impl->infer_shape, nullptr);
+    EXPECT_NE(impl->infer_datatype, nullptr);
+}
 
-    // x
-    gert::StorageShape x_shape_0 = {{1}, {}};
-    gert::StorageShape x_shape_1 = {{2}, {}};
-    gert::StorageShape x_shape_2 = {{3}, {}};
+TEST_F(ForeachZeroInplaceTest, infer_shape_mirrors_dynamic_inputs)
+{
+    auto inferShape = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace")->infer_shape;
+    ASSERT_NE(inferShape, nullptr);
 
-    gert::StorageShape y_shape_0 = {{}, {}};
-    gert::StorageShape y_shape_1 = {{}, {}};
-    gert::StorageShape y_shape_2 = {{}, {}};
-
-    std::vector<void*> input_shape_ref(3);
-    input_shape_ref[0] = &x_shape_0;
-    input_shape_ref[1] = &x_shape_1;
-    input_shape_ref[2] = &x_shape_2;
-
-    std::vector<void*> output_shape_ref(3);
-    output_shape_ref[0] = &y_shape_0;
-    output_shape_ref[1] = &y_shape_1;
-    output_shape_ref[2] = &y_shape_2;
+    gert::StorageShape xShape0 = {{1}, {}};
+    gert::StorageShape xShape1 = {{2, 3}, {}};
+    gert::StorageShape xShape2 = {{}, {}};
+    gert::StorageShape yShape0 = {{}, {}};
+    gert::StorageShape yShape1 = {{}, {}};
+    gert::StorageShape yShape2 = {{}, {}};
+    std::vector<void*> inputShapes = {&xShape0, &xShape1, &xShape2};
+    std::vector<void*> outputShapes = {&yShape0, &yShape1, &yShape2};
 
     auto holder = gert::InferShapeContextFaker()
                       .IrInstanceNum({3}, {3})
-                      .InputShapes(input_shape_ref)
-                      .OutputShapes(output_shape_ref)
+                      .InputShapes(inputShapes)
+                      .OutputShapes(outputShapes)
+                      .Build();
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_NE(context, nullptr);
+    ASSERT_EQ(inferShape(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[1]");
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(1)), "[2, 3]");
+    EXPECT_EQ(Ops::Base::ToString(*context->GetOutputShape(2)), "[]");
+}
+
+TEST_F(ForeachZeroInplaceTest, infer_shape_rejects_rank_above_limit)
+{
+    auto inferShape = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace")->infer_shape;
+    ASSERT_NE(inferShape, nullptr);
+
+    gert::StorageShape xShape = {{1, 1, 1, 1, 1, 1, 1, 1, 1}, {}};
+    gert::StorageShape yShape = {{}, {}};
+    std::vector<void*> inputShapes = {&xShape};
+    std::vector<void*> outputShapes = {&yShape};
+    auto holder = gert::InferShapeContextFaker()
+                      .IrInstanceNum({1}, {1})
+                      .InputShapes(inputShapes)
+                      .OutputShapes(outputShapes)
                       .Build();
 
     auto context = holder.GetContext<gert::InferShapeContext>();
     ASSERT_NE(context, nullptr);
-    ASSERT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
-
-    auto output_shape_0 = context->GetOutputShape(0);
-    EXPECT_EQ(Ops::Base::ToString(*output_shape_0), "[]");
-
-    auto output_shape_1 = context->GetOutputShape(1);
-    EXPECT_EQ(Ops::Base::ToString(*output_shape_1), "[]");
-
-    auto output_shape_2 = context->GetOutputShape(2);
-    EXPECT_EQ(Ops::Base::ToString(*output_shape_2), "[]");
+    EXPECT_EQ(inferShape(context), ge::GRAPH_FAILED);
 }
 
-TEST_F(ForeachZeroInplaceTest, infer_dtype_test_1)
+TEST_F(ForeachZeroInplaceTest, infer_shape_rejects_output_count_mismatch)
 {
-    auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace")->infer_datatype;
-    ASSERT_NE(infer_datatype_func, nullptr);
+    auto inferShape = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace")->infer_shape;
+    ASSERT_NE(inferShape, nullptr);
 
-    // x
-    ge::DataType x_dtype_0 = ge::DT_FLOAT16;
-    ge::DataType x_dtype_1 = ge::DT_FLOAT16;
-    ge::DataType x_dtype_2 = ge::DT_FLOAT16;
+    gert::StorageShape xShape0 = {{1}, {}};
+    gert::StorageShape xShape1 = {{2}, {}};
+    gert::StorageShape yShape = {{}, {}};
+    std::vector<void*> inputShapes = {&xShape0, &xShape1};
+    std::vector<void*> outputShapes = {&yShape};
+    auto holder = gert::InferShapeContextFaker()
+                      .IrInstanceNum({2}, {1})
+                      .InputShapes(inputShapes)
+                      .OutputShapes(outputShapes)
+                      .Build();
 
-    std::vector<void*> input_dtype_ref(3);
-    input_dtype_ref[0] = &x_dtype_0;
-    input_dtype_ref[1] = &x_dtype_1;
-    input_dtype_ref[2] = &x_dtype_2;
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(inferShape(context), ge::GRAPH_FAILED);
+}
 
-    std::vector<void*> output_dtype_ref(3);
+TEST_F(ForeachZeroInplaceTest, infer_dtype_mirrors_dynamic_inputs)
+{
+    auto inferDtype = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace")->infer_datatype;
+    ASSERT_NE(inferDtype, nullptr);
 
+    ge::DataType xDtype0 = ge::DT_FLOAT16;
+    ge::DataType xDtype1 = ge::DT_FLOAT16;
+    ge::DataType xDtype2 = ge::DT_FLOAT16;
+    std::vector<void*> inputDtypes = {&xDtype0, &xDtype1, &xDtype2};
+    std::vector<void*> outputDtypes(3);
     auto holder = gert::InferDataTypeContextFaker()
                       .IrInstanceNum({3}, {3})
-                      .InputDataTypes(input_dtype_ref)
-                      .OutputDataTypes(output_dtype_ref)
+                      .InputDataTypes(inputDtypes)
+                      .OutputDataTypes(outputDtypes)
                       .Build();
 
     auto context = holder.GetContext<gert::InferDataTypeContext>();
     ASSERT_NE(context, nullptr);
-    ASSERT_EQ(infer_datatype_func(context), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(inferDtype(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT16);
+    EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT16);
+    EXPECT_EQ(context->GetOutputDataType(2), ge::DT_FLOAT16);
+}
 
-    ge::DataType expected_datatype = ge::DT_MAX;
-    auto output_dtype_0 = context->GetOutputDataType(0);
-    EXPECT_EQ(output_dtype_0, expected_datatype);
+TEST_F(ForeachZeroInplaceTest, infer_dtype_rejects_mixed_inputs)
+{
+    auto inferDtype = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace")->infer_datatype;
+    ASSERT_NE(inferDtype, nullptr);
 
-    auto output_dtype_1 = context->GetOutputDataType(1);
-    EXPECT_EQ(output_dtype_1, expected_datatype);
+    ge::DataType xDtype0 = ge::DT_FLOAT16;
+    ge::DataType xDtype1 = ge::DT_FLOAT;
+    std::vector<void*> inputDtypes = {&xDtype0, &xDtype1};
+    std::vector<void*> outputDtypes(2);
+    auto holder = gert::InferDataTypeContextFaker()
+                      .IrInstanceNum({2}, {2})
+                      .InputDataTypes(inputDtypes)
+                      .OutputDataTypes(outputDtypes)
+                      .Build();
 
-    auto output_dtype_2 = context->GetOutputDataType(2);
-    EXPECT_EQ(output_dtype_2, expected_datatype);
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(inferDtype(context), ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachZeroInplaceTest, infer_dtype_rejects_unsupported_inputs)
+{
+    auto inferDtype = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachZeroInplace")->infer_datatype;
+    ASSERT_NE(inferDtype, nullptr);
+
+    for (auto dtype : {ge::DT_INT8, ge::DT_DOUBLE}) {
+        std::vector<void*> inputDtypes = {&dtype};
+        std::vector<void*> outputDtypes(1);
+        auto holder = gert::InferDataTypeContextFaker()
+                          .IrInstanceNum({1}, {1})
+                          .InputDataTypes(inputDtypes)
+                          .OutputDataTypes(outputDtypes)
+                          .Build();
+
+        auto context = holder.GetContext<gert::InferDataTypeContext>();
+        ASSERT_NE(context, nullptr);
+        EXPECT_EQ(inferDtype(context), ge::GRAPH_FAILED);
+    }
 }

@@ -17,7 +17,20 @@
                     }
                 ]
             ],
-            "outputs": []
+            "outputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
         },
         {
             "bin_filename": "ForeachZeroInplace_2f745510bc3e9a51d014993a0de1664f",
@@ -35,7 +48,20 @@
                     }
                 ]
             ],
-            "outputs": []
+            "outputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
         },
         {
             "bin_filename": "ForeachZeroInplace_3a055884adb2b306c861a643b92162ad",
@@ -53,7 +79,20 @@
                     }
                 ]
             ],
-            "outputs": []
+            "outputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "int16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
         },
         {
             "bin_filename": "ForeachZeroInplace_226aad6308e394da4825f6e509d8d2b6",
@@ -71,7 +110,20 @@
                     }
                 ]
             ],
-            "outputs": []
+            "outputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "int32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
         },
         {
             "bin_filename": "ForeachZeroInplace_8ef5d9df577156d0a58bf8e19a6cce0e",
@@ -89,7 +141,20 @@
                     }
                 ]
             ],
-            "outputs": []
+            "outputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
         }
     ]
 }

@@ -18,6 +18,7 @@
 #include "register/op_impl_registry.h"
 #include "runtime/infer_shape_context.h"
 #include "runtime/storage_shape.h"
+#include "util/shape_util.h"
 #include "common_dtype.h"
 #include <string>
 #include <vector>
@@ -131,6 +132,58 @@ static ge::graphStatus InferDataType4ForeachInplace(gert::InferDataTypeContext* 
 {
     (void)context;
     return ge::GRAPH_SUCCESS;
+}
+
+constexpr size_t FOREACH_ZERO_INPLACE_MAX_RANK = 8;
+
+bool IsForeachZeroInplaceRankSupported(const gert::Shape& shape)
+{
+    return Ops::Base::IsUnknownRank(shape) || shape.GetDimNum() <= FOREACH_ZERO_INPLACE_MAX_RANK;
+}
+
+bool IsForeachZeroInplaceDtypeMatched(ge::DataType expected, ge::DataType actual) { return expected == actual; }
+
+static bool IsForeachZeroInplaceDtypeSupported(ge::DataType dtype)
+{
+    return dtype == ge::DT_FLOAT16 || dtype == ge::DT_FLOAT || dtype == ge::DT_BF16 || dtype == ge::DT_INT16 ||
+           dtype == ge::DT_INT32;
+}
+
+static ge::graphStatus InferShape4ForeachZeroInplace(gert::InferShapeContext* context)
+{
+    const auto inputInfo = context->GetIrInputInstanceInfo(0);
+    OP_CHECK_IF(inputInfo == nullptr || inputInfo->GetInstanceNum() == 0,
+                OP_LOGE(context->GetNodeName(), "ForeachZeroInplace requires at least one input tensor"),
+                return ge::GRAPH_FAILED);
+
+    for (uint32_t i = 0; i < inputInfo->GetInstanceNum(); ++i) {
+        const auto xShape = context->GetDynamicInputShape(0, i);
+        OP_CHECK_IF(xShape == nullptr, OP_LOGE(context->GetNodeName(), "x[%u] shape is null", i),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(!IsForeachZeroInplaceRankSupported(*xShape),
+                    OP_LOGE(context->GetNodeName(), "x[%u] rank must not exceed %zu", i, FOREACH_ZERO_INPLACE_MAX_RANK),
+                    return ge::GRAPH_FAILED);
+    }
+    return InferShape4ForeachCommon(context);
+}
+
+static ge::graphStatus InferDataType4ForeachZeroInplace(gert::InferDataTypeContext* context)
+{
+    const auto inputInfo = context->GetIrInputInstanceInfo(0);
+    OP_CHECK_IF(inputInfo == nullptr || inputInfo->GetInstanceNum() == 0,
+                OP_LOGE(context->GetNodeName(), "ForeachZeroInplace requires at least one input tensor"),
+                return ge::GRAPH_FAILED);
+
+    const ge::DataType dtype = context->GetDynamicInputDataType(0, 0);
+    OP_CHECK_IF(
+        !IsForeachZeroInplaceDtypeSupported(dtype),
+        OP_LOGE(context->GetNodeName(), "ForeachZeroInplace does not support dtype %d", static_cast<int32_t>(dtype)),
+        return ge::GRAPH_FAILED);
+    for (uint32_t i = 1; i < inputInfo->GetInstanceNum(); ++i) {
+        OP_CHECK_IF(!IsForeachZeroInplaceDtypeMatched(dtype, context->GetDynamicInputDataType(0, i)),
+                    OP_LOGE(context->GetNodeName(), "x tensor dtypes must match"), return ge::GRAPH_FAILED);
+    }
+    return InferDataType4ForeachCommon(context);
 }
 
 // In-place foreach ops whose in-place parameter is mirrored by an IR output of the same name (ref
@@ -303,8 +356,8 @@ IMPL_OP_INFERSHAPE(ForeachTanh)
     .InferDataType(ops::InferDataType4ForeachCommon);
 
 IMPL_OP_INFERSHAPE(ForeachZeroInplace)
-    .InferShape(ops::InferShape4ForeachInplace)
-    .InferDataType(ops::InferDataType4ForeachInplace);
+    .InferShape(ops::InferShape4ForeachZeroInplace)
+    .InferDataType(ops::InferDataType4ForeachZeroInplace);
 
 IMPL_OP_INFERSHAPE(ForeachMulScalarInplace)
     .InferShape(ops::InferShape4ForeachInplaceRef)

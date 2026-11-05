@@ -2,19 +2,19 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
 import sys
 import os
-import numpy as np
+import random
 import re
-import tensorflow as tf
+import struct
 
 
 def parse_str_to_shape_list(shape_str):
@@ -27,25 +27,48 @@ def parse_str_to_shape_list(shape_str):
 
 
 def gen_data_and_golden(shape_str, d_type="float32"):
-    d_type_dict = {
-        "float32": np.float32,
-        "float16": np.float16,
-        "int32": np.int32,
-        "bfloat16_t": tf.bfloat16.as_numpy_dtype
+    type_info = {
+        "float32": ("float32", 4),
+        "float16": ("float16", 2),
+        "int16": ("int16", 2),
+        "int32": ("int32", 4),
+        "bfloat16_t": ("bfloat16", 2),
     }
-    np_type = d_type_dict[d_type]
+    if d_type not in type_info:
+        raise ValueError(f"Unsupported dtype: {d_type}")
+
     shape_list = parse_str_to_shape_list(shape_str)
+    rng = random.Random(0)
     for index, shape in enumerate(shape_list):
-        tmp_input = np.random.rand(*shape) * 2 - 1
-        tmp_golden = np.random.rand(*shape)*10
-        tmp_golden = tmp_input.astype(np_type)
+        element_count = 1
+        for dimension in shape:
+            element_count *= dimension
 
-        for i in range(len(tmp_golden)):
-            tmp_golden[i] = 0
-        tmp_golden = tmp_golden.astype(np_type)
+        values = [rng.uniform(-1.0, 1.0) for _ in range(element_count)]
+        input_data = b"".join(pack_value(d_type, value) for value in values)
+        golden_data = b"".join(pack_value(d_type, 0) for _ in values)
 
-        tmp_input.astype(np_type).tofile(f"{d_type}_input_t_foreach_zero_inplace_{index}.bin")
-        tmp_golden.astype(np_type).tofile(f"{d_type}_golden_t_foreach_zero_inplace_{index}.bin")
+        with open(
+            f"{d_type}_input_t_foreach_zero_inplace_{index}.bin", "wb"
+        ) as input_file:
+            input_file.write(input_data)
+        with open(
+            f"{d_type}_golden_t_foreach_zero_inplace_{index}.bin", "wb"
+        ) as golden_file:
+            golden_file.write(golden_data)
+
+
+def pack_value(d_type, value):
+    if d_type == "float32":
+        return struct.pack("<f", value)
+    if d_type == "float16":
+        return struct.pack("<e", value)
+    if d_type == "int32":
+        return struct.pack("<i", int(value * 1000))
+    if d_type == "int16":
+        return struct.pack("<h", int(value * 100))
+    bits = struct.unpack("<I", struct.pack("<f", value))[0]
+    return struct.pack("<H", bits >> 16)
 
 
 if __name__ == "__main__":

@@ -119,16 +119,6 @@ static ge::graphStatus Tiling4ForeachSqrtTiling(gert::TilingContext* context)
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus Tiling4ForeachZeroInplaceTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(ZERO_OP_CODE, ForeachInputType::TYPE_TENSORS, ForeachReturnType::TYPE_INPLACE) !=
-        ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
 ge::graphStatus ForeachBaseClass::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
@@ -300,9 +290,6 @@ IMPL_OP_OPTILING(ForeachSqrt)
     .Tiling(Tiling4ForeachSqrtTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
 
-IMPL_OP_OPTILING(ForeachZeroInplace)
-    .Tiling(Tiling4ForeachZeroInplaceTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
 } // namespace optiling
 
 #endif // AIR_CXX_RUNTIME_V2_OP_IMPL_FOREACH_SOLO_FUNC_H_

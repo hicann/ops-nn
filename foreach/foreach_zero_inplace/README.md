@@ -59,10 +59,14 @@
 ## 约束说明
 
 - inplace操作的输入/输出不支持非连续Tensor。
+- TensorList中的所有Tensor必须使用相同的数据类型。
+- 图模式（GE/IR）不支持成员数为0的空TensorList，单个Tensor列表中Tensor的数量不超过256个。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_zero_inplace](examples/test_aclnn_foreach_zero_inplace.cpp) | 通过[aclnnForeachZeroInplace](docs/aclnnForeachZeroInplace.md)接口方式调用ForeachZeroInplace算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_zero_inplace_proto.h)构图方式调用ForeachZeroInplace算子。         |
+| 图模式 | [ForeachZeroInplace IR](op_graph/foreach_zero_inplace_proto.h) | 通过[算子IR](op_graph/foreach_zero_inplace_proto.h)构图；同名动态ref输出`x`返回原地更新后的数据。 |
+| Kernel验证 | [Ascend C Kernel](op_kernel/arch35/foreach_zero_inplace.cpp) | 通过TTK Kernel模式直接验证动态、静态和二进制Kernel。 |
+| PyTorch eager / TorchAir | - | 本算子包不提供该通路；PyTorch接口仅作为竞品语义参考。 |

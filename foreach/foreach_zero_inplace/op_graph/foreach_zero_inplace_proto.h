@@ -20,11 +20,15 @@ namespace ge {
 /**
  * @brief Apply zero operation for each tensor in a tensor list in manner of element-wise
  * @par Inputs:
- * One inputs:
- * @li x: A tensor list containing multiple tensors meanwhile, this value is also an output
+ * One input:
+ * @li x: A tensor list containing multiple tensors to update in place.
+ * @par Outputs:
+ * One output:
+ * @li x: A dynamic ref output that mirrors the input list and exposes its updated storage.
  */
 REG_OP(ForeachZeroInplace)
     .DYNAMIC_INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT16, DT_BF16}))
+    .DYNAMIC_OUTPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT16, DT_BF16}))
     .OP_END_FACTORY_REG(ForeachZeroInplace)
 } // namespace ge
 #endif // OPS_OP_PROTO_INC_FOREACH_ZERO_INPLACE_H_

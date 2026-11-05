@@ -86,7 +86,7 @@ aclnnStatus aclnnForeachZeroInplace(
       <td>x (aclTensorList*)</td>
       <td>Input/Output</td>
       <td>Input and output tensor list for the zeroing operation, corresponding to `x` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>The number of tensors in the TensorList ranges from 0 to 256. If the number is 0 (empty list), the API returns success without performing computation.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT16, INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -145,12 +145,15 @@ aclnnStatus aclnnForeachZeroInplace(
       <td>The data type of x is not supported.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="2">561002</td>
+      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="3">561002</td>
       <td>The data types of tensors in x are inconsistent.</td>
     </tr>
     <tr>
       <td>The number of dimensions of a tensor in x exceeds 8.</td>
+    </tr>
+    <tr>
+      <td>The number of tensors in x exceeds 256.</td>
     </tr>
   </tbody></table>
 
@@ -199,12 +202,14 @@ aclnnStatus aclnnForeachZeroInplace(
 
 ## Constraints
 
+- All tensors in the TensorList must use the same data type.
+- If x is an empty TensorList or all tensors in x are empty, the API returns success without performing computation.
 - Deterministic computation:
   - aclnnForeachZeroInplace defaults to a deterministic implementation.
 
 ## Example
 
-The following sample code is for reference only. For details about compilation and execution, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
+The following code demonstrates initialization, input construction, the two-phase call, synchronization, result copy-back, and resource cleanup.
 
 ```Cpp
 #include <iostream>
@@ -213,139 +218,214 @@ The following sample code is for reference only. For details about compilation a
 #include "aclnnop/aclnn_foreach_zero_inplace.h"
 
 #define CHECK_RET(cond, return_expr) \
-  do {                               \
-    if (!(cond)) {                   \
-      return_expr;                   \
-    }                                \
-  } while (0)
+    do {                             \
+        if (!(cond)) {               \
+            return_expr;             \
+        }                            \
+    } while (0)
 
-#define LOG_PRINT(message, ...)     \
-  do {                              \
-    printf(message, ##__VA_ARGS__); \
-  } while (0)
+#define LOG_PRINT(message, ...)         \
+    do {                                \
+        printf(message, ##__VA_ARGS__); \
+    } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
-  int64_t shapeSize = 1;
-  for (auto i : shape) {
-    shapeSize *= i;
-  }
-  return shapeSize;
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
+    int64_t shapeSize = 1;
+    for (auto i : shape) {
+        shapeSize *= i;
+    }
+    return shapeSize;
 }
 
-int Init(int32_t deviceId, aclrtStream* stream) {
-  // Boilerplate, resource initialization
-  auto ret = aclInit(nullptr);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
-  ret = aclrtSetDevice(deviceId);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
-  ret = aclrtCreateStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
-  return 0;
+void LogCleanupFailure(const char* operation, aclError status)
+{
+    if (status != ACL_SUCCESS) {
+        LOG_PRINT("%s failed. ERROR: %d\n", operation, status);
+    }
+}
+
+int Init(int32_t deviceId, aclrtStream* stream)
+{
+    // Initialize ACL resources.
+    auto ret = aclInit(nullptr);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
+    ret = aclrtSetDevice(deviceId);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret);
+              LogCleanupFailure("aclFinalize", aclFinalize()); return ret);
+    ret = aclrtCreateStream(stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
+              LogCleanupFailure("aclrtResetDevice", aclrtResetDevice(deviceId));
+              LogCleanupFailure("aclFinalize", aclFinalize()); return ret);
+    return 0;
 }
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
-  auto size = GetShapeSize(shape) * sizeof(T);
-  // Call aclrtMalloc to allocate device memory.
-  auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-  // Call aclrtMemcpy to copy data from the host to device memory.
-  ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+                    aclDataType dataType, aclTensor** tensor)
+{
+    *deviceAddr = nullptr;
+    *tensor = nullptr;
+    auto size = GetShapeSize(shape) * sizeof(T);
+    // Allocate device memory.
+    auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
+    // Copy input data from the host to the device.
+    ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-  // Calculate the strides of the contiguous tensor.
-  std::vector<int64_t> strides(shape.size(), 1);
-  for (int64_t i = shape.size() - 2; i >= 0; i--) {
-    strides[i] = shape[i + 1] * strides[i + 1];
-  }
+    // Calculate strides for a contiguous tensor.
+    std::vector<int64_t> strides(shape.size(), 1);
+    for (int64_t i = shape.size() - 2; i >= 0; i--) {
+        strides[i] = shape[i + 1] * strides[i + 1];
+    }
 
-  // Call the aclCreateTensor API to create an aclTensor.
-  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                            shape.data(), shape.size(), *deviceAddr);
-  return 0;
+    // Create an aclTensor.
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed\n"); return ACL_ERROR_FAILURE);
+    return 0;
 }
 
-int main() {
-  // 1. (Boilerplate) Initialize the device/stream. For details, see the acl API manual.
-  // Set deviceId based on the actual device.
-  int32_t deviceId = 0;
-  aclrtStream stream;
-  auto ret = Init(deviceId, &stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+int main()
+{
+    // 1. Initialize the device and stream.
+    int32_t deviceId = 0;
+    aclrtStream stream = nullptr;
+    auto ret = Init(deviceId, &stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. Construct the inputs and outputs based on the API.
-  std::vector<int64_t> selfShape1 = {2, 3};
-  std::vector<int64_t> selfShape2 = {1, 3};
-  void* input1DeviceAddr = nullptr;
-  void* input2DeviceAddr = nullptr;
-  aclTensor* input1 = nullptr;
-  aclTensor* input2 = nullptr;
-  std::vector<float> input1HostData = {1, 2, 3, 4, 5, 6};
-  std::vector<float> input2HostData = {7, 8, 9};
+    // 2. Construct the input TensorList.
+    std::vector<int64_t> selfShape1 = {2, 3};
+    std::vector<int64_t> selfShape2 = {1, 3};
+    void* input1DeviceAddr = nullptr;
+    void* input2DeviceAddr = nullptr;
+    void* workspaceAddr = nullptr;
+    aclTensor* input1 = nullptr;
+    aclTensor* input2 = nullptr;
+    aclTensorList* tensorListInput = nullptr;
+    aclOpExecutor* executor = nullptr;
+    uint64_t workspaceSize = 0;
+    bool streamHasPendingWork = false;
 
-  // Create the input1 aclTensor.
-  ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+    auto cleanup = [&](int status) {
+        bool deviceWasReset = false;
+        auto recordCleanupStatus = [&](const char* operation, aclError cleanupStatus) {
+            if (cleanupStatus != ACL_SUCCESS) {
+                LOG_PRINT("%s failed. ERROR: %d\n", operation, cleanupStatus);
+                if (status == ACL_SUCCESS) {
+                    status = cleanupStatus;
+                }
+            }
+        };
+        if (stream != nullptr) {
+            const aclError streamStatus = streamHasPendingWork ? aclrtDestroyStreamForce(stream) :
+                                                                 aclrtDestroyStream(stream);
+            recordCleanupStatus(streamHasPendingWork ? "aclrtDestroyStreamForce" : "aclrtDestroyStream", streamStatus);
+            if (streamHasPendingWork && streamStatus != ACL_SUCCESS) {
+                const aclError resetStatus = aclrtResetDeviceForce(deviceId);
+                recordCleanupStatus("aclrtResetDeviceForce", resetStatus);
+                if (resetStatus != ACL_SUCCESS) {
+                    LOG_PRINT("Device reset failed; retain in-flight resources until process exit.\n");
+                    return status;
+                }
+                deviceWasReset = true;
+                workspaceAddr = nullptr;
+                input1DeviceAddr = nullptr;
+                input2DeviceAddr = nullptr;
+            }
+            stream = nullptr;
+            streamHasPendingWork = false;
+        }
+        if (tensorListInput != nullptr) {
+            recordCleanupStatus("aclDestroyTensorList", aclDestroyTensorList(tensorListInput));
+            tensorListInput = nullptr;
+        } else {
+            if (input1 != nullptr) {
+                recordCleanupStatus("aclDestroyTensor(input1)", aclDestroyTensor(input1));
+                input1 = nullptr;
+            }
+            if (input2 != nullptr) {
+                recordCleanupStatus("aclDestroyTensor(input2)", aclDestroyTensor(input2));
+                input2 = nullptr;
+            }
+        }
+        if (!deviceWasReset && workspaceAddr != nullptr) {
+            recordCleanupStatus("aclrtFree(workspace)", aclrtFree(workspaceAddr));
+            workspaceAddr = nullptr;
+        }
+        if (!deviceWasReset && input1DeviceAddr != nullptr) {
+            recordCleanupStatus("aclrtFree(input1)", aclrtFree(input1DeviceAddr));
+            input1DeviceAddr = nullptr;
+        }
+        if (!deviceWasReset && input2DeviceAddr != nullptr) {
+            recordCleanupStatus("aclrtFree(input2)", aclrtFree(input2DeviceAddr));
+            input2DeviceAddr = nullptr;
+        }
+        if (!deviceWasReset) {
+            recordCleanupStatus("aclrtResetDevice", aclrtResetDevice(deviceId));
+        }
+        recordCleanupStatus("aclFinalize", aclFinalize());
+        return status;
+    };
 
-  // Create the input2 aclTensor.
-  ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_FLOAT, &input2);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+    std::vector<float> input1HostData = {1, 2, 3, 4, 5, 6};
+    std::vector<float> input2HostData = {7, 8, 9};
 
-  std::vector<aclTensor*> tempInput{input1, input2};
-  aclTensorList* tensorListInput = aclCreateTensorList(tempInput.data(), tempInput.size());
+    // Create input1.
+    ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
+    CHECK_RET(ret == ACL_SUCCESS, return cleanup(ret));
 
-  // 3. Call the CANN operator library API. Replace it with the actual API name.
-  uint64_t workspaceSize = 0;
-  aclOpExecutor* executor;
-  // Call the first-phase API aclnnForeachZeroInplace.
-  ret = aclnnForeachZeroInplaceGetWorkspaceSize(tensorListInput, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachZeroInplaceGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // Allocate device memory based on the workspaceSize computed by the first-phase API.
-  void* workspaceAddr = nullptr;
-  if (workspaceSize > 0) {
-    ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
-  }
-  // Call the second-phase API aclnnForeachZeroInplace.
-  ret = aclnnForeachZeroInplace(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachZeroInplace failed. ERROR: %d\n", ret); return ret);
+    // Create input2.
+    ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_FLOAT, &input2);
+    CHECK_RET(ret == ACL_SUCCESS, return cleanup(ret));
 
-  // 4. (Boilerplate) Wait for the task execution to complete.
-  ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+    std::vector<aclTensor*> tempInput{input1, input2};
+    tensorListInput = aclCreateTensorList(tempInput.data(), tempInput.size());
+    CHECK_RET(tensorListInput != nullptr, LOG_PRINT("aclCreateTensorList failed\n"); return cleanup(ACL_ERROR_FAILURE));
 
-  // 5. Obtain the output value and copy the result from the device side to the host side; modify it as required by the specific API definition.
-  auto size = GetShapeSize(selfShape1);
-  std::vector<float> self1Data(size, 0);
-  ret = aclrtMemcpy(self1Data.data(), self1Data.size() * sizeof(self1Data[0]), input1DeviceAddr,
-                    size * sizeof(self1Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("out1 result[%ld] is: %f\n", i, self1Data[i]);
-  }
+    // 3. Call the two-phase API.
+    // Call the first-phase API.
+    ret = aclnnForeachZeroInplaceGetWorkspaceSize(tensorListInput, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachZeroInplaceGetWorkspaceSize failed. ERROR: %d\n", ret);
+              return cleanup(ret));
+    // Allocate workspace based on workspaceSize.
+    if (workspaceSize > 0) {
+        ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return cleanup(ret));
+    }
+    // Call the second-phase API.
+    ret = aclnnForeachZeroInplace(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachZeroInplace failed. ERROR: %d\n", ret); return cleanup(ret));
+    streamHasPendingWork = true;
 
-  size = GetShapeSize(selfShape2);
-  std::vector<float> self2Data(size, 0);
-  ret = aclrtMemcpy(self2Data.data(), self2Data.size() * sizeof(self2Data[0]), input2DeviceAddr,
-                    size * sizeof(self2Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("out2 result[%ld] is: %f\n", i, self2Data[i]);
-  }
+    // 4. Wait for execution to complete.
+    ret = aclrtSynchronizeStream(stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return cleanup(ret));
+    streamHasPendingWork = false;
 
-  // 6. Release the aclTensor; modify it as required by the specific API definition.
-  aclDestroyTensorList(tensorListInput);
+    // 5. Copy the in-place results back to the host.
+    auto size = GetShapeSize(selfShape1);
+    std::vector<float> self1Data(size, 0);
+    ret = aclrtMemcpy(self1Data.data(), self1Data.size() * sizeof(self1Data[0]), input1DeviceAddr,
+                      size * sizeof(self1Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+              return cleanup(ret));
+    for (int64_t i = 0; i < size; i++) {
+        LOG_PRINT("out1 result[%ld] is: %f\n", i, self1Data[i]);
+    }
 
-  // 7. Release device resources; modify them as required by the specific API definition.
-  aclrtFree(input1DeviceAddr);
-  aclrtFree(input2DeviceAddr);
-  if (workspaceSize > 0) {
-    aclrtFree(workspaceAddr);
-  }
-  aclrtDestroyStream(stream);
-  aclrtResetDevice(deviceId);
-  aclFinalize();
-  return 0;
+    size = GetShapeSize(selfShape2);
+    std::vector<float> self2Data(size, 0);
+    ret = aclrtMemcpy(self2Data.data(), self2Data.size() * sizeof(self2Data[0]), input2DeviceAddr,
+                      size * sizeof(self2Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+              return cleanup(ret));
+    for (int64_t i = 0; i < size; i++) {
+        LOG_PRINT("out2 result[%ld] is: %f\n", i, self2Data[i]);
+    }
+
+    // 6. Release tensor and device resources.
+    return cleanup(ACL_SUCCESS);
 }
 ```

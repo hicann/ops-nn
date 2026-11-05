@@ -17,6 +17,7 @@
 #include "op_api/op_api_def_nn.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
+#include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
 
@@ -46,7 +47,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
-static aclnnStatus CheckParams(const aclTensorList* x, uint64_t* workspaceSize, aclOpExecutor** executor)
+static aclnnStatus CheckParams(const aclTensorList* x)
 {
     OP_CHECK_NULL(x, return ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckTensorListNotNull(x, "x"), ACLNN_ERR_PARAM_INVALID);
@@ -78,7 +79,12 @@ static aclnnStatus CheckParams(const aclTensorList* x, uint64_t* workspaceSize, 
 static bool AllViewsEmpty(const aclTensorList* x)
 {
     for (uint64_t i = 0; i < x->Size(); i++) {
-        if ((*x)[i]->GetViewShape().GetShapeSize() != 0) {
+        const auto& shape = (*x)[i]->GetViewShape();
+        bool isEmpty = false;
+        for (size_t dim = 0; dim < shape.GetDimNum(); ++dim) {
+            isEmpty = isEmpty || shape.GetDim(dim) == 0;
+        }
+        if (!isEmpty) {
             return false;
         }
     }
@@ -88,9 +94,18 @@ static bool AllViewsEmpty(const aclTensorList* x)
 static aclnnStatus ExecForeachZeroInplaceGetWorkspaceSize(const aclTensorList* x, uint64_t* workspaceSize,
                                                           aclOpExecutor** executor)
 {
+    if (workspaceSize == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "workspaceSize is nullptr");
+        return ACLNN_ERR_PARAM_NULLPTR;
+    }
+    if (executor == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "executor is nullptr");
+        return ACLNN_ERR_PARAM_NULLPTR;
+    }
+
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    auto ret = CheckParams(x, workspaceSize, executor);
+    auto ret = CheckParams(x);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (AllViewsEmpty(x)) {

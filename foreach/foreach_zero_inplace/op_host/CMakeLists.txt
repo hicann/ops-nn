@@ -10,7 +10,9 @@
 
 message(STATUS "=== Debug: start ops.foreach.foreach_zero_inplace.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_zero_inplace ACLNNTYPE aclnn_exclude DEPENDENCIES foreach_utils)
+set(SUPPORT_COMPUTE_UNIT "ascend910_93" "ascend910b" "kirinx90" "kirin9030" "ascend950")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch35")
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_zero_inplace ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DEPENDENCIES foreach_utils)
 
 get_filename_component(FOREACH_UTILS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../foreach_utils ABSOLUTE)
 target_include_directories(${OPHOST_NAME}_opapi_obj PRIVATE ${FOREACH_UTILS_DIR}/op_host)

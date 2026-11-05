@@ -133,6 +133,23 @@ TEST_P(L2ForeachZeroInplaceTest, null_list)
     EXPECT_EQ(GetWorkspaceStatus(nullptr, &workspaceSize), ACLNN_ERR_PARAM_NULLPTR);
 }
 
+TEST_P(L2ForeachZeroInplaceTest, null_workspace_size)
+{
+    auto x = TensorListDesc({TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND)});
+    auto tensorList = x.ToAclType();
+    aclOpExecutor* executor = nullptr;
+    EXPECT_EQ(aclnnForeachZeroInplaceGetWorkspaceSize(tensorList.get(), nullptr, &executor), ACLNN_ERR_PARAM_NULLPTR);
+}
+
+TEST_P(L2ForeachZeroInplaceTest, null_executor)
+{
+    auto x = TensorListDesc({TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND)});
+    auto tensorList = x.ToAclType();
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(aclnnForeachZeroInplaceGetWorkspaceSize(tensorList.get(), &workspaceSize, nullptr),
+              ACLNN_ERR_PARAM_NULLPTR);
+}
+
 TEST_P(L2ForeachZeroInplaceTest, null_element_after_valid_tensor)
 {
     const aclTensor* items[] = {TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ToAclTypeRawPtr(), nullptr};
@@ -163,13 +180,20 @@ TEST_P(L2ForeachZeroInplaceTest, private_format)
     ExpectWorkspaceStatus(TensorListDesc({x}), ACLNN_ERR_PARAM_INVALID);
 }
 
+TEST_P(L2ForeachZeroInplaceTest, non_private_format)
+{
+    auto x = TensorDesc({1, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    ExpectWorkspaceStatus(TensorListDesc({x}), ACLNN_SUCCESS);
+}
+
 TEST_P(L2ForeachZeroInplaceTest, excessive_rank)
 {
     auto x = TensorDesc(std::vector<int64_t>(9, 1), ACL_FLOAT, ACL_FORMAT_ND);
     ExpectWorkspaceStatus(TensorListDesc({x}), ACLNN_ERR_INNER_TILING_ERROR);
 }
 
-INSTANTIATE_TEST_SUITE_P(A2AndA3, L2ForeachZeroInplaceTest,
-                         testing::Values(op::SocVersion::ASCEND910B, op::SocVersion::ASCEND910_93));
+INSTANTIATE_TEST_SUITE_P(A2AndA3AndA5, L2ForeachZeroInplaceTest,
+                         testing::Values(op::SocVersion::ASCEND910B, op::SocVersion::ASCEND910_93,
+                                         op::SocVersion::ASCEND950));
 
 } // namespace
