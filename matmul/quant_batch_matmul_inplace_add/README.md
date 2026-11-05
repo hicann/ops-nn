@@ -48,14 +48,14 @@
     <td class="tg-22a9">x1</td>
     <td class="tg-22a9">输入</td>
     <td class="tg-22a9">矩阵乘运算中的左矩阵，公式中的输入x1。</td>
-    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8</td>
+    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8, FLOAT4_E2M1</td>
     <td class="tg-22a9">ND</td>
   </tr>
   <tr>
     <td class="tg-22a9">x2</td>
     <td class="tg-22a9">输入</td>
     <td class="tg-22a9">矩阵乘运算中的右矩阵，公式中的输入x2。</td>
-    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8</td>
+    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8, FLOAT4_E2M1</td>
     <td class="tg-22a9">ND</td>
   </tr>
   <tr>
@@ -103,7 +103,7 @@
 </tbody></table>
 
 - <term>Ascend 950PR&950DT系列产品</term>：
-  - x1、x2支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型。
+  - x1、x2支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1数据类型。
   - x1Scale、x2Scale支持FLOAT8_E8M0（MX）和FLOAT32（HIFLOAT8 TT）数据类型。
   - yRef只支持FLOAT32数据类型。
   - 当前仅支持transposeX1=true且transposeX2=false。
@@ -115,7 +115,12 @@
 - groupSize相关约束：传入的groupSize内部会按公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0时，会根据x1/x2/x1Scale/x2Scale输入shape重新推断。
 - 动态量化（MX量化）场景约束：
   - 输入和输出支持以下数据类型组合：x1、x2为FLOAT8_E5M2/FLOAT8_E4M3FN，x1Scale、x2Scale为FLOAT8_E8M0，yRef为FLOAT32。
+  - 输入和输出还支持以下数据类型组合：x1、x2均为FLOAT4_E2M1，x1Scale、x2Scale均为FLOAT8_E8M0，yRef为FLOAT32。不支持FLOAT4_E1M2输入，不支持FP4与FP8混合输入。
   - x1 shape为(k, m)，x2 shape为(k, n)，x1Scale shape为(ceil(k/64), m, 2)，x2Scale shape为(ceil(k/64), n, 2)，yRef shape为(m, n)，[gsM, gsN, gsK] 为 [1, 1, 32]，groupSize为32。
+  - MXFP4量化场景额外约束：
+    - m、n必须为非负偶数。
+    - 上述shape以逻辑元素数表示。x1、x2采用4-bit打包存储，一个字节保存两个FLOAT4_E2M1编码。连续输入x1、x2的逻辑shape分别为(k, m)、(k, n)，对应的字节存储shape分别为(k, m/2)、(k, n/2)。
+    - 当m、n、k均大于0时，必须同时满足m × k > 2、n × k > 2。
 - HIFLOAT8 T-T场景约束：
   - 输入和输出支持以下数据类型组合：x1、x2为HIFLOAT8，x1Scale、x2Scale为FLOAT32，yRef为FLOAT32。
   - x1 shape为(k, m)，x2 shape为(k, n)，yRef shape为(m, n)。
@@ -127,4 +132,5 @@
 | 调用方式 | 样例代码 | 说明 |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口 | [test_aclnn_quant_batch_matmul_inplace_add_mxfp8](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp8.cpp) | 展示mxFP8量化场景的调用方式，其中`x1/x2`为FLOAT8、`x1Scale/x2Scale`为FLOAT8_E8M0，`groupSize=32`。 |
+| aclnn接口 | <a href="examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp4.cpp">test_aclnn_quant_batch_matmul_inplace_add_mxfp4</a> | 展示MXFP4量化场景的调用方式，其中x1、x2为打包存储的FLOAT4_E2M1，x1Scale、x2Scale为FLOAT8_E8M0，yRef为FLOAT32，groupSize=32。 |
 | aclnn接口 | [test_aclnn_quant_batch_matmul_inplace_add_TT](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_TT.cpp) | 展示当前支持组合`transposeX1=true`、`transposeX2=false`下HIFLOAT8 TT场景的调用方式。 |

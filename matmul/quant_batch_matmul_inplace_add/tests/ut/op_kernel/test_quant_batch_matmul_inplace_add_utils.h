@@ -30,6 +30,15 @@
 #endif
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+// The dtype variants are linked into one UT executable. Give each entry a
+// distinct symbol so identical template arguments cannot select another dtype.
+#if ORIG_DTYPE_X1 == DT_FLOAT4_E2M1
+#define quant_batch_matmul_inplace_add qbmmia_mx4_ut_kernel
+#elif ORIG_DTYPE_X1 == DT_HIFLOAT8
+#define quant_batch_matmul_inplace_add qbmmia_hif8_ut_kernel
+#else
+#define quant_batch_matmul_inplace_add qbmmia_mx8_ut_kernel
+#endif
 #include "arch35/quant_batch_matmul_inplace_add_tiling_key.h"
 #include "arch35/quant_batch_matmul_inplace_add.cpp"
 
@@ -75,6 +84,8 @@ struct QuantBatchMatmulInplaceAddTestParam {
     string tilingData;
 };
 
+namespace {
+// DTYPE_X1/X2 differ between translation units: do not merge their helpers.
 class QuantBatchMatmulInplaceAddTestUtils {
 public:
     static constexpr uint32_t MAX_NUM_BLOCKS = 4;
@@ -217,6 +228,10 @@ public:
         tilingData.baseK = static_cast<uint16_t>(std::min<int64_t>(param.k, 64));
         tilingData.scaleKL1 = param.groupSize > 0 ? static_cast<uint32_t>(tilingData.baseK) : 0U;
         tilingData.groupSizeK = static_cast<uint16_t>(param.groupSize);
+        // No tail splitting in AUTO mode. Zero would produce invalid scheduler
+        // tile sizes/offsets when UpdateTailTile is called by the real kernel.
+        tilingData.mTailTile = 1;
+        tilingData.nTailTile = 1;
         tilingData.mBaseTailSplitCnt = 1;
         tilingData.nBaseTailSplitCnt = 1;
         tilingData.kAL1 = tilingData.baseK;
@@ -284,6 +299,10 @@ public:
     static void TestOneParamCaseDav3510(const QuantBatchMatmulInplaceAddTestParam& param,
                                         decltype(s_funcMapApt)& funcMapApt)
     {
+        auto kernel = funcMapApt.find(param.tilingKey);
+        ASSERT_NE(kernel, funcMapApt.end()) << "Unsupported tilingKey: " << param.tilingKey;
+        const bool isMx4 = param.kernelUtTarget == "MX4_FLOW";
+        const bool isMx8 = param.kernelUtTarget == "MX_FLOW";
         int64_t batchA = param.batchA > 0 ? param.batchA : 1L;
         int64_t batchB = param.batchB > 0 ? param.batchB : 1L;
         int64_t batchC = param.batchC > 0 ? param.batchC : 1L;
@@ -292,6 +311,12 @@ public:
         size_t shapeY = static_cast<size_t>(batchC) * param.m * param.n * sizeof(DTYPE_Y);
         size_t shapeX1Scale = GetX1ScaleBytes(param);
         size_t shapeX2Scale = GetX2ScaleBytes(param);
+        if (isMx4) {
+            shapeX1 = (static_cast<size_t>(batchA) * param.m * param.k + 1) / 2;
+            shapeX2 = (static_cast<size_t>(batchB) * param.k * param.n + 1) / 2;
+            shapeX1Scale = static_cast<size_t>(batchA) * param.m * ((param.k + 63) / 64) * 2;
+            shapeX2Scale = static_cast<size_t>(batchB) * param.n * ((param.k + 63) / 64) * 2;
+        }
         size_t tilingDataSize = GetTilingDataSize(param);
         size_t workspaceSize = 16 * 1024 * 1024 + 50 * 1024 * 1024;
 
@@ -314,6 +339,22 @@ public:
         if (x2Scale != nullptr) {
             memset(x2Scale, 1, shapeX2Scale);
         }
+        if (isMx4) {
+            // Each nibble 0x2 is E2M1 1.0; E8M0 code 127 is scale 1.0.
+            memset(x1, 0x22, shapeX1);
+            memset(x2, 0x22, shapeX2);
+        } else if (isMx8) {
+            std::fill_n(reinterpret_cast<DTYPE_X1*>(x1), shapeX1 / sizeof(DTYPE_X1), DTYPE_X1(1.0F));
+            std::fill_n(reinterpret_cast<DTYPE_X2*>(x2), shapeX2 / sizeof(DTYPE_X2), DTYPE_X2(1.0F));
+        }
+        if (isMx4 || isMx8) {
+            // E8M0 byte 1 is 2^-126, not 1.0; avoid unintended underflow
+            // in these normal-path cases and check a known exact result.
+            memset(x1Scale, 127, shapeX1Scale);
+            memset(x2Scale, 127, shapeX2Scale);
+            std::fill_n(reinterpret_cast<float*>(yIn), shapeY / sizeof(float), 5.0F);
+            memcpy(y, yIn, shapeY);
+        }
         memset(workspace, 0, workspaceSize);
         FillTilingBuffer(param, tiling);
 
@@ -328,6 +369,23 @@ public:
 
         ICPU_RUN_KF(func, std::min(MAX_NUM_BLOCKS, param.numBlocks), x1, x2, x2Scale, yIn, x1Scale, y, workspace,
                     tiling);
+
+        if (isMx4 || isMx8) {
+            const auto checkOutput = [&](float expected) {
+                const float* output = reinterpret_cast<const float*>(y);
+                for (size_t i = 0; i < shapeY / sizeof(float); ++i) {
+                    if (output[i] != expected) {
+                        ADD_FAILURE() << param.caseName << " key=" << param.tilingKey << " output[" << i
+                                      << "]=" << output[i] << ", expected " << expected;
+                        break;
+                    }
+                }
+            };
+            checkOutput(5.0F + static_cast<float>(param.k));
+            ICPU_RUN_KF(func, std::min(MAX_NUM_BLOCKS, param.numBlocks), x1, x2, x2Scale, yIn, x1Scale, y, workspace,
+                        tiling);
+            checkOutput(5.0F + 2.0F * static_cast<float>(param.k));
+        }
 
         AscendC::GmFree(x1);
         AscendC::GmFree(x2);
@@ -344,5 +402,6 @@ public:
     }
 #endif
 };
+} // namespace
 
 #endif

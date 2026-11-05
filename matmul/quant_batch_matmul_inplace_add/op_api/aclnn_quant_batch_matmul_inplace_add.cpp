@@ -204,6 +204,11 @@ static inline bool IsHiFloat4Input(const aclTensor* x1, const aclTensor* x2)
            x2->GetDataType() == static_cast<op::DataType>(Ops::NN::DT_HIFLOAT4);
 }
 
+static inline bool IsMx4Input(const aclTensor* x1, const aclTensor* x2)
+{
+    return x1->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1;
+}
+
 static bool CheckMKN(int64_t m, int64_t k, int64_t n)
 {
     if (m < 0) {
@@ -485,12 +490,34 @@ static aclnnStatus CheckShape(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddPa
              OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "CheckShapeInfoMatch failed."),
              return ACLNN_ERR_PARAM_INVALID);
 
+    // MXFP4 packing requires even m and n (each byte holds two E2M1 elements).
+    if (IsMx4Input(params.x1, params.x2)) {
+        if (shapeInfo.mDim % 2 != 0 || shapeInfo.nDim % 2 != 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "M, N",
+                FormatString("%ld, %ld", shapeInfo.mDim, shapeInfo.nDim).c_str(),
+                "when the dtypes of x1 and x2 are FLOAT4_E2M1, M and N must be even");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+
     if (!CheckMKN(shapeInfo.mDim, shapeInfo.kDim, shapeInfo.nDim)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckMKN failed.");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (IsHiFloat4Input(params.x1, params.x2) && !CheckMKN4HIF4(params.x1, params.x2, shapeInfo.kDim)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckMKN4HIF4 failed.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    // PTA cannot recover the original orientation of a single packed FP4 byte.
+    // Require M*K > 2 and N*K > 2 only for non-empty inputs.
+    // Preserve empty-tensor behavior; division avoids element-count overflow.
+    if (IsMx4Input(params.x1, params.x2) && shapeInfo.mDim > 0 && shapeInfo.nDim > 0 && shapeInfo.kDim > 0 &&
+        (shapeInfo.mDim <= 2 / shapeInfo.kDim || shapeInfo.nDim <= 2 / shapeInfo.kDim)) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "M, K, N",
+            FormatString("%ld, %ld, %ld", shapeInfo.mDim, shapeInfo.kDim, shapeInfo.nDim).c_str(),
+            "for non-empty FLOAT4_E2M1 inputs, M*K and N*K must both be greater than 2");
         return ACLNN_ERR_PARAM_INVALID;
     }
     OP_CHECK(CheckMxScaleLastDim(params) == ACLNN_SUCCESS,
@@ -667,8 +694,10 @@ static aclnnStatus CheckDtype(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddPa
     auto x2Dtype = params.x2->GetDataType();
     auto x1ScaleDtype = params.x1ScaleOptional->GetDataType();
     auto x2ScaleDtype = params.x2Scale->GetDataType();
-    if ((x1Dtype == DataType::DT_FLOAT8_E4M3FN || x1Dtype == DataType::DT_FLOAT8_E5M2) &&
-        (x2Dtype == DataType::DT_FLOAT8_E4M3FN || x2Dtype == DataType::DT_FLOAT8_E5M2)) {
+    const bool isMx8 = (x1Dtype == DataType::DT_FLOAT8_E4M3FN || x1Dtype == DataType::DT_FLOAT8_E5M2) &&
+                       (x2Dtype == DataType::DT_FLOAT8_E4M3FN || x2Dtype == DataType::DT_FLOAT8_E5M2);
+    const bool isMx4 = x1Dtype == DataType::DT_FLOAT4_E2M1 && x2Dtype == DataType::DT_FLOAT4_E2M1;
+    if (isMx8 || isMx4) {
         OP_CHECK(CheckScaleQuantDim(params, "mx") == ACLNN_SUCCESS,
                  OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "Check CheckScaleQuantDim for mx failed."),
                  return ACLNN_ERR_PARAM_INVALID);

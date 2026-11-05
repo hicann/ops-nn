@@ -27,7 +27,11 @@ sys.path.insert(
 
 import en_dtypes
 import matmul_golden_util as _util
-from qbmmia_aclnn_golden import AclnnQuantBatchMatmulInplaceAddTestSpec
+from qbmmia_aclnn_golden import (
+    AclnnQuantBatchMatmulInplaceAddTestSpec,
+    _fp4_to_np,
+    _scale_to_np,
+)
 
 
 class TorchNpuAddQuantMatmulTestSpec(AclnnQuantBatchMatmulInplaceAddTestSpec):
@@ -47,8 +51,8 @@ class TorchNpuAddQuantMatmulTestSpec(AclnnQuantBatchMatmulInplaceAddTestSpec):
         x2_scale_dtype=None,
         **kwargs,
     ):
-        transpose_x1 = _util.detect_transpose_from_strides(x1)
-        transpose_x2 = _util.detect_transpose_from_strides(x2)
+        transpose_x1 = False
+        transpose_x2 = False
 
         group_size = _util.pack_group_sizes(group_sizes)
 
@@ -76,13 +80,36 @@ class TorchNpuAddQuantMatmulTestSpec(AclnnQuantBatchMatmulInplaceAddTestSpec):
             and int(x1_scale_dtype) == 293
             and x1_scale is not None
         ):
-            x1_scale = _util.torch_to_numpy(x1_scale).view(en_dtypes.float8_e8m0)
+            x1_scale = _scale_to_np(x1_scale).view(en_dtypes.float8_e8m0)
         if (
             x2_scale_dtype is not None
             and int(x2_scale_dtype) == 293
             and x2_scale is not None
         ):
-            x2_scale = _util.torch_to_numpy(x2_scale).view(en_dtypes.float8_e8m0)
+            x2_scale = _scale_to_np(x2_scale).view(en_dtypes.float8_e8m0)
+
+        # TTK versions without native FP4 support use uint8 packed storage,
+        # just as the HIF8 path uses an explicit dtype attribute. Decode back
+        # to STORAGE layout here; the kernel golden applies transpose once.
+        # 296 is torch_npu.float4_e2m1fn_x2, not the ACL FP4 enum (40).
+        if (
+            x1_dtype is not None
+            and int(x1_dtype) == 296
+            and isinstance(x1, torch.Tensor)
+        ):
+            if x1.dtype == torch.uint8:
+                transpose_x1 = _util.detect_transpose_from_strides(x1)
+                x1 = _fp4_to_np(x1)
+        if (
+            x2_dtype is not None
+            and int(x2_dtype) == 296
+            and isinstance(x2, torch.Tensor)
+        ):
+            if x2.dtype == torch.uint8:
+                transpose_x2 = _util.detect_transpose_from_strides(x2)
+                x2 = _fp4_to_np(x2)
+
+        # Native FP4 tensors remain Torch tensors until the ACLNN conversion.
 
         return super().golden(
             x1,

@@ -100,7 +100,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>输入</td>
       <td>公式中的输入x1。</td>
       <td>-</td>
-      <td>FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
+      <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1、HIFLOAT8</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -110,7 +110,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>输入</td>
       <td>公式中的输入x2。</td>
       <td>-</td>
-      <td>FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
+      <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1、HIFLOAT8</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -235,8 +235,8 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>如果传入参数是必选输入、输出或者必选属性，且是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x1、x2、x1ScaleOptional、x2Scale、yRef的数据类型和数据格式不在支持的范围内，或groupSize的取值不在支持的范围内。</td>
     </tr>
     <tr>
@@ -244,6 +244,9 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     </tr>
     <tr>
       <td>x1、x2的K维度为0。</td>
+    </tr>
+    <tr>
+      <td>x1、x2数据类型为FLOAT4_E2M1时，M或N维度为奇数；或M、N、K均大于0时，M × K ≤ 2或N × K ≤ 2。</td>
     </tr>
     <tr>
       <td>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1ScaleOptional，x2Scale的shape关系无法推断groupSize。</td>
@@ -284,14 +287,19 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     | x1 | x2 | x1Scale | x2Scale | yRef |
     |:-------:|:-------:| :------- | :------ | :------ |
     |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
+    |FLOAT4_E2M1 |FLOAT4_E2M1| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
 
   - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
 
       | x1数据类型 | x2数据类型 | x1 shape | x2 shape | x1Scale Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
       |:-------:|:-------:| :------- | :------ | :------ | :------ | :------ | :------ | :------ |
       |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 4295032864 |
+      |FLOAT4_E2M1 |FLOAT4_E2M1| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 4295032864 |
 
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
+  - FLOAT4_E2M1场景额外约束：
+    - x1的M维度、x2的N维度必须为偶数。
+    - 当M、N、K均大于0时，必须同时满足M × K > 2、N × K > 2。
 
 - HIFLOAT8 T-T场景约束：
   - 输入和输出支持以下数据类型组合：

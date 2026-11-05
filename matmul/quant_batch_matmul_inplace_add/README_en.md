@@ -50,14 +50,14 @@ English | [简体中文](./README.md)
     <td class="tg-22a9">x1</td>
     <td class="tg-22a9">Input</td>
     <td class="tg-22a9">Left matrix in the matrix multiplication, corresponding to input x1 in the formula.</td>
-    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8</td>
+    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8, FLOAT4_E2M1</td>
     <td class="tg-22a9">ND</td>
   </tr>
   <tr>
     <td class="tg-22a9">x2</td>
     <td class="tg-22a9">Input</td>
     <td class="tg-22a9">Right matrix in the matrix multiplication, corresponding to input x2 in the formula.</td>
-    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8</td>
+    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8, FLOAT4_E2M1</td>
     <td class="tg-22a9">ND</td>
   </tr>
   <tr>
@@ -105,7 +105,7 @@ English | [简体中文](./README.md)
 </tbody></table>
 
 - <term>Ascend 950PR&950DT products</term>:
-  - x1 and x2 support the FLOAT8_E4M3FN, FLOAT8_E5M2, and HIFLOAT8 data types.
+  - x1 and x2 support the FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8, and FLOAT4_E2M1 data types.
   - x1Scale and x2Scale support the FLOAT8_E8M0 (MX) and FLOAT32 (HIFLOAT8 TT) data types.
   - yRef supports only the FLOAT32 data type.
   - Currently only transposeX1=true and transposeX2=false are supported.
@@ -117,7 +117,12 @@ English | [简体中文](./README.md)
 - groupSize-related constraints: the passed-in groupSize is internally decomposed according to the formula to obtain groupSizeM, groupSizeN, and groupSizeK. When one or more of them is 0, the values are inferred again according to the input shapes of x1/x2/x1Scale/x2Scale.
 - Constraints of the dynamic quantization (MX quantization) scenario:
   - The inputs and outputs support the following data type combinations: x1 and x2 are FLOAT8_E5M2/FLOAT8_E4M3FN, x1Scale and x2Scale are FLOAT8_E8M0, and yRef is FLOAT32.
+  - The inputs and outputs also support the following data type combination: x1 and x2 are both FLOAT4_E2M1, x1Scale and x2Scale are both FLOAT8_E8M0, and yRef is FLOAT32. FLOAT4_E1M2 inputs and mixed FP4 and FP8 inputs are not supported.
   - The shape of x1 is (k, m), the shape of x2 is (k, n), the shape of x1Scale is (ceil(k/64), m, 2), the shape of x2Scale is (ceil(k/64), n, 2), the shape of yRef is (m, n), [gsM, gsN, gsK] is [1, 1, 32], and groupSize is 32.
+  - Additional constraints for MXFP4 quantization:
+    - m and n must be non-negative even numbers.
+    - The preceding shapes are expressed in logical element counts. x1 and x2 use 4-bit packed storage, with each byte storing two FLOAT4_E2M1 codes. For contiguous inputs, the logical shapes of x1 and x2 are (k, m) and (k, n), respectively, and the corresponding byte storage shapes are (k, m/2) and (k, n/2).
+    - When m, n, and k are all greater than 0, both m × k > 2 and n × k > 2 must hold.
 - Constraints of the HIFLOAT8 T-T scenario:
   - The inputs and outputs support the following data type combinations: x1 and x2 are HIFLOAT8, x1Scale and x2Scale are FLOAT32, and yRef is FLOAT32.
   - The shape of x1 is (k, m), the shape of x2 is (k, n), and the shape of yRef is (m, n).
@@ -129,4 +134,5 @@ English | [简体中文](./README.md)
 | Invocation method | Sample code | Description |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn interface | [test_aclnn_quant_batch_matmul_inplace_add_mxfp8](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp8.cpp) | Shows the invocation method of the mxFP8 quantization scenario, where `x1/x2` are FLOAT8, `x1Scale/x2Scale` are FLOAT8_E8M0, and `groupSize=32`. |
+| aclnn interface | <a href="examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp4.cpp">test_aclnn_quant_batch_matmul_inplace_add_mxfp4</a> | Shows the invocation method of the MXFP4 quantization scenario, where x1 and x2 are packed FLOAT4_E2M1, x1Scale and x2Scale are FLOAT8_E8M0, yRef is FLOAT32, and groupSize=32. |
 | aclnn interface | [test_aclnn_quant_batch_matmul_inplace_add_TT](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_TT.cpp) | Shows the invocation method of the HIFLOAT8 TT scenario under the currently supported combination `transposeX1=true` and `transposeX2=false`. |

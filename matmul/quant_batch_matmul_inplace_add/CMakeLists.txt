@@ -30,12 +30,14 @@ if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
       COMMAND ${CMAKE_COMMAND} -E rm -f
         "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opkernel_test_quant_batch_matmul_inplace_add.dir/arch35/test_quant_batch_matmul_inplace_add.cpp.gcda"
         "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opkernel_test_quant_batch_matmul_inplace_add_apt_hif8.dir/arch35/test_quant_batch_matmul_inplace_add_apt_hif8.cpp.gcda"
-        "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opkernel_test_quant_batch_matmul_inplace_add_apt_mx.dir/arch35/test_quant_batch_matmul_inplace_add_apt_mx.cpp.gcda"
+        "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opkernel_test_quant_batch_matmul_inplace_add_apt_mxfp8.dir/arch35/test_quant_batch_matmul_inplace_add_apt_mxfp8.cpp.gcda"
+        "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/opkernel_test_quant_batch_matmul_inplace_add_apt_mxfp4.dir/arch35/test_quant_batch_matmul_inplace_add_apt_mxfp4.cpp.gcda"
     )
     foreach(_qbmmia_ut_target
         opkernel_test_quant_batch_matmul_inplace_add
         opkernel_test_quant_batch_matmul_inplace_add_apt_hif8
-        opkernel_test_quant_batch_matmul_inplace_add_apt_mx)
+        opkernel_test_quant_batch_matmul_inplace_add_apt_mxfp8
+        opkernel_test_quant_batch_matmul_inplace_add_apt_mxfp4)
         if(TARGET ${_qbmmia_ut_target})
             add_dependencies(${_qbmmia_ut_target} qbmmia_ut_clean_gcda)
         endif()

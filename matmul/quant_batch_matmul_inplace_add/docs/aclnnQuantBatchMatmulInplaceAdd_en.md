@@ -102,7 +102,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>Input</td>
       <td>Input x1 in the Formula.</td>
       <td>-</td>
-      <td>FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8</td>
+      <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, HIFLOAT8</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>Input</td>
       <td>Input x2 in the Formula.</td>
       <td>-</td>
-      <td>FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8</td>
+      <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, HIFLOAT8</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -233,8 +233,8 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>If the input parameter is a mandatory input, output, or mandatory attribute and is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data types and data formats of x1, x2, x1Scale, x2Scale, and yRef are out of the supported range, or the value of groupSize is out of the supported range.</td>
     </tr>
     <tr>
@@ -242,6 +242,9 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     </tr>
     <tr>
       <td>The K dimension of x1 or x2 is 0.</td>
+    </tr>
+    <tr>
+      <td>When the data types of x1 and x2 are FLOAT4_E2M1, M or N is odd; or when M, N, and K are all greater than 0, M × K ≤ 2 or N × K ≤ 2.</td>
     </tr>
     <tr>
       <td>The input groupSize does not meet the validation conditions, or when the input groupSize is 0, groupSize cannot be inferred from the shape relationships among x1, x2, x1Scale, and x2Scale.</td>
@@ -282,12 +285,18 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     | x1 | x2 | x1Scale | x2Scale | yRef |
     |:-------:|:-------:| :------- | :------ | :------ |
     |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
+    |FLOAT4_E2M1 |FLOAT4_E2M1| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
 
   - Relationship among the x1 data type, x2 data type, x1, x2, x1Scale, x2Scale, and groupSize:
 
       | x1 Data Type | x2 Data Type | x1 Shape | x2 Shape | x1Scale Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
       |:-------:|:-------:| :------- | :------ | :------ | :------ | :------ | :------ | :------ |
       |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 32 |
+      |FLOAT4_E2M1 |FLOAT4_E2M1| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 4295032864 |
+
+  - Additional constraints for FLOAT4_E2M1:
+    - The M dimension of x1 and the N dimension of x2 must be even.
+    - When M, N, and K are all greater than 0, both M × K > 2 and N × K > 2 must hold.
 
 - HIFLOAT8 T-T use case constraints:
   - The input and output support the following data type combinations:

@@ -25,8 +25,82 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(__file__), "../../../common/tests/st/arch35")
 )
 
+import en_dtypes
 import matmul_golden_util as _util
 from qbmmia_kernel_golden import QuantBatchMatmulInplaceAddTestSpec
+
+
+def _is_fp4_tensor(t):
+    """Check if t is a torch.float4_e2m1fn_x2 tensor."""
+    import torch
+
+    return (
+        isinstance(t, torch.Tensor)
+        and hasattr(torch, "float4_e2m1fn_x2")
+        and t.dtype == torch.float4_e2m1fn_x2
+    )
+
+
+def _unpack_fp4_numpy(raw_uint8):
+    """Unpack packed uint8 (2 FP4/byte) → en_dtypes.float4_e2m1 (1 FP4/byte).
+
+    Unpacks along the last dimension: each byte → 2 FP4 values
+    (low nibble first, high nibble second).
+    """
+    out = np.empty((raw_uint8.shape[0], raw_uint8.shape[1] * 2), dtype=np.uint8)
+    out[:, 0::2] = raw_uint8 & 0x0F
+    out[:, 1::2] = (raw_uint8 >> 4) & 0x0F
+    return out.view(en_dtypes.float4_e2m1)
+
+
+def _fp4_to_np(t):
+    """Convert torch.float4_e2m1fn_x2 → en_dtypes.float4_e2m1 numpy (storage layout).
+
+    1. view(uint8).numpy() → packed uint8 (preserves non-contiguous strides)
+    2. Detect the transposed packed view from strides, including singleton K
+    3. Unpack along last dim: (K, M_packed) → (K, M) = storage layout
+    """
+    import torch
+
+    raw = t.view(torch.uint8).numpy()
+    # A transposed singleton dimension may still be contiguous in PyTorch.
+    # Match the TN view strides instead of using is_contiguous() as a transpose flag.
+    if _util.detect_transpose_from_strides(t):
+        raw = np.ascontiguousarray(raw.T)
+    return _unpack_fp4_numpy(raw)
+
+
+def _to_np(*tensors):
+    result = []
+    for t in tensors:
+        if t is None:
+            result.append(None)
+        elif isinstance(t, np.ndarray):
+            result.append(t)
+        elif _is_fp4_tensor(t):
+            result.append(_fp4_to_np(t))
+        else:
+            result.append(_util.torch_to_numpy(t))
+    return tuple(result)
+
+
+def _scale_to_np(t):
+    import torch
+
+    values = _util.torch_to_numpy(t)
+    if isinstance(t, (torch.Tensor, np.ndarray)) and t.ndim == 3:
+        strides = (
+            t.stride()
+            if isinstance(t, torch.Tensor)
+            else tuple(s // t.itemsize for s in t.strides)
+        )
+        if (
+            strides[-3] == t.shape[-1]
+            and strides[-2] == t.shape[-1] * t.shape[-3]
+            and not (t.shape[-2] == 1 and t.shape[-3] == 1)
+        ):
+            values = np.ascontiguousarray(values.swapaxes(-3, -2))
+    return values
 
 
 def _customize_inputs_impl(x1, x2, x1ScaleOptional, x2Scale, yRef, **kwargs):
@@ -54,19 +128,30 @@ class AclnnQuantBatchMatmulInplaceAddTestSpec(QuantBatchMatmulInplaceAddTestSpec
         groupSize=0,
         **kwargs,
     ):
-        x1_np, x2_np, x1_scale_np, x2_scale_np, y_np = _util.to_numpy(
-            x1, x2, x1ScaleOptional, x2Scale, yRef
-        )
+        x1_np, x2_np, y_np = _to_np(x1, x2, yRef)
+        x1_scale_np = _scale_to_np(x1ScaleOptional)
+        x2_scale_np = _scale_to_np(x2Scale)
 
-        # 检测非连续 tensor，恢复存储布局并修正 transpose
         import torch
 
-        if isinstance(x1, torch.Tensor) and not x1.is_contiguous():
-            x1_np = np.ascontiguousarray(x1_np.T)
-            transposeX1 = True
-        if isinstance(x2, torch.Tensor) and not x2.is_contiguous():
-            x2_np = np.ascontiguousarray(x2_np.T)
-            transposeX2 = True
+        if isinstance(
+            x1, (torch.Tensor, np.ndarray)
+        ) and _util.detect_transpose_from_strides(x1):
+            if not _is_fp4_tensor(x1):
+                x1_np = np.ascontiguousarray(x1_np.T)
+            transposeX1 = not transposeX1
+        if isinstance(
+            x2, (torch.Tensor, np.ndarray)
+        ) and _util.detect_transpose_from_strides(x2):
+            if not _is_fp4_tensor(x2):
+                x2_np = np.ascontiguousarray(x2_np.T)
+            transposeX2 = not transposeX2
+
+        # Convert int8 scale to float8_e8m0 for MX mode detection
+        if x1_scale_np is not None and x1_scale_np.dtype == np.int8:
+            x1_scale_np = x1_scale_np.view(en_dtypes.float8_e8m0)
+        if x2_scale_np is not None and x2_scale_np.dtype == np.int8:
+            x2_scale_np = x2_scale_np.view(en_dtypes.float8_e8m0)
 
         return super().golden(
             x1_np,

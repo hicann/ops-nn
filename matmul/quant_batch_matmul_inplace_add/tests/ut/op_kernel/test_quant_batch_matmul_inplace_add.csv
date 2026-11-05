@@ -2,3 +2,6 @@ socVersion,caseName,kernelUtTarget,prefix,coreNum,batchA,batchB,batchC,m,k,n,tra
 Dav3510,hif8_tt,HIF8_FLOW,kernel,,1,1,1,128,512,128,1,0,0,1,1,TRUE,16,1,AUTO,FALSE
 Dav3510,mx_2,MX_FLOW,kernel,,1,1,1,1024,512,1024,1,0,32,1,1,TRUE,32,1,AUTO,FALSE
 Dav3510,mx_test1,MX_FLOW,kernel,,1,1,1,128,512,128,1,0,32,1,1,TRUE,16,1,AUTO,FALSE
+Dav3510,mxfp4_test1,MX4_FLOW,kernel,,1,1,1,128,512,128,1,0,32,1,1,TRUE,16,1,AUTO,FALSE
+Dav3510,mxfp4_a_full_load,MX4_FLOW,kernel,,1,1,1,128,512,16384,1,0,32,1,1,TRUE,32,17,AUTO,FALSE
+Dav3510,mxfp4_test2,MX4_FLOW,kernel,,1,1,1,1024,512,1024,1,0,32,1,1,TRUE,32,1,AUTO,FALSE

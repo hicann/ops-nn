@@ -27,10 +27,12 @@
 #endif
 
 #if defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_X2_SCALE) && defined(DT_FLOAT8_E4M3FN) && \
-    defined(DT_FLOAT8_E5M2) && defined(DT_FLOAT8_E8M0)
-#define QBMMIA_IS_MX                                                           \
-    ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) && \
-     (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2) && ORIG_DTYPE_X2_SCALE == DT_FLOAT8_E8M0)
+    defined(DT_FLOAT8_E5M2) && defined(DT_FLOAT4_E2M1) && defined(DT_FLOAT8_E8M0)
+#define QBMMIA_IS_MX                                                              \
+    (ORIG_DTYPE_X2_SCALE == DT_FLOAT8_E8M0 &&                                     \
+     (((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) &&  \
+       (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2)) || \
+      (ORIG_DTYPE_X1 == DT_FLOAT4_E2M1 && ORIG_DTYPE_X2 == DT_FLOAT4_E2M1)))
 #else
 #define QBMMIA_IS_MX false
 #endif

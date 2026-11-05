@@ -57,6 +57,7 @@ protected:
     bool CheckDtype() const override;
     const char* GetDefaultOpName() const override;
     bool IsFp8Dtype(const ge::DataType dtype) const;
+    bool IsFp4Dtype(const ge::DataType dtype) const;
     bool IsHiFloat8Dtype(const ge::DataType dtype) const;
     bool IsHiFloat4Dtype(const ge::DataType dtype) const;
     bool IsMxBasicApiCapable() const;
@@ -106,8 +107,13 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::InitMatmulSize(const gert::Shape& 
     auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
     auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
+    auto kSize = this->inputParams_.transA ? x1Outer : x1Inner;
+    OP_CHECK_IF(kSize <= 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "K", std::to_string(kSize).c_str(),
+                                                      "the K dimension of x1 and x2 must be positive"),
+                return false);
     this->inputParams_.mSize = static_cast<uint64_t>(this->inputParams_.transA ? x1Inner : x1Outer);
-    this->inputParams_.kSize = static_cast<uint64_t>(this->inputParams_.transA ? x1Outer : x1Inner);
+    this->inputParams_.kSize = static_cast<uint64_t>(kSize);
     this->inputParams_.nSize = static_cast<uint64_t>(this->inputParams_.transB ? x2Outer : x2Inner);
     return true;
 }
@@ -199,6 +205,12 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::IsFp8Dtype(const ge::DataType dtyp
 }
 
 template <typename BaseT>
+bool QuantBatchMatmulInplaceAddHelper<BaseT>::IsFp4Dtype(const ge::DataType dtype) const
+{
+    return dtype == ge::DT_FLOAT4_E2M1;
+}
+
+template <typename BaseT>
 bool QuantBatchMatmulInplaceAddHelper<BaseT>::IsHiFloat8Dtype(const ge::DataType dtype) const
 {
     return dtype == ge::DT_HIFLOAT8;
@@ -213,11 +225,13 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::IsHiFloat4Dtype(const ge::DataType
 template <typename BaseT>
 bool QuantBatchMatmulInplaceAddHelper<BaseT>::IsMxBasicApiCapable() const
 {
-    const bool isMxfp8 = IsFp8Dtype(this->inputParams_.aDtype) && IsFp8Dtype(this->inputParams_.bDtype) &&
-                         this->inputParams_.isMxPerGroup;
+    const bool isMx = ((IsFp8Dtype(this->inputParams_.aDtype) && IsFp8Dtype(this->inputParams_.bDtype)) ||
+                       (IsFp4Dtype(this->inputParams_.aDtype) && IsFp4Dtype(this->inputParams_.bDtype))) &&
+                      this->inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 &&
+                      this->inputParams_.perTokenScaleDtype == ge::DT_FLOAT8_E8M0 && this->inputParams_.isMxPerGroup;
     const bool isHif4 = this->inputParams_.isHif4PerGroup && IsHiFloat4Dtype(this->inputParams_.aDtype) &&
                         IsHiFloat4Dtype(this->inputParams_.bDtype);
-    return isMxfp8 || isHif4;
+    return isMx || isHif4;
 }
 
 template <typename BaseT>
@@ -266,8 +280,9 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::CheckDtype() const
     const bool isFp8 = IsFp8Dtype(this->inputParams_.aDtype) && IsFp8Dtype(this->inputParams_.bDtype);
     const bool isHiFloat8 = IsHiFloat8Dtype(this->inputParams_.aDtype) && IsHiFloat8Dtype(this->inputParams_.bDtype);
     const bool isHiFloat4 = IsHiFloat4Dtype(this->inputParams_.aDtype) && IsHiFloat4Dtype(this->inputParams_.bDtype);
-    if (isFp8) {
-        return CheckScaleDtype("FLOAT8_E4M3FN/FLOAT8_E5M2", ge::DT_FLOAT8_E8M0);
+    const bool isFp4 = IsFp4Dtype(this->inputParams_.aDtype) && IsFp4Dtype(this->inputParams_.bDtype);
+    if (isFp8 || isFp4) {
+        return CheckScaleDtype("FLOAT8_E4M3FN/FLOAT8_E5M2/FLOAT4_E2M1", ge::DT_FLOAT8_E8M0);
     }
     if (isHiFloat8) {
         return CheckScaleDtype("HIFLOAT8", ge::DT_FLOAT);
@@ -275,11 +290,12 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::CheckDtype() const
     if (isHiFloat4 && this->compileInfo_.npuArch == NpuArch::DAV_9201) {
         return CheckScaleDtype("HIFLOAT4", Ops::NN::DT_HIFLOAT4_SCALE);
     }
-    const char* supportedDtypes = this->compileInfo_.npuArch == NpuArch::DAV_9201 ?
-                                      "the dtypes of x1 and x2 must both be FLOAT8_E4M3FN/FLOAT8_E5M2, both be "
-                                      "HIFLOAT8 or both be HIFLOAT4" :
-                                      "the dtypes of x1 and x2 must both be FLOAT8_E4M3FN/FLOAT8_E5M2 or both be "
-                                      "HIFLOAT8";
+    const char*
+        supportedDtypes = this->compileInfo_.npuArch == NpuArch::DAV_9201 ?
+                              "the dtypes of x1 and x2 must both be FLOAT8_E4M3FN/FLOAT8_E5M2/FLOAT4_E2M1, both be "
+                              "HIFLOAT8 or both be HIFLOAT4" :
+                              "the dtypes of x1 and x2 must both be FLOAT8_E4M3FN/FLOAT8_E5M2/FLOAT4_E2M1 or both be "
+                              "HIFLOAT8";
     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
         this->inputParams_.opName, "x1, x2",
         FormatString("%s, %s", ge::TypeUtils::DataTypeToSerialString(this->inputParams_.aDtype).c_str(),
@@ -308,6 +324,25 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::CheckShapeVaild(const gert::Shape&
                                                        FormatString("%lu, %lu", x1KDimValue, x2KDimValue).c_str(),
                                                        "the K dimension of x1 must be equal to the K dimension of x2"),
                 return false);
+    // MXFP4 packing requires even m and n (each byte holds two E2M1 elements).
+    if (IsFp4Dtype(this->inputParams_.aDtype) && IsFp4Dtype(this->inputParams_.bDtype)) {
+        auto x1MDimValue = static_cast<uint64_t>(this->inputParams_.transA ?
+                                                     x1Shape.GetDim(x1ShapeLength - LAST_FIRST_DIM_INDEX) :
+                                                     x1Shape.GetDim(x1ShapeLength - LAST_SECOND_DIM_INDEX));
+        auto x2NDimValue = static_cast<uint64_t>(this->inputParams_.transB ?
+                                                     x2Shape.GetDim(x2ShapeLength - LAST_SECOND_DIM_INDEX) :
+                                                     x2Shape.GetDim(x2ShapeLength - LAST_FIRST_DIM_INDEX));
+        OP_CHECK_IF(x1MDimValue % 2 != 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        this->inputParams_.opName, "x1", FormatString("[%lu, %lu]", x1MDimValue, x1KDimValue).c_str(),
+                        "when the dtypes of x1 and x2 are FLOAT4_E2M1, the M dimension of x1 must be even"),
+                    return false);
+        OP_CHECK_IF(x2NDimValue % 2 != 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        this->inputParams_.opName, "x2", FormatString("[%lu, %lu]", x2KDimValue, x2NDimValue).c_str(),
+                        "when the dtypes of x1 and x2 are FLOAT4_E2M1, the N dimension of x2 must be even"),
+                    return false);
+    }
     return true;
 }
 
