@@ -282,7 +282,7 @@ English | [简体中文](./README.md)
   - The shape of scaleOut must be (M), and its data type is FLOAT.
   - alpha is an optional input. In the current version, only a null pointer is supported.
   - Currently, axis supports only -1 or 1.
-  - roundMode supports "rint", "round", and "floor". When a null pointer is passed in, the "rint" mode is used.
+  - On <term>Atlas A3 products</term> and <term>Atlas A2 products</term>: roundMode currently supports only rint.
   - Currently, scaleAlg supports only 0.
   - Currently, dstTypeMax supports only 0.0.
   - Currently, trans supports only false.

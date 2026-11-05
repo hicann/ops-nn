@@ -111,7 +111,9 @@ x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_mode="rint", scale_al
   - scale的shape为(M,)，返回的Tensor数据类型为torch.float32，对应底层ACL的FLOAT类型，表示pertoken缩放因子。
   - alpha为可选输入，当前版本仅支持传入None。
   - axis目前只支持-1或者1。
-  - round_mode支持"rint"、"round"、"floor"，传入None时，采用"rint"模式。
+  <!-- npu="A3,910b" id7 -->
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>的round_mode当前仅支持rint。
+  <!-- end id7 -->
   - scale_alg目前只支持0。
   - dst_type_max目前只支持0.0。
   - transpose_y目前只支持False。

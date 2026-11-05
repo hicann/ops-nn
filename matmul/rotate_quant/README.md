@@ -280,7 +280,7 @@
   - scaleOut的shape必须是(M)，数据类型为FLOAT。
   - alpha为可选输入，当前版本仅支持传入空指针。
   - axis目前只支持-1或者1。
-  - roundMode支持"rint"、"round"、"floor"，传入空指针时，采用"rint"模式。
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>的roundMode当前仅支持rint。
   - scaleAlg目前只支持0。
   - dstTypeMax目前只支持0.0。
   - trans目前只支持false。

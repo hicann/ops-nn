@@ -435,7 +435,9 @@ aclnnStatus aclnnRotateQuant(
   - The shape of scaleOut must be (M), and the data type must be FLOAT.
   - alpha is an optional input. In the current version, only a null pointer can be passed.
   - axis currently supports only -1 or 1.
-  - roundMode supports "rint", "round", and "floor". If a null pointer is passed in, the "rint" mode is used.
+  <!-- npu="A3,910b" id11 -->
+  - On <term>Atlas A3 products</term> and <term>Atlas A2 products</term>: roundMode currently supports only rint.
+  <!-- end id11 -->
   - scaleAlg supports only 0.
   - dstTypeMax supports only 0.0.
   - trans supports only false.
