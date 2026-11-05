@@ -17,7 +17,7 @@
  * Role: Ascend C kernel entry point for InplaceApplyAdamWithAmsgrad on arch35 (Ascend 950).
  *        Contains the __global__ kernel function that runs on the NPU.
  *
- * Prototype (see docs/InplaceApplyAdamWithAmsgrad/develop/proto.md §3):
+ * Prototype:
  *   __global__ __aicore__ void inplace_apply_adam_with_amsgrad(
  *       GM_ADDR var, GM_ADDR m, GM_ADDR v, GM_ADDR vhat,
  *       GM_ADDR beta1_power, GM_ADDR beta2_power, GM_ADDR lr,
@@ -25,7 +25,7 @@
  *       GM_ADDR var_out, GM_ADDR m_out, GM_ADDR v_out, GM_ADDR vhat_out,
  *       GM_ADDR workspace, GM_ADDR tiling)
  *
- * Branch dispatch (per docs/InplaceApplyAdamWithAmsgrad/design/Kernel.md §2):
+ * Branch dispatch:
  *   The build system instantiates this entry once per dtype declared in the
  *   OpDef (DataType = {BF16, FP16, FP32} for var/m/v/vhat/grad).  Each binary
  *   is compiled with the `DTYPE_VAR` macro defined to the corresponding C++

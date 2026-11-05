@@ -105,7 +105,9 @@ static void CpuAmsgrad(const AdamParams& p, const float* var, const float* m, co
     for (int64_t i = 0; i < n; ++i) {
         const float mNew = m[i] + (grad[i] - m[i]) * oneMinusB1;
         const float vNew = v[i] + (grad[i] * grad[i] - v[i]) * oneMinusB2;
-        const float vhatNew = (vhat[i] > vNew) ? vhat[i] : vNew;
+        // vhat' = max(vhat, v')，与 TF/Eigen cwiseMax 语义一致：(vhat < v) ? v : vhat。
+        // NaN 保留方向：与 NaN 比较为假——v 含 NaN 时保留 vhat 旧值，vhat 含 NaN 时保留 NaN。
+        const float vhatNew = (vhat[i] < vNew) ? vNew : vhat[i];
         const float denom = std::sqrt(vhatNew) + p.epsilon;
         const float varNew = var[i] - alpha * mNew / denom;
         varOut[i] = varNew;
@@ -385,7 +387,8 @@ int main(int argc, char* argv[])
     CHECK_RET(session != nullptr, "Create session failed");
 
     uint32_t graph_id = 0;
-    ret = session->AddGraph(graph_id, graph, {});
+    std::map<AscendString, AscendString> graphOptions = {};
+    ret = session->AddGraph(graph_id, graph, graphOptions);
     CHECK_RET(ret == SUCCESS, "AddGraph failed");
 
     printf("%s - INFO - [XIR]: Run graph\n", GetTime().c_str());

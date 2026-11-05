@@ -65,6 +65,11 @@ constexpr size_t kTensorInputCount = 5;
 constexpr size_t kMaxTensorRank = 8;
 // Four in-place outputs (var/m/v/vhat) that each take that shared shape.
 constexpr size_t kOutputCount = 4;
+// Six scalar hyperparameter inputs (beta1_power..epsilon, indices 4-9) that
+// must each be rank-0 or shape [1] per spec.yaml/README constraints.
+constexpr size_t kScalarInputFirst = 4;
+constexpr size_t kScalarInputLast = 9;
+constexpr size_t kScalarInputCount = 6;
 
 bool IsUnknownRank(const gert::Shape* shape)
 {
@@ -72,6 +77,34 @@ bool IsUnknownRank(const gert::Shape* shape)
 }
 
 } // namespace
+
+// CheckScalarInputShapes: rank validation for the six scalar hyperparameter
+// inputs (beta1_power/beta2_power/lr/beta1/beta2/epsilon, indices 4-9).
+// Each must be rank-0 or shape [1] per spec.yaml/README; any other shape
+// (including empty [0] or multi-element [3]/[2,2]) is rejected as
+// shape_mismatch.  A nullptr or UNKNOWN_RANK/UNKNOWN_DIM scalar shape cannot
+// be validated here and is left to the tiling-side mirror check.
+static ge::graphStatus CheckScalarInputShapes(const gert::InferShapeContext* context)
+{
+    static const char* scalarNames[kScalarInputCount] = {"beta1_power", "beta2_power", "lr",
+                                                         "beta1",       "beta2",       "epsilon"};
+    for (size_t i = kScalarInputFirst; i <= kScalarInputLast; ++i) {
+        const gert::Shape* shape = context->GetInputShape(i);
+        if (shape == nullptr || IsUnknownRank(shape)) {
+            continue;
+        }
+        const size_t rank = shape->GetDimNum();
+        const bool valid = (rank == 0) || (rank == 1 && (shape->GetDim(0) == 1 || shape->GetDim(0) == ge::UNKNOWN_DIM));
+        if (!valid) {
+            OP_LOGE("InplaceApplyAdamWithAmsgrad",
+                    "InferShape failed: scalar input %s (index %zu) must be rank-0 or shape [1], "
+                    "got rank %zu (shape_mismatch).",
+                    scalarNames[i - kScalarInputFirst], i, rank);
+            return GRAPH_FAILED;
+        }
+    }
+    return GRAPH_SUCCESS;
+}
 
 // CheckShapesNotNull: nullptr validation for the five input shapes (checked
 // first) and the four output shapes (checked second), preserving the original
@@ -193,7 +226,7 @@ static void SetOutputShapes(gert::Shape* const* outputShapes, size_t rank, const
  *   contexts, rank mismatches, or conflicting known dimensions.
  *
  * Design:
- *   Per proto.md §4, the five element-wise inputs var/m/v/vhat/grad must share
+ *   The five element-wise inputs var/m/v/vhat/grad must share
  *   one shape; the four in-place outputs var/m/v/vhat reuse that shape.
  *   UNKNOWN_RANK on any of the five inputs propagates to all four outputs.
  *   For known-rank shapes, ranks must match and every known dimension pair
@@ -217,6 +250,11 @@ static ge::graphStatus InferShapeForInplaceApplyAdamWithAmsgrad(gert::InferShape
 
     // nullptr validation for all nine shapes (inputs first, then outputs).
     if (!CheckShapesNotNull(tensorShapes, outputShapes)) {
+        return GRAPH_FAILED;
+    }
+
+    // Scalar hyperparameter shape validation (rank-0 or [1], shape_mismatch otherwise).
+    if (CheckScalarInputShapes(context) != GRAPH_SUCCESS) {
         return GRAPH_FAILED;
     }
 

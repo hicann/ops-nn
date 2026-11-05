@@ -52,9 +52,10 @@ namespace ge {
  *
  *@par Attributes:
  *@li use_locking: An optional bool. Defaults to "False".
- *     If "True", updating of the var, m, v and vhat tensors will be protected
- *     by a lock; otherwise the behavior is undefined, but may exhibit less
- *     contention.
+ *     Semantic placeholder only (aligned with TensorFlow ResourceApplyAdamWithAmsgrad):
+ *     NPU graph execution is serial with no concurrent writes, so no locking is
+ *     implemented; the numeric behavior is equivalent to use_locking=false
+ *     regardless of the value.
  *
  *@par Outputs:
  *@li var: Same shape and dtype as input "var", in-place updated.

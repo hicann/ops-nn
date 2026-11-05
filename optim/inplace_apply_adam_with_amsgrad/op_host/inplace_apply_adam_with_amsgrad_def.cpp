@@ -25,7 +25,7 @@
  *   - The registration macro registers this OpDef subclass at static init time
  *     so op_build can discover it.
  *
- * Prototype (see docs/InplaceApplyAdamWithAmsgrad/develop/proto.md):
+ * Prototype:
  *   - 11 Inputs: var, m, v, vhat, beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad
  *   - 4 Outputs: var, m, v, vhat (in-place with same-named inputs)
  *   - 1 Attr: use_locking (OPTIONAL Bool, default false)
@@ -64,7 +64,7 @@ public:
     explicit InplaceApplyAdamWithAmsgrad(const char* name) : OpDef(name)
     {
         // —— Input 声明（11 个）：DataType 按 3 组组合列展开，所有 IO 等长 = 3 ——
-        // 组合序: [0]=bfloat16, [1]=float16, [2]=float32（与 proto.md §2 表行序一致）
+        // 组合序: [0]=bfloat16, [1]=float16, [2]=float32
         this->Input("var")
             .ParamType(REQUIRED)
             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})

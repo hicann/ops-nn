@@ -243,3 +243,71 @@ TEST_F(InplaceApplyAdamWithAmsgradInferShape, infershape_reject_shape_mismatch)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
+
+TEST_F(InplaceApplyAdamWithAmsgradInferShape, infershape_reject_scalar_shape_3_elements)
+{
+    // Scalar hyperparameter with out-of-domain shape [3] -> reject (must be rank-0 or [1]).
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdamWithAmsgrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape tensorShape = MakeShape({4, 8});
+    gert::StorageShape badScalarShape = MakeShape({3}); // multi-element scalar
+    gert::StorageShape outShape = MakeShape({4, 8});
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(11, 4)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape, &badScalarShape,
+                                    &badScalarShape, &badScalarShape, &badScalarShape, &badScalarShape, &badScalarShape,
+                                    &tensorShape})
+                      .OutputShapes({&outShape, &outShape, &outShape, &outShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceApplyAdamWithAmsgradInferShape, infershape_reject_scalar_shape_empty)
+{
+    // Scalar hyperparameter with empty shape [0] -> reject (must be rank-0 or [1]);
+    // a 0-element scalar would otherwise be read out-of-bounds on device.
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdamWithAmsgrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape tensorShape = MakeShape({4, 8});
+    gert::StorageShape emptyScalarShape = MakeShape({0}); // empty scalar
+    gert::StorageShape outShape = MakeShape({4, 8});
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(11, 4)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape, &emptyScalarShape,
+                                    &emptyScalarShape, &emptyScalarShape, &emptyScalarShape, &emptyScalarShape,
+                                    &emptyScalarShape, &tensorShape})
+                      .OutputShapes({&outShape, &outShape, &outShape, &outShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(InplaceApplyAdamWithAmsgradInferShape, infershape_case_scalar_rank0_accept)
+{
+    // Scalar hyperparameters with rank-0 shape -> accept (documented contract:
+    // rank-0 scalar or shape [1]).
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdamWithAmsgrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape tensorShape = MakeShape({4, 8});
+    gert::StorageShape rank0ScalarShape = MakeShape({}); // rank-0 scalar
+    gert::StorageShape outShape = MakeShape({4, 8});
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(11, 4)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape, &rank0ScalarShape,
+                                    &rank0ScalarShape, &rank0ScalarShape, &rank0ScalarShape, &rank0ScalarShape,
+                                    &rank0ScalarShape, &tensorShape})
+                      .OutputShapes({&outShape, &outShape, &outShape, &outShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}

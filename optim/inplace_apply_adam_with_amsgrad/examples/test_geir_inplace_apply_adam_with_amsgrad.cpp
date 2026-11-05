@@ -42,14 +42,14 @@ using std::string;
 using std::vector;
 #define ADD_INPUT(intputIndex, intputName, intputDtype, inputShape)                                                 \
     vector<int64_t> placeholder##intputIndex##_shape = inputShape;                                                  \
-    auto placeholder##intputIndex = op::Data("placeholder" + intputIndex).set_attr_index(0);                        \
+    auto placeholder##intputIndex = op::Data("placeholder" + std::to_string(intputIndex)).set_attr_index(0);        \
     TensorDesc placeholder##intputIndex##_desc = TensorDesc(ge::Shape(placeholder##intputIndex##_shape), FORMAT_ND, \
                                                             intputDtype);                                           \
     placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                               \
     placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                                           \
     Tensor tensor_placeholder##intputIndex;                                                                         \
-    ret = GenOnesDataFloat32(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                     \
-                             placeholder##intputIndex##_desc, 2);                                                   \
+    ret = GenFilledData(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                          \
+                        placeholder##intputIndex##_desc, 2);                                                        \
     if (ret != SUCCESS) {                                                                                           \
         printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                              \
         return FAILED;                                                                                              \
@@ -113,21 +113,58 @@ uint32_t GetDataTypeSize(DataType dt)
     return dilation;
 }
 
-int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, float value)
+int32_t GenFilledData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, float value)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
     for (uint32_t i = 0; i < shapes.size(); i++) {
         size *= shapes[i];
     }
-    uint32_t byteSizeFloat32 = 4;
-    uint32_t data_len = size * byteSizeFloat32;
-    float* pData = new (std::nothrow) float[size];
+    // Generate data according to the DECLARED dtype: element size and bit
+    // pattern must match the TensorDesc so the graph input carries the
+    // intended values (fp32 uses 4-byte elements, fp16/bf16 use 2-byte).
+    const DataType dt = input_tensor_desc.GetDataType();
+    const uint32_t dtypeBytes = GetDataTypeSize(dt);
+    const uint32_t data_len = size * dtypeBytes;
+    uint8_t* pData = new (std::nothrow) uint8_t[data_len];
 
-    for (size_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
+    if (dt == ge::DT_FLOAT) {
+        float* p = (float*)pData;
+        for (size_t i = 0; i < size; ++i) {
+            p[i] = value;
+        }
+    } else if (dt == ge::DT_FLOAT16) {
+        // float -> half bit pattern (same conversion as the arch35 sample)
+        uint32_t bits = 0;
+        memcpy(&bits, &value, sizeof(bits));
+        const uint16_t sign = (bits >> 16) & 0x8000;
+        int32_t exp = (int32_t)((bits >> 23) & 0xFF) - 127 + 15;
+        uint16_t h = 0;
+        if (exp <= 0) {
+            h = sign;
+        } else if (exp >= 31) {
+            h = sign | 0x7C00;
+        } else {
+            h = (uint16_t)(sign | (exp << 10) | ((bits >> 13) & 0x3FF));
+        }
+        uint16_t* p = (uint16_t*)pData;
+        for (size_t i = 0; i < size; ++i) {
+            p[i] = h;
+        }
+    } else if (dt == ge::DT_BF16) {
+        uint32_t bits = 0;
+        memcpy(&bits, &value, sizeof(bits));
+        const uint16_t bf = (uint16_t)(bits >> 16);
+        uint16_t* p = (uint16_t*)pData;
+        for (size_t i = 0; i < size; ++i) {
+            p[i] = bf;
+        }
+    } else {
+        delete[] pData;
+        printf("%s - ERROR - [XIR]: Unsupported dtype %d for sample data generation\n", GetTime().c_str(), (int)dt);
+        return FAILED;
     }
-    input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    input_tensor = Tensor(input_tensor_desc, pData, data_len);
     return SUCCESS;
 }
 

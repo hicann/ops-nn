@@ -18,11 +18,7 @@
  *        arch35 (Ascend 950).
  *
  * Current stage: PUBLIC TilingFunc IMPL (Task 27).  Replaces the Task-26
- *   red-baseline stub with the real documented formulas from:
- *     - docs/InplaceApplyAdamWithAmsgrad/design/HostTiling.md   §1-§10
- *     - docs/InplaceApplyAdamWithAmsgrad/design/BranchRoute.md §1-§2
- *     - docs/InplaceApplyAdamWithAmsgrad/design/TilingData.md  §1-§3
- *     - docs/InplaceApplyAdamWithAmsgrad/design/branches/DESIGN-BRANCH-{0,1,2}.md §2
+ *   red-baseline stub with the real documented formulas.
  *
  *   The matching gtest UT (tests/tiling/test_tiling_gtest.cpp) holds an
  *   INDEPENDENT oracle that re-implements the same formulas by hand.  Both
@@ -68,23 +64,23 @@
 namespace optiling {
 
 // ---------------------------------------------------------------------------
-// Documented constants (HostTiling.md §4-§5 / DESIGN-BRANCH-*.md §2).
+// Documented constants.
 // All element counts; ubSize/coreNum in bytes/cores.
 // ---------------------------------------------------------------------------
 constexpr int64_t kAlign256 = 256;        // UB 256-byte alignment (kElewiseUbAlignBytes)
 constexpr int64_t kElemAlign = 512;       // multi-core per-core element alignment (kElewiseElemAlignFactor)
 constexpr int64_t kMinTilingBits = 32768; // 4 KB per core minimum, in bits
-constexpr int64_t kBufferNum = 5;         // var/m/v/vhat/grad (HostTiling.md §1, §4)
+constexpr int64_t kBufferNum = 5;         // var/m/v/vhat/grad
 constexpr int64_t kFp32K = 4;             // fp32: 4 fp32 intermediate TBufs (basic Vector API, no VF)
 constexpr int64_t kFp16Bf16K = 13;        // fp16/bf16: 5 fp32 input + 4 fp32 output + 4 fp32 intermediate
-constexpr int64_t kExtraSizeBytes = 0;    // host reserves 0 B for framework overhead (DESIGN-BRANCH-*.md §2)
+constexpr int64_t kExtraSizeBytes = 0;    // host reserves 0 B for framework overhead
 constexpr size_t kMaxTensorRank = 8;      // spec.yaml rank_range [0, 8] for var/m/v/vhat/grad
 // Scalar input index range: beta1_power(4) .. epsilon(9), all must be DT_FLOAT (_def.cpp:78-107).
 constexpr size_t kScalarInputFirst = 4;
 constexpr size_t kScalarInputLast = 9;
 constexpr size_t kScalarInputCount = 6;
 
-// Per-dtype tiling parameters (DESIGN-BRANCH-*.md §2).
+// Per-dtype tiling parameters.
 // NOTE: dtype is NOT encoded into tilingKey here — the operator has no
 // algorithm variants, so dtype is routed def-driven via the DTYPE_VAR macro
 // (one .o per def dtype combination).  These per-dtype constants are only used
@@ -95,7 +91,7 @@ struct DtypeParams {
     int64_t K;          // number of fp32 intermediate buffers (fp32=4, fp16/bf16=13)
 };
 
-// ResolveDtypeParams — per-dtype constants (HostTiling.md §7).
+// ResolveDtypeParams — per-dtype constants.
 // Returns false on unsupported dtype (host rejects, not a branch).  No
 // tilingKey is produced: dtype dispatch is def-driven (DTYPE_VAR macro).
 static bool ResolveDtypeParams(ge::DataType dt, DtypeParams& out)
@@ -212,7 +208,7 @@ static bool ReadScalar(const gert::TilingContext* ctx, size_t index, float& out)
 }
 
 // ---------------------------------------------------------------------------
-// ReadAndCheckScalars — TilingFunc Steps 2&3 (HostTiling.md §9): read the
+// ReadAndCheckScalars — TilingFunc Steps 2&3: read the
 // three alpha-relevant scalars (beta1_power/beta2_power/lr, indices 4-6) and
 // compute the host-budget alpha.
 //
@@ -236,11 +232,11 @@ static void ReadAndCheckScalars(const gert::TilingContext* context, float& alpha
     (void)ReadScalar(context, 4, beta1Power);
     (void)ReadScalar(context, 5, beta2Power);
     (void)ReadScalar(context, 6, lr);
-    // alpha = lr * sqrt(1 - beta2_power) / (1 - beta1_power)  (HostTiling.md §7).
+    // alpha = lr * sqrt(1 - beta2_power) / (1 - beta1_power).
     // Intentionally NO div0 guard (CODE_REVIEW N1):
     // When 1-beta1_power==0 (beta1Power=1.0), alpha becomes Inf/NaN — this
-    // is the CONTRACTED output, matching TF golden / TilingUT oracle bit-for-bit
-    // (DESIGN-BRANCH-0.md §5/§7).  Do NOT add div0 guard; it would diverge from
+    // is the CONTRACTED output, matching TF golden / TilingUT oracle bit-for-bit.
+    // Do NOT add div0 guard; it would diverge from
     // golden.  In the aclnn path (ReadScalar returns false → scalars stay 0),
     // alpha is a placeholder — the kernel recomputes from GM.  In the UT path
     // (host-backed scalars), alpha is the real value and TilingUT verifies it.
@@ -287,6 +283,31 @@ static ge::graphStatus ValidateInputs(const gert::TilingContext* context, DtypeP
         }
     }
 
+    // ----- Scalar shape check (inputs 4-9 must be rank-0 or [1]) -----
+    // Mirrors the InferShape check: per the README/spec.yaml constraint the six
+    // scalar hyperparameters must be rank-0 or shape [1].  Out-of-domain shapes
+    // (e.g. empty [0], [3], [2,2]) are rejected as shape_mismatch — in
+    // particular a 0-element scalar tensor would otherwise cause a device-side
+    // OOB read in ReadScalarsFromGm (GetValue(0) on an empty GM tensor) when
+    // the state tensors are non-empty.
+    for (size_t i = kScalarInputFirst; i <= kScalarInputLast; ++i) {
+        const gert::StorageShape* s = context->GetInputShape(i);
+        if (s == nullptr) {
+            continue;
+        }
+        const auto& scalarShape = s->GetStorageShape();
+        const size_t scalarRank = scalarShape.GetDimNum();
+        const bool valid = (scalarRank == 0) || (scalarRank == 1 && scalarShape.GetDim(0) == 1);
+        if (!valid) {
+            static const char* scalarNames[kScalarInputCount] = {"beta1_power", "beta2_power", "lr",
+                                                                 "beta1",       "beta2",       "epsilon"};
+            OP_LOGE(context->GetNodeName(),
+                    "Scalar input %s (index %zu) must be rank-0 or shape [1], got rank %zu (shape_mismatch).",
+                    scalarNames[i - kScalarInputFirst], i, scalarRank);
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     // ----- Step 5: dim0 = product of var.shape dims (rank-0 -> 1) -----
     const gert::StorageShape* varShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
@@ -302,7 +323,24 @@ static ge::graphStatus ValidateInputs(const gert::TilingContext* context, DtypeP
         return ge::GRAPH_FAILED;
     }
 
-    // ----- Shape consistency check (DESIGN-BRANCH-0.md §0: 五张量同形) -----
+    // ----- Element-count int64 overflow guard -----
+    // The multi-core split computes CeilDiv(dim0 * dp.dtypeBits, kMinTilingBits);
+    // dim0 * dtypeBits and CeilDiv's (a + b - 1) accumulation must stay within
+    // int64 range.  A shape whose element count exceeds the representable bound
+    // (e.g. a legal-metadata [2^20, 2^20, 2^20] fp32 input, dim0=2^60) is
+    // rejected here; without this guard the signed overflow is UB and typically
+    // wraps to a wrong/negative core count.
+    constexpr int64_t kInt64Max = INT64_MAX;
+    const int64_t maxDim0 = (kInt64Max - kMinTilingBits + 1) / dp.dtypeBits;
+    if (dim0 > maxDim0) {
+        OP_LOGE(context->GetNodeName(),
+                "Tensor element count %ld exceeds the int64 representable bound for the tiling arithmetic "
+                "(max %ld elements at dtypeBits %ld); rejected.",
+                static_cast<long>(dim0), static_cast<long>(maxDim0), static_cast<long>(dp.dtypeBits));
+        return ge::GRAPH_FAILED;
+    }
+
+    // ----- Shape consistency check (五张量同形) -----
     // var/m/v/vhat/grad must all have the same shape (no broadcast).  The
     // test S6 case swaps m's view shape (e.g. [3,2] vs var [2,3]) — same
     // element count but different dimensions.  Reject with GRAPH_FAILED
@@ -325,7 +363,7 @@ static ge::graphStatus ValidateInputs(const gert::TilingContext* context, DtypeP
 }
 
 // ---------------------------------------------------------------------------
-// ComputeMultiCoreTiling — TilingFunc Step 7 (HostTiling.md §5): multi-core
+// ComputeMultiCoreTiling — TilingFunc Step 7: multi-core
 // split.  Writes coreNum/blockFormer/blockNum into the TilingData buffer.
 // ---------------------------------------------------------------------------
 static void ComputeMultiCoreTiling(InplaceApplyAdamWithAmsgradTilingData* tiling, int64_t dim0, const DtypeParams& dp,
@@ -342,7 +380,7 @@ static void ComputeMultiCoreTiling(InplaceApplyAdamWithAmsgradTilingData* tiling
 }
 
 // ---------------------------------------------------------------------------
-// ComputeUbTiling — TilingFunc Steps 8-9 (HostTiling.md §4/§7): UB split.
+// ComputeUbTiling — TilingFunc Steps 8-9: UB split.
 //   bufferDivisor = bufferNum*dtypeBytes + K*sizeof(float)  (B/elem)
 //     fp32:  5*4 + 4*4 = 36  | fp16/bf16: 5*2 + 13*4 = 62
 //   maxElemNum  = (ubSize - extraSize) / bufferDivisor       (elements)
@@ -371,7 +409,7 @@ static void ComputeUbTiling(InplaceApplyAdamWithAmsgradTilingData* tiling, int64
 
 // ---------------------------------------------------------------------------
 // FillTilingData — TilingFunc Step 6 defaults + field write-out
-// (HostTiling.md §7/§9): totalLength/alpha always; coreNum=1 and all
+// totalLength/alpha always; coreNum=1 and all
 // block/UB loops/tails zeroed for the empty-tensor short-circuit (the
 // non-empty path overwrites them via ComputeMultiCoreTiling/ComputeUbTiling).
 // NOTE: no tilingKey field — dtype is def-driven (DTYPE_VAR macro), not
@@ -392,7 +430,7 @@ static void FillTilingData(InplaceApplyAdamWithAmsgradTilingData* tiling, int64_
 }
 
 // ---------------------------------------------------------------------------
-// TilingFunc — runtime tiling entry (HostTiling.md §9).
+// TilingFunc — runtime tiling entry.
 //
 // Workflow:
 //   1. Read platform info (coreNum, ubSize) via Ops::Base wrappers around
@@ -407,10 +445,10 @@ static void FillTilingData(InplaceApplyAdamWithAmsgradTilingData* tiling, int64_
 //   5. Compute dim0 = product of var.shape dims (StorageShape::GetShapeSize).
 //   6. Empty-tensor short-circuit: blockNum=0, coreNum=1, all loops/tails=0,
 //      SetBlockDim(1), workspace[0]=0.
-//   7. MultiCoreSplit (HostTiling.md §5): coreNum, blockFormer, blockNum, blockTail.
-//   8. ComputeUbFormer (HostTiling.md §4): bufferDivisor, maxElemNum,
+//   7. MultiCoreSplit: coreNum, blockFormer, blockNum, blockTail.
+//   8. ComputeUbFormer: bufferDivisor, maxElemNum,
 //      alignFactor, ubFormer = AlignDown(maxElemNum, alignFactor) (>= alignFactor).
-//   9. FillAndLogTilingData (HostTiling.md §7): all 10 TilingData fields.
+//   9. FillAndLogTilingData: all 10 TilingData fields.
 //  10. SetBlockDim(coreNum), GetWorkspaceSizes(1)[0]=0 (no tiling-key set).
 // ---------------------------------------------------------------------------
 ge::graphStatus InplaceApplyAdamWithAmsgradTilingFunc(gert::TilingContext* context)
@@ -437,26 +475,26 @@ ge::graphStatus InplaceApplyAdamWithAmsgradTilingFunc(gert::TilingContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     FillTilingData(tiling, dim0, alpha);
 
-    // ----- Step 6: empty-tensor short-circuit (HostTiling.md §9 / TilingData.md §3) -----
+    // ----- Step 6: empty-tensor short-circuit -----
     // dim0==0: blockNum=0, coreNum=1, all loops/tails=0 (defaults written by
     // FillTilingData); kernel Init sees blockNum_==0 and returns immediately
     // (equivalent to no update).  No tilingKey is set: dtype dispatch is
     // def-driven (one .o per dtype combination).
     if (dim0 != 0) {
-        // ----- Step 7: MultiCoreSplit (HostTiling.md §5) -----
+        // ----- Step 7: MultiCoreSplit -----
         ComputeMultiCoreTiling(tiling, dim0, dp, availableCoreNum);
-        // ----- Step 8 + 9: ComputeUbFormer + first/tail UB loop/tail (HostTiling.md §4/§7) -----
+        // ----- Step 8 + 9: ComputeUbFormer + first/tail UB loop/tail -----
         ComputeUbTiling(tiling, dim0, dp, ubSize);
     }
 
-    // ----- SetBlockDim + workspace[0]=0 (HostTiling.md §9) -----
+    // ----- SetBlockDim + workspace[0]=0 -----
     // No tiling-key is set: dtype dispatch is def-driven (DTYPE_VAR macro, one
     // .o per def dtype combination); the operator has no algorithm variants.
     context->SetBlockDim(static_cast<uint32_t>(tiling->coreNum));
 
     size_t* ws = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, ws);
-    ws[0] = 0; // Elementwise inplace op: no workspace (HostTiling.md §6 N/A)
+    ws[0] = 0; // Elementwise inplace op: no workspace
 
     OP_LOGI(context->GetNodeName(),
             "TilingData: dim0=%ld coreNum=%d blockFormer=%ld blockNum=%ld ubFormer=%ld "
@@ -469,7 +507,7 @@ ge::graphStatus InplaceApplyAdamWithAmsgradTilingFunc(gert::TilingContext* conte
 
 // ---------------------------------------------------------------------------
 // TilingPrepareForInplaceApplyAdamWithAmsgrad — compile-time preparation
-// (HostTiling.md §8).  Populates InplaceApplyAdamWithAmsgradCompileInfo with
+// Populates InplaceApplyAdamWithAmsgradCompileInfo with
 // platform core count and UB size so the runtime TilingFunc could read them
 // via GetCompileInfo<>().  The runtime TilingFunc above uses GetPlatformInfo()
 // directly (matching scale_custom's pattern), so this CompileInfo is not on
@@ -490,7 +528,7 @@ ge::graphStatus TilingPrepareForInplaceApplyAdamWithAmsgrad(gert::TilingParseCon
 
 // =============================================================================
 // IMPL_OP_OPTILING(InplaceApplyAdamWithAmsgrad) — register the tiling function
-// and the compile-time preparation callback (HostTiling.md §8).
+// and the compile-time preparation callback.
 //
 // NOTE on TilingInputsDataDependency: REMOVED.  The framework's
 // TilingInputsDataDependency mechanism stages scalar inputs to a
@@ -503,7 +541,7 @@ ge::graphStatus TilingPrepareForInplaceApplyAdamWithAmsgrad(gert::TilingParseCon
 //
 // Fix: the kernel reads beta1Power/beta2Power/lr DIRECTLY from their GM
 // scalar tensors (via GlobalTensor::GetValue) and computes alpha locally
-// (same fp32 formula as the host, per DESIGN-BRANCH-0.md §7).  The
+// (same fp32 formula as the host).  The
 // TilingData.alpha field is kept for documentation but the kernel ignores
 // it; alpha is recomputed in the kernel from the un-staged GM scalars.
 // This avoids the framework's staging cache and matches the oracle's

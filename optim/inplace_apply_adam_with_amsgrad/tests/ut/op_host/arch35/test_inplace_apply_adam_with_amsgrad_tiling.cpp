@@ -63,10 +63,12 @@ struct IpaUtCompileInfo {};
 
 // ---------------------------------------------------------------------------
 // Helper: run one tiling case. gradShape == nullptr means same as tensorShape.
+// scalarShapeVec == nullptr means scalars use shape [1] (the documented contract).
 // Returns the TilingContext for result inspection when expected success.
 // ---------------------------------------------------------------------------
 static void DoTilingCase(const std::vector<int64_t>& inputShape, ge::DataType tensorDtype, ge::DataType scalarDtype,
-                         const std::vector<int64_t>* gradShape, ge::graphStatus expectedResult)
+                         const std::vector<int64_t>* gradShape, ge::graphStatus expectedResult,
+                         const std::vector<int64_t>* scalarShapeVec = nullptr)
 {
     fe::PlatFormInfos platFormInfo;
     map<string, string> socInfos;
@@ -104,6 +106,10 @@ static void DoTilingCase(const std::vector<int64_t>& inputShape, ge::DataType te
         gradStorage = makeShape(*gradShape);
     }
     gert::StorageShape oneShape = makeShape({1});
+    gert::StorageShape scalarStorage = oneShape;
+    if (scalarShapeVec != nullptr) {
+        scalarStorage = makeShape(*scalarShapeVec);
+    }
 
     IpaUtCompileInfo compileInfo;
 
@@ -111,8 +117,9 @@ static void DoTilingCase(const std::vector<int64_t>& inputShape, ge::DataType te
                       .SetOpType(opType)
                       .NodeIoNum(11, 4)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape, &oneShape, &oneShape,
-                                    &oneShape, &oneShape, &oneShape, &oneShape, &gradStorage})
+                      .InputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape, &scalarStorage,
+                                    &scalarStorage, &scalarStorage, &scalarStorage, &scalarStorage, &scalarStorage,
+                                    &gradStorage})
                       .OutputShapes({&tensorShape, &tensorShape, &tensorShape, &tensorShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
@@ -222,4 +229,35 @@ TEST_F(TestInplaceApplyAdamWithAmsgradTiling, tiling_grad_rank_mismatch_reject)
     // grad rank differs from var rank -> reject.
     const std::vector<int64_t> gradShape = {32};
     DoTilingCase({4, 8}, ge::DT_FLOAT, ge::DT_FLOAT, &gradShape, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestInplaceApplyAdamWithAmsgradTiling, tiling_scalar_shape_3_elements_reject)
+{
+    // Scalar hyperparameter with out-of-domain shape [3] -> reject (shape_mismatch).
+    const std::vector<int64_t> scalarShape = {3};
+    DoTilingCase({4, 8}, ge::DT_FLOAT, ge::DT_FLOAT, nullptr, ge::GRAPH_FAILED, &scalarShape);
+}
+
+TEST_F(TestInplaceApplyAdamWithAmsgradTiling, tiling_scalar_shape_empty_reject)
+{
+    // Scalar hyperparameter with empty shape [0] -> reject (shape_mismatch):
+    // a 0-element scalar tensor would otherwise cause a device-side OOB read
+    // in ReadScalarsFromGm (GetValue(0) on an empty GM tensor).
+    const std::vector<int64_t> scalarShape = {0};
+    DoTilingCase({4, 8}, ge::DT_FLOAT, ge::DT_FLOAT, nullptr, ge::GRAPH_FAILED, &scalarShape);
+}
+
+TEST_F(TestInplaceApplyAdamWithAmsgradTiling, tiling_scalar_shape_2d_reject)
+{
+    // Scalar hyperparameter with 2-D shape [2,2] -> reject (shape_mismatch).
+    const std::vector<int64_t> scalarShape = {2, 2};
+    DoTilingCase({4, 8}, ge::DT_FLOAT, ge::DT_FLOAT, nullptr, ge::GRAPH_FAILED, &scalarShape);
+}
+
+TEST_F(TestInplaceApplyAdamWithAmsgradTiling, tiling_scalar_shape_rank0_accept)
+{
+    // Scalar hyperparameter with rank-0 shape -> accept (documented contract:
+    // rank-0 scalar or shape [1]).
+    const std::vector<int64_t> scalarShape = {};
+    DoTilingCase({4, 8}, ge::DT_FLOAT, ge::DT_FLOAT, nullptr, ge::GRAPH_SUCCESS, &scalarShape);
 }

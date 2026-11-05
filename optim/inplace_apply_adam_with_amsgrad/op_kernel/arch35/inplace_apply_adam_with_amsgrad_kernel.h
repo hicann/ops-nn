@@ -16,8 +16,7 @@
  * =============================================================================
  * Role: Ascend C device-side kernel class for InplaceApplyAdamWithAmsgrad on
  *        arch35 (Ascend 950).  Implements the full Adam-with-AMSGrad compute
- *        chain (α → m_t → v_t → vhat_t → var_t) per
- *        docs/InplaceApplyAdamWithAmsgrad/design/Kernel.md §1 + branches/DESIGN-BRANCH-{0,1,2}.md §5.
+ *        chain (α → m_t → v_t → vhat_t → var_t).
  *
  *   Template: KernelInplaceApplyAdamWithAmsgrad<T>
  *     T = float         → Branch-0 (fp32-direct): fp32 compute, no Cast.
@@ -30,7 +29,7 @@
  *   class with KernelInplaceApplyAdamWithAmsgrad<DTYPE_VAR>.  tilingKey is NOT
  *   used to encode dtype (no algorithm variants).
  *
- *   Compute chain (DESIGN-BRANCH-0.md §5 / DESIGN-BRANCH-1.md §5 / DESIGN-BRANCH-2.md §5):
+ *   Compute chain:
  *     S1: m_t   = β1·m + (1-β1)·grad                   → Add (inplace B_m for fp32 / fp32 output for fp16/bf16)
  *     S2: v_t   = β2·v + (1-β2)·grad²                  → Add (inplace B_v for fp32 / fp32 output for fp16/bf16)
  *     S3: vhat_t= max(vhat, v_t)                        → AscendC::Max (inplace B_vhat / fp32 output)
@@ -42,21 +41,21 @@
  *   no re-cast between steps (only at CopyOut for fp16/bf16).
  *
  *   Inplace: var/m/v/vhat outputs share GM addresses with same-named inputs
- *   (Interface.md "Inplace 算子特殊规则").  CopyOut writes to *_out GM_ADDRs
+ *   CopyOut writes to *_out GM_ADDRs
  *   which alias the input addresses.  Cross-round MTE3_MTE2 sync (SetFlag/
- *   WaitFlag) prevents read-after-write hazard (Kernel.md §8).
+ *   WaitFlag) prevents read-after-write hazard.
  *
  *   UB management: TBuf<VECCALC> for all buffers.
  *     fp32 branch:     5 inplace fp32 TBufs + 4 fp32 intermediate TBufs (P=9)
  *     fp16/bf16 branch: 5 T TBufs (load/store) + 5 fp32 input TBufs + 4 fp32
  *                       output TBufs + 4 fp32 intermediate TBufs (P=18)
  *
- *   Scalar inputs: alpha is host-budgeted in TilingData.alpha (HostTiling.md
- *   §7) but the kernel also reads beta1Power/beta2Power/lr DIRECTLY from GM
+ *   Scalar inputs: alpha is host-budgeted in TilingData.alpha, but the kernel
+ *   also reads beta1Power/beta2Power/lr DIRECTLY from GM
  *   (via GlobalTensor::GetValue) and recomputes alpha locally to bypass the
  *   framework's TilingInputsDataDependency staging cache (which breaks per-call
  *   value changes).  beta1/beta2/epsilon are read from GM; the kernel computes
- *   (1-β1)/(1-β2) locally (Kernel.md §7 "标量与张量 dtype 对齐").
+ *   (1-β1)/(1-β2) locally.
  *
  * Operator name variants:
  *   - PascalCase:   InplaceApplyAdamWithAmsgrad
@@ -83,7 +82,6 @@
 // this 1-ULP fp32 difference flips the final CAST_RINT bf16 rounding on
 // near-zero var_t elements, exploding errors.  PRECISION_0ULP_FTZ_FALSE routes
 // to IEEE-754 RTE, subnormal-preserving, matching numpy bit-for-bit on fp32.
-// Source: ascendc-precision-debug/references/hardware-precision-api.md.
 // ===========================================================================
 constexpr AscendC::SqrtConfig kVarSqrtHiPrec{AscendC::SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
 constexpr AscendC::DivConfig kVarDivHiPrec{AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
@@ -123,8 +121,7 @@ public:
         ubLoopOfTailBlock_ = tilingData->ubLoopOfTailBlock;
         ubTailOfTailBlock_ = tilingData->ubTailOfTailBlock;
 
-        // ----- Empty-tensor / idle-core short-circuit (HostTiling.md §9 /
-        // TilingData.md §3; CODE_REVIEW F1) -----
+        // ----- Empty-tensor / idle-core short-circuit (CODE_REVIEW F1) -----
         if (CheckShortCircuit()) {
             return;
         }
@@ -149,7 +146,7 @@ public:
         for (int64_t i = 0; i < loopNum - 1; i++) {
             // Cross-round MTE3_MTE2 sync: previous round's CopyOut (MTE3 GM
             // write) must complete before this round's CopyIn (MTE2 GM read)
-            // touches the same GM address (inplace hazard, Kernel.md §8).
+            // touches the same GM address (inplace hazard).
             if (i > 0) {
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventID_);
             }
@@ -353,7 +350,7 @@ private:
         // Intentionally NO div0 guard (CODE_REVIEW N1):
         // When 1-beta1_power==0 (beta1Power=1.0), alpha becomes Inf/NaN — this
         // is the CONTRACTED output, matching TensorFlow ResourceApplyAdamWithAmsgrad
-        // golden bit-for-bit (DESIGN-BRANCH-0.md §5/§7).  Adding protection would
+        // golden bit-for-bit.  Adding protection would
         // diverge from golden and break precision tests.  Do NOT add div0 guard.
         alpha_ = lrVal * std::sqrt(1.0f - b2pVal) / (1.0f - b1pVal);
         beta1_ = b1Val;
@@ -398,7 +395,7 @@ private:
     // are Cast(CAST_RINT) back to the load/store dtype HERE — at CopyOut — not
     // per-step in Compute.  This keeps all intermediates in fp32 through the
     // entire compute chain; the only fp16/bf16 rounding is the final output
-    // cast (DESIGN-BRANCH-1/2.md §5).
+    // cast.
     __aicore__ inline void CopyOut(int64_t offset, int64_t count)
     {
         const uint32_t count32 = static_cast<uint32_t>(count);

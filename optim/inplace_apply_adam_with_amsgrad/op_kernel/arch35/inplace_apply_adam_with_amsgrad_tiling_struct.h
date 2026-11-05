@@ -20,21 +20,20 @@
  *        (op_kernel/_apt.cpp).  Carries the tiling parameters computed on host
  *        to the device kernel.
  *
- * Field set: per docs/InplaceApplyAdamWithAmsgrad/design/TilingData.md §1-§2.
+ * Field set:
  *   This operator is a 1D-linear Elementwise + Stateful inplace update; the three
  *   dtype branches (fp32 / fp16 / bf16) share ONE TilingData struct (differences
  *   expressed via the build-system-injected DTYPE_VAR macro, no branch-private
  *   fields).  dtype does NOT enter TilingData as a value and is NOT routed
  *   through tilingKey; each def dtype combination is compiled to its own .o
- *   (def-driven dtype, per references/advanced-guide.md "def 文件与 TilingKey
- *   的协作关系").  There is no tilingKey field — the operator has no algorithm
+ *   (def-driven dtype).  There is no tilingKey field — the operator has no algorithm
  *   variants, so tilingKey is left unset (defaults to 0).
  *
- * Units convention (see TilingData.md §2 / HostTiling.md):
+ * Units convention:
  *   - totalLength / blockFormer / blockNum / ubFormer / ubLoop* / ubTail* are
  *     ELEMENT COUNTS (not bytes).
  *   - coreNum is a dimensionless scalar (core count).
- *   - alpha is a host-budgeted fp32 scalar: lr*sqrt(1-beta2_power)/(1-beta2_power).
+ *   - alpha is a host-budgeted fp32 scalar: lr*sqrt(1-beta2_power)/(1-beta1_power).
  *
  * Operator name variants:
  *   - PascalCase:   InplaceApplyAdamWithAmsgrad
@@ -48,13 +47,13 @@
 
 #include <cstdint>
 
-// Elewise-tiling alignment constants (see HostTiling.md §4-§5).
+// Elewise-tiling alignment constants.
 // kElewiseElemAlignFactor: multi-core per-core element alignment (512 elems).
 // kElewiseUbAlignBytes:    UB 256-byte alignment granularity.
 constexpr int64_t kElewiseElemAlignFactor = 512;
 constexpr int64_t kElewiseUbAlignBytes = 256;
 
-// TilingData — per docs/InplaceApplyAdamWithAmsgrad/design/TilingData.md §1.
+// TilingData — shared host/device tiling struct.
 // Trivially copyable (POD): only scalar fields, no pointers/virtual, so it can
 // be serialised into the raw tiling buffer passed host -> device via GM.
 struct InplaceApplyAdamWithAmsgradTilingData {

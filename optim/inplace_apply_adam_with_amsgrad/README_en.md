@@ -7,7 +7,7 @@ English | [简体中文](./README.md)
 | Product             |  Support  |
 |:-------------------------|:----------:|
 |  <term>Ascend 950PR&950DT products</term>   |     √    |
-|  <term>Atlas A3 products</term>  |     x    |
+|  <term>Atlas A3 products</term>  |     ×    |
 |  <term>Atlas A2 products</term>     |     ×    |
 |  <term>Atlas 200I/500 A2 inference products</term>    |     ×    |
 |  <term>Atlas inference products</term>    |     ×    |
@@ -15,7 +15,7 @@ English | [简体中文](./README.md)
 
 ## Function
 
-InplaceApplyAdamWithAmsgrad performs a single-step in-place update on the four state tensors var, m, v, and vhat of the AMSGrad optimizer, with semantics aligned with the TensorFlow ResourceApplyAdamWithAmsgrad. var, m, v, and vhat are written back with the updated values in place. grad and the six scalar hyperparameters participate in the computation, and all tensor inputs and outputs share the same data type. This operator is invoked in GE graph mode.
+InplaceApplyAdamWithAmsgrad performs a single-step in-place update on the four state tensors var, m, v, and vhat of the AMSGrad optimizer, with semantics aligned with the TensorFlow ResourceApplyAdamWithAmsgrad. var, m, v, and vhat are written back with the updated values in place. grad and the six scalar hyperparameters participate in the computation. The five state tensors var, m, v, vhat, and grad share the same data type (FLOAT, FLOAT16, or BFLOAT16), while the six scalar hyperparameters beta1_power, beta2_power, lr, beta1, beta2, and epsilon are fixed to FLOAT. This operator is invoked in GE graph mode.
 
 The formulas are as follows. The update dependency order is fixed as m→v→vhat (using the new v)→var (using the new m):
 
@@ -91,42 +91,42 @@ $$
 <td>beta1_power</td>
 <td>Input</td>
 <td>The scalar hyperparameter β1^t, corresponding to beta1_power in the formula, maintained by the framework side step by step.</td>
-<td>FLOAT, FLOAT16, BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>beta2_power</td>
 <td>Input</td>
 <td>The scalar hyperparameter β2^t, corresponding to beta2_power in the formula, maintained by the framework side step by step.</td>
-<td>FLOAT, FLOAT16, BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>lr</td>
 <td>Input</td>
 <td>The learning rate scalar hyperparameter, corresponding to lr in the formula.</td>
-<td>FLOAT, FLOAT16, BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>beta1</td>
 <td>Input</td>
 <td>The scalar hyperparameter β1, corresponding to beta1 in the formula.</td>
-<td>FLOAT, FLOAT16, BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>beta2</td>
 <td>Input</td>
 <td>The scalar hyperparameter β2, corresponding to beta2 in the formula.</td>
-<td>FLOAT, FLOAT16, BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>epsilon</td>
 <td>Input</td>
 <td>The scalar hyperparameter ε, corresponding to epsilon in the formula.</td>
-<td>FLOAT, FLOAT16, BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
@@ -171,9 +171,9 @@ $$
 </thead>
 <tbody>
 <tr>
-<td>Graph-mode invocation</td>
+<td>GE graph mode</td>
 <td><a href="./examples/test_geir_inplace_apply_adam_with_amsgrad.cpp">test_geir_inplace_apply_adam_with_amsgrad</a></td>
-<td>Invoke the InplaceApplyAdamWithAmsgrad operator by constructing a graph through the operator IR.</td>
+<td>Invoke the InplaceApplyAdamWithAmsgrad operator by constructing a graph through the operator IR. The operator IR prototype is defined in <a href="./op_graph/inplace_apply_adam_with_amsgrad_proto.h">inplace_apply_adam_with_amsgrad_proto.h</a>.</td>
 </tr>
 </tbody>
 </table>

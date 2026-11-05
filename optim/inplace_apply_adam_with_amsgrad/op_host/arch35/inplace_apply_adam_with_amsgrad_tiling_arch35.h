@@ -57,13 +57,13 @@ namespace optiling {
  * InplaceApplyAdamWithAmsgradCompileInfo — compile-time platform info carrier.
  *
  * Populated by TilingPrepareForInplaceApplyAdamWithAmsgrad() during graph
- * compilation (HostTiling.md §8).  Carries the AIV core count and the per-core
+ * compilation.  Carries the AIV core count and the per-core
  * UB size so the runtime TilingFunc can read them without re-querying the
  * platform.  The runtime TilingFunc ALSO queries GetPlatformInfo() directly
  * (matching scale_custom_package's pattern) so that the UT path — which does
  * not invoke TilingParse — works identically.
  *
- * Fields (per HostTiling.md §8 + scale_custom arch35 reference):
+ * Fields:
  *   coreNum — number of available AIV cores on the NPU (Ascend950 = 48).
  *   ubSize  — Unified Buffer size in bytes per core (Ascend950 AIV = 192 KiB
  *             = 196608 B).
@@ -83,14 +83,14 @@ struct InplaceApplyAdamWithAmsgradCompileInfo {
  * Returns:
  *   ge::GRAPH_SUCCESS on success.
  *
- * Side effects (per HostTiling.md §9):
+ * Side effects:
  *   - Reads platform info (coreNum/ubSize) and 6 scalar inputs (beta1_power,
  *     beta2_power, lr, beta1, beta2, epsilon).
  *   - Host-budgets alpha = lr*sqrt(1-beta2_power)/(1-beta1_power).
  *   - Resolves per-dtype UB-tiling constants (dtypeBits/dtypeBytes/K) from
  *     var.dtype (dtype is NOT encoded into tilingKey; dispatch is def-driven
  *     via the DTYPE_VAR macro — one .o per def dtype combination).
- *   - MultiCoreSplit + ComputeUbFormer (per HostTiling.md §4-§5).
+ *   - MultiCoreSplit + ComputeUbFormer.
  *   - Writes all 10 TilingData fields + SetBlockDim + workspace[0]=0 (no
  *     tiling-key is set: no algorithm variants).
  */
@@ -98,7 +98,7 @@ ge::graphStatus InplaceApplyAdamWithAmsgradTilingFunc(gert::TilingContext* conte
 
 /**
  * TilingPrepareForInplaceApplyAdamWithAmsgrad: compile-time tiling preparation
- * callback (HostTiling.md §8).  Populates InplaceApplyAdamWithAmsgradCompileInfo
+ * callback.  Populates InplaceApplyAdamWithAmsgradCompileInfo
  * from the platform info so the runtime TilingFunc can read pre-computed
  * coreNum/ubSize.  Not invoked by the gtest UT path (UT exercises TilingFunc
  * directly with a mock fe::PlatFormInfos).

@@ -5,7 +5,7 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Ascend 950PR&950DT系列产品</term>   |     √    |
-|  <term>Atlas A3系列产品</term>  |     x    |
+|  <term>Atlas A3系列产品</term>  |     ×    |
 |  <term>Atlas A2系列产品</term>     |     ×    |
 |  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
 |  <term>Atlas推理系列产品</term>    |     ×    |
@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-InplaceApplyAdamWithAmsgrad对AMSGrad优化器的四个状态张量var、m、v、vhat执行单步原地更新，语义对标TensorFlow ResourceApplyAdamWithAmsgrad。var、m、v、vhat在原地写回更新值；grad与六个标量超参参与计算，全部张量输入输出共享同一数据类型。该算子通过GE图模式调用。
+InplaceApplyAdamWithAmsgrad对AMSGrad优化器的四个状态张量var、m、v、vhat执行单步原地更新，语义对标TensorFlow ResourceApplyAdamWithAmsgrad。var、m、v、vhat在原地写回更新值；grad与六个标量超参参与计算，var、m、v、vhat、grad五个状态张量共享同一数据类型（FLOAT、FLOAT16或BFLOAT16），beta1_power、beta2_power、lr、beta1、beta2、epsilon六个标量超参固定为FLOAT。该算子通过GE图模式调用。
 
 计算公式如下，更新依赖顺序固定为m→v→vhat（使用新v）→var（使用新m）：
 
@@ -89,42 +89,42 @@ $$
 <td>beta1_power</td>
 <td>输入</td>
 <td>标量超参β1^t，对应公式中beta1_power，由框架侧逐step维护。</td>
-<td>FLOAT、FLOAT16、BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>beta2_power</td>
 <td>输入</td>
 <td>标量超参β2^t，对应公式中beta2_power，由框架侧逐step维护。</td>
-<td>FLOAT、FLOAT16、BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>lr</td>
 <td>输入</td>
 <td>学习率标量超参，对应公式中lr。</td>
-<td>FLOAT、FLOAT16、BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>beta1</td>
 <td>输入</td>
 <td>标量超参β1，对应公式中beta1。</td>
-<td>FLOAT、FLOAT16、BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>beta2</td>
 <td>输入</td>
 <td>标量超参β2，对应公式中beta2。</td>
-<td>FLOAT、FLOAT16、BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>epsilon</td>
 <td>输入</td>
 <td>标量超参ε，对应公式中epsilon。</td>
-<td>FLOAT、FLOAT16、BFLOAT16</td>
+<td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
@@ -169,9 +169,9 @@ $$
 </thead>
 <tbody>
 <tr>
-<td>图模式调用</td>
+<td>GE图模式</td>
 <td><a href="./examples/test_geir_inplace_apply_adam_with_amsgrad.cpp">test_geir_inplace_apply_adam_with_amsgrad</a></td>
-<td>通过算子IR构图方式调用InplaceApplyAdamWithAmsgrad算子。</td>
+<td>通过算子IR构图方式调用InplaceApplyAdamWithAmsgrad算子，算子IR原型定义见<a href="./op_graph/inplace_apply_adam_with_amsgrad_proto.h">inplace_apply_adam_with_amsgrad_proto.h</a>。</td>
 </tr>
 </tbody>
 </table>

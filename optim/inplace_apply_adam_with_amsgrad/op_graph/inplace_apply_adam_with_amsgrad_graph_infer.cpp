@@ -17,7 +17,7 @@
  * Role: Graph-level inference function for the InplaceApplyAdamWithAmsgrad operator.
  *        Registers a data-type inference callback via IMPL_OP(InplaceApplyAdamWithAmsgrad).InferDataType.
  *
- * Prototype (see docs/InplaceApplyAdamWithAmsgrad/develop/proto.md §4 Shape 契约):
+ * Prototype (shape contract):
  *   - Outputs var/m/v/vhat share the shape and dtype of input var (in-place).
  *   - No reduction axis; pure element-wise update.
  *
@@ -46,7 +46,7 @@ namespace ops {
 /**
  * InferDataTypeForInplaceApplyAdamWithAmsgrad: GE data-type inference callback.
  *
- * Per proto.md §2/§4, the five element-wise tensors var/m/v/vhat/grad must
+ * The five element-wise tensors var/m/v/vhat/grad must
  * share one dtype; the four in-place outputs reuse input var's dtype. A
  * cross-input dtype mismatch is rejected (GRAPH_FAILED → DT_UNDEFINED outputs).
  * The six scalar inputs (beta1_power/beta2_power/lr/beta1/beta2/epsilon,
