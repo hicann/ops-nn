@@ -127,6 +127,52 @@ int64_t CheckBroadcastShape(const std::vector<std::vector<int64_t>>& paddedIn,
     return kOk;
 }
 
+int64_t ValidateBroadcastShape(const std::vector<int64_t>& xShape, const std::vector<int64_t>& scaleShape,
+                               const std::vector<std::vector<int64_t>>& outputShapes)
+{
+    const int64_t xRank = static_cast<int64_t>(xShape.size());
+    const int64_t scaleRank = static_cast<int64_t>(scaleShape.size());
+    if (xRank < 1 || scaleRank > xRank) {
+        return kErrRankExceedsX;
+    }
+    for (int64_t i = 0; i < scaleRank; i++) {
+        const int64_t scaleDim = scaleShape[i];
+        const int64_t xDim = xShape[xRank - scaleRank + i];
+        if (scaleDim != 1 && scaleDim != xDim) {
+            return kErrShapeMismatch;
+        }
+    }
+    // 输出 shape 须逐维等于 x 的 shape（README 约束），防止 Kernel 按广播 shape 写入更小的输出。
+    for (size_t o = 0; o < outputShapes.size(); o++) {
+        if (static_cast<int64_t>(outputShapes[o].size()) != xRank) {
+            return kErrShapeMismatch;
+        }
+        for (int64_t d = 0; d < xRank; d++) {
+            if (outputShapes[o][d] != xShape[d]) {
+                return kErrShapeMismatch;
+            }
+        }
+    }
+    return kOk;
+}
+
+int64_t ValidateTotalElements(const std::vector<int64_t>& maxBroShape)
+{
+    __int128 total = 1;
+    for (size_t d = 0; d < maxBroShape.size(); d++) {
+        if (maxBroShape[d] < 0) {
+            return kErrShapeOverflow;
+        }
+        total *= static_cast<__int128>(maxBroShape[d]);
+        if (total > static_cast<__int128>(INT64_MAX)) {
+            return kErrShapeOverflow;
+        }
+    }
+    return kOk;
+}
+
+constexpr int64_t TAIL_LOAD_MARGIN_BYTES = 512;
+
 int64_t FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t maxDtypeSize, int64_t ubPerCore,
                       int64_t physNodes, SplitResult& out)
 {
@@ -142,12 +188,20 @@ int64_t FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t maxDtypeS
 
     constexpr int64_t UB_ALIGN_MASK = ~31LL;
     int64_t perBufBytes = (ubPerCore / physNodes) & UB_ALIGN_MASK;
-    int64_t perBufElems = perBufBytes / maxDtypeSize;
+    int64_t usableBytes = perBufBytes - TAIL_LOAD_MARGIN_BYTES;
+    if (usableBytes < maxDtypeSize) {
+        usableBytes = maxDtypeSize;
+    }
+    int64_t perBufElems = usableBytes / maxDtypeSize;
+    if (perBufElems < 1) {
+        perBufElems = 1;
+    }
     int64_t rank = (int64_t)maxBroShape.size();
-    int64_t inner = 1;
+    __int128 inner = 1;
     for (int64_t k = rank - 1; k >= 0; k--) {
-        if (maxBroShape[k] * inner > perBufElems) {
-            out.aI = perBufElems / inner;
+        if (static_cast<__int128>(maxBroShape[k]) * inner > perBufElems) {
+            int64_t inner64 = static_cast<int64_t>(inner);
+            out.aI = perBufElems / inner64;
             if (out.aI < 1)
                 out.aI = 1;
             out.aO = (maxBroShape[k] + out.aI - 1) / out.aI;
@@ -171,10 +225,15 @@ int64_t FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t maxDtypeS
 int64_t MultiCoreSplit(const std::vector<int64_t>& maxBroShape, const SplitResult& ubSplit, int64_t maxCores,
                        MultiCoreResult& out)
 {
-    int64_t k = ubSplit.axis, outerProd = 1;
+    int64_t k = ubSplit.axis;
+    __int128 outerProd = 1;
     for (int64_t j = 0; j < k; j++)
         outerProd *= maxBroShape[j];
-    out.totalTiles = outerProd * ubSplit.aO;
+    __int128 totalTiles = outerProd * static_cast<__int128>(ubSplit.aO);
+    if (totalTiles > static_cast<__int128>(INT64_MAX)) {
+        return kErrShapeOverflow;
+    }
+    out.totalTiles = static_cast<int64_t>(totalTiles);
 
     if (out.totalTiles == 0) {
         out.numCores = 0;
@@ -238,17 +297,26 @@ int64_t ComputeBranchTiling(const BranchInputs<RANK>& in, AscendRequantTilingDat
     int64_t delta = RANK - rank;
 
     int64_t perBufBytes = (in.ubPerCore / PHYS_NODES) & UB_ALIGN_MASK;
-    int64_t perBufElems = perBufBytes / MAX_DTYPE_SIZE;
+    // 与 FindSplitAxis 一致：预留尾块整宽加载余量（A5 VL(uint32)=64，按 uint64 计 512B）。
+    int64_t usableBytes = perBufBytes - ascend_requant::public_api::TAIL_LOAD_MARGIN_BYTES;
+    if (usableBytes < MAX_DTYPE_SIZE) {
+        usableBytes = MAX_DTYPE_SIZE;
+    }
+    int64_t perBufElems = usableBytes / MAX_DTYPE_SIZE;
+    if (perBufElems < 1) {
+        perBufElems = 1;
+    }
 
     if constexpr (RANK > 4) {
     }
 
     SplitResult split{};
     {
-        int64_t inner = 1;
+        __int128 inner = 1;
         for (int64_t k = rank - 1; k >= 0; k--) {
-            if (in.maxBroShape[k] * inner > perBufElems) {
-                split.aI = perBufElems / inner;
+            if (static_cast<__int128>(in.maxBroShape[k]) * inner > perBufElems) {
+                int64_t inner64 = static_cast<int64_t>(inner);
+                split.aI = perBufElems / inner64;
                 if (split.aI < 1)
                     split.aI = 1;
                 split.aO = (in.maxBroShape[k] + split.aI - 1) / split.aI;
@@ -270,10 +338,14 @@ int64_t ComputeBranchTiling(const BranchInputs<RANK>& in, AscendRequantTilingDat
 
     MultiCoreResult mc{};
     {
-        int64_t outerProd = 1;
+        __int128 outerProd = 1;
         for (int64_t j = 0; j < split.axis; j++)
             outerProd *= in.maxBroShape[j];
-        mc.totalTiles = outerProd * split.aO;
+        __int128 totalTiles = outerProd * static_cast<__int128>(split.aO);
+        if (totalTiles > static_cast<__int128>(INT64_MAX)) {
+            return static_cast<int64_t>(ascend_requant::public_api::kErrShapeOverflow);
+        }
+        mc.totalTiles = static_cast<int64_t>(totalTiles);
         if (mc.totalTiles == 0) {
             mc.numCores = 0;
             mc.tilesMain = 0;
@@ -295,10 +367,10 @@ int64_t ComputeBranchTiling(const BranchInputs<RANK>& in, AscendRequantTilingDat
                 st[d] = 0;
                 continue;
             }
-            int64_t prod = 1;
+            __int128 prod = 1;
             for (int64_t j = d + 1; j < r; j++)
                 prod *= s[j];
-            st[d] = prod;
+            st[d] = static_cast<int64_t>(prod);
         }
         return st;
     };
@@ -386,10 +458,14 @@ static bool PrecomputeStrides(const std::vector<int64_t>& s, std::vector<int64_t
             strides[d] = 0;
             continue;
         }
-        int64_t prod = 1;
+        // 后缀维度乘积以 __int128 累计并限制在 int64 内，超出则步长无法表示。
+        __int128 prod = 1;
         for (int64_t j = d + 1; j < rank; j++)
             prod *= s[j];
-        strides[d] = prod;
+        if (prod > static_cast<__int128>(INT64_MAX)) {
+            return false;
+        }
+        strides[d] = static_cast<int64_t>(prod);
     }
     return true;
 }
@@ -479,6 +555,13 @@ private:
             return ge::GRAPH_FAILED;
         }
 
+        if (ascend_requant::public_api::ValidateBroadcastShape(raw_input_shapes_[0], raw_input_shapes_[1],
+                                                               raw_output_shapes_) != ascend_requant::public_api::kOk) {
+            OP_LOGE(ctx_->GetNodeName(),
+                    "req_scale must broadcast to x (each dim 1 or equal to x) and output shape must equal x");
+            return ge::GRAPH_FAILED;
+        }
+
         return ge::GRAPH_SUCCESS;
     }
 
@@ -535,6 +618,12 @@ private:
             return ge::GRAPH_FAILED;
         }
 
+        // 总元素数超出 int64 可表示范围时，分块数与步长累乘必然溢出，拒绝而非产生错误 tiling。
+        if (ascend_requant::public_api::ValidateTotalElements(max_bro_shape_) != ascend_requant::public_api::kOk) {
+            OP_LOGE(ctx_->GetNodeName(), "total elements of broadcast shape exceed int64 range");
+            return ge::GRAPH_FAILED;
+        }
+
         OP_LOGI(ctx_->GetNodeName(), "GetShapeInfo done rank %lld dtype %lld ub %llu core %llu relu_flag %lld", rank_,
                 dtype_size_, ubSize_, coreNum_, reluFlag_);
 
@@ -574,9 +663,18 @@ private:
         int64_t per_buf_bytes = (ub_per_core / PHYS_NODES) & ~31LL;
 
         constexpr int64_t MAX_DTYPE_SIZE = 8;
-        ascend_requant::public_api::FindSplitAxis(max_bro_shape_, MAX_DTYPE_SIZE, ub_per_core, PHYS_NODES,
-                                                  tiling->split);
-        ascend_requant::public_api::MultiCoreSplit(max_bro_shape_, tiling->split, (int64_t)coreNum_, tiling->multicore);
+        int64_t splitRet = ascend_requant::public_api::FindSplitAxis(max_bro_shape_, MAX_DTYPE_SIZE, ub_per_core,
+                                                                     PHYS_NODES, tiling->split);
+        if (splitRet != ascend_requant::public_api::kOk) {
+            OP_LOGE(ctx_->GetNodeName(), "FindSplitAxis failed: %lld", splitRet);
+            return ge::GRAPH_FAILED;
+        }
+        int64_t mcRet = ascend_requant::public_api::MultiCoreSplit(max_bro_shape_, tiling->split,
+                                                                   static_cast<int64_t>(coreNum_), tiling->multicore);
+        if (mcRet != ascend_requant::public_api::kOk) {
+            OP_LOGE(ctx_->GetNodeName(), "MultiCoreSplit failed: %lld", mcRet);
+            return ge::GRAPH_FAILED;
+        }
         if (tiling->multicore.numCores < 1) {
             tiling->multicore.numCores = 1;
         }
@@ -585,10 +683,18 @@ private:
         int64_t num_in = (int64_t)normal_input_shapes_.size();
         int64_t num_out = (int64_t)normal_output_shapes_.size();
         std::vector<std::vector<int64_t>> in_strides(num_in), out_strides(num_out);
-        for (int64_t i = 0; i < num_in; i++)
-            PrecomputeStrides(normal_input_shapes_[i], in_strides[i]);
-        for (int64_t i = 0; i < num_out; i++)
-            PrecomputeStrides(normal_output_shapes_[i], out_strides[i]);
+        for (int64_t i = 0; i < num_in; i++) {
+            if (!PrecomputeStrides(normal_input_shapes_[i], in_strides[i])) {
+                OP_LOGE(ctx_->GetNodeName(), "input strides exceed int64 range");
+                return ge::GRAPH_FAILED;
+            }
+        }
+        for (int64_t i = 0; i < num_out; i++) {
+            if (!PrecomputeStrides(normal_output_shapes_[i], out_strides[i])) {
+                OP_LOGE(ctx_->GetNodeName(), "output strides exceed int64 range");
+                return ge::GRAPH_FAILED;
+            }
+        }
 
         tiling->rank = rank_;
         tiling->reluFlag = reluFlag_;

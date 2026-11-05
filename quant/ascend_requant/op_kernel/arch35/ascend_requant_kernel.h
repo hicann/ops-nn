@@ -291,8 +291,11 @@ __simd_vf__ inline void RequantVF(__ubuf__ YT* dstAddr, __ubuf__ XT* src0Addr, _
     AscendC::Reg::RegTensor<YT> yReg;
     AscendC::Reg::MaskReg mask;
     AscendC::Reg::MaskReg negMask;
+    AscendC::Reg::MaskReg storeMask;
 
     static constexpr float kUint64AsFloat = static_cast<float>(uint64_t(1) << 63) * 2.0f;
+
+    constexpr uint32_t kCopyOutAlignElems = 32U / sizeof(YT);
 
     uint32_t sreg = count;
     for (uint16_t i = 0; i < repeatTimes; ++i) {
@@ -313,6 +316,15 @@ __simd_vf__ inline void RequantVF(__ubuf__ YT* dstAddr, __ubuf__ XT* src0Addr, _
         if constexpr (kApplyMaxZero) {
             AscendC::Reg::Maxs(yReg, yReg, YT(0), mask);
         }
-        AscendC::Reg::StoreAlign<YT, AscendC::Reg::StoreDist::DIST_PACK4_B32>(dstAddr + i * oneRepeatSize, yReg, mask);
+        uint32_t storeCount = static_cast<uint32_t>(i + 1) * oneRepeatSize;
+        uint32_t storeElems = (storeCount > count) ? (count - static_cast<uint32_t>(i) * oneRepeatSize) : oneRepeatSize;
+        if (i + 1 == repeatTimes) {
+            uint32_t aligned = (storeElems + kCopyOutAlignElems - 1U) / kCopyOutAlignElems * kCopyOutAlignElems;
+            storeElems = (aligned < oneRepeatSize) ? aligned : oneRepeatSize;
+        }
+        uint32_t storeCnt = storeElems;
+        storeMask = AscendC::Reg::UpdateMask<uint32_t>(storeCnt);
+        AscendC::Reg::StoreAlign<YT, AscendC::Reg::StoreDist::DIST_PACK4_B32>(dstAddr + i * oneRepeatSize, yReg,
+                                                                              storeMask);
     }
 }

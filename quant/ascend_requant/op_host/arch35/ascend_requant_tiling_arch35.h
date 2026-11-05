@@ -33,6 +33,7 @@ constexpr int64_t kErrDtypeNotSupported = -2;
 constexpr int64_t kErrFormatNotSupported = -3;
 constexpr int64_t kErrDimOutOfRange = -4;
 constexpr int64_t kErrRankExceedsX = -5;
+constexpr int64_t kErrShapeOverflow = -6;
 constexpr int64_t kOk = 0;
 
 int64_t PadAndSqueeze(const std::vector<std::vector<int64_t>>& inputShapes,
@@ -42,6 +43,11 @@ int64_t PadAndSqueeze(const std::vector<std::vector<int64_t>>& inputShapes,
 
 int64_t CheckBroadcastShape(const std::vector<std::vector<int64_t>>& paddedIn,
                             const std::vector<std::vector<int64_t>>& paddedOut, int64_t maxRank);
+
+int64_t ValidateBroadcastShape(const std::vector<int64_t>& xShape, const std::vector<int64_t>& scaleShape,
+                               const std::vector<std::vector<int64_t>>& outputShapes);
+
+int64_t ValidateTotalElements(const std::vector<int64_t>& maxBroShape);
 
 int64_t FindSplitAxis(const std::vector<int64_t>& maxBroShape, int64_t maxDtypeSize, int64_t ubPerCore,
                       int64_t physNodes, SplitResult& out);

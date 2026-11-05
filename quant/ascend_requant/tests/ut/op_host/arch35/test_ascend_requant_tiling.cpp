@@ -544,3 +544,122 @@ TEST_F(AscendRequantTilingTest, tiling_shape_mismatch)
                       .Build();
     EXPECT_NE(tilingFunc(holder.GetContext<gert::TilingContext>()), ge::GRAPH_SUCCESS);
 }
+
+TEST_F(AscendRequantTilingTest, tiling_broadcast_amplification_rejected)
+{
+    fe::PlatFormInfos platformInfo;
+    map<string, string> socInfos, aicoreSpec, intrinsics;
+    SetupPlatform(platformInfo, socInfos, aicoreSpec, intrinsics);
+    AscendRequantCompileInfoForTest compileInfo;
+    gert::KernelRunContextHolder kernelHolder;
+    SetupKernelHolder(platformInfo, compileInfo, socInfos, aicoreSpec, intrinsics, kernelHolder);
+
+    gert::StorageShape xShape = {{1, 4}, {1, 4}};
+    gert::StorageShape sShape = {{3, 1}, {3, 1}};
+    gert::StorageShape yShape = {{1, 4}, {1, 4}};
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AscendRequant")->tiling;
+    ASSERT_NE(tilingFunc, nullptr);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+
+    bool reluFlag = false;
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("AscendRequant")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &sShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"relu_flag", Ops::NN::AnyValue::CreateFrom<bool>(reluFlag)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+    EXPECT_NE(tilingFunc(holder.GetContext<gert::TilingContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(AscendRequantTilingTest, tiling_output_shape_mismatch_rejected)
+{
+    fe::PlatFormInfos platformInfo;
+    map<string, string> socInfos, aicoreSpec, intrinsics;
+    SetupPlatform(platformInfo, socInfos, aicoreSpec, intrinsics);
+    AscendRequantCompileInfoForTest compileInfo;
+    gert::KernelRunContextHolder kernelHolder;
+    SetupKernelHolder(platformInfo, compileInfo, socInfos, aicoreSpec, intrinsics, kernelHolder);
+
+    gert::StorageShape xShape = {{2, 3}, {2, 3}};
+    gert::StorageShape sShape = {{2, 3}, {2, 3}};
+    gert::StorageShape yShape = {{2, 4}, {2, 4}};
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AscendRequant")->tiling;
+    ASSERT_NE(tilingFunc, nullptr);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+
+    bool reluFlag = false;
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("AscendRequant")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &sShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"relu_flag", Ops::NN::AnyValue::CreateFrom<bool>(reluFlag)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+    EXPECT_NE(tilingFunc(holder.GetContext<gert::TilingContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(AscendRequantTilingTest, tiling_total_elements_overflow_rejected)
+{
+    fe::PlatFormInfos platformInfo;
+    map<string, string> socInfos, aicoreSpec, intrinsics;
+    SetupPlatform(platformInfo, socInfos, aicoreSpec, intrinsics);
+    AscendRequantCompileInfoForTest compileInfo;
+    gert::KernelRunContextHolder kernelHolder;
+    SetupKernelHolder(platformInfo, compileInfo, socInfos, aicoreSpec, intrinsics, kernelHolder);
+
+    gert::StorageShape xShape = {{4294967296LL, 4294967296LL, 4294967296LL, 10},
+                                 {4294967296LL, 4294967296LL, 4294967296LL, 10}};
+    gert::StorageShape sShape = {{1}, {1}};
+    gert::StorageShape yShape = {{4294967296LL, 4294967296LL, 4294967296LL, 10},
+                                 {4294967296LL, 4294967296LL, 4294967296LL, 10}};
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AscendRequant")->tiling;
+    ASSERT_NE(tilingFunc, nullptr);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto* wsSize = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+
+    bool reluFlag = false;
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("AscendRequant")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&xShape, &sShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"relu_flag", Ops::NN::AnyValue::CreateFrom<bool>(reluFlag)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+    EXPECT_NE(tilingFunc(holder.GetContext<gert::TilingContext>()), ge::GRAPH_SUCCESS);
+}
