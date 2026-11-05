@@ -12,8 +12,8 @@ English | [简体中文](./README.md)
 |Atlas 200I/500 A2 inference products|×|
 |Atlas inference products|√|
 |Atlas training products|×|
-|Kirin X90 processor series products|√|
-|Kirin 9030 processor series products|√|
+|KirinX90 processor series products|√|
+|Kirin9030 processor series products|√|
 
 ## Function
 
@@ -78,11 +78,12 @@ English | [简体中文](./README.md)
 - Atlas A3 products: The FRACTAL_NZ format is not supported, and bias does not support the BFLOAT16 data format.
 - Ascend 950PR&950DT products: Only input b supports the FRACTAL_NZ format.
 
-- Kirin X90/Kirin 9030 processor series products: BFLOAT16 and FLOAT32 are not supported.
+- KirinX90/Kirin9030 processor series products: FLOAT16 is supported.
+- Kirin9030 currently supports only the 2-D FLOAT16 `ND,ND -> ND` path, with optional one-dimensional bias and `transpose_x2`; `transpose_x1`, non-zero `offset_x`, empty tensors, FRACTAL_NZ, and non-default `opImplMode` are not supported. Unsupported combinations are rejected during host tiling.
 
 ## Constraints
 
-- Empty tensors are supported. In the empty tensor scenario, bias is not supported.
+- Except for the Kirin9030 limitations above, empty tensors are supported. In the empty tensor scenario, bias is not supported.
 - Contiguous tensors are supported. [Non-contiguous tensors](../../docs/en/context/non_contiguous_tensor.md) support only the transpose scenario.
 
 ## Invocation Description

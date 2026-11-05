@@ -12,8 +12,8 @@ English | [简体中文](./README.md)
 | <term>Atlas 200I/500 A2 inference products</term>                      |    ×     |
 | <term>Atlas inference products</term>                             |    √     |
 | <term>Atlas training products</term>                              |    √     |
-| <term>Kirin X90 processor series products</term> | √ |
-| <term>Kirin 9030 processor series products</term> | √ |
+| <term>KirinX90 processor series products</term> | √ |
+| <term>Kirin9030 processor series products</term> | √ |
 
 ## Function
 
@@ -115,7 +115,7 @@ English | [简体中文](./README.md)
 
 - <term>Atlas A3 products</term>, <term>Atlas A2 products</term>: the data types of output `y` support only INT8 and INT4.
 
-- Kirin X90/Kirin 9030 processor series products:
+- KirinX90/Kirin9030 processor series products:
   - Inputs `x` and `smooth_scales`: BFLOAT16 is not supported.
   - Output `y`: the data types INT4, FLOAT8_E5M2, FLOAT8_E4M3FN, and HIFLOAT8 are not supported.
 

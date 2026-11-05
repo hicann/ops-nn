@@ -105,8 +105,36 @@ public:
         config_without_bf16.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend310p", config_without_bf16);
         this->AICore().AddConfig("ascend910", config_without_bf16);
-        this->AICore().AddConfig("kirinx90", config_without_bf16);
-        this->AICore().AddConfig("kirin9030", config_without_bf16);
+
+        OpAICoreConfig config_regbase_without_bf16;
+        config_regbase_without_bf16.Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        config_regbase_without_bf16.Input("gamma")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        config_regbase_without_bf16.Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        config_regbase_without_bf16.Output("rstd")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+        config_regbase_without_bf16.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "rms_norm_apt");
+        this->AICore().AddConfig("kirinx90", config_regbase_without_bf16);
+        this->AICore().AddConfig("kirin9030", config_regbase_without_bf16);
     }
 };
 OP_ADD(RmsNorm);

@@ -10,8 +10,8 @@
 |Atlas 200I/500 A2推理产品|x|
 |Atlas推理系列产品|x|
 |Atlas训练系列产品|x|
-|Kirin X90处理器系列产品|√|
-|Kirin 9030处理器系列产品|√|
+|KirinX90处理器系列产品|√|
+|Kirin9030处理器系列产品|x|
 
 ## 功能说明
 
@@ -109,6 +109,20 @@
 
       $$
       out = (x1@(x2 * x2Scale)) * yScale
+      $$
+
+  - <term>KirinX90处理器系列产品</term>：
+
+    - x1为INT8，x2为INT4(FRACTAL_Z格式)，x1Scale为FLOAT32，x2Scale为UINT64，可选参数bias的dtype为FLOAT16，out为FLOAT16:
+
+      $$
+      out = ((x1 @ x2) * x2Scale) * x1Scale
+      $$
+
+    - 有bias:
+
+      $$
+      out = ((x1 @ x2) * x2Scale) * x1Scale + bias
       $$
 
 ## 参数说明
@@ -240,6 +254,19 @@
     | FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/BFLOAT16/FLOAT16| BFLOAT16/FLOAT16                               |
     | FLOAT8_E4M3FN             | FLOAT4_E2M1               | nullptr        | BFLOAT16/FLOAT16 | nullptr     | INT64/UINT64    | nullptr  | BFLOAT16/FLOAT16               |
 
+  - <term>KirinX90处理器系列产品</term>：
+
+    | x1                        | x2                        | x1_scale     | x2_scale         | x2_offset    | y_scale   | bias         | y_offset    | y                                    |
+    | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
+    | INT8                      | INT4                     | FLOAT32     | UINT64          | nullptr        | nullptr     | nullptr/FLOAT16         | nullptr    | FLOAT16                       |
+
+    额外约束：
+    - x2为FRACTAL_Z 格式，shape 必须为 [K/64, N/16, 16, 8]。
+    - transpose_x1、transpose_x2仅支持 false。
+    - group_size 仅支持 128 或 256。
+    - 对齐约束：K % 64 ==0, N % 16 ==0, K % group_size == 0。
+    - x2_scale的shape必须是 [ceil(K/group_size), N]。
+    - GT = ceil(K/group_size) <= 960。
 ## 调用说明
 
 - <term>Atlas A2系列产品、Atlas A3系列产品</term>：

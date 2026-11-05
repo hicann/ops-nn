@@ -10,8 +10,8 @@
 |Atlas 200I/500 A2推理产品|×|
 |Atlas推理系列产品|√|
 |Atlas训练系列产品|×|
-|Kirin X90处理器系列产品|√|
-|Kirin 9030处理器系列产品|√|
+|KirinX90处理器系列产品|√|
+|Kirin9030处理器系列产品|√|
 
 ## 功能说明
 
@@ -76,11 +76,14 @@
 - Atlas A3系列产品：不支持FRACTAL_NZ格式，bias不支持BFLOAT16数据格式。
 - Ascend 950PR&950DT系列产品：只有输入b支持FRACTAL_NZ格式。
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16、FLOAT32。
+- KirinX90/Kirin9030 处理器系列产品：支持FLOAT16。
+- Kirin9030 当前仅支持二维FLOAT16的`ND,ND -> ND`路径，支持可选的一维
+  bias和`transpose_x2`；不支持`transpose_x1`、非零`offset_x`、空tensor、
+  FRACTAL_NZ或非默认`opImplMode`。不支持的组合会在host tiling阶段拒绝。
 
 ## 约束说明
 
-- 支持空tensor，空tensor场景下不支持bias。
+- 除上述Kirin 9030限制外，支持空tensor，空tensor场景下不支持bias。
 - 支持连续tensor，[非连续tensor](../../docs/zh/context/non_contiguous_tensor.md)只支持转置场景。
 
 ## 调用说明

@@ -19,7 +19,7 @@ add_all_modules_sources(
 # [IMPL_MODE high_performance] 高性能模式，缺省为high_performance[,optional]
 # [OPTIONS "option1" "option2"] 其他编译选项
 add_kernel_sources(
-    COMPUTE_UNITS ascend310p ascend910b ascend910_93 kirinx90
+    COMPUTE_UNITS ascend310p ascend910b ascend910_93
     SIMPLIFIED_KEY None
     AUTO_SYNC false
 )
@@ -38,7 +38,8 @@ add_kernel_sources(
 )
 
 add_kernel_sources(
-    COMPUTE_UNITS kirin9030
+    KERNEL_SRC arch31/mat_mul_v3.cpp
+    COMPUTE_UNITS kirin9030 kirinx90
     AUTO_SYNC false
 )
 

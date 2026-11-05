@@ -137,8 +137,38 @@ public:
         config_310p_910.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend310p", config_310p_910);
         this->AICore().AddConfig("ascend910", config_310p_910);
-        this->AICore().AddConfig("kirinx90", config_310p_910);
-        this->AICore().AddConfig("kirin9030", config_310p_910);
+        OpAICoreConfig config_kirin;
+        config_kirin.Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("smooth_scales")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("group_index")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_INT32})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT8})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.Output("scale")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("kirinx90", config_kirin);
+        this->AICore().AddConfig("kirin9030", config_kirin);
     }
 };
 

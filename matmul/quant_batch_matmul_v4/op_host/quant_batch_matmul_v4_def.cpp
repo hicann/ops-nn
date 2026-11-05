@@ -1075,6 +1075,73 @@ public:
 
         this->AICore().AddConfig("ascend960pr", config_960);
         this->AICore().AddConfig("ascend960dt", config_960);
+
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(false)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(false);
+        config_kirin.Input("x1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT8})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .IgnoreContiguous();
+        config_kirin.Input("x2")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_INT4})
+            .Format({ge::FORMAT_FRACTAL_Z})
+            .UnknownShapeFormat({ge::FORMAT_FRACTAL_Z})
+            .IgnoreContiguous();
+        config_kirin.Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.Input("x1_scale")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.Input("x2_scale")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_UINT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.Input("y_scale")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_UINT64})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.Input("x1_offset")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.Input("x2_offset")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.Input("y_offset")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        config_kirin.Input("x2_table")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_INT8})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+
+        config_kirin.Output("y")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
+        this->AICore().AddConfig("kirinx90", config_kirin);
     }
 };
 

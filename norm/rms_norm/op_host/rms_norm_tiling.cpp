@@ -295,7 +295,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
 {
     OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
                     return ge::GRAPH_FAILED);
-    const bool isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
+    bool isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     RMSNormTilingData tiling;
     OP_LOGD(context, " Tiling4RmsNorm");
     auto ptrCompileInfo = reinterpret_cast<const Tiling4RmsNormCompileInfo*>(context->GetCompileInfo());
@@ -311,6 +311,12 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
         numCore = ptrCompileInfo->totalCoreNum;
         ubSize = ptrCompileInfo->totalUbSize;
         curSocVersion = ptrCompileInfo->curSocVersion;
+    }
+    // KIRINX90 (DAV_L300) and KIRIN9030 (DAV_L311) are SIMD RegBase architectures
+    // only modify for this op
+    if (curSocVersion == platform_ascendc::SocVersion::KIRINX90 ||
+        curSocVersion == platform_ascendc::SocVersion::KIRIN9030) {
+        isRegbase = true;
     }
     bool isSoc910B = (curSocVersion == platform_ascendc::SocVersion::ASCEND910B);
     const gert::Shape x_shape = context->GetInputShape(X_INDEX)->GetStorageShape();
@@ -762,7 +768,14 @@ static ge::graphStatus Tiling4GemmaRmsNorm(gert::TilingContext* context)
                     OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling getUbFactor failed, please check."),
                     return ge::GRAPH_FAILED);
     float epsilon = tilingData.get_epsilon();
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+    bool isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
+    // KIRINX90 (DAV_L300) and KIRIN9030 (DAV_L311) are SIMD RegBase architectures
+    // only modify for this op
+    if (curSocVersion == platform_ascendc::SocVersion::KIRINX90 ||
+        curSocVersion == platform_ascendc::SocVersion::KIRIN9030) {
+        isRegbase = true;
+    }
+    if (isRegbase) {
         RMSNormArch35TilingData arch35TilingData;
         return TilingArch354RmsNorm(context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, epsilon,
                                     tilingData, arch35TilingData);

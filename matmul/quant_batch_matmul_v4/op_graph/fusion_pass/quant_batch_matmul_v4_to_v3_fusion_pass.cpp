@@ -49,6 +49,19 @@ constexpr int QUANT_BATCH_MATMUL_V4_TO_V3_CAPTURE_TENSOR_INDEX = 0;
 const std::map<int, int> V4_V3_INDEX_MAP{{V4_X1_INDEX, V3_X1_INDEX},         {V4_X2_INDEX, V3_X2_INDEX},
                                          {V4_BIAS_INDEX, V3_BIAS_INDEX},     {V4_X1SCALE_INDEX, V3_PERTOKENSCALE_INDEX},
                                          {V4_X2SCALE_INDEX, V3_SCALE_INDEX}, {V4_X2OFFSET_INDEX, V3_OFFSET_INDEX}};
+static const std::set<std::string> ARCH31_SUPPORT_SOC = {"KirinX90", "Kirin9030"};
+
+static bool IsArch31Platform()
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optionalInfo;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
+        ge::GRAPH_SUCCESS) {
+        OPS_LOG_W(QUANT_BATCH_MATMUL_V4_TO_V3_FUSION_PASS_NAME, "Failed to get platform info.");
+        return false;
+    }
+    return ARCH31_SUPPORT_SOC.count(platformInfo.str_info.short_soc_version) > 0;
+}
 } // namespace
 
 std::vector<PatternUniqPtr> QuantBatchMatmulV4ToV3FusionPass::Patterns()
@@ -111,6 +124,11 @@ bool QuantBatchMatmulV4ToV3FusionPass::MeetRequirements(const std::unique_ptr<Ma
         OPS_LOG_D(QUANT_BATCH_MATMUL_V4_TO_V3_FUSION_PASS_NAME,
                   "When x1's type is FLOAT8_E4M3FN, x2's type is FLOAT4_E2M1 or FLOAT, y's type is BF16 or FLOAT16, "
                   "there is no need for graph fusion");
+        return false;
+    }
+    auto x2Shape = x2Desc.GetOriginShape();
+    if (IsArch31Platform()) {
+        OPS_LOG_D(QUANT_BATCH_MATMUL_V4_TO_V3_FUSION_PASS_NAME, "Arch31 no need fallback to V3.");
         return false;
     }
     TensorDesc x1ScaleDesc;

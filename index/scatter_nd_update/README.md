@@ -10,6 +10,8 @@
 | <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
 | <term>Atlas推理系列产品</term>                             |    ×     |
 | <term>Atlas训练系列产品</term>                              |    ×   |
+| <term>KirinX90 处理器系列产品</term>                             |    √     |
+| <term>Kirin9030 处理器系列产品</term>                              |    √   |
 
 ## 功能说明
 
@@ -75,6 +77,7 @@
     </tr>
   </tbody></table>
   <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型在该型号中不支持。
+  <term>KirinX90 处理器系列产品</term>、<term>Kirin9030 处理器系列产品</term>：DT_INT64、DT_BF16、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型在该型号中不支持。indices不支持INT64。
 
 ## 约束说明
 

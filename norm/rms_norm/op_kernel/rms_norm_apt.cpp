@@ -14,17 +14,21 @@
  */
 #include "arch35/rms_norm_regbase_perf.h"
 #include "arch35/rms_norm_regbase_split_d.h"
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #include "arch35/rms_norm_regbase_split_ar.h"
 #include "arch35/rms_norm_regbase_trans.h"
 #include "arch35/rms_norm_regbase_reduce_empty.h"
+#endif
 using namespace AscendC;
 using namespace RmsNorm;
 
 #define RMSNORM_REGBASE_NORMAL 5000
 #define RMSNORM_REGBASE_SPLIT 2001
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #define RMSNORM_REGBASE_SPLIT_AR 3000
 #define RMSNORM_REGBASE_TRANSPOSE 4000
 #define RMSNORM_REGBASE_REDUCE_EMPTY 6000
+#endif
 
 #define GENERAL_OP_IMPL(templateClass, ...)      \
     do {                                         \
@@ -43,6 +47,7 @@ extern "C" __global__ __aicore__ void rms_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR
         KernelRmsNormRegBasePerf<DTYPE_X, DTYPE_GAMMA, false> op;
         op.Init(x, gamma, y, rstd, tilingData);
         op.Process();
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(RMSNORM_REGBASE_SPLIT_AR)) {
         KERNEL_TASK_TYPE(RMSNORM_REGBASE_SPLIT_AR, KERNEL_TYPE_MIX_AIV_1_0);
         GET_TILING_DATA_WITH_STRUCT(RMSNormRegbaseSplitARTilingData, tilingData, tiling);
@@ -62,6 +67,7 @@ extern "C" __global__ __aicore__ void rms_norm(GM_ADDR x, GM_ADDR gamma, GM_ADDR
         KernelRmsNormRegBaseReduceEmpty op(&pipe);
         op.Init(rstd, &tilingData);
         op.Process();
+#endif
     } else if (TILING_KEY_IS(RMSNORM_REGBASE_SPLIT)) {
         GET_TILING_DATA_WITH_STRUCT(RMSNormTilingData, tiling_data_in, tiling);
         const RMSNormTilingData* __restrict tilingData = &tiling_data_in;

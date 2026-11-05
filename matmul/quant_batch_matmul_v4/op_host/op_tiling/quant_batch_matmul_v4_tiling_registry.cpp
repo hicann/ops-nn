@@ -16,6 +16,7 @@
 #include "quant_batch_matmul_v4_msd_tiling.h"
 #include "quant_batch_matmul_v4_perblock_tiling.h"
 #include "quant_batch_matmul_v4_pergroup_tiling.h"
+#include "arch31/quant_batch_matmul_v4_arch31_tiling.h"
 #include "arch35/adaptive_sliding_window_basic_api_v4_tiling.h"
 #include "arch35/quant_batch_matmul_v4_asw_tiling.h"
 #include "arch35/quant_batch_matmul_v4_pergroup_arch35_tiling.h"
@@ -70,6 +71,13 @@ ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext* context)
         socVersion = compileInfoPtr->socVersion;
         npuArch = compileInfoPtr->npuArch;
         supportMmadS8S4 = compileInfoPtr->supportMmadS8S4;
+    }
+
+    if (socVersion == platform_ascendc::SocVersion::KIRINX90 || socVersion == platform_ascendc::SocVersion::KIRIN9030) {
+        auto x2Desc = context->GetInputDesc(1);
+        if (x2Desc != nullptr && x2Desc->GetDataType() == ge::DT_INT4) {
+            return QuantBatchMatmulV4Arch31Tiling(context);
+        }
     }
     if (socVersion == platform_ascendc::SocVersion::ASCEND910B ||
         socVersion == platform_ascendc::SocVersion::ASCEND910_93 ||

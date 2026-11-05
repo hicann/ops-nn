@@ -15,6 +15,40 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
+
+// kirinx90 / kirin9030 支持的数据类型组合（保守精简：去掉 bf16/float8/complex，保留基本类型）
+// 组合数：5 种 x (fp16/fp32/int8/int32/int64) × 2 种 indices (int32/int64) × 2 种 axis (int32/int64) = 20 组
+static const std::vector<ge::DataType> kirinXDataType = {
+    // fp16 × 4
+    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+    // fp32 × 4
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+    // int8 × 4
+    ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
+    // int32 × 4
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    // int64 × 4
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::DataType> kirinIndicesDataType = {
+    // 每种 x 重复 4 组：(int32,int32,int64,int64)
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::DataType> kirinAxisDataType = {
+    // 每组 axis 在 (int32, int64) 间交替
+    ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32,
+    ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64,
+    ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64};
+static const std::vector<ge::DataType> kirinYDataType = {
+    // y 类型 = x 类型
+    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+    ge::DT_FLOAT,   ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,  ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT64,   ge::DT_INT64,   ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::Format> gatherV2FormatKirin = {
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+
 class GatherV2 : public OpDef {
 public:
     explicit GatherV2(const char* name) : OpDef(name)
@@ -210,6 +244,37 @@ public:
         this->AICore().AddConfig("ascend950", aicoreConfig);
         this->AICore().AddConfig("ascend350", aicoreConfig);
         this->AICore().AddConfig("ascend960dt", aicoreConfig);
+
+        OpAICoreConfig config_kirin;
+        config_kirin.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_kirin.Input("x")
+            .ParamType(REQUIRED)
+            .DataType(kirinXDataType)
+            .Format(gatherV2FormatKirin)
+            .UnknownShapeFormat(gatherV2FormatKirin);
+        config_kirin.Input("indices")
+            .ParamType(REQUIRED)
+            .DataType(kirinIndicesDataType)
+            .Format(gatherV2FormatKirin)
+            .UnknownShapeFormat(gatherV2FormatKirin);
+        config_kirin.Input("axis")
+            .ParamType(REQUIRED)
+            .DataType(kirinAxisDataType)
+            .Format(gatherV2FormatKirin)
+            .UnknownShapeFormat(gatherV2FormatKirin)
+            .ValueDepend(OPTIONAL);
+        config_kirin.Output("y")
+            .ParamType(REQUIRED)
+            .DataType(kirinYDataType)
+            .Format(gatherV2FormatKirin)
+            .UnknownShapeFormat(gatherV2FormatKirin);
+        this->AICore().AddConfig("kirinx90", config_kirin);
+        this->AICore().AddConfig("kirin9030", config_kirin);
     }
 };
 

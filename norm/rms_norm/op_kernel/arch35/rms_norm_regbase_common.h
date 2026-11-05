@@ -16,13 +16,20 @@
 #define OPS_BUILT_IN_TBE_IMPL_ASCENDC_RMS_NORM_REGBASE_COMMON_H
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
+#include "kernel_utils.h"
+#else
 #include "kernel_operator_utils_intf.h"
+#endif
 #include "../rms_norm_base.h"
 #include "../../norm_common/reduce_common_regbase.h"
 
 namespace RmsNorm {
 using namespace AscendC;
 using namespace AscendC::Reg;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
+using AscendC::Reg::RegTensor;
+#endif
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
 
@@ -538,6 +545,7 @@ __aicore__ inline void LoadSquareRemainTile(__ubuf__ T* mainAddr, __ubuf__ T* ta
             StoreAlign(xFp32TailAddr + offset1, tailA, pregLoop);
             StoreAlign(xFp32TailAddr + offset2, tailB, pregLoop);
         }
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBFp16MainA, xBFp16MainB, xBFp16TailA, xBFp16TailB;
         LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, mainAddr + offset1);
@@ -554,6 +562,7 @@ __aicore__ inline void LoadSquareRemainTile(__ubuf__ T* mainAddr, __ubuf__ T* ta
             StoreAlign(xFp32TailAddr + offset1, tailA, pregLoop);
             StoreAlign(xFp32TailAddr + offset2, tailB, pregLoop);
         }
+#endif
     } else {
         LoadAlign(mainA, mainAddr + offset1);
         LoadAlign(mainB, mainAddr + offset2);
@@ -583,6 +592,7 @@ __aicore__ inline void LoadSquareMasterTile(__ubuf__ T* masterAddr, uint16_t off
         }
         Mul(mainA, mainA, mainA, pregLoop);
         Mul(mainB, mainB, mainB, pregLoop);
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBFp16MainA, xBFp16MainB;
         LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, masterAddr + offset1);
@@ -595,6 +605,7 @@ __aicore__ inline void LoadSquareMasterTile(__ubuf__ T* masterAddr, uint16_t off
         }
         Mul(mainA, mainA, mainA, pregLoop);
         Mul(mainB, mainB, mainB, pregLoop);
+#endif
     } else {
         LoadAlign(mainA, masterAddr + offset1);
         LoadAlign(mainB, masterAddr + offset2);

@@ -107,6 +107,7 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
         RunLargeIndex<DTYPE_VAR>(indices, updates, varRef, tilingData, tpipe, isView);
     }
 #else
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     if (TILING_KEY_IS(11)) {
         RunLinearIndexAndScatter<DTYPE_VAR, true, int, ScatterNdUpdate::ScatterNdUpdateKernel>(
             indices, updates, varRef, workspace, tilingData, tpipe, isView);
@@ -122,6 +123,10 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
     } else if (TILING_KEY_IS(30)) {
         RunLargeIndex<DTYPE_VAR>(indices, updates, varRef, tilingData, tpipe, isView);
     }
+#else
+    RunLinearIndexAndScatter<DTYPE_VAR, false, int, ScatterNdUpdate::ScatterNdUpdateKernelNoSort>(
+        indices, updates, varRef, workspace, tilingData, tpipe, isView);
+#endif
 #endif
 #endif
 }

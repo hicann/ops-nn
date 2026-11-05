@@ -22,3 +22,10 @@ add_kernel_sources(
     IMPL_MODE high_performance,high_precision,support_out_of_bound_index
     OPTIONS "--cce-no-dcache-flush"
 )
+# arch31(kirinx90/kirin9030) 使用 arch31/gather_v2.cpp 作为 kernel 入口
+add_kernel_sources(
+    KERNEL_SRC arch31/gather_v2.cpp
+    COMPUTE_UNITS kirinx90 kirin9030
+    IMPL_MODE high_performance,high_precision,support_out_of_bound_index
+    AUTO_SYNC false
+)

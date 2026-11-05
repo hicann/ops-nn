@@ -222,6 +222,8 @@ public:
             .ExtendCfgInfo("opFile.value", "scatter_nd_update");
         this->AICore().AddConfig("ascend910b", aicoreConfigArch22);
         this->AICore().AddConfig("ascend910_93", aicoreConfigArch22);
+        this->AICore().AddConfig("kirinx90", aicoreConfigArch22);
+        this->AICore().AddConfig("kirin9030", aicoreConfigArch22);
     }
 };
 

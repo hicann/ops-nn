@@ -13,6 +13,8 @@ English | [简体中文](./README.md)
 | <term>Atlas 200I/500 A2 inference products</term>                      |    ×     |
 | <term>Atlas inference products</term>                             |    ×     |
 | <term>Atlas training products</term>                              |    ×   |
+| <term>KirinX90 processor series products</term>                             |    √     |
+| <term>Kirin9030 processor series products</term>                              |    √   |
 
 ## Function
 
@@ -78,6 +80,7 @@ English | [简体中文](./README.md)
     </tr>
   </tbody></table>
   <term>Atlas A3 products</term> and <term>Atlas A2 products</term>: the FLOAT8_E4M3FN, FLOAT8_E5M2, and HIFLOAT8 data types are not supported on these models.
+  <term>KirinX90 processor series products</term> and <term>Kirin9030 processor series products</term>: the DT_INT64, DT_BF16, FLOAT8_E4M3FN, FLOAT8_E5M2, and HIFLOAT8 data types are not supported on these models, and INT64 is not supported for indices.
 
 ## Constraints
 

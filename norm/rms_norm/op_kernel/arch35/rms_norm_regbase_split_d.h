@@ -186,7 +186,12 @@ private:
             level1 += 1;
             ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
         }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113)
+        ComputeMultiLevelRstd<false>(dstLocal, position, level1Local, level2Local, level3Local, level1, level2,
+                                     avgFactor, epsilon);
+#else
         ComputeMultiLevelRstd<false>(dstLocal, position, level1Local, level2Local, level3Local, level1, level2, level3);
+#endif
     }
 
     __aicore__ inline void ComputeLatter(uint32_t rowRepeat, uint32_t calRowNum, uint32_t colRepeat,

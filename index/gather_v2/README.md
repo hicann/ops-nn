@@ -10,7 +10,8 @@
 | <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
 | <term>Atlas推理系列产品</term>                             |    ×     |
 | <term>Atlas训练系列产品</term>                              |    ×     |
-
+| <term>KirinX90处理器系列产品</term>    |    √    |
+| <term>Kirin9030处理器系列产品</term>   |    √    |
 ## 功能说明
 
 - 算子功能：从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。

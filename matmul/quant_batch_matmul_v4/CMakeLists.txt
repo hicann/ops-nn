@@ -18,6 +18,12 @@ add_kernel_sources(
 )
 
 add_kernel_sources(
+    KERNEL_SRC arch31/quant_batch_matmul_v4.cpp
+    COMPUTE_UNITS kirinx90
+    AUTO_SYNC false
+)
+
+add_kernel_sources(
     KERNEL_SRC arch35/quant_batch_matmul_v4.cpp
     COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     AUTO_SYNC false

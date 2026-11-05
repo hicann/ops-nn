@@ -12,8 +12,8 @@ English | [简体中文](./README.md)
 |Atlas 200I/500 A2 inference products|x|
 |Atlas inference products|x|
 |Atlas training products|x|
-|Kirin X90 processor series products|√|
-|Kirin 9030 processor series products|√|
+|KirinX90 processor series products|√|
+|Kirin9030 processor series products|x|
 
 ## Function
 
@@ -111,6 +111,20 @@ English | [简体中文](./README.md)
 
       $$
       out = (x1@(x2 * x2Scale)) * yScale
+      $$
+
+  - <term>KirinX90 processor series products</term>:
+
+    - x1 is INT8, x2 is INT4 (FRACTAL_Z format), x1Scale is FLOAT32, x2Scale is UINT64, the dtype of the optional parameter bias is FLOAT16, and out is FLOAT16:
+
+      $$
+      out = ((x1 @ x2) * x2Scale) * x1Scale
+      $$
+
+    - With bias:
+
+      $$
+      out = ((x1 @ x2) * x2Scale) * x1Scale + bias
       $$
 
 ## Parameters
@@ -241,6 +255,20 @@ English | [简体中文](./README.md)
     | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
     | FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/BFLOAT16/FLOAT16| BFLOAT16/FLOAT16                               |
     | FLOAT8_E4M3FN             | FLOAT4_E2M1               | nullptr        | BFLOAT16/FLOAT16 | nullptr     | INT64/UINT64    | nullptr  | BFLOAT16/FLOAT16               |
+
+  - <term>KirinX90 processor series products</term>:
+
+    | x1                        | x2                        | x1_scale     | x2_scale         | x2_offset    | y_scale   | bias         | y_offset    | y                                    |
+    | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
+    | INT8                      | INT4                     | FLOAT32     | UINT64          | nullptr        | nullptr     | nullptr/FLOAT16         | nullptr    | FLOAT16                       |
+
+    Additional constraints:
+    - x2 is in FRACTAL_Z format, and the shape must be [K/64, N/16, 16, 8].
+    - transpose_x1 and transpose_x2 support only false.
+    - group_size supports only 128 or 256.
+    - Alignment constraints: K % 64 == 0, N % 16 == 0, K % group_size == 0.
+    - The shape of x2_scale must be [ceil(K/group_size), N].
+    - GT = ceil(K/group_size) <= 960.
 
 ## Invocation Description
 

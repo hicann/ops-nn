@@ -112,7 +112,7 @@
   - 输入`smooth_scales`为预留参数，当前版本不参与计算。
 - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：输出`y`的数据类型仅支持INT8、INT4。
 
-- Kirin X90/kirin 9030处理器系列产品：
+- KirinX90/Kirin9030处理器系列产品：
   - 输入`x`、`smooth_scales`：不支持BFLOAT16。
   - 输出`y`：数据类型不支持INT4、FLOAT8_E5M2、FLOAT8_E4M3FN、HIFLOAT8。
 

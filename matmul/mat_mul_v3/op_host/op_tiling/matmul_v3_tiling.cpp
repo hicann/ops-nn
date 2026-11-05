@@ -21,6 +21,7 @@
 #include "arch35/matmul_v3_tiling_advanced.h"
 #include "matmul_v3_base_tiling.h"
 #include "matmul_v3_compile_info.h"
+#include "arch31/matmul_v3_tiling.h"
 #include "matmul_v3_simplifiedkey.h"
 #include "matmul_v3_platform_common.h"
 #include "register/op_def_registry.h"
@@ -45,6 +46,9 @@ REGISTER_TILING_TEMPLATE("MatMulV3", MatmulV3BaseTiling, 0);
 static ge::graphStatus MatmulV3TilingFunc(gert::TilingContext* context)
 {
     OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("MatMulV3", "context is null"), return ge::GRAPH_FAILED);
+    if (IsMatmulV3Arch31(context)) {
+        return MatmulV3Arch31Tiling(context);
+    }
     if (IsAdvancedSocVersion(context)) {
         return matmul_v3_advanced::MatMulV3Tiling(context).DoTiling();
     }
@@ -53,6 +57,9 @@ static ge::graphStatus MatmulV3TilingFunc(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepareForMatmulV3(gert::TilingParseContext* context)
 {
+    if (IsMatmulV3Arch31(context)) {
+        return ge::GRAPH_SUCCESS;
+    }
     if (IsAdvancedSocVersion(context)) {
         return matmul_v3_advanced::InitCompileInfo(context);
     }
