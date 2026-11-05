@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -682,8 +682,18 @@ static aclnnStatus CheckDataParamsValid(const GruDataParamsIn& inputs, const Gru
                      inputs.numLayers),
              return ACLNN_ERR_PARAM_NULLPTR);
 
-    if (inputs.input->IsEmpty())
+    //  空输入（I=0）直接回填0返回成功，不进入 GRU kernel（底层不支持特征维为0的matmul）。
+    if (inputs.batchSizes != nullptr) {
+        const auto timeStep = inputs.batchSizes->Numel();
+        if (timeStep <= 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "The length of batchSizes should be greater than 0, but %lld was obtained.", timeStep);
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    if (inputs.input->IsEmpty()) {
         return ACLNN_SUCCESS;
+    }
 
     //  填充维度信息
     info.L = inputs.numLayers;
@@ -870,6 +880,31 @@ static aclnnStatus GruDataRun(const GruDataParamsIn& inputs, GruDataInfo& info, 
     return ACLNN_SUCCESS;
 }
 
+//  空tensor场景（I=0或B=0）显式回填0
+static aclnnStatus FillOutputWithZero(const aclTensor* out, aclOpExecutor* executor)
+{
+    if (out->IsEmpty()) {
+        return ACLNN_SUCCESS;
+    }
+    auto* descriptor = executor->AllocTensor(out->GetViewShape(), out->GetDataType(), op::Format::FORMAT_ND);
+    CHECK_RET(descriptor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto* zero = l0op::ZerosLike(descriptor, executor);
+    CHECK_RET(zero != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(l0op::ViewCopy(zero, out, executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus FillTensorListWithZero(const aclTensorList* list, aclOpExecutor* executor)
+{
+    if (list == nullptr) {
+        return ACLNN_SUCCESS;
+    }
+    for (size_t i = 0; i < list->Size(); ++i) {
+        CHECK_RET(FillOutputWithZero((*list)[i], executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    }
+    return ACLNN_SUCCESS;
+}
+
 //  PackedSequence模式入库函数
 [[maybe_unused]] static aclnnStatus GruDataGetWorkspaceSize(GruDataParamsIn& inputs, GruDataParamsOut& outputs,
                                                             uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -885,9 +920,25 @@ static aclnnStatus GruDataRun(const GruDataParamsIn& inputs, GruDataInfo& info, 
     ret = CheckDataParamsValid(inputs, outputs, info);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    //  空tensor处理
+    //  空tensor处理：I=0（input特征维为0）不支持进入GRU kernel，直接回填0返回成功
     if (inputs.input->IsEmpty()) {
-        *workspaceSize = 0;
+        ret = FillOutputWithZero(outputs.output, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = FillOutputWithZero(outputs.hy, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        if (inputs.train) {
+            ret = FillTensorListWithZero(outputs.rOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            ret = FillTensorListWithZero(outputs.zOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            ret = FillTensorListWithZero(outputs.nOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            ret = FillTensorListWithZero(outputs.hnOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            ret = FillTensorListWithZero(outputs.hOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        }
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
@@ -1064,9 +1115,25 @@ aclnnStatus aclnnGRUGetWorkspaceSize(const aclTensor* input, const aclTensorList
                            zOut, nOut, hnOut, hOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 空tensor处理
+    //  空tensor处理：I=0（input特征维为0）不支持进入GRU kernel，直接回填0返回成功
     if (input->IsEmpty()) {
-        *workspaceSize = 0;
+        ret = FillOutputWithZero(output, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = FillOutputWithZero(hy, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        if (train) {
+            ret = FillTensorListWithZero(rOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            ret = FillTensorListWithZero(zOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            ret = FillTensorListWithZero(nOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            ret = FillTensorListWithZero(hnOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+            ret = FillTensorListWithZero(hOut, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        }
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }

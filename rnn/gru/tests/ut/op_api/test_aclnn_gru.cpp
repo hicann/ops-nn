@@ -466,3 +466,273 @@ TEST_F(GruApiTest, case_output_shape_mismatch)
     aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
 }
+
+// 负例9: 定长模式T=0（batch_first=true），期望 ACLNN_ERR_PARAM_INVALID
+TEST_F(GruApiTest, case_t0_invalid_batch_first)
+{
+    int64_t T = 0;
+    int64_t B = 3;
+    int64_t I = 4;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({B, T, I}, ACL_FLOAT16, ACL_FORMAT_ND); // batch_first=true: (B, T=0, I)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh});
+
+    auto output = TensorDesc({B, T, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, nullptr, nullptr),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), false, numLayers, 0.0, false,
+                        false, true);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 负例10: 定长模式T=0（batch_first=false），期望 ACLNN_ERR_PARAM_INVALID
+TEST_F(GruApiTest, case_t0_invalid_non_batch_first)
+{
+    int64_t T = 0;
+    int64_t B = 3;
+    int64_t I = 4;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({T, B, I}, ACL_FLOAT16, ACL_FORMAT_ND); // batch_first=false: (T=0, B, I)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh});
+
+    auto output = TensorDesc({T, B, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, nullptr, nullptr),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), false, numLayers, 0.0, false,
+                        false, false);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 负例11: PackedSequence模式T=0（batchSizes元素数为0），期望 ACLNN_ERR_PARAM_INVALID
+TEST_F(GruApiTest, case_packed_t0_invalid)
+{
+    int64_t B = 3;
+    int64_t I = 4;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({0, I}, ACL_FLOAT16, ACL_FORMAT_ND); // packed: (sum(batch_size)=0, I)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh});
+    auto hx = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto batchSizes = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND); // T=0
+
+    auto output = TensorDesc({0, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, hx, batchSizes),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), false, numLayers, 0.0, false,
+                        false, false);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 正例7: 定长模式I=0（batch_first=true），合法空输入，期望 ACLNN_SUCCESS（输出填零）
+TEST_F(GruApiTest, case_i0_legal_batch_first)
+{
+    int64_t T = 4;
+    int64_t B = 3;
+    int64_t I = 0;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({B, T, I}, ACL_FLOAT16, ACL_FORMAT_ND); // (B, T, I=0)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh});
+
+    auto output = TensorDesc({B, T, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, nullptr, nullptr),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), false, numLayers, 0.0, false,
+                        false, true);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_SUCCESS);
+}
+
+// 正例8: 定长模式I=0（batch_first=false），合法空输入，期望 ACLNN_SUCCESS（输出填零）
+TEST_F(GruApiTest, case_i0_legal_non_batch_first)
+{
+    int64_t T = 4;
+    int64_t B = 3;
+    int64_t I = 0;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({T, B, I}, ACL_FLOAT16, ACL_FORMAT_ND); // (T, B, I=0)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh});
+
+    auto output = TensorDesc({T, B, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, nullptr, nullptr),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), false, numLayers, 0.0, false,
+                        false, false);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_SUCCESS);
+}
+
+// 正例9: 定长模式B=0，合法空输入，期望 ACLNN_SUCCESS（输出填零）
+TEST_F(GruApiTest, case_b0_legal)
+{
+    int64_t T = 4;
+    int64_t B = 0;
+    int64_t I = 4;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({T, B, I}, ACL_FLOAT16, ACL_FORMAT_ND); // (T, B=0, I)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh});
+
+    auto output = TensorDesc({T, B, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, nullptr, nullptr),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), false, numLayers, 0.0, false,
+                        false, false);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_SUCCESS);
+}
+
+// 正例10: PackedSequence模式I=0（batchSizes非空，特征维为0），合法空输入，期望 ACLNN_SUCCESS（输出填零）
+TEST_F(GruApiTest, case_packed_i0_legal)
+{
+    int64_t B = 3;
+    int64_t I = 0;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({6, I}, ACL_FLOAT16, ACL_FORMAT_ND); // packed: (sum(batch_size)=6, I=0)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh});
+    auto hx = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto batchSizes = TensorDesc({3}, ACL_INT64, ACL_FORMAT_ND); // T=3 > 0
+
+    auto output = TensorDesc({6, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, hx, batchSizes),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), false, numLayers, 0.0, false,
+                        false, false);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_SUCCESS);
+}
+
+// 正例11: 定长模式I=0且hx/偏置非零，合法空输入，期望 ACLNN_SUCCESS（当前回填0，不进入GRU kernel）
+TEST_F(GruApiTest, case_i0_with_bias_hx_non_batch_first)
+{
+    int64_t T = 4;
+    int64_t B = 3;
+    int64_t I = 0;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({T, B, I}, ACL_FLOAT16, ACL_FORMAT_ND); // (T, B, I=0)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto bi = TensorDesc({gateNum * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto bh = TensorDesc({gateNum * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh, bi, bh});
+
+    auto hx = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto output = TensorDesc({T, B, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, hx, nullptr),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), true, numLayers, 0.0, false,
+                        false, false);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_SUCCESS);
+}
+
+// 正例12: PackedSequence模式I=0且hx/偏置非零，合法空输入，期望 ACLNN_SUCCESS（当前回填0，不进入GRU kernel）
+TEST_F(GruApiTest, case_packed_i0_with_bias_hx)
+{
+    int64_t B = 3;
+    int64_t I = 0;
+    int64_t H = 5;
+    int64_t gateNum = 3;
+    int64_t numLayers = 1;
+    int64_t dScale = 1;
+    int64_t ldScale = numLayers * dScale;
+
+    auto input = TensorDesc({6, I}, ACL_FLOAT16, ACL_FORMAT_ND); // packed: (sum(batch_size)=6, I=0)
+    auto wi = TensorDesc({gateNum * H, I}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto wh = TensorDesc({gateNum * H, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto bi = TensorDesc({gateNum * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto bh = TensorDesc({gateNum * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto params = TensorListDesc({wi, wh, bi, bh});
+    auto hx = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto batchSizes = TensorDesc({3}, ACL_INT64, ACL_FORMAT_ND); // T=3 > 0
+
+    auto output = TensorDesc({6, dScale * H}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto hy = TensorDesc({ldScale, B, H}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGRU, INPUT(input, params, hx, batchSizes),
+                        OUTPUT(output, hy, nullptr, nullptr, nullptr, nullptr, nullptr), true, numLayers, 0.0, false,
+                        false, false);
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(ret, ACLNN_SUCCESS);
+}
