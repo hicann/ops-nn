@@ -175,7 +175,16 @@ def _inplace_add_third_party_compute(x, indices, v):
     # torch.index_add returns an independent output, so cloning x or v first would
     # add copies that are not part of the competitor implementation.
     updates = updates.reshape((idx.numel(),) + tuple(y.shape[1:]))
-    y = torch.index_add(y, 0, idx.reshape(-1), updates)
+    if y.is_complex():
+        # Native complex index_add can propagate Inf/NaN into the other component.
+        # Real views keep the real and imaginary additions independent.
+        y = torch.view_as_complex(
+            torch.index_add(
+                torch.view_as_real(y), 0, idx.reshape(-1), torch.view_as_real(updates)
+            )
+        )
+    else:
+        y = torch.index_add(y, 0, idx.reshape(-1), updates)
     return _restore_inplace_add_output(y, result_dtype, return_torch)
 
 

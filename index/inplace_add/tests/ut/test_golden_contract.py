@@ -144,3 +144,46 @@ def test_e2e_input_hook_preserves_invalid_shapes_and_k_greater_than_n():
         for output, original in zip(outputs, (x, indices, v)):
             assert output.shape == original.shape
             np.testing.assert_array_equal(output, original)
+
+
+@pytest.mark.parametrize("dtype_name", ["complex32", "complex64"])
+@pytest.mark.parametrize(
+    "update_values",
+    [
+        [complex(np.inf, 2), complex(3, -np.inf)],
+        [complex(np.inf, np.inf), complex(-np.inf, -np.inf)],
+        [complex(np.nan, 2), complex(3, np.nan)],
+        [1 + 2j, -3 - 4j],
+    ],
+)
+def test_third_party_complex_updates_keep_components_independent(
+    dtype_name, update_values
+):
+    import torch
+
+    dtype = getattr(torch, dtype_name)
+    x = torch.tensor([[1 + 2j, 3 + 4j], [5 + 6j, 7 + 8j]], dtype=dtype)
+    v = torch.tensor([update_values], dtype=dtype)
+    before_x, before_v = x.clone(), v.clone()
+    indices = torch.tensor([-1], dtype=torch.int32)
+    output = _G._InplaceAddTorchCompose()(x, indices, v)[0]
+    expected = torch.view_as_real(before_x).clone()
+    expected[1] += torch.view_as_real(before_v[0])
+    assert output.dtype == dtype
+    torch.testing.assert_close(
+        torch.view_as_real(output), expected, rtol=0, atol=0, equal_nan=True
+    )
+    torch.testing.assert_close(x, before_x, rtol=0, atol=0)
+    torch.testing.assert_close(v, before_v, rtol=0, atol=0, equal_nan=True)
+
+
+def test_third_party_numpy_complex_updates_preserve_inputs():
+    x = np.array([[1 + 2j], [3 + 4j]], dtype=np.complex64)
+    v = np.array([[complex(np.inf, 1)]], dtype=np.complex64)
+    before_x, before_v = x.copy(), v.copy()
+    output = _G._InplaceAddTorchCompose()(x, np.array([-1], np.int32), v)[0]
+    np.testing.assert_array_equal(
+        output, np.array([[1 + 2j], [complex(np.inf, 5)]], dtype=np.complex64)
+    )
+    np.testing.assert_array_equal(x, before_x)
+    np.testing.assert_array_equal(v, before_v)
