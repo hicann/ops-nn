@@ -115,6 +115,26 @@ static std::vector<TilingContextPara::TensorDescription> MakeOutputs(const std::
     };
 }
 
+// 可指定标量(lr/momentum/x2) shape 的输入构造（FP32 通路），
+// 用于独立覆盖标量 shape 校验分支（[1] 合法；0D/动态/多元素 拒绝）。
+static std::vector<TilingContextPara::TensorDescription> MakeInputsWithScalarShape(
+    const std::initializer_list<int64_t>& varShape, const std::initializer_list<int64_t>& scalarShape)
+{
+    gert::StorageShape v = {varShape, varShape};
+    gert::StorageShape s = {scalarShape, scalarShape};
+    ge::DataType d = ge::DT_FLOAT;
+    ge::DataType vc = ge::DT_FLOAT16;
+    return {
+        {v, ge::DT_FLOAT, ge::FORMAT_ND}, // var       恒 FP32
+        {v, d, ge::FORMAT_ND},            // accum     通路 dtype
+        {s, d, ge::FORMAT_ND},            // lr
+        {v, d, ge::FORMAT_ND},            // x1
+        {s, d, ge::FORMAT_ND},            // momentum
+        {s, d, ge::FORMAT_ND},            // x2
+        {v, vc, ge::FORMAT_ND},           // var_copy  FP16
+    };
+}
+
 static std::vector<TilingContextPara::OpAttr> MakeAttrs(bool useNesterov, bool useLocking)
 {
     return {
@@ -363,6 +383,30 @@ TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_shape_mismatch_failed)
 {
     TilingContextPara para(OP_NAME, MakeInputs({8}, {4}), MakeOutputs({8}), MakeAttrs(false, false), &compileInfo,
                            DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, TILING_DATA_MAX);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0UL, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+// —— 标量为动态维(-1) → GRAPH_FAILED（kernel 仅读首元素，动态维解析为多元素会静默忽略） ——
+TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_dynamic_dim_failed)
+{
+    TilingContextPara para(OP_NAME, MakeInputsWithScalarShape({8}, {-1}), MakeOutputs({8}), MakeAttrs(false, false),
+                           &compileInfo, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, TILING_DATA_MAX);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0UL, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+// —— 标量为未知 rank(-2) → GRAPH_FAILED ——
+TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_unknown_rank_failed)
+{
+    TilingContextPara para(OP_NAME, MakeInputsWithScalarShape({8}, {-2}), MakeOutputs({8}), MakeAttrs(false, false),
+                           &compileInfo, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, TILING_DATA_MAX);
+    ExecuteTestCase(para, ge::GRAPH_FAILED, 0UL, EMPTY_EXPECT_TILING_DATA, {});
+}
+
+// —— 标量为多元素(如 [4]) → GRAPH_FAILED ——
+TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_multi_element_failed)
+{
+    TilingContextPara para(OP_NAME, MakeInputsWithScalarShape({8}, {4}), MakeOutputs({8}), MakeAttrs(false, false),
+                           &compileInfo, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, TILING_DATA_MAX);
     ExecuteTestCase(para, ge::GRAPH_FAILED, 0UL, EMPTY_EXPECT_TILING_DATA, {});
 }
 

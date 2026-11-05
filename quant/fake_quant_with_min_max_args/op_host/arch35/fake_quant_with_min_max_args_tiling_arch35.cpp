@@ -15,8 +15,8 @@
  * Host-side Nudge (per design §1.1 & §5):
  *   H1) scaleInv = (qMax-qMin)/(fMax-fMin)  [re-divide, NOT 1/scale]
  *   H2) zeroPointFromMin = qMin - fMin/scale  [division, NOT * scaleInv]
- *   H3) nudgedZeroPoint = std::round(zeroPointFromMin)  [round-half-away]
- *   H4) clip: <= qMin / >= qMax  [closed intervals]
+ *   H3) nudgedZeroPoint = std::round(zeroPointFromMin)  [round-half-away，TF StdRound 同义]
+ *   H4) clip: TF 严格 < qMin / > qMax 走边界，边界点走 round（整数自映射）
  *   H5) quantZero = floor(-nudgedMin * scaleInv + 0.5f)  [based on nudgedMin, NOT reusing nudgedZeroPoint]
  */
 
@@ -39,8 +39,9 @@ constexpr size_t ATTR_NARROW_RANGE_INDEX = 3;
 constexpr size_t SYNC_WORKSPACE_SIZE = 0;
 constexpr int64_t DEFAULT_BASE_LEN = 8192; // 32KB per buffer (fp32)
 constexpr int64_t BLOCK_ALIGN_FP32 = 8;    // 32B / 4B
-constexpr int64_t BUFF_NUM = 2;            // in + out double-buffering => 2 * 2 buffers logically
-constexpr int64_t MIN_BLOCK_FACTOR = 64;   // 至少给单核 256B 工作量
+constexpr int64_t VL_ELEM_FP32 = 64; // VECTOR_REG_WIDTH/sizeof(float)=256/4，kernel 无掩码整寄存器加载宽度
+constexpr int64_t BUFF_NUM = 2;      // in + out double-buffering => 2 * 2 buffers logically
+constexpr int64_t MIN_BLOCK_FACTOR = 64; // 至少给单核 256B 工作量
 
 ge::graphStatus FakeQuantWithMinMaxArgsTiling::GetCompileInfo()
 {
@@ -99,6 +100,14 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::GetOpParam()
                 OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs requires min < max, got min=%f max=%f.",
                         fMin_, fMax_),
                 return ge::GRAPH_FAILED);
+    // min/max 各自有限且 min<max 仍可能使 (max-min) 在 float32 中溢出为 inf（如 min=-1e38,max=2.5e38），
+    // 导致 scale=inf/scaleInv=0/nudgedMin=NaN。此处直接拒绝该合法值域边界，避免 NaN 传播。
+    OP_CHECK_IF(
+        (std::isinf(fMax_ - fMin_)),
+        OP_LOGE(context_->GetNodeName(),
+                "FakeQuantWithMinMaxArgs requires (max-min) finite in float32 (no overflow), got min=%f max=%f.", fMin_,
+                fMax_),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (numBits_ < 2 || numBits_ > 16),
         OP_LOGE(context_->GetNodeName(), "FakeQuantWithMinMaxArgs num_bits must be in [2,16], got %ld.", numBits_),
@@ -120,11 +129,12 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::CalcNudge()
     // H2: zeroPointFromMin uses division (qMin - fMin / scale), NOT (qMin - fMin * scaleInv).
     const float zeroPointFromMin = qMinF - fMin_ / scale;
 
-    // H3 & H4: closed-interval clip + std::round (round-half-away).
+    // H3 & H4: TF 源码为严格开区间比较（zero_point_from_min < qMin / > qMax 才 clip），
+    // 边界点（== qMin/== qMax）走 StdRound（round-half-away，整数取整返回自身，结果等价）。
     float nudgedZeroPoint = 0.0f;
-    if (zeroPointFromMin <= qMinF) {
+    if (zeroPointFromMin < qMinF) {
         nudgedZeroPoint = qMinF;
-    } else if (zeroPointFromMin >= qMaxF) {
+    } else if (zeroPointFromMin > qMaxF) {
         nudgedZeroPoint = qMaxF;
     } else {
         nudgedZeroPoint = std::round(zeroPointFromMin);
@@ -135,6 +145,19 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::CalcNudge()
 
     // H5: quantZero must be recomputed from nudgedMin, NOT directly reuse nudgedZeroPoint.
     const float quantZero = std::floor(-nudgedMin * scaleInv + 0.5f);
+
+    // 兜底校验：区间宽度过小（如 min=0,max=最小正子正规数）时 (max-min) 虽有限，
+    // 但 scale 下溢为 0 / scaleInv 溢出为 inf，零点和 nudged 参数会退化为 NaN/Inf。
+    // 此处统一拦截：任一量化参数非有限 或 scale<=0 均视为无法表示的区间，拒绝。
+    const bool nudgeFinite = std::isfinite(scale) && std::isfinite(scaleInv) && std::isfinite(zeroPointFromMin) &&
+                             std::isfinite(nudgedMin) && std::isfinite(nudgedMax) && std::isfinite(quantZero) &&
+                             std::isfinite(nudgedZeroPoint);
+    OP_CHECK_IF(!nudgeFinite || scale <= 0.0f,
+                OP_LOGE(context_->GetNodeName(),
+                        "FakeQuantWithMinMaxArgs: interval [%f,%f] not representable in float32 (scale=%f "
+                        "scaleInv=%f zp=%f nudgedMin=%f nudgedMax=%f quantZero=%f)",
+                        fMin_, fMax_, scale, scaleInv, zeroPointFromMin, nudgedMin, nudgedMax, quantZero),
+                return ge::GRAPH_FAILED);
 
     tilingData_.nudgedMin = nudgedMin;
     tilingData_.nudgedMax = nudgedMax;
@@ -158,18 +181,20 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::CalcTiling()
     //          每份双缓冲（BUFF_NUM），保留少量预留。
     int64_t ubAvail = static_cast<int64_t>(ubSize_) - 2048; // reserve
     int64_t maxBaseLen = ubAvail / (2 * BUFF_NUM * static_cast<int64_t>(sizeof(float)));
-    // 向下对齐到 BLOCK_ALIGN_FP32。
-    maxBaseLen = (maxBaseLen / BLOCK_ALIGN_FP32) * BLOCK_ALIGN_FP32;
+    // 向下对齐到 VL_ELEM_FP32：kernel Compute 无掩码整寄存器加载按 VL=64 整块读取，
+    // baseLen 必须是 64 的倍数，才能保证任意 dataCount<=baseLen 的末 repeat 加载不越出缓冲
+    // （否则 baseLen<64 时单次 256B 加载即越过 baseLen*4B 的缓冲边界）。
+    maxBaseLen = (maxBaseLen / VL_ELEM_FP32) * VL_ELEM_FP32;
     if (maxBaseLen <= 0) {
         OP_LOGE(context_->GetNodeName(), "UB size %lu too small for fake_quant_with_min_max_args.", ubSize_);
         return ge::GRAPH_FAILED;
     }
     baseLen_ = (DEFAULT_BASE_LEN < maxBaseLen) ? DEFAULT_BASE_LEN : maxBaseLen;
     if (baseLen_ > totalLen_) {
-        // 数据少于一份 baseLen，向上取整对齐到 BLOCK_ALIGN_FP32（防止 0）。
-        baseLen_ = ((totalLen_ + BLOCK_ALIGN_FP32 - 1) / BLOCK_ALIGN_FP32) * BLOCK_ALIGN_FP32;
+        // 数据少于一份 baseLen，向上取整对齐到 VL_ELEM_FP32（防止 0 且满足整寄存器加载）。
+        baseLen_ = ((totalLen_ + VL_ELEM_FP32 - 1) / VL_ELEM_FP32) * VL_ELEM_FP32;
         if (baseLen_ == 0) {
-            baseLen_ = BLOCK_ALIGN_FP32;
+            baseLen_ = VL_ELEM_FP32;
         }
     }
 

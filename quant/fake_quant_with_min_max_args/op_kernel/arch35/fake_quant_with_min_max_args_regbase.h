@@ -13,7 +13,7 @@
  * \brief fake_quant_with_min_max_args kernel (regbase / arch35)
  *
  * Self-check (per design §5):
- *  1) round = floor(scaled + roundBias), roundBias = 0.5 - quantZero
+ *  1) q = floor(scaled + 0.5); q_offset = q - quantZero（先取整再减整数零点，避免大数相减精度损失）
  *  2) scheme A: shifted=clamped+(-nudgedMin); scaled=shifted*scaleInv (no merge)
  *  3) dequant y = q_offset * scale (no large-add)
  *  4) NaN: x!=x mask + final Select(vX,vY,nanMask) passthrough
@@ -166,6 +166,7 @@ __aicore__ inline void FakeQuantWithMinMaxArgsRegbase<SchMode>::Compute(int64_t 
     const float nudgedMax = tilingData_->nudgedMax;
     const float scaleInv = tilingData_->scaleInv;
     const float scale = tilingData_->scale;
+    const float quantZero = tilingData_->quantZero;
     const float negNudgedMin = -nudgedMin;
 
     __VEC_SCOPE__
@@ -176,26 +177,17 @@ __aicore__ inline void FakeQuantWithMinMaxArgsRegbase<SchMode>::Compute(int64_t 
         AscendC::Reg::RegTensor<float> vNMax;
         AscendC::Reg::RegTensor<float> vAhi;
         AscendC::Reg::RegTensor<float> vWh;
-        AscendC::Reg::RegTensor<float> vCorr;
         AscendC::Reg::RegTensor<float> vP;
         AscendC::Reg::RegTensor<int32_t> vPInt;
-        AscendC::Reg::RegTensor<float> vF;
-        AscendC::Reg::RegTensor<float> vDec;
-        AscendC::Reg::RegTensor<float> vPm;
-        AscendC::Reg::RegTensor<float> vOne;
-        AscendC::Reg::RegTensor<float> vZero;
         AscendC::Reg::RegTensor<float> vY;
         AscendC::Reg::MaskReg mask;
         AscendC::Reg::MaskReg gtMask;
         AscendC::Reg::MaskReg ltMask;
-        AscendC::Reg::MaskReg geMask;
         AscendC::Reg::MaskReg nanMask;
 
         // Broadcast nudged constants into reg tensors
         AscendC::Reg::Duplicate(vNMin, nudgedMin);
         AscendC::Reg::Duplicate(vNMax, nudgedMax);
-        AscendC::Reg::Duplicate(vOne, 1.0f);
-        AscendC::Reg::Duplicate(vZero, 0.0f);
 
         uint32_t count = static_cast<uint32_t>(dataCount);
         for (uint16_t i = 0; i < vfLoopNum; ++i) {
@@ -215,22 +207,20 @@ __aicore__ inline void FakeQuantWithMinMaxArgsRegbase<SchMode>::Compute(int64_t 
             AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(ltMask, vClamped, nudgedMin, mask);
             AscendC::Reg::Select<float>(vClamped, vNMin, vClamped, ltMask);
 
-            // Step 3: determination of product FMA compensation.
+            // Step 3: q = floor((clamped - nudgedMin) * scaleInv + 0.5); q_offset = q - quantZero
+            // 先对 (clamped-nudgedMin)*scaleInv 取整，再对整数结果减 quantZero。
+            // 不可把 quantZero 前移到 floor 内：num_bits=16 全负区间时 quantZero 可达 65535，
+            // 此时 (scaled - quantZero) 在 float32 下 ulp≈0.004，会吃掉 scaled 距半整数的
+            // 小数位导致取整方向翻转（off-by-one）；floor 后再减则减法发生在整数域，无精度损失。
             AscendC::Reg::Adds(vAhi, vClamped, negNudgedMin, mask);
             AscendC::Reg::Muls(vWh, vAhi, scaleInv, mask);
-            AscendC::Reg::Muls(vCorr, vWh, -1.0f, mask);
-            AscendC::Reg::Axpy(vCorr, vAhi, scaleInv, mask);
+            AscendC::Reg::Adds(vWh, vWh, 0.5f, mask);
             AscendC::Reg::Cast<int32_t, float, CAST_TRAIT_FP32_TO_S32_FLOOR>(vPInt, vWh, mask);
             AscendC::Reg::Cast<float, int32_t, CAST_TRAIT_S32_TO_FP32>(vP, vPInt, mask);
-            AscendC::Reg::Sub(vF, vWh, vP, mask);
-            AscendC::Reg::Add(vF, vF, vCorr, mask);
-            AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::GE>(geMask, vF, 0.5f, mask);
-            AscendC::Reg::Select<float>(vDec, vOne, vZero, geMask);
-            AscendC::Reg::Add(vPm, vP, vDec, mask);
+            AscendC::Reg::Adds(vP, vP, -quantZero, mask);
 
-            // Step 4: q = Pm - quantZero; dequant y = q * scale.
-            AscendC::Reg::Adds(vPm, vPm, -tilingData_->quantZero, mask);
-            AscendC::Reg::Muls(vY, vPm, scale, mask);
+            // Step 4: dequant y = q_offset * scale.
+            AscendC::Reg::Muls(vY, vP, scale, mask);
 
             // Step 5: NaN passthrough -- nanMask=1 -> vX, else vY.
             AscendC::Reg::Select<float>(vY, vX, vY, nanMask);

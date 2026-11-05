@@ -13,13 +13,13 @@
  * \brief fake_quant_with_min_max_args kernel entry (regbase / arch35)
  *
  * Self-check (design §5, 11 items):
- *  1) round = floor(scaled + roundBias), roundBias = 0.5 - quantZero    [regbase.h]
+ *  1) q = floor((c-nMin)*scaleInv + 0.5); q_offset = q - quantZero（先取整再减整数零点）  [regbase.h]
  *  2) scheme A: shifted=clamped+(-nudgedMin); scaled*scaleInv (no merge)[regbase.h]
  *  3) dequant y = q_offset * scale (no large-add)                       [regbase.h]
  *  4) NaN: x!=x mask + final Select(vX,vY,nanMask) passthrough          [regbase.h]
  *  5) N/A (gradient-only: backward mask)
  *  6) clamp via >/< + Select (NaN-safe), not Min/Max                    [regbase.h]
- *  7-10) host Nudge H1-H5 (scaleInv re-div / zp div / round / closed)   [tiling.cpp]
+ *  7-10) host Nudge H1-H5 (scaleInv re-div / zp div / std::round / strict <>)   [tiling.cpp]
  *  11) N/A (gradient-only)
  */
 

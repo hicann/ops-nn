@@ -320,3 +320,17 @@ TEST_F(FakeQuantWithMinMaxArgsTiling, tiling_max_inf_fail)
     gert::StorageShape xShape = {{1024}, {1024}};
     DoTilingCase(-6.0f, std::numeric_limits<float>::infinity(), 8, false, xShape, ge::GRAPH_FAILED);
 }
+
+// —— 区间宽度极小(最小正子正规数)导致 scale 下溢/scaleInv 溢出 → GRAPH_FAILED ——
+TEST_F(FakeQuantWithMinMaxArgsTiling, tiling_tiny_interval_subnormal_fail)
+{
+    gert::StorageShape xShape = {{1024}, {1024}};
+    DoTilingCase(0.0f, std::numeric_limits<float>::denorm_min(), 8, false, xShape, ge::GRAPH_FAILED);
+}
+
+// —— 区间宽度为最小正正规数，scaleInv 溢出为 inf → GRAPH_FAILED ——
+TEST_F(FakeQuantWithMinMaxArgsTiling, tiling_tiny_interval_min_normal_fail)
+{
+    gert::StorageShape xShape = {{1024}, {1024}};
+    DoTilingCase(0.0f, std::numeric_limits<float>::min(), 8, false, xShape, ge::GRAPH_FAILED);
+}

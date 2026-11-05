@@ -52,8 +52,9 @@ static void FillTiling(FakeQuantWithMinMaxArgsTilingData* tilingDatafromBin, int
 // CPU golden matching kernel formula exactly:
 //   if (isnan(x)) y = x;
 //   else: c = clamp(x, nMin, nMax)
-//         q = floor((c - nMin) * scaleInv + 0.5 - quantZero)
-//         y = q * scale
+//         q = floor((c - nMin) * scaleInv + 0.5)
+//         q_offset = q - quantZero
+//         y = q_offset * scale
 static float ForwardGolden(float x, const FakeQuantWithMinMaxArgsTilingData& t)
 {
     if (std::isnan(x)) {
@@ -64,9 +65,10 @@ static float ForwardGolden(float x, const FakeQuantWithMinMaxArgsTilingData& t)
         c = t.nudgedMax;
     if (c < t.nudgedMin)
         c = t.nudgedMin;
-    float scaled = (c - t.nudgedMin) * t.scaleInv + (0.5f - t.quantZero);
+    float scaled = (c - t.nudgedMin) * t.scaleInv + 0.5f;
     float q = std::floor(scaled);
-    return q * t.scale;
+    float qOffset = q - t.quantZero;
+    return qOffset * t.scale;
 }
 
 TEST_F(FakeQuantWithMinMaxArgsTest, test_case_fp32_default)

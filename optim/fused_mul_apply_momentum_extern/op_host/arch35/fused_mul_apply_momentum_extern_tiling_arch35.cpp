@@ -97,6 +97,24 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
                         varShape->GetStorageShape().GetDimNum()),
                 return ge::GRAPH_FAILED);
 
+    // lr/momentum/x2 为 shape={1} 标量（README 公开契约，不支持 0D/空/多元素）；
+    // kernel 仅读取首元素（GlobalTensor 长度固定 1），故动态维(-1)/未知 rank(-2) 一律拒绝，
+    // 避免动态维运行时解析为多元素时静默忽略其余参数（正确用法：主 tensor 动态、标量保持 [1]）。
+    constexpr size_t scalarIndices[] = {2, 4, 5}; // lr/momentum/x2
+    const char* scalarNames[] = {"lr", "momentum", "x2"};
+    for (size_t i = 0; i < sizeof(scalarIndices) / sizeof(scalarIndices[0]); ++i) {
+        auto scalarShape = context->GetInputShape(scalarIndices[i]);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
+        const auto& storage = scalarShape->GetStorageShape();
+        const bool scalarOk = (storage.GetDimNum() == 1 && storage.GetDim(0) == 1);
+        OP_CHECK_IF(!scalarOk,
+                    OP_LOGE(context,
+                            "FusedMulApplyMomentumExtern: %s must be shape=[1] scalar (empty/0D/dynamic/"
+                            "multi-element not supported), got %s",
+                            scalarNames[i], Ops::Base::ToString(storage).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
     // dtype 校验：var 恒 FP32；accum/lr/x1/momentum/x2 须同 dtype（FP32/FP16）；
     // var_copy 须为 FP16。
     auto varDesc = context->GetInputDesc(IDX_VAR);

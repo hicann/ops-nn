@@ -281,6 +281,24 @@ __aicore__ inline void FusedMulApplyMomentumExtern<InT, VarCopyT, USE_NESTEROV>:
     LocalTensor<InT> x1Local = x1InQue_.template AllocTensor<InT>();
     LocalTensor<VarCopyT> varCopyLocal = varCopyInQue_.template AllocTensor<VarCopyT>();
 
+    // TQUE：尾 repeat 的 LoadAlign 是无掩码整 repeat 读取（VF 内 var/accum/x1/var_copy 载入均不带掩码），
+    // 若 currentNum 非 oneRepeatSize 整数倍，末 repeat 会读到 [currentNum, alignLen) 的未初始化 UB 数据。
+    // 在拷贝前把整段 [0, alignLen) 从基址 0 清零：基址恒 32B 对齐；不能在 tensor[currentNum]
+    // 处调用 Duplicate——FP16 的 accum/x1/var_copy 要求 currentNum%16==0、FP32 的 var 要求 %8==0，
+    // 否则触发 errcode 340 "The address for VEC to access UB is not aligned"。
+    // ubFormer 由 tiling 按 64 元素对齐分配，alignLen <= ubFormer，不会越界。
+    constexpr uint32_t oneRepeatSize = AscendC::GetVecLen() / sizeof(float);
+    const uint32_t alignLen = AscendC::CeilDivision(static_cast<uint32_t>(currentNum), oneRepeatSize) * oneRepeatSize;
+    if (alignLen > static_cast<uint32_t>(currentNum)) {
+        AscendC::Duplicate(varLocal, (float)0, alignLen);
+        AscendC::Duplicate(accumLocal, (InT)0, alignLen);
+        AscendC::Duplicate(x1Local, (InT)0, alignLen);
+        AscendC::Duplicate(varCopyLocal, (VarCopyT)0, alignLen);
+        event_t evtVtoMte2 = static_cast<event_t>(pipe_.FetchEventID(AscendC::HardEvent::V_MTE2));
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evtVtoMte2);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evtVtoMte2);
+    }
+
     AscendC::DataCopyExtParams cpVar{1, static_cast<uint32_t>(currentNum * sizeof(float)), 0, 0, 0};
     AscendC::DataCopyExtParams cpIn{1, static_cast<uint32_t>(currentNum * sizeof(InT)), 0, 0, 0};
     AscendC::DataCopyExtParams cpVc{1, static_cast<uint32_t>(currentNum * sizeof(VarCopyT)), 0, 0, 0};

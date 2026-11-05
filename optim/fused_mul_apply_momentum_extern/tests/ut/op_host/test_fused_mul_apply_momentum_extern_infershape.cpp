@@ -46,6 +46,24 @@ static std::vector<gert::InfershapeContextPara::TensorDescription> MakeInputs(
     };
 }
 
+// 可指定标量(lr/momentum/x2) shape 的输入构造（FP32 通路），
+// 用于独立覆盖标量 shape 校验分支（[1] 合法；0D/动态/多元素 拒绝）。
+static std::vector<gert::InfershapeContextPara::TensorDescription> MakeInputsWithScalarShape(
+    const std::initializer_list<int64_t>& tensorShape, const std::initializer_list<int64_t>& scalarShape)
+{
+    gert::StorageShape ts = {tensorShape, tensorShape};
+    gert::StorageShape s = {scalarShape, scalarShape};
+    return {
+        {ts, ge::DT_FLOAT, ge::FORMAT_ND},   // var       FP32
+        {ts, ge::DT_FLOAT, ge::FORMAT_ND},   // accum     FP32
+        {s, ge::DT_FLOAT, ge::FORMAT_ND},    // lr        FP32
+        {ts, ge::DT_FLOAT, ge::FORMAT_ND},   // x1        FP32
+        {s, ge::DT_FLOAT, ge::FORMAT_ND},    // momentum  FP32
+        {s, ge::DT_FLOAT, ge::FORMAT_ND},    // x2        FP32
+        {ts, ge::DT_FLOAT16, ge::FORMAT_ND}, // var_copy  FP16
+    };
+}
+
 // 三输出（shape 待推导，dtype: FP32 / FP16 / FP32）
 static std::vector<gert::InfershapeContextPara::TensorDescription> MakeOutputs()
 {
@@ -71,4 +89,28 @@ TEST_F(FusedMulApplyMomentumExternInfershape, infershape_1d_64)
     gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputs({64}), MakeOutputs());
     std::vector<std::vector<int64_t>> expect = {{64}, {64}, {64}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
+}
+
+// —— 标量为动态维(-1) → GRAPH_FAILED（kernel 仅读首元素，动态维解析为多元素会静默忽略） ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_dynamic_dim_failed)
+{
+    gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputsWithScalarShape({64}, {-1}),
+                                     MakeOutputs());
+    ExecuteTestCase(para, ge::GRAPH_FAILED, {});
+}
+
+// —— 标量为未知 rank(-2) → GRAPH_FAILED ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_unknown_rank_failed)
+{
+    gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputsWithScalarShape({64}, {-2}),
+                                     MakeOutputs());
+    ExecuteTestCase(para, ge::GRAPH_FAILED, {});
+}
+
+// —— 标量为多元素(如 [4]) → GRAPH_FAILED ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_multi_element_failed)
+{
+    gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputsWithScalarShape({64}, {4}),
+                                     MakeOutputs());
+    ExecuteTestCase(para, ge::GRAPH_FAILED, {});
 }

@@ -75,6 +75,49 @@ uint32_t GetDataTypeSize(DataType dt)
     return 4;
 }
 
+// IEEE float → half（RNE 舍入）位模式
+uint16_t FloatToHalfBits(float value)
+{
+    union {
+        float f;
+        uint32_t u;
+    } conv;
+    conv.f = value;
+    const uint32_t sign = (conv.u >> 16) & 0x8000;
+    const int32_t exp = static_cast<int32_t>((conv.u >> 23) & 0xFF) - 127;
+    const uint32_t mant = conv.u & 0x7FFFFF;
+    if (exp > 15) {
+        return static_cast<uint16_t>(sign | 0x7C00); // 溢出 → inf
+    }
+    if (exp < -24) {
+        return static_cast<uint16_t>(sign); // 下溢 → 0
+    }
+    if (exp < -14) {
+        // 次正规
+        uint32_t half = (mant | 0x800000) >> (static_cast<uint32_t>(-exp - 14) + 13);
+        uint32_t rem = mant & ((1u << (static_cast<uint32_t>(-exp - 14) + 13)) - 1);
+        if (rem > (1u << (static_cast<uint32_t>(-exp - 14) + 12)) ||
+            (rem == (1u << (static_cast<uint32_t>(-exp - 14) + 12)) && (half & 1))) {
+            ++half; // RNE
+        }
+        return static_cast<uint16_t>(sign | half);
+    }
+    uint32_t halfExp = static_cast<uint32_t>(exp + 15);
+    uint32_t halfMant = mant >> 13;
+    const uint32_t rem = mant & 0x1FFF;
+    if (rem > 0x1000 || (rem == 0x1000 && (halfMant & 1))) {
+        ++halfMant; // RNE
+        if (halfMant == 0x400) {
+            halfMant = 0;
+            ++halfExp;
+            if (halfExp == 0x1F) {
+                return static_cast<uint16_t>(sign | 0x7C00);
+            }
+        }
+    }
+    return static_cast<uint16_t>(sign | (halfExp << 10) | halfMant);
+}
+
 int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& inputTensor, TensorDesc& inputTensorDesc, float value)
 {
     inputTensorDesc.SetRealDimCnt(shapes.size());
@@ -82,15 +125,35 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& inputTensor, TensorDe
     for (uint32_t i = 0; i < shapes.size(); i++) {
         size *= shapes[i];
     }
-    uint32_t dataLen = size * 4;
-    float* pData = new (std::nothrow) float[size];
+    // 按 dtype 计算字节数（var_copy 为 FP16 时 dataLen=2*size，而非固定 4*size）
+    uint32_t dtypeSize = GetDataTypeSize(inputTensorDesc.GetDataType());
+    uint32_t dataLen = static_cast<uint32_t>(size) * dtypeSize;
+    uint8_t* pData = new (std::nothrow) uint8_t[dataLen];
     if (pData == nullptr) {
         return FAILED;
     }
-    for (size_t i = 0; i < size; ++i) {
-        pData[i] = value;
+    const ge::DataType dt = inputTensorDesc.GetDataType();
+    if (dt == ge::DT_FLOAT) {
+        float* data = reinterpret_cast<float*>(pData);
+        for (size_t i = 0; i < size; ++i) {
+            data[i] = value;
+        }
+    } else if (dt == ge::DT_FLOAT16) {
+        const uint16_t halfVal = FloatToHalfBits(value);
+        uint16_t* data = reinterpret_cast<uint16_t*>(pData);
+        for (size_t i = 0; i < size; ++i) {
+            data[i] = halfVal;
+        }
+    } else {
+        // DT_BF16：float 高 16 位即 bf16
+        const uint16_t bf16Val = static_cast<uint16_t>((*reinterpret_cast<uint32_t*>(&value)) >> 16);
+        uint16_t* data = reinterpret_cast<uint16_t*>(pData);
+        for (size_t i = 0; i < size; ++i) {
+            data[i] = bf16Val;
+        }
     }
-    inputTensor = Tensor(inputTensorDesc, reinterpret_cast<uint8_t*>(pData), dataLen);
+    inputTensor = Tensor(inputTensorDesc, pData, dataLen);
+    delete[] pData; // ge::Tensor 构造已拷贝数据，释放临时缓冲
     return SUCCESS;
 }
 

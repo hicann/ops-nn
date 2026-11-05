@@ -23,6 +23,31 @@ protected:
     static void TearDownTestCase() { std::cout << "FakeQuantWithMinMaxArgsProto TearDown" << std::endl; }
 };
 
+TEST_F(FakeQuantWithMinMaxArgsProto, FakeQuantWithMinMaxArgs_proto_fp32_0d)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxArgs")->infer_shape;
+
+    gert::StorageShape xShape = {{}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[]");
+}
+
 TEST_F(FakeQuantWithMinMaxArgsProto, FakeQuantWithMinMaxArgs_proto_fp32_1d)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxArgs")->infer_shape;
