@@ -151,8 +151,11 @@ static ge::graphStatus CheckTensorListInfo(gert::TilingContext* context, uint64_
                     OP_LOGE(context, "The dim num of y[%lu] must be less than or equal to 8, but got %zu.", i,
                             outShape.GetDimNum()),
                     return ge::GRAPH_FAILED);
-        OP_CHECK_IF(outShape.GetShapeSize() != x1Shape.GetShapeSize(),
-                    OP_LOGE(context, "The shape size of y[%lu] must be the same as that of x1[%lu].", i, i),
+        OP_CHECK_IF(outShape.GetShapeSize() < x1Shape.GetShapeSize(),
+                    OP_LOGE(context,
+                            "The shape size of y[%lu] must be greater than or equal to that of x1[%lu], but got "
+                            "%ld and %ld.",
+                            i, i, outShape.GetShapeSize(), x1Shape.GetShapeSize()),
                     return ge::GRAPH_FAILED);
         auto outDescPtr = context->GetOutputDesc(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, outDescPtr);

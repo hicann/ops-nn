@@ -107,7 +107,7 @@ aclnnStatus aclnnForeachDivList(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示除法运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape与入参`x1`的shape一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnForeachDivList(
       <td>x1、x2、out的数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>x1、x2、out的shape不满足约束。</td>
+      <td>x1、x2、out的shape不满足约束（含out的shape size小于x1的shape size）。</td>
     </tr>
     <tr>
       <td>x1、x2或out中的Tensor的数据类型不一致。</td>

@@ -143,11 +143,24 @@ static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, 
     // tensor 维度检查
     for (uint64_t i = 0; i < x1->Size(); i++) {
         OP_CHECK_MAX_DIM((*x1)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+        OP_CHECK_MAX_DIM((*out)[i], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
-    // self和out的shape必须一致
+    // out的元素数必须大于等于x1（文档：out的shape size大于等于入参x1的shape size）
     for (uint64_t i = 0; i < x1->Size(); i++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*x1)[i], (*out)[i], return false);
+        const int64_t x1Size = (*x1)[i]->GetViewShape().GetShapeSize();
+        const int64_t outSize = (*out)[i]->GetViewShape().GetShapeSize();
+        if (outSize < x1Size) {
+            const std::string reason = ("The shape size of the " + std::to_string(i) +
+                                        "th tensor in out must be greater than or equal to that of x1, but got " +
+                                        std::to_string(outSize) + " and " + std::to_string(x1Size) + ".");
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+            REPORT_PREDEFINED_ERR_MSG("EZ0015",
+                                      (std::vector<const char*>{"param_name", "op_name", "incorrect_size", "reason"}),
+                                      (std::vector<const char*>{"out", "aclnnForeachDivList",
+                                                                (std::to_string(outSize)).c_str(), reason.c_str()}));
+            return false;
+        }
     }
     return true;
 }
