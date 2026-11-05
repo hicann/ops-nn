@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file test_ascend_quant.cpp
+ * \file test_ascend_quant_apt.cpp
  * \brief ascend_quant kernel unit test
  */
 
@@ -20,7 +20,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "../../../op_kernel/ascend_quant.cpp"
+#include "../../../op_kernel/ascend_quant_apt.cpp"
 #include <cstdint>
 
 using namespace std;

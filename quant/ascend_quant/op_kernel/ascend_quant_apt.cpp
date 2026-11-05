@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file ascend_quant.cpp
+ * \file ascend_quant_apt.cpp
  * \brief ascend_quant kernel entry
  */
 
