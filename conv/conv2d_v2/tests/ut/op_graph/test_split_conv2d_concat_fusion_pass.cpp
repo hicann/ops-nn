@@ -31,8 +31,6 @@ struct SplitConvGraphOptions {
     int32_t axis = 3;
     DataType dtype = DT_FLOAT16;
     DataType biasDtype = DT_UNDEFINED;
-    DataType inputDtype = DT_UNDEFINED;     // Split input/output dtype (undefined = same as dtype)
-    DataType concatOutDtype = DT_UNDEFINED; // Concat output dtype (undefined = same as dtype)
     Format fmt = FORMAT_NHWC;
     int32_t numSplit = 2;
     std::vector<int64_t> inputShape = {1, 7, 7, 32};
@@ -40,7 +38,6 @@ struct SplitConvGraphOptions {
     bool useSplitV = false;
     bool useConcatV2 = false;
     bool withBias = false;
-    bool withOffsetW = false;
     bool mismatchWeight = false;
     bool mismatchConcatFormat = false;
     bool mismatchWeightFormat = false;
@@ -114,8 +111,7 @@ protected:
     }
 
     GNode CreateConv2DNode(Graph* graph, const std::string& name, DataType dtype, Format fmt,
-                           const std::vector<int64_t>& inShape, const std::vector<int64_t>& filterShape, bool withBias,
-                           bool withOffsetW = false)
+                           const std::vector<int64_t>& inShape, const std::vector<int64_t>& filterShape, bool withBias)
     {
         auto node = CompliantNodeBuilder(graph)
                         .OpType("Conv2D")
@@ -154,13 +150,6 @@ protected:
             biasDesc.SetOriginFormat(FORMAT_ND);
             biasDesc.SetOriginShape(Shape({cout}));
             node.UpdateInputDesc(2, biasDesc);
-        }
-        if (withOffsetW) {
-            int64_t cout = (fmt == FORMAT_NHWC) ? filterShape[3] : filterShape[0];
-            TensorDesc offsetWDesc(Shape({cout}), FORMAT_ND, DT_INT8);
-            offsetWDesc.SetOriginFormat(FORMAT_ND);
-            offsetWDesc.SetOriginShape(Shape({cout}));
-            node.UpdateInputDesc(3, offsetWDesc);
         }
         TensorDesc outDesc(Shape(inShape), fmt, dtype);
         outDesc.SetOriginFormat(fmt);
@@ -221,26 +210,22 @@ protected:
 
     GraphPtr BuildSplitConvConcatGraph(const SplitConvGraphOptions& opt)
     {
-        DataType splitInDtype = (opt.inputDtype == DT_UNDEFINED) ? opt.dtype : opt.inputDtype;
-        DataType concatOutDtype = (opt.concatOutDtype == DT_UNDEFINED) ? opt.dtype : opt.concatOutDtype;
         EsGraphBuilder graphBuilder("test_split_conv_concat");
-        auto input = graphBuilder.CreateInput(0, "input", splitInDtype, opt.fmt, opt.inputShape);
+        auto input = graphBuilder.CreateInput(0, "input", opt.dtype, opt.fmt, opt.inputShape);
         Graph* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
 
         auto splitNode = BuildSplitNode(graphBuilder, opt, input);
         int32_t dataIdx = opt.useSplitV ? 0 : 1;
-        TensorDesc inputDesc(Shape(opt.inputShape), opt.fmt, splitInDtype);
+        TensorDesc inputDesc(Shape(opt.inputShape), opt.fmt, opt.dtype);
         inputDesc.SetOriginFormat(opt.fmt);
-        inputDesc.SetOriginShape(Shape(opt.inputShape));
         splitNode.UpdateInputDesc(dataIdx, inputDesc);
 
         std::vector<int64_t> splitOutShape = opt.inputShape;
         size_t cPos = (opt.fmt == FORMAT_NHWC) ? 3 : 1;
         splitOutShape[cPos] = opt.inputShape[cPos] / opt.numSplit;
         for (int32_t i = 0; i < opt.numSplit; ++i) {
-            TensorDesc outDesc(Shape(splitOutShape), opt.fmt, splitInDtype);
+            TensorDesc outDesc(Shape(splitOutShape), opt.fmt, opt.dtype);
             outDesc.SetOriginFormat(opt.fmt);
-            outDesc.SetOriginShape(Shape(splitOutShape));
             splitNode.UpdateOutputDesc(i, outDesc);
         }
 
@@ -264,7 +249,7 @@ protected:
             }
             bool branchBias = opt.withBias && !(opt.mismatchInputCount && i == 1);
             auto convNode = CreateConv2DNode(graph, "conv2d_" + std::to_string(i), opt.dtype, opt.fmt, splitOutShape,
-                                             curFilterShape, branchBias, opt.withOffsetW);
+                                             curFilterShape, branchBias);
             graph->AddDataEdge(splitNode, i, convNode, 0);
             std::vector<int64_t> filterDescShape = curFilterShape;
             if (opt.unknownWeightShape) {
@@ -288,15 +273,6 @@ protected:
                 biasDesc.SetOriginShape(Shape({biasLen}));
                 convNode.UpdateInputDesc(2, biasDesc);
                 graph->AddDataEdge(bias, 0, convNode, 2);
-            }
-            if (opt.withOffsetW) {
-                int64_t cout = (opt.fmt == FORMAT_NHWC) ? curFilterShape[3] : curFilterShape[0];
-                auto offsetW = CreateBiasConst(graph, "offset_w_" + std::to_string(i), DT_INT8, cout);
-                TensorDesc offsetWDesc(Shape({cout}), FORMAT_ND, DT_INT8);
-                offsetWDesc.SetOriginFormat(FORMAT_ND);
-                offsetWDesc.SetOriginShape(Shape({cout}));
-                convNode.UpdateInputDesc(3, offsetWDesc);
-                graph->AddDataEdge(offsetW, 0, convNode, 3);
             }
             convNodes.push_back(convNode);
         }
@@ -356,9 +332,8 @@ protected:
 
         Format concatOutFmt = opt.mismatchConcatFormat ? ((opt.fmt == FORMAT_NHWC) ? FORMAT_NCHW : FORMAT_NHWC) :
                                                          opt.fmt;
-        TensorDesc concatOutDesc(Shape(opt.inputShape), concatOutFmt, concatOutDtype);
+        TensorDesc concatOutDesc(Shape(opt.inputShape), concatOutFmt, opt.dtype);
         concatOutDesc.SetOriginFormat(concatOutFmt);
-        concatOutDesc.SetOriginShape(Shape(opt.inputShape));
         concatNode.UpdateOutputDesc(0, concatOutDesc);
 
         auto concatHolder = EsTensorHolder(graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(concatNode, 0));
@@ -597,94 +572,6 @@ TEST_F(SplitConv2dConcatFusionPassTest, split_conv2d_concat_with_bias_success)
     EXPECT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "Conv2D", groupConv));
     auto biasPair = groupConv.GetInDataNodesAndPortIndexs(2);
     EXPECT_NE(biasPair.first, nullptr);
-}
-
-TEST_F(SplitConv2dConcatFusionPassTest, split_conv2d_concat_with_bias_offset_w_success)
-{
-    SplitConvGraphOptions opt;
-    opt.withBias = true;
-    opt.withOffsetW = true;
-    auto graph = BuildSplitConvConcatGraph(opt);
-    ASSERT_NE(graph, nullptr);
-    TestTotalPass("with_bias_offset_w_success", graph, SUCCESS);
-    EXPECT_FALSE(GraphChecker::HasNode(graph, "Split"));
-    EXPECT_EQ(GraphChecker::CountNodes(graph, "Concatv2HostCpuOp"), 3);
-    GNode groupConv;
-    EXPECT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "Conv2D", groupConv));
-    auto biasPair = groupConv.GetInDataNodesAndPortIndexs(2);
-    EXPECT_NE(biasPair.first, nullptr);
-    auto offsetWPair = groupConv.GetInDataNodesAndPortIndexs(3);
-    EXPECT_NE(offsetWPair.first, nullptr);
-    TensorDesc offsetWDesc;
-    EXPECT_EQ(groupConv.GetInputDesc(3, offsetWDesc), GRAPH_SUCCESS);
-    EXPECT_EQ(offsetWDesc.GetDataType(), DT_INT8);
-    auto offsetWDims = offsetWDesc.GetOriginShape().GetDims();
-    if (offsetWDims.empty()) {
-        offsetWDims = offsetWDesc.GetShape().GetDims();
-    }
-    ASSERT_EQ(offsetWDims.size(), 1U);
-    EXPECT_EQ(offsetWDims[0], 32); // 16 per branch x 2 groups, N-axis expanded
-}
-
-TEST_F(SplitConv2dConcatFusionPassTest, split_conv2d_concat_fixed_shift_value_copied)
-{
-    SplitConvGraphOptions opt;
-    opt.withBias = true;
-    opt.withOffsetW = true;
-    auto graph = BuildSplitConvConcatGraph(opt);
-    ASSERT_NE(graph, nullptr);
-    GNode firstConv;
-    ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "Conv2D", firstConv));
-    int64_t fixedShiftValue = 13;
-    ASSERT_EQ(firstConv.SetAttr(AscendString("fixed_shift_value"), fixedShiftValue), GRAPH_SUCCESS);
-    TestTotalPass("fixed_shift_value_copied", graph, SUCCESS);
-    EXPECT_FALSE(GraphChecker::HasNode(graph, "Split"));
-    GNode groupConv;
-    EXPECT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "Conv2D", groupConv));
-    int64_t groupFixedShift = 0;
-    EXPECT_EQ(groupConv.GetAttr(AscendString("fixed_shift_value"), groupFixedShift), GRAPH_SUCCESS);
-    EXPECT_EQ(groupFixedShift, 13);
-}
-
-// Quantized graph: Split input DT_INT8 (from AscendQuant), Conv2D fmap/output DT_FLOAT16
-// (weights rolled back to fp16), Concat output DT_INT32 (for subsequent AscendQuant).
-// The fused group conv must preserve Conv2D's fp16 dtype for both fmap and output,
-// only taking shape from Split input and Concat output respectively.
-TEST_F(SplitConv2dConcatFusionPassTest, split_conv2d_concat_quant_keep_conv_dtype)
-{
-    SplitConvGraphOptions opt;
-    opt.dtype = DT_FLOAT16;
-    opt.inputDtype = DT_INT8;      // Split input: int8 (from AscendQuant)
-    opt.concatOutDtype = DT_INT32; // Concat output: int32 (for AscendQuant)
-    opt.withBias = true;
-    auto graph = BuildSplitConvConcatGraph(opt);
-    ASSERT_NE(graph, nullptr);
-    TestTotalPass("quant_keep_conv_dtype", graph, SUCCESS);
-    EXPECT_FALSE(GraphChecker::HasNode(graph, "Split"));
-    GNode groupConv;
-    EXPECT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "Conv2D", groupConv));
-
-    TensorDesc fmapDesc;
-    EXPECT_EQ(groupConv.GetInputDesc(0, fmapDesc), GRAPH_SUCCESS);
-    EXPECT_EQ(fmapDesc.GetDataType(), DT_FLOAT16);
-    EXPECT_EQ(fmapDesc.GetOriginFormat(), FORMAT_NHWC);
-    auto fmapDims = fmapDesc.GetOriginShape().GetDims();
-    if (fmapDims.empty()) {
-        fmapDims = fmapDesc.GetShape().GetDims();
-    }
-    ASSERT_EQ(fmapDims.size(), 4U);
-    EXPECT_EQ(fmapDims[3], 32); // full channels from split input
-
-    TensorDesc outDesc;
-    EXPECT_EQ(groupConv.GetOutputDesc(0, outDesc), GRAPH_SUCCESS);
-    EXPECT_EQ(outDesc.GetDataType(), DT_FLOAT16);
-    EXPECT_EQ(outDesc.GetOriginFormat(), FORMAT_NHWC);
-    auto outDims = outDesc.GetOriginShape().GetDims();
-    if (outDims.empty()) {
-        outDims = outDesc.GetShape().GetDims();
-    }
-    ASSERT_EQ(outDims.size(), 4U);
-    EXPECT_EQ(outDims[3], 32); // full channels from concat output
 }
 
 TEST_F(SplitConv2dConcatFusionPassTest, splitv_conv2d_concatv2_success)

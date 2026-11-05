@@ -33,7 +33,7 @@ void ASplitConv2dConcatPass::InitMember()
     outputDesc = TensorDesc();
     splitDimOriginFormat = FORMAT_ND;
     groups = 0;
-    paramCnt = 0;
+    hasBias = false;
     isConcatV2 = false;
     isSplitV = false;
 }
@@ -135,8 +135,9 @@ bool ASplitConv2dConcatPass::CheckConvNonFmapInputs(const GNode& convNode, bool 
 {
     for (size_t idx = static_cast<size_t>(INPUT_FILTER_INDEX); idx < convNode.GetInputsSize(); ++idx) {
         auto inputPair = convNode.GetInDataNodesAndPortIndexs(static_cast<int32_t>(idx));
-        FUSION_PASS_CHECK(inputPair.first == nullptr,
-                          OP_LOGD(splitNodeName.GetString(), "conv input %zu is not connected.", idx), return false);
+        if (inputPair.first == nullptr) {
+            continue;
+        }
         AscendString inType;
         FUSION_PASS_CHECK(inputPair.first->GetType(inType) != GRAPH_SUCCESS,
                           OP_LOGD(splitNodeName.GetString(), "get conv input type failed."), return false);
@@ -159,13 +160,9 @@ bool ASplitConv2dConcatPass::CheckOneConvBranch(const GNode& convNode, ConvBranc
     size_t inputCnt = convNode.GetInputsSize();
     FUSION_PASS_CHECK(inputCnt < REQUIRED_INPUT_NUMS, OP_LOGD(splitNodeName.GetString(), "conv2d inputs less than 2."),
                       return false);
-    // Conv2D proto declares at most [x, filter, bias, offset_w];
-    FUSION_PASS_CHECK(inputCnt > CONV_COUNT_PARAMS_OFFSET_W,
-                      OP_LOGD(splitNodeName.GetString(), "conv2d inputs more than %zu.", CONV_COUNT_PARAMS_OFFSET_W),
-                      return false);
     if (isFirst) {
         baseline.inputCnt = inputCnt;
-        paramCnt = inputCnt - 1;
+        hasBias = inputCnt == CONV_COUNT_PARAMS_BIAS;
     } else {
         FUSION_PASS_CHECK(inputCnt != baseline.inputCnt,
                           OP_LOGD(splitNodeName.GetString(), "conv2d input count inconsistent."), return false);
@@ -263,25 +260,15 @@ bool ASplitConv2dConcatPass::VerifySptCcatAxis(const GNode& splitNode)
 
 bool ASplitConv2dConcatPass::CheckFormatsConsistent(const GNode& splitNode)
 {
-    TensorDesc splitDataDesc;
-    FUSION_PASS_CHECK(splitNode.GetInputDesc(GetSplitDataInputIdx(), splitDataDesc) != GRAPH_SUCCESS,
+    FUSION_PASS_CHECK(splitNode.GetInputDesc(GetSplitDataInputIdx(), fmapDesc) != GRAPH_SUCCESS,
                       OP_LOGD(splitNodeName.GetString(), "get split data desc failed."), return false);
-    TensorDesc concatOutDesc;
-    FUSION_PASS_CHECK(concatNode->GetOutputDesc(OUTPUT_INDEX, concatOutDesc) != GRAPH_SUCCESS,
+    FUSION_PASS_CHECK(concatNode->GetOutputDesc(OUTPUT_INDEX, outputDesc) != GRAPH_SUCCESS,
                       OP_LOGD(splitNodeName.GetString(), "get concat output desc failed."), return false);
-    Format splitFmt = splitDataDesc.GetOriginFormat();
-    FUSION_PASS_CHECK(splitFmt != concatOutDesc.GetOriginFormat(),
+    Format splitFmt = fmapDesc.GetOriginFormat();
+    FUSION_PASS_CHECK(splitFmt != outputDesc.GetOriginFormat(),
                       OP_LOGD(splitNodeName.GetString(), "split format is not equal to concat."), return false);
     FUSION_PASS_CHECK(splitFmt != convDescInfo.fmapDesc.GetOriginFormat(),
                       OP_LOGD(splitNodeName.GetString(), "split format is not equal to conv2d."), return false);
-    std::vector<int64_t> splitInShape = splitDataDesc.GetOriginShape().GetDims();
-    fmapDesc = convDescInfo.fmapDesc;
-    fmapDesc.SetShape(Shape(splitInShape));
-    fmapDesc.SetOriginShape(Shape(splitInShape));
-    std::vector<int64_t> concatOutShape = concatOutDesc.GetOriginShape().GetDims();
-    outputDesc = convDescInfo.outputDesc;
-    outputDesc.SetShape(Shape(concatOutShape));
-    outputDesc.SetOriginShape(Shape(concatOutShape));
     return true;
 }
 
@@ -379,26 +366,25 @@ std::unique_ptr<SubgraphBoundary> ASplitConv2dConcatPass::ConstructBoundary(cons
     FUSION_PASS_CHECK_NOLOG(
         !ConvFusionUtilsPass::AddSubgraphInput(boundary, splitNode, GetSplitDataInputIdx(), BOUNDARY_FMAP_INPUT_IDX),
         return nullptr);
-    for (size_t j = 0; j < paramCnt; ++j) {
+    for (size_t i = 0; i < convNodes.size(); ++i) {
+        FUSION_PASS_CHECK_NOLOG(
+            !ConvFusionUtilsPass::AddSubgraphInput(boundary, convNodes[i], INPUT_FILTER_INDEX,
+                                                   BOUNDARY_FILTER_INPUT_BASE + static_cast<int64_t>(i)),
+            return nullptr);
+    }
+    if (hasBias) {
         for (size_t i = 0; i < convNodes.size(); ++i) {
-            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(
-                                        boundary, convNodes[i], INPUT_FILTER_INDEX + static_cast<int32_t>(j),
-                                        BOUNDARY_FILTER_INPUT_BASE + static_cast<int64_t>(j * convNodes.size() + i)),
-                                    return nullptr);
+            FUSION_PASS_CHECK_NOLOG(
+                !ConvFusionUtilsPass::AddSubgraphInput(
+                    boundary, convNodes[i], INPUT_BIAS_INDEX,
+                    static_cast<int64_t>(convNodes.size()) + BOUNDARY_FILTER_INPUT_BASE + static_cast<int64_t>(i)),
+                return nullptr);
         }
     }
     FUSION_PASS_CHECK_NOLOG(
         !ConvFusionUtilsPass::AddSubgraphOutput(boundary, *concatNode, OUTPUT_INDEX, BOUNDARY_OUTPUT_IDX),
         return nullptr);
     return boundary;
-}
-
-int32_t ASplitConv2dConcatPass::GetParamConcatAxis(const TensorDesc& paramDesc) const
-{
-    if (paramDesc.GetOriginShape().GetDims().size() != CONCAT_SHAPE_SIZE) {
-        return 0;
-    }
-    return GetFormatAxisPos(paramDesc.GetOriginFormat(), 'N');
 }
 
 bool ASplitConv2dConcatPass::BuildHostConcatNode(es::EsGraphBuilder& graphBuilder,
@@ -500,21 +486,10 @@ bool ASplitConv2dConcatPass::SetGroupConvAttrs(GNode& groupConv)
         FUSION_PASS_CHECK(groupConv.SetAttr(PADDING, baseAttrs.padding) != GRAPH_SUCCESS,
                           OP_LOGE(splitNodeName.GetString(), "set padding failed."), return false);
     }
-    AscendString attrAutoPad = "";
-    (void)convNodes[FIRST_BRANCH_IDX].GetAttr(AUTO_PAD, attrAutoPad);
-    if (attrAutoPad.GetLength() != 0) {
-        FUSION_PASS_CHECK(groupConv.SetAttr(AUTO_PAD, attrAutoPad) != GRAPH_SUCCESS,
-                          OP_LOGE(splitNodeName.GetString(), "set auto_pad failed."), return false);
-    }
     int64_t opImplModeEnum = 0;
     if (convNodes[FIRST_BRANCH_IDX].GetAttr(OP_IMPL_MODE_ENUM, opImplModeEnum) == GRAPH_SUCCESS) {
         FUSION_PASS_CHECK(groupConv.SetAttr(OP_IMPL_MODE_ENUM, opImplModeEnum) != GRAPH_SUCCESS,
                           OP_LOGE(splitNodeName.GetString(), "set _op_impl_mode_enum failed."), return false);
-    }
-    int64_t fixedShiftValue = 0;
-    if (convNodes[FIRST_BRANCH_IDX].GetAttr(FIXED_SHIFT_VALUE, fixedShiftValue) == GRAPH_SUCCESS) {
-        FUSION_PASS_CHECK(groupConv.SetAttr(FIXED_SHIFT_VALUE, fixedShiftValue) != GRAPH_SUCCESS,
-                          OP_LOGE(splitNodeName.GetString(), "set fixed_shift_value failed."), return false);
     }
     return true;
 }
@@ -524,17 +499,17 @@ bool ASplitConv2dConcatPass::UpdateGroupConvDescs(GNode& groupConv)
     FUSION_PASS_CHECK(groupConv.UpdateInputDesc(INPUT_FMAP_INDEX, fmapDesc) != GRAPH_SUCCESS,
                       OP_LOGE(splitNodeName.GetString(), "update group conv fmap desc failed."), return false);
 
-    for (size_t j = 0; j < paramCnt; ++j) {
-        TensorDesc paramDesc;
-        FUSION_PASS_CHECK(convNodes[FIRST_BRANCH_IDX].GetInputDesc(INPUT_FILTER_INDEX + static_cast<int32_t>(j),
-                                                                   paramDesc) != GRAPH_SUCCESS,
-                          OP_LOGE(splitNodeName.GetString(), "get conv param %zu desc failed.", j), return false);
-        FUSION_PASS_CHECK_NOLOG(!ExpandNDimInDesc(paramDesc), return false);
-        FUSION_PASS_CHECK(
-            groupConv.UpdateInputDesc(INPUT_FILTER_INDEX + static_cast<int32_t>(j), paramDesc) != GRAPH_SUCCESS,
-            OP_LOGE(splitNodeName.GetString(), "update group conv param %zu desc failed.", j), return false);
-    }
+    TensorDesc filterDesc = convDescInfo.filterDesc;
+    FUSION_PASS_CHECK_NOLOG(!ExpandNDimInDesc(filterDesc), return false);
+    FUSION_PASS_CHECK(groupConv.UpdateInputDesc(INPUT_FILTER_INDEX, filterDesc) != GRAPH_SUCCESS,
+                      OP_LOGE(splitNodeName.GetString(), "update group conv filter desc failed."), return false);
 
+    if (hasBias) {
+        TensorDesc biasDesc = convDescInfo.biasDesc;
+        FUSION_PASS_CHECK_NOLOG(!ExpandNDimInDesc(biasDesc), return false);
+        FUSION_PASS_CHECK(groupConv.UpdateInputDesc(INPUT_BIAS_INDEX, biasDesc) != GRAPH_SUCCESS,
+                          OP_LOGE(splitNodeName.GetString(), "update group conv bias desc failed."), return false);
+    }
     FUSION_PASS_CHECK(groupConv.UpdateOutputDesc(OUTPUT_INDEX, outputDesc) != GRAPH_SUCCESS,
                       OP_LOGE(splitNodeName.GetString(), "update group conv output desc failed."), return false);
     return true;
@@ -546,30 +521,8 @@ bool ASplitConv2dConcatPass::BuildGroupConvNode(es::EsGraphBuilder& graphBuilder
     Graph* geGraph = graphBuilder.GetCGraphBuilder()->GetGraph();
     FUSION_PASS_CHECK(geGraph == nullptr, OP_LOGE(splitNodeName.GetString(), "get replacement graph failed."),
                       return false);
-    FUSION_PASS_CHECK(inputs.empty() || inputs.size() > CONV_COUNT_PARAMS_OFFSET_W,
-                      OP_LOGE(splitNodeName.GetString(), "group conv input count %zu invalid.", inputs.size()),
-                      return false);
-    for (const auto& input : inputs) {
-        FUSION_PASS_CHECK(input.GetProducer() == nullptr,
-                          OP_LOGE(splitNodeName.GetString(), "group conv input producer is nullptr."), return false);
-    }
-
-    groupConv = es::CompliantNodeBuilder(geGraph)
-                    .OpType(CONV2D.GetString())
-                    .Name("group_conv2d")
-                    .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                  {"filter", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
-                                  {"bias", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
-                                  {"offset_w", es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
-                    .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                    .Build();
-    for (size_t idx = 0; idx < inputs.size(); ++idx) {
-        FUSION_PASS_CHECK(geGraph->AddDataEdge(*inputs[idx].GetProducer(), inputs[idx].GetProducerOutIndex(), groupConv,
-                                               static_cast<int32_t>(idx)) != GRAPH_SUCCESS,
-                          OP_LOGE(splitNodeName.GetString(), "add group conv input %zu edge failed.", idx),
-                          return false);
-    }
-
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::BuildConv2dNode(geGraph, "group_conv2d", inputs, groupConv),
+                      OP_LOGE(splitNodeName.GetString(), "build group conv2d failed."), return false);
     FUSION_PASS_CHECK_NOLOG(!SetGroupConvAttrs(groupConv), return false);
     FUSION_PASS_CHECK_NOLOG(!UpdateGroupConvDescs(groupConv), return false);
     return true;
@@ -579,31 +532,42 @@ GraphUniqPtr ASplitConv2dConcatPass::Replacement(const GNode& splitNode)
 {
     auto graphBuilder = es::EsGraphBuilder("replacement");
     auto fmap = graphBuilder.CreateInput(BOUNDARY_FMAP_INPUT_IDX);
-    std::vector<es::EsTensorHolder> convInputs = {fmap};
-    for (size_t j = 0; j < paramCnt; ++j) {
-        std::vector<es::EsTensorHolder> params;
+    std::vector<es::EsTensorHolder> filters;
+    std::vector<es::EsTensorHolder> biases;
+    for (size_t i = 0; i < convNodes.size(); ++i) {
+        filters.push_back(graphBuilder.CreateInput(BOUNDARY_FILTER_INPUT_BASE + static_cast<int64_t>(i)));
+    }
+    if (hasBias) {
         for (size_t i = 0; i < convNodes.size(); ++i) {
-            params.push_back(
-                graphBuilder.CreateInput(BOUNDARY_FILTER_INPUT_BASE + static_cast<int64_t>(j * convNodes.size() + i)));
+            biases.push_back(graphBuilder.CreateInput(static_cast<int64_t>(convNodes.size()) +
+                                                      BOUNDARY_FILTER_INPUT_BASE + static_cast<int64_t>(i)));
         }
-        TensorDesc paramDesc;
-        FUSION_PASS_CHECK(convNodes[FIRST_BRANCH_IDX].GetInputDesc(INPUT_FILTER_INDEX + static_cast<int32_t>(j),
-                                                                   paramDesc) != GRAPH_SUCCESS,
-                          OP_LOGE(splitNodeName.GetString(), "get conv param %zu desc failed.", j), return nullptr);
-        int32_t concatAxis = GetParamConcatAxis(paramDesc);
+    }
 
-        GNode hostConcatNode;
-        AscendString concatName = (j == 0) ? AscendString("weight_concat") :
-                                             ((j == 1) ? AscendString("bias_concat") : AscendString("param_concat"));
-        FUSION_PASS_CHECK(!BuildHostConcatNode(graphBuilder, params, concatAxis, concatName, hostConcatNode),
-                          OP_LOGE(splitNodeName.GetString(), "build param %zu host concat failed.", j), return nullptr);
-        FUSION_PASS_CHECK(!UpdateHostConcatDescs(hostConcatNode, paramDesc),
-                          OP_LOGE(splitNodeName.GetString(), "update param %zu host concat desc failed.", j),
+    GNode filterConcatNode;
+    int32_t weightAxisPos = GetFormatAxisPos(convDescInfo.filterDesc.GetOriginFormat(), 'N');
+    FUSION_PASS_CHECK(
+        !BuildHostConcatNode(graphBuilder, filters, weightAxisPos, AscendString("weight_concat"), filterConcatNode),
+        OP_LOGE(splitNodeName.GetString(), "build weight host concat failed."), return nullptr);
+    FUSION_PASS_CHECK(!UpdateHostConcatDescs(filterConcatNode, convDescInfo.filterDesc),
+                      OP_LOGE(splitNodeName.GetString(), "update weight host concat desc failed."), return nullptr);
+
+    auto* filterTh = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(filterConcatNode, OUTPUT_INDEX);
+    FUSION_PASS_CHECK(filterTh == nullptr, OP_LOGE(splitNodeName.GetString(), "get filter concat holder failed."),
+                      return nullptr);
+    std::vector<es::EsTensorHolder> convInputs = {fmap, es::EsTensorHolder(filterTh)};
+
+    if (hasBias) {
+        GNode biasConcatNode;
+        FUSION_PASS_CHECK(
+            !BuildHostConcatNode(graphBuilder, biases, BIAS_AXIS, AscendString("bias_concat"), biasConcatNode),
+            OP_LOGE(splitNodeName.GetString(), "build bias host concat failed."), return nullptr);
+        FUSION_PASS_CHECK(!UpdateHostConcatDescs(biasConcatNode, convDescInfo.biasDesc),
+                          OP_LOGE(splitNodeName.GetString(), "update bias host concat desc failed."), return nullptr);
+        auto* biasTh = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(biasConcatNode, OUTPUT_INDEX);
+        FUSION_PASS_CHECK(biasTh == nullptr, OP_LOGE(splitNodeName.GetString(), "get bias concat holder failed."),
                           return nullptr);
-        auto* paramTh = graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(hostConcatNode, OUTPUT_INDEX);
-        FUSION_PASS_CHECK(paramTh == nullptr,
-                          OP_LOGE(splitNodeName.GetString(), "get param %zu concat holder failed.", j), return nullptr);
-        convInputs.emplace_back(es::EsTensorHolder(paramTh));
+        convInputs.emplace_back(es::EsTensorHolder(biasTh));
     }
 
     GNode groupConv;
