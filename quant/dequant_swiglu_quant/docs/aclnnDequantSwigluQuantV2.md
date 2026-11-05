@@ -209,7 +209,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>输入待处理的数据，公式中的x。</td>
-      <td><ul><li>shape为[X1,X2,...Xn,2H]，shape不超过8维，不小于2维。</li><li>输入x对应activateDim的维度需要是2的倍数。</li></ul></td>
+      <td><ul><li>shape为[X1,X2,...Xn,2H]，shape不超过8维，不小于2维。</li><li>输入x对应activateDim的维度需要是2的倍数。</li><li>当groupIndexOptional不为空指针时，x的数据类型仅支持BFLOAT16、INT32。</li></ul></td>
       <td>FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>2-8</td>
@@ -219,7 +219,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>weightScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>weight的反量化scale。</td>
-      <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针。当groupIndexOptional为空指针时，shape为[2H]，[1, 2H]；当groupIndexOptional不为空指针时，shape为[groupNum, 2H]。</li></ul></td>
+      <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针；当输入x的数据类型为INT32时必选，不能传空指针。当groupIndexOptional为空指针时，shape为[2H]，[1, 2H]；当groupIndexOptional不为空指针时，shape为[groupNum, 2H]。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1或2</td>
@@ -410,9 +410,9 @@ aclnnStatus aclnnDequantSwigluQuantV2(
 
   <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
-    - x参数中，仅支持输入为2维，数据类型为INT32、BFLOAT16。
+    - x参数中，数据类型支持FLOAT16、BFLOAT16、INT32；当groupIndexOptional不为空指针时，仅支持BFLOAT16、INT32。
     - quantScaleOptional参数中，当quantModeOptional为static时，shape表示为[groupNum]或[groupNum, H]，当quantModeOptional为dynamic时，shape表示为[groupNum]或[groupNum, H]。
-    - groupIndexOptional参数中，仅支持输入为1维[groupNum]，不支持空指针。
+    - groupIndexOptional参数中，支持输入为1维[groupNum]，可选参数，支持传空指针。
     - dstType参数中，仅支持输入为2-INT8。
     - roundModeOptional参数中，仅支持输入为空指针或“rint”。
     - activateDim参数中，仅支持-1。
@@ -448,12 +448,12 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>输入或输出的数据类型不在支持范围内。</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="7">561002</td>
+      <td rowspan="10">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="10">561002</td>
       <td>当x的数据类型为int32时，weightScaleOptional是空指针。</td>
     </tr>
     <tr>
-      <td>当quantModeOptional为static时，quantScaleOptional是空指针。</td>
+      <td>当groupIndexOptional不为空指针且quantModeOptional为static时，quantScaleOptional是空指针。</td>
     </tr>
     <tr>
       <td>quantModeOptional不在指定的取值范围内。</td>
@@ -469,6 +469,15 @@ aclnnStatus aclnnDequantSwigluQuantV2(
     </tr>
     <tr>
       <td>weightScaleOptional、activationScaleOptional、biasOptional、quantScaleOptional、groupIndexOptional的shape与x不满足约束。</td>
+    </tr>
+    <tr>
+      <td>x的维度小于2，或x的最后一维不是2的倍数。</td>
+    </tr>
+    <tr>
+      <td>yOut或scaleOut的shape与x推导结果不一致（例如yOut的最后一维不是x最后一维的一半）。</td>
+    </tr>
+    <tr>
+      <td>x的数据类型为FLOAT16且groupIndexOptional不为空指针。</td>
     </tr>
   </tbody></table>
 
@@ -519,7 +528,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
 - 确定性计算：
   - aclnnDequantSwigluQuantV2默认确定性实现。
 
-- 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
+- 输入x对应activateDim的维度需要是2的倍数，且x的维度必须大于1维。
 - 当输入x的数据类型为INT32时，weightScaleOptional不能为空；当输入x的数据类型不为INT32时，weightScaleOptional不允许输入，传入空指针。
 - 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，传入空指针。
 - 当输入x的数据类型不为INT32时，biasOptional不允许输入，传入空指针。

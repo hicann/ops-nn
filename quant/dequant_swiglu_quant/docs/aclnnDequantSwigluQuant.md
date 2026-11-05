@@ -109,7 +109,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>weightScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>weight的反量化scale，公式中的weightScaleOptional。</td>
-      <td><ul><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li>可选参数，支持传空指针；当输入x的数据类型为INT32时必选，不能传空指针。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1或2</td>
@@ -232,8 +232,8 @@ aclnnStatus aclnnDequantSwigluQuant(
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - weightScaleOptional参数中，shape表示为[H]，且取值H和x最后一维保持一致。
     - activationScaleOptional参数中，shape为[N..., 1]，最后一维为1，其余和x保持一致。
-    - quantScaleOptional参数中，当quantModeOptional为static时，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
-    - quantOffsetOptional参数中，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]；quantModeOptional为dynamic时，shape维数为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
+    - quantScaleOptional参数中，当quantModeOptional为static时，shape表示为shape[1]；quantModeOptional为dynamic时，shape维度为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
+    - quantOffsetOptional参数中，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]；quantModeOptional为dynamic时，shape维度为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
     - quantModeOptional参数中，支持“dynamic”和“static"。
   <!-- end id7 -->
 
@@ -273,23 +273,29 @@ aclnnStatus aclnnDequantSwigluQuant(
     <td>传入的x、yOut或scaleOut是空指针。</td>
   </tr>
   <tr>
-    <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-    <td rowspan="4">161002</td>
+    <td>ACLNN_ERR_PARAM_INVALID</td>
+    <td>161002</td>
     <td>输入或输出的数据类型不在支持的范围内。</td>
   </tr>
   <tr>
-    <td>输入或输出的参数维度不在支持的范围内。</td>
-  </tr>
-  <tr>
-    <td>输入或输出的shape不满足约束要求。</td>
-  </tr>
-  <tr>
-    <td>输入的取值不满足要求。</td>
-  </tr>
-  <tr>
-    <td>ACLNN_ERR_INNER_TILING_ERROR</td>
-    <td>561002</td>
+    <td rowspan="6">ACLNN_ERR_INNER_TILING_ERROR</td>
+    <td rowspan="6">561002</td>
     <td>输入张量的内存大小超过上限。</td>
+  </tr>
+  <tr>
+    <td>输入或输出的参数维度不在支持的范围内（例如x的维度小于2）。</td>
+  </tr>
+  <tr>
+    <td>输入或输出的shape不满足约束要求（例如x的最后一维不是2的倍数，或yOut/scaleOut的shape与x推导结果不一致）。</td>
+  </tr>
+  <tr>
+    <td>输入的取值不满足要求（例如quantScaleOptional、quantOffsetOptional的shape与x不满足约束）。</td>
+  </tr>
+  <tr>
+    <td>当x的数据类型为int32时，weightScaleOptional是空指针。</td>
+  </tr>
+  <tr>
+    <td>当groupIndexOptional不为空指针且quantModeOptional为static时，quantScaleOptional是空指针。</td>
   </tr>
   </tbody>
   </table>
@@ -344,13 +350,13 @@ aclnnStatus aclnnDequantSwigluQuant(
 
 <!-- npu="A3,910b" id9 -->
 - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
-  - x的最后一维需要是2的倍数，且x的维数必须大于1维。
-  - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除以2。
+  - x的最后一维需要是2的倍数，且x的维度必须大于1维。
+  - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维度为1维，值为x的最后一维除以2。
 <!-- end id9 -->
 
 <!-- npu="950" id10 -->
 - <term>Ascend 950PR&950DT系列产品</term>：
-  - 输入x的最后一维需要是2的倍数，且x的维数必须大于1维。
+  - 输入x的最后一维需要是2的倍数，且x的维度必须大于1维。
   - 当输入x的数据类型为INT32时，weightScaleOptional不能为空；当输入x的数据类型不为INT32时，weightScaleOptional不允许输入，传入空指针。
   - 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，传入空指针。
   - 当输入x的数据类型不为INT32时，biasOptional不允许输入，传入空指针。
