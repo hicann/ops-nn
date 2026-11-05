@@ -107,9 +107,12 @@ aclnnStatus aclnnBinaryCrossEntropy(
       <td> 传入的self、target或out为空指针。</td>
       </tr>
       <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>self、target、weight或out的数据类型不在支持的范围内。</td>
+      </tr>
+      <tr>
+      <td>self、target的shape不一致，或weight非空时其shape与self不一致。</td>
       </tr>
       <tr>
       <td>out shape与实际不匹配。</td>

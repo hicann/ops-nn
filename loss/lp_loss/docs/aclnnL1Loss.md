@@ -127,7 +127,7 @@ aclnnStatus aclnnL1Loss(
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">指定要应用到输出的缩减。</td>
       <td class="tg-0pky">输出tensor，存放L1Loss计算结果。out的数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out为0维tensor。</td>
-      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、INT64</td>
+      <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、INT64、DOUBLE</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
@@ -183,7 +183,7 @@ aclnnStatus aclnnL1Loss(
       <td class="tg-0pky">self和target的数据类型不满足数据类型推导规则，或者推导后的dtype不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self和target进行数据类型推导后的类型无法cast为out的数据类型。</td>
+      <td class="tg-0pky">out的数据类型不在支持范围内，或self和target进行数据类型推导后的类型无法cast为out的数据类型。</td>
     </tr>
     <tr>
       <td class="tg-0pky">self或target的维度大于8。</td>
@@ -256,6 +256,7 @@ aclnnStatus aclnnL1Loss(
 - 确定性计算：
     - aclnnL1Loss默认确定性实现。
 - LpLoss中p为计算loss的参数，只支持p=1，aclnn接口名称为aclnnL1Loss。
+- out为int64数据类型时，仅reduction=2时可用。
 
 ## 调用示例
 

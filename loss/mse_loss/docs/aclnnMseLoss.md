@@ -246,6 +246,12 @@ aclnnStatus aclnnMseLoss(
 
 - 确定性计算：
     - aclnnMseLoss默认确定性实现。
+- 空 tensor 输入（元素个数为0）的输出语义：
+    - reduction为0('none')时，输出为空 tensor，不写入任何元素；
+    - reduction为1('mean')时，输出为 NaN；
+    - reduction为2('sum')时，输出为 0。
+- 输入包含 inf 时的输出语义：
+    - reduction为1('mean')或2('sum')时，归约结果为 NaN。注意与 PyTorch 的差异：PyTorch 中 inf 会正常传播（mean/sum 结果为 inf），本接口实测返回 NaN，调用方需自行处理含非有限值的输入。
 
 ## 调用示例
 

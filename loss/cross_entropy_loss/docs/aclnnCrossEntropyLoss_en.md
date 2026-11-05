@@ -284,7 +284,7 @@ aclnnStatus aclnnCrossEntropyLoss(
       <tr>
         <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
         <td rowspan="2">561002</td>
-        <td>The shapes of input, target, and weightOptional are not in the supported range.</td>
+        <td>The shapes of input, target, or weightOptional are not in the supported range, or the shapes of lossOut/zlossOut are inconsistent with reductionOptional (they should match dim 0 of input when reductionOptional is "none", otherwise be [1]).</td>
       </tr>
       <tr>
         <td>The values of reductionOptional and labelSmoothing are not in the supported range.</td>

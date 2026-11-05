@@ -288,7 +288,7 @@ aclnnStatus aclnnCrossEntropyLoss(
       <tr>
         <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
         <td rowspan="2">561002</td>
-        <td>传入的input、target、weightOptional的shape不在支持范围内。</td>
+        <td>传入的input、target、weightOptional的shape不在支持范围内，或lossOut/zlossOut的shape与reductionOptional不自洽（reductionOptional为"none"时应与input第0维一致，否则应为[1]）。</td>
       </tr>
       <tr>
         <td>传入的reductionOptional、labelSmoothing的值不在支持范围内。</td>

@@ -185,7 +185,7 @@ aclnnStatus aclnnL1Loss(
       <td class="tg-0pky">The data types of self and target do not conform to the data type deduction rules, or the deduced dtype is not within the supported range.</td>
     </tr>
     <tr>
-      <td class="tg-0pky">The type of self and target after data type deduction cannot be cast to the data type of out.</td>
+      <td class="tg-0pky">The data type of out is not within the supported range, or the type of self and target after data type deduction cannot be cast to the data type of out.</td>
     </tr>
     <tr>
       <td class="tg-0pky">The dimension of self or target is greater than 8.</td>

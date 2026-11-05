@@ -131,12 +131,104 @@ TEST_F(CrossEntropyLossTiling, test_tiling_bf16_mean)
     ASSERT_EQ(tiling_key, 1);
 }
 
+TEST_F(CrossEntropyLossTiling, test_tiling_loss_out_shape_not_consistent_with_reduction)
+{
+    gert::StorageShape inputShape = {{49, 112595}, {49, 112595}};
+    gert::StorageShape targetShape = {{49}, {49}};
+    gert::StorageShape weightShape = {{112595}, {112595}};
+
+    string compile_info_string = R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                                                        "Intrinsic_fix_pipe_l0c2out": false,
+                                                        "Intrinsic_data_move_l12ub": true,
+                                                        "Intrinsic_data_move_l0c2ub": true,
+                                                        "Intrinsic_data_move_out2l1_nd2nz": false,
+                                                        "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                                                        "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                                                        "CORE_NUM": 48}
+                                    })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+
+    struct CrossEntropyLossCompileInfo {};
+    CrossEntropyLossCompileInfo compile_info;
+
+    std::string op_type("CrossEntropyLoss");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    // lossOut/zlossOut的shape与reduction不自洽时，tiling应失败，避免只写出部分元素后静默返回成功
+    auto run_tiling = [&](const std::string& reduction, gert::StorageShape& lossShape) -> ge::graphStatus {
+        auto param = gert::TilingData::CreateCap(4096);
+        auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+        auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+        auto holder = gert::TilingContextFaker()
+                          .NodeIoNum(3, 4)
+                          .IrInstanceNum({1, 1, 1})
+                          .InputShapes({&inputShape, &targetShape, &weightShape})
+                          .OutputShapes({&lossShape, &inputShape, &lossShape, &targetShape})
+                          .CompileInfo(&compile_info)
+                          .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)},
+                                      {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
+                                      {"label_smoothing", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                      {"lse_square_scale_for_zloss", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
+                                      {"return_zloss", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                          .TilingData(param.get())
+                          .Workspace(ws_size)
+                          .Build();
+        gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+        tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+        tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+        tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+        tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+        return tiling_func(tiling_context);
+    };
+
+    // mean + lossOut元素个数不为1，应失败
+    gert::StorageShape meanBadLossShape = {{16}, {16}};
+    EXPECT_NE(run_tiling("mean", meanBadLossShape), ge::GRAPH_SUCCESS);
+
+    // none + lossOut元素个数不等于input第0维，应失败
+    gert::StorageShape noneBadLossShape = {{1}, {1}};
+    EXPECT_NE(run_tiling("none", noneBadLossShape), ge::GRAPH_SUCCESS);
+}
+
 TEST_F(CrossEntropyLossTiling, test_tiling_bf16_none)
 {
     gert::StorageShape inputShape = {{49, 112595}, {49, 112595}};
     gert::StorageShape targetShape = {{49}, {49}};
     gert::StorageShape weightShape = {{112595}, {112595}};
-    gert::StorageShape lossShape = {{1}, {1}};
+    gert::StorageShape lossShape = {{49}, {49}};
 
     string compile_info_string = R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                                                         "Intrinsic_fix_pipe_l0c2out": false,

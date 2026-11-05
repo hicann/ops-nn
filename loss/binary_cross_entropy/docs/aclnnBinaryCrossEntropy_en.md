@@ -109,9 +109,12 @@ aclnnStatus aclnnBinaryCrossEntropy(
       <td> The passed-in self, target, or out is a null pointer.</td>
       </tr>
       <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>The data type of self, target, weight, or out is not in the supported range.</td>
+      </tr>
+      <tr>
+      <td>The shape of self and target are inconsistent, or the shape of weight (when not null) is inconsistent with self.</td>
       </tr>
       <tr>
       <td>The out shape does not match the actual shape.</td>

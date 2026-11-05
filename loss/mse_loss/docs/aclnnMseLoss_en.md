@@ -248,6 +248,12 @@ aclnnStatus aclnnMseLoss(
 
 - deterministic computation:
     - aclnnMseLoss defaults to a deterministic implementation.
+- Output semantics for empty tensor inputs (with 0 elements):
+    - When reduction is 0 ('none'), the output is an empty tensor and no element is written.
+    - When reduction is 1 ('mean'), the output is NaN.
+    - When reduction is 2 ('sum'), the output is 0.
+- Output semantics for inputs containing inf:
+    - When reduction is 1 ('mean') or 2 ('sum'), the reduction result is NaN. Note the difference from PyTorch, where inf propagates normally (the mean/sum result is inf). This operator returns NaN in this case, so callers need to handle non-finite inputs themselves.
 
 ## Example
 

@@ -167,6 +167,22 @@ TEST_F(l2_binary_cross_entropy_test, case_shape_abnormal)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
+// weight非空时shape与self不一致
+TEST_F(l2_binary_cross_entropy_test, case_weight_shape_abnormal)
+{
+    auto self = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto target = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto weight = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto out = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int64_t reduction = Reduction::None;
+
+    auto ut = OP_API_UT(aclnnBinaryCrossEntropy, INPUT(self, target, weight, reduction), OUTPUT(out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
 // 空tensor float Reduction::None
 TEST_F(l2_binary_cross_entropy_test, case_fp_empty_tensor_none)
 {

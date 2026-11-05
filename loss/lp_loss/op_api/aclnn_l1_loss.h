@@ -22,7 +22,7 @@ extern "C" {
  * @brief aclnnL1Loss的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_train
  *
- * 算子功能：计算输入x和目标y中每个元素之间的均方误差。
+ * 算子功能：计算输入x和目标y中每个元素之间的平均绝对误差（Mean Absolute Error，MAE）。
  *
  * @param [in] self:
  * 公式中的输入`self`，与target满足数据类型推导规则，推导后数据类型支持INT64、FLOAT、FLOAT16，shape需要与target满足broadcast规则。
@@ -35,7 +35,7 @@ extern "C" {
  * 'none' 表示不应用减少，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
  * @param [in] out:
  * 公式中的`out`，数据类型支持INT64、FLOAT、FLOAT16。reduction为0时，shape需要与self和target进行broadcast后的shape一致，
- * 其他场景为rank1de Tensor。支持非连续的Tensor，数据格式支持ND。
+ * 其他场景为0维Tensor。支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
@@ -46,7 +46,7 @@ ACLNN_API aclnnStatus aclnnL1LossGetWorkspaceSize(const aclTensor* self, const a
 /**
  * @brief aclnnL1Loss的第二段接口，用于执行计算。
  *
- * 算子功能：计算输入x和目标y中每个元素之间的均方误差。
+ * 算子功能：计算输入x和目标y中每个元素之间的平均绝对误差（Mean Absolute Error，MAE）。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
  * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnL1LossGetWorkspaceSize获取。

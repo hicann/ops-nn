@@ -100,7 +100,7 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, cons
         return false;
     }
 
-    // LpLoss算子入参和出参的dtype一致，检查promote后的数据类型能否cast为out的数据类型
+    // LpLoss算子入参和出参的dtype一致，检查out的数据类型是否在支持列表内。
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(promoteType, out->GetDataType(), return false);
     return true;
 }

@@ -20,6 +20,8 @@ namespace optiling {
 constexpr uint32_t INPUT_DATA_IDX = 0;
 constexpr uint32_t INPUT_TARGET_IDX = 1;
 constexpr uint32_t INPUT_WEIGHT_IDX = 2;
+constexpr uint32_t OUTPUT_LOSS_IDX = 0;
+constexpr uint32_t OUTPUT_ZLOSS_IDX = 2;
 constexpr uint32_t DIM_0 = 0;
 constexpr uint32_t DIM_1 = 1;
 constexpr uint32_t NUM_1 = 1;
@@ -350,6 +352,66 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
+// 计算输出shape的元素个数；shape含未知维度（-1，动态shape）时返回false，不做强校验
+static bool GetOutputShapeNum(const gert::Shape& shape, int64_t& shapeNum)
+{
+    shapeNum = 1;
+    for (size_t i = 0; i < shape.GetDimNum(); i++) {
+        if (shape.GetDim(i) < 0) {
+            return false;
+        }
+        shapeNum *= shape.GetDim(i);
+    }
+    return true;
+}
+
+static ge::graphStatus CheckOutputShape(gert::TilingContext* context)
+{
+    auto input = context->GetInputShape(INPUT_DATA_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, input);
+    const int64_t inputDim0 = input->GetStorageShape().GetDim(DIM_0);
+
+    // 直调aclnn两段式接口时，tiling上下文的输出shape为用户声明的出参；图模式执行时为推导结果，天然一致。
+    // lossOut的元素个数必须与reduction自洽：reduction为none时为N（input第0维），否则为1；
+    // 不自洽时直接报错，避免kernel按reduction推导的元素数写入导致只写部分元素后静默返回成功。
+    const bool isReductionNone = crossEntropyLossTiling.get_reduction() == REDUCTION_NONE;
+    // 动态shape下input第0维可能为-1，reduction为none时无法确定lossOut期望元素数，跳过lossOut强校验；
+    // 非none时期望元素数恒为1，不依赖inputDim0。
+    const bool canCheckLoss = !isReductionNone || inputDim0 >= 0;
+    const int64_t expectedLossNum = isReductionNone ? inputDim0 : 1;
+
+    auto lossOut = context->GetOutputShape(OUTPUT_LOSS_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, lossOut);
+    int64_t lossNum = 0;
+    if (canCheckLoss && GetOutputShapeNum(lossOut->GetStorageShape(), lossNum)) {
+        OP_CHECK_IF(lossNum != expectedLossNum,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "lossOut",
+                        (std::to_string(lossNum) + " and " + std::to_string(expectedLossNum)).c_str(),
+                        ("The element num of lossOut should be " + std::to_string(expectedLossNum) +
+                         " under current reduction, but got " + std::to_string(lossNum) + ".")
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // zlossOut为预留输出、不参与计算：reduction不为none时元素个数必须为1；
+    // reduction为none时允许为1（图模式推导口径）或N（与lossOut一致）
+    auto zlossOut = context->GetOutputShape(OUTPUT_ZLOSS_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, zlossOut);
+    int64_t zlossNum = 0;
+    if (!isReductionNone && GetOutputShapeNum(zlossOut->GetStorageShape(), zlossNum)) {
+        OP_CHECK_IF(zlossNum != static_cast<int64_t>(NUM_1),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "zlossOut",
+                        (std::to_string(zlossNum) + " and " + std::to_string(NUM_1)).c_str(),
+                        ("The element num of zlossOut should be 1 when reduction is not none, but got " +
+                         std::to_string(zlossNum) + ".")
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus GetTilingData(gert::TilingContext* context)
 {
     uint64_t targetNum = context->GetInputShape(INPUT_DATA_IDX)->GetStorageShape().GetDim(DIM_1);
@@ -386,6 +448,8 @@ ge::graphStatus Tiling4CrossEntropyLoss(gert::TilingContext* context)
     OP_CHECK_IF(CheckInputDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckInputDtype failed."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(CheckInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckInputShape failed."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckOutputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "CheckOutputShape failed."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(GetTilingData(context) != ge::GRAPH_SUCCESS, OP_LOGE(nodeName, "GetTilingData failed."),
                 return ge::GRAPH_FAILED);
