@@ -19,11 +19,11 @@ English | [简体中文](./README.md)
 - Formula:
 
 $$
-len = outputOffset[i+1] - outputOffset[i]
+len = output_offsets[i+1] - output_offsets[i]
 $$
 
 $$
-outputPermuteOut[outputOffset[i]:outputOffset[i+1]] = arange(inputOffset[permute[i]],inputOffset[permute[i]]+len)
+output_permute[output_offsets[i]:output_offsets[i+1]] = arange(input_offsets[permute[i]],input_offsets[permute[i]]+len)
 $$
 
 ## Parameters
@@ -52,28 +52,28 @@ $$
       <td>ND</td>
     </tr>
     <tr>
-      <td>inputOffset</td>
+      <td>input_offsets</td>
       <td>Input</td>
       <td>Denotes the exclusive offsets of the table-level lengths.</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>outputOffset</td>
+      <td>output_offsets</td>
       <td>Input</td>
       <td>Denotes the exclusive offsets of the table-level permutation lengths.</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>outputPermute</td>
+      <td>output_permute</td>
       <td>Output</td>
       <td>Denotes the output in the formula.</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
         <tr>
-      <td>outputSize</td>
+      <td>output_size</td>
       <td>Attribute</td>
       <td><ul><li>Length of the output result.</li></ul></td>
       <td>INT32, INT64</td>
@@ -83,10 +83,14 @@ $$
 
 ## Constraints
 
-The length of inputOffset and outputOffset is 1 more than that of permute.
+Let P be the length of permute. The lengths of input_offsets and output_offsets must both be P+1.
+When P is 0, output_size must be 0. When P is greater than 0, output_size must be greater than or equal to P.
+
+input_offsets and output_offsets must start at 0 and, when P is greater than 0, must be strictly increasing.
+The last value of output_offsets must equal output_size.
 
 ## Invocation Description
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn invocation  | [test_expand_into_jagged_permute.cpp](tests/ut/op_kernel/test_expand_into_jagged_permute.cpp) | Invokes the ExpandIntoJaggedPermute operator through the [aclnnExpandIntoJaggedPermute](docs/aclnnExpandIntoJaggedPermute_en.md) API. |
+| aclnn invocation  | [test_aclnn_expand_into_jagged_permute.cpp](examples/test_aclnn_expand_into_jagged_permute.cpp) | Invokes the ExpandIntoJaggedPermute operator through the [aclnnExpandIntoJaggedPermute](docs/aclnnExpandIntoJaggedPermute_en.md) API. |

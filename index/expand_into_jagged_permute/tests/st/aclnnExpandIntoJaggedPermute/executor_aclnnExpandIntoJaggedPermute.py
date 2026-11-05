@@ -20,6 +20,11 @@ from atk.tasks.dataset.base_dataset import OpsDataset
 
 @register("ascend_function_expand_into_jagged_permute")
 class FunctionExpandIntoJaggedPermuteApi(BaseApi):
+    """Generate legal inputs for the ACLNN standard.acc positive suite.
+
+    Expected-error L2 cases use their own assets and do not enter this executor.
+    """
+
     def __init__(self, task_result: TaskResult):
         super(FunctionExpandIntoJaggedPermuteApi, self).__init__(task_result)
 
@@ -44,112 +49,76 @@ class FunctionExpandIntoJaggedPermuteApi(BaseApi):
             )
             return tensor
 
-        n = input_data.kwargs["output_size"]
         k = input_data.kwargs["output_offsets"].shape[0]
-        if k == 23:
-            input_data.kwargs["permute"] = (
-                torch.tensor(
-                    [
-                        0,
-                        11,
-                        1,
-                        12,
-                        2,
-                        13,
-                        3,
-                        14,
-                        4,
-                        15,
-                        5,
-                        16,
-                        6,
-                        17,
-                        7,
-                        18,
-                        8,
-                        19,
-                        9,
-                        20,
-                        10,
-                        21,
-                    ]
-                )
-                .to(input_data.kwargs["permute"].device)
-                .to(input_data.kwargs["permute"].dtype)
+        n = max(int(input_data.kwargs["output_size"]), k - 1)
+        if k == 1:
+            input_data.kwargs["output_size"] = 0
+            input_data.kwargs["output_offsets"] = torch.zeros(
+                1,
+                dtype=input_data.kwargs["output_offsets"].dtype,
+                device=input_data.kwargs["output_offsets"].device,
             )
-            input_data.kwargs["input_offsets"] = (
-                torch.tensor(
-                    [
-                        0,
-                        4860,
-                        9720,
-                        14580,
-                        19440,
-                        24300,
-                        29160,
-                        34020,
-                        38880,
-                        43740,
-                        48600,
-                        53460,
-                        58899,
-                        64338,
-                        69777,
-                        75216,
-                        80655,
-                        86094,
-                        91533,
-                        96972,
-                        102411,
-                        107850,
-                        113289,
-                    ]
-                )
-                .to(input_data.kwargs["input_offsets"].device)
-                .to(input_data.kwargs["input_offsets"].dtype)
+            input_data.kwargs["input_offsets"] = torch.zeros(
+                1,
+                dtype=input_data.kwargs["input_offsets"].dtype,
+                device=input_data.kwargs["input_offsets"].device,
             )
-            input_data.kwargs["output_offsets"] = (
-                torch.tensor(
-                    [
-                        0,
-                        4860,
-                        10299,
-                        15159,
-                        20598,
-                        25458,
-                        30897,
-                        35757,
-                        41196,
-                        46056,
-                        51495,
-                        56355,
-                        61794,
-                        66654,
-                        72093,
-                        76953,
-                        82392,
-                        87252,
-                        92691,
-                        97551,
-                        102990,
-                        107850,
-                        113289,
-                    ]
-                )
-                .to(device=input_data.kwargs["output_offsets"].device)
-                .to(dtype=input_data.kwargs["output_offsets"].dtype)
+            input_data.kwargs["permute"] = torch.empty(
+                0,
+                dtype=input_data.kwargs["permute"].dtype,
+                device=input_data.kwargs["permute"].device,
             )
-            input_data.kwargs["output_size"] = 113289
         else:
-            input_data.kwargs["output_offsets"] = (
-                generate_strictly_increasing_tensor_torch(n, k)
-                .to(device=input_data.kwargs["output_offsets"].device)
-                .to(dtype=input_data.kwargs["output_offsets"].dtype)
+            input_data.kwargs["output_size"] = n
+            output_offsets = generate_strictly_increasing_tensor_torch(n, k).to(
+                device=input_data.kwargs["output_offsets"].device,
+                dtype=input_data.kwargs["output_offsets"].dtype,
             )
-            input_data.kwargs["permute"] = (
-                torch.randperm(k - 1)
-                .to(input_data.kwargs["permute"].device)
-                .to(input_data.kwargs["permute"].dtype)
+            permute = torch.arange(
+                k - 1,
+                device=input_data.kwargs["permute"].device,
+                dtype=input_data.kwargs["permute"].dtype,
+            )
+            if k > 2:
+                permute = permute.roll(1)
+            target_lengths = output_offsets[1:] - output_offsets[:-1]
+            source_lengths = torch.empty_like(target_lengths)
+            source_lengths[permute] = target_lengths
+            input_offsets = torch.cat(
+                [
+                    torch.zeros(
+                        1,
+                        dtype=input_data.kwargs["input_offsets"].dtype,
+                        device=input_data.kwargs["input_offsets"].device,
+                    ),
+                    torch.cumsum(source_lengths, dim=0).to(
+                        device=input_data.kwargs["input_offsets"].device,
+                        dtype=input_data.kwargs["input_offsets"].dtype,
+                    ),
+                ]
+            )
+            input_data.kwargs["output_offsets"] = output_offsets
+            input_data.kwargs["input_offsets"] = input_offsets
+            input_data.kwargs["permute"] = permute
+        input_offsets = input_data.kwargs["input_offsets"]
+        output_offsets = input_data.kwargs["output_offsets"]
+        permute = input_data.kwargs["permute"]
+        if (
+            input_offsets.ndim != 1
+            or output_offsets.ndim != 1
+            or permute.ndim != 1
+            or input_offsets.shape != output_offsets.shape
+            or input_offsets.shape[0] != permute.shape[0] + 1
+            or input_offsets.numel() == 0
+            or int(input_offsets[0]) != 0
+            or int(output_offsets[0]) != 0
+            or not torch.all(input_offsets[1:] > input_offsets[:-1])
+            or not torch.all(output_offsets[1:] > output_offsets[:-1])
+            or int(output_offsets[-1]) != int(input_data.kwargs["output_size"])
+            or not torch.all((permute >= 0) & (permute < permute.shape[0]))
+        ):
+            raise ValueError(
+                "generated ACLNN inputs violate ExpandIntoJaggedPermute constraints"
             )
         print(f"output_offsets:{input_data.kwargs['output_offsets']}")
         print(f"permute:{input_data.kwargs['permute']}")

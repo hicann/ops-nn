@@ -29,11 +29,11 @@
 - **Formula**:
 
 $$
-len = outputOffset[i+1] - outputOffset[i]
+len = outputOffsets[i+1] - outputOffsets[i]
 $$
 
 $$
-outputPermuteOut[outputOffset[i]:outputOffset[i+1]] = arange(inputOffset[permute[i]],inputOffset[permute[i]]+len)
+out[outputOffsets[i]:outputOffsets[i+1]] = arange(inputOffsets[permute[i]],inputOffsets[permute[i]]+len)
 $$
 
 ## Function Prototype
@@ -43,10 +43,10 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
 ```c++
 aclnnStatus aclnnExpandIntoJaggedPermuteGetWorkspaceSize(
     const aclTensor *permute,
-    const aclTensor *inputOffset,
-    const aclTensor *outputOffset,
+    const aclTensor *inputOffsets,
+    const aclTensor *outputOffsets,
     int64_t          outputSize,
-    const aclTensor *outputPermuteOut,
+    const aclTensor *out,
     uint64_t        *workspaceSize,
     aclOpExecutor  **executor)
 ```
@@ -96,20 +96,20 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
         <td>√</td>
     </tr>
     <tr>
-        <td>inputOffset</td>
+        <td>inputOffsets</td>
         <td>Input</td>
-        <td>The inputOffset in the formula, representing the mutually exclusive offset of table-level lengths.</td>
-        <td>Required to be a one-dimensional tensor. Its values must be strictly monotonically increasing, and the last value must equal outputSize.</td>
+        <td>The inputOffsets in the formula, representing the mutually exclusive offset of table-level lengths.</td>
+        <td>Required to be a one-dimensional tensor starting at 0. When permute is non-empty, its values must be strictly increasing.</td>
         <td>Consistent with permute</td>
         <td>ND</td>
         <td>inputLen+1</td>
         <td>√</td>
     </tr>
     <tr>
-        <td>outputOffset</td>
+        <td>outputOffsets</td>
         <td>Input</td>
-        <td>outputOffset in the formula, indicating the first shared expert.</td>
-        <td>Required to be a one-dimensional tensor. Its values must be strictly monotonically increasing, and the last value must equal outputSize.</td>
+        <td>outputOffsets in the formula, indicating the target offset in the flattened output space.</td>
+        <td>Required to be a one-dimensional tensor starting at 0. When permute is non-empty, its values must be strictly increasing, and the last value must equal outputSize.</td>
         <td>Consistent with permute</td>
         <td>ND</td>
         <td>inputLen+1</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
         <td>-</td>
     </tr>
     <tr>
-        <td>outputPermute</td>
+        <td>out</td>
         <td>Output</td>
         <td>Output in the formula.</td>
         <td>The shape is (outputSize).</td>
@@ -244,11 +244,15 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
 - Deterministic computation:
   - aclnnExpandIntoJaggedPermute defaults to a deterministic implementation.
 
-1. The shapes of inputOffset and outputOffset must be the same.
+1. The shapes of inputOffsets and outputOffsets must be the same.
 
-2. permute, inputOffset, outputOffset, and outputPermuteOut must have the same data type.
+2. permute, inputOffsets, outputOffsets, and out must have the same data type.
 
-3. The values of outputOffset are required to be strictly monotonically increasing, and the last value must be equal to outputSize.
+3. inputOffsets and outputOffsets must start at 0 and, when permute is non-empty, must be strictly increasing. The last
+   value of outputOffsets must equal outputSize.
+
+4. Let P be the length of permute. When P is 0, outputSize must be 0. When P is greater than 0, outputSize must be
+   greater than or equal to P.
 
 ## Example
 
