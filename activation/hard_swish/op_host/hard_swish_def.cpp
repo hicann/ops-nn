@@ -50,6 +50,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "hard_swish_apt");
         this->AICore().AddConfig("ascend950", aicoreConfig950);
+        this->AICore().AddConfig("ascend5162", aicoreConfig950);
     }
 };
 OP_ADD(HardSwish);

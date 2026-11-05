@@ -40,6 +40,8 @@ ge::graphStatus SoftmaxV2TilingArSmallR::DoOpTiling()
     int64_t a0New = a1_;
 
     int64_t a0TileBase = vlFp32_; // 计算过程中均按FP32处理
+    // 与tileA0Len的DATA_BLOCK_COUNT对齐粒度保持一致，避免对齐后超出UB预算（如5162上vlFp32为8）
+    int64_t a0TileUnit = CeilAlign(a0TileBase, DATA_BLOCK_COUNT);
     int64_t rTileBase;
     if (yDtype_ == ge::DT_FLOAT) {
         rTileBase = DATA_BLOCK_COUNT / CONST_TWO;
@@ -51,7 +53,7 @@ ge::graphStatus SoftmaxV2TilingArSmallR::DoOpTiling()
     int64_t rFactor = rAligned * (xDtypeSize_ * DOUBLE_BUFFER + yDtypeSize_ * DOUBLE_BUFFER +
                                   FLOAT32_BYTES * DOUBLE_BUFFER); // 输入、tmp、输出buffer的基本大小，单位为字节
 
-    int64_t a0TileNumMax = aicoreParams_.ubSize / (a0TileBase * (rFactor + FLOAT32_BYTES)); // 最大支持a基础块的个数
+    int64_t a0TileNumMax = aicoreParams_.ubSize / (a0TileUnit * (rFactor + FLOAT32_BYTES)); // 最大支持a基础块的个数
 
     OP_CHECK_IF(a0TileNumMax < 1,
                 OP_LOGI(context_->GetNodeName(),
@@ -61,7 +63,7 @@ ge::graphStatus SoftmaxV2TilingArSmallR::DoOpTiling()
                 return ge::GRAPH_PARAM_INVALID);
 
     // 切a0
-    int64_t a0TileNumTmp = CeilDiv(a0New, a0TileBase); // a基础块的数量
+    int64_t a0TileNumTmp = CeilDiv(a0New, a0TileUnit); // a基础块的数量
     int64_t a0TileNum;
     if (isDav920x_) {
         // target-soc: flatten paradigm — actively shrink tileA0Len to fill more cores. a0FactorMax is the
@@ -74,7 +76,8 @@ ge::graphStatus SoftmaxV2TilingArSmallR::DoOpTiling()
         // non-target-soc: original greedy logic.
         a0TileNum = a0TileNumMax < a0TileNumTmp ? a0TileNumMax : a0TileNumTmp;
     }
-    int64_t tileA0Len = a0TileNum * a0TileBase;  // UB内能放下的tiling块，UB块
+    // UB内能放下的tiling块，按a0TileUnit切分，天然满足DATA_BLOCK_COUNT对齐且不超出UB预算
+    int64_t tileA0Len = a0TileNum * a0TileUnit;
     int64_t a0Outer = CeilDiv(a0New, tileA0Len); // UB块的数量
     int64_t tileA0Tail = a0New - tileA0Len * (a0Outer - 1);
 

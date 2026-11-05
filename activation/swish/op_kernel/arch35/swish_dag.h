@@ -39,8 +39,7 @@ struct SwishNegOneDagCalc : public Vec::ElemwiseBinaryOP<T, T, float> {
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(float);
-        constexpr uint64_t VECTOR_REG_WIDTH = 256UL;
-        uint32_t vl = VECTOR_REG_WIDTH / dtypeSize;
+        uint32_t vl = AscendC::VECTOR_REG_WIDTH / dtypeSize;
         uint32_t loopNum = (count + vl - 1) / vl;
         uint32_t vlSize = vl;
 
@@ -97,9 +96,8 @@ struct SwishCalc : public Vec::ElemwiseBinaryOP<T, T, float> {
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(float);
-        constexpr uint64_t VECTOR_REG_WIDTH = 256UL;
         constexpr float NEGATIVE_ONE = -1;
-        uint32_t vl = VECTOR_REG_WIDTH / dtypeSize;
+        uint32_t vl = AscendC::VECTOR_REG_WIDTH / dtypeSize;
         uint32_t loopNum = (count + vl - 1) / vl;
         uint32_t vlSize = vl;
 

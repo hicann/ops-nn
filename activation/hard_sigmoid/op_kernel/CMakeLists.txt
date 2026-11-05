@@ -13,3 +13,8 @@ add_kernel_sources(
     COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
 )
+
+add_kernel_sources(
+    KERNEL_SRC arch35/hard_sigmoid.cpp
+    COMPUTE_UNITS ascend5162
+)
