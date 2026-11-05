@@ -13,6 +13,9 @@
  * \brief
  */
 
+#include <string>
+#include <vector>
+#include "base/err_msg.h"
 #include "log/log.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "register/op_impl_registry.h"
@@ -114,10 +117,21 @@ private:
 
 bool InplaceIndexAddWithSortedTiling::CheckParam()
 {
-    if (tilingContext->GetInputShape(INPUT_0) == nullptr || tilingContext->GetInputShape(INPUT_1) == nullptr ||
-        tilingContext->GetInputShape(INPUT_2) == nullptr || tilingContext->GetInputShape(INPUT_3) == nullptr ||
-        tilingContext->GetInputDesc(INPUT_0) == nullptr || tilingContext->GetRawTilingData() == nullptr) {
-        OP_LOGE(tilingContext, "tilingContext inputShape or outputShape is nullptr.");
+    const char* inputNames[] = {"var", "value", "sorted_indices", "pos"};
+    for (size_t i = 0; i < 4; ++i) {
+        if (tilingContext->GetInputShape(i) == nullptr) {
+            OP_LOGE_WITH_INVALID_INPUT("InplaceIndexAddWithSorted", inputNames[i]);
+            return false;
+        }
+    }
+    if (tilingContext->GetInputDesc(INPUT_0) == nullptr || tilingContext->GetRawTilingData() == nullptr) {
+        const std::string
+            reason = std::string(__func__) + ": " +
+                     ("framework input descriptor or rawTilingData is nullptr; check context construction");
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"InplaceIndexAddWithSorted", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("InplaceIndexAddWithSorted", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
         return false;
     }
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
@@ -125,13 +139,19 @@ bool InplaceIndexAddWithSortedTiling::CheckParam()
     inputSize = ge::GetSizeByDataType(inputDtype);
 
     if (inputDtype != valueDtype) {
-        OP_LOGE(tilingContext, "value dtype must be same as var.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON("InplaceIndexAddWithSorted", "var, value",
+                                               std::to_string(inputDtype) + ", " + std::to_string(valueDtype),
+                                               "value dtype must equal var dtype");
         return false;
     }
 
     if (ge::DT_INT32 != tilingContext->GetInputDesc(INPUT_2)->GetDataType() ||
         ge::DT_INT32 != tilingContext->GetInputDesc(INPUT_3)->GetDataType()) {
-        OP_LOGE(tilingContext, "sorted_index and pos only support int32.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON("InplaceIndexAddWithSorted", "sorted_indices, pos",
+                                               std::to_string(tilingContext->GetInputDesc(INPUT_2)->GetDataType()) +
+                                                   ", " +
+                                                   std::to_string(tilingContext->GetInputDesc(INPUT_3)->GetDataType()),
+                                               "both inputs must have dtype DT_INT32");
         return false;
     }
     auto inputShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
@@ -141,7 +161,10 @@ bool InplaceIndexAddWithSortedTiling::CheckParam()
 
     auto inputDimNum = inputShape.GetDimNum();
     if (inputDimNum != updatesShape.GetDimNum()) {
-        OP_LOGE(tilingContext, "the dimNum of input must equal the dimNum of updates.");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            "InplaceIndexAddWithSorted", "var, value",
+            std::to_string(inputDimNum) + ", " + std::to_string(updatesShape.GetDimNum()),
+            "var and value must have equal ranks");
         return false;
     }
     const int64_t* ptrDim = tilingContext->GetAttrs()->GetAttrPointer<int64_t>(0);
@@ -149,13 +172,17 @@ bool InplaceIndexAddWithSortedTiling::CheckParam()
     dimAttr = dimAttr < 0 ? inputDimNum + dimAttr : dimAttr;
     // 当前版本仅支持dim = 0，此处做个拦截
     if (dimAttr != 0) {
-        OP_LOGE(tilingContext, "Dim only support 0 on the version, but get %ld.", dimAttr);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("InplaceIndexAddWithSorted", "axis", std::to_string(dimAttr),
+                                              "this implementation supports only axis=0");
         return false;
     }
     for (int64_t idx = 0; idx < static_cast<int64_t>(inputDimNum); ++idx) {
         if (dimAttr != idx) {
             if (inputShape.GetDim(idx) != updatesShape.GetDim(idx)) {
-                OP_LOGE(tilingContext, "The size of self must match the size of source at dimension %ld.", idx);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    "InplaceIndexAddWithSorted", "var, value",
+                    std::to_string(inputShape.GetDim(idx)) + ", " + std::to_string(updatesShape.GetDim(idx)),
+                    "sizes must match at non-indexed dimension " + std::to_string(idx));
                 return false;
             }
         }
@@ -166,14 +193,32 @@ bool InplaceIndexAddWithSortedTiling::CheckParam()
 ge::graphStatus InplaceIndexAddWithSortedTiling::Init()
 {
     if (tilingContext == nullptr) {
-        OP_LOGE(tilingContext, "tilingContext is nullptr.");
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("framework-provided tilingContext is nullptr; check context construction");
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"InplaceIndexAddWithSorted", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("InplaceIndexAddWithSorted", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
         return ge::GRAPH_FAILED;
     }
     auto compileInfo = static_cast<const InplaceIndexAddWithSortedCompileInfo*>(tilingContext->GetCompileInfo());
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
+    if (compileInfo == nullptr) {
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("framework-provided compileInfo is nullptr; check context construction");
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"InplaceIndexAddWithSorted", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("InplaceIndexAddWithSorted", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+        return ge::GRAPH_FAILED;
+    }
     coreNum = static_cast<int32_t>(compileInfo->totalCoreNum);
     if (coreNum == 0) {
-        OP_LOGE(tilingContext, "coreNum must greater than 0.");
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("platform coreNum must be positive; actual=" + std::to_string(coreNum));
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"InplaceIndexAddWithSorted", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("InplaceIndexAddWithSorted", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
         return ge::GRAPH_FAILED;
     }
     // 固定预留13K的索引ub和posub空间用于遍历索引
@@ -213,7 +258,10 @@ ge::graphStatus InplaceIndexAddWithSortedTiling::RunKernelTiling()
     }
     indicesCount = indicesShape.GetDim(INPUT_0);
     if (inputCount == 0 || updatesCount == 0 || indicesCount == 0) {
-        OP_LOGE(tilingContext, "shape size cannot equal 0.");
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            "InplaceIndexAddWithSorted", "var, value, sorted_indices",
+            std::to_string(inputCount) + ", " + std::to_string(updatesCount) + ", " + std::to_string(indicesCount),
+            "all element counts must be positive");
         return ge::GRAPH_FAILED;
     }
     uint32_t fixedOutputFlag = tilingContext->GetDeterministic() == 1 ? 1 : 0;
@@ -347,17 +395,41 @@ ge::graphStatus TilingPrepareForInplaceIndexAddWithSorted(gert::TilingParseConte
 {
     OP_LOGD(context, "TilingPrepareForInplaceIndexAddWithSorted start.");
     auto compileInfo = context->GetCompiledInfo<InplaceIndexAddWithSortedCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    if (compileInfo == nullptr) {
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("framework-provided compileInfo is nullptr; check context construction");
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"InplaceIndexAddWithSorted", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("InplaceIndexAddWithSorted", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+        return ge::GRAPH_FAILED;
+    }
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    if (platformInfo == nullptr) {
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("framework-provided platformInfo is nullptr; check context construction");
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"InplaceIndexAddWithSorted", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("InplaceIndexAddWithSorted", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+        return ge::GRAPH_FAILED;
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     compileInfo->workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context, "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    if ((compileInfo->ubSizePlatForm <= 0)) {
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("platform UB size must be positive; actual=" +
+                                    std::to_string(compileInfo->ubSizePlatForm));
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"InplaceIndexAddWithSorted", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("InplaceIndexAddWithSorted", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);

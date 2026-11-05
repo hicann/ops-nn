@@ -13,6 +13,9 @@
  * \brief
  */
 
+#include <string>
+#include <vector>
+#include "base/err_msg.h"
 #include "index_fill_tiling.h"
 
 #include "register/op_impl_registry.h"
@@ -243,16 +246,40 @@ ge::graphStatus TilingPrepareForIndexFill(gert::TilingParseContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling Prepare For IndexFill start.");
     auto compileInfo = context->GetCompiledInfo<IndexFillCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    if (compileInfo == nullptr) {
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("framework-provided compileInfo is nullptr; check context construction");
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"IndexFill", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("IndexFill", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+        return ge::GRAPH_FAILED;
+    }
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    if (platformInfo == nullptr) {
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("framework-provided platformInfo is nullptr; check context construction");
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"IndexFill", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("IndexFill", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+        return ge::GRAPH_FAILED;
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<uint64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    if ((compileInfo->ubSizePlatForm <= 0)) {
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("platform UB size must be positive; actual=" +
+                                    std::to_string(compileInfo->ubSizePlatForm));
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"IndexFill", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("IndexFill", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     OP_LOGD(context->GetNodeName(), "Tiling Prepare For IndexFill end.");
     return ge::GRAPH_SUCCESS;

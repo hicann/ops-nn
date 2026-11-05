@@ -12,6 +12,9 @@
  * \file index_fill_infershape.cpp
  * \brief
  */
+#include <string>
+#include <vector>
+#include "base/err_msg.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
@@ -21,9 +24,17 @@ namespace ops {
 static ge::graphStatus InferShapeForIndexFill(gert::InferShapeContext* context)
 {
     auto in_shape = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
+    OP_CHECK_IF(in_shape == nullptr, OP_LOGE_WITH_INVALID_INPUT("IndexFill", "x"), return ge::GRAPH_FAILED);
     auto out_shape = context->GetOutputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    if (out_shape == nullptr) {
+        const std::string reason = std::string(__func__) + ": " +
+                                   ("framework-provided out_shape is nullptr; check context construction");
+        const std::vector<const char*> keys = {"opName", "reason"};
+        const std::vector<const char*> values = {"IndexFill", reason.c_str()};
+        OP_LOGE_WITHOUT_REPORT("IndexFill", "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ1014", keys, values);
+        return ge::GRAPH_FAILED;
+    }
     *out_shape = *in_shape;
     return GRAPH_SUCCESS;
 }
