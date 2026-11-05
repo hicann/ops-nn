@@ -91,10 +91,18 @@ def prepare(output):
                 "affine_offset_cancellation",
                 "mean_low_zero_std",
                 "half_overflow_boundary",
+                "fp32_restore_boundary",
+                "unbiased_var_low",
+                "affine_mean_tail",
             ):
                 if mode == "affine_offset_cancellation" and dtype != "float32":
                     continue  # These finite FP32 inputs exceed the FP16 range.
                 if mode == "half_overflow_boundary" and dtype != "float16":
+                    continue
+                if (
+                    mode in ("fp32_restore_boundary", "affine_mean_tail")
+                    and dtype != "float32"
+                ):
                     continue
                 name = f"intu2_fix_{dtype}_{layout}_{mode}"
                 shape = (1, 1, 1, 3) if layout == "NCHW" else (1, 1, 3, 1)
@@ -104,8 +112,14 @@ def prepare(output):
                     shape = (1, 1, 1, 8197) if layout == "NCHW" else (1, 1, 8197, 1)
                 if mode == "half_overflow_boundary":
                     shape = (1, 2, 1, 3) if layout == "NCHW" else (1, 1, 3, 2)
+                if mode in ("fp32_restore_boundary", "affine_mean_tail"):
+                    shape = (1, 2, 2, 5) if layout == "NCHW" else (1, 2, 5, 2)
                 stat = (1, 1, 1, 1)
-                if mode == "half_overflow_boundary":
+                if mode in (
+                    "half_overflow_boundary",
+                    "fp32_restore_boundary",
+                    "affine_mean_tail",
+                ):
                     stat = (1, 2, 1, 1) if layout == "NCHW" else (1, 1, 1, 2)
                 cancellation = mode == "cancellation"
                 x = (
@@ -114,7 +128,13 @@ def prepare(output):
                     else np.full(shape, 65504.0, dtype=dtype)
                     if cancellation
                     else np.ones(shape, dtype=dtype)
-                    if mode in ("mean_low_zero_std", "half_overflow_boundary")
+                    if mode
+                    in (
+                        "mean_low_zero_std",
+                        "half_overflow_boundary",
+                        "fp32_restore_boundary",
+                        "affine_mean_tail",
+                    )
                     else np.array([1.0, 2.0, 3.0], dtype=dtype).reshape(shape)
                 )
                 # Deliberately negative raw variance exercises the documented clamp.
@@ -132,7 +152,32 @@ def prepare(output):
                     None,
                 ]
                 epsilon = 1e-5
-                if mode == "mean_low_zero_std":
+                if mode == "unbiased_var_low":
+                    # The exact unbiased variance is 10082 / 2 = 5041.
+                    # Rounding 10082 / 3 before Bessel correction loses one ULP.
+                    inputs[0] = np.array([-71.0, 0.0, 71.0], dtype=dtype).reshape(shape)
+                    inputs[1].fill(0.0)
+                    inputs[2].fill(10082.0)
+                    inputs[3] = inputs[4] = None
+                elif mode == "fp32_restore_boundary":
+                    # Small reproducer of round-three case 483, with both signs.
+                    # The promoted affine result rounds to finite +/-FLT_MAX.
+                    signs = np.array([-1.0, 1.0], dtype=np.float32).reshape(stat)
+                    inputs[0].fill(1.8655141592025757)
+                    inputs[1].fill(16.513830184936523)
+                    inputs[2].fill(27.729080200195312)
+                    inputs[3] = signs * np.finfo(np.float32).max
+                    inputs[4] = signs * np.float32(5.27933406829834)
+                elif mode == "affine_mean_tail":
+                    # A second channel from case 483 exposes the low part's
+                    # division residual after near-mean cancellation.
+                    signs = np.array([-1.0, 1.0], dtype=np.float32).reshape(stat)
+                    inputs[0].fill(1.6771430969238281)
+                    inputs[1].fill(16.77142906188965)
+                    inputs[2].fill(28.752470016479492)
+                    inputs[3] = signs * np.finfo(np.float32).max
+                    inputs[4].fill(0.0)
+                elif mode == "mean_low_zero_std":
                     inputs[0].fill(
                         1.9990234375 if dtype == "float16" else np.float32(1.0 / 3.0)
                     )
@@ -194,6 +239,7 @@ def prepare(output):
                     "infinite_mean_std",
                     "mean_low_zero_std",
                     "half_overflow_boundary",
+                    "unbiased_var_low",
                 ):
                     shapes = (shape, stat, stat, None, None, None, None)
                     formats = (layout,) * 3 + ("ND",) * 4
