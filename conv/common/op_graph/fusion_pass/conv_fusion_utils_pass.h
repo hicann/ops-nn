@@ -11,6 +11,7 @@
 #ifndef NN_CONV_FUSION_UTILS_PASS_H
 #define NN_CONV_FUSION_UTILS_PASS_H
 
+#include <cmath>
 #include <map>
 #include <memory>
 #include <set>
@@ -96,6 +97,23 @@ const std::string NPU_ARCH_KEY_FUSE = "FUSE";
 
 std::string GeFormatToString(const ge::Format& geFormat);
 std::string GeDtypeToString(const ge::DataType& geDtype);
+
+inline bool IsNodeOfType(const ge::GNodePtr& node, const ge::AscendString& type)
+{
+    if (node == nullptr) {
+        return false;
+    }
+    ge::AscendString nodeType;
+    if (node->GetType(nodeType) != ge::GRAPH_SUCCESS) {
+        return false;
+    }
+    return nodeType == type;
+}
+
+inline bool FloatEqual(const ge::float32_t lhs, const ge::float32_t rhs)
+{
+    return std::fabs(lhs - rhs) < 1.1920929e-07F;
+}
 
 inline std::string SocListToString(const std::map<std::string, NpuArch>& socList)
 {
