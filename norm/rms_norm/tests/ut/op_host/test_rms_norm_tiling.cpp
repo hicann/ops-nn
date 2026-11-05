@@ -2009,19 +2009,19 @@ TEST(RmsNormTemplatesTiling, ExistingFallbackAndInvalidPlatform)
 
 TEST(RmsNormTemplatesTiling, NonRegbaseRstdNumelMustEqualRows)
 {
-    // 非 regbase 平台（910B，NpuArch=2201）：rstdOut 元素数必须等于归一化行数 x.numel / gamma.numel，
-    // 否则内核按行数写 rstd 会产生越界写（issue #7333）。声明 1 个元素而 rows=8 时 tiling 应失败。
-    auto bad = RunShapeTiling({{8, 128}, {8, 128}}, {{128}, {128}}, {{1, 1}, {1, 1}}, ge::DT_FLOAT16, ge::DT_FLOAT, 0,
-                              "RmsNorm", 64, 253952, "Ascend910B", "2201");
-    EXPECT_EQ(bad.status, ge::GRAPH_FAILED);
+    // 非 regbase 平台（910B，NpuArch=2201）：rstdOut 元素数小于归一化行数 x.numel / gamma.numel 时，
+    // GemmaRmsNorm 内核按行数写 rstd 会产生越界写（issue #7333），tiling 应失败。
+    // 该校验仅作用于 GemmaRmsNorm 的 tiling 实现；RmsNorm 不做此校验，保持原有行为。
     auto badGemma = RunShapeTiling({{8, 128}, {8, 128}}, {{128}, {128}}, {{1, 1}, {1, 1}}, ge::DT_FLOAT16, ge::DT_FLOAT,
                                    0, "GemmaRmsNorm", 64, 253952, "Ascend910B", "2201");
     EXPECT_EQ(badGemma.status, ge::GRAPH_FAILED);
 
+    // RmsNorm 不受该校验影响：同样的 rstd 形态仍按原行为放行。
+    auto rmsBad = RunShapeTiling({{8, 128}, {8, 128}}, {{128}, {128}}, {{1, 1}, {1, 1}}, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                 0, "RmsNorm", 64, 253952, "Ascend910B", "2201");
+    EXPECT_EQ(rmsBad.status, ge::GRAPH_SUCCESS);
+
     // 合法形态（rstdOut 元素数等于行数）不被新增校验误伤。
-    auto good = RunShapeTiling({{8, 128}, {8, 128}}, {{128}, {128}}, {{8, 1}, {8, 1}}, ge::DT_FLOAT16, ge::DT_FLOAT, 0,
-                               "RmsNorm", 64, 253952, "Ascend910B", "2201");
-    EXPECT_EQ(good.status, ge::GRAPH_SUCCESS);
     auto goodGemma = RunShapeTiling({{8, 128}, {8, 128}}, {{128}, {128}}, {{8, 1}, {8, 1}}, ge::DT_FLOAT16,
                                     ge::DT_FLOAT, 0, "GemmaRmsNorm", 64, 253952, "Ascend910B", "2201");
     EXPECT_EQ(goodGemma.status, ge::GRAPH_SUCCESS);

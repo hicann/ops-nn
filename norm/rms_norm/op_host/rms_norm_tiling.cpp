@@ -220,35 +220,6 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
             return false;
         }
     }
-    // 非regbase平台：rstd元素数必须等于归一化行数 x.numel / gamma.numel，
-    // 否则内核按行数写rstd会产生越界写（aclnnGemmaRmsNorm #7333）。
-    if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
-        const gert::Shape& xStorageShape = xShape->GetStorageShape();
-        const gert::Shape& gammaStorageShape = gammaShape->GetStorageShape();
-        const gert::Shape& rstdStorageShape = rstdShape->GetStorageShape();
-        bool allShapeKnown = true;
-        for (size_t i = 0; i < xStorageShape.GetDimNum(); i++) {
-            allShapeKnown = allShapeKnown && xStorageShape.GetDim(i) >= 0;
-        }
-        for (size_t i = 0; i < gammaStorageShape.GetDimNum(); i++) {
-            allShapeKnown = allShapeKnown && gammaStorageShape.GetDim(i) >= 0;
-        }
-        for (size_t i = 0; i < rstdStorageShape.GetDimNum(); i++) {
-            allShapeKnown = allShapeKnown && rstdStorageShape.GetDim(i) >= 0;
-        }
-        if (allShapeKnown) {
-            int64_t xNumel = xStorageShape.GetShapeSize();
-            int64_t gammaNumel = gammaStorageShape.GetShapeSize();
-            int64_t rstdNumel = rstdStorageShape.GetShapeSize();
-            int64_t rowNum = (gammaNumel != 0) ? xNumel / gammaNumel : 0;
-            OP_TILING_CHECK(rstdNumel != rowNum,
-                            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                                context->GetNodeName(), "rstd", ToString(rstdStorageShape).c_str(),
-                                "the element number of output rstd must be equal to the number of normalized rows "
-                                "(x.numel / gamma.numel)"),
-                            return false);
-        }
-    }
     return true;
 }
 
@@ -716,10 +687,55 @@ void setWorkSize(gert::TilingContext* context)
     currentWorkspace[0] = usrSize + sysWorkspaceSize;
 }
 
+// GemmaRmsNorm（#7333）：非regbase平台内核按归一化行数写rstd，rstd元素数不能小于
+// x.numel / gamma.numel，否则产生越界写；元素数大于行数属于安全的多分配，保持放行。
+// 本校验仅作用于GemmaRmsNorm的tiling实现，不涉及RmsNorm。
+static ge::graphStatus CheckGemmaRstdShape(const gert::TilingContext* context)
+{
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        return ge::GRAPH_SUCCESS;
+    }
+    const gert::StorageShape* xShape = context->GetInputShape(X_INDEX);
+    const gert::StorageShape* gammaShape = context->GetInputShape(GAMMA_INDEX);
+    const gert::StorageShape* rstdShape = context->GetOutputShape(1U);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, rstdShape);
+    const gert::Shape& xStorageShape = xShape->GetStorageShape();
+    const gert::Shape& gammaStorageShape = gammaShape->GetStorageShape();
+    const gert::Shape& rstdStorageShape = rstdShape->GetStorageShape();
+    bool allShapeKnown = true;
+    for (size_t i = 0; i < xStorageShape.GetDimNum(); i++) {
+        allShapeKnown = allShapeKnown && xStorageShape.GetDim(i) >= 0;
+    }
+    for (size_t i = 0; i < gammaStorageShape.GetDimNum(); i++) {
+        allShapeKnown = allShapeKnown && gammaStorageShape.GetDim(i) >= 0;
+    }
+    for (size_t i = 0; i < rstdStorageShape.GetDimNum(); i++) {
+        allShapeKnown = allShapeKnown && rstdStorageShape.GetDim(i) >= 0;
+    }
+    if (!allShapeKnown) {
+        return ge::GRAPH_SUCCESS;
+    }
+    int64_t xNumel = xStorageShape.GetShapeSize();
+    int64_t gammaNumel = gammaStorageShape.GetShapeSize();
+    int64_t rstdNumel = rstdStorageShape.GetShapeSize();
+    int64_t rowNum = (gammaNumel != 0) ? xNumel / gammaNumel : 0;
+    OP_TILING_CHECK(rstdNumel < rowNum,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context->GetNodeName(), "rstd", ToString(rstdStorageShape).c_str(),
+                        "the element number of output rstd must not be less than the number of normalized rows "
+                        "(x.numel / gamma.numel), otherwise the kernel writes out of bounds"),
+                    return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus Tiling4GemmaRmsNorm(gert::TilingContext* context)
 {
     platform_ascendc::SocVersion curSocVersion;
     OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(CheckGemmaRstdShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Gemma rstd shape invalid."),
                     return ge::GRAPH_FAILED);
     OP_LOGD(context, " Tiling4GemmaRmsNorm");
     OP_TILING_CHECK(!setEpsTiling(context), OP_LOGE(context, "Get attr epsilon error."), return ge::GRAPH_FAILED);
