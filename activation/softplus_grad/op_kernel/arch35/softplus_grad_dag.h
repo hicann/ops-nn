@@ -23,66 +23,26 @@ using namespace Ops::Base;
 
 constexpr int CastModeToFloat = 0;
 constexpr int CastModeFromFloat = 1;
-// AscendC CMPMODE/SELMODE 枚举值（kernel_utils_mode.h）：GE=4，VSEL_TENSOR_TENSOR_MODE=2
-constexpr int COMPARE_MODE_GE = 4;
-constexpr int SELECT_MODE_T_T = 2;
-
-template <typename T>
-struct ExpFtzFalse : public Vec::ElemwiseUnaryOP<T, T> {
-    __aicore__ inline ExpFtzFalse(LocalTensor<T>& dst, LocalTensor<T>& src, int count)
-    {
-#ifdef __CCE_AICORE__
-        static constexpr AscendC::ExpConfig config = {AscendC::ExpAlgo::PRECISION_1ULP_FTZ_FALSE};
-        AscendC::Exp<T, config>(dst, src, count);
-#endif
-    }
-};
-
-template <typename T>
-struct DivFtzFalse : public Vec::ElemwiseBinaryOP<T, T, T> {
-    __aicore__ inline DivFtzFalse(LocalTensor<T>& dst, LocalTensor<T>& numerator, LocalTensor<T>& denominator,
-                                  int count)
-    {
-#ifdef __CCE_AICORE__
-        static constexpr AscendC::DivConfig config = {AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
-        AscendC::Div<T, config>(dst, numerator, denominator, count);
-#endif
-    }
-};
 
 template <typename U>
 struct SoftplusGradDag {
     using ConstNegOne = MAKE_CONST(float, -1);
-    using ConstOne = MAKE_CONST(float, 1);
-    using ConstZero = MAKE_CONST(float, 0);
+    using ConstOne = MAKE_CONST(U, 1);
 
     using OpCopyInGrads = Bind<Vec::CopyInBrc<U>, Placeholder::In0<U>>;
     using OpCopyInFeats = Bind<Vec::CopyInBrc<U>, Placeholder::In1<U>>;
 
     using OpGradF32 = Bind<Vec::Cast<float, U, CastModeToFloat>, OpCopyInGrads>;
     using OpFeatF32 = Bind<Vec::Cast<float, U, CastModeToFloat>, OpCopyInFeats>;
-
-    // 数值稳定 sigmoid（REQUIREMENTS 8.1）：两个分支的 exp 参数均 <= 0，中间量不溢出：
-    //   features >= 0: sigmoid = 1 / (1 + exp(-features))
-    //   features <  0: sigmoid = exp(features) / (1 + exp(features))
-    // 未选中分支的极值（inf/NaN）被 Select 逐元素丢弃；features = -0.0 走 >= 0 分支得 0.5
-    using OpIsNonNeg = Bind<Vec::Compare<uint8_t, float, COMPARE_MODE_GE>, OpFeatF32, ConstZero>;
-
     using OpNegFeat = Bind<Vec::Muls<float>, OpFeatF32, ConstNegOne>;
-    using OpExpNegFeat = Bind<Vec::Exp<float>, OpNegFeat>;
-    using OpDenomPos = Bind<Vec::Adds<float>, OpExpNegFeat, ConstOne>;
-    using OpSigmoidPos = Bind<Vec::Reciprocal<float>, OpDenomPos>;
+    using OpExpF32 = Bind<Vec::Exp<float>, OpNegFeat>;
+    using OpExpU = Bind<Vec::Cast<U, float, CastModeFromFloat>, OpExpF32>;
+    using OpDenomU = Bind<Vec::Adds<U>, OpExpU, ConstOne>;
+    using OpDenomF32 = Bind<Vec::Cast<float, U, CastModeToFloat>, OpDenomU>;
+    using OpResultF32 = Bind<Vec::Div<float>, OpGradF32, OpDenomF32>;
+    using OpResult = Bind<Vec::Cast<U, float, CastModeFromFloat>, OpResultF32>;
 
-    using OpExpFeat = Bind<ExpFtzFalse<float>, OpFeatF32>;
-    using OpDenomNeg = Bind<Vec::Adds<float>, OpExpFeat, ConstOne>;
-    using OpSigmoidNeg = Bind<DivFtzFalse<float>, OpExpFeat, OpDenomNeg>;
-
-    using OpSigmoid = Bind<Vec::Select<uint8_t, float, SELECT_MODE_T_T>, OpIsNonNeg, OpSigmoidPos, OpSigmoidNeg>;
-
-    using OpResult = Bind<Vec::Mul<float>, OpGradF32, OpSigmoid>;
-
-    using OpResultU = Bind<Vec::Cast<U, float, CastModeFromFloat>, OpResult>;
-    using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpResultU>;
+    using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpResult>;
 
     using Outputs = Elems<OpCopyOut>;
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;

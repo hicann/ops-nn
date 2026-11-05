@@ -20,15 +20,6 @@ except ImportError:
     BFLOAT16 = None
 
 
-def stable_sigmoid(features):
-    result = np.empty_like(features, dtype=np.float32)
-    nonnegative = features >= 0
-    result[nonnegative] = 1.0 / (1.0 + np.exp(-features[nonnegative]))
-    exp_features = np.exp(features[~nonnegative])
-    result[~nonnegative] = exp_features / (1.0 + exp_features)
-    return result
-
-
 def gen_golden_data_simple(shape_str, dtype, data_case):
     dtype_dict = {
         "float32": np.float32,
@@ -96,7 +87,7 @@ def gen_golden_data_simple(shape_str, dtype, data_case):
     feat_f32 = data_features.astype(np.float32)
     grad_f32 = data_gradients.astype(np.float32)
 
-    sigmoid_feat = stable_sigmoid(feat_f32)
+    sigmoid_feat = 1.0 / (1.0 + np.exp(-feat_f32))
     golden_f32 = grad_f32 * sigmoid_feat
     golden = golden_f32.astype(x_dtype, copy=False)
 
