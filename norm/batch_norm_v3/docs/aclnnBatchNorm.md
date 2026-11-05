@@ -180,8 +180,8 @@ aclnnStatus aclnnBatchNorm(
     <tr>
       <td>saveMean（aclTensor*）</td>
       <td>输出</td>
-      <td>只在训练场景输出，表示保存的均值，对应公式中的`E(x)`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td>只在训练场景输出，表示保存的均值，对应公式中的`E(x)`。推理场景下不计算、不写入有效内容。</td>
+      <td><ul><li>支持空Tensor。</li><li>训练场景下为必选输出，shape长度与入参`input`中channel轴的长度相等。</li><li>推理场景下该参数被忽略，可传入空指针，数据类型和shape不作校验，输出内容为未定义值，不应参与数值比对。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -190,8 +190,8 @@ aclnnStatus aclnnBatchNorm(
     <tr>
       <td>saveInvstd（aclTensor*）</td>
       <td>输出</td>
-      <td>只在训练场景输出，表示保存的input方差或者input标准差倒数，分别对应公式中的`Var(x)`、(Var(x) + eps)开平方的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td>只在训练场景输出，表示保存的input方差或者input标准差倒数，分别对应公式中的`Var(x)`、(Var(x) + eps)开平方的倒数。推理场景下不计算、不写入有效内容。</td>
+      <td><ul><li>支持空Tensor。</li><li>训练场景下为必选输出，shape长度与入参`input`中channel轴的长度相等。</li><li>推理场景下该参数被忽略，可传入空指针，数据类型和shape不作校验，输出内容为未定义值，不应参与数值比对。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
