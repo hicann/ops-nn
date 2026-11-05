@@ -207,9 +207,9 @@ bool ParseScalarValue(const ge::Tensor& constTensor, float& value, ge::DataType&
 
 // the graph backend may return a fresh ge::GNode wrapper per query, so the boundary node is identified
 // by its name (unique inside one graph) instead of pointer equality
-bool IsBoundaryInputNode(const ge::GNode& node, const int32_t inputIdx, const char* boundaryNodeName)
+bool IsBoundaryInputNode(const ge::GNode& node, const int32_t inputIdx, const std::string& boundaryNodeName)
 {
-    if ((boundaryNodeName == nullptr) || (boundaryNodeName[0] == '\0')) {
+    if (boundaryNodeName.empty()) {
         return false;
     }
     const ge::GNodePtr producer = node.GetInDataNodesAndPortIndexs(inputIdx).first;
@@ -220,7 +220,7 @@ bool IsBoundaryInputNode(const ge::GNode& node, const int32_t inputIdx, const ch
     if (producer->GetName(producerName) != ge::SUCCESS) {
         return false;
     }
-    return producerName == boundaryNodeName;
+    return producerName == boundaryNodeName.c_str();
 }
 
 // the boundary inputX node feeds input 0 of the inputX carrier (div for erf, squareMul for tanh); return its name
@@ -243,7 +243,8 @@ std::string GetBoundaryInputName(const ge::GNode& xCarrierNode)
 // legacy GetScalarFromOp behavior: prefer input x2, fall back to x1 only when x2 is not const.
 // the boundary input must be excluded: when inputX itself is a Const node, its value must not be
 // mistaken for the pattern-internal const (e.g. the 0.5 const on mul0/mul1)
-bool GetConstScalarFromBinaryOp(const ge::GNode& node, const char* boundaryNodeName, float& value, ge::DataType& dtype)
+bool GetConstScalarFromBinaryOp(const ge::GNode& node, const std::string& boundaryNodeName, float& value,
+                                ge::DataType& dtype)
 {
     ge::Tensor constTensor;
     const int32_t inputIndexes[] = {kBinaryInputX2Idx, kBinaryInputX1Idx};
@@ -480,7 +481,7 @@ bool CheckIntermediateConsumer(const MatchedNodes& nodes)
 
 // the add const must be 1.0 and the 0.5 const lives on mul0 (family 1/3) or mul1 (family 2),
 // shared by both families; the boundary name excludes inputX when inputX itself is a Const node
-bool CheckAddAndMulConsts(const MatchedNodes& nodes, const char* xNodeName)
+bool CheckAddAndMulConsts(const MatchedNodes& nodes, const std::string& xNodeName)
 {
     float addValue = 0.0F;
     ge::DataType addDtype = ge::DT_UNDEFINED;
@@ -513,7 +514,6 @@ bool CheckErfFormulaConsts(const MatchedNodes& nodes)
     const std::string xNodeNameStr = GetBoundaryInputName(nodes.divNode);
     OPS_ERR_IF(xNodeNameStr.empty(),
                OPS_LOG_D(kPassName.c_str(), "Cannot resolve the erf boundary input name, skip fusion."), return false);
-    const char* xNodeName = xNodeNameStr.c_str();
 
     // div const: inputX / sqrt(2) or inputX * (1 / sqrt(2))
     float divValue = 0.0F;
@@ -529,7 +529,7 @@ bool CheckErfFormulaConsts(const MatchedNodes& nodes)
                OPS_LOG_D(kPassName.c_str(), "Div const value %f is not equal to expected %f, skip fusion.", divValue,
                          expectedDivValue),
                return false);
-    return CheckAddAndMulConsts(nodes, xNodeName);
+    return CheckAddAndMulConsts(nodes, xNodeNameStr);
 }
 
 // tanh formula consts: kappa + beta + add 1.0 + mul 0.5.
@@ -540,11 +540,10 @@ bool CheckTanhFormulaConsts(const MatchedNodes& nodes)
     const std::string xNodeNameStr = GetBoundaryInputName(nodes.squareMulNode);
     OPS_ERR_IF(xNodeNameStr.empty(),
                OPS_LOG_D(kPassName.c_str(), "Cannot resolve the tanh boundary input name, skip fusion."), return false);
-    const char* xNodeName = xNodeNameStr.c_str();
 
     float kappaValue = 0.0F;
     ge::DataType kappaDtype = ge::DT_UNDEFINED;
-    OPS_ERR_IF(!GetConstScalarFromBinaryOp(nodes.kappaMulNode, nullptr, kappaValue, kappaDtype),
+    OPS_ERR_IF(!GetConstScalarFromBinaryOp(nodes.kappaMulNode, "", kappaValue, kappaDtype),
                OPS_LOG_D(kPassName.c_str(), "Cannot get kappa const value, skip fusion."), return false);
     OPS_ERR_IF(std::fabs(kappaValue - kTanhKappaValue) > kKappaTolerance,
                OPS_LOG_D(kPassName.c_str(), "Kappa const value %f is not equal to expected %f, skip fusion.",
@@ -553,14 +552,14 @@ bool CheckTanhFormulaConsts(const MatchedNodes& nodes)
 
     float betaValue = 0.0F;
     ge::DataType betaDtype = ge::DT_UNDEFINED;
-    OPS_ERR_IF(!GetConstScalarFromBinaryOp(nodes.betaMulNode, nullptr, betaValue, betaDtype),
+    OPS_ERR_IF(!GetConstScalarFromBinaryOp(nodes.betaMulNode, "", betaValue, betaDtype),
                OPS_LOG_D(kPassName.c_str(), "Cannot get beta const value, skip fusion."), return false);
     const float betaTolerance = (betaDtype == ge::DT_FLOAT) ? kDivToleranceFp32 : kDivToleranceFp16;
     OPS_ERR_IF(std::fabs(betaValue - kTanhBetaValue) > betaTolerance,
                OPS_LOG_D(kPassName.c_str(), "Beta const value %f is not equal to expected %f, skip fusion.", betaValue,
                          kTanhBetaValue),
                return false);
-    return CheckAddAndMulConsts(nodes, xNodeName);
+    return CheckAddAndMulConsts(nodes, xNodeNameStr);
 }
 
 // validate the formula consts against the gelu formula, dispatched by the activation family
@@ -596,7 +595,7 @@ std::vector<ge::fusion::PatternUniqPtr> GeluV2ONNXFusionPass::Patterns()
     return patterns;
 }
 
-bool GeluV2ONNXFusionPass::MeetRequirements(const std::unique_ptr<ge::fusion::MatchResult>& matchResult)
+bool GeluV2ONNXFusionPass::MeetRequirements(const std::unique_ptr<ge::fusion::MatchResult>& match_result)
 {
     OPS_LOG_D(kPassName.c_str(), "Enter MeetRequirements for GeluV2ONNXFusionPass");
     if (!CheckNpuArch(kPassName, kSupportedNpuArchs)) {
@@ -605,7 +604,7 @@ bool GeluV2ONNXFusionPass::MeetRequirements(const std::unique_ptr<ge::fusion::Ma
     }
 
     MatchedNodes nodes;
-    OP_LOGE_IF(!GetMatchedNodes(matchResult, nodes), false, kPassName.c_str(), "Get matched nodes failed.");
+    OP_LOGE_IF(!GetMatchedNodes(match_result, nodes), false, kPassName.c_str(), "Get matched nodes failed.");
 
     if (!CheckInputConstraints(nodes)) {
         return false;
@@ -616,15 +615,15 @@ bool GeluV2ONNXFusionPass::MeetRequirements(const std::unique_ptr<ge::fusion::Ma
     return CheckFormulaConsts(nodes);
 }
 
-ge::fusion::GraphUniqPtr GeluV2ONNXFusionPass::Replacement(const std::unique_ptr<ge::fusion::MatchResult>& matchResult)
+ge::fusion::GraphUniqPtr GeluV2ONNXFusionPass::Replacement(const std::unique_ptr<ge::fusion::MatchResult>& match_result)
 {
     OPS_LOG_D(kPassName.c_str(), "Enter Replacement for GeluV2ONNXFusionPass");
     ge::GNode xCarrierNode;
     ge::GNode activationNode;
     ge::GNode mul1Node;
-    if (!GetCapturedNode(matchResult, kCaptureDivIdx, xCarrierNode) ||
-        !GetCapturedNode(matchResult, kCaptureActivationIdx, activationNode) ||
-        !GetCapturedNode(matchResult, kCaptureMul1Idx, mul1Node)) {
+    if (!GetCapturedNode(match_result, kCaptureDivIdx, xCarrierNode) ||
+        !GetCapturedNode(match_result, kCaptureActivationIdx, activationNode) ||
+        !GetCapturedNode(match_result, kCaptureMul1Idx, mul1Node)) {
         return nullptr;
     }
 

@@ -63,7 +63,7 @@ int CreateGraph(std::vector<ge::Tensor>& inputs, std::vector<ge::Operator>& grap
 {
     // x: the queried shape, a 1D tensor of length rank.
     ge::Tensor xTensor = BuildTensor<int32_t>({2}, ge::DT_INT32, {3, 5});
-    // data_seq: the mapped table, length must be a multiple of x length (rank) and at most 100 * rank.
+    // data_seq: the mapped table, length must be a multiple of x length (rank) and at most 256 * rank.
     // Reshaped to [N, rank] = [[3, 5], [3, 7]], so x matches row 0.
     ge::Tensor dataSeqTensor = BuildTensor<int32_t>({4}, ge::DT_INT32, {3, 5, 3, 7});
     // level_index: optional secondary index, length equals data_seq length / x length (N).
@@ -81,7 +81,8 @@ int CreateGraph(std::vector<ge::Tensor>& inputs, std::vector<ge::Operator>& grap
     op.set_input_data_seq(dataSeq);
     op.set_input_level_index(levelIndex);
     op.set_attr_transpose(false);
-    op.update_output_desc_y(ge::TensorDesc(ge::Shape({1}), ge::FORMAT_ND, ge::DT_INT32));
+    // y is a 0-dim scalar of int32, inferred by the registered InferShape of MapIndex.
+    op.update_output_desc_y(ge::TensorDesc(ge::Shape(), ge::FORMAT_ND, ge::DT_INT32));
 
     inputs = {xTensor, dataSeqTensor, levelIndexTensor};
     graphInputs = {x, dataSeq, levelIndex};
@@ -97,9 +98,8 @@ int CheckOutput(const std::vector<ge::Tensor>& outputs)
     }
 
     const auto& tensor = outputs[0];
-    const int64_t elemCount = tensor.GetTensorDesc().GetShape().GetShapeSize();
-    if (elemCount != 1) {
-        std::cerr << "Unexpected output element count: " << elemCount << std::endl;
+    if (tensor.GetTensorDesc().GetShape().GetDims().size() != 0) {
+        std::cerr << "Unexpected output shape: not a scalar" << std::endl;
         return kFailed;
     }
 

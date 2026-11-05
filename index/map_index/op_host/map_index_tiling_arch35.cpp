@@ -129,16 +129,18 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, MapIndexTi
     OP_CHECK_IF(dataSeqShape.GetDim(0) % xShape.GetDim(0) != 0,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                     context->GetNodeName(), "data_seq", std::to_string(dataSeqShape.GetDim(0)),
-                    "Shape[0] of data_seq must be exactly divisible by shape[0] of x"),
+                    "Shape[0] of data_seq must be exactly divisible by shape[0] of x, but x length is " +
+                        std::to_string(xShape.GetDim(0))),
                 return ge::GRAPH_FAILED);
 
     tilingParam.Dim0Size = dataSeqShape.GetDim(0) / xShape.GetDim(0);
 
-    OP_CHECK_IF(tilingParam.Dim0Size > DATA_SEQ_MAX_DIM0,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "data_seq_len",
-                                                      std::to_string(tilingParam.Dim0Size),
-                                                      "The value of data_seq_len must be less than 256"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        tilingParam.Dim0Size > DATA_SEQ_MAX_DIM0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "data_seq_len / x_len", std::to_string(tilingParam.Dim0Size),
+            "The value of data_seq_len / x_len must be less than or equal to " + std::to_string(DATA_SEQ_MAX_DIM0)),
+        return ge::GRAPH_FAILED);
 
     if (tilingParam.hasLevelIndex) {
         auto levelIndexShapePtr = context->GetOptionalInputShape(LEVEL_INDEX_INDEX);
@@ -282,7 +284,7 @@ ge::graphStatus Tiling4MapIndex(gert::TilingContext* context)
 
     MapIndexTilingData tilingData;
     OP_CHECK_IF(SetTilingData(context, tilingParam, tilingData) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "SetContext fail."), return ge::GRAPH_FAILED);
+                OP_LOGE(context->GetNodeName(), "SetContext failed."), return ge::GRAPH_FAILED);
 
     PrintTilingData(context, tilingData);
     return ge::GRAPH_SUCCESS;
