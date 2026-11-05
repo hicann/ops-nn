@@ -230,7 +230,4 @@ void Conv3DQuantProcessFusionPass::PrintGraphStructure() const
     OP_LOGI(FUSION_NAME, "%s %s done.", convDescInfo.nodeNameStr.c_str(), FUSION_NAME.c_str());
 }
 
-#if GE_COMPILER_VERSION_NUM >= 90300000U
-REG_FUSION_PASS(Conv3DQuantProcessFusionPass).Stage(CustomPassStage::kCompatibleInherited);
-#endif
 } // namespace Ops

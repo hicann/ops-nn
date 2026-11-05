@@ -508,10 +508,4 @@ bool Conv2DQuantProcessFusionPass::ConvFusionReplaceImpl(ge::GraphPtr& graph, ge
     return true;
 }
 
-// 注册门槛与 AIPP 读值门控同版本（GE 9.3.0）：能力完整的 toolkit 上新 pass 经
-// kCompatibleInherited 接管同名老 pass；老 toolkit 上不注册，由老系融合 pass 兜底
-// （老 pass 在老框架下 AIPP 链路完整，优于降级版新 pass）
-#if GE_COMPILER_VERSION_NUM >= 90300000U
-REG_FUSION_PASS(Conv2DQuantProcessFusionPass).Stage(ge::CustomPassStage::kCompatibleInherited);
-#endif
 } // namespace Ops
