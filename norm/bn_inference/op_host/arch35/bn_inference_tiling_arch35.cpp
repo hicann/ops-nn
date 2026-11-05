@@ -507,6 +507,9 @@ bool BNInferenceTiling::GetParamLedger(int64_t paramLen, int64_t cacheLen, bool 
     if (!preFolded_ && !hasScale_ && !hasOffset_) {
         ++cacheCount; // Post-multiply correction for an overflowing folded shift.
     }
+    if (!preFolded_ && hasScale_ && !hasOffset_ && xBytes_ == FP32_BYTES && varianceBytes_ == FP32_BYTES) {
+        ++cacheCount; // Low component of the compensated reciprocal square root.
+    }
     int64_t allCacheBytes = 0;
     int64_t total = 0;
     return TryAlignedTensorBytes(cacheLen, FP32_BYTES, blockSize_, cacheBytes) &&

@@ -44,9 +44,9 @@ offset.  Offset without scale is rejected in this mode.  This is an intentional
 Ascend950 extension: canndev ignores ``mode`` and therefore still executes the
 full BN path for ``mode == 0``.  TTK-promoted inputs retain their promoted
 precision.  The independent competitor uses native PyTorch tensor primitives
-for the ordered pointwise paths and native inference BatchNorm for the
-nonzero-mode one-sided paths.  ``use_global_stats`` remains an ABI-compatible
-attribute and does not affect the result.
+with FP32 intermediates for the ordered pointwise paths and native inference
+BatchNorm for the nonzero-mode one-sided paths.  ``use_global_stats`` remains
+an ABI-compatible attribute and does not affect the result.
 """
 
 import ast
@@ -418,8 +418,8 @@ def _kernel_golden(
             **kwargs,
         )
     else:
-        # Two-party comparison follows the same FP32 widening and typed graph
-        # boundaries as the NPU/GPU path, including the final narrowing to x.
+        # Two-party comparison uses FP32 intermediates for low-precision
+        # inputs and narrows to x.dtype only at the final output.
         inputs = [
             None if value is None else _as_torch_tensor(value)
             for value in (x, mean, variance, momentum, scale, offset)
@@ -514,15 +514,9 @@ class _BNInferenceNative:
             beta = channel_parameter(
                 variance.to(device=x.device, dtype=compute_dtype).reshape(channel_count)
             )
-            add_output = torch.add(x_channel_first.to(dtype=compute_dtype), alpha).to(
-                dtype=x.dtype
-            )
-            output_cf = torch.mul(add_output.to(dtype=compute_dtype), beta)
+            add_output = torch.add(x_channel_first.to(dtype=compute_dtype), alpha)
+            output_cf = torch.mul(add_output, beta)
             if scale is not None:
-                # The BNInferenceD graph exposes the base Mul in x.dtype before
-                # its optional affine stage; this is a tensor boundary, not an
-                # NPU implementation detail.
-                output_cf = output_cf.to(dtype=x.dtype).to(dtype=compute_dtype)
                 native_scale = channel_parameter(
                     scale.to(device=x.device, dtype=compute_dtype).reshape(
                         channel_count
@@ -544,13 +538,11 @@ class _BNInferenceNative:
             if optional_mask == 0 and momentum.numel() == 0:
                 raise ValueError("momentum must contain at least one element")
 
-            # BnHost materializes alpha/beta tensors whose dtypes follow
-            # mean/variance, and BNInferenceD materializes Add in x's dtype
-            # before Mul.  Those casts are graph-visible tensor semantics, not
-            # an emulation of an NPU reduction tree or another device detail.
-            # Use native Torch pointwise primitives while preserving exactly
-            # those typed boundaries.  Actual registered inputs are at most
-            # FP32; the FP64 branch keeps direct/promoted callers lossless.
+            # The ordered folding formula uses FP32 intermediates, including
+            # factor, alpha/beta and Add.  Low-precision input/output types do
+            # not introduce intermediate tensor round-trips.  Actual registered
+            # inputs are at most FP32; the FP64 branch keeps direct callers
+            # lossless without changing the promoted CPU reference.
             folded_inputs = [x, mean, variance, scale, offset]
             if optional_mask == 0:
                 folded_inputs.append(momentum)
@@ -581,11 +573,6 @@ class _BNInferenceNative:
                     zero,
                     torch.div(torch.ones_like(momentum_first), momentum_first),
                 )
-                # The legacy FP16 BnHost path stores factor in FP16 before it
-                # produces the hidden coefficients.  BF16 has no corresponding
-                # legacy host branch and remains the Ascend950 support superset.
-                if momentum.dtype == torch.float16:
-                    factor = factor.to(dtype=torch.float16).to(dtype=fold_dtype)
                 folded_alpha = torch.neg(torch.mul(factor, mean_fold))
                 scaled_variance = torch.mul(factor, variance_fold)
                 folded_beta = torch.div(
@@ -607,18 +594,12 @@ class _BNInferenceNative:
                     mean_fold,
                 )
 
-            # Hidden BnHost outputs follow the statistics dtypes.  Convert them
-            # back to the FP32/FP64 arithmetic type only after the semantic
-            # tensor round-trip, matching the public two-op chain.
-            folded_alpha = folded_alpha.to(dtype=mean.dtype).to(dtype=fold_dtype)
-            folded_beta = folded_beta.to(dtype=variance.dtype).to(dtype=fold_dtype)
-
             add_output = torch.add(
                 x_channel_first.to(dtype=fold_dtype),
                 channel_parameter(folded_alpha),
-            ).to(dtype=x.dtype)
+            )
             output_cf = torch.mul(
-                add_output.to(dtype=fold_dtype),
+                add_output,
                 channel_parameter(folded_beta),
             ).to(dtype=x.dtype)
             output = output_cf.movedim(1, -1) if channel_axis == -1 else output_cf

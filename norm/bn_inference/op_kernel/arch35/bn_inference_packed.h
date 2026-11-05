@@ -19,7 +19,9 @@ template <typename T_X, typename T_MEAN, typename T_VARIANCE, typename T_MOMENTU
           bool HAS_SCALE, bool HAS_OFFSET, bool CHANNEL_LAST, bool PRE_FOLDED>
 class BNInferencePacked {
 public:
-    static constexpr bool CACHE_CORRECTION = !PRE_FOLDED && !HAS_SCALE && !HAS_OFFSET;
+    static constexpr bool CACHE_RSTD_LOW = !PRE_FOLDED && HAS_SCALE && !HAS_OFFSET && IsSameType<T_X, float>::value &&
+                                           IsSameType<T_VARIANCE, float>::value;
+    static constexpr bool CACHE_CORRECTION = (!PRE_FOLDED && !HAS_SCALE && !HAS_OFFSET) || CACHE_RSTD_LOW;
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR mean, GM_ADDR variance, GM_ADDR momentum, GM_ADDR scale,
                                 GM_ADDR offset, GM_ADDR y, const BNInferenceTilingData* tilingData, TPipe* pipe)
@@ -204,12 +206,16 @@ private:
                 StoreFromFp32(meanCache, alphaReg, mask, 0);
                 StoreFromFp32(rstdCache, betaReg, mask, 0);
             } else if constexpr (HAS_SCALE && HAS_OFFSET) {
-                FoldWithAffine<T_MEAN, T_VARIANCE>(meanReg, varianceReg, scaleReg, offsetReg, alphaReg, betaReg, mask,
-                                                   tilingData_->epsilon);
+                FoldWithAffine<T_MEAN, T_VARIANCE, T_SCALE, T_OFFSET>(meanReg, varianceReg, scaleReg, offsetReg,
+                                                                      alphaReg, betaReg, mask, tilingData_->epsilon);
                 StoreFromFp32(meanCache, alphaReg, mask, 0);
                 StoreFromFp32(rstdCache, betaReg, mask, 0);
             } else {
-                ComputeRstdExact(varianceReg, rstdReg, mask, tilingData_->epsilon);
+                if constexpr (CACHE_RSTD_LOW) {
+                    Compensated::ComputeWideRstd(varianceReg, rstdReg, offsetReg, mask, tilingData_->epsilon);
+                } else {
+                    ComputeRstdExact(varianceReg, rstdReg, mask, tilingData_->epsilon);
+                }
                 StoreFromFp32(meanCache, meanReg, mask, 0);
                 StoreFromFp32(rstdCache, rstdReg, mask, 0);
             }
@@ -289,7 +295,8 @@ private:
                 } else if constexpr (HAS_SCALE == HAS_OFFSET) {
                     ApplyCorrectedFoldedAffine<T_X, HAS_SCALE>(xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg, mask);
                 } else {
-                    NormalizeOneSided<HAS_SCALE, HAS_OFFSET>(xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg, mask);
+                    NormalizeOneSided<T_X, T_MEAN, T_VARIANCE, HAS_SCALE, HAS_OFFSET>(xReg, meanReg, rstdReg, scaleReg,
+                                                                                      offsetReg, yReg, mask);
                 }
                 StoreUnalignedFromFp32(yCurrent, yReg, yState, mask, active);
             }

@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 
 _PATH = Path(__file__).parents[1] / "assets" / "golden.py"
 _SPEC = importlib.util.spec_from_file_location(
@@ -41,15 +42,57 @@ def test_promote_does_not_round_to_declared_output(dtype):
     assert out.item() == 4098
 
 
-def test_two_party_keeps_typed_add_boundary():
-    x = np.array([2048], dtype=np.float16).reshape(1, 1, 1, 1)
-    a = np.array([1], dtype=np.float16)
-    b = np.array([2], dtype=np.float16)
+@pytest.mark.parametrize(
+    "dtype,x,expected",
+    [(torch.float16, 2048, 3074), (torch.bfloat16, 256, 386)],
+)
+def test_pre_folded_add_retains_fp32_until_final_cast(dtype, x, expected):
+    inputs = [torch.tensor([value], dtype=dtype) for value in (x, 1, 1.5, 1)]
+    inputs[0] = inputs[0].reshape(1, 1, 1, 1)
+    out = _G._BNInferenceNative(mode=0, input_formats=("NCHW",))(*inputs)[0]
+    assert out.dtype == dtype
+    assert out.item() == expected
+
+
+@pytest.mark.parametrize(
+    "dtype,step,scale,offset,expected",
+    [
+        (torch.float16, 2**-10, 512, -513, 2**-11),
+        (torch.bfloat16, 2**-7, 64, -65, 2**-8),
+    ],
+)
+def test_pre_folded_affine_retains_base_product(dtype, step, scale, offset, expected):
+    values = (1 + step, 0, 1 + step, 1, scale, offset)
+    inputs = [torch.tensor([value], dtype=dtype) for value in values]
+    inputs[0] = inputs[0].reshape(1, 1, 1, 1)
+    out = _G._BNInferenceNative(mode=0, input_formats=("NCHW",))(*inputs)[0]
+    assert out.dtype == dtype
+    assert out.item() == expected
+
+
+@pytest.mark.parametrize(
+    "x_dtype,values,expected",
+    [
+        pytest.param(np.float32, (1, 0, 0.5, 2**-17), 2**-8, id="factor-overflow"),
+        pytest.param(
+            np.float32, (1, -128, 64, 2**-10), 512 + 2**-8, id="alpha-overflow"
+        ),
+        pytest.param(
+            np.float32, (0, -1024, 64, 1, 1, 10000), 10128, id="affine-alpha-overflow"
+        ),
+        pytest.param(np.float32, (0, 0, 2**-24, 1, 32768, 1), 1, id="beta-overflow"),
+        pytest.param(np.float16, (32768, -32, 64, 2**-10), 256, id="add-overflow"),
+    ],
+)
+def test_folded_reference_avoids_artificial_fp16_overflow(x_dtype, values, expected):
+    inputs = [np.array([value], dtype=np.float16) for value in values]
+    inputs[0] = np.array([values[0]], dtype=x_dtype).reshape(1, 1, 1, 1)
     out = _G.BNInferenceKernelSpec.golden(
-        x, a, b, a, mode=0, input_formats=("NCHW",), golden_mode="Enable"
+        *inputs, epsilon=0, mode=1, input_formats=("NCHW",), golden_mode="Enable"
     )[0]
-    assert out.dtype == np.float16
-    assert out.item() == 4096
+    assert out.dtype == x_dtype
+    assert np.isfinite(out).all()
+    assert out.item() == expected
 
 
 def test_promote_mixed_dtypes_follow_native_tensor_arithmetic():

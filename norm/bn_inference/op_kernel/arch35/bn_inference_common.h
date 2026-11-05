@@ -12,6 +12,7 @@
 #define BN_INFERENCE_COMMON_H
 
 #include "kernel_operator.h"
+#include "bn_inference_compensated.h"
 #include "op_kernel/platform_util.h"
 
 namespace BNInferenceOps {
@@ -174,7 +175,7 @@ __aicore__ inline void ComputeRstdExact(RegTensor<float>& variance, RegTensor<fl
     AscendC::Reg::Div<float, &kHighPrecisionDiv>(rstd, oneReg, rstd, mask);
 }
 
-template <bool HAS_SCALE, bool HAS_OFFSET>
+template <typename T_X, typename T_MEAN, typename T_VARIANCE, bool HAS_SCALE, bool HAS_OFFSET>
 __aicore__ inline void NormalizeOneSided(RegTensor<float>& x, RegTensor<float>& mean, RegTensor<float>& rstd,
                                          RegTensor<float>& gamma, RegTensor<float>& beta, RegTensor<float>& y,
                                          MaskReg& mask)
@@ -186,6 +187,15 @@ __aicore__ inline void NormalizeOneSided(RegTensor<float>& x, RegTensor<float>& 
         // removes the redundant multiplication by the implicit scale 1.
         AscendC::Reg::Sub(y, x, mean, mask);
         AscendC::Reg::MulDstAdd(y, rstd, beta, mask);
+    } else if constexpr (!IsSameType<T_X, float>::value && !IsSameType<T_MEAN, float>::value &&
+                         !IsSameType<T_VARIANCE, float>::value) {
+        // The promoted reference normalizes in FP32 only when x, mean and
+        // variance are all FP16/BF16. Preserve that stage's overflow before
+        // applying scale. Any original FP32 operand makes this stage FP64,
+        // so the mixed-type paths below must recover representable results.
+        AscendC::Reg::Sub(y, x, mean, mask);
+        AscendC::Reg::Mul(y, y, rstd, mask);
+        AscendC::Reg::Mul(y, y, gamma, mask);
     } else {
         RegTensor<float> centered;
         RegTensor<float> coefficient;
@@ -206,8 +216,8 @@ __aicore__ inline void NormalizeOneSided(RegTensor<float>& x, RegTensor<float>& 
         AscendC::Reg::Compares<float, CMPMODE::GT>(normalizedOverflow, magnitude, FP32_MAX_FINITE, mask);
         AscendC::Reg::Mul(y, y, gamma, mask);
 
-        // Retain the original rounding for ordinary lanes. Reassociate only
-        // when an overflowing intermediate has a representable final result.
+        // Recover a representable result from an overflowing intermediate.
+        // This also supplies the fallback for unrepresentable compensated lanes.
         AscendC::Reg::Mul(coefficient, rstd, gamma, mask);
         AscendC::Reg::Mul(stable, centered, coefficient, mask);
         AscendC::Reg::Mul(scaledX, x, coefficient, mask);
@@ -219,6 +229,31 @@ __aicore__ inline void NormalizeOneSided(RegTensor<float>& x, RegTensor<float>& 
         AscendC::Reg::Or(overflow, centeredOverflow, normalizedOverflow, mask);
         AscendC::Reg::And(recover, overflow, finiteStable, mask);
         AscendC::Reg::Select(y, stable, y, recover);
+        if constexpr (IsSameType<T_X, float>::value && IsSameType<T_VARIANCE, float>::value) {
+            RegTensor<float> negativeMean, zero, high, low, candidate;
+            RegTensor<float> centeredHigh, centeredLow, alternateHigh, alternateLow;
+            MaskReg finiteCandidate, smallProduct, largeProduct, alternateOrder;
+            AscendC::Reg::Muls(negativeMean, mean, -1.0f, mask);
+            AscendC::Reg::Duplicate(zero, 0.0f, mask);
+            Compensated::TwoSum(centeredHigh, centeredLow, x, negativeMean, mask);
+            // beta carries the reciprocal-square-root residual on this path.
+            Compensated::MulPair(high, low, centeredHigh, centeredLow, rstd, beta, mask);
+            AscendC::Reg::Abs(magnitude, high, mask);
+            // The low component needs another FP32 significand below the
+            // leading product. Change order before either component loses range.
+            AscendC::Reg::Compares<float, CMPMODE::LT>(smallProduct, magnitude, 0x1p-102f, mask);
+            AscendC::Reg::Compares<float, CMPMODE::GT>(largeProduct, magnitude, FP32_MAX_FINITE, mask);
+            AscendC::Reg::Or(alternateOrder, smallProduct, largeProduct, mask);
+            Compensated::MulPair(alternateHigh, alternateLow, centeredHigh, centeredLow, gamma, zero, alternateOrder);
+            Compensated::MulPair(alternateHigh, alternateLow, alternateHigh, alternateLow, rstd, beta, alternateOrder);
+            Compensated::MulPair(high, low, high, low, gamma, zero, mask);
+            AscendC::Reg::Select(high, alternateHigh, high, alternateOrder);
+            AscendC::Reg::Select(low, alternateLow, low, alternateOrder);
+            AscendC::Reg::Add(candidate, high, low, mask);
+            AscendC::Reg::Abs(magnitude, candidate, mask);
+            AscendC::Reg::Compares<float, CMPMODE::LE>(finiteCandidate, magnitude, FP32_MAX_FINITE, mask);
+            AscendC::Reg::Select(y, candidate, y, finiteCandidate);
+        }
     }
 }
 
@@ -296,7 +331,7 @@ __aicore__ inline void FoldWithoutAffine(RegTensor<float>& mean, RegTensor<float
     }
 }
 
-template <typename T_MEAN, typename T_VARIANCE>
+template <typename T_MEAN, typename T_VARIANCE, typename T_SCALE, typename T_OFFSET>
 __aicore__ inline void FoldWithAffine(RegTensor<float>& mean, RegTensor<float>& variance, RegTensor<float>& scale,
                                       RegTensor<float>& offset, RegTensor<float>& alpha, RegTensor<float>& beta,
                                       MaskReg& mask, float epsilon)
@@ -306,6 +341,7 @@ __aicore__ inline void FoldWithAffine(RegTensor<float>& mean, RegTensor<float>& 
     RegTensor<float> inverseSqrt;
     RegTensor<float> magnitude;
     MaskReg divisionOverflow;
+    MaskReg finiteQuotient;
     MaskReg shiftOverflow;
     MaskReg alphaOverflow;
     MaskReg overflow;
@@ -313,7 +349,11 @@ __aicore__ inline void FoldWithAffine(RegTensor<float>& mean, RegTensor<float>& 
     AscendC::Reg::Add(variance, variance, epsilonReg, mask);
     AscendC::Reg::Sqrt<float, &SQRT_NO_FTZ_MODE>(variance, variance, mask);
     AscendC::Reg::Duplicate(oneReg, 1.0f, mask);
-    AscendC::Reg::Div(inverseSqrt, oneReg, variance, mask);
+    // A reciprocal error can move the final low-precision output across a
+    // rounding boundary after folding. Preserve subnormal division inputs.
+    static constexpr AscendC::Reg::DivSpecificMode kHighPrecisionDiv = {MaskMergeMode::ZEROING, false,
+                                                                        AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+    AscendC::Reg::Div<float, &kHighPrecisionDiv>(inverseSqrt, oneReg, variance, mask);
     AscendC::Reg::Mul(beta, scale, inverseSqrt, mask);
     AscendC::Reg::Div(alpha, offset, scale, mask);
     if constexpr (IsSameType<T_MEAN, float>::value && IsSameType<T_VARIANCE, float>::value) {
@@ -321,6 +361,7 @@ __aicore__ inline void FoldWithAffine(RegTensor<float>& mean, RegTensor<float>& 
         // quotient followed by sqrt(0) would otherwise become a false NaN.
         AscendC::Reg::Abs(magnitude, alpha, mask);
         AscendC::Reg::Compares<float, CMPMODE::GT>(divisionOverflow, magnitude, FP32_MAX_FINITE, mask);
+        AscendC::Reg::Compares<float, CMPMODE::LE>(finiteQuotient, magnitude, FP32_MAX_FINITE, mask);
     }
     AscendC::Reg::Mul(alpha, alpha, variance, mask);
     if constexpr (IsSameType<T_MEAN, float>::value && IsSameType<T_VARIANCE, float>::value) {
@@ -370,6 +411,11 @@ __aicore__ inline void FoldWithAffine(RegTensor<float>& mean, RegTensor<float>& 
         AscendC::Reg::And(recover, finiteRoot, nonzeroScale, mask);
         AscendC::Reg::Abs(magnitude, offset, mask);
         AscendC::Reg::Compares<float, CMPMODE::LE>(finiteOffset, magnitude, FP32_MAX_FINITE, recover);
+        if constexpr (!IsSameType<T_SCALE, float>::value && !IsSameType<T_OFFSET, float>::value) {
+            // The affine quotient is evaluated before it meets the wider
+            // statistics. Its FP32 overflow remains part of the folding.
+            AscendC::Reg::And(finiteOffset, finiteOffset, finiteQuotient, mask);
+        }
         AscendC::Reg::Sub(centeredShift, zero, mean, mask);
         AscendC::Reg::Select(alpha, centeredShift, alpha, finiteOffset);
         AscendC::Reg::Select(offset, offset, zero, finiteOffset);
