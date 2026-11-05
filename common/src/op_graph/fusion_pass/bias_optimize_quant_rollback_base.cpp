@@ -505,22 +505,7 @@ ge::Status BiasOptimizeQuantRollbackBase::OptimizeMainProc(ge::GraphPtr& graph, 
     return ge::SUCCESS;
 }
 
-bool BiasOptimizeQuantRollbackBase::CheckOpSupported(const ge::GNode& node) const
-{
-    bool isSupported = false;
-    ge::AscendString unsupportedReason;
-    if (ge::GeUtils::CheckNodeSupportOnAicore(node, isSupported, unsupportedReason) != ge::SUCCESS) {
-        OPS_LOG_W(kLogTag, "CheckNodeSupportOnAicore failed for node[%s], treat as unsupported.",
-                  NodeName(node).c_str());
-        return false;
-    }
-    if (!isSupported) {
-        const char* reasonStr = unsupportedReason.GetString();
-        OPS_LOG_D(kLogTag, "Node[%s, %s] is not supported on aicore: %s.", NodeName(node).c_str(),
-                  NodeType(node).c_str(), (reasonStr == nullptr) ? "unknown reason" : reasonStr);
-    }
-    return isSupported;
-}
+bool BiasOptimizeQuantRollbackBase::CheckOpSupported(const ge::GNode& node) const { return true; }
 
 ge::Status BiasOptimizeQuantRollbackBase::GetCoValue(const ge::GNodePtr& cubeNode, int64_t& co)
 {
@@ -703,11 +688,14 @@ ge::Status BiasOptimizeQuantRollbackBase::RemoveEnter(ge::Graph& graph, const ge
             continue;
         }
         const ge::GNodePtr preNode = peer.first;
+        if (NodeType(*preNode) != kEnterOpType) {
+            continue;
+        }
         const size_t outDataNum = preNode->GetOutDataNodesAndPortIndexs(0).size() +
                                   preNode->GetOutControlNodes().size();
         const bool hasSingleInput = (preNode->GetInDataNodesAndPortIndexs(0).first != nullptr) &&
                                     preNode->GetInControlNodes().empty();
-        if (NodeType(*preNode) != kEnterOpType || outDataNum != 1U || !hasSingleInput) {
+        if (outDataNum != 1U || !hasSingleInput) {
             continue;
         }
         const ge::GNodePtr srcNode = IsPeerOutConst(preNode, graph);
@@ -1245,7 +1233,7 @@ ge::Status BiasOptimizeQuantRollbackBase::LinkHostOpEdge(ge::Graph& graph, const
             OPS_LOG_E(kLogTag,
                       "Failed to add edge between weight const node and host op[%s], cube node[%s], "
                       "input index %zu.",
-                      NodeName(*patternNode.cubeNode).c_str(), NodeName(*hostNode).c_str(), index);
+                      NodeName(*hostNode).c_str(), NodeName(*patternNode.cubeNode).c_str(), index);
             return ge::FAILED;
         }
     } else if (graph.AddDataEdge(*convWeightPeer.first, convWeightPeer.second, *hostNode,
@@ -1373,15 +1361,18 @@ ge::Status BiasOptimizeQuantRollbackBase::GetWeightNodesOfCubeNode(const ge::GNo
     const ge::GNodePtr cubeWeightInputNode = cubeWeightPeer.first;
     const std::string cubeWeightInputType = NodeType(*cubeWeightInputNode);
     const bool isRootGraphData = (cubeWeightInputType == kDataOpType) || (cubeWeightInputType == kRefDataOpType);
-    const auto firstInputPeer = cubeWeightInputNode->GetInDataNodesAndPortIndexs(0);
-    if (firstInputPeer.first == nullptr || isRootGraphData) {
+    ge::GNodePtr firstInputNode = nullptr;
+    if (!isRootGraphData && cubeWeightInputNode->GetInputsSize() > 0U) {
+        firstInputNode = cubeWeightInputNode->GetInDataNodesAndPortIndexs(0).first;
+    }
+    if (firstInputNode == nullptr) {
         OPS_LOG_D(kLogTag, "In caffe case, set ascend_weight_quant node to nullptr.");
         ascendWeightQuantNode = nullptr;
         weightConstNode = cubeWeightInputNode;
         return ge::SUCCESS;
     }
     ascendWeightQuantNode = cubeWeightInputNode;
-    weightConstNode = firstInputPeer.first;
+    weightConstNode = firstInputNode;
     return ge::SUCCESS;
 }
 
