@@ -123,7 +123,7 @@ aclnnStatus aclnnUniqueConsecutive(
       <td>数据类型与 self 一致</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。</td>
       <td>ND</td>
-      <td>与 self 保持一致</td>
+      <td>一维，缓冲区按self展平后的元素总数分配；实际输出长度为去重后的元素个数，由算子执行后动态回写</td>
       <td>√</td>
     </tr>
     <tr>
@@ -133,7 +133,7 @@ aclnnStatus aclnnUniqueConsecutive(
       <td>inverseOut 和 countsOut 的数据类型须一致。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>与 valueOut 保持一致</td>
+      <td>一维，缓冲区按self展平后的元素总数分配；returnInverse为true时实际输出长度为展平后元素总数，为false时为哑元输出</td>
       <td>√</td>
     </tr>
     <tr>
@@ -143,7 +143,7 @@ aclnnStatus aclnnUniqueConsecutive(
       <td>inverseOut 和 countsOut 的数据类型须一致。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>与 valueOut 保持一致</td>
+      <td>一维，缓冲区按self展平后的元素总数分配；实际输出长度为去重后的元素个数（returnCounts为true）或1（returnCounts为false），由算子执行后动态回写</td>
       <td>√</td>
     </tr>
     <tr>
@@ -203,8 +203,8 @@ aclnnStatus aclnnUniqueConsecutive(
       <td>传入的 self 或 valueOut 或 inverseOut 或 countsOut 是空指针时。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>self 或 valueOut 的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -215,6 +215,12 @@ aclnnStatus aclnnUniqueConsecutive(
     </tr>
     <tr>
       <td>inverseOut 和 countsOut 的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>self的维度数大于8。</td>
+    </tr>
+    <tr>
+      <td>dim不等于1000时，dim不在取值范围[-self.dim(), self.dim())内。</td>
     </tr>
   </tbody>
   </table>
@@ -346,7 +352,7 @@ int main() {
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> selfShape = {4, 2};
   std::vector<int64_t> valueShape = {8};
-  std::vector<int64_t> inverseShape = {4, 2};
+  std::vector<int64_t> inverseShape = {8};
   std::vector<int64_t> countsShape = {8};
   void* selfDeviceAddr = nullptr;
   void* valueDeviceAddr = nullptr;
@@ -362,7 +368,7 @@ int main() {
   std::vector<int64_t> countsHostData = {0, 0, 0, 0, 0, 0, 0, 0};
   bool returnInverse = false;
   bool returnCounts = false;
-  int64_t dim = 0;
+  int64_t dim = 1000;
 
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);

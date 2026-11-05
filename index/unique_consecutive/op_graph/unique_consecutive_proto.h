@@ -29,7 +29,7 @@ namespace ge {
 * @par Attributes:
 * @li return_idx: An optional bool. Whether to also return the indices. The default value is False. Currently only False
 is supported.
-* @li return_count: An optional bool. Whether to also return the counts for each element. The default is False.
+* @li return_counts: An optional bool. Whether to also return the counts for each element. The default is False.
 * @li axis: An optional int. Which one axis to apply unique. The default is 1000, which means None. Currently only 1000
 is supported.
 * @li out_idx: Output index/count's datatype. The default is DT_INT64.
@@ -40,7 +40,8 @@ is supported.
 * @li count: The counts of each value of "y".
 
 * @attention Constraints:
-* UniqueConsecutive runs on the Ascend AI CPU, which delivers poor performance.
+* UniqueConsecutive runs on the Ascend AI Core. Currently only the flatten mode (axis = 1000)
+* with return_idx = false is supported on the AI Core path.
 
 * @par Third-party framework compatibility
 * Compatible with the PyTorch operator UniqueConsecutive.
