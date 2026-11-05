@@ -129,9 +129,8 @@ TEST_F(GeluGradTilingTest, test_gelu_grad_tiling_fp16_001)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    auto tiling_key = tiling_context->GetTilingKey();
-    std::cout << tiling_key << std::endl;
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
+    EXPECT_FALSE(tiling_data_result.empty());
 }
 
 TEST_F(GeluGradTilingTest, test_gelu_grad_tiling_bf16_002)
@@ -197,8 +196,8 @@ TEST_F(GeluGradTilingTest, test_gelu_grad_tiling_bf16_002)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    auto tiling_key = tiling_context->GetTilingKey();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
+    EXPECT_FALSE(tiling_data_result.empty());
 }
 
 TEST_F(GeluGradTilingTest, test_gelu_grad_tiling_fp32_003)
@@ -265,8 +264,8 @@ TEST_F(GeluGradTilingTest, test_gelu_grad_tiling_fp32_003)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    auto tiling_key = tiling_context->GetTilingKey();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
+    EXPECT_FALSE(tiling_data_result.empty());
 }
 
 TEST_F(GeluGradTilingTest, test_gelu_grad_tiling_failed_dtype_input_output_diff_005)

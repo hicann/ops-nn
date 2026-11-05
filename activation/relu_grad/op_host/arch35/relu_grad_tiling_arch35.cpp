@@ -67,7 +67,7 @@ ge::graphStatus ReluGradTiling::DoOpTiling()
     } else if (inputDtype == ge::DT_INT64) {
         BroadcastBaseTiling<ReluGradDag<int64_t>::OpDag> brcBaseTiling(context_);
         status = brcBaseTiling.DoTiling();
-        tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), RELU_GRAD_TPL_INT32);
+        tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), RELU_GRAD_TPL_INT64);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(inputDtype),
                                   "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_UINT8, DT_INT32, DT_INT64");
