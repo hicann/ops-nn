@@ -22,10 +22,11 @@ namespace ge {
  * @brief Quant Batch Matmul Calculation With Inplace Add.
 * @par Inputs:
 * Five inputs, including:
-* @li x1: A tensor. Format supports ND. Must be one of the following types: hifloat8, float8_e5m2, float8_e4m3fn.
+* @li x1: A tensor. Format supports ND. Must be one of the following types: hifloat8, float8_e5m2, float8_e4m3fn,
+* float4_e2m1.
 * In ND format, the shape ranges from 2D to 6D. When transpose_x1 is false, the shape is (m,k), when
 * transpose_x1 is true, the shape is (k,m).
-* @li x2: A tensor. Must be one of the following types: hifloat8, float8_e5m2, float8_e4m3fn.
+* @li x2: A tensor. Must be one of the following types: hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1.
 * In ND format, the shape ranges from 2D to 6D. When transpose_x2 is false, the shape is (m,k), when
 * transpose_x1 is true, the shape is (k,m).
 * @li x2_scale: A tensor, quantization parameter. Must be float32 or float8_e8m0 dtype, supports ND format.
@@ -67,20 +68,21 @@ along the k-dimension.
 *\n
 | quant | x1 type | x2 type | x1_scale type | x2_scale type | y type |
 |-------|---------|---------|---------------|---------------|--------|
-| mx | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float8_e8m0 | float8_e8m0 | float32 |
+| mxfp8 | float8_e4m3fn/float8_e5m2 | float8_e4m3fn/float8_e5m2 | float8_e8m0 | float8_e8m0 | float32 |
+| mxfp4 | float4_e2m1 | float4_e2m1 | float8_e8m0 | float8_e8m0 | float32 |
 | tt | hifloat8 | hifloat8 | float32 | float32 | float32 |
 *\n
 | quant | x1 shape | x2 shape | x1_scale shape | x2_scale shape | y shape | group_size |
 |-------|----------|----------|----------------|----------------|---------|------------|
-| mx | (k,m) | (k,n) | (ceil(k/64),m,2) | (ceil(k/64),n,2) | (m,n) | [1, 1, 32] |
+| mxfp8/mxfp4 | (k,m) | (k,n) | (ceil(k/64),m,2) | (ceil(k/64),n,2) | (m,n) | [1, 1, 32] |
 | tt | (k,m) | (n,k) | (1) | (1) | (m,n) | 0 |
 *\n
 */
 #ifndef OPS_PROTO_DEF_QUANTBATCHMATMULINPLACEADD
 #define OPS_PROTO_DEF_QUANTBATCHMATMULINPLACEADD
 REG_OP(QuantBatchMatmulInplaceAdd)
-    .INPUT(x1, TensorType({DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
-    .INPUT(x2, TensorType({DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
+    .INPUT(x1, TensorType({DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
+    .INPUT(x2, TensorType({DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
     .INPUT(x2_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
     .INPUT(y, TensorType({DT_FLOAT}))
     .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
