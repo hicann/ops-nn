@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -192,4 +191,46 @@ TEST_F(foreach_addcmul_scalar_test, test_case_bfloat16_4)
     AscendC::GmFree((void*)tiling);
 
     system("cd ./addcmul_scalar_data/ && python3 compare_data.py 'bfloat16_t'");
+}
+
+// out 元素数大于 x1（numel 32 >= 24）的执行级用例：验证 kernel 只写前 x1 numel 个元素、out 尾部保持初始值
+TEST_F(foreach_addcmul_scalar_test, test_case_out_larger)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{4, 6}};
+    std::vector<std::vector<uint64_t>> outShapeInfos = {{32}};
+    system("cp -rf "
+           "../../../../foreach/foreach_addcmul_scalar/tests/ut/op_kernel/addcmul_scalar_data ./");
+    system("chmod -R 755 ./addcmul_scalar_data/");
+    system("cd ./addcmul_scalar_data/ && python3 gen_data.py '{{4, 6}}' 3 'float32' '{32}'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 1;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 1, 4);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = CreateTensorListForeachAddcmulScalar<float>(shapeInfos, "float32", "input");
+    uint8_t* tensor1 = CreateTensorListForeachAddcmulScalar<float>(shapeInfos, "float32", "tensor1");
+    uint8_t* tensor2 = CreateTensorListForeachAddcmulScalar<float>(shapeInfos, "float32", "tensor2");
+    uint8_t* out = CreateTensorListForeachAddcmulScalar<float>(outShapeInfos, "float32", "outinit");
+    uint8_t* scalar = (uint8_t*)AscendC::GmAlloc(sizeof(float));
+    *((float*)scalar) = 3;
+
+    ICPU_SET_TILING_KEY(2);
+    ICPU_RUN_KF(foreach_addcmul_scalar, blockDim, x1, tensor1, tensor2, scalar, out, workspace, tiling);
+
+    FreeTensorListForeachAddcmulScalar<float>(out, outShapeInfos, "float32");
+    AscendC::GmFree((void*)x1);
+    AscendC::GmFree((void*)scalar);
+    AscendC::GmFree((void*)tensor1);
+    AscendC::GmFree((void*)tensor2);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./addcmul_scalar_data/ && python3 compare_data.py 'float32'");
 }

@@ -109,7 +109,7 @@ aclnnStatus aclnnForeachDivScalar(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list of tensor x divided by tensor scalar, corresponding to `y` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape size is greater than or equal to that of input parameter `x`.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape is the same as that of input parameter `x`.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -163,16 +163,14 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>x, scalar, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data types of x, scalar, or out are not within the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="4">561002</td>
       <td>The shapes of x and out do not meet the constraints.</td>
     </tr>
     <tr>
@@ -182,6 +180,8 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>The data types of tensors in x or out are inconsistent.</td>
     </tr>
     <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
       <td>The number of elements in scalar is not 1.</td>
     </tr>
   </tbody></table>

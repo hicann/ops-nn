@@ -151,23 +151,23 @@ aclnnStatus aclnnForeachAsin(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>The data type of x or out is not supported.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td>The dimensions of the tensors in x or out exceed 8.</td>
+    </tr>
+    <tr>
+      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="2">561002</td>
       <td>The shapes of x and out do not meet the constraints.</td>
     </tr>
     <tr>
       <td>The data types of the tensors in x or out are inconsistent.</td>
-    </tr>
-    <tr>
-      <td>The dimensions of the tensors in x or out exceed 8.</td>
     </tr>
   </tbody></table>
 

@@ -213,3 +213,37 @@ TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_non_con
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
+
+// out 元素数大于 x1：实现要求严格同 shape，应拒绝
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_out_shape_larger_numel)
+{
+    auto alpha = ScalarDesc(1.0);
+    auto x1 = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto x1List = TensorListDesc({x1});
+    auto x2List = TensorListDesc({x2});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddListV2, INPUT(x1List, x2List, alpha), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 空 Tensor：实现不拦截空 Tensor，应放行
+TEST_F(l2_foreach_add_list_v2_test, ascend910B2_foreach_add_list_v2_test_empty_tensor)
+{
+    auto alpha = ScalarDesc(1.0);
+    auto x1 = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto x2 = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto x1List = TensorListDesc({x1});
+    auto x2List = TensorListDesc({x2});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddListV2, INPUT(x1List, x2List, alpha), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}

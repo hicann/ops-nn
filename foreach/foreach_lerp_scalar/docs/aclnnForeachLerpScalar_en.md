@@ -185,16 +185,14 @@ aclnnStatus aclnnForeachLerpScalar(
       <td>x1, x2, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data types of x1, x2, weight, and out are not within the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x1, x2, weight, and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
       <td>The shapes of x1, x2, and out do not satisfy the corresponding relationship.</td>
     </tr>
     <tr>

@@ -149,8 +149,8 @@ aclnnStatus aclnnForeachAsin(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -169,8 +169,6 @@ aclnnStatus aclnnForeachAsin(
       <td>x与out中对应位置的Tensor的shape不一致。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td>561002</td>
       <td>x或out中单个Tensor列表的Tensor数量超过256。</td>
     </tr>
   </tbody></table>

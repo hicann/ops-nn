@@ -51,7 +51,7 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-// self and out diffrent shape
+// self and out diffrent shape（out 元素数 >= x1：文档契约，应放行）
 TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_shape_different)
 {
     vector<vector<int64_t>> selfDims = {{2, 2}};
@@ -69,7 +69,7 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
     auto ut = OP_API_UT(aclnnForeachAddcmulScalarV2, INPUT(xList, x2List, x3List, scalar_desc), OUTPUT(outList));
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
 // self and x2 diffrent shape
@@ -214,4 +214,67 @@ TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+// out 元素数大于 x1：文档要求 shape size >=，应放行
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_out_shape_larger_numel)
+{
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    auto scalar_desc = ScalarDesc(1.0);
+    vector<vector<int64_t>> outDims = {{2, 4}};
+    auto x = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x3 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims[0], ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto x3List = TensorListDesc({x3});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcmulScalarV2, INPUT(xList, x2List, x3List, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+// out 与 x1 元素数相同但 shape 不同：文档要求 shape size >=，应放行
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_out_shape_same_numel)
+{
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    auto scalar_desc = ScalarDesc(1.0);
+    vector<vector<int64_t>> outDims = {{4}};
+    auto x = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x3 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims[0], ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto x3List = TensorListDesc({x3});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcmulScalarV2, INPUT(xList, x2List, x3List, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+// out 元素数小于 x1：应拒绝
+TEST_F(l2_foreach_addcmul_scalar_v2_test, ascend910B2_foreach_addcmul_scalar_v2_test_out_shape_smaller_numel)
+{
+    vector<vector<int64_t>> selfDims = {{2, 4}};
+    auto scalar_desc = ScalarDesc(1.0);
+    vector<vector<int64_t>> outDims = {{2, 2}};
+    auto x = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x3 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims[0], ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto x3List = TensorListDesc({x3});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcmulScalarV2, INPUT(xList, x2List, x3List, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }

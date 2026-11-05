@@ -52,7 +52,6 @@ static inline bool ForeachAddScalarCheckNotNull(const aclTensorList* self, const
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(scalar, return false);
     OP_CHECK_NULL(out, return false);
-    OP_CHECK_TENSORLIST_SIZE_EQUAL(self, out, return false);
     return true;
 }
 

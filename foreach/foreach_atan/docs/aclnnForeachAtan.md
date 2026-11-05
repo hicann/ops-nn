@@ -149,23 +149,23 @@ aclnnStatus aclnnForeachAtan(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td>x或out中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="2">561002</td>
       <td>x与out的shape不满足约束。</td>
     </tr>
     <tr>
       <td>x或out中的Tensor的数据类型不一致。</td>
-    </tr>
-    <tr>
-      <td>x或out中的Tensor维度超过8维。</td>
     </tr>
   </tbody></table>
 

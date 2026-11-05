@@ -89,7 +89,7 @@ aclnnStatus aclnnForeachAddListV2(
       <td>x1 (aclTensorList*)</td>
       <td>Input</td>
       <td>Indicates the first input tensor list of the addition operation. `x1` in the formula.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32, INT16, INT8, UINT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnForeachAddListV2(
       <td>x2 (aclTensorList*)</td>
       <td>Input</td>
       <td>Indicates the second input tensor list of the addition operation. `x2` in the corresponding formula.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type, data format, and shape are the same as those of input `x1`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type, data format, and shape are the same as those of input `x1`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32, INT16, INT8, UINT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnForeachAddListV2(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list that represents addition. Corresponds to `y` in the corresponding formula.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format must be the same as those of input `x1`, and the shape size must be greater than or equal to that of input `x1`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format must be the same as those of input `x1`, and the shape is the same as that of input `x1`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32, INT16, INT8, UINT8</td>
       <td>ND</td>
       <td>0-8</td>

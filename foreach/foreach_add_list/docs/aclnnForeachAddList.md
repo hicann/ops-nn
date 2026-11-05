@@ -118,7 +118,7 @@ aclnnStatus aclnnForeachAddList(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示加法运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -172,16 +172,14 @@ aclnnStatus aclnnForeachAddList(
       <td>传入的x1、x2、alpha、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x1、x2、alpha、out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x1、x2、out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="4">561002</td>
       <td>x1、x2、out的shape不满足约束。</td>
     </tr>
     <tr>
@@ -191,6 +189,8 @@ aclnnStatus aclnnForeachAddList(
       <td>x1、x2或out中的Tensor维度超过8维。</td>
     </tr>
     <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
       <td>alpha元素个数不为1。</td>
     </tr>
   </tbody></table>

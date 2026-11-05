@@ -120,7 +120,7 @@ aclnnStatus aclnnForeachAddList(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list that represents the addition operation. It corresponds to `y` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x1`, and the shape size is greater than or equal to that of input parameter `x1`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x1`, and the shape is the same as that of input parameter `x1`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32, INT16, INT8, UINT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -174,16 +174,14 @@ aclnnStatus aclnnForeachAddList(
       <td>x1, x2, alpha, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data type of x1, x2, alpha, or out is not supported.</td>
     </tr>
     <tr>
       <td>The data types of x1, x2, and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="4">561002</td>
       <td>The shapes of x1, x2, and out do not meet the constraints.</td>
     </tr>
     <tr>
@@ -193,6 +191,8 @@ aclnnStatus aclnnForeachAddList(
       <td>The dimensions of Tensors in x1, x2, or out exceed 8.</td>
     </tr>
     <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
       <td>The number of alpha elements is not 1.</td>
     </tr>
   </tbody></table>
