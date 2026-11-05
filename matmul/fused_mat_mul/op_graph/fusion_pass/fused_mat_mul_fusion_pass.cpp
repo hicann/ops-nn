@@ -76,6 +76,21 @@ using namespace ge::es;
 using namespace ge::fusion;
 using namespace fe;
 
+namespace fe {
+// The FE resolved precision mode holder (libaicore_utils): the same fe::Configuration::
+// GetPrecisionModeStr() the canndev FusedMatMulFusionPass reads (the explicit option, the v2
+// option form and the FE default branches, every signal lazily read inside). Declared WEAK on
+// purpose: the UT link interposes a strong definition of the same symbol (reading the injected
+// option map, the same interposition pattern as CustomPassContext::GetOptionValue), while the
+// plugin runtime resolves it from libaicore_utils - always loaded in-process (the
+// SetDefaultPrecisionMode / GetPrecisionModeFromGraph device logs come from this very lib).
+// The null case only guards a hypothetical runtime without the lib.
+class Configuration {
+public:
+    static std::string GetPrecisionModeStr() __attribute__((weak));
+};
+} // namespace fe
+
 namespace ops {
 namespace {
 
@@ -654,14 +669,39 @@ Status RunDirectPath(GraphPtr& graph, CustomPassContext& passContext)
 // set by the canndev FixPipeAbilityProcessPass (FORBIDDEN_CLOSE, always runs) and consumed by
 // the PostCubeUtils::GetPostCubeNodeList entry, the same collaboration the canndev pass relies on.
 
+// The resolved session precision mode via the FE (the exact fe::Configuration::
+// GetPrecisionModeStr() call the canndev pass makes): the explicit option (the
+// ge.exec.precision_mode / ge.exec.precision_mode_v2 keys, the v2 form included) or the FE
+// default branches (inference -> force_fp16, train -> must_keep_origin_dtype /
+// allow_fp32_to_fp16). Every signal is lazily read inside the FE (the session context options
+// via GetGeContextValue and the platform info), so the resolution needs no FE
+// pre-initialization and is timing-independent for the pass.
+// The device evidence for this single channel: with BOTH the option and the graph attr unset,
+// SetDefaultPrecisionMode resolves empty -> default[0] (force_fp16) inside the FE while
+// fe::FeGraphUtils::GetPrecisionModeFromGraph itself reads -1 from the graph and falls back to
+// this same internal resolution - no other channel carries the mode there.
+std::string ResolvePrecisionModeStr()
+{
+    using FeGetPrecisionModeStrFn = std::string (*)();
+    auto feGetPrecisionModeStr = static_cast<FeGetPrecisionModeStrFn>(&fe::Configuration::GetPrecisionModeStr);
+    if (feGetPrecisionModeStr != nullptr) {
+        return feGetPrecisionModeStr();
+    }
+    return "";
+}
+
 // Under force_fp16 on DAV_5102, the whole-FP32 chain is temporarily reduced to FP16 so the
 // dtype check can pass (the FE inserts the conversion nodes later); the descs are restored on
 // destruction when the fusion is rejected (RAII), aligned with canndev Fp16FusionPreparation.
 class Fp16FusionPreparation {
 public:
     Fp16FusionPreparation(const GNodePtr& matmulNode, const GNodePtr& reluNode, const GNodePtr& quantNode,
-                          const CustomPassContext& passContext)
-        : matmulNode_(matmulNode), reluNode_(reluNode), quantNode_(quantNode), passContext_(passContext)
+                          const CustomPassContext& passContext, const std::string& precisionMode)
+        : matmulNode_(matmulNode),
+          reluNode_(reluNode),
+          quantNode_(quantNode),
+          passContext_(passContext),
+          precisionMode_(precisionMode)
     {}
 
     ~Fp16FusionPreparation()
@@ -681,7 +721,7 @@ public:
     void Prepare()
     {
         // Only a consistently FP32 chain under force_fp16 needs the preparation.
-        if (GetPrecisionModeStr(passContext_) != kFp16FusionPrecisionMode || !CanReducePrecision(matmulNode_) ||
+        if (precisionMode_ != kFp16FusionPrecisionMode || !CanReducePrecision(matmulNode_) ||
             !CanReducePrecision(reluNode_) || !CanReducePrecision(quantNode_)) {
             return;
         }
@@ -829,6 +869,7 @@ private:
     GNodePtr reluNode_;
     GNodePtr quantNode_;
     const CustomPassContext& passContext_;
+    std::string precisionMode_;
     std::vector<DescBackup> descBackups_;
     bool committed_ = false;
 };
@@ -1233,6 +1274,10 @@ Status RunPostCubePath(GraphPtr& graph, CustomPassContext& passContext)
     FUSION_PASS_CHECK(matmulNodes.empty(), OPS_LOG_D(kPassName, "No matmul node found, exit."),
                       return GRAPH_NOT_CHANGED);
 
+    // The resolved session precision mode (via the FE): resolved once, the FE state does not
+    // change within one compilation.
+    const std::string precisionMode = ResolvePrecisionModeStr();
+
     bool changed = false;
     for (auto& matmulNode : matmulNodes) {
         if (IsMatmulSkippable(matmulNode)) {
@@ -1249,7 +1294,7 @@ Status RunPostCubePath(GraphPtr& graph, CustomPassContext& passContext)
         const GNodePtr matmulNodePtr = GetMatmulNodePtr(matmulNode);
         Fp16FusionPreparation fp16Preparation(
             (matmulNodePtr != nullptr) ? matmulNodePtr : std::make_shared<GNode>(matmulNode), prepareReluNode,
-            prepareQuantNode, passContext);
+            prepareQuantNode, passContext, precisionMode);
         fp16Preparation.Prepare();
 
         if (!CheckMatmulCommon(matmulNode, false)) {

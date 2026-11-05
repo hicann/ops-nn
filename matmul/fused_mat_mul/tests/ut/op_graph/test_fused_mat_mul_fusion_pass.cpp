@@ -54,6 +54,31 @@ graphStatus CustomPassContext::GetOptionValue(const AscendString& optionKey, Asc
 }
 } // namespace ge
 
+namespace fe {
+// UT interposition of the FE resolved precision mode: the pass resolves the mode via the weak
+// fe::Configuration::GetPrecisionModeStr symbol (the exact call the canndev pass makes), the
+// UT defines it strongly so the weak reference binds here (the same interposition pattern as
+// the CustomPassContext::GetOptionValue above) reading the same injected option map - the real
+// libaicore_utils is not loaded in the UT, and this keeps the precision mode scenarios
+// controllable (an empty map means "unset", the same precondition as the device run).
+class Configuration {
+public:
+    static std::string GetPrecisionModeStr();
+};
+
+std::string Configuration::GetPrecisionModeStr()
+{
+    const auto& options = ge::ut_detail::GetOptionsMap();
+    for (const char* key : {"ge.exec.precision_mode", "precision_mode"}) {
+        const auto it = options.find(key);
+        if (it != options.end()) {
+            return it->second;
+        }
+    }
+    return ""; // unset: the real FE would run its default branches here
+}
+} // namespace fe
+
 namespace {
 
 constexpr char kOpTypeFusedMatMul[] = "FusedMatMul";
@@ -1330,6 +1355,25 @@ TEST_F(FusedMatMulPostCubePathTest, postcubeForceFp16Fp32ChainFusesFp16)
     TensorDesc outputDesc;
     ASSERT_EQ(fusedMatMul->GetOutputDesc(0, outputDesc), GRAPH_SUCCESS);
     EXPECT_EQ(outputDesc.GetDataType(), DT_FLOAT16);
+}
+
+// The mode resolution is the FE interposition: no precision_mode entry in the injected option
+// map (the "unset" precondition, the same as the device run without any setting) resolves to
+// an empty mode, the FP16 preparation skips and the FP32 chain hits the s8s4 dtype table. On
+// the device the real fe::Configuration::GetPrecisionModeStr() would resolve the FE default
+// (force_fp16 for inference) instead - this UT pins the resolution-empty behavior only.
+TEST_F(FusedMatMulPostCubePathTest, postcubeFp32ChainNoModeNotFusedInUt)
+{
+    MatmulPostCubeParam param;
+    param.dtype = DT_FLOAT;
+    param.postOp = PostOp::RELU;
+    std::shared_ptr<Graph> graph = BuildMatmulPostOpGraph(param);
+
+    Status status = RunPostCubePass(graph);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeFusedMatMul), 0);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeMatMulV3), 1);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeRelu), 1);
 }
 
 // A customize_dtypes entry on the FusedMatMul op type forbids the precision reduction: the FP32
