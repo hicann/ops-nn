@@ -11,6 +11,7 @@
 from .quant_matmul_activation_quant import quant_matmul_activation_quant
 from .flat_quant import flat_quant
 from .rotate_quant import rotate_quant
+from .transpose_batch_mat_mul import transpose_batch_mat_mul
 from .transpose_quant_batch_mat_mul import transpose_quant_batch_mat_mul
 from .confidence_head_fused import confidence_head_fused
 
@@ -19,6 +20,7 @@ __all__ = [
     "quant_matmul_activation_quant",
     "flat_quant",
     "rotate_quant",
+    "transpose_batch_mat_mul",
     "transpose_quant_batch_mat_mul",
     "confidence_head_fused",
 ]

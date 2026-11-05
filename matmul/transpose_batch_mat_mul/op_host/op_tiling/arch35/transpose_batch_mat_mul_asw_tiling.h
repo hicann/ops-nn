@@ -45,13 +45,13 @@ private:
     void GetTransposeBatchMatMulInfo();
     void BaseLoadBalance();
     void ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN);
-    void CheckApiLevelAndModel();
+    void CheckModel();
 
     TBMMPermX1 permX1_ = TBMMPermX1::PERM_X1_0_1_2;
     TBMMPermX2 permX2_ = TBMMPermX2::PERM_X2_0_1_2;
     TBMMBatchSplit batchSplitMode_ = TBMMBatchSplit::BATCH_SPLIT_FALSE;
     TBMMModel model_{TBMMModel::TBMM_BASIC};
-    TBMMApiLevel apiLevel_{TBMMApiLevel::TBMM_HIGH_LEVEL};
+    TBMMApiLevel apiLevel_{TBMMApiLevel::TBMM_TENSOR_LEVEL};
     uint32_t batchSplitFactor_ = 1;
 };
 } // namespace transpose_batch_mat_mul_advanced

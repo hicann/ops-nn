@@ -94,17 +94,17 @@ void TransposeBatchMatMulAswTiling::BaseLoadBalance()
     }
 }
 
-void TransposeBatchMatMulAswTiling::CheckApiLevelAndModel()
+// DAV_RESV (unknown or unmapped npuArch) never reaches this tiling class: the
+// template above is registered only for DAV_3510/DAV_9201/DAV_9202, so
+// DAV_RESV keeps using the legacy tiling/kernel path.
+void TransposeBatchMatMulAswTiling::CheckModel()
 {
-    bool isNoSupportNpuArch = compileInfo_.npuArch == NpuArch::DAV_RESV;
-    bool isSplitK = MatMulV3TilingHelper::IsSplitSingleCoreK(compileInfo_, args_, !isNoSupportNpuArch);
+    bool isSplitK = MatMulV3TilingHelper::IsSplitSingleCoreK(compileInfo_, args_, true);
     if (isSplitK) {
         runInfo_.splitKBase = MatMulV3TilingHelper::SelectSplitKBase(context_, args_.mValue, args_.nValue, args_.kValue,
                                                                      runInfo_.baseK);
         model_ = TBMMModel::TBMM_BASIC_SPLIT_K;
     }
-
-    apiLevel_ = (!isNoSupportNpuArch) ? TBMMApiLevel::TBMM_TENSOR_LEVEL : TBMMApiLevel::TBMM_HIGH_LEVEL;
 }
 
 ge::graphStatus TransposeBatchMatMulAswTiling::DoOpTiling()
@@ -118,7 +118,7 @@ ge::graphStatus TransposeBatchMatMulAswTiling::DoOpTiling()
     }
     MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
     GetTransposeBatchMatMulInfo();
-    CheckApiLevelAndModel();
+    CheckModel();
     return ge::GRAPH_SUCCESS;
 }
 

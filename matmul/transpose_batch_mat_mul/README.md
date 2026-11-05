@@ -135,3 +135,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_transpose_batch_mat_mul](examples/test_aclnn_transpose_batch_mat_mul.cpp) | 通过<br>- [aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)<br>- [aclnnTransposeBatchMatMulWeightNz](docs/aclnnTransposeBatchMatMulWeightNz.md)<br>等方式调用TransposeBatchMatMul算子。|
+| torch接口  | [torchapi_transpose_batch_mat_mul](docs/torchapi_transpose_batch_mat_mul.md) | 通过`cann_ops_nn.transpose_batch_mat_mul`调用TransposeBatchMatMul算子，支持perm转置、batch_split_factor切分以及FLOAT16+scale的INT8量化输出，支持单算子模式与TorchAir图模式。|

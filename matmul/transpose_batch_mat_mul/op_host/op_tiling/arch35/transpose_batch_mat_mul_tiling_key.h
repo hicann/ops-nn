@@ -31,7 +31,7 @@ public:
     TBMMTilingKey& SetBatchSplitMode(TBMMBatchSplit batchSplitMode);
 
 private:
-    TBMMApiLevel apiLevel_ = TBMMApiLevel::TBMM_HIGH_LEVEL;
+    TBMMApiLevel apiLevel_ = TBMMApiLevel::TBMM_TENSOR_LEVEL;
     TBMMModel model_ = TBMMModel::TBMM_BASIC;
     TBMMPermX1 permX1_ = TBMMPermX1::PERM_X1_0_1_2;
     TBMMPermX2 permX2_ = TBMMPermX2::PERM_X2_0_1_2;

@@ -27,6 +27,7 @@ namespace {
     } while (0)
 const size_t kTransposeBatchMatMulScaleIdx = 3;
 const size_t kBlockSize = 128;
+constexpr static int64_t UNKNOWN_DIM = static_cast<int64_t>(-1);
 constexpr static int64_t UNKNOWN_DIM_NUM = static_cast<int64_t>(-2);
 constexpr static int64_t N_DIM_NUM = 2;
 
@@ -53,19 +54,33 @@ static bool CheckIsUnknownDimNum(const gert::Shape& shape)
     return shape.GetDimNum() == 1 && shape.GetDim(0) == UNKNOWN_DIM_NUM;
 }
 
+static inline bool SafeMul(int64_t lhs, int64_t rhs, int64_t& result)
+{
+    if (lhs == UNKNOWN_DIM || rhs == UNKNOWN_DIM) {
+        result = UNKNOWN_DIM;
+        return true;
+    }
+    return !__builtin_mul_overflow(lhs, rhs, &result);
+}
+
+static inline int64_t SafeDiv(int64_t lhs, int64_t rhs) { return (lhs == UNKNOWN_DIM) ? UNKNOWN_DIM : lhs / rhs; }
+
 static ge::graphStatus CheckScaleForTransposeBatchMatMul(const InferShapeContext* context,
                                                          const Shape& shape_x2_transposed)
 {
     const Shape* shape_scale = context->GetOptionalInputShape(kTransposeBatchMatMulScaleIdx);
-    if (shape_scale != nullptr && shape_scale->GetDimNum() == 1) {
-        int64_t scale_dim = shape_scale->GetDimNum();
-        CHECK(
-            shape_scale->GetDim(scale_dim - 1) !=
-                shape_x2_transposed.GetDim(0) * shape_x2_transposed.GetDim(2), // scale = batch * n
-            OP_LOGE(context->GetNodeName(), "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
-                    shape_x2_transposed.GetDim(0) * shape_x2_transposed.GetDim(2), shape_scale->GetDim(scale_dim - 1)),
-            return ge::GRAPH_FAILED);
+    if (shape_scale == nullptr || CheckIsUnknownDimNum(*shape_scale)) {
+        return ge::GRAPH_SUCCESS;
     }
+    CHECK(shape_scale->GetDimNum() != 1, OP_LOGE(context->GetNodeName(), "The scale tensor must be 1-dimensional."),
+          return ge::GRAPH_FAILED);
+    int64_t expected_scale_dim = 0;
+    CHECK(!SafeMul(shape_x2_transposed.GetDim(0), shape_x2_transposed.GetDim(2), expected_scale_dim),
+          OP_LOGE(context->GetNodeName(), "The dimension of n * b overflows int64."), return ge::GRAPH_FAILED);
+    CHECK(expected_scale_dim != UNKNOWN_DIM && shape_scale->GetDim(0) != expected_scale_dim,
+          OP_LOGE(context->GetNodeName(), "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
+                  expected_scale_dim, shape_scale->GetDim(0)),
+          return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -85,15 +100,20 @@ static ge::graphStatus SetShapeY(Shape& shape_y, const Shape& shape_x1_transpose
     if (has_scale_shape) {
         shape_y.SetDim(0, m_dim);
         shape_y.SetDim(1, 1);
-        shape_y.SetDim(N_DIM_NUM, batch_dim * n_dim);
+        int64_t scale_batch_n = 0;
+        CHECK(!SafeMul(batch_dim, n_dim, scale_batch_n),
+              CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] batch * n overflows int64."), return ge::GRAPH_FAILED);
+        shape_y.SetDim(N_DIM_NUM, scale_batch_n);
     }
 
     if (batch_split_factor > 1) {
         int64_t m = shape_y.GetDim(0);
-        int64_t batch_n = shape_y.GetDim(1) * shape_y.GetDim(2);
+        int64_t batch_n = 0;
+        CHECK(!SafeMul(shape_y.GetDim(1), shape_y.GetDim(2), batch_n),
+              CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] batch * n overflows int64."), return ge::GRAPH_FAILED);
         shape_y.SetDim(0, batch_split_factor);
         shape_y.SetDim(1, m);
-        shape_y.SetDim(2, batch_n / batch_split_factor); // 2 is dim index
+        shape_y.SetDim(2, SafeDiv(batch_n, batch_split_factor)); // 2 is dim index
     }
 
     Shape shape_y_transposed;
@@ -152,6 +172,13 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
 
     CHECK(CheckPermForTransposeBatchMatMul(*perm_x1, *perm_x2, *perm_y) != ge::GRAPH_SUCCESS,
           CUBE_INNER_ERR_REPORT(name_op, "[InferShape] Failed to check perm"), return ge::GRAPH_FAILED);
+
+    if (CheckIsUnknownDimNum(*shape_x1) || CheckIsUnknownDimNum(*shape_x2)) {
+        shape_y->SetDimNum(1);
+        shape_y->SetDim(0, UNKNOWN_DIM_NUM);
+        return ge::GRAPH_SUCCESS;
+    }
+
     Shape shape_x1_transposed;
     Shape shape_x2_transposed;
     CHECK(!TransposeShape(*shape_x1, *perm_x1, shape_x1_transposed),
@@ -159,17 +186,21 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
     CHECK(!TransposeShape(*shape_x2, *perm_x2, shape_x2_transposed),
           CUBE_INNER_ERR_REPORT(name_op, "[InferShape] Failed to transpose shape of x2"), return ge::GRAPH_FAILED);
 
-    CHECK(shape_x1_transposed.GetDim(2) != shape_x2_transposed.GetDim(1),
+    const int64_t k_dim_x1 = shape_x1_transposed.GetDim(2);
+    const int64_t k_dim_x2 = shape_x2_transposed.GetDim(1);
+    CHECK(k_dim_x1 != UNKNOWN_DIM && k_dim_x2 != UNKNOWN_DIM && k_dim_x1 != k_dim_x2,
           CUBE_INNER_ERR_REPORT(name_op, "The k-axis of the two inputs are different."), return ge::GRAPH_FAILED);
 
-    CHECK(shape_x1_transposed.GetDim(0) != shape_x2_transposed.GetDim(0),
+    const int64_t batch_dim_x1 = shape_x1_transposed.GetDim(0);
+    const int64_t batch_dim_x2 = shape_x2_transposed.GetDim(0);
+    CHECK(batch_dim_x1 != UNKNOWN_DIM && batch_dim_x2 != UNKNOWN_DIM && batch_dim_x1 != batch_dim_x2,
           CUBE_INNER_ERR_REPORT(name_op, "[InferShape] batch must be equal, transposed shape of x1 and x2 is %s, %s.",
                                 Ops::Base::ToString(shape_x1_transposed).c_str(),
                                 Ops::Base::ToString(shape_x2_transposed).c_str()),
           return ge::GRAPH_FAILED);
 
-    CHECK((*batch_split_factor <= 0 || *batch_split_factor > shape_x1_transposed.GetDim(0) ||
-           shape_x1_transposed.GetDim(0) % *batch_split_factor != 0),
+    CHECK(*batch_split_factor <= 0 || (batch_dim_x1 != UNKNOWN_DIM &&
+                                       (*batch_split_factor > batch_dim_x1 || batch_dim_x1 % *batch_split_factor != 0)),
           CUBE_INNER_ERR_REPORT(name_op, "batch_split_factor is not supported."), return ge::GRAPH_FAILED);
 
     auto* shape_scale = context->GetOptionalInputShape(kTransposeBatchMatMulScaleIdx);
@@ -177,12 +208,16 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
         CHECK(*batch_split_factor != 1,
               CUBE_INNER_ERR_REPORT(name_op, "batchSplitFactor should be 1 when the scale is not null."),
               return ge::GRAPH_FAILED);
-        CHECK(!CheckIsUnknownDimNum(*shape_scale) &&
-                  shape_scale->GetDim(0) != shape_x1_transposed.GetDim(0) * shape_x2_transposed.GetDim(2),
-              CUBE_INNER_ERR_REPORT(name_op, "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
-                                    shape_x1_transposed.GetDim(0) * shape_x2_transposed.GetDim(2),
-                                    shape_scale->GetDim(0)),
-              return ge::GRAPH_FAILED);
+        int64_t expected_scale_dim = 0;
+        CHECK(!SafeMul(batch_dim_x1, shape_x2_transposed.GetDim(2), expected_scale_dim),
+              CUBE_INNER_ERR_REPORT(name_op, "The dimension of n * b overflows int64."), return ge::GRAPH_FAILED);
+        if (!CheckIsUnknownDimNum(*shape_scale) && expected_scale_dim != UNKNOWN_DIM) {
+            CHECK(
+                shape_scale->GetDimNum() != 1 || shape_scale->GetDim(0) != expected_scale_dim,
+                CUBE_INNER_ERR_REPORT(name_op, "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
+                                      expected_scale_dim, shape_scale->GetDim(0)),
+                return ge::GRAPH_FAILED);
+        }
         auto tensor_x1 = context->GetInputDesc(0);
         auto tensor_x2 = context->GetInputDesc(1);
         CHECK(tensor_x1 == nullptr || tensor_x2 == nullptr, CUBE_INNER_ERR_REPORT(name_op, "x1 or x2 desc is null."),

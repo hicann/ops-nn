@@ -137,3 +137,4 @@ English | [简体中文](./README.md)
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn interface  | [test_aclnn_transpose_batch_mat_mul](examples/test_aclnn_transpose_batch_mat_mul.cpp) | Invokes the TransposeBatchMatMul operator through<br>- [aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul_en.md)<br>- [aclnnTransposeBatchMatMulWeightNz](docs/aclnnTransposeBatchMatMulWeightNZ_en.md)<br>and other methods.|
+| torch interface  | [torchapi_transpose_batch_mat_mul](docs/torchapi_transpose_batch_mat_mul_en.md) | Invokes the TransposeBatchMatMul operator through `cann_ops_nn.transpose_batch_mat_mul`; supports perm transpose, batch_split_factor splitting, and FLOAT16+scale INT8 quantization output; supports eager mode and TorchAir graph mode. |

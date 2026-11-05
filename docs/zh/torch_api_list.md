@@ -54,4 +54,5 @@
 |[fused_matmul](../../matmul/fused_mat_mul/docs/torchapi_fused_matmul.md)|矩阵乘与通用向量计算融合。|-|默认支持确定性计算|
 |[confidence_head_fused](../../matmul/confidence_head_fused/docs/torchapi_confidence_head_fused.md)|将hidden与可选markov_emb逻辑拼接后做矩阵向量乘，融合逐行bias、温度缩放、可选截断与Sigmoid，输出FP32置信度。|-|默认支持确定性计算|
 |[transpose_quant_batch_mat_mul](../../matmul/transpose_quant_batch_mat_mul/docs/torchapi_transpose_quant_batch_mat_mul.md)|完成张量x1与x2的量化矩阵乘计算，支持MX（MXFP8/MXFP4）、FP8（K-C，FLOAT8_E5M2/E4M3FN+float32 scale）与HIFP8（HIFLOAT8+uint64 scale）三种量化模式，输出FLOAT16/BFLOAT16结果。|-|默认支持确定性计算|
+|[transpose_batch_mat_mul](../../matmul/transpose_batch_mat_mul/docs/torchapi_transpose_batch_mat_mul.md)|完成三维张量x1与x2的矩阵乘计算，支持perm转置、batch_split_factor切分以及FLOAT16+scale的INT8量化输出。|默认支持确定性计算|默认支持确定性计算|
 |[gemm_syrk](../../matmul/gemm_syrk/docs/torchapi_gemm_syrk.md)|对称秩k更新：计算α乘以A与A转置的乘积，再与β和input C的乘积求和，原地更新对称矩阵C。|-|默认支持确定性计算|

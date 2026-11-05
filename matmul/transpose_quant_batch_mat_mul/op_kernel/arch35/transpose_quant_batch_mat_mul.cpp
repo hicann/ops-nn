@@ -14,19 +14,12 @@
  */
 #include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
 #include "transpose_quant_batch_mat_mul_tiling_key.h"
-#include "transpose_quant_batch_mat_mul_asw_kernel_advanced.h"
 #include "transpose_quant_batch_mat_mul_tiling_key_public.h"
-#include "transpose_quant_batch_mat_mul_asw_block_advanced.h"
 #include "transpose_quant_batch_mat_mul_mx.h"
 #include "transpose_quant_batch_mat_mul_fixpipe_quant.h"
 #include "transpose_quant_batch_mat_mul_mix.h"
 
-using namespace TransposeQuantBatchMatMulAdvanced;
-
 using namespace AscendC;
-using namespace matmul;
-
-#define DTYPE_LOC_LOCAL float
 
 #ifndef DTYPE_BIAS
 #define DTYPE_BIAS half
@@ -40,12 +33,10 @@ using namespace matmul;
 #define FORMAT_FRACTAL_NZ
 #endif
 
-constexpr CubeFormat format_x1 = CubeFormat::ND;
-constexpr CubeFormat format_y = CubeFormat::ND;
 #if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
-constexpr CubeFormat format_x2 = CubeFormat::NZ;
+constexpr bool X2_IS_FRACTAL_NZ = true;
 #else
-constexpr CubeFormat format_x2 = CubeFormat::ND;
+constexpr bool X2_IS_FRACTAL_NZ = false;
 #endif
 
 #define TQBMM_MX_BLAZE_IMPL_CLASS(aLayout, bLayout, cLayout)                                                           \
@@ -109,9 +100,8 @@ __global__ __aicore__ void transpose_quant_batch_mat_mul(GM_ADDR aGM, GM_ADDR bG
 
     using layoutA = AscendC::Std::conditional_t<aTran, asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn>;
     using layoutB = AscendC::Std::conditional_t<
-        bTran,
-        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), asc::te::zn_layout_ptn, asc::te::dn_ext_layout_ptn>,
-        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), asc::te::nz_layout_ptn, asc::te::nd_ext_layout_ptn>>;
+        bTran, AscendC::Std::conditional_t<X2_IS_FRACTAL_NZ, asc::te::zn_layout_ptn, asc::te::dn_ext_layout_ptn>,
+        AscendC::Std::conditional_t<X2_IS_FRACTAL_NZ, asc::te::nz_layout_ptn, asc::te::nd_ext_layout_ptn>>;
     // C GM layout
     using layoutC = asc::te::nd_ext_layout_ptn;
 

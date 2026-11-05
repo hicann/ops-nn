@@ -59,7 +59,7 @@ private:
     TQBMMPermX1 permX1_ = TQBMMPermX1::PERM_X1_1_0_2;
     TQBMMPermX2 permX2_ = TQBMMPermX2::PERM_X2_0_1_2;
     TQBMMBatchSplit batchSplitMode_ = TQBMMBatchSplit::BATCH_SPLIT_FALSE;
-    TQBMMApiLevel apiLevel_ = TQBMMApiLevel::HIGH_LEVEL;
+    TQBMMApiLevel apiLevel_ = TQBMMApiLevel::TENSOR_LEVEL;
     TQBMMPrecisionMode precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_FP8;
     uint32_t batchSplitFactor_ = 1;
     uint32_t scaleFactorA_ = 1;
