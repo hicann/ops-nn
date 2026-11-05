@@ -228,3 +228,80 @@ TEST_F(advance_step_test, test_advance_step_wide_block_tables)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 }
+
+static void RunLegacyQueryCase(int64_t kNumQueries)
+{
+    SCOPED_TRACE(kNumQueries);
+    const int64_t kNumSeqs = kNumQueries + 85;
+    constexpr int64_t kBlockSize = 16;
+    constexpr int64_t kTableStride = 8;
+    constexpr int64_t kNeedCoreNum = 40;
+    const size_t seqSize = kNumSeqs * sizeof(int64_t);
+    const size_t querySize = kNumQueries * sizeof(int64_t);
+    const size_t tableSize = kNumSeqs * kTableStride * sizeof(int64_t);
+    uint8_t* input_tokens = (uint8_t*)AscendC::GmAlloc(seqSize);
+    uint8_t* sampled_token_ids = (uint8_t*)AscendC::GmAlloc(querySize);
+    uint8_t* input_positions = (uint8_t*)AscendC::GmAlloc(seqSize);
+    uint8_t* seq_lens = (uint8_t*)AscendC::GmAlloc(seqSize);
+    uint8_t* slot_mapping = (uint8_t*)AscendC::GmAlloc(seqSize);
+    uint8_t* block_tables = (uint8_t*)AscendC::GmAlloc(tableSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16781184);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(AdvanceStepTilingDataTest));
+    std::vector<int64_t> tokens(kNumSeqs, -7), sampled(kNumQueries), positions(kNumSeqs, -7), lengths(kNumSeqs),
+        slots(kNumSeqs, -9), tables(kNumSeqs * kTableStride);
+    for (int64_t i = 0; i < kNumSeqs; ++i) {
+        lengths[i] = 3 + i % 60;
+    }
+    for (int64_t i = 0; i < kNumQueries; ++i) {
+        sampled[i] = 7000 + i;
+    }
+    for (int64_t i = 0; i < kNumSeqs * kTableStride; ++i) {
+        tables[i] = 1000 + i;
+    }
+    memcpy(input_tokens, tokens.data(), seqSize);
+    memcpy(sampled_token_ids, sampled.data(), querySize);
+    memcpy(input_positions, positions.data(), seqSize);
+    memcpy(seq_lens, lengths.data(), seqSize);
+    memcpy(slot_mapping, slots.data(), seqSize);
+    memcpy(block_tables, tables.data(), tableSize);
+    auto* tilingData = reinterpret_cast<AdvanceStepTilingDataTest*>(tiling);
+    tilingData->needCoreNum = kNeedCoreNum;
+    tilingData->blockTablesStride = kTableStride;
+    tilingData->numSeqs = kNumSeqs;
+    tilingData->numQueries = kNumQueries;
+    tilingData->blockSize = kBlockSize;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_SET_TILING_KEY(1);
+    ICPU_RUN_KF(advance_step, 1, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables,
+                nullptr, nullptr, input_tokens, input_positions, seq_lens, slot_mapping, workspace,
+                (uint8_t*)tilingData);
+    for (int64_t i = 0; i < kNumQueries; ++i) {
+        EXPECT_EQ(reinterpret_cast<int64_t*>(input_tokens)[i], sampled[i]);
+        EXPECT_EQ(reinterpret_cast<int64_t*>(seq_lens)[i], lengths[i] + 1);
+        EXPECT_EQ(reinterpret_cast<int64_t*>(input_positions)[i], lengths[i]);
+        int64_t offset = lengths[i];
+        EXPECT_EQ(reinterpret_cast<int64_t*>(slot_mapping)[i],
+                  tables[i * kTableStride + offset / kBlockSize] * kBlockSize + offset % kBlockSize);
+    }
+    for (int64_t i = kNumQueries; i < kNumSeqs; ++i) {
+        EXPECT_EQ(reinterpret_cast<int64_t*>(input_tokens)[i], 0);
+        EXPECT_EQ(reinterpret_cast<int64_t*>(input_positions)[i], 0);
+        EXPECT_EQ(reinterpret_cast<int64_t*>(slot_mapping)[i], -1);
+        EXPECT_EQ(reinterpret_cast<int64_t*>(seq_lens)[i], lengths[i]);
+    }
+    AscendC::GmFree(input_tokens);
+    AscendC::GmFree(sampled_token_ids);
+    AscendC::GmFree(input_positions);
+    AscendC::GmFree(seq_lens);
+    AscendC::GmFree(slot_mapping);
+    AscendC::GmFree(block_tables);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(advance_step_test, test_advance_step_all_queries_and_padding)
+{
+    for (int64_t numQueries : {1, 2, 39, 40, 41, 80, 100, 101, 257}) {
+        RunLegacyQueryCase(numQueries);
+    }
+}

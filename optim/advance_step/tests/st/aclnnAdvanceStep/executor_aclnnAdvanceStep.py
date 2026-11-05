@@ -47,8 +47,6 @@ class FunctionAdanceStep(BaseApi):
         slot_mapping,
         block_tables,
     ):
-        core_num = 40
-
         logging.info(
             f"****************************************input_tokens {input_tokens} "
         )
@@ -60,22 +58,12 @@ class FunctionAdanceStep(BaseApi):
             f"****************************************slot_mapping {slot_mapping} "
         )
 
-        for blockIdx in range(core_num):
-            n_pad = num_seqs - num_queries
-            if n_pad > 0 and blockIdx == 0:
-                offset = num_queries
-                i = 0
-                while i < n_pad:
-                    input_tokens[offset + i] = 0
-                    input_positions[offset + i] = 0
-                    slot_mapping[offset + i] = -1
-                    i += core_num
-            num_query_blocks = num_queries // 1
-            if blockIdx >= num_query_blocks:
-                break
-            cur_query_id = blockIdx * 1 + 0
-            if cur_query_id >= num_queries:
-                break
+        for index in range(num_queries, num_seqs):
+            input_tokens[index] = 0
+            input_positions[index] = 0
+            slot_mapping[index] = -1
+
+        for cur_query_id in range(num_queries):
             input_tokens[cur_query_id] = sampled_token_ids[cur_query_id]
             seq_len = seq_lens[cur_query_id]
             next_seq_len = seq_len + 1

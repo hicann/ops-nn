@@ -30,7 +30,7 @@
 - 计算公式：
 
   $$
-  blockIdx是当前代码被执行的核的index。
+  blockIdx是当前查询序列的索引，取值范围为0到numQueries-1，与AIV核数无关。
   $$
 
   $$

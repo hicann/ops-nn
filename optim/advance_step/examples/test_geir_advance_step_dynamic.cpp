@@ -65,8 +65,7 @@ namespace {
 
 constexpr int kSuccess = 0;
 constexpr int kFailed = -1;
-constexpr int kBlocked = 2;              // all runs rejected by framework forward-compatibility check
-constexpr int64_t kV1PaddingStride = 64; // mirrors golden plugin padding stride
+constexpr int kBlocked = 2; // all runs rejected by framework forward-compatibility check
 
 using ShapeVector = std::vector<int64_t>;
 
@@ -255,7 +254,7 @@ GoldenOutputs ComputeV1Golden(const V1Feeds& feeds)
         out.slotMapping[static_cast<size_t>(i)] = physicalBlock * blockSize + blockOffset;
     }
     const int64_t nPad = numSeqs - numQueries;
-    for (int64_t k = 0; k < nPad; k += kV1PaddingStride) {
+    for (int64_t k = 0; k < nPad; ++k) {
         const int64_t idx = numQueries + k;
         out.tokens[static_cast<size_t>(idx)] = 0;
         out.positions[static_cast<size_t>(idx)] = 0;
