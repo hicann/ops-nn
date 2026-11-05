@@ -230,12 +230,22 @@ aclnnStatus aclnnDequantSwigluQuant(
   </tbody>
   </table>
 
-  <!-- npu="910b" id7 -->
-  - <term>Atlas A2 products</term>:
+  <!-- npu="A3,910b" id7 -->
+  - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
     - In the parameter weightScaleOptional, shape is represented as [H], and the value of H keeps consistent with the last dimension of x.
     - In the parameter activationScaleOptional, shape is [N..., 1], the last dimension is 1, and other dimensions keep consistent with x.
-    - In the parameter quantScaleOptional, shape is represented as shape[1] when quantModeOptional is static; when quantModeOptional is dynamic, the number of shape dimensions is 1, the value is half of the last dimension of x, and shape is represented as shape[H/2]. Optional parameter, which supports passing a null pointer.
-    - In the parameter quantOffsetOptional, when quantModeOptional is static, shape has 1 dimension, the value is 1, and shape is represented as shape[1]; when quantModeOptional is dynamic, the number of shape dimensions is 1, the value is half of the last dimension of x, and shape is represented as shape[H/2]. Optional parameter, which supports passing a null pointer.
+    - In the quantScaleOptional parameter, the shape validation rules are determined by whether groupIndexOptional is a null pointer and by the value of quantModeOptional (H is the last dimension of x, and H must be an even number):
+      - When groupIndexOptional is a null pointer, the rules are the same for static and dynamic: a null pointer is supported; if not null, the number of elements is validated and must be H/2 (per channel) or 1 (per tensor), with no limit on the number of dimensions.
+      - When groupIndexOptional is not a null pointer (groupNum is the first dimension of groupIndexOptional):
+        - static: mandatory. The shape is [groupNum] (one quantization parameter per group) or [groupNum, H/2] (per channel per group). quantOffsetOptional must follow the same shape rules.
+        - dynamic: optional. If not null, the shape is [H/2] or [1, H/2] (when groupNum is 1), or [groupNum, H/2] (when groupNum is greater than 1, the first dimension must be groupNum).
+    - In the quantOffsetOptional parameter, its constraints are also determined by whether groupIndexOptional is a null pointer and by the value of quantModeOptional (H is the last dimension of x):
+      - When groupIndexOptional is a null pointer:
+        - static: if quantScaleOptional is a null pointer, this parameter does not take effect, and passing a null pointer is recommended; if quantScaleOptional is not a null pointer, this parameter is mandatory and its data type must be FLOAT. The number of elements is validated and must be H/2 (per channel) or 1 (per tensor), with no limit on the number of dimensions.
+        - dynamic: this parameter does not take effect, and passing a null pointer is recommended.
+      - When groupIndexOptional is not a null pointer (groupNum is the first dimension of groupIndexOptional):
+        - static: mandatory, and the data type and shape must be the same as those of quantScaleOptional.
+        - dynamic: must be a null pointer.
     - In the parameter quantModeOptional, "dynamic" and "static" are supported.
   <!-- end id7 -->
   <!-- npu="950" id8 -->
@@ -343,10 +353,10 @@ aclnnStatus aclnnDequantSwigluQuant(
 - deterministic computation:
   - aclnnDequantSwigluQuant defaults to a deterministic implementation.
 
-<!-- npu="910b" id9 -->
-- <term>Atlas A2 products</term>:
+<!-- npu="A3,910b" id9 -->
+- <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
   - The last dimension of x must be a multiple of 2, and the dimension of x must be greater than 1.
-  - When quantModeOptional is static, quantScaleOptional and quantOffsetOptional are 1-dimensional with a value of 1. When quantModeOptional is dynamic, quantScaleOptional and quantOffsetOptional are 1-dimensional with a value equal to the last dimension of x divided by 2.
+  - The operator imposes an upper limit on the memory size of input tensors. Verification formula: weightScaleOptional tensor memory size + biasOptional tensor memory size + quantScaleOptional tensor memory size + quantOffsetOptional tensor memory size + (activationScaleOptional tensor memory size + scaleOut tensor memory size) / 40 + x tensor last dimension H memory size * 10 < 192 KB.
 <!-- end id9 -->
 <!-- npu="950" id10 -->
 - <term>Ascend 950PR&950DT products</term>:
@@ -356,10 +366,6 @@ aclnnStatus aclnnDequantSwigluQuant(
   - When the data type of input x is not INT32, biasOptional is not allowed and a null pointer must be passed.
   - The trailing axis of output yOut must not exceed 5120.
 <!-- end id10 -->
-
-<!-- npu="A3,910b" id11 -->
-- <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: The operator imposes an upper limit on the memory size of input tensors. Verification formula: weightScaleOptional tensor memory size + biasOptional tensor memory size + quantScaleOptional tensor memory size + quantOffsetOptional tensor memory size + (activationScaleOptional tensor memory size + scaleOut tensor memory size) / 40 + x tensor last dimension H memory size * 10 < 192 KB.
-<!-- end id11 -->
 
 ## Example
 

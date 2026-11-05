@@ -251,7 +251,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>quantScaleOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Scale for quantization, corresponding to quantScaleOptional in the formula.</td>
-      <td><ul><li>If quantModeOptional is static, the shape is 1D with a value of 1, represented as shape[1].</li><li>If quantModeOptional is dynamic, the shape is 1D or 2D, represented as [H], [2H], or [groupNum, H].</li><li>If groupIndexOptional is a null pointer and activateDim is the trailing axis, the shape is [H].</li><li>If groupIndexOptional is not a null pointer and activateDim is the trailing axis, the shape is [groupNum, H].</li></ul></td>
+      <td><ul><li>Optional parameter, supports passing a null pointer. It is mandatory when quantModeOptional is static.</li><li>The shape is 1D or 2D. For details about the constraints, see the product-specific description below.</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -261,7 +261,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>quantOffsetOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Quantization offset.</td>
-      <td><ul><li>When quant_mode is dynamic, the quantOffset input is not required. For static quantization, quantOffset is required, and its data type and shape are the same as those of quantScale.</li></ul></td>
+      <td><ul><li>Optional parameter, supports passing a null pointer. It is supported only when quantModeOptional is static; passing a non-null pointer in dynamic mode causes an error.</li><li>The shape is 1D or 2D. For details about the constraints, see the product-specific description below.</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -413,12 +413,32 @@ aclnnStatus aclnnDequantSwigluQuantV2(
   <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
     - For x, only 2-dimensional inputs with data type INT32 or BFLOAT16 are supported.
-    - quantScaleOptional parameter: when quantModeOptional is static, the shape is [groupNum] or [groupNum, H]; when quantModeOptional is dynamic, the shape is [groupNum] or [groupNum, H].
-    - groupIndexOptional parameter: only 1-D [groupNum] input is supported, and null pointers are not supported.
+    - quantScaleOptional parameter: the shape validation rules depend on whether groupIndexOptional is a null pointer and on the value of quantModeOptional (H is half of the last dimension of x, that is, the last dimension of y):
+      - When groupIndexOptional is a null pointer (in this case quantModeOptional supports only dynamic), a null pointer is supported; if not null, the shape is [H] or [1, H].
+      - When groupIndexOptional is not a null pointer (groupNum is the first dimension of groupIndexOptional):
+        - static: mandatory. The shape is [groupNum] (one quant parameter per group) or [groupNum, H] (per channel per group). quantOffsetOptional must follow the same shape rules.
+        - dynamic: optional. If not null, the shape is [H] or [1, H] when groupNum is 1, or [groupNum, H] when groupNum is greater than 1 (the first dimension must be groupNum).
+    - quantOffsetOptional parameter: its constraints also depend on whether groupIndexOptional is a null pointer and on the value of quantModeOptional (H is half of the last dimension of x, that is, the last dimension of y):
+      - When groupIndexOptional is a null pointer, it must be a null pointer.
+      - When groupIndexOptional is not a null pointer (groupNum is the first dimension of groupIndexOptional):
+        - static: mandatory, and the data type and shape must be the same as those of quantScaleOptional.
+        - dynamic: must be a null pointer.
+    - groupIndexOptional parameter: only INT64 is supported. This parameter is optional and a null pointer is supported. The shape can be 1-D or 2-D: 1-D is [groupNum], where each element indicates the number of tokens in the group; 2-D is [groupNum, 2], where each row indicates [realGroupIdx, count]. When x is BFLOAT16, only the 1-D shape is supported; the 2-D shape cannot be used together with biasOptional or a non-zero swigluMode.
+    - biasOptional parameter: when groupIndexOptional is a null pointer and swigluMode is not 0, biasOptional is not supported and a null pointer must be passed.
     - dstType parameter: only 2-INT8 input is supported.
     - roundModeOptional parameter: only a null pointer or "rint" is supported.
     - activateDim parameter: only -1 is supported.
   <!-- end id7 -->
+  <!-- npu="950" id11 -->
+  - <term>Ascend 950PR&950DT products</term>:
+    - In the quantScaleOptional parameter, the data type must be FLOAT and the shape must be 1D or 2D. The parameter is mandatory when quantModeOptional is static and supports a null pointer in dynamic mode (H is the last dimension of y):
+      - When groupIndexOptional is a null pointer, the shape is [1] or [H] in static mode and [H] or [1, H] in dynamic mode.
+      - When groupIndexOptional is not a null pointer (groupNum is the first dimension of groupIndexOptional), the first dimension must be groupNum in static mode and the shape is [groupNum] or [groupNum, H] (the last dimension is H or 1); in dynamic mode, the shape must be [groupNum, H].
+    - In the quantOffsetOptional parameter, the data type must be FLOAT and the shape must be 1D or 2D. The parameter is optional and is supported only when quantModeOptional is static; passing a non-null pointer in dynamic mode causes an error:
+      - When groupIndexOptional is a null pointer, the shape is [1] or [H].
+      - When groupIndexOptional is not a null pointer (groupNum is the first dimension of groupIndexOptional), the first dimension must be groupNum and the shape is [groupNum] or [groupNum, H] (the last dimension is H or 1).
+      - When both quantScaleOptional and quantOffsetOptional are provided, they must have the same number of elements.
+  <!-- end id11 -->
 
 - **Return value**
 

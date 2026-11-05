@@ -232,9 +232,19 @@ aclnnStatus aclnnDequantSwigluQuant(
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - weightScaleOptional参数中，shape表示为[H]，且取值H和x最后一维保持一致。
     - activationScaleOptional参数中，shape为[N..., 1]，最后一维为1，其余和x保持一致。
-    - quantScaleOptional参数中，当quantModeOptional为static时，shape表示为shape[1]；quantModeOptional为dynamic时，shape维度为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
-    - quantOffsetOptional参数中，当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]；quantModeOptional为dynamic时，shape维度为1维，值为x的最后一维的二分之一，shape表示为shape[H/2]。可选参数，支持传空指针。
-    - quantModeOptional参数中，支持“dynamic”和“static"。
+    - quantScaleOptional参数中，shape的校验规则由groupIndexOptional是否为空和quantModeOptional的取值共同决定（H为x的最后一维，且H需为偶数）：
+      - groupIndexOptional为空指针时，static和dynamic规则一致：可传空指针；非空时按元素总数校验，shape的元素个数必须为H/2（逐channel）或1（逐tensor），不限制维数。
+      - groupIndexOptional不为空指针时（groupNum为groupIndexOptional的第0维）：
+        - static：必须输入，shape为[groupNum]（每组一个量化参数）或[groupNum, H/2]（每组逐channel），quantOffsetOptional需采用相同的shape规则。
+        - dynamic：可传空指针；非空时shape为[H/2]或[1, H/2]（groupNum为1时），或[groupNum, H/2]（groupNum大于1时，第0维必须等于groupNum）。
+    - quantOffsetOptional参数中，其约束同样由groupIndexOptional是否为空和quantModeOptional的取值决定（H为x的最后一维）：
+      - groupIndexOptional为空指针时：
+        - static：当quantScaleOptional为空指针时，该参数不生效，建议传空指针；当quantScaleOptional不为空指针时，该参数必须输入，数据类型需为FLOAT，shape按元素总数校验，元素个数必须为H/2（逐channel）或1（逐tensor），不限制维数。
+        - dynamic：该参数不生效，建议传空指针。
+      - groupIndexOptional不为空指针时（groupNum为groupIndexOptional的第0维）：
+        - static：必须输入，数据类型和shape需与quantScaleOptional一致。
+        - dynamic：必须传空指针。
+    - quantModeOptional参数中，支持“dynamic”和“static”。
   <!-- end id7 -->
 
   <!-- npu="950" id8 -->
@@ -350,8 +360,8 @@ aclnnStatus aclnnDequantSwigluQuant(
 
 <!-- npu="A3,910b" id9 -->
 - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
-  - x的最后一维需要是2的倍数，且x的维度必须大于1维。
-  - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维度为1维，值为x的最后一维除以2。
+  - x的最后一维需要是2的倍数，且x的维数必须大于1维。
+  - 算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 +（activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
 <!-- end id9 -->
 
 <!-- npu="950" id10 -->
@@ -362,10 +372,6 @@ aclnnStatus aclnnDequantSwigluQuant(
   - 当输入x的数据类型不为INT32时，biasOptional不允许输入，传入空指针。
   - 输出yOut的尾轴不超过5120。
 <!-- end id10 -->
-
-<!-- npu="A3,910b" id11 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 +（activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
-<!-- end id11 -->
 
 ## 调用示例
 

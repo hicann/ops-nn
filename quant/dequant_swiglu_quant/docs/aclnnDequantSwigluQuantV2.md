@@ -249,7 +249,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>quantScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的scale，公式中的quantScaleOptional。</td>
-      <td><ul><li>当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]。</li><li>当quantModeOptional为dynamic时，shape为1维或2维，shape表示为[H], [2H]或[groupNum, H]。</li><li>当groupIndexOptional为空指针且activateDim为尾轴时，shape为[H]。</li><li>当groupIndexOptional不为空指针且activateDim为尾轴时，shape为[groupNum, H]。</li></ul></td>
+      <td><ul><li>可选参数，支持传空指针；当quantModeOptional为static时必须输入。</li><li>shape支持1维或2维，具体约束见下方各产品说明。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -259,7 +259,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>quantOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的offset。</td>
-      <td><ul><li>quant_mode为动态时不需要quantOffset输入，静态量化中quantOffset必须输入，且数据类型与shape同quantScale。</li></ul></td>
+      <td><ul><li>可选参数，支持传空指针；仅在quantModeOptional为static时支持，dynamic时传入非空指针会报错。</li><li>shape支持1维或2维，具体约束见下方各产品说明。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
@@ -410,13 +410,33 @@ aclnnStatus aclnnDequantSwigluQuantV2(
 
   <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
-    - x参数中，数据类型支持FLOAT16、BFLOAT16、INT32；当groupIndexOptional不为空指针时，仅支持BFLOAT16、INT32。
-    - quantScaleOptional参数中，当quantModeOptional为static时，shape表示为[groupNum]或[groupNum, H]，当quantModeOptional为dynamic时，shape表示为[groupNum]或[groupNum, H]。
-    - groupIndexOptional参数中，支持输入为1维[groupNum]，可选参数，支持传空指针。
+    - x参数中，仅支持输入为2维，数据类型为INT32、BFLOAT16。
+    - quantScaleOptional参数中，shape的校验规则由groupIndexOptional是否为空和quantModeOptional的取值共同决定（H为x最后一维的一半，即y的最后一维）：
+      - groupIndexOptional为空指针时（此时quantModeOptional仅支持dynamic）：可传空指针；非空时shape为[H]或[1, H]。
+      - groupIndexOptional不为空指针时（groupNum为groupIndexOptional的第0维）：
+        - static：必须输入，shape为[groupNum]（每组一个量化参数）或[groupNum, H]（每组逐channel），quantOffsetOptional需采用相同的shape规则。
+        - dynamic：可传空指针；非空时shape为[H]或[1, H]（groupNum为1时），或[groupNum, H]（groupNum大于1时，第0维必须等于groupNum）。
+    - quantOffsetOptional参数中，其约束同样由groupIndexOptional是否为空和quantModeOptional的取值决定（H为x最后一维的一半，即y的最后一维）：
+      - groupIndexOptional为空指针时：必须传空指针。
+      - groupIndexOptional不为空指针时（groupNum为groupIndexOptional的第0维）：
+        - static：必须输入，数据类型和shape需与quantScaleOptional一致。
+        - dynamic：必须传空指针。
+    - groupIndexOptional参数中，仅支持INT64。可选参数，支持传空指针。shape支持1维或2维：1维为[groupNum]，每个元素表示该组的token数；2维为[groupNum, 2]，每行表示[realGroupIdx, count]。当x为BFLOAT16时仅支持1维；2维不支持与biasOptional或非0的swigluMode同时使用。
+    - biasOptional参数中，当groupIndexOptional为空指针且swigluMode不为0时，不允许输入biasOptional，必须传入空指针。
     - dstType参数中，仅支持输入为2-INT8。
     - roundModeOptional参数中，仅支持输入为空指针或“rint”。
     - activateDim参数中，仅支持-1。
   <!-- end id7 -->
+  <!-- npu="950" id11 -->
+  - <term>Ascend 950PR&950DT系列产品</term>：
+    - quantScaleOptional参数中，数据类型需为FLOAT，shape支持1维或2维；quantModeOptional为static时必须输入，为dynamic时可传空指针（H为y的最后一维）：
+      - groupIndexOptional为空指针时：static下shape为[1]或[H]；dynamic下shape为[H]或[1, H]。
+      - groupIndexOptional不为空指针时（groupNum为groupIndexOptional的第0维）：static下第0维必须为groupNum，shape为[groupNum]或[groupNum, H]（2维时最后一维为H或1）；dynamic下shape必须为[groupNum, H]。
+    - quantOffsetOptional参数中，数据类型需为FLOAT，shape支持1维或2维，仅在quantModeOptional为static时支持（dynamic下传入非空指针会报错），可选：
+      - groupIndexOptional为空指针时：shape为[1]或[H]。
+      - groupIndexOptional不为空指针时（groupNum为groupIndexOptional的第0维）：第0维必须为groupNum，shape为[groupNum]或[groupNum, H]（2维时最后一维为H或1）。
+      - quantScaleOptional和quantOffsetOptional同时存在时，两者的元素总数必须相同。
+  <!-- end id11 -->
 
 - **返回值：**
 
