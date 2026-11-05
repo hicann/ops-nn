@@ -797,7 +797,7 @@ TEST_F(l2_rotate_quant_test, ascend350_rotate_quant_v2_null_groups_keep_legacy_m
 // hif4: bf16 x, K=64, scale shape (M, CeilDiv(N,64), 1)
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_bf16_k64_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -812,7 +812,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_bf16_k64_success)
 // hif4: fp16 x, K=128, scale shape (M, CeilDiv(N,64), 1) = (4, 2, 1)
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_fp16_k128_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({128, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 128}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -827,7 +827,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_fp16_k128_success)
 // hif4 success: V2接口(groupList为空)与V1同走hif4校验路径
 TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_v2_hif4_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -843,7 +843,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_v2_hif4_success)
 // hif4 success: 3D x, yOut与x逐维同shape, scale为(*, CeilDiv(N,64), 1)
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_3d_x_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({2, 4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({2, 4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -858,7 +858,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_3d_x_success)
 // hif4 success: 空tensor(含0维)走快速返回
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_empty_tensor_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({0, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({0, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -873,7 +873,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_empty_tensor_success)
 // hif4 fail: 3D rot not allowed (hif4 only supports 2D rotation, per-axis=-1 quant)
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_bf16_k64_3d_rot_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 128}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({2, 64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 128}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -890,7 +890,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_bf16_k64_3d_rot_fail)
 // mxfp4: bf16 x, K=64, scaleAlg=0, scale shape (M, CeilDiv(N,64), 2)
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_bf16_k64_alg0_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
@@ -905,7 +905,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_bf16_k64_alg0_success)
 // mxfp4: fp16 x, K=128, scaleAlg=2, dstTypeMax=8.0, scale shape (4, 2, 2)
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_fp16_k128_alg2_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({128, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
@@ -920,7 +920,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_fp16_k128_alg2_success)
 // mxfp4: bf16 x, K=32, scaleAlg=0, scale shape (8, 2, 2) (N=96, CeilDiv(96,64)=2)
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_bf16_k32_n96_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({8, 96}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({32, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({8, 96}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
@@ -937,7 +937,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_bf16_k32_n96_success)
 // mxfp8: fp8_e4m3 output, scaleAlg=0
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp8_e4m3_bf16_k64_alg0_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -952,7 +952,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp8_e4m3_bf16_k64_alg0_success)
 // mxfp8: fp8_e5m2 output, scaleAlg=1
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp8_e5m2_fp16_k128_alg1_success)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({128, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 128}, ACL_FLOAT8_E5M2, ACL_FORMAT_ND);
@@ -969,7 +969,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp8_e5m2_fp16_k128_alg1_success)
 // hif4 fail: K=32 not allowed (must be 64 or 128)
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_k32_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({32, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 32}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -984,7 +984,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_k32_fail)
 // hif4 fail: scaleAlg=2 not allowed (must be 0)
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_scaleAlg2_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -999,7 +999,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_scaleAlg2_fail)
 // hif4 fail: roundMode="floor" not allowed (must be "rint")
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_roundMode_floor_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1014,7 +1014,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_roundMode_floor_fail)
 // hif4 fail: scale dtype mismatch (FLOAT8_E8M0 instead of HIFLOAT4_SCALE)
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_scale_dtype_e8m0_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1029,7 +1029,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_scale_dtype_e8m0_fail)
 // hif4 fail: dstTypeMax != 0.0
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_dstTypeMax_nonzero_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1044,7 +1044,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_dstTypeMax_nonzero_fail)
 // hif4 fail: scale shape mismatch (expected (4,1,1), given (4,1))
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_scale_shape_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1059,7 +1059,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_scale_shape_fail)
 // hif4 fail: hif4场景(scale非E8M0)alpha必须为nullptr
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_alpha_not_null_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc alpha_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
@@ -1072,10 +1072,10 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_alpha_not_null_fail)
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
-// hif4 fail: HIFLOAT4输出仅支持DAV_9201/DAV_9202, 950平台拒绝
-TEST_F(l2_rotate_quant_test, ascend950_hif4_output_rejected_fail)
+// hif4 fail: HIFLOAT4输出仅支持DAV_9201/DAV_9202, dav3510(950)平台拒绝
+TEST_F(l2_rotate_quant_test, dav3510_hif4_output_rejected_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1090,7 +1090,7 @@ TEST_F(l2_rotate_quant_test, ascend950_hif4_output_rejected_fail)
 // hif4 fail: rotation为2D但非方阵(dim0 != K)
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_rot_not_square_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({128, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1107,8 +1107,8 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_rot_not_square_fail)
 // hif4输出: yOut的shape与x相同(仅dtype位宽不同), 正常路径成功
 TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_hif4_y_shape_equal_x_success)
 {
-    for (auto soc : {SocVersion::ASCEND960DT, SocVersion::ASCEND960PR}) {
-        SocVersionManager versionManager(soc);
+    for (auto arch : {Ops::Base::DAV_9201, Ops::Base::DAV_9202}) {
+        op::NpuArchManager archManager(arch);
         TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
         TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
         TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1124,8 +1124,8 @@ TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_hif4_y_shape_equal_x_succe
 // hif4输出: yOut的shape与x不一致(偏大)时必须报参数错
 TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_hif4_y_shape_larger_than_x_fail)
 {
-    for (auto soc : {SocVersion::ASCEND960DT, SocVersion::ASCEND960PR}) {
-        SocVersionManager versionManager(soc);
+    for (auto arch : {Ops::Base::DAV_9201, Ops::Base::DAV_9202}) {
+        op::NpuArchManager archManager(arch);
         TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
         TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
         TensorDesc y_desc = TensorDesc({4, 128}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1141,7 +1141,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_hif4_y_shape_larger_than_x
 // hif4输出: yOut的shape与x不一致(偏小)时必须报参数错
 TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_hif4_y_shape_smaller_than_x_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 32}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1156,7 +1156,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_hif4_y_shape_smaller_than_
 // hif4输出(V2接口): yOut的shape与x不一致时同样必须报参数错
 TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_v2_hif4_y_shape_not_equal_x_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 128}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1172,7 +1172,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_v2_hif4_y_shape_not_equal_
 // hif4输出: 3D x时yOut需与x逐维同shape, 中间维不一致必须报参数错
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_3d_x_y_shape_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({2, 4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({2, 8, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1189,7 +1189,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_3d_x_y_shape_fail)
 // mxfp4 fail: K=48 not in {32, 64, 128}
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_k48_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 48}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({48, 48}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 48}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
@@ -1204,7 +1204,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_k48_fail)
 // mxfp4 fail: scaleAlg=2 but dstTypeMax=3.0 out of [6.0, 12.0]
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_alg2_dstTypeMax_3_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
@@ -1219,7 +1219,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_alg2_dstTypeMax_3_fail)
 // mxfp4 fail: scale dtype mismatch (HIFLOAT4_SCALE instead of FLOAT8_E8M0)
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_scale_hif4scale_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
@@ -1234,7 +1234,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp4_scale_hif4scale_fail)
 // mxfp8 fail: roundMode="round" not allowed (must be "rint")
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp8_roundMode_round_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -1249,7 +1249,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp8_roundMode_round_fail)
 // mxfp8 fail: scaleAlg=2 not allowed for fp8 (must be 0 or 1)
 TEST_F(l2_rotate_quant_test, ascend960dt_mxfp8_scaleAlg2_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
@@ -1266,7 +1266,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_mxfp8_scaleAlg2_fail)
 // v121 fail: INT8 output not supported on v121 (MX arch)
 TEST_F(l2_rotate_quant_test, ascend960dt_int8_output_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
@@ -1280,7 +1280,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_int8_output_fail)
 // v121 fail: trans=true not supported
 TEST_F(l2_rotate_quant_test, ascend960dt_trans_true_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1295,7 +1295,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_trans_true_fail)
 // v121 fail: N not divisible by K
 TEST_F(l2_rotate_quant_test, ascend960dt_hif4_n_not_divisible_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({4, 100}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc y_desc = TensorDesc({4, 100}, ACL_HIFLOAT4, ACL_FORMAT_ND);
@@ -1310,7 +1310,7 @@ TEST_F(l2_rotate_quant_test, ascend960dt_hif4_n_not_divisible_fail)
 // v121 fail: groupList仅支持Ascend950, 960平台hif4下V2接口传入groupList必须拒绝
 TEST_F(l2_rotate_quant_test, ascend960dt_rotate_quant_v2_hif4_reject_groups_fail)
 {
-    SocVersionManager versionManager(SocVersion::ASCEND960DT);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     TensorDesc x_desc = TensorDesc({7, 96}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc rot_desc = TensorDesc({3, 32, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc groups_desc = TensorDesc({3}, ACL_INT64, ACL_FORMAT_ND);

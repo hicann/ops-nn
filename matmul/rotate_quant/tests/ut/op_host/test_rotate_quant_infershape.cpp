@@ -341,6 +341,8 @@ static void SetPlatform960DT()
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = AICORE_CNT_960DT;
+    // SocVersion→NpuArch迁移(#12680)后infershape按soc_info.arch_type判断平台, mock需同步补该字段
+    platformInfo.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_9201);
     platformInfo.str_info.short_soc_version = "Ascend960DT";
     optiCompilationInfo.soc_version = "Ascend960DT";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend960DT"] = platformInfo;
