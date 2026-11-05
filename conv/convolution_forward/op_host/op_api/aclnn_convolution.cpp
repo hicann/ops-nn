@@ -4928,6 +4928,14 @@ private:
 inline aclnnStatus PreProcessCheckOutputDtype(const aclTensor* bias, const ConvolutionOpInfo& opInfo,
                                               const std::string& entityName)
 {
+    if (opInfo.inputDtype != opInfo.outputDtype) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "%s: When transposed is true, input dtype and output dtype must be the same, "
+                "but got inputDtype: %s, outputDtype: %s.",
+                entityName.c_str(), op::ToString(opInfo.inputDtype).GetString(),
+                op::ToString(opInfo.outputDtype).GetString());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     if (bias != nullptr &&
         (opInfo.outputDtype == op::DataType::DT_HIFLOAT8 || opInfo.outputDtype == op::DataType::DT_FLOAT8_E4M3FN)) {
         std::stringstream reason;
