@@ -12,6 +12,7 @@
  * \brief ScatterNdUpdate InferShape RT2.0 implementation
  */
 
+#include <vector>
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
 #include "log/log.h"
@@ -19,6 +20,18 @@
 
 using namespace ge;
 namespace ops {
+namespace {
+ge::graphStatus ReportInferShapeFailure(const char* opName, const char* reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {
+        opName, "Operator shape inference execution failed. Preserve the execution logs and contact operator support."};
+    REPORT_PREDEFINED_ERR_MSG("EZ1014", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "ScatterNdUpdate InferShape: %s", reason);
+    return ge::GRAPH_FAILED;
+}
+} // namespace
+
 static constexpr size_t SC_IN_VAR_IDX = 0;
 static constexpr size_t SC_OUT_VAR_IDX = 0;
 
@@ -35,10 +48,14 @@ static ge::graphStatus InferShape4ScatterNdUpdate(gert::InferShapeContext* conte
 {
     OP_LOGD(context->GetNodeName(), "Begin to do ScatterNdUpdate Infershape.");
     const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
+    if (var_shape == nullptr) {
+        return ReportInferShapeFailure(context->GetNodeName(), "GetInputShape(var) returned null");
+    }
 
     gert::Shape* output_shape = context->GetOutputShape(SC_OUT_VAR_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
+    if (output_shape == nullptr) {
+        return ReportInferShapeFailure(context->GetNodeName(), "GetOutputShape(var) returned null");
+    }
 
     if (Ops::Base::IsUnknownRank(*var_shape)) {
         OP_LOGD(context->GetNodeName(), "input shape is UnknownRank, set output shape to (-2, )");

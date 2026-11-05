@@ -13,6 +13,8 @@
  * \brief scatter_nd_update arch22 tiling implementation
  */
 
+#include <string>
+#include <vector>
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "tiling/tiling_api.h"
@@ -20,6 +22,18 @@
 #include "scatter_nd_update_tiling.h"
 
 namespace optiling {
+namespace {
+ge::graphStatus ReportTilingFailure(const char* opName, const std::string& reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {
+        opName, "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "ScatterNdUpdate arch22: %s", reason.c_str());
+    return ge::GRAPH_FAILED;
+}
+} // namespace
+
 constexpr uint64_t MAX_DIM_NUM = 8;
 constexpr uint64_t MAX_LENGTH_INT32 = (1LL << 31) - 1;
 constexpr uint64_t MAX_FLOAT_EXPRESS_INT32 = (1LL << 24) - 1;
@@ -374,18 +388,26 @@ inline size_t ScatterNdUpdateArch22Tiling::CalcWorkSpaceSize(uint64_t indexRow)
 static ge::graphStatus TilingParseForScatterNdUpdateArch22(gert::TilingParseContext* context)
 {
     auto compileInfo = context->GetCompiledInfo<ScatterNdUpdateArch22CompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    if (compileInfo == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "TilingParse: compileInfo is null");
+    }
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    if (platformInfo == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "TilingParse: platformInfo is null");
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->vectorCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->vectorCoreNum == 0) {
+        return ReportTilingFailure(context->GetNodeName(),
+                                   "TilingParse: invalid vectorCoreNum=" + std::to_string(compileInfo->vectorCoreNum));
+    }
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = ubSize;
-    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->ubSize == 0) {
+        return ReportTilingFailure(context->GetNodeName(),
+                                   "TilingParse: invalid ubSize=" + std::to_string(compileInfo->ubSize));
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -496,7 +518,9 @@ ge::graphStatus ScatterNdUpdateArch22Tiling::Init()
         isLinearIndex_ = IsLinearIndex(info.totalLength);
     }
     auto compileInfo = tilingContext_->GetCompileInfo<ScatterNdUpdateArch22CompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, compileInfo);
+    if (compileInfo == nullptr) {
+        return ReportTilingFailure(tilingContext_->GetNodeName(), "Init: compileInfo is null");
+    }
     coreNum_ = std::min(static_cast<uint64_t>(compileInfo->vectorCoreNum), std::min(info.totalLength, info.indexRow));
     coreNum_ = coreNum_ == 0 ? 1 : coreNum_;
     ubSize_ = compileInfo->ubSize;
@@ -519,7 +543,7 @@ static ge::graphStatus ScatterNdUpdateArch22TilingFunc(gert::TilingContext* cont
 {
     ScatterNdUpdateArch22Tiling tilingOp(context);
     if (tilingOp.Init() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context->GetNodeName(), "Tiling init fail");
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "ScatterNdUpdate arch22 Init failed; preserve the root error.");
         return ge::GRAPH_FAILED;
     }
     return tilingOp.SetKernelTiling();

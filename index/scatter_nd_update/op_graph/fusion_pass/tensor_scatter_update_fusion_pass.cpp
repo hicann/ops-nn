@@ -213,8 +213,8 @@ bool TensorScatterUpdateFusionPass::MeetRequirements(const std::unique_ptr<Match
     OPS_LOG_D(PASS_NAME.c_str(), "Enter MeetRequirements for TensorScatterUpdateFusionPass");
 
     NodeIo captured;
-    OP_LOGE_IF(matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS, false, PASS_NAME.c_str(),
-               "Failed to get captured tensor.");
+    OP_LOGI_IF_RETURN(matchResult->GetCapturedTensor(CAPTURE_IDX_OUTPUT, captured) != SUCCESS, false, PASS_NAME.c_str(),
+                      "Cannot get captured tensor; skip fusion.");
 
     // 校验匹配节点的 OpType
     GNode sourceNode = captured.node;
@@ -226,7 +226,8 @@ bool TensorScatterUpdateFusionPass::MeetRequirements(const std::unique_ptr<Match
     }
 
     TensorDesc inputDesc0;
-    OP_LOGE_IF(sourceNode.GetInputDesc(0, inputDesc0) != SUCCESS, false, PASS_NAME.c_str(), "Get input x desc failed.");
+    OP_LOGI_IF_RETURN(sourceNode.GetInputDesc(0, inputDesc0) != SUCCESS, false, PASS_NAME.c_str(),
+                      "Cannot get input x desc; skip fusion.");
     bool isRegbase = IsRegbasePlatform();
     if (isRegbase && (inputDesc0.GetDataType() == ge::DT_STRING || inputDesc0.GetDataType() == ge::DT_COMPLEX128)) {
         OPS_LOG_D(SUPPORTED_OP_TYPE.c_str(),
@@ -243,8 +244,8 @@ bool TensorScatterUpdateFusionPass::MeetRequirements(const std::unique_ptr<Match
     std::vector<Shape> inputShapes;
     for (int32_t i = 0; i < PARAM_NUM; i++) {
         TensorDesc desc;
-        OP_LOGE_IF(sourceNode.GetInputDesc(i, desc) != SUCCESS, false, PASS_NAME.c_str(),
-                   "Failed to get input desc %d.", i);
+        OP_LOGI_IF_RETURN(sourceNode.GetInputDesc(i, desc) != SUCCESS, false, PASS_NAME.c_str(),
+                          "Cannot get input desc %d; skip fusion.", i);
         inputDtypes.emplace_back(desc.GetDataType());
         inputFormats.emplace_back(desc.GetFormat());
         inputShapes.emplace_back(desc.GetShape());

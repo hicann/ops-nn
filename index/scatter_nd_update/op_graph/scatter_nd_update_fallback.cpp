@@ -23,20 +23,26 @@ constexpr size_t UPDATES_INDEX = 2;
 
 static graphStatus ScatterNdUpdateHostExecuteFunc(OpExecuteContext* hostApiCtx)
 {
-    OP_CHECK_IF(hostApiCtx == nullptr, OP_LOGE("aclnnfallback", "hostApiCtx is null"), return GRAPH_FAILED);
-    OP_LOGD("aclnnfallback", "Enter ScatterNdUpdateHostExecuteFunc.");
+    OP_CHECK_IF(hostApiCtx == nullptr, OP_LOGE_WITHOUT_REPORT("aclnnfallback", "hostApiCtx is null"),
+                return GRAPH_FAILED);
+    OP_LOGD(hostApiCtx, "Enter ScatterNdUpdateHostExecuteFunc.");
 
     auto var = hostApiCtx->GetInputTensor(VAR_INDEX);
-    OP_CHECK_IF(var == nullptr, OP_LOGE("aclnnfallback", "var is null"), return GRAPH_FAILED);
+    OP_CHECK_IF(var == nullptr, OP_LOGE_WITH_INVALID_INPUT(Ops::Base::GetOpInfo(hostApiCtx), "var"),
+                return GRAPH_FAILED);
 
     auto indices = hostApiCtx->GetInputTensor(INDICES_INDEX);
-    OP_CHECK_IF(indices == nullptr, OP_LOGE("aclnnfallback", "indices is null"), return GRAPH_FAILED);
+    OP_CHECK_IF(indices == nullptr, OP_LOGE_WITH_INVALID_INPUT(Ops::Base::GetOpInfo(hostApiCtx), "indices"),
+                return GRAPH_FAILED);
 
     auto updates = hostApiCtx->GetInputTensor(UPDATES_INDEX);
-    OP_CHECK_IF(updates == nullptr, OP_LOGE("aclnnfallback", "updates is null"), return GRAPH_FAILED);
+    OP_CHECK_IF(updates == nullptr, OP_LOGE_WITH_INVALID_INPUT(Ops::Base::GetOpInfo(hostApiCtx), "updates"),
+                return GRAPH_FAILED);
 
     auto apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(hostApiCtx, aclnnScatterNdUpdate, var, indices, updates);
-    OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE("aclnnfallback", "apiRet failed:%d", apiRet), return GRAPH_FAILED);
+    OP_CHECK_IF(apiRet != GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(hostApiCtx, "aclnnScatterNdUpdate fallback failed, apiRet=%d", apiRet),
+                return GRAPH_FAILED);
 
     return GRAPH_SUCCESS;
 }
