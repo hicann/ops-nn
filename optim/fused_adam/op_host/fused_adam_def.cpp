@@ -119,6 +119,7 @@ public:
         this->Attr("amsgrad").AttrType(OPTIONAL).Bool(false);
         this->Attr("maximize").AttrType(OPTIONAL).Bool(false);
         this->AICore().AddConfig("ascend950");
+        this->AICore().AddConfig("ascend960dt");
     }
 };
 
