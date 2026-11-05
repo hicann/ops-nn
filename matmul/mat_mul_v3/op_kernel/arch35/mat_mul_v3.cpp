@@ -179,11 +179,29 @@ __global__ __aicore__ void mat_mul_v3(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, 
                                                         layoutC, FULL_LOAD, L0C2OUT_MODEL>(aGM, bGM, biasGM, cGM,
                                                                                            workspaceGM, tilingData);
     } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_SLICE && L0C2OUT_MODEL == MAT_MUL_1V1_ND_ALIG_FIXPIPE) {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+        // 非全载FixpOpti1v1非连续SliceM
+        MatmulV3Advanced::MatMulFixpipeOptiTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                        layoutC, FULL_LOAD, L0C2OUT_MODEL, Blaze::Gemm::OP_TYPE_EMPTY,
+                                                        static_cast<uint64_t>(
+                                                            Blaze::Gemm::NoContiguousType::NON_CONTIGUOUS_TYPE_SLICE)>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                          MODEL == MAT_MUL_BASIC && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
         MatmulV3Advanced::MatMulFixpipeOptiTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
                                                         layoutC, FULL_LOAD, L0C2OUT_MODEL>(aGM, bGM, biasGM, cGM,
                                                                                            workspaceGM, tilingData);
+    } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         MODEL == MAT_MUL_SLICE && L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+        // 非全载FixpOpti1v2非连续SliceM
+        MatmulV3Advanced::MatMulFixpipeOptiTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                        layoutC, FULL_LOAD, L0C2OUT_MODEL, Blaze::Gemm::OP_TYPE_EMPTY,
+                                                        static_cast<uint64_t>(
+                                                            Blaze::Gemm::NoContiguousType::NON_CONTIGUOUS_TYPE_SLICE)>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
     } else if constexpr (API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_B_FULL_LOAD &&
                          MODEL == MAT_MUL_BASIC &&
                          L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) { // Fixpipe B全载fp32场景切换tensor api 场景

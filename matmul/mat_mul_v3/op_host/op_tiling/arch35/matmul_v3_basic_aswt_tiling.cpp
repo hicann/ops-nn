@@ -367,10 +367,8 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         }
         CheckApiLevelAndModel();
     } else {
-        // fixpipe优化场景
-        if (!isSlice_) {
-            CheckApiLevelAndModel();
-        }
+        // 非全载fixpipe优化场景支持非连续sliceM
+        CheckApiLevelAndModel();
     }
     return ge::GRAPH_SUCCESS;
 }

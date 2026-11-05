@@ -24,7 +24,8 @@
 namespace MatmulV3Advanced {
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-          uint64_t FULL_LOAD_MODE = 0, uint64_t L0C2OUT_MODEL, uint64_t FUSED_OP_TYPE = 0>
+          uint64_t FULL_LOAD_MODE = 0, uint64_t L0C2OUT_MODEL, uint64_t FUSED_OP_TYPE = 0,
+          uint64_t NON_CONTIGUOUS_TYPE = 0>
 __aicore__ inline void MatMulFixpipeOptiTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
                                                      GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
                                                      int64_t batch = 0)
@@ -56,7 +57,7 @@ __aicore__ inline void MatMulFixpipeOptiTensorKernel(GM_ADDR aGM, GM_ADDR bGM, G
         Blaze::Gemm::MatmulMultiBlockBFullLoad<L0C2OUT_MODEL, FUSED_OP_TYPE,
                                                Blaze::Gemm::KernelMmadMultiBlockBFullLoad>,
         Blaze::Gemm::MatmulMultiBlockFixpipeOpti<L0C2OUT_MODEL, FUSED_OP_TYPE,
-                                                 Blaze::Gemm::KernelMmadMultiBlockFixpipeOpti>>;
+                                                 Blaze::Gemm::KernelMmadMultiBlockFixpipeOpti, NON_CONTIGUOUS_TYPE>>;
     using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
                                                     BiasType, LayoutBias>;
 
