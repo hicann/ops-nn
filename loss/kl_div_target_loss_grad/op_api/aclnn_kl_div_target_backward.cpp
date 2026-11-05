@@ -20,6 +20,7 @@
 #include "level0/mul.h"
 #include "level0/exp.h"
 #include "level0/div.h"
+#include "level0/fill.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
@@ -219,7 +220,7 @@ static const aclTensor* ComputeGradForKlDiv(const aclTensor* targetBroadcast, co
 
     const aclTensor* grad = nullptr;
 
-    //将reduction处理前置，防溢出
+    // 将reduction处理前置，防溢出
     if (reduction == Mean) {
         auto totalElementScalar = executor->AllocScalar(GetElementNum(targetBroadcast->GetViewShape()));
         auto totalElementTensor = executor->ConvertToTensor(totalElementScalar, op::DataType::DT_FLOAT);
@@ -322,6 +323,29 @@ static aclnnStatus ExecuteKlDivTargetBackward(const aclTensor* gradOutput, const
     return ACLNN_SUCCESS;
 }
 
+// self 为空 tensor 时目标梯度是空维度上的求和，恒为 0，需要显式把 gradTarget 填 0
+static aclnnStatus FillZeroToGradTarget(aclTensor* gradTarget, aclOpExecutor* executor)
+{
+    auto gradTargetShape = op::ToShapeVector(gradTarget->GetViewShape());
+    auto dims = executor->ConvertToTensor(gradTargetShape.data(), gradTargetShape.size(), op::DataType::DT_INT64);
+    CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto shapeArray = executor->AllocIntArray(gradTargetShape.data(), gradTargetShape.size());
+    CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto zeroScalar = executor->AllocScalar(0);
+    auto zeroTensor = executor->ConvertToTensor(zeroScalar, gradTarget->GetDataType());
+    CHECK_RET(zeroTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto zeroOut = l0op::Fill(dims, zeroTensor, shapeArray, executor);
+    CHECK_RET(zeroOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，将计算结果拷贝到输出gradTarget上，gradTarget可能是非连续的tensor
+    auto viewCopyResult = l0op::ViewCopy(zeroOut, gradTarget, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnKlDivTargetBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
                                                      const aclTensor* target, int64_t reduction, bool logTarget,
                                                      aclTensor* gradTarget, uint64_t* workspaceSize,
@@ -340,8 +364,11 @@ aclnnStatus aclnnKlDivTargetBackwardGetWorkspaceSize(const aclTensor* gradOutput
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (self->IsEmpty()) {
-        // 根据实际支持情况补充
-        *workspaceSize = 0;
+        // self为空tensor时target梯度恒为0，需要显式填充gradTarget，避免输出残留脏数据
+        ret = FillZeroToGradTarget(gradTarget, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
