@@ -75,10 +75,23 @@ class FlatQuantOpBuilder(OpBuilder):
                 kronecker_p2.dim() == 2,
                 lambda: f"kronecker_p2 must be 2-dimensional [N2, N2], but got {kronecker_p2.dim()}-d",
             )
-            torch._check(
-                kronecker_p2.shape[0] == N2 and kronecker_p2.shape[1] == N2,
-                lambda: f"kronecker_p2 shape must be [{N2}, {N2}], but got [{kronecker_p2.shape[0]}, {kronecker_p2.shape[1]}]",
-            )
+            if dst_dtype == 296:
+                torch._check(
+                    (kronecker_p2.shape[0] == 0 and kronecker_p2.shape[1] == 0)
+                    or (kronecker_p2.shape[0] == N2 and kronecker_p2.shape[1] == N2),
+                    lambda: (
+                        f"kronecker_p2 shape must be [{N2}, {N2}] or [0, 0] for FP4 output, "
+                        f"but got [{kronecker_p2.shape[0]}, {kronecker_p2.shape[1]}]"
+                    ),
+                )
+            else:
+                torch._check(
+                    kronecker_p2.shape[0] == N2 and kronecker_p2.shape[1] == N2,
+                    lambda: (
+                        f"kronecker_p2 shape must be [{N2}, {N2}], "
+                        f"but got [{kronecker_p2.shape[0]}, {kronecker_p2.shape[1]}]"
+                    ),
+                )
 
             # 数据类型检查
             torch._check(

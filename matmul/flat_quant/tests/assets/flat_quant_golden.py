@@ -482,8 +482,11 @@ def compute_mx_fp4(x, p1, p2):
     x_f = x.astype(np.float32)
     p1_f = p1.astype(np.float32)
     p2_f = p2.astype(np.float32)
-    x1 = np.matmul(x_f, p2_f).astype(x.dtype)
-    x2 = np.matmul(p1_f, x1.astype(np.float32)).astype(_util.np_bfloat16)
+    if p2_f.shape == (0, 0):
+        x2 = np.matmul(p1_f, x_f).astype(_util.np_bfloat16)
+    else:
+        x1 = np.matmul(x_f, p2_f).astype(x.dtype)
+        x2 = np.matmul(p1_f, x1.astype(np.float32)).astype(_util.np_bfloat16)
     x2 = x2.reshape(x2.shape[0], -1)
 
     ele_array, scale_array = mx_quantize(

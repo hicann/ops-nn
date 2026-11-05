@@ -39,8 +39,6 @@ std::tuple<at::Tensor, at::Tensor> flat_quant(const at::Tensor& x, const at::Ten
                 "], but got [", kronecker_p1.size(0), ", ", kronecker_p1.size(1), "]");
 
     TORCH_CHECK(kronecker_p2.dim() == 2, "kronecker_p2 must be 2-dimensional [N2, N2], but got ", kronecker_p2.dim());
-    TORCH_CHECK(kronecker_p2.size(0) == n2 && kronecker_p2.size(1) == n2, "kronecker_p2 shape must be [", n2, ", ", n2,
-                "], but got [", kronecker_p2.size(0), ", ", kronecker_p2.size(1), "]");
 
     // 3. 数据类型检查
     auto input_dtype = x.scalar_type();
@@ -80,6 +78,16 @@ std::tuple<at::Tensor, at::Tensor> flat_quant(const at::Tensor& x, const at::Ten
         TORCH_CHECK(n2 % 2 == 0, "N2 must be even for FP4 output, but got N2=", n2);
     } else {
         TORCH_CHECK(false, "dst_dtype must be INT4 or FP4, got dst_dtype=", dst_dtype);
+    }
+
+    bool isP2ZeroShape = (kronecker_p2.size(0) == 0 && kronecker_p2.size(1) == 0);
+    if (out_acl_type == ACL_FLOAT4_E2M1) {
+        TORCH_CHECK(isP2ZeroShape || (kronecker_p2.size(0) == n2 && kronecker_p2.size(1) == n2),
+                    "kronecker_p2 shape must be [", n2, ", ", n2, "] or [0, 0] for FP4 output, but got [",
+                    kronecker_p2.size(0), ", ", kronecker_p2.size(1), "]");
+    } else {
+        TORCH_CHECK(kronecker_p2.size(0) == n2 && kronecker_p2.size(1) == n2, "kronecker_p2 shape must be [", n2, ", ",
+                    n2, "], but got [", kronecker_p2.size(0), ", ", kronecker_p2.size(1), "]");
     }
 
     // 7. 创建输出张量
