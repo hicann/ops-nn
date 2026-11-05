@@ -23,7 +23,7 @@ extern "C" {
  * 计算公式：out_{i}=round(x_{i}, roundMode)
  * @domain aclnnop_math
  * @param [in]   x
- * 输入Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16（Ascend950），INT16（Ascend910B系列）。数据格式支持ND。
+ * 输入Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16，INT16。数据格式支持ND。
  * @param [in]   roundMode       输入Scalar Tensor，数据类型支持INT8，元素个数为1。数据格式支持ND。
  * @param [in]   out             输出Tensor，数据类型和格式与入参`x`一致。数据格式支持ND。
  * @param [out]  workspaceSize   返回用户需要在npu device侧申请的workspace大小。

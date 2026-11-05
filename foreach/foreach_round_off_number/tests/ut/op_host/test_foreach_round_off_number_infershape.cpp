@@ -70,7 +70,7 @@ TEST_F(ForeachRoundOffNumberTest, infer_shape_known_success)
     EXPECT_EQ(Ops::Base::ToString(*output_shape_2), "[3]");
 }
 
-TEST_F(ForeachRoundOffNumberTest, infer_dtype_test_1)
+TEST_F(ForeachRoundOffNumberTest, infer_dtype_known_success)
 {
     auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachRoundOffNumber")->infer_datatype;
     ASSERT_NE(infer_datatype_func, nullptr);

@@ -19,6 +19,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
+#include "tiling_case_executor.h"
 #include "ut_op_util.h"
 
 struct ForeachRoundOffNumberCompileInfo {
@@ -34,13 +35,159 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachRoundOffNumberTilingTest TearDown" << std::endl; }
 };
 
-static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint64_t expectKey)
+// Fake platform shared by every case below: 24 AICores, 1 MiB Unified Buffer.
+static void InitFakePlatform(fe::PlatFormInfos& pf, std::map<std::string, std::string>& soc,
+                             std::map<std::string, std::string>& ai, std::map<std::string, std::string>& intr)
+{
+    GetPlatFormInfos(R"({"hardware_info":{"UB_SIZE":1048576,"CORE_NUM":24}})", soc, ai, intr);
+    pf.Init();
+}
+
+// Mirrors the compile phase: runs tilingParse against the fake platform so the
+// compile info carries the platform-derived core num / ub size. DoFallbackCase
+// deliberately skips this prefill (its zero-valued compile info exercises the
+// platform fallback path).
+template <typename TilingParseFn>
+static auto TilingParsePrefill(fe::PlatFormInfos& pf, std::map<std::string, std::string>& soc,
+                               std::map<std::string, std::string>& ai, std::map<std::string, std::string>& intr,
+                               TilingParseFn tilingParseFn, ForeachRoundOffNumberCompileInfo& ci)
+{
+    std::string ciStr = R"({"device_id":null})";
+    auto kh = gert::KernelRunContextFaker()
+                  .KernelIONum(2, 1)
+                  .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
+                  .Outputs({&ci})
+                  .Build();
+    auto* parseCtx = kh.GetContext<gert::TilingParseContext>();
+    parseCtx->GetPlatformInfo()->Init();
+    parseCtx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
+    parseCtx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
+    parseCtx->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    parseCtx->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intr);
+    return tilingParseFn(kh.GetContext<gert::KernelContext>());
+}
+
+// Attaches the fake platform resources to a built tiling context.
+static void AttachFakePlatformRes(gert::TilingContext* ctx, std::map<std::string, std::string>& soc,
+                                  std::map<std::string, std::string>& ai, std::map<std::string, std::string>& intr)
+{
+    ctx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
+    ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
+    ctx->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    ctx->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intr);
+}
+
+// Single-tensor case scaffolding: the tiling faker references the platform,
+// compile info, shapes and scratch buffers by pointer, so they are owned here
+// and must outlive the tiling call.
+struct SingleTensorCase {
+    fe::PlatFormInfos pf;
+    std::map<std::string, std::string> soc, ai, intr;
+    ForeachRoundOffNumberCompileInfo ci;
+    gert::StorageShape xS;
+    gert::StorageShape yS;
+    gert::StorageShape scalar;
+    decltype(gert::TilingData::CreateCap(4096)) param;
+    decltype(gert::ContinuousVector::Create<size_t>(4096)) wsh;
+
+    explicit SingleTensorCase(std::initializer_list<int64_t> xShape)
+        : xS{xShape, xShape},
+          yS{xShape, xShape},
+          scalar{{1}, {1}},
+          param(gert::TilingData::CreateCap(4096)),
+          wsh(gert::ContinuousVector::Create<size_t>(4096))
+    {
+        ci.coreNum = 0;
+        ci.ubSize = 0;
+        InitFakePlatform(pf, soc, ai, intr);
+    }
+};
+
+// Builds the (2-in/1-out) tiling context around the case scaffolding.
+static auto BuildSingleTensorContext(SingleTensorCase& c, ge::DataType dt)
+{
+    return gert::TilingContextFaker()
+        .NodeIoNum(2, 1)
+        .IrInstanceNum({1, 1})
+        .InputShapes({&c.xS, &c.scalar})
+        .OutputShapes({&c.yS})
+        .CompileInfo(&c.ci)
+        .PlatformInfo(reinterpret_cast<char*>(&c.pf))
+        .NodeInputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
+        .TilingData(c.param.get())
+        .Workspace(reinterpret_cast<gert::ContinuousVector*>(c.wsh.get()))
+        .Build();
+}
+
+static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint64_t expectKey,
+                   uint32_t expectBlockDim = 0)
+{
+    SingleTensorCase c(xShape);
+    auto opType = std::string("ForeachRoundOffNumber");
+    auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    auto tilingParseFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_NE(tilingFn, nullptr);
+    ASSERT_NE(tilingParseFn, nullptr);
+
+    ASSERT_EQ(TilingParsePrefill(c.pf, c.soc, c.ai, c.intr, tilingParseFn, c.ci), ge::GRAPH_SUCCESS);
+    auto th = BuildSingleTensorContext(c, dt);
+    auto* ctx = th.GetContext<gert::TilingContext>();
+    AttachFakePlatformRes(ctx, c.soc, c.ai, c.intr);
+    EXPECT_EQ(tilingFn(ctx), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+    if (expectBlockDim != 0) {
+        EXPECT_EQ(ctx->GetBlockDim(), expectBlockDim);
+    }
+}
+
+// Dims/dtype valid but tilingFunc must fail: for the unsupported-dtype probe the only
+// reachable rejection is the tilingKey switch default branch.
+static void DoFailCase(std::initializer_list<int64_t> xShape, ge::DataType dt)
+{
+    SingleTensorCase c(xShape);
+    auto opType = std::string("ForeachRoundOffNumber");
+    auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    auto tilingParseFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_NE(tilingFn, nullptr);
+    ASSERT_NE(tilingParseFn, nullptr);
+
+    ASSERT_EQ(TilingParsePrefill(c.pf, c.soc, c.ai, c.intr, tilingParseFn, c.ci), ge::GRAPH_SUCCESS);
+    auto th = BuildSingleTensorContext(c, dt);
+    auto* ctx = th.GetContext<gert::TilingContext>();
+    AttachFakePlatformRes(ctx, c.soc, c.ai, c.intr);
+    EXPECT_NE(tilingFn(ctx), ge::GRAPH_SUCCESS);
+}
+
+// CompileInfo left zero-valued (no TilingParse prefill): TilingFunc must take core num and
+// ub size from the platform info fallback path.
+static void DoFallbackCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint64_t expectKey)
+{
+    SingleTensorCase c(xShape);
+    auto opType = std::string("ForeachRoundOffNumber");
+    auto tilingFn = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    ASSERT_NE(tilingFn, nullptr);
+
+    auto th = BuildSingleTensorContext(c, dt);
+    auto* ctx = th.GetContext<gert::TilingContext>();
+    AttachFakePlatformRes(ctx, c.soc, c.ai, c.intr);
+    EXPECT_EQ(tilingFn(ctx), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+}
+
+// Metadata rejection probes: roundMode must be an INT8 scalar tensor (exactly one
+// element), and the x/y tensor lists must have the same length. Each malformed
+// form must be rejected. The x members carry no rank limit (elewise semantics:
+// the tiling consumes only the total element count).
+static void DoMetadataRejectCase(std::initializer_list<std::initializer_list<int64_t>> xShapes,
+                                 std::initializer_list<int64_t> roundModeShape, ge::DataType roundModeDtype,
+                                 const std::vector<uint32_t>& inputInstanceNum,
+                                 const std::vector<uint32_t>& outputInstanceNum)
 {
     fe::PlatFormInfos pf;
     std::map<std::string, std::string> soc, ai, intr;
-    GetPlatFormInfos(R"({"hardware_info":{"UB_SIZE":1048576,"CORE_NUM":24}})", soc, ai, intr);
-    pf.Init();
-
+    InitFakePlatform(pf, soc, ai, intr);
     ForeachRoundOffNumberCompileInfo ci;
     ci.coreNum = 0;
     ci.ubSize = 0;
@@ -50,44 +197,45 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     ASSERT_NE(tilingFn, nullptr);
     ASSERT_NE(tilingParseFn, nullptr);
 
-    std::string ciStr = R"({"device_id":null})";
-    auto kh = gert::KernelRunContextFaker()
-                  .KernelIONum(2, 1)
-                  .Inputs({const_cast<char*>(ciStr.c_str()), reinterpret_cast<void*>(&pf)})
-                  .Outputs({&ci})
-                  .Build();
-    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init();
-    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
-    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
-    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intr);
-    ASSERT_EQ(tilingParseFn(kh.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(TilingParsePrefill(pf, soc, ai, intr, tilingParseFn, ci), ge::GRAPH_SUCCESS);
 
-    gert::StorageShape xS = {xShape, xShape};
-    gert::StorageShape yS = {xShape, xShape};
-    gert::StorageShape scalar = {{1}, {1}};
+    std::vector<gert::StorageShape> xS;
+    xS.reserve(xShapes.size());
+    for (const auto& xShape : xShapes) {
+        xS.emplace_back(xShape, xShape);
+    }
+    gert::StorageShape roundModeS(roundModeShape, roundModeShape);
+    std::vector<void*> inputShapes;
+    inputShapes.reserve(xS.size() + 1);
+    for (auto& shape : xS) {
+        inputShapes.push_back(&shape);
+    }
+    inputShapes.push_back(&roundModeS);
+    std::vector<gert::StorageShape> yS(outputInstanceNum.front(), xS.front());
+    std::vector<void*> outputShapes;
+    for (auto& shape : yS) {
+        outputShapes.push_back(&shape);
+    }
     auto param = gert::TilingData::CreateCap(4096);
     auto wsh = gert::ContinuousVector::Create<size_t>(4096);
-    auto th = gert::TilingContextFaker()
-                  .NodeIoNum(2, 1)
-                  .IrInstanceNum({1, 1})
-                  .InputShapes({&xS, &scalar})
-                  .OutputShapes({&yS})
-                  .CompileInfo(&ci)
-                  .PlatformInfo(reinterpret_cast<char*>(&pf))
-                  .NodeInputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .NodeOutputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .TilingData(param.get())
-                  .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
-                  .Build();
+    gert::TilingContextFaker tilingFaker;
+    tilingFaker.NodeIoNum(2, 1)
+        .IrInstanceNum(inputInstanceNum, outputInstanceNum)
+        .InputShapes(inputShapes)
+        .OutputShapes(outputShapes)
+        .CompileInfo(&ci)
+        .PlatformInfo(reinterpret_cast<char*>(&pf))
+        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(1, roundModeDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+        .TilingData(param.get())
+        .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()));
+    for (uint32_t i = 0; i < outputInstanceNum.front(); i++) {
+        tilingFaker.NodeOutputTd(static_cast<int32_t>(i), ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND);
+    }
+    auto th = tilingFaker.Build();
     auto* ctx = th.GetContext<gert::TilingContext>();
-    ctx->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc);
-    ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
-    ctx->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    ctx->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intr);
-    EXPECT_EQ(tilingFn(ctx), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+    AttachFakePlatformRes(ctx, soc, ai, intr);
+    EXPECT_NE(tilingFn(ctx), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_float32) { DoCase({32, 4, 4, 4}, ge::DT_FLOAT, 0); }
@@ -95,3 +243,83 @@ TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_float32) { DoCa
 TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_float16) { DoCase({32, 4, 4, 4}, ge::DT_FLOAT16, 1); }
 
 TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_bf16) { DoCase({32, 4, 4, 4}, ge::DT_BF16, 2); }
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_int16) { DoCase({32, 4, 4, 4}, ge::DT_INT16, 3); }
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_unsupported_dtype_reject)
+{
+    DoFailCase({32, 4, 4, 4}, ge::DT_INT32);
+}
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_platform_fallback)
+{
+    DoFallbackCase({32, 4, 4, 4}, ge::DT_FLOAT, 0);
+}
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_roundmode_dtype_not_int8_rejected)
+{
+    DoMetadataRejectCase({{32, 4, 4, 4}}, {1}, ge::DT_INT32, {1, 1}, {1});
+}
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_roundmode_numel_not_1_rejected)
+{
+    DoMetadataRejectCase({{32, 4, 4, 4}}, {2}, ge::DT_INT8, {1, 1}, {1});
+}
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_roundmode_empty_tensor_rejected)
+{
+    DoMetadataRejectCase({{32, 4, 4, 4}}, {0}, ge::DT_INT8, {1, 1}, {1});
+}
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_rank9_pass_through)
+{
+    // elewise operators place no rank limit on x members: a rank-9 tensor is legal
+    // input and the tiling must succeed (it consumes only the total element count).
+    DoCase({1, 1, 1, 1, 1, 1, 1, 1, 1}, ge::DT_FLOAT, 0);
+}
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_instance_count_mismatch_rejected)
+{
+    DoMetadataRejectCase({{32, 4, 4, 4}, {32, 4, 4, 4}}, {1}, ge::DT_INT8, {2, 1}, {1});
+}
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_dtype_mixed_in_list_rejected)
+{
+    // x members must share one dtype: a FLOAT + INT16 list cannot be dispatched by a single
+    // template instantiation, so the element-loop consistency guard must reject it. The
+    // per-member dtypes need the per-slot TilingContextPara form (NodeInputTd addresses a
+    // whole IR input at once and cannot express a mixed list).
+    gert::StorageShape xFp32({32, 4, 4, 4}, {32, 4, 4, 4});
+    gert::StorageShape xInt16({32, 4, 4, 4}, {32, 4, 4, 4});
+    gert::StorageShape roundMode({1}, {1});
+    std::vector<gert::TilingContextPara::TensorDescription> ins = {
+        gert::TilingContextPara::TensorDescription(xFp32, ge::DT_FLOAT, ge::FORMAT_ND),
+        gert::TilingContextPara::TensorDescription(xInt16, ge::DT_INT16, ge::FORMAT_ND),
+        gert::TilingContextPara::TensorDescription(roundMode, ge::DT_INT8, ge::FORMAT_ND)};
+    std::vector<gert::TilingContextPara::TensorDescription> outs = {
+        gert::TilingContextPara::TensorDescription(xFp32, ge::DT_FLOAT, ge::FORMAT_ND),
+        gert::TilingContextPara::TensorDescription(xFp32, ge::DT_FLOAT, ge::FORMAT_ND)};
+    static ForeachRoundOffNumberCompileInfo mixedCaseCompileInfo = {24, 1048576};
+    gert::TilingContextPara para("ForeachRoundOffNumber", ins, outs, {}, {2, 1}, {2}, &mixedCaseCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+// Core split probes: the per-core minimum is 1024 elements, so 512 elements stay on one
+// core and 24576 elements (= 24 * 1024) saturate all 24 cores of the fake platform.
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_coresplit_below_min_single_core)
+{
+    DoCase({512}, ge::DT_FLOAT, 0, 1);
+}
+
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_coresplit_saturates_all_cores)
+{
+    DoCase({24, 1024}, ge::DT_FLOAT, 0, 24);
+}
+
+// A single tensor whose element count is close to INT64_MAX is still a legal input for
+// the accumulation guard: the core split must saturate all cores. The ceil-by-addition
+// form (totalElements + N - 1) overflows int64 here and degrades the split to 1 core.
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_coresplit_int64_overflow_boundary)
+{
+    DoCase({9223372036854775805}, ge::DT_FLOAT, 0, 24);
+}

@@ -58,7 +58,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
   const aclrtStream    stream)
 ```
 
-## aclnnForeachRoundOffNumberV2
+## aclnnForeachRoundOffNumberV2GetWorkspaceSize
 
 - **Parameters**
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
@@ -90,14 +90,14 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>roundMode (aclScalar*)</td>
       <td>Input</td>
       <td>Indicates the input scalar for the rounding operation. It corresponds to `roundMode` in the formula.</td>
-      <td><ul><li>The number of elements is 1.</li><li>The values of roundMode and the corresponding rounding policies are as follows:<ul><li>When roundMode=1, it indicates that the input is rounded using the round-half-to-even rounding operation.</li><li>When roundMode=2, it indicates that the input is rounded down toward negative infinity.</li><li>When roundMode=3, it indicates that the input is rounded up toward positive infinity.</li><li>When roundMode=4, it indicates that the input is rounded half up.</li><li>When roundMode=5, it indicates that the input is rounded toward zero.</li><li>When roundMode=6, it indicates that the input is rounded to the nearest odd number.</li><li>When roundMode is set to another value, the round-half-to-even rounding operation is performed if precision loss occurs; otherwise, no rounding operation is performed.</li></ul></li></ul></td>
+      <td><ul><li>The values of roundMode and the corresponding rounding policies are as follows:<ul><li>When roundMode=0, it indicates that no rounding operation is performed on the input.</li><li>When roundMode=1, it indicates that the input is rounded using the round-half-to-even rounding operation.</li><li>When roundMode=2, it indicates that the input is rounded down toward negative infinity.</li><li>When roundMode=3, it indicates that the input is rounded up toward positive infinity.</li><li>When roundMode=4, it indicates that the input is rounded half up.</li><li>When roundMode=5, it indicates that the input is rounded toward zero.</li><li>When roundMode=6, it indicates that the input is rounded to the nearest odd number.</li><li>When roundMode=7, it indicates that the fractional part of the input is taken.</li><li>When roundMode is set to another value, it indicates that no rounding operation is performed on the input.</li></ul></li></ul></td>
       <td>INT8, INT64</td>
       <td>-</td>
       <td>-</td>
@@ -107,11 +107,11 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Indicates the output tensor list for performing the rounding operation. It corresponds to `y` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type and data format are the same as those of input `x`, and the shape size is greater than or equal to that of input `x`.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type and data format are the same as those of input `x`, and the shape size is equal to that of input `x`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT16</td>
       <td>ND</td>
-      <td>0-8</td>
-      <td>×</td>
+      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -161,8 +161,8 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>x, roundMode, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>The data type of x, roundMode, or out is not supported.</td>
     </tr>
     <tr>
@@ -175,7 +175,16 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>The data types of the tensors in x or out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The dimensions of the tensors in x or out exceed 8.</td>
+      <td>The value of roundMode exceeds the INT8 range [-128, 127].</td>
+    </tr>
+    <tr>
+      <td>The number of tensors in x and out is inconsistent.</td>
+    </tr>
+    <tr>
+      <td>The tensor list of x or out contains a null pointer member.</td>
+    </tr>
+    <tr>
+      <td>The tensor list length of x or out exceeds 256.</td>
     </tr>
   </tbody></table>
 
@@ -226,6 +235,7 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 - Deterministic computation:
   - aclnnForeachRoundOffNumberV2 defaults to a deterministic implementation.
+- The tensor list length of x and out cannot exceed 256.
 
 ## Example
 

@@ -35,10 +35,13 @@ static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPP
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT16};
 
 static const std::initializer_list<DataType> ASCEND950_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT16};
 
 // roundMode(aclTensor*)的dtype按def定义为固定INT8
 static const std::initializer_list<DataType> FOREACH_ROUND_MODE_SUPPORT_LIST = {DataType::DT_INT8};
+
+// Tensor列表容量上限, 与TilingData定长数组容量(arch35)及公共tiling截断上界(arch22)一致
+static constexpr int64_t MAX_TENSOR_NUM_LIST = 256;
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
@@ -62,18 +65,6 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
                 op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return EMPTY_LIST;
     }
-}
-
-static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
-{
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        // self格式不能是私有格式
-        if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
-            return false;
-        }
-    }
-    return true;
 }
 
 static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* roundMode, const aclTensorList* out)
@@ -101,16 +92,17 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* r
 
     // check the releation of self and roundMode
     OP_CHECK_DTYPE_NOT_SUPPORT(roundMode, FOREACH_ROUND_MODE_SUPPORT_LIST, return false);
+    // roundMode为标量语义, 元素个数必须为1
+    if (roundMode->GetViewShape().GetShapeSize() != 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "roundMode numel must be 1, but got %ld.",
+                roundMode->GetViewShape().GetShapeSize());
+        return false;
+    }
     return true;
 }
 
 static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out)
 {
-    // tensor 维度检查
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
-    }
-
     // self和out的shape必须一致
     for (uint64_t i = 0; i < self->Size(); i++) {
         OP_CHECK_SHAPE_NOT_EQUAL((*self)[i], (*out)[i], return false);
@@ -124,16 +116,25 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
     CHECK_RET(CheckNotNull(self, roundMode, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // Check every entry in tensor lists is not null, to avoid null pointer
-    // dereference in CheckDtypeValid/CheckShape/CheckFormat.
+    // dereference in CheckDtypeValid/CheckShape.
     CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    // 2. 检查x与out张量个数一致
+    if (self->Size() != out->Size()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x size[%llu] and out size[%llu] must be equal.", self->Size(), out->Size());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    // 3. 检查列表长度不超过kernel TilingData容量上限
+    if (self->Size() > MAX_TENSOR_NUM_LIST) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor list size[%llu] exceeds max tensor num[%ld].", self->Size(),
+                MAX_TENSOR_NUM_LIST);
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    // 4. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(self, roundMode, out), ACLNN_ERR_PARAM_INVALID);
-    // 3. 检查shape是否满足约束
+    // 5. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
-    // 4. 检查Format是否满足约束
-    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 

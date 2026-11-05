@@ -20,6 +20,7 @@
 #include "tiling/tiling_api.h"
 #include "platform/platform_info.h"
 #include "log/log.h"
+#include "util/math_util.h"
 #include "foreach_round_off_number_tiling.h"
 
 using namespace AscendC;
@@ -29,6 +30,8 @@ namespace optiling {
 constexpr int64_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t SINGLE_CORE_MIN_ELEMENTS = 1024;
 constexpr int64_t INPUT_IDX = 0;
+constexpr int64_t ROUND_MODE_IDX = 1;
+constexpr int64_t OUTPUT_IDX = 0;
 
 // Get tiling key from dtype
 static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
@@ -95,9 +98,31 @@ static ge::graphStatus ForeachRoundOffNumberTilingFunc(gert::TilingContext* cont
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
     OP_CHECK_IF(
-        (static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ROUND_HOST),
+        (tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM_FOREACH_ROUND_HOST)),
         OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum, MAX_TENSOR_NUM_FOREACH_ROUND_HOST),
         return ge::GRAPH_FAILED);
+
+    // 输入/输出实例数必须一致, 列表个数失配时无法逐成员对齐输出
+    auto outInstanceInfoPtr = computeNodeInfoPtr->GetOutputInstanceInfo(OUTPUT_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outInstanceInfoPtr);
+    uint64_t outTensorNum = outInstanceInfoPtr->GetInstanceNum();
+    OP_CHECK_IF((outTensorNum != tensorNum),
+                OP_LOGE(context, "x instance num %lu is not equal to y instance num %lu", tensorNum, outTensorNum),
+                return ge::GRAPH_FAILED);
+
+    // roundMode必须为INT8单元素张量, 非法元数据不下发kernel
+    auto roundModeDescPtr = context->GetRequiredInputDesc(ROUND_MODE_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, roundModeDescPtr);
+    OP_CHECK_IF((roundModeDescPtr->GetDataType() != ge::DT_INT8),
+                OP_LOGE(context, "roundMode dtype must be INT8, but got %d",
+                        static_cast<int32_t>(roundModeDescPtr->GetDataType())),
+                return ge::GRAPH_FAILED);
+    auto roundModeShapePtr = context->GetRequiredInputShape(ROUND_MODE_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, roundModeShapePtr);
+    int64_t roundModeNumel = roundModeShapePtr->GetStorageShape().GetShapeSize();
+    OP_CHECK_IF((roundModeNumel != 1),
+                OP_LOGE(context, "roundMode must contain exactly 1 element, but got %ld", roundModeNumel),
+                return ge::GRAPH_FAILED);
 
     // 3. Compute element counts and total elements
     int64_t totalElements = 0;
@@ -110,11 +135,19 @@ static ge::graphStatus ForeachRoundOffNumberTilingFunc(gert::TilingContext* cont
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
         int64_t numel = idxTensorShape.GetShapeSize();
         tilingData->tensorElements[i] = numel;
+        // 累加前检查int64上溢
+        OP_CHECK_IF((numel > INT64_MAX - totalElements),
+                    OP_LOGE(context, "total elements overflow: numel %ld, accumulated %ld", numel, totalElements),
+                    return ge::GRAPH_FAILED);
         totalElements += numel;
 
+        auto idxTensorDtypePtr = context->GetDynamicInputDesc(INPUT_IDX, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorDtypePtr);
+        // 列表内所有Tensor的dtype必须一致, 混合dtype无法由单一tilingKey正确分派模板
+        OP_CHECK_IF((i > 0 && idxTensorDtypePtr->GetDataType() != dataType),
+                    OP_LOGE(context, "dtype of tensor[%lu] is inconsistent with tensor[0]", i),
+                    return ge::GRAPH_FAILED);
         if (i == 0) {
-            auto idxTensorDtypePtr = context->GetDynamicInputDesc(INPUT_IDX, i);
-            OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorDtypePtr);
             dataType = idxTensorDtypePtr->GetDataType();
         }
     }
@@ -122,7 +155,8 @@ static ge::graphStatus ForeachRoundOffNumberTilingFunc(gert::TilingContext* cont
     // 4. Compute core split
     int64_t needCoreNum = coreNum;
     if (totalElements > 0) {
-        needCoreNum = std::min(coreNum, (totalElements + SINGLE_CORE_MIN_ELEMENTS - 1) / SINGLE_CORE_MIN_ELEMENTS);
+        // CeilDiv官方封装, 溢出安全(加法式x+N-1在x>INT64_MAX-N时有符号上溢)
+        needCoreNum = std::min(coreNum, Ops::Base::CeilDiv(totalElements, SINGLE_CORE_MIN_ELEMENTS));
     }
     needCoreNum = std::max(needCoreNum, static_cast<int64_t>(1));
 

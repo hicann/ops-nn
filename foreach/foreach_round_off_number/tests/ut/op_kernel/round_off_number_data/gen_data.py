@@ -25,6 +25,25 @@ def parse_str_to_shape_list(shape_str):
     return shape_list
 
 
+def _round_half_away(x):
+    # 与内核roundf一致的四舍五入(half-away-from-zero): trunc+精确小数部判定,
+    # 避免floor(|x|+0.5)中转加法在大值域的舍入偏差
+    t = np.trunc(x)
+    fr = x - t
+    r = t + np.where(fr >= 0.5, 1.0, np.where(fr <= -0.5, -1.0, 0.0))
+    # 零结果继承操作数符号(IEEE 754)
+    r = np.where(r == 0, np.where(np.signbit(x), np.float32(-0.0), np.float32(0.0)), r)
+    return r.astype(x.dtype)
+
+
+def _round_to_odd(x):
+    # 与内核RoundToOdd一致: 就近取整, 恰为.5时取奇数
+    f = np.floor(x)
+    fr = x - f
+    odd = np.where(np.mod(f, 2.0) != 0.0, f, f + 1.0)
+    return np.where(fr > 0.5, f + 1.0, np.where(fr < 0.5, f, odd))
+
+
 def gen_data_and_golden(shape_str, roundMode=3, d_type="float32"):
     d_type_dict = {
         "float32": np.float32,
@@ -39,7 +58,7 @@ def gen_data_and_golden(shape_str, roundMode=3, d_type="float32"):
         1: np.rint,
         2: np.floor,
         3: np.ceil,
-        4: np.round,
+        4: _round_half_away,
         5: np.trunc,
     }
 
@@ -55,14 +74,15 @@ def gen_data_and_golden(shape_str, roundMode=3, d_type="float32"):
                 tmp_golden = (tmp_input - np.floor(tmp_input)).astype(np_type)
         elif roundMode == 6:
             if d_type == "int16":
-                rounded = np.round(tmp_input).astype(np.int16)
-                tmp_golden = np.clip(rounded + (1 - (rounded % 2)), -32767, 32767)
+                # 整型无小数部, 非frac模式内核输出恒等
+                tmp_golden = tmp_input.astype(np.int16)
             else:
-                tmp_golden = np.rint(tmp_input.astype(np_type))
+                tmp_golden = _round_to_odd(tmp_input.astype(np_type)).astype(np_type)
         elif roundMode in round_funcs:
             tmp_golden = round_funcs[roundMode](tmp_input.astype(np_type))
         else:
-            tmp_golden = np.round(tmp_input).astype(np_type)
+            # 未列举模式内核恒等返回
+            tmp_golden = tmp_input.astype(np_type)
         tmp_input.astype(np_type).tofile(
             f"{d_type}_input_t_foreach_round_off_number{index}.bin"
         )

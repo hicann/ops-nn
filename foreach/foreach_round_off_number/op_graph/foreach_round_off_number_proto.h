@@ -9,16 +9,16 @@
  */
 
 /*!
- * \file foreach_sign_proto.h
+ * \file foreach_round_off_number_proto.h
  * \brief
  */
-#ifndef OPS_OP_PROTO_INC_FOREACH_SIGN_H_
-#define OPS_OP_PROTO_INC_FOREACH_SIGN_H_
+#ifndef OPS_OP_PROTO_INC_FOREACH_ROUND_OFF_NUMBER_H_
+#define OPS_OP_PROTO_INC_FOREACH_ROUND_OFF_NUMBER_H_
 
 #include "graph/operator_reg.h"
 namespace ge {
 /**
- * @brief round off number foreach element in each tensor in tesnorlist, this is an in-place operation.
+ * @brief round off number foreach element in each tensor in tesnorlist.
  * @par Inputs:
  * Two inputs
  * @li x: A tensor list containing multiple tensors, can be float16, float, bfloat16 or int16.
@@ -32,4 +32,4 @@ REG_OP(ForeachRoundOffNumber)
     .DYNAMIC_OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT16}))
     .OP_END_FACTORY_REG(ForeachRoundOffNumber)
 } // namespace ge
-#endif // OPS_OP_PROTO_INC_FOREACH_SIGN_H_
+#endif // OPS_OP_PROTO_INC_FOREACH_ROUND_OFF_NUMBER_H_

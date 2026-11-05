@@ -49,21 +49,21 @@
       <td>x</td>
       <td>输入</td>
       <td>表示进行舍入运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16、INT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>roundMode</td>
       <td>输入</td>
-      <td>表示进行舍入计算的输入张量，对应公式中的`roundMode`。元素个数为1。roundMode的取值及对应的舍入策略如下：当roundMode=1，表示对输入进行四舍六入五成双舍入操作；当roundMode=2，表示对输入进行向负无穷舍入取整操作；当roundMode=3，表示对输入进行向正无穷舍入取整操作；当roundMode=4，表示对输入进行四舍五入舍入操作；当roundMode=5，表示对输入进行向零舍入操作；当roundMode=6，表示对输入进行最近邻奇数舍入操作；当roundMode为其他时，如果精度损失会进行四舍六入五成双舍入操作，不涉及精度损失时则不进行舍入操作。</td>
+      <td>表示进行舍入计算的输入张量，对应公式中的`roundMode`。元素个数为1。roundMode的取值及对应的舍入策略如下：当roundMode=0，表示对输入不进行舍入操作；当roundMode=1，表示对输入进行四舍六入五成双舍入操作；当roundMode=2，表示对输入进行向负无穷舍入取整操作；当roundMode=3，表示对输入进行向正无穷舍入取整操作；当roundMode=4，表示对输入进行四舍五入舍入操作；当roundMode=5，表示对输入进行向零舍入操作；当roundMode=6，表示对输入进行最近邻奇数舍入操作；当roundMode=7，表示对输入取小数部分；当roundMode为其他时，表示对输入不进行舍入操作。</td>
       <td>INT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行舍入运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT16</td>
+      <td>表示进行舍入运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size等于入参`x`的shape size。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16、INT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -72,7 +72,9 @@
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+- 非连续Tensor输入由框架自动转换为连续Tensor后执行。
+- 非连续Tensor输出由框架自动转换为连续Tensor后执行。
+- x和out的Tensor列表长度不能超过256。
 
 ## 调用说明
 

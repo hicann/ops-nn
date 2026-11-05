@@ -51,21 +51,21 @@ English | [简体中文](./README.md)
       <td>x</td>
       <td>Input</td>
       <td>Represents the input tensor list for the rounding operation, corresponding to `x` in the formulas. The data types of all tensors in this parameter are consistent.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16, INT16</td>
+      <td>FLOAT, FLOAT16, BFLOAT16, INT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>roundMode</td>
       <td>Input</td>
-      <td>Represents the input tensor for the rounding computation, corresponding to `roundMode` in the formulas. The number of elements is 1. The values of roundMode and the corresponding rounding strategies are as follows: when roundMode=1, the operator performs banker's rounding (round half to even) on the input; when roundMode=2, the operator rounds the input toward negative infinity; when roundMode=3, the operator rounds the input toward positive infinity; when roundMode=4, the operator performs round-half-up rounding on the input; when roundMode=5, the operator rounds the input toward zero; when roundMode=6, the operator performs nearest-odd rounding on the input; for other values of roundMode, the operator performs banker's rounding if precision loss occurs, and does not perform rounding if no precision loss occurs.</td>
+      <td>Represents the input tensor for the rounding computation, corresponding to `roundMode` in the formulas. The number of elements is 1. The values of roundMode and the corresponding rounding strategies are as follows: when roundMode=0, no rounding operation is performed on the input; when roundMode=1, the input is rounded half to even; when roundMode=2, the input is rounded toward negative infinity; when roundMode=3, the input is rounded toward positive infinity; when roundMode=4, the input is rounded half up; when roundMode=5, the input is rounded toward zero; when roundMode=6, the input is rounded to nearest odd; when roundMode=7, the fractional part of the input is taken; for other values of roundMode, no rounding operation is performed on the input.</td>
       <td>INT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Represents the output tensor list for the rounding operation, corresponding to `y` in the formulas. The data types of all tensors in this parameter are consistent. The data type and data format are the same as those of the input `x`, and the shape size is greater than or equal to the shape size of the input `x`.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16, INT16</td>
+      <td>Represents the output tensor list for the rounding operation, corresponding to `y` in the formulas. The data types of all tensors in this parameter are consistent. The data type and data format are the same as those of the input `x`, and the shape size is equal to the shape size of the input `x`.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16, INT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -74,7 +74,9 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.
+- Non-contiguous output tensors are automatically converted to contiguous tensors by the framework before computation.
+- The tensor list length of x and out cannot exceed 256.
 
 ## Invocation Description
 

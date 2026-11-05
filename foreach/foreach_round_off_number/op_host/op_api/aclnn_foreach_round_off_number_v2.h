@@ -25,17 +25,17 @@ extern "C" {
 
 /**
  * @brief aclnnForeachRoundOffNumberV2的第一段接口，根据具体的计算流程，计算workspace大小。
- * 功能描述：对输入张量列表的每个张量进行四舍五入到指定的小数位数运算。
+ * 功能描述：对输入张量列表的每个张量按roundMode指定的舍入模式取整后输出。
  * 计算公式：
  * out_i = round(x_i, roundMode)
  * @domain aclnnop_math
  * 参数描述：
- * @param [in]   input
- * 输入Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16。数据格式支持ND。
- * @param [in]   input
- * 输入Scalar，数据类型支持INT8。数据格式支持ND。
+ * @param [in]   x
+ * 输入Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16，INT16。数据格式支持ND。
+ * @param [in]   roundMode
+ * 输入Scalar，数据类型支持INT8，INT64。
  * @param [in]   out
- * 输出Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16。数据格式支持ND。
+ * 输出Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16，INT16。数据格式支持ND。
  * @param [out]  workspaceSize   返回用户需要在npu device侧申请的workspace大小。
  * @param [out]  executor         返回op执行器，包含了算子计算流程。
  * @return       aclnnStatus      返回状态码
@@ -46,7 +46,7 @@ ACLNN_API aclnnStatus aclnnForeachRoundOffNumberV2GetWorkspaceSize(const aclTens
 
 /**
  * @brief aclnnForeachRoundOffNumberV2的第二段接口，用于执行计算。
- * 功能描述：对输入张量列表的每个张量进行四舍五入到指定的小数位数运算。
+ * 功能描述：对输入张量列表的每个张量按roundMode指定的舍入模式取整后输出。
  * 计算公式：
  * out_i = round(x_i, roundMode)
  * @domain aclnnop_math

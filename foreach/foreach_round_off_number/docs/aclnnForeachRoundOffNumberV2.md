@@ -88,14 +88,14 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>roundMode（aclScalar*）</td>
       <td>输入</td>
       <td>表示进行舍入计算的输入标量。对应公式中的`roundMode`。</td>
-      <td><ul><li>元素个数为1。</li><li>roundMode的取值及对应的舍入策略如下：<ul><li>当roundMode=1，表示对输入进行四舍六入五成双舍入操作。</li><li>当roundMode=2，表示对输入进行向负无穷舍入取整操作。</li><li>当roundMode=3，表示对输入进行向正无穷舍入取整操作。</li><li>当roundMode=4，表示对输入进行四舍五入舍入操作。</li><li>当roundMode=5，表示对输入进行向零舍入操作。</li><li>当roundMode=6，表示对输入进行最近邻奇数舍入操作。</li><li>当roundMode为其他时，如果精度损失会进行四舍六入五成双舍入操作，不涉及精度损失时则不进行舍入操作。</li></ul></li></ul></td>
+      <td><ul><li>roundMode的取值及对应的舍入策略如下：<ul><li>当roundMode=0，表示对输入不进行舍入操作。</li><li>当roundMode=1，表示对输入进行四舍六入五成双舍入操作。</li><li>当roundMode=2，表示对输入进行向负无穷舍入取整操作。</li><li>当roundMode=3，表示对输入进行向正无穷舍入取整操作。</li><li>当roundMode=4，表示对输入进行四舍五入舍入操作。</li><li>当roundMode=5，表示对输入进行向零舍入操作。</li><li>当roundMode=6，表示对输入进行最近邻奇数舍入操作。</li><li>当roundMode=7，表示对输入取小数部分。</li><li>当roundMode为其他时，表示对输入不进行舍入操作。</li></ul></li></ul></td>
       <td>INT8，INT64</td>
       <td>-</td>
       <td>-</td>
@@ -105,10 +105,10 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行舍入运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size等于入参`x`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -159,8 +159,8 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>传入的x、roundMode、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>x、roundMode和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -173,7 +173,16 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
       <td>x或out中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x或out中的Tensor维度超过8维。</td>
+      <td>roundMode的取值超出INT8的表示范围[-128, 127]。</td>
+    </tr>
+    <tr>
+      <td>x和out的Tensor个数不一致。</td>
+    </tr>
+    <tr>
+      <td>x或out的Tensor列表中存在空指针成员。</td>
+    </tr>
+    <tr>
+      <td>x或out的Tensor列表长度超过256。</td>
     </tr>
   </tbody></table>
 
@@ -224,6 +233,7 @@ aclnnStatus aclnnForeachRoundOffNumberV2(
 
 - 确定性计算：
   - aclnnForeachRoundOffNumberV2默认确定性实现。
+- x和out的Tensor列表长度不能超过256。
 
 ## 调用示例
 

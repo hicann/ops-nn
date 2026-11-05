@@ -99,7 +99,8 @@ int main()
     std::vector<float> input2HostData = {7.45, 8.87, 9.54};
     std::vector<float> out1HostData(6, 0);
     std::vector<float> out2HostData(3, 0);
-    std::vector<float> alphaHostData = {1};
+    // roundMode为INT8标量张量, 宿主数据须与声明的ACL_INT8类型一致
+    std::vector<int8_t> alphaHostData = {1};
     // 创建input1 aclTensor
     ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
     CHECK_RET(ret == ACL_SUCCESS, return ret);

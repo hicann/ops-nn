@@ -44,9 +44,22 @@ constexpr int8_t CAST_FRAC = 7;
 
 // ========== Helpers: apply the round mode with SIMT C APIs ==========
 
+// IEEE 754 keeps the operand sign when a rounding-to-integer result is zero
+// (e.g. ceil/rint/trunc/round of a negative fraction yields -0.0). Multiplying
+// the operand by 0.0f propagates that sign bit without extra library calls.
+__simt_callee__ inline float KeepRoundedZeroSign(float result, float value)
+{
+    if (result == 0.0f) {
+        return value * 0.0f;
+    }
+    return result;
+}
+
 __simt_callee__ inline float RoundToOdd(float value)
 {
-    float floorValue = floorf(value);
+    // The device floorf drops the sign bit of a zero result; restore the operand
+    // sign so the floor leg matches IEEE floor semantics (floor(-0.0) = -0.0).
+    float floorValue = KeepRoundedZeroSign(floorf(value), value);
     float fraction = value - floorValue;
     if (fraction > 0.5f) {
         return floorValue + 1.0f;
@@ -61,19 +74,29 @@ __simt_callee__ inline float ApplyRoundMode(float value, int8_t roundModeValue)
 {
     switch (roundModeValue) {
         case CAST_RINT:
-            return rintf(value);
+            return KeepRoundedZeroSign(rintf(value), value);
         case CAST_FLOOR:
-            return floorf(value);
+            return KeepRoundedZeroSign(floorf(value), value);
         case CAST_CEIL:
-            return ceilf(value);
+            return KeepRoundedZeroSign(ceilf(value), value);
         case CAST_ROUND:
-            return roundf(value);
+            return KeepRoundedZeroSign(roundf(value), value);
         case CAST_TRUNC:
-            return truncf(value);
+            return KeepRoundedZeroSign(truncf(value), value);
         case CAST_ODD:
             return RoundToOdd(value);
-        case CAST_FRAC:
-            return value - truncf(value);
+        case CAST_FRAC: {
+            // Correct the -0.0 case: the device subtraction keeps the operand
+            // sign bit when the fraction is an exact zero (frac(-0.0) and frac
+            // of negative integers yield -0.0 on device), while IEEE 754
+            // defines x - x as +0.0. The zero check below also matches -0.0,
+            // so return the normalized +0.0 for bitwise consistency.
+            float fraction = value - truncf(value);
+            if (fraction == 0.0f) {
+                return 0.0f;
+            }
+            return fraction;
+        }
         case CAST_NONE:
         default:
             return value;
