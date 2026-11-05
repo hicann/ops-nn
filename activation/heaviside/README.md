@@ -75,8 +75,12 @@
 ## 约束说明
 
 - input、values、out的数据类型必须一致。
-- input支持1~8维
-- values为标量（单元素）或与input的shape相同，kernel内部不广播，按相同线性偏移读取values。
+- input支持1~8维；当values为单元素张量（标量）时，input额外支持0维（标量）。
+- values仅支持以下两种形态：
+  - 单元素张量（元素总数为1，按标量处理）；
+  - 与input的shape完全相同，且input、values的元素总数均大于0（图模式不支持元素总数为0的空Tensor）。
+- 图模式（算子IR）下kernel内部不做broadcast，仅按标量或相同线性偏移读取values，因此不支持input与values的一般广播关系（例如input为0维标量、values为多维张量）。
+
 
 ## 调用说明
 

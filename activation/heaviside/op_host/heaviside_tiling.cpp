@@ -21,6 +21,7 @@
 namespace optiling {
 
 constexpr int32_t MAX_ELEMENT_NUM_EACH_CORE = 8 * 1024;
+constexpr int32_t MAX_INPUT_DIM_NUM = 8;
 
 constexpr uint64_t TILING_KEY_DEFAULT = 1;
 
@@ -68,7 +69,16 @@ private:
             valuesType = true;
         } else if (valuesShapeSize > 0 && valuesShape == inputShape) {
             valuesType = false;
+        } else if (valuesShapeSize == 0) {
+            OP_LOGE(tilingContext->GetNodeName(),
+                    "Heaviside does not support empty tensor; values shape size is 0 (input shape size: %d).",
+                    static_cast<int32_t>(inputShapeSize));
+            return false;
         } else {
+            OP_LOGE(tilingContext->GetNodeName(),
+                    "Heaviside does not support broadcast; values must be a scalar (shape size 1) or have the same "
+                    "shape as input (current values shape size: %d, input shape size: %d).",
+                    static_cast<int32_t>(valuesShapeSize), static_cast<int32_t>(inputShapeSize));
             return false;
         }
         return true;
@@ -102,6 +112,11 @@ ge::graphStatus HeavisideTiling::RunBigKernelTiling()
     inputShapeSize = inputShape.GetShapeSize();
     valuesShape = srcShape1->GetOriginShape();
     valuesShapeSize = valuesShape.GetShapeSize();
+    if (inputShape.GetDimNum() > static_cast<size_t>(MAX_INPUT_DIM_NUM)) {
+        OP_LOGE(tilingContext->GetNodeName(), "input dim num %d exceeds the supported maximum %d.",
+                static_cast<int32_t>(inputShape.GetDimNum()), MAX_INPUT_DIM_NUM);
+        return ge::GRAPH_FAILED;
+    }
     if (GetValuesType() == false) {
         return ge::GRAPH_FAILED;
     }

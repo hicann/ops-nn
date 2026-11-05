@@ -68,14 +68,14 @@
 <tbody>
   <tr>
     <td>var</td>
-    <td>输入 / 输出(inplace)</td>
+    <td>输入</td>
     <td>待更新的主权重参数（master weight），对应公式中的var。恒为FP32；Kernel内inplace更新，GE IR输出复用同名var与输入共享Device内存。</td>
     <td>FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>accum</td>
-    <td>输入 / 输出(inplace)</td>
+    <td>输入</td>
     <td>动量缓冲，对应公式中的accum。跨调用持久，shape必须与var一致；Kernel内显式写回输入GM地址。</td>
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
@@ -110,24 +110,10 @@
   </tr>
   <tr>
     <td>var_copy</td>
-    <td>输入 / 输出(inplace)</td>
+    <td>输入</td>
     <td>低精度权重副本（compute copy），对应公式中的var_copy。shape必须与var一致；Kernel内独立同步更新并写回输入GM地址。</td>
     <td>FLOAT16</td>
     <td>ND</td>
-  </tr>
-  <tr>
-    <td>use_nesterov</td>
-    <td>属性</td>
-    <td>是否使用Nesterov动量。默认false（标准动量）。</td>
-    <td>BOOL</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>use_locking</td>
-    <td>属性</td>
-    <td>是否在更新时加锁。默认false。与TF语义对齐，当前实现不强制互斥锁，仅作语义占位，不影响数值结果。</td>
-    <td>BOOL</td>
-    <td>-</td>
   </tr>
   <tr>
     <td>var (output)</td>
@@ -150,6 +136,20 @@
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
+  <tr>
+    <td>use_nesterov</td>
+    <td>属性</td>
+    <td>是否使用Nesterov动量。默认false（标准动量）。</td>
+    <td>BOOL</td>
+    <td>-</td>
+  </tr>
+  <tr>
+    <td>use_locking</td>
+    <td>属性</td>
+    <td>是否在更新时加锁。默认false。与TF语义对齐，当前实现不强制互斥锁，仅作语义占位，不影响数值结果。</td>
+    <td>BOOL</td>
+    <td>-</td>
+  </tr>
 </tbody></table>
 
 - **dtype通路约束**：`var`恒为FLOAT；`accum`/`lr`/`x1`/`momentum`/`x2`五者dtype必须一致，取值{FLOAT, FLOAT16}；`var_copy`恒为FLOAT16。
@@ -162,6 +162,6 @@
 
 ## 调用说明
 
-| 调用方式 | 调用样例 | 说明 |
+| 调用方式 | 样例代码 | 说明 |
 |----------|----------|------|
-| 图模式 | [test_geir_fused_mul_apply_momentum_extern](./examples/arch35/test_geir_fused_mul_apply_momentum_extern.cpp) | 通过[算子IR](./op_graph/fused_mul_apply_momentum_extern_proto.h)构图方式调用FusedMulApplyMomentumExtern算子。本算子为CANN图模式融合训练算子，由`momentum_lossscale_fusion_pass`融合PASS产生。 |
+| GE图模式 | [test_geir_fused_mul_apply_momentum_extern](./examples/arch35/test_geir_fused_mul_apply_momentum_extern.cpp) | 通过[算子IR](./op_graph/fused_mul_apply_momentum_extern_proto.h)构图方式调用FusedMulApplyMomentumExtern算子。本算子为CANN图模式融合训练算子，由`momentum_lossscale_fusion_pass`融合PASS产生。 |

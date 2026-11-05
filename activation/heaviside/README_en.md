@@ -77,8 +77,11 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The data types of input, values, and out must be consistent.
-- input supports 1~8 dims
-- values is a scalar (single element) or has the same shape as input. The kernel does not broadcast internally, and reads values with the same linear offset.
+- input supports 1~8 dims. When values is a single-element tensor (scalar), input additionally supports 0 dims (scalar).
+- values supports only the following two forms:
+  - A single-element tensor (with a total element count of 1, processed as a scalar);
+  - The exact same shape as input, with the total element counts of both input and values greater than 0 (graph mode does not support empty tensors with a total element count of 0).
+- In graph mode (operator IR), the kernel does not perform broadcast internally and reads values only as a scalar or at the same linear offset. Therefore, a general broadcast relationship between input and values is not supported (for example, input is a 0-dim scalar while values is a multi-dim tensor).
 
 ## Invocation Description
 

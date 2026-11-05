@@ -23,7 +23,7 @@
   - $qMax = 2^{num\_bits} - 1$
   - $scale = (max - min) / (qMax - qMin)$
   - $scaleInv = (qMax - qMin) / (max - min)$（必须独立除法计算，不能用 $1/scale$，精度保障）
-  - $nudgedZeroPoint = round(qMin - min / scale)$，裁剪至 $[qMin, qMax]$
+  - $nudgedZeroPoint = round(qMin - min / scale)$，裁剪至 $[qMin, qMax]$（round 为 round-half-away，与 TF Eigen 的 `std::round` 一致）
   - $nudgedMin = (qMin - nudgedZeroPoint) \times scale$
   - $nudgedMax = (qMax - nudgedZeroPoint) \times scale$
   - $quantZero = floor(-nudgedMin \times scaleInv + 0.5)$（必须基于nudgedMin重算，不能复用nudgedZeroPoint，精度保障）
@@ -35,7 +35,7 @@
   $$
 
   $$
-  q\_offset = floor((clamped - nudgedMin) \times scaleInv + (0.5 - quantZero))
+  q = floor((clamped - nudgedMin) \times scaleInv + 0.5); \quad q\_offset = q - quantZero
   $$
 
   $$
@@ -72,14 +72,14 @@
     <tr>
       <td>min</td>
       <td>可选属性</td>
-      <td><ul><li>表示量化范围的最小值，对应公式中的min；</li><li>必须小于max；</li><li>缺省值为-6.0。</li></ul></td>
+      <td><ul><li>表示量化范围的最小值，对应公式中的min；</li><li>必须为有限值（非NaN/Inf）且小于max；</li><li>缺省值为-6.0。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>max</td>
       <td>可选属性</td>
-      <td><ul><li>表示量化范围的最大值，对应公式中的max；</li><li>必须大于min；</li><li>缺省值为6.0。</li></ul></td>
+      <td><ul><li>表示量化范围的最大值，对应公式中的max；</li><li>必须为有限值（非NaN/Inf）且大于min；</li><li>缺省值为6.0。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
@@ -110,11 +110,11 @@
 ## 约束说明
 
 - 输入`x`与输出`y`的数据类型仅支持FLOAT32，shape必须完全一致。
-- `min`必须小于`max`。
+- `min`、`max`必须为有限值（非NaN/Inf），且`min`必须小于`max`；`max-min`不得在FLOAT32下溢出为Inf，也不得过小导致`scale`下溢为0或`scaleInv`溢出为Inf（无法在FLOAT32下表示的区间将报错）。
 - `num_bits`取值范围为[2, 16]。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | [test_geir_fake_quant_with_min_max_args](examples/test_geir_fake_quant_with_min_max_args.cpp) | 通过GE IR构图方式调用FakeQuantWithMinMaxArgs算子（per-tensor min/max/num_bits/narrow_range标量属性）。 |
+| GE图模式 | [test_geir_fake_quant_with_min_max_args](examples/test_geir_fake_quant_with_min_max_args.cpp) | 通过[算子IR定义](op_graph/fake_quant_with_min_max_args_proto.h)构图方式调用FakeQuantWithMinMaxArgs算子（per-tensor min/max/num_bits/narrow_range标量属性）。 |

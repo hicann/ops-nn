@@ -25,7 +25,7 @@ English | [简体中文](./README.md)
   - $qMax = 2^{num\_bits} - 1$
   - $scale = (max - min) / (qMax - qMin)$
   - $scaleInv = (qMax - qMin) / (max - min)$ (must be computed by an independent division and cannot use $1/scale$, for precision assurance)
-  - $nudgedZeroPoint = round(qMin - min / scale)$, clipped to $[qMin, qMax]$
+  - $nudgedZeroPoint = round(qMin - min / scale)$, clipped to $[qMin, qMax]$ (round is round-half-away, consistent with `std::round` in TF Eigen)
   - $nudgedMin = (qMin - nudgedZeroPoint) \times scale$
   - $nudgedMax = (qMax - nudgedZeroPoint) \times scale$
   - $quantZero = floor(-nudgedMin \times scaleInv + 0.5)$ (must be recomputed based on nudgedMin and cannot reuse nudgedZeroPoint, for precision assurance)
@@ -37,7 +37,7 @@ English | [简体中文](./README.md)
   $$
 
   $$
-  q\_offset = floor((clamped - nudgedMin) \times scaleInv + (0.5 - quantZero))
+  q = floor((clamped - nudgedMin) \times scaleInv + 0.5); \quad q\_offset = q - quantZero
   $$
 
   $$
@@ -74,14 +74,14 @@ English | [简体中文](./README.md)
     <tr>
       <td>min</td>
       <td>Optional attribute</td>
-      <td><ul><li>Minimum value of the quantization range, corresponding to min in the formula.</li><li>It must be less than max.</li><li>Default value: -6.0.</li></ul></td>
+      <td><ul><li>Minimum value of the quantization range, corresponding to min in the formula.</li><li>It must be a finite value (not NaN/Inf) and less than max.</li><li>Default value: -6.0.</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>max</td>
       <td>Optional attribute</td>
-      <td><ul><li>Maximum value of the quantization range, corresponding to max in the formula.</li><li>It must be greater than min.</li><li>Default value: 6.0.</li></ul></td>
+      <td><ul><li>Maximum value of the quantization range, corresponding to max in the formula.</li><li>It must be a finite value (not NaN/Inf) and greater than min.</li><li>Default value: 6.0.</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
@@ -112,11 +112,11 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The data types of the input `x` and the output `y` support only FLOAT32, and their shapes must be exactly identical.
-- `min` must be less than `max`.
+- `min` and `max` must be finite values (not NaN/Inf), and `min` must be less than `max`; `max-min` must not overflow to Inf in FLOAT32, nor be so small that `scale` underflows to 0 or `scaleInv` overflows to Inf (an interval that cannot be represented in FLOAT32 will report an error).
 - The value range of `num_bits` is [2, 16].
 
 ## Invocation Description
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| Graph-mode invocation | [test_geir_fake_quant_with_min_max_args](examples/test_geir_fake_quant_with_min_max_args.cpp) | Invokes the FakeQuantWithMinMaxArgs operator through GE IR graph construction (per-tensor min/max/num_bits/narrow_range scalar attributes). |
+| GE graph-mode invocation | [test_geir_fake_quant_with_min_max_args](examples/test_geir_fake_quant_with_min_max_args.cpp) | Invokes the FakeQuantWithMinMaxArgs operator through graph construction based on [operator IR definitions](op_graph/fake_quant_with_min_max_args_proto.h) (per-tensor min/max/num_bits/narrow_range scalar attributes). |
