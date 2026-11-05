@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_impl_registry.h"
+#include "graph/utils/type_utils.h"
 #include "util/math_util.h"
 #include "log/log.h"
 #include "platform/platform_infos_def.h"
@@ -36,6 +37,9 @@ constexpr uint32_t TILING_KEY_FOR_MEMORY = 3;
 constexpr uint32_t DOUBLE_BUFFER = 2;
 constexpr uint32_t FLOAT_BYTES = 4;
 constexpr uint32_t TILING_ELEMENTS = 1024 * 4;
+// kernel 对 logits_max/sum_exp_logits/predicted_logits 三个 1-D 输入固定按 float 读取（GlobalTensor<float>）
+constexpr uint32_t SCALAR_INPUT_NUM = 3;
+const char* const SCALAR_INPUT_NAMES[SCALAR_INPUT_NUM] = {"logits_max", "sum_exp_logits", "predicted_logits"};
 
 class FusedCrossEntropyLossWithMaxSumTiling {
 public:
@@ -211,8 +215,27 @@ ge::graphStatus FusedCrossEntropyLossWithMaxSumTiling::TilingForMenory()
     return ge::GRAPH_SUCCESS;
 }
 
+// 三个 1-D 输入按 spec 仅支持 fp32；kernel 固定按 4B/元素读 GM，传入非 fp32（如 fp16，2B/元素分配）
+// 会造成 2 倍 GM 越界读（块外读，越界哨兵不可检出），tiling 期统一拦截，regbase/传统路径共用
+static ge::graphStatus CheckScalarInputDtype(gert::TilingContext* context)
+{
+    for (uint32_t i = 0; i < SCALAR_INPUT_NUM; i++) {
+        auto desc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        auto dtype = desc->GetDataType();
+        OP_CHECK_IF(dtype != ge::DT_FLOAT,
+                    OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), SCALAR_INPUT_NAMES[i],
+                                              ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "FLOAT"),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus TilingFusedCrossEntropyLossWithMaxSum(gert::TilingContext* context)
 {
+    if (CheckScalarInputDtype(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         OP_LOGD(context, "enter TilingFusedCrossEntropyLossWithMaxSumRegbase");
         return TilingFusedCrossEntropyLossWithMaxSumRegbase(context);
