@@ -21,6 +21,7 @@
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "common/inc/op_host/op_const_def_nn.h"
 #include "aclnn/aclnn_base.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
@@ -39,6 +40,7 @@ extern "C" {
 #endif
 
 constexpr size_t MAX_DIM = 8;
+constexpr int64_t TWO = 2;
 
 // 列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
@@ -51,6 +53,17 @@ static const std::initializer_list<op::DataType> DTYPE_950_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_INT64,
     op::DataType::DT_BOOL,  op::DataType::DT_BF16,    op::DataType::DT_INT8,  op::DataType::DT_UINT8,
     op::DataType::DT_INT16, op::DataType::DT_DOUBLE};
+
+static const std::initializer_list<op::DataType> DTYPE_960_SUPPORT_LIST = {
+    op::DataType::DT_INT32,      op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_INT64,
+    op::DataType::DT_BOOL,       op::DataType::DT_BF16,    op::DataType::DT_INT8,  op::DataType::DT_UINT8,
+    op::DataType::DT_INT16,      op::DataType::DT_DOUBLE,  Ops::NN::DT_HIFLOAT4,   op::DataType::DT_FLOAT4_E2M1,
+    op::DataType::DT_FLOAT4_E1M2};
+
+// 960PR（DAV_9202）不支持 fp4 系列 dtype，且走 IndexFillD 兜底（tiling 仅支持基础 6 种 dtype）
+static const std::initializer_list<op::DataType> DTYPE_960PR_SUPPORT_LIST = {
+    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
+    op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> DTYPE_INDEX_SUPPORT_LIST = {op::DataType::DT_INT32,
                                                                              op::DataType::DT_INT64};
@@ -100,12 +113,20 @@ static bool CheckIndexDtypeValid(const aclTensor* index)
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* self, const aclScalar* value, const aclTensor* out)
 {
     // 检查self的数据类型是否在算子的支持列表内
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
         OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_910B_SUPPORT_LIST, return false);
+    } else if (npuArch == NpuArch::DAV_9201) {
+        // 仅 960DT（DAV_9201）支持 fp4 系列 dtype
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_960_SUPPORT_LIST, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(value, DTYPE_960_SUPPORT_LIST, return false);
+    } else if (npuArch == NpuArch::DAV_9202) {
+        // 960PR 不支持 fp4，dtype 能力与 IndexFillD 兜底内核对齐
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_960PR_SUPPORT_LIST, return false);
     } else if (Ops::NN::AclnnUtil::IsRegbase()) {
         OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_950_SUPPORT_LIST, return false);
     } else {
@@ -115,17 +136,95 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
     return true;
 }
 
+static bool CheckFp4Support(const aclTensor* self, const aclScalar* value, int64_t dim)
+{
+    if (self->GetDataType() != Ops::NN::DT_HIFLOAT4 && self->GetDataType() != op::DataType::DT_FLOAT4_E2M1 &&
+        self->GetDataType() != op::DataType::DT_FLOAT4_E1M2) {
+        return true;
+    }
+
+    if (self->GetDataType() != value->GetDataType()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The self and value must have the same data type when the dtype is DT_HIFLOAT4, DT_FLOAT4_E2M1, "
+                "or DT_FLOAT4_E1M2.");
+        return false;
+    }
+
+    auto selfShape = self->GetViewShape();
+    auto selfDim = static_cast<int64_t>(selfShape.GetDimNum());
+    int64_t actualDim = dim >= 0 ? dim : dim + selfDim;
+    int64_t afterAxis = 1;
+    for (int64_t i = actualDim + 1; i < selfDim; i++) {
+        afterAxis *= selfShape.GetDim(i);
+    }
+    // hif4、fp4 时需满足input的dim轴之后的维度乘积为偶数。
+    if (afterAxis % TWO != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The number of input in each line must be an even number when dtype of input is DT_HIFLOAT4, "
+                "DT_FLOAT4_E2M1 and DT_FLOAT4_E1M2.");
+        return false;
+    }
+    return true;
+}
+
+static bool IsNonContiguous(const aclTensor* tensor)
+{
+    if (tensor == nullptr) {
+        return false;
+    }
+    op::Shape shapeI = tensor->GetViewShape();
+    auto dimNum = static_cast<int64_t>(shapeI.GetDimNum());
+    // 0 维（scalar）张量恒视为连续，避免后续以 dimNum - 1 == -1 越界访问 stride
+    if (dimNum <= 0) {
+        return false;
+    }
+    auto shapeIStride = tensor->GetViewStrides();
+    // 尾轴stride不为1，非连续
+    if (shapeIStride[dimNum - 1] != 1) {
+        return true;
+    }
+    // 其他轴的stride[i]!=shape[i+1]*stride[i+1]，非连续
+    for (int64_t j = dimNum - TWO; j >= 0; j--) {
+        if (shapeIStride[j] != shapeIStride[j + 1] * shapeI[j + 1]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool CheckContiguousSupport(const aclTensor* self)
+{
+    if (self->GetDataType() != Ops::NN::DT_HIFLOAT4 && self->GetDataType() != op::DataType::DT_FLOAT4_E2M1 &&
+        self->GetDataType() != op::DataType::DT_FLOAT4_E1M2) {
+        return true;
+    }
+    auto selfIsNonCon = IsNonContiguous(self);
+    if (selfIsNonCon) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "When self has dtype DT_HIFLOAT4, DT_FLOAT4_E2M1, or DT_FLOAT4_E1M2, only contiguous support is "
+                "available.");
+        return false;
+    }
+
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value,
                                const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, index, value, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
-    CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(self, value, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckIndexDtypeValid(index), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查输入的shape是否满足要求
     CHECK_RET(CheckShape(self, dim, out), ACLNN_ERR_PARAM_INVALID);
+    // 5. 检查FP4支持情况
+    CHECK_RET(CheckFp4Support(self, value, dim), ACLNN_ERR_PARAM_INVALID);
+    // 6. 检查是否连续
+    CHECK_RET(CheckContiguousSupport(self), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -133,7 +232,7 @@ static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTens
 static bool NeedTranspose(const aclTensor* self, int64_t dim)
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        // 950芯片不需要做转置操作
+        // 950/960芯片不需要做转置操作
         return false;
     }
 
