@@ -19,7 +19,7 @@ English | [简体中文](./README.md)
 
 - Formula:
 
-  Assume that the shape of $var$ is $(d_0, ..., d_{m-1})$, $a$ is the normalized `dimension`, and $D=d_a$. The shapes of $indices$ and $updates$ are the shape of $var$ with dimension $a$ set to 1, and $k$ is the index of the element on dimension $a$. Then:
+  Assume that the shape of $var$ is $(d_0, ..., d_{m-1})$, $a$ is the normalized `dimension`, and $D=d_a$. The shapes of $indices$ and $updates$ are the shape of $var$ with dimension $a$ removed (the formula below describes broadcasting with that dimension of length 1), and $k$ is the index of the element on dimension $a$. Then:
 
   $$
   y[i_0,...,k,...,i_{m-1}] = \begin{cases} updates[i_0,...,0,...,i_{m-1}], & k = indices[i_0,...,0,...,i_{m-1}] \\ var[i_0,...,k,...,i_{m-1}], & \text{其他} \end{cases}
@@ -36,16 +36,19 @@ English | [简体中文](./README.md)
 | Parameter name | Input/Output/Attribute | Description                                                         | Data type        | Data format |
 | ------ | -------------- | ------------------------------------------------------------ | --------------- | -------- |
 | var    | Input           | Base tensor to be written. The output `y` has the same shape and data type as it.                          | FLOAT16, FLOAT, INT32, INT8 | ND |
-| indices | Input          | Target indices along the `dimension` axis, with the shape of `var` with the `dimension` dimension set to 1. | INT32     | ND |
+| indices | Input          | Target indices along the `dimension` axis, with the shape of `var` with the `dimension` axis removed (when `rank(var)==1`, $(1,)$). | INT32     | ND |
 | updates | Input          | Values to write, with the same shape as `indices` and the same data type as `var`.         | FLOAT16, FLOAT, INT32, INT8 | ND |
 | y      | Output           | Hit positions take `updates`, and the others keep `var`; the shape and data type are both the same as those of `var`. | FLOAT16, FLOAT, INT32, INT8 | ND |
 | dimension | Attribute        | Required. Specifies the axis along which to compare, with the value range $[-m, m-1]$, where $m$ is the number of dimensions of `var`. | INT       | -    |
 
 ## Constraints
 
+- Let $m$ be the rank of `var` and $a$ the normalized `dimension`. When $m \ge 2$, both `indices` and `updates` have rank $m-1$, and their shapes are $(d_0,\ ...,\ d_{a-1},\ d_{a+1},\ ...,\ d_{m-1})$; when $m=1$, both shapes are $(1,)$.
 - The shapes of `indices` and `updates` must be exactly the same.
-- The lengths of `indices` and `updates` along the `dimension` axis must be 1, that is, the general form of PyTorch `scatter` is not supported: when the shape of `var` is $[2,3,4,5]$ and `dimension` is 2, `indices` and `updates` can only be $[2,3,1,5]$ (equivalent to $[2,3,5]$), and $[2,3,2,5]$ is not supported.
+- Shapes that keep the `dimension` axis (length 1, e.g. $[2,3,1,5]$) or have that axis longer than 1 (e.g. $[2,3,2,5]$) are not supported.
 - The data type of `updates` must be consistent with that of `var`; the data type of `indices` is fixed to INT32.
+- The rank of `var` must be at least 1, with no upper bound (rank 0 is rejected).
+- The selected axis length $D=var.shape[dimension]$ must not exceed INT32_MAX (axis indices and `indices` are represented as int32).
 - The indices of elements on the `dimension` axis are generated inside the operator based on `dimension` and the shape of `var`; users do not need to construct them, and they are not passed in as inputs.
 
 ## Invocation Description

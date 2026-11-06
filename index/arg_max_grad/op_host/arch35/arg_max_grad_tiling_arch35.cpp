@@ -12,6 +12,7 @@
  * \brief
  */
 #include <cstring>
+#include <limits>
 #include "error_util.h"
 #include "register/op_def_registry.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -26,7 +27,8 @@ namespace optiling {
 // 说明: 本文件里 `OPS_CHECK_NULL_WITH_CONTEXT` 展开出的拒收分支均**不可达**(输入描述/形状/属性
 // 由 GE 框架保证非空, faker 也造不出), 保留为防御。真正可达的拒收分支都有对应 UT:
 // dtype 非法 / updates dtype 不一致 / indices 非 int32 / updates 与 indices 形状不一致 / rank 为 0 /
-// dimension 越界 / indices 元素数不匹配 / 平台核数为 0 / UB 不大于 dcache 预留 / UB 装不下一个向量整宽。
+// indices rank 与 var 不符 / indices 逐维与 var 不符 / dimension 越界 / dimension 轴长超 INT32_MAX /
+// indices 元素数不匹配 / 平台核数为 0 / UB 不大于 dcache 预留 / UB 装不下一个向量整宽。
 using namespace Ops::Base;
 
 namespace {
@@ -37,6 +39,8 @@ constexpr uint32_t ATTR_DIMENSION_IDX = 0;
 
 constexpr int64_t DTYPE_LEN_INT32 = 4;
 constexpr int64_t DTYPE_LEN_HALF = 2;
+// 轴下标在内核按 int32 生成(GenAssist/Reg::Arange 同为 int32), 被选轴长度超过 INT32_MAX 时 k 会回绕
+constexpr int64_t MAX_DIM_SIZE = static_cast<int64_t>(std::numeric_limits<int32_t>::max());
 
 // 模板键: 与 op_kernel/arch35/arg_max_grad_tiling_key.h 的 innerIsOne 取值一一对应
 constexpr uint64_t KEY_INNER_MULTI = 0;
@@ -169,6 +173,15 @@ ge::graphStatus ArgMaxGradTiling::CheckShape()
     OP_CHECK_IF((rank == 0), OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "var", std::to_string(rank), ">= 1"),
                 return ge::GRAPH_FAILED);
 
+    // 与 A2 IsArgMaxGradCheckPass 对齐: rank(var)>1 时 indices/updates 为 rank(var)-1; rank(var)==1 时为 1。
+    // updates 与 indices 的形状相等已在上方校验, 这里只补 indices 与 var 的 rank 关系。
+    const size_t idxRank = indicesShapePtr->GetStorageShape().GetDimNum();
+    const size_t expectIdxRank = (rank > 1) ? (rank - 1) : 1;
+    OP_CHECK_IF((idxRank != expectIdxRank),
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "indices", std::to_string(idxRank) + "D",
+                                             std::to_string(expectIdxRank) + "D"),
+                return ge::GRAPH_FAILED);
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -181,6 +194,7 @@ ge::graphStatus ArgMaxGradTiling::CheckAttrAndSplitLayout()
     size_t rank = varShape.GetDimNum();
     auto indicesShapePtr = context_->GetInputShape(INPUT_INDICES_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, indicesShapePtr);
+    const auto& indicesShape = indicesShapePtr->GetStorageShape();
     auto* attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const int64_t* dimensionPtr = attrs->GetAttrPointer<int64_t>(ATTR_DIMENSION_IDX);
@@ -194,6 +208,20 @@ ge::graphStatus ArgMaxGradTiling::CheckAttrAndSplitLayout()
         OP_LOGE(context_->GetNodeName(), "dimension %ld is out of range [-%zu, %zu)", *dimensionPtr, rank, rank),
         return ge::GRAPH_FAILED);
 
+    // 与 A2 IsArgMaxGradCheckPass 对齐: indices 逐维等于 var 去掉 dimension 轴后的形状。
+    // rank 关系已在 CheckShape 校验, 此处只处理 rank(var)>1(rank(var)==1 时 indices 只有 (1,), 由元素数校验覆盖)。
+    if (rank > 1) {
+        for (size_t i = 0; i < indicesShape.GetDimNum(); ++i) {
+            const int64_t expectDim = (static_cast<int64_t>(i) < dimension) ? varShape.GetDim(i) :
+                                                                              varShape.GetDim(i + 1);
+            OP_CHECK_IF((indicesShape.GetDim(i) != expectDim),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "indices",
+                                                              Ops::Base::ToString(indicesShape).c_str(),
+                                                              "must equal var shape with the dimension axis removed"),
+                        return ge::GRAPH_FAILED);
+        }
+    }
+
     // 布局归一: (outer, D, inner)
     int64_t outer = 1;
     for (int64_t i = 0; i < dimension; ++i) {
@@ -203,13 +231,18 @@ ge::graphStatus ArgMaxGradTiling::CheckAttrAndSplitLayout()
     for (size_t i = static_cast<size_t>(dimension) + 1; i < rank; ++i) {
         inner *= varShape.GetDim(i);
     }
+    const int64_t dimSize = varShape.GetDim(dimension);
+    OP_CHECK_IF(
+        (dimSize > MAX_DIM_SIZE),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "var", Ops::Base::ToString(varShape).c_str(),
+                                              "dimension axis length must be <= INT32_MAX"),
+        return ge::GRAPH_FAILED);
     tilingData_->outer = outer;
-    tilingData_->dimSize = varShape.GetDim(dimension);
+    tilingData_->dimSize = dimSize;
     tilingData_->inner = inner;
 
     // indices/updates 沿 dimension 轴长度为 1: 元素总数须等于 outer*inner
     int64_t indicesNum = 1;
-    const auto& indicesShape = indicesShapePtr->GetStorageShape();
     for (size_t i = 0; i < indicesShape.GetDimNum(); ++i) {
         indicesNum *= indicesShape.GetDim(i);
     }

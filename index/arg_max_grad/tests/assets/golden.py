@@ -55,7 +55,7 @@ def _compute(var, indices, updates, dimension):
     """torch.Tensor 进 / 出。用 torch.where 显式表达 A2 的 vcmp+vsel 语义。
 
     不用 torch.scatter_ 作 golden 的原因: indices 越界时 scatter_ 直接抛异常,
-    而本算子契约是"越界即不命中、整轴保留 var"(01 §2), where 形态能覆盖该行为。
+    而本算子语义是"越界即不命中、整轴保留 var"(01 §2), where 形态能覆盖该行为。
     """
     dim = dimension if dimension >= 0 else dimension + var.dim()
     # indices/updates 沿 dim 轴长度为 1(允许该轴被 squeeze 掉, 这里统一还原成 keepdim 形态)

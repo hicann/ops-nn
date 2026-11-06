@@ -66,6 +66,7 @@ struct ArgMaxGradCase {
     ge::DataType varDtype = ge::DT_FLOAT;
     ge::DataType updatesDtype = ge::DT_UNDEFINED; // 缺省=跟随 var
     ge::DataType indicesDtype = ge::DT_INT32;
+    std::vector<int64_t> indicesShapeOv{}; // 缺省=按 var/dimension 推导 squeeze 形态
     std::vector<int64_t> updatesShapeOv{}; // 缺省=与 indices 同形
 };
 
@@ -188,7 +189,8 @@ static ge::graphStatus DoArgMaxGradTilingCase(const ArgMaxGradCase& c, uint64_t&
 
     RunTilingParse(tilingParseFunc, platFormInfo, socInfos, aicoreSpec, intrinsics, compileInfo);
 
-    std::vector<int64_t> idxDims = SqueezeDimAxis(c.varShape, c.dimension);
+    std::vector<int64_t> idxDims = c.indicesShapeOv.empty() ? SqueezeDimAxis(c.varShape, c.dimension) :
+                                                              c.indicesShapeOv;
     std::vector<int64_t> updDims = c.updatesShapeOv.empty() ? idxDims : c.updatesShapeOv;
 
     ArgMaxGradShapes shapes{MakeShape(c.varShape), MakeShape(idxDims), MakeShape(updDims), MakeShape(c.varShape)};
@@ -346,12 +348,56 @@ TEST_F(ArgMaxGradTiling, test_tiling_updates_shape_mismatch)
     EXPECT_EQ(DoArgMaxGradTilingCase(c, tilingKey, blockDim), ge::GRAPH_FAILED);
 }
 
+// keepdim 形态(index rank == rank(var))必须拒收, 与 A2 GE verify 对齐
+TEST_F(ArgMaxGradTiling, test_tiling_keepdim_indices_rejected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    ArgMaxGradCase c{{2, 3, 4, 5}, 2, ge::DT_FLOAT};
+    c.indicesShapeOv = {2, 3, 1, 5};
+    EXPECT_EQ(DoArgMaxGradTilingCase(c, tilingKey, blockDim), ge::GRAPH_FAILED);
+}
+
+// 元素数相同但 rank 不符(如 [6,5] vs [2,3,5])也必须拒收, 避免按元素数静默放行
+TEST_F(ArgMaxGradTiling, test_tiling_indices_rank_mismatch_rejected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    ArgMaxGradCase c{{2, 3, 4, 5}, 2, ge::DT_FLOAT};
+    c.indicesShapeOv = {6, 5};
+    EXPECT_EQ(DoArgMaxGradTilingCase(c, tilingKey, blockDim), ge::GRAPH_FAILED);
+}
+
+// 同 rank、同元素数但逐维与 var 去掉 dimension 轴不一致(如 [2,5,3])也必须拒收:
+// 元素数口径会放行, 只有逐维比较才能拒收
+TEST_F(ArgMaxGradTiling, test_tiling_indices_dim_mismatch_rejected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    ArgMaxGradCase c{{2, 3, 4, 5}, 2, ge::DT_FLOAT};
+    c.indicesShapeOv = {2, 5, 3};
+    EXPECT_EQ(DoArgMaxGradTilingCase(c, tilingKey, blockDim), ge::GRAPH_FAILED);
+}
+
+// 被选轴长度超过 INT32_MAX 必须拒收(内核轴下标以 int32 生成, 超出会回绕)
+TEST_F(ArgMaxGradTiling, test_tiling_dim_size_over_int32_rejected)
+{
+    uint64_t tilingKey = 0;
+    uint32_t blockDim = 0;
+    ArgMaxGradCase c{{1, 2147483648LL, 1}, 1, ge::DT_FLOAT};
+    EXPECT_EQ(DoArgMaxGradTilingCase(c, tilingKey, blockDim), ge::GRAPH_FAILED);
+}
+
 TEST_F(ArgMaxGradTiling, test_tiling_dimension_out_of_range)
 {
     uint64_t tilingKey = 0;
     uint32_t blockDim = 0;
-    EXPECT_EQ(DoArgMaxGradTilingCase({{4, 16, 8}, 3, ge::DT_FLOAT}, tilingKey, blockDim), ge::GRAPH_FAILED);
-    EXPECT_EQ(DoArgMaxGradTilingCase({{4, 16, 8}, -4, ge::DT_FLOAT}, tilingKey, blockDim), ge::GRAPH_FAILED);
+    ArgMaxGradCase c{{4, 16, 8}, 3, ge::DT_FLOAT};
+    // indices rank 合法, 确保命中 dimension 越界分支而不是 rank 校验
+    c.indicesShapeOv = {4, 16};
+    EXPECT_EQ(DoArgMaxGradTilingCase(c, tilingKey, blockDim), ge::GRAPH_FAILED);
+    c.dimension = -4;
+    EXPECT_EQ(DoArgMaxGradTilingCase(c, tilingKey, blockDim), ge::GRAPH_FAILED);
 }
 
 // ── 布局归一 (outer, D, inner) 的值断言 ──────────────────────────────────────────
@@ -409,10 +455,10 @@ TEST_F(ArgMaxGradTiling, test_tiling_negative_dimension_layout_equivalent)
     EXPECT_EQ(keyNeg, keyPos);
 }
 
-// rank 1~8 全区间: 每一档都要能出 tiling, 且 totalElems 等于形状连乘
+// rank 1~9 全区间(含 >8): 每一档都要能出 tiling, 且 totalElems 等于形状连乘
 TEST_F(ArgMaxGradTiling, test_tiling_rank_full_range)
 {
-    for (int64_t rank = 1; rank <= 8; ++rank) {
+    for (int64_t rank = 1; rank <= 9; ++rank) {
         std::vector<int64_t> shape(static_cast<size_t>(rank), 2);
         int64_t expect = 1;
         for (auto d : shape) {

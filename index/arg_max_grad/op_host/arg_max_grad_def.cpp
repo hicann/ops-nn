@@ -19,7 +19,7 @@ class ArgMaxGrad : public OpDef {
 public:
     explicit ArgMaxGrad(const char* name) : OpDef(name)
     {
-        // dtype 面对齐 A2 的 aic-ascend910b-ops-info.ini 的 [ArgMaxGrad] 段:
+        // dtype 面对齐 A2 的 aic-ascend910b-ops-info.ini 的 [ArgMaxGradD] 段:
         // var/updates/y 为 float16 / float / int32 / int8 四组, indices 恒 int32
         this->Input("var")
             .ParamType(REQUIRED)
