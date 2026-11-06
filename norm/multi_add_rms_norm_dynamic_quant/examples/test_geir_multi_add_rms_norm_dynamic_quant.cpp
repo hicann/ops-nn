@@ -22,6 +22,8 @@
 #include <new>
 #include <ctime>
 #include <cstdint>
+#include <cmath>
+#include <cstring>
 #include <cstdlib>
 #include "graph.h"
 #include "types.h"
@@ -87,7 +89,8 @@ int CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Ope
     int idx = 0;
 
     // x1: dynamic input tensor list -> multi-add
-    op1.create_dynamic_input_x1(x1Num);
+    // x1 is the first IR input; insert before the static input ports.
+    op1.create_dynamic_input_byindex_x1(x1Num, 0);
     for (int i = 0; i < x1Num; ++i) {
         auto d = MkHalf("x1_" + std::to_string(i), idx++, xShape, input);
         graph.AddOp(d);
@@ -130,6 +133,49 @@ int CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Ope
 
     outputs.push_back(op1);
     return SUCCESS;
+}
+
+// The example fills every input with 1.0. Check all six outputs against
+// this deterministic reference, including the TensorList contribution.
+static bool CheckExampleOutputs(const vector<ge::Tensor>& output)
+{
+    if (g_x1Num < 1 || g_x1Num > 5 || output.size() != 6) {
+        return false;
+    }
+    const uint16_t sumBits[] = {0x4000, 0x4200, 0x4400, 0x4500, 0x4600};
+    const double sum = g_x1Num + 1.0;
+    const double scale = sum / std::sqrt(sum * sum + 1e-6) / 127.0;
+    for (size_t i = 0; i < output.size(); ++i) {
+        const vector<int64_t> expectedShape = i < 4 ? vector<int64_t>{4, 8} : vector<int64_t>{4};
+        const DataType dtype = i < 2 ? DT_INT8 : (i < 4 ? DT_FLOAT16 : DT_FLOAT);
+        const size_t count = i < 4 ? 32 : 4;
+        const size_t width = i < 2 ? 1 : (i < 4 ? 2 : 4);
+        if (output[i].GetTensorDesc().GetShape().GetDims() != expectedShape ||
+            output[i].GetTensorDesc().GetDataType() != dtype || output[i].GetSize() != count * width ||
+            output[i].GetData() == nullptr) {
+            return false;
+        }
+        for (size_t j = 0; j < count; ++j) {
+            const auto* data = output[i].GetData() + j * width;
+            if (i < 2) {
+                int8_t value;
+                std::memcpy(&value, data, sizeof(value));
+                if (value != 127)
+                    return false;
+            } else if (i < 4) {
+                uint16_t value;
+                std::memcpy(&value, data, sizeof(value));
+                if (value != (i == 2 ? sumBits[g_x1Num - 1] : 0x3c00))
+                    return false;
+            } else {
+                float value;
+                std::memcpy(&value, data, sizeof(value));
+                if (!std::isfinite(value) || std::abs(value - scale) > 1e-6)
+                    return false;
+            }
+        }
+    }
+    return true;
 }
 
 int main(int argc, char* argv[])
@@ -179,6 +225,13 @@ int main(int argc, char* argv[])
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Run graph success, output num = %zu\n", GetTime().c_str(), output.size());
+    if (!CheckExampleOutputs(output)) {
+        printf("Example output validation failed\n");
+        delete session;
+        GEFinalize();
+        return FAILED;
+    }
+    printf("All six outputs match the deterministic reference\n");
 
     delete session;
     if (ge::GEFinalize() != SUCCESS) {
