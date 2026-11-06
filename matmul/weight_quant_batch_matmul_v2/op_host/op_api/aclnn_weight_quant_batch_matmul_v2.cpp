@@ -399,6 +399,7 @@ static inline bool CheckMxAntiquantScaleShapeSoc96(const aclTensor* weight, cons
     int64_t groupDimK = (kWeight + mxScaleKFactor - 1) / mxScaleKFactor;
 
     if (transposeWeight) {
+        // 2 and 3 select the second and third dimensions from the end; keep the last packing dimension unchanged.
         const_cast<aclTensor*>(antiquantScale)->SetViewShape(SwapLastTwoDimValue(antiquantScale->GetViewShape(), 2, 3));
     }
     int64_t mxScaleNDim = transposeWeight ? antiquantScale->GetViewShape().GetDim(0) :
@@ -888,7 +889,6 @@ static bool CheckValForWeightB4Nz9201(const aclTensor* x, const aclTensor* weigh
         (weight->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ)) {
         return true;
     }
-    bool transposeX = IsTransposeLastTwoDims(x);
     bool transposeWeight = IsTransposeLastTwoDims(weight);
     auto storageShape = weight->GetStorageShape();
     auto storageShapeDim = storageShape.GetDimNum();
@@ -963,7 +963,6 @@ static bool CheckValForWeightB4Nz9201(const aclTensor* x, const aclTensor* weigh
 static bool CheckValForWeightB8ND9201(const aclTensor* x, const aclTensor* weight, bool transposeWeight,
                                       const aclTensor* antiquantScale)
 {
-    bool transposeX = IsTransposeLastTwoDims(x);
     if (weight->GetDataType() == DataType::DT_INT8) {
         if (antiquantScale->GetDataType() != x->GetDataType() && !transposeWeight) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "antiquantScale",
@@ -1001,7 +1000,6 @@ static bool CheckValForWeightC032B89201(const aclTensor* weight, bool transposeW
                                         const aclTensor* antiquantScale, const aclTensor* antiquantOffsetOptional)
 {
     int64_t kWeight = GetWeightK(weight);
-    int64_t nWeight = GetWeightN(weight);
     // per-channel场景和per-group场景
     OP_CHECK(antiquantOffsetOptional == nullptr,
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -1043,10 +1041,6 @@ static bool CheckValForWeightC032B89201(const aclTensor* weight, bool transposeW
 static bool CheckValForWeightC016B89201(const aclTensor* x, const aclTensor* weight, bool transposeWeight,
                                         int antiquantGroupSize)
 {
-    bool transposeX = IsTransposeLastTwoDims(x);
-    int64_t kWeight = GetWeightK(weight);
-    int64_t nWeight = GetWeightN(weight);
-
     // per-group场景 C016 B8系列不存在perchannel/perTensor场景
     OP_CHECK(!transposeWeight,
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(

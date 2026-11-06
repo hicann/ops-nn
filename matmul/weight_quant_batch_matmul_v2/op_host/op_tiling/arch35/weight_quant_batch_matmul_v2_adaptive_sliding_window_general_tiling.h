@@ -21,7 +21,7 @@
 namespace optiling {
 namespace weight_quant_batch_matmul_v2 {
 
-struct AdaptiveSlidingWindow {
+struct AdaptiveSlidingWindowGerneral {
     uint64_t baseM = 0; // 主窗口基本块大小
     uint64_t baseN = 0; // 主窗口基本块大小
     uint64_t baseK = 0;
@@ -45,7 +45,7 @@ struct AdaptiveSlidingWindow {
     bool enablePreAlloc = true;       // MTE2是否开启PreAllocation
 };
 
-struct BasicTiling {
+struct BasicTilingGerneral {
     uint32_t usedCoreNum = 1;
     uint32_t tilingMode = 0;
     uint32_t singleCoreM = 1;
@@ -75,7 +75,7 @@ struct BasicTiling {
     uint32_t scaleFactorB = 1;
 };
 
-struct BasicBlockParam {
+struct BasicBlockParamGerneral {
     uint64_t mSize = 0;
     uint64_t nSize = 0;
     uint64_t kSize = 0;
@@ -91,7 +91,7 @@ struct BasicBlockParam {
     uint64_t biasDtypeBits = 0;
     double mte2Cost = 0;
 
-    bool operator<(const BasicBlockParam& other) const
+    bool operator<(const BasicBlockParamGerneral& other) const
     {
         if (mte2Cost != other.mte2Cost) {
             return mte2Cost < other.mte2Cost;
@@ -156,8 +156,8 @@ protected:
 
 private:
     // 滑窗相关信息
-    AdaptiveSlidingWindow adaptiveWin_;
-    BasicTiling basicTiling_;
+    AdaptiveSlidingWindowGerneral adaptiveWin_;
+    BasicTilingGerneral basicTiling_;
     bool ClosePreAllocCond() const;
 };
 

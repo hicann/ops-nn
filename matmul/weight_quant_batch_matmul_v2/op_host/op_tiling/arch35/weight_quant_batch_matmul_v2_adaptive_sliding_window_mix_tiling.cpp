@@ -534,9 +534,9 @@ bool WeightQuantBatchMatmulV2TilingASWMix::CheckBasicBlockL1BufferSize(uint64_t 
                       (matmulInfoPtr_->antiQuantType == QuantType::PER_CHANNEL ? scaleByteSize * DB_SIZE * baseN : 0);
     // A16Fp4 perchannel 在L1上还需要占用一个全1的矩阵用于MX的计算
     if (matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1 && matmulInfoPtr_->antiQuantType == QuantType::PER_CHANNEL) {
-        // 2：4 bit 位宽为 0.5，乘 0.5 即除以 2
         l1Size = baseM * baseK * DB_SIZE * MAX_PERF_STEPKB * aByteSize + scaleByteSize * DB_SIZE * baseN +
-                 baseN * baseK * DB_SIZE * MAX_PERF_STEPKB / 2 + MAX_PERF_STEPKB * baseN * baseK / MX_GROUP_SIZE;
+                 baseN * baseK * DB_SIZE * MAX_PERF_STEPKB / 2 +
+                 MAX_PERF_STEPKB * baseN * baseK / MX_GROUP_SIZE; // 2：4 bit 位宽为 0.5，乘 0.5 即除以 2
     } else if (matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1 && matmulInfoPtr_->antiQuantType == QuantType::MX) {
         // 2：4 bit 位宽为 0.5，乘 0.5 即除以 2；sizeof(float8_e8m0) = 1
         l1Size = baseM * baseK * DB_SIZE * MAX_PERF_STEPKB * aByteSize + baseN * baseK * DB_SIZE * MAX_PERF_STEPKB / 2 +
@@ -902,7 +902,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingASWMix::PostTiling()
                     CUBE_INNER_ERR_REPORT(opName_, "tiling data size[%zu] is not aligned to 8", tilingDataSize_),
                     return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void*>(tilingData_.get()), tilingDataSize_);
+                           static_cast<const void*>(tilingData_.get()), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

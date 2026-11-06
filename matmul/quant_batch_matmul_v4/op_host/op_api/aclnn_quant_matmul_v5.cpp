@@ -251,7 +251,6 @@ static inline aclnnStatus CheckInputExistence(TupleInput& inputTensors, TupleQua
 {
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
     auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
-    auto x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
     auto x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
     auto yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
     auto x1Offset = std::get<INDEX_X1_OFFSET_IN_QUANT_TUPLE>(quantTensors);
@@ -263,7 +262,6 @@ static inline aclnnStatus CheckInputExistence(TupleInput& inputTensors, TupleQua
     OP_CHECK_NULL(x2Scale, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(out, return ACLNN_ERR_PARAM_NULLPTR);
     isA8W4 = isA8W4Float(x1, x2) || isA8W4Int(x1, x2);
-
     // 不支持参数
     if (!isA8W4 && yScale != nullptr && !yScale->IsEmpty()) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "yScale", "not empty/null",
@@ -674,7 +672,7 @@ static inline bool CheckScaleX2Shape(const TupleQuant& quantTensors, int64_t x2N
         // MX_SCALE_LAST_DIM_SIZE:x2Scale Shape: (n, groupDim / MX_SCALE_LAST_DIM_SIZE, MX_SCALE_LAST_DIM_SIZE)
         if (x2ScaleNDim != x2NDim ||
             x2ScaleGroupDim != CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)) ||
-            x2Scale->GetViewShape().GetDim(2) != MX_SCALE_LAST_DIM_SIZE) {
+            x2Scale->GetViewShape().GetDim(2) != MX_SCALE_LAST_DIM_SIZE) { // 2 ：获取第三维度参数
             OP_LOGE_FOR_INVALID_SHAPE(
                 kOpName, "x2Scale", op::ToString(x2Scale->GetViewShape()).GetString(),
                 "[" + std::to_string(x2NDim) + ", " +

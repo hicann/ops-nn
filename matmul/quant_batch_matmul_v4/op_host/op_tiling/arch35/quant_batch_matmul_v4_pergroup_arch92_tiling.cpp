@@ -165,7 +165,7 @@ bool QuantBatchMatmulV4PerGroupTiling::IsCapable()
 
 ge::graphStatus QuantBatchMatmulV4PerGroupTiling::GetPlatformInfo()
 {
-    auto compileInfoPtr = reinterpret_cast<const QuantBatchMatmulV4CompileInfo*>(context_->GetCompileInfo());
+    auto compileInfoPtr = static_cast<const QuantBatchMatmulV4CompileInfo*>(context_->GetCompileInfo());
     OP_TILING_CHECK(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compileInfoPtr is null"),
                     return ge::GRAPH_FAILED);
     compileInfo_ = *compileInfoPtr;
@@ -659,7 +659,7 @@ ge::graphStatus QuantBatchMatmulV4PerGroupTiling::PostTiling()
     context_->SetBlockDim(tilingData_->cubeBlockDimM * tilingData_->cubeBlockDimN);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void*>(tilingData_), tilingDataSize_);
+                           static_cast<const void*>(tilingData_), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

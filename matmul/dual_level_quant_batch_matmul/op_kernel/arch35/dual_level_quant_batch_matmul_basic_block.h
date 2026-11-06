@@ -97,6 +97,7 @@ __aicore__ inline void DualLevelQuantMatmulBasicBlock<LOCAL_TEMPLATE_FUNC_PARAMS
     fixpParams.nL0Size = l0Params.nL0Size;
     fixpParams.outNSize = fixpParams.nL0Size;
 
+    // 2 ：m分到两个AIV核上
     offsetParams.mUbSize = Ops::Base::CeilDiv<uint64_t>(l0Params.mIterSize, 2);
 
     for (uint64_t kGmOffset = 0; kGmOffset < offsetParams.kSize; kGmOffset += offsetParams.l0BaseK) {
