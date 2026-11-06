@@ -48,10 +48,14 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* scale, const
                             const aclTensor* out, const aclTensor* mask)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
+    // README 契约：scale/y dtype 与 x 相同。白名单只拦越界 dtype，拦不住合法域内交叉错配
+    // （如 self=FLOAT 传 out=FLOAT16 会按 self dtype 写回导致越界写），需补充同型校验。
     OP_CHECK_DTYPE_NOT_SUPPORT(scale, DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(scale, self->GetDataType(), return false);
     // out is an output contract too: docs only allow FLOAT16/FLOAT32. CanCast alone is not
     // enough because float->int / float->bool are considered castable and silently truncate.
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(zeroPoint, ZERO_POINT_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_MATCH(mask, op::DataType::DT_BOOL, return false);
     return true;
@@ -75,6 +79,13 @@ static bool CheckShape(const aclTensor* self, const aclTensor* scale, const aclT
     auto inputShape = self->GetViewShape();
     auto scaleShape = scale->GetViewShape();
     auto zeroPointShape = zeroPoint->GetViewShape();
+
+    // 文档声明 self/out/mask 支持 0-8 维（ND）：越界返回 161002（P1-5）
+    if (self->GetViewShape().GetDimNum() > 8) { // ND 格式 0-8 维
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension of self should be in range [0, 8], but got %zu",
+                self->GetViewShape().GetDimNum());
+        return false;
+    }
 
     auto scaleDimNum = scaleShape.GetDimNum();
     auto zeroPointDimNum = zeroPointShape.GetDimNum();
@@ -106,7 +117,8 @@ static bool CheckShape(const aclTensor* self, const aclTensor* scale, const aclT
     }
 
     int64_t positiveDim = MakeWrapDim(axis, selfDimNum);
-    auto expectSize = inputShape.GetDim(positiveDim);
+    // 0 维 self 无 GetDim(0) 可读，视为单元素，要求 scale/zeroPoint 长度为 1
+    int64_t expectSize = (selfDimNum == 0) ? 1 : inputShape.GetDim(positiveDim);
     if (expectSize != scaleShape.GetDim(0) || expectSize != zeroPointShape.GetDim(0)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dimensions of scale and zero-point are not consistant with input tensor");
         return false;
@@ -120,6 +132,12 @@ static bool CheckQuantValue(int64_t quantMin, int64_t quantMax)
 {
     if (quantMin > quantMax) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "`quantMin` should be less than or equal to `quantMax`.");
+        return false;
+    }
+    constexpr int64_t QUANT_BOUND_LIMIT = 16777215; // 2^24 - 1，与 Host/tiling 同口径
+    if (quantMin < -QUANT_BOUND_LIMIT || quantMax > QUANT_BOUND_LIMIT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quant bounds out of representable range [-%ld, %ld].", QUANT_BOUND_LIMIT,
+                QUANT_BOUND_LIMIT);
         return false;
     }
     return true;
@@ -146,6 +164,11 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* scale, co
 static aclIntArray* GetTransposeArray(const aclTensor* self, int64_t axis, aclOpExecutor* executor)
 {
     int64_t dimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
+    // 0 维（标量）self：无维度可置换（axis 合法域已由 CheckShape 限定为 {0,-1}），
+    // 返回空置换数组；原实现对空 vector 取下标 perm[0] 属未定义行为
+    if (dimNum == 0) {
+        return executor->AllocIntArray(nullptr, 0);
+    }
     int64_t positiveDim = MakeWrapDim(axis, dimNum);
     std::vector<int64_t> perm(dimNum, 0);
     for (int64_t i = 0; i < dimNum; i++) {
@@ -165,6 +188,14 @@ static std::pair<aclTensor*, aclTensor*> RunFakeQuantDispatch(const aclTensor* s
         int64_t positiveAxis = MakeWrapDim(axis, selfDimNum);
         auto result = l0op::FakeQuantAffineCachemask(selfContiguous, scaleContiguous, zeroPointContiguous, positiveAxis,
                                                      quantMin, quantMax, exec);
+        return {std::get<0>(result), std::get<1>(result)};
+    }
+    // 0 维（标量）self 无维度可置换：axis∈{0,-1} 均等价于 axis=0，直接走无
+    // Transpose 路径（避免空置换数组进入 Transpose 及其回转）
+    const int64_t selfDimNum = static_cast<int64_t>(selfContiguous->GetViewShape().GetDimNum());
+    if (selfDimNum == 0) {
+        auto result = l0op::FakeQuantAffineCachemask(selfContiguous, scaleContiguous, zeroPointContiguous, 0, quantMin,
+                                                     quantMax, exec);
         return {std::get<0>(result), std::get<1>(result)};
     }
     if (axis != 0) {

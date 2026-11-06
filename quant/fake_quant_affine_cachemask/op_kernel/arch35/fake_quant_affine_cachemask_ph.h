@@ -44,10 +44,10 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueMask_;
 
-    TBuf<TPosition::VECCALC> scaleSegBuf_;   // T, baseN + 32B 对齐余量
-    TBuf<TPosition::VECCALC> zpSegBuf_;      // ZpT, baseN + 32B 对齐余量
-    TBuf<TPosition::VECCALC> scaleNFp32Buf_; // fp32, baseN + VL 对齐余量
-    TBuf<TPosition::VECCALC> zpNFp32Buf_;    // fp32, baseN + VL 对齐余量
+    TBuf<TPosition::VECCALC> scaleSegBuf_;   // T, 段容量（baseN 维）
+    TBuf<TPosition::VECCALC> zpSegBuf_;      // ZpT, 段容量（baseN 维）
+    TBuf<TPosition::VECCALC> scaleNFp32Buf_; // fp32, 段容量
+    TBuf<TPosition::VECCALC> zpNFp32Buf_;    // fp32, 段容量
 
     TBuf<TPosition::VECCALC> m1Fp32Buf_;
     TBuf<TPosition::VECCALC> halfMaskBuf_;
@@ -81,6 +81,11 @@ private:
     // 当前 nb 段 scale/zp 在 fp32 buf 中的起始偏移（用于 32B 对齐 superset 加载）
     int64_t scaleFp32Offset_ = 0;
     int64_t zpFp32Offset_ = 0;
+    // 输入队列 tile 的实际分配元素数（按 VF 粒度对齐），CopyIn 清零用
+    int64_t tileAllocElems_ = 0;
+    // fp32/half 中间 buffer 的分配字节数（清零用）
+    int64_t tileBytesFp32_ = 0;
+    int64_t tileBytesHalf_ = 0;
 };
 
 template <typename T, typename ZpT, int HAS_ZP>
@@ -145,26 +150,27 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::Init(
 
     int64_t bn = (baseN_ < 1) ? 1 : baseN_;
     int64_t bl = (baseLen_ < 1) ? 1 : baseLen_;
-    int64_t tileElem = bn * bl;
+    // 对齐到 VL_FP32：VF 无 mask 整寄存器按 256B 加载，tile 须容纳尾段 VL
+    int64_t blAligned = ((bl + VL_FP32 - 1) / VL_FP32) * VL_FP32;
+    int64_t tileElem = bn * blAligned;
+    int64_t tileBytesT = AlignBytesToVL(tileElem * static_cast<int64_t>(sizeof(T)));
+    tileAllocElems_ = tileBytesT / static_cast<int64_t>(sizeof(T));
 
-    pipe_.InitBuffer(inQueueX_, BUFFER_NUM, tileElem * sizeof(T));
-    pipe_.InitBuffer(outQueueY_, BUFFER_NUM, tileElem * sizeof(T));
-    pipe_.InitBuffer(outQueueMask_, BUFFER_NUM, tileElem * sizeof(uint8_t));
+    pipe_.InitBuffer(inQueueX_, BUFFER_NUM, tileBytesT);
+    pipe_.InitBuffer(outQueueY_, BUFFER_NUM, tileBytesT);
+    pipe_.InitBuffer(outQueueMask_, BUFFER_NUM, tileElem);
 
-    // scale/zp 按 nb 段（≤ baseN 行）分段加载到 UB：
-    // head + segN ≤ baseN + lanesPerBlock - 1，32B 对齐向上取整后分配
+    // scale/zp 分段加载（按 baseN 维段）：段容量 = CeilAlign(bn + VL, VL)，
+    // 每段加载 [gmSOff, gmSOff+segN) 的 32B 对齐 superset；
+    // 避免整条 dim1 常驻导致超大通道数时 UB 超限（InitBuffer 失败→矢量核异常）。
+    int64_t segAlloc = ((bn + 2 * VL_FP32 - 1) / VL_FP32) * VL_FP32;
+    int64_t segNBytes = AlignBytesToVL(segAlloc * static_cast<int64_t>(sizeof(float)));
     constexpr int64_t lanesPerBlock_T = 32 / static_cast<int64_t>(sizeof(T));
     constexpr int64_t lanesPerBlock_ZpT = 32 / static_cast<int64_t>(sizeof(ZpT));
-    int64_t supRawT = bn + lanesPerBlock_T - 1;
-    int64_t supRawZ = bn + lanesPerBlock_ZpT - 1;
-    int64_t supT = ((supRawT + lanesPerBlock_T - 1) / lanesPerBlock_T) * lanesPerBlock_T;
-    int64_t supZ = ((supRawZ + lanesPerBlock_ZpT - 1) / lanesPerBlock_ZpT) * lanesPerBlock_ZpT;
-    int64_t supFp32Scale = ((supRawT + VL_FP32 - 1) / VL_FP32) * VL_FP32;
-    int64_t supFp32Zp = ((supRawZ + VL_FP32 - 1) / VL_FP32) * VL_FP32;
-
-    int64_t segNBytes = supFp32Scale * static_cast<int64_t>(sizeof(float));
-    int64_t scaleRawBytes = supT * static_cast<int64_t>(sizeof(T));
-    int64_t zpRawBytes = supZ * static_cast<int64_t>(sizeof(ZpT));
+    int64_t scaleRawBytes = AlignBytesToVL(((segAlloc + lanesPerBlock_T - 1) / lanesPerBlock_T) * lanesPerBlock_T *
+                                           static_cast<int64_t>(sizeof(T)));
+    int64_t zpRawBytes = AlignBytesToVL(((segAlloc + lanesPerBlock_ZpT - 1) / lanesPerBlock_ZpT) * lanesPerBlock_ZpT *
+                                        static_cast<int64_t>(sizeof(ZpT)));
     if (segNBytes < 32)
         segNBytes = 32;
     if (scaleRawBytes < 32)
@@ -173,15 +179,15 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::Init(
         zpRawBytes = 32;
     pipe_.InitBuffer(scaleSegBuf_, scaleRawBytes);
     pipe_.InitBuffer(scaleNFp32Buf_, segNBytes);
-    pipe_.InitBuffer(zpNFp32Buf_, (supFp32Zp * static_cast<int64_t>(sizeof(float)) < 32) ?
-                                      32 :
-                                      supFp32Zp * static_cast<int64_t>(sizeof(float)));
+    pipe_.InitBuffer(zpNFp32Buf_, segNBytes);
     if constexpr (HAS_ZP == 1) {
         pipe_.InitBuffer(zpSegBuf_, zpRawBytes);
     }
 
-    int64_t tileBytesFp32 = tileElem * static_cast<int64_t>(sizeof(float));
-    int64_t tileBytesHalf = tileElem * static_cast<int64_t>(sizeof(half));
+    int64_t tileBytesFp32 = AlignBytesToVL(tileElem * static_cast<int64_t>(sizeof(float)));
+    int64_t tileBytesHalf = AlignBytesToVL(tileElem * static_cast<int64_t>(sizeof(half)));
+    tileBytesFp32_ = tileBytesFp32;
+    tileBytesHalf_ = tileBytesHalf;
     pipe_.InitBuffer(m1Fp32Buf_, tileBytesFp32);
     pipe_.InitBuffer(halfMaskBuf_, tileBytesHalf);
 }
@@ -191,6 +197,14 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::CopyInXMulti(
                                                                                 int64_t segLen)
 {
     AscendC::LocalTensor<T> xLocal = inQueueX_.template AllocTensor<T>();
+    // 先清零整个 tile 分配区：2D DMA 只写 nRow*segLen 个元素，VF 无 mask 整寄存器
+    // 读会越过写入区到分配内尾部（mssanitizer initcheck 报未初始化读取；插桩
+    // 批次该区域数值参与 mask 外比较仍可触发 NaN/Inf mismatch），清零保证
+    // 所有被读字节均有确定值（清零按 VF 粒度写，tileAllocElems_ 已 256B 对齐）
+    AscendC::Duplicate<T>(xLocal, static_cast<T>(0), static_cast<int32_t>(tileAllocElems_));
+    AscendC::TEventID evZero = pipe_.template FetchEventID<AscendC::HardEvent::V_MTE2>();
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evZero);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evZero);
     uint32_t blockLenBytes = static_cast<uint32_t>(segLen * sizeof(T));
     int64_t srcStrideBytes = (dim2_ - segLen) * static_cast<int64_t>(sizeof(T));
     AscendC::DataCopyExtParams params{static_cast<uint16_t>(nRow), blockLenBytes, srcStrideBytes, 0, 0};
@@ -236,28 +250,45 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::FillScaleZpNS
     AscendC::LocalTensor<T> sSeg = scaleSegBuf_.template Get<T>();
     AscendC::LocalTensor<float> sFp32 = scaleNFp32Buf_.template Get<float>();
 
-    // 仅加载当前 nb 段所需 scale 切片（segN 行），缓冲占用与 baseN 同阶（不随 dim1 增长）。
-    // 起点向下对齐到 32B（head），LoadCnt = head + segN：GM 侧起点 32B 对齐、且不越界
-    // （loadOff + loadCnt = gmSOff + segN <= dim1）；VF 内按 head + j 索引。
+    // 分段加载：只加载 [gmSOff, gmSOff+segN) 覆盖的 32B 对齐 superset。
+    // loadStart 取 32B 对齐下界（GM 起点天然 32B 对齐，DataCopyPad 安全），
+    // 规避 gmSOff*sizeof(T) 非 32B 对齐时 MTE2 32B-granule 错位填充问题；
+    // loadEnd 不越过 scaleNum 的 32B 上界。段开销只随 segN（≤baseN）增长，
+    // 超大通道数 dim1 不再整条常驻 UB。
+    //
+    // 越界安全性说明（MTE 32B granule 平台契约）：MTE2 引擎按 32B 粒度块传输
+    // （BLOCK_SIZE=32 为 DMA 最小对齐单元），loadEnd 向上取整到 32B 块边界时
+    // 最多越过张量声明末尾 lanesPerBlock-1 个元素（fp32 最多 28B）。该访问
+    // 依赖 CANN GM 分配器保证「分配块按 32B 对齐且大小向上补齐到 32B 块」的
+    // 平台契约——这是 DataCopyPad 处理非 32B 对齐尾段的全部算子的共同前提
+    // （否则任何非对齐 DataCopyPad 均无法工作）。真机实证：op_debug_config=oom
+    // 插桩（OO 越界检测）73/73 用例 memory_oob 全 PASS，PH superset 读取路径
+    // 未触发任何越界。
+    int64_t scaleNum = (dim1_ > 0) ? dim1_ : 1;
     constexpr int64_t lanesPerBlock_T = 32 / static_cast<int64_t>(sizeof(T));
-    int64_t head = gmSOff % lanesPerBlock_T;
-    int64_t loadOff = gmSOff - head;
-    int64_t loadCnt = head + segN;
-    scaleFp32Offset_ = head;
+    int64_t loadStart = (gmSOff / lanesPerBlock_T) * lanesPerBlock_T;
+    int64_t loadEndMax = ((scaleNum + lanesPerBlock_T - 1) / lanesPerBlock_T) * lanesPerBlock_T;
+    int64_t loadEnd = ((gmSOff + segN + lanesPerBlock_T - 1) / lanesPerBlock_T) * lanesPerBlock_T;
+    if (loadEnd > loadEndMax)
+        loadEnd = loadEndMax;
+    if (loadEnd < loadStart)
+        loadEnd = loadStart;
+    int64_t loadCount = loadEnd - loadStart;
+    scaleFp32Offset_ = gmSOff - loadStart;
 
-    int64_t fp32Total = ((loadCnt + VL_FP32 - 1) / VL_FP32) * VL_FP32;
+    int64_t fp32Total = ((loadCount + VL_FP32 - 1) / VL_FP32) * VL_FP32;
     AscendC::Duplicate<float>(sFp32, 0.0f, static_cast<int32_t>(fp32Total));
 
-    AscendC::DataCopyExtParams sp{1, static_cast<uint32_t>(loadCnt * sizeof(T)), 0, 0, 0};
+    AscendC::DataCopyExtParams sp{1, static_cast<uint32_t>(loadCount * sizeof(T)), 0, 0, 0};
     AscendC::DataCopyPadExtParams<T> sPad{false, 0, 0, 0};
-    AscendC::DataCopyPad(sSeg, inputGMScale_[loadOff], sp, sPad);
+    AscendC::DataCopyPad(sSeg, inputGMScale_[loadStart], sp, sPad);
     AscendC::TEventID eventS = pipe_.template FetchEventID<AscendC::HardEvent::MTE2_V>();
     AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventS);
     AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventS);
     if constexpr (std::is_same<T, float>::value) {
-        AscendC::Adds<float>(sFp32, sSeg, 0.0f, static_cast<int32_t>(loadCnt));
+        AscendC::Adds<float>(sFp32, sSeg, 0.0f, static_cast<int32_t>(loadCount));
     } else {
-        AscendC::Cast<float, T>(sFp32, sSeg, AscendC::RoundMode::CAST_NONE, static_cast<int32_t>(loadCnt));
+        AscendC::Cast<float, T>(sFp32, sSeg, AscendC::RoundMode::CAST_NONE, static_cast<int32_t>(loadCount));
     }
     // 计算 invScale 的工作迁移到 VF 内（vreg），节省 UB 占用。
     AscendC::TEventID eventSBack = pipe_.template FetchEventID<AscendC::HardEvent::V_MTE2>();
@@ -267,25 +298,30 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::FillScaleZpNS
     AscendC::LocalTensor<float> zFp32 = zpNFp32Buf_.template Get<float>();
     if constexpr (HAS_ZP == 1) {
         constexpr int64_t lanesPerBlock_ZpT = 32 / static_cast<int64_t>(sizeof(ZpT));
-        int64_t zHead = gmSOff % lanesPerBlock_ZpT;
-        int64_t zLoadOff = gmSOff - zHead;
-        int64_t zLoadCnt = zHead + segN;
-        zpFp32Offset_ = zHead;
+        int64_t zLoadStart = (gmSOff / lanesPerBlock_ZpT) * lanesPerBlock_ZpT;
+        int64_t zLoadEndMax = ((scaleNum + lanesPerBlock_ZpT - 1) / lanesPerBlock_ZpT) * lanesPerBlock_ZpT;
+        int64_t zLoadEnd = ((gmSOff + segN + lanesPerBlock_ZpT - 1) / lanesPerBlock_ZpT) * lanesPerBlock_ZpT;
+        if (zLoadEnd > zLoadEndMax)
+            zLoadEnd = zLoadEndMax;
+        if (zLoadEnd < zLoadStart)
+            zLoadEnd = zLoadStart;
+        int64_t zLoadCount = zLoadEnd - zLoadStart;
+        zpFp32Offset_ = gmSOff - zLoadStart;
 
-        int64_t zfp32Total = ((zLoadCnt + VL_FP32 - 1) / VL_FP32) * VL_FP32;
+        int64_t zfp32Total = ((zLoadCount + VL_FP32 - 1) / VL_FP32) * VL_FP32;
         AscendC::Duplicate<float>(zFp32, 0.0f, static_cast<int32_t>(zfp32Total));
 
         AscendC::LocalTensor<ZpT> zSeg = zpSegBuf_.template Get<ZpT>();
-        AscendC::DataCopyExtParams zp{1, static_cast<uint32_t>(zLoadCnt * sizeof(ZpT)), 0, 0, 0};
+        AscendC::DataCopyExtParams zp{1, static_cast<uint32_t>(zLoadCount * sizeof(ZpT)), 0, 0, 0};
         AscendC::DataCopyPadExtParams<ZpT> zPad{false, 0, 0, 0};
-        AscendC::DataCopyPad(zSeg, inputGMZp_[zLoadOff], zp, zPad);
+        AscendC::DataCopyPad(zSeg, inputGMZp_[zLoadStart], zp, zPad);
         AscendC::TEventID eventZ = pipe_.template FetchEventID<AscendC::HardEvent::MTE2_V>();
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventZ);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventZ);
         if constexpr (std::is_same<ZpT, float>::value) {
-            AscendC::Adds<float>(zFp32, zSeg, 0.0f, static_cast<int32_t>(zLoadCnt));
+            AscendC::Adds<float>(zFp32, zSeg, 0.0f, static_cast<int32_t>(zLoadCount));
         } else {
-            AscendC::Cast<float, ZpT>(zFp32, zSeg, AscendC::RoundMode::CAST_NONE, static_cast<int32_t>(zLoadCnt));
+            AscendC::Cast<float, ZpT>(zFp32, zSeg, AscendC::RoundMode::CAST_NONE, static_cast<int32_t>(zLoadCount));
         }
         AscendC::TEventID eventZBack = pipe_.template FetchEventID<AscendC::HardEvent::V_MTE2>();
         AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(eventZBack);
@@ -309,6 +345,15 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::ComputeMulti(
     AscendC::LocalTensor<float> m1Buf = m1Fp32Buf_.template Get<float>();
     AscendC::LocalTensor<half> hBuf = halfMaskBuf_.template Get<half>();
 
+    // 中间 buffer 尾段清零：掩码 VF store 只写活跃 lane，FinalizeCompute 的
+    // tensor 级 Cast 按 256B 块粒度读，尾部残留会被 initcheck 判未初始化读
+    {
+        int64_t m1Elems = tileBytesFp32_ / static_cast<int64_t>(sizeof(float));
+        int64_t hElems = tileBytesHalf_ / static_cast<int64_t>(sizeof(half));
+        AscendC::Duplicate<float>(m1Buf, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<half>(hBuf, static_cast<half>(0), static_cast<int32_t>(hElems));
+    }
+
     const float qMinF = static_cast<float>(quantMin_);
     const float qMaxF = static_cast<float>(quantMax_);
     const float qMinMinus1F = static_cast<float>(quantMin_ - 1);
@@ -325,8 +370,6 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::ComputeMulti(
             Reg::RegTensor<T> vregX;
             Reg::RegTensor<float> vregTmp;
             Reg::RegTensor<float> vregSc;
-            Reg::RegTensor<float> vregInvSc;
-            Reg::RegTensor<float> vregOne;
             Reg::RegTensor<float> vregZp;
             Reg::RegTensor<float> vregQ;
             Reg::RegTensor<float> vregM1;
@@ -340,17 +383,8 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::ComputeMulti(
             __ubuf__ T* yPtr = (__ubuf__ T*)yLocal.GetPhyAddr();
 
             // 行 j 的 scale/zp 在 sPtr[scaleBaseOff + j]/zPtr[zpBaseOff + j]，
-            // scaleBaseOff 由 Process 根据段内 head 偏移传入
+            // scaleBaseOff 由 Process 根据 (gmSBaseOff_ + nBase) % dim1_ 传入
             Reg::DataCopy<float, Reg::LoadDist::DIST_BRC_B32>(vregSc, sPtr + scaleBaseOff + j);
-            // 与 torch 原生（aten cachemask）一致：inv = 1/s 为 fp32 倒数（0ulp 正确舍入），
-            // t = x * inv 为 fp32 乘法（非除法；x/s 恰为 tie 时的舍入方向由此确定）
-            {
-                uint32_t fullSreg = static_cast<uint32_t>(VL_FP32);
-                Reg::MaskReg fullMask = Reg::UpdateMask<uint32_t>(fullSreg);
-                Reg::Duplicate<float>(vregOne, 1.0f);
-                static constexpr AscendC::Reg::DivSpecificMode divMode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
-                Reg::Div<float, &divMode>(vregInvSc, vregOne, vregSc, fullMask);
-            }
             if constexpr (HAS_ZP == 1) {
                 Reg::DataCopy<float, Reg::LoadDist::DIST_BRC_B32>(vregZp, zPtr + zpBaseOff + j);
             }
@@ -372,17 +406,20 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::ComputeMulti(
                     Reg::DataCopy<T, Reg::LoadDist::DIST_UNPACK_B16>(vregX, xPtr + rowOffElems + i * VL_FP32);
                     Reg::Cast<float, T, layoutZMrgZ>(vregTmp, vregX, mask);
                 }
-                if constexpr (HAS_ZP == 1 && !ZP_IS_INTEGRAL<ZpT>) {
-                    // 浮点 zp 在 round 前加（lrintf 路径），用单次舍入的融合乘加对齐 aten float 路径
-                    Reg::MulDstAdd<float>(vregTmp, vregInvSc, vregZp, mask);
-                } else {
-                    Reg::Mul<float>(vregTmp, vregTmp, vregInvSc, mask);
+                // 真除法口径（与 PT/README/参考一致；原倒数乘法在 0.5 边界会与除法差 1 个量化级）
+                // 取整次序按 zp dtype 分支（对齐 ATen 实测与文档）：int32 zp 两步式（rint 后加），
+                // 浮点 zp 一步式（rint 前加进 vregTmp）
+                Reg::Div<float>(vregTmp, vregTmp, vregSc, mask);
+                if constexpr (HAS_ZP == 1 && !std::is_same<ZpT, int32_t>::value) {
+                    Reg::Add<float>(vregTmp, vregTmp, vregZp, mask);
                 }
+                // 特殊值契约（与 PT/PC 的 ComputeQuantMaskBody 同口径）：NaN/±Inf 在
+                // Cast 前替换为 ±FLT_MAX 哨兵（NaN/−Inf→quant_min、+Inf→quant_max，
+                // mask=False）。PH 为独立内联计算链，不经过 body，须显式调用
                 ForceNonFiniteToSentinel(vregTmp, mask);
                 Reg::Cast<int32_t, float, layoutZSatSMrgZRndR>(vregInt32, vregTmp, mask);
                 Reg::Cast<float, int32_t, layoutZMrgZRndR>(vregQ, vregInt32, mask);
-                if constexpr (HAS_ZP == 1 && ZP_IS_INTEGRAL<ZpT>) {
-                    // 整数 zp 在 round 后加：qval = rint(x/s) + zp
+                if constexpr (HAS_ZP == 1 && std::is_same<ZpT, int32_t>::value) {
                     Reg::Add<float>(vregQ, vregQ, vregZp, mask);
                 }
 
@@ -454,7 +491,8 @@ __aicore__ inline void FakeQuantAffineCachemaskPH<T, ZpT, HAS_ZP>::Process()
 
             FillScaleZpNSeg(gmSOff, segN);
 
-            // 每行 j 的 scale/zp 在当前段 fp32 buf 中的索引 = 段内 head 偏移 + j
+            // 每行 j 的 scale 在段 fp32 buf 中的偏移 = scaleFp32Offset_ + j
+            // （FillScaleZpNSeg 分段加载后 sFp32[scaleFp32Offset_+j] 即通道 gmSOff+j）
             int64_t scaleBaseOff = scaleFp32Offset_;
             int64_t zpBaseOff = (HAS_ZP == 1) ? zpFp32Offset_ : 0;
 

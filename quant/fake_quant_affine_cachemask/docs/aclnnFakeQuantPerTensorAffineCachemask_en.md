@@ -31,7 +31,7 @@
 - Formula: When fake_quant_enabled >= 1, a temporary variable qval is first computed based on the operator functionality, and then out and mask are derived from it.
 
   $$
-  qval = Round(std::nearby\_int(self / scale) + zero\_point)
+  qval = Round(self / scale) + zero\_point
   $$
 
   $$
@@ -236,7 +236,7 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemask(
       <td>The shapes of out and mask are inconsistent with that of self.</td>
     </tr>
     <tr>
-      <td>quantMin is greater than quantMax.</td>
+      <td>quantMin is greater than quantMax, or the absolute value of quant_min/quant_max is not less than 2^24 (exceeding the integer domain exactly representable in fp32).</td>
     </tr>
   </tbody>
   </table>

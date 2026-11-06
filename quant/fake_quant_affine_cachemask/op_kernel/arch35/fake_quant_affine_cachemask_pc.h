@@ -66,6 +66,11 @@ private:
     int64_t blockLen_ = 0;
     int64_t gmXBaseOff_ = 0;
     int64_t gmSBaseOff_ = 0;
+    // 输入队列 tile 的实际分配元素数（VF 粒度对齐），CopyIn 清零用
+    int64_t tileAllocElems_ = 0;
+    // fp32/half 中间 buffer 的分配字节数（清零用）
+    int64_t fp32Bytes_ = 0;
+    int64_t halfBytes_ = 0;
 };
 
 template <typename T, typename ZpT, int HAS_ZP>
@@ -113,14 +118,20 @@ __aicore__ inline void FakeQuantAffineCachemaskPC<T, ZpT, HAS_ZP>::Init(
     int64_t bl = (baseLen_ < 1) ? 1 : baseLen_;
     // 对齐到 VL_FP32（一次 VF 一次性读 VL_FP32 个 lane，必须保证 fp32 buf 容得下整个尾段 VL）
     int64_t blAligned = ((bl + VL_FP32 - 1) / VL_FP32) * VL_FP32;
-    pipe_.InitBuffer(inQueueX_, BUFFER_NUM, bl * sizeof(T));
-    pipe_.InitBuffer(outQueueY_, BUFFER_NUM, bl * sizeof(T));
-    pipe_.InitBuffer(outQueueMask_, BUFFER_NUM, bl * sizeof(uint8_t));
+    // 队列同样按 VF 整寄存器粒度（256B）对齐：无 mask 整寄存器加载固定 256B，
+    // 逻辑元素数分配会让末次加载越界（16 位 dtype 尤甚）
+    int64_t tileBytesT = AlignBytesToVL(blAligned * static_cast<int64_t>(sizeof(T)));
+    tileAllocElems_ = tileBytesT / static_cast<int64_t>(sizeof(T));
+    pipe_.InitBuffer(inQueueX_, BUFFER_NUM, tileBytesT);
+    pipe_.InitBuffer(outQueueY_, BUFFER_NUM, tileBytesT);
+    pipe_.InitBuffer(outQueueMask_, BUFFER_NUM, blAligned);
 
-    int64_t fp32Bytes = blAligned * static_cast<int64_t>(sizeof(float));
-    int64_t halfBytes = blAligned * static_cast<int64_t>(sizeof(half));
-    int64_t scaleRawBytes = blAligned * static_cast<int64_t>(sizeof(T));
-    int64_t zpRawBytes = blAligned * static_cast<int64_t>(sizeof(ZpT));
+    int64_t fp32Bytes = AlignBytesToVL(blAligned * static_cast<int64_t>(sizeof(float)));
+    fp32Bytes_ = fp32Bytes;
+    int64_t halfBytes = AlignBytesToVL(blAligned * static_cast<int64_t>(sizeof(half)));
+    halfBytes_ = halfBytes;
+    int64_t scaleRawBytes = AlignBytesToVL(blAligned * static_cast<int64_t>(sizeof(T)));
+    int64_t zpRawBytes = AlignBytesToVL(blAligned * static_cast<int64_t>(sizeof(ZpT)));
     // 至少 32B 对齐
     if (scaleRawBytes < 32)
         scaleRawBytes = 32;
@@ -143,6 +154,12 @@ template <typename T, typename ZpT, int HAS_ZP>
 __aicore__ inline void FakeQuantAffineCachemaskPC<T, ZpT, HAS_ZP>::CopyInXTile(int64_t gmXOffset, int64_t dataCount)
 {
     AscendC::LocalTensor<T> xLocal = inQueueX_.template AllocTensor<T>();
+    // 先清零整个 tile 分配区：DMA 只写 dataCount 元素，VF 无 mask 整寄存器读会
+    // 越过写入区到分配内尾部（initcheck 未初始化读取），清零保证被读字节确定
+    AscendC::Duplicate<T>(xLocal, static_cast<T>(0), static_cast<int32_t>(tileAllocElems_));
+    AscendC::TEventID evZero = pipe_.template FetchEventID<AscendC::HardEvent::V_MTE2>();
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evZero);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evZero);
     AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
     AscendC::DataCopyPadExtParams<T> pad{false, 0, 0, 0};
     AscendC::DataCopyPad(xLocal, buf_.inputGMX_[gmXOffset], p, pad);
@@ -236,6 +253,18 @@ __aicore__ inline void FakeQuantAffineCachemaskPC<T, ZpT, HAS_ZP>::Compute(int64
     AscendC::LocalTensor<float> m2Buf = buf_.m2Fp32Buf_.template Get<float>();
     AscendC::LocalTensor<half> hBuf = buf_.halfMaskBuf_.template Get<half>();
 
+    // 中间 buffer 尾段清零：掩码 VF store 只写活跃 lane，FinalizeCompute 的
+    // tensor 级 Cast 按 256B 块粒度读，尾部残留会被 initcheck 判未初始化读
+    {
+        int64_t m1Elems = fp32Bytes_ / static_cast<int64_t>(sizeof(float));
+        int64_t hElems = halfBytes_ / static_cast<int64_t>(sizeof(half));
+        AscendC::Duplicate<float>(m1Buf, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<float>(tmp, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<float>(qFp32, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<float>(m2Buf, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<half>(hBuf, static_cast<half>(0), static_cast<int32_t>(hElems));
+    }
+
     __VEC_SCOPE__
     {
         Reg::MaskReg mask;
@@ -243,8 +272,6 @@ __aicore__ inline void FakeQuantAffineCachemaskPC<T, ZpT, HAS_ZP>::Compute(int64
         Reg::RegTensor<float> vregTmp;
         Reg::RegTensor<float> vregSc;
         Reg::RegTensor<float> vregZp;
-        Reg::RegTensor<float> vregInvSc;
-        Reg::RegTensor<float> vregOne;
         Reg::RegTensor<float> vregQ;
         Reg::RegTensor<float> vregM1;
         Reg::RegTensor<float> vregM2;
@@ -269,22 +296,16 @@ __aicore__ inline void FakeQuantAffineCachemaskPC<T, ZpT, HAS_ZP>::Compute(int64
                 Reg::Cast<float, T, layoutZMrgZ>(vregTmp, vregX, mask);
             }
             Reg::DataCopy<float, Reg::LoadDist::DIST_NORM>(vregSc, sPtr + i * VL_FP32);
-            // 与 torch 原生（aten cachemask）一致：inv = 1/s 为 fp32 倒数（0ulp 正确舍入），
-            // t = x * inv 为 fp32 乘法（非除法；x/s 恰为 tie 时的舍入方向由此确定）
-            Reg::Duplicate<float>(vregOne, 1.0f);
-            static constexpr AscendC::Reg::DivSpecificMode divMode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
-            Reg::Div<float, &divMode>(vregInvSc, vregOne, vregSc, mask);
+            // 真除法口径（与 PT/README/参考一致；原倒数乘法在 0.5 边界会与除法差 1 个量化级）
+            // 取整次序按 zp dtype 分支（对齐 ATen）：int32 zp 由 body 两步式处理（此处不加）；
+            // 浮点 zp 一步式（rint(x/s+zp)），此处先加进 vregTmp
+            Reg::Div<float>(vregTmp, vregTmp, vregSc, mask);
             if constexpr (HAS_ZP == 1) {
                 Reg::DataCopy<float, Reg::LoadDist::DIST_NORM>(vregZp, zPtr + i * VL_FP32);
             }
-            if constexpr (HAS_ZP == 1 && !ZP_IS_INTEGRAL<ZpT>) {
-                // 浮点 zp 在 round 前加（lrintf 路径），用单次舍入的融合乘加对齐 aten float 路径
-                Reg::MulDstAdd<float>(vregTmp, vregInvSc, vregZp, mask);
-            } else {
-                // 整数 zp 在 round 后加（见 ComputeQuantMaskBody），round 前仅 x/s
-                Reg::Mul<float>(vregTmp, vregTmp, vregInvSc, mask);
+            if constexpr (HAS_ZP == 1 && !std::is_same<ZpT, int32_t>::value) {
+                Reg::Add<float>(vregTmp, vregTmp, vregZp, mask);
             }
-            ForceNonFiniteToSentinel(vregTmp, mask);
             ComputeQuantMaskBody<T, ZpT, HAS_ZP>(vregTmp, vregSc, vregZp, vregQ, vregM1, vregM2, vregInt32, mask, i,
                                                  m1Ptr, yPtr, qMinF, qMaxF, qMinMinus1F, qMaxPlus1F);
         }

@@ -18,13 +18,10 @@
  * \file apply_rms_prop_tiling_arch35.cpp
  * \brief ApplyRMSProp tiling implementation (arch35)
  *
- * TilingKey selection:
- *   TilingKey_0: D_T_X=C_DT_FLOAT,   BUFFER_MODE=0  (FP32, single buffer)
- *   TilingKey_1: D_T_X=C_DT_FLOAT,   BUFFER_MODE=1  (FP32, double buffer)
- *   TilingKey_2: D_T_X=C_DT_FLOAT16, BUFFER_MODE=0  (FP16, single buffer)
- *   TilingKey_3: D_T_X=C_DT_FLOAT16, BUFFER_MODE=1  (FP16, double buffer)
- *   TilingKey_4: D_T_X=C_DT_BF16,    BUFFER_MODE=0  (BF16, single buffer)
- *   TilingKey_5: D_T_X=C_DT_BF16,    BUFFER_MODE=1  (BF16, double buffer)
+ * TilingKey encoding (FR-04 fix, decoupled integer TPL codes; see
+ * op_kernel/arch35/apply_rms_prop_tiling_key.h):
+ *   key = dType_index + (BUFFER_MODE_index << 2)
+ *   FP32 single/double: 0 / 4; FP16: 1 / 5; BF16: 2 / 6
  *
  * Scalar parameters (lr / rho / momentum / epsilon) are 1-element Tensor
  * inputs (index 3/4/5/6). They are read by Kernel from GM at runtime, NOT
@@ -49,20 +46,24 @@ using Ops::Base::GetUbBlockSize;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 
 // Per-element UB byte cost in fp32-equivalent slots (1 slot == sizeof(float) == 4B):
-//   FP32 single buffer: 7 TQue (fp32, 4B) x 1 + 2 TBuf (fp32, 4B)
-//                       = (7 * 4 + 2 * 4) B/elem = 36 B/elem = 9 slots
-//   FP32 double buffer: 7 TQue (fp32, 4B) x 2 + 2 TBuf (fp32, 4B)
-//                       = (7 * 4 * 2 + 2 * 4) B/elem = 64 B/elem = 16 slots
+//   FP32 single buffer: 7 TQue (fp32, 4B) x 1 + 2 TBuf (fp32, 4B) + 3 P1-1 fix TBuf
+//                       = (7 * 4 + 2 * 4) + 12 B/elem = 48 B/elem = 12 slots
+//   FP32 double buffer: 7 TQue (fp32, 4B) x 2 + 2 TBuf (fp32, 4B) + 3 P1-1 fix TBuf
+//                       = (7 * 4 * 2 + 2 * 4) + 12 B/elem = 76 B/elem = 19 slots
 //   FP16/BF16 single buffer: 7 TQue (T, 2B) x 1 + 4 TBuf (fp32, 4B) + 2 tmp (fp32, 4B)
-//                       = (7 * 2 + 6 * 4) B/elem = 38 B/elem => ceil(38/4) = 10 slots
+//                            + 3 P1-1 fix TBuf = (7 * 2 + 6 * 4) + 12 B/elem
+//                            = 50 B/elem => ceil(50/4) = 13 slots
 //   FP16/BF16 double buffer: 7 TQue (T, 2B) x 2 + 4 TBuf (fp32, 4B) + 2 tmp (fp32, 4B)
-//                       = (7 * 2 * 2 + 6 * 4) B/elem = 52 B/elem = 13 slots
+//                            + 3 P1-1 fix TBuf = (7 * 2 * 2 + 6 * 4) + 12 B/elem
+//                            = 64 B/elem => 16 slots
+//   P1-1 fix 的 3 个额外 TBuf：mom_a_buf + mom_b_buf（各 4B/elem）+ cmp_mask_buf
+//   （bit-packed 掩码 ≈ 0.125B/elem，取整按 1 slot 保守计入）。
 static int64_t GetTensorSlots(ge::DataType dataType, uint64_t bufferMode)
 {
     if (dataType == ge::DT_FLOAT) {
-        return bufferMode ? 16 : 9;
+        return bufferMode ? 19 : 12;
     } else {
-        return bufferMode ? 13 : 10;
+        return bufferMode ? 16 : 13;
     }
 }
 
@@ -105,7 +106,19 @@ static int64_t ComputeSplit(ApplyRmsPropTilingData* tiling, ge::DataType dataTyp
     bufferMode = (tiling->totalNum > MIN_SPLIT_THRESHOLD) ? 1 : 0;
     int64_t slots = GetTensorSlots(dataType, bufferMode);
     constexpr int64_t elemBytes = 4; // Internal computation in fp32
-    tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize) / elemBytes, slots), ubBlockSize);
+    // SAFE.01 fix: Kernel 在张量缓冲之外固定申请 scalar_buf(128B) + scalar_buf_in(128B)，
+    // 推导 ubFactor 前必须从可用 UB 中预留该段（对齐 inplace_apply_rms_prop 的
+    // SCALAR_FP32_UB_BYTES 处理），避免 FP32 双缓冲满额划分越界。
+    constexpr int64_t scalarUbBytes = 256;
+    int64_t tensorUbBytes = static_cast<int64_t>(ubSize) - scalarUbBytes;
+    if (tensorUbBytes < elemBytes) {
+        tensorUbBytes = elemBytes;
+    }
+    // F-01 fix: ubFactor 强制按 64 个 fp32 元素对齐。Kernel 的 CompareScalar/Select
+    // 以 64 元素对齐的 cmpSelCount 消费 mom_a_buf/mom_b_buf，若 ubFactor 仅 32 元素
+    // 对齐（fp16/bf16 ubBlockSize），对齐区会越界读写缓冲尾部 128B。
+    constexpr int64_t ubAlignElems = 64;
+    tiling->ubFactor = FloorAlign(FloorDiv(tensorUbBytes / elemBytes, slots), ubAlignElems);
     return usedCoreNum;
 }
 
@@ -124,7 +137,20 @@ static bool ShapeEqual(const gert::Shape& a, const gert::Shape& b)
 }
 
 // C3 constraint check: lr/rho/momentum/epsilon are 1-element Tensors.
-static bool IsScalarShape(const gert::Shape& s) { return s.GetShapeSize() == 1; }
+// F-04 fix: GetShapeSize() 是逐维乘积（(-1,-1) 的乘积恰为 1 会放行未知维），
+// 标量形状须逐维非负且元素数为 1。
+static bool IsScalarShape(const gert::Shape& s)
+{
+    if (s.GetShapeSize() != 1) {
+        return false;
+    }
+    for (size_t i = 0; i < s.GetDimNum(); ++i) {
+        if (s.GetDim(i) < 0) {
+            return false;
+        }
+    }
+    return true;
+}
 
 // Input indices (canndev REG_OP(ApplyRMSProp) order)
 constexpr size_t kIdxVar = 0;
@@ -135,6 +161,18 @@ constexpr size_t kIdxRho = 4;
 constexpr size_t kIdxMomentum = 5;
 constexpr size_t kIdxEpsilon = 6;
 constexpr size_t kIdxGrad = 7;
+
+// FR-04 fix: ge::DataType → 解耦整型 TPL 编码（不再直接暴露 C_DT_* 运算 dtype）。
+static uint32_t MapDTypeToTpl(ge::DataType dataType)
+{
+    if (dataType == ge::DT_FLOAT16) {
+        return APPLY_RMS_PROP_TPL_FP16;
+    }
+    if (dataType == ge::DT_BF16) {
+        return APPLY_RMS_PROP_TPL_BF16;
+    }
+    return APPLY_RMS_PROP_TPL_FP32;
+}
 
 // C1: shape(var) == shape(ms) == shape(mom) == shape(grad).
 static ge::graphStatus CheckShapeC1(gert::TilingContext* context, const gert::StorageShape* varShape)
@@ -184,7 +222,8 @@ static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context, int64_t
 
     constexpr size_t kMaxRank = 8;
     const size_t varRank = varShape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(varRank == 0 || varRank > kMaxRank, OP_LOGE(context, "var rank must be in [1, 8], got %zu", varRank),
+    // FR-17 fix: rank-0（标量 var）为合法输入（对齐 TensorFlow ApplyRMSProp 语义），仅拒绝 rank > 8。
+    OP_CHECK_IF(varRank > kMaxRank, OP_LOGE(context, "var rank must be in [0, 8], got %zu", varRank),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CheckShapeC1(context, varShape) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckShapeC1 failed"),
@@ -193,6 +232,20 @@ static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context, int64_t
                 return ge::GRAPH_FAILED);
 
     totalNum = varShape->GetStorageShape().GetShapeSize();
+    // FR-05 fix: 含未知维（负维度值）的存储形状须显式拒绝，避免其经 CeilDiv/CeilAlign
+    // 推导出非法 blockFactor/blockDim 执行计划。
+    // 逐维校验（而非仅看 GetShapeSize 乘积）：偶数个未知维（如 -1 x -1）的乘积为正，
+    // 会绕过纯 totalNum < 0 的判定（终审 reviewer observation）。
+    for (size_t i = 0; i < varRank; ++i) {
+        const int64_t dim = varShape->GetStorageShape().GetDim(i);
+        OP_CHECK_IF(dim < 0,
+                    OP_LOGE(context, "var shape must be concrete: dim %zu is unknown (%ld)", i, static_cast<long>(dim)),
+                    return ge::GRAPH_FAILED);
+    }
+    OP_CHECK_IF(totalNum < 0,
+                OP_LOGE(context, "var shape must be concrete (unknown dims are rejected), got %ld",
+                        static_cast<long>(totalNum)),
+                return ge::GRAPH_FAILED);
     auto varDesc = context->GetInputDesc(kIdxVar);
     OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
     dataType = varDesc->GetDataType();
@@ -207,6 +260,12 @@ static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context, int64_t
                     OP_LOGE(context, "ApplyRMSProp: dtype mismatch, %s != var dtype", kCheckNames[i]),
                     return ge::GRAPH_FAILED);
     }
+    // OP-03 fix: var dtype 白名单。TilingKey/Kernel 模板只覆盖 FLOAT/FLOAT16/BF16，
+    // 其他 dtype（如 double/int32 经 NumberType() 放行时）不得静默映射为 FP32。
+    OP_CHECK_IF(
+        dataType != ge::DT_FLOAT && dataType != ge::DT_FLOAT16 && dataType != ge::DT_BF16,
+        OP_LOGE(context, "ApplyRMSProp: var dtype must be FLOAT/FLOAT16/BFLOAT16, got %d", static_cast<int>(dataType)),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -261,7 +320,7 @@ static ge::graphStatus ApplyRMSPropTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(SetWorkspace(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetWorkspace error"),
                 return ge::GRAPH_FAILED);
 
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
+    uint32_t dTypeX = MapDTypeToTpl(dataType);
     if (totalNum == 0) {
         return HandleEmptyTensor(context, dTypeX);
     }

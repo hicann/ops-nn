@@ -27,7 +27,7 @@ English | [简体中文](./README.md)
 
 ## Function
 
-- **Operator function**: performs a single-step parameter update of the RMSProp optimizer (non-centered version). Based on the current gradient, the moving average of the squared gradient, and the momentum accumulation, it updates the parameter tensors `var`, `ms`, and `mom`, all with **inplace** semantics. It aligns with the computation semantics of the TensorFlow `tf.raw_ops.ApplyRMSProp` interface.
+- **Operator function**: performs a single-step parameter update of the RMSProp optimizer (non-centered version). Based on the current gradient, the moving average of the squared gradient, and the momentum accumulation, it updates the parameter tensors `var`, `ms`, and `mom`: `ms` and `mom` are explicitly written back to their input addresses (inplace update), while the updated value of `var` is written to the output tensor (at GE graph execution the output reuses the Device memory of the input var, and the kernel writes to an independent output address). It aligns with the computation semantics of the TensorFlow `tf.raw_ops.ApplyRMSProp` interface.
 
 - **Computation formula**:
 
@@ -62,7 +62,7 @@ English | [简体中文](./README.md)
   <tr>
     <td>var</td>
     <td>Input / Output(inplace)</td>
-    <td>Weight parameter to be updated, corresponding to var in the formula. It is updated inplace inside the kernel, and the single-output view of the GE IR shares Device memory with input var.</td>
+    <td>Weight parameter to be updated, corresponding to var in the formula. The updated value is written to the output var (at GE graph execution the output reuses the Device memory of this input; see the output row).</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -83,28 +83,28 @@ English | [简体中文](./README.md)
   <tr>
     <td>lr</td>
     <td>Input</td>
-    <td>Learning rate, corresponding to lr in the formula. It is a 1-element scalar tensor with shape={1}, and the dtype must be consistent with var.</td>
+    <td>Learning rate, corresponding to lr in the formula. It is a scalar tensor with exactly 1 element (e.g. shape={1}; shapes containing unknown dims are rejected), and the dtype must be consistent with var.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>rho</td>
     <td>Input</td>
-    <td>Decay coefficient, corresponding to rho in the formula. It is a 1-element scalar tensor with shape={1}, with a value range of [0, 1).</td>
+    <td>Decay coefficient, corresponding to rho in the formula. It is a scalar tensor with exactly 1 element (e.g. shape={1}; shapes containing unknown dims are rejected), with a value range of [0, 1), and the dtype must be consistent with var.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>momentum</td>
     <td>Input</td>
-    <td>Momentum coefficient, corresponding to momentum in the formula. It is a 1-element scalar tensor with shape={1}.</td>
+    <td>Momentum coefficient, corresponding to momentum in the formula. It is a scalar tensor with exactly 1 element (e.g. shape={1}; shapes containing unknown dims are rejected), and the dtype must be consistent with var.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>epsilon</td>
     <td>Input</td>
-    <td>Numerical stability constant, corresponding to epsilon in the formula. It is a 1-element scalar tensor with shape={1}, and it must be > 0.</td>
+    <td>Numerical stability constant, corresponding to epsilon in the formula. It is a scalar tensor with exactly 1 element (e.g. shape={1}; shapes containing unknown dims are rejected), it must be > 0, and the dtype must be consistent with var.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -125,7 +125,7 @@ English | [简体中文](./README.md)
   <tr>
     <td>var (output)</td>
     <td>Output</td>
-    <td>Updated var tensor, sharing Device memory with input var (inplace).</td>
+    <td>Updated var tensor. At GE graph execution the output reuses the Device memory of the input var (in-place view provided by graph memory reuse); at the kernel level the updated value is written to an independent output address, and the caller can read the graph output to obtain the updated value.</td>
     <td>FLOAT, FLOAT16, BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -133,7 +133,11 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-None
+- The rank of var is limited to [0, 8]: inputs with rank > 8 are rejected.
+- The storage shape of var must be concrete: inputs containing unknown dims (e.g. dynamic shapes not yet materialized) are rejected.
+- The dtype of all 7 non-var inputs (ms, mom, lr, rho, momentum, epsilon, grad) must be consistent with var, where the shape of ms/mom/grad must be exactly the same as var, and lr/rho/momentum/epsilon must be tensors of exactly 1 element with a concrete shape (inputs containing unknown dims are rejected).
+- This operator declares support for dynamic shape and dynamic rank, but shapes must be materialized (no unknown dims) before graph execution.
+- **Precision path**: FP16/BF16 inputs are first converted to FP32 for computation, and the results are written back to the output dtype with round-to-nearest-even (RNE); extreme intermediate values are guarded against overflow by scaling and normalized identity transforms. The numerical deviation between FP16/BF16 and the FP32 reference mainly comes from the internal FP32 computation and the write-back rounding.
 
 ## Invocation Description
 

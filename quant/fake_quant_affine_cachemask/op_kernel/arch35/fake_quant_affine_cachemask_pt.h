@@ -46,12 +46,13 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueY_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueMask_;
 
-    // raw scale/zp 加载 buf（按 T / ZpT），各 32B
-    TBuf<TPosition::VECCALC> scaleRawBuf_; // T, 32B
-    TBuf<TPosition::VECCALC> zpRawBuf_;    // ZpT, 32B
+    // raw scale/zp 加载 buf（按 T / ZpT）：VF 标量 Adds/Cast 仍按整寄存器(256B)读写，
+    // 32B 分配会越界读写相邻 UB（首跑未初始化 vs 后续残留 → 输出不确定），扩到 VL 粒度
+    TBuf<TPosition::VECCALC> scaleRawBuf_; // T, 256B
+    TBuf<TPosition::VECCALC> zpRawBuf_;    // ZpT, 256B
     // fp32 计算用常驻 buf
-    TBuf<TPosition::VECCALC> scaleUbBuf_; // float, 32B
-    TBuf<TPosition::VECCALC> zpUbBuf_;    // float, 32B
+    TBuf<TPosition::VECCALC> scaleUbBuf_; // float, 256B
+    TBuf<TPosition::VECCALC> zpUbBuf_;    // float, 256B
 
     CommonBuffers<T, ZpT> buf_;
 
@@ -66,6 +67,11 @@ private:
     int64_t blockIdx_ = 0;
     int64_t blockLen_ = 0;
     int64_t gmXBaseOff_ = 0;
+    // 输入队列 tile 的实际分配元素数（VF 粒度对齐），CopyIn 清零用
+    int64_t tileAllocElems_ = 0;
+    // fp32/half 中间 buffer 的分配字节数（清零用）
+    int64_t fp32Bytes_ = 0;
+    int64_t halfBytes_ = 0;
 };
 
 template <typename T, typename ZpT, int HAS_ZP>
@@ -95,18 +101,39 @@ __aicore__ inline void FakeQuantAffineCachemaskPT<T, ZpT, HAS_ZP>::Init(
     buf_.outputGMMask_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(mask), totalNum);
 
     int64_t bl = (baseLen_ < 1) ? 1 : baseLen_;
-    pipe_.InitBuffer(inQueueX_, BUFFER_NUM, bl * sizeof(T));
-    pipe_.InitBuffer(outQueueY_, BUFFER_NUM, bl * sizeof(T));
-    pipe_.InitBuffer(outQueueMask_, BUFFER_NUM, bl * sizeof(uint8_t));
+    // 对齐到 VL_FP32：VF 无 mask 整寄存器按 256B 加载，Buffer 须容纳整个尾段 VL
+    int64_t blAligned = ((bl + VL_FP32 - 1) / VL_FP32) * VL_FP32;
+    int64_t tileBytesT = AlignBytesToVL(blAligned * static_cast<int64_t>(sizeof(T)));
+    tileAllocElems_ = tileBytesT / static_cast<int64_t>(sizeof(T));
+    pipe_.InitBuffer(inQueueX_, BUFFER_NUM, tileBytesT);
+    pipe_.InitBuffer(outQueueY_, BUFFER_NUM, tileBytesT);
+    pipe_.InitBuffer(outQueueMask_, BUFFER_NUM, blAligned);
 
-    pipe_.InitBuffer(scaleRawBuf_, 32);
-    pipe_.InitBuffer(scaleUbBuf_, 32);
+    // 标量 buf 按 VF 整寄存器粒度（256B）分配：count=1 的 Adds/Cast 仍按整寄存器
+    // 读写，32B 分配会越界读写相邻 UB（首跑未初始化 vs 后续残留 → 输出不确定）
+    pipe_.InitBuffer(scaleRawBuf_, VL_BYTES_K);
+    pipe_.InitBuffer(scaleUbBuf_, VL_BYTES_K);
     if constexpr (HAS_ZP == 1) {
-        pipe_.InitBuffer(zpRawBuf_, 32);
-        pipe_.InitBuffer(zpUbBuf_, 32);
+        pipe_.InitBuffer(zpRawBuf_, VL_BYTES_K);
+        pipe_.InitBuffer(zpUbBuf_, VL_BYTES_K);
     }
-    int64_t fp32Bytes = bl * static_cast<int64_t>(sizeof(float));
-    int64_t halfBytes = bl * static_cast<int64_t>(sizeof(half));
+    // DMA 只写 1 个元素，VF 整寄存器读会读到段内未初始化区——先清零整段
+    // （mssanitizer initcheck 报未初始化读取；lane0 之外被掩码排除但读行为存在）
+    {
+        AscendC::LocalTensor<T> sRawInit = scaleRawBuf_.template Get<T>();
+        AscendC::Duplicate<T>(sRawInit, static_cast<T>(0), static_cast<int32_t>(VL_BYTES_K / sizeof(T)));
+        if constexpr (HAS_ZP == 1) {
+            AscendC::LocalTensor<ZpT> zRawInit = zpRawBuf_.template Get<ZpT>();
+            AscendC::Duplicate<ZpT>(zRawInit, static_cast<ZpT>(0), static_cast<int32_t>(VL_BYTES_K / sizeof(ZpT)));
+        }
+        AscendC::TEventID evInit = pipe_.template FetchEventID<AscendC::HardEvent::V_MTE2>();
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evInit);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evInit);
+    }
+    int64_t fp32Bytes = AlignBytesToVL(blAligned * static_cast<int64_t>(sizeof(float)));
+    fp32Bytes_ = fp32Bytes;
+    int64_t halfBytes = AlignBytesToVL(blAligned * static_cast<int64_t>(sizeof(half)));
+    halfBytes_ = halfBytes;
     pipe_.InitBuffer(buf_.tmpFp32Buf_, fp32Bytes);
     pipe_.InitBuffer(buf_.qFp32Buf_, fp32Bytes);
     pipe_.InitBuffer(buf_.m1Fp32Buf_, fp32Bytes);
@@ -117,17 +144,25 @@ __aicore__ inline void FakeQuantAffineCachemaskPT<T, ZpT, HAS_ZP>::Init(
 template <typename T, typename ZpT, int HAS_ZP>
 __aicore__ inline void FakeQuantAffineCachemaskPT<T, ZpT, HAS_ZP>::LoadScaleZpScalar()
 {
-    // scale: T 1 elem → UB 32B raw → fp32 buf
+    // scale: T 1 elem → UB 256B raw → fp32 buf
     AscendC::LocalTensor<T> sRaw = scaleRawBuf_.template Get<T>();
     AscendC::LocalTensor<float> sUb = scaleUbBuf_.template Get<float>();
     AscendC::DataCopyExtParams sp{1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0};
     AscendC::DataCopyPadExtParams<T> sPad{false, 0, 0, 0};
     AscendC::DataCopyPad(sRaw, buf_.inputGMScale_, sp, sPad);
-    // MTE2 → V：必须等 MTE2 把标量写入 sRaw 后再由 V 读取转换，
-    // 否则 V 先读到未初始化 UB，且首跑与后续跑结果不一致（非确定性输出根因）
-    AscendC::TEventID eventS = pipe_.template FetchEventID<AscendC::HardEvent::MTE2_V>();
-    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventS);
-    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventS);
+    if constexpr (HAS_ZP == 1) {
+        AscendC::LocalTensor<ZpT> zRaw = zpRawBuf_.template Get<ZpT>();
+        AscendC::LocalTensor<float> zUb = zpUbBuf_.template Get<float>();
+        AscendC::DataCopyExtParams zp{1, static_cast<uint32_t>(sizeof(ZpT)), 0, 0, 0};
+        AscendC::DataCopyPadExtParams<ZpT> zPad{false, 0, 0, 0};
+        AscendC::DataCopyPad(zRaw, buf_.inputGMZp_, zp, zPad);
+    }
+    // MTE2 → V：DataCopyPad 异步写 UB 后，必须显式同步等待写回完成再让 V 侧
+    // Adds/Cast 读取，否则读到 UB 残留（scale/zp 随机错误 → 输出不确定）
+    AscendC::TEventID eventLoad = pipe_.template FetchEventID<AscendC::HardEvent::MTE2_V>();
+    AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventLoad);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventLoad);
+
     if constexpr (std::is_same<T, float>::value) {
         AscendC::Adds<float>(sUb, sRaw, 0.0f, 1);
     } else {
@@ -137,13 +172,6 @@ __aicore__ inline void FakeQuantAffineCachemaskPT<T, ZpT, HAS_ZP>::LoadScaleZpSc
     if constexpr (HAS_ZP == 1) {
         AscendC::LocalTensor<ZpT> zRaw = zpRawBuf_.template Get<ZpT>();
         AscendC::LocalTensor<float> zUb = zpUbBuf_.template Get<float>();
-        AscendC::DataCopyExtParams zp{1, static_cast<uint32_t>(sizeof(ZpT)), 0, 0, 0};
-        AscendC::DataCopyPadExtParams<ZpT> zPad{false, 0, 0, 0};
-        AscendC::DataCopyPad(zRaw, buf_.inputGMZp_, zp, zPad);
-        // 同上：zp 的 MTE2 → V 同步
-        AscendC::TEventID eventZ = pipe_.template FetchEventID<AscendC::HardEvent::MTE2_V>();
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(eventZ);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(eventZ);
         if constexpr (std::is_same<ZpT, float>::value) {
             AscendC::Adds<float>(zUb, zRaw, 0.0f, 1);
         } else {
@@ -156,6 +184,12 @@ template <typename T, typename ZpT, int HAS_ZP>
 __aicore__ inline void FakeQuantAffineCachemaskPT<T, ZpT, HAS_ZP>::CopyInXTile(int64_t gmXOffset, int64_t dataCount)
 {
     AscendC::LocalTensor<T> xLocal = inQueueX_.template AllocTensor<T>();
+    // 先清零整个 tile 分配区：DMA 只写 dataCount 元素，VF 无 mask 整寄存器读会
+    // 越过写入区到分配内尾部（initcheck 未初始化读取），清零保证被读字节确定
+    AscendC::Duplicate<T>(xLocal, static_cast<T>(0), static_cast<int32_t>(tileAllocElems_));
+    AscendC::TEventID evZero = pipe_.template FetchEventID<AscendC::HardEvent::V_MTE2>();
+    AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evZero);
+    AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evZero);
     AscendC::DataCopyExtParams params{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
     AscendC::DataCopyPadExtParams<T> pad{false, 0, 0, 0};
     AscendC::DataCopyPad(xLocal, buf_.inputGMX_[gmXOffset], params, pad);
@@ -203,14 +237,24 @@ __aicore__ inline void FakeQuantAffineCachemaskPT<T, ZpT, HAS_ZP>::Compute(int64
     AscendC::LocalTensor<float> m2Buf = buf_.m2Fp32Buf_.template Get<float>();
     AscendC::LocalTensor<half> hBuf = buf_.halfMaskBuf_.template Get<half>();
 
+    // 中间 buffer 尾段清零：掩码 VF store 只写活跃 lane，FinalizeCompute 的
+    // tensor 级 Cast 按 256B 块粒度读，尾部残留会被 initcheck 判未初始化读
+    {
+        int64_t m1Elems = fp32Bytes_ / static_cast<int64_t>(sizeof(float));
+        int64_t hElems = halfBytes_ / static_cast<int64_t>(sizeof(half));
+        AscendC::Duplicate<float>(m1Buf, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<float>(tmp, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<float>(qFp32, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<float>(m2Buf, 0.0f, static_cast<int32_t>(m1Elems));
+        AscendC::Duplicate<half>(hBuf, static_cast<half>(0), static_cast<int32_t>(hElems));
+    }
+
     __VEC_SCOPE__
     {
         Reg::MaskReg mask;
         Reg::RegTensor<T> vregX;
         Reg::RegTensor<float> vregTmp;
         Reg::RegTensor<float> vregSc;
-        Reg::RegTensor<float> vregInvSc;
-        Reg::RegTensor<float> vregOne;
         Reg::RegTensor<float> vregQ;
         Reg::RegTensor<float> vregZp;
         Reg::RegTensor<float> vregM1;
@@ -241,19 +285,12 @@ __aicore__ inline void FakeQuantAffineCachemaskPT<T, ZpT, HAS_ZP>::Compute(int64
                 Reg::Cast<float, T, layoutZMrgZ>(vregTmp, vregX, mask);
             }
 
-            // 与 torch 原生（aten cachemask）一致：inv = 1/s 为 fp32 倒数（0ulp 正确舍入），
-            // t = x * inv 为 fp32 乘法（非除法；x/s 恰为 tie 时的舍入方向由此确定）
-            Reg::Duplicate<float>(vregOne, 1.0f);
-            static constexpr AscendC::Reg::DivSpecificMode divMode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
-            Reg::Div<float, &divMode>(vregInvSc, vregOne, vregSc, mask);
-            if constexpr (HAS_ZP == 1 && !ZP_IS_INTEGRAL<ZpT>) {
-                // 浮点 zp 在 round 前加（lrintf 路径），用单次舍入的融合乘加对齐 aten float 路径
-                Reg::MulDstAdd<float>(vregTmp, vregInvSc, vregZp, mask);
-            } else {
-                // 整数 zp 在 round 后加（见 ComputeQuantMaskBody），round 前仅 x/s
-                Reg::Mul<float>(vregTmp, vregTmp, vregInvSc, mask);
+            // 取整次序按 zp dtype 分支（对齐 ATen）：int32 zp 由 body 两步式处理（此处不加）；
+            // 浮点 zp 一步式（rint(x/s+zp)），此处先加进 vregTmp
+            Reg::Div<float>(vregTmp, vregTmp, vregSc, mask);
+            if constexpr (HAS_ZP == 1 && !std::is_same<ZpT, int32_t>::value) {
+                Reg::Add<float>(vregTmp, vregTmp, vregZp, mask);
             }
-            ForceNonFiniteToSentinel(vregTmp, mask);
             ComputeQuantMaskBody<T, ZpT, HAS_ZP>(vregTmp, vregSc, vregZp, vregQ, vregM1, vregM2, vregInt32, mask, i,
                                                  m1Ptr, yPtr, qMinF, qMaxF, qMinMinus1F, qMaxPlus1F);
         }

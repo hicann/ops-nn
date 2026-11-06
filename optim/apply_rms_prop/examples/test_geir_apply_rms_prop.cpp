@@ -29,6 +29,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
 #include "assert.h"
 
 #include "graph.h"
@@ -211,8 +212,13 @@ int main(int argc, char* argv[])
     Graph graph(graph_name);
     std::vector<ge::Tensor> input;
 
+    // P2-9 fix: 设备号参数实际生效（此前仅打印，ge.exec.deviceId 固定为 "0"）。
+    // F-12 fix: 声明须先于 GEInitialize 处的使用。
+    std::string deviceId = (argc > 1) ? argv[1] : "0";
+    std::cout << "device id arg: " << deviceId << std::endl;
     printf("%s - INFO - [XIR]: Start to initialize ge using ge global options\n", GetTime().c_str());
-    std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
+    std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", deviceId.c_str()},
+                                                           {"ge.graphRunMode", "1"}};
     Status ret = ge::GEInitialize(global_options);
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Initialize ge using ge global options failed\n", GetTime().c_str());
@@ -223,16 +229,14 @@ int main(int argc, char* argv[])
     std::vector<Operator> inputs{};
     std::vector<Operator> outputs{};
 
-    if (argc > 1) {
-        std::cout << "device id arg: " << argv[1] << std::endl;
-    }
-
     DataType inDtype = DT_FLOAT;
     std::cout << "input dtype: " << inDtype << std::endl;
 
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        // P2-9 fix: GEInitialize 成功后的失败返回路径须释放 GE 环境。
+        GEFinalize();
         return FAILED;
     }
 
@@ -244,10 +248,13 @@ int main(int argc, char* argv[])
 
     };
     printf("%s - INFO - [XIR]: Start to create ir session using build options\n", GetTime().c_str());
-    ge::Session* session = new Session(build_options);
+    // DEMO.04 fix: 用 unique_ptr 托管 Session，成功路径同样自动释放，避免泄漏。
+    std::unique_ptr<ge::Session> session(new (std::nothrow) Session(build_options));
 
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        // P2-9 fix: GEInitialize 成功后的失败返回路径须释放 GE 环境。
+        GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Create ir session using build options success\n", GetTime().c_str());
@@ -258,17 +265,27 @@ int main(int argc, char* argv[])
     };
     uint32_t graph_id = 0;
     ret = session->AddGraph(graph_id, graph, graph_options);
-
+    // P2-9 fix: 检查 AddGraph 返回值，失败时释放资源并返回，不再无条件打印成功。
+    if (ret != SUCCESS) {
+        printf("%s - ERROR - [XIR]: Session add ir compute graph failed\n", GetTime().c_str());
+        // F-13 fix: 先析构 Session 再释放 GE 环境（与成功路径顺序一致）。
+        session.reset();
+        GEFinalize();
+        return FAILED;
+    }
     printf("%s - INFO - [XIR]: Session add ir compute graph to ir session success\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
     std::string file_path = "./dump";
-    aclgrphDumpGraph(graph, file_path.c_str(), file_path.length());
+    if (aclgrphDumpGraph(graph, file_path.c_str(), file_path.length()) != SUCCESS) {
+        printf("%s - WARN - [XIR]: dump graph to txt failed (non-fatal)\n", GetTime().c_str());
+    }
     printf("%s - INFO - [XIR]: Start to run ir compute graph\n", GetTime().c_str());
     std::vector<ge::Tensor> output;
     ret = session->RunGraph(graph_id, input, output);
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
-        delete session;
+        // F-13 fix: 先析构 Session 再释放 GE 环境（与成功路径顺序一致）。
+        session.reset();
         GEFinalize();
         return FAILED;
     }
@@ -282,7 +299,9 @@ int main(int argc, char* argv[])
         int64_t input_shape = input[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th input, input shape size =" << input_shape << std::endl;
         uint32_t data_size = input_shape * GetDataTypeSize(input[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)input_file.c_str(), data_size, input_data_i);
+        if (WriteDataToFile((const char*)input_file.c_str(), data_size, input_data_i) != SUCCESS) {
+            printf("%s - WARN - [XIR]: write input %d bin failed (non-fatal)\n", GetTime().c_str(), i);
+        }
     }
 
     int output_num = output.size();
@@ -293,7 +312,9 @@ int main(int argc, char* argv[])
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th output, output shape size =" << output_shape << std::endl;
         uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
+        if (WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i) != SUCCESS) {
+            printf("%s - WARN - [XIR]: write output %d bin failed (non-fatal)\n", GetTime().c_str(), i);
+        }
     }
 
     ge::AscendString error_msg = ge::GEGetErrorMsgV2();
@@ -302,8 +323,14 @@ int main(int argc, char* argv[])
     ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
     std::string warning_str(warning_msg.GetString());
     std::cout << "Warning message: " << warning_str << std::endl;
-    printf("%s - INFO - [XIR]: Precision is ok\n", GetTime().c_str());
+    // P2-9 fix: 此前无任何参考比较即打印 Precision is ok；样例仅落盘输入/输出
+    // 数据，精度结论须由外部比对工具给出，改为如实的落盘完成说明。
+    printf("%s - INFO - [XIR]: input/output bins dumped; run an external comparison for precision\n",
+           GetTime().c_str());
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
+    // P2-9 fix: Session 须在 GEFinalize 之前析构（此前 unique_ptr 到 main 返回才析构，
+    // Session 在 GE 环境释放后才销毁）。
+    session.reset();
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());

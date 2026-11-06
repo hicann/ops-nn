@@ -110,13 +110,8 @@ ge::graphStatus FakeQuantAffineCachemaskTiling::Init()
     currentWorkSpace[0] = sysWorkspaceSize;
     auto xShape = tilingContext->GetInputShape(0)->GetStorageShape();
     totalLength = xShape.GetShapeSize();
-    // rank=0 is a scalar tensor: GetShapeSize() is 1, but GetDim(0) is invalid.
-    // Treat it as one "head" of one element so the kernel sees a valid 1-element tile.
-    if (xShape.GetDimNum() == 0) {
-        headNum = 1;
-    } else {
-        headNum = xShape.GetDim(0);
-    }
+    // 0 维（标量）x 无 GetDim(0) 可读，视为单通道
+    headNum = (xShape.GetDimNum() == 0) ? 1 : xShape.GetDim(0);
     if (headNum == 0) {
         return ge::GRAPH_FAILED;
     }
@@ -139,6 +134,35 @@ ge::graphStatus FakeQuantAffineCachemaskTiling::Init()
     remainNum = headNum % coreNum;
 
     auto attrs = tilingContext->GetAttrs();
+    // A2/A3（非 regbase）路径的 kernel 按 axis=0 的 [headNum, calcLength] 布局索引
+    // scale/zero_point，TilingData 无 axis 字段；axis 指向非 0 维时若继续执行会
+    // 静默按 axis=0 计算并返回成功。此处显式拒绝非 0 维 axis（aclnn 入口已通过
+    // Transpose 归一化到 axis=0，仅图模式直调可触发本分支）。
+    const int64_t* axisPtr = attrs->GetAttrPointer<int64_t>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, axisPtr);
+    {
+        const int64_t xRank = static_cast<int64_t>(xShape.GetDimNum());
+        int64_t axisVal = *axisPtr;
+        if (xRank == 0) {
+            // 0 维（标量）x：合法 axis 仅 {0, -1}（与 InferShape 同口径）
+            if (axisVal != 0 && axisVal != -1) {
+                OP_LOGE(tilingContext->GetNodeName(),
+                        "A2/A3 non-regbase path: 0-dim x only supports axis 0 or -1 (got %ld).", *axisPtr);
+                return ge::GRAPH_FAILED;
+            }
+            axisVal = 0;
+        }
+        if (axisVal < 0) {
+            axisVal += xRank;
+        }
+        if (axisVal != 0) {
+            OP_LOGE(tilingContext->GetNodeName(),
+                    "A2/A3 non-regbase path only supports axis=0 (got %ld); use the aclnn entry (which "
+                    "normalizes via Transpose) or pre-transpose the input for graph-mode calls on this SoC.",
+                    *axisPtr);
+            return ge::GRAPH_FAILED;
+        }
+    }
     quantMin = *(attrs->GetAttrPointer<int64_t>(1));
     // 2 is quant_max in op of index
     quantMax = *(attrs->GetAttrPointer<int64_t>(2));
@@ -192,10 +216,10 @@ static ge::graphStatus TilingFakeQuantAffineCachemask(gert::TilingContext* conte
         return Tiling4FakeQuantAffineCachemaskArch35(context);
     }
     FakeQuantAffineCachemaskTiling tilingObject(context);
-    ge::graphStatus ret = tilingObject.Init();
-    if (ret != ge::GRAPH_SUCCESS) {
-        return ret;
-    }
+    // Init 失败（headNum==0/平台核数为 0 等）必须终止：原实现丢弃返回值后仍执行
+    // RunKernelTiling，以 blockDim=0 与默认 tiling 数据返回 SUCCESS
+    OP_CHECK_IF(tilingObject.Init() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "FakeQuantAffineCachemaskTiling Init failed"), return ge::GRAPH_FAILED);
     return tilingObject.RunKernelTiling();
 }
 

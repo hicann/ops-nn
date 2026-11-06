@@ -47,7 +47,10 @@ namespace ge {
  *   @li grad:      A Tensor, same shape/dtype as "var".
  *
  * @par Outputs:
- *   @li var: Updated var (in-place; ms / mom are also in-place updated through input GM addresses).
+ *   @li var: Updated var. At GE graph execution the output reuses the input
+ *             var device memory (in-place view provided by graph memory reuse);
+ *             the kernel itself writes to the independent output address.
+ *             ms / mom are updated through their input GM addresses.
  *
  * @par Attributes:
  *   @li use_locking: An optional bool. Defaults to "false". Semantic placeholder.

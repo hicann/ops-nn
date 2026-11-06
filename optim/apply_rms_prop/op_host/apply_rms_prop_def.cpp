@@ -22,7 +22,7 @@
  * 输出 (1): var（ms / mom 通过 inplace 语义随输入 GM 地址更新，无显式输出端口）
  * 属性 (1): use_locking (bool, default=false, 语义占位)
  *
- * 仅适配 Ascend950 (arch35 / DAV_3510)。
+ * 适配 Ascend950 与 Ascend350（均使用 arch35 / DAV_3510 kernel 与 tiling）。
  */
 #include "register/op_def_registry.h"
 
@@ -94,7 +94,7 @@ public:
         // 属性 (use_locking, 语义占位)
         this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
-        // Ascend950 (arch35) 配置
+        // Ascend950 / Ascend350 (arch35) 共用配置
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
@@ -103,6 +103,9 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        // Ascend350 与 Ascend950 共享 arch35 kernel/tiling（见顶层 CMakeLists
+        // SUPPORT_TILING_DIR），对齐同仓 adam_apply_one 的多平台注册方式。
+        this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };
 OP_ADD(ApplyRMSProp);

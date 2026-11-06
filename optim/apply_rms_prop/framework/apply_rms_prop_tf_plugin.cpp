@@ -16,9 +16,11 @@
 
 namespace domi {
 // ApplyRMSProp maps directly from the TensorFlow op of the same name; auto operator mapping suffices.
+// P1-2 fix: 与 canndev 基线对齐，同时注册 ResourceApplyRMSProp 源算子，
+// 否则含该节点的 TF 模型在构图映射阶段失败。
 REGISTER_CUSTOM_OP("ApplyRMSProp")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType("ApplyRMSProp")
+    .OriginOpType({"ApplyRMSProp", "ResourceApplyRMSProp"})
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

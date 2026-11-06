@@ -29,7 +29,7 @@
 - 计算公式：在fake_quant_enabled >= 1的情况下，根据算子功能先计算临时变量qval，再计算得出out和mask。
 
   $$
-  qval = Round(std::nearby\_int(self / scale) + zero\_point)
+  qval = Round(self / scale) + zero\_point
   $$
 
   $$
@@ -234,7 +234,7 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemask(
       <td>out和mask的shape与self不一致</td>
     </tr>
     <tr>
-      <td>quantMin大于quantMax。</td>
+      <td>quantMin大于quantMax，或quant_min/quant_max绝对值不小于2^24（超出fp32可精确表示的整数域）。</td>
     </tr>
   </tbody>
   </table>

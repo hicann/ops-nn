@@ -118,7 +118,7 @@ int main()
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
-    // 调用aclnnEye第一段接口
+    // 调用aclnn第一段接口
     ret = aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize(self, scale, zeroPoint, axis, quantMin, quantMax, out,
                                                                   mask, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS,

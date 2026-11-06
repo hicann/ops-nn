@@ -43,16 +43,18 @@ extern "C" {
  *   D(l0op::FakeQuantPerChannelAffineCachemask)-->C3(l0op::Transpose)-->EF2(l0op::ViewCopy)-->F2[(mask)]
  * ```
  * @param [in] self:
- * Device侧的aclTensor，数据类型支持FLOAT16、FLOAT32。支持非连续的Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
- * @param [in] scale: Device侧的aclTensor，表示输入伪量化的缩放系数。数据类型支持FLOAT16、FLOAT32，size大小为1。
- * @param [in] zeroPoint: Device侧的aclTensor，表示输入伪量化的零基准参数。数据类型支持INT32，size大小为1。
+ * Device侧的aclTensor，数据类型支持FLOAT16、FLOAT32。支持非连续的Tensor，[数据格式](../../../docs/zh/context/data_format.md)支持ND。
+ * @param [in] scale:
+ * Device侧的aclTensor，表示输入伪量化的缩放系数。数据类型支持FLOAT16、FLOAT32，size大小与self在axis轴上的长度一致。
+ * @param [in] zeroPoint:
+ * Device侧的aclTensor，表示输入伪量化的零基准参数。数据类型支持INT32，size大小与self在axis轴上的长度一致。
  * @param [in] axis: Host侧的整型，表示计算维度，数据类型支持INT。
  * @param [in] quantMin: Host侧的整型，表示输入数据伪量化后的最小值，数据类型支持INT。
  * @param [in] quantMax: Host侧的整型，表示输入数据伪量化后的最大值，数据类型支持INT。
  * @param [out] out:
- * Device侧的aclTensor，数据类型支持LOAT16、FLOAT32，支持非连续Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+ * Device侧的aclTensor，数据类型支持FLOAT16、FLOAT32，支持非连续Tensor，[数据格式](../../../docs/zh/context/data_format.md)支持ND。
  * @param [out] mask:
- * Device侧的aclTensor，数据类型支持BOOL，支持非连续Tensor，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+ * Device侧的aclTensor，数据类型支持BOOL，支持非连续Tensor，[数据格式](../../../docs/zh/context/data_format.md)支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。

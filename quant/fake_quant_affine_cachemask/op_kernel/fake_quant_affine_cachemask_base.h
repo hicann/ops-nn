@@ -60,6 +60,13 @@ public:
                 scaleOffset = remainNum + GetBlockIdx() * loopNum;
             }
         }
+        // calcLength==0 的空张量：tileNum 为 0，lastActulTileLength 会下溢为
+        // 无符号最大值——直接早退（A2/A3 老路径空输入防护）
+        if (calcLength == 0) {
+            tileNum = 0;
+            lastActulTileLength = 0;
+            return;
+        }
         tileNum = (totalLengthAligned + tileLength - 1) / tileLength;
         lastActulTileLength = calcLength - (tileNum - 1) * tileLength;
     }

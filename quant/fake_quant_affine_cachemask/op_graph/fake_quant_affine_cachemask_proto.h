@@ -23,17 +23,25 @@ namespace ge {
 
 *@par Inputs:
 *Three inputs, including:
-*@li x: A Tensor. Must be one of the following types: float16, float32.
-*@li scale: A Tensor of type float32 or float16. Has the same type and format as "x".
-*@li zero_point: A Tensor of type int32, float16 or float32.\n
+*@li x: A Tensor. Must be one of the following types: float16, float32, bfloat16
+*      (bfloat16 only supported on Ascend 950PR&950DT series and kirin series).
+*@li scale: A Tensor of type float32, float16 or bfloat16. Same dtype as "x",
+*      1-D with size equal to x.dim() on the axis dimension.
+*@li zero_point: A Tensor of type int32, float16, float32 or bfloat16.
+*      int32 always supported; float/float16 cross-combinable with x on the
+*      Ascend 950PR&950DT and Ascend 350 registration domain (Atlas A2/A3
+*      support same-dtype float zero_point; kirin series int32 only).\n
 
 *@par Attributes:
-*@li axis: An required attribute of type int64.
-*@li quant_min: An required attribute of type int64.
-*@li quant_max: An required attribute of type int64.\n
+*@li axis: An required attribute of type int64. Valid range is [-x.dim(), x.dim()-1];
+*      for 0-dim (scalar) x only 0 or -1.
+*@li quant_min: An required attribute of type int64. Must satisfy quant_min <= quant_max
+*      and |bound| < 2^24.
+*@li quant_max: An required attribute of type int64. Must satisfy quant_min <= quant_max
+*      and |bound| < 2^24.\n
 
 *@par Outputs:
-*y: A Tensor of type float32 or float16.
+*y: A Tensor of type float32, float16 or bfloat16 (same dtype as x).
 *mask: A Tensor of type bool. \n
 
 *@par Third-party framework compatibility
@@ -41,10 +49,10 @@ namespace ge {
 */
 
 REG_OP(FakeQuantAffineCachemask)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(scale, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(zero_point, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(scale, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
+    .INPUT(zero_point, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT32}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OUTPUT(mask, TensorType({DT_BOOL}))
     .REQUIRED_ATTR(axis, Int)
     .REQUIRED_ATTR(quant_min, Int)

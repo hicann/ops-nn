@@ -30,11 +30,11 @@
 
   - The data type of `zero_point` is int32.
   $$
-  qval = Round(std::nearby\_int(self / scale) + zero\_point)
+  qval = Round(self / scale) + zero\_point
   $$
   - The data type of zero_point is float16 or float32.
   $$
-  qval = std::lrintf(self / scale + zero\_point)
+  qval = std::lrint(self / scale + zero\_point)
   $$
 
   $$
@@ -127,7 +127,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
        <td>Input</td>
        <td>zero_point in the formula, indicating the input zero-point parameter for pseudo-quantization.</td>
        <td>The size must be consistent with that of scale and with the size of self along axis.</td>
-       <td>INT32</td>
+       <td>INT32, FLOAT16, FLOAT</td>
        <td>ND</td>
        <td>1</td>
        <td>√</td>
@@ -241,13 +241,13 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
       <td>The sizes of scale and zeroPoint are inconsistent.</td>
     </tr>
     <tr>
-      <td>The dimension specified by axis is not within the valid range [-self.dim(), self.dim()-1].</td>
+      <td>The dimension specified by axis is not within the valid range [-self.dim(), self.dim()-1] (when self is a 0-dim scalar, only axis=0 or axis=-1 is supported).</td>
     </tr>
     <tr>
       <td>The size of scale or zeroPoint is inconsistent with the size of self along axis.</td>
     </tr>
     <tr>
-      <td>quantMin is greater than quantMax.</td>
+      <td>quantMin is greater than quantMax, or the absolute value of quant_min/quant_max is not less than 2^24 (exceeding the integer domain exactly representable in fp32).</td>
     </tr>
   </tbody>
   </table>
@@ -300,7 +300,14 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
 - Deterministic computation:
   - aclnnFakeQuantPerChannelAffineCachemask defaults to a deterministic implementation.
 
-- The current new operator FakeQuantPerChannelAffineCachemask does not support float32 and float16 inputs for zero_point. Therefore, this is intercepted inside the aclnn API for now, and the restriction will be lifted once the operator supports it.
+- The zero_point of this aclnn API supports INT32, FLOAT16 and FLOAT (out-of-range dtypes return 161002).
+
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT products</term>: Floating-point zero_point supports cross combinations with self; the GEIR graph mode additionally supports BFLOAT16 zero_point (cross-combinable with self).
+<!-- end id7 -->
+<!-- npu="A3,910b" id8 -->
+- <term>Atlas A3 products</term>, <term>Atlas A2 products</term>: Floating-point zero_point supports only the same dtype as self; the GEIR graph mode (non-regbase form factors) supports only axis=0 (the aclnn entry is not subject to this restriction because it normalizes via an internal Transpose).
+<!-- end id8 -->
 
 ## Example
 

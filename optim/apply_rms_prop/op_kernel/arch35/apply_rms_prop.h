@@ -92,6 +92,10 @@ private:
     // FP32 path: 2 temporary buffers for intermediate computation
     TBuf<QuePosition::VECCALC> tmp_buf1;
     TBuf<QuePosition::VECCALC> tmp_buf2;
+    // P1-1 fix: Step2 双路（常规 + 大梯度归一化）的 A/B 路结果与比较掩码。
+    TBuf<QuePosition::VECCALC> mom_a_buf;
+    TBuf<QuePosition::VECCALC> mom_b_buf;
+    TBuf<QuePosition::VECCALC> cmp_mask_buf;
     // Reduced-precision path (fp16 / bf16): 4 fp32 TBuf for Cast workspace
     TBuf<QuePosition::VECCALC> fp32_var_buf;
     TBuf<QuePosition::VECCALC> fp32_ms_buf;
@@ -118,6 +122,16 @@ private:
     float one_minus_rho_ = 1.0f;
     float momentum_ = 0.0f;
     float eps_ = 1e-7f;
+    // P1-1/F-02/F-03 fix: 仅当 |ms_new| 超过 FLT_MAX（即 Step1 的和溢出为 ±Inf，
+    // fp32 不可表示）时 A 路才不可用，Step2 切换到归一化路径。ms_new 有限时（含
+    // FLT_MAX 本身）sqrt(ms_new+eps) 有界，A 路天然安全；F-02 相消场景 |ms_new|
+    // 极小、F-03 的溢出由 Inf 精确捕捉。
+    // 注意：ms_new 为 Inf 不只来自 Step1 的 w 溢出——输入 ms 本身可为 ±Inf
+    // （上一轮溢出写回后再次调用），此时 g 可为 0，B 路 sign(g)=g/|g| 会产生
+    // 0/0=NaN。故 sign 计算以 max(|g|, FLT_MIN) 为除数：g==0 时 sign=0，
+    // momB=0/sqrt(Inf)=0（与 A 路极限 lr*0/sqrt(Inf)=0 一致），不再出现 NaN。
+    static constexpr float kMsNewSwitchBound = 3.4028235e38f; // FLT_MAX
+    static constexpr float kSignGuard = 1.17549435e-38f;      // FLT_MIN，防 0/0
 };
 
 // Read 1-element scalar Tensors (lr/rho/momentum/epsilon) from GM into UB,
@@ -186,12 +200,17 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::load_scalars_from_gm(GM_ADD
     eps_ = slotEps.GetValue(0);
     one_minus_rho_ = 1.0f - rho_;
 
-    // Major-2 fix: epsilon 必须 > 0，否则 sqrt(ms+eps)=0 时 Div 产生 inf/nan。
-    // fp16 下 1e-7 会被截断为 0，这里用 IEEE 754 fp32 最小 normal (FLT_MIN) 兜底。
+    // P1-1 fix: epsilon 必须 > 0，否则 sqrt(ms+eps)=0 时 Div 产生 inf/nan。
+    // FR-03 fix: (0, FLT_MIN] 内的 fp32 次正规正值是 README 公式（仅要求 > 0）的合法输入，
+    // 不再被改写；仅对非正值（含 0/负值/NaN）兜底为 FLT_MIN。
     constexpr float EPS_FLOOR = 1.1754944e-38f; // FLT_MIN
-    if (!(eps_ > EPS_FLOOR)) {
+    if (!(eps_ > 0.0f)) {
         eps_ = EPS_FLOOR;
     }
+    // P1-1 fix: |grad| > sqrt(FLT_MAX/(1-rho)) 时 (1-rho)*grad^2 溢出 fp32，
+    // Step2 切换到归一化路径；该阈值为 A 路安全上界的精确交点。
+    // 注：等价改写为 sqrt(FLT_MAX)/sqrt(1-rho) 计算 FLT_MAX/(1-rho) 的中间量
+    // （1-rho < 1 时）在 fp32 中自身溢出为 Inf，会使阈值失效。
 }
 
 template <typename T, int BUFFER_MODE>
@@ -235,6 +254,15 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Init(GM_ADDR var, GM_ADDR m
         pipe.InitBuffer(tmp_buf1, ub_length_ * sizeof(float));
         pipe.InitBuffer(tmp_buf2, ub_length_ * sizeof(float));
     }
+    // P1-1 fix: Step2 双路的 A/B 路结果 buffer 与 bit-packed 比较掩码
+    // （掩码每元素 1 bit，按 32B 对齐，参见 apply_ftrl_v2 的同款公式）。
+    pipe.InitBuffer(mom_a_buf, ub_length_ * sizeof(float));
+    pipe.InitBuffer(mom_b_buf, ub_length_ * sizeof(float));
+    uint32_t cmpMaskSize = static_cast<uint32_t>((ub_length_ + 255) / 256 * 32);
+    if (cmpMaskSize < 32) {
+        cmpMaskSize = 32;
+    }
+    pipe.InitBuffer(cmp_mask_buf, cmpMaskSize);
 
     // Scalar fp32 output region: 4 * 8 fp32 elements = 128 bytes (4 UB blocks).
     pipe.InitBuffer(scalar_buf, NUM_SCALARS * SCALAR_ALIGN_ELEMS * sizeof(float));
@@ -302,20 +330,61 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Compute(int64_t current_num
         Cast(gF, g, RoundMode::CAST_NONE, n);
 
         // Step1: ms_new = rho * ms + (1-rho) * grad^2
-        Mul(tmp1, gF, gF, n);
-        Muls(tmp1, tmp1, one_minus_rho_, n);
+        // OP-01 fix: 按 TF 左结合序 ((1-rho)*grad)*grad 先缩放再平方；
+        // 极值梯度下 ms_new 本身溢出为 Inf 属于数学正确结果（写回 ms 即为 Inf），
+        // 其消费方由 Step2 的双路（P1-1 fix）处理。
+        Muls(tmp1, gF, one_minus_rho_, n);
+        Mul(tmp1, tmp1, gF, n);
         Muls(mF, mF, rho_, n);
+        Adds(tmp2, mF, eps_, n); // tmp2 = rho*ms+eps（B 路材料，先于 mF 覆盖保存）
         Add(mF, mF, tmp1, n);
         // mF now holds ms_new
 
         // Step2: mom_new = momentum * mom + lr * grad / sqrt(ms_new + eps)
+        // P1-1 双路：A 路常规序；B 路在 |ms_new| 超出 fp32 安全余量时启用，
+        // 分子分母同除 |grad| 恒等变形 mom = lr*sign(g)/sqrt((rho*ms+eps)/g^2+(1-rho))，
+        // 使被消费的中间量始终落在 fp32 可表示域（w 溢出区 (rho*ms+eps)/g^2 下溢
+        // 为 0，分母恒为 sqrt(1-rho) 附近，规避 ms_new 溢出 Inf 导致梯度项丢失）。
+        LocalTensor<float> momA = mom_a_buf.Get<float>();
+        LocalTensor<float> momB = mom_b_buf.Get<float>();
+
+        // 切换掩码先行：|ms_new| 超过 FLT_MAX（Inf，fp32 不可表示）时选 B 路
+        // （F-02/F-03 fix，见类内常量说明；CompareScalar/Select 要求 count 256B
+        //  对齐，对齐区 padding 不参与后续按 n 的消费，垃圾值不会写出）。
+        const int32_t cmpSelCount = (n + 63) / 64 * 64;
+        LocalTensor<uint8_t> cmpMask = cmp_mask_buf.Get<uint8_t>();
+        Abs(tmp1, mF, n); // tmp1 = |ms_new|（±Inf 满足 GT；NaN 为 false 走 A）
+        CompareScalar(cmpMask, tmp1, kMsNewSwitchBound, CMPMODE::GT, cmpSelCount);
+        PipeBarrier<PIPE_ALL>();
+
+        // A 路: momA = (grad / sqrt(ms_new+eps)) * lr
         Adds(tmp1, mF, eps_, n);
         Sqrt(tmp1, tmp1, n);
-        // tmp2 = lr * grad
-        Muls(tmp2, gF, lr_, n);
-        // tmp2 = (lr * grad) / sqrt(ms_new + eps)
-        Div(tmp2, tmp2, tmp1, n);
-        // moF = momentum * mom + tmp2
+        // 与 master 原序一致：先乘 lr 再除 sqrt。先除后乘在 lr 大/grad 小且
+        // sqrt 极大时（如 eps=1e38）中间量下溢为 0，更新量被静默丢弃。
+        Muls(momA, gF, lr_, n);
+        Div(momA, momA, tmp1, n);
+
+        // B 路: momB = (sign(g) / sqrt((rho*ms+eps)/g^2 + (1-rho))) * lr
+        // 两次除法直接计算 (rho*ms+eps)/g^2 = ((rho*ms+eps)/g)/g：不先构造
+        // w=(1-rho)*g^2——g 超过 sqrt(FLT_MAX) 时 w 溢出为 Inf，会把与 ms 同
+        // 量级的主导项抹成 0（ms=3e38、g=3e19 时归一化项偏差 15.5%），ms=Inf
+        // 时更产生 Inf/Inf=NaN 污染写回。逐次除法各操作数均在 fp32 域内。
+        Div(momB, tmp2, gF, n); // momB = (rho*ms+eps)/g
+        Div(momB, momB, gF, n); // momB = (rho*ms+eps)/g^2
+        Adds(momB, momB, one_minus_rho_, n);
+        Sqrt(momB, momB, n);
+        Abs(tmp1, gF, n);                // tmp1 = |grad|
+        Maxs(tmp1, tmp1, kSignGuard, n); // 防 g==0 时 0/0=NaN（ms=Inf 输入可触发 B 路）
+        Div(tmp2, gF, tmp1, n);          // tmp2 = sign(g)，g==0 时为 0（对齐 A 路极限）
+        Div(momB, tmp2, momB, n);
+        Muls(momB, momB, lr_, n);
+
+        // Select: |ms_new| > kMsNewSwitchBound ? momB : momA
+        Select(tmp2, cmpMask, momB, momA, SELMODE::VSEL_TENSOR_TENSOR_MODE, cmpSelCount);
+        PipeBarrier<PIPE_ALL>();
+
+        // moF = momentum * mom + selected mom term
         Muls(moF, moF, momentum_, n);
         Add(moF, moF, tmp2, n);
 
@@ -328,17 +397,46 @@ __aicore__ inline void ApplyRmsProp<T, BUFFER_MODE>::Compute(int64_t current_num
     } else {
         // fp32 direct path
 
-        // Step1: ms_new = rho * ms + (1-rho) * grad^2
-        Mul(tmp1, g, g, n);
-        Muls(tmp1, tmp1, one_minus_rho_, n);
+        // Step1: ms_new = rho * ms + (1-rho) * grad^2（同 IS_REDUCED 分支的 OP-01/P1-1 fix 说明）
+        Muls(tmp1, g, one_minus_rho_, n);
+        Mul(tmp1, tmp1, g, n);
         Muls(m_out, m, rho_, n);
+        Adds(tmp2, m_out, eps_, n); // tmp2 = rho*ms+eps（B 路材料）
         Add(m_out, m_out, tmp1, n);
 
-        // Step2: mom_new = momentum * mom + lr * grad / sqrt(ms_new + eps)
+        // Step2 双路（P1-1 fix，同 IS_REDUCED 分支说明）
+        LocalTensor<float> momA = mom_a_buf.Get<float>();
+        LocalTensor<float> momB = mom_b_buf.Get<float>();
+
+        const int32_t cmpSelCount = (n + 63) / 64 * 64;
+        LocalTensor<uint8_t> cmpMask = cmp_mask_buf.Get<uint8_t>();
+        Abs(tmp1, m_out, n); // tmp1 = |ms_new|（±Inf 满足 GT；NaN 为 false 走 A）
+        CompareScalar(cmpMask, tmp1, kMsNewSwitchBound, CMPMODE::GT, cmpSelCount);
+        PipeBarrier<PIPE_ALL>();
+
+        // A 路: momA = (grad / sqrt(ms_new+eps)) * lr
         Adds(tmp1, m_out, eps_, n);
         Sqrt(tmp1, tmp1, n);
-        Muls(tmp2, g, lr_, n);
-        Div(tmp2, tmp2, tmp1, n);
+        // 与 master 原序一致：先乘 lr 再除 sqrt（同 IS_REDUCED 分支的防下溢说明）
+        Muls(momA, g, lr_, n);
+        Div(momA, momA, tmp1, n);
+
+        // B 路: momB = (sign(g) / sqrt((rho*ms+eps)/g^2 + (1-rho))) * lr
+        // （两次除法计算 (rho*ms+eps)/g^2，避免 w=(1-rho)*g^2 溢出，同 IS_REDUCED 分支说明。）
+        Div(momB, tmp2, g, n); // momB = (rho*ms+eps)/g
+        Div(momB, momB, g, n); // momB = (rho*ms+eps)/g^2
+        Adds(momB, momB, one_minus_rho_, n);
+        Sqrt(momB, momB, n);
+        Abs(tmp1, g, n);
+        Maxs(tmp1, tmp1, kSignGuard, n); // 防 g==0 时 0/0=NaN（ms=Inf 输入可触发 B 路）
+        Div(tmp2, g, tmp1, n);           // sign(g)，g==0 时为 0（对齐 A 路极限）
+        Div(momB, tmp2, momB, n);
+        Muls(momB, momB, lr_, n);
+
+        Select(tmp2, cmpMask, momB, momA, SELMODE::VSEL_TENSOR_TENSOR_MODE, cmpSelCount);
+        PipeBarrier<PIPE_ALL>();
+
+        // mom_new = momentum * mom + selected mom term
         Muls(mo_out, mo, momentum_, n);
         Add(mo_out, mo_out, tmp2, n);
 

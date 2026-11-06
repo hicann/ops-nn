@@ -50,8 +50,7 @@ constexpr int64_t BUFF_NUM = 2;       // 双缓冲
 constexpr int64_t CACHE_LINE = 128;   // arch35
 constexpr int64_t BLOCK_SIZE = 32;    // DMA 最小对齐单元
 constexpr int64_t VL_BYTES = 256;     // VECTOR_REG_WIDTH (arch3510)
-constexpr int64_t VL_FP32_ELEMS = VL_BYTES / static_cast<int64_t>(sizeof(float)); // VF 一次处理的 fp32 元素数
-constexpr int64_t PC_NDDMA_THR = 32;                                              // dim1 < 32B 时 PC → PC_NDDMA
+constexpr int64_t PC_NDDMA_THR = 32;  // dim1 < 32B 时 PC → PC_NDDMA
 
 constexpr int64_t MODE_PT = 0;
 constexpr int64_t MODE_PC = 1;
@@ -61,13 +60,14 @@ constexpr int64_t MODE_PH = 3;
 // fake-quant 单元素字节模型（含 mask + 中间 fp32/int32 + DB）
 // 行相关：x(in) + y(out) + mask(uint8) → 双缓冲乘 2
 // 行无关（PC/PH）：scale(fp32) + zp(fp32) 段加载，按 baseLen 计入
-// 中间 buf：fp32_tmp + qFp32 + maskFp32 + t2 + maskHalf + int32_tmp
+// 中间 buf：fp32_tmp + qFp32 + maskFp32×2 + halfMask(2B) + scaleFp32 + zpFp32
 //
-// 保守估计：fp32 输入路径 行相关 ≈ (4+4+1)*2 = 18B；中间 6 个 buf ≈ 6*4 = 24B；
-//          总 ≈ 42B；fp16/bf16 类似（x/y 2B*2 + 中间不变）≈ 32B
+// 保守估计：fp32 输入路径 行相关 ≈ (4+4+1)*2 = 18B；中间 6 个 fp32 buf + halfMask(2B) ≈ 26B；
+//          总 ≈ 52B；fp16/bf16 (2+2+1)*2=10B + 26B + 8B ≈ 44B（halfMask 2B 使预算略保守）
 constexpr int64_t BYTES_X(int64_t xBytes) { return (xBytes + xBytes + 1) * BUFF_NUM; }
-constexpr int64_t BYTES_INTERMEDIATE = 4 * 6;  // 6 fp32 中间 buf
-constexpr int64_t BYTES_SCALE_ZP_FP32 = 4 + 4; // PC/PH 行无关 scale + zp
+constexpr int64_t BYTES_INTERMEDIATE = 4 * 6 + 2; // 6 fp32 中间 buf + halfMask(2B/elem)
+constexpr int64_t BYTES_SCALE_ZP_FP32 = 4 + 4;    // PC/PH 行无关 scale + zp
+constexpr int64_t VL_ELEMS = VL_BYTES / 4;        // VF 整寄存器加载对齐粒度（fp32 元素数）
 
 // ---------- shape utilities ----------
 static const gert::Shape g_vec_1_shape = {1};
@@ -109,6 +109,7 @@ struct ShapeInfo {
     int64_t totalNum = 0;
     ge::DataType xDtype;
     ge::DataType zpDtype;
+    int64_t zpBytes = 4;
 };
 
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, ShapeInfo* info)
@@ -120,15 +121,19 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, ShapeInfo
 
     auto inputScale = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputScale);
-    info->scaleNum = EnsureNotScalar(inputScale->GetStorageShape()).GetShapeSize();
+    const gert::Shape scaleRawShape = inputScale->GetStorageShape();
+    info->scaleNum = EnsureNotScalar(scaleRawShape).GetShapeSize();
 
     auto inputZp = context->GetInputShape(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputZp);
-    info->zpNum = EnsureNotScalar(inputZp->GetStorageShape()).GetShapeSize();
+    const gert::Shape zpRawShape = inputZp->GetStorageShape();
+    info->zpNum = EnsureNotScalar(zpRawShape).GetShapeSize();
 
     auto xDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     info->xDtype = xDesc->GetDataType();
+    auto scaleDesc = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scaleDesc);
 
     auto zpDesc = context->GetInputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, zpDesc);
@@ -138,25 +143,112 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, ShapeInfo
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const int64_t* axisPtr = attrs->GetAttrPointer<int64_t>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, axisPtr);
+    const int64_t* qMinPtr = attrs->GetAttrPointer<int64_t>(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, qMinPtr);
+    const int64_t* qMaxPtr = attrs->GetAttrPointer<int64_t>(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, qMaxPtr);
 
-    int64_t rank = static_cast<int64_t>(info->xShape.GetDimNum());
-    int64_t axisVal = *axisPtr;
-    if (axisVal < 0)
-        axisVal += rank;
-    if (axisVal < 0)
-        axisVal = 0;
-    if (axisVal >= rank)
-        axisVal = rank - 1;
-    info->axisNorm = axisVal;
+    // x 秩上限（ND 0-8 维，与 Host InferShape 同口径）
+    OP_CHECK_IF(inputX->GetStorageShape().GetDimNum() > 8,
+                OP_LOGE(context, "x rank %zu exceeds max rank 8", inputX->GetStorageShape().GetDimNum()),
+                return ge::GRAPH_FAILED);
+    // scale/zero_point 仅拒 >=2 维；0 维经 EnsureNotScalar 规整为 {1}（PT 标量语义）。
+    // aclnn 侧：per-tensor 同此口径（0 维放行）；per-channel 维持上游 1 维原口径
+    OP_CHECK_IF(scaleRawShape.GetDimNum() > 1, OP_LOGE(context, "scale should be a 0-D or 1-D tensor"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(zpRawShape.GetDimNum() > 1, OP_LOGE(context, "zero_point should be a 0-D or 1-D tensor"),
+                return ge::GRAPH_FAILED);
+    // quant 边界值域：qmin<=qmax 且 |边界|<2^24（fp32 可精确表示的整数域；
+    // 超界时 kernel 的 fp32 mask 边界链无法与整数语义一致，按参数错误拒绝）
+    OP_CHECK_IF(*qMinPtr > *qMaxPtr,
+                OP_LOGE(context, "quant_min %ld should be less than or equal to quant_max %ld", *qMinPtr, *qMaxPtr),
+                return ge::GRAPH_FAILED);
+    constexpr int64_t QUANT_BOUND_LIMIT = 16777215; // 2^24 - 1
+    OP_CHECK_IF(
+        *qMinPtr < -QUANT_BOUND_LIMIT || *qMaxPtr > QUANT_BOUND_LIMIT,
+        OP_LOGE(context, "quant bounds out of representable range [-%ld, %ld]", QUANT_BOUND_LIMIT, QUANT_BOUND_LIMIT),
+        return ge::GRAPH_FAILED);
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
     OP_CHECK_IF(supportedDtype.count(info->xDtype) == 0,
                 OP_LOGE(context, "x dtype not supported: %d", static_cast<int>(info->xDtype)), return ge::GRAPH_FAILED);
-    // zp 只允许 INT32 或与 x 同 dtype
-    OP_CHECK_IF(!(info->zpDtype == ge::DT_INT32 || info->zpDtype == info->xDtype),
-                OP_LOGE(context, "zp dtype must be INT32 or same as x: zp=%d x=%d", static_cast<int>(info->zpDtype),
+    // zp 允许 INT32 或浮点集合（FLOAT/FLOAT16/BF16，可与 x 交叉组合——
+    // 对齐 proto.h 原型独立 dtype 集合与 950 注册矩阵 12 列）
+    OP_CHECK_IF(!(info->zpDtype == ge::DT_INT32 || info->zpDtype == ge::DT_FLOAT || info->zpDtype == ge::DT_FLOAT16 ||
+                  info->zpDtype == ge::DT_BF16),
+                OP_LOGE(context, "zp dtype must be INT32 or float family: zp=%d x=%d", static_cast<int>(info->zpDtype),
                         static_cast<int>(info->xDtype)),
                 return ge::GRAPH_FAILED);
+    // 注：zp 数值约束 |zp|<2^24（fp32 精确整数域，超出时 qval/y/mask 偏离公式）
+    // 在 aclnn 首段与 README 声明；tiling 层 zp 为 device tensor 无法读取数值，
+    // quant 边界已有 ±(2^24-1) 校验兜底（qval=zp±rint(x/s) 落入边界才有意义）
+    // scale 必须与 x 同 dtype（ascend950 注册域每列 x/scale 同型）
+    OP_CHECK_IF(scaleDesc->GetDataType() != info->xDtype,
+                OP_LOGE(context, "scale dtype must be same as x: scale=%d x=%d",
+                        static_cast<int>(scaleDesc->GetDataType()), static_cast<int>(info->xDtype)),
+                return ge::GRAPH_FAILED);
+    info->zpBytes = (info->zpDtype == ge::DT_INT32 || info->zpDtype == ge::DT_FLOAT) ? 4 : 2;
+
+    // 输出 dtype：y 与 x 同 dtype，mask 为 BOOL
+    auto yDesc = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
+    OP_CHECK_IF(yDesc->GetDataType() != info->xDtype,
+                OP_LOGE(context, "y dtype must be same as x: y=%d x=%d", static_cast<int>(yDesc->GetDataType()),
+                        static_cast<int>(info->xDtype)),
+                return ge::GRAPH_FAILED);
+    auto maskDesc = context->GetOutputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, maskDesc);
+    OP_CHECK_IF(maskDesc->GetDataType() != ge::DT_BOOL,
+                OP_LOGE(context, "mask dtype must be BOOL: mask=%d", static_cast<int>(maskDesc->GetDataType())),
+                return ge::GRAPH_FAILED);
+
+    // 输出 shape：y/mask 与 x 一致（0 维按单元素规整后比较）
+    auto yShapePtr = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
+    const gert::Shape yShapeN = EnsureNotScalar(yShapePtr->GetStorageShape());
+    OP_CHECK_IF(yShapeN.GetDimNum() != info->xShape.GetDimNum() || yShapeN.GetShapeSize() != info->totalNum,
+                OP_LOGE(context, "y shape mismatch with x"), return ge::GRAPH_FAILED);
+    auto maskShapePtr = context->GetOutputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, maskShapePtr);
+    const gert::Shape maskShapeN = EnsureNotScalar(maskShapePtr->GetStorageShape());
+    OP_CHECK_IF(maskShapeN.GetDimNum() != info->xShape.GetDimNum() || maskShapeN.GetShapeSize() != info->totalNum,
+                OP_LOGE(context, "mask shape mismatch with x"), return ge::GRAPH_FAILED);
+
+    // x 仅支持 ND 格式（拒绝 FRACTAL_NZ 等非 ND 布局）
+    auto xFormat = xDesc->GetStorageFormat();
+    OP_CHECK_IF(xFormat != ge::FORMAT_ND && xFormat != ge::FORMAT_RESERVED,
+                OP_LOGE(context, "x format not supported (ND only): %d", static_cast<int>(xFormat)),
+                return ge::GRAPH_FAILED);
+
+    // axis 越界直接拒绝（不做静默钳制）
+    int64_t rank = static_cast<int64_t>(info->xShape.GetDimNum());
+    int64_t axisVal = *axisPtr;
+    OP_CHECK_IF(axisVal < -rank || axisVal >= rank,
+                OP_LOGE(context, "axis %ld out of range [-%ld, %ld]", axisVal, rank, rank - 1),
+                return ge::GRAPH_FAILED);
+    if (axisVal < 0) {
+        axisVal += rank;
+    }
+    info->axisNorm = axisVal;
+
+    // scale/zp 元素数：per-channel 须与 x 在 axis 维长度一致；
+    // per-tensor（scaleNum<=1 走 MODE_PT 的标量语义）豁免
+    int64_t expectSize = info->xShape.GetDim(axisVal);
+    if (info->scaleNum > 1) {
+        OP_CHECK_IF(
+            info->scaleNum != expectSize,
+            OP_LOGE(context, "scale size %ld mismatch with x dim %ld on axis %ld", info->scaleNum, expectSize, axisVal),
+            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(info->zpNum != expectSize,
+                    OP_LOGE(context, "zero_point size %ld mismatch with x dim %ld on axis %ld", info->zpNum, expectSize,
+                            axisVal),
+                    return ge::GRAPH_FAILED);
+    } else {
+        OP_CHECK_IF(info->zpNum > 1 && info->zpNum != expectSize,
+                    OP_LOGE(context, "zero_point size %ld mismatch with x dim %ld on axis %ld", info->zpNum, expectSize,
+                            axisVal),
+                    return ge::GRAPH_FAILED);
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -245,6 +337,13 @@ static int64_t CalcMaxN(int64_t ubSize, int64_t base, int64_t xBytes)
     return maxN;
 }
 
+// UB tile 基础对齐粒度：VF 整寄存器按 256B 加载，baseLen 需对齐到 VL（fp32 元素数）
+static inline int64_t TileAlignElems(int64_t cacheLineElems)
+{
+    int64_t align = cacheLineElems > VL_ELEMS ? cacheLineElems : VL_ELEMS;
+    return align;
+}
+
 // ---------- PT Tiling ----------
 //   blockAxis=1（永远切 dim1）；ubAxis=1；baseN=1；
 //   blockFactor 按 cacheLine 块对齐
@@ -262,6 +361,7 @@ static TilingResult CalcPTTiling(int64_t dim1, int64_t coreNum, int64_t ubSize, 
     int64_t cacheLineElems = CACHE_LINE / (xBytes > 0 ? xBytes : 1);
     if (cacheLineElems <= 0)
         cacheLineElems = 1;
+    int64_t tileAlign = TileAlignElems(cacheLineElems);
 
     int64_t cacheLineNum = CeilDiv(dim1, cacheLineElems);
     int64_t actCore = CeilDiv(cacheLineNum, CeilDiv(cacheLineNum, coreNum));
@@ -273,14 +373,14 @@ static TilingResult CalcPTTiling(int64_t dim1, int64_t coreNum, int64_t ubSize, 
     if (r.blockTailFactor <= 0)
         r.blockTailFactor = r.blockFactor;
 
-    // UB
-    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/false), cacheLineElems);
-    if (maxBase < cacheLineElems)
-        maxBase = cacheLineElems;
+    // UB（baseLen 对齐到 VL，保证 VF 整寄存器加载不越界）
+    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/false), tileAlign);
+    if (maxBase < tileAlign)
+        maxBase = tileAlign;
     int64_t blockBase = CeilAlign(r.blockFactor, cacheLineElems);
     r.baseLen = std::min(blockBase, maxBase);
     if (r.baseLen <= 0)
-        r.baseLen = cacheLineElems;
+        r.baseLen = tileAlign;
     return r;
 }
 
@@ -320,10 +420,11 @@ static TilingResult CalcPCTiling(int64_t dim0, int64_t dim1, int64_t coreNum, in
         r.blockTailFactor = r.blockFactor;
     r.blockUnion = 1;
 
-    // UB 二选一
-    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true), cacheLineElems);
-    if (maxBase < cacheLineElems)
-        maxBase = cacheLineElems;
+    // UB 二选一（baseLen 对齐到 VL，保证 VF 整寄存器加载不越界）
+    int64_t tileAlign = TileAlignElems(cacheLineElems);
+    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true), tileAlign);
+    if (maxBase < tileAlign)
+        maxBase = tileAlign;
     int64_t blockBase = (r.blockAxis == 0) ? dim1 : r.blockFactor;
     blockBase = CeilAlign(blockBase, cacheLineElems);
 
@@ -342,7 +443,7 @@ static TilingResult CalcPCTiling(int64_t dim0, int64_t dim1, int64_t coreNum, in
         r.baseN = 1;
         r.baseLen = std::min(blockBase, maxBase);
         if (r.baseLen <= 0)
-            r.baseLen = cacheLineElems;
+            r.baseLen = tileAlign;
     }
     return r;
 }
@@ -355,8 +456,11 @@ static void DemoteToPCNddma(TilingResult* r, int64_t dim1, int64_t xBytes, int64
     if (!(r->blockAxis == 0 && dim1 * xBytes < PC_NDDMA_THR))
         return;
     r->mode = MODE_PC_NDDMA;
-    // UB 不对齐 cacheLine（NDDMA 自带跨距）
-    int64_t maxBase = CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true);
+    // UB 不对齐 cacheLine（NDDMA 自带跨距），但仍对齐 VL 保证 VF 加载安全
+    int64_t vlElems = VL_ELEMS;
+    int64_t maxBase = FloorAlign(CalcMaxBaseLen(ubSize, xBytes, /*perChannelLike=*/true), vlElems);
+    if (maxBase < vlElems)
+        maxBase = vlElems;
     int64_t blockBase = dim1; // 切合轴时 blockBase = dim1
     if (blockBase <= 0)
         blockBase = 1;
@@ -437,124 +541,96 @@ static void CalcPHBlockParams(TilingResult* r, int64_t dim0, int64_t dim1, int64
         r->blockTailFactor = r->blockFactor;
 }
 
-// PH kernel UB 预算镜像（与 op_kernel/arch35/fake_quant_affine_cachemask_ph.h Init 中
-// 各 buffer 一一对应；tile = bn × bl）：
-//   inQueueX / outQueueY：BUFF_NUM × tile × sizeof(T)（各一份）
-//   outQueueMask：BUFF_NUM × tile（uint8）
-//   m1Fp32Buf：tile × 4；halfMaskBuf：tile × 2
-//   scale/zp 原始段：32B 对齐的 (bn + lanesPerBlock - 1) × sizeof(dtype)
-//   scale/zp fp32 段：VL(64) 对齐的 (bn + lanesPerBlock - 1) × 4（scale + zp 各一份）
-static int64_t PHScaleZpKernelBytes(int64_t bn, int64_t xBytes, int64_t zpBytes, bool hasZp)
+// PH scale/zp 分段常驻开销（baseN 维段加载）：
+// kernel 按 [gmSOff, gmSOff+segN) 的 32B 对齐 superset 分段加载，段容量按
+// CeilAlign(baseN + 2*VL, VL) 分配（见 ph.h InitBuffer 的 segAlloc，与尾部整寄存器
+// 加载的余量一致）；开销 = 段容量 × (rawScale + rawZp + 2×fp32)
+static inline int64_t PhSegOverheadBytes(int64_t bn, int64_t xBytes, int64_t zpBytes)
 {
-    int64_t lanesT = BLOCK_SIZE / xBytes;
-    int64_t lanesZ = BLOCK_SIZE / zpBytes;
-    int64_t supRawT = bn + lanesT - 1;
-    int64_t supRawZ = bn + lanesZ - 1;
-    int64_t bytes = CeilAlign(supRawT, lanesT) * xBytes;                              // scale 原始段
-    bytes += CeilAlign(supRawT, VL_FP32_ELEMS) * static_cast<int64_t>(sizeof(float)); // scale fp32 段
-    bytes += CeilAlign(supRawZ, VL_FP32_ELEMS) * static_cast<int64_t>(sizeof(float)); // zp fp32 段（HAS_ZP=0 亦分配）
-    if (hasZp) {
-        bytes += CeilAlign(supRawZ, lanesZ) * zpBytes; // zp 原始段
-    }
-    return bytes;
-}
-
-static int64_t PHUbUsed(int64_t bn, int64_t bl, int64_t xBytes, int64_t zpBytes, bool hasZp)
-{
-    int64_t tile = bn * bl;
-    int64_t bytes = BUFF_NUM * tile * xBytes; // inQueueX
-    bytes += BUFF_NUM * tile * xBytes;        // outQueueY
-    bytes += BUFF_NUM * tile;                 // outQueueMask
-    bytes += tile * 4;                        // m1Fp32Buf
-    bytes += tile * 2;                        // halfMaskBuf
-    bytes += PHScaleZpKernelBytes(bn, xBytes, zpBytes, hasZp);
-    return bytes;
-}
-
-// 给定行宽 bl，求 budget 内可容纳的最大行数 bn（仅作保守估计，再按精确预算收敛）
-static int64_t PHMaxN(int64_t budget, int64_t bl, int64_t xBytes, int64_t zpBytes, bool hasZp)
-{
-    int64_t perN = bl * (BUFF_NUM * (2 * xBytes + 1) + 6);
-    int64_t scalePerN = xBytes + 2 * static_cast<int64_t>(sizeof(float)) + (hasZp ? zpBytes : 0);
-    if (perN <= 0)
-        perN = 1;
-    int64_t n = budget / (perN + scalePerN + 1);
-    if (n < 1)
-        n = 1;
-    int64_t guard = 4096;
-    while (n > 1 && PHUbUsed(n, bl, xBytes, zpBytes, hasZp) > budget && (guard--) > 0) {
-        --n;
-    }
-    return (n < 1) ? 1 : n;
-}
-
-// 给定 bn = 1，求 budget 内可容纳的最大行宽 bl
-static int64_t PHMaxBl(int64_t budget, int64_t xBytes, int64_t zpBytes, bool hasZp)
-{
-    int64_t perElem = BUFF_NUM * (2 * xBytes + 1) + 6;
-    if (perElem <= 0)
-        perElem = 1;
-    int64_t bl = budget / perElem;
-    if (bl < 1)
-        bl = 1;
-    int64_t guard = 4096;
-    while (bl > 1 && PHUbUsed(1, bl, xBytes, zpBytes, hasZp) > budget && (guard--) > 0) {
-        --bl;
-    }
-    return (bl < 1) ? 1 : bl;
+    int64_t segAlloc = CeilAlign(bn + 2 * VL_ELEMS, VL_ELEMS);
+    return segAlloc * (xBytes + zpBytes + 8);
 }
 
 static void CalcPHUbTiling(TilingResult* r, int64_t dim1, int64_t dim2, int64_t ubSize, int64_t xBytes, int64_t zpBytes,
-                           bool hasZp, int64_t cacheLineElems)
+                           int64_t cacheLineElems)
 {
     int64_t shape2 = CeilAlign(dim2, cacheLineElems);
     if (shape2 <= 0)
         shape2 = 1;
-    int64_t budget = static_cast<int64_t>(ubSize) - RESERVED_UB;
-    if (budget <= 0)
-        budget = static_cast<int64_t>(ubSize) / 2;
-    int64_t blockSize = CeilAlign(r->blockFactor, cacheLineElems);
+    int64_t tileAlign = TileAlignElems(cacheLineElems);
+    // tile 每元素字节：队列(x,y,mask 双缓冲) + m1Fp32 + halfMask
+    int64_t tileBytesPerElem = BYTES_X(xBytes) + 4 + 2;
 
-    if (r->blockAxis == 0) {
-        if (dim1 > 0 && PHUbUsed(dim1, shape2, xBytes, zpBytes, hasZp) <= budget) {
-            r->ubAxis = 0;
-            r->baseN = dim1;
-            r->baseLen = shape2;
-        } else if (PHUbUsed(1, shape2, xBytes, zpBytes, hasZp) <= budget) {
-            r->ubAxis = 1;
-            r->baseN = PHMaxN(budget, shape2, xBytes, zpBytes, hasZp);
-            r->baseLen = shape2;
+    // 两轮迭代收敛：段开销随 baseN 增长，先按 baseN=1 估 baseLen/baseN，再复算
+    int64_t bn = 1;
+    for (int iter = 0; iter < 2; ++iter) {
+        int64_t segBytes = PhSegOverheadBytes(bn, xBytes, zpBytes);
+        int64_t avail = ubSize - RESERVED_UB - segBytes;
+        if (avail <= 0)
+            avail = ubSize / 4;
+        int64_t maxBase = FloorAlign(avail / tileBytesPerElem, tileAlign);
+        if (maxBase < tileAlign)
+            maxBase = tileAlign;
+
+        if (r->blockAxis == 0) {
+            if (dim1 * shape2 <= maxBase) {
+                r->ubAxis = 0;
+                bn = dim1;
+                r->baseLen = shape2;
+            } else if (shape2 <= maxBase) {
+                r->ubAxis = 1;
+                bn = std::max<int64_t>(maxBase / (shape2 > 0 ? shape2 : 1), 1);
+                r->baseLen = shape2;
+            } else {
+                r->ubAxis = 2;
+                bn = 1;
+                r->baseLen = maxBase;
+            }
+        } else if (r->blockAxis == 1) {
+            if (shape2 <= maxBase) {
+                r->ubAxis = 1;
+                bn = std::min<int64_t>(r->blockFactor, std::max<int64_t>(maxBase / (shape2 > 0 ? shape2 : 1), 1));
+                r->baseLen = shape2;
+            } else {
+                r->ubAxis = 2;
+                bn = 1;
+                r->baseLen = maxBase;
+            }
         } else {
             r->ubAxis = 2;
-            r->baseN = 1;
-            r->baseLen = PHMaxBl(budget, xBytes, zpBytes, hasZp);
+            bn = 1;
+            int64_t blockSize = CeilAlign(r->blockFactor, cacheLineElems);
+            r->baseLen = std::min(blockSize, maxBase);
         }
-    } else if (r->blockAxis == 1) {
-        if (PHUbUsed(1, shape2, xBytes, zpBytes, hasZp) <= budget) {
+        if (bn < 1)
+            bn = 1;
+        if (r->baseLen <= 0)
+            r->baseLen = tileAlign;
+    }
+
+    // 终验收缩：确保 tile + 段开销 + 预留不超过 UB
+    auto totalBytes = [&](int64_t n, int64_t len) {
+        int64_t lenAligned = CeilAlign(len, VL_ELEMS);
+        return n * lenAligned * tileBytesPerElem + PhSegOverheadBytes(n, xBytes, zpBytes) + RESERVED_UB;
+    };
+    while (totalBytes(bn, r->baseLen) > ubSize) {
+        if (r->ubAxis == 0) {
+            // 整行批超限：降级到逐行批
             r->ubAxis = 1;
-            r->baseN = std::min<int64_t>(r->blockFactor, PHMaxN(budget, shape2, xBytes, zpBytes, hasZp));
-            r->baseLen = shape2;
+            bn = std::max<int64_t>(bn / 2, 1);
+        } else if (r->ubAxis == 1 && bn > 1) {
+            bn = std::max<int64_t>(bn / 2, 1);
+        } else if (r->baseLen > tileAlign) {
+            r->baseLen -= tileAlign;
         } else {
-            r->ubAxis = 2;
-            r->baseN = 1;
-            r->baseLen = PHMaxBl(budget, xBytes, zpBytes, hasZp);
+            break;
         }
-    } else {
-        r->ubAxis = 2;
-        r->baseN = 1;
-        r->baseLen = std::min(blockSize, PHMaxBl(budget, xBytes, zpBytes, hasZp));
     }
-    // UB tile 需按 cacheLine 对齐（保证各 buffer 尺寸为 32B 整数倍）
-    if (r->baseLen > 0 && (r->baseLen % cacheLineElems) != 0) {
-        int64_t aligned = FloorAlign(r->baseLen, cacheLineElems);
-        r->baseLen = (aligned >= cacheLineElems) ? aligned : cacheLineElems;
-    }
-    if (r->baseLen <= 0)
-        r->baseLen = cacheLineElems;
+    r->baseN = bn;
     if (r->baseN <= 0)
         r->baseN = 1;
-    if (r->baseN > dim1 && dim1 > 0)
-        r->baseN = dim1;
+    if (r->baseLen <= 0)
+        r->baseLen = tileAlign;
 
     if ((dim2 * xBytes) % BLOCK_SIZE != 0) {
         r->baseN = 1;
@@ -562,7 +638,7 @@ static void CalcPHUbTiling(TilingResult* r, int64_t dim1, int64_t dim2, int64_t 
 }
 
 static TilingResult CalcPHTiling(int64_t dim0, int64_t dim1, int64_t dim2, int64_t coreNum, int64_t ubSize,
-                                 int64_t xBytes, int64_t zpBytes, bool hasZp)
+                                 int64_t xBytes, int64_t zpBytes)
 {
     TilingResult r;
     r.mode = MODE_PH;
@@ -576,7 +652,7 @@ static TilingResult CalcPHTiling(int64_t dim0, int64_t dim1, int64_t dim2, int64
 
     SelectPHBlockAxis(&r, dim0, dim1, dim2, coreNum, cacheLineNum, xBytes);
     CalcPHBlockParams(&r, dim0, dim1, dim2, cacheLineNum, cacheLineElems);
-    CalcPHUbTiling(&r, dim1, dim2, ubSize, xBytes, zpBytes, hasZp, cacheLineElems);
+    CalcPHUbTiling(&r, dim1, dim2, ubSize, xBytes, zpBytes, cacheLineElems);
     return r;
 }
 
@@ -625,7 +701,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 
 // ---------- Dispatch ----------
 static bool DispatchTiling(int64_t mode, int64_t dim0, int64_t dim1, int64_t dim2, int64_t coreNum, int64_t ubSize,
-                           int64_t xBytes, int64_t zpBytes, bool hasZp, TilingResult* res)
+                           int64_t xBytes, int64_t zpBytes, TilingResult* res)
 {
     switch (mode) {
         case MODE_PT:
@@ -636,7 +712,7 @@ static bool DispatchTiling(int64_t mode, int64_t dim0, int64_t dim1, int64_t dim
             DemoteToPCNddma(res, dim1, xBytes, ubSize);
             return true;
         case MODE_PH:
-            *res = CalcPHTiling(dim0, dim1, dim2, coreNum, ubSize, xBytes, zpBytes, hasZp);
+            *res = CalcPHTiling(dim0, dim1, dim2, coreNum, ubSize, xBytes, zpBytes);
             return true;
         default:
             return false;
@@ -686,7 +762,6 @@ static ge::graphStatus FakeQuantAffineCachemaskTilingFunc(gert::TilingContext* c
 
     int64_t hasZeroPoint = (info.zpNum > 0) ? 1 : 0;
     int64_t xBytes = XDtypeBytes(info.xDtype);
-    int64_t zpBytes = XDtypeBytes(info.zpDtype);
 
     auto* tiling = context->GetTilingData<FakeQuantAffineCachemaskTilingDataArch35>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -702,7 +777,7 @@ static ge::graphStatus FakeQuantAffineCachemaskTilingFunc(gert::TilingContext* c
 
     TilingResult res;
     int64_t ubSizeI = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF(!DispatchTiling(mode, dim0, dim1, dim2, coreNum, ubSizeI, xBytes, zpBytes, hasZeroPoint != 0, &res),
+    OP_CHECK_IF(!DispatchTiling(mode, dim0, dim1, dim2, coreNum, ubSizeI, xBytes, info.zpBytes, &res),
                 OP_LOGE(context, "unsupported mode %ld", static_cast<long>(mode)), return ge::GRAPH_FAILED);
 
     WriteTilingData(tiling, res, dim0, dim1, dim2, hasZeroPoint, info.axisNorm, *qMinPtr, *qMaxPtr);

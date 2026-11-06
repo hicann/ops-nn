@@ -24,49 +24,43 @@ class MethodTorchNnFakeQuantAffineCachemaskApi(BaseApi):
         super(MethodTorchNnFakeQuantAffineCachemaskApi, self).__init__(task_result)
         OpsDataset.seed_everything()
 
-    def init_by_input_data(self, input_data: InputDataset):
-            """
-            该接口可实现部门场景下api的初始化需要依赖于当前的输入数据，且不希望计入耗时，
-            可以在此接口实现
-            :param input_data:
-            :return:
-            """
-            # 确保quantMin <= quantMax
-            if input_data.kwargs['quantMin'] is None or input_data.kwargs['quantMax'] is None:
-                return
-            if input_data.kwargs['quantMin'] > input_data.kwargs['quantMax']:
-                input_data.kwargs['quantMin'], input_data.kwargs['quantMax'] = \
-                    input_data.kwargs['quantMax'], input_data.kwargs['quantMin']
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         func = eval(self.api_name)
-        
+
         if self.device == "gpu":
             device = f"cuda:{self.device_id}"
         elif self.device == "npu":
             device = f"{self.device}:{self.device_id}"
         else:
             device = "cpu"
-        input_data.kwargs['self'] = input_data.kwargs['self'].to(device)
-        input_data.kwargs['scale'] = input_data.kwargs['scale'].to(device)
-        input_data.kwargs['zeroPoint'] = input_data.kwargs['zeroPoint'].to(device)
-        input_data.kwargs['fakeQuantEnbled'] = torch.tensor(bool(input_data.kwargs['fakeQuantEnbled']),
-                                                            dtype=torch.bool).to(device)
+        input_data.kwargs["self"] = input_data.kwargs["self"].to(device)
+        input_data.kwargs["scale"] = input_data.kwargs["scale"].to(device)
+        input_data.kwargs["zeroPoint"] = input_data.kwargs["zeroPoint"].to(device)
+        # 按文档语义：fakeQuantEnabled >= 1 启用伪量化，小于 1 时输出 identity；
+        # 先转 bool 会使 0<值<1 被误判为启用
+        fqe = input_data.kwargs["fakeQuantEnbled"]
+        if not torch.is_tensor(fqe):
+            fqe = torch.tensor(fqe)
+        input_data.kwargs["fakeQuantEnbled"] = fqe.to(device)
 
         output = mask = None
         if with_output:
-            output, mask = func(input_data.kwargs['self'],
-                             input_data.kwargs['scale'],
-                             input_data.kwargs['zeroPoint'],
-                             input_data.kwargs['fakeQuantEnbled'],
-                             input_data.kwargs['quantMin'],
-                             input_data.kwargs['quantMax'])
+            output, mask = func(
+                input_data.kwargs["self"],
+                input_data.kwargs["scale"],
+                input_data.kwargs["zeroPoint"],
+                input_data.kwargs["fakeQuantEnbled"],
+                input_data.kwargs["quantMin"],
+                input_data.kwargs["quantMax"],
+            )
         else:
-            func(input_data.kwargs['self'],
-                 input_data.kwargs['scale'],
-                 input_data.kwargs['zeroPoint'],
-                 input_data.kwargs['fakeQuantEnbled'],
-                 input_data.kwargs['quantMin'],
-                 input_data.kwargs['quantMax'])
+            func(
+                input_data.kwargs["self"],
+                input_data.kwargs["scale"],
+                input_data.kwargs["zeroPoint"],
+                input_data.kwargs["fakeQuantEnbled"],
+                input_data.kwargs["quantMin"],
+                input_data.kwargs["quantMax"],
+            )
 
         return output, mask

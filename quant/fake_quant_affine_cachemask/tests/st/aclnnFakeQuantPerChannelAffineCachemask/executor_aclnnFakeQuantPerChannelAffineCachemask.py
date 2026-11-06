@@ -11,12 +11,12 @@
 # ----------------------------------------------------------------------------
 
 import torch
+
 from atk.configs.dataset_config import InputDataset
 from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.dataset.base_dataset import OpsDataset
-from atk.configs.base_config import TaskType
 
 
 @register("aclnn_fake_quant_per_channel_affine_cachemask")
@@ -39,31 +39,35 @@ class MethodTorchNnFakeQuantAffineCachemaskApi(BaseApi):
             device = f"npu:{self.device_id}"
         else:
             device = "cpu"
-        
-        if self.device == "cpu":
-            # 标杆的scale仅支持fp32
-            input_data.kwargs['scale'] = input_data.kwargs['scale'].to(torch.float32)
-        input_data.kwargs['self'] = input_data.kwargs['self'].to(device)
-        input_data.kwargs['scale'] = input_data.kwargs['scale'].to(device)
-        input_data.kwargs['zeroPoint'] = input_data.kwargs['zeroPoint'].to(device)
-        
-    def __call__(self, input_data: InputDataset, with_output: bool = False):
 
+        # CPU 对标时 ATen 仅接受 Float/BFloat16 scale（fp16 需先升 fp32）；
+        # NPU 侧保持原 dtype（950 注册域要求与 self 同 dtype）
+        if device == "cpu":
+            input_data.kwargs["scale"] = input_data.kwargs["scale"].to(torch.float32)
+        input_data.kwargs["self"] = input_data.kwargs["self"].to(device)
+        input_data.kwargs["scale"] = input_data.kwargs["scale"].to(device)
+        input_data.kwargs["zeroPoint"] = input_data.kwargs["zeroPoint"].to(device)
+
+    def __call__(self, input_data: InputDataset, with_output: bool = False):
         func = eval(self.api_name)
         output = mask = None
         if with_output:
-            output, mask = func(input_data.kwargs['self'],
-                                input_data.kwargs['scale'],
-                                input_data.kwargs['zeroPoint'],
-                                input_data.kwargs['axis'],
-                                input_data.kwargs['quantMin'],
-                                input_data.kwargs['quantMax'])
+            output, mask = func(
+                input_data.kwargs["self"],
+                input_data.kwargs["scale"],
+                input_data.kwargs["zeroPoint"],
+                input_data.kwargs["axis"],
+                input_data.kwargs["quantMin"],
+                input_data.kwargs["quantMax"],
+            )
         else:
-            func(input_data.kwargs['self'],
-                 input_data.kwargs['scale'],
-                 input_data.kwargs['zeroPoint'],
-                 input_data.kwargs['axis'],
-                 input_data.kwargs['quantMin'],
-                 input_data.kwargs['quantMax'])
+            func(
+                input_data.kwargs["self"],
+                input_data.kwargs["scale"],
+                input_data.kwargs["zeroPoint"],
+                input_data.kwargs["axis"],
+                input_data.kwargs["quantMin"],
+                input_data.kwargs["quantMax"],
+            )
 
         return output, mask

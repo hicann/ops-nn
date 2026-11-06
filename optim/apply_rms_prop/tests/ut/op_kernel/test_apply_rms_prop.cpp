@@ -52,11 +52,11 @@
 #include "tikicpulib.h"
 #include "data_utils.h"
 
-// op_kernel/arch35/apply_rms_prop_tiling_key.h uses ASCENDC_TPL_DATATYPE_DECL
-// with C_DT_FLOAT / C_DT_FLOAT16 / C_DT_BF16 tokens; in op_kernel UT host
-// compile mode these resolve via the ::C_DT_* enum defined by GE c_types.h.
-// Include it first so the macro expansion finds the symbols.
-#include "graph/c_types.h"
+// op_kernel/arch35/apply_rms_prop_tiling_key.h uses ASCENDC_TPL_UINT_DECL
+// with APPLY_RMS_PROP_TPL_FP32 / FP16 / BF16 integer codes (FR-04 fix); the
+// kernel entry template is <uint64_t dType, uint64_t BUFFER_MODE>. Map the
+// host-side C++ type to its TPL code for explicit instantiation below.
+#include "../../../op_kernel/arch35/apply_rms_prop_tiling_key.h"
 
 // Include kernel cpp directly so the class template + entry kernel are
 // available for explicit instantiation in the test process. The Tiling
@@ -135,6 +135,22 @@ void FillScalar<bfloat16_t>(uint8_t* gm, float value)
     *p = Float2BFloat16(value);
 }
 
+// Map host-side C++ type to the decoupled integer TPL dtype code (FR-04 fix).
+template <typename T>
+struct TplDTypeCode;
+template <>
+struct TplDTypeCode<float> {
+    static constexpr uint64_t value = APPLY_RMS_PROP_TPL_FP32;
+};
+template <>
+struct TplDTypeCode<half> {
+    static constexpr uint64_t value = APPLY_RMS_PROP_TPL_FP16;
+};
+template <>
+struct TplDTypeCode<bfloat16_t> {
+    static constexpr uint64_t value = APPLY_RMS_PROP_TPL_BF16;
+};
+
 // Fill an array of n T-typed elements with the same value.
 template <typename T>
 static void FillArray(uint8_t* gm, size_t n, float value)
@@ -209,15 +225,16 @@ static void LaunchApplyRmsPropOnce(size_t totalNum, float lrVal, float rhoVal, f
     tilingData->reserved = 0;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    // BUFFER_MODE encoded in TilingKey upper byte; not consumed by the
-    // CPU-mode test harness for dispatch, but kept here for trace clarity.
-    ICPU_SET_TILING_KEY(static_cast<uint64_t>(BUFFER_MODE) * 256);
+    // TilingKey (FR-04 fix): dType_index + BUFFER_MODE_index * 4; not consumed
+    // by the CPU-mode test harness for dispatch, but kept here for trace clarity.
+    ICPU_SET_TILING_KEY(TplDTypeCode<T>::value + static_cast<uint64_t>(BUFFER_MODE) * 4);
 
     uint32_t blockDim = 1;
-    // Explicit template instantiation: call apply_rms_prop<T, BUFFER_MODE>.
+    // Explicit template instantiation: call apply_rms_prop<TPL_DTYPE, BUFFER_MODE>.
     auto KernelApplyRmsProp = [](GM_ADDR a, GM_ADDR b, GM_ADDR c, GM_ADDR d, GM_ADDR e, GM_ADDR f, GM_ADDR g, GM_ADDR h,
-                                 GM_ADDR i, GM_ADDR j,
-                                 GM_ADDR k) { ::apply_rms_prop<T, BUFFER_MODE>(a, b, c, d, e, f, g, h, i, j, k); };
+                                 GM_ADDR i, GM_ADDR j, GM_ADDR k) {
+        ::apply_rms_prop<TplDTypeCode<T>::value, BUFFER_MODE>(a, b, c, d, e, f, g, h, i, j, k);
+    };
     ICPU_RUN_KF(KernelApplyRmsProp, blockDim, var, ms, mom, lr, rho, momentum, epsilon, grad, var_out, workspace,
                 tiling);
 
@@ -421,8 +438,9 @@ TEST_F(apply_rms_prop_kernel_test, test_empty_input_no_op)
     ICPU_SET_TILING_KEY(0);
     uint32_t blockDim = 1;
     auto KernelApplyRmsProp = [](GM_ADDR a, GM_ADDR b, GM_ADDR c, GM_ADDR d, GM_ADDR e, GM_ADDR f, GM_ADDR g, GM_ADDR h,
-                                 GM_ADDR i, GM_ADDR j,
-                                 GM_ADDR k) { ::apply_rms_prop<float, 0>(a, b, c, d, e, f, g, h, i, j, k); };
+                                 GM_ADDR i, GM_ADDR j, GM_ADDR k) {
+        ::apply_rms_prop<APPLY_RMS_PROP_TPL_FP32, 0>(a, b, c, d, e, f, g, h, i, j, k);
+    };
     // Must not crash; Process() exits early because block_length_ == 0.
     ICPU_RUN_KF(KernelApplyRmsProp, blockDim, var, ms, mom, lr, rho, momentum, epsilon, grad, var_out, workspace,
                 tiling);
@@ -438,4 +456,109 @@ TEST_F(apply_rms_prop_kernel_test, test_empty_input_no_op)
     AscendC::GmFree(var_out);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
+}
+
+// =====================================================================
+// T09 极值梯度归一化路径（P1-1 fix regression）。
+// grad=-FLT_MAX、rho=0.75、lr=1.5、momentum=-0.0005、epsilon=0.5、
+// var=-0.0005、ms=0、mom=0：|grad| 远超 A 路安全上界
+// sqrt(FLT_MAX/(1-rho))≈3.69e19，旧实现的中间平方 (1-rho)*grad^2 溢出为
+// +Inf，随后 Sqrt(Inf)=Inf、grad/Inf=0，动量项被静默清零，var 停在原值
+// -0.0005 附近；修复后走归一化路径 mom=(sign(g)/sqrt((rho*ms+eps)/g^2
+// +(1-rho)))*lr=-3.0，var≈2.9995（与 float64 主参考一致）。
+// =====================================================================
+TEST_F(apply_rms_prop_kernel_test, test_extreme_grad_normalized_path)
+{
+    constexpr size_t totalNum = 256;
+    std::vector<uint8_t> outVar, outMs, outMom;
+    LaunchApplyRmsPropOnce<float, 0>(totalNum,
+                                     /*lr=*/1.5f, /*rho=*/0.75f, /*momentum=*/-0.0005f, /*epsilon=*/0.5f,
+                                     /*var=*/-0.0005f, /*ms=*/0.0f, /*mom=*/0.0f,
+                                     /*grad=*/-3.4028235e38f, outVar, outMs, outMom);
+
+    const auto* varPtr = reinterpret_cast<const float*>(outVar.data());
+    for (size_t i = 0; i < totalNum; ++i) {
+        EXPECT_NEAR(varPtr[i], 2.9995f, 1e-3f) << "var at index " << i << " = " << varPtr[i];
+    }
+    // ms 写回中间平方的数学真值（超出 fp32 表示域，正确结果为 +Inf）。
+    const auto* msPtr = reinterpret_cast<const float*>(outMs.data());
+    for (size_t i = 0; i < totalNum; ++i) {
+        EXPECT_TRUE(std::isinf(msPtr[i]) && msPtr[i] > 0.0f) << "ms at index " << i << " = " << msPtr[i];
+    }
+}
+
+// =====================================================================
+// T10 F-03 回归：rho*ms 与 w 同号相加越界（分项有限、和为 +Inf）。
+// ms=3.4e38（fp32 可表示）、rho=0.999、grad=1e20、lr=1、momentum=0、eps=1e-7：
+// w=1e37、rho*ms=3.3966e38，和 3.4966e38 超出 fp32 表示域 → 旧实现 A 路
+// sqrt(Inf)=Inf、grad/Inf=0 使动量项丢失；修复后切归一化路径，
+// mom=(1e20/1e20*... )≈5.348，var≈-4.348（与 float64 参考一致）。
+// =====================================================================
+TEST_F(apply_rms_prop_kernel_test, test_f03_ms_new_sum_overflow)
+{
+    constexpr size_t totalNum = 64;
+    std::vector<uint8_t> outVar, outMs, outMom;
+    LaunchApplyRmsPropOnce<float, 0>(totalNum,
+                                     /*lr=*/1.0f, /*rho=*/0.999f, /*momentum=*/0.0f, /*epsilon=*/1e-7f,
+                                     /*var=*/1.0f, /*ms=*/3.4e38f, /*mom=*/0.0f,
+                                     /*grad=*/1e20f, outVar, outMs, outMom);
+
+    const auto* varPtr = reinterpret_cast<const float*>(outVar.data());
+    for (size_t i = 0; i < totalNum; ++i) {
+        EXPECT_NEAR(varPtr[i], -4.348f, 0.01f) << "var at index " << i << " = " << varPtr[i];
+    }
+}
+
+// =====================================================================
+// T11 F-02 回归：rho*ms 与 w 异号相消使 |ms_new| 极小 → 必须走 A 路。
+// ms=-1e38、rho=0.5、grad=1e19、lr=1、momentum=0、eps=1e-7：
+// ms_new = -5e37 + 5e37 = 0（精确相消），A 路 sqrt(0+1e-7)=3.1623e-4，
+// mom = 1e19/3.1623e-4 = 3.1623e22，var ≈ -3.1623e22；若误走 B 路，
+// 分母分项 (rho*ms+eps)/g^2 + (1-rho) = -0.5 + 0.5 相消为 0 → 除零 ±Inf。
+// =====================================================================
+TEST_F(apply_rms_prop_kernel_test, test_f02_cancellation_uses_a_path)
+{
+    constexpr size_t totalNum = 64;
+    std::vector<uint8_t> outVar, outMs, outMom;
+    LaunchApplyRmsPropOnce<float, 0>(totalNum,
+                                     /*lr=*/1.0f, /*rho=*/0.5f, /*momentum=*/0.0f, /*epsilon=*/1e-7f,
+                                     /*var=*/0.0f, /*ms=*/-1e38f, /*mom=*/0.0f,
+                                     /*grad=*/1e19f, outVar, outMs, outMom);
+
+    const auto* varPtr = reinterpret_cast<const float*>(outVar.data());
+    for (size_t i = 0; i < totalNum; ++i) {
+        // 相消场景走 A 路应得有限大值（mom≈±3.16e22 量级），不得出现 NaN/Inf。
+        EXPECT_TRUE(std::isfinite(varPtr[i])) << "non-finite at index " << i << ": " << varPtr[i];
+    }
+}
+
+// =====================================================================
+// T12 A 路求值序回归（liubo75 L419）：恢复 master 原序（先乘 lr 再除
+// sqrt），防止 grad/sqrt 中间量先下溢。var=ms=mom=0、grad=1e-30、lr=1e30、
+// rho=0.5、momentum=0、eps=1e38：ms_new=(1-rho)*grad^2 下溢为 0，走 A 路；
+// sqrt(ms_new+eps)=1e19。原序 (lr*grad)/sqrt = 1.0/1e19 = 1e-19，var_new
+// ≈ -1e-19；先除后乘的旧序 1e-30/1e19=1e-49 在 fp32 下溢为 0，更新量被
+// 静默丢弃（var_new=0）。
+// =====================================================================
+TEST_F(apply_rms_prop_kernel_test, test_a_path_mul_first_underflow)
+{
+    constexpr size_t totalNum = 64;
+    std::vector<uint8_t> outVar, outMs, outMom;
+    LaunchApplyRmsPropOnce<float, 0>(totalNum,
+                                     /*lr=*/1e30f, /*rho=*/0.5f, /*momentum=*/0.0f, /*epsilon=*/1e38f,
+                                     /*var=*/0.0f, /*ms=*/0.0f, /*mom=*/0.0f,
+                                     /*grad=*/1e-30f, outVar, outMs, outMom);
+
+    const auto* varPtr = reinterpret_cast<const float*>(outVar.data());
+    const auto* momPtr = reinterpret_cast<const float*>(outMom.data());
+    for (size_t i = 0; i < totalNum; ++i) {
+        // 更新量不得被下溢丢弃：var_new = -lr*grad/sqrt(eps) = -1e-19。
+        EXPECT_NEAR(varPtr[i], -1e-19f, 1e-21f) << "var at index " << i << " = " << varPtr[i];
+        EXPECT_NEAR(momPtr[i], 1e-19f, 1e-21f) << "mom at index " << i << " = " << momPtr[i];
+    }
+    // ms_new=(1-rho)*grad^2=5e-61 在 fp32 下溢为 0。
+    const auto* msPtr = reinterpret_cast<const float*>(outMs.data());
+    for (size_t i = 0; i < totalNum; ++i) {
+        EXPECT_EQ(msPtr[i], 0.0f) << "ms at index " << i << " = " << msPtr[i];
+    }
 }

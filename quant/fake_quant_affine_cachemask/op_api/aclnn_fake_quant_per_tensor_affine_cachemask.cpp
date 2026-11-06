@@ -46,10 +46,14 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* scale, const
                             const aclTensor* out, const aclTensor* mask)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
+    // README 契约：scale/y dtype 与 x 相同。白名单只拦越界 dtype，拦不住合法域内交叉错配
+    // （如 self=FLOAT 传 out=FLOAT16 会按 self dtype 写回导致越界写），需补充同型校验。
     OP_CHECK_DTYPE_NOT_SUPPORT(scale, DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(scale, self->GetDataType(), return false);
     // out is an output contract too: docs only allow FLOAT16/FLOAT32. CanCast alone is not
     // enough because float->int / float->bool are considered castable and silently truncate.
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(zeroPoint, op::DataType::DT_INT32, return false);
     OP_CHECK_DTYPE_NOT_MATCH(mask, op::DataType::DT_BOOL, return false);
     return true;
@@ -58,10 +62,29 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* scale, const
 static bool CheckShape(const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, const aclTensor* out,
                        const aclTensor* mask)
 {
+    // 文档声明 self/out/mask 支持 0-8 维（ND）：越界返回 161002（P1-5）
+    if (self->GetViewShape().GetDimNum() > 8) { // ND 格式 0-8 维
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dimension of self should be in range [0, 8], but got %zu",
+                self->GetViewShape().GetDimNum());
+        return false;
+    }
+
     auto scaleShape = scale->GetViewShape();
     auto zeroPointShape = zeroPoint->GetViewShape();
     auto scaleDimNum = scaleShape.GetDimNum();
     auto zeroPointDimNum = zeroPointShape.GetDimNum();
+
+    // scale/zeroPoint 支持 0 维（标量）或 1 维单元素（上游原口径：元素数为 1 即标量语义；
+    // ≥2 维与 Host InferShape/tiling 同口径拒绝）
+    if (scaleDimNum > 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale should be a 0-D or 1-D tensor");
+        return false;
+    }
+    if (zeroPointDimNum > 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "zero_point should be a 0-D or 1-D tensor");
+        return false;
+    }
+
     int64_t totalSize = 1;
 
     for (size_t idx = 0; idx < scaleDimNum; idx++) {
@@ -92,6 +115,12 @@ static bool CheckQuantValue(int64_t quantMin, int64_t quantMax)
 {
     if (quantMin > quantMax) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "`quantMin` should be less than or equal to `quantMax`.");
+        return false;
+    }
+    constexpr int64_t QUANT_BOUND_LIMIT = 16777215; // 2^24 - 1，与 Host/tiling 同口径
+    if (quantMin < -QUANT_BOUND_LIMIT || quantMax > QUANT_BOUND_LIMIT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quant bounds out of representable range [-%ld, %ld].", QUANT_BOUND_LIMIT,
+                QUANT_BOUND_LIMIT);
         return false;
     }
     return true;

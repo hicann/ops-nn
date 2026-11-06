@@ -21,13 +21,13 @@
  *   Outputs (1): var
  *   Attrs   (1): use_locking (optional bool, default false)
  *
- * TilingKey encoding (D_T_X / BUFFER_MODE via ASCENDC_TPL_SEL_PARAM):
- *   D_T_X = C_DT_FLOAT   (=0) + BUFFER_MODE=0  -> key 0
- *   D_T_X = C_DT_FLOAT   (=0) + BUFFER_MODE=1  -> key 256
- *   D_T_X = C_DT_FLOAT16 (=1) + BUFFER_MODE=0  -> key 1
- *   D_T_X = C_DT_FLOAT16 (=1) + BUFFER_MODE=1  -> key 257
- *   D_T_X = C_DT_BF16    (=2) + BUFFER_MODE=0  -> key 2
- *   D_T_X = C_DT_BF16    (=2) + BUFFER_MODE=1  -> key 258
+ * TilingKey encoding (dType / BUFFER_MODE via ASCENDC_TPL_SEL_PARAM, FR-04 fix):
+ *   dType = APPLY_RMS_PROP_TPL_FP32 (idx 0) + BUFFER_MODE=0  -> key 0
+ *   dType = APPLY_RMS_PROP_TPL_FP32 (idx 0) + BUFFER_MODE=1  -> key 4
+ *   dType = APPLY_RMS_PROP_TPL_FP16 (idx 1) + BUFFER_MODE=0  -> key 1
+ *   dType = APPLY_RMS_PROP_TPL_FP16 (idx 1) + BUFFER_MODE=1  -> key 5
+ *   dType = APPLY_RMS_PROP_TPL_BF16 (idx 2) + BUFFER_MODE=0  -> key 2
+ *   dType = APPLY_RMS_PROP_TPL_BF16 (idx 2) + BUFFER_MODE=1  -> key 6
  *
  * BufferMode threshold:
  *   MIN_SPLIT_THRESHOLD = 1024
@@ -42,11 +42,11 @@
  *
  * Test coverage (22 cases):
  *   T01  FP32 single buffer (totalNum <= 1024)        -> key 0
- *   T02  FP32 double buffer (totalNum >  1024)        -> key 256
+ *   T02  FP32 double buffer (totalNum >  1024)        -> key 4
  *   T03  FP16 single buffer (totalNum <= 1024)        -> key 1
- *   T04  FP16 double buffer (totalNum >  1024)        -> key 257
+ *   T04  FP16 double buffer (totalNum >  1024)        -> key 5
  *   T05  BF16 single buffer (totalNum <= 1024)        -> key 2
- *   T06  BF16 double buffer (totalNum >  1024)        -> key 258
+ *   T06  BF16 double buffer (totalNum >  1024)        -> key 6
  *   T07  Empty Tensor (totalNum == 0) FP32            -> key 0, fast path
  *   T08  Empty Tensor (totalNum == 0) FP16            -> key 1, fast path
  *   T09  Empty Tensor (totalNum == 0) BF16            -> key 2, fast path
@@ -64,10 +64,10 @@
  *   T21  use_locking == true  -> TilingData.useLocking == 1
  *   T22  use_locking == false -> TilingData.useLocking == 0
  *   T23  rank == 8 boundary (rank validity upper bound)        -> SUCCESS
- *   T24  rank == 9 (out of [1, 8])                              -> FAILED
- *   T25  rank == 0 (0-dim scalar var, below [1, 8] lower bound) -> FAILED
- *   T26  ubFactor must be > 0 and 256-aligned (large shape FP32)
- *   T27  Large shape (>1M elements) totalNum correctness       -> key 256
+ *   T24  rank == 9 (out of [0, 8])                              -> FAILED
+ *   T25  rank == 0 (0-dim scalar var, FR-17 fix)                -> SUCCESS
+ *   T26  ubFactor must be > 0 and 64-aligned (large shape FP32)
+ *   T27  Large shape (>1M elements) totalNum correctness       -> key 4
  */
 
 #include <gtest/gtest.h>
@@ -94,18 +94,17 @@ protected:
     static void TearDownTestCase() { std::cout << "TestApplyRMSPropTiling TearDown" << std::endl; }
 };
 
-// TilingKey 公式: D_T_X + BUFFER_MODE * 256
-// ASCENDC_TPL 框架对 dtype 的内部编码：FP32 = 0, FP16 = 1, BF16 = 27（非 2）
-// （ge::DT_BF16 的枚举值即 27，框架沿用其原始值，不做重新映射）
-static constexpr uint64_t DTYPE_CODE_FP32 = 0;
-static constexpr uint64_t DTYPE_CODE_FP16 = 1;
-static constexpr uint64_t DTYPE_CODE_BF16 = 27;
-static constexpr uint64_t TILING_KEY_FP32_SINGLE = DTYPE_CODE_FP32 + 0 * 256; // 0
-static constexpr uint64_t TILING_KEY_FP32_DOUBLE = DTYPE_CODE_FP32 + 1 * 256; // 256
-static constexpr uint64_t TILING_KEY_FP16_SINGLE = DTYPE_CODE_FP16 + 0 * 256; // 1
-static constexpr uint64_t TILING_KEY_FP16_DOUBLE = DTYPE_CODE_FP16 + 1 * 256; // 257
-static constexpr uint64_t TILING_KEY_BF16_SINGLE = DTYPE_CODE_BF16 + 0 * 256; // 27
-static constexpr uint64_t TILING_KEY_BF16_DOUBLE = DTYPE_CODE_BF16 + 1 * 256; // 283
+// TilingKey 公式（FR-04 fix 后）: dType_index + BUFFER_MODE_index * 4
+// ASCENDC_TPL_UINT_DECL 对 UINT 参数按值在声明列表中的索引编码（FastEncodeTilingKeyDirect）。
+static constexpr uint64_t DTYPE_CODE_FP32 = 0;                              // APPLY_RMS_PROP_TPL_FP32
+static constexpr uint64_t DTYPE_CODE_FP16 = 1;                              // APPLY_RMS_PROP_TPL_FP16
+static constexpr uint64_t DTYPE_CODE_BF16 = 2;                              // APPLY_RMS_PROP_TPL_BF16
+static constexpr uint64_t TILING_KEY_FP32_SINGLE = DTYPE_CODE_FP32 + 0 * 4; // 0
+static constexpr uint64_t TILING_KEY_FP32_DOUBLE = DTYPE_CODE_FP32 + 1 * 4; // 4
+static constexpr uint64_t TILING_KEY_FP16_SINGLE = DTYPE_CODE_FP16 + 0 * 4; // 1
+static constexpr uint64_t TILING_KEY_FP16_DOUBLE = DTYPE_CODE_FP16 + 1 * 4; // 5
+static constexpr uint64_t TILING_KEY_BF16_SINGLE = DTYPE_CODE_BF16 + 0 * 4; // 2
+static constexpr uint64_t TILING_KEY_BF16_DOUBLE = DTYPE_CODE_BF16 + 1 * 4; // 6
 
 static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& socInfos,
                          map<string, string>& aicoreSpec, map<string, string>& intrinsics,
@@ -283,7 +282,7 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_fp32_single_buffer)
 }
 
 // =====================================================================
-// T02 FP32 double buffer (totalNum > 1024) -> key 256
+// T02 FP32 double buffer (totalNum > 1024) -> key 4
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_fp32_double_buffer)
 {
@@ -305,7 +304,7 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_fp16_single_buffer)
 }
 
 // =====================================================================
-// T04 FP16 double buffer (totalNum > 1024) -> key 257
+// T04 FP16 double buffer (totalNum > 1024) -> key 5
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_fp16_double_buffer)
 {
@@ -327,7 +326,7 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_bf16_single_buffer)
 }
 
 // =====================================================================
-// T06 BF16 double buffer (totalNum > 1024) -> key 258
+// T06 BF16 double buffer (totalNum > 1024) -> key 6
 // =====================================================================
 TEST_F(TestApplyRMSPropTiling, apply_rms_prop_bf16_double_buffer)
 {
@@ -565,15 +564,18 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_rank_9_invalid)
 }
 
 // =====================================================================
-// T25 var rank == 0 (0-dim scalar, below [1, 8] lower bound) -> FAILED
+// T25 var rank == 0 (0-dim scalar) -> SUCCESS
+// FR-17 fix: rank-0（标量 var）为合法输入（对齐 TensorFlow ApplyRMSProp
+// 语义），totalNum == 1 走正常单核路径。
 // =====================================================================
-TEST_F(TestApplyRMSPropTiling, apply_rms_prop_rank_0_invalid)
+TEST_F(TestApplyRMSPropTiling, apply_rms_prop_rank_0_scalar)
 {
     ApplyRMSPropTilingArgs args{/*var=*/{},  /*ms=*/{},    /*mom=*/{},
                                 /*lr=*/{1},  /*rho=*/{1},  /*momentum=*/{1}, /*epsilon=*/{1},
                                 /*grad=*/{}, ge::DT_FLOAT, ge::FORMAT_ND,    /*useLocking=*/false};
     auto result = DoApplyRMSPropTilingCase(args);
-    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.totalNum, 1);
 }
 
 // =====================================================================
@@ -585,8 +587,13 @@ TEST_F(TestApplyRMSPropTiling, apply_rms_prop_ub_factor_alignment)
     auto result = DoApplyRMSPropValidCase({64, 64, 64}, ge::DT_FLOAT, /*useLocking=*/false);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_GT(result.ubFactor, 0);
-    // ubBlockSize on arch35 is 256 elements for fp32; ubFactor must be multiple.
-    EXPECT_EQ(result.ubFactor % 256, 0);
+    // F-01 fix: Kernel 的 CompareScalar/Select 按 64 元素对齐消费缓冲，ubFactor
+    // 必须按 64 个 fp32 元素对齐（此前仅 32 对齐会在对齐区越界读写 128B）。
+    EXPECT_EQ(result.ubFactor % 64, 0);
+    // SAFE.01 fix: 256B scalar reserve must be excluded: with UB_SIZE=245760 the
+    // FP32 double-buffer ubFactor is 3200 (64-aligned, slots=19), strictly below
+    // the old non-reserved 3840.
+    EXPECT_LE(result.ubFactor, 3200);
     // blockFactor is 32B aligned and divides totalNum into used cores.
     EXPECT_GT(result.blockFactor, 0);
 }

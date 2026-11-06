@@ -41,6 +41,14 @@ constexpr int64_t MODE_PH = 3;
 
 // VL（一次 VF 处理的 fp32 数量）= VECTOR_REG_WIDTH / sizeof(fp32) = 256/4 = 64
 constexpr int32_t VL_FP32 = 256 / sizeof(float);
+// VF 整寄存器访问粒度（字节）：16 位 dtype 整寄存器 unpack 同样按 256B 粒度读
+constexpr int64_t VL_BYTES_K = 256;
+
+// 将字节长度向上对齐到 VF 整寄存器粒度，保证 Buffer 容得下末次整寄存器加载
+static __aicore__ inline int64_t AlignBytesToVL(int64_t bytes)
+{
+    return ((bytes + VL_BYTES_K - 1) / VL_BYTES_K) * VL_BYTES_K;
+}
 
 // AscendC 提供的 CastTrait 常量（在 AscendC::namespace，定义于 dav_c310 vconv impl）
 //   layoutZSatSMrgZRndR : fp32 → int32 / fp32 → fp16 / fp32 → bf16（带 Sat + RINT）
@@ -62,31 +70,24 @@ struct CommonBuffers {
     GlobalTensor<uint8_t> outputGMMask_;
 };
 
-// zero_point dtype 分支判据（REQUIREMENTS §2.1.1 / §4.6.4，与 PyTorch aten 逐位对齐）：
-//   - 整数 zp  : qval = rint(x/s) + zp        （先 round 再加 zp）
-//   - 浮点 zp  : qval = rint(x/s + zp)        （先加 zp 再 round，lrintf 路径）
-template <typename ZpT>
-constexpr bool ZP_IS_INTEGRAL = std::is_same_v<ZpT, int32_t> || std::is_same_v<ZpT, int16_t> ||
-                                std::is_same_v<ZpT, int64_t>;
-
-// 特殊值口径（spec.yaml formula notes / DESIGN §1.4）：x/s (+zp) 为非有限值（NaN/±inf）时，
-// 经 int 转换须饱和到 INT32_MIN（等价 golden 的 non-finite → INT64_MIN），随后被
-// min/max 钳到 quant_min、对应 mask = False。
-// VF 的 Cast+RINT+Sat 对 NaN 不产生 INT32_MIN（实测为 0），故在 Cast 前显式做一次
-// 非有限值检测并替换为 -FLT_MAX（其 RINT+Sat 结果即 INT32_MIN）：
-//   有限 <=> (v > -FLT_MAX) && (v < +FLT_MAX)；NaN/±inf 均不满足，替换为 -FLT_MAX。
+// 特殊值契约（docs「特殊值语义」与 PyTorch 对齐，issue #7537）：NaN/±Inf → mask=False，
+// out=(边界−zero_point)·scale：NaN/−Inf 钳到 quant_min、+Inf 钳到 quant_max。
+// VF 的 Cast+RINT+Sat 对 NaN 不产生 INT32_MIN（实测为 0），故在 Cast 前显式替换：
+//   第一步 (v > -FLT_MAX) 为假的元素（NaN、-Inf）替换为 -FLT_MAX（NaN 与任何比较均为假）；
+//   第二步 (v < +FLT_MAX) 为假的元素（+Inf）替换为 +FLT_MAX。
+// 经 RINT+Sat 后分别落入 INT32_MIN/INT32_MAX，必然越出 [quant_min, quant_max] 使
+// mask=False，并被边界 min/max 钳位。±FLT_MAX 精确有限值替换后值不变，行为一致。
 __aicore__ inline void ForceNonFiniteToSentinel(Reg::RegTensor<float>& vreg, Reg::MaskReg mask)
 {
     constexpr float FLT_MAX_F = 3.4028234663852886e+38F;
-    Reg::MaskReg mGt;
-    Reg::MaskReg mLt;
     Reg::MaskReg mFinite;
     Reg::RegTensor<float> vregSentinel;
-    Reg::Compares<float, CMPMODE::GT>(mGt, vreg, -FLT_MAX_F, mask);
-    Reg::Compares<float, CMPMODE::LT>(mLt, vreg, FLT_MAX_F, mask);
-    Reg::And(mFinite, mGt, mLt, mask);
+    Reg::Compares<float, CMPMODE::GT>(mFinite, vreg, -FLT_MAX_F, mask);
     Reg::Duplicate<float>(vregSentinel, -FLT_MAX_F);
-    Reg::Select(vreg, vreg, vregSentinel, mFinite); // mask 位为 1 取 src0（有限值），否则取哨兵
+    Reg::Select(vreg, vreg, vregSentinel, mFinite); // mFinite 位为 1 取原值，否则取哨兵
+    Reg::Compares<float, CMPMODE::LT>(mFinite, vreg, FLT_MAX_F, mask);
+    Reg::Duplicate<float>(vregSentinel, FLT_MAX_F);
+    Reg::Select(vreg, vreg, vregSentinel, mFinite);
 }
 
 template <typename T, typename ZpT, int HAS_ZP>
@@ -97,11 +98,14 @@ __aicore__ inline void ComputeQuantMaskBody(Reg::RegTensor<float>& vregTmp, Reg:
                                             __ubuf__ float* m1Ptr, __ubuf__ T* yPtr, float qMinF, float qMaxF,
                                             float qMinMinus1F, float qMaxPlus1F)
 {
-    // vregTmp 入参约定：整数 zp 为 x/s（round 前不加 zp）；浮点 zp 为 x/s + zp
+    // 取整次序按 zero_point dtype 分支（对齐 ATen 实测语义与 aclnn 文档公式）：
+    //   int32 zp：两步式 q = rint(x/scale) + zp（vregTmp 此处为 x/scale，不含 zp）
+    //   浮点 zp：一步式 q = rint(x/scale + zp)（调用方已把 zp 加进 vregTmp）
+    // 半整数商配奇数 zp 时两种次序相差一个量化级（x/s=2.5, zp=3：两步=2+3=5，一步=rint(5.5)=6）
+    ForceNonFiniteToSentinel(vregTmp, mask);
     Reg::Cast<int32_t, float, layoutZSatSMrgZRndR>(vregInt32, vregTmp, mask);
     Reg::Cast<float, int32_t, layoutZMrgZRndR>(vregQ, vregInt32, mask);
-    if constexpr (HAS_ZP == 1 && ZP_IS_INTEGRAL<ZpT>) {
-        // 整数 zp：qval = rint(x/s) + zp（round 之后加，整数 zp 值在 fp32 中精确表示）
+    if constexpr (HAS_ZP == 1 && std::is_same<ZpT, int32_t>::value) {
         Reg::Add<float>(vregQ, vregQ, vregZp, mask);
     }
     Reg::Adds<float, float>(vregM1, vregQ, -qMinMinus1F, mask);

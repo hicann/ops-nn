@@ -28,11 +28,11 @@
 
   - zero\_point的数据类型为int32
   $$
-  qval = Round(std::nearby\_int(self / scale) + zero\_point)
+  qval = Round(self / scale) + zero\_point
   $$
   - zero\_point的数据类型为float16或float32
   $$
-  qval = std::lrintf(self / scale + zero\_point)
+  qval = std::lrint(self / scale + zero\_point)
   $$
 
   $$
@@ -125,7 +125,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
        <td>输入</td>
        <td>公式中的zero_point，表示输入伪量化的零基准参数。</td>
        <td>size需要与scale一致且需要与self在axis轴的size一致。</td>
-       <td>INT32</td>
+       <td>INT32、FLOAT16、FLOAT</td>
        <td>ND</td>
        <td>1</td>
        <td>√</td>
@@ -239,13 +239,13 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
       <td>scale和zeroPoint的size大小不一致。</td>
     </tr>
     <tr>
-      <td>axis指定的维度不在合法范围[-self.dim(), self.dim()-1]内。</td>
+      <td>axis指定的维度不在合法范围[-self.dim(), self.dim()-1]内（self为0维标量时仅支持axis=0或axis=-1）。</td>
     </tr>
     <tr>
       <td>scale或zeroPoint的size与self在axis轴上的size大小不一致。</td>
     </tr>
     <tr>
-      <td>quantMin大于quantMax。</td>
+      <td>quantMin大于quantMax，或quant_min/quant_max绝对值不小于2^24（超出fp32可精确表示的整数域）。</td>
     </tr>
   </tbody>
   </table>
@@ -298,7 +298,14 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
 - 确定性计算：
   - aclnnFakeQuantPerChannelAffineCachemask默认确定性实现。
 
-- 当前新算子FakeQuantPerChannelAffineCachemask不支持zero_point的float32和float16输入，故先在aclnn接口内部拦截，待算子支持后放开该限制。
+- 本aclnn接口的zero_point支持INT32、FLOAT16、FLOAT（越界dtype返回161002）。
+
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT系列产品</term>：浮点zero_point支持与self交叉组合；GEIR图模式另支持BFLOAT16的zero_point（可与self交叉组合）。
+<!-- end id7 -->
+<!-- npu="A3,910b" id8 -->
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：浮点zero_point仅支持与self同型；GEIR图模式（非regbase形态）仅支持axis=0（aclnn入口通过内部Transpose归一化不受此限制）。
+<!-- end id8 -->
 
 ## 调用示例
 

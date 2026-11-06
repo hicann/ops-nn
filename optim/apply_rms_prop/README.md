@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- **算子功能**：执行RMSProp优化器（非centered版本）的单步参数更新。根据当前梯度、梯度平方移动平均和动量累积，更新参数张量`var`、`ms`、`mom`，全部采用 **inplace** 语义。对标TensorFlow `tf.raw_ops.ApplyRMSProp`接口的计算语义。
+- **算子功能**：执行RMSProp优化器（非centered版本）的单步参数更新。根据当前梯度、梯度平方移动平均和动量累积，更新参数张量`var`、`ms`、`mom`：`ms`、`mom`由Kernel显式写回输入地址（inplace更新），`var`的更新值写入输出张量（GE图执行时输出与输入var复用Device内存，Kernel写独立输出地址）。对标TensorFlow `tf.raw_ops.ApplyRMSProp`接口的计算语义。
 
 - **计算公式**：
 
@@ -59,50 +59,50 @@
 <tbody>
   <tr>
     <td>var</td>
-    <td>输入 / 输出(inplace)</td>
-    <td>待更新的权重参数，对应公式中的var。Kernel内inplace更新，GE IR单输出视图与输入var共享Device内存。</td>
+    <td>输入</td>
+    <td>待更新的权重参数，对应公式中的var。更新值由Kernel写入独立输出var（输出不与输入共享Device内存）。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>ms</td>
-    <td>输入(inplace更新)</td>
-    <td>梯度平方移动平均，对应公式中的ms。shape/dtype必须与var一致；Kernel内显式写回输入GM地址。</td>
+    <td>输入</td>
+    <td>梯度平方移动平均，对应公式中的ms。shape/dtype必须与var一致；Kernel内显式写回输入GM地址（inplace更新）。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>mom</td>
-    <td>输入(inplace更新)</td>
-    <td>动量累积，对应公式中的mom。shape/dtype必须与var一致；Kernel内显式写回输入GM地址。</td>
+    <td>输入</td>
+    <td>动量累积，对应公式中的mom。shape/dtype必须与var一致；Kernel内显式写回输入GM地址（inplace更新）。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>lr</td>
     <td>输入</td>
-    <td>学习率，对应公式中的lr。shape={1} 的1元素scalar Tensor，dtype必须与var一致。</td>
+    <td>学习率，对应公式中的lr。元素数为1的scalar Tensor（如shape={1}，含未知维的形状会被拒绝），dtype必须与var一致。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>rho</td>
     <td>输入</td>
-    <td>衰减系数，对应公式中的rho。shape={1} 的1元素scalar Tensor，取值范围 [0, 1)。</td>
+    <td>衰减系数，对应公式中的rho。元素数为1的scalar Tensor（如shape={1}，含未知维的形状会被拒绝），dtype必须与var一致，取值范围 [0, 1)。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>momentum</td>
     <td>输入</td>
-    <td>动量系数，对应公式中的momentum。shape={1} 的1元素scalar Tensor。</td>
+    <td>动量系数，对应公式中的momentum。元素数为1的scalar Tensor（如shape={1}，含未知维的形状会被拒绝），dtype必须与var一致。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>epsilon</td>
     <td>输入</td>
-    <td>数值稳定常数，对应公式中的epsilon。shape={1} 的1元素scalar Tensor，必须 > 0。</td>
+    <td>数值稳定常数，对应公式中的epsilon。shape={1} 的1元素scalar Tensor，dtype必须与var一致，必须 > 0。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -121,9 +121,9 @@
     <td>-</td>
   </tr>
   <tr>
-    <td>var (output)</td>
+    <td>var</td>
     <td>输出</td>
-    <td>更新后的var Tensor，与输入var共享Device内存（inplace）。</td>
+    <td>更新后的var Tensor。GE图执行时输出与输入var复用Device内存（in-place视图，由图运行时内存复用实现）；Kernel层面将更新值写入独立输出地址，调用方读取图输出即可获得更新值。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -131,7 +131,11 @@
 
 ## 约束说明
 
-无
+- var的秩（rank）范围为 [0, 8]：rank > 8的输入会被拒绝。
+- var的存储形状必须具体：含未知维（如动态shape未具体化）的输入会被拒绝。
+- 全部7个非var输入（ms、mom、lr、rho、momentum、epsilon、grad）的dtype必须与var一致，其中ms/mom/grad的shape必须与var完全一致，lr/rho/momentum/epsilon为元素数为1的具体形状Tensor（含未知维会被拒绝）。
+- 本算子声明支持动态shape与动态rank，但在图执行前形状必须已具体化（无未知维）。
+- **精度路径**：FP16/BF16输入先转换为FP32计算，结果按最近偶舍入（RNE）写回输出dtype；极值中间量采用缩放与归一化恒等式规避溢出。FP16/BF16与FP32参考的数值偏差主要来自内部FP32计算与回写舍入。
 
 ## 调用说明
 
