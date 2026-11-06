@@ -13,6 +13,8 @@
 
 #include <cstdint>
 
+constexpr int64_t APPLY_CAME_PART3_MAX_SYNC_CORE_COUNT = 80;
+
 struct ApplyCamePart3TilingData {
     int64_t usedCoreNum = 0;
     int64_t curN = 0;

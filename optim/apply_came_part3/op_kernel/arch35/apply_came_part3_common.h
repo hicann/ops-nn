@@ -20,7 +20,7 @@ constexpr int64_t CAME_ONE_BLOCK_SIZE = 32;
 constexpr int64_t REP_BLOCK_STRIDE = 8;
 constexpr int64_t FP16_ONE_BLOCK_COUNT = 16;
 constexpr int64_t FP32_ONE_BLOCK_COUNT = 8;
-constexpr int64_t BUFFER_SIZE = 3;
+constexpr int64_t BUFFER_SIZE = 4;
 constexpr int64_t ONE_BLOCK_INT32_COUNT = 8;
 constexpr int64_t SPLIT_PART = 2;
 constexpr int64_t ONE_VECTOR_FP32_SIZE = 64;
@@ -29,8 +29,10 @@ constexpr int64_t MAX_DATA_COPY_STRIDE = 65535;
 constexpr int64_t INT64_ONE_BLOCK_COUNT = 4;
 constexpr int64_t GLOBAL_SHAPE_ELEMENT_COUNT = 2;
 constexpr int64_t MAX_POST_BUFFER_SIZE = 16384;
-constexpr uint32_t DET_WORKSPACE_SIZE = 392;  // 8 * 49
-constexpr uint32_t DET_WORKSPACE_BYTE = 1568; // 32B * 49
+constexpr uint32_t MAX_SYNC_CORE_COUNT = static_cast<uint32_t>(APPLY_CAME_PART3_MAX_SYNC_CORE_COUNT);
+constexpr uint32_t DET_WORKSPACE_SIZE = (MAX_SYNC_CORE_COUNT + 1) * ONE_BLOCK_INT32_COUNT;
+constexpr int64_t REDUCED_PRECISION_REDUCE_CHUNK = 512;
+constexpr uint32_t DET_WORKSPACE_BYTE = DET_WORKSPACE_SIZE * sizeof(int32_t);
 constexpr float APPLY_CAME_PART3_MAX_FINITE = 3.402823466e+38F;
 
 __aicore__ inline bool ApplyCamePart3IsFinite(float value)
@@ -49,8 +51,10 @@ __aicore__ inline void ApplyCamePart3CompensatedAdd(float leftHigh, float leftLo
     }
     const float split = sum - leftHigh;
     const float error = (leftHigh - (sum - split)) + (rightHigh - split);
-    resultHigh = sum;
-    resultLow = leftLow + rightLow + error;
+    const float residual = leftLow + rightLow + error;
+    const float normalizedHigh = sum + residual;
+    resultHigh = normalizedHigh;
+    resultLow = residual - (normalizedHigh - sum);
 }
 
 __aicore__ inline void ApplyCamePart3NormalizeCompensation(AscendC::LocalTensor<float> high,
@@ -59,6 +63,21 @@ __aicore__ inline void ApplyCamePart3NormalizeCompensation(AscendC::LocalTensor<
                                                            AscendC::LocalTensor<float> maskStorage, uint64_t count)
 {
     AscendC::LocalTensor<uint8_t> finiteMask = maskStorage.ReinterpretCast<uint8_t>();
+    AscendC::Abs(scratch, high, count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Compares(finiteMask, scratch, APPLY_CAME_PART3_MAX_FINITE, AscendC::CMPMODE::LE, count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Duplicate(scratch, static_cast<float>(0), count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Select(low, finiteMask, low, scratch, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Add(scratch, high, low, count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Sub(maskStorage, scratch, high, count);
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Sub(low, low, maskStorage, count);
+    AscendC::Adds(high, scratch, static_cast<float>(0), count);
+    AscendC::PipeBarrier<PIPE_V>();
     AscendC::Abs(scratch, high, count);
     AscendC::PipeBarrier<PIPE_V>();
     AscendC::Compares(finiteMask, scratch, APPLY_CAME_PART3_MAX_FINITE, AscendC::CMPMODE::LE, count);
@@ -119,85 +138,77 @@ __aicore__ inline void ApplyCamePart3SumUCTail(AscendC::LocalTensor<float>& ubLo
     }
 }
 
+__aicore__ inline void ApplyCamePart3ReduceRows(AscendC::LocalTensor<float> values, int64_t rowCount, int64_t rowWidth);
+__aicore__ inline void ApplyCamePart3CompensatedReduceRows(AscendC::LocalTensor<float> high,
+                                                           AscendC::LocalTensor<float> low,
+                                                           AscendC::LocalTensor<float> sumTmp,
+                                                           AscendC::LocalTensor<float> recoveredTmp, int64_t rowCount,
+                                                           int64_t rowWidth);
+
 __aicore__ inline void ApplyCamePart3CalcSumUC(AscendC::LocalTensor<float>& ubLocal2,
                                                AscendC::LocalTensor<float>& ubLocal3,
-                                               AscendC::LocalTensor<float>& ubLocal4, int64_t baseM, int64_t baseN,
+                                               AscendC::LocalTensor<float>& ubLocal4,
+                                               AscendC::LocalTensor<float>& ubLocal5, int64_t baseM, int64_t baseN,
                                                int64_t bufSize, int64_t tailBlockStride)
 {
-    int64_t rowNum = baseN;
-    AscendC::Muls(ubLocal4, ubLocal2, static_cast<float>(1.0), bufSize);
+    (void)tailBlockStride;
     AscendC::Muls(ubLocal3, ubLocal2, static_cast<float>(1.0), bufSize);
+    AscendC::Duplicate(ubLocal4, static_cast<float>(0.0), bufSize);
     AscendC::PipeBarrier<PIPE_V>();
-    int64_t blockSize = ApplyCamePart3Ceil(baseM, FP32_ONE_BLOCK_COUNT);
-    int64_t calcSize = baseN / SPLIT_PART * blockSize;
-    uint64_t mask = baseM < ONE_VECTOR_FP32_SIZE ? blockSize : ONE_VECTOR_FP32_SIZE;
-    int64_t tailOffset = 0;
-    bool hasTail = false;
-    while (rowNum > 1) {
-        if (rowNum % SPLIT_PART) {
-            if (!hasTail) {
-                hasTail = true;
-                tailOffset = (rowNum - 1) * blockSize;
-            } else {
-                int64_t currentTail = (rowNum - 1) * blockSize;
-                AscendC::Add(ubLocal3[tailOffset], ubLocal4[currentTail], ubLocal3[tailOffset], baseM);
-            }
-            calcSize = rowNum / SPLIT_PART * blockSize;
-        }
-        rowNum /= SPLIT_PART;
+    ApplyCamePart3CompensatedReduceRows(ubLocal3, ubLocal4, ubLocal5, ubLocal2, baseN,
+                                        ApplyCamePart3Ceil(baseM, FP32_ONE_BLOCK_COUNT));
+}
+
+__aicore__ inline void ApplyCamePart3CompensatedReduceRows(AscendC::LocalTensor<float> high,
+                                                           AscendC::LocalTensor<float> low,
+                                                           AscendC::LocalTensor<float> sumTmp,
+                                                           AscendC::LocalTensor<float> recoveredTmp, int64_t rowCount,
+                                                           int64_t rowWidth)
+{
+    int64_t activeRows = rowCount;
+    while (activeRows > 1) {
+        const int64_t rightRows = (activeRows + 1) / 2;
+        const int64_t pairRows = activeRows - rightRows;
+        const int64_t rightOffset = rightRows * rowWidth;
+        const int64_t pairElements = pairRows * rowWidth;
+        AscendC::Add(sumTmp, high, high[rightOffset], pairElements);
         AscendC::PipeBarrier<PIPE_V>();
-        if (baseM % ONE_VECTOR_FP32_SIZE == 0) {
-            int64_t repeatTimes = rowNum * baseM / ONE_VECTOR_FP32_SIZE;
-            AscendC::Add(ubLocal4, ubLocal3, ubLocal4[calcSize], mask, repeatTimes,
-                         {1, 1, 1, REP_BLOCK_STRIDE, REP_BLOCK_STRIDE, REP_BLOCK_STRIDE});
-        } else {
-            int64_t fullVectors = baseM / ONE_VECTOR_FP32_SIZE;
-            for (int64_t vectorIdx = 0; vectorIdx < fullVectors; ++vectorIdx) {
-                int64_t offset = vectorIdx * ONE_VECTOR_FP32_SIZE;
-                AscendC::Add(ubLocal4[offset], ubLocal3[offset], ubLocal4[calcSize + offset], mask, rowNum,
-                             {1, 1, 1, static_cast<uint8_t>(tailBlockStride), static_cast<uint8_t>(tailBlockStride),
-                              static_cast<uint8_t>(tailBlockStride)});
-            }
-            if (baseM % ONE_VECTOR_FP32_SIZE) {
-                ApplyCamePart3SumUCTail(ubLocal4, ubLocal3, baseM, rowNum, calcSize, tailBlockStride);
-            }
-        }
+        AscendC::Sub(recoveredTmp, sumTmp, high, pairElements);
         AscendC::PipeBarrier<PIPE_V>();
-        AscendC::Muls(ubLocal3, ubLocal4, static_cast<float>(1.0), calcSize);
+        AscendC::Sub(high[rightOffset], high[rightOffset], recoveredTmp, pairElements);
+        AscendC::Sub(recoveredTmp, sumTmp, recoveredTmp, pairElements);
         AscendC::PipeBarrier<PIPE_V>();
-        calcSize /= SPLIT_PART;
+        AscendC::Sub(high, high, recoveredTmp, pairElements);
+        AscendC::PipeBarrier<PIPE_V>();
+        AscendC::Add(high, high, high[rightOffset], pairElements);
+        AscendC::Add(low, low, low[rightOffset], pairElements);
+        AscendC::PipeBarrier<PIPE_V>();
+        AscendC::Add(low, low, high, pairElements);
+        AscendC::Adds(high, sumTmp, static_cast<float>(0), pairElements);
+        AscendC::PipeBarrier<PIPE_V>();
+        ApplyCamePart3NormalizeCompensation(high, low, high[rightOffset], recoveredTmp, pairElements);
+        activeRows = rightRows;
     }
-    if (hasTail) {
-        AscendC::Add(ubLocal4, ubLocal3[tailOffset], ubLocal4, baseM);
-    }
-    AscendC::PipeBarrier<PIPE_V>();
 }
 
 // Reduce a row-major [rowCount, rowWidth] tile without assuming that the
 // row width is vector-block aligned.  Workspace C stores compact rows, so the
 // reduction stride must be the actual element count rather than an aligned
 // byte width.
-__aicore__ inline void ApplyCamePart3ReduceRows(AscendC::LocalTensor<float>& values, int64_t rowCount, int64_t rowWidth)
+__aicore__ inline void ApplyCamePart3ReduceRows(AscendC::LocalTensor<float> values, int64_t rowCount, int64_t rowWidth)
 {
     if (rowCount <= 1 || rowWidth <= 0) {
         return;
     }
     int64_t activeRows = rowCount;
     while (activeRows > 1) {
-        const int64_t pairRows = activeRows / 2;
-        for (int64_t row = 0; row < pairRows; ++row) {
-            const int64_t dstOffset = row * rowWidth;
-            const int64_t leftOffset = (row * 2) * rowWidth;
-            const int64_t rightOffset = leftOffset + rowWidth;
-            AscendC::Add(values[dstOffset], values[leftOffset], values[rightOffset], rowWidth);
+        const int64_t rightRows = (activeRows + 1) / 2;
+        const int64_t pairRows = activeRows - rightRows;
+        if (pairRows > 0) {
+            AscendC::Add(values, values[rightRows * rowWidth], values, pairRows * rowWidth);
+            AscendC::PipeBarrier<PIPE_V>();
         }
-        if (activeRows % 2 != 0) {
-            const int64_t dstOffset = pairRows * rowWidth;
-            const int64_t srcOffset = (activeRows - 1) * rowWidth;
-            AscendC::Muls(values[dstOffset], values[srcOffset], static_cast<float>(1.0), rowWidth);
-        }
-        AscendC::PipeBarrier<PIPE_V>();
-        activeRows = pairRows + (activeRows % 2);
+        activeRows = rightRows;
     }
 }
 

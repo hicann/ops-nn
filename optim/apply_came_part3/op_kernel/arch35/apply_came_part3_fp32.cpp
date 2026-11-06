@@ -31,9 +31,21 @@ __aicore__ inline void ApplyCamePart3FP32::Init(CamePart3InOut camePart3InOut, G
                                                 const ApplyCamePart3TilingData* __restrict cameTiling)
 {
     ParseTilingData(cameTiling);
-    InitBuffers(camePart3InOut, workspace);
-    InitVars();
-    ClearAcculateMatrix();
+    if (GetBlockIdx() < usedCoreNum) {
+        InitBuffers(camePart3InOut, workspace);
+        InitVars();
+        ClearAcculateMatrix();
+        if (GetBlockIdx() == 0) {
+            const float initValue = 0.0f;
+            InitOutput<int32_t>(gmDetWorkspace, DET_WORKSPACE_SIZE, 0);
+            if (cCoreNum > 1) {
+                InitOutput<float>(sumURGm, curN, initValue);
+            }
+            InitOutput<float>(sumUCGm, curM, initValue);
+            InitOutput<float>(sumURCGm, 1, initValue);
+        }
+    }
+    SyncAll();
 }
 
 __aicore__ inline void ApplyCamePart3FP32::ParseTilingData(const ApplyCamePart3TilingData* __restrict tilingData)
@@ -41,6 +53,8 @@ __aicore__ inline void ApplyCamePart3FP32::ParseTilingData(const ApplyCamePart3T
     usedCoreNum = tilingData->usedCoreNum;
     curN = tilingData->curN;
     curM = tilingData->curM;
+    tilingRNumCalc = tilingData->rNumCalc;
+    tilingBaseN = tilingData->baseN;
     rNumCalc = tilingData->rNumCalc;
     cNumCalc = tilingData->cNumCalc;
     baseN = tilingData->baseN;
@@ -79,6 +93,12 @@ __aicore__ inline void ApplyCamePart3FP32::InitBuffers(CamePart3InOut camePart3I
     ubLocal2 = calcBuf.Get<float>(BUFFER_SIZE * bufSize);
     ubLocal3 = ubLocal2[bufSize];
     ubLocal4 = ubLocal3[bufSize];
+    ubLocal5 = ubLocal4[bufSize];
+
+    const int64_t sumURBufferSize = Ceil(oriBaseN, FP32_ONE_BLOCK_COUNT);
+    pipe.InitBuffer(sumURBuf, 2 * sumURBufferSize * sizeof(float));
+    sumURHigh = sumURBuf.Get<float>(2 * sumURBufferSize);
+    sumURLow = sumURHigh[sumURBufferSize];
 
     pipe.InitBuffer(detBuf, DET_WORKSPACE_BYTE);
     ubDetWorkspace = detBuf.Get<int32_t>(DET_WORKSPACE_SIZE);
@@ -116,21 +136,23 @@ __aicore__ inline void ApplyCamePart3FP32::InitOutBuffers(CamePart3InOut camePar
     GM_ADDR sumUC = camePart3InOut.sumUC;
     GM_ADDR sumURC = camePart3InOut.sumURC;
 
-    sumURGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumUR + nOffset * sizeof(float)), curN);
+    sumURGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumUR), curN);
     sumUCGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumUC + mOffset * sizeof(float)), curM);
     sumURCGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumURC), 1 * sizeof(float));
     mOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(mOut + blockOffset * sizeof(float)), curN * curM);
 
-    workspaceSumGradC_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + DET_WORKSPACE_BYTE));
+    const int64_t rTailNumCalc = curN - tilingRNumCalc * (rCoreNum - 1);
+    const int64_t rBlockNum = DivCeil(tilingRNumCalc, tilingBaseN) * (rCoreNum - 1) +
+                              DivCeil(rTailNumCalc, tilingBaseN);
+    const int64_t workspaceCElements = rBlockNum * curM;
+    const int64_t workspaceRElements = usedCoreNum * Ceil(tilingRNumCalc, FP32_ONE_BLOCK_COUNT);
+    auto* workspaceRBase = reinterpret_cast<__gm__ float*>(workspace + DET_WORKSPACE_BYTE);
+    workspaceSumGradRHigh_.SetGlobalBuffer(workspaceRBase);
+    workspaceSumGradRLow_.SetGlobalBuffer(workspaceRBase + workspaceRElements);
+    auto* workspaceCBase = workspaceRBase + workspaceRElements * 2;
+    workspaceSumGradCHigh_.SetGlobalBuffer(workspaceCBase);
+    workspaceSumGradCLow_.SetGlobalBuffer(workspaceCBase + workspaceCElements);
     gmDetWorkspace.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(workspace));
-
-    float initValue = 0.0;
-    if (GetBlockIdx() == 0) {
-        InitOutput<float>(sumURGm, curN, initValue);
-        InitOutput<float>(sumUCGm, curM, initValue);
-        InitOutput<float>(sumURCGm, 1, initValue);
-    }
-    SyncAll();
 }
 
 __aicore__ inline void ApplyCamePart3FP32::InitVars()
@@ -150,21 +172,23 @@ __aicore__ inline void ApplyCamePart3FP32::CalcGMOffset()
     auto mCoreIndx = GetBlockIdx() % temp0;
 
     // workspace gm offset
-    int64_t rOneCoreBaseNum = DivCeil(rNumCalc, baseN);
+    int64_t rOneCoreBaseNum = DivCeil(tilingRNumCalc, tilingBaseN);
 
     tilingBaseM = baseM;
     workspaceCOffset = nCoreIndx * rOneCoreBaseNum * curM + mCoreIndx * cNumCalc;
+    workspaceROffset = GetBlockIdx() * Ceil(tilingRNumCalc, FP32_ONE_BLOCK_COUNT);
 
     // gm nd format
     mOffset = mCoreIndx * cNumCalc;
     oriMOffset = mOffset;
-    nOffset = nCoreIndx * rNumCalc;
+    nOffset = nCoreIndx * tilingRNumCalc;
     oriNOffset = nOffset;
-    blockOffset = nCoreIndx * rNumCalc * curM + mCoreIndx * cNumCalc;
+    blockOffset = nCoreIndx * tilingRNumCalc * curM + mCoreIndx * cNumCalc;
 
     uint64_t gmUserM = curM - mCoreIndx * cNumCalc;
     cNumCalc = gmUserM < cNumCalc ? gmUserM : cNumCalc;
-    uint64_t gmUserN = curN - nCoreIndx * rNumCalc;
+    uint64_t gmUserN = curN - nCoreIndx * tilingRNumCalc;
+    isRTailCore = gmUserN < static_cast<uint64_t>(tilingRNumCalc);
     rNumCalc = gmUserN < rNumCalc ? gmUserN : rNumCalc;
 
     baseM = baseM < cNumCalc ? baseM : cNumCalc;
@@ -178,8 +202,8 @@ __aicore__ inline void ApplyCamePart3FP32::Process()
     if (GetBlockIdx() < usedCoreNum) {
         ProcessNormal();
         ApplyCamePart3WaitMte3ToS();
-        SyncAll();
     }
+    SyncAll();
 }
 
 __aicore__ inline void ApplyCamePart3FP32::CalcOneOffset(int64_t mIdx, int64_t nIdx)
@@ -210,6 +234,7 @@ __aicore__ inline void ApplyCamePart3FP32::ProcessNormal()
     SetFlag<HardEvent::S_V>(eventIdSToV);
     WaitFlag<HardEvent::S_V>(eventIdSToV);
     for (int64_t nIdx = 0; nIdx < nLoop; nIdx++) {
+        InitSumURAccumulator();
         for (int64_t mIdx = 0; mIdx < mLoop; mIdx++) {
             ProcessOneLoop(mIdx, nIdx);
         }
@@ -330,9 +355,10 @@ __aicore__ inline void ApplyCamePart3FP32::CalcSumUCTailBlock(LocalTensor<float>
     }
 }
 
-__aicore__ inline void ApplyCamePart3FP32::CalcSumUC(LocalTensor<float>& ubLocal2, LocalTensor<float>& ubLocal4)
+__aicore__ inline void ApplyCamePart3FP32::CalcSumUC(LocalTensor<float>& ubLocal2, LocalTensor<float>& ubLocal3,
+                                                     LocalTensor<float>& ubLocal4, LocalTensor<float>& ubLocal5)
 {
-    ApplyCamePart3CalcSumUC(ubLocal2, ubLocal3, ubLocal4, baseM, baseN, bufSize, tailBlockStride);
+    ApplyCamePart3CalcSumUC(ubLocal2, ubLocal3, ubLocal4, ubLocal5, baseM, baseN, bufSize, tailBlockStride);
 }
 
 __aicore__ inline void ApplyCamePart3FP32::CalcSumURReduce(LocalTensor<float>& ubLocal3, LocalTensor<float>& ubLocal4,
@@ -391,30 +417,98 @@ __aicore__ inline void ApplyCamePart3FP32::CalcSumURAddBlock(LocalTensor<float>&
 __aicore__ inline void ApplyCamePart3FP32::CalcSumUR(LocalTensor<float>& ubLocal2, LocalTensor<float>& ubLocal3,
                                                      LocalTensor<float>& ubLocal4)
 {
-    int64_t tLoop = DivCeil(baseM, ONE_VECTOR_FP32_SIZE) - 2;
-    if (baseM % ONE_VECTOR_FP32_SIZE) {
-        tLoop -= 1;
+    if (baseM <= ONE_VECTOR_FP32_SIZE) {
+        CalcSumURReduce(ubLocal2, ubLocal4, static_cast<uint8_t>(rowBlockStride));
+        return;
     }
-    uint64_t mask = baseM < ONE_VECTOR_FP32_SIZE ? Ceil(baseM, FP32_ONE_BLOCK_COUNT) : ONE_VECTOR_FP32_SIZE;
-    int64_t repeatTimes = baseN;
-    int64_t overMaxRepeat = 0;
-    if (repeatTimes > MAX_REPEAT_TIME) {
-        repeatTimes = MAX_REPEAT_TIME;
-        overMaxRepeat = 1;
-    }
-    int64_t loopOffset = ONE_VECTOR_FP32_SIZE;
-    uint8_t src0RepStride = Ceil(baseM, FP32_ONE_BLOCK_COUNT) / (CAME_ONE_BLOCK_SIZE / sizeof(float));
-    if (baseM == 1) {
-        Muls(ubLocal3, ubLocal2, static_cast<float>(1.0), bufSize);
+    const int64_t rowWidth = Ceil(baseM, FP32_ONE_BLOCK_COUNT);
+    for (int64_t row = 0; row < baseN; ++row) {
+        ReduceSum(ubLocal4[row], ubLocal2[row * rowWidth], ubLocal3, baseM);
         PipeBarrier<PIPE_V>();
-        return CalcSumURReduce(ubLocal3, ubLocal4, static_cast<uint8_t>(rowBlockStride));
     }
+}
 
+__aicore__ inline void ApplyCamePart3FP32::InitSumURAccumulator()
+{
+    const int64_t count = Ceil(oriBaseN, FP32_ONE_BLOCK_COUNT);
+    Duplicate(sumURHigh, static_cast<float>(0), count);
+    Duplicate(sumURLow, static_cast<float>(0), count);
     PipeBarrier<PIPE_V>();
-    if (baseM > ONE_VECTOR_FP32_SIZE) {
-        CalcSumURAddBlock(ubLocal2, repeatTimes);
+}
+
+__aicore__ inline void ApplyCamePart3FP32::AccumulateSumUR(LocalTensor<float>& partial, int64_t count)
+{
+    Add(ubLocal5, sumURHigh, partial, count);
+    PipeBarrier<PIPE_V>();
+    Sub(ubLocal3, ubLocal5, sumURHigh, count);
+    PipeBarrier<PIPE_V>();
+    Sub(partial, partial, ubLocal3, count);
+    Sub(ubLocal3, ubLocal5, ubLocal3, count);
+    PipeBarrier<PIPE_V>();
+    Sub(ubLocal3, sumURHigh, ubLocal3, count);
+    PipeBarrier<PIPE_V>();
+    Add(ubLocal3, ubLocal3, partial, count);
+    Add(sumURLow, sumURLow, ubLocal3, count);
+    Adds(sumURHigh, ubLocal5, static_cast<float>(0), count);
+    PipeBarrier<PIPE_V>();
+    ApplyCamePart3NormalizeCompensation(sumURHigh, sumURLow, ubLocal5, ubLocal3, count);
+}
+
+__aicore__ inline void ApplyCamePart3FP32::FinalizeSumUR(LocalTensor<float>& output, int64_t count)
+{
+    Add(output, sumURHigh, sumURLow, count);
+    PipeBarrier<PIPE_V>();
+}
+
+__aicore__ inline void ApplyCamePart3FP32::StoreSumURPartial(int64_t offset, int64_t count)
+{
+    if (cCoreNum == 1) {
+        Add(sumURHigh, sumURHigh, sumURLow, count);
+        PipeBarrier<PIPE_V>();
+        event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        DataCopyPad(sumURGm[oriNOffset + offset], sumURHigh,
+                    {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0});
+        event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+        WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+        return;
     }
-    CalcSumURReduce(ubLocal2, ubLocal4, src0RepStride);
+    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    DataCopyPad(workspaceSumGradRHigh_[workspaceROffset + offset], sumURHigh,
+                {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0});
+    DataCopyPad(workspaceSumGradRLow_[workspaceROffset + offset], sumURLow,
+                {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0});
+    event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+    WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+}
+
+__aicore__ inline void ApplyCamePart3FP32::AccumulateSumURPrecise(LocalTensor<float>& input, int64_t count)
+{
+    constexpr int64_t reduceChunk = 4096;
+    const int64_t rowWidth = Ceil(baseM, FP32_ONE_BLOCK_COUNT);
+    for (int64_t row = 0; row < count; ++row) {
+        for (int64_t offset = 0; offset < baseM; offset += reduceChunk) {
+            const int64_t chunk = baseM - offset < reduceChunk ? baseM - offset : reduceChunk;
+            ReduceSum(ubLocal3, input[row * rowWidth + offset], ubLocal4, chunk);
+            event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+            SetFlag<HardEvent::V_S>(eventIdVToS);
+            WaitFlag<HardEvent::V_S>(eventIdVToS);
+            float resultHigh = 0.0f;
+            float resultLow = 0.0f;
+            ApplyCamePart3CompensatedAdd(sumURHigh.GetValue(row), sumURLow.GetValue(row), ubLocal3.GetValue(0), 0.0f,
+                                         resultHigh, resultLow);
+            sumURHigh.SetValue(row, resultHigh);
+            sumURLow.SetValue(row, resultLow);
+        }
+    }
+    event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+    SetFlag<HardEvent::S_V>(eventIdSToV);
+    WaitFlag<HardEvent::S_V>(eventIdSToV);
 }
 
 __aicore__ inline void ApplyCamePart3FP32::CalcAddEps(LocalTensor<float>& ubLocal2)
@@ -475,11 +569,28 @@ __aicore__ inline void ApplyCamePart3FP32::ProcessOneLoop(int64_t mIdx, int64_t 
     CalcAddEps(ubLocal2);
     PipeBarrier<PIPE_V>();
 
-    CalcSumUC(ubLocal2, ubLocal4);
-    CopyUB2Workspace(workspaceSumGradC_, ubLocal4, workspaceCOffsetBase, baseM);
+    // CalcSumUC reuses ubLocal2 as compensated-reduction scratch. Complete
+    // the row reduction before that destructive reuse so sumUR always sees
+    // the original squared tile.
+    if (baseM <= ONE_VECTOR_FP32_SIZE) {
+        CalcSumUR(ubLocal2, ubLocal3, ubLocal4);
+        if (cCoreNum == 1 && mLoop == 1) {
+            Muls(sumURHigh, ubLocal4, static_cast<float>(1.0), baseN);
+            Duplicate(sumURLow, static_cast<float>(0.0), baseN);
+            PipeBarrier<PIPE_V>();
+        } else {
+            AccumulateSumUR(ubLocal4, baseN);
+        }
+    } else {
+        AccumulateSumURPrecise(ubLocal2, baseN);
+    }
 
-    CalcSumUR(ubLocal2, ubLocal3, ubLocal4);
-    CopyUB2Out(sumURGm, ubLocal4, nOffset, baseN);
+    CalcSumUC(ubLocal2, ubLocal3, ubLocal4, ubLocal5);
+    CopyUB2Workspace(workspaceSumGradCHigh_, ubLocal3, workspaceCOffsetBase, baseM);
+    CopyUB2Workspace(workspaceSumGradCLow_, ubLocal4, workspaceCOffsetBase, baseM);
+    if (mIdx == mLoop - 1) {
+        StoreSumURPartial(nIdx * oriBaseN, baseN);
+    }
 
     event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
     SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);

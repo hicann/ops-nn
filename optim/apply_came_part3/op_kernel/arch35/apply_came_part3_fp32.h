@@ -44,10 +44,16 @@ protected:
 
     __aicore__ inline void CalcSumUR(AscendC::LocalTensor<float>& ubLocal2, AscendC::LocalTensor<float>& ubLocal3,
                                      AscendC::LocalTensor<float>& ubLocal4);
+    __aicore__ inline void InitSumURAccumulator();
+    __aicore__ inline void AccumulateSumUR(AscendC::LocalTensor<float>& partial, int64_t count);
+    __aicore__ inline void FinalizeSumUR(AscendC::LocalTensor<float>& output, int64_t count);
+    __aicore__ inline void StoreSumURPartial(int64_t offset, int64_t count);
+    __aicore__ inline void AccumulateSumURPrecise(AscendC::LocalTensor<float>& input, int64_t count);
     __aicore__ inline void CalcSumURReduce(AscendC::LocalTensor<float>& ubLocal3, AscendC::LocalTensor<float>& ubLocal4,
                                            uint8_t repStride);
     __aicore__ inline void CalcSumURAddBlock(AscendC::LocalTensor<float>& ubLocal2, int64_t repeatTimes);
-    __aicore__ inline void CalcSumUC(AscendC::LocalTensor<float>& ubLocal2, AscendC::LocalTensor<float>& ubLocal4);
+    __aicore__ inline void CalcSumUC(AscendC::LocalTensor<float>& ubLocal2, AscendC::LocalTensor<float>& ubLocal3,
+                                     AscendC::LocalTensor<float>& ubLocal4, AscendC::LocalTensor<float>& ubLocal5);
     __aicore__ inline void CalcSumUCTailBlock(AscendC::LocalTensor<float>& ubLocal4,
                                               AscendC::LocalTensor<float>& ubLocal3, int64_t rowNum, int64_t calcSize);
     __aicore__ inline void CalcAddEps(AscendC::LocalTensor<float>& ubLocal2);
@@ -80,17 +86,20 @@ protected:
     AscendC::GlobalTensor<float> sumUCGm;
     AscendC::GlobalTensor<float> sumURCGm;
 
-    AscendC::GlobalTensor<float> workspaceSumGradC_;
+    AscendC::GlobalTensor<float> workspaceSumGradCHigh_;
+    AscendC::GlobalTensor<float> workspaceSumGradCLow_;
+    AscendC::GlobalTensor<float> workspaceSumGradRHigh_;
+    AscendC::GlobalTensor<float> workspaceSumGradRLow_;
     AscendC::GlobalTensor<int32_t> gmDetWorkspace; // workspace gm for deterministic algorithm
 
     // LocalTensor
-    AscendC::LocalTensor<float> ubLocal2, ubLocal3, ubLocal4;
+    AscendC::LocalTensor<float> ubLocal2, ubLocal3, ubLocal4, ubLocal5, sumURHigh, sumURLow;
     AscendC::LocalTensor<int32_t> ubDetWorkspace; // workspace ub for deterministic algorithm
 
     // Queue
     AscendC::TQue<AscendC::QuePosition::VECIN, DEFAULT_QUEUE_BUFFE_SIZE> inQueue;
     AscendC::TQue<AscendC::QuePosition::VECOUT, DEFAULT_QUEUE_BUFFE_SIZE> outQueue;
-    AscendC::TBuf<AscendC::TPosition::VECCALC> calcBuf, detBuf;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> calcBuf, detBuf, sumURBuf;
 
     int64_t mOffset;
     int64_t oriMOffset;
@@ -101,6 +110,7 @@ protected:
 
     int64_t workspaceCOffset;
     int64_t workspaceCOffsetBase;
+    int64_t workspaceROffset;
     int64_t tilingBaseM;
 
     float eps;
@@ -124,6 +134,8 @@ protected:
     int64_t usedCoreNum;
     int64_t curN;
     int64_t curM;
+    int64_t tilingRNumCalc;
+    int64_t tilingBaseN;
     int64_t rNumCalc;
     int64_t cNumCalc;
     int64_t baseN;
@@ -132,6 +144,7 @@ protected:
     int64_t cCoreNum;
     int64_t isGlobalShape;
     int64_t useFirstMoment;
+    bool isRTailCore{false};
 
     int64_t maxMLoop{0};
     int64_t maxNLoop{0};

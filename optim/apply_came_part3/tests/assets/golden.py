@@ -70,14 +70,15 @@ def _compute(
     original_m = _torch(m)
     m_dtype = original_m.dtype
     u = _lift_low_precision(u)
-    m = _lift_low_precision(original_m)
-    compute_dtype = torch.promote_types(u.dtype, m.dtype)
+    compute_dtype = torch.promote_types(u.dtype, original_m.dtype)
+    if not compute_dtype.is_floating_point:
+        compute_dtype = torch.float32
     u = u.to(compute_dtype)
-    m = m.to(compute_dtype)
+    m = original_m.to(compute_dtype)
     work = m
 
     def scalar(value):
-        return _torch(value).reshape(-1)[0]
+        return _torch(value).reshape(-1)[0].to(compute_dtype)
 
     eps = scalar(eps)
     beta1 = scalar(beta1)
@@ -107,12 +108,11 @@ def _compute(
     m_out = updated_m if use_first_moment else work
     diff = scaled_u - m_used
     squared = torch.square(diff) + eps
-    global_sum = squared.sum((-2, -1)).reshape(1)
     return (
         m_out.to(m_dtype),
-        squared.sum(-1).to(torch.float32),
-        squared.sum(-2).to(torch.float32),
-        global_sum.to(torch.float32),
+        squared.sum(-1),
+        squared.sum(-2),
+        squared.sum((-2, -1)).reshape(1),
     )
 
 

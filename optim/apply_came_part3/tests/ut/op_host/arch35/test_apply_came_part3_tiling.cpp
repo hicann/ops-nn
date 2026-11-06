@@ -22,7 +22,9 @@ constexpr uint64_t kUbSize = 248UL * 1024UL;
 constexpr uint64_t kCoreNum = 48UL;
 constexpr uint64_t kTilingDataSize = 4096UL;
 constexpr size_t kSystemWorkspaceSize = 16UL * 1024UL * 1024UL;
-constexpr size_t kDetWorkspaceBytes = 1568UL;
+constexpr size_t kFp32PerDataBlock = 8UL;
+constexpr size_t kDetWorkspaceBytes = (static_cast<size_t>(optiling::APPLY_CAME_PART3_MAX_SYNC_CORE_COUNT) + 1UL) *
+                                      kFp32PerDataBlock * sizeof(int32_t);
 
 struct TilingResult {
     TilingInfo info;
@@ -76,7 +78,7 @@ TilingResult RunTiling(int64_t n, int64_t m, ge::DataType momentType, bool useFi
 }
 
 bool RunInvalidTiling(const std::vector<int64_t>& matrixDims, const std::vector<int64_t>& scalarDims,
-                      const std::vector<int64_t>& globalShapeDims)
+                      const std::vector<int64_t>& globalShapeDims, uint64_t coreNum = kCoreNum)
 {
     const gert::StorageShape matrix = MakeStorageShape(matrixDims);
     const gert::StorageShape scalar = MakeStorageShape(scalarDims);
@@ -98,8 +100,8 @@ bool RunInvalidTiling(const std::vector<int64_t>& matrixDims, const std::vector<
     std::vector<gert::TilingContextPara::OpAttr> attrs = {
         {"use_first_moment", Ops::NN::AnyValue::CreateFrom<bool>(false)},
     };
-    optiling::ApplyCamePart3CompileInfo compileInfo{static_cast<int32_t>(kCoreNum), kUbSize};
-    gert::TilingContextPara para("ApplyCamePart3", inputs, outputs, attrs, &compileInfo, kCoreNum, kUbSize,
+    optiling::ApplyCamePart3CompileInfo compileInfo{static_cast<int32_t>(coreNum), kUbSize};
+    gert::TilingContextPara para("ApplyCamePart3", inputs, outputs, attrs, &compileInfo, coreNum, kUbSize,
                                  kTilingDataSize);
     TilingInfo info;
     return ExecuteTiling(para, info);
@@ -114,7 +116,10 @@ size_t ExpectedWorkspaceSize(const optiling::ApplyCamePart3TilingData& data)
     const size_t rBlockCount = static_cast<size_t>(data.rCoreNum - 1) * rOneCoreBlocks +
                                static_cast<size_t>(DivCeil(rTailNumCalc, data.baseN));
     const size_t workspaceCElements = rBlockCount * static_cast<size_t>(data.curM);
-    return kSystemWorkspaceSize + kDetWorkspaceBytes + workspaceCElements * sizeof(float);
+    const size_t workspaceRElements = static_cast<size_t>(data.usedCoreNum) *
+                                      static_cast<size_t>(DivCeil(data.rNumCalc, kFp32PerDataBlock)) *
+                                      kFp32PerDataBlock;
+    return kSystemWorkspaceSize + kDetWorkspaceBytes + 2UL * (workspaceCElements + workspaceRElements) * sizeof(float);
 }
 } // namespace
 
@@ -124,7 +129,7 @@ TEST(ApplyCamePart3Tiling, FixedDetBufferParticipatesInUbBudget)
     EXPECT_EQ(result.data.cCoreNum, 1);
     EXPECT_EQ(result.data.cNumCalc, 1577);
     EXPECT_EQ(result.data.baseN, 1);
-    EXPECT_EQ(result.data.baseM, 832);
+    EXPECT_EQ(result.data.baseM, 1304);
     ASSERT_EQ(result.info.workspaceSizes.size(), 1U);
     EXPECT_EQ(result.info.workspaceSizes[0], ExpectedWorkspaceSize(result.data));
 }
@@ -202,6 +207,12 @@ TEST(ApplyCamePart3Tiling, RejectsOnlyWhenFp32TensorByteRangeOverflows)
 {
     constexpr int64_t kBeyondInt32 = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
     EXPECT_FALSE(RunInvalidTiling({kBeyondInt32, kBeyondInt32}, {1}, {2}));
+}
+
+TEST(ApplyCamePart3Tiling, RejectsCoreCountBeyondSynchronizationCapacity)
+{
+    constexpr uint64_t excessiveCoreNum = static_cast<uint64_t>(optiling::APPLY_CAME_PART3_MAX_SYNC_CORE_COUNT) + 1UL;
+    EXPECT_FALSE(RunInvalidTiling({1, 1}, {1}, {2}, excessiveCoreNum));
 }
 
 TEST(ApplyCamePart3Tiling, InvalidShapesReturnGraphFailed)

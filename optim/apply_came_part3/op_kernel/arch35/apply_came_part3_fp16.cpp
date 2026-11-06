@@ -34,9 +34,21 @@ __aicore__ inline void ApplyCamePart3FP16<T>::Init(CamePart3InOut camePart3InOut
                                                    const ApplyCamePart3TilingData* __restrict cameTiling)
 {
     ParseTilingData(cameTiling);
-    InitBuffers(camePart3InOut, workspace);
-    InitVars();
-    ClearAcculateMatrix();
+    if (GetBlockIdx() < usedCoreNum) {
+        InitBuffers(camePart3InOut, workspace);
+        InitVars();
+        ClearAcculateMatrix();
+        if (GetBlockIdx() == 0) {
+            const float initValue = 0.0f;
+            InitOutput<int32_t>(gmDetWorkspace, DET_WORKSPACE_SIZE, 0);
+            if (cCoreNum > 1) {
+                InitOutput<float>(sumURGm, curN, initValue);
+            }
+            InitOutput<float>(sumUCGm, curM, initValue);
+            InitOutput<float>(sumURCGm, 1, initValue);
+        }
+    }
+    SyncAll();
 }
 
 template <typename T>
@@ -46,6 +58,8 @@ __aicore__ inline void ApplyCamePart3FP16<T>::ParseTilingData(const ApplyCamePar
     usedCoreNum = data.usedCoreNum;
     curN = data.curN;
     curM = data.curM;
+    tilingRNumCalc = data.rNumCalc;
+    tilingBaseN = data.baseN;
     rNumCalc = data.rNumCalc;
     cNumCalc = data.cNumCalc;
     baseN = data.baseN;
@@ -62,18 +76,22 @@ __aicore__ inline void ApplyCamePart3FP16<T>::ParseTilingData(const ApplyCamePar
 template <typename T>
 __aicore__ inline void ApplyCamePart3FP16<T>::ClearAcculateMatrix()
 {
+    if (baseM <= ONE_VECTOR_FP32_SIZE || baseM % FP16_ONE_BLOCK_COUNT == 0) {
+        return;
+    }
     constexpr float scalarValue = 0;
 
-    Duplicate(ubLocal2, scalarValue, bufSize);
-    Duplicate(ubLocal3, scalarValue, bufSize);
-    Duplicate(ubLocal4, scalarValue, bufSize);
+    Duplicate(ubLocal2, scalarValue, calcSize);
+    Duplicate(ubLocal3, scalarValue, calcSize);
+    Duplicate(ubLocal4, scalarValue, calcSize);
 }
 
 template <typename T>
 __aicore__ inline void ApplyCamePart3FP16<T>::InitBuffers(CamePart3InOut camePart3InOut, GM_ADDR workspace)
 {
     CalcGMOffset();
-    bufSize = Ceil(baseM, FP16_ONE_BLOCK_COUNT) * Ceil(baseN, FP16_ONE_BLOCK_COUNT);
+    bufSize = Ceil(baseM, FP32_ONE_BLOCK_COUNT) * baseN;
+    calcSize = Ceil(baseM, FP32_ONE_BLOCK_COUNT) * baseN;
     tailBlockStride = Ceil(baseM, FP32_ONE_BLOCK_COUNT) * sizeof(float) / CAME_ONE_BLOCK_SIZE;
     rowBlockStride = tailBlockStride < REP_BLOCK_STRIDE ? tailBlockStride : REP_BLOCK_STRIDE;
     InitInBuffers(camePart3InOut);
@@ -86,6 +104,12 @@ __aicore__ inline void ApplyCamePart3FP16<T>::InitBuffers(CamePart3InOut camePar
     ubLocal2 = calcBuf.Get<float>(BUFFER_SIZE * bufSize);
     ubLocal3 = ubLocal2[bufSize];
     ubLocal4 = ubLocal3[bufSize];
+    ubLocal5 = ubLocal4[bufSize];
+
+    const int64_t sumURBufferSize = Ceil(oriBaseN, FP32_ONE_BLOCK_COUNT);
+    pipe.InitBuffer(sumURBuf, 2 * sumURBufferSize * sizeof(float));
+    sumURHigh = sumURBuf.Get<float>(2 * sumURBufferSize);
+    sumURLow = sumURHigh[sumURBufferSize];
 
     pipe.InitBuffer(detBuf, DET_WORKSPACE_BYTE);
     ubDetWorkspace = detBuf.Get<int32_t>(DET_WORKSPACE_SIZE);
@@ -125,21 +149,23 @@ __aicore__ inline void ApplyCamePart3FP16<T>::InitOutBuffers(CamePart3InOut came
     GM_ADDR sumUC = camePart3InOut.sumUC;
     GM_ADDR sumURC = camePart3InOut.sumURC;
 
-    sumURGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumUR + nOffset * sizeof(float)), curN);
+    sumURGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumUR), curN);
     sumUCGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumUC + mOffset * sizeof(float)), curM);
     sumURCGm.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumURC), 1 * sizeof(float));
     mOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(mOut + blockOffset * sizeof(T)), curN * curM);
 
-    workspaceSumGradC_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace + DET_WORKSPACE_BYTE));
+    const int64_t rTailNumCalc = curN - tilingRNumCalc * (rCoreNum - 1);
+    const int64_t rBlockNum = DivCeil(tilingRNumCalc, tilingBaseN) * (rCoreNum - 1) +
+                              DivCeil(rTailNumCalc, tilingBaseN);
+    const int64_t workspaceCElements = rBlockNum * curM;
+    const int64_t workspaceRElements = usedCoreNum * Ceil(tilingRNumCalc, FP32_ONE_BLOCK_COUNT);
+    auto* workspaceRBase = reinterpret_cast<__gm__ float*>(workspace + DET_WORKSPACE_BYTE);
+    workspaceSumGradRHigh_.SetGlobalBuffer(workspaceRBase);
+    workspaceSumGradRLow_.SetGlobalBuffer(workspaceRBase + workspaceRElements);
+    auto* workspaceCBase = workspaceRBase + workspaceRElements * 2;
+    workspaceSumGradCHigh_.SetGlobalBuffer(workspaceCBase);
+    workspaceSumGradCLow_.SetGlobalBuffer(workspaceCBase + workspaceCElements);
     gmDetWorkspace.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(workspace));
-
-    float initValue = 0.0;
-    if (GetBlockIdx() == 0) {
-        InitOutput<float>(sumURGm, curN, initValue);
-        InitOutput<float>(sumUCGm, curM, initValue);
-        InitOutput<float>(sumURCGm, 1, initValue);
-    }
-    SyncAll();
 }
 
 template <typename T>
@@ -161,21 +187,23 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CalcGMOffset()
     auto mCoreIndx = GetBlockIdx() % temp0;
 
     // workspace gm offset
-    int64_t rOneCoreBaseNum = DivCeil(rNumCalc, baseN);
+    int64_t rOneCoreBaseNum = DivCeil(tilingRNumCalc, tilingBaseN);
 
     tilingBaseM = baseM;
     workspaceCOffset = nCoreIndx * rOneCoreBaseNum * curM + mCoreIndx * cNumCalc;
+    workspaceROffset = GetBlockIdx() * Ceil(tilingRNumCalc, FP32_ONE_BLOCK_COUNT);
 
     // gm nd format
     mOffset = mCoreIndx * cNumCalc;
     oriMOffset = mOffset;
-    nOffset = nCoreIndx * rNumCalc;
+    nOffset = nCoreIndx * tilingRNumCalc;
     oriNOffset = nOffset;
-    blockOffset = nCoreIndx * rNumCalc * curM + mCoreIndx * cNumCalc;
+    blockOffset = nCoreIndx * tilingRNumCalc * curM + mCoreIndx * cNumCalc;
 
     uint64_t gmUserM = curM - mCoreIndx * cNumCalc;
     cNumCalc = gmUserM < cNumCalc ? gmUserM : cNumCalc;
-    uint64_t gmUserN = curN - nCoreIndx * rNumCalc;
+    uint64_t gmUserN = curN - nCoreIndx * tilingRNumCalc;
+    isRTailCore = gmUserN < static_cast<uint64_t>(tilingRNumCalc);
     rNumCalc = gmUserN < rNumCalc ? gmUserN : rNumCalc;
 
     baseM = baseM < cNumCalc ? baseM : cNumCalc;
@@ -190,8 +218,8 @@ __aicore__ inline void ApplyCamePart3FP16<T>::Process()
     if (GetBlockIdx() < usedCoreNum) {
         ProcessNormal();
         ApplyCamePart3WaitMte3ToS();
-        SyncAll();
     }
+    SyncAll();
 }
 
 template <typename T>
@@ -212,6 +240,7 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CalcOneOffset(int64_t mIdx, int64_
     } else {
         baseN = oriBaseN;
     }
+    calcSize = Ceil(baseM, FP32_ONE_BLOCK_COUNT) * baseN;
 
     workspaceCOffsetBase = workspaceCOffset + nIdx * curM + mIdx * tilingBaseM;
 }
@@ -224,6 +253,7 @@ __aicore__ inline void ApplyCamePart3FP16<T>::ProcessNormal()
     SetFlag<HardEvent::S_V>(eventIdSToV);
     WaitFlag<HardEvent::S_V>(eventIdSToV);
     for (int64_t nIdx = 0; nIdx < nLoop; nIdx++) {
+        InitSumURAccumulator();
         for (int64_t mIdx = 0; mIdx < mLoop; mIdx++) {
             ProcessOneLoop(mIdx, nIdx);
         }
@@ -244,13 +274,6 @@ template <typename T>
 __aicore__ inline void ApplyCamePart3FP16<T>::CopyInU(LocalTensor<float>& ubLocal, GlobalTensor<float>& tensorGm)
 {
     LocalTensor<float> ubLocalIn = inQueue.AllocTensor<float>();
-    if (baseM % FP32_ONE_BLOCK_COUNT || baseN % FP32_ONE_BLOCK_COUNT) {
-        Duplicate<float>(ubLocalIn, 0.0, bufSize);
-        event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
-        SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-        WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-    }
-
     const int64_t srcStrideBytes = (curM - baseM) * sizeof(float);
     if (baseM % FP32_ONE_BLOCK_COUNT) {
         DataCopyPadParams padParamsLast;
@@ -289,7 +312,7 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CopyInU(LocalTensor<float>& ubLoca
     event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
-    Muls(ubLocal, ubLocalIn, static_cast<float>(1.0), bufSize);
+    Muls(ubLocal, ubLocalIn, static_cast<float>(1.0), calcSize);
     PipeBarrier<PIPE_V>();
     inQueue.FreeTensor(ubLocalIn);
 }
@@ -298,12 +321,6 @@ template <typename T>
 __aicore__ inline void ApplyCamePart3FP16<T>::CopyInM(LocalTensor<float>& ubLocal, GlobalTensor<T>& tensorGm)
 {
     LocalTensor<T> ubLocalIn = inQueue.AllocTensor<T>();
-    if (baseM % FP16_ONE_BLOCK_COUNT || baseN % FP16_ONE_BLOCK_COUNT) {
-        Duplicate<T>(ubLocalIn, 0.0, bufSize);
-        event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
-        SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-        WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
-    }
     const int64_t srcStrideBytes = (curM - baseM) * sizeof(T);
     if (baseM % FP16_ONE_BLOCK_COUNT) {
         DataCopyPadParams padParamsLast;
@@ -387,7 +404,7 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CastIn(LocalTensor<float>& ubLocal
         Cast(ubLocal[tailBlockOffset], ubLocalIn[tailBlockOffset], RoundMode::CAST_NONE, mask, repeatTimes,
              {1, 1, static_cast<uint8_t>(tailBlockStride), srcRepStride});
     } else {
-        Cast(ubLocal, ubLocalIn, RoundMode::CAST_NONE, bufSize);
+        Cast(ubLocal, ubLocalIn, RoundMode::CAST_NONE, calcSize);
     }
     PipeBarrier<PIPE_V>();
 }
@@ -400,12 +417,12 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CalcOutM(LocalTensor<float>& ubLoc
     event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
     SetFlag<HardEvent::S_V>(eventIdSToV);
     WaitFlag<HardEvent::S_V>(eventIdSToV);
-    Muls(ubLocal2, ubLocal2, max1, bufSize);
+    Muls(ubLocal2, ubLocal2, max1, calcSize);
     PipeBarrier<PIPE_V>();
-    Muls(ubLocal4, ubLocal2, beta2, bufSize);
-    Muls(ubLocal3, ubLocal3, beta1, bufSize);
+    Muls(ubLocal4, ubLocal2, beta2, calcSize);
+    Muls(ubLocal3, ubLocal3, beta1, calcSize);
     PipeBarrier<PIPE_V>();
-    Add(ubLocal3, ubLocal4, ubLocal3, bufSize);
+    Add(ubLocal3, ubLocal4, ubLocal3, calcSize);
     PipeBarrier<PIPE_V>();
 }
 
@@ -441,9 +458,10 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CalcSumUCTailBlock(LocalTensor<flo
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart3FP16<T>::CalcSumUC(LocalTensor<float>& ubLocal2, LocalTensor<float>& ubLocal4)
+__aicore__ inline void ApplyCamePart3FP16<T>::CalcSumUC(LocalTensor<float>& ubLocal2, LocalTensor<float>& ubLocal3,
+                                                        LocalTensor<float>& ubLocal4, LocalTensor<float>& ubLocal5)
 {
-    ApplyCamePart3CalcSumUC(ubLocal2, ubLocal3, ubLocal4, baseM, baseN, bufSize, tailBlockStride);
+    ApplyCamePart3CalcSumUC(ubLocal2, ubLocal3, ubLocal4, ubLocal5, baseM, baseN, calcSize, tailBlockStride);
 }
 
 template <typename T>
@@ -505,30 +523,103 @@ template <typename T>
 __aicore__ inline void ApplyCamePart3FP16<T>::CalcSumUR(LocalTensor<float>& ubLocal2, LocalTensor<float>& ubLocal3,
                                                         LocalTensor<float>& ubLocal4)
 {
-    int64_t tLoop = DivCeil(baseM, ONE_VECTOR_FP32_SIZE) - 2;
-    if (baseM % ONE_VECTOR_FP32_SIZE) {
-        tLoop -= 1;
+    if (baseM <= ONE_VECTOR_FP32_SIZE) {
+        CalcSumURReduce(ubLocal2, ubLocal4, static_cast<uint8_t>(rowBlockStride));
+        return;
     }
-    uint64_t mask = baseM < ONE_VECTOR_FP32_SIZE ? Ceil(baseM, FP32_ONE_BLOCK_COUNT) : ONE_VECTOR_FP32_SIZE;
-    int64_t repeatTimes = baseN;
-    int64_t overMaxRepeat = 0;
-    if (repeatTimes > MAX_REPEAT_TIME) {
-        repeatTimes = MAX_REPEAT_TIME;
-        overMaxRepeat = 1;
-    }
-    int64_t loopOffset = ONE_VECTOR_FP32_SIZE;
-    uint8_t src0RepStride = Ceil(baseM, FP32_ONE_BLOCK_COUNT) / (CAME_ONE_BLOCK_SIZE / sizeof(float));
-    if (baseM == 1) {
-        Muls(ubLocal3, ubLocal2, static_cast<float>(1.0), bufSize);
+    const int64_t rowWidth = Ceil(baseM, FP32_ONE_BLOCK_COUNT);
+    for (int64_t row = 0; row < baseN; ++row) {
+        ReduceSum(ubLocal4[row], ubLocal2[row * rowWidth], ubLocal3, baseM);
         PipeBarrier<PIPE_V>();
-        return CalcSumURReduce(ubLocal3, ubLocal4, static_cast<uint8_t>(rowBlockStride));
     }
+}
 
+template <typename T>
+__aicore__ inline void ApplyCamePart3FP16<T>::InitSumURAccumulator()
+{
+    const int64_t count = Ceil(oriBaseN, FP32_ONE_BLOCK_COUNT);
+    Duplicate(sumURHigh, static_cast<float>(0), count);
+    Duplicate(sumURLow, static_cast<float>(0), count);
     PipeBarrier<PIPE_V>();
-    if (baseM > ONE_VECTOR_FP32_SIZE) {
-        CalcSumURAddBlock(ubLocal2, repeatTimes);
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart3FP16<T>::AccumulateSumUR(LocalTensor<float>& partial, int64_t count)
+{
+    Add(ubLocal5, sumURHigh, partial, count);
+    PipeBarrier<PIPE_V>();
+    Sub(ubLocal3, ubLocal5, sumURHigh, count);
+    PipeBarrier<PIPE_V>();
+    Sub(partial, partial, ubLocal3, count);
+    Sub(ubLocal3, ubLocal5, ubLocal3, count);
+    PipeBarrier<PIPE_V>();
+    Sub(ubLocal3, sumURHigh, ubLocal3, count);
+    PipeBarrier<PIPE_V>();
+    Add(ubLocal3, ubLocal3, partial, count);
+    Add(sumURLow, sumURLow, ubLocal3, count);
+    Adds(sumURHigh, ubLocal5, static_cast<float>(0), count);
+    PipeBarrier<PIPE_V>();
+    ApplyCamePart3NormalizeCompensation(sumURHigh, sumURLow, ubLocal5, ubLocal3, count);
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart3FP16<T>::FinalizeSumUR(LocalTensor<float>& output, int64_t count)
+{
+    Add(output, sumURHigh, sumURLow, count);
+    PipeBarrier<PIPE_V>();
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart3FP16<T>::StoreSumURPartial(int64_t offset, int64_t count)
+{
+    if (cCoreNum == 1) {
+        Add(sumURHigh, sumURHigh, sumURLow, count);
+        PipeBarrier<PIPE_V>();
+        event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        DataCopyPad(sumURGm[oriNOffset + offset], sumURHigh,
+                    {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0});
+        event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+        WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+        return;
     }
-    CalcSumURReduce(ubLocal2, ubLocal4, src0RepStride);
+    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    DataCopyPad(workspaceSumGradRHigh_[workspaceROffset + offset], sumURHigh,
+                {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0});
+    DataCopyPad(workspaceSumGradRLow_[workspaceROffset + offset], sumURLow,
+                {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0});
+    event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+    WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart3FP16<T>::AccumulateSumURPrecise(LocalTensor<float>& input, int64_t count)
+{
+    const int64_t rowWidth = Ceil(baseM, FP32_ONE_BLOCK_COUNT);
+    for (int64_t row = 0; row < count; ++row) {
+        for (int64_t offset = 0; offset < baseM; offset += REDUCED_PRECISION_REDUCE_CHUNK) {
+            const int64_t chunk = baseM - offset < REDUCED_PRECISION_REDUCE_CHUNK ? baseM - offset :
+                                                                                    REDUCED_PRECISION_REDUCE_CHUNK;
+            ReduceSum(ubLocal3, input[row * rowWidth + offset], ubLocal4, chunk);
+            event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+            SetFlag<HardEvent::V_S>(eventIdVToS);
+            WaitFlag<HardEvent::V_S>(eventIdVToS);
+            float resultHigh = 0.0f;
+            float resultLow = 0.0f;
+            ApplyCamePart3CompensatedAdd(sumURHigh.GetValue(row), sumURLow.GetValue(row), ubLocal3.GetValue(0), 0.0f,
+                                         resultHigh, resultLow);
+            sumURHigh.SetValue(row, resultHigh);
+            sumURLow.SetValue(row, resultLow);
+        }
+    }
+    event_t eventIdSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+    SetFlag<HardEvent::S_V>(eventIdSToV);
+    WaitFlag<HardEvent::S_V>(eventIdSToV);
 }
 
 template <typename T>
@@ -566,16 +657,16 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CalcAddEps(LocalTensor<float>& ubL
         Adds(ubLocal2[tailBlockOffset], ubLocal2[tailBlockOffset], eps, mask, baseN,
              {1, 1, static_cast<uint8_t>(tailBlockStride), static_cast<uint8_t>(tailBlockStride)});
     } else {
-        Adds(ubLocal2, ubLocal2, eps, bufSize);
+        Adds(ubLocal2, ubLocal2, eps, calcSize);
     }
 }
 
 template <typename T>
 __aicore__ inline void ApplyCamePart3FP16<T>::ProcessOneLoop(int64_t mIdx, int64_t nIdx)
 {
+    CalcOneOffset(mIdx, nIdx);
     ClearAcculateMatrix();
     PipeBarrier<PIPE_V>();
-    CalcOneOffset(mIdx, nIdx);
 
     CopyInU(ubLocal2, uGm);
     CopyInM(ubLocal3, mInputGm);
@@ -584,18 +675,35 @@ __aicore__ inline void ApplyCamePart3FP16<T>::ProcessOneLoop(int64_t mIdx, int64
         CopyOutM(mOutputGm, ubLocal3, outMOffset);
     }
 
-    Sub(ubLocal2, ubLocal2, ubLocal3, bufSize);
+    Sub(ubLocal2, ubLocal2, ubLocal3, calcSize);
     PipeBarrier<PIPE_V>();
-    Mul(ubLocal2, ubLocal2, ubLocal2, bufSize);
+    Mul(ubLocal2, ubLocal2, ubLocal2, calcSize);
     PipeBarrier<PIPE_V>();
     CalcAddEps(ubLocal2);
     PipeBarrier<PIPE_V>();
 
-    CalcSumUC(ubLocal2, ubLocal4);
-    CopyUB2Workspace(workspaceSumGradC_, ubLocal4, workspaceCOffsetBase, baseM);
+    // CalcSumUC reuses ubLocal2 as compensated-reduction scratch. Complete
+    // the row reduction before that destructive reuse so sumUR always sees
+    // the original squared tile.
+    if (baseM <= ONE_VECTOR_FP32_SIZE) {
+        CalcSumUR(ubLocal2, ubLocal3, ubLocal4);
+        if (cCoreNum == 1 && mLoop == 1) {
+            Muls(sumURHigh, ubLocal4, static_cast<float>(1.0), baseN);
+            Duplicate(sumURLow, static_cast<float>(0.0), baseN);
+            PipeBarrier<PIPE_V>();
+        } else {
+            AccumulateSumUR(ubLocal4, baseN);
+        }
+    } else {
+        AccumulateSumURPrecise(ubLocal2, baseN);
+    }
 
-    CalcSumUR(ubLocal2, ubLocal3, ubLocal4);
-    CopyUB2Out(sumURGm, ubLocal4, nOffset, baseN);
+    CalcSumUC(ubLocal2, ubLocal3, ubLocal4, ubLocal5);
+    CopyUB2Workspace(workspaceSumGradCHigh_, ubLocal3, workspaceCOffsetBase, baseM);
+    CopyUB2Workspace(workspaceSumGradCLow_, ubLocal4, workspaceCOffsetBase, baseM);
+    if (mIdx == mLoop - 1) {
+        StoreSumURPartial(nIdx * oriBaseN, baseN);
+    }
 
     event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
     SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
@@ -781,18 +889,23 @@ __aicore__ inline void ApplyCamePart3FP16<T>::CopyOutM(GlobalTensor<T>& outGloba
         Cast(tmp[tailBlockOffset], ubLocal[tailBlockOffset], RoundMode::CAST_RINT, mask, repeatTimes,
              {1, 1, dstRepStride, static_cast<uint8_t>(tailBlockStride)});
     } else {
-        Cast(tmp, ubLocal, RoundMode::CAST_RINT, bufSize);
+        Cast(tmp, ubLocal, RoundMode::CAST_RINT, calcSize);
     }
     outQueue.EnQue(tmp);
     tmp = outQueue.DeQue<T>();
 
     if (baseM % FP16_ONE_BLOCK_COUNT != 0) {
-        const int64_t sourceRowStride = Ceil(baseM, FP16_ONE_BLOCK_COUNT);
+        LoopModeParams loopParams;
+        loopParams.loop1Size = static_cast<uint32_t>(baseN);
+        loopParams.loop2Size = 1;
+        loopParams.loop1SrcStride = Ceil(baseM, FP16_ONE_BLOCK_COUNT) * sizeof(T);
+        loopParams.loop1DstStride = curM * sizeof(T);
+        loopParams.loop2SrcStride = 0;
+        loopParams.loop2DstStride = 0;
+        SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(baseM * sizeof(T)), 0, 0, 0};
-        for (int64_t row = 0; row < baseN; ++row) {
-            DataCopyPad<T, PaddingMode::Compact>(outGlobal[offset + row * curM], tmp[row * sourceRowStride],
-                                                 copyParams);
-        }
+        DataCopyPad<T, PaddingMode::Compact>(outGlobal[offset], tmp, copyParams);
+        ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
         event_t eventMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventMte3ToMte2);
         WaitFlag<HardEvent::MTE3_MTE2>(eventMte3ToMte2);

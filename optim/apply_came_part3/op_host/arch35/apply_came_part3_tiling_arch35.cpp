@@ -25,8 +25,11 @@ constexpr int64_t kFp32PerVectorBlock = kVectorBlockBytes / kFp32Bytes;
 constexpr int64_t kFp32PerDataBlock = 32 / kFp32Bytes;
 constexpr int64_t kMaxRepeatStrideBlocks = 255;
 constexpr int64_t kMaxRepeatStrideElements = kMaxRepeatStrideBlocks * kFp32PerDataBlock;
-constexpr int64_t kDetWorkspaceBytes = 1568;
+constexpr int64_t kDetWorkspaceBytes = (APPLY_CAME_PART3_MAX_SYNC_CORE_COUNT + 1) * kFp32PerDataBlock * sizeof(int32_t);
+constexpr uint64_t kVectorUbBytes = 248 * 1024;
 constexpr int64_t kGlobalShapeIndex = 6;
+constexpr int64_t kTileBufferCount = 6;
+constexpr int64_t kRowAccumulatorBufferCount = 2;
 
 int64_t CeilDiv(int64_t value, int64_t factor)
 {
@@ -44,6 +47,8 @@ int64_t CeilAlign(int64_t value, int64_t factor)
     }
     return quotient * factor;
 }
+
+int64_t FloorAlign(int64_t value, int64_t factor) { return factor <= 0 ? value : value / factor * factor; }
 
 bool IsOneElementTensorShape(const gert::Shape& shape) { return shape.GetShapeSize() == 1; }
 
@@ -133,7 +138,8 @@ ge::graphStatus ComputeTileShape(const gert::TilingContext* context, ApplyCamePa
     const int64_t coreNum = static_cast<int64_t>(platform.GetCoreNumAiv());
     uint64_t ubSize = 0;
     platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_TILING_CHECK(coreNum <= 0 || ubSize <= static_cast<uint64_t>(kDetWorkspaceBytes),
+    OP_TILING_CHECK(coreNum <= 0 || coreNum > APPLY_CAME_PART3_MAX_SYNC_CORE_COUNT ||
+                        ubSize <= static_cast<uint64_t>(kDetWorkspaceBytes),
                     VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "invalid Ascend950 platform resources"),
                     return ge::GRAPH_FAILED);
 
@@ -146,44 +152,45 @@ ge::graphStatus ComputeTileShape(const gert::TilingContext* context, ApplyCamePa
     data.cNumCalc = std::min(data.cNumCalc, data.curM);
     data.cCoreNum = CeilDiv(data.curM, data.cNumCalc);
     const int64_t bytesPerElement = mDesc->GetDataType() == ge::DT_FLOAT ? 4 : 2;
-    // Only the first-moment path writes m_out. If a row is not cache-line
-    // aligned, adjacent column cores can update different logical columns in
-    // the same physical GM cache line through DataCopyPad. Keep each written
-    // row on one column core and retain parallelism along N. The other path
-    // preserves the REF input in place and can keep column parallelism.
     if (data.useFirstMoment != 0 && data.curM * bytesPerElement % kGmCacheLineBytes != 0) {
         data.cCoreNum = 1;
         data.cNumCalc = data.curM;
     }
+    // Maximum simultaneously alive tile buffers: one input queue, one output
+    // queue and four FP32 calculation planes. Reduced-precision queue tensors
+    // need no more bytes than the corresponding FP32-aligned tile, so all six
+    // buffers use the FP32 data-block alignment. The high/low row accumulators
+    // are independent of baseM. Subtract fixed storage first, then derive the
+    // actual tile dimensions directly from the remaining UB capacity.
+    const uint64_t vectorUbSize = std::min(ubSize, kVectorUbBytes);
+    const int64_t usableUbElements = static_cast<int64_t>(vectorUbSize - static_cast<uint64_t>(kDetWorkspaceBytes)) /
+                                     kFp32Bytes;
+    constexpr int64_t tileAlignment = kFp32PerDataBlock;
     data.baseN = data.rNumCalc;
-    data.baseM = data.cNumCalc;
-    // Kernel UB layout is inQueue + outQueue + three FP32 calculation planes,
-    // plus an unconditional deterministic helper buffer. Derive the tile from
-    // the complete allocation instead of accepting an overcommitted tile.
-    const int64_t maxUbElements = static_cast<int64_t>(ubSize - static_cast<uint64_t>(kDetWorkspaceBytes)) /
-                                  (5 * kFp32Bytes);
-    const int64_t tileAlignment = bytesPerElement == 4 ? 8 : 16;
-    auto tileElements = [&data, tileAlignment]() {
-        return CeilAlign(data.baseM, tileAlignment) * CeilAlign(data.baseN, tileAlignment);
-    };
-    while (data.baseM > kMaxRepeatStrideElements || tileElements() > maxUbElements) {
-        // Several vector APIs encode repeat stride in uint8_t blocks. Cap baseM
-        // at 255 FP32 blocks even on future platforms with a larger UB.
-        if (data.baseM > kMaxRepeatStrideElements || (data.baseM >= data.baseN && data.baseM > kFp32PerVectorBlock)) {
-            data.baseM = CeilAlign(CeilDiv(data.baseM, 2), kFp32PerVectorBlock);
-        } else if (data.baseN > kFp32PerVectorBlock) {
-            data.baseN = CeilAlign(CeilDiv(data.baseN, 2), kFp32PerVectorBlock);
-        } else {
-            break;
+    data.baseM = 0;
+    while (data.baseN > 0) {
+        const int64_t alignedN = CeilAlign(data.baseN, tileAlignment);
+        const int64_t rowAccumulatorElements = kRowAccumulatorBufferCount * CeilAlign(data.baseN, kFp32PerDataBlock);
+        const int64_t tileBudgetElements = usableUbElements - rowAccumulatorElements;
+        if (tileBudgetElements > 0) {
+            const int64_t maxTileElements = tileBudgetElements / kTileBufferCount;
+            const int64_t maxAlignedM = FloorAlign(maxTileElements / alignedN, tileAlignment);
+            const int64_t logicalMCap = std::min(data.cNumCalc, kMaxRepeatStrideElements);
+            data.baseM = std::min(logicalMCap, maxAlignedM);
+            if (data.baseM > 0) {
+                break;
+            }
         }
+        data.baseN = FloorAlign(CeilDiv(data.baseN, 2), tileAlignment);
     }
-    OP_TILING_CHECK(data.baseM > kMaxRepeatStrideElements || tileElements() > maxUbElements,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
-                                                    "ApplyCamePart3 tile exceeds vector stride or UB limits"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        data.baseM <= 0 || data.baseN <= 0,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 has no valid tile within UB limits"),
+        return ge::GRAPH_FAILED);
     data.usedCoreNum = data.rCoreNum * data.cCoreNum;
-    OP_TILING_CHECK(data.usedCoreNum <= 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart3 used core count is zero"),
+    OP_TILING_CHECK(data.usedCoreNum <= 0 || data.usedCoreNum > APPLY_CAME_PART3_MAX_SYNC_CORE_COUNT,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
+                                                    "ApplyCamePart3 used core count exceeds synchronization capacity"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -217,7 +224,19 @@ bool ComputeWorkspaceSize(const ApplyCamePart3TilingData& data, size_t systemWor
         return false;
     }
     size_t userBytes = 0;
-    if (!CheckedMultiply(workspaceCElements, sizeof(float), userBytes) ||
+    size_t workspaceRElements = 0;
+    if (!CheckedMultiply(static_cast<size_t>(data.usedCoreNum),
+                         static_cast<size_t>(CeilAlign(data.rNumCalc, kFp32PerDataBlock)), workspaceRElements)) {
+        return false;
+    }
+    size_t workspaceRBytes = 0;
+    if (!CheckedMultiply(workspaceRElements, 2 * sizeof(float), workspaceRBytes)) {
+        return false;
+    }
+    size_t workspaceCCompensatedElements = 0;
+    if (!CheckedMultiply(workspaceCElements, 2, workspaceCCompensatedElements) ||
+        !CheckedMultiply(workspaceCCompensatedElements, sizeof(float), userBytes) ||
+        !CheckedAdd(userBytes, workspaceRBytes, userBytes) ||
         !CheckedAdd(userBytes, static_cast<size_t>(kDetWorkspaceBytes), userBytes) ||
         !CheckedAdd(systemWorkspaceSize, userBytes, workspaceSize)) {
         return false;

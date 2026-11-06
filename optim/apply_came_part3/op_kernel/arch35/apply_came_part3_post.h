@@ -30,7 +30,24 @@ private:
     __aicore__ inline void ReduceAdd(LocalTensor<float> accuUb, int64_t n, int64_t m);
     __aicore__ inline void CalcSumC(LocalTensor<float> inputLocal, int64_t gmOffsets, int64_t idx, int64_t preN,
                                     int64_t calcN, int64_t calcM);
-    __aicore__ inline void CalcSumURC();
+    __aicore__ inline void CalcSumCLarge(LocalTensor<float> inputLocal, int64_t gmOffsets, int64_t idx, int64_t preN,
+                                         int64_t calcN, int64_t calcM);
+    __aicore__ inline void CalcSumCAligned(LocalTensor<float> inputLocal, int64_t gmOffsets, int64_t idx, int64_t preN,
+                                           int64_t calcN, int64_t calcM);
+    __aicore__ inline void ReduceSumUR();
+    __aicore__ inline void ReduceSumUC();
+    __aicore__ inline void MergeCompensated(LocalTensor<float> high, LocalTensor<float> low,
+                                            LocalTensor<float> highRight, LocalTensor<float> lowRight,
+                                            LocalTensor<float> sumTmp, LocalTensor<float> recoveredTmp, int64_t count);
+    __aicore__ inline void ReduceSumURChunk(LocalTensor<float> high, LocalTensor<float> low,
+                                            LocalTensor<float> highRight, LocalTensor<float> lowRight,
+                                            LocalTensor<float> sumTmp, LocalTensor<float> recoveredTmp, int64_t rowCore,
+                                            int64_t outputBase, int64_t offset, int64_t count);
+    __aicore__ inline void ReduceSumUCSingleColumn(LocalTensor<float> high, LocalTensor<float> low);
+    __aicore__ inline void ReduceSumUCChunk(LocalTensor<float> high, LocalTensor<float> low,
+                                            LocalTensor<float> highRight, LocalTensor<float> lowRight,
+                                            LocalTensor<float> sumTmp, LocalTensor<float> recoveredTmp, int64_t offset,
+                                            int64_t count, float& totalHigh, float& totalLow);
     __aicore__ inline int64_t DivCeil(int64_t a, int64_t b);
     __aicore__ inline int64_t Ceil(int64_t a, int64_t b);
     __aicore__ inline void L0ReduceSum(LocalTensor<float> dst, LocalTensor<float> src, LocalTensor<float> worklocal,
@@ -48,7 +65,10 @@ private:
     GlobalTensor<float> gmSumGradC_;
     GlobalTensor<float> gmSumGradRC_;
 
-    GlobalTensor<float> workspaceSumGradC_;
+    GlobalTensor<float> workspaceSumGradCHigh_;
+    GlobalTensor<float> workspaceSumGradCLow_;
+    GlobalTensor<float> workspaceSumGradRHigh_;
+    GlobalTensor<float> workspaceSumGradRLow_;
 
     // multi-core sync
     GlobalTensor<int32_t> syncGlobal_;
@@ -71,6 +91,7 @@ private:
 
     // part1 params
     int64_t baseCSize{0};
+    int64_t workspaceRStride{0};
     int64_t mLoopNumCore_{0};
 
     const int64_t ONCE_HANDLE_NUM64{64};
@@ -147,7 +168,16 @@ __aicore__ inline void ApplyCamePart3Post<T>::Init(CamePart3InOut camePart3InOut
     baseCSize = rBlockNum;
 
     // workspace地址
-    workspaceSumGradC_.SetGlobalBuffer((__gm__ float*)workspace + DET_WORKSPACE_SIZE);
+    const int64_t workspaceCElements = rBlockNum * curM;
+    const int64_t workspaceRElements = usedCoreNum_ * Ceil(rNumCalc_, FP32_ONE_BLOCK_COUNT);
+    auto* workspaceRBase = (__gm__ float*)workspace + DET_WORKSPACE_SIZE;
+    workspaceSumGradRHigh_.SetGlobalBuffer(workspaceRBase);
+    workspaceSumGradRLow_.SetGlobalBuffer(workspaceRBase + workspaceRElements);
+    auto* workspaceCBase = workspaceRBase + workspaceRElements * 2;
+    workspaceSumGradCHigh_.SetGlobalBuffer(workspaceCBase);
+    workspaceSumGradCLow_.SetGlobalBuffer(workspaceCBase + workspaceCElements);
+    workspaceRStride = Ceil(rNumCalc_, FP32_ONE_BLOCK_COUNT);
+    syncGlobal_.SetGlobalBuffer((__gm__ int32_t*)workspace);
 
     pipe.InitBuffer(inputBuf, ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64 * sizeof(float));
 }
@@ -217,175 +247,215 @@ __aicore__ inline void ApplyCamePart3Post<T>::L0ReduceSum(LocalTensor<float> dst
 template <typename T>
 __aicore__ inline void ApplyCamePart3Post<T>::Process()
 {
-    // The producer phase writes partial C/RC values from every active block.
-    // Keep the post phase behind a device-wide barrier so dynamic and binary
-    // launches observe the same completed workspace contents.
     SyncAll();
     if (GetBlockIdx() != 0) {
         return;
     }
 
-    mLoopNumCore_ = DivCeil(curM, ONCE_HANDLE_NUM64);
-    uint64_t core_loop = DivCeil(mLoopNumCore_, ONCE_HANDLE_NUM512 - 1);
-    // Use ceiling division so every workspace chunk fits the input buffer.
-    uint64_t pre_core_m = DivCeil(mLoopNumCore_, core_loop) * ONCE_HANDLE_NUM64;
-    uint64_t gmOffsets = 0;
-    uint64_t base_m = 0;
-
-    for (int64_t core_loop_idx = 0; core_loop_idx < core_loop - 1; core_loop_idx++) {
-        gmOffsets = core_loop_idx * pre_core_m;
-        Pre_Core_Compute(gmOffsets, pre_core_m);
+    if (cCoreNum_ > 1) {
+        ReduceSumUR();
     }
-    gmOffsets = (core_loop - 1) * pre_core_m;
-    base_m = curM - pre_core_m * (core_loop - 1);
-    Pre_Core_Compute(gmOffsets, base_m);
-    CalcSumURC();
+    ReduceSumUC();
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart3Post<T>::Pre_Core_Compute(uint64_t gmOffsets, uint64_t cal_m)
+__aicore__ inline void ApplyCamePart3Post<T>::MergeCompensated(LocalTensor<float> high, LocalTensor<float> low,
+                                                               LocalTensor<float> highRight,
+                                                               LocalTensor<float> lowRight, LocalTensor<float> sumTmp,
+                                                               LocalTensor<float> recoveredTmp, int64_t count)
 {
-    uint64_t pre_loop_n = 1;
-    while (pre_loop_n < baseCSize && pre_loop_n < MAX_DATA_COPY_BLOCK_COUNT) {
-        pre_loop_n = pre_loop_n << 1;
-        if (pre_loop_n * Ceil(cal_m, CAME_ONE_BLOCK_SIZE_FP32) > ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64 ||
-            pre_loop_n >= MAX_DATA_COPY_BLOCK_COUNT) {
-            pre_loop_n = pre_loop_n >> 1;
-            break;
-        }
-        if (pre_loop_n >= baseCSize) {
-            break;
-        }
+    Add(sumTmp, high, highRight, count);
+    PipeBarrier<PIPE_V>();
+    Sub(recoveredTmp, sumTmp, high, count);
+    PipeBarrier<PIPE_V>();
+    Sub(highRight, highRight, recoveredTmp, count);
+    Sub(recoveredTmp, sumTmp, recoveredTmp, count);
+    PipeBarrier<PIPE_V>();
+    Sub(high, high, recoveredTmp, count);
+    PipeBarrier<PIPE_V>();
+    Add(high, high, highRight, count);
+    Add(low, low, lowRight, count);
+    PipeBarrier<PIPE_V>();
+    Add(low, low, high, count);
+    Adds(high, sumTmp, static_cast<float>(0), count);
+    PipeBarrier<PIPE_V>();
+    ApplyCamePart3NormalizeCompensation(high, low, highRight, recoveredTmp, count);
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart3Post<T>::ReduceSumURChunk(LocalTensor<float> high, LocalTensor<float> low,
+                                                               LocalTensor<float> highRight,
+                                                               LocalTensor<float> lowRight, LocalTensor<float> sumTmp,
+                                                               LocalTensor<float> recoveredTmp, int64_t rowCore,
+                                                               int64_t outputBase, int64_t offset, int64_t count)
+{
+    const int64_t alignedCount = Ceil(count, FP32_ONE_BLOCK_COUNT);
+    const uint8_t rightPadding = static_cast<uint8_t>(alignedCount - count);
+    const int64_t firstBlockOffset = rowCore * cCoreNum_ * workspaceRStride + offset;
+    DataCopyPad(high, workspaceSumGradRHigh_[firstBlockOffset],
+                {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0}, {true, 0, rightPadding, 0});
+    DataCopyPad(low, workspaceSumGradRLow_[firstBlockOffset],
+                {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0}, {true, 0, rightPadding, 0});
+    event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    for (int64_t core = 1; core < cCoreNum_; ++core) {
+        const int64_t blockOffset = (rowCore * cCoreNum_ + core) * workspaceRStride + offset;
+        DataCopyPad(highRight, workspaceSumGradRHigh_[blockOffset],
+                    {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0}, {true, 0, rightPadding, 0});
+        DataCopyPad(lowRight, workspaceSumGradRLow_[blockOffset],
+                    {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0}, {true, 0, rightPadding, 0});
+        eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        MergeCompensated(high, low, highRight, lowRight, sumTmp, recoveredTmp, alignedCount);
+        event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+        SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+        WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
     }
-    uint64_t loop_time = DivCeil(baseCSize, pre_loop_n);
-    uint64_t last_loop_n = baseCSize - (loop_time - 1) * pre_loop_n;
+    Add(high, high, low, alignedCount);
+    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    DataCopyPad(gmSumGradR_[outputBase + offset], high, {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0});
+    event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+    SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+    WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart3Post<T>::ReduceSumUR()
+{
+    constexpr int64_t reduceChunk = 4096;
     LocalTensor<float> inputLocal = inputBuf.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
-
-    for (int64_t i = 0; i < loop_time - 1; i++) {
-        CalcSumC(inputLocal, gmOffsets, i, pre_loop_n, pre_loop_n, cal_m);
-
-        event_t eventMte3toMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-        SetFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
-        WaitFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
-    }
-
-    CalcSumC(inputLocal, gmOffsets, loop_time - 1, pre_loop_n, last_loop_n, cal_m);
-
-    event_t eventMte3toMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-    SetFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
-    WaitFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
-}
-
-template <typename T>
-__aicore__ inline void ApplyCamePart3Post<T>::CalcSumC(LocalTensor<float> inputLocal, int64_t gmOffsets, int64_t idx,
-                                                       int64_t preN, int64_t calcN, int64_t calcM)
-{
-    /*
-    workspace -> UB -> reduceAdd -> GM
-    */
-    int64_t calcSize = calcM * sizeof(float);
-    if (calcSize > MAX_BLOCK_LEN) {
-        int64_t loop = calcM / MAX_BLOCK_LEN_SIZE_FP32;
-        int64_t tail = calcM - loop * MAX_BLOCK_LEN_SIZE_FP32;
-        // Each workspace C row spans the complete logical M dimension.  The
-        // post kernel processes one M tile at a time, so the row stride is
-        // curM rather than the tile width calcM.
-        for (int64_t row = 0; row < calcN; ++row) {
-            const int64_t rowOffset = (idx * preN + row) * curM + gmOffsets;
-            for (int32_t i = 0; i < loop; i++) {
-                DataCopy(inputLocal[i * MAX_BLOCK_LEN_SIZE_FP32],
-                         workspaceSumGradC_[rowOffset + i * MAX_BLOCK_LEN_SIZE_FP32], MAX_BLOCK_LEN_SIZE_FP32);
-            }
-            if (tail > 0) {
-                DataCopyPad(inputLocal[loop * MAX_BLOCK_LEN_SIZE_FP32],
-                            workspaceSumGradC_[rowOffset + loop * MAX_BLOCK_LEN_SIZE_FP32],
-                            {static_cast<uint16_t>(1), static_cast<uint16_t>(tail * sizeof(float)), 0, 0},
-                            {false, 0, 0, 0});
-            }
-            event_t eventMte2toMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
-            SetFlag<HardEvent::MTE2_MTE3>(eventMte2toMte3);
-            WaitFlag<HardEvent::MTE2_MTE3>(eventMte2toMte3);
-            event_t eventMte2toS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-            SetFlag<HardEvent::MTE2_S>(eventMte2toS);
-            WaitFlag<HardEvent::MTE2_S>(eventMte2toS);
-            StoreAccumulated(inputLocal, gmOffsets, calcM);
-            event_t eventMte3toMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-            SetFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
-            WaitFlag<HardEvent::MTE3_MTE2>(eventMte3toMte2);
-        }
-    } else {
-        const int64_t alignedM = Ceil(calcM, CAME_ONE_BLOCK_SIZE_FP32);
-        const uint8_t rightPadding = alignedM - calcM;
-        // Vector reduction needs an aligned row stride.  Copy each logical row
-        // from its full-M workspace row into its padded UB slot explicitly.
-        for (int64_t row = 0; row < calcN; ++row) {
-            const int64_t rowOffset = (idx * preN + row) * curM + gmOffsets;
-            DataCopyPad(inputLocal[row * alignedM], workspaceSumGradC_[rowOffset],
-                        {1, static_cast<uint16_t>(calcSize), 0, 0}, {true, 0, rightPadding, 0});
-        }
-
-        event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventMte2V);
-        WaitFlag<HardEvent::MTE2_V>(eventMte2V);
-
-        ReduceAdd(inputLocal, calcN, alignedM);
-
-        event_t eventV2Mte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        SetFlag<HardEvent::V_MTE3>(eventV2Mte3);
-        WaitFlag<HardEvent::V_MTE3>(eventV2Mte3);
-        event_t eventV2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(eventV2S);
-        WaitFlag<HardEvent::V_S>(eventV2S);
-
-        StoreAccumulated(inputLocal, gmOffsets, calcM);
-    }
-}
-
-template <typename T>
-__aicore__ inline void ApplyCamePart3Post<T>::CalcSumURC()
-{
-    LocalTensor<float> inputLocal = inputBuf.Get<float>(MAX_BUF_SIZE * 2);
     LocalTensor<float> high = inputLocal;
-    LocalTensor<float> low = inputLocal[COMPENSATED_REDUCE_SIZE];
-    LocalTensor<float> sumTmp = inputLocal[COMPENSATED_REDUCE_SIZE * 2];
-    LocalTensor<float> recoveredTmp = inputLocal[COMPENSATED_REDUCE_SIZE * 3];
+    LocalTensor<float> low = high[reduceChunk];
+    LocalTensor<float> highRight = low[reduceChunk];
+    LocalTensor<float> lowRight = highRight[reduceChunk];
+    LocalTensor<float> sumTmp = lowRight[reduceChunk];
+    LocalTensor<float> recoveredTmp = sumTmp[reduceChunk];
+    for (int64_t rowCore = 0; rowCore < rCoreNum_; ++rowCore) {
+        const int64_t outputBase = rowCore * rNumCalc_;
+        const int64_t rowCount = curN - outputBase < rNumCalc_ ? curN - outputBase : rNumCalc_;
+        for (int64_t offset = 0; offset < rowCount; offset += reduceChunk) {
+            const int64_t count = rowCount - offset < reduceChunk ? rowCount - offset : reduceChunk;
+            ReduceSumURChunk(high, low, highRight, lowRight, sumTmp, recoveredTmp, rowCore, outputBase, offset, count);
+        }
+    }
+}
+
+template <typename T>
+__aicore__ inline void ApplyCamePart3Post<T>::ReduceSumUCSingleColumn(LocalTensor<float> high, LocalTensor<float> low)
+{
+    constexpr int64_t reduceChunk = 4096;
     float totalHigh = 0.0f;
     float totalLow = 0.0f;
-
-    const uint64_t loopTime = DivCeil(curM, COMPENSATED_REDUCE_SIZE);
-    for (uint64_t loopIndex = 0; loopIndex < loopTime; ++loopIndex) {
-        const uint64_t offset = loopIndex * COMPENSATED_REDUCE_SIZE;
-        const uint64_t count = curM - offset < COMPENSATED_REDUCE_SIZE ? curM - offset : COMPENSATED_REDUCE_SIZE;
-        const uint64_t alignedCount = Ceil(count, FP32_ONE_BLOCK_COUNT);
-        const uint8_t rightPadding = alignedCount - count;
-        DataCopyPad(high, gmSumGradC_[offset], {1, static_cast<uint16_t>(count * sizeof(float)), 0, 0},
-                    {true, 0, rightPadding, 0});
-        Duplicate(low, static_cast<float>(0), alignedCount);
-
-        event_t eventMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventMte2V);
-        WaitFlag<HardEvent::MTE2_V>(eventMte2V);
-        PipeBarrier<PIPE_V>();
-        ApplyCamePart3CompensatedReduce(high, low, sumTmp, recoveredTmp, count);
-
-        const float chunkHigh = high.GetValue(0);
-        const float chunkLow = low.GetValue(0);
-        float nextHigh = 0.0f;
-        float nextLow = 0.0f;
-        ApplyCamePart3CompensatedAdd(totalHigh, totalLow, chunkHigh, chunkLow, nextHigh, nextLow);
-        totalHigh = nextHigh;
-        totalLow = nextLow;
+    for (int64_t rowBase = 0; rowBase < baseCSize; rowBase += reduceChunk) {
+        const int64_t count = baseCSize - rowBase < reduceChunk ? baseCSize - rowBase : reduceChunk;
+        DataCopyPad(high, workspaceSumGradCHigh_[rowBase], {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0},
+                    {false, 0, 0, 0});
+        DataCopyPad(low, workspaceSumGradCLow_[rowBase], {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0},
+                    {false, 0, 0, 0});
+        event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+        SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+        WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+        for (int64_t row = 0; row < count; ++row) {
+            float nextHigh = 0.0f;
+            float nextLow = 0.0f;
+            ApplyCamePart3CompensatedAdd(totalHigh, totalLow, high.GetValue(row), low.GetValue(row), nextHigh, nextLow);
+            totalHigh = nextHigh;
+            totalLow = nextLow;
+        }
     }
-    gmSumGradRC_.SetValue(0, totalHigh + totalLow);
-    event_t eventSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-    SetFlag<HardEvent::S_MTE3>(eventSToMte3);
-    WaitFlag<HardEvent::S_MTE3>(eventSToMte3);
+    const float total = totalHigh + totalLow;
+    gmSumGradC_.SetValue(0, total);
+    gmSumGradRC_.SetValue(0, total);
+    event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+    SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+    WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
 }
 
 template <typename T>
-__aicore__ inline void ApplyCamePart3Post<T>::ReduceAdd(LocalTensor<float> accuUb, int64_t n, int64_t m)
+__aicore__ inline void ApplyCamePart3Post<T>::ReduceSumUCChunk(LocalTensor<float> high, LocalTensor<float> low,
+                                                               LocalTensor<float> highRight,
+                                                               LocalTensor<float> lowRight, LocalTensor<float> sumTmp,
+                                                               LocalTensor<float> recoveredTmp, int64_t offset,
+                                                               int64_t count, float& totalHigh, float& totalLow)
 {
-    ApplyCamePart3ReduceRows(accuUb, n, m);
+    const int64_t alignedCount = Ceil(count, FP32_ONE_BLOCK_COUNT);
+    const uint8_t rightPadding = static_cast<uint8_t>(alignedCount - count);
+    DataCopyPad(high, workspaceSumGradCHigh_[offset], {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0},
+                {true, 0, rightPadding, 0});
+    DataCopyPad(low, workspaceSumGradCLow_[offset], {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0},
+                {true, 0, rightPadding, 0});
+    event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+    for (int64_t row = 1; row < baseCSize; ++row) {
+        const int64_t workspaceOffset = row * curM + offset;
+        DataCopyPad(highRight, workspaceSumGradCHigh_[workspaceOffset],
+                    {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0}, {true, 0, rightPadding, 0});
+        DataCopyPad(lowRight, workspaceSumGradCLow_[workspaceOffset],
+                    {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0}, {true, 0, rightPadding, 0});
+        eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
+        MergeCompensated(high, low, highRight, lowRight, sumTmp, recoveredTmp, alignedCount);
+        event_t eventIdVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+        SetFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+        WaitFlag<HardEvent::V_MTE2>(eventIdVToMte2);
+    }
+    Add(highRight, high, low, alignedCount);
+    event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+    DataCopyPad(gmSumGradC_[offset], highRight, {1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0});
+    event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+    SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+    WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
+    Duplicate(low, static_cast<float>(0), alignedCount);
+    PipeBarrier<PIPE_V>();
+    ApplyCamePart3CompensatedReduce(highRight, low, sumTmp, recoveredTmp, count);
+    float nextHigh = 0.0f;
+    float nextLow = 0.0f;
+    ApplyCamePart3CompensatedAdd(totalHigh, totalLow, highRight.GetValue(0), low.GetValue(0), nextHigh, nextLow);
+    totalHigh = nextHigh;
+    totalLow = nextLow;
+    event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
+    SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+    WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+    event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+    SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
+    WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
 }
+
+template <typename T>
+__aicore__ inline void ApplyCamePart3Post<T>::ReduceSumUC()
+{
+    constexpr int64_t reduceChunk = 4096;
+    LocalTensor<float> inputLocal = inputBuf.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
+    LocalTensor<float> high = inputLocal;
+    LocalTensor<float> highRight = high[reduceChunk];
+    LocalTensor<float> low = highRight[reduceChunk];
+    LocalTensor<float> lowRight = low[reduceChunk];
+    LocalTensor<float> sumTmp = lowRight[reduceChunk];
+    LocalTensor<float> recoveredTmp = sumTmp[reduceChunk];
+    if (curM == 1) {
+        ReduceSumUCSingleColumn(high, low);
+        return;
+    }
+    float totalHigh = 0.0f;
+    float totalLow = 0.0f;
+    for (int64_t offset = 0; offset < curM; offset += reduceChunk) {
+        const int64_t count = curM - offset < reduceChunk ? curM - offset : reduceChunk;
+        ReduceSumUCChunk(high, low, highRight, lowRight, sumTmp, recoveredTmp, offset, count, totalHigh, totalLow);
+    }
+    gmSumGradRC_.SetValue(0, totalHigh + totalLow);
+    event_t eventIdSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+    SetFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+    WaitFlag<HardEvent::S_MTE3>(eventIdSToMte3);
+}
+
+#include "apply_came_part3_post_calc.h"
 
 #endif // _ASCENDC_APPLY_CAME_PART3_POST_H_
