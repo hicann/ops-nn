@@ -76,9 +76,18 @@ static const std::initializer_list<op::DataType> MASK_DTYPE_SUPPORT_LIST = {op::
 
 static bool CheckNotNull(const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source)
 {
-    OP_CHECK_NULL(selfRef, return false);
-    OP_CHECK_NULL(mask, return false);
-    OP_CHECK_NULL(source, return false);
+    if (selfRef == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(kOpName, "selfRef");
+        return false;
+    }
+    if (mask == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(kOpName, "mask");
+        return false;
+    }
+    if (source == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(kOpName, "source");
+        return false;
+    }
 
     return true;
 }
@@ -170,13 +179,19 @@ static bool CheckShape(const aclTensor* selfRef, const aclTensor* mask, const ac
 static aclnnStatus CheckParams(const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(selfRef, mask, source), ACLNN_ERR_PARAM_NULLPTR);
+    if (!CheckNotNull(selfRef, mask, source)) {
+        return ACLNN_ERR_PARAM_NULLPTR;
+    }
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(selfRef, mask, source), ACLNN_ERR_PARAM_INVALID);
+    if (!CheckDtypeValid(selfRef, mask, source)) {
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     // 3. 检查输入形状是否满足
-    CHECK_RET(CheckShape(selfRef, mask, source), ACLNN_ERR_PARAM_INVALID);
+    if (!CheckShape(selfRef, mask, source)) {
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     return ACLNN_SUCCESS;
 }
@@ -392,17 +407,29 @@ static aclnnStatus ProcessBroadcast(const aclTensor* selfRef, const aclTensor* m
     op::Shape targetMaskShape = VectorToShape(targetMask);
 
     const aclTensor* selfRefProcessed = l0op::Contiguous(selfRef, executor);
-    CHECK_RET(selfRefProcessed != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (selfRefProcessed == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "Contiguous of selfRef failed; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
 
     const aclTensor* maskProcessed = BroadcastTensor(mask, targetMaskShape, executor);
-    CHECK_RET(maskProcessed != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (maskProcessed == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "BroadcastTensor of mask failed; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
     maskProcessed = l0op::Contiguous(maskProcessed, executor);
-    CHECK_RET(maskProcessed != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (maskProcessed == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "Contiguous of mask failed; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
 
     const aclTensor* sourceProcessed = source;
     if (!source->IsEmpty()) {
         sourceProcessed = l0op::Contiguous(source, executor);
-        CHECK_RET(sourceProcessed != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (sourceProcessed == nullptr) {
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "Contiguous of source failed; preserve lower-layer error.");
+            return ACLNN_ERR_INNER_NULLPTR;
+        }
     }
 
     std::vector<int64_t> isBroadcast;
@@ -438,17 +465,33 @@ static aclnnStatus ProcessBroadcast(const aclTensor* selfRef, const aclTensor* m
 
         op::Shape newSelfShape = {-1};
         const aclTensor* maskWithPositionReshape = l0op::Reshape(maskWithPosition, newSelfShape, executor);
-        CHECK_RET(maskWithPositionReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (maskWithPositionReshape == nullptr) {
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR,
+                                   "Reshape of mask position failed; preserve lower-layer error.");
+            return ACLNN_ERR_INNER_NULLPTR;
+        }
 
         FVector<int64_t> posIdxVec = {0};
         auto posIdx = executor->ConvertToTensor(posIdxVec.data(), posIdxVec.size(), DataType::DT_INT64);
         auto maskCumSum = l0op::Cumsum(maskWithPositionReshape, posIdx, executor);
-        CHECK_RET(maskCumSum != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (maskCumSum == nullptr) {
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "Cumsum of mask failed; preserve lower-layer error.");
+            return ACLNN_ERR_INNER_NULLPTR;
+        }
         if (!isInt64Mask_ && maskSize > Threshold) {
             maskCumSum = l0op::Cast(maskCumSum, DataType::DT_INT64, executor);
+            if (maskCumSum == nullptr) {
+                OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR,
+                                       "Cast of mask cumsum failed; preserve lower-layer error.");
+                return ACLNN_ERR_INNER_NULLPTR;
+            }
         }
         const aclTensor* maskCumSumReshape = l0op::Reshape(maskCumSum, maskWithPosition->GetViewShape(), executor);
-        CHECK_RET(maskCumSumReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (maskCumSumReshape == nullptr) {
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR,
+                                   "Reshape of mask cumsum failed; preserve lower-layer error.");
+            return ACLNN_ERR_INNER_NULLPTR;
+        }
 
         opResult = l0op::MaskedScatterWithPosition(selfRefProcessed, maskProcessed, maskCumSumReshape, sourceProcessed,
                                                    executor);
@@ -457,7 +500,10 @@ static aclnnStatus ProcessBroadcast(const aclTensor* selfRef, const aclTensor* m
         opResult = l0op::MaskedScatter(selfRefProcessed, maskProcessed, sourceProcessed, executor);
     }
 
-    CHECK_RET(opResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (opResult == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "MaskedScatter returned null; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
 
     *out = opResult;
     return ACLNN_SUCCESS;
@@ -485,11 +531,16 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(aclTensor* selfRef, const 
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    if (uniqueExecutor.get() == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_CREATE_EXECUTOR, "Create op executor failed.");
+        return ACLNN_ERR_INNER_CREATE_EXECUTOR;
+    }
 
     // 固定写法，参数检查
     auto ret = CheckParams(selfRef, mask, source);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    if (ret != ACLNN_SUCCESS) {
+        return ret;
+    }
 
     CheckFormat(selfRef, mask, source);
 
@@ -509,11 +560,17 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(aclTensor* selfRef, const 
 
     // 固定写法，将输入selfRef转换成连续的tensor
     auto selfRefContiguous = l0op::Contiguous(selfRef, uniqueExecutor.get());
-    CHECK_RET(selfRefContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (selfRefContiguous == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "Contiguous of selfRef failed; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
 
     // 固定写法，将输入mask转换成连续的tensor
     auto maskContiguous = l0op::Contiguous(mask, uniqueExecutor.get());
-    CHECK_RET(maskContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (maskContiguous == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "Contiguous of mask failed; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
 
     // mask 0维转换维1维
     if (GetTensorDimNum(maskContiguous) == 0 && maskContiguous->Size() > 0) {
@@ -532,7 +589,10 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(aclTensor* selfRef, const 
         sourceContiguous = source;
     } else {
         sourceContiguous = l0op::Contiguous(source, uniqueExecutor.get());
-        CHECK_RET(sourceContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (sourceContiguous == nullptr) {
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "Contiguous of source failed; preserve lower-layer error.");
+            return ACLNN_ERR_INNER_NULLPTR;
+        }
     }
 
     // source 0维转换维1维
@@ -542,19 +602,30 @@ aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(aclTensor* selfRef, const 
 
     // 将输入mask的数据类型转换成bool数据类型
     auto maskBool = l0op::Cast(maskContiguous, DataType::DT_BOOL, uniqueExecutor.get());
-    CHECK_RET(maskBool != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (maskBool == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "Cast of mask failed; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
 
     const aclTensor* opOut = nullptr;
     if (!Ops::NN::AclnnUtil::IsRegbase()) { // 判断芯片架构
         opOut = l0op::MaskedScatter(selfRefContiguous, maskBool, sourceContiguous, uniqueExecutor.get());
     } else {
         auto retStatus = ProcessBroadcast(selfRefContiguous, maskBool, sourceContiguous, &opOut, uniqueExecutor.get());
-        CHECK_RET(retStatus == ACLNN_SUCCESS, retStatus);
+        if (retStatus != ACLNN_SUCCESS) {
+            return retStatus;
+        }
     }
-    CHECK_RET(opOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (opOut == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "MaskedScatter returned null; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
 
     auto viewCopyResult = l0op::ViewCopy(opOut, selfRef, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (viewCopyResult == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "ViewCopy failed; preserve lower-layer error.");
+        return ACLNN_ERR_INNER_NULLPTR;
+    }
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

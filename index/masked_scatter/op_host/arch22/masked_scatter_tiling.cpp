@@ -13,15 +13,30 @@
  * \brief
  */
 
+#include <string>
+#include <vector>
 #include "log/log.h"
 #include "util/math_util.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "matmul/common/op_host/log_format_util.h"
 #include "masked_scatter_tiling.h"
 #include "../../op_kernel/masked_scatter_tiling_data.h"
 #include "../../op_kernel/masked_scatter_tiling_key.h"
 
 namespace optiling {
+namespace {
+ge::graphStatus ReportTilingFailure(const char* opName, const std::string& reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {
+        opName, "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "MaskedScatter arch22: %s", reason.c_str());
+    return ge::GRAPH_FAILED;
+}
+} // namespace
+
 constexpr uint32_t X_INDEX = 0;
 constexpr uint32_t MASK_INDEX = 1;
 constexpr uint32_t UPDATES_INDEX = 2;
@@ -52,7 +67,7 @@ private:
     ge::graphStatus CheckOpInputDtype(const gert::TilingContext* context);
     ge::graphStatus CheckOpInputShape(const gert::TilingContext* context);
     ge::graphStatus SetOpTilingData(gert::TilingContext* context);
-    uint32_t ComputeupdateLineLength(gert::TilingContext* context);
+    uint32_t ComputeupdateLineLength() const;
     void TilingDataPrint(gert::TilingContext* context);
     MaskedScatterV1CompileInfo compileInfo;
     void SetTilingKeyMode(gert::TilingContext* context);
@@ -69,6 +84,7 @@ private:
     uint32_t updatesLineNum = 0;
     uint32_t updateLineLength = 0;
     uint32_t updatesNum = 0;
+    uint32_t dataTypeSize = 0;
     bool isUpdateLengthExceed = false;
 };
 
@@ -88,16 +104,17 @@ ge::graphStatus MaskedScatterV1Tiling::GetCompileInfo(const gert::TilingContext*
 {
     OP_LOGD(context, "GetCompileInfo start.");
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    if (platformInfo == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "GetPlatformInfo returned null");
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
 
     uint64_t ubSizePlatform = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
     ubSize = ubSizePlatform;
     totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    if (ubSize <= 0 || totalCoreNum <= 0) {
-        OP_LOGE(context->GetNodeName(), "GetCompileInfo failed!");
-        return ge::GRAPH_FAILED;
+    if (ubSize == 0 || totalCoreNum == 0) {
+        return ReportTilingFailure(context->GetNodeName(), "UB size or AIV core count is zero");
     }
     compileInfo.sysWorkspace = ascendcPlatform.GetLibApiWorkSpaceSize();
     OP_LOGD(context, "GetCompileInfo end.");
@@ -106,12 +123,31 @@ ge::graphStatus MaskedScatterV1Tiling::GetCompileInfo(const gert::TilingContext*
 
 ge::graphStatus MaskedScatterV1Tiling::CheckOpInputShape(const gert::TilingContext* context)
 {
-    auto xShape = context->GetInputShape(X_INDEX)->GetStorageShape();
+    auto xShapePtr = context->GetInputShape(X_INDEX);
+    if (xShapePtr == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "x");
+        return ge::GRAPH_FAILED;
+    }
+    auto maskShapePtr = context->GetInputShape(MASK_INDEX);
+    if (maskShapePtr == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "mask");
+        return ge::GRAPH_FAILED;
+    }
+    auto updatesShapePtr = context->GetInputShape(UPDATES_INDEX);
+    if (updatesShapePtr == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "updates");
+        return ge::GRAPH_FAILED;
+    }
+    auto xShape = xShapePtr->GetStorageShape();
     size_t xDimNum = xShape.GetDimNum();
-    auto maskShape = context->GetInputShape(MASK_INDEX)->GetStorageShape();
+    auto maskShape = maskShapePtr->GetStorageShape();
     size_t maskDimNum = maskShape.GetDimNum();
-    auto updatesShape = context->GetInputShape(UPDATES_INDEX)->GetStorageShape();
+    auto updatesShape = updatesShapePtr->GetStorageShape();
     size_t updatesDimNum = updatesShape.GetDimNum();
+
+    auto actualShapes = Ops::NN::FormatString("%s, %s, %s", Ops::Base::ToString(xShape).c_str(),
+                                              Ops::Base::ToString(maskShape).c_str(),
+                                              Ops::Base::ToString(updatesShape).c_str());
 
     uint32_t updatesElement = 1;
     for (size_t i = 0; i < updatesDimNum; i++) {
@@ -119,7 +155,8 @@ ge::graphStatus MaskedScatterV1Tiling::CheckOpInputShape(const gert::TilingConte
     }
 
     if (xDimNum != maskDimNum) {
-        OP_LOGE(context->GetNodeName(), "Invalid shape!");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, mask, updates", actualShapes.c_str(),
+                                               "The rank of x and mask must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -134,20 +171,26 @@ ge::graphStatus MaskedScatterV1Tiling::CheckOpInputShape(const gert::TilingConte
         return ge::GRAPH_SUCCESS;
     }
 
-    if (maskShape.GetDim(maskDimNum - 1) != 1 || xShape.GetDim(xDimNum - 1) != updatesShape.GetDim(updatesDimNum - 1)) {
-        OP_LOGE(context->GetNodeName(), "Invalid shape!");
+    if (maskDimNum == 0 || updatesDimNum == 0 || maskShape.GetDim(maskDimNum - 1) != 1 ||
+        xShape.GetDim(xDimNum - 1) != updatesShape.GetDim(updatesDimNum - 1)) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "x, mask, updates", actualShapes.c_str(),
+            "For broadcast mode, mask last dimension must be 1 and x last dimension must equal updates last dimension");
         return ge::GRAPH_FAILED;
     }
     for (size_t i = 0; i < maskDimNum - 1; i++) {
         if (maskShape.GetDim(i) != xShape.GetDim(i)) {
-            OP_LOGE(context->GetNodeName(), "Invalid shape!");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context->GetNodeName(), "x, mask, updates", actualShapes.c_str(),
+                "All dimensions before the last dimension of x and mask must be the same");
             return ge::GRAPH_FAILED;
         }
         totalMaskLength = totalMaskLength * maskShape.GetDim(i);
     }
     updatesLineNum = xShape.GetDim(xDimNum - 1);
     if (updatesLineNum == 0) {
-        OP_LOGE(context->GetNodeName(), "Invalid shape!");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, mask, updates", actualShapes.c_str(),
+                                               "The last dimension of x must be greater than zero");
         return ge::GRAPH_FAILED;
     }
     totalUpdatesNum = totalMaskLength * updatesLineNum;
@@ -159,38 +202,51 @@ ge::graphStatus MaskedScatterV1Tiling::CheckOpInputShape(const gert::TilingConte
 ge::graphStatus MaskedScatterV1Tiling::CheckOpInputDtype(const gert::TilingContext* context)
 {
     auto xInputDesc = context->GetInputDesc(X_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xInputDesc);
-    auto xDtype = xInputDesc->GetDataType();
-    if (SUPPORT_DTYPE.find(xDtype) == SUPPORT_DTYPE.end()) {
-        OP_LOGE(context->GetNodeName(), "Invalid xDtype!");
+    if (xInputDesc == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "x");
         return ge::GRAPH_FAILED;
     }
+    auto xDtype = xInputDesc->GetDataType();
+    if (SUPPORT_DTYPE.find(xDtype) == SUPPORT_DTYPE.end()) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+            "The dtype of x must be in [FLOAT32, FLOAT16, UINT8, INT8, INT16, INT32, INT64, BFLOAT16, DOUBLE, BOOL]");
+        return ge::GRAPH_FAILED;
+    }
+    dataTypeSize = SUPPORT_DTYPE.at(xDtype);
 
     auto maskInputDesc = context->GetInputDesc(MASK_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, maskInputDesc);
+    if (maskInputDesc == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "mask");
+        return ge::GRAPH_FAILED;
+    }
     auto maskDtype = maskInputDesc->GetDataType();
     if (maskDtype != ge::DataType::DT_BOOL) {
-        OP_LOGE(context->GetNodeName(), "Invalid maskDtype!");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "mask",
+                                              ge::TypeUtils::DataTypeToSerialString(maskDtype).c_str(),
+                                              "The dtype of mask must be BOOL");
         return ge::GRAPH_FAILED;
     }
 
     auto updatesInputDesc = context->GetInputDesc(UPDATES_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, updatesInputDesc);
+    if (updatesInputDesc == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "updates");
+        return ge::GRAPH_FAILED;
+    }
     auto updatesDtype = updatesInputDesc->GetDataType();
     if (updatesDtype != xDtype) {
-        OP_LOGE(context->GetNodeName(), "Invalid updatesDtype!");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "x, updates",
+            Ops::NN::FormatString("%s, %s", ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+                                  ge::TypeUtils::DataTypeToSerialString(updatesDtype).c_str())
+                .c_str(),
+            "The dtype of x and updates must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
-uint32_t MaskedScatterV1Tiling::ComputeupdateLineLength(gert::TilingContext* context)
-{
-    auto updatesInputDesc = context->GetInputDesc(UPDATES_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, updatesInputDesc);
-    auto updatesDtype = updatesInputDesc->GetDataType();
-    return updatesLineNum * SUPPORT_DTYPE[updatesDtype];
-}
+uint32_t MaskedScatterV1Tiling::ComputeupdateLineLength() const { return updatesLineNum * dataTypeSize; }
 
 void MaskedScatterV1Tiling::TilingDataPrint(gert::TilingContext* context)
 {
@@ -208,7 +264,7 @@ ge::graphStatus MaskedScatterV1Tiling::SetOpTilingData(gert::TilingContext* cont
     usedCoreNum = totalMaskLength < totalCoreNum ? totalMaskLength : totalCoreNum;
     loopNum = totalMaskLength / usedCoreNum;
     remainNum = totalMaskLength % usedCoreNum;
-    updateLineLength = ComputeupdateLineLength(context);
+    updateLineLength = ComputeupdateLineLength();
     if (updateLineLength <= BYTES_MAX_UPDATE) {
         isUpdateLengthExceed = false;
         maskTileLength = MASK_TILE_NUM;
@@ -220,9 +276,12 @@ ge::graphStatus MaskedScatterV1Tiling::SetOpTilingData(gert::TilingContext* cont
     context->SetBlockDim(usedCoreNum);
     SetTilingKeyMode(context);
     MaskedScatterV1TilingData* tilingData = context->GetTilingData<MaskedScatterV1TilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
-    OP_CHECK_IF(memset_s(tilingData, sizeof(MaskedScatterV1TilingData), 0, sizeof(MaskedScatterV1TilingData)) != EOK,
-                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    if (tilingData == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "GetTilingData returned null");
+    }
+    if (memset_s(tilingData, sizeof(MaskedScatterV1TilingData), 0, sizeof(MaskedScatterV1TilingData)) != EOK) {
+        return ReportTilingFailure(context->GetNodeName(), "Failed to initialize tiling data");
+    }
     tilingData->loopNum = loopNum;
     tilingData->remainNum = remainNum;
     tilingData->updatesLineNum = updatesLineNum;
@@ -230,6 +289,9 @@ ge::graphStatus MaskedScatterV1Tiling::SetOpTilingData(gert::TilingContext* cont
     tilingData->maskTileLength = maskTileLength;
     tilingData->updatesNum = updatesNum;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+    if (currentWorkspace == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "GetWorkspaceSizes returned null");
+    }
     currentWorkspace[0] = compileInfo.sysWorkspace;
     return ge::GRAPH_SUCCESS;
 }
@@ -237,16 +299,22 @@ ge::graphStatus MaskedScatterV1Tiling::SetOpTilingData(gert::TilingContext* cont
 ge::graphStatus MaskedScatterV1Tiling::RunKernelTiling(gert::TilingContext* context)
 {
     if (GetCompileInfo(context) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context->GetNodeName(), "RunKernelTiling GetCompileInfo failed.");
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetCompileInfo failed; preserve root error.");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF((CheckOpInputShape(context) != ge::GRAPH_SUCCESS),
-                OP_LOGE(context->GetNodeName(), "input shape check failed!"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF((CheckOpInputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context->GetNodeName(), "dtype is invalid"),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF((SetOpTilingData(context) != ge::GRAPH_SUCCESS), OP_LOGE(context->GetNodeName(), "set optiling failed"),
-                return ge::GRAPH_FAILED);
+    if (CheckOpInputShape(context) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "Input shape check failed; preserve root error.");
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckOpInputDtype(context) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "Input dtype check failed; preserve root error.");
+        return ge::GRAPH_FAILED;
+    }
+    if (SetOpTilingData(context) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "SetOpTilingData failed; preserve root error.");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

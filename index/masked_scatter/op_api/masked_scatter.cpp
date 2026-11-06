@@ -89,9 +89,10 @@ static const aclTensor* MaskedScatterAiCore(const aclTensor* self, const aclTens
     L0_DFX(MaskedScatterAiCore, self, mask, source, output);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MaskedScatter, OP_INPUT(self, mask, source), OP_OUTPUT(output));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedScatterAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-             return nullptr);
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(ret, "MaskedScatterAiCore launcher failed, ret=%d; preserve lower-layer error.", ret),
+        return nullptr);
     return output;
 }
 
@@ -104,8 +105,10 @@ static const aclTensor* MaskedScatterAiCpu(const aclTensor* self, const aclTenso
     static internal::AicpuTaskSpace space("MaskedScatter");
     auto ret = ADD_TO_LAUNCHER_LIST_AICPU(MaskedScatter, OP_ATTR_NAMES(), OP_INPUT(self, mask, source),
                                           OP_OUTPUT(maskedScatterOut));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MaskedScatterAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(ret, "MaskedScatterAiCpu launcher failed, ret=%d; preserve lower-layer error.", ret),
+        return nullptr);
     return maskedScatterOut;
 }
 

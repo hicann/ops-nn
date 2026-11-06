@@ -13,15 +13,37 @@
  * \brief
  */
 
+#include <vector>
 #include "op_host/infershape_elewise_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
 namespace ops {
+namespace {
+ge::graphStatus ReportInferShapeFailure(const char* opName, const char* reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {
+        opName, "Operator shape inference execution failed. Preserve the execution logs and contact operator support."};
+    REPORT_PREDEFINED_ERR_MSG("EZ1014", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "MaskedScatter InferShape: %s", reason);
+    return ge::GRAPH_FAILED;
+}
+} // namespace
+
 static ge::graphStatus InferShape4MaskedScatter(gert::InferShapeContext* context)
 {
     OP_LOGI(context->GetNodeName(), "***runtime2.0 inferShape***");
-    return Ops::Base::InferShape4Elewise(context);
+    const gert::Shape* inputShape = context->GetInputShape(0);
+    if (inputShape == nullptr) {
+        return ReportInferShapeFailure(context->GetNodeName(), "GetInputShape(x) returned null");
+    }
+    gert::Shape* outputShape = context->GetOutputShape(0);
+    if (outputShape == nullptr) {
+        return ReportInferShapeFailure(context->GetNodeName(), "GetOutputShape(y) returned null");
+    }
+    *outputShape = *inputShape;
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus InferDataType4MaskedScatter(gert::InferDataTypeContext* context)
