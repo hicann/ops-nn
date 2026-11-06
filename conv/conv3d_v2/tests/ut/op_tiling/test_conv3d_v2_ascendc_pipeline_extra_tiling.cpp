@@ -424,3 +424,72 @@ TEST_F(TestConv3dPipelineExtra, pointwise_3d_success)
                            false,
                            false});
 }
+
+// ============================================================================
+// Additional direct-call coverage for conv3d_v2 static helpers.
+// ============================================================================
+#include "../../../op_host/op_tiling/arch35/conv3d_v2_base_tiling.h"
+#include "../../../op_host/op_tiling/arch35/conv3d_v2_base_tiling_template_tilingkey.h"
+#include "conv/conv3d_v2/op_host/op_tiling/conv3d_common_utils.h"
+
+namespace {
+using namespace optiling::conv_ops_tiling;
+} // namespace
+
+class Conv3dStaticHelperExtra : public testing::Test {};
+
+TEST_F(Conv3dStaticHelperExtra, load3d_max_filter_hw)
+{
+    Conv3dBaseTilingV2 sut(nullptr);
+    sut.descInfo_.fMapFormat = ge::FORMAT_NCDHW;
+    EXPECT_EQ(sut.GetLoad3dMaxFilterHW(), LOAD3D_MAX_FILTER_H_W_DAV);
+    sut.descInfo_.fMapFormat = ge::FORMAT_NDHWC;
+    EXPECT_EQ(sut.GetLoad3dMaxFilterHW(), LOAD3D_MAX_FILTER_H_W_DAV);
+    sut.descInfo_.fMapFormat = ge::FORMAT_NCHW;
+    EXPECT_EQ(sut.GetLoad3dMaxFilterHW(), 0u);
+}
+
+TEST_F(Conv3dStaticHelperExtra, template_tiling_key_zero_const_params)
+{
+    // Zero m0/k0/n0 force the CeilDiv/AlignB zero-divisor guards in the template key helpers.
+    Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tilingData = {};
+    ConvAscendcTilingFlag flagInfo;
+    ConvAscendcDescInfo descInfo;
+    descInfo.fMapDtype = ge::DT_FLOAT16;
+    descInfo.weightDtype = ge::DT_FLOAT16;
+    descInfo.fMapFormat = ge::FORMAT_NCDHW;
+    descInfo.weightFormat = ge::FORMAT_NCDHW;
+    descInfo.outFormat = ge::FORMAT_NCDHW;
+    ConvAscendcShapesInfo shapeInfo;
+    shapeInfo.ci = 16;
+    shapeInfo.co = 16;
+    shapeInfo.kd = 3;
+    shapeInfo.kh = 3;
+    shapeInfo.kw = 3;
+    NumBlocksRes numBlocksRes;
+    ConvOpsConstParams constParams;
+    Conv3dV2BaseTilingKey key(tilingData, flagInfo, descInfo, shapeInfo, numBlocksRes, constParams);
+    ConvTilingKeyPara tilingKeyPara;
+    key.GetTemplateTilingKey(tilingKeyPara);
+    EXPECT_EQ(tilingKeyPara.outputOrder, 0u);
+}
+
+TEST_F(Conv3dStaticHelperExtra, common_utils_edge_cases)
+{
+    uint64_t mulRes = 0;
+    EXPECT_FALSE(Conv3dCommon::MulWithOverflowCheck(mulRes, static_cast<uint64_t>(0), static_cast<uint64_t>(5)));
+    EXPECT_EQ(mulRes, 0u);
+    EXPECT_EQ(Conv3dCommon::CeilDiv(static_cast<uint64_t>(1), static_cast<uint64_t>(0)), 0u);
+    EXPECT_EQ(Conv3dCommon::AlignUp(static_cast<uint64_t>(1), static_cast<uint64_t>(0)), 0u);
+
+    std::vector<uint32_t> factorList;
+    Conv3dCommon::CalcCommFactor(static_cast<uint64_t>(12), static_cast<uint32_t>(8), factorList);
+    EXPECT_EQ(factorList, std::vector<uint32_t>({1, 2, 3, 4, 6}));
+
+    std::vector<uint64_t> factorList64;
+    Conv3dCommon::CalcCommFactor(static_cast<uint64_t>(12), static_cast<uint64_t>(8), factorList64);
+    EXPECT_EQ(factorList64, std::vector<uint64_t>({1, 2, 3, 4, 6}));
+
+    EXPECT_TRUE(Conv3dCommon::IsArrayEqual(std::vector<uint32_t>({1, 2, 3}), std::vector<uint32_t>({1, 2, 3}), 3));
+    EXPECT_FALSE(Conv3dCommon::IsArrayEqual(std::vector<uint32_t>({1, 2}), std::vector<uint32_t>({1, 2, 3}), 3));
+}

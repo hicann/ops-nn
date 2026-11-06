@@ -1,0 +1,24 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file test_conv2d_v2_ascendc_cache_helper_tiling.cpp
+ * \brief Reset the process-level Conv2d tiling cache architecture between parameterized UT cases.
+ */
+
+#include "conv/conv2d_v2/op_host/op_tiling/arch35/conv2d_v2_base_tiling.h"
+
+namespace conv_ut {
+void ResetConv2dTilingCacheSocVersion()
+{
+    optiling::conv_ops_tiling::Conv2dTilingCache::GetInstance().SetSocVersion(
+        NpuArch::DAV_RESV, optiling::conv_ops_tiling::ConvTilingParseInfo());
+}
+} // namespace conv_ut

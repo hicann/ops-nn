@@ -914,3 +914,108 @@ CONV3D_INPUT_OK(check_input_desc_ncdhw_success, {"format_ncdhw",
                                                  1,
                                                  0,
                                                  true})
+
+// ============================================================================
+// Direct coverage for Conv3dBaseTilingV2::CheckWeightNZFormatShape
+// (normal entry is refused earlier when the NZ storage shape is malformed).
+// ============================================================================
+#include "conv/conv3d_v2/op_host/op_tiling/arch35/conv3d_v2_base_tiling.h"
+
+namespace {
+gert::KernelRunContextHolder BuildNzWeightContext(optiling::conv_ops_tiling::ConvTilingParseInfo& compileInfo,
+                                                  fe::PlatFormInfos& platformInfo,
+                                                  const std::vector<int64_t>& weightStorageShape)
+{
+    gert::StorageShape fmap = {{1, 16, 4, 16, 16}, {1, 16, 4, 16, 16}};
+    gert::StorageShape weight;
+    weight.MutableOriginShape().SetDimNum(weightStorageShape.size());
+    weight.MutableStorageShape().SetDimNum(weightStorageShape.size());
+    for (size_t i = 0; i < weightStorageShape.size(); ++i) {
+        weight.MutableOriginShape().SetDim(i, weightStorageShape[i]);
+        weight.MutableStorageShape().SetDim(i, weightStorageShape[i]);
+    }
+    gert::StorageShape bias = {{16}, {16}};
+    gert::StorageShape output = {{1, 16, 2, 14, 14}, {1, 16, 2, 14, 14}};
+    std::vector<void*> inputShapes = {&fmap, &weight, &bias, nullptr};
+    std::vector<void*> outputShapes = {&output};
+    std::vector<int64_t> strides = {1, 1, 1, 1, 1};
+    std::vector<int64_t> pads = {0, 0, 0, 0, 0, 0};
+    std::vector<int64_t> dilations = {1, 1, 1, 1, 1};
+    auto tilingData = gert::TilingData::CreateCap(4096);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    return gert::TilingContextFaker()
+        .SetOpType("Conv3DV2")
+        .NodeIoNum(NUM_4, 1)
+        .IrInstanceNum({1, 1, 1, 1})
+        .InputShapes(inputShapes)
+        .OutputShapes(outputShapes)
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+        .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_FRACTAL_Z_3D)
+        .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+        .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                    {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                    {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                    {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                    {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCDHW")},
+                    {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                    {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                    {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+        .TilingData(tilingData.get())
+        .Workspace(ws)
+        .Build();
+}
+
+void InitNzWeightSut(optiling::conv_ops_tiling::Conv3dBaseTilingV2& sut,
+                     optiling::conv_ops_tiling::ConvTilingParseInfo& opInfo, gert::TilingContext* ctx)
+{
+    sut.opInfo_ = &opInfo;
+    sut.paramInfo_.nodeType = "Conv3DV2";
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.descInfo_.fMapDtype = ge::DT_FLOAT16;
+    sut.oriShapeAttrInfo_.oriWeightN = 16;
+    sut.oriShapeAttrInfo_.oriWeightC = 16;
+    sut.oriShapeAttrInfo_.oriWeightD = 3;
+    sut.oriShapeAttrInfo_.oriWeightH = 3;
+    sut.oriShapeAttrInfo_.oriWeightW = 3;
+    (void)ctx;
+}
+} // namespace
+
+TEST_F(TestConv3dCheckInput, nz_weight_format_shape_wrong_dim)
+{
+    optiling::conv_ops_tiling::ConvTilingParseInfo compileInfo;
+    fe::PlatFormInfos platformInfo;
+    auto holder = BuildNzWeightContext(compileInfo, platformInfo, {27, 1, 16, 16, 16});
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    optiling::conv_ops_tiling::Conv3dBaseTilingV2 sut(ctx);
+    InitNzWeightSut(sut, compileInfo, ctx);
+    EXPECT_EQ(sut.CheckWeightNZFormatShape(), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestConv3dCheckInput, nz_weight_format_shape_mismatch)
+{
+    optiling::conv_ops_tiling::ConvTilingParseInfo compileInfo;
+    fe::PlatFormInfos platformInfo;
+    auto holder = BuildNzWeightContext(compileInfo, platformInfo, {27, 1, 16, 16});
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    optiling::conv_ops_tiling::Conv3dBaseTilingV2 sut(ctx);
+    InitNzWeightSut(sut, compileInfo, ctx);
+    sut.oriShapeAttrInfo_.oriWeightN = 32;
+    EXPECT_EQ(sut.CheckWeightNZFormatShape(), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestConv3dCheckInput, nz_weight_format_shape_success)
+{
+    optiling::conv_ops_tiling::ConvTilingParseInfo compileInfo;
+    fe::PlatFormInfos platformInfo;
+    auto holder = BuildNzWeightContext(compileInfo, platformInfo, {27, 1, 16, 16});
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    optiling::conv_ops_tiling::Conv3dBaseTilingV2 sut(ctx);
+    InitNzWeightSut(sut, compileInfo, ctx);
+    EXPECT_EQ(sut.CheckWeightNZFormatShape(), ge::GRAPH_SUCCESS);
+}

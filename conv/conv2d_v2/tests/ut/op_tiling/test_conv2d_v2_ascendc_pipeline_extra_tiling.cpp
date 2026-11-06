@@ -524,3 +524,356 @@ TEST_F(TestConv2dPipelineExtra, depthwise_separable_success)
                      true,
                      false});
 }
+
+// ============================================================================
+// Tiling key computation coverage. The tiling key getters are only reachable
+// through the full tiling pipeline, so drive them directly here.
+// ============================================================================
+#include "../../../op_host/op_tiling/arch35/conv2d_v2_base_tiling.h"
+
+namespace {
+using namespace optiling::conv_ops_tiling;
+
+void InitTilingKeyState(optiling::conv_ops_tiling::Conv2dBaseTiling& sut,
+                        optiling::conv_ops_tiling::ConvTilingParseInfo& opInfo)
+{
+    opInfo.aicoreNum = AIC_NUM;
+    opInfo.l0cSize = MEM_SIZE_256K;
+    opInfo.ubSize = MEM_SIZE_200K;
+    opInfo.npuArch = NpuArch::DAV_3510;
+    sut.opInfo_ = &opInfo;
+
+    sut.shapeInfo_.batch = 1;
+    sut.shapeInfo_.ci = 16;
+    sut.shapeInfo_.hi = 16;
+    sut.shapeInfo_.wi = 16;
+    sut.shapeInfo_.co = 16;
+    sut.shapeInfo_.kh = 3;
+    sut.shapeInfo_.kw = 3;
+    sut.shapeInfo_.ho = 14;
+    sut.shapeInfo_.wo = 14;
+    sut.attrInfo_.groups = 1;
+    sut.attrInfo_.strideH = 1;
+    sut.attrInfo_.strideW = 1;
+    sut.attrInfo_.dilationH = 1;
+    sut.attrInfo_.dilationW = 1;
+    sut.descInfo_.fMapDtype = ge::DT_FLOAT16;
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.descInfo_.outDtype = ge::DT_FLOAT16;
+    sut.descInfo_.fMapFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.weightFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.outFormat = ge::FORMAT_NCHW;
+    sut.flagInfo_.hasBias = true;
+    sut.flagInfo_.convGroupType = ConvGroupType::NORMAL_CONV;
+    sut.paramInfo_.nodeType = "Conv2DV2";
+    sut.convOpsConstParams_.m0 = CUBE_M0;
+    sut.convOpsConstParams_.k0 = CUBE_K0_16;
+    sut.convOpsConstParams_.n0 = CUBE_N0;
+    sut.numBlocksRes.nDim = 1;
+    sut.apiInputPlatformInfo.npuArch = NpuArch::DAV_3510;
+    sut.apiInputPlatformInfo.l0BSize = MEM_SIZE_64K;
+
+    sut.tilingData_.set_kAL1(144);
+    sut.tilingData_.set_kBL1(144);
+    sut.tilingData_.set_nBL1(16);
+    sut.tilingData_.set_nL0(16);
+    sut.tilingData_.set_hoL1(14);
+    sut.tilingData_.set_woL1(14);
+    sut.tilingData_.set_hoL0(16);
+    sut.tilingData_.set_woL0(16);
+    sut.tilingData_.set_singleCoreBatch(1);
+    sut.tilingData_.set_singleCoreHo(14);
+    sut.tilingData_.set_singleCoreWo(14);
+    sut.tilingData_.set_pBufferFlag(27);
+    sut.tilingData_.set_kernelH(3);
+    sut.tilingData_.set_kernelW(3);
+    sut.tilingData_.set_innerBatch(1);
+    sut.tilingData_.set_iterateMNOrder(1);
+}
+} // namespace
+
+class Conv2dTilingKeyExtra : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        sut_ = std::make_shared<optiling::conv_ops_tiling::Conv2dBaseTiling>(nullptr);
+        InitTilingKeyState(*sut_, opInfo_);
+    }
+    void TearDown() override {}
+
+    std::shared_ptr<optiling::conv_ops_tiling::Conv2dBaseTiling> sut_;
+    optiling::conv_ops_tiling::ConvTilingParseInfo opInfo_;
+};
+
+TEST_F(Conv2dTilingKeyExtra, getters_normal_conv)
+{
+    EXPECT_EQ(sut_->GetL0PingPongVal(), 27u & optiling::conv_ops_tiling::L0A_L0B_PB_FLAG_MASK);
+    EXPECT_EQ(sut_->GetL1PingPongVal(),
+              (27u & optiling::conv_ops_tiling::L1A_L1B_PB_FLAG_MASK) >> optiling::conv_ops_tiling::L1_PB_OFFSET);
+    EXPECT_EQ(sut_->GetOutputOrderVal(), 0u);
+    sut_->flagInfo_.mSplitModeFlag = true;
+    EXPECT_EQ(sut_->GetOutputOrderVal(), 1u);
+    EXPECT_EQ(sut_->GetWeightUbTrans(), optiling::conv_ops_tiling::WEIGHT_UB_TRANS_CLOSE);
+    EXPECT_EQ(sut_->GetFmapCopyMode(), optiling::conv_ops_tiling::FMAP_LOAD3D_MODE);
+    EXPECT_EQ(sut_->GetNoPad(), 1u); // CONV_NO_PAD
+    sut_->attrInfo_.padTop = 1;
+    EXPECT_EQ(sut_->GetNoPad(), 0u); // CONV_HAS_PAD
+
+    sut_->tilingData_.set_bUbNStep(16);
+    sut_->tilingData_.set_bUbKStep(16);
+    EXPECT_EQ(sut_->GetWeightUbTrans(), optiling::conv_ops_tiling::WEIGHT_UB_TRANS_OPEN);
+    sut_->tilingData_.set_khUb(1);
+    sut_->tilingData_.set_kwUb(1);
+    EXPECT_EQ(sut_->GetFmapCopyMode(), optiling::conv_ops_tiling::FMAP_DMA_MODE);
+}
+
+TEST_F(Conv2dTilingKeyExtra, getters_group_conv)
+{
+    sut_->flagInfo_.convGroupType = ConvGroupType::OPT_GROUP_CONV;
+    sut_->tilingData_.set_pBufferFlag(optiling::conv_ops_tiling::L1_PB_ALL_OPEN
+                                      << optiling::conv_ops_tiling::L1_PB_OFFSET);
+    EXPECT_EQ(sut_->GetL1PingPongVal(), optiling::conv_ops_tiling::L1_PB_ALL_OPEN);
+    sut_->tilingData_.set_pBufferFlag(optiling::conv_ops_tiling::L1_PB_ALL_CLOSE
+                                      << optiling::conv_ops_tiling::L1_PB_OFFSET);
+    EXPECT_EQ(sut_->GetL1PingPongVal(), optiling::conv_ops_tiling::L1_PB_ALL_CLOSE);
+}
+
+TEST_F(Conv2dTilingKeyExtra, fmp_tiling_hw_split_partial)
+{
+    sut_->tilingData_.set_singleCoreWo(24);
+    sut_->tilingData_.set_woL0(16);
+    sut_->tilingData_.set_woL1(32);
+    sut_->tilingData_.set_hoL0(32);
+    sut_->tilingData_.set_hoL1(32);
+    sut_->tilingData_.set_singleCoreHo(32);
+    EXPECT_EQ(sut_->GetFmpTilingValForHWSplit(false), optiling::conv_ops_tiling::FMP_OTHER);
+}
+
+TEST_F(Conv2dTilingKeyExtra, set_tiling_key_nchw)
+{
+    ASSERT_EQ(sut_->SetTilingKey(), ge::GRAPH_SUCCESS);
+    EXPECT_NE(sut_->tilingKey_, 0u);
+}
+
+TEST_F(Conv2dTilingKeyExtra, set_tiling_key_nz_weight)
+{
+    sut_->descInfo_.weightFormat = ge::FORMAT_FRACTAL_Z;
+    sut_->tilingData_.set_singleCoreBatch(1);
+    ASSERT_EQ(sut_->SetTilingKey(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(sut_->GetNoPad(), 1u); // CONV_NO_PAD
+    EXPECT_NE(sut_->tilingKey_, 0u);
+}
+
+TEST_F(Conv2dTilingKeyExtra, reset_tiling_key_para_9201_group)
+{
+    sut_->apiInputPlatformInfo.npuArch = NpuArch::DAV_9201;
+    sut_->flagInfo_.convGroupType = ConvGroupType::ORI_GROUP_CONV;
+    sut_->tilingKeyPara_.weightTiling = 1;
+    sut_->ReSetTilingKeyPara();
+    EXPECT_EQ(sut_->tilingKeyPara_.weightTiling, 1u);
+
+    sut_->apiInputPlatformInfo.npuArch = NpuArch::DAV_3510;
+    sut_->flagInfo_.convGroupType = ConvGroupType::NORMAL_CONV;
+    sut_->flagInfo_.mSplitModeFlag = true;
+    sut_->tilingKeyPara_.weightTiling = 1;
+    sut_->tilingKeyPara_.fmpTiling = 1;
+    sut_->tilingKeyPara_.outputOrder = 1;
+    sut_->ReSetTilingKeyPara();
+    EXPECT_EQ(sut_->tilingKeyPara_.weightTiling, 1u);
+    EXPECT_EQ(sut_->tilingKeyPara_.fmpTiling, 1u);
+}
+
+TEST_F(Conv2dTilingKeyExtra, reset_tiling_key_para_reset_flags)
+{
+    sut_->flagInfo_.mSplitModeFlag = false;
+    sut_->tilingKeyPara_.weightTiling = 1;
+    sut_->tilingKeyPara_.fmpTiling = 1;
+    sut_->tilingKeyPara_.outputOrder = 0;
+    sut_->ReSetTilingKeyPara();
+    EXPECT_EQ(sut_->tilingKeyPara_.weightTiling, optiling::conv_ops_tiling::WEIGHT_OTHER);
+    EXPECT_EQ(sut_->tilingKeyPara_.fmpTiling, optiling::conv_ops_tiling::FMP_OTHER);
+
+    sut_->flagInfo_.convGroupType = ConvGroupType::OPT_GROUP_CONV;
+    sut_->flagInfo_.mSplitModeFlag = true;
+    sut_->tilingKeyPara_.weightTiling = 1;
+    sut_->tilingKeyPara_.fmpTiling = 1;
+    sut_->tilingKeyPara_.outputOrder = 1;
+    sut_->tilingKeyPara_.fmapCppyMode = optiling::conv_ops_tiling::FMAP_LOAD3D_MODE;
+    sut_->tilingKeyPara_.l1PingPong = optiling::conv_ops_tiling::L1_PB_ALL_OPEN;
+    sut_->tilingData_.set_iterateMNOrder(0);
+    sut_->tilingData_.set_hoL0(14);
+    sut_->tilingKeyPara_.weightTiling = optiling::conv_ops_tiling::WEIGHT_OTHER;
+    sut_->tilingKeyPara_.fmpTiling = optiling::conv_ops_tiling::FMP_OTHER;
+    sut_->ReSetTilingKeyPara();
+    EXPECT_EQ(sut_->tilingKeyPara_.weightTiling, optiling::conv_ops_tiling::FULLLOAD_BL1);
+}
+
+// ============================================================================
+// ASWT / FullMN post-tiling branches that are not reachable on ascend960dt
+// (DAV_5102 ASWT enable, FullMN buffer error path, non-9201 ASWT block dim).
+// ============================================================================
+namespace {
+gert::KernelRunContextHolder BuildPostTilingContext(optiling::conv_ops_tiling::ConvTilingParseInfo& compileInfo,
+                                                    fe::PlatFormInfos& platformInfo, const void* tilingData,
+                                                    gert::ContinuousVector* ws)
+{
+    gert::StorageShape fmap = {{1, 16, 16, 16}, {1, 16, 16, 16}};
+    gert::StorageShape weight = {{16, 16, 3, 3}, {16, 16, 3, 3}};
+    gert::StorageShape bias = {{16}, {16}};
+    gert::StorageShape output = {{1, 16, 16, 16}, {1, 16, 16, 16}};
+    std::vector<void*> inputShapes = {&fmap, &weight, &bias, nullptr};
+    std::vector<void*> outputShapes = {&output};
+    return gert::TilingContextFaker()
+        .SetOpType("Conv2DV2")
+        .NodeIoNum(NUM_4, 1)
+        .IrInstanceNum({1, 1, 1, 1})
+        .InputShapes(inputShapes)
+        .OutputShapes(outputShapes)
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .TilingData(tilingData)
+        .Workspace(ws)
+        .Build();
+}
+
+void InitPostTilingSut(optiling::conv_ops_tiling::Conv2dBaseTiling& sut,
+                       optiling::conv_ops_tiling::ConvTilingParseInfo& opInfo, gert::TilingContext* ctx)
+{
+    sut.opInfo_ = &opInfo;
+    sut.paramInfo_.nodeType = "Conv2DV2";
+    sut.paramInfo_.paramsIdxVec = {{0, 1, 2, 3, 4}, {0, 1, 2, 3, 4}, {0, 1, 2, 3, 4}};
+    sut.shapeInfo_.batch = 1;
+    sut.shapeInfo_.ci = 16;
+    sut.shapeInfo_.hi = 16;
+    sut.shapeInfo_.wi = 16;
+    sut.shapeInfo_.co = 16;
+    sut.shapeInfo_.kh = 3;
+    sut.shapeInfo_.kw = 3;
+    sut.shapeInfo_.ho = 16;
+    sut.shapeInfo_.wo = 16;
+    sut.attrInfo_.groups = 1;
+    sut.descInfo_.fMapDtype = ge::DT_FLOAT16;
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.descInfo_.outDtype = ge::DT_FLOAT16;
+    sut.descInfo_.fMapFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.weightFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.outFormat = ge::FORMAT_NCHW;
+    sut.convOpsConstParams_.m0 = CUBE_M0;
+    sut.convOpsConstParams_.k0 = CUBE_K0_16;
+    sut.convOpsConstParams_.n0 = CUBE_N0;
+    sut.numBlocksRes = {1, 1, 1, 1, 1, 0};
+    (void)ctx;
+}
+
+void SetMNFullLoadKeyParams(optiling::conv_ops_tiling::Conv2dBaseTiling& sut)
+{
+    sut.descInfo_.weightFormat = ge::FORMAT_NHWC;
+    sut.tilingKeyPara_.fmpTiling = optiling::conv_ops_tiling::ONLY_M_FULLLOAD_AL1_AL0;
+    sut.tilingKeyPara_.weightTiling = optiling::conv_ops_tiling::ONLY_N_FULLLOAD_BL1_BL0;
+    sut.tilingKeyPara_.l1PingPong = optiling::conv_ops_tiling::L1_PB_ALL_OPEN;
+    sut.tilingKeyPara_.l0PingPong = optiling::conv_ops_tiling::L0_PB_ALL_OPEN;
+    sut.tilingKeyPara_.groupType = static_cast<uint64_t>(optiling::conv_ops_tiling::ConvGroupType::NORMAL_CONV);
+    sut.tilingKeyPara_.weightUbTrans = optiling::conv_ops_tiling::WEIGHT_UB_TRANS_CLOSE;
+    sut.tilingKeyPara_.fmapCppyMode = optiling::conv_ops_tiling::FMAP_LOAD3D_MODE;
+    sut.tilingKeyPara_.innerBatch = optiling::conv_ops_tiling::CONV_INNER_BATCH_SINGLE;
+    sut.flagInfo_.mSplitModeFlag = true;
+    sut.flagInfo_.enableC04Flag = false;
+    sut.flagInfo_.disContinuousFlag = false;
+    sut.flagInfo_.isASWT = false;
+    sut.tilingData_.set_iterateMNOrder(static_cast<uint64_t>(optiling::conv_ops_tiling::IterateMNOrder::ITER_M_FST));
+}
+} // namespace
+
+TEST_F(Conv2dTilingKeyExtra, post_tiling_fullmn_small_buffer)
+{
+    optiling::conv_ops_tiling::ConvTilingParseInfo opInfo;
+    fe::PlatFormInfos platformInfo;
+    auto tilingData = gert::TilingData::CreateCap(1);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(MEM_SIZE_4K);
+    auto ws = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto holder = BuildPostTilingContext(opInfo, platformInfo, tilingData.get(), ws);
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx);
+    InitPostTilingSut(sut, opInfo, ctx);
+    sut.opInfo_->npuArch = NpuArch::DAV_9201;
+    SetMNFullLoadKeyParams(sut);
+    EXPECT_TRUE(sut.IsMNFullLoadKPartia());
+    EXPECT_EQ(sut.PostTiling(), ge::GRAPH_FAILED);
+}
+
+TEST_F(Conv2dTilingKeyExtra, post_tiling_fullmn_success)
+{
+    optiling::conv_ops_tiling::ConvTilingParseInfo opInfo;
+    fe::PlatFormInfos platformInfo;
+    auto tilingData = gert::TilingData::CreateCap(MEM_SIZE_4K);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(MEM_SIZE_4K);
+    auto ws = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto holder = BuildPostTilingContext(opInfo, platformInfo, tilingData.get(), ws);
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx);
+    InitPostTilingSut(sut, opInfo, ctx);
+    sut.opInfo_->npuArch = NpuArch::DAV_9201;
+    SetMNFullLoadKeyParams(sut);
+    EXPECT_EQ(sut.PostTiling(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(ctx->GetRawTilingData()->GetDataSize(), sizeof(Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling));
+}
+
+TEST_F(Conv2dTilingKeyExtra, post_tiling_aswt_5102_block_dim)
+{
+    optiling::conv_ops_tiling::ConvTilingParseInfo opInfo;
+    fe::PlatFormInfos platformInfo;
+    auto tilingData = gert::TilingData::CreateCap(MEM_SIZE_4K);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(MEM_SIZE_4K);
+    auto ws = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto holder = BuildPostTilingContext(opInfo, platformInfo, tilingData.get(), ws);
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx);
+    InitPostTilingSut(sut, opInfo, ctx);
+    sut.opInfo_->npuArch = NpuArch::DAV_5102;
+    sut.opInfo_->aicoreNum = 4;
+    sut.flagInfo_.isASWT = true;
+    sut.tilingData_.set_innerBatch(1);
+    sut.tilingData_.set_hoL1(16);
+    sut.tilingData_.set_nBL1(16);
+    EXPECT_EQ(sut.PostTiling(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(ctx->GetBlockDim(), 4U);
+}
+
+TEST_F(Conv2dTilingKeyExtra, calc_aswt_strategy_5102_enable)
+{
+    optiling::conv_ops_tiling::ConvTilingParseInfo opInfo;
+    fe::PlatFormInfos platformInfo;
+    auto tilingData = gert::TilingData::CreateCap(MEM_SIZE_4K);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(MEM_SIZE_4K);
+    auto ws = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    auto holder = BuildPostTilingContext(opInfo, platformInfo, tilingData.get(), ws);
+    auto ctx = holder.GetContext<gert::TilingContext>();
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx);
+    InitPostTilingSut(sut, opInfo, ctx);
+    sut.opInfo_->npuArch = NpuArch::DAV_5102;
+    sut.opInfo_->aicoreNum = 32;
+    sut.flagInfo_.mSplitModeFlag = true;
+    sut.flagInfo_.convGroupType = optiling::conv_ops_tiling::ConvGroupType::NORMAL_CONV;
+    sut.attrInfo_.groups = 1;
+    sut.descInfo_.weightFormat = ge::FORMAT_FRACTAL_Z;
+    sut.descInfo_.fMapFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.outFormat = ge::FORMAT_NCHW;
+    sut.tilingData_.set_kAL1(288);
+    sut.tilingData_.set_kBL1(288);
+    sut.tilingData_.set_nBL1(16);
+    sut.tilingData_.set_nL0(16);
+    sut.tilingData_.set_hoL1(16);
+    sut.tilingData_.set_hoL0(8);
+    sut.tilingData_.set_singleCoreHo(16);
+    sut.tilingData_.set_innerBatch(1);
+    sut.tilingData_.set_pBufferFlag(0);
+    sut.numBlocksRes = {1, 1, 1, 1, 1, 0};
+    sut.CalcASWTStrategy();
+    EXPECT_TRUE(sut.flagInfo_.isASWT);
+    EXPECT_GT(sut.tilingData_.get_mWindows(), 0U);
+}

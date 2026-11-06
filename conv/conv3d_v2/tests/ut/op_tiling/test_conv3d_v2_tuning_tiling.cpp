@@ -375,4 +375,53 @@ TEST_F(Conv3DV2TuningTilingTest, TilingForConv3DV2Input_GroupConv)
     auto parsed = std::static_pointer_cast<tuningtiling::Conv3DV2InputArgs>(inputArgs);
     EXPECT_EQ(parsed->groups, 3);
 }
+
+TEST_F(Conv3DV2TuningTilingTest, BankKeyParseLoadRoundTrip)
+{
+    auto& funcs = tuningtiling::OpBankKeyFuncRegistryV2::RegisteredOpFuncInfoV2();
+    auto it = funcs.find(ge::AscendString("Conv3DV2"));
+    ASSERT_NE(it, funcs.end());
+
+    auto args = std::make_shared<tuningtiling::Conv3DV2InputArgs>();
+    args->aDtype = ge::DT_FLOAT16;
+    args->bDtype = ge::DT_FLOAT16;
+    args->aShapeN = 2;
+    args->aShapeD = 4;
+    args->aShapeH = 16;
+    args->aShapeW = 16;
+    args->groups = 3;
+    args->biasFlag = true;
+
+    ge::AscendString keyJson;
+    ASSERT_TRUE(it->second.GetBankKeyParseFuncV2()(args, sizeof(tuningtiling::Conv3DV2InputArgs), keyJson));
+
+    std::shared_ptr<void> loaded = nullptr;
+    size_t loadedSize = 0;
+    ASSERT_TRUE(it->second.GetBankKeyLoadFuncV2()(loaded, loadedSize, keyJson));
+    ASSERT_NE(loaded, nullptr);
+    auto parsed = std::static_pointer_cast<tuningtiling::Conv3DV2InputArgs>(loaded);
+    EXPECT_EQ(parsed->aShapeD, 4);
+    EXPECT_EQ(parsed->groups, 3);
+    EXPECT_TRUE(parsed->biasFlag);
+}
+
+TEST_F(Conv3DV2TuningTilingTest, Conv3DTuningClassFactoryRoundTrip)
+{
+    auto def = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance(ge::AscendString("Conv3D"));
+    ASSERT_NE(def, nullptr);
+    nlohmann::json j;
+    def->ToJson(j);
+    def->FromJson(j);
+    EXPECT_FALSE(def->GetItemInfo().empty());
+}
+
+TEST_F(Conv3DV2TuningTilingTest, Conv3DV2TuningClassFactoryRoundTrip)
+{
+    auto def = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance(ge::AscendString("Conv3DV2"));
+    ASSERT_NE(def, nullptr);
+    nlohmann::json j;
+    def->ToJson(j);
+    def->FromJson(j);
+    EXPECT_FALSE(def->GetItemInfo().empty());
+}
 } // namespace

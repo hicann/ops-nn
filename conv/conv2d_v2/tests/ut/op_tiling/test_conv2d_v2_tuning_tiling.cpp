@@ -29,6 +29,7 @@
 
 #include "../../../op_host/op_tiling/arch35/conv2d_v2_tuning_tiling.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_base_utils.h"
+#include "../../../op_host/op_tiling/conv2d_v2_tiling.h"
 
 using namespace std;
 using namespace ge;
@@ -426,4 +427,59 @@ TEST_F(Conv2DV2TuningTilingTest, GetFilterInfo_DepthwiseConv)
     EXPECT_EQ(args->bShapeC, 1);
     EXPECT_EQ(args->bShapeH, 3);
     EXPECT_EQ(args->bShapeW, 3);
+}
+
+TEST_F(Conv2DV2TuningTilingTest, BankKeyParseLoadRoundTrip)
+{
+    auto& funcs = tuningtiling::OpBankKeyFuncRegistryV2::RegisteredOpFuncInfoV2();
+    auto it = funcs.find(ge::AscendString("Conv2DV2"));
+    ASSERT_NE(it, funcs.end());
+
+    auto args = std::make_shared<tuningtiling::Conv2DV2InputArgs>();
+    args->aDtype = ge::DT_FLOAT16;
+    args->bDtype = ge::DT_FLOAT16;
+    args->aShapeN = 2;
+    args->aShapeH = 16;
+    args->aShapeW = 16;
+    args->groups = 3;
+    args->biasFlag = true;
+
+    ge::AscendString keyJson;
+    ASSERT_TRUE(it->second.GetBankKeyParseFuncV2()(args, sizeof(tuningtiling::Conv2DV2InputArgs), keyJson));
+
+    std::shared_ptr<void> loaded = nullptr;
+    size_t loadedSize = 0;
+    ASSERT_TRUE(it->second.GetBankKeyLoadFuncV2()(loaded, loadedSize, keyJson));
+    ASSERT_NE(loaded, nullptr);
+    auto parsed = std::static_pointer_cast<tuningtiling::Conv2DV2InputArgs>(loaded);
+    EXPECT_EQ(parsed->aShapeH, 16);
+    EXPECT_EQ(parsed->groups, 3);
+    EXPECT_TRUE(parsed->biasFlag);
+}
+
+TEST_F(Conv2DV2TuningTilingTest, DisplayInfoDictAndSchemaRoundTrip)
+{
+    std::shared_ptr<void> args = std::make_shared<tuningtiling::Conv2DV2InputArgs>();
+    std::string info = tuningtiling::DisplayInfoDict(args, sizeof(tuningtiling::Conv2DV2InputArgs), "Conv2DV2");
+    EXPECT_FALSE(info.empty());
+
+    auto def = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance(ge::AscendString("Conv2DV2"));
+    ASSERT_NE(def, nullptr);
+    nlohmann::json j;
+    def->ToJson(j);
+    def->FromJson(j);
+    EXPECT_FALSE(def->GetItemInfo().empty());
+}
+
+TEST_F(Conv2DV2TuningTilingTest, TilingDataArraySetters)
+{
+    optiling::Conv2DTilingData tilingData;
+    uint32_t values[3] = {1, 2, 3};
+    tilingData.set_tailRegionCuts(values);
+    tilingData.set_tailRegionOrgM(values);
+    tilingData.set_tailRegionOrgN(values);
+    uint32_t batchTailNs[2] = {0, 0};
+    tilingData.set_tailRegionBatchTailNs(batchTailNs);
+    EXPECT_EQ(tilingData.get_tailRegionCuts()[0], 1u);
+    EXPECT_EQ(tilingData.get_fixpParamsFullLoadFlag(), 0u);
 }

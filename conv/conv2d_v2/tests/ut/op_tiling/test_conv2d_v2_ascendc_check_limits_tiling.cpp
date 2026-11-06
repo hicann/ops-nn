@@ -28,6 +28,7 @@
 #include "../../../../common/op_host/op_tiling/arch35/conv_base_utils.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_base.h"
 #include "test_conv2d_v2_ascendc_utils_tiling.h"
+#include "../../../op_host/op_tiling/arch35/conv2d_v2_base_tiling.h"
 
 using namespace ut_util;
 using namespace conv_tiling_utils;
@@ -603,4 +604,205 @@ TEST_F(TestConv2dCheckLimits, check_no_bias_success)
                                       false,
                                       false,
                                       "NCHW"});
+}
+
+// ============================================================================
+// Direct-call coverage for the remaining check_limits branches (C04 MDC,
+// Load3D all-pad overflow, discontinuous input limits, L0C2GM NZ2ND limits).
+// ============================================================================
+namespace {
+gert::KernelRunContextHolder BuildLimitsContext(optiling::conv_ops_tiling::ConvTilingParseInfo& compileInfo,
+                                                fe::PlatFormInfos& platformInfo)
+{
+    gert::StorageShape fmap = {{1, 16, 16, 16}, {1, 16, 16, 16}};
+    gert::StorageShape weight = {{16, 16, 1, 1}, {16, 16, 1, 1}};
+    gert::StorageShape bias = {{16}, {16}};
+    gert::StorageShape output = {{1, 16, 16, 16}, {1, 16, 16, 16}};
+    std::vector<void*> inputShapes = {&fmap, &weight, &bias, nullptr};
+    std::vector<void*> outputShapes = {&output};
+    std::vector<int64_t> strides = {1, 1, 1, 1};
+    std::vector<int64_t> pads = {0, 0, 0, 0};
+    std::vector<int64_t> dilations = {1, 1, 1, 1};
+    auto tilingData = gert::TilingData::CreateCap(MEM_SIZE_4K);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(MEM_SIZE_4K);
+    auto ws = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+    return gert::TilingContextFaker()
+        .SetOpType("Conv2DV2")
+        .NodeIoNum(NUM_4, 1)
+        .IrInstanceNum({1, 1, 1, 1})
+        .InputShapes(inputShapes)
+        .OutputShapes(outputShapes)
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+        .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                    {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                    {"dilations", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilations)},
+                    {"groups", Ops::NN::AnyValue::CreateFrom<int64_t>(1)},
+                    {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                    {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                    {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SPECIFIC")},
+                    {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+        .TilingData(tilingData.get())
+        .Workspace(ws)
+        .Build();
+}
+
+void InitLimitsSut(optiling::conv_ops_tiling::Conv2dBaseTiling& sut,
+                   optiling::conv_ops_tiling::ConvTilingParseInfo& opInfo, gert::TilingContext* ctx)
+{
+    sut.opInfo_ = &opInfo;
+    sut.paramInfo_.nodeType = "Conv2DV2";
+    sut.paramInfo_.paramsIdxVec = {{0, 1, 2, 3, 4}, {0, 1, 2, 3, 4}, {0, 1, 2, 3, 4}};
+    sut.shapeInfo_.batch = 1;
+    sut.shapeInfo_.ci = 16;
+    sut.shapeInfo_.hi = 16;
+    sut.shapeInfo_.wi = 16;
+    sut.shapeInfo_.co = 16;
+    sut.shapeInfo_.kh = 1;
+    sut.shapeInfo_.kw = 1;
+    sut.shapeInfo_.ho = 16;
+    sut.shapeInfo_.wo = 16;
+    sut.attrInfo_.groups = 1;
+    sut.attrInfo_.strideH = 1;
+    sut.attrInfo_.strideW = 1;
+    sut.attrInfo_.dilationH = 1;
+    sut.attrInfo_.dilationW = 1;
+    sut.descInfo_.fMapDtype = ge::DT_FLOAT16;
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.descInfo_.outDtype = ge::DT_FLOAT16;
+    sut.descInfo_.fMapFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.weightFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.outFormat = ge::FORMAT_NCHW;
+    (void)ctx;
+}
+} // namespace
+
+class TestConv2dCheckLimitsDirect : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        compile_info_.aicoreNum = AIC_NUM;
+        compile_info_.l0aSize = MEM_SIZE_64K;
+        compile_info_.l0bSize = MEM_SIZE_64K;
+        compile_info_.l0cSize = MEM_SIZE_256K;
+        compile_info_.ubSize = MEM_SIZE_200K;
+        compile_info_.l1Size = MEM_SIZE_512K;
+        compile_info_.npuArch = NpuArch::DAV_3510;
+        holder_ = BuildLimitsContext(compile_info_, platform_info_);
+        ctx_ = holder_.GetContext<gert::TilingContext>();
+    }
+
+    optiling::conv_ops_tiling::ConvTilingParseInfo compile_info_;
+    fe::PlatFormInfos platform_info_;
+    gert::KernelRunContextHolder holder_;
+    gert::TilingContext* ctx_ = nullptr;
+};
+
+TEST_F(TestConv2dCheckLimitsDirect, c04_mdc_invalid_weight_dtype)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx_);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    compile_info_.isCubeVectorFuse = true;
+    sut.descInfo_.weightFormat = ge::FORMAT_FRACTAL_Z_C04;
+    sut.descInfo_.weightDtype = ge::DT_INT8;
+    EXPECT_EQ(sut.CheckC04Mdc(), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, c04_mdc_group_conv)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx_);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    compile_info_.isCubeVectorFuse = true;
+    sut.descInfo_.weightFormat = ge::FORMAT_FRACTAL_Z_C04;
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.attrInfo_.groups = 2;
+    sut.shapeInfo_.ci = 4;
+    EXPECT_EQ(sut.CheckC04Mdc(), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, c04_mdc_cin_over_limit)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx_);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    compile_info_.isCubeVectorFuse = true;
+    sut.descInfo_.weightFormat = ge::FORMAT_FRACTAL_Z_C04;
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.attrInfo_.groups = 1;
+    sut.shapeInfo_.ci = 8;
+    EXPECT_EQ(sut.CheckC04Mdc(), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, c04_mdc_success)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx_);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    compile_info_.isCubeVectorFuse = true;
+    sut.descInfo_.weightFormat = ge::FORMAT_FRACTAL_Z_C04;
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.attrInfo_.groups = 1;
+    sut.shapeInfo_.ci = 4;
+    EXPECT_EQ(sut.CheckC04Mdc(), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, load3d_all_pad_overflow)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(nullptr);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    sut.shapeInfo_.kh = 511;
+    sut.shapeInfo_.kw = 1;
+    sut.attrInfo_.dilationH = 255;
+    sut.attrInfo_.dilationW = 1;
+    sut.attrInfo_.padLeft = 1;
+    EXPECT_EQ(sut.CheckLoad3DAllPadOverflow(), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, load3d_all_pad_within_limit)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(nullptr);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    sut.shapeInfo_.kh = 3;
+    sut.shapeInfo_.kw = 3;
+    sut.attrInfo_.padLeft = 3;
+    EXPECT_EQ(sut.CheckLoad3DAllPadOverflow(), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, discontinuous_instr_overflow)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx_);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    sut.flagInfo_.disContinuousFlag = true;
+    sut.shapeInfo_.ci = 65536;
+    sut.shapeInfo_.batch = 1;
+    EXPECT_EQ(sut.CheckDisContinuousInstrLimits(), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, discontinuous_instr_success)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx_);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    sut.flagInfo_.disContinuousFlag = true;
+    sut.shapeInfo_.ci = 16;
+    sut.shapeInfo_.batch = 1;
+    EXPECT_EQ(sut.CheckDisContinuousInstrLimits(), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, l0c2gm_nz2nd_overflow)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx_);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    sut.shapeInfo_.wo = 65536;
+    sut.shapeInfo_.co = 100000;
+    EXPECT_EQ(sut.CheckL0c2GmNZ2NDInstrLimits(), ge::GRAPH_FAILED);
+}
+
+TEST_F(TestConv2dCheckLimitsDirect, l0c2gm_nz2nd_success)
+{
+    optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx_);
+    InitLimitsSut(sut, compile_info_, ctx_);
+    EXPECT_EQ(sut.CheckL0c2GmNZ2NDInstrLimits(), ge::GRAPH_SUCCESS);
 }

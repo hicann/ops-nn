@@ -1694,3 +1694,83 @@ TEST_F(Conv3DV2TilingRuntime, TestBaseTilingExtractAndPassParams_WithScale)
 }
 
 } // namespace
+
+// ============================================================================
+// Legacy (DAV_2201) full tiling pipeline: drives Conv3dBaseTiling::DoTiling
+// with a pre-initialized engine, covering the base <-> engine bridge.
+// ============================================================================
+TEST_F(Conv3DV2TilingRuntime, TestBaseTilingDoTilingLegacyPath)
+{
+    gert::StorageShape fmap = {{1, 16, 4, 16, 16}, {1, 16, 4, 16, 16}};
+    gert::StorageShape weight = {{16, 16, 3, 3, 3}, {16, 16, 3, 3, 3}};
+    gert::StorageShape bias = {{16}, {16}};
+    gert::StorageShape out = {{1, 16, 2, 14, 14}, {1, 16, 2, 14, 14}};
+
+    auto info = CreateDefaultCompileAndPlatformInfo();
+    info.compile_info.socVersion = "Ascend910B";
+    auto tilingData = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(tilingData, nullptr);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("Conv3DV2")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&fmap, &weight, &bias})
+                      .OutputShapes({&out})
+                      .CompileInfo(&info.compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
+                      .TilingData(tilingData.get())
+                      .Workspace(ws)
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NDC1HWC0)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_FRACTAL_Z_3D)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NDC1HWC0)
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
+                      .Build();
+
+    optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
+    base.engine_ = MakeInitializedEngineForTest(20, "Ascend910B");
+    ASSERT_EQ(base.DoTiling(), ge::GRAPH_SUCCESS);
+    EXPECT_GT(base.numBlocksRes.batchDim * base.numBlocksRes.nDim * base.numBlocksRes.mDim * base.numBlocksRes.doDim *
+                  base.numBlocksRes.groupDim,
+              0u);
+    EXPECT_EQ(base.tilingData_.convRunInfo.batch, 1u);
+    EXPECT_GT(holder.GetContext<gert::TilingContext>()->GetBlockDim(), 0u);
+}
+
+TEST_F(Conv3DV2TilingRuntime, TestBaseTilingDoTilingPointWise)
+{
+    gert::StorageShape fmap = {{1, 16, 1, 8, 8}, {1, 16, 1, 8, 8}};
+    gert::StorageShape weight = {{16, 16, 1, 1, 1}, {16, 16, 1, 1, 1}};
+    gert::StorageShape out = {{1, 16, 1, 8, 8}, {1, 16, 1, 8, 8}};
+
+    auto info = CreateDefaultCompileAndPlatformInfo();
+    info.compile_info.socVersion = "Ascend910B";
+    auto tilingData = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(tilingData, nullptr);
+    auto wsHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws = reinterpret_cast<gert::ContinuousVector*>(wsHolder.get());
+
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("Conv3DV2")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&fmap, &weight})
+                      .OutputShapes({&out})
+                      .CompileInfo(&info.compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&info.platform_info))
+                      .TilingData(tilingData.get())
+                      .Workspace(ws)
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCDHW, ge::Format::FORMAT_NCDHW)
+                      .NodeAttrs(MakeConv3DV2Attrs({1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 1, "NCDHW"))
+                      .Build();
+
+    optiling::Conv3dOpsTiling::Conv3dBaseTiling base(holder.GetContext<gert::TilingContext>());
+    base.engine_ = MakeInitializedEngineForTest(20, "Ascend910B");
+    ASSERT_EQ(base.DoTiling(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(base.tilingData_.convApiTiling.mL0 > 0, true);
+}

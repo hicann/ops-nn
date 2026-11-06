@@ -2081,3 +2081,24 @@ TEST_F(Conv3dErrorCodeTest, Load3dStrideLimitReportsAtRoot)
     ExpectSingleReport("EZ0026", "param_name", "strides", "incorrect_value", "[64, 1]", "reason");
 }
 } // namespace
+
+TEST_F(Conv3dErrorCodeTest, EngineStateAndNumBlocksHelpers)
+{
+    EXPECT_TRUE(engine.IsInitialized());
+    EXPECT_EQ(engine.GetOutputOrder(), static_cast<uint8_t>(Conv3dApiTiling::M_Mode));
+    EXPECT_FALSE(engine.UsesPointWisePath());
+    std::vector<int64_t> dims = {1, 2, 3};
+    EXPECT_TRUE(engine.CheckDims(dims));
+    dims[2] = -1;
+    EXPECT_FALSE(engine.CheckDims(dims));
+    optiling::Conv3dOpsTiling::NumBlocksRes res;
+    engine.InitNumBlocksRes(res);
+    EXPECT_EQ(res.minCost, Conv3dCommon::MAX_64_BIT_NUM);
+    EXPECT_EQ(res.batchDim, 1u);
+    engine.GetNumBlocksRange();
+    std::vector<uint32_t> groupRange;
+    engine.GetNumBlocksRangeforGroupRange(groupRange);
+    EXPECT_FALSE(groupRange.empty());
+    engine.NumBlocksDecision();
+    EXPECT_GE(engine.numBlocksResOpt_.batchDim, 1u);
+}

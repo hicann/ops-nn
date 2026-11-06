@@ -46,13 +46,13 @@ PlatformInfo SetPlatFormInfo_960DT()
 {
     PlatformInfo platformInfo;
     platformInfo.npuArch = NpuArch::DAV_9201;
-    platformInfo.l1Size = 524288;
-    platformInfo.l0ASize = 65536;
-    platformInfo.l0BSize = 65536;
-    platformInfo.l0CSize = 262144;
-    platformInfo.ubSize = 385024;
-    platformInfo.btSize = 4096;
-    platformInfo.fbSize = 2048;
+    platformInfo.l1Size = MEM_SIZE_512K;
+    platformInfo.l0ASize = MEM_SIZE_64K;
+    platformInfo.l0BSize = MEM_SIZE_64K;
+    platformInfo.l0CSize = MEM_SIZE_256K;
+    platformInfo.ubSize = MEM_SIZE_256K;
+    platformInfo.btSize = MEM_SIZE_4K;
+    platformInfo.fbSize = MEM_SIZE_4K;
     return platformInfo;
 }
 

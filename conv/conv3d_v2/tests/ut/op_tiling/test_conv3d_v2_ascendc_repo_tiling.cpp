@@ -33,6 +33,8 @@
 #include "../../../op_host/op_tiling/arch35/conv3d_v2_tuning_tiling.h"
 #include "../../../op_host/op_tiling/arch35/conv3d_v2_base_tiling.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_base.h"
+#include "../../../op_host/op_tiling/conv3d_base_tiling.h"
+#include "../../../op_host/op_tiling/conv3d_tuning_tiling.h"
 
 using namespace ut_util;
 using namespace std;
@@ -345,3 +347,285 @@ true, "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserve
  0})"}};
 
 INSTANTIATE_TEST_CASE_P(Conv3DV2, Conv3DTilingRepo, testing::ValuesIn(general_cases_params_repo));
+
+namespace {
+// ----------------------------------------------------------------------------
+// Runtime-KB translation coverage. The ascend960dt build has no Conv3DV2
+// runtime-kb bank, so QueryBank never succeeds and TranslateRepoTiling is not
+// entered through the normal tiling entry. Drive the helpers directly.
+// ----------------------------------------------------------------------------
+using namespace optiling::conv_ops_tiling;
+
+void InitRepoTilingState3D(Conv3dBaseTilingV2& sut, ConvTilingParseInfo& opInfo,
+                           tuningtiling::Conv3DV2TunnerTiling& tunner)
+{
+    opInfo.aicoreNum = 32;
+    opInfo.l1Size = 524288;
+    opInfo.l0aSize = 65536;
+    opInfo.l0bSize = 65536;
+    opInfo.l0cSize = 262144;
+    opInfo.ubSize = 196608;
+    opInfo.btSize = 4096;
+    opInfo.npuArch = NpuArch::DAV_9201;
+    opInfo.socVersion = "Ascend960DT";
+    sut.opInfo_ = &opInfo;
+
+    sut.shapeInfo_.batch = 1;
+    sut.shapeInfo_.ci = 16;
+    sut.shapeInfo_.di = 4;
+    sut.shapeInfo_.hi = 16;
+    sut.shapeInfo_.wi = 16;
+    sut.shapeInfo_.co = 16;
+    sut.shapeInfo_.kd = 3;
+    sut.shapeInfo_.kh = 3;
+    sut.shapeInfo_.kw = 3;
+    sut.shapeInfo_.dout = 2;
+    sut.shapeInfo_.ho = 14;
+    sut.shapeInfo_.wo = 14;
+    sut.attrInfo_.groups = 1;
+    sut.attrInfo_.strideD = 1;
+    sut.attrInfo_.strideH = 1;
+    sut.attrInfo_.strideW = 1;
+    sut.attrInfo_.dilationD = 1;
+    sut.attrInfo_.dilationH = 1;
+    sut.attrInfo_.dilationW = 1;
+    sut.attrInfo_.roundMode = 1;
+    sut.descInfo_.fMapDtype = ge::DT_FLOAT16;
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.descInfo_.biasDtype = ge::DT_FLOAT16;
+    sut.descInfo_.outDtype = ge::DT_FLOAT16;
+    sut.descInfo_.fMapFormat = ge::FORMAT_NCDHW;
+    sut.descInfo_.weightFormat = ge::FORMAT_NCDHW;
+    sut.descInfo_.outFormat = ge::FORMAT_NCDHW;
+    sut.flagInfo_.hasBias = true;
+    sut.flagInfo_.convGroupType = ConvGroupType::NORMAL_CONV;
+    sut.paramInfo_.nodeType = "Conv3DV2";
+    sut.convOpsConstParams_.m0 = 16;
+    sut.convOpsConstParams_.k0 = 16;
+    sut.convOpsConstParams_.n0 = 16;
+    sut.apiInputPlatformInfo_.ubSize = 196608;
+    sut.apiInputPlatformInfo_.npuArch = NpuArch::DAV_9201;
+
+    conv_tiling::PlatformInfo platform;
+    platform.l1Size = 524288;
+    platform.l0CSize = 262144;
+    platform.ubSize = 196608;
+    platform.l0ASize = 65536;
+    platform.l0BSize = 65536;
+    platform.btSize = 4096;
+    platform.aivPerAic = 2;
+    platform.npuArch = NpuArch::DAV_9201;
+    sut.conv3dApiTiling_ = conv_tiling::Conv3dTiling(platform);
+
+    tunner.groups = 1;
+    tunner.orgCi = 16;
+    tunner.orgDi = 4;
+    tunner.orgHi = 16;
+    tunner.orgWi = 16;
+    tunner.orgDo = 2;
+    tunner.orgCo = 16;
+    tunner.orgHo = 14;
+    tunner.orgWo = 14;
+    tunner.kernelD = 3;
+    tunner.kernelH = 3;
+    tunner.kernelW = 3;
+    tunner.khL1 = 3;
+    tunner.kwL1 = 3;
+    tunner.singleCoreCi = 16;
+    tunner.singleCoreCo = 16;
+    tunner.singleCoreHo = 14;
+    tunner.singleCoreWo = 14;
+    tunner.singleCoreDo = 2;
+    tunner.hoL1 = 14;
+    tunner.woL1 = 14;
+    tunner.kAL1 = 144;
+    tunner.kBL1 = 144;
+    tunner.nBL1 = 16;
+    tunner.hoL0 = 16;
+    tunner.woL0 = 16;
+    tunner.kL0 = 16;
+    tunner.nL0 = 16;
+    tunner.pBufferFlag = 27;
+    tunner.strideD = 1;
+    tunner.strideH = 1;
+    tunner.strideW = 1;
+    tunner.dilationD = 1;
+    tunner.dilationH = 1;
+    tunner.dilationW = 1;
+    tunner.iterateMNOrder = 1;
+    tunner.biasFullLoadFlag = 1;
+    tunner.fixpParamsFullLoadFlag = 1;
+    tunner.batchDim = 1;
+    tunner.nDim = 1;
+    tunner.hoDim = 1;
+    tunner.doDim = 1;
+    tunner.groupDim = 1;
+    tunner.isC04Flag = 0;
+    tunner.mMode = 0;
+}
+} // namespace
+
+class Conv3DTilingRepoTranslate : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        sut_ = std::make_shared<Conv3dBaseTilingV2>(nullptr);
+        tiling_ = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance("Conv3DV2");
+        ASSERT_NE(tiling_, nullptr);
+        tunner_ = std::static_pointer_cast<tuningtiling::Conv3DV2TunnerTiling>(tiling_);
+        ASSERT_NE(tunner_, nullptr);
+        InitRepoTilingState3D(*sut_, opInfo_, *tunner_);
+    }
+    void TearDown() override {}
+
+    std::shared_ptr<Conv3dBaseTilingV2> sut_;
+    tuningtiling::TuningTilingDefPtr tiling_ = nullptr;
+    std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> tunner_ = nullptr;
+    ConvTilingParseInfo opInfo_;
+};
+
+TEST_F(Conv3DTilingRepoTranslate, translate_hw_mode_tiling)
+{
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_EQ(sut_->tilingData_.groups, 1u);
+    EXPECT_EQ(sut_->tilingData_.orgCi, 16u);
+    EXPECT_EQ(sut_->tilingData_.kernelD, 3u);
+    EXPECT_EQ(sut_->tilingData_.singleCoreBatch, 1u);
+    EXPECT_EQ(sut_->tilingData_.kernelHxkernelW, 9u);
+    EXPECT_EQ(sut_->tilingData_.kernelHxkernelWxkernelD, 27u);
+    EXPECT_EQ(sut_->tilingData_.cinAInCore, 16u);
+    EXPECT_EQ(sut_->tilingData_.mStep, 256u);
+    EXPECT_EQ(sut_->tilingData_.kStep, 1u);
+    EXPECT_EQ(sut_->tilingData_.nStep, 1u);
+    EXPECT_EQ(sut_->tilingData_.nL1DivBlockSize, 1u);
+    EXPECT_GT(sut_->tilingData_.aL1SpaceSize, 0u);
+    EXPECT_FALSE(sut_->flagInfo_.mSplitModeFlag);
+    EXPECT_FALSE(sut_->flagInfo_.isKernelSplit);
+}
+
+TEST_F(Conv3DTilingRepoTranslate, translate_m_mode_tiling)
+{
+    tunner_->mMode = 1;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_TRUE(sut_->flagInfo_.mSplitModeFlag);
+    EXPECT_EQ(sut_->tilingData_.mStep, 16u);
+    EXPECT_GT(sut_->tilingData_.aL1SpaceSize, 0u);
+}
+
+TEST_F(Conv3DTilingRepoTranslate, translate_kernel_split)
+{
+    tunner_->khL1 = 1;
+    tunner_->kwL1 = 1;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_TRUE(sut_->flagInfo_.isKernelSplit);
+    EXPECT_EQ(sut_->tilingData_.cinAInCore, 144u);
+    EXPECT_EQ(sut_->tilingData_.khL1, 1u);
+    EXPECT_EQ(sut_->tilingData_.kwL1, 1u);
+}
+
+TEST_F(Conv3DTilingRepoTranslate, translate_kernel_value_zero)
+{
+    tunner_->kernelH = 0;
+    tunner_->kernelW = 0;
+    EXPECT_FALSE(sut_->TranslateRepoTiling(tiling_));
+}
+
+TEST_F(Conv3DTilingRepoTranslate, translate_c04_wo_full_load)
+{
+    tunner_->isC04Flag = 1;
+    tunner_->singleCoreWo = 14;
+    tunner_->woL1 = 14;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_GT(sut_->tilingData_.aL1SpaceSize, 0u);
+    EXPECT_EQ(sut_->tilingData_.aL1SpaceSize % 64u, 0u);
+}
+
+TEST_F(Conv3DTilingRepoTranslate, translate_opt_group)
+{
+    sut_->attrInfo_.groups = 2;
+    sut_->shapeInfo_.ci = 32;
+    sut_->shapeInfo_.co = 32;
+    tunner_->groups = 2;
+    tunner_->orgCi = 32;
+    tunner_->orgCo = 32;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_EQ(sut_->tilingData_.singleCoreGroups, sut_->optGroupInfo_.enlarge);
+}
+
+TEST_F(Conv3DTilingRepoTranslate, translate_null_tiling)
+{
+    tuningtiling::TuningTilingDefPtr nullTiling = nullptr;
+    EXPECT_FALSE(sut_->TranslateRepoTiling(nullTiling));
+}
+
+TEST_F(Conv3DTilingRepoTranslate, get_tiling_input_args)
+{
+    sut_->attrInfo_.hf32Mode = 1;
+    shared_ptr<void> inputArgs = nullptr;
+    size_t inputArgsSize = 0;
+    sut_->GetTilingInputArgs(inputArgs, inputArgsSize);
+    ASSERT_NE(inputArgs, nullptr);
+    EXPECT_EQ(inputArgsSize, sizeof(tuningtiling::Conv3DV2InputArgs));
+    auto conv3dArgs = reinterpret_cast<tuningtiling::Conv3DV2InputArgs*>(inputArgs.get());
+    EXPECT_EQ(conv3dArgs->groups, 1);
+    EXPECT_EQ(conv3dArgs->bShapeC, 16);
+    EXPECT_EQ(conv3dArgs->aShapeD, 4);
+}
+
+TEST_F(Conv3DTilingRepoTranslate, cache_tiling_support_and_translate)
+{
+    EXPECT_TRUE(sut_->CheckSupportCacheTiling());
+    sut_->paramInfo_.nodeType = "QuantConv3D";
+    EXPECT_FALSE(sut_->CheckSupportCacheTiling());
+    sut_->paramInfo_.nodeType = "Conv3DV2";
+
+    sut_->GetCacheTilingInputArgs();
+    EXPECT_EQ(sut_->cacheInputArgs_.inputShapeD, 4);
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    sut_->GetCachedTilingData();
+    sut_->tilingData_ = {};
+    sut_->TranslateCachedTilingData();
+    EXPECT_EQ(sut_->tilingData_.orgCi, 16u);
+    EXPECT_EQ(sut_->tilingData_.kernelH, 3u);
+}
+
+// ----------------------------------------------------------------------------
+// Legacy (DAV_2201) AOE knowledge-bank translation helpers are not reached by
+// the ascend960dt tiling entry; drive them directly with a v1 tunner instance.
+// ----------------------------------------------------------------------------
+TEST_F(Conv3DTilingRepoTranslate, legacy_aoe_translate)
+{
+    auto def = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance(ge::AscendString("Conv3D"));
+    ASSERT_NE(def, nullptr);
+    auto tuner = std::static_pointer_cast<tuningtiling::Conv3DTunerTiling>(def);
+    ASSERT_NE(tuner, nullptr);
+    tuner->groups = 1;
+    tuner->orgCi = 16;
+    tuner->orgDi = 4;
+    tuner->orgHi = 16;
+    tuner->orgWi = 16;
+    tuner->orgCo = 16;
+    tuner->orgDo = 2;
+    tuner->orgHo = 14;
+    tuner->orgWo = 14;
+    tuner->kernelD = 3;
+    tuner->kernelH = 3;
+    tuner->kernelW = 3;
+    tuner->batchDim = 1;
+    tuner->mDim = 1;
+    tuner->nDim = 1;
+    tuner->doDim = 1;
+    tuner->groupDim = 1;
+
+    optiling::Conv3dOpsTiling::Conv3dBaseTiling legacy(nullptr);
+    legacy.shapeInfo_.batch = 1;
+    legacy.flagInfo_.hasBias = true;
+    ASSERT_TRUE(legacy.TranslateAoeTiling(def));
+    EXPECT_EQ(legacy.tilingData_.convApiTiling.orgCi, 16u);
+    EXPECT_EQ(legacy.tilingData_.convApiTiling.kernelD, 3u);
+    EXPECT_EQ(legacy.tilingData_.convRunInfo.batch, 1u);
+    EXPECT_EQ(legacy.tilingData_.convRunInfo.cout, 16u);
+
+    tuningtiling::TuningTilingDefPtr nullTiling = nullptr;
+    EXPECT_FALSE(legacy.TranslateAoeTiling(nullTiling));
+}

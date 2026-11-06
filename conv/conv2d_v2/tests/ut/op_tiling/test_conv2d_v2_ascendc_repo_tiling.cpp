@@ -357,3 +357,274 @@ static Conv2DTilingTestParamRepo general_cases_params_repo[] = {
     "reserverdParam6": 0})"}};
 
 INSTANTIATE_TEST_CASE_P(Conv2DV2, Conv2DTilingRepo, testing::ValuesIn(general_cases_params_repo));
+
+namespace {
+// ----------------------------------------------------------------------------
+// Runtime-KB translation coverage: the ascend960dt build ships no
+// *_runtime_kb.json for Conv2DV2, so QueryBank never succeeds and
+// TranslateRepoTiling is never entered through the normal tiling entry.
+// The tests below drive the translation helpers directly with a tunner
+// instance created by the tuning class factory.
+// ----------------------------------------------------------------------------
+using namespace optiling::conv_ops_tiling;
+
+void InitRepoTilingState(Conv2dBaseTiling& sut, ConvTilingParseInfo& opInfo, tuningtiling::Conv2DV2TunnerTiling& tunner)
+{
+    opInfo.aicoreNum = AIC_NUM;
+    opInfo.l1Size = MEM_SIZE_512K;
+    opInfo.l0aSize = MEM_SIZE_64K;
+    opInfo.l0bSize = MEM_SIZE_64K;
+    opInfo.l0cSize = MEM_SIZE_256K;
+    opInfo.ubSize = MEM_SIZE_200K;
+    opInfo.btSize = MEM_SIZE_4K;
+    opInfo.npuArch = NpuArch::DAV_9201;
+    opInfo.socVersion = "Ascend960DT";
+    sut.opInfo_ = &opInfo;
+
+    sut.shapeInfo_.batch = 1;
+    sut.shapeInfo_.ci = 16;
+    sut.shapeInfo_.hi = 16;
+    sut.shapeInfo_.wi = 16;
+    sut.shapeInfo_.co = 16;
+    sut.shapeInfo_.kh = 3;
+    sut.shapeInfo_.kw = 3;
+    sut.shapeInfo_.ho = 14;
+    sut.shapeInfo_.wo = 14;
+    sut.attrInfo_.groups = 1;
+    sut.attrInfo_.strideH = 1;
+    sut.attrInfo_.strideW = 1;
+    sut.attrInfo_.dilationH = 1;
+    sut.attrInfo_.dilationW = 1;
+    sut.attrInfo_.roundMode = 1;
+    sut.descInfo_.fMapDtype = ge::DT_FLOAT16;
+    sut.descInfo_.weightDtype = ge::DT_FLOAT16;
+    sut.descInfo_.biasDtype = ge::DT_FLOAT16;
+    sut.descInfo_.outDtype = ge::DT_FLOAT16;
+    sut.descInfo_.fMapFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.weightFormat = ge::FORMAT_NCHW;
+    sut.descInfo_.outFormat = ge::FORMAT_NCHW;
+    sut.flagInfo_.hasBias = true;
+    sut.flagInfo_.convGroupType = ConvGroupType::NORMAL_CONV;
+    sut.featureFlagInfo_ = ConvAscendcFeatureFlag::IS_LOAD3D_FLAG;
+    sut.paramInfo_.nodeType = "Conv2DV2";
+    sut.convOpsConstParams_.m0 = CUBE_M0;
+    sut.convOpsConstParams_.k0 = CUBE_K0_16;
+    sut.convOpsConstParams_.n0 = CUBE_N0;
+
+    conv_tiling::PlatformInfo platform;
+    platform.l1Size = MEM_SIZE_512K;
+    platform.l0CSize = MEM_SIZE_256K;
+    platform.ubSize = MEM_SIZE_200K;
+    platform.l0ASize = MEM_SIZE_64K;
+    platform.l0BSize = MEM_SIZE_64K;
+    platform.btSize = MEM_SIZE_4K;
+    platform.aivPerAic = NUM_2;
+    platform.npuArch = NpuArch::DAV_9201;
+    sut.conv2dApiTiling_ = conv_tiling::Conv2dTiling(platform);
+
+    tunner.groups = 1;
+    tunner.orgCi = 16;
+    tunner.orgHi = 16;
+    tunner.orgWi = 16;
+    tunner.orgCo = 16;
+    tunner.orgHo = 14;
+    tunner.orgWo = 14;
+    tunner.kernelH = 3;
+    tunner.kernelW = 3;
+    tunner.khL1 = 3;
+    tunner.kwL1 = 3;
+    tunner.singleCoreCi = 16;
+    tunner.singleCoreCo = 16;
+    tunner.singleCoreHo = 14;
+    tunner.singleCoreWo = 14;
+    tunner.hoL1 = 14;
+    tunner.woL1 = 14;
+    tunner.kAL1 = 144;
+    tunner.kBL1 = 144;
+    tunner.nBL1 = 16;
+    tunner.multiNBL1 = 1;
+    tunner.hoL0 = 16;
+    tunner.woL0 = 16;
+    tunner.kL0 = 16;
+    tunner.nL0 = 16;
+    tunner.nL1DivBlockSize = 1;
+    tunner.pBufferFlag = 27;
+    tunner.strideH = 1;
+    tunner.strideW = 1;
+    tunner.dilationH = 1;
+    tunner.dilationW = 1;
+    tunner.iterateMNOrder = 1;
+    tunner.biasFullLoadFlag = 1;
+    tunner.fixpParamsFullLoadFlag = 1;
+    tunner.roundMode = 1;
+    tunner.batchDim = 1;
+    tunner.hoDim = 1;
+    tunner.woDim = 1;
+    tunner.nDim = 1;
+    tunner.groupDim = 1;
+    tunner.mMode = 0;
+    tunner.innerBatch = 1;
+    tunner.enlarge = 0;
+    tunner.isC04Flag = 0;
+    tunner.isWeightUbTransFlag = 0;
+}
+} // namespace
+
+class Conv2DTilingRepoTranslate : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        sut_ = std::make_shared<Conv2dBaseTiling>(nullptr);
+        tiling_ = tuningtiling::TuningTilingClassFactory::CreateTilingDataInstance("Conv2DV2");
+        ASSERT_NE(tiling_, nullptr);
+        tunner_ = std::static_pointer_cast<tuningtiling::Conv2DV2TunnerTiling>(tiling_);
+        ASSERT_NE(tunner_, nullptr);
+        InitRepoTilingState(*sut_, opInfo_, *tunner_);
+    }
+    void TearDown() override {}
+
+    std::shared_ptr<Conv2dBaseTiling> sut_;
+    tuningtiling::TuningTilingDefPtr tiling_ = nullptr;
+    std::shared_ptr<tuningtiling::Conv2DV2TunnerTiling> tunner_ = nullptr;
+    ConvTilingParseInfo opInfo_;
+};
+
+TEST_F(Conv2DTilingRepoTranslate, translate_load3d_tiling)
+{
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_EQ(sut_->tilingData_.get_groups(), 1u);
+    EXPECT_EQ(sut_->tilingData_.get_orgCi(), 16u);
+    EXPECT_EQ(sut_->tilingData_.get_singleCoreBatch(), 1u);
+    EXPECT_EQ(sut_->tilingData_.get_kernelHxkernelW(), 9u);
+    EXPECT_EQ(sut_->tilingData_.get_khL1(), 0u);
+    EXPECT_EQ(sut_->tilingData_.get_bUbNStep(), 0u);
+    EXPECT_EQ(sut_->tilingData_.get_khUb(), 0u);
+    EXPECT_EQ(sut_->tilingData_.get_multiNBL1(), 1u);
+    EXPECT_EQ(sut_->tilingData_.get_aL1SpaceSize() % MEM_SIZE_64B, 0u);
+}
+
+TEST_F(Conv2DTilingRepoTranslate, translate_dma_tiling)
+{
+    sut_->featureFlagInfo_ = ConvAscendcFeatureFlag::IS_DMA_FLAG;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_EQ(sut_->tilingData_.get_khL1(), 3u);
+    EXPECT_EQ(sut_->tilingData_.get_kwL1(), 3u);
+    EXPECT_GT(sut_->tilingData_.get_khUb(), 0u);
+    EXPECT_GT(sut_->tilingData_.get_kwUb(), 0u);
+}
+
+TEST_F(Conv2DTilingRepoTranslate, translate_c04_mmode_inner_batch)
+{
+    tunner_->isC04Flag = 1;
+    tunner_->mMode = 1;
+    tunner_->innerBatch = 2;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_TRUE(sut_->flagInfo_.enableC04Flag);
+    EXPECT_TRUE(sut_->flagInfo_.mSplitModeFlag);
+    EXPECT_GT(sut_->tilingData_.get_bUbNStep(), 0u);
+    EXPECT_EQ(sut_->tilingData_.get_bUbKStep(), 0u);
+    EXPECT_GT(sut_->tilingData_.get_aL1SpaceSize(), 0u);
+}
+
+TEST_F(Conv2DTilingRepoTranslate, translate_c04_hw_wo_full_load)
+{
+    tunner_->isC04Flag = 1;
+    tunner_->mMode = 0;
+    tunner_->orgWo = 14;
+    tunner_->woL1 = 14;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_TRUE(sut_->flagInfo_.enableC04Flag);
+    EXPECT_FALSE(sut_->flagInfo_.mSplitModeFlag);
+    EXPECT_GT(sut_->tilingData_.get_aL1SpaceSize(), 0u);
+}
+
+TEST_F(Conv2DTilingRepoTranslate, translate_weight_ub_trans)
+{
+    tunner_->isWeightUbTransFlag = 1;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_GT(sut_->tilingData_.get_bUbNStep(), 0u);
+    EXPECT_GT(sut_->tilingData_.get_bUbKStep(), 0u);
+}
+
+TEST_F(Conv2DTilingRepoTranslate, translate_mmode_al1_space)
+{
+    tunner_->mMode = 1;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_TRUE(sut_->flagInfo_.mSplitModeFlag);
+    EXPECT_GT(sut_->tilingData_.get_aL1SpaceSize(), 0u);
+}
+
+TEST_F(Conv2DTilingRepoTranslate, translate_opt_group_enlarge)
+{
+    sut_->flagInfo_.convGroupType = ConvGroupType::OPT_GROUP_CONV;
+    sut_->oriGroupInfo_.ciPerGroup = 8;
+    sut_->oriGroupInfo_.coPerGroup = 8;
+    sut_->optGroupInfo_.enlarge = 2;
+    sut_->optGroupInfo_.groupOpt = 1;
+    tunner_->groups = 2;
+    tunner_->enlarge = 2;
+    tunner_->groupDim = 1;
+    ASSERT_TRUE(sut_->TranslateRepoTiling(tiling_));
+    EXPECT_EQ(sut_->tilingData_.get_enlarge(), 2u);
+    EXPECT_EQ(sut_->tilingData_.get_cinOpt(), 16u);
+    EXPECT_EQ(sut_->tilingData_.get_coutOpt(), 16u);
+    EXPECT_EQ(sut_->tilingData_.get_groupOpt(), 1u);
+    EXPECT_EQ(sut_->tilingData_.get_singleCoreGroups(), 2u);
+}
+
+TEST_F(Conv2DTilingRepoTranslate, translate_null_tiling)
+{
+    tuningtiling::TuningTilingDefPtr nullTiling = nullptr;
+    EXPECT_FALSE(sut_->TranslateRepoTiling(nullTiling));
+}
+
+TEST_F(Conv2DTilingRepoTranslate, get_tiling_input_args)
+{
+    sut_->attrInfo_.hf32Mode = 1;
+    sut_->flagInfo_.extendConvFlag = true;
+    sut_->fixpipeInfo_.dualOutput = 1;
+    shared_ptr<void> inputArgs = nullptr;
+    size_t inputArgsSize = 0;
+    sut_->GetTilingInputArgs(inputArgs, inputArgsSize);
+    ASSERT_NE(inputArgs, nullptr);
+    EXPECT_EQ(inputArgsSize, sizeof(tuningtiling::Conv2DV2InputArgs));
+    auto conv2dArgs = reinterpret_cast<tuningtiling::Conv2DV2InputArgs*>(inputArgs.get());
+    EXPECT_TRUE(conv2dArgs->hf32Flag);
+    EXPECT_EQ(conv2dArgs->groups, 1);
+    EXPECT_EQ(conv2dArgs->bShapeC, 16);
+}
+
+TEST_F(Conv2DTilingRepoTranslate, cache_tiling_support_and_translate)
+{
+    EXPECT_TRUE(sut_->CheckSupportCacheTiling());
+    sut_->paramInfo_.nodeType = "QuantConv2D";
+    EXPECT_FALSE(sut_->CheckSupportCacheTiling());
+    sut_->paramInfo_.nodeType = "Conv2DV2";
+
+    sut_->GetCacheTilingInputArgs();
+    EXPECT_EQ(sut_->cacheInputArgs_.inputShapeN, 1);
+    EXPECT_EQ(sut_->cacheInputArgs_.weightShapeN, 16);
+
+    sut_->GetCachedTilingData();
+    sut_->TranslateCachedTilingData();
+    EXPECT_EQ(sut_->tilingData_.get_orgCi(), 16u);
+    EXPECT_EQ(sut_->tilingData_.get_orgHi(), 16u);
+
+    Conv2dTilingCache::GetInstance().cachedTiling.clear();
+    ASSERT_TRUE(sut_->AddTilingToCache());
+    Conv2dCacheTilingData cachedData;
+    EXPECT_TRUE(Conv2dTilingCache::GetInstance().GetCachedTiling(sut_->cacheInputArgs_, cachedData));
+    Conv2dTilingCache::GetInstance().cachedTiling.clear();
+}
+
+TEST_F(Conv2DTilingRepoTranslate, cache_tiling_full)
+{
+    Conv2dTilingCache::GetInstance().cachedTiling.clear();
+    ConvInputArgs args;
+    for (uint64_t idx = 0; idx < MAX_CACHE_SIZE; ++idx) {
+        args.inputShapeN = static_cast<int64_t>(idx);
+        ASSERT_TRUE(Conv2dTilingCache::GetInstance().AddCachedTiling(args, Conv2dCacheTilingData()));
+    }
+    EXPECT_FALSE(sut_->AddTilingToCache());
+    Conv2dTilingCache::GetInstance().cachedTiling.clear();
+}
