@@ -13,8 +13,8 @@
  * \brief ApplyCamePart4 kernel entry (arch35), aligned to canndev ApplyCamePart4
  *
  * GE IR signature (canndev REG_OP(ApplyCamePart4)):
- *   Inputs (12): param, m, r, c, weight_decay, lr, beta3, sum_r(optional),
- *                sum_u_r, sum_u_c, sum_u_rc, global_shape(optional)
+ *   Inputs (12): param, m, r, c, weight_decay, lr, beta3,
+ *                sum_u_r(7), sum_u_c(8), sum_u_rc(9), sum_r(10, optional), global_shape(11, optional)
  *   Outputs (3): param, r, c
  *
  * Template parameters (matching apply_came_part4_tiling_key.h):

@@ -5,7 +5,7 @@
       "bin_filename": "ApplyCamePart4_fp32_350",
       "inputs": [
         {
-          "name": "param_in",
+          "name": "param",
           "index": 0,
           "dtype": "float32",
           "format": "ND",
@@ -27,7 +27,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "r_in",
+          "name": "r",
           "index": 2,
           "dtype": "float32",
           "format": "ND",
@@ -38,7 +38,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "c_in",
+          "name": "c",
           "index": 3,
           "dtype": "float32",
           "format": "ND",
@@ -82,19 +82,8 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "sum_r",
-          "index": 7,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "optional",
-          "shape": [
-            -2
-          ],
-          "format_match_mode": "FormatAgnostic"
-        },
-        {
           "name": "sum_u_r",
-          "index": 8,
+          "index": 7,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
@@ -105,7 +94,7 @@
         },
         {
           "name": "sum_u_c",
-          "index": 9,
+          "index": 8,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
@@ -116,10 +105,21 @@
         },
         {
           "name": "sum_u_rc",
-          "index": 10,
+          "index": 9,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "sum_r",
+          "index": 10,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
           "shape": [
             -2
           ],
@@ -139,7 +139,7 @@
       ],
       "outputs": [
         {
-          "name": "param_out",
+          "name": "param",
           "index": 0,
           "dtype": "float32",
           "format": "ND",
@@ -150,7 +150,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "r_out",
+          "name": "r",
           "index": 1,
           "dtype": "float32",
           "format": "ND",
@@ -161,7 +161,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "c_out",
+          "name": "c",
           "index": 2,
           "dtype": "float32",
           "format": "ND",
@@ -177,7 +177,7 @@
       "bin_filename": "ApplyCamePart4_float16_350",
       "inputs": [
         {
-          "name": "param_in",
+          "name": "param",
           "index": 0,
           "dtype": "float16",
           "format": "ND",
@@ -199,7 +199,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "r_in",
+          "name": "r",
           "index": 2,
           "dtype": "float16",
           "format": "ND",
@@ -210,7 +210,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "c_in",
+          "name": "c",
           "index": 3,
           "dtype": "float16",
           "format": "ND",
@@ -254,19 +254,8 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "sum_r",
-          "index": 7,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "optional",
-          "shape": [
-            -2
-          ],
-          "format_match_mode": "FormatAgnostic"
-        },
-        {
           "name": "sum_u_r",
-          "index": 8,
+          "index": 7,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
@@ -277,7 +266,7 @@
         },
         {
           "name": "sum_u_c",
-          "index": 9,
+          "index": 8,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
@@ -288,10 +277,21 @@
         },
         {
           "name": "sum_u_rc",
-          "index": 10,
+          "index": 9,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "sum_r",
+          "index": 10,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
           "shape": [
             -2
           ],
@@ -311,7 +311,7 @@
       ],
       "outputs": [
         {
-          "name": "param_out",
+          "name": "param",
           "index": 0,
           "dtype": "float16",
           "format": "ND",
@@ -322,7 +322,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "r_out",
+          "name": "r",
           "index": 1,
           "dtype": "float16",
           "format": "ND",
@@ -333,7 +333,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "c_out",
+          "name": "c",
           "index": 2,
           "dtype": "float16",
           "format": "ND",
@@ -349,7 +349,7 @@
       "bin_filename": "ApplyCamePart4_bf16_350",
       "inputs": [
         {
-          "name": "param_in",
+          "name": "param",
           "index": 0,
           "dtype": "bfloat16",
           "format": "ND",
@@ -371,7 +371,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "r_in",
+          "name": "r",
           "index": 2,
           "dtype": "bfloat16",
           "format": "ND",
@@ -382,7 +382,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "c_in",
+          "name": "c",
           "index": 3,
           "dtype": "bfloat16",
           "format": "ND",
@@ -426,19 +426,8 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "sum_r",
-          "index": 7,
-          "dtype": "float32",
-          "format": "ND",
-          "paramType": "optional",
-          "shape": [
-            -2
-          ],
-          "format_match_mode": "FormatAgnostic"
-        },
-        {
           "name": "sum_u_r",
-          "index": 8,
+          "index": 7,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
@@ -449,7 +438,7 @@
         },
         {
           "name": "sum_u_c",
-          "index": 9,
+          "index": 8,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
@@ -460,10 +449,21 @@
         },
         {
           "name": "sum_u_rc",
-          "index": 10,
+          "index": 9,
           "dtype": "float32",
           "format": "ND",
           "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "sum_r",
+          "index": 10,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
           "shape": [
             -2
           ],
@@ -483,7 +483,7 @@
       ],
       "outputs": [
         {
-          "name": "param_out",
+          "name": "param",
           "index": 0,
           "dtype": "bfloat16",
           "format": "ND",
@@ -494,7 +494,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "r_out",
+          "name": "r",
           "index": 1,
           "dtype": "bfloat16",
           "format": "ND",
@@ -505,7 +505,7 @@
           "format_match_mode": "FormatAgnostic"
         },
         {
-          "name": "c_out",
+          "name": "c",
           "index": 2,
           "dtype": "bfloat16",
           "format": "ND",
