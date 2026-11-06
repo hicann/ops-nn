@@ -180,9 +180,14 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>传入的x、attenMaskOptional、relativePosBias或out是空指针。</td>
     </tr>
     <tr>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>传入的x、attenMaskOptional（非空时）、relativePosBias或out的数据类型不在支持的范围之内，或与x的数据类型不一致。</td>
+    </tr>
+    <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>561002</td>
-      <td>入参或者出参的数据类型、数据格式或shape不在支持的范围之内。</td>
+      <td>输入或输出的shape不匹配或者不在支持的维度范围内。</td>
     </tr>
   </tbody></table>
 

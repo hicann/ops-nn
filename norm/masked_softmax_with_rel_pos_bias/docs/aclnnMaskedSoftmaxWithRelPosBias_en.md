@@ -182,9 +182,14 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>x, attenMaskOptional, relativePosBias, or out is a null pointer.</td>
     </tr>
     <tr>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>The data type of x, attenMaskOptional (when not null), relativePosBias, or out is not within the supported range, or is inconsistent with the data type of x.</td>
+    </tr>
+    <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>561002</td>
-      <td>The data type, data format, or shape of an input or output parameter is not within the supported range.</td>
+      <td>The shape of an input or output parameter does not match or is not within the supported dimension range.</td>
     </tr>
   </tbody></table>
 
