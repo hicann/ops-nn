@@ -24,6 +24,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -31,6 +32,7 @@
 #include <vector>
 #include <gtest/gtest.h>
 
+#include "base/err_mgr.h"
 #include "ut_op_util.h"
 #include "test_cube_util.h"
 #include "kernel_run_context_facker.h"
@@ -104,7 +106,8 @@ void InitPlatForm(fe::PlatFormInfos& platformInfo, std::map<std::string, std::st
 class TilingRunner {
 public:
     TilingRunner(const std::vector<int64_t>& dims, ge::DataType dtype, bool transpose,
-                 int64_t coreNum = DEFAULT_CORE_NUM, int64_t ubSize = DEFAULT_UB_SIZE, bool withTransposeAttr = true)
+                 int64_t coreNum = DEFAULT_CORE_NUM, int64_t ubSize = DEFAULT_UB_SIZE, bool withTransposeAttr = true,
+                 ge::DataType outputDtype = ge::DT_INT64)
     {
         compileInfo_.coreNum = coreNum;
         compileInfo_.ubSize = ubSize;
@@ -132,7 +135,7 @@ public:
                       .CompileInfo(&compileInfo_)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo_))
                       .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, outputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(attrs)
                       .TilingData(param_.get())
                       .Workspace(workspace)
@@ -181,6 +184,22 @@ private:
     std::function<ge::graphStatus(gert::TilingContext*)> tilingFunc_;
     ge::graphStatus status_ = ge::GRAPH_FAILED;
 };
+void ExpectSingleError(const char* code, std::initializer_list<const char*> expectedParts)
+{
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    ASSERT_EQ(errors.size(), 1U);
+    EXPECT_STREQ(errors[0].error_id.get(), code);
+    ASSERT_NE(errors[0].error_message.get(), nullptr);
+    const std::string message(errors[0].error_message.get());
+    for (const char* part : expectedParts) {
+        EXPECT_NE(message.find(part), std::string::npos) << message;
+    }
+    if (std::string(code) == "EZ1008") {
+        for (const char* detail : {"compile info", "AIV core count", "UB size", "transpose"}) {
+            EXPECT_EQ(message.find(detail), std::string::npos) << message;
+        }
+    }
+}
 } // namespace
 
 class NonZeroTilingArch22Test : public testing::Test {
@@ -399,35 +418,53 @@ TEST_F(NonZeroTilingArch22Test, NonZeroTilingArch22_transpose_true)
 // ---- 失败分支：coreNum <= 0 --------------------------------------------------------------------
 TEST_F(NonZeroTilingArch22Test, NonZeroTilingArch22_core_num_zero_failed)
 {
+    (void)error_message::GetErrMgrErrorMessage();
     TilingRunner r({1000}, ge::DT_FLOAT, /*transpose=*/false, /*coreNum=*/0);
     EXPECT_EQ(r.Status(), ge::GRAPH_FAILED);
+    ExpectSingleError("EZ1008", {"NonZero", "tiling execution failed", "Preserve the execution logs"});
 }
 
 // ---- 失败分支：ubSize <= 0 --------------------------------------------------------------------
 TEST_F(NonZeroTilingArch22Test, NonZeroTilingArch22_ub_size_zero_failed)
 {
+    (void)error_message::GetErrMgrErrorMessage();
     TilingRunner r({1000}, ge::DT_FLOAT, /*transpose=*/false, DEFAULT_CORE_NUM, /*ubSize=*/0);
     EXPECT_EQ(r.Status(), ge::GRAPH_FAILED);
+    ExpectSingleError("EZ1008", {"NonZero", "tiling execution failed", "Preserve the execution logs"});
 }
 
 // ---- 失败分支：rank == 0（空 shape） -----------------------------------------------------------
 TEST_F(NonZeroTilingArch22Test, NonZeroTilingArch22_rank_zero_failed)
 {
+    (void)error_message::GetErrMgrErrorMessage();
     TilingRunner r({}, ge::DT_FLOAT, /*transpose=*/false);
     EXPECT_EQ(r.Status(), ge::GRAPH_FAILED);
+    ExpectSingleError("EZ0012", {"Parameter x", "shape dim 0", "rank must be in [1, 8]"});
 }
 
 // ---- 失败分支：rank > 8 ------------------------------------------------------------------------
 TEST_F(NonZeroTilingArch22Test, NonZeroTilingArch22_rank_exceed_max_failed)
 {
+    (void)error_message::GetErrMgrErrorMessage();
     TilingRunner r({2, 2, 2, 2, 2, 2, 2, 2, 2}, ge::DT_FLOAT, /*transpose=*/false);
     EXPECT_EQ(r.Status(), ge::GRAPH_FAILED);
+    ExpectSingleError("EZ0012", {"Parameter x", "shape dim 9", "rank must be in [1, 8]"});
 }
 
 // ---- 失败分支：transpose 属性缺失 --------------------------------------------------------------
 TEST_F(NonZeroTilingArch22Test, NonZeroTilingArch22_transpose_attr_missing_failed)
 {
+    (void)error_message::GetErrMgrErrorMessage();
     TilingRunner r({1000}, ge::DT_FLOAT, /*transpose=*/false, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE,
                    /*withTransposeAttr=*/false);
     EXPECT_EQ(r.Status(), ge::GRAPH_FAILED);
+    ExpectSingleError("EZ1008", {"NonZero", "tiling execution failed", "Preserve the execution logs"});
+}
+
+TEST_F(NonZeroTilingArch22Test, NonZeroTilingArch22_invalid_output_dtype_failed)
+{
+    (void)error_message::GetErrMgrErrorMessage();
+    TilingRunner r({1000}, ge::DT_FLOAT, false, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, true, ge::DT_FLOAT);
+    EXPECT_EQ(r.Status(), ge::GRAPH_FAILED);
+    ExpectSingleError("EZ0020", {"Parameter y", "FLOAT", "set the dtype attribute to int32 or int64"});
 }

@@ -13,6 +13,9 @@
  * \brief
  */
 
+#include <string>
+#include <vector>
+
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "tiling/tiling_api.h"
@@ -25,32 +28,47 @@ constexpr size_t ATTR_TRANSPOSE_IDX = 0;
 constexpr int64_t INT32_BYTE = 4;
 constexpr int64_t WORKSPACE_ALIGN = 64;
 
+namespace {
+ge::graphStatus ReportTilingFailure(const char* opName, const std::string& detail)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {
+        opName, "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "%s", detail.c_str());
+    return ge::GRAPH_FAILED;
+}
+} // namespace
+
 static int64_t AlignUp(int64_t value, int64_t align) { return ((value + align - 1) / align) * align; }
 
 ge::graphStatus NonZeroAscendCTilingImpl::GetCompileInfo()
 {
     auto compileInfo = context_->GetCompileInfo<NonZeroCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
+    if (compileInfo == nullptr) {
+        return ReportTilingFailure(context_->GetNodeName(), "compile info is null");
+    }
     coreNum_ = compileInfo->coreNum;
     ubSize_ = compileInfo->ubSize;
-    OP_CHECK_IF(
-        coreNum_ <= 0 || ubSize_ <= 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "coreNum, ubSize",
-                                              (std::to_string(coreNum_) + ", " + std::to_string(ubSize_)).c_str(),
-                                              "value must be greater than 0"),
-        return ge::GRAPH_FAILED);
+    if (coreNum_ <= 0 || ubSize_ <= 0) {
+        return ReportTilingFailure(context_->GetNodeName(), "invalid platform resources: AIV core count " +
+                                                                std::to_string(coreNum_) + ", UB size " +
+                                                                std::to_string(ubSize_));
+    }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus NonZeroAscendCTilingImpl::CalcShapeInfo()
 {
     auto xStorage = context_->GetInputShape(INPUT_X_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, xStorage);
+    if (xStorage == nullptr) {
+        return ReportTilingFailure(context_->GetNodeName(), "input x storage shape is null");
+    }
     auto xShape = xStorage->GetStorageShape();
     rank_ = static_cast<int64_t>(xShape.GetDimNum());
     OP_CHECK_IF(rank_ <= 0 || rank_ > MAX_DIM_NUM,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "rank", std::to_string(rank_).c_str(),
-                                                      "value must be in [1, 8]"),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(rank_).c_str(),
+                                                         "rank must be in [1, 8]"),
                 return ge::GRAPH_FAILED);
 
     numel_ = 1;
@@ -63,7 +81,9 @@ ge::graphStatus NonZeroAscendCTilingImpl::CalcShapeInfo()
 
     // 输入元素字节数：bool/int8/uint8=1、fp16=2、bf16 用 -2 编码、fp32/int32=4（kernel 按位模式判零）
     auto xDesc = context_->GetInputDesc(INPUT_X_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+    if (xDesc == nullptr) {
+        return ReportTilingFailure(context_->GetNodeName(), "input x descriptor is null");
+    }
     ge::DataType xDtype = xDesc->GetDataType();
     switch (xDtype) {
         case ge::DT_BOOL:
@@ -85,19 +105,24 @@ ge::graphStatus NonZeroAscendCTilingImpl::CalcShapeInfo()
     // 输出元素字节数：int32=4、int64=8。GE 图模式（jit_compile）下 NonZero 内部输出为 int32 + 后置 Cast，
     // kernel 据此切换输出值与 outShape 刷新协议的写出位宽
     auto yDesc = context_->GetOutputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
+    if (yDesc == nullptr) {
+        return ReportTilingFailure(context_->GetNodeName(), "output y descriptor is null");
+    }
     ge::DataType yDtype = yDesc->GetDataType();
     OP_CHECK_IF(yDtype != ge::DT_INT32 && yDtype != ge::DT_INT64,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "y dtype",
-                                                      std::to_string(static_cast<int32_t>(yDtype)).c_str(),
-                                                      "only support int32 or int64"),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "y", Ops::Base::ToString(yDtype).c_str(),
+                                                      "set the dtype attribute to int32 or int64"),
                 return ge::GRAPH_FAILED);
     yElemSize_ = (yDtype == ge::DT_INT32) ? INT32_BYTE : 8;
 
     auto attrs = context_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    if (attrs == nullptr) {
+        return ReportTilingFailure(context_->GetNodeName(), "runtime attributes are null");
+    }
     const bool* transposePtr = attrs->GetAttrPointer<bool>(ATTR_TRANSPOSE_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, transposePtr);
+    if (transposePtr == nullptr) {
+        return ReportTilingFailure(context_->GetNodeName(), "transpose attribute is missing from the tiling context");
+    }
     // transpose=1 → 输出 [dim, num]；transpose=0 → 输出 [num, dim]
     transpose_ = *transposePtr ? 1 : 0;
 
@@ -115,32 +140,26 @@ ge::graphStatus NonZeroAscendCTilingImpl::CalcShapeInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus NonZeroAscendCTilingImpl::CalcWorkspaceSize(size_t* workspaceSize)
+size_t NonZeroAscendCTilingImpl::CalcWorkspaceSize()
 {
     int64_t userWorkspaceSize = AlignUp(realCoreNum_ * 8 * INT32_BYTE, WORKSPACE_ALIGN);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    *workspaceSize = sysWorkspaceSize + static_cast<size_t>(userWorkspaceSize);
-    return ge::GRAPH_SUCCESS;
+    return sysWorkspaceSize + static_cast<size_t>(userWorkspaceSize);
 }
 
 ge::graphStatus NonZeroAscendCTilingImpl::Init()
 {
     if (GetCompileInfo() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "NonZero arch22 tiling GetCompileInfo failed.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "NonZero arch22 tiling GetCompileInfo failed.");
         return ge::GRAPH_FAILED;
     }
     if (CalcShapeInfo() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "NonZero arch22 tiling CalcShapeInfo failed.");
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "NonZero arch22 tiling CalcShapeInfo failed.");
         return ge::GRAPH_FAILED;
     }
 
-    size_t workspaceSize = 0;
-    if (CalcWorkspaceSize(&workspaceSize) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "NonZero arch22 tiling CalcWorkspaceSize failed.");
-        return ge::GRAPH_FAILED;
-    }
-    context_->GetWorkspaceSizes(1)[0] = workspaceSize;
+    context_->GetWorkspaceSizes(1)[0] = CalcWorkspaceSize();
     context_->SetBlockDim(static_cast<int32_t>(realCoreNum_));
     context_->SetScheduleMode(1);
     return ge::GRAPH_SUCCESS;
@@ -170,20 +189,27 @@ ge::graphStatus NonZeroAscendCTilingImpl::SetKernelTiling()
 static ge::graphStatus TilingParseForNonZeroArch22(gert::TilingParseContext* context)
 {
     auto compileInfo = context->GetCompiledInfo<NonZeroCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    if (compileInfo == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "tiling parse output compile info is null");
+    }
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    if (platformInfo == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "tiling parse platform info is null");
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
 
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->coreNum <= 0) {
+        return ReportTilingFailure(context->GetNodeName(),
+                                   "invalid AIV core count " + std::to_string(compileInfo->coreNum));
+    }
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->ubSize <= 0) {
+        return ReportTilingFailure(context->GetNodeName(), "invalid UB size " + std::to_string(compileInfo->ubSize));
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -191,7 +217,7 @@ static ge::graphStatus TilingFuncForNonZeroArch22(gert::TilingContext* context)
 {
     NonZeroAscendCTilingImpl tilingImpl(context);
     if (tilingImpl.Init() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context->GetNodeName(), "NonZero arch22 tiling init failed.");
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "NonZero arch22 tiling init failed.");
         return ge::GRAPH_FAILED;
     }
     return tilingImpl.SetKernelTiling();

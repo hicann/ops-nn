@@ -50,7 +50,7 @@ public:
 private:
     ge::graphStatus GetCompileInfo();
     ge::graphStatus CalcShapeInfo();
-    ge::graphStatus CalcWorkspaceSize(size_t* workspaceSize);
+    size_t CalcWorkspaceSize();
 
     gert::TilingContext* context_ = nullptr;
     NonZeroTilingData tilingData_;
