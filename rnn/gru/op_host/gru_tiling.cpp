@@ -72,7 +72,10 @@ ge::graphStatus GruTilingOp::GetOpInfo()
         gruParams_.inputSize = static_cast<int64_t>(xShape.GetDim(1));
         //  读取batch_size
         gruParams_.totalSteps = static_cast<int64_t>(xShape.GetDim(0)); // sum(batch_size)
-        auto batchSizeShape = context_->GetOptionalInputShape(5)->GetStorageShape();
+        auto batchSizeTensor = context_->GetOptionalInputShape(INPUT_LENGTHS_IDX);
+        OP_CHECK_IF(batchSizeTensor == nullptr,
+                    OP_LOGE(context_->GetNodeName(), "2D packed input requires batch_sizes."), return ge::GRAPH_FAILED);
+        auto batchSizeShape = batchSizeTensor->GetStorageShape();
         gruParams_.timeStep = batchSizeShape.GetDim(0);
 
         auto outputHShape = context_->GetOutputShape(1)->GetStorageShape(); //  [B,H]
@@ -305,10 +308,12 @@ ge::graphStatus GruTilingOp::Init()
     gruParams_.dataType = dataType == ge::DT_FLOAT ? FP32_BYTES : FP16_BYTES;
 
     // get op info
-    GetOpInfo();
+    OP_CHECK_IF(GetOpInfo() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context_->GetNodeName(), "failed to get GRU input information."), return ge::GRAPH_FAILED);
 
     // get attr
-    GetAttr();
+    OP_CHECK_IF(GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "failed to get GRU attributes."),
+                return ge::GRAPH_FAILED);
 
     // get UB L1 size
     auto platformInfo = context_->GetPlatformInfo();
@@ -370,7 +375,8 @@ ge::graphStatus GruTilingOp::DoTiling()
 ge::graphStatus TilingForGru(gert::TilingContext* context)
 {
     GruTilingOp tilingOp(context);
-    tilingOp.Init();
+    OP_CHECK_IF(tilingOp.Init() != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "failed to initialize GRU tiling."), return ge::GRAPH_FAILED);
     return tilingOp.DoTiling();
 }
 
