@@ -53,6 +53,10 @@ struct QuantBatchMatmulInplaceAddCsvRow {
     int64_t groupSize;
     aclnnStatus expectRet;
     bool checkRet;
+    vector<int64_t> x1ScaleStorageShape;
+    int64_t x1ScaleOffset;
+    vector<int64_t> x2ScaleStorageShape;
+    int64_t x2ScaleOffset;
 };
 
 using QuantBatchMatmulInplaceAddTestParam = QuantBatchMatmulInplaceAddCsvRow;
@@ -77,7 +81,7 @@ static QuantBatchMatmulInplaceAddCsvLoadResult LoadCsvRows()
 
     string line;
     bool skipHeader = true;
-    constexpr size_t kExpectedCols = 23UL;
+    constexpr size_t kExpectedCols = 27UL;
     size_t lineNo = 0UL;
     while (getline(csvData, line)) {
         ++lineNo;
@@ -124,6 +128,10 @@ static QuantBatchMatmulInplaceAddCsvLoadResult LoadCsvRows()
         row.expectRet = ParseAclnnStatus(cols[idx++]);
         const string checkRetStr = Trim(cols[idx++]);
         row.checkRet = checkRetStr.empty() ? true : ParseBool(checkRetStr);
+        row.x1ScaleStorageShape = ParseInt64Vec(cols[idx++]);
+        row.x1ScaleOffset = ParseInt64OrDefault(cols[idx++], 0);
+        row.x2ScaleStorageShape = ParseInt64Vec(cols[idx++]);
+        row.x2ScaleOffset = ParseInt64OrDefault(cols[idx++], 0);
         result.rows.push_back(row);
     }
     if (result.rows.empty()) {
@@ -186,8 +194,12 @@ TEST_P(QuantBatchMatmulInplaceAddApiTest, dav3510_csv_test)
 
     TensorDesc x1Desc = TensorDesc(param.x1Shape, param.x1Type, param.x1Format).ValueRange(-1, 1);
     TensorDesc x2Desc = TensorDesc(param.x2Shape, param.x2Type, param.x2Format).ValueRange(-1, 1);
-    TensorDesc x1ScaleDesc = TensorDesc(param.x1ScaleShape, param.x1ScaleType, param.x1ScaleFormat).ValueRange(-1, 1);
-    TensorDesc x2ScaleDesc = TensorDesc(param.x2ScaleShape, param.x2ScaleType, param.x2ScaleFormat).ValueRange(-1, 1);
+    TensorDesc x1ScaleDesc = TensorDesc(param.x1ScaleShape, param.x1ScaleType, param.x1ScaleFormat, {},
+                                        param.x1ScaleOffset, param.x1ScaleStorageShape)
+                                 .ValueRange(-1, 1);
+    TensorDesc x2ScaleDesc = TensorDesc(param.x2ScaleShape, param.x2ScaleType, param.x2ScaleFormat, {},
+                                        param.x2ScaleOffset, param.x2ScaleStorageShape)
+                                 .ValueRange(-1, 1);
     TensorDesc yInputDesc = TensorDesc(param.yInputShape, param.yInputType, param.yInputFormat).ValueRange(-1, 1);
 
     auto ut = OP_API_UT(aclnnQuantBatchMatmulInplaceAdd,

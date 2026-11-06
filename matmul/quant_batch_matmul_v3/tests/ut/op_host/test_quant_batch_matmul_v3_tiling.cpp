@@ -105,14 +105,15 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
         soc_version_infos["Short_SoC_version"] = "Ascend310P";
     }
     map<string, string> soc2Arch = {
-        {"Ascend910B2", "2201"}, {"Ascend910B4", "2201"}, {"Ascend310P3", "2002"},
-        {"Dav3510", "3510"},     {"MC62CM12AA", "5102"},
+        {"Ascend910B2", "2201"}, {"Ascend910B4", "2201"}, {"Ascend310P3", "2002"}, {"Dav3510", "3510"},
+        {"MC62CM12AA", "5102"},  {"Dav9201", "9201"},     {"Dav9202", "9202"},
     };
     auto soc2ArchIter = soc2Arch.find(socVersion);
     if (soc2ArchIter != soc2Arch.end()) {
         soc_version_infos["NpuArch"] = soc2ArchIter->second;
     }
-    if (socVersion == "Dav3510") {
+    const bool isDav960 = socVersion == "Dav9201" || socVersion == "Dav9202";
+    if (socVersion == "Dav3510" || isDav960) {
         soc_version_infos.clear();
         soc_version_infos["NpuArch"] = soc2ArchIter->second;
     }
@@ -145,7 +146,7 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 20,
                             "cube_core_cnt": 20, "vector_core_cnt": 40, "core_type_list": "CubeCore,VectorCore"}
                             })";
-    } else if (socVersion.compare("Dav3510") == 0) {
+    } else if (socVersion.compare("Dav3510") == 0 || isDav960) {
         compileInfoStr = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -173,6 +174,12 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
                         })";
     }
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
+    if (isDav960) {
+        // 960DT/PR bind one AIV per AIC. Keep the resource fixture explicit and independent of SDK INI files.
+        socInfos["ai_core_cnt"] = "32";
+        socInfos["vector_core_cnt"] = "32";
+        aicoreSpec["l0_c_size"] = socVersion == "Dav9202" ? "524288" : "262144";
+    }
     aicoreSpec["cube_freq"] = "1800";
     if (socVersion.compare("Ascend310P3") == 0) {
         aicoreSpec["cube_freq"] = "1000";
@@ -183,7 +190,7 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
     if (aicNum > 0) {
         socInfos["ai_core_cnt"] = std::to_string(aicNum);
         socInfos["cube_core_cnt"] = std::to_string(aicNum);
-        socInfos["vector_core_cnt"] = std::to_string(aicNum * 2);
+        socInfos["vector_core_cnt"] = std::to_string(aicNum * (isDav960 ? 1 : 2));
     }
     if (aivNum > 0) {
         socInfos["vector_core_cnt"] = std::to_string(aivNum);
@@ -195,6 +202,17 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
     tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+}
+
+static ge::DataType ParseQuantBatchMatmulDtype(const std::string& dtype)
+{
+    if (dtype == "HIFLOAT4") {
+        return Ops::NN::DT_HIFLOAT4;
+    }
+    if (dtype == "HIFLOAT4_SCALE") {
+        return Ops::NN::DT_HIFLOAT4_SCALE;
+    }
+    return ParseDtype(dtype);
 }
 
 static QuantBatchMatmulV3TilingCsvLoadResult LoadParams(const std::string& socVersion)
@@ -270,10 +288,10 @@ static QuantBatchMatmulV3TilingCsvLoadResult LoadParams(const std::string& socVe
             param.transA = stol(testParam[idx++]);
             param.transB = stol(testParam[idx++]);
             param.quantMode = stol(testParam[idx++]);
-            param.x1Dtype = ParseDtype(Trim(testParam[idx++]));
-            param.x2Dtype = ParseDtype(Trim(testParam[idx++]));
-            param.scaleDtype = ParseDtype(Trim(testParam[idx++]));
-            param.perTokenScaleDtype = ParseDtype(Trim(testParam[idx++]));
+            param.x1Dtype = ParseQuantBatchMatmulDtype(Trim(testParam[idx++]));
+            param.x2Dtype = ParseQuantBatchMatmulDtype(Trim(testParam[idx++]));
+            param.scaleDtype = ParseQuantBatchMatmulDtype(Trim(testParam[idx++]));
+            param.perTokenScaleDtype = ParseQuantBatchMatmulDtype(Trim(testParam[idx++]));
             param.biasDtype = ParseDtype(Trim(testParam[idx++]));
             param.yDtype = ParseDtype(Trim(testParam[idx++]));
             param.fmapNz = Trim(testParam[idx++]) == "NZ";
@@ -310,6 +328,8 @@ static const QuantBatchMatmulV3TilingCsvLoadResult& GetParamsLoadResult(const st
     static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams910B4 = LoadParams("Ascend910B4");
     static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParams310P3 = LoadParams("Ascend310P3");
     static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParamsDav3510 = LoadParams("Dav3510");
+    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParamsDav9201 = LoadParams("Dav9201");
+    static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParamsDav9202 = LoadParams("Dav9202");
     static const QuantBatchMatmulV3TilingCsvLoadResult kCasesParamsMC62CM12AA = LoadParams("MC62CM12AA");
     if (socVersion == "Ascend910B2") {
         return kCasesParams910B2;
@@ -322,6 +342,12 @@ static const QuantBatchMatmulV3TilingCsvLoadResult& GetParamsLoadResult(const st
     }
     if (socVersion == "Dav3510") {
         return kCasesParamsDav3510;
+    }
+    if (socVersion == "Dav9201") {
+        return kCasesParamsDav9201;
+    }
+    if (socVersion == "Dav9202") {
+        return kCasesParamsDav9202;
     }
     return kCasesParamsMC62CM12AA;
 }
@@ -456,6 +482,10 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
     } else if (quantMode == 6) { // double per-tensor scale: x1Scale {1}, x2Scale {1}.
         pertokenShape.MutableStorageShape() = gert::Shape({1});
         scaleShape.MutableStorageShape() = gert::Shape({1});
+    } else if (quantMode == 8) { // HIF4 groups: [M, ceil(K/64), 1] and [ceil(K/64), N, 1].
+        const int64_t groups = ops::CeilDiv<int64_t>(k, 64);
+        pertokenShape.MutableStorageShape() = transA ? gert::Shape({groups, m, 1}) : gert::Shape({m, groups, 1});
+        scaleShape.MutableStorageShape() = transB ? gert::Shape({n, groups, 1}) : gert::Shape({groups, n, 1});
     } else if (quantMode == 7) { // X2 per-group CSV cases use G=128.
         const int64_t groupCnt = ops::CeilDiv<int64_t>(k, 128);
         scaleShape.MutableStorageShape() = x2Dim == 3 ? gert::Shape({batchB, groupCnt, n}) : gert::Shape({groupCnt, n});
@@ -499,6 +529,8 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
         groupSize = 4303356032;
     } else if (quantMode == 7) {
         groupSize = 128LL | (1LL << 16) | (1LL << 32); // [M, N, K] = [1, 1, 128].
+    } else if (quantMode == 8) {
+        groupSize = 64LL | (1LL << 16) | (1LL << 32); // [M, N, K] = [1, 1, 64].
     }
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(6, 1)
@@ -675,6 +707,10 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     } else if (quantMode == 6) { // double per-tensor scale: x1Scale {1}, x2Scale {1}.
         pertokenShape.MutableStorageShape() = gert::Shape({1});
         scaleShape.MutableStorageShape() = gert::Shape({1});
+    } else if (quantMode == 8) { // HIF4 groups: [M, ceil(K/64), 1] and [ceil(K/64), N, 1].
+        const int64_t groups = ops::CeilDiv<int64_t>(k, 64);
+        pertokenShape.MutableStorageShape() = transA ? gert::Shape({groups, m, 1}) : gert::Shape({m, groups, 1});
+        scaleShape.MutableStorageShape() = transB ? gert::Shape({n, groups, 1}) : gert::Shape({groups, n, 1});
     } else if (quantMode == 7) { // X2 per-group CSV cases use G=128.
         const int64_t groupCnt = ops::CeilDiv<int64_t>(k, 128);
         scaleShape.MutableStorageShape() = x2Dim == 3 ? gert::Shape({batchB, groupCnt, n}) : gert::Shape({groupCnt, n});
@@ -718,6 +754,8 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         groupSize = 4303356032;
     } else if (quantMode == 7) {
         groupSize = 128LL | (1LL << 16) | (1LL << 32); // [M, N, K] = [1, 1, 128].
+    } else if (quantMode == 8) {
+        groupSize = 64LL | (1LL << 16) | (1LL << 32); // [M, N, K] = [1, 1, 64].
     }
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(6, 1)
@@ -758,7 +796,8 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
                        (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2);
         bool isMxfp4 = quantMode == 2 && x1Dtype == ge::DT_FLOAT4_E2M1 && x2Dtype == ge::DT_FLOAT4_E2M1;
         bool isDav3510 = socVersion == "Dav3510";
-        bool tensorApiCapable = IsTensorapiCapable() && isDav3510;
+        bool tensorApiCapable = IsTensorapiCapable() &&
+                                (isDav3510 || socVersion == "Dav9201" || socVersion == "Dav9202");
         //  非 Blaze 不支持 weightNz BasicAPI 路径；dav_3510 非 TensorAPI 场景跳过 MX 出参校验
         bool skipMxCheckWithoutTensorApi = isDav3510 && !tensorApiCapable && (isMxfp8 || isMxfp4);
         // tilingKey布局: ATRANS[0:1] BTRANS[2:3] BATCHMODE[4:7] KERNELTYPE[8:15] APILEVEL[16:17]
@@ -884,7 +923,8 @@ void QuantBatchMatmulV3TilingTestParam::Test() const
 
 TEST(QuantBatchMatmulV3TilingCsv, ShouldLoadValidCases)
 {
-    for (const auto& socVersion : {"Ascend910B2", "Ascend910B4", "Ascend310P3", "Dav3510", "MC62CM12AA"}) {
+    for (const auto& socVersion :
+         {"Ascend910B2", "Ascend910B4", "Ascend310P3", "Dav3510", "MC62CM12AA", "Dav9201", "Dav9202"}) {
         const auto& loadResult = GetParamsLoadResult(socVersion);
         for (const auto& error : loadResult.errors) {
             ADD_FAILURE() << error;

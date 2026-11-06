@@ -31,7 +31,7 @@ constexpr ge::DataType kInitialOutputDtype = ge::DT_INT16;
 
 const auto* GetOpImpl() { return gert::OpImplRegistry::GetInstance().GetOpImpl(kOpType); }
 
-gert::ContextHolder<gert::InferDataTypeContext> BuildContext()
+gert::ContextHolder<gert::InferDataTypeContext> BuildContext(const int64_t* dtype = nullptr)
 {
     gert::OpInferDataTypeContextBuilder builder;
     builder.OpType(kOpType).OpName("qbmmv3_infer_dtype");
@@ -39,6 +39,9 @@ gert::ContextHolder<gert::InferDataTypeContext> BuildContext()
     builder.InputTensorDesc(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND);
     builder.InputTensorDesc(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND);
     builder.OutputTensorDesc(0, ge::FORMAT_ND, ge::FORMAT_ND);
+    if (dtype != nullptr) {
+        builder.AppendAttr(*dtype);
+    }
     return builder.Build();
 }
 
@@ -102,5 +105,44 @@ TEST(QuantBatchMatmulV3GraphInfer, RejectsValuesOutside32BitRange)
         EXPECT_EQ(ops::SetQuantBatchMatmulV3OutputDtype(context, dtype), ge::GRAPH_FAILED);
         EXPECT_EQ(context->GetOutputDataType(0), kInitialOutputDtype);
     }
+}
+
+TEST(QuantBatchMatmulV3GraphInfer, ReadsDtypeAttribute)
+{
+    for (int64_t dtype : {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_INT32, ge::DT_BF16}) {
+        SCOPED_TRACE(dtype);
+        auto holder = BuildContext(&dtype);
+        auto* context = holder.GetContext();
+        ASSERT_NE(context, nullptr);
+        ASSERT_EQ(context->SetOutputDataType(0, kInitialOutputDtype), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(ops::InferDataTypeForQuantBatchMatmulV3(context), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(context->GetOutputDataType(0), static_cast<ge::DataType>(dtype));
+    }
+}
+
+TEST(QuantBatchMatmulV3GraphInfer, CallbackRejectsInvalidAttributeWithoutChangingOutput)
+{
+    for (int64_t dtype : {int64_t{-1}, int64_t{ge::DT_DOUBLE}, int64_t{4294967297}}) {
+        SCOPED_TRACE(dtype);
+        auto holder = BuildContext(&dtype);
+        auto* context = holder.GetContext();
+        ASSERT_NE(context, nullptr);
+        ASSERT_EQ(context->SetOutputDataType(0, kInitialOutputDtype), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(ops::InferDataTypeForQuantBatchMatmulV3(context), ge::GRAPH_FAILED);
+        EXPECT_EQ(context->GetOutputDataType(0), kInitialOutputDtype);
+    }
+}
+
+TEST(QuantBatchMatmulV3GraphInfer, PropagatesOutputSetterFailure)
+{
+    const int64_t dtype = ge::DT_BF16;
+    auto holder = BuildContext(&dtype);
+    auto* context = holder.GetContext();
+    ASSERT_NE(context, nullptr);
+    auto* rawContext = reinterpret_cast<gert::KernelContext*>(context)->GetContext();
+    const auto outputSize = rawContext->output_size;
+    rawContext->output_size = 0; // malformed execution context: output 0 cannot be written.
+    EXPECT_EQ(ops::InferDataTypeForQuantBatchMatmulV3(context), ge::GRAPH_FAILED);
+    rawContext->output_size = outputSize;
 }
 } // namespace

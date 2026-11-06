@@ -171,12 +171,12 @@ static Status ToStatus(const std::string& value)
     throw std::runtime_error("Unsupported status: " + value);
 }
 
-static void SetPlatformSupport()
+static void SetPlatformSupport(bool supportMmadS8S4 = false)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_data_move_l12bt"] = {"float16"};
-    platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_mmad"] = {"s8s8"};
+    platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_mmad"] = {supportMmadS8S4 ? "s8s4" : "s8s8"};
     optionalInfo.soc_version = "soc_version";
     fe::PlatformInfoManager::Instance().platform_info_map_.clear();
     fe::PlatformInfoManager::Instance().platform_info_map_["soc_version"] = platformInfo;
@@ -468,6 +468,62 @@ static std::string TestName(const testing::TestParamInfo<QuantBatchMatmulV3Trans
 
 class QuantBatchMatmulV3TransposeFusionPassTest
     : public testing::TestWithParam<QuantBatchMatmulV3TransposeFusionPassParam> {};
+
+TEST(QuantBatchMatmulV3TransposeFusionBoundary, NullGraphIsUnchanged)
+{
+    GraphPtr graph;
+    CustomPassContext context;
+    TestQuantBatchMatmulV3TransposeFusionPass pass;
+    TestQuantBatchMatmulV3TransposeLimitFusionPass limitPass;
+    EXPECT_EQ(pass.RunForTest(graph, context), GRAPH_NOT_CHANGED);
+    EXPECT_EQ(limitPass.RunForTest(graph, context), GRAPH_NOT_CHANGED);
+    EXPECT_EQ(graph, nullptr);
+}
+
+TEST(QuantBatchMatmulV3TransposeFusionBoundary, GraphWithoutQuantMatmulIsUnchanged)
+{
+    ge::es::EsGraphBuilder builder("without_quant_matmul");
+    const auto input = builder.CreateInput(0, "input", DT_INT8, FORMAT_ND, {16, 32});
+    GraphPtr graph = builder.BuildAndReset({input});
+    ASSERT_NE(graph, nullptr);
+    const auto nodes = graph->GetAllNodes().size();
+    CustomPassContext context;
+    TestQuantBatchMatmulV3TransposeFusionPass pass;
+    TestQuantBatchMatmulV3TransposeLimitFusionPass limitPass;
+    EXPECT_EQ(pass.RunForTest(graph, context), GRAPH_NOT_CHANGED);
+    EXPECT_EQ(limitPass.RunForTest(graph, context), GRAPH_NOT_CHANGED);
+    EXPECT_EQ(graph->GetAllNodes().size(), nodes);
+}
+
+TEST(QuantBatchMatmulV3TransposeFusionBoundary, BitcastFusionHonorsPlatformCapabilities)
+{
+    const auto cases = GetParams();
+    const auto selected = std::find_if(cases.begin(), cases.end(), [](const auto& param) {
+        return param.caseName == "quant_bmm_v3_with_both_transpose_bitcast";
+    });
+    ASSERT_NE(selected, cases.end());
+    // Platform metadata is an internal pass input and is not part of the shape CSV.
+    for (int platform = 0; platform < 3; ++platform) {
+        SCOPED_TRACE(platform);
+        auto graph = BuildGraph(*selected);
+        SetPlatformSupport(platform == 1);
+        if (platform == 2) {
+            ClearPlatformSupport();
+        }
+        CustomPassContext context;
+        context.SetPassName(QUANT_BATCH_MATMUL_V3_TRANSPOSE_FUSION_PASS_NAME);
+        TestQuantBatchMatmulV3TransposeFusionPass pass;
+        const auto status = pass.RunForTest(graph, context);
+        ClearPlatformSupport();
+        EXPECT_EQ(status, platform == 1 ? GRAPH_NOT_CHANGED : SUCCESS);
+        EXPECT_EQ(CountNodes(graph, "Transpose"), platform == 1 ? 2 : 0);
+        EXPECT_EQ(CountNodes(graph, "Bitcast"), 2);
+        auto quantNode = FindQuantBatchMatmulV3(graph);
+        auto expected = *selected;
+        expected.expectedTransposeX1 = expected.expectedTransposeX2 = platform != 1;
+        ExpectTransposeAttrs(expected, quantNode);
+    }
+}
 
 TEST_P(QuantBatchMatmulV3TransposeFusionPassTest, RunFusionPass)
 {

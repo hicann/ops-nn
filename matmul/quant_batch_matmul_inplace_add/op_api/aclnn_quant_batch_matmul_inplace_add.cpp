@@ -882,8 +882,16 @@ static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
     params.x1ScaleOptional = x1ScaleNd;
     CHECK_RET(TensorContiguousProcess(params.x1, params.transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(TensorContiguousProcess(params.x2, params.transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(MxScaleContiguousProcess(params.x1ScaleOptional, executor), ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(MxScaleContiguousProcess(params.x2Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+    if (IsHiFloat8Input(params.x1, params.x2)) {
+        // Normalize scalar scale views before tiling reads their storage/origin shapes.
+        params.x1ScaleOptional = l0op::Contiguous(params.x1ScaleOptional, executor);
+        CHECK_RET(params.x1ScaleOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        params.x2Scale = l0op::Contiguous(params.x2Scale, executor);
+        CHECK_RET(params.x2Scale != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        CHECK_RET(MxScaleContiguousProcess(params.x1ScaleOptional, executor), ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(MxScaleContiguousProcess(params.x2Scale, executor), ACLNN_ERR_INNER_NULLPTR);
+    }
     auto ret = CheckParams(params);
     CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(InferGroupSize(params), ACLNN_ERR_PARAM_INVALID);

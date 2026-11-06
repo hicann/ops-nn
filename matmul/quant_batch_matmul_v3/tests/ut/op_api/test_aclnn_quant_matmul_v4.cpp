@@ -18,6 +18,8 @@
 #include "gtest/gtest.h"
 
 #include "../../../op_api/aclnn_quant_matmul_v4.h"
+#include "../../../op_api/aclnn_quant_matmul_v3.h"
+#include "../../../op_api/aclnn_quant_matmul_weight_nz.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -29,6 +31,37 @@ using namespace ut_str;
 
 using namespace std;
 using namespace op;
+
+TEST(QuantBatchMatmulApiBoundary, RejectsMissingWorkspaceOrExecutorOutputs)
+{
+    auto x1 = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND).ToAclType();
+    auto x2 = TensorDesc({32, 64}, ACL_INT8, ACL_FORMAT_ND).ToAclType();
+    auto scale = TensorDesc({64}, ACL_UINT64, ACL_FORMAT_ND).ToAclType();
+    auto out = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ToAclType();
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    EXPECT_EQ(aclnnQuantMatmulV3GetWorkspaceSize(x1.get(), x2.get(), scale.get(), nullptr, nullptr, false, false,
+                                                 out.get(), nullptr, &executor),
+              ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclnnQuantMatmulV3GetWorkspaceSize(x1.get(), x2.get(), scale.get(), nullptr, nullptr, false, false,
+                                                 out.get(), &workspaceSize, nullptr),
+              ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclnnQuantMatmulV4GetWorkspaceSize(x1.get(), x2.get(), scale.get(), nullptr, nullptr, nullptr, false,
+                                                 false, out.get(), nullptr, &executor),
+              ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclnnQuantMatmulV4GetWorkspaceSize(x1.get(), x2.get(), scale.get(), nullptr, nullptr, nullptr, false,
+                                                 false, out.get(), &workspaceSize, nullptr),
+              ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(executor, nullptr);
+    EXPECT_EQ(workspaceSize, 0U);
+}
+
+TEST(QuantBatchMatmulApiBoundary, ExecutionRequiresAnExecutor)
+{
+    EXPECT_EQ(aclnnQuantMatmulV3(nullptr, 0, nullptr, nullptr), ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclnnQuantMatmulV4(nullptr, 0, nullptr, nullptr), ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclnnQuantMatmulWeightNz(nullptr, 0, nullptr, nullptr), ACLNN_ERR_PARAM_NULLPTR);
+}
 
 struct QuantBatchMatmulV4TestParam {
     string socVersion;
