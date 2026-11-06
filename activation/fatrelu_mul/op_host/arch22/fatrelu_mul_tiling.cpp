@@ -156,11 +156,34 @@ ge::graphStatus FatreluMulTiling::RunBigKernelTiling()
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(tilingContext->GetNodeName(), "x",
                                                           std::to_string(lastDimSize), "Last dim size should be even."),
                 return ge::GRAPH_FAILED);
-
     OP_CHECK_IF((batchSize > LENGTH_LIMIT),
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(tilingContext->GetNodeName(), "x", std::to_string(batchSize),
                                                           "Batch dim size should be no more than 200000."),
                 return ge::GRAPH_FAILED);
+
+    auto yShapePtr = tilingContext->GetOutputShape(0);
+    OP_CHECK_IF(yShapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(tilingContext->GetNodeName(), "out"),
+                return ge::GRAPH_FAILED);
+    auto yShape = yShapePtr->GetOriginShape();
+    size_t yShapeDim = yShape.GetDimNum();
+    OP_CHECK_IF((yShapeDim != inputShapeDim),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(tilingContext->GetNodeName(), "out", std::to_string(yShapeDim),
+                                                         "Output shape dim should be the same as input x."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((yShape.GetDim(inputShapeDim - 1) != lastDimSize / 2),
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(tilingContext->GetNodeName(), "out",
+                                                          std::to_string(yShape.GetDim(inputShapeDim - 1)),
+                                                          "Output last dim should be half of input x last dim."),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 0; i + 1 < inputShapeDim; ++i) {
+        OP_CHECK_IF((yShape.GetDim(i) != inputShape.GetDim(i)),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        tilingContext->GetNodeName(), "out, x",
+                        std::to_string(yShape.GetDim(i)) + ", " + std::to_string(inputShape.GetDim(i)),
+                        "Output shape dim should be the same as input x dim."),
+                    return ge::GRAPH_FAILED);
+    }
+
     tilingData.set_lastDimSize(lastDimSize);
     tilingData.set_batchSize(batchSize);
     tilingData.set_needCoreNum(needCoreNum);
