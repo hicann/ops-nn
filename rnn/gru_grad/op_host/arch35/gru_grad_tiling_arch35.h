@@ -77,6 +77,8 @@ private:
     int64_t sysAivCoreNum_{0};
     int64_t alignedPara_{0};
     int64_t inputDSize_{0};
+    std::string firstBadParam_;
+    std::string firstBadParamShape_;
 
     CutBatchTiling dxhInputParam_;
     CutBatchTiling dxhHiddenParam_;

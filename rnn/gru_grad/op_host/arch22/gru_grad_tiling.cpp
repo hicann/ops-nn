@@ -71,7 +71,11 @@ ge::graphStatus GruGradTiling::GetPlatformInfo()
 {
     OP_LOGD(nodeName_, "GruGradTiling GetPlatformInfo.");
     compileInfo_ = static_cast<const GruGradCompileInfo*>(context_->GetCompileInfo());
-    OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo_);
+    OP_CHECK_IF(compileInfo_ == nullptr,
+                ReportTilingFailure(context_->GetNodeName(),
+                                    "compile info is unavailable; check operator registration and compile info "
+                                    "configuration."),
+                return ge::GRAPH_FAILED);
 
     sysAicCoreNum_ = static_cast<int64_t>(compileInfo_->aicCoreNum);
     sysAivCoreNum_ = static_cast<int64_t>(compileInfo_->aivCoreNum);
@@ -340,7 +344,10 @@ bool GruGradTiling::CheckParamsShape()
 bool GruGradTiling::CheckAttr()
 {
     auto attrs = context_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    OP_CHECK_IF(attrs == nullptr,
+                ReportTilingFailure(nodeName_, "attributes are unavailable; check operator prototype attribute "
+                                               "registration."),
+                return false);
     const char* dir = attrs->GetAttrPointer<char>(0);
     OP_CHECK_IF(std::find(SUPPORT_DIRECTION.begin(), SUPPORT_DIRECTION.end(), dir) == SUPPORT_DIRECTION.end(),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_, "direction", dir == nullptr ? "nullptr" : dir,

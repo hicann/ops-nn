@@ -39,14 +39,39 @@ inline ge::graphStatus TilingPrepareForGruGrad(gert::TilingParseContext* context
 {
     OP_LOGD(context->GetNodeName(), "TilingPrepareForGruGrad start.");
     auto ci = context->GetCompiledInfo<GruGradCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, ci);
+    OP_CHECK_IF(ci == nullptr,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{context->GetNodeName(),
+                                              "compile info is unavailable; check operator registration and compile "
+                                              "info configuration."})),
+                return ge::GRAPH_FAILED);
     fe::PlatFormInfos* pi = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, pi);
+    OP_CHECK_IF(pi == nullptr,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{context->GetNodeName(), "platform info is unavailable; check platform "
+                                                                      "metadata configuration."})),
+                return ge::GRAPH_FAILED);
     auto plat = platform_ascendc::PlatformAscendC(pi);
     ci->aicCoreNum = plat.GetCoreNumAic();
-    OP_CHECK_IF(ci->aicCoreNum <= 0, OP_LOGE(context->GetNodeName(), "aicCore<=0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ci->aicCoreNum <= 0,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{context->GetNodeName(),
+                                              (std::string("Failed to get aicCoreNum; actual=") +
+                                               std::to_string(ci->aicCoreNum) + "; check platform resource metadata.")
+                                                  .c_str()})),
+                return ge::GRAPH_FAILED);
     ci->aivCoreNum = ci->aicCoreNum * 2;
-    OP_CHECK_IF(ci->aivCoreNum <= 0, OP_LOGE(context->GetNodeName(), "aivCore<=0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ci->aivCoreNum <= 0,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{context->GetNodeName(),
+                                              (std::string("Failed to get aivCoreNum; actual=") +
+                                               std::to_string(ci->aivCoreNum) + "; check platform resource metadata.")
+                                                  .c_str()})),
+                return ge::GRAPH_FAILED);
     uint64_t ub = 0;
     plat.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ub);
     ci->ubSizePlatForm = static_cast<int64_t>(ub);
