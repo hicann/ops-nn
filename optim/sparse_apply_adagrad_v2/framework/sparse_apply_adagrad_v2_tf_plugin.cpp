@@ -15,10 +15,11 @@
 #include "register/register.h"
 
 namespace domi {
-// SparseApplyAdagradV2 maps directly from the TensorFlow op of the same name; auto operator mapping suffices.
+// SparseApplyAdagradV2 / ResourceSparseApplyAdagradV2（TF 资源变量形态，同语义）
+// 均映射到本算子，与基线插件映射范围保持一致；auto operator mapping suffices.
 REGISTER_CUSTOM_OP("SparseApplyAdagradV2")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType("SparseApplyAdagradV2")
+    .OriginOpType({"SparseApplyAdagradV2", "ResourceSparseApplyAdagradV2"})
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

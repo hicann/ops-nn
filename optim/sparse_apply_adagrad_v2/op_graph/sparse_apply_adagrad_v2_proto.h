@@ -31,7 +31,7 @@ namespace ge {
  * @li lr: A scalar Tensor of type float32.
  * @li epsilon: A scalar Tensor of type float32.
  * @li grad: A Tensor of type float32.
- * @li indices: A 1-D Tensor of type int32.
+ * @li indices: A 1-D Tensor of type int32 or int64.
 
  *@par Outputs:
  *Two outputs, including:
@@ -51,7 +51,7 @@ REG_OP(SparseApplyAdagradV2)
     .INPUT(lr, TensorType({DT_FLOAT}))
     .INPUT(epsilon, TensorType({DT_FLOAT}))
     .INPUT(grad, TensorType({DT_FLOAT}))
-    .INPUT(indices, TensorType({DT_INT32}))
+    .INPUT(indices, TensorType({DT_INT32, DT_INT64}))
     .OUTPUT(var, TensorType({DT_FLOAT}))
     .OUTPUT(accum, TensorType({DT_FLOAT}))
     .ATTR(use_locking, Bool, false)

@@ -47,11 +47,13 @@ protected:
 
 // 构造 6 输入 + 2 输出的 InferShape 上下文。
 // var/accum/grad 取 varShape；lr/epsilon 取 scalarShape；indices 取 indicesShape。
+// indicesDtype 缺省 int32，可传 int64 验证索引 dtype 放行。
 static InfershapeContextPara MakeInfershapePara(const gert::StorageShape& varShape,
                                                 const gert::StorageShape& accumShape, const gert::StorageShape& lrShape,
                                                 const gert::StorageShape& epsilonShape,
                                                 const gert::StorageShape& gradShape,
-                                                const gert::StorageShape& indicesShape)
+                                                const gert::StorageShape& indicesShape,
+                                                ge::DataType indicesDtype = ge::DT_INT32)
 {
     std::vector<InfershapeContextPara::TensorDescription> inputs;
     inputs.emplace_back(varShape, ge::DT_FLOAT, ge::FORMAT_ND);     // 0 var
@@ -59,7 +61,7 @@ static InfershapeContextPara MakeInfershapePara(const gert::StorageShape& varSha
     inputs.emplace_back(lrShape, ge::DT_FLOAT, ge::FORMAT_ND);      // 2 lr
     inputs.emplace_back(epsilonShape, ge::DT_FLOAT, ge::FORMAT_ND); // 3 epsilon
     inputs.emplace_back(gradShape, ge::DT_FLOAT, ge::FORMAT_ND);    // 4 grad
-    inputs.emplace_back(indicesShape, ge::DT_INT32, ge::FORMAT_ND); // 5 indices
+    inputs.emplace_back(indicesShape, indicesDtype, ge::FORMAT_ND); // 5 indices
 
     gert::StorageShape outShape({}, {});
     std::vector<InfershapeContextPara::TensorDescription> outputs;
@@ -212,6 +214,33 @@ TEST_F(SparseApplyAdagradV2Infershape, S011_Mixed_PartialUnknownAndUnknownRank)
     auto para = MakeInfershapePara(var, accum, scalar, scalar, grad, indices);
     std::vector<std::vector<int64_t>> expect = {{-2}, {-2}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
+}
+
+// S012 正例：indices 为 int64（基线 int32/int64 组合），应放行
+// （indices 非法 dtype 的拒绝行为由 tiling UT 的 tiling_indices_invalid_dtype_rejected 覆盖，
+//   InferShape executor 仅执行 shape 推导，不执行 InferDataType）
+TEST_F(SparseApplyAdagradV2Infershape, S012_IndicesInt64_Accepted)
+{
+    gert::StorageShape var({4, 3}, {4, 3});
+    gert::StorageShape accum({4, 3}, {4, 3});
+    gert::StorageShape scalar({}, {});
+    gert::StorageShape grad({2, 3}, {2, 3});
+    gert::StorageShape indices({2}, {2});
+    auto para = MakeInfershapePara(var, accum, scalar, scalar, grad, indices, ge::DT_INT64);
+    std::vector<std::vector<int64_t>> expect = {{4, 3}, {4, 3}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
+}
+
+// S013 负例：var/accum rank > 8（超出公开声明 rank_range [2,8]），应报错
+TEST_F(SparseApplyAdagradV2Infershape, S013_Negative_VarRankGreaterThan8)
+{
+    gert::StorageShape var({2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2});
+    gert::StorageShape accum({2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2});
+    gert::StorageShape scalar({}, {});
+    gert::StorageShape grad({1, 2, 2, 2, 2, 2, 2, 2, 2}, {1, 2, 2, 2, 2, 2, 2, 2, 2});
+    gert::StorageShape indices({1}, {1});
+    auto para = MakeInfershapePara(var, accum, scalar, scalar, grad, indices);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
 
 } // namespace SparseApplyAdagradV2UT

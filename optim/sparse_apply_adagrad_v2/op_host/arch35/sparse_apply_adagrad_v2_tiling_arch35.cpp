@@ -34,6 +34,7 @@ constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
 constexpr int64_t MIN_ELEMENTS_PER_CORE = 1024;
 constexpr int64_t UNKNOWN_DIM = -1;
+constexpr int64_t MAX_VAR_RANK = 8; // se_spec.yaml rank_range [2,8]
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
@@ -101,6 +102,11 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
     OP_CHECK_IF(varStorageShape.GetDimNum() < 2,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var", std::to_string(varStorageShape.GetDimNum()),
                                              "at least 2D"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(varStorageShape.GetDimNum() > MAX_VAR_RANK,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var", std::to_string(varStorageShape.GetDimNum()),
+                                             "at most 8D"),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(accumStorageShape.GetDimNum() != varStorageShape.GetDimNum(),
@@ -204,9 +210,9 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
                 return ge::GRAPH_FAILED);
 
     auto indicesDtype = context->GetInputDesc(5)->GetDataType();
-    OP_CHECK_IF(indicesDtype != ge::DT_INT32,
+    OP_CHECK_IF(indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64,
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices",
-                                          ge::TypeUtils::DataTypeToSerialString(indicesDtype).c_str(), "INT32"),
+                                          ge::TypeUtils::DataTypeToSerialString(indicesDtype).c_str(), "INT32/INT64"),
                 return ge::GRAPH_FAILED);
 
     int64_t firstDim = varStorageShape.GetDim(0);

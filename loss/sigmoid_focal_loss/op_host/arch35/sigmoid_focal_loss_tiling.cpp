@@ -529,6 +529,14 @@ bool HasNonNegativeDims(const gert::Shape& shape)
     return true;
 }
 
+// Rank-0 and rank-1 (1,) both denote the one-element scalar output of sum/mean; callers such as
+// TTK kernel mode may deliver either form (or mix them between origin and storage), mirroring the
+// opbase EnsureNotScalar convention. Reduction outputs accept both instead of requiring rank 0.
+bool IsScalarEquivalentShape(const gert::Shape& shape)
+{
+    return shape.GetDimNum() == 0 || (shape.GetDimNum() == 1 && shape.GetDim(0) == 1);
+}
+
 ge::graphStatus ValidateInputs(gert::TilingContext* context, SemanticInfo& semanticInfo)
 {
     const auto* predDesc = context->GetInputDesc(0);
@@ -640,7 +648,8 @@ ge::graphStatus ValidateInputs(gert::TilingContext* context, SemanticInfo& seman
     const bool isOutputShapeValid = semanticInfo.reductionMode == REDUCTION_NONE ?
                                         IsSameShape(predOriginShape, outputOriginShape) &&
                                             IsSameShape(predShape, outputShape) :
-                                        outputOriginShape.GetDimNum() == 0 && outputShape.GetDimNum() == 0;
+                                        IsScalarEquivalentShape(outputOriginShape) &&
+                                            IsScalarEquivalentShape(outputShape);
     if (!isOutputShapeValid) {
         OP_LOGE(context->GetNodeName(), "output origin/storage shape does not match reduction=%s",
                 reductionValue.c_str());

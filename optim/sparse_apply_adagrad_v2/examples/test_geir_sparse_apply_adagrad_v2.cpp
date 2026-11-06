@@ -102,6 +102,31 @@ string GetTime()
     return tmp;
 }
 
+// 输入宿主缓冲登记表：RunGraph 并落盘后统一释放，避免泄漏与提前释放
+static std::vector<float*>& GetHostFloatBuffers()
+{
+    static std::vector<float*> buffers;
+    return buffers;
+}
+
+static std::vector<int32_t*>& GetHostIntBuffers()
+{
+    static std::vector<int32_t*> buffers;
+    return buffers;
+}
+
+static void FreeHostBuffers()
+{
+    for (float* p : GetHostFloatBuffers()) {
+        delete[] p;
+    }
+    GetHostFloatBuffers().clear();
+    for (int32_t* p : GetHostIntBuffers()) {
+        delete[] p;
+    }
+    GetHostIntBuffers().clear();
+}
+
 uint32_t GetDataTypeSize(DataType dt)
 {
     uint32_t dilation = 1;
@@ -144,6 +169,11 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorD
     uint32_t byteSizeFloat32 = 4;
     uint32_t data_len = size * byteSizeFloat32;
     float* pData = new (std::nothrow) float[size];
+    if (pData == nullptr) {
+        printf("%s - ERROR - [XIR]: Alloc input host buffer failed\n", GetTime().c_str());
+        return FAILED;
+    }
+    GetHostFloatBuffers().push_back(pData);
 
     for (size_t i = 0; i < size; ++i) {
         *(pData + i) = value;
@@ -162,6 +192,11 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
     }
     uint32_t data_len = size * GetDataTypeSize(data_type);
     int32_t* pData = new (std::nothrow) int32_t[data_len];
+    if (pData == nullptr) {
+        printf("%s - ERROR - [XIR]: Alloc input host buffer failed\n", GetTime().c_str());
+        return FAILED;
+    }
+    GetHostIntBuffers().push_back(pData);
     for (size_t i = 0; i < size; ++i) {
         *(pData + i) = value;
     }
@@ -172,8 +207,16 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
 int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 {
     FILE* fp = fopen(bin_file.c_str(), "w");
-    fwrite(inputData, sizeof(uint8_t), data_size, fp);
+    if (fp == nullptr) {
+        printf("%s - ERROR - [XIR]: Open file %s failed\n", GetTime().c_str(), bin_file.c_str());
+        return FAILED;
+    }
+    size_t written = fwrite(inputData, sizeof(uint8_t), data_size, fp);
     fclose(fp);
+    if (written != static_cast<size_t>(data_size)) {
+        printf("%s - ERROR - [XIR]: Write file %s incomplete\n", GetTime().c_str(), bin_file.c_str());
+        return FAILED;
+    }
     return SUCCESS;
 }
 
@@ -201,6 +244,8 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
 
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
     const char* graph_name = "tc_ge_irrun_test";
     Graph graph(graph_name);
     std::vector<ge::Tensor> input;
@@ -217,7 +262,7 @@ int main(int argc, char* argv[])
     std::vector<Operator> inputs{};
     std::vector<Operator> outputs{};
 
-    std::cout << argv[1] << std::endl;
+    std::cout << "run graph: " << graph_name << std::endl;
 
     DataType inDtype = DT_FLOAT;
 
@@ -226,6 +271,7 @@ int main(int argc, char* argv[])
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        FreeHostBuffers();
         return FAILED;
     }
 
@@ -237,10 +283,12 @@ int main(int argc, char* argv[])
 
     };
     printf("%s - INFO - [XIR]: Start to create ir session using build options\n", GetTime().c_str());
-    ge::Session* session = new Session(build_options);
+    ge::Session* session = new (std::nothrow) Session(build_options);
 
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        FreeHostBuffers();
+        (void)ge::GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Create ir session using build options success\n", GetTime().c_str());
@@ -262,7 +310,8 @@ int main(int argc, char* argv[])
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
         delete session;
-        GEFinalize();
+        FreeHostBuffers();
+        (void)ge::GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
@@ -275,8 +324,10 @@ int main(int argc, char* argv[])
         int64_t input_shape = input[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th input, input shape size =" << input_shape << std::endl;
         uint32_t data_size = input_shape * GetDataTypeSize(input[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)input_file.c_str(), data_size, input_data_i);
+        (void)WriteDataToFile((const char*)input_file.c_str(), data_size, input_data_i);
     }
+    // 输入张量仅是宿主缓冲的视图，落盘完成后统一释放
+    FreeHostBuffers();
 
     int output_num = output.size();
     for (int i = 0; i < output_num; i++) {
@@ -286,7 +337,7 @@ int main(int argc, char* argv[])
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th output, output shape size =" << output_shape << std::endl;
         uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
+        (void)WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
         float* resultData = (float*)output_data_i;
         for (int64_t j = 0; j < output_shape; j++) {
             LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);
@@ -300,6 +351,7 @@ int main(int argc, char* argv[])
     std::string warning_str(warning_msg.GetString());
     std::cout << "Warning message: " << warning_str << std::endl;
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
+    delete session;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());

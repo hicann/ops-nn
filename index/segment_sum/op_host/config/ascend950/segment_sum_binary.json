@@ -377,7 +377,7 @@
               {
                 "name": "x",
                 "index": 0,
-                "dtype": "int64",
+                "dtype": "int32",
                 "format": "ND",
                 "paramType": "required",
                 "shape": [
@@ -387,7 +387,7 @@
               {
                 "name": "segment_ids",
                 "index": 1,
-                "dtype": "int32",
+                "dtype": "int64",
                 "format": "ND",
                 "paramType": "required",
                 "shape": [

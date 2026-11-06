@@ -428,13 +428,13 @@ std::vector<NamedHostCase> InvalidShapeCases()
     cases.push_back({"NoneOutputScalar", value});
     value = {};
     value.reduction = "sum";
-    value.output.originShape = value.output.storageShape = {1};
-    cases.push_back({"SumOutputRank1", value});
+    value.output.originShape = value.output.storageShape = {2};
+    cases.push_back({"SumOutputRank1Dim2", value});
     value = {};
     value.reduction = "sum";
-    value.output.originShape = {1};
+    value.output.originShape = {2};
     value.output.storageShape = {};
-    cases.push_back({"SumOutputOriginRank1", value});
+    cases.push_back({"SumOutputOriginRank1Dim2", value});
     value = {};
     value.reduction = "mean";
     value.output.originShape = value.output.storageShape = {1, 1};
@@ -470,6 +470,32 @@ TEST(SigmoidFocalLossHostValidation, AcceptsDtypesAttributeBoundsReductionsAndEm
         }
         EXPECT_EQ(RunHostTiling(value), ge::GRAPH_SUCCESS);
     }
+}
+
+// TTK kernel-mode tiling promotes scalar output declarations () to (1,) on the origin side while
+// leaving the storage side unpromoted; rank-0 and (1,) are equivalent one-element scalar forms and
+// both must be accepted for sum/mean reductions, including with empty inputs and absent weight.
+TEST(SigmoidFocalLossHostValidation, AcceptsScalarEquivalentReductionOutputShapes)
+{
+    const std::array<std::vector<int64_t>, 2> scalarForms = {{std::vector<int64_t>{}, std::vector<int64_t>{1}}};
+    for (const std::string reduction : {"sum", "mean"}) {
+        for (const auto& origin : scalarForms) {
+            for (const auto& storage : scalarForms) {
+                HostTilingCase value;
+                value.reduction = reduction;
+                value.output.originShape = origin;
+                value.output.storageShape = storage;
+                EXPECT_EQ(RunHostTiling(value), ge::GRAPH_SUCCESS);
+            }
+        }
+    }
+    HostTilingCase emptyCase;
+    emptyCase.reduction = "mean";
+    emptyCase.pred.originShape = emptyCase.pred.storageShape = {0, 3};
+    emptyCase.target.originShape = emptyCase.target.storageShape = {0, 3};
+    emptyCase.output.originShape = {1};
+    emptyCase.output.storageShape = {};
+    EXPECT_EQ(RunHostTiling(emptyCase), ge::GRAPH_SUCCESS);
 }
 
 } // namespace

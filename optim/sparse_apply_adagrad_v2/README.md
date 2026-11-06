@@ -27,7 +27,7 @@ $$
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 980px"><colgroup>
+<table style="table-layout: fixed; width: 980px"><colgroup>
   <col style="width: 100px">
   <col style="width: 150px">
   <col style="width: 280px">
@@ -46,70 +46,70 @@ $$
     <tr>
       <td>var</td>
       <td>输入</td>
-      <td>参数变量，shape (N, C)</td>
+      <td>参数变量，shape (N, C)。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>accum</td>
       <td>输入</td>
-      <td>梯度平方累加器，shape (N, C)</td>
+      <td>梯度平方累加器，shape (N, C)。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>lr</td>
       <td>输入</td>
-      <td>学习率标量</td>
+      <td>学习率标量。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>epsilon</td>
       <td>输入</td>
-      <td>常数因子标量，避免除零</td>
+      <td>常数因子标量，避免除零。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>grad</td>
       <td>输入</td>
-      <td>稀疏梯度，shape (M, C)</td>
+      <td>稀疏梯度，shape (M, C)。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>稀疏索引向量，shape (M)</td>
-      <td>INT32</td>
+      <td>稀疏索引向量，shape (M)。</td>
+      <td>INT32/INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var</td>
       <td>输出</td>
-      <td>更新后的参数变量，shape (N, C)</td>
+      <td>更新后的参数变量，shape (N, C)。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>accum</td>
       <td>输出</td>
-      <td>更新后的累加器，shape (N, C)</td>
+      <td>更新后的累加器，shape (N, C)。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>use_locking</td>
-      <td>属性</td>
-      <td>是否在更新时加锁（NPU场景下通常忽略）</td>
+      <td>可选属性</td>
+      <td>是否在更新时加锁，省略时默认为 false。</td>
       <td>Bool</td>
       <td>-</td>
     </tr>
     <tr>
       <td>update_slots</td>
-      <td>属性</td>
-      <td>是否更新累加器（True时accum+=grad^2）</td>
+      <td>可选属性</td>
+      <td>是否更新累加器（True 时 accum += grad^2），省略时默认为 true。</td>
       <td>Bool</td>
       <td>-</td>
     </tr>
@@ -117,28 +117,31 @@ $$
 
 ## 约束说明
 
-- var 和 accum 的 shape 必须相同
-- lr 和 epsilon 必须为标量（shape 为空或 [1]）
-- indices 必须为一维向量
-- grad 的第一维必须与 indices 的第一维相同，其余维度必须与 var 的对应维度相同
-- var、accum、lr、epsilon、grad 的 dtype 必须相同
-- indices 的 dtype 为 int32
-- 越界索引（< 0 或 >= var 行数）将被跳过，不报错
-- 当indices有重复索引值的时候，结果不保序
+- var 和 accum 的 shape 必须相同。
+- var、accum、grad 的 rank 取值范围为 [2, 8]，rank 小于 2 或大于 8 时报错拒绝。
+- lr 和 epsilon 必须为标量（shape 为空或 [1]）。
+- indices 必须为一维向量。
+- grad 的第一维必须与 indices 的第一维相同，其余维度必须与 var 的对应维度相同。
+- var、accum、lr、epsilon、grad 的 dtype 必须相同。
+- indices 的 dtype 为 int32 或 int64。
+- 越界索引（< 0 或 >= var 行数）将被跳过，不报错。
+- 当 indices 有重复索引值的时候，结果不保序。
 
 ## 调用说明
 
 <table><thead>
   <tr>
     <th>调用方式</th>
-    <th>调用样例</th>
+    <th>样例代码</th>
     <th>说明</th>
   </tr></thead>
 <tbody>
   <tr>
-    <td>图模式调用</td>
+    <td>GE图模式</td>
     <td><a href="./examples/test_geir_sparse_apply_adagrad_v2.cpp">test_geir_sparse_apply_adagrad_v2</a></td>
-    <td>参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
+    <td>算子 IR 定义见 <a href="./op_graph/sparse_apply_adagrad_v2_proto.h">sparse_apply_adagrad_v2_proto.h</a>，调用方式参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>。</td>
   </tr>
 </tbody>
 </table>
+
+本仓同时交付 TensorFlow 适配插件（<a href="./framework/sparse_apply_adagrad_v2_tf_plugin.cpp">sparse_apply_adagrad_v2_tf_plugin.cpp</a>），TF 计算图中的 SparseApplyAdagradV2 与 ResourceSparseApplyAdagradV2 节点可自动映射到本算子。

@@ -32,6 +32,7 @@ static constexpr int64_t IDX_INDICES = 5;
 
 static constexpr int64_t UNKNOWN_DIM = -1;
 static constexpr int64_t UNKNOWN_RANK = -2;
+static constexpr int64_t MAX_VAR_RANK = 8; // se_spec.yaml rank_range [2,8]
 
 static bool IsUnknownRank(const gert::Shape* shape)
 {
@@ -88,11 +89,15 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
         accumOutShape->SetDim(i, accumShape->GetDim(i));
     }
 
-    // 校验约束（与 SE 文档 §5.4/5.5、MDE §3.4 一致）:
+    // 校验约束（与 README"约束说明"公开声明一致）:
 
-    // 0. var/accum 应至少为 2 维（shape (N, C)），rank < 2 语义非法
+    // 0. var/accum 应至少为 2 维（shape (N, C)），rank < 2 语义非法；
+    //    rank 上限 8（se_spec.yaml rank_range [2,8]，超出公开声明支持域）
     OP_CHECK_IF(varDimNum < 2,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var", std::to_string(varDimNum), "at least 2D"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varDimNum > MAX_VAR_RANK,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var", std::to_string(varDimNum), "at most 8D"),
                 return ge::GRAPH_FAILED);
 
     // 1. accum.shape == var.shape
@@ -169,7 +174,7 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
 
 static ge::graphStatus InferDataTypeSparseApplyAdagradV2(gert::InferDataTypeContext* context)
 {
-    // dtype 一致性校验（与 SE 文档 §5.5、MDE §3.4 一致）:
+    // dtype 一致性校验（与 README"约束说明"公开声明一致）:
     // var.dtype == accum.dtype == lr.dtype == epsilon.dtype == grad.dtype
     auto varDtype = context->GetInputDataType(IDX_VAR);
     auto accumDtype = context->GetInputDataType(IDX_ACCUM);
@@ -206,11 +211,11 @@ static ge::graphStatus InferDataTypeSparseApplyAdagradV2(gert::InferDataTypeCont
                                                        "var dtype must equal grad dtype"),
                 return ge::GRAPH_FAILED);
 
-    // indices.dtype == int32
+    // indices.dtype == int32 或 int64（与基线算子信息库 int32/int64 组合声明一致）
     auto indicesDtype = context->GetInputDataType(IDX_INDICES);
-    OP_CHECK_IF(indicesDtype != ge::DT_INT32,
+    OP_CHECK_IF(indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64,
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices",
-                                          ge::TypeUtils::DataTypeToSerialString(indicesDtype).c_str(), "INT32"),
+                                          ge::TypeUtils::DataTypeToSerialString(indicesDtype).c_str(), "INT32/INT64"),
                 return ge::GRAPH_FAILED);
 
     // 输出 var dtype = 输入 var dtype（原地更新）
