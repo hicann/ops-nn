@@ -99,12 +99,26 @@ constexpr int32_t kNhwcDimN = 0;
 constexpr int32_t kNhwcDimH = 1;
 constexpr int32_t kNhwcDimW = 2;
 constexpr int32_t kNhwcDimC = 3;
+constexpr int32_t NDHWC_DIM_N = 0;
+constexpr int32_t NDHWC_DIM_H = 2;
+constexpr int32_t NDHWC_DIM_W = 3;
+constexpr int32_t NDHWC_DIM_C = 4;
+constexpr int32_t NCDHW_DIM_N = 0;
+constexpr int32_t NCDHW_DIM_C = 1;
+constexpr int32_t NCDHW_DIM_H = 3;
+constexpr int32_t NCDHW_DIM_W = 4;
+constexpr int32_t DHWCN_DIM_H = 1;
+constexpr int32_t DHWCN_DIM_W = 2;
+constexpr int32_t DHWCN_DIM_C = 3;
+constexpr int32_t DHWCN_DIM_N = 4;
 
 const std::map<ge::Format, std::map<std::string, int32_t>> kAxisIndexOfFormat = {
     {ge::FORMAT_NCHW, {{"N", kNchwDimN}, {"C", kNchwDimC}, {"H", kNchwDimH}, {"W", kNchwDimW}}},
     {ge::FORMAT_HWCN, {{"N", kHwcnDimN}, {"C", kHwcnDimC}, {"H", kHwcnDimH}, {"W", kHwcnDimW}}},
-    {ge::FORMAT_NHWC, {{"N", kNhwcDimN}, {"C", kNhwcDimC}, {"H", kNhwcDimH}, {"W", kNhwcDimW}}}};
-
+    {ge::FORMAT_NHWC, {{"N", kNhwcDimN}, {"C", kNhwcDimC}, {"H", kNhwcDimH}, {"W", kNhwcDimW}}},
+    {ge::FORMAT_NDHWC, {{"N", NDHWC_DIM_N}, {"C", NDHWC_DIM_C}, {"H", NDHWC_DIM_H}, {"W", NDHWC_DIM_W}}},
+    {ge::FORMAT_NCDHW, {{"N", NCDHW_DIM_N}, {"C", NCDHW_DIM_C}, {"H", NCDHW_DIM_H}, {"W", NCDHW_DIM_W}}},
+    {ge::FORMAT_DHWCN, {{"N", DHWCN_DIM_N}, {"C", DHWCN_DIM_C}, {"H", DHWCN_DIM_H}, {"W", DHWCN_DIM_W}}}};
 std::atomic<uint64_t> gHostCpuAtomicId{0};
 
 uint64_t GetHostCpuAtomicId() { return gHostCpuAtomicId.fetch_add(1U); }
@@ -528,7 +542,7 @@ ge::Status BiasOptimizeQuantRollbackBase::GetCoValue(const ge::GNodePtr& cubeNod
         return ge::FAILED;
     }
 
-    const int32_t indexCo = GetAxisIndexByFormat(filterFormat, "N");
+    const int32_t indexCo = GetAxisIndexByFormat(filterFormat, "C");
     if (indexCo < 0) {
         OPS_LOG_E(kLogTag, "Node[%s] index_co is negative, check filter format.", NodeName(*cubeNode).c_str());
         return ge::FAILED;

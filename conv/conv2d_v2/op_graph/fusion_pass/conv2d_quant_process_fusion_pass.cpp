@@ -32,8 +32,6 @@ using ops::QuantProcessMode;
 
 bool IsPadNode(const ge::GNodePtr& node) { return IsNodeOfType(node, PAD) || IsNodeOfType(node, PADV3); }
 
-// 老 UtilPlatform::isTiny：Intrinsic_set_l1 支持 f16 不支持 f32（Tiny 产品 L1 无 fp32 能力），
-// 数据源与 cube_common.cc ReadPlatFormConfig 同为 PlatformInfoManager 的 intrinsic dtype map。
 bool IsTinyProduct()
 {
     fe::PlatformInfo platformInfo;
@@ -47,9 +45,6 @@ bool IsTinyProduct()
     return supportFp16 && !supportFp32;
 }
 
-// 老 ISAArchVersion 判定的 NpuArch 映射：
-// 310P 不做 AIPP 调整（DAV_2002）；910/910B 才 NEED_ADJUST（DAV_1001/DAV_2201）；
-// 其余（含 950=DAV_3510）不做调整。
 bool ResolveAippArch(NpuArch& npuArch)
 {
     fe::PlatformInfo platformInfo;
@@ -63,7 +58,8 @@ bool ResolveAippArch(NpuArch& npuArch)
         {"Ascend950DT", NpuArch::DAV_3510}};
     auto iter = socToArch.find(platformInfo.str_info.short_soc_version);
     if (iter == socToArch.end()) {
-        return false;
+        npuArch = NpuArch::DAV_RESV;
+        return true;
     }
     npuArch = iter->second;
     return true;
@@ -128,10 +124,6 @@ ge::Status Conv2DQuantProcessFusionPass::SetPadNodeDataType(ge::GNode& padNodeRe
     return ge::SUCCESS;
 }
 
-// 老 GetCoValue（conv2d 版）：按 filter format 的 N 轴取 Co 总数。基类默认实现在 N 轴之上再乘
-// groups，而 NCHW filter [Co总, Cin每组, H, W] 的 N 维已是总输出通道（ExtendConv2D tiling 校验
-// bias[0]==filter[0]），groups>1 无 bias 造零 bias 时会放大 groups 倍致 tiling 失败（EZ0010）。
-// 老 pass 即覆写本实现不走基类默认，与之对齐。
 ge::Status Conv2DQuantProcessFusionPass::GetCoValue(const ge::GNodePtr& cubeNode, int64_t& co)
 {
     ge::TensorDesc filterDesc;
@@ -157,7 +149,7 @@ ge::Status Conv2DQuantProcessFusionPass::GetCoValue(const ge::GNodePtr& cubeNode
     return ge::SUCCESS;
 }
 
-// 老 SetDataTypeOfNodes（conv2d 版）：基类 cube 全 desc 改 fp16 + conv2d 特化的 Pad 修正
+// 基类 cube 全 desc 改 fp16 + conv2d 特化的 Pad 修正
 ge::Status Conv2DQuantProcessFusionPass::SetDataTypeOfNodes(const ge::GNodePtr& cubeNode)
 {
     if (BiasOptimizeQuantRollbackBase::SetDataTypeOfNodes(cubeNode) != ge::SUCCESS) {
@@ -171,7 +163,7 @@ ge::Status Conv2DQuantProcessFusionPass::SetDataTypeOfNodes(const ge::GNodePtr& 
     return ge::SUCCESS;
 }
 
-// 老 GetCubeNodeInputNode（conv2d 版）：quant 与 cube 间隔 Pad 时，摘 quant 边重接到 Pad
+// quant 与 cube 间隔 Pad 时，摘 quant 边重接到 Pad
 ge::GNodePtr Conv2DQuantProcessFusionPass::GetCubeNodeInputNode(const ge::GNodePtr& cubeNode) const
 {
     auto convInputPair = cubeNode->GetInDataNodesAndPortIndexs(INPUT_INDEX_0);
@@ -181,9 +173,8 @@ ge::GNodePtr Conv2DQuantProcessFusionPass::GetCubeNodeInputNode(const ge::GNodeP
     return cubeNode;
 }
 
-// 老 GetQuantProcessMode（conv2d 版）：基类默认判定（不支持→ROLLBACK；C unknown→跳过；
-// C>16 或不支持 fp16→BIAS_OPTIMIZE）+ conv2d 特化（tiny 产品→BIAS_OPTIMIZE；
-// AIPP first conv 判定后 ROLLBACK→BIAS_OPTIMIZE，见 ConvFusionPreImpl）。
+// 基类默认判定（不支持→ROLLBACK；C unknown→跳过；
+// C>16 或不支持 fp16→BIAS_OPTIMIZE）+ conv2d 特化
 ge::Status Conv2DQuantProcessFusionPass::GetQuantProcessMode(const ge::GNodePtr& quantNode,
                                                              const ge::GNodePtr& cubeNode,
                                                              QuantProcessMode& quantProcessMode)
@@ -230,9 +221,8 @@ void Conv2DQuantProcessFusionPass::PrintGraphStructure() const
             static_cast<int32_t>(quantProcessMode), padNode != nullptr);
 }
 
-// 老 fe::Configuration::IsEnableFirstLayerQuantization 等价实现：
 // 开关值经 atc --compression_optimize_conf（ge.compressionOptimizeConf 指向的配置文件）传入，
-// 文件内格式 "enable_first_layer_quantization:true"
+// "enable_first_layer_quantization:true"
 bool Conv2DQuantProcessFusionPass::IsFirstLayerQuantEnabled(const ge::CustomPassContext& passContext) const
 {
     ge::AscendString confPath;
@@ -263,13 +253,6 @@ bool Conv2DQuantProcessFusionPass::IsFirstLayerQuantEnabled(const ge::CustomPass
     return false;
 }
 
-// 老 AippGetInt64Value/AippGetFloatValue/AippGetFloatVecFirstValue 经 NamedAttrs 子属性读取的
-// 新框架等价实现：GNode::GetAttr(AttrValue) + AttrValue::GetNamedAttrValue（GE 9.3.0 导出）。
-// GetNamedAttrValue 是外部定义类的成员函数，无法按 !10871 的方式在类外重声明为弱引用，
-// 故以其 mangled 符号名声明 ABI 等价的自由函数（this 作首参）并置弱引用：高版本 toolkit
-// 运行时符号存在则全功能；低版本 toolkit 运行时符号为空（弱引用不阻断 so 加载），AIPP
-// first conv 判定走 NONE 分支降级，不影响 rollback/biasopt 主链融合。
-// 符号名解 mangling：ge::AttrValue::GetNamedAttrValue(ge::AscendString const&, ge::AttrValue&) const
 extern "C" ge::graphStatus _ZNK2ge9AttrValue17GetNamedAttrValueERKNS_12AscendStringERS0_(
     const ge::AttrValue& aippValue, const ge::AscendString& attrName, ge::AttrValue& attrValue) __attribute__((weak));
 
@@ -284,7 +267,7 @@ ge::Status GetAippInt64Value(const ge::AttrValue& aippValue, const std::string& 
     return subValue.GetAttrValue(value) == ge::GRAPH_SUCCESS ? ge::SUCCESS : ge::FAILED;
 }
 
-// 老 AippGetFloatVecFirstValue：min_chn/var_reci_chn 为 vector<float> 时取首元素，标量直接读
+// min_chn/var_reci_chn 为 vector<float> 时取首元素，标量直接读
 ge::Status GetAippFloatValue(const ge::AttrValue& aippValue, const std::string& key, ge::float32_t& value)
 {
     ge::AttrValue subValue;
@@ -349,7 +332,7 @@ bool Conv2DQuantProcessFusionPass::CheckAippVarChn() const
     return true;
 }
 
-// 老 QuantParamRevise：按 AIPP var_reci 均值改写 quant 的 scale/offset，记录 scale_rate 供 dequant/host op
+// 按 AIPP var_reci 均值改写 quant 的 scale/offset，记录 scale_rate 供 dequant/host op
 ge::Status Conv2DQuantProcessFusionPass::QuantParamRevise()
 {
     FUSION_PASS_CHECK(dequantNode == nullptr, OP_LOGE(convDescInfo.nodeNameStr, "Dequant node is null."),
@@ -382,7 +365,6 @@ ge::Status Conv2DQuantProcessFusionPass::QuantParamRevise()
     return ge::SUCCESS;
 }
 
-// 老 IsAippWithFirstConv + PostProcAfterOptimize 合并到 PreImpl/ReplaceImpl 的调用时序见各函数
 ge::Status Conv2DQuantProcessFusionPass::ConvFusionPreImpl(ge::GraphPtr& graph, ge::GNode& convNode,
                                                            ge::CustomPassContext& passContext)
 {
@@ -429,7 +411,7 @@ ge::Status Conv2DQuantProcessFusionPass::ConvFusionPreImpl(ge::GraphPtr& graph, 
     return ge::SUCCESS;
 }
 
-// 老 PostProcAfterOptimize：NEED_ADJUST 时回写 AIPP mean 向量 + host op 的 scale_rate
+// NEED_ADJUST 时回写 AIPP mean 向量 + host op 的 scale_rate
 void Conv2DQuantProcessFusionPass::PostProcAfterOptimize(const std::vector<ge::GNode>& nodesAfterFuse)
 {
     if (aippFirstConvType != AIPPFirstConvType::NEED_ADJUST_TYPE || aippNode == nullptr) {
@@ -508,4 +490,7 @@ bool Conv2DQuantProcessFusionPass::ConvFusionReplaceImpl(ge::GraphPtr& graph, ge
     return true;
 }
 
+#if GE_COMPILER_VERSION_NUM >= 90300000U
+REG_FUSION_PASS(Conv2DQuantProcessFusionPass).Stage(ge::CustomPassStage::kCompatibleInherited);
+#endif
 } // namespace Ops

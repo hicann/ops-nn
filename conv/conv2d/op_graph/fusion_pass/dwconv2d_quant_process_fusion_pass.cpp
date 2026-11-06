@@ -278,8 +278,6 @@ bool DWConv2DQuantProcessFusionPass::MeetRequirements(const ge::GNode& convNode)
 
 bool DWConv2DQuantProcessFusionPass::CheckOpSupported(const ge::GNode& node) const
 {
-    // Ascend950 包不携带depthwise TBE 实现，恒失败并走 quant rollback，
-    // 此处以 dn2nz intrinsic 识别该 soc 家族保持同语义；GE 提供普通模式 CheckSupported 接口后应移除。
     (void)node;
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
@@ -302,4 +300,7 @@ void DWConv2DQuantProcessFusionPass::PrintGraphStructure() const
     OP_LOGI(FUSION_NAME, "%s %s done.", convDescInfo.nodeNameStr.c_str(), FUSION_NAME.c_str());
 }
 
+#if GE_COMPILER_VERSION_NUM >= 90300000U
+REG_FUSION_PASS(DWConv2DQuantProcessFusionPass).Stage(CustomPassStage::kCompatibleInherited);
+#endif
 } // namespace Ops

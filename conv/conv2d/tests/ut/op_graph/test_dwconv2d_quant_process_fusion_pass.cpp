@@ -642,9 +642,13 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_nd_filte
     EXPECT_EQ(biasDesc.GetShape().GetDim(0), 1);
 }
 
-TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_unsupported_filter_legacy_failed)
+// ==========================================================================================
+// Bias optimize: 5D filter(NCDHW) 格式已加入 kAxisIndexOfFormat，无 bias 时 GetCoValue 按
+// N 轴取 co（PadShapeTo4Dim 截取前 4 维后 dim[0]），补零 Const bias 后融合成功
+// ==========================================================================================
+TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_5d_filter_no_bias_success)
 {
-    TestGraph builder("dwconv2d_quant_bias_optimize_unsupported_filter_legacy_failed");
+    TestGraph builder("dwconv2d_quant_bias_optimize_5d_filter_no_bias_success");
     DepthwiseConv2DConfig dwConfig;
     dwConfig.SetName("DepthwiseConv2D")
         .AddInput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE, "DepthwiseConv2D_x")
@@ -672,7 +676,19 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_unsuppor
                      .SetOutput("Relu")
                      .Build();
 
-    TestTotalPass("dwconv2d_quant_bias_optimize_unsupported_filter_legacy_failed", graph, FAILED);
+    TestTotalPass("dwconv2d_quant_bias_optimize_5d_filter_no_bias_success", graph, SUCCESS);
+
+    // 5D NCDHW filter：DWConv2D::GetCoValue 按 N 轴取 dim[0]=3，无 bias 时补零 Const bias 长度为 3
+    EXPECT_TRUE(GraphChecker::HasNode(graph, "QuantBiasOptimization"));
+    EXPECT_FALSE(GraphChecker::HasNode(graph, "QuantWeightRollBack"));
+    EXPECT_EQ(GraphChecker::CountNodes(graph, "AscendQuant"), 1);
+    EXPECT_EQ(GraphChecker::CountNodes(graph, "AscendDequant"), 1);
+    GNode biasConst;
+    EXPECT_TRUE(GraphChecker::FindNodeByNameSuffix(graph, "_quant_bias", biasConst));
+    TensorDesc biasDesc;
+    ASSERT_EQ(biasConst.GetOutputDesc(0, biasDesc), GRAPH_SUCCESS);
+    EXPECT_EQ(biasDesc.GetDataType(), DT_INT32);
+    EXPECT_EQ(biasDesc.GetShape().GetDim(0), 3);
 }
 
 // ==========================================================================================

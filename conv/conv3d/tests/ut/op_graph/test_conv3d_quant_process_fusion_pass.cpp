@@ -606,12 +606,12 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_c0_boundary)
 }
 
 // ==========================================================================================
-// 5D filter 格式(NCDHW)不在 AXIS map 内，bias optimize 且无 bias 时保持老码 FAILED 行为
-// fmap 保持 NCHW 使 mode 判定可解析，失败点精确落在 GetCoValue 的 N 轴查询
+// 5D filter 格式(NCDHW)已加入 AXIS map，bias optimize 且无 bias 时 GetCoValue 按 N 轴取
+// dim[0] 成功，补零 Const bias 后融合成功（与 5d_filter_with_bias 用例互补覆盖无 bias 分支）
 // ==========================================================================================
-TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_5d_filter_no_bias_legacy_failed)
+TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_5d_filter_no_bias_success)
 {
-    TestGraph builder("conv3d_quant_bias_optimize_5d_filter_no_bias_legacy_failed");
+    TestGraph builder("conv3d_quant_bias_optimize_5d_filter_no_bias_success");
     Conv3DConfig convConfig;
     convConfig.SetName("Conv3D")
         .AddInput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT, "Conv3D_x")
@@ -638,7 +638,17 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_5d_filter_no
                      .SetOutput("Relu")
                      .Build();
 
-    TestTotalPass("conv3d_quant_bias_optimize_5d_filter_no_bias_legacy_failed", graph, FAILED);
+    TestTotalPass("conv3d_quant_bias_optimize_5d_filter_no_bias_success", graph, SUCCESS);
+
+    // 5D NCDHW filter {3,8,3,3,3}：Conv3D::GetCoValue 按 N 轴取 dim[0]=3，无 bias 时补零 Const bias 长度为 3
+    EXPECT_TRUE(GraphChecker::HasNode(graph, "QuantBiasOptimization"));
+    EXPECT_FALSE(GraphChecker::HasNode(graph, "QuantWeightRollBack"));
+    GNode biasConst;
+    EXPECT_TRUE(GraphChecker::FindNodeByNameSuffix(graph, "_quant_bias", biasConst));
+    TensorDesc biasDesc;
+    ASSERT_EQ(biasConst.GetOutputDesc(0, biasDesc), GRAPH_SUCCESS);
+    EXPECT_EQ(biasDesc.GetDataType(), DT_INT32);
+    EXPECT_EQ(biasDesc.GetShape().GetDim(0), 3);
 }
 
 // ==========================================================================================

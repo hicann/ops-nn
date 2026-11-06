@@ -512,7 +512,8 @@ TEST_F(BiasOptimizeQuantRollbackBaseTest, OptimizeMainProcBiasOptimizeSuccess)
     Tensor biasTensor;
     EXPECT_EQ(hostOp->GetInputConstData(0, biasTensor), GRAPH_SUCCESS);
     EXPECT_NE(biasTensor.GetData(), nullptr);
-    EXPECT_EQ(biasTensor.GetSize(), 2U * sizeof(int32_t));
+    // filter {2,16,1,1} NCHW → C轴dim[1]=16 → 零bias长度16
+    EXPECT_EQ(biasTensor.GetSize(), 16U * sizeof(int32_t));
     for (size_t i = 0; i < biasTensor.GetSize(); ++i) {
         EXPECT_EQ(biasTensor.GetData()[i], 0U);
     }
@@ -735,7 +736,7 @@ TEST_F(BiasOptimizeQuantRollbackBaseTest, GetCoValueAllBranches)
     (void)cube->UpdateInputDesc(kCubeFilterPort, fracDesc);
     EXPECT_NE(pass.GetCoValue(cube, co), SUCCESS);
 
-    // NHWC filter [Co, H, W, Cin] → N轴取Co
+    // NHWC filter [N, H, W, C] → 按C轴(=3)取dim[3]
     TensorDesc nhwcDesc;
     nhwcDesc.SetFormat(FORMAT_NHWC);
     nhwcDesc.SetShape(Shape({8, 1, 1, 16}));
@@ -743,7 +744,7 @@ TEST_F(BiasOptimizeQuantRollbackBaseTest, GetCoValueAllBranches)
     EXPECT_EQ(pass.GetCoValue(cube, co), SUCCESS);
     EXPECT_EQ(co, 16);
 
-    // HWCN + groups: [H,W,Cin,Co] → N轴=3取Co=2, groups=3 → co=6
+    // HWCN + groups: [H, W, C, N] → 按C轴(=2)取dim[2]=16, groups=3 → co=48
     (void)cube->UpdateInputDesc(kCubeFilterPort, hwcnDesc);
     int64_t groupsHwcn = 3;
     (void)cube->SetAttr(AscendString("groups"), groupsHwcn);
@@ -752,13 +753,30 @@ TEST_F(BiasOptimizeQuantRollbackBaseTest, GetCoValueAllBranches)
     int64_t resetGroups2 = 1;
     (void)cube->SetAttr(AscendString("groups"), resetGroups2);
 
-    // NCHW 低维filter [Co, Cin] → PadShapeTo4Dim补[H,W]=[Co,Cin,1,1] → N=Co
+    // NCHW 低维filter → PadShapeTo4Dim补[H,W]后按C轴(=1)取dim[1]=32
     TensorDesc lowDimDesc;
     lowDimDesc.SetFormat(FORMAT_NCHW);
     lowDimDesc.SetShape(Shape({4, 32}));
     (void)cube->UpdateInputDesc(kCubeFilterPort, lowDimDesc);
     EXPECT_EQ(pass.GetCoValue(cube, co), SUCCESS);
     EXPECT_EQ(co, 32);
+
+    // 5D格式已加入kAxisIndexOfFormat：PadShapeTo4Dim按前4维截断后按C轴取值
+    // NCDHW {2,16,1,1,1} → 截断为[2,16,1,1]，C轴(=1)取dim[1]=16
+    TensorDesc ncdhwDesc;
+    ncdhwDesc.SetFormat(FORMAT_NCDHW);
+    ncdhwDesc.SetShape(Shape({2, 16, 1, 1, 1}));
+    (void)cube->UpdateInputDesc(kCubeFilterPort, ncdhwDesc);
+    EXPECT_EQ(pass.GetCoValue(cube, co), SUCCESS);
+    EXPECT_EQ(co, 16);
+
+    // DHWCN {1,1,16,2,1} → 截断为[1,1,16,2]，C轴(=3)取dim[3]=2
+    TensorDesc dhwcnDesc;
+    dhwcnDesc.SetFormat(FORMAT_DHWCN);
+    dhwcnDesc.SetShape(Shape({1, 1, 16, 2, 1}));
+    (void)cube->UpdateInputDesc(kCubeFilterPort, dhwcnDesc);
+    EXPECT_EQ(pass.GetCoValue(cube, co), SUCCESS);
+    EXPECT_EQ(co, 2);
 }
 
 TEST_F(BiasOptimizeQuantRollbackBaseTest, IsCubeHasBiasInputAndNeedBiasInput)
@@ -1406,7 +1424,8 @@ TEST_F(BiasOptimizeQuantRollbackBaseTest, IndexOverrideBiasOptimizeZeroBiasCreat
     TensorDesc hostIn0;
     (void)hostOp->GetInputDesc(0, hostIn0);
     EXPECT_EQ(hostIn0.GetDataType(), DT_INT32);
-    EXPECT_EQ(hostIn0.GetShape().GetDims(), std::vector<int64_t>({2}));
+    // 按C轴取值: filter {2,16,1,1} NCHW → C轴dim[1]=16
+    EXPECT_EQ(hostIn0.GetShape().GetDims(), std::vector<int64_t>({16}));
 }
 
 TEST_F(BiasOptimizeQuantRollbackBaseTest, NodesToRemoveNodesStillAccessibleAfterReturn)
@@ -1469,9 +1488,10 @@ TEST_F(BiasOptimizeQuantRollbackBaseTest, NodesToRemoveResetOnSecondCall)
     // 如果FAILED, nodesToRemove2不会被写入; 如果SUCCESS, 不含残留
 }
 
-TEST_F(BiasOptimizeQuantRollbackBaseTest, ZeroBiasLengthEqualsCoNotCin)
+TEST_F(BiasOptimizeQuantRollbackBaseTest, ZeroBiasLengthEqualsCAxisNotNAxis)
 {
-    // 无bias + BIAS_OPTIMIZE: 零bias长度应为Co(N轴) × groups, 而非Cin(C轴) × groups
+    // 无bias + BIAS_OPTIMIZE: 按filter format的C轴 × groups取零bias长度,
+    // 而非N轴(conv2d/dwconv2d/conv3d等子类覆写GetCoValue自行按N轴取Co)
     QuantTestGraph tg("p1_zero_bias");
     QuantGraphOptions opt;
     opt.withBias = false;
@@ -1494,13 +1514,13 @@ TEST_F(BiasOptimizeQuantRollbackBaseTest, ZeroBiasLengthEqualsCoNotCin)
     ASSERT_EQ(pass.OptimizeMainProc(graph, FindByName(graph, "quant"), FindByName(graph, "dequant"),
                                     FindByName(graph, "cube"), fusionNodes, nodesToRemove),
               SUCCESS);
-    // filter {2, 16, 1, 1} NCHW → Co=2(N=0), Cin=16(C=1)
-    // 零bias长度应为Co=2, 而非Cin=16
+    // filter {2, 16, 1, 1} NCHW → N轴(=0)为2, C轴(=1)为16
+    // 零bias长度应为C轴dim[1]=16, 而非N轴dim[0]=2
     const GNodePtr cube = FindByName(graph, "cube");
     ASSERT_NE(cube, nullptr);
     const auto biasPeer = cube->GetInDataNodesAndPortIndexs(kCubeBiasPort);
     ASSERT_NE(biasPeer.first, nullptr);
     TensorDesc biasDesc;
     ASSERT_EQ(biasPeer.first->GetOutputDesc(0, biasDesc), GRAPH_SUCCESS);
-    EXPECT_EQ(biasDesc.GetShape().GetDims(), std::vector<int64_t>({2})) << "零bias长度应为Co=2";
+    EXPECT_EQ(biasDesc.GetShape().GetDims(), std::vector<int64_t>({16})) << "零bias长度应为C轴维度16";
 }
