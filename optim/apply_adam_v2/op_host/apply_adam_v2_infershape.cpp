@@ -12,13 +12,8 @@
 #include <cstring>
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "graph/operator_factory.h"
 
 namespace {
-// Reserve only ApplyAdamV2's legacy entry before builtin proto registration.
-// The empty public callback leaves the existing RTS2 implementation selected.
-const ge::InferShapeFuncRegister kApplyAdamV2LegacyInferEmptyFirst("ApplyAdamV2", ge::InferShapeFunc{});
-
 constexpr size_t MAX_RANK = 8;
 constexpr const char* INPUT_NAMES[] = {
     "var",          "m",        "v", "lr", "beta1", "beta2", "epsilon", "grad", "max_grad_norm", "global_grad_norm",
