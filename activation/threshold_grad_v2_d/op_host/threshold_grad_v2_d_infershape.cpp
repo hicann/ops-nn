@@ -37,14 +37,6 @@ static ge::graphStatus InferShape4ThresholdGradV2D(gert::InferShapeContext* cont
     return ret;
 }
 
-static ge::graphStatus InferDataType4ThresholdGradV2D(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(OUTPUT_IDX, context->GetInputDataType(0));
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(ThresholdGradV2D)
-    .InferShape(InferShape4ThresholdGradV2D)
-    .InferDataType(InferDataType4ThresholdGradV2D);
+IMPL_OP_INFERSHAPE(ThresholdGradV2D).InferShape(InferShape4ThresholdGradV2D);
 
 } // namespace ops
