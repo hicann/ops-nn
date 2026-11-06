@@ -6,51 +6,51 @@
 
 - 场景一：带gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_1.png)
+  ![layer_norm_onnx_fusion_pass_1](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_1.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_7.png)
+  ![layer_norm_onnx_fusion_pass_7](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_7.png)
 
 - 场景二：不带gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_2.png)
+  ![layer_norm_onnx_fusion_pass_2](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_2.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_8.png)
+  ![layer_norm_onnx_fusion_pass_8](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_8.png)
 
 - 场景三：平方计算前带Cast，且带gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_3.png)
+  ![layer_norm_onnx_fusion_pass_3](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_3.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_7.png)
+  ![layer_norm_onnx_fusion_pass_7](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_7.png)
 
 - 场景四：平方计算前带Cast，不带gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_4.png)
+  ![layer_norm_onnx_fusion_pass_4](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_4.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_8.png)
+  ![layer_norm_onnx_fusion_pass_8](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_8.png)
 
 - 场景五：开方前依次经过Max和Min，不带Cast、gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_5.png)
+  ![layer_norm_onnx_fusion_pass_5](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_5.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_8.png)
+  ![layer_norm_onnx_fusion_pass_8](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_8.png)
 
 - 场景六：开方前依次经过Min和Max，不带Cast、gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_6.png)
+  ![layer_norm_onnx_fusion_pass_6](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_6.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_8.png)
+  ![layer_norm_onnx_fusion_pass_8](../../../docs/zh/figures/layer_norm_onnx_fusion_pass_8.png)
 
 上述各场景中，Pow的指数输入exp为2，也支持替换为不带exp输入的Square。场景三、四的除法节点仅支持Div；场景一、二、五、六的除法节点支持Div或RealDiv。Add\_0的两个输入可以交换，带gamma和beta时，Mul\_0、Add\_1的两个输入也可以分别交换。
 

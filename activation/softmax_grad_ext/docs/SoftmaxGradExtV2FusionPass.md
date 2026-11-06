@@ -5,16 +5,16 @@
 该融合将符合下图左侧图结构的Mul、ReduceSum、Sub这些小算子，融合成下图右侧的SoftmaxGradExt算子。
 
 **场景一**
-![](../../../docs/zh/figures/softmax_grad_ext_v2_fusion_pass_1.png)
+![softmax_grad_ext_v2_fusion_pass_1](../../../docs/zh/figures/softmax_grad_ext_v2_fusion_pass_1.png)
 
 **场景二**
-![](../../../docs/zh/figures/softmax_grad_ext_v2_fusion_pass_2.png)
+![softmax_grad_ext_v2_fusion_pass_2](../../../docs/zh/figures/softmax_grad_ext_v2_fusion_pass_2.png)
 
 **场景三**
-![](../../../docs/zh/figures/softmax_grad_ext_v2_fusion_pass_3.png)
+![softmax_grad_ext_v2_fusion_pass_3](../../../docs/zh/figures/softmax_grad_ext_v2_fusion_pass_3.png)
 
 **场景四**
-![](../../../docs/zh/figures/softmax_grad_ext_v2_fusion_pass_4.png)
+![softmax_grad_ext_v2_fusion_pass_4](../../../docs/zh/figures/softmax_grad_ext_v2_fusion_pass_4.png)
 
 ## 使用约束
 

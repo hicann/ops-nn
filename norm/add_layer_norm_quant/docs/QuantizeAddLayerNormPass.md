@@ -4,17 +4,17 @@
 
 场景1：将算子AddLayerNorm的输出y所连接的两个Quantize算子或两个AscendQuantV2算子融合掉，融合成新算子DuaQuantizeAddLayerNorm。
 
-![](../../../docs/zh/figures/quantize_add_layer_norm_pass_1.png)
+![quantize_add_layer_norm_pass_1](../../../docs/zh/figures/quantize_add_layer_norm_pass_1.png)
 
 场景2：将算子AddLayerNorm的输出y所连接的1个AscendQuant或AscendQuantV2算子节点融合掉，融合成新算子QuantizeAddLayerNorm：
 
-![](../../../docs/zh/figures/quantize_add_layer_norm_pass_2.png)
+![quantize_add_layer_norm_pass_2](../../../docs/zh/figures/quantize_add_layer_norm_pass_2.png)
 
 场景3：在Ascend 950PR&950DT系列产品平台下，将AddLayerNorm算子和其后面链接的1个或2个Quantize或AscendQuantV2算子融合为AddLayerNormQuant算子
 
-![](../../../docs/zh/figures/quantize_add_layer_norm_pass_3.png)
+![quantize_add_layer_norm_pass_3](../../../docs/zh/figures/quantize_add_layer_norm_pass_3.png)
 
-![](../../../docs/zh/figures/quantize_add_layer_norm_pass_4.png)
+![quantize_add_layer_norm_pass_4](../../../docs/zh/figures/quantize_add_layer_norm_pass_4.png)
 
 ## 使用约束
 

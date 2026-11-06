@@ -8,239 +8,239 @@
 
   静态shape、单输入情况：
 
-  ![](../../../docs/zh/figures/EinsumPass_1.png)
+  ![EinsumPass_1](../../../docs/zh/figures/EinsumPass_1.png)
 
   融合成
 
-  ![](../../../docs/zh/figures/EinsumPass_2.png)
+  ![EinsumPass_2](../../../docs/zh/figures/EinsumPass_2.png)
 
   静态shape、双输入情况（视具体表达式而定，MatMul类算子的两个输入顺序可能互换）：
 
-  ![](../../../docs/zh/figures/EinsumPass_3.png)
+  ![EinsumPass_3](../../../docs/zh/figures/EinsumPass_3.png)
 
   融合成
 
-  ![](../../../docs/zh/figures/EinsumPass_4.png)
+  ![EinsumPass_4](../../../docs/zh/figures/EinsumPass_4.png)
 
 - **存在动态shape的场景**下，融合前Einsum算子所属的图皆为双输入情况，如下图所示：
 
-  ![](../../../docs/zh/figures/EinsumPass_5.png)
+  ![EinsumPass_5](../../../docs/zh/figures/EinsumPass_5.png)
 
   存在动态shape的场景目前支持28种表达式对应的情况，融合后的图具体如下所示：
 
  1. Einsum表达式形如"abc,cde-\>abde"：
 
-    ![](../../../docs/zh/figures/EinsumPass_6.png)
+    ![EinsumPass_6](../../../docs/zh/figures/EinsumPass_6.png)
 
  2. Einsum表达式形如"abcd,aecd-\>aceb"（BatchMatMul算子的两个输入交换顺序）：
 
-    ![](../../../docs/zh/figures/EinsumPass_7.png)
+    ![EinsumPass_7](../../../docs/zh/figures/EinsumPass_7.png)
 
  3. Einsum表达式形如"abcd,adbe-\>acbe"：
 
-    ![](../../../docs/zh/figures/EinsumPass_8.png)
+    ![EinsumPass_8](../../../docs/zh/figures/EinsumPass_8.png)
 
  4. Einsum表达式形如"abcd,cde-\>abe"：
 
-    ![](../../../docs/zh/figures/EinsumPass_9.png)
+    ![EinsumPass_9](../../../docs/zh/figures/EinsumPass_9.png)
 
  5. Einsum表达式形如"abc,cd-\>abd"：
 
-    ![](../../../docs/zh/figures/EinsumPass_10.png)
+    ![EinsumPass_10](../../../docs/zh/figures/EinsumPass_10.png)
 
  6. Einsum表达式形如"abc,dc-\>abd"：
 
-    ![](../../../docs/zh/figures/EinsumPass_11.png)
+    ![EinsumPass_11](../../../docs/zh/figures/EinsumPass_11.png)
 
  7. Einsum表达式形如"abc,abd-\>dc"（MatMulV2算子的两个输入交换顺序）：
 
-    ![](../../../docs/zh/figures/EinsumPass_12.png)
+    ![EinsumPass_12](../../../docs/zh/figures/EinsumPass_12.png)
 
  8. Einsum表达式形如"abc,dec-\>abde"：
 
-    ![](../../../docs/zh/figures/EinsumPass_13.png)
+    ![EinsumPass_13](../../../docs/zh/figures/EinsumPass_13.png)
 
  9. Einsum表达式形如"abc,abde-\>dec"：
 
-    TensorB为静态shape的情况：![](../../../docs/zh/figures/EinsumPass_14.png)
+    TensorB为静态shape的情况：![EinsumPass_14](../../../docs/zh/figures/EinsumPass_14.png)
 
     TensorB为动态shape的情况：
 
-    ![](../../../docs/zh/figures/EinsumPass_15.png)
+    ![EinsumPass_15](../../../docs/zh/figures/EinsumPass_15.png)
 
 10. Einsum表达式形如"abcd,aecd-\>acbe"：
 
-    ![](../../../docs/zh/figures/EinsumPass_16.png)
+    ![EinsumPass_16](../../../docs/zh/figures/EinsumPass_16.png)
 
 11. Einsum表达式形如"abcd,acbe-\>aecd"：
 
-    ![](../../../docs/zh/figures/EinsumPass_17.png)
+    ![EinsumPass_17](../../../docs/zh/figures/EinsumPass_17.png)
 
 12. Einsum表达式形如"abcd,ecd-\>abe"：
 
-    ![](../../../docs/zh/figures/EinsumPass_18.png)
+    ![EinsumPass_18](../../../docs/zh/figures/EinsumPass_18.png)
 
 13. Einsum表达式形如"abcd,abe-\>ecd"：
 
     TensorA为静态shape的情况：
 
-    ![](../../../docs/zh/figures/EinsumPass_19.png)
+    ![EinsumPass_19](../../../docs/zh/figures/EinsumPass_19.png)
 
     TensorA为动态shape的情况：
 
-    ![](../../../docs/zh/figures/EinsumPass_20.png)
+    ![EinsumPass_20](../../../docs/zh/figures/EinsumPass_20.png)
 
 14. Einsum表达式形如"abcd,acbe-\>adbe"：
 
-    ![](../../../docs/zh/figures/EinsumPass_21.png)
+    ![EinsumPass_21](../../../docs/zh/figures/EinsumPass_21.png)
 
     根据输入shape是否为动态，以上图示中的**Reshape dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_22.png)
+    ![EinsumPass_22](../../../docs/zh/figures/EinsumPass_22.png)
 
     根据输入shape是否为动态，以上图示中的**Transpose dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_23.png)
+    ![EinsumPass_23](../../../docs/zh/figures/EinsumPass_23.png)
 
 15. Einsum表达式形如"abcd, abde-\>abce"：
 
-    ![](../../../docs/zh/figures/EinsumPass_24.png)
+    ![EinsumPass_24](../../../docs/zh/figures/EinsumPass_24.png)
 
 16. Einsum表达式形如"abcd, abce-\>abde"：
 
-    ![](../../../docs/zh/figures/EinsumPass_25.png)
+    ![EinsumPass_25](../../../docs/zh/figures/EinsumPass_25.png)
 
     根据输入shape是否为动态，以上图示中的**Transpose dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_26.png)
+    ![EinsumPass_26](../../../docs/zh/figures/EinsumPass_26.png)
 
 17. Einsum表达式形如"abcd, aebd-\>aebc"：
 
-    ![](../../../docs/zh/figures/EinsumPass_27.png)
+    ![EinsumPass_27](../../../docs/zh/figures/EinsumPass_27.png)
 
     根据输入shape是否为动态，以上图示中的**Reshape**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_28.png)
+    ![EinsumPass_28](../../../docs/zh/figures/EinsumPass_28.png)
 
 18. Einsum表达式形如"abcd, abce-\>acde"：
 
-    ![](../../../docs/zh/figures/EinsumPass_29.png)
+    ![EinsumPass_29](../../../docs/zh/figures/EinsumPass_29.png)
 
     根据输入shape是否为动态，以上图示中的**Reshape**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_30.png)
+    ![EinsumPass_30](../../../docs/zh/figures/EinsumPass_30.png)
 
 19. Einsum表达式形如"abc, abd-\>acd"：
 
-    ![](../../../docs/zh/figures/EinsumPass_31.png)
+    ![EinsumPass_31](../../../docs/zh/figures/EinsumPass_31.png)
 
     根据输入shape是否为动态，以上图示中的**Transpose dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_32.png)
+    ![EinsumPass_32](../../../docs/zh/figures/EinsumPass_32.png)
 
 20. Einsum表达式形如"ab, cb-\>ac"：
 
-    ![](../../../docs/zh/figures/EinsumPass_33.png)
+    ![EinsumPass_33](../../../docs/zh/figures/EinsumPass_33.png)
 
     根据输入shape是否为动态，以上图示中的**Transpose dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_34.png)
+    ![EinsumPass_34](../../../docs/zh/figures/EinsumPass_34.png)
 
 21. Einsum表达式形如"abc, acd-\>abd"：
 
-    ![](../../../docs/zh/figures/EinsumPass_35.png)
+    ![EinsumPass_35](../../../docs/zh/figures/EinsumPass_35.png)
 
 22. Einsum表达式形如"abc, adc-\>abd"：
 
-    ![](../../../docs/zh/figures/EinsumPass_36.png)
+    ![EinsumPass_36](../../../docs/zh/figures/EinsumPass_36.png)
 
     根据输入shape是否为动态，以上图示中的**Transpose dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_37.png)
+    ![EinsumPass_37](../../../docs/zh/figures/EinsumPass_37.png)
 
 23. Einsum表达式形如"abcd, ced-\>abce"：
 
-    ![](../../../docs/zh/figures/EinsumPass_38.png)
+    ![EinsumPass_38](../../../docs/zh/figures/EinsumPass_38.png)
 
     根据输入shape是否为动态，以上图示中的**Reshape**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_39.png)
+    ![EinsumPass_39](../../../docs/zh/figures/EinsumPass_39.png)
 
     根据输入shape是否为动态，以上图示中的**Transpose dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_40.png)
+    ![EinsumPass_40](../../../docs/zh/figures/EinsumPass_40.png)
 
 24. Einsum表达式形如"abcd, ebcd-\>bcae"：
 
-    ![](../../../docs/zh/figures/EinsumPass_41.png)
+    ![EinsumPass_41](../../../docs/zh/figures/EinsumPass_41.png)
 
     根据输入shape是否为动态，以上图示中的**Reshape**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_42.png)
+    ![EinsumPass_42](../../../docs/zh/figures/EinsumPass_42.png)
 
     根据输入shape是否为动态，以上图示中的**Transpose dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_43.png)
+    ![EinsumPass_43](../../../docs/zh/figures/EinsumPass_43.png)
 
 25. Einsum表达式形如"abcd, dabe-\>cabe"：
 
-    ![](../../../docs/zh/figures/EinsumPass_44.png)
+    ![EinsumPass_44](../../../docs/zh/figures/EinsumPass_44.png)
 
     根据输入shape是否为动态，以上图示中的**Reshape**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_45.png)
+    ![EinsumPass_45](../../../docs/zh/figures/EinsumPass_45.png)
 
 26. Einsum表达式形如"a, b-\>ab"：
 
-    ![](../../../docs/zh/figures/EinsumPass_46.png)
+    ![EinsumPass_46](../../../docs/zh/figures/EinsumPass_46.png)
 
 27. Einsum表达式形如"abcd, aecd-\>eb"：
 
-    ![](../../../docs/zh/figures/EinsumPass_47.png)
+    ![EinsumPass_47](../../../docs/zh/figures/EinsumPass_47.png)
 
     根据输入shape是否为动态，以上图示中的**Reshape**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_48.png)
+    ![EinsumPass_48](../../../docs/zh/figures/EinsumPass_48.png)
 
     根据输入shape是否为动态，以上图示中的**Transpose dym/stc**节点具体包含的算子如下所示：
 
-    ![](../../../docs/zh/figures/EinsumPass_49.png)
+    ![EinsumPass_49](../../../docs/zh/figures/EinsumPass_49.png)
 
 28. Einsum表达式形如"abcd, eb-\>aecd"：
 
-  ![](../../../docs/zh/figures/EinsumPass_50.png)
+  ![EinsumPass_50](../../../docs/zh/figures/EinsumPass_50.png)
 
   根据输入shape是否为动态，以上图示中的**Reshape**节点具体包含的算子如下所示：
 
-  ![](../../../docs/zh/figures/EinsumPass_51.png)
+  ![EinsumPass_51](../../../docs/zh/figures/EinsumPass_51.png)
 
 1. 其他动态shape场景包括如下两种情况：
     1. 单输入情况：
 
-        ![](../../../docs/zh/figures/EinsumPass_52.png)
+        ![EinsumPass_52](../../../docs/zh/figures/EinsumPass_52.png)
 
         融合后
 
-        ![](../../../docs/zh/figures/EinsumPass_53.png)
+        ![EinsumPass_53](../../../docs/zh/figures/EinsumPass_53.png)
 
     2. 双输入情况：
         1. 场景一
 
-            ![](../../../docs/zh/figures/EinsumPass_54.png)
+            ![EinsumPass_54](../../../docs/zh/figures/EinsumPass_54.png)
 
             融合后
 
-            ![](../../../docs/zh/figures/EinsumPass_55.png)
+            ![EinsumPass_55](../../../docs/zh/figures/EinsumPass_55.png)
 
             Unsqueeze、ReduceSum和Squeeze都为可选，且都可以有多个。
 
         2. 场景二
 
-            ![](../../../docs/zh/figures/EinsumPass_56.png)
+            ![EinsumPass_56](../../../docs/zh/figures/EinsumPass_56.png)
 
             融合后
 
-            ![](../../../docs/zh/figures/EinsumPass_57.png)
+            ![EinsumPass_57](../../../docs/zh/figures/EinsumPass_57.png)
 
             Unsqueeze、ReduceSum、Unsqueeze/FlattenV2、Reshape、Transpose和Squeeze都为可选，且ReduceSum和Unsqueeze/FlattenV2可以有多个。
 

@@ -6,35 +6,35 @@
 
 - 场景一：使用Mul计算平方，带gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_1.png)
+  ![layer_norm_onnx_mul_fusion_pass_1](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_1.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_3.png)
+  ![layer_norm_onnx_mul_fusion_pass_3](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_3.png)
 
 - 场景二：使用Mul计算平方，不带gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_2.png)
+  ![layer_norm_onnx_mul_fusion_pass_2](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_2.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_4.png)
+  ![layer_norm_onnx_mul_fusion_pass_4](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_4.png)
 
 - 场景三：使用Pow计算平方，带gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_5.png)
+  ![layer_norm_onnx_mul_fusion_pass_5](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_5.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_3.png)
+  ![layer_norm_onnx_mul_fusion_pass_3](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_3.png)
 
 - 场景四：使用Pow计算平方，不带gamma和beta。
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_6.png)
+  ![layer_norm_onnx_mul_fusion_pass_6](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_6.png)
 
   **融合为**
 
-  ![](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_4.png)
+  ![layer_norm_onnx_mul_fusion_pass_4](../../../docs/zh/figures/layer_norm_onnx_mul_fusion_pass_4.png)
 
 场景一、二中，Mul\_0的两个输入均为Sub\_1的结果，用于计算平方；场景三、四中，Pow以Sub\_1的结果为底数，指数输入exp为2。上述各场景的Sqrt均支持替换为exp为0.5的Pow。Add\_0的两个输入可以交换，带gamma和beta时，Mul\_1、Add\_1的两个输入也可以分别交换。
 

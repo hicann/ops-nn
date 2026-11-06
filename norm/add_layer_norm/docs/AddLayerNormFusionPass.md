@@ -3,29 +3,29 @@
 ## 融合模式
 
 - 场景一：基础场景，将Add + Cast\(可选\)+ LayerNorm/LayerNormV3/LayerNormV4融合为AddLayerNorm算子。
-  ![](../../../docs/zh/figures/add_layer_norm_fusion_pass_1.png)
+  ![add_layer_norm_fusion_pass_1](../../../docs/zh/figures/add_layer_norm_fusion_pass_1.png)
 
-  ![](../../../docs/zh/figures/add_layer_norm_fusion_pass_2.png)
+  ![add_layer_norm_fusion_pass_2](../../../docs/zh/figures/add_layer_norm_fusion_pass_2.png)
 
 - 场景二：支持将Add + Add + Cast\(可选\)+ LayerNorm/LayerNormV3/LayerNormV4融合为AddLayerNorm算子。
 
-  ![](../../../docs/zh/figures/add_layer_norm_fusion_pass_3.png)
+  ![add_layer_norm_fusion_pass_3](../../../docs/zh/figures/add_layer_norm_fusion_pass_3.png)
 
-  ![](../../../docs/zh/figures/add_layer_norm_fusion_pass_4.png)
+  ![add_layer_norm_fusion_pass_4](../../../docs/zh/figures/add_layer_norm_fusion_pass_4.png)
 
 - 场景三：支持将Cast + Add + LayerNorm/LayerNormV3/LayerNormV4融合为AddLayerNorm算子。
 
-  ![](../../../docs/zh/figures/add_layer_norm_fusion_pass_5.png)
+  ![add_layer_norm_fusion_pass_5](../../../docs/zh/figures/add_layer_norm_fusion_pass_5.png)
 
-  ![](../../../docs/zh/figures/add_layer_norm_fusion_pass_6.png)
+  ![add_layer_norm_fusion_pass_6](../../../docs/zh/figures/add_layer_norm_fusion_pass_6.png)
 
 - 场景四：支持将Add + Add + Cast + LayerNorm/LayerNormV3/LayerNormV4 + Cast融合为AddLayerNorm算子。
 
-  ![](../../../docs/zh/figures/add_layer_norm_fusion_pass_7.png)
+  ![add_layer_norm_fusion_pass_7](../../../docs/zh/figures/add_layer_norm_fusion_pass_7.png)
 
   或者
 
-  ![](../../../docs/zh/figures/add_layer_norm_fusion_pass_8.png)
+  ![add_layer_norm_fusion_pass_8](../../../docs/zh/figures/add_layer_norm_fusion_pass_8.png)
 
 ## 使用约束
 
