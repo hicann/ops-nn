@@ -18,21 +18,32 @@
 using namespace ge;
 
 namespace ops {
-static constexpr int64_t IDX_0 = 0;
+static constexpr size_t IDX_SCALE = 0;
+static constexpr size_t IDX_OFFSET = 1;
 
 static ge::graphStatus InferShapeIfmr(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeIfmr");
-    auto outShape = context->GetOutputShape(0);
+    auto outShape = context->GetOutputShape(IDX_SCALE);
     OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
     outShape->SetDimNum(0);
     outShape->AppendDim(1);
-    outShape = context->GetOutputShape(1);
+    outShape = context->GetOutputShape(IDX_OFFSET);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
     outShape->SetDimNum(0);
     outShape->AppendDim(1);
     OP_LOGD(context->GetNodeName(), "End to do InferShapeIfmr");
-    return GRAPH_SUCCESS;
+    return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(IFMR).InferShape(InferShapeIfmr);
+static ge::graphStatus InferDataTypeForIfmr(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeForIfmr");
+    context->SetOutputDataType(IDX_SCALE, ge::DT_FLOAT);
+    context->SetOutputDataType(IDX_OFFSET, ge::DT_FLOAT);
+    OP_LOGD(context->GetNodeName(), "End to do InferDataTypeForIfmr");
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(IFMR).InferShape(InferShapeIfmr).InferDataType(InferDataTypeForIfmr);
 } // namespace ops

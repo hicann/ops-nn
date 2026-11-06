@@ -17,6 +17,7 @@
 #include "array_ops.h"
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
+#include "infer_datatype_context_faker.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "log/log.h"
@@ -58,4 +59,32 @@ TEST_F(IfmrTest, ifmr_test_case_infershape)
     gert::Shape expected_output_shape = {1};
     ASSERT_EQ(Ops::Base::ToString(*scale_desc), Ops::Base::ToString(expected_output_shape));
     ASSERT_EQ(Ops::Base::ToString(*offset_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+TEST_F(IfmrTest, ifmr_test_case_infer_datatype)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("IFMR"), nullptr);
+    auto inferDatatypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("IFMR")->infer_datatype;
+    ASSERT_NE(inferDatatypeFunc, nullptr);
+    ge::DataType dataDataType = ge::DT_FLOAT16;
+    ge::DataType scaleDataType = ge::DT_FLOAT;
+    ge::DataType offsetDataType = ge::DT_FLOAT;
+    auto holder = gert::InferDataTypeContextFaker()
+                      .IrInputNum(4)
+                      .NodeIoNum(4, 2)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputDataTypes({&dataDataType})
+                      .OutputDataTypes({&scaleDataType, &offsetDataType})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_EQ(inferDatatypeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
+    EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT);
 }
