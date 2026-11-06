@@ -141,3 +141,38 @@ TEST_F(l2_inplace_scatter_value_test, l2_inplace_scatter_value_test_18)
     test_run_invalid({10, 15, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {3, 5, 3}, ACL_INT64, ACL_FORMAT_ND, {0, 2},
                      -12, "int", 0);
 }
+
+// 空index时，aclnnInplaceScatterValue 的参数校验同样不能被跳过
+TEST_F(l2_inplace_scatter_value_test, empty_index_dtype_invalid_float32)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto value = ScalarDesc(1.0f);
+    auto ut = OP_API_UT(aclnnInplaceScatterValue, INPUT(self_desc, dim, index_desc, value, int64_t{0}), OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_inplace_scatter_value_test, empty_index_dim_out_of_range)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 5;
+    auto index_desc = TensorDesc({0, 4}, ACL_INT64, ACL_FORMAT_ND);
+    auto value = ScalarDesc(1.0f);
+    auto ut = OP_API_UT(aclnnInplaceScatterValue, INPUT(self_desc, dim, index_desc, value, int64_t{0}), OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+// 空index + 合法dtype(INT64)仍应成功
+TEST_F(l2_inplace_scatter_value_test, empty_index_dtype_valid_int64)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_INT64, ACL_FORMAT_ND);
+    auto value = ScalarDesc(1.0f);
+    auto ut = OP_API_UT(aclnnInplaceScatterValue, INPUT(self_desc, dim, index_desc, value, int64_t{0}), OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
+}

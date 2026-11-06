@@ -195,10 +195,8 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
     OP_CHECK_DTYPE_NOT_MATCH(src, self->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
-    // 当index为空时，不对其dtype进行校验
-    if (!index->IsEmpty()) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(index, DTYPE_SUPPORT_LIST_INDICES, return false);
-    }
+    // dtype是类型层面的静态约束，与tensor是否为空无关，因此空index同样需要校验
+    OP_CHECK_DTYPE_NOT_SUPPORT(index, DTYPE_SUPPORT_LIST_INDICES, return false);
     return true;
 }
 
@@ -582,6 +580,10 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
     auto ret = CheckParams(self, index, src, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
+    // 参数完整性校验(dim范围/index与src形状/self与out形状等)与index是否为空无关
+    ret = CheckParams2(self, index, src, out, dim);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     // 如果是0维，需要扩维成1维进行计算
     bool needUnsqueeze = (self->GetViewShape().GetDimNum() == 0);
     int64_t squeezeDim = 0;
@@ -600,9 +602,6 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
                  return ACLNN_ERR_INNER_NULLPTR);
         return ACLNN_SUCCESS;
     }
-
-    ret = CheckParams2(self, index, src, out, dim);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     bool aicoreSupport = true;
@@ -963,6 +962,14 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(const aclTensor* self, int64
     CheckFormat(self);
 
     if (index->IsEmpty()) {
+        // 空index时out是self的拷贝，但dtype/dim/形状校验与是否为空无关
+        auto srcForCheck = uniqueExecutor.get()->ConvertToTensor(value, self->GetDataType());
+        CHECK_COND(srcForCheck != nullptr, ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor value failed!");
+        auto ret = CheckParams(self, index, srcForCheck, out);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        CHECK_COND(CheckShape(self, index, out, dim), ACLNN_ERR_PARAM_INVALID, "checkshape failed!");
+        CHECK_COND(CheckDimRange(self, dim), ACLNN_ERR_PARAM_INVALID, "dim must in [-N, N-1]!");
+
         auto selfContiguous = InitializeTensor(self, uniqueExecutor.get());
         OP_CHECK(selfContiguous != nullptr,
                  OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "InitializeTensor self failed!"),

@@ -138,3 +138,112 @@ TEST_F(l2_scatter_add_test_elements, case_10)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// 空index时index dtype仍需校验：非法dtype应返回ACLNN_ERR_PARAM_INVALID
+TEST_F(l2_scatter_add_test_elements, empty_index_dtype_invalid_float32)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto src_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_scatter_add_test_elements, empty_index_dtype_invalid_float16)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto src_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_scatter_add_test_elements, empty_index_dtype_invalid_bool)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_BOOL, ACL_FORMAT_ND);
+    auto src_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 空index + 合法dtype(INT64/INT32)仍应成功
+TEST_F(l2_scatter_add_test_elements, empty_index_dtype_valid_int64)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_INT64, ACL_FORMAT_ND);
+    auto src_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    ut.TestPrecision();
+}
+
+TEST_F(l2_scatter_add_test_elements, empty_index_dtype_valid_int32)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_INT32, ACL_FORMAT_ND);
+    auto src_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    ut.TestPrecision();
+}
+
+// 空index时，形状/dim相关参数校验同样不能被跳过
+TEST_F(l2_scatter_add_test_elements, empty_index_dim_out_of_range)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 5;
+    auto index_desc = TensorDesc({0, 4}, ACL_INT64, ACL_FORMAT_ND);
+    auto src_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_scatter_add_test_elements, empty_index_src_shape_mismatch)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_INT64, ACL_FORMAT_ND);
+    auto src_desc = TensorDesc({0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_scatter_add_test_elements, empty_index_out_shape_mismatch)
+{
+    auto self_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t dim = 1;
+    auto index_desc = TensorDesc({0, 4}, ACL_INT64, ACL_FORMAT_ND);
+    auto src_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnScatterAdd, INPUT(self_desc, dim, index_desc, src_desc), OUTPUT(out_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
