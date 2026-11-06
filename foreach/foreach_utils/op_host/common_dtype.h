@@ -40,6 +40,7 @@ constexpr uint64_t TILING_KEY_INT8 = 7;
 constexpr uint64_t TILING_KEY_UINT8 = 8;
 constexpr uint64_t TILING_KEY_UINT32 = 9;
 constexpr uint64_t TILING_KEY_INT64 = 10;
+constexpr uint64_t TILING_KEY_UINT64 = 10; // UINT64 shares the kernel of INT64 (same 8-byte copy)
 constexpr uint64_t TILING_KEY_DOUBLE = 11;
 constexpr uint64_t TILING_KEY_BOOL = 12;
 constexpr uint64_t TILING_KEY_FLOAT_TO_HALF = 13;
@@ -66,6 +67,7 @@ inline uint8_t GetDataTypeSize(ge::DataType dataType)
         case ge::DT_BOOL:
             return BYTE_LEN_1;
         case ge::DT_INT64:
+        case ge::DT_UINT64:
         case ge::DT_DOUBLE:
             return BYTE_LEN_8;
         default:
@@ -97,6 +99,8 @@ inline uint64_t GetTilingKeyByDtypeOnly(ge::DataType dataType)
             return TILING_KEY_UINT16;
         case ge::DT_UINT32:
             return TILING_KEY_UINT32;
+        case ge::DT_UINT64:
+            return TILING_KEY_UINT64;
         case ge::DT_INT64:
             return TILING_KEY_INT64;
         case ge::DT_DOUBLE:

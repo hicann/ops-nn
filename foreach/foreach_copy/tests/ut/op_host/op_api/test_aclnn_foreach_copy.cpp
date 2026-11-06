@@ -140,6 +140,22 @@ TEST_F(l2_foreach_copy_test, ascend910B2_foreach_copy_test_int32)
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
+// uint64 same dtype
+TEST_F(l2_foreach_copy_test, ascend910B2_foreach_copy_test_uint64)
+{
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    vector<vector<int64_t>> outDims = {{2, 2}};
+    auto x = TensorDesc(selfDims[0], ACL_UINT64, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims[0], ACL_UINT64, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachCopy, INPUT(xList), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
 // non-contiguous input and output
 TEST_F(l2_foreach_copy_test, ascend910B2_foreach_copy_test_non_contiguous)
 {

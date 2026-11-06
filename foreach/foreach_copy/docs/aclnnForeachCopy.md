@@ -87,7 +87,7 @@ aclnnStatus aclnnForeachCopy(
       <td>输入</td>
       <td>表示进行内容复制的输入张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、DOUBLE、BOOL</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT8、UINT8、INT16、UINT16、INT32、UINT32、UINT64、INT64、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnForeachCopy(
       <td>输出</td>
       <td>表示进行内容复制的输出张量列表，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据格式与入参`x`的数据格式一致，shape size大于等于入参`x`的shape size。</li><li>数据类型与入参`x`的数据类型存在一定的对应关系：<ul><li>当入参`x`的数据类型为FLOAT32时，输出的数据类型支持FLOAT16或者BFLOAT16。</li><li>当入参`x`的数据类型为FLOAT16时，输出的数据类型支持FLOAT32。</li><li>当入参`x`的数据类型为BFLOAT16时，输出的数据类型支持FLOAT32、BFLOAT16。</li><li>当输入`x`的数据类型不为FLOAT32、FLOAT16、BFLOAT16时，输出的数据类型与输入`x`的数据类型保持一致。</li></ul></li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、DOUBLE、BOOL</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT8、UINT8、INT16、UINT16、INT32、UINT32、UINT64、INT64、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>

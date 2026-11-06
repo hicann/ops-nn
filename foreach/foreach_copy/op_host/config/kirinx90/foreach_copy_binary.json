@@ -16,7 +16,7 @@
                         ]
                     }
                 ]
-                
+
             ],
             "outputs": [
                 [
@@ -303,6 +303,37 @@
                         "name": "y",
                         "index": 0,
                         "dtype": "int64",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachCopy_d352cc839cc9cf38d3898facf84a2f1f",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "uint64",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "uint64",
                         "format": "ND",
                         "paramType": "dynamic",
                         "shape": [

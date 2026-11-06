@@ -52,14 +52,14 @@ English | [简体中文](./README.md)
       <td>x</td>
       <td>Input</td>
       <td>Represents the input tensor list for content copying, corresponding to `x` in the formula. The data types of all tensors in this parameter are the same.</td>
-      <td>FLOAT32, FLOAT16, INT32, BFLOAT16, INT8, UINT8, INT16, UINT16, UINT32, INT64, DOUBLE, BOOL</td>
+      <td>FLOAT32, FLOAT16, INT32, BFLOAT16, INT8, UINT8, INT16, UINT16, UINT32, UINT64, INT64, DOUBLE, BOOL</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
       <td><ul><li>Represents the output tensor list for content copying, corresponding to `y` in the formula.</li><li>The data format is consistent with the data format of input parameter `x`, and the shape size is greater than or equal to the shape size of input parameter `x`.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type has a certain correspondence with the data type of input parameter `x`: <ul><li>When the data type of input parameter `x` is FLOAT32, the output data type supports FLOAT16 or BFLOAT16.</li><li>When the data type of input parameter `x` is FLOAT16, the output data type supports FLOAT32.</li><li>When the data type of input `x` is not FLOAT32 or FLOAT16, the output data type must be consistent with the data type of input `x`.</li></ul></li></ul></td>
-      <td>FLOAT32, FLOAT16, INT32, BFLOAT16, INT8, UINT8, INT16, UINT16, UINT32, INT64, DOUBLE, BOOL</td>
+      <td>FLOAT32, FLOAT16, INT32, BFLOAT16, INT8, UINT8, INT16, UINT16, UINT32, UINT64, INT64, DOUBLE, BOOL</td>
       <td>ND</td>
     </tr>
   </tbody></table>

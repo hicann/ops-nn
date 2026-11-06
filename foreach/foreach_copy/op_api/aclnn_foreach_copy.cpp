@@ -27,9 +27,9 @@ extern "C" {
 #endif
 
 static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT,  DataType::DT_FLOAT16, DataType::DT_BF16,   DataType::DT_INT32,
-    DataType::DT_INT8,   DataType::DT_UINT8,   DataType::DT_INT16,  DataType::DT_UINT16,
-    DataType::DT_UINT32, DataType::DT_INT64,   DataType::DT_DOUBLE, DataType::DT_BOOL};
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16,   DataType::DT_INT32,  DataType::DT_INT8,
+    DataType::DT_UINT8, DataType::DT_INT16,   DataType::DT_UINT16, DataType::DT_UINT32, DataType::DT_UINT64,
+    DataType::DT_INT64, DataType::DT_DOUBLE,  DataType::DT_BOOL};
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 

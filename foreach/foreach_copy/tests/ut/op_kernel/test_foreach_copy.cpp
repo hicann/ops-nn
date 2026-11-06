@@ -361,6 +361,40 @@ TEST_F(foreach_copy_test, test_case_int64_10)
     system("cd ./copy_data/ && python3 compare_data.py 'int64_t'");
 }
 
+TEST_F(foreach_copy_test, test_case_uint64)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_copy/tests/ut/op_kernel/copy_data ./");
+    system("chmod -R 755 ./copy_data/");
+    system("cd ./copy_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 'uint64_t'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 10,
+                       32); // shape info, dataType, the tiling code (uint64 shares tiling key 10 with int64)
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = CreateCopyTensorList<uint64_t>(shapeInfos, "uint64_t"); // input tensor
+    uint8_t* x2 = CreateCopyTensorList<uint64_t>(shapeInfos, "uint64_t"); // output tensor
+
+    ICPU_SET_TILING_KEY(10);
+    ICPU_RUN_KF(foreach_copy, blockDim, x1, x2, workspace, tiling);
+
+    FreeCopyTensorList<uint64_t>(x2, shapeInfos, "uint64_t");
+    AscendC::GmFree((void*)x1);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./copy_data/ && python3 compare_data.py 'uint64_t'");
+}
+
 TEST_F(foreach_copy_test, test_case_float64_11)
 {
     std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
