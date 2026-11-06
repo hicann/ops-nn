@@ -45,6 +45,10 @@
  *| NHWC	| INT8	        | INT8	        | UINT64	| UINT64	| INT8	        | FLOAT16       |\n
  *| NHWC	| INT8	        | INT8	        | UINT64	| UINT64	| FLOAT16	    | INT8          |\n
  *| NHWC	| INT8	        | INT8	        | UINT64	| UINT64	| INT8	        | INT8          |\n
+ *| NCHW	| INT8	        | INT8	        | INT64	    | INT64	    | FLOAT16	    | FLOAT16       |\n
+ *| NCHW	| INT8	        | INT8	        | UINT64    | UINT64    | FLOAT16	    | FLOAT16       |\n
+ *| NHWC	| INT8	        | INT8	        | INT64	    | INT64	    | FLOAT16	    | FLOAT16       |\n
+ *| NHWC	| INT8	        | INT8	        | UINT64    | UINT64    | FLOAT16	    | FLOAT16       |\n
  *\n
  */
 
@@ -60,7 +64,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dFmpDat
       ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
       ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT16,
-      ge::DT_FLOAT16}},
+      ge::DT_FLOAT16,       ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8}},
     {"ascend960dt",
      {ge::DT_INT8,          ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,
       ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_INT8,
@@ -72,7 +76,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dFmpDat
       ge::DT_FLOAT8_E4M3FN, ge::DT_INT8,          ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,
       ge::DT_HIFLOAT8,      ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
-      ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_INT8}},
+      ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_INT8,          ge::DT_INT8,
+      ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8}},
     {"ascend5162", {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_INT8, ge::DT_FLOAT16}}};
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dWeightDataType = {
     {"ascend950",
@@ -83,7 +88,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dWeight
       ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
       ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT16,
-      ge::DT_FLOAT16}},
+      ge::DT_FLOAT16,       ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8}},
     {"ascend960dt",
      {ge::DT_INT8,          ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,
       ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_INT8,
@@ -95,16 +100,18 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dWeight
       ge::DT_FLOAT8_E4M3FN, ge::DT_INT8,          ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,
       ge::DT_HIFLOAT8,      ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
-      ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_INT8}},
+      ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_INT8,          ge::DT_INT8,
+      ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8}},
     {"ascend5162", {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_INT8, ge::DT_FLOAT16}}};
 
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dBiasDataType = {
-    {"ascend950", {ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-                   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT32,
-                   ge::DT_INT32,   ge::DT_INT32,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
-                   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT32,   ge::DT_INT32,
-                   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_FLOAT16, ge::DT_FLOAT16,
-                   ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}},
+    {"ascend950",
+     {ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
+      ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,
+      ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
+      ge::DT_FLOAT,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,
+      ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16,
+      ge::DT_FLOAT16, ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32,   ge::DT_INT32}},
     {"ascend960dt",
      {ge::DT_INT32,   ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,
       ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_INT32,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,
@@ -113,7 +120,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dBiasDa
       ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,
       ge::DT_FLOAT,   ge::DT_INT32, ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,
       ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16,
-      ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32}},
+      ge::DT_FLOAT16, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32,   ge::DT_INT32, ge::DT_INT32,
+      ge::DT_INT32,   ge::DT_INT32}},
     {"ascend5162", {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_INT32, ge::DT_FLOAT16}}};
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOffsetWDataType = {
     {"ascend950",
@@ -121,7 +129,7 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOffset
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
-      ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}},
+      ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}},
     {"ascend960dt",
      {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
@@ -129,15 +137,16 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOffset
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
-      ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}},
+      ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
+      ge::DT_INT8, ge::DT_INT8}},
     {"ascend5162", {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}};
 static const std::vector<ge::DataType> extendConv2dScaleAttrDataType = {
-    ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,
-    ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_UINT64,
-    ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
-    ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_INT64,  ge::DT_INT64,
-    ge::DT_INT64,  ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_INT64,  ge::DT_UINT64,
-    ge::DT_INT64,  ge::DT_UINT64, ge::DT_INT64,  ge::DT_UINT64, ge::DT_INT64,  ge::DT_UINT64};
+    ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,
+    ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
+    ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
+    ge::DT_UINT64, ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
+    ge::DT_INT64,  ge::DT_UINT64, ge::DT_INT64,  ge::DT_UINT64, ge::DT_INT64,  ge::DT_UINT64, ge::DT_INT64,
+    ge::DT_UINT64, ge::DT_INT64,  ge::DT_UINT64, ge::DT_INT64,  ge::DT_UINT64};
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dScale0DataType = {
     {"ascend950", extendConv2dScaleAttrDataType},
     {"ascend960dt",
@@ -148,7 +157,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dScale0
       ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
       ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
       ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,
-      ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64}},
+      ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_UINT64,
+      ge::DT_INT64,  ge::DT_UINT64}},
     {"ascend5162", {ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64}}};
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dScale1DataType = {
     {"ascend950", extendConv2dScaleAttrDataType},
@@ -160,14 +170,15 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dScale1
       ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
       ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
       ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,
-      ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64}},
+      ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_INT64,  ge::DT_UINT64,
+      ge::DT_INT64,  ge::DT_UINT64}},
     {"ascend5162", {ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64}}};
 static const std::vector<ge::DataType> extendConv2dReluWeightDataType = {
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
 static const std::vector<ge::DataType> extendConv2dReluWeightDataType96 = {
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
@@ -175,7 +186,8 @@ static const std::vector<ge::DataType> extendConv2dReluWeightDataType96 = {
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+    ge::DT_FLOAT, ge::DT_FLOAT};
 static const std::vector<ge::DataType> extendConv2dReluWeightDataType51 = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
                                                                            ge::DT_FLOAT, ge::DT_FLOAT};
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dReluWeight0DataType = {
@@ -193,7 +205,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipVa
       ge::DT_FLOAT16,  ge::DT_INT8,    ge::DT_FLOAT,   ge::DT_FLOAT16,       ge::DT_BF16,          ge::DT_HIFLOAT8,
       ge::DT_FLOAT,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT8_E4M3FN, ge::DT_INT8,          ge::DT_FLOAT16,
       ge::DT_INT8,     ge::DT_INT8,    ge::DT_FLOAT16, ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
-      ge::DT_FLOAT16,  ge::DT_FLOAT16, ge::DT_INT8,    ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8}},
+      ge::DT_FLOAT16,  ge::DT_FLOAT16, ge::DT_INT8,    ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
+      ge::DT_FLOAT16,  ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}},
     {"ascend960dt",
      {ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,
@@ -203,7 +216,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipVa
       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,         ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN,
       ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,
-      ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,          ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8}},
+      ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,          ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,
+      ge::DT_FLOAT16, ge::DT_FLOAT16,  ge::DT_FLOAT16,       ge::DT_FLOAT16}},
     {"ascend5162", {ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16}}};
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipValue1DataType = {
     {"ascend950",
@@ -212,7 +226,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipVa
       ge::DT_INT8,     ge::DT_INT8,    ge::DT_FLOAT,   ge::DT_FLOAT16,       ge::DT_BF16,          ge::DT_HIFLOAT8,
       ge::DT_FLOAT,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16,       ge::DT_INT8,
       ge::DT_INT8,     ge::DT_FLOAT16, ge::DT_INT8,    ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
-      ge::DT_INT8,     ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16}},
+      ge::DT_INT8,     ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
+      ge::DT_FLOAT16,  ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}},
     {"ascend960dt",
      {ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,
@@ -222,7 +237,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dClipVa
       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,         ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN,
       ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,
-      ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,          ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8}},
+      ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,          ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,
+      ge::DT_FLOAT16, ge::DT_FLOAT16,  ge::DT_FLOAT16,       ge::DT_FLOAT16}},
     {"ascend5162", {ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16}}};
 
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput0DataType = {
@@ -232,7 +248,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput
       ge::DT_FLOAT16,  ge::DT_INT8,    ge::DT_FLOAT,   ge::DT_FLOAT16,       ge::DT_BF16,          ge::DT_HIFLOAT8,
       ge::DT_FLOAT,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT8_E4M3FN, ge::DT_INT8,          ge::DT_FLOAT16,
       ge::DT_INT8,     ge::DT_INT8,    ge::DT_FLOAT16, ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
-      ge::DT_FLOAT16,  ge::DT_FLOAT16, ge::DT_INT8,    ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8}},
+      ge::DT_FLOAT16,  ge::DT_FLOAT16, ge::DT_INT8,    ge::DT_INT8,          ge::DT_INT8,          ge::DT_INT8,
+      ge::DT_FLOAT16,  ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}},
     {"ascend960dt",
      {ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,
@@ -242,7 +259,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput
       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,         ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN,
       ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,
-      ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,          ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8}},
+      ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,          ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,
+      ge::DT_FLOAT16, ge::DT_FLOAT16,  ge::DT_FLOAT16,       ge::DT_FLOAT16}},
     {"ascend5162", {ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16}}};
 static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput1DataType = {
     {"ascend950",
@@ -251,7 +269,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput
       ge::DT_INT8,     ge::DT_INT8,    ge::DT_FLOAT,   ge::DT_FLOAT16,       ge::DT_BF16,          ge::DT_HIFLOAT8,
       ge::DT_FLOAT,    ge::DT_FLOAT16, ge::DT_BF16,    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16,       ge::DT_INT8,
       ge::DT_INT8,     ge::DT_FLOAT16, ge::DT_INT8,    ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
-      ge::DT_INT8,     ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16}},
+      ge::DT_INT8,     ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,          ge::DT_FLOAT16,       ge::DT_FLOAT16,
+      ge::DT_FLOAT16,  ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16}},
     {"ascend960dt",
      {ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,
@@ -261,7 +280,8 @@ static const std::map<std::string, std::vector<ge::DataType>> extendConv2dOutput
       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,         ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN,
       ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_FLOAT16,       ge::DT_BF16,    ge::DT_HIFLOAT8, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_BF16,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,
-      ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,          ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8}},
+      ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,          ge::DT_FLOAT16, ge::DT_INT8,     ge::DT_INT8,
+      ge::DT_FLOAT16, ge::DT_FLOAT16,  ge::DT_FLOAT16,       ge::DT_FLOAT16}},
     {"ascend5162", {ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16}}};
 static const std::vector<ge::Format> extendConv2dFmapFormat = {
     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
@@ -269,7 +289,8 @@ static const std::vector<ge::Format> extendConv2dFmapFormat = {
     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
     ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
-    ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC};
+    ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
+    ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC};
 static const std::vector<ge::Format> extendConv2dFormat96 = {
     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
@@ -279,7 +300,8 @@ static const std::vector<ge::Format> extendConv2dFormat96 = {
     ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
     ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
     ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-    ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC};
+    ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
+    ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC};
 static const std::vector<ge::Format> extendConv2dFormat51 = {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
                                                              ge::FORMAT_NCHW, ge::FORMAT_NCHW};
 static const std::map<std::string, std::vector<ge::Format>> extendConv2dFmapAndOutputFormat = {
@@ -293,25 +315,27 @@ static const std::vector<ge::Format> extendConv2dWeightFormat96 = {
     ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
     ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
     ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-    ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN};
+    ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
+    ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_HWCN, ge::FORMAT_HWCN};
 static const std::map<std::string, std::vector<ge::Format>> extendConv2dWeightFormat = {
-    {"ascend950",
-     {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-      ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-      ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
-      ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
-      ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
-      ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN}},
+    {"ascend950", {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                   ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                   ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                   ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
+                   ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
+                   ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
+                   ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_HWCN, ge::FORMAT_HWCN}},
     {"ascend960dt", extendConv2dWeightFormat96},
     {"ascend5162",
      {ge::FORMAT_FRACTAL_Z, ge::FORMAT_FRACTAL_Z, ge::FORMAT_FRACTAL_Z, ge::FORMAT_FRACTAL_Z, ge::FORMAT_NCHW}}};
 static const std::map<std::string, std::vector<ge::Format>> extendConv2dNDFormat = {
-    {"ascend950", {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}},
+    {"ascend950",
+     {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}},
     {"ascend960dt",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
@@ -320,7 +344,8 @@ static const std::map<std::string, std::vector<ge::Format>> extendConv2dNDFormat
       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}},
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+      ge::FORMAT_ND, ge::FORMAT_ND}},
     {"ascend5162", {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
 class ExtendConv2D : public OpDef {
 public:
