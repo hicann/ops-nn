@@ -118,11 +118,14 @@ using namespace matmul;
 #define IS_MX false
 #endif
 
+// Match host tiling SetFormat(): valid non-FRACTAL_NZ inputs use the ND path.
+// Dense graph inputs may retain NCHW; checking FORMAT_ND alone can exclude
+// valid tiling keys or skip kernel execution.
 #if defined(ORIG_DTYPE_SCALE)
 #define CUBE_TEMPLATE_ND                                                                              \
     (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64 || ORIG_DTYPE_SCALE == DT_FLOAT || \
      ORIG_DTYPE_SCALE == DT_BF16) &&                                                                  \
-        FORMAT_X2 == FORMAT_ND
+        FORMAT_X2 != FORMAT_FRACTAL_NZ
 #else
 #define CUBE_TEMPLATE_ND false
 #endif
@@ -403,7 +406,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 
 #if (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)
 #if SUPPORT_MIX_TILING_KEY
-#if FORMAT_X2 == FORMAT_ND
+#if FORMAT_X2 != FORMAT_FRACTAL_NZ
     using TeBLayout = TeBLayoutNd;
 #else
     using TeBLayout = TeBLayoutNz;

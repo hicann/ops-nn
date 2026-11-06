@@ -119,35 +119,31 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define QBMMV3_IS_FP8_PERTENSOR_STREAMK_TPL false
 #endif
 
-#if defined(FORMAT_X2) && defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ)
-#define SUPPORT_NON_MX_STREAMK_TILING_KEY                                                                        \
-    (!QBMMV3_IS_MX_DTYPE_TPL && (QBMMV3_IS_INT8_PERTENSOR_STREAMK_TPL || QBMMV3_IS_FP8_PERTENSOR_STREAMK_TPL) && \
-     (FORMAT_X2 == FORMAT_ND || FORMAT_X2 == FORMAT_FRACTAL_NZ))
-#else
-#define SUPPORT_NON_MX_STREAMK_TILING_KEY false
-#endif
+// Match host tiling SetFormat(): valid non-FRACTAL_NZ inputs use the ND path.
+// Dense graph inputs may retain NCHW; checking FORMAT_ND alone can exclude
+// valid tiling keys or skip kernel execution.
+#define SUPPORT_NON_MX_STREAMK_TILING_KEY \
+    (!QBMMV3_IS_MX_DTYPE_TPL && (QBMMV3_IS_INT8_PERTENSOR_STREAMK_TPL || QBMMV3_IS_FP8_PERTENSOR_STREAMK_TPL))
 
 // Keep the existing non-MX Cube ND/API-level classification independent from StreamK key selection.
-#if defined(__CCE_AICORE__) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && defined(FORMAT_ND) && \
+#if defined(__CCE_AICORE__) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && defined(FORMAT_FRACTAL_NZ) && \
     defined(DT_UINT64) && defined(DT_INT64) && defined(DT_FLOAT) && defined(DT_BF16)
 #define QBMMV3_IS_NON_MX_CUBE_ND_TPL                                                                   \
     (!QBMMV3_IS_MX_DTYPE_TPL &&                                                                        \
      (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64 || ORIG_DTYPE_SCALE == DT_FLOAT || \
       ORIG_DTYPE_SCALE == DT_BF16) &&                                                                  \
-     FORMAT_X2 == FORMAT_ND)
+     FORMAT_X2 != FORMAT_FRACTAL_NZ)
 #else
 #define QBMMV3_IS_NON_MX_CUBE_ND_TPL false
 #endif
 
 // Ordinary ND and WeightNZ Mix share the Blaze kernel and transpose selectors.
-#if (!defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) || !__FIXED_POINT_ONLY_CUBE_TO_L0C__) && IS_BLAZE &&                   \
-    defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_Y) && defined(ORIG_DTYPE_SCALE) &&          \
-    defined(FORMAT_X2) && defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ) && defined(DT_FLOAT8_E4M3FN) &&             \
-    defined(DT_FLOAT8_E5M2) && defined(DT_HIFLOAT8) && defined(DT_INT8) && defined(DT_FLOAT) && defined(DT_FLOAT16) && \
-    defined(DT_BF16)
+#if (!defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) || !__FIXED_POINT_ONLY_CUBE_TO_L0C__) && IS_BLAZE &&          \
+    defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_Y) && defined(ORIG_DTYPE_SCALE) && \
+    defined(DT_FLOAT8_E4M3FN) && defined(DT_FLOAT8_E5M2) && defined(DT_HIFLOAT8) && defined(DT_INT8) &&       \
+    defined(DT_FLOAT) && defined(DT_FLOAT16) && defined(DT_BF16)
 #define SUPPORT_MIX_TILING_KEY                                                                \
-    ((FORMAT_X2 == FORMAT_ND || FORMAT_X2 == FORMAT_FRACTAL_NZ) &&                            \
-     (((ORIG_DTYPE_X1 == DT_INT8 && ORIG_DTYPE_X2 == DT_INT8) &&                              \
+    ((((ORIG_DTYPE_X1 == DT_INT8 && ORIG_DTYPE_X2 == DT_INT8) &&                              \
        (ORIG_DTYPE_Y == DT_FLOAT16 || ORIG_DTYPE_Y == DT_BF16) &&                             \
        (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)) ||                      \
       (((((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2) &&           \
@@ -162,12 +158,12 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #if defined(__CCE_AICORE__) && (defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__) && \
     defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) &&        \
     defined(DT_INT8) && defined(DT_UINT64) && defined(DT_INT64) && defined(DT_FLOAT) && defined(DT_BF16) &&       \
-    defined(FORMAT_ND)
+    defined(FORMAT_FRACTAL_NZ)
 #define QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL                                                         \
     ((ORIG_DTYPE_X1 == DT_INT8) && (ORIG_DTYPE_X2 == DT_INT8) &&                                       \
      (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64 || ORIG_DTYPE_SCALE == DT_FLOAT || \
       ORIG_DTYPE_SCALE == DT_BF16) &&                                                                  \
-     (FORMAT_X2 == FORMAT_ND))
+     (FORMAT_X2 != FORMAT_FRACTAL_NZ))
 #else
 #define QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL false
 #endif
@@ -383,7 +379,7 @@ ASCENDC_TPL_SEL(
 #if !defined(__CCE_AICORE__) ||                                                                                     \
     ((defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__) && ORIG_DTYPE_X1 == DT_INT8 && \
      (ORIG_DTYPE_X2 == DT_INT8 || ORIG_DTYPE_X2 == DT_INT4) && ORIG_DTYPE_SCALE == DT_UINT64 &&                     \
-     ORIG_DTYPE_Y == DT_FLOAT16 && FORMAT_X1 == FORMAT_ND && FORMAT_X2 == FORMAT_FRACTAL_NZ)
+     ORIG_DTYPE_Y == DT_FLOAT16 && FORMAT_X1 != FORMAT_FRACTAL_NZ && FORMAT_X2 == FORMAT_FRACTAL_NZ)
     ASCENDC_TPL_ARGS_SEL( // X2 Per-Group: Host-selected no-full-load/A-full/B-full loading.
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_1), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
