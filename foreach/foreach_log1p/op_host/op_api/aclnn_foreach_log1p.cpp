@@ -12,7 +12,6 @@
 #include "foreach_log1p.h"
 #include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
 #include "aclnn_kernels/contiguous.h"
-#include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
@@ -31,22 +30,13 @@ static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPP
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
+// Tensor列表数量上界: 与tiling侧静态数组容量(MAX_TENSOR_CONT=256)一致, 超出将被静默截断
+static constexpr uint64_t MAX_TENSOR_COUNT = 256;
+
 static inline bool CheckNotNull(const aclTensorList* self, const aclTensorList* out)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(out, return false);
-    return true;
-}
-
-static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
-{
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        // self格式不能是私有格式
-        if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
-            return false;
-        }
-    }
     return true;
 }
 
@@ -95,11 +85,6 @@ static inline bool CheckShape(const aclTensorList* self, const aclTensorList* ou
         return false;
     }
 
-    // tensor 维度检查
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
-    }
-
     // self和out的shape必须一致
     for (uint64_t i = 0; i < self->Size(); i++) {
         OP_CHECK_SHAPE_NOT_EQUAL((*self)[i], (*out)[i], return false);
@@ -113,16 +98,20 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // Check every entry in tensor lists is not null, to avoid null pointer
-    // dereference in CheckDtypeValid/CheckShape/CheckFormat.
+    // dereference in CheckDtypeValid/CheckShape.
     CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
+    // 2. 检查Tensor列表数量上界: 超出tiling静态数组容量将静默截断, 此处显式拒绝
+    if (self->Size() > MAX_TENSOR_COUNT) {
+        OP_LOGE(ACLNN_ERR_INNER_TILING_ERROR, "The tensor list x must contain at most 256 tensors.");
+        return ACLNN_ERR_INNER_TILING_ERROR;
+    }
+
+    // 3. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
-    // 3. 检查shape是否满足约束
+    // 4. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
-    // 4. 检查Format是否满足约束
-    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 

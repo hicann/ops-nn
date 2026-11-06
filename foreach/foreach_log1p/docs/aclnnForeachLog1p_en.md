@@ -87,21 +87,21 @@ aclnnStatus aclnnForeachLog1p(
       <td>x (aclTensorList*)</td>
       <td>Input</td>
       <td>Input tensor list for the operation that adds 1 and then computes the natural logarithm, corresponding to `x` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>Supports empty tensor lists. In this case, out must also be an empty tensor list, and the first-phase API returns success directly without performing computation.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list for the operation that adds 1 and then computes the natural logarithm, corresponding to `y` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input `x`, and the shape size is greater than or equal to that of input `x`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input `x`, and the shape is the same as that of the corresponding tensor in input `x`.</li><li>Supports empty tensor lists. In this case, x must also be an empty tensor list.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
-      <td>0-8</td>
-      <td>×</td>
+      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnForeachLog1p(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Status Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -151,23 +151,29 @@ aclnnStatus aclnnForeachLog1p(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>The data type of x or out is not within the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
-    </tr>
-    <tr>
       <td>The data types of tensors in x or out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The dimension of a tensor in x or out exceeds 8.</td>
+      <td>The number of tensors in x and out is inconsistent.</td>
+    </tr>
+    <tr>
+      <td>The tensor list of x or out contains a null tensor pointer.</td>
+    </tr>
+    <tr>
+      <td>The shapes of the corresponding tensors in x and out are inconsistent.</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>Number of tensors in x exceeds 256.</td>
     </tr>
   </tbody></table>
 
@@ -216,6 +222,9 @@ aclnnStatus aclnnForeachLog1p(
 
 ## Constraints
 
+- Number of tensors in x/out <= 256.
+- The number of tensors in x and out must be the same.
+- The shape of the corresponding tensor in out must be the same as that in x.
 - Deterministic computation:
   - aclnnForeachLog1p defaults to a deterministic implementation.
 

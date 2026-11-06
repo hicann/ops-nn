@@ -56,10 +56,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachLog1pSimtKe
 {
     __gm__ T* inputPtr = SimtGetTensorAddr<T>(xList, tensorId);
     __gm__ T* outputPtr = SimtGetTensorAddr<T>(yList, tensorId);
-    for (int64_t localIdx = static_cast<int64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                                 AscendC::Simt::GetThreadIdx());
-         localIdx < elementCount;
-         localIdx += static_cast<int64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum())) {
+    for (int64_t localIdx = static_cast<int64_t>(blockIdx.x * blockDim.x + threadIdx.x); localIdx < elementCount;
+         localIdx += static_cast<int64_t>(blockDim.x * gridDim.x)) {
         T val = inputPtr[localIdx];
         outputPtr[localIdx] = Log1pCompute<T>::Compute(val);
     }
@@ -76,8 +74,7 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const Fo
         if (elementCount <= 0) {
             continue;
         }
-        AscendC::Simt::VF_CALL<OpForeachLog1pSimtKernel<T>>(AscendC::Simt::Dim3(THREAD_NUM), elementCount, tensorId, x,
-                                                            y);
+        asc_vf_call<OpForeachLog1pSimtKernel<T>>(dim3(THREAD_NUM), elementCount, tensorId, x, y);
     }
 }
 

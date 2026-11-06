@@ -50,15 +50,15 @@ English | [简体中文](./README.md)
     <tr>
       <td>x</td>
       <td>Input</td>
-      <td>Represents the input tensor list for adding 1 first and then applying the logarithm function with base e, corresponding to `x` in the formula. The data types of all tensors in this parameter are the same.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Represents the input tensor list for adding 1 first and then applying the logarithm function with base e, corresponding to `x` in the formula. The data types of all tensors in this parameter are the same. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Represents the final output result, corresponding to `y` in the formula. The data type and data format are consistent with those of input parameter `x`, and the shape size is greater than or equal to the shape size of input parameter `x`. The data types of all tensors in this parameter are the same.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Represents the final output result, corresponding to `y` in the formula. The data type and data format are consistent with those of input parameter `x`, and the shape is the same as that of the corresponding tensor in `x`. The data types of all tensors in this parameter are the same. Non-contiguous output tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -67,7 +67,9 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- Non-contiguous tensors are not supported for the output.
+- Number of tensors in x/y <= 256.
+- The number of tensors in x and y must be the same.
+- The shape of the corresponding tensor in y must be the same as that in x.
 
 ## Invocation Description
 

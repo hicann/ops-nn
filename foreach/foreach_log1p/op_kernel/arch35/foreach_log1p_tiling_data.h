@@ -20,7 +20,8 @@
 
 #include <cstdint>
 
-constexpr int32_t MAX_TENSOR_NUM = 128;
+// 张量列表容量上界: 与arch22基线(foreach_tiling_def.h MAX_TENSOR_CONT=256)及兄弟算子foreach_exp保持一致
+constexpr int32_t MAX_TENSOR_NUM = 256;
 
 struct ForeachLog1pTilingData {
     int32_t needCoreNum;

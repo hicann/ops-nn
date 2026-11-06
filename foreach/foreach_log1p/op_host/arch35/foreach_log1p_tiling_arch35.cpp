@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -17,10 +17,12 @@
 
 #include <vector>
 #include <algorithm>
+#include <limits>
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "platform/platform_info.h"
 #include "log/log.h"
+#include "util/math_util.h"
 #include "../../op_kernel/arch35/foreach_log1p_tiling_data.h"
 #include "../../op_kernel/arch35/foreach_log1p_tiling_key.h"
 
@@ -28,7 +30,7 @@ using namespace AscendC;
 
 namespace optiling {
 
-constexpr int64_t DCACHE_SIZE = 128 * 1024;
+constexpr uint64_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t MIN_PER_CORE_ELEMENTS = 1024;
 constexpr int64_t INPUT_IDX = 0;
 
@@ -41,8 +43,10 @@ constexpr uint64_t TILING_KEY_FP16 = 0;
 constexpr uint64_t TILING_KEY_FP32 = 1;
 constexpr uint64_t TILING_KEY_BF16 = 2;
 
-constexpr int64_t FALLBACK_CORE_NUM = 24;
-constexpr int64_t FALLBACK_UB_SIZE = 1024 * 1024;
+static bool IsSupportedInputDtype(ge::DataType dtype)
+{
+    return dtype == ge::DT_FLOAT || dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16;
+}
 
 static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
 {
@@ -62,37 +66,148 @@ static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::Dat
     }
 }
 
-static ge::graphStatus GetPlatformInfoFallback(const gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
+// 平台参数优先取编译期CompileInfo(TilingParse填充), 缺失时运行时查询, 均无效则显式失败
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     auto compileInfo = reinterpret_cast<const ForeachLog1pCompileInfo*>(context->GetCompileInfo());
     if (compileInfo != nullptr && compileInfo->coreNum > 0 && compileInfo->ubSize > 0) {
         coreNum = compileInfo->coreNum;
-        ubSize = compileInfo->ubSize;
+        ubSize = static_cast<uint64_t>(compileInfo->ubSize);
         return ge::GRAPH_SUCCESS;
     }
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    if (platformInfoPtr != nullptr) {
-        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-        coreNum = ascendcPlatform.GetCoreNumAiv();
-        uint64_t ub = 0;
-        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ub);
-        ubSize = static_cast<int64_t>(ub);
-        if (coreNum > 0 && ubSize > 0) {
-            return ge::GRAPH_SUCCESS;
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    coreNum = ascendcPlatform.GetCoreNumAiv();
+    OP_CHECK_IF(coreNum <= 0, OP_LOGE(context, "coreNum is %ld", coreNum), return ge::GRAPH_FAILED);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+// 实例数量校验: 空列表放行, x 的 Tensor 数量不超过 MAX_TENSOR_NUM, x 与 y 数量一致
+static ge::graphStatus CheckInstanceCount(gert::TilingContext* context, uint64_t& tensorNum)
+{
+    auto computeNodeInfoPtr = context->GetComputeNodeInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
+    auto instanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(INPUT_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, instanceInfoPtr);
+    tensorNum = instanceInfoPtr->GetInstanceNum();
+    // 校验 x 的 Tensor 数量不超过 MAX_TENSOR_NUM(256, 与arch22基线一致), 空列表放行
+    OP_CHECK_IF(tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM),
+                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum, MAX_TENSOR_NUM),
+                return ge::GRAPH_FAILED);
+    // 校验 x 与 y 的 Tensor 数量一致
+    OP_CHECK_IF(context->GetComputeNodeOutputNum() != tensorNum,
+                OP_LOGE(context, "The tensor nums of x and y must be the same, x is %lu, y is %lu.", tensorNum,
+                        static_cast<uint64_t>(context->GetComputeNodeOutputNum())),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+// 输入列表成员校验: desc/shape 判空, dtype 支持集, 跨实例 dtype 一致, 元素数非负且累计不溢出
+static ge::graphStatus CheckInputMember(gert::TilingContext* context, uint64_t i, ge::DataType& listDtype,
+                                        int64_t& totalElements, const gert::Shape*& inputStorageShape)
+{
+    auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX, i);
+    auto inputShape = context->GetDynamicInputShape(INPUT_IDX, i);
+    // 校验 x 的 desc 与 shape 非空
+    OP_CHECK_IF(inputDesc == nullptr || inputShape == nullptr,
+                OP_LOGE(context, "The input %lu desc or shape is null.", i), return ge::GRAPH_FAILED);
+
+    ge::DataType inputDtype = inputDesc->GetDataType();
+    // 校验 x 的 dtype 在支持范围内
+    OP_CHECK_IF(!IsSupportedInputDtype(inputDtype),
+                OP_LOGE(context, "unsupported dtype: %d", static_cast<int32_t>(inputDtype)), return ge::GRAPH_FAILED);
+    if (listDtype == ge::DT_UNDEFINED) {
+        listDtype = inputDtype;
+    } else {
+        // 校验 x 列表内各 Tensor 的 dtype 一致(跨实例)
+        OP_CHECK_IF(inputDtype != listDtype,
+                    OP_LOGE(context,
+                            "The dtypes of all tensors in the tensor list must be the same. "
+                            "Currently, the dtype of the %lu th tensor is inconsistent with that of "
+                            "other tensors.",
+                            i),
+                    return ge::GRAPH_FAILED);
+    }
+
+    inputStorageShape = &inputShape->GetStorageShape();
+    int64_t dataCount = inputStorageShape->GetShapeSize();
+    // 校验 x 的元素数非负且累计不溢出
+    OP_CHECK_IF(dataCount < 0 || totalElements > std::numeric_limits<int64_t>::max() - dataCount,
+                OP_LOGE(context,
+                        "The shape size of the %lu th tensor in the tensor list must be 0 or a "
+                        "positive number, and the total element count of the tensor list must not "
+                        "overflow.",
+                        i),
+                return ge::GRAPH_FAILED);
+    totalElements += dataCount;
+    return ge::GRAPH_SUCCESS;
+}
+
+// 输出列表成员校验: desc/shape 判空, dtype 与 shape 和对应位置 x 严格一致
+static ge::graphStatus CheckOutputMember(gert::TilingContext* context, uint64_t i, ge::DataType listDtype,
+                                         const gert::Shape* inputStorageShape)
+{
+    auto outputDesc = context->GetOutputDesc(i);
+    auto outputShape = context->GetOutputShape(i);
+    // 校验 y 的 desc 与 shape 非空
+    OP_CHECK_IF(outputDesc == nullptr || outputShape == nullptr,
+                OP_LOGE(context, "The output %lu desc or shape is null.", i), return ge::GRAPH_FAILED);
+    // 校验 y 的 dtype 与对应位置 x 一致
+    OP_CHECK_IF(outputDesc->GetDataType() != listDtype,
+                OP_LOGE(context,
+                        "The dtype of the %lu th tensor in tensor list y must be same as that of "
+                        "tensor list x.",
+                        i),
+                return ge::GRAPH_FAILED);
+    const gert::Shape& outputStorageShape = outputShape->GetStorageShape();
+    // 校验 y 的 shape 与对应位置的 x 严格一致
+    OP_CHECK_IF(outputStorageShape != *inputStorageShape,
+                OP_LOGE(context,
+                        "The shape of the %lu th tensor in tensor list y must be same as that of "
+                        "tensor list x.",
+                        i),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateForeachLog1p(gert::TilingContext* context)
+{
+    uint64_t tensorNum = 0;
+    if (CheckInstanceCount(context, tensorNum) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    // 空列表放行: 不进入成员级校验
+    if (tensorNum == 0) {
+        return ge::GRAPH_SUCCESS;
+    }
+    ge::DataType listDtype = ge::DT_UNDEFINED;
+    int64_t totalElements = 0;
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        const gert::Shape* inputStorageShape = nullptr;
+        if (CheckInputMember(context, i, listDtype, totalElements, inputStorageShape) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+        if (CheckOutputMember(context, i, listDtype, inputStorageShape) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
         }
     }
-    coreNum = FALLBACK_CORE_NUM;
-    ubSize = FALLBACK_UB_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus ForeachLog1pTilingFunc(gert::TilingContext* context)
 {
+    if (ValidateForeachLog1p(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    int64_t ubSize = 0;
-    OP_CHECK_IF(GetPlatformInfoFallback(context, coreNum, ubSize) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Failed to get platform info"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ubSize %ld <= DCACHE_SIZE %ld", ubSize, DCACHE_SIZE),
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((ubSize <= DCACHE_SIZE), OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE %lu", ubSize, DCACHE_SIZE),
                 return ge::GRAPH_FAILED);
     ubSize = ubSize - DCACHE_SIZE;
 
@@ -102,14 +217,17 @@ static ge::graphStatus ForeachLog1pTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
-    OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM),
-                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum, MAX_TENSOR_NUM),
-                return ge::GRAPH_FAILED);
+    ge::DataType dataType = ge::DT_UNDEFINED;
+    if (tensorNum > 0) {
+        auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX, 0);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+        dataType = inputDesc->GetDataType();
+    }
+
+    ForeachLog1pTilingData* tilingData = context->GetTilingData<ForeachLog1pTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
 
     int64_t totalElements = 0;
-    ge::DataType dataType = ge::DT_FLOAT;
-    ForeachLog1pTilingData* tilingData = context->GetTilingData<ForeachLog1pTilingData>();
-
     for (uint64_t i = 0; i < tensorNum; i++) {
         auto idxTensorShapePtr = context->GetDynamicInputShape(INPUT_IDX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorShapePtr);
@@ -117,41 +235,41 @@ static ge::graphStatus ForeachLog1pTilingFunc(gert::TilingContext* context)
         int64_t numel = idxTensorShape.GetShapeSize();
         totalElements += numel;
         tilingData->cumulativeOffsets[i] = totalElements;
-
-        if (i == 0) {
-            auto idxTensorDtypePtr = context->GetDynamicInputDesc(INPUT_IDX, i);
-            OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorDtypePtr);
-            dataType = idxTensorDtypePtr->GetDataType();
-        }
     }
 
-    int64_t needCoreNum = (totalElements + MIN_PER_CORE_ELEMENTS - 1) / MIN_PER_CORE_ELEMENTS;
-    needCoreNum = std::min(needCoreNum, coreNum);
+    // 溢出安全的向上取整: 使用仓内惯例封装 Ops::Base::CeilDiv(与家族基准 foreach_exp 一致)
+    int64_t needCoreNum = std::min(coreNum, Ops::Base::CeilDiv(totalElements, MIN_PER_CORE_ELEMENTS));
     needCoreNum = std::max(needCoreNum, static_cast<int64_t>(1));
-    int64_t perCoreElements = (totalElements + needCoreNum - 1) / needCoreNum;
+    int64_t perCoreElements = Ops::Base::CeilDiv(totalElements, needCoreNum);
 
     tilingData->needCoreNum = static_cast<int32_t>(needCoreNum);
     tilingData->tensorCount = static_cast<int32_t>(tensorNum);
     tilingData->totalElements = totalElements;
     tilingData->perCoreElements = perCoreElements;
 
-    context->SetBlockDim(needCoreNum);
+    context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
     uint64_t tilingKey = 0;
-    if (GetTilingKeyByDtype(context, dataType, tilingKey) != ge::GRAPH_SUCCESS) {
+    // 空 Tensor 列表放行(与 aclnn 通路两空列表第一段直接成功的语义一致),
+    // 默认走 FLOAT tiling key, 对齐家族基准 foreach_exp 的空列表特判
+    if (tensorNum == 0) {
+        tilingKey = TILING_KEY_FP32;
+    } else if (GetTilingKeyByDtype(context, dataType, tilingKey) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     context->SetTilingKey(tilingKey);
 
-    auto res = context->SetLocalMemorySize(ubSize);
-    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),
+    auto res = context->SetLocalMemorySize(static_cast<uint32_t>(ubSize));
+    OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%lu failed", ubSize),
                 return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = 0;
 
     return ge::GRAPH_SUCCESS;
 }
 
+// 编译期填充平台参数(coreNum/ubSize)到CompileInfo, 供Tiling侧优先取用
 static ge::graphStatus TilingParseForForeachLog1p(gert::TilingParseContext* context)
 {
     auto compileInfo = context->GetCompiledInfo<ForeachLog1pCompileInfo>();
@@ -161,7 +279,7 @@ static ge::graphStatus TilingParseForForeachLog1p(gert::TilingParseContext* cont
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
-    uint64_t ubSize;
+    uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
     OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);

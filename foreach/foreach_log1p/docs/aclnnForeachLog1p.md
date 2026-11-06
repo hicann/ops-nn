@@ -85,20 +85,20 @@ aclnnStatus aclnnForeachLog1p(
       <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>表示先加一再进行以e为底的对数函数运算的输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>支持空TensorList；此时out也须为空TensorList，第一段接口直接返回成功且不执行计算。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示先加一再进行以e为底的对数函数运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape与入参`x`中对应位置的Tensor的shape一致。</li><li>支持空TensorList；此时x也须为空TensorList。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -149,23 +149,29 @@ aclnnStatus aclnnForeachLog1p(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>x与out的shape不满足约束。</td>
-    </tr>
-    <tr>
       <td>x或out中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x或out中的Tensor维度超过8维。</td>
+      <td>x与out的Tensor数量不一致。</td>
+    </tr>
+    <tr>
+      <td>x或out的Tensor列表中包含空指针Tensor。</td>
+    </tr>
+    <tr>
+      <td>x与out中对应位置的Tensor的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>x中Tensor数超过256。</td>
     </tr>
   </tbody></table>
 
@@ -214,6 +220,9 @@ aclnnStatus aclnnForeachLog1p(
 
 ## 约束说明
 
+- x/out中Tensor数<=256。
+- x与out的Tensor数量必须一致。
+- out中对应位置的Tensor的shape必须与x一致。
 - 确定性计算：
   - aclnnForeachLog1p默认确定性实现。
 
