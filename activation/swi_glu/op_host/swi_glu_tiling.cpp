@@ -603,6 +603,37 @@ ge::graphStatus Tiling4SwiGlu(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
+    if (Glu_Flag == GLU_FLAG::SWIGLU_SINGLE) {
+        auto outShapePtr = context->GetOutputShape(0);
+        OP_CHECK_IF(
+            outShapePtr == nullptr,
+            OP_LOGE_WITH_INVALID_INPUT((context->GetNodeName() == nullptr ? "swi_glu" : context->GetNodeName()), "out"),
+            return ge::GRAPH_FAILED);
+        const gert::Shape& outOriginShape = outShapePtr->GetOriginShape();
+        bool hasUnknownDim = false;
+        for (int64_t j = 0; j < static_cast<int64_t>(inShape.GetDimNum()); j++) {
+            if (inShape.GetDim(j) < 0) {
+                hasUnknownDim = true;
+                break;
+            }
+        }
+        for (int64_t j = 0; j < static_cast<int64_t>(outOriginShape.GetDimNum()); j++) {
+            if (outOriginShape.GetDim(j) < 0) {
+                hasUnknownDim = true;
+                break;
+            }
+        }
+        int64_t expectedOutNum = inShape.GetShapeSize() / 2;
+        if (!hasUnknownDim && outOriginShape.GetShapeSize() != expectedOutNum) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context->GetNodeName(), "out, x",
+                (std::to_string(outOriginShape.GetShapeSize()) + ", " + std::to_string(inShape.GetShapeSize() / 2))
+                    .c_str(),
+                "The element count of out must be half of the element count of x");
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(tilingCalculator.totalUsedCoreNum_);

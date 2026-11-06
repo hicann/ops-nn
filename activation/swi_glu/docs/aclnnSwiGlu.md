@@ -30,7 +30,7 @@
   <p style="text-align: center">
   out<sub>i</sub> = SwiGlu(x<sub>i</sub>)=Swish(A<sub>i</sub>)*B<sub>i</sub>
   </p>
-  其中，A<sub>i</sub>表示x<sub>i</sub>按指定dim维度一分为二的前半部分张量，B<sub>i</sub>表示x<sub>i</sub>按指定dim维度一分为二的后半部分张量。
+  其中，A<sub>i</sub>表示x<sub>i</sub>从dim维度起展平后按对半切分的前半部分张量，B<sub>i</sub>表示对半切分的后半部分张量。
 
 ## 函数原型
 
@@ -83,7 +83,7 @@ aclnnStatus aclnnSwiGlu(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示待计算的数据，公式中的x<sub>i</sub>。</td>
-      <td><ul><li>支持空Tensor。</li><li>维度必须大于0且shape必须在入参dim对应维度上是偶数。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>维度必须大于0。</li><li>dim维度及其后所有维度的乘积需为偶数。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>-</td>
@@ -92,7 +92,7 @@ aclnnStatus aclnnSwiGlu(
       <tr>
       <td>dim（int64_t）</td>
       <td>输入</td>
-      <td>需要进行切分的维度序号，对x相应轴进行对半切分。</td>
+      <td>需要进行切分的维度序号，将x从该维度起的部分展平为一维后按对半切分。</td>
       <td>取值范围为[-x.dim(), x.dim()-1]。</td>
       <td>-</td>
       <td>-</td>
@@ -161,12 +161,17 @@ aclnnStatus aclnnSwiGlu(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
+      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="2">561002</td>
       <td>dim不在取值范围内。</td>
+    </tr>
+    <tr>
+      <td>dim维度及其后所有维度的乘积不是偶数，或out的元素总数不是x的元素总数的一半。</td>
     </tr>
   </tbody></table>
 
