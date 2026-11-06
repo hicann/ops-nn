@@ -365,7 +365,7 @@ int main(int argc, char* argv[])
     printf("%s - INFO - [XIR]: Start to initialize ge using ge global options\n", GetTime().c_str());
     // 设置全局选项
     std::map<AscendString, AscendString> global_options = {
-        {"ge.exec.deviceId", "1"}, // device id 通过`npu-smi info`命令查询，环境中状态为`OK`的device id为1
+        {"ge.exec.deviceId", "0"}, // 默认使用 device 0，可通过 npu-smi info 确认设备状态
         {"ge.graphRunMode", "0"},
         {"ge.exec.precision_mode", "must_keep_origin_dtype"}};
     // 初始化图引擎

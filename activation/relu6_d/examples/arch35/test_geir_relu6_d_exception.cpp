@@ -45,6 +45,7 @@ std::string FailureStage(const std::string& error)
         return "tiling";
     }
     if (error.find("Unsupported_Operator") != std::string::npos ||
+        error.find("Not_Supported_Operator") != std::string::npos ||
         error.find("No supported Ops kernel") != std::string::npos) {
         return "engine_selection";
     }
