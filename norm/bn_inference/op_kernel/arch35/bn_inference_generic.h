@@ -42,8 +42,7 @@ public:
         }
         yGm_.SetGlobalBuffer((__gm__ T_X*)y);
 
-        int64_t maxXElements = CHANNEL_LAST ? tilingData_->tileRows * tilingData_->tileElements :
-                                              tilingData_->tileElements;
+        const int64_t maxXElements = tilingData_->tileRows * tilingData_->tileElements;
         pipe_->InitBuffer(xQueue_, BUFFER_NUM, AlignUpBlock(maxXElements * sizeof(T_X)));
         pipe_->InitBuffer(yQueue_, BUFFER_NUM, AlignUpBlock(maxXElements * sizeof(T_X)));
         pipe_->InitBuffer(meanQueue_, BUFFER_NUM, AlignUpBlock(tilingData_->paramTileLen * sizeof(T_MEAN)));
@@ -63,6 +62,11 @@ public:
         }
         pipe_->InitBuffer(meanCache_, AlignUpBlock(tilingData_->paramCacheLen * sizeof(float)));
         pipe_->InitBuffer(rstdCache_, AlignUpBlock(tilingData_->paramCacheLen * sizeof(float)));
+        if constexpr (!CHANNEL_LAST) {
+            if (tilingData_->paramTileLen > 1 || tilingData_->tileRows > 1) {
+                pipe_->InitBuffer(gatherOffset_, AlignUpBlock(tilingData_->tileElements * sizeof(uint32_t)));
+            }
+        }
     }
 
     __aicore__ inline void Process()
@@ -238,21 +242,22 @@ private:
         yQueue_.FreeTensor(y);
     }
 
-    __aicore__ inline void CopyInChannelLast(int64_t gmOffset, int64_t rows, int64_t cLen)
+    __aicore__ inline void CopyInStrided(int64_t gmOffset, int64_t rows, int64_t rowElements, int64_t globalRowElements)
     {
         LocalTensor<T_X> x = xQueue_.AllocTensor<T_X>();
-        DataCopyExtParams params{static_cast<uint16_t>(rows), static_cast<uint32_t>(cLen * sizeof(T_X)),
-                                 (tilingData_->c - cLen) * static_cast<int64_t>(sizeof(T_X)), 0, 0};
+        DataCopyExtParams params{static_cast<uint16_t>(rows), static_cast<uint32_t>(rowElements * sizeof(T_X)),
+                                 (globalRowElements - rowElements) * static_cast<int64_t>(sizeof(T_X)), 0, 0};
         DataCopyPadExtParams<T_X> pad{false, 0, 0, 0};
         DataCopyPad<T_X, PaddingMode::Compact>(x, xGm_[gmOffset], params, pad);
         xQueue_.EnQue(x);
     }
 
-    __aicore__ inline void CopyOutChannelLast(int64_t gmOffset, int64_t rows, int64_t cLen)
+    __aicore__ inline void CopyOutStrided(int64_t gmOffset, int64_t rows, int64_t rowElements,
+                                          int64_t globalRowElements)
     {
         LocalTensor<T_X> y = yQueue_.DeQue<T_X>();
-        DataCopyExtParams params{static_cast<uint16_t>(rows), static_cast<uint32_t>(cLen * sizeof(T_X)), 0,
-                                 (tilingData_->c - cLen) * static_cast<int64_t>(sizeof(T_X)), 0};
+        DataCopyExtParams params{static_cast<uint16_t>(rows), static_cast<uint32_t>(rowElements * sizeof(T_X)), 0,
+                                 (globalRowElements - rowElements) * static_cast<int64_t>(sizeof(T_X)), 0};
         DataCopyPad<T_X, PaddingMode::Compact>(yGm_[gmOffset], y, params);
         yQueue_.FreeTensor(y);
     }
@@ -395,12 +400,131 @@ private:
         }
     }
 
+    __aicore__ inline void PrepareChannelFirstOffsets(uint16_t channels, uint16_t spatial)
+    {
+        __ubuf__ uint32_t* indices = (__ubuf__ uint32_t*)gatherOffset_.Get<uint32_t>().GetPhyAddr();
+        __VEC_SCOPE__
+        {
+            RegTensor<uint32_t> channel;
+            MaskReg allMask = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+            AscendC::MicroAPI::UnalignRegForStore state;
+            __ubuf__ uint32_t* current = indices;
+            const uint16_t repeats = (spatial + VL_FP32 - 1) / VL_FP32;
+            for (uint16_t c = 0; c < channels; ++c) {
+                AscendC::Reg::Duplicate(channel, static_cast<uint32_t>(c), allMask);
+                for (uint16_t i = 0; i < repeats; ++i) {
+                    const uint32_t left = spatial - i * VL_FP32;
+                    const uint32_t active = left > VL_FP32 ? VL_FP32 : left;
+                    AscendC::MicroAPI::StoreUnAlign<uint32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                        current, channel, state, active);
+                }
+            }
+            AscendC::MicroAPI::StoreUnAlignPost(current, state, 0);
+            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
+                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
+        }
+    }
+
+    __aicore__ inline void ComputeChannelFirstGrouped(uint16_t rows, uint16_t rowElements)
+    {
+        LocalTensor<T_X> x = xQueue_.DeQue<T_X>();
+        LocalTensor<T_X> y = yQueue_.AllocTensor<T_X>();
+        VFComputeChannelFirstGrouped(
+            (__ubuf__ T_X*)x.GetPhyAddr(), (__ubuf__ T_X*)y.GetPhyAddr(),
+            (__ubuf__ uint32_t*)gatherOffset_.Get<uint32_t>().GetPhyAddr(),
+            (__ubuf__ float*)meanCache_.Get<float>().GetPhyAddr(),
+            (__ubuf__ float*)rstdCache_.Get<float>().GetPhyAddr(),
+            HAS_SCALE ? (__ubuf__ float*)scaleCache_.Get<float>().GetPhyAddr() : nullptr,
+            (HAS_OFFSET || CACHE_CORRECTION) ? (__ubuf__ float*)offsetCache_.Get<float>().GetPhyAddr() : nullptr, rows,
+            rowElements);
+        yQueue_.EnQue(y);
+        xQueue_.FreeTensor(x);
+    }
+
+    __aicore__ inline void VFComputeChannelFirstGrouped(__ubuf__ T_X* x, __ubuf__ T_X* y, __ubuf__ uint32_t* indices,
+                                                        __ubuf__ float* mean, __ubuf__ float* rstd,
+                                                        __ubuf__ float* scale, __ubuf__ float* offset, uint16_t rows,
+                                                        uint16_t rowElements)
+    {
+        __VEC_SCOPE__
+        {
+            RegTensor<uint32_t> channels;
+            RegTensor<float> xReg, yReg, meanReg, rstdReg, scaleReg, offsetReg;
+            for (uint16_t row = 0; row < rows; ++row) {
+                __ubuf__ T_X* xCurrent = x + row * rowElements;
+                __ubuf__ T_X* yCurrent = y + row * rowElements;
+                AscendC::MicroAPI::UnalignRegForLoad xState;
+                AscendC::MicroAPI::UnalignRegForStore yState;
+                AscendC::MicroAPI::LoadUnAlignPre(xState, xCurrent);
+                const uint16_t loopCount = (rowElements + VL_FP32 - 1) / VL_FP32;
+                for (uint16_t i = 0; i < loopCount; ++i) {
+                    const uint16_t processed = i * VL_FP32;
+                    const uint32_t active = rowElements - processed > VL_FP32 ? VL_FP32 : rowElements - processed;
+                    uint32_t maskCount = active;
+                    MaskReg mask = AscendC::MicroAPI::UpdateMask<float>(maskCount);
+                    LoadUnalignedToFp32(xCurrent, xReg, xState, mask, active);
+                    LoadOffsetUnaligned(indices + processed, channels, active);
+                    GatherToFp32(mean, meanReg, channels, mask, active);
+                    GatherToFp32(rstd, rstdReg, channels, mask, active);
+                    if constexpr (HAS_SCALE) {
+                        GatherToFp32(scale, scaleReg, channels, mask, active);
+                    } else {
+                        AscendC::Reg::Duplicate(scaleReg, 1.0f, mask);
+                    }
+                    if constexpr (HAS_OFFSET || CACHE_CORRECTION) {
+                        GatherToFp32(offset, offsetReg, channels, mask, active);
+                    } else {
+                        AscendC::Reg::Duplicate(offsetReg, 0.0f, mask);
+                    }
+                    if constexpr (PRE_FOLDED) {
+                        ApplyPreFoldedAffine<T_X, HAS_SCALE, HAS_OFFSET>(xReg, meanReg, rstdReg, scaleReg, offsetReg,
+                                                                         yReg, mask);
+                    } else if constexpr (HAS_SCALE == HAS_OFFSET) {
+                        ApplyCorrectedFoldedAffine<T_X, HAS_SCALE>(xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg,
+                                                                   mask);
+                    } else {
+                        NormalizeOneSided<T_X, T_MEAN, T_VARIANCE, HAS_SCALE, HAS_OFFSET>(
+                            xReg, meanReg, rstdReg, scaleReg, offsetReg, yReg, mask);
+                    }
+                    StoreUnalignedFromFp32(yCurrent, yReg, yState, mask, active);
+                }
+                AscendC::MicroAPI::StoreUnAlignPost(yCurrent, yState, 0);
+            }
+        }
+    }
+
+    __aicore__ inline void ProcessChannelFirstGrouped(int64_t tileId, int64_t& cachedCBegin, int64_t& cachedCLen)
+    {
+        const int64_t batchBegin = (tileId % tilingData_->innerTileCount) * tilingData_->tileRows;
+        const int64_t cBegin = (tileId / tilingData_->innerTileCount) * tilingData_->paramTileLen;
+        const int64_t rows = tilingData_->n - batchBegin < tilingData_->tileRows ? tilingData_->n - batchBegin :
+                                                                                   tilingData_->tileRows;
+        const int64_t cLen = tilingData_->c - cBegin < tilingData_->paramTileLen ? tilingData_->c - cBegin :
+                                                                                   tilingData_->paramTileLen;
+        const int64_t rowElements = cLen * tilingData_->inner;
+        const int64_t globalRowElements = tilingData_->c * tilingData_->inner;
+        const int64_t gmOffset = batchBegin * globalRowElements + cBegin * tilingData_->inner;
+        if (cLen != cachedCLen) {
+            PrepareChannelFirstOffsets(static_cast<uint16_t>(cLen), static_cast<uint16_t>(tilingData_->inner));
+        }
+        EnsureParameters(cBegin, cLen, cachedCBegin, cachedCLen);
+        CopyInStrided(gmOffset, rows, rowElements, globalRowElements);
+        ComputeChannelFirstGrouped(static_cast<uint16_t>(rows), static_cast<uint16_t>(rowElements));
+        CopyOutStrided(gmOffset, rows, rowElements, globalRowElements);
+    }
+
     __aicore__ inline void ProcessChannelFirstTile(int64_t tileId, int64_t& cachedCBegin, int64_t& cachedCLen)
     {
+        if (tilingData_->paramTileLen > 1 || tilingData_->tileRows > 1) {
+            ProcessChannelFirstGrouped(tileId, cachedCBegin, cachedCLen);
+            return;
+        }
         const int64_t b1Block = tileId % tilingData_->innerTileCount;
         const int64_t ncIndex = tileId / tilingData_->innerTileCount;
-        const int64_t channel = ncIndex % tilingData_->c;
-        const int64_t batch = ncIndex / tilingData_->c;
+        // Keep the channel fixed across batches so its folded parameters stay
+        // cached instead of being copied and recomputed for every small tile.
+        const int64_t channel = ncIndex / tilingData_->n;
+        const int64_t batch = ncIndex % tilingData_->n;
         const int64_t b1Begin = b1Block * tilingData_->tileElements;
         const int64_t count = tilingData_->inner - b1Begin < tilingData_->tileElements ? tilingData_->inner - b1Begin :
                                                                                          tilingData_->tileElements;
@@ -423,9 +547,9 @@ private:
                                                                                    tilingData_->tileElements;
         const int64_t gmOffset = bBegin * tilingData_->c + cBegin;
         EnsureParameters(cBegin, cLen, cachedCBegin, cachedCLen);
-        CopyInChannelLast(gmOffset, rows, cLen);
+        CopyInStrided(gmOffset, rows, cLen, tilingData_->c);
         ComputeChannelLast(static_cast<uint16_t>(rows), static_cast<uint16_t>(cLen));
-        CopyOutChannelLast(gmOffset, rows, cLen);
+        CopyOutStrided(gmOffset, rows, cLen, tilingData_->c);
     }
 
 private:
@@ -449,6 +573,7 @@ private:
     TBuf<TPosition::VECCALC> rstdCache_;
     TBuf<TPosition::VECCALC> scaleCache_;
     TBuf<TPosition::VECCALC> offsetCache_;
+    TBuf<TPosition::VECCALC> gatherOffset_;
     float factor_ = 0.0f;
 };
 } // namespace BNInferenceOps

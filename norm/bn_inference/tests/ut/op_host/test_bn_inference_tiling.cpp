@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <array>
 #include <cstddef>
+#include <cstring>
 #include <limits>
 #include <string>
 #include <vector>
@@ -55,7 +56,8 @@ bool RunCase(const std::vector<int64_t>& xDims, ge::Format xFormat, ge::DataType
              const std::vector<int64_t>& yDims = {}, ge::Format yFormat = ge::FORMAT_RESERVED,
              int64_t expectedTilingKey = -1, size_t expectedBlockNum = 0,
              ge::Format xOriginFormat = ge::FORMAT_RESERVED, ge::Format yOriginFormat = ge::FORMAT_RESERVED,
-             int64_t mode = 1, bool hasScale = false, bool hasOffset = false, const AttrPresence& attrPresence = {})
+             int64_t mode = 1, bool hasScale = false, bool hasOffset = false, const AttrPresence& attrPresence = {},
+             BNInferenceTilingData* captured = nullptr)
 {
     const ge::Format resolvedXOrigin = xOriginFormat == ge::FORMAT_RESERVED ? xFormat : xOriginFormat;
     const ge::Format logicalFormat = xFormat == ge::FORMAT_ND ? resolvedXOrigin : xFormat;
@@ -105,6 +107,9 @@ bool RunCase(const std::vector<int64_t>& xDims, ge::Format xFormat, ge::DataType
     EXPECT_EQ(succeeded, expected == ge::GRAPH_SUCCESS);
     if (succeeded) {
         EXPECT_EQ(info.tilingDataSize, BN_INFERENCE_TILING_DATA_EXPECTED_BYTES);
+        if (captured != nullptr && info.tilingDataSize == sizeof(*captured)) {
+            std::memcpy(captured, info.tilingData.get(), sizeof(*captured));
+        }
         if (expectedTilingKey >= 0) {
             EXPECT_EQ(info.tilingKey, expectedTilingKey);
         }
@@ -241,7 +246,39 @@ TEST(BNInferenceTilingTest, MapsPublicFiveDimensionalFormatsToNdBinaryKey)
 TEST(BNInferenceTilingTest, AcceptsNchwWithoutAffine)
 {
     EXPECT_TRUE(RunCase({2, 3, 4, 5}, ge::FORMAT_NCHW, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS,
-                        -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CF_GENERIC_BASE, 6));
+                        -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CF_GENERIC_BASE, 1));
+}
+
+TEST(BNInferenceTilingTest, GroupsChannelFirstWithChannelAndBatchTails)
+{
+    BNInferenceTilingData data{};
+    ASSERT_TRUE(RunCase({7, 513, 4, 2}, ge::FORMAT_NCHW, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS,
+                        -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CF_GENERIC_BASE + 3, 0, ge::FORMAT_RESERVED,
+                        ge::FORMAT_RESERVED, 1, true, true, {}, &data));
+    EXPECT_EQ(data.paramTileLen, 512);
+    EXPECT_EQ(data.paramCacheLen, data.paramTileLen);
+    EXPECT_EQ(data.tileElements, data.paramTileLen * data.inner);
+    ASSERT_GT(data.tileRows, 1);
+    EXPECT_GT(data.n % data.tileRows, 0);
+    EXPECT_EQ(data.c % data.paramTileLen, 1);
+    EXPECT_EQ(data.innerTileCount, (data.n + data.tileRows - 1) / data.tileRows);
+    EXPECT_LE(data.tileRows * data.tileElements, std::numeric_limits<uint16_t>::max());
+    // Four parameter queues (double buffered), four FP32 caches, one index
+    // pattern, and double-buffered x/y must fit together with the reserve.
+    const int64_t fixedBytes = (8 + 4) * data.paramTileLen * sizeof(float) + data.tileElements * sizeof(uint32_t) +
+                               16 * 1024;
+    EXPECT_LE(fixedBytes + 4 * data.tileRows * data.tileElements * sizeof(float), UB_SIZE);
+}
+
+TEST(BNInferenceTilingTest, KeepsLargeSpatialSlicesOnOriginalGenericPath)
+{
+    BNInferenceTilingData data{};
+    ASSERT_TRUE(RunCase({2, 3, 1, 257}, ge::FORMAT_NCHW, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS,
+                        -1, {}, ge::FORMAT_RESERVED, BNInferenceKey::CF_GENERIC_BASE, 6, ge::FORMAT_RESERVED,
+                        ge::FORMAT_RESERVED, 1, false, false, {}, &data));
+    EXPECT_EQ(data.paramTileLen, 1);
+    EXPECT_EQ(data.tileRows, 1);
+    EXPECT_EQ(data.tileElements, 257);
 }
 
 TEST(BNInferenceTilingTest, UsesDefaultsWhenOptionalAttributesAreOmitted)

@@ -57,6 +57,7 @@ private:
     ge::graphStatus FillTilingData();
     bool TrySelectPackedChannelFirst();
     bool TrySelectPackedChannelLast();
+    bool TrySelectGroupedChannelFirst();
     bool SelectGenericChannelFirst();
     bool SelectGenericChannelLast();
     bool GetParamLedger(int64_t paramLen, int64_t cacheLen, bool packed, int64_t& fixedBytes) const;

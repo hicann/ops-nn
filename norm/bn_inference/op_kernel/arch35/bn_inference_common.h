@@ -347,7 +347,19 @@ __aicore__ inline void FoldWithAffine(RegTensor<float>& mean, RegTensor<float>& 
     MaskReg overflow;
     AscendC::Reg::Duplicate(epsilonReg, epsilon, mask);
     AscendC::Reg::Add(variance, variance, epsilonReg, mask);
+    // Folding can amplify a one-ULP coefficient error when x cancels alpha.
+    // The zero-ULP sqrt only supports bounded positive radicands; retain the
+    // full-range instruction for zero, negative, nonfinite and larger inputs.
+    RegTensor<float> preciseRoot;
+    MaskReg positiveRadicand;
+    MaskReg preciseRange;
+    static constexpr AscendC::Reg::SqrtSpecificMode kPreciseSqrt = {MaskMergeMode::ZEROING, false,
+                                                                    AscendC::SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
+    AscendC::Reg::Compares<float, CMPMODE::GT>(positiveRadicand, variance, 0.0f, mask);
+    AscendC::Reg::Compares<float, CMPMODE::LE>(preciseRange, variance, FP32_MAX_FINITE * 0.25f, positiveRadicand);
+    AscendC::Reg::Sqrt<float, &kPreciseSqrt>(preciseRoot, variance, preciseRange);
     AscendC::Reg::Sqrt<float, &SQRT_NO_FTZ_MODE>(variance, variance, mask);
+    AscendC::Reg::Select(variance, preciseRoot, variance, preciseRange);
     AscendC::Reg::Duplicate(oneReg, 1.0f, mask);
     // A reciprocal error can move the final low-precision output across a
     // rounding boundary after folding. Preserve subnormal division inputs.
@@ -355,7 +367,7 @@ __aicore__ inline void FoldWithAffine(RegTensor<float>& mean, RegTensor<float>& 
                                                                         AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
     AscendC::Reg::Div<float, &kHighPrecisionDiv>(inverseSqrt, oneReg, variance, mask);
     AscendC::Reg::Mul(beta, scale, inverseSqrt, mask);
-    AscendC::Reg::Div(alpha, offset, scale, mask);
+    AscendC::Reg::Div<float, &kHighPrecisionDiv>(alpha, offset, scale, mask);
     if constexpr (IsSameType<T_MEAN, float>::value && IsSameType<T_VARIANCE, float>::value) {
         // Record the division before multiplying by sqrt: an overflowing
         // quotient followed by sqrt(0) would otherwise become a false NaN.

@@ -88,6 +88,7 @@ constexpr int64_t ATTR_EPSILON = 0;
 constexpr int64_t ATTR_MODE = 2;
 constexpr int64_t PIPE_META_RESERVE = 16 * 1024;
 constexpr int64_t MAX_GENERIC_C_VECTORS = 8;
+constexpr int64_t MAX_GROUPED_CF_INNER = 256;
 constexpr int64_t SMALL_CF_Q_LIMIT = 32;
 // Keep very small row counts on the generic path to avoid packed setup overhead.
 constexpr int64_t SMALL_CL_MIN_B = 64;
@@ -622,8 +623,55 @@ bool BNInferenceTiling::TrySelectPackedChannelLast()
     return true;
 }
 
+bool BNInferenceTiling::TrySelectGroupedChannelFirst()
+{
+    // Amortize short spatial slices across adjacent channels and batches.
+    // The index buffer describes one channel group and is reused for each row.
+    if (inner_ <= 0 || inner_ > MAX_GROUPED_CF_INNER) {
+        return false;
+    }
+    int64_t maxChannels = 0;
+    if (!TryMulNonNegative(vectorLength_ / FP32_BYTES, MAX_GENERIC_C_VECTORS, maxChannels)) {
+        return false;
+    }
+    for (int64_t channels = std::min(c_, maxChannels); channels > 0; channels /= 2) {
+        int64_t elements = 0;
+        int64_t fixedBytes = 0;
+        int64_t indexBytes = 0;
+        int64_t unavailable = 0;
+        int64_t rows = 0;
+        if (!TryMulNonNegative(channels, inner_, elements) || !GetParamLedger(channels, channels, false, fixedBytes) ||
+            !TryAlignedTensorBytes(elements, FP32_BYTES, blockSize_, indexBytes) ||
+            !TryAddNonNegative(fixedBytes, indexBytes, unavailable) ||
+            !TryAddNonNegative(unavailable, PIPE_META_RESERVE, unavailable) || unavailable >= ubSize_ ||
+            !TryGetPackedRows(n_, elements, unavailable, rows) || (channels == 1 && rows == 1)) {
+            continue;
+        }
+        int64_t channelBlocks = 0;
+        int64_t batchBlocks = 0;
+        int64_t tiles = 0;
+        if (!TryCeilDivNonNegative(c_, channels, channelBlocks) || !TryCeilDivNonNegative(n_, rows, batchBlocks) ||
+            !TryMulNonNegative(channelBlocks, batchBlocks, tiles)) {
+            return false;
+        }
+        tileElements_ = elements;
+        tileRows_ = rows;
+        paramTileLen_ = channels;
+        paramCacheLen_ = channels;
+        innerTileCount_ = batchBlocks;
+        totalTiles_ = tiles;
+        const uint64_t base = preFolded_ ? BNInferenceKey::CF_GENERIC_PRE_FOLDED_BASE : BNInferenceKey::CF_GENERIC_BASE;
+        tilingKey_ = base + BNInferenceKey::OptionalMask(hasScale_, hasOffset_);
+        return true;
+    }
+    return false;
+}
+
 bool BNInferenceTiling::SelectGenericChannelFirst()
 {
+    if (TrySelectGroupedChannelFirst()) {
+        return true;
+    }
     int64_t fixedBytes = 0;
     if (!GetParamLedger(1, 1, false, fixedBytes)) {
         return false;
