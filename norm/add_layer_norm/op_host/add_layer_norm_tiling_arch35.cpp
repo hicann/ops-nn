@@ -860,11 +860,11 @@ ge::graphStatus AddLayerNormRegbaseTiling::DoOpTiling()
         rowsPerCore_ = (rows_ + blockNum - 1) / blockNum;
         rowsPerTailCore_ = rows_ - (blockNum - 1) * rowsPerCore_;
         tailCoreStartIndex_ = blockNum - 1;
-        int64_t perLoopMax = static_cast<int64_t>(ubSize_) / static_cast<int64_t>(sizeof(float));
+        int64_t perLoopMax = static_cast<int64_t>(ubSize_) / (OUTPUT_NUM * static_cast<int64_t>(sizeof(float)));
         int64_t chunk = (perLoopMax < rowsPerCore_) ? perLoopMax : rowsPerCore_;
         rowsPerLoop_ = chunk / elemsPerBlock * elemsPerBlock;
         if (rowsPerLoop_ < 1) {
-            rowsPerLoop_ = rowsPerCore_;
+            rowsPerLoop_ = elemsPerBlock;
         }
         colsPerLoop_ = 0;
         colsLoopCount_ = 0;

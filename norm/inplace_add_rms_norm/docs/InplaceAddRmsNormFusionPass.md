@@ -13,6 +13,7 @@
 ## 使用约束
 
 - 通用约束：仅限推理场景，不支持训练场景。
+- 当AddRmsNorm的输入x1或x2的直接前驱节点类型为Data时，不进行原地融合。
 - 融合成AddRmsNormCast约束：
   - 仅支持输入x1为float16/bfloat16。
   - 仅支持cast从float16/bfloat16转float32。

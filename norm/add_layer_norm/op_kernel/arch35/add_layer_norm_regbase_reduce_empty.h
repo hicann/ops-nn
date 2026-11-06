@@ -10,9 +10,9 @@
 
 /*!
  * \file add_layer_norm_regbase_reduce_empty.h
- * \brief 空张量(reduce empty)兜底 kernel:合轴后 R==0 且 A>0 时,mean/rstd=[A,1] 填 NaN,
+ * \brief 空张量(reduce empty)兜底 kernel:合轴后 R==0 且 A>0 时,mean=[A,1] 填 0、rstd=[A,1] 填 NaN,
  *        y/x=[A,0] 空不写。把 mean/rstd 当一维 A 个 fp32,host 多核切分+定每循环元素数,
- *        kernel Duplicate NaN 一次、循环复用 buffer 搬出。
+ *        同一 buffer 分两段填充 0 和 NaN，循环搬出。
  */
 
 #ifndef ADD_LAYER_NORM_REGBASE_REDUCE_EMPTY_H
@@ -45,7 +45,7 @@ public:
         tailLen_ = rowsThisCore_ - (loopCount_ - 1) * rowsPerLoop_;
         meanGm_.SetGlobalBuffer((__gm__ float*)mean + rowOffset_, rowsThisCore_);
         rstdGm_.SetGlobalBuffer((__gm__ float*)rstd + rowOffset_, rowsThisCore_);
-        pipe_.InitBuffer(outNanQueue_, 1, rowsPerLoop_ * sizeof(float));
+        pipe_.InitBuffer(outQueue_, 1, 2 * rowsPerLoop_ * sizeof(float));
     }
 
     __aicore__ inline void Process()
@@ -55,11 +55,12 @@ public:
             return;
         }
 
-        LocalTensor<float> nanLocal = outNanQueue_.AllocTensor<float>();
+        LocalTensor<float> outLocal = outQueue_.AllocTensor<float>();
         float nanVal = AscendC::NumericLimits<float>::QuietNaN();
-        Duplicate(nanLocal, nanVal, static_cast<int32_t>(rowsPerLoop_));
-        outNanQueue_.EnQue(nanLocal);
-        nanLocal = outNanQueue_.DeQue<float>();
+        Duplicate(outLocal, 0.0f, static_cast<int32_t>(rowsPerLoop_));
+        Duplicate(outLocal[rowsPerLoop_], nanVal, static_cast<int32_t>(rowsPerLoop_));
+        outQueue_.EnQue(outLocal);
+        outLocal = outQueue_.DeQue<float>();
 
         for (int64_t i = 0; i < loopCount_; i++) {
             int64_t curLen = (i == loopCount_ - 1) ? tailLen_ : rowsPerLoop_;
@@ -68,11 +69,11 @@ public:
             copyParams.blockLen = static_cast<uint32_t>(curLen * sizeof(float));
             copyParams.srcStride = 0;
             copyParams.dstStride = 0;
-            DataCopyPad(meanGm_[i * rowsPerLoop_], nanLocal, copyParams);
-            DataCopyPad(rstdGm_[i * rowsPerLoop_], nanLocal, copyParams);
+            DataCopyPad(meanGm_[i * rowsPerLoop_], outLocal, copyParams);
+            DataCopyPad(rstdGm_[i * rowsPerLoop_], outLocal[rowsPerLoop_], copyParams);
         }
 
-        outNanQueue_.FreeTensor(nanLocal);
+        outQueue_.FreeTensor(outLocal);
     }
 
 private:
@@ -80,7 +81,7 @@ private:
     const AddLayerNormRegbaseTilingData* tiling_;
     GlobalTensor<float> meanGm_;
     GlobalTensor<float> rstdGm_;
-    TQue<QuePosition::VECOUT, 1> outNanQueue_;
+    TQue<QuePosition::VECOUT, 1> outQueue_;
     int64_t usedCoreNum_{0};
     int64_t rowsThisCore_{0};
     int64_t rowOffset_{0};

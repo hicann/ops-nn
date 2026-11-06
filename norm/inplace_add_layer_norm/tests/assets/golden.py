@@ -45,9 +45,9 @@ def inplace_add_layer_norm_golden(
         x = x1.astype(calc_dtype) + x2.astype(calc_dtype)
 
     if 0 in normalized_shape:
-        # 950平台支持空tensor，mean/rstd 填 NaN、y/x 为空不写；
+        # 950 空归一化维度：mean=0，rstd=NaN。
         y_out = np.zeros(x1.shape, dtype=yx_dtype)
-        mean_out = np.full(stat_shape, np.nan).astype("float32")
+        mean_out = np.zeros(stat_shape, dtype=np.float32)
         rstd_out = np.full(stat_shape, np.nan).astype("float32")
     else:
         eps = np.float64(epsilon) if wide else np.float32(epsilon)
@@ -63,7 +63,7 @@ def inplace_add_layer_norm_golden(
         rstd_out = rstd.numpy().reshape(stat_shape).astype("float32")
 
     if not additional_output:
-        return y_out, mean_out, rstd_out
+        return y_out, mean_out, rstd_out, None
     return y_out, mean_out, rstd_out, x.astype(yx_dtype)
 
 
