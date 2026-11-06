@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv2d_v2_instr_impl_51.h
+ * \file conv2d_v2_instr_impl_arch51.h
  * \brief
  */
 

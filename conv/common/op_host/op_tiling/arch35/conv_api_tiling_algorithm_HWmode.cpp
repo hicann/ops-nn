@@ -114,7 +114,7 @@ int64_t ConvTilingAlgorithmHWmode::CalcL0Conv()
 
     if (tilingIns_->l0TilingInfo.khConv <= tilingIns_->attrInfo.padTop ||
         tilingIns_->l0TilingInfo.khConv <= tilingIns_->attrInfo.padBottom) {
-        OP_LOGE(tilingIns_->nodeType, "khConv(%d) less than padTop(%d) or padBottom(%d).",
+        OP_LOGE(tilingIns_->nodeType, "khConv(%lu) less than padTop(%d) or padBottom(%d).",
                 tilingIns_->l0TilingInfo.khConv, tilingIns_->attrInfo.padTop, tilingIns_->attrInfo.padBottom);
         return -1;
     }

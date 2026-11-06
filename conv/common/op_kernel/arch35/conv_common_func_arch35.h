@@ -22,7 +22,7 @@
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5162)
 #include "conv_iterate_impl.h"
 #else
-#include "../arch51/conv_iterate_impl_51.h"
+#include "../arch51/conv_iterate_impl_arch51.h"
 #endif
 #include "conv_opt_group_impl.h"
 #include "conv_util.h"
@@ -480,7 +480,7 @@ struct End {
                 self->ctx.queueCL0.FreeAllEvent();
             }
             if constexpr (Intf::convToL1Mode != static_cast<int8_t>(ConvToL1::CLOSE)) {
-                if (self->ctx.enableVectorQuant) {
+                if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     self->ctx.queueScaleFB.FreeAllEvent();
                 }
             }

@@ -9,14 +9,14 @@
  */
 
 /*!
- * \file conv_iterate_impl_51.h
+ * \file conv_iterate_impl_arch51.h
  * \brief
  */
 
 #ifndef CONV_ITERATE_IMPL_5162_H
 #define CONV_ITERATE_IMPL_5162_H
 
-#include "conv_iterate_base_impl_51.h"
+#include "conv_iterate_base_impl_arch51.h"
 #include "../arch35/conv_iterate_impl_declare.h"
 #include "../arch35/conv_iterate_hw_mode_impl.h"
 #include "../arch35/conv_instr_impl_declare.h"
@@ -36,6 +36,7 @@ __aicore__ inline bool Iterate<Intf, ImplType>::call(Intf* self, IterateParam& i
     if ASCEND_IS_AIC_CONV {
         return IterateImplHWMode(self, iterParam, enPartialSum);
     }
+    return false;
 }
 
 template <class Intf, uint32_t ImplType>
@@ -539,7 +540,7 @@ __aicore__ void Iterate<Intf, ImplType>::IterateBiasScale(Intf* self, IteratePar
     FixPipeConfigBitModeParams param;
     param.SetShiftValue(SHIFT_VAL_DEFAULT);
     // move scale from l1 to ppb
-    if (self->ctx.enableVectorQuant) {
+    if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         self->ctx.scaleFB = self->ctx.queueScaleFB.template AllocTensor<typename Intf::ScaleT>();
         self->ctx.loadScaleFBIns.LoadChannelWiseFB(self->ctx.scaleFB, self->ctx.scaleL1, iterParam,
                                                    PostProcBufBlockMode::PRE_QUANT);

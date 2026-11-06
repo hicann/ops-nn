@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv_instr_impl_51.h
+ * \file conv_instr_impl_arch51.h
  * \brief
  */
 
@@ -198,7 +198,7 @@ __aicore__ inline void LoadBL1FZTools<Intf>::LoadBL1(IterateParam& iterParam)
         dataCopyParams.blockCount = CeilDiv(currentKBL1, Intf::k0);
         dataCopyParams.blockLen = iterParam.currentNBL1 * C0_SIZE;
         dataCopyParams.srcStride = (orgCoAlignN0 - iterParam.currentNBL1) * C0_SIZE;
-        dataCopyParams.dstStride = self_->ctx.convTilingData->nBL1 - self_->ctx.currentNBL1;
+        dataCopyParams.dstStride = self_->ctx.convTilingData->nBL1 - iterParam.currentNBL1;
     }
     DataCopyPad<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.bgm[bL1GmOffset], dataCopyParams, padParams);
 }
@@ -298,9 +298,9 @@ __aicore__ inline void CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::SetFixpipe
         intriParams.ndNum = 1;
         intriParams.dstNdStride = 0;
     } else {
-        intriParams.mSize = self_->ctx.currentWoL0;
-        intriParams.srcNdStride = self_->ctx.currentWoL0;
-        intriParams.ndNum = self_->ctx.currentHoL0;
+        intriParams.mSize = iterParam.currentWoL0;
+        intriParams.srcNdStride = iterParam.currentWoL0;
+        intriParams.ndNum = iterParam.currentHoL0;
         intriParams.dstNdStride = self_->ctx.singleCoreWo;
     }
 

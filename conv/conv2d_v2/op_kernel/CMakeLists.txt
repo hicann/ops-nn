@@ -21,3 +21,10 @@ add_kernel_sources(
     AUTO_SYNC false
     OPTIONS "-DFORCE_TILING_CONST_PROPAGATION" "--cce-no-dcache-flush"
 )
+
+add_kernel_sources(
+    KERNEL_SRC conv2d_v2.cpp
+    COMPUTE_UNITS ascend5162
+    AUTO_SYNC false
+    OPTIONS "-DFORCE_TILING_CONST_PROPAGATION" "--cce-no-dcache-flush"
+)

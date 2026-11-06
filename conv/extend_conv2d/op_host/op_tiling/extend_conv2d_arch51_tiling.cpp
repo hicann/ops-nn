@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file extend_conv2d_51_tiling.cpp
+ * \file extend_conv2d_arch51_tiling.cpp
  * \brief
  */
 #include "error_util.h"

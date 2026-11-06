@@ -150,7 +150,8 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_9201 = {
 
 const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_5162 = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
-    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_FRACTAL_Z, ge::Format::FORMAT_NCHW}};
+    {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_FRACTAL_Z, ge::Format::FORMAT_NCHW},
+    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_FRACTAL_Z, ge::Format::FORMAT_NHWC}};
 
 const std::vector<std::vector<ge::Format>> SUPPORT_QUANT_CONV2D_FORMAT_LIST = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW}};

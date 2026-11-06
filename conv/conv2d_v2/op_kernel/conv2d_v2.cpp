@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv2dv2_apt.cpp
+ * \file conv2d_v2.cpp
  * \brief
  */
 
@@ -33,9 +33,9 @@ using Conv2DTilingData = Ops::NN::Conv2dV2::Conv2DTilingData;
 #include "conv2d_v2_tiling_data.h"
 #include "arch35/full_mn_kernel/full_mn_kernel_pipeline.h"
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
-#include "arch51/conv2d_v2_instr_impl_51.h"
-#include "../../common/arch51/conv_common_func_51.h"
-#include "../../common/arch51/conv_iterate_impl_51.h"
+#include "arch51/conv2d_v2_instr_impl_arch51.h"
+#include "../../common/arch51/conv_common_func_arch51.h"
+#include "../../common/arch51/conv_iterate_impl_arch51.h"
 #endif
 
 using namespace AscendC;

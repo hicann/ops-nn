@@ -309,7 +309,8 @@ void Conv2dTiling::SetUbTiling(optiling::Conv2DTilingData& tiling)
                         !(descInfo.weightType.dtype == ConvDtype::FLOAT32 && !this->hf32Enable) &&
                         !(kernelHxkernelW == 1) && !(kernelHxkernelW % VGATHER_PERF_LIMIT == 0) &&
                         l1TilingInfo.kBL1 != weightKSize && dbValue.pbBL1 == DOUBLE_BUFFER_NUM && weightUbSizeLimit;
-    if (weightUbFlag && platformInfo.npuArch != NpuArch::DAV_9201 && platformInfo.npuArch != NpuArch::DAV_9202) {
+    if (weightUbFlag && platformInfo.npuArch != NpuArch::DAV_9201 && platformInfo.npuArch != NpuArch::DAV_9202 &&
+        platformInfo.npuArch != Ops::Base::DAV_5162) {
         ConvWeightUbTransParams params = {l1TilingInfo.nBL1,
                                           l1TilingInfo.kBL1,
                                           static_cast<uint64_t>(shapeInfo.orgkH),

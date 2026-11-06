@@ -566,11 +566,11 @@ __aicore__ inline void FreeL1Tensor(Intf* self)
     }
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
-    if (self->ctx.enableVectorQuant) {
+    if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         self->ctx.queueScaleFB.FreeTensor(self->ctx.scaleFB);
     }
 
-    if (self->ctx.enableVectorRelu) {
+    if (self->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
         self->ctx.queueReluWeightFB.FreeTensor(self->ctx.reluWeightFB);
     }
 #endif

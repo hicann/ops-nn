@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv_common_func_51.h
+ * \file conv_common_func_arch51.h
  * \brief
  */
 

@@ -389,6 +389,10 @@ uint64_t Conv2dBaseTiling::GetNoPad() const
 
 uint64_t Conv2dBaseTiling::GetConvToL1Mode() const
 {
+    if (!IsArch5162(opInfo_->npuArch)) {
+        return CONV_TO_L1_DISABLE;
+    }
+
     if (!conv2dApiTiling_.GetIsWeightBypassL1() && conv2dApiTiling_.GetIsTilingKh()) {
         return CONV_TO_L1_ENABLE_TILING_KH;
     }
@@ -422,7 +426,7 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
     }
     tilingKeyPara_.smallKernel = GetSmallKernelVal();
     ReSetTilingKeyPara();
-    tilingKeyPara_.convToL1 = IsArch5162(opInfo_->npuArch) ? GetConvToL1Mode() : CONV_TO_L1_DISABLE;
+    tilingKeyPara_.convToL1 = GetConvToL1Mode();
     if (IsWeightNZFormat(descInfo_.weightFormat) && !IsArch5162(opInfo_->npuArch)) {
         tilingKey_ = GET_TPL_TILING_KEY(
             tilingKeyPara_.fmpTiling, tilingKeyPara_.weightTiling, tilingKeyPara_.l1PingPong, tilingKeyPara_.l0PingPong,

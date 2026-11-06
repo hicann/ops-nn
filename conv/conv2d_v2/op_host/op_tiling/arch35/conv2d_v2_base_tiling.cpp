@@ -24,10 +24,6 @@
 #include "conv/common/op_kernel/arch35/conv_tilingkey.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_base.h"
 
-constexpr uint64_t L1_FAKE_SIZE_5162 = 524288;
-constexpr uint64_t L0A_FAKE_SIZE_5162 = 786432;
-constexpr uint64_t L0C_FAKE_SIZE_5162 = 262144;
-
 namespace optiling {
 namespace conv_ops_tiling {
 ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
@@ -393,9 +389,9 @@ ge::graphStatus Conv2dBaseTiling::ParseAndCheckInfo()
 void Conv2dBaseTiling::SetArch5162BufferSize()
 {
     if (IsArch5162(opInfo_->npuArch)) {
-        opInfo_->l1Size = L1_FAKE_SIZE_5162;
-        opInfo_->l0aSize = L0A_FAKE_SIZE_5162;
-        opInfo_->l0cSize = L0C_FAKE_SIZE_5162;
+        opInfo_->l1Size = L1_SIZE;
+        opInfo_->l0aSize = L0A_VIRTUAL_SIZE_5162;
+        opInfo_->l0cSize = L0C_SIZE;
     }
 }
 

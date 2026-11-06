@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv_iterate_base_impl_51.h
+ * \file conv_iterate_base_impl_arch51.h
  * \brief
  */
 
@@ -17,7 +17,7 @@
 #define CONV_ITERATE_BASE_IMPL_5162_H
 
 #include "../arch35/conv_iterate_base_impl.h"
-#include "conv_instr_impl_51.h"
+#include "conv_instr_impl_arch51.h"
 
 template <class Intf>
 __aicore__ inline void CalcCoDirectionVar(Intf* self, IterateParam& iterParam)
@@ -101,7 +101,7 @@ __aicore__ inline void ReduceKCloseL0PingPongFor5162(Intf* self, const uint64_t&
 
     LocalTensor<typename Intf::WeightT> bl0;
     if constexpr (Intf::isL0BFullLoadable) {
-        bl0 = self->ctx.wholeBl0Tensor[iterParam.kIter * self->ctx.currentNL0Align * self->ctx.convTilingData->kL0];
+        bl0 = self->ctx.wholeBl0Tensor[iterParam.kIter * iterParam.currentNL0Align * self->ctx.convTilingData->kL0];
     } else {
         bl0 = self->ctx.wholeBl0Tensor;
     }
@@ -149,7 +149,7 @@ __aicore__ inline void ReduceKOpenL0BPingPongFor5162(Intf* self, const uint16_t&
     }
 
     if constexpr (Intf::isL0BFullLoadable) {
-        bl0 = self->ctx.wholeBl0Tensor[iterParam.kIter * self->ctx.currentNL0Align * self->ctx.convTilingData->kL0];
+        bl0 = self->ctx.wholeBl0Tensor[iterParam.kIter * iterParam.currentNL0Align * self->ctx.convTilingData->kL0];
     } else {
         bl0 = self->ctx.wholeBl0Tensor[(bl0PingPongFlag)*L0B_HALF_SIZE / Intf::sizeOfWeight];
         uint64_t bgmOffset = 0;

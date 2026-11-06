@@ -27,9 +27,9 @@ using Conv2DTilingData = Ops::NN::Conv2dV2::Conv2DTilingData;
 #include "../conv2d_v2/arch35/conv2d_small_kernel_parallelism.h"
 #include "../conv2d_v2/arch35/conv2d_small_kernel_fm_partload.h"
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
-#include "../conv2d_v2/arch51/conv2d_v2_instr_impl_51.h"
-#include "../../common/arch51/conv_common_func_51.h"
-#include "../../common/arch51/conv_iterate_impl_51.h"
+#include "../conv2d_v2/arch51/conv2d_v2_instr_impl_arch51.h"
+#include "../../common/arch51/conv_common_func_arch51.h"
+#include "../../common/arch51/conv_iterate_impl_arch51.h"
 #endif
 
 using namespace AscendC;

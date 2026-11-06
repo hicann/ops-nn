@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv2d_v2_51_tiling.cpp
+ * \file conv2d_v2_arch51_tiling.cpp
  * \brief
  */
 

@@ -258,6 +258,7 @@ constexpr uint64_t CONV_TO_L1_DISABLE = 0;
 constexpr uint64_t CONV_TO_L1_ENABLE_WEIGHT_BY_PASS = 1;
 constexpr uint64_t CONV_TO_L1_ENABLE_L1 = 2;
 constexpr uint64_t CONV_TO_L1_ENABLE_TILING_KH = 3;
+constexpr uint64_t L0A_VIRTUAL_SIZE_5162 = 786432;
 
 // Fix shift val，A16W8：29位，A16W16: 58位
 constexpr uint32_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
