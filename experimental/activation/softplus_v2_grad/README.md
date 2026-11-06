@@ -74,7 +74,7 @@ softplus_v2_grad/
 
 ### 参考算子
 
-Abs：[ops-math/math/abs/README.md](https://gitcode.com/cann/ops-math/blob/master/math/abs/README.md)
+Abs：[ops-math/math/abs/README.md](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/math/abs/README.md)
 
 ### 更新说明
 

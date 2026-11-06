@@ -69,4 +69,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_adaptive_avg_pool2d.cpp](examples/test_aclnn_adaptive_avg_pool2d.cpp) | 通过[aclnnAdaptiveAvgPool2d](docs/aclnnAdaptiveAvgPool2d.md)接口方式调用AdaptiveAvgPool2d算子。 |
+| aclnn接口  | [test_aclnn_adaptive_avg_pool2d.cpp](./examples/arch35/test_aclnn_adaptive_avg_pool2d.cpp) | 通过[aclnnAdaptiveAvgPool2d](docs/aclnnAdaptiveAvgPool2d.md)接口方式调用AdaptiveAvgPool2d算子。 |

@@ -1,6 +1,5 @@
 # aclnnInplaceQuantScatterV2
 
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
@@ -24,7 +23,7 @@
 
 ## 功能说明
 
-[Quantize](https://gitcode.com/cann/ops-nn/blob/master/quant/quantize/docs/aclnnQuantize.md)算子和[Scatter](https://gitcode.com/cann/ops-nn/blob/master/index/scatter/docs/aclnnInplaceScatterUpdate.md)算子的融合，先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。相比aclnnInplaceQuantScatter多了roundMode输入。
+[Quantize](https://gitcode.com/cann/ops-nn/blob/9.3.0-beta.1/quant/quantize/docs/aclnnQuantize.md)算子和[Scatter](https://gitcode.com/cann/ops-nn/blob/9.3.0-beta.1/index/scatter/docs/aclnnInplaceScatterUpdate.md)算子的融合，先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。相比aclnnInplaceQuantScatter多了roundMode输入。
 
 ## 函数原型
 

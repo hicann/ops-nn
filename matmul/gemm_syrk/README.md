@@ -64,7 +64,7 @@
   （对称块尺寸，16 对齐）、每轴单尾块（不做核间尾块切分）、
   `baseM × baseN × 4B ≤ L0C_SIZE / 2`（单累加器位于一个 L0C 槽，槽粒度即 L0C/2；
   UB 需容纳 fp32 累加器镜像与两个 AIV 的 staging）。详细推导见
-  [BlockMmadSyrk](https://gitcode.com/cann/ops-tensor/blob/master/docs/API/gemm/block/block_mmad_matmul_syrk.md) 文档。
+  [BlockMmadSyrk](https://gitcode.com/cann/ops-tensor/blob/9.3.0-beta.1/docs/API/gemm/block/block_mmad_matmul_syrk.md) 文档。
 
 ## 调用说明
 

@@ -4,7 +4,7 @@
 
 | 产品型号 | 芯片号 | 支持的数据类型 |
 |---------|--------|---------------|
-| Atlas A5 训练/推理系列 | Ascend950PR | float32, float16, bfloat16 |
+| Ascend 950PR&950DT系列产品 | Ascend950PR | float32, float16, bfloat16 |
 
 ## 功能描述
 

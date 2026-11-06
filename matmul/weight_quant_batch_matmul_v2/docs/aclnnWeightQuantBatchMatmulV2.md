@@ -1,6 +1,5 @@
 # aclnnWeightQuantBatchMatmulV2
 
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
@@ -370,7 +369,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       - `weight`的数据类型为INT8，y的数据类型为非INT8。
       - `weight`的数据类型为INT4/INT32，`weight`转置，y的数据类型为非INT8。
     - pergroup[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：`weight`的数据类型为INT4/INT32，`weight`非转置，`x`非转置，antiquantGroupSize为64或128，k为antiquantGroupSize对齐，n为64对齐，y的数据类型为非INT8。
-  - `antiquantScale`（aclTensor *,计算输入）：数据类型支持FLOAT16、BFLOAT16、UINT64、INT64（当FLOAT16、BFLOAT16时，数据类型要求和输入`x`保持一致；当为UINT64、INT64时，`x`仅支持FLOAT16，不转置，`weight`仅支持INT8，ND转置，模式仅支持perchannel[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，quantScaleOptional和quantOffsetOptional必须传入空指针，m仅支持[1, 96]，k和n要求64对齐，需要首先配合aclnnCast接口完成FLOAT16到FLOAT32的转换，详情请参考[Cast](https://gitcode.com/cann/ops-math/blob/master/math/cast/docs/aclnnCast.md)，再配合aclnnTransQuantParamV2接口完成FLOAT32到UINT64的转换，详情请参考[TransQuantParamV2](../../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md)）。[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)仅支持转置场景。
+  - `antiquantScale`（aclTensor *,计算输入）：数据类型支持FLOAT16、BFLOAT16、UINT64、INT64（当FLOAT16、BFLOAT16时，数据类型要求和输入`x`保持一致；当为UINT64、INT64时，`x`仅支持FLOAT16，不转置，`weight`仅支持INT8，ND转置，模式仅支持perchannel[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，quantScaleOptional和quantOffsetOptional必须传入空指针，m仅支持[1, 96]，k和n要求64对齐，需要首先配合aclnnCast接口完成FLOAT16到FLOAT32的转换，详情请参考[Cast](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/math/cast/docs/aclnnCast.md)，再配合aclnnTransQuantParamV2接口完成FLOAT32到UINT64的转换，详情请参考[TransQuantParamV2](../../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md)）。[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)仅支持转置场景。
     对于不同伪量化算法模式，`antiquantScale`支持的shape如下:
     - pertensor[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：输入shape为(1,)或(1, 1)。
     - perchannel[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：输入shape为(1, n)或(n,)。

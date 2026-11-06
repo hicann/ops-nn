@@ -97,7 +97,7 @@ pip uninstall cann-ops-nn-custom
 
 ## 目录结构
 
-```
+```text
 ├── torch_extension
 │   ├── build.sh                              # 构建脚本（支持 --torch_extension 参数）
 │   ├── setup.py                              # wheel 打包配置（自动收集分布式算子）
@@ -140,8 +140,6 @@ result = cann_ops_nn.ops.swiglu_group(x)
 
 print(result.shape)  # torch.Size([16, 16])
 ```
-
-
 
 ## 开发者指南：新增算子
 

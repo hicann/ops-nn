@@ -348,7 +348,7 @@ aclnnStatus aclnnQuantMatmulV3(
   - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
   - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
     - 当输入x2为NZ时，不支持transposeX2为false的场景。
-  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
+  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
 <!-- end id13 -->
 <!-- npu="A3,910b" id14 -->
 - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
@@ -357,13 +357,13 @@ aclnnStatus aclnnQuantMatmulV3(
     - 数据类型为INT4时，在transposeX2为true时shape形如（n，k），要求k为偶数；在transposeX2为false时shape形如（k，n），要求n为偶数。
     - 数据类型为INT32时，每个INT32数据存放8个INT4数据，在transposeX2为true时shape形如（n，k // 8），要求k为8的倍数；在transposeX2为false时shape形如（k，n // 8），要求n为8的倍数。
     - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见aclnnConvertWeightToINT4Pack接口。
-  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
+  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
 
 <!-- end id14 -->
 <!-- npu="950" id15 -->
 - <term>Ascend 950PR&950DT系列产品</term>：
   - A4W4全量化场景下，x2仅支持ND格式。
-  - A8W8全量化场景下，x2支持ND、NZ格式。支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)将ND格式的x2转换为NZ格式，转换时必须使用0填充，避免引入脏数据。
+  - A8W8全量化场景下，x2支持ND、NZ格式。支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)将ND格式的x2转换为NZ格式，转换时必须使用0填充，避免引入脏数据。
   - A8W8全量化场景下，当原始ND格式x2的后两维中任一维度为1（即n=1或k=1）时，不支持转换为NZ格式，x2应使用ND格式。
 
 <!-- end id15 -->

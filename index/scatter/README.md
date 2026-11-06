@@ -63,4 +63,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_inplace_scatter_update](example/test_aclnn_inplace_scatter_update.cpp) |通过[aclnnInplaceScatterUpdate](docs/aclnnInplaceScatterUpdate.md)接口方式调用Scatter算子。 |
+| aclnn接口 | [test_aclnn_inplace_scatter_update](./examples/test_aclnn_inplace_scatter_update.cpp) |通过[aclnnInplaceScatterUpdate](docs/aclnnInplaceScatterUpdate.md)接口方式调用Scatter算子。 |

@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：完成二级量化mxfp4的矩阵乘计算，其中参数x2需为NZ格式，可通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式。
+- 接口功能：完成二级量化mxfp4的矩阵乘计算，其中参数x2需为NZ格式，可通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式。
 - 计算公式
 
   $$

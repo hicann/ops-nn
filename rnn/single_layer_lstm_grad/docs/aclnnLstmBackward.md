@@ -21,7 +21,6 @@
 - <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
-
 ## 功能说明
 
 - 接口功能：计算对应[LSTM正向](../../dynamic_rnn/docs/aclnnLSTM.md)的输入input、初始状态hx和参数params的梯度。本接口不返回新的正向输出。

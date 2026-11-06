@@ -1,6 +1,5 @@
 # aclnnQuantMatmulActivationQuantWeightNz
 
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
@@ -552,7 +551,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
   <a id="公共约束"></a>
   - x1仅支持ND格式，x2仅支持NZ格式。
   - 当k或n为1时，无法使用weightNz特性，本接口不支持此种场景。
-  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式，在使用时必须使用0来填充以防引入脏数据。
+  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式，在使用时必须使用0来填充以防引入脏数据。
   - transposeX1为false时x1的shape：(batch, m, k)。transposeX1为true时x1的shape：(batch, k, m)。其中batch代表前0~4维，0维表示batch不存在。
   - transposeX2为false时x2的shape：(batch, n1, k1, k0, n0)。transposeX2为true时x2的shape：(batch, k1, n1, n0, k0)。其中batch代表前0~4维，0维表示batch不存在。k与x1的shape中的k一致。
   - x1、x2的转置状态由转置标记和stride共同决定，任改一处即可（两种方式等价，注意不要同时使用）：

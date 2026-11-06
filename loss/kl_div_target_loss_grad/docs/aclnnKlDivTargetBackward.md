@@ -1,6 +1,5 @@
 # aclnnKlDivTargetBackward
 
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
@@ -24,7 +23,7 @@
 
 ## 功能说明
 
-- 算子功能：进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的target反向计算。
+- 算子功能：进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的target反向计算。
 
 - 计算公式：
 

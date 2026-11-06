@@ -6,7 +6,7 @@
 
 - **对标接口**：TensorFlow `tensorflow.python.training.gen_training_ops.apply_proximal_gradient_descent`（原始 kernel 见 `tensorflow/core/kernels/training_ops.cc`）。
 - **接口形式**：非 Inplace，结果写入独立输出张量 `varOut`；用户侧可让 `var` 与 `varOut` 指向同一块设备内存以实现 inplace。
-- **目标平台**：Atlas A3 / Atlas 950 系列（Ascend950，`__NPU_ARCH__=3510`）。
+- **目标平台**：Atlas A3系列产品、Ascend 950PR&950DT系列产品（Ascend950，`__NPU_ARCH__=3510`）。
 
 ## 2. 计算公式
 

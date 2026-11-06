@@ -8,7 +8,7 @@
 
 nn仓的算子采用**分布式目录结构**：每个算子的torch_extension文件放在仓库根目录下对应的算子目录中，`setup.py`在构建时自动收集并staging到whl包内。以算子`${op_api}`（属于`${category}`分类）为例：
 
-```
+```text
 ├── ${category}/
 │   └── ${op_api}/
 │       └── torch_extension/                    # 算子的 torch_extension 目录
@@ -97,6 +97,7 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
 - **模块级常量**：全大写蛇形（UPPER_SNAKE_CASE），如`BLOCK_FP8_QUANT_MODE`、`MX_BLOCK_SIZE`。
 - **模块内部私有符号**：以单下划线`_`前缀标识，如`_swiglu_group`、`_TORCHAIR_AVAILABLE`。
 - **类型注解**：对外接口与关键内部函数应带类型注解（`from typing import Optional, Tuple, List`），可选参数统一用`Optional[...]`，例如：
+
   ```python
   def swiglu_group(
       x: torch.Tensor,
@@ -106,6 +107,7 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
       clamp_limit: float = -1.0,
   ) -> torch.Tensor:
   ```
+
 - **参数命名一致性**：同一算子在schema、meta、dispatcher、对外函数、Converter中的同义参数应使用相同的名字（如`clamp_limit`、`group_index`），避免在不同层出现不一致写法。
 
 #### C++标识符
@@ -128,7 +130,7 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
 
   以`swiglu_group`为例的schema：
 
-  ```
+  ```Cpp
   swiglu_group(Tensor x, *, Tensor? weight=None, Tensor? group_index=None, float clamp_limit=-1.0) -> Tensor
   ```
 
@@ -141,12 +143,14 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
 1. 文件头部包含`#include <torch/extension.h>`与`#include "aclnn_common.h"`，实现置于`namespace cann_ops_nn`和`namespace ${category}`内。
 2. 函数签名与schema严格对应：必选/可选参数类型按[2.3 C++入参类型约定](#c标识符)选择。
 3. **入参校验**：使用`TORCH_CHECK(cond, msg...)`校验shape、dtype、维度、取值范围等，错误信息要可读且包含实际值，例如：
+
    ```cpp
    TORCH_CHECK(torch_npu::utils::is_npu(tensor), "tensor must be on NPU device");
    TORCH_CHECK(tensor.is_contiguous(), "tensor must be contiguous");
    TORCH_CHECK(x.scalar_type() == at::kHalf || x.scalar_type() == at::kBFloat16,
                "x dtype must be float16 or bfloat16, but got ", x.scalar_type());
    ```
+
 4. **输出张量手动申请**：按meta推导的shape/dtype用`at::empty(...)`申请输出，dtype通过`x.options().dtype(...)`指定。
 5. **拉起kernel**：使用`ACLNN_CMD(aclnn接口名, 入参..., 出参...)`宏调用aclnn接口（如`ACLNN_CMD(aclnnSwigluGroup, ...)`），入参顺序需与aclnn接口定义一致；该宏自动完成类型转换、workspace申请、stream下发与资源释放。
 6. **导出绑定**：通过`PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)`将C++函数绑定为与schema同名的Python接口。
@@ -203,10 +207,12 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
    - `schema()`：返回算子schema字符串（见[2.3 Schema标识符](#schema标识符算子签名)）；
    - `register_meta()`：用`@impl(get_as_library(), self.name, "Meta")`注册Meta实现，仅做shape/dtype推导，不触碰真实NPU计算（FakeTensor/图模式必需）。
 2. **实例化与初始化**：模块加载时实例化builder并调用`_ensure_initialized()`注册schema与meta：
+
    ```python
    builder = SwigluGroupOpBuilder()
    builder._ensure_initialized()
    ```
+
 3. **PrivateUse1 dispatcher**：用`@impl(get_as_library(), builder.name, "PrivateUse1")`注册NPU后端实现，函数体透传到编译产物`op_module.<算子名>(...)`。`PrivateUse1`是PyTorch为自定义NPU后端预留的dispatch key。
 4. **对外接口**：提供面向用户的函数，负责参数整理、默认值处理等，最终调用`torch.ops.cann_ops_nn.<算子名>(...)`通过dispatcher调度。
 5. **对外api必须书写注释（docstring）**：每个对外导出的接口都要有docstring，至少覆盖「功能说明、各参数含义/shape/dtype/取值范围、返回值说明」。
@@ -263,13 +269,16 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
 对外导出分两级：
 
 1. **算子`__init__.py`**：每个新增算子的对外接口与Converter都需在此显式import导出，导入即触发schema/meta/converter注册：
+
    ```python
    __all__ = ["swiglu_group", "convert_swiglu_group"]
 
    from .swiglu_group import swiglu_group
    from .graph_convert_swiglu_group import convert_swiglu_group
    ```
+
 2. **分类`__init__.py`**（如`activation/__init__.py`）：在分类目录下导出算子，构建时会被复制到whl中：
+
    ```python
    __all__ = ["swiglu_group", "swiglu_group_quant"]
 

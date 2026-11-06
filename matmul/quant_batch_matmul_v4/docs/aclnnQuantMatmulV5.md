@@ -1,6 +1,5 @@
 # aclnnQuantMatmulV5
 
-
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
@@ -628,7 +627,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - x2的约束：
     - x2的最后一维大小不能超过65535，transposeX2仅支持true。
     - 各个维度表示：(batch, k1, n1, n0, k0)，batch可不存在，其中k0 = 32， n0 = 16， x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil(k / 32) = k1。
-    - x2需要通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
+    - x2需要通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
   - x1Scale的约束：数据格式支持ND，shape是1维(t,)，t = m，其中m与x1的m一致。
   - x2Scale的约束：数据格式支持ND，shape是1维(t,)，t = n，其中n与x2的n一致。
   - bias的约束：数据格式支持ND，shape支持1维(n,)或3维(batch, 1, n)，n与x2的n一致。

@@ -30,6 +30,6 @@
 
 ## 贡献说明
 
-本算子由社区开发者贡献，贡献流程请参考 [CANN 算子贡献指南](https://gitcode.com/cann/ops-math/blob/master/CONTRIBUTING.md)。
+本算子由社区开发者贡献，贡献流程请参考 [CANN 算子贡献指南](https://gitcode.com/cann/ops-math/blob/9.3.0-beta.1/CONTRIBUTING.md)。
 
 欢迎提交 Issue 或 Pull Request 参与共建。如有问题，请在对应仓库的 Issue 区描述复现步骤和环境信息。

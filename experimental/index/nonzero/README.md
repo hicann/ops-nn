@@ -6,7 +6,7 @@
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR&950DT系列产品</term> | × |
 | <term>Atlas A3系列产品</term>| √ |
-| <term>Atlas A2系列产品/A200I A2 Box异构组件</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
 | <term>Atlas 200I/500 A2推理产品</term> | × |
 | <term>Atlas推理系列产品</term> | × |
 | <term>Atlas训练系列产品</term> | × |
@@ -14,8 +14,7 @@
 > 说明：Atlas A3（Ascend910_93）与 Atlas A2（Ascend910B）同为 DAV_2201 架构
 > （共代际），运行时 `Ascend910_93` 映射到 `ASCEND910B`，由同一份 `ascend910b`
 > 注册（config/ascend910b/ + AddConfig）覆盖，无需单独的 A3 配置。本算子仅
-> 在 910b（A2）硬件上实测；Ascend 950PR/950DT 属 A5 代际（DAV_3510），未验证，
-> 暂不支持。
+> 在Atlas A2系列产品硬件上实测。
 
 ## 功能说明
 

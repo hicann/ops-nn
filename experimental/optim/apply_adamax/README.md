@@ -30,7 +30,7 @@ $$
 
 | 产品 | 是否支持 |
 |------|:------:|
-| Ascend 950PR / Ascend 950DT（Atlas A5 推理系列，DAV_3510） | √ |
+| Ascend 950PR&950DT系列产品 | √ |
 | Atlas A3 训练系列 / Atlas A3 推理系列 | × |
 | Atlas A2 训练系列 / Atlas A2 推理系列 | × |
 | Atlas 200I/500 A2推理产品 | × |
@@ -75,7 +75,7 @@ $$
 
 ## 约束说明
 
-- 本算子仅支持 Ascend 950PR / Ascend 950DT 产品（Atlas A5 推理系列，DAV_3510 架构）。
+- 本算子仅支持Ascend 950PR&950DT系列产品。
 - `var`、`m`、`v`、`grad` 的 shape 必须**完全相同**，不支持广播。
 - `var`、`m`、`v`、`grad` 的 dtype 必须**完全一致**。
 - 不支持 0 维标量 Tensor 作为 var / m / v / grad。
