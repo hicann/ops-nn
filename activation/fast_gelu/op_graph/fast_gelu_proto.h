@@ -19,7 +19,7 @@ namespace ge {
 * @brief
 * For Atlas training products,
   Atlas inference products, Ascend 610 AI Processor,
-  the calculation formula is x*e^(0.851*x)*(x-|x|)/(1+e^(-1.702|x|)).
+  the calculation formula is x/(1+e^(-1.702*x)).
 * For other chips, the calculation formula is x/(1+e^(-1.702*x)).
 
 * @par Inputs:

@@ -23,11 +23,11 @@ extern "C" {
  * @domain aclnn_math
  * 算子功能：返回输入FastGelu的计算结果
  * 计算公式：
- * $$ FastGelu(x_i) = \frac {x_i} {1 + \exp(-1.702 * \left| x_i \right|)} * \exp(0851 * (x_i - \left| x_i \right|)) $$
+ * $$ FastGelu(x_i) = \frac {x_i} {1 + \exp(-1.702 * x_i)} $$
  *
  *
  * @param [in] self: 输入张量，npu device侧的aclTensor,
- * 数据类型支持FLOAT16、FLOAT32、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
+ * 数据类型支持FLOAT16、FLOAT32、BFLOAT16，数据格式支持ND，不支持非连续的Tensor。
  * @param [in] out: 输出张量，npu device侧的aclTensor,
  * 数据类型支持FLOAT16、FLOAT32、BFLOAT16，数据格式支持ND，支持非连续的Tensor。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。

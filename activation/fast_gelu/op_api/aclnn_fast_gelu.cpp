@@ -120,7 +120,12 @@ aclnnStatus aclnnFastGeluGetWorkspaceSize(const aclTensor* self, aclTensor* out,
 
     // self如果非连续，需要转换
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (selfContiguous == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "self is a sliced non-contiguous tensor (strides with gaps), which is not supported yet, "
+                "please call contiguous first.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     // 调用l0算子FastGelu进行计算
     auto fastGeluResult = l0op::FastGelu(selfContiguous, uniqueExecutor.get());

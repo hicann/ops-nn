@@ -19,7 +19,7 @@ English | [简体中文](./README.md)
   Outputs the computation result of fast_gelu.
 - Formula:
 
- $$ FastGelu(x_i) = \frac {x_i} {1 + \exp(-1.702 * \left| x_i \right|)} * \exp(0.851 * (x_i - \left| x_i \right|)) $$
+ $$ FastGelu(x_i) = \frac {x_i} {1 + e^{-1.702 x_i}} $$
 
 ## Parameters
 
