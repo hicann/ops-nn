@@ -33,7 +33,7 @@ constexpr int64_t kMaxNdDmaDims = 5;
 // 默认标量属性: 必须与 op_host/softplus_v2_grad_def.cpp 中 Attr 注册的默认值保持一致
 constexpr float kDefaultBeta = 1.0f;
 constexpr float kDefaultThreshold = 20.0f;
-// exp 输入 clamp 上界: min(-beta*self, clamp) 防 exp 上溢（对应 DESIGN §3.5 S5 eArg = min(nege, CLAMP)）
+// Legacy argument retained for the VF signature; the current compute path does not clamp.
 constexpr float kExpInputClamp = 50.0f;
 // attr 索引: 与 def.cpp 中 Attr 注册顺序一致 (0=beta, 1=threshold)
 constexpr int64_t kAttrIdxBeta = 0;

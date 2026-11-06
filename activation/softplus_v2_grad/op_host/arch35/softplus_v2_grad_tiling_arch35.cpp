@@ -290,8 +290,7 @@ ge::graphStatus SoftplusV2GradTiling::GetShapeInfo()
                                               "dtype must be fp16/fp32/bf16");
         return GRAPH_FAILED;
     }
-    // CODE.03: 文档约束 input_gradients 与 input_features dtype 必须一致（不支持混合精度），
-    // aclnn 通路已由 CheckDtypeValid 拦截，图模式必须在 Tiling 侧等价拦截
+    // Native kernel/GEIR inputs must share a dtype. ACLNN casts supported mixed inputs before this entry.
     auto inputDesc1 = ctx_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, inputDesc1);
     if (inputDesc1->GetDataType() != dtype) {
@@ -504,6 +503,33 @@ ge::graphStatus SoftplusV2GradTiling::DoTilingAndSet()
                                                    Arr2String(max_bro_shape_.data(), rank_),
                                                    "FindSplitAxis failed: shape cannot fit per-buffer capacity");
             return ge::GRAPH_FAILED;
+        }
+        // Give the compact high-rank broadcast path enough independent tiles.
+        // Keep small/fallback transfers and already occupied cores unchanged.
+        if (rank_ > 8 && tiling->split.a_i > 1) {
+            int64_t outerTiles = 1;
+            for (int64_t d = 0; d < tiling->split.axis; ++d)
+                outerTiles *= max_bro_shape_[d];
+            int64_t maxCores = static_cast<int64_t>(compileInfo->coreNum);
+            int64_t axisSize = max_bro_shape_[tiling->split.axis];
+            if (outerTiles > 0 && axisSize > 1 && outerTiles * tiling->split.a_o < maxCores) {
+                int64_t desired = maxCores / outerTiles;
+                int64_t candidate = axisSize / desired + (axisSize % desired != 0);
+                bool compactSuffix = true;
+                for (int64_t d = tiling->split.axis + 1; d < rank_; ++d) {
+                    int64_t size = max_bro_shape_[d];
+                    compactSuffix = compactSuffix && size > 0 && (size & (size - 1)) == 0;
+                }
+                int64_t copyOuter = 1;
+                for (int64_t d = tiling->split.axis; d < rank_ - kMaxNdDmaDims; ++d)
+                    copyOuter *= (d == tiling->split.axis) ? candidate : max_bro_shape_[d];
+                if (candidate > 0 && compactSuffix && copyOuter > 8 && candidate < tiling->split.a_i) {
+                    tiling->split.a_i = candidate;
+                    tiling->split.a_o = axisSize / candidate + (axisSize % candidate != 0);
+                    int64_t rem = axisSize % candidate;
+                    tiling->split.a_i_tail = rem == 0 ? candidate : rem;
+                }
+            }
         }
         if (!MultiCoreSplit(max_bro_shape_, tiling->split, static_cast<int64_t>(compileInfo->coreNum),
                             tiling->multicore)) {

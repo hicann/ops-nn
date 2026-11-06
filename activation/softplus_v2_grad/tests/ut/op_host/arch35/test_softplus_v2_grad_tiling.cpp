@@ -513,3 +513,35 @@ TEST_F(SoftplusV2GradTilingIntegrationTest, tiling_fp32_empty_tensor_shortcut)
     gert::StorageShape shape = {{0, 3}, {0, 3}};
     RunTilingIntegrationTest(shape, shape, shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, true);
 }
+
+TEST_F(SoftplusV2GradTilingIntegrationTest, high_rank_empty_shapes_shortcut_before_heuristic)
+{
+    for (size_t rank : {9u, 17u, 25u}) {
+        for (size_t zeroAxis : {size_t(0), rank / 2, rank - 1}) {
+            SCOPED_TRACE(::testing::Message() << "rank=" << rank << ", zeroAxis=" << zeroAxis);
+            gert::StorageShape shape;
+            shape.MutableOriginShape().SetDimNum(rank);
+            shape.MutableStorageShape().SetDimNum(rank);
+            for (size_t d = 0; d < rank; ++d) {
+                int64_t size = d == zeroAxis ? 0 : 2;
+                shape.MutableOriginShape().SetDim(d, size);
+                shape.MutableStorageShape().SetDim(d, size);
+            }
+            RunTilingIntegrationTest(shape, shape, shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, true,
+                                     GET_TPL_TILING_KEY(SOFTPLUS_V2_GRAD_FRAMEWORK_RANK));
+        }
+    }
+}
+
+TEST_F(SoftplusV2GradTilingIntegrationTest, high_rank_nonempty_heuristic_control)
+{
+    gert::StorageShape shape;
+    shape.MutableOriginShape().SetDimNum(17);
+    shape.MutableStorageShape().SetDimNum(17);
+    for (size_t d = 0; d < 17; ++d) {
+        shape.MutableOriginShape().SetDim(d, 2);
+        shape.MutableStorageShape().SetDim(d, 2);
+    }
+    RunTilingIntegrationTest(shape, shape, shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, false,
+                             GET_TPL_TILING_KEY(SOFTPLUS_V2_GRAD_FRAMEWORK_RANK));
+}

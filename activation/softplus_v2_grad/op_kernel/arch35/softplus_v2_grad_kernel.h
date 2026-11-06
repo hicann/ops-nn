@@ -76,7 +76,8 @@ template <typename T>
 __simd_vf__ inline void SoftplusV2GradVF(__ubuf__ T* dst, __ubuf__ T* src0, __ubuf__ T* src1, uint32_t count,
                                          uint32_t VL, uint16_t rep, float beta, float threshold, float clamp)
 {
-    (void)clamp; // Unused in this isolated experiment.
+    (void)clamp;
+    static constexpr AscendC::Reg::DivSpecificMode preciseDivMode = {AscendC::Reg::MaskMergeMode::ZEROING, true};
     // 寄存器声明
     AscendC::Reg::RegTensor<T> src0Reg;
     AscendC::Reg::RegTensor<T> src1Reg;
@@ -106,12 +107,12 @@ __simd_vf__ inline void SoftplusV2GradVF(__ubuf__ T* dst, __ubuf__ T* src0, __ub
         //     T1 = beta * input_features
         AscendC::Reg::Muls<T>(regT1, src0Reg, beta, padMask);
 
-        // Experimental literal formula: grad * exp(beta*self) / (1 + exp(beta*self)).
+        // Literal formula: grad * exp(beta*self) / (1 + exp(beta*self)).
         // No exponent clamp; preserve the original multiplication before division.
         AscendC::Reg::Exp<T>(regT3, regT1, padMask);
         AscendC::Reg::Adds<T>(regT4, regT3, static_cast<T>(1.0f), padMask);
         AscendC::Reg::Mul<T>(regT2, src1Reg, regT3, padMask);
-        AscendC::Reg::Div<T>(regT5, regT2, regT4, padMask);
+        AscendC::Reg::Div<T, &preciseDivMode>(regT5, regT2, regT4, padMask);
 
         // Compare against the literal threshold even when beta*self is infinite.
         AscendC::Reg::Duplicate<T>(regThresh, static_cast<T>(threshold));
@@ -124,6 +125,52 @@ __simd_vf__ inline void SoftplusV2GradVF(__ubuf__ T* dst, __ubuf__ T* src0, __ub
 
         // --- Store: Reg → UB ---
         AscendC::Reg::StoreAlign(dst, dstReg, aReg, padMask);
+    }
+}
+
+// Compress selected index bits; masks are prepared once on the scalar side.
+template <typename U, int SHIFT>
+__simd_callee__ inline void CompressBroadcastBits(AscendC::Reg::RegTensor<U>& value, uint32_t moveMask,
+                                                  AscendC::Reg::MaskReg& active)
+{
+    if (moveMask != 0) {
+        AscendC::Reg::RegTensor<U> mask, moved;
+        AscendC::Reg::Duplicate(mask, static_cast<U>(moveMask));
+        AscendC::Reg::And(moved, value, mask, active);
+        AscendC::Reg::Xor(value, value, moved, active);
+        AscendC::Reg::ShiftRights(moved, moved, static_cast<int16_t>(SHIFT), active);
+        AscendC::Reg::Or(value, value, moved, active);
+    }
+}
+
+// Expand a compact contiguous input inside UB; this only permutes input bits.
+template <typename T, int64_t RANK>
+__simd_vf__ inline void ExpandCompactBroadcastVF(__ubuf__ T* dst, __ubuf__ T* src, uint32_t count, uint32_t keepMask,
+                                                 uint32_t move0, uint32_t move1, uint32_t move2, uint32_t move3,
+                                                 uint32_t move4)
+{
+    using U = typename std::conditional<sizeof(T) == 2, uint16_t, uint32_t>::type;
+    using I = typename std::conditional<sizeof(T) == 2, int16_t, int32_t>::type;
+    constexpr uint32_t lanes = AscendC::GetVecLen() / sizeof(T);
+    AscendC::Reg::RegTensor<I> sequence;
+    AscendC::Reg::RegTensor<U> flat, offset, mask;
+    AscendC::Reg::RegTensor<T> value;
+    AscendC::Reg::Arange(sequence, static_cast<I>(0));
+    AscendC::Reg::Duplicate(mask, static_cast<U>(keepMask));
+    for (uint16_t rep = 0; rep < (count + lanes - 1) / lanes; ++rep) {
+        uint32_t remaining = count - rep * lanes;
+        auto active = AscendC::Reg::UpdateMask<T>(remaining);
+        AscendC::Reg::Adds(flat, (AscendC::Reg::RegTensor<U>&)sequence, static_cast<U>(rep * lanes), active);
+        AscendC::Reg::And(offset, flat, mask, active);
+        CompressBroadcastBits<U, 1>(offset, move0, active);
+        CompressBroadcastBits<U, 2>(offset, move1, active);
+        CompressBroadcastBits<U, 4>(offset, move2, active);
+        CompressBroadcastBits<U, 8>(offset, move3, active);
+        if constexpr (sizeof(U) == 4)
+            CompressBroadcastBits<U, 16>(offset, move4, active);
+        AscendC::Reg::Gather(value, src, offset, active);
+        auto address = AscendC::Reg::CreateAddrReg<T>(rep, lanes);
+        AscendC::Reg::StoreAlign(dst, value, address, active);
     }
 }
 
@@ -142,9 +189,12 @@ class SoftplusV2GradKernel {
     AscendC::GlobalTensor<T> gmIn_[kMaxInputSlots];
     AscendC::GlobalTensor<T> gmOut_[kMaxOutputSlots];
     AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[kPhysNodes];
-    AscendC::MultiCopyParams<T, ND> nddmaParams_[kMaxInputSlots];
+    AscendC::MultiCopyParams<T, ND> nddmaParams_[kMaxInputSlots]{};
     int64_t nddmaOuterIters_[kMaxInputSlots];
     int64_t nddma_dims_;
+    bool compactBroadcast_ = false;
+    uint32_t gatherKeep_[kMaxInputSlots] = {};
+    uint32_t gatherMove_[kMaxInputSlots][5] = {};
     float beta_;
     float threshold_;
 
@@ -190,6 +240,41 @@ public:
             nddmaOuterIters_[inp] = 1;
             for (int64_t d = k; d < RANK - nddma_dims_; d++)
                 nddmaOuterIters_[inp] *= (d == k) ? td_->split.a_i : dstShape[d];
+        }
+        if constexpr (RANK > 8) {
+            compactBroadcast_ = td_->rank > 8 && nddmaOuterIters_[0] > 8;
+            for (int64_t d = k + 1; d < RANK; ++d) {
+                int64_t size = dstShape[d];
+                compactBroadcast_ = compactBroadcast_ && size > 0 && (size & (size - 1)) == 0;
+            }
+            if (compactBroadcast_) {
+                for (int inp = 0; inp < kMaxInputSlots; ++inp) {
+                    uint32_t outputBits = 0, keep = 0;
+                    for (int64_t d = RANK - 1; d >= k; --d) {
+                        uint32_t size = static_cast<uint32_t>(d == k ? td_->split.a_i : dstShape[d]);
+                        uint32_t bits = 0;
+                        for (uint32_t v = size - 1; v > 0; v >>= 1)
+                            ++bits;
+                        if (td_->input_shapes[inp][d] != 1 && bits != 0) {
+                            keep |= ((1U << bits) - 1) << outputBits;
+                        }
+                        outputBits += bits;
+                    }
+                    gatherKeep_[inp] = keep;
+                    uint32_t mask = keep, holes = (~mask) << 1;
+                    for (uint32_t stage = 0; stage < 5; ++stage) {
+                        uint32_t prefix = holes ^ (holes << 1);
+                        prefix ^= prefix << 2;
+                        prefix ^= prefix << 4;
+                        prefix ^= prefix << 8;
+                        prefix ^= prefix << 16;
+                        uint32_t moved = prefix & mask;
+                        gatherMove_[inp][stage] = moved;
+                        mask = (mask ^ moved) | (moved >> (1U << stage));
+                        holes &= ~prefix;
+                    }
+                }
+            }
         }
     }
 
@@ -341,6 +426,31 @@ private:
         int64_t k = td_->split.axis;
         int64_t off = CalcOffset(coord, td_->input_strides[inputIdx], RANK);
         const int64_t* dstShape = td_->max_bro_shape;
+        if constexpr (RANK > 8) {
+            if (compactBroadcast_) {
+                // A split-axis slice of a dense input is contiguous before broadcast.
+                int64_t compactCount = CalcTransferCount(td_->input_shapes[inputIdx], RANK, k, a_i_seg);
+                int64_t count = a_i_seg;
+                for (int64_t d = k + 1; d < RANK; ++d)
+                    count *= dstShape[d];
+                AscendC::DataCopyExtParams ext = {1, static_cast<uint32_t>(compactCount * sizeof(T)), 0, 0, 0};
+                AscendC::DataCopyPadExtParams<T> pad = {false, 0, 0, 0};
+                // Slot 3 is not live until both inputs have reached their compute slots.
+                AscendC::DataCopyPad(buf_[3].Get<T>(), gmIn_[inputIdx][off], ext, pad);
+                auto mte2v = GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V);
+                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(mte2v);
+                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(mte2v);
+                asc_vf_call<ExpandCompactBroadcastVF<T, RANK>>(
+                    (__ubuf__ T*)buf_[slot].Get<T>().GetPhyAddr(), (__ubuf__ T*)buf_[3].Get<T>().GetPhyAddr(),
+                    static_cast<uint32_t>(count), gatherKeep_[inputIdx], gatherMove_[inputIdx][0],
+                    gatherMove_[inputIdx][1], gatherMove_[inputIdx][2], gatherMove_[inputIdx][3],
+                    gatherMove_[inputIdx][4]);
+                auto vmte2 = GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2);
+                AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(vmte2);
+                AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(vmte2);
+                return;
+            }
+        }
 
         auto params = nddmaParams_[inputIdx];
         int64_t k_nd = RANK - 1 - k;
