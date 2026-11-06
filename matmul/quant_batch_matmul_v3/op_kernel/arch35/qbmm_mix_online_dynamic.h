@@ -18,6 +18,7 @@
 #include "mm_extension_interface/qbmm_custom_mm_policy.h"
 #include "qbmm_asw_block.h"
 #include "../quant_batch_matmul_v3_base.h"
+#include "qbmm_api_utils.h"
 
 #define LOCAL_TEMPLATE_CLASS_MIX_PARAMS                                                                             \
     template <class aType, class bType, class scaleType, class biasType, class ptScaleType, class cType,            \
@@ -96,8 +97,17 @@ protected:
     __aicore__ inline void WaitForVector()
     {
         AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE, PIPE_FIX>(AIV_SYNC_AIC_FLAG);
+        if (static_cast<uint64_t>(QuantBatchMatmulV3::GetAicAivTaskRation()) != 1) {
+            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE, PIPE_FIX>(AIV_SYNC_AIC_FLAG + FLAG_ID_MAX);
+        }
     }
-    __aicore__ inline void NotifyVector() { AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE, PIPE_FIX>(AIC_SYNC_AIV_FLAG); }
+    __aicore__ inline void NotifyVector()
+    {
+        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE, PIPE_FIX>(AIC_SYNC_AIV_FLAG);
+        if (static_cast<uint64_t>(QuantBatchMatmulV3::GetAicAivTaskRation()) != 1) {
+            AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE, PIPE_FIX>(AIC_SYNC_AIV_FLAG + FLAG_ID_MAX);
+        }
+    }
     __aicore__ inline void WaitForCube() { AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE, PIPE_V>(AIC_SYNC_AIV_FLAG); }
     __aicore__ inline void CopyDataFromGm2Ub();
     __aicore__ inline void CopyX1ScaleFromGm2Ub(LocalTensor<ptScaleType>& dst, uint64_t blockLen, uint64_t offset);

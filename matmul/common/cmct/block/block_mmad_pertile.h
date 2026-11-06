@@ -116,10 +116,18 @@ private:
     __aicore__ inline void WaitForVector(uint16_t crossPingPongID)
     {
         AscendC::CrossCoreWaitFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIC_SYNC_AIV_FLAG + crossPingPongID);
+        if (GetAicAivTaskRation() != 1) {
+            AscendC::CrossCoreWaitFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIC_SYNC_AIV_FLAG + crossPingPongID +
+                                                                         QBMM_FLAG_ID_MAX);
+        }
     }
     __aicore__ inline void NotifyVector(uint16_t crossPingPongID)
     {
         AscendC::CrossCoreSetFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIV_SYNC_AIC_FLAG + crossPingPongID);
+        if (GetAicAivTaskRation() != 1) {
+            AscendC::CrossCoreSetFlag<QBMM_AIC_SYNC_AIV_MODE, PIPE_FIX>(QBMM_AIV_SYNC_AIC_FLAG + crossPingPongID +
+                                                                        QBMM_FLAG_ID_MAX);
+        }
     }
 
 public:

@@ -258,4 +258,14 @@ __aicore__ inline void ProcessWithBatch(QuantBmmAswBlock& block, T& object)
     }
 }
 
+// 获取aiv和aic核数比，类似的AscendC::GetTaskRation()在if ASCEND_IS_AIC时，固定返回1
+__aicore__ inline uint32_t GetAicAivTaskRation()
+{
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201 || __NPU_ARCH__ == 3510)
+    return 2U; // 2: aic:aiv = 1:2
+#else
+    return 1U;
+#endif
+}
+
 } // namespace QuantBatchMatmulV3
