@@ -14,6 +14,8 @@
  */
 
 #include "conv3d_backprop_input_v2_polyphase_tiling.h"
+#include <algorithm>
+#include <array>
 
 namespace Ops {
 namespace NN {
@@ -23,6 +25,8 @@ namespace Polyphase {
 constexpr uint32_t INTERLEAVE_STRIDE = 2U;
 constexpr uint8_t ALL_PHASE_B1 = 1U;
 constexpr uint32_t MAX_LOAD_WIDTH = 65535U;
+
+using PhasedScore = std::array<uint64_t, 12>;
 
 bool AivFits(uint64_t stride, uint64_t outputM, bool dense, const Resources& resources)
 {
@@ -78,7 +82,7 @@ struct PhasedSearch {
     const Resources& resources;
     bool dense;
     bool found = false;
-    std::array<uint64_t, 12> best{};
+    PhasedScore best{};
     Plan plan{};
 };
 
@@ -122,18 +126,18 @@ void RankPhased(PhasedSearch& search, uint8_t residency, uint64_t baseM, uint64_
     const uint64_t overlapBytes = work * alignedCout * (q - 1U) * resources.dataBytes;
     const uint64_t innerTiles = work * Ops::Base::CeilDiv(stripe, baseM);
     const uint64_t innerOps = innerTiles * runInfo.stride_w * Ops::Base::CeilDiv(fullK, baseK);
-    const std::array<uint64_t, 12> score{waves,
-                                         slots - work,
-                                         innerOps,
-                                         innerTiles * runInfo.stride_w,
-                                         filterBytes,
-                                         inputBytes,
-                                         overlapBytes,
-                                         nDim * BASIC_BLOCK_SIZE_16 - outputTiles,
-                                         mDim * stripe - width,
-                                         static_cast<uint64_t>(residency == SINGLE_PHASE_B1),
-                                         UINT64_MAX - baseK,
-                                         UINT64_MAX - baseM};
+    const PhasedScore score{waves,
+                            slots - work,
+                            innerOps,
+                            innerTiles * runInfo.stride_w,
+                            filterBytes,
+                            inputBytes,
+                            overlapBytes,
+                            nDim * BASIC_BLOCK_SIZE_16 - outputTiles,
+                            mDim * stripe - width,
+                            static_cast<uint64_t>(residency == SINGLE_PHASE_B1),
+                            UINT64_MAX - baseK,
+                            UINT64_MAX - baseM};
     if (!search.found || score < search.best) {
         search.found = true;
         search.best = score;
@@ -209,18 +213,18 @@ void RankDense(PhasedSearch& search, uint64_t baseM, uint64_t baseK, uint64_t st
         peak.transferBytes = std::max(peak.transferBytes, cost.transferBytes);
         totalMmads += cost.mmads;
     }
-    const std::array<uint64_t, 12> score{waves,
-                                         peak.mmads,
-                                         peak.l0bCalls,
-                                         peak.fixpipes,
-                                         peak.macBlocks,
-                                         peak.transferBytes,
-                                         work * runInfo.stride_w,
-                                         totalMmads,
-                                         waves * search.resources.cores - work,
-                                         mDim * stripe - width,
-                                         UINT64_MAX - baseK,
-                                         UINT64_MAX - baseM};
+    const PhasedScore score{waves,
+                            peak.mmads,
+                            peak.l0bCalls,
+                            peak.fixpipes,
+                            peak.macBlocks,
+                            peak.transferBytes,
+                            work * runInfo.stride_w,
+                            totalMmads,
+                            waves * search.resources.cores - work,
+                            mDim * stripe - width,
+                            UINT64_MAX - baseK,
+                            UINT64_MAX - baseM};
     if (!search.found || score < search.best) {
         search.found = true;
         search.best = score;

@@ -14,6 +14,7 @@
  */
 
 #include "conv3d_backprop_input_v2_inner_product_tiling.h"
+#include <algorithm>
 #include <map>
 #include <numeric>
 #include <log/log.h>
@@ -57,6 +58,7 @@ constexpr uint8_t SINGLE_CORE_DIN_SIZE = 1;
 constexpr uint8_t DEFAULT_FIXED_SHIFT_VAL = 42;
 constexpr uint8_t DEFAULT_FIXED_SHIFT_VAL_A16W8 = 13;
 constexpr uint32_t NO_SPLIT_KERNEL = 0;
+constexpr uint32_t RESERVED_SIZE = 4;
 struct MSplitChoice {
     bool enabled = false;
     uint64_t tileW = 0;
@@ -998,7 +1000,7 @@ bool Conv3DDXV2InnerProductTiling::TryJointLocalWSplit(uint64_t baselineCritical
     }
 
     const LocalWAttemptState saved = SnapshotLocalWAttempt();
-    auto restore = [&]() { RestoreLocalWAttempt(saved); };
+    auto restore = [this, &saved]() { RestoreLocalWAttempt(saved); };
 
     enableLocalWSplit_ = true;
     tilingRunInfo_.tilingHkWkMode = NO_TILING_HWK;
@@ -1310,8 +1312,7 @@ void Conv3DDXV2InnerProductTiling::SetCommonTilingData(const CoreTilingParams& c
     dxt.set_enableFullLoad(tilingRunInfo_.enableFullLoadTiling);
     dxt.set_loadB1FractalZ(IsLoadB1FractalZ());
     dxt.set_enableLocalW(static_cast<uint8_t>(enableLocalWSplit_));
-    uint8_t reserved[4] = {0};
-    dxt.set_reserved(reserved);
+    std::fill_n(dxt.get_reserved(), RESERVED_SIZE, uint8_t{0});
     dxt.set_polyphaseMode(0);
     dxt.set_polyphaseStrategy(0);
     dxt.set_polyphaseDense(0);
@@ -1372,8 +1373,7 @@ bool Conv3DDXV2InnerProductTiling::GetTilingFromRepo()
     TranslateTilingRunInfo(tunerTiling);
     tilingData_.set_loadB1FractalZ(0);
     tilingData_.set_enableLocalW(static_cast<uint8_t>(loadB1Condition_ == ENABLE_LOCAL_W));
-    uint8_t reserved[4] = {0};
-    tilingData_.set_reserved(reserved);
+    std::fill_n(tilingData_.get_reserved(), RESERVED_SIZE, uint8_t{0});
     tilingData_.set_polyphaseMode(0);
     tilingData_.set_polyphaseStrategy(0);
     tilingData_.set_polyphaseDense(0);
@@ -2567,6 +2567,11 @@ void Conv3DDXV2InnerProductTiling::SetRunBaseShapeInfoTiling(optiling::Conv3DBac
     dxt.set_woExpand((runInfo_.dedy_w - 1) * runInfo_.stride_w + 1);
     dxt.set_dkHkWk(static_cast<uint64_t>(runInfo_.kernel_d) * runInfo_.kernel_h * runInfo_.kernel_w);
     dxt.set_hkWk(static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w);
+}
+
+bool Conv3DDXV2InnerProductTiling::IsSocVersion950() const
+{
+    return context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510;
 }
 
 bool Conv3DDXV2InnerProductTiling::IsSocVersion960() const

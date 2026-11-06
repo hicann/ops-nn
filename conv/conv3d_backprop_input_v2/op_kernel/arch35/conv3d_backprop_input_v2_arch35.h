@@ -19,7 +19,6 @@
 #include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output_arch35.h"
 #include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_vec_transpose.h"
 #include "conv3d_backprop_input_v2/conv3d_dx_small_kernel.h"
-#include "conv3d_backprop_input_v2/conv3d_dx_polyphase_func.h"
 
 using namespace AscendC;
 
@@ -36,19 +35,6 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
                                                            GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
-
-    if constexpr (loadB2Condition == TPL_TRANSPOSE_AND_REVERSE && kernelSplitMode == TPL_NO_SPLIT_KERNEL &&
-                  groupConvMode == TPL_GROUP_MODE_ORIGIN && isBasicBlockTiling && loadB1Condition == TPL_POLYPHASE) {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-        KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
-#endif
-        if constexpr (IsSameType<DTYPE_Y, half>::value || IsSameType<DTYPE_Y, bfloat16_t>::value) {
-            Conv3dPolyphase<DTYPE_Y> op;
-            op.Init(filter, out_backprop, y, tilingData);
-            op.ProcessDx();
-        }
-        return;
-    }
 
     GM_ADDR usrWsp = nullptr;
     if (workSpace != nullptr) {

@@ -14,6 +14,8 @@
  */
 
 #include "conv3d_backprop_input_v2_polyphase_tiling.h"
+#include <algorithm>
+#include <array>
 
 namespace Ops {
 namespace NN {
@@ -27,6 +29,9 @@ constexpr uint32_t MIN_PARALLEL_PHASES = 8U;
 constexpr uint32_t GATHER_INDEX_LIMIT = static_cast<uint32_t>(UINT16_MAX) + 1U;
 constexpr uint32_t PHASE_MAX_STRIDE = 63U;
 constexpr uint32_t SEGMENT_CAPACITY = 64U;
+
+using ParallelRank = std::array<uint64_t, 3>;
+using DepthwiseRank = std::array<uint64_t, 6>;
 
 bool SegmentedProduct(uint64_t left, uint64_t right, uint64_t& result)
 {
@@ -145,7 +150,7 @@ void RefineSegmentedParallel(const Conv3dBpInputV2RunInfo& runInfo, const Resour
     }
     const uint64_t limit = std::min(active, resources.cores / tasks);
     bool found = false;
-    std::array<uint64_t, 3> best{};
+    ParallelRank best{};
     for (uint64_t groups = MIN_PHASE_GROUPS; groups <= limit; ++groups) {
         uint64_t width = 0U;
         uint64_t previous = 0U;
@@ -157,8 +162,8 @@ void RefineSegmentedParallel(const Conv3dBpInputV2RunInfo& runInfo, const Resour
         if (!SegmentedParallelFits(runInfo, resources, plan, width)) {
             continue;
         }
-        const std::array<uint64_t, 3> rank{Ops::Base::CeilDiv(active, groups),
-                                           Ops::Base::CeilAlign<uint64_t>(width, BASIC_BLOCK_SIZE_16), groups};
+        const ParallelRank rank{Ops::Base::CeilDiv(active, groups),
+                                Ops::Base::CeilAlign<uint64_t>(width, BASIC_BLOCK_SIZE_16), groups};
         if (!found || rank < best) {
             found = true;
             best = rank;
@@ -210,7 +215,7 @@ bool BuildSegmentedDepthwise(const Conv3dBpInputV2RunInfo& runInfo, bool bias, c
     const uint64_t nDim = Ops::Base::CeilDiv<uint64_t>(runInfo.groups, BASIC_BLOCK_SIZE_16);
     const uint64_t maxQ = Ops::Base::CeilDiv<uint64_t>(runInfo.kernel_w, stride);
     bool found = false;
-    std::array<uint64_t, 6> best{};
+    DepthwiseRank best{};
     for (uint64_t m = BASIC_BLOCK_SIZE_16; m <= BASIC_BLOCK_SIZE_256; m += BASIC_BLOCK_SIZE_16) {
         const uint64_t cap = std::min(
             {maxQ, static_cast<uint64_t>(runInfo.dedy_w) + m - 1U, static_cast<uint64_t>(SEGMENT_CAPACITY),
@@ -229,7 +234,7 @@ bool BuildSegmentedDepthwise(const Conv3dBpInputV2RunInfo& runInfo, bool bias, c
         const uint64_t waves = Ops::Base::CeilDiv(tasks, cores);
         const uint64_t segments = CountDepthwiseSegments(runInfo, m, cap);
         const uint64_t work = SegmentedCost(tasks, segments);
-        const std::array<uint64_t, 6> rank{
+        const DepthwiseRank rank{
             SegmentedCost(waves, segments),
             SegmentedCost(waves, stride * m),
             SegmentedCost(work, (BASIC_BLOCK_SIZE_16 * BASIC_BLOCK_SIZE_16 * resources.dataBytes) * m * cap),

@@ -244,7 +244,7 @@ __aicore__ inline void LoadBL0(LocalTensor<filterType>& b0, const LocalTensor<fi
     if constexpr (filterFormat == FORMAT_FRACTAL_Z) {
         if constexpr (IS_A16W8_FZ) {
             // 源侧按物理宽 CinPhys/16 寻址，读取量按尾段有效宽 curNAlign。
-            srcBlockBaseN = segCin_ >> 4;
+            srcBlockBaseN = Convolution3DBackpropFunc::Div16(segCin_);
         }
         params.srcStride = static_cast<int32_t>(srcBlockBaseN);
     } else {

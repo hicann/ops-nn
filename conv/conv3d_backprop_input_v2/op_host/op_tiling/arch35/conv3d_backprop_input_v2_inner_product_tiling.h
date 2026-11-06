@@ -211,6 +211,7 @@ protected:
         const uint32_t scale1Count = runInfo_.quantMode1 == static_cast<uint8_t>(QuantMode::VECTOR_QUANT) ? 1U : 0U;
         return scale0Count + scale1Count;
     }
+    bool IsSocVersion950() const;
     bool IsSocVersion960() const;
 
     bool a1DbFlag_ = false;

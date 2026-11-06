@@ -27,6 +27,7 @@
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
 #include "../../../../../common/op_host/op_tiling/conv_platform_util.h"
+#include "../../../../../conv3d_backprop_input_v2/op_host/op_tiling/conv3d_backprop_input_v2_tiling_data_arch35.h"
 #include "test_cube_util.h"
 
 #define SUCCESS 0
@@ -77,6 +78,7 @@ struct Conv3DTransposeV2TilingTestParam {
     uint64_t tiling_key;
     std::string tiling_data;
     std::string tiling_data_in_repo;
+    bool has_bias = false;
 };
 
 const string COMPILE_INFO_STR_950 = R"({
@@ -212,6 +214,13 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
         result += " ";
     }
 
+    // 统一校验模式与策略字段，原模板使用默认值。
+    const optiling::Conv3DBackpropInputArch35TilingData layout;
+    for (const auto offset :
+         {layout.polyphaseMode_offset_, layout.polyphaseStrategy_offset_, layout.polyphaseDense_offset_,
+          layout.polyphaseDualAiv_offset_, layout.polyphaseBulkFilter_offset_}) {
+        result += std::to_string(reinterpret_cast<const uint8_t*>(data)[offset]) + " ";
+    }
     return result;
 }
 
@@ -287,6 +296,17 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), input_size.data(),
                    input_size.size() * sizeof(int64_t));
 
+    gert::StorageShape bias_shape;
+    std::vector<void*> input_shapes = {tensor, &x_shape, &filter_shape};
+    gert::TilingContextFaker tiling_faker;
+    tiling_faker.NodeIoNum(param.has_bias ? 4 : 3, 1);
+    if (param.has_bias) {
+        const int64_t channels = *(param.y_ori_shape.begin() + 1);
+        bias_shape = {{channels}, {channels}};
+        input_shapes.push_back(&bias_shape);
+        tiling_faker.NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND);
+    }
+
     auto tiling_data = gert::TilingData::CreateCap(2048);
     ge::DataType input_size_dtype_val = ge::DT_INT64;
     if (param.input_size_dtype == "int32") {
@@ -294,11 +314,9 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     } else if (param.input_size_dtype == "float16") {
         input_size_dtype_val = ge::DT_FLOAT16;
     }
-    auto holder = gert::TilingContextFaker()
-                      .SetOpType(op_type)
-                      .NodeIoNum(3, 1)
-                      .IrInstanceNum({1, 1, 1})
-                      .InputShapes({tensor, &x_shape, &filter_shape})
+    auto holder = tiling_faker.SetOpType(op_type)
+                      .IrInstanceNum({1, 1, 1, param.has_bias ? 1 : 0, 0})
+                      .InputShapes(input_shapes)
                       .OutputShapes(output_shapes_ref)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeAttrs({{"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.strides)},
@@ -369,7 +387,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      5,
      50331648,
      "1 1 1 1 1 1 5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 "
-     "1 1 1 1 1 2 16 1 32 16 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "},
+     "1 1 1 1 1 2 16 1 32 16 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
+     "0 0 0 0 0 "},
     {"conv3d_transpose_2_group",
      "Ascend910_95",
      "3510",
@@ -401,7 +420,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      5,
      16842754,
      "1 1 1 1 1 1 5 2 2 2 2 2 1 16 4 4 16 0 0 1 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 "
-     "1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "},
+     "1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
+     "0 0 0 0 0 "},
     {"conv3d_transpose_3_general_group",
      "Ascend910_95",
      "3510",
@@ -433,7 +453,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      20,
      16842754,
      "1 1 1 1 1 1 20 2 2 2 2 2 1 16 4 4 4 0 0 1 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 "
-     "1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "},
+     "1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
+     "0 0 0 0 0 "},
     {"conv3d_transpose_4_general_group1_ncdhw_dhwcn",
      "3510",
      "3510",
@@ -465,7 +486,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      5,
      16777218,
      "1 1 1 1 1 1 5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 "
-     "1 1 1 1 1 2 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "},
+     "1 1 1 1 1 2 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
+     "0 0 0 0 0 "},
     {"conv3d_transpose_5_general_group1_ndhwc_dhwcn",
      "3510",
      "3510",
@@ -497,7 +519,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      5,
      16777218,
      "1 1 1 1 1 1 5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 "
-     "1 1 1 1 1 2 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "},
+     "1 1 1 1 1 2 16 1 32 64 16 1 1 5 1 30 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
+     "0 0 0 0 0 "},
     {"conv3d_transpose_split_k_case1",
      "3510",
      "3510",
@@ -529,7 +552,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      32,
      16777217,
      "1 1 1 1 1 1 32 2 2 1 2 2 1 16 4 4 1 0 0 1 0 0 0 153 721 553 721 553 35 46 35 46 1 6 6 1 14 13 1 9 8 1 1 1 1 1 0 "
-     "0 0 0 0 0 0 8 8 7 7 1 1 1 1 553 112 1 128 96 112 12 12 1 1 128 0 448 105 32256 1 1 0 0 0 9 8 6 6 72 72 0 "},
+     "0 0 0 0 0 0 8 8 7 7 1 1 1 1 553 112 1 128 96 112 12 12 1 1 128 0 448 105 32256 1 1 0 0 0 9 8 6 6 72 72 0 "
+     "0 0 0 0 0 "},
     {"conv3d_transpose_split_k_case2",
      "3510",
      "3510",
@@ -562,7 +586,8 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      83886081,
      "1 1 1 1 1 1 32 2 2 1 2 2 1 16 4 4 1 0 1 1 0 0 0 1 35 120 35 120 8 3 8 3 1 5 123 1 71 1837 1 99 98 1 1 1 15 15 0 "
      "0 93 93 94 94 0 103 103 100 100 1 2 2 1 120 32 1 1024 16 32 98 98 1 1 1837 0 80 40 7840 1 1 0 0 0 197 195 61 "
-     "1831 9702 9702 0 "},
+     "1831 9702 9702 0 "
+     "0 0 0 0 0 "},
     {"conv3d_transpose_input_size_dtype_unsupported_float16",
      "3510",
      "3510",
@@ -654,6 +679,303 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      false,
      5,
+     0,
+     ""},
+    // DIRECT 普通分组，来源 DCOV-002。
+    {"conv3d_transpose_polyphase_direct_dense",
+     "3510",
+     "3510",
+     "int64",
+     {1, 1, 1, 1, 133},
+     {1, 127, 1, 1, 67},
+     {1, 127, 1, 1, 67},
+     {127, 1, 1, 1, 3},
+     {127, 1, 1, 1, 3},
+     {1, 1, 1, 1, 133},
+     {1, 1, 1, 1, 133},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 2},
+     {0, 0, 0, 0, 1, 1},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     "",
+     true,
+     true,
+     9,
+     184549377,
+     "1 1 9 1 1 1 9 2 2 1 1 1 1 16 4 4 1 0 0 1 0 3 0 1 1 127 1 127 8 1 8 1 1 1 67 1 1 133 1 1 3 1 1 1 1 2 0 0 0 0"
+     " 1 1 0 0 0 1 1 1 1 1 1 128 1 1 16 128 16 1 1 1 1 16 0 1 128 128 0 0 0 0 0 1 1 1 16 3 3 0 1 0 1 1 0 ",
+     "",
+     true},
+    // DIRECT 扩组，来源 DCOV-140。
+    {"conv3d_transpose_polyphase_direct_group_enlarge",
+     "3510",
+     "3510",
+     "int64",
+     {1, 510, 1, 1, 69},
+     {1, 255, 1, 1, 35},
+     {1, 255, 1, 1, 35},
+     {255, 2, 1, 1, 3},
+     {255, 2, 1, 1, 3},
+     {1, 510, 1, 1, 69},
+     {1, 510, 1, 1, 69},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 2},
+     {0, 0, 0, 0, 1, 1},
+     {1, 1, 1, 1, 1},
+     255,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     "",
+     true,
+     true,
+     32,
+     184549377,
+     "1 32 1 1 1 1 32 2 2 1 1 1 1 16 4 4 8 0 0 0 0 3 0 1 510 255 16 8 16 32 1 1 1 1 35 1 1 69 1 1 3 32 255 1 1 2 "
+     "0 0 0 0 1 1 0 0 0 1 1 1 1 1 1 16 16 1 48 16 48 1 1 1 1 69 0 1 16 16 0 0 0 0 0 1 1 1 48 3 3 0 1 0 1 1 0 "},
+    // PHASED 全 tap，来源 row-3。
+    {"conv3d_transpose_polyphase_one_phase",
+     "3510",
+     "3510",
+     "int64",
+     {1, 32, 1, 1, 140},
+     {1, 32, 1, 1, 65},
+     {1, 32, 1, 1, 65},
+     {32, 1, 1, 1, 12},
+     {32, 1, 1, 1, 12},
+     {1, 32, 1, 1, 140},
+     {1, 32, 1, 1, 140},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 2},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     32,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     "",
+     true,
+     true,
+     10,
+     184549377,
+     "1 1 5 1 2 1 10 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 1 32 32 16 16 2 2 1 1 1 1 65 1 1 140 1 1 12 2 32 1 1 2 0 0"
+     " 0 0 0 0 0 0 0 11 11 1 1 1 16 16 16 1 16 96 16 6 2 1 1 16 0 1 96 96 0 0 0 0 0 1 6 1 65 6 6 0 0 0 0 0 0 "},
+    // PHASED 串行 depthwise 分段，来源 row-11。
+    {"conv3d_transpose_polyphase_serial_depthwise",
+     "3510",
+     "3510",
+     "int64",
+     {8, 32, 1, 1, 4024},
+     {8, 32, 1, 1, 513},
+     {8, 32, 1, 1, 513},
+     {32, 1, 1, 1, 441},
+     {32, 1, 1, 1, 441},
+     {8, 32, 1, 1, 4024},
+     {8, 32, 1, 1, 4024},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 7},
+     {0, 0, 0, 0, 1, 0},
+     {1, 1, 1, 1, 1},
+     32,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     "",
+     true,
+     true,
+     32,
+     184549377,
+     "8 1 4 1 2 1 32 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 8 32 32 1 1 2 2 1 1 1 1 513 1 1 4024 1 1 441 32 32 1 1 7 0"
+     " 0 0 0 1 0 0 0 0 439 434 1 1 1 16 16 16 1 144 112 16 7 7 1 1 144 0 1 112 112 0 0 0 0 0 1 7 1 513 7 7 0 0 1 "
+     "0 0 0 "},
+    // PHASED 并行 depthwise 分段，来源 row-47。
+    {"conv3d_transpose_polyphase_parallel_depthwise",
+     "3510",
+     "3510",
+     "int64",
+     {1, 8, 1, 1, 461},
+     {1, 8, 1, 1, 7},
+     {1, 8, 1, 1, 7},
+     {8, 1, 1, 1, 264},
+     {8, 1, 1, 1, 264},
+     {1, 8, 1, 1, 461},
+     {1, 8, 1, 1, 461},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 33},
+     {0, 0, 0, 0, 0, 1},
+     {1, 1, 1, 1, 1},
+     8,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     "",
+     true,
+     true,
+     17,
+     184549377,
+     "1 1 1 1 1 17 17 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 1 8 8 1 1 1 1 1 1 1 1 7 1 1 461 1 1 264 8 8 1 1 33 0 0 0 "
+     "0 0 1 0 0 0 263 230 1 1 1 2 16 16 1 16 128 16 8 33 1 1 16 0 1 128 128 0 0 0 0 0 1 8 1 7 8 8 0 0 2 0 0 0 "},
+    // PHASED dense 全 tap，来源 row-9。
+    {"conv3d_transpose_polyphase_one_phase_dense",
+     "3510",
+     "3510",
+     "int64",
+     {1, 48, 1, 1, 1024},
+     {1, 96, 1, 1, 511},
+     {1, 96, 1, 1, 511},
+     {96, 48, 1, 1, 4},
+     {96, 48, 1, 1, 4},
+     {1, 48, 1, 1, 1024},
+     {1, 48, 1, 1, 1024},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 2},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     "",
+     true,
+     true,
+     24,
+     184549377,
+     "1 1 8 1 3 1 24 2 2 1 1 2 1 16 4 4 1 0 0 1 0 2 0 1 48 96 48 96 6 3 6 3 1 1 511 1 1 1024 1 1 4 1 1 1 1 2 0 0 "
+     "0 0 0 0 0 0 0 3 3 1 1 1 1 96 16 1 64 192 16 2 2 1 1 64 0 1 192 192 0 0 0 0 0 1 2 1 511 2 2 0 0 0 1 0 0 ",
+     "",
+     true},
+    // 原覆盖率补充用例。
+    {"cov_tp_fallthrough_big_kernel",
+     "3510",
+     "3510",
+     "int64",
+     {1, 16, 2, 10, 10},
+     {1, 16, 2, 10, 10},
+     {1, 16, 2, 10, 10},
+     {16, 16, 7, 7, 7},
+     {16, 16, 7, 7, 7},
+     {1, 16, 2, 30, 30},
+     {1, 16, 2, 30, 30},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0},
+     0,
+     "",
+     true,
+     false,
+     0,
+     0,
+     ""},
+    {"cov_tp_fallthrough_tiny",
+     "3510",
+     "3510",
+     "int64",
+     {1, 16, 1, 2, 2},
+     {1, 16, 1, 2, 2},
+     {1, 16, 1, 2, 2},
+     {16, 16, 1, 1, 1},
+     {16, 16, 1, 1, 1},
+     {1, 16, 1, 2, 2},
+     {1, 16, 1, 2, 2},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0},
+     0,
+     "",
+     true,
+     false,
+     0,
+     0,
+     ""},
+    {"cov_tp_fallthrough_groups4",
+     "3510",
+     "3510",
+     "int64",
+     {1, 64, 2, 10, 10},
+     {1, 16, 2, 10, 10},
+     {1, 16, 2, 10, 10},
+     {64, 16, 3, 3, 3},
+     {64, 16, 3, 3, 3},
+     {1, 64, 2, 12, 12},
+     {1, 64, 2, 12, 12},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     4,
+     "NCDHW",
+     {0, 0, 0},
+     0,
+     "",
+     true,
+     false,
+     0,
      0,
      ""},
 };

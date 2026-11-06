@@ -52,6 +52,8 @@ constexpr size_t kNDimIndexOfNFirst = 0;
 constexpr size_t kCDimIndexOfNSecond = 1;
 constexpr size_t kCDimIndexOfHWCN = 2;
 constexpr size_t kNDimIndexOfHWCN = 3;
+// 通道后置format中C维在倒数第二位(HWCN/DHWCN)时距末维的偏移
+constexpr size_t kSecondLastDimOffset = 2;
 
 ge::graphStatus InferShapeForConvBackprop(gert::InferShapeContext* context, size_t const_tensor_idx,
                                           const char* const_tensor_name, size_t dim_num)
@@ -120,7 +122,7 @@ static bool GetFilterCnDimIndex(const ge::Format& format, size_t dimNum, size_t&
             cIdx = dimNum - 1;
             nIdx = kNDimIndexOfNFirst;
         } else if (format == ge::FORMAT_HWCN) {
-            cIdx = dimNum - 2;
+            cIdx = dimNum - kSecondLastDimOffset;
             nIdx = dimNum - 1;
         } else {
             return false;
@@ -133,7 +135,7 @@ static bool GetFilterCnDimIndex(const ge::Format& format, size_t dimNum, size_t&
             cIdx = dimNum - 1;
             nIdx = kNDimIndexOfNFirst;
         } else if (format == ge::FORMAT_DHWCN) {
-            cIdx = dimNum - 2;
+            cIdx = dimNum - kSecondLastDimOffset;
             nIdx = dimNum - 1;
         } else {
             return false;

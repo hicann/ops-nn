@@ -14,6 +14,7 @@
  */
 
 #include "conv3d_backprop_input_v2_polyphase_tiling.h"
+#include <algorithm>
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h"
 #include "op_host/tiling_templates_registry.h"
 
@@ -352,16 +353,12 @@ bool Conv3DBackpropInputV2PolyphaseTiling::BuildPlan()
         runInfo_.dedy_cout <= MAX_CHANNELS && runInfo_.dedx_cin <= MAX_CHANNELS && plan.mode == Mode::PHASED &&
         plan.residency == SINGLE_PHASE_B1 && plan.strategy == Strategy::ONE_PHASE &&
         tilingRunInfo_.tilingHkWkMode == LOCAL_W_INITIAL_HK_WK && IsJointLocalWSplitCapable()) {
-        OP_LOGW(context_->GetNodeName(),
-                "Polyphase declined: SINGLE_PHASE_B1 dense row exceeds L1 and localW is capable");
         return false;
     }
     if (plan.mode == Mode::DIRECT_DENSE && PreferSmallShape(plan.singleCoreM)) {
-        OP_LOGW(context_->GetNodeName(), "Polyphase declined: sparse DIRECT fits SmallShape L1 budget");
         return false;
     }
     if (PreferLegacy(plan, resources.cores)) {
-        OP_LOGW(context_->GetNodeName(), "Polyphase declined: legacy work and L1 admission");
         return false;
     }
     if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 &&
@@ -381,24 +378,36 @@ bool Conv3DBackpropInputV2PolyphaseTiling::BuildPlan()
 
 bool Conv3DBackpropInputV2PolyphaseTiling::IsCapable()
 {
-    // 仅转置卷积准入，DX 沿用原模板。
-    if (opType_ != optiling::OpTypeV2::kConv3DTransposeV2 || !IsPolyphaseInput(context_, runInfo_) || !BuildPlan()) {
+    // Ascend950转置卷积准入
+    if (opType_ != optiling::OpTypeV2::kConv3DTransposeV2 || !IsSocVersion950()) {
         return false;
     }
+    if (!IsPolyphaseInput(context_, runInfo_) || !BuildPlan()) {
+        return false;
+    }
+    const auto mode = static_cast<Polyphase::Mode>(tilingData_.get_polyphaseMode());
+    if (mode == Polyphase::Mode::PHASED) {
+        return IsPhasedCapable();
+    }
+    return mode != Polyphase::Mode::DIRECT_DENSE || IsDirectDenseCapable();
+}
+
+bool Conv3DBackpropInputV2PolyphaseTiling::IsPhasedCapable()
+{
     auto& data = tilingData_;
-    // 短输入跨多输出块、浅归约大 stride 或 dense 分段时，准备和同步难以摊销。
-    if (IsArchAfter35(context_) &&
-        ((data.get_polyphaseMode() == static_cast<uint8_t>(Polyphase::Mode::PHASED) &&
-          ((data.get_polyphaseStrategy() == static_cast<uint8_t>(Polyphase::Strategy::SERIAL_DEPTHWISE) &&
-            runInfo_.dedy_w < data.get_baseM() && data.get_mDim() > 1) ||
-           data.get_polyphaseStrategy() == static_cast<uint8_t>(Polyphase::Strategy::DENSE_SEGMENTED))) ||
-         (data.get_polyphaseMode() == static_cast<uint8_t>(Polyphase::Mode::DIRECT_DENSE) && data.get_enlarge() == 1 &&
-          runInfo_.dedy_cout / runInfo_.groups < BASIC_BLOCK_SIZE_16 && runInfo_.dedy_w <= BASIC_BLOCK_SIZE_16 &&
-          runInfo_.stride_w >= BASIC_BLOCK_SIZE_16))) {
+    // 短输入跨多输出块或 dense 分段，准备和同步难以摊销。
+    return !((data.get_polyphaseStrategy() == static_cast<uint8_t>(Polyphase::Strategy::SERIAL_DEPTHWISE) &&
+              runInfo_.dedy_w < data.get_baseM() && data.get_mDim() > 1) ||
+             data.get_polyphaseStrategy() == static_cast<uint8_t>(Polyphase::Strategy::DENSE_SEGMENTED));
+}
+
+bool Conv3DBackpropInputV2PolyphaseTiling::IsDirectDenseCapable()
+{
+    auto& data = tilingData_;
+    // 浅归约的短输入配大 stride，准备开销难以摊销。
+    if (data.get_enlarge() == 1 && runInfo_.dedy_cout / runInfo_.groups < BASIC_BLOCK_SIZE_16 &&
+        runInfo_.dedy_w <= BASIC_BLOCK_SIZE_16 && runInfo_.stride_w >= BASIC_BLOCK_SIZE_16) {
         return false;
-    }
-    if (!IsArchAfter35(context_) || data.get_polyphaseMode() != static_cast<uint8_t>(Polyphase::Mode::DIRECT_DENSE)) {
-        return true;
     }
     constexpr uint64_t c0 = BASIC_BLOCK_SIZE_16;
     const uint64_t kernel = static_cast<uint64_t>(runInfo_.kernel_w);
@@ -435,15 +444,14 @@ bool Conv3DBackpropInputV2PolyphaseTiling::IsCapable()
     // C0 通道条带的展开字节量，以 L1 双缓冲单 bank 为经验成本尺度；不改变资源合法性。
     const uint64_t inputBankLimit = platformInfo_.l1_size / DB_ON / c0 / runInfo_.a_dtype_bytes / stride;
     return live != 0U && (compact || reduction || wide) &&
-           (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch != NpuArch::DAV_3510 ||
-            !RejectDirectSetup(runInfo_, live, tile, data, hasBiasFlag_, inputBankLimit));
+           !RejectDirectSetup(runInfo_, live, tile, data, hasBiasFlag_, inputBankLimit);
 }
 
 ge::graphStatus Conv3DBackpropInputV2PolyphaseTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus Conv3DBackpropInputV2PolyphaseTiling::DoLibApiTiling()
 {
-    OP_LOGD(opName_, "Enable polyphase tiling");
+    OP_LOGD(context_->GetNodeName(), "Enable polyphase tiling");
     return ge::GRAPH_SUCCESS;
 }
 

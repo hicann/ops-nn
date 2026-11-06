@@ -15,6 +15,8 @@
 #ifndef CONV3D_BACKPROP_INPUT_V2_COMMON_H
 #define CONV3D_BACKPROP_INPUT_V2_COMMON_H
 
+#include <cstdint>
+
 namespace Ops {
 namespace NN {
 namespace Conv {

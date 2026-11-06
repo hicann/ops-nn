@@ -14,6 +14,9 @@
  */
 
 #include "conv3d_backprop_input_v2_polyphase_tiling.h"
+#include <algorithm>
+#include <limits>
+#include <numeric>
 
 namespace Ops {
 namespace NN {
@@ -118,36 +121,37 @@ void RankDirect(DirectSearch& search, const DirectTile& tileInfo, uint64_t k0, u
     const uint64_t fullK = Ops::Base::CeilAlign<uint64_t>(runInfo.dedy_cout / runInfo.groups, BASIC_BLOCK_SIZE_16);
     const uint64_t ci = runInfo.dedy_cout / runInfo.groups;
     const uint64_t kw = runInfo.kernel_w;
-    const uint64_t stride = runInfo.stride_w;
-    const uint64_t cores = resources.cores;
     const uint64_t ka = requestA ? fullK : chunk;
     const uint64_t kb = requestB ? fullK : chunk;
     const bool aFull = requestA || ka == fullK;
     const bool bFull = requestB || kb == fullK;
+    if (ka > UINT32_MAX || kb > UINT32_MAX || k0 == 0U || k0 > UINT32_MAX) {
+        return;
+    }
     const uint64_t l1 = tileInfo.m * ka * resources.dataBytes * (aFull ? 1U : DB_ON) +
                         tileInfo.n * kb * resources.dataBytes * (bFull ? 1U : DB_ON);
     if (l1 > resources.l1) {
         return;
     }
-    const uint64_t blocks = std::min(cores, tileInfo.tasks);
+    const uint64_t blocks = std::min(resources.cores, tileInfo.tasks);
     const uint64_t waves = Ops::Base::CeilDiv(tileInfo.tasks, blocks);
     const long double cube = static_cast<long double>(tileInfo.m) * tileInfo.n * fullK * MAC_OPERATIONS;
     const long double gm = static_cast<long double>(tileInfo.m + tileInfo.channels * kw) * ci * resources.dataBytes;
-    const long double epilogue = static_cast<long double>(tileInfo.channels) * tileInfo.tile * kw / stride;
+    const long double epilogue = static_cast<long double>(tileInfo.channels) * tileInfo.tile * kw / runInfo.stride_w;
     const uint64_t transfers = Ops::Base::CeilDiv(fullK, ka) + Ops::Base::CeilDiv(fullK, kb);
-    const long double cost = waves *
-                             (cube / MODEL_CUBE_THROUGHPUT + gm / MODEL_TRANSFER_THROUGHPUT +
-                              tileInfo.pBytes / MODEL_TRANSFER_THROUGHPUT + epilogue / MODEL_EPILOGUE_THROUGHPUT +
-                              transfers * MODEL_TRANSFER_SETUP + fullK / k0 * MODEL_K_TILE_SETUP);
+    const long double cost = waves * (cube / MODEL_CUBE_THROUGHPUT + gm / MODEL_TRANSFER_THROUGHPUT +
+                                      tileInfo.pBytes / MODEL_TRANSFER_THROUGHPUT +
+                                      epilogue / MODEL_EPILOGUE_THROUGHPUT + transfers * MODEL_TRANSFER_SETUP +
+                                      static_cast<long double>(fullK) / k0 * MODEL_K_TILE_SETUP);
     if (cost < search.best) {
         search.best = cost;
         search.plan.baseM = tileInfo.m;
         search.plan.baseN = tileInfo.n;
-        search.plan.baseK = k0;
+        search.plan.baseK = static_cast<uint32_t>(k0);
         search.plan.singleCoreM = tileInfo.tile;
         search.plan.channels = tileInfo.channels;
-        search.plan.ka = ka;
-        search.plan.kb = kb;
+        search.plan.ka = static_cast<uint32_t>(ka);
+        search.plan.kb = static_cast<uint32_t>(kb);
         search.plan.mDim = tileInfo.mDim;
         search.plan.nDim = tileInfo.nDim;
         search.plan.coreNum = blocks;
@@ -158,10 +162,13 @@ void RankDirect(DirectSearch& search, const DirectTile& tileInfo, uint64_t k0, u
 void SearchDirectK(DirectSearch& search, const DirectTile& tile)
 {
     const auto& resources = search.resources;
+    if (resources.dataBytes == 0U || tile.m == 0U || tile.n == 0U) {
+        return;
+    }
     const uint64_t fullK = Ops::Base::CeilAlign<uint64_t>(search.runInfo.dedy_cout / search.runInfo.groups,
                                                           BASIC_BLOCK_SIZE_16);
-    const uint64_t k0Max = std::min(fullK, std::min(resources.l0a / ((DB_ON * resources.dataBytes) * tile.m),
-                                                    resources.l0b / ((DB_ON * resources.dataBytes) * tile.n)));
+    const uint64_t k0Max = std::min(fullK, std::min(resources.l0a / DB_ON / resources.dataBytes / tile.m,
+                                                    resources.l0b / DB_ON / resources.dataBytes / tile.n));
     for (uint64_t k0 = BASIC_BLOCK_SIZE_16; k0 <= k0Max; k0 += BASIC_BLOCK_SIZE_16) {
         if (fullK % k0 != 0U) {
             continue;
@@ -183,23 +190,25 @@ void SearchDirectTile(DirectSearch& search, uint64_t channels, uint64_t tile, ui
 {
     const auto& runInfo = search.runInfo;
     const auto& resources = search.resources;
-    const uint64_t co = runInfo.dedx_cin / runInfo.groups;
-    const uint64_t wi = runInfo.dedy_w;
-    const uint64_t wo = runInfo.dedx_w;
+    if (tile == 0U || runInfo.kernel_w <= 0 || runInfo.dilation_w <= 0) {
+        return;
+    }
     const uint64_t stride = runInfo.stride_w;
     const uint64_t receptive = (static_cast<uint64_t>(runInfo.kernel_w) - 1U) * runInfo.dilation_w;
+    if (receptive > UINT64_MAX - (tile - 1U)) {
+        return;
+    }
+    const uint64_t span = tile - 1U + receptive;
     const uint64_t localDilation = runInfo.dilation_w / std::gcd(stride, static_cast<uint64_t>(runInfo.dilation_w));
-    const uint64_t ubLimit = resources.ub;
-    const uint64_t upper = Ops::Base::CeilDiv(receptive + tile - 1U, stride) +
-                           (BASIC_BLOCK_SIZE_256 / resources.accBytes);
+    const uint64_t upper = Ops::Base::CeilDiv(span, stride) + (BASIC_BLOCK_SIZE_256 / resources.accBytes);
     const uint64_t lower = Ops::Base::CeilDiv(receptive, stride) + localDilation;
     if (upper > INT32_MAX || lower > INT32_MAX) {
         return;
     }
-    const uint64_t m = Ops::Base::CeilAlign<uint64_t>(std::min(wi, (tile - 1U + receptive) / stride + 1U),
+    const uint64_t m = Ops::Base::CeilAlign<uint64_t>(std::min<uint64_t>(runInfo.dedy_w, span / stride + 1U),
                                                       BASIC_BLOCK_SIZE_16);
-    const uint64_t mDim = Ops::Base::CeilDiv(wo, tile);
-    const uint64_t nDim = Ops::Base::CeilDiv(co, channels);
+    const uint64_t mDim = Ops::Base::CeilDiv<uint64_t>(runInfo.dedx_w, tile);
+    const uint64_t nDim = Ops::Base::CeilDiv<uint64_t>(runInfo.dedx_cin / runInfo.groups, channels);
     const uint64_t tasks = DirectTasks(runInfo, mDim, nDim);
     const uint64_t outputBytes = Ops::Base::CeilAlign<uint64_t>(
         channels * Ops::Base::CeilAlign<uint64_t>(tile, BASIC_BLOCK_SIZE_16) * resources.dataBytes, BYTE_BLOCK);
@@ -207,7 +216,7 @@ void SearchDirectTile(DirectSearch& search, uint64_t channels, uint64_t tile, ui
     const uint64_t pBytes = Ops::Base::CeilAlign<uint64_t>(m * n * resources.accBytes, BYTE_BLOCK);
     const uint64_t ub = DB_ON * pBytes + DB_ON * outputBytes + biasBytes;
     const uint64_t l0c = m * n * resources.accBytes;
-    if (m == 0U || m > DIRECT_MAX_M || tasks == 0U || tasks > UINT32_MAX || ub > ubLimit || l0c > resources.l0c) {
+    if (m == 0U || m > DIRECT_MAX_M || tasks == 0U || tasks > UINT32_MAX || ub > resources.ub || l0c > resources.l0c) {
         return;
     }
     SearchDirectK(search, {channels, tile, m, n, mDim, nDim, tasks, pBytes});
@@ -221,14 +230,12 @@ bool BuildDirect(const Conv3dBpInputV2RunInfo& runInfo, const Resources& resourc
     }
     const uint64_t ci = runInfo.dedy_cout / runInfo.groups;
     const uint64_t co = runInfo.dedx_cin / runInfo.groups;
-    const uint64_t wi = runInfo.dedy_w;
     const uint64_t wo = runInfo.dedx_w;
     const uint64_t kw = runInfo.kernel_w;
     const uint64_t fullK = Ops::Base::CeilAlign<uint64_t>(ci, BASIC_BLOCK_SIZE_16);
-    const uint64_t cores = resources.cores;
-    const uint64_t ubLimit = resources.ub;
-    if (cores == 0U || co * kw > UINT32_MAX || ci > UINT32_MAX - (BASIC_BLOCK_SIZE_16 - 1U) ||
-        !TensorFits(runInfo.batch_n, runInfo.dedy_cout, wi, resources.dataBytes) ||
+    if (resources.cores == 0U || resources.dataBytes == 0U || resources.accBytes == 0U || co * kw > UINT32_MAX ||
+        ci > UINT32_MAX - (BASIC_BLOCK_SIZE_16 - 1U) ||
+        !TensorFits(runInfo.batch_n, runInfo.dedy_cout, runInfo.dedy_w, resources.dataBytes) ||
         !TensorFits(runInfo.batch_n, runInfo.dedx_cin, wo, resources.dataBytes) ||
         !TensorFits(runInfo.dedy_cout, co, kw, resources.dataBytes) ||
         !TensorFits(1U, 1U, runInfo.dedx_cin, resources.accBytes)) {
@@ -238,8 +245,8 @@ bool BuildDirect(const Conv3dBpInputV2RunInfo& runInfo, const Resources& resourc
     DirectSearch search{runInfo, resources};
     for (uint64_t channels = 1U; channels <= channelLimit; ++channels) {
         const uint64_t n = Ops::Base::CeilAlign<uint64_t>(channels * kw, BASIC_BLOCK_SIZE_16);
-        const uint64_t maxTile = std::min<uint64_t>(DIRECT_MAX_WIDTH,
-                                                    std::min<uint64_t>(wo, ubLimit / (resources.accBytes * channels)));
+        const uint64_t maxTile = std::min<uint64_t>(
+            DIRECT_MAX_WIDTH, std::min<uint64_t>(wo, resources.ub / (resources.accBytes * channels)));
         for (uint64_t ordinal = 0U; ordinal <= maxTile / BASIC_BLOCK_SIZE_16; ++ordinal) {
             const uint64_t tile = ordinal == 0U ? maxTile : ordinal * BASIC_BLOCK_SIZE_16;
             if (tile == 0U) {
@@ -317,8 +324,8 @@ long double ScoreDirectGroup(const Conv3dBpInputV2RunInfo& runInfo, bool bias, c
                     static_cast<long double>(runInfo.c_dtype_bytes) * matrix * (dual ? resources.vectorRatio : 1U) /
                         MODEL_TRANSFER_THROUGHPUT +
                     static_cast<long double>(runInfo.a_dtype_bytes) * c * w / MODEL_TRANSFER_THROUGHPUT +
-                    (MODEL_VECTOR_SETUP + MODEL_BIAS_SETUP * bias) * laneC * vectors + MODEL_TAP_SETUP * laneC * taps +
-                    MODEL_PHASE_SETUP * phase + MODEL_TASK_SETUP +
+                    (MODEL_VECTOR_SETUP + (bias ? MODEL_BIAS_SETUP : 0U)) * laneC * vectors +
+                    MODEL_TAP_SETUP * laneC * taps + MODEL_PHASE_SETUP * phase + MODEL_TASK_SETUP +
                     MODEL_GROUP_TRANSFER_SETUP *
                         (Ops::Base::CeilDiv<uint64_t>(k, plan.ka) + Ops::Base::CeilDiv<uint64_t>(k, plan.kb)) +
                     MODEL_K_TILE_SETUP * k / plan.baseK + pack);
@@ -328,7 +335,10 @@ Plan MakeGroupPlan(uint64_t e, uint64_t c, uint64_t k, uint64_t n, uint64_t m, u
                    uint64_t cores, uint64_t tasks, uint64_t k0)
 {
     Plan candidate{};
-    candidate.baseM = m;
+    if (m == 0U || m > DIRECT_MAX_M) {
+        return candidate;
+    }
+    candidate.baseM = static_cast<uint32_t>(m);
     candidate.baseN = n;
     candidate.baseK = k0;
     candidate.singleCoreM = tile;
@@ -348,26 +358,24 @@ void SearchGroupTile(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Res
                      uint64_t tile, long double& best, Plan& plan)
 {
     const uint64_t ci = runInfo.dedy_cout / runInfo.groups;
-    const uint64_t co = runInfo.dedx_cin / runInfo.groups;
-    const uint64_t c = e * co;
+    const uint64_t c = e * (runInfo.dedx_cin / runInfo.groups);
     const uint64_t k = Ops::Base::CeilAlign<uint64_t>(e * ci, BASIC_BLOCK_SIZE_16);
     const uint64_t n = Ops::Base::CeilAlign<uint64_t>(c * runInfo.kernel_w, BASIC_BLOCK_SIZE_16);
     const uint64_t receptive = static_cast<uint64_t>(runInfo.kernel_w - 1) * runInfo.dilation_w;
-    const uint64_t cores = resources.cores;
     const uint64_t m = Ops::Base::CeilAlign<uint64_t>(
         std::min<uint64_t>(runInfo.dedy_w, (tile - 1U + receptive) / runInfo.stride_w + 1U), BASIC_BLOCK_SIZE_16);
     const uint64_t mDim = Ops::Base::CeilDiv<uint64_t>(runInfo.dedx_w, tile);
     const uint64_t tasks = DirectTasks(runInfo, mDim, 1U, e);
-    if (tasks == 0U) {
+    if (tasks == 0U || m == 0U || n == 0U || resources.dataBytes == 0U) {
         return;
     }
-    const uint64_t k0Max = std::min(k, std::min(resources.l0a / ((DB_ON * resources.dataBytes) * m),
-                                                resources.l0b / ((DB_ON * resources.dataBytes) * n)));
+    const uint64_t k0Max = std::min(
+        k, std::min(resources.l0a / DB_ON / resources.dataBytes / m, resources.l0b / DB_ON / resources.dataBytes / n));
     for (uint64_t k0 = BASIC_BLOCK_SIZE_16; k0 <= k0Max; k0 += BASIC_BLOCK_SIZE_16) {
         if (k % k0 != 0U) {
             continue;
         }
-        Plan candidate = MakeGroupPlan(e, c, k, n, m, tile, mDim, cores, tasks, k0);
+        Plan candidate = MakeGroupPlan(e, c, k, n, m, tile, mDim, resources.cores, tasks, k0);
         if (!DirectGroupFits(runInfo, resources, candidate)) {
             continue;
         }
@@ -381,8 +389,7 @@ void SearchGroupTile(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Res
 
 void EnlargeGroups(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Resources& resources, Plan& plan)
 {
-    const uint64_t cores = resources.cores;
-    if (runInfo.groups <= 1 || DirectTasks(runInfo, plan.mDim, plan.nDim) <= cores) {
+    if (runInfo.groups <= 1 || DirectTasks(runInfo, plan.mDim, plan.nDim) <= resources.cores) {
         return;
     }
     const uint64_t ci = runInfo.dedy_cout / runInfo.groups;
@@ -392,7 +399,6 @@ void EnlargeGroups(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Resou
                                  BASIC_BLOCK_SIZE_16 / std::gcd<uint64_t>(co, BASIC_BLOCK_SIZE_16)));
     const uint64_t baseK = Ops::Base::CeilAlign<uint64_t>(ci, BASIC_BLOCK_SIZE_16);
     const uint64_t baseN = Ops::Base::CeilAlign<uint64_t>(co * runInfo.kernel_w, BASIC_BLOCK_SIZE_16);
-    const uint64_t ubLimit = resources.ub;
     long double best = GROUP_REFINE_MAX_COST_RATIO * ScoreDirectGroup(runInfo, bias, resources, plan);
     for (uint64_t e = MIN_GROUP_ENLARGE; e <= eMax; ++e) {
         const uint64_t c = e * co;
@@ -403,7 +409,7 @@ void EnlargeGroups(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Resou
             continue;
         }
         const uint64_t maxTile = std::min<uint64_t>(
-            DIRECT_MAX_WIDTH, std::min<uint64_t>(runInfo.dedx_w, ubLimit / (resources.accBytes * c)));
+            DIRECT_MAX_WIDTH, std::min<uint64_t>(runInfo.dedx_w, resources.ub / (resources.accBytes * c)));
         for (uint64_t ordinal = 0U; ordinal <= maxTile / BASIC_BLOCK_SIZE_16; ++ordinal) {
             const uint64_t tile = ordinal == 0U ? maxTile : ordinal * BASIC_BLOCK_SIZE_16;
             if (tile == 0U) {

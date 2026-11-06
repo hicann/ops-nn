@@ -13,10 +13,6 @@
 
 #include "../conv3d_backprop_input_v2_inner_product_tiling.h"
 #include "conv/common/op_host/op_tiling/conv_platform_util.h"
-#include <algorithm>
-#include <array>
-#include <limits>
-#include <numeric>
 #include <util/math_util.h>
 
 namespace Ops {
@@ -42,6 +38,8 @@ protected:
 private:
     bool PreferLegacy(const Polyphase::Plan& plan, uint64_t cores) const;
     bool BuildPlan();
+    bool IsPhasedCapable();
+    bool IsDirectDenseCapable();
     bool PreferSmallShape(uint32_t singleCoreM) const;
     bool FitsSmallShape(uint64_t columns) const
     {
@@ -132,10 +130,6 @@ inline bool IsDepthwise(const Conv3dBpInputV2RunInfo& runInfo)
 
 inline bool IsPolyphaseInput(const gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfo)
 {
-    const auto* compile = context->GetCompileInfo<Conv3DBackpropV2CompileInfo>();
-    if (compile->npuArch != NpuArch::DAV_3510) {
-        return false;
-    }
     if (runInfo.dedy_d != 1 || runInfo.dedy_h != 1 || runInfo.dedx_d != 1 || runInfo.dedx_h != 1 ||
         runInfo.kernel_d != 1 || runInfo.kernel_h != 1 || runInfo.stride_d != 1 || runInfo.stride_h != 1 ||
         runInfo.dilation_d != 1 || runInfo.dilation_h != 1 || runInfo.pad_h != 0 || runInfo.pad_t != 0 ||
@@ -148,12 +142,6 @@ inline bool IsPolyphaseInput(const gert::TilingContext* context, const Conv3dBpI
     }
     const auto* yDesc = context->GetOutputDesc(0U);
     if (yDesc->GetDataType() != ge::DT_BF16 && yDesc->GetDataType() != ge::DT_FLOAT16) {
-        return false;
-    }
-    constexpr uint32_t vectorRatio = 2U;
-    const auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    if (platform.GetCoreNumAiv() != vectorRatio * platform.GetCoreNumAic()) {
-        OP_LOGD(context->GetNodeName(), "Polyphase requires a 1:2 AIC/AIV core ratio");
         return false;
     }
     return true;
