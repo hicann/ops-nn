@@ -74,6 +74,7 @@ public:
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opInterface.value", "sparse_apply_adagrad");
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend960dt", aicoreConfig);
     }
 };
 
