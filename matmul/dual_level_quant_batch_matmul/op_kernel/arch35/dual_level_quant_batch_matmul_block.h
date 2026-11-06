@@ -185,6 +185,14 @@ __aicore__ inline void DualLevelQuantBatchMatmulBaseBlock::UpdateBlockParams(uin
     if (params_.nIndex >= params_.nBaseNormCnt) {
         offset_.singleCoreN = params_.nIndex >= (params_.nCnt - 1) ? params_.nBaseTailLast : params_.nBaseTailMain;
     }
+    // 尾窗口不满一轮时，最后一轮多余的核不参与计算，否则越界index会取模回绕到有效尾块上造成跨核重复写。
+    // lastRoundTiles为0时最后一轮是整轮，不存在多余尾核，不能直接比较，否则会把整轮核全部清零
+    uint64_t lastRoundTiles = params_.totalCnt % tiling_->usedCoreNum;
+    if (lastRoundTiles != 0 && roundIdx == params_.round - 1 && blockIdx_ >= params_.totalTailTile * lastRoundTiles) {
+        offset_.singleCoreM = 0;
+        offset_.singleCoreN = 0;
+        return;
+    }
     // 如果Tiling配置不需要对Tile进行核间再切分(TailTile为1)，则直接结束
     if (tiling_->mTailTile == 1 && tiling_->nTailTile == 1) {
         return;
@@ -202,9 +210,8 @@ __aicore__ inline void DualLevelQuantBatchMatmulBaseBlock::UpdateBlockParams(uin
         // 更新尾块重切分、分核后、位于原始tile中的偏移量
         params_.mSplitAddrOffset = mSplitIdx * singleCoreMSplit;
         params_.nSplitAddrOffset = nSplitIdx * singleCoreNSplit;
-        // 偏移量已经超出了tile总大小或多余的尾核，不需要参与计算
-        if (params_.mSplitAddrOffset >= offset_.singleCoreM || params_.nSplitAddrOffset >= offset_.singleCoreN ||
-            blockIdx_ >= (params_.totalTailTile * (params_.totalCnt % tiling_->usedCoreNum))) {
+        // 重切分偏移量已超出tile总大小的核不需要参与计算；多余尾核已在上方守卫统一清零，此处不再重复判断
+        if (params_.mSplitAddrOffset >= offset_.singleCoreM || params_.nSplitAddrOffset >= offset_.singleCoreN) {
             offset_.singleCoreM = 0;
             offset_.singleCoreN = 0;
             return;
