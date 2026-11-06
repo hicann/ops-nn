@@ -39,7 +39,7 @@ struct SoftplusGradDag {
     using OpExpU = Bind<Vec::Cast<U, float, CastModeFromFloat>, OpExpF32>;
     using OpDenomU = Bind<Vec::Adds<U>, OpExpU, ConstOne>;
     using OpDenomF32 = Bind<Vec::Cast<float, U, CastModeToFloat>, OpDenomU>;
-    using OpResultF32 = Bind<Vec::Div<float>, OpGradF32, OpDenomF32>;
+    using OpResultF32 = Bind<Vec::DivHighPrecision<float>, OpGradF32, OpDenomF32>;
     using OpResult = Bind<Vec::Cast<U, float, CastModeFromFloat>, OpResultF32>;
 
     using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpResult>;
