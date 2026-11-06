@@ -330,7 +330,6 @@ public:
         LocalTensor<float> batchMeanTensor = batchMeanQueue.AllocTensor<float>();
         LocalTensor<float> batchRstdTensor = batchRstdQueue.AllocTensor<float>();
         LastFinalize(batchMeanTensor, batchRstdTensor, allMeanTensor, alllVarTensor, countTensor2, tmpTensor);
-        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
 
         LocalTensor<T2> gammaTensor = gammaQueue.AllocTensor<T2>();
         LocalTensor<T2> betaTensor = betaQueue.AllocTensor<T2>();
@@ -370,7 +369,6 @@ public:
         // 需要等runningMeanVar计算完成后，才能计算成Rstd
         NormCommon::ComputeRstdNewtonRaphson<false>(batchRstdTensor, batchRstdTensor, static_cast<uint32_t>(currentA),
                                                     tilingData->epsilon, 1.0f, VL_F32);
-        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
 
         NormalizeX(batchMeanTensor, batchRstdTensor, gammaTensor, betaTensor);
 
@@ -619,7 +617,17 @@ private:
                 RegTensor<float> delta2;
                 RegTensor<float> delta3;
                 RegTensor<float> delat4;
+                // ±inf 输入保护，同 batch_norm_ext2
+                RegTensor<float> zeroDelta;
+                RegTensor<float> absMean;
+                RegTensor<float> sumX1Mean;
+                MaskReg infMeanMask;
+                MaskReg nanSumMask;
+                MaskReg notNanSumMask;
+                MaskReg zeroDeltaMask;
                 MaskReg mask0;
+                MaskReg pregAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                Duplicate(zeroDelta, 0.0f, pregAll);
                 uint32_t sreg0 = processR0Num * processR1Num;
                 for (uint16_t i = 0; i < loopCount; i++) {
                     mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
@@ -628,6 +636,15 @@ private:
                     DataCopy(tmpM2, m2TensorAddr + a_idx * formerRAlignNum + i * VL_F32);
                     // delata1 = x1 - mean
                     Sub(delta1, x1, tmpMean, mask0);
+                    // mean 为 ±inf 且 x1 + mean 非 NaN 时清零 delta1，保持 mean 不变；
+                    // 异号 inf 时 x1 + mean 为 NaN，保留 delta1
+                    AscendC::Reg::Abs(absMean, tmpMean, mask0);
+                    Compares(infMeanMask, absMean, POS_INF, mask0);
+                    AscendC::Reg::Add(sumX1Mean, x1, tmpMean, mask0);
+                    AscendC::Reg::Compare<float, AscendC::CMPMODE::NE>(nanSumMask, sumX1Mean, sumX1Mean, mask0);
+                    AscendC::Reg::Not(notNanSumMask, nanSumMask, mask0);
+                    AscendC::Reg::And(zeroDeltaMask, infMeanMask, notNanSumMask, mask0);
+                    Select(delta1, zeroDelta, delta1, zeroDeltaMask);
                     // delta2 = delta1 * scale
                     Muls(delta2, delta1, scale, mask0);
                     // mean = mean + delta2

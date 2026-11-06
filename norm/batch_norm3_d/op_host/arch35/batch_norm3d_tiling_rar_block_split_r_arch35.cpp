@@ -65,10 +65,21 @@ public:
 protected:
     bool IsCapable() override
     {
-        // RAR_BLOCK_SPLIT_R 在当前 CANN 版本存在 SyncAll 之后调用 outline 版 vector 段的
-        // 设备侧异常（实测 a_=1/4/11/34 且大 R 场景全部 VEC_ERROR），暂整类禁用，
-        // 交由后续模板（如 Welford，优先级 30000）处理。
-        return false;
+        OP_LOGI(context_->GetNodeName(),
+                "BatchNorm3DRARBlockSplitRTiling IsCapable: enter IsCapable function to judge.");
+        // R0 多核切分时 tail A 统计量有误，交由 Welford 模板处理
+        if (r1_ < static_cast<int64_t>(aicoreParams_.blockDim)) {
+            return false;
+        }
+        if (a_ * NUM_TWO >= static_cast<int64_t>(aicoreParams_.blockDim)) {
+            return false;
+        }
+        OP_LOGI(
+            context_->GetNodeName(),
+            "BatchNorm3DRARBlockSplitRTiling IsCapable true! ready to use BatchNorm3DRARBlockSplitRTiling (tilingkey: "
+            "%lu) !",
+            TILINGKEY_RAR_BLOCK_SPLIT_R);
+        return true;
     }
     // 3、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;
