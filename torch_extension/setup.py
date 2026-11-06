@@ -101,6 +101,9 @@ for _subdir in ("csrc", "common"):
 _op_category_inits = {}
 _op_py_files = []
 _op_cpp_files = []
+# Extra op Python modules imported at runtime but not named after the operator
+# (e.g. default parameter tables such as _perm_defaults.py).
+_OP_EXTRA_PY_FILES = ("_perm_defaults.py",)
 
 
 def _collect_cpp(csrc_dir):
@@ -120,10 +123,10 @@ def _collect_cpp(csrc_dir):
         _op_cpp_files.append((dst_rel, src_abs))
 
 
-def _collect_op(cat, name, torch_extension):
+def _collect_op(cat, name, torch_extension, extra_py_files=_OP_EXTRA_PY_FILES):
     # Collect one operator's torch_extension dir, staging its files under (cat, name).
     _selected_op_categories.append((cat, name))
-    for f in ("__init__.py", "%s.py" % name):
+    for f in ("__init__.py", "%s.py" % name, *extra_py_files):
         f_src = os.path.join(torch_extension, f)
         if os.path.isfile(f_src):
             _op_py_files.append((os.path.join("ops", cat, name, f), f_src))
@@ -197,7 +200,7 @@ if os.path.isdir(_staged_ops_dir):
             if (cat, name) in _selected_op_categories:
                 continue
             _selected_op_categories.append((cat, name))
-            for f in ("__init__.py", "%s.py" % name):
+            for f in ("__init__.py", "%s.py" % name, *_OP_EXTRA_PY_FILES):
                 f_src = os.path.join(op_path, f)
                 if os.path.isfile(f_src):
                     _op_py_files.append((os.path.join("ops", cat, name, f), f_src))
