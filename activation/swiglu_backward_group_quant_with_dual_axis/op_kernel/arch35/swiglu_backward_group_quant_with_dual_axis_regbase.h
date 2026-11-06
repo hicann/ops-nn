@@ -218,7 +218,7 @@ SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, h
                                                                 GM_ADDR y2, GM_ADDR mxScale2)
 {
     (void)gradX;
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
 

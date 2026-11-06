@@ -14,7 +14,7 @@
 
 using namespace SwigluBackwardGroupQuantWithDualAxisOp;
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201)
 #define SAVE_MX_OVERFLOW_MODE() \
     int64_t overflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>()
 #define RESTORE_MX_OVERFLOW_MODE() AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(overflowMode)

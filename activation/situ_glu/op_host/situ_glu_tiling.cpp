@@ -71,7 +71,7 @@ bool SituGluTiling::IsCapable()
 {
     if (socVersion_ != platform_ascendc::SocVersion::ASCEND910_93 &&
         socVersion_ != platform_ascendc::SocVersion::ASCEND910B &&
-        socVersion_ != platform_ascendc::SocVersion::ASCEND950) {
+        socVersion_ != platform_ascendc::SocVersion::ASCEND950 && !Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
     }
     return true;

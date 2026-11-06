@@ -10,8 +10,8 @@
 
 message(STATUS "=== Debug: start ops.norm.group_norm.op_host.CMakeLists.txt ")
 
-set(SUPPORT_COMPUTE_UNIT "ascend950")
-set(SUPPORT_TILING_DIR "arch35")
+set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend960dt")
+set(SUPPORT_TILING_DIR "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE group_norm
                     ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}
                     TILING_DIR ${SUPPORT_TILING_DIR} DEPENDENCIES group_norm_silu norm_common)

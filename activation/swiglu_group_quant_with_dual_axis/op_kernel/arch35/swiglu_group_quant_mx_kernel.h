@@ -351,7 +351,7 @@ __aicore__ inline void SwigluGroupQuantMxKernel<xDtype, y1Dtype, mode, roundMode
                                                                                   GM_ADDR mxScale1, GM_ADDR y2,
                                                                                   GM_ADDR mxScale2, GM_ADDR yOrigin)
 {
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
 

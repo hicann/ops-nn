@@ -1,0 +1,152 @@
+{
+    "op_type": "SituGlu",
+    "op_list": [
+      {
+        "bin_filename": "SituGlu_fp32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": -1
+          },
+          {
+            "name": "beta",
+            "dtype": "float32",
+            "value": 1.0
+          },
+          {
+            "name": "linear_beta",
+            "dtype": "float32",
+            "value": 0.0
+          },
+          {
+            "name": "activate_left",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "SituGlu_fp16",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": -1
+          },
+          {
+            "name": "beta",
+            "dtype": "float32",
+            "value": 1.0
+          },
+          {
+            "name": "linear_beta",
+            "dtype": "float32",
+            "value": 0.0
+          },
+          {
+            "name": "activate_left",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      },
+      {
+        "bin_filename": "SituGlu_bf16",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": -1
+          },
+          {
+            "name": "beta",
+            "dtype": "float32",
+            "value": 1.0
+          },
+          {
+            "name": "linear_beta",
+            "dtype": "float32",
+            "value": 0.0
+          },
+          {
+            "name": "activate_left",
+            "dtype": "bool",
+            "value": true
+          }
+        ]
+      }
+    ]
+}

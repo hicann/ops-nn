@@ -118,6 +118,7 @@ public:
             .ExtendCfgInfo("kernelSrc.value", "swiglu_group_quant_with_dual_axis")
             .ExtendCfgInfo("opInterface.value", "swiglu_group_quant_with_dual_axis");
         this->AICore().AddConfig("ascend950", config);
+        this->AICore().AddConfig("ascend960dt", config);
     }
 };
 
