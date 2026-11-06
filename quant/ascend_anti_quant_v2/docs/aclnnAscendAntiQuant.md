@@ -232,7 +232,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>x的数据类型为INT4时，x的反量化轴大小不是偶数。</td>
     </tr>
     <tr>
-      <td>x的数据类型为INT4时，x为非连续Tensor。</td>
+      <td>x的数据类型为INT4且非空Tensor时，x为非连续Tensor。</td>
     </tr>
     <tr>
       <td>x的数据类型为INT32时，y的反量化轴不是x的反量化轴大小的8倍，或者x与y的其他轴大小不一致。</td>
