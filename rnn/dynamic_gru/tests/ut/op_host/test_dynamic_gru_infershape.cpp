@@ -103,9 +103,15 @@ InferShapeResult RunInferShape(const InferShapeCaseIn& c)
     gert::Shape outShape[NUM_OUTPUTS];
     std::vector<gert::Shape*> outShapes = {&outShape[0], &outShape[1], &outShape[2], &outShape[3], &outShape[4]};
 
+    // NOTE: do NOT chain NodeIoNum(7, ...) here. The underlying builder's
+    // IONum and IOInstanceNum are mutually exclusive (IONum installs a
+    // default per-IR-slot instance table {num=1, start=slot}); combining
+    // them makes the CANN 9.2 builder keep the default table, so the packed
+    // 6th shape (init_h) is resolved as IR slot 5 (seq_length) and
+    // normalWithInitHOnly fails. IrInstanceNum alone declares the full IR
+    // layout (7 inputs / 5 outputs) with the packed present-only shapes.
     res.holder = gert::InferShapeContextFaker()
                      .SetOpType(kOpType)
-                     .NodeIoNum(7, NUM_OUTPUTS)
                      .IrInstanceNum(inputInst, {1, 1, 1, 1, 1})
                      .InputShapes(inShapes)
                      .OutputShapes(outShapes)
