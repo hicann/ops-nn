@@ -50,14 +50,14 @@ English | [简体中文](./README.md)
     <tr>
       <td>x</td>
       <td>Input</td>
-      <td>Denotes the input tensor list for the error function operation, corresponding to `x` in the formula. All tensors in this parameter have the same data type.</td>
+      <td>Denotes the input tensor list for the complementary error function operation, corresponding to `x` in the formula. All tensors in this parameter have the same data type.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Denotes the output tensor list for the error function operation, corresponding to `y` in the formula. All tensors in this parameter have the same data type. Its data type and data format are consistent with those of input parameter `x`, and its shape size is greater than or equal to the shape size of input parameter `x`.</td>
+      <td>Denotes the output tensor list for the complementary error function operation, corresponding to `y` in the formula. All tensors in this parameter have the same data type. Its data type and data format are consistent with those of input parameter `x`, and its shape size is greater than or equal to the shape size of input parameter `x`.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -67,7 +67,12 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- The numbers of tensors in x and out must be the same, and the shape size of each tensor in out must be greater than or equal to that of the tensor at the corresponding position in x.
+- All tensors within a single tensor list of x or out must have the same data type, and the data types of x and out must be consistent, all within the supported range declared in the parameter table.
+- The number of dimensions of a single tensor cannot exceed 8.
+- The number of tensors in a single tensor list of x/y cannot exceed 256.
+- When the numbers of tensors in x and out are 0 (empty lists), the API returns success directly without performing computation.
+- Non-contiguous tensors are supported: non-contiguous inputs/outputs are automatically made contiguous for computation, and results are written back in the original layout.
 
 ## Invocation Description
 

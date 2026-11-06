@@ -42,3 +42,26 @@ TEST_F(l2_foreach_erfc_test, ascend910B2_foreach_erfc_test_non_contiguous)
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
+
+// OP_CHECK_COMM_INPUT_workspaceSize_nullptr
+TEST_F(l2_foreach_erfc_test, ascend910B2_foreach_erfc_test_workspace_size_nullptr)
+{
+    vector<int64_t> selfDims = {2, 4};
+    vector<int64_t> outDims = {2, 4};
+    auto x = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachErfc, INPUT(xList), OUTPUT(outList));
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(nullptr);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+// OP_CHECK_COMM_INPUT_executor_nullptr
+TEST_F(l2_foreach_erfc_test, ascend910B2_foreach_erfc_test_executor_nullptr)
+{
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = aclnnForeachErfcGetWorkspaceSize(nullptr, nullptr, &workspaceSize, nullptr);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+}

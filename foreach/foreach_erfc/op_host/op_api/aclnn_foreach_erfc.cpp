@@ -167,6 +167,8 @@ static aclnnStatus ExecForeachErfcGetWorkspaceSize(const aclTensorList* x, const
 aclnnStatus aclnnForeachErfcGetWorkspaceSize(const aclTensorList* x, aclTensorList* out, uint64_t* workspaceSize,
                                              aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
     L2_DFX_PHASE_1(aclnnForeachErfc, DFX_IN(x), DFX_OUT(out));
     return ExecForeachErfcGetWorkspaceSize(x, out, workspaceSize, executor);
 }

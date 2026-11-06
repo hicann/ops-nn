@@ -44,7 +44,7 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
 ```Cpp
 aclnnStatus aclnnForeachErfcGetWorkspaceSize(
   const aclTensorList *x,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -101,7 +101,7 @@ aclnnStatus aclnnForeachErfc(
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -151,16 +151,14 @@ aclnnStatus aclnnForeachErfc(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>The data type of x or out is not in the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
       <td>The shapes of x and out do not meet the constraints.</td>
     </tr>
     <tr>
@@ -168,6 +166,20 @@ aclnnStatus aclnnForeachErfc(
     </tr>
     <tr>
       <td>The dimensions of tensors in x or out exceed 8.</td>
+    </tr>
+    <tr>
+      <td>The numbers of tensors in x and out are inconsistent.</td>
+    </tr>
+    <tr>
+      <td>A null tensor exists in the tensor list of x or out.</td>
+    </tr>
+    <tr>
+      <td>The format of a tensor in x or out is a private format.</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>The number of tensors in a single tensor list of x or out exceeds 256.</td>
     </tr>
   </tbody></table>
 
@@ -216,6 +228,9 @@ aclnnStatus aclnnForeachErfc(
 
 ## Constraints
 
+- The number of tensors in a single tensor list of x/out cannot exceed 256.
+- When the numbers of tensors in x and out are 0 (empty lists), the API returns success directly without performing computation.
+- Non-contiguous tensors are supported: non-contiguous inputs/outputs are automatically made contiguous for computation, and results are written back in the original layout.
 - Deterministic computation:
   - aclnnForeachErfc defaults to a deterministic implementation.
 

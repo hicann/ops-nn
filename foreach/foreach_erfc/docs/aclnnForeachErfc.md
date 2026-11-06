@@ -42,7 +42,7 @@
 ```Cpp
 aclnnStatus aclnnForeachErfcGetWorkspaceSize(
   const aclTensorList *x,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -149,16 +149,14 @@ aclnnStatus aclnnForeachErfc(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
       <td>x与out的shape不满足约束。</td>
     </tr>
     <tr>
@@ -166,6 +164,20 @@ aclnnStatus aclnnForeachErfc(
     </tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>x与out的Tensor数量不一致。</td>
+    </tr>
+    <tr>
+      <td>x或out的Tensor列表中存在空指针的Tensor。</td>
+    </tr>
+    <tr>
+      <td>x或out中的Tensor格式为私有格式。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>x或out中单个Tensor列表的Tensor数量超过256。</td>
     </tr>
   </tbody></table>
 
@@ -214,6 +226,9 @@ aclnnStatus aclnnForeachErfc(
 
 ## 约束说明
 
+- x/out中单个Tensor列表的Tensor数量不能超过256。
+- x与out数量为0（空列表）时，接口直接返回成功，不执行计算。
+- 支持非连续Tensor：非连续输入/输出自动转连续计算，结果按原布局写回。
 - 确定性计算：
   - aclnnForeachErfc默认确定性实现。
 

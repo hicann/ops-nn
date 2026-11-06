@@ -21,6 +21,7 @@
 #include "tiling/tiling_api.h"
 #include "platform/platform_info.h"
 #include "log/log.h"
+#include "graph/utils/type_utils.h"
 #include "foreach_erfc_tiling_arch35.h"
 
 using namespace AscendC;
@@ -31,6 +32,7 @@ constexpr int64_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t SINGLE_CORE_MIN_ELEMENTS = 1024;
 constexpr int64_t ALIGN_SIZE = 32;
 constexpr int64_t INPUT_IDX = 0;
+constexpr size_t MAX_DIM_NUM = 8U;
 
 static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
 {
@@ -66,6 +68,99 @@ static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int
     return ge::GRAPH_FAILED;
 }
 
+static bool IsSupportedInputDtype(ge::DataType dtype)
+{
+    return dtype == ge::DT_FLOAT || dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16;
+}
+
+static ge::graphStatus ValidateForeachErfc(gert::TilingContext* context, int32_t tensorNum)
+{
+    // 校验 x 与 y 的 Tensor 数量一致
+    OP_CHECK_IF(context->GetComputeNodeOutputNum() != static_cast<uint64_t>(tensorNum),
+                OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(
+                    context->GetNodeName(), "x and y",
+                    (std::to_string(tensorNum) + " and " + std::to_string(context->GetComputeNodeOutputNum())).c_str(),
+                    "The tensor nums in {x, y} must be the same"),
+                return ge::GRAPH_FAILED);
+
+    ge::DataType listDtype = ge::DT_UNDEFINED;
+    for (int32_t i = 0; i < tensorNum; i++) {
+        auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX, i);
+        // 校验 x 的 desc 非空
+        OP_CHECK_IF(inputDesc == nullptr, OP_LOGE(context, "x[%d] descriptor is null", i), return ge::GRAPH_FAILED);
+        auto inputShape = context->GetDynamicInputShape(INPUT_IDX, i);
+        // 校验 x 的 shape 非空
+        OP_CHECK_IF(inputShape == nullptr, OP_LOGE(context, "x[%d] shape is null", i), return ge::GRAPH_FAILED);
+        const gert::Shape& inputStorageShape = inputShape->GetStorageShape();
+        // 校验 x 的维度不超过 8 维
+        OP_CHECK_IF(inputStorageShape.GetDimNum() > MAX_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        context->GetNodeName(), "x", std::to_string(inputStorageShape.GetDimNum()).c_str(),
+                        ("The shape dim of the " + std::to_string(i) +
+                         "th tensor in the tensor list should be less than or equal to " + std::to_string(MAX_DIM_NUM))
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+        // 校验 x 的元素数非负（GetShapeSize 溢出时返回 INT64_MIN 哨兵，一并拦截）
+        OP_CHECK_IF(inputStorageShape.GetShapeSize() < 0,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        context->GetNodeName(), "x", std::to_string(inputStorageShape.GetShapeSize()).c_str(),
+                        ("The shape size of the " + std::to_string(i) +
+                         "th tensor in the tensor list must be 0 or a positive number")
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+        ge::DataType inputDtype = inputDesc->GetDataType();
+        // 校验 x 的 dtype 在支持范围内
+        OP_CHECK_IF(!IsSupportedInputDtype(inputDtype),
+                    OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x",
+                                              ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
+                                              "DT_FLOAT, DT_FLOAT16 or DT_BF16"),
+                    return ge::GRAPH_FAILED);
+        if (listDtype == ge::DT_UNDEFINED) {
+            listDtype = inputDtype;
+        } else {
+            // 校验 x 列表内各 Tensor 的 dtype 一致
+            OP_CHECK_IF(inputDtype != listDtype,
+                        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                            context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
+                            ("The dtypes of all tensors in the tensor list must be the same. "
+                             "Currently, the dtype of the " +
+                             std::to_string(i) + "th tensor is inconsistent with that (" +
+                             ge::TypeUtils::DataTypeToSerialString(listDtype) + ") of other tensors")
+                                .c_str()),
+                        return ge::GRAPH_FAILED);
+        }
+
+        auto outputDesc = context->GetOutputDesc(i);
+        // 校验 y 的 desc 非空
+        OP_CHECK_IF(outputDesc == nullptr, OP_LOGE(context, "y[%d] descriptor is null", i), return ge::GRAPH_FAILED);
+        auto outputShape = context->GetOutputShape(i);
+        // 校验 y 的 shape 非空
+        OP_CHECK_IF(outputShape == nullptr, OP_LOGE(context, "y[%d] shape is null", i), return ge::GRAPH_FAILED);
+        // 校验 y 的 dtype 与 x 一致
+        OP_CHECK_IF(
+            outputDesc->GetDataType() != listDtype,
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(outputDesc->GetDataType()).c_str(),
+                "The dtype of y must be the same as x"),
+            return ge::GRAPH_FAILED);
+        const gert::Shape& outputStorageShape = outputShape->GetStorageShape();
+        // 校验 y 的 shape size 不小于对应位置的 x（与 arch22 公共校验口径一致：仅拒绝 y 小于 x）
+        OP_CHECK_IF(inputStorageShape.GetShapeSize() > outputStorageShape.GetShapeSize(),
+                    OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                        context->GetNodeName(), "x and y",
+                        (std::to_string(inputStorageShape.GetShapeSize()) + " and " +
+                         std::to_string(outputStorageShape.GetShapeSize()))
+                            .c_str(),
+                        ("The shape size of " + std::to_string(i) +
+                         "th tensor in tensor list y should be greater than or equal to that of the tensor "
+                         "in the same position of the another tensor list x")
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus ForeachErfcTilingFunc(gert::TilingContext* context)
 {
     int64_t coreNum = 0;
@@ -80,18 +175,24 @@ static ge::graphStatus ForeachErfcTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
     auto idxInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
-    uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
-
-    OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ERFC),
-                OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM_FOREACH_ERFC %d", tensorNum,
-                        MAX_TENSOR_NUM_FOREACH_ERFC),
+    uint64_t instanceNum = idxInstanceInfoPtr->GetInstanceNum();
+    // 窄化前校验数量上限，防止超界实例数经 int32 截断绕过定长数组边界
+    OP_CHECK_IF(instanceNum > static_cast<uint64_t>(MAX_TENSOR_NUM_FOREACH_ERFC),
+                OP_LOGE_FOR_INVALID_TENSORNUM(
+                    context->GetNodeName(), "x", static_cast<int64_t>(instanceNum),
+                    ("within the range [0, " + std::to_string(MAX_TENSOR_NUM_FOREACH_ERFC) + "]").c_str()),
                 return ge::GRAPH_FAILED);
+    int32_t tensorNum = static_cast<int32_t>(instanceNum);
+
+    if (ValidateForeachErfc(context, tensorNum) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     int64_t totalElements = 0;
     ge::DataType dataType = ge::DT_FLOAT;
     ForeachErfcTilingData* tilingData = context->GetTilingData<ForeachErfcTilingData>();
 
-    for (uint64_t i = 0; i < tensorNum; i++) {
+    for (int32_t i = 0; i < tensorNum; i++) {
         auto idxTensorShapePtr = context->GetDynamicInputShape(INPUT_IDX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorShapePtr);
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
