@@ -34,17 +34,22 @@ def adaptive_max_pool3d_golden(x, output_size, indices_dtype=3, **kwargs):
     import torch
     import torch.nn as nn
 
-    xDtype = x.dtype
+    is_numpy = isinstance(x, np.ndarray)
+    if is_numpy:
+        x = torch.from_numpy(x)
+    out_dtype = x.dtype
 
     m = nn.AdaptiveMaxPool3d(output_size, True)
 
-    if xDtype in ["float16", "bfloat16"]:
-        x = x.astype(np.float32)  ## torch cpu不支持fp16, bf16不支持from_numpy
-    x_tensor = torch.from_numpy(x)
+    if x.dtype in (torch.float16, torch.bfloat16):
+        x = x.to(torch.float32)  ## torch cpu不支持fp16, bf16
 
-    output, indices = m(x_tensor)
-    output = output.numpy().astype(xDtype)
-    indices = indices.to(torch.int32).numpy()  ## 与竞品差异
+    output, indices = m(x)
+    output = output.to(out_dtype)
+    indices = indices.to(torch.int32)  ## 与竞品差异
+    if is_numpy:
+        output = output.numpy()
+        indices = indices.numpy()
 
     return output, indices
 
@@ -56,7 +61,16 @@ def aclnn_adaptive_max_pool3d_golden(
         outputSize = outputSize.tolist()
     elif isinstance(outputSize, int):
         outputSize = [outputSize] * 3
-    result = torch.nn.functional.adaptive_max_pool3d(
-        self, outputSize, return_indices=True
+    if isinstance(self, np.ndarray):
+        self = torch.from_numpy(self)
+    out_dtype = self.dtype
+    x = (
+        self.to(torch.float32)
+        if self.dtype in (torch.float16, torch.bfloat16)
+        else self
     )
-    return [result[0], result[1]]
+    result = torch.nn.functional.adaptive_max_pool3d(x, outputSize, return_indices=True)
+    return [
+        result[0].to(out_dtype),
+        result[1].to(torch.int32),
+    ]  ## 与竞品差异: indices为int32

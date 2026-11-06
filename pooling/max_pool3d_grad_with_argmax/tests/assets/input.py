@@ -35,12 +35,15 @@ def aclnn_max_pool_backward_input(*args, **kwargs):
     self_input = args[1]
     indices = args[2]
 
-    attrs = kwargs.get("attributes", {})
-    kernel_size = attrs.get("kernelSize", [2, 2])
-    stride = attrs.get("stride", [2, 2])
-    padding = attrs.get("padding", [1, 1])
-    dilation = attrs.get("dilation", [1, 1])
-    ceil_mode = attrs.get("ceilMode", False)
+    # TTK aclnn custom input contract: positional args follow the aclnn API order
+    # args = [gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode, gradInput]
+    kernel_size = args[3]
+    stride = args[4]
+    padding = args[5]
+    dilation = args[6]
+    ceil_mode = args[7]
+    if not stride:
+        stride = kernel_size
 
     input_grad_format = kwargs.get("tensor_formats", ["NCHW"])[0]
 

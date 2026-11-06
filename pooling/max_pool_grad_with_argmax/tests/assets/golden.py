@@ -117,7 +117,7 @@ def max_pool_grad_with_argmax_golden(
 
     else:
         argmax_data = argmax_data.astype(np.int64)
-        maxpoolgrad_res = tf.raw.ops.MaxPoolGradWithArgmax(
+        maxpoolgrad_res = tf.raw_ops.MaxPoolGradWithArgmax(
             input=input_data,
             grad=grad_data,
             argmax=argmax_data,

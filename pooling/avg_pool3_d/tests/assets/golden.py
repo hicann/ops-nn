@@ -254,10 +254,12 @@ def aclnn_avg_pool3d_golden(
     if data_format.lower() not in ["ncdhw", "nd"]:
         raise Exception("AvgPool3d only support ND and NCDHW")
 
-    if data_format == "ND":
+    squeeze_n = False
+    if data_format == "ND" and inputx.dim() == 4:
         inputx = inputx.reshape(
             1, inputx.shape[0], inputx.shape[1], inputx.shape[2], inputx.shape[3]
         )
+        squeeze_n = True
     if len(ksize) == 5:
         ksize = [ksize[2], ksize[3], ksize[4]]
     if len(strides) == 5:
@@ -309,6 +311,8 @@ def aclnn_avg_pool3d_golden(
         pads[3] = max(in_h - inputx.shape[3] - pads[2], 0)
         pads[5] = max(in_w - inputx.shape[4] - pads[4], 0)
 
+        if torch.is_tensor(inputx):
+            inputx = inputx.numpy()
         inputx = np.pad(
             inputx,
             (
@@ -361,7 +365,7 @@ def aclnn_avg_pool3d_golden(
             pool_size = window_d * window_h * window_w
             pool_size = pool_size.to(torch.float).reshape(1, 1, out_d, out_h, out_w)
             out = out / pool_size
-    if data_format == "ND":
+    if squeeze_n:
         out = out.reshape(out.shape[1], out.shape[2], out.shape[3], out.shape[4])
     res = out.to(input_dtype)
     return res
