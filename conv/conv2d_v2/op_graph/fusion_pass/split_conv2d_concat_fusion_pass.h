@@ -41,7 +41,6 @@ constexpr int64_t BOUNDARY_FILTER_INPUT_BASE = 1;
 constexpr int64_t BOUNDARY_FMAP_INPUT_IDX = 0;
 constexpr int64_t BOUNDARY_OUTPUT_IDX = 0;
 constexpr int32_t AXIS_FROM_END = -1;
-constexpr int32_t BIAS_AXIS = 0;
 constexpr int32_t CONCAT_DIM_INPUT_IDX = 0;
 constexpr int32_t NHWC_C_POSITION = 3;
 constexpr int32_t SPLIT_DATA_INPUT_IDX = 1;
@@ -54,6 +53,7 @@ constexpr int64_t CONCAT_DIM_SHAPE_SIZE = 1;
 constexpr size_t CONCAT_SHAPE_SIZE = 4;
 constexpr size_t FIRST_BRANCH_IDX = 0;
 constexpr size_t SINGLE_REF_CNT = 1;
+constexpr size_t CONV_COUNT_PARAMS_OFFSET_W = 4; // [fmap, filter, bias, offset_w]
 
 struct ConvBranchBaseline {
     size_t inputCnt = 0;
@@ -93,6 +93,7 @@ private:
     int32_t GetSplitDimInputIdx() const;
     int32_t GetConcatDimInputIdx() const;
     int32_t GetFormatAxisPos(ge::Format format, char axisChar) const;
+    int32_t GetParamConcatAxis(const ge::TensorDesc& paramDesc) const;
     ge::Status SafeRemoveConstNode(ge::GraphPtr& graph, ge::GNode& constNode) const;
     bool BuildHostConcatNode(ge::es::EsGraphBuilder& graphBuilder, const std::vector<ge::es::EsTensorHolder>& inputs,
                              int32_t axis, const ge::AscendString& name, ge::GNode& hostConcatNode) const;
@@ -110,7 +111,7 @@ private:
     ge::TensorDesc outputDesc = {};
     ge::Format splitDimOriginFormat = ge::FORMAT_ND;
     int64_t groups = 0;
-    bool hasBias = false;
+    size_t paramCnt = 0;
     bool isConcatV2 = false;
     bool isSplitV = false;
 };
