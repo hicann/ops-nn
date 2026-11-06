@@ -99,16 +99,6 @@
   </tr>
     <tr>
     <td>activation</td>
-    <td><a href="../../activation/bnll/README.md">bnll</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算BNLL (Binomial Normal Log Likelihood)激活函数，即数值稳定版本的softplus：y = ln(1 + exp(x))。</td>
-  </tr>
-  <tr>
-    <td>activation</td>
     <td><a href="../../activation/elu/README.md">elu</a></td>
     <td>✓</td>
     <td>✓</td>
