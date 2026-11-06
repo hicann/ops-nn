@@ -1,0 +1,341 @@
+{
+  "op_type": "FusedSgd",
+  "op_list": [
+    {
+      "bin_filename": "FusedSgd_0",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "momentum_buffer_list",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "momentum_buffer_list_out",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "momentum",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.01
+        },
+        {
+          "name": "dampening",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "nesterov",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "is_first_step",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedSgd_1",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "momentum_buffer_list",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "momentum_buffer_list_out",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "momentum",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.01
+        },
+        {
+          "name": "dampening",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "nesterov",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "is_first_step",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedSgd_2",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "momentum_buffer_list",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "momentum_buffer_list_out",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "momentum",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.01
+        },
+        {
+          "name": "dampening",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "nesterov",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "is_first_step",
+          "dtype": "bool",
+          "value": true
+        }
+      ]
+    }
+  ]
+}
