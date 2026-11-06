@@ -158,7 +158,7 @@ private:
     // fused-single 与 fused-pair 的 UB 布局完全一致，仅 dy/x 输入 que 的深度不同(inBufNum)：
     // single 双缓冲驻留 1 个 tile，pair 需 4 buffer 同时驻留 2 个 tile。
     // 【重要】任何这里的 buffer 增删/大小改动，必须同步 host GetTilingKey() 的 fusedCommonUb/inBuf 合计
-    // UB 兜底估算，否则兜底会失真、放过它本要拒绝的 NO_OUTPUT。
+    // UB 兜底估算，否则兜底会失真、放过它本要拦截的 NO_OUTPUT。
     __aicore__ inline void FusedInitBuffer(const int32_t inBufNum)
     {
         int64_t rDimSize = currLoopFactor_ * aFactorAlign_;
@@ -175,6 +175,7 @@ private:
         pipe_->InitBuffer(gammaInQue_, SINGLE_BUFFER, aDimSize);
         pipe_->InitBuffer(dbetaWsOutQue_, SINGLE_BUFFER, aDimSize * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma
         pipe_->InitBuffer(dbetaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
+        pipe_->InitBuffer(rstdInQue_, 1, aDimSize); // 跨核归约终点的 rstd 加载
         pipe_->InitBuffer(dgammaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
         pipe_->InitBuffer(dbetaWsInQue_, SINGLE_BUFFER, stage1InSize); // 合并 dbeta+dgamma
         if (blockIdx_ == 0) {
@@ -453,23 +454,21 @@ private:
             __ubuf__ DY_TYPE* xAddr = (__ubuf__ DY_TYPE*)xTensor.GetPhyAddr();
             __ubuf__ DY_TYPE* dyAddr = (__ubuf__ DY_TYPE*)dyTensor.GetPhyAddr();
             __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor_.GetPhyAddr();
-            __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdTensor_.GetPhyAddr();
             __ubuf__ float* xMainAddr = (__ubuf__ float*)xMainTensor_.GetPhyAddr();
             __ubuf__ float* dyMainAddr = (__ubuf__ float*)dyMainTensor_.GetPhyAddr();
             Reg::MaskReg pMask;
             uint32_t count = aLength;
-            Reg::RegTensor<float> xMainReg, dyMainReg, meanReg, rstdReg;
+            Reg::RegTensor<float> xMainReg, dyMainReg, meanReg;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 pMask = Reg::UpdateMask<float>(count);
                 LoadOneTensor<float>(meanAddr, meanReg, pMask, i * outerLoopStride);
-                LoadOneTensor<float>(rstdAddr, rstdReg, pMask, i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     int32_t offset = i * outerLoopStride + j * innerLoopStride;
                     LoadOneTensor<DY_TYPE>(xAddr, xMainReg, pMask, offset);
                     LoadOneTensor<DY_TYPE>(dyAddr, dyMainReg, pMask, offset);
                     Reg::Sub<float, Reg::MaskMergeMode::ZEROING>(xMainReg, xMainReg, meanReg, pMask);
                     Reg::Mul<float, Reg::MaskMergeMode::ZEROING>(xMainReg, xMainReg, dyMainReg, pMask);
-                    Reg::Mul<float, Reg::MaskMergeMode::ZEROING>(xMainReg, xMainReg, rstdReg, pMask);
+                    // dgamma 先归约后乘 rstd（段内不乘，归约终点统一乘一次）
                     StoreOneTensor<float>(xMainAddr, xMainReg, pMask, offset);
                     StoreOneTensor<float>(dyMainAddr, dyMainReg, pMask, offset);
                 }
@@ -495,14 +494,12 @@ private:
             __ubuf__ DY_TYPE* dyFoldAddr = (__ubuf__ DY_TYPE*)dyFoldTensor_.GetPhyAddr();
             __ubuf__ DY_TYPE* xFoldAddr = (__ubuf__ DY_TYPE*)xFoldTensor_.GetPhyAddr();
             __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor_.GetPhyAddr();
-            __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdTensor_.GetPhyAddr();
             Reg::MaskReg pMask;
             uint32_t count = aLength;
-            Reg::RegTensor<float> dyMainReg, dyFoldReg, xMainReg, xFoldReg, meanReg, rstdReg;
+            Reg::RegTensor<float> dyMainReg, dyFoldReg, xMainReg, xFoldReg, meanReg;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 pMask = Reg::UpdateMask<float>(count);
                 LoadOneTensor<float>(meanAddr, meanReg, pMask, i * outerLoopStride);
-                LoadOneTensor<float>(rstdAddr, rstdReg, pMask, i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     int32_t offset = i * outerLoopStride + j * innerLoopStride;
                     LoadOneTensor<float>(dyMainAddr, dyMainReg, pMask, offset);
@@ -513,7 +510,7 @@ private:
                     LoadOneTensor<DY_TYPE>(xFoldAddr, xFoldReg, pMask, offset);
                     Reg::Sub<float, Reg::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, meanReg, pMask);
                     Reg::Mul<float, Reg::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, dyFoldReg, pMask);
-                    Reg::Mul<float, Reg::MaskMergeMode::ZEROING>(xFoldReg, xFoldReg, rstdReg, pMask);
+                    // dgamma 先归约后乘 rstd（段内不乘，归约终点统一乘一次）
                     Reg::Add<float, Reg::MaskMergeMode::ZEROING>(xMainReg, xMainReg, xFoldReg, pMask);
                     StoreOneTensor<float>(xMainAddr, xMainReg, pMask, offset);
                 }
@@ -570,13 +567,13 @@ private:
     __aicore__ inline void Stage1InitBuffer()
     {
         pipe_->Reset();
-
         pipe_->InitBuffer(dbetaWsInQue_, BUFFER_NUM, // 合并 dbeta+dgamma,两段各按 VL 取整预留
                           MERGED_QUE_NODE_NUM * Stage1VlAlignedSpan() * sizeof(float));
         pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM,
                           aFactorAlign_ * sizeof(float) * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma
         pipe_->InitBuffer(dbetaOutQue_, BUFFER_NUM,
                           aFactorAlign_ * sizeof(WEIGHT_TYPE) * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma 输出
+        pipe_->InitBuffer(rstdInQue_, 1, aFactorAlign_ * sizeof(float)); // 跨核归约终点的 rstd 加载
     }
 
     __aicore__ inline void LoadDbetaDgammaFromWs(const int64_t offset, const int64_t rowSize, const uint32_t colSize,
@@ -653,6 +650,37 @@ private:
         ReduceSum<float, Pattern::Reduce::RA, true>(dbetaTmpTensor, dbetaWsTensor, srcShape, false);
         ReduceSum<float, Pattern::Reduce::RA, true>(dgammaTmpTensor, dgammaWsTensor, srcShape, false);
         dbetaWsInQue_.FreeTensor(dbetaWsTensor);
+        // dgamma 归约完成后统一乘一次 rstd（先归约后乘）;
+        // rstd 从 GM 按 baseOffset 段加载（stage1 的 pipe Reset 使 rstdTensor_ 不可依赖）
+        {
+            LocalTensor<float> rstdLocal = rstdInQue_.AllocTensor<float>();
+            DataCopyExtParams rstdCopyParams;
+            rstdCopyParams.blockCount = 1;
+            rstdCopyParams.blockLen = aLength * sizeof(float);
+            rstdCopyParams.srcStride = 0;
+            rstdCopyParams.dstStride = 0;
+            DataCopyPadExtParams<float> rstdPadParams{false, 0, 0, 0};
+            DataCopyPad(rstdLocal, rstdGm_[baseOffset], rstdCopyParams, rstdPadParams);
+            rstdInQue_.EnQue(rstdLocal);
+            rstdLocal = rstdInQue_.template DeQue<float>();
+            __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+            __ubuf__ float* dgammaAddr = (__ubuf__ float*)dgammaTmpTensor.GetPhyAddr();
+            __VEC_SCOPE__
+            {
+                Reg::RegTensor<float> rstdValue, dgammaValue;
+                Reg::MaskReg pregMask;
+                uint32_t sreg = aLength;
+                uint16_t loopTimes = (aLength + VL_FP32 - 1) / VL_FP32;
+                for (uint16_t j = 0; j < loopTimes; j++) {
+                    pregMask = Reg::UpdateMask<float>(sreg);
+                    LoadOneTensor<float>(rstdAddr, rstdValue, pregMask, j * VL_FP32);
+                    LoadOneTensor<float>(dgammaAddr, dgammaValue, pregMask, j * VL_FP32);
+                    Reg::Mul(dgammaValue, dgammaValue, rstdValue, pregMask);
+                    StoreOneTensor<float>(dgammaAddr, dgammaValue, pregMask, j * VL_FP32);
+                }
+            }
+            rstdInQue_.FreeTensor(rstdLocal);
+        }
 
         LocalTensor<WEIGHT_TYPE> dbetaOutTensor = dbetaOutQue_.AllocTensor<WEIGHT_TYPE>();
         LocalTensor<WEIGHT_TYPE> dgammaOutTensor = dbetaOutTensor[aFactorAlign_];
@@ -813,6 +841,7 @@ private:
                     uint32_t inputOffset = i * outerLoopStride + j * inputLoopStride;
                     LoadOneTensor<DY_TYPE>(dyAddr, dyReg, pMask, inputOffset);
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, inputOffset);
+                    // 合并减形态（分离减实测慢 3.3~4.5x）
                     Reg::Sub<float, Reg::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
                     Reg::Mul<float, Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
                     Reg::Mul<float, Reg::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
@@ -996,6 +1025,7 @@ private:
     TQue<QuePosition::VECIN, 1> dyInQue_, xInQue_, meanInQue_;
     TBuf<TPosition::VECCALC> dyTmpQue_, xTmpQue_;
     TBuf<TPosition::VECCALC> dbetaCacheBuffer_, dgammaCacheBuffer_;
+    TQue<QuePosition::VECIN, 1> rstdInQue_; // 跨核归约终点的 per-channel rstd 加载
     // dbetaWsOutQue_ 合并存放 [dbeta | dgamma]，dgamma 在 aFactorAlign_ 偏移处
     TQue<QuePosition::VECOUT, 1> dbetaWsOutQue_;
     // dbetaWsInQue_ 合并存放 [dbeta | dgamma]，dgamma 在 rowSize*aFactorAlign_ 偏移处(行数随 stage 变)

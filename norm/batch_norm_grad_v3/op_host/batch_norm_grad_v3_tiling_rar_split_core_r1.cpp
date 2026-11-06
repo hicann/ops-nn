@@ -266,9 +266,14 @@ ge::graphStatus BatchNormGradV3RARSplitCoreR1::DoOpTilingStage1()
     int64_t weightBaseLen = weightDtype == ge::DT_FLOAT ? blockFp32Nums_ : blockFp16Nums_;
 
     // 计算公式: ubSize >= aInnerStg1 * sizeof(float) * usedCoreNums_ * DOUBLE_BUFFER * 2 +
-    // aInnerStg1 * DOUBLE_BUFFER * 2 * (sizeof(float) + sizeof(DTYPE_WEIGHT))
-    int64_t factorMax = ubSize / (DOUBLE_BUFFER * CONST_TWO * weightBaseLen *
-                                  (FLOAT32_BYTES * usedCoreNums_ + (FLOAT32_BYTES + weightDtypeSize)));
+    // aInnerStg1 * DOUBLE_BUFFER * (2 * sizeof(float) + 2 * sizeof(DTYPE_WEIGHT)) +
+    // aInnerStg1 * sizeof(float)
+    // (float-in×2·usedCores + float-out×2 + weight-out×2 各双缓冲; rstdInQue_ 单缓冲,
+    //  其 aInnerStg1 项不乘 DOUBLE_BUFFER, 与 kernel InitBuffer(rstdInQue_, 1, ...) 一致)
+    int64_t factorMax = ubSize / (DOUBLE_BUFFER * weightBaseLen *
+                                      (CONST_TWO * FLOAT32_BYTES * usedCoreNums_ + CONST_TWO * FLOAT32_BYTES +
+                                       CONST_TWO * weightDtypeSize) +
+                                  weightBaseLen * FLOAT32_BYTES);
 
     OP_TILING_CHECK(factorMax <= 0,
                     OP_LOGI(context_->GetNodeName(),

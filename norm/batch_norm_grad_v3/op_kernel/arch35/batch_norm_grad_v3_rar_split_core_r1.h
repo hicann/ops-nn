@@ -110,6 +110,7 @@ public:
         pipe_->InitBuffer(dgammaTmpInQue_, BUFFER_NUM, aSizeIn);
 
         pipe_->InitBuffer(dbetaTmpOutQue_, BUFFER_NUM, tilingData_->aInnerStg1 * sizeof(float));
+        pipe_->InitBuffer(rstdInQue_, 1, tilingData_->aInnerStg1 * sizeof(float)); // 归约终点 rstd
         pipe_->InitBuffer(dgammaTmpOutQue_, BUFFER_NUM, tilingData_->aInnerStg1 * sizeof(float));
         pipe_->InitBuffer(dbetaOutQue_, BUFFER_NUM, tilingData_->aInnerStg1 * sizeof(WEIGHT_DTYPE));
         pipe_->InitBuffer(dgammaOutQue_, BUFFER_NUM, tilingData_->aInnerStg1 * sizeof(WEIGHT_DTYPE));
@@ -365,12 +366,11 @@ public:
         {
             MaskReg pregMask;
             MaskReg pregMaskAll = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
-            RegTensor<float> regMean, regRstd, regDy, regX;
+            RegTensor<float> regMean, regDy, regX;
 
             for (uint16_t i = 0; i < curAInnerLen; i++) {
                 uint32_t sreg = curR0AlignedLen;
                 LoadsTensorForDtypeT<float>(meanLocal, regMean, pregMaskAll, i);
-                LoadsTensorForDtypeT<float>(rstdLocal, regRstd, pregMaskAll, i);
                 for (uint16_t j = 0; j < loopNum; j++) {
                     pregMask = UpdateMask<float>(sreg);
                     for (uint16_t k = 0; k < curR1Len; k++) {
@@ -380,7 +380,7 @@ public:
 
                         Sub(regX, regX, regMean, pregMask);
                         Mul(regX, regX, regDy, pregMask);
-                        Mul(regX, regX, regRstd, pregMask);
+                        // dgamma 先归约后乘 rstd（段内不乘，归约终点统一乘一次）
                         StoreAlign((__ubuf__ float*)dgammaReduceTmpLocal + offset, regX, pregMask);
 
                         if constexpr (!IsSameType<DY_DTYPE, float>::value) {
@@ -453,6 +453,18 @@ public:
 
             int64_t offset = i * tilingData_->aInnerStg1;
             CopyInDbetaDgammaTmp(offset, curAInnerLen);
+            // 加载 rstd[offset..+curAInnerLen) 供归约终点统一乘（先归约后乘）
+            LocalTensor<float> rstdLocal = rstdInQue_.AllocTensor<float>();
+            DataCopyExtParams rstdCopyParams;
+            rstdCopyParams.blockCount = 1;
+            rstdCopyParams.blockLen = curAInnerLen * sizeof(float);
+            rstdCopyParams.srcStride = 0;
+            rstdCopyParams.dstStride = 0;
+            DataCopyPadExtParams<float> rstdPadParams{false, 0, 0, 0};
+            DataCopyPad(rstdLocal, rstdGm_[offset], rstdCopyParams, rstdPadParams);
+            rstdInQue_.EnQue(rstdLocal);
+            rstdLocal = rstdInQue_.template DeQue<float>();
+            __ubuf__ float* rstdLocalAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
 
             LocalTensor<float> dbetaTmpIn = dbetaTmpInQue_.template DeQue<float>();
             LocalTensor<float> dgammaTmpIn = dgammaTmpInQue_.template DeQue<float>();
@@ -485,13 +497,19 @@ public:
                 uint32_t sreg = curAInnerLen;
                 RegTensor<float> regDbeta, regDgamma;
 
+                RegTensor<float> regRstd;
                 for (uint16_t i = 0; i < loopNum; i++) {
                     pregMask = UpdateMask<float>(sreg);
                     uint32_t offset = i * VL_FP32;
                     LoadOneTensor<float>(dbetaTmpOutLocal, regDbeta, pregMask, offset);
                     LoadOneTensor<float>(dgammaTmpOutLocal, regDgamma, pregMask, offset);
+                    LoadOneTensor<float>(rstdLocalAddr, regRstd, pregMask, offset);
+                    Mul(regDgamma, regDgamma, regRstd, pregMask);
                     StoreOneTensor<WEIGHT_DTYPE>(dbetaOutLocal, regDbeta, pregMask, offset);
                     StoreOneTensor<WEIGHT_DTYPE>(dgammaOutLocal, regDgamma, pregMask, offset);
+                    // 归约终点乘积同步写回 tmp(workspace 源): Stage2 修正项需要含 rstd 的最终 dgamma,
+                    // 只写 GM 输出会让 workspace 残留未乘值, 修正项少一个 rstd 因子
+                    StoreOneTensor<float>(dgammaTmpOutLocal, regDgamma, pregMask, offset);
                 }
             }
 
@@ -500,6 +518,8 @@ public:
 
             dbetaOutQue_.EnQue(dbetaOutTensor);
             dgammaOutQue_.EnQue(dgammaOutTensor);
+
+            rstdInQue_.FreeTensor(rstdLocal); // 归约终点 rstd 用毕释放
 
             CopyOutDbetaDgammaAndTmp(offset, curAInnerLen);
         }
@@ -629,6 +649,7 @@ public:
                         MaskReg pregMask;
 
                         RegTensor<float> regMean, regRstd, regGamma, regDbetaTmp, regDgammaTmp, regDy, regX;
+                        RegTensor<float> regGs;
 
                         for (uint16_t i = 0; i < curAInnerLen; i++) {
                             LoadsTensorForDtypeT<float>(meanAddr, regMean, pregMaskAll, i);
@@ -636,6 +657,8 @@ public:
                             LoadsTensorForDtypeT<float>(dbetaTmpAddr, regDbetaTmp, pregMaskAll, i);
                             LoadsTensorForDtypeT<float>(dgammaTmpAddr, regDgammaTmp, pregMaskAll, i);
                             LoadsTensorForDtypeT<WEIGHT_DTYPE>(gammaAddr, regGamma, pregMaskAll, i);
+                            // 预合并 grad_scale = fl(rstd*gamma)（j 循环外每通道一次）
+                            Mul(regGs, regRstd, regGamma, pregMaskAll);
 
                             uint32_t sreg = curR0Len;
                             for (uint16_t j = 0; j < loopNum; j++) { // r0
@@ -646,14 +669,15 @@ public:
                                     LoadOneTensor<DY_DTYPE>(dyLocal, regDy, pregMask, offset);
                                     LoadOneTensor<DY_DTYPE>(xLocal, regX, pregMask, offset);
 
+                                    // dx = (dy − ((x̂·dgamma + dbeta)·(1/N))) · grad_scale
+                                    // 合并减形态（VF 循环内不引入分支），grad_scale 预合并
                                     Sub(regX, regX, regMean, pregMask);
                                     Mul(regX, regX, regRstd, pregMask);
                                     Mul(regX, regX, regDgammaTmp, pregMask);
                                     Add(regX, regX, regDbetaTmp, pregMask);
                                     Muls(regX, regX, hRecipVal_, pregMask);
                                     Sub(regX, regDy, regX, pregMask);
-                                    Mul(regX, regX, regGamma, pregMask);
-                                    Mul(regX, regX, regRstd, pregMask);
+                                    Mul(regX, regX, regGs, pregMask);
 
                                     StoreOneTensor<DY_DTYPE>(dxLocal, regX, pregMask, offset);
                                 }

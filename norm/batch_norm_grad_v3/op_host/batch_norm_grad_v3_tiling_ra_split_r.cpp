@@ -273,6 +273,7 @@ uint64_t BatchNormGradV3TilingRASplitR::GetTilingKey() const
                                  alignBlk(aDimSize) + // meanInQue_(×2) + gammaInQue_(×1) + dbetaWsOutQue_(×2)
                              PAIRED_BUFFER_NUM *
                                  alignBlk(aDimSize * cacheBuffCnt_) + // dbetaCacheBuffer_ + dgammaCacheBuffer_
+                             alignBlk(aDimSize) +                     // rstdInQue_(跨核归约终点 rstd 加载)
                              alignBlk(stage1InSize) + // dbetaWsInQue_(dbeta+dgamma,0 号核全核归约)
                              PAIRED_BUFFER_NUM * alignBlk(aDimSize) + // dbetaOutQue_(dbeta+dgamma 输出,0 号核)
                              alignBlk(static_cast<uint64_t>(blockFactor_) * aFactorAlign_ * dyTypeSize_); // dxOutQue_

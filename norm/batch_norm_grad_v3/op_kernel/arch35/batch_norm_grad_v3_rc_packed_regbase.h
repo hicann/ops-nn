@@ -38,7 +38,7 @@ __aicore__ inline void ComputePackedInputs(__ubuf__ DY_TYPE* dyAddr, __ubuf__ DY
             LoadOneTensor<DY_TYPE>(xAddr, xReg, valid, g * inputStride);
             Reg::Sub<float, Reg::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, valid);
             Reg::Mul<float, Reg::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, valid);
-            Reg::Mul<float, Reg::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, valid);
+            // dgamma 先归约后乘 rstd（段内不乘，Stage1 归约终点统一乘一次，与 RA Split-R 其余路径一致）
             // Explicitly zero padding before full-vector stores and the lane-wise block reduction.
             Reg::Muls<float, float, Reg::MaskMergeMode::ZEROING>(dyReg, dyReg, 1.0f, valid);
             if constexpr (FOLD) {

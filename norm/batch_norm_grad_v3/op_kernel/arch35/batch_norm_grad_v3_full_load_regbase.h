@@ -370,10 +370,8 @@ public:
                     LoadAlign(binaryAddR2,
                               (__ubuf__ float*)(xhatAddr) + aOffset + i * VL_FP32 + binaryAddQuotientOffset);
                     Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
-                    Mul(binaryAddQ1, binaryAddQ1, rstdValue, pregMain);
-                    Mul(binaryAddR1, binaryAddR1, binaryAddR2, pregLoop);
-                    Mul(binaryAddR1, binaryAddR1, rstdValue, pregLoop);
-                    Add(binaryAddQ1, binaryAddQ1, binaryAddR1, pregLoop);
+                    // MulAddDst 单次舍入（本循环掩码恒满，ZEROING 无损）
+                    MulAddDst(binaryAddQ1, binaryAddR1, binaryAddR2, pregLoop);
                     Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
                     StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)binaryAdd + i, vlSum,
                                                                               pregMerge);
@@ -388,17 +386,12 @@ public:
                 LoadAlign(binaryAddR2,
                           (__ubuf__ float*)(xhatAddr) + aOffset + remainderGeneral * VL_FP32 + binaryAddQuotientOffset);
                 Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
-                Mul(binaryAddQ1, binaryAddQ1, rstdValue, pregMain);
-                Mul(binaryAddR1, binaryAddR1, binaryAddR2, pregLoop);
-                Mul(binaryAddR1, binaryAddR1, rstdValue, pregLoop);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddQ1, binaryAddQ1, binaryAddR1, pregLoop);
-                Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
-#else
-                Add(binaryAddRes, binaryAddQ1, binaryAddR1, pregLoop);
+                // 余段元素乘加 MulAddDst 单次舍入。末向量掩码可能部分有效而
+                // MulAddDst 仅支持 ZEROING, 先 Move 将商段积带入 dst, 掩码外由 Select 从 Q1 恢复
+                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddRes, binaryAddQ1, pregLoop);
+                MulAddDst(binaryAddRes, binaryAddR1, binaryAddR2, pregLoop);
                 Select(binaryAddRes, binaryAddRes, binaryAddQ1, pregLoop);
                 Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddRes, pregMain);
-#endif
                 StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)binaryAdd + remainderGeneral,
                                                                           vlSum, pregMerge);
 
@@ -407,8 +400,8 @@ public:
                                            aOffset + (i + binaryAddRemainderLoop) * VL_FP32);
                     LoadAlign(binaryAddQ2,
                               (__ubuf__ float*)(xhatAddr) + aOffset + (i + binaryAddRemainderLoop) * VL_FP32);
+                    // dgamma 先归约后乘 rstd（段内不乘，归约完成后统一乘一次）
                     Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
-                    Mul(binaryAddQ1, binaryAddQ1, rstdValue, pregMain);
                     Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
                     StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                         (__ubuf__ float*)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
@@ -429,6 +422,8 @@ public:
                 Reg::MaskReg pregLast = Reg::UpdateMask<float>(sreg2);
                 LoadAlign(sum, (__ubuf__ float*)(binaryAdd));
                 Reduce<AscendC::Reg::ReduceType::SUM>(dgamma, sum, pregLast);
+                Mul(dgamma, dgamma, rstdValue,
+                    pregMerge); // dgamma 先归约后乘 rstd（段内不乘，归约完成后统一乘一次）
                 StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)dgammaAddr) + k, dgamma,
                                                                           pregMerge);
                 Reg::LocalMemBar<Reg::MemType::VEC_LOAD, Reg::MemType::VEC_STORE>();
@@ -456,8 +451,9 @@ public:
                 LoadAlign(x, (__ubuf__ float*)(xhatAddr) + aOffset);
                 LoadAlign<float, Reg::LoadDist::DIST_BRC_B32>(rstdValue, (__ubuf__ float*)(rstdAddr) + k);
                 Mul(x, y, x, pregLoop);
-                Mul(x, x, rstdValue, pregLoop);
+                // dgamma 先归约后乘 rstd（段内不乘，归约完成后统一乘一次）
                 Reduce<AscendC::Reg::ReduceType::SUM>(sum, x, pregLoop);
+                Mul(sum, sum, rstdValue, pregMerge);
                 StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)dgammaAddr) + k, sum,
                                                                           pregMerge);
             }
@@ -497,10 +493,9 @@ public:
         {
             Reg::RegTensor<float> rstdValue, gammaValue;
             Reg::RegTensor<float> dx, dgammaValue, dbetaValue;
-            Reg::RegTensor<float> gammaMulSubDy, divH, subDy;
+            Reg::RegTensor<float> mulRstd, mulDgamma, addDbeta, divH, subDy, gradScale;
             Reg::MaskReg pregR;
             Reg::RegTensor<float> dy, xhat;
-            Reg::RegTensor<float> mulRstd, mulDgamma, addDbeta;
             Reg::MaskReg preg = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
             Reg::MaskReg pregMerge = Reg::CreateMask<float, Reg::MaskPattern::VL1>();
             for (uint16_t i = 0; i < (uint16_t)a; i++) {
@@ -508,18 +503,20 @@ public:
                 LoadAlign<float, Reg::LoadDist::DIST_BRC_B32>(dgammaValue, (__ubuf__ float*)(dgammaAddr) + i);
                 LoadAlign<float, Reg::LoadDist::DIST_BRC_B32>(dbetaValue, (__ubuf__ float*)(dbetaAddr) + i);
                 LoadOneElement<WEIGHT_TYPE>(gammaAddr, gammaValue, preg, i);
+                // 预合并 grad_scale = rstd * gamma（j 循环外每通道一次）
+                Mul(gradScale, rstdValue, gammaValue, preg);
                 uint32_t sregMask = (uint32_t)r;
                 for (uint16_t j = 0; j < loopTimes; j++) {
                     pregR = Reg::UpdateMask<float>(sregMask);
                     LoadAlign(xhat, (__ubuf__ float*)(xhatAddr) + i * rAlign + VL * j);
                     LoadOneTensor<DY_TYPE>(dyAddr, dy, pregR, i * rAlign + VL * j);
+                    // dx = (dy − ((x̂·dgamma + dbeta)·(1/N))) · grad_scale
                     Mul(mulRstd, xhat, rstdValue, pregR);
                     Mul(mulDgamma, mulRstd, dgammaValue, pregR);
                     Add(addDbeta, mulDgamma, dbetaValue, preg);
                     Muls(divH, addDbeta, hRecipValue, pregR);
                     Sub(subDy, dy, divH, pregR);
-                    Mul(gammaMulSubDy, gammaValue, subDy, pregR);
-                    Mul(dx, rstdValue, gammaMulSubDy, pregR);
+                    Mul(dx, subDy, gradScale, pregR);
                     StoreOneTensor<DY_TYPE>(xhatAddr, dx, pregR, i * rAlign + VL * j);
                 }
                 if constexpr (IsSameType<WEIGHT_TYPE, half>::value || IsSameType<WEIGHT_TYPE, bfloat16_t>::value) {

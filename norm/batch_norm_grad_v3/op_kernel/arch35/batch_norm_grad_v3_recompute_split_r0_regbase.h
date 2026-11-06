@@ -653,25 +653,27 @@ public:
                 Reg::Mul(binaryAddXR1, binaryAddXR1, binaryAddDyR1, pregLoop);
                 Reg::Mul(binaryAddXQ2, binaryAddXQ2, binaryAddDyQ2, pregQ);
                 Reg::Mul(binaryAddXR2, binaryAddXR2, binaryAddDyR2, pregR);
-
-                Reg::Mul(binaryAddDyQ1, rstdValue, binaryAddXQ1, pregMain);
-                Reg::Mul(binaryAddDyR1, rstdValue, binaryAddXR1, pregLoop);
-                Reg::Mul(binaryAddDyQ2, rstdValue, binaryAddXQ2, pregQ);
-                Reg::Mul(binaryAddDyR2, rstdValue, binaryAddXR2, pregR);
+                // dgamma 先归约后乘 rstd（段内不乘，归约完成后统一乘一次）
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddDyQ1, binaryAddDyQ1, binaryAddDyQ2, pregQ);
-                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddDyR1, binaryAddDyR1, binaryAddDyR2, pregR);
-                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddDyQ1, binaryAddDyQ1, binaryAddDyR1, pregLoop);
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddXQ1, binaryAddXQ1, binaryAddXQ2, pregQ);
 #else
-                Reg::Add(tmp, binaryAddDyQ1, binaryAddDyQ2, pregQ);
-                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddDyQ1, tmp, pregQ);
-                Reg::Add(tmp, binaryAddDyR1, binaryAddDyR2, pregR);
-                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddDyR1, tmp, pregR);
-                Reg::Add(tmp, binaryAddDyQ1, binaryAddDyR1, pregLoop);
-                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddDyQ1, tmp, pregLoop);
+                Reg::Add(tmp, binaryAddXQ1, binaryAddXQ2, pregQ);
+                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddXQ1, tmp, pregQ);
 #endif
-                Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddDyQ1, pregMain);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddXR1, binaryAddXR1, binaryAddXR2, pregR);
+#else
+                Reg::Add(tmp, binaryAddXR1, binaryAddXR2, pregR);
+                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddXR1, tmp, pregR);
+#endif
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddXQ1, binaryAddXQ1, binaryAddXR1, pregLoop);
+#else
+                Reg::Add(tmp, binaryAddXQ1, binaryAddXR1, pregLoop);
+                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddXQ1, tmp, pregLoop);
+#endif
+                Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddXQ1, pregMain);
                 Reg::StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)binaryAddAddr + i,
                                                                                vlSum, pregMerge);
             }
@@ -691,16 +693,13 @@ public:
                 Reg::Mul(binaryAddXQ1, binaryAddXQ1, binaryAddDyQ1, pregMain);
                 Reg::Mul(binaryAddXQ2, binaryAddXQ2, binaryAddDyQ2, pregQ);
 
-                Reg::Mul(binaryAddDyQ1, rstdValue, binaryAddXQ1, pregMain);
-                Reg::Mul(binaryAddDyQ2, rstdValue, binaryAddXQ2, pregQ);
-
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddDyQ1, binaryAddDyQ1, binaryAddDyQ2, pregQ);
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddXQ1, binaryAddXQ1, binaryAddXQ2, pregQ);
 #else
-                Reg::Add(tmp, binaryAddDyQ1, binaryAddDyQ2, pregQ);
-                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddDyQ1, tmp, pregQ);
+                Reg::Add(tmp, binaryAddXQ1, binaryAddXQ2, pregQ);
+                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddXQ1, tmp, pregQ);
 #endif
-                Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddDyQ1, pregMain);
+                Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddXQ1, pregMain);
                 Reg::StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
@@ -767,15 +766,14 @@ public:
                 Reg::Sub(binaryAddR1, binaryAddR1, meanValue, pregLoop);
                 Reg::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
                 Reg::Mul(binaryAddR1, binaryAddR1, binaryAddR2, pregLoop);
-                Reg::Mul(binaryAddQ2, rstdValue, binaryAddQ1, pregMain);
-                Reg::Mul(binaryAddR2, rstdValue, binaryAddR1, pregLoop);
+// dgamma 先归约后乘 rstd（段内不乘，归约完成后统一乘一次）
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddQ2, binaryAddQ2, binaryAddR2, pregLoop);
+                Add<float, AscendC::Reg::MaskMergeMode::MERGING>(binaryAddQ1, binaryAddQ1, binaryAddR1, pregLoop);
 #else
-                Reg::Add(tmp, binaryAddQ2, binaryAddR2, pregLoop);
-                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddQ2, tmp, pregLoop);
+                Reg::Add(tmp, binaryAddQ1, binaryAddR1, pregLoop);
+                Reg::Move<float, Reg::MaskMergeMode::MERGING>(binaryAddQ1, tmp, pregLoop);
 #endif
-                Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ2, pregMain);
+                Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
                 Reg::StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)binaryAddAddr + i,
                                                                                vlSum, pregMerge);
             }
@@ -785,8 +783,7 @@ public:
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddQ2, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
                 Reg::Sub(binaryAddQ1, binaryAddQ1, meanValue, pregMain);
                 Reg::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
-                Reg::Mul(binaryAddQ2, rstdValue, binaryAddQ1, pregMain);
-                Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ2, pregMain);
+                Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
                 Reg::StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
@@ -829,6 +826,18 @@ public:
     {
         ReduceAllLevel(dbeta_, level1Idx, level2Idx, level3Idx);
         ReduceAllLevel(dgamma_, level1Idx, level2Idx, level3Idx);
+        // dgamma 先归约后乘 rstd（各段归约完成后统一乘一次）
+        __VEC_SCOPE__
+        {
+            Reg::RegTensor<float> dgammaValue;
+            Reg::RegTensor<float> rstdValue;
+            Reg::MaskReg pregMerge = Reg::CreateMask<float, Reg::MaskPattern::VL1>();
+            Reg::LoadAlign<float, Reg::LoadDist::DIST_BRC_B32>(rstdValue, (__ubuf__ float*)rstd_.GetPhyAddr());
+            Reg::LoadAlign(dgammaValue, (__ubuf__ float*)dgamma_.GetPhyAddr());
+            Reg::Mul(dgammaValue, dgammaValue, rstdValue, pregMerge);
+            Reg::StoreAlign<float, Reg::StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)dgamma_.GetPhyAddr(),
+                                                                           dgammaValue, pregMerge);
+        }
     }
 
     __aicore__ inline void ReduceToNextBuf(uint32_t& level1Idx, uint32_t& level2Idx, uint32_t& level3Idx)
@@ -924,7 +933,7 @@ public:
             Reg::RegTensor<float> gammaValue;
             Reg::RegTensor<float> dgammaValue;
             Reg::RegTensor<float> dbetaValue;
-            Reg::RegTensor<float> gammaMulSubDy;
+            Reg::RegTensor<float> gradScale;
             Reg::MaskReg pregR;
             Reg::RegTensor<float> dy;
             Reg::RegTensor<float> mulDgamma;
@@ -938,19 +947,22 @@ public:
             Reg::LoadAlign<float, Reg::LoadDist::DIST_BRC_B32>(dgammaValue, (__ubuf__ float*)(dgammaAddr));
             Reg::LoadAlign<float, Reg::LoadDist::DIST_BRC_B32>(dbetaValue, (__ubuf__ float*)(dbetaAddr));
             LoadOneElement<WEIGHT_TYPE>(gammaAddr, gammaValue, preg, 0);
+            // grad_scale = rstd * gamma（循环外一次）
+            Reg::Mul(gradScale, rstdValue, gammaValue, preg);
             uint32_t sregMask = r;
             for (uint16_t j = 0; j < loopTimes; j++) {
                 pregR = Reg::UpdateMask<float>(sregMask);
                 LoadOneTensor<DY_TYPE>(xSrcAddr, xValue, pregR, VL_FP32 * j);
                 LoadOneTensor<DY_TYPE>(dyAddr, dy, pregR, VL_FP32 * j);
+                // xhat 入参是 (x-mean)，先补乘 rstd；合并减形态（分离减实测慢 2.7~2.8x）
                 Reg::Sub(xSubMean, xValue, meanValue, pregR);
                 Reg::Mul(xHat, xSubMean, rstdValue, pregR);
                 Reg::Mul(mulDgamma, xHat, dgammaValue, pregR);
                 Reg::Add(addDbeta, mulDgamma, dbetaValue, preg);
                 Reg::Muls(divH, addDbeta, hRecipValue, pregR);
                 Reg::Sub(subDy, dy, divH, pregR);
-                Reg::Mul(gammaMulSubDy, gammaValue, subDy, pregR);
-                Reg::Mul(dx, rstdValue, gammaMulSubDy, pregR);
+
+                Reg::Mul(dx, subDy, gradScale, pregR);
                 StoreOneTensor<DY_TYPE>(xDstAddr, dx, pregR, VL_FP32 * j);
             }
         }
