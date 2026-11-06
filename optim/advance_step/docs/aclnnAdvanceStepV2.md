@@ -172,7 +172,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>specToken（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStepV2计算的入参，用于记录当前投机模型的token的index。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维长度为specNum。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>可选输入；传入空Tensor视为未传入。</li><li>非空时shape第一维长度与numSeqs一致，第二维长度为specNum，且specNum必须大于0。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
@@ -262,7 +262,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   <tr>
     <td>ACLNN_ERR_PARAM_NULLPTR</td>
     <td>161001</td>
-    <td>传入的inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables、specToken、acceptedNum是空指针。</td>
+    <td>传入的inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables是空指针（specToken、acceptedNum为可选输入，允许为空指针）。</td>
   </tr>
   <tr>
     <td>ACLNN_ERR_PARAM_INVALID</td>
@@ -278,7 +278,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>输入sampledTokenIds的shape的第一维长度与numSeqs不一致，或者shape的第二维长度不为1 + specNum。</td>
   </tr>
   <tr>
-    <td>输入specToken的shape的第一维长度与numSeqs不一致，或者shape的维度不为2。</td>
+    <td>输入specToken非空时，shape的第一维长度与numSeqs不一致，或者shape的维度不为2。</td>
   </tr>
   <tr>
     <td>输入acceptedNum的shape长度与numSeqs不一致。</td>
@@ -340,6 +340,10 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 
 ## 约束说明
 
+- 接口路径约束：
+  - V2路径要求specToken与acceptedNum同时传入且均非空，specNum（specToken第二维长度）大于0，且numSeqs与numQueries相等。
+  - 仅传入specToken或acceptedNum中的一个，或两者均未传入（含传入空Tensor；specNum为0时specToken为空Tensor）时，走V1路径；V1路径要求numSeqs大于numQueries，不满足时返回561002。
+  - 无投机解码场景可评估使用aclnnAdvanceStep，但V1路径的numSeqs与numQueries约束与V2路径不同，不能直接等价替换。
 - 确定性计算：
   - aclnnAdvanceStepV2默认确定性实现。
 

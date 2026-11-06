@@ -102,7 +102,7 @@
     <tr>
       <td>numSeqs</td>
       <td>属性</td>
-      <td><ul><li>记录输入的seq数量，大小与seqLens的长度一致。</li><li>取值范围是大于0的正整数。numSeqs的值大于输入numQueries的值。</li></ul></td>
+      <td><ul><li>记录输入的seq数量，大小与seqLens的长度一致。</li><li>取值范围是大于0的正整数。</li><li>V1路径numSeqs的值大于输入numQueries的值；V2路径numSeqs的值等于输入numQueries的值。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -134,10 +134,11 @@
   - sampledTokenIds的shape必须为[numQueries, 1]。
   - numSeqs必须大于numQueries。
 - 形状约束（spec_token与accepted_num同时传入，V2路径）：
-  - inputTokens、inputPositions、seqLens、slotMapping的shape必须为[numSeqs * (1 + specNum)]，specNum为spec_token第二维长度。
+  - inputTokens、inputPositions、seqLens、slotMapping的shape必须为[numSeqs * (1 + specNum)]，specNum为spec_token第二维长度且必须大于0。
   - sampledTokenIds的shape必须为[numSeqs, (1 + specNum)]，spec_token的shape必须为[numSeqs, specNum]，accepted_num的shape必须为[numSeqs]。
   - blockTables的shape必须为[numSeqs, blockTablesStride]，第二维长度blockTablesStride必须大于0。
-  - spec_token与accepted_num须同时传入或同时不传入（传入空Tensor视为未传入）；仅传入其一时走V1路径，spec_token/accepted_num不参与计算。
+  - numSeqs必须等于numQueries。
+  - spec_token与accepted_num须同时传入或同时不传入（传入空Tensor视为未传入）；仅传入其一或均未传入时走V1路径，spec_token/accepted_num不参与计算。spec_token为空Tensor（specNum为0）时不会走V2路径。无投机解码场景可评估使用aclnnAdvanceStep，但V1路径要求numSeqs大于numQueries，与V2路径（numSeqs等于numQueries）的约束不同，不能直接等价替换。
 - 所有必选输入不支持空Tensor（上述形状约束已隐含，第一维不小于1）。
 
 ### 用户保证约束（涉及数据内容或内存布局，host侧无法校验，由调用方保证，违反时可能导致计算错误或越界访问）

@@ -104,7 +104,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>numSeqs</td>
       <td>Attribute</td>
-      <td><ul><li>Records the number of input seqs, and its size is consistent with the length of seqLens.</li><li>The value range is positive integers greater than 0. The value of numSeqs is greater than the value of the input numQueries.</li></ul></td>
+      <td><ul><li>Records the number of input seqs, and its size is consistent with the length of seqLens.</li><li>The value range is positive integers greater than 0.</li><li>In the V1 path, numSeqs is greater than numQueries; in the V2 path, numSeqs is equal to numQueries.</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -136,10 +136,11 @@ English | [简体中文](./README.md)
   - The shape of sampledTokenIds must be [numQueries, 1].
   - numSeqs must be greater than numQueries.
 - Shape constraints (both spec_token and accepted_num are passed, V2 path):
-  - The shape of inputTokens, inputPositions, seqLens, and slotMapping must be [numSeqs * (1 + specNum)], where specNum is the length of the second dimension of spec_token.
+  - The shape of inputTokens, inputPositions, seqLens, and slotMapping must be [numSeqs * (1 + specNum)], where specNum is the length of the second dimension of spec_token and must be greater than 0.
   - The shape of sampledTokenIds must be [numSeqs, (1 + specNum)], the shape of spec_token must be [numSeqs, specNum], and the shape of accepted_num must be [numSeqs].
   - The shape of blockTables must be [numSeqs, blockTablesStride], and the second-dimension length blockTablesStride must be greater than 0.
-  - spec_token and accepted_num must be passed together or omitted together (passing an empty tensor counts as not passing); when only one of them is passed, the V1 path is used, and spec_token/accepted_num do not participate in the computation.
+  - numSeqs must be equal to numQueries.
+  - spec_token and accepted_num must be passed together or omitted together (passing an empty tensor counts as not passing); when only one of them is passed or neither is passed, the V1 path is used, and spec_token/accepted_num do not participate in the computation. When spec_token is an empty tensor (specNum is 0), the V2 path is not used. For the no-speculative-decoding scenario, evaluate aclnnAdvanceStep, but note that the V1 path requires numSeqs to be greater than numQueries, which differs from the V2 path constraint (numSeqs equals numQueries); it is not a direct equivalent replacement.
 - All mandatory inputs do not support empty tensors (implied by the shape constraints above: the first dimension is not less than 1).
 
 ### User guarantee constraints (involving data content or memory layout; the host side cannot validate them, and the caller guarantees them. Violations may cause computation errors or out-of-bounds access)

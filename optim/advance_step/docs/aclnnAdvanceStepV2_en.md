@@ -174,7 +174,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>specToken (aclTensor*)</td>
       <td>Input</td>
       <td>Input for the AdvanceStepV2 calculation to be performed, used to record the token index of the current speculative model.</td>
-      <td><ul><li>Empty tensors not supported.</li><li>The length of the first dimension of the shape is consistent with numSeqs, and the length of the second dimension is specNum.</li><li>The value range is a positive integer greater than 0.</li></ul></td>
+      <td><ul><li>Optional input; passing an empty tensor is regarded as not passing it.</li><li>When it is not empty, the length of the first dimension of the shape is consistent with numSeqs, and the length of the second dimension is specNum, which must be greater than 0.</li><li>The value range is a positive integer greater than 0.</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>numSeqs(int64_t)</td>
       <td>Input</td>
       <td>Records the number of input sequences. The size must be consistent with the length of seqLens.</td>
-      <td><ul><li>Value range: positive integers greater than 0.</li><li>The value of numSeqs is greater than the value of input numQueries.</li></ul></td>
+      <td><ul><li>Value range: positive integers greater than 0.</li><li>The value of numSeqs is equal to the value of input numQueries.</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -264,7 +264,7 @@ The first-phase API performs input parameter validation and returns an error in 
   <tr>
     <td>ACLNN_ERR_PARAM_NULLPTR</td>
     <td>161001</td>
-    <td>The input inputTokens, sampledTokenIds, inputPositions, seqLens, slotMapping, blockTables, specToken, and acceptedNum are null pointers.</td>
+    <td>The input inputTokens, sampledTokenIds, inputPositions, seqLens, slotMapping, and blockTables are null pointers (specToken and acceptedNum are optional inputs and may be null pointers).</td>
   </tr>
   <tr>
     <td>ACLNN_ERR_PARAM_INVALID</td>
@@ -283,7 +283,7 @@ The first-phase API performs input parameter validation and returns an error in 
     <td>The length of the shape of input acceptedNum is inconsistent with numSeqs.</td>
   </tr>
     <tr>
-    <td>The length of the second dimension of the shape of input specToken is not specNum.</td>
+    <td>When input specToken is not empty, the length of the first dimension of the shape is inconsistent with numSeqs, or the number of dimensions is not 2.</td>
   </tr>
     <tr>
     <td>The value of input numSeqs is not equal to the value of input numQueries.</td>
@@ -336,6 +336,10 @@ The first-phase API performs input parameter validation and returns an error in 
 
 ## Constraints
 
+- Interface path constraints:
+  - The V2 path requires specToken and acceptedNum to be passed together and to be non-empty, specNum (the length of the second dimension of specToken) to be greater than 0, and numSeqs to be equal to numQueries.
+  - When only one of specToken and acceptedNum is passed, or neither is passed (including passing an empty tensor; when specNum is 0, specToken is an empty tensor), the V1 path is used. The V1 path requires numSeqs to be greater than numQueries; otherwise, 561002 is returned.
+  - For the no-speculative-decoding scenario, evaluate aclnnAdvanceStep, but the numSeqs and numQueries constraints of the V1 path differ from those of the V2 path, so it is not a direct equivalent replacement.
 - deterministic computation:
   - aclnnAdvanceStepV2 defaults to a deterministic implementation.
 
