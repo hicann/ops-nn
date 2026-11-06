@@ -630,9 +630,10 @@ int main()
         bool trans = false;
         uint64_t workspaceSize = 0;
         aclOpExecutor* executor = nullptr;
-        ret = aclnnRotateQuantGetWorkspaceSize(xTensor, rotTensor, nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans,
-                                            yTensor, scaleTensor, &workspaceSize, &executor);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+        ret = aclnnRotateQuantGetWorkspaceSize(xTensor, rotTensor, nullptr, axis, roundMode, scaleAlg, dstTypeMax,
+                                               trans, yTensor, scaleTensor, &workspaceSize, &executor);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
+                  return ret);
 
         // 根据第一段接口计算出的workspaceSize申请device内存
         void* workspaceAddr = nullptr;
@@ -655,10 +656,11 @@ int main()
         auto ySize = GetShapeSize(yShape);
         std::vector<int8_t> yResult(ySize, 0);
         ret = aclrtMemcpy(yResult.data(), ySize * sizeof(int8_t), yDeviceAddr, ySize * sizeof(int8_t),
-                        ACL_MEMCPY_DEVICE_TO_HOST);
+                          ACL_MEMCPY_DEVICE_TO_HOST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y result failed.\n"); return ret);
 
-        void* scaleResult = isMx ? static_cast<void*>(scaleMxHostData.data()) : static_cast<void*>(scaleHostData.data());
+        void* scaleResult = isMx ? static_cast<void*>(scaleMxHostData.data()) :
+                                   static_cast<void*>(scaleHostData.data());
         auto scaleBytes = scaleSize * (isMx ? sizeof(uint8_t) : sizeof(float));
         ret = aclrtMemcpy(scaleResult, scaleBytes, scaleDeviceAddr, scaleBytes, ACL_MEMCPY_DEVICE_TO_HOST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale result failed.\n"); return ret);

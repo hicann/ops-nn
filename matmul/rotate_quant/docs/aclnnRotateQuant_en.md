@@ -454,8 +454,13 @@ aclnnStatus aclnnRotateQuant(
 The following sample code is for reference only. For details about compilation and execution, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
 
 ```Cpp
+#include <algorithm>
+#include <cctype>
+#include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <vector>
 #include <random>
 
@@ -495,9 +500,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -510,9 +514,9 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return 1);
     return 0;
 }
 
@@ -541,128 +545,148 @@ std::vector<uint16_t> GenerateIdentityMatrix(int64_t K)
 
 int main()
 {
-    // 1. (boilerplate) device/stream initialization. For details, see the acl API manual.
+    // 1. (boilerplate) Initialize the device and stream. For details, see the acl API manual.
     // Set deviceId based on the actual device.
     int32_t deviceId = 0;
     aclrtStream stream;
 
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+    {
+        // V1 ordinary RotateQuant: select a supported output type and scale layout based on the chip.
+        const char* socName = aclrtGetSocName();
+        CHECK_RET(socName != nullptr, LOG_PRINT("aclrtGetSocName failed.\n"); return 1);
+        std::string soc(socName);
+        std::transform(soc.begin(), soc.end(), soc.begin(),
+                       [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+        const bool isInt = soc.rfind("ascend910b", 0) == 0 || soc.rfind("ascend910_93", 0) == 0;
+        const bool isMx = soc.rfind("ascend950", 0) == 0 || soc.rfind("ascend350", 0) == 0 ||
+                          soc.rfind("ascend960dt", 0) == 0 || soc.rfind("ascend960pr", 0) == 0;
+        CHECK_RET(isInt || isMx, LOG_PRINT("Unsupported SOC for this example: %s\n", socName); return 1);
+        LOG_PRINT("Current SOC: %s; mode=ordinary, y=%s, scale=%s\n", socName, isMx ? "FLOAT8_E4M3FN" : "INT8",
+                  isMx ? "FLOAT8_E8M0" : "FLOAT");
 
-    // 2. Construct the input and output. Customize the construction based on the API definition.
-    // x: (M, N), rot: (K, K), y: (M, N), scale: (M,)
-    // Constraints: rot must be square, N % K == 0, N % 8 == 0
-    int64_t M = 1024;
-    int64_t N = 256;
-    int64_t K = 64;
+        // 2. Construct the input and output tensors based on the API definition.
+        // All input rows share a 2D rotation matrix, applied in groups of K elements before quantization.
+        // x: (M, N), rot: (K, K), y: (M, N)
+        // INT scale: (M,); MX scale: (M, CeilDiv(N, 64), 2)
+        const int64_t M = 1024;
+        const int64_t N = 256;
+        const int64_t K = 64;
 
-    std::vector<int64_t> xShape = {M, N};
-    std::vector<int64_t> rotShape = {K, K};
-    std::vector<int64_t> yShape = {M, N};
-    std::vector<int64_t> scaleShape = {M};
+        std::vector<int64_t> xShape = {M, N};
+        std::vector<int64_t> rotShape = {K, K};
+        std::vector<int64_t> yShape = {M, N};
+        std::vector<int64_t> scaleShape = isMx ? std::vector<int64_t>{M, (N + 63) / 64, 2} : std::vector<int64_t>{M};
 
-    // Create x aclTensor (BF16).
-    auto xHostData = GenerateRandomBf16Data(M * N, 42);
-    void* xDeviceAddr = nullptr;
-    aclTensor* xTensor = nullptr;
-    ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &xTensor);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(xTensor, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void*)> xAddrPtr(xDeviceAddr, aclrtFree);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create x tensor failed.\n"); return ret);
+        // Create x aclTensor (BF16).
+        auto xHostData = GenerateRandomBf16Data(M * N, 42);
+        void* xDeviceAddr = nullptr;
+        aclTensor* xTensor = nullptr;
+        ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &xTensor);
+        std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(xTensor, aclDestroyTensor);
+        std::unique_ptr<void, aclError (*)(void*)> xAddrPtr(xDeviceAddr, aclrtFree);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create x tensor failed.\n"); return ret);
 
-    // Create rot aclTensor (BF16, must be a square matrix).
-    auto rotHostData = GenerateIdentityMatrix(K);
-    void* rotDeviceAddr = nullptr;
-    aclTensor* rotTensor = nullptr;
-    ret = CreateAclTensor(rotHostData, rotShape, &rotDeviceAddr, aclDataType::ACL_BF16, &rotTensor);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> rotTensorPtr(rotTensor, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void*)> rotAddrPtr(rotDeviceAddr, aclrtFree);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create rot tensor failed.\n"); return ret);
+        // Create rot aclTensor (BF16, must be a square matrix).
+        auto rotHostData = GenerateIdentityMatrix(K);
+        void* rotDeviceAddr = nullptr;
+        aclTensor* rotTensor = nullptr;
+        ret = CreateAclTensor(rotHostData, rotShape, &rotDeviceAddr, aclDataType::ACL_BF16, &rotTensor);
+        std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> rotTensorPtr(rotTensor, aclDestroyTensor);
+        std::unique_ptr<void, aclError (*)(void*)> rotAddrPtr(rotDeviceAddr, aclrtFree);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create rot tensor failed.\n"); return ret);
 
-    // Create y aclTensor (INT8).
-    std::vector<int8_t> yHostData(M * N, 0);
-    void* yDeviceAddr = nullptr;
-    aclTensor* yTensor = nullptr;
-    ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_INT8, &yTensor);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> yTensorPtr(yTensor, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void*)> yAddrPtr(yDeviceAddr, aclrtFree);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create y tensor failed.\n"); return ret);
+        // Create y aclTensor: each INT8 or FLOAT8_E4M3FN element occupies one byte.
+        std::vector<int8_t> yHostData(M * N, 0);
+        void* yDeviceAddr = nullptr;
+        aclTensor* yTensor = nullptr;
+        ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr,
+                              isMx ? aclDataType::ACL_FLOAT8_E4M3FN : aclDataType::ACL_INT8, &yTensor);
+        std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> yTensorPtr(yTensor, aclDestroyTensor);
+        std::unique_ptr<void, aclError (*)(void*)> yAddrPtr(yDeviceAddr, aclrtFree);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create y tensor failed.\n"); return ret);
 
-    // Create scale aclTensor (FLOAT32).
-    std::vector<float> scaleHostData(M, 0.0f);
-    void* scaleDeviceAddr = nullptr;
-    aclTensor* scaleTensor = nullptr;
-    ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scaleTensor);
-    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> scaleTensorPtr(scaleTensor, aclDestroyTensor);
-    std::unique_ptr<void, aclError (*)(void*)> scaleAddrPtr(scaleDeviceAddr, aclrtFree);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create scale tensor failed.\n"); return ret);
+        // Create scale aclTensor: use FLOAT in INT mode and one-byte raw FLOAT8_E8M0 codes in MX mode.
+        auto scaleSize = GetShapeSize(scaleShape);
+        std::vector<float> scaleHostData(isMx ? 0 : scaleSize, 0.0f);
+        std::vector<uint8_t> scaleMxHostData(isMx ? scaleSize : 0, 0);
+        void* scaleDeviceAddr = nullptr;
+        aclTensor* scaleTensor = nullptr;
+        if (isMx) {
+            ret = CreateAclTensor(scaleMxHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0,
+                                  &scaleTensor);
+        } else {
+            ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scaleTensor);
+        }
+        std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> scaleTensorPtr(scaleTensor, aclDestroyTensor);
+        std::unique_ptr<void, aclError (*)(void*)> scaleAddrPtr(scaleDeviceAddr, aclrtFree);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create scale tensor failed.\n"); return ret);
 
-    // 3. Call the CANN operator library API. Change it to the specific API name.
-    // Call the first-phase API of aclnnRotateQuant.
-    int64_t axis = -1;
-    char* roundMode = const_cast<char*>("rint");
-    int64_t scaleAlg = 0;
-    double dstTypeMax = 0.0;
-    bool trans = false;
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor = nullptr;
-    ret = aclnnRotateQuantGetWorkspaceSize(xTensor, rotTensor, nullptr, axis, roundMode, scaleAlg, dstTypeMax, trans,
-                                            yTensor, scaleTensor, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-                   LOG_PRINT("aclnnRotateQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+        // 3. Call the CANN operator library API. Use the specific API name.
+        // Call the V1 first-phase API for ordinary rotation quantization. Pass nullptr for alpha to disable clamp.
+        int64_t axis = -1;
+        char roundMode[] = "rint";
+        int64_t scaleAlg = 0;
+        double dstTypeMax = 0.0;
+        bool trans = false;
+        uint64_t workspaceSize = 0;
+        aclOpExecutor* executor = nullptr;
+        ret = aclnnRotateQuantGetWorkspaceSize(xTensor, rotTensor, nullptr, axis, roundMode, scaleAlg, dstTypeMax,
+                                               trans, yTensor, scaleTensor, &workspaceSize, &executor);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
+                  return ret);
 
-    // Allocate device memory based on the workspaceSize computed by the first-phase API.
-    void* workspaceAddr = nullptr;
-    std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
-    if (workspaceSize > 0) {
-        ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
-        workspaceAddrPtr.reset(workspaceAddr);
+        // Allocate device memory based on the workspaceSize computed by the first-phase API.
+        void* workspaceAddr = nullptr;
+        std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
+        if (workspaceSize > 0) {
+            ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+            CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+            workspaceAddrPtr.reset(workspaceAddr);
+        }
+
+        // Call the second-phase API of aclnnRotateQuant.
+        ret = aclnnRotateQuant(workspaceAddr, workspaceSize, executor, stream);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuant failed. ERROR: %d\n", ret); return ret);
+
+        // 4. (boilerplate) Synchronize and wait for task execution to complete.
+        ret = aclrtSynchronizeStream(stream);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+
+        // 5. Obtain the output values by copying results from device memory to host memory based on the API definition.
+        auto ySize = GetShapeSize(yShape);
+        std::vector<int8_t> yResult(ySize, 0);
+        ret = aclrtMemcpy(yResult.data(), ySize * sizeof(int8_t), yDeviceAddr, ySize * sizeof(int8_t),
+                          ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y result failed.\n"); return ret);
+
+        void* scaleResult = isMx ? static_cast<void*>(scaleMxHostData.data()) :
+                                   static_cast<void*>(scaleHostData.data());
+        auto scaleBytes = scaleSize * (isMx ? sizeof(uint8_t) : sizeof(float));
+        ret = aclrtMemcpy(scaleResult, scaleBytes, scaleDeviceAddr, scaleBytes, ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale result failed.\n"); return ret);
+
+        // Print part of the results.
+        constexpr int64_t kPrintLimit = 5;
+        for (int64_t i = 0; i < kPrintLimit && i < static_cast<int64_t>(yResult.size()); i++) {
+            if (isMx) {
+                // Print FP8/E8M0 values as raw codes; they cannot be interpreted directly as INT8/FLOAT.
+                LOG_PRINT("y[%ld] code = 0x%02x\n", i, static_cast<unsigned>(static_cast<uint8_t>(yResult[i])));
+            } else {
+                LOG_PRINT("y[%ld] = %d\n", i, static_cast<int>(yResult[i]));
+            }
+        }
+        for (int64_t i = 0; i < kPrintLimit && i < scaleSize; i++) {
+            if (isMx) {
+                LOG_PRINT("scale[%ld] code = 0x%02x\n", i, static_cast<unsigned>(scaleMxHostData[i]));
+            } else {
+                LOG_PRINT("scale[%ld] = %f\n", i, scaleHostData[i]);
+            }
+        }
     }
 
-    // Call the second-phase API of aclnnRotateQuant.
-    ret = aclnnRotateQuant(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuant failed. ERROR: %d\n", ret); return ret);
-
-    // 4. (boilerplate) Synchronize and wait for the task execution to complete.
-    ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
-    // 5. Obtain the output values, and copy the results from device memory to host memory. Modify them according to the specific API definition.
-    auto ySize = GetShapeSize(yShape);
-    std::vector<int8_t> yResult(ySize, 0);
-    ret = aclrtMemcpy(yResult.data(), ySize * sizeof(int8_t), yDeviceAddr, ySize * sizeof(int8_t),
-                      ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y result failed.\n"); return ret);
-
-    auto scaleSize = GetShapeSize(scaleShape);
-    std::vector<float> scaleResult(scaleSize, 0.0f);
-    ret = aclrtMemcpy(scaleResult.data(), scaleSize * sizeof(float), scaleDeviceAddr, scaleSize * sizeof(float),
-                      ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale result failed.\n"); return ret);
-
-    // Print part of the results.
-    for (int64_t i = 0; i < 5 && i < static_cast<int64_t>(yResult.size()); i++) {
-        LOG_PRINT("y[%ld] = %d\n", i, static_cast<int>(yResult[i]));
-    }
-    for (int64_t i = 0; i < 5 && i < static_cast<int64_t>(scaleResult.size()); i++) {
-        LOG_PRINT("scale[%ld] = %f\n", i, scaleResult[i]);
-    }
-
-    // 6. Release aclTensor and aclScalar. Modify them according to the specific API definition.
-    aclDestroyTensor(xTensor);
-    aclDestroyTensor(rotTensor);
-    aclDestroyTensor(yTensor);
-    aclDestroyTensor(scaleTensor);
-
-    // 7. Release device resources. Modify them according to the specific API definition.
-    aclrtFree(xDeviceAddr);
-    aclrtFree(rotDeviceAddr);
-    aclrtFree(yDeviceAddr);
-    aclrtFree(scaleDeviceAddr);
-    if (workspaceSize > 0) {
-      aclrtFree(workspaceAddr);
-    }
+    // 6. Release resources.
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
