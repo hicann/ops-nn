@@ -25,6 +25,8 @@
 
 using namespace op;
 
+static constexpr size_t MAX_DIM_LEN = 8;
+
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16,
                                                                    DataType::DT_BF16};
 
@@ -44,6 +46,10 @@ static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, con
 // self、gradInput的shape需要满足broadcast规则，gradnput的shape为broadcast后的shape
 static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput)
 {
+    OP_CHECK_MAX_DIM(gradOutput, MAX_DIM_LEN, return false);
+    OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
+    OP_CHECK_MAX_DIM(gradInput, MAX_DIM_LEN, return false);
+
     const auto& gradInputShape = gradInput->GetViewShape();
 
     op::Shape broadcastShape;
