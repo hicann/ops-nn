@@ -88,7 +88,7 @@ aclnnStatus aclnnHeaviside(
       <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>输入的张量，公式中的input。</td>
-      <td><ul><li>支持空Tensor。</li><li>需要与values满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>需要与values满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>input与values的数据类型需保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnHeaviside(
       <td>values（aclTensor*）</td>
       <td>输入</td>
       <td>input值为零时使用的值的张量，公式中的values。</td>
-      <td><ul><li>支持空Tensor。</li><li>需要与input满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>需要与input满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>input与values的数据类型需保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -162,9 +162,12 @@ aclnnStatus aclnnHeaviside(
       <td>传入的输入参数（input，values）或输出参数out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>输入/输出参数的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>输入参数input和values的数据类型不一致。</td>
     </tr>
     <tr>
       <td>输入参数input和values的shape无法做broadcast。</td>

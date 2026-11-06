@@ -48,6 +48,8 @@ inline static bool CheckDtypeValid(const aclTensor* input, const aclTensor* valu
     OP_CHECK_DTYPE_NOT_SUPPORT(input, AICORE_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(values, AICORE_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, AICORE_DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_MATCH(values, input->GetDataType(), return false);
+    OP_CHECK_DTYPE_NOT_MATCH(out, input->GetDataType(), return false);
     return true;
 }
 
@@ -59,8 +61,11 @@ static bool CheckShape(const aclTensor* input, const aclTensor* values, const ac
     Shape broadcastShape;
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(input, values, broadcastShape, return false);
 
-    if (out->GetViewShape().GetShapeSize() != broadcastShape.GetShapeSize()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The out shape size is not same with broadcastShapeSize.");
+    if (out->GetViewShape() != broadcastShape) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The out shape is not same with broadcastShape, out shape is %s, "
+                "broadcastShape is %s.",
+                op::ToString(out->GetViewShape()).GetString(), op::ToString(broadcastShape).GetString());
         return false;
     }
 
