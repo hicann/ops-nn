@@ -139,40 +139,21 @@ public:
 
     __aicore__ inline void CopyBiasToUB(LocalTensor<BIAS_TYPE> biasLocal, int32_t copyLen)
     {
-        if constexpr (isMix) {
-            const int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(BIAS_TYPE), blockSize_) / sizeof(BIAS_TYPE);
-            const int32_t copyLenAlignB16 = BLOCK_ALIGN(copyLen * sizeof(half), blockSize_) / sizeof(half);
+        const int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(BIAS_TYPE), blockSize_) / sizeof(BIAS_TYPE);
 
-            DataCopyPadExtParams<BIAS_TYPE> padParams;
-            padParams.isPad = true;
-            padParams.paddingValue = static_cast<BIAS_TYPE>(0.0);
-            padParams.rightPadding = copyLenAlign - copyLen;
+        DataCopyPadExtParams<BIAS_TYPE> padParams{};
+        padParams.isPad = true;
+        padParams.paddingValue = static_cast<BIAS_TYPE>(0.0);
+        padParams.rightPadding = copyLenAlign - copyLen;
 
-            DataCopyExtParams dataCopyParams;
-            dataCopyParams.blockCount = 1;
-            dataCopyParams.blockLen = copyLen * sizeof(BIAS_TYPE);
-            dataCopyParams.srcStride = 0;
-            dataCopyParams.dstStride = (copyLenAlignB16 != copyLenAlign) ? 1 : 0;
+        DataCopyExtParams dataCopyParams{};
+        dataCopyParams.blockCount = 1;
+        dataCopyParams.blockLen = copyLen * sizeof(BIAS_TYPE);
+        dataCopyParams.srcStride = 0;
+        dataCopyParams.dstStride = 0;
 
-            DataCopyPad(biasLocal, biasGm_[0], dataCopyParams, padParams);
-            biasQueue_.EnQue(biasLocal);
-        } else {
-            int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(BIAS_TYPE), blockSize_) / sizeof(BIAS_TYPE);
-
-            DataCopyPadExtParams<BIAS_TYPE> padParams;
-            padParams.isPad = true;
-            padParams.paddingValue = static_cast<BIAS_TYPE>(0.0);
-            padParams.rightPadding = copyLenAlign - copyLen;
-
-            DataCopyExtParams dataCopyParams;
-            dataCopyParams.blockCount = 1;
-            dataCopyParams.blockLen = copyLen * sizeof(BIAS_TYPE);
-            dataCopyParams.srcStride = 0;
-            dataCopyParams.dstStride = 0;
-
-            DataCopyPad(biasLocal, biasGm_[0], dataCopyParams, padParams);
-            biasQueue_.EnQue(biasLocal);
-        }
+        DataCopyPad(biasLocal, biasGm_[0], dataCopyParams, padParams);
+        biasQueue_.EnQue(biasLocal);
     }
 
     __aicore__ inline void CopyInputsToUB(LocalTensor<X1_TYPE> x1Local, LocalTensor<X2_TYPE> x2Local,
