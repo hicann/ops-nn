@@ -42,6 +42,7 @@ public:
             .ExtendCfgInfo("opFile.value", "glu_grad");
         this->AICore().AddConfig("ascend950", aicoreConfig);
         this->AICore().AddConfig("ascend350", aicoreConfig);
+        this->AICore().AddConfig("ascend960dt", aicoreConfig);
     }
 };
 
