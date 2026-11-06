@@ -8,7 +8,6 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
-import ml_dtypes
 import numpy as np
 import torch
 
@@ -51,6 +50,8 @@ def _to_numpy(outputs):
     for output in outputs:
         result = output.detach().cpu().contiguous()
         if result.dtype == torch.bfloat16:
+            import ml_dtypes
+
             bits = result.view(torch.uint16).numpy().copy()
             arrays.append(bits.view(ml_dtypes.bfloat16))
         else:
@@ -59,8 +60,17 @@ def _to_numpy(outputs):
 
 
 def apply_came_part1_golden(grad, eps, **kwargs):
-    """Use FP32 accumulation for low-precision input."""
-    return _to_numpy(_compute(grad, eps, match_kernel=True))
+    """Compute the CPU reference entirely in FP64 and retain FP64 outputs."""
+    grad64 = _to_torch(grad).to(dtype=torch.float64, device="cpu")
+    eps64 = _to_torch(eps).reshape(-1)[0].to(dtype=torch.float64, device="cpu")
+    values64 = torch.square(grad64) + eps64
+    return _to_numpy(
+        [
+            torch.sum(values64, dim=-1),
+            torch.sum(values64, dim=-2),
+            torch.sum(values64, dim=(-2, -1)),
+        ]
+    )
 
 
 class _ApplyCamePart1Compose:

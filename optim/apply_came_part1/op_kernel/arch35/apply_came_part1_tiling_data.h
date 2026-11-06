@@ -29,6 +29,10 @@ struct ApplyCamePart1TilingData {
     int64_t mCoreNum = 0;
     int64_t batchCoreNum = 1;
     int64_t directBatchMode = 0;
+    int64_t tileSize = 64;
+    int64_t ubArenaBytes = 131072;
+    int64_t postUbElements = 32768;
+    int64_t directUbElements = 8192;
 #define APPLY_CAME_TILING_ACCESSOR(name)        \
     int64_t get_##name() const { return name; } \
     void set_##name(int64_t value) { name = value; }
@@ -48,6 +52,10 @@ struct ApplyCamePart1TilingData {
     APPLY_CAME_TILING_ACCESSOR(mCoreNum)
     APPLY_CAME_TILING_ACCESSOR(batchCoreNum)
     APPLY_CAME_TILING_ACCESSOR(directBatchMode)
+    APPLY_CAME_TILING_ACCESSOR(tileSize)
+    APPLY_CAME_TILING_ACCESSOR(ubArenaBytes)
+    APPLY_CAME_TILING_ACCESSOR(postUbElements)
+    APPLY_CAME_TILING_ACCESSOR(directUbElements)
 #undef APPLY_CAME_TILING_ACCESSOR
 };
 #endif // OPS_NN_APPLY_CAME_PART1_TILING_DATA_H

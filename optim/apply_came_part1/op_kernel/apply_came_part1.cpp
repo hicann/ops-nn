@@ -49,7 +49,8 @@ __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR s
 
     if (tilingData.directBatchMode != 0) {
         ApplyCamePart1::ApplyCamePart1Batch<D_T> batchOp;
-        batchOp.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, tilingData.N, tilingData.M);
+        batchOp.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, tilingData.N, tilingData.M,
+                     tilingData.directUbElements);
         batchOp.Process(tilingData.batchCount, tilingData.usedCoreNum);
         return;
     }
@@ -58,7 +59,7 @@ __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR s
         ApplyCamePart1::ApplyCamePart1FP32<float> op;
         op.InitOnce(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData);
         ApplyCamePart1::ApplyCamePart1Post<float> opPost;
-        opPost.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData);
+        opPost.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData, op.GetUbArena());
         // Clear outputs and workspace before concurrent atomic updates.
         op.ZeroWorkspace(userWS);
         op.ZeroOutputs(sum_grad_r, sum_grad_c, sum_grad_rc, tilingData.batchCount);
@@ -81,7 +82,7 @@ __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR s
         ApplyCamePart1::ApplyCamePart1FP16<D_T> op;
         op.InitOnce(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData);
         ApplyCamePart1::ApplyCamePart1Post<float> opPost;
-        opPost.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData);
+        opPost.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData, op.GetUbArena());
         op.ZeroWorkspace(userWS);
         op.ZeroOutputs(sum_grad_r, sum_grad_c, sum_grad_rc, tilingData.batchCount);
         SyncAll();

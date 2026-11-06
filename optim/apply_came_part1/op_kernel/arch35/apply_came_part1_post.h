@@ -29,12 +29,15 @@ class ApplyCamePart1Post {
 public:
     __aicore__ inline ApplyCamePart1Post(){};
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR eps, GM_ADDR sum_grad_r, GM_ADDR sum_grad_c, GM_ADDR sum_grad_rc,
-                                GM_ADDR workspace, const ApplyCamePart1TilingData* tilingData);
+                                GM_ADDR workspace, const ApplyCamePart1TilingData* tilingData,
+                                LocalTensor<float> arena);
     __aicore__ inline void ProcessBatch(int64_t batchIdx);
 
 private:
     __aicore__ inline void ParseTilingData(const ApplyCamePart1TilingData* tilingData);
     __aicore__ inline void Pre_Core_Compute(uint64_t gmOffsets, uint64_t cal_m, uint64_t base_m);
+    __aicore__ inline void ReduceNarrowC(uint64_t gmOffsets, uint64_t outputCount, uint64_t rowCount,
+                                         uint64_t rowsPerChunk);
     __aicore__ inline void ReduceWorkspaceRPartial(LocalTensor<float> inputLocal, int64_t base, int64_t partialRows);
     __aicore__ inline void ReduceWorkspaceR();
     __aicore__ inline void ReduceWorkspaceRCPair(LocalTensor<float> high, LocalTensor<float> highRight,
@@ -51,11 +54,12 @@ private:
                                              LocalTensor<float> scratch);
 
 private:
-    TPipe pipe;
-    TBuf<QuePosition::VECCALC> inputBuf_;
+    int64_t postUbElements_{32768};
+    LocalTensor<float> inputLocal_;
+    LocalTensor<float> outputScratchLocal_;
+
     // Keep GM read-modify-write scratch separate from reduction input. Reusing
     // inputBuf_ here would overwrite values that the caller still needs to read.
-    TBuf<QuePosition::VECCALC> outputScratchBuf_;
 
     GlobalTensor<float> gmGrad_;
     GlobalTensor<float> gmEps_;
@@ -95,7 +99,7 @@ private:
     bool IsContainsTailM{false};
     int64_t batchIdx_{0};
 
-    const int64_t ONCE_HANDLE_NUM64{64};
+    int64_t ONCE_HANDLE_NUM64{64};
     const int64_t ONCE_HANDLE_NUM512{512};
     const int64_t ONCE_ONE_SIZE8{8};
 };
@@ -104,6 +108,8 @@ template <typename T>
 __aicore__ inline void ApplyCamePart1Post<T>::ParseTilingData(const ApplyCamePart1TilingData* tilingData)
 {
     // 总维度[N, M]
+    ONCE_HANDLE_NUM64 = tilingData->tileSize;
+    postUbElements_ = tilingData->postUbElements;
     N = tilingData->N;
     M = tilingData->M;
 
@@ -133,7 +139,7 @@ __aicore__ inline void ApplyCamePart1Post<T>::ParseTilingData(const ApplyCamePar
 template <typename T>
 __aicore__ inline void ApplyCamePart1Post<T>::Init(GM_ADDR grad, GM_ADDR eps, GM_ADDR sum_grad_r, GM_ADDR sum_grad_c,
                                                    GM_ADDR sum_grad_rc, GM_ADDR workspace,
-                                                   const ApplyCamePart1TilingData* tilingData)
+                                                   const ApplyCamePart1TilingData* tilingData, LocalTensor<float> arena)
 {
     (void)grad;
     (void)eps;
@@ -169,8 +175,8 @@ __aicore__ inline void ApplyCamePart1Post<T>::Init(GM_ADDR grad, GM_ADDR eps, GM
         workspaceSumGradC_.SetGlobalBuffer(regionBase + 2 * rcOffsets + rOffsets);
     }
 
-    pipe.InitBuffer(inputBuf_, ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64 * sizeof(float));
-    pipe.InitBuffer(outputScratchBuf_, 2 * ONCE_ONE_SIZE8 * sizeof(float));
+    inputLocal_ = arena;
+    outputScratchLocal_ = arena[postUbElements_];
 }
 
 template <typename T>
@@ -192,7 +198,8 @@ __aicore__ inline void ApplyCamePart1Post<T>::ProcessBatch(int64_t batchIdx)
     // 产者/归约阶段的同步由内核入口统一负责, 此处不再做全局屏障.
     batchIdx_ = batchIdx;
     ReduceWorkspaceR();
-    uint64_t core_loop = (totalColumnTileCount_ + ONCE_HANDLE_NUM512 - 1) / ONCE_HANDLE_NUM512;
+    const uint64_t columnTilesPerChunk = postUbElements_ / ONCE_HANDLE_NUM64;
+    uint64_t core_loop = (totalColumnTileCount_ + columnTilesPerChunk - 1) / columnTilesPerChunk;
     uint64_t pre_core_m = (totalColumnTileCount_ + core_loop - 1) / core_loop * ONCE_HANDLE_NUM64;
     uint64_t last_core_m = (totalColumnTileCount_ - pre_core_m * (core_loop - 1) / ONCE_HANDLE_NUM64) *
                            ONCE_HANDLE_NUM64;
@@ -213,8 +220,8 @@ template <typename T>
 __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRPartial(LocalTensor<float> inputLocal, int64_t base,
                                                                       int64_t partialRows)
 {
-    constexpr int64_t rowWidth = 64;
-    constexpr int64_t maxRowsPerCopy = 256;
+    const int64_t rowWidth = ONCE_HANDLE_NUM64;
+    const int64_t maxRowsPerCopy = postUbElements_ / (2 * rowWidth);
     int64_t activeRows = partialRows;
     while (activeRows > 1) {
         const int64_t rightRows = (activeRows + 1) / 2;
@@ -254,8 +261,8 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRPartial(LocalTenso
 template <typename T>
 __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceR()
 {
-    LocalTensor<float> inputLocal = inputBuf_.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
-    constexpr int64_t rowWidth = 64;
+    LocalTensor<float> inputLocal = inputLocal_;
+    const int64_t rowWidth = ONCE_HANDLE_NUM64;
     const int64_t partialRows = mCoreNum_;
 
     for (int64_t nCoreIdx = 0; nCoreIdx < nCoreNum_; ++nCoreIdx) {
@@ -275,7 +282,7 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceR()
             SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
             WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
             for (int64_t i = 0; i < rowCount; ++i) {
-                StoreFloatAligned(gmSumGradR_, rowOffset + i, inputLocal.GetValue(i), outputScratchBuf_.Get<float>());
+                StoreFloatAligned(gmSumGradR_, rowOffset + i, inputLocal.GetValue(i), outputScratchLocal_);
             }
             event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
             SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
@@ -359,7 +366,7 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRCFinal(LocalTensor
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
-    StoreFloatAligned(gmSumGradRC_, batchIdx_, inputLocal.GetValue(0), outputScratchBuf_.Get<float>());
+    StoreFloatAligned(gmSumGradRC_, batchIdx_, inputLocal.GetValue(0), outputScratchLocal_);
     event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
     SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
     WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
@@ -368,10 +375,10 @@ __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRCFinal(LocalTensor
 template <typename T>
 __aicore__ inline void ApplyCamePart1Post<T>::ReduceWorkspaceRC()
 {
-    LocalTensor<float> inputLocal = inputBuf_.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
+    LocalTensor<float> inputLocal = inputLocal_;
     constexpr uint64_t kScalarSlotSize = 8;
-    constexpr uint64_t kMaxPairCount = 512;
-    constexpr uint64_t kMaxPairElements = kMaxPairCount * kScalarSlotSize;
+    const uint64_t kMaxPairCount = static_cast<uint64_t>(postUbElements_) / (6 * 8);
+    const uint64_t kMaxPairElements = kMaxPairCount * kScalarSlotSize;
     LocalTensor<float> high = inputLocal;
     LocalTensor<float> highRight = inputLocal[kMaxPairElements];
     LocalTensor<float> low = inputLocal[2 * kMaxPairElements];
@@ -408,13 +415,66 @@ __aicore__ inline void ApplyCamePart1Post<T>::CopyWorkspaceCChunk(LocalTensor<fl
 }
 
 template <typename T>
+__aicore__ inline void ApplyCamePart1Post<T>::ReduceNarrowC(uint64_t gmOffsets, uint64_t outputCount, uint64_t rowCount,
+                                                            uint64_t rowsPerChunk)
+{
+    const uint64_t width = static_cast<uint64_t>(ONCE_HANDLE_NUM64);
+    LocalTensor<float> input = inputLocal_;
+    LocalTensor<float> high = input[rowsPerChunk * width];
+    LocalTensor<float> low = input[(rowsPerChunk + 1) * width];
+    Duplicate(high, 0.0f, width);
+    Duplicate(low, 0.0f, width);
+    for (uint64_t start = 0; start < rowCount; start += rowsPerChunk) {
+        Duplicate(input, 0.0f, rowsPerChunk * width);
+        event_t vToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+        SetFlag<HardEvent::V_MTE2>(vToMte2);
+        WaitFlag<HardEvent::V_MTE2>(vToMte2);
+        const uint64_t count = rowCount - start < rowsPerChunk ? rowCount - start : rowsPerChunk;
+        CopyWorkspaceCChunk(input, start, count, gmOffsets, width);
+        event_t mte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+        SetFlag<HardEvent::MTE2_V>(mte2ToV);
+        WaitFlag<HardEvent::MTE2_V>(mte2ToV);
+        ReduceAdd(input, rowsPerChunk, width);
+        event_t vToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(vToS);
+        WaitFlag<HardEvent::V_S>(vToS);
+        for (uint64_t col = 0; col < outputCount; ++col) {
+            float h = 0.0f;
+            float l = 0.0f;
+            CompensatedAddApplyCamePart1(high.GetValue(col), low.GetValue(col), input.GetValue(col), 0.0f, h, l);
+            high.SetValue(col, h);
+            low.SetValue(col, l);
+        }
+        event_t sToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        SetFlag<HardEvent::S_V>(sToV);
+        WaitFlag<HardEvent::S_V>(sToV);
+    }
+    Add(input, high, low, width);
+    CopyOutCReduceResult(gmSumGradC_, input, batchIdx_ * M + gmOffsets, outputCount);
+}
+
+template <typename T>
 __aicore__ inline void ApplyCamePart1Post<T>::Pre_Core_Compute(uint64_t gmOffsets, uint64_t cal_m, uint64_t base_m)
 {
     uint64_t total_n = (nCoreNum_ - 1) * nLoopNormCore_ + nLoopTailCore_;
+    if (cal_m == static_cast<uint64_t>(ONCE_HANDLE_NUM64) && total_n > 512) {
+        // Reserve two aligned rows for compensated accumulation in the same arena.
+        const uint64_t width = static_cast<uint64_t>(ONCE_HANDLE_NUM64);
+        const uint64_t availableRows = static_cast<uint64_t>(postUbElements_) / width;
+        if (availableRows >= 4) {
+            uint64_t rowsPerChunk = 1;
+            while (rowsPerChunk < 256 && rowsPerChunk * 2 <= availableRows - 2) {
+                rowsPerChunk *= 2;
+            }
+            const uint64_t outputCount = (M - gmOffsets < base_m) ? M - gmOffsets : base_m;
+            ReduceNarrowC(gmOffsets, outputCount, total_n, rowsPerChunk);
+            return;
+        }
+    }
     uint64_t pre_loop_n = 1;
     while (pre_loop_n < total_n) {
         pre_loop_n = pre_loop_n << 1;
-        if (pre_loop_n * cal_m > ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64) {
+        if (pre_loop_n * cal_m > static_cast<uint64_t>(postUbElements_)) {
             pre_loop_n = pre_loop_n >> 1;
             break;
         }
@@ -424,7 +484,7 @@ __aicore__ inline void ApplyCamePart1Post<T>::Pre_Core_Compute(uint64_t gmOffset
     }
     uint64_t loop_time = (total_n + pre_loop_n - 1) / pre_loop_n;
     uint64_t last_loop_n = total_n - (loop_time - 1) * pre_loop_n;
-    LocalTensor<float> inputLocal = inputBuf_.Get<float>(ONCE_HANDLE_NUM512 * ONCE_HANDLE_NUM64);
+    LocalTensor<float> inputLocal = inputLocal_;
     event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
     SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
     WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);

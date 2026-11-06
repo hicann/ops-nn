@@ -10,11 +10,13 @@
 
 #include <cstring>
 #include <limits>
+#include <utility>
 #include <vector>
 #include <gtest/gtest.h>
 #include "tiling_case_executor.h"
 #include "tiling_context_faker.h"
 #include "../../../../op_host/arch35/apply_came_part1_tiling_arch35.h"
+#include "../../../../op_host/arch35/apply_came_part1_ub_plan.h"
 
 namespace ApplyCamePart1TilingUT {
 namespace {
@@ -88,6 +90,40 @@ bool TryTiling(const std::vector<int64_t>& gradShape, ge::DataType gradType)
     return ExecuteTiling(para, info);
 }
 } // namespace
+
+TEST(ApplyCamePart1Tiling, UbPlannerSelectsTileAndBoundsLiveBuffers)
+{
+    for (const uint64_t dtypeBytes : {2UL, 4UL}) {
+        for (const auto& config : {std::pair<uint64_t, uint64_t>{kUbSize, 128}, {64UL * 1024UL, 64}}) {
+            SCOPED_TRACE(::testing::Message() << "dtypeBytes=" << dtypeBytes << " ub=" << config.first);
+            const auto plan = apply_came_ub::MakePlan(config.first, dtypeBytes, kCoreNum);
+            ASSERT_EQ(plan.tile, config.second);
+            EXPECT_GT(plan.directElements, 0U);
+            EXPECT_LE(apply_came_ub::kReserveBytes + plan.persistentBytes + plan.arenaBytes, config.first);
+            EXPECT_LE(plan.producerPeakBytes, plan.arenaBytes);
+            EXPECT_LE(plan.postElements * sizeof(float) + 64, plan.arenaBytes);
+            EXPECT_EQ(plan.postElements % plan.tile, 0U);
+            EXPECT_GE(plan.postElements, 2 * plan.tile);
+            // RC post uses six arrays of 8-float pairs and a separate 64-byte output slot.
+            EXPECT_LE((plan.postElements / (6 * 8)) * 6 * 8 * sizeof(float) + 64, plan.arenaBytes);
+        }
+    }
+}
+
+TEST(ApplyCamePart1Tiling, LargeTilesUsePlannedArenaForEachDtype)
+{
+    for (const auto dtype : {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT}) {
+        SCOPED_TRACE(static_cast<int>(dtype));
+        const auto result = RunTiling({257, 259}, dtype);
+        const uint64_t dtypeBytes = dtype == ge::DT_FLOAT ? 4 : 2;
+        const auto plan = apply_came_ub::MakePlan(kUbSize, dtypeBytes, kCoreNum);
+        ASSERT_EQ(plan.tile, 128U);
+        EXPECT_EQ(result.data.tileSize, plan.tile);
+        EXPECT_EQ(result.data.ubArenaBytes, plan.arenaBytes);
+        EXPECT_EQ(result.data.postUbElements, plan.postElements);
+        EXPECT_EQ(result.data.directBatchMode, 0);
+    }
+}
 
 TEST(ApplyCamePart1Tiling, Fp16UsesGeneralBatchDirectPath)
 {

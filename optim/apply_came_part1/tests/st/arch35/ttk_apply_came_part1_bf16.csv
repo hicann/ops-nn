@@ -1,2 +1,8 @@
 testcase_name,op_name,input_dtypes,input_formats,input_shapes,output_shapes,output_dtypes,output_formats,attributes,input_data_ranges,absolute_precision
 apply_came_part1_bf16_tail,apply_came_part1,"('bfloat16','float32')","('ND','ND')","((65,67),(1,))","((65,),(67,),())","('float32','float32','float32')","('ND','ND','ND')",{},"((-1,1),(0.001,0.001))",0.001
+apply_came_part1_float16_256_256,apply_came_part1,"('float16','float32')","('ND','ND')","((256,256),(1,))","((256,),(256,),())","('float32','float32','float32')","('ND','ND','ND')",{},"((-1,1),(0.001,0.001))",0.001
+apply_came_part1_float16_257_259,apply_came_part1,"('float16','float32')","('ND','ND')","((257,259),(1,))","((257,),(259,),())","('float32','float32','float32')","('ND','ND','ND')",{},"((-1,1),(0.001,0.001))",0.001
+apply_came_part1_bfloat16_256_256,apply_came_part1,"('bfloat16','float32')","('ND','ND')","((256,256),(1,))","((256,),(256,),())","('float32','float32','float32')","('ND','ND','ND')",{},"((-1,1),(0.001,0.001))",0.001
+apply_came_part1_bfloat16_257_259,apply_came_part1,"('bfloat16','float32')","('ND','ND')","((257,259),(1,))","((257,),(259,),())","('float32','float32','float32')","('ND','ND','ND')",{},"((-1,1),(0.001,0.001))",0.001
+apply_came_part1_float32_256_256,apply_came_part1,"('float32','float32')","('ND','ND')","((256,256),(1,))","((256,),(256,),())","('float32','float32','float32')","('ND','ND','ND')",{},"((-1,1),(0.001,0.001))",0.001
+apply_came_part1_float32_257_259,apply_came_part1,"('float32','float32')","('ND','ND')","((257,259),(1,))","((257,),(259,),())","('float32','float32','float32')","('ND','ND','ND')",{},"((-1,1),(0.001,0.001))",0.001

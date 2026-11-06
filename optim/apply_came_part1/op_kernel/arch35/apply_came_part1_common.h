@@ -64,9 +64,8 @@ __aicore__ inline int64_t CeilDivApplyCamePart1(int64_t value, int64_t factor)
 
 // Apply eps to the valid columns in each row.
 __aicore__ inline void AddEpsApplyCamePart1(LocalTensor<float> values, float eps, int64_t tileColumns,
-                                            int64_t curRepeatTimes)
+                                            int64_t curRepeatTimes, int64_t tileSize = 64)
 {
-    constexpr int64_t tileSize = 64;
     if (tileColumns >= tileSize) {
         Adds(values, values, eps, curRepeatTimes * tileSize);
         return;

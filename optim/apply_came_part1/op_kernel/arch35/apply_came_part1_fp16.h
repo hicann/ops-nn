@@ -36,6 +36,8 @@ public:
     __aicore__ inline void ZeroWorkspace(GM_ADDR workspace);
     __aicore__ inline void ProcessTile(int64_t nLoopIdx, int64_t mLoopIdx, int64_t curRepeatTimes);
 
+    __aicore__ inline LocalTensor<float> GetUbArena() { return phaseArena_.Get<float>(); }
+
 private:
     __aicore__ inline void ParseTilingData(const ApplyCamePart1TilingData* tilingData);
     __aicore__ inline void ClearAcculateMatrix();
@@ -51,6 +53,8 @@ private:
     __aicore__ inline void ComputeC(int64_t mLoopIdx, int64_t curRepeatTimes, LocalTensor<float> gradSqrtTmpUb);
 
 private:
+    TBuf<QuePosition::VECCALC> phaseArena_;
+    int64_t arenaBytes_{0};
     TPipe pipe;
     TQue<QuePosition::VECIN, 1> gradQueue_;
     TQue<QuePosition::VECIN, 1> epsQueue_;
@@ -58,11 +62,6 @@ private:
     TQue<QuePosition::VECOUT, 1> sumGradRQueue_;
     TQue<QuePosition::VECOUT, 1> sumGradCQueue_;
     TQue<QuePosition::VECOUT, 1> sumGradRCQueue_;
-
-    TBuf<QuePosition::VECCALC> accuComTmpBuf_;
-    TBuf<QuePosition::VECCALC> gradCastTmpBuf_;
-    TBuf<QuePosition::VECCALC> gradSqrtTmpBuf_;
-    TBuf<QuePosition::VECCALC> mComTmpBuf_;
 
     GlobalTensor<T> gmGrad_;
     GlobalTensor<float> gmEps_;
@@ -114,7 +113,7 @@ private:
     GM_ADDR sumGradCAddrBatch_{0};
     GM_ADDR sumGradRCAddrBatch_{0};
 
-    const int64_t ONCE_HANDLE_NUM64{64};
+    int64_t ONCE_HANDLE_NUM64{64};
     const int64_t ONCE_ONE_SIZE8{8};
 };
 
@@ -122,6 +121,8 @@ template <typename T>
 __aicore__ inline void ApplyCamePart1FP16<T>::ParseTilingData(const ApplyCamePart1TilingData* tilingData)
 {
     // 总维度[N, M]
+    ONCE_HANDLE_NUM64 = tilingData->tileSize;
+    arenaBytes_ = tilingData->ubArenaBytes;
     N = tilingData->N;
     M = tilingData->M;
 
@@ -192,7 +193,7 @@ template <typename T>
 __aicore__ inline void ApplyCamePart1FP16<T>::InitBatch(int64_t batchIdx)
 {
     // The post stage reuses UB on the group leader, so each batch starts with a fresh row accumulator.
-    LocalTensor<float> rowAccumulator = accuComTmpBuf_.Get<float>();
+    LocalTensor<float> rowAccumulator = phaseArena_.Get<float>()[ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64];
     Duplicate(rowAccumulator, static_cast<float>(0), 2 * ONCE_HANDLE_NUM64);
     PipeBarrier<PIPE_V>();
 
@@ -215,7 +216,7 @@ template <typename T>
 __aicore__ inline void ApplyCamePart1FP16<T>::ZeroOutputs(GM_ADDR sum_grad_r, GM_ADDR sum_grad_c, GM_ADDR sum_grad_rc,
                                                           int64_t batchCount)
 {
-    LocalTensor<float> zeroUb = gradCastTmpBuf_.Get<float>();
+    LocalTensor<float> zeroUb = phaseArena_.Get<float>()[ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 + 2 * ONCE_HANDLE_NUM64];
     Duplicate(zeroUb, static_cast<float>(0), ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
     PipeBarrier<PIPE_V>();
     event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -249,7 +250,8 @@ __aicore__ inline void ApplyCamePart1FP16<T>::ZeroWorkspace(GM_ADDR workspace)
                 return;
             }
         }
-        LocalTensor<float> zeroUb = gradCastTmpBuf_.Get<float>();
+        LocalTensor<float> zeroUb = phaseArena_
+                                        .Get<float>()[ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 + 2 * ONCE_HANDLE_NUM64];
         Duplicate(zeroUb, static_cast<float>(0), ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
         PipeBarrier<PIPE_V>();
         event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -311,10 +313,12 @@ __aicore__ inline void ApplyCamePart1FP16<T>::Compute(int64_t nLoopIdx, int64_t 
     LocalTensor<T> gradLocal = gradQueue_.DeQue<T>();
     LocalTensor<float> epsLocal = epsQueue_.DeQue<float>();
 
-    LocalTensor<float> gradCastTmpUb = gradCastTmpBuf_.Get<float>();
-    LocalTensor<float> gradSqrtTmpUb = gradSqrtTmpBuf_.Get<float>();
-    LocalTensor<float> accuComTmpUb = accuComTmpBuf_.Get<float>();
-    LocalTensor<float> reductionTmpUb = mComTmpBuf_.Get<float>();
+    LocalTensor<float> gradCastTmpUb = phaseArena_
+                                           .Get<float>()[ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 + 2 * ONCE_HANDLE_NUM64];
+    LocalTensor<float> gradSqrtTmpUb = phaseArena_.Get<float>();
+    LocalTensor<float> accuComTmpUb = phaseArena_.Get<float>()[ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64];
+    LocalTensor<float>
+        reductionTmpUb = phaseArena_.Get<float>()[ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 + 2 * ONCE_HANDLE_NUM64];
     Duplicate(gradCastTmpUb, (float)0.0, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
     PipeBarrier<PIPE_V>();
     event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -334,7 +338,8 @@ __aicore__ inline void ApplyCamePart1FP16<T>::Compute(int64_t nLoopIdx, int64_t 
     Mul(gradSqrtTmpUb, gradCastTmpUb, gradCastTmpUb, calCount);
 
     PipeBarrier<PIPE_V>();
-    AddEpsApplyCamePart1(gradSqrtTmpUb, eps, coreColumns_ - mLoopIdx * ONCE_HANDLE_NUM64, curRepeatTimes);
+    AddEpsApplyCamePart1(gradSqrtTmpUb, eps, coreColumns_ - mLoopIdx * ONCE_HANDLE_NUM64, curRepeatTimes,
+                         ONCE_HANDLE_NUM64);
 
     PipeBarrier<PIPE_V>();
     (void)accuComTmpUb;
@@ -347,7 +352,7 @@ __aicore__ inline void ApplyCamePart1FP16<T>::Compute(int64_t nLoopIdx, int64_t 
 
     if (mLoopIdx == (mLoopCount_ - 1)) {
         PipeBarrier<PIPE_V>();
-        Duplicate(accuComTmpUb, static_cast<float>(0), ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
+        Duplicate(accuComTmpUb, static_cast<float>(0), 2 * ONCE_HANDLE_NUM64);
         Duplicate(reductionTmpUb, static_cast<float>(0), 4 * ONCE_HANDLE_NUM64);
     }
 
@@ -418,23 +423,9 @@ __aicore__ inline void ApplyCamePart1FP16<T>::ProcessTile(int64_t nLoopIdx, int6
 template <typename T>
 __aicore__ inline void ApplyCamePart1FP16<T>::ClearAcculateMatrix()
 {
-    constexpr float scalarValue = 0;
-
-    pipe.InitBuffer(gradCastTmpBuf_, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 * sizeof(float));
-    LocalTensor<float> gradCastTmpUb = gradCastTmpBuf_.Get<float>(ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
-    Duplicate(gradCastTmpUb, scalarValue, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
-
-    pipe.InitBuffer(gradSqrtTmpBuf_, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 * sizeof(float));
-    LocalTensor<float> gradSqrtTmpUb = gradSqrtTmpBuf_.Get<float>(ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
-    Duplicate(gradSqrtTmpUb, scalarValue, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
-
-    pipe.InitBuffer(accuComTmpBuf_, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 * sizeof(float));
-    LocalTensor<float> accuComTmpUb = accuComTmpBuf_.Get<float>(ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
-    Duplicate(accuComTmpUb, scalarValue, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64);
-
-    pipe.InitBuffer(mComTmpBuf_, (4 + 8) * ONCE_HANDLE_NUM64 * sizeof(float));
-    LocalTensor<float> reductionTmpUb = mComTmpBuf_.Get<float>();
-    Duplicate(reductionTmpUb, scalarValue, 4 * ONCE_HANDLE_NUM64);
+    pipe.InitBuffer(phaseArena_, arenaBytes_);
+    LocalTensor<float> arena = phaseArena_.Get<float>();
+    Duplicate(arena, static_cast<float>(0), arenaBytes_ / sizeof(float));
 }
 
 } // namespace ApplyCamePart1

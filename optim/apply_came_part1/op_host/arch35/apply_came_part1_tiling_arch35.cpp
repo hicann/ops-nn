@@ -22,6 +22,7 @@
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "apply_came_part1_tiling_arch35.h"
+#include "apply_came_part1_ub_plan.h"
 
 namespace optiling {
 
@@ -129,15 +130,15 @@ static ge::graphStatus ApplyCamePart1SetTilingData(gert::TilingContext* context,
 static inline ge::graphStatus CalcNdimTiling(const gert::TilingContext* context, ApplyCamePart1TilingData& tilingData)
 {
     OP_LOGD(context->GetNodeName(), "TilingApplyCamePart1 Enter CalcNdimTiling.");
-    int64_t nNormalCoreNum = std::max(CeilMul(tilingData.get_N(), N_NUM_PER_CORE, tilingData.get_totalCoreNum()),
-                                      static_cast<int64_t>(1));
+    int64_t nNormalCoreNum = std::max(
+        CeilMul(tilingData.get_N(), tilingData.get_tileSize(), tilingData.get_totalCoreNum()), static_cast<int64_t>(1));
     int64_t nTailCoreNum = tilingData.get_N() % nNormalCoreNum;
     if (nTailCoreNum == 0) {
         nTailCoreNum = nNormalCoreNum;
     }
     int64_t nCoreNum = CeilDiv(tilingData.get_N(), nNormalCoreNum);
-    int64_t nLoopNormCore = CeilDiv(nNormalCoreNum, N_NUM_PER_CORE);
-    int64_t nLoopTailCore = CeilDiv(nTailCoreNum, N_NUM_PER_CORE);
+    int64_t nLoopNormCore = CeilDiv(nNormalCoreNum, tilingData.get_tileSize());
+    int64_t nLoopTailCore = CeilDiv(nTailCoreNum, tilingData.get_tileSize());
     tilingData.set_nNormalCoreNum(nNormalCoreNum);
     tilingData.set_nTailCoreNum(nTailCoreNum);
     tilingData.set_nCoreNum(nCoreNum);
@@ -173,15 +174,15 @@ static inline ge::graphStatus CalcMdimTiling(const gert::TilingContext* context,
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "TilingApplyCamePart1 nCoreNum is invalid."),
         return ge::GRAPH_FAILED);
 
-    const int64_t columnTileCount = CeilDiv(tilingData.get_M(), M_NUM_PER_CORE);
+    const int64_t columnTileCount = CeilDiv(tilingData.get_M(), tilingData.get_tileSize());
     const int64_t availableMCoreNum = std::max<int64_t>(1, tilingData.get_totalCoreNum() / nCoreNum);
     int64_t mCoreNum = std::min(columnTileCount, availableMCoreNum);
     const int64_t columnsPerCore = CeilDiv(tilingData.get_M(), mCoreNum);
-    const int64_t mNormalCoreNum = CeilAlign(columnsPerCore, M_NUM_PER_CORE);
+    const int64_t mNormalCoreNum = CeilAlign(columnsPerCore, tilingData.get_tileSize());
     mCoreNum = CeilDiv(tilingData.get_M(), mNormalCoreNum);
     const int64_t mTailCoreNum = tilingData.get_M() - mNormalCoreNum * (mCoreNum - 1);
 
-    tilingData.set_mLoopNumCore(CeilDiv(mNormalCoreNum, M_NUM_PER_CORE));
+    tilingData.set_mLoopNumCore(CeilDiv(mNormalCoreNum, tilingData.get_tileSize()));
     tilingData.set_mNormalCoreNum(mNormalCoreNum);
     tilingData.set_mTailCoreNum(mTailCoreNum);
     tilingData.set_mCoreNum(mCoreNum);
@@ -232,6 +233,29 @@ static ge::graphStatus CheckParamsShape(const gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
+// Size buffers from the maximum concurrent live set in each phase.
+static ge::graphStatus PlanUbBuffers(gert::TilingContext* context, ApplyCamePart1TilingData& data)
+{
+    auto platformInfo = context->GetPlatformInfo();
+    OPS_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto platform = platform_ascendc::PlatformAscendC(platformInfo);
+    uint64_t ubBytes = 0;
+    platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubBytes);
+    const uint64_t elementBytes = context->GetInputDesc(0)->GetDataType() == ge::DT_FLOAT ? 4 : 2;
+    const auto plan = apply_came_ub::MakePlan(ubBytes, elementBytes, data.get_totalCoreNum());
+    OP_TILING_CHECK(plan.tile == 0 || plan.directElements == 0,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context, "UB cannot hold the peak live buffer set."),
+                    return ge::GRAPH_FAILED);
+    data.set_tileSize(plan.tile);
+    data.set_ubArenaBytes(plan.arenaBytes);
+    data.set_postUbElements(plan.postElements);
+    data.set_directUbElements(plan.directElements);
+    OP_LOGI(context->GetNodeName(),
+            "UB plan: total=%lu tile=%lu persistent=%lu producerPeak=%lu arena=%lu postElements=%lu", ubBytes,
+            plan.tile, plan.persistentBytes, plan.producerPeakBytes, plan.arenaBytes, plan.postElements);
+    return ge::GRAPH_SUCCESS;
+}
+
 static bool ShouldUseDirectBatch(const ApplyCamePart1TilingData& tilingData)
 {
     const int64_t n = tilingData.get_N();
@@ -240,7 +264,7 @@ static bool ShouldUseDirectBatch(const ApplyCamePart1TilingData& tilingData)
         return false;
     }
     const int64_t matrixElements = n * m;
-    if (matrixElements > MAX_DIRECT_MATRIX_ELEMENTS) {
+    if (matrixElements > tilingData.get_directUbElements()) {
         return false;
     }
     const bool singleVectorTile = n <= N_NUM_PER_CORE && m <= M_NUM_PER_CORE;
@@ -287,7 +311,7 @@ static ge::graphStatus CalculateApplyCamePart1Workspace(gert::TilingContext* con
     size_t nLoopCount = 0;
     size_t rElements = 0;
     size_t rcElements = 0;
-    const size_t totalColumnTileCount = static_cast<size_t>(CeilDiv(tilingData.get_M(), M_NUM_PER_CORE));
+    const size_t totalColumnTileCount = static_cast<size_t>(CeilDiv(tilingData.get_M(), tilingData.get_tileSize()));
     OP_TILING_CHECK(
         !CheckedMultiply(nCoreNum - 1, nLoopNormCore, normalLoopCount) ||
             !CheckedAdd(normalLoopCount, nLoopTailCore, nLoopCount) ||
@@ -308,8 +332,10 @@ static ge::graphStatus CalculateApplyCamePart1Workspace(gert::TilingContext* con
     size_t cWorkspaceBytes = 0;
     OP_TILING_CHECK(
         !CheckedMultiply(rcElements, rcSlotSize, rcStorageElements) ||
-            !CheckedMultiply(rElements, static_cast<size_t>(N_NUM_PER_CORE * sizeof(float)), rWorkspaceBytes) ||
-            !CheckedMultiply(rcElements, static_cast<size_t>(M_NUM_PER_CORE * sizeof(float)), cWorkspaceBytes),
+            !CheckedMultiply(rElements, static_cast<size_t>(tilingData.get_tileSize() * sizeof(float)),
+                             rWorkspaceBytes) ||
+            !CheckedMultiply(rcElements, static_cast<size_t>(tilingData.get_tileSize() * sizeof(float)),
+                             cWorkspaceBytes),
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace byte size overflows."),
         return ge::GRAPH_FAILED);
 
@@ -442,6 +468,9 @@ static ge::graphStatus InitializeApplyCamePart1Tiling(gert::TilingContext* conte
 
 static ge::graphStatus CalculateApplyCamePart1Tiling(gert::TilingContext* context, ApplyCamePart1TilingData& tilingData)
 {
+    if (PlanUbBuffers(context, tilingData) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (ShouldUseDirectBatch(tilingData)) {
         tilingData.set_directBatchMode(1);
         tilingData.set_nNormalCoreNum(tilingData.get_N());

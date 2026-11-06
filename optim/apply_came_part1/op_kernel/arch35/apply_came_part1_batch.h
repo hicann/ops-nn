@@ -21,8 +21,10 @@ template <typename T>
 class ApplyCamePart1Batch {
 public:
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR eps, GM_ADDR sumGradR, GM_ADDR sumGradC, GM_ADDR sumGradRC,
-                                int64_t n, int64_t m)
+                                int64_t n, int64_t m, int64_t ubElements)
     {
+        maxInputElements_ = ubElements;
+        maxOutputElements_ = ubElements + 2 * kMaxTileBatches + 3 * kOutputAlignmentElements;
         n_ = n;
         m_ = m;
         matrixElements_ = n * m;
@@ -32,13 +34,13 @@ public:
         sumGradCGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumGradC));
         sumGradRCGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumGradRC));
 
-        pipe_.InitBuffer(gradQueue_, 1, kMaxInputElements * sizeof(T));
+        pipe_.InitBuffer(gradQueue_, 1, maxInputElements_ * sizeof(T));
         pipe_.InitBuffer(epsQueue_, 1, kBlockFloats * sizeof(float));
         pipe_.InitBuffer(sumGradRQueue_, 1, kVectorTileWidth * sizeof(float));
         pipe_.InitBuffer(sumGradCQueue_, 1, kVectorTileWidth * sizeof(float));
-        pipe_.InitBuffer(castBuf_, kMaxInputElements * sizeof(float));
-        pipe_.InitBuffer(valueBuf_, kMaxInputElements * sizeof(float));
-        pipe_.InitBuffer(outputBuf_, kMaxOutputElements * sizeof(float));
+        // Cast dies before output production, so both use this physical slot.
+        pipe_.InitBuffer(castOutputBuf_, maxOutputElements_ * sizeof(float));
+        pipe_.InitBuffer(valueBuf_, maxInputElements_ * sizeof(float));
         pipe_.InitBuffer(reduceBuf_, kReduceScratchElements * sizeof(float));
     }
 
@@ -92,9 +94,9 @@ private:
 
     __aicore__ inline int64_t GetScalarTileBatchCount() const
     {
-        int64_t byInput = kMaxInputElements / matrixElements_;
+        int64_t byInput = maxInputElements_ / matrixElements_;
         const int64_t outputElementsPerBatch = n_ + m_ + 1;
-        int64_t byOutput = kMaxOutputElements / outputElementsPerBatch;
+        int64_t byOutput = maxOutputElements_ / outputElementsPerBatch;
         int64_t tileBatches = byInput < byOutput ? byInput : byOutput;
         tileBatches = tileBatches < kMaxTileBatches ? tileBatches : kMaxTileBatches;
         return tileBatches > 0 ? tileBatches : 1;
@@ -121,9 +123,9 @@ private:
         gradQueue_.EnQue(gradLocal);
         gradLocal = gradQueue_.DeQue<T>();
 
-        LocalTensor<float> castLocal = castBuf_.Get<float>();
+        LocalTensor<float> castLocal = castOutputBuf_.Get<float>();
         LocalTensor<float> valueLocal = valueBuf_.Get<float>();
-        LocalTensor<float> outputLocal = outputBuf_.Get<float>();
+        LocalTensor<float> outputLocal = castOutputBuf_.Get<float>();
         event_t eventMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventMte2ToV);
@@ -212,7 +214,7 @@ private:
                                                LocalTensor<float>& sumGradRCLocal)
     {
         const int64_t paddedElements = n_ * kVectorTileWidth;
-        LocalTensor<float> castLocal = castBuf_.Get<float>();
+        LocalTensor<float> castLocal = castOutputBuf_.Get<float>();
         LocalTensor<float> valueLocal = valueBuf_.Get<float>();
         LocalTensor<float> reductionScratch = reduceBuf_.Get<float>();
         event_t eventMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -236,8 +238,14 @@ private:
         ComputeCApplyCamePart1(sumGradCQueue_, n_, valueLocal, 1, 1, kVectorTileWidth, m_, 0);
         sumGradRLocal = sumGradRQueue_.DeQue<float>();
         sumGradCLocal = sumGradCQueue_.DeQue<float>();
-        sumGradRCLocal = outputBuf_.Get<float>();
+        sumGradRCLocal = castOutputBuf_.Get<float>();
         FinishApplyCamePart1Reduction(sumGradRCLocal, sumGradCLocal, reductionScratch, kVectorTileWidth);
+        // The producer/post path carries this low slot through workspace.
+        // Direct writes RC immediately, so fold it before the one-float copy.
+        // Both slots already live in castOutputBuf_; no new UB allocation.
+        constexpr int64_t kRcLowOffset = 8;
+        Add(sumGradRCLocal, sumGradRCLocal, sumGradRCLocal[kRcLowOffset], 1);
+        PipeBarrier<PIPE_V>();
     }
 
     __aicore__ inline void CopyOutVectorMatrix(int64_t batchIdx, LocalTensor<T> gradLocal,
@@ -303,6 +311,8 @@ private:
                                                   3 * kOutputAlignmentElements;
     static constexpr int64_t kReduceScratchElements = 12 * kVectorTileWidth;
 
+    int64_t maxInputElements_{8192};
+    int64_t maxOutputElements_{8280};
     int64_t n_{0};
     int64_t m_{0};
     int64_t matrixElements_{0};
@@ -311,9 +321,8 @@ private:
     TQue<QuePosition::VECIN, 1> epsQueue_;
     TQue<QuePosition::VECOUT, 1> sumGradRQueue_;
     TQue<QuePosition::VECOUT, 1> sumGradCQueue_;
-    TBuf<QuePosition::VECCALC> castBuf_;
+    TBuf<QuePosition::VECCALC> castOutputBuf_;
     TBuf<QuePosition::VECCALC> valueBuf_;
-    TBuf<QuePosition::VECCALC> outputBuf_;
     TBuf<QuePosition::VECCALC> reduceBuf_;
     GlobalTensor<T> gradGm_;
     GlobalTensor<float> epsGm_;
