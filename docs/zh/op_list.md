@@ -5560,36 +5560,6 @@
   </tr>
   <tr>
     <td>rnn</td>
-    <td><a href="../../rnn/dynamic_augru/README.md">dynamic_augru</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实现由注意力分数调节更新门的门控循环单元，返回完整隐藏状态序列及门控中间结果，支持有效序列长度和逐元素掩码控制。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
-    <td><a href="../../rnn/dynamic_augru_grad/README.md">dynamic_augru_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>带注意力更新门的GRU（AUGRU）反向算子，按BPTT计算输入、初始隐状态、权重与偏置的梯度，并输出注意力梯度dw_att。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
-    <td><a href="../../rnn/dynamic_gru/README.md">dynamic_gru</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>单层单向GRU（门控循环单元）前向整段循环算子，一次调用完成全部时间步的双门GEMM、候选门GEMM与门控逐元素更新；吸收变长序列掩码能力（seq_length传入即激活冻结式掩码）。仅支持GEIR/GE图模式调用，不提供aclnn接口。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
     <td><a href="../../rnn/block_lstm_grad/README.md">block_lstm_grad</a></td>
     <td>✓</td>
     <td>✓</td>
