@@ -45,7 +45,7 @@ English | [简体中文](./README.md)
     <td>Input</td>
     <td>The upstream gradient, supporting 2D to 5D tensors.</td>
     <td>FLOAT16, FLOAT, BFLOAT16</td>
-    <td>NHWC, NCHW, NC1HWC0 (A2/A3 only)</td>
+    <td>NHWC, NCHW, NC1HWC0</td>
   </tr>
   <tr>
     <td>scale</td>
@@ -66,7 +66,7 @@ English | [简体中文](./README.md)
     <td>Output</td>
     <td>The input gradient, with the same shape and data type as grads.</td>
     <td>FLOAT16, FLOAT, BFLOAT16</td>
-    <td>NHWC, NCHW, NC1HWC0 (A2/A3 only)</td>
+    <td>NHWC, NCHW, NC1HWC0</td>
   </tr>
   <tr>
     <td>epsilon</td>
@@ -81,8 +81,8 @@ English | [简体中文](./README.md)
 
 - The logical C dimension of grads (the 2nd dimension of NCHW, the last dimension of NHWC) must equal the lengths of scale and batch_variance.
 - scale and batch_variance support only FLOAT.
-- In the prototype, the logical formats of grads and x_backprop support NHWC, NCHW, or NC1HWC0; scale and batch_variance are 1D ND.
-- In the Ascend950 Vector branch, grads and x_backprop support only NCHW and NHWC; NC1HWC0 is not supported.
+- Atlas A3 series products and Atlas A2 series products: the data format of parameters grads and x_backprop supports NC1HWC0, NCHW, and NHWC.
+- Ascend 950PR&950DT series products: the data format of parameters grads and x_backprop supports only NCHW and NHWC.
 - The shape, data type, and data format of x_backprop match grads.
 - epsilon supports only the FLOAT scalar type. It must be greater than 0, with the recommended range [1e-6, 1e-3]; there are no enumeration or step constraints.
 

@@ -43,7 +43,7 @@
     <td>输入</td>
     <td>上游梯度，支持2D至5D张量。</td>
     <td>FLOAT16、FLOAT、BFLOAT16</td>
-    <td>NHWC、NCHW、NC1HWC0（仅A2/A3）</td>
+    <td>NHWC、NCHW、NC1HWC0</td>
   </tr>
   <tr>
     <td>scale</td>
@@ -64,7 +64,7 @@
     <td>输出</td>
     <td>输入梯度，shape和数据类型与grads一致。</td>
     <td>FLOAT16、FLOAT、BFLOAT16</td>
-    <td>NHWC、NCHW、NC1HWC0（仅A2/A3）</td>
+    <td>NHWC、NCHW、NC1HWC0</td>
   </tr>
   <tr>
     <td>epsilon</td>
@@ -79,8 +79,8 @@
 
 - grads的逻辑C维（NCHW的第二维、NHWC的最后一维）必须等于scale和batch_variance的长度。
 - scale和batch_variance仅支持FLOAT。
-- 原型中grads和x_backprop的逻辑格式支持NHWC、NCHW或NC1HWC0；scale和batch_variance为一维ND。
-- Ascend950 Vector分支的grads和x_backprop仅支持NCHW和NHWC；不支持NC1HWC0。
+- Atlas A3系列产品、Atlas A2系列产品：参数grads、x_backprop的数据格式支持NC1HWC0、NCHW和NHWC。
+- Ascend 950PR&950DT系列产品：参数grads、x_backprop的数据格式仅支持NCHW和NHWC。
 - x_backprop的shape、数据类型和数据格式与grads一致。
 - epsilon仅支持FLOAT标量，必须大于0，建议范围[1e-6, 1e-3]；无枚举或步长约束。
 

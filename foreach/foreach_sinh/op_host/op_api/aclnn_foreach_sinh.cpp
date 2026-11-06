@@ -20,6 +20,14 @@
 #include "opdev/platform.h"
 #include "../../foreach_utils/op_host/foreach_null_check_helper.h"
 
+#define FOREACH_CHECK_RET(condition, ret_value)                   \
+    do {                                                          \
+        if (unlikely(!(condition))) {                             \
+            OP_LOGE((ret_value), "Check %s failed.", #condition); \
+            return (ret_value);                                   \
+        }                                                         \
+    } while (false)
+
 using namespace op;
 
 #ifdef __cplusplus
@@ -41,9 +49,10 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclTensorList* 
 static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
 {
     for (uint64_t i = 0; i < self->Size(); i++) {
-        // self格式不能是私有格式
-        if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
+        // 文档约束：仅支持 ND
+        if ((*self)[i]->GetStorageFormat() != op::Format::FORMAT_ND ||
+            (*out)[i]->GetStorageFormat() != op::Format::FORMAT_ND) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND.");
             return false;
         }
     }
@@ -99,6 +108,7 @@ static inline bool CheckShape(const aclTensorList* self, const aclTensorList* ou
     // tensor 维度检查
     for (uint64_t i = 0; i < self->Size(); i++) {
         OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+        OP_CHECK_MAX_DIM((*out)[i], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
     // self和out的shape必须一致
@@ -111,19 +121,19 @@ static inline bool CheckShape(const aclTensorList* self, const aclTensorList* ou
 static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensorList* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
+    FOREACH_CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShape/CheckFormat.
-    CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
+    FOREACH_CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
+    FOREACH_CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
-    CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
+    FOREACH_CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
-    CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
+    FOREACH_CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查Format是否满足约束
-    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
+    FOREACH_CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -132,11 +142,11 @@ static aclnnStatus ExecForeachSinhGetWorkspaceSize(const aclTensorList* x, const
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    FOREACH_CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
     auto ret = CheckParams(x, out);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    FOREACH_CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空Tensorlist处理
     if (x->Size() == 0) {
@@ -147,18 +157,19 @@ static aclnnStatus ExecForeachSinhGetWorkspaceSize(const aclTensorList* x, const
 
     // 输入如果非连续，需要转连续（空tensor直接用，保持索引一致）
     auto contiguousTensors = ForeachMakeContiguousTensorList(x, uniqueExecutor.get());
-    CHECK_RET(contiguousTensors != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    FOREACH_CHECK_RET(contiguousTensors != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 输出如果非连续，需要转连续作为kernel输出buffer；连续/空则直接使用
     auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
-    CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    FOREACH_CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 调用l0算子ForeachSinh进行计算，输出到连续buffer
     auto result = l0op::ForeachSinh(contiguousTensors, contiguousOut, uniqueExecutor.get());
-    CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    FOREACH_CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
-    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
+    FOREACH_CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()),
+                      ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

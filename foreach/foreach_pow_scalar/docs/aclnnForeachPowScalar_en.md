@@ -113,7 +113,7 @@ aclnnStatus aclnnForeachPowScalar(
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnForeachPowScalar(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -163,17 +163,15 @@ aclnnStatus aclnnForeachPowScalar(
       <td>x, scalar, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>The data types of x, scalar, and out are not in the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="4">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
+      <td>The shapes of x and out do not meet the constraints, or the x and out TensorList lengths are inconsistent.</td>
     </tr>
     <tr>
       <td>The data types of tensors in x or out are inconsistent.</td>

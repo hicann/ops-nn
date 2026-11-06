@@ -49,17 +49,17 @@ English | [简体中文](./README.md)
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
-      <td>Input</td>
-      <td>Exponent of the power-of-x computation, corresponding to `x` in the formula. The data types of all tensors in this parameter stay consistent.</td>
-      <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
       <td>scalar</td>
       <td>Input</td>
       <td>Base of the power-of-x computation, corresponding to `scalar` in the formula. Its data type has a certain correspondence with that of the input parameter `x`: when the data type of x is FLOAT32, FLOAT16, or BFLOAT16, the data type supports FLOAT32; when the data type of x is INT32, the data type supports INT64.</td>
       <td>FLOAT32, INT64</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x</td>
+      <td>Input</td>
+      <td>Exponent of the power-of-x computation, corresponding to `x` in the formula. The data types of all tensors in this parameter stay consistent.</td>
+      <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -81,5 +81,5 @@ English | [简体中文](./README.md)
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn interface  | [test_aclnn_foreach_pow_scalar_and_tensor](examples/test_aclnn_foreach_pow_scalar_and_tensor.cpp) | Calls the ForeachPowScalarAndTensor operator through the [aclnnForeachPowScalarAndTensor](docs/aclnnForeachPowScalarAndTensor_en.md) interface. |
-| Graph mode | -  | Calls the ForeachPowScalarAndTensor operator by constructing a graph through the [operator IR](op_graph/foreach_pow_scalar_and_tensor_proto.h).         |
+| aclnn API  | [test_aclnn_foreach_pow_scalar_and_tensor](examples/test_aclnn_foreach_pow_scalar_and_tensor.cpp) | Calls the ForeachPowScalarAndTensor operator through the [aclnnForeachPowScalarAndTensor](docs/aclnnForeachPowScalarAndTensor_en.md) interface. |
+| GE graph mode | -  | Calls the ForeachPowScalarAndTensor operator by constructing a graph through the [operator IR](op_graph/foreach_pow_scalar_and_tensor_proto.h).         |

@@ -22,6 +22,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/foreach_pow_scalar_and_tensor_tiling_data.h"
 #include "../../op_kernel/arch35/foreach_pow_scalar_and_tensor_tiling_key.h"
+#include "../../../foreach_utils/op_host/foreach_flat_regbase_validator.h"
 
 namespace optiling {
 
@@ -108,8 +109,25 @@ static void ComputeBlockDim(gert::TilingContext* context, int64_t coreNum, int64
     context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
 }
 
+static bool IsForeachPowScalarAndTensorDtype(ge::DataType dtype)
+{
+    return dtype == ge::DT_FLOAT || dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16 || dtype == ge::DT_INT32;
+}
+
 static ge::graphStatus ForeachPowScalarAndTensorTilingFunc(gert::TilingContext* context)
 {
+    // 0. Validate x-list size, dtype homogeneity, rank and output capacity
+    if (ForeachFlatRegbaseValidation::ValidateHomogeneous<1>(context, IsForeachPowScalarAndTensorDtype, X_IDX) !=
+        ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    auto scalarShape = context->GetRequiredInputShape(SCALAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
+    OP_CHECK_IF(scalarShape->GetStorageShape().GetShapeSize() != 1,
+                OP_LOGE(context, "scalar element count[%ld] must be 1", scalarShape->GetStorageShape().GetShapeSize()),
+                return ge::GRAPH_FAILED);
+
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,

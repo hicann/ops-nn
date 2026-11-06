@@ -107,7 +107,7 @@ aclnnStatus aclnnForeachPowScalar(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行n次方运算的输出结果，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape必须与入参`x`完全一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

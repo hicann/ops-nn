@@ -44,7 +44,8 @@ inline ge::graphStatus ValidateShape(gert::TilingContext* context, const gert::S
 }
 
 template <uint32_t INPUT_FLOW_COUNT>
-ge::graphStatus ValidateHomogeneous(gert::TilingContext* context, DtypePredicate acceptsDtype)
+ge::graphStatus ValidateHomogeneous(gert::TilingContext* context, DtypePredicate acceptsDtype,
+                                    uint32_t listInputIndex = 0U)
 {
     static_assert(INPUT_FLOW_COUNT > 0U, "a flat foreach validator needs at least one tensor-list input");
     auto computeNodeInfo = context->GetComputeNodeInfo();
@@ -53,7 +54,7 @@ ge::graphStatus ValidateHomogeneous(gert::TilingContext* context, DtypePredicate
         return ge::GRAPH_FAILED;
     }
 
-    auto firstListInfo = computeNodeInfo->GetInputInstanceInfo(0);
+    auto firstListInfo = computeNodeInfo->GetInputInstanceInfo(listInputIndex);
     if (firstListInfo == nullptr) {
         OP_LOGE(context, "input tensor-list metadata is null");
         return ge::GRAPH_FAILED;
@@ -66,7 +67,7 @@ ge::graphStatus ValidateHomogeneous(gert::TilingContext* context, DtypePredicate
     }
 
     for (uint32_t flow = 1; flow < INPUT_FLOW_COUNT; ++flow) {
-        auto listInfo = computeNodeInfo->GetInputInstanceInfo(flow);
+        auto listInfo = computeNodeInfo->GetInputInstanceInfo(listInputIndex + flow);
         if (listInfo == nullptr || listInfo->GetInstanceNum() != tensorCount) {
             OP_LOGE(context, "all tensor-list inputs must have the same list size");
             return ge::GRAPH_FAILED;
@@ -80,8 +81,8 @@ ge::graphStatus ValidateHomogeneous(gert::TilingContext* context, DtypePredicate
     ge::DataType listDtype = ge::DT_UNDEFINED;
     int64_t totalElements = 0;
     for (uint32_t tensorIndex = 0; tensorIndex < tensorCount; ++tensorIndex) {
-        auto firstDesc = context->GetDynamicInputDesc(0, tensorIndex);
-        auto firstShape = context->GetDynamicInputShape(0, tensorIndex);
+        auto firstDesc = context->GetDynamicInputDesc(listInputIndex, tensorIndex);
+        auto firstShape = context->GetDynamicInputShape(listInputIndex, tensorIndex);
         if (firstDesc == nullptr || firstShape == nullptr) {
             OP_LOGE(context, "x[%u] descriptor or shape is null", tensorIndex);
             return ge::GRAPH_FAILED;
@@ -111,8 +112,8 @@ ge::graphStatus ValidateHomogeneous(gert::TilingContext* context, DtypePredicate
         totalElements += dataCount;
 
         for (uint32_t flow = 1; flow < INPUT_FLOW_COUNT; ++flow) {
-            auto inputDesc = context->GetDynamicInputDesc(flow, tensorIndex);
-            auto inputShape = context->GetDynamicInputShape(flow, tensorIndex);
+            auto inputDesc = context->GetDynamicInputDesc(listInputIndex + flow, tensorIndex);
+            auto inputShape = context->GetDynamicInputShape(listInputIndex + flow, tensorIndex);
             if (inputDesc == nullptr || inputShape == nullptr || inputDesc->GetDataType() != listDtype ||
                 inputShape->GetStorageShape() != storageShape) {
                 OP_LOGE(context, "same-position input tensors must have identical dtype and storage shape");

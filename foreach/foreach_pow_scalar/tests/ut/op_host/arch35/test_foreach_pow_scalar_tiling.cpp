@@ -29,7 +29,8 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachPowScalarTilingTest TearDown" << std::endl; }
 };
 
-static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType inputDt, uint64_t expectKey)
+static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType inputDt, uint64_t expectKey,
+                   std::initializer_list<int64_t> yStorageShape = {}, bool expectSuccess = true)
 {
     fe::PlatFormInfos pf;
     std::map<std::string, std::string> soc, ai, intr;
@@ -58,7 +59,7 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType inputDt, 
     ASSERT_EQ(tilingParseFn(kh.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     gert::StorageShape xS = {xShape, xShape};
-    gert::StorageShape yS = {xShape, xShape};
+    gert::StorageShape yS = {xShape, yStorageShape.size() == 0 ? xShape : yStorageShape};
     gert::StorageShape sS = {{1}, {1}};
     auto param = gert::TilingData::CreateCap(4096);
     auto wsh = gert::ContinuousVector::Create<size_t>(4096);
@@ -79,8 +80,12 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType inputDt, 
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
     ctx->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intr);
-    EXPECT_EQ(tilingFn(ctx), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+    if (expectSuccess) {
+        EXPECT_EQ(tilingFn(ctx), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+    } else {
+        EXPECT_EQ(tilingFn(ctx), ge::GRAPH_FAILED);
+    }
 }
 
 TEST_F(ForeachPowScalarTilingTest, foreach_pow_scalar_float32)
@@ -101,4 +106,9 @@ TEST_F(ForeachPowScalarTilingTest, foreach_pow_scalar_int32)
 TEST_F(ForeachPowScalarTilingTest, foreach_pow_scalar_bfloat16)
 {
     DoCase({4, 4}, ge::DT_BF16, GET_TPL_TILING_KEY(FOREACH_POW_SCALAR_TPL_SCH_MODE_BF16));
+}
+
+TEST_F(ForeachPowScalarTilingTest, foreach_pow_scalar_out_storage_smaller)
+{
+    DoCase({4, 4}, ge::DT_FLOAT, 0, {3, 4}, false);
 }

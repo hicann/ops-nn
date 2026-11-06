@@ -68,6 +68,7 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The output does not support non-contiguous tensors.
+- The length of the input and output tensor lists must not exceed 256.
 
 ## Invocation Description
 

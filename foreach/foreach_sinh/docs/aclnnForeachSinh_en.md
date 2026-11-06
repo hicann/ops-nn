@@ -87,7 +87,7 @@ aclnnStatus aclnnForeachSinh(
       <td>x (aclTensorList*)</td>
       <td>Input</td>
       <td>Input tensor list for the hyperbolic sine operation, corresponding to `x` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>The number of tensors in the list is in [0, 256]; an empty list returns success without computation.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -151,21 +151,18 @@ aclnnStatus aclnnForeachSinh(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data type of x or out is not supported.</td>
     </tr>
+    <tr><td>The data types of x and out are inconsistent.</td></tr>
+    <tr><td>The data types of the tensors in x or out are inconsistent.</td></tr>
+    <tr><td>The dimensions of the tensors in x or out exceed 8.</td></tr>
+    <tr><td>The shapes of x and out do not meet the constraint.</td></tr>
     <tr>
-      <td>The data types of x and out are inconsistent.</td></tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x and out do not meet the constraint.</td>
-    </tr>
-    <tr>
-      <td>The data types of the tensors in x or out are inconsistent.</td></tr>
-    <tr>
-      <td>The dimensions of the tensors in x or out exceed 8.</td>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>The number of tensors in a single tensor list of x or out exceeds 256.</td>
     </tr>
   </tbody></table>
 
@@ -214,6 +211,10 @@ aclnnStatus aclnnForeachSinh(
 
 ## Constraints
 
+- The number of tensors in a single list of x or out must not exceed 256.
+- When the data type of input x is FLOAT32 or BFLOAT16 and |x| > asinh(dtype_max) ≈ 89.42, the output is ±inf.
+- When the data type of input x is FLOAT16 and |x| > ≈11.09, the output is ±inf.
+- When input x is NaN, the output is NaN.
 - Deterministic computation:
   - aclnnForeachSinh defaults to a deterministic implementation.
 

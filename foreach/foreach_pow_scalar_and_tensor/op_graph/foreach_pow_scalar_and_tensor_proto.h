@@ -18,15 +18,15 @@
 #include "graph/operator_reg.h"
 namespace ge {
 /**
- * @brief Apply power operation for each tensor in tensor list with a scalar in manner
- * of element-wise the number of tensors in tensor list shall be equal to the number of scalars
- * in scalar list
+ * @brief Apply power operation element-wise to each tensor in a tensor list, using a single
+ * scalar as the base and each tensor as the exponent: y[i] = scalar ** x[i].
  * @par Inputs:
  * Two inputs:
- * @li x: A tensor list containing multiple tensors
- * @li scalar: A scalar
+ * @li scalar: A scalar used as the base of the power operation
+ * @li x: A tensor list containing multiple tensors used as exponents
  * @par Outputs:
- * @li y: A tensor list which store the tensors whose value are power with the scalars in scalar list
+ * @li y: A tensor list whose value is the power of the scalar base raised to the
+ * corresponding tensor in x
  */
 REG_OP(ForeachPowScalarAndTensor)
     .INPUT(scalar, TensorType({DT_FLOAT, DT_INT64}))

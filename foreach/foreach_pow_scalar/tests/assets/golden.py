@@ -21,9 +21,9 @@ import numpy as np
 import torch
 
 _TOLERANCE = {
-    "float16": {"standard": "cross_check", "level": "L1"},
-    "float32": {"standard": "cross_check", "level": "L1"},
-    "bfloat16": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L0"},
+    "float32": {"standard": "cross_check", "level": "L0"},
+    "bfloat16": {"standard": "cross_check", "level": "L0"},
     "int8": {"standard": "binary_equal"},
     "int16": {"standard": "binary_equal"},
     "int32": {"standard": "binary_equal"},

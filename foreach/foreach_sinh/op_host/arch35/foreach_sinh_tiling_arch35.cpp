@@ -20,6 +20,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "foreach/foreach_sinh/op_kernel/arch35/foreach_sinh_tiling_data.h"
 #include "foreach/foreach_sinh/op_kernel/arch35/foreach_sinh_tiling_key.h"
+#include "../../../foreach_utils/op_host/foreach_flat_regbase_validator.h"
 
 namespace optiling {
 
@@ -44,9 +45,19 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
+static bool IsForeachSinhDtype(ge::DataType dtype)
+{
+    return dtype == ge::DT_FLOAT || dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16;
+}
+
 static ge::graphStatus ForeachSinhTilingFunc(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "ForeachSinhTilingFunc begin.");
+
+    // 0. Validate tensor-list size, dtype homogeneity, rank and output capacity
+    if (ForeachFlatRegbaseValidation::ValidateHomogeneous<1>(context, IsForeachSinhDtype) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     uint64_t ubSize = 0;
     int64_t maxCoreNum = 0;

@@ -22,6 +22,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "foreach/foreach_pow_scalar/op_kernel/arch35/foreach_pow_scalar_tiling_data.h"
 #include "foreach/foreach_pow_scalar/op_kernel/arch35/foreach_pow_scalar_tiling_key.h"
+#include "../../../foreach_utils/op_host/foreach_flat_regbase_validator.h"
 
 namespace optiling {
 
@@ -46,8 +47,18 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
+static bool IsForeachPowScalarDtype(ge::DataType dtype)
+{
+    return dtype == ge::DT_FLOAT || dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16 || dtype == ge::DT_INT32;
+}
+
 static ge::graphStatus ForeachPowScalarTilingFunc(gert::TilingContext* context)
 {
+    // 0. Validate list size/dtype and y storage capacity (y storage size >= x storage size)
+    if (ForeachFlatRegbaseValidation::ValidateHomogeneous<1>(context, IsForeachPowScalarDtype) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
@@ -71,18 +82,6 @@ static ge::graphStatus ForeachPowScalarTilingFunc(gert::TilingContext* context)
     auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     ge::DataType dataType = inputDesc->GetDataType();
-
-    // x 列表所有成员 dtype 必须一致（README 约束）：kernel 按首成员 dtype 选模板并以同一类型
-    // 遍历全部成员读写，混合 dtype 会按错误宽度写入输出缓冲造成越界写，必须在此拒绝。
-    for (uint64_t i = 1; i < tensorNum; i++) {
-        auto memberDesc = context->GetDynamicInputDesc(INPUT_IDX_0, i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, memberDesc);
-        OP_CHECK_IF(
-            memberDesc->GetDataType() != dataType,
-            OP_LOGE(context, "x[%lu] dtype %d differs from x[0] dtype %d; all tensors in x must share one dtype", i,
-                    static_cast<int32_t>(memberDesc->GetDataType()), static_cast<int32_t>(dataType)),
-            return ge::GRAPH_FAILED);
-    }
 
     // 4. Fill tiling data
     ForeachPowScalarTilingData* tiling = context->GetTilingData<ForeachPowScalarTilingData>();

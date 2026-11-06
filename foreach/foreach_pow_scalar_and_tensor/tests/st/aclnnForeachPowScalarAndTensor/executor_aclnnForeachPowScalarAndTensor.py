@@ -11,17 +11,13 @@
 
 import torch
 from atk.configs.dataset_config import InputDataset
-from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
-from atk.tasks.dataset.base_dataset import OpsDataset
-import numpy as np
 
 
 @register("function_aclnnForeachPowScalarAndTensor")
 class aclnnForeachPowScalarAndTensorExecutor(BaseApi):
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         scalar = input_data.kwargs["scalar"]
         x = input_data.kwargs["x"]
@@ -29,6 +25,7 @@ class aclnnForeachPowScalarAndTensorExecutor(BaseApi):
         output = torch._foreach_pow(scalar, x)
 
         return output
+
 
 @register("aclnnfunction_aclnnForeachPowScalarAndTensor")
 class aclnnfunctionExecutor(AclnnBaseApi):

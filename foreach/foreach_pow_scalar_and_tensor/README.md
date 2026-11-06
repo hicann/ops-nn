@@ -47,17 +47,17 @@
     </tr></thead>
   <tbody>
     <tr>
-      <td>x</td>
-      <td>输入</td>
-      <td>表示进行x次方运算的指数，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
       <td>scalar</td>
       <td>输入</td>
       <td>表示进行x次方运算的底数，对应公式中的`scalar`。与入参`x`的数据类型具有一定对应关系：当x的数据类型为FLOAT32、FLOAT16、BFLOAT16时，数据类型支持FLOAT32；当x的数据类型为INT32时，数据类型支持INT64。</td>
       <td>FLOAT32、INT64</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x</td>
+      <td>输入</td>
+      <td>表示进行x次方运算的指数，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -79,5 +79,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_foreach_pow_scalar_and_tensor](examples/test_aclnn_foreach_pow_scalar_and_tensor.cpp) | 通过[aclnnForeachPowScalarAndTensor](docs/aclnnForeachPowScalarAndTensor.md)接口方式调用ForeachPowScalarAndTensor算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_pow_scalar_and_tensor_proto.h)构图方式调用ForeachPowScalarAndTensor算子。         |
+| aclnn API  | [test_aclnn_foreach_pow_scalar_and_tensor](examples/test_aclnn_foreach_pow_scalar_and_tensor.cpp) | 通过[aclnnForeachPowScalarAndTensor](docs/aclnnForeachPowScalarAndTensor.md)接口方式调用ForeachPowScalarAndTensor算子。 |
+| GE图模式 | -  | 通过[算子IR](op_graph/foreach_pow_scalar_and_tensor_proto.h)构图方式调用ForeachPowScalarAndTensor算子。         |

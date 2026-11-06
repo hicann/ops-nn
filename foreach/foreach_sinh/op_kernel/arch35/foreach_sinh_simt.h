@@ -37,7 +37,18 @@ template <typename T>
 __simt_callee__ inline T ComputeSinh(T val)
 {
     float fval = static_cast<float>(val);
-    float result = sinhf(fval);
+    // asinh(FLT_MAX) ~= 89.4160: beyond this sinh overflows float32. The device
+    // sinhf saturates to a finite near-FLT_MAX value instead of returning inf,
+    // which disagrees with the torch golden and with float16/float32 semantics.
+    constexpr float SINH_OVERFLOW_THRESHOLD = 89.41598510742188f;
+    float result;
+    if (fval > SINH_OVERFLOW_THRESHOLD) {
+        result = __builtin_inff();
+    } else if (fval < -SINH_OVERFLOW_THRESHOLD) {
+        result = -__builtin_inff();
+    } else {
+        result = sinhf(fval);
+    }
     return static_cast<T>(result);
 }
 

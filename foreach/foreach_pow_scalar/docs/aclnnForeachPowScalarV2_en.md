@@ -111,7 +111,7 @@ aclnnStatus aclnnForeachPowScalarV2(
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnForeachPowScalarV2(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -169,7 +169,7 @@ aclnnStatus aclnnForeachPowScalarV2(
       <td>The data types of x and out are inconsistent.</td>
     </tr>
      <tr>
-      <td>The shapes of x and out do not meet the constraints.</td>
+      <td>The shapes of x and out do not meet the constraints, or the x and out TensorList lengths are inconsistent.</td>
     </tr>
       <tr>
       <td>The data types of tensors in x or out are inconsistent.</td>

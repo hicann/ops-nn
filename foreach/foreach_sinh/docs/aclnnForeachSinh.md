@@ -42,7 +42,7 @@
 ```Cpp
 aclnnStatus aclnnForeachSinhGetWorkspaceSize(
   const aclTensorList     *x,
-  const aclTensorList     *out,
+  aclTensorList           *out,
   uint64_t                *workspaceSize,
   aclOpExecutor          **executor)
 ```
@@ -85,7 +85,7 @@ aclnnStatus aclnnForeachSinh(
       <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行双曲正弦函数运算的输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空tensor。</li><li>Tensor列表的Tensor数量取值范围为0~256，数量为0（空列表）时接口直接返回成功、不执行计算。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -146,24 +146,21 @@ aclnnStatus aclnnForeachSinh(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x或out是空指针。</td>
+      <td>x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
+    <tr><td>x和out的数据类型不一致。</td></tr>
+    <tr><td>x或out中的Tensor的数据类型不一致。</td></tr>
+    <tr><td>x或out中的Tensor维度超过8维。</td></tr>
+    <tr><td>x与out的shape不满足约束。</td></tr>
     <tr>
-      <td>x和out的数据类型不一致。</td></tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>x与out的shape不满足约束。</td>
-    </tr>
-    <tr>
-      <td>x或out中的Tensor的数据类型不一致。</td></tr>
-    <tr>
-      <td>x或out中的Tensor维度超过8维。</td>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>x或out中单个Tensor列表的Tensor数量超过256。</td>
     </tr>
   </tbody></table>
 
@@ -212,6 +209,10 @@ aclnnStatus aclnnForeachSinh(
 
 ## 约束说明
 
+- x/out中单个Tensor列表的Tensor数量不能超过256。
+- 当输入x的数据类型为FLOAT32、BFLOAT16，且|x|>asinh(dtype_max)≈89.42时，输出为±inf。
+- 当输入x的数据类型为FLOAT16，且|x|>≈11.09时，输出为±inf。
+- 当输入x为NaN时，输出为NaN。
 - 确定性计算：
   - aclnnForeachSinh默认确定性实现。
 

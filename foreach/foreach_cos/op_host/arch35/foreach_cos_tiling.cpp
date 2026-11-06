@@ -20,6 +20,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/foreach_cos_tiling_data.h"
 #include "../../op_kernel/arch35/foreach_cos_tiling_key.h"
+#include "../../../foreach_utils/op_host/foreach_flat_regbase_validator.h"
 
 namespace optiling {
 
@@ -45,8 +46,18 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
+static bool IsForeachCosDtype(ge::DataType dtype)
+{
+    return dtype == ge::DT_FLOAT || dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16;
+}
+
 static ge::graphStatus ForeachCosTilingFunc(gert::TilingContext* context)
 {
+    // 0. Validate tensor-list size, dtype homogeneity, rank and output capacity
+    if (ForeachFlatRegbaseValidation::ValidateHomogeneous<1>(context, IsForeachCosDtype) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
