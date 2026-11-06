@@ -51,8 +51,11 @@ bool LayerNormV3RegBaseTwoPassPerfTiling::CanFitInBuffer(int64_t curA)
     int64_t ubCanUseSize = GetUBCanUseSize();
     int64_t rowWeight = GetRowWeight();
 
-    return curA * static_cast<int64_t>(commonParams.rowAlign) * rowWeight <=
-           ubCanUseSize - LNV3_NUM_TWO * LNV3_DOUBLE_BUFFER * curAAlign;
+    int64_t outputBufferSize = LNV3_NUM_TWO * LNV3_DOUBLE_BUFFER * curAAlign * sizeof(float);
+    if (commonParams.isV1) {
+        outputBufferSize += curAAlign * sizeof(float);
+    }
+    return curA * static_cast<int64_t>(commonParams.rowAlign) * rowWeight <= ubCanUseSize - outputBufferSize;
 }
 
 bool LayerNormV3RegBaseTwoPassPerfTiling::IsCapable()
@@ -162,4 +165,5 @@ ge::graphStatus LayerNormV3RegBaseTwoPassPerfTiling::PostTiling()
 }
 
 REGISTER_OPS_TILING_TEMPLATE(LayerNormV3, LayerNormV3RegBaseTwoPassPerfTiling, 150);
+REGISTER_OPS_TILING_TEMPLATE(LayerNorm, LayerNormV3RegBaseTwoPassPerfTiling, 150);
 } // namespace optiling

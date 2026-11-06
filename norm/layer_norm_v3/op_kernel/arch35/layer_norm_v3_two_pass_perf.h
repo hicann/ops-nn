@@ -36,7 +36,7 @@ using AscendC::Reg::UpdateMask;
 using NormCommon::NormCommonRegbase::LoadRegForDtype;
 using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
-template <typename T, typename U, typename M>
+template <typename T, typename U, typename M, bool IsOutRstd>
 class LayerNormV3RegbaseTwoPassPerf {
 public:
     __aicore__ inline LayerNormV3RegbaseTwoPassPerf(const LayerNormV3TilingDataRegBaseTwoPassPerf* tilingData,
@@ -48,7 +48,7 @@ public:
         hasBeta_ = (tilingData->nullptrBeta == 0);
     }
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout)
     {
         // copy in gamma and beta
         gammaGm_.SetGlobalBuffer((__gm__ U*)gamma);
@@ -60,10 +60,13 @@ public:
         xGm_.SetGlobalBuffer((__gm__ T*)x + xBlockOffset);
         yGm_.SetGlobalBuffer((__gm__ T*)y + xBlockOffset);
         meanGm_.SetGlobalBuffer((__gm__ M*)mean + meanBlockOffset);
-        rstdGm_.SetGlobalBuffer((__gm__ M*)rstd + meanBlockOffset);
+        lastoutGm_.SetGlobalBuffer((__gm__ M*)lastout + meanBlockOffset);
 
         pipe_->InitBuffer(meanQueue_, DOUBLE_BUFFER, tl_->aUbFactorAlignB32 * sizeof(float));
-        pipe_->InitBuffer(rstdQueue_, DOUBLE_BUFFER, tl_->aUbFactorAlignB32 * sizeof(float));
+        pipe_->InitBuffer(lastoutQueue_, DOUBLE_BUFFER, tl_->aUbFactorAlignB32 * sizeof(float));
+        if constexpr (!IsOutRstd) {
+            pipe_->InitBuffer(rstdBuf_, tl_->aUbFactorAlignB32 * sizeof(float));
+        }
 
         elemNum_ = tl_->aUbFactor * tl_->rAlign;
         pipe_->InitBuffer(xQueue_, DOUBLE_BUFFER, elemNum_ * sizeof(T));
@@ -87,7 +90,7 @@ public:
             CopyInX(offset, currentA);
             Caculate(currentA);
             CopyOutY(offset, currentA);
-            CopyOutMeanRstd(aOffset, currentA);
+            CopyOutMeanLastout(aOffset, currentA);
         }
 
         gammaBetaQueue_.FreeTensor(gammaBetaInUb_);
@@ -137,12 +140,12 @@ private:
     {
         LocalTensor<T> xInUb = xQueue_.template DeQue<T>();
         meanOutUb_ = meanQueue_.AllocTensor<float>();
-        rstdOutUb_ = rstdQueue_.AllocTensor<float>();
+        lastoutOutUb_ = lastoutQueue_.AllocTensor<float>();
         LocalTensor<float> tmpTensor = tmpBuf.Get<float>();
 
         __ubuf__ T* xInUbAddr = (__ubuf__ T*)xInUb.GetPhyAddr();
         __ubuf__ float* meanOutUbAddr = (__ubuf__ float*)meanOutUb_.GetPhyAddr();
-        __ubuf__ float* rstdOutUbAddr = (__ubuf__ float*)rstdOutUb_.GetPhyAddr();
+        __ubuf__ float* rstdOutUbAddr = (__ubuf__ float*)lastoutOutUb_.GetPhyAddr();
         __ubuf__ float* xSubMeanUbAddr = (__ubuf__ float*)tmpTensor.GetPhyAddr();
         __ubuf__ float* tmpUbAddr = (__ubuf__ float*)tmpTensor.GetPhyAddr() + elemNum_;
 
@@ -156,7 +159,11 @@ private:
             CalculateMeanVarRCommon<NUM_TWO>(xInUbAddr, meanOutUbAddr, rstdOutUbAddr, xSubMeanUbAddr, tmpUbAddr,
                                              currentANum);
         }
-        CalculateRstdVF(rstdOutUbAddr, currentANum);
+        __ubuf__ float* varianceUbAddr = rstdOutUbAddr;
+        if constexpr (!IsOutRstd) {
+            rstdOutUbAddr = (__ubuf__ float*)rstdBuf_.Get<float>().GetPhyAddr();
+        }
+        CalculateRstdVF(rstdOutUbAddr, varianceUbAddr, currentANum);
 
         LocalTensor<T> yOutUb = yQueue_.AllocTensor<T>();
         __ubuf__ U* gammaInUbAddr = (__ubuf__ U*)gammaBetaInUb_.GetPhyAddr();
@@ -505,10 +512,10 @@ private:
         }
     }
 
-    __aicore__ inline void CalculateRstdVF(__ubuf__ float* rstdOutUb, uint16_t currentANum)
+    __aicore__ inline void CalculateRstdVF(__ubuf__ float* rstdOutUb, __ubuf__ float* varianceUb, uint16_t currentANum)
     {
         float epsilonLocal = tl_->epsilon;
-        NormCommon::ComputeRstdNewtonRaphson<false>(rstdOutUb, rstdOutUb, static_cast<uint32_t>(currentANum),
+        NormCommon::ComputeRstdNewtonRaphson<false>(varianceUb, rstdOutUb, static_cast<uint32_t>(currentANum),
                                                     epsilonLocal, 1.0f, VL_B32);
     }
 
@@ -603,12 +610,12 @@ private:
         }
     }
 
-    __aicore__ inline void CastMeanRstd(int64_t currentANum)
+    __aicore__ inline void CastMeanLastout(int64_t currentANum)
     {
         __ubuf__ float* meanInAddr = (__ubuf__ float*)meanOutUb_.GetPhyAddr();
-        __ubuf__ float* rstdInAddr = (__ubuf__ float*)rstdOutUb_.GetPhyAddr();
+        __ubuf__ float* rstdInAddr = (__ubuf__ float*)lastoutOutUb_.GetPhyAddr();
         __ubuf__ M* meanOutAddr = (__ubuf__ M*)meanOutUb_.GetPhyAddr();
-        __ubuf__ M* rstdOutAddr = (__ubuf__ M*)rstdOutUb_.GetPhyAddr();
+        __ubuf__ M* rstdOutAddr = (__ubuf__ M*)lastoutOutUb_.GetPhyAddr();
 
         uint32_t castCount = static_cast<uint32_t>(currentANum);
         uint16_t castLoops = static_cast<uint32_t>((castCount + VL_B32 - 1) / VL_B32);
@@ -631,15 +638,15 @@ private:
         }
     }
 
-    __aicore__ inline void CopyOutMeanRstd(int64_t offset, int64_t currentANum)
+    __aicore__ inline void CopyOutMeanLastout(int64_t offset, int64_t currentANum)
     {
         if constexpr (!IsSameType<M, float>::value) {
             // float to bfloat16 or float16, input continue and output each repeat have only half value
-            CastMeanRstd(currentANum);
+            CastMeanLastout(currentANum);
             meanQueue_.EnQue(meanOutUb_);
-            rstdQueue_.EnQue(rstdOutUb_);
+            lastoutQueue_.EnQue(lastoutOutUb_);
             LocalTensor<M> meanInUb = meanQueue_.template DeQue<M>();
-            LocalTensor<M> rstdInUb = rstdQueue_.template DeQue<M>();
+            LocalTensor<M> rstdInUb = lastoutQueue_.template DeQue<M>();
 
             uint32_t castDmaCount = static_cast<uint32_t>(currentANum);
             uint32_t castDmaLoops = static_cast<uint32_t>(castDmaCount / VL_B32);
@@ -650,7 +657,7 @@ private:
                 copyInParams.srcStride = (VECTOR_REG_WIDTH - VL_B32 * sizeof(M)) / BLOCK_SIZE;
                 copyInParams.dstStride = 0;
                 DataCopyPad(meanGm_[offset], meanInUb, copyInParams);
-                DataCopyPad(rstdGm_[offset], rstdInUb, copyInParams);
+                DataCopyPad(lastoutGm_[offset], rstdInUb, copyInParams);
             }
             // tail
             uint32_t tailSize = static_cast<uint32_t>(castDmaCount % VL_B32);
@@ -661,24 +668,25 @@ private:
                 copyInParamsTail.srcStride = 0;
                 copyInParamsTail.dstStride = 0;
                 DataCopyPad(meanGm_[offset + castDmaLoops * VL_B32], meanInUb[castDmaLoops * VL_B16], copyInParamsTail);
-                DataCopyPad(rstdGm_[offset + castDmaLoops * VL_B32], rstdInUb[castDmaLoops * VL_B16], copyInParamsTail);
+                DataCopyPad(lastoutGm_[offset + castDmaLoops * VL_B32], rstdInUb[castDmaLoops * VL_B16],
+                            copyInParamsTail);
             }
             meanQueue_.FreeTensor(meanInUb);
-            rstdQueue_.FreeTensor(rstdInUb);
+            lastoutQueue_.FreeTensor(rstdInUb);
         } else {
             meanQueue_.EnQue(meanOutUb_);
-            rstdQueue_.EnQue(rstdOutUb_);
+            lastoutQueue_.EnQue(lastoutOutUb_);
             LocalTensor<float> meanInUb = meanQueue_.template DeQue<float>();
-            LocalTensor<float> rstdInUb = rstdQueue_.template DeQue<float>();
+            LocalTensor<float> rstdInUb = lastoutQueue_.template DeQue<float>();
             DataCopyExtParams copyInParams;
             copyInParams.blockCount = 1;
             copyInParams.blockLen = currentANum * sizeof(float);
             copyInParams.srcStride = 0;
             copyInParams.dstStride = 0;
             DataCopyPad(meanGm_[offset], meanInUb, copyInParams);
-            DataCopyPad(rstdGm_[offset], rstdInUb, copyInParams);
+            DataCopyPad(lastoutGm_[offset], rstdInUb, copyInParams);
             meanQueue_.FreeTensor(meanInUb);
-            rstdQueue_.FreeTensor(rstdInUb);
+            lastoutQueue_.FreeTensor(rstdInUb);
         }
     }
 
@@ -701,7 +709,7 @@ private:
 
     GlobalTensor<T> yGm_;
     GlobalTensor<M> meanGm_;
-    GlobalTensor<M> rstdGm_;
+    GlobalTensor<M> lastoutGm_;
 
     /* variable */
     bool hasGamma_ = true;
@@ -717,13 +725,14 @@ private:
 
     TQue<QuePosition::VECOUT, 1> yQueue_;
     TQue<QuePosition::VECOUT, 1> meanQueue_;
-    TQue<QuePosition::VECOUT, 1> rstdQueue_;
+    TQue<QuePosition::VECOUT, 1> lastoutQueue_;
 
     TBuf<TPosition::VECCALC> tmpBuf;
+    TBuf<TPosition::VECCALC> rstdBuf_;
 
     LocalTensor<U> gammaBetaInUb_;
     LocalTensor<float> meanOutUb_;
-    LocalTensor<float> rstdOutUb_;
+    LocalTensor<float> lastoutOutUb_;
 };
 } // namespace LayerNormV3
 

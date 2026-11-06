@@ -105,15 +105,15 @@ __aicore__ inline void RegbaseWelfordImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta
     op.Process();
 }
 
-template <typename Tfm, typename Tweight, typename Tmean>
+template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
 __aicore__ inline void RegbaseTwoPassPerfImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
-                                              GM_ADDR rstd, GM_ADDR tiling)
+                                              GM_ADDR lastout, GM_ADDR tiling)
 {
     TPipe pipeIn;
     GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataRegBaseTwoPassPerf, tiling_data_in, tiling);
     const LayerNormV3TilingDataRegBaseTwoPassPerf* __restrict tilingData = &tiling_data_in;
-    LayerNormV3RegbaseTwoPassPerf<Tfm, Tweight, Tmean> op(tilingData, &pipeIn);
-    op.Init(x, gamma, beta, y, mean, rstd);
+    LayerNormV3RegbaseTwoPassPerf<Tfm, Tweight, Tmean, IsOutRstd> op(tilingData, &pipeIn);
+    op.Init(x, gamma, beta, y, mean, lastout);
     op.Process();
 }
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
@@ -190,19 +190,19 @@ static __aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR 
         RegbaseWelfordImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_FLOAT_FLOAT)) {
-        RegbaseTwoPassPerfImpl<float, float, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseTwoPassPerfImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_HALF_FLOAT)) {
-        RegbaseTwoPassPerfImpl<half, float, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseTwoPassPerfImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_HALF_HALF)) {
-        RegbaseTwoPassPerfImpl<half, half, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseTwoPassPerfImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_BF16_FLOAT)) {
-        RegbaseTwoPassPerfImpl<bfloat16_t, float, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseTwoPassPerfImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_BF16_BF16)) {
-        RegbaseTwoPassPerfImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
+        RegbaseTwoPassPerfImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_NO_REDUCE_FLOAT_FLOAT)) {
         RegbaseNoReduceImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);

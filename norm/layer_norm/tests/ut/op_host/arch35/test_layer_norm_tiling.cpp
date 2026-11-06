@@ -36,7 +36,7 @@ protected:
     static void TearDownTestCase() { std::cout << "LayerNormTiling TearDown" << std::endl; }
 };
 
-TEST_F(LayerNormTilingTest, layer_norm_tiling_regbase_two_pass)
+TEST_F(LayerNormTilingTest, layer_norm_tiling_regbase_two_pass_perf)
 {
     gert::StorageShape x_shape = {{64, 4096}, {64, 4096}};
     gert::StorageShape gamma_shape = {{4096}, {4096}};
@@ -129,7 +129,7 @@ TEST_F(LayerNormTilingTest, layer_norm_tiling_regbase_two_pass)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 300);
+    ASSERT_EQ(tiling_key, 500);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     // EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
