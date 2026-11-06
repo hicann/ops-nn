@@ -74,6 +74,8 @@ ge::graphStatus MatMulV3ToMulTiling::DoOpTiling()
         biasCount = args_.hasBias ? 1 : 0;
         baseMN = std::min(tmpMN, ubCount / (NUM_FIVE * baseK + biasCount + 1));
     }
+    OP_CHECK_IF(baseMN == 0 || baseK == 0, OP_LOGE(args_.opName, "baseMN/baseK is 0, ubSize:%lu", compileInfo_.ubSize),
+                return ge::GRAPH_FAILED);
     // 尾核需要处理的MN方向个数
     uint64_t tailMN = shapeMN % baseMN;
     // 每个核K方向尾次处理的个数

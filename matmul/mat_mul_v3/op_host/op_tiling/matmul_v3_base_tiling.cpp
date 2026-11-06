@@ -1078,7 +1078,6 @@ bool MatmulV3BaseTiling::TranslateAoeTiling(tuningtiling::TuningTilingDefPtr& tu
     tilingData_.matmulTiling.dbL0A = aoeTiling->dbL0A;
     tilingData_.matmulTiling.dbL0B = aoeTiling->dbL0B;
     tilingData_.matmulTiling.dbL0C = aoeTiling->dbL0C;
-    tilingData_.matmulTiling.dbL0C = aoeTiling->dbL0C;
     if (!compileInfo_.supportL0c2out) {
         tilingData_.matmulTiling.transLength = L0C_SIZE_256_KB / NUM_HALF;
         tilingData_.matmulTiling.shareUbSize = 0;
