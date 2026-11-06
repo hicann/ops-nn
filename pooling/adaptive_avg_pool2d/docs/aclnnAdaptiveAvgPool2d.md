@@ -84,7 +84,7 @@ aclnnStatus aclnnAdaptiveAvgPool2d(
     <tr>
       <td>outputSize</td>
       <td>输入</td>
-      <td>输出Tensor在HW维度上的Size大小。</td>
+      <td>输出Tensor在HW维度上的大小。</td>
       <td>数组长度恒为2。</td>
       <td>INT64</td>
       <td>-</td>

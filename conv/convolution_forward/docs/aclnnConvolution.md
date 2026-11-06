@@ -193,7 +193,7 @@ aclnnStatus aclnnConvolution(
   <td>output（aclTensor*）</td>
   <td>输出</td>
   <td>表示卷积输出。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型需要与input与weight推导之后的数据类型保持一致。</li><li>通道数等于weight第一维，其他维度≥0。</li></ul></td>
+  <td><ul><li>支持空Tensor。</li><li>数据类型需要与input、weight推导之后的数据类型保持一致。</li><li>通道数等于weight第一维，其他维度≥0。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN</td>
   <td>NCL、NCHW、NCDHW</td>
   <td>3-5</td>

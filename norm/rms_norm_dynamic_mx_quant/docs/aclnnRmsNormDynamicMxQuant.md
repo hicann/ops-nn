@@ -43,7 +43,7 @@
     $$
     P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
     $$
-    - emax: 对应数据类型的最大正则数的指数位。
+    - emax: 对应数据类型的最大正规数的指数位。
 
         |   DataType    | emax |
         | :-----------: | :--: |

@@ -203,7 +203,7 @@ aclnnStatus aclnnMaxUnpool2d(
       <td>outputSize的两个元素乘积值小于self在H和W维度上的size乘积值。</td>
     </tr>
     <tr>
-      <td>out在N、C维度上的size大小与self未完全相同。</td>
+      <td>out在N、C维度上的size大小与self不完全相同。</td>
     </tr>
     <tr>
       <td>out在H、W维度上的size大小与outputSize中的两个元素值不相等。</td>

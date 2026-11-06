@@ -175,7 +175,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
       <td>location（aclTensor*）</td>
       <td>输入</td>
       <td>采样点位置tensor，存储每个采样点的坐标位置。对应公式中的`location`。</td>
-      <td><ul><il>数据类型与value保持一致。</il><il>shape为(bs, num_queries, num_heads, num_levels, num_points, 2)。其中num_queries为查询的数量，num_points为采样点的数量，2分别代表y，x。</il></ul></td>
+      <td><ul><li>数据类型与value保持一致。</li><li>shape为(bs, num_queries, num_heads, num_levels, num_points, 2)。其中num_queries为查询的数量，num_points为采样点的数量，2分别代表y，x。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>6</td>

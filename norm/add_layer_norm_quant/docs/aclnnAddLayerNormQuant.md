@@ -406,7 +406,7 @@ aclnnStatus aclnnAddLayerNormQuant(
     <tr>
       <td>全部输入tensor的shape满足以下等量关系：
       <ol>
-      <li>1. x1、x2、xOut、y1的shape不相同；当scales2Optional可选输入存在时，该条件严格化为x1、x2、xOut、y1、y2的shape不相同。</li>
+      <li>x1、x2、xOut、y1的shape不相同；当scales2Optional可选输入存在时，该条件严格化为x1、x2、xOut、y1、y2的shape不相同。</li>
       <li>gamma、beta的shape不相同；当可选输入scales1Optional、scales2Optional、zeroPoints1Optional、zeroPoints2Optional存在时，它们的shape和gamma相异。</li>
       <li>当biasOptional存在时，它的shape既和gamma相异，也和x1相异。</li>
       <li>当量化模式为动态，即输入quantMode的值为"dynamic"，且在此同时scales2Optional可选输入存在时，outScales1Out的shape和outScales2Out的shape相异。</li>

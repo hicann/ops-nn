@@ -217,7 +217,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>scaleAlg (int64_t)</td>
       <td>输入</td>
       <td>指定mxscale计算时采用的算法。</td>
-      <td><ul><li>当前取值支持0、1和2。取值为0代表场景1，取值为1代表场景2，取值为2代表场景3。</li><li>当dstType为FLOAT4时时支持取值为0和2；当dstType为FLOAT8时支持取值0和1。</li></ul></td>
+      <td><ul><li>当前取值支持0、1和2。取值为0代表场景1，取值为1代表场景2，取值为2代表场景3。</li><li>当dstType为FLOAT4时支持取值为0和2；当dstType为FLOAT8时支持取值0和1。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>

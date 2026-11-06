@@ -260,7 +260,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
       <td>kernelSize的长度不等于1或者2。</td>
     </tr>
     <tr>
-      <td>kernelSize中的数值中存在小于等于0的数值。</td>
+      <td>kernelSize中存在小于等于0的数值。</td>
     </tr>
     <tr>
       <td>stride的长度不等于0，1或2。</td>

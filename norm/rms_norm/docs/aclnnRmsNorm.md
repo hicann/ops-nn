@@ -244,7 +244,7 @@ aclnnStatus aclnnRmsNorm(
 - <term>Ascend 950PR&950DT系列产品</term>：
 
   - `gamma`支持空Tensor。
-  - 归一化后缀各维大小之积为0、非归一化维各维大小之积大于0时，`x`、`gamma`、`yOut`为空Tensor，`rstdOut`非空且各元素为NaN。
+  - 归一化维各维大小之积为0、非归一化维各维大小之积大于0时，`x`、`gamma`、`yOut`为空Tensor，`rstdOut`非空且各元素为NaN。
   - `x`为空Tensor时，`rstdOut`的shape允许省略全部归一化维，仅保留非归一化维。例如，`x`的shape为`(2, 3, 0, 4)`、`gamma`的shape为`(0, 4)`时，`rstdOut`的shape可为`(2, 3, 1, 1)`或`(2, 3)`。
   - `x`为空Tensor且归一化覆盖其全部维度时，省略后的`rstdOut`为含1个FLOAT32元素的0维标量，shape为`()`，不是空Tensor。例如，`x`和`gamma`的shape均为`(0,)`时，`rstdOut`的shape可为`(1,)`或`()`。
   - 省略归一化维后的`rstdOut`等价于将保留归一化维的结果reshape为省略后的shape，元素值（含NaN）保持不变。
@@ -271,7 +271,7 @@ aclnnStatus aclnnRmsNorm(
   - `gamma`不支持空Tensor。
   - 参数`x`、`gamma`、`yOut`的数据类型不支持BFLOAT16。
   - 归一化维的总数据量（即`gamma`各维度大小之积×单个元素字节数）必须大于等于32Bytes。
-  - 输入不支持包含Inf和NaN。
+  - 输入不支持Inf和NaN。
 <!-- end id10 -->
 
 - 各平台支持数据类型说明：

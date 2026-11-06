@@ -243,7 +243,7 @@ aclnnStatus aclnnRepeatInterleaveIntWithDim(
 
 - 确定性计算：
   - aclnnRepeatInterleaveIntWithDim默认确定性实现。
-- 其他限制：在计算时需要满足要求：outputSize = self的dim维度的size * repeats的值。
+- 其他限制：outputSize = self的dim维度的size * repeats的值。
 
 ## 调用示例
 

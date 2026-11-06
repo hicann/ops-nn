@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：计算[aclnnMish](../../mish/docs/aclnnMish&aclnnInplaceMish.md)的反向传播过程。
+- 接口功能：计算[aclnnMish](../../mish/docs/aclnnMish&aclnnInplaceMish.md)的反向传播。
 
 ## 函数原型
 

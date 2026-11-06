@@ -27,7 +27,7 @@
 
 - 计算公式：
 
-1. 先计算gelu计算得到geluOut
+1. 先计算gelu得到geluOut
 
     - approximate = tanh
 

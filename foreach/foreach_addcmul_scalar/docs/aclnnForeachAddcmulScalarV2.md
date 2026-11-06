@@ -211,7 +211,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
       <td>x1、x2、x3、out的shape不满足约束（含out的shape size小于x1的shape size）。</td>
     </tr>
     <tr>
-      <td>x1、x2、x3或out中的Tensor的元素数据类型不一致。</td>
+      <td>x1、x2、x3或out中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
       <td>x1、x2、x3或out中的Tensor维度超过8维。</td>

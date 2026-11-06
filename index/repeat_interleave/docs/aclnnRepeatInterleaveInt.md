@@ -28,7 +28,7 @@
 - 示例：
   假设 input tensor 是([[a, b], [c, d], [e, f]])，repeats 为 2。
   那么最后生成的 tensor 为 tensor([a, a, b, b, c, c, d, d, e, e, f, f])。
-  将 tensor 进行 flatten 后，input 转变为([a, b, c, d, e, f])。该 tensor 中的每个元素复制 repeats 次数，也就是每个元素复制 2 次。
+  将 tensor 进行 flatten 后，input 转变为([a, b, c, d, e, f])。该 tensor 中的每个元素复制 repeats 次，也就是每个元素复制 2 次。
 
 ## 函数原型
 

@@ -49,7 +49,7 @@
   - numWeights(uint64_t,计算输入)：输出tensor的首轴大小。
   - paddingIdx(uint64_t,计算输入)：将输出tensor中第paddingIdx行填充成0，如果paddingIdx为负数则不进行处理。
   - scaleGradByFreq(bool,计算输入)：根据单词出现的频率，是否对梯度进行缩放。若为true，对结果按词频进行缩放，若为false，不进行处理。
-  - out(aclTensor*,计算输出)：梯度求和的结果输出，Device侧的aclTensor，维度为2维，首轴大小为numWeights，尾轴大小与grad尾轴相同，数据类型与grad类型相同，[数据格式](../../../docs/zh/context/data_format.md)仅支持ND。
+  - out(aclTensor*,计算输出)：梯度求和的结果，Device侧的aclTensor，维度为2维，首轴大小为numWeights，尾轴大小与grad尾轴相同，数据类型与grad类型相同，[数据格式](../../../docs/zh/context/data_format.md)仅支持ND。
 
     <!-- npu="910" id9 -->
     - <term>Atlas训练系列产品</term>：数据类型支持FLOAT16、FLOAT。

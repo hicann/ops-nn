@@ -215,7 +215,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     <tr>
       <td>scales1Optional（aclTensor*）</td>
       <td>输入</td>
-      <td>可选输入参数，表示第一个被融合的量化计算子中的scale/smooth输入。对应公式中的scales1Optional。</td>
+      <td>可选输入参数，表示第一个被融合的量化算子中的scale/smooth输入。对应公式中的scales1Optional。</td>
       <td><ul><li>支持空Tensor。</li><li>shape可以与gamma保持一致或为[1]，perTensor模式下shape为[1]。</li><li>可选输入参数传入时，数据类型以及取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>

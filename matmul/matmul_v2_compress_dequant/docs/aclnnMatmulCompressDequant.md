@@ -109,7 +109,7 @@ aclnnStatus aclnnMatmulCompressDequant(
       <td>compressIndex</td>
       <td>输入</td>
       <td>表示矩阵乘右输入的压缩索引表。</td>
-      <td>通过示例中的msModelSlim工具中获取</td>
+      <td>通过示例中的msModelSlim工具获取</td>
       <td>INT8</td>
       <td>ND</td>
       <td>1</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnMatmulCompressDequant(
       <td>deqScale</td>
       <td>输入</td>
       <td>表示反量化参数。</td>
-      <td>tensor中的值为float通过下述示例中转换后的UINT64的数据。</td>
+      <td>tensor中的值为float通过下述示例中转换后的UINT64数据。</td>
       <td>UINT64</td>
       <td>ND</td>
       <td>2维，shape支持(1, n)或者(1, 1),其中n为输出shape(m, n)中的n。</td>

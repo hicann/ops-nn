@@ -318,7 +318,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <tr>
       <td>activateDim（int64_t）</td>
       <td>输入</td>
-      <td>表示进行swish计算时，选择的指定切分轴。</td>
+      <td>表示进行swish计算时，选择的切分轴。</td>
       <td><ul><li>activateDim的取值范围是：[-xDim, xDim - 1]（其中xDim指输入x的维度）。</li><li>当activateDim对应的不是x的尾轴时，不允许输入groupIndexOptional。</li><li>当activateDim对应的不是x的尾轴时，quantModeOptional仅支持dynamic。</li></ul></td>
       <td>-</td>
       <td>-</td>

@@ -101,7 +101,7 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
         <td>clip_ratio</td>
         <td>float</td>
         <td>可选</td>
-        <td>量化裁剪比例，用于控制量化的裁剪比例，范围(0, 1]。默认值1.0。</td>
+        <td>量化裁剪比例，用于控制量化的裁剪幅度，范围(0, 1]。默认值1.0。</td>
         <td>-</td>
         <td>-</td>
     </tr>

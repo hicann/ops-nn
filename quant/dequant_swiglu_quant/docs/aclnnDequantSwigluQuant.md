@@ -255,7 +255,7 @@ aclnnStatus aclnnDequantSwigluQuant(
     - quantOffsetOptional参数中，暂时不支持该参数。
     - groupIndexOptional参数中，仅支持INT64。shape为[groupNum]，groupNum大于等于1。可选参数，支持传空指针。
     - quantModeOptional参数中，仅支持“dynamic”，支持传入空指针，传入空指针时，则默认使用“static”。
-    - yOut参数中，shape为[N...,H/2]，yOut的尾轴需要小超过5120。
+    - yOut参数中，shape为[N...,H/2]，yOut的尾轴需要不超过5120。
     - scaleOut参数中，shape不超过7维，不小于1维，shape为[N,...]，shape与yOut去除尾轴后的shape一致。
   <!-- end id8 -->
 

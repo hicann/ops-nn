@@ -112,7 +112,7 @@ aclnnStatus aclnnScaledMaskedSoftmax(
     <tr>
       <td>fixedTriuMask</td>
       <td>输入</td>
-      <td>表示是否需要从在算子内生成上三角的mask Tensor。</td>
+      <td>表示是否需要在算子内生成上三角的mask Tensor。</td>
       <td>仅支持false</td>
       <td>BOOL</td>
       <td>-</td>

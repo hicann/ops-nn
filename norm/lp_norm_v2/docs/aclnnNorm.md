@@ -214,7 +214,7 @@ aclnnStatus aclnnNorm(
       <td>self的数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>dim和keepdim的数据类型和数据格式不符合接口入参要求。</td>
+      <td>dim和keepdim的数据类型不符合接口入参要求。</td>
     </tr>
     <tr>
       <td>dim超过[-N, N-1] (N表示self的维度)。</td>

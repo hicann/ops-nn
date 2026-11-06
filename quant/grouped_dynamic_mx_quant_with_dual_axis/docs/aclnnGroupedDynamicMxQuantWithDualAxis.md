@@ -170,7 +170,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
     <tr>
       <td>scaleAlg（int64_t）</td>
       <td>输入</td>
-      <td>y1ScaleOut和y2ScaleOut的scale计算算法。</td>
+      <td>y1ScaleOut和y2ScaleOut的scale计算方法。</td>
       <td><ul><li>仅支持取值为1。</li></ul></td>
       <td>INT64</td>
       <td>-</td>

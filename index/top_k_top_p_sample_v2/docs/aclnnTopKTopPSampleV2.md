@@ -124,7 +124,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     | :-------:| :------:|:-------:|:-------:|
     |`top_p[b]`|保留1个最大词频token|0<top_p<1,执行topP采样|top_p≥1,跳过topP采样|
 
-  * 如果执行常规topP采样，且如果前序topK环节已有排序输出结果，则根据topK采样输出计算累积词频，并根据top_p截断采样：
+  * 如果执行常规topP采样，且前序topK环节已有排序输出结果，则根据topK采样输出计算累积词频，并根据top_p截断采样：
     $$
     topPMask[b] =
     \begin{cases}
@@ -223,7 +223,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   后继处理
 
-  * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。<br>如果上述前序采样环节都未开启，则直接使用输入logits的归一化结果：
+  * 此阶段输入为前序topK-topP-minP采样的联合结果logitsSortMasked。<br>如果上述前序采样环节都未开启，则直接使用输入logits的归一化结果：
 
     $$
     logitsMinpFiltered =
@@ -250,7 +250,9 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
 
     接下来有三种模式：None，QSample，输出中间结果，通过入参约束属性isNeedSampleResult和是否输入q加以控制。
+
   * None:
+
   * isNeedSampleResult为false，且不输入q时为该模式。该模式下直接对每个batch通过Argmax取最大元素和索引，并通过gatherOut输出。
     $$
     \text{logitsSelectIdx}[b] = \text{LogitsIdx}[b]\left[\text{ArgMax}(\text{probs}[b][:])\right]

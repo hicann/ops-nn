@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- **接口功能**：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行量化处理。目前支持pertoken和pergroup量化方式，分别对应INT4和FLOAT4_E2M1量化输出类型。
+- **接口功能**：该融合算子为输入矩阵x依次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行量化处理。目前支持pertoken和pergroup量化方式，分别对应INT4和FLOAT4_E2M1量化输出类型。
 
 - 矩阵乘计算公式：
 
@@ -57,7 +57,7 @@
 
   pergroup量化方式
 
-  1. 矩阵乘后x''的shape为[M,N1,N2]，在计算pergroup量化方式其中的mx_quantize时，需reshape为[M,N1*N2]，记为x2
+  1. 矩阵乘后x''的shape为[M,N1,N2]，在计算pergroup量化方式中的mx_quantize时，需reshape为[M,N1*N2]，记为x2
 
   2. 在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
 

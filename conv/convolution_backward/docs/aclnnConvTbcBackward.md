@@ -283,7 +283,6 @@ aclnnStatus aclnnConvTbcBackward(
 
 - **返回值：**
 
-
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
@@ -505,7 +504,7 @@ aclnnStatus aclnnConvTbcBackward(
      <th scope="row">cubeMathType说明</th>
      <td>
         <ul>
-        <li>枚举值为1：当输入是FLOAT，处理器转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
+        <li>枚举值为1：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
         <li>枚举值为2：当输入是BFLOAT16时不支持该选项。当输入为其他数据类型时不做处理。</li>
         <li>枚举值为3：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
         </ul>

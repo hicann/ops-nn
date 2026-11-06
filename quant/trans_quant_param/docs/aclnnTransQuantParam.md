@@ -128,7 +128,7 @@ aclnnStatus aclnnTransQuantParam(
     <tr>
       <td>quantParam（uint64_t**）</td>
       <td>输出</td>
-      <td>表示指向存储转换得到的quantParam数据的内存的地址，对应公式中的`out`。</td>
+      <td>表示指向存储转换得到的quantParam数据的内存地址，对应公式中的`out`。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

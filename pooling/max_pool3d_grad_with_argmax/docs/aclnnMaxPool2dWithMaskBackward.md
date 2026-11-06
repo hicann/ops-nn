@@ -101,7 +101,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
     <td>indices</td>
     <td>输入</td>
     <td>正向输出的索引。</td>
-    <td>最大值在求mask的kernel位置的bit值组成的Tensor。</td>
+    <td>最大值在mask的kernel位置的bit值组成的Tensor。</td>
     <td>INT8</td>
     <td>NCHW</td>
     <td>4</td>

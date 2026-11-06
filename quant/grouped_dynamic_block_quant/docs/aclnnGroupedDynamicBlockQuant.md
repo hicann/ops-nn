@@ -126,7 +126,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>roundModeOptional (char*)</td>
       <td>输入</td>
       <td>表示最后由高bit数据cast到目标数据类型的近似模式。</td>
-      <td><ul><li>当dstType为35/36时，对应输出yOut数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持{"rint"}；</li><li>当dstType为34时，对应输出yOut数据类型为HIFLOAT8时，支持{"round"、"hybrid"}；</li><li>传入空指针时，采用"rint"模式。</li></ul></td>
+      <td><ul><li>当dstType为35/36时，对应输出yOut数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN，仅支持{"rint"}；</li><li>当dstType为34时，对应输出yOut数据类型为HIFLOAT8时，支持{"round"、"hybrid"}；</li><li>传入空指针时，采用"rint"模式。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -235,7 +235,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x、groupList、yOut或scaleOut的参数是空指针。</td>
+      <td>传入的x、groupList、yOut或scaleOut为空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>

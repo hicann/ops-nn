@@ -44,7 +44,7 @@ $$
 \lfloor{\frac{W_{in}+2 \times padding[2] - dilation[2] \times (kernelSize[2] - 1) - 1}{stride[2]}}\rfloor + 1]
 $$
 
-  * out tensor的shape推导公式（默认ceilMode=true，即向上取整）：
+  * out tensor的shape推导公式（ceilMode=true，即向上取整）：
 
 $$
 [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lceil{\frac{D_{in}+2 \times padding[0] - dilation[0] \times (kernelSize[0] - 1) - 1}{stride[0]}}\rceil + 1,\\

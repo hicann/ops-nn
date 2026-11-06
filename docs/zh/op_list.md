@@ -5997,9 +5997,9 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>实现带L1/L2正则化的近端梯度下降一步更新，常用于带稀疏正则的优化场景。</td>
-	    <td>实现带L1/L2正则化的近端梯度下降一步更新，常用于带稀疏正则的优化场景。</td>
-	  </tr>
-	  <tr>
+      <td>实现带L1/L2正则化的近端梯度下降一步更新，常用于带稀疏正则的优化场景。</td>
+    </tr>
+    <tr>
     <td>optim</td>
     <td><a href="../../optim/inplace_apply_proximal_gradient_descent/README.md">inplace_apply_proximal_gradient_descent</a></td>
     <td>✓</td>
@@ -6009,7 +6009,7 @@
     <td>AI Core</td>
     <td>执行带L1/L2正则的近端梯度下降单步更新，显式输出更新后的var_out；本仓提供Ascend950的GE图模式实现，对齐TensorFlow近端梯度下降更新语义。</td>
   </tr>
-	  <tr>
+    <tr>
     <td>optim</td>
     <td><a href="../../optim/sparse_apply_adagrad_v2/README.md">sparse_apply_adagrad_v2</a></td>
     <td>✓</td>

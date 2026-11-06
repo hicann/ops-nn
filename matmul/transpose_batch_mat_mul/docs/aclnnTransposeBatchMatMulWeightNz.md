@@ -846,7 +846,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       aclIntArray* permX2 = aclCreateIntArray(permX2Series.data(), permX2Series.size());
       aclIntArray* permY = aclCreateIntArray(permYSeries.data(), permYSeries.size());
 
-      // 3. weight tensor ND转NZ，调用npu_foramt_cast接口
+      // 3. weight tensor ND转NZ，调用npu_format_cast接口
       aclDataType additionalDtype = aclDataType::ACL_FLOAT16;
       aclDataType srcDtype = aclDataType::ACL_FLOAT16;
       int64_t* dstShape = nullptr;

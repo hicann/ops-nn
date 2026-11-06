@@ -241,7 +241,7 @@ aclnnStatus aclnnBucketize(
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR&950DT系列产品</term>：
 
-  ```Cpp
+```Cpp
   #include <iostream>
   #include <vector>
   #include "acl/acl.h"
@@ -393,6 +393,6 @@ aclnnStatus aclnnBucketize(
 | 输入 | input | 输入张量 | FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、DOUBLE | FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、DOUBLE|
 | 输入 | boundaries | 边界数组，必须是一维且单调递增 | FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、DOUBLE | FLOAT、FLOAT16、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、DOUBLE|
 | 属性 | outInt32 | 输出数据类型是否为int32 | bool | bool |
-| 属性 | right | 区间是否包含右边界 | bool | bool |
+| 属性 | right | 区间是否包含左边界 | bool | bool |
 | 输入 | out | 指定的输出tensor | INT32、INT64 |INT32、INT64|
 | 输出 | output | 输出tensor | INT32、INT64 |INT32、INT64|

@@ -349,7 +349,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   <tr>
     <td>ACLNN_ERR_RUNTIME_ERROR</td>
     <td>361001</td>
-    <td>当前平台不在支持的平台范围内。</td>
+    <td>当前平台不在支持的范围内。</td>
   </tr>
 </tbody></table>
 
@@ -406,7 +406,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 - INT8：必须提供`weightScaleOptional`，禁止`activationScaleOptional`和`groupIndexOptional`。
 - INT32：必须提供`weightScaleOptional`和`activationScaleOptional`，禁止`quantScaleOptional`和`quantOffsetOptional`。
 - BF16/FLOAT16：除`groupIndexOptional`外其余可选输入均不使用（预反量化模式）；`groupIndexOptional`可选，
-  为各专家连续排布的行计数（INT64段长），计数总和不超过x行数，超出计数总和的死尾行不参与计算、输出保持0。
+  为各专家连续排布的行计数（INT64段长），计数总和不超过x行数，超出计数总和的尾行不参与计算、输出保持0。
 - 当`quantTypeOptional`为static时，`quantScaleOptional`必须提供。
 - 当`quantTypeOptional`为dynamic时，`quantScaleOptional`可选（作为smoothScale使用）。
 

@@ -119,7 +119,7 @@
 
     - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
 
-    - emax: 对应数据类型的最大正则数的指数位。
+    - emax: 对应数据类型的最大正规数的指数位。
 
         |   DataType    | emax |
         | :-----------: | :--: |
@@ -222,7 +222,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>data的每个值必须为大于等于0的整数，所有值的和必须大于0，且必须小于等于x经SwiGLU操作后的总行数（即SwiGLU输出yOut的总行数：activateDim为尾轴时等于x除尾轴之外剩余轴的乘积，activateDim为非尾轴时等于x总行数的一半）。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor（shape[0]=0会被拒绝，与不传该参数不同）。</li><li>当此输入存在，且activateDim 或者 axis 任一一个非尾轴， 输入x的shape必须为2维</li></ul></td>
+      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>data的每个值必须为大于等于0的整数，所有值的和必须大于0，且必须小于等于x经SwiGLU操作后的总行数（即SwiGLU输出yOut的总行数：activateDim为尾轴时等于x除尾轴之外剩余轴的乘积，activateDim为非尾轴时等于x总行数的一半）。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor（shape[0]=0会被拒绝，与不传该参数不同）。</li><li>当此输入存在，且activateDim 或者 axis 任一为非尾轴， 输入x的shape必须为2维</li></ul></td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>

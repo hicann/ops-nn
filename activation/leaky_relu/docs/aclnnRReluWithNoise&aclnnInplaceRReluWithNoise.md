@@ -49,7 +49,7 @@
 - aclnnRReluWithNoise和aclnnInplaceRReluWithNoise实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnRReluWithNoise：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceRReluWithNoise：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
-- 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnRReluWithNoiseGetWorkspaceSize”或”aclnnInplaceRReluWithNoiseGetWorkspaceSize“接口获取入参并根据流程计算所需workspace大小，再调用“aclnnRReluWithNoise”或”aclnnInplaceRReluWithNoise“接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnRReluWithNoiseGetWorkspaceSize”或“aclnnInplaceRReluWithNoiseGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnRReluWithNoise”或“aclnnInplaceRReluWithNoise”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnRReluWithNoiseGetWorkspaceSize(
@@ -124,7 +124,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>待进行RReluWithNoise计算的入参，公式中的self。</td>
-      <td><ul><li>shape支持的维度不超过25。</li><li>数据类型需要和out的数据类型保持一致。</li><li>shape需要和out的shape保持一致。</li><li>数据格式需要和out的数据格式类型保持一致。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>shape支持的维度不超过25。</li><li>数据类型需要和out的数据类型保持一致。</li><li>shape需要和out的shape保持一致。</li><li>数据格式需要和out的数据格式保持一致。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-25</td>

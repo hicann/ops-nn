@@ -245,7 +245,7 @@ The following sample code is for reference only. For details about compilation a
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR&950DT products</term>:
 
-  ```Cpp
+```Cpp
   #include <iostream>
   #include <vector>
   #include "acl/acl.h"
@@ -383,7 +383,7 @@ The following sample code is for reference only. For details about compilation a
 
 ### Pytorch AtenIR
 
-```
+```Cpp
 - func: bucketize.Tensor_out(Tensor self, Tensor boundaries, *, bool outInt32=False, bool right=False, Tensor(a!) out) -> Tensor(a!)
   dispatch:
     CPU: bucketize_out_cpu
@@ -397,6 +397,6 @@ The following sample code is for reference only. For details about compilation a
 | Input | input | Input tensor. | FLOAT, FLOAT16, BFLOAT16, INT8, INT16, INT32, INT64, UINT8, DOUBLE | FLOAT, FLOAT16, BFLOAT16, INT8, INT16, INT32, INT64, UINT8, DOUBLE|
 | Input | boundaries | Boundary array, must be one-dimensional and monotonically increasing. | FLOAT, FLOAT16, BFLOAT16, INT8, INT16, INT32, INT64, UINT8, DOUBLE | FLOAT, FLOAT16, BFLOAT16, INT8, INT16, INT32, INT64, UINT8, DOUBLE|
 | Attribute | outInt32 | Whether the output data type is int32. | bool | bool |
-| Attribute | right | Whether the interval includes the right boundary. | bool | bool |
+| Attribute | right | Whether the interval includes the left boundary. | bool | bool |
 | Input | out | Specified output tensor. | INT32, INT64 |INT32, INT64|
 | Output | output | Output tensor. | INT32, INT64 |INT32, INT64|

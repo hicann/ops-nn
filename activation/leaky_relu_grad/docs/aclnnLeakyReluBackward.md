@@ -157,7 +157,7 @@ aclnnStatus aclnnLeakyReluBackward(
   </table>
 
    <!-- npu="910,310p" id7 -->
-   - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：gradOutput、self、和out的数据类型支持FLOAT、FLOAT16、DOUBLE。negativeSlope的数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT8、BOOL、INT16、UINT8。
+   - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：gradOutput、self和out的数据类型支持FLOAT、FLOAT16、DOUBLE。negativeSlope的数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT8、BOOL、INT16、UINT8。
    <!-- end id7 -->
 
 - **返回值：**

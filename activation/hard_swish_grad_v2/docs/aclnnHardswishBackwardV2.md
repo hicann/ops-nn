@@ -94,7 +94,7 @@ aclnnStatus aclnnHardswishBackwardV2(
     <tr>
       <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
-      <td>表示输入张量，公式中的输入gradOutput。</td>
+      <td>表示输入张量，公式中的gradOutput。</td>
       <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND、NCHW、NHWC</td>

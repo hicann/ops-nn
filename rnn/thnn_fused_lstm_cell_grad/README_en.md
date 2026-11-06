@@ -148,4 +148,4 @@ None
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn API  | [test_aclnn_thnn_fused_lstm_cell_grad.cpp](examples/test_aclnn_thnn_fused_lstm_cell_grad.cpp) | Calls the ThnnFusedLstmCellGrad operator through the [aclnnThnnFusedLstmCellBackward](docs/aclnnThnnFusedLstmCellBackward_en.md) API. |      |
+| aclnn API  | [test_aclnn_thnn_fused_lstm_cell_grad.cpp](examples/test_aclnn_thnn_fused_lstm_cell_grad.cpp) | Calls the ThnnFusedLstmCellGrad operator through the [aclnnThnnFusedLstmCellBackward](docs/aclnnThnnFusedLstmCellBackward_en.md) API. |

@@ -138,4 +138,4 @@ None.
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn interface  | [test_aclnn_thnn_fused_lstm_cell.cpp](examples/test_aclnn_thnn_fused_lstm_cell.cpp) | Invokes the ThnnFusedLstmCell operator through the [aclnnThnnFusedLstmCell](docs/aclnnThnnFusedLstmCell_en.md) interface. |      |
+| aclnn interface  | [test_aclnn_thnn_fused_lstm_cell.cpp](examples/test_aclnn_thnn_fused_lstm_cell.cpp) | Invokes the ThnnFusedLstmCell operator through the [aclnnThnnFusedLstmCell](docs/aclnnThnnFusedLstmCell_en.md) interface. |

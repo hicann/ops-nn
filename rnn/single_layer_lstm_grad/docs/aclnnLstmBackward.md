@@ -424,7 +424,7 @@ aclnnStatus aclnnLstmBackward(
     <tr>
       <td>h</td>
       <td>输入</td>
-      <td>LSTM正向中每层的隐藏hidden状态。对应公式中的h。</td>
+      <td>LSTM正向中每层的隐藏状态。对应公式中的h。</td>
       <td><ul><li>列表长度为D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NCL</td>

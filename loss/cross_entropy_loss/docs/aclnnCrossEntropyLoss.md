@@ -516,7 +516,7 @@ int main() {
                 LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);
                 return ret);
 
-    // 5.获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改]
+    // 5.获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
 
     auto size1 = GetShapeSize(lossOutShape);
     auto size2 = GetShapeSize(logProbOutShape);

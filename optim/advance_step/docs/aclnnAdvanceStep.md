@@ -175,7 +175,7 @@ aclnnStatus aclnnAdvanceStep(
       <tr>
       <td>numQueries（int64_t）</td>
       <td>输入</td>
-      <td>记录输入的Query的数量，大小与sampledTokenIds第一维的长度一致。</td>
+      <td>记录输入的Query数量，大小与sampledTokenIds第一维的长度一致。</td>
       <td>取值范围是大于0的正整数。</td>
       <td>-</td>
       <td>-</td>

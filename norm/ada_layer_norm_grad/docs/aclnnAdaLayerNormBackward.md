@@ -437,7 +437,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
     | **Group A** | `gradOut`、`input`、`rstd`、`mean`、`scale`、`shift`、`gradInputOut`、`gradScaleOut`、`gradShiftOut` |
     | **Group B** | `weightOptional`、`biasOptional`、`gradWeightOut`、`gradBiasOut` |
 
-  - 上述两类数据类型固定搭配类型为（左侧和右侧数据类型严格对应）：
+  - 上述两类数据的固定搭配类型为（左侧和右侧数据类型严格对应）：
 
     | 第一类参数（Group A）| 第二类参数（Group B）|
     | --------| --------|

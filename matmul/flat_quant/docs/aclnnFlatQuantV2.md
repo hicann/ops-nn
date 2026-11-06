@@ -65,8 +65,10 @@
      $$
 
   pergroup量化方式：
+
   - 当dstTypeMax = 0.0时：
-    1. 矩阵乘后x''的shape为[M,N1,N2]，在计算pergroup量化方式其中的mx_quantize时，需reshape为[M,N1*N2]，记为x2
+
+    1. 矩阵乘后x''的shape为[M,N1,N2]，在计算pergroup量化方式中的mx_quantize时，需reshape为[M,N1*N2]，记为x2
 
     2. 在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
 
@@ -108,7 +110,9 @@
       $$
 
     - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+
   - 当dstTypeMax != 0.0/6.0/7.0时：
+
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
     - 找到该块中数值的最大绝对值：
 

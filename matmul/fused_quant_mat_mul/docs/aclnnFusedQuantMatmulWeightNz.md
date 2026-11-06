@@ -386,7 +386,7 @@ aclnnStatus aclnnFusedQuantMatmulWeightNz(
       - 要求x1内轴为偶数。
     - 当数据类型为INT32时，每个INT32数据存放8个INT4数据，对应维度表示：（batch，m，k // 8），要求k为8的倍数。
   - x2数据类型支持INT8、INT32、INT4。
-    - 该接口仅支持x2为NZ格式，此时x2是NZ格式时，k、n不能为1。
+    - 该接口仅支持x2为NZ格式，此时k、n不能为1。
     - 数据类型为INT32时，每个INT32数据存放8个INT4数据。
     - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见[aclnnConvertWeightToINT4Pack接口](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
     - x2按逻辑shape声明，维度为2~6。不转置时为（batch，k，n），转置时为（batch，n，k），batch可不存在。数据格式为NZ。不要把NZ内部块排布当作入参shape。

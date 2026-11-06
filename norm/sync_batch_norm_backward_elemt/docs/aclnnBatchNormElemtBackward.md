@@ -136,7 +136,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
     <tr>
       <td>sumDy（aclTensor*）</td>
       <td>输入</td>
-      <td>表示输出梯度的样本均值和的平均值，对应公式中的`sumDy`。</td>
+      <td>表示输出梯度的样本均值，对应公式中的`sumDy`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
     <tr>
       <td>sumDyXmu（aclTensor*）</td>
       <td>输入</td>
-      <td>表示样本均值和与输入梯度乘积的平均值，对应公式中的`sumDyXmu`。</td>
+      <td>表示样本均值与输入梯度乘积的平均值，对应公式中的`sumDyXmu`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -156,7 +156,7 @@ aclnnStatus aclnnBatchNormElemtBackward(
     <tr>
       <td>counter（aclTensor*）</td>
       <td>输入</td>
-      <td>表示输入数据的数量大小，对应公式中的`counter`。</td>
+      <td>表示输入数据的数量，对应公式中的`counter`。</td>
       <td><ul><li>支持空Tensor。</li></ul></td>
       <td>INT32、FLOAT16、FLOAT32</td>
       <td>ND</td>

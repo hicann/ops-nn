@@ -146,4 +146,4 @@ $$
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_thnn_fused_lstm_cell_grad.cpp](examples/test_aclnn_thnn_fused_lstm_cell_grad.cpp) | 通过[aclnnThnnFusedLstmCellBackward](docs/aclnnThnnFusedLstmCellBackward.md)接口方式调用ThnnFusedLstmCellGrad算子。 |      |
+| aclnn接口  | [test_aclnn_thnn_fused_lstm_cell_grad.cpp](examples/test_aclnn_thnn_fused_lstm_cell_grad.cpp) | 通过[aclnnThnnFusedLstmCellBackward](docs/aclnnThnnFusedLstmCellBackward.md)接口方式调用ThnnFusedLstmCellGrad算子。 |

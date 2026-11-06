@@ -140,7 +140,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时开启，需要配合aclnnTransQuantParamV2接口完成FLOAT32到UINT64/INT64的转换。</td>
         <td>
         <ul>
-            <li>shape仅支持一维且需要满足等于[b*n]。</li>
+            <li>shape仅支持一维且需要等于[b*n]。</li>
         </ul>
         </td>
         <td>INT64、UINT64</td>
@@ -275,7 +275,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
       <td>x1、x2或out的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>x1的第二维和x2的第一维度不相等。</td>
+      <td>x1的第二维和x2的第一维不相等。</td>
     </tr>
     <tr>
       <td>x1或x2的维度大小不等于3。</td>

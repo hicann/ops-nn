@@ -44,7 +44,7 @@
 
   - 通过softmax将经过top-k过滤后的数据按最后一轴转换为概率分布。
   $$probsValue = softmax(sortedValue, dim=-1)$$
-  - 按最后一轴计算累计概率（从最小的概率开始累加）
+  - 按最后一轴计算累积概率（从最小的概率开始累加）
   $$probsSum = cumsum(probsValue, dim=-1)$$
   - 生成top-p的mask，累计概率小于等于1-p的位置需要过滤掉，并保证每个batch至少保留一个元素。
   $$topPMask[b][v] = probsSum[b][v] <= 1-p[b]$$

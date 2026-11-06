@@ -80,7 +80,7 @@
       $$
 
     - Row-wise量化后的$P_{i}$按对应的$V_{i}$的位置组成输出rowDataOut，mxscale\_row按对应的K维度上的分组组成输出rowScaleOut（每两个相邻分组的scale组成一对，存于最后一维，shape为[T, ceil(N*D/64), 2]，尾组不足两个时偶数pad填充0）。Col-wise量化后的$P_{j}$按对应的$V_{j}$的位置组成输出colDataOut，mxscale\_col按对应的T维度上的分组组成输出colScaleOut（shape为[ceil(T/64), N*D, 2]，同样偶数pad填充0）。
-    - emax: 对应数据类型的最大正则数的指数位。
+    - emax: 对应数据类型的最大正规数的指数位。
 
       |   DataType    | emax |
       | :-----------: | :--: |

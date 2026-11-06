@@ -116,7 +116,7 @@ aclnnStatus aclnnMatmulCompress(
       <td>compressIndex</td>
       <td>输入</td>
       <td>表示矩阵乘右输入的压缩索引表。</td>
-      <td>通过示例中的msModelSlim工具中获取</td>
+      <td>通过示例中的msModelSlim工具获取</td>
       <td>INT8</td>
       <td>ND</td>
       <td>1</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnMatmulCompress(
       <td>out</td>
       <td>输出</td>
       <td>输出Tensor。</td>
-      <td>通过示例中的msModelSlim工具中获取</td>
+      <td>通过示例中的msModelSlim工具获取</td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>2</td>

@@ -22,12 +22,12 @@
 <!-- end id6 -->
 
 > 说明：
- 	 <!-- npu="950" id7 -->
- 	 > - <term>Ascend 950PR&950DT系列产品</term> 已支持本接口，其中 AICORE 路径支持 `none/add/mul`，其他 reduction 模式是否可用取决于后端回退能力。
- 	 <!-- end id7 -->
- 	 <!-- npu="A3,910b" id8 -->
- 	 > - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term> 当前仅支持 `self/src/out` 为 `FLOAT32`、`reduce=1(add)` 且 `includeSelf=true` 的组合；其他 dtype、reduce 或 includeSelf 组合会返回参数错误。
- 	 <!-- end id8 -->
+      <!-- npu="950" id7 -->
+      > - <term>Ascend 950PR&950DT系列产品</term> 已支持本接口，其中AI Core路径支持 `none/add/mul`，其他reduction模式是否可用取决于后端回退能力。
+      <!-- end id7 -->
+      <!-- npu="A3,910b" id8 -->
+      > - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term> 当前仅支持 `self/src/out` 为 `FLOAT32`、`reduce=1(add)` 且 `includeSelf=true` 的组合；其他 dtype、reduce 或 includeSelf 组合会返回参数错误。
+      <!-- end id8 -->
 
 ## 功能说明
 
@@ -44,7 +44,7 @@
   - `include_self=true`：规约时将 `self` 原始值参与计算。
   - `include_self=false`：规约时不将 `self` 原始值作为初始值参与计算；首次命中时以第一个 `src` 值作为初值。
 - 接口职责边界：
-  - `aclnnScatterReduce/aclnnInplaceScatterReduce` 统一承接显式需要 `include_self` 的规约场景，具体可用组合受产品能力约束限制。
+  - `aclnnScatterReduce/aclnnInplaceScatterReduce` 统一承接显式需要 `include_self` 的规约场景，具体可用组合受产品能力约束。
   - `aclnnScatterAdd` 是固定 `reduce=add` 且固定 `includeSelf=true` 的快捷接口，不再承接显式 `include_self` 传参场景。
   - 若仅需要传统 `scatter/scatter_value` 语义且不显式暴露 `include_self`，使用 `aclnnScatter/aclnnInplaceScatter/aclnnScatterValue/aclnnInplaceScatterValue`。
 

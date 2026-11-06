@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：计算输入self的组归一化，输出均值meanOut，标准差的倒数rstdOut，以及对silu的输出结果进行量化的结果out。
+- 接口功能：计算输入self的组归一化，输出均值meanOut，标准差的倒数rstdOut，以及对silu的输出结果进行量化后的结果out。
 - 计算公式：
   - **GroupNorm：**
 
@@ -149,7 +149,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>group</td>
         <td>输入</td>
         <td>表示将输入self的第1维度分为group组。</td>
-        <td>group需可以整除self的第一维度。</td>
+        <td>group需能整除self的第1维度。</td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>

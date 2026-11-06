@@ -191,7 +191,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>groups（int64_t）</td>
   <td>输入</td>
-  <td>表示从输入通道到输出通道的块链接个数。</td>
+  <td>表示从输入通道到输出通道的块连接个数。</td>
   <td>值=1</td>
   <td>INT64</td>
   <td>-</td>

@@ -181,7 +181,6 @@ aclnnStatus aclnnGeGluBackward(
   - <term>Atlas推理系列产品</term>：“approximate”只支持1('tanh')。
   <!-- end id8 -->
 
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。

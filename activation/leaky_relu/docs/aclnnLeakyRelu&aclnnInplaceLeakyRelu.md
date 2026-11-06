@@ -390,7 +390,7 @@ aclnnStatus aclnnInplaceLeakyRelu(
 - 确定性计算：
   - aclnnLeakyRelu&aclnnInplaceLeakyRelu默认确定性实现。
 
-- negativeSlope使用整型类型作为属性输入，而输入self是FLOAT类型，那么如果negativeSlope大于2^24或小于-2^24可能存在精度损失。同理，如果输入self是FLOAT16类型，那么negativeSlope大于2^11或小于-2^11可能存在精度损失。
+- negativeSlope使用整型作为属性输入，而输入self是FLOAT类型，那么如果negativeSlope大于2^24或小于-2^24可能存在精度损失。同理，如果输入self是FLOAT16类型，那么negativeSlope大于2^11或小于-2^11可能存在精度损失。
 
 ## 调用示例
 

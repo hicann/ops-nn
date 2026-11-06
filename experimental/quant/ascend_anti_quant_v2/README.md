@@ -107,7 +107,7 @@ scale：不支持空Tensor。scale的维数必须与x相同，或者是1维；�
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_ascend_anti_quant](examples/test_aclnn_ascend_anti_quant.cpp) | 通过[aclnnAscendAntiQuant](docs/aclnnAscendAntiQuant.md)接口方式调用AscendAntiQuantV2算子。 |    |
+| aclnn接口  | [test_aclnn_ascend_anti_quant](examples/test_aclnn_ascend_anti_quant.cpp) | 通过[aclnnAscendAntiQuant](docs/aclnnAscendAntiQuant.md)接口方式调用AscendAntiQuantV2算子。 |
 
 ## 贡献说明
 
