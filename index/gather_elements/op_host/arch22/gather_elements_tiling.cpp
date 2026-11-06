@@ -21,6 +21,7 @@
 #include "register/op_impl_registry.h"
 #include <algorithm>
 #include <set>
+#include <string>
 #include <vector>
 
 namespace {
@@ -134,12 +135,12 @@ private:
     void RecordTilingCommonInformation(int32_t axis, int32_t paramsDims);
     void RecordShapeInformation();
     void ConfirmCutIntoSliceInformation();
-    void ConfirmIndicesLoopInformation(int64_t availableUbSize);
-    void ChooseTilingModeSameShapeExceptAxis();
+    ge::graphStatus ConfirmIndicesLoopInformation(int64_t availableUbSize);
+    ge::graphStatus ChooseTilingModeSameShapeExceptAxis();
     bool LastAxisCutIntoSlices(bool sameShapeExceptAxisFlag, int64_t lastDimSize, int64_t availableUbSize);
     int64_t CalcuRepeatUnaligned(int32_t indicesAxis, int32_t largeNumPerBlock) const;
     bool ChooseTilingModeForLastAxis(bool ifSameDimValueExceptAxis);
-    bool ChooseTilingMode(bool ifSameDimValueExceptAxis);
+    bool ChooseTilingMode(bool ifSameDimValueExceptAxis, ge::graphStatus& status);
     ge::graphStatus ComputeScalarTiling();
 
     gert::TilingContext* tilingContext_ = nullptr;
@@ -172,38 +173,62 @@ ge::graphStatus GatherElementsTiling::GetPlatformInfo()
 {
     auto platformInfo = tilingContext_->GetPlatformInfo();
     if (platformInfo == nullptr) {
-        OP_CHECK_IF(compileInfo_ == nullptr, OP_LOGE(tilingContext_->GetNodeName(), "compile info is null"),
-                    return ge::GRAPH_FAILED);
+        if (compileInfo_ == nullptr) {
+            const char* reportOpName = tilingContext_->GetNodeName();
+            reportOpName = reportOpName != nullptr ? reportOpName : "GatherElements";
+            OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "Compile info is null");
+            const std::vector<const char*> reportKeys = {"opName", "reason"};
+            const std::vector<const char*> reportValues = {
+                reportOpName,
+                "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+            REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+            return ge::GRAPH_FAILED;
+        }
         coreNumAll_ = compileInfo_->core_num;
         ubSize_ = compileInfo_->ub_size;
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         coreNumAll_ = ascendcPlatform.GetCoreNumAiv();
-        uint64_t ubSizePlatForm;
+        uint64_t ubSizePlatForm = 0;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         ubSize_ = static_cast<int64_t>(ubSizePlatForm);
+    }
+    if (coreNumAll_ <= 0 || ubSize_ <= 0) {
+        const char* reportOpName = tilingContext_->GetNodeName();
+        reportOpName = reportOpName != nullptr ? reportOpName : "GatherElements";
+        OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "Platform core count or UB size is not positive");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            reportOpName,
+            "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }
 
 bool GatherElementsTiling::CheckTensorShape() const
 {
+    const char* nodeName = tilingContext_->GetNodeName();
+    const char* opName = nodeName != nullptr ? nodeName : "GatherElements";
     int32_t paramsDims = paramsShape_.GetDimNum();
     int32_t indicesDims = indicesShape_.GetDimNum();
     int32_t yDims = yShape_.GetDimNum();
     if (paramsDims != yDims) {
-        OP_LOGE(tilingContext_->GetNodeName(),
-                "op [GatherElementsTiling] : CheckTensorShape, x shape range and index shape range is not the same.");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "x, y",
+                                                  std::to_string(paramsDims) + ", " + std::to_string(yDims),
+                                                  "x and y must have the same rank");
         return false;
     }
     if (yDims != indicesDims) {
-        OP_LOGE(tilingContext_->GetNodeName(), "op [GatherElementsTiling] : CheckTensorShape, y Shape is invalid.");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "index, y",
+                                                  std::to_string(indicesDims) + ", " + std::to_string(yDims),
+                                                  "index and y must have the same rank");
         return false;
     }
     for (int32_t i = 0; i < yDims; i++) {
         if (yShape_.GetDim(i) != indicesShape_.GetDim(i)) {
-            OP_LOGE(tilingContext_->GetNodeName(),
-                    "op [GatherElementsTiling] : CheckTensorShape, y Shape dim is invalid.");
+            OP_LOGE_FOR_INVALID_SHAPE(opName, "y", Ops::Base::ToString(yShape_), Ops::Base::ToString(indicesShape_));
             return false;
         }
     }
@@ -223,13 +248,20 @@ void GatherElementsTiling::ConfirmCutIntoSliceInformation()
                                          tilingData_.get_slice_thickness_once() * (tilingData_.get_slice_num() - 1));
 }
 
-void GatherElementsTiling::ConfirmIndicesLoopInformation(int64_t availableUbSize)
+ge::graphStatus GatherElementsTiling::ConfirmIndicesLoopInformation(int64_t availableUbSize)
 {
-    OP_TILING_CHECK(commonInformation_.indices_block_num == 0 || commonInformation_.params_block_num == 0 ||
-                        commonInformation_.indices_block_num_large == 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING("GatherElements",
-                                                    "In the ConfirmIndicesLoopInformation function, the divisor is 0."),
-                    return);
+    if (commonInformation_.indices_block_num == 0 || commonInformation_.params_block_num == 0 ||
+        commonInformation_.indices_block_num_large == 0) {
+        const char* reportOpName = tilingContext_->GetNodeName();
+        reportOpName = reportOpName != nullptr ? reportOpName : "GatherElements";
+        OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "ConfirmIndicesLoopInformation has a zero block divisor");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            reportOpName,
+            "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
+    }
     int64_t indicesNumEachLoop = availableUbSize / (static_cast<int64_t>(commonInformation_.indices_dsize) +
                                                     static_cast<int64_t>(commonInformation_.params_dsize));
     indicesNumEachLoop = std::min(
@@ -241,10 +273,17 @@ void GatherElementsTiling::ConfirmIndicesLoopInformation(int64_t availableUbSize
                                           commonInformation_.indices_block_num_large);
     tilingData_.set_indices_num_remaining(tilingData_.get_indices_num() -
                                           tilingData_.get_need_core_num() * tilingData_.get_indices_num_each_core());
-    OP_TILING_CHECK(indicesNumEachLoop == static_cast<int64_t>(0),
-                    VECTOR_INNER_ERR_REPORT_TILIING("GatherElements",
-                                                    "In the ConfirmIndicesLoopInformation function, the divisor is 0."),
-                    return);
+    if (indicesNumEachLoop <= static_cast<int64_t>(0)) {
+        const char* reportOpName = tilingContext_->GetNodeName();
+        reportOpName = reportOpName != nullptr ? reportOpName : "GatherElements";
+        OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "Available UB cannot hold one aligned indices loop");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            reportOpName,
+            "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
+    }
     tilingData_.set_indices_loop_num(tilingData_.get_indices_num_each_core() / indicesNumEachLoop);
     tilingData_.set_indices_row_num_once(indicesNumEachLoop);
     tilingData_.set_indices_row_num_last(tilingData_.get_indices_num_each_core() %
@@ -253,6 +292,7 @@ void GatherElementsTiling::ConfirmIndicesLoopInformation(int64_t availableUbSize
                                            commonInformation_.indices_block_num_large);
     tilingData_.set_remaining_block_num(tilingData_.get_indices_num_remaining() /
                                         commonInformation_.indices_block_num_large);
+    return ge::GRAPH_SUCCESS;
 }
 
 bool GatherElementsTiling::IfParamsIndicesSameShapeExceptAxis() const
@@ -343,7 +383,7 @@ void GatherElementsTiling::RecordTilingCommonInformation(int32_t axis, int32_t p
     commonInformation_.params_total_ceil_size = commonInformation_.params_total_ceil * commonInformation_.params_dsize;
 }
 
-void GatherElementsTiling::ChooseTilingModeSameShapeExceptAxis()
+ge::graphStatus GatherElementsTiling::ChooseTilingModeSameShapeExceptAxis()
 {
     int64_t xUbSize = 0;
     tilingData_.set_need_core_num(coreNumAll_);
@@ -359,7 +399,7 @@ void GatherElementsTiling::ChooseTilingModeSameShapeExceptAxis()
         xUbSize = commonInformation_.params_total_ceil_size;
     }
     int64_t availableUbSize = ubSize_ - xUbSize - RESERVED_UB_SIZE;
-    ConfirmIndicesLoopInformation(availableUbSize);
+    return ConfirmIndicesLoopInformation(availableUbSize);
 }
 
 bool GatherElementsTiling::LastAxisCutIntoSlices(bool sameShapeExceptAxisFlag, int64_t lastDimSize,
@@ -522,8 +562,9 @@ bool GatherElementsTiling::ChooseTilingModeForLastAxis(bool ifSameDimValueExcept
     return true;
 }
 
-bool GatherElementsTiling::ChooseTilingMode(bool ifSameDimValueExceptAxis)
+bool GatherElementsTiling::ChooseTilingMode(bool ifSameDimValueExceptAxis, ge::graphStatus& status)
 {
+    status = ge::GRAPH_SUCCESS;
     // 1.tiling mode for last axis.
     // 2.tiling mode for not too large shape.
     // 3.when choose tiling failed, aicpu recommended.
@@ -549,7 +590,10 @@ bool GatherElementsTiling::ChooseTilingMode(bool ifSameDimValueExceptAxis)
                      tilingData_.get_indices_num() > INDICES_NUM_THRESHOULD),
                     OP_LOGW("GatherElements", "op GatherElementsTiling: it's not proper to use aicore."), return false);
 
-    ChooseTilingModeSameShapeExceptAxis();
+    status = ChooseTilingModeSameShapeExceptAxis();
+    if (status != ge::GRAPH_SUCCESS) {
+        return false;
+    }
     if (!ifSameDimValueExceptAxis) {
         tilingData_.set_tilingMode(tilingData_.get_tilingMode() + TILING_MODE_DIF);
     }
@@ -1080,19 +1124,26 @@ ge::graphStatus GatherElementsTiling::TryRouteToV2()
 
 ge::graphStatus GatherElementsTiling::Init()
 {
-    OP_LOGD(tilingContext_->GetNodeName(), "GatherElementsTiling initing");
+    const char* nodeName = tilingContext_->GetNodeName();
+    const char* opName = nodeName != nullptr ? nodeName : "GatherElements";
+    OP_LOGD(opName, "GatherElementsTiling initing");
     compileInfo_ = static_cast<const GatherElementsCompileInfo*>(tilingContext_->GetCompileInfo());
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, compileInfo_);
-    OP_TILING_CHECK(GetPlatformInfo() != ge::GRAPH_SUCCESS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(tilingContext_->GetNodeName(),
-                                                    "op GatherElementsTiling: GetPlatformInfo failed."),
+    if (compileInfo_ == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(opName, "%s", "Compile info is null");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            opName, "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
+    }
+    OP_TILING_CHECK(GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE_WITHOUT_REPORT(opName, "GetPlatformInfo failed"),
                     return ge::GRAPH_FAILED);
     auto inputDesc = tilingContext_->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputDesc);
+    OP_CHECK_IF(inputDesc == nullptr, OP_LOGE_WITH_INVALID_INPUT(opName, "x"), return ge::GRAPH_FAILED);
     auto indicesDesc = tilingContext_->GetInputDesc(1);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, indicesDesc);
+    OP_CHECK_IF(indicesDesc == nullptr, OP_LOGE_WITH_INVALID_INPUT(opName, "index"), return ge::GRAPH_FAILED);
     auto attrs = tilingContext_->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, attrs);
+    OP_CHECK_IF(attrs == nullptr, OP_LOGE_WITH_INVALID_INPUT(opName, "dim"), return ge::GRAPH_FAILED);
 
     uint32_t paramsTypeLen = 0;
     uint32_t indicesTypeLen = 0;
@@ -1101,33 +1152,48 @@ ge::graphStatus GatherElementsTiling::Init()
     paramsDsize_ = static_cast<int32_t>(paramsTypeLen);
     indicesDsize_ = static_cast<int32_t>(indicesTypeLen);
     OP_CHECK_IF((paramsDsize_ <= 0 || indicesDsize_ <= 0),
-                OP_LOGE(tilingContext_->GetNodeName(), "Failed to get data type length"), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName, "x, index",
+                                                       Ops::Base::ToString(inputDesc->GetDataType()) + ", " +
+                                                           Ops::Base::ToString(indicesDesc->GetDataType()),
+                                                       "x and index must have data types with a positive storage size"),
+                return ge::GRAPH_FAILED);
     supportGather_ = GATHER_DTYPES.count(inputDesc->GetDataType()) > 0 ? 1 : 0;
 
-    paramsShape_ = tilingContext_->GetInputShape(0)->GetStorageShape();
-    indicesShape_ = tilingContext_->GetInputShape(1)->GetStorageShape();
-    yShape_ = tilingContext_->GetOutputShape(0)->GetStorageShape();
+    const auto* inputShape = tilingContext_->GetInputShape(0);
+    const auto* indicesShape = tilingContext_->GetInputShape(1);
+    const auto* outputShape = tilingContext_->GetOutputShape(0);
+    if (inputShape == nullptr || indicesShape == nullptr || outputShape == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(opName, "%s", "Tensor shape storage is null");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            opName, "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
+    }
+    paramsShape_ = inputShape->GetStorageShape();
+    indicesShape_ = indicesShape->GetStorageShape();
+    yShape_ = outputShape->GetStorageShape();
     dims_ = static_cast<int32_t>(paramsShape_.GetDimNum());
 
     const int64_t* axisPtr = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_AXIS);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, axisPtr);
+    OP_CHECK_IF(axisPtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(opName, "dim"), return ge::GRAPH_FAILED);
     int32_t axis = static_cast<int32_t>(*axisPtr);
 
     // check inputs shape
     int32_t indicesDims = static_cast<int32_t>(indicesShape_.GetDimNum());
     OP_TILING_CHECK(dims_ <= 0 || indicesDims <= 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(tilingContext_->GetNodeName(),
-                                                    "GatherElementsTiling: params_dims or indices_dims is 0."),
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                        opName, "x, index", std::to_string(dims_) + ", " + std::to_string(indicesDims),
+                        "x and index must have ranks greater than 0"),
                     return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(
-        axis < -dims_ || axis >= dims_,
-        VECTOR_INNER_ERR_REPORT_TILIING(tilingContext_->GetNodeName(), "op GatherElementsTiling: axis is invalid."),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(axis < -dims_ || axis >= dims_,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        opName, "dim", std::to_string(axis),
+                        "dim must be in [" + std::to_string(-dims_) + ", " + std::to_string(dims_) + ")"),
+                    return ge::GRAPH_FAILED);
     axis_ = axis < 0 ? axis + dims_ : axis;
-    OP_TILING_CHECK(!CheckTensorShape(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(tilingContext_->GetNodeName(),
-                                                    "op GatherElementsTiling: [checkTensorShape] failed."),
+    OP_TILING_CHECK(!CheckTensorShape(), OP_LOGE_WITHOUT_REPORT(opName, "CheckTensorShape failed"),
                     return ge::GRAPH_FAILED);
 
     tilingData_.set_axis(axis_);
@@ -1141,15 +1207,20 @@ ge::graphStatus GatherElementsTiling::Init()
         return v2Ret;
     }
     if (useV2_) {
-        OP_LOGD(tilingContext_->GetNodeName(), "GatherElementsTiling routed to gather_elements_v2");
+        OP_LOGD(opName, "GatherElementsTiling routed to gather_elements_v2");
         return ge::GRAPH_SUCCESS;
     }
 
-    if (!ChooseTilingMode(IfParamsIndicesSameShapeExceptAxis())) {
-        OP_LOGW(tilingContext_->GetNodeName(), "choose tiling mode failed, route to scalar branch.");
+    ge::graphStatus tilingStatus = ge::GRAPH_SUCCESS;
+    bool tilingChosen = ChooseTilingMode(IfParamsIndicesSameShapeExceptAxis(), tilingStatus);
+    if (tilingStatus != ge::GRAPH_SUCCESS) {
+        return tilingStatus;
+    }
+    if (!tilingChosen) {
+        OP_LOGW(opName, "choose tiling mode failed, route to scalar branch.");
         return ComputeScalarTiling();
     }
-    OP_LOGD(tilingContext_->GetNodeName(), "GatherElementsTiling inited");
+    OP_LOGD(opName, "GatherElementsTiling inited");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -1395,31 +1466,77 @@ void GatherElementsTiling::TilingDataPrint()
 
 ge::graphStatus Tiling4GatherElements(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Tiling4GatherElements running begin");
     if (context == nullptr) {
-        OP_LOGE("GatherElements", "The context is nullptr.");
+        const char* reportOpName = "GatherElements";
+        OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "Tiling context is null");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            reportOpName,
+            "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
         return ge::GRAPH_FAILED;
     }
+    OP_LOGD(context->GetNodeName(), "Tiling4GatherElements running begin");
     GatherElementsTiling tilingObject(context);
     OP_CHECK_IF(tilingObject.Init() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "gather elements tiling init fail"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "gather elements tiling init fail"),
+                return ge::GRAPH_FAILED);
     return tilingObject.SetKernelTiling();
 }
 
 ge::graphStatus TilingPrepare4GatherElements(gert::TilingParseContext* context)
 {
+    if (context == nullptr) {
+        const char* reportOpName = "GatherElements";
+        OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "Tiling prepare context is null");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            reportOpName,
+            "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "Tiling Prepare For GatherElements start.");
     auto compileInfo = context->GetCompiledInfo<GatherElementsCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    if (compileInfo == nullptr) {
+        const char* reportOpName = context->GetNodeName();
+        reportOpName = reportOpName != nullptr ? reportOpName : "GatherElements";
+        OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "Tiling prepare compile info is null");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            reportOpName,
+            "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
+    }
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    if (platformInfo == nullptr) {
+        const char* reportOpName = context->GetNodeName();
+        reportOpName = reportOpName != nullptr ? reportOpName : "GatherElements";
+        OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "Tiling prepare platform info is null");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            reportOpName,
+            "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->core_num = ascendcPlatform.GetCoreNumAiv();
-    uint64_t ub_size;
+    uint64_t ub_size = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ub_size);
     compileInfo->ub_size = static_cast<int64_t>(ub_size);
-    OP_CHECK_IF((compileInfo->ub_size <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size"),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->core_num <= 0 || compileInfo->ub_size <= 0) {
+        const char* reportOpName = context->GetNodeName();
+        reportOpName = reportOpName != nullptr ? reportOpName : "GatherElements";
+        OP_LOGE_WITHOUT_REPORT(reportOpName, "%s", "Tiling prepare core count or UB size is not positive");
+        const std::vector<const char*> reportKeys = {"opName", "reason"};
+        const std::vector<const char*> reportValues = {
+            reportOpName,
+            "Operator tiling execution failed. Preserve the execution logs and contact operator support."};
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", reportKeys, reportValues);
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu", compileInfo->ub_size);
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     OP_LOGD(context->GetNodeName(), "sysWorkspaceSize is %lu", compileInfo->sysWorkspaceSize);

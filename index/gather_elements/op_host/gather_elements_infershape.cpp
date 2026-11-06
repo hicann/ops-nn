@@ -14,16 +14,33 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
+#include <vector>
 
 using namespace ge;
 namespace ops {
+namespace {
+void ReportGatherElementsInferShapeError(const char* opName, const char* detail)
+{
+    opName = opName != nullptr ? opName : "GatherElements";
+    OP_LOGE_WITHOUT_REPORT(opName, "%s", detail);
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {
+        opName, "Operator shape inference execution failed. Preserve the execution logs and contact operator support."};
+    REPORT_PREDEFINED_ERR_MSG("EZ1014", keys, values);
+}
+} // namespace
 ge::graphStatus CopyShapeInput2OutputWithIdxForGatherElements(gert::InferShapeContext* context, int64_t input_idx,
                                                               int64_t output_idx)
 {
+    OP_CHECK_IF(context == nullptr, ReportGatherElementsInferShapeError("GatherElements", "InferShape context is null"),
+                return ge::GRAPH_FAILED);
+    const char* nodeName = context->GetNodeName();
+    const char* opName = nodeName != nullptr ? nodeName : "GatherElements";
     auto in_shape = context->GetInputShape(input_idx);
-    OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
+    OP_CHECK_IF(in_shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(opName, "index"), return ge::GRAPH_FAILED);
     auto out_shape = context->GetOutputShape(output_idx);
-    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    OP_CHECK_IF(out_shape == nullptr, ReportGatherElementsInferShapeError(opName, "Output shape storage is null"),
+                return ge::GRAPH_FAILED);
     *out_shape = *in_shape;
     return ge::GRAPH_SUCCESS;
 }

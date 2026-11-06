@@ -23,6 +23,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "base/err_msg.h"
 
 using namespace op;
 
@@ -213,22 +214,31 @@ const aclTensor* GatherElements(const aclTensor* self, const int64_t dim, const 
                                 aclOpExecutor* executor)
 {
     L0_DFX(GatherElements, self, dim, index);
-    CHECK_RET(self != nullptr, nullptr);
-    CHECK_RET(index != nullptr, nullptr);
+    if (self == nullptr || index == nullptr) {
+        const std::vector<const char*> keys = {"functionName", "paraName"};
+        const std::vector<const char*> values = {"GatherElements", self == nullptr ? "self" : "index"};
+        REPORT_PREDEFINED_ERR_MSG("EZ1011", keys, values);
+        return nullptr;
+    }
 
     auto out = executor->AllocTensor(index->GetViewShape(), self->GetDataType());
+    if (out == nullptr) {
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GatherElements failed to allocate output tensor, shape=%s, dtype=%s.",
+                op::ToString(index->GetViewShape()).GetString(), op::ToString(self->GetDataType()).GetString());
+        return nullptr;
+    }
     auto ret = ACL_SUCCESS;
     if (IsAiCoreSupport(self, index, dim)) {
         ret = ADD_TO_LAUNCHER_LIST_AICORE(GatherElements, OP_INPUT(self, index), OP_OUTPUT(out), OP_ATTR(dim));
         OP_CHECK(ret == ACLNN_SUCCESS,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GatherElements AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+                 OP_LOGE_WITHOUT_REPORT(ret, "GatherElements AiCore ADD_TO_LAUNCHER_LIST_AICORE failed, ret=%d.", ret),
                  return nullptr);
     } else {
         static internal::AicpuTaskSpace space("GatherElements");
         ret = ADD_TO_LAUNCHER_LIST_AICPU(GatherElements, OP_ATTR_NAMES({"dim"}), OP_INPUT(self, index), OP_OUTPUT(out),
                                          OP_ATTR(dim));
         OP_CHECK(ret == ACLNN_SUCCESS,
-                 OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "GatherElements AiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."),
+                 OP_LOGE_WITHOUT_REPORT(ret, "GatherElements AiCpu ADD_TO_LAUNCHER_LIST_AICPU failed, ret=%d.", ret),
                  return nullptr);
     }
     return out;

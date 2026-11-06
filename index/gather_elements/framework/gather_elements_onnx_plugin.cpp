@@ -20,7 +20,7 @@ static Status ParseParamsGatherElements(const Message* op_src, ge::Operator& op_
 {
     const ge::onnx::NodeProto* node = dynamic_cast<const ge::onnx::NodeProto*>(op_src);
     if (nullptr == node) {
-        OP_LOGE(GetOpName(op_dest).c_str(), "Dynamic cast op_src to NodeProto failed.");
+        OP_LOGE_FOR_INVALID_GRAPH_NODE(GetOpName(op_dest).c_str(), "Expected an ONNX NodeProto source node.");
         return FAILED;
     }
 

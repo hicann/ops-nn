@@ -143,28 +143,25 @@ static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTens
                                       const aclIntArray* padding, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_COND(CheckNotNull(gradOutput, self, indices, outputSize, stride, padding, out), ACLNN_ERR_PARAM_NULLPTR,
-               "CheckNotNull failed for gradOutput/self/indices/outputSize/stride/padding/out!");
+    CHECK_RET(CheckNotNull(gradOutput, self, indices, outputSize, stride, padding, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查out是否连续张量
-    CHECK_COND(CheckOutContiguous(out), ACLNN_ERR_PARAM_INVALID, "CheckOutContiguous failed for out!");
+    CHECK_RET(CheckOutContiguous(out), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_COND(CheckDtypeValid(gradOutput, self, indices, out), ACLNN_ERR_PARAM_INVALID,
-               "CheckDtypeValid failed for gradOutput/self/indices/out!");
+    CHECK_RET(CheckDtypeValid(gradOutput, self, indices, out), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输入的self、indices和out的shape
-    CHECK_COND(CheckShape(self, indices, out), ACLNN_ERR_PARAM_INVALID, "CheckShape failed for self/indices/out!");
+    CHECK_RET(CheckShape(self, indices, out), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 校验输入self的元素值是否小于0
-    CHECK_COND(CheckInputNullTensorMaxUnPool3D(self), ACLNN_ERR_PARAM_INVALID, "CheckInputNullTensor failed for self!");
+    CHECK_RET(CheckInputNullTensorMaxUnPool3D(self), ACLNN_ERR_PARAM_INVALID);
 
     // 6. 检查输入的outputSize, stride, padding的size大小及元素值大小
-    CHECK_COND(CheckIntArrayShapeMaxUnPool3D(self, outputSize, stride, padding), ACLNN_ERR_PARAM_INVALID,
-               "CheckIntArrayShape failed for outputSize!");
+    CHECK_RET(CheckIntArrayShapeMaxUnPool3D(self, outputSize, stride, padding), ACLNN_ERR_PARAM_INVALID);
 
     // 7. 校验gradOutput的shape是否合法
-    CHECK_COND(CheckOutShape(self, outputSize, gradOutput), ACLNN_ERR_PARAM_INVALID, "CheckOutShape failed for out!");
+    CHECK_RET(CheckOutShape(self, outputSize, gradOutput), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 

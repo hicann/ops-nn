@@ -129,16 +129,13 @@ static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTens
                                       const aclIntArray* outputSize, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_COND(CheckNotNull(gradOutput, self, indices, outputSize, out), ACLNN_ERR_PARAM_NULLPTR,
-               "CheckNotNull failed for gradOutput/self/indices/outputSize/out!");
+    CHECK_RET(CheckNotNull(gradOutput, self, indices, outputSize, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_COND(CheckDtypeValid(gradOutput, self, indices, out), ACLNN_ERR_PARAM_INVALID,
-               "CheckDtypeValid failed for gradOutput/self/indices/out!");
+    CHECK_RET(CheckDtypeValid(gradOutput, self, indices, out), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输出输出shape
-    CHECK_COND(CheckShape(gradOutput, self, indices, outputSize, out), ACLNN_ERR_PARAM_INVALID,
-               "CheckShape failed for gradOutput/self/indices/outputSize/out!");
+    CHECK_RET(CheckShape(gradOutput, self, indices, outputSize, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
