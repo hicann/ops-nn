@@ -304,6 +304,29 @@ TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_dtype_mixed_in_
     ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
 
+// x and y must agree member-wise: a list whose member shapes differ between the input and
+// the output side (member 0 matches, member 1 carries x=(2,3) vs y=(2,4)) must be rejected
+// before any tiling data is built. Same TilingContextPara per-slot form as the mixed-dtype
+// case above (NodeInputTd addresses a whole IR input at once).
+TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_shape_mismatch_rejected)
+{
+    gert::StorageShape xMatch({2, 3}, {2, 3});
+    gert::StorageShape yMatch({2, 3}, {2, 3});
+    gert::StorageShape xBad({2, 3}, {2, 3});
+    gert::StorageShape yBad({2, 4}, {2, 4});
+    gert::StorageShape roundMode({1}, {1});
+    std::vector<gert::TilingContextPara::TensorDescription> ins = {
+        gert::TilingContextPara::TensorDescription(xMatch, ge::DT_FLOAT, ge::FORMAT_ND),
+        gert::TilingContextPara::TensorDescription(xBad, ge::DT_FLOAT, ge::FORMAT_ND),
+        gert::TilingContextPara::TensorDescription(roundMode, ge::DT_INT8, ge::FORMAT_ND)};
+    std::vector<gert::TilingContextPara::TensorDescription> outs = {
+        gert::TilingContextPara::TensorDescription(yMatch, ge::DT_FLOAT, ge::FORMAT_ND),
+        gert::TilingContextPara::TensorDescription(yBad, ge::DT_FLOAT, ge::FORMAT_ND)};
+    static ForeachRoundOffNumberCompileInfo shapeMismatchCompileInfo = {24, 1048576};
+    gert::TilingContextPara para("ForeachRoundOffNumber", ins, outs, {}, {2, 1}, {2}, &shapeMismatchCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
 // Core split probes: the per-core minimum is 1024 elements, so 512 elements stay on one
 // core and 24576 elements (= 24 * 1024) saturate all 24 cores of the fake platform.
 TEST_F(ForeachRoundOffNumberTilingTest, foreach_round_off_number_coresplit_below_min_single_core)

@@ -133,6 +133,14 @@ static ge::graphStatus ForeachRoundOffNumberTilingFunc(gert::TilingContext* cont
         auto idxTensorShapePtr = context->GetDynamicInputShape(INPUT_IDX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorShapePtr);
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
+        // 输出与输入逐成员shape必须一致: tiling独立于Host InferShape执行, 输出shape旁路推导时逐成员失配即拒绝
+        auto outputShapePtr = context->GetOutputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputShapePtr);
+        OP_CHECK_IF((idxTensorShape != outputShapePtr->GetStorageShape()),
+                    OP_LOGE(context, "x[%lu] and y[%lu] must have the same storage shape, but got %s and %s", i, i,
+                            Ops::Base::ToString(idxTensorShape).c_str(),
+                            Ops::Base::ToString(outputShapePtr->GetStorageShape()).c_str()),
+                    return ge::GRAPH_FAILED);
         int64_t numel = idxTensorShape.GetShapeSize();
         tilingData->tensorElements[i] = numel;
         // 累加前检查int64上溢
