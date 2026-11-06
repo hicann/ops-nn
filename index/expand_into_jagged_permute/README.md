@@ -85,6 +85,7 @@ $$
 P=0时output_size必须为0；P>0时output_size必须大于等于P。
 
 input_offsets和output_offsets必须从0开始，P>0时严格单调递增。
+input_offsets的末值等于输入侧总元素数。
 output_offsets的末值必须等于output_size。
 
 ## 调用说明

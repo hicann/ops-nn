@@ -87,6 +87,7 @@ Let P be the length of permute. The lengths of input_offsets and output_offsets 
 When P is 0, output_size must be 0. When P is greater than 0, output_size must be greater than or equal to P.
 
 input_offsets and output_offsets must start at 0 and, when P is greater than 0, must be strictly increasing.
+The last value of input_offsets equals the total number of input-side elements.
 The last value of output_offsets must equal output_size.
 
 ## Invocation Description

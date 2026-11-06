@@ -97,7 +97,7 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
         <td>inputOffsets</td>
         <td>输入</td>
         <td>公式中的inputOffsets，代表表级别长度的互斥偏移量。</td>
-        <td>要求为一维Tensor，首值为0；permute非空时值严格单调递增。</td>
+        <td>要求为一维Tensor，首值为0；permute非空时值严格单调递增，末值等于输入侧总元素数。</td>
         <td>与permute一致。</td>
         <td>ND</td>
         <td>inputLen+1</td>
@@ -246,8 +246,8 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
 
 2. permute、inputOffsets、outputOffsets、out的数据类型需要相同。
 
-3. inputOffsets、outputOffsets首值为0；permute非空时严格单调递增；outputOffsets最后一个值等于
-   outputSize。
+3. inputOffsets、outputOffsets首值为0；permute非空时严格单调递增；inputOffsets末值等于输入侧
+   总元素数，outputOffsets最后一个值等于outputSize。
 
 4. 设P为permute的长度。P=0时outputSize必须为0；P>0时outputSize必须大于等于P。
 

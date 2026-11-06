@@ -99,7 +99,7 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
         <td>inputOffsets</td>
         <td>Input</td>
         <td>The inputOffsets in the formula, representing the mutually exclusive offset of table-level lengths.</td>
-        <td>Required to be a one-dimensional tensor starting at 0. When permute is non-empty, its values must be strictly increasing.</td>
+        <td>Required to be a one-dimensional tensor starting at 0. When permute is non-empty, its values must be strictly increasing, and the last value must equal the total number of input-side elements.</td>
         <td>Consistent with permute</td>
         <td>ND</td>
         <td>inputLen+1</td>
@@ -249,7 +249,8 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
 2. permute, inputOffsets, outputOffsets, and out must have the same data type.
 
 3. inputOffsets and outputOffsets must start at 0 and, when permute is non-empty, must be strictly increasing. The last
-   value of outputOffsets must equal outputSize.
+   value of inputOffsets must equal the total number of input-side elements, and the last value of outputOffsets must
+   equal outputSize.
 
 4. Let P be the length of permute. When P is 0, outputSize must be 0. When P is greater than 0, outputSize must be
    greater than or equal to P.
