@@ -93,6 +93,7 @@ def prepare(output):
                 "half_overflow_boundary",
                 "fp32_restore_boundary",
                 "unbiased_var_low",
+                "variance_subtraction_residual",
                 "affine_mean_tail",
             ):
                 if mode == "affine_offset_cancellation" and dtype != "float32":
@@ -152,7 +153,16 @@ def prepare(output):
                     None,
                 ]
                 epsilon = 1e-5
-                if mode == "unbiased_var_low":
+                if mode == "variance_subtraction_residual":
+                    # The rounded product difference loses a subtraction
+                    # residual before the unbiased-variance correction.
+                    inputs[0] = np.array([-100.0, 0.0, 26.0], dtype=dtype).reshape(
+                        shape
+                    )
+                    inputs[1].fill(-74.0)
+                    inputs[2].fill(10676.0)
+                    inputs[3] = inputs[4] = None
+                elif mode == "unbiased_var_low":
                     # The exact unbiased variance is 10082 / 2 = 5041.
                     # Rounding 10082 / 3 before Bessel correction loses one ULP.
                     inputs[0] = np.array([-71.0, 0.0, 71.0], dtype=dtype).reshape(shape)
@@ -240,6 +250,7 @@ def prepare(output):
                     "mean_low_zero_std",
                     "half_overflow_boundary",
                     "unbiased_var_low",
+                    "variance_subtraction_residual",
                 ):
                     shapes = (shape, stat, stat, None, None, None, None)
                     formats = (layout,) * 3 + ("ND",) * 4

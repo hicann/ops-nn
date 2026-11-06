@@ -299,10 +299,15 @@ __aicore__ inline void ComputeBaseStats(__ubuf__ float* sum, __ubuf__ float* squ
         Reg::Muls(meanSquareErrorReg, meanErrorReg, 1.0f, validMask);
         Reg::MulDstAdd(meanSquareErrorReg, meanErrorReg, tempReg, validMask);
 
-        Reg::Sub(varReg, varReg, meanSquareReg, validMask);
+        // Preserve the subtraction residual as well as the product residuals.
+        // Otherwise a small mean square can be rounded away from square_sum/R
+        // before Bessel correction and the running-variance update.
+        Reg::Muls(tempReg, meanSquareReg, -1.0f, validMask);
+        Reg::Sub(varHighReg, varReg, meanSquareReg, validMask);
+        SumError(varLowReg, varReg, tempReg, varHighReg, validMask);
         Reg::Sub(varErrorReg, varErrorReg, meanSquareErrorReg, validMask);
-        Reg::Muls(varHighReg, varReg, 1.0f, validMask);
-        Reg::Add(varReg, varReg, varErrorReg, validMask);
+        Reg::Add(varErrorReg, varErrorReg, varLowReg, validMask);
+        Reg::Add(varReg, varHighReg, varErrorReg, validMask);
         SumError(varLowReg, varHighReg, varErrorReg, varReg, validMask);
 
         // Residual recovery intentionally forms Inf-Inf for non-finite inputs.
