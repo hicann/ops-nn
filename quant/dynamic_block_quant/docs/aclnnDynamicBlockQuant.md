@@ -97,7 +97,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示算子输入的Tensor。对应公式中的`x`。</td>
-      <td>不支持空Tensor。</td>
+      <td>支持空Tensor。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor。对应公式中的`yOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape与`x`保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`x`保持一致。</li></ul></td>
       <td>INT8、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8</td>
       <td>ND</td>
       <td>2-3</td>
@@ -167,7 +167,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>scaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化使用的scaleOut，对应公式中的`scaleOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>如果输入`x`的shape为[M, N]，输出`scaleOut`的shape维度为[ceil(M/rowBlockSize), ceil(N/colBlockSize)]；如果输入`x`的shape为[B, M, N]，输出`scaleOut`的shape维度为[B, ceil(M/rowBlockSize), ceil(N/colBlockSize)]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果输入`x`的shape为[M, N]，输出`scaleOut`的shape维度为[ceil(M/rowBlockSize), ceil(N/colBlockSize)]；如果输入`x`的shape为[B, M, N]，输出`scaleOut`的shape维度为[B, ceil(M/rowBlockSize), ceil(N/colBlockSize)]。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>
@@ -198,6 +198,7 @@ aclnnStatus aclnnDynamicBlockQuant(
 
   <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
+    - 参数`x`的数据类型仅支持FLOAT16、BFLOAT16。
     - 参数`roundModeOptional`只支持rint。
     - 参数`dstType`仅支持取值2，代表INT8。
     - 参数`rowBlockSize`仅支持取值1。
