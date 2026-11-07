@@ -72,8 +72,14 @@ static graphStatus InferShape4UnsortedSegment(gert::InferShapeContext* context)
     }
 
     // dynamic shape is -1 and not dynamic shape
+    // pre-check const-ness to avoid misleading ERROR logs from GetConstInt on non-const inputs
     int64_t num_segments = 0;
-    if (!Ops::Base::GetConstInt(context, INPUT_NUM_SEGMENTS_IDX, num_segments)) {
+    const gert::Tensor* numSegmentsTensor = context->GetInputTensor(INPUT_NUM_SEGMENTS_IDX);
+    const bool numSegmentsIsConst = numSegmentsTensor != nullptr && numSegmentsTensor->GetAddr() != nullptr;
+    if (!numSegmentsIsConst) {
+        OP_LOGD(context->GetNodeName(), "num_segments is not a const tensor, set num_segments to -1");
+        num_segments = UNKNOWN_DIM_VALUE_;
+    } else if (!Ops::Base::GetConstInt(context, INPUT_NUM_SEGMENTS_IDX, num_segments)) {
         OP_LOGD(context->GetNodeName(), "get num_segments_tensor unsuccessful, set num_segments to -1");
         num_segments = UNKNOWN_DIM_VALUE_;
     }
