@@ -31,20 +31,20 @@
 
 - Formula:
 
-  Given an input tensor input whose last dimension has a length of 2d, the following computation is performed:
+  Given an input tensor x whose last dimension has a length of 2d, the following computation is performed:
 
-  1. Split input into two parts:
+  1. Split x into two parts:
 
      $$
-     x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
+     x_1 = x[..., :d], \quad x_2 = x[..., d:]
      $$
   2. Apply the Threshold activation function to x1, defined as follows:
 
      $$
      \text{Threshold}(x, \text{threshold}) =
         \begin{cases}
-        0 & \text{if } x < \text{threshold} \\
-        x & \text{if } x \geq \text{threshold}
+        0 & \text{if } x \leq \text{threshold} \\
+        x & \text{if } x > \text{threshold}
         \end{cases}
      $$
 
@@ -65,7 +65,7 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
 
 ```Cpp
 aclnnStatus aclnnFatreluMulGetWorkspaceSize(
-  const aclTensor *input,
+  const aclTensor *x,
   const aclTensor *threshold,
   const aclTensor *out,
   uint64_t        *workspaceSize,
@@ -107,34 +107,34 @@ aclnnStatus aclnnFatreluMul(
     </tr></thead>
    <tbody>
       <tr>
-      <td>input (aclTensor*)</td>
+      <td>x (aclTensor*)</td>
       <td>Input</td>
-      <td>Input tensor, corresponding to input in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>The last dimension is an even number less than or equal to 1024.</li><li>The product of other dimensions is less than or equal to 200000.</li></ul></td>
+      <td>Input tensor, that is, x in the formula.</td>
+      <td><ul><li>Empty tensors are supported.</li><li>The last dimension is an even number.</li><li>For Atlas A2 series, Atlas A3 series, and kirin series products: the last dimension is not greater than 1024, and the product of other dimensions is not greater than 200000.</li><li>For Atlas inference series and Atlas training series products: the last dimension is not greater than 1024, and the product of other dimensions is not greater than 200000.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
       <td>ND</td>
-      <td>2-8</td>
+      <td>Not less than 2</td>
       <td>√</td>
     </tr>
      <tr>
       <td>threshold (aclTensor*)</td>
       <td>Input</td>
       <td>Boundary value for the Threshold computation, corresponding to threshold in the formula.</td>
-      <td><ul><li>The data type and data format are the same as those of input.</li><li>Requires that the tensor has only one element.</li><li>NaN and Inf are not supported.</li></ul></td>
+      <td><ul><li>The data type and data format are the same as those of x.</li><li>Requires that the tensor has only one element.</li><li>NaN and Inf are not supported.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>Unrestricted</td>
       <td>√</td>
     </tr>
       <tr>
       <td>out (aclTensor*)</td>
       <td>Output</td>
       <td>Output tensor, that is, out in the formula.</td>
-      <td><ul><li>The output data type is the same as that of input.</li><li>The value of the last dimension of the output shape is half that of the input shape.</li><li>The values of other dimensions are the same as those of the input shape.</li></ul></td>
+      <td><ul><li>The output data type is the same as that of x.</li><li>The value of the last dimension of the output shape is half that of the input shape.</li><li>The values of other dimensions are the same as those of the x shape.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
       <td>ND</td>
-      <td>2-8</td>
-      <td>√</td>
+      <td>Not less than 2</td>
+      <td>×</td>
     </tr>
       <tr>
       <td>workspaceSize(uint64_t*)</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnFatreluMul(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -181,12 +181,32 @@ aclnnStatus aclnnFatreluMul(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>input, threshold, or out is a null pointer.</td>
+      <td>x, threshold, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
-      <td>The data type of input is not supported.</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
+      <td>The data type of x is not supported.</td>
+    </tr>
+    <tr>
+      <td>The data type of threshold is not supported.</td>
+    </tr>
+    <tr>
+      <td>The data type of out is not supported.</td>
+    </tr>
+    <tr>
+      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="4">561002</td>
+      <td>The rank of x is less than 2.</td>
+    </tr>
+    <tr>
+      <td>The length of the last dimension of x is not an even number.</td>
+    </tr>
+    <tr>
+      <td>The number of elements in threshold is not 1.</td>
+    </tr>
+    <tr>
+      <td>The shape of out does not match that of x (the leading dimensions are inconsistent, or the last dimension is not half of that of x).</td>
     </tr>
   </tbody></table>
 
@@ -237,6 +257,8 @@ aclnnStatus aclnnFatreluMul(
 
 - Deterministic computation:
   - aclnnFatreluMul defaults to a deterministic implementation.
+
+- For elements in the gate segment (the first half) of input x that are NaN, the output at the corresponding position is 0.
 
 - In typical scenarios, the last axis is a multiple of 16. When the last axis is not 32-byte aligned, it is recommended to use the small operator splicing logic.
 

@@ -196,3 +196,22 @@ TEST_F(FatreluMulTilingArch35, test_tiling_rank9_fwd_011)
     FatreluMulTilingArch35TestCase({2, 2, 2, 2, 2, 2, 2, 2, 8}, {1}, {2, 2, 2, 2, 2, 2, 2, 2, 4}, ge::DT_FLOAT,
                                    ge::GRAPH_SUCCESS, 256);
 }
+
+// threshold rank=9 且 numel=1：rank 不限（单元素为唯一语义约束），应放行；
+// batchSize = 前导维乘积 = 2（行模型断言）
+TEST_F(FatreluMulTilingArch35, test_tiling_thr_rank9_numel1_fwd_012)
+{
+    FatreluMulTilingArch35TestCase({2, 8}, {1, 1, 1, 1, 1, 1, 1, 1, 1}, {2, 4}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, 2);
+}
+
+// threshold numel=2：非单元素，tiling 校验拒绝（numel==1 唯一约束的拒绝路径）
+TEST_F(FatreluMulTilingArch35, test_tiling_thr_numel2_rejected_013)
+{
+    FatreluMulTilingArch35TestCase({2, 8}, {2}, {2, 4}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+// threshold 0-d 标量（rank=0，numel=1）：合法输入，应放行
+TEST_F(FatreluMulTilingArch35, test_tiling_thr_scalar0d_fwd_014)
+{
+    FatreluMulTilingArch35TestCase({2, 8}, {}, {2, 4}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, 2);
+}

@@ -121,7 +121,7 @@ aclnnStatus aclnnFatreluMul(
       <td><ul><li>数据类型和数据格式与x保持一致。</li><li>要求tensor中元素只有一个。</li><li>不支持NaN和Inf。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>不限制</td>
       <td>√</td>
     </tr>
       <tr>
