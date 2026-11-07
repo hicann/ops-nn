@@ -21,6 +21,7 @@
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_kernel_split_tiling.h"
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_small_kernel_tiling.h"
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_small_shape_tiling.h"
+#include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch51/conv3d_backprop_input_v2_inner_product_tiling_arch51.h"
 
 namespace Ops {
 namespace NN {
@@ -74,6 +75,17 @@ public:
         opType_ = optiling::OpTypeV2::kExtendConvTranspose;
     }
     ~ExtendConvTransposeInnerProductTiling() override = default;
+};
+
+class ExtendConvTransposeInnerProductTilingArch51 : public Conv3DDXV2InnerProductTilingArch51 {
+public:
+    explicit ExtendConvTransposeInnerProductTilingArch51(gert::TilingContext* context)
+        : Conv3DDXV2InnerProductTilingArch51(context)
+    {
+        Reset();
+        opType_ = optiling::OpTypeV2::kExtendConvTranspose;
+    }
+    ~ExtendConvTransposeInnerProductTilingArch51() override = default;
 };
 
 class ExtendConvTransposeKernelSplitTiling : public Conv3DDXV2KernelSplitTiling {

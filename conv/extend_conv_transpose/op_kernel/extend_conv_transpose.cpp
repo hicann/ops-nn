@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -14,11 +14,15 @@
  */
 
 #define K_MAX_SHAPE_DIM 0
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+#include "../conv3d_backprop_input_v2/arch51/conv3d_dx_block_arch51.h"
+#else
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_dx_rowc_block.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_dx_kernel_split_block.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output_arch35.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_vec_transpose.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_dx_small_kernel.h"
+#endif
 
 using namespace AscendC;
 
@@ -37,6 +41,24 @@ using namespace AscendC;
         opVecTranspose.Destroy();                           \
     } while (0)
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
+__global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
+                                                 GM_ADDR scale, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
+{
+    GET_TILING_DATA(tilingData, tiling);
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
+
+    if (tilingData.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
+        Conv3dDxInitOutput<DTYPE_Y> opInitOutput;
+        opInitOutput.Init(y, tilingData);
+        opInitOutput.Process(y);
+        opInitOutput.Destroy();
+    }
+
+    EXTEND_CONV_TRANSPOSE_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y,
+                                                  DTYPE_BIAS, FORMAT_BIAS, DTYPE_SCALE, FORMAT_SCALE>);
+}
+#else
 template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
           uint8_t loadB1Condition>
 __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
@@ -95,3 +117,4 @@ __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, 
                              FORMAT_SCALE>);
     }
 }
+#endif

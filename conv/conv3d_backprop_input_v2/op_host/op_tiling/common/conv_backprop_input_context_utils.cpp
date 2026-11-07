@@ -21,6 +21,7 @@
 #include <cstdarg>
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "conv/common/op_host/op_tiling/conv_math_util.h"
 #include "conv/common/op_host/op_tiling/conv_platform_util.h"
 #include "securec.h"
@@ -49,7 +50,8 @@ bool IsArchAfter35(const gert::TilingContext* context)
 {
     return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510 ||
            context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9201 ||
-           context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202;
+           context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202 ||
+           context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == Ops::Base::DAV_5162;
 }
 
 static bool IsSocVersion960(const gert::TilingContext* context)
@@ -57,6 +59,12 @@ static bool IsSocVersion960(const gert::TilingContext* context)
     return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9201 ||
            context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202;
 }
+
+bool IsArch51(const gert::TilingContext* context)
+{
+    return context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->npuArch == Ops::Base::DAV_5162;
+}
+
 static bool IsFilterDxStorageNcdhw(const gert::TilingContext* context)
 {
     return ge::GetPrimaryFormat(context->GetInputDesc(static_cast<size_t>(FILTER_INDEX))->GetStorageFormat()) ==
@@ -1352,6 +1360,9 @@ static bool CalRealG(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runIn
     int32_t dy_c_extend = MathUtil::Lcm(static_cast<int64_t>(dy_c_ori), dyAlign) / dy_c_ori;
     otherParams.multiple_extend = std::min(MathUtil::Lcm(dx_c_extend, dy_c_extend),
                                            static_cast<int64_t>(runInfoV2.groups));
+    if (IsArch51(context)) {
+        otherParams.multiple_extend = 1;
+    }
     runInfoV2.real_g = (static_cast<int64_t>(runInfoV2.groups) + otherParams.multiple_extend - 1) /
                        otherParams.multiple_extend;
     otherParams.ci1g = Ops::Base::CeilDiv(otherParams.multiple_extend * otherParams.b_shape.c, dxAlign);
@@ -1847,7 +1858,7 @@ bool GetInputOutputFormat(const gert::TilingContext* context, Conv3dBpInputV2Run
 bool CalScale(const gert::TilingContext* context, const Conv3dBpInputV2RunInfo& runInfoV2,
               const OtherParams& otherParams)
 {
-    if (!IsSocVersionFuse(context)) {
+    if (!IsSocVersionFuse(context) || IsArch51(context)) {
         return true;
     }
     const char* opName = context->GetNodeName();

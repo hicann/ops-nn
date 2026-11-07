@@ -861,13 +861,23 @@ bool CheckBiasParams(gert::TilingContext* context, const OtherParams& otherParam
                                           .c_str()),
             return false);
     } else {
-        OP_CHECK_IF(
-            biasDtype != ge::DT_FLOAT,
-            OP_LOGE_FOR_INVALID_DTYPE(op_name, "biasDtype", ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(),
-                                      FormatString("bias dtype has incorrect value %s, should be FP32",
-                                                   ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str())
-                                          .c_str()),
-            return false);
+        if (!IsArch51(context)) {
+            OP_CHECK_IF(biasDtype != ge::DT_FLOAT,
+                        OP_LOGE_FOR_INVALID_DTYPE(op_name, "biasDtype",
+                                                  ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(),
+                                                  FormatString("bias dtype has incorrect value %s, should be FP32",
+                                                               ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str())
+                                                      .c_str()),
+                        return false);
+        } else {
+            OP_CHECK_IF(biasDtype != ge::DT_FLOAT16,
+                        OP_LOGE_FOR_INVALID_DTYPE(op_name, "biasDtype",
+                                                  ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(),
+                                                  FormatString("bias dtype has incorrect value %s, should be FP16",
+                                                               ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str())
+                                                      .c_str()),
+                        return false);
+        }
     }
 
     return true;
