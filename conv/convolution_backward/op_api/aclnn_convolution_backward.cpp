@@ -2594,6 +2594,92 @@ static bool IsW1FmNDxFmtAndAttrOk(const ConvolutionBackwardInputTensor& inputTen
     return true;
 }
 
+// For batch>1, dx goes through the bmm broadcast path (bmm splits batch into an outer loop and reloads W per
+// batch, while conv merges batch into the N dim and loads W only once). Only the scenes below, measured as
+// severe degradations, fall back to conv, and other batch>1 scenes keep the matmul path. The batch=1 mm path
+// keeps its original admission rules and is not affected by these checks.
+static bool IsW1FmNDxBmmDegrade(const ConvolutionBackwardInputTensor& inputTensor,
+                                const ConvolutionBackwardParams& params)
+{
+    op::Shape weightShape = inputTensor.weight->GetViewShape();
+    op::Shape inputShape = params.transposed ? inputTensor.gradOutput->GetViewShape() :
+                                               inputTensor.input->GetViewShape();
+    int64_t batchDim = inputShape.GetDim(NCDHW_N_DIM);
+    int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
+    int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
+    int64_t dhwDim = inputShape.GetDim(NCDHW_D_DIM) * inputShape.GetDim(NCDHW_H_DIM) * inputShape.GetDim(NCDHW_W_DIM);
+
+    // Scene 1: K=1(Cout=1) with large batch and narrow M(Cin): the bmm contraction dim is 1, cube utilization
+    // is 1/16, and the narrow M cannot amortize the reload overhead under large batch
+    constexpr int64_t bmmMinBatchWhenKEqual1 = 16;
+    constexpr int64_t bmmMaxCinWhenKEqual1 = 128;
+    if (cOutDim == 1 && batchDim >= bmmMinBatchWhenKEqual1 && cInDim < bmmMaxCinWhenKEqual1) {
+        OP_LOGD("K=1(Cout=1) with large batch and narrow M(Cin<%ld), bmm degrade, fallback to conv, "
+                "batch = %ld, Cout = %ld, Cin = %ld.",
+                bmmMaxCinWhenKEqual1, batchDim, cOutDim, cInDim);
+        return true;
+    }
+
+    if (inputTensor.input->GetDataType() != DataType::DT_FLOAT) {
+        return false;
+    }
+
+    // Scene 2: fp32 with mid spatial dim, large batch and small K large M(Cout<=128 and Cin>256): the m/k
+    // imbalance amplifies the overhead of re-reading W^T per batch
+    constexpr int64_t bmmFp32MinDhw = 512;
+    constexpr int64_t bmmFp32MaxDhw = 2048;
+    constexpr int64_t bmmFp32MinBatch = 16;
+    constexpr int64_t bmmFp32MaxK = 128;
+    constexpr int64_t bmmFp32MinM = 256;
+    if (dhwDim >= bmmFp32MinDhw && dhwDim < bmmFp32MaxDhw && batchDim >= bmmFp32MinBatch && cOutDim <= bmmFp32MaxK &&
+        cInDim > bmmFp32MinM) {
+        OP_LOGD("fp32 with mid spatial dim([%ld, %ld)), large batch(>=%ld), small K(Cout<=%ld) and large "
+                "M(Cin>%ld), m/k imbalance, bmm degrade, fallback to conv, D*H*W = %ld, batch = %ld, "
+                "Cout = %ld, Cin = %ld.",
+                bmmFp32MinDhw, bmmFp32MaxDhw, bmmFp32MinBatch, bmmFp32MaxK, bmmFp32MinM, dhwDim, batchDim, cOutDim,
+                cInDim);
+        return true;
+    }
+
+    // Scenes 3/4 only apply when cubeMathType is neither ALLOW_FP32_DOWN_PRECISION nor USE_HF32: with
+    // downgrade/hf32(cubeMathType=1/3), cube throughput recovers and bmm no longer degrades
+    if (params.cubeMathType != ALLOW_FP32_DOWN_PRECISION && params.cubeMathType != USE_HF32) {
+        // Scene 3: small batch, mid-or-above K/M, mid spatial dim and K not aligned to 16: the per-batch
+        // re-read of W^T cannot be amortized; when K is aligned to 16, fractal needs no padding and the
+        // measured performance is on par
+        constexpr int64_t bmmFp32Scene3MaxBatch = 16;
+        constexpr int64_t bmmFp32Scene3MinCout = 96;
+        constexpr int64_t bmmFp32Scene3MinCin = 96;
+        constexpr int64_t bmmFp32Scene3MinDhw = 192;
+        constexpr int64_t bmmFp32Scene3MaxDhw = 2048;
+        constexpr int64_t bmmFp32Scene3CoutAlign = 16;
+        if (batchDim < bmmFp32Scene3MaxBatch && cOutDim >= bmmFp32Scene3MinCout && cInDim >= bmmFp32Scene3MinCin &&
+            dhwDim >= bmmFp32Scene3MinDhw && dhwDim < bmmFp32Scene3MaxDhw && cOutDim % bmmFp32Scene3CoutAlign != 0) {
+            OP_LOGD("fp32 with cubeMathType(%d), small batch(<%ld), mid K(>=%ld)/M(>=%ld), mid spatial dim([%ld, "
+                    "%ld)) and K(Cout) not aligned to %ld, bmm degrade, fallback to conv, D*H*W = %ld, "
+                    "batch = %ld, Cout = %ld, Cin = %ld.",
+                    static_cast<int>(params.cubeMathType), bmmFp32Scene3MaxBatch, bmmFp32Scene3MinCout,
+                    bmmFp32Scene3MinCin, bmmFp32Scene3MinDhw, bmmFp32Scene3MaxDhw, bmmFp32Scene3CoutAlign, dhwDim,
+                    batchDim, cOutDim, cInDim);
+            return true;
+        }
+
+        // Scene 4: large batch and large K*M(>=50000): the per-batch re-read overhead of W^T is further amplified
+        constexpr int64_t bmmFp32Scene4MinBatch = 16;
+        constexpr int64_t bmmFp32Scene4MinCoutCin = 50000;
+        constexpr int64_t bmmFp32Scene4MaxDhw = 1000;
+        if (batchDim >= bmmFp32Scene4MinBatch && cOutDim * cInDim >= bmmFp32Scene4MinCoutCin &&
+            dhwDim < bmmFp32Scene4MaxDhw) {
+            OP_LOGD("fp32 with cubeMathType(%d), large batch(>=%ld), large K*M(>=%ld) and spatial dim(<%ld), bmm "
+                    "degrade, fallback to conv, D*H*W = %ld, batch = %ld, Cout = %ld, Cin = %ld.",
+                    static_cast<int>(params.cubeMathType), bmmFp32Scene4MinBatch, bmmFp32Scene4MinCoutCin,
+                    bmmFp32Scene4MaxDhw, dhwDim, batchDim, cOutDim, cInDim);
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool IsW1FmNDxShapeOk(const ConvolutionBackwardInputTensor& inputTensor, const ConvolutionBackwardParams& params)
 {
     // kernel=1
@@ -2605,39 +2691,8 @@ static bool IsW1FmNDxShapeOk(const ConvolutionBackwardInputTensor& inputTensor, 
 
     op::Shape inputShape = params.transposed ? inputTensor.gradOutput->GetViewShape() :
                                                inputTensor.input->GetViewShape();
-    // batch>1走bmm广播路径, 仅拦截以下两类实测严重劣化场景
-    // 1. K=1(Cout=1)且batch较大且M维(Cin)过窄：bmm收缩维为1，cube利用率1/16，大batch下计算reload且窄M无法摊薄
-    // 2. fp32且中等空间维+大batch+小K大M(Cout<=128且Cin>256)：m/k失衡，W^T按batch重复读的开销被放大
-    if (inputShape.GetDim(NCDHW_N_DIM) > 1) {
-        constexpr int64_t BMM_MIN_BATCH_WHEN_K_EQUAL_1 = 16;
-        constexpr int64_t BMM_MAX_CIN_WHEN_K_EQUAL_1 = 128;
-        constexpr int64_t BMM_FP32_MIN_DHW = 512;
-        constexpr int64_t BMM_FP32_MAX_DHW = 2048;
-        constexpr int64_t BMM_FP32_MIN_BATCH = 16;
-        constexpr int64_t BMM_FP32_MAX_K = 128;
-        constexpr int64_t BMM_FP32_MIN_M = 256;
-        int64_t batchDim = inputShape.GetDim(NCDHW_N_DIM);
-        int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
-        int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
-        int64_t dhwDim = inputShape.GetDim(NCDHW_D_DIM) * inputShape.GetDim(NCDHW_H_DIM) *
-                         inputShape.GetDim(NCDHW_W_DIM);
-        if (cOutDim == 1 && batchDim >= BMM_MIN_BATCH_WHEN_K_EQUAL_1 && cInDim < BMM_MAX_CIN_WHEN_K_EQUAL_1) {
-            OP_LOGD("K=1(Cout=1) with large batch and narrow M(Cin<%ld), bmm degrade, fallback to conv, "
-                    "batch = %ld, Cout = %ld, Cin = %ld.",
-                    BMM_MAX_CIN_WHEN_K_EQUAL_1, batchDim, cOutDim, cInDim);
-            return false;
-        }
-        if (inputTensor.input->GetDataType() == DataType::DT_FLOAT) {
-            if (dhwDim >= BMM_FP32_MIN_DHW && dhwDim < BMM_FP32_MAX_DHW && batchDim >= BMM_FP32_MIN_BATCH &&
-                cOutDim <= BMM_FP32_MAX_K && cInDim > BMM_FP32_MIN_M) {
-                OP_LOGD("fp32 with mid spatial dim([%ld, %ld)), large batch(>=%ld), small K(Cout<=%ld) and large "
-                        "M(Cin>%ld), m/k imbalance, bmm degrade, fallback to conv, D*H*W = %ld, batch = %ld, "
-                        "Cout = %ld, Cin = %ld.",
-                        BMM_FP32_MIN_DHW, BMM_FP32_MAX_DHW, BMM_FP32_MIN_BATCH, BMM_FP32_MAX_K, BMM_FP32_MIN_M, dhwDim,
-                        batchDim, cOutDim, cInDim);
-                return false;
-            }
-        }
+    if (inputShape.GetDim(NCDHW_N_DIM) > 1 && IsW1FmNDxBmmDegrade(inputTensor, params)) {
+        return false;
     }
     // Din, Hin, Win不能同时为1
     if (inputShape.GetDim(NCDHW_D_DIM) == 1 && inputShape.GetDim(NCDHW_H_DIM) == 1 &&
