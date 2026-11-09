@@ -132,7 +132,7 @@ __aicore__ inline void LpNormV3<T, schMode>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR 
     } else if constexpr (schMode == LP_NORM_AXIS_1) {
         workGmSize = cols * SLOT_STRIDE;
     }
-    //多核操作时，更新全局缓存以64B为一个整体，若多核在64B内同时操作会导致随机覆写，故workGm设置大小为范数数量*16（范数以float存储）
+    // 多核操作时，更新全局缓存以64B为一个整体，若多核在64B内同时操作会导致随机覆写，故workGm设置大小为范数数量*16（范数以float存储）
     workGm.SetGlobalBuffer((__gm__ float*)workspace, workGmSize);
 
     // 分配本地缓冲区（双缓冲）
@@ -147,7 +147,7 @@ __aicore__ inline void LpNormV3<T, schMode>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR 
         pipe.InitBuffer(tmp_norm, tileDataNum * sizeof(float));
     }
 
-    pipe.InitBuffer(tmp_base, workGmSize); // 存储sum+epsilon（范数计算用）+ 原子加操作临时缓冲
+    pipe.InitBuffer(tmp_base, workGmSize * sizeof(float)); // 存储sum+epsilon（范数计算用）+ 原子加操作临时缓冲
     if constexpr (schMode == LP_NORM_AXIS_0) {
         pipe.InitBuffer(row_base, rows * sizeof(float));
         this->localSum = row_base.Get<float>();
@@ -249,7 +249,7 @@ __aicore__ inline void LpNormV3<T, schMode>::ReduceInf(int32_t progress)
     Abs(tileFloat, tileFloat, this->processDataNum);
     // 累加到localSum
     if constexpr (schMode == LP_NORM_AXIS_NONE) {
-        if (this->isposinf) { //正无穷范数
+        if (this->isposinf) { // 正无穷范数
             uint32_t negInfTmp = NEG_INF_BITS;
             float tileSum = *reinterpret_cast<float*>(&negInfTmp);
             for (uint32_t i = 0; i < this->processDataNum; ++i) {
@@ -353,7 +353,7 @@ __aicore__ inline void LpNormV3<T, schMode>::SumAndSyncAllInf()
     SyncAll();
     PipeBarrier<PIPE_V>();
     // 无穷范数直接使用最大/最小值，无需额外运算
-    if (GetBlockIdx() == 0) { //核0刷新缓存
+    if (GetBlockIdx() == 0) { // 核0刷新缓存
         if constexpr (schMode == LP_NORM_AXIS_NONE) {
             DataCacheCleanAndInvalid<float, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(workGm[0]);
         } else if constexpr (schMode == LP_NORM_AXIS_0) {
@@ -404,7 +404,7 @@ __aicore__ inline void LpNormV3<T, schMode>::SumAndSyncAll()
     }
     SyncAll();
     PipeBarrier<PIPE_V>();
-    if (GetBlockIdx() == 0) { //核0计算开方
+    if (GetBlockIdx() == 0) { // 核0计算开方
 
         if constexpr (schMode == LP_NORM_AXIS_NONE) {
             base.SetValue(0, workGm.GetValue(0) + this->epsilon);
@@ -526,7 +526,7 @@ __aicore__ inline void LpNormV3<T, schMode>::InfProcess()
 template <typename T, uint32_t schMode>
 __aicore__ inline void LpNormV3<T, schMode>::Process()
 {
-    if (!(this->isposinf) && !(this->isneginf)) { //当P不为负无穷和正无穷时
+    if (!(this->isposinf) && !(this->isneginf)) { // 当P不为负无穷和正无穷时
         NormalProcess();
     } else {
         InfProcess();

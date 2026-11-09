@@ -57,11 +57,11 @@ struct LpNormV3CompileInfoShapeInfo {
     uint64_t blockSize{0};
 
     float p{2.0f};
-    int64_t axis{0};
+    int64_t axis{-1};
     uint64_t rows{0};
     uint64_t cols{0};
 };
-//平台信息
+// 平台信息
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
@@ -73,7 +73,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     OP_CHECK_IF(ubSize <= 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
-//工作空间
+// 工作空间
 static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context, LpNormV3CompileInfoShapeInfo& info)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE(context, "context is nullptr"), return ge::GRAPH_FAILED);
@@ -96,7 +96,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context, LpNormV3Co
     currentWorkspace[0] = usrSize + sysWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }
-//形状属性
+// 形状属性
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t ubSize,
                                          LpNormV3CompileInfoShapeInfo& info)
 {
@@ -114,13 +114,6 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t 
     uint64_t ubDataNumber = UB_DATA_NUMBER_FLOAT;
     OP_CHECK_IF(dataType != ge::DT_FLOAT16 && dataType != ge::DT_FLOAT, OP_LOGE(context, "dataType is error"),
                 return ge::GRAPH_FAILED);
-    info.tileBlockNum = (ubSize / BUFFER_NUM / info.blockSize) / ubDataNumber;
-    if (info.inputBytes == 0) {
-        return ge::GRAPH_FAILED;
-    }
-    info.tileDataNum = (info.tileBlockNum * info.blockSize) / info.inputBytes;
-    info.inputLengthAlign32 = (((inputLength + info.blockSize - 1) / info.blockSize) * info.blockSize);
-
     auto attrs = context->GetAttrs();
     if (attrs) {
         if (attrs->GetFloat(0)) {
@@ -130,11 +123,46 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, uint64_t 
             info.axis = *(attrs->GetInt(1));
         }
     }
-    info.rows = context->GetInputShape(0)->GetStorageShape().GetDim(0);
-    info.cols = context->GetInputShape(0)->GetStorageShape().GetDim(1);
+    const auto storageShape = context->GetInputShape(0)->GetStorageShape();
+    const size_t dimNum = storageShape.GetDimNum();
+    if (info.axis != -1 && info.axis != 0 && info.axis != 1) {
+        OP_LOGE(context, "LpNormV3 does not support axis %ld", info.axis);
+        return ge::GRAPH_FAILED;
+    }
+    if ((info.axis == 0 || info.axis == 1) && dimNum != 2) {
+        OP_LOGE(context, "LpNormV3 axis %ld only supports 2D input, but got rank %zu", info.axis, dimNum);
+        return ge::GRAPH_FAILED;
+    }
+    if (dimNum >= 2) {
+        info.rows = storageShape.GetDim(0);
+        info.cols = storageShape.GetDim(1);
+    }
+
+    if (info.inputBytes == 0) {
+        return ge::GRAPH_FAILED;
+    }
+
+    uint64_t fixedUbElements = 0;
+    if (info.axis == -1) {
+        fixedUbElements = SLOT_STRIDE + 8; // tmp_base and all_base
+    } else if (info.axis == 0) {
+        fixedUbElements = info.rows * (SLOT_STRIDE + 1); // tmp_base and row_base
+    } else if (info.axis == 1) {
+        fixedUbElements = info.cols * (SLOT_STRIDE + 1); // tmp_base and col_base
+    }
+    const uint64_t fixedUbBytes = fixedUbElements * sizeof(float);
+    OP_CHECK_IF(ubSize <= fixedUbBytes, OP_LOGE(context, "UB size is too small for reduction buffers"),
+                return ge::GRAPH_FAILED);
+    const uint64_t availableUbSize = ubSize - fixedUbBytes;
+    info.tileBlockNum = (availableUbSize / BUFFER_NUM / info.blockSize) / ubDataNumber;
+    if (info.tileBlockNum == 0) {
+        return ge::GRAPH_FAILED;
+    }
+    info.tileDataNum = (info.tileBlockNum * info.blockSize) / info.inputBytes;
+    info.inputLengthAlign32 = (((inputLength + info.blockSize - 1) / info.blockSize) * info.blockSize);
     return ge::GRAPH_SUCCESS;
 }
-//分块信息
+// 分块信息
 static ge::graphStatus CalculateCoreBlockNums(int64_t coreNum, LpNormV3CompileInfoShapeInfo& info)
 {
     if (0 == coreNum || 0 == info.tileBlockNum || 0 == info.inputBytes) {
@@ -161,7 +189,7 @@ static ge::graphStatus CalculateCoreBlockNums(int64_t coreNum, LpNormV3CompileIn
 static ge::graphStatus LpNormV3TilingFunc(gert::TilingContext* context)
 {
     uint32_t batch_mode = 1U;
-    auto ret1 = context->SetScheduleMode(batch_mode); //核间同步算子需要设置该模式。
+    auto ret1 = context->SetScheduleMode(batch_mode); // 核间同步算子需要设置该模式。
     OP_CHECK_IF(ret1 != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetScheduleMode error"), return ge::GRAPH_FAILED);
 
     LpNormV3TilingData* tiling = context->GetTilingData<LpNormV3TilingData>();
@@ -169,17 +197,17 @@ static ge::graphStatus LpNormV3TilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(memset_s(tiling, sizeof(LpNormV3TilingData), 0, sizeof(LpNormV3TilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    //获取平台运行信息
+    // 获取平台运行信息
     uint64_t ubSize;
     int64_t coreNum;
     ge::graphStatus ret = GetPlatformInfo(context, ubSize, coreNum);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
-    //获取输入数据信息
+    // 获取输入数据信息
     LpNormV3CompileInfoShapeInfo shapeInfo;
     shapeInfo.blockSize = Ops::Base::GetUbBlockSize(context);
     ret = GetShapeAttrsInfo(context, ubSize, shapeInfo);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
-    //计算coreNum
+    // 计算coreNum
     if (shapeInfo.tileDataNum >= shapeInfo.inputNum) {
         coreNum = 1;
     } else {
@@ -189,12 +217,12 @@ static ge::graphStatus LpNormV3TilingFunc(gert::TilingContext* context)
                       coreNum :
                       shapeInfo.inputLengthAlign32 / shapeInfo.blockSize;
     }
-    //计算每个core处理的数据块数
+    // 计算每个core处理的数据块数
     ret = CalculateCoreBlockNums(coreNum, shapeInfo);
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
-    //设置tiling数据
+    // 设置tiling数据
     tiling->smallCoreDataNum = static_cast<uint32_t>(shapeInfo.smallCoreDataNum);
     tiling->bigCoreDataNum = static_cast<uint32_t>(shapeInfo.bigCoreDataNum);
     tiling->tileDataNum = static_cast<uint32_t>(shapeInfo.tileDataNum);
@@ -206,7 +234,7 @@ static ge::graphStatus LpNormV3TilingFunc(gert::TilingContext* context)
     tiling->p = static_cast<float>(shapeInfo.p);
     tiling->rows = static_cast<uint32_t>(shapeInfo.rows);
     tiling->cols = static_cast<uint32_t>(shapeInfo.cols);
-    //计算workspace大小
+    // 计算workspace大小
     OP_CHECK_IF(GetWorkspaceSize(context, shapeInfo) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
                 return ge::GRAPH_FAILED);
     context->SetBlockDim(coreNum);

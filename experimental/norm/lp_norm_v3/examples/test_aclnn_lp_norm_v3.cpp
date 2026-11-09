@@ -69,7 +69,7 @@ void PrintOutResult(const std::vector<int64_t>& shape, void** deviceAddr)
     std::vector<float> resultData(size, 0);
     auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), *deviceAddr,
                            size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("output[%ld] is: %f\n", i, resultData[i]);
     }
@@ -81,7 +81,7 @@ void PrintOutResult16(const std::vector<int64_t>& shape, void** deviceAddr)
     // 1. 从设备拷贝 FP16 数据到 Host
     auto ret = aclrtMemcpy(resultDataFp16.data(), size * sizeof(uint16_t), *deviceAddr, size * sizeof(uint16_t),
                            ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return );
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
 
     // 2. FP16 -> float 并打印
     for (int64_t i = 0; i < size; i++) {
@@ -218,8 +218,8 @@ void ComputeGoldenData(const std::vector<float>& inputData, std::vector<float>& 
                        int64_t axis = DEFAULT_AXIS)
 {
     const int64_t dimNum = INPUT_SHAPE.size();
-    CHECK_RET(axis >= 0 && axis < dimNum, LOG_PRINT("Invalid axis: %ld", axis); return );
-    CHECK_RET(dimNum == 2, LOG_PRINT("Only support 2D input for normalization"); return );
+    CHECK_RET(axis >= 0 && axis < dimNum, LOG_PRINT("Invalid axis: %ld", axis); return);
+    CHECK_RET(dimNum == 2, LOG_PRINT("Only support 2D input for normalization"); return);
 
     const int64_t rows = INPUT_SHAPE[0]; // 行数（第0维）
     const int64_t cols = INPUT_SHAPE[1]; // 列数（第1维）
@@ -336,8 +336,8 @@ int VerifyResult(const std::vector<float>& goldenData, const std::vector<int64_t
 
     // 3. 打印验证结果
     LOG_PRINT("=== %s Result Verification ===", dataTypeStr.c_str());
-    LOG_PRINT("Max Error: %.6f", maxError);
-    LOG_PRINT("Avg Error: %.6f", avgError);
+    LOG_PRINT("Max Diff: %.6f", maxError);
+    LOG_PRINT("Avg Diff: %.6f", avgError);
 
     // 4. 精度校验
     const float errorThreshold = (std::is_same<T, float>::value) ? 1e-5f : 1e-3f;
