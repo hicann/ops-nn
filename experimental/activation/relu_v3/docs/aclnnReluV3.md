@@ -104,6 +104,7 @@ aclnnStatus aclnnReluV3(
 
 - 确定性计算：
   - aclnnReluV3默认确定性实现。
+- 输入x的最后一维必须是8的倍数。
 
 ## 调用示例
 
