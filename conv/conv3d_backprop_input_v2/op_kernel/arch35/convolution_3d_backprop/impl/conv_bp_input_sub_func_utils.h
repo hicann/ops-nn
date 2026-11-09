@@ -55,6 +55,11 @@ constexpr uint8_t SHIFT_VALUE_LEN = 58;
 constexpr uint32_t
     BIT16_GATHER_MAX_BUF_SIZE = 131072; // (65535 + 1) * sizeof(bfoat16), 16bit情况下 vgather index能取到的最大值为65535
 #endif
+// vselr scatter padding per (cout1, hkWk) NZ staging row: 16 elems = 1 * 32B block, rotating
+// scatter destinations by 1 bank per row to avoid 32B bank conflicts (same coprime effect
+// as the historical 17-block pad, less UB waste).
+constexpr uint32_t VSELR_SCATTER_PAD_ELEMS = 16;
+constexpr uint32_t VSELR_SCATTER_PAD_BLOCKS = 1; // the same padding in 32B blocks (DataCopyParams stride unit)
 
 static __aicore__ inline uint32_t Div16(uint32_t a) { return a >> SHIFT_BIT_4; }
 

@@ -306,6 +306,8 @@ __aicore__ inline void InitSingleShapeParams(Intf* self)
     self->ctx.singleShapeM_ = 0;
     self->ctx.singleShapeCin_ = 0;
     self->ctx.singleShapeCout_ = 0;
+    self->ctx.groupNzUbBytes_ = 0;
+    self->ctx.vselrScatterPadElems_ = 0;
     self->ctx.singleShapeHWk_ = self->ctx.tiling_->hkWk;
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK) {
         self->ctx.singleShapeHWk_ = self->ctx.tiling_->wk;

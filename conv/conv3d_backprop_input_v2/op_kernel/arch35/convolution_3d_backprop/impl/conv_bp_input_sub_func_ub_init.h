@@ -55,9 +55,48 @@ __aicore__ inline void InitUbByteSize(Intf* self)
                 GROUP_UB_BUF_SIZE = BIT16_GATHER_MAX_BUF_SIZE;
             }
 #endif
-            self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, GROUP_UB_BUF_SIZE);
-            self->ctx.pipe_.InitBuffer(self->ctx.nzVecBuf_, GROUP_UB_BUF_SIZE);
-            self->ctx.pipe_.InitBuffer(self->ctx.idxVecBuf_, AscendC::VECTOR_REG_WIDTH);
+            // 16-bit types: nd/nz staging sized by the actual window [cout1G, hkWk, cin1G,
+            // BLOCK_CUBE, c0]; nz additionally reserves VSELR_SCATTER_PAD_ELEMS per
+            // (cout1, hkWk) row (bank-conflict avoidance) when vselr is statically reachable
+            // and it fits, degrading to 0 otherwise. groupNzUbBytes_ feeds the runtime vselr
+            // fallback in UseVselr4GroupTransdata. Non-16-bit types: vgather only.
+            if constexpr (std::is_same<typename Intf::SrcT, bfloat16_t>::value ||
+                          std::is_same<typename Intf::SrcT, half>::value) {
+                uint32_t winElems = self->ctx.tiling_->cout1G * static_cast<uint32_t>(self->ctx.tiling_->hkWk) *
+                                    self->ctx.tiling_->cin1G * BLOCK_CUBE * self->ctx.tiling_->c0;
+                uint32_t winBytes = winElems * sizeof(typename Intf::SrcT);
+                constexpr bool vselrFormatOk = Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NCDHW;
+                bool padNz = vselrFormatOk && (self->ctx.tiling_->hkWk > 4) && (self->ctx.tiling_->hkWk < 16) &&
+                             ((self->ctx.tiling_->cin / self->ctx.tiling_->oriGroup) > 1);
+                uint32_t padBytes = 0;
+                if (padNz) {
+                    padBytes = self->ctx.tiling_->cout1G * static_cast<uint32_t>(self->ctx.tiling_->hkWk) *
+                               VSELR_SCATTER_PAD_ELEMS * sizeof(typename Intf::SrcT);
+                }
+                uint32_t ndBytes = winBytes < GROUP_UB_BUF_SIZE ? winBytes : GROUP_UB_BUF_SIZE;
+                uint32_t nzBudget = UB_SIZE - 3 * AscendC::VECTOR_REG_WIDTH - ndBytes;
+                // tier ladder: padded window -> unpadded window -> clip (runtime fallback to vgather)
+                uint32_t nzPaddedBytes = winBytes + padBytes;
+                uint32_t nzBytes = nzBudget;
+                uint32_t padElems = 0;
+                if (padNz && nzPaddedBytes <= nzBudget) {
+                    nzBytes = nzPaddedBytes;
+                    padElems = VSELR_SCATTER_PAD_ELEMS;
+                } else if (winBytes <= nzBudget) {
+                    nzBytes = winBytes;
+                }
+                self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, ndBytes);
+                self->ctx.pipe_.InitBuffer(self->ctx.nzVecBuf_, nzBytes);
+                self->ctx.groupNzUbBytes_ = nzBytes;
+                self->ctx.vselrScatterPadElems_ = padElems;
+                self->ctx.pipe_.InitBuffer(self->ctx.idxVselrBuf_, AscendC::VECTOR_REG_WIDTH);
+                self->ctx.pipe_.InitBuffer(self->ctx.idxVscatterBuf_, AscendC::VECTOR_REG_WIDTH);
+                self->ctx.pipe_.InitBuffer(self->ctx.idxVecBuf_, AscendC::VECTOR_REG_WIDTH);
+            } else {
+                self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, GROUP_UB_BUF_SIZE);
+                self->ctx.pipe_.InitBuffer(self->ctx.nzVecBuf_, GROUP_UB_BUF_SIZE);
+                self->ctx.pipe_.InitBuffer(self->ctx.idxVecBuf_, AscendC::VECTOR_REG_WIDTH);
+            }
         }
     } else if constexpr (Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIV_SCALAR {

@@ -77,6 +77,35 @@ __simd_vf__ inline void ExpandGatherIdxByStride(__ubuf__ IndexT* idxAddr, uint16
     }
 }
 
+/* gen vselr gather/scatter index rows from the seed row (c0PerReg entries):
+   vselrIdx[i][c]   = i + c * hkWk (gathers [c * hkWk + i] from source UB)
+   vscatterIdx[i][c] = i * scatterStride + c (scatters to [i * scatterStride + c] in dest UB)
+   rows are c0PerReg entries, not 32B aligned when c0PerReg < 16, so store unaligned */
+template <class IndexT>
+__simd_vf__ inline void ExpandVselrIdxByStride(__ubuf__ IndexT* vselrIdxAddr, __ubuf__ IndexT* vscatterIdxAddr,
+                                               uint16_t repeatTimes, uint16_t numPerRepeat, uint16_t initialDstOffset,
+                                               uint32_t mask, IndexT vselrKStride, IndexT vscatterKStride)
+{
+    AscendC::Reg::RegTensor<IndexT> idxVselrReg;
+    AscendC::Reg::RegTensor<IndexT> idxVscatterReg;
+    AscendC::Reg::DataCopy<IndexT>(idxVselrReg, vselrIdxAddr);
+    AscendC::Reg::DataCopy<IndexT>(idxVscatterReg, vscatterIdxAddr);
+    AscendC::Reg::MaskReg maskReg = AscendC::Reg::UpdateMask<IndexT>(mask);
+    AscendC::Reg::UnalignReg ureg0;
+    AscendC::Reg::UnalignReg ureg1;
+
+    vselrIdxAddr += initialDstOffset;
+    vscatterIdxAddr += initialDstOffset;
+    for (uint16_t i = 0; i < repeatTimes; ++i) {
+        AscendC::Reg::Adds<IndexT, IndexT>(idxVselrReg, idxVselrReg, vselrKStride, maskReg);
+        AscendC::Reg::DataCopyUnAlign(vselrIdxAddr, idxVselrReg, ureg0, numPerRepeat);
+        AscendC::Reg::DataCopyUnAlignPost(vselrIdxAddr, ureg0, 0);
+        AscendC::Reg::Adds<IndexT, IndexT>(idxVscatterReg, idxVscatterReg, vscatterKStride, maskReg);
+        AscendC::Reg::DataCopyUnAlign(vscatterIdxAddr, idxVscatterReg, ureg1, numPerRepeat);
+        AscendC::Reg::DataCopyUnAlignPost(vscatterIdxAddr, ureg1, 0);
+    }
+}
+
 template <class SrcBT, class IndexT>
 __simd_vf__ inline void GatherDn2Nz4Group(__ubuf__ IndexT* idxAddr, __ubuf__ SrcBT* srcAddr, __ubuf__ SrcBT* dstAddr,
                                           uint16_t cout1G, uint16_t hkWk, uint16_t cin1GIterMax,
@@ -101,6 +130,45 @@ __simd_vf__ inline void GatherDn2Nz4Group(__ubuf__ IndexT* idxAddr, __ubuf__ Src
                 // copy gather output data from reg to ub
                 AscendC::Reg::StoreAlign<SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
             }
+        }
+    }
+}
+
+/* vselr Dn2Nz: for each nIndex (cin0), stream-read the ND staging and gather/scatter
+   to the NZ staging. Data flow: ndTensor -> ureg -> srcReg -> (GatherImpl) dstReg -> (DataCopyScatter) dst.
+   Each pass consumes srcCo0Stride source elements (auto-updated srcAddr) and scatters
+   mask = c0PerReg * hkWk lanes by the vscatter index table. */
+template <class SrcT, class IndexT>
+__simd_vf__ inline void GatherScatterDn2Nz4Group(__ubuf__ IndexT* vselrIndexAddr, __ubuf__ IndexT* vscatterIndexAddr,
+                                                 __ubuf__ SrcT* srcAddr, __ubuf__ SrcT* dstAddr, uint16_t nLoopTimes,
+                                                 uint16_t co1LoopTimes, uint8_t passCnt, uint32_t mask,
+                                                 uint32_t dstNStride, uint32_t srcCo0Stride, uint32_t dstCo0Stride,
+                                                 uint32_t dstCo1Stride)
+{
+    AscendC::Reg::RegTensor<SrcT> srcReg;
+    AscendC::Reg::RegTensor<SrcT> dstReg;
+    AscendC::Reg::RegTensor<IndexT> vselrIndex;
+    AscendC::Reg::RegTensor<IndexT> vscatterIndex;
+    AscendC::Reg::DataCopy<IndexT>(vselrIndex, vselrIndexAddr);
+    AscendC::Reg::DataCopy<IndexT>(vscatterIndex, vscatterIndexAddr);
+    AscendC::Reg::MaskReg maskReg = AscendC::Reg::UpdateMask<IndexT>(mask);
+    AscendC::Reg::UnalignReg ureg;
+
+    AscendC::Reg::DataCopyUnAlignPre(ureg, srcAddr);
+    __ubuf__ SrcT* dst = dstAddr;
+    for (uint16_t nIndex = 0; nIndex < nLoopTimes; ++nIndex) {
+        dst = dstAddr + nIndex * dstNStride;
+        for (uint16_t co1Index = 0; co1Index < co1LoopTimes; ++co1Index) {
+            for (uint8_t passIdx = 0; passIdx < passCnt; ++passIdx) {
+                // Data flow: ndTensor -> ureg -> srcReg. Auto update srcAddr: srcAddr += srcCo0Stride
+                AscendC::Reg::DataCopyUnAlign(srcReg, ureg, srcAddr, srcCo0Stride);
+                // vselr not support fp32, so here use API: GatherImpl
+                AscendC::Reg::GatherImpl(dstReg, srcReg, vselrIndex);
+                // scatter gather output data from reg to ub according to scatter index
+                AscendC::Reg::DataCopyScatter<SrcT, IndexT>(dst, dstReg, vscatterIndex, maskReg);
+                dst += dstCo0Stride;
+            }
+            dst += dstCo1Stride;
         }
     }
 }

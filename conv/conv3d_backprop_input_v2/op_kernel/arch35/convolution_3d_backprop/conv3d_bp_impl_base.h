@@ -113,6 +113,8 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, singleShapeCin_);
         DEFINE_STUCT_FIELD(uint32_t, singleShapeCout_);
         DEFINE_STUCT_FIELD(uint32_t, curEnlargeCin1_);
+        DEFINE_STUCT_FIELD(uint32_t, groupNzUbBytes_);
+        DEFINE_STUCT_FIELD(uint32_t, vselrScatterPadElems_);
         DEFINE_STUCT_FIELD(uint32_t, singleShapeDin_);
         DEFINE_STUCT_FIELD(uint32_t, curDinStartIdx_);
         DEFINE_STUCT_FIELD(int32_t, curHoStartIdx_);
@@ -194,6 +196,8 @@ public:
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, ndVecBuf_, TPosition::VECIN);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, nzVecBuf_, TPosition::VECOUT);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, idxVecBuf_, TPosition::VECCALC);
+        DEFINE_STUCT_TEMPLATE_FIELD(TBuf, idxVselrBuf_, TPosition::VECCALC);
+        DEFINE_STUCT_TEMPLATE_FIELD(TBuf, idxVscatterBuf_, TPosition::VECCALC);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, maskVecBuf_, TPosition::VECCALC);
         using ubLocalTensor = LocalTensor<typename Intf::SrcBT>;
         DEFINE_STUCT_FIELD(ubLocalTensor, vecInBuf_);
