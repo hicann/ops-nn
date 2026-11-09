@@ -191,9 +191,9 @@ SIMT采用线程级并行模型，每个线程独立处理元素：
 ```cpp
 // SIMT: 使用线程级并行，无需显式buffer管理
 __simt_vf__ LAUNCH_BOUND(2048) void GatherSimt(...) {
-    for (INDEX_SIZE_T index = Simt::GetThreadIdx();
+    for (INDEX_SIZE_T index = threadIdx.x;
          index < currentCoreElements;
-         index += Simt::GetThreadNum()) {  // 线程跳跃式并行
+         index += blockDim.x) {  // 线程跳跃式并行
         // 每个线程独立计算单点索引并访问
         INDEX_SIZE_T gatherI = Simt::UintDiv(yIndex, m0, shift0);
         INDICES_T indicesValue = indices[gatherI];  // 根据单点索引gatherI直接访问GM
