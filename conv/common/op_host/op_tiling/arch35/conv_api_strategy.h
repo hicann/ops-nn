@@ -16,7 +16,6 @@
 #define CONV_API_STRATEGY_H
 
 #include <cstdint>
-#include "conv_api_tiling_base.h"
 
 namespace conv_tiling_algo_bb {
 class ConvTilingAlgorithmBBmode;

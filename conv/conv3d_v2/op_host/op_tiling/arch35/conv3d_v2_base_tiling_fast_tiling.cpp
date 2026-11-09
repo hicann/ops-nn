@@ -15,7 +15,6 @@
 #include "conv3d_v2_base_tiling.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_basic_block.h"
 #include "conv/common/op_host/op_tiling/arch35/conv3d_basic_block_strategy.h"
-#include "conv/common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_BBmode.h"
 #include "conv/common/op_host/op_tiling/arch35/conv3d_dimension_strategy.h"
 
 namespace optiling {

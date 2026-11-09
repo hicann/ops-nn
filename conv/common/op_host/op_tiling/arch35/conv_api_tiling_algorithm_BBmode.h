@@ -16,11 +16,9 @@
 #ifndef ASCENDC_TILING_CONV_API_TILING_ALGORITHM_BBMODE_H
 #define ASCENDC_TILING_CONV_API_TILING_ALGORITHM_BBMODE_H
 
-#include <cstdint>
 #include <unordered_map>
 #include <memory>
 #include "conv_api_tiling_algorithm_base.h"
-#include "conv_api_tiling_base.h"
 #include "conv_api_strategy.h"
 
 namespace conv_tiling_algo_bb {

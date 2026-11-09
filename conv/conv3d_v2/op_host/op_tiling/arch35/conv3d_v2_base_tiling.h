@@ -19,7 +19,6 @@
 #include "log/log.h"
 #include "error_util.h"
 #include "op_host/tiling_base.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "conv3d_v2_tiling.h"
 #include "conv3d_v2_api_tiling.h"
 #include "conv3d_v2_tiling_utils.h"

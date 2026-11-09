@@ -15,13 +15,10 @@
 #ifndef CONV_BASIC_BLOCK_H
 #define CONV_BASIC_BLOCK_H
 
-#include <vector>
 #include <utility>
 #include <unordered_set>
 #include <numeric>
-#include <algorithm>
 #include <limits>
-#include <cmath>
 #include <memory>
 #include "conv_api_tiling_base.h"
 #include "conv_base_numblocks_decision.h"
