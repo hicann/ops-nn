@@ -54,6 +54,83 @@ __simd_callee__ inline void ReduceFullAR(RegTensor<float>& result, RegTensor<flo
 }
 
 template <typename T_X>
+__simd_vf__ inline void CalculateR1Vf(__ubuf__ T_X* xUb, __ubuf__ float* sumUb, __ubuf__ float* squareUb,
+                                      uint32_t count, uint16_t loops)
+{
+    RegTensor<float> value;
+    RegTensor<float> square;
+    for (uint16_t i = 0; i < loops; ++i) {
+        MaskReg valid = UpdateMask<float>(count);
+        const uint32_t offset = static_cast<uint32_t>(i) * VL_FP32;
+        if constexpr (IsSameType<T_X, float>::value) {
+            AscendC::Reg::LoadAlign(value, xUb + offset);
+        } else {
+            RegTensor<T_X> input;
+            AscendC::Reg::LoadAlign<T_X, LoadDist::DIST_UNPACK_B16>(input, xUb + offset);
+            AscendC::Reg::Cast<float, T_X, castTraitB162B32>(value, input, valid);
+        }
+        Mul(square, value, value, valid);
+        AscendC::Reg::StoreAlign(sumUb + offset, value, valid);
+        AscendC::Reg::StoreAlign(squareUb + offset, square, valid);
+    }
+}
+
+template <typename T_X>
+__simd_vf__ inline void CalculateShortRVf(__ubuf__ T_X* xUb, __ubuf__ float* sumUb, __ubuf__ float* squareUb,
+                                          uint32_t rows, uint32_t reduceLen, uint16_t loops, float scale, float restore)
+{
+    RegTensor<uint32_t> rowOffsets;
+    RegTensor<uint32_t> offsets;
+    RegTensor<float> value;
+    RegTensor<float> square;
+    RegTensor<float> sumHi;
+    RegTensor<float> sumLo;
+    RegTensor<float> squareHi;
+    RegTensor<float> squareLo;
+    MaskReg full = CreateMask<float, MaskPattern::ALL>();
+    AscendC::Reg::Arange((RegTensor<int32_t>&)rowOffsets, static_cast<int32_t>(0));
+    Muls(rowOffsets, rowOffsets, reduceLen, full);
+    for (uint16_t i = 0; i < loops; ++i) {
+        const uint32_t rowOffset = static_cast<uint32_t>(i) * VL_FP32;
+        uint32_t activeRows = rows;
+        MaskReg valid = UpdateMask<float>(rows);
+        activeRows -= rows;
+        MaskReg validB16 = UpdateMask<half>(activeRows);
+        Duplicate(sumHi, 0.0f, full);
+        Duplicate(sumLo, 0.0f, full);
+        Duplicate(squareHi, 0.0f, full);
+        Duplicate(squareLo, 0.0f, full);
+        __ubuf__ T_X* rowBase = xUb + rowOffset * reduceLen;
+        for (uint16_t column = 0; column < reduceLen; ++column) {
+            // ZEROING gives inactive lanes a safe zero index in the final tile.
+            Adds(offsets, rowOffsets, static_cast<uint32_t>(column), valid);
+            if constexpr (IsSameType<T_X, float>::value) {
+                AscendC::Reg::Gather(value, rowBase, offsets, valid);
+            } else {
+                RegTensor<uint16_t> offsetsB16;
+                RegTensor<T_X> gathered;
+                RegTensor<T_X> unpacked;
+                AscendC::Reg::Pack(offsetsB16, offsets);
+                AscendC::Reg::Gather(gathered, rowBase, offsetsB16, validB16);
+                AscendC::Reg::UnPack((RegTensor<uint32_t>&)unpacked, (RegTensor<uint16_t>&)gathered);
+                AscendC::Reg::Cast<float, T_X, castTraitB162B32>(value, unpacked, valid);
+            }
+            Mul(square, value, value, valid);
+            ScaleSumValue<T_X>(value, scale, valid);
+            AccumulateWithError(sumHi, sumLo, value, valid);
+            AccumulateWithError(squareHi, squareLo, square, valid);
+        }
+        ClearNonFiniteCorrection(sumLo, valid);
+        ClearNonFiniteCorrection(squareLo, valid);
+        Add(sumHi, sumHi, sumLo, valid);
+        Add(squareHi, squareHi, squareLo, valid);
+        ScaleSumValue<T_X>(sumHi, restore, valid);
+        AscendC::Reg::StoreAlign(sumUb + rowOffset, sumHi, valid);
+        AscendC::Reg::StoreAlign(squareUb + rowOffset, squareHi, valid);
+    }
+}
+
+template <typename T_X>
 class INTrainingReduceV2ARFullReduce {
 public:
     using TSum = float; // 输出恒 fp32
@@ -102,6 +179,9 @@ public:
         pipe_.InitBuffer(inQueueX_, DOUBLE_BUFFER_NUM, inputBufferBytes_);
         pipe_.InitBuffer(outQueueSum_, DOUBLE_BUFFER_NUM, outputBufferBytes_);
         pipe_.InitBuffer(outQueueSquareSum_, DOUBLE_BUFFER_NUM, outputBufferBytes_);
+        if (rAlign_ == 0) {
+            return;
+        }
         pipe_.InitBuffer(binaryAddBuf_, scratchBufferBytes_);
         pipe_.InitBuffer(squareBinaryAddBuf_, scratchBufferBytes_);
     }
@@ -121,6 +201,10 @@ public:
     {
         if (isSubRTiling_ != 0) {
             ProcessSubR();
+            return;
+        }
+        if (rAlign_ == 0) {
+            ProcessPackedRows();
             return;
         }
         const int64_t totalCnt = totalTiles_;
@@ -152,6 +236,46 @@ public:
     }
 
 private:
+    __aicore__ inline void ProcessPackedRows()
+    {
+        const int64_t startIndex = blockIdx_ * perCoreCnt_;
+        if (startIndex >= totalTiles_) {
+            return;
+        }
+        const int64_t remaining = totalTiles_ - startIndex;
+        const int64_t endIndex = startIndex + (perCoreCnt_ < remaining ? perCoreCnt_ : remaining);
+        for (int64_t tile = startIndex; tile < endIndex; ++tile) {
+            const int64_t offset = tile * cInner_;
+            const uint32_t count = static_cast<uint32_t>(tile == totalTiles_ - 1 ? cTail_ : cInner_);
+            // A single packed DMA replaces one padded DMA block per output row.
+            const uint32_t inputCount = count * static_cast<uint32_t>(numR_);
+            CopyInX(offset * numR_, 1, inputCount, inputCount);
+            LocalTensor<T_X> xLocal = inQueueX_.DeQue<T_X>();
+            LocalTensor<TSum> sumLocal = outQueueSum_.AllocTensor<TSum>();
+            LocalTensor<TSum> squareSumLocal = outQueueSquareSum_.AllocTensor<TSum>();
+            CalculatePackedRows(xLocal, sumLocal, squareSumLocal, count);
+            inQueueX_.FreeTensor(xLocal);
+            outQueueSum_.EnQue(sumLocal);
+            outQueueSquareSum_.EnQue(squareSumLocal);
+            CopyOutSumSquareSum(offset, count);
+        }
+    }
+
+    __aicore__ inline void CalculatePackedRows(const LocalTensor<T_X>& xLocal, LocalTensor<TSum>& sumLocal,
+                                               LocalTensor<TSum>& squareSumLocal, uint32_t count)
+    {
+        __ubuf__ T_X* xUb = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ float* sumUb = (__ubuf__ float*)sumLocal.GetPhyAddr();
+        __ubuf__ float* squareUb = (__ubuf__ float*)squareSumLocal.GetPhyAddr();
+        const uint16_t loops = static_cast<uint16_t>((count + VL_FP32 - 1) / VL_FP32);
+        if (numR_ == 1) {
+            asc_vf_call<CalculateR1Vf<T_X>>(xUb, sumUb, squareUb, count, loops);
+        } else {
+            asc_vf_call<CalculateShortRVf<T_X>>(xUb, sumUb, squareUb, count, static_cast<uint32_t>(numR_), loops,
+                                                sumScale_, sumRestore_);
+        }
+    }
+
     __aicore__ inline void CopyInX(int64_t offset, uint32_t cnt, uint32_t r, uint32_t rAlign)
     {
         LocalTensor<T_X> xLocal = inQueueX_.AllocTensor<T_X>();

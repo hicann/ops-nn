@@ -64,6 +64,13 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
     if (dataType == ge::DT_FLOAT16) {
         elemSize = FP16_BYTE;
     }
+    if (r <= vlfp32 && DoPackedRowTiling(static_cast<uint64_t>(elemSize))) {
+        return true;
+    }
+    if (r == 1) {
+        OP_LOGE(GetNodeName(), "R=1 input/output buffers exceed UB capacity");
+        return false;
+    }
 
     const uint64_t rValue = static_cast<uint64_t>(r);
     const uint64_t elemSizeValue = static_cast<uint64_t>(elemSize);
@@ -168,6 +175,45 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
     td_.outputBufferBytes = outputBufferBytes;
     td_.scratchBufferBytes = scratchBufferBytes;
     td_.partialBufferBytes = 0;
+    return true;
+}
+
+// Pack consecutive N*C rows without per-row DMA padding. For short reductions,
+// each vector lane owns one output row; R=1 keeps the elementwise fast path.
+bool INTrainingReduceV2ARFullReduceTiling::DoPackedRowTiling(uint64_t elemSize)
+{
+    const uint64_t usable = aicoreParams_.ubSize - RESERVE_FOR_ALIGN;
+    const uint64_t vectorElements = static_cast<uint64_t>(vlfp32);
+    const uint64_t rowBytes = static_cast<uint64_t>(r) * elemSize;
+    const uint64_t bytesPerRow = DOUBLE_BUFFER_COUNT * (rowBytes + REDUCE_OUTPUT_COUNT * sizeof(float));
+    const uint64_t maxTileRows = usable / bytesPerRow / vectorElements * vectorElements;
+    // Small mocked UB capacities can still use the original full-AR path.
+    if (maxTileRows == 0) {
+        return false;
+    }
+    const uint64_t balancedRows = Ops::Base::CeilAlign(Ops::Base::CeilDiv(totalRows_, aicoreParams_.blockDim),
+                                                       vectorElements);
+    const uint64_t maxLoopRows = std::numeric_limits<uint16_t>::max() * vectorElements;
+    const uint64_t maxCopyRows = std::numeric_limits<uint32_t>::max() / rowBytes / vectorElements * vectorElements;
+    const uint64_t tileRows = std::min({maxTileRows, balancedRows, maxLoopRows, maxCopyRows});
+    const uint64_t totalTiles = Ops::Base::CeilDiv(totalRows_, tileRows);
+    const uint64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, aicoreParams_.blockDim);
+    blockNum_ = Ops::Base::CeilDiv(totalTiles, tilesPerCore);
+
+    td_.numN = a1;
+    td_.numC = a0;
+    td_.numR = r;
+    td_.rAlign = 0; // Packed rows use masked gathers, with no per-row padding.
+    td_.cInner = static_cast<int64_t>(tileRows);
+    td_.cOuter = static_cast<int64_t>(totalTiles);
+    td_.cTail = static_cast<int64_t>(totalRows_ - (totalTiles - 1) * tileRows);
+    td_.perCoreCnt = static_cast<int64_t>(tilesPerCore);
+    td_.totalRows = static_cast<int64_t>(totalRows_);
+    td_.totalElements = static_cast<int64_t>(totalElements_);
+    td_.totalTiles = static_cast<int64_t>(totalTiles);
+    // Full vector loads, including the last partial vector, stay inside UB.
+    td_.inputBufferBytes = tileRows * rowBytes;
+    td_.outputBufferBytes = tileRows * sizeof(float);
     return true;
 }
 
