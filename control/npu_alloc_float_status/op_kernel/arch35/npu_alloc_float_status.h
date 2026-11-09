@@ -32,11 +32,21 @@ __aicore__ inline void Process(GM_ADDR data)
     GlobalTensor<T> dataGmTensor;
     dataGmTensor.SetGlobalBuffer(dataGm, ALLOC_ELEMENT_COUNT);
 
-    for (int32_t i = 0; i < ALLOC_ELEMENT_COUNT; i++) {
-        dataGmTensor.SetValue(i, static_cast<T>(0));
-    }
-
-    DataCacheCleanAndInvalid<T, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(dataGmTensor);
+    // 8 x sizeof(T) = 32B 整块搬运: 向量单元填零后经 DataCopy 块写 GM,
+    // 替代循环 SetValue 逐元素标量写(生产代码禁逐元素 GM 访问);
+    // DataCopy 走 MTE 搬运通道写 GM, 无需显式 DataCacheCleanAndInvalid。
+    TPipe pipe;
+    TBuf<QuePosition::VECCALC> zerosBuf;
+    pipe.InitBuffer(zerosBuf, ALLOC_ELEMENT_COUNT * sizeof(T));
+    LocalTensor<T> zerosLocal = zerosBuf.Get<T>();
+    Duplicate(zerosLocal, static_cast<T>(0), ALLOC_ELEMENT_COUNT);
+    // V(vector 写 UB) → MTE3(搬出) 事件屏障: 裸 TBuf 路径无 TQue 隐式同步,
+    // 缺屏障时 MTE3 可先于 Duplicate 完成读取 UB, 搬出残留数据;
+    // 参考实现: index_simd.h CopyOut / kernel_tpipe_impl.h TPipe 写 GM 路径同款 V_MTE3 屏障。
+    event_t eventIdVtoMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVtoMTE3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVtoMTE3);
+    DataCopy(dataGmTensor, zerosLocal, ALLOC_ELEMENT_COUNT);
 }
 
 } // namespace NsNPUAllocFloatStatus

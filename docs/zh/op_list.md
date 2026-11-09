@@ -942,7 +942,7 @@
     <td><a href="../../control/npu_alloc_float_status/README.md">npu_alloc_float_status</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>分配8个float32零值的Tensor，用于NPU溢出状态检测。</td>

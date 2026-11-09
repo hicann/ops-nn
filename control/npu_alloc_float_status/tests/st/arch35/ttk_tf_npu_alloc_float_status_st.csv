@@ -1,0 +1,2 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,attributes,output_tensor_indexes,golden_api,input_data_ranges,precision_tolerances,absolute_precision,is_enabled,remark,soc_series,priority
+tf_npu_alloc_float_status_L0_001,npu_device.gen_npu_ops.npu_alloc_float_status,(),(),(),{},,,,,,True,tf_form_a_official_positive,,0

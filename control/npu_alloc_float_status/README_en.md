@@ -59,10 +59,8 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- This operator has no inputs and no attributes, and has only one output `data`.
 - The shape of the output `data` is fixed to (8,) and cannot be changed. The 8 elements correspond to the overflow status flags of the NPU hardware (32 bytes in total).
 - The dtype of the output `data` supports only float32. Other data types are not supported.
-- The format of the output `data` supports only ND.
 - The output values are always all zeros (8 float32 zero values) and do not depend on any input.
 - This operator is a deterministic operator. The output is fixed all zeros, with no parallel reduction, so it is deterministic by nature.
 
@@ -78,7 +76,7 @@ English | [简体中文](./README.md)
   <tr>
     <td>Graph-mode invocation</td>
     <td><a href="./examples/test_geir_npu_alloc_float_status.cpp">test_geir_npu_alloc_float_status</a></td>
-    <td>See <a href="../../docs/zh/invocation/quick_op_invocation.md">Operator Invocation</a> to complete operator compilation and verification.</td>
+    <td>Calls the NPUAllocFloatStatus operator through graph construction with the <a href="./op_graph/npu_alloc_float_status_proto.h">operator IR</a>.</td>
   </tr>
 </tbody>
 </table>

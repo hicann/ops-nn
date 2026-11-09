@@ -57,10 +57,8 @@
 
 ## 约束说明
 
-- 该算子无输入、无属性，仅有一个输出`data`。
 - 输出`data`的shape固定为(8,)，不可变更。8个元素对应NPU硬件的溢出状态标志位（共32字节）。
 - 输出`data`的dtype仅支持float32，不支持其他数据类型。
-- 输出`data`的format仅支持ND。
 - 输出值始终为全零（8个float32零值），不依赖任何输入。
 - 该算子为确定性算子，输出固定全零，无并行归约，天然确定性。
 
@@ -76,7 +74,7 @@
   <tr>
     <td>图模式调用</td>
     <td><a href="./examples/test_geir_npu_alloc_float_status.cpp">test_geir_npu_alloc_float_status</a></td>
-    <td>参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
+    <td>通过<a href="./op_graph/npu_alloc_float_status_proto.h">算子IR</a>构图方式调用NPUAllocFloatStatus算子。</td>
   </tr>
 </tbody>
 </table>

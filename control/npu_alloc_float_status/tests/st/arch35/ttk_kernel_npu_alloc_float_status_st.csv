@@ -1,0 +1,2 @@
+testcase_name,network_name,op_name,input_shapes,input_dtypes,input_formats,output_shapes,output_dtypes,output_formats,input_ori_shapes,input_ori_formats,output_ori_shapes,output_ori_formats,attributes,input_data_ranges,precision_tolerances,absolute_precision,output_inplace_indexes,output_shape_unknown_indexes,is_enabled,remark,soc_series,priority,dump_file_prefix,manual_input_binaries,manual_golden_binaries
+NPUAllocFloatStatus_L0_bound_001,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((8,),)","('float32',)","('ND',)",(),,"((8,),)","('ND',)",{},,,1e-08,(),(),True,,,0,,(),()

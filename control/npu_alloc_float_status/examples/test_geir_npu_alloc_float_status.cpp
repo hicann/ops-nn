@@ -25,14 +25,12 @@
 
 #include "graph.h"
 #include "types.h"
-#include "tensor.h"
-#include "ge_error_codes.h"
+#include "ops_proto_math.h"
+#include "error_codes.h"
 #include "ge_api_types.h"
 #include "ge_api.h"
-#include "array_ops.h"
 #include "ge_ir_build.h"
 
-#include "nn_other.h"
 #include "../op_graph/npu_alloc_float_status_proto.h"
 
 #define FAILED -1
@@ -130,6 +128,8 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
         }
     }
     input_tensor = Tensor(input_tensor_desc, pData, data_len);
+    // Tensor(const uint8_t*, size_t) 构造为拷贝语义(不接管所有权), 构造完成后须释放宿主缓冲
+    delete[] pData;
     return SUCCESS;
 }
 

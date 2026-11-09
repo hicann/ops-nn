@@ -1,0 +1,13 @@
+testcase_name,network_name,op_name,input_shapes,input_dtypes,input_formats,output_shapes,output_dtypes,output_formats,input_ori_formats,attributes,input_data_ranges,precision_tolerances,absolute_precision,output_inplace_indexes,output_shape_unknown_indexes,is_enabled,remark,soc_series,priority,dump_file_prefix,manual_input_binaries,manual_golden_binaries,dyn_input_shapes
+NPUAllocFloatStatus_L0_bound_001,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((8,),)","('float32',)","('ND',)",,{},,,1e-08,(),(),True,,,0,,(),(),[]
+NPUAllocFloatStatus_L2_exc_dtype_001,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((8,),)","('bfloat16',)","('ND',)",,{},,,1e-08,(),(),True,dtype不在合法域; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_dtype_002,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((8,),)","('bool',)","('ND',)",,{},,,,(),(),True,dtype不在合法域; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_format_003,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((8,),)","('float32',)","('FRACTAL_NZ',)",,{},,,1e-08,(),(),True,format不支持; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_shape_004,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((999,),)","('float32',)","('ND',)",,{},,,1e-08,(),(),True,输出shape与期望不匹配; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_constraint_005,UNKNOWN,NPUAllocFloatStatus,(),(),(),"(None,)","('float32',)","('ND',)",,{},,,1e-08,(),(),True,EX-S6; 约束违反; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_dimval_006,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((),)","('float32',)","('ND',)",,{},,,1e-08,(),(),True,维度下溢; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_constraint_007,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((8,1,),)","('float32',)","('ND',)",,{},,,1e-08,(),(),True,EX-S3; 约束违反; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_constraint_008,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((8,),)","('float16',)","('ND',)",,{},,,1e-08,(),(),True,EX-S1; 约束违反; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_constraint_009,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((8,),)","('float32',)","('NCHW',)",,{},,,1e-08,(),(),True,EX-S2; 约束违反; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_constraint_010,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((4,),)","('float32',)","('ND',)",,{},,,1e-08,(),(),True,EX-S4; 约束违反; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()
+NPUAllocFloatStatus_L2_exc_constraint_011,UNKNOWN,NPUAllocFloatStatus,(),(),(),"((0,),)","('float32',)","('ND',)",,{},,,1e-08,(),(),True,EX-S5; 约束违反; expect ERROR_CODE_UNSPECIFIED,,0,,(),(),()

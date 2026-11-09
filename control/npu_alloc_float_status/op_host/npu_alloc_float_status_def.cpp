@@ -30,8 +30,7 @@ public:
             .DynamicRankSupportFlag(false)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "npu_alloc_float_status_apt");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

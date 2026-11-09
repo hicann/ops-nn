@@ -22,7 +22,7 @@ namespace ge {
  * @brief Produces a variable with 0 in memory .
  *
  * @par Outputs:
- * y: A Tensor of type float32, output eight numbers with a value of zero.
+ * data: A Tensor of type float32, output eight numbers with a value of zero.
  *
  * @par Restrictions:
  * Warning: THIS FUNCTION IS EXPERIMENTAL.  Please do not use.
