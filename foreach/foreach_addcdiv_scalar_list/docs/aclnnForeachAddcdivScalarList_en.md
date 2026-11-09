@@ -42,18 +42,18 @@
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). First call "aclnnForeachAddcdivScalarListGetWorkspaceSize" to obtain the workspace size required for computation and the executor that contains the operator computation process. Then call "aclnnForeachAddcdivScalarList" to perform the computation.
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachAddcdivScalarListGetWorkspaceSize(
   const aclTensorList *x1,
   const aclTensorList *x2,
   const aclTensorList *x3,
   const aclTensor     *scalars,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachAddcdivScalarList(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -92,9 +92,9 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>Input</td>
       <td>Denotes the first input tensor list in the addition of the mixed operation. Corresponds to `x1` in the formula.</td>
       <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>shape is the same as that of input parameters `x2` and `x3`.</li></ul></td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -102,9 +102,9 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>Input</td>
       <td>Denotes the first input tensor list in the division of the mixed operation. Corresponds to `x2` in the formula.</td>
       <td><ul><li>Supports empty tensors.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type, data format, and shape are consistent with input parameter `x1`.</li></ul></td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -112,29 +112,29 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>Input</td>
       <td>Indicates the second input tensor list for division in the mixed operation. Corresponds to `x3` in the formula.</td>
      <td><ul><li>Supports empty tensors.</li><li>The data types of all tensors in this parameter are the same.</li><li>The data type, data format, and shape are consistent with input parameter `x1`.</li></ul></td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>scalars (aclTensor*)</td>
       <td>Input</td>
       <td>Represents the second input tensor of the multiplication in the mixed operation. Corresponds to `scalars` in the formula.</td>
-      <td><ul><li>Empty tensors are not supported.</li><li>The number of elements equals the number of tensors in `x1`.</li><li>The data type and data format are consistent with input parameter `x1`.</li></ul></td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td><ul><li>Empty tensors are not supported (except when `x1` is an empty tensor list).</li><li>The number of elements equals the number of tensors in `x1`.</li><li>The data type and data format are consistent with input parameter `x1`.</li></ul></td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Represents the output tensor list of the mixed operation. Corresponds to `y` in the corresponding formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are consistent with input parameter `x1`, and the shape size is greater than or equal to the shape size of input parameter `x1`.</li></ul></td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The length of the tensor list is the same as that of `x1`.</li><li>The data type and data format are consistent with input parameter `x1`, and the shape size (total number of elements) is the same as that of the tensor at the corresponding position of `x1`.</li></ul></td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -173,7 +173,7 @@ aclnnStatus aclnnForeachAddcdivScalarList(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -185,23 +185,32 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>The input x1, x2, x3, scalars, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data types of x1, x2, x3, scalars, and out are not within the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x1, x2, x3, scalars, and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x1, x2, x3, and out do not meet the constraints.</td>
-    </tr>
-    <tr>
       <td>The element data types of tensors in x1, x2, x3, or out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The dimension of any tensor in x1, x2, x3, or out exceeds 8.</td>
+      <td>The shapes of x1, x2, x3, and out do not meet the constraints.</td>
+    </tr>
+    <tr>
+      <td>The tensor list lengths of x1, x2, x3, and out are inconsistent.</td>
+    </tr>
+    <tr>
+      <td>A tensor list of x1, x2, x3, or out contains a null tensor pointer.</td>
+    </tr>
+    <tr>
+      <td>The number of elements in scalars is inconsistent with the number of tensors in x1.</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_NULLPTR</td>
+      <td>561103</td>
+      <td>A single tensor list contains more than 256 tensors.</td>
     </tr>
   </tbody></table>
 
@@ -252,6 +261,8 @@ aclnnStatus aclnnForeachAddcdivScalarList(
 
 - Deterministic computation:
   - aclnnForeachAddcdivScalarList defaults to a deterministic implementation.
+- A single tensor list can contain no more than 256 tensors; the operator execution fails when the limit is exceeded.
+- An empty tensor list (a tensor list containing 0 tensors) is a valid input: when `x1`, `x2`, `x3`, and `out` are all empty tensor lists, `scalars` contains 0 elements, the API returns success, no computation is performed, and `out` is not modified.
 
 ## Example
 

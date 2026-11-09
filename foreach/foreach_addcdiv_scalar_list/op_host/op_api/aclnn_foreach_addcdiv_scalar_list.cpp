@@ -55,39 +55,6 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
 }
 
-static inline bool CheckFormat(const aclTensorList* x1, const aclTensorList* x2, const aclTensorList* x3,
-                               const aclTensorList* out)
-{
-    for (uint64_t i = 0; i < x1->Size(); i++) {
-        if (IsPrivateFormat((*out)[i]->GetStorageFormat()) || IsPrivateFormat((*x1)[i]->GetStorageFormat()) ||
-            IsPrivateFormat((*x2)[i]->GetStorageFormat()) || IsPrivateFormat((*x3)[i]->GetStorageFormat())) {
-            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s",
-                                   "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
-            REPORT_PREDEFINED_ERR_MSG(
-                "EZ0035", (std::vector<const char*>{"param_name", "op_name", "incorrect_format", "reason"}),
-                (std::vector<const char*>{
-                    std::string((IsPrivateFormat((*out)[i]->GetStorageFormat()) ?
-                                     "out" :
-                                     (IsPrivateFormat((*x1)[i]->GetStorageFormat()) ?
-                                          "x1" :
-                                          (IsPrivateFormat((*x2)[i]->GetStorageFormat()) ? "x2" : "x3"))))
-                        .c_str(),
-                    "aclnnForeachAddcdivScalarList",
-                    (std::to_string(static_cast<int>(
-                         (IsPrivateFormat((*out)[i]->GetStorageFormat()) ?
-                              (*out)[i]->GetStorageFormat() :
-                              (IsPrivateFormat((*x1)[i]->GetStorageFormat()) ?
-                                   (*x1)[i]->GetStorageFormat() :
-                                   (IsPrivateFormat((*x2)[i]->GetStorageFormat()) ? (*x2)[i]->GetStorageFormat() :
-                                                                                    (*x3)[i]->GetStorageFormat()))))))
-                        .c_str(),
-                    "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW."}));
-            return false;
-        }
-    }
-    return true;
-}
-
 static inline bool CheckDtypeValid(const aclTensorList* x1, const aclTensorList* x2, const aclTensorList* x3,
                                    const aclTensor* scalars, const aclTensorList* out)
 {
@@ -118,6 +85,26 @@ static inline bool CheckDtypeValid(const aclTensorList* x1, const aclTensorList*
     return true;
 }
 
+static inline bool CheckScalars(const aclTensorList* x1, const aclTensor* scalars)
+{
+    OP_CHECK_DTYPE_NOT_SUPPORT(scalars, GetDtypeSupportList(), return false);
+    OP_CHECK_DTYPE_NOT_MATCH(scalars, (*x1)[0]->GetDataType(), return false);
+    if (scalars->GetViewShape().GetShapeSize() != static_cast<int64_t>(x1->Size())) {
+        const std::string reason = (std::string("The element count of scalars must be equal to the number of tensors "
+                                                "in x1; scalars=") +
+                                    std::to_string(scalars->GetViewShape().GetShapeSize()) +
+                                    ", x1=" + std::to_string(x1->Size()) + ".");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ0038", (std::vector<const char*>{"param_name", "op_name", "incorrect_size", "reason"}),
+            (std::vector<const char*>{"scalars", "aclnnForeachAddcdivScalarList",
+                                      (std::to_string(scalars->GetViewShape().GetShapeSize())).c_str(),
+                                      reason.c_str()}));
+        return false;
+    }
+    return true;
+}
+
 static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, const aclTensorList* x3,
                               const aclTensorList* out)
 {
@@ -136,10 +123,6 @@ static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, 
     for (uint64_t i = 0; i < x1->Size(); i++) {
         OP_CHECK_SHAPE_NOT_EQUAL((*x1)[i], (*x2)[i], return false);
         OP_CHECK_SHAPE_NOT_EQUAL((*x1)[i], (*x3)[i], return false);
-    }
-
-    for (uint64_t i = 0; i < x1->Size(); i++) {
-        OP_CHECK_MAX_DIM((*x1)[i], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
     for (uint64_t i = 0; i < x1->Size(); i++) {
@@ -191,8 +174,10 @@ static inline aclnnStatus CheckParams(const aclTensorList* x1, const aclTensorLi
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckDtypeValid(x1, x2, x3, scalars, out), ACLNN_ERR_PARAM_INVALID);
+    if (x1->Size() != 0) {
+        CHECK_RET(CheckScalars(x1, scalars), ACLNN_ERR_PARAM_INVALID);
+    }
     CHECK_RET(CheckShape(x1, x2, x3, out), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckFormat(x1, x2, x3, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -225,9 +210,18 @@ static aclnnStatus ExecForeachAddcdivScalarListGetWorkspaceSize(const aclTensorL
     auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 调用l0算子ForeachAddcdivScalarList进行计算，输出到连续buffer（scalars为aclTensor*直接透传）
-    auto result = l0op::ForeachAddcdivScalarList(contiguousTensorsX1, contiguousTensorsX2, contiguousTensorsX3, scalars,
-                                                 contiguousOut, uniqueExecutor.get());
+    // scalars按张量下标平坦读取，stride≠1或共享storage的view会取错标量；
+    // 与x1/x2/x3/out一致做Contiguous规整（对storage_shape != view_shape的
+    // view生成独立规范tensor），连续且非视图时直接透传。
+    const aclTensor* contiguousScalars = scalars;
+    if (!(op::IsContiguous(scalars) && scalars->GetStorageShape() == scalars->GetViewShape())) {
+        contiguousScalars = l0op::Contiguous(scalars, uniqueExecutor.get());
+        CHECK_RET(contiguousScalars != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    // 调用l0算子ForeachAddcdivScalarList进行计算，输出到连续buffer
+    auto result = l0op::ForeachAddcdivScalarList(contiguousTensorsX1, contiguousTensorsX2, contiguousTensorsX3,
+                                                 contiguousScalars, contiguousOut, uniqueExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）

@@ -73,5 +73,5 @@ TEST_F(foreach_addcdiv_scalar_list_test, test_case_float_1)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./addcdiv_scalar_list_data/ && python3 compare_data.py 'float32'");
+    EXPECT_EQ(system("cd ./addcdiv_scalar_list_data/ && python3 compare_data.py 'float32'"), 0);
 }

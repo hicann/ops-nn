@@ -40,18 +40,18 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnForeachAddcdivScalarListGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachAddcdivScalarList”接口执行计算。
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachAddcdivScalarListGetWorkspaceSize(
   const aclTensorList *x1,
   const aclTensorList *x2,
   const aclTensorList *x3,
   const aclTensor     *scalars,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachAddcdivScalarList(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -90,9 +90,9 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>输入</td>
       <td>表示进行混合运算中加法的第一个输入张量列表。对应公式中的`x1`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>shape与入参`x2`、`x3`的shape一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -100,9 +100,9 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>输入</td>
       <td>表示进行混合运算中除法的第一个输入张量列表。对应公式中的`x2`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -110,29 +110,29 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>输入</td>
       <td>表示进行混合运算中除法的第二个输入张量列表。对应公式中的`x3`。</td>
      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>scalars（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行混合运算中乘法的第二个输入张量。对应公式中的`scalars`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>元素个数与`x1`中Tensor的个数相等。</li><li>数据类型和数据格式与入参`x1`一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td><ul><li>不支持空Tensor（`x1`为空TensorList时除外）。</li><li>元素个数与`x1`中Tensor的个数相等。</li><li>数据类型和数据格式与入参`x1`一致。</li></ul></td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示混合运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>Tensor列表长度与`x1`一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size（元素总数）与`x1`对应位置的Tensor一致。</li></ul></td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -183,23 +183,32 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>传入的x1、x2、x3、scalars、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>x1、x2、x3、scalars和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x1、x2、x3、scalars、out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>x1、x2、x3、out的shape不满足约束。</td>
-    </tr>
-    <tr>
       <td>x1、x2、x3或out中的Tensor的元素数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x1、x2、x3或out中的Tensor维度超过8维。</td>
+      <td>x1、x2、x3、out的shape不满足约束。</td>
+    </tr>
+    <tr>
+      <td>x1、x2、x3、out的Tensor列表长度不一致。</td>
+    </tr>
+    <tr>
+      <td>x1、x2、x3或out的Tensor列表内含空Tensor指针。</td>
+    </tr>
+    <tr>
+      <td>scalars的元素个数与x1中Tensor的个数不一致。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_NULLPTR</td>
+      <td>561103</td>
+      <td>单个Tensor列表中Tensor的数量超过256个。</td>
     </tr>
   </tbody></table>
 
@@ -250,6 +259,8 @@ aclnnStatus aclnnForeachAddcdivScalarList(
 
 - 确定性计算：
   - aclnnForeachAddcdivScalarList默认确定性实现。
+- 单个Tensor列表中Tensor的数量不超过256个，超出上限时算子执行失败。
+- 空TensorList（含0个Tensor的TensorList）为合法输入：`x1`、`x2`、`x3`、`out`均为空TensorList时，`scalars`的元素个数为0，接口返回成功，不执行计算、不修改`out`。
 
 ## 调用示例
 

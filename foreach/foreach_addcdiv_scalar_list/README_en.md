@@ -51,36 +51,36 @@ English | [简体中文](./README.md)
     <tr>
       <td>x1</td>
       <td>Input</td>
-      <td>Represents the first input tensor list of the addition in the mixed operation, corresponding to `x1` in the formula. All tensors in this parameter have the same data type.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Represents the first input tensor list of the addition in the mixed operation, corresponding to `x1` in the formula. All tensors in this parameter have the same data type. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>Input</td>
-      <td>Represents the first input tensor list of the division in the mixed operation, corresponding to `x2` in the formula. Its data type, data format, and shape are consistent with those of input `x1`, and all tensors in this parameter have the same data type.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Represents the first input tensor list of the division in the mixed operation, corresponding to `x2` in the formula. Its data type, data format, and shape are consistent with those of input `x1`, and all tensors in this parameter have the same data type. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x3</td>
       <td>Input</td>
-      <td>Represents the second input tensor list of the division in the mixed operation, corresponding to `x3` in the formula. Its data type, data format, and shape are consistent with those of input `x1`, and all tensors in this parameter have the same data type.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Represents the second input tensor list of the division in the mixed operation, corresponding to `x3` in the formula. Its data type, data format, and shape are consistent with those of input `x1`, and all tensors in this parameter have the same data type. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scalars</td>
       <td>Input</td>
-      <td>Represents the second input tensor of the multiplication in the mixed operation, corresponding to `scalars` in the formula. The number of elements equals the number of tensors in `x1`. Its data type and data format are consistent with those of input `x1`.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Represents the second input tensor of the multiplication in the mixed operation, corresponding to `scalars` in the formula. The number of elements equals the number of tensors in `x1`. Its data type and data format are consistent with those of input `x1`. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Represents the output tensor list of the mixed operation, corresponding to `y` in the formula. Its data type and data format are consistent with those of input `x1`, and its shape size is greater than or equal to the shape size of input `x1`. All tensors in this parameter have the same data type.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Represents the output tensor list of the mixed operation, corresponding to `y` in the formula. The tensor list length is consistent with that of `x1`, its data type and data format are consistent with those of input `x1`, and its shape size (total number of elements) is consistent with that of the corresponding tensor in `x1`. All tensors in this parameter have the same data type. Non-contiguous output tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -89,7 +89,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- Non-contiguous tensors are not supported for the output.
+- A single tensor list contains no more than 256 tensors. If the upper limit is exceeded, the operator execution fails.
 
 ## Invocation Description
 

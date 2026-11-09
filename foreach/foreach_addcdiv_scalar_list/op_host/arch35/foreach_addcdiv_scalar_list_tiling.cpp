@@ -16,6 +16,7 @@
  *        each core a contiguous [tensorStart, tensorEnd] + offset range.
  */
 
+#include <cstdint>
 #include <vector>
 #include <algorithm>
 #include "register/op_def_registry.h"
@@ -32,6 +33,9 @@ constexpr int64_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t SINGLE_CORE_MIN_ELEMENTS = 1024;
 constexpr int64_t ALIGN_SIZE = 32;
 constexpr int64_t INPUT_IDX_X1 = 0;
+constexpr int64_t INPUT_IDX_X2 = 1;
+constexpr int64_t INPUT_IDX_X3 = 2;
+constexpr int64_t INPUT_IDX_SCALARS = 3;
 
 static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
 {
@@ -129,6 +133,101 @@ static void AssignDataToEachCore(ForeachAddcdivScalarListTilingData& tilingData,
     }
 }
 
+// 图模式下 DYNAMIC_INPUT 各输入实例数在 IR 层相互独立, kernel 侧按实例
+// 下标直接解引用列表指针表, 须在此拦截违约构图。
+static ge::graphStatus CheckInputTensorListConsistency(gert::TilingContext* context, uint64_t tensorNum)
+{
+    auto computeNodeInfoPtr = context->GetComputeNodeInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
+    for (int64_t inputIdx = INPUT_IDX_X2; inputIdx <= INPUT_IDX_X3; inputIdx++) {
+        auto instanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(inputIdx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, instanceInfoPtr);
+        OP_CHECK_IF((instanceInfoPtr->GetInstanceNum() != tensorNum),
+                    OP_LOGE(context,
+                            "The tensorNums of dynamic input tensor lists x1 and x%ld must be the same; x1=%lu, "
+                            "x%ld=%lu.",
+                            inputIdx + 1, tensorNum, inputIdx + 1, instanceInfoPtr->GetInstanceNum()),
+                    return ge::GRAPH_FAILED);
+    }
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        auto x1ShapePtr = context->GetDynamicInputShape(INPUT_IDX_X1, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1ShapePtr);
+        auto x1DescPtr = context->GetDynamicInputDesc(INPUT_IDX_X1, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1DescPtr);
+        for (int64_t inputIdx = INPUT_IDX_X2; inputIdx <= INPUT_IDX_X3; inputIdx++) {
+            auto shapePtr = context->GetDynamicInputShape(inputIdx, i);
+            OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
+            OP_CHECK_IF(
+                (shapePtr->GetStorageShape() != x1ShapePtr->GetStorageShape()),
+                OP_LOGE(context, "The shapes of %luth tensor in tensor list input %ld and input %ld must be the same.",
+                        i, inputIdx, INPUT_IDX_X1),
+                return ge::GRAPH_FAILED);
+            auto descPtr = context->GetDynamicInputDesc(inputIdx, i);
+            OP_CHECK_NULL_WITH_CONTEXT(context, descPtr);
+            OP_CHECK_IF(
+                (descPtr->GetDataType() != x1DescPtr->GetDataType()),
+                OP_LOGE(context, "The dtypes of %luth tensor in tensor list input %ld and input %ld must be the same.",
+                        i, inputIdx, INPUT_IDX_X1),
+                return ge::GRAPH_FAILED);
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+// scalars 为 REQUIRED 输入, kernel 侧按成员下标平坦读取; 其 dtype 取值域、
+// 元素个数与 x1 张量数的一致性、与 x1 的 dtype 一致性、x1 列表内 dtype 一致
+// 性在此统一校验。desc/shape 经 Required 系接口按 IR 槽位解析。
+static ge::graphStatus CheckScalarsAndX1Uniformity(gert::TilingContext* context, uint64_t tensorNum)
+{
+    auto scalarsDescPtr = context->GetRequiredInputDesc(INPUT_IDX_SCALARS);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarsDescPtr);
+    ge::DataType scalarsDtype = scalarsDescPtr->GetDataType();
+    OP_CHECK_IF((scalarsDtype != ge::DT_FLOAT16 && scalarsDtype != ge::DT_FLOAT && scalarsDtype != ge::DT_BF16),
+                OP_LOGE(context, "unsupported scalars dtype: %d", static_cast<int32_t>(scalarsDtype)),
+                return ge::GRAPH_FAILED);
+    if (tensorNum == 0) {
+        return ge::GRAPH_SUCCESS;
+    }
+    auto scalarsShapePtr = context->GetRequiredInputShape(INPUT_IDX_SCALARS);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarsShapePtr);
+    int64_t scalarsNumel = scalarsShapePtr->GetStorageShape().GetShapeSize();
+    OP_CHECK_IF(
+        (scalarsNumel != static_cast<int64_t>(tensorNum)),
+        OP_LOGE(context, "The element count of scalars must be equal to the tensor count of x1; scalars=%ld, x1=%lu.",
+                scalarsNumel, tensorNum),
+        return ge::GRAPH_FAILED);
+    auto x1FirstDescPtr = context->GetDynamicInputDesc(INPUT_IDX_X1, 0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, x1FirstDescPtr);
+    ge::DataType x1FirstDtype = x1FirstDescPtr->GetDataType();
+    OP_CHECK_IF(
+        (scalarsDtype != x1FirstDtype),
+        OP_LOGE(context, "The dtype of scalars must be the same as the dtype of tensors in x1; scalars=%d, x1=%d.",
+                static_cast<int32_t>(scalarsDtype), static_cast<int32_t>(x1FirstDtype)),
+        return ge::GRAPH_FAILED);
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        auto x1DescPtr = context->GetDynamicInputDesc(INPUT_IDX_X1, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1DescPtr);
+        ge::DataType dtype = x1DescPtr->GetDataType();
+        OP_CHECK_IF((dtype != ge::DT_FLOAT16 && dtype != ge::DT_FLOAT && dtype != ge::DT_BF16),
+                    OP_LOGE(context, "unsupported dtype: %d", static_cast<int32_t>(dtype)), return ge::GRAPH_FAILED);
+        OP_CHECK_IF((dtype != x1FirstDtype),
+                    OP_LOGE(context, "The dtypes of tensors in x1 must be the same; first=%d, %luth=%d.",
+                            static_cast<int32_t>(x1FirstDtype), i, static_cast<int32_t>(dtype)),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static bool IsShapeAllNonNegative(const gert::Shape& shape)
+{
+    for (size_t dimIdx = 0; dimIdx < shape.GetDimNum(); dimIdx++) {
+        if (shape.GetDim(dimIdx) < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static ge::graphStatus ForeachAddcdivScalarListTilingFunc(gert::TilingContext* context)
 {
     int64_t coreNum = 0;
@@ -145,7 +244,13 @@ static ge::graphStatus ForeachAddcdivScalarListTilingFunc(gert::TilingContext* c
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
-    OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ADDCDIV),
+    OP_CHECK_IF(CheckInputTensorListConsistency(context, tensorNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "CheckInputTensorListConsistency failed."), return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(CheckScalarsAndX1Uniformity(context, tensorNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "CheckScalarsAndX1Uniformity failed."), return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF((tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM_FOREACH_ADDCDIV)),
                 OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum, MAX_TENSOR_NUM_FOREACH_ADDCDIV),
                 return ge::GRAPH_FAILED);
 
@@ -159,7 +264,13 @@ static ge::graphStatus ForeachAddcdivScalarListTilingFunc(gert::TilingContext* c
         auto idxTensorShapePtr = context->GetDynamicInputShape(INPUT_IDX_X1, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, idxTensorShapePtr);
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
+        OP_CHECK_IF((!IsShapeAllNonNegative(idxTensorShape)),
+                    OP_LOGE(context, "The dims of %luth tensor in x1 must be non-negative.", i),
+                    return ge::GRAPH_FAILED);
         int64_t numel = idxTensorShape.GetShapeSize();
+        OP_CHECK_IF((numel < 0 || numel > INT64_MAX - totalDataCount),
+                    OP_LOGE(context, "invalid or overflow element count %ld at tensor index %lu", numel, i),
+                    return ge::GRAPH_FAILED);
         tilingDataHost.tensorDataCountList[i] = numel;
         totalDataCount += numel;
 
@@ -170,6 +281,10 @@ static ge::graphStatus ForeachAddcdivScalarListTilingFunc(gert::TilingContext* c
         }
     }
     tilingDataHost.totalDataCount = totalDataCount;
+    // 后续按 totalDataCount 向上取整的加法(至多 +SINGLE_CORE_MIN_ELEMENTS-1)
+    // 不得有符号溢出
+    OP_CHECK_IF((totalDataCount < 0 || totalDataCount > INT64_MAX - SINGLE_CORE_MIN_ELEMENTS),
+                OP_LOGE(context, "total element count %ld overflows int64", totalDataCount), return ge::GRAPH_FAILED);
 
     int64_t dataTypeSize = 0;
     switch (dataType) {
@@ -216,6 +331,7 @@ static ge::graphStatus ForeachAddcdivScalarListTilingFunc(gert::TilingContext* c
                 return ge::GRAPH_FAILED);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = 0;
 
     return ge::GRAPH_SUCCESS;

@@ -49,36 +49,36 @@
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>表示混合运算中加法的第一个输入张量列表，对应公式中的`x1`。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示混合运算中加法的第一个输入张量列表，对应公式中的`x1`。该参数中所有Tensor的数据类型保持一致。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>表示混合运算中除法的第一个输入张量列表，对应公式中的`x2`。数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致，该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示混合运算中除法的第一个输入张量列表，对应公式中的`x2`。数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致，该参数中所有Tensor的数据类型保持一致。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x3</td>
       <td>输入</td>
-      <td>表示混合运算中除法的第二个输入张量列表，对应公式中的`x3`。数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致，该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示混合运算中除法的第二个输入张量列表，对应公式中的`x3`。数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致，该参数中所有Tensor的数据类型保持一致。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示进行混合运算中乘法的第二个输入张量，对应公式中的`scalars`。元素个数与`x1`中Tensor的个数相等。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示进行混合运算中乘法的第二个输入张量，对应公式中的`scalars`。元素个数与`x1`中Tensor的个数相等。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示混合运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示混合运算的输出张量列表，对应公式中的`y`。Tensor列表长度与`x1`一致，数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size（元素总数）与`x1`对应位置的Tensor一致。该参数中所有Tensor的数据类型保持一致。非连续Tensor输出由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -87,7 +87,7 @@
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+- 单个Tensor列表中Tensor的数量不超过256个，超出上限时算子执行失败。
 
 ## 调用说明
 
