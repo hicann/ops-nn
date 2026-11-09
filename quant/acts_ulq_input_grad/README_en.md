@@ -30,8 +30,8 @@ English | [简体中文](./README.md)
 | Parameter name | Input/Output/Attribute | Description | Data type | Data format |
 |--------|---------------|------|----------|----------|
 | y_grad | Input | Denotes the gradient tensor passed in from upstream, corresponding to y_grad in the formula. Its shape must be exactly the same as clamp_min_mask, clamp_max_mask, and x_grad. | FLOAT, FLOAT16 | ND |
-| clamp_min_mask | Input | Denotes the lower-bound clamp mask tensor, corresponding to clamp_min_mask in the formula, with values {0,1}. Its data type is bool or the same floating-point type as y_grad. Its shape must match y_grad. | BOOL, FLOAT16, FLOAT | ND |
-| clamp_max_mask | Input | Denotes the upper-bound clamp mask tensor, corresponding to clamp_max_mask in the formula, with values {0,1}. Its data type must be the same as clamp_min_mask. Its shape must match y_grad. | BOOL, FLOAT16, FLOAT | ND |
+| clamp_min_mask | Input | Denotes the lower-bound clamp mask tensor, corresponding to clamp_min_mask in the formula. Its data type is bool or the same floating-point type as y_grad. Its shape must match y_grad. | BOOL, FLOAT16, FLOAT | ND |
+| clamp_max_mask | Input | Denotes the upper-bound clamp mask tensor, corresponding to clamp_max_mask in the formula. Its data type must be the same as clamp_min_mask. Its shape must match y_grad. | BOOL, FLOAT16, FLOAT | ND |
 | x_grad | Output | The gated input gradient tensor, corresponding to x_grad in the formula. Its data type must be the same as y_grad, and its shape must match y_grad. | FLOAT, FLOAT16 | ND |
 
 ## Constraints
@@ -46,7 +46,6 @@ English | [简体中文](./README.md)
   | FLOAT | BOOL | FLOAT |
   | FLOAT | FLOAT | FLOAT |
 
-- The semantic values of clamp_min_mask and clamp_max_mask should be 0 or 1.
 - The shapes of the three inputs and the output must be exactly the same (no broadcasting), and empty tensors are supported.
 
 ## Invocation Description

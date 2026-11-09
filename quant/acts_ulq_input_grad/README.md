@@ -28,8 +28,8 @@
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
 |--------|---------------|------|----------|----------|
 | y_grad | 输入 | 表示上游传入的梯度张量，对应公式中y_grad；shape需与clamp_min_mask、clamp_max_mask、x_grad完全一致。 | FLOAT、FLOAT16 | ND |
-| clamp_min_mask | 输入 | 表示下界clamp掩码张量，对应公式中clamp_min_mask，取值 {0,1}；数据类型为bool或与y_grad相同的浮点；shape需与y_grad一致。 | BOOL、FLOAT16、FLOAT | ND |
-| clamp_max_mask | 输入 | 表示上界clamp掩码张量，对应公式中clamp_max_mask，取值 {0,1}；数据类型必须与clamp_min_mask一致；shape需与y_grad一致。 | BOOL、FLOAT16、FLOAT | ND |
+| clamp_min_mask | 输入 | 表示下界clamp掩码张量，对应公式中clamp_min_mask；数据类型为bool或与y_grad相同的浮点；shape需与y_grad一致。 | BOOL、FLOAT16、FLOAT | ND |
+| clamp_max_mask | 输入 | 表示上界clamp掩码张量，对应公式中clamp_max_mask；数据类型必须与clamp_min_mask一致；shape需与y_grad一致。 | BOOL、FLOAT16、FLOAT | ND |
 | x_grad | 输出 | 门控后的输入梯度张量，对应公式中x_grad；数据类型必须与y_grad一致；shape必须与y_grad一致。 | FLOAT、FLOAT16 | ND |
 
 ## 约束说明
@@ -44,7 +44,6 @@
   | FLOAT | BOOL | FLOAT |
   | FLOAT | FLOAT | FLOAT |
 
-- clamp_min_mask与clamp_max_mask的语义值应为0或1；掩码取值为(0,1)区间的连续浮点时，按一般逐元素乘法语义计算（`x_grad = y_grad * mask_min * mask_max`）。
 - 三个输入与输出的shape必须完全一致（无广播），支持空Tensor。
 
 ## 调用说明
