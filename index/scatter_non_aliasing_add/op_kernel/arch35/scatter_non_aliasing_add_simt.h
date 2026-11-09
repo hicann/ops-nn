@@ -56,13 +56,13 @@ __simt_vf__ __aicore__ __launch_bounds__(THREADS<IDX_T>) inline void OpScatterCo
                                                                                              int64_t perCoreElements,
                                                                                              __gm__ T* x, __gm__ T* y)
 {
-    IDX_T totalElems = static_cast<IDX_T>(totalElements);
-    IDX_T perCoreElems = static_cast<IDX_T>(perCoreElements);
-    IDX_T coreStart = static_cast<IDX_T>(blockIdx.x) * perCoreElems;
-    IDX_T coreEnd = coreStart + perCoreElems;
-    if (coreEnd > totalElems) {
-        coreEnd = totalElems;
+    int64_t coreStart64 = static_cast<int64_t>(blockIdx.x) * perCoreElements;
+    int64_t coreEnd64 = coreStart64 + perCoreElements;
+    if (coreEnd64 > totalElements) {
+        coreEnd64 = totalElements;
     }
+    IDX_T coreStart = static_cast<IDX_T>(coreStart64);
+    IDX_T coreEnd = static_cast<IDX_T>(coreEnd64);
     for (IDX_T idx = coreStart + static_cast<IDX_T>(threadIdx.x); idx < coreEnd;
          idx += static_cast<IDX_T>(blockDim.x)) {
         y[idx] = x[idx];
@@ -74,16 +74,16 @@ __simt_vf__ __aicore__ __launch_bounds__(THREADS<IDX_T>) inline void OpScatterAd
     int32_t K, int64_t totalElements, int64_t totalScatters, int64_t updateDataNum, int64_t perCoreElements,
     __ubuf__ int64_t* stridesUb, __gm__ IndexT* indices, __gm__ T* updates, __gm__ T* y)
 {
-    IDX_T totalElems = static_cast<IDX_T>(totalElements);
-    IDX_T perCoreElems = static_cast<IDX_T>(perCoreElements);
     IDX_T totalScat = static_cast<IDX_T>(totalScatters);
     IDX_T updateNum = static_cast<IDX_T>(updateDataNum);
 
-    IDX_T coreStart = static_cast<IDX_T>(blockIdx.x) * perCoreElems;
-    IDX_T coreEnd = coreStart + perCoreElems;
-    if (coreEnd > totalElems) {
-        coreEnd = totalElems;
+    int64_t coreStart64 = static_cast<int64_t>(blockIdx.x) * perCoreElements;
+    int64_t coreEnd64 = coreStart64 + perCoreElements;
+    if (coreEnd64 > totalElements) {
+        coreEnd64 = totalElements;
     }
+    IDX_T coreStart = static_cast<IDX_T>(coreStart64);
+    IDX_T coreEnd = static_cast<IDX_T>(coreEnd64);
 
     for (IDX_T i = 0; i < totalScat; i++) {
         IDX_T offset = ComputeScatterOffset<T, IndexT, IDX_T>(K, i, indices, stridesUb);
@@ -93,11 +93,32 @@ __simt_vf__ __aicore__ __launch_bounds__(THREADS<IDX_T>) inline void OpScatterAd
     }
 }
 
+__aicore__ static inline bool UseInt32Index(const ScatterNonAliasingAddTilingData& tilingData)
+{
+    if (tilingData.totalElements > static_cast<int64_t>(INT32_MAX) ||
+        tilingData.perCoreElements > static_cast<int64_t>(INT32_MAX) ||
+        tilingData.totalScatters > static_cast<int64_t>(INT32_MAX) ||
+        tilingData.updateDataNum > static_cast<int64_t>(INT32_MAX)) {
+        return false;
+    }
+    if (tilingData.totalScatters > 0) {
+        if (tilingData.K > 0 &&
+            tilingData.totalScatters > static_cast<int64_t>(INT32_MAX) / static_cast<int64_t>(tilingData.K)) {
+            return false;
+        }
+        if (tilingData.updateDataNum > 0 &&
+            tilingData.totalScatters > static_cast<int64_t>(INT32_MAX) / tilingData.updateDataNum) {
+            return false;
+        }
+    }
+    return true;
+}
+
 template <typename T, typename IndexT>
 __aicore__ inline void ScatterDispatch(const ScatterNonAliasingAddTilingData& tilingData, __ubuf__ int64_t* stridesUb,
                                        __gm__ T* xGm, __gm__ IndexT* indicesGm, __gm__ T* updatesGm, __gm__ T* yGm)
 {
-    if (tilingData.totalElements <= static_cast<int64_t>(INT32_MAX)) {
+    if (UseInt32Index(tilingData)) {
         asc_vf_call<OpScatterCopySimtKernel<T, int32_t>>(dim3(THREADS<int32_t>), tilingData.totalElements,
                                                          tilingData.perCoreElements, xGm, yGm);
         GlobalTensor<T> yFlushGm;

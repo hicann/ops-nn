@@ -15,10 +15,12 @@
 #include "util/platform_util.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "util/shape_util.h"
 #include "../../op_kernel/arch35/scatter_non_aliasing_add_tiling_data.h"
 #include "../../op_kernel/arch35/scatter_non_aliasing_add_tiling_key.h"
 
 #include <cstring>
+#include <limits>
 
 namespace optiling {
 
@@ -41,32 +43,58 @@ static ge::graphStatus ComputeScatterTilingParams(gert::TilingContext* context, 
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesInput);
     auto xShape = xInput->GetStorageShape();
     auto indicesShape = indicesInput->GetStorageShape();
+    auto updatesInput = context->GetInputShape(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesInput);
+    auto updatesShape = updatesInput->GetStorageShape();
+
+    // GE compile-time tiling can see unknown rank/shape; runtime tiling will run
+    // again with concrete shapes. Skip shape-dependent checks for that placeholder.
+    if (Ops::Base::IsUnknownRank(xShape) || Ops::Base::IsUnknownRank(indicesShape) ||
+        Ops::Base::IsUnknownRank(updatesShape) || Ops::Base::IsUnknownShape(xShape) ||
+        Ops::Base::IsUnknownShape(indicesShape) || Ops::Base::IsUnknownShape(updatesShape)) {
+        totalElements = 0;
+        totalScatters = 0;
+        updateDataNum = 0;
+        K = 0;
+        maxIndice = 0;
+        perCoreSlots = 0;
+        needCoreNum = 1;
+        perCoreElements = 0;
+        auto indicesDesc = context->GetInputDesc(1);
+        OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
+        context->SetTilingKey(indicesDesc->GetDataType() == ge::DT_INT32 ? GET_TPL_TILING_KEY(SCATTER_IDX_INT32) :
+                                                                           GET_TPL_TILING_KEY(SCATTER_IDX_INT64));
+        return ge::GRAPH_SUCCESS;
+    }
+
     int32_t xRank = static_cast<int32_t>(xShape.GetDimNum());
     int32_t indicesRank = static_cast<int32_t>(indicesShape.GetDimNum());
 
     OP_CHECK_IF(
-        indicesRank < 2,
+        indicesRank < 1,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices", std::to_string(indicesRank).c_str(),
-                                                 "The rank of indices must be >= 2"),
+                                                 "The rank of indices must be >= 1"),
         return ge::GRAPH_FAILED);
 
-    K = static_cast<int32_t>(indicesShape.GetDim(indicesRank - 1));
+    int64_t kDim = indicesShape.GetDim(indicesRank - 1);
+    OP_CHECK_IF(
+        kDim < 0 || kDim > static_cast<int64_t>(xRank),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices", std::to_string(kDim).c_str(),
+                                                 "The last dim of indices (K) must be in [0, rank of x]"),
+        return ge::GRAPH_FAILED);
+    K = static_cast<int32_t>(kDim);
 
     OP_CHECK_IF(xRank > MAX_STRIDES,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xRank).c_str(),
                                                          "The rank of x must be <= 8"),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(K > xRank,
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices", std::to_string(K).c_str(),
-                                                         "The last dim of indices (K) must be <= rank of x"),
-                return ge::GRAPH_FAILED);
-
-    auto updatesInput = context->GetInputShape(2);
-    OP_CHECK_NULL_WITH_CONTEXT(context, updatesInput);
-    auto updatesShape = updatesInput->GetStorageShape();
+    updatesShape = Ops::NN::OpTiling::EnsureNotScalar(updatesShape);
     int32_t updatesRank = static_cast<int32_t>(updatesShape.GetDimNum());
     int32_t expectedRank = (indicesRank - 1) + (xRank - K);
+    if (expectedRank == 0) {
+        expectedRank = 1;
+    }
     bool updatesShapeMismatch = (updatesRank != expectedRank);
     for (int32_t i = 0; !updatesShapeMismatch && i < indicesRank - 1; i++) {
         updatesShapeMismatch = (updatesShape.GetDim(i) != indicesShape.GetDim(i));
@@ -104,6 +132,9 @@ static ge::graphStatus ComputeScatterTilingParams(gert::TilingContext* context, 
     perCoreSlots = Ops::Base::CeilAlign(perCoreSlots, SLOT_ALIGN);
     needCoreNum = (perCoreSlots > 0) ? ((maxIndice + perCoreSlots - 1) / perCoreSlots) : 1;
     needCoreNum = (needCoreNum < 1) ? 1 : needCoreNum;
+    OP_CHECK_IF(updateDataNum > 0 && perCoreSlots > std::numeric_limits<int64_t>::max() / updateDataNum,
+                OP_LOGE(context, "perCoreSlots %ld * updateDataNum %ld overflows int64", perCoreSlots, updateDataNum),
+                return ge::GRAPH_FAILED);
     perCoreElements = perCoreSlots * updateDataNum;
     auto indicesDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);

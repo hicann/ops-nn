@@ -97,3 +97,28 @@ TEST_F(ScatterNonAliasingAddInfershape, scatter_non_aliasing_add_infershape_unkn
     gert::Shape expectedOutputShape = {-2};
     ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectedOutputShape));
 }
+
+TEST_F(ScatterNonAliasingAddInfershape, scatter_non_aliasing_add_infershape_indices_rank_one)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterNonAliasingAdd")->infer_shape;
+    gert::Shape xShape = {4, 8, 16};
+    gert::Shape indicesShape = {2};
+    gert::Shape updatesShape = {16};
+    gert::Shape yShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &indicesShape, &updatesShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expectedOutputShape = {4, 8, 16};
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectedOutputShape));
+}

@@ -52,14 +52,14 @@ $$
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>多维索引tensor，rank(indices) ≥ 2，shape[-1] = K ≤ rank(x)，指定散射目标位置。</td>
+      <td>多维索引tensor，rank(indices) ≥ 1，shape[-1] = K ≤ rank(x)，指定散射目标位置。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>updates</td>
       <td>输入</td>
-      <td>待累加的更新值tensor，shape = indices.shape[:-1] + x.shape[K:]。</td>
+      <td>待累加的更新值tensor，shape = indices.shape[:-1] + x.shape[K:]，dtype必须与x相同。</td>
       <td>FLOAT16、FLOAT、INT32</td>
       <td>ND</td>
     </tr>
@@ -76,13 +76,17 @@ $$
 
 - 输出y与输入x不共享内存（Non-Aliasing），y是独立分配的tensor。
 - 所有输入输出均为FORMAT_ND（连续存储），不支持非连续tensor。
-- indices的rank必须大于等于2，最后一维表示索引深度K。
+- indices的rank必须大于等于1，最后一维表示索引深度K。
+- x的rank不超过8（实现按MAX_STRIDES=8保存strides）。
+- updates与x的dtype必须相同。
+- updates的形状必须等于`indices.shape[:-1] + x.shape[K:]`；当该结果为标量时，也接受形状为`(1,)`的单元素updates。
 - 重复索引按indices原始顺序多次累加，结果确定性。
 - indices中每个索引值必须满足0 ≤ index < x.shape[dim]，不支持负索引和越界索引。算子不对索引做合法性校验，调用方需保证索引合法，否则结果未定义。
-- 支持空tensor（shape含0维），此时返回x的拷贝，不执行scatter add。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | - | 通过[算子IR](op_graph/scatter_non_aliasing_add_proto.h)接口方式调用ScatterNonAliasingAdd算子。 |
+| 图模式 | [test_geir_scatter_non_aliasing_add](examples/arch35/test_geir_scatter_non_aliasing_add.cpp) | 通过[算子IR](op_graph/scatter_non_aliasing_add_proto.h)构图方式调用ScatterNonAliasingAdd算子。 |
+
+样例输入：`x`为`[3, 2]` FLOAT32，`indices`为`[2, 1]` INT32，`updates`为`[2, 2]` FLOAT32，输出`y`为`[3, 2]` FLOAT32。在仓库根目录执行`bash build.sh --run_example scatter_non_aliasing_add graph --soc=ascend950`可编译并运行该样例。

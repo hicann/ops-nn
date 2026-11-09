@@ -63,15 +63,15 @@ constexpr size_t MAX_DIM_NUM = 8;
 static constexpr int32_t P_POS_INF = 2147483647;  // INT_MAX → +inf
 static constexpr int32_t P_NEG_INF = -2147483648; // INT_MIN → -inf
 
-// p 特殊值（V1 原型 p 为 int，此处转 float 比较）
-static constexpr float P_ZERO = 0.0f;    // p=0 → 恒等路径
-static constexpr float P_ONE = 1.0f;     // p=1 → 恒等路径
-static constexpr float P_TWO = 2.0f;     // p=2 → Sqrt 快速路径
+// p 特殊值（V1 原型 p 为 int，直接用 int 比较，避免窄化为 float 后边界值误判）
+static constexpr int32_t P_ZERO = 0;     // p=0 → 恒等路径
+static constexpr int32_t P_ONE = 1;      // p=1 → 恒等路径
+static constexpr int32_t P_TWO = 2;      // p=2 → Sqrt 快速路径
 static constexpr float INV_P_TWO = 0.5f; // 1/p when p=2
 
-// 判断 p（int→float 后）是否为 ±inf（经 INT_MAX/INT_MIN 映射）
-static bool IsPosInf(float p) { return p == static_cast<float>(P_POS_INF); }
-static bool IsNegInf(float p) { return p == static_cast<float>(P_NEG_INF); }
+// 判断 p 是否为 ±inf（经 INT_MAX/INT_MIN 映射）
+static bool IsPosInf(int32_t p) { return p == P_POS_INF; }
+static bool IsNegInf(int32_t p) { return p == P_NEG_INF; }
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -98,7 +98,7 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
 
 // 获取属性和 shape 信息
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalNum, ge::DataType* dataType,
-                                         float* p, float* epsilon)
+                                         int32_t* p, float* epsilon)
 {
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
@@ -138,7 +138,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     auto pPtr = attrs->GetAttrPointer<int>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, pPtr);
-    *p = static_cast<float>(*pPtr);
+    *p = *pPtr;
     auto epsilonPtr = attrs->GetAttrPointer<float>(1);
     *epsilon = (epsilonPtr == nullptr) ? 1.0e-12f : *epsilonPtr;
 
@@ -165,7 +165,7 @@ static float CalcEpsEff(ge::DataType dtype, float epsilon)
 }
 
 // 设置 TilingKey（按 p 值分派计算路径）
-static int32_t CalcTilingKey(float p, float* invP)
+static int32_t CalcTilingKey(int32_t p, float* invP)
 {
     if (IsPosInf(p) || IsNegInf(p) || p == P_ONE) {
         // p ∈ {1, ±inf} → 恒等路径
@@ -183,7 +183,7 @@ static int32_t CalcTilingKey(float p, float* invP)
         return TILING_KEY_IDENTITY;
     }
     // 其他有限非零 p（含负值）→ Power 路径
-    *invP = 1.0f / p;
+    *invP = 1.0f / static_cast<float>(p);
     return TILING_KEY_POWER;
 }
 
@@ -203,12 +203,16 @@ struct TilingSplitResult {
     uint32_t powerTmpBufferSize;
 };
 
-static ge::graphStatus CalcTilingSplit(int64_t totalNum, int64_t coreNum, uint64_t ubSize, ge::DataType dataType,
-                                       int32_t tilingKey, TilingSplitResult& result)
+static ge::graphStatus CalcTilingSplit(gert::TilingContext* context, int64_t totalNum, int64_t coreNum, uint64_t ubSize,
+                                       ge::DataType dataType, int32_t tilingKey, TilingSplitResult& result)
 {
     // 多核切分
     int64_t elemBytes = (dataType == ge::DT_FLOAT16) ? FP16_TYPE_SIZE : FP32_TYPE_SIZE;
     int64_t minDtypeBits = elemBytes * 8;
+    OP_CHECK_IF(totalNum > (std::numeric_limits<int64_t>::max() - (MIN_TILING_BITS - 1)) / minDtypeBits,
+                OP_LOGE(context, "LpNormUpdate: totalNum %ld * minDtypeBits %ld overflows int64 before core split",
+                        totalNum, minDtypeBits),
+                return ge::GRAPH_FAILED);
     int64_t calcCoreNum = (totalNum * minDtypeBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS;
     int64_t usedCoreNum = std::min(calcCoreNum, coreNum);
     result.blockFactor = CeilAlign(CeilDiv(totalNum, usedCoreNum), ELEM_ALIGN_FACTOR);
@@ -263,7 +267,7 @@ struct TilingInputInfo {
     int64_t coreNum;
     int64_t totalNum;
     ge::DataType dataType;
-    float pVal;
+    int32_t pVal;
     float epsilonVal;
     LpNormUpdateTilingData* tiling;
 };
@@ -307,8 +311,8 @@ static ge::graphStatus LpNormUpdateTilingFunc(gert::TilingContext* context)
 
     // 4、多核切分 + UB 切分 + Power buffer
     TilingSplitResult splitResult{};
-    OP_CHECK_IF(CalcTilingSplit(info.totalNum, info.coreNum, info.ubSize, info.dataType, tilingKey, splitResult) !=
-                    ge::GRAPH_SUCCESS,
+    OP_CHECK_IF(CalcTilingSplit(context, info.totalNum, info.coreNum, info.ubSize, info.dataType, tilingKey,
+                                splitResult) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "LpNormUpdate: ubFactor invalid (ubSize=%lu, tilingKey=%d)", info.ubSize, tilingKey),
                 return ge::GRAPH_FAILED);
 
@@ -325,7 +329,7 @@ static ge::graphStatus LpNormUpdateTilingFunc(gert::TilingContext* context)
     ASCENDC_TPL_SEL_PARAM(context, static_cast<uint64_t>(tilingKey));
 
     OP_LOGI(context,
-            "LpNormUpdate: tilingKey=%d | p=%f, epsEff=%f, invP=%f | totalNum=%ld, blockFactor=%ld, ubFactor=%ld, "
+            "LpNormUpdate: tilingKey=%d | p=%d, epsEff=%f, invP=%f | totalNum=%ld, blockFactor=%ld, ubFactor=%ld, "
             "usedCoreNum=%ld",
             tilingKey, info.pVal, epsEff, invP, info.totalNum, splitResult.blockFactor, splitResult.ubFactor,
             usedCoreNum);

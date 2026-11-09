@@ -100,16 +100,11 @@ int32_t GenSequentialFloat32Data(vector<int64_t> shapes, Tensor& input_tensor, T
     }
     uint32_t byteSizeFloat32 = 4;
     uint32_t data_len = size * byteSizeFloat32;
-    float* pData = new (std::nothrow) float[size];
-    if (pData == nullptr) {
-        return FAILED;
-    }
     g_inputData.resize(size);
     for (size_t i = 0; i < size; ++i) {
-        pData[i] = static_cast<float>(i + 1);
-        g_inputData[i] = pData[i];
+        g_inputData[i] = static_cast<float>(i + 1);
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(g_inputData.data()), data_len);
     return SUCCESS;
 }
 
@@ -188,6 +183,7 @@ int main(int argc, char* argv[])
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        GEFinalize();
         return FAILED;
     }
 

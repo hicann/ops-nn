@@ -31,9 +31,8 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(LpNormUpdate);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_DOUBLE, op::DataType::DT_COMPLEX64,
-    op::DataType::DT_COMPLEX128};
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                              op::DataType::DT_FLOAT16};
 
 static bool IsAiCoreSupport(const aclTensor* self) { return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST); }
 
@@ -53,7 +52,7 @@ static const aclTensor* LpNormUpdateAiCpu(const aclTensor* self, int64_t p, floa
 {
     L0_DFX(LpNormUpdateAiCpu, self, p, eps, relType);
     static internal::AicpuTaskSpace space("LpNormUpdate");
-    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(LpNormUpdate, OP_ATTR_NAMES({"p", "eps"}), OP_INPUT(self),
+    auto ret = ADD_TO_LAUNCHER_LIST_AICPU(LpNormUpdate, OP_ATTR_NAMES({"p", "epsilon"}), OP_INPUT(self),
                                           OP_OUTPUT(updateOut), OP_ATTR(p, eps));
     OP_CHECK(ret == ACLNN_SUCCESS,
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpNormUpdateAiCpu ADD_TO_LAUNCHER_LIST_AICPU failed."), return nullptr);
@@ -63,7 +62,7 @@ static const aclTensor* LpNormUpdateAiCpu(const aclTensor* self, int64_t p, floa
 const aclTensor* LpNormUpdate(const aclTensor* self, int64_t p, float eps, const op::DataType relType,
                               aclOpExecutor* executor)
 {
-    if (self->GetDataType() != static_cast<op::DataType>(ACL_FLOAT)) {
+    if (!IsAiCoreSupport(self)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "LpNormUpdate selftype [%s] && current shape [%s].",
                 op::ToString(self->GetDataType()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return nullptr;

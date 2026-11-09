@@ -20,6 +20,7 @@
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -32,6 +33,11 @@ static ge::graphStatus InferShape4LpNormUpdate(gert::InferShapeContext* context)
 
     gert::Shape* output_shape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
+
+    if (Ops::Base::IsUnknownRank(*input_shape)) {
+        Ops::Base::SetUnknownRank(*output_shape);
+        return ge::GRAPH_SUCCESS;
+    }
 
     // 设置输出形状 = 输入形状
     *output_shape = *input_shape;

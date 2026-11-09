@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <cstdint>
 #include <gtest/gtest.h>
 #include "log/log.h"
 #include "kernel_run_context_facker.h"
@@ -72,6 +73,66 @@ TEST_F(ScatterNonAliasingAddTilingTest, fp32_int32)
     gert::StorageShape indices = {{10, 2}, {10, 2}};
     gert::StorageShape updates = {{10, 16}, {10, 16}};
     gert::StorageShape y = {{4, 8, 16}, {4, 8, 16}};
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &updates})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context, nullptr);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    uint64_t expect_key = GET_TPL_TILING_KEY(SCATTER_IDX_INT32);
+    EXPECT_EQ(tiling_context->GetTilingKey(), expect_key);
+}
+
+TEST_F(ScatterNonAliasingAddTilingTest, scalar_updates_single_element)
+{
+    string compile_info_string = R"({
+        "hardware_info": {
+            "UB_SIZE": 253952,
+            "CORE_NUM": 64,
+            "version": "Ascend950"
+        }
+    })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+
+    ScatterNonAliasingAddCompileInfo compile_info;
+
+    std::string op_type("ScatterNonAliasingAdd");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+
+    gert::StorageShape x = {{8}, {8}};
+    gert::StorageShape indices = {{1}, {1}};
+    gert::StorageShape updates = {{1}, {1}};
+    gert::StorageShape y = {{8}, {8}};
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(3, 1)
@@ -388,5 +449,189 @@ TEST_F(ScatterNonAliasingAddTilingTest, indices_rank_one)
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ScatterNonAliasingAddTilingTest, k_overflows_int32)
+{
+    string compile_info_string = R"({
+        "hardware_info": {
+            "UB_SIZE": 253952,
+            "CORE_NUM": 64,
+            "version": "Ascend950"
+        }
+    })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    ScatterNonAliasingAddCompileInfo compile_info;
+
+    std::string op_type("ScatterNonAliasingAdd");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+
+    gert::StorageShape x = {{1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1}};
+    // 2^32 + 1: K must be validated as int64 and rejected, not truncated to 1.
+    gert::StorageShape indices = {{1, 4294967297}, {1, 4294967297}};
+    gert::StorageShape updates = {{1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1}};
+    gert::StorageShape y = {{1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1}};
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &updates})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context, nullptr);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+TEST_F(ScatterNonAliasingAddTilingTest, per_core_elements_exceeds_int32)
+{
+    string compile_info_string = R"({
+        "hardware_info": {
+            "UB_SIZE": 253952,
+            "CORE_NUM": 64,
+            "version": "Ascend950"
+        }
+    })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    ScatterNonAliasingAddCompileInfo compile_info;
+
+    std::string op_type("ScatterNonAliasingAdd");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+
+    constexpr int64_t kUpdateDataNum = 67108864; // 2^26
+    gert::StorageShape x = {{1, kUpdateDataNum}, {1, kUpdateDataNum}};
+    gert::StorageShape indices = {{1, 1}, {1, 1}};
+    gert::StorageShape updates = {{1, kUpdateDataNum}, {1, kUpdateDataNum}};
+    gert::StorageShape y = {{1, kUpdateDataNum}, {1, kUpdateDataNum}};
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &updates})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context, nullptr);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto* tiling = tiling_context->GetTilingData<ScatterNonAliasingAddTilingData>();
+    ASSERT_NE(tiling, nullptr);
+    EXPECT_GT(tiling->perCoreElements, static_cast<int64_t>(INT32_MAX));
+}
+
+TEST_F(ScatterNonAliasingAddTilingTest, dynamic_unknown_dim_uses_placeholder)
+{
+    string compile_info_string = R"({
+        "hardware_info": {
+            "UB_SIZE": 253952,
+            "CORE_NUM": 64,
+            "version": "Ascend950"
+        }
+    })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    ScatterNonAliasingAddCompileInfo compile_info;
+
+    std::string op_type("ScatterNonAliasingAdd");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+
+    // Unknown dim (-1): GE compile-time tiling should emit a placeholder and let
+    // runtime tiling handle the concrete shape.
+    gert::StorageShape x = {{-1, 4}, {-1, 4}};
+    gert::StorageShape indices = {{-1, 1}, {-1, 1}};
+    gert::StorageShape updates = {{-1, 4}, {-1, 4}};
+    gert::StorageShape y = {{-1, 4}, {-1, 4}};
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x, &indices, &updates})
+                      .OutputShapes({&y})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context, nullptr);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto* tiling = tiling_context->GetTilingData<ScatterNonAliasingAddTilingData>();
+    ASSERT_NE(tiling, nullptr);
+    EXPECT_EQ(tiling->totalElements, 0U);
+    EXPECT_EQ(tiling->totalScatters, 0U);
+    EXPECT_EQ(tiling->K, 0);
+    EXPECT_EQ(tiling_context->GetBlockDim(), 1U);
 }

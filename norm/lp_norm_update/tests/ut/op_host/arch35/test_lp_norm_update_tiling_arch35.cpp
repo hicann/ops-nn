@@ -100,10 +100,10 @@ constexpr int64_t FP32_EXTRA_BUFFER_COUNT = 3; // FP32 原生 + tBuf for Sqrt/Po
 static constexpr int32_t P_POS_INF = 2147483647;  // INT_MAX → +inf
 static constexpr int32_t P_NEG_INF = -2147483648; // INT_MIN → -inf
 
-// p 特殊值（V1 原型 p 为 int，此处转 float 比较）
-static constexpr float P_ZERO = 0.0f;    // p=0 → 恒等路径
-static constexpr float P_ONE = 1.0f;     // p=1 → 恒等路径
-static constexpr float P_TWO = 2.0f;     // p=2 → Sqrt 快速路径
+// p 特殊值（V1 原型 p 为 int，直接用 int 比较，避免窄化为 float 后边界值误判）
+static constexpr int32_t P_ZERO = 0;     // p=0 → 恒等路径
+static constexpr int32_t P_ONE = 1;      // p=1 → 恒等路径
+static constexpr int32_t P_TWO = 2;      // p=2 → Sqrt 快速路径
 static constexpr float INV_P_TWO = 0.5f; // 1/p when p=2
 
 // TilingKey 值（从 lp_norm_update_tiling_key.h 复制，独立编译不依赖 CANN 头文件）
@@ -111,11 +111,11 @@ static constexpr int32_t TILING_KEY_IDENTITY = 0; // 恒等路径
 static constexpr int32_t TILING_KEY_SQRT = 1;     // Sqrt 快速路径
 static constexpr int32_t TILING_KEY_POWER = 2;    // Power 通用路径
 
-// 判断 p（int→float 后）是否为 +inf（经 INT_MAX 映射）
-static bool IsPosInf(float p) { return p == static_cast<float>(P_POS_INF); }
+// 判断 p 是否为 +inf（经 INT_MAX 映射）
+static bool IsPosInf(int32_t p) { return p == P_POS_INF; }
 
-// 判断 p（int→float 后）是否为 -inf（经 INT_MIN 映射）
-static bool IsNegInf(float p) { return p == static_cast<float>(P_NEG_INF); }
+// 判断 p 是否为 -inf（经 INT_MIN 映射）
+static bool IsNegInf(int32_t p) { return p == P_NEG_INF; }
 
 /*!
  * \brief CalcTilingKey 逻辑复制（lp_norm_update_tiling_arch35.cpp）
@@ -124,9 +124,9 @@ static bool IsNegInf(float p) { return p == static_cast<float>(P_NEG_INF); }
  *   p ∈ {1, ±inf} → 恒等路径（TilingKey=0）
  *   p == 2        → Sqrt 快速路径（TilingKey=1）
  *   其他有限非零 p（含负值）→ Power 路径（TilingKey=2）
- *   p == 0        → 校验阶段拒绝，此处兜底返回 Identity
+ *   p == 0        → 恒等路径（TilingKey=0）
  */
-static int32_t CalcTilingKey(float p, float* invP)
+static int32_t CalcTilingKey(int32_t p, float* invP)
 {
     if (IsPosInf(p) || IsNegInf(p) || p == P_ONE) {
         *invP = P_ZERO;
@@ -140,7 +140,7 @@ static int32_t CalcTilingKey(float p, float* invP)
         *invP = P_ZERO;
         return TILING_KEY_IDENTITY;
     }
-    *invP = 1.0f / p;
+    *invP = 1.0f / static_cast<float>(p);
     return TILING_KEY_POWER;
 }
 
@@ -192,10 +192,22 @@ static int64_t CalcUbMaxElemNum(int64_t ubSize, int64_t totalDivisor, int64_t po
 /*!
  * \brief 多核切分逻辑复制（lp_norm_update_tiling_arch35.cpp）
  */
+static bool CalcCoreNumSafe(int64_t totalNum, int64_t minDtypeBits, int64_t* calcCoreNum)
+{
+    if (totalNum > (INT64_MAX - (MIN_TILING_BITS - 1)) / minDtypeBits) {
+        return false;
+    }
+    *calcCoreNum = (totalNum * minDtypeBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS;
+    return true;
+}
+
 static int64_t CalcBlockFactor(int64_t totalNum, int64_t coreNum)
 {
     int64_t minDtypeBits = FP32_TYPE_SIZE * 8;
-    int64_t calcCoreNum = (totalNum * minDtypeBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS;
+    int64_t calcCoreNum = 0;
+    if (!CalcCoreNumSafe(totalNum, minDtypeBits, &calcCoreNum)) {
+        return -1;
+    }
     int64_t usedCoreNum = std::min(calcCoreNum, coreNum);
     if (usedCoreNum <= 0) {
         usedCoreNum = 1;
@@ -214,9 +226,9 @@ static int64_t FloorAlign(int64_t a, int64_t b) { return (a / b) * b; }
 void test_tiling_key_p0()
 {
     TEST_BEGIN("tiling_key_p0_identity");
-    // p=0 实际校验阶段拒绝，CalcTilingKey 兜底返回 Identity
+    // p=0 → 恒等路径（L0 Reduce 已得计数，开 0 次根为退化操作）
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(0), &invP);
+    int32_t tk = CalcTilingKey(0, &invP);
     ASSERT_EQ(tk, TILING_KEY_IDENTITY);
     ASSERT_FLOAT_EQ(invP, P_ZERO);
     TEST_END();
@@ -226,7 +238,7 @@ void test_tiling_key_p1()
 {
     TEST_BEGIN("tiling_key_p1_identity");
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(1), &invP);
+    int32_t tk = CalcTilingKey(1, &invP);
     ASSERT_EQ(tk, TILING_KEY_IDENTITY);
     ASSERT_FLOAT_EQ(invP, P_ZERO);
     TEST_END();
@@ -236,7 +248,7 @@ void test_tiling_key_p2()
 {
     TEST_BEGIN("tiling_key_p2_sqrt");
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(2), &invP);
+    int32_t tk = CalcTilingKey(2, &invP);
     ASSERT_EQ(tk, TILING_KEY_SQRT);
     ASSERT_FLOAT_EQ(invP, INV_P_TWO);
     TEST_END();
@@ -246,7 +258,7 @@ void test_tiling_key_p3()
 {
     TEST_BEGIN("tiling_key_p3_power");
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(3), &invP);
+    int32_t tk = CalcTilingKey(3, &invP);
     ASSERT_EQ(tk, TILING_KEY_POWER);
     ASSERT_FLOAT_EQ(invP, 1.0f / 3.0f);
     TEST_END();
@@ -256,7 +268,7 @@ void test_tiling_key_p4()
 {
     TEST_BEGIN("tiling_key_p4_power");
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(4), &invP);
+    int32_t tk = CalcTilingKey(4, &invP);
     ASSERT_EQ(tk, TILING_KEY_POWER);
     ASSERT_FLOAT_EQ(invP, 1.0f / 4.0f);
     TEST_END();
@@ -267,7 +279,7 @@ void test_tiling_key_p_neg1()
     TEST_BEGIN("tiling_key_p_neg1_power");
     // 有限负 p=-1 → Power 路径，invP = -1.0
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(-1), &invP);
+    int32_t tk = CalcTilingKey(-1, &invP);
     ASSERT_EQ(tk, TILING_KEY_POWER);
     ASSERT_FLOAT_EQ(invP, -1.0f);
     TEST_END();
@@ -278,7 +290,7 @@ void test_tiling_key_p_neg2()
     TEST_BEGIN("tiling_key_p_neg2_power");
     // 有限负 p=-2 → Power 路径，invP = -0.5
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(-2), &invP);
+    int32_t tk = CalcTilingKey(-2, &invP);
     ASSERT_EQ(tk, TILING_KEY_POWER);
     ASSERT_FLOAT_EQ(invP, -0.5f);
     TEST_END();
@@ -289,7 +301,7 @@ void test_tiling_key_p_neg3()
     TEST_BEGIN("tiling_key_p_neg3_power");
     // 有限负 p=-3 → Power 路径，invP = -1/3
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(-3), &invP);
+    int32_t tk = CalcTilingKey(-3, &invP);
     ASSERT_EQ(tk, TILING_KEY_POWER);
     ASSERT_FLOAT_EQ(invP, 1.0f / -3.0f);
     TEST_END();
@@ -299,7 +311,7 @@ void test_tiling_key_pos_inf()
 {
     TEST_BEGIN("tiling_key_pos_inf_identity");
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(P_POS_INF), &invP);
+    int32_t tk = CalcTilingKey(P_POS_INF, &invP);
     ASSERT_EQ(tk, TILING_KEY_IDENTITY);
     ASSERT_FLOAT_EQ(invP, P_ZERO);
     TEST_END();
@@ -309,9 +321,31 @@ void test_tiling_key_neg_inf()
 {
     TEST_BEGIN("tiling_key_neg_inf_identity");
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(static_cast<float>(P_NEG_INF), &invP);
+    int32_t tk = CalcTilingKey(P_NEG_INF, &invP);
     ASSERT_EQ(tk, TILING_KEY_IDENTITY);
     ASSERT_FLOAT_EQ(invP, P_ZERO);
+    TEST_END();
+}
+
+void test_tiling_key_near_pos_inf()
+{
+    TEST_BEGIN("tiling_key_near_pos_inf_power");
+    // INT_MAX-1 是合法有限 p，不得因 float 窄化舍入到 INT_MAX 而误走恒等路径
+    float invP = -1.0f;
+    int32_t tk = CalcTilingKey(P_POS_INF - 1, &invP);
+    ASSERT_EQ(tk, TILING_KEY_POWER);
+    ASSERT_FLOAT_EQ(invP, 1.0f / static_cast<float>(P_POS_INF - 1));
+    TEST_END();
+}
+
+void test_tiling_key_near_neg_inf()
+{
+    TEST_BEGIN("tiling_key_near_neg_inf_power");
+    // INT_MIN+1 是合法有限 p，不得因 float 窄化舍入到 INT_MIN 而误走恒等路径
+    float invP = -1.0f;
+    int32_t tk = CalcTilingKey(P_NEG_INF + 1, &invP);
+    ASSERT_EQ(tk, TILING_KEY_POWER);
+    ASSERT_FLOAT_EQ(invP, 1.0f / static_cast<float>(P_NEG_INF + 1));
     TEST_END();
 }
 
@@ -424,13 +458,13 @@ void test_empty_tensor_tiling_key()
     TEST_BEGIN("empty_tensor_tiling_key_dispatch");
     // 空 tensor 仍需正确设置 TilingKey
     float invP = -1.0f;
-    int32_t tk = CalcTilingKey(2.0f, &invP);
+    int32_t tk = CalcTilingKey(2, &invP);
     ASSERT_EQ(tk, TILING_KEY_SQRT);
     ASSERT_FLOAT_EQ(invP, 0.5f);
 
     // 空 tensor：totalNum=0 时 SetBlockDim(1)，直接返回
     // 此处验证 TilingKey 分派逻辑不受 totalNum 影响
-    int32_t tk2 = CalcTilingKey(0.0f, &invP);
+    int32_t tk2 = CalcTilingKey(0, &invP);
     ASSERT_EQ(tk2, TILING_KEY_IDENTITY);
     TEST_END();
 }
@@ -442,6 +476,19 @@ void test_empty_tensor_block_factor()
     int64_t bf = CalcBlockFactor(0, 40);
     // totalNum=0: calcCoreNum=0, usedCoreNum=1, blockFactor=ceil(0/1, 512)=0
     ASSERT_EQ(bf, 0);
+    TEST_END();
+}
+
+void test_core_num_overflow_guard()
+{
+    TEST_BEGIN("core_num_overflow_guard");
+    int64_t calcCoreNum = -1;
+    int64_t safeMax = (INT64_MAX - (MIN_TILING_BITS - 1)) / 32;
+    // FP32: totalNum * 32 超过 INT64_MAX 时必须在乘法前拦截
+    ASSERT_EQ(CalcCoreNumSafe(safeMax + 1, 32, &calcCoreNum), false);
+    // 边界内仍可正常计算
+    ASSERT_EQ(CalcCoreNumSafe(safeMax, 32, &calcCoreNum), true);
+    ASSERT_EQ(CalcBlockFactor(safeMax + 1, 40), -1);
     TEST_END();
 }
 
@@ -559,6 +606,8 @@ int main()
     test_tiling_key_p_neg3();
     test_tiling_key_pos_inf();
     test_tiling_key_neg_inf();
+    test_tiling_key_near_pos_inf();
+    test_tiling_key_near_neg_inf();
 
     printf("\n--- CalcEpsEff 自适应 ---\n");
     test_eps_eff_fp16_normal();
@@ -578,6 +627,7 @@ int main()
     printf("\n--- 空 tensor 路径 ---\n");
     test_empty_tensor_tiling_key();
     test_empty_tensor_block_factor();
+    test_core_num_overflow_guard();
 
     printf("\n--- UB 公式（不含 *8） ---\n");
     test_ub_formula_fp32_tk0();

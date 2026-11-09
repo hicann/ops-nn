@@ -54,14 +54,14 @@ $$
     <tr>
       <td>indices</td>
       <td>Input</td>
-      <td>Multi-dimensional index tensor, with rank(indices) ≥ 2 and shape[-1] = K ≤ rank(x). It specifies the scatter target positions.</td>
+      <td>Multi-dimensional index tensor, with rank(indices) ≥ 1 and shape[-1] = K ≤ rank(x). It specifies the scatter target positions.</td>
       <td>INT32, INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>updates</td>
       <td>Input</td>
-      <td>Tensor of update values to be accumulated, with shape = indices.shape[:-1] + x.shape[K:].</td>
+      <td>Tensor of update values to be accumulated, with shape = indices.shape[:-1] + x.shape[K:] and dtype = x.dtype.</td>
       <td>FLOAT16, FLOAT, INT32</td>
       <td>ND</td>
     </tr>
@@ -78,13 +78,17 @@ $$
 
 - Output y does not share memory with input x (Non-Aliasing), and y is an independently allocated tensor.
 - All inputs and outputs use FORMAT_ND (contiguous storage), and non-contiguous tensors are not supported.
-- The rank of indices must be greater than or equal to 2, and the last dimension indicates the index depth K.
+- The rank of indices must be greater than or equal to 1, and the last dimension indicates the index depth K.
+- The rank of x must be less than or equal to 8.
+- The dtype of updates must be the same as x.
+- The shape of updates must be indices.shape[:-1] + x.shape[K:]. When the result is a scalar, a single-element updates tensor with shape (1,) is also accepted.
 - Repeated indices are accumulated multiple times in the original order of indices, and the result is deterministic.
 - Each index value in indices must satisfy 0 ≤ index < x.shape[dim]. Negative indices and out-of-bounds indices are not supported. The operator does not validate index validity. You must ensure that the indices are valid; otherwise, the result is undefined.
-- Empty tensors (shapes containing 0 dimensions) are supported. In this case, a copy of x is returned, and scatter add is not performed.
 
 ## Invocation Description
 
 | Invocation method | Sample code | Description |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| Graph mode | - | Invoke the ScatterNonAliasingAdd operator through the [operator IR](op_graph/scatter_non_aliasing_add_proto.h) API. |
+| Graph mode | [test_geir_scatter_non_aliasing_add](examples/arch35/test_geir_scatter_non_aliasing_add.cpp) | Invoke the ScatterNonAliasingAdd operator through the [operator IR](op_graph/scatter_non_aliasing_add_proto.h) API. |
+
+Sample input: x is [3, 2] FLOAT32, indices is [2, 1] INT32, updates is [2, 2] FLOAT32, and the output y is [3, 2] FLOAT32. In the repository root, run `bash build.sh --run_example scatter_non_aliasing_add graph --soc=ascend950` to compile and run the sample.

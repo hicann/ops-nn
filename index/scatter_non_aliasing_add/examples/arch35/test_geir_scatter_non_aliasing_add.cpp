@@ -79,7 +79,7 @@ uint32_t GetDataTypeSize(DataType dt)
 }
 
 // Generate sequential float data 1, 1, 1, ... for x / updates.
-int32_t GenFloatSeq(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc)
+int32_t GenFloatSeq(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, vector<float>& storage)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -87,17 +87,17 @@ int32_t GenFloatSeq(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
         size *= shapes[i];
     }
     uint32_t data_len = size * sizeof(float);
-    float* pData = new (std::nothrow) float[size];
+    storage.resize(size);
     for (size_t i = 0; i < size; ++i) {
-        *(pData + i) = 1.0f;
+        storage[i] = 1.0f;
     }
-    input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(storage.data()), data_len);
     return SUCCESS;
 }
 
 // Generate int32 data from a given value array (for indices).
 int32_t GenInt32Arr(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, const int32_t* vals,
-                    size_t valsCnt)
+                    size_t valsCnt, vector<int32_t>& storage)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -105,27 +105,35 @@ int32_t GenInt32Arr(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
         size *= shapes[i];
     }
     uint32_t data_len = size * sizeof(int32_t);
-    int32_t* pData = new (std::nothrow) int32_t[size];
+    storage.resize(size);
     for (size_t i = 0; i < size; ++i) {
-        *(pData + i) = (i < valsCnt) ? vals[i] : 0;
+        storage[i] = (i < valsCnt) ? vals[i] : 0;
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(storage.data()), data_len);
     return SUCCESS;
 }
 
 int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 {
-    FILE* fp;
-    fp = fopen(bin_file.c_str(), "w");
-    fwrite(inputData, sizeof(uint8_t), data_size, fp);
-    fclose(fp);
-    return SUCCESS;
+    FILE* fp = fopen(bin_file.c_str(), "w");
+    if (fp == nullptr) {
+        return FAILED;
+    }
+    size_t written = fwrite(inputData, sizeof(uint8_t), data_size, fp);
+    if (written != data_size) {
+        fclose(fp);
+        return FAILED;
+    }
+    return (fclose(fp) == 0) ? SUCCESS : FAILED;
 }
 
 int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
                      std::vector<Operator>& outputs, Graph& graph)
 {
     Status ret = SUCCESS;
+    static vector<float> xData;
+    static vector<float> updatesData;
+    static vector<int32_t> indicesData;
     auto scatterNonAliasingAdd = op::ScatterNonAliasingAdd("scatterNonAliasingAdd");
 
     // x: Data input, shape {3, 2}
@@ -135,7 +143,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     xDesc.SetPlacement(ge::kPlacementHost);
     xDesc.SetFormat(FORMAT_ND);
     Tensor tensorX;
-    ret = GenFloatSeq(xShape, tensorX, xDesc);
+    ret = GenFloatSeq(xShape, tensorX, xDesc, xData);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Generate x data failed\n", GetTime().c_str());
         return FAILED;
@@ -147,15 +155,16 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     scatterNonAliasingAdd.set_input_x(placeholderX);
     inputs.push_back(placeholderX);
 
-    // indices: Const input, int32, shape {2}, values [0, 1]
-    vector<int64_t> indicesShape = {2};
+    // indices: Const input, int32, shape {2, 1}, values [[0], [2]]
+    vector<int64_t> indicesShape = {2, 1};
     auto placeholderIndices = op::Const("placeholderIndices");
     TensorDesc indicesDesc = TensorDesc(ge::Shape(indicesShape), FORMAT_ND, DT_INT32);
     indicesDesc.SetPlacement(ge::kPlacementHost);
     indicesDesc.SetFormat(FORMAT_ND);
     Tensor tensorIndices;
-    const int32_t indicesVals[] = {0, 1};
-    ret = GenInt32Arr(indicesShape, tensorIndices, indicesDesc, indicesVals, sizeof(indicesVals) / sizeof(int32_t));
+    const int32_t indicesVals[] = {0, 2};
+    ret = GenInt32Arr(indicesShape, tensorIndices, indicesDesc, indicesVals, sizeof(indicesVals) / sizeof(int32_t),
+                      indicesData);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Generate indices data failed\n", GetTime().c_str());
         return FAILED;
@@ -174,7 +183,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     updatesDesc.SetPlacement(ge::kPlacementHost);
     updatesDesc.SetFormat(FORMAT_ND);
     Tensor tensorUpdates;
-    ret = GenFloatSeq(updatesShape, tensorUpdates, updatesDesc);
+    ret = GenFloatSeq(updatesShape, tensorUpdates, updatesDesc, updatesData);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Generate updates data failed\n", GetTime().c_str());
         return FAILED;
@@ -221,6 +230,7 @@ int main(int argc, char* argv[])
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        GEFinalize();
         return FAILED;
     }
 
@@ -233,6 +243,7 @@ int main(int argc, char* argv[])
     ge::Session* session = new Session(build_options);
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+        GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Create ir session using build options success\n", GetTime().c_str());
@@ -240,6 +251,13 @@ int main(int argc, char* argv[])
     std::map<AscendString, AscendString> graph_options = {};
     uint32_t graph_id = 0;
     ret = session->AddGraph(graph_id, graph, graph_options);
+    if (ret != SUCCESS) {
+        printf("%s - ERROR - [XIR]: Session add ir compute graph to ir session failed, ret = %d\n", GetTime().c_str(),
+               ret);
+        delete session;
+        GEFinalize();
+        return FAILED;
+    }
     printf("%s - INFO - [XIR]: Session add ir compute graph to ir session success\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
     std::string file_path = "./dump";
@@ -263,7 +281,12 @@ int main(int argc, char* argv[])
         int64_t input_shape = input[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th input, input shape size =" << input_shape << std::endl;
         uint32_t data_size = input_shape * GetDataTypeSize(input[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)input_file.c_str(), data_size, input_data_i);
+        if (WriteDataToFile((const char*)input_file.c_str(), data_size, input_data_i) != SUCCESS) {
+            printf("%s - ERROR - [XIR]: Write input file %s failed\n", GetTime().c_str(), input_file.c_str());
+            delete session;
+            GEFinalize();
+            return FAILED;
+        }
     }
 
     int output_num = output.size();
@@ -274,7 +297,12 @@ int main(int argc, char* argv[])
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th output, output shape size =" << output_shape << std::endl;
         uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
+        if (WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i) != SUCCESS) {
+            printf("%s - ERROR - [XIR]: Write output file %s failed\n", GetTime().c_str(), output_file.c_str());
+            delete session;
+            GEFinalize();
+            return FAILED;
+        }
         float* resultData = (float*)output_data_i;
         printf("output result (shape [%ld]):\n", output_shape);
         for (int64_t j = 0; j < output_shape; j++) {
@@ -289,6 +317,8 @@ int main(int argc, char* argv[])
     std::string warning_str(warning_msg.GetString());
     std::cout << "Warning message: " << warning_str << std::endl;
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
+    delete session;
+    session = nullptr;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
