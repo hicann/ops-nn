@@ -99,7 +99,9 @@
 
 ## 约束说明
 
-无
+- x1 和 x2 的 rank 为 1～8，shape 必须完全相同且不可为空。
+- gamma 的 rank 为 1～8，且不得大于 x1 的 rank；gamma 各维度必须与 x1 末尾对应维度相同。
+- y 和 x 的 shape 与 x1 相同；rstd rank 与 x1 相同，x1 前置未归一化维度保持不变，gamma 对应的末尾维度置为 1。
 
 ## 调用说明
 
