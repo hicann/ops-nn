@@ -620,4 +620,7 @@ void ASplitConv2dConcatPass::PrintGraphStructure() const
     OP_LOGI(splitNodeName.GetString(), "split_conv2d_concat fusion success: groups=%lld.", groups);
 }
 
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+REG_FUSION_PASS(ASplitConv2dConcatPass).Stage(CustomPassStage::kCompatibleInherited);
+#endif
 } // namespace Ops

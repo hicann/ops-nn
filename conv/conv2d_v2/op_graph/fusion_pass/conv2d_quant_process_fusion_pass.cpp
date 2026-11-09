@@ -490,4 +490,7 @@ bool Conv2DQuantProcessFusionPass::ConvFusionReplaceImpl(ge::GraphPtr& graph, ge
     return true;
 }
 
+#if GE_COMPILER_VERSION_NUM >= 90300000U
+REG_FUSION_PASS(Conv2DQuantProcessFusionPass).Stage(ge::CustomPassStage::kCompatibleInherited);
+#endif
 } // namespace Ops
