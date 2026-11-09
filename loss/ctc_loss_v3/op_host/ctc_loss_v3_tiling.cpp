@@ -75,7 +75,7 @@ public:
     bool CheckShapeInfo();
     bool CheckShapeInfoForN();
     bool CheckShapeInfoForCT();
-    bool CheckDtypeInfo();
+    bool CheckDtypeInfo() const;
     void PrintTilingData() const;
     void TilingDataPrint();
     bool GetMaxTargetLengths();
@@ -116,7 +116,7 @@ private:
     int64_t logAlphaT = 0;
 };
 
-bool CTCLossV3Tiling::CheckDtypeInfo()
+bool CTCLossV3Tiling::CheckDtypeInfo() const
 {
     auto nodeName = context->GetNodeName();
     auto logProbsDesc = context->GetInputDesc(INPUT_LOG_PROB_IDX);
