@@ -481,6 +481,10 @@ macro(add_category_subdirectory)
 
   if("${ASCEND_OP_NAME}" STREQUAL "add_example" OR "${ASCEND_OP_NAME}" STREQUAL "add_example_aicpu"
      OR "${ASCEND_OP_NAME}" STREQUAL "add_example_pypto")
+    # examples 在算子循环外单独加载，此时 OP_DIR/OP_NAME 仍残留循环最后一次的算子目录，
+    # 会导致 examples 下 AddOpTestCase 误用该目录并在 --ops 过滤时提前 return（UT 用例不注册）。
+    unset(OP_DIR)
+    unset(OP_NAME)
     add_subdirectory(examples)
   endif()
 endmacro()
