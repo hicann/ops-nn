@@ -31,8 +31,8 @@ void RollbackOriginalEdge(const ReshapeEdgeInfo& edge)
         AscendString dstName;
         (void)edge.src.GetName(srcName);
         (void)edge.dst.GetName(dstName);
-        OP_LOGE(FUSION_NAME, "rollback add edge %s->%s failed, graph may be corrupted.", srcName.GetString(),
-                dstName.GetString());
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "rollback add edge %s->%s failed, graph may be corrupted.",
+                               srcName.GetString(), dstName.GetString());
     }
 }
 } // namespace
@@ -92,14 +92,16 @@ bool ADepthwiseFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& depthwi
     FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     GNodePtr filterProducer = depthwiseNode.GetInDataNodesAndPortIndexs(FILTER_INPUT_INDEX).first;
-    FUSION_PASS_CHECK(filterProducer == nullptr,
-                      OP_LOGE(FUSION_NAME, "%s get filter producer node failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
+    FUSION_PASS_CHECK(
+        filterProducer == nullptr,
+        OP_LOGE_FOR_INVALID_GRAPH_NODE(convDescInfo.nodeNameStr.c_str(), "Required filter input has no producer node"),
+        return false);
 
     AscendString producerType;
-    FUSION_PASS_CHECK(filterProducer->GetType(producerType) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s get filter producer type failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
+    FUSION_PASS_CHECK(
+        filterProducer->GetType(producerType) != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s get filter producer type failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
 
     if (producerType == ASCEND_WEIGHT_QUANT) {
         FUSION_PASS_CHECK_NOLOG(!DealQuantNodeCase(*graph, *filterProducer, depthwiseNode), return false);
@@ -122,10 +124,10 @@ bool ADepthwiseFusionPass::DealQuantNodeCase(Graph& graph, GNode& quantNode, GNo
             continue;
         }
         TensorDesc upstreamOutDesc;
-        FUSION_PASS_CHECK(
-            upstreamProducer->GetOutputDesc(upstreamPair.second, upstreamOutDesc) != GRAPH_SUCCESS,
-            OP_LOGE(FUSION_NAME, "%s get upstream producer output desc failed.", convDescInfo.nodeNameStr.c_str()),
-            return false);
+        FUSION_PASS_CHECK(upstreamProducer->GetOutputDesc(upstreamPair.second, upstreamOutDesc) != GRAPH_SUCCESS,
+                          OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s get upstream producer output desc failed.",
+                                                 convDescInfo.nodeNameStr.c_str()),
+                          return false);
         Format upstreamFormat = upstreamOutDesc.GetOriginFormat();
         if (upstreamFormat != Format::FORMAT_HWCN && upstreamFormat != Format::FORMAT_NCHW) {
             continue;
@@ -139,31 +141,33 @@ bool ADepthwiseFusionPass::DealQuantNodeCase(Graph& graph, GNode& quantNode, GNo
 bool ADepthwiseFusionPass::UpdateQuantAndDepthwiseFilterDesc(GNode& quantNode, GNode& depthwiseNode) const
 {
     TensorDesc filterDesc;
-    FUSION_PASS_CHECK(
-        depthwiseNode.GetInputDesc(FILTER_INPUT_INDEX, filterDesc) != GRAPH_SUCCESS,
-        OP_LOGE(FUSION_NAME, "%s get depthwise filter input desc failed.", convDescInfo.nodeNameStr.c_str()),
-        return false);
+    FUSION_PASS_CHECK(depthwiseNode.GetInputDesc(FILTER_INPUT_INDEX, filterDesc) != GRAPH_SUCCESS,
+                      OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s get depthwise filter input desc failed.",
+                                             convDescInfo.nodeNameStr.c_str()),
+                      return false);
 
     FilterShapeResult shapeResult;
     FUSION_PASS_CHECK(
         !ComputeFilterShapes(filterDesc.GetOriginShape().GetDims(), filterDesc.GetOriginFormat(), shapeResult),
-        OP_LOGE(FUSION_NAME, "%s compute quant filter shapes failed.", convDescInfo.nodeNameStr.c_str()), return false);
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s compute quant filter shapes failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
 
     TensorDesc quantOutDesc;
-    FUSION_PASS_CHECK(quantNode.GetOutputDesc(OUTPUT_INDEX, quantOutDesc) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s get quant node output desc failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
-    SetTensorDescShape(quantOutDesc, shapeResult.newShape);
     FUSION_PASS_CHECK(
-        quantNode.UpdateOutputDesc(OUTPUT_INDEX, quantOutDesc) != GRAPH_SUCCESS,
-        OP_LOGE(FUSION_NAME, "%s update quant node output desc failed.", convDescInfo.nodeNameStr.c_str()),
+        quantNode.GetOutputDesc(OUTPUT_INDEX, quantOutDesc) != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s get quant node output desc failed.", convDescInfo.nodeNameStr.c_str()),
         return false);
+    SetTensorDescShape(quantOutDesc, shapeResult.newShape);
+    FUSION_PASS_CHECK(quantNode.UpdateOutputDesc(OUTPUT_INDEX, quantOutDesc) != GRAPH_SUCCESS,
+                      OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s update quant node output desc failed.",
+                                             convDescInfo.nodeNameStr.c_str()),
+                      return false);
 
     SetTensorDescShape(filterDesc, shapeResult.newShape);
-    FUSION_PASS_CHECK(
-        depthwiseNode.UpdateInputDesc(FILTER_INPUT_INDEX, filterDesc) != GRAPH_SUCCESS,
-        OP_LOGE(FUSION_NAME, "%s update depthwise filter input desc failed.", convDescInfo.nodeNameStr.c_str()),
-        return false);
+    FUSION_PASS_CHECK(depthwiseNode.UpdateInputDesc(FILTER_INPUT_INDEX, filterDesc) != GRAPH_SUCCESS,
+                      OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s update depthwise filter input desc failed.",
+                                             convDescInfo.nodeNameStr.c_str()),
+                      return false);
 
     return true;
 }
@@ -175,10 +179,11 @@ bool ADepthwiseFusionPass::InsertReshapeForConsumers(Graph& graph, GNode& produc
     std::vector<int64_t> curNewShape;
     if (!isQuantCase) {
         FilterShapeResult shapeResult;
-        FUSION_PASS_CHECK(!ComputeFilterShapes(convDescInfo.filterDesc.GetOriginShape().GetDims(),
-                                               convDescInfo.filterDesc.GetOriginFormat(), shapeResult),
-                          OP_LOGE(FUSION_NAME, "%s compute filter shapes failed.", convDescInfo.nodeNameStr.c_str()),
-                          return false);
+        FUSION_PASS_CHECK(
+            !ComputeFilterShapes(convDescInfo.filterDesc.GetOriginShape().GetDims(),
+                                 convDescInfo.filterDesc.GetOriginFormat(), shapeResult),
+            OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s compute filter shapes failed.", convDescInfo.nodeNameStr.c_str()),
+            return false);
         curPreShape = shapeResult.preShape;
         curNewShape = shapeResult.newShape;
     }
@@ -193,9 +198,10 @@ bool ADepthwiseFusionPass::InsertReshapeForConsumers(Graph& graph, GNode& produc
             int32_t consumerInIdx = consumerPair.second;
 
             AscendString consumerType;
-            FUSION_PASS_CHECK(consumer.GetType(consumerType) != GRAPH_SUCCESS,
-                              OP_LOGE(FUSION_NAME, "%s get consumer type failed.", convDescInfo.nodeNameStr.c_str()),
-                              return false);
+            FUSION_PASS_CHECK(
+                consumer.GetType(consumerType) != GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s get consumer type failed.", convDescInfo.nodeNameStr.c_str()),
+                return false);
             if (targetTypes.find(consumerType) == targetTypes.end()) {
                 continue;
             }
@@ -234,9 +240,10 @@ bool ADepthwiseFusionPass::ResolveReshapeShapes(GNode& producer, int32_t outIdx,
 {
     resolved = false;
     TensorDesc producerOutDesc;
-    FUSION_PASS_CHECK(producer.GetOutputDesc(outIdx, producerOutDesc) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s get producer output desc failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
+    FUSION_PASS_CHECK(
+        producer.GetOutputDesc(outIdx, producerOutDesc) != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s get producer output desc failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
 
     FUSION_PASS_CHECK_NOLOG(
         !ComputeFilterShapes(consumerInDesc.GetOriginShape().GetDims(), producerOutDesc.GetOriginFormat(), shapeResult),
@@ -264,20 +271,22 @@ bool ADepthwiseFusionPass::UpdateConsumerInputShape(GNode& consumer, int32_t con
 {
     TensorDesc updatedInDesc = consumerInDesc;
     SetTensorDescShape(updatedInDesc, newShape);
-    FUSION_PASS_CHECK(consumer.UpdateInputDesc(consumerInIdx, updatedInDesc) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s update consumer input desc failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
+    FUSION_PASS_CHECK(
+        consumer.UpdateInputDesc(consumerInIdx, updatedInDesc) != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s update consumer input desc failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
     return true;
 }
 
 bool ADepthwiseFusionPass::InsertReshapeBetween(const ReshapeEdgeInfo& edge, const ReshapeDescInfo& descInfo)
 {
     FUSION_PASS_CHECK(edge.graph.RemoveEdge(edge.src, edge.srcOutIdx, edge.dst, edge.dstInIdx) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s remove edge failed.", convDescInfo.nodeNameStr.c_str()), return false);
+                      OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s remove edge failed.", convDescInfo.nodeNameStr.c_str()),
+                      return false);
 
     AscendString srcName;
     if (edge.src.GetName(srcName) != GRAPH_SUCCESS) {
-        OP_LOGE(FUSION_NAME, "%s get src node name failed.", convDescInfo.nodeNameStr.c_str());
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s get src node name failed.", convDescInfo.nodeNameStr.c_str());
         RollbackOriginalEdge(edge);
         return false;
     }
@@ -287,12 +296,12 @@ bool ADepthwiseFusionPass::InsertReshapeBetween(const ReshapeEdgeInfo& edge, con
                             return false);
 
     if (edge.graph.AddDataEdge(edge.src, edge.srcOutIdx, reshapeNode, RESHAPE_INPUT_INDEX) != GRAPH_SUCCESS) {
-        OP_LOGE(FUSION_NAME, "%s add edge src->reshape failed.", convDescInfo.nodeNameStr.c_str());
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s add edge src->reshape failed.", convDescInfo.nodeNameStr.c_str());
         RollbackOriginalEdge(edge);
         return false;
     }
     if (edge.graph.AddDataEdge(reshapeNode, RESHAPE_OUTPUT_INDEX, edge.dst, edge.dstInIdx) != GRAPH_SUCCESS) {
-        OP_LOGE(FUSION_NAME, "%s add edge reshape->dst failed.", convDescInfo.nodeNameStr.c_str());
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s add edge reshape->dst failed.", convDescInfo.nodeNameStr.c_str());
         (void)edge.graph.RemoveEdge(edge.src, edge.srcOutIdx, reshapeNode, RESHAPE_INPUT_INDEX);
         RollbackOriginalEdge(edge);
         return false;
@@ -314,20 +323,24 @@ bool ADepthwiseFusionPass::CreateReshapeNode(Graph& graph, const AscendString& p
                       .Build();
 
     AscendString reshapeType;
-    FUSION_PASS_CHECK(reshapeNode.GetType(reshapeType) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s get reshape node type failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
+    FUSION_PASS_CHECK(
+        reshapeNode.GetType(reshapeType) != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s get reshape node type failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
 
-    FUSION_PASS_CHECK(reshapeNode.UpdateInputDesc(RESHAPE_INPUT_INDEX, descInfo.inDesc) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s update reshape input desc failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
-    FUSION_PASS_CHECK(reshapeNode.UpdateOutputDesc(RESHAPE_OUTPUT_INDEX, descInfo.outDesc) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s update reshape output desc failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
+    FUSION_PASS_CHECK(
+        reshapeNode.UpdateInputDesc(RESHAPE_INPUT_INDEX, descInfo.inDesc) != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s update reshape input desc failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
+    FUSION_PASS_CHECK(
+        reshapeNode.UpdateOutputDesc(RESHAPE_OUTPUT_INDEX, descInfo.outDesc) != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s update reshape output desc failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
     std::vector<int64_t> attrValue = descInfo.shapeAttr;
-    FUSION_PASS_CHECK(reshapeNode.SetAttr(SHAPE_ATTR, attrValue) != GRAPH_SUCCESS,
-                      OP_LOGE(FUSION_NAME, "%s set reshape shape attr failed.", convDescInfo.nodeNameStr.c_str()),
-                      return false);
+    FUSION_PASS_CHECK(
+        reshapeNode.SetAttr(SHAPE_ATTR, attrValue) != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s set reshape shape attr failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
     insertedReshapeNodes.emplace_back(reshapeNode);
     return true;
 }

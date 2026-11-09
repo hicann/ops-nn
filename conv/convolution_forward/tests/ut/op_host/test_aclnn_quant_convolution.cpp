@@ -26,6 +26,8 @@
 #include "op_api_ut_common/tensor_desc.h"
 
 #include "opdev/platform.h"
+#include "base/err_mgr.h"
+#include <map>
 
 using namespace op;
 using namespace std;
@@ -2389,4 +2391,35 @@ TEST_F(quant_convolution_test, ascend960dt_quant_conv3d_aclnn_weight_nhwc_suppor
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
         // EXPECT_EQ(aclRet, ACL_SUCCESS);
     }
+}
+
+TEST_F(quant_convolution_test, owner_missing_argument_single_formal_report)
+{
+    op::SocVersionManager platform(op::SocVersion::ASCEND910B);
+    (void)error_message::ErrMgrInit(error_message::ErrorMessageMode::INTERNAL_MODE);
+    (void)error_message::GetErrMgrRawErrorMessages();
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    EXPECT_EQ(
+        aclnnQuantConvolutionGetWorkspaceSize(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+                                              false, nullptr, 1, 0, nullptr, nullptr, &workspaceSize, &executor),
+        ACLNN_ERR_PARAM_NULLPTR);
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    ASSERT_EQ(errors.size(), 1U);
+    ASSERT_NE(errors[0].error_id, nullptr);
+    EXPECT_STREQ(errors[0].error_id.get(), "EZ0024");
+    ASSERT_EQ(errors[0].args_key.size(), 4U);
+    ASSERT_EQ(errors[0].args_value.size(), 4U);
+    std::map<std::string, std::string> fields;
+    for (size_t i = 0; i < errors[0].args_key.size(); ++i) {
+        ASSERT_NE(errors[0].args_key[i], nullptr);
+        ASSERT_NE(errors[0].args_value[i], nullptr);
+        fields.emplace(errors[0].args_key[i].get(), errors[0].args_value[i].get());
+    }
+    const std::map<std::string, std::string> expected = {{"param_name", "bias"},
+                                                         {"op_name", "aclnnQuantConvolutionGetWorkspaceSize"},
+                                                         {"incorrect_value", "nullptr"},
+                                                         {"correct_value", "not nullptr"}};
+    EXPECT_EQ(fields, expected);
+    EXPECT_TRUE(error_message::GetErrMgrRawErrorMessages().empty());
 }

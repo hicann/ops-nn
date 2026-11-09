@@ -21,6 +21,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
+#include "op_common/log/log.h"
 #include "opdev/shape_utils.h"
 #include "aclnn_kernels/transpose.h"
 #include "op_api/aclnn_util.h"
@@ -28,6 +29,17 @@
 using namespace op;
 
 namespace l0op {
+
+// The target opbase convenience macro uses "paramName", while the registered EZ0038 key is "param_name".
+static void ReportConvolutionListSize(const char* opName, const char* parameter, const std::string& actual,
+                                      const char* reason)
+{
+    OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Parameter %s of %s has list size %s. Reason: %s", parameter, opName,
+                           actual.c_str(), reason);
+    const std::vector<const char*> keys = {"param_name", "op_name", "incorrect_size", "reason"};
+    const std::vector<const char*> values = {parameter, opName, actual.c_str(), reason};
+    REPORT_PREDEFINED_ERR_MSG("EZ0038", keys, values);
+}
 OP_TYPE_REGISTER(Conv2D);
 OP_TYPE_REGISTER(Conv2DV2);
 OP_TYPE_REGISTER(Conv2DTranspose);
@@ -603,20 +615,41 @@ static aclnnStatus Conv2dWithFlag(const aclTensor* input, const aclTensor* weigh
     L0_DFX(Conv2dWithFlag, input, weight, stride, padding, dilation, groups, useHf32);
 
     auto stride4 = ConstructConv2DNewStride(input, stride, executor);
+    if (stride4 == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "AllocIntArray returned nullptr for stride4");
+        output = nullptr;
+        return ACLNN_ERR_INNER;
+    }
     if (stride4->Size() != PAD_DIM_4) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct conv2d new stride failed.");
+        ReportConvolutionListSize("Convolution", "strides", std::to_string(stride->Size()).c_str(),
+                                  "At least 2 elements are required for 2D convolution");
+        output = nullptr;
         return ACLNN_ERR_INNER;
     }
     auto dilation4 = ConstructConv2DNewDilation(input, dilation, executor);
+    if (dilation4 == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "AllocIntArray returned nullptr for dilation4");
+        output = nullptr;
+        return ACLNN_ERR_INNER;
+    }
     if (dilation4->Size() != PAD_DIM_4) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct conv2d new dilation failed.");
+        ReportConvolutionListSize("Convolution", "dilations", std::to_string(dilation->Size()).c_str(),
+                                  "At least 2 elements are required for 2D convolution");
+        output = nullptr;
         return ACLNN_ERR_INNER;
     }
     const char* empty_str = "";
     const int64_t hf32 = useHf32 ? 0x40 : 0x20;
     auto pad4 = ConstructNewPad(padding, executor);
+    if (pad4 == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "AllocIntArray returned nullptr for pad4");
+        output = nullptr;
+        return ACLNN_ERR_INNER;
+    }
     if (pad4->Size() != PAD_DIM_4) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct conv2d new pad failed.");
+        ReportConvolutionListSize("Convolution", "pads", std::to_string(padding->Size()).c_str(),
+                                  "2D convolution padding must contain 2 or 4 elements");
+        output = nullptr;
         return ACLNN_ERR_INNER;
     }
     ge::AscendString originalFormat = op::ToString(input->GetOriginalFormat());
@@ -632,7 +665,7 @@ static aclnnStatus Conv2dWithFlag(const aclTensor* input, const aclTensor* weigh
     auto ret = INFER_SHAPE(Conv2D, OP_INPUT(input, weight, bias), OP_OUTPUT(output),
                            OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, empty_str, empty_str, hf32));
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed, rc=%d.", ret);
         output = nullptr;
         return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
     }
@@ -640,7 +673,8 @@ static aclnnStatus Conv2dWithFlag(const aclTensor* input, const aclTensor* weigh
         Conv2D, OP_INPUT(input, weight, bias), OP_OUTPUT(output),
         OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, empty_str, empty_str, hf32));
     if (launchRet != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_FIND_KERNEL_ERROR, "Conv2D ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_FIND_KERNEL_ERROR, "Conv2D ADD_TO_LAUNCHER_LIST_AICORE failed, rc=%d.",
+                               launchRet);
         output = nullptr;
         return ACLNN_ERR_INNER_FIND_KERNEL_ERROR;
     }
@@ -729,7 +763,7 @@ static aclnnStatus Conv3dWithFlag(const aclTensor* input, const aclTensor* weigh
     auto ret = INFER_SHAPE(Conv3D, OP_INPUT(input, weight, bias), OP_OUTPUT(output),
                            OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, 0));
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed, rc=%d.", ret);
         output = nullptr;
         return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
     }
@@ -798,11 +832,15 @@ static aclnnStatus Conv3dv2WithFlag(const aclTensor* input, const aclTensor* wei
     aclIntArray* stride5;
     aclIntArray* dilation5;
     if (stride->Size() < DIM_3) {
-        OP_LOGE(ACLNN_ERR_INNER, "conv3dv2 get stride size < 3");
+        ReportConvolutionListSize("Convolution", "strides", std::to_string(stride->Size()).c_str(),
+                                  "At least 3 elements are required for 3D convolution");
+        output = nullptr;
         return ACLNN_ERR_INNER;
     }
     if (dilation->Size() < DIM_3) {
-        OP_LOGE(ACLNN_ERR_INNER, "conv3dv2 get dilation size < 3");
+        ReportConvolutionListSize("Convolution", "dilations", std::to_string(dilation->Size()).c_str(),
+                                  "At least 3 elements are required for 3D convolution");
+        output = nullptr;
         return ACLNN_ERR_INNER;
     }
     FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1], (*stride)[2]};
@@ -811,8 +849,15 @@ static aclnnStatus Conv3dv2WithFlag(const aclTensor* input, const aclTensor* wei
     dilation5 = executor->AllocIntArray(newDilation.data(), conv3dDimNum);
 
     aclIntArray* pad6 = ConstructConv3DNewPad(padding, executor);
+    if (pad6 == nullptr) {
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "AllocIntArray returned nullptr for pad6");
+        output = nullptr;
+        return ACLNN_ERR_INNER;
+    }
     if (pad6->Size() != PAD_DIM_6) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct conv3d new pad failed.");
+        ReportConvolutionListSize("Convolution", "pads", std::to_string(padding->Size()).c_str(),
+                                  "3D convolution padding must contain 3 or 6 elements");
+        output = nullptr;
         return ACLNN_ERR_INNER;
     }
 
@@ -821,7 +866,7 @@ static aclnnStatus Conv3dv2WithFlag(const aclTensor* input, const aclTensor* wei
     auto ret = INFER_SHAPE(Conv3DV2, OP_INPUT(input, weight, bias, scale, offset, nullptr), OP_OUTPUT(output),
                            OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, 0, "SPECIFIC", useHf32));
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed, rc=%d.", ret);
         output = nullptr;
         return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
     }

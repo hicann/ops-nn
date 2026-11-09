@@ -365,7 +365,7 @@ bool CheckDisContinuousStride(const aclTensor* input, const std::vector<int64_t>
     auto viewStrides = input->GetViewStrides();
     uint32_t totalDims = std::min(viewStrides.size(), newStrides.size());
     if (dims > totalDims) {
-        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "Invalid dims");
+        OP_LOGD("Skip discontinuous-stride optimization: tensor rank is not 4 or 5");
         return false;
     }
     for (size_t i = 0; i < dims; i++) {

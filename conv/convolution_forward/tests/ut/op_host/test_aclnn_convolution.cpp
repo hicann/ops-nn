@@ -26,6 +26,10 @@
 #include "op_api_ut_common/tensor_desc.h"
 
 #include "opdev/platform.h"
+#include "base/err_mgr.h"
+#include <map>
+#include "opdev/make_op_executor.h"
+#include "../../../op_host/op_api/convolution.h"
 
 using namespace op;
 using namespace std;
@@ -5195,4 +5199,34 @@ TEST_F(convolution_test, ascend960dt_test_conv1D_LNC)
 
         // ut.TestPrecision();
     }
+}
+
+TEST_F(convolution_test, owner_missing_input_single_formal_report)
+{
+    op::SocVersionManager platform(op::SocVersion::ASCEND910B);
+    (void)error_message::ErrMgrInit(error_message::ErrorMessageMode::INTERNAL_MODE);
+    (void)error_message::GetErrMgrRawErrorMessages();
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    EXPECT_EQ(aclnnConvolutionGetWorkspaceSize(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, false, nullptr, 1,
+                                               nullptr, 0, &workspaceSize, &executor),
+              ACLNN_ERR_PARAM_NULLPTR);
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    ASSERT_EQ(errors.size(), 1U);
+    ASSERT_NE(errors[0].error_id, nullptr);
+    EXPECT_STREQ(errors[0].error_id.get(), "EZ0024");
+    ASSERT_EQ(errors[0].args_key.size(), 4U);
+    ASSERT_EQ(errors[0].args_value.size(), 4U);
+    std::map<std::string, std::string> fields;
+    for (size_t i = 0; i < errors[0].args_key.size(); ++i) {
+        ASSERT_NE(errors[0].args_key[i], nullptr);
+        ASSERT_NE(errors[0].args_value[i], nullptr);
+        fields.emplace(errors[0].args_key[i].get(), errors[0].args_value[i].get());
+    }
+    const std::map<std::string, std::string> expected = {{"param_name", "x"},
+                                                         {"op_name", "aclnnConvolutionGetWorkspaceSize"},
+                                                         {"incorrect_value", "nullptr"},
+                                                         {"correct_value", "not nullptr"}};
+    EXPECT_EQ(fields, expected);
+    EXPECT_TRUE(error_message::GetErrMgrRawErrorMessages().empty());
 }

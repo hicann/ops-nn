@@ -4221,7 +4221,7 @@ static inline aclnnStatus CommonConvImpl(std::map<std::string, L0FUNCTION>& l0Fu
     }
 
     if (convOut == nullptr) {
-        OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "%s", errorMsg);
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_RUNTIME_ERROR, "%s", errorMsg);
         return ACLNN_ERR_RUNTIME_ERROR;
     }
     return ACLNN_SUCCESS;
@@ -4422,7 +4422,7 @@ public:
                                     outputPadding, groups, useHf32, executor);
         }
         if (convOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv2d raised an unknown error");
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_RUNTIME_ERROR, "conv2d raised an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -4841,7 +4841,7 @@ public:
         convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
                                 outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv3d raised an unknown error");
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_RUNTIME_ERROR, "conv3d raised an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -5010,7 +5010,7 @@ public:
         convOut = FUNCTION_CALL(l0Functions, opInfo, input, weight, bias, stride, padding, dilation, transposed,
                                 outputPadding, groups, useHf32, executor);
         if (convOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "conv1d raised an unknown error");
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_RUNTIME_ERROR, "conv1d raised an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -5553,7 +5553,10 @@ aclnnStatus aclnnConvolutionGetWorkspaceSize(const aclTensor* input, const aclTe
     convEngine.entityName = "aclnnConvolutionGetWorkspaceSize";
     // check param
     auto ret = CheckConvParams(convEngine);
-    CHECK_RET_CODE(ret, "Check Param failed");
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE_WITHOUT_REPORT(ret, "Parameter validation failed, rc=%d", ret);
+        return ret;
+    }
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     // 创建OpExecutor
@@ -5570,7 +5573,8 @@ aclnnStatus aclnnConvolutionGetWorkspaceSize(const aclTensor* input, const aclTe
             auto convOut = ExecBatchMatmulOpWithBiasAndAttrs(
                 bmmInput.leftData, bmmInput.rightData, bmmInput.biasData, bmmInput.outputData, bmmInput.isLeftTranspose,
                 bmmInput.isRightTranspose, cubeMathType, uniqueExecutor.get());
-            OP_CHECK(convOut != nullptr, OP_LOGE(ACLNN_ERR_INNER, "The BatchMatmul in Conv Return Nullptr."),
+            OP_CHECK(convOut != nullptr,
+                     OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "The BatchMatmul in Conv Return Nullptr."),
                      return ACLNN_ERR_INNER_NULLPTR);
             auto resForBmm = CommonPostProcessForBmm(output, convOut, uniqueExecutor.get());
             CHECK_RET(resForBmm == ACLNN_SUCCESS, resForBmm);
@@ -5725,7 +5729,10 @@ aclnnStatus aclnnConvDepthwise2dGetWorkspaceSize(const aclTensor* self, const ac
     convEngine.entityName = "aclnnConvDepthwise2dGetWorkspaceSize";
     // check param
     auto ret = CheckConvDepthwise2dParams(convEngine);
-    CHECK_RET_CODE(ret, "Check Param failed");
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE_WITHOUT_REPORT(ret, "Parameter validation failed, rc=%d", ret);
+        return ret;
+    }
     ret = CheckConvDepthwise2dKernelSize(convEngine, kernelSize);
     CHECK_RET_CODE(ret, "Check kernelSize failed");
 

@@ -70,6 +70,14 @@ using CONV3D_V2_FUNCTION = const aclTensor* (*)(const aclTensor* input, const ac
         }                                                                      \
     } while (0)
 
+#define CHECK_LOWER_RESULT(param, ret_value)                                              \
+    do {                                                                                  \
+        if ((param) == (nullptr)) {                                                       \
+            OP_LOGE_WITHOUT_REPORT(ret_value, "Lower call returned null for %s", #param); \
+            return ret_value;                                                             \
+        }                                                                                 \
+    } while (0)
+
 #define REG_L0_FUNCTION_BY_OPTYPE(map, function, functionType) ((map).emplace(functionType, (L0FUNCTION(&(function)))))
 
 namespace op {
@@ -1229,7 +1237,7 @@ static aclnnStatus CheckQuantConvParams(QuantConvEngine& engine)
     for (size_t i = 0; i < checkList.size(); i++) {
         aclnnStatus ret = checkList[i]->Check(engine);
         if (ret != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "quant conv checker failed, index: %zu", i);
+            OP_LOGE_WITHOUT_REPORT(ret, "quant conv checker failed, index=%zu, rc=%d", i, ret);
             return ret;
         }
     }
@@ -1267,11 +1275,11 @@ static aclnnStatus TransDataPreProcess(const aclTensor*& input, const aclTensor*
                                        aclOpExecutor* executor, bool isWeightNz)
 {
     input = l0op::TransData(input, Format::FORMAT_NDC1HWC0, groups, executor);
-    CHECK_NULLPTR(input, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_LOWER_RESULT(input, ACLNN_ERR_INNER_NULLPTR);
 
     if (!isWeightNz) {
         weight = l0op::TransData(weight, Format::FORMAT_FRACTAL_Z_3D, groups, executor);
-        CHECK_NULLPTR(weight, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_LOWER_RESULT(weight, ACLNN_ERR_INNER_NULLPTR);
     }
 
     return ACLNN_SUCCESS;
@@ -1281,18 +1289,18 @@ static aclnnStatus ContiguousPreProcess(const aclTensor*& input, const aclTensor
                                         const aclTensor*& bias, aclOpExecutor* executor, bool isWeightNz)
 {
     input = l0op::Contiguous(input, executor);
-    CHECK_NULLPTR(input, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_LOWER_RESULT(input, ACLNN_ERR_INNER_NULLPTR);
     if (!isWeightNz) {
         weight = l0op::Contiguous(weight, executor);
-        CHECK_NULLPTR(weight, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_LOWER_RESULT(weight, ACLNN_ERR_INNER_NULLPTR);
     }
 
     scale = l0op::Contiguous(scale, executor);
-    CHECK_NULLPTR(scale, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_LOWER_RESULT(scale, ACLNN_ERR_INNER_NULLPTR);
 
     if (bias != nullptr) {
         bias = l0op::Contiguous(bias, executor);
-        CHECK_NULLPTR(bias, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_LOWER_RESULT(bias, ACLNN_ERR_INNER_NULLPTR);
     }
     return ACLNN_SUCCESS;
 }
@@ -1456,12 +1464,14 @@ public:
         outputDtype = output->GetDataType();
         auto retContiguous = ContiguousPreProcess(input, weight, scale, bias, executor, is_weight_nz);
         if (retContiguous != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d contiguous preprocess failed");
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d contiguous preprocess failed, rc=%d",
+                                   retContiguous);
             return retContiguous;
         }
         auto retTransData = TransDataPreProcess(input, weight, groups, executor, is_weight_nz);
         if (retTransData != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d transdata preprocess failed");
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d transdata preprocess failed, rc=%d",
+                                   retTransData);
             return retTransData;
         }
         if (bias->GetDataType() == DataType::DT_BF16 || bias->GetDataType() == DataType::DT_FLOAT16) {
@@ -1501,7 +1511,7 @@ public:
         }
 
         if (quantConvOut == nullptr) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d impl raise an unknown error");
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d impl raise an unknown error");
             return ACLNN_ERR_RUNTIME_ERROR;
         }
         return ACLNN_SUCCESS;
@@ -1531,7 +1541,7 @@ public:
             }
         }
         auto quantConv3dViewCopyRet = l0op::ViewCopy(resConvOut, output, executor);
-        CHECK_NULLPTR(quantConv3dViewCopyRet, ACLNN_ERR_RUNTIME_ERROR);
+        CHECK_LOWER_RESULT(quantConv3dViewCopyRet, ACLNN_ERR_RUNTIME_ERROR);
         return ACLNN_SUCCESS;
     }
 };
@@ -1663,25 +1673,25 @@ aclnnStatus aclnnQuantConvolutionGetWorkspaceSize(const aclTensor* input, const 
             quantConvEngine.entityName, input, weight, bias, scale, offset, stride, padding, dilation, transposed,
             outputPadding, groups, offsetx, roundMode, output, false, uniqueExecutor.get());
     if (quantConvImpl == nullptr) {
-        OP_LOGE(ACLNN_ERR_INNER, "create quant convolution failed, convolution = nullptr");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "create quant convolution failed, convolution = nullptr");
         return ACLNN_ERR_INNER;
     }
 
     aclnnStatus preProcessRet = quantConvImpl->PreProcess();
     if (preProcessRet != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "quant convolution run preprocess failed");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "quant convolution run preprocess failed, rc=%d", preProcessRet);
         return ACLNN_ERR_INNER;
     }
 
     aclnnStatus implRet = quantConvImpl->Impl();
     if (implRet != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "quant convolution run impl failed");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "quant convolution run impl failed, rc=%d", implRet);
         return ACLNN_ERR_INNER;
     }
 
     aclnnStatus postProcessRet = quantConvImpl->PostProcess();
     if (postProcessRet != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "quant convolution run impl postprocess failed");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "quant convolution run impl postprocess failed, rc=%d", postProcessRet);
         return ACLNN_ERR_INNER;
     }
 
@@ -1725,25 +1735,27 @@ aclnnStatus aclnnQuantConvolutionWeightNzGetWorkspaceSize(
             quantConvEngine.entityName, input, weight, bias, scale, offset, stride, padding, dilation, transposed,
             outputPadding, groups, offsetx, roundMode, output, true, uniqueExecutor.get());
     if (quantConvImpl == nullptr) {
-        OP_LOGE(ACLNN_ERR_INNER, "create quant convolution weight nz failed, convolution = nullptr");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "create quant convolution weight nz failed, convolution = nullptr");
         return ACLNN_ERR_INNER;
     }
 
     aclnnStatus preProcessRet = quantConvImpl->PreProcess();
     if (preProcessRet != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "quant convolution weight nz run preprocess failed");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "quant convolution weight nz run preprocess failed, rc=%d",
+                               preProcessRet);
         return ACLNN_ERR_INNER;
     }
 
     aclnnStatus implRet = quantConvImpl->Impl();
     if (implRet != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "quant convolution weight nz run impl failed");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "quant convolution weight nz run impl failed, rc=%d", implRet);
         return ACLNN_ERR_INNER;
     }
 
     aclnnStatus postProcessRet = quantConvImpl->PostProcess();
     if (postProcessRet != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER, "quant convolution weight nz run impl postprocess failed");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "quant convolution weight nz run impl postprocess failed, rc=%d",
+                               postProcessRet);
         return ACLNN_ERR_INNER;
     }
 
