@@ -44,7 +44,7 @@ English | [简体中文](./README.md)
     </tr>
     <tr>
       <td>p</td>
-      <td>Attribute</td>
+      <td>Optional attribute</td>
       <td>Exponent p of the Lp norm. The default value is 2.0 (that is, the L2 norm).</td>
       <td>FLOAT</td>
       <td>-</td>
@@ -61,9 +61,12 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The input tensor supports only the 4D(NCHW) or 5D(NCD0D1D2) dimensions.
+- Attribute p must be a finite non-zero value. p = 0, +Inf, -Inf or NaN are illegal inputs and are rejected by Host Tiling. Positive and negative finite values both follow the Lp-norm formula and have defined semantics.
+- Dynamic shape: dynamic shape (dimension -1) is supported; unknown Rank (-2) is not supported, and unknown Rank inputs are rejected by InferShape.
+- Empty tensor: when N×C = 0 the output is empty; when the spatial product is 0 (empty reduction), the output spatial dimensions are 1 and the value is always 0 (zero identity convention, for all p).
 
 ## Invocation Description
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| Graph-mode interface | [test_geir_global_lp_pool](examples/arch35/test_geir_global_lp_pool.cpp) | Invokes the GlobalLpPool operator through graph construction with the [operator IR](./op_graph/global_lp_pool_proto.h). |
+| Graph-mode interface | [test_geir_global_lp_pool](examples/arch35/test_geir_global_lp_pool.cpp) | Invokes the GlobalLpPool operator through graph construction with the [operator IR](./op_graph/global_lp_pool_proto.h). Build and run: `bash build.sh --run_example global_lp_pool graph --soc=ascend950`. |

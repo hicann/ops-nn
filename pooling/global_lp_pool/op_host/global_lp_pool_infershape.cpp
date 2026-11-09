@@ -26,15 +26,8 @@ ge::graphStatus GlobalLpPoolInferShape(gert::InferShapeContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    // Handle unknown rank: output shape also unknown
-    if (xShape->GetDimNum() == static_cast<size_t>(UNKNOWN_DIM_NUM)) {
-        gert::Shape* yShape = context->GetOutputShape(0);
-        if (yShape != nullptr) {
-            yShape->SetDimNum(static_cast<size_t>(UNKNOWN_DIM_NUM));
-        }
-        return ge::GRAPH_SUCCESS;
-    }
-
+    // Unknown rank (-2) is NOT supported (consistent with the canndev
+    // reference); it falls through to the rank check below and is rejected.
     int64_t rank = static_cast<int64_t>(xShape->GetDimNum());
     if (rank != 4 && rank != 5) {
         return ge::GRAPH_FAILED;

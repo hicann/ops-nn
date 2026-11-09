@@ -29,8 +29,9 @@ namespace ge {
  * x: A 4D or 5D Tensor of type float16, float32 or bfloat16, with format ND. \n
  *
  * @par Attributes:
- * @li p: p value of the Lp norm used to pool over the input data. Must be one of the following types: float32. Defaults
- * to 2.0. \n
+ * @li p: p value of the Lp norm used to pool over the input data. Must be a finite non-zero value. Values 0, +inf, -inf
+ * and NaN are illegal and are rejected by Host Tiling. Positive and negative finite values both follow the Lp-norm
+ * formula and have defined semantics. Must be one of the following types: float32. Defaults to 2.0. \n
  *
  * @par Outputs:
  * y: A 4D or 5D Tensor. Has the same type and format as "x". \n

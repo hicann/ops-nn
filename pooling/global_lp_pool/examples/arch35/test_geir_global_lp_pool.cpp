@@ -59,14 +59,15 @@ uint32_t GetDataTypeSize(DataType dt)
 }
 
 int32_t GenTestData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
-                    const vector<float>& host_data)
+                    const vector<float>& host_data, vector<uint8_t>& input_buffer)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
     for (uint32_t i = 0; i < shapes.size(); i++)
         size *= shapes[i];
     uint32_t data_len = size * GetDataTypeSize(data_type);
-    uint8_t* pData = new (std::nothrow) uint8_t[data_len];
+    input_buffer.assign(data_len, 0);
+    uint8_t* pData = input_buffer.empty() ? nullptr : input_buffer.data();
 
     if (data_type == DT_FLOAT16) {
         uint16_t* ptr = reinterpret_cast<uint16_t*>(pData);
@@ -207,7 +208,8 @@ int main(int argc, char* argv[])
 
         // ── Set input data ──
         Tensor inputTensor;
-        GenTestData(tc.shape, inputTensor, inputDesc, inDtype, host_data);
+        vector<uint8_t> input_buffer;
+        GenTestData(tc.shape, inputTensor, inputDesc, inDtype, host_data, input_buffer);
         vector<Tensor> inputs{inputTensor};
 
         // ── Add to session and run ──
@@ -225,6 +227,19 @@ int main(int argc, char* argv[])
             printf("  FAIL: RunGraph failed (ret=%d)\n", runRet);
             failed++;
             continue;
+        }
+
+        // ── Validate output tensor shape/dtype before reading data ──
+        {
+            const TensorDesc& outDesc = outputs[0].GetTensorDesc();
+            const auto outTensorShape = outDesc.GetShape();
+            const int64_t outShapeSize = outTensorShape.GetShapeSize();
+            if (outDesc.GetDataType() != inDtype || outShapeSize != out_size) {
+                printf("  FAIL: output tensor mismatch (dtype=%d size=%ld expected_size=%ld)\n",
+                       static_cast<int>(outDesc.GetDataType()), outShapeSize, out_size);
+                failed++;
+                continue;
+            }
         }
 
         // ── Compare with golden ──
@@ -252,6 +267,14 @@ int main(int argc, char* argv[])
             outData_f32 = outF32.data();
         } else {
             outData_f32 = reinterpret_cast<const float*>(rawData);
+        }
+
+        // Empty output is a valid contract case: the output shape/dtype was
+        // already validated above, so count it as PASS.
+        if (out_size == 0) {
+            printf("  PASS: empty output (shape/dtype validated)\n");
+            passed++;
+            continue;
         }
 
         float maxRelErr = 0.0f;

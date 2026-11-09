@@ -9,76 +9,123 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""TTK TestSpec for global_lp_pool (kernel / GEIR 通路, arch35/Ascend950).
+"""TTK TestSpec golden for global_lp_pool (Kernel / GEIR path).
 
-y = (sum_spatial |x|^p)^(1/p), keepdims=True.
-输入 x: 4D(NCHW) / 5D(NCD0D1D2), dtype ∈ {float32, float16, bfloat16};
-属性 p: float, 支持任意非零实数（p>0 为主契约，p<0 按同一公式自然延拓）; 输出 dtype 与 x 相同。
-
-注册说明：
-    __spec__  —— TTK TestSpec（优先加载）。GEIR 通路复用 kernel 通路同一注册键
-                 （op_name = global_lp_pool），不单独注册。
-    __golden__ —— 兼容旧插件的 kernel 入口，与 __spec__ 共用同一实现。
-
-数值口径：kernel 内部把 fp16/bf16 抬到 fp32 计算后再舍回原 dtype，golden 采用
-相同口径（fp32 计算 + 舍回 x.dtype），不额外抬 fp64。
+y = (sum_spatial |x|^p)^(1/p), keepdims=True, p != 0.
+p edge behaviour: p == 0 or non-finite (+inf/-inf/NaN) -> ValueError;
+empty reduction (prod(spatial) == 0) -> 0 (operator EMPTY_R convention).
+数值口径：直接调用 torch.linalg.vector_norm，不做 dtype 提升或手写算法；
+golden 与 third_party(torch) 同源，cross_check 退化为 NPU vs torch。
 """
 
+import math
+
+import ml_dtypes
 import numpy as np
+import torch
 
-__spec__ = {"global_lp_pool": "GlobalLpPoolKernelSpec"}
+__spec__ = {
+    "global_lp_pool": "GlobalLpPoolKernelSpec",
+    "GlobalLpPool": "GlobalLpPoolKernelSpec",
+}
 
 
-def global_lp_pool_golden(x, **kwargs):
-    """y = (sum(|x|^p) over spatial dims)^(1/p), keepdims=True.
+def _np_to_torch(arr):
+    if arr is None:
+        return None
+    if isinstance(arr, torch.Tensor):
+        return arr
+    arr = np.ascontiguousarray(np.asarray(arr))
+    if arr.dtype == ml_dtypes.bfloat16:
+        return torch.from_numpy(arr.view(np.int16)).view(torch.bfloat16)
+    return torch.from_numpy(arr)
 
-    Parameters follow global_lp_pool_def.cpp without outputs (x, attr p).
-    Returns [y] (one ndarray per output).
-    """
-    p = float(kwargs.get("p", 2.0))
-    if p == 0.0:
-        # p=0 无定义：1/p 发散，且左右极限分别为 0 / +inf（极点）。
-        # 注：-0.0 == 0.0，同样落在此分支（与 kernel 的 `p != 0.0f` 判断一致）。
-        raise ValueError("global_lp_pool golden requires p != 0, got %r" % (p,))
 
-    # 空归约（R = prod(spatial) == 0）：按算子约定输出恒等元 0（kernel EMPTY_R 路径
-    # 直接写 0.0f，见 global_lp_pool_kernel.h isEmptyTensor 分支）。
-    # 注：对 p<0，公式的自然延拓为 0^(1/p) = +inf，与 kernel 的 0 不一致；
-    #     此处按算子既有约定编码，该语义缺口单独记录（不在此 golden 内裁定）。
-    spatial_size = 1
-    for d in x.shape[2:]:
-        spatial_size *= d
-    if spatial_size == 0:
-        out_shape = (x.shape[0], x.shape[1]) + (1,) * (x.ndim - 2)
-        return [np.zeros(out_shape, dtype=x.dtype)]
+def _as_numpy(x):
+    if isinstance(x, torch.Tensor):
+        return _torch_to_np(x)
+    return np.asarray(x)
 
-    # fp16/bf16 抬 fp32 计算（与 kernel 内部计算域一致）
-    x_f32 = x.astype(np.float32)
 
-    # Spatial axes: dims[2:]
-    spatial_axes = tuple(range(2, x_f32.ndim))
+def _torch_to_np(t):
+    if t is None:
+        return None
+    if isinstance(t, np.ndarray):
+        return t
+    t = t.detach().cpu().contiguous()
+    if t.dtype == torch.bfloat16:
+        return t.view(torch.int16).numpy().view(ml_dtypes.bfloat16)
+    return t.numpy()
 
-    # p<0 时含 0 输入会 |x|^p -> inf、Σ -> inf、(inf)^(1/p) -> 0（自然延拓），
-    # 与 kernel 的 exp/ln 链一致；抑制 numpy 的 divide/over 警告。
-    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
-        # |x|^p
-        powered = np.power(np.abs(x_f32), p)
 
-        # Sum along spatial dims
-        summed = np.sum(powered, axis=spatial_axes, keepdims=True)
+def _norm_p(v):
+    if isinstance(v, (np.ndarray, np.generic)):
+        return float(v.item()) if v.ndim == 0 else float(v.reshape(-1)[0])
+    if isinstance(v, torch.Tensor):
+        return float(v.item()) if v.ndim == 0 else float(v.reshape(-1)[0])
+    return float(v)
 
-        # (sum)^(1/p)
-        result = np.power(summed, 1.0 / p)
 
-    # 输出与输入同 dtype
-    return [result.astype(x.dtype, copy=False)]
+def _spatial_size(shape):
+    n = 1
+    for d in shape[2:]:
+        n *= int(d)
+    return n
+
+
+def _out_shape(shape):
+    return tuple(shape[:2]) + (1,) * (len(shape) - 2)
+
+
+def _check_p(p_val):
+    if p_val == 0.0 or not math.isfinite(p_val):
+        raise ValueError(
+            "global_lp_pool golden requires a finite non-zero p, got %r" % (p_val,)
+        )
+
+
+def _lp_norm(x, p_val):
+    """函数形态 golden：numpy 输入 → numpy 输出；空归约按算子约定置 0。"""
+    if _spatial_size(x.shape) == 0:
+        return np.zeros(_out_shape(x.shape), dtype=x.dtype)
+    xt = _np_to_torch(x)
+    dims = tuple(range(2, xt.ndim))
+    return _torch_to_np(
+        torch.linalg.vector_norm(xt, ord=float(p_val), dim=dims, keepdim=True)
+    )
+
+
+def global_lp_pool_golden(x, p=2.0, **kwargs):
+    p_val = _norm_p(p)
+    _check_p(p_val)
+    return [_lp_norm(_as_numpy(x), p_val)]
+
+
+class GlobalLpPoolTorchSpec:
+    def __init__(self, *, p=2.0, **kwargs):
+        # 前置处理全部在此：p 归一化 + 合法性校验
+        self.p = _norm_p(p)
+        _check_p(self.p)
+
+    def __call__(self, x, p=2.0, **kwargs):
+        # x 已是 server 转好的 torch.Tensor（device 上）；空归约按算子约定置 0
+        if _spatial_size(x.shape) == 0:
+            return [x.new_zeros(_out_shape(x.shape))]
+        return [
+            torch.linalg.vector_norm(
+                x, ord=self.p, dim=tuple(range(2, x.ndim)), keepdim=True
+            )
+        ]
 
 
 class GlobalLpPoolKernelSpec:
-    """kernel / GEIR 共用 spec: golden 收 numpy.ndarray, 返 list[np.ndarray]."""
+    def golden(x, p=2.0, **kwargs):
+        return global_lp_pool_golden(x, p, **kwargs)
 
-    def golden(x, **kwargs):
-        return global_lp_pool_golden(x, **kwargs)
+    third_party = {"torch": GlobalLpPoolTorchSpec}
 
-
-__golden__ = {"kernel": {"global_lp_pool": "global_lp_pool_golden"}}
+    tolerance = {
+        "float16": {"standard": "cross_check", "level": "L1"},
+        "float32": {"standard": "cross_check", "level": "L1"},
+        "bfloat16": {"standard": "cross_check", "level": "L1"},
+    }

@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <string>
 
@@ -184,6 +185,10 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* ctx, TilingCtx& tc)
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(ctx->GetNodeName(), "p", "GetAttrPointer<float>(0) returned nullptr"),
         return ge::GRAPH_FAILED);
     tc.p = *pPtr;
+    OP_CHECK_IF(!std::isfinite(tc.p) || tc.p == 0.0f,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                    ctx->GetNodeName(), "p", "p must be a finite non-zero value; 0, +inf, -inf and NaN are rejected"),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(ctx, "input: shape=%s dtype=%d dimNum=%ld dtypeSize=%ld p=%.6f", Ops::Base::ToString(storageShape).c_str(),
             static_cast<int>(tc.dtype), tc.dimNum, tc.dtypeSize, tc.p);
