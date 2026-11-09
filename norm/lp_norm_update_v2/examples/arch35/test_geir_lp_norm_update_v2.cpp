@@ -30,7 +30,7 @@
 #include "graph.h"
 #include "types.h"
 #include "tensor.h"
-#include "ge_error_codes.h"
+#include "graph/error_codes.h"
 #include "ge_api_types.h"
 #include "ge_api.h"
 #include "array_ops.h"
@@ -81,10 +81,15 @@ int32_t GenFloat32Data(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc&
     }
     uint32_t data_len = size * 4;
     float* pData = new (std::nothrow) float[size];
+    if (pData == nullptr) {
+        return FAILED;
+    }
     for (size_t i = 0; i < size; ++i) {
         *(pData + i) = value;
     }
     input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    // Tensor copies the buffer; release the temporary to avoid a leak.
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -98,16 +103,24 @@ int32_t GenFloat32DataArray(vector<int64_t> shapes, Tensor& input_tensor, Tensor
     }
     uint32_t data_len = size * 4;
     float* pData = new (std::nothrow) float[size];
+    if (pData == nullptr) {
+        return FAILED;
+    }
     for (size_t i = 0; i < size; ++i) {
         pData[i] = (i < values.size()) ? values[i] : 0.0f;
     }
     input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    // Tensor copies the buffer; release the temporary to avoid a leak.
+    delete[] pData;
     return SUCCESS;
 }
 
 int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 {
     FILE* fp = fopen(bin_file.c_str(), "w");
+    if (fp == nullptr) {
+        return FAILED;
+    }
     fwrite(inputData, sizeof(uint8_t), data_size, fp);
     fclose(fp);
     return SUCCESS;
@@ -172,6 +185,7 @@ int main(int argc, char* argv[])
     ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create graph failed\n", GetTime().c_str());
+        GEFinalize();
         return FAILED;
     }
 
@@ -181,9 +195,10 @@ int main(int argc, char* argv[])
 
     std::map<AscendString, AscendString> build_options = {};
     printf("%s - INFO - [XIR]: Start to create ir session\n", GetTime().c_str());
-    ge::Session* session = new Session(build_options);
+    ge::Session* session = new (std::nothrow) Session(build_options);
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create ir session failed\n", GetTime().c_str());
+        GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Create ir session success\n", GetTime().c_str());
@@ -212,6 +227,7 @@ int main(int argc, char* argv[])
 
     // 输出结果
     int output_num = output.size();
+    bool overallMatch = (output_num > 0);
     for (int i = 0; i < output_num; i++) {
         int64_t output_shape_size = output[i].GetTensorDesc().GetShape().GetShapeSize();
         uint32_t data_size = output_shape_size * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
@@ -242,17 +258,24 @@ int main(int argc, char* argv[])
         if (allMatch) {
             printf("验证结果: PASS (p=2.0 sqrt 分支, FP32, GE IR)\n");
         } else {
+            overallMatch = false;
             printf("验证结果: MISMATCH\n");
         }
         printf("========================================\n");
     }
 
     printf("%s - INFO - [XIR]: Start to finalize\n", GetTime().c_str());
+    delete session;
+    session = nullptr;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize failed\n", GetTime().c_str());
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Finalize success\n", GetTime().c_str());
+    if (!overallMatch) {
+        printf("%s - ERROR - [XIR]: output verification MISMATCH\n", GetTime().c_str());
+        return FAILED;
+    }
     return SUCCESS;
 }

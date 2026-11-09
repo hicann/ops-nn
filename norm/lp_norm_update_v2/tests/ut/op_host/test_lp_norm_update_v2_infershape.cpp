@@ -115,3 +115,24 @@ TEST_F(LpNormUpdateV2Test, infershape_scalar)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+
+TEST_F(LpNormUpdateV2Test, infershape_dynamic_markers_propagate)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("LpNormUpdateV2"), nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LpNormUpdateV2")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape xShape = {{-1, 4}, {-1, 4}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto* out = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(out->GetDimNum(), 2u);
+    EXPECT_EQ(out->GetDim(0), -1);
+    EXPECT_EQ(out->GetDim(1), 4);
+}

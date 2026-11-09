@@ -30,11 +30,14 @@
 #include "util/platform_util.h"
 #include "platform/platform_info.h"
 #include "graph/utils/type_utils.h"
+#include "utils/extern_math_util.h"
 #include "../../op_kernel/arch35/lp_norm_update_v2_tiling_data.h"
 #include "../../op_kernel/arch35/lp_norm_update_v2_tiling_key.h"
 
 #include <cmath>
 #include <cfloat>
+#include <cstdint>
+#include <limits>
 #include <algorithm>
 
 namespace optiling {
@@ -42,7 +45,6 @@ namespace optiling {
 using Ops::Base::CeilAlign;
 using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
-using Ops::Base::FloorDiv;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr size_t WORKSPACE_NUM = 1;
@@ -52,15 +54,18 @@ constexpr int64_t ALIGN_256 = 256;         // UB 对齐字节数
 constexpr int64_t BUFFER_NUM = 4;          // 双缓冲: 2 input + 2 output
 constexpr size_t MAX_TENSOR_RANK = 8;      // Tensor 最大支持维数（0-8 维，9D+ 拒绝）
 
-// FP16 下溢保护阈值：epsilon <= 此值时提升为 FP16 最小可表示正规数
+// FP16 次正规数阈值：1e-7 是次正规数，不是最小正规数（2^-14≈6.1e-5）
 constexpr float FP16_EPSILON_FLOOR = 1e-7f;
-// sqrt 分支 p 判定阈值（对齐 np.isclose 默认参数）
-constexpr float SQRT_RTOL = 1e-5f;
-constexpr float SQRT_ATOL = 1e-8f;
+// sqrt 分支 p 判定阈值（对齐 TBE 使用的 Python math.isclose 默认参数：rel_tol=1e-9, abs_tol=0；不是 numpy.isclose）
+constexpr float SQRT_RTOL = 1e-9f;
+constexpr float SQRT_ATOL = 0.0f;
 constexpr float SQRT_P_TARGET = 2.0f;
 // 默认属性值
 constexpr float DEFAULT_P = 2.0f;
 constexpr float DEFAULT_EPSILON = 1e-12f;
+// ±INT_MAX/±INT_MIN 是 ±inf 的兼容编码；float32 下两者的实际值为 ±2^31
+constexpr float INT_SENTINEL_MAX = static_cast<float>(std::numeric_limits<int32_t>::max());
+constexpr float INT_SENTINEL_MIN = static_cast<float>(std::numeric_limits<int32_t>::min());
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -70,6 +75,23 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape)
         return g_vec_1_shape;
     }
     return inShape;
+}
+
+static ge::graphStatus ComputeElementCount(gert::TilingContext* context, const gert::Shape& shape, int64_t* totalIdx)
+{
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        const int64_t dim = shape.GetDim(i);
+        if (dim < 0) {
+            OP_LOGE(context, "LpNormUpdateV2: invalid shape: dim[%zu]=%ld is negative", i, dim);
+            return ge::GRAPH_FAILED;
+        }
+    }
+    *totalIdx = shape.GetShapeSize();
+    if (*totalIdx < 0) {
+        OP_LOGE(context, "LpNormUpdateV2: element count overflow");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
 // 获取平台信息
@@ -97,7 +119,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
                 return ge::GRAPH_FAILED);
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
 
-    *totalIdx = inputShapeX.GetShapeSize();
+    OP_CHECK_IF(ComputeElementCount(context, inputShapeX, totalIdx) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "LpNormUpdateV2: invalid input shape"), return ge::GRAPH_FAILED);
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
     auto inputDesc = context->GetInputDesc(0);
@@ -132,11 +155,11 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 static int32_t ComputeTilingKey(float p)
 {
     // p ∈ {0, 1, ±inf} → identity (TilingKey=0)
-    // inf 用 FLT_MAX / -FLT_MAX 表示（spec attributes semantics）
-    if (p == 0.0f || p == 1.0f || std::isinf(p) || p == FLT_MAX || p == -FLT_MAX) {
+    // inf 可能由真实 ±inf 或 ±INT_MAX/±INT_MIN 编码传入
+    if (p == 0.0f || p == 1.0f || std::isinf(p) || p == INT_SENTINEL_MAX || p == INT_SENTINEL_MIN) {
         return 0; // identity
     }
-    // p ≈ 2.0 → sqrt (TilingKey=1)，对齐 np.isclose 默认 rtol/atol
+    // p ≈ 2.0 → sqrt (TilingKey=1)，阈值对齐 TBE 的 math.isclose 默认参数
     if (std::fabs(p - SQRT_P_TARGET) <= (SQRT_RTOL * std::fabs(SQRT_P_TARGET) + SQRT_ATOL)) {
         return 1; // sqrt
     }
@@ -147,8 +170,8 @@ static int32_t ComputeTilingKey(float p)
 // Step 3: 计算 epsilonEff
 static float ComputeEpsilonEff(ge::DataType dtype, float epsilon)
 {
-    if (dtype == ge::DT_FLOAT16 && epsilon <= FP16_EPSILON_FLOOR) {
-        return FP16_EPSILON_FLOOR; // fp16 最小亚正规数约 6e-8，1e-12 下溢为 0
+    if (dtype == ge::DT_FLOAT16 && epsilon > 0.0f && epsilon <= FP16_EPSILON_FLOOR) {
+        return FP16_EPSILON_FLOOR; // fp16 最小亚正规数约 6e-8，1e-12 下溢为 0；ε=0 保持 0
     }
     return epsilon;
 }
@@ -172,13 +195,24 @@ static ge::graphStatus ComputeTilingSplit(gert::TilingContext* context, LpNormUp
     int64_t elemBytes = static_cast<int64_t>((dataType == ge::DT_FLOAT) ? 4 : 2);
 
     // 多核切分
-    int64_t coreNum = (dim0 * minDtypeBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS;
+    int64_t totalBits = 0;
+    int64_t coreNum = 0;
+    if (ge::MulOverflow(dim0, minDtypeBits, totalBits)) {
+        // 乘法溢出说明所需 tiling 数远大于实际可用核数，先饱和到最大值，后续由 availableCoreNum 截断。
+        coreNum = std::numeric_limits<int64_t>::max();
+    } else {
+        coreNum = CeilDiv(totalBits, MIN_TILING_BITS);
+    }
     coreNum = std::min(coreNum, availableCoreNum);
     coreNum = std::max(coreNum, static_cast<int64_t>(1));
 
     tiling->blockFormer = CeilAlign(CeilDiv(dim0, coreNum), ELEM_ALIGN_FACTOR);
     tiling->blockNum = CeilDiv(dim0, tiling->blockFormer);
     tiling->coreNum = static_cast<int32_t>(tiling->blockNum);
+    OP_CHECK_IF(tiling->blockFormer <= 0 || tiling->blockNum <= 0,
+                OP_LOGE(context, "LpNormUpdateV2: invalid split blockFormer=%ld blockNum=%ld", tiling->blockFormer,
+                        tiling->blockNum),
+                return ge::GRAPH_FAILED);
 
     // UB 切分
     int64_t K = ComputeK(tilingKey, dataType);

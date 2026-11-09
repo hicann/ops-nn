@@ -4002,7 +4002,7 @@
      <td><a href="../../norm/lp_norm_update_v2/README.md">lp_norm_update_v2</a></td>
      <td>✓</td>
      <td>✓</td>
-     <td>✓</td>
+     <td>×</td>
      <td>✓</td>
      <td>AI Core</td>
      <td>Lp范数两步计算的更新阶段算子，计算y=max(x^(1/p),epsilon)。</td>
