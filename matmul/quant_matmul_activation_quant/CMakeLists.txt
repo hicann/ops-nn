@@ -15,7 +15,14 @@ add_all_modules_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/quant_matmul_activation_quant.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950
+    AUTO_SYNC false
+    OPTIONS "--cce-no-dcache-flush" "-Werror"
+)
+
+add_kernel_sources(
+    KERNEL_SRC arch35/quant_matmul_activation_quant.cpp
+    COMPUTE_UNITS ascend350
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

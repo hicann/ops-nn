@@ -20,7 +20,14 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/quant_batch_matmul_v3.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS ascend950
+    AUTO_SYNC false
+    OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true" "-Werror"
+)
+
+add_kernel_sources(
+    KERNEL_SRC arch35/quant_batch_matmul_v3.cpp
+    COMPUTE_UNITS ascend350
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true"
 )
@@ -35,7 +42,7 @@ add_kernel_sources(
     KERNEL_SRC arch35/quant_batch_matmul_v3.cpp
     COMPUTE_UNITS ascend960dt ascend960pr
     AUTO_SYNC false
-    OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true"
+    OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true" "-Werror"
 )
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
