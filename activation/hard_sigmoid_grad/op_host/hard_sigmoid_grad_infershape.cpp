@@ -18,6 +18,7 @@
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
+#include "graph/types.h"
 #include "log/log.h"
 
 using namespace ge;
@@ -48,10 +49,10 @@ static ge::graphStatus InferShape4HardSigmoidGrad(gert::InferShapeContext* conte
     // reject rank overflow and statically-known shape divergence here instead
     // of deferring them to the tiling stage. Unknown (-1) dims are dynamic
     // placeholders and are skipped by the per-dim comparison; an unknown rank
-    // (-2 marker: dim_num==1 && dim[0]==-2) defers the whole decision to
+    // (ge::UNKNOWN_DIM_NUM marker: dim_num==1 && dim[0]==-2) defers the whole decision to
     // runtime by marking the output as unknown rank too.
-    const bool gradUnknownRank = grad_shape->GetDimNum() == 1 && grad_shape->GetDim(0) == -2;
-    const bool selfUnknownRank = input_shape->GetDimNum() == 1 && input_shape->GetDim(0) == -2;
+    const bool gradUnknownRank = grad_shape->GetDimNum() == 1 && grad_shape->GetDim(0) == ge::UNKNOWN_DIM_NUM;
+    const bool selfUnknownRank = input_shape->GetDimNum() == 1 && input_shape->GetDim(0) == ge::UNKNOWN_DIM_NUM;
     // A statically-known side must still respect the 0D-8D proto limit even
     // when the other side is unknown-rank; only the pairwise rank/dim checks
     // are deferred to runtime.
@@ -70,7 +71,7 @@ static ge::graphStatus InferShape4HardSigmoidGrad(gert::InferShapeContext* conte
     // the tiling stage at runtime.
     if (selfUnknownRank) {
         gert::Shape unknownShape;
-        unknownShape.AppendDim(-2);
+        unknownShape.AppendDim(ge::UNKNOWN_DIM_NUM);
         *output_shape = unknownShape;
         OP_LOGI(context->GetNodeName(), "[InferShape] unknown-rank input_x, defer to runtime");
         return ge::GRAPH_SUCCESS;

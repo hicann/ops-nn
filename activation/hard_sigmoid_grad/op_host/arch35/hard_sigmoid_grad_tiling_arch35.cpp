@@ -160,7 +160,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     // alpha*x+beta chain that flips the element just below 3.0.
     double loD;
     double hiD;
-    if (alpha == 0.0f) {
+    if (std::fpclassify(alpha) == FP_ZERO) {
         // Degenerate full range: the mask stays true and result = grad * 0 == 0.
         maskLo = -std::numeric_limits<float>::max();
         maskHi = std::numeric_limits<float>::max();

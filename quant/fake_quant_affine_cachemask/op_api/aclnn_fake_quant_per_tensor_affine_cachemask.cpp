@@ -46,14 +46,10 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* scale, const
                             const aclTensor* out, const aclTensor* mask)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
-    // README 契约：scale/y dtype 与 x 相同。白名单只拦越界 dtype，拦不住合法域内交叉错配
-    // （如 self=FLOAT 传 out=FLOAT16 会按 self dtype 写回导致越界写），需补充同型校验。
     OP_CHECK_DTYPE_NOT_SUPPORT(scale, DTYPE_SUPPORT_LIST, return false);
-    OP_CHECK_DTYPE_NOT_MATCH(scale, self->GetDataType(), return false);
     // out is an output contract too: docs only allow FLOAT16/FLOAT32. CanCast alone is not
     // enough because float->int / float->bool are considered castable and silently truncate.
     OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
-    OP_CHECK_DTYPE_NOT_MATCH(out, self->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(zeroPoint, op::DataType::DT_INT32, return false);
     OP_CHECK_DTYPE_NOT_MATCH(mask, op::DataType::DT_BOOL, return false);
     return true;

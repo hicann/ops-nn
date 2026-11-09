@@ -16,6 +16,7 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "log/log.h"
+#include "graph/types.h"
 #include "platform/platform_info.h"
 
 class HardSigmoidGradProtoTest : public testing::Test {
@@ -180,8 +181,8 @@ TEST_F(HardSigmoidGradProtoTest, infershape_dynamic_dim_success)
     SetUpPlatform();
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("HardSigmoidGrad")->infer_shape;
 
-    gert::Shape grad_shape = {-1, 4};
-    gert::Shape self_shape = {-1, 4};
+    gert::Shape grad_shape = {ge::UNKNOWN_DIM, 4};
+    gert::Shape self_shape = {ge::UNKNOWN_DIM, 4};
     gert::Shape output_shape = {};
 
     auto holder = gert::InferShapeContextFaker()
@@ -197,7 +198,7 @@ TEST_F(HardSigmoidGradProtoTest, infershape_dynamic_dim_success)
     auto* ctx = holder.GetContext<gert::InferShapeContext>();
     ASSERT_EQ(inferShapeFunc(ctx), ge::GRAPH_SUCCESS);
     ASSERT_EQ(ctx->GetOutputShape(0)->GetDimNum(), 2);
-    ASSERT_EQ(ctx->GetOutputShape(0)->GetDim(0), -1);
+    ASSERT_EQ(ctx->GetOutputShape(0)->GetDim(0), ge::UNKNOWN_DIM);
 }
 
 TEST_F(HardSigmoidGradProtoTest, infershape_unknown_rank_deferred)
@@ -208,7 +209,7 @@ TEST_F(HardSigmoidGradProtoTest, infershape_unknown_rank_deferred)
     // Only grads carries the unknown-rank marker; the declared output source
     // (input_x) is known, so the output shape follows input_x and grads is
     // re-checked against it by the tiling stage at runtime.
-    gert::Shape grad_shape = {-2};
+    gert::Shape grad_shape = {ge::UNKNOWN_DIM_NUM};
     gert::Shape self_shape = {2, 4};
     gert::Shape output_shape = {};
 
@@ -237,7 +238,7 @@ TEST_F(HardSigmoidGradProtoTest, infershape_unknown_rank_input_x_deferred)
     // The declared output source (input_x) itself is unknown-rank: the output
     // must be marked unknown-rank and deferred to runtime.
     gert::Shape grad_shape = {2, 4};
-    gert::Shape self_shape = {-2};
+    gert::Shape self_shape = {ge::UNKNOWN_DIM_NUM};
     gert::Shape output_shape = {};
 
     auto holder = gert::InferShapeContextFaker()
@@ -253,7 +254,7 @@ TEST_F(HardSigmoidGradProtoTest, infershape_unknown_rank_input_x_deferred)
     auto* ctx = holder.GetContext<gert::InferShapeContext>();
     ASSERT_EQ(inferShapeFunc(ctx), ge::GRAPH_SUCCESS);
     ASSERT_EQ(ctx->GetOutputShape(0)->GetDimNum(), 1);
-    ASSERT_EQ(ctx->GetOutputShape(0)->GetDim(0), -2);
+    ASSERT_EQ(ctx->GetOutputShape(0)->GetDim(0), ge::UNKNOWN_DIM_NUM);
 }
 
 TEST_F(HardSigmoidGradProtoTest, inferdtype_same_dtype_fp32)
