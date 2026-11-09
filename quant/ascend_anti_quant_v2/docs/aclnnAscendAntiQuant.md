@@ -123,7 +123,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>offset（aclTensor*）</td>
       <td>输入</td>
       <td>反量化中的offset值。对应公式中的offset。</td>
-      <td><ul><li>支持空Tensor；</li><li>数据类型和shape需要与scale保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>offset为可选输入。</li><li>数据类型和shape需要与scale保持一致。</li></ul></td>
       <td>FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>y（aclTensor*）</td>
       <td>输出</td>
       <td>反量化的计算输出。对应公式中的y。</td>
-      <td><ul><li>支持空Tensor。</li><li>当输入x为INT32类型时，shape尾轴的大小为输入x的尾轴大小的8倍，其余情况shape与输入x一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当输入x为INT32类型时，shape尾轴的大小为输入x的尾轴大小的8倍，其余情况shape与输入x一致。</li><li>当输入x为INT32类型且为0维标量时，y的shape必须是(8,)。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -226,7 +226,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>x、scale、offset、y的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>dstType不在有效取值范围。</td>
+      <td>dstType不在有效取值范围，或dstType取值对应的数据类型与y的数据类型不一致。</td>
     </tr>
     <tr>
       <td>x的数据类型为INT4时，x的反量化轴大小不是偶数。</td>
