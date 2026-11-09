@@ -20,7 +20,7 @@
   \begin{aligned}
   mg_t   &= \rho \cdot mg_{t-1}  + (1 - \rho) \cdot \text{grad}_t \\
   ms_t   &= \rho \cdot ms_{t-1}  + (1 - \rho) \cdot \text{grad}_t^2 \\
-  denom_t &= \sqrt{ms_t - mg_t^2 + \epsilon} \\
+  denom_t &= \sqrt{\max(ms_t - mg_t^2, 0) + \epsilon} \\
   mom_t  &= \text{momentum} \cdot mom_{t-1} + \text{lr} \cdot \frac{\text{grad}_t}{denom_t} \\
   var_t  &= var_{t-1} - mom_t
   \end{aligned}
