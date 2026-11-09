@@ -94,6 +94,43 @@ inline void InitTilingData(uint8_t* tiling, LayerNormV4TilingDataWelford* const_
 }
 #endif
 
+#pragma pack(1)
+struct LayerNormV4TilingDataSplitR {
+    int64_t M = 0;
+    int64_t N = 0;
+    int64_t rAlign = 0;
+    int64_t numBlocks = 0;
+    int64_t mainBlockCount = 0;
+    int64_t mainBlockFactor = 0;
+    int64_t tailBlockFactor = 0;
+    int64_t tileLength = 0;
+    int64_t welfordTempSize = 0;
+    int64_t welfordUpdateTimes = 0;
+    int64_t welfordUpdateTail = 0;
+    int64_t nullptrGamma = 0;
+    int64_t nullptrBeta = 0;
+    int64_t apiTempBufferSize = 0;
+    float epsilon = 0;
+    int32_t pad_ = 0; // Match the host tiling serialization alignment before splitR.
+    int64_t splitR = 0;
+};
+#pragma pack()
+
+#ifdef __NPU_TILING__
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormV4TilingDataSplitR* const_data)
+{
+    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
+    uint32_t* dst = (uint32_t*)const_data;
+    for (auto i = 0; i < sizeof(LayerNormV4TilingDataSplitR) / 4; i++)
+        *(dst + i) = *(src + i);
+}
+#else
+inline void InitTilingData(uint8_t* tiling, LayerNormV4TilingDataSplitR* const_data)
+{
+    memcpy(const_data, tiling, sizeof(LayerNormV4TilingDataSplitR));
+}
+#endif
+
 #define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
     tiling_struct tiling_data;                                              \
     InitTilingData(tiling_arg, &tiling_data)

@@ -14,6 +14,7 @@
  */
 
 #include <iostream>
+#include <cstring>
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
@@ -25,6 +26,8 @@
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "base/err_mgr.h"
+#include "tiling/platform/platform_ascendc.h"
+#include "op_common/op_host/util/platform_util.h"
 
 using namespace ut_util;
 using namespace std;
@@ -2011,3 +2014,159 @@ static const auto _inst_LAYER_NORM_V4 = []() {
     testing::UnitTest::GetInstance()->listeners().Append(new LAYER_NORM_V4NoEz9999Check());
     return 0;
 }();
+
+// Prevent regressions in SplitR dispatch and fallback at the shape boundaries.
+static void CheckLayerNormV4SplitR(int64_t a, int64_t r, int64_t expectedSplits)
+{
+    gert::StorageShape x_shape = {{a, r}, {a, r}};
+    gert::StorageShape normalized_shape = {{1}, {1}};
+    gert::StorageShape gamma_shape = {{r}, {r}};
+    gert::StorageShape beta_shape = {{r}, {r}};
+    gert::StorageShape y_shape = {{a, r}, {a, r}};
+    gert::StorageShape mean_shape = {{a}, {a}};
+    gert::StorageShape rstd_shape = {{a}, {a}};
+    float eps = 1e-5;
+
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    map<string, string> npuarchs = {{"NpuArch", "3510"}};
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    LayerNormV4CompileInfo compile_info;
+
+    std::string op_type("LayerNormV4");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(4, 3)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x_shape, &normalized_shape, &gamma_shape, &beta_shape})
+                      .OutputShapes({&y_shape, &mean_shape, &rstd_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
+
+    ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto tiling_key = tiling_context->GetTilingKey();
+    if (expectedSplits > 0) {
+        ASSERT_EQ(tiling_key, 810);
+        EXPECT_EQ(tiling_context->GetBlockDim(), a * expectedSplits);
+        // SplitR publishes separate 32B mean and variance rows per core.
+        // Include the system SyncAll workspace.
+        auto platform = platform_ascendc::PlatformAscendC(tiling_context->GetPlatformInfo());
+        auto* workspace = tiling_context->GetWorkspaceSizes(1);
+        ASSERT_NE(workspace, nullptr);
+        EXPECT_EQ(workspace[0], platform.GetLibApiWorkSpaceSize() +
+                                    2 * a * expectedSplits * Ops::Base::GetUbBlockSize(tiling_context));
+    } else {
+        EXPECT_NE(tiling_key, 810);
+    }
+    auto tilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(tilingData, nullptr);
+    if (expectedSplits > 0) {
+        // The common Welford/SplitR ABI starts with fourteen int64_t fields;
+        // read only this prefix, without depending on the epsilon/tail padding.
+        int64_t fields[14] = {};
+        ASSERT_GE(tilingData->GetDataSize(), sizeof(fields));
+        std::memcpy(fields, tilingData->GetData(), sizeof(fields));
+        constexpr size_t MAIN_BLOCK_FACTOR_FIELD = 5;
+        EXPECT_EQ(fields[MAIN_BLOCK_FACTOR_FIELD], 1); // One row per SplitR core.
+        constexpr size_t TILE_LENGTH_FIELD = 7;
+        constexpr size_t WELFORD_TEMP_FIELD = 8;
+        constexpr size_t API_TEMP_FIELD = 13;
+        const int64_t tileLength = fields[TILE_LENGTH_FIELD];
+        ASSERT_GT(tileLength, 0);
+        ASSERT_GT(compile_info.vectorLength, 0);
+        // FP16 x/y and FP32 gamma/beta, all double buffered; two double
+        // buffered statistics queues contain 256 floats each.
+        const int64_t ioBuffers = 24 * tileLength + 4 * 256 * sizeof(float);
+        const int64_t mergeBuffers = 2 * compile_info.vectorLength;
+        EXPECT_LE(ioBuffers + fields[WELFORD_TEMP_FIELD] + fields[API_TEMP_FIELD] + mergeBuffers,
+                  compile_info.ubSizePlatForm);
+    }
+}
+
+TEST_F(LayerNormV4Tiling, split_r_long_row) { CheckLayerNormV4SplitR(1, 1048576, 16); }
+
+TEST_F(LayerNormV4Tiling, split_r_multiple_rows_and_tail) { CheckLayerNormV4SplitR(3, 65537, 4); }
+
+TEST_F(LayerNormV4Tiling, split_r_short_row_fallback) { CheckLayerNormV4SplitR(1, 65535, 0); }
+
+TEST_F(LayerNormV4Tiling, split_r_sufficient_rows_fallback) { CheckLayerNormV4SplitR(64, 65537, 0); }
+
+TEST_F(LayerNormV4Tiling, split_r_threshold_boundary) { CheckLayerNormV4SplitR(1, 65536, 4); }
+
+TEST_F(LayerNormV4Tiling, split_r_max_admitted_rows) { CheckLayerNormV4SplitR(16, 65536, 4); }
+
+TEST_F(LayerNormV4Tiling, split_r_above_max_admitted_rows) { CheckLayerNormV4SplitR(17, 65536, 0); }
+
+TEST_F(LayerNormV4Tiling, split_r_nearly_saturated_rows_fallback) { CheckLayerNormV4SplitR(32, 65536, 0); }
+
+// Non-power-of-two groups exercise compact masked reductions; a tail
+// element also makes the per-core counts unequal in the finalization input.
+TEST_F(LayerNormV4Tiling, split_r_five_parts_with_tail) { CheckLayerNormV4SplitR(1, 81921, 5); }
+
+TEST_F(LayerNormV4Tiling, split_r_six_parts_with_tail) { CheckLayerNormV4SplitR(1, 98305, 6); }
+
+TEST_F(LayerNormV4Tiling, split_r_seven_parts_core_limited) { CheckLayerNormV4SplitR(9, 1048577, 7); }
+
+TEST_F(LayerNormV4Tiling, split_r_nine_parts_with_tail) { CheckLayerNormV4SplitR(1, 147457, 9); }
+
+TEST_F(LayerNormV4Tiling, split_r_fifteen_parts_with_tail) { CheckLayerNormV4SplitR(1, 245761, 15); }

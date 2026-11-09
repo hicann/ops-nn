@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "arch35/layer_norm_v4_two_pass.h"
 #include "arch35/layer_norm_v4_welford.h"
+#include "arch35/layer_norm_v4_split_r.h"
 #include "arch35/layer_norm_v4_two_pass_perf.h"
 
 using namespace LayerNormV4;
@@ -40,6 +41,12 @@ using AscendC::AIC;
 #define LNV4_REGBASE_TWO_PASS_PERF_HALF_HALF 511
 #define LNV4_REGBASE_TWO_PASS_PERF_BF16_FLOAT 520
 #define LNV4_REGBASE_TWO_PASS_PERF_BF16_BF16 522
+
+#define LNV4_REGBASE_SPLIT_R_FLOAT_FLOAT 800
+#define LNV4_REGBASE_SPLIT_R_HALF_FLOAT 810
+#define LNV4_REGBASE_SPLIT_R_HALF_HALF 811
+#define LNV4_REGBASE_SPLIT_R_BF16_FLOAT 820
+#define LNV4_REGBASE_SPLIT_R_BF16_BF16 822
 
 template <typename Tfm, typename Tweight, typename Tmean>
 __aicore__ inline void RegbaseTwoPassImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
@@ -76,6 +83,24 @@ __aicore__ inline void RegbaseTwoPassPerfImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR 
     op.Process();
 }
 
+template <typename T, typename U>
+__aicore__ inline void RegbaseSplitRImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
+                                         GM_ADDR workspace, GM_ADDR tiling)
+{
+    if (workspace == nullptr) {
+        return;
+    }
+    GM_ADDR userWS = GetUserWorkspace(workspace);
+    if (userWS == nullptr) {
+        return;
+    }
+    TPipe pipe;
+    GET_TILING_DATA_WITH_STRUCT(LayerNormV4TilingDataSplitR, tilingData, tiling);
+    LayerNormV4RegbaseSplitR<T, U, DTYPE_MEAN> op(&tilingData, &pipe);
+    op.Init(x, gamma, beta, y, mean, rstd, userWS);
+    op.Process();
+}
+
 static __aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
                                               GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -83,6 +108,32 @@ static __aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR 
         return;
     }
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    // Hardware SyncAll requires MIX scheduling even when only AIV cores execute.
+    if (TILING_KEY_IS(LNV4_REGBASE_SPLIT_R_FLOAT_FLOAT)) {
+        KERNEL_TASK_TYPE(LNV4_REGBASE_SPLIT_R_FLOAT_FLOAT, KERNEL_TYPE_MIX_AIV_1_0);
+        RegbaseSplitRImpl<float, float>(x, gamma, beta, y, mean, rstd, workspace, tiling);
+        return;
+    }
+    if (TILING_KEY_IS(LNV4_REGBASE_SPLIT_R_HALF_FLOAT)) {
+        KERNEL_TASK_TYPE(LNV4_REGBASE_SPLIT_R_HALF_FLOAT, KERNEL_TYPE_MIX_AIV_1_0);
+        RegbaseSplitRImpl<half, float>(x, gamma, beta, y, mean, rstd, workspace, tiling);
+        return;
+    }
+    if (TILING_KEY_IS(LNV4_REGBASE_SPLIT_R_HALF_HALF)) {
+        KERNEL_TASK_TYPE(LNV4_REGBASE_SPLIT_R_HALF_HALF, KERNEL_TYPE_MIX_AIV_1_0);
+        RegbaseSplitRImpl<half, half>(x, gamma, beta, y, mean, rstd, workspace, tiling);
+        return;
+    }
+    if (TILING_KEY_IS(LNV4_REGBASE_SPLIT_R_BF16_FLOAT)) {
+        KERNEL_TASK_TYPE(LNV4_REGBASE_SPLIT_R_BF16_FLOAT, KERNEL_TYPE_MIX_AIV_1_0);
+        RegbaseSplitRImpl<bfloat16_t, float>(x, gamma, beta, y, mean, rstd, workspace, tiling);
+        return;
+    }
+    if (TILING_KEY_IS(LNV4_REGBASE_SPLIT_R_BF16_BF16)) {
+        KERNEL_TASK_TYPE(LNV4_REGBASE_SPLIT_R_BF16_BF16, KERNEL_TYPE_MIX_AIV_1_0);
+        RegbaseSplitRImpl<bfloat16_t, bfloat16_t>(x, gamma, beta, y, mean, rstd, workspace, tiling);
+        return;
+    }
     if (TILING_KEY_IS(LNV4_REGBASE_TWO_PASS_FLOAT_FLOAT)) {
         RegbaseTwoPassImpl<float, float, DTYPE_MEAN>(x, gamma, beta, y, mean, rstd, tiling);
         return;

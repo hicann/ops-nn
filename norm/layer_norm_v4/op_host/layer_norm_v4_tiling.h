@@ -131,6 +131,31 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_411, LayerNormV4TilingDataWelford)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_420, LayerNormV4TilingDataWelford)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_422, LayerNormV4TilingDataWelford)
 
+BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataSplitR)
+TILING_DATA_FIELD_DEF(int64_t, M);                  // 输入tensor的行
+TILING_DATA_FIELD_DEF(int64_t, N);                  // 输入tensor的列，即reduce的轴
+TILING_DATA_FIELD_DEF(int64_t, rAlign);             // r对齐的大小
+TILING_DATA_FIELD_DEF(int64_t, numBlocks);          // 实际使用的core数量
+TILING_DATA_FIELD_DEF(int64_t, mainBlockCount);     // 整核的数量
+TILING_DATA_FIELD_DEF(int64_t, mainBlockFactor);    // 整核处理的row大小
+TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);    // 尾核处理的row大小
+TILING_DATA_FIELD_DEF(int64_t, tileLength);         // tile块的元素个数
+TILING_DATA_FIELD_DEF(int64_t, welfordTempSize);    // welford临时buffer的大小
+TILING_DATA_FIELD_DEF(int64_t, welfordUpdateTimes); // welford update的次数
+TILING_DATA_FIELD_DEF(int64_t, welfordUpdateTail);  // welford update的尾数
+TILING_DATA_FIELD_DEF(int64_t, nullptrGamma);
+TILING_DATA_FIELD_DEF(int64_t, nullptrBeta);
+TILING_DATA_FIELD_DEF(int64_t, apiTempBufferSize);
+TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(int64_t, splitR);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormV4_800, LayerNormV4TilingDataSplitR)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_810, LayerNormV4TilingDataSplitR)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_811, LayerNormV4TilingDataSplitR)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_820, LayerNormV4TilingDataSplitR)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_822, LayerNormV4TilingDataSplitR)
+
 BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataRegBaseTwoPassPerf)
 TILING_DATA_FIELD_DEF(int64_t, a);
 TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);
