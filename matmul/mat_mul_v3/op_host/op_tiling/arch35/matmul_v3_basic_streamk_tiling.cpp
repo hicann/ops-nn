@@ -24,6 +24,7 @@ using namespace optiling;
 using namespace optiling::matmul_v3_advanced;
 
 constexpr uint64_t FIXPIPE_N_ALIGN_ELEMENTS = 32UL;
+constexpr double FP32_CUBE_UNIT = 256.0;
 
 // ------------------------------ CheckStreamKDPSKTiling -------------------------------------------//
 bool CheckStreamKDPSKTilingDefault(const MatmulV3CompileInfo& /* compileInfo */, const MatMulV3Args& /* args */,
@@ -78,10 +79,39 @@ double GetMte2Perf(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& a
     double timeConvert = TIME_CONVERT_UNIT * TIME_CONVERT_UNIT;
     double mte2Perf = static_cast<double>(hbmSize) / (MatMulV3TilingHelper::GetHbmBW(platformInfo) * timeConvert) +
                       static_cast<double>(l2Size) / (MatMulV3TilingHelper::GetL2BW(platformInfo) * timeConvert);
+    // 针对非128B的基本块，并且存在跳搬情况下，惩罚MTE2效率
+    bool isMte2PerfDouble = (args.isATrans && runInfo.baseM < args.mValue &&
+                             runInfo.baseM * args.aDtypeSize < BASIC_BLOCK_SIZE_128) ||
+                            (!args.isBTrans && runInfo.baseN < args.nValue &&
+                             runInfo.baseN * args.bDtypeSize < BASIC_BLOCK_SIZE_128);
+    if (isMte2PerfDouble) {
+        mte2Perf *= NUM_TWO;
+    }
     if (compileInfo.npuArch == NpuArch::DAV_9202) {
         return mte2Perf;
     }
     return mte2Perf / (static_cast<double>(usedCoreNum) / compileInfo.aicNum);
+}
+
+double GetCubePerf(const MatMulV3Args& args, const MatMulV3RunInfo& runInfo, uint64_t kCnt,
+                   fe::PlatFormInfos* platformInfo)
+{
+    bool isFp32 = args.aType == ge::DT_FLOAT && args.bType == ge::DT_FLOAT && !args.isHf32;
+    double cubeUnit = BASIC_BLOCK_SIZE_16 * BASIC_BLOCK_SIZE_16 * (BLOCK_BYTE_SIZE / args.aDtypeSize);
+    if (isFp32) {
+        cubeUnit = FP32_CUBE_UNIT;
+    }
+    double cubePerf = runInfo.baseM * runInfo.baseN *
+                      ops::CeilAlign(MathUtil::CeilDivision(args.kValue, kCnt), BASIC_BLOCK_SIZE_16) /
+                      (cubeUnit * MatMulV3TilingHelper::GetCoreFreq(platformInfo) * TIME_CONVERT_UNIT);
+    if (isFp32) {
+        if (runInfo.baseM <= BASIC_BLOCK_SIZE_16 && runInfo.baseN <= BASIC_BLOCK_SIZE_16) {
+            cubePerf *= NUM_THREE;
+        } else if (runInfo.baseM <= BASIC_BLOCK_SIZE_32 && runInfo.baseN <= BASIC_BLOCK_SIZE_32) {
+            cubePerf *= NUM_TWO;
+        }
+    }
+    return cubePerf;
 }
 
 double GetNegPerf(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, int64_t kCnt, int64_t usedCoreNum,
@@ -186,7 +216,8 @@ bool CheckStreamKSKPerfModelAdmission(const MatmulV3CompileInfo& compileInfo, co
     MatMulV3RunInfo runInfoTmp;
     MatMulV3TilingHelper::ResetBase(compileInfo, args, runInfoTmp);
     runInfo.usedCoreNum = mCnt * nCnt;
-    double bestPerf = GetMte2Perf(compileInfo, args, runInfo.usedCoreNum, runInfo, platformInfo);
+    double bestPerf = std::max(GetMte2Perf(compileInfo, args, runInfo.usedCoreNum, runInfo, platformInfo),
+                               GetCubePerf(args, runInfo, 1, platformInfo));
     for (uint64_t kCnt = 2; kCnt <= compileInfo.aicNum; kCnt++) {
         runInfoTmp.usedCoreNum = compileInfo.aicNum / kCnt;
         MatMulV3TilingHelper::GetRebalanceBlock(compileInfo, args, runInfoTmp, context);
@@ -204,30 +235,16 @@ bool CheckStreamKSKPerfModelAdmission(const MatmulV3CompileInfo& compileInfo, co
             continue;
         }
         double curMte2Perf = GetMte2Perf(compileInfo, args, mCntTmp * nCntTmp * kCnt, runInfoTmp, platformInfo);
+        double curCubePerf = GetCubePerf(args, runInfoTmp, kCnt, platformInfo);
         double negPerf = GetNegPerf(compileInfo, args, kCnt, mCntTmp * nCntTmp * kCnt, platformInfo);
-        double curCubePerf = runInfoTmp.baseM * runInfoTmp.baseN *
-                             ops::CeilAlign(MathUtil::CeilDivision(args.kValue, kCnt), BASIC_BLOCK_SIZE_16) /
-                             (BASIC_BLOCK_SIZE_16 * BASIC_BLOCK_SIZE_16 * (BLOCK_BYTE_SIZE / args.aDtypeSize) *
-                              MatMulV3TilingHelper::GetCoreFreq(platformInfo) *
-                              TIME_CONVERT_UNIT); // 单核算力及单位换算
-        bool isCubeBoundBetter = runInfoTmp.cubeBoundParam <= runInfoTmp.cubeBoundEdge &&
-                                 (curCubePerf + negPerf) < bestPerf;
-        bool isMemBoundBetter = runInfoTmp.cubeBoundParam > runInfoTmp.cubeBoundEdge &&
-                                (curMte2Perf + negPerf) < bestPerf;
-        if (isCubeBoundBetter || isMemBoundBetter) {
+        double curPerf = std::max(curMte2Perf, curCubePerf) + negPerf;
+        if (curPerf < bestPerf) {
             runInfo.baseM = runInfoTmp.baseM;
             runInfo.baseN = runInfoTmp.baseN;
             runInfo.baseK = runInfoTmp.baseK;
             runInfo.tailInfo.kCnt = kCnt;
             runInfo.usedCoreNum = runInfoTmp.usedCoreNum * kCnt;
-            if (isCubeBoundBetter) {
-                bestPerf = curCubePerf + negPerf;
-                if (mCntTmp * nCntTmp * kCnt == compileInfo.aicNum) {
-                    break;
-                }
-            } else {
-                bestPerf = curMte2Perf + negPerf;
-            }
+            bestPerf = curPerf;
         }
     }
     return runInfo.tailInfo.kCnt > 1;

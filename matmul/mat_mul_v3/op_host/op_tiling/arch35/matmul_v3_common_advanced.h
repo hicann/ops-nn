@@ -25,6 +25,7 @@ constexpr uint64_t DB_SIZE = 2UL;
 constexpr uint64_t DB_OFF_SIZE = 1UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
+constexpr uint64_t BASIC_BLOCK_SIZE_32 = 32UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_16 = 16UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_8 = 8UL;
 constexpr uint64_t FP32_MN_SHAPE_THRESHOLD = 65536UL; // 256 * 256
