@@ -364,14 +364,15 @@ private:
 
     __aicore__ inline int64_t SegmentLen() const { return (blockIdx_ < realCoreNum_ - 1) ? numPerCore8_ : tailNum_; }
 
+    // 浮点判零需屏蔽符号位，避免 -0.0（位模式非零但数值为 0）被误判为非零
     __aicore__ inline bool IsNonZero(const LocalTensor<uint8_t>& xUb, int64_t idx)
     {
         if (elemSize_ == 4) {
             auto xU32 = xUb.ReinterpretCast<uint32_t>();
-            return xU32.GetValue(idx) != 0U;
+            return (xU32.GetValue(idx) & 0x7FFFFFFFU) != 0U;
         } else if (elemSize_ == 2) {
             auto xU16 = xUb.ReinterpretCast<uint16_t>();
-            return xU16.GetValue(idx) != 0U;
+            return (xU16.GetValue(idx) & 0x7FFFU) != 0U;
         }
         return xUb.GetValue(idx) != 0U;
     }
