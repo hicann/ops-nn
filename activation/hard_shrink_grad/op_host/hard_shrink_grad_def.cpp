@@ -40,7 +40,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
 
-        this->Attr("lambd").Float(0.5f);
+        this->Attr("lambd").AttrType(OPTIONAL).Float(0.5f);
 
         OpAICoreConfig aicoreConfig910B;
         aicoreConfig910B.DynamicCompileStaticFlag(true)
@@ -48,8 +48,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "hard_shrink_grad_apt");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig910B);
     }
 };

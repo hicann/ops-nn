@@ -19,6 +19,9 @@
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "log/log.h"
+#include <string>
+#include <vector>
+#include "base/err_msg.h"
 
 using namespace ge;
 
@@ -27,14 +30,61 @@ namespace ops {
 static ge::graphStatus InferShape4HardShrinkGrad(gert::InferShapeContext* context)
 {
     const gert::Shape* inputShape = context->GetInputShape(0);
-    if (inputShape == nullptr) {
-        return ge::GRAPH_FAILED;
+    OP_CHECK_IF(inputShape == nullptr,
+                OP_LOGE_WITH_INVALID_INPUT(
+                    ((context) == nullptr || (context)->GetNodeName() == nullptr ? "hard_shrink_grad" :
+                                                                                   (context)->GetNodeName()),
+                    "gradients"),
+                return ge::GRAPH_FAILED);
+
+    // 跨输入一致性校验：features 与 gradients 同形（rank-0 标量按
+    // {1} 归一化参与比较；rank 与逐维长度不等时拒绝）
+    const gert::Shape* featuresShape = context->GetInputShape(1);
+    OP_CHECK_IF(featuresShape == nullptr,
+                OP_LOGE_WITH_INVALID_INPUT(
+                    ((context) == nullptr || (context)->GetNodeName() == nullptr ? "hard_shrink_grad" :
+                                                                                   (context)->GetNodeName()),
+                    "features"),
+                return ge::GRAPH_FAILED);
+    // 未知标记旁路：-2（未知秩）输入无法判定任何 rank/逐维关系，跳过校验并原样传播
+    // （执行期 shape 具体化后由 tiling 独立校验三张量元素数一致）；-1（未知维）仅该维不可判定，
+    // 跳过该维比较，其余维照常校验
+    if (Ops::Base::IsUnknownRank(*inputShape) || Ops::Base::IsUnknownRank(*featuresShape)) {
+        gert::Shape* unknownRankOutput = context->GetOutputShape(0);
+        OP_CHECK_IF(unknownRankOutput == nullptr,
+                    OP_LOGE_WITH_INVALID_INPUT(
+                        ((context) == nullptr || (context)->GetNodeName() == nullptr ? "hard_shrink_grad" :
+                                                                                       (context)->GetNodeName()),
+                        "backprops"),
+                    return ge::GRAPH_FAILED);
+        *unknownRankOutput = *inputShape;
+        OP_LOGI(context->GetNodeName(), "[InferShape] unknown rank input, output0 shape=%s",
+                Ops::Base::ToString(*unknownRankOutput).c_str());
+        return ge::GRAPH_SUCCESS;
+    }
+    const size_t gradientsRank = (inputShape->GetDimNum() == 0) ? 1 : inputShape->GetDimNum();
+    const size_t featuresRank = (featuresShape->GetDimNum() == 0) ? 1 : featuresShape->GetDimNum();
+    OP_CHECK_IF(gradientsRank != featuresRank,
+                OP_LOGE(context->GetNodeName(), "HardShrinkGrad: rank mismatch: gradients=%zu, features=%zu",
+                        inputShape->GetDimNum(), featuresShape->GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 0; i < gradientsRank; ++i) {
+        const int64_t gradientsDim = (inputShape->GetDimNum() == 0) ? 1 : inputShape->GetDim(i);
+        const int64_t featuresDim = (featuresShape->GetDimNum() == 0) ? 1 : featuresShape->GetDim(i);
+        OP_CHECK_IF(
+            gradientsDim >= 0 && featuresDim >= 0 && gradientsDim != featuresDim,
+            OP_LOGE(context->GetNodeName(), "HardShrinkGrad: shape mismatch at dim %zu: gradients=%ld, features=%ld", i,
+                    gradientsDim, featuresDim),
+            return ge::GRAPH_FAILED);
     }
 
     gert::Shape* outputShape = context->GetOutputShape(0);
-    if (outputShape == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(outputShape == nullptr,
+                OP_LOGE_WITH_INVALID_INPUT(
+                    ((context) == nullptr || (context)->GetNodeName() == nullptr ? "hard_shrink_grad" :
+                                                                                   (context)->GetNodeName()),
+                    "backprops"),
+                return ge::GRAPH_FAILED);
 
     *outputShape = *inputShape;
     OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*outputShape).c_str());

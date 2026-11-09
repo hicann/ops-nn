@@ -64,7 +64,7 @@ TEST_F(l2_hardshrink_backward_test, case_nullptr)
     auto ut3 = OP_API_UT(aclnnHardshrinkBackward, INPUT(gradOutput_desc, nullptr, lambd_desc), OUTPUT(gradInput_desc));
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize3 = 0;
-    aclnnStatus aclRet3 = ut.TestGetWorkspaceSize(&workspaceSize3);
+    aclnnStatus aclRet3 = ut3.TestGetWorkspaceSize(&workspaceSize3);
     EXPECT_EQ(aclRet3, ACLNN_ERR_PARAM_NULLPTR);
 
     auto ut4 = OP_API_UT(aclnnHardshrinkBackward, INPUT(nullptr, self_desc, lambd_desc), OUTPUT(gradInput_desc));
@@ -159,7 +159,7 @@ TEST_F(l2_hardshrink_backward_test, case_broadcast_fail)
 TEST_F(l2_hardshrink_backward_test, case_empty_tensor)
 {
     auto gradOutput_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto self_desc = TensorDesc({1, 1, 1, 4}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 2, 3, 4});
+    auto self_desc = TensorDesc({0}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto lambd_desc = ScalarDesc(8.0f);
     auto gradInput_desc = TensorDesc(self_desc).Precision(0.0001, 0.0001);
 
@@ -183,4 +183,73 @@ TEST_F(l2_hardshrink_backward_test, case_not_contiguous)
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// lambd scalar of the float class (float/double) is accepted via implicit conversion,
+// aligning with the standard built-in aclnnHardshrinkBackward behavior (torch_npu packs
+// aten Scalar lambd as DT_DOUBLE); non-float dtypes are rejected without implicit conversion
+TEST_F(l2_hardshrink_backward_test, case_lambd_dtype_double)
+{
+    auto gradOutput_desc = TensorDesc({1, 1, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto self_desc = TensorDesc({1, 1, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto lambd_desc = ScalarDesc(8.0);
+    auto gradInput_desc = TensorDesc(self_desc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnHardshrinkBackward, INPUT(gradOutput_desc, self_desc, lambd_desc), OUTPUT(gradInput_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// lambd accepts any numeric scalar dtype; int is implicitly converted by ToFloat
+TEST_F(l2_hardshrink_backward_test, case_lambd_dtype_int_implicit)
+{
+    auto gradOutput_desc = TensorDesc({1, 1, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto self_desc = TensorDesc({1, 1, 4, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto lambd_desc = ScalarDesc(static_cast<int32_t>(8));
+    auto gradInput_desc = TensorDesc(self_desc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnHardshrinkBackward, INPUT(gradOutput_desc, self_desc, lambd_desc), OUTPUT(gradInput_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// the second-phase run entry must fail cleanly on a null executor instead of crashing
+TEST_F(l2_hardshrink_backward_test, case_run_with_null_executor)
+{
+    aclnnStatus runResult = aclnnHardshrinkBackward(nullptr, 0, nullptr, nullptr);
+    EXPECT_NE(runResult, ACLNN_SUCCESS);
+}
+
+// rank-9 float32 inputs exceed the wrapper OP_CHECK_MAX_DIM(8) gate and are rejected with 161002
+TEST_F(l2_hardshrink_backward_test, case_rank9_float32_rejected)
+{
+    auto gradOutput_desc = TensorDesc({1, 1, 1, 1, 1, 1, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto self_desc = TensorDesc({1, 1, 1, 1, 1, 1, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto lambd_desc = ScalarDesc(0.5f);
+    auto gradInput_desc = TensorDesc(gradOutput_desc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnHardshrinkBackward, INPUT(gradOutput_desc, self_desc, lambd_desc), OUTPUT(gradInput_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// rank-9 float16 inputs exceed the wrapper OP_CHECK_MAX_DIM(8) gate and are rejected with 161002
+TEST_F(l2_hardshrink_backward_test, case_rank9_float16_rejected)
+{
+    auto gradOutput_desc = TensorDesc({2, 1, 1, 1, 1, 1, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto self_desc = TensorDesc({2, 1, 1, 1, 1, 1, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto lambd_desc = ScalarDesc(0.5f);
+    auto gradInput_desc = TensorDesc(gradOutput_desc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnHardshrinkBackward, INPUT(gradOutput_desc, self_desc, lambd_desc), OUTPUT(gradInput_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

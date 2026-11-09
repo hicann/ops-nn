@@ -30,7 +30,7 @@ namespace ge {
  *
  * @par Inputs:
  * Two inputs, including:
- * @li gradients: A Tensor. Support 1D~8D. Must be one of the following types:
+ * @li gradients: A Tensor. Must be one of the following types:
  * float16, float32, bfloat16. The upstream gradient tensor.
  * @li features: A Tensor. Has the same type, format and shape as "gradients".
  * The input tensor of the corresponding HardShrink forward operation.

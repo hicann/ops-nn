@@ -23,12 +23,12 @@
  *
  * Computation: dx = (|x| <= lambd) ? 0 : dy
  *
- * Strategy (aligned with probe-validated patterns):
- *   - fp16: Abs/Compares/Select directly on half (probe_fp16_sb validated)
- *   - fp32: Abs/Compares/Select directly on float (probe_fp32_db validated)
- *   - bf16: Cast bf16->float, Abs/Compares/Select in float, Cast back (probe_bf16_db validated)
+ * Strategy:
+ *   - fp16: Abs/Compares/Select directly on half
+ *   - fp32: Abs/Compares/Select directly on float
+ *   - bf16: Cast bf16->float, Abs/Compares/Select in float, Cast back
  *
- * Uses Compares (scalar comparison) + Select (VSEL_TENSOR_SCALAR_MODE).
+ * Uses Compares (threshold comparison) + Select (VSEL_TENSOR_TENSOR_MODE).
  */
 
 #ifndef HARD_SHRINK_GRAD_H
@@ -129,10 +129,10 @@ __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::CopyIn(int64_t progress, 
     LocalTensor<T> gradLocal = inputQueueGrad_.template AllocTensor<T>();
     LocalTensor<T> selfLocal = inputQueueSelf_.template AllocTensor<T>();
 
-    DataCopyPad(gradLocal, gmGrad_[progress * ubLength_], {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
-                {false, 0, 0, 0});
-    DataCopyPad(selfLocal, gmSelf_[progress * ubLength_], {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0},
-                {false, 0, 0, 0});
+    DataCopyExtParams copyParams{1, static_cast<uint32_t>(currentNum * sizeof(T)), 0, 0, 0};
+    DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
+    DataCopyPad(gradLocal, gmGrad_[progress * ubLength_], copyParams, padParams);
+    DataCopyPad(selfLocal, gmSelf_[progress * ubLength_], copyParams, padParams);
 
     inputQueueGrad_.EnQue(gradLocal);
     inputQueueSelf_.EnQue(selfLocal);
@@ -143,7 +143,8 @@ __aicore__ inline void HardShrinkGrad<T, BUFFER_MODE>::CopyOut(int64_t progress,
 {
     LocalTensor<T> outLocal = outputQueue_.template DeQue<T>();
 
-    DataCopyPad(gmOut_[progress * ubLength_], outLocal, {1, static_cast<uint16_t>(currentNum * sizeof(T)), 0, 0});
+    DataCopyExtParams copyParamsOut{1, static_cast<uint32_t>(currentNum * sizeof(T)), 0, 0, 0};
+    DataCopyPad(gmOut_[progress * ubLength_], outLocal, copyParamsOut);
 
     outputQueue_.FreeTensor(outLocal);
 }

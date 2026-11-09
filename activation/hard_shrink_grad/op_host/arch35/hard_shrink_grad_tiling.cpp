@@ -76,7 +76,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     OP_CHECK_NULL_WITH_CONTEXT(context, output);
     auto outShape = EnsureNotScalar(output->GetStorageShape());
 
-    // shape 校验
+    // shape 校验：三张量元素数一致（kernel 按平坦逐元素计算，元素数不一致时拒绝）
     OP_CHECK_IF(inputShapeGrad.GetShapeSize() != inputShapeSelf.GetShapeSize() ||
                     inputShapeGrad.GetShapeSize() != outShape.GetShapeSize(),
                 OP_LOGE(context, "HardShrinkGrad: shape size mismatch: gradients=%ld, features=%ld, backprops=%ld",
@@ -85,13 +85,35 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
 
     totalIdx = inputShapeGrad.GetShapeSize();
 
-    // dtype 校验
+    // dtype 校验：两张量均在支持列表内且一致（图执行通路同 dtype 契约）
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
-    auto inputDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    dataType = inputDesc->GetDataType();
+    auto inputDescGrad = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDescGrad);
+    dataType = inputDescGrad->GetDataType();
+    auto inputDescSelf = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDescSelf);
     if (supportedDtype.count(dataType) == 0) {
         OP_LOGE(context, "HardShrinkGrad: invalid dtype %d", static_cast<int>(dataType));
+        return ge::GRAPH_FAILED;
+    }
+    if (inputDescSelf->GetDataType() != dataType) {
+        OP_LOGE(context, "HardShrinkGrad: gradients dtype %d and features dtype %d must be the same",
+                static_cast<int>(dataType), static_cast<int>(inputDescSelf->GetDataType()));
+        return ge::GRAPH_FAILED;
+    }
+
+    // 输出 dtype 校验：backprops 须在支持列表内且与输入同型（proto 声明 backprops 与
+    // features 同 type；输出 buffer 按输出 desc 分配，错型组合曾致设备阶段 VEC_ERROR/
+    // 静默错算，图编译链域由 InferDataType 推导同型，此处为 tiling 门禁独立拦截）
+    auto outputDesc = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+    if (supportedDtype.count(outputDesc->GetDataType()) == 0) {
+        OP_LOGE(context, "HardShrinkGrad: invalid backprops dtype %d", static_cast<int>(outputDesc->GetDataType()));
+        return ge::GRAPH_FAILED;
+    }
+    if (outputDesc->GetDataType() != dataType) {
+        OP_LOGE(context, "HardShrinkGrad: backprops dtype %d must be the same as gradients dtype %d",
+                static_cast<int>(outputDesc->GetDataType()), static_cast<int>(dataType));
         return ge::GRAPH_FAILED;
     }
 
@@ -140,13 +162,21 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(memset_s(tiling, sizeof(HardShrinkGradTilingData), 0, sizeof(HardShrinkGradTilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
+    // 空 Tensor：totalIdx==0 时以单核空调度收尾（kernel 侧 blockLength_<=0 提前返回守卫，
+    // 零元素无搬运转下界）
+    if (totalIdx == 0) {
+        context->SetBlockDim(1);
+        uint32_t bufferMode = 0;
+        ASCENDC_TPL_SEL_PARAM(context, bufferMode);
+        return ge::GRAPH_SUCCESS;
+    }
+
     // 多核切分
     tiling->totalNum = totalIdx;
     tiling->blockFactor = CeilDiv(totalIdx, coreNum);
     int64_t usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
 
-    // lambd 预处理：非负数处理，lambd < 0 时取 0
-    tiling->lambd = (lambd < 0.0f) ? 0.0f : lambd;
+    tiling->lambd = lambd;
 
     // UB 切分
     // 根据 dtype 确定类型大小和计算对齐
@@ -173,7 +203,7 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     int64_t systemOverhead = 16 * 1024;
     int64_t availableUb = static_cast<int64_t>(ubSize) - systemOverhead;
 
-    // Buffer layout per element (aligned with probe-validated kernel):
+    // Buffer layout per element:
     //   fp16/fp32: 3 TQue(T) x BUFFER_NUM + mask(~0)
     //     fp16 double: 3*2*2 = 12 bytes/elem
     //     fp16 single: 3*1*2 = 6 bytes/elem
@@ -205,9 +235,10 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
 
     context->SetBlockDim(usedCoreNum);
 
-    // 5. 设置 TilingKey
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX, useDoubleBuffer);
+    // def 驱动 dtype：tiling_key 只编码 bufferMode，dtype 由 def.cpp 的 DataType 列表
+    // 经构建系统注入 DTYPE_GRADIENTS 编译宏，host 不再编码 dtype 派发维度
+    uint32_t bufferMode = static_cast<uint32_t>(useDoubleBuffer);
+    ASCENDC_TPL_SEL_PARAM(context, bufferMode);
 
     return ge::GRAPH_SUCCESS;
 }

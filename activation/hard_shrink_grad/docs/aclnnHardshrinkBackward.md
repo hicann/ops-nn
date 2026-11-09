@@ -29,11 +29,12 @@
   $$
   HardshrinkBackward(x,grad)=
   \begin{cases}
-  &grad, &if(x > \lambda) \\
-  &grad, &if(x < -\lambda) \\
-  &0, &otherwise
+  &0, &if(-\lambda \leq x \leq \lambda) \\
+  &grad, &otherwise
   \end{cases}
   $$
+
+  当x为NaN时，对应位置输出grad值；当grad为NaN且|x|>λ时，对应位置输出NaN。
 
 ## 函数原型
 
@@ -87,7 +88,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>反向传播过程中上一步输出的梯度，作为本反向算子的输入，公式中的grad。</td>
-      <td><ul><li>gradOutput与self的shape满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
+      <td><ul><li>gradOutput与self的shape满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>支持空Tensor。</li><li>gradOutput与self的数据类型可以不同，不同时内部转换为数据类型提升后的数据类型进行计算。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -97,7 +98,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入的Tensor、公式中的x。</td>
-      <td><ul><li>gradOutput与self的shape满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
+      <td><ul><li>gradOutput与self的shape满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>支持空Tensor。</li><li>gradOutput与self的数据类型可以不同，不同时内部转换为数据类型提升后的数据类型进行计算。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -107,7 +108,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>lambd（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的λ。</td>
-      <td>当λ小于0时，按0计算。</td>
+      <td>取值无限制；数值标量内部转换为FLOAT参与计算（复数除外）；当λ为+inf（含超出FLOAT表示范围的值）时，非NaN元素输出0；当λ为NaN时，梯度全部透传。</td>
       <td>FLOAT</td>
       <td>-</td>
       <td>-</td>
@@ -117,7 +118,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的HardshrinkBackward(x,grad)。</td>
-      <td><ul><li>gradInput与self和gradOutput的broadcast后的Tensor的shape一致。</li><li>支持空Tensor传入。</li><li>gradOutput与self、gradInput的数据类型一致。</li></ul></td>
+      <td><ul><li>gradInput与self和gradOutput的broadcast后的Tensor的shape一致。</li><li>支持空Tensor。</li><li>gradInput的数据类型须支持从gradOutput与self数据类型提升后的数据类型转换。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -175,15 +176,21 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>传入的gradOutput、self、lambd或gradInput是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>self、lambd和gradInput的数据类型和数据格式不在支持的范围之内。</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
+      <td>gradOutput、self、lambd或gradInput的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>gradOutput与self的数据类型提升后的数据类型不能转换为gradInput的数据类型。</td>
+    </tr>
+    <tr>
+      <td>gradOutput、self或gradInput的维度大于8。</td>
     </tr>
     <tr>
       <td>self和gradOutput的shape不满足broadcast条件。</td>
     </tr>
     <tr>
-      <td>gradInput、shape与self和gradOutput的broadcast结果不一致。</td>
+      <td>gradInput的shape与self和gradOutput的broadcast结果不一致。</td>
     </tr>
   </tbody></table>
 

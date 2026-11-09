@@ -23,10 +23,11 @@ extern "C" {
  * @domain aclnn_ops_train
  *
  * 算子功能： 对输入Tensor完成hardShrink backward操作
- * @param [in] gradOutput: 计算输入, 数据类型支持FLOAT、FLOAT16, 数据格式支持ND, 支持非连续的Tensor。
- * @param [in] self: 计算输入, 数据类型支持FLOAT、FLOAT16, 数据格式支持ND, 支持非连续的Tensor。
- * @param [in] lambd:计算输入, 指定hardShrinkBackward分段的阈值，数据类型支持FLOAT类型。
- * @param [in] gradInput:计算输出, 数据类型支持FLOAT、FLOAT16, 数据格式支持ND, 支持非连续的Tensor。
+ * @param [in] gradOutput: 计算输入, 数据类型支持FLOAT、FLOAT16、BFLOAT16, 数据格式支持ND, 支持非连续的Tensor。
+ * @param [in] self: 计算输入, 数据类型支持FLOAT、FLOAT16、BFLOAT16, 数据格式支持ND, 支持非连续的Tensor。
+ * @param [in] lambd:计算输入, 指定hardShrinkBackward分段的阈值。
+ * 数据类型支持FLOAT类型。
+ * @param [in] gradInput:计算输出, 数据类型支持FLOAT、FLOAT16、BFLOAT16, 数据格式支持ND, 支持非连续的Tensor。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码， 成功返回ACLNN_SUCCESS, 失败返回对应错误码。

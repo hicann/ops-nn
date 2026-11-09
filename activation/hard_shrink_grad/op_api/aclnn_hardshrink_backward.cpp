@@ -61,7 +61,7 @@ inline static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* se
     return true;
 }
 
-inline static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* /* lambd */,
+inline static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclScalar* lambd,
                                    const aclTensor* gradInput)
 {
     auto dtypeSupportList = GetDtypeSupportList();
@@ -71,6 +71,8 @@ inline static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor*
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
     // 检查gradInput的数据类型是否在HardShrinkBackward算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradInput, dtypeSupportList, return false);
+    // lambd 为数值标量，由 ToFloat 隐式转换为 FLOAT 参与计算；复数等无法安全转换的类型拒绝
+    OP_CHECK_RESULT_DTYPE_CAST_FAILED(lambd->GetDataType(), DataType::DT_FLOAT, return false);
 
     return true;
 }
@@ -173,16 +175,17 @@ aclnnStatus aclnnHardshrinkBackwardGetWorkspaceSize(const aclTensor* gradOutput,
     op::DataType promoteType;
     CHECK_RET(CheckPromoteType(gradOutput, self, gradInput, promoteType), ACLNN_ERR_PARAM_INVALID);
 
+    // 检查能否做shape的broadcast推导（空Tensor早退前完成：空输入×广播不相容/
+    // gradInput shape与broadcast结果不符的组合按文档错误表返回161002，不随早退静默放行）
+    op::Shape resultShape;
+    CHECK_RET(CheckShapeBroadcast(gradOutput, self, gradInput, resultShape), ACLNN_ERR_PARAM_INVALID);
+
     // 空Tensor处理
     if (gradOutput->IsEmpty() || self->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
-
-    // 检查能否做shape的broadcast推导
-    op::Shape resultShape;
-    CHECK_RET(CheckShapeBroadcast(gradOutput, self, gradInput, resultShape), ACLNN_ERR_PARAM_INVALID);
 
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
@@ -212,9 +215,6 @@ aclnnStatus aclnnHardshrinkBackwardGetWorkspaceSize(const aclTensor* gradOutput,
 
     // 调用l0算子HardShrinkGrad进行计算
     auto lambdFloat = lambd->ToFloat();
-    if (lambdFloat < 0) {
-        lambdFloat = 0;
-    }
     auto hardShrinkGrad = l0op::HardShrinkGrad(gradOutputCasted, selfCasted, lambdFloat, uniqueExecutor.get());
     CHECK_RET(hardShrinkGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

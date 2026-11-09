@@ -16,14 +16,30 @@
  */
 
 #include "register/op_impl_registry.h"
+#include "log/log.h"
 
 using namespace ge;
 
 namespace ops {
 
-static ge::graphStatus InferDataType4HardShrinkGrad(gert::InferDataTypeContext* context)
+// 非 static：op_graph UT 直连函数原型调用本实现（模式 = mse_loss_graph_infer.cpp，
+// repo op_graph UT 骨架会以 SetSpaceRegistry 重建默认 registry，registry 查询路径不可用）
+ge::graphStatus InferDataType4HardShrinkGrad(gert::InferDataTypeContext* context)
 {
-    context->SetOutputDataType(0, context->GetInputDataType(0));
+    // dtype 域校验：gradients/features 均须在算子支持面内（proto 声明域 {F16, F32, BF16}）
+    const ge::DataType gradientsDtype = context->GetInputDataType(0);
+    const ge::DataType featuresDtype = context->GetInputDataType(1);
+    OP_CHECK_IF(gradientsDtype != ge::DT_FLOAT16 && gradientsDtype != ge::DT_FLOAT && gradientsDtype != ge::DT_BF16,
+                OP_LOGE(context->GetNodeName(), "HardShrinkGrad: invalid dtype %d", static_cast<int>(gradientsDtype)),
+                return ge::GRAPH_FAILED);
+    // 跨输入一致性：features 与 gradients 同 dtype（对齐 canndev CheckTwoInputDtypeSame 语义）
+    OP_CHECK_IF(
+        featuresDtype != gradientsDtype,
+        OP_LOGE(context->GetNodeName(), "HardShrinkGrad: gradients dtype %d and features dtype %d must be the same",
+                static_cast<int>(gradientsDtype), static_cast<int>(featuresDtype)),
+        return ge::GRAPH_FAILED);
+
+    context->SetOutputDataType(0, gradientsDtype);
     return ge::GRAPH_SUCCESS;
 }
 

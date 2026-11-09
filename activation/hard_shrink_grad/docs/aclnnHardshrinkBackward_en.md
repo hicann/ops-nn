@@ -31,11 +31,12 @@
   $$
   HardshrinkBackward(x,grad)=
   \begin{cases}
-  &grad, &if(x > \lambda) \\
-  &grad, &if(x < -\lambda) \\
-  &0, &otherwise
+  &0, &if(-\lambda \leq x \leq \lambda) \\
+  &grad, &otherwise
   \end{cases}
   $$
+
+  When x is NaN, the output at the corresponding position is grad; when grad is NaN and |x| > λ, the output at the corresponding position is NaN.
 
 ## Function Prototype
 
@@ -89,7 +90,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>gradOutput (aclTensor*)</td>
       <td>Input</td>
       <td>Gradient output from the previous step in backward propagation. It serves as the input to this backward operator and corresponds to grad in the formula.</td>
-      <td><ul><li>The shape of gradOutput satisfies the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with self.</li><li>The data type of gradOutput is the same as that of self and gradInput.</li></ul></td>
+      <td><ul><li>The shape of gradOutput satisfies the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with self.</li><li>Empty tensors are supported.</li><li>The data type of gradOutput can be different from that of self. When they are different, the computation is performed in the data type after data type promotion.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -99,7 +100,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>self (aclTensor*)</td>
       <td>Input</td>
       <td>Input tensor, corresponding to x in the formula.</td>
-      <td><ul><li>The shapes of gradOutput and self comply with the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a>.</li><li>gradOutput, self, and gradInput have the same data type.</li></ul></td>
+      <td><ul><li>The shapes of gradOutput and self comply with the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a>.</li><li>Empty tensors are supported.</li><li>The data type of self can be different from that of gradOutput. When they are different, the computation is performed in the data type after data type promotion.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -109,7 +110,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>lambd (aclScalar*)</td>
       <td>Input</td>
       <td>λ in the formula.</td>
-      <td>If λ is less than 0, it is regarded as 0.</td>
+      <td>The value is not restricted; numeric scalars are internally converted to FLOAT for computation (except complex numbers); if λ is +inf (including values beyond the FLOAT representable range), the output is 0 for non-NaN elements; if λ is NaN, all gradients are passed through.</td>
       <td>FLOAT</td>
       <td>-</td>
       <td>-</td>
@@ -119,7 +120,7 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>gradInput (aclTensor*)</td>
       <td>Output</td>
       <td>HardshrinkBackward(x,grad) in the formula.</td>
-      <td><ul><li>The shape of gradInput is the same as that of the tensor obtained by broadcasting self and gradOutput.</li><li>Empty tensors are supported.</li><li>The data type of gradOutput is the same as that of self and gradInput.</li></ul></td>
+      <td><ul><li>The shape of gradInput is the same as that of the tensor obtained by broadcasting self and gradOutput.</li><li>Empty tensors are supported.</li><li>The data type of gradInput must support conversion from the data type promoted from gradOutput and self.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -165,7 +166,7 @@ aclnnStatus aclnnHardshrinkBackward(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -177,9 +178,15 @@ aclnnStatus aclnnHardshrinkBackward(
       <td>The passed gradOutput, self, lambd, or gradInput is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>The data types and data formats of self, lambd, and gradInput are not within the supported range.</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
+      <td>The data types of gradOutput, self, lambd, or gradInput are not within the supported range.</td>
+    </tr>
+    <tr>
+      <td>The data type promoted from gradOutput and self cannot be converted to the data type of gradInput.</td>
+    </tr>
+    <tr>
+      <td>The number of dimensions of gradOutput, self, or gradInput is greater than 8.</td>
     </tr>
     <tr>
       <td>The shapes of self and gradOutput do not meet the broadcast conditions.</td>
