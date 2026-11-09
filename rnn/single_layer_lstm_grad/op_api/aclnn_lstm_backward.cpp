@@ -17,6 +17,7 @@
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn/aclnn_base.h"
+#include "aclnn/acl_meta.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/shape_utils.h"
@@ -771,10 +772,13 @@ LstmBackwardMultiLayerBidirec(const aclTensor* input, const aclTensor* initHMult
     return mergedResult;
 }
 
-static bool CheckTensorListNotNull(const aclTensorList* tensorList)
+static bool CheckTensorListNotNull(const aclTensorList* tensorList, const char* listName)
 {
     for (uint64_t index = 0; index < tensorList->Size(); index++) {
-        OP_CHECK_NULL((*tensorList)[index], return false);
+        if ((*tensorList)[index] == nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "%s[%lu] is null.", listName, index);
+            return false;
+        }
     }
     return true;
 }
@@ -783,8 +787,15 @@ static bool CheckGateListLengths(uint64_t gateLength, const aclTensorList* i, co
                                  const aclTensorList* f, const aclTensorList* o, const aclTensorList* h,
                                  const aclTensorList* c, const aclTensorList* tanhc)
 {
-    return gateLength == i->Size() && gateLength == j->Size() && gateLength == f->Size() && gateLength == o->Size() &&
-           gateLength == h->Size() && gateLength == c->Size() && gateLength == tanhc->Size();
+    const TensorListItem lists[] = {{"i", i}, {"g", j}, {"f", f}, {"o", o}, {"h", h}, {"c", c}, {"tanhc", tanhc}};
+    for (const auto& item : lists) {
+        if (item.list->Size() != gateLength) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s list length should be %lu, actual %lu.", item.name, gateLength,
+                    item.list->Size());
+            return false;
+        }
+    }
+    return true;
 }
 
 static bool CheckParamsListLength(const aclTensorList* params, const aclTensorList* dparams, bool hasBias,
@@ -793,57 +804,56 @@ static bool CheckParamsListLength(const aclTensorList* params, const aclTensorLi
     uint64_t paramsLength = hasBias && bidirectional   ? NUM_WITH_B_AND_BID * numLayers :
                             (hasBias || bidirectional) ? NUM_WITH_B_OR_BID * numLayers :
                                                          NUM_NO_B_NO_BIDIR * numLayers;
-    return paramsLength == params->Size() && paramsLength == dparams->Size();
+    if (params->Size() != paramsLength) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "params list length should be %lu, actual %lu.", paramsLength, params->Size());
+        return false;
+    }
+    if (dparams->Size() != paramsLength) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dparamsOut list length should be %lu, actual %lu.", paramsLength,
+                dparams->Size());
+        return false;
+    }
+    return true;
 }
 
 static bool CheckNotNull(const aclTensor* input, const aclTensorList* hc, const aclTensorList* params,
                          const aclTensorList* i, const aclTensorList* j, const aclTensorList* f, const aclTensorList* o,
                          const aclTensorList* h, const aclTensorList* c, const aclTensorList* tanhc,
                          const aclTensor* dx, const aclTensor* dhPrev, const aclTensor* dcPrev,
-                         const aclTensorList* dparams, bool hasBias, int64_t numLayers, bool bidirectional)
+                         const aclTensorList* dparams)
 {
     OP_CHECK_NULL(input, return false);
-    OP_CHECK_NULL(hc, return false);
+    if (hc == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "hx is null.");
+        return false;
+    }
     OP_CHECK_NULL(params, return false);
     OP_CHECK_NULL(i, return false);
-    OP_CHECK_NULL(j, return false);
+    if (j == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "g is null.");
+        return false;
+    }
     OP_CHECK_NULL(f, return false);
     OP_CHECK_NULL(o, return false);
     OP_CHECK_NULL(h, return false);
     OP_CHECK_NULL(c, return false);
     OP_CHECK_NULL(tanhc, return false);
-    OP_CHECK_NULL(dx, return false);
-    OP_CHECK_NULL(dhPrev, return false);
-    OP_CHECK_NULL(dcPrev, return false);
-    OP_CHECK_NULL(dparams, return false);
-    uint64_t gateLength = bidirectional ? numLayers * BI_DIRECTION : numLayers;
-    bool tensorLengthCheck = CheckGateListLengths(gateLength, i, j, f, o, h, c, tanhc);
-    if (hc->Size() != HC_TENSOR_COUNT) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For inithc tensorlist, the tensor quantities %ld should be %d.", hc->Size(),
-                HC_TENSOR_COUNT);
+    if (dx == nullptr || dhPrev == nullptr || dcPrev == nullptr || dparams == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "dxOut, dhPrevOut, dcPrevOut and dparamsOut must be non-null.");
         return false;
     }
-    if (!tensorLengthCheck) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "For tensor lists such as the 4 gates, the tensor quantities should follow consistent patterns.");
-        return false;
-    }
-    if (!CheckParamsListLength(params, dparams, hasBias, bidirectional, numLayers)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "For tensor lists include params and dparams, the tensor quantities should "
-                                         "follow the pattern related to the weigths.");
-        return false;
-    }
-
-    return CheckTensorListNotNull(hc) && CheckTensorListNotNull(i) && CheckTensorListNotNull(j) &&
-           CheckTensorListNotNull(f) && CheckTensorListNotNull(o) && CheckTensorListNotNull(h) &&
-           CheckTensorListNotNull(c) && CheckTensorListNotNull(tanhc) && CheckTensorListNotNull(dparams);
+    return CheckTensorListNotNull(hc, "hx") && CheckTensorListNotNull(params, "params") &&
+           CheckTensorListNotNull(i, "i") && CheckTensorListNotNull(j, "g") && CheckTensorListNotNull(f, "f") &&
+           CheckTensorListNotNull(o, "o") && CheckTensorListNotNull(h, "h") && CheckTensorListNotNull(c, "c") &&
+           CheckTensorListNotNull(tanhc, "tanhc") && CheckTensorListNotNull(dparams, "dparamsOut");
 }
 
 static bool CheckTensorListFormat(const aclTensorList* tensors, const char* listName, const ge::Format format)
 {
     for (uint64_t idx = 0; idx < tensors->Size(); idx++) {
         if ((*tensors)[idx]->GetStorageFormat() != format) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s tensor %lu format only support ND", listName, idx);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s tensor %lu format must be %s", listName, idx,
+                    format == Format::FORMAT_NCL ? "NCL" : "ND");
             return false;
         }
     }
@@ -855,13 +865,13 @@ static bool CheckTensorListsFormat(const aclTensorList* hc, const aclTensorList*
                                    const aclTensorList* h, const aclTensorList* c, const aclTensorList* tanhc,
                                    const aclTensorList* dparams)
 {
-    if (!CheckTensorListFormat(hc, "hc", Format::FORMAT_NCL))
+    if (!CheckTensorListFormat(hc, "hx", Format::FORMAT_NCL))
         return false;
     if (!CheckTensorListFormat(params, "params", Format::FORMAT_ND))
         return false;
     if (!CheckTensorListFormat(i, "i", Format::FORMAT_NCL))
         return false;
-    if (!CheckTensorListFormat(j, "j", Format::FORMAT_NCL))
+    if (!CheckTensorListFormat(j, "g", Format::FORMAT_NCL))
         return false;
     if (!CheckTensorListFormat(f, "f", Format::FORMAT_NCL))
         return false;
@@ -873,7 +883,7 @@ static bool CheckTensorListsFormat(const aclTensorList* hc, const aclTensorList*
         return false;
     if (!CheckTensorListFormat(tanhc, "tanhc", Format::FORMAT_NCL))
         return false;
-    if (!CheckTensorListFormat(dparams, "dparams", Format::FORMAT_ND))
+    if (!CheckTensorListFormat(dparams, "dparamsOut", Format::FORMAT_ND))
         return false;
     return true;
 }
@@ -887,11 +897,13 @@ static bool CheckFormatValid(const aclTensor* input, const aclTensorList* hc, co
 {
     auto inputFormat = batchSizes == nullptr ? Format::FORMAT_NCL : Format::FORMAT_ND;
     if (input->GetStorageFormat() != inputFormat) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input format only support ND/NCL");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input format must be %s for this batchSizesOptional mode",
+                inputFormat == Format::FORMAT_NCL ? "NCL" : "ND");
         return false;
     }
     if (dy != nullptr && dy->GetStorageFormat() != inputFormat) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dy format only support ND/NCL");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dy format must be %s for this batchSizesOptional mode",
+                inputFormat == Format::FORMAT_NCL ? "NCL" : "ND");
         return false;
     }
     if (dh != nullptr && dh->GetStorageFormat() != Format::FORMAT_NCL) {
@@ -903,19 +915,20 @@ static bool CheckFormatValid(const aclTensor* input, const aclTensorList* hc, co
         return false;
     }
     if (dx->GetStorageFormat() != inputFormat) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dx format only support ND/NCL");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dxOut format must be %s for this batchSizesOptional mode",
+                inputFormat == Format::FORMAT_NCL ? "NCL" : "ND");
         return false;
     }
     if (dhPrev->GetStorageFormat() != Format::FORMAT_NCL) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dhPrev format only support NCL");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dhPrevOut format must be NCL");
         return false;
     }
     if (dcPrev->GetStorageFormat() != Format::FORMAT_NCL) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dcPrev format only support NCL");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dcPrevOut format must be NCL");
         return false;
     }
     if (batchSizes != nullptr && batchSizes->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes only support ND");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizesOptional format must be ND");
         return false;
     }
     if (!CheckTensorListsFormat(hc, params, i, j, f, o, h, c, tanhc, dparams)) {
@@ -972,16 +985,21 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensorList* hc, con
                             const aclTensorList* dparams, const aclTensor* batchSizes = nullptr)
 {
     ge::DataType baseDtype = input->GetDataType();
-    const SingleTensorItem singleTensors[] = {{"dy", dy}, {"dh", dh},         {"dc", dc},
-                                              {"dx", dx}, {"dhPrev", dhPrev}, {"dcPrev", dcPrev}};
-    const TensorListItem listTensors[] = {{"hc", hc}, {"params", params}, {"dparams", dparams}};
+    if (baseDtype != DataType::DT_FLOAT && baseDtype != DataType::DT_FLOAT16 &&
+        !(GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 && baseDtype == DataType::DT_BF16)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input dtype is not supported: %s.", op::ToString(baseDtype).GetString());
+        return false;
+    }
+    const SingleTensorItem singleTensors[] = {
+        {"dy", dy}, {"dh", dh}, {"dc", dc}, {"dxOut", dx}, {"dhPrevOut", dhPrev}, {"dcPrevOut", dcPrev}};
+    const TensorListItem listTensors[] = {{"hx", hc}, {"params", params}, {"dparamsOut", dparams}};
     for (const auto& item : singleTensors) {
         if (item.tensor != nullptr && !CheckSingleTensorDtype(item.tensor, item.name, baseDtype)) {
             return false;
         }
     }
     if (batchSizes != nullptr && batchSizes->GetDataType() != op::DataType::DT_INT64) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes tensor dtype inconsistent, expected: %s, actual: %s.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizesOptional tensor dtype inconsistent, expected: %s, actual: %s.",
                 op::ToString(op::DataType::DT_INT64).GetString(), op::ToString(batchSizes->GetDataType()).GetString());
         return false;
     }
@@ -990,7 +1008,7 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensorList* hc, con
             return false;
         }
     }
-    const TensorListItem caches[] = {{"i", i}, {"j", j}, {"f", f}, {"o", o}, {"h", h}, {"c", c}, {"tanhc", tanhc}};
+    const TensorListItem caches[] = {{"i", i}, {"g", j}, {"f", f}, {"o", o}, {"h", h}, {"c", c}, {"tanhc", tanhc}};
     for (const auto& item : caches) {
         if (!CheckTensorListDtype(item.list, item.name, baseDtype)) {
             return false;
@@ -1094,7 +1112,7 @@ static bool CheckGateTensorsForIndex(const aclTensorList* i, const aclTensorList
 {
     if (!ValidateInputShape((*i)[idx], hiddenDim, "i"))
         return false;
-    if (!ValidateInputShape((*j)[idx], hiddenDim, "j"))
+    if (!ValidateInputShape((*j)[idx], hiddenDim, "g"))
         return false;
     if (!ValidateInputShape((*f)[idx], hiddenDim, "f"))
         return false;
@@ -1116,9 +1134,9 @@ static bool ValidateCoreShapes(int64_t numLayers, const aclTensor* input, const 
 {
     if (numLayers <= 0)
         return false;
-    if (!ValidateInputShape(input, inputDim, "input") || !ValidateInputShape((*hc)[0], inithDim, "inith") ||
-        !ValidateInputShape((*hc)[1], inithDim, "initc") || !ValidateInputShape(dx, inputDim, "dx") ||
-        !ValidateInputShape(dhPrev, inithDim, "dhPrev") || !ValidateInputShape(dcPrev, inithDim, "dcPrev")) {
+    if (!ValidateInputShape(input, inputDim, "input") || !ValidateInputShape((*hc)[0], inithDim, "hx[0]") ||
+        !ValidateInputShape((*hc)[1], inithDim, "hx[1]") || !ValidateInputShape(dx, inputDim, "dxOut") ||
+        !ValidateInputShape(dhPrev, inithDim, "dhPrevOut") || !ValidateInputShape(dcPrev, inithDim, "dcPrevOut")) {
         return false;
     }
     if (dy && !ValidateInputShape(dy, outHiddenDim, "dy"))
@@ -1182,10 +1200,18 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensorList* hc, con
                             const aclTensorList* dparams, bool hasBias, int64_t numLayers, bool bidirectional,
                             bool batchFirst, const aclTensor* batchSizes = nullptr)
 {
-    OP_CHECK_WRONG_DIMENSION((*i)[0], DIM_THREE, return false);
     bool hasSeqlength = batchSizes != nullptr;
     size_t inputDimsNum = hasSeqlength ? DIM_TWO : DIM_THREE;
     OP_CHECK_WRONG_DIMENSION(input, inputDimsNum, return false);
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+        input->GetViewShape().GetDim(batchFirst ? DIM_ONE : SEQUENCE_DIM) <= 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "time_step must be positive on ascend950.");
+        return false;
+    }
+    if ((*i)[0]->GetViewShape().GetDimNum() != DIM_THREE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "i[0] must have rank 3.");
+        return false;
+    }
     if (hasSeqlength) {
         OP_CHECK_WRONG_DIMENSION(batchSizes, DIM_ONE, return false);
     }
@@ -1232,18 +1258,25 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* hc, 
                                bool batchFirst, const aclTensor* batchSizes = nullptr)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(input, hc, params, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams, hasBias, numLayers,
-                           bidirectional),
+    CHECK_RET(CheckNotNull(input, hc, params, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams),
               ACLNN_ERR_PARAM_NULLPTR);
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
+    // 2. 列表长度是取值约束，不能作为空指针错误返回。
+    if (hc->Size() != HC_TENSOR_COUNT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "hx list length should be %d, actual %lu.", HC_TENSOR_COUNT, hc->Size());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    const uint64_t gateLength = bidirectional ? numLayers * BI_DIRECTION : numLayers;
+    CHECK_RET(CheckGateListLengths(gateLength, i, j, f, o, h, c, tanhc), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckParamsListLength(params, dparams, hasBias, bidirectional, numLayers), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(input, hc, params, dy, dh, dc, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams,
                               batchSizes),
               ACLNN_ERR_PARAM_INVALID);
-    // 3. 检查shape是否满足约束
+    // 4. 检查shape是否满足约束
     CHECK_RET(CheckShapeValid(input, hc, params, dy, dh, dc, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams,
                               hasBias, numLayers, bidirectional, batchFirst, batchSizes),
               ACLNN_ERR_PARAM_INVALID);
-    // 4. 检查format是否满足约束
+    // 5. 检查format是否满足约束
     CHECK_RET(CheckFormatValid(input, hc, params, dy, dh, dc, i, j, f, o, h, c, tanhc, dx, dhPrev, dcPrev, dparams,
                                batchSizes),
               ACLNN_ERR_PARAM_INVALID);
@@ -1716,6 +1749,35 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
                    DFX_OUT(dxOut, dhPrevOut, dcPrevOut, dparamsOut));
     auto uniqueExecutor = CREATE_EXECUTOR();
     // REMOVED(unreachable): CREATE_EXECUTOR 使用普通 new，失败抛 bad_alloc，该 null 检查不可达
+    if (outputMask != nullptr) {
+        uint64_t maskSize = 0;
+        if (aclGetBoolArraySize(outputMask, &maskSize) != ACLNN_SUCCESS || maskSize != GATE_COUNT) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outputMask length must be 4 when provided.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
+        if (batchSizesOptional != nullptr) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizesOptional must be null on ascend950.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (bidirectional) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bidirectional must be false on ascend950.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (numLayers <= 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "numLayers must be positive.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (!IsDropoutZero(dropout)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dropout must be zero on ascend950.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (!train) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "train must be true on ascend950.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
     auto ret = CheckParams(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, dxOut, dhPrevOut, dcPrevOut,
                            dparamsOut, hasBias, numLayers, bidirectional, batchFirst, batchSizesOptional);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -1723,12 +1785,9 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
         // Do not fall through to legacy packed/dropout/empty success paths:
         // those do not implement this candidate's forward/backward contract.
         const int64_t hiddenSize = (*hx)[0]->GetViewShape().GetDim(2);
-        OP_CHECK(batchSizesOptional == nullptr && !bidirectional && IsDropoutZero(dropout) && train && numLayers > 0 &&
-                     input->GetViewShape().GetDim(batchFirst ? 1 : 0) > 0 && input->GetViewShape().GetDim(2) >= 0 &&
-                     hiddenSize >= 0,
+        OP_CHECK(input->GetViewShape().GetDim(2) >= 0 && hiddenSize >= 0,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "ascend950 LSTM backward requires dense unidirectional train=True, dropout=0, "
-                         "positive T and nonnegative I/H."),
+                         "ascend950 LSTM backward requires nonnegative input_size and hidden_size."),
                  return ACLNN_ERR_PARAM_INVALID);
         if (hiddenSize == 0) {
             // With no hidden features every H-dependent gradient is empty. The

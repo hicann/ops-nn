@@ -156,8 +156,8 @@ class AclnnLstmBackwardGolden:
         check_options(batchSizesOptional, numLayers, dropout, bidirectional)
         if not train:
             raise ValueError("Backward reference requires train=True")
-        if outputMask is not None and (len(outputMask) != 4 or not all(outputMask)):
-            raise NotImplementedError("This reference requires all gradient outputs")
+        if outputMask is not None and len(outputMask) != 4:
+            raise ValueError("outputMask must have length 4 when provided")
         x, (h0, c0), weights = prepare(
             input, hx, params, hasBias, numLayers, batchFirst, promote=promote
         )

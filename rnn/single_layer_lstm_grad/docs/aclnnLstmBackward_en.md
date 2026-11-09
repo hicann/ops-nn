@@ -307,7 +307,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Fixed-length input sequence of LSTM, corresponding to x in the formula.</td>
       <td>batch_size indicates the number of sequences; time_step indicates the time dimension; input_size indicates the number of input features.</td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL (non-packed); ND (packed)</td>
       <td><ul>
       <li>If valid batchSizesOptional is passed in, the shape is [time_step * batch_size, input_size]</li>
       <li>If a null pointer batchSizesOptional is passed in, the shape is [time_step, batch_size, input_size] or [batch_size, time_step, input_size]</li></ul></td>
@@ -340,7 +340,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Gradient of the output hidden of the last layer in LSTM forward propagation. ∂L/∂h^(l) in the corresponding formula.</td>
       <td><ul><li>When bidirectional, data along the last dimension is arranged in forward-then-backward order.</li><li>The data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL (non-packed); ND (packed)</td>
       <td><ul>
       <li>If a valid batchSizesOptional is passed in, the shape is [time_step * batch_size, hidden_size * D].</li>
       <li>If a null-pointer batchSizesOptional is passed in, the shape is [time_step, batch_size, hidden_size * D] or [batch_size, time_step, hidden_size * D].</li></ul></td>
@@ -509,8 +509,8 @@ aclnnStatus aclnnLstmBackward(
     <tr>
       <td>outputMask</td>
       <td>Input</td>
-      <td>Indicates whether to compute four gradients.</td>
-      <td>Array length is 4. Currently not supported.</td>
+      <td>Reserved mask for the four gradient outputs.</td>
+      <td>May be null. When provided, its length must be 4, corresponding to dxOut, dhPrevOut, dcPrevOut, and dparamsOut. Its values do not currently skip computation; all four outputs must be provided and are computed.</td>
       <td>ACL_BOOL_ARRAY</td>
       <td>-</td>
       <td>-</td>
@@ -522,7 +522,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Gradient of the input. It is δx in the corresponding formula.</td>
       <td><ul><li>The shape is consistent with input.</li><li>The data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL (non-packed); ND (packed)</td>
       <td>-</td>
       <td>√</td>
     </tr>

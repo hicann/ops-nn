@@ -322,7 +322,7 @@ aclnnStatus aclnnLstmBackward(
       <td>LSTM的定长输入序列，对应公式中的x。</td>
       <td>batch_size表示序列组数；time_step表示时间维度；input_size表示输入的特征数量。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>NCL、ND</td>
+      <td>NCL（非packed）；ND（packed）</td>
       <td><ul>
       <li>若传入有效batchSizesOptional，为[time_step * batch_size, input_size]</li>
       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, input_size] 或 [batch_size, time_step, input_size]</li></ul></td>
@@ -355,7 +355,7 @@ aclnnStatus aclnnLstmBackward(
       <td>正向输出序列output的上游梯度，包含最后一层每个时间步的贡献。</td>
       <td><ul><li>双向时数据沿最后一维按前后向排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>NCL、ND</td>
+      <td>NCL（非packed）；ND（packed）</td>
       <td><ul>
       <li>若传入有效batchSizesOptional，为[time_step * batch_size, hidden_size * D]</li>
       <li>若传入空指针batchSizesOptional，为[time_step, batch_size, hidden_size * D] 或 [batch_size, time_step, hidden_size * D]</li></ul></td>
@@ -524,8 +524,8 @@ aclnnStatus aclnnLstmBackward(
     <tr>
       <td>outputMask</td>
       <td>输入</td>
-      <td>表示是否计算四个梯度。</td>
-      <td>按dxOut、dhPrevOut、dcPrevOut、dparamsOut对应四组梯度。当前未实现按mask裁剪计算，四组输出均须提供。</td>
+      <td>保留的四组梯度掩码参数。</td>
+      <td>可传空指针；非空时长度必须为4，依次对应dxOut、dhPrevOut、dcPrevOut、dparamsOut。当前不按元素值裁剪计算，四组梯度始终计算且四组输出均须提供。</td>
       <td>ACL_BOOL_ARRAY</td>
       <td>-</td>
       <td>-</td>
@@ -537,7 +537,7 @@ aclnnStatus aclnnLstmBackward(
       <td>输入input上的梯度，对应公式中的δx。</td>
       <td><ul><li>shape与input一致。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>NCL、ND</td>
+      <td>NCL（非packed）；ND（packed）</td>
       <td>-</td>
       <td>√</td>
     </tr>
