@@ -108,7 +108,7 @@ aclnnStatus aclnnConvTbc(
   <td>公式中的bias，表示卷积偏置。</td>
   <td><ul>
   <li>数据类型与self、weight一致。</li>
-  <li>一维且与weight第一维相等，不允许传入空指针。</li>
+  <li>一维，长度等于输出通道数C<sub>out</sub>(即weight的第三个维度)，不允许传入空指针。</li>
   </ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16</td>
   <td>ND</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnConvTbc(
   <li>支持空Tensor。</li>
   <li>数据类型与self一致。</li>
   <li>shape为（H<sub>out</sub>,N,C<sub>out</sub>）。</li>
-  <li>通道数等于weight第一维，其他维度≥0。</li>
+  <li>通道数等于输出通道数C<sub>out</sub>(即weight的第三个维度)，其他维度≥0。</li>
   </ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>ND、NCL</td>
@@ -211,7 +211,7 @@ aclnnStatus aclnnConvTbc(
   <tr><td align="left">weight的dim不为3。</td></tr>
   <tr><td align="left">bias的dim不为1。</td></tr>
   <tr><td align="left">self的第二个维度值不等于weight的第二个维度值。</td></tr>
-  <tr><td align="left">bias的值不等于weight的第一个维度。</td></tr>
+  <tr><td align="left">bias的长度不等于weight的输出通道数C<sub>out</sub>(即weight的第三个维度)。</td></tr>
   <tr>
   <td align="left">ACLNN_ERR_INNER_NULLPTR</td>
   <td align="left">561103</td>
