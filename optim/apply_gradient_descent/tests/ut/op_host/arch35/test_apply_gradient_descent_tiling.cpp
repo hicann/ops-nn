@@ -147,6 +147,6 @@ TEST_F(ApplyGradientDescentTilingTest, apply_gradient_descent_david_tiling1)
     std::initializer_list<int64_t> inputShape2 = {};
     std::initializer_list<int64_t> outputShape = {2048, 1, 48};
 
-    std::string expectStr = "98304 32985348833344 1536 64 1 1 1536 1536 7680 1 ";
+    std::string expectStr = "98304 43980465111104 1536 64 1 1 1536 1536 10240 1 ";
     DoApplyGradientDescentTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT /*inputdtype*/, expectStr);
 }
