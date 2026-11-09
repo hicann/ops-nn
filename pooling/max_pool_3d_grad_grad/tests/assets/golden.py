@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
@@ -8,7 +6,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""TensorFlow competitor Golden for Kernel and GEIR test paths.
+"""References for Kernel/GEIR and TensorFlow framework E2E test paths.
 
 Kernel and GEIR pass ``numpy.ndarray`` inputs to ``golden`` and share the
 ``max_pool_3d_grad_grad`` registration key.  The optional third-party provider
@@ -20,11 +18,28 @@ to FP16.  The reference keeps TensorFlow semantics: no equality match returns
 zero, and SAME padding compares only valid input positions.
 """
 
+from typing import ClassVar
+
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.eager import context as tf_context
+
+__spec__ = {
+    "max_pool_3d_grad_grad": "MaxPool3DGradGradKernelGeirSpec",
+    "MaxPool3DGradGrad": "MaxPool3DGradGradKernelGeirSpec",
+    "tf.raw_ops.MaxPool3DGradGrad": "MaxPool3DGradGradE2ETestSpec",
+}
 
 
-__spec__ = {"max_pool_3d_grad_grad": "MaxPool3DGradGradKernelGeirSpec"}
+# Test-case names carrying this marker keep the caller-provided orig_y instead of the
+# forward result, so the "no equality match or NaN target -> FP16 zero" branch stays
+# reachable; every other case receives a forward-consistent orig_y (match branch).
+NO_MATCH_CASE_MARKERS = ("nomatch", "no_match")
+
+
+def _is_no_match_case(testcase_name):
+    name = str(testcase_name).lower()
+    return any(marker in name for marker in NO_MATCH_CASE_MARKERS)
 
 
 def _canonical_5d(values, name):
@@ -55,7 +70,12 @@ def _padding_from_pads(pads):
 def _tensorflow_max_pool_3d_grad_grad(
     orig_x, orig_y, grads, *, ksize, strides, pads, data_format="NDHWC"
 ):
-    """Run the same-name TensorFlow RawOp on CPU and preserve input dtype."""
+    """Run the same-name TensorFlow RawOp on CPU and return the FP16 operator result.
+
+    float32 input is accepted because TTK promotes float16 inputs to float32 for the
+    reference when the registered tolerance standard is ``cross_check``; promotion is
+    lossless for a float16 test case and the operator output contract stays float16.
+    """
     if data_format != "NDHWC":
         raise ValueError("only logical NDHWC is supported")
 
@@ -64,8 +84,10 @@ def _tensorflow_max_pool_3d_grad_grad(
     grads_tensor = tf.convert_to_tensor(grads)
     if x_tensor.dtype != y_tensor.dtype or x_tensor.dtype != grads_tensor.dtype:
         raise TypeError("orig_x, orig_y and grads must have the same dtype")
-    if x_tensor.dtype != tf.float16:
-        raise TypeError("this delivery supports float16 only")
+    if x_tensor.dtype not in (tf.float16, tf.float32):
+        raise TypeError(
+            f"only float16 (or float32-promoted float16) inputs are supported, got {x_tensor.dtype.name}"
+        )
     if (
         x_tensor.shape.rank != 5
         or y_tensor.shape.rank != 5
@@ -84,7 +106,7 @@ def _tensorflow_max_pool_3d_grad_grad(
         padding=_padding_from_pads(pads),
         data_format=data_format,
     )
-    return tf.cast(output, x_tensor.dtype)
+    return tf.cast(output, tf.float16)
 
 
 class MaxPool3DGradGradKernelGeirSpec:
@@ -101,7 +123,13 @@ class MaxPool3DGradGradKernelGeirSpec:
         data_format="NDHWC",
         **kwargs,
     ):
-        """Build a TensorFlow-compatible forward output for generated ST data."""
+        """Fill in a forward-consistent orig_y unless the case asks to keep its own.
+
+        Shapes are always checked against the forward result. Values are replaced by the
+        forward output only for cases that are not marked as no-match cases, otherwise the
+        supplied orig_y is preserved so the zero-output branch remains testable.
+        """
+        testcase_name = kwargs.pop("testcase_name", "")
         del kwargs
         if data_format != "NDHWC":
             raise ValueError("only logical NDHWC is supported")
@@ -120,6 +148,8 @@ class MaxPool3DGradGradKernelGeirSpec:
                 f"TensorFlow forward shape {pooled_array.shape} does not match "
                 f"orig_y shape {orig_y.shape}"
             )
+        if _is_no_match_case(testcase_name):
+            return x_array, np.ascontiguousarray(orig_y, dtype=np.float16), grads_array
         return x_array, pooled_array, grads_array
 
     def golden(
@@ -178,5 +208,45 @@ class MaxPool3DGradGradKernelGeirSpec:
                 )
             ]
 
-    third_party = {"tf": TensorFlowThirdPartyImpl}
-    tolerance = {"float16": {"standard": "cross_check", "level": "L1"}}
+    third_party: ClassVar[dict] = {"tf": TensorFlowThirdPartyImpl}
+    tolerance: ClassVar[dict] = {"float16": {"standard": "cross_check", "level": "L1"}}
+
+
+class MaxPool3DGradGradE2ETestSpec:
+    """TF API parameters are distinct from the GEIR/kernel pads interface."""
+
+    @staticmethod
+    def golden(
+        orig_input,
+        orig_output,
+        grad,
+        ksize,
+        strides,
+        padding,
+        data_format="NDHWC",
+        name=None,
+        **kwargs,
+    ):
+        del name, kwargs
+        if padding not in ("SAME", "VALID"):
+            raise ValueError("padding must be SAME or VALID")
+        pads = [0, 0, 0, 0, 0, 0] if padding == "VALID" else [1, 1, 1, 1, 1, 1]
+        # npu_device.as_default() overrides tf.device; use the eager CPU scope.
+        with tf_context.device("/CPU:0"):
+            inputs = [
+                tf.convert_to_tensor(
+                    value.numpy() if hasattr(value, "numpy") else value
+                )
+                for value in (orig_input, orig_output, grad)
+            ]
+            result = _tensorflow_max_pool_3d_grad_grad(
+                *inputs,
+                ksize=ksize,
+                strides=strides,
+                pads=pads,
+                data_format=data_format,
+            )
+        return [result]
+
+    third_party: ClassVar[dict] = {"tf": "tf.raw_ops.MaxPool3DGradGrad"}
+    tolerance: ClassVar[dict] = {"float16": {"standard": "cross_check", "level": "L1"}}

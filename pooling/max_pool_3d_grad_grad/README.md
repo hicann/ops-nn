@@ -118,6 +118,7 @@ $$
 - `data_format`仅支持NDHWC。
 - 多个`orig_x`值与目标相等时，固定选择D→H→W扫描顺序中的首个位置。无匹配或目标为NaN时输出FP16零；K1路径同样先比较`orig_x`与`orig_y`，不匹配时输出零。
 - SAME边界只扫描有效输入位置；padding不构造可见哨兵，也不参与`orig_x == orig_y`匹配。
+- TensorFlow图模式适配会把TF的`padding`属性映射为`pads`：`SAME`写非零占位（实际边界由SAME公式重算），`VALID`或未设置写全零。
 
 ## 调用说明
 
@@ -131,7 +132,7 @@ $$
   <tr>
     <td>图模式调用</td>
     <td><a href="./examples/test_geir_max_pool_3d_grad_grad.cpp">test_geir_max_pool_3d_grad_grad</a></td>
-    <td>参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
+    <td>参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证；算子 IR 定义见<a href="./op_graph/max_pool_3d_grad_grad_proto.h">max_pool_3d_grad_grad_proto.h</a>。</td>
   </tr>
 </tbody>
 </table>

@@ -120,6 +120,7 @@ where $q=(n,od,oh,ow,c)$, and $W_{valid}$ contains only the valid input position
 - `data_format` supports only NDHWC.
 - When multiple `orig_x` values equal the target, the first position in the D→H→W scan order is always selected. When there is no match or the target is NaN, the FP16 zero is output. The K1 path also compares `orig_x` with `orig_y` first, and outputs zero when they do not match.
 - SAME boundaries scan only valid input positions. Padding does not construct visible sentinels and does not participate in the `orig_x == orig_y` matching.
+- The TensorFlow graph adapter maps TF `padding` to `pads`: `SAME` uses nonzero placeholders (the actual boundaries are recomputed using the SAME formula), while `VALID` or a missing attribute uses all zeros.
 
 ## Invocation Description
 
@@ -133,7 +134,7 @@ where $q=(n,od,oh,ow,c)$, and $W_{valid}$ contains only the valid input position
   <tr>
     <td>Graph-mode invocation</td>
     <td><a href="./examples/test_geir_max_pool_3d_grad_grad.cpp">test_geir_max_pool_3d_grad_grad</a></td>
-    <td>See <a href="../../docs/zh/invocation/quick_op_invocation.md">Operator Invocation</a> to complete operator compilation and verification.</td>
+    <td>See <a href="../../docs/zh/invocation/quick_op_invocation.md">Operator Invocation</a> to complete operator compilation and verification; the operator IR is defined in <a href="./op_graph/max_pool_3d_grad_grad_proto.h">max_pool_3d_grad_grad_proto.h</a>.</td>
   </tr>
 </tbody>
 </table>

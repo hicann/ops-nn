@@ -306,7 +306,7 @@ int main(int argc, char* argv[])
         printf("%s - ERROR - [XIR]: Create session failed\n", GetTime().c_str());
         Status finalizeRet = ge::GEFinalize();
         if (finalizeRet != SUCCESS) {
-            printf("%s - ERROR - [XIR]: Finalize after session creation failure also failed\\n", GetTime().c_str());
+            printf("%s - ERROR - [XIR]: Finalize after session creation failure also failed\n", GetTime().c_str());
         }
         return FAILED;
     }

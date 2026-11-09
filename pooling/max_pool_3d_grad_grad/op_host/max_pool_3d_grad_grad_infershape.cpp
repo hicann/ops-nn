@@ -155,15 +155,6 @@ ge::graphStatus ValidateDtypeAndFormat(gert::InferShapeContext* context)
                     OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), INPUT_NAMES[i],
                                               std::to_string(desc->GetDataType()).c_str(), "DT_FLOAT16"),
                     return ge::GRAPH_FAILED);
-        OP_CHECK_IF(desc->GetOriginFormat() != ge::FORMAT_ND,
-                    OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), INPUT_NAMES[i],
-                                               std::to_string(desc->GetOriginFormat()).c_str(), "FORMAT_ND"),
-                    return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            desc->GetFormat().GetStorageFormat() != ge::FORMAT_ND,
-            OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), INPUT_NAMES[i],
-                                       std::to_string(desc->GetFormat().GetStorageFormat()).c_str(), "FORMAT_ND"),
-            return ge::GRAPH_FAILED);
     }
     auto outputDesc = context->GetOutputDesc(Y_IDX);
     OP_CHECK_IF(outputDesc == nullptr,
@@ -171,15 +162,6 @@ ge::graphStatus ValidateDtypeAndFormat(gert::InferShapeContext* context)
                                           (std::vector<const char*>{Ops::Base::GetOpInfo(context).c_str(),
                                                                     "outputDesc is null; InferShape cannot continue"})),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(outputDesc->GetOriginFormat() != ge::FORMAT_ND,
-                OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "y",
-                                           std::to_string(outputDesc->GetOriginFormat()).c_str(), "FORMAT_ND"),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        outputDesc->GetFormat().GetStorageFormat() != ge::FORMAT_ND,
-        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "y",
-                                   std::to_string(outputDesc->GetFormat().GetStorageFormat()).c_str(), "FORMAT_ND"),
-        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

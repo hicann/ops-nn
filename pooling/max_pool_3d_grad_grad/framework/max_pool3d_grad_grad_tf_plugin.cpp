@@ -18,15 +18,27 @@
 #include "log/log.h"
 
 namespace domi {
-// Replace ge ParseParams fuction to process graph maxpool3dgradgrad node attrs
+// The target op expresses padding as a pads list: all-zero means VALID, any non-zero entry
+// means SAME (the tiling recomputes the real SAME pads from ksize/strides, the values are
+// not used). TF carries a padding string instead, so it must be mapped here; unconditionally
+// writing all-zero pads would silently execute TF padding=SAME nodes as VALID.
 static Status ParseParamsMaxPool3DGradGrad(const ge::Operator& op_src, ge::Operator& op)
 {
     // Convert original tf graph maxpool3dgradgrad attrs to GE graph attrs
     if (AutoMappingByOpFn(op_src, op) != SUCCESS) {
         return FAILED;
     }
-    // Escape GE require attr [pads] check here
+    std::string padding = "VALID";
+    if (op_src.GetAttr("padding", padding) != ge::GRAPH_SUCCESS) {
+        padding = "VALID";
+    }
     std::vector<int32_t> padList = {0, 0, 0, 0, 0, 0};
+    if (padding == "SAME") {
+        padList = {1, 1, 1, 1, 1, 1};
+    } else if (padding != "VALID") {
+        OP_LOGE("MaxPool3DGradGrad", "unsupported TF padding [%s], only SAME and VALID are defined.", padding.c_str());
+        return FAILED;
+    }
     (void)op.SetAttr("pads", padList);
     return SUCCESS;
 }
