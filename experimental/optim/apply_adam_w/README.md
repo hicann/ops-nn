@@ -14,8 +14,8 @@
 
   $$
   g_t=\begin{cases}-g_t
-  & \text{ if } maxmize= true\\
-  g_t  & \text{ if } maxmize=false
+  & \text{ if } maximize= true\\
+  g_t  & \text{ if } maximize=false
   \end{cases}
   $$
   $$
@@ -43,7 +43,7 @@
   \hat{v}_{t}=\frac{v_{t}}{1-\beta_{2}^{t}} \\
   $$
   $$
-  \theta_{t+1}=\theta_{t}-\frac{\eta}{\sqrt{\hat{v}_{t}}+\epsilon} \hat{m}_{t}-\eta \cdot \lambda \cdot \theta_{t-1}
+  \theta_{t+1}=\left(1-\eta\lambda\right)\theta_{t}-\frac{\eta}{\sqrt{\hat{v}_{t}}+\epsilon} \hat{m}_{t}
   $$
 
 <table style="undefined;table-layout: fixed; width: 1305px"><colgroup>
@@ -170,7 +170,7 @@
 
 - 输入张量的数据类型应保持一致，数据类型支持FLOAT16、BFLOAT16、FLOAT32。
 - 输入张量beta1Power、beta2Power、lr、weightDecay、beta1、beta2、eps的shape大小应为1。
-- 输入布尔值maximize为true时，maxGradNormOptional参数必选且数据类型和shape应与varRef一致时。
+- 输入布尔值amsgrad为true时，maxGradNormOptional参数必选且数据类型和shape应与varRef一致。
 
 - 确定性计算：
   - aclnnApplyAdamW默认确定性实现。
