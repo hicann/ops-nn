@@ -25,9 +25,9 @@ English | [简体中文](./README.md)
   $$
   \text{Heaviside}(\text{input},   \text{values}) =
   \begin{cases}
-  0, & \text{如果input} < 0 \\
-  \text{values}, & \text{如果input} = 0 \\
-  1, & \text{如果input} > 0
+  0, & \text{if input} < 0 \\
+  \text{values}, & \text{if input} = 0 \\
+  1, & \text{if input} > 0
   \end{cases}
   $$
 

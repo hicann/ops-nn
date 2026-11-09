@@ -39,9 +39,10 @@ int Init(int32_t deviceId, aclrtStream* stream)
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); aclFinalize(); return ret);
     ret = aclrtCreateStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); aclrtResetDevice(deviceId);
+              aclFinalize(); return ret);
     return 0;
 }
 
@@ -56,7 +57,8 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
     // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
     ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); aclrtFree(*deviceAddr);
+              *deviceAddr = nullptr; return ret);
 
     // 计算连续tensor的strides
     std::vector<int64_t> strides(shape.size(), 1);
@@ -95,13 +97,15 @@ int main()
 
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, aclrtResetDevice(deviceId); aclFinalize(); return ret);
     // 创建other aclTensor
     ret = CreateAclTensor(valuesHostData, valuesShape, &valuesDeviceAddr, aclDataType::ACL_FLOAT, &values);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, aclDestroyTensor(self); aclrtFree(selfDeviceAddr); aclrtResetDevice(deviceId);
+              aclFinalize(); return ret);
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, aclDestroyTensor(self); aclDestroyTensor(values); aclrtFree(selfDeviceAddr);
+              aclrtFree(valuesDeviceAddr); aclrtResetDevice(deviceId); aclFinalize(); return ret);
 
     // 3.调用CANN算子库API，需要修改为具体的HostApi
     uint64_t workspaceSize = 0;

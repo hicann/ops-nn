@@ -23,7 +23,7 @@
 #define __CCE_UT_TEST__
 
 struct HeavisideTilingData {
-    int32_t elementNum = 8;
+    int64_t elementNum = 8;
     bool valuesType = false;
     uint32_t needCoreNum = 1;
 };

@@ -152,7 +152,7 @@ aclnnStatus aclnnHeaviside(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -164,9 +164,12 @@ aclnnStatus aclnnHeaviside(
       <td>The input parameter (input, values) or output parameter out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>The data type of the input/output parameter is not in the supported range.</td>
+    </tr>
+    <tr>
+      <td>The data types of input parameters input and values are inconsistent.</td>
     </tr>
     <tr>
       <td>The shapes of input parameters input and values cannot be broadcast.</td>

@@ -13,6 +13,7 @@
  * \brief heaviside_tiling source file
  */
 #include "heaviside_tiling.h"
+#include <limits>
 #include <vector>
 #include "op_common/log/log.h"
 #include "register/tilingdata_base.h"
@@ -43,11 +44,15 @@ private:
 
     inline int64_t CeilA2B(const int64_t a, const int64_t b) const
     {
-        if (b != 0) {
-            return (a + b - 1) / b;
-        } else {
+        if (b == 0) {
             return a;
         }
+        if (a <= 0) {
+            return 0;
+        }
+        // (a + b - 1) / b can overflow signed int64 when a is near INT64_MAX;
+        // (a - 1) / b + 1 is equivalent for positive a and never overflows.
+        return (a - 1) / b + 1;
     }
 
     int32_t GetNeedCoreNum(const int32_t coreNumPlatform) const
@@ -97,21 +102,44 @@ ge::graphStatus HeavisideTiling::RunBigKernelTiling()
         return ge::GRAPH_FAILED;
     }
 
-    auto temp = tilingContext->GetInputDesc(0);
-    if (temp == nullptr) {
+    auto inputDesc = tilingContext->GetInputDesc(0);
+    if (inputDesc == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    dataType = tilingContext->GetInputDesc(0)->GetDataType();
+    dataType = inputDesc->GetDataType();
+
+    auto valuesDesc = tilingContext->GetInputDesc(1);
+    if (valuesDesc == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    if (valuesDesc->GetDataType() != dataType) {
+        OP_LOGE(tilingContext->GetNodeName(),
+                "values dtype %d is inconsistent with input dtype %d, they must be the same.",
+                static_cast<int32_t>(valuesDesc->GetDataType()), static_cast<int32_t>(dataType));
+        return ge::GRAPH_FAILED;
+    }
 
     tilingContext->SetTilingKey(TILING_KEY_DEFAULT);
 
     // 获取input和values的shape
     auto srcShape0 = tilingContext->GetInputShape(0);
     auto srcShape1 = tilingContext->GetInputShape(1);
+    if (srcShape0 == nullptr || srcShape1 == nullptr) {
+        OP_LOGE(tilingContext->GetNodeName(),
+                "Tiling framework object input shape is unavailable; check the operator registration and "
+                "context construction.");
+        return ge::GRAPH_FAILED;
+    }
     inputShape = srcShape0->GetOriginShape();
     inputShapeSize = inputShape.GetShapeSize();
     valuesShape = srcShape1->GetOriginShape();
     valuesShapeSize = valuesShape.GetShapeSize();
+    if (inputShapeSize == std::numeric_limits<int64_t>::min() ||
+        valuesShapeSize == std::numeric_limits<int64_t>::min()) {
+        OP_LOGE(tilingContext->GetNodeName(),
+                "input/values shape size overflow (GetShapeSize returned the invalid sentinel).");
+        return ge::GRAPH_FAILED;
+    }
     if (inputShape.GetDimNum() > static_cast<size_t>(MAX_INPUT_DIM_NUM)) {
         OP_LOGE(tilingContext->GetNodeName(), "input dim num %d exceeds the supported maximum %d.",
                 static_cast<int32_t>(inputShape.GetDimNum()), MAX_INPUT_DIM_NUM);
@@ -121,19 +149,43 @@ ge::graphStatus HeavisideTiling::RunBigKernelTiling()
         return ge::GRAPH_FAILED;
     }
 
-    auto platformInfo = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
-    uint32_t needCoreNum = GetNeedCoreNum(platformInfo.GetCoreNumAiv());
+    auto platformInfoPtr = tilingContext->GetPlatformInfo();
+    if (platformInfoPtr == nullptr) {
+        OP_LOGE(tilingContext->GetNodeName(),
+                "Tiling framework object platformInfo is unavailable; check the operator registration and "
+                "context construction.");
+        return ge::GRAPH_FAILED;
+    }
+    auto platformInfo = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    uint32_t coreNumPlatform = platformInfo.GetCoreNumAiv();
+    if (coreNumPlatform == 0) {
+        OP_LOGE(tilingContext->GetNodeName(), "platform core num is 0, GetCoreNumAiv failed.");
+        return ge::GRAPH_FAILED;
+    }
+    uint32_t needCoreNum = GetNeedCoreNum(static_cast<int32_t>(coreNumPlatform));
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    if (currentWorkspace == nullptr) {
+        OP_LOGE(tilingContext->GetNodeName(),
+                "Tiling framework object workspace is unavailable; check the operator registration and "
+                "context construction.");
+        return ge::GRAPH_FAILED;
+    }
     currentWorkspace[0] = 0;
 
     tilingData.set_elementNum(inputShapeSize);
     tilingData.set_valuesType(valuesType);
     tilingData.set_needCoreNum(needCoreNum);
 
-    tilingData.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(),
-                            tilingContext->GetRawTilingData()->GetCapacity());
-    tilingContext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    auto rawTilingData = tilingContext->GetRawTilingData();
+    if (rawTilingData == nullptr) {
+        OP_LOGE(tilingContext->GetNodeName(),
+                "Tiling framework object rawTilingData is unavailable; check the operator registration and "
+                "context construction.");
+        return ge::GRAPH_FAILED;
+    }
+    tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
+    rawTilingData->SetDataSize(tilingData.GetDataSize());
 
     tilingContext->SetBlockDim(needCoreNum);
     return ge::GRAPH_SUCCESS;

@@ -2,31 +2,31 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 import sys
 import os
 import numpy as np
-import re
 import tensorflow as tf
 import torch
 
 
 def parse_str_to_shape_list(shape_str):
-    shape_str = shape_str.strip('(').strip(')')
+    shape_str = shape_str.strip("(").strip(")")
     shape_list = [int(x) for x in shape_str.split(",")]
     return np.array(shape_list), shape_list
+
 
 def gen_data_and_golden(input_shape_str, output_size_str, d_type="float32"):
     d_type_dict = {
         "float32": np.float32,
         "float16": np.float16,
-        "bfloat16_t": tf.bfloat16.as_numpy_dtype
+        "bfloat16_t": tf.bfloat16.as_numpy_dtype,
     }
     np_type = d_type_dict[d_type]
     input_shape, _ = parse_str_to_shape_list(input_shape_str)
@@ -44,6 +44,7 @@ def gen_data_and_golden(input_shape_str, output_size_str, d_type="float32"):
     tmp_input.astype(np_type).tofile(f"{d_type}_input_heaviside.bin")
     tmp_values.astype(np_type).tofile(f"{d_type}_values_heaviside.bin")
     tmp_golden.astype(np_type).tofile(f"{d_type}_golden_heaviside.bin")
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:

@@ -66,9 +66,17 @@ static graphStatus InferDataType4Heaviside(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context, "Begin to do InferDataType4Heaviside");
 
-    auto input_dtype = context->GetInputDataType(IDX_0);
+    auto inputDtype = context->GetInputDataType(IDX_0);
+    auto valuesDtype = context->GetInputDataType(1);
 
-    context->SetOutputDataType(IDX_0, input_dtype);
+    OP_CHECK_IF(
+        inputDtype == ge::DT_UNDEFINED || valuesDtype == ge::DT_UNDEFINED || inputDtype != valuesDtype,
+        OP_LOGE_WITH_INVALID_INPUT(
+            ((context) == nullptr || (context)->GetNodeName() == nullptr ? "heaviside" : (context)->GetNodeName()),
+            "values"),
+        return ge::GRAPH_FAILED);
+
+    context->SetOutputDataType(IDX_0, inputDtype);
 
     OP_LOGD(context, "End to do InferDataType4Heaviside");
 
