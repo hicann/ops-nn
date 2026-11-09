@@ -330,6 +330,14 @@ function(gen_cust_proto_symbol)
     cust_proto
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
     ge_compiler
+    INTERFACE
+    # opbase 的 executor 等源码引用 aclsysGetVersionNum（由 ACL 运行时提供）。
+    # 自定义算子包的 op_proto 库需要把 acl_rt 传递到最终 .so 的链接行，
+    # 否则 libcust_opsproto_rt2.0.so 的 NEEDED 不含符号提供库，
+    # 安装时共享库校验（dlopen RTLD_NOW）会因 undefined symbol 中止。
+    -Wl,--no-as-needed
+    acl_rt
+    -Wl,--as-needed
     )
 
   if(NOT ENABLE_OP_KERNEL)
