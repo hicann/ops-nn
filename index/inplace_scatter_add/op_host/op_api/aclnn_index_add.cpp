@@ -128,7 +128,7 @@ static bool CheckDtypeValid(const op::DataType selfDtype, const op::DataType ind
     }
     if (!CheckType(outDtype, dtypeSupportList)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "outDtype dtype %s should be in dtype support list %s.",
-                op::ToString(sourceDtype).GetString(), op::ToString(dtypeSupportList).GetString());
+                op::ToString(outDtype).GetString(), op::ToString(dtypeSupportList).GetString());
         return false;
     }
     if (selfDtype != sourceDtype) {
@@ -137,7 +137,7 @@ static bool CheckDtypeValid(const op::DataType selfDtype, const op::DataType ind
         return false;
     }
     if (selfDtype != outDtype) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self dtype %s and source dtype %s must same.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self dtype %s and out dtype %s must be the same.",
                 op::ToString(selfDtype).GetString(), op::ToString(outDtype).GetString());
         return false;
     }
@@ -152,19 +152,16 @@ static bool CheckShape(const aclTensor* self, const aclTensor* index, const aclT
     int64_t selfDimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
 
     if (selfDimNum == 0) {
-        if (dim != -1 && dim != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when self.dims() == 0, dim should be 0 or -1, but dim is %ld.", dim);
-            return false;
-        }
-    } else {
-        if ((dim < -selfDimNum || dim >= selfDimNum) && (!(dim == 0 && selfDimNum == 0))) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dim should be in [-self.dims(), self.dims), but dim is %ld.", dim);
-            return false;
-        }
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of self should be in range [1, %zu], but dimNum of self is 0.",
+                MAX_DIM_LEN);
+        return false;
+    }
+    if (dim < -selfDimNum || dim >= selfDimNum) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dim should be in [-self.dims(), self.dims), but dim is %ld.", dim);
+        return false;
     }
 
-    if (self->GetViewShape().GetDimNum() != 0 &&
-        self->GetViewShape().GetDimNum() != source->GetViewShape().GetDimNum()) {
+    if (self->GetViewShape().GetDimNum() != source->GetViewShape().GetDimNum()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of self must be equal to dimNum of source.");
         return false;
     }
@@ -227,6 +224,7 @@ static const aclTensor* DoIndexAddWithSorted(const aclTensor* self, const int64_
     // 注：由于sort在元素个数为1时会走到aicpu算子，耗时为几百us，性能大幅劣化，在sort修复前先用此逻辑规避
     if (indexSize > 1) {
         const aclTensor* indicesViewFloat = executor->CreateView(indexInt32, {indexSize}, indexInt32->GetViewOffset());
+        CHECK_RET(indicesViewFloat != nullptr, nullptr);
         ViewDataType(indicesViewFloat, op::DataType::DT_FLOAT);
         auto sortResult = l0op::Sort(indicesViewFloat, -1, false, true, op::DataType::DT_INT32, executor);
         auto sortIdxOut = std::get<0>(sortResult);
@@ -234,6 +232,7 @@ static const aclTensor* DoIndexAddWithSorted(const aclTensor* self, const int64_
         CHECK_RET(sortIdxOut != nullptr && posIdx != nullptr, nullptr);
         // 将sort的结果已INT32的数据类型来进行读取
         auto sortIndices = executor->CreateView(sortIdxOut, {indexSize}, sortIdxOut->GetViewOffset());
+        CHECK_RET(sortIndices != nullptr, nullptr);
         sortIndices->SetDataType(op::DataType::DT_INT32);
         // inplace index add
         indexAddRes = l0op::InplaceIndexAddWithSorted(self, dim, sortIndices, posIdx, source, alpha, executor);
@@ -284,11 +283,12 @@ static const aclTensor* DoIndexAddWithIndexPut(const aclTensor* self, const int6
     OP_LOGD("[IndexAddIndexPut] definedStride=%ld, definedValueSize=%ld.", definedStride[0], definedValueSize[0]);
 
     if (self->GetDataType() == op::DataType::DT_DOUBLE || self->GetDataType() == op::DataType::DT_INT16 ||
-        index->GetViewShape().GetShapeSize() > MAX_SUPPORTTYPE_INDICES_NUM || definedValueSize[0] > INT32_MAX_LIMIT) {
-        OP_LOGD("[IndexAddIndexPut] self dtype %s or index num %ld or indexed dim size %ld not supported by "
-                "IndexPutWithSortV2, fallback to IndexPut(AICPU).",
+        index->GetViewShape().GetShapeSize() > MAX_SUPPORTTYPE_INDICES_NUM || definedValueSize[0] > INT32_MAX_LIMIT ||
+        definedStride[0] > INT32_MAX_LIMIT) {
+        OP_LOGD("[IndexAddIndexPut] self dtype %s or index num %ld or indexed dim size %ld or stride %ld not "
+                "supported by IndexPutWithSortV2, fallback to IndexPut(AICPU).",
                 op::ToString(self->GetDataType()).GetString(),
-                static_cast<int64_t>(index->GetViewShape().GetShapeSize()), definedValueSize[0]);
+                static_cast<int64_t>(index->GetViewShape().GetShapeSize()), definedValueSize[0], definedStride[0]);
         auto indicesList = executor->AllocTensorList(definedIndices.data(), definedIndices.size());
         CHECK_RET(indicesList != nullptr, nullptr);
         auto maskArray = executor->AllocIntArray(masks.data(), masks.size());

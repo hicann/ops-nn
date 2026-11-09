@@ -103,10 +103,17 @@ static bool CheckDtypeValid(const op::DataType selfDtype, const op::DataType ind
         return false;
     }
 
-    OP_CHECK_RESULT_DTYPE_CAST_FAILED(alphaDtype, selfDtype, return false);
+    // alpha 需可转换为 self 的数据类型。按仓级转换文档语义放开浮点 alpha 与整型 self 的组合（转换后数值截断，
+    // 与 V1 及 torch eager 口径一致）；复数 alpha 转非复数 self、非 BOOL alpha 转 BOOL self 仍拒绝。
+    if ((IsComplexType(alphaDtype) && !IsComplexType(selfDtype)) ||
+        (alphaDtype != op::DataType::DT_BOOL && selfDtype == op::DataType::DT_BOOL)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Alpha dtype %s can't be cast to self dtype %s.",
+                op::ToString(alphaDtype).GetString(), op::ToString(selfDtype).GetString());
+        return false;
+    }
 
     if (selfDtype != outDtype) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self dtype %s and source dtype %s must same.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self dtype %s and out dtype %s must be the same.",
                 op::ToString(selfDtype).GetString(), op::ToString(outDtype).GetString());
         return false;
     }
@@ -119,12 +126,16 @@ static bool CheckShape(const aclTensor* self, const aclTensor* index, const aclT
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(source, MAX_DIM_LEN, return false);
     int64_t selfDimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
-    if ((dim < -selfDimNum || dim >= selfDimNum) && (!(dim == 0 && selfDimNum == 0))) {
+    if (selfDimNum == 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of self should be in range [1, %zu], but dimNum of self is 0.",
+                MAX_DIM_LEN);
+        return false;
+    }
+    if (dim < -selfDimNum || dim >= selfDimNum) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dim should be in [-self.dims(), self.dims), but dim is %ld.", dim);
         return false;
     }
-    if (self->GetViewShape().GetDimNum() != 0 &&
-        self->GetViewShape().GetDimNum() != source->GetViewShape().GetDimNum()) {
+    if (self->GetViewShape().GetDimNum() != source->GetViewShape().GetDimNum()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of self must be equal to dimNum of source.");
         return false;
     }
@@ -167,29 +178,33 @@ static aclnnStatus CheckParams(const aclTensor* self, const int64_t dim, const a
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* UnDeterministicImpl(const aclTensor* selfContiguous, const int64_t dim,
-                                            const aclTensor* indexContiguous, const aclTensor* sourceContiguous,
-                                            const aclScalar* alpha, int64_t mode, aclOpExecutor* executor)
+static aclnnStatus UnDeterministicImpl(const aclTensor* selfContiguous, const int64_t dim,
+                                       const aclTensor* indexContiguous, const aclTensor* sourceContiguous,
+                                       const aclScalar* alpha, int64_t mode, aclOpExecutor* executor,
+                                       const aclTensor** indexAddOut)
 {
-    const aclTensor* indexAddOut = nullptr;
     if (mode == 0) {
         if (!IsAICoreSupport(selfContiguous, dim, indexContiguous)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Do not support mode == 0, please check!");
-            return nullptr;
+            return ACLNN_ERR_PARAM_INVALID;
         }
         const aclTensor* selfContiguousCast = nullptr;
         const aclTensor* sourceContiguousCast = nullptr;
         if (selfContiguous->GetDataType() == op::DataType::DT_INT16 ||
             selfContiguous->GetDataType() == op::DataType::DT_INT32) {
             selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_INT32, executor);
+            CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
             sourceContiguousCast = l0op::Cast(sourceContiguous, op::DataType::DT_INT32, executor);
+            CHECK_RET(sourceContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
             selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
+            CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
             sourceContiguousCast = l0op::Cast(sourceContiguous, op::DataType::DT_FLOAT, executor);
+            CHECK_RET(sourceContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
-        indexAddOut = l0op::InplaceScatterAddAiCore(selfContiguousCast, indexContiguous, sourceContiguousCast,
-                                                    executor);
-        CHECK_RET(indexAddOut != nullptr, nullptr);
+        *indexAddOut = l0op::InplaceScatterAddAiCore(selfContiguousCast, indexContiguous, sourceContiguousCast,
+                                                     executor);
+        CHECK_RET(*indexAddOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
         const aclTensor* selfContiguousCast = nullptr;
         const aclTensor* sourceContiguousCast = nullptr;
@@ -197,18 +212,22 @@ static const aclTensor* UnDeterministicImpl(const aclTensor* selfContiguous, con
             selfContiguous->GetDataType() == op::DataType::DT_FLOAT ||
             selfContiguous->GetDataType() == op::DataType::DT_BF16) {
             selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_DOUBLE, executor);
+            CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
             sourceContiguousCast = l0op::Cast(sourceContiguous, op::DataType::DT_DOUBLE, executor);
+            CHECK_RET(sourceContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
             selfContiguousCast = l0op::Cast(selfContiguous, selfContiguous->GetDataType(), executor);
+            CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
             sourceContiguousCast = l0op::Cast(sourceContiguous, sourceContiguous->GetDataType(), executor);
+            CHECK_RET(sourceContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
         const aclTensor* alphaTensor = executor->ConvertToTensor(alpha, selfContiguousCast->GetDataType());
-        CHECK_RET(alphaTensor != nullptr, nullptr);
-        indexAddOut = l0op::InplaceIndexAddAiCpu(selfContiguousCast, dim, indexContiguous, sourceContiguousCast,
-                                                 alphaTensor, executor);
-        CHECK_RET(indexAddOut != nullptr, nullptr);
+        CHECK_RET(alphaTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        *indexAddOut = l0op::InplaceIndexAddAiCpu(selfContiguousCast, dim, indexContiguous, sourceContiguousCast,
+                                                  alphaTensor, executor);
+        CHECK_RET(*indexAddOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    return indexAddOut;
+    return ACLNN_SUCCESS;
 }
 
 static void CheckFormat(const aclTensor* self, const aclTensor* index, const aclTensor* source)
@@ -269,9 +288,11 @@ static aclnnStatus ExecAclnnIndexAddV2GetWorkspaceSize(const aclTensor* self, co
     CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor* indexAddOut = nullptr;
-    indexAddOut = UnDeterministicImpl(selfContiguous, dim, indexContiguous, sourceContiguous, alpha, mode,
-                                      uniqueExecutor.get());
-    CHECK_RET(indexAddOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    aclnnStatus unDetRet = UnDeterministicImpl(selfContiguous, dim, indexContiguous, sourceContiguous, alpha, mode,
+                                               uniqueExecutor.get(), &indexAddOut);
+    if (unDetRet != ACLNN_SUCCESS) {
+        return unDetRet;
+    }
     const aclTensor* indexAddOutCast = l0op::Cast(indexAddOut, out->GetDataType(), uniqueExecutor.get());
     CHECK_RET(indexAddOutCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyResult = l0op::ViewCopy(indexAddOutCast, out, uniqueExecutor.get());

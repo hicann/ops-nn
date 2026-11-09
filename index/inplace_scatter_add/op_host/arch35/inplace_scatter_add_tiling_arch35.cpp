@@ -59,6 +59,51 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, uint64_t M, 
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus ValidateUpdatesInput(gert::TilingContext* context, const gert::Shape& varShape,
+                                            const gert::Shape& updatesShape, uint64_t K)
+{
+    auto varDesc = context->GetInputDesc(INDEX_VAR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
+    auto updatesDesc = context->GetInputDesc(INDEX_UPDATES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesDesc);
+
+    OP_CHECK_IF((updatesDesc->GetDataType() != varDesc->GetDataType()),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "updates and var",
+                                                       (Ops::Base::ToString(updatesDesc->GetDataType()) + " and " +
+                                                        Ops::Base::ToString(varDesc->GetDataType()))
+                                                           .c_str(),
+                                                       "The dtypes of updates and var must be the same."),
+                return ge::GRAPH_FAILED);
+
+    size_t varDimNum = varShape.GetDimNum();
+    size_t updatesDimNum = updatesShape.GetDimNum();
+    OP_CHECK_IF((updatesDimNum != varDimNum),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "updates and var",
+                    (std::to_string(updatesDimNum) + "D and " + std::to_string(varDimNum) + "D").c_str(),
+                    "The shape dims of updates and var must be the same."),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF((updatesShape.GetDim(0) != static_cast<int64_t>(K)),
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    context->GetNodeName(), "updates", std::to_string(updatesShape.GetDim(0)).c_str(),
+                    ("The first dim of updates must be equal to the number of indices " + std::to_string(K) +
+                     ", var.shape = " + Ops::Base::ToString(varShape).c_str())
+                        .c_str()),
+                return ge::GRAPH_FAILED);
+
+    for (size_t i = 1; i < varDimNum; i++) {
+        OP_CHECK_IF((updatesShape.GetDim(i) != varShape.GetDim(i)),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context->GetNodeName(), "updates", Ops::Base::ToString(updatesShape).c_str(),
+                        ("The shape of updates must match var shape excluding dimension 0, var.shape = " +
+                         Ops::Base::ToString(varShape))
+                            .c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InplaceScatterAddTilingFunc(gert::TilingContext* context)
 {
     OP_LOGD(context, "Enter TilingInplaceScatterAdd");
@@ -70,6 +115,10 @@ static ge::graphStatus InplaceScatterAddTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesInput);
     auto indicesShape = indicesInput->GetStorageShape();
 
+    auto updatesInput = context->GetInputShape(INDEX_UPDATES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesInput);
+    auto updatesShape = updatesInput->GetStorageShape();
+
     uint64_t M = static_cast<uint64_t>(varShape.GetDim(0));
     uint64_t N = 1;
     for (size_t i = 1; i < varShape.GetDimNum(); i++) {
@@ -77,14 +126,17 @@ static ge::graphStatus InplaceScatterAddTilingFunc(gert::TilingContext* context)
     }
     uint64_t K = static_cast<uint64_t>(indicesShape.GetShapeSize());
 
+    if (ValidateUpdatesInput(context, varShape, updatesShape, K) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
     if (K == 0 || M == 0 || N == 0) {
         return HandleZeroCase(context, M, N, K);
     }
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t coreNum = ascendcPlatform.GetCoreNumAiv();
-    if (coreNum == 0)
-        coreNum = 1;
+    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
 
     // Choose split axis: split along whichever is larger (N or K) for max parallelism
     // blockDim = min(splitDim, coreNum) — more cores = more concurrent atomic ops = better latency hiding

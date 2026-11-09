@@ -27,6 +27,8 @@
 
 Adds values from the source tensor to the values at the corresponding positions in the input tensor along a specified dimension based on the given indices.
 
+This operator uses in-place semantics: the computation is accumulated directly onto the storage of self, and self is overwritten in place after the call (equivalent to executing self[index] += alpha × source in place). The underlying operator's output is bound to the storage of self (in-place binding), and the aclnn API copies the result to out for delivery.
+
 ## Function Prototype
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). Call "aclnnIndexAddGetWorkspaceSize" first to obtain the workspace size required for the computation and the executor containing the operator computation process, and then call "aclnnIndexAdd" to perform the computation.
@@ -81,10 +83,10 @@ aclnnStatus aclnnIndexAdd(
         <td>self (aclTensor*)</td>
         <td>Input</td>
         <td>Input tensor.</td>
-        <td>-</td>
+        <td>1 to 8 dimensions are supported. A 0-D self has no valid dim value (the value range [-self.dim(), self.dim()-1] is empty when self is 0-D), and it is rejected by the first-phase validation.</td>
         <td>FLOAT, FLOAT16, INT32, INT16, INT8, UINT8, DOUBLE, INT64, BOOL, BFLOAT16</td>
         <td>ND</td>
-        <td>0-8</td>
+        <td>1-8</td>
         <td>√</td>
       </tr>
       <tr>
@@ -121,9 +123,9 @@ aclnnStatus aclnnIndexAdd(
         <td>alpha (aclScalar*)</td>
         <td>Input</td>
         <td>Scale factor.</td>
-        <td>The data type can be converted to the deduced data types of self and source.</td>
+        <td>The data type can be converted to the deduced data types of self and source.<br>A floating-point alpha with an integer self is accepted: the alpha value is truncated according to the conversion semantics toward the self data type (for example, 0.5 is converted to 0 for an integer self). When the alpha value is outside the representable range of the self data type (for example, alpha is inf, nan, or a floating-point value beyond the representable range while self is an integer type), the behavior is undefined.<br>When self is BOOL, alpha supports only BOOL (BOOL supports one-way conversion to other data types; numeric/floating-point types cannot be converted to BOOL).</td>
+        <td>Scalar type (must be convertible to the data type of self; complex types are not supported)</td>
         <td>-</td>
-        <td>Consistent with self</td>
         <td>-</td>
         <td>-</td>
       </tr>
@@ -131,7 +133,7 @@ aclnnStatus aclnnIndexAdd(
         <td>out (aclTensor*)</td>
         <td>Output</td>
         <td>Output aclTensor.</td>
-        <td>-</td>
+        <td>The underlying operator binds the output to the storage of self in place (self is overwritten in place), and the API copies the result to out.</td>
         <td>Consistent with self.</td>
         <td>ND</td>
         <td>Consistent with self.</td>
@@ -183,18 +185,15 @@ aclnnStatus aclnnIndexAdd(
       <td>Null pointers are passed for self, index, source, alpha, and out.</td>
       </tr>
       <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data types of self, index, source, and out are not in the supported range.</td>
       </tr>
       <tr>
       <td>The data types of self, source, and out are not consistent.</td>
       </tr>
       <tr>
-      <td>The value of dim is greater than the shape size of self.</td>
-      </tr>
-      <tr>
-      <td>The computed data type cannot be converted to the data type of the specified output out.</td>
+      <td>The value of dim is not within the range [-self.dim(), self.dim()-1].</td>
       </tr>
       <tr>
       <td>The shape values of self and source are not equal on dimensions other than dim.</td>
@@ -257,9 +256,15 @@ aclnnStatus aclnnIndexAdd(
 ## Constraints
 
 - deterministic computation:
-  - aclnnIndexAdd defaults to a non-deterministic implementation. You can enable deterministic computation through aclrtCtxSetSysParamOpt.
+  - aclnnIndexAdd defaults to a non-deterministic implementation. You can enable deterministic computation through aclrtSetSysParamOpt.
+- In-place semantics
+  - self is overwritten in place after the call (see Function); GE graph mode (GEIR) is not within the supported scope of this operator.
 - Index value range
-  - The input value of index must fall within the range [0, self.shape[dim]), meaning the index value must be within the shape size of self along the dim dimension.
+  - The index value is expected to fall within the range [0, self.shape[dim]). The first-phase API does not validate the index value range: negative indices are silently skipped by the kernel-side guard (not accumulated), and out-of-bounds indices result in undefined behavior (an execution-time exception may be triggered when the InplaceIndexAdd path is used).
+- Empty tensor
+  - When source is an empty tensor, the API copies self to out (no accumulation is performed); when self is an empty tensor, out is an empty tensor.
+- Capacity limit
+  - The 32-bit fast path of the operator requires the element scale involved in the computation to be within the uint32 domain (2^32-1). Beyond that, the computation is automatically routed to the 64-bit implementation with identical results. The actual supported tensor scale limit depends on the data type and Device memory.
 
 ## Example
 
@@ -311,7 +316,8 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
   // Call aclrtMemcpy to copy data from the host to the device memory.
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); aclrtFree(*deviceAddr);
+            *deviceAddr = nullptr; return ret);
 
   // Calculate the strides of the contiguous tensor.
   std::vector<int64_t> strides(shape.size(), 1);
@@ -342,6 +348,7 @@ int main() {
   void* indexDeviceAddr = nullptr;
   void* sourceDeviceAddr = nullptr;
   void* outDeviceAddr = nullptr;
+  void* workspaceAddr = nullptr;
   aclTensor* self = nullptr;
   aclTensor* index = nullptr;
   aclTensor* source = nullptr;
@@ -353,70 +360,102 @@ int main() {
   std::vector<float> outHostData(8, 0);
   int64_t dim = 0;
   float alphaValue = 1.0f;
+  uint64_t workspaceSize = 0;
+  aclOpExecutor* executor = nullptr;
+  int32_t exitCode = 0;
+  int64_t resultSize = 0;
+  std::vector<float> resultData;
   // Create the self aclTensor.
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor(self) failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // Create the index aclTensor.
   ret = CreateAclTensor(indexHostData, indexShape, &indexDeviceAddr, aclDataType::ACL_INT32, &index);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor(index) failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // Create the source aclTensor.
   ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_FLOAT, &source);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor(source) failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // Create the out aclTensor.
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor(out) failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // Create the alpha aclScalar.
   alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha != nullptr, LOG_PRINT("create alpha failed.\n"); return -1);
+  CHECK_RET(alpha != nullptr, LOG_PRINT("create alpha failed.\n"); exitCode = -1; goto cleanup);
 
   // 3. Call the CANN operator library API. Replace it with the actual API name.
-  uint64_t workspaceSize = 0;
-  aclOpExecutor* executor;
   // Call the first-phase API of aclnnIndexAdd.
   ret = aclnnIndexAddGetWorkspaceSize(self, dim, index, source, alpha, out, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexAddGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexAddGetWorkspaceSize failed. ERROR: %d\n", ret);
+            exitCode = -1; goto cleanup);
   // Allocate device memory based on the workspaceSize calculated by the first-phase API.
-  void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); exitCode = -1;
+              goto cleanup);
   }
   // Call the second-phase API of aclnnIndexAdd.
   ret = aclnnIndexAdd(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexAdd failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexAdd failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
 
   // 4. (Boilerplate) Synchronize and wait for the task execution to end.
   ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
 
   // 5. Obtain the output value and copy the result from device-side memory to the host. Modify it based on the API definition.
-  auto size = GetShapeSize(outShape);
-  std::vector<float> resultData(size, 0);
+  resultSize = GetShapeSize(outShape);
+  resultData.assign(resultSize, 0.0f);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
-                    size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
+                    resultSize * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+            exitCode = -1; goto cleanup);
+  for (int64_t i = 0; i < resultSize; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
+cleanup:
   // 6. Release aclTensor and aclScalar. Modify it based on the API definition.
-  aclDestroyTensor(self);
-  aclDestroyTensor(index);
-  aclDestroyTensor(source);
-  aclDestroyScalar(alpha);
-  aclDestroyTensor(out);
+  // (Objects that have been created are also released on failure paths.)
+  if (self != nullptr) {
+    aclDestroyTensor(self);
+  }
+  if (index != nullptr) {
+    aclDestroyTensor(index);
+  }
+  if (source != nullptr) {
+    aclDestroyTensor(source);
+  }
+  if (alpha != nullptr) {
+    aclDestroyScalar(alpha);
+  }
+  if (out != nullptr) {
+    aclDestroyTensor(out);
+  }
 
   // 7. Release device resources. Modify it based on the API definition.
-  aclrtFree(selfDeviceAddr);
-  aclrtFree(indexDeviceAddr);
-  aclrtFree(sourceDeviceAddr);
-  aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
+  // (Resources that have been allocated are also released on failure paths.)
+  if (selfDeviceAddr != nullptr) {
+    aclrtFree(selfDeviceAddr);
+  }
+  if (indexDeviceAddr != nullptr) {
+    aclrtFree(indexDeviceAddr);
+  }
+  if (sourceDeviceAddr != nullptr) {
+    aclrtFree(sourceDeviceAddr);
+  }
+  if (outDeviceAddr != nullptr) {
+    aclrtFree(outDeviceAddr);
+  }
+  if (workspaceAddr != nullptr) {
     aclrtFree(workspaceAddr);
   }
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();
-  return 0;
+  return exitCode;
 }
 ```

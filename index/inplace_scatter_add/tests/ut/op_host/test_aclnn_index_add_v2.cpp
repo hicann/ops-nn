@@ -16,6 +16,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "opdev/platform.h"
 
 using namespace op;
 using namespace std;
@@ -381,4 +382,100 @@ TEST_F(l2_index_add_v2_test, Ascend910B_case_FLOAT_empty_self)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
     EXPECT_EQ(workspace_size, 0);
+}
+
+// A float alpha with an integer self is accepted (previously rejected with 161002 by the CanCast
+// semantics); after the first-stage validation passes, mode=1 dispatches normally (the truncation
+// semantics are guarded numerically by the aclnn-level test cases).
+TEST_F(l2_index_add_v2_test, case_alpha_float_self_int32_accept)
+{
+    auto tensor_desc = TensorDesc({5, 3}, ACL_INT32, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+    int64_t dims = 0;
+    auto index_desc = TensorDesc({3}, ACL_INT32, ACL_FORMAT_NCHW).Value(vector<int32_t>{0, 2, 4});
+    auto source_desc = TensorDesc({3, 3}, ACL_INT32, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+    auto scalar_desc = ScalarDesc(2.5f);
+    int64_t mode = 1;
+
+    auto ut = OP_API_UT(aclnnIndexAddV2, INPUT(tensor_desc, dims, index_desc, source_desc, scalar_desc, mode),
+                        OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// A non-BOOL alpha with a BOOL self is still rejected with 161002.
+TEST_F(l2_index_add_v2_test, case_alpha_float_self_bool_reject)
+{
+    auto tensor_desc = TensorDesc({5, 3}, ACL_BOOL, ACL_FORMAT_NCHW);
+    int64_t dims = 0;
+    auto index_desc = TensorDesc({3}, ACL_INT32, ACL_FORMAT_NCHW).Value(vector<int32_t>{0, 2, 4});
+    auto source_desc = TensorDesc({3, 3}, ACL_BOOL, ACL_FORMAT_NCHW);
+    auto scalar_desc = ScalarDesc(1.0f);
+    int64_t mode = 1;
+
+    auto ut = OP_API_UT(aclnnIndexAddV2, INPUT(tensor_desc, dims, index_desc, source_desc, scalar_desc, mode),
+                        OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// A 0-dim self is rejected by the first-stage validation with 161002 (V2 route, "DimNum of self should
+// be in range [1, 8]").
+TEST_F(l2_index_add_v2_test, case_self_zero_dim)
+{
+    auto tensor_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    int64_t dims = 0;
+    auto index_desc = TensorDesc({3}, ACL_INT32, ACL_FORMAT_NCHW).Value(vector<int32_t>{0, 2, 4});
+    auto source_desc = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+    auto scalar_desc = ScalarDesc(1.0f);
+    int64_t mode = 1;
+
+    auto ut = OP_API_UT(aclnnIndexAddV2, INPUT(tensor_desc, dims, index_desc, source_desc, scalar_desc, mode),
+                        OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// Mismatched self and out dtypes are rejected with 161002 (log message mentions "out dtype").
+TEST_F(l2_index_add_v2_test, case_out_dtype_mismatch)
+{
+    auto tensor_desc = TensorDesc({5, 3}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+    int64_t dims = 0;
+    auto index_desc = TensorDesc({3}, ACL_INT32, ACL_FORMAT_NCHW).Value(vector<int32_t>{0, 2, 4});
+    auto source_desc = TensorDesc({3, 3}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+    auto scalar_desc = ScalarDesc(1.0f);
+    int64_t mode = 1;
+    auto out_desc = TensorDesc({5, 3}, ACL_INT32, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnIndexAddV2, INPUT(tensor_desc, dims, index_desc, source_desc, scalar_desc, mode),
+                        OUTPUT(out_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// A mode=0 violation (dim not in {0, -2}) is rejected directly with 161002 ("Do not support
+// mode == 0") instead of falling through a nullptr detour to 561103. The source shape matches
+// self (equal on every dim except dimStd) to get past CheckShape.
+TEST_F(l2_index_add_v2_test, case_mode0_dim_violation)
+{
+    auto tensor_desc = TensorDesc({5, 3}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+    int64_t dims = 1;
+    auto index_desc = TensorDesc({3}, ACL_INT32, ACL_FORMAT_NCHW).Value(vector<int32_t>{0, 2, 4});
+    auto source_desc = TensorDesc({5, 3}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(-10, 10);
+    auto scalar_desc = ScalarDesc(1.0f);
+    int64_t mode = 0;
+
+    auto ut = OP_API_UT(aclnnIndexAddV2, INPUT(tensor_desc, dims, index_desc, source_desc, scalar_desc, mode),
+                        OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

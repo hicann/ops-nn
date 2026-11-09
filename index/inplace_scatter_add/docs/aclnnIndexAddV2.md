@@ -25,6 +25,8 @@
 
 在指定维度上，根据给定的索引，将源张量中的值加到输入张量中对应位置的值上。
 
+本算子为就地语义算子：计算直接累加到self的存储上，self在调用后将被原地改写（等价于self[index] += alpha × source的就地执行）；底层算子的输出与self的存储绑定（就地绑定），aclnn接口内部将结果拷贝至out交付。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用"aclnnIndexAddV2GetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnIndexAddV2"接口执行计算。
@@ -80,10 +82,10 @@ aclnnStatus aclnnIndexAddV2(
         <td>self（aclTensor*）</td>
         <td>输入</td>
         <td>输入张量。</td>
-        <td>-</td>
+        <td>支持1-8维；0维self无合法dim取值（dim取值范围[-self.dim(), self.dim()-1]在0维时为空集），由第一段校验拒绝。</td>
         <td>FLOAT、FLOAT16、INT32、INT16、INT8、UINT8、DOUBLE、INT64、BOOL、BFLOAT16</td>
         <td>ND</td>
-        <td>0-8</td>
+        <td>1-8</td>
         <td>√</td>
       </tr>
       <tr>
@@ -103,7 +105,7 @@ aclnnStatus aclnnIndexAddV2(
         <td>index的shape大小和source在dim维度上的shape值需要相等。</td>
         <td>INT64、INT32</td>
         <td>ND</td>
-        <td>1</td>
+        <td>0-1</td>
         <td>√</td>
       </tr>
       <tr>
@@ -120,9 +122,9 @@ aclnnStatus aclnnIndexAddV2(
         <td>alpha（aclScalar*）</td>
         <td>输入</td>
         <td>缩放因子。</td>
-        <td>数据类型可转换成self与source<a href="../../../docs/zh/context/deduction_relationship.md">推导</a>后的数据类型。<br>在非确定性计算场景下且mode取值为0，alpha不参与计算。</td>
+        <td>数据类型可转换成self与source<a href="../../../docs/zh/context/deduction_relationship.md">推导</a>后的数据类型。<br>浮点类型alpha与整型self的组合受理：alpha数值按向self数据类型转换的语义截断（如0.5按整型self转换为0）；alpha数值超出self数据类型可表示范围时（如整型self时alpha为inf、nan或超出表示范围的浮点值）行为无定义。<br>self为BOOL时，alpha仅支持BOOL类型（BOOL仅支持单向转换为其他数据类型，数值/浮点类型无法转换为BOOL）。<br>在非确定性计算场景下且mode取值为0，alpha不参与计算。</td>
+        <td>标量类型（需可转换成self的数据类型，不支持复数类型）</td>
         <td>-</td>
-        <td>与self一致</td>
         <td>-</td>
         <td>-</td>
       </tr>
@@ -140,7 +142,7 @@ aclnnStatus aclnnIndexAddV2(
         <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>输出aclTensor。</td>
-        <td>-</td>
+        <td>底层算子将输出与self的存储就地绑定（self会被原地改写），接口内部将结果拷贝至out。</td>
         <td>与self一致</td>
         <td>ND</td>
         <td>与self一致</td>
@@ -192,33 +194,30 @@ aclnnStatus aclnnIndexAddV2(
       <td>传入的self、index、source、alpha、out是空指针。</td>
       </tr>
       <tr>
-      <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="10">161002</td>
+      <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="9">161002</td>
       <td>self、index、source、out的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
       <td>self、source和out的数据类型不一致。</td>
       </tr>
       <tr>
-      <td>dim的值大于self的shape大小。</td>
+      <td>dim的值不在[-self.dim(), self.dim()-1]范围内。</td>
       </tr>
       <tr>
-      <td>计算出的数据类型无法转换为指定输出out的数据类型。</td>
+      <td>alpha的数据类型无法转换为self的数据类型（如self为BOOL时alpha为非BOOL类型，或alpha为复数类型）。</td>
       </tr>
       <tr>
       <td>self和source除了在维度dim上，其余维度上存在shape值不相等。</td>
       </tr>
       <tr>
-      <td>index不为1维。</td>
+      <td>index不为0-1维。</td>
       </tr>
       <tr>
       <td>index的shape大小和source在维度dim上的shape值不相等。</td>
       </tr>
       <tr>
       <td>out的shape和self的shape不相等。</td>
-      </tr>
-      <tr>
-      <td>index取值范围不在[0,self.shape[dim])范围内。</td>
       </tr>
       <tr>
       <td>当mode=0时，不满足约束说明中的高性能模式限制。</td>
@@ -273,8 +272,14 @@ aclnnStatus aclnnIndexAddV2(
 
 - 确定性计算：
   - aclnnIndexAddV2默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性。
+- 就地语义
+  - self在调用后被原地改写（见功能说明）；GE 图模式（GEIR）不在本算子支持范围内。
 - index取值范围
-  - index输入取值范围在[0,self.shape[dim])范围内，即索引值输入范围为self在dim维度上的shape大小，不支持负索引和越界索引。
+  - 期望index取值范围在[0, self.shape[dim])范围内；接口第一段不校验index的取值范围，负值索引在kernel侧被守卫静默跳过（不参与累加），越界索引行为未定义（经InplaceIndexAdd路径执行时可能触发执行期异常）。
+- 空Tensor
+  - source为空Tensor时，接口将self拷贝至out（不进行累加）；self为空Tensor时，out为空Tensor。
+- 容量限制
+  - 算子32位快速路径要求计算涉及的元素规模不超过uint32表示域（2^32-1），超出时自动路由至64位实现，功能结果一致；实际可支持的张量规模上限取决于数据类型与Device内存。
 - 高性能模式（mode=0）额外限制：
   - dim取值为0或-2。
   - self数据类型为FLOAT、FLOAT16、INT32、INT16或BFLOAT16。
@@ -283,7 +288,7 @@ aclnnStatus aclnnIndexAddV2(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。完整示例代码见[test_aclnn_index_add_v2.cpp](../examples/test_aclnn_index_add_v2.cpp)。
 
 ```Cpp
 #include <iostream>
@@ -331,7 +336,8 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
   // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); aclrtFree(*deviceAddr);
+            *deviceAddr = nullptr; return ret);
 
   // 计算连续tensor的strides
   std::vector<int64_t> strides(shape.size(), 1);
@@ -362,6 +368,7 @@ int main() {
   void* indexDeviceAddr = nullptr;
   void* sourceDeviceAddr = nullptr;
   void* outDeviceAddr = nullptr;
+  void* workspaceAddr = nullptr;
   aclTensor* self = nullptr;
   aclTensor* index = nullptr;
   aclTensor* source = nullptr;
@@ -374,70 +381,100 @@ int main() {
   int64_t dim = 0;
   int64_t mode = 0;
   float alphaValue = 1.0f;
+  uint64_t workspaceSize = 0;
+  aclOpExecutor* executor = nullptr;
+  int32_t exitCode = 0;
+  int64_t resultSize = 0;
+  std::vector<float> resultData;
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor(self) failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // 创建index aclTensor
   ret = CreateAclTensor(indexHostData, indexShape, &indexDeviceAddr, aclDataType::ACL_INT32, &index);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor(index) failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // 创建source aclTensor
   ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_FLOAT, &source);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor(source) failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor(out) failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // 创建alpha aclScalar
   alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha != nullptr, return ret);
+  CHECK_RET(alpha != nullptr, LOG_PRINT("create alpha failed.\n"); exitCode = -1; goto cleanup);
 
   // 3. 调用CANN算子库API，需要修改为具体的API名称
-  uint64_t workspaceSize = 0;
-  aclOpExecutor* executor;
   // 调用aclnnIndexAddV2第一段接口
   ret = aclnnIndexAddV2GetWorkspaceSize(self, dim, index, source, alpha, mode, out, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexAddV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexAddV2GetWorkspaceSize failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
   // 根据第一段接口计算出的workspaceSize申请device内存
-  void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); exitCode = -1;
+              goto cleanup);
   }
   // 调用aclnnIndexAddV2第二段接口
   ret = aclnnIndexAddV2(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexAddV2 failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexAddV2 failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
 
   // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); exitCode = -1;
+            goto cleanup);
 
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-  auto size = GetShapeSize(outShape);
-  std::vector<float> resultData(size, 0);
+  resultSize = GetShapeSize(outShape);
+  resultData.assign(resultSize, 0.0f);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
-                    size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
+                    resultSize * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+            exitCode = -1; goto cleanup);
+  for (int64_t i = 0; i < resultSize; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-  aclDestroyTensor(self);
-  aclDestroyTensor(index);
-  aclDestroyTensor(source);
-  aclDestroyScalar(alpha);
-  aclDestroyTensor(out);
+cleanup:
+  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改（失败路径同样释放已创建对象）
+  if (self != nullptr) {
+    aclDestroyTensor(self);
+  }
+  if (index != nullptr) {
+    aclDestroyTensor(index);
+  }
+  if (source != nullptr) {
+    aclDestroyTensor(source);
+  }
+  if (alpha != nullptr) {
+    aclDestroyScalar(alpha);
+  }
+  if (out != nullptr) {
+    aclDestroyTensor(out);
+  }
 
-  // 7. 释放device资源，需要根据具体API的接口定义修改
-  aclrtFree(selfDeviceAddr);
-  aclrtFree(indexDeviceAddr);
-  aclrtFree(sourceDeviceAddr);
-  aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
+  // 7. 释放device资源，需要根据具体API的接口定义修改（失败路径同样释放已申请资源）
+  if (selfDeviceAddr != nullptr) {
+    aclrtFree(selfDeviceAddr);
+  }
+  if (indexDeviceAddr != nullptr) {
+    aclrtFree(indexDeviceAddr);
+  }
+  if (sourceDeviceAddr != nullptr) {
+    aclrtFree(sourceDeviceAddr);
+  }
+  if (outDeviceAddr != nullptr) {
+    aclrtFree(outDeviceAddr);
+  }
+  if (workspaceAddr != nullptr) {
     aclrtFree(workspaceAddr);
   }
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();
-  return 0;
+  return exitCode;
 }
 ```

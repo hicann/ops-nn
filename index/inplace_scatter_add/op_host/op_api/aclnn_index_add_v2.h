@@ -23,7 +23,8 @@ extern "C" {
 #endif
 
 /**
- * @brief aclnnIndexAddV2的第一段接口，根据具体的计算流程，计算workspace大小。该接口暂不对外开放，仅供PTA调用。
+ * @brief
+ * aclnnIndexAddV2的第一段接口，根据具体的计算流程，计算workspace大小。该接口当前经PTA/确定性计算场景使用，暂不承诺对外公开兼容。
  * @domain aclnn_ops_infer
  * @param [in] self: npu
  * device侧的aclTensor，数据类型支持FLOAT、INT32、FLOAT16、DOUBLE、INT16、INT8、UINT8、INT64、BOOL、BFLOAT16，

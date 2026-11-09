@@ -27,6 +27,19 @@ using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 1024;
 
+// 32-bit loop routing guard: totalElements is the loop upper bound of the 32-bit variants (N-split uses
+// K * blockLength and K-split uses blockLength * N; the product wraps in uint32, so it must be computed and
+// compared in uint64). Also, the dividend + q addition inside the framework Simt::UintDiv<uint32_t> wraps
+// once the dividend reaches 2^(32 - shift) * divisor (for power-of-two divisors this threshold is exactly
+// 2^32, i.e. no extra restriction), so the upper bound must not exceed that threshold. For divisor > 2^31
+// that is not a power of two, shift == 32 and shifting a uint32 by 32 bits is an out-of-range shift
+// (undefined behavior), so such divisors are excluded altogether.
+__aicore__ inline bool CanUse32BitLoop(uint64_t totalElements, uint64_t divisor, uint32_t shift)
+{
+    return shift < UINT32_C(32) && totalElements <= UINT32_MAX &&
+           totalElements <= (UINT64_C(1) << (UINT64_C(32) - shift)) * divisor;
+}
+
 // ============ N-split path: N >= K, split N across cores, each core handles all K ============
 
 template <typename T, typename IDX_T>
@@ -148,23 +161,26 @@ __aicore__ inline void Process(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
         if (blockOffset + remain > static_cast<uint64_t>(N)) {
             remain = static_cast<uint64_t>(N) - blockOffset;
         }
-        if (canUse32Bit) {
-            uint32_t magic = 0, shift = 0;
-            if (remain > 1) {
-                GetUintDivMagicAndShift<uint32_t>(magic, shift, static_cast<uint32_t>(remain));
-            }
+        // Route to the 64-bit variant when the guard fails (product wraparound or UintDiv wraparound domain)
+        uint32_t magic = 0;
+        uint32_t shift = 0;
+        if (canUse32Bit && remain > 1) {
+            GetUintDivMagicAndShift<uint32_t>(magic, shift, static_cast<uint32_t>(remain));
+        }
+        if (canUse32Bit && CanUse32BitLoop(static_cast<uint64_t>(K) * remain, remain, shift)) {
             asc_vf_call<ScatterAddNSplit32<T, IDX_T>>(
                 dim3(THREAD_NUM), static_cast<uint32_t>(M), static_cast<uint32_t>(N), static_cast<uint32_t>(K),
                 static_cast<uint32_t>(blockOffset), static_cast<uint32_t>(remain), magic, shift, (__gm__ T*)var,
                 (__gm__ IDX_T*)indices, (__gm__ T*)updates);
         } else {
-            uint64_t magic = 0, shift = 0;
+            uint64_t magic64 = 0;
+            uint64_t shift64 = 0;
             if (remain > 1) {
-                GetUintDivMagicAndShift<uint64_t>(magic, shift, remain);
+                GetUintDivMagicAndShift<uint64_t>(magic64, shift64, remain);
             }
             asc_vf_call<ScatterAddNSplit64<T, IDX_T>>(dim3(THREAD_NUM), static_cast<uint64_t>(M),
                                                       static_cast<uint64_t>(N), static_cast<uint64_t>(K),
-                                                      static_cast<uint64_t>(blockOffset), remain, magic, shift,
+                                                      static_cast<uint64_t>(blockOffset), remain, magic64, shift64,
                                                       (__gm__ T*)var, (__gm__ IDX_T*)indices, (__gm__ T*)updates);
         }
     } else {
@@ -176,23 +192,26 @@ __aicore__ inline void Process(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
         if (blockOffset + remain > static_cast<uint64_t>(K)) {
             remain = static_cast<uint64_t>(K) - blockOffset;
         }
-        if (canUse32Bit) {
-            uint32_t magic = 0, shift = 0;
-            if (N > 1) {
-                GetUintDivMagicAndShift<uint32_t>(magic, shift, static_cast<uint32_t>(N));
-            }
+        // Route to the 64-bit variant when the guard fails (product wraparound or UintDiv wraparound domain)
+        uint32_t magic = 0;
+        uint32_t shift = 0;
+        if (canUse32Bit && N > 1) {
+            GetUintDivMagicAndShift<uint32_t>(magic, shift, static_cast<uint32_t>(N));
+        }
+        if (canUse32Bit && CanUse32BitLoop(remain * static_cast<uint64_t>(N), N, shift)) {
             asc_vf_call<ScatterAddKSplit32<T, IDX_T>>(
                 dim3(THREAD_NUM), static_cast<uint32_t>(M), static_cast<uint32_t>(N), static_cast<uint32_t>(K),
                 static_cast<uint32_t>(blockOffset), static_cast<uint32_t>(remain), magic, shift, (__gm__ T*)var,
                 (__gm__ IDX_T*)indices, (__gm__ T*)updates);
         } else {
-            uint64_t magic = 0, shift = 0;
+            uint64_t magic64 = 0;
+            uint64_t shift64 = 0;
             if (N > 1) {
-                GetUintDivMagicAndShift<uint64_t>(magic, shift, static_cast<uint64_t>(N));
+                GetUintDivMagicAndShift<uint64_t>(magic64, shift64, static_cast<uint64_t>(N));
             }
             asc_vf_call<ScatterAddKSplit64<T, IDX_T>>(
                 dim3(THREAD_NUM), static_cast<uint64_t>(M), static_cast<uint64_t>(N), static_cast<uint64_t>(K),
-                static_cast<uint64_t>(blockOffset), static_cast<uint64_t>(remain), magic, shift, (__gm__ T*)var,
+                static_cast<uint64_t>(blockOffset), static_cast<uint64_t>(remain), magic64, shift64, (__gm__ T*)var,
                 (__gm__ IDX_T*)indices, (__gm__ T*)updates);
         }
     }
