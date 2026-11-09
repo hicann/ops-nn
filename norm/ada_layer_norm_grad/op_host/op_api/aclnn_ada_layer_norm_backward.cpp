@@ -111,6 +111,45 @@ inline static bool CheckOptionalOutDtype(const aclTensor* input, const aclTensor
     return true;
 }
 
+inline static bool CheckFormat(const aclTensor* gradOut, const aclTensor* input, const aclTensor* rstd,
+                               const aclTensor* mean, const aclTensor* scale, const aclTensor* shift,
+                               const aclTensor* weightOptional, const aclTensor* biasOptional,
+                               const aclTensor* gradInputOut, const aclTensor* gradScaleOut,
+                               const aclTensor* gradShiftOut, const aclTensor* gradWeightOut,
+                               const aclTensor* gradBiasOut)
+{
+    // 全部入/出参仅支持 ND；私有格式会被当成连续数据计算，结果错且不报错。
+    struct TensorName {
+        const aclTensor* tensor;
+        const char* name;
+    };
+    const TensorName tensors[] = {{gradOut, "gradOut"},
+                                  {input, "input"},
+                                  {rstd, "rstd"},
+                                  {mean, "mean"},
+                                  {scale, "scale"},
+                                  {shift, "shift"},
+                                  {weightOptional, "weightOptional"},
+                                  {biasOptional, "biasOptional"},
+                                  {gradInputOut, "gradInputOut"},
+                                  {gradScaleOut, "gradScaleOut"},
+                                  {gradShiftOut, "gradShiftOut"},
+                                  {gradWeightOut, "gradWeightOut"},
+                                  {gradBiasOut, "gradBiasOut"}};
+    for (const auto& item : tensors) {
+        if (item.tensor == nullptr) {
+            continue;
+        }
+        auto format = item.tensor->GetStorageFormat();
+        if (format != op::Format::FORMAT_ND) {
+            OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON("aclnnAdaLayerNormBackward", item.name,
+                                                   op::ToString(format).GetString(), "only ND format is supported");
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool CheckDtype(const aclTensor* gradOut, const aclTensor* input, const aclTensor* rstd, const aclTensor* mean,
                        const aclTensor* scale, const aclTensor* shift, const aclTensor* weightOptional,
                        const aclTensor* biasOptional, const aclTensor* gradInputOut, const aclTensor* gradScaleOut,
@@ -379,6 +418,10 @@ static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* input,
                                aclTensor* gradInputOut, aclTensor* gradScaleOut, aclTensor* gradShiftOut,
                                aclTensor* gradWeightOut, aclTensor* gradBiasOut, int64_t N)
 {
+    // 0. 格式校验：私有格式（如 NZ）会被当连续数据处理，必须前置拒绝
+    CHECK_RET(CheckFormat(gradOut, input, rstd, mean, scale, shift, weightOptional, biasOptional, gradInputOut,
+                          gradScaleOut, gradShiftOut, gradWeightOut, gradBiasOut),
+              ACLNN_ERR_PARAM_INVALID);
     // 1. 检查数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckDtype(gradOut, input, rstd, mean, scale, shift, weightOptional, biasOptional, gradInputOut,
                          gradScaleOut, gradShiftOut, gradWeightOut, gradBiasOut),

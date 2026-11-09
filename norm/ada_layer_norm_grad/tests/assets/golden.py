@@ -193,19 +193,28 @@ class AdaLayerNormGradAclnnSpec:
     """aclnn。golden 收【已 H2D 的 torch.Tensor】，直接返 Tensor。
 
     参数名取自 op_host/op_api/aclnn_ada_layer_norm_backward.h：
-        gradOut / input / rstd / mean / scale / shift / weightOptional / biasOptional
+        gradOut / input / normalizedShape / rstd / mean / scale / shift /
+        weightOptional / biasOptional / gradInputOut / gradScaleOut /
+        gradShiftOut / gradWeightOut / gradBiasOut
     对应 kernel 契约的 dy / x / rstd / mean / scale / gamma / beta。
+    签名须与 header 位置参数逐字对齐，否则会 TypeError（位置参数个数不符）。
     """
 
     def golden(
         gradOut,
         input,
-        rstd,
-        mean,
-        scale,
-        shift,
+        normalizedShape=None,
+        rstd=None,
+        mean=None,
+        scale=None,
+        shift=None,
         weightOptional=None,
         biasOptional=None,
+        gradInputOut=None,
+        gradScaleOut=None,
+        gradShiftOut=None,
+        gradWeightOut=None,
+        gradBiasOut=None,
         **kwargs,
     ):
         # 与 aclnn C++ 一致：weight/bias 缺省时填 1/0（CreateContiguousTensorsAndComputeGrad
@@ -213,23 +222,82 @@ class AdaLayerNormGradAclnnSpec:
         # 即 C++ 的 gradWeightOut/gradBiasOut），否则回落入参 dtype。
         # shift 的值不进 kernel（l0op::AdaLayerNormGrad 的 OP_INPUT 仅 7 张量），
         # 仅参与 gradShift 输出的形状/校验，故此处不参与计算。
-        od = kwargs.get("output_dtypes") or []
-        od = [d[0] if isinstance(d, (list, tuple)) else str(d) for d in od]
-
-        def _fill_dtype(idx):
-            return _TORCH_DTYPE.get(
-                od[idx] if idx < len(od) and od[idx] else None, input.dtype
+        # 调用约定守卫：TTK 须按 C header 顺序喂全部位置参数（实测 14 个）。只喂输入侧
+        # 会让 normalizedShape 错位收到张量，算错且无日志线索，这里显式拦掉。
+        if normalizedShape is not None and not isinstance(
+            normalizedShape, (list, tuple)
+        ):
+            raise TypeError(
+                "[aclnnAdaLayerNormBackward] golden expects positional args in C header order "
+                "(gradOut, input, normalizedShape, rstd, mean, scale, shift, weight*, bias*, "
+                "gradInputOut, gradScaleOut, gradShiftOut, gradWeightOut, gradBiasOut); "
+                f"got {type(normalizedShape).__name__} for normalizedShape"
             )
+        for _name, _arg in (
+            ("rstd", rstd),
+            ("mean", mean),
+            ("scale", scale),
+            ("shift", shift),
+        ):
+            if _arg is None:
+                raise TypeError(
+                    f"[aclnnAdaLayerNormBackward] golden requires non-null required input '{_name}'; "
+                    "the caller did not pass arguments in C header order"
+                )
 
+        # 输出 dtype 兜底：aclnn 通路不传 output_dtypes，只传 tensor_dtypes（长度=全部
+        # 张量），输出槽固定为末尾 5 项；序列形态的 dtype 项需先取元素再 str。
+        def _dtype_name(d):
+            if isinstance(d, (list, tuple)):
+                d = d[0] if d else None
+            return str(d) if d else None
+
+        od = [_dtype_name(d) for d in (kwargs.get("output_dtypes") or [])]
+        if not od:
+            td = list(kwargs.get("tensor_dtypes") or [])
+            if len(td) < 5:
+                # 不足 5 项说明不是全张量 dtype 表，静默取尾会错位，显式报错。
+                raise ValueError(
+                    "[aclnnAdaLayerNormBackward] golden needs the full tensor dtype list "
+                    f"(>=5 entries; outputs are the last 5) but got {len(td)}: {td!r}"
+                )
+            od = [_dtype_name(d) for d in td[-5:]]
+
+        def _infer_fill_dtype():
+            """与 C++ infer_dtype() 同序：weight > bias > gradWeightOut > gradBiasOut > fp32。"""
+            for tensor in (weightOptional, biasOptional, gradWeightOut, gradBiasOut):
+                if isinstance(tensor, torch.Tensor):
+                    return tensor.dtype
+            return torch.float32
+
+        fill_dtype = _infer_fill_dtype()
         if weightOptional is None:
             weightOptional = torch.ones(
-                input.shape[-1:], dtype=_fill_dtype(3), device=input.device
+                input.shape[-1:], dtype=fill_dtype, device=input.device
             )
         if biasOptional is None:
             biasOptional = torch.zeros(
-                input.shape[-1:], dtype=_fill_dtype(4), device=input.device
+                input.shape[-1:], dtype=fill_dtype, device=input.device
             )
-        return _compute(gradOut, input, rstd, mean, scale, weightOptional, biasOptional)
+        # 先提升到计算精度再算（Promote 用 fp64，否则 fp32）：直接按 b16 算会在
+        # pd_gamma/pd_beta 的抵消处放大舍入误差而必然 FAIL。
+        operands = [gradOut, input, rstd, mean, scale, weightOptional, biasOptional]
+        compute = _compute_dtype(*operands)
+        outs = _compute(*[t.to(compute) for t in operands])
+        # 出口 cast 回输出张量自身 dtype（对应 C++ GenOutWithMask 的 Cast）：取
+        # mask.dtype 不依赖 tensor_dtypes 的槽位形态，兜底才回落 od。
+        masks = (gradInputOut, gradScaleOut, gradShiftOut, gradWeightOut, gradBiasOut)
+        cast_outs = []
+        for i, (out, mask) in enumerate(zip(outs, masks)):
+            if isinstance(mask, torch.Tensor):
+                cast_outs.append(out.to(mask.dtype))
+            elif i < len(od) and od[i] in _TORCH_DTYPE:
+                cast_outs.append(out.to(_TORCH_DTYPE[od[i]]))
+            else:
+                cast_outs.append(out)
+        # 输出张量为 None 时算子不产出，golden 按位返回 None，避免 NO_OUTPUT 误判。
+        # 全部输出均为 None 是合法用例状态（如 L2_exc_dtype_007），不得回填或报错。
+        return [o if m is not None else None for o, m in zip(cast_outs, masks)]
 
     # 【预留】TTK aclnn 通路当前不取用 third_party（仅 kernel/geir 取用）；写在此处不生效也无副作用。
     third_party = {"torch": _Compose}
