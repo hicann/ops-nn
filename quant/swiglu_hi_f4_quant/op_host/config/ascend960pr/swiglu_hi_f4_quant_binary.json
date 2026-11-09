@@ -78,6 +78,11 @@
           "name": "axis",
           "dtype": "int",
           "value": null
+        },
+        {
+          "name": "scale_alg",
+          "dtype": "int",
+          "value": null
         }
       ]
     },
@@ -156,6 +161,11 @@
         },
         {
           "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "scale_alg",
           "dtype": "int",
           "value": null
         }
