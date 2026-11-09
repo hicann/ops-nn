@@ -14,6 +14,7 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
@@ -139,6 +140,15 @@ static graphStatus InferShapeForSoftmaxCrossEntropyWithLogits(gert::InferShapeCo
                                                                                    (context)->GetNodeName()),
                     "labels"),
                 return ge::GRAPH_FAILED);
+    if (Ops::Base::IsUnknownRank(*input_features_shape) || Ops::Base::IsUnknownRank(*input_labels_shape)) {
+        gert::Shape* output_loss_shape = context->GetOutputShape(0);
+        OP_CHECK_NULL_WITH_CONTEXT(context, output_loss_shape);
+        gert::Shape* output_backprop_shape = context->GetOutputShape(1);
+        OP_CHECK_NULL_WITH_CONTEXT(context, output_backprop_shape);
+        Ops::Base::SetUnknownRank(*output_loss_shape);
+        Ops::Base::SetUnknownRank(*output_backprop_shape);
+        return GRAPH_SUCCESS;
+    }
     size_t input_labels_dim_num = input_labels_shape->GetDimNum();
     OP_LOGD(context->GetNodeName(), "input_features_dim_num is %zu, input_labels_dim_num is %zu",
             input_features_dim_num, input_labels_dim_num);
