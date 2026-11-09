@@ -4550,13 +4550,13 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/apply_adagrad/README.md">apply_adagrad</a></td>
+    <td><a href="../../optim/inplace_apply_adagrad/README.md">inplace_apply_adagrad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>ApplyAdagrad是自适应梯度算法的核心更新操作，主要用于在优化器（如随机梯度下降）中更新模型参数。</td>
+    <td>InplaceApplyAdagrad是Adagrad优化器的单步原地参数更新算子，同时更新参数var与梯度平方累积量accum，输出与同名输入共享Device内存。</td>
   </tr>
   <tr>
     <td>optim</td>

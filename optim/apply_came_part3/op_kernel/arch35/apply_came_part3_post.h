@@ -366,6 +366,11 @@ __aicore__ inline void ApplyCamePart3Post<T>::ReduceSumUCSingleColumn(LocalTenso
             totalHigh = nextHigh;
             totalLow = nextLow;
         }
+        if (rowBase + count < baseCSize) {
+            event_t eventIdSToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE2));
+            SetFlag<HardEvent::S_MTE2>(eventIdSToMte2);
+            WaitFlag<HardEvent::S_MTE2>(eventIdSToMte2);
+        }
     }
     const float total = totalHigh + totalLow;
     gmSumGradC_.SetValue(0, total);

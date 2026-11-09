@@ -53,6 +53,11 @@ __aicore__ inline void ApplyCamePart3CompensatedAdd(float leftHigh, float leftLo
     const float error = (leftHigh - (sum - split)) + (rightHigh - split);
     const float residual = leftLow + rightLow + error;
     const float normalizedHigh = sum + residual;
+    if (!ApplyCamePart3IsFinite(normalizedHigh)) {
+        resultHigh = normalizedHigh;
+        resultLow = 0.0f;
+        return;
+    }
     resultHigh = normalizedHigh;
     resultLow = residual - (normalizedHigh - sum);
 }

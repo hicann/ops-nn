@@ -373,15 +373,9 @@ ge::graphStatus BNInferLastChannelTiling::ParseSupportedShape(const gert::Shape&
             return ret;
         }
     } else if (format == FORMAT_ND) {
-        auto ret = ParseNdAsLastChannelShape(xStorageShape);
-        OP_CHECK_IF(ret != ge::GRAPH_SUCCESS && ret != ge::GRAPH_PARAM_INVALID,
-                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x",
-                                                              "parse nd-as-last-channel shape failed",
-                                                              "ND as last-channel shape parse failed"),
-                    return ge::GRAPH_FAILED);
-        if (ret == ge::GRAPH_PARAM_INVALID) {
-            return ret;
-        }
+        // ParseNdAsLastChannelShape already reports its own hard failures; keep
+        // the failure log single-source and let PARAM_INVALID fall through.
+        return ParseNdAsLastChannelShape(xStorageShape);
     } else {
         OP_LOGI(context_, "Only supported format NHWC, NDHWC, NCHW, NCDHW or ND.");
         return ge::GRAPH_PARAM_INVALID;
@@ -412,14 +406,11 @@ ge::graphStatus BNInferLastChannelTiling::GetShapeAttrsInfo()
     epsilon = (epsilonPtr == nullptr) ? DEFAULT_EPSILON : *epsilonPtr;
 
     auto parseStatus = ParseSupportedShape(xShape->GetStorageShape(), format);
-    if (parseStatus == ge::GRAPH_PARAM_INVALID) {
-        // This template does not own the layout; let the tiling registry fall through.
+    if (parseStatus != ge::GRAPH_SUCCESS) {
+        // Hard failures are already reported by the ParseXxx helpers; PARAM_INVALID
+        // means another template owns this layout and must fall through silently.
         return parseStatus;
     }
-    OP_CHECK_IF(parseStatus != ge::GRAPH_SUCCESS,
-                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                    context_->GetNodeName(), "x", "parse last-channel shape failed", "last-channel shape parse failed"),
-                return parseStatus);
 
     OP_CHECK_IF(
         fusedALen <= 0 || fusedBLen <= 0,

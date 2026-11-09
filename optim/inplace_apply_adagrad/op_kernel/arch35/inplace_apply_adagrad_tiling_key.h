@@ -1,0 +1,44 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file inplace_apply_adagrad_tiling_key.h
+ * \brief
+ */
+
+#ifndef INPLACE_APPLY_ADAGRAD_TILING_KEY_H
+#define INPLACE_APPLY_ADAGRAD_TILING_KEY_H
+
+#define ELEMENTWISE_TPL_SCH_MODE_0 0
+#define ELEMENTWISE_TPL_SCH_MODE_1 1
+
+#define INPLACE_APPLY_ADAGRAD_TPL_FP16 0
+#define INPLACE_APPLY_ADAGRAD_TPL_BF16 1
+#define INPLACE_APPLY_ADAGRAD_TPL_FP32 2
+
+#define UPDATE_SLOTS_TPL_TRUE 1
+#define UPDATE_SLOTS_TPL_FALSE 0
+#include "ascendc/host_api/tiling/template_argument.h"
+
+ASCENDC_TPL_ARGS_DECL(InplaceApplyAdagrad,
+                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, ELEMENTWISE_TPL_SCH_MODE_0,
+                                            ELEMENTWISE_TPL_SCH_MODE_1),
+                      ASCENDC_TPL_UINT_DECL(updateSlots, 1, ASCENDC_TPL_UI_LIST, UPDATE_SLOTS_TPL_TRUE,
+                                            UPDATE_SLOTS_TPL_FALSE),
+                      ASCENDC_TPL_UINT_DECL(dType, 2, ASCENDC_TPL_UI_LIST, INPLACE_APPLY_ADAGRAD_TPL_FP16,
+                                            INPLACE_APPLY_ADAGRAD_TPL_BF16, INPLACE_APPLY_ADAGRAD_TPL_FP32));
+
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(
+    ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, ELEMENTWISE_TPL_SCH_MODE_0, ELEMENTWISE_TPL_SCH_MODE_1),
+    ASCENDC_TPL_UINT_SEL(updateSlots, ASCENDC_TPL_UI_LIST, UPDATE_SLOTS_TPL_TRUE, UPDATE_SLOTS_TPL_FALSE),
+    ASCENDC_TPL_UINT_SEL(dType, ASCENDC_TPL_UI_LIST, INPLACE_APPLY_ADAGRAD_TPL_FP16, INPLACE_APPLY_ADAGRAD_TPL_BF16,
+                         INPLACE_APPLY_ADAGRAD_TPL_FP32)));
+
+#endif // INPLACE_APPLY_ADAGRAD_TILING_KEY_H
