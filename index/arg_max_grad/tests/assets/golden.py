@@ -113,20 +113,13 @@ class ArgMaxGradKernelSpec:
         ]
 
     def customize_inputs(var, indices, updates, **kwargs):
-        """indices 不能用随机数据, 必须按语义构造(参数名与 def.cpp 逐字一致)。
+        """indices 的取值由用例 input_data_ranges 显式给定, 不在此钳制(参数名与 def.cpp 逐字一致)。
 
-        - indices: 收敛到 [0, D) —— 随机 int32 几乎必然越界, 越界时全轴保留 var,
-          用例就退化成"恒等拷贝", 覆盖不到命中路径。
+        - 合法下标落在 [0, D); 越界(负值或 >= D)时语义是「该位置整轴不命中、保留 var」
+          (01 §2 / README)。golden 的 _compute 用 torch.eq 表达比较, 对越界下标天然不命中;
+          若在此把 indices 钳进 [0, D), 会把专测越界语义的用例(如 indices 全负 / 超上界)
+          破坏成命中路径, 反而覆盖不到越界行为。
         """
-        dimension = int(_attr(kwargs, "dimension", 0))
-        dim = dimension if dimension >= 0 else dimension + var.ndim
-        # DFX 负向用例会传越界的 dimension: 这里不能抛异常(否则连输入都生成不出来,
-        # 拿不到"算子按预期拒收"的证据), 原样返回让 host 校验去拒收。
-        if dim < 0 or dim >= var.ndim:
-            return (var, indices, updates)
-        axis_len = var.shape[dim]
-        if axis_len > 0:
-            indices[...] = np.abs(indices) % axis_len
         return (var, indices, updates)
 
     third_party = {"torch": _ArgMaxGradCompose}

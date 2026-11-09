@@ -22,7 +22,7 @@ English | [简体中文](./README.md)
   Assume that the shape of $var$ is $(d_0, ..., d_{m-1})$, $a$ is the normalized `dimension`, and $D=d_a$. The shapes of $indices$ and $updates$ are the shape of $var$ with dimension $a$ removed (the formula below describes broadcasting with that dimension of length 1), and $k$ is the index of the element on dimension $a$. Then:
 
   $$
-  y[i_0,...,k,...,i_{m-1}] = \begin{cases} updates[i_0,...,0,...,i_{m-1}], & k = indices[i_0,...,0,...,i_{m-1}] \\ var[i_0,...,k,...,i_{m-1}], & \text{其他} \end{cases}
+  y[i_0,...,k,...,i_{m-1}] = \begin{cases} updates[i_0,...,0,...,i_{m-1}], & k = indices[i_0,...,0,...,i_{m-1}] \\ var[i_0,...,k,...,i_{m-1}], & \text{otherwise} \end{cases}
   $$
 
   Here:
@@ -55,4 +55,4 @@ English | [简体中文](./README.md)
 
 | Invocation method | Sample code | Description |
 | -------- | -------- | ---- |
-| Graph-mode invocation | [test_geir_arg_max_grad.cpp](examples/test_geir_arg_max_grad.cpp) | Calls the ArgMaxGrad operator by constructing a graph through the [operator IR](./op_graph/arg_max_grad_proto.h). |
+| Graph-mode invocation | [test_geir_arg_max_grad.cpp](examples/test_geir_arg_max_grad.cpp) | Calls the ArgMaxGrad operator by constructing a graph through the [operator IR](./op_graph/arg_max_grad_proto.h). For details, see [Operator Invocation](../../docs/zh/invocation/quick_op_invocation.md). |

@@ -19,6 +19,8 @@
 #include <string>
 #include <map>
 #include <ctime>
+#include <algorithm>
+#include <memory>
 #include "graph.h"
 #include "types.h"
 #include "tensor.h"
@@ -45,6 +47,8 @@ string GetTime()
 }
 
 // 数据只为构图打通, 不校验数值
+// 输入 buffer 通过带 DeleteFunc 的 SetData 重载交由 Tensor 接管所有权,
+// 保证内存存活到 RunGraph 之后(Tensor 析构时自动释放), 避免局部 vector 返回后悬垂。
 int32_t GenData(vector<int64_t> shapes, Tensor& tensor, TensorDesc& desc, DataType dt)
 {
     desc.SetRealDimCnt(shapes.size());
@@ -54,14 +58,38 @@ int32_t GenData(vector<int64_t> shapes, Tensor& tensor, TensorDesc& desc, DataTy
     desc.SetShape(ge::Shape(shapes));
     tensor.SetTensorDesc(desc);
     if (dt == DT_FLOAT) {
-        vector<float> v(size, 0.5f);
-        tensor.SetData((uint8_t*)v.data(), size * sizeof(float));
+        std::unique_ptr<float[]> data(new (std::nothrow) float[static_cast<size_t>(size)]);
+        if (data == nullptr) {
+            return FAILED;
+        }
+        std::fill(data.get(), data.get() + size, 0.5f);
+        if (tensor.SetData(reinterpret_cast<uint8_t*>(data.get()), size * sizeof(float),
+                           [](uint8_t* p) { delete[] reinterpret_cast<float*>(p); }) != ge::GRAPH_SUCCESS) {
+            return FAILED;
+        }
+        data.release();
     } else if (dt == DT_INT32) {
-        vector<int32_t> v(size, 1);
-        tensor.SetData((uint8_t*)v.data(), size * sizeof(int32_t));
+        std::unique_ptr<int32_t[]> data(new (std::nothrow) int32_t[static_cast<size_t>(size)]);
+        if (data == nullptr) {
+            return FAILED;
+        }
+        std::fill(data.get(), data.get() + size, 1);
+        if (tensor.SetData(reinterpret_cast<uint8_t*>(data.get()), size * sizeof(int32_t),
+                           [](uint8_t* p) { delete[] reinterpret_cast<int32_t*>(p); }) != ge::GRAPH_SUCCESS) {
+            return FAILED;
+        }
+        data.release();
     } else {
-        vector<uint16_t> v(size, 0x3800); // fp16 ~0.5
-        tensor.SetData((uint8_t*)v.data(), size * sizeof(uint16_t));
+        std::unique_ptr<uint16_t[]> data(new (std::nothrow) uint16_t[static_cast<size_t>(size)]);
+        if (data == nullptr) {
+            return FAILED;
+        }
+        std::fill(data.get(), data.get() + size, static_cast<uint16_t>(0x3800)); // fp16 ~0.5
+        if (tensor.SetData(reinterpret_cast<uint8_t*>(data.get()), size * sizeof(uint16_t),
+                           [](uint8_t* p) { delete[] reinterpret_cast<uint16_t*>(p); }) != ge::GRAPH_SUCCESS) {
+            return FAILED;
+        }
+        data.release();
     }
     return SUCCESS;
 }
@@ -74,7 +102,10 @@ int32_t GenData(vector<int64_t> shapes, Tensor& tensor, TensorDesc& desc, DataTy
     ph##idx##_desc.SetOriginFormat(FORMAT_ND);                                              \
     ph##idx##_desc.SetOriginShape(ge::Shape(ph##idx##_shape));                              \
     Tensor tensor_ph##idx;                                                                  \
-    ret = GenData(ph##idx##_shape, tensor_ph##idx, ph##idx##_desc, inDtype);                \
+    if (GenData(ph##idx##_shape, tensor_ph##idx, ph##idx##_desc, inDtype) != SUCCESS) {     \
+        printf("create failed: prepare input %s failed\n", #opInputName);                   \
+        return FAILED;                                                                      \
+    }                                                                                       \
     ph##idx.update_input_desc_x(ph##idx##_desc);                                            \
     ph##idx.update_output_desc_y(ph##idx##_desc);                                           \
     input.push_back(tensor_ph##idx);                                                        \
@@ -91,7 +122,6 @@ int32_t GenData(vector<int64_t> shapes, Tensor& tensor, TensorDesc& desc, DataTy
 int CreateGraph(DataType dt, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
                 std::vector<Operator>& outputs, Graph& graph)
 {
-    Status ret = SUCCESS;
     auto op_node = op::ArgMaxGrad("arg_max_grad_op");
     // var 为 (outer, D, inner); indices/updates 把 dimension 轴置 1
     const int64_t dimension = 1;

@@ -53,4 +53,4 @@
 
 | 调用方式 | 样例代码 | 说明 |
 | -------- | -------- | ---- |
-| 图模式调用 | [test_geir_arg_max_grad.cpp](examples/test_geir_arg_max_grad.cpp) | 通过[算子IR](./op_graph/arg_max_grad_proto.h)构图方式调用ArgMaxGrad算子。 |
+| 图模式调用 | [test_geir_arg_max_grad.cpp](examples/test_geir_arg_max_grad.cpp) | 通过[算子IR](./op_graph/arg_max_grad_proto.h)构图方式调用ArgMaxGrad算子，详见[算子调用](../../docs/zh/invocation/quick_op_invocation.md)。 |

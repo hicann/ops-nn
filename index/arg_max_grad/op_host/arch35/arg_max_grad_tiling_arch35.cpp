@@ -66,10 +66,6 @@ constexpr int64_t MERGE_PAD = 0;
 constexpr int64_t MERGE_COMPACT_DIRECT = 1;
 constexpr int64_t MERGE_COMPACT_FILL = 2;
 constexpr int64_t MERGE_COMPACT_STREAM = 3;
-// 铺 tile 路径要对整段数据走的遍数: indices 铺 + updates 铺 + 轴下标铺 + 比较选择。
-// 逐行直算每元素代价 ∝ 1/min(inner, 车道数)(一行一组指令, 车道用不满按比例摊薄),
-// 铺 tile 每元素代价 ∝ FILL_PASSES/车道数, 两者相等处即 min(inner, 车道数) = 车道数 / FILL_PASSES。
-constexpr int64_t FILL_PASSES = 4;
 // SIMD/SIMT 共用的 dcache, 与参照算子一致预留
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 
@@ -342,9 +338,11 @@ void ArgMaxGradTiling::CalMergeParams(int64_t cols) const
         tilingData_->dstStrideT = (rowElems * varDtypeLen_ - occT) / UB_BLOCK_BYTES;
         tilingData_->dstStrideI = (rowElems * DTYPE_LEN_INT32 - occI) / UB_BLOCK_BYTES;
         if (rowElems == inner) {
-            // 行长是 32B 整数倍 → 行起点落在寄存器块边界, 可以逐行直算; 但一行短于 车道数/FILL_PASSES 时
-            // 直算的车道浪费超过铺 tile 多走的几遍, 这一档仍走铺 tile(相等处判给铺 tile: 它每条指令都是满车道)。
-            tilingData_->mergeMode = (inner * FILL_PASSES > vlInt32_) ? MERGE_COMPACT_DIRECT : MERGE_COMPACT_FILL;
+            // 行长是 32B 整数倍 → 行起点落在寄存器块边界。逐行直算的 VF 用无掩码 LoadAlign 恒按整寄存器
+            // 读取, 只有行长还是向量整宽(vlInt32_ 个元素)的整数倍时, 每个寄存器块才完整落在一行内、末行
+            // 尾部不会越界读到相邻缓冲; 否则退回铺 tile(它对整段一次比较选择, 尾部由 colsPerChunk 的整宽
+            // 对齐兜底, 不再逐行读取)。
+            tilingData_->mergeMode = (inner % vlInt32_ == 0) ? MERGE_COMPACT_DIRECT : MERGE_COMPACT_FILL;
             // ⚠️ 紧排 + 非对齐流式铺设当前不启用: 该铺法写入目的地址所在 32B 块时会连带覆盖块内前导
             // 车道。indices/updates 各行内容相同, 覆盖不可见; 轴下标每行取值不同, 会在行边界处产生少量
             // 错值(实测 binary_equal 下每例错 1~3 个元素, 集中在 inner 小且 D 不大的形状)。要启用需先把
@@ -363,11 +361,10 @@ void ArgMaxGradTiling::CalMergeParams(int64_t cols) const
         const int64_t stride = (tilingData_->mergeMode == MERGE_PAD) ? rowElems : inner;
         tilingData_->rowsPerChunk = (stride > 0 && stride <= cols) ? (cols / stride) : 1;
     } else {
-        // inner==1: 一段能装几个 outer。每个 outer 在 UB 里的起点是 j*D, 要求 D 在 T 域与 int32 域
-        // 都落在 32B 边界, 否则逐 outer 的向量读写会落到非对齐地址上(errcode 340)。
+        // 与逐行直算同口径: 多 outer 合并的 VF 同样无掩码整寄存器读取, D 必须是向量整宽的整数倍,
+        // 否则末 outer 的尾块会越过本 outer 读进相邻缓冲。
         const int64_t d = tilingData_->dimSize > 0 ? tilingData_->dimSize : 1;
-        const bool dAligned = ((d * varDtypeLen_) % UB_BLOCK_BYTES == 0) &&
-                              ((d * DTYPE_LEN_INT32) % UB_BLOCK_BYTES == 0);
+        const bool dAligned = (d % vlInt32_ == 0);
         tilingData_->rowElems = 1;
         tilingData_->rowsPerChunk = (dAligned && d <= cols) ? (cols / d) : 1;
         tilingData_->dstStrideT = 0;
@@ -379,15 +376,12 @@ void ArgMaxGradTiling::CalMergeParams(int64_t cols) const
 ge::graphStatus ArgMaxGradTiling::CalUbSplit()
 {
     const bool innerIsOne = (tilingData_->inner == 1);
-    int64_t alignElems = UB_BLOCK_BYTES / DTYPE_LEN_INT32;
-    if (UB_BLOCK_BYTES / varDtypeLen_ > alignElems) {
-        alignElems = UB_BLOCK_BYTES / varDtypeLen_;
-    }
     const int64_t innerElems = tilingData_->inner > 0 ? tilingData_->inner : 1;
-    // 逐行直算档: 行长是整宽的整数倍(行起点落在寄存器块边界)且一行够肥, 此时 indices/updates
-    // 只需一行常驻, 不随段长增长。
-    const bool rowDirectShape = !innerIsOne && (Ops::Base::CeilAlign(innerElems, alignElems) == innerElems) &&
-                                (innerElems * FILL_PASSES > vlInt32_);
+    // 逐行直算档: 行长必须是向量整宽(vlInt32_ 个元素)的整数倍。逐行直算的 VF 用无掩码 LoadAlign
+    // 恒按整寄存器读取, 只有每个寄存器块都完整落在一行内, 末行尾部的读取才不会越过 varL/outL 的
+    // 分配边界(colsPerChunk 是 vlMax_ 整数倍, 但行 stride 取 inner 而非 vlMax_, 故 inner 非整宽倍时
+    // 末行读上界 (rows-1)*inner + 64 会溢出)。此时 indices/updates 只需一行常驻, 不随段长增长。
+    const bool rowDirectShape = !innerIsOne && (innerElems % vlInt32_ == 0);
 
     // 单次驻留 UB 的上限 = 一个 outer 覆盖的元素数(再多也用不上, indices/updates 按 outer 变):
     //   inner == 1 : 一段可以装多个 outer(每个 outer 只带一个标量 indices/updates), 上限按整张量算;
@@ -438,7 +432,9 @@ void ArgMaxGradTiling::PrintTilingData() const
 
 ge::graphStatus ArgMaxGradTiling::Init()
 {
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    auto platformInfoPtr = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum_ = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((coreNum_ <= 0), OP_LOGE(context_->GetNodeName(), "GetHardwareInfo failed, aivCoreNum %ld", coreNum_),
                 return ge::GRAPH_FAILED);

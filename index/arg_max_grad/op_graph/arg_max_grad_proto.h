@@ -34,7 +34,7 @@ namespace ge {
 *
 *@attention Constraints:
 *@li indices: only support int32,and shape same to "updates"
-*@li The value range of "dimension" is [-dims, dims - 1]. "dims" is the dimension length of "x".
+*@li The value range of "dimension" is [-dims, dims - 1]. "dims" is the dimension number (rank) of "var".
 *@li y:A ND Tensor, the type and shape is same to "var" \n
 
 *@par Third-party framework compatibility
