@@ -154,7 +154,7 @@ aclnnStatus aclnnNonzero(
       <td>The data type of self is not within the supported range.</td>
     </tr>
     <tr>
-      <td>The range of a dimension in the shape of self does not meet the requirement.</td>
+      <td>The range of a dimension in the shape of self does not meet the requirement, or out is not a 2D tensor.</td>
     </tr>
   </tbody>
   </table>

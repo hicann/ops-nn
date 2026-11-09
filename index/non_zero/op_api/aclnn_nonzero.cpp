@@ -88,7 +88,11 @@ inline static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
 inline static bool CheckShape(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
-    OP_CHECK_MAX_DIM(out, MAX_DIM_LEN, return false);
+    if (out->GetViewShape().GetDimNum() != 2) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out must be a 2D tensor, but got %zu dimensions.",
+                out->GetViewShape().GetDimNum());
+        return false;
+    }
     return true;
 }
 

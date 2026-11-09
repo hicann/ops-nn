@@ -181,11 +181,7 @@ TEST_F(l2_nonzero_test, aclnnNonzero_16_input_shape_dim_exceed_int32)
                            },
                            ACL_INT32, ACL_FORMAT_ND)
                            .ValueRange(-2, 2);
-    auto outDesc = TensorDesc(
-        {
-            2147483638,
-        },
-        ACL_INT64, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2147483638, 1}, ACL_INT64, ACL_FORMAT_ND);
 
     auto ut_self = OP_API_UT(aclnnNonzero, INPUT(tensorDesc9), OUTPUT(outDesc));
     // SAMPLE: only test GetWorkspaceSize
@@ -197,6 +193,17 @@ TEST_F(l2_nonzero_test, aclnnNonzero_16_input_shape_dim_exceed_int32)
         EXPECT_EQ(aclRet, ACL_SUCCESS);
     } else {
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    }
+}
+
+TEST_F(l2_nonzero_test, aclnnNonzero_reject_output_rank)
+{
+    auto selfDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    for (const auto& shape : vector<vector<int64_t>>{{6}, {1, 6, 2}, {}, {0}, {0, 1, 2}}) {
+        auto outDesc = TensorDesc(shape, ACL_INT64, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnNonzero, INPUT(selfDesc), OUTPUT(outDesc));
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
     }
 }
 

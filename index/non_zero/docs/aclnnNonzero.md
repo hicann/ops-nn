@@ -152,7 +152,7 @@ aclnnStatus aclnnNonzero(
       <td>self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>self的shape某一维范围不满足要求。</td>
+      <td>self的shape某一维范围不满足要求，或out不是二维张量。</td>
     </tr>
   </tbody>
   </table>
