@@ -73,7 +73,7 @@
 
 ## 约束说明
 
-- 支持非连续Tensor。
+- 输出不支持非连续Tensor。
 - x与out的Tensor数量一致，且对应位置Tensor的shape完全相等。
 - x或out的单个Tensor列表内所有Tensor的数据类型保持一致，且x与out的数据类型一致，均须在参数表声明的支持范围内。
 - 单个Tensor的维度不超过8。

@@ -63,7 +63,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示乘法运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示乘法运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape 与入参`x1`对应位置 Tensor 的 shape 一致。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16、INT16、INT8、UINT8</td>
       <td>ND</td>
     </tr>
@@ -74,9 +74,13 @@
 ## 约束说明
 
 - 输出不支持非连续Tensor。
+- x1、x2、y 三个列表中 Tensor 数量须一致，单个列表长度 n 满足 1≤n≤256。
+- INT32、INT16、INT8、UINT8 等整数类型的乘法发生溢出时，按 C 语义回绕，不报错。
+- FLOAT16、BFLOAT16 类型的输入会先提升为 FLOAT32 相乘，再将结果舍回为原类型。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_foreach_mul_list](examples/test_aclnn_foreach_mul_list.cpp) | 通过[aclnnForeachMulList](docs/aclnnForeachMulList.md)接口方式调用ForeachMulList算子。 |
+| aclnn API  | [test_aclnn_foreach_mul_list](examples/test_aclnn_foreach_mul_list.cpp) | 通过[aclnnForeachMulList](docs/aclnnForeachMulList.md)接口方式调用ForeachMulList算子。 |
+| GE图模式   | [foreach_mul_list_proto.h](op_graph/foreach_mul_list_proto.h) | 通过 GE 图方式调用ForeachMulList算子。 |

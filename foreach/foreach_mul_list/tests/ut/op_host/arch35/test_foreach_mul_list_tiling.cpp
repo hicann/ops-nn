@@ -29,7 +29,9 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachMulListTilingTest TearDown" << std::endl; }
 };
 
-static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint64_t expectKey)
+static void RunCase(std::initializer_list<int64_t> x1Shape, std::initializer_list<int64_t> x2Shape,
+                    std::initializer_list<int64_t> yShape, ge::DataType x1Dt, ge::DataType x2Dt, ge::DataType yDt,
+                    ge::graphStatus expectStatus, uint64_t expectKey)
 {
     fe::PlatFormInfos pf;
     std::map<std::string, std::string> soc, ai, intr;
@@ -57,9 +59,9 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     kh.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intr);
     ASSERT_EQ(tilingParseFn(kh.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    gert::StorageShape xS1 = {xShape, xShape};
-    gert::StorageShape xS2 = {xShape, xShape};
-    gert::StorageShape yS = {xShape, xShape};
+    gert::StorageShape xS1 = {x1Shape, x1Shape};
+    gert::StorageShape xS2 = {x2Shape, x2Shape};
+    gert::StorageShape yS = {yShape, yShape};
     auto param = gert::TilingData::CreateCap(4096);
     auto wsh = gert::ContinuousVector::Create<size_t>(4096);
     auto th = gert::TilingContextFaker()
@@ -69,9 +71,9 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
                   .OutputShapes({&yS})
                   .CompileInfo(&ci)
                   .PlatformInfo(reinterpret_cast<char*>(&pf))
-                  .NodeInputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .NodeInputTd(1, dt, ge::FORMAT_ND, ge::FORMAT_ND)
-                  .NodeOutputTd(0, dt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeInputTd(0, x1Dt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeInputTd(1, x2Dt, ge::FORMAT_ND, ge::FORMAT_ND)
+                  .NodeOutputTd(0, yDt, ge::FORMAT_ND, ge::FORMAT_ND)
                   .TilingData(param.get())
                   .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsh.get()))
                   .Build();
@@ -80,8 +82,15 @@ static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint6
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreSpec", ai);
     ctx->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     ctx->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intr);
-    EXPECT_EQ(tilingFn(ctx), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+    EXPECT_EQ(tilingFn(ctx), expectStatus);
+    if (expectStatus == ge::GRAPH_SUCCESS) {
+        EXPECT_EQ(ctx->GetTilingKey(), expectKey);
+    }
+}
+
+static void DoCase(std::initializer_list<int64_t> xShape, ge::DataType dt, uint64_t expectKey)
+{
+    RunCase(xShape, xShape, xShape, dt, dt, dt, ge::GRAPH_SUCCESS, expectKey);
 }
 
 TEST_F(ForeachMulListTilingTest, foreach_mul_list_float32)
@@ -102,4 +111,16 @@ TEST_F(ForeachMulListTilingTest, foreach_mul_list_bf16)
 TEST_F(ForeachMulListTilingTest, foreach_mul_list_int32)
 {
     DoCase({4, 4}, ge::DT_INT32, GET_TPL_TILING_KEY(FOREACH_MUL_LIST_TPL_SCH_MODE_INT32));
+}
+
+TEST_F(ForeachMulListTilingTest, foreach_mul_list_x1_x2_shape_mismatch)
+{
+    // x2 的 shape 与 x1 不一致，应在 ValidateForeachMulList 的 shape 严格一致校验处被拒绝。
+    RunCase({4, 4}, {4, 8}, {4, 4}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, 0);
+}
+
+TEST_F(ForeachMulListTilingTest, foreach_mul_list_dtype_mismatch)
+{
+    // x2 的 dtype 与 x1 不一致，应在 ValidateForeachMulList 的 x2-dtype 校验处被拒绝。
+    RunCase({4, 4}, {4, 4}, {4, 4}, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::GRAPH_FAILED, 0);
 }

@@ -65,7 +65,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Output tensor list of the multiplication, corresponding to `y` in the formula. Its data type and data format are consistent with the data type and data format of the input parameter `x1`, and its shape size is greater than or equal to the shape size of the input parameter `x1`. All tensors in this parameter have the same data type.</td>
+      <td>Output tensor list of the multiplication, corresponding to `y` in the formula. Its data type and data format are consistent with the data type and data format of the input parameter `x1`, and its shape is consistent with the shape of the tensor at the corresponding position in input `x1`. All tensors in this parameter have the same data type.</td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16, INT16, INT8, UINT8</td>
       <td>ND</td>
     </tr>
@@ -76,9 +76,13 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The output does not support non-contiguous tensors.
+- The three lists x1, x2, and y must have the same number of tensors, and the length n of a single list satisfies 1≤n≤256.
+- When overflow occurs in the multiplication of integer types such as INT32, INT16, INT8, and UINT8, the result wraps around following C semantics without reporting an error.
+- Inputs of FLOAT16 and BFLOAT16 types are first promoted to FLOAT32 for the multiplication, and the result is then rounded back to the original type.
 
 ## Invocation Description
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn invocation  | [test_aclnn_foreach_mul_list](examples/test_aclnn_foreach_mul_list.cpp) | Invokes the ForeachMulList operator through the [aclnnForeachMulList](docs/aclnnForeachMulList_en.md) interface. |
+| aclnn API  | [test_aclnn_foreach_mul_list](examples/test_aclnn_foreach_mul_list.cpp) | Invokes the ForeachMulList operator through the [aclnnForeachMulList](docs/aclnnForeachMulList_en.md) interface. |
+| GE graph mode   | [foreach_mul_list_proto.h](op_graph/foreach_mul_list_proto.h) | Invokes the ForeachMulList operator by constructing a graph through [the operator IR](op_graph/foreach_mul_list_proto.h). |

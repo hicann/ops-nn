@@ -23,9 +23,10 @@ namespace ge {
  * @par Inputs:
  * Two inputs:
  * @li x1: A tensor list containing multiple tensors
- * @li x2: Another tensor list containing multiple tensorsr
+ * @li x2: Another tensor list containing multiple tensors
  * @par Outputs:
- * @li y: A tensor list which store the tensors whose value are mul by the scalars in scalar list
+ * @li y: A tensor list which store the tensors whose values are the element-wise product of the corresponding tensors
+ * in x1 and x2
  */
 REG_OP(ForeachMulList)
     .DYNAMIC_INPUT(x1, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16, DT_INT16, DT_INT8, DT_UINT8}))

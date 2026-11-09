@@ -46,7 +46,7 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
 aclnnStatus aclnnForeachMulListGetWorkspaceSize(
   const aclTensorList *x1,
   const aclTensorList *x2,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -109,7 +109,7 @@ aclnnStatus aclnnForeachMulList(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list that represents multiplication, which is `y` in the corresponding formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>Data type and data format must be the same as those of input `x1`, and shape size must be greater than or equal to the shape size of input `x1`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>Data type and data format must be the same as those of input `x1`, and the shape must be the same as that of the corresponding tensor in input `x1`.</li><li>The number of tensors in x1, x2, and out must be the same.</li></ul></td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16, INT16, INT8, UINT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -163,16 +163,14 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>The input x1, x2, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data types of x1, x2, and out are not within the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x1, x2, and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
       <td>The shapes of x1, x2, and out do not meet the constraints.</td>
     </tr>
     <tr>
@@ -230,6 +228,9 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 - Deterministic computation:
   - aclnnForeachMulList defaults to a deterministic implementation.
+- List length: The length n of each of x1, x2, and out must satisfy 1≤n≤256.
+- For integer types (INT32, INT16, INT8, UINT8), multiplication overflow wraps around following C semantics and does not report an error.
+- FLOAT16 and BFLOAT16 inputs are first promoted to FLOAT32 for multiplication, and the result is then rounded back to the original type.
 
 ## Example
 

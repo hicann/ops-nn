@@ -76,6 +76,11 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The output does not support non-contiguous tensors.
+- x and out have the same number of tensors, and the tensors at corresponding positions have exactly identical shapes.
+- All tensors in a single tensor list of x or out share the same data type, and x and out share the same data type, both of which must be within the supported range declared in the parameter table.
+- The dimensionality of a single tensor does not exceed 8.
+- The number of tensors in a single tensor list of x/y cannot exceed 256.
+- When the number of x and out is 0 (empty list), it returns success directly without performing any computation.
 
 ## Invocation Description
 
