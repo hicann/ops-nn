@@ -20,6 +20,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "add_layer_norm_regbase_common.h"
 
 namespace AddLayerNorm {
 using namespace AscendC;
@@ -45,7 +46,7 @@ public:
         tailLen_ = rowsThisCore_ - (loopCount_ - 1) * rowsPerLoop_;
         meanGm_.SetGlobalBuffer((__gm__ float*)mean + rowOffset_, rowsThisCore_);
         rstdGm_.SetGlobalBuffer((__gm__ float*)rstd + rowOffset_, rowsThisCore_);
-        pipe_.InitBuffer(outQueue_, 1, 2 * rowsPerLoop_ * sizeof(float));
+        pipe_.InitBuffer(outQueue_, 1, NUM_TWO * rowsPerLoop_ * sizeof(float));
     }
 
     __aicore__ inline void Process()
