@@ -16,6 +16,8 @@
  */
 
 #include "foreach_expm1_simt.h"
+#include "foreach_expm1_small_list_simt.h"
+#include "foreach_expm1_packed_scalar_simt.h"
 
 enum class ForeachExpm1TilingKey : uint32_t {
     TILING_KEY_FLOAT = 0,
@@ -24,6 +26,12 @@ enum class ForeachExpm1TilingKey : uint32_t {
     TILING_KEY_INT16 = 3,
     TILING_KEY_INT8 = 4,
     TILING_KEY_UINT8 = 5,
+    TILING_KEY_SMALL_FLOAT = 6,
+    TILING_KEY_SMALL_FLOAT16 = 7,
+    TILING_KEY_SMALL_BF16 = 8,
+    TILING_KEY_PACKED_FLOAT = 9,
+    TILING_KEY_PACKED_FLOAT16 = 10,
+    TILING_KEY_PACKED_BF16 = 11,
 };
 
 template <uint32_t schMode>
@@ -46,5 +54,17 @@ __global__ __aicore__ void foreach_expm1(GM_ADDR x, GM_ADDR y, GM_ADDR workspace
         NsForeachExpm1::Process<int8_t, float>(x, y, tilingGm);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpm1TilingKey::TILING_KEY_UINT8)) {
         NsForeachExpm1::Process<uint8_t, float>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpm1TilingKey::TILING_KEY_SMALL_FLOAT)) {
+        NsForeachExpm1SmallList::Process<float, float>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpm1TilingKey::TILING_KEY_SMALL_FLOAT16)) {
+        NsForeachExpm1SmallList::Process<half, half>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpm1TilingKey::TILING_KEY_SMALL_BF16)) {
+        NsForeachExpm1SmallList::Process<bfloat16_t, bfloat16_t>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpm1TilingKey::TILING_KEY_PACKED_FLOAT)) {
+        NsForeachExpm1PackedScalar::Process<float, float>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpm1TilingKey::TILING_KEY_PACKED_FLOAT16)) {
+        NsForeachExpm1PackedScalar::Process<half, half>(x, y, tilingGm);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachExpm1TilingKey::TILING_KEY_PACKED_BF16)) {
+        NsForeachExpm1PackedScalar::Process<bfloat16_t, bfloat16_t>(x, y, tilingGm);
     }
 }

@@ -216,6 +216,7 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 ## Constraints
 
+- In the current implementation on <term>Ascend 950PR&950DT products</term>, the input tensor list `x` can contain at most 256 tensors due to the tiling data capacity. If this limit is exceeded, tiling fails and the operator is not executed.
 - Deterministic computation:
   - aclnnForeachExpm1 defaults to a deterministic implementation.
 

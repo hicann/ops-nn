@@ -34,9 +34,10 @@ constexpr int64_t MIN_PER_CORE = 1024;
 
 struct ForeachExpm1CompileInfo {};
 
-static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, fe::PlatFormInfos*& platformInfoPtr,
+                                       uint64_t& ubSize, int64_t& coreNum)
 {
-    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
@@ -48,9 +49,10 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
 
 static ge::graphStatus ForeachExpm1TilingFunc(gert::TilingContext* context)
 {
+    fe::PlatFormInfos* platformInfoPtr = nullptr;
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+    OP_CHECK_IF(GetPlatformInfo(context, platformInfoPtr, ubSize, coreNum) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
@@ -58,6 +60,11 @@ static ge::graphStatus ForeachExpm1TilingFunc(gert::TilingContext* context)
     auto idxInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(INPUT_IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
+    // Protect the fixed tensorElements capacity in ForeachExpm1TilingData before populating it.
+    OP_CHECK_IF(
+        tensorNum > FOREACH_EXPM1_MAX_TENSOR_NUM,
+        OP_LOGE(context, "tensorNum[%lu] should be less than or equal to %lu", tensorNum, FOREACH_EXPM1_MAX_TENSOR_NUM),
+        return ge::GRAPH_FAILED);
 
     auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
@@ -72,6 +79,16 @@ static ge::graphStatus ForeachExpm1TilingFunc(gert::TilingContext* context)
     int64_t totalElements = 0;
 
     for (uint64_t i = 0; i < tensorNum; i++) {
+        auto currentInputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, currentInputDesc);
+        ge::DataType currentDataType = currentInputDesc->GetDataType();
+        OP_CHECK_IF(
+            currentDataType != dataType,
+            OP_LOGE(context, "The dtypes of all tensors in x must be the same, but x[%lu] is %s while x[0] is %s.", i,
+                    ge::TypeUtils::DataTypeToSerialString(currentDataType).c_str(),
+                    ge::TypeUtils::DataTypeToSerialString(dataType).c_str()),
+            return ge::GRAPH_FAILED);
+
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
         auto storageShape = shapePtr->GetStorageShape();
@@ -81,7 +98,46 @@ static ge::graphStatus ForeachExpm1TilingFunc(gert::TilingContext* context)
     }
     tiling->totalElements = totalElements;
 
-    if (totalElements == 0) {
+    int64_t nonemptyCount = 0;
+    bool scalarList = true;
+    bool homogeneousMidList = true;
+    int64_t midListLength = 0;
+    for (uint64_t i = 0; i < tensorNum; ++i) {
+        const int64_t numel = tiling->tensorElements[i];
+        nonemptyCount += (numel > 0);
+        scalarList = scalarList && (numel <= 1);
+        if (numel > 0) {
+            if (midListLength == 0) {
+                midListLength = numel;
+            }
+            homogeneousMidList = homogeneousMidList && numel == midListLength && numel >= 1024 && numel <= 8192;
+        }
+    }
+    const auto socVersion = platform_ascendc::PlatformAscendC(platformInfoPtr).GetSocVersion();
+    const bool isAscend950Family = socVersion == platform_ascendc::SocVersion::ASCEND950;
+    const bool packedScalarRoute = isAscend950Family &&
+                                   (dataType == ge::DT_FLOAT || dataType == ge::DT_FLOAT16 ||
+                                    dataType == ge::DT_BF16) &&
+                                   tensorNum >= 32 && tensorNum <= 256 &&
+                                   totalElements == static_cast<int64_t>(tensorNum) &&
+                                   nonemptyCount == static_cast<int64_t>(tensorNum) && scalarList;
+    const bool smallListRoute = isAscend950Family &&
+                                (dataType == ge::DT_FLOAT || dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) &&
+                                scalarList && nonemptyCount >= 32 && totalElements <= 256;
+    const bool midListRoute = isAscend950Family &&
+                              (dataType == ge::DT_FLOAT || dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) &&
+                              homogeneousMidList && nonemptyCount >= 32 && totalElements > 256;
+    const bool tensorOwnedRoute = smallListRoute || midListRoute;
+
+    if (packedScalarRoute) {
+        int64_t needCoreNum = std::min(coreNum, Ops::Base::CeilDiv(static_cast<int64_t>(tensorNum), 32L));
+        tiling->needCoreNum = static_cast<int32_t>(needCoreNum);
+        context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
+    } else if (tensorOwnedRoute) {
+        int64_t needCoreNum = std::min(coreNum, nonemptyCount);
+        tiling->needCoreNum = static_cast<int32_t>(needCoreNum);
+        context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
+    } else if (totalElements == 0) {
         tiling->needCoreNum = 1;
         context->SetBlockDim(1);
     } else {
@@ -97,7 +153,19 @@ static ge::graphStatus ForeachExpm1TilingFunc(gert::TilingContext* context)
     context->SetLocalMemorySize(static_cast<uint32_t>(ubSize - DCACHE_SIZE));
 
     uint64_t tilingKey = 0;
-    if (dataType == ge::DT_FLOAT) {
+    if (packedScalarRoute && dataType == ge::DT_FLOAT) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXPM1_TPL_SCH_MODE_PACKED_FLOAT);
+    } else if (packedScalarRoute && dataType == ge::DT_FLOAT16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXPM1_TPL_SCH_MODE_PACKED_FLOAT16);
+    } else if (packedScalarRoute && dataType == ge::DT_BF16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXPM1_TPL_SCH_MODE_PACKED_BF16);
+    } else if (tensorOwnedRoute && dataType == ge::DT_FLOAT) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXPM1_TPL_SCH_MODE_SMALL_FLOAT);
+    } else if (tensorOwnedRoute && dataType == ge::DT_FLOAT16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXPM1_TPL_SCH_MODE_SMALL_FLOAT16);
+    } else if (tensorOwnedRoute && dataType == ge::DT_BF16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_EXPM1_TPL_SCH_MODE_SMALL_BF16);
+    } else if (dataType == ge::DT_FLOAT) {
         tilingKey = GET_TPL_TILING_KEY(FOREACH_EXPM1_TPL_SCH_MODE_FLOAT);
     } else if (dataType == ge::DT_FLOAT16) {
         tilingKey = GET_TPL_TILING_KEY(FOREACH_EXPM1_TPL_SCH_MODE_FLOAT16);

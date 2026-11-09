@@ -11,23 +11,20 @@
 
 import torch
 from atk.configs.dataset_config import InputDataset
-from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
-from atk.tasks.dataset.base_dataset import OpsDataset
-import numpy as np
 
 
 @register("function_aclnnForeachExpm1")
 class aclnnForeachExpm1Executor(BaseApi):
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         x_input = input_data.kwargs["input"]
 
         output = torch._foreach_expm1(x_input)
 
         return output
+
 
 @register("aclnnfunction_aclnnForeachExpm1")
 class aclnnfunctionExecutor(AclnnBaseApi):

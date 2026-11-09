@@ -57,7 +57,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Output tensor list for the exponential operation followed by the subtraction-of-1 operation, corresponding to `y` in the formula. The data types of all tensors in this parameter are consistent. When the data type of `x` is INT16, INT8, or UINT8, the data type is FLOAT32; in other cases, the data type is the same as that of the input parameter `x`. The data format is the same as that of the input parameter `x`, and the shape size is greater than or equal to the shape size of the input parameter `x`.</td>
+      <td>Output tensor list for the exponential operation followed by the subtraction-of-1 operation, corresponding to `y` in the formula. The data types of all tensors in this parameter are consistent. When the data type of `x` is INT16, INT8, or UINT8, the data type is FLOAT32; in other cases, the data type is the same as that of the input parameter `x`. The data format is the same as that of the input parameter `x`; `y` contains the same number of tensors as `x`, and the shape of `y[i]` is the same as that of `x[i]`.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -67,7 +67,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-None
+- In the current implementation on <term>Ascend 950PR&950DT products</term>, the input tensor list `x` can contain at most 256 tensors due to the tiling data capacity. If this limit is exceeded, tiling fails and the operator is not executed.
 
 ## Invocation Description
 

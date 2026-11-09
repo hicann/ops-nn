@@ -22,8 +22,10 @@ extern "C" {
  * 功能描述：对输入张量列表中的每个张量计算exp(x)-1。
  * 计算公式：out_{i}=exp(x_{i})-1
  * @domain aclnnop_math
- * @param [in]   x               输入Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16，INT16，INT8，UINT8。数据格式支持ND。
- * @param [in]   out 输出Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16（整数输入提升为FLOAT32输出）。数据格式支持ND。
+ * @param [in]   x               输入Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16，INT16，INT8，UINT8。
+ *                               数据格式支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW。
+ * @param [in]   out             输出Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16（整数输入提升为FLOAT32输出）。
+ *                               数据格式支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW。
  * @param [out]  workspaceSize   返回用户需要在npu device侧申请的workspace大小。
  * @param [out]  executor        返回op执行器，包含了算子计算流程。
  * @return       aclnnStatus     返回状态码

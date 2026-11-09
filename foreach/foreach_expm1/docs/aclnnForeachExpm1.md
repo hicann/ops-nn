@@ -42,7 +42,7 @@
 ```Cpp
 aclnnStatus aclnnForeachExpm1GetWorkspaceSize(
   const aclTensorList *x,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
@@ -85,9 +85,9 @@ aclnnStatus aclnnForeachExpm1(
       <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行指数运算然后减1运算的输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与出参`out`的数据类型和数据格式一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据格式与出参`out`的数据格式一致。数据类型为BFLOAT16、FLOAT16、FLOAT32时与出参`out`的数据类型一致；数据类型为INT16、INT8、UINT8时，出参`out`的数据类型为FLOAT32。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32、INT16、INT8、UINT8</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -95,9 +95,9 @@ aclnnStatus aclnnForeachExpm1(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行指数运算然后减1运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>当`x`的数据类型为INT16、INT8、UINT8时，数据类型为FLOAT32，其他情况下与入参`x`的数据类型一致。</li><li>数据格式与入参`x`的数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>当`x`的数据类型为INT16、INT8、UINT8时，数据类型为FLOAT32，其他情况下与入参`x`的数据类型一致。</li><li>数据格式与入参`x`的数据格式一致。</li><li>`out`包含的Tensor数量与`x`相等，且`out[i]`的shape与`x[i]`的shape相同。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -149,20 +149,21 @@ aclnnStatus aclnnForeachExpm1(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>x和out的数据类型不一致。</td>
-    </tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>x与out的shape不满足约束。</td>
+      <td>out的数据类型不符合与x的数据类型映射关系：x为BFLOAT16、FLOAT16、FLOAT32时，out与x一致；x为INT16、INT8、UINT8时，out为FLOAT32。</td>
     </tr>
     <tr>
       <td>x或out中的Tensor的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>x与out的Tensor数量不一致。</td>
+    </tr>
+    <tr>
+      <td>x与out的shape不满足约束。</td>
     </tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td>
@@ -214,6 +215,7 @@ aclnnStatus aclnnForeachExpm1(
 
 ## 约束说明
 
+- 在<term>Ascend 950PR&950DT系列产品</term>的当前实现中，受tiling数据容量限制，输入张量列表`x`最多包含256个Tensor；超过上限时tiling失败，算子不执行。
 - 确定性计算：
   - aclnnForeachExpm1默认确定性实现。
 

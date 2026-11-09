@@ -18,11 +18,13 @@
 #ifndef FOREACH_EXPM1_TILING_DATA_H
 #define FOREACH_EXPM1_TILING_DATA_H
 
+constexpr uint64_t FOREACH_EXPM1_MAX_TENSOR_NUM = 256;
+
 struct ForeachExpm1TilingData {
     int32_t needCoreNum = 0;
     int32_t tensorCount = 0;
     int64_t totalElements = 0;
-    int64_t tensorElements[256] = {0};
+    int64_t tensorElements[FOREACH_EXPM1_MAX_TENSOR_NUM] = {0};
 };
 
 #endif // FOREACH_EXPM1_TILING_DATA_H

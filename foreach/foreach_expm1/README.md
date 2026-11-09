@@ -55,7 +55,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行指数运算然后减1运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。当`x`的数据类型为INT16、INT8、UINT8时，数据类型为FLOAT32，其他情况下与入参`x`的数据类型一致。数据格式与入参`x`的数据格式一致，shape size大于等于入参`x`的shape size。</td>
+      <td>表示进行指数运算然后减1运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。当`x`的数据类型为INT16、INT8、UINT8时，数据类型为FLOAT32，其他情况下与入参`x`的数据类型一致。数据格式与入参`x`的数据格式一致；`y`包含的Tensor数量与`x`相等，且`y[i]`的shape与`x[i]`的shape相同。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -65,7 +65,7 @@
 
 ## 约束说明
 
-无
+- 在<term>Ascend 950PR&950DT系列产品</term>的当前实现中，受tiling数据容量限制，输入张量列表`x`最多包含256个Tensor；超过上限时tiling失败，算子不执行。
 
 ## 调用说明
 
