@@ -100,8 +100,8 @@ std::string GetCurrentSocVersion()
     return platformInfo.str_info.short_soc_version;
 }
 
-// Ascend310 does not support the legacy lowering. Ascend950 provides a native InplaceAdd implementation,
-// so its graph must keep the original node and dispatch to the native binary.
+// Ascend310 does not support the legacy lowering. Ascend950 and Ascend960DT provide a native InplaceAdd
+// implementation, so their graphs must keep the original node and dispatch to the native binary.
 bool IsSupportSoc()
 {
     const std::string curSoc = GetCurrentSocVersion();
@@ -110,7 +110,7 @@ bool IsSupportSoc()
         return false;
     }
     OPS_LOG_D(kPassName.c_str(), "cur_soc is %s", curSoc.c_str());
-    if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc || ops::IsDav3510Arch()) {
+    if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc || ops::IsDav3510Arch() || curSoc == "Ascend960DT") {
         OPS_LOG_D(kPassName.c_str(), "cur_soc %s does not use the legacy fusion.", curSoc.c_str());
         return false;
     }
