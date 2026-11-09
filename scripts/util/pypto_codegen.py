@@ -70,7 +70,16 @@ def _load_kernels(py_file: Path):
 
     spec = importlib.util.spec_from_file_location(py_file.stem, str(py_file))
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.modules.get(spec.name)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        if previous is None:
+            sys.modules.pop(spec.name, None)
+        else:
+            sys.modules[spec.name] = previous
+        raise
 
     kernels = [v for v in vars(module).values() if isinstance(v, _TileJitKernel)]
     return pto_compile, kernels
