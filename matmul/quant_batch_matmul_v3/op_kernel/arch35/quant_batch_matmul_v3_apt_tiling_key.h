@@ -376,10 +376,14 @@ ASCENDC_TPL_SEL(
                                               TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
                          ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BASIC)),
 #endif
-#if !defined(__CCE_AICORE__) ||                                                                                     \
-    ((defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__) && ORIG_DTYPE_X1 == DT_INT8 && \
-     (ORIG_DTYPE_X2 == DT_INT8 || ORIG_DTYPE_X2 == DT_INT4) && ORIG_DTYPE_SCALE == DT_UINT64 &&                     \
-     ORIG_DTYPE_Y == DT_FLOAT16 && FORMAT_X1 != FORMAT_FRACTAL_NZ && FORMAT_X2 == FORMAT_FRACTAL_NZ)
+
+#if !defined(__CCE_AICORE__) ||                                                                                       \
+    ((defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__) && defined(ORIG_DTYPE_X1) &&     \
+     defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(ORIG_DTYPE_Y) && defined(FORMAT_X1) &&            \
+     defined(FORMAT_X2) && defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ) && defined(DT_INT8) &&                    \
+     defined(DT_UINT64) && defined(DT_FLOAT16) && ORIG_DTYPE_X1 == DT_INT8 &&                                         \
+     (ORIG_DTYPE_X2 == DT_INT8 || (defined(DT_INT4) && ORIG_DTYPE_X2 == DT_INT4)) && ORIG_DTYPE_SCALE == DT_UINT64 && \
+     ORIG_DTYPE_Y == DT_FLOAT16 && FORMAT_X1 == FORMAT_ND && FORMAT_X2 == FORMAT_FRACTAL_NZ)
     ASCENDC_TPL_ARGS_SEL( // X2 Per-Group: Host-selected no-full-load/A-full/B-full loading.
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_1), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
