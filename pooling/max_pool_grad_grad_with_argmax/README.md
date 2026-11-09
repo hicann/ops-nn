@@ -63,24 +63,24 @@
      </tr>
      <tr>
        <td>ksize</td>
-      <td>属性（必选）</td>
+      <td>属性</td>
       <td>池化窗口大小，长度为4的列表。ksize[0]=1且ksize[3]=1。</td>
       <td>ListInt</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>strides</td>
-      <td>属性（必选）</td>
+      <td>属性</td>
       <td>窗口移动步长，长度为4的列表。strides[0]=1且strides[3]=1。</td>
       <td>ListInt</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>padding</td>
-      <td>属性（必选）</td>
+      <td>属性</td>
       <td>填充算法，取值为"SAME"或"VALID"。</td>
       <td>String</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
   </tbody></table>
 
@@ -97,4 +97,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式接口 | [test_geir_max_pool_grad_grad_with_argmax](examples/arch35/test_geir_max_pool_grad_grad_with_argmax.cpp) | 通过IR [MaxPoolGradGradWithArgmax](./op_graph/max_pool_grad_grad_with_argmax_proto.h)构图方式调用MaxPoolGradGradWithArgmax算子。 |
+| GE图模式 | [test_geir_max_pool_grad_grad_with_argmax](examples/arch35/test_geir_max_pool_grad_grad_with_argmax.cpp) | 通过IR [MaxPoolGradGradWithArgmax](./op_graph/max_pool_grad_grad_with_argmax_proto.h)构图方式调用MaxPoolGradGradWithArgmax算子，参见[算子调用](../../docs/zh/invocation/quick_op_invocation.md)完成算子编译和验证。 |

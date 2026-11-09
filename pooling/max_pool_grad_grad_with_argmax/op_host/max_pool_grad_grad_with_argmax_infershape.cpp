@@ -196,6 +196,12 @@ static ge::graphStatus InferDataTypeForMaxPoolGradGradWithArgmax(gert::InferData
     }
 
     const ge::DataType xDtype = context->GetInputDataType(INDEX_X);
+    const ge::DataType gradDtype = context->GetInputDataType(INDEX_GRAD);
+    OP_CHECK_IF(
+        xDtype != gradDtype,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "x, grad", "x and grad dtypes are different",
+                                               "x and grad dtypes must be the same"),
+        return ge::GRAPH_FAILED);
     context->SetOutputDataType(INDEX_OUTPUT, xDtype);
     return ge::GRAPH_SUCCESS;
 }

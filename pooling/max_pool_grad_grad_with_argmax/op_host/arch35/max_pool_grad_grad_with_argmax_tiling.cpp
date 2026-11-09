@@ -17,8 +17,10 @@
  *        固定 BatchFalse 局部索引模式（include_batch_in_index=false）。
  */
 
+#include "error_util.h"
 #include "log/log.h"
 #include "platform/platform_ascendc.h"
+#include "util/shape_util.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/max_pool_grad_grad_with_argmax_tiling_data.h"
@@ -100,6 +102,14 @@ static ge::graphStatus MaxPoolGradGradWithArgmaxTilingFunc(gert::TilingContext* 
                 OP_LOGE(context, "grad must be 4-D, actual rank=%zu", gradShape.GetDimNum()), return ge::GRAPH_FAILED);
     OP_CHECK_IF(argmaxShape.GetDimNum() != EXPECTED_RANK,
                 OP_LOGE(context, "argmax must be 4-D, actual rank=%zu", argmaxShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    // 4.5 校验 x 与 argmax 的 batch(dim0)、channel(dim3) 一致，避免 kernel 内 batchId 越界
+    OP_CHECK_IF(xShape.GetDim(0) != argmaxShape.GetDim(0) || xShape.GetDim(3) != argmaxShape.GetDim(3),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    "MaxPoolGradGradWithArgmax", "x, argmax",
+                    (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(argmaxShape)).c_str(),
+                    "x and argmax must have equal batch(dim0) and channel(dim3)"),
                 return ge::GRAPH_FAILED);
 
     // 5. 校验 y.shape == argmax.shape

@@ -14,8 +14,8 @@
  * \file max_pool_grad_grad_with_argmax.cpp
  * \brief Kernel entry for max_pool_grad_grad_with_argmax operator.
  *        固定 BatchFalse 局部索引模式（include_batch_in_index=false），TilingKey 仅 LOCAL。
- *        dtype 由 DTYPE_ 宏自动实例化，6 种 dtype 组合：
- *          {float, half, bfloat16} x {int32, int64}
+ *        dtype 由 DTYPE_ 宏自动实例化，8 种 dtype 组合：
+ *          {float, half, bfloat16, double} x {int32, int64}
  *        x 不参与计算（仅用于 shape 校验，已在 tiling 侧完成）。
  */
 

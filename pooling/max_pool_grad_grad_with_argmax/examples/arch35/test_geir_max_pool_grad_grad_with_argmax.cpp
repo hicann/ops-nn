@@ -39,7 +39,7 @@ using std::string;
 using std::vector;
 #define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                       \
     vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                                      \
-    auto placeholder##inputIndex = op::Data("placeholder" + inputIndex).set_attr_index(0);                             \
+    auto placeholder##inputIndex = op::Data("placeholder" #inputIndex).set_attr_index(0);                              \
     TensorDesc placeholder##inputIndex##_desc = TensorDesc(ge::Shape(placeholder##inputIndex##_shape), FORMAT_ND,      \
                                                            inputDtype);                                                \
     placeholder##inputIndex##_desc.SetPlacement(ge::kPlacementHost);                                                   \
@@ -109,6 +109,23 @@ uint32_t GetDataTypeSize(DataType dt)
     return dilation;
 }
 
+// FP16 位模式构造：float→FP16 转换（纯位运算，不依赖 __fp16）
+static uint16_t FloatToHalfBits(float fval)
+{
+    uint32_t bits;
+    memcpy(&bits, &fval, sizeof(bits));
+    uint32_t sign = (bits >> 16) & 0x8000;
+    int32_t exponent = ((bits >> 23) & 0xff) - 127 + 15;
+    uint32_t mantissa = (bits >> 13) & 0x3ff;
+    if (exponent <= 0) {
+        return sign; // 零或非规格化数简化为零
+    }
+    if (exponent >= 0x1f) {
+        return sign | 0x7c00; // 无穷大
+    }
+    return static_cast<uint16_t>(sign | (exponent << 10) | mantissa);
+}
+
 int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
                     int value)
 {
@@ -118,11 +135,26 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
         size *= shapes[i];
     }
     uint32_t data_len = size * GetDataTypeSize(data_type);
-    int32_t* pData = new (std::nothrow) int32_t[data_len];
-    for (uint32_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
+    uint8_t* pData = new (std::nothrow) uint8_t[data_len];
+    if (pData == nullptr) {
+        return FAILED;
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+    for (uint32_t i = 0; i < size; ++i) {
+        uint32_t offset = i * GetDataTypeSize(data_type);
+        if (data_type == ge::DT_FLOAT) {
+            float fval = static_cast<float>(value);
+            memcpy(pData + offset, &fval, sizeof(fval));
+        } else if (data_type == ge::DT_FLOAT16) {
+            // float→FP16 位模式转换，直接截取 float 低 2 字节会得到 0.0
+            uint16_t fp16Bits = FloatToHalfBits(static_cast<float>(value));
+            memcpy(pData + offset, &fp16Bits, sizeof(uint16_t));
+        } else {
+            int64_t ival = value;
+            memcpy(pData + offset, &ival, GetDataTypeSize(data_type));
+        }
+    }
+    input_tensor = Tensor(input_tensor_desc, pData, data_len);
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -257,10 +289,12 @@ int main(int argc, char* argv[])
     }
 
     if (!AddGraphToSession(session, graph, 0)) {
+        delete session;
         return FAILED;
     }
 
     if (!RunGraph(session, 0, input, output)) {
+        delete session;
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
@@ -301,9 +335,10 @@ int main(int argc, char* argv[])
     ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
     std::string warning_str(warning_msg.GetString());
     std::cout << "Warning message: " << warning_str << std::endl;
-    printf("%s - INFO - [XIR]: Precision is ok\n", GetTime().c_str());
+    printf("%s - INFO - [XIR]: Output data dumped, no precision check performed\n", GetTime().c_str());
 
     if (!FinalizeEnv()) {
+        delete session;
         return FAILED;
     }
 

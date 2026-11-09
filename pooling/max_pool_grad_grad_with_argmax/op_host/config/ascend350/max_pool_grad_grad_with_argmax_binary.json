@@ -96,6 +96,38 @@
         {"name": "strides", "dtype": "list_int", "value": []},
         {"name": "padding", "dtype": "string", "value": null}
       ]
+    },
+    {
+      "bin_filename": "MaxPoolGradGradWithArgmax_double_int32",
+      "inputs": [
+        {"name": "x", "index": 0, "dtype": "double", "format": "ND", "paramType": "required", "shape": [-2], "format_match_mode": "FormatAgnostic"},
+        {"name": "grad", "index": 0, "dtype": "double", "format": "ND", "paramType": "required", "shape": [-2], "format_match_mode": "FormatAgnostic"},
+        {"name": "argmax", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2], "format_match_mode": "FormatAgnostic"}
+      ],
+      "outputs": [
+        {"name": "y", "index": 0, "dtype": "double", "format": "ND", "paramType": "required", "shape": [-2], "format_match_mode": "FormatAgnostic"}
+      ],
+      "attrs": [
+        {"name": "ksize", "dtype": "list_int", "value": []},
+        {"name": "strides", "dtype": "list_int", "value": []},
+        {"name": "padding", "dtype": "string", "value": null}
+      ]
+    },
+    {
+      "bin_filename": "MaxPoolGradGradWithArgmax_double_int64",
+      "inputs": [
+        {"name": "x", "index": 0, "dtype": "double", "format": "ND", "paramType": "required", "shape": [-2], "format_match_mode": "FormatAgnostic"},
+        {"name": "grad", "index": 0, "dtype": "double", "format": "ND", "paramType": "required", "shape": [-2], "format_match_mode": "FormatAgnostic"},
+        {"name": "argmax", "index": 0, "dtype": "int64", "format": "ND", "paramType": "required", "shape": [-2], "format_match_mode": "FormatAgnostic"}
+      ],
+      "outputs": [
+        {"name": "y", "index": 0, "dtype": "double", "format": "ND", "paramType": "required", "shape": [-2], "format_match_mode": "FormatAgnostic"}
+      ],
+      "attrs": [
+        {"name": "ksize", "dtype": "list_int", "value": []},
+        {"name": "strides", "dtype": "list_int", "value": []},
+        {"name": "padding", "dtype": "string", "value": null}
+      ]
     }
   ]
 }

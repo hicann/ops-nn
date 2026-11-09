@@ -65,24 +65,24 @@ English | [简体中文](./README.md)
      </tr>
      <tr>
        <td>ksize</td>
-      <td>Attribute (required)</td>
+      <td>Attribute</td>
       <td>Pooling window size. It is a list of length 4. ksize[0]=1 and ksize[3]=1.</td>
       <td>ListInt</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>strides</td>
-      <td>Attribute (required)</td>
+      <td>Attribute</td>
       <td>Window movement stride. It is a list of length 4. strides[0]=1 and strides[3]=1.</td>
       <td>ListInt</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>padding</td>
-      <td>Attribute (required)</td>
+      <td>Attribute</td>
       <td>Padding algorithm. The value is "SAME" or "VALID".</td>
       <td>String</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
   </tbody></table>
 
@@ -99,4 +99,4 @@ English | [简体中文](./README.md)
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| Graph-mode interface | [test_geir_max_pool_grad_grad_with_argmax](examples/arch35/test_geir_max_pool_grad_grad_with_argmax.cpp) | Invokes the MaxPoolGradGradWithArgmax operator through the IR-based [MaxPoolGradGradWithArgmax](./op_graph/max_pool_grad_grad_with_argmax_proto.h) graph construction method. |
+| GE graph mode | [test_geir_max_pool_grad_grad_with_argmax](examples/arch35/test_geir_max_pool_grad_grad_with_argmax.cpp) | Invokes the MaxPoolGradGradWithArgmax operator through the IR-based [MaxPoolGradGradWithArgmax](./op_graph/max_pool_grad_grad_with_argmax_proto.h) graph construction method. For details, see [Operator Invocation](../../docs/zh/invocation/quick_op_invocation.md). |
