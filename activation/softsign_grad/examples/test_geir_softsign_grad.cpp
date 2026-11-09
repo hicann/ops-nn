@@ -34,6 +34,26 @@
 #include "ge_api_types.h"
 #include "ge_api.h"
 #include "array_ops.h"
+
+// 自包含 fp16/bf16 位转换（不依赖 opdev/fp16_t.h——示例编译不含 aclnn 头路径）
+static inline uint16_t FloatToFp16Bits(float val)
+{
+    uint32_t bits = *reinterpret_cast<uint32_t*>(&val);
+    uint32_t sign = (bits >> 16) & 0x8000;
+    int32_t exp = static_cast<int32_t>((bits >> 23) & 0xFF) - 127 + 15;
+    uint32_t mant = (bits >> 13) & 0x3FF;
+    if (exp <= 0)
+        return static_cast<uint16_t>(sign); // 下溢为 0
+    if (exp >= 0x1F)
+        return static_cast<uint16_t>(sign | 0x7C00); // 上溢为 inf
+    return static_cast<uint16_t>(sign | (static_cast<uint32_t>(exp) << 10) | mant);
+}
+
+static inline uint16_t FloatToBf16Bits(float val)
+{
+    uint32_t bits = *reinterpret_cast<uint32_t*>(&val);
+    return static_cast<uint16_t>(bits >> 16); // 截断高 16 位
+}
 #include "ge_ir_build.h"
 
 #include "../op_graph/softsign_grad_proto.h"
@@ -101,6 +121,8 @@ int32_t GenInputData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& i
         size *= shapes[i];
     }
     uint32_t data_len = size * GetDataTypeSize(data_type);
+    // 按 data_type 生成对应精度的输入数据（DEMO.02/ROUTE.10 修复：
+    // 声明 dtype 与实际数据 dtype 必须一致——fp16 用 fp16_t、bf16 用 bfloat16）
     float* pData = new (std::nothrow) float[size];
     if (pData == nullptr) {
         return FAILED;
@@ -117,8 +139,28 @@ int32_t GenInputData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& i
             pData[i] = static_cast<float>(i) * 0.1f - 3.0f;
         }
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
-    delete[] pData;
+
+    if (data_type == ge::DT_FLOAT16 || data_type == ge::DT_BF16) {
+        // FP16/BF16: 转换为对应位模式后按 2 字节/元素写入
+        uint16_t* pHalf = new (std::nothrow) uint16_t[size];
+        if (pHalf == nullptr) {
+            delete[] pData;
+            return FAILED;
+        }
+        for (size_t i = 0; i < size; ++i) {
+            if (data_type == ge::DT_BF16) {
+                pHalf[i] = FloatToBf16Bits(pData[i]);
+            } else {
+                pHalf[i] = FloatToFp16Bits(pData[i]);
+            }
+        }
+        input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pHalf), data_len);
+        delete[] pHalf;
+        delete[] pData;
+    } else {
+        input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+        delete[] pData;
+    }
     return SUCCESS;
 }
 

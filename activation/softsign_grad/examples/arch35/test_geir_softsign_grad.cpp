@@ -117,8 +117,38 @@ int32_t GenInputData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& i
             pData[i] = static_cast<float>(i) * 0.1f - 3.0f;
         }
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
-    delete[] pData;
+    if (data_type == ge::DT_FLOAT16 || data_type == ge::DT_BF16) {
+        // FP16/BF16: 转换为对应位模式后按 2 字节/元素写入（dtype 与数据一致）
+        uint16_t* pHalf = new (std::nothrow) uint16_t[size];
+        if (pHalf == nullptr) {
+            delete[] pData;
+            return FAILED;
+        }
+        for (size_t i = 0; i < size; ++i) {
+            if (data_type == ge::DT_BF16) {
+                uint32_t bits = *reinterpret_cast<uint32_t*>(&pData[i]);
+                pHalf[i] = static_cast<uint16_t>(bits >> 16);
+            } else {
+                uint32_t bits = *reinterpret_cast<uint32_t*>(&pData[i]);
+                uint32_t sign = (bits >> 16) & 0x8000;
+                int32_t exp = static_cast<int32_t>((bits >> 23) & 0xFF) - 127 + 15;
+                uint32_t mant = (bits >> 13) & 0x3FF;
+                if (exp <= 0) {
+                    pHalf[i] = static_cast<uint16_t>(sign);
+                } else if (exp >= 0x1F) {
+                    pHalf[i] = static_cast<uint16_t>(sign | 0x7C00);
+                } else {
+                    pHalf[i] = static_cast<uint16_t>(sign | (static_cast<uint32_t>(exp) << 10) | mant);
+                }
+            }
+        }
+        input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pHalf), data_len);
+        delete[] pHalf;
+        delete[] pData;
+    } else {
+        input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+        delete[] pData;
+    }
     return SUCCESS;
 }
 

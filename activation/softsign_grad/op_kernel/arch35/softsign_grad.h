@@ -24,8 +24,10 @@
  *   - T: 数据类型 (half / float / bfloat16_t)
  *   - BUFFER_MODE: 缓冲模式 (0=单缓冲, 1=双缓冲)
  *
- * 全量覆盖（迭代三完成）：6 个 TilingKey 组合
- *   T=half/float/bfloat16_t, BUFFER_MODE=0/1
+ * 派发结构（CODE.01 修正）：TilingKey 仅编码 BUFFER_MODE（取值 0/1，键空间 2 值）；
+ * dtype 维度由构建系统按 OpDef 声明生成 3 个二进制变体承载（DTYPE_GRADIENTS 编译
+ * 选项，不在 TilingKey 键空间内——本仓约定 TilingKey 禁止包含算子数据类型）。
+ * 内核实例总数 3 dtype 变体 × 2 键值 = 6（构建产物 kernelList 每变体含 _0/_1 两个内核）。
  */
 
 #ifndef SOFTSIGN_GRAD_H
@@ -81,6 +83,14 @@ template <typename T, int BUFFER_MODE>
 __aicore__ inline void SoftsignGrad<T, BUFFER_MODE>::Init(GM_ADDR gradients, GM_ADDR features, GM_ADDR output,
                                                           const SoftsignGradTilingData* tilingData)
 {
+    // 空张量/无效切分保护：全零或含零字段时跳过 GlobalBuffer 绑定与缓冲初始化，
+    // 避免 0 长度 InitBuffer（家族惯例，见 celu）；Process 侧由 blockLength_<=0 早退。
+    if (tilingData->totalNum == 0 || tilingData->blockFactor == 0 || tilingData->ubFactor == 0) {
+        blockLength_ = 0;
+        ubLength_ = 0;
+        return;
+    }
+
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
     ubLength_ = tilingData->ubFactor;

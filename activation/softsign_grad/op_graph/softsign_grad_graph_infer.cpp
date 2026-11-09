@@ -18,6 +18,8 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
+#include <set>
+
 using namespace ge;
 
 namespace ops {
@@ -26,7 +28,26 @@ static constexpr int64_t IDX_0 = 0;
 static ge::graphStatus InferDataType4SoftsignGrad(gert::InferDataTypeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4SoftsignGrad");
-    context->SetOutputDataType(IDX_0, context->GetInputDataType(IDX_0));
+    auto gradients_dtype = context->GetInputDataType(IDX_0);
+    auto features_dtype = context->GetInputDataType(1);
+
+    // 输入 dtype 域：FP16/FP32/BF16（README/spec 契约；TF 标杆域 half/bfloat16/
+    // float/double，本算子交付域为其子集，int32 等域外值两方均拒绝）
+    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+    if (supportedDtype.count(gradients_dtype) == 0) {
+        OP_LOGE("SoftsignGrad", "gradients dtype=%d not supported: only FP16/FP32/BF16",
+                static_cast<int>(gradients_dtype));
+        return ge::GRAPH_FAILED;
+    }
+
+    // 双输入 dtype 一致：TF 标杆实测拒绝混合 dtype
+    if (gradients_dtype != features_dtype) {
+        OP_LOGE("SoftsignGrad", "dtype mismatch: gradients=%d, features=%d", static_cast<int>(gradients_dtype),
+                static_cast<int>(features_dtype));
+        return ge::GRAPH_FAILED;
+    }
+
+    context->SetOutputDataType(IDX_0, gradients_dtype);
     OP_LOGD(context->GetNodeName(), "End to do InferDataType4SoftsignGrad");
     return ge::GRAPH_SUCCESS;
 }

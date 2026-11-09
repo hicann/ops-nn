@@ -18,6 +18,8 @@
 #include <vector>
 #include "base/err_msg.h"
 
+#include <set>
+
 using namespace ge;
 
 namespace ops {
@@ -27,6 +29,62 @@ static ge::graphStatus InferShape4SoftsignGrad(gert::InferShapeContext* context)
     const gert::Shape* gradients_shape = context->GetInputShape(0);
     if (gradients_shape == nullptr) {
         OP_LOGE_WITH_INVALID_INPUT("SoftsignGrad", "gradients");
+        return ge::GRAPH_FAILED;
+    }
+
+    const gert::Shape* features_shape = context->GetInputShape(1);
+    if (features_shape == nullptr) {
+        OP_LOGE("SoftsignGrad", "GetInputShape(1) returns nullptr");
+        return ge::GRAPH_FAILED;
+    }
+
+    // UnknownRank 家族惯例传播（标杆 sigmoid_grad 走公共 Ops::Base::InferShape4Elewise：
+    // 输入 UnknownRank 时输出置 (-2,)）：秩未知时无法比较 shape/判定 rank，直接传播。
+    // GE 流程在 shape 定值后重新推理编译，走下方正常校验链。
+    if (Ops::Base::IsUnknownRank(*gradients_shape) || Ops::Base::IsUnknownRank(*features_shape)) {
+        gert::Shape* output_shape = context->GetOutputShape(0);
+        if (output_shape == nullptr) {
+            OP_LOGE("SoftsignGrad", "GetOutputShape(0) returns nullptr");
+            return ge::GRAPH_FAILED;
+        }
+        Ops::Base::SetUnknownRank(*output_shape);
+        return ge::GRAPH_SUCCESS;
+    }
+
+    // 双输入 shape 相容校验与合并（动态图描述符语义）：未知维(-1)与已知维相容
+    // 并精化为已知值，仅拒绝已知维真冲突；输出取合并结果。运行时"shape 完全相同"
+    // 契约（README，不广播）由 tiling 层具体值三向全等校验兜底（运行时 -1 已定值）。
+    // 基线先验：canndev CheckTwoInputShapeSame（-1 通配/UnknownRank 放行，仅具体值
+    // 不等拒绝）+ 动态分支逐维取已知值精化输出；TF 图级 shape 推断同做未知维合并
+    // （"must have the same size and shape" 系 TF kernel 运行时校验，非描述符层义务）。
+    if (gradients_shape->GetDimNum() != features_shape->GetDimNum()) {
+        OP_LOGE("SoftsignGrad", "rank mismatch: gradients=%s, features=%s",
+                Ops::Base::ToString(*gradients_shape).c_str(), Ops::Base::ToString(*features_shape).c_str());
+        return ge::GRAPH_FAILED;
+    }
+    gert::Shape merged_shape = *gradients_shape;
+    for (size_t i = 0; i < merged_shape.GetDimNum(); ++i) {
+        const int64_t dim_g = (*gradients_shape)[i];
+        const int64_t dim_f = (*features_shape)[i];
+        if (dim_g == dim_f) {
+            continue;
+        }
+        if (dim_g == -1) {
+            merged_shape.SetDim(i, dim_f);
+            continue;
+        }
+        if (dim_f == -1) {
+            continue; // merged 已持有具体值 dim_g
+        }
+        OP_LOGE("SoftsignGrad", "shape conflict at dim %zu: gradients=%ld, features=%ld", i, dim_g, dim_f);
+        return ge::GRAPH_FAILED;
+    }
+
+    // rank ≤ 8：README/spec 0-8 维契约；TF 标杆 "We only handle up to Tensor::dims()
+    // up to 8"；A2/A3 基线 TBE RANK_LIMIT=8 框架级拦截。gert::Shape 上限 25，需显式拒绝。
+    constexpr size_t kMaxRank = 8;
+    if (gradients_shape->GetDimNum() > kMaxRank) {
+        OP_LOGE("SoftsignGrad", "rank=%zu exceeds supported 0-8 dims", gradients_shape->GetDimNum());
         return ge::GRAPH_FAILED;
     }
 
@@ -41,19 +99,18 @@ static ge::graphStatus InferShape4SoftsignGrad(gert::InferShapeContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    *output_shape = *gradients_shape;
+    *output_shape = merged_shape;
 
     OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(*output_shape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataType4SoftsignGrad(gert::InferDataTypeContext* context)
-{
-    auto input_dtype = context->GetInputDataType(0);
-    context->SetOutputDataType(0, input_dtype);
-    return ge::GRAPH_SUCCESS;
-}
+// InferDataType 注册唯一性（GEIR.01/1 修复）：仅经 op_graph/softsign_grad_graph_infer.cpp
+// 的 IMPL_OP(SoftsignGrad) 注册一次（家族惯例：softsign/relu6/celu_v2 同构——op_graph
+// 承载 InferDataType，op_host 仅 InferShape）；校验版实现已整体移入该文件。此前经
+// IMPL_OP_INFERSHAPE 链式注册的第二个实现与 op_graph 版双写同一槽位（注册表单槽），
+// 生效实现取决于库加载顺序——已从本文件删除以保证确定性。
 
-IMPL_OP_INFERSHAPE(SoftsignGrad).InferShape(InferShape4SoftsignGrad).InferDataType(InferDataType4SoftsignGrad);
+IMPL_OP_INFERSHAPE(SoftsignGrad).InferShape(InferShape4SoftsignGrad);
 
 } // namespace ops

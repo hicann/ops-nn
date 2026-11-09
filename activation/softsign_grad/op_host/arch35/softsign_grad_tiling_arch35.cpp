@@ -13,6 +13,7 @@
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
+#include "op_common/op_host/util/shape_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_util.h"
 #include "../../op_kernel/arch35/softsign_grad_tiling_data.h"
@@ -67,6 +68,33 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
                         Ops::Base::ToString(outputShape).c_str()),
                 return ge::GRAPH_FAILED);
 
+    // rank ≤ 8（tiling 门独立拦截，与 Host 推理门各司其职；README/spec 0-8 维契约，
+    // TF 标杆与 A2/A3 基线 TBE RANK_LIMIT=8 同限）
+    constexpr size_t kMaxRank = 8;
+    OP_CHECK_IF(gradientsShape.GetDimNum() > kMaxRank,
+                OP_LOGE(context, "SoftsignGrad: rank=%zu exceeds supported 0-8 dims", gradientsShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    // IsUnknownShape：任一维 -1 即返回 true（CANN 库实际语义，非"全维 -1"）。
+    // 到达 tiling 的含 -1 维 shape 说明框架尚未定值，无法规划切分，显式拒绝。
+    // 参照 TF "Dimension must be >= 0" + 基线 TBE 逐维域检查。
+    if (Ops::Base::IsUnknownShape(gradientsShape) || Ops::Base::IsUnknownShape(featuresShape)) {
+        OP_LOGE(context, "SoftsignGrad: shape with unknown dim (-1) reached tiling; "
+                         "shape must be resolved before tiling");
+        return ge::GRAPH_FAILED;
+    }
+
+    // 逐维非负校验（CODE.04 修复）：tiling 阶段 shape 必须已定值（全具体 ≥0）。
+    // 拦截：个别 -1 与正常维混合（偶数个 -1 乘积为正）、负维（-3 等）乘积为正、
+    // 以及 {0,-3} 等与合法空张量不可区分的组合。
+    // InferShape 侧不加此校验（-1 在推理阶段是合法占位，值域校验归 tiling 门）。
+    for (size_t i = 0; i < gradientsShape.GetDimNum(); ++i) {
+        OP_CHECK_IF(gradientsShape[i] < 0,
+                    OP_LOGE(context, "SoftsignGrad: invalid dimension %ld at axis %zu (must be >= 0 at tiling stage)",
+                            gradientsShape[i], i),
+                    return ge::GRAPH_FAILED);
+    }
+
     totalNum = gradientsShape.GetShapeSize();
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
@@ -82,6 +110,30 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     OP_CHECK_NULL_WITH_CONTEXT(context, featuresDescInfo);
     OP_CHECK_IF(featuresDescInfo->GetDataType() != dataType,
                 OP_LOGE(context, "SoftsignGrad: gradients and features dtype mismatch"), return ge::GRAPH_FAILED);
+
+    // 输出 dtype 域内且与输入一致（上板实测：complex128 输出产出错误结果、fp16 输出
+    // 设备 VEC_ERROR——越域元数据必须受控拒绝，不得进入执行）
+    auto outputDescInfo = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputDescInfo);
+    OP_CHECK_IF(supportedDtype.count(outputDescInfo->GetDataType()) == 0,
+                OP_LOGE(context, "SoftsignGrad: output dtype=%d not supported: only FP16/FP32/BF16",
+                        static_cast<int>(outputDescInfo->GetDataType())),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputDescInfo->GetDataType() != dataType,
+                OP_LOGE(context, "SoftsignGrad: output dtype=%d mismatch with gradients dtype=%d",
+                        static_cast<int>(outputDescInfo->GetDataType()), static_cast<int>(dataType)),
+                return ge::GRAPH_FAILED);
+
+    // format 三向 ND（README/spec ND-only 契约；家族先例 relu6_d_tiling 同款校验；
+    // 上板实测 FRACTAL_NZ 全链路静默接受并计算——越域排布必须拒绝）
+    const auto inputFormat = inputDesc->GetFormat().GetStorageFormat();
+    const auto featuresFormat = featuresDescInfo->GetFormat().GetStorageFormat();
+    const auto outputFormat = outputDescInfo->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(
+        inputFormat != ge::FORMAT_ND || featuresFormat != ge::FORMAT_ND || outputFormat != ge::FORMAT_ND,
+        OP_LOGE(context, "SoftsignGrad: format not supported (only ND): gradients=%d, features=%d, output=%d",
+                static_cast<int>(inputFormat), static_cast<int>(featuresFormat), static_cast<int>(outputFormat)),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -118,7 +170,26 @@ static ge::graphStatus SoftsignGradTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(memset_s(tiling, sizeof(SoftsignGradTilingData), 0, sizeof(SoftsignGradTilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(totalNum <= 0, OP_LOGE(context, "SoftsignGrad: totalNum=%ld, empty shape is not supported", totalNum),
+    // 空张量早退：totalNum==0 走家族惯例（celu/relu6），置零切分 + 单核 + 单缓冲 key，
+    // kernel 侧 Init 对全零 tiling 早退；外推自正常公式在 totalNum=0 处的极限值。
+    if (totalNum == 0) {
+        tiling->totalNum = 0;
+        tiling->blockFactor = 0;
+        tiling->ubFactor = 0;
+        context->SetBlockDim(1);
+        uint64_t bufferModeKey = 0U;
+        ASCENDC_TPL_SEL_PARAM(context, bufferModeKey);
+        return ge::GRAPH_SUCCESS;
+    }
+    // totalNum<0 到达条件：维度乘积 int64 溢出（GetShapeSize 以 __builtin_mul_overflow
+    // 检测并返回 INT64_MIN 哨兵）或未知维/未知秩标记（-1/-2 使乘积为负）——两者均为
+    // 非法元数据，显式拒绝（CODE.05/06：文案须描述实际条件，不得与已支持的空 shape
+    // 场景混淆；空 shape 在上一分支已按受支持路径早退）。
+    OP_CHECK_IF(totalNum < 0,
+                OP_LOGE(context,
+                        "SoftsignGrad: invalid shape metadata: totalNum=%ld (negative shape-size product: "
+                        "dimension multiplication overflow or unknown-dim/-rank markers in static input)",
+                        totalNum),
                 return ge::GRAPH_FAILED);
 
     tiling->totalNum = totalNum;

@@ -30,7 +30,7 @@ namespace ge {
 * output: A tensor with the same shape and dtype as gradients.
 
 * @par Third-party framework compatibility
-* Compatible with the TensorFlow/PyTorch Softsign backward operation.
+ * Compatible with the TensorFlow Softsign backward operation.
 */
 REG_OP(SoftsignGrad)
     .INPUT(gradients, TensorType({FloatingDataType, DT_BF16}))
