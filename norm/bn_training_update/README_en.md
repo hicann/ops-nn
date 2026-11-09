@@ -28,7 +28,7 @@ English | [简体中文](./README.md)
   $$
 
   $$
-  batch\_variance = {square\_sum\over num} - batch\_mean^2
+  batch\_variance = \max\left({square\_sum\over num} - batch\_mean^2, 0\right)
   $$
 
   $$
@@ -43,7 +43,7 @@ English | [简体中文](./README.md)
   variance = factor * {num\over num - 1} * batch\_variance + (1 - factor) * variance
   $$
 
-  When num=1, the Bessel correction term is 0.
+  When num=1, the Bessel correction term is 0. Statistics are computed by multiplying by the FP32 reciprocal. Negative variance is clamped to zero before normalization, the running variance update, and the batch_variance output, matching the 910B calculation.
 
 ## Parameters
 
@@ -175,7 +175,7 @@ English | [简体中文](./README.md)
 - x supports FLOAT16/FLOAT32/BFLOAT16; sum/square_sum/scale/offset/mean/variance are always FLOAT32 in ND format, with shape [C], and the number of elements must equal the channel dimension C of x.
 - The value range of factor is [0.0, 1.0], and epsilon must be greater than 0; when the value is out of range, the operator rejects execution on the host side.
 - The empty tensor semantics align with TensorFlow FusedBatchNormV3: when any non-channel dimension is 0 and C>0, the input is valid — y is empty, the updated mean/variance are all NaN, and batch_mean/batch_variance are all 0; C=0 (empty channel vector) is not supported, and the host side rejects execution.
-- The normalization denominator is sqrt(|batch_variance + epsilon|), and batch_variance is not clamped to non-negative values; when the batch_variance output is a tiny negative value caused by cancellation errors, it is output as is. The fp16 output y is saturated to ±65504, with NaN set to 0, before being written back.
+- The normalization denominator is sqrt(batch_variance + epsilon), with batch_variance first clamped to a nonnegative value. The clamped variance is used for normalization, the running variance update, and the batch_variance output. y is converted directly to the output type, without additional FP16 saturation or replacement of NaN with zero.
 
 **Other products (<term>Atlas A2 products</term>, <term>Atlas A3 products</term>, <term>Atlas training products</term>, <term>Atlas inference products</term>, <term>Atlas 200I/500 A2 inference products</term>):**
 

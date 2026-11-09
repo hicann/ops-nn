@@ -18,9 +18,10 @@
  *   x{2,3,2,2}、sum/square_sum/scale/offset/mean/variance{3}，factor=0.25、epsilon=1e-3。
  *
  * CPU Golden 语义（与 docs spec/golden 一致）：
- *   batch_mean     = sum / M                       （M = numel(x) / C）
- *   batch_variance = square_sum / M - batch_mean^2
- *   multiplier     = scale / sqrt(|batch_variance + epsilon|)
+ *   num_rec        = float32(1 / M)                （M = numel(x) / C）
+ *   batch_mean     = sum * num_rec
+ *   batch_variance = max(square_sum * num_rec - batch_mean^2, 0)
+ *   multiplier     = scale / sqrt(batch_variance + epsilon)
  *   addend         = offset - multiplier * batch_mean
  *   y              = multiplier * x + addend
  *   mean_out       = factor * batch_mean + (1 - factor) * mean_old
@@ -130,10 +131,11 @@ Expected ComputeExpected(const Inputs& inputs)
     std::vector<float> addend(channels);
 
     for (size_t channel = 0; channel < channels; ++channel) {
-        const float batchMean = inputs.sum[channel] / sampleCount;
-        const float rawVariance = inputs.squareSum[channel] / sampleCount - batchMean * batchMean;
-        const float batchVariance = rawVariance;
-        multiplier[channel] = inputs.scale[channel] / std::sqrt(std::abs(batchVariance + kEpsilon));
+        const float numRec = 1.0F / sampleCount;
+        const float batchMean = inputs.sum[channel] * numRec;
+        const float rawVariance = inputs.squareSum[channel] * numRec - batchMean * batchMean;
+        const float batchVariance = std::max(rawVariance, 0.0F);
+        multiplier[channel] = inputs.scale[channel] / std::sqrt(batchVariance + kEpsilon);
         addend[channel] = inputs.offset[channel] - multiplier[channel] * batchMean;
         expected.batchMean[channel] = batchMean;
         expected.batchVariance[channel] = batchVariance;

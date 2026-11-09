@@ -25,8 +25,9 @@
  *    3 组 rank-4 具体 Shape 验证未知 Rank 图在运行时解析为合法 4D 输入的链路，
  *    该约束冲突已由转测规则所有者确认。
  *
- * CPU Golden 与静态示例一致：batch_mean=sum/M；batch_variance=square_sum/M-
- * batch_mean^2；y=multiplier*x+addend；mean/variance 按 factor 与 Bessel 修正更新。
+ * CPU Golden 与静态示例一致：num_rec=float32(1/M)；batch_mean=sum*num_rec；
+ * batch_variance=max(square_sum*num_rec-batch_mean^2, 0)；
+ * y=multiplier*x+addend；mean/variance 按 factor 与 Bessel 修正更新。
  * 每组用例校验全部 5 个输出的 Shape、dtype 和逐元素数值。
  */
 
@@ -142,10 +143,11 @@ Expected ComputeExpected(const std::vector<int64_t>& xShape, const Inputs& input
     std::vector<float> multiplier(channels);
     std::vector<float> addend(channels);
     for (size_t channel = 0; channel < channels; ++channel) {
-        const float batchMean = inputs.sum[channel] / sampleCount;
-        const float rawVariance = inputs.squareSum[channel] / sampleCount - batchMean * batchMean;
-        const float batchVariance = rawVariance;
-        multiplier[channel] = inputs.scale[channel] / std::sqrt(std::abs(batchVariance + kEpsilon));
+        const float numRec = 1.0F / sampleCount;
+        const float batchMean = inputs.sum[channel] * numRec;
+        const float rawVariance = inputs.squareSum[channel] * numRec - batchMean * batchMean;
+        const float batchVariance = std::max(rawVariance, 0.0F);
+        multiplier[channel] = inputs.scale[channel] / std::sqrt(batchVariance + kEpsilon);
         addend[channel] = inputs.offset[channel] - multiplier[channel] * batchMean;
         expected.batchMean[channel] = batchMean;
         expected.batchVariance[channel] = batchVariance;

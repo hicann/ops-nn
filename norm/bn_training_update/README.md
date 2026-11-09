@@ -26,7 +26,7 @@
   $$
 
   $$
-  batch\_variance = {square\_sum\over num} - batch\_mean^2
+  batch\_variance = \max\left({square\_sum\over num} - batch\_mean^2, 0\right)
   $$
 
   $$
@@ -41,7 +41,7 @@
   variance = factor * {num\over num - 1} * batch\_variance + (1 - factor) * variance
   $$
 
-  其中num=1时Bessel修正项取0。
+  其中num=1时Bessel修正项取0。统计量通过乘以FP32倒数计算；负方差在归一化、running variance更新和batch_variance输出之前截断为0，与910B计算逻辑对齐。
 
 ## 参数说明
 
@@ -173,7 +173,7 @@
 - x支持FLOAT16/FLOAT32/BFLOAT16；sum/square_sum/scale/offset/mean/variance恒为FLOAT32、ND格式，shape为[C]，元素数必须等于x的通道维C。
 - factor取值范围为[0.0, 1.0]，epsilon必须大于0；越界时算子在host侧拒绝执行。
 - 空tensor语义与TensorFlow FusedBatchNormV3对齐：任一非通道维为0且C>0时合法——y为空、更新后的mean/variance全为NaN、batch_mean/batch_variance全为0；C=0（空通道向量）不支持，host侧拒绝执行。
-- 归一化分母为sqrt(|batch_variance + epsilon|)，batch_variance不做非负钳制；batch_variance输出为消减误差产生的微小负值时按原值输出。fp16输出的y饱和到±65504、NaN置0后写回。
+- 归一化分母为sqrt(batch_variance + epsilon)，batch_variance先截断到非负值；截断后的值用于归一化、running variance更新和batch_variance输出。y按计算结果直接转换为输出类型，不额外执行FP16饱和或NaN清零。
 
 **其余产品（<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>）：**
 

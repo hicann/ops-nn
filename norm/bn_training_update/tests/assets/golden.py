@@ -12,11 +12,12 @@
 
 """BNTrainingUpdate kernel/GEIR golden in the TestSpec multi-path format.
 
-Numerical contract (official tbetoolkits golden_funcs for bn_training_update):
+Numerical contract (Ascend910B dynamic bn_training_update):
 
-    batch_mean[c]     = sum[c] / num
-    batch_variance[c] = square_sum[c] / num - batch_mean[c] ** 2        (raw, no clamp)
-    multiplier[c]     = scale[c] / sqrt(|batch_variance[c] + epsilon|)
+    num_rec           = 1 / num
+    batch_mean[c]     = sum[c] * num_rec
+    batch_variance[c] = max(square_sum[c] * num_rec - batch_mean[c] ** 2, 0)
+    multiplier[c]     = scale[c] / sqrt(batch_variance[c] + epsilon)
     addend[c]         = offset[c] - multiplier[c] * batch_mean[c]
     y                 = multiplier[c] * x + addend[c]
     mean[c]           = factor * batch_mean[c] + (1 - factor) * mean_old[c]
@@ -24,15 +25,13 @@ Numerical contract (official tbetoolkits golden_funcs for bn_training_update):
                           + (1 - factor) * variance_old[c]
 
 The Bessel factor ``num / (num - 1)`` is replaced by 0 when ``num == 1``.
-``batch_variance`` is the raw biased variance (cancellation may leave tiny
-negative values; they are NOT clamped, and the denominator takes the absolute
-value of ``batch_variance + epsilon``). For fp16 x the y output is clamped to
-+-65504 and NaN is replaced by 0 before the cast back to fp16; fp32/bf16
-outputs are not clamped.
-The empty-tensor semantics follow the TF-aligned contract: when any dimension
-(including C) is zero the operator returns empty outputs without computing.
-The CPU true-value path lifts fp16/bf16 to fp32 and casts ``y`` back to the
-input dtype, mirroring the arch35 kernel's float32 arithmetic chain.
+``batch_variance`` is the biased variance clamped to zero before computing y,
+updating running variance, and returning batch statistics. The denominator
+does not take an absolute value. The y result is cast directly to x's dtype,
+without explicit saturation or NaN replacement. For arch35's empty-batch
+extension, y is empty, running statistics are NaN and batch statistics are
+zero. C == 0 is rejected. The CPU reference normally uses fp32 arithmetic,
+including the rounded reciprocal multiplication. Promote retains fp64 arithmetic.
 """
 
 import numpy as np
@@ -96,26 +95,27 @@ def golden(
     epsilon=None,
     **kwargs,
 ):
-    """Compute BNTrainingUpdate on the CPU with numpy float32 chain."""
+    """Compute in FP32, retaining the higher precision supplied by Promote."""
     if factor is None or epsilon is None:
         raise ValueError("factor/epsilon attributes are required")
     x = np.asarray(x)
-    sum = np.asarray(sum, dtype=np.float32)
-    square_sum = np.asarray(square_sum, dtype=np.float32)
-    scale = np.asarray(scale, dtype=np.float32)
-    offset = np.asarray(offset, dtype=np.float32)
-    mean = np.asarray(mean, dtype=np.float32)
-    variance = np.asarray(variance, dtype=np.float32)
+    promoted = kwargs.get("golden_mode") == "Promote"
+    work_dtype = np.float64 if promoted else np.float32
+    sum = np.asarray(sum, dtype=work_dtype)
+    square_sum = np.asarray(square_sum, dtype=work_dtype)
+    scale = np.asarray(scale, dtype=work_dtype)
+    offset = np.asarray(offset, dtype=work_dtype)
+    mean = np.asarray(mean, dtype=work_dtype)
+    variance = np.asarray(variance, dtype=work_dtype)
 
     channel_count = int(scale.size)
+    if channel_count == 0:
+        raise ValueError("C must be greater than zero")
     if x.size == 0:
-        y = np.zeros(x.shape, dtype=x.dtype)
-        if channel_count == 0:
-            empty = np.zeros((0,), dtype=np.float32)
-            return [y, empty, empty, empty, empty]
-        nan_stats = np.full((channel_count,), np.nan, dtype=np.float32)
-        zero_stats = np.zeros((channel_count,), dtype=np.float32)
-        return [y, nan_stats, nan_stats, zero_stats, zero_stats]
+        y = np.empty(x.shape, dtype=x.dtype)
+        nan_stats = np.full((channel_count,), np.nan, dtype=work_dtype)
+        zero_stats = np.zeros((channel_count,), dtype=work_dtype)
+        return [y, nan_stats, nan_stats.copy(), zero_stats, zero_stats.copy()]
 
     axis = _channel_axis(x, channel_count, kwargs)
     channel_shape = [1] * x.ndim
@@ -123,32 +123,84 @@ def golden(
     channel_shape = tuple(channel_shape)
     sample_count = x.size // channel_count
 
-    x32 = x.astype(np.float32)
-    batch_mean = sum / np.float32(sample_count)
-    batch_variance = square_sum / np.float32(sample_count) - batch_mean * batch_mean
+    num_rec = work_dtype(1.0 / sample_count)
+    batch_mean = sum * num_rec
+    batch_variance = square_sum * num_rec - batch_mean * batch_mean
+    batch_variance = np.maximum(batch_variance, work_dtype(0.0))
 
     scale_b = scale.reshape(channel_shape)
     offset_b = offset.reshape(channel_shape)
     mean_b = batch_mean.reshape(channel_shape)
     variance_b = batch_variance.reshape(channel_shape)
-    multiplier = scale_b / np.sqrt(np.abs(variance_b + np.float32(epsilon)))
+    multiplier = scale_b / np.sqrt(variance_b + work_dtype(np.float32(epsilon)))
     addend = offset_b - multiplier * mean_b
-    y32 = multiplier * x32 + addend
-    if x.dtype == np.float16:
-        y = np.clip(y32, -65504.0, 65504.0)
-        y = np.nan_to_num(y, nan=0.0).astype(np.float16)
-    else:
-        y = y32.astype(x.dtype)
+    # Bound temporary storage for large batches, including Promote's FP64 work arrays.
+    y = np.empty_like(x)
+    with np.nditer(
+        [x, np.broadcast_to(multiplier, x.shape), np.broadcast_to(addend, x.shape), y],
+        flags=["external_loop", "buffered"],
+        op_flags=[["readonly"], ["readonly"], ["readonly"], ["writeonly"]],
+        op_dtypes=[work_dtype, work_dtype, work_dtype, x.dtype],
+        casting="unsafe",
+        buffersize=1 << 20,
+    ) as blocks:
+        for x_block, multiplier_block, addend_block, y_block in blocks:
+            y_block[...] = multiplier_block * x_block + addend_block
 
     bessel = 0.0 if sample_count == 1 else sample_count / (sample_count - 1)
-    unbiased = batch_variance * np.float32(bessel)
-    factor32 = np.float32(factor)
-    reverse = np.float32(1.0) - factor32
+    unbiased = batch_variance * work_dtype(bessel)
+    factor32 = work_dtype(np.float32(factor))
+    reverse = work_dtype(1.0) - factor32
     mean_out = batch_mean * factor32 + mean * reverse
     variance_out = unbiased * factor32 + variance * reverse
     return [y, mean_out, variance_out, batch_mean, batch_variance]
 
 
+class BnTrainingUpdateThirdParty:
+    def __init__(self, factor, epsilon, **kwargs):
+        self.factor = np.float32(factor).item()
+        self.epsilon = np.float32(epsilon).item()
+        formats = kwargs.get("input_ori_formats") or kwargs.get("input_formats") or ()
+        self.axis = 3 if formats and str(formats[0]).upper() == "NHWC" else 1
+
+    def __call__(self, x, sum, square_sum, scale, offset, mean, variance):
+        import torch
+
+        channels = scale.numel()
+        if channels == 0:
+            raise ValueError("C must be greater than zero")
+        if x.numel() == 0:
+            zeros = torch.zeros_like(scale)
+            stats = torch.full_like(scale, float("nan"))
+            return [torch.empty_like(x), stats, stats.clone(), zeros, zeros.clone()]
+        count = x.numel() // channels
+        promote_stats = sum.dtype == torch.float64
+        num_rec = (np.float64 if promote_stats else np.float32)(1.0 / count).item()
+        batch_mean = sum * num_rec
+        batch_variance = torch.clamp_min(
+            square_sum * num_rec - batch_mean * batch_mean, 0.0
+        )
+        shape = [1] * x.dim()
+        shape[self.axis] = channels
+        multiplier = scale / torch.sqrt(batch_variance + self.epsilon)
+        addend = offset - multiplier * batch_mean
+        # Keep the promoted arithmetic width. In the regular path this is
+        # float32 for fp16/bf16/float32 inputs; Promote may provide float64.
+        y = x.to(dtype=multiplier.dtype) * multiplier.reshape(shape) + addend.reshape(
+            shape
+        )
+        bessel = (np.float64 if promote_stats else np.float32)(
+            0.0 if count == 1 else count / (count - 1)
+        ).item()
+        reverse = (np.float64 if promote_stats else np.float32)(
+            1.0 - self.factor
+        ).item()
+        mean_out = batch_mean * self.factor + mean * reverse
+        variance_out = (batch_variance * bessel) * self.factor + variance * reverse
+        return [y.to(x.dtype), mean_out, variance_out, batch_mean, batch_variance]
+
+
 class BnTrainingUpdateTestSpec:
     golden = staticmethod(golden)
+    third_party = {"torch": BnTrainingUpdateThirdParty}
     tolerance = TOLERANCE

@@ -70,13 +70,13 @@ static constexpr AscendC::Reg::DivSpecificMode kBnDivMode = {AscendC::Reg::MaskM
                                                              AscendC::DivAlgo::PRECISION_0ULP_FTZ_TRUE};
 
 // sqrt 必须正确舍入（0ULP）：native vsqrt 在 1-2^-24 等中点处向上偏 1 ulp，
-// 会翻转极值域（scale=FP32_MAX）下 multiplier 的溢出行为，与官方 golden_funcs
+// 会翻转极值域（scale=FP32_MAX）下 multiplier 的溢出行为，与 FP32 golden
 // （numpy 正确舍入）产生 NaN/Inf 类别差（见 kernel_case_0026）。
 static constexpr AscendC::Reg::SqrtSpecificMode kBnSqrtMode = {AscendC::Reg::MaskMergeMode::ZEROING, false,
                                                                AscendC::SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
 
 __simd_vf__ inline void BatchMomentsVF(__ubuf__ float* sumAddr, __ubuf__ float* squareSumAddr, uint32_t count,
-                                       float invM, uint32_t oneRepeatSize, uint16_t repeatTimes)
+                                       float numRec, uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<float> sumReg, squareReg, meanReg;
     AscendC::Reg::RegTensor<float> divReg, meanSquareReg, varianceReg;
@@ -88,22 +88,26 @@ __simd_vf__ inline void BatchMomentsVF(__ubuf__ float* sumAddr, __ubuf__ float* 
         mask = AscendC::Reg::UpdateMask<float>(remaining);
         AscendC::Reg::LoadAlign(sumReg, sumAddr, addr);
         AscendC::Reg::LoadAlign(squareReg, squareSumAddr, addr);
-        AscendC::Reg::Muls(meanReg, sumReg, invM, mask);
-        AscendC::Reg::Muls(divReg, squareReg, invM, mask);
+        // Match Ascend910B: multiply by the rounded FP32 reciprocal, then clamp variance.
+        AscendC::Reg::Muls(meanReg, sumReg, numRec, mask);
+        AscendC::Reg::Muls(divReg, squareReg, numRec, mask);
         AscendC::Reg::Mul(meanSquareReg, meanReg, meanReg, mask);
         AscendC::Reg::Sub(varianceReg, divReg, meanSquareReg, mask);
+        AscendC::Reg::Maxs(varianceReg, varianceReg, 0.0f, mask);
         AscendC::Reg::StoreAlign(sumAddr, meanReg, addr, mask);
         AscendC::Reg::StoreAlign(squareSumAddr, varianceReg, addr, mask);
     }
 }
 
 __simd_vf__ inline void AffineCoeffVF(__ubuf__ float* multiplierAddr, __ubuf__ float* addendAddr,
-                                      __ubuf__ float* batchMeanAddr, __ubuf__ float* batchVarianceAddr, uint32_t count,
-                                      float epsilon, uint32_t oneRepeatSize, uint16_t repeatTimes)
+                                      __ubuf__ float* batchMeanAddr, __ubuf__ float* batchVarianceAddr,
+                                      __ubuf__ float* offsetAddr, uint32_t count, float epsilon, uint32_t oneRepeatSize,
+                                      uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<float> scaleReg, offsetReg, meanReg, varianceReg;
     AscendC::Reg::RegTensor<float> denomReg, multiplierReg, addendReg, tmpReg;
-    AscendC::Reg::MaskReg mask;
+    AscendC::Reg::RegTensor<float> squareResidualReg, quotientResidualReg, correctionReg, negativeReg;
+    AscendC::Reg::MaskReg mask, correctionMask;
     AscendC::Reg::AddrReg addr;
     uint32_t remaining = count;
     for (uint16_t i = 0; i < repeatTimes; ++i) {
@@ -114,20 +118,80 @@ __simd_vf__ inline void AffineCoeffVF(__ubuf__ float* multiplierAddr, __ubuf__ f
         AscendC::Reg::LoadAlign(meanReg, batchMeanAddr, addr);
         AscendC::Reg::LoadAlign(varianceReg, batchVarianceAddr, addr);
         AscendC::Reg::Adds(denomReg, varianceReg, epsilon, mask);
-        AscendC::Reg::Abs(denomReg, denomReg, mask);
+        AscendC::Reg::Adds(squareResidualReg, denomReg, 0.0f, mask);
         AscendC::Reg::Sqrt<float, &kBnSqrtMode>(denomReg, denomReg, mask);
         AscendC::Reg::Div<float, &kBnDivMode>(multiplierReg, scaleReg, denomReg, mask);
+        // Correct the coefficient's two rounding steps before cancellation in y.
+        // For s=sqrt(d), m=scale/s, FMA gives r=d-s*s and e=scale-m*s.
+        // The first-order correction e/s - m*r/(2*d) rounds scale/sqrt(d) once.
+        AscendC::Reg::Muls(negativeReg, denomReg, -1.0f, mask);
+        AscendC::Reg::MulAddDst(squareResidualReg, negativeReg, denomReg, mask);
+        AscendC::Reg::Adds(quotientResidualReg, scaleReg, 0.0f, mask);
+        AscendC::Reg::Muls(negativeReg, multiplierReg, -1.0f, mask);
+        AscendC::Reg::MulAddDst(quotientResidualReg, negativeReg, denomReg, mask);
+        AscendC::Reg::Div<float, &kBnDivMode>(quotientResidualReg, quotientResidualReg, denomReg, mask);
+        AscendC::Reg::Adds(tmpReg, varianceReg, epsilon, mask);
+        AscendC::Reg::Div<float, &kBnDivMode>(correctionReg, squareResidualReg, tmpReg, mask);
+        AscendC::Reg::Muls(correctionReg, correctionReg, -0.5f, mask);
+        AscendC::Reg::MulAddDst(quotientResidualReg, multiplierReg, correctionReg, mask);
+        AscendC::Reg::Add(correctionReg, multiplierReg, quotientResidualReg, mask);
+        // Preserve the original IEEE result on overflow/NaN lanes.
+        AscendC::Reg::Abs(tmpReg, correctionReg, mask);
+        AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(correctionMask, tmpReg, __builtin_inff(), mask);
+        // Keep the third party's FP32 sqrt/div rounding for large coefficients:
+        // an extra one-ULP correction can flip y's overflow classification.
+        AscendC::Reg::Abs(tmpReg, multiplierReg, mask);
+        AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(correctionMask, tmpReg, 0x1p64f, correctionMask);
+        AscendC::Reg::Select<float>(multiplierReg, correctionReg, multiplierReg, correctionMask);
         AscendC::Reg::Mul(tmpReg, multiplierReg, meanReg, mask);
         AscendC::Reg::Sub(addendReg, offsetReg, tmpReg, mask);
         AscendC::Reg::StoreAlign(multiplierAddr, multiplierReg, addr, mask);
         AscendC::Reg::StoreAlign(addendAddr, addendReg, addr, mask);
+        AscendC::Reg::StoreAlign(offsetAddr, offsetReg, addr, mask);
     }
 }
 
-__simd_vf__ inline void NormalizeVF(__ubuf__ float* yAddr, __ubuf__ float* multiplierAddr, __ubuf__ float* addendAddr,
-                                    uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+// Use the centered form when the affine terms cancel and both paths are finite.
+// Otherwise subtracting a much smaller mean from x adds unnecessary rounding.
+// Retain the original FP32 overflow and NaN behavior for extreme inputs.
+__simd_callee__ inline void CenteredNormalize(AscendC::Reg::RegTensor<float>& yReg,
+                                              AscendC::Reg::RegTensor<float>& xReg,
+                                              AscendC::Reg::RegTensor<float>& multiplierReg,
+                                              AscendC::Reg::RegTensor<float>& meanReg,
+                                              AscendC::Reg::RegTensor<float>& offsetReg,
+                                              AscendC::Reg::RegTensor<float>& addendReg, AscendC::Reg::MaskReg& mask)
 {
-    AscendC::Reg::RegTensor<float> xReg, multiplierReg, addendReg, yReg;
+    AscendC::Reg::RegTensor<float> centeredReg, tmpReg, addendAbsReg;
+    AscendC::Reg::MaskReg centeredMask, exactCancellationMask;
+    AscendC::Reg::Sub(centeredReg, xReg, meanReg, mask);
+    AscendC::Reg::Mul(centeredReg, centeredReg, multiplierReg, mask);
+    AscendC::Reg::Add(centeredReg, centeredReg, offsetReg, mask);
+    AscendC::Reg::Abs(tmpReg, multiplierReg, mask);
+    AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(centeredMask, tmpReg, 0x1p64f, mask);
+    AscendC::Reg::Abs(tmpReg, yReg, mask);
+    AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(centeredMask, tmpReg, __builtin_inff(), centeredMask);
+    AscendC::Reg::Abs(tmpReg, centeredReg, mask);
+    AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(centeredMask, tmpReg, __builtin_inff(), centeredMask);
+    AscendC::Reg::Abs(tmpReg, yReg, mask);
+    AscendC::Reg::Abs(addendAbsReg, addendReg, mask);
+    AscendC::Reg::Compare<float, AscendC::CMPMODE::LT>(centeredMask, tmpReg, addendAbsReg, centeredMask);
+    // If x == mean and offset is lost even in FP64's affine addend, retain
+    // affine cancellation. Centering would restore a discarded offset.
+    // 2^-54 is a conservative lower bound on half an FP64 ULP of the addend.
+    AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(exactCancellationMask, xReg, meanReg, centeredMask);
+    AscendC::Reg::Muls(tmpReg, addendAbsReg, 0x1p-54f, mask);
+    AscendC::Reg::Abs(addendAbsReg, offsetReg, mask);
+    AscendC::Reg::Compare<float, AscendC::CMPMODE::LT>(exactCancellationMask, addendAbsReg, tmpReg,
+                                                       exactCancellationMask);
+    AscendC::Reg::Select<float>(centeredReg, yReg, centeredReg, exactCancellationMask);
+    AscendC::Reg::Select<float>(yReg, centeredReg, yReg, centeredMask);
+}
+
+__simd_vf__ inline void NormalizeVF(__ubuf__ float* yAddr, __ubuf__ float* multiplierAddr, __ubuf__ float* addendAddr,
+                                    __ubuf__ float* batchMeanAddr, __ubuf__ float* offsetAddr, uint32_t count,
+                                    uint32_t oneRepeatSize, uint16_t repeatTimes)
+{
+    AscendC::Reg::RegTensor<float> xReg, multiplierReg, addendReg, yReg, meanReg, offsetReg;
     AscendC::Reg::MaskReg mask;
     AscendC::Reg::AddrReg addr;
     uint32_t remaining = count;
@@ -137,8 +201,11 @@ __simd_vf__ inline void NormalizeVF(__ubuf__ float* yAddr, __ubuf__ float* multi
         AscendC::Reg::LoadAlign(xReg, yAddr, addr);
         AscendC::Reg::LoadAlign(multiplierReg, multiplierAddr, addr);
         AscendC::Reg::LoadAlign(addendReg, addendAddr, addr);
+        AscendC::Reg::LoadAlign(meanReg, batchMeanAddr, addr);
+        AscendC::Reg::LoadAlign(offsetReg, offsetAddr, addr);
         AscendC::Reg::Mul(yReg, multiplierReg, xReg, mask);
         AscendC::Reg::Add(yReg, yReg, addendReg, mask);
+        CenteredNormalize(yReg, xReg, multiplierReg, meanReg, offsetReg, addendReg, mask);
         AscendC::Reg::StoreAlign(yAddr, yReg, addr, mask);
     }
 }
@@ -153,12 +220,13 @@ __simd_vf__ inline void NormalizeVF(__ubuf__ float* yAddr, __ubuf__ float* multi
 constexpr int16_t kGatherFixedPointBits = 24;
 
 __simd_vf__ inline void NormalizeGatherVF(__ubuf__ float* yAddr, __ubuf__ float* multiplierAddr,
-                                          __ubuf__ float* addendAddr, uint32_t blockCount, uint32_t blockChannels,
+                                          __ubuf__ float* addendAddr, __ubuf__ float* batchMeanAddr,
+                                          __ubuf__ float* offsetAddr, uint32_t blockCount, uint32_t blockChannels,
                                           uint32_t blockXStride, uint32_t blockCoefStride, uint32_t totalChannels,
                                           uint32_t innerStride, int32_t gatherScale, uint32_t oneRepeatSize)
 {
     AscendC::Reg::RegTensor<float> xReg, multReg, addReg;
-    AscendC::Reg::RegTensor<float> multBReg, addBReg, yReg;
+    AscendC::Reg::RegTensor<float> multBReg, addBReg, yReg, meanReg, offsetReg, meanBReg, offsetBReg;
     AscendC::Reg::RegTensor<int32_t> idxReg, baseIdxReg;
     AscendC::Reg::MaskReg mask;
     uint32_t full = oneRepeatSize;
@@ -175,9 +243,13 @@ __simd_vf__ inline void NormalizeGatherVF(__ubuf__ float* yAddr, __ubuf__ float*
         __ubuf__ float* xBase = yAddr + b * blockXStride;
         AscendC::Reg::LoadAlign(multReg, multPtr);
         AscendC::Reg::LoadAlign(addReg, addPtr);
+        AscendC::Reg::LoadAlign(meanReg, batchMeanAddr + coefAligned);
+        AscendC::Reg::LoadAlign(offsetReg, offsetAddr + coefAligned);
         AscendC::Reg::Adds(idxReg, baseIdxReg, coefOffset, idxMask);
         AscendC::Reg::Gather<float>(multBReg, multReg, (AscendC::Reg::RegTensor<uint32_t>&)idxReg);
         AscendC::Reg::Gather<float>(addBReg, addReg, (AscendC::Reg::RegTensor<uint32_t>&)idxReg);
+        AscendC::Reg::Gather<float>(meanBReg, meanReg, (AscendC::Reg::RegTensor<uint32_t>&)idxReg);
+        AscendC::Reg::Gather<float>(offsetBReg, offsetReg, (AscendC::Reg::RegTensor<uint32_t>&)idxReg);
         // 尾块通道数收敛：最后一个不满通道块按实际通道数截断 blockElems，
         // 防止 StoreAlign/LoadAlign 越过 tile 有效数据末端（RB-3）
         const uint32_t channelsThisBlock = (blockCoefStride > 0 && b + 1 == blockCount) ?
@@ -193,29 +265,9 @@ __simd_vf__ inline void NormalizeGatherVF(__ubuf__ float* yAddr, __ubuf__ float*
             AscendC::Reg::LoadAlign(xReg, xPtr);
             AscendC::Reg::Mul(yReg, multBReg, xReg, mask);
             AscendC::Reg::Add(yReg, yReg, addBReg, mask);
+            CenteredNormalize(yReg, xReg, multBReg, meanBReg, offsetBReg, addBReg, mask);
             AscendC::Reg::StoreAlign(xPtr, yReg, mask);
         }
-    }
-}
-
-__simd_vf__ inline void Fp16SanitizeVF(__ubuf__ float* yAddr, uint32_t count, uint32_t oneRepeatSize,
-                                       uint16_t repeatTimes)
-{
-    AscendC::Reg::RegTensor<float> yReg, zeroReg;
-    AscendC::Reg::MaskReg mask, nanMask;
-    AscendC::Reg::AddrReg addr;
-    uint32_t remaining = count;
-    constexpr float kFp16Max = 65504.0f;
-    for (uint16_t i = 0; i < repeatTimes; ++i) {
-        addr = AscendC::Reg::CreateAddrReg<float>(i, oneRepeatSize);
-        mask = AscendC::Reg::UpdateMask<float>(remaining);
-        AscendC::Reg::LoadAlign(yReg, yAddr, addr);
-        AscendC::Reg::Compare<float, AscendC::CMPMODE::NE>(nanMask, yReg, yReg, mask);
-        AscendC::Reg::Duplicate(zeroReg, 0.0f, mask);
-        AscendC::Reg::Select<float>(yReg, zeroReg, yReg, nanMask);
-        AscendC::Reg::Mins(yReg, yReg, kFp16Max, mask);
-        AscendC::Reg::Maxs(yReg, yReg, -kFp16Max, mask);
-        AscendC::Reg::StoreAlign(yAddr, yReg, addr, mask);
     }
 }
 
@@ -608,11 +660,13 @@ private:
             AscendC::CeilDivision(static_cast<uint32_t>(count), oneRepeatSize));
         const uint16_t compactRepeatTimes = static_cast<uint16_t>(
             AscendC::CeilDivision(static_cast<uint32_t>(statCount), oneRepeatSize));
-        const float invM = 1.0f / static_cast<float>(td_->sampleCount);
+        const float numRec = 1.0f / static_cast<float>(td_->sampleCount);
         const float bessel = td_->sampleCount == 1 ?
                                  0.0f :
                                  static_cast<float>(td_->sampleCount) / static_cast<float>(td_->sampleCount - 1);
         const float factorReverse = 1.0f - td_->factor;
+        // buf_[0] is free between the input and output dtype conversions.
+        __ubuf__ float* b0 = (__ubuf__ float*)buf_[0].template Get<float>().GetPhyAddr();
         __ubuf__ float* b1 = (__ubuf__ float*)buf_[1].template Get<float>().GetPhyAddr();
         __ubuf__ float* b2 = (__ubuf__ float*)buf_[2].template Get<float>().GetPhyAddr();
         __ubuf__ float* b3 = (__ubuf__ float*)buf_[3].template Get<float>().GetPhyAddr();
@@ -621,20 +675,18 @@ private:
         __ubuf__ float* b6 = (__ubuf__ float*)buf_[6].template Get<float>().GetPhyAddr();
         __ubuf__ float* b7 = (__ubuf__ float*)buf_[7].template Get<float>().GetPhyAddr();
         if (mode == StatMode::GATHER) {
-            asc_vf_call<BatchMomentsVF>(b6 + compactOffset, b7 + compactOffset, static_cast<uint32_t>(statCount), invM,
-                                        oneRepeatSize, compactRepeatTimes);
-            asc_vf_call<AffineCoeffVF>(b4, b5, b6 + compactOffset, b7 + compactOffset, static_cast<uint32_t>(statCount),
-                                       td_->epsilon, oneRepeatSize, compactRepeatTimes);
+            asc_vf_call<BatchMomentsVF>(b6 + compactOffset, b7 + compactOffset, static_cast<uint32_t>(statCount),
+                                        numRec, oneRepeatSize, compactRepeatTimes);
+            asc_vf_call<AffineCoeffVF>(b4, b5, b6 + compactOffset, b7 + compactOffset, b0,
+                                       static_cast<uint32_t>(statCount), td_->epsilon, oneRepeatSize,
+                                       compactRepeatTimes);
             {
                 const uint32_t stride = static_cast<uint32_t>(innerStride);
                 const int32_t gatherScale = static_cast<int32_t>(((1U << 24) / stride) +
                                                                  (((1U << 24) % stride) != 0 ? 1U : 0U));
-                asc_vf_call<NormalizeGatherVF>(b1, b4, b5, gatherBlockCount, gatherBlockChannels, gatherBlockXStride,
-                                               gatherBlockCoefStride, static_cast<uint32_t>(statCount), stride,
-                                               gatherScale, oneRepeatSize);
-            }
-            if constexpr (AscendC::IsSameType<T, half>::value) {
-                asc_vf_call<Fp16SanitizeVF>(b1, static_cast<uint32_t>(count), oneRepeatSize, repeatTimes);
+                asc_vf_call<NormalizeGatherVF>(b1, b4, b5, b6 + compactOffset, b0, gatherBlockCount,
+                                               gatherBlockChannels, gatherBlockXStride, gatherBlockCoefStride,
+                                               static_cast<uint32_t>(statCount), stride, gatherScale, oneRepeatSize);
             }
             if (writeStats) {
                 asc_vf_call<RunningUpdateVF>(b6, b7, b6 + compactOffset, b7 + compactOffset,
@@ -643,13 +695,10 @@ private:
             }
             return;
         }
-        asc_vf_call<BatchMomentsVF>(b2, b3, static_cast<uint32_t>(count), invM, oneRepeatSize, repeatTimes);
-        asc_vf_call<AffineCoeffVF>(b4, b5, b2, b3, static_cast<uint32_t>(count), td_->epsilon, oneRepeatSize,
+        asc_vf_call<BatchMomentsVF>(b2, b3, static_cast<uint32_t>(count), numRec, oneRepeatSize, repeatTimes);
+        asc_vf_call<AffineCoeffVF>(b4, b5, b2, b3, b0, static_cast<uint32_t>(count), td_->epsilon, oneRepeatSize,
                                    repeatTimes);
-        asc_vf_call<NormalizeVF>(b1, b4, b5, static_cast<uint32_t>(count), oneRepeatSize, repeatTimes);
-        if constexpr (AscendC::IsSameType<T, half>::value) {
-            asc_vf_call<Fp16SanitizeVF>(b1, static_cast<uint32_t>(count), oneRepeatSize, repeatTimes);
-        }
+        asc_vf_call<NormalizeVF>(b1, b4, b5, b2, b0, static_cast<uint32_t>(count), oneRepeatSize, repeatTimes);
         if (writeStats) {
             asc_vf_call<RunningUpdateVF>(b6, b7, b2, b3, static_cast<uint32_t>(count), td_->factor, factorReverse,
                                          bessel, oneRepeatSize, repeatTimes);

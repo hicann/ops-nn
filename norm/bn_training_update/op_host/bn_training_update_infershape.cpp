@@ -19,6 +19,7 @@ using namespace ge;
 namespace ops {
 static ge::graphStatus InferShape4BNTrainingUpdate(gert::InferShapeContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "runtime2.0 BNTrainingUpdate infershape running");
     const gert::Shape* xShape = context->GetInputShape(0);
     const gert::Shape* scaleShape = context->GetInputShape(3);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
@@ -33,6 +34,7 @@ static ge::graphStatus InferShape4BNTrainingUpdate(gert::InferShapeContext* cont
         OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
         *outputShape = *scaleShape;
     }
+    OP_LOGD(context->GetNodeName(), "runtime2.0 BNTrainingUpdate infershape run success.");
     return ge::GRAPH_SUCCESS;
 }
 
