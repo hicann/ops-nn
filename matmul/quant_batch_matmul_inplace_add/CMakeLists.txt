@@ -17,7 +17,6 @@ add_kernel_sources(
     KERNEL_SRC arch35/quant_batch_matmul_inplace_add.cpp
     COMPUTE_UNITS ascend950 ascend960dt
     AUTO_SYNC false
-    OPTIONS "-Werror"
 )
 
 add_kernel_sources(
