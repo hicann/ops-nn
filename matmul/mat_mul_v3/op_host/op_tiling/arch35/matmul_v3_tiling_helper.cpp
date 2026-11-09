@@ -201,7 +201,10 @@ MatMulV3L0C2Out GetL0C2OutDav9201(const MatmulV3CompileInfo& compileInfo, const 
         return MatMulV3L0C2Out::ON_THE_FLY;
     }
     uint64_t cDtypeSize = ge::GetSizeByDataType(args.cType);
-    bool isUnalignedN = args.nValue * cDtypeSize % 128UL != 0;
+    bool isUnalignedN = args.nValue * cDtypeSize % 128UL != 0 && args.nValue * cDtypeSize > BASIC_BLOCK_SIZE_256;
+    uint64_t mCnt = MathUtil::CeilDivision(args.mValue, runInfo.singleCoreM);
+    uint64_t nCnt = MathUtil::CeilDivision(args.nValue, runInfo.singleCoreN);
+    bool isMultiRound = mCnt * nCnt > compileInfo.aicNum;
     double hbmBW = MatMulV3TilingHelper::GetHbmBW(platformInfo);
     double coreFreq = MatMulV3TilingHelper::GetCoreFreq(platformInfo);
     double fixpBoundEdge = static_cast<double>(
@@ -216,7 +219,7 @@ MatMulV3L0C2Out GetL0C2OutDav9201(const MatmulV3CompileInfo& compileInfo, const 
     double cubeLeFixpEdge = static_cast<double>(cDtypeSize) * computePower * BASIC_BLOCK_K_512_BYTE /
                             (hbmBW * TIME_CONVERT_UNIT);
     bool isCubeLeFixp = static_cast<double>(args.kValue) <= cubeLeFixpEdge;
-    bool fixpipeBound = isUnalignedN && isFixpDominantMte2;
+    bool fixpipeBound = isUnalignedN && isMultiRound && isFixpDominantMte2;
     if (runInfo.cubeBoundParam <= runInfo.cubeBoundEdge) {
         fixpipeBound = isCubeLeFixp && fixpipeBound;
     }
