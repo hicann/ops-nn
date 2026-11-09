@@ -41,7 +41,7 @@
       P_i = cast\_to\_dst\_type(V_i/scale, round\_mode), \space i\space from\space 1\space to\space 32*32
       $$
 
-    - 同时将scale（1\*1）广播为scale1（32\*1）和scale2（1\*32）作为输出scale1和scale2，​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y。
+    - 同时将scale（1\*1）广播为scale1（32\*1）和scale2（1\*32）作为输出scale1和scale2，量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y。
 
     - emax: 对应数据类型的最大正规数的指数位。
 

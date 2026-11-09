@@ -35,7 +35,7 @@
     P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
     $$
 
-    - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+    - 量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
 
     - emax: 对应数据类型的最大正规数的指数位。
 

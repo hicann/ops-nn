@@ -57,7 +57,7 @@
       P_j = cast\_to\_dst\_type(V_j/mxscale2, round\_mode), \space j\space from\space 1\space to\space 32
       $$
 
-    - -1轴​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴​量化后的$P_{j}$按对应的$V_{j}$的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
+    - -1轴量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴量化后的$P_{j}$按对应的$V_{j}$的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
 
     - emax: 对应数据类型的最大正规数的指数位。
 

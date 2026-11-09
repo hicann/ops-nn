@@ -53,7 +53,7 @@
   y_i = cast\_to\_FP4\_E2M1(temp_i/level1Scale, round\_mode), \space i\space from\space 1\space to\space level1BlockSize
   $$
 
-  - ​量化后的$y_{i}$按对应的$x_{i}$的位置组成输出yOut，level0Scale按尾轴对应的分组组成输出level0ScaleOut，level1Scale按尾轴对应的分组组成输出level1ScaleOut。
+  - 量化后的$y_{i}$按对应的$x_{i}$的位置组成输出yOut，level0Scale按尾轴对应的分组组成输出level0ScaleOut，level1Scale按尾轴对应的分组组成输出level1ScaleOut。
 
   - max_i代表求第i个分组中的最大值
 

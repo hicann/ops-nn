@@ -57,7 +57,7 @@
       P_j = cast\_to\_dst\_type(V_j/mxscale2, round\_mode), \space j\space from\space 1\space to\space 32
       $$
 
-    - -1轴​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴​量化后的$P_{j}$按对应的$V_{j}$的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
+    - -1轴量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴量化后的$P_{j}$按对应的$V_{j}$的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
 
     - emax: 对应数据类型的最大正则数的指数位。
 
@@ -103,7 +103,7 @@
         P_i = cast\_to\_dst\_type(V_i/mxscale1, round\_mode), \space i\space from\space 1\space to\space 32\\
         $$
       - **-2轴量化**：同时，将输入x在-2轴上按照32个数进行分组，一组32个数 $\{\{V_j\}_{j=1}^{32}\}$ 采用与-1轴相同的进位计算方法量化为 $\{mxscale2, \{P_j\}_{j=1}^{32}\}$。
-      - ​-1轴量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴量化后的 $P_{j}$ 按对应的 $V_{j}$ 的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
+      - -1轴量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴量化后的 $P_{j}$ 按对应的 $V_{j}$ 的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
     - 当dstTypeMax != 0.0/6.0/7.0时：
       - **-1轴量化**：将输入x在-1轴上按照32个数进行分组，每组长度为32，对每组单独计算一个块缩放因子$S_{fp32}^b$，再把组内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP4_E2M1。如果最后一组不足32个元素，把缺失值视为0，按照完整组处理。
         - 找到该组中数值的最大绝对值：
