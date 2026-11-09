@@ -24,13 +24,18 @@ namespace {
 constexpr int64_t TILINGKEY_INFER_LAST_CHANNEL = 900000;
 constexpr int64_t TILINGKEY_INFER_LAST_CHANNEL_SMALL_A = 902000;
 constexpr int64_t TILINGKEY_INFER_LAST_CHANNEL_CONTINUOUS_A = 901000;
-constexpr int64_t TILING_TEMPLATE_PRIORITY_LAST_CHANNEL = 91000;
+// Lower priority value is evaluated first. The last-channel template is the
+// specialised path (channel on the contiguous inner axis), so it must run before
+// the generic B0*A*B1 template; otherwise ND/pointwise layouts whose B1 == 1 are
+// silently swallowed by the general template.
+constexpr int64_t TILING_TEMPLATE_PRIORITY_LAST_CHANNEL = 89000;
 constexpr int64_t MAX_SMALL_A = 8;
 constexpr int64_t MIN_CONTINUOUS_A_LEN = 64;
 constexpr int64_t MAX_CONTINUOUS_A_OUTER = 6;
 constexpr int64_t MAX_CONTINUOUS_A_OUTER_FP16 = 3;
 constexpr int64_t MIN_SMALL_A_B_LEN = 65536;
 
+constexpr int64_t MIN_ND_DIM_NUM = 2;
 constexpr int64_t NHWC_DIM_NUM = 4;
 constexpr int64_t NDHWC_DIM_NUM = 5;
 constexpr int64_t WEIGHT_BIAS_NUM = 2;
@@ -83,6 +88,23 @@ inline bool TryAlignUp(int64_t value, int64_t alignment, int64_t& result)
     const int64_t remainder = value % alignment;
     return remainder == 0 ? (result = value, true) : TryAdd(value, alignment - remainder, result);
 }
+
+// ND format carries the channel on dimension 1. When every trailing dimension is
+// degenerate, dimension 1 is also the innermost contiguous dimension, so the
+// tensor has exactly the same physical layout as pointwise NCHW and can use the
+// last-channel kernel instead of the B0*A*B1 general path.
+inline bool IsNdContiguousChannel(const gert::Shape& shape)
+{
+    if (shape.GetDimNum() < MIN_ND_DIM_NUM) {
+        return false;
+    }
+    for (size_t i = static_cast<size_t>(MIN_ND_DIM_NUM); i < shape.GetDimNum(); ++i) {
+        if (shape.GetDim(i) != 1) {
+            return false;
+        }
+    }
+    return shape.GetDim(1) > 0;
+}
 } // namespace
 
 class BNInferLastChannelTiling : public Ops::NN::Optiling::TilingBaseClass {
@@ -115,9 +137,10 @@ protected:
             bool isNcdhwPointwise = format == FORMAT_NCDHW && xStorageShape.GetDimNum() == NDHWC_DIM_NUM &&
                                     xStorageShape.GetDim(DIM_2) == 1 && xStorageShape.GetDim(DIM_3) == 1 &&
                                     xStorageShape.GetDim(DIM_4) == 1;
-            if (!isNchwPointwise && !isNcdhwPointwise) {
+            bool isNdContiguousChannel = format == FORMAT_ND && IsNdContiguousChannel(xStorageShape);
+            if (!isNchwPointwise && !isNcdhwPointwise && !isNdContiguousChannel) {
                 OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", Ops::Base::ToString(format).c_str(),
-                                           "NHWC, NDHWC, pointwise NCHW or pointwise NCDHW");
+                                           "NHWC, NDHWC, pointwise NCHW/NCDHW or contiguous-channel ND");
                 return false;
             }
         }
@@ -154,6 +177,7 @@ private:
     ge::graphStatus ParseNdhwcShape(const gert::Shape& xStorageShape);
     ge::graphStatus ParseNchwAsLastChannelShape(const gert::Shape& xStorageShape);
     ge::graphStatus ParseNcdhwAsLastChannelShape(const gert::Shape& xStorageShape);
+    ge::graphStatus ParseNdAsLastChannelShape(const gert::Shape& xStorageShape);
     ge::graphStatus ParseSupportedShape(const gert::Shape& xStorageShape, ge::Format format);
     ge::graphStatus ValidateTilingParams() const;
     ge::graphStatus DoSmallLastChannelTiling();
@@ -294,6 +318,20 @@ ge::graphStatus BNInferLastChannelTiling::ParseNcdhwAsLastChannelShape(const ger
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus BNInferLastChannelTiling::ParseNdAsLastChannelShape(const gert::Shape& xStorageShape)
+{
+    OP_CHECK_IF(xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x", std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                             "at least 2D with ND format"),
+                return ge::GRAPH_FAILED);
+    if (!IsNdContiguousChannel(xStorageShape)) {
+        return ge::GRAPH_PARAM_INVALID;
+    }
+    fusedALen = xStorageShape.GetDim(DIM_1);
+    fusedBLen = xStorageShape.GetDim(DIM_0);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus BNInferLastChannelTiling::ParseSupportedShape(const gert::Shape& xStorageShape, ge::Format format)
 {
     if (format == FORMAT_NHWC) {
@@ -334,8 +372,18 @@ ge::graphStatus BNInferLastChannelTiling::ParseSupportedShape(const gert::Shape&
         if (ret == ge::GRAPH_PARAM_INVALID) {
             return ret;
         }
+    } else if (format == FORMAT_ND) {
+        auto ret = ParseNdAsLastChannelShape(xStorageShape);
+        OP_CHECK_IF(ret != ge::GRAPH_SUCCESS && ret != ge::GRAPH_PARAM_INVALID,
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x",
+                                                              "parse nd-as-last-channel shape failed",
+                                                              "ND as last-channel shape parse failed"),
+                    return ge::GRAPH_FAILED);
+        if (ret == ge::GRAPH_PARAM_INVALID) {
+            return ret;
+        }
     } else {
-        OP_LOGI(context_, "Only supported format NHWC or NDHWC.");
+        OP_LOGI(context_, "Only supported format NHWC, NDHWC, NCHW, NCDHW or ND.");
         return ge::GRAPH_PARAM_INVALID;
     }
     return ge::GRAPH_SUCCESS;
@@ -364,6 +412,10 @@ ge::graphStatus BNInferLastChannelTiling::GetShapeAttrsInfo()
     epsilon = (epsilonPtr == nullptr) ? DEFAULT_EPSILON : *epsilonPtr;
 
     auto parseStatus = ParseSupportedShape(xShape->GetStorageShape(), format);
+    if (parseStatus == ge::GRAPH_PARAM_INVALID) {
+        // This template does not own the layout; let the tiling registry fall through.
+        return parseStatus;
+    }
     OP_CHECK_IF(parseStatus != ge::GRAPH_SUCCESS,
                 OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
                     context_->GetNodeName(), "x", "parse last-channel shape failed", "last-channel shape parse failed"),

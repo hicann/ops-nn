@@ -74,7 +74,7 @@ ge::graphStatus RunBNInferTiling(const vector<int64_t>& xDims, ge::DataType xDty
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    map<string, string> socVersion = {{"Short_SoC_version", "ASCEND950"}};
+    map<string, string> socVersion = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     GetPlatFormInfos(COMPILE_INFO, socInfos, aicoreSpec, intrinsics, socVersion);
 
     fe::PlatFormInfos platformInfo;
@@ -175,6 +175,35 @@ TEST_F(BNInferTilingTest, ndSmallAB1FloatFallsBackToGeneralTiling)
 {
     uint64_t tilingKey = 0;
     auto status = RunBNInferTiling({256, 4, 4}, ge::DT_FLOAT, ge::FORMAT_ND, &tilingKey);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingKey, 910000);
+}
+
+TEST_F(BNInferTilingTest, ndContiguousChannelLargeAUsesLastChannel)
+{
+    uint64_t tilingKey = 0;
+    BNInferLastChannelTilingData tilingData{};
+    auto status = RunBNInferTiling({10189, 7786}, ge::DT_FLOAT, ge::FORMAT_ND, &tilingKey, nullptr, &tilingData);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingKey, 900000);
+    EXPECT_EQ(tilingData.totalALen, 7786);
+    EXPECT_GT(tilingData.aOuter, 1);
+    EXPECT_GT(tilingData.tileBlockALen, 0);
+    EXPECT_GT(tilingData.tileBlockBLen, 0);
+}
+
+TEST_F(BNInferTilingTest, ndContiguousChannelTrailingOnesUsesLastChannel)
+{
+    uint64_t tilingKey = 0;
+    auto status = RunBNInferTiling({8, 16, 1, 1}, ge::DT_FLOAT, ge::FORMAT_ND, &tilingKey);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingKey, 900000);
+}
+
+TEST_F(BNInferTilingTest, ndNonContiguousChannelKeepsGeneralTiling)
+{
+    uint64_t tilingKey = 0;
+    auto status = RunBNInferTiling({8, 16, 2, 1}, ge::DT_FLOAT, ge::FORMAT_ND, &tilingKey);
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(tilingKey, 910000);
 }
