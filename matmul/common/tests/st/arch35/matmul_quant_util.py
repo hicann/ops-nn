@@ -15,7 +15,7 @@
 matmul golden 公共 util 的 quant 分类模块，包含：
   - 通用数学：ceil_div
   - scale/offset 生成与截断：scale_generate / f32_2_s9 / needs_scale_generate
-  - e8m0 输入规整：sanitize_e8m0_scale
+  - e8m0 输入规整：sanitize_e8m0_scale / sanitize_e8m0_carrier
   - UINT64 量化参数编解码：u64_to_deq_scale / u64_to_offset / pack_u64_scale /
     generate_u64_scale / decode_u64_scale
   - group_size 解码与打包：unpack_groupsize / get_effective_group_size /
@@ -102,6 +102,39 @@ def sanitize_e8m0_scale(tensor, testcase_name="unknown"):
         return new_data.astype(tensor.dtype)
     new_data_e8m0 = new_data.astype(tensor_np.dtype)
     return torch.from_numpy(new_data_e8m0.view(np.uint8)).view(tensor.dtype)
+
+
+def sanitize_e8m0_carrier(tensor, testcase_name="unknown"):
+    """Sanitize uint8/int8 e8m0 carrier by removing raw byte 255 (NaN).
+
+    The uint8/int8 carrier stores raw e8m0 bytes. Raw byte 255 means NaN; if
+    any is present, regenerate the whole tensor with valid raw bytes in
+    [127, 129], which decode to values 1, 2, 4. This mirrors the policy of
+    sanitize_e8m0_scale for float8_e8m0 tensors.
+    """
+    if tensor is None or "float8_e8m0" in str(tensor.dtype):
+        return tensor
+    tensor_np = torch_to_numpy(tensor)
+    if tensor_np.dtype not in (np.uint8, np.int8):
+        return tensor
+    raw = np.ascontiguousarray(tensor_np).view(np.uint8)
+    nan_count = int(np.count_nonzero(raw == 255))
+    if nan_count == 0:
+        return tensor
+
+    warnings.warn(
+        f"[{testcase_name}] Detected {nan_count} invalid e8m0 carrier bytes (255), "
+        "regenerating with raw range [127, 129]"
+    )
+    new_raw = np.random.randint(127, 130, size=tensor.shape, dtype=np.uint8)
+    if isinstance(tensor, torch.Tensor):
+        new_tensor = torch.from_numpy(new_raw)
+        if tensor.dtype == torch.int8:
+            new_tensor = new_tensor.view(torch.int8)
+        return new_tensor
+    if tensor_np.dtype == np.int8:
+        return new_raw.view(np.int8)
+    return new_raw
 
 
 # ============================================================================

@@ -159,6 +159,7 @@ class TorchNpuQuantMatmulTestSpec:
         scale_dtype=None,
         group_sizes=None,
         y_scale=None,
+        fp4_packed_lastdim=None,
         **kwargs,
     ):
         # 1. 方向契约：e2e 通路交付的是逻辑视图值（转置语义已体现在视图数值排布中，
@@ -180,32 +181,89 @@ class TorchNpuQuantMatmulTestSpec:
             x1, x2, scale, offset, pertoken_scale, bias
         )
 
-        # fp4 uint8 载体解码（x1_dtype/x2_dtype=296），逻辑 M/N 从 scale 获取。
-        # pertoken 约定 (M,G,2)：M 在 -3；scale 约定 (G,N,2)：N 在 -2（低维约定取不到时为 None）
-        if pertoken_np is None or pertoken_np.ndim < 2:
-            m_expect = None
-        elif pertoken_np.ndim >= 3:
-            m_expect = pertoken_np.shape[-3]
-        else:
-            m_expect = pertoken_np.shape[-2]
-        if scale_np is None or scale_np.ndim < 2:
-            n_expect = None
-        elif scale_np.ndim >= 3:
-            n_expect = scale_np.shape[-2]
-        else:
-            n_expect = scale_np.shape[-1]
+        int4_carrier = False
+        # int4 packed carrier：x1/x2 为 int32、每个 int32 沿 K 打包 8 个有符号 int4。
+        # e2e 表未携带 convert_x_to_int4 属性，但 NPU 仍按 packed int4 解释，
+        # golden 必须同步解包，否则会退化成 int32 matmul。
+        if (
+            x1_np is not None
+            and x2_np is not None
+            and x1_np.dtype == np.int32
+            and x2_np.dtype == np.int32
+            and x1_np.ndim == 2
+            and x2_np.ndim == 2
+        ):
 
-        packed = _fp4_axes_and_k(
-            x1, x2, x1_np, x2_np, x1_dtype, x2_dtype, pertoken_np, scale_np
-        )
-        if packed is not None:
-            a_axis, b_axis, logical_k = packed
-            x1_np = _decode_fp4_carrier(
-                x1_np, x1_dtype, a_axis, m_expect if a_axis == -2 else logical_k
+            def _unpack_int4_carrier(arr):
+                u = np.ascontiguousarray(arr).view(np.uint8).reshape(arr.shape + (4,))
+                nib = np.empty(arr.shape + (8,), dtype=np.int16)
+                for j in range(4):
+                    byte = u[..., j].astype(np.int16)
+                    nib[..., 2 * j] = byte & 0x0F
+                    nib[..., 2 * j + 1] = (byte >> 4) & 0x0F
+                return np.where(nib >= 8, nib - 16, nib).astype(np.int8)
+
+            x1_np = _unpack_int4_carrier(x1_np).reshape(x1_np.shape[0], -1)
+            x2_np = _unpack_int4_carrier(x2_np)
+            x2_np = x2_np.transpose(0, 2, 1).reshape(x2_np.shape[0] * 8, x2_np.shape[1])
+            int4_carrier = True
+
+        # uint8 载体 e8m0（属性 scale_dtype/pertoken_scale_dtype=293）：
+        # 解码为 float32 数值，并向 kernel golden 传 scale_dtype 提示，保持 MX 量化模式。
+        scale_hint = None
+        if scale_np is not None and int(scale_dtype or 0) == 293:
+            scale_np = _util.e8m0_to_float(scale_np)
+            scale_hint = "float8_e8m0"
+        if pertoken_np is not None and int(pertoken_scale_dtype or 0) == 293:
+            pertoken_np = _util.e8m0_to_float(pertoken_np)
+
+        # fp4 uint8 载体解码（x1_dtype/x2_dtype=296）。
+        # fp4_packed_lastdim 是图腿新增的显式末维打包约定；
+        # 其余场景沿用上游的轴推理逻辑。
+        if fp4_packed_lastdim:
+
+            def _decode_fp4_packed(arr, dtype_code):
+                if (
+                    arr is None
+                    or dtype_code != _ACL_FLOAT4_E2M1
+                    or arr.dtype != np.uint8
+                ):
+                    return arr
+                ax = arr.ndim - 1
+                lo = _decode_fp4_nibble(arr & 0x0F)
+                hi = _decode_fp4_nibble((arr >> 4) & 0x0F)
+                stacked = np.stack([lo, hi], axis=ax + 1)
+                new_shape = arr.shape[:ax] + (arr.shape[ax] * 2,)
+                return stacked.reshape(new_shape)
+
+            x1_np = _decode_fp4_packed(x1_np, x1_dtype)
+            x2_np = _decode_fp4_packed(x2_np, x2_dtype)
+        else:
+            # 逻辑 M/N 从 pertoken/scale 获取；压缩轴由 _fp4_axes_and_k 统一推断。
+            if pertoken_np is None or pertoken_np.ndim < 2:
+                m_expect = None
+            elif pertoken_np.ndim >= 3:
+                m_expect = pertoken_np.shape[-3]
+            else:
+                m_expect = pertoken_np.shape[-2]
+            if scale_np is None or scale_np.ndim < 2:
+                n_expect = None
+            elif scale_np.ndim >= 3:
+                n_expect = scale_np.shape[-2]
+            else:
+                n_expect = scale_np.shape[-1]
+
+            packed = _fp4_axes_and_k(
+                x1, x2, x1_np, x2_np, x1_dtype, x2_dtype, pertoken_np, scale_np
             )
-            x2_np = _decode_fp4_carrier(
-                x2_np, x2_dtype, b_axis, n_expect if b_axis == -1 else logical_k
-            )
+            if packed is not None:
+                a_axis, b_axis, logical_k = packed
+                x1_np = _decode_fp4_carrier(
+                    x1_np, x1_dtype, a_axis, m_expect if a_axis == -2 else logical_k
+                )
+                x2_np = _decode_fp4_carrier(
+                    x2_np, x2_dtype, b_axis, n_expect if b_axis == -1 else logical_k
+                )
 
         deq_scale, u64_offset = _util.decode_u64_scale(scale_np)
         if u64_offset is not None and offset_np is None:
@@ -234,6 +292,8 @@ class TorchNpuQuantMatmulTestSpec:
             group_size=group_size,
             out_dtype=out_dtype,
             out_shapes=out_shapes,
+            scale_dtype_hint=scale_hint,
+            force_scale_gen=int4_carrier,
             **kwargs,
         )
 

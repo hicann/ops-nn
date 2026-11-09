@@ -557,7 +557,7 @@ def qbmmv3_kernel_compute(
     # 判断是否需要 _util.scale_generate
     do_scale_gen = _util.needs_scale_generate(
         x1_dtype, x2_scale, bias_dtype, scale_dtype
-    )
+    ) or bool(kwargs.get("force_scale_gen"))
 
     # 判断 bias 是否为向量（影响 bias 加法位置）
     is_bias_vec = bias_dtype is not None and (
@@ -572,8 +572,6 @@ def qbmmv3_kernel_compute(
     # 准备 offset
     if offset is not None:
         offset = offset.astype(np.float32)
-        if x2_scale.shape[-1] < offset.shape[-1]:
-            offset = offset[0]
 
     # 根据量化模式分发计算
     if quant_mode == "G-G":
@@ -628,6 +626,8 @@ def qbmmv3_kernel_compute(
 
         # 根据输出 dtype 和量化模式选择 compute 函数
         if y_dtype == "int8":
+            if do_scale_gen:
+                x2_scale = _util.scale_generate(x2_scale)
             y = compute_requant(matmul_out, x2_scale, offset, bias, bias_dtype)
         elif y_dtype == "int32":
             y = compute_int32(matmul_out, bias, bias_dtype)

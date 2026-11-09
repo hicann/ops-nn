@@ -71,7 +71,12 @@ def _kernel_qbmm(
     temp_kwargs = dict(kwargs)
     if out_dtype:
         temp_kwargs["output_dtypes"] = [out_dtype]
-    if scale_np is not None:
+    # uint8 e8m0 载体：e2e 侧已解码数值并给出 scale_dtype 提示，
+    # 此处优先使用提示，避免按 uint8 载体 dtype 误判量化模式。
+    hint = temp_kwargs.pop("scale_dtype_hint", None)
+    if hint:
+        temp_kwargs["scale_dtype"] = hint
+    elif scale_np is not None:
         temp_kwargs["scale_dtype"] = _util.dtype_to_str(scale_np.dtype)
     if out_shapes:
         temp_kwargs["output_shapes"] = out_shapes
@@ -112,6 +117,24 @@ def _customize_inputs_impl(x1, x2, scale, offset, bias, pertoken_scale, **kwargs
         if tensor is None:
             continue
         cleaned = _util.sanitize_e8m0_scale(tensor, testcase_name)
+        if cleaned is not tensor:
+            _util.write_back(tensor, cleaned)
+
+    # 1b. uint8/int8 e8m0 carrier：raw 255 是 NaN，按 scale dtype 提示清洗。
+    # 只处理 scale/pertoken 槽，避免误清 x1/x2 的 fp4 uint8 数据。
+    for tensor, dtype_hint in (
+        (scale, kwargs.get("scale_dtype")),
+        (pertoken_scale, kwargs.get("pertoken_scale_dtype")),
+    ):
+        if tensor is None or dtype_hint is None:
+            continue
+        try:
+            is_e8m0 = int(dtype_hint) == 293
+        except (TypeError, ValueError):
+            is_e8m0 = str(dtype_hint) == "float8_e8m0"
+        if not is_e8m0:
+            continue
+        cleaned = _util.sanitize_e8m0_carrier(tensor, testcase_name)
         if cleaned is not tensor:
             _util.write_back(tensor, cleaned)
 

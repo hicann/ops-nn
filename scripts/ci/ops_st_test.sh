@@ -240,6 +240,9 @@ usage() {
     echo "    --testcase, -t  (Optional) Specify testcase name(s) to run (comma-separated). Mutually exclusive; cannot specify both or repeat."
     echo "    --update_ttk    (Optional) Force re-download ops-test-kit by removing existing directory and cloning again."
     echo "    --ci_st_check   (Optional) Must be used ONLY with --pr_filelist. Parse pr_filelist and decide whether ST is needed; prints 'need_st=yes|no' to stdout and exits (no env/ttk required)."
+    echo "    e2e mode        All op categories: tables named '*_graph.csv' run with -c; '*_dyngraph.csv' run with -d."
+    echo "                    Graph legs use the ttk default process count (1-4) unless E2E_GRAPH_PC is set;"
+    echo "                    other e2e tables keep --pc=16."
     echo "Examples:"
     echo "    bash ops_st_test.sh"
     echo "    bash ops_st_test.sh pr_filelist.txt"
@@ -409,6 +412,19 @@ get_op_type() {
     echo "${op_type}"
 }
 
+# Classify an e2e table into eager / static graph (-c) / dynamic graph (-d).
+# All op categories use the same exact suffix convention; non-graph tables stay
+# eager. The suffix convention is documented in usage().
+classify_e2e_item() {
+    local csv_file="$1"
+
+    case "$(basename "${csv_file}" .csv)" in
+        *_dyngraph) echo "e2e_d" ;;
+        *_graph)    echo "e2e_c" ;;
+        *)          echo "e2e" ;;
+    esac
+}
+
 # Find test case CSV files for an op, including arch-specific cases
 find_test_cases() {
     local op_name="$1"
@@ -450,6 +466,9 @@ find_test_cases() {
         local csv_files=$(find "${st_path}" -maxdepth 1 -name "${prefix}_*.csv" -type f 2>/dev/null)
         for csv_file in ${csv_files}; do
             local test_type="${prefix#ttk_}"
+            if [[ "${test_type}" == "e2e" ]]; then
+                test_type=$(classify_e2e_item "${csv_file}")
+            fi
             test_case_files+=("${test_type}:${csv_file}")
         done
     done
@@ -462,6 +481,9 @@ find_test_cases() {
                 local csv_files=$(find "${arch_path}" -maxdepth 1 -name "${prefix}_*.csv" -type f 2>/dev/null)
                 for csv_file in ${csv_files}; do
                     local test_type="${prefix#ttk_}"
+                    if [[ "${test_type}" == "e2e" ]]; then
+                        test_type=$(classify_e2e_item "${csv_file}")
+                    fi
                     test_case_files+=("${test_type}:${csv_file}")
                 done
             done
@@ -648,6 +670,7 @@ run_e2e_test() {
     local op_name="$1"
     local test_csv="$2"
     local ops_test_path="$3"
+    local e2e_mode="${4:-}"
 
     if [[ ! -f "${test_csv}" ]]; then
         print_warning "Test csv file not found: ${test_csv}, skipping this test case"
@@ -675,7 +698,21 @@ run_e2e_test() {
     if [[ -n "${testcase_filter}" ]]; then
         testcase_arg="-t ${testcase_filter}"
     fi
-    local cmd="python3 -m ttk e2e -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} --pc=16 --run 1 --compare close --task-prof false --no-memory-check ${testcase_arg}"
+    # Graph legs (-c/-d) use the ttk default process count (1-4, capped at 4)
+    # unless E2E_GRAPH_PC is set: multiple workers only parallelize host-side
+    # input/golden generation (device execution is serialized by DeviceLock),
+    # and a high --pc was observed to trigger 507018 ACL stream pseudo-failures.
+    local mode_flag=""
+    local pc_arg="--pc=16"
+    if [[ -n "${e2e_mode}" ]]; then
+        mode_flag="-${e2e_mode}"
+        if [[ -n "${E2E_GRAPH_PC:-}" ]]; then
+            pc_arg="--pc=${E2E_GRAPH_PC}"
+        else
+            pc_arg=""
+        fi
+    fi
+    local cmd="python3 -m ttk e2e -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} ${mode_flag} ${pc_arg} --run 1 --compare close --task-prof false --no-memory-check ${testcase_arg}"
     print_msg "Executing: ${cmd}"
 
     local start_time=$(date +%s)
@@ -789,10 +826,18 @@ print_reproduction_commands() {
             result_basename=$(basename "${f_csv}")
             csv_basename="${result_basename%_result.csv}"
             if [[ -n "${csv_basename}" ]]; then
-                input_csv=$(find "${framework_path}" -name "${csv_basename}.csv" -type f 2>/dev/null | head -1)
+                # Case tables may live under --case_path (e.g. opstest); fall back
+                # to the op repo when the table is not there.
+                local search_root="${case_path:-${framework_path}}"
+                if [[ -d "${search_root}" ]]; then
+                    input_csv=$(find "${search_root}" -name "${csv_basename}.csv" -type f 2>/dev/null | head -1 || true)
+                fi
+                if [[ -z "${input_csv}" && -n "${case_path}" && -d "${framework_path}" ]]; then
+                    input_csv=$(find "${framework_path}" -name "${csv_basename}.csv" -type f 2>/dev/null | head -1 || true)
+                fi
             fi
 
-            local ttk_mode extra_flags
+            local ttk_mode extra_flags pc_flag="--pc=16"
             case "${test_type}" in
                 kernel) ttk_mode="kernel"
                         if is_op_in_kernel_dyn_whitelist "${f_op}"; then
@@ -801,11 +846,26 @@ print_reproduction_commands() {
                             extra_flags="-d=false -b=release"
                         fi;;
                 aclnn)  ttk_mode="aclnn";  extra_flags="";;
-                e2e)    ttk_mode="e2e";    extra_flags="";;
+                e2e)    ttk_mode="e2e";    extra_flags=""
+                        if [[ -n "${csv_basename}" ]]; then
+                            local e2e_kind
+                            e2e_kind=$(classify_e2e_item "${csv_basename}.csv")
+                            case "${e2e_kind}" in
+                                e2e_c) extra_flags="-c" ;;
+                                e2e_d) extra_flags="-d" ;;
+                            esac
+                        fi
+                        if [[ -n "${extra_flags}" ]]; then
+                            if [[ -n "${E2E_GRAPH_PC:-}" ]]; then
+                                pc_flag="--pc=${E2E_GRAPH_PC}"
+                            else
+                                pc_flag=""
+                            fi
+                        fi;;
                 *)      ttk_mode="${test_type}"; extra_flags="";;
             esac
 
-            local repro_cmd="cd ${ttk_path} && python3 -m ttk ${ttk_mode} -i ${input_csv} -o ${f_csv} --plugin ${ops_test_path} ${extra_flags} --pc=16 --run 1 --compare close --task-prof false --no-memory-check -t ${f_tc}"
+            local repro_cmd="cd ${ttk_path} && python3 -m ttk ${ttk_mode} -i ${input_csv} -o ${f_csv} --plugin ${ops_test_path} ${extra_flags} ${pc_flag} --run 1 --compare close --task-prof false --no-memory-check -t ${f_tc}"
 
             {
                 echo "  # [${test_type}] ${f_op} / ${f_tc}"
@@ -872,6 +932,8 @@ run_single_op_test() {
         ["kernel"]="run_kernel_test"
         ["aclnn"]="run_aclnn_test"
         ["e2e"]="run_e2e_test"
+        ["e2e_c"]="run_e2e_test"
+        ["e2e_d"]="run_e2e_test"
     )
 
     for test_item in "${test_case_array[@]}"; do
@@ -885,7 +947,11 @@ run_single_op_test() {
         fi
 
         local runner_func="${test_runners[${test_type}]}"
-        result_csv=$(${runner_func} "${op_name}" "${test_csv}" "${ops_test_path}")
+        if [[ "${test_type}" == "e2e_c" || "${test_type}" == "e2e_d" ]]; then
+            result_csv=$(${runner_func} "${op_name}" "${test_csv}" "${ops_test_path}" "${test_type#e2e_}")
+        else
+            result_csv=$(${runner_func} "${op_name}" "${test_csv}" "${ops_test_path}")
+        fi
         test_ret=$?
 
         if [[ ${test_ret} -ne 0 ]]; then
@@ -894,8 +960,10 @@ run_single_op_test() {
 
         if [[ -n "${result_csv}" ]]; then
             result_csvs+=("${result_csv}")
-            # Append result to the per-type array dynamically, e.g. kernel_csvs
-            eval "${test_type}_csvs+=(\"\${result_csv}\")"
+            # Append result to the per-type array dynamically, e.g. kernel_csvs.
+            # e2e_c/e2e_d share the e2e summary bucket.
+            local result_bucket="${test_type%%_*}"
+            eval "${result_bucket}_csvs+=(\"\${result_csv}\")"
         fi
     done
 
@@ -1040,6 +1108,22 @@ parse_args "$@"
 # Normalize pr_filelist to absolute path
 if [[ -n "${pr_filelist}" && "${pr_filelist}" != /* ]]; then
     pr_filelist="$(pwd)/${pr_filelist}"
+fi
+
+# Normalize case_path to absolute path. Keep a missing relative path untouched;
+# reproduction printing guards the find to avoid set -e aborts.
+if [[ -n "${case_path}" ]]; then
+    if [[ -d "${case_path}" ]]; then
+        case_path="$(cd "${case_path}" && pwd)"
+    else
+        print_warning "case_path not found: ${case_path}"
+    fi
+fi
+
+# Validate the optional graph process count; invalid values fall back to ttk default.
+if [[ -n "${E2E_GRAPH_PC:-}" && ! "${E2E_GRAPH_PC}" =~ ^[1-9][0-9]*$ ]]; then
+    print_warning "Invalid E2E_GRAPH_PC=${E2E_GRAPH_PC}; using ttk default"
+    E2E_GRAPH_PC=""
 fi
 
 if [[ -n "${ci_st_check}" ]]; then
