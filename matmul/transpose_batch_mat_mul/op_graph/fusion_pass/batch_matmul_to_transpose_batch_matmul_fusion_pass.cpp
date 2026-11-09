@@ -39,6 +39,7 @@
  */
 
 #include "batch_matmul_to_transpose_batch_matmul_fusion_pass.h"
+#include "acl/acl_platform.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -175,12 +176,16 @@ std::string GetPlatform()
     FUSION_PASS_CHECK(
         fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
         OPS_LOG_E(kPassName, "Get platform info failed."), return "");
+    char buf[64] = {0};
+    FUSION_PASS_CHECK(aclplatformGetDeviceInfo(ACL_PLATFORM_NPU_ARCH, buf, sizeof(buf)) != ACL_SUCCESS,
+                      OPS_LOG_E(kPassName, "Get npu arch failed."), return "");
+    const int32_t npuArch = std::atoi(buf);
     static const std::set<int32_t> supportNpuArchList = {
         static_cast<int32_t>(NpuArch::DAV_2201), static_cast<int32_t>(Ops::Base::DAV_3510),
-        static_cast<int32_t>(NpuArch::DAV_9201), static_cast<int32_t>(NpuArch::DAV_9202)};
-    const std::string currentPlat = platformInfo.str_info.short_soc_version;
-    FUSION_PASS_CHECK(supportNpuArchList.count(platformInfo.soc_info.arch_type) == 0,
+        static_cast<int32_t>(Ops::Base::DAV_9201), static_cast<int32_t>(Ops::Base::DAV_9202)};
+    FUSION_PASS_CHECK(supportNpuArchList.count(npuArch) == 0,
                       OPS_LOG_W(kPassName, "Fusion TransposeBatchMatMul not supported on this platform."), return "");
+    const std::string currentPlat = platformInfo.str_info.short_soc_version;
     return currentPlat;
 }
 

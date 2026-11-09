@@ -40,6 +40,7 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
     add_executable(${OP_GRAPH_UT_EXE}
         ${INFERSHAPE_STUB_FILES}
         test_op_graph_main.cpp
+        ${CMAKE_SOURCE_DIR}/tests/ut/acl_platform_stub.cpp
     )
 
     # 当前桩函数实现不完整，优先从环境变量中链接so
@@ -49,6 +50,7 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
 
     target_compile_definitions(${OP_GRAPH_UT_EXE} PRIVATE LOG_CPP)
     target_compile_options(${OP_GRAPH_UT_EXE} PUBLIC -fPIE -fno-access-control)
+    target_include_directories(${OP_GRAPH_UT_EXE} PRIVATE ${ASCEND_DIR}/include)
     add_dependencies(${OP_GRAPH_UT_EXE}
         json
         build_es_math

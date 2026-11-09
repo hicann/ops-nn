@@ -79,6 +79,7 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT OR OP_API_UT)
     set(OP_HOST_UT_EXE ${PKG_NAME}_op_host_ut)
     add_executable(${OP_HOST_UT_EXE}
         test_op_host_main.cpp
+        ${CMAKE_SOURCE_DIR}/tests/ut/acl_platform_stub.cpp
     )
 
     # 当前桩函数实现不完整，优先从环境变量中链接so
@@ -87,7 +88,7 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT OR OP_API_UT)
     )
 
     target_compile_definitions(${OP_HOST_UT_EXE} PRIVATE LOG_CPP)
-    target_include_directories(${OP_HOST_UT_EXE} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc)
+    target_include_directories(${OP_HOST_UT_EXE} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc ${ASCEND_DIR}/include)
     target_compile_options(${OP_HOST_UT_EXE} PUBLIC -fPIE -fno-access-control)
     target_link_libraries(${OP_HOST_UT_EXE} PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>

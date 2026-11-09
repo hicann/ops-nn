@@ -21,6 +21,7 @@
 #include "version/ge-compiler_version.h"
 #include "op_common/op_host/util/op_const_def.h"
 #include "acl/acl_rt.h"
+#include "acl/acl_platform.h"
 
 using namespace ge;
 using namespace ge::es;
@@ -118,14 +119,16 @@ bool IsSupportL12BtBf16(const PlatformInfo& platformInfo)
 // 判断当前ARCH是否为DAV_3510或后续兼容版本，后续新增兼容ARCH在此函数内追加
 bool IsNpuArch3510Series()
 {
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optionalInfo;
-    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
+    char buf[64] = {0};
+    aclError ret = aclplatformGetDeviceInfo(ACL_PLATFORM_NPU_ARCH, buf, sizeof(buf));
+    if (ret != ACL_SUCCESS) {
+        OPS_LOG_E("IsNpuArch3510Series", "get npu arch failed.");
         return false;
     }
-    return (platformInfo.soc_info.arch_type == static_cast<int32_t>(Ops::Base::DAV_3510) ||
-            platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9201) ||
-            platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9202));
+
+    return (std::atoi(buf) == static_cast<int32_t>(Ops::Base::DAV_3510) ||
+            std::atoi(buf) == static_cast<int32_t>(Ops::Base::DAV_9201) ||
+            std::atoi(buf) == static_cast<int32_t>(Ops::Base::DAV_9202));
 }
 
 constexpr int32_t kGeCompilerVersion900 = 90000000;

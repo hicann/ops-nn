@@ -56,6 +56,7 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "platform/soc_spec.h"
+#include "acl/acl_platform.h"
 #include "runtime/runtime/base.h"
 #include "version/ge-compiler_version.h"
 #include "common/op_graph/fusion_pass/weight_quant_fusion_utils.h"
@@ -141,19 +142,15 @@ static bool CheckPlatform(bool& supportV1)
         supportV1 = (npuArch != kNpuArch3510);
         return true;
     }
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optionalInfo;
-    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
-        ge::SUCCESS) {
-        OP_LOGW(kFusedOpType, "Failed to get platform info.");
+    if (aclplatformGetDeviceInfo(ACL_PLATFORM_NPU_ARCH, npuArchStr, kMaxLen) != ACL_SUCCESS) {
+        OP_LOGW(kFusedOpType, "Failed to get npu arch.");
         return false;
     }
-    const int32_t npuArch = platformInfo.soc_info.arch_type;
+    const int32_t npuArch = std::atoi(npuArchStr);
     const std::set<int32_t> supportNpuArchList = {static_cast<int32_t>(NpuArch::DAV_2201),
                                                   static_cast<int32_t>(Ops::Base::DAV_3510)};
-    const std::string soc = platformInfo.str_info.short_soc_version;
     if (supportNpuArchList.count(npuArch) == 0) {
-        OP_LOGW(kFusedOpType, "The fusion pass is not supported on SoC [%s]", soc.c_str());
+        OP_LOGW(kFusedOpType, "The fusion pass is not supported on NpuArch [%d]", npuArch);
         return false;
     }
     supportV1 = (npuArch != static_cast<int32_t>(Ops::Base::DAV_3510));

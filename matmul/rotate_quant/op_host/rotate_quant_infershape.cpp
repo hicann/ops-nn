@@ -22,6 +22,7 @@
 #include "util/math_util.h"
 #include "platform/platform_info.h"
 #include "op_common/op_host/util/op_const_def.h"
+#include "acl/acl_platform.h"
 
 namespace ops {
 
@@ -52,12 +53,15 @@ const std::initializer_list<ge::DataType> INT_OUT_TYPE_LIST = {ge::DT_INT8, ge::
 
 static bool IsRotateQuantDav3510Support()
 {
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optionalInfo;
-    auto ret = fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo);
-    return (ret == ge::GRAPH_SUCCESS && (platformInfo.soc_info.arch_type == static_cast<int32_t>(Ops::Base::DAV_3510) ||
-                                         platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9201) ||
-                                         platformInfo.soc_info.arch_type == static_cast<int32_t>(NpuArch::DAV_9202)));
+    char buf[64] = {0};
+    aclError ret = aclplatformGetDeviceInfo(ACL_PLATFORM_NPU_ARCH, buf, sizeof(buf));
+    if (ret != ACL_SUCCESS) {
+        OP_LOGE("IsRotateQuantDav3510Support", "get npu arch failed.");
+        return false;
+    }
+    return (std::atoi(buf) == static_cast<int32_t>(Ops::Base::DAV_3510) ||
+            std::atoi(buf) == static_cast<int32_t>(Ops::Base::DAV_9201) ||
+            std::atoi(buf) == static_cast<int32_t>(Ops::Base::DAV_9202));
 }
 
 static bool IsGroupedRotateQuantSupport()
