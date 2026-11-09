@@ -115,6 +115,7 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorD
         *(pData + i) = value;
     }
     input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -210,19 +211,11 @@ int main(int argc, char* argv[])
     ret = session->RunGraph(graph_id, input, output);
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Run graph failed\n", GetTime().c_str());
-        // Free input buffers allocated by GenOnesDataFloat32 (Tensor does not take ownership).
-        for (auto& inTensor : input) {
-            delete[] reinterpret_cast<float*>(inTensor.GetData());
-        }
         delete session;
         GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
-    // Free input buffers allocated by GenOnesDataFloat32 (Tensor does not take ownership).
-    for (auto& inTensor : input) {
-        delete[] reinterpret_cast<float*>(inTensor.GetData());
-    }
 
     int output_num = output.size();
     for (int i = 0; i < output_num; i++) {
