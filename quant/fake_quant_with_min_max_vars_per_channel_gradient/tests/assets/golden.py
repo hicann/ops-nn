@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
@@ -9,32 +10,32 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-"""Golden reference for FakeQuantWithMinMaxVarsPerChannelGradient (per-channel QAT backward).
+"""golden + third_party for fake_quant_with_min_max_vars_per_channel_gradient.
 
-The reference math is expressed with torch tensor-operator composition (not bare NumPy), and the
-per-channel nudge is computed in float32 so it matches the Kernel and the TensorFlow reference
-implementation exactly (`round(qMin - min/scale)` at the fp32 precision used on device). A
-TensorFlow `third_party` competitor is provided for cross-checking.
+两条通路（kernel/geir + tf E2E），无 aclnn（CmakeLists aclnn_exclude）。
+输出顺序：[backprops_wrt_x, backprop_wrt_min, backprop_wrt_max]。
 
-Contract (README):
-  - q_min = 1 if narrow_range else 0, q_max = 2^num_bits - 1,
-    scale = (max - min) / (q_max - q_min), nudged zero point = round(q_min - min/scale)
-    (half away from zero, as TF std::round) clipped to [q_min, q_max],
-    nudged_min = (q_min - zp) * scale, nudged_max = (q_max - zp) * scale.
-  - only a both-zero channel (min == 0 and max == 0) passes gradients through with
-    bp_min/bp_max = 0 (TF special case); every other max <= min channel keeps the raw
-    nudge formula above: min == max != 0 collapses the nudged interval to [0, 0]
-    (mask keeps only x == 0) and max < min reverses it (mask empty), so the out-of-range
-    gradients still land in bp_min/bp_max.
-  - backprops_wrt_x = gradients * mask, mask = (nudged_min <= x <= nudged_max); a NaN element
-    yields mask = 0.
-  - backprops_wrt_min = sum_{x < nudged_min} gradients, backprops_wrt_max = sum_{x > nudged_max}
-    gradients over all leading axes, accumulated in float64 to stay close to the Kahan-compensated
-    device accumulation.
+golden 主实现为 torch 张量算子拼接（nudge 用 TF Nudge() 的 raw float32 公式，
+仅 min==0 且 max==0 通道保留 TF 直通特例，其余退化通道走 raw 公式；
+zp 舍入 round half away from zero；bpmin/bpmax 沿 leading axes 以 float64 累加）。
+TF 降为 third_party 竞品（_TfCompetitor）做交叉核验。
+
+环境要求：golden 主实现需要 torch（延迟导入）；third_party tf 竞品需要
+tensorflow（延迟导入）。CI tf/torch 容器隔离，torch 为守卫式可选导入。
 """
 
 import numpy as np
 
+__spec__ = {
+    # geir / kernel 通路：ttk kernel | GEIR，CSV op_name 查找，golden 收 numpy
+    "fake_quant_with_min_max_vars_per_channel_gradient": "FakeQuantWithMinMaxVarsPerChannelGradientKernelSpec",
+    # GE 类型名变体（CSV op_type / GE OpType，双注册，兼容两种 TTK 查找路径；ops-nn 同款键，并集只增不删）
+    "FakeQuantWithMinMaxVarsPerChannelGradient": "FakeQuantWithMinMaxVarsPerChannelGradientKernelSpec",
+    # E2E 通路：ttk e2e，CSV api_name = tf 竞品 API 全路径，golden 收 torch.Tensor
+    "tf.quantization.fake_quant_with_min_max_vars_per_channel_gradient": "TfFakeQuantWithMinMaxVarsPerChannelGradientSpec",
+}
+
+# TTK 外部插件注册：级别 -> {op_name -> 入口函数名}（ops-nn tests/assets 同款 legacy 约定，绝对 import only）
 __golden__ = {
     "kernel": {
         "FakeQuantWithMinMaxVarsPerChannelGradient": (
@@ -46,23 +47,6 @@ __golden__ = {
             "fake_quant_with_min_max_vars_per_channel_gradient_golden"
         ),
     }
-}
-
-# Explicit module-level TestSpec registration (newer TTK spec convention) alongside the legacy
-# __golden__ mapping above, so both discovery mechanisms resolve this operator.
-__spec__ = {
-    "FakeQuantWithMinMaxVarsPerChannelGradient": (
-        "FakeQuantWithMinMaxVarsPerChannelGradientTestSpec"
-    ),
-    # snake_case / tf python API keys so the ttk e2e route (which resolves the
-    # golden by the CSV api_name) picks this golden up, aligned with the OA
-    # master __spec__ registration shape.
-    "fake_quant_with_min_max_vars_per_channel_gradient": (
-        "FakeQuantWithMinMaxVarsPerChannelGradientTestSpec"
-    ),
-    "tf.quantization.fake_quant_with_min_max_vars_per_channel_gradient": (
-        "FakeQuantWithMinMaxVarsPerChannelGradientTestSpec"
-    ),
 }
 
 
@@ -156,10 +140,14 @@ class _TfCompetitor:
 
     def __call__(self, gradients, x, min, max, **kwargs):
         import tensorflow as tf
-        import torch
+
+        try:
+            import torch
+        except ImportError:
+            torch = None
 
         def arr(value):
-            if isinstance(value, torch.Tensor):
+            if torch is not None and isinstance(value, torch.Tensor):
                 value = value.detach().cpu().numpy()
             return np.asarray(value)
 
@@ -173,17 +161,32 @@ class _TfCompetitor:
         )
 
 
-class FakeQuantWithMinMaxVarsPerChannelGradientTestSpec:
-    """TestSpec for the newer TTK spec convention (Kernel/GEIR route)."""
+class FakeQuantWithMinMaxVarsPerChannelGradientKernelSpec:
+    def golden(gradients, x, min, max, num_bits=8, narrow_range=False, **kwargs):
+        # golden 主实现：torch 张量算子拼接（ops-nn 同步，与 kernel fp32 舍入链逐行对齐）；
+        # num_bits/narrow_range 位置/关键字双兼容 + None 归一化（issue #14）。
+        return fake_quant_with_min_max_vars_per_channel_gradient_golden(
+            gradients, x, min, max, num_bits=num_bits, narrow_range=narrow_range
+        )
 
+    third_party = {"tf": _TfCompetitor}
+    # 对齐算子仓修复定版口径（cann/ops-nn tests/assets/golden.py：mix_tolerance rtol=atol=1e-5）。
+    # cross_check L1 比率判定在本 golden 形态下不可用：golden(torch 实现)与 third_party(TF) 为
+    # 独立实现，部分元素 b-g 恰为 0，NPU 归约顺序的正常舍入差(4 ULP/rel≈4e-7)在该处无解
+    # （L0_037 Output 1 实测）。golden 为真值，按 spec.yaml 容差判定。
+    tolerance = {
+        "float32": {"standard": "mix_tolerance", "rtol": 1.0e-5, "atol": 1.0e-5}
+    }
+
+
+class TfFakeQuantWithMinMaxVarsPerChannelGradientSpec:
     def golden(gradients, x, min, max, num_bits=8, narrow_range=False, **kwargs):
         return fake_quant_with_min_max_vars_per_channel_gradient_golden(
             gradients, x, min, max, num_bits=num_bits, narrow_range=narrow_range
         )
 
     third_party = {"tf": _TfCompetitor}
-    # Tolerance per spec.yaml numerical_tolerance (rtol/atol 1e-5, max_relative):
-    # tightens the mix_tolerance table values for this quantization compute operator.
+    # 同上：对齐算子仓修复定版口径（mix_tolerance rtol=atol=1e-5）
     tolerance = {
         "float32": {"standard": "mix_tolerance", "rtol": 1.0e-5, "atol": 1.0e-5}
     }

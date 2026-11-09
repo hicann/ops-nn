@@ -74,6 +74,13 @@ __golden__ = {
     },
 }
 
+# ─── __spec__ TestSpec 显式注册（与 opencann/operator-artifacts 保持一致）─────────
+__spec__ = {
+    "fake_quant_with_min_max_vars_per_channel": "FakeQuantWithMinMaxVarsPerChannelKernelSpec",
+    "FakeQuantWithMinMaxVarsPerChannel": "FakeQuantWithMinMaxVarsPerChannelKernelSpec",
+    "tf.quantization.fake_quant_with_min_max_vars_per_channel": "TfFakeQuantWithMinMaxVarsPerChannelSpec",
+}
+
 # fp32 最小正常数：次正规区（0 < |值| < FLT_MIN）按退化处理（与 kernel keep 判定一致）
 _FLT_MIN_NORMAL = 1.1754943508222875e-38
 # fp32 最大有限数：量程 (max-min) 超过它即溢出为 +inf，启用防溢出分解（与 kernel 2.1b 一致）
@@ -260,3 +267,61 @@ def fake_quant_with_min_max_vars_per_channel_e2e_golden(
     max_t = _as_float_tensor(max).reshape(-1)
     out = _forward(x_t, min_t, max_t, num_bits, narrow_range)
     return (out.numpy(),)
+
+
+# ─── third_party TF 竞品（与 opencann/operator-artifacts 保持一致）───────────────
+# 唯一竞品为 TensorFlow tf.quantization.fake_quant_with_min_max_vars_per_channel
+# （REQUIREMENTS §3 / DESIGN §10.1）。TF per-channel API 的 min/max 即为
+# 1-D tensor，与本算子接口一致，直接调用。server 侧 import tensorflow（standalone）。
+
+
+class _TfCompetitor:
+    """third_party tf — 调用 tf.quantization.fake_quant_with_min_max_vars_per_channel."""
+
+    def __init__(self, *, num_bits=8, narrow_range=False, **kwargs):
+        self.num_bits = int(num_bits)
+        self.narrow_range = bool(narrow_range)
+
+    def __call__(self, x, min, max, **kwargs):
+        import tensorflow as tf
+
+        return [
+            tf.quantization.fake_quant_with_min_max_vars_per_channel(
+                x, min, max, num_bits=self.num_bits, narrow_range=self.narrow_range
+            )
+        ]
+
+
+# ─── TestSpec 类（__spec__ 声明的目标）─────────────────────────────────────────
+
+
+class FakeQuantWithMinMaxVarsPerChannelKernelSpec:
+    """geir / kernel 通路 — golden 收 numpy.ndarray."""
+
+    def golden(x, min, max, *, num_bits=8, narrow_range=False, **kwargs):
+        return fake_quant_with_min_max_vars_per_channel_golden(
+            x, min, max, num_bits, narrow_range
+        )
+
+    third_party = {
+        "tf": _TfCompetitor,
+    }
+    tolerance = {
+        "float32": {"standard": "cross_check", "level": "L1"},
+    }
+
+
+class TfFakeQuantWithMinMaxVarsPerChannelSpec:
+    """E2E (TF) 通路 — golden 收 torch.Tensor."""
+
+    def golden(x, min, max, *, num_bits=8, narrow_range=False, **kwargs):
+        return fake_quant_with_min_max_vars_per_channel_e2e_golden(
+            x, min, max, num_bits, narrow_range
+        )
+
+    third_party = {
+        "tf": _TfCompetitor,
+    }
+    tolerance = {
+        "float32": {"standard": "cross_check", "level": "L1"},
+    }

@@ -10,33 +10,34 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-"""HardSigmoidGrad 的 TTK 多路径 TestSpec golden。
+"""HardSigmoidGrad 独立 Golden。
 
-参考 README.md 与 op_graph/hard_sigmoid_grad_proto.h:
-    y = grads * alpha            if 0 < alpha * input_x + beta < 1
-    y = 0                        otherwise
-    alpha 默认 1/6（float32 0.16666667），beta 默认 0.5。
+主参考为 float64 开区间显式公式（与 kernel host 侧 double 边界推导及 ulp 外扩
+同口径，见 ops-nn PR #13155 定版），ATen hardsigmoid_backward 降为 third_party
+交叉对照：其仿射链在 fp32 下于 x≈±(1-β)/α 边界存在翻转，仅用于三方比对。
 
-掩码在 float64 中求值（与 kernel 的 host 侧 double 边界推导一致），
-避免 fp32 乘加舍入在 x 略小于 (1-beta)/alpha（默认 3.0）时翻转判定。
+路由注册覆盖 kernel/aclnn/torch 全部 api_name（含 .default 变体）；
+torch_graph 图入口供图模式使用，kernel 双态经 ttk.utilities 转换。
 """
-
-__spec__ = {
-    "HardSigmoidGrad": "HardSigmoidGradKernelSpec",
-    "hard_sigmoid_grad": "HardSigmoidGradKernelSpec",
-    "aclnnHardsigmoidBackward": "AclnnHardsigmoidBackwardSpec",
-    "torch.ops.aten.hardsigmoid_backward": "TorchHardSigmoidBackwardSpec",
-}
 
 import numpy as np
 
-try:
-    from ml_dtypes import bfloat16 as _bf16
-except ImportError:  # pragma: no cover
-    _bf16 = None
+__spec__ = {
+    "hard_sigmoid_grad": "HardSigmoidGradKernelSpec",
+    "HardSigmoidGrad": "HardSigmoidGradKernelSpec",
+    "aclnnHardsigmoidBackward": "HardSigmoidGradAclnnSpec",
+    "torch.ops.aten.hardsigmoid_backward": "HardSigmoidGradTorchSpec",
+    "torch.ops.aten.hardsigmoid_backward.default": "HardSigmoidGradTorchSpec",
+}
 
-_DEFAULT_ALPHA = 0.16666667  # = 1/6 in float32
+_DEFAULT_ALPHA = 1.0 / 6.0
 _DEFAULT_BETA = 0.5
+
+_TOLERANCE = {
+    "float16": {"standard": "mix_tolerance"},
+    "bfloat16": {"standard": "mix_tolerance"},
+    "float32": {"standard": "mix_tolerance"},
+}
 
 
 def _masked(grads, input_x, alpha, beta):
@@ -48,6 +49,23 @@ def _masked(grads, input_x, alpha, beta):
     inner = alpha_d * x + beta_d
     keep = (inner > 0.0) & (inner < 1.0)
     return np.where(keep, grad * alpha_d, 0.0)
+
+
+def _aten_backward(grad, x, alpha=_DEFAULT_ALPHA, beta=_DEFAULT_BETA):
+    """Third-party reference: ATen hardsigmoid_backward with affine transform.
+
+    ATen is fixed to y/6+1/2; non-default alpha/beta are mapped through the
+    affine transform. The mask chain runs in fp32, so boundary elements may
+    disagree with the float64 main reference by one ulp — that divergence is
+    the expected third-party signal under the comparison tolerance.
+    """
+    import torch
+
+    alpha = float(alpha)
+    beta = float(beta)
+    transformed_x = torch.add(torch.mul(x, 6.0 * alpha), 6.0 * (beta - 0.5))
+    transformed_grad = torch.mul(grad, 6.0 * alpha)
+    return torch.ops.aten.hardsigmoid_backward(transformed_grad, transformed_x)
 
 
 def _to_np(t):
@@ -64,91 +82,104 @@ def _to_np(t):
     return np.asarray(t)
 
 
+def hard_sigmoid_grad_golden(
+    grads, input_x, alpha=_DEFAULT_ALPHA, beta=_DEFAULT_BETA, **kwargs
+):
+    del kwargs
+    import torch
+    from ttk.utilities.dtypes import numpy_to_torch_tensor, torch_to_numpy_tensor
+
+    is_torch = isinstance(grads, torch.Tensor)
+    grad_t = grads if is_torch else numpy_to_torch_tensor(grads)
+    x_t = (
+        input_x if isinstance(input_x, torch.Tensor) else numpy_to_torch_tensor(input_x)
+    )
+    out_dtype = x_t.dtype
+    y = _masked(
+        grad_t.detach().to(torch.float32).cpu().numpy(),
+        x_t.detach().to(torch.float32).cpu().numpy(),
+        alpha,
+        beta,
+    )
+    result = torch.from_numpy(y).to(out_dtype)
+    return [result if is_torch else torch_to_numpy_tensor(result.detach().cpu())]
+
+
+def aclnn_hard_sigmoid_grad_golden(gradOutput, self, out=None, **kwargs):
+    del kwargs
+    import torch
+
+    out_dtype = torch.float32
+    if isinstance(out, torch.Tensor):
+        out_dtype = out.dtype
+    elif out is not None:
+        out_dtype = torch.from_numpy(np.asarray(out)).dtype
+    y = _masked(_to_np(gradOutput), _to_np(self), _DEFAULT_ALPHA, _DEFAULT_BETA)
+    result = torch.from_numpy(y).to(out_dtype)
+    if out is not None:
+        result = result.reshape(out.shape)
+    return [result]
+
+
+def torch_hard_sigmoid_grad_golden(grad_output, self, **kwargs):
+    del kwargs
+    import torch
+
+    out_dtype = self.dtype if isinstance(self, torch.Tensor) else torch.float32
+    g = (
+        grad_output
+        if isinstance(grad_output, torch.Tensor)
+        else torch.as_tensor(grad_output)
+    )
+    x = self if isinstance(self, torch.Tensor) else torch.as_tensor(self)
+    y = _masked(
+        g.detach().to(torch.float32).cpu().numpy(),
+        x.detach().to(torch.float32).cpu().numpy(),
+        _DEFAULT_ALPHA,
+        _DEFAULT_BETA,
+    )
+    return [torch.from_numpy(y).to(out_dtype)]
+
+
+class _TorchHardSigmoidGrad:
+    def __init__(self, *, alpha=_DEFAULT_ALPHA, beta=_DEFAULT_BETA):
+        self.alpha = alpha
+        self.beta = beta
+
+    def __call__(instance, **kwargs):
+        grad = kwargs.get("grads", kwargs.get("gradOutput", kwargs.get("grad_output")))
+        x = kwargs.get("input_x", kwargs.get("self", kwargs.get("input")))
+        return [_aten_backward(grad, x, instance.alpha, instance.beta)]
+
+
+class _HardSigmoidGradGraph:
+    def __init__(self, alpha=_DEFAULT_ALPHA, beta=_DEFAULT_BETA, **kwargs):
+        del kwargs
+        self.alpha = float(alpha)
+        self.beta = float(beta)
+
+    def __call__(self, grad_output, source):
+        import torch
+
+        out_dtype = source.dtype if isinstance(source, torch.Tensor) else torch.float32
+        y = _masked(_to_np(grad_output), _to_np(source), self.alpha, self.beta)
+        return torch.from_numpy(y).to(out_dtype)
+
+
 class HardSigmoidGradKernelSpec:
-    """Kernel (REG_OP) path: numpy inputs, attributes alpha/beta via kwargs."""
-
-    tolerance = {
-        "float16": {"standard": "mix_tolerance"},
-        "bfloat16": {"standard": "mix_tolerance"},
-        "float32": {"standard": "mix_tolerance"},
-    }
-
-    def golden(grads, input_x, **kwargs):
-        alpha = kwargs.get("alpha", _DEFAULT_ALPHA)
-        beta = kwargs.get("beta", _DEFAULT_BETA)
-        y = _masked(_to_np(grads), _to_np(input_x), alpha, beta)
-        out_dtype = np.asarray(input_x).dtype
-        if _bf16 is not None and out_dtype == _bf16:
-            return [y.astype(_bf16)]
-        return [y.astype(out_dtype, copy=False)]
+    golden = staticmethod(hard_sigmoid_grad_golden)
+    third_party = {"torch": _TorchHardSigmoidGrad}
+    tolerance = _TOLERANCE
 
 
-class AclnnHardsigmoidBackwardSpec:
-    """ACLNN path: torch tensors (gradOutput, self, out); result in out dtype.
-
-    The aclnn entry casts both inputs to PromoteType(gradOutput, self), runs the
-    op with alpha = 1/6 and beta = 0.5 (fixed), then casts the result to out.
-    """
-
-    tolerance = {
-        "float16": {"standard": "mix_tolerance"},
-        "bfloat16": {"standard": "mix_tolerance"},
-        "float32": {"standard": "mix_tolerance"},
-    }
-
-    def golden(gradOutput, self, out=None, **kwargs):
-        import torch
-
-        # The aclnn runner binds only CSV inputs (+optional attrs); out may be
-        # absent, a torch tensor, or a numpy array. Normalize its dtype through
-        # the same widening rules used for the inputs.
-        out_dtype = torch.float32
-        if isinstance(out, torch.Tensor):
-            out_dtype = out.dtype
-        elif out is not None:
-            out_dtype = torch.from_numpy(np.asarray(out)).dtype
-        y = _masked(_to_np(gradOutput), _to_np(self), 1.0 / 6.0, 0.5)
-        return [torch.from_numpy(y).to(out_dtype)]
+class HardSigmoidGradAclnnSpec:
+    golden = staticmethod(aclnn_hard_sigmoid_grad_golden)
+    third_party = {"torch": _TorchHardSigmoidGrad}
+    tolerance = _TOLERANCE
 
 
-class TorchHardSigmoidBackwardSpec:
-    """Torch eager/graph e2e path: torch tensors (gradOutput, self).
-
-    aten.hardsigmoid_backward has no alpha/beta arguments; its fixed
-    |x| < 3 mask equals the default alpha = 1/6, beta = 0.5 semantics, so the
-    golden delegates to the aten CPU reference directly.
-    """
-
-    tolerance = {
-        "float16": {"standard": "mix_tolerance"},
-        "bfloat16": {"standard": "mix_tolerance"},
-        "float32": {"standard": "mix_tolerance"},
-    }
-
-    def golden(gradOutput, self, **kwargs):
-        import torch
-
-        g = (
-            gradOutput
-            if isinstance(gradOutput, torch.Tensor)
-            else torch.as_tensor(gradOutput)
-        )
-        x = self if isinstance(self, torch.Tensor) else torch.as_tensor(self)
-        out_dtype = torch.result_type(g, x)
-        y = torch.ops.aten.hardsigmoid_backward(
-            g.to(torch.float32), x.to(torch.float32)
-        )
-        return [y.to(out_dtype)]
-
-    class TorchThirdParty:
-        """torch third-party reference: native aten.hardsigmoid_backward."""
-
-        def __init__(self, **kwargs):
-            pass
-
-        def __call__(self, gradOutput, input_x, **kwargs):
-            import torch
-
-            return [torch.ops.aten.hardsigmoid_backward(gradOutput, input_x)]
-
-    third_party = {"torch": TorchThirdParty}
+class HardSigmoidGradTorchSpec:
+    golden = staticmethod(torch_hard_sigmoid_grad_golden)
+    third_party = {"torch": "torch.ops.aten.hardsigmoid_backward.default"}
+    torch_graph = _HardSigmoidGradGraph
+    tolerance = _TOLERANCE
