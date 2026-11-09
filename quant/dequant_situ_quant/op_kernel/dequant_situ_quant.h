@@ -1183,13 +1183,13 @@ private:
 
         const int64_t onesIdx = bufferWidth_; // 32B-aligned float offset
         LocalTensor<float> onesBlock = temp[onesIdx];
-        Duplicate<float>(onesBlock, 1.0f, 8);
+        Duplicate<float>(onesBlock, 1.0f, BLOCK_ELEM);
         PipeBarrier<PIPE_V>();
 
         constexpr uint64_t maskFp32 = static_cast<uint64_t>(ELEM_PER_REP_FP32);
         const uint32_t fullReps = static_cast<uint32_t>(alignOutputWidth_ / ELEM_PER_REP_FP32);
         const uint32_t remainder = static_cast<uint32_t>(alignOutputWidth_ % ELEM_PER_REP_FP32);
-        BinaryRepeatParams divParams(1, 0, 1, 8, 0, 8);
+        BinaryRepeatParams divParams(1, 0, 1, MASK_BLK_STRIDE, 0, MASK_BLK_STRIDE);
         if (fullReps > 0) {
             Div(sigmoid, onesBlock, expNeg, maskFp32, static_cast<uint8_t>(fullReps), divParams);
             PipeBarrier<PIPE_V>();
