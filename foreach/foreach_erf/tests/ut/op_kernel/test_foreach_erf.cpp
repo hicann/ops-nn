@@ -60,7 +60,8 @@ TEST_F(foreach_erf_test, test_case_float_1)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./erf_data/ && python3 compare_data.py 'float32'");
+    int cmpRet = system("cd ./erf_data/ && python3 compare_data.py 'float32'");
+    EXPECT_EQ(cmpRet, 0);
 }
 
 TEST_F(foreach_erf_test, test_case_float16_2)
@@ -92,7 +93,8 @@ TEST_F(foreach_erf_test, test_case_float16_2)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./erf_data/ && python3 compare_data.py 'float16'");
+    int cmpRet = system("cd ./erf_data/ && python3 compare_data.py 'float16'");
+    EXPECT_EQ(cmpRet, 0);
 }
 
 TEST_F(foreach_erf_test, test_case_bfloat16_3)
@@ -124,5 +126,6 @@ TEST_F(foreach_erf_test, test_case_bfloat16_3)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./erf_data/ && python3 compare_data.py 'bfloat16_t'");
+    int cmpRet = system("cd ./erf_data/ && python3 compare_data.py 'bfloat16_t'");
+    EXPECT_EQ(cmpRet, 0);
 }

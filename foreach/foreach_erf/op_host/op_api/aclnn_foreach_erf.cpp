@@ -39,18 +39,6 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclTensorList* 
     return true;
 }
 
-static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
-{
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        // self格式不能是私有格式
-        if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
-            return false;
-        }
-    }
-    return true;
-}
-
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
@@ -94,9 +82,14 @@ static inline bool CheckShape(const aclTensorList* self, const aclTensorList* ou
         return false;
     }
 
-    // tensor 维度检查
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+    // 单个张量列表最多 256 个 Tensor: 超出 arch22 共享 tiling 容量 (foreach_tiling_def.h
+    // MAX_TENSOR_CONT=256) 会被静默截断, arch35 侧同输入显式拒绝 (foreach_erf_tiling.cpp
+    // MAX_TENSOR_NUM), 此处统一在入口拒绝, 与 arch35 设计意图一致。
+    constexpr uint64_t MAX_TENSOR_LIST_LEN = 256;
+    if (self->Size() > MAX_TENSOR_LIST_LEN) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Each tensor list must have at most %lu tensors, but got %lu.",
+                MAX_TENSOR_LIST_LEN, self->Size());
+        return false;
     }
 
     // self和out的shape必须一致
@@ -112,7 +105,7 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
     CHECK_RET(CheckNotNull(self, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // Check every entry in tensor lists is not null, to avoid null pointer
-    // dereference in CheckDtypeValid/CheckShape/CheckFormat.
+    // dereference in CheckDtypeValid/CheckShape.
     CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
@@ -120,8 +113,8 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
     CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
-    // 4. 检查Format是否满足约束
-    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
+    // 注: 本接口不校验数据格式。图模式（GEIR）下非ND格式由框架按算子注册域拒绝;
+    // aclnn直连路径不校验数据格式, 非ND格式成员的执行结果不保证正确。
     return ACLNN_SUCCESS;
 }
 

@@ -41,15 +41,15 @@
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). First, call the "aclnnForeachErfGetWorkspaceSize" API to obtain the workspace size required for the computation and the executor containing the operator computation flow, and then call the "aclnnForeachErf" API to perform the computation.
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachErfGetWorkspaceSize(
   const aclTensorList *x,
-  const aclTensorList *out,
+  aclTensorList       *out,
   uint64_t            *workspaceSize,
   aclOpExecutor      **executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachErf(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -85,23 +85,23 @@ aclnnStatus aclnnForeachErf(
     <tbody>
     <tr>
       <td>x (aclTensorList*)</td>
-      <td>input</td>
+      <td>Input</td>
       <td>List of input tensors for the error function computation, corresponding to `x` in the formula.</td>
       <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>List of output tensors for the error function computation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type and data format are the same as those of input `x`, and the shape size is greater than or equal to that of input `x`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type and data format are consistent with those of input `x`, and the shape is the same as that of the corresponding tensor in `x`.</li></ul></td>
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
-      <td>0-8</td>
-      <td>×</td>
+      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnForeachErf(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -151,23 +151,27 @@ aclnnStatus aclnnForeachErf(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data type of x or out is not supported.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
-    </tr>
-    <tr>
       <td>The data types of tensors in x or out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The dimensions of tensors in x or out exceed 8.</td>
+      <td>A tensor member in x or out is a null pointer.</td>
+    </tr>
+    <tr>
+      <td>The number of tensors in x and out is inconsistent.</td>
+    </tr>
+    <tr>
+      <td>The number of tensors in a single tensor list of x or out exceeds 256.</td>
+    </tr>
+    <tr>
+      <td>The shapes of tensors at corresponding positions in x and out are inconsistent.</td>
     </tr>
   </tbody></table>
 
@@ -223,7 +227,7 @@ aclnnStatus aclnnForeachErf(
 
 The following sample code is for reference only. For details about compilation and execution, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
 
-```Cpp
+```cpp
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"

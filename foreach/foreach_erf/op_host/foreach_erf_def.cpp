@@ -26,14 +26,12 @@ public:
             .ParamType(DYNAMIC)
             .DataType(tensor_dtype_list)
             .Format(format_list)
-            .UnknownShapeFormat(format_list)
-            .AutoContiguous();
+            .UnknownShapeFormat(format_list);
         this->Output("y")
             .ParamType(DYNAMIC)
             .DataType(tensor_dtype_list)
             .Format(format_list)
-            .UnknownShapeFormat(format_list)
-            .AutoContiguous();
+            .UnknownShapeFormat(format_list);
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

@@ -18,6 +18,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "simt_api/math_functions.h"
 #include "foreach_erf_tiling_data.h"
 #include "foreach_erf_tiling_key.h"
 
@@ -28,93 +29,22 @@ constexpr int TENSOR_PTR_SHIFT = 3;
 using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 1024;
-constexpr float ERF_CLAMP_MIN = -3.92f;
-constexpr float ERF_CLAMP_MAX = 3.92f;
 
 /**
- * \brief Clamp input value to specified range
- */
-__simt_callee__ inline float Clamp(float x, float minVal, float maxVal)
-{
-    if (x < minVal) {
-        return minVal;
-    }
-    if (x > maxVal) {
-        return maxVal;
-    }
-    return x;
-}
-
-/**
- * \brief Erf approximation using rational function (v200+ platform)
- *        Polynomial coefficients from TBE erf implementation
- */
-__simt_callee__ inline float ErfApproximation(float x)
-{
-    // 1. Clamp input to [-3.92, 3.92]
-    float xClamped = Clamp(x, ERF_CLAMP_MIN, ERF_CLAMP_MAX);
-
-    // 2. Compute x^2
-    float x2 = xClamped * xClamped;
-
-    // 3. Compute numerator polynomial
-    // numer = ((((0.53443748819e-1*x² + 0.75517016694e1)*x² + 0.10162808918e3)*x²
-    //           + 0.13938061484e4)*x² + 0.50637915060e4)*x² + 0.29639384698e5)*x
-    float numer = x2;
-    numer = numer * 0.53443748819e-1f + 0.75517016694e1f;
-    numer = numer * x2 + 0.10162808918e3f;
-    numer = numer * x2 + 0.13938061484e4f;
-    numer = numer * x2 + 0.50637915060e4f;
-    numer = numer * x2 + 0.29639384698e5f;
-    numer = numer * xClamped;
-
-    // 4. Compute denominator polynomial
-    // denom = (((((x² + 0.31212858877e2)*x² + 0.39856963806e3)*x²
-    //            + 0.30231248150e4)*x² + 0.13243365831e5)*x² + 0.26267224157e5
-    float denom = x2;
-    denom = denom + 0.31212858877e2f;
-    denom = denom * x2 + 0.39856963806e3f;
-    denom = denom * x2 + 0.30231248150e4f;
-    denom = denom * x2 + 0.13243365831e5f;
-    denom = denom * x2 + 0.26267224157e5f;
-
-    // 5. Return erf result
-    return numer / denom;
-}
-
-/**
- * \brief Handle special values (NaN and Inf) for erf
- */
-__simt_callee__ inline float HandleSpecialValues(float x)
-{
-    // NaN detection: NaN != NaN
-    if (x != x) {
-        // Return NaN (using 0.0f / 0.0f to generate quiet NaN)
-        return 0.0f / 0.0f;
-    }
-    // Inf detection: check large values beyond clamp range
-    // For erf, x >= 3.92 outputs ~1, x <= -3.92 outputs ~-1
-    // We use clamp to handle large values, so no explicit Inf check needed
-    // But for true Inf, the result should be ±1
-    // Since clamp will convert Inf to max/min, we handle it via approximation
-
-    // Normal value -> use rational function approximation (includes clamp)
-    return ErfApproximation(x);
-}
-
-/**
- * \brief Compute erf with type promotion for float16/bfloat16
+ * \brief Compute erf via simt library erff (direct call, full-domain library
+ *        semantics: NaN/±Inf/saturation and all special values are carried
+ *        by erff itself, with no input-range pre-check or clamping)
  */
 template <typename T>
 __simt_callee__ inline T ComputeErf(T x)
 {
     if constexpr (std::is_same_v<T, float>) {
-        // float32: direct computation
-        return HandleSpecialValues(x);
+        // float32: direct library call
+        return erff(x);
     } else {
-        // float16/bfloat16: promote to float32, compute, then cast back
+        // float16/bfloat16: promote to float32, compute via erff, then cast back
         float xFloat = static_cast<float>(x);
-        float resultFloat = HandleSpecialValues(xFloat);
+        float resultFloat = erff(xFloat);
         return static_cast<T>(resultFloat);
     }
 }

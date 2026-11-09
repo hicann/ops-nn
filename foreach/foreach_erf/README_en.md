@@ -50,15 +50,15 @@ English | [简体中文](./README.md)
     <tr>
       <td>x</td>
       <td>Input</td>
-      <td>The input tensor list for the error function computation, corresponding to `x` in the formula. The data types of all tensors in this parameter are consistent.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>The input tensor list for the error function computation, corresponding to `x` in the formula. The data types of all tensors in this parameter are consistent. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>The output tensor list for the error function computation, corresponding to `y` in the formula. The data type and data format are consistent with the data type and data format of the input parameter `x`, and the shape size is greater than or equal to the shape size of the input parameter `x`. The data types of all tensors in this parameter are consistent.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>The output tensor list for the error function computation, corresponding to `y` in the formula. The data type and data format are consistent with those of input parameter `x`, and the shape is the same as that of the corresponding tensor in `x`. The data types of all tensors in this parameter are consistent. Non-contiguous output tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -67,7 +67,9 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- The number of tensors in x or y must not exceed 256.
+- The number of tensors in x and y must be the same.
+- The shape of the tensor at the corresponding position in y must be the same as that in x.
 
 ## Invocation Description
 
