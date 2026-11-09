@@ -286,7 +286,7 @@ aclnnStatus aclnnFusedSgd(
 
 ## aclnnFusedSgd
 
-* ​**参数说明**​：
+* **参数说明**：
 
 <div style="overflow-x: auto;">
     <table style="undefined;table-layout: fixed; width: 900px"><colgroup>
@@ -324,7 +324,7 @@ aclnnStatus aclnnFusedSgd(
     </tbody></table>
     </div>
 
-* ​**返回值**​：
+* **返回值**：
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
