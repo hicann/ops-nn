@@ -23,19 +23,41 @@
 
 ## 功能说明
 
-- 接口功能：将hidden与可选的markovEmbOptional按最后一维进行逻辑拼接，与weight做矩阵向量乘；加上可选biasOptional，经temperatureOptional缩放、截断和Sigmoid后，输出每行的置信度。计算使用FP32累加及激活，输出为FP32。
+- 接口功能：将hidden与可选的markovEmbOptional沿最后一维逻辑拼接，与weight做矩阵向量乘，加上可选的biasOptional，经temperatureOptional缩放、可选截断和Sigmoid计算后，输出每行的置信度。矩阵乘累加、后处理及输出的数据类型为FLOAT32。
 - 计算公式：
 
-  $$
-  z_{b,n}=\sum_{k=0}^{K_1-1}hidden_{b,n,k}\,weight_k
-  +\sum_{k=0}^{K_2-1}markovEmb_{b,n,k}\,weight_{K_1+k}+bias_n
-  $$
+  以下以三维输入为例；二维输入省略batch下标$b$。$K_1$为hidden的最后一维长度；markovEmbOptional为nullptr时$K_2=0$，否则$K_2$为其最后一维长度。weight的长度为$K_1+K_2$。
 
-  $$
-  u_{b,n}=-\frac{z_{b,n}}{T_{\mathrm{eff}}},\qquad out_{b,n}=\frac{1}{1+\exp(u_{b,n})}
-  $$
+  1. 沿最后一维逻辑拼接后，计算矩阵向量乘并加偏置：
 
-  二维输入省略下标b。markovEmbOptional为nullptr时，第二项为0，K2=0；biasOptional为nullptr时，不加偏置；temperatureOptional为nullptr，或当前值为+0/-0时，有效温度T_eff=1；其余情况T_eff取当前值，允许负值，不修改输入Tensor。定义`C=FP32(INT32_MAX)=2147483648.0`，两个clamp参数分别转为FP32；nullptr分别映射为`L=-C`、`H=C`。计算指数之前，L不等于-C时令`u=max(u,L)`，H不等于C时再令`u=min(u,H)`；等于对应约定值时跳过该侧截断。截断作用于指数的输入`-z/T_eff`，不是概率输出。biasOptional[N] 在不同batch之间广播。
+     $$
+     z_{b,n}=\sum_{k=0}^{K_1-1}\mathrm{hidden}_{b,n,k}\,\mathrm{weight}_k
+     +\sum_{k=0}^{K_2-1}\mathrm{markovEmbOptional}_{b,n,k}\,\mathrm{weight}_{K_1+k}+p_n
+     $$
+
+     $K_2=0$时第二项为0。biasOptional为nullptr时$p_n=0$，否则$p_n=\mathrm{biasOptional}_n$，并在各batch共用。
+
+  2. 按温度缩放，得到指数函数的输入：
+
+     $$
+     T=\begin{cases}
+     1, & \mathrm{temperatureOptional}=\mathrm{nullptr}\text{或}\mathrm{temperatureOptional}[0]=0,\\
+     \mathrm{temperatureOptional}[0], & \text{其他情况},
+     \end{cases}
+     \qquad u_{b,n}=-\frac{z_{b,n}}{T}
+     $$
+
+  3. 先处理下限、再处理上限，最后计算Sigmoid：
+
+     $$
+     \begin{aligned}
+     v_{b,n}&=\begin{cases}u_{b,n},&L=-C,\\\max(u_{b,n},L),&L\ne-C,\end{cases}\\
+     w_{b,n}&=\begin{cases}v_{b,n},&H=C,\\\min(v_{b,n},H),&H\ne C,\end{cases}\\
+     \mathrm{out}_{b,n}&=\frac{1}{1+\exp(w_{b,n})}
+     \end{aligned}
+     $$
+
+     $C=\operatorname{FP32}(\mathrm{INT32\_MAX})=2147483648.0$。clampLowOptional为nullptr时$L=-C$，否则$L$为其FLOAT32值；clampHighOptional为nullptr时$H=C$，否则$H$为其FLOAT32值。显式传入约定值也会跳过对应的截断。
 
 ## 函数原型
 
@@ -94,17 +116,17 @@ aclnnStatus aclnnConfidenceHeadFused(
       <tr>
         <td>hidden</td>
         <td>输入</td>
-        <td>待投影的特征。</td>
+        <td>待投影的特征，对应公式中的hidden。</td>
         <td><li>必选，shape为 [N,K1] 或 [B,N,K1]。</li></td>
         <td>FLOAT16、BFLOAT16</td>
-        <td>ND、NCL（三维）</td>
+        <td>ND</td>
         <td>2、3</td>
         <td>√</td>
       </tr>
       <tr>
         <td>weight</td>
         <td>输入</td>
-        <td>所有行共用的投影权重。</td>
+        <td>所有行共用的投影权重，对应公式中的weight。</td>
         <td><li>必选，shape为 [K1+K2]，数据类型与hidden一致。</li></td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
@@ -114,17 +136,17 @@ aclnnStatus aclnnConfidenceHeadFused(
       <tr>
         <td>markovEmbOptional</td>
         <td>输入</td>
-        <td>可选的Markov特征。</td>
+        <td>可选的Markov特征，对应公式中的markovEmbOptional。</td>
         <td><li>可选参数。传入nullptr时不拼接Markov特征，K2=0；非空时shape为[N,K2]或[B,N,K2]，rank、前导维度和数据类型与hidden一致。</li></td>
         <td>FLOAT16、BFLOAT16</td>
-        <td>ND、NCL（三维）</td>
+        <td>ND</td>
         <td>2、3</td>
         <td>√</td>
       </tr>
       <tr>
         <td>temperatureOptional</td>
         <td>输入</td>
-        <td>温度系数。</td>
+        <td>温度系数，用于确定公式中的有效温度T。</td>
         <td><li>可选参数。非空时为[1] Tensor；传入nullptr或当前值为+0/-0时按温度1计算，其他值（含负值）使用当前值，不修改输入Tensor。</li></td>
         <td>FLOAT32</td>
         <td>ND</td>
@@ -134,7 +156,7 @@ aclnnStatus aclnnConfidenceHeadFused(
       <tr>
         <td>biasOptional</td>
         <td>输入</td>
-        <td>投影后的逐行偏置。</td>
+        <td>按N维添加的偏置，用于确定公式中的p_n。</td>
         <td><li>可选参数。传入nullptr时不加偏置；非空时shape为[N]，同一n在各batch使用相同的biasOptional[n]。N&gt;1时不接受[1]广播。</li></td>
         <td>FLOAT32</td>
         <td>ND</td>
@@ -144,8 +166,8 @@ aclnnStatus aclnnConfidenceHeadFused(
       <tr>
         <td>clampLowOptional</td>
         <td>输入</td>
-        <td>指数输入的截断下限L。</td>
-        <td><li>可选参数。传入nullptr时使用-2147483648.0，不做下限截断；非空时使用aclScalar，其数据类型须可转换为FLOAT32，转换结果等于该约定值时也不做下限截断。</li></td>
+        <td>指数输入的截断下限，对应公式中的L。</td>
+        <td><li>可选参数。传入空指针时不做下限截断；传入数值须可转换为FLOAT32，转换后等于-2147483648.0时也不做下限截断。</li></td>
         <td>aclScalar</td>
         <td>-</td>
         <td>-</td>
@@ -154,8 +176,8 @@ aclnnStatus aclnnConfidenceHeadFused(
       <tr>
         <td>clampHighOptional</td>
         <td>输入</td>
-        <td>指数输入的截断上限H。</td>
-        <td><li>可选参数。传入nullptr时使用2147483648.0，不做上限截断；非空时使用aclScalar，其数据类型须可转换为FLOAT32，转换结果等于该约定值时也不做上限截断。</li></td>
+        <td>指数输入的截断上限，对应公式中的H。</td>
+        <td><li>可选参数。传入空指针时不做上限截断；传入数值须可转换为FLOAT32，转换后等于2147483648.0时也不做上限截断。</li></td>
         <td>aclScalar</td>
         <td>-</td>
         <td>-</td>
@@ -164,7 +186,7 @@ aclnnStatus aclnnConfidenceHeadFused(
       <tr>
         <td>out</td>
         <td>输出</td>
-        <td>每行的置信度。</td>
+        <td>每行的置信度，对应公式中的out。</td>
         <td><li>必选；由调用方创建，shape为 [N] 或 [B,N]，与hidden的前导维度一致。</li></td>
         <td>FLOAT32</td>
         <td>ND</td>
@@ -217,23 +239,17 @@ aclnnStatus aclnnConfidenceHeadFused(
         <td>传入的hidden、weight、out、workspaceSize或executor是空指针。</td>
       </tr>
       <tr>
-        <td>ACLNN_ERR_PARAM_INVALID</td>
-        <td>161002</td>
+        <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="4">161002</td>
         <td>当前平台不支持该接口。</td>
       </tr>
       <tr>
-        <td>ACLNN_ERR_PARAM_INVALID</td>
-        <td>161002</td>
         <td>输入或输出的数据类型、数据格式、维度不满足参数说明。</td>
       </tr>
       <tr>
-        <td>ACLNN_ERR_PARAM_INVALID</td>
-        <td>161002</td>
         <td>hidden、markovEmbOptional、weight、biasOptional或out的shape不匹配，或维度、展平行数及K1+K2超出支持范围。</td>
       </tr>
       <tr>
-        <td>ACLNN_ERR_PARAM_INVALID</td>
-        <td>161002</td>
         <td>clampLowOptional或clampHighOptional的数据类型不能转换为FLOAT32。</td>
       </tr>
   </tbody></table>
@@ -281,12 +297,11 @@ aclnnStatus aclnnConfidenceHeadFused(
 
 ## 约束说明
 
-- 支持合法基础格式，不支持FRACTAL_NZ。按输入shape的实际维度顺序计算。
-- 各维度、展平后的行数B*N和K1+K2均不能超过UINT32_MAX。二维输入按B=1理解。
-- K1+K2=0时仍执行biasOptional、temperatureOptional、可选clamp和Sigmoid。biasOptional为nullptr，且已启用的截断不改变0时，输出全部为0.5。B=0或N=0时返回空输出，仍校验输入输出参数。
-- clampLowOptional和clampHighOptional同时生效时，先执行下限截断，再执行上限截断；不校验上下限的大小关系，显式0为有效阈值。
-- 确定性计算：
-  - aclnnConfidenceHeadFused默认确定性实现。
+- 支持合法基础格式和非连续Tensor，不支持FRACTAL_NZ。
+- hidden、weight、markovEmbOptional的数据类型须同为FLOAT16或同为BFLOAT16；temperatureOptional、biasOptional和out为FLOAT32。weight的长度为K1+K2，markovEmbOptional的前导维度与hidden一致，biasOptional的shape为[N]，out的shape与hidden去掉最后一维后的shape一致。
+- 各维度、B*N和K1+K2须位于[0,UINT32_MAX]。二维输入按B=1理解。
+- K1+K2=0时仍执行biasOptional、temperatureOptional、可选截断和Sigmoid计算；B=0或N=0时输出为空。
+- 确定性计算：aclnnConfidenceHeadFused默认支持确定性计算。
 
 ## 调用示例
 

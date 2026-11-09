@@ -15,17 +15,60 @@ English | [简体中文](./README.md)
 
 ## Function
 
-The operator logically concatenates hidden and the optional markov_emb along the last dimension, performs matrix-vector multiplication with the 1D weight, adds the optional bias, applies temperature scaling, optional clamping, and Sigmoid, and outputs the FP32 confidence.
+- Operator function: Logically concatenate hidden and optional markov_emb along the last dimension, project each row with weight, add optional bias, apply temperature scaling, optional clamp_low and clamp_high bounds, and then Sigmoid. Accumulation, post-processing, and output use FLOAT32.
+- Formula:
 
-```text
-features = cat([hidden, markov_emb], dim=-1)  # hidden is used when markov_emb is absent
-z = features @ weight + bias                # 0 is used when bias is absent
-T_eff = 1 if temperature is None or temperature[0] == 0 else temperature[0]
-u = -z / T_eff
-if clamp_low is enabled:  u = max(u, clamp_low)
-if clamp_high is enabled: u = min(u, clamp_high)
-out = 1 / (1 + exp(u))
-```
+  The following formulas use a 3D input. For a 2D input, omit the batch index $b$. $K_1$ is the last dimension of hidden. If markov_emb is absent, $K_2=0$; otherwise, $K_2$ is its last dimension. The length of weight is $K_1+K_2$.
+
+  1. Project the logically concatenated features and add the bias:
+
+     $$
+     z_{b,n}=\sum_{k=0}^{K_1-1}\mathrm{hidden}_{b,n,k}\,\mathrm{weight}_k
+     +\sum_{k=0}^{K_2-1}\mathrm{markov\_emb}_{b,n,k}\,\mathrm{weight}_{K_1+k}+p_n
+     $$
+
+     The second sum is $0$ when $K_2=0$. If bias is absent, $p_n=0$; otherwise, $p_n=\mathrm{bias}_n$ and is shared across batches.
+
+  2. Apply temperature scaling to obtain the exponential input:
+
+     $$
+     T=\begin{cases}
+     1, & \mathrm{temperature}=\mathrm{None}\text{ or }\mathrm{temperature}[0]=0,\\
+     \mathrm{temperature}[0], & \text{otherwise},
+     \end{cases}
+     \qquad u_{b,n}=-\frac{z_{b,n}}{T}
+     $$
+
+  3. Apply clamp_low, then clamp_high, and compute Sigmoid. Let $C=\operatorname{FP32}(\mathrm{INT32\_MAX})=2147483648.0$:
+
+     $$
+     \begin{aligned}
+     L&=\begin{cases}
+     -C, & \mathrm{clamp\_low}=\mathrm{None},\\
+     \operatorname{FP32}(\mathrm{clamp\_low}), & \text{otherwise},
+     \end{cases}\\
+     H&=\begin{cases}
+     C, & \mathrm{clamp\_high}=\mathrm{None},\\
+     \operatorname{FP32}(\mathrm{clamp\_high}), & \text{otherwise}
+     \end{cases}
+     \end{aligned}
+     $$
+
+     $$
+     \begin{aligned}
+     v_{b,n}&=\begin{cases}
+     u_{b,n}, & L=-C,\\
+     \max(u_{b,n},L), & L\ne-C,
+     \end{cases}\\
+     w_{b,n}&=\begin{cases}
+     v_{b,n}, & H=C,\\
+     \min(v_{b,n},H), & H\ne C,
+     \end{cases}\\
+     \mathrm{out}_{b,n}&=\frac{1}{1+\exp(w_{b,n})}
+     \end{aligned}
+     $$
+
+     An explicitly supplied clamp_low equal to $-C$ or clamp_high equal to $C$ also skips the corresponding bound.
 
 ## Parameters
 
@@ -36,18 +79,16 @@ out = 1 / (1 + exp(u))
 | markov_emb | Optional input | The shape is [N,K2] or [B,N,K2]. The leading dimensions and data type are the same as those of hidden. When this parameter is absent, K2=0. | FLOAT16, BFLOAT16 | ND |
 | temperature | Optional input | The shape is [1]. When this parameter is absent or the current value is positive or negative zero, the computation uses 1. | FLOAT32 | ND |
 | bias | Optional input | The shape is [N]. The parameter is broadcast across batches. | FLOAT32 | ND |
-| clamp_low | Optional attribute | Lower bound of the exponential input. If this parameter is not passed, no lower-bound clamping is performed. | Float | - |
-| clamp_high | Optional attribute | Upper bound of the exponential input. If this parameter is not passed, no upper-bound clamping is performed. | Float | - |
+| clamp_low | Optional attribute | Lower bound of the exponential input. The bound is skipped if omitted or if its FLOAT32 value equals -2147483648.0. | Float | - |
+| clamp_high | Optional attribute | Upper bound of the exponential input. The bound is skipped if omitted or if its FLOAT32 value equals 2147483648.0. | Float | - |
 | out | Output | The shape is [N] or [B,N]. | FLOAT32 | ND |
 
 ## Constraints
 
-- Valid base formats are supported, and FRACTAL_NZ is not supported. The ACLNN internally converts the inputs to contiguous and unifies them into ND. Valid non-contiguous inputs and output views are supported.
-- hidden, weight, and markov_emb must be all FLOAT16 or all BFLOAT16. temperature, bias, and out are FLOAT32.
-- Each dimension, B*N, and K1+K2 must be in [0,UINT32_MAX]. Non-empty GEMV is limited by the L1 capacity for fully loading the weights and the on-chip capacity required by tiling.
-- The kernel reads the current value of temperature. Negative values are allowed, and the input tensor is not modified.
-- Clamping applies to -z/T_eff. Lower-bound clamping is performed first, and then upper-bound clamping is performed. The lower bound -2147483648.0 and upper bound 2147483648.0 are FP32 convention values that indicate skipping the corresponding clamping. When 0 is explicitly passed in, clamping is performed as usual.
-- When K1+K2=0, post-processing is still performed. When B=0 or N=0, the output is empty.
+- Valid base formats and non-contiguous tensors are supported. FRACTAL_NZ is not supported.
+- hidden, weight, and markov_emb must all be FLOAT16 or all be BFLOAT16. temperature, bias, and out are FLOAT32. The length of weight is $K_1+K_2$; the leading dimensions of markov_emb must match hidden; bias has shape [$N$]; and out has the shape of hidden without its last dimension.
+- Each dimension, $B\times N$, and $K_1+K_2$ must be in $[0,\mathrm{UINT32\_MAX}]$. For a 2D input, $B=1$.
+- When $K_1+K_2=0$, bias, temperature, optional clamping, and Sigmoid are still applied. When $B=0$ or $N=0$, the output is empty.
 
 ## Invocation Description
 

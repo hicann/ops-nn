@@ -18,8 +18,8 @@
 namespace ge {
 
 /**
- * @brief Projects hidden and optional markov features with weight, then applies temperature scaling,
- * optional clamping and sigmoid to produce confidence scores.
+ * @brief Projects hidden and optional markov features with weight, adds optional bias, then applies temperature
+ * scaling, optional clamping and sigmoid to produce confidence scores.
  *
  * @par Inputs:
  * @li hidden: A tensor with shape [N, K1] or [B, N, K1]. Supports float16 and bfloat16 in ND format.
@@ -31,9 +31,10 @@ namespace ge {
  * @li bias: An optional float32 tensor with shape [N] in ND format, broadcast across batches.
  *
  * @par Attributes:
- * @li clamp_low: An optional float. Lower bound for the exponent input -z / temperature. The default value is
+ * @li clamp_low: An optional float. Lower bound for the sigmoid exponent input (negated projected score divided
+ * by the effective temperature). The default value is
  * -2147483648.0 and disables the lower bound.
- * @li clamp_high: An optional float. Upper bound for the exponent input -z / temperature. The default value is
+ * @li clamp_high: An optional float. Upper bound for the sigmoid exponent input. The default value is
  * 2147483648.0 and disables the upper bound. The lower bound is applied before the upper bound.
  *
  * @par Outputs:
