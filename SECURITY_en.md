@@ -19,7 +19,7 @@ When compiling and installing this project from source code, you need to compile
 
 - You are advised to write the operator invocation script according to the resource status of the running environment. If the operator invocation script does not match the resource status, for example, the space used for generating input data or golden computation results exceeds the memory capacity limit, or the data saved locally by the script exceeds the disk space, errors may occur and the process may exit unexpectedly.
 - When an operator running error occurs, the process exits and prints error information. You are advised to locate the specific error cause based on the error message, for example, by setting the operator to run synchronously or viewing log files.
-- When the operator is invoked through [PyTorch](https://gitee.com/ascend/pytorch), a running error may occur due to version mismatch. For details, refer to the [PyTorch Security Statement](https://gitee.com/ascend/pytorch#%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E).
+- When the operator is invoked through [PyTorch](https://gitcode.com/Ascend/pytorch), a running error may occur due to version mismatch. For details, refer to the [PyTorch Security Statement](https://gitcode.com/Ascend/pytorch#%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E).
 
 ## Public Network Address Statement
 

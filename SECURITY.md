@@ -19,7 +19,7 @@
 
 - 建议用户结合运行环境资源状况编写对应算子调用脚本。若算子调用脚本与资源状况不匹配，如生成输入数据或标杆计算结果使用空间超出内存容量限制、脚本在本地保存数据超过磁盘空间大小等情况，可能会引发错误并导致进程意外退出。
 - 算子在运行异常时会退出进程并打印报错信息，建议根据报错提示定位具体错误原因，包括设定算子同步执行、查看日志文件等方式。
-- 算子通过[PyTorch](https://gitee.com/ascend/pytorch)方式调用时，可能会因为版本不匹配导致运行错误，具体请参考[PyTorch安全声明](https://gitee.com/ascend/pytorch#%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)。
+- 算子通过[PyTorch](https://gitcode.com/Ascend/pytorch)方式调用时，可能会因为版本不匹配导致运行错误，具体请参考[PyTorch安全声明](https://gitcode.com/Ascend/pytorch#%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)。
 
 ## 公网地址声明
 
