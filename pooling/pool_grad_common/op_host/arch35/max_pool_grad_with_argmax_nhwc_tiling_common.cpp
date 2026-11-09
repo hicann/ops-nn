@@ -167,7 +167,10 @@ void MaxPoolGradWithArgmaxNHWCTilingCommon::AdjustInnerSplitForMultiCore()
         return;
     }
 
-    SearchOuterSingle(splitData.cOutputInner, 1);
+    const int64_t bigCDomainThreshold = baseData.vRegSize / (2 * baseData.indexBytes);
+    if (inputData->cX > bigCDomainThreshold) {
+        SearchOuterSingle(splitData.cOutputInner, 1);
+    }
     DoBufferCalculate();
 }
 
