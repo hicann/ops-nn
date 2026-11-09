@@ -190,10 +190,8 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>The self, ord, dims, or out parameter is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
-    </tr>
-    <tr>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>dims exceeds [-N, N-1] (N is the number of dimensions of self).</td>
     </tr>
     <tr>

@@ -164,11 +164,10 @@ aclnnStatus aclnnForeachMaximumScalarV2(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
+      <td>The data types of x, scalar, and out are not within the supported range.</td>
     </tr>
-    <tr>
-      <td>The data types of x, scalar, and out are not within the supported range.</td></tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td></tr>
     <tr><td>The shapes of x and out do not meet the constraints.</td></tr>

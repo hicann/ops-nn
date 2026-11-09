@@ -240,7 +240,10 @@ aclnnStatus aclnnForeachSubListV2(
 
 ## Constraints
 
-- The tensor counts of `x1`, `x2`, and `out` must be identical. On Ascend 950PR&950DT products, each tensor list supports at most 256 tensors.
+- The tensor counts of `x1`, `x2`, and `out` must be identical.
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT products</term>: The count of tensors in any single tensor list of `x1`, `x2`, and `out` shall not exceed 256.
+<!-- end id7 -->
 - When `x1`, `x2`, and `out` are all empty tensor lists, the API returns success without performing computation. Other tensor count mismatches return a parameter error.
 - The `-1` (dynamic dimension) and `-2` (dynamic rank) markers are handled by Host inference according to the framework conventions. Tiling requires concrete shapes and non-negative element counts.
 - Integer overflow wraps according to the bit width of the output data type.

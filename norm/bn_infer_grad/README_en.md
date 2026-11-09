@@ -81,8 +81,8 @@ English | [简体中文](./README.md)
 
 - The logical C dimension of grads (the 2nd dimension of NCHW, the last dimension of NHWC) must equal the lengths of scale and batch_variance.
 - scale and batch_variance support only FLOAT.
-- Atlas A3 series products and Atlas A2 series products: the data format of parameters grads and x_backprop supports NC1HWC0, NCHW, and NHWC.
-- Ascend 950PR&950DT series products: the data format of parameters grads and x_backprop supports only NCHW and NHWC.
+- Atlas A3 products and Atlas A2 products: the data format of parameters grads and x_backprop supports NC1HWC0, NCHW, and NHWC.
+- Ascend 950PR&950DT products: the data format of parameters grads and x_backprop supports only NCHW and NHWC.
 - The shape, data type, and data format of x_backprop match grads.
 - epsilon supports only the FLOAT scalar type. It must be greater than 0, with the recommended range [1e-6, 1e-3]; there are no enumeration or step constraints.
 

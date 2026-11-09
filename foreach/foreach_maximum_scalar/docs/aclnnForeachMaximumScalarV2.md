@@ -162,11 +162,10 @@ aclnnStatus aclnnForeachMaximumScalarV2(
       <td>传入的x、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
+      <td>x、scalar和out的数据类型不在支持的范围之内。</td>
     </tr>
-    <tr>
-      <td>x、scalar和out的数据类型不在支持的范围之内。</td></tr>
     <tr>
       <td>x和out的数据类型不一致。</td></tr>
     <tr><td>x与out的shape不满足约束。</td></tr>

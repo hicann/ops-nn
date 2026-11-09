@@ -191,7 +191,7 @@
 - 输出：y1、y2、x 的 shape 必须等于 x1.shape；y1、y2 的 dtype 固定为 INT8，x 的 dtype 与 x1 一致。
 - 量化参数：axis 不为 -65535（除法模式）时，scales1、scales2 不得为 0；实现对除零不作守卫，结果按 Inf/NaN 语义传播。
 - 数值范围：epsilon 无值域校验；当 Var(x)+epsilon 的平方项超出 FLOAT32 可表示范围时按 IEEE 语义传播（例如方差平方上溢为 Inf 时 rstd 为 0，norm_out 退化为 beta）。
-- 平台差异：Atlas A2（ascend910b）、Atlas A3（ascend910_93）当前仅交付 BFLOAT16 二进制；FLOAT16、FLOAT32 仅在 Ascend 950 系列交付。
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：输入参数和输出参数`x`的数据类型仅支持BFLOAT16。
 
 ## 调用说明
 

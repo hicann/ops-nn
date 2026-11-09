@@ -160,10 +160,8 @@ aclnnStatus aclnnForeachDivScalarV2(
       <td>传入的x、scalar或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
-    </tr>
-    <tr>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x、scalar和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

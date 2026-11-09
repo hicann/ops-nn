@@ -234,7 +234,10 @@ aclnnStatus aclnnForeachSubList(
 
 ## 约束说明
 
-- `x1`、`x2`、`out`的Tensor列表长度必须一致；Ascend 950PR&950DT系列产品单个Tensor列表中Tensor的数量不超过256个。
+- `x1`、`x2`、`out`的Tensor列表长度必须一致。
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT系列产品</term>：`x1`、`x2`、`out`的单个Tensor列表中Tensor的数量不超过256个。
+<!-- end id7 -->
 - `x1`、`x2`、`out`均为空TensorList时，接口执行成功空操作；其他列表数量失配场景返回参数错误。
 - `-1`（动态维度）与`-2`（动态Rank）标记由Host推导阶段按框架约定处理；内核侧Tiling要求shape已具体化且元素数非负。
 - 整数计算结果溢出时按输出数据类型的位宽进行回绕。

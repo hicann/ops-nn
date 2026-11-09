@@ -413,12 +413,12 @@ bool CheckHardwareSupport()
 
     LOG_PRINT("Current SOC: %s\n", socName);
 
-    // This operator supports only Ascend950.
+    // This operator supports only Ascend 950PR&950DT products.
     if (strstr(socName, "Ascend950") != nullptr || strstr(socName, "ascend950") != nullptr) {
         return true;
     }
 
-    LOG_PRINT("Warning: This operator only supports Ascend950, current SOC '%s' is not supported. Skip test.\n",
+    LOG_PRINT("Warning: This operator only supports Ascend 950PR&950DT products, current SOC '%s' is not supported. Skip test.\n",
               socName);
     return false;
 }

@@ -194,6 +194,7 @@ English | [简体中文](./README.md)
 - Quantization parameters: when axis is not -65535 (division mode), scales1 and scales2 must not be 0; the implementation does not guard against division by zero, and results propagate according to Inf/NaN semantics.
 - Value range: no value range check is performed on epsilon; when the square term of Var(x)+epsilon exceeds the representable range of FLOAT32, the result propagates according to IEEE semantics (for example, when the variance square overflows to Inf, rstd is 0 and norm_out degrades to beta).
 - Platform differences: for Atlas A2 (ascend910b) and Atlas A3 (ascend910_93), only BFLOAT16 binaries are currently delivered; FLOAT16 and FLOAT32 are delivered only on the Ascend 950 series.
+- <term>Atlas A3 products</term> and <term>Atlas A2 products</term>, all input parameters and output parameter `x` only support the BFLOAT16 data type.
 
 ## Invocation Description
 
