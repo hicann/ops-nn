@@ -1,11 +1,13 @@
 /**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
- * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * This program is free software, you can redistribute it and/or modify it under
+ * the terms and conditions of CANN Open Software License Agreement Version 2.0
+ * (the "License"). Please refer to the License for details. You may not use
+ * this file except in compliance with the License. THIS SOFTWARE IS PROVIDED ON
+ * AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS
+ * FOR A PARTICULAR PURPOSE. See LICENSE in the root of the software repository
+ * for the full text of the License.
  */
 
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_SELECTION_OPS_H_
@@ -14,16 +16,17 @@
 
 namespace ge {
 /**
-* @brief Fills the elements of the input tensor with value val by selecting the indices in the order given in index.
+* @brief Fills the elements of the input tensor with value val by selecting the
+indices in the order given in index.
 
 * @par Inputs:
 * Three inputs, including:
 * @li x: A tensor. Must be one of the following types:
-*     float16, float32, int32, bfloat16. \n
+*     float16, float32, int32, bool, bfloat16. \n
 * @li assist1: A tensor. Must be one of the following types:
-*     float16, float32, int32, bfloat16. \n
+*     float16, float32, int32, bool, bfloat16. \n
 * @li assist2: A tensor. Must be one of the following types:
-*     float16, float32, int32, bfloat16. \n
+*     float16, float32, int32, bool, bfloat16. \n
 
 * @par Attributes:
 * dim: A required int. Used to select the dimension of this tensor. \n
