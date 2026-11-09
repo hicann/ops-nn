@@ -49,6 +49,32 @@ def mx_dtype(dtype):
     return fp8_dtype(dtype)
 
 
+def _mx_operand_dtypes(
+    x1, x2, output_dtype, input_dtypes=(), x1_dtype=None, x2_dtype=None
+):
+    """Resolve logical MX types before promoted inputs lose their native dtype."""
+    input_dtypes = input_dtypes or ()
+    declared = (x1_dtype, x2_dtype)
+    operands = []
+    for index, value in enumerate((x1, x2)):
+        if value is None:
+            raise ValueError("MX inputs require x1 and x2")
+        dtype = declared[index]
+        if dtype is None:
+            dtype = input_dtypes[index] if index < len(input_dtypes) else value.dtype
+            if str(dtype).removeprefix("torch.") in ("float32", "float64"):
+                dtype = str(value.dtype).removeprefix("torch.")
+                # ACLNN may promote both the values and their dtype metadata.
+                if dtype in ("float32", "float64"):
+                    dtype = output_dtype
+        operands.append(mx_dtype(dtype))
+    if operands[0] != output_dtype:
+        raise ValueError("MX output dtype must match x1")
+    if (operands[0] == "float4_e2m1") != (operands[1] == "float4_e2m1"):
+        raise ValueError("MXFP4 requires both inputs to be FP4")
+    return tuple(operands)
+
+
 _FP32_TINY = np.float32(np.finfo(np.float32).tiny)
 _QUANTIZE_CHUNK_ELEMENTS = 1 << 20
 _MX_GROUP_SIZE = 32
@@ -941,12 +967,9 @@ def _npu_activation_golden(
     import torch.nn.functional as functional
     import torch_npu
 
-    a_dtype = mx_dtype(x1.dtype if x1_dtype is None else x1_dtype)
-    b_dtype = mx_dtype(x2.dtype if x2_dtype is None else x2_dtype)
-    if dtype != a_dtype:
-        raise ValueError("MX output dtype must match x1")
-    if is_fp4 and b_dtype != dtype:
-        raise ValueError("MXFP4 requires both inputs to be FP4")
+    a_dtype, b_dtype = _mx_operand_dtypes(
+        x1, x2, dtype, x1_dtype=x1_dtype, x2_dtype=x2_dtype
+    )
     a = _to_npu_tensor(x1, a_dtype, device)
     b = (
         _to_npu_tensor(x2, b_dtype, device)
@@ -1164,6 +1187,9 @@ class QuantMatmulActivationQuantTestSpec:
         dtype = mx_dtype(y_dtype)
         if quant_mode != "mx":
             raise ValueError("This TestSpec covers MX quantization")
+        a_dtype, b_dtype = _mx_operand_dtypes(
+            x1, x2, dtype, kwargs.get("input_dtypes", ())
+        )
         npu_device = _npu_golden_device(device)
         weight_nz_shape = None
         input_formats = kwargs.get("input_formats", ())
@@ -1175,9 +1201,8 @@ class QuantMatmulActivationQuantTestSpec:
                 raise ValueError("WeightNZ kernel golden requires input_ori_shapes[1]")
             weight_nz_shape = input_ori_shapes[1]
             if npu_device is None:
-                x2 = weight_nz_to_nd(x2, weight_nz_shape, dtype)
+                x2 = weight_nz_to_nd(x2, weight_nz_shape, b_dtype)
         if npu_device is not None:
-            input_dtypes = kwargs.get("input_dtypes", ())
             return _npu_activation_golden(
                 x1,
                 x2,
@@ -1193,8 +1218,8 @@ class QuantMatmulActivationQuantTestSpec:
                 dst_type_max=dst_type_max,
                 transpose_x1=transpose_x1,
                 transpose_x2=transpose_x2,
-                x1_dtype=input_dtypes[0] if input_dtypes else None,
-                x2_dtype=input_dtypes[1] if input_dtypes else None,
+                x1_dtype=a_dtype,
+                x2_dtype=b_dtype,
                 weight_nz_shape=weight_nz_shape,
             )
         # TTK kernel path normalizes the first output dtype to float32, so the
@@ -1251,6 +1276,9 @@ class QuantMatmulActivationQuantAclnnTestSpec:
         if dtype is None:
             dtype = str(yOut.dtype) if yOut is not None else str(x1.dtype)
         dtype = mx_dtype(dtype)
+        a_dtype, b_dtype = _mx_operand_dtypes(
+            x1, x2, dtype, kwargs.get("tensor_dtypes", ())
+        )
         npu_device = _npu_golden_device(device)
         weight_nz_shape = None
         if _is_fractal_nz(kwargs.get("tensor_formats", ())):
@@ -1260,9 +1288,8 @@ class QuantMatmulActivationQuantAclnnTestSpec:
             # Recover and decode that storage before _numpy() copies the view.
             weight_nz_shape = tuple(x2.shape)
             if npu_device is None:
-                x2 = weight_nz_to_nd(x2, weight_nz_shape, dtype)
+                x2 = weight_nz_to_nd(x2, weight_nz_shape, b_dtype)
         if npu_device is not None:
-            tensor_dtypes = kwargs.get("tensor_dtypes", ())
             return _npu_activation_golden(
                 x1,
                 x2,
@@ -1278,8 +1305,8 @@ class QuantMatmulActivationQuantAclnnTestSpec:
                 dst_type_max=dstTypeMax,
                 transpose_x1=transposeX1,
                 transpose_x2=transposeX2,
-                x1_dtype=tensor_dtypes[0] if tensor_dtypes else None,
-                x2_dtype=tensor_dtypes[1] if tensor_dtypes else None,
+                x1_dtype=a_dtype,
+                x2_dtype=b_dtype,
                 weight_nz_shape=weight_nz_shape,
             )
         result = reference(
@@ -1317,18 +1344,36 @@ class QuantMatmulActivationQuantE2ETestSpec:
         **kwargs,
     ):
         # PyTorch views already express the logical matrix: no second transpose.
+        tensor_dtypes = kwargs.get("tensor_dtypes", ())
         dtype = output_dtype
         if dtype is None:
-            dtype = x1_dtype if x1_dtype is not None else str(x1.dtype)
+            dtype = x1_dtype
+        if dtype is None:
+            dtype = tensor_dtypes[0] if tensor_dtypes else x1.dtype
         dtype = mx_dtype(dtype)
+        a_dtype, b_dtype = _mx_operand_dtypes(
+            x1, x2, dtype, tensor_dtypes, x1_dtype, x2_dtype
+        )
+        quant_mode = kwargs.get("quant_mode", "mx")
+        if quant_mode != "mx":
+            raise ValueError("This TestSpec covers MX quantization")
+        group_sizes = kwargs.get("group_sizes")
+        if group_sizes is not None and tuple(group_sizes) not in (
+            (),
+            (0, 0, 0),
+            (1, 1, 32),
+        ):
+            raise ValueError("Invalid MX group_sizes")
+        scale_alg = 0 if scale_alg is None else scale_alg
         npu_device = _npu_golden_device(device)
         if npu_device is not None:
-            group_sizes = kwargs.get("group_sizes")
-            if group_sizes is not None and tuple(group_sizes) not in (
-                (0, 0, 0),
-                (1, 1, 32),
-            ):
-                raise ValueError("Invalid MX group_sizes")
+            if _is_fractal_nz(kwargs.get("tensor_formats", ())):
+                import torch_npu
+
+                # Match the NZ binding applied before the actual E2E operator call.
+                x2 = torch_npu.npu_format_cast(
+                    _to_npu_tensor(x2, b_dtype, npu_device), 29
+                )
             return _npu_activation_golden(
                 x1,
                 x2,
@@ -1338,23 +1383,21 @@ class QuantMatmulActivationQuantE2ETestSpec:
                 device=npu_device,
                 output_dtype=dtype,
                 activation_type=activation_type,
-                quant_mode=kwargs.get("quant_mode", "mx"),
+                quant_mode=quant_mode,
                 round_mode=round_mode,
                 scale_alg=scale_alg,
                 dst_type_max=dst_type_max,
-                x1_dtype=x1_dtype,
-                x2_dtype=x2_dtype,
+                x1_dtype=a_dtype,
+                x2_dtype=b_dtype,
                 pack_fp4_output=dtype == "float4_e2m1",
             )
         is_fp4 = dtype == "float4_e2m1"
         if is_fp4:
-            if mx_dtype(x1_dtype) != dtype or mx_dtype(x2_dtype) != dtype:
-                raise ValueError("MXFP4 E2E inputs require FP4 dtype attributes")
             x1_value = _unpack_fp4(x1)
             x2_value = _unpack_fp4(x2)
         else:
-            x1_value = _numpy_mx(x1, x1.dtype if x1_dtype is None else x1_dtype)
-            x2_value = _numpy_mx(x2, x2.dtype if x2_dtype is None else x2_dtype)
+            x1_value = _numpy_mx(x1, a_dtype)
+            x2_value = _numpy_mx(x2, b_dtype)
         result = reference(
             x1_value,
             x2_value,
