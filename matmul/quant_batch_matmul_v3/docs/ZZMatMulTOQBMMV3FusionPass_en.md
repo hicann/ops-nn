@@ -1,17 +1,15 @@
 # ZZMatMulTOQBMMV3FusionPass
 
-<!-- md-trans-meta sourceCommit=unknown translatedAt=2026-10-12T17:10:34.905Z pushedAt=2026-10-13T01:47:29.775Z -->
+## Fusion Patterns
 
-## Fusion Pattern
+This fusion converts MatMul/MatMulV2/MatMulV3 and BatchMatMul/BatchMatMulV2/BatchMatMulV3 into QuantBatchMatmulV3, inserting a constant scale of 1.0. The bias input, transpose attributes, and output y data type are preserved.
 
-This fusion converts the MatMul/MatMulV2/MatMulV3 and BatchMatMul/BatchMatMulV2/BatchMatMulV3 operators into the QuantBatchMatMulV3 operator, and inserts a constant with a scale of 1.0 as the scale input. The bias input, transpose attribute, and data type of output y remain unchanged.
-
-![](../../../docs/en/figures/ZZMatMulTOQBMMV3FusionPass_1.png)
+![Before and after converting MatMul to QuantBatchMatmulV3](../../../docs/en/figures/ZZMatMulTOQBMMV3FusionPass_1.png)
 
 ## Constraints
 
-- The MatMul type includes BatchMatMul/BatchMatMulV2/MatMul/MatMulV2.
-- The input supports the HIFLOAT8 data type.
+- MatMul types include MatMul, MatMulV2, MatMulV3, BatchMatMul, BatchMatMulV2, and BatchMatMulV3.
+- The supported input data type is HIFLOAT8.
 <!-- npu="950" id1 -->
 - <term>Ascend 950PR&950DT products</term>: Support the combination of INT8 input and INT32 output.
 <!-- end id1 -->
@@ -19,5 +17,5 @@ This fusion converts the MatMul/MatMulV2/MatMulV3 and BatchMatMul/BatchMatMulV2/
 ## Applicable Products
 
 <!-- npu="950" id2 -->
-<term>Ascend 950PR&950DT products</term>
+- <term>Ascend 950PR&950DT products</term>
 <!-- end id2 -->

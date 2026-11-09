@@ -2,13 +2,13 @@
 
 ## 融合模式
 
-该融合将MatMul/MatMulV2/MatMulV3、BatchMatMul/BatchMatMulV2/BatchMatMulV3算子转换为QuantBatchMatMulV3算子，并插入scale为1.0的常量作为scale输入，bias输入、转置属性及输出y的数据类型保持不变。
+该融合将MatMul/MatMulV2/MatMulV3、BatchMatMul/BatchMatMulV2/BatchMatMulV3算子转换为QuantBatchMatmulV3算子，并插入scale为1.0的常量作为scale输入，bias输入、转置属性及输出y的数据类型保持不变。
 
-![](../../../docs/zh/figures/zz_matmul_to_qbmmv3_fusion_pass_1.png)
+![MatMul转换为QuantBatchMatmulV3的融合前后示意图](../../../docs/zh/figures/zz_matmul_to_qbmmv3_fusion_pass_1.png)
 
 ## 使用约束
 
-- MatMul类型包括BatchMatMul/BatchMatMulV2/MatMul/MatMulV2。
+- MatMul类型包括MatMul、MatMulV2、MatMulV3、BatchMatMul、BatchMatMulV2、BatchMatMulV3。
 - 输入的数据类型支持HIFLOAT8。
 <!-- npu="950" id1 -->
 - <term>Ascend 950PR&950DT系列产品</term>：支持输入为INT8且输出为INT32的组合。
@@ -17,5 +17,5 @@
 ## 支持的型号
 
 <!-- npu="950" id2 -->
-Ascend 950PR&950DT系列产品
+- <term>Ascend 950PR&950DT系列产品</term>
 <!-- end id2 -->

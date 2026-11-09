@@ -1,7 +1,5 @@
 # aclnnTransQuantParamV3
 
-<!-- md-trans-meta sourceCommit=unknown translatedAt=2026-09-22T21:45:06.468Z -->
-
 ## Applicable Products
 
 <!-- npu="950" id1 -->
@@ -25,33 +23,33 @@
 
 ## Function
 
-- Description: Converts the data type of the quantization parameter scale from FLOAT32 to UINT64 or INT64 as required by the hardware. Compared with aclnnTransQuantParamV2, this version adds the roundMode input to select the conversion mode for data values during the data type conversion process.
+- Function: Converts quantization scale data from FLOAT32 to the UINT64 or INT64 type required by the hardware. Compared with [aclnnTransQuantParamV2](aclnnTransQuantParamV2_en.md), this interface adds the roundMode input to select the rounding mode used during data type conversion.
 - Formula:
 
   1. `out` is in 64-bit format and is initialized to 0.
 
-  2. If `round_mode` is 1, `scale` is rounded to the upper 19 bits. If `round_mode` is 0, no processing is performed.
+  2. If `roundMode` is 1, first round `scale` to a 19-bit floating-point representation (1 sign bit, 8 exponent bits, and 10 mantissa bits) using round to nearest, ties to even. Resolve ties to the value whose least significant mantissa bit is 0. Flush FLOAT32 subnormal values to zero while preserving the sign. Skip this step if `roundMode` is 0.
 
      $$
      scale = Round(scale)
      $$
 
-  3. `scale` is truncated to the upper 19 bits, stored at bit position 32 of `out`, and bit 46 is set to 1.
+  3. Reinterpret the processed `scale` bitwise as UINT32, denoted by `scaleBits`. Preserve its highest 19 bits (bits 13–31, with the lowest 13 bits cleared), write them into the lowest 32 bits of `out`, and set bit 46 to 1. Widen the value to UINT64 before bitwise operations. Bit positions are numbered from 0.
 
      $$
-     out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
+     out = out\ |\ (scaleBits\ \&\ 0xFFFFE000)\ |\ (1\ll46)
      $$
 
   4. Perform subsequent calculations based on the `offset` value:
      - If `offset` does not exist, no further computation is performed.
      - If `offset` exists:
-       1. Process the `offset` value as int, with a range of [-256, 255].
+       1. Round `offset` to the nearest integer, resolving ties to even, and clamp it to [-256, 255].
 
           $$
           offset = Max(Min(INT(Round(offset)),255),-256)
           $$
 
-       2. Retain the lower 9 bits of `offset` and store them in bits 37 to 45 of `out`.
+       2. Preserve the lowest 9 bits of `offset` and store them in bits 37–45 of `out`.
 
           $$
           out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0x1FF)\ll37)
@@ -61,7 +59,7 @@
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). Call the "aclnnTransQuantParamV3GetWorkspaceSize" API first to obtain the workspace size required for computation and the executor that contains the operator computation process, and then call the "aclnnTransQuantParamV3" API to execute the computation.
 
-```Cpp
+```cpp
 aclnnStatus aclnnTransQuantParamV3GetWorkspaceSize(
   const aclTensor* scale,
   const aclTensor* offset,
@@ -71,101 +69,103 @@ aclnnStatus aclnnTransQuantParamV3GetWorkspaceSize(
   aclOpExecutor**  executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnTransQuantParamV3(
-  void                *workspace,
-  uint64_t             workspaceSize,
-  aclOpExecutor       *executor,
-  const aclrtStream    stream)
+  void*             workspace,
+  uint64_t          workspaceSize,
+  aclOpExecutor*    executor,
+  const aclrtStream stream)
 ```
 
 ## aclnnTransQuantParamV3GetWorkspaceSize
 
-- **Parameters:**
+- **Parameters**
 
-  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
-  <col style="width: 170px">
-  <col style="width: 120px">
-  <col style="width: 271px">
-  <col style="width: 330px">
-  <col style="width: 223px">
-  <col style="width: 101px">
-  <col style="width: 190px">
-  <col style="width: 145px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Parameter</th>
-      <th>Input/Output</th>
-      <th>Description</th>
-      <th>Instruction</th>
-      <th>Data Type</th>
-      <th>Data Format</th>
-      <th>Dimension (shape)</th>
-      <th>Non-contiguous Tensor</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>scale (aclTensor*)</td>
-      <td>Input</td>
-      <td>The scale value used in quantization. It corresponds to `scale` in the formula.</td>
-      <td><ul><li>Empty tensors are not supported.</li><li>The shape is 1D (t,), where t = 1 or n, or 2D (1, n), where n is the same as the shape n of the right matrix in the matmul calculation.</li><li>Ensure that the scale data contains no NaN or Inf.</li></ul></td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-      <td>1-2</td>
-      <td>×</td>
-    </tr>
-    <tr>
-      <td>offset (aclTensor*)</td>
-      <td>Input</td>
-      <td>Optional parameter. The offset value used in quantization. It corresponds to `offset` in the formula.</td>
-      <td><ul><li>Empty tensors are not supported.</li><li>The shape is 1D (t,) or 2D (1, n), where t = 1 or n, and n is the same as the shape n of the right matrix in the matmul computation.</li><li>Ensure that the offset data contains no NaN or Inf.</li></ul></td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-      <td>1-2</td>
-      <td>×</td>
-    </tr>
-    <tr>
-      <td>roundMode (int64_t)</td>
-      <td>Input</td>
-      <td>Round mode for padding FP32 to FP19 in the quantization computation. Corresponds to `roundMode` in the formula description.</td>
-      <td>Only the following values are supported: 0 (compatible with V2), 1 (improved computation precision).</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>out (aclTensor*)</td>
-      <td>Output</td>
-      <td>Computation output of quantization. Corresponds to `out` in the formula.</td>
-      <td><ul><li>Empty tensors are not supported.</li><li>If the shape of input scale is 1D, the shape of out is also 1D, and the size of this dimension is the maximum of the single-dimension shape sizes of scale and offset (if not nullptr). If the shape of input scale is 2D, the shape and size of out are exactly the same as those of input scale.</li></ul></td>
-      <td>UINT64, INT64</td>
-      <td>ND</td>
-      <td>1-2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>workspaceSize (uint64_t*)</td>
-      <td>Output</td>
-      <td>Returns the workspace size to be allocated on the Device side.</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>executor (aclOpExecutor**)</td>
-      <td>Output</td>
-      <td>Returns the op executor, which contains the operator computation process.</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-  </tbody>
+  <table style="table-layout: fixed; width: 1500px">
+    <colgroup>
+      <col style="width: 210px">
+      <col style="width: 100px">
+      <col style="width: 240px">
+      <col style="width: 390px">
+      <col style="width: 230px">
+      <col style="width: 120px">
+      <col style="width: 110px">
+      <col style="width: 100px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Input/Output</th>
+        <th>Description</th>
+        <th>Instruction</th>
+        <th>Data Type</th>
+        <th>Data Format</th>
+        <th>Dimensions (Shape)</th>
+        <th>Non-contiguous Tensor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>scale (const aclTensor*)</td>
+        <td>Input</td>
+        <td>Quantization scale value, corresponding to <code>scale</code> in the formula.</td>
+        <td><ul><li>Empty tensors are not supported. NaN and Inf are not allowed.</li><li>Supports a one-dimensional shape (t,) or a two-dimensional shape (1,n), where t=1 or n. For two-dimensional shape restrictions in grouped scenarios, see <a href="#constraints">Constraints</a>.</li></ul></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1-2</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>offset (const aclTensor*)</td>
+        <td>Optional input</td>
+        <td>Optional quantization offset value, corresponding to <code>offset</code> in the formula.</td>
+        <td><ul><li>Empty tensors are not supported.</li><li>Supports a one-dimensional shape (t,) or a two-dimensional shape (1, n), where t=1 or n, and n matches the n dimension of the right matrix in matmul.</li><li>The user must ensure that offset contains no NaN or Inf.</li><li>If offset is unused, pass nullptr. Its bit field in the output remains 0.</li></ul></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1-2</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>roundMode (int64_t)</td>
+        <td>Input</td>
+        <td>Rounding mode applied before encoding scale.</td>
+        <td>0: clears the lowest 13 bits of the FLOAT32 representation, consistent with V2. 1: rounds to a 19-bit floating-point representation (1 sign bit, 8 exponent bits, and 10 mantissa bits) using round to nearest, ties to even. Other values are unsupported.</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>out (const aclTensor*)</td>
+        <td>Output</td>
+        <td>Quantization output, corresponding to <code>out</code> in the formula.</td>
+        <td><ul><li>Empty tensors are not supported.</li><li>Without offset, the shape matches that of scale. With offset, the shape must match the broadcast result. See the shape description below for common combinations.</li></ul></td>
+        <td>UINT64, INT64</td>
+        <td>ND</td>
+        <td>1-2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize (uint64_t*)</td>
+        <td>Output</td>
+        <td>Returns the workspace size to allocate on the device, in bytes.</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor (aclOpExecutor**)</td>
+        <td>Output</td>
+        <td>Returns the op executor, which contains the operator computation process.</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody>
   </table>
 
 - **Return Value**
@@ -174,74 +174,72 @@ aclnnStatus aclnnTransQuantParamV3(
 
   The first-phase API performs input parameter validation and returns an error in the following scenarios:
 
-  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
-  <col style="width: 268px">
-  <col style="width: 140px">
-  <col style="width: 762px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Error Code</th>
-      <th>Error code</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>The input scale or out is a null pointer.</td>
-    </tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>The data type or data format of scale, offset, or out is not within the supported range.</td>
-    </tr>
-    <tr>
-      <td>The shape of scale or offset is not within the supported range.</td>
-    </tr>
-    <tr>
-      <td>The value of roundMode is not within the supported range.</td>
-    </tr>
-  </tbody></table>
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 300px">
+      <col style="width: 150px">
+      <col style="width: 550px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Return/Status Code</th>
+        <th>Value</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>The input scale or out is a null pointer.</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_PARAM_INVALID</td>
+        <td>161002</td>
+        <td><ul><li>The data type or format of scale, offset, or out is unsupported.</li><li>The shape of scale or offset is unsupported.</li><li>The value of roundMode is unsupported.</li></ul></td>
+      </tr>
+    </tbody>
+  </table>
 
 ## aclnnTransQuantParamV3
 
-- **Parameters:**
+- **Parameters**
 
-  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
-  <col style="width: 173px">
-  <col style="width: 112px">
-  <col style="width: 668px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Parameter</th>
-      <th>Input/Output</th>
-      <th>Description</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>Input</td>
-      <td>Workspace memory address requested on the Device side.</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>Input</td>
-      <td>Workspace size requested on the Device side, obtained by calling the first-phase API aclnnTransQuantParamV3GetWorkspaceSize.</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>Input</td>
-      <td>Op executor that contains the operator computation flow.</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>Input</td>
-      <td>Specifies the stream for task execution.</td>
-    </tr>
-  </tbody>
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 220px">
+      <col style="width: 100px">
+      <col style="width: 680px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Input/Output</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>workspace (void*)</td>
+        <td>Input</td>
+        <td>Workspace memory address requested on the Device side.</td>
+      </tr>
+      <tr>
+        <td>workspaceSize (uint64_t)</td>
+        <td>Input</td>
+        <td>Workspace size to allocate on the Device, in bytes, obtained from the first-stage interface aclnnTransQuantParamV3GetWorkspaceSize.</td>
+      </tr>
+      <tr>
+        <td>executor (aclOpExecutor*)</td>
+        <td>Input</td>
+        <td>Op executor that contains the operator computation flow.</td>
+      </tr>
+      <tr>
+        <td>stream (const aclrtStream)</td>
+        <td>Input</td>
+        <td>Specifies the stream for task execution.</td>
+      </tr>
+    </tbody>
   </table>
 
 - **Return Value**
@@ -251,19 +249,24 @@ aclnnStatus aclnnTransQuantParamV3(
 ## Constraints
 
 <!-- npu="950,A3,910b,310p" id7 -->
-- <term>Atlas inference products</term>, <term>Atlas A2 products</term>, <term>Atlas A3 products</term>, <term>Ascend 950PR&950DT products</term>: This API can be used together with matmul operators (such as [aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)).
+- <term>Atlas inference products</term>, <term>Atlas A2 products</term>, <term>Atlas A3 products</term>, <term>Ascend 950PR&950DT products</term>: This API can be used together with matmul operators (such as [aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4_en.md)).
 <!-- end id7 -->
 <!-- npu="A3,910b,310p" id8 -->
 - <term>Atlas inference products</term>, <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: This API does not support use with grouped matmul class operators (such as aclnnGroupedMatmulV4).
 <!-- end id8 -->
+<!-- npu="950" id9 -->
+- <term>Ascend 950PR&950DT products</term>: grouped scenarios without offset also support scale with shape (g,n), where g and n are positive integers. The shape of out matches that of scale.
+<!-- end id9 -->
 - The shapes of scale, offset, and out are described as follows:
   - When there is no offset, the out shape is the same as the scale shape.
-    - If out is used as the input of a matmul operator (such as [aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)), the shape can be 1D (1,), (n,) or 2D (1, n), where n is the same as the shape n of the right matrix (corresponding to parameter x2) in matmul computation.
+    - If out is used as the input of a matmul operator (such as [aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4_en.md)), the shape can be 1D (1,), (n,) or 2D (1, n), where n is the same as the shape n of the right matrix (corresponding to parameter x2) in matmul computation.
+    <!-- npu="950" id10 -->
     - If out is used as a grouped matmul class operator input (such as aclnnGroupedMatmulV4), it is only used when the grouping mode is m-axis grouping (corresponding parameter groupType is 0). Its shape supports 1D (g,) or 2D (g, 1), (g, n), where n is consistent with the shape n of the right matrix (corresponding parameter x2) in the grouped matmul computation, and g is consistent with the number of groups (corresponding parameter groupListOptional's shape size) in the grouped matmul computation.
-  - When offset is present, it can only be used as the input of a matmul operator (such as [aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)):
+    <!-- end id10 -->
+  - When offset is present, it can only be used as the input of a matmul operator (such as [aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4_en.md)):
     - The shapes of offset, scale, and out support 1D (1,), (n,) or 2D (1, n), where n is consistent with the shape n of the right matrix (corresponding parameter x2) in the matmul computation.
-    - When the input scale's shape is 1D, the out shape is also 1D, and its shape size is the maximum of the single-dimension shape sizes of scale and offset.
-    - When the shape of the input scale is 2D, the shape of out has exactly the same dimensions and size as the shape of the input scale.
+    - When scale and offset are both one-dimensional, out is one-dimensional and its element count is the maximum of their element counts. If both input element counts exceed 1, they must be equal.
+    - When scale and offset are both two-dimensional, out has shape (1,n), matching the broadcast result. Use the same number of dimensions for scale and offset where possible, avoiding mixed (n,) and (1,n) shapes.
 - Deterministic computation:
   - aclnnTransQuantParamV3 defaults to a deterministic implementation.
 
@@ -271,8 +274,10 @@ aclnnStatus aclnnTransQuantParamV3(
 
 The following sample code is for reference only. For details about compilation and execution, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
 
-```Cpp
+```cpp
 #include <memory>
+#include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -342,6 +347,7 @@ int CreateAclTensor(
     *tensor = aclCreateTensor(
         shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
         *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
     return 0;
 }
 
@@ -389,7 +395,7 @@ int aclnnTransQuantParamV3Test(int32_t deviceId, aclrtStream& stream)
 
     // 3. Call the CANN operator library API and change it to the specific API name.
     uint64_t workspaceSize = 0;
-    aclOpExecutor* executor;
+    aclOpExecutor* executor = nullptr;
     // Call the first-phase API aclnnTransQuantParamV3.
     ret = aclnnTransQuantParamV3GetWorkspaceSize(scale, offset, roundMode, out, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV3GetWorkspaceSize failed. ERROR: %d\n", ret);
@@ -429,7 +435,7 @@ int main()
     // 1. (boilerplate) Initialize device/stream. For details, see the acl API manual.
     // Fill in deviceId based on the actual device.
     int32_t deviceId = 0;
-    aclrtStream stream;
+    aclrtStream stream = nullptr;
     auto ret = aclnnTransQuantParamV3Test(deviceId, stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV3Test failed. ERROR: %d\n", ret); return ret);
 

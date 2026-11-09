@@ -27,21 +27,25 @@
 
 - 计算公式：
 
-  - **MX量化：**
+  $X_1$、$X_2$表示应用转置属性后的矩阵，shape分别为$(M,K)$、$(K,N)$。$Y_{\mathrm{in}}$为调用前的`yRef`，$Y_{\mathrm{out}}$为原地更新后的结果；两者的shape均为$(M,N)$。
+
+  - MX（Microscaling，微缩放）量化：
 
     $$
-    y[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice)) * (scale1[m, j] * scale2[j, n])) + y[m,n]
+    Y_{\mathrm{out}}[m,n]=Y_{\mathrm{in}}[m,n]+\sum_{j=0}^{L-1}
+    \left(\sum_{t=0}^{g_j-1}X_1[m,jg_K+t]X_2[jg_K+t,n]\right)S_1[m,j]S_2[j,n]
     $$
 
-    其中，$gsK$ 代表K轴的量化的block size即32，$x1Slice$代表$x1$第m行长度为 $gsK$ 的向量，$x2Slice$代表$x2$第n列长度为 $gsK$ 的向量，K轴均从$j*gsK$起始切片，j的取值范围[0, kLoops), kLoops=ceil($K_i$ / $gsK$)，支持最后的切片长度不足 $gsK$。
+    其中，$g_K=32$，$L=\lceil K/g_K\rceil$，$g_j=\min(g_K,K-jg_K)$。$S_1$、$S_2$分别为`x1ScaleOptional`、`x2Scale`中对应分组的scale，存储shape见[约束说明](#约束说明)。
 
-  - **HIFLOAT8 T-T量化：**
+  - HIFLOAT8 T-T量化：
 
     $$
-    y[m,n] = (\sum_{k=0}^{K_i-1} (x1[m,k] * x2[k,n])) * (scale1 * scale2) + y[m,n]
+    Y_{\mathrm{out}}[m,n]=Y_{\mathrm{in}}[m,n]+
+    \left(\sum_{k=0}^{K-1}X_1[m,k]X_2[k,n]\right)s_1s_2
     $$
 
-    其中，$scale1$和$scale2$分别对应$x1Scale$和$x2Scale$，均为标量（shape为 $(1)$）；当设置transposeX1/transposeX2时，公式中的$x1$和$x2$按转置后的视图参与计算。
+    $s_1$、$s_2$分别对应`x1ScaleOptional`、`x2Scale`，shape均为$(1,)$。
 
 ## 函数原型
 
@@ -49,161 +53,155 @@
 
 ```cpp
 aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize(
-    const aclTensor *x1,
-    const aclTensor *x2,
-    const aclTensor *x1ScaleOptional,
-    const aclTensor *x2Scale,
-    aclTensor       *yRef,
-    bool             transposeX1,
-    bool             transposeX2,
-    int64_t          groupSize,
-    uint64_t        *workspaceSize,
-    aclOpExecutor   **executor)
+  const aclTensor* x1,
+  const aclTensor* x2,
+  const aclTensor* x1ScaleOptional,
+  const aclTensor* x2Scale,
+  aclTensor*       yRef,
+  bool             transposeX1,
+  bool             transposeX2,
+  int64_t          groupSize,
+  uint64_t*        workspaceSize,
+  aclOpExecutor**  executor)
 ```
 
 ```cpp
 aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
-    void          *workspace,
-    uint64_t       workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream    stream)
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
+  aclrtStream    stream)
 ```
 
 ## aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize
 
-- **参数说明：**
-  <table style="undefined;table-layout: fixed;width: 1507px"><colgroup>
-  <col style="width: 170px">
-  <col style="width: 120px">
-  <col style="width: 300px">
-  <col style="width: 330px">
-  <col style="width: 212px">
-  <col style="width: 100px">
-  <col style="width: 130px">
-  <col style="width: 145px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th style="white-space: nowrap">输入/输出</th>
-      <th>描述</th>
-      <th>使用说明</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-      <th style="white-space: nowrap">维度</th>
-      <th>非连续的Tensor</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>x1（aclTensor*）</td>
-      <td>输入</td>
-      <td>公式中的输入x1。</td>
-      <td>-</td>
-      <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1、HIFLOAT8</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>x2（aclTensor*）</td>
-      <td>输入</td>
-      <td>公式中的输入x2。</td>
-      <td>-</td>
-      <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1、HIFLOAT8</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>x1ScaleOptional（aclTensor*）</td>
-      <td>输入</td>
-      <td>表示量化参数中的由x1量化引入的缩放因子。</td>
-      <td>
-        综合约束请参见<a href="#约束说明" target="_blank">约束说明</a>。
-      </td>
-      <td>FLOAT8_E8M0、FLOAT32</td>
-      <td>ND</td>
-      <td>3、1</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>x2Scale（aclTensor*）</td>
-      <td>输入</td>
-      <td>表示量化参数中的由x2量化引入的缩放因子。</td>
-      <td>
-        综合约束请参见<a href="#约束说明" target="_blank">约束说明</a>。
-      </td>
-      <td>FLOAT8_E8M0、FLOAT32</td>
-      <td>ND</td>
-      <td>3、1</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>yRef（aclTensor*）</td>
-      <td>输入输出</td>
-      <td>对应公式中的输入输出y。</td>
-      <td>
-      当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor。
-      </td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-      <td>2</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>transposeX1（bool）</td>
-      <td>输入</td>
-      <td>表示x1的输入shape是否转置</td>
-      <td>-</td>
-      <td>bool</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>transposeX2（bool）</td>
-      <td>输入</td>
-      <td>表示x2的输入shape是否转置</td>
-      <td>-</td>
-      <td>bool</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
+- **参数说明**
+  <table style="table-layout: fixed; width: 1500px">
+    <colgroup>
+      <col style="width: 210px">
+      <col style="width: 100px">
+      <col style="width: 240px">
+      <col style="width: 390px">
+      <col style="width: 230px">
+      <col style="width: 120px">
+      <col style="width: 110px">
+      <col style="width: 100px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
       </tr>
-    <tr>
-      <td>groupSize（int64）</td>
-      <td>输入</td>
-      <td>整数型参数，用于输入m、n、k方向上的量化分组大小。</td>
-      <td>
-      由3个方向的groupSizeM、groupSizeN、groupSizeK三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效），计算公式见表格下方。
-      </td>
-      <td>INT64</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>workspaceSize（uint64_t）</td>
-      <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>executor（aclOpExecutor*）</td>
-      <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-  </tbody></table>
+    </thead>
+    <tbody>
+      <tr>
+        <td>x1（const aclTensor*）</td>
+        <td>输入</td>
+        <td>公式中的输入x1。</td>
+        <td>-</td>
+        <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1、HIFLOAT8</td>
+        <td>ND</td>
+        <td>2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x2（const aclTensor*）</td>
+        <td>输入</td>
+        <td>公式中的输入x2。</td>
+        <td>-</td>
+        <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1、HIFLOAT8</td>
+        <td>ND</td>
+        <td>2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x1ScaleOptional（const aclTensor*）</td>
+        <td>输入</td>
+        <td>表示量化参数中的由x1量化引入的缩放因子。</td>
+        <td>综合约束请参见<a href="#约束说明" target="_blank">约束说明</a>。<br/>当前支持的MX和HIFLOAT8 T-T场景均必须提供此参数，不能传入nullptr。</td>
+        <td>FLOAT8_E8M0、FLOAT32</td>
+        <td>ND</td>
+        <td>3、1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x2Scale（const aclTensor*）</td>
+        <td>输入</td>
+        <td>表示量化参数中的由x2量化引入的缩放因子。</td>
+        <td>综合约束请参见<a href="#约束说明" target="_blank">约束说明</a>。</td>
+        <td>FLOAT8_E8M0、FLOAT32</td>
+        <td>ND</td>
+        <td>3、1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>yRef（aclTensor*）</td>
+        <td>输入/输出</td>
+        <td>累加输入及原地更新后的输出，对应公式中的Y_in和Y_out。</td>
+        <td>当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor。<br/>须提供连续Tensor。</td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>2</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>transposeX1（bool）</td>
+        <td>输入</td>
+        <td>表示x1的输入shape是否转置</td>
+        <td>当前仅支持true。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>transposeX2（bool）</td>
+        <td>输入</td>
+        <td>表示x2的输入shape是否转置</td>
+        <td>当前仅支持false。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>groupSize（int64_t）</td>
+        <td>输入</td>
+        <td>整数型参数，用于输入m、n、k方向上的量化分组大小。</td>
+        <td>由3个方向的groupSizeM、groupSizeN、groupSizeK三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效），计算公式见表格下方。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t*）</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小，单位为字节。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor**）</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody>
+  </table>
 
   - 计算公式：<a name='f1'></a>
 
@@ -211,90 +209,117 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
     $$
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  <table style="undefined;table-layout: fixed;width: 1030px"><colgroup>
-  <col style="width: 250px">
-  <col style="width: 130px">
-  <col style="width: 650px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>返回值</th>
-      <th>错误码</th>
-      <th>描述</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>如果传入参数是必选输入、输出或者必选属性，且是空指针。</td>
-    </tr>
-    <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
-      <td>x1、x2、x1ScaleOptional、x2Scale、yRef的数据类型和数据格式不在支持的范围内，或groupSize的取值不在支持的范围内。</td>
-    </tr>
-    <tr>
-      <td>x1、x2、x1ScaleOptional、x2Scale、yRef的shape不满足校验条件。</td>
-    </tr>
-    <tr>
-      <td>x1、x2的K维度为0。</td>
-    </tr>
-    <tr>
-      <td>x1、x2数据类型为FLOAT4_E2M1时，M或N维度为奇数；或M、N、K均大于0时，M × K ≤ 2或N × K ≤ 2。</td>
-    </tr>
-    <tr>
-      <td>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1ScaleOptional，x2Scale的shape关系无法推断groupSize。</td>
-    </tr>
-  </tbody></table>
-
-## aclnnQuantBatchMatmulInplaceAdd
-
-- **参数说明：**
-  <table>
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 300px">
+      <col style="width: 150px">
+      <col style="width: 550px">
+    </colgroup>
     <thead>
-      <tr><th>参数名</th><th>输入/输出</th><th>描述</th></tr>
+      <tr>
+        <th>返回码/状态码</th>
+        <th>码值</th>
+        <th>描述</th>
+      </tr>
     </thead>
     <tbody>
-      <tr><td>workspace</td><td>输入</td><td>在Device侧申请的workspace内存地址。</td></tr>
-      <tr><td>workspaceSize</td><td>输入</td><td>在Device侧申请的workspace大小，由第一段接口aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize获取。</td></tr>
-      <tr><td>executor</td><td>输入</td><td>op执行器，包含了算子计算流程。</td></tr>
-      <tr><td>stream</td><td>输入</td><td>指定执行任务的AscendCL stream流。</td></tr>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>如果传入参数是必选输入、输出或者必选属性，且是空指针。</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_PARAM_INVALID</td>
+        <td>161002</td>
+        <td><ul><li>x1、x2、x1ScaleOptional、x2Scale、yRef的数据类型和数据格式不在支持的范围内，或groupSize的取值不在支持的范围内。</li><li>x1、x2、x1ScaleOptional、x2Scale、yRef的shape不满足校验条件。</li><li>x1、x2的K维度为0。</li><li>x1、x2数据类型为FLOAT4_E2M1时，M或N维度为奇数；或M、N、K均大于0时，M × K ≤ 2或N × K ≤ 2。</li><li>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1ScaleOptional，x2Scale的shape关系无法推断groupSize。</li></ul></td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
+        <td>561101</td>
+        <td>创建算子执行器失败。</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_INNER_NULLPTR</td>
+        <td>561103</td>
+        <td>内部Tensor创建、预处理、算子计算或结果拷贝失败，返回空指针。</td>
+      </tr>
     </tbody>
   </table>
 
-- **返回值：**
+## aclnnQuantBatchMatmulInplaceAdd
+
+- **参数说明**
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 220px">
+      <col style="width: 100px">
+      <col style="width: 680px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>workspace（void*）</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t）</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，单位为字节，由第一段接口aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor*）</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream（aclrtStream）</td>
+        <td>输入</td>
+        <td>指定执行任务的AscendCL stream流。</td>
+      </tr>
+    </tbody>
+  </table>
+
+- **返回值**
 
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
+  执行器运行失败时返回ACLNN_ERR_INNER（561000）。
 
 ## 约束说明
 
 - 确定性说明：aclnnQuantBatchMatmulInplaceAdd默认确定性实现。
-- 当前仅支持transposeX1=true且transposeX2=false。
+- 当前仅支持transposeX1=true且transposeX2=false。M、N须为非负整数，K须为正整数。
 - groupSize相关约束：
-  - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示m方向量化分组值由接口推断，推断公式为groupSizeM = m / scaleM（需保证m能被scaleM整除），其中m与x1 shape中的m一致，scaleM与x1Scale shape中的m一致。
+  - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1ScaleOptional/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示m方向量化分组值由接口推断，推断公式为groupSizeM = m / scaleM（需保证m能被scaleM整除），其中m与x1 shape中的m一致，scaleM与x1ScaleOptional shape中的m一致。
     $$
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
     $$
 - 动态量化（MX量化）场景约束：
   - 输入和输出支持以下数据类型组合：
 
-    | x1 | x2 | x1Scale | x2Scale | yRef |
-    |:-------:|:-------:| :------- | :------ | :------ |
-    |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
-    |FLOAT4_E2M1 |FLOAT4_E2M1| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
+    | x1 | x2 | x1ScaleOptional | x2Scale | yRef |
+    | :-------: | :-------: | :------- | :------ | :------ |
+    | FLOAT8_E5M2/FLOAT8_E4M3FN | FLOAT8_E5M2/FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
+    | FLOAT4_E2M1 | FLOAT4_E2M1 | FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
 
-  - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+  - x1数据类型、x2数据类型、x1、x2、x1ScaleOptional、x2Scale和groupSize的取值关系：
 
-      | x1数据类型 | x2数据类型 | x1 shape | x2 shape | x1Scale Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
-      |:-------:|:-------:| :------- | :------ | :------ | :------ | :------ | :------ | :------ |
-      |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 4295032864 |
-      |FLOAT4_E2M1 |FLOAT4_E2M1| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 4295032864 |
+      | x1数据类型 | x2数据类型 | x1 shape | x2 shape | x1ScaleOptional Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
+      | :-------: | :-------: | :------- | :------ | :------ | :------ | :------ | :------ | :------ |
+      | FLOAT8_E5M2/FLOAT8_E4M3FN | FLOAT8_E5M2/FLOAT8_E4M3FN | (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 4295032864 |
+      | FLOAT4_E2M1 | FLOAT4_E2M1 | (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 4295032864 |
 
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
   - FLOAT4_E2M1场景额外约束：
@@ -304,22 +329,24 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 - HIFLOAT8 T-T场景约束：
   - 输入和输出支持以下数据类型组合：
 
-    | x1 | x2 | x1Scale | x2Scale | yRef |
-    |:-------:|:-------:| :------- | :------ | :------ |
-    |HIFLOAT8 |HIFLOAT8| FLOAT32 | FLOAT32 | FLOAT32 |
+    | x1 | x2 | x1ScaleOptional | x2Scale | yRef |
+    | :-------: | :-------: | :------- | :------ | :------ |
+    | HIFLOAT8 | HIFLOAT8 | FLOAT32 | FLOAT32 | FLOAT32 |
 
-  - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+  - x1数据类型、x2数据类型、x1、x2、x1ScaleOptional、x2Scale和groupSize的取值关系：
 
-      | x1数据类型 | x2数据类型 | x1 shape | x2 shape | x1Scale Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
-      |:-------:|:-------:| :------- | :------ | :------ | :------ | :------ | :------ | :------ |
-      |HIFLOAT8 |HIFLOAT8| (k, m) | (k, n) | (1) | (1) | (m, n) | [0, 0, 0] | 0 |
+      | x1数据类型 | x2数据类型 | x1 shape | x2 shape | x1ScaleOptional Shape | x2Scale Shape | yRef Shape | [gsM, gsN, gsK] | groupSize |
+      | :-------: | :-------: | :------- | :------ | :------ | :------ | :------ | :------ | :------ |
+      | HIFLOAT8 | HIFLOAT8 | (k, m) | (k, n) | (1) | (1) | (m, n) | [0, 0, 0] | 0 |
 
 ## 调用示例
 
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR&950DT系列产品</term>：mxFP8量化场景示例代码如下，其中`x1/x2`为mxFP8、`x1Scale/x2Scale`为FLOAT8_E8M0，`groupSize=32`。具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-  ```Cpp
+  ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <vector>
   #include <memory>
@@ -390,6 +417,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       *tensor = aclCreateTensor(
           shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
           *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -520,20 +548,20 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = AclnnQuantBatchMatmulInplaceAddTest(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantBatchMatmulInplaceAddTest failed. ERROR: %d\n", ret); return ret);
 
       Finalize(deviceId, stream);
       return 0;
   }
-    ```
+  ```
 
 <!-- end id7 -->
 <!-- npu="950" id8 -->
-- <term>Ascend 950PR&950DT系列产品</term>：HIFLOAT8 TT场景示例代码如下，当前支持组合`transposeX1=true`、`transposeX2=false`，且`x1/x2`为HIFLOAT8、`x1Scale/x2Scale`为FLOAT32、`groupSize=0`。具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
+- <term>Ascend 950PR&950DT系列产品</term>：HIFLOAT8 TT场景示例代码如下，当前支持组合`transposeX1=true`、`transposeX2=false`，且`x1/x2`为HIFLOAT8、`x1ScaleOptional/x2Scale`为FLOAT32、`groupSize=0`。具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-  ```Cpp
+  ```cpp
   /**
    * Copyright (c) 2026 Huawei Technologies Co., Ltd.
    * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
@@ -549,6 +577,8 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
   * \brief
   */
 
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -615,6 +645,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       *tensor = aclCreateTensor(
           shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
           *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -726,7 +757,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
   int main()
   {
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = AclnnQuantBatchMatmulInplaceAddTTDemo(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS,
                     LOG_PRINT("AclnnQuantBatchMatmulInplaceAddTTDemo failed. ERROR: %d\n", ret); return ret);

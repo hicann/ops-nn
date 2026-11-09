@@ -1,81 +1,79 @@
 # QuantBatchMatmulV3TransposeFusionPass
 
-<!-- md-trans-meta sourceCommit=unknown translatedAt=2026-10-12T17:10:14.145Z pushedAt=2026-10-13T01:47:29.772Z -->
-
 ## Fusion Patterns
 
-This fusion rule folds the explicit transpose in the `x1` or `x2` input branch of `QuantBatchMatmulV3` into the matmul computation, and can also process both branches at the same time. The recognized transpose node types are `Transpose` and `TransposeD`. When fusing the `x1` branch, invert the `transpose_x1` attribute of the `QuantBatchMatmulV3` node; when fusing the `x2` branch, invert the `transpose_x2` attribute of the node. Inverting means changing `false` to `true`, or `true` to `false`.
+This fusion rule folds explicit transposes on the `x1` or `x2` input branch of `QuantBatchMatmulV3` into matrix multiplication, and can process both branches together. It recognizes `Transpose` and `TransposeD` nodes. Fusing the `x1` branch inverts the node's `transpose_x1` attribute; fusing the `x2` branch inverts `transpose_x2`. Inversion changes `false` to `true` or `true` to `false`.
 
-In this document, "bypass" refers to the following connection adjustment: connect the input of a conversion node directly to the successor node of that conversion node, so that the current branch no longer passes through the conversion node. After the bypass, keep the conversion node if it still has other data consumers; otherwise, delete it. The successor node can be `QuantBatchMatmulV3` or the retained `Bitcast`.
+In this document, "bypass" means connecting a conversion node's input directly to its successor so that the current branch no longer passes through that conversion node. Retain the bypassed node if other data consumers still use it; otherwise, remove it. The successor can be `QuantBatchMatmulV3` or a retained `Bitcast`.
 
-The following figures assume that the [Input and Transpose Requirements](#input-and-transpose-requirements) and [Dimension and Platform Restrictions](#dimension-and-platform-constraints) are met. The variables in the figures are described as follows:
+The diagrams below assume that the [Input and Transpose Requirements](#input-and-transpose-requirements) and [Dimension and Platform Constraints](#dimension-and-platform-constraints) are satisfied. Variables used in the diagrams are defined below:
 
-- **Input Mapping**: Shows `x1`, `x2`, and the two `scale` inputs respectively. `x1_scale` denotes the input `pertoken_scale` (IR index 5), and `x2_scale` denotes the input `scale` (IR index 2); these two names are aliases used in the figures, not new operator parameters or operator attributes.
-- **Symbol Definition**: `t1` and `t2` denote the values of the `transpose_x1` and `transpose_x2` attributes of `QuantBatchMatmulV3` before fusion, respectively; `!` denotes logical inversion.
-- **Source Tensor**: A source tensor with the same name before and after fusion refers to the same tensor.
-- **Omitted Content**: The figures omit `bias`, `offset`, the input specifying the transpose dimension order, and the input specifying the shape after reshape, and show only the data connections relevant to fusion.
+- **Input mapping**: The diagrams show `x1`, `x2`, and their two `scale` branches. `x1_scale` denotes input `pertoken_scale` (IR index 5), and `x2_scale` denotes input `scale` (IR index 2). These names are diagram aliases, not additional operator parameters or attributes.
+- **Symbols**: `t1` and `t2` denote the `transpose_x1` and `transpose_x2` attributes of `QuantBatchMatmulV3` before fusion. `!` denotes logical negation.
+- **Source tensors**: A source tensor with the same name before and after fusion denotes the same tensor.
+- **Omitted items**: The diagrams omit `bias`, `offset`, transpose-permutation inputs, and target-shape inputs. Only connections relevant to fusion are shown.
 
-### Fusion-Only x1 Side Transpose
+### Fusing Only the x1 Transpose
 
-When there exists one transpose node in each of the `x1` branch and the `x1_scale` branch, bypass respectively the two transpose nodes, and connect their inputs directly to the `x1` and `pertoken_scale` input ports of `QuantBatchMatmulV3`. Meanwhile, invert the `transpose_x1` attribute of the `QuantBatchMatmulV3` node. The connections of the `x2` and `scale` inputs and the `transpose_x2` attribute of the node remain unchanged.
+When the `x1` and `x1_scale` branches each contain a transpose node, bypass both transpose nodes and connect their inputs directly to the `x1` and `pertoken_scale` ports of `QuantBatchMatmulV3`, respectively. Invert the node's `transpose_x1` attribute. Keep the `x2` and `scale` connections and the `transpose_x2` attribute unchanged.
 
-![Fusion-only x1 and x1_scale transposes, four-way input independently connected](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_1.png)
+![Fusing the x1 and x1_scale transposes with four independent input branches](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_1.png)
 
-### Fusion-only x2 Side Transpose
+### Fusing Only the x2 Transpose
 
-When there exists one transpose node each in the `x2` branch and the `x2_scale` branch, bypass the two transpose nodes respectively, and connect their inputs directly to the `x2` and `scale` input ports of `QuantBatchMatmulV3`. Also, invert the `transpose_x2` attribute of the `QuantBatchMatmulV3` node. Keep the connections of the `x1` and `pertoken_scale` inputs and the `transpose_x1` attribute of the node unchanged.
+When the `x2` and `x2_scale` branches each contain a transpose node, bypass both transpose nodes and connect their inputs directly to the `x2` and `scale` ports of `QuantBatchMatmulV3`, respectively. Invert the node's `transpose_x2` attribute. Keep the `x1` and `pertoken_scale` connections and the `transpose_x1` attribute unchanged.
 
-![Fusion-only x2 and x2_scale transposes, four-way input connected independently](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_2.png)
+![Fusing the x2 and x2_scale transposes with four independent input branches](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_2.png)
 
-### Simultaneously Fusing Transposes on Both Sides
+### Fusing Transposes on Both Sides
 
-When there exists one transpose node in each of the four branches of `x1`, `x2`, `x1_scale`, and `x2_scale`, and both the `x1` and `x2` sides meet the usage constraints listed at the beginning of this section, the four transpose nodes are bypassed respectively. The inputs of the four transpose nodes connect to the `x1`, `x2`, `pertoken_scale`, and `scale` input ports of `QuantBatchMatmulV3`, respectively; the `transpose_x1` and `transpose_x2` attributes of the `QuantBatchMatmulV3` node are both inverted. Matching only the structure in the figure is insufficient to trigger fusion. Constraints such as data type, dimension, and platform capability must also be satisfied.
+When each of the `x1`, `x2`, `x1_scale`, and `x2_scale` branches contains a transpose node, and both data branches meet the constraints listed at the start of this section, bypass all four transpose nodes. Connect their inputs to the `x1`, `x2`, `pertoken_scale`, and `scale` ports of `QuantBatchMatmulV3`, respectively, and invert both `transpose_x1` and `transpose_x2`. Matching the illustrated structure alone is insufficient: the data type, dimension, and platform capability constraints must also be satisfied.
 
-![Four transposes of two data inputs and two scale inputs fused respectively](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_3.png)
+![Fusing the four transposes on the two data and two scale branches](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_3.png)
 
-### Reshape Fusion for Normal Scale
+### Reshape Fusion for Normal scale
 
-When there exists one transpose node in each of the `x1` and `x2` input branches, and one `Reshape` equivalent to the required transpose in each of the two `scale` branches, bypass the two transpose nodes and the two `Reshape` nodes respectively. The four branches connect to their corresponding `QuantBatchMatmulV3` input ports, and the `transpose_x1` and `transpose_x2` attributes of the `QuantBatchMatmulV3` node are both inverted. For identification requirements of static normal `scale`, see [Reshape Requirements for scale](#reshape-requirements-for-scale). The figure shows the case where both sides can be fused. You can also fuse only the side that satisfies the constraints.
+When each data branch contains a transpose node and each `scale` branch contains a `Reshape` equivalent to the required transpose, bypass both transpose nodes and both `Reshape` nodes. Connect the four branches to their corresponding `QuantBatchMatmulV3` input ports and invert both `transpose_x1` and `transpose_x2`. For static normal `scale` requirements, see [Reshape Requirements for scale](#reshape-requirements-for-scale). The figure shows fusion on both sides; only the side meeting the constraints can also be fused.
 
-![Fusion of the Reshapes of two normal scale branches with their corresponding data transposes](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_4.png)
+![Fusing each normal scale Reshape with its corresponding data transpose](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_4.png)
 
-### Reshape Fusion of MX Scale
+### Reshape Fusion for MX scale
 
-Taking the `x2` side as an example: the `x2` input is preceded by `Transpose` or `TransposeD`, `x2_scale` is of the `FLOAT8_E8M0` type, and its `Reshape` changes (1, N, 2) to (N, 1, 2). During fusion, the transpose node in the `x2` branch and the `Reshape` in the `x2_scale` branch are bypassed, and their inputs are connected to the `x2` and `scale` input ports of `QuantBatchMatmulV3` respectively; the `transpose_x2` attribute of the `QuantBatchMatmulV3` node is inverted. The connections of `x1` and `x1_scale` remain unchanged. The same processing logic applies when the `x1` side meets the corresponding conditions.
+For example, on the `x2` side, the data input is preceded by `Transpose` or `TransposeD`, `x2_scale` has type `FLOAT8_E8M0`, and its `Reshape` changes (1, N, 2) to (N, 1, 2). Bypass the data transpose and scale `Reshape`, connect their inputs to the `x2` and `scale` ports of `QuantBatchMatmulV3`, respectively, and invert `transpose_x2`. Keep the `x1` and `x1_scale` connections unchanged. Apply the same logic on the `x1` side when its corresponding conditions are met.
 
-![MX scenario showing x1, x2, the two scales, and the 3D Reshape respectively](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_5.png)
+![MX inputs showing x1, x2, both scales, and a three-dimensional Reshape](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_5.png)
 
 ### Transpose Fusion Retaining Bitcast
 
-`Bitcast` reinterprets the bit representation of data as the target data type. When each of the four-way inputs is connected as "transpose node → `Bitcast` → `QuantBatchMatmulV3`", the fusion directly connects the inputs of the four transpose nodes to the subsequent `Bitcast` respectively, retains the four `Bitcast` nodes and their connections to `QuantBatchMatmulV3`, and performs attribute inversion on the `transpose_x1` and `transpose_x2` attributes of the `QuantBatchMatmulV3` node. After fusion, the data type of the `Bitcast` output remains unchanged.
+`Bitcast` reinterprets the data bits as the target data type. When each of the four branches follows "transpose node → `Bitcast` → `QuantBatchMatmulV3`", connect each transpose node's input directly to its following `Bitcast`. Retain all four `Bitcast` nodes and their connections to `QuantBatchMatmulV3`, and invert both `transpose_x1` and `transpose_x2`. The output data type of each `Bitcast` remains unchanged.
 
-![Fusion of transposes on four-way inputs with Bitcast retained respectively](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_6.png)
+![Fusing the four input transposes while retaining their Bitcast nodes](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_6.png)
 
-The input branches are not required to contain `Bitcast` at the same time. A transpose node can connect to the matmul directly or through a `Bitcast`; fusion across multiple consecutive `Bitcast` nodes is not supported. For the `scale` branch, the node before the `Bitcast` can also be a `Reshape` that meets the requirements described below. For platform restrictions and the applicability boundary of dynamic `Reshape`, see the usage constraints.
+The input branches do not all have to contain `Bitcast`. A transpose can connect to matrix multiplication directly or through one `Bitcast`; fusion across multiple consecutive `Bitcast` nodes is unsupported. On a `scale` branch, the node preceding `Bitcast` can also be a `Reshape` meeting the requirements below. For platform restrictions and the scope of dynamic `Reshape` support, see Constraints.
 
-### Reshape Fusion for Dynamic Scale
+### Reshape Fusion for Dynamic scale
 
-If `x1` or `x2` contains unknown dimensions, handle it as a dynamic scenario. Taking the `x2` side as an example, the fusion bypasses the transpose node on the `x2` branch and the `Reshape` on the `x2_scale` branch, connects their inputs to the `x2` and `scale` input ports of `QuantBatchMatmulV3` respectively, and will invert the `transpose_x2` attribute of the `QuantBatchMatmulV3` node. `x1` and `x1_scale` keep their original connections. The dynamic scenario does not perform the dimension condition check for a static `Reshape`, but the input graph must still ensure transpose equivalence between the `Reshape` and the required `scale`.
+Treat the scenario as dynamic if `x1` or `x2` contains an unknown dimension. For example, on the `x2` side, bypass the data transpose and `x2_scale` `Reshape`, connect their inputs to the `x2` and `scale` ports of `QuantBatchMatmulV3`, respectively, and invert `transpose_x2`. Keep `x1` and `x1_scale` unchanged. Static `Reshape` dimension checks are not performed in dynamic scenarios, but the input graph must still ensure that the `Reshape` is equivalent to the required scale transpose.
 
-![Four-way inputs shown separately in the dynamic scenario, with only the x2 side transpose and Reshape processed](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_7.png)
+![Four independent inputs in a dynamic scenario, with only the x2 transpose and Reshape fused](../../../docs/en/figures/QuantBatchMatmulV3TransposeFusionPass_7.png)
 
-The `scale` conversion nodes in each figure are the specific structures of the illustrated scenario. A conversion node is not required on every `scale` branch. A `scale` branch is processed only when the `Transpose` or `TransposeD` of the corresponding data input is fused; when `pertoken_scale` is not connected, that input is not processed. A bypassed node is retained if it still has other data consumers; otherwise, it is removed from the graph.
+The scale conversion nodes shown in each figure are specific to that example. A conversion node is not required on every `scale` branch. Process a `scale` branch only when the corresponding data input's `Transpose` or `TransposeD` is fused; do not process `pertoken_scale` if it is unconnected. Retain a bypassed node if other data consumers still use it; otherwise, remove it from the graph.
 
 ## Constraints
 
 ### Input and Transpose Requirements
 
-- The original `shape` of both `x1` and `x2` must have at least 2 dimensions. At least one data input must connect to `Transpose` or `TransposeD`; otherwise, fusion is not triggered. A data input preceded only by `Reshape` does not trigger fusion.
-- The data types of both `x1` and `x2` support `INT8`, `INT4`, `FLOAT8_E4M3FN`, `FLOAT8_E5M2`, `HIFLOAT8`, and `FLOAT4_E2M1`. The output data types support `INT8`, `FLOAT16`, `BF16`, `INT32`, and `FLOAT32`. The actual combinations must also meet the operator constraints of the target product.
-- Dynamic `shape` is supported. If the `shape` of `x1` or `x2` contains unknown dimensions, it is processed as a dynamic scenario.
-- The transpose of a data input must only swap the last two dimensions, with the order of other dimensions unchanged. For example, an input of shape `(B, M, K)` is transposed to `(B, K, M)`. Other transposes, such as swapping the batch dimension, are out of the scope of this rule. The corresponding `scale` conversion must also maintain the correspondence between quantization coefficients and data. For details, see the next section.
-- `pertoken_scale` is an optional input. If it is not connected, the corresponding `scale` is not processed.
+- The original shapes of `x1` and `x2` must each have at least two dimensions. At least one data input must have a preceding `Transpose` or `TransposeD`; otherwise, fusion is not triggered. A `Reshape` alone before a data input cannot trigger fusion.
+- `x1` and `x2` each support `INT8`, `INT4`, `FLOAT8_E4M3FN`, `FLOAT8_E5M2`, `HIFLOAT8`, and `FLOAT4_E2M1`. The output supports `INT8`, `FLOAT16`, `BFLOAT16`, `INT32`, and `FLOAT32`. The actual combination must also satisfy the target product's operator constraints.
+- Dynamic shapes are supported. If the shape of `x1` or `x2` contains an unknown dimension, the case is treated as dynamic.
+- A data transpose must swap only the last two dimensions and preserve the order of all other dimensions, for example, `(B, M, K)` → `(B, K, M)`. Other permutations, such as swapping batch dimensions, are outside this rule's scope. The corresponding scale transformation must also preserve the correspondence between quantization coefficients and data. See the next section.
+- `pertoken_scale` is optional. Its scale branch is not processed when unconnected.
 
-### Restrictions in the Bitcast Scenario
+### Restrictions for Bitcast Patterns
 
-On some platforms, the matrix multiplication instruction supports mixed INT8 and INT4 inputs. On such platforms, if one of the four-way inputs matches the structure in the following table, this rule retains the entire `QuantBatchMatmulV3` node and all of its input branches, and does not perform this transpose fusion. This restriction applies even if the current node does not use mixed INT8 and INT4 inputs.
+Some platforms support mixed INT8 and INT4 matrix multiplication inputs. On those platforms, if any of the four input branches matches a pattern in the table below, retain the entire `QuantBatchMatmulV3` node and all its input branches without performing this transpose fusion. This restriction applies even when the current node does not use mixed INT8 and INT4 inputs.
 
-| Input Branch | Connection Structure That Triggers the Preceding Constraint |
+| Input branch | Connection pattern that triggers the restrictions above |
 | ---- | ---- |
 | `x1`, `x2`, or either of the two `scale` branches | `Transpose` or `TransposeD` → `Bitcast` → `QuantBatchMatmulV3` |
 | Either of the two `scale` branches | `Reshape` that meets the fusion requirements in the next section → `Bitcast` → `QuantBatchMatmulV3` |
@@ -104,8 +102,8 @@ Let `outer` denote the penultimate dimension of the original `shape` of the data
 
 | Product | General Rule | Limit Supplementary Rule |
 | ---- | ---- | ---- |
-| <term>Ascend 950PR&950DT products</term>  | `x1` and `x2` are not subject to the 65535 dimension threshold in this section. Transpose fusion is performed when other usage constraints are met. | This supplementary rule is skipped, and transpose fusion is handled by the general rule. |
-| <term>Atlas A2 products</term> and <term>Atlas A3 products</term> | `x1` requires `outer` ≤ 65535; `x2` requires `outer` ≤ 65535 or the `FRACTAL_NZ` format. | Checks `x1` and `x2` respectively; processes only branches that meet 0 < `outer` ≤ 65535 and `inner` > 65535. |
+| <term>Ascend 950PR&950DT products</term> | Neither `x1` nor `x2` is subject to this section's 65535-dimension threshold. Transpose fusion runs when the other constraints are met. | This supplementary rule is skipped; transpose fusion is handled by the regular rule. |
+| <term>Atlas A2 products</term>, <term>Atlas A3 products</term> | `x1` requires `outer` ≤ 65535. `x2` requires `outer` ≤ 65535 or `FRACTAL_NZ` format. | Checks `x1` and `x2` independently and processes only branches with 0 < `outer` ≤ 65535 and `inner` > 65535. |
 
 The dimension conditions of the Limit rule also apply to the `FRACTAL_NZ` format; they are not relaxed due to the format. If the `outer` or `inner` value involved in the check is the unknown value `-1`, the branch does not satisfy the dimension conditions of the Limit rule.
 
@@ -116,16 +114,16 @@ The dimension conditions of the Limit rule also apply to the `FRACTAL_NZ` format
 
 ## Applicable Products
 
-See [QuantBatchMatmulV3 Operator Description](../README.md) for the data types and formats supported by the product. This rule determines fusion conditions based on platform instruction capabilities. Operator support for a product does not mean that the product supports all fusion modes of this rule.
+See [QuantBatchMatmulV3 Operator Description](../README_en.md) for the data types and formats supported by the product. This rule determines fusion conditions based on platform instruction capabilities. Operator support for a product does not mean that the product supports all fusion modes of this rule.
 
 <!-- npu="910b" id1 -->
-<term>Atlas A2 products</term>
+- <term>Atlas A2 products</term>
 <!-- end id1 -->
 
 <!-- npu="A3" id2 -->
-<term>Atlas A3 products</term>
+- <term>Atlas A3 products</term>
 <!-- end id2 -->
 
 <!-- npu="950" id3 -->
-<term>Ascend 950PR&950DT products</term>
+- <term>Ascend 950PR&950DT products</term>
 <!-- end id3 -->

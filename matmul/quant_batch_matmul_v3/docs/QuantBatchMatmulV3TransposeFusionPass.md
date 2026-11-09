@@ -64,7 +64,7 @@
 ### 输入与转置要求
 
 - `x1`和`x2`的原始`shape`维数均不得小于2，至少一路数据输入存在`Transpose`或`TransposeD`，否则不触发融合。数据输入前仅有`Reshape`不能触发融合。
-- `x1`、`x2`的数据类型均支持`INT8`、`INT4`、`FLOAT8_E4M3FN`、`FLOAT8_E5M2`、`HIFLOAT8`、`FLOAT4_E2M1`；输出数据类型支持`INT8`、`FLOAT16`、`BF16`、`INT32`、`FLOAT32`。实际组合还需满足目标产品的算子约束。
+- `x1`、`x2`的数据类型均支持`INT8`、`INT4`、`FLOAT8_E4M3FN`、`FLOAT8_E5M2`、`HIFLOAT8`、`FLOAT4_E2M1`；输出数据类型支持`INT8`、`FLOAT16`、`BFLOAT16`、`INT32`、`FLOAT32`。实际组合还需满足目标产品的算子约束。
 - 支持动态`shape`；`x1`或`x2`的`shape`存在未知维度时，按动态场景处理。
 - 数据输入的转置必须只交换最后两维，其他维度的顺序保持不变。例如，形状为`(B, M, K)`的输入转置为`(B, K, M)`。交换批次维度等其他转置方式不属于本规则的适用范围。对应的`scale`转换也须保持量化系数与数据的对应关系，具体要求见下一节。
 - `pertoken_scale`是可选输入，未连接时不处理该路`scale`。
@@ -102,8 +102,8 @@
 
 | 产品 | 普通规则 | Limit补充规则 |
 | ---- | ---- | ---- |
-| Ascend 950PR&950DT系列产品 | `x1`、`x2`均不受本节65535维度阈值限制，满足其他使用约束时执行转置融合 | 跳过本补充规则，转置融合由普通规则处理 |
-| Atlas A2训练系列产品/Atlas A2推理系列产品、Atlas A3训练系列产品/Atlas A3推理系列产品 | `x1`要求`outer` ≤ 65535；`x2`要求`outer` ≤ 65535或格式为`FRACTAL_NZ` | 分别检查`x1`、`x2`；仅处理满足0 < `outer` ≤ 65535且`inner` > 65535的支路 |
+| <term>Ascend 950PR&950DT系列产品</term> | `x1`、`x2`均不受本节65535维度阈值限制，满足其他使用约束时执行转置融合 | 跳过本补充规则，转置融合由普通规则处理 |
+| <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term> | `x1`要求`outer` ≤ 65535；`x2`要求`outer` ≤ 65535或格式为`FRACTAL_NZ` | 分别检查`x1`、`x2`；仅处理满足0 < `outer` ≤ 65535且`inner` > 65535的支路 |
 
 Limit规则的维度条件同样适用于`FRACTAL_NZ`格式，不因格式而放宽。参与判断的`outer`或`inner`为未知值`-1`时，该支路不满足Limit规则的维度条件。
 
@@ -117,13 +117,13 @@ Limit规则的维度条件同样适用于`FRACTAL_NZ`格式，不因格式而放
 产品的数据类型与格式支持范围参见[QuantBatchMatmulV3算子说明](../README.md)。本规则按平台指令能力判断融合条件，算子支持某产品并不表示该产品支持本规则的全部融合模式。
 
 <!-- npu="910b" id1 -->
-Atlas A2训练系列产品/Atlas A2推理系列产品
+- <term>Atlas A2系列产品</term>
 <!-- end id1 -->
 
 <!-- npu="A3" id2 -->
-Atlas A3训练系列产品/Atlas A3推理系列产品
+- <term>Atlas A3系列产品</term>
 <!-- end id2 -->
 
 <!-- npu="950" id3 -->
-Ascend 950PR&950DT系列产品
+- <term>Ascend 950PR&950DT系列产品</term>
 <!-- end id3 -->

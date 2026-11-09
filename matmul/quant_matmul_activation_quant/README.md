@@ -29,7 +29,7 @@ C_{m,n}=\sum_{j=0}^{L-1}\left[
 S_{1,m,j}\,S_{2,j,n}\right]+b_n
 $$
 
-其中，$g_M$、$g_N$、$g_K$分别为M、N、K方向的分组大小，当前固定为$(1,1,32)$；$L=\lceil K/g_K\rceil$，$g_j=\min(g_K,K-jg_K)$。$S_1$、$S_2$分别表示`x1_scale`、`x2_scale`中第$j$组的scale，实际存储形状见参数和约束说明。矩阵乘采用FP32累加，偏置在激活前相加；未传入偏置时，$b_n=0$。
+其中，$g_M$、$g_N$、$g_K$分别为M、N、K方向的分组大小，当前固定为$(1,1,32)$；$L=\lceil K/g_K\rceil$，$g_j=\min(g_K,K-jg_K)$。$S_1$、$S_2$分别表示`x1_scale`、`x2_scale`中第$j$组的scale，实际存储形状见[形状](#形状)。矩阵乘采用FP32累加，偏置在激活前相加；未传入偏置时，$b_n=0$。
 
 ### 激活
 
@@ -63,13 +63,13 @@ $$
 
 ### 动态MX量化
 
-将激活结果按最近偶数舍入模式（RNE）转换为BF16，即舍入到最近的可表示值，中间值取尾数最低位为0的值，再沿最后一维每32个元素划为一组。最后一组不足32个元素时补0参与scale计算，补齐元素不写入输出。
+将激活结果按最近偶数舍入模式（RNE，Round to Nearest, ties to Even）转换为BFLOAT16，即舍入到最近的可表示值，中间值取尾数最低位为0的值，再沿最后一维每32个元素划为一组。最后一组不足32个元素时补0参与scale计算，补齐元素不写入输出。
 
 $$
 V_i=\operatorname{BF16}_{RNE}(A_i),\qquad a=\max_i|V_i|,\qquad s=2^e
 $$
 
-每组共用一个scale $s$，按`round_mode`转换为输出数据类型$D$：
+每组共用一个scale$s$，按`round_mode`转换为输出数据类型$D$：
 
 $$
 Q_i=\begin{cases}
@@ -127,184 +127,31 @@ E8M0以字节值$e+127$编码$2^e$。特殊情况如下：
 
 ## 参数说明
 
-<table style="table-layout: fixed; width: 1370px">
-<colgroup>
-<col style="width: 180px">
-<col style="width: 140px">
-<col style="width: 600px">
-<col style="width: 300px">
-<col style="width: 150px">
-</colgroup>
-<thead>
-  <tr>
-    <th>参数名</th>
-    <th>输入/输出/属性</th>
-    <th>描述</th>
-    <th>数据类型</th>
-    <th>数据格式</th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td>x1</td>
-    <td>输入</td>
-    <td>矩阵乘的左矩阵，对应公式中的X<sub>1</sub>。</td>
-    <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>x2</td>
-    <td>输入</td>
-    <td>矩阵乘的右矩阵，对应公式中的X<sub>2</sub>。NZ不支持FLOAT8_E5M2。</td>
-    <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1</td>
-    <td>ND、FRACTAL_NZ</td>
-  </tr>
-  <tr>
-    <td>bias</td>
-    <td>可选输入</td>
-    <td><ul>
-      <li>在激活前相加的偏置，对应公式中的b。</li>
-      <li>未提供时不加偏置。</li>
-    </ul></td>
-    <td>FLOAT32</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>x1_scale</td>
-    <td>可选输入</td>
-    <td><ul>
-      <li>x1的分组scale，对应公式中的S<sub>1</sub>。</li>
-      <li>在算子原型中定义为可选输入；本算子仅支持MX模式，执行时必须提供。</li>
-    </ul></td>
-    <td>FLOAT8_E8M0</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>x2_scale</td>
-    <td>可选输入</td>
-    <td><ul>
-      <li>x2的分组scale，对应公式中的S<sub>2</sub>。</li>
-      <li>在算子原型中定义为可选输入；本算子仅支持MX模式，执行时必须提供。</li>
-    </ul></td>
-    <td>FLOAT8_E8M0</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>y</td>
-    <td>输出</td>
-    <td>动态量化结果，对应公式中的y，数据类型须与x1一致。</td>
-    <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>y_scale</td>
-    <td>输出</td>
-    <td>每32个输出元素对应的scale，对应公式中的s。</td>
-    <td>FLOAT8_E8M0</td>
-    <td>ND</td>
-  </tr>
-  <tr>
-    <td>transpose_x1</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>是否转置x1的最后两维：false表示不转置，true表示转置。</li>
-      <li>默认false。</li>
-    </ul></td>
-    <td>BOOL</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>transpose_x2</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>是否转置x2的最后两维：false表示不转置，true表示转置。</li>
-      <li>默认false。</li>
-    </ul></td>
-    <td>BOOL</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>group_size</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>输入量化在M、N、K方向的分组大小编码，仅支持0或4295032864，均表示[1,1,32]。</li>
-      <li>默认0。</li>
-    </ul></td>
-    <td>INT64</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>activation_type</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>激活类型，支持"gelu_tanh"、"gelu_erf"、"silu"、"swiglu"。</li>
-      <li>默认"gelu_tanh"。</li>
-    </ul></td>
-    <td>STRING</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>y_dtype</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>y的数据类型枚举，支持FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1对应的枚举值，所指定的数据类型须与x1一致。</li>
-      <li>默认为FLOAT8_E4M3FN对应的枚举值。</li>
-    </ul></td>
-    <td>INT64</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>quant_mode</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>量化模式，仅支持"mx"。</li>
-      <li>默认"mx"。</li>
-    </ul></td>
-    <td>STRING</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>round_mode</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>转换为输出数据类型时的舍入模式。FP8仅支持"rint"，表示舍入到最近的可表示值，中间值取尾数最低位为0的值。</li>
-      <li>FP4还支持"floor"（向负无穷方向舍入）和"round"（舍入到最近的可表示值，中间值向远离0的方向舍入）。</li>
-      <li>默认"rint"。</li>
-    </ul></td>
-    <td>STRING</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>scale_alg</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>输出scale的计算方法，FP8支持0、1，FP4支持0、2。</li>
-      <li>算法定义见<a href="#scale的计算方法">scale的计算方法</a>，默认0。</li>
-    </ul></td>
-    <td>INT64</td>
-    <td>-</td>
-  </tr>
-  <tr>
-    <td>dst_type_max</td>
-    <td>可选属性</td>
-    <td><ul>
-      <li>scale_alg=2时计算输出scale所用的参考上限，对应公式中的d。</li>
-      <li>支持0.0（等价于6.0）或[6.0,12.0]内的有限值。</li>
-      <li>默认0.0；其他算法忽略该属性。</li>
-    </ul></td>
-    <td>FLOAT32</td>
-    <td>-</td>
-  </tr>
-</tbody>
-</table>
+| 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
+| --- | --- | --- | --- | --- |
+| x1 | 输入 | 矩阵乘的左矩阵，对应公式中的X<sub>1</sub>。 | FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1 | ND |
+| x2 | 输入 | 矩阵乘的右矩阵，对应公式中的X<sub>2</sub>。NZ不支持FLOAT8_E5M2。 | FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1 | ND、FRACTAL_NZ |
+| bias | 可选输入 | <ul><li>在激活前相加的偏置，对应公式中的b。</li><li>未提供时不加偏置。</li></ul> | FLOAT32 | ND |
+| x1_scale | 可选输入 | <ul><li>x1的分组scale，对应公式中的S<sub>1</sub>。</li><li>本算子仅支持MX模式，执行时须提供对应的分组scale。</li></ul> | FLOAT8_E8M0 | ND |
+| x2_scale | 可选输入 | <ul><li>x2的分组scale，对应公式中的S<sub>2</sub>。</li><li>本算子仅支持MX模式，执行时须提供对应的分组scale。</li></ul> | FLOAT8_E8M0 | ND |
+| y | 输出 | 动态量化结果，对应公式中的y，数据类型须与x1一致。 | FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1 | ND |
+| y_scale | 输出 | 每32个输出元素对应的scale，对应公式中的s。 | FLOAT8_E8M0 | ND |
+| transpose_x1 | 可选属性 | <ul><li>是否转置x1的最后两维：false表示不转置，true表示转置。</li><li>默认false。</li></ul> | BOOL | - |
+| transpose_x2 | 可选属性 | <ul><li>是否转置x2的最后两维：false表示不转置，true表示转置。</li><li>默认false。</li></ul> | BOOL | - |
+| group_size | 可选属性 | <ul><li>输入量化在M、N、K方向的分组大小编码，仅支持0或4295032864，均表示[1,1,32]。</li><li>默认0。</li></ul> | INT64 | - |
+| activation_type | 可选属性 | <ul><li>激活类型，支持"gelu_tanh"、"gelu_erf"、"silu"、"swiglu"。</li><li>默认"gelu_tanh"。</li></ul> | STRING | - |
+| y_dtype | 可选属性 | <ul><li>y的数据类型枚举，支持FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1对应的枚举值，所指定的数据类型须与x1一致。</li><li>默认为FLOAT8_E4M3FN对应的枚举值。</li></ul> | INT64 | - |
+| quant_mode | 可选属性 | <ul><li>量化模式，仅支持"mx"。</li><li>默认"mx"。</li></ul> | STRING | - |
+| round_mode | 可选属性 | <ul><li>转换为输出数据类型时的舍入模式。FP8仅支持"rint"，表示舍入到最近的可表示值，中间值取尾数最低位为0的值。</li><li>FP4还支持"floor"（向负无穷方向舍入）和"round"（舍入到最近的可表示值，中间值向远离0的方向舍入）。</li><li>默认"rint"。</li></ul> | STRING | - |
+| scale_alg | 可选属性 | <ul><li>输出scale的计算方法，FP8支持0、1，FP4支持0、2。</li><li>算法定义见<a href="#scale的计算方法">scale的计算方法</a>，默认0。</li></ul> | INT64 | - |
+| dst_type_max | 可选属性 | <ul><li>scale_alg=2时计算输出scale所用的参考上限，对应公式中的d。</li><li>支持0.0（等价于6.0）或[6.0,12.0]内的有限值。</li><li>默认0.0；其他算法忽略该属性。</li></ul> | FLOAT32 | - |
 
 ## 约束说明
 
-以下为执行时的输入要求，具体ACLNN布局限制见对应接口文档。
+以下为算子执行时的输入要求。接口布局限制见[aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant.md)和[aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz.md)。
 
 - x1、x2的逻辑维数为2～6；不支持空Tensor，各维度须为正整数。
 - x1、x2的各逻辑维度及广播后的batch维乘积不超过$2^{32}-1$，激活前输出元素数不超过$2^{63}-1$。
-- 输入scale和输出scale均为FLOAT8_E8M0；bias传入时的数据类型须为FLOAT32。
 
 矩阵和输出支持以下组合：
 
@@ -324,14 +171,14 @@ E8M0以字节值$e+127$编码$2^e$。特殊情况如下：
 
 | activation_type | 数据类型 | 输出宽度H | N的要求 | x2为ND时的transpose_x1 | x2为NZ时的transpose_x1 |
 | --- | --- | --- | --- | --- | --- |
-| "gelu_tanh"、"gelu_erf" | FP8 | N | N > 0 | false、true | false、true |
+| "gelu_tanh"、"gelu_erf" | FP8 | N | $N>0$ | false、true | false、true |
 | "gelu_tanh"、"gelu_erf" | FP4 | N | 正偶数 | false、true | false |
-| "silu" | FP8 | N | N > 0 | false、true | false |
+| "silu" | FP8 | N | $N>0$ | false、true | false |
 | "swiglu" | FP8 | N/2 | 64的正整数倍 | false、true | false |
 
 `transpose_x2`均支持false、true。x2为NZ时，K、N均须大于1。
 
-FP4仅支持GELU，且K > 2、N为偶数。FP4输入x1和x2在连续存储布局下的最内轴须为偶数：x1不转置时检查K，转置时检查M；x2不转置时检查N，转置时检查K。
+FP4仅支持GELU，且$K>2$、N为偶数。FP4输入x1和x2在连续存储布局下的最内轴须为偶数：x1不转置时检查K，转置时检查M；x2不转置时检查N，转置时检查K。
 
 ### 形状
 

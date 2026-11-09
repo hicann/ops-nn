@@ -4,118 +4,81 @@ English | [简体中文](./README.md)
 
 ## Applicable Products
 
-| Product                                                         |  Support   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR&950DT products</term>                             |    √     |
-| <term>Atlas A3 products</term>     |    √    |
-| <term>Atlas A2 products</term> |    √    |
-| <term>Atlas 200I/500 A2 inference products</term>                      |    ×    |
-| <term>Atlas inference products</term>                             |    √    |
-| <term>Atlas training products</term>                              |    ×    |
-| <term>Kirin X90 processor series products</term> | √ |
-| <term>Kirin 9030 processor series products</term> | √ |
+| Product | Support |
+| --- | :---: |
+| <term>Ascend 950PR&950DT products</term> | √ |
+| <term>Atlas A3 products</term> | √ |
+| <term>Atlas A2 products</term> | √ |
+| <term>Atlas 200I/500 A2 inference products</term> | × |
+| <term>Atlas inference products</term> | √ |
+| <term>Atlas training products</term> | × |
+| <term>Kirin X90 processor products</term> | √ |
+| <term>Kirin 9030 processor products</term> | √ |
 
 ## Function
 
-- Operator function: Converts the data type of the quantization computation parameter scale from FLOAT32 to the UINT64 type required by the hardware.
+- Function: Encodes FLOAT32 quantization scale factors and optional offsets into the UINT64 quantization parameters required by the hardware for operators such as matrix multiplication. The output contains the floating-point bit pattern of scale, the integer encoding of offset, and a flag bit.
 
-- Formula:
+- Interface versions: Both [aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2_en.md) and [aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3_en.md) call this operator. V2 always uses round_mode=0. V3 adds the roundMode parameter to select round_mode=0 or 1.
 
-  1. `out` is in 64-bit format and is initially 0.
+- Encoding flow: The following steps describe the calculation of a single output element. Bit positions start at 0 for the least significant bit.
 
-  2. If `round_mode` is 1, `scale` is rounded bitwise to the highest 19 bits. If `round_mode` is 0, no processing is performed.
-
-     $$
-     scale = Round(scale)
-     $$
-  3. The highest 19 bits of `scale` are retained bitwise (that is, bits 13~31, with the lowest 13 bits cleared to zero), written into the lowest 32 bits of `out`, and bit 46 is set to 1.
+  1. Process the bit pattern of scale. When round_mode=0, directly preserve the highest 19 bits of FLOAT32. When round_mode=1, first round to 19-bit floating-point precision using Round to Nearest, ties to Even (RNE), and then encode the result. These 19 bits comprise 1 sign bit, 8 exponent bits, and 10 mantissa bits.
 
      $$
-     out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
+     b=\begin{cases}
+     \operatorname{Bits}_{32}(scale), & \mathrm{round\_mode}=0 \\
+     \operatorname{Bits}_{32}(\operatorname{RoundFP19}(scale)), & \mathrm{round\_mode}=1
+     \end{cases}
      $$
 
-  4. Performs the subsequent computation according to the value of `offset`:
+     Here, $\operatorname{Bits}_{32}$ reinterprets FLOAT32 bitwise as UINT32. $\operatorname{RoundFP19}$ denotes rounding to the 19-bit precision described above, with the result still represented in the FLOAT32 bit layout. RNE rounds to the nearest value and resolves exact ties to the value whose least significant retained mantissa bit is 0.
 
-     - If `offset` does not exist, no subsequent computation is performed.
-     - If `offset` exists:
-       1. Processes the `offset` value into an int, with the range [-256, 255].
+  2. Write bits 13–31 of scale to the corresponding positions in y, clear the lowest 13 bits, and set bit 46 of y to 1 to obtain the intermediate encoding $y_0$. All shifts and bitwise OR operations below use UINT64.
 
-          $$
-          offset = Max(Min(INT(Round(offset)),255),-256)
-          $$
+     $$
+     y_0=\left(\operatorname{UINT64}(b)\mathbin{\&}\mathtt{0xFFFFE000}\right)
+     \mathbin{|}(1\ll46)
+     $$
 
-       2. Then retains 9 bits of `offset` bitwise and stores them in bits 37 to 45 of out.
+  3. If offset is omitted, $y=y_0$. Otherwise, convert offset to INT32 using RNE, clamp the result to $[-256,255]$, and write its lowest 9 bits to bits 37–45 of y.
 
-          $$
-          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0x1FF)\ll37)
-          $$
+     $$
+     q=\min\left(255,\max\left(-256,\operatorname{RNE}_{\mathrm{INT32}}(offset)\right)\right)
+     $$
+
+     $$
+     y=y_0\mathbin{|}\left[\left(\operatorname{UINT64}(q)\mathbin{\&}\mathtt{0x1FF}\right)\ll37\right]
+     $$
+
+     Here, $q$ is the processed offset. For negative values, retain the lowest 9 bits of the two's complement representation. round_mode controls only scale processing; offset always uses RNE.
 
 ## Parameters
 
-<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
-  <col style="width: 170px">
-  <col style="width: 170px">
-  <col style="width: 352px">
-  <col style="width: 213px">
-  <col style="width: 100px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Parameter name</th>
-      <th>Input/Output/Attribute</th>
-      <th>Description</th>
-      <th>Data type</th>
-      <th>Data format</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>scale</td>
-      <td>Input</td>
-      <td>Quantization parameter, corresponding to `scale` in the formula. The shape is 1-dimensional (t,), where t = 1 or n, or 2-dimensional (1, n), where n is consistent with the shape n of the right matrix in the matmul computation. You must ensure that the scale data does not contain NaN or Inf.</td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>offset</td>
-      <td>Optional input</td>
-      <td>Optional quantization parameter, corresponding to `offset` in the formula description. The shape is 1-dimensional (t,) or 2-dimensional (1, n), where t = 1 or n, and n is consistent with the shape n of the right matrix in the matmul computation. You must ensure that the offset data does not contain NaN or Inf.</td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>round_mode</td>
-      <td>Optional attribute</td>
-      <td><ul><li>Round mode from FP32 to FP19 in quantization computation. Only the following values are supported: 0 (aclnn
-      V3 compatible with V2), 1 (improves computation precision). It corresponds to `round_mode` in the formula description.</li><li>The default value is 0.</li></ul></td>
-      <td>INT</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>y</td>
-      <td>Output</td>
-      <td>Output result after quantization, corresponding to `out` in the formula. When the shape of the input scale is 1-dimensional, the shape of y is also 1-dimensional, and the shape size of this dimension is the maximum of the single-dimension shape sizes of scale and offset (if it is not nullptr). When the shape of the input scale is 2-dimensional, the dimensions and size of the shape of y are exactly the same as those of the input scale.</td>
-      <td>UINT64</td>
-      <td>ND</td>
-    </tr>
-  </tbody></table>
+| Parameter | Input/Output/Attribute | Description | Data Type | Data Format |
+| --- | --- | --- | --- | --- |
+| scale | Input | Quantization scale factor, corresponding to scale in the formula. Supports one- or two-dimensional tensors. For shapes and usage scenarios, see [Constraints](#constraints). | FLOAT32 | ND |
+| offset | Optional input | Quantization offset, corresponding to offset in the formula. Omitted by default, meaning no offset is encoded. If provided, supports one- or two-dimensional tensors. | FLOAT32 | ND |
+| y | Output | Encoded quantization parameters, corresponding to y in the formula. For the output shape, see [Constraints](#constraints). | UINT64 | ND |
+| round_mode | Optional attribute | <ul><li>Encoding mode for scale: 0 discards the lowest 13 bits; 1 rounds to 19-bit floating-point precision using RNE before encoding.</li><li>Defaults to 0. Only 0 and 1 are supported.</li></ul> | INT64 | - |
 
 ## Constraints
 
-- <term>Atlas inference products</term>, <term>Atlas A2 products</term>, <term>Atlas A3 products</term>, and <term>Ascend 950PR&950DT products</term>: The aclnn interface corresponding to this interface supports being used together with matmul operators (for example, [aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4_en.md)).
-- <term>Atlas inference products</term>, <term>Atlas A2 products</term>, and <term>Atlas A3 products</term>: The aclnn interface corresponding to this interface does not support being used together with grouped matmul operators (for example, aclnnGroupedMatmulV4).
-- The shapes of scale, offset, and y are described as follows:
-  - When there is no offset, the y shape is the same as the scale shape.
-    - If y is used as the input of a matmul operator, the supported shapes are 1-dimensional (1,) and (n,), or 2-dimensional (1, n), where n is consistent with the shape n of the right matrix (corresponding to parameter x2) in the matmul computation.
-    - If y is used as the input of a grouped matmul operator, it is used only when the grouping mode is m-axis grouping (corresponding to groupType 0). The supported shapes are 1-dimensional (g,) or 2-dimensional (g, 1) and (g, n), where n is consistent with the shape n of the right matrix (corresponding to parameter x2) in the grouped matmul computation, and g is consistent with the number of groups (corresponding to the shape size of groupListOptional) in the grouped matmul computation.
-  - When offset exists, it is used only as the input of matmul operators:
-    - The supported shapes of offset, scale, and y are 1-dimensional (1,) and (n,), or 2-dimensional (1, n), where n is consistent with the shape n of the right matrix (corresponding to parameter x2) in the matmul computation.
-    - When the shape of the input scale is 1-dimensional, the shape of y is also 1-dimensional, and the shape size is the maximum of the single-dimension shape sizes of scale and offset.
-    - When the shape of the input scale is 2-dimensional, the dimensions and size of the shape of y are exactly the same as those of the input scale.
+- scale and any provided offset must be nonempty tensors containing no NaN or Inf.
+- When round_mode=1, subnormal scale values are treated as zeros with their signs preserved.
+- When used with matrix multiplication operators, scale and any provided offset support shapes `(1,)`, `(n,)`, or `(1, n)`, where n is the number of columns of the right matrix used in the multiplication. This operator can be used with operators such as [QuantBatchMatmulV3](../../matmul/quant_batch_matmul_v3/README_en.md).
+- Output shape inference:
+  - If offset is omitted, the shape of y matches that of scale.
+  - If offset is provided, y uses the shape of scale, except when offset is two-dimensional and scale is one-dimensional, in which case y uses the shape of offset.
+  - <term>Ascend 950PR&950DT products</term>: when both scale and offset are one-dimensional, the length of y is the maximum of their lengths.
+- <term>Ascend 950PR&950DT products</term>: when used with grouped matrix multiplication, only grouping along the M dimension is supported, and offset must be omitted. scale and y support shapes `(g,)`, `(g, 1)`, or `(g, n)`, where g is the group count and n is the number of columns of the right matrix used in the multiplication.
+- <term>Atlas A3 products</term>, <term>Atlas A2 products</term>, and <term>Atlas inference products</term>: use with grouped matrix multiplication is unsupported.
+- For aclnn input combinations and layout requirements, see [aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2_en.md#constraints) and [aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3_en.md#constraints).
 
 ## Invocation Description
 
-| Invocation method   | Sample code           | Description                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn invocation  | [test_aclnn_trans_quant_param_v2](examples/test_aclnn_trans_quant_param_v2.cpp) | Calls the TransQuantParamV2 operator through the [aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2_en.md) interface. |
-| aclnn invocation  | [test_aclnn_trans_quant_param_v3](examples/test_aclnn_trans_quant_param_v3.cpp) | Calls the TransQuantParamV2 operator through the [aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3_en.md) interface. |
-| Graph mode | [test_geir_trans_quant_param_v2](examples/test_geir_trans_quant_param_v2.cpp) | Calls the TransQuantParamV2 operator by building a graph through the [operator IR](op_graph/trans_quant_param_v2_proto.h).         |
+| Invocation method | Sample code | Description |
+| --- | --- | --- |
+| aclnn API | [test_aclnn_trans_quant_param_v2](examples/test_aclnn_trans_quant_param_v2.cpp) | Calls [aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2_en.md) with round_mode=0. |
+| aclnn API | [test_aclnn_trans_quant_param_v3](examples/test_aclnn_trans_quant_param_v3.cpp) | Calls [aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3_en.md). The example uses roundMode=1. |
+| GE graph mode | [test_geir_trans_quant_param_v2](examples/test_geir_trans_quant_param_v2.cpp) | Builds and invokes a graph using the [TransQuantParamV2 operator IR](op_graph/trans_quant_param_v2_proto.h). The example uses round_mode=0. |

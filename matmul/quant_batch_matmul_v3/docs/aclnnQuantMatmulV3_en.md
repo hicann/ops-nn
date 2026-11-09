@@ -1,8 +1,6 @@
 # aclnnQuantMatmulV3
 
-<!-- md-trans-meta sourceCommit=unknown translatedAt=2026-09-22T18:43:16.532Z -->
-
-**Notice: This API will be deprecated in later versions. Use the latest aclnnQuantMatmulV5 API instead.**
+**Notice: This interface will be deprecated in a future release. Use [aclnnQuantMatmulV5](../../quant_batch_matmul_v4/docs/aclnnQuantMatmulV5_en.md) instead.**
 
 ## Applicable Products
 
@@ -51,45 +49,48 @@
 
   <!-- end id7 -->
 
+In the formulas, `x1` and `x2` are the matrices after applying the transpose attributes. Their last two dimensions are (M,K) and (K,N), and those of the output are (M,N). `@` denotes matrix multiplication, and `*` denotes multiplication after broadcasting along the corresponding dimensions. For UINT64/INT64 quantization parameters, the formulas use the encoded scale values. An omitted optional bias or offset is treated as 0. For supported combinations, see [Constraints](#constraints).
+
 ## Function Prototype
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). First, call "aclnnQuantMatmulV3GetWorkspaceSize" to obtain the workspace size required for computation and the executor that contains the operator computation process. Then, call "aclnnQuantMatmulV3" to execute the computation.
 
 ```cpp
 aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(
-    const aclTensor *x1,
-    const aclTensor *x2,
-    const aclTensor *scale,
-    const aclTensor *offset,
-    const aclTensor *bias,
-    bool             transposeX1,
-    bool             transposeX2,
-    const aclTensor *out,
-    uint64_t        *workspaceSize,
-    aclOpExecutor   **executor)
+  const aclTensor* x1,
+  const aclTensor* x2,
+  const aclTensor* scale,
+  const aclTensor* offset,
+  const aclTensor* bias,
+  bool             transposeX1,
+  bool             transposeX2,
+  const aclTensor* out,
+  uint64_t*        workspaceSize,
+  aclOpExecutor**  executor)
 ```
 
 ```cpp
 aclnnStatus aclnnQuantMatmulV3(
-    void          *workspace,
-    uint64_t       workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream    stream)
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
+  aclrtStream    stream)
 ```
 
 ## aclnnQuantMatmulV3GetWorkspaceSize
 
-- **Parameters:**
+- **Parameters**
 
-    <table style="table-layout: fixed; width: 1503px"><colgroup>
-    <col style="width: 130px">
-    <col style="width: 97px">
-    <col style="width: 308px">
-    <col style="width: 488px">
-    <col style="width: 197px">
-    <col style="width: 77px">
-    <col style="width: 115px">
-    <col style="width: 95px">
+  <table style="table-layout: fixed; width: 1500px">
+    <colgroup>
+      <col style="width: 210px">
+      <col style="width: 100px">
+      <col style="width: 240px">
+      <col style="width: 390px">
+      <col style="width: 230px">
+      <col style="width: 120px">
+      <col style="width: 110px">
+      <col style="width: 100px">
     </colgroup>
     <thead>
       <tr>
@@ -99,115 +100,95 @@ aclnnStatus aclnnQuantMatmulV3(
         <th>Instruction</th>
         <th>Data Type</th>
         <th>Data Format</th>
-        <th>Dimension (shape)</th>
+        <th>Dimensions (Shape)</th>
         <th>Non-contiguous Tensor</th>
-      </tr></thead>
+      </tr>
+    </thead>
     <tbody>
       <tr>
-        <td>x1</td>
+        <td>x1 (const aclTensor*)</td>
         <td>Input</td>
         <td>Input x1 in the formula.</td>
-        <td><ul>
-        <li>Non-contiguous tensors with the last two axes transposed are supported. Non-contiguous tensors in other cases are not supported.</li>
-        <li>When transposeX1 is false, the shape is in the form of (batch, m, k). When transposeX1 is true, the shape is in the form of (batch, k, m). batch may not exist.
-        </li></ul>
-        </td>
+        <td><ul> <li>Non-contiguous tensors with the last two axes transposed are supported. Non-contiguous tensors in other cases are not supported.</li> <li>When transposeX1 is false, the shape is in the form of (batch, m, k). When transposeX1 is true, the shape is in the form of (batch, k, m). batch may not exist. </li></ul></td>
         <td>INT8, INT32, INT4</td>
         <td>ND</td>
         <td>2-6</td>
-        <td>✓</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>x2</td>
+        <td>x2 (const aclTensor*)</td>
         <td>Input</td>
         <td>Input x2 in the formula.</td>
-        <td><ul>
-        <li>ND:
-        <ul><li>Only non-contiguous tensors with the last two axes transposed are supported; non-contiguous tensors in other use cases are not supported.</li>
-        <li>When transposeX2 is false, the shape is in the form of (batch, k, n). When transposeX2 is true, the shape is in the form of (batch, n, k). batch may not exist, where k is consistent with k in the shape of x1.</li></ul> </li>
-        <li>NZ:
-          <ul><li>When transposeX2 is true, the shape is in the form of (batch, k1, n1, n0, k0). batch may not exist, where k0=32 and n0=16. k in the shape of x1 and k1 in the shape of x2 must satisfy ceil(k / 32) = k1.</li></ul>
-          <ul><li>When transposeX2 is false, the shape is in the form of (batch, n1, k1, k0, n0). batch may not exist, where k0=16 and n0=32. k in the shape of x1 and k1 in the shape of x2 must satisfy ceil(k / 16) = k1.</li></ul>
-        </li></ul></td>
+        <td><ul> <li>ND: <ul><li>Only non-contiguous tensors with the last two axes transposed are supported; non-contiguous tensors in other use cases are not supported.</li> <li>When transposeX2 is false, the shape is in the form of (batch, k, n). When transposeX2 is true, the shape is in the form of (batch, n, k). batch may not exist, where k is consistent with k in the shape of x1.</li></ul> </li> <li>NZ: <ul><li>When transposeX2 is true, the shape is in the form of (batch, k1, n1, n0, k0). batch may not exist, where k0=32 and n0=16. k in the shape of x1 and k1 in the shape of x2 must satisfy ceil(k / 32) = k1.</li></ul> <ul><li>When transposeX2 is false, the shape is in the form of (batch, n1, k1, k0, n0). batch may not exist, where k0=16 and n0=32. k in the shape of x1 and k1 in the shape of x2 must satisfy ceil(k / 16) = k1.</li></ul> </li></ul></td>
         <td>INT8, INT32, INT4</td>
-        <td>ND, NZ</td>
-        <td>2-8 (ND), 4-8 (NZ)
-        </td>
-        <td>✓</td>
+        <td>ND, FRACTAL_NZ</td>
+        <td>2-6 (ND), 4-8 (NZ)</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>scale</td>
+        <td>scale (const aclTensor*)</td>
         <td>Input</td>
         <td>Indicates the quantization parameter, that is, the input scale in the formula.</td>
-        <td>(t,), t = 1 or n, where n is consistent with n in x2<br>When the original input data type does not satisfy the type combinations in [Constraints](#constraints), call the aclnn API of the TransQuantParamV2 operator in advance to convert scale to the INT64 or UINT64 data type.</td>
+        <td>(t,), where t = 1 or n and n matches the N dimension of x2.<br/>If the original input type does not satisfy the combinations in <a href="#constraints">Constraints</a>, first call the ACLNN interface of TransQuantParamV2 to convert scale to INT64 or UINT64.</td>
         <td>UINT64, INT64, FLOAT32, BFLOAT16</td>
         <td>ND</td>
         <td>1</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>offset</td>
-        <td>Input</td>
+        <td>offset (const aclTensor*)</td>
+        <td>Optional input</td>
         <td>The input offset in the formula.</td>
-        <td>(t,), t = 1 or n, where n is consistent with the n of x2<br>When the data type of out is INT8, offset may exist; for other input types, nullptr must be passed in.</td>
+        <td>(t,), where t = 1 or n and n matches the N dimension of x2.<br/>offset may be provided when out is INT8. For other output types, pass nullptr.<br/>Pass nullptr when no output offset is used.</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>bias</td>
+        <td>bias (const aclTensor*)</td>
         <td>Optional input</td>
         <td>Input bias in the formula.</td>
-        <td>shape supports 1D (n,) or 3D (batch, 1, n), where n is consistent with the n of x2.<br>When the shape of out is 2D, 4D, 5D, or 6D, the shape of bias only supports 1D.</td>
+        <td>Supports shape (n,) or (batch, 1, n), where n matches the N dimension of x2.<br/>When out has 2, 4, 5, or 6 dimensions, bias must be one-dimensional.<br/>Pass nullptr when no bias is used.</td>
         <td>INT32, BFLOAT16, FLOAT32</td>
         <td>ND</td>
         <td>1, 3</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>transposeX1</td>
+        <td>transposeX1 (bool)</td>
         <td>Input</td>
         <td>Indicates whether the input shape of x1 contains transpose.</td>
-        <td>When transposeX1 is false, the shape is in the form of (batch, m, k)<br>When transposeX1 is true, the shape is in the form of (batch, k, m)<br>batch may not exist.</td>
-        <td>bool</td>
+        <td>The shape is (batch, m, k) when transposeX1 is false, and (batch, k, m) when it is true.<br/>The batch dimensions are optional.<br/>false disables transposition and true enables it. For supported combinations, see <a href="#constraints">Constraints</a>.</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>×</td>
       </tr>
       <tr>
-        <td>transposeX2</td>
+        <td>transposeX2 (bool)</td>
         <td>Input</td>
         <td>Indicates whether the input shape of x2 contains transpose.</td>
-        <td>        <ul>
-        <li>ND: when transposeX2 is false, the shape is in the form of (batch, k, n)<br>when transposeX2 is true, the shape is in the form of (batch, n, k)<br>batch may not exist, where k is consistent with k in the shape of x1</li>
-        <li>NZ:
-        <ul>
-        <li>when transposeX2 is true, the shape is in the form of (batch, k1, n1, n0, k0), batch may not exist, where k0 = 32, n0 = 16, and k in the shape of x1 and k1 in the shape of x2 must satisfy the following relationship: ceil(k / 32) = k1</li>
-        <li>when transposeX2 is false, the shape is in the form of (batch, n1, k1, k0, n0), batch may not exist, where k0 = 16, n0 = 32, and k in the shape of x1 and k1 in the shape of x2 must satisfy the following relationship: ceil(k / 16) = k1</li>
-        </ul>
-        </li>
-        </ul>
-        </td>
-        <td>bool</td>
+        <td><ul><li>ND: The shape is (batch, k, n) when transposeX2 is false, and (batch, n, k) when it is true. The batch dimensions are optional, and k must match the K dimension of x1.</li><li>NZ:<ul><li>When transposeX2 is true, the shape is (batch, k1, n1, n0, k0), where batch is optional, k0 = 32, n0 = 16, and ceil(k / 32) = k1 for the K dimension k of x1.</li><li>When transposeX2 is false, the shape is (batch, n1, k1, k0, n0), where batch is optional, k0 = 16, n0 = 32, and ceil(k / 16) = k1.</li><li>false disables transposition and true enables it. For supported combinations, see <a href="#constraints">Constraints</a>.</li></ul></li><li>false disables transposition and true enables it. For supported combinations, see <a href="#constraints">Constraints</a>.</li></ul></td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>×</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out (const aclTensor*)</td>
         <td>Output</td>
         <td>The output out in the formula.</td>
-        <td>        (batch, m, n), batch may not exist, and broadcast is supported for the batch dimension of x1 and x2<br>The output batch is consistent with the batch after broadcast, m is consistent with m of x1, and n is consistent with n of x2.</td>
+        <td>(batch, m, n), batch may not exist, and broadcast is supported for the batch dimension of x1 and x2<br/>The output batch is consistent with the batch after broadcast, m is consistent with m of x1, and n is consistent with n of x2.</td>
         <td>FLOAT16, INT8, BFLOAT16, INT32</td>
         <td>ND</td>
         <td>2-6</td>
-        <td>✓</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize (uint64_t*)</td>
         <td>Output</td>
-        <td>Returns the workspace size to be applied for on the Device side.</td>
+        <td>Returns the workspace size to allocate on the device, in bytes.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -215,7 +196,7 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor (aclOpExecutor**)</td>
         <td>Output</td>
         <td>Returns the op executor. It contains the operator computation process.</td>
         <td>-</td>
@@ -224,7 +205,8 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>-</td>
         <td>-</td>
       </tr>
-    </tbody></table>
+    </tbody>
+  </table>
 
   <!-- npu="310p" id8 -->
   - <term>Atlas inference products</term>:
@@ -247,27 +229,29 @@ aclnnStatus aclnnQuantMatmulV3(
     - The scale data type supports UINT64, INT64, FLOAT32, and BFLOAT16.
     - bias supports INT32, BFLOAT16, and FLOAT32
     - out supports FLOAT16, INT8, BFLOAT16, and INT32.
-    - In the Full Quantization Field, when x2 is in ND format and m of input x1 is 0 or n of x2 is 0, the output is an empty Tensor; in the A8W8 Full Quantization Field, when x2 is in NZ format and m of input x1 is 0 or n of x2 is 0, the output is an empty Tensor.
+    - In the full quantization scenario, when x2 is in ND format and m of input x1 is 0 or n of x2 is 0, the output is an empty Tensor; in the A8W8 full quantization scenario, when x2 is in NZ format and m of input x1 is 0 or n of x2 is 0, the output is an empty Tensor.
 
   <!-- end id10 -->
 
-- **Return value**
+- **Return Value**
 
-  aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
+  aclnnStatus: return status code. See specifically [aclnn return code](../../../docs/en/context/aclnn_return_code.md).
 
   The first-phase API performs input parameter validation and returns an error in the following scenarios:
 
-  <table style="table-layout: fixed; width: 1149px"><colgroup>
-  <col style="width: 291px">
-  <col style="width: 135px">
-  <col style="width: 723px">
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 300px">
+      <col style="width: 150px">
+      <col style="width: 550px">
     </colgroup>
     <thead>
       <tr>
-        <th>Return Value</th>
-        <th>Error Code</th>
+        <th>Return/Status Code</th>
+        <th>Value</th>
         <th>Description</th>
-      </tr></thead>
+      </tr>
+    </thead>
     <tbody>
       <tr>
         <td>ACLNN_ERR_PARAM_NULLPTR</td>
@@ -275,59 +259,70 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>The passed-in x1, x2, scale, or out is a null pointer.</td>
       </tr>
       <tr>
-        <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="3">161002</td>
-        <td>The data type and data format of x1, x2, bias, scale, offset, or out are not within the supported range.</td>
+        <td>ACLNN_ERR_PARAM_INVALID</td>
+        <td>161002</td>
+        <td><ul><li>The data types or formats of x1, x2, bias, scale, offset, or out are outside the supported ranges.</li><li>The shapes of x1, x2, bias, scale, offset, or out fail validation.</li><li>x1, x2, bias, scale, offset, or out is an empty tensor outside the supported empty-tensor cases described above.</li></ul></td>
       </tr>
       <tr>
-        <td>The shape of x1, x2, bias, scale, offset, or out does not meet the check conditions.</td>
+        <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
+        <td>561101</td>
+        <td>Failed to create the operator executor.</td>
       </tr>
       <tr>
-        <td>x1, x2, bias, scale, offset, or out is an empty tensor and does not fall into the supported empty tensor use cases described above.</td>
+        <td>ACLNN_ERR_INNER_NULLPTR</td>
+        <td>561103</td>
+        <td>An internal tensor operation returned a null pointer during tensor creation, preprocessing, operator computation, or result copying.</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_RUNTIME_ERROR</td>
+        <td>361001</td>
+        <td>The current platform does not support the selected quantized matrix multiplication path.</td>
       </tr>
     </tbody>
-    </table>
+  </table>
 
 ## aclnnQuantMatmulV3
 
-- **Parameters:**
+- **Parameters**
 
-  <table style="table-layout: fixed; width: 1151px"><colgroup>
-  <col style="width: 184px">
-  <col style="width: 134px">
-  <col style="width: 833px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Parameters</th>
-      <th>Input/Output</th>
-      <th>Description</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>Input</td>
-      <td>The workspace memory address applied on the Device.</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>Input</td>
-      <td>The size of the workspace applied on the Device, obtained by the first-phase API aclnnQuantMatmulV3GetWorkspaceSize.</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>Input</td>
-      <td>Op executor. Contains the operator computation process.</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>Input</td>
-      <td>Stream for executing tasks.</td>
-    </tr>
-  </tbody>
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 220px">
+      <col style="width: 100px">
+      <col style="width: 680px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Input/Output</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>workspace (void*)</td>
+        <td>Input</td>
+        <td>The workspace memory address applied on the Device.</td>
+      </tr>
+      <tr>
+        <td>workspaceSize (uint64_t)</td>
+        <td>Input</td>
+        <td>Workspace size in bytes to allocate on the device, obtained from the first-stage aclnnQuantMatmulV3GetWorkspaceSize interface.</td>
+      </tr>
+      <tr>
+        <td>executor (aclOpExecutor*)</td>
+        <td>Input</td>
+        <td>Op executor. Contains the operator computation process.</td>
+      </tr>
+      <tr>
+        <td>stream (aclrtStream)</td>
+        <td>Input</td>
+        <td>Stream for executing tasks.</td>
+      </tr>
+    </tbody>
   </table>
 
-- **Return value**
+- **Return Value**
 
   aclnnStatus: return status code. See specifically [aclnn return code](../../../docs/en/context/aclnn_return_code.md).
 
@@ -335,8 +330,8 @@ aclnnStatus aclnnQuantMatmulV3(
 
 - Deterministic computation description:
 
-  <!-- npu="910,310p" id11 -->
-  - <term>Atlas training products</term> and <term>Atlas inference products</term>: aclnnQuantMatmulV3 default to a deterministic implementation.
+  <!-- npu="A3,910b,310p" id11 -->
+  - <term>Atlas A3 products</term>, <term>Atlas A2 products</term>, and <term>Atlas inference products</term>: aclnnQuantMatmulV3 uses a deterministic implementation by default.
   <!-- end id11 -->
   <!-- npu="950" id12 -->
   - <term>Ascend 950PR&950DT products</term>: aclnnQuantMatmulV3 defaults to a deterministic implementation.
@@ -348,7 +343,7 @@ aclnnStatus aclnnQuantMatmulV3(
   - The size of the last dimension of x1 cannot exceed 65535. The last dimension of x1 refers to m when transposeX1 is true, or k when transposeX1 is false.
   - The size of the last dimension of x2 cannot exceed 65535. The last dimension of x2 refers to k when transposeX2 is true or n when transposeX2 is false.
     - When the input x2 is in NZ format, the scenario where transposeX2 is false is not supported.
-  - Before calling this API, processing x2 in ND format through [aclnnTransMatmulWeight](https://gitcode.com/en/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) to obtain the NZ format is supported.
+  - Before calling this API, processing x2 in ND format through [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) to obtain the NZ format is supported.
 <!-- end id13 -->
 <!-- npu="A3,910b" id14 -->
 - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
@@ -357,14 +352,14 @@ aclnnStatus aclnnQuantMatmulV3(
     - When the data type is INT4, if transposeX2 is true, the shape is (n, k) and k must be even; if transposeX2 is false, the shape is (k, n) and n must be even.
     - When the data type is INT32, each INT32 value stores eight INT4 values. If transposeX2 is true, the shape is (n, k // 8) and k must be a multiple of 8; if transposeX2 is false, the shape is (k, n // 8) and n must be a multiple of 8.
     - You can use the aclnnConvertWeightToINT4Pack API to convert x2 from INT32 (one INT32 stores one INT4 in bits 0–3) to INT32 (one INT32 stores eight INT4 values) or INT4 (one INT4 represents one INT4 value). For details, see the aclnnConvertWeightToINT4Pack API.
-  - Before calling this API, processing x2 in ND format through [aclnnTransMatmulWeight](https://gitcode.com/en/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) to obtain the NZ format is supported.
+  - Before calling this API, processing x2 in ND format through [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) to obtain the NZ format is supported.
 
 <!-- end id14 -->
 <!-- npu="950" id15 -->
 - <term>Ascend 950PR&950DT products</term>:
-  - In the A4W4 Full Quantization Field, only the ND format is supported for x2.
-  - In the A8W8 Full Quantization Field, x2 supports the ND and NZ formats. Before calling this API, converting x2 in ND format to the NZ format through [aclnnTransMatmulWeight](https://gitcode.com/en/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) or [aclnnNpuFormatCast](https://gitcode.com/en/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md) is supported. 0 padding must be used during conversion to avoid introducing dirty data.
-  - In the A8W8 Full Quantization Field, when any of the last two dimensions of the original x2 in ND format is 1 (that is, n=1 or k=1), conversion to the NZ format is not supported, and x2 should use the ND format.
+  - In the A4W4 full quantization scenario, only the ND format is supported for x2.
+  - In the A8W8 full quantization scenario, x2 supports the ND and NZ formats. Before calling this API, converting x2 in ND format to the NZ format through [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) or [aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md) is supported. 0 padding must be used during conversion to avoid introducing dirty data.
+  - In the A8W8 full quantization scenario, when any of the last two dimensions of the original x2 in ND format is 1 (that is, n=1 or k=1), conversion to the NZ format is not supported, and x2 should use the ND format.
 
 <!-- end id15 -->
 
@@ -375,34 +370,34 @@ The input and output support the following data type combinations. The following
 <!-- npu="310p" id16 -->
 - <term>Atlas inference products</term>:
 
-  | x1 | x2 | Scale | Offset | Bias | Out |
+  | x1 | x2 | scale | offset | bias | out |
   | ------- | ------- | ------ | ------ | ------- | ------- |
-  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
-  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32 | FLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32 | INT8 |
 
 <!-- end id16 -->
 <!-- npu="A3,910b" id17 -->
 - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
 
-  | x1 | x2 | Scale | Offset | Bias | Out |
+  | x1 | x2 | scale | offset | bias | out |
   | ------- | ------- | ------ | ------ | ------- | ------- |
-  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
-  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
-  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32  |  BFLOAT16 |
-  | INT4/INT32 | INT4/INT32 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
-  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32 | FLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32 | INT8 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16 |
+  | INT4/INT32 | INT4/INT32 | UINT64/INT64 | null | null/INT32 | FLOAT16 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32 | INT32 |
 
 <!-- end id17 -->
 <!-- npu="950" id18 -->
 - <term>Ascend 950PR&950DT products</term>:
 
-  | x1 | x2 | Scale | Offset | Bias | Out |
+  | x1 | x2 | scale | offset | bias | out |
   | ------- | ------- | ------ | ------ | ------- | ------- |
-  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16/BFLOAT16 |
-  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
-  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32  |  BFLOAT16 |
-  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
-  | INT4 | INT4 | UINT64/INT64 | null | null/INT32  | FLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32 | FLOAT16/BFLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32 | INT8 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32 | INT32 |
+  | INT4 | INT4 | UINT64/INT64 | null | null/INT32 | FLOAT16 |
 
 <!-- end id18 -->
 
@@ -415,6 +410,8 @@ The input and output support the following data type combinations. The following
 The following is the sample code for the general use case, for reference only. For details about the compilation and execution process, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -476,7 +473,7 @@ The following is the sample code for the general use case, for reference only. F
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-      // Compute the strides of the contiguous tensor.
+      // Calculate the strides of the contiguous tensor.
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
@@ -485,6 +482,7 @@ The following is the sample code for the general use case, for reference only. F
       // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -500,7 +498,7 @@ The following is the sample code for the general use case, for reference only. F
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-      // 2. Construct the input and output. Custom construction is required based on the API.
+      // 2. Construct the input and output, which need to be custom-constructed based on the API.
       std::vector<int64_t> x1Shape = {5, 2};
       std::vector<int64_t> x2Shape = {2, 3};
       std::vector<int64_t> biasShape = {3};
@@ -528,7 +526,7 @@ The following is the sample code for the general use case, for reference only. F
       std::vector<uint64_t> quantParamHostData(scaleHostData.size(), 0);
       std::vector<float> offsetHostData = {1, 1, 1};
       std::vector<uint16_t> outHostData = {1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1};  // Actually in float16 half-precision mode.
+                                          1, 1, 1, 1, 1, 1, 1};  // Actually in float16 half-precision mode
       // Create the x1 aclTensor.
       ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_INT8, &x1);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x1TensorPtr(x1, aclDestroyTensor);
@@ -573,7 +571,7 @@ The following is the sample code for the general use case, for reference only. F
       aclOpExecutor *executor = nullptr;
 
       // For scale of the FLOAT data type, call the aclnn API of the TransQuantParamV2 operator in advance.
-      // Call the first-phase API of aclnnTransQuantParamV2.
+      // Call the aclnnTransQuantParamV2 first-phase API.
       ret = aclnnTransQuantParamV2GetWorkspaceSize(scale, offset, quantParam, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2GetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
@@ -585,7 +583,7 @@ The following is the sample code for the general use case, for reference only. F
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrV2.reset(workspaceAddr);
       }
-      // Call the second-phase API of aclnnTransQuantParamV2.
+      // Call the aclnnTransQuantParamV2 second-phase API.
       ret = aclnnTransQuantParamV2(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2 failed. ERROR: %d\n", ret); return ret);
 
@@ -607,14 +605,14 @@ The following is the sample code for the general use case, for reference only. F
       ret = aclnnQuantMatmulV3(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3 failed. ERROR: %d\n", ret); return ret);
 
-      // 4. (boilerplate) Wait for the task execution to finish.
+      // 4. (boilerplate) Synchronize and wait for the task execution to complete.
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-      // 5. Obtain the output value, copy the result on the device side to the host side, and modify the code based on the definition of the specific API.
+      // 5. Obtain the output values and copy the result from the device memory to the host memory. Modify the code according to the definition of the specific API.
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(
-          size, 0);  // fp16 data cannot be printed directly in C. Read it out as uint16 and convert the binary data to fp16 manually.
+          size, 0);  // The C language cannot print fp16 data directly. Read it as uint16 and manually convert it from binary to fp16.
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
@@ -628,9 +626,9 @@ The following is the sample code for the general use case, for reference only. F
   int main()
   {
       // 1. (boilerplate) Initialize device/stream. For details, see the acl API manual.
-      // Set deviceId based on the actual device.
+      // Fill in deviceId based on the actual device.
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulV3Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3Test failed. ERROR: %d\n", ret); return ret);
 
@@ -643,6 +641,8 @@ The following is the sample code for the general use case, for reference only. F
 - <term>Atlas A2 products</term> and <term>Atlas A3 products</term>: The sample code for x2 in the NZ use case is as follows (transposeX2=false), for reference only. For details about the compilation and execution process, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -684,7 +684,7 @@ The following is the sample code for the general use case, for reference only. F
 
   int Init(int32_t deviceId, aclrtStream *stream)
   {
-      // Boilerplate. Initialize resources.
+      // Boilerplate: initialize resources.
       auto ret = aclInit(nullptr);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
       ret = aclrtSetDevice(deviceId);
@@ -699,14 +699,14 @@ The following is the sample code for the general use case, for reference only. F
                       aclDataType dataType, aclTensor **tensor)
   {
       auto size = GetShapeSize(shape) * sizeof(T);
-      // Call aclrtMalloc to allocate memory on the device.
+      // Call aclrtMalloc to allocate device memory.
       auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-      // Call aclrtMemcpy to copy host-side data to device-side memory.
+      // Call aclrtMemcpy to copy host data to device memory.
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-      // Compute the strides of the contiguous tensor.
+      // Calculate the strides of the contiguous tensor.
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
@@ -715,6 +715,7 @@ The following is the sample code for the general use case, for reference only. F
       // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -737,14 +738,14 @@ The following is the sample code for the general use case, for reference only. F
                 return ret);
       size *= sizeof(T);
 
-      // Call aclrtMalloc to allocate memory on the device.
+      // Call aclrtMalloc to allocate device memory.
       ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-      // Call aclrtMemcpy to copy host-side data to device-side memory.
+      // Call aclrtMemcpy to copy host data to device memory.
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-      // Compute the strides of the contiguous tensor.
+      // Calculate the strides of the contiguous tensor.
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
@@ -756,6 +757,7 @@ The following is the sample code for the general use case, for reference only. F
       // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 storageShape.data(), storageShape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -764,7 +766,7 @@ The following is the sample code for the general use case, for reference only. F
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-      // 2. Construct the input and output. You need to customize the construction based on the API.
+      // 2. Construct the input and output, which need to be custom-constructed based on the API.
       std::vector<int64_t> x1Shape = {5, 2};
       std::vector<int64_t> x2Shape = {2, 3};
       std::vector<int64_t> biasShape = {3};
@@ -791,39 +793,39 @@ The following is the sample code for the general use case, for reference only. F
       std::vector<float> scaleHostData = {1, 1, 1};
       std::vector<float> offsetHostData = {1, 1, 1};
       std::vector<uint16_t> outHostData = {1, 1, 1, 1, 1, 1, 1, 1,
-                                          1, 1, 1, 1, 1, 1, 1};  // Actually float16 half-precision format
-      // Create the x1 aclTensor
+                                          1, 1, 1, 1, 1, 1, 1};  // Actually in float16 half-precision mode
+      // Create the x1 aclTensor.
       ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_INT8, &x1);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x1TensorPtr(x1, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> x1DeviceAddrPtr(x1DeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // Create the NZ x2 aclTensor
+      // Create the NZ x2 aclTensor.
       ret = CreateAclTensorX2(x2HostData, x2Shape, &x2DeviceAddr, aclDataType::ACL_INT8, &x2);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x2HPTensorPtr(x2, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> x2HPDeviceAddrPtr(x2DeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // Create the scale aclTensor
+      // Create the scale aclTensor.
       ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scale);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> scaleTensorPtr(scale, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> scaleDeviceAddrPtr(scaleDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // Create the quantParam aclTensor
+      // Create the quantParam aclTensor.
       ret = CreateAclTensor(scaleHostData, scaleShape, &quantParamDeviceAddr, aclDataType::ACL_UINT64, &quantParam);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> quantParamTensorPtr(quantParam,
                                                                                         aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> quantParamDeviceAddrPtr(quantParamDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // Create the offset aclTensor
+      // Create the offset aclTensor.
       ret = CreateAclTensor(offsetHostData, offsetShape, &offsetDeviceAddr, aclDataType::ACL_FLOAT, &offset);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> offsetTensorPtr(offset, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> offsetDeviceAddrPtr(offsetDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // Create the bias aclTensor
+      // Create the bias aclTensor.
       ret = CreateAclTensor(biasHostData, biasShape, &biasDeviceAddr, aclDataType::ACL_INT32, &bias);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> biasTensorPtr(bias, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> biasDeviceAddrPtr(biasDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // Create the out aclTensor
+      // Create the out aclTensor.
       ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT16, &out);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> outTensorPtr(out, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
@@ -831,11 +833,11 @@ The following is the sample code for the general use case, for reference only. F
       bool transposeX1 = false;
       bool transposeX2 = false;
 
-      // 3. Call the CANN operator library API. Replace it with the specific API name
+      // 3. Call the CANN operator library API. Replace it with the specific API name.
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
       void *workspaceAddr = nullptr;
-      // Call the first-phase API of aclnnTransMatmulWeight.
+      // Call the aclnnTransMatmulWeight first-phase API.
       ret = aclnnTransMatmulWeightGetWorkspaceSize(x2, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransMatmulWeightGetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
@@ -847,12 +849,12 @@ The following is the sample code for the general use case, for reference only. F
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrTrans.reset(workspaceAddr);
       }
-      // Call the second-phase API of aclnnTransMatmulWeight.
+      // Call the aclnnTransMatmulWeight second-phase API.
       ret = aclnnTransMatmulWeight(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransMatmulWeight failed. ERROR: %d\n", ret); return ret);
 
-      // For scale of the FLOAT data type, the aclnn API of the TransQuantParamV2 operator must be called in advance.
-      // Call the first-phase API of aclnnTransQuantParamV2.
+      // For scale of the FLOAT data type, call the aclnn API of the TransQuantParamV2 operator in advance.
+      // Call the aclnnTransQuantParamV2 first-phase API.
       ret = aclnnTransQuantParamV2GetWorkspaceSize(scale, offset, quantParam, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2GetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
@@ -864,7 +866,7 @@ The following is the sample code for the general use case, for reference only. F
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrV2.reset(workspaceAddr);
       }
-      // Call the second-phase API of aclnnTransQuantParamV2.
+      // Call the aclnnTransQuantParamV2 second-phase API.
       ret = aclnnTransQuantParamV2(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2 failed. ERROR: %d\n", ret); return ret);
 
@@ -887,14 +889,14 @@ The following is the sample code for the general use case, for reference only. F
       ret = aclnnQuantMatmulV3(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3 failed. ERROR: %d\n", ret); return ret);
 
-      // 4. (boilerplate) Synchronously wait for task execution to complete.
+      // 4. (boilerplate) Synchronize and wait for the task execution to complete.
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-      // 5. Obtain the output value and copy the result from device memory to host memory. Modify the code as required by the definition of the specific API.
+      // 5. Obtain the output values and copy the result from the device memory to the host memory. Modify the code according to the definition of the specific API.
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(
-          size, 0);  // The fp16 data cannot be printed directly in C. Read it as uint16 and manually convert it to fp16 in binary format.
+          size, 0);  // The C language cannot print fp16 data directly. Read it as uint16 and manually convert it from binary to fp16.
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
@@ -907,10 +909,10 @@ The following is the sample code for the general use case, for reference only. F
 
   int main()
   {
-      // 1. (boilerplate) Initialize the device/stream. For details, see the acl API manual.
-      // Fill in deviceId based on your actual device.
+      // 1. (boilerplate) Initialize device/stream. For details, see the acl API manual.
+      // Fill in deviceId based on the actual device.
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulV3Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3Test failed. ERROR: %d\n", ret); return ret);
 
@@ -924,6 +926,8 @@ The following is the sample code for the general use case, for reference only. F
 - <term>Atlas A2 products</term> and <term>Atlas A3 products</term>: The sample code for the INT4 quantization use case is as follows (the data types of x1 and x2 are INT4, transposeX2=false), for reference only. For details about compilation and execution, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -964,7 +968,7 @@ The following is the sample code for the general use case, for reference only. F
 
   int Init(int32_t deviceId, aclrtStream *stream)
   {
-      // (boilerplate) Initialize resources.
+      // Boilerplate: initialize resources.
       auto ret = aclInit(nullptr);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
       ret = aclrtSetDevice(deviceId);
@@ -983,7 +987,7 @@ The following is the sample code for the general use case, for reference only. F
       // Call aclrtMalloc to allocate device memory.
       auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-      // Call aclrtMemcpy to copy data from host memory to device memory.
+      // Call aclrtMemcpy to copy host data to device memory.
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
@@ -996,6 +1000,7 @@ The following is the sample code for the general use case, for reference only. F
       // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1011,7 +1016,7 @@ The following is the sample code for the general use case, for reference only. F
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-      // 2. Construct inputs and outputs. Custom construction is required based on the API.
+      // 2. Construct the input and output, which need to be custom-constructed based on the API.
       int64_t m = 16;
       int64_t k = 8;
       int64_t n = 32;
@@ -1110,7 +1115,7 @@ The following is the sample code for the general use case, for reference only. F
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvertWeightToINT4Pack failed. ERROR: %d\n", ret); return ret);
 
       // For scale of the FLOAT data type, call the aclnn API of the TransQuantParamV2 operator in advance.
-      // Call the first-phase API of aclnnTransQuantParamV2.
+      // Call the aclnnTransQuantParamV2 first-phase API.
       ret = aclnnTransQuantParamV2GetWorkspaceSize(scale, offset, quantParam, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2GetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
@@ -1122,7 +1127,7 @@ The following is the sample code for the general use case, for reference only. F
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrV2.reset(workspaceAddr);
       }
-      // Call the second-phase API of aclnnTransQuantParamV2.
+      // Call the aclnnTransQuantParamV2 second-phase API.
       ret = aclnnTransQuantParamV2(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2 failed. ERROR: %d\n", ret); return ret);
 
@@ -1140,18 +1145,18 @@ The following is the sample code for the general use case, for reference only. F
           workspaceAddrPtrV3.reset(workspaceAddr);
       }
 
-      // Call the second-phase API aclnnQuantMatmulV3.
+      // Call the second-phase API of aclnnQuantMatmulV3.
       ret = aclnnQuantMatmulV3(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3 failed. ERROR: %d\n", ret); return ret);
 
-      // 4. (boilerplate) Wait synchronously for the task execution to complete.
+      // 4. (boilerplate) Synchronize and wait for the task execution to complete.
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-      // 5. Obtain the output value and copy the result from device memory to the host side. Modify it according to the specific API definition.
+      // 5. Obtain the output values and copy the result from the device memory to the host memory. Modify the code according to the definition of the specific API.
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(
-          size, 0);  // In C, fp16 data cannot be printed directly. Read it out as uint16 and manually convert it to fp16 through binary conversion.
+          size, 0);  // The C language cannot print fp16 data directly. Read it as uint16 and manually convert it from binary to fp16.
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
@@ -1164,10 +1169,10 @@ The following is the sample code for the general use case, for reference only. F
 
   int main()
   {
-      // 1. (boilerplate) Initialize device/stream. Refer to the acl API manual.
+      // 1. (boilerplate) Initialize device/stream. For details, see the acl API manual.
       // Fill in deviceId based on the actual device.
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulV3Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3Test failed. ERROR: %d\n", ret); return ret);
 
@@ -1181,6 +1186,8 @@ The following is the sample code for the general use case, for reference only. F
 - <term>Atlas inference products</term>: The following is sample code for the use case where x2 is in NZ format (transposeX2=true). For reference only. For the specific compilation and execution process, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -1237,7 +1244,7 @@ The following is the sample code for the general use case, for reference only. F
                       aclDataType dataType, aclTensor **tensor)
   {
       auto size = GetShapeSize(shape) * sizeof(T);
-      // Call aclrtMalloc to apply for device memory.
+      // Call aclrtMalloc to allocate device memory.
       auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
       // Call aclrtMemcpy to copy host data to device memory.
@@ -1253,6 +1260,7 @@ The following is the sample code for the general use case, for reference only. F
       // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1294,6 +1302,7 @@ The following is the sample code for the general use case, for reference only. F
       // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 storageShape.data(), storageShape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1392,7 +1401,7 @@ The following is the sample code for the general use case, for reference only. F
       // Call the aclnnPermute first-phase API.
       ret = aclnnPermuteGetWorkspaceSize(x2, dims, x2Transposed, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermuteGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-      // Allocate device memory using the workspaceSize calculated by the first-phase API.
+      // Allocate device memory based on the workspaceSize calculated by the first-phase API.
       std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtrPermute(nullptr, aclrtFree);
       if (workspaceSize > 0) {
           ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -1401,7 +1410,7 @@ The following is the sample code for the general use case, for reference only. F
       }
       // Call the aclnnPermute second-phase API.
       ret = aclnnPermute(workspaceAddr, workspaceSize, executor, stream);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermuteGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermute failed. ERROR: %d\n", ret); return ret);
 
       workspaceSize = 0;
       // Call the aclnnTransMatmulWeight first-phase API.
@@ -1409,7 +1418,7 @@ The following is the sample code for the general use case, for reference only. F
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransMatmulWeightGetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
 
-      // Allocate device memory using the workspaceSize calculated by the first-phase API.
+      // Allocate device memory based on the workspaceSize calculated by the first-phase API.
       std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtrTrans(nullptr, aclrtFree);
       if (workspaceSize > 0) {
           ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -1425,7 +1434,7 @@ The following is the sample code for the general use case, for reference only. F
       ret = aclnnTransQuantParamV2GetWorkspaceSize(scale, offset, quantParam, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2GetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
-      // Allocate device memory using the workspaceSize calculated by the first-phase API.
+      // Allocate device memory based on the workspaceSize calculated by the first-phase API.
       workspaceAddr = nullptr;
       std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtrV2(nullptr, aclrtFree);
       if (workspaceSize > 0) {
@@ -1479,7 +1488,7 @@ The following is the sample code for the general use case, for reference only. F
       // 1. (boilerplate) Initialize device/stream. For details, see the acl API manual.
       // Fill in deviceId based on the actual device.
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulV3Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3Test failed. ERROR: %d\n", ret); return ret);
 

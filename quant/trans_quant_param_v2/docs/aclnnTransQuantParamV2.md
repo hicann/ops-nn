@@ -27,22 +27,22 @@
 - 计算公式：
   1. `out`为64位格式，初始为0。
 
-  2. `scale`按bit位保留高19位（即bit位13~31，低13位清零），写入`out`的低32位，并将46位修改为1。
+  2. 将处理后的`scale`按位重解释为UINT32，记为`scaleBits`。保留其高19位（bit 13～31，低13位清零），写入`out`的低32位，并将bit 46置1。位运算前扩展为UINT64，位编号从0开始。
 
      $$
-     out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
+     out = out\ |\ (scaleBits\ \&\ 0xFFFFE000)\ |\ (1\ll46)
      $$
 
   3. 根据`offset`取值进行后续计算：
      - 若`offset`不存在，不再进行后续计算。
      - 若`offset`存在：
-       1. 将`offset`值处理为int，范围为[-256, 255]。
+       1. 先将`offset`按最近偶数舍入为整数，再截断到[-256, 255]。
 
           $$
           offset = Max(Min(INT(Round(offset)),255),-256)
           $$
 
-       2. 再将`offset`按bit位保留9位并存储于out的37到45位。
+       2. 再将`offset`按bit位保留9位并存储于`out`的bit 37～45。
 
           $$
           out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0x1FF)\ll37)
@@ -52,7 +52,7 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnTransQuantParamV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnTransQuantParamV2”接口执行计算。
 
-```Cpp
+```cpp
 aclnnStatus aclnnTransQuantParamV2GetWorkspaceSize(
   const aclTensor* scale,
   const aclTensor* offset,
@@ -61,91 +61,93 @@ aclnnStatus aclnnTransQuantParamV2GetWorkspaceSize(
   aclOpExecutor**  executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnTransQuantParamV2(
-  void                *workspace,
-  uint64_t             workspaceSize,
-  aclOpExecutor       *executor,
-  const aclrtStream    stream)
+  void*             workspace,
+  uint64_t          workspaceSize,
+  aclOpExecutor*    executor,
+  const aclrtStream stream)
 ```
 
 ## aclnnTransQuantParamV2GetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
-  <col style="width: 170px">
-  <col style="width: 120px">
-  <col style="width: 271px">
-  <col style="width: 330px">
-  <col style="width: 223px">
-  <col style="width: 101px">
-  <col style="width: 190px">
-  <col style="width: 145px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-      <th>使用说明</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-      <th>维度(shape)</th>
-      <th>非连续Tensor</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>scale（aclTensor*）</td>
-      <td>输入</td>
-      <td>量化中的scale值。对应公式中的`scale`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>用户需要保证scale数据中不存在NaN和Inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-      <td>1-2</td>
-      <td>×</td>
-    </tr>
-    <tr>
-      <td>offset（aclTensor*）</td>
-      <td>输入</td>
-      <td>可选参数，量化中的offset值。对应公式中的`offset`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>用户需要保证offset数据中不存在NaN和Inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-      <td>1-2</td>
-      <td>×</td>
-    </tr>
-    <tr>
-      <td>out（aclTensor*）</td>
-      <td>输出</td>
-      <td>量化的计算输出。对应公式中的`out`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
-      <td>UINT64、INT64</td>
-      <td>ND</td>
-      <td>1-2</td>
-      <td>√ </td>
-    </tr>
-    <tr>
-      <td>workspaceSize（uint64_t*）</td>
-      <td>输出</td>
-      <td>返回需要在Device侧申请的workspace大小。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>executor（aclOpExecutor**）</td>
-      <td>输出</td>
-      <td>返回op执行器，包含了算子计算流程。</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-  </tbody>
+  <table style="table-layout: fixed; width: 1500px">
+    <colgroup>
+      <col style="width: 210px">
+      <col style="width: 100px">
+      <col style="width: 240px">
+      <col style="width: 390px">
+      <col style="width: 230px">
+      <col style="width: 120px">
+      <col style="width: 110px">
+      <col style="width: 100px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+        <th>使用说明</th>
+        <th>数据类型</th>
+        <th>数据格式</th>
+        <th>维度(shape)</th>
+        <th>非连续Tensor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>scale（const aclTensor*）</td>
+        <td>输入</td>
+        <td>量化中的scale值。对应公式中的<code>scale</code>。</td>
+        <td><ul><li>不支持空Tensor，数据不能包含NaN或Inf。</li><li>shape支持一维(t,)或二维(1,n)，t=1或n；分组场景的二维shape限制见<a href="#约束说明">约束说明</a>。</li></ul></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1-2</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>offset（const aclTensor*）</td>
+        <td>可选输入</td>
+        <td>可选参数，量化中的offset值。对应公式中的<code>offset</code>。</td>
+        <td><ul><li>不支持空Tensor。</li><li>用户需要保证offset数据中不存在NaN和Inf。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li><li>不使用offset时传入nullptr，输出中offset对应的位域保持为0。</li></ul></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1-2</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>out（const aclTensor*）</td>
+        <td>输出</td>
+        <td>量化的计算输出。对应公式中的<code>out</code>。</td>
+        <td><ul><li>不支持空Tensor。</li><li>shape的约束请参见<a href="#约束说明">约束说明</a>。</li></ul></td>
+        <td>UINT64、INT64</td>
+        <td>ND</td>
+        <td>1-2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t*）</td>
+        <td>输出</td>
+        <td>返回需要在Device侧申请的workspace大小，单位为字节。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor**）</td>
+        <td>输出</td>
+        <td>返回op执行器，包含了算子计算流程。</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody>
   </table>
 
 - **返回值**
@@ -154,74 +156,72 @@ aclnnStatus aclnnTransQuantParamV2(
 
   第一段接口完成入参校验，出现以下场景时报错：
 
-  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
-  <col style="width: 268px">
-  <col style="width: 140px">
-  <col style="width: 762px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>返回码</th>
-      <th>错误码</th>
-      <th>描述</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>传入的scale或out是空指针。</td>
-    </tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>scale、offset或out的数据类型和数据格式不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>若offset的shape不是(t,)或(1, n)，则会报错，其中t=1或n，n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致）。</td>
-    </tr>
-    <tr>
-      <td>若scale的shape不是一维(t,)、(g,)或二维(1, n)、(g, 1)、(g, n)，则会报错。其中：t=1或n；n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致）；g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。</td>
-    </tr>
-  </tbody></table>
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 300px">
+      <col style="width: 150px">
+      <col style="width: 550px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>返回码/状态码</th>
+        <th>码值</th>
+        <th>描述</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>传入的scale或out是空指针。</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_PARAM_INVALID</td>
+        <td>161002</td>
+        <td><ul><li>scale、offset或out的数据类型和数据格式不在支持的范围之内。</li><li>若offset的shape不是(t,)或(1, n)，则会报错，其中t=1或n，n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致）。</li><li>若scale的shape不是一维(t,)、(g,)或二维(1, n)、(g, 1)、(g, n)，则会报错。其中：t=1或n；n与matmul计算中的x2的n一致（或与grouped matmul计算中右矩阵（对应参数weight）的shape n一致）；g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。</li></ul></td>
+      </tr>
+    </tbody>
+  </table>
 
 ## aclnnTransQuantParamV2
 
-- **参数说明：**
+- **参数说明**
 
-  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
-  <col style="width: 173px">
-  <col style="width: 112px">
-  <col style="width: 668px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnTransQuantParamV2GetWorkspaceSize获取。</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>输入</td>
-      <td>指定执行任务的Stream。</td>
-    </tr>
-  </tbody>
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 220px">
+      <col style="width: 100px">
+      <col style="width: 680px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>workspace（void*）</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t）</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，单位为字节，由第一段接口aclnnTransQuantParamV2GetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor*）</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream（const aclrtStream）</td>
+        <td>输入</td>
+        <td>指定执行任务的Stream。</td>
+      </tr>
+    </tbody>
   </table>
 
 - **返回值**
@@ -236,14 +236,19 @@ aclnnStatus aclnnTransQuantParamV2(
 <!-- npu="A3,910b,310p" id8 -->
 - <term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：该接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
 <!-- end id8 -->
+<!-- npu="950" id9 -->
+- <term>Ascend 950PR&950DT系列产品</term>：无offset的分组场景还支持scale为(g,n)，g、n均为正整数，out的shape与scale一致。
+<!-- end id9 -->
 - 关于scale、offset、out的shape说明如下：
   - 当无offset时，out shape与scale shape一致。
     - 若out作为matmul类算子输入（如[aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)），shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。
+    <!-- npu="950" id10 -->
     - 若out作为grouped matmul类算子输入（如aclnnGroupedMatmulV4），仅在分组模式为m轴分组时使用（对应参数groupType为0），shape支持1维(g,)或2维(g, 1)、(g, n)，其中n与grouped matmul计算中右矩阵（对应参数x2）的shape n一致，g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。
+    <!-- end id10 -->
   - 当有offset时，仅作为matmul类算子输入（如[aclnnQuantMatmulV4](../../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）：
     - offset，scale，out的shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。
-    - 当输入scale的shape为1维，out的shape也为1维，且shape大小为scale与offset单维shape大小的最大值。
-    - 当输入scale的shape为2维，out的shape与输入scale的shape维度和大小完全一致。
+    - scale与offset均为一维时，out为一维，元素数为二者元素数的最大值；二者元素数都大于1时必须相等。
+    - scale与offset均为二维时，out为(1,n)，与广播后的结果一致。建议先统一scale与offset的维数，避免混用(n,)与(1,n)。
 - 确定性计算：
   - aclnnTransQuantParamV2默认确定性实现。
 
@@ -251,8 +256,10 @@ aclnnStatus aclnnTransQuantParamV2(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-```Cpp
+```cpp
 #include <memory>
+#include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -322,6 +329,7 @@ int CreateAclTensor(
     *tensor = aclCreateTensor(
         shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
         *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
     return 0;
 }
 
@@ -408,7 +416,7 @@ int main()
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
-    aclrtStream stream;
+    aclrtStream stream = nullptr;
     auto ret = aclnnTransQuantParamV2Test(deviceId, stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2Test failed. ERROR: %d\n", ret); return ret);
 

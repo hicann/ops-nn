@@ -31,7 +31,7 @@ Batch indices are omitted below. $X_1$ and $X_2$ are the matrices used in the co
 
 ### MX Quantized Matrix Multiplication
 
-Split the K axis into groups of 32 elements, multiply each partial matrix product by its input scales, and accumulate the results before adding the bias:
+Split K into groups of 32 elements. Multiply each partial matrix product by the corresponding input scales and accumulate the results with bias to obtain $C$:
 
 $$
 C_{m,n}=\sum_{j=0}^{L-1}\left[
@@ -39,7 +39,7 @@ C_{m,n}=\sum_{j=0}^{L-1}\left[
 S_{1,m,j}\,S_{2,j,n}\right]+b_n
 $$
 
-Here, $g_M$, $g_N$, and $g_K$ are the group sizes along M, N, and K. Only $(1,1,32)$ is supported; $L=\lceil K/g_K\rceil$ and $g_j=\min(g_K,K-jg_K)$. $S_1$ and $S_2$ are the scales for group $j$ in `x1_scale` and `x2_scale`. Their storage shapes are listed under Parameters and Constraints. Accumulation uses FP32. The bias is added before activation; $b_n=0$ when no bias is supplied.
+Here, $g_M$, $g_N$, and $g_K$ are the group sizes along M, N, and K, respectively, and are currently fixed at $(1,1,32)$; $L=\lceil K/g_K\rceil$ and $g_j=\min(g_K,K-jg_K)$. $S_1$ and $S_2$ denote the scale values for group $j$ in `x1_scale` and `x2_scale`, respectively. For storage shapes, see [Layout and Storage](#layout-and-storage). Matrix multiplication uses FP32 accumulation, and bias is added before activation. If bias is omitted, $b_n=0$.
 
 ### Activation
 
@@ -51,13 +51,13 @@ Apply the specified activation to $C$ to obtain $A$:
   A=\frac{C}{2}\left[1+\tanh\left(\sqrt{\frac{2}{\pi}}\left(C+0.044715C^3\right)\right)\right]
   $$
 
-- `activation_type="gelu_erf"`: The erf form of GELU.
+- `activation_type="gelu_erf"`: the erf form of GELU.
 
   $$
   A=\frac{C}{2}\left[1+\operatorname{erf}\left(\frac{C}{\sqrt{2}}\right)\right]
   $$
 
-- `activation_type="silu"`: Elementwise SiLU.
+- `activation_type="silu"`: elementwise SiLU.
 
   $$
   A=\operatorname{SiLU}(C)=\frac{C}{1+e^{-C}}
@@ -69,11 +69,11 @@ Apply the specified activation to $C$ to obtain $A$:
   C=[G\mid U],\qquad A=\operatorname{SiLU}(G)\odot U=\frac{G}{1+e^{-G}}\odot U
   $$
 
-All activations are computed in FP32. Let $H$ be the output width after activation: $H=N$ for GELU and SiLU, and $H=N/2$ for SwiGLU.
+All activations above are calculated in FP32. Let $H$ be the output width after activation: $H=N$ for GELU and SiLU, and $H=N/2$ for SwiGLU.
 
 ### Dynamic MX Quantization
 
-Round the activation result to BF16 using round-to-nearest-even (RNE), then form groups of 32 elements along the last dimension. Zero-pad the final group when needed to calculate its scale; padding elements are not written to the output.
+Convert the activation result to BF16 using Round to Nearest, ties to Even (RNE): round to the nearest representable value, resolving ties to the value whose least significant mantissa bit is 0. Then divide the last dimension into groups of 32 elements. If the last group contains fewer than 32 elements, pad it with zeros for scale calculation. The padding elements are not written to the output.
 
 $$
 V_i=\operatorname{BF16}_{RNE}(A_i),\qquad a=\max_i|V_i|,\qquad s=2^e
@@ -90,7 +90,7 @@ $$
 
 `y_scale` uses `torch.float8_e8m0fnu`. The scale for group $j$ is written to `y_scale[..., m, j // 2, j % 2]`; its shape is `(..., M, ceil(H/64), 2)`.
 
-For the scale algorithms and special-value handling, see [Scale Calculation](aclnnQuantMatmulActivationQuant_en.md#scale-calculation).
+For the formulas and special-value handling of each `scale_alg`, see [Scale Calculation Algorithms](../README_en.md#scale-calculation-algorithms).
 
 ## Function Prototype
 
@@ -165,7 +165,7 @@ Returns `(y, y_scale)` on the same NPU device as x1. Data types below are logica
 
 Supported logical data type combinations are listed below.
 
-| x1 | x2 | y | x2 Format |
+| x1 | x2 | y | x2 format |
 | --- | --- | --- | --- |
 | torch.float8_e4m3fn | torch.float8_e4m3fn | torch.float8_e4m3fn | ND, FRACTAL_NZ |
 | torch.float8_e5m2 | torch.float8_e4m3fn | torch.float8_e5m2 | ND, FRACTAL_NZ |
@@ -219,7 +219,7 @@ ND inputs support [non-contiguous tensors](../../../docs/en/context/non_contiguo
 
 ## Example
 
-Install compatible `torch`, `torch_npu`, and the repository's PyTorch extension. See the [PyTorch Extension Guide](../../../torch_extension/README.md) for installation instructions.
+Install compatible `torch`, `torch_npu`, and the repository's PyTorch extension. See the [PyTorch Extension Guide](../../../torch_extension/README_en.md) for installation instructions.
 
 ### Single-Operator Invocation
 

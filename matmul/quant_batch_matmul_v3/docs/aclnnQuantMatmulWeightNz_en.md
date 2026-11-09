@@ -1,7 +1,5 @@
 # aclnnQuantMatmulWeightNz
 
-<!-- md-trans-meta sourceCommit=unknown translatedAt=2026-09-22T18:34:21.594Z -->
-
 ## Applicable Products
 
 <!-- npu="950" id1 -->
@@ -29,93 +27,95 @@
 
 - Formula:
 
-    <!-- npu="950,A3,910b,310p" id7 -->
-    <details>
-    <summary><term>Atlas inference products</term>, <term>Atlas A2 products</term>, <term>Atlas A3 products</term>, <term>Ascend 950PR&950DT products</term></summary>
+  <!-- npu="950,A3,910b,310p" id7 -->
+  <details>
+  <summary><term>Atlas inference products</term>, <term>Atlas A2 products</term>, <term>Atlas A3 products</term>, <term>Ascend 950PR&950DT products</term></summary>
 
-    - Without x1Scale and bias:
+  - Without x1Scale and bias:
 
     $$
     out = x1@x2 * x2Scale + x2Offset
     $$
 
-    - bias INT32:
+  - bias INT32:
 
     $$
     out = (x1@x2 + bias) * x2Scale + x2Offset
     $$
 
-    - x1Scale without bias
+  - x1Scale without bias
 
     $$
     out = x1@x2 * x2Scale * x1Scale
     $$
 
-    - With x1Scale, bias INT32.
+  - With x1Scale, bias INT32.
 
     $$
     out = (x1@x2 + bias) * x2Scale * x1Scale
     $$
 
-    - With x1Scale, bias FLOAT32
+  - With x1Scale, bias FLOAT32
 
     $$
     out = x1@x2 * x2Scale * x1Scale + bias
     $$
 
-    </details>
-    <!-- end id7 -->
+  </details>
+  <!-- end id7 -->
 
-    <!-- npu="950,A3,910b" id8 -->
-    <details>
-    <summary><term>Atlas A2 products</term>, <term>Atlas A3 products</term>, <term>Ascend 950PR&950DT products</term></summary>
+  <!-- npu="950,A3,910b" id8 -->
+  <details>
+  <summary><term>Atlas A2 products</term>, <term>Atlas A3 products</term>, <term>Ascend 950PR&950DT products</term></summary>
 
-    - bias BFLOAT16/FLOAT32 (no x2Offset in this scenario):
+  - bias BFLOAT16/FLOAT32 (no x2Offset in this scenario):
 
     $$
     out = x1@x2 * x2Scale + bias
     $$
 
-    - x1Scale, no bias:
+  - x1Scale, no bias:
 
     $$
     out = x1@x2 * x2Scale * x1Scale
     $$
 
-    - x1Scale, bias INT32 (this scenario has no x2Offset):
+  - x1Scale, bias INT32 (this scenario has no x2Offset):
 
     $$
     out = (x1@x2 + bias) * x2Scale * x1Scale
     $$
 
-    - x1Scale, bias BFLOAT16/FLOAT16/FLOAT32 (this scenario has no x2Offset):
+  - x1Scale, bias BFLOAT16/FLOAT16/FLOAT32 (this scenario has no x2Offset):
 
     $$
     out = x1@x2 * x2Scale * x1Scale + bias
     $$
 
-    - x1 is INT8, x2 is INT32, x1Scale is FLOAT32, x2Scale is UINT64, and yOffset is FLOAT32:
+  - x1 is INT8, x2 is INT32, x1Scale is FLOAT32, x2Scale is UINT64, and yOffset is FLOAT32:
 
     $$
     out = ((x1 @ (x2*x2Scale)) + yOffset) * x1Scale
     $$
 
-    </details>
-    <!-- end id8 -->
+  </details>
+  <!-- end id8 -->
 
-    <!-- npu="950" id9 -->
-    <details>
-    <summary><term>Ascend 950PR&950DT products</term></summary>
+  <!-- npu="950" id9 -->
+  <details>
+  <summary><term>Ascend 950PR&950DT products</term></summary>
 
-    - G-B && B-B && MX quantization mode:
+  - G-B && B-B && MX quantization mode:
 
-        $$
-        out[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
-        $$
+    $$
+    out[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
+    $$
 
-        where gsM, gsN, and gsK represent groupSizeM, groupSizeN, and groupSizeK, respectively; x1Slice is a vector of length groupSizeK from row m of x1, and x2Slice is a vector of length groupSizeK from column n of x2; slicing along the K axis starts from j*groupSizeK, the value range of j is [0, kLoops), kLoops = ceil(K / groupSizeK), and K is the length of the K axis. The last slice may be shorter than groupSizeK.
-    </details>
-    <!-- end id9 -->
+    Here, gsM, gsN, and gsK denote groupSizeM, groupSizeN, and groupSizeK. x1Slice is a vector of length groupSizeK from row m of x1, and x2Slice is a vector of length groupSizeK from column n of x2. Both slices start at j*groupSizeK along K, where j is in [0, kLoops), kLoops = ceil(K / groupSizeK), and K is the reduction dimension. The last slice may be shorter than groupSizeK. Bias is accumulated only when supported by the selected mode and provided; otherwise, that term is 0.
+  </details>
+  <!-- end id9 -->
+
+In the formulas, `x1` and `x2` are the matrices after applying the transpose attributes. Their last two dimensions are (M,K) and (K,N), and those of the output are (M,N). `@` denotes matrix multiplication, and `*` denotes multiplication after broadcasting along the corresponding dimensions. For UINT64/INT64 quantization parameters, the formulas use the encoded scale values. An omitted optional bias or offset is treated as 0. For supported combinations, see [Constraints](#constraints).
 
 ## Function Prototype
 
@@ -123,44 +123,45 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
 
 ```cpp
 aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(
-    const aclTensor *x1,
-    const aclTensor *x2,
-    const aclTensor *x1Scale,
-    const aclTensor *x2Scale,
-    const aclTensor *yScale,
-    const aclTensor *x1Offset,
-    const aclTensor *x2Offset,
-    const aclTensor *yOffset,
-    const aclTensor *bias,
-    bool             transposeX1,
-    bool             transposeX2,
-    int64_t          groupSize,
-    aclTensor       *out,
-    uint64_t        *workspaceSize,
-    aclOpExecutor   **executor)
+  const aclTensor* x1,
+  const aclTensor* x2,
+  const aclTensor* x1Scale,
+  const aclTensor* x2Scale,
+  const aclTensor* yScale,
+  const aclTensor* x1Offset,
+  const aclTensor* x2Offset,
+  const aclTensor* yOffset,
+  const aclTensor* bias,
+  bool             transposeX1,
+  bool             transposeX2,
+  int64_t          groupSize,
+  aclTensor*       out,
+  uint64_t*        workspaceSize,
+  aclOpExecutor**  executor)
 ```
 
 ```cpp
 aclnnStatus aclnnQuantMatmulWeightNz(
-    void          *workspace,
-    uint64_t       workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream    stream)
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
+  aclrtStream    stream)
 ```
 
 ## aclnnQuantMatmulWeightNzGetWorkspaceSize
 
-- **Parameters:**
-  <table style="table-layout: fixed; width: 1552px"><colgroup>
-  <col style="width: 198px">
-  <col style="width: 121px">
-  <col style="width: 220px">
-  <col style="width: 450px">
-  <col style="width: 165px">
-  <col style="width: 115px">
-  <col style="width: 138px">
-  <col style="width: 145px">
-  </colgroup>
+- **Parameters**
+  <table style="table-layout: fixed; width: 1500px">
+    <colgroup>
+      <col style="width: 210px">
+      <col style="width: 100px">
+      <col style="width: 240px">
+      <col style="width: 390px">
+      <col style="width: 230px">
+      <col style="width: 120px">
+      <col style="width: 110px">
+      <col style="width: 100px">
+    </colgroup>
     <thead>
       <tr>
         <th>Parameter</th>
@@ -169,175 +170,145 @@ aclnnStatus aclnnQuantMatmulWeightNz(
         <th>Instruction</th>
         <th>Data Type</th>
         <th>Data Format</th>
-        <th>Dimension (shape)</th>
+        <th>Dimensions (Shape)</th>
         <th>Non-contiguous Tensor</th>
-      </tr></thead>
+      </tr>
+    </thead>
     <tbody>
-    <tr>
-        <td>x1</td>
+      <tr>
+        <td>x1 (const aclTensor*)</td>
         <td>Input</td>
-        <td>Input x1 in the formula.</td>
-        <td>          <ul>
-              <li>Supports non-contiguous tensor when the last two axes are transposed; in other scenarios, <a href="../../../docs/en/context/non_contiguous_tensor.md"> non-contiguous tensor</a> is not supported.</li>
-              <li>When transposeX1 is false, dimensions are represented as (batch, m, k), and batch may not exist.</li>
-              <li>When transposeX1 is true, dimensions are represented as (batch, k, m), and batch may not exist.</li>
-          </ul>
-        </td>
+        <td>Input x1 in the Formula.</td>
+        <td><ul><li>Supports <a href="../../../docs/en/context/non_contiguous_tensor.md">non-contiguous tensors</a>.</li><li>When transposeX1 is false, the shape is (batch, m, k). The batch dimensions are optional.</li><li>When transposeX1 is true, the shape is (batch, k, m). The batch dimensions are optional.</li></ul></td>
         <td>INT4<sup>1, 3</sup>, INT8, HIFLOAT8<sup>1, 2</sup>, FLOAT8_E4M3FN<sup>1, 2</sup>, FLOAT4_E2M1<sup>1, 2</sup></td>
         <td>ND</td>
         <td>2-6</td>
-        <td>✓</td>
-    </tr>
-    <tr>
-        <td>x2</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x2 (const aclTensor*)</td>
         <td>Input</td>
-        <td>Input x2 in the formula.</td>
-        <td>          <ul>
-              <li>In each case where transposeX2 is true, the dimensions are: (batch, k1, n1, n0, k0), where batch may not exist, k0 = 32, and n0 = 16.</li>
-              <li>In each case where transposeX2 is false, the dimensions are: (batch, n1, k1, k0, n0), where batch may not exist, k0 = 16, and n0 = 32.</li>
-              <li>k in the x1 shape and k1 in the x2 shape must satisfy ceil(k / k0) = k1, <br>n1 in the x2 shape and n in out must satisfy ceil(n / n0) = n1.</li>
-          </ul>
-        </td>
-        <td>INT4<sup>1,3</sup>, INT8, INT32<sup>1,3</sup>, HIFLOAT8<sup>1,2</sup>, FLOAT4_E2M1<sup>1,2</sup>, FLOAT32<sup>1,2</sup>, FLOAT8_E4M3FN<sup>1,2</sup></td>
-        <td>NZ</td>
-        <td>4-8</td>
-        <td>✓</td>
-    </tr>
-    <tr>
-        <td>x1Scale</td>
-        <td>Input</td>
+        <td>Input x2 in the Formula.</td>
+        <td><ul><li>The logical shape is (batch,K,N) when transposeX2=false and (batch,N,K) when it is true. The batch dimensions are optional.</li><li>Storage must use the NZ layout. For storage shapes and packing requirements, see the product-specific and quantization-mode descriptions below. Physical block axes must not be treated as logical matrix axes.</li></ul></td>
+        <td>INT4<sup>1, 3</sup>, INT8, INT32<sup>1, 3</sup>, HIFLOAT8<sup>1, 2</sup>, FLOAT4_E2M1<sup>1, 2</sup>, FLOAT32<sup>1, 2</sup>, FLOAT8_E4M3FN<sup>1, 2</sup></td>
+        <td>FRACTAL_NZ</td>
+        <td>Logical: 2–6; storage: 4–8</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x1Scale (const aclTensor*)</td>
+        <td>Optional input</td>
         <td>Optional quantization parameter, which is the input x1Scale in the formula.</td>
-        <td>          <ul>
-              <li>When x1Scale is FLOAT8_E8M0, the dimensions are: (batch, m, ceil(k / 64), 2) when transposeX1 is false, (batch, ceil(k / 64), m, 2) when transposeX1 is true, and batch is the same as the batch dimension of x1.</li>
-              <li>When x1Scale is FLOAT32, the shape is 1D (t, ), where t = m and m is the same as m in x1.</li>
-          </ul>
-        </td>
-        <td>FLOAT32<sup>1</sup>, FLOAT8_E8M0<sup>1,2</sup></td>
+        <td><ul><li>For FLOAT8_E8M0 x1Scale, the shape is (batch, m, ceil(k / 64), 2) when transposeX1 is false, and (batch, ceil(k / 64), m, 2) when it is true. The batch dimensions must match those of x1.</li><li>For non-grouped quantization, FLOAT32 x1Scale has shape (m,), where m matches x1. For grouped modes such as G-B and B-B, see <a href="#constraints">Constraints</a>.</li><li>Pass nullptr when a left-matrix scale is not used. This parameter is required for modes such as grouped quantization that need it. See <a href="#constraints">Constraints</a>.</li></ul></td>
+        <td>FLOAT32<sup>1</sup>, FLOAT8_E8M0<sup>1, 2</sup></td>
         <td>ND</td>
-        <td>1, 3-7</td>
-        <td>-</td>
-    </tr>
-    <tr>
-        <td>x2Scale</td>
+        <td>1–7</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x2Scale (const aclTensor*)</td>
         <td>Input</td>
         <td>Represents the quantization parameter, which is the input x2Scale in the formula.</td>
-        <td>          <ul>
-              <li>When x2Scale is FLOAT8_E8M0, the dimensions are as follows: (batch, ceil(k / 64), n, 2) if transposeX2 is false, and (batch, n, ceil(k / 64), 2) if transposeX2 is true. batch is consistent with the batch dimension of x2.</li>
-              <li>When x2Scale is of another dtype, the shape is 1D (t, ), where t = 1 or n, and n is consistent with the n of x2.</li>
-              <li>When the data types of x1 and x2 are HIFLOAT8 and x2 is in NZ format, x2Scale supports UINT64 and INT64 in the static quantization scenario; both x1Scale and x2Scale support FLOAT32 in the dynamic quantization scenario.</li>
-              <li>When the original input types do not match the combinations in <a href="#constraints">Constraints</a>, call the aclnn API of the TransQuantParamV2 operator in advance to convert scale to the INT64 or UINT64 data type.</li>
-          </ul>
-        </td>
+        <td><ul><li>For FLOAT8_E8M0 x2Scale in ND format, the shape is (batch, ceil(k / 64), n, 2) when transposeX2 is false, and (batch, n, ceil(k / 64), 2) when it is true. The batch dimensions must match those of x2.</li><li>For FLOAT8_E8M0 x2Scale in NZ format (ScaleNZ), the logical shape is fixed at (batch, ceil(k / 64), n, 2), and the storage shape is (batch, ceil(n / 16), ceil(k / 64), 16, 2), independently of transposeX2. See <a href="#scalenz-constraints">ScaleNZ Constraints</a>.</li><li>For non-grouped quantization, other x2Scale data types use shape (1,) or (n,), where n matches x2. For grouped modes and T-CG, see <a href="#constraints">Constraints</a>.</li><li>When x1 and x2 are HIFLOAT8 and x2 uses NZ format, x2Scale supports UINT64 and INT64 for static quantization; x1Scale and x2Scale both support FLOAT32 for dynamic quantization.</li><li>If the original input type does not match the combinations in <a href="#constraints">Constraints</a>, first call the ACLNN interface of TransQuantParamV2 to convert scale to INT64 or UINT64.</li></ul></td>
         <td>UINT64, INT64, FLOAT32<sup>1</sup>, BFLOAT16<sup>1</sup>, FLOAT8_E8M0<sup>1, 2</sup>, FLOAT16<sup>1, 2</sup></td>
-        <td>ND</td>
-        <td>1, 3-7</td>
-        <td>-</td>
-    </tr>
-    <tr>
-        <td>yScale</td>
-        <td>Input</td>
+        <td>ND, FRACTAL_NZ</td>
+        <td>1–7 (ND)<br/>3–7 (NZ logical shape)<br/>4–8 (NZ storage shape)</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>yScale (const aclTensor*)</td>
+        <td>Optional input</td>
         <td>Dequantization scale parameter of output y.</td>
-        <td>            The shape is 2D (1, n), where n is the same as n of x2.
-        </td>
+        <td>The shape is two-dimensional (1, n), where n matches x2.<br/>Required for T-CG. For support in other modes, see their constraints. Pass nullptr when unused.</td>
         <td>UINT64<sup>1, 2</sup>, INT64<sup>1, 2</sup></td>
         <td>ND</td>
         <td>2</td>
-        <td>-</td>
-    </tr>
-    <tr>
-        <td>x1Offset</td>
-        <td>Input</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>x1Offset (const aclTensor*)</td>
+        <td>Optional input</td>
         <td>Reserved parameter.</td>
-        <td>            Not supported in the current version. nullptr or an empty tensor must be passed in.
-        </td>
+        <td>Not supported in the current version. nullptr or an empty tensor must be passed in.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
-    </tr>
-    <tr>
-        <td>x2Offset</td>
-        <td>Input</td>
+      </tr>
+      <tr>
+        <td>x2Offset (const aclTensor*)</td>
+        <td>Optional input</td>
         <td>Optional quantization parameter, the input x2Offset in the formula.</td>
-        <td>The shape is 1D (t, ), where t = 1 or n, and n is the same as the n of x2.</td>
+        <td>The shape is one-dimensional (t,), where t = 1 or n and n matches x2.<br/>Pass nullptr when no output offset is used.</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
-        <td>-</td>
-    </tr>
-    <tr>
-        <td>yOffset</td>
-        <td>Input</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>yOffset (const aclTensor*)</td>
+        <td>Optional input</td>
         <td>The input yOffset in the formula.</td>
-        <td>-</td>
+        <td>For A8W4 with INT8 input and INT32 packed weights, provide the offline auxiliary result with shape (N,). For its values, see <a href="#constraints">Constraints</a>. Pass nullptr in other cases.</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
-        <td>-</td>
-    </tr>
-    <tr>
-        <td>bias</td>
-        <td>Input</td>
+        <td>×</td>
+      </tr>
+      <tr>
+        <td>bias (const aclTensor*)</td>
+        <td>Optional input</td>
         <td>Optional parameter, the input bias in the formula.</td>
-        <td>          <ul>
-              <li>Shape supports 1D (n, ) or 3D (batch, 1, n), and n is consistent with the n of x2.</li>
-              <li>When the shape of out is 2, 4, 5, or 6 dimensions, the shape of bias supports only 1D (n, ).</li>
-          </ul>
-        </td>
+        <td><ul><li>Supports shape (n,) or (batch, 1, n), where n matches x2.</li><li>When out has 2, 4, 5, or 6 dimensions, bias must have shape (n,).</li><li>Pass nullptr when no bias is used.</li></ul></td>
         <td>INT32, BFLOAT16<sup>1</sup>, FLOAT16<sup>1</sup>, FLOAT32<sup>1</sup></td>
         <td>ND</td>
         <td>1, 3</td>
-        <td>-</td>
-    </tr>
-    <tr>
-        <td>transposeX1</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>transposeX1 (bool)</td>
         <td>Input</td>
         <td>Indicates whether the input shape of x1 includes transpose.</td>
+        <td>false disables transposition and true enables it. For supported combinations, see <a href="#constraints">Constraints</a>.</td>
         <td>-</td>
-        <td>BOOL</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
       </tr>
       <tr>
-        <td>transposeX2</td>
+        <td>transposeX2 (bool)</td>
         <td>Input</td>
         <td>Indicates whether the input shape of x2 contains transpose.</td>
+        <td>false disables transposition and true enables it. For supported combinations, see <a href="#constraints">Constraints</a>.</td>
         <td>-</td>
-        <td>BOOL</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
       </tr>
       <tr>
-        <td>groupSize</td>
+        <td>groupSize (int64_t)</td>
         <td>Input</td>
-        <td>Specifies the quantization group sizes along the m, n, and k directions of the input.</td>
-        <td>            Composed of the three directional values groupSizeM, groupSizeN, and groupSizeK concatenated, each occupying 16 bits, for a total of the lower 48 bits of the int64_t type groupSize (the upper 16 bits are invalid). For the calculation formula, see Formula 1 below the table. If groupSize is not supported, pass 0.
-        </td>
-        <td>INT64</td>
+        <td>Specifies the quantization group sizes along the m, n, and k dimensions.</td>
+        <td>Composed of the three directional values groupSizeM, groupSizeN, and groupSizeK concatenated, each occupying 16 bits, for a total of the lower 48 bits of the int64_t type groupSize (the upper 16 bits are invalid). For the calculation formula, see Formula 1 below the table. If groupSize is not supported, pass 0.</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
       </tr>
-    <tr>
-        <td>out</td>
+      <tr>
+        <td>out (aclTensor*)</td>
         <td>Output</td>
         <td>The output out in the formula.</td>
-        <td>          <ul>
-              <li>The shape supports 2-6 dimensions, (batch, m, n), and batch may not exist.</li>
-              <li>The batch dimensions of x1 and x2 support broadcasting. The output batch is the same as the batch after broadcasting, m is the same as the m of x1, and n, together with n1 and n0 of x2, satisfies the relationship ceil(n / n0) = n1.</li>
-          </ul>
-        </td>
+        <td><ul> <li>The shape supports 2-6 dimensions, (batch, m, n), and batch may not exist.</li> <li>The batch dimensions of x1 and x2 support broadcasting. The output batch is the same as the batch after broadcasting, m is the same as the m of x1, and n, together with n1 and n0 of x2, satisfies the relationship ceil(n / n0) = n1.</li> </ul></td>
         <td>FLOAT16, INT8, BFLOAT16<sup>1</sup>, INT32<sup>1</sup>, FLOAT32<sup>1, 2</sup></td>
         <td>ND</td>
         <td>2-6</td>
-        <td>-</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize (uint64_t*)</td>
         <td>Output</td>
-        <td>Returns the size of the workspace to be applied on the Device side.</td>
+        <td>Returns the workspace size to allocate on the device, in bytes.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -345,7 +316,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor (aclOpExecutor**)</td>
         <td>Output</td>
         <td>Returns the op executor, which includes the calculation process of the operator.</td>
         <td>-</td>
@@ -354,7 +325,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
         <td>-</td>
         <td>-</td>
       </tr>
-    </tbody></table>
+    </tbody>
+  </table>
 
   - Formula 1:
 
@@ -395,88 +367,96 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     </details>
     <!-- end id18 -->
 
-- **Return value**
+- **Return Value**
 
-  aclnnStatus: return value (status code). For details, see [aclnn return codes](../../../docs/en/context/aclnn_return_code.md).
+  aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
 
     The first-phase API performs input parameter validation and returns an error in the following scenarios:
 
-    <table style="table-layout: fixed; width: 1149px"><colgroup>
-    <col style="width: 291px">
-    <col style="width: 135px">
-    <col style="width: 723px">
-    </colgroup>
-    <thead>
-    <tr>
-    <th>Return Value</th>
-    <th>Error Code</th>
-    <th>Description</th>
-    </tr></thead>
-    <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>x1, x2, x2Scale, or out is a null pointer.</td>
-    </tr>
-    <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
-      <td>The data type or data format of x1, x2, bias, x1Scale, x2Scale, x2Offset, or out is not supported.</td>
-    </tr>
-    <tr>
-      <td>The shape of x1, x2, bias, x1Scale, x2Scale, x2Offset, or out does not meet the check requirements.</td>
-    </tr>
-    <tr>
-      <td>x1, x2, bias, x1Scale, x2Scale, x2Offset, or out is an empty tensor and is not among the supported empty tensor use cases described above.</td>
-    </tr>
-    <tr>
-        <td>The input yScale, x1Offset, and yOffset are not nullptr and are not empty tensors.</td>
-    </tr>
-    <tr>
-        <td>The passed-in groupSize does not meet the check requirements.</td>
-    </tr>
-    </tbody>
-    </table>
-
-## aclnnQuantMatmulWeightNz
-
-- **Parameters:**
-
-    <table style="table-layout: fixed; width: 1151px"><colgroup>
-    <col style="width: 184px">
-    <col style="width: 134px">
-    <col style="width: 833px">
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 300px">
+      <col style="width: 150px">
+      <col style="width: 550px">
     </colgroup>
     <thead>
       <tr>
-      <th>Parameter</th>
-      <th>Input/Output</th>
-      <th>Description</th>
-      </tr></thead>
+        <th>Return/Status Code</th>
+        <th>Value</th>
+        <th>Description</th>
+      </tr>
+    </thead>
     <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>Input</td>
-      <td>Workspace memory address applied on the Device side.</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>Input</td>
-      <td>Size of the workspace applied on the Device side, obtained by calling the first-phase API aclnnQuantMatmulWeightNzGetWorkspaceSize.</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>Input</td>
-      <td>op executor, which includes the calculation process of the operator.</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>Input</td>
-      <td>Specifies the stream for executing tasks.</td>
-    </tr>
-  </tbody></table>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>x1, x2, x2Scale, or out is a null pointer.</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_PARAM_INVALID</td>
+        <td>161002</td>
+        <td><ul><li>The data types or formats of x1, x2, bias, x1Scale, x2Scale, x2Offset, or out are outside the supported ranges.</li><li>The shapes of x1, x2, bias, x1Scale, x2Scale, x2Offset, or out fail validation.</li><li>x1, x2, bias, x1Scale, x2Scale, x2Offset, or out is an empty tensor outside the supported empty-tensor cases described above.</li><li>A nonempty tensor is provided for yScale, x1Offset, or yOffset in a quantization mode that does not support it.</li><li>groupSize fails validation.</li></ul></td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
+        <td>561101</td>
+        <td>Failed to create the operator executor.</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_INNER_NULLPTR</td>
+        <td>561103</td>
+        <td>An internal tensor operation returned a null pointer during tensor creation, preprocessing, operator computation, or result copying.</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_RUNTIME_ERROR</td>
+        <td>361001</td>
+        <td>The current platform does not support the selected quantized matrix multiplication path.</td>
+      </tr>
+    </tbody>
+  </table>
 
-- **Return value**
+## aclnnQuantMatmulWeightNz
+
+- **Parameters**
+
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 220px">
+      <col style="width: 100px">
+      <col style="width: 680px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Input/Output</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>workspace (void*)</td>
+        <td>Input</td>
+        <td>Workspace memory address applied on the Device side.</td>
+      </tr>
+      <tr>
+        <td>workspaceSize (uint64_t)</td>
+        <td>Input</td>
+        <td>Workspace size in bytes to allocate on the device, obtained from the first-stage aclnnQuantMatmulWeightNzGetWorkspaceSize interface.</td>
+      </tr>
+      <tr>
+        <td>executor (aclOpExecutor*)</td>
+        <td>Input</td>
+        <td>op executor, which includes the calculation process of the operator.</td>
+      </tr>
+      <tr>
+        <td>stream (aclrtStream)</td>
+        <td>Input</td>
+        <td>Specifies the stream for executing tasks.</td>
+      </tr>
+    </tbody>
+  </table>
+
+- **Return Value**
 
   aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
 
@@ -489,29 +469,29 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 <details>
 <summary><term>Atlas A2 products</term>, <term>Atlas A3 products</term></summary>
 
-  - The last dimension size of x1 cannot exceed 65535. However, if the dtype of x1 and x2 is INT8, the dtype of x2Scale is FLOAT32 or BFLOAT16, and both x2Scale and x1Scale have a dimension of 1, a size greater than 65535 is supported. The last dimension of x1 refers to m when transposeX1 is true, or k when transposeX1 is false.
-  - The last dimension size of x2 cannot exceed 65535. However, if the dtype of x1 and x2 is INT8, the dtype of x2Scale is FLOAT32 or BFLOAT16, and both x2Scale and x1Scale have a dimension of 1, a size greater than 65535 is supported. The last dimension of x2 refers to k when transposeX2 is true, or n when transposeX2 is false.
-  - This interface supports calling [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) before the call to process x2 with the ND format to obtain the AI processor-affinity data layout format.
+- The last dimension size of x1 cannot exceed 65535. However, if the dtype of x1 and x2 is INT8, the dtype of x2Scale is FLOAT32 or BFLOAT16, and both x2Scale and x1Scale have a dimension of 1, a size greater than 65535 is supported. The last dimension of x1 refers to m when transposeX1 is true, or k when transposeX1 is false.
+- The last dimension size of x2 cannot exceed 65535. However, if the dtype of x1 and x2 is INT8, the dtype of x2Scale is FLOAT32 or BFLOAT16, and both x2Scale and x1Scale have a dimension of 1, a size greater than 65535 is supported. The last dimension of x2 refers to k when transposeX2 is true, or n when transposeX2 is false.
+- This interface supports calling [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) before the call to process x2 with the ND format to obtain the AI processor-affinity data layout format.
 
-  - When either of the last two dimensions of the original ND is 1, the weightNz feature cannot be used, and this API does not support such a scenario.
+- When either of the last two dimensions of the original ND is 1, the weightNz feature cannot be used, and this API does not support such a scenario.
 
-  - The input and output support the following data type combinations:
+- The input and output support the following data type combinations:
 
-    | x1 | x2 | x1Scale | x2Scale | x2Offset | yOffset | Bias | Out |
+    | x1 | x2 | x1Scale | x2Scale | x2Offset | yOffset | bias | out |
     | ---- | ----- | ------------ | ---------------- | ------------- | ------- | --------------------------- | ----------------- |
-    | INT8 | INT8  | null         | UINT64/INT64     | null          | null    | null/INT32                  | FLOAT16           |
-    | INT8 | INT8  | null         | UINT64/INT64     | null/FLOAT32  | null    | null/INT32                  | INT8              |
-    | INT8 | INT8  | null/FLOAT32 | FLOAT32/BFLOAT16 | null          | null    | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16          |
-    | INT8 | INT8  | FLOAT32      | FLOAT32          | null          | null    | null/INT32/FLOAT16/FLOAT32  | FLOAT16           |
-    | INT8 | INT8  | null         | FLOAT32/BFLOAT16 | null          | null    | null/INT32                  | INT32             |
-    | INT4 | INT4  | null/FLOAT32 | BFLOAT16         | null/FLOAT32  | null    | null/BFLOAT16               | BFLOAT16          |
-    | INT4 | INT4  | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null    | null/BFLOAT16               | BFLOAT16          |
-    | INT4 | INT4  | null/FLOAT32 | UINT64           | null/FLOAT32  | null    | null/INT32                  | FLOAT16           |
-    | INT4 | INT4  | null/FLOAT32 | FLOAT32          | null/FLOAT32  | null    | null/INT32                  | FLOAT16           |
-    | INT8 | INT32 | FLOAT32      | UINT64           | null          | FLOAT32 | null                        | FLOAT16/BFLOAT16  |
+    | INT8 | INT8 | null | UINT64/INT64 | null | null | null/INT32 | FLOAT16 |
+    | INT8 | INT8 | null | UINT64/INT64 | null/FLOAT32 | null | null/INT32 | INT8 |
+    | INT8 | INT8 | null/FLOAT32 | FLOAT32/BFLOAT16 | null | null | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16 |
+    | INT8 | INT8 | FLOAT32 | FLOAT32 | null | null | null/INT32/FLOAT16/FLOAT32 | FLOAT16 |
+    | INT8 | INT8 | null | FLOAT32/BFLOAT16 | null | null | null/INT32 | INT32 |
+    | INT4 | INT4 | null/FLOAT32 | BFLOAT16 | null/FLOAT32 | null | null/BFLOAT16 | BFLOAT16 |
+    | INT4 | INT4 | null/FLOAT32 | FLOAT32 | null/FLOAT32 | null | null/BFLOAT16 | BFLOAT16 |
+    | INT4 | INT4 | null/FLOAT32 | UINT64 | null/FLOAT32 | null | null/INT32 | FLOAT16 |
+    | INT4 | INT4 | null/FLOAT32 | FLOAT32 | null/FLOAT32 | null | null/INT32 | FLOAT16 |
+    | INT8 | INT32 | FLOAT32 | UINT64 | null | FLOAT32 | null | FLOAT16/BFLOAT16 |
 
-  - Constraint on x1: When the data type is INT8 and the data type of x2 is INT32, transposeX1 must be false. Dimensions: (m, k), where k must be an even number and less than 29576.
-  - Constraint on yOffset: The shape supports 1 dimension (n). It is an auxiliary result computed offline during the computation process, with the value required to be 8\*x2\*x2Scale, and accumulated along the first dimension.
+- Constraint on x1: When the data type is INT8 and the data type of x2 is INT32, transposeX1 must be false. Dimensions: (m, k), where k must be an even number and less than 29576.
+- Constraint on yOffset: The shape supports 1 dimension (n). It is an auxiliary result computed offline during the computation process, with the value required to be 8\*x2\*x2Scale, and accumulated along the first dimension.
 
 </details>
 <!-- end id10 -->
@@ -520,21 +500,21 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 <details>
 <summary><term>Atlas inference products</term></summary>
 
-  - The size of the last dimension of x1 cannot exceed 65535. The last dimension of x1 refers to m when transposeX1 is true, or k when transposeX1 is false.
-  - The size of the last dimension of x2 cannot exceed 65535. The last dimension of x2 refers to k when transposeX2 is true or n when transposeX2 is false.
-  - This interface supports calling [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) before the call to process x2 with the ND format to obtain the AI processor-affinity data layout format.
+- The size of the last dimension of x1 cannot exceed 65535. The last dimension of x1 refers to m when transposeX1 is true, or k when transposeX1 is false.
+- The size of the last dimension of x2 cannot exceed 65535. The last dimension of x2 refers to k when transposeX2 is true or n when transposeX2 is false.
+- This interface supports calling [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) before the call to process x2 with the ND format to obtain the AI processor-affinity data layout format.
 
-  - When either of the last two dimensions of the original ND is 1, the weightNz feature cannot be used, and this API does not support such a scenario.
+- When either of the last two dimensions of the original ND is 1, the weightNz feature cannot be used, and this API does not support such a scenario.
 
-  - The input and output support the following data type combinations:
+- The input and output support the following data type combinations:
 
-    | x1 | x2 | x1Scale | x2Scale | x2Offset | Bias | Out |
+    | x1 | x2 | x1Scale | x2Scale | x2Offset | bias | out |
     | ---- | ---- | ------- | ------------ | ------------- | ------------------ | ------- |
-    | INT8 | INT8 | null    | UINT64/INT64 | null          | null/INT32         | FLOAT16 |
-    | INT8 | INT8 | null    | UINT64/INT64 | null/FLOAT32  | null/INT32         | INT8    |
-    | INT8 | INT8 | FLOAT   | FLOAT        | null          | null/INT32/FLOAT32 | FLOAT16 |
+    | INT8 | INT8 | null | UINT64/INT64 | null | null/INT32 | FLOAT16 |
+    | INT8 | INT8 | null | UINT64/INT64 | null/FLOAT32 | null/INT32 | INT8 |
+    | INT8 | INT8 | FLOAT | FLOAT | null | null/INT32/FLOAT32 | FLOAT16 |
 
-  - When x1Scale is not null, only K-C quantization is supported.
+- When x1Scale is not null, only K-C quantization is supported.
 
 </details>
 <!-- end id11 -->
@@ -543,104 +523,115 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 <details>
 <summary><term>Ascend 950PR&950DT products</term></summary>
 
-  - This interface supports calling [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) or [aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md) before the call to process x2 with the ND format into the NZ format. When used, it must be padded with 0s to prevent dirty data.
+- This interface supports calling [aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md) or [aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md) before the call to process x2 with the ND format into the NZ format. When used, it must be padded with 0s to prevent dirty data.
 
-  - When either of the last two dimensions of the original ND is 1, the weightNz feature cannot be used, and this API does not support such a scenario.
+- When either of the last two dimensions of the original ND is 1, the weightNz feature cannot be used, and this API does not support such a scenario.
 
-  - **T-C Quantization && T-T Quantization Scenario Constraints:**
-  <a id="t-c-quantization-&&-t-t-quantization"></a>
-    - The input and output support the following data type combinations:
+- **T-C Quantization && T-T Quantization Scenario Constraints:**
+  <a id="t-c-quantization--t-t-quantization"></a>
+  - The input and output support the following data type combinations:
   <a id="input-and-output-support-the-following-data-type-combinations-tc-tt"></a>
 
-      | x1 | x2 | x1Scale | x2Scale | x2Offset | yScale | Bias | Out |
-      | --------------- | ----------- | ----------- |   --------------- | ------------ | -------| -------------------------- |   ----------------------|
-      | INT8            | INT8        | null        | UINT64/ INT64     | null         | null   | null/INT32                 |   FLOAT16/ BFLOAT16     |
-      | INT8            | INT8        | null        | UINT64/ INT64     | null/FLOAT32 | null   | null/INT32                 |   INT8                  |
-      | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32/FLOAT32/BFLOAT16|   BFLOAT16              |
-      | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32                 |   INT32                 |
-      | HIFLOAT8        | HIFLOAT8    | null        | UINT64/INT64      | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
-      | FLOAT8_E4M3FN   | FLOAT8_E4M3FN | null        | UINT64/INT64      | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
+      | x1 | x2 | x1Scale | x2Scale | x2Offset | yScale | bias | out |
+      | --------------- | ----------- | ----------- | --------------- | ------------ | ------- | -------------------------- | ---------------------- |
+      | INT8 | INT8 | null | UINT64/ INT64 | null | null | null/INT32 | FLOAT16/ BFLOAT16 |
+      | INT8 | INT8 | null | UINT64/ INT64 | null/FLOAT32 | null | null/INT32 | INT8 |
+      | INT8 | INT8 | null | FLOAT32/BFLOAT16 | null | null | null/INT32/FLOAT32/BFLOAT16 | BFLOAT16 |
+      | INT8 | INT8 | null | FLOAT32/BFLOAT16 | null | null | null/INT32 | INT32 |
+      | HIFLOAT8 | HIFLOAT8 | null | UINT64/INT64 | null | null | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32 |
+      | FLOAT8_E4M3FN | FLOAT8_E4M3FN | null | UINT64/INT64 | null | null | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32 |
 
-    - In the T-T quantization scenario, null is passed to x1Scale, and the shape of x2Scale is (1,).
-    - In the T-C quantization scenario, x1Scale is passed as null, and the shape of x2Scale is (n,), where n is consistent with n of x2.
-    - Dynamic T-C or dynamic T-T quantization is not supported.
+  - In the T-T quantization scenario, null is passed to x1Scale, and the shape of x2Scale is (1,).
+  - In the T-C quantization scenario, x1Scale is passed as null, and the shape of x2Scale is (n,), where n is consistent with n of x2.
+  - Dynamic T-C or dynamic T-T quantization is not supported.
 
-  - **K-C Quantization && K-T Quantization Scenario Constraints:**
-  <a id="k-c-quantization-&&-k-t-quantization"></a>
-    - The input and output support the following data type combinations:
+- **K-C Quantization && K-T Quantization Scenario Constraints:**
+  <a id="k-c-quantization--k-t-quantization"></a>
+  - The input and output support the following data type combinations:
   <a id="input-and-output-support-the-following-data-type-combinations-kc-kt"></a>
 
-      | x1 | x2 | x1Scale | x2Scale | x2Offset | yScale | Bias | Out |
-      | -------------------- | -------------------- | ------- | --------------- | -------- | -------|   ------------------------- | ------------------------- |
-      | INT8                 | INT8                 | FLOAT32 | FLOAT32/BFLOAT16| null     | null   | null/INT32/FLOAT32/BFLOAT16 | BFLOAT16                  |
-      | INT8                 | INT8                 | FLOAT32 | FLOAT32         | null     | null   | null/INT32/FLOAT32/FLOAT16  | FLOAT16                   |
-      | FLOAT8_E4M3FN        | FLOAT8_E4M3FN        | FLOAT32 | FLOAT32         | null     | null   | null/FLOAT32                | FLOAT16/BFLOAT16/FLOAT32  |
-      | HIFLOAT8             | HIFLOAT8             | FLOAT32 | FLOAT32         | null     | null   | null/FLOAT32                | FLOAT16/BFLOAT16/FLOAT32  |
+      | x1 | x2 | x1Scale | x2Scale | x2Offset | yScale | bias | out |
+      | -------------------- | -------------------- | ------- | --------------- | -------- | ------- | ------------------------- | ------------------------- |
+      | INT8 | INT8 | FLOAT32 | FLOAT32/BFLOAT16 | null | null | null/INT32/FLOAT32/BFLOAT16 | BFLOAT16 |
+      | INT8 | INT8 | FLOAT32 | FLOAT32 | null | null | null/INT32/FLOAT32/FLOAT16 | FLOAT16 |
+      | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT32 | FLOAT32 | null | null | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32 |
+      | HIFLOAT8 | HIFLOAT8 | FLOAT32 | FLOAT32 | null | null | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32 |
 
-    - In the K-C quantization scenario, the shape of x1Scale is (m,), and the shape of x2Scale is (n,), where m matches the m of x1, and n matches the n of x2.
-    - In the K-T quantization scenario, the shape of x1Scale is (m,), and the shape of x2Scale is (1,), where m matches the m of x1.
-    - When the data types of x1 and x2 are FLOAT8_E4M3FN and HIFLOAT8, only transA=false is supported.
+  - In the K-C quantization scenario, the shape of x1Scale is (m,), and the shape of x2Scale is (n,), where m matches the m of x1, and n matches the n of x2.
+  - In the K-T quantization scenario, the shape of x1Scale is (m,), and the shape of x2Scale is (1,), where m matches the m of x1.
+  - When x1 and x2 use FLOAT8_E4M3FN and HIFLOAT8, only transposeX1=false is supported.
 
+- **Constraints for G-B and B-B quantization:**
+  <a id="g-b-quantization--b-b-quantization"></a>
+  - The input and output support the following data type combinations:
+  <a id="input-and-output-support-the-following-data-type-combinations-gbbb"></a>
 
-  - **G-B quantization && B-B quantization scenario constraints:**
-  <a id="G-B quantization && B-B quantization"></a>
-    - The input and output support the following data type combinations:
-  <a id="input-and-output-support-the-following-data-type-combinations-GB/BB"></a>
+      | x1 | x2 | x1Scale | x2Scale | x2Offset | yScale | bias | out |
+      | -------------------- | -------------------- | ------- | --------------- | -------- | ------- | ------------------------- | ------------------------- |
+      | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT32 | FLOAT32 | null | null | null | FLOAT16/BFLOAT16/  FLOAT32 |
+      | HIFLOAT8 | HIFLOAT8 | FLOAT32 | FLOAT32 | null | null | null | FLOAT16/BFLOAT16/  FLOAT32 |
 
-      | x1 | x2 | x1Scale | x2Scale | x2Offset | yScale | Bias | Out |
-      | -------------------- | -------------------- | ------- | --------------- | -------- | -------|   ------------------------- | ------------------------- |
-      | FLOAT8_E4M3FN        | FLOAT8_E4M3FN        | FLOAT32 | FLOAT32         | null     | null   | null | FLOAT16/BFLOAT16/  FLOAT32               |
-      | HIFLOAT8             | HIFLOAT8             | FLOAT32 | FLOAT32         | null     | null   | null | FLOAT16/BFLOAT16/  FLOAT32               |
+  - Relationship between x1, x2, x1Scale, x2Scale, and groupSize values:
 
-    - Relationship between x1, x2, x1Scale, x2Scale, and groupSize values:
+      | Quantization mode | x1 shape | x2 shape | x1Scale shape | x2Scale shape | yScale shape | [gsM, gsN, gsK] | groupSize |
+      | ------- | -------- | -------- | ------------- | ------------- | ------------ | --- | --- |
+      | B-B quantization | <ul><li>Not transposed: (batch, m, k)</li></ul> | <ul><li>Not transposed: (batch, k, n)</li><li>Transposed: (batch, n, k)</li></ul> | <ul><li>Not transposed: (batch, ceil(m / 128), ceil(k / 128))</li></ul> | <ul><li>Not transposed: (batch, ceil(k / 128), ceil(n / 128))</li><li>Transposed: (batch, ceil(n / 128), ceil(k / 128))</li></ul> | null | [128, 128, 128] | 549764202624 |
+      | G-B quantization | <ul><li>Not transposed: (batch, m, k)</li></ul> | <ul><li>Not transposed: (batch, k, n)</li><li>Transposed: (batch, n, k)</li></ul> | <ul><li>Not transposed: (batch, m, ceil(k / 128))</li></ul> | <ul><li>Not transposed: (batch, ceil(k / 128), ceil(n / 128))</li><li>Transposed: (batch, ceil(n / 128), ceil(k / 128))</li></ul> | null | [1, 128, 128] | 4303356032 |
 
-      | Quantization Type | x1 Shape | x2 Shape | x1Scale Shape | x2Scale Shape | yScale Shape | [gsM, gsN, gsK] | groupSize |
-      |-------|--------|--------|-------------|-------------|------------|---|---|
-      |B-B quantization|<li>Non-transpose: (batch, m, k)</li>|<li>Non-transposed: (batch, k, n)</li><li>Transposed: (batch, n, k)</li>|<li>Non-transpose: (batch, ceil(m / 128), ceil(k / 128))</li>|<li>Non-transposed: (batch, ceil(k / 128), ceil(n / 128))</li><li>Transposed: (batch, ceil(n / 128), ceil(k / 128))</li>|null|[128, 128, 128]|549764202624|
-      |G-B quantization|<li>Non-transpose: (batch, m, k)</li>|<li>Non-transposed: (batch, k, n)</li><li>Transposed: (batch, n, k)</li>|<li>Non-transpose: (batch, m, ceil(k / 128))</li>|<li>Non-transposed: (batch, ceil(k / 128), ceil(n / 128))</li><li>Transposed: (batch, ceil(n / 128), ceil(k / 128))</li>|null|[1, 128, 128]|4303356032|
+  - Note: In the table above, gsM, gsK, and gsN denote groupSizeM, groupSizeK, and groupSizeN respectively. Dimensions with gsM, gsK, or gsN set to 0 are automatically inferred. The table above lists the case where automatic inference is not used.
+  - In the G-B quantization and B-B quantization scenarios, x1 supports only non-transpose, and the transpose attribute of x2 must be consistent with that of x2Scale (when an axis in the shape has a size of 1 and the case is not a dynamic graph NZ scenario, the transpose attributes of x and scale can be inconsistent).
+  - Batch consistency: The B-B quantization scenario does not support batch consistency. Even if the batch consistency switch is enabled, the output cannot be guaranteed to meet batch consistency requirements.
 
-    - Note: In the table above, gsM, gsK, and gsN denote groupSizeM, groupSizeK, and groupSizeN respectively. Dimensions with gsM, gsK, or gsN set to 0 are automatically inferred. The table above lists the case where automatic inference is not used.
-    - In the G-B quantization and B-B quantization scenarios, x1 supports only non-transpose, and the transpose attribute of x2 must be consistent with that of x2Scale (when an axis in the shape has a size of 1 and the case is not a dynamic graph NZ scenario, the transpose attributes of x and scale can be inconsistent).
-    - Batch consistency: The B-B quantization scenario does not support batch consistency. Even if the batch consistency switch is enabled, the output cannot be guaranteed to meet batch consistency requirements.
+- **Constraints for MX quantization:**
+    <a id="mx-quantization"></a>
 
-  - **MX quantization scenario constraints:**
-  <a id="MX-quantization"></a>
-    - The input and output support the following data type combinations:
-  <a id="input-and-output-support-the-following-data-type-combination-mx"></a>
+  - The input and output support the following data type combinations:
+      <a id="input-and-output-support-the-following-data-type-combinations-mx"></a>
 
-      | x1 | x2 | x1Scale | x2Scale | x2Offset | yScale | Bias | Out |
-      |---------------| ------------- | ----------- | ----------- | -------- | ------ | -------------| --------------------------- |
-      | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | null     | null   | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32    |
-      | FLOAT4_E2M1 | FLOAT4_E2M1 | FLOAT8_E8M0 | FLOAT8_E8M0 | null     | null   | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32    |
+      | x1 | x2 | x1Scale | x2Scale | x2Offset | yScale | bias | out |
+      | --------------- | ------------- | ----------- | ----------- | -------- | ------ | ------------- | --------------------------- |
+      | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT8_E8M0 | FLOAT8_E8M0 | null | null | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32 |
+      | FLOAT4_E2M1 | FLOAT4_E2M1 | FLOAT8_E8M0 | FLOAT8_E8M0 | null | null | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32 |
 
-    - Relationship among the x1 data type, x2 data type, x1, x2, x1Scale, x2Scale, and groupSize:
+  - Relationship among the x1 data type, x2 data type, x1, x2, x1Scale, x2Scale, and groupSize:
 
-      | Quantization Type | x1 Data Type | x2 Data Type | x1 Shape | x2 Shape | x1Scale Shape | x2Scale Shape | Bias Shape | yScale Shape | [groupSizeM, groupSizeN, groupSizeK] | groupSize |
-      |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-      |MX full quantization|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>non-transpose: (batch, m, k)</li>|<li>Non-transposed: (batch, k, n)</li><li>Transposed: (batch, n, k)</li>|<li>non-transpose: (batch, m, ceil(k / 64), 2)</li>|<li>non-transpose: (batch, ceil(k / 64), n, 2)</li><li>transpose: (batch, n, ceil(k / 64), 2)</li>|(n,) or (batch, 1, n)|null|[1, 1, 32]|4295032864|
-      |MX full quantization|FLOAT4_E2M1|FLOAT4_E2M1|<li>non-transpose: (batch, m, k)</li>|<li>Non-transposed: (batch, k, n)</li><li>Transposed: (batch, n, k)</li>|<li>non-transpose: (batch, m, ceil(k / 64), 2)</li>|<li>non-transpose: (batch, ceil(k / 64), n, 2)</li><li>transpose: (batch, n, ceil(k / 64), 2)</li>|(n,) or (batch, 1, n)|null|[1, 1, 32]|4295032864|
+      | Quantization mode | x1 data type | x2 data type | x1 shape | x2 shape | x1Scale shape | x2Scale shape | bias shape | yScale shape | [groupSizeM, groupSizeN, groupSizeK] | groupSize |
+      | ------- | -------- | -------- | -------- | -------- | ------------- | ------------- | ------------ | --------------------------------------- | -- | -- |
+      | Full MX quantization | FLOAT8_E4M3FN | FLOAT8_E4M3FN | <ul><li>Not transposed: (batch, m, k)</li><li>Transposed: (batch, k, m)</li></ul> | <ul><li>Not transposed: (batch, k, n)</li><li>Transposed: (batch, n, k)</li></ul> | <ul><li>Not transposed: (batch, m, ceil(k / 64), 2)</li><li>Transposed: (batch, ceil(k / 64), m, 2)</li></ul> | <ul><li>Not transposed: (batch, ceil(k / 64), n, 2)</li><li>Transposed: (batch, n, ceil(k / 64), 2)</li></ul> | (n,) or (batch, 1, n) | null | [1, 1, 32] | 4295032864 |
+      | Full MX quantization | FLOAT4_E2M1 | FLOAT4_E2M1 | <ul><li>Not transposed: (batch, m, k)</li></ul> | <ul><li>Not transposed: (batch, k, n)</li><li>Transposed: (batch, n, k)</li></ul> | <ul><li>Not transposed: (batch, m, ceil(k / 64), 2)</li></ul> | <ul><li>Not transposed: (batch, ceil(k / 64), n, 2)</li><li>Transposed: (batch, n, ceil(k / 64), 2)</li></ul> | (n,) or (batch, 1, n) | null | [1, 1, 32] | 4295032864 |
 
-    - In the MX full quantization scenario, when the data types of x1 and x2 are FLOAT8_E4M3FN/FLOAT4_E2M1, the transpose attribute of x1 must be consistent with that of x1Scale, and the transpose attribute of x2 must be consistent with that of x2Scale.
-    - In the MX full quantization scenario, when the data types of x1 and x2 are FLOAT4_E2M1, the following conditions must be met:
-      - The inner axes of x1 and x2 must be even, and k must be greater than 2.
-      - transposeX1 must be false.
-      - When transposeX2 is false, n must be greater than 2.
-      - When transposeX2 is true, n must be greater than 1.
+  - The x2Scale shapes in the table above apply to ND format. For full MX quantization with FLOAT8_E4M3FN/FLOAT4_E2M1 inputs, x1 and x1Scale must have matching transpose settings. When x2Scale uses ND format, x2 and x2Scale must also have matching transpose settings. ScaleNZ uses the fixed shape constraints below.
+  - In the MX full quantization scenario, when the data types of x1 and x2 are FLOAT4_E2M1, the following conditions must be met:
+    - The inner axes of x1 and x2 must be even, and k must be greater than 2.
+    - transposeX1 must be false.
+    - When transposeX2 is false, n must be greater than 2.
+    - When transposeX2 is true, n must be greater than 1.
 
-  - **The dtype and shape requirements in pseudo-quantization scenarios are as follows:**
+  - **ScaleNZ constraints:**
+      <a id="scalenz-constraints"></a>
 
-    | Quantization Type | x1 Dtype | x2 Dtype | x1Scale Dtype | x2Scale Dtype | Bias Dtype | yScale Dtype | Out Dtype | x1 Shape | x2 Shape | x1Scale Shape | x2Scale Shape | Bias Shape | yScale Shape | [groupSizeM, groupSizeN, groupSizeK] |
-    |---------------| ------------| -------------- |--------------|-------------|--------- | -------- |--------| ---------- | --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
-    | MX quantization |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k)  |(m, ceil(k / 64), 2)    |(n, ceil(k / 64), 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
-    | MX quantization |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k/8)|(m, ceil(k / 64), 2)    |(n, ceil(k / 64), 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
-    | T-CG quantization |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16/FLOAT16      |null| uint64/int64 |BFLOAT16/FLOAT16|(m, k)  |(k, n)  |null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
-    | T-CG quantization |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16/FLOAT16      |null| uint64/int64 |BFLOAT16/FLOAT16|(m, k)  |(k, n/8)|null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
+    - Before calling this interface, you can use [aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md) to convert x2Scale from ND to NZ format (ScaleNZ), reducing scale format conversions during matrix multiplication. x2 must use NZ format (WeightNZ). Combining ND x2 with ScaleNZ is not supported.
+    - Supports only full MX quantization where x1 and x2 are both FLOAT8_E4M3FN or both FLOAT4_E2M1. x1Scale and x2Scale must be FLOAT8_E8M0, and x1Scale must remain in ND format. Other parameters follow the full MX quantization constraints above.
+    - Before format conversion, arrange x2Scale data contiguously as (batch, ceil(k / 64), n, 2), where k and n are the logical matrix dimensions and FLOAT4_E2M1 k counts elements. If the original scale layout is (batch, n, ceil(k / 64), 2), first swap the n and ceil(k / 64) axes and reorder the data; changing only the shape is insufficient. After conversion to ScaleNZ, do not transpose the scale according to transposeX2.
+    - The ScaleNZ logical shape is (batch, ceil(k / 64), n, 2), and its storage shape is (batch, ceil(n / 16), ceil(k / 64), 16, 2). batch denotes 0–4 leading dimensions and must match the rank and sizes of the batch dimensions of x2. aclnnNpuFormatCast currently supports only three- or four-dimensional FLOAT8_E8M0 inputs; its constraints also apply when using it for conversion.
+    - When constructing x2Scale with aclCreateTensor, set viewDims to the logical shape above, storageDims to the storage shape above, format to ACL_FORMAT_FRACTAL_NZ, and offset to 0. Compute strides by cumulative multiplication of the logical dimensions from the last axis. For example, without batch dimensions, the strides are (2 * n, 2, 1). data must point to data already converted to NZ format; changing the format flag of ND data to NZ is insufficient.
+    - The interface checks the ScaleNZ logical shape, storage shape, batch dimensions, strides, and offset. It does not infer data semantics from transpose operations performed before format conversion. The caller must ensure that the scale k and n axes and values correspond to x2.
+    - For direct ACLNN invocation, use the two-stage process described here. For ACLNN Graph, complete WeightNZ and ScaleNZ conversion before capture, then capture this interface's computation. Both invocation methods must satisfy the input constraints above.
 
-    - Constraints:
-      - In the MX quantization mode, k must be aligned to 8, and n must be aligned to 8.
-      - In the T-CG quantization mode, k must be aligned to 32 and greater than or equal to 64, and n must be aligned to 8.
-      - When x1 is FLOAT8_E4M3FN and x2 is FLOAT32, x2 represents a densely packed data format where one FLOAT32 stores eight FLOAT4_E2M1 values.
-      - In the MX quantization mode, the data type of bias must be the same as that of out; in the T-CG quantization mode, the data type of x2Scale must be the same as that of out.
+- **Data type and shape requirements for weight-only quantization:**
+
+    | Quantization mode | x1 dtype | x2 dtype | x1Scale dtype | x2Scale dtype | bias dtype | yScale dtype | out dtype | x1 shape | x2 shape | x1Scale shape | x2Scale shape | bias shape | yScale shape | [groupSizeM, groupSizeN, groupSizeK] |
+    | --------------- | ------------ | -------------- | -------------- | ------------- | --------- | -------- | -------- | ---------- | -------------- | ------------ | ---------- | ------------ | --------------------------------------- | ------- |
+    | MX quantization | FLOAT8_E4M3FN | FLOAT4_E2M1 | FLOAT8_E8M0 | FLOAT8_E8M0 | null/BFLOAT16/FLOAT16 | null | BFLOAT16/FLOAT16 | (m, k) | (n, k) | (m, ceil(k / 64), 2) | (n, ceil(k / 64), 2) | (1, n) | null | [0, 0, 32] / [1, 1, 32] |
+    | MX quantization | FLOAT8_E4M3FN | FLOAT32 | FLOAT8_E8M0 | FLOAT8_E8M0 | null/BFLOAT16/FLOAT16 | null | BFLOAT16/FLOAT16 | (m, k) | (n, k/8) | (m, ceil(k / 64), 2) | (n, ceil(k / 64), 2) | (1, n) | null | [0, 0, 32] / [1, 1, 32] |
+    | T-CG quantization | FLOAT8_E4M3FN | FLOAT4_E2M1 | null | BFLOAT16/FLOAT16 | null | UINT64/INT64 | BFLOAT16/FLOAT16 | (m, k) | (k, n) | null | (k/32, n) | null | (1, n) | [0, 0, 32] / [1, 1, 32] |
+    | T-CG quantization | FLOAT8_E4M3FN | FLOAT32 | null | BFLOAT16/FLOAT16 | null | UINT64/INT64 | BFLOAT16/FLOAT16 | (m, k) | (k, n/8) | null | (k/32, n) | null | (1, n) | [0, 0, 32] / [1, 1, 32] |
+
+  - Constraints:
+    - For MX quantization, k and n must be multiples of 8.
+    - For T-CG quantization, k must be a multiple of 32 and at least 64, and n must be a multiple of 8.
+    - When x1 is FLOAT8_E4M3FN and x2 is FLOAT32, each FLOAT32 storage element of x2 contains eight densely packed FLOAT4_E2M1 elements.
+    - For MX quantization, bias must have the same data type as out. For T-CG quantization, x2Scale must have the same data type as out.
 
 </details>
 <!-- end id12 -->
@@ -654,6 +645,8 @@ The example code is for reference only. For details about compilation and execut
   In the MM_MX_A8W4 scenario, call `aclnnWeightQuantPreprocess` first to synchronously preprocess weight and weightScale, and then call this interface to perform matrix multiplication.
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <cstring>
   #include <iostream>
   #include <memory>
@@ -935,6 +928,8 @@ The example code is for reference only. For details about compilation and execut
   The following is sample code for the scenario where x2 is in NZ format (transposeX2=false).
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -976,7 +971,7 @@ The example code is for reference only. For details about compilation and execut
 
   int Init(int32_t deviceId, aclrtStream *stream)
   {
-      // Boilerplate, resource initialization
+      // Boilerplate: initialize resources.
       auto ret = aclInit(nullptr);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
       ret = aclrtSetDevice(deviceId);
@@ -991,14 +986,14 @@ The example code is for reference only. For details about compilation and execut
                       aclDataType dataType, aclTensor **tensor)
   {
       auto size = GetShapeSize(shape) * sizeof(T);
-      // Call aclrtMalloc to allocate device memory.
+      // Call aclrtMalloc to allocate memory on the device.
       auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-      // Call aclrtMemcpy to copy host data to device memory.
+      // Call aclrtMemcpy to copy data from the host to device memory.
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-      // Calculate the strides of the contiguous tensor.
+      // Compute the strides of the contiguous tensor.
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
@@ -1007,6 +1002,7 @@ The example code is for reference only. For details about compilation and execut
       // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1029,14 +1025,14 @@ The example code is for reference only. For details about compilation and execut
                 return ret);
       size *= sizeof(T);
 
-      // Call aclrtMalloc to allocate device memory.
+      // Call aclrtMalloc to allocate memory on the device.
       ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-      // Call aclrtMemcpy to copy host data to device memory.
+      // Call aclrtMemcpy to copy data from the host to device memory.
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-      // Calculate the strides of the contiguous tensor.
+      // Compute the strides of the contiguous tensor.
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
@@ -1045,9 +1041,10 @@ The example code is for reference only. For details about compilation and execut
       std::vector<int64_t> storageShape;
       storageShape.push_back(GetShapeSize(shape));
 
-      // Call aclCreateTensor to create an aclTensor.
+      // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 storageShape.data(), storageShape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1056,7 +1053,7 @@ The example code is for reference only. For details about compilation and execut
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-      // 2. Construct the input and output, which need to be custom constructed according to the API.
+      // 2. Construct the input and output. The construction must be customized based on the API.
       std::vector<int64_t> x1Shape = {5, 32};
       std::vector<int64_t> x2Shape = {32, 32};
       std::vector<int64_t> biasShape = {32};
@@ -1082,13 +1079,13 @@ The example code is for reference only. For details about compilation and execut
       std::vector<int32_t> biasHostData(32, 1);
       std::vector<float> scaleHostData(32, 1);
       std::vector<float> offsetHostData(32, 1);
-      std::vector<uint16_t> outHostData(5 * 32, 1);  // Actually float16 half-precision.
+      std::vector<uint16_t> outHostData(5 * 32, 1);  // Actually float16 half-precision mode.
       // Create the x1 aclTensor.
       ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_INT8, &x1);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x1TensorPtr(x1, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> x1DeviceAddrPtr(x1DeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      // Create the x2 aclTensor in NZ format.
+      // Create the x2 aclTensor in NZ format
       ret = CreateAclTensorX2(x2HostData, x2Shape, &x2DeviceAddr, aclDataType::ACL_INT8, &x2);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x2HPTensorPtr(x2, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> x2HPDeviceAddrPtr(x2DeviceAddr, aclrtFree);
@@ -1122,12 +1119,12 @@ The example code is for reference only. For details about compilation and execut
       bool transposeX1 = false;
       bool transposeX2 = false;
 
-      // 3. Call the CANN operator library API, and change it to the specific API name.
+      // 3. Call the CANN operator library API, which needs to be changed to the specific API name.
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor;
       void *workspaceAddr = nullptr;
 
-      // Call the first-phase API of aclnnTransMatmulWeight.
+      // Call the first-phase API of aclnnTransMatmulWeight
       ret = aclnnTransMatmulWeightGetWorkspaceSize(x2, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransMatmulWeightGetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
@@ -1138,12 +1135,12 @@ The example code is for reference only. For details about compilation and execut
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrTrans.reset(workspaceAddr);
       }
-      // Call the second-phase API of aclnnTransMatmulWeight.
+      // Call the second-phase API of aclnnTransMatmulWeight
       ret = aclnnTransMatmulWeight(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransMatmulWeight failed. ERROR: %d\n", ret); return ret);
 
-      // For scale of the FLOAT data type, call the aclnn API of the TransQuantParamV2 operator in advance.
-      // Call the first-phase API of aclnnTransQuantParamV2.
+      // For scale of the FLOAT data type, the aclnn API of the TransQuantParamV2 operator must be called in advance
+      // Call the first-phase API of aclnnTransQuantParamV2
       ret = aclnnTransQuantParamV2GetWorkspaceSize(scale, offset, quantParam, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2GetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
@@ -1155,7 +1152,7 @@ The example code is for reference only. For details about compilation and execut
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrV2.reset(workspaceAddr);
       }
-      // Call the second-phase API of aclnnTransQuantParamV2.
+      // Call the second-phase API of aclnnTransQuantParamV2
       ret = aclnnTransQuantParamV2(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2 failed. ERROR: %d\n", ret); return ret);
 
@@ -1175,18 +1172,18 @@ The example code is for reference only. For details about compilation and execut
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrNZ.reset(workspaceAddr);
       }
-      // Call the second-phase API of aclnnQuantMatmulWeightNz.
+      // Call the second-phase API aclnnQuantMatmulWeightNz.
       ret = aclnnQuantMatmulWeightNz(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNz failed. ERROR: %d\n", ret); return ret);
 
-      // 4. (boilerplate) Synchronize and wait for the task to be complete.
+      // 4. (Boilerplate) Synchronize and wait for the task execution to complete.
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-      // 5. Obtain the output values and copy the results from device memory to host memory. Modify the code as required by the specific API definition.
+      // 5. Obtain the output value, copy the result from device memory to the host, and modify it based on the definition of the specific API.
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(
-          size, 0);  // In C, fp16 data cannot be printed directly. Read it as uint16 and manually convert it to fp16 through binary.
+          size, 0);  // uint16_t stores raw FP16 bits. The code below prints the integer bit patterns; decode them to float to print floating-point values.
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
@@ -1199,10 +1196,10 @@ The example code is for reference only. For details about compilation and execut
 
   int main()
   {
-      // 1. (boilerplate) device/stream initialization. For details, see the acl API manual.
-      // Fill in deviceId based on the actual device.
+      // 1. (Boilerplate) Initialize the device/stream. For details, see the acl API manual.
+      // Set deviceId based on the actual device.
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulWeightNzTest(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzTest failed. ERROR: %d\n", ret);
                     return ret);
@@ -1218,6 +1215,8 @@ The example code is for reference only. For details about compilation and execut
   The following is the sample code for the scenario where x2 is in NZ format (transposeX2=true).
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -1259,7 +1258,7 @@ The example code is for reference only. For details about compilation and execut
 
   int Init(int32_t deviceId, aclrtStream *stream)
   {
-      // (boilerplate) Resource initialization.
+      // Boilerplate: initialize resources.
       auto ret = aclInit(nullptr);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
       ret = aclrtSetDevice(deviceId);
@@ -1274,22 +1273,23 @@ The example code is for reference only. For details about compilation and execut
                       aclDataType dataType, aclTensor **tensor)
   {
       auto size = GetShapeSize(shape) * sizeof(T);
-      // Call aclrtMalloc to allocate device memory.
+      // Call aclrtMalloc to allocate memory on the device.
       auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-      // Call aclrtMemcpy to copy host data to device memory.
+      // Call aclrtMemcpy to copy data from the host to device memory.
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-      // Calculate strides of the contiguous tensor
+      // Compute the strides of the contiguous tensor.
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
       }
 
-      // Call the aclCreateTensor API to create an aclTensor
+      // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1312,14 +1312,14 @@ The example code is for reference only. For details about compilation and execut
                 return ret);
       size *= sizeof(T);
 
-      // Call aclrtMalloc to allocate memory on the device
+      // Call aclrtMalloc to allocate memory on the device.
       ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-      // Call aclrtMemcpy to copy data from the host to the device memory
+      // Call aclrtMemcpy to copy data from the host to device memory.
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-      // Calculate strides of the contiguous tensor
+      // Compute the strides of the contiguous tensor.
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
@@ -1328,9 +1328,10 @@ The example code is for reference only. For details about compilation and execut
       std::vector<int64_t> storageShape;
       storageShape.push_back(GetShapeSize(shape));
 
-      // Call the aclCreateTensor API to create an aclTensor
+      // Call the aclCreateTensor API to create an aclTensor.
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 storageShape.data(), storageShape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1339,7 +1340,7 @@ The example code is for reference only. For details about compilation and execut
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-      // 2. Construct inputs and outputs, which need to be custom-constructed based on the API
+      // 2. Construct the input and output. The construction must be customized based on the API.
       std::vector<int64_t> x1Shape = {5, 32};
       std::vector<int64_t> x2Shape = {32, 32};
       std::vector<int64_t> x2TransposedShape = {32, 32};
@@ -1370,7 +1371,7 @@ The example code is for reference only. For details about compilation and execut
       std::vector<float> scaleHostData(32, 1);
       std::vector<float> offsetHostData(32, 1);
       std::vector<uint16_t> outHostData(5 * 32, 1);  // Actually float16 half-precision mode.
-      // Create the x1 aclTensor
+      // Create the x1 aclTensor.
       ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_INT8, &x1);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> x1TensorPtr(x1, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void *)> x1DeviceAddrPtr(x1DeviceAddr, aclrtFree);
@@ -1416,7 +1417,7 @@ The example code is for reference only. For details about compilation and execut
       bool transposeX1 = false;
       bool transposeX2 = true;
 
-      // 3. Call the CANN operator library API. Replace it with the specific API name.
+      // 3. Call the CANN operator library API, which needs to be changed to the specific API name.
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor;
       void *workspaceAddr = nullptr;
@@ -1428,7 +1429,7 @@ The example code is for reference only. For details about compilation and execut
       // Call the first-phase API of aclnnPermute.
       ret = aclnnPermuteGetWorkspaceSize(x2, dims, x2Transposed, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermuteGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-      // Allocate device memory using the workspaceSize calculated by the first-phase API
+      // Allocate device memory based on the workspaceSize calculated by the first-phase API.
       std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtrPermute(nullptr, aclrtFree);
       if (workspaceSize > 0) {
           ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -1437,14 +1438,14 @@ The example code is for reference only. For details about compilation and execut
       }
       // Call the second-phase API of aclnnPermute
       ret = aclnnPermute(workspaceAddr, workspaceSize, executor, stream);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermuteGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnPermute failed. ERROR: %d\n", ret); return ret);
 
       workspaceSize = 0;
       // Call the first-phase API of aclnnTransMatmulWeight
       ret = aclnnTransMatmulWeightGetWorkspaceSize(x2Transposed, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransMatmulWeightGetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
-      // Allocate device memory using the workspaceSize calculated by the first-phase API
+      // Allocate device memory based on the workspaceSize calculated by the first-phase API.
       std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtrTrans(nullptr, aclrtFree);
       if (workspaceSize > 0) {
           ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -1460,7 +1461,7 @@ The example code is for reference only. For details about compilation and execut
       ret = aclnnTransQuantParamV2GetWorkspaceSize(scale, offset, quantParam, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2GetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
-      // Allocate device memory using the workspaceSize calculated by the first-phase API
+      // Allocate device memory based on the workspaceSize calculated by the first-phase API.
       workspaceAddr = nullptr;
       std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtrV2(nullptr, aclrtFree);
       if (workspaceSize > 0) {
@@ -1472,7 +1473,7 @@ The example code is for reference only. For details about compilation and execut
       ret = aclnnTransQuantParamV2(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2 failed. ERROR: %d\n", ret); return ret);
 
-      // Call the first-phase API of aclnnQuantMatmulWeightNz
+      // Call the first-phase API of aclnnQuantMatmulWeightNz.
       workspaceSize = 0;
       ret = aclnnQuantMatmulWeightNzGetWorkspaceSize(x1, x2Transposed, nullptr, quantParam, nullptr, nullptr,
                                                     nullptr, nullptr, bias, transposeX1, transposeX2, 0, out,
@@ -1480,7 +1481,7 @@ The example code is for reference only. For details about compilation and execut
 
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
-      // Allocate device memory based on the workspaceSize calculated by the first-phase API
+      // Allocate device memory based on the workspaceSize calculated by the first-phase API.
 
       std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtrNZ(nullptr, aclrtFree);
       if (workspaceSize > 0) {
@@ -1488,7 +1489,7 @@ The example code is for reference only. For details about compilation and execut
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrNZ.reset(workspaceAddr);
       }
-      // Call the second-phase API aclnnQuantMatmulWeightNz
+      // Call the second-phase API aclnnQuantMatmulWeightNz.
       ret = aclnnQuantMatmulWeightNz(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNz failed. ERROR: %d\n", ret); return ret);
 
@@ -1496,10 +1497,10 @@ The example code is for reference only. For details about compilation and execut
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-      // 5. Obtain the output value and copy the result from the device memory to the host. Modify it according to the definition of the specific API.
+      // 5. Obtain the output value, copy the result from device memory to the host, and modify it based on the definition of the specific API.
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(
-          size, 0);  // The fp16 data cannot be directly printed in C. Read it as uint16 and manually convert it to fp16 based on the binary representation.
+          size, 0);  // uint16_t stores raw FP16 bits. The code below prints the integer bit patterns; decode them to float to print floating-point values.
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
@@ -1512,10 +1513,10 @@ The example code is for reference only. For details about compilation and execut
 
   int main()
   {
-      // 1. (Boilerplate) Initialize the device/stream. For details, see the acl API documentation.
+      // 1. (Boilerplate) Initialize the device/stream. For details, see the acl API manual.
       // Set deviceId based on the actual device.
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulWeightNzTest(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzTest failed. ERROR: %d\n", ret);
                     return ret);
@@ -1531,6 +1532,8 @@ The example code is for reference only. For details about compilation and execut
   The following is the sample code for the scenario where x2 is in NZ format (transposeX2=true).
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <cstring>
   #include <iostream>
   #include <memory>
@@ -1586,7 +1589,7 @@ The example code is for reference only. For details about compilation and execut
                       aclDataType dataType, aclTensor** tensor)
   {
       auto size = GetShapeSize(shape) * sizeof(T);
-      // Call aclrtMalloc to apply for device memory.
+      // Call aclrtMalloc to allocate memory on the device.
       auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
       // Call aclrtMemcpy to copy data from the host to device memory.
@@ -1796,7 +1799,7 @@ The example code is for reference only. For details about compilation and execut
       ret = aclnnNpuFormatCast(workspaceNzAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCast failed. ERROR: %d\n", ret); return ret);
 
-      // 4. (boilerplate) Synchronize and wait for the task execution to complete.
+      // 4. (Boilerplate) Synchronize and wait for the task execution to complete.
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -1827,7 +1830,7 @@ The example code is for reference only. For details about compilation and execut
       // 5. Obtain the output value, copy the result from device memory to the host, and modify it based on the definition of the specific API.
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(size,
-                                       0); // C cannot directly print fp16 data. Read it out as uint16 and manually convert it from binary to fp16.
+                                       0); // uint16_t stores raw BF16 bits. The code below converts them to float with Bf16ToFloat before printing.
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                         size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
@@ -1842,7 +1845,7 @@ The example code is for reference only. For details about compilation and execut
       // 1. (Boilerplate) Initialize the device/stream. For details, see the acl API manual.
       // Set deviceId based on the actual device.
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulWeightNzTest(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulWeightNzTest failed. ERROR: %d\n", ret); return ret);
 

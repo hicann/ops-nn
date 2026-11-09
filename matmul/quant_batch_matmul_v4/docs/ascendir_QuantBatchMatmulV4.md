@@ -23,8 +23,8 @@
 
 ## 功能说明
 
-- 算子功能：完成量化场景下的矩阵乘计算（反量化与矩阵乘融合计算），支持A8W8、A8W4、MxA8W4、A4W4等量化场景，并支持在乘法结果上累加偏置向量（bias）。支持T-T、T-C、K-T、K-C、K-G、G-B、B-B、MX、T-CG等[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合及约束参见[aclnnQuantMatmulV5](aclnnQuantMatmulV5.md)的约束说明。
-- 计算公式（以K-C && K-T量化模式为例）：
+- 算子功能：完成量化场景下的矩阵乘计算（反量化与矩阵乘融合计算），支持A8W8、A8W4、MxA8W4、A4W4等量化场景，并支持在乘法结果上累加偏置向量（bias）。支持T-T、T-C、K-T、K-C、K-G、G-B、B-B、MX、T-CG等[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，IR声明的类型集合见下文；不能将ACLNN接口支持的全部模式和预处理能力直接用于本IR。相关量化模式说明参见[aclnnQuantMatmulV5](aclnnQuantMatmulV5.md)的约束说明。
+- 计算公式（以K-C或K-T量化模式为例）：
 
   $$
   y = x1 @ x2 * x2Scale * x1Scale + bias
@@ -40,6 +40,8 @@
 ## Ascend IR定义
 
 Ascend IR定义所在头文件路径：[quant_batch_matmul_v4_proto.h](../op_graph/quant_batch_matmul_v4_proto.h)
+
+以下列出本文产品范围使用的IR定义；源码中的HIFLOAT4及其scale扩展类型不在本文产品支持范围内。完整声明以链接的头文件为准。
 
 ```cpp
 REG_OP(QuantBatchMatmulV4)
@@ -67,7 +69,7 @@ REG_OP(QuantBatchMatmulV4)
 | 参数名 | 输入/属性/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度（shape） |
 | ------ | -------------- | ---- | -------- | -------- | -------- | ------------- |
 | x1 | 必选输入 | 矩阵乘运算的左矩阵，公式中的$x1$。 | transpose_x1=false时，最后两维为(M, K)；transpose_x1=true时，最后两维为(K, M)，计算时逻辑转置为(M, K)参与计算。 | FLOAT8_E5M2<sup>1</sup>、FLOAT8_E4M3FN<sup>1</sup>、INT8、INT4 | ND | 2~6 |
-| x2 | 必选输入 | 矩阵乘运算的量化权重右矩阵，公式中的$x2$。 | transpose_x2=false时，最后两维为(K, N)；transpose_x2=true时，最后两维为(N, K)，计算时逻辑转置为(K, N)参与计算。FRACTAL_NZ格式下，transpose_x2=true时shape为(k1, n1, n0, k0)，n0=16，k0=32（x2为INT4时k0=64）；transpose_x2=false时shape为(n1, k1, k0, n0)，k0=16，n0=32（x2为INT4时n0=64）。 | FLOAT4_E2M1<sup>1</sup>、INT4、INT8 | ND、FRACTAL_NZ | 2~6 |
+| x2 | 必选输入 | 矩阵乘运算的量化权重右矩阵，公式中的$x2$。 | transpose_x2=false时，最后两维为(K, N)；transpose_x2=true时，最后两维为(N, K)，计算时逻辑转置为(K, N)参与计算。FRACTAL_NZ格式下，transpose_x2=true时存储shape为(batch, k1, n1, n0, k0)，n0=16，k0=32（x2为INT4时k0=64）；transpose_x2=false时存储shape为(batch, n1, k1, k0, n0)，k0=16，n0=32（x2为INT4时n0=64）。batch可不存在，逻辑shape仍为(batch,K,N)或(batch,N,K)。 | FLOAT4_E2M1<sup>1</sup>、INT4、INT8 | ND、FRACTAL_NZ | 2~6 |
 | bias | 可选输入 | 矩阵乘运算结果上累加的偏置向量，公式中的$bias$。 | N需与x2的N维一致。 | BFLOAT16、FLOAT16、FLOAT32 | ND | 1~3 |
 | x1_scale | 可选输入 | x1量化参数的缩放因子，公式中的$x1Scale$。 | shape随量化模式不同而不同。 | FLOAT16<sup>1</sup>、BFLOAT16<sup>1</sup>、FLOAT8_E8M0<sup>1</sup>、FLOAT32 | ND | 1~7 |
 | x2_scale | 可选输入 | x2量化参数的缩放因子，公式中的$x2Scale$。 | shape随量化模式不同而不同。 | FLOAT16<sup>1</sup>、BFLOAT16、FLOAT8_E8M0<sup>1</sup>、UINT64、FLOAT32 | ND | 1~7 |
@@ -78,10 +80,10 @@ REG_OP(QuantBatchMatmulV4)
 | x2_table | 可选输入 | x2量化参数的查找表。 | 预留参数，当前暂不支持。 | INT8 | ND | 2 |
 | y | 必选输出 | 矩阵乘运算的计算结果，公式中的$y$。 | batch维度为x1与x2广播后的结果，最后两维为(M, N)。 | FLOAT16、BFLOAT16 | ND | 2~6 |
 | dtype | 必选属性 | 输出y的数据类型。 | 取值1（FLOAT16）、27（BFLOAT16）。 | Int | - | - |
-| compute_type | 必选属性 | 计算类型。 | 默认值-1（auto），取值支持-1（auto）、4（f8f4）。 | Int | - | - |
-| transpose_x1 | 必选属性 | 指示左矩阵x1参与矩阵乘前是否转置。 | 默认值false，取值true时x1最后两维逻辑转置后参与计算。 | Bool | - | - |
-| transpose_x2 | 必选属性 | 指示右矩阵x2参与矩阵乘前是否转置。 | 默认值false，取值true时x2最后两维逻辑转置后参与计算。 | Bool | - | - |
-| group_size | 必选属性 | 量化分组大小，由groupSizeM、groupSizeN、groupSizeK三个值拼接组成，每个值占16位，占用低48位。 | 默认值-1，仅在MX、G-B、B-B、K-G、T-CG量化模式中生效，计算公式为group_size = groupSizeK \| groupSizeN << 16 \| groupSizeM << 32。 | Int | - | - |
+| compute_type | 可选属性 | 计算类型。 | 默认值-1（auto），取值支持-1（auto）、4（f8f4）。 | Int | - | - |
+| transpose_x1 | 可选属性 | 指示左矩阵x1参与矩阵乘前是否转置。 | 默认值false，取值true时x1最后两维逻辑转置后参与计算。 | Bool | - | - |
+| transpose_x2 | 可选属性 | 指示右矩阵x2参与矩阵乘前是否转置。 | 默认值false，取值true时x2最后两维逻辑转置后参与计算。 | Bool | - | - |
+| group_size | 可选属性 | 量化分组大小，由groupSizeM、groupSizeN、groupSizeK三个值拼接组成，每个值占16位，占用低48位。 | 默认值-1，仅在MX、G-B、B-B、K-G、T-CG量化模式中生效，计算公式为group_size = groupSizeK \| groupSizeN << 16 \| groupSizeM << 32。 | Int | - | - |
 
 <!-- npu="A3,910b" id7 -->
 - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：上表数据类型列中的角标“1”代表该系列不支持的数据类型；不支持y_scale输入。
@@ -100,11 +102,11 @@ REG_OP(QuantBatchMatmulV4)
   <!-- npu="950" id10 -->
   - <term>Ascend 950PR&950DT系列产品</term>：全量化场景下支持空tensor，当x1为m=0或x2为n=0的空tensor时，输出为空tensor（x2为FRACTAL_NZ格式时仅支持x1为m=0的空tensor）；伪量化（A8W4）场景不支持空tensor。
   <!-- end id10 -->
-- 支持连续tensor，[非连续tensor](../../../docs/zh/context/non_contiguous_tensor.md)仅支持转置场景。
+- 输入需按IR要求提供连续Tensor和正确的FRACTAL_NZ存储排布；逻辑转置通过transpose_x1、transpose_x2属性指定。ACLNN接口的非连续Tensor预处理能力不属于IR定义。
 - 各量化模式下输入输出的数据类型组合、shape取值关系及对齐要求等详细约束，参见[aclnnQuantMatmulV5](aclnnQuantMatmulV5.md)的约束说明。
 
 ## 调用示例
 
-| 调用方式   | 样例代码           | 说明                                         |
+| 调用方式 | 样例代码 | 说明 |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| GEIR接口  | [test_geir_quant_batch_matmul_v4](../examples/arch35/test_geir_quant_batch_matmul_v4.cpp) | 通过[QuantBatchMatmulV4算子IR](../op_graph/quant_batch_matmul_v4_proto.h)构图并调用算子。 |
+| GEIR接口 | [test_geir_quant_batch_matmul_v4](../examples/arch35/test_geir_quant_batch_matmul_v4.cpp) | 通过[QuantBatchMatmulV4算子IR](../op_graph/quant_batch_matmul_v4_proto.h)构图并调用算子。 |

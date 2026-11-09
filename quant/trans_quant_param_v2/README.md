@@ -2,118 +2,81 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
-| <term>Atlas A3系列产品</term>     |    √    |
-| <term>Atlas A2系列产品</term> |    √    |
-| <term>Atlas 200I/500 A2推理产品</term>                      |    ×    |
-| <term>Atlas推理系列产品</term>                             |    √    |
-| <term>Atlas训练系列产品</term>                              |    ×    |
-| <term>kirin X90处理器系列产品</term> | √ |
-| <term>kirin 9030处理器系列产品</term> | √ |
+| 产品 | 是否支持 |
+| --- | :---: |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | √ |
+| <term>Atlas A2系列产品</term> | √ |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | √ |
+| <term>Atlas训练系列产品</term> | × |
+| <term>KirinX90处理器系列产品</term> | √ |
+| <term>Kirin9030处理器系列产品</term> | √ |
 
 ## 功能说明
 
-- 算子功能：完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64类型。
+- 算子功能：将FLOAT32类型的量化缩放因子scale及可选偏置offset编码为硬件所需的UINT64量化参数，供矩阵乘等算子使用，输出包含scale的浮点位模式、offset的整数编码及标志位。
 
-- 计算公式：
+- 版本关系：[aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2.md)和[aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3.md)均调用本算子。V2接口固定使用round_mode=0；V3接口增加roundMode参数，可选择round_mode=0或1。
 
-  1. `out`为64位格式，初始为0。
+- 编码流程：以下描述单个输出元素的计算过程，位编号从最低位0开始。
 
-  2. 若`round_mode`为1，`scale`按bit位round到高19位，`round_mode`为0不做处理。
-
-     $$
-     scale = Round(scale)
-     $$
-  3. `scale`按bit位保留高19位（即bit位13~31，低13位清零），写入`out`的低32位，并将46位修改为1。
+  1. 处理scale的位模式。round_mode=0时直接保留FLOAT32的高19位；round_mode=1时先按最近偶数舍入模式（RNE，Round to Nearest, ties to Even）保留19位浮点精度，再编码。19位由1位符号、8位指数和10位尾数组成。
 
      $$
-     out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
+     b=\begin{cases}
+     \operatorname{Bits}_{32}(scale), & \mathrm{round\_mode}=0 \\
+     \operatorname{Bits}_{32}(\operatorname{RoundFP19}(scale)), & \mathrm{round\_mode}=1
+     \end{cases}
      $$
 
-  4. 根据`offset`取值进行后续计算：
+     其中，$\operatorname{Bits}_{32}$表示将FLOAT32按位解释为UINT32；$\operatorname{RoundFP19}$表示上述19位精度舍入，结果仍按FLOAT32位布局表示。RNE表示舍入到最近值，恰好位于中点时取保留尾数最低位为0的值。
 
-     - 若`offset`不存在，不再进行后续计算。
-     - 若`offset`存在：
-       1. 将`offset`值处理为int，范围为[-256, 255]。
+  2. 将scale的第13～31位写入y的对应位置，低13位清零，并将y的第46位置1，得到中间编码$y_0$。以下移位和按位或运算均在UINT64中进行。
 
-          $$
-          offset = Max(Min(INT(Round(offset)),255),-256)
-          $$
+     $$
+     y_0=\left(\operatorname{UINT64}(b)\mathbin{\&}\mathtt{0xFFFFE000}\right)
+     \mathbin{|}(1\ll46)
+     $$
 
-       2. 再将`offset`按bit位保留9位并存储于out的37到45位。
+  3. 未传入offset时，$y=y_0$。传入offset时，先按RNE转换为INT32，再将结果限制到$[-256,255]$，取低9位写入y的第37～45位。
 
-          $$
-          out = (out\ \&\ 0x4000FFFFFFFF)\ |\ ((offset\ \&\ 0x1FF)\ll37)
-          $$
+     $$
+     q=\min\left(255,\max\left(-256,\operatorname{RNE}_{\mathrm{INT32}}(offset)\right)\right)
+     $$
+
+     $$
+     y=y_0\mathbin{|}\left[\left(\operatorname{UINT64}(q)\mathbin{\&}\mathtt{0x1FF}\right)\ll37\right]
+     $$
+
+     其中，$q$为处理后的offset，负数按补码保留低9位。round_mode仅控制scale的处理方式，offset始终使用RNE。
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
-  <col style="width: 170px">
-  <col style="width: 170px">
-  <col style="width: 352px">
-  <col style="width: 213px">
-  <col style="width: 100px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出/属性</th>
-      <th>描述</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>scale</td>
-      <td>输入</td>
-      <td>量化参数，对应公式中的`scale`。shape是1维（t，），t = 1或n，以及2维（1，n）其中n与matmul计算中的右矩阵的shape n一致。用户需要保证scale数据中不存在NaN和Inf。</td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>offset</td>
-      <td>可选输入</td>
-      <td>量化可选参数，对应公式中描述中的`offset`。shape是1维（t，），以及2维（1，n），t = 1或n，其中n与matmul计算中的右矩阵的shape n一致。用户需要保证offset数据中不存在NaN和Inf。</td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>round_mode</td>
-      <td>可选属性</td>
-      <td><ul><li>量化计算中FP32填充到FP19的round模式，仅支持以下取值：0（aclnn
-      的V3兼容V2），1（提升计算精度）。对应公式中描述中的`round_mode`。</li><li>默认值为0。</li></ul></td>
-      <td>INT</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>y</td>
-      <td>输出</td>
-      <td>量化后的输出结果，对应公式中的`out`。当输入scale的shape为1维时，y的shape也为1维，该维度的shape大小为scale与offset(若不为nullptr)单维shape大小的最大值，当输入scale的shape为2维时，y的shape与输入scale的shape维度和大小完全一致。</td>
-      <td>UINT64</td>
-      <td>ND</td>
-    </tr>
-  </tbody></table>
+| 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
+| --- | --- | --- | --- | --- |
+| scale | 输入 | 量化缩放因子，对应公式中的scale。支持一维或二维Tensor，具体形状及使用场景见[约束说明](#约束说明)。 | FLOAT32 | ND |
+| offset | 可选输入 | 量化偏置，对应公式中的offset。默认不传入，表示不编码偏置；传入时支持一维或二维Tensor。 | FLOAT32 | ND |
+| y | 输出 | 编码后的量化参数，对应公式中的y。输出形状见[约束说明](#约束说明)。 | UINT64 | ND |
+| round_mode | 可选属性 | <ul><li>scale的编码模式：0表示截断低13位，1表示按RNE保留19位浮点精度后编码。</li><li>默认值为0，仅支持0或1。</li></ul> | INT64 | - |
 
 ## 约束说明
 
-- <term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Ascend 950PR&950DT系列产品</term>：该接口对应的aclnn接口支持与matmul类算子（如[aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)）配套使用。
-- <term>Atlas推理系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：该接口对应的aclnn接口不支持与grouped matmul类算子（如aclnnGroupedMatmulV4）配套使用。
-- 关于scale、offset、y的shape说明如下：
-  - 当无offset时，y shape与scale shape一致。
-    - 若y作为matmul类算子输入，shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。
-    - 若y作为grouped matmul类算子输入，仅在分组模式为m轴分组时使用（对应参数groupType为0），shape支持1维(g,)或2维(g, 1)、(g, n)，其中n与grouped matmul计算中右矩阵（对应参数x2）的shape n一致，g与grouped matmul计算中分组数（对应参数groupListOptional的shape大小）一致。
-  - 当有offset时，仅作为matmul类算子输入：
-    - offset，scale，y的shape支持1维(1,)、(n,)或2维(1, n)，其中n与matmul计算中右矩阵（对应参数x2）的shape n一致。
-    - 当输入scale的shape为1维，y的shape也为1维，且shape大小为scale与offset单维shape大小的最大值。
-    - 当输入scale的shape为2维，y的shape与输入scale的shape维度和大小完全一致。
+- scale及传入的offset不支持空Tensor，数据中不能包含NaN或Inf。
+- round_mode=1时，scale的非规格化浮点数按保留符号的0处理。
+- 与矩阵乘算子配套使用时，scale及传入的offset支持形状`(1,)`、`(n,)`或`(1, n)`，n为矩阵乘右矩阵参与计算的列数。可与[QuantBatchMatmulV3](../../matmul/quant_batch_matmul_v3/README.md)等算子配套使用。
+- 输出形状推导：
+  - 未传入offset时，y的形状与scale一致。
+  - 传入offset时，y沿用scale的形状；当offset为二维、scale为一维时，y采用offset的形状。
+  - <term>Ascend 950PR&950DT系列产品</term>：当scale和offset均为一维时，y的长度为二者长度的最大值。
+- <term>Ascend 950PR&950DT系列产品</term>：与分组矩阵乘算子配套时，仅支持M轴分组，且不传入offset。scale及y的形状支持`(g,)`、`(g, 1)`或`(g, n)`，g为分组数，n为右矩阵参与计算的列数。
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas推理系列产品</term>：不支持与分组矩阵乘算子配套使用。
+- aclnn接口的输入组合及布局要求分别见[aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2.md#约束说明)和[aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3.md#约束说明)。
 
 ## 调用说明
 
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_trans_quant_param_v2](examples/test_aclnn_trans_quant_param_v2.cpp) | 通过[aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2.md)接口方式调用TransQuantParamV2算子。 |
-| aclnn接口  | [test_aclnn_trans_quant_param_v3](examples/test_aclnn_trans_quant_param_v3.cpp) | 通过[aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3.md)接口方式调用TransQuantParamV2算子。 |
-| 图模式 | [test_geir_trans_quant_param_v2](examples/test_geir_trans_quant_param_v2.cpp) | 通过[算子IR](op_graph/trans_quant_param_v2_proto.h)构图方式调用TransQuantParamV2算子。         |
+| 调用方式 | 样例代码 | 说明 |
+| --- | --- | --- |
+| aclnn API | [test_aclnn_trans_quant_param_v2](examples/test_aclnn_trans_quant_param_v2.cpp) | 通过[aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2.md)调用，使用round_mode=0。 |
+| aclnn API | [test_aclnn_trans_quant_param_v3](examples/test_aclnn_trans_quant_param_v3.cpp) | 通过[aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3.md)调用，样例使用roundMode=1。 |
+| GE图模式 | [test_geir_trans_quant_param_v2](examples/test_geir_trans_quant_param_v2.cpp) | 通过[TransQuantParamV2算子IR](op_graph/trans_quant_param_v2_proto.h)构图调用，样例使用round_mode=0。 |

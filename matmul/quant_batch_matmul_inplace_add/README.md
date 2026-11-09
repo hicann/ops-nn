@@ -3,134 +3,75 @@
 ## 产品支持情况
 
 | 产品 | 是否支持 |
-| ---- | :----:|
-| Ascend 950PR&950DT系列产品 | √ |
-| Atlas A3系列产品 | × |
-| Atlas A2系列产品 | × |
-| Atlas 200I/500 A2推理产品 | × |
-| Atlas推理系列产品 | × |
-| Atlas训练系列产品 | × |
+| --- | :---: |
+| <term>Ascend 950PR&950DT系列产品</term> | √ |
+| <term>Atlas A3系列产品</term> | × |
+| <term>Atlas A2系列产品</term> | × |
+| <term>Atlas 200I/500 A2推理产品</term> | × |
+| <term>Atlas推理系列产品</term> | × |
+| <term>Atlas训练系列产品</term> | × |
 
 ## 功能说明
 
-- 算子功能：在micro-batch训练场景中，需要做micro-batch的梯度累积，会存在大量QuantBatchMatmul后接InplaceAdd的融合场景。QuantBatchMatmulInplaceAdd算子将上述算子融合起来，提高网络性能。实现量化矩阵乘计算和加法计算，基本功能为矩阵乘和加法的组合。
+- 算子功能：融合量化矩阵乘和原地加法，将矩阵乘结果累加到已有的y中，适用于微批次（micro-batch）训练中的梯度累积。
 
-- 计算公式：
+- 计算公式：支持MX（Microscaling，微缩放）量化和HIFLOAT8的T-T（pertensor-pertensor，逐张量对逐张量）量化，模式说明见[量化模式介绍](../../docs/zh/context/quant_mode_introduction.md)。
 
-  - **MX量化：**
+  以下公式中的$X_1$、$X_2$表示按转置属性解释后的矩阵，形状分别为$(M,K)$、$(K,N)$。M、N为结果矩阵的行数、列数，K为归约维度；$Y_{\mathrm{in}}$、$Y_{\mathrm{out}}$分别表示原地累加前后的y。
 
-    $$
-    y[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice)) * (scale1[m, j] * scale2[j, n])) + y[m,n]
-    $$
-
-    其中，$gsK$ 代表K轴的量化的block size即32，$x1Slice$ 代表 $x1$ 第m行长度为 $gsK$ 的向量，$x2Slice$ 代表 $x2$ 第n列长度为 $gsK$ 的向量，K轴均从 $j*gsK$ 起始切片，j的取值范围 [0, kLoops)，kLoops=ceil($K_i$ / $gsK$)，支持最后的切片长度不足 $gsK$。
-
-  - **HIFLOAT8 T-T量化：**
+  - MX量化：
 
     $$
-    y[m,n] = (\sum_{k=0}^{K_i-1} (x1[m,k] * x2[k,n])) * (scale1 * scale2) + y[m,n]
+    Y_{\mathrm{out},m,n}=Y_{\mathrm{in},m,n}+
+    \sum_{j=0}^{L-1}\left[
+    \left(\sum_{t=0}^{g_j-1}X_{1,m,jg_K+t}X_{2,jg_K+t,n}\right)
+    S_{1,m,j}S_{2,j,n}\right]
     $$
 
-    其中，$scale1$ 和 $scale2$ 分别对应 $x1Scale$ 和 $x2Scale$，均为标量（shape为 $(1)$）；当设置`transposeX1`/`transposeX2`时，公式中的 $x1$ 和 $x2$ 按转置后的视图参与计算。
+    其中，$g_K=32$，$L=\lceil K/g_K\rceil$，$g_j=\min(g_K,K-jg_K)$。$S_1$、$S_2$为对应K分组的输入scale，最后一组可以不足32个元素。
+
+  - HIFLOAT8的T-T量化：
+
+    $$
+    Y_{\mathrm{out},m,n}=Y_{\mathrm{in},m,n}+
+    \left(\sum_{k=0}^{K-1}X_{1,m,k}X_{2,k,n}\right)S_1S_2
+    $$
+
+    其中，$S_1$、$S_2$分别对应x1_scale、x2_scale，均为形状为$(1,)$的缩放因子。
 
 ## 参数说明
 
-<table class="tg"><thead>
-  <tr>
-    <th class="tg-hlb2"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">参数名</span></th>
-    <th class="tg-hlb2"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">输入/输出/属性</span></th>
-    <th class="tg-hlb2"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">描述</span></th>
-    <th class="tg-hlb2"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">数据类型</span></th>
-    <th class="tg-hlb2"><span style="font-weight:700;color:var(--theme-text);background-color:var(--theme-table-header-bg)">数据格式</span></th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td class="tg-22a9">x1</td>
-    <td class="tg-22a9">输入</td>
-    <td class="tg-22a9">矩阵乘运算中的左矩阵，公式中的输入x1。</td>
-    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8, FLOAT4_E2M1</td>
-    <td class="tg-22a9">ND</td>
-  </tr>
-  <tr>
-    <td class="tg-22a9">x2</td>
-    <td class="tg-22a9">输入</td>
-    <td class="tg-22a9">矩阵乘运算中的右矩阵，公式中的输入x2。</td>
-    <td class="tg-22a9">FLOAT8_E4M3FN, FLOAT8_E5M2, HIFLOAT8, FLOAT4_E2M1</td>
-    <td class="tg-22a9">ND</td>
-  </tr>
-  <tr>
-    <td class="tg-22a9">x1Scale</td>
-    <td class="tg-22a9">可选输入</td>
-    <td class="tg-22a9">量化参数中由x1量化引入的缩放因子，对应公式的scale1。</td>
-    <td class="tg-22a9">FLOAT8_E8M0（MX）、FLOAT32（HIFLOAT8 TT）</td>
-    <td class="tg-22a9">ND</td>
-  </tr>
-  <tr>
-    <td class="tg-22a9">x2Scale</td>
-    <td class="tg-22a9">输入</td>
-    <td class="tg-22a9">量化参数中由x2量化引入的缩放因子，对应公式的scale2。</td>
-    <td class="tg-22a9">FLOAT8_E8M0（MX）、FLOAT32（HIFLOAT8 TT）</td>
-    <td class="tg-22a9">ND</td>
-  </tr>
-  <tr>
-    <td class="tg-22a9">yRef</td>
-    <td class="tg-22a9">输入输出</td>
-    <td class="tg-22a9">矩阵乘运算与加法累加后的结果，对应公式中的输入输出y。</td>
-    <td class="tg-22a9">FLOAT32</td>
-    <td class="tg-22a9">ND</td>
-  </tr>
-  <tr>
-    <td class="tg-22a9">transposeX1</td>
-    <td class="tg-22a9">输入</td>
-    <td class="tg-22a9">表示x1的输入shape是否转置。</td>
-    <td class="tg-22a9">bool</td>
-    <td class="tg-22a9">-</td>
-  </tr>
-  <tr>
-    <td class="tg-22a9">transposeX2</td>
-    <td class="tg-22a9">输入</td>
-    <td class="tg-22a9">表示x2的输入shape是否转置。</td>
-    <td class="tg-22a9">bool</td>
-    <td class="tg-22a9">-</td>
-  </tr>
-  <tr>
-    <td class="tg-22a9">groupSize</td>
-    <td class="tg-22a9">输入</td>
-    <td class="tg-22a9">整数型参数，用于输入m、n、k方向上的量化分组大小。</td>
-    <td class="tg-22a9">INT64</td>
-    <td class="tg-22a9">-</td>
-  </tr>
-</tbody></table>
-
-- <term>Ascend 950PR&950DT系列产品</term>：
-  - x1、x2支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1数据类型。
-  - x1Scale、x2Scale支持FLOAT8_E8M0（MX）和FLOAT32（HIFLOAT8 TT）数据类型。
-  - yRef只支持FLOAT32数据类型。
-  - 当前仅支持transposeX1=true且transposeX2=false。
-  - groupSize由groupSizeM、groupSizeN、groupSizeK拼接组成：groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32。
+| 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
+| --- | --- | --- | --- | --- |
+| x1 | 输入 | 矩阵乘的左矩阵，对应公式中的X₁。 | FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1 | ND |
+| x2 | 输入 | 矩阵乘的右矩阵，对应公式中的X₂。 | FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1 | ND |
+| x2_scale | 输入 | x2的量化缩放因子，对应公式中的S₂。MX量化使用FLOAT8_E8M0，HIFLOAT8的T-T量化使用FLOAT32。 | FLOAT8_E8M0、FLOAT32 | ND |
+| y | 输入 | 参与原地累加的已有结果，对应公式中的Y_in。 | FLOAT32 | ND |
+| x1_scale | 可选输入 | x1的量化缩放因子，对应公式中的S₁。当前支持的MX和HIFLOAT8的T-T量化场景均须提供，数据类型与x2_scale一致。 | FLOAT8_E8M0、FLOAT32 | ND |
+| y | 输出 | 原地累加后的结果，对应公式中的Y_out，与输入y共用存储。 | FLOAT32 | ND |
+| transpose_x1 | 可选属性 | <ul><li>是否转置x1的最后两维：false表示不转置，true表示转置。</li><li>默认值为false；当前支持的计算场景须设为true。</li></ul> | BOOL | - |
+| transpose_x2 | 可选属性 | <ul><li>是否转置x2的最后两维：false表示不转置，true表示转置。</li><li>默认值为false；当前支持的计算场景须保持false。</li></ul> | BOOL | - |
+| group_size | 可选属性 | <ul><li>M、N、K方向量化分组大小的编码值，各分量占16位；支持的分组组合见<a href="#约束说明">约束说明</a>。</li><li>默认值为0。</li></ul> | INT64 | - |
 
 ## 约束说明
 
-- 支持连续tensor，[非连续tensor](../../docs/zh/context/non_contiguous_tensor.md)支持转置场景。
-- groupSize相关约束：传入的groupSize内部会按公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0时，会根据x1/x2/x1Scale/x2Scale输入shape重新推断。
-- 动态量化（MX量化）场景约束：
-  - 输入和输出支持以下数据类型组合：x1、x2为FLOAT8_E5M2/FLOAT8_E4M3FN，x1Scale、x2Scale为FLOAT8_E8M0，yRef为FLOAT32。
-  - 输入和输出还支持以下数据类型组合：x1、x2均为FLOAT4_E2M1，x1Scale、x2Scale均为FLOAT8_E8M0，yRef为FLOAT32。不支持FLOAT4_E1M2输入，不支持FP4与FP8混合输入。
-  - x1 shape为(k, m)，x2 shape为(k, n)，x1Scale shape为(ceil(k/64), m, 2)，x2Scale shape为(ceil(k/64), n, 2)，yRef shape为(m, n)，[gsM, gsN, gsK] 为 [1, 1, 32]，groupSize为32。
-  - MXFP4量化场景额外约束：
-    - m、n必须为非负偶数。
-    - 上述shape以逻辑元素数表示。x1、x2采用4-bit打包存储，一个字节保存两个FLOAT4_E2M1编码。连续输入x1、x2的逻辑shape分别为(k, m)、(k, n)，对应的字节存储shape分别为(k, m/2)、(k, n/2)。
-    - 当m、n、k均大于0时，必须同时满足m × k > 2、n × k > 2。
-- HIFLOAT8 T-T场景约束：
-  - 输入和输出支持以下数据类型组合：x1、x2为HIFLOAT8，x1Scale、x2Scale为FLOAT32，yRef为FLOAT32。
-  - x1 shape为(k, m)，x2 shape为(k, n)，yRef shape为(m, n)。
-  - x1Scale shape为(1)，x2Scale shape为(1)，groupSize必须为0。
-  - 不支持bias、offset参数。
+- 当前仅支持transpose_x1=true且transpose_x2=false。输入x1、x2的逻辑形状分别为`(K, M)`、`(K, N)`，y为`(M, N)`。
+- group_size按`group_size_k | (group_size_n << 16) | (group_size_m << 32)`编码。分量为0时由对应输入及scale的形状推导；推导后须满足对应量化模式的分组要求。
+- MX量化：
+  - x1、x2可分别为FLOAT8_E4M3FN或FLOAT8_E5M2，也可同时为FLOAT4_E2M1；不支持FP4与FP8混合输入，不支持FLOAT4_E1M2。
+  - x1_scale、x2_scale均为FLOAT8_E8M0，形状分别为`(ceil(K/64), M, 2)`、`(ceil(K/64), N, 2)`，其中ceil表示向上取整。
+  - 最终分组大小为`[group_size_m, group_size_n, group_size_k]=[1, 1, 32]`。可显式设置group_size=4295032864；设置为32时，M、N方向的分组大小由形状推导。
+  - MXFP4场景下，M、N须为非负偶数。x1、x2采用4位打包存储，每字节保存两个FLOAT4_E2M1元素；连续输入对应的字节存储形状分别为`(K, M/2)`、`(K, N/2)`。
+  - MXFP4场景下，当M、N、K均大于0时，还须同时满足$M\times K>2$、$N\times K>2$。
+- HIFLOAT8的T-T量化：
+  - x1、x2均为HIFLOAT8，x1_scale、x2_scale均为FLOAT32且形状为`(1,)`。
+  - group_size须为0。
 
 ## 调用说明
 
 | 调用方式 | 样例代码 | 说明 |
-| ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_quant_batch_matmul_inplace_add_mxfp8](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp8.cpp) | 展示mxFP8量化场景的调用方式，其中`x1/x2`为FLOAT8、`x1Scale/x2Scale`为FLOAT8_E8M0，`groupSize=32`。 |
-| aclnn接口 | <a href="examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp4.cpp">test_aclnn_quant_batch_matmul_inplace_add_mxfp4</a> | 展示MXFP4量化场景的调用方式，其中x1、x2为打包存储的FLOAT4_E2M1，x1Scale、x2Scale为FLOAT8_E8M0，yRef为FLOAT32，groupSize=32。 |
-| aclnn接口 | [test_aclnn_quant_batch_matmul_inplace_add_TT](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_TT.cpp) | 展示当前支持组合`transposeX1=true`、`transposeX2=false`下HIFLOAT8 TT场景的调用方式。 |
+| --- | --- | --- |
+| aclnn API | [MXFP8样例](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp8.cpp) | 通过[aclnnQuantBatchMatmulInplaceAdd](docs/aclnnQuantBatchMatmulInplaceAdd.md)调用，展示MXFP8量化。 |
+| aclnn API | [MXFP4样例](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_mxfp4.cpp) | 通过[aclnnQuantBatchMatmulInplaceAdd](docs/aclnnQuantBatchMatmulInplaceAdd.md)调用，展示打包存储的FLOAT4_E2M1输入。 |
+| aclnn API | [HIFLOAT8的T-T样例](examples/arch35/test_aclnn_quant_batch_matmul_inplace_add_TT.cpp) | 通过[aclnnQuantBatchMatmulInplaceAdd](docs/aclnnQuantBatchMatmulInplaceAdd.md)调用，展示逐张量量化。 |
+| GE图模式 | - | 通过[QuantBatchMatmulInplaceAdd算子IR](op_graph/quant_batch_matmul_inplace_add_proto.h)构图调用。 |

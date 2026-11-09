@@ -1,6 +1,6 @@
 # aclnnQuantMatmulV3
 
-**须知：该接口后续版本会废弃，请使用最新aclnnQuantMatmulV5接口。**
+**须知：该接口后续版本会废弃，请使用[aclnnQuantMatmulV5](../../quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)接口。**
 
 ## 产品支持情况
 
@@ -49,45 +49,48 @@
 
   <!-- end id7 -->
 
+公式中的`x1`、`x2`表示应用转置属性后的矩阵，尾两维分别为(M,K)、(K,N)，输出尾两维为(M,N)；`@`表示矩阵乘，`*`表示按对应维度广播后的乘法。UINT64/INT64量化参数参与公式时，使用其编码所代表的缩放值。未传入的可选bias和offset按0处理，具体可用组合见[约束说明](#约束说明)。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnQuantMatmulV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV3”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(
-    const aclTensor *x1,
-    const aclTensor *x2,
-    const aclTensor *scale,
-    const aclTensor *offset,
-    const aclTensor *bias,
-    bool             transposeX1,
-    bool             transposeX2,
-    const aclTensor *out,
-    uint64_t        *workspaceSize,
-    aclOpExecutor   **executor)
+  const aclTensor* x1,
+  const aclTensor* x2,
+  const aclTensor* scale,
+  const aclTensor* offset,
+  const aclTensor* bias,
+  bool             transposeX1,
+  bool             transposeX2,
+  const aclTensor* out,
+  uint64_t*        workspaceSize,
+  aclOpExecutor**  executor)
 ```
 
 ```cpp
 aclnnStatus aclnnQuantMatmulV3(
-    void          *workspace,
-    uint64_t       workspaceSize,
-    aclOpExecutor *executor,
-    aclrtStream    stream)
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
+  aclrtStream    stream)
 ```
 
 ## aclnnQuantMatmulV3GetWorkspaceSize
 
-- **参数说明：**
+- **参数说明**
 
-    <table style="table-layout: fixed; width: 1503px"><colgroup>
-    <col style="width: 130px">
-    <col style="width: 97px">
-    <col style="width: 308px">
-    <col style="width: 488px">
-    <col style="width: 197px">
-    <col style="width: 77px">
-    <col style="width: 115px">
-    <col style="width: 95px">
+  <table style="table-layout: fixed; width: 1500px">
+    <colgroup>
+      <col style="width: 210px">
+      <col style="width: 100px">
+      <col style="width: 240px">
+      <col style="width: 390px">
+      <col style="width: 230px">
+      <col style="width: 120px">
+      <col style="width: 110px">
+      <col style="width: 100px">
     </colgroup>
     <thead>
       <tr>
@@ -99,115 +102,93 @@ aclnnStatus aclnnQuantMatmulV3(
         <th>数据格式</th>
         <th>维度(shape)</th>
         <th>非连续Tensor</th>
-      </tr></thead>
+      </tr>
+    </thead>
     <tbody>
       <tr>
-        <td>x1</td>
+        <td>x1（const aclTensor*）</td>
         <td>输入</td>
         <td>公式中的输入x1。</td>
-        <td><ul>
-        <li>支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持。</li>
-        <li>在transposeX1为false时shape形如（batch，m，k），在transposeX1为true时shape形如（batch，k，m），batch可不存在。
-        </li></ul>
-        </td>
+        <td><ul> <li>支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持。</li> <li>在transposeX1为false时shape形如（batch，m，k），在transposeX1为true时shape形如（batch，k，m），batch可不存在。 </li></ul></td>
         <td>INT8、INT32、INT4</td>
         <td>ND</td>
         <td>2-6</td>
-        <td>✓</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>x2</td>
+        <td>x2（const aclTensor*）</td>
         <td>输入</td>
         <td>公式中的输入x2。</td>
-        <td><ul>
-        <li>ND：
-        <ul><li>支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持</li>
-        <li>在transposeX2为false时shape形如（batch，k，n），在transposeX2为true时shape形如（batch，n，k），batch可不存在，其中k与x1的shape中的k一致</li></ul> </li>
-        <li>NZ：
-          <ul><li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0=32，n0=16，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 32） = k1</li></ul>
-          <ul><li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0=16，n0=32，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 16） = k1</li></ul>
-        </li></ul></td>
+        <td><ul> <li>ND： <ul><li>支持最后两根轴转置情况下的非连续tensor，其他场景的非连续的Tensor不支持</li> <li>在transposeX2为false时shape形如（batch，k，n），在transposeX2为true时shape形如（batch，n，k），batch可不存在，其中k与x1的shape中的k一致</li></ul> </li> <li>NZ： <ul><li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0=32，n0=16，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 32） = k1</li></ul> <ul><li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0=16，n0=32，x1 shape中的k和x2 shape中的k1需要满足ceil（k / 16） = k1</li></ul> </li></ul></td>
         <td>INT8、INT32、INT4</td>
-        <td>ND、NZ</td>
-        <td>2-8（ND）、4-8（NZ）
-        </td>
-        <td>✓</td>
+        <td>ND、FRACTAL_NZ</td>
+        <td>2-6（ND）、4-8（NZ）</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>scale</td>
+        <td>scale（const aclTensor*）</td>
         <td>输入</td>
         <td>表示量化参数，公式中的输入scale。</td>
-        <td>（t，），t = 1或n，其中n与x2的n一致<br>当原始输入类型不满足[约束说明](#约束说明)中的类型组合时，需提前调用TransQuantParamV2算子的aclnn接口将scale转换为INT64、UINT64类型。</td>
+        <td>（t，），t = 1或n，其中n与x2的n一致<br/>当原始输入类型不满足<a href="#约束说明">约束说明</a>中的类型组合时，需提前调用TransQuantParamV2算子的aclnn接口将scale转换为INT64、UINT64类型。</td>
         <td>UINT64、INT64、FLOAT32、BFLOAT16</td>
         <td>ND</td>
         <td>1</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>offset</td>
-        <td>输入</td>
+        <td>offset（const aclTensor*）</td>
+        <td>可选输入</td>
         <td>公式中的输入offset。</td>
-        <td>（t，），t = 1或n，其中n与x2的n一致<br>当out数据类型为INT8时，offset可以存在，其他输入类型需要传入nullptr。</td>
+        <td>（t，），t = 1或n，其中n与x2的n一致<br/>当out数据类型为INT8时，offset可以存在，其他输入类型需要传入nullptr。<br/>不使用输出偏移时传入nullptr。</td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>bias</td>
+        <td>bias（const aclTensor*）</td>
         <td>可选输入</td>
         <td>公式中的输入bias。</td>
-        <td>shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。<br>当out的shape为2、4、5、6维时，bias的shape只支持1维。</td>
+        <td>shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。<br/>当out的shape为2、4、5、6维时，bias的shape只支持1维。<br/>不使用偏置时传入nullptr。</td>
         <td>INT32、BFLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>1、3</td>
-        <td>×</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>transposeX1</td>
+        <td>transposeX1（bool）</td>
         <td>输入</td>
         <td>表示x1的输入shape是否包含transpose。</td>
-        <td>在transposeX1为false时shape形如（batch，m，k）<br>在transposeX1为true时shape形如（batch，k，m）<br>batch可不存在。</td>
-        <td>bool</td>
+        <td>在transposeX1为false时shape形如（batch，m，k）<br/>在transposeX1为true时shape形如（batch，k，m）<br/>batch可不存在。<br/>false表示不转置，true表示转置；可用组合见<a href="#约束说明">约束说明</a>。</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>×</td>
       </tr>
       <tr>
-        <td>transposeX2</td>
+        <td>transposeX2（bool）</td>
         <td>输入</td>
         <td>表示x2的输入shape是否包含transpose。</td>
-        <td>
-        <ul>
-        <li>ND：在transposeX2为false时shape形如（batch，k，n）<br>在transposeX2为true时shape形如（batch，n，k）<br>batch可不存在，其中k与x1的shape中的k一致</li>
-        <li>NZ：
-        <ul>
-        <li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1</li>
-        <li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1</li>
-        </ul>
-        </li>
-        </ul>
-        </td>
-        <td>bool</td>
+        <td><ul> <li>ND：在transposeX2为false时shape形如（batch，k，n）<br/>在transposeX2为true时shape形如（batch，n，k）<br/>batch可不存在，其中k与x1的shape中的k一致</li> <li>NZ： <ul> <li>在transposeX2为true时shape形如（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32，n0 = 16，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1</li> <li>在transposeX2为false时shape形如（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1</li> <li>false表示不转置，true表示转置；可用组合见<a href="#约束说明">约束说明</a>。</li></ul> </li> <li>false表示不转置，true表示转置；可用组合见<a href="#约束说明">约束说明</a>。</li></ul></td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>×</td>
       </tr>
       <tr>
-        <td>out</td>
+        <td>out（const aclTensor*）</td>
         <td>输出</td>
         <td>公式中的输出out。</td>
-        <td>
-        （batch，m，n），batch可不存在，支持x1与x2的batch维度broadcast<br>输出batch与broadcast之后的batch一致，m与x1的m一致，n与x2的n一致。</td>
+        <td>（batch，m，n），batch可不存在，支持x1与x2的batch维度broadcast<br/>输出batch与broadcast之后的batch一致，m与x1的m一致，n与x2的n一致。</td>
         <td>FLOAT16、INT8、BFLOAT16、INT32</td>
         <td>ND</td>
         <td>2-6</td>
-        <td>✓</td>
+        <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
+        <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
-        <td>返回需要在Device侧申请的workspace大小。</td>
+        <td>返回需要在Device侧申请的workspace大小，单位为字节。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -215,7 +196,7 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
+        <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
         <td>-</td>
@@ -224,7 +205,8 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>-</td>
         <td>-</td>
       </tr>
-    </tbody></table>
+    </tbody>
+  </table>
 
   <!-- npu="310p" id8 -->
   - <term>Atlas推理系列产品</term>：
@@ -251,23 +233,25 @@ aclnnStatus aclnnQuantMatmulV3(
 
   <!-- end id10 -->
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错:
 
-  <table style="table-layout: fixed; width: 1149px"><colgroup>
-  <col style="width: 291px">
-  <col style="width: 135px">
-  <col style="width: 723px">
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 300px">
+      <col style="width: 150px">
+      <col style="width: 550px">
     </colgroup>
     <thead>
       <tr>
-        <th>返回值</th>
-        <th>错误码</th>
+        <th>返回码/状态码</th>
+        <th>码值</th>
         <th>描述</th>
-      </tr></thead>
+      </tr>
+    </thead>
     <tbody>
       <tr>
         <td>ACLNN_ERR_PARAM_NULLPTR</td>
@@ -275,59 +259,70 @@ aclnnStatus aclnnQuantMatmulV3(
         <td>传入的x1、x2、scale或out是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="3">161002</td>
-        <td>x1、x2、bias、scale、offset或out的数据类型和数据格式不在支持的范围之内。</td>
+        <td>ACLNN_ERR_PARAM_INVALID</td>
+        <td>161002</td>
+        <td><ul><li>x1、x2、bias、scale、offset或out的数据类型和数据格式不在支持的范围之内。</li><li>x1、x2、bias、scale、offset或out的shape不满足校验条件。</li><li>x1、x2、bias、scale、offset或out是空tensor，且不属于上述支持的空Tensor场景。</li></ul></td>
       </tr>
       <tr>
-        <td>x1、x2、bias、scale、offset或out的shape不满足校验条件。</td>
+        <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
+        <td>561101</td>
+        <td>创建算子执行器失败。</td>
       </tr>
       <tr>
-        <td>x1、x2、bias、scale、offset或out是空tensor，且不属于上述支持的空Tensor场景。</td>
+        <td>ACLNN_ERR_INNER_NULLPTR</td>
+        <td>561103</td>
+        <td>内部Tensor创建、预处理、算子计算或结果拷贝失败，返回空指针。</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_RUNTIME_ERROR</td>
+        <td>361001</td>
+        <td>当前运行平台不支持所选量化矩阵乘计算路径。</td>
       </tr>
     </tbody>
-    </table>
+  </table>
 
 ## aclnnQuantMatmulV3
 
-- **参数说明：**
+- **参数说明**
 
-  <table style="table-layout: fixed; width: 1151px"><colgroup>
-  <col style="width: 184px">
-  <col style="width: 134px">
-  <col style="width: 833px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数说明</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnQuantMatmulV3GetWorkspaceSize获取。</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>输入</td>
-      <td>指定执行任务的Stream。</td>
-    </tr>
-  </tbody>
+  <table style="table-layout: fixed; width: 1000px">
+    <colgroup>
+      <col style="width: 220px">
+      <col style="width: 100px">
+      <col style="width: 680px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>workspace（void*）</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize（uint64_t）</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，单位为字节，由第一段接口aclnnQuantMatmulV3GetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor（aclOpExecutor*）</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream（aclrtStream）</td>
+        <td>输入</td>
+        <td>指定执行任务的Stream。</td>
+      </tr>
+    </tbody>
   </table>
 
-- **返回值：**
+- **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
@@ -377,8 +372,8 @@ aclnnStatus aclnnQuantMatmulV3(
 
   | x1 | x2 | scale | offset | bias | out |
   | ------- | ------- | ------ | ------ | ------- | ------- |
-  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
-  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32 | FLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32 | INT8 |
 
 <!-- end id16 -->
 <!-- npu="A3,910b" id17 -->
@@ -386,11 +381,11 @@ aclnnStatus aclnnQuantMatmulV3(
 
   | x1 | x2 | scale | offset | bias | out |
   | ------- | ------- | ------ | ------ | ------- | ------- |
-  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
-  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
-  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32  |  BFLOAT16 |
-  | INT4/INT32 | INT4/INT32 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
-  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32 | FLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32 | INT8 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16 |
+  | INT4/INT32 | INT4/INT32 | UINT64/INT64 | null | null/INT32 | FLOAT16 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32 | INT32 |
 
 <!-- end id17 -->
 <!-- npu="950" id18 -->
@@ -398,11 +393,11 @@ aclnnStatus aclnnQuantMatmulV3(
 
   | x1 | x2 | scale | offset | bias | out |
   | ------- | ------- | ------ | ------ | ------- | ------- |
-  | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16/BFLOAT16 |
-  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
-  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32  |  BFLOAT16 |
-  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
-  | INT4 | INT4 | UINT64/INT64 | null | null/INT32  | FLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null | null/INT32 | FLOAT16/BFLOAT16 |
+  | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32 | INT8 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32/BFLOAT16/FLOAT32 | BFLOAT16 |
+  | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32 | INT32 |
+  | INT4 | INT4 | UINT64/INT64 | null | null/INT32 | FLOAT16 |
 
 <!-- end id18 -->
 
@@ -415,6 +410,8 @@ aclnnStatus aclnnQuantMatmulV3(
 通用场景示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -485,6 +482,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -630,7 +628,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulV3Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3Test failed. ERROR: %d\n", ret); return ret);
 
@@ -643,6 +641,8 @@ aclnnStatus aclnnQuantMatmulV3(
 - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -715,6 +715,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -756,6 +757,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 storageShape.data(), storageShape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -910,7 +912,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulV3Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3Test failed. ERROR: %d\n", ret); return ret);
 
@@ -924,6 +926,8 @@ aclnnStatus aclnnQuantMatmulV3(
 - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：INT4量化场景示例代码如下(x1和x2数据类型为INT4，transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -996,6 +1000,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1167,7 +1172,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulV3Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3Test failed. ERROR: %d\n", ret); return ret);
 
@@ -1181,6 +1186,8 @@ aclnnStatus aclnnQuantMatmulV3(
 - <term>Atlas推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=true)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
+  #include <cstdint>
+  #include <cstdio>
   #include <iostream>
   #include <memory>
   #include <vector>
@@ -1253,6 +1260,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1294,6 +1302,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 storageShape.data(), storageShape.size(), *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -1479,7 +1488,7 @@ aclnnStatus aclnnQuantMatmulV3(
       // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
-      aclrtStream stream;
+      aclrtStream stream = nullptr;
       auto ret = aclnnQuantMatmulV3Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV3Test failed. ERROR: %d\n", ret); return ret);
 

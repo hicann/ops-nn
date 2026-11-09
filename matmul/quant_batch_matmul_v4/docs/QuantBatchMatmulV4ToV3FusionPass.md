@@ -40,8 +40,8 @@ V4特有的`compute_type`属性不传递给V3。
 
 | 保留V4的场景 | 数据类型条件 | shape条件 |
 | ---- | ---- | ---- |
-| V4原生支持场景 | x1为`FLOAT8_E4M3FN`，x2为`FLOAT4_E2M1`或FLOAT32，y为BF16或FLOAT16 | 满足左列数据类型条件即保留V4，无附加形状条件 |
-| A8W8 G-B量化识别场景 | x1、x2均为INT8，`x1_scale`、`x2_scale`均存在且为FLOAT32，y为BF16 | x1与`x1_scale`的原始shape维数相同，且x2与`x2_scale`的原始shape维数相同 |
+| V4原生支持场景 | x1为`FLOAT8_E4M3FN`，x2为`FLOAT4_E2M1`或FLOAT32，y为BFLOAT16或FLOAT16 | 满足左列数据类型条件即保留V4，无附加形状条件 |
+| A8W8 G-B量化识别场景 | x1、x2均为INT8，`x1_scale`、`x2_scale`均存在且为FLOAT32，y为BFLOAT16 | x1与`x1_scale`的原始shape维数相同，且x2与`x2_scale`的原始shape维数相同 |
 
 上表A8W8 G-B场景比较的是维数，不要求各维长度相等，也不以`group_size`属性值区分。除上表条件外，本规则不额外要求输入必须为静态形状，也不额外限定输入格式；可用形状和格式仍须同时满足V4与V3的算子约束。
 
@@ -50,13 +50,13 @@ V4特有的`compute_type`属性不传递给V3。
 产品支持范围需同时满足[QuantBatchMatmulV4算子说明](../README.md)和[QuantBatchMatmulV3算子说明](../../quant_batch_matmul_v3/README.md)。该pass自身没有按芯片型号进行分支判断，是否转换由上述输入条件决定。
 
 <!-- npu="910b" id1 -->
-Atlas A2训练系列产品/Atlas A2推理系列产品
+- <term>Atlas A2系列产品</term>
 <!-- end id1 -->
 
 <!-- npu="A3" id2 -->
-Atlas A3训练系列产品/Atlas A3推理系列产品
+- <term>Atlas A3系列产品</term>
 <!-- end id2 -->
 
 <!-- npu="950" id3 -->
-Ascend 950PR&950DT系列产品
+- <term>Ascend 950PR&950DT系列产品</term>
 <!-- end id3 -->

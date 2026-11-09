@@ -37,13 +37,13 @@
 
 ### 保留Bitcast的转置融合
 
-对于“转置节点→`Bitcast`→目标算子”的结构，融合转置并保留`Bitcast`。`x1`和`x1_scale`可以分别包含一个`Bitcast`，不要求两路同时包含。`x2`和`x2_scale`支路保持不变。此模式的共享节点限制见使用约束。
+对于“转置节点→`Bitcast`→目标算子”的结构，融合转置并保留`Bitcast`。`x1`和`x1_scale`可以分别包含一个`Bitcast`，不要求两路同时包含。`x2`和`x2_scale`支路保持不变。此模式的共享节点限制见[使用约束](#使用约束)。
 
 ![保留Bitcast的转置融合](../../../docs/zh/figures/QuantBatchMatmulInplaceAddTransposeFusionPass_5.png)
 
 ### 保留Bitcast的x1_scale Reshape融合
 
-`x1_scale`支路可以为“`Reshape`→`Bitcast`→目标算子”。当`Reshape`满足等价转置条件，且带`Bitcast`的模式被识别时，融合该`Reshape`并保留`Bitcast`。图中展示静态MX量化场景；动态shape组合的限制见使用约束。
+`x1_scale`支路可以为“`Reshape`→`Bitcast`→目标算子”。当`Reshape`满足等价转置条件，且带`Bitcast`的模式被识别时，融合该`Reshape`并保留`Bitcast`。图中展示静态MX量化场景；动态shape组合的限制见[使用约束](#使用约束)。
 
 ![保留Bitcast的x1_scale Reshape融合](../../../docs/zh/figures/QuantBatchMatmulInplaceAddTransposeFusionPass_6.png)
 
@@ -79,10 +79,10 @@
 - 含`Bitcast`的模式仅用于待融合转换节点不被其他计算支路共享的图；共享支路的数值正确性不在该模式的保证范围内。
 - 带`Bitcast`的融合模式须通过目标平台的能力校验；不支持该模式的平台保持原图。此限制不影响不带`Bitcast`的模式。
 - 每个目标节点根据自身`x1`、`x2`的shape独立识别动态shape，不受此前处理的节点或图影响。动态shape的“`Reshape`→`Bitcast`”组合仍须满足平台能力及其他融合条件。此处动态shape指含未知维度，与MX动态量化不是同一概念。
-- 实际数据类型、量化模式、shape和转置属性须符合[QuantBatchMatmulInplaceAdd算子说明](../README.md)。该算子当前要求`transposeX1=true`、`transposeX2=false`；图示中的属性取反不扩展算子的支持范围。
+- 实际数据类型、量化模式、shape和转置属性须符合[QuantBatchMatmulInplaceAdd算子说明](../README.md)。该算子当前要求`transpose_x1=true`、`transpose_x2=false`；图示中的属性取反不扩展算子的支持范围。
 
 ## 支持的型号
 
 <!-- npu="950" id1 -->
-Ascend 950PR&950DT系列产品
+- <term>Ascend 950PR&950DT系列产品</term>
 <!-- end id1 -->

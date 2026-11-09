@@ -33,7 +33,7 @@ Batch indices are omitted below. $X_1$ and $X_2$ denote the matrices after apply
 
 ### MX Quantized Matrix Multiplication
 
-Split the K axis into groups of 32 elements, multiply each partial matrix product by its input scales, and accumulate the results before adding the bias:
+Split K into groups of 32 elements. Multiply each partial matrix product by the corresponding input scales and accumulate the results with bias to obtain $C$:
 
 $$
 C_{m,n}=\sum_{j=0}^{L-1}\left[
@@ -41,7 +41,7 @@ C_{m,n}=\sum_{j=0}^{L-1}\left[
 S_{1,m,j}\,S_{2,j,n}\right]+b_n
 $$
 
-Here, $g_M$, $g_N$, and $g_K$ are the group sizes along M, N, and K. Only $(1,1,32)$ is supported; $L=\lceil K/g_K\rceil$ and $g_j=\min(g_K,K-jg_K)$. $S_1$ and $S_2$ are the scales for group $j$ in `x1ScaleOptional` and `x2Scale`. Their storage shapes are listed under Parameters and Constraints. Accumulation uses FP32. The bias is added before activation; $b_n=0$ when no bias is supplied.
+Here, $g_M$, $g_N$, and $g_K$ are the group sizes along M, N, and K, respectively, and are currently fixed at $(1,1,32)$; $L=\lceil K/g_K\rceil$ and $g_j=\min(g_K,K-jg_K)$. $S_1$ and $S_2$ denote the scale values for group $j$ in `x1ScaleOptional` and `x2Scale`, respectively. For storage shapes, see [Shapes](#shapes). Matrix multiplication uses FP32 accumulation, and bias is added before activation. If bias is omitted, $b_n=0$.
 
 ### Activation
 
@@ -71,11 +71,11 @@ Apply the specified activation to $C$ to obtain $A$:
   C=[G\mid U],\qquad A=\operatorname{SiLU}(G)\odot U=\frac{G}{1+e^{-G}}\odot U
   $$
 
-All activations are computed in FP32. Let $H$ be the output width after activation: $H=N$ for GELU and SiLU, and $H=N/2$ for SwiGLU.
+All activations above are calculated in FP32. Let $H$ be the output width after activation: $H=N$ for GELU and SiLU, and $H=N/2$ for SwiGLU.
 
 ### Dynamic MX Quantization
 
-Round the activation result to BF16 using round-to-nearest-even (RNE), then form groups of 32 elements along the last dimension. Zero-pad the final group when needed to calculate its scale; padding elements are not written to the output.
+Convert the activation result to BF16 using Round to Nearest, ties to Even (RNE): round to the nearest representable value, resolving ties to the value whose least significant mantissa bit is 0. Then divide the last dimension into groups of 32 elements. If the last group contains fewer than 32 elements, pad it with zeros for scale calculation. The padding elements are not written to the output.
 
 $$
 V_i=\operatorname{BF16}_{RNE}(A_i),\qquad a=\max_i|V_i|,\qquad s=2^e
@@ -92,7 +92,7 @@ $$
 
 `yScaleOut` stores scales as FLOAT8_E8M0. The scale for group $j$ is written to `yScaleOut[..., m, j // 2, j % 2]`; its shape is `(..., M, ceil(H/64), 2)`.
 
-#### Scale Calculation
+#### Scale Calculation Algorithms
 
 The following formulas apply to finite $a>0$. Let $p=\lfloor\log_2a\rfloor$.
 
@@ -124,7 +124,7 @@ The following formulas apply to finite $a>0$. Let $p=\lfloor\log_2a\rfloor$.
   \end{cases}\right)
   $$
 
-  For other $d$ values in $[6,12]$:
+  For other values of $d$ in $[6,12]$:
 
   $$
   S=\operatorname{FP32}\left(a\cdot\operatorname{FP32}(1/d)\right),\qquad
@@ -133,9 +133,9 @@ The following formulas apply to finite $a>0$. Let $p=\lfloor\log_2a\rfloor$.
 
 E8M0 encodes $2^e$ as the byte $e+127$. Special cases are handled as follows:
 
-- An all-zero group produces zeros and a scale byte of 0. Unused scale slots added to complete the trailing dimension of 2 also contain byte 0, which represents $2^{-127}$.
-- If $S=0$, use $e=-127$. Algorithm 0, and algorithm 2 with $d=6$ or $d=7$, set the group's quantized values to zero when the scale byte is 0.
-- A group containing NaN or Inf produces scale byte 255 (NaN).
+- An all-zero group produces zeros and a scale encoding of 0. Padding slots in the output scales that have no corresponding data group are also set to 0. This encoding represents $2^{-127}$.
+- If $S=0$, use $e=-127$. Algorithm 0, and algorithm 2 with $d=6$ or $d=7$, set the group's quantized results to 0 when the scale encoding is 0.
+- For a group containing NaN or Inf, the scale encoding is 255 (NaN).
 
 <!-- end id7 -->
 
@@ -145,30 +145,30 @@ Each operator provides a [two-phase API](../../../docs/en/context/two_phase_api.
 
 ```cpp
 aclnnStatus aclnnQuantMatmulActivationQuantGetWorkspaceSize(
-  const aclTensor *x1,
-  const aclTensor *x2,
-  const aclTensor *x1ScaleOptional,
-  const aclTensor *x2Scale,
-  const aclTensor *biasOptional,
+  const aclTensor* x1,
+  const aclTensor* x2,
+  const aclTensor* x1ScaleOptional,
+  const aclTensor* x2Scale,
+  const aclTensor* biasOptional,
   bool             transposeX1,
   bool             transposeX2,
   int64_t          groupSize,
-  char            *activationType,
-  char            *quantMode,
-  char            *roundMode,
+  char*            activationType,
+  char*            quantMode,
+  char*            roundMode,
   int64_t          scaleAlg,
   double           dstTypeMax,
-  aclTensor       *yOut,
-  aclTensor       *yScaleOut,
-  uint64_t        *workspaceSize,
-  aclOpExecutor  **executor)
+  aclTensor*       yOut,
+  aclTensor*       yScaleOut,
+  uint64_t*        workspaceSize,
+  aclOpExecutor**  executor)
 ```
 
 ```cpp
 aclnnStatus aclnnQuantMatmulActivationQuant(
-  void          *workspace,
+  void*          workspace,
   uint64_t       workspaceSize,
-  aclOpExecutor *executor,
+  aclOpExecutor* executor,
   aclrtStream    stream)
 ```
 
@@ -178,248 +178,201 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 
   All tensor data resides on the device. Only `biasOptional` may be nullptr; all other tensor parameters are required and must be nonempty.
 
-  <table style="table-layout: fixed; width: 1550px">
-  <colgroup>
-  <col style="width: 260px">
-  <col style="width: 90px">
-  <col style="width: 180px">
-  <col style="width: 390px">
-  <col style="width: 240px">
-  <col style="width: 120px">
-  <col style="width: 130px">
-  <col style="width: 140px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Parameter</th>
-      <th>Input/Output</th>
-      <th>Description</th>
-      <th>Usage</th>
-      <th>Data Type</th>
-      <th>Format</th>
-      <th>Dimensions (Shape)</th>
-      <th>Non-contiguous Tensor</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>x1 (const aclTensor*)</td>
-      <td>Input</td>
-      <td>Left matrix, corresponding to X<sub>1</sub> in the formulas.</td>
-      <td><ul>
-        <li>Required and nonempty.</li>
-        <li>See <a href="#shapes">Shapes</a> and <a href="#data-types-and-activations">Data Types and Activations</a> for shape and transpose restrictions.</li>
-      </ul></td>
-      <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1</td>
-      <td>ND</td>
-      <td>2–6</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>x2 (const aclTensor*)</td>
-      <td>Input</td>
-      <td>Right matrix, corresponding to X<sub>2</sub> in the formulas.</td>
-      <td><ul>
-        <li>Required and nonempty.</li>
-        <li>See <a href="#shapes">Shapes</a> for logical shapes and <a href="#layout-and-storage">Layout and Storage</a> for storage requirements.</li>
-      </ul></td>
-      <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1</td>
-      <td>ND</td>
-      <td>2–6</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>x1ScaleOptional (const aclTensor*)</td>
-      <td>Input</td>
-      <td>Scales for x1 groups along K, corresponding to S<sub>1</sub>.</td>
-      <td><ul>
-        <li>This API supports only MX mode; this input must be supplied and must not be nullptr.</li>
-        <li>Must be nonempty; batch dimensions must match x1.</li>
-      </ul></td>
-      <td>FLOAT8_E8M0</td>
-      <td>ND</td>
-      <td>3–7</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>x2Scale (const aclTensor*)</td>
-      <td>Input</td>
-      <td>Scales for x2 groups along K, corresponding to S<sub>2</sub>.</td>
-      <td><ul>
-        <li>Required and nonempty.</li>
-        <li>Batch dimensions must match x2.</li>
-      </ul></td>
-      <td>FLOAT8_E8M0</td>
-      <td>ND</td>
-      <td>3–7</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>biasOptional (const aclTensor*)</td>
-      <td>Optional input</td>
-      <td>Bias added before activation, corresponding to b.</td>
-      <td><ul>
-        <li>Shape: (N,); (B,1,N) is also supported for a 3D output.</li>
-        <li>Pass nullptr to omit the bias. A supplied tensor must be nonempty.</li>
-      </ul></td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-      <td>1 or 3</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>transposeX1 (bool)</td>
-      <td>Input</td>
-      <td>Whether to transpose the last two dimensions of x1.</td>
-      <td><ul>
-        <li>false leaves the matrix unchanged; true transposes it.</li>
-        <li>See <a href="#data-types-and-activations">Data Types and Activations</a> for supported combinations.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>transposeX2 (bool)</td>
-      <td>Input</td>
-      <td>Whether to transpose the last two dimensions of x2.</td>
-      <td><ul>
-        <li>false leaves the matrix unchanged; true transposes it.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>groupSize (int64_t)</td>
-      <td>Input</td>
-      <td>Encoded input quantization group sizes along M, N, and K.</td>
-      <td><ul>
-        <li>Only 0 and 4295032864 are supported; both specify [1,1,32].</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>activationType (char*)</td>
-      <td>Input</td>
-      <td>Activation type.</td>
-      <td><ul>
-        <li>Supports "gelu_tanh", "gelu_erf", "silu", and "swiglu".</li>
-        <li>Must not be nullptr.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>quantMode (char*)</td>
-      <td>Input</td>
-      <td>Quantization mode.</td>
-      <td><ul>
-        <li>Only "mx" is supported. Must not be nullptr.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>roundMode (char*)</td>
-      <td>Input</td>
-      <td>Rounding mode for output quantization.</td>
-      <td><ul>
-        <li>FP8 supports only "rint": round to the nearest representable value, with ties to even.</li>
-        <li>FP4 also supports "floor" (round toward negative infinity) and "round" (round to the nearest representable value, with ties away from zero).</li>
-        <li>Must not be nullptr.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>scaleAlg (int64_t)</td>
-      <td>Input</td>
-      <td>Algorithm for calculating output scales.</td>
-      <td><ul>
-        <li>FP8 supports 0 and 1; FP4 supports 0 and 2.</li>
-        <li>0 uses the OCP shared exponent; 1 uses the FP8 maximum finite value; 2 uses the range specified by dstTypeMax.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>dstTypeMax (double)</td>
-      <td>Input</td>
-      <td>Reference maximum used to calculate output scales when scaleAlg=2, corresponding to d in the formulas.</td>
-      <td><ul>
-        <li>Applies only when scaleAlg=2: 0.0 selects 6.0; finite values in [6.0,12.0] are also supported.</li>
-        <li>Ignored by the other algorithms.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>yOut (aclTensor*)</td>
-      <td>Output</td>
-      <td>Dynamically quantized result, corresponding to yOut in the formulas.</td>
-      <td><ul>
-        <li>Required and nonempty.</li>
-        <li>Must have the same data type as x1. Shape: (batch,M,H).</li>
-      </ul></td>
-      <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1</td>
-      <td>ND (see <a href="#layout-and-storage">Layout and Storage</a> for compatible formats)</td>
-      <td>2–6</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>yScaleOut (aclTensor*)</td>
-      <td>Output</td>
-      <td>Scales for output groups, corresponding to s in the formulas.</td>
-      <td><ul>
-        <li>Required and nonempty.</li>
-        <li>Shape: (batch,M,ceil(H/64),2).</li>
-      </ul></td>
-      <td>FLOAT8_E8M0</td>
-      <td>ND (see <a href="#layout-and-storage">Layout and Storage</a> for compatible formats)</td>
-      <td>3–7</td>
-      <td>√</td>
-    </tr>
-    <tr>
-      <td>workspaceSize (uint64_t*)</td>
-      <td>Output</td>
-      <td>Returns the workspace size to allocate on the device, in bytes.</td>
-      <td><ul>
-        <li>Must not be nullptr.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>executor (aclOpExecutor**)</td>
-      <td>Output</td>
-      <td>Returns the op executor containing the operator's computation flow.</td>
-      <td><ul>
-        <li>Must not be nullptr.</li>
-      </ul></td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-  </tbody>
+  <table style="table-layout: fixed; width: 1500px">
+    <colgroup>
+      <col style="width: 210px">
+      <col style="width: 100px">
+      <col style="width: 240px">
+      <col style="width: 390px">
+      <col style="width: 230px">
+      <col style="width: 120px">
+      <col style="width: 110px">
+      <col style="width: 100px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Input/Output</th>
+        <th>Description</th>
+        <th>Usage</th>
+        <th>Data Type</th>
+        <th>Format</th>
+        <th>Dimensions (Shape)</th>
+        <th>Non-contiguous Tensor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>x1 (const aclTensor*)</td>
+        <td>Input</td>
+        <td>Left matrix, corresponding to X<sub>1</sub> in the formulas.</td>
+        <td><ul> <li>Required and nonempty.</li> <li>See <a href="#shapes">Shapes</a> and <a href="#data-types-and-activations">Data Types and Activations</a> for shape and transpose restrictions.</li> </ul></td>
+        <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1</td>
+        <td>ND</td>
+        <td>2–6</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x2 (const aclTensor*)</td>
+        <td>Input</td>
+        <td>Right matrix, corresponding to X<sub>2</sub> in the formulas.</td>
+        <td><ul> <li>Required and nonempty.</li> <li>See <a href="#shapes">Shapes</a> for logical shapes and <a href="#layout-and-storage">Layout and Storage</a> for storage requirements.</li> </ul></td>
+        <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1</td>
+        <td>ND</td>
+        <td>2–6</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x1ScaleOptional (const aclTensor*)</td>
+        <td>Input</td>
+        <td>Scales for x1 groups along K, corresponding to S<sub>1</sub>.</td>
+        <td><ul> <li>This API supports only MX mode; this input must be supplied and must not be nullptr.</li> <li>Must be nonempty; batch dimensions must match x1.</li> </ul></td>
+        <td>FLOAT8_E8M0</td>
+        <td>ND</td>
+        <td>3–7</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>x2Scale (const aclTensor*)</td>
+        <td>Input</td>
+        <td>Scales for x2 groups along K, corresponding to S<sub>2</sub>.</td>
+        <td><ul> <li>Required and nonempty.</li> <li>Batch dimensions must match x2.</li> </ul></td>
+        <td>FLOAT8_E8M0</td>
+        <td>ND</td>
+        <td>3–7</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>biasOptional (const aclTensor*)</td>
+        <td>Optional input</td>
+        <td>Bias added before activation, corresponding to b.</td>
+        <td><ul> <li>Shape: (N,); (B,1,N) is also supported for a 3D output.</li> <li>Pass nullptr to omit the bias. A supplied tensor must be nonempty.</li> </ul></td>
+        <td>FLOAT32</td>
+        <td>ND</td>
+        <td>1 or 3</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>transposeX1 (bool)</td>
+        <td>Input</td>
+        <td>Whether to transpose the last two dimensions of x1.</td>
+        <td><ul> <li>false means no transpose, and true means transpose.</li> <li>For supported data type and activation combinations, see <a href="#data-types-and-activations">Data Types and Activations</a>.</li> <li>For supported transpose combinations, see <a href="#constraints">Constraints</a>.</li></ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>transposeX2 (bool)</td>
+        <td>Input</td>
+        <td>Whether to transpose the last two dimensions of x2.</td>
+        <td><ul> <li>false means no transpose, and true means transpose.</li> <li>For supported combinations, see <a href="#constraints">Constraints</a>.</li></ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>groupSize (int64_t)</td>
+        <td>Input</td>
+        <td>Encoded input quantization group sizes along M, N, and K.</td>
+        <td><ul> <li>Only 0 and 4295032864 are supported; both specify [1,1,32].</li> </ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>activationType (char*)</td>
+        <td>Input</td>
+        <td>Activation type.</td>
+        <td><ul> <li>Supports "gelu_tanh", "gelu_erf", "silu", and "swiglu".</li> <li>Must not be nullptr.</li> </ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>quantMode (char*)</td>
+        <td>Input</td>
+        <td>Quantization mode.</td>
+        <td><ul> <li>Only "mx" is supported. Must not be nullptr.</li> </ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>roundMode (char*)</td>
+        <td>Input</td>
+        <td>Rounding mode for output quantization.</td>
+        <td><ul> <li>FP8 supports only "rint": round to the nearest representable value, with ties to even.</li> <li>FP4 also supports "floor" (round toward negative infinity) and "round" (round to the nearest representable value, with ties away from zero).</li> <li>Must not be nullptr.</li> </ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>scaleAlg (int64_t)</td>
+        <td>Input</td>
+        <td>Algorithm for calculating output scales.</td>
+        <td><ul> <li>FP8 supports 0 and 1; FP4 supports 0 and 2.</li> <li>0 uses the OCP shared exponent; 1 uses the FP8 maximum finite value; 2 uses the range specified by dstTypeMax.</li> </ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>dstTypeMax (double)</td>
+        <td>Input</td>
+        <td>Reference maximum used to calculate output scales when scaleAlg=2, corresponding to d in the formulas.</td>
+        <td><ul> <li>Applies only when scaleAlg=2: 0.0 selects 6.0; finite values in [6.0,12.0] are also supported.</li> <li>Ignored by the other algorithms.</li> </ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>yOut (aclTensor*)</td>
+        <td>Output</td>
+        <td>Dynamically quantized result, corresponding to yOut in the formulas.</td>
+        <td><ul> <li>Required and nonempty.</li> <li>Must have the same data type as x1. Shape: (batch,M,H).</li> </ul></td>
+        <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1</td>
+        <td>ND (see <a href="#layout-and-storage">Layout and Storage</a> for compatible formats)</td>
+        <td>2–6</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>yScaleOut (aclTensor*)</td>
+        <td>Output</td>
+        <td>Scales for output groups, corresponding to s in the formulas.</td>
+        <td><ul> <li>Required and nonempty.</li> <li>Shape: (batch,M,ceil(H/64),2).</li> </ul></td>
+        <td>FLOAT8_E8M0</td>
+        <td>ND (see <a href="#layout-and-storage">Layout and Storage</a> for compatible formats)</td>
+        <td>3–7</td>
+        <td>√</td>
+      </tr>
+      <tr>
+        <td>workspaceSize (uint64_t*)</td>
+        <td>Output</td>
+        <td>Returns the workspace size to allocate on the device, in bytes.</td>
+        <td><ul> <li>Must not be nullptr.</li> </ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>executor (aclOpExecutor**)</td>
+        <td>Output</td>
+        <td>Returns the op executor containing the operator's computation flow.</td>
+        <td><ul> <li>Must not be nullptr.</li> </ul></td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody>
   </table>
 
   A nonzero `groupSize` is encoded as `(groupSizeM << 32) | (groupSizeN << 16) | groupSizeK`; the upper 16 bits must be zero. Use int64_t values for the shifts.
@@ -431,30 +384,40 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
   The first-phase API validates the input parameters and reports errors in the following cases:
 
   <table style="table-layout: fixed; width: 1000px">
-  <colgroup>
-  <col style="width: 300px">
-  <col style="width: 100px">
-  <col style="width: 600px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Return Code</th>
-      <th>Value</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>x1, x2, x1ScaleOptional, x2Scale, yOut, yScaleOut, workspaceSize, or executor is a null pointer.</td>
-    </tr>
-    <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
-      <td>A tensor data type, format, shape, broadcast relationship, stride, or accessed storage range violates the constraints; a string parameter is null; or an attribute value or combination is invalid.</td>
-    </tr>
-  </tbody>
+    <colgroup>
+      <col style="width: 300px">
+      <col style="width: 150px">
+      <col style="width: 550px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Return/Status Code</th>
+        <th>Value</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>x1, x2, x1ScaleOptional, x2Scale, yOut, yScaleOut, workspaceSize, or executor is a null pointer.</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_PARAM_INVALID</td>
+        <td>161002</td>
+        <td>A tensor data type, format, shape, broadcast relationship, stride, or accessed storage range violates the constraints; a string parameter is null; or an attribute value or combination is invalid.</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
+        <td>561101</td>
+        <td>Failed to create the operator executor.</td>
+      </tr>
+      <tr>
+        <td>ACLNN_ERR_INNER_NULLPTR</td>
+        <td>561103</td>
+        <td>An internal tensor operation returned a null pointer during tensor creation, preprocessing, operator computation, or result copying.</td>
+      </tr>
+    </tbody>
   </table>
 
 ## aclnnQuantMatmulActivationQuant
@@ -462,45 +425,47 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 - **Parameters**
 
   <table style="table-layout: fixed; width: 1000px">
-  <colgroup>
-  <col style="width: 300px">
-  <col style="width: 100px">
-  <col style="width: 600px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Parameter</th>
-      <th>Input/Output</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>Input</td>
-      <td>Address of the workspace memory allocated on the device.</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>Input</td>
-      <td>Size of the workspace allocated on the device, in bytes, obtained from the first-phase API aclnnQuantMatmulActivationQuantGetWorkspaceSize.</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>Input</td>
-      <td>Op executor containing the operator's computation flow.</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>Input</td>
-      <td>Stream specified for executing the task.</td>
-    </tr>
-  </tbody>
+    <colgroup>
+      <col style="width: 220px">
+      <col style="width: 100px">
+      <col style="width: 680px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Input/Output</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>workspace (void*)</td>
+        <td>Input</td>
+        <td>Address of the workspace memory allocated on the device.</td>
+      </tr>
+      <tr>
+        <td>workspaceSize (uint64_t)</td>
+        <td>Input</td>
+        <td>Size of the workspace allocated on the device, in bytes, obtained from the first-phase API aclnnQuantMatmulActivationQuantGetWorkspaceSize.</td>
+      </tr>
+      <tr>
+        <td>executor (aclOpExecutor*)</td>
+        <td>Input</td>
+        <td>Op executor containing the operator's computation flow.</td>
+      </tr>
+      <tr>
+        <td>stream (aclrtStream)</td>
+        <td>Input</td>
+        <td>Stream specified for executing the task.</td>
+      </tr>
+    </tbody>
   </table>
 
 - **Return Value**
 
   aclnnStatus: Returns a status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
+
+  ACLNN_ERR_INNER (561000) is returned if executor execution fails.
 
 ## Constraints
 
