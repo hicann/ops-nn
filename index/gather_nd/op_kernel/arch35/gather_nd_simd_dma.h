@@ -187,7 +187,7 @@ __simd_vf__ inline void GatherNdSimdDma<INDICES_T, isCastIndices, NIS>::DealIndi
             if constexpr (NIS) {
                 AscendC::Reg::Compare<OFFSET_T, CMPMODE::LT>(tmpMask, inReg, zeroConstReg, pregLoop);
                 AscendC::Reg::Adds(tmpReg, inReg, xShapeDimkSize, tmpMask); // 补偿负索引场景
-                Move<OFFSET_T, AscendC::Reg::MaskMergeMode::MERGING>(inReg, tmpReg, tmpMask);
+                AscendC::Reg::Move<OFFSET_T, AscendC::Reg::MaskMergeMode::MERGING>(inReg, tmpReg, tmpMask);
             }
 
             AscendC::Reg::Compare<OFFSET_T, CMPMODE::LT>(tmpMask, inReg, zeroConstReg, pregLoop); // 负越界
@@ -205,7 +205,7 @@ __simd_vf__ inline void GatherNdSimdDma<INDICES_T, isCastIndices, NIS>::DealIndi
 
         AscendC::Reg::Muls(outReg, outReg, aSize, pregLoop);
         AscendC::Reg::Duplicate(tmpReg, OFFSET_T(-1), overstepMask); // 补偿越界
-        Move<OFFSET_T, AscendC::Reg::MaskMergeMode::MERGING>(outReg, tmpReg, overstepMask);
+        AscendC::Reg::Move<OFFSET_T, AscendC::Reg::MaskMergeMode::MERGING>(outReg, tmpReg, overstepMask);
         auto outOfstAddr = outOfstLocalPtr + i * vfLen;
         AscendC::Reg::StoreAlign(outOfstAddr, outReg, pregLoop);
     }
