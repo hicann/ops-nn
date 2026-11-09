@@ -32,7 +32,7 @@
 #include "array_ops.h"
 #include "ge_ir_build.h"
 
-#include "../op_graph/dua_quantize_add_layer_norm_proto.h"
+#include "../../op_graph/dua_quantize_add_layer_norm_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
