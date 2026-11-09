@@ -2056,6 +2056,7 @@ loss-c@ops-nn:
         - ops/ops-nn/optim/fused_sgd/tests/
         - ops/ops-nn/optim/apply_fused_ema_adam/examples/
         - ops/ops-nn/optim/apply_fused_ema_adam/tests/
+        - ops/ops-nn/loss/mse_loss_grad_v2/op_host/arch35/
       non_delivery: null
       open_source: null
 
