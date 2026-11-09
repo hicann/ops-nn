@@ -258,6 +258,6 @@ GraphUniqPtr MaxPoolGradFusionPass::Replacement(const std::unique_ptr<MatchResul
     return replaceGraph;
 }
 
-REG_FUSION_PASS(MaxPoolGradFusionPass).Stage(CustomPassStage::kAfterInferShape);
+REG_FUSION_PASS(MaxPoolGradFusionPass).Stage(CustomPassStage::kBeforeInferShape);
 
 } // namespace ops
