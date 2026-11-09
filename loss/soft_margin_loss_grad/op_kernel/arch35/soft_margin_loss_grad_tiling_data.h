@@ -12,7 +12,7 @@
 
 /*!
  * \file soft_margin_loss_grad_tiling_data.h
- * \brief SoftMarginLossGrad TilingData 结构体定义（Broadcast 范式，按 rank 模板化两档）
+ * \brief SoftMarginLossGrad TilingData 结构体定义（Broadcast 范式，按 rank 模板化三档）
  */
 #ifndef SOFT_MARGIN_LOSS_GRAD_TILING_DATA_H_
 #define SOFT_MARGIN_LOSS_GRAD_TILING_DATA_H_
@@ -49,7 +49,7 @@ struct SoftMarginLossGradTilingData {
     MultiCoreResult multicore;
     int64_t per_buf_bytes; // (ub_per_core/kPhysNodes)&kAlignMask，kAlignBytes 字节对齐
     int64_t cof_is_mean;   // reduction==1(mean) → 1，否则 0
-    int64_t total_num;     // broadcast 后元素总数 N（mean 求 cof=1/N）
+    int64_t total_num;     // Broadcast output element count; independent of the mean normalizer.
     float normalization;   // host double reciprocal rounded once to FP32
     int32_t normalization_padding = 0;
     int64_t max_bro_shape[kRank];

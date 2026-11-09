@@ -148,8 +148,8 @@ aclnnStatus aclnnSoftMarginLossBackwardGetWorkspaceSize(const aclTensor* gradOut
     auto ret = CheckParams(gradOutput, self, target, reduction, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    if (self->IsEmpty()) {
-        // 根据实际支持情况补充
+    // CheckParams has validated the broadcast result and the output shape.
+    if (out->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;

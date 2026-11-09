@@ -232,7 +232,7 @@ aclnnStatus aclnnSoftMarginLossBackward(
 ## 约束说明
 
 - 支持动态shape与动态rank（DynamicShapeSupportFlag=true、DynamicRankSupportFlag=true），输入shape无需在编译期固定。
-- 空tensor：仍需满足参数校验和broadcast规则；self为空时接口直接返回成功。其他输入为空时不保证在ACLNN层直接短路，输出shape仍须符合broadcast结果。
+- 空tensor：完成参数、broadcast及输出shape校验后，若输出元素数为0，ACLNN直接成功返回，workspace为0，不再执行广播搬运或数值kernel。
 - 确定性计算：
   - aclnnSoftMarginLossBackward默认确定性实现。
 

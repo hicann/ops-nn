@@ -251,3 +251,54 @@ TEST_F(l2_soft_margin_loss_backward_test, reduction_out_of_range)
         EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
     }
 }
+
+TEST_F(l2_soft_margin_loss_backward_test, empty_broadcast_result_has_zero_workspace)
+{
+    for (int64_t reduction : {0, 1, 2}) {
+        auto grad = TensorDesc({0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto self = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto target = TensorDesc({2, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto out = TensorDesc({2, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnSoftMarginLossBackward, INPUT(grad, self, target, reduction), OUTPUT(out));
+        uint64_t workspaceSize = 123;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+        EXPECT_EQ(workspaceSize, 0U);
+    }
+}
+
+TEST_F(l2_soft_margin_loss_backward_test, empty_result_preserves_parameter_validation)
+{
+    for (int64_t reduction : {-1, 3}) {
+        auto grad = TensorDesc({0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto self = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto target = TensorDesc({2, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto out = TensorDesc({2, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnSoftMarginLossBackward, INPUT(grad, self, target, reduction), OUTPUT(out));
+        uint64_t workspaceSize = 123;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+    }
+    int64_t validReduction = 1;
+    auto grad = TensorDesc({0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto self = TensorDesc({3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto target = TensorDesc({2, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto wrongOut = TensorDesc({0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto invalidOut = OP_API_UT(aclnnSoftMarginLossBackward, INPUT(grad, self, target, validReduction),
+                                OUTPUT(wrongOut));
+    uint64_t workspaceSize = 123;
+    EXPECT_EQ(invalidOut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+
+    auto incompatibleSelf = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto emptyOut = TensorDesc({2, 0, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto invalidBroadcast = OP_API_UT(aclnnSoftMarginLossBackward,
+                                      INPUT(grad, incompatibleSelf, target, validReduction), OUTPUT(emptyOut));
+    EXPECT_EQ(invalidBroadcast.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+
+    auto badGrad = TensorDesc({0, 3}, ACL_INT32, ACL_FORMAT_ND);
+    auto invalidDtype = OP_API_UT(aclnnSoftMarginLossBackward, INPUT(badGrad, self, target, validReduction),
+                                  OUTPUT(emptyOut));
+    EXPECT_EQ(invalidDtype.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+
+    auto nullInput = OP_API_UT(aclnnSoftMarginLossBackward, INPUT(nullptr, self, target, validReduction),
+                               OUTPUT(emptyOut));
+    EXPECT_EQ(nullInput.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_NULLPTR);
+}

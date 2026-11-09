@@ -84,10 +84,10 @@
 
 - 图模式支持0D~25D输入，aclnn接口支持0D~8D输入。
 
-- 数据类型约束：通过GE图模式调用时，predict、label、dout与gradient的数据类型必须相同（同为FLOAT16、FLOAT32或BFLOAT16之一）；通过aclnn API调用时，输入数据类型需满足互转换关系，计算时自动提升为FP32，输出gradient的数据类型与out一致。
+- 数据类型约束：通过GE图模式调用时，predict、label、dout与gradient的数据类型必须相同（同为FLOAT16、FLOAT32或BFLOAT16之一）；通过aclnn API调用时，输入数据类型需满足互转换关系，按共同数据类型规则转换后计算，输出gradient的数据类型与out一致。
 - 支持shape broadcast：predict、label、dout三者的shape相互broadcast（低维在前补1，各维非1值需一致，否则不支持），输出shape为三者broadcast的结果。
-- 图模式支持动态shape与动态rank。
-- 空tensor：仍需满足参数校验和broadcast规则；self为空时接口直接返回成功。其他输入为空时不保证在ACLNN层直接短路，输出shape仍须符合broadcast结果。
+- 图模式支持动态shape（-1）和未知rank（-2）。
+- 空tensor：ACLNN接口支持空tensor输入；输入须满足broadcast规则，输出为空tensor且shape与broadcast结果一致。
 - reduction为"mean"时，图模式的N取输入predict的元素数；aclnn接口的N取广播后的元素数。
 
 ## 调用说明

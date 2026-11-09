@@ -12,7 +12,7 @@
 
 /*!
  * \file soft_margin_loss_grad_tiling_key.h
- * \brief SoftMarginLossGrad TilingKey 模板参数定义（Broadcast 范式：仅按 RANK 划分两档）
+ * \brief SoftMarginLossGrad TilingKey 模板参数定义（Broadcast 范式：按 RANK 划分 4/8/25 三档）
  */
 #ifndef SOFT_MARGIN_LOSS_GRAD_TILING_KEY_H_
 #define SOFT_MARGIN_LOSS_GRAD_TILING_KEY_H_

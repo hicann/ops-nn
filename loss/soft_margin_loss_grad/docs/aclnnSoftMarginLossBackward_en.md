@@ -230,6 +230,8 @@ aclnnStatus aclnnSoftMarginLossBackward(
 
 ## Constraints
 
+- Dynamic shapes and dynamic ranks are supported (DynamicShapeSupportFlag=true, DynamicRankSupportFlag=true); input shapes do not need to be fixed at compile time.
+- Empty tensors: after parameter, broadcast, and output shape validation, if the output has zero elements, the ACLNN interface returns success with zero workspace, without performing broadcast copies or executing the numerical kernel.
 - Deterministic computation:
   - aclnnSoftMarginLossBackward defaults to a deterministic implementation.
 
@@ -268,9 +270,14 @@ int Init(int32_t deviceId, aclrtStream* stream) {
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret);
+            aclFinalize();
+            return ret);
   ret = aclrtCreateStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
+            aclrtResetDevice(deviceId);
+            aclFinalize();
+            return ret);
   return 0;
 }
 
@@ -283,7 +290,10 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
   // Call aclrtMemcpy to copy data from the host side to the device side memory.
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret);
+            aclrtFree(*deviceAddr);
+            *deviceAddr = nullptr;
+            return ret);
 
   // Compute the strides of the contiguous tensor.
   std::vector<int64_t> strides(shape.size(), 1);
@@ -301,7 +311,19 @@ int main() {
   // 1. (Boilerplate) device/stream initialization. For details, see the acl API manual.
   // Set deviceId based on the actual device.
   int32_t deviceId = 0;
-  aclrtStream stream;
+  aclrtStream stream = nullptr;
+  void* gradOutputDeviceAddr = nullptr;
+  void* selfDeviceAddr = nullptr;
+  void* targetDeviceAddr = nullptr;
+  void* outDeviceAddr = nullptr;
+  void* workspaceAddr = nullptr;
+  aclTensor* gradOutput = nullptr;
+  aclTensor* self = nullptr;
+  aclTensor* target = nullptr;
+  aclTensor* out = nullptr;
+  uint64_t workspaceSize = 0;
+  aclOpExecutor* executor = nullptr;
+  int64_t reduction = 1;
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init failed. ERROR: %d\n", ret); return ret);
 
@@ -310,82 +332,92 @@ int main() {
   std::vector<int64_t> selfShape = {2, 2};
   std::vector<int64_t> targetShape = {2, 2};
   std::vector<int64_t> outShape = {2, 2};
-  void* gradOutputDeviceAddr = nullptr;
-  void* selfDeviceAddr = nullptr;
-  void* targetDeviceAddr = nullptr;
-  void* outDeviceAddr = nullptr;
-  aclTensor* gradOutput = nullptr;
-  aclTensor* self = nullptr;
-  aclTensor* target = nullptr;
-  aclTensor* out = nullptr;
+  auto size = GetShapeSize(outShape);
   std::vector<float> gradOutputHostData = {0, 1, 2, 3};
   std::vector<float> selfHostData = {0, 1, 2, 3};
   std::vector<float> targetHostData = {1, 1, 1, 1};
   std::vector<float> outHostData(4, 0);
+  std::vector<float> resultData(size, 0);
   // Create the gradOutput aclTensor.
   ret = CreateAclTensor(gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr,
                         aclDataType::ACL_FLOAT, &gradOutput);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, goto Cleanup);
   // Create the self aclTensor.
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, goto Cleanup);
   // Create the target aclTensor.
   ret = CreateAclTensor(targetHostData, targetShape, &targetDeviceAddr, aclDataType::ACL_FLOAT, &target);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
+  CHECK_RET(ret == ACL_SUCCESS, goto Cleanup);
   // Create the out aclTensor.
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create reduction.
-  int64_t reduction = 1;
+  CHECK_RET(ret == ACL_SUCCESS, goto Cleanup);
 
   // 3. Call the CANN operator library API. Replace it with the specific API name.
-  uint64_t workspaceSize = 0;
-  aclOpExecutor* executor;
   // Call the first-phase API aclnnSoftMarginLossBackward.
   ret = aclnnSoftMarginLossBackwardGetWorkspaceSize(gradOutput, self, target, reduction, out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftMarginLossBackwardGetWorkspaceSize failed. ERROR: %d\n", ret);
-            return ret);
+            goto Cleanup);
   // Allocate device memory based on the workspaceSize calculated by the first-phase API.
-  void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); goto Cleanup);
   }
   // Call the second-phase API aclnnSoftMarginLossBackward.
   ret = aclnnSoftMarginLossBackward(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftMarginLossBackward failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSoftMarginLossBackward failed. ERROR: %d\n", ret); goto Cleanup);
 
   // 4. (boilerplate) Synchronously wait for the task execution to complete.
   ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); goto Cleanup);
 
   // 5. Obtain the output value and copy the result from the device memory to the host memory. Modify the code based on the API definition.
-  auto size = GetShapeSize(outShape);
-  std::vector<float> resultData(size, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                     size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto Cleanup);
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
+Cleanup:
   // 6. Release aclTensor and aclScalar. Modify the code based on the API definition.
-  aclDestroyTensor(gradOutput);
-  aclDestroyTensor(self);
-  aclDestroyTensor(target);
-  aclDestroyTensor(out);
+  if (gradOutput != nullptr) {
+    aclDestroyTensor(gradOutput);
+  }
+  if (self != nullptr) {
+    aclDestroyTensor(self);
+  }
+  if (target != nullptr) {
+    aclDestroyTensor(target);
+  }
+  if (out != nullptr) {
+    aclDestroyTensor(out);
+  }
 
   // 7. Release device resources. Modify the code based on the API definition.
-  aclrtFree(gradOutputDeviceAddr);
-  aclrtFree(selfDeviceAddr);
-  aclrtFree(targetDeviceAddr);
-  aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
+  if (gradOutputDeviceAddr != nullptr) {
+    aclrtFree(gradOutputDeviceAddr);
+  }
+  if (selfDeviceAddr != nullptr) {
+    aclrtFree(selfDeviceAddr);
+  }
+  if (targetDeviceAddr != nullptr) {
+    aclrtFree(targetDeviceAddr);
+  }
+  if (outDeviceAddr != nullptr) {
+    aclrtFree(outDeviceAddr);
+  }
+  if (workspaceAddr != nullptr) {
     aclrtFree(workspaceAddr);
   }
-  aclrtDestroyStream(stream);
+  if (stream != nullptr) {
+    aclrtDestroyStream(stream);
+  }
   aclrtResetDevice(deviceId);
   aclFinalize();
-  return 0;
+  return ret;
 }
 ```
+
+### Rank Constraints
+
+The ACLNN interface checks that the original rank of each of gradOutput, self, and target is no greater than 8. The effective-rank compatibility rules for kernel/GEIR do not extend the original-rank limit of this interface.

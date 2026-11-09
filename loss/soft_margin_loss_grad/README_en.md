@@ -87,10 +87,10 @@ English | [简体中文](./README.md)
 
 - Graph mode supports 0D to 25D inputs, and the aclnn interface supports 0D to 8D inputs.
 
-- Data type constraint: when the operator is called in GE graph mode, the data types of predict, label, dout, and gradient must be the same (all one of FLOAT16, FLOAT32, or BFLOAT16); when the operator is called through the aclnn API, the input data types must satisfy the mutual conversion relationship, the computation automatically promotes the inputs to FP32, and the data type of the output gradient is consistent with out.
+- Data type constraint: when the operator is called in GE graph mode, the data types of predict, label, dout, and gradient must be the same (all one of FLOAT16, FLOAT32, or BFLOAT16); when the operator is called through the aclnn API, the input data types must satisfy the mutual conversion relationship, the inputs are converted according to the common data type rules before computation, and the data type of the output gradient is consistent with out.
 - Shape broadcast is supported: the shapes of predict, label, and dout are broadcast with one another (1s are prepended to the lower dimensions, and the non-1 values of each dimension must be consistent; otherwise, broadcast is not supported), and the output shape is the result of broadcasting the three shapes.
-- Graph mode supports dynamic shapes and dynamic ranks.
-- Empty tensors: the parameter validation and broadcast rules must still be satisfied; when self is empty, the interface directly returns success. When other inputs are empty, a direct short circuit at the ACLNN layer is not guaranteed, and the output shape must still conform to the broadcast result.
+- Graph mode supports dynamic shapes (-1) and unknown ranks (-2).
+- Empty tensors: the ACLNN interface supports empty tensor inputs. The inputs must satisfy the broadcast rules, and the output is an empty tensor whose shape matches the broadcast result.
 - When reduction is "mean", N in graph mode is the element count of the input predict; N in the aclnn interface is the element count after broadcast.
 
 ## Invocation Description

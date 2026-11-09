@@ -15,7 +15,7 @@
  * \brief SoftMarginLossGrad Kernel — SmlgKernel<T, RANK>（arch35 / RegBase / Broadcast 范式）
  *
  * 公式: out = cof * (-y*exp(-xy)) / (1 + exp(-xy)) * grad   (x=self, y=target, grad=gradOutput)
- * fp16/bf16: Cast→fp32 计算（Exp/Div 无 bf16），CAST_RINT 回写
+ * fp16/bf16: 每个张量操作后回存原 dtype；单操作临时 FP32，最终 CAST_RINT 回写
  * 注: 采用字面形(-y*exp(-xy))/(1+exp(-xy))，溢出语义对齐 torch golden（exp 上溢→NaN/inf）
  * Memory: TBuf（禁 TQue）+ NDDMA DataCopy<T,ND,cfg>，GM↔UB 双缓冲 + 事件同步
  */
@@ -83,7 +83,7 @@ __aicore__ inline int64_t CalcOutputTransferCount(const int64_t* normal_shape, i
 template <typename T, int64_t RANK>
 class SmlgKernel {
     static constexpr int64_t ND = (RANK <= kMaxNdDma) ? RANK : kMaxNdDma;
-    // fp16/bf16 需中间提升 fp32（Exp/Div 无 bf16/fp16 安全语义），fp32 直算
+    // Low-precision tensor operations round after each step; FP32 runs directly.
     static constexpr bool kHalf = AscendC::IsSameType<T, half>::value || AscendC::IsSameType<T, bfloat16_t>::value;
     // TBuf 槽位布局：[BG=0, BX=1, BY=2, BXY=3, BTMP=4] 为公共槽，
     // fp16/bf16 扩位 Cast 专用 fp32 槽从 kFp32SlotBase 起连续 3 个
@@ -100,7 +100,7 @@ class SmlgKernel {
     AscendC::GlobalTensor<T> gmIn_[kMaxInputSlots]; // [0]=x(self), [1]=y(target), [2]=grad(gradOutput)
     AscendC::GlobalTensor<T> gmOut_[kMaxOutputSlots];
     AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[kPhysNodes];
-    AscendC::MultiCopyParams<T, ND> nddmaParams_[kMaxInputSlots];
+    AscendC::MultiCopyParams<T, ND> nddmaParams_[kMaxInputSlots]{};
     int64_t nddmaOuterIters_[kMaxInputSlots];
     int64_t nddma_dims_;
     float cof_;
@@ -201,45 +201,61 @@ public:
     }
 
 private:
-    // out = cof * (-y*exp(-xy)) / (1+exp(-xy)) * grad；fp16/bf16 中间提升 fp32，结果写回 BG
-    __aicore__ inline void Compute(int64_t count, int BG, int BX, int BY, int BXY, int BTMP)
+    // CUDA stores each tensor-operation result in T. A single BF16 operation
+    // uses transient FP32 arithmetic and immediately rounds back to T.
+    __aicore__ inline void RoundTensorOp(AscendC::LocalTensor<float> value, int64_t count, int scratchSlot)
     {
         if constexpr (kHalf) {
-            // bf16/fp16 源驻留 BG/BX/BY；扩位 Cast 写独立 fp32 槽，禁止 in-place 自覆盖
-            constexpr int FG = kFp32SlotBase, FX = kFp32SlotBase + 1, FY = kFp32SlotBase + 2;
-            AscendC::LocalTensor<float> g = buf_[FG].Get<float>();
-            AscendC::LocalTensor<float> x = buf_[FX].Get<float>();
-            AscendC::LocalTensor<float> y = buf_[FY].Get<float>();
-            AscendC::LocalTensor<float> xy = buf_[BXY].Get<float>();
-            AscendC::LocalTensor<float> e = buf_[BTMP].Get<float>();
+            auto rounded = buf_[scratchSlot].Get<T>();
+            AscendC::Cast(rounded, value, AscendC::RoundMode::CAST_RINT, count);
+            AscendC::Cast(value, rounded, AscendC::RoundMode::CAST_NONE, count);
+        }
+    }
+
+    __aicore__ inline void Compute(int64_t count, int BG, int BX, int BY, int BXY, int BTMP)
+    {
+        AscendC::LocalTensor<float> g;
+        AscendC::LocalTensor<float> x;
+        AscendC::LocalTensor<float> y;
+        if constexpr (kHalf) {
+            g = buf_[kFp32SlotBase].Get<float>();
+            x = buf_[kFp32SlotBase + 1].Get<float>();
+            y = buf_[kFp32SlotBase + 2].Get<float>();
             AscendC::Cast(g, buf_[BG].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             AscendC::Cast(x, buf_[BX].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             AscendC::Cast(y, buf_[BY].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-            // Match ATen statement order: exp((-y)*x), (y*e)*(-norm), divide, then grad.
-            AscendC::Muls(xy, y, kNegOne, count);
-            AscendC::Mul(xy, xy, x, count);
-            AscendC::Exp(e, xy, count);
-            AscendC::Mul(x, y, e, count);
-            AscendC::Muls(x, x, -cof_, count);
-            AscendC::Adds(e, e, kPosOne, count);
-            AscendC::Div<float, kDivConfig>(x, x, e, count);
+        } else {
+            g = buf_[BG].Get<float>();
+            x = buf_[BX].Get<float>();
+            y = buf_[BY].Get<float>();
+        }
+        auto xy = buf_[BXY].Get<float>();
+        auto e = buf_[BTMP].Get<float>();
+        // The public autograd loss/N graph supplies g/N to the loss backward.
+        // CUDA scalar division forms a double reciprocal, then casts to FP32.
+        if (td_->cof_is_mean != 0) {
+            AscendC::Muls(g, g, cof_, count);
+            RoundTensorOp(g, count, BG);
+        }
+        AscendC::Muls(xy, y, kNegOne, count);
+        RoundTensorOp(xy, count, BG);
+        AscendC::Mul(xy, xy, x, count);
+        RoundTensorOp(xy, count, BG);
+        AscendC::Exp(e, xy, count);
+        RoundTensorOp(e, count, BG);
+        AscendC::Mul(x, y, e, count);
+        RoundTensorOp(x, count, BG);
+        AscendC::Muls(x, x, kNegOne, count);
+        RoundTensorOp(x, count, BG);
+        AscendC::Adds(e, e, kPosOne, count);
+        RoundTensorOp(e, count, BG);
+        AscendC::Div<float, kDivConfig>(x, x, e, count);
+        RoundTensorOp(x, count, BG);
+        if constexpr (kHalf) {
             AscendC::Mul(x, x, g, count);
             AscendC::Cast(buf_[BG].Get<T>(), x, AscendC::RoundMode::CAST_RINT, count);
         } else {
-            AscendC::LocalTensor<float> g = buf_[BG].Get<float>();
-            AscendC::LocalTensor<float> x = buf_[BX].Get<float>();
-            AscendC::LocalTensor<float> y = buf_[BY].Get<float>();
-            AscendC::LocalTensor<float> xy = buf_[BXY].Get<float>();
-            AscendC::LocalTensor<float> e = buf_[BTMP].Get<float>();
-            // Match ATen statement order: exp((-y)*x), (y*e)*(-norm), divide, then grad.
-            AscendC::Muls(xy, y, kNegOne, count);
-            AscendC::Mul(xy, xy, x, count);
-            AscendC::Exp(e, xy, count);
-            AscendC::Mul(x, y, e, count);
-            AscendC::Muls(x, x, -cof_, count);
-            AscendC::Adds(e, e, kPosOne, count);
-            AscendC::Div<float, kDivConfig>(x, x, e, count);
-            AscendC::Mul(g, x, g, count); // result to BG
+            AscendC::Mul(g, x, g, count);
         }
     }
 
