@@ -55,7 +55,7 @@ English | [简体中文](./README.md)
     <tr><td>mean</td><td>Optional input</td><td>Reserved slot of the official IR (same shape as sum). It does not participate in the calculation.</td><td>FLOAT</td><td>ND</td></tr>
     <tr><td>variance</td><td>Optional input</td><td>Reserved slot of the official IR (same shape as sum). It does not participate in the calculation.</td><td>FLOAT</td><td>ND</td></tr>
     <tr><td>num_groups</td><td>Optional attribute</td><td>Number of groups G. The default value is 2, and it must divide C.</td><td>INT</td><td>-</td></tr>
-    <tr><td>epsilon</td><td>Optional attribute</td><td>Small value added to variance to prevent division by zero. The default value is 0.0001.</td><td>FLOAT</td><td>-</td></tr>
+    <tr><td>epsilon</td><td>Optional attribute</td><td>Small value added to variance to prevent division by zero. It must be greater than 0 (0, negative values, and NaN are rejected on Host). The default value is 0.0001.</td><td>FLOAT</td><td>-</td></tr>
     <tr><td>y</td><td>Output</td><td>Normalization (+ optional affine) result. Its shape and data type are the same as those of x.</td><td>FLOAT16, FLOAT</td><td>ND, NCHW, NHWC</td></tr>
     <tr><td>batch_mean</td><td>Output</td><td>Per-group mean computed on the fly (sum/M), with the same shape as sum.</td><td>FLOAT</td><td>ND</td></tr>
     <tr><td>batch_variance</td><td>Output</td><td>Per-group biased variance computed on the fly (square_sum/M − mean², without epsilon), with the same shape as sum.</td><td>FLOAT</td><td>ND</td></tr>
@@ -65,6 +65,7 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - `G == num_groups` and `C % num_groups == 0` (hard validation on Host).
+- `epsilon > 0` (hard validation on Host: 0, negative values, and NaN are rejected). It only participates in the `rstd` computation; the `batch_variance` output does not include epsilon.
 - Tensors other than `x` / `y` support only ND. When `x` / `y` are ND, the layout is inferred from the position of the group dimension of the statistics. When an explicit NCHW/NHWC label conflicts with the group dimension position of the statistics, the input is rejected.
 - An empty batch with `N=0` is valid: all three outputs are empty and no kernel is dispatched. C / H / W / G being 0 is regarded as invalid.
 - Dynamic shape: Unknown dimensions (-1) are supported. Unknown dimensions pass through InferShape, and kernel compilation handles them uniformly as static (DynamicCompileStatic). Dynamic rank: the interface enables DynamicRankSupport, but when x or sum has an unknown rank, all statically checkable shape validations are deferred to runtime, and the interception point of invalid inputs is deferred accordingly.

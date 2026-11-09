@@ -53,7 +53,7 @@
     <tr><td>mean</td><td>可选输入</td><td>官方IR保留位（shape同sum），不参与计算。</td><td>FLOAT</td><td>ND</td></tr>
     <tr><td>variance</td><td>可选输入</td><td>官方IR保留位（shape同sum），不参与计算。</td><td>FLOAT</td><td>ND</td></tr>
     <tr><td>num_groups</td><td>可选属性</td><td>组数G，默认值为2，必须整除C。</td><td>INT</td><td>-</td></tr>
-    <tr><td>epsilon</td><td>可选属性</td><td>加在variance上防除零的小值，默认值为0.0001。</td><td>FLOAT</td><td>-</td></tr>
+    <tr><td>epsilon</td><td>可选属性</td><td>加在variance上防除零的小值，必须大于0（0、负值或NaN在Host侧拒绝），默认值为0.0001。</td><td>FLOAT</td><td>-</td></tr>
     <tr><td>y</td><td>输出</td><td>归一化（+可选仿射）结果，shape和数据类型均与x相同。</td><td>FLOAT16、FLOAT</td><td>ND、NCHW、NHWC</td></tr>
     <tr><td>batch_mean</td><td>输出</td><td>现算组内均值（sum/M），shape同sum。</td><td>FLOAT</td><td>ND</td></tr>
     <tr><td>batch_variance</td><td>输出</td><td>现算组内有偏方差（square_sum/M − mean²，未加epsilon），shape同sum。</td><td>FLOAT</td><td>ND</td></tr>
@@ -63,6 +63,7 @@
 ## 约束说明
 
 - `G == num_groups`且`C % num_groups == 0`（Host硬校验）。
+- `epsilon > 0`（Host硬校验，0、负值或NaN均拒绝）；该值只参与`rstd`计算，`batch_variance`输出未加epsilon。
 - 除`x` / `y`外的张量仅支持ND；`x` / `y`为ND时布局由统计量组维位置推断，显式NCHW/NHWC标签与统计量组维位置冲突时拒绝。
 - `N=0`空batch合法：三个输出均为空且不下发Kernel；C / H / W / G为0视为非法。
 - 动态Shape：支持未知维（-1），未知维在InferShape透传、Kernel编译按静态统一处理（DynamicCompileStatic）；动态Rank：接口开启DynamicRankSupport，但当x或sum任一未知rank时静态可判的形状校验一律延后到运行时，非法输入的拦截时点随之延后。
