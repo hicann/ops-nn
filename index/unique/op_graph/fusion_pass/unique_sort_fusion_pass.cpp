@@ -124,7 +124,7 @@ static int32_t GetRuntimeGeCompilerVersion()
 // ops (Sort/UniqueConsecutive/AdjacentDifference/Cumsum/ScatterElements) on that arch
 // first and adjusting the set plus the UT platform resources accordingly; extending the
 // set for other archs follows the same rule.
-const std::set<std::string> kSupportedNpuArchs = {"3510", "5102"};
+const std::set<std::string> kSupportedNpuArchs = {"3510", "5102", "9201", "9202"};
 
 bool IsRegbasePlatform() { return ops::CheckNpuArch(kPassName, kSupportedNpuArchs); }
 
