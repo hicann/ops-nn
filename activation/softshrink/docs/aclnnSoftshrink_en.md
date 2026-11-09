@@ -23,6 +23,8 @@
 - <term>Atlas training products</term>: Supported
 <!-- end id6 -->
 
+> Note: Ascend 950PR/950DT is provided by the Ascend C implementation in this repository; Atlas A3/A2 and Atlas inference/training products are provided by the canndev TBE implementation. Atlas 200I/500 A2 has no corresponding binary configuration and is not supported. Atlas inference/training products support only FLOAT and FLOAT16, not BFLOAT16.
+
 ## Function
 
 - Description: Performs element-wise Hardshrink, forcing elements within the range of λ to zero.
@@ -98,17 +100,17 @@ aclnnStatus aclnnSoftshrink(
       <td>lambd(aclScalar*)</td>
       <td>Input</td>
       <td>Input scalar, which is λ in the formula.</td>
-      <td>The value must be greater than or equal to 0.</td>
+      <td>Must be a FLOAT scalar greater than or equal to 0. Negative values and NaN return an invalid-parameter error; +Inf is allowed.</td>
       <td>FLOAT</td>
-      <td>ND</td>
-      <td>0-8</td>
-      <td>√</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>out (aclTensor*)</td>
       <td>Output</td>
       <td>Output parameter of the Softshrink computation.</td>
-      <td><ul><li>Supports empty tensors.</li><li>The shape must be the same as that of self.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>The shape must be the same as that of self.</li><li>The dtype can differ from that of self; the API casts the result to the out dtype. Using the same dtype as self is recommended to avoid precision loss.</li></ul></td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -166,9 +168,12 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>self, lambd, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
-      <td>The data type of self, lambd, or out is not within the supported range.</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
+      <td>The data type of self or out is not within the supported range.</td>
+    </tr>
+    <tr>
+      <td>The data type of lambd is not FLOAT.</td>
     </tr>
     <tr>
       <td>The shapes of self and out are inconsistent.</td>
@@ -177,7 +182,7 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>The dimension of self or out is greater than 8.</td>
     </tr>
     <tr>
-      <td>lambd is less than 0.</td>
+      <td>lambd is less than 0 or is NaN.</td>
     </tr>
   </tbody></table>
 
@@ -228,6 +233,14 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 - Deterministic computation:
   - aclnnSoftshrink defaults to a deterministic implementation.
+
+- Only the ND data format is supported.
+- self supports 0D to 8D input. A 0D scalar input is processed as a 1D tensor with shape (1,).
+- The dtype of out can differ from that of self; the API casts the result to the out dtype. Using the same dtype as self is recommended to avoid precision loss.
+- lambd must be a FLOAT scalar in the range [0, +∞): 0, positive values, and +Inf are allowed; negative values and NaN return ACLNN_ERR_PARAM_INVALID(161002).
+- When self is NaN, the output is 0. NaN is not propagated; callers that rely on NaN propagation should note this difference.
+- Empty tensors (with 0 elements) are supported, and an empty output of the same shape is directly returned.
+- Dynamic shapes (including -1 dimensions) are supported: tiling computes the split based on the actual shape at runtime, without recompilation.
 
 ## Example
 

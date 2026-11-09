@@ -21,6 +21,8 @@
 - <term>Atlas训练系列产品</term>：支持
 <!-- end id6 -->
 
+> 说明：Ascend 950PR/950DT 由本仓 Ascend C 实现提供；Atlas A3/A2、Atlas推理/训练由 canndev TBE 实现承接；Atlas 200I/500 A2 无对应二进制配置，不支持。Atlas推理/训练仅支持 FLOAT、FLOAT16，不支持 BFLOAT16。
+
 ## 功能说明
 
 - 接口功能：以元素为单位，强制收缩λ范围内的元素。
@@ -96,17 +98,17 @@ aclnnStatus aclnnSoftshrink(
       <td>lambd（aclScalar*）</td>
       <td>输入</td>
       <td>输入的标量，公式中的输入λ。</td>
-      <td>数值要求大于等于0。接口内部将标量转换为FLOAT参与计算，非FLOAT类型存在精度转换（如DOUBLE按IEEE754舍入到FLOAT、超出FLOAT表示范围的整数会丢失精度），阈值精度敏感场景建议直接传入FLOAT标量。</td>
-      <td>除COMPLEX64、COMPLEX128外的数值标量类型</td>
-      <td>ND</td>
-      <td>0-8</td>
-      <td>√</td>
+      <td>必须为FLOAT标量且数值大于等于0；负数和NaN返回参数非法错误，+Inf合法。</td>
+      <td>FLOAT</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>Softshrink计算的出参。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与self一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与self一致。</li><li>dtype可以与self不同，接口按out的dtype进行Cast；建议与self一致以避免精度损失。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -164,9 +166,12 @@ aclnnStatus aclnnSoftshrink(
       <td>传入的self、lambd或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>self或out的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>lambd的数据类型不是FLOAT。</td>
     </tr>
     <tr>
       <td>self和out的shape不一致。</td>
@@ -175,7 +180,7 @@ aclnnStatus aclnnSoftshrink(
       <td>self或out的维数大于8。</td>
     </tr>
     <tr>
-      <td>lambd < 0。</td>
+      <td>lambd < 0 或 lambd 为 NaN。</td>
     </tr>
   </tbody></table>
 
@@ -227,10 +232,11 @@ aclnnStatus aclnnSoftshrink(
 - 确定性计算：
   - aclnnSoftshrink默认确定性实现。
 
-- 数据格式仅支持ND；out的dtype与self一致。
+- 数据格式仅支持ND。
 - self支持0~8维输入；0维标量输入会被视作shape为(1,)的1维tensor处理。
-- lambd取值范围为[0, +∞)，不允许为负数或nan。
-- lambd支持除复数外的数值标量类型，接口内部统一转换为FLOAT后参与计算；非FLOAT标量存在精度转换，阈值精度敏感场景建议直接使用FLOAT标量。
+- out的dtype可以与self不同，接口按out的dtype进行Cast；建议与self一致以避免精度损失。
+- lambd仅支持FLOAT标量，取值范围为[0, +∞)：允许0、正数和+Inf，负数或NaN返回ACLNN_ERR_PARAM_INVALID(161002)。
+- 输入self为NaN时，输出为0，不进行NaN透传；依赖NaN传播的调用方需注意该差异。
 - 支持空Tensor（元素个数为0），直接返回同shape的空输出。
 - 支持动态shape（含-1维度）：tiling在运行期按实际shape计算切分，无需重新编译。
 

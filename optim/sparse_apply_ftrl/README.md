@@ -8,8 +8,12 @@
 | <term>Atlas A3系列产品</term>   |    √     |
 | <term>Atlas A2系列产品</term>    |    √     |
 | <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
-| <term>Atlas推理系列产品</term>                               |    ×     |
-| <term>Atlas训练系列产品</term>                               |    ×     |
+| <term>Atlas推理系列产品</term>                               |    √     |
+| <term>Atlas训练系列产品</term>                               |    √     |
+
+> 说明：
+> - Ascend 950PR/950DT 由本仓 Ascend C 实现提供（OpDef 注册 ascend950/ascend350，构建 ascend950/ascend350）；Atlas A3/A2、Atlas推理/训练由 canndev TBE 实现承接；Atlas 200I/500 A2 无对应二进制配置，不支持。
+> - 当前各实现的数据类型均为 FLOAT（var/accum/linear/grad/lr/l1/l2/lr_power）与 INT32/INT64（indices），数据格式为 ND。
 
 ## 功能说明
 
@@ -146,7 +150,7 @@ $$
     <tr>
       <td>use_locking</td>
       <td>属性</td>
-      <td>是否使用锁保护更新操作（当前实现未使用）</td>
+      <td>可选属性，默认false。是否使用锁保护更新操作；当前实现未使用该属性，不改变更新行为。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -154,28 +158,22 @@ $$
 
 ## 约束说明
 
-1. var/accum/linear必须具有相同的shape和dtype（float32）。
-2. grad.shape[1:] 必须等于var.shape[1:]，grad.shape[0] 必须等于indices.shape[0]。
-3. indices必须为1-D tensor。
-4. lr/l1/l2/lr\_power为标量tensor（0-D）。
-5. **lr为学习率，作为输入时不能为0**。
-6. **indices必须唯一**（不可有重复值）。TensorFlow和Ascend官方均声明：indices重复时行为未定义。
-7. **indices取值范围必须满足0 <= indices[i] < var.shape[0]**。kernel不做运行时越界检查，越界将导致内存越界读写。
-8. **输入tensor必须为连续内存布局**。kernel使用扁平寻址假设连续内存；`AutoContiguous()`仅在aclnn通路生效，geir/tf通路需调用方保证输入连续。
+1. var/accum/linear必须具有相同的shape和dtype（FLOAT）。
+2. grad必须与var维数相同；grad.shape[0]必须等于indices.shape[0]，grad.shape[1:]必须等于var.shape[1:]。
+3. indices必须为1-D tensor，dtype为INT32或INT64。
+4. lr/l1/l2/lr\_power为标量tensor，形态为0-D或shape为[1]的1-D tensor；动态shape（-1/-2）在InferShape中按动态处理，`(1,1)`等更高维形态会被拒绝。
+5. **本仓Ascend C实现要求var/accum/linear至少为2维，当前未显式校验rank上限（受框架/接口限制）**；Atlas A3/A2等由canndev TBE承接的实现对rank下限较宽（允许1-D var），跨产品使用时请按对应实现版本约束准备输入。
+6. **lr为学习率，调用方必须保证lr > 0**；l1、l2应大于等于0，lr\_power应小于等于0。Host/Tiling不读取设备侧标量值，因此不做运行时值域校验，非法值会导致结果未定义。
+7. **indices必须唯一**（不可有重复值）。TensorFlow和Ascend官方均声明：indices重复时行为未定义；当前实现未做运行时重复检查。
+8. **indices取值范围必须满足0 <= indices[i] < var.shape[0]**。kernel不做运行时越界检查，越界将导致内存越界读写。
+9. **输入tensor必须为连续内存布局**。kernel使用扁平寻址假设连续内存；`AutoContiguous()`只在aclnn通路生效，geir/tf通路需调用方保证输入连续。
+10. **输出var/accum/linear为独立输出缓冲，不与输入原地共享存储**。调用方应使用输出tensor获取更新结果。
+11. **数据格式仅支持ND**。本版本binary_config仅提供FLOAT+INT32/INT64、ND的组合；历史版本中的NCHW/NHWC等位置化组合不在本版本支持范围内。
 
 ## 调用说明
 
-<table><thead>
-  <tr>
-    <th>调用方式</th>
-    <th>调用样例</th>
-    <th>说明</th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td>图模式调用</td>
-    <td><a>-</a></td>
-    <td>通过[算子IR]<a href="op_graph/sparse_apply_ftrl_proto.h">(..op_graph/sparse_apply_ftrl_proto.h)</a>构图方式调用SparseApplyFtrl算子。</td>
-  </tr>
-</tbody>
-</table>
+| 调用方式 | 样例代码 | 说明 |
+|:---|:---|:---|
+| GE图模式 | [test_geir_sparse_apply_ftrl.cpp](./examples/test_geir_sparse_apply_ftrl.cpp) | 通过[SparseApplyFtrl算子IR](./op_graph/sparse_apply_ftrl_proto.h)构图方式调用SparseApplyFtrl算子。 |
+
+> TensorFlow通路当前仅注册`SparseApplyFtrl`；`ResourceSparseApplyFtrl`未在本仓插件中注册，由canndev实现承接。示例的编译与运行请参考CANN样例编译运行说明。
