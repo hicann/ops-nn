@@ -94,3 +94,13 @@ repos:
         require_serial: true
         stages: [pre-push]
         verbose: true
+
+  - repo: local
+    hooks:
+      - id: host-python-regressions
+        name: Host Python Script Regressions
+        entry: python -m pytest -q tests/host
+        language: python
+        additional_dependencies: [pytest==8.3.5]
+        pass_filenames: false
+        files: ^(scripts/.*\.py|tests/host/.*\.py|\.pre-commit-config\.yaml)$
