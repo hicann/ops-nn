@@ -106,7 +106,7 @@
 - 输入维度范围 1-8 维。
 - `predict` 与 `label` 的 dtype 需要一致。
 - `predict` 与 `label` 不支持广播；二者的 shape 需要完全一致。当 `reduction=none` 时，输出 shape 与输入 shape 一致。
-- `sigma` 必须为正数。
+- 建议将 `sigma` 设为正数；当前实现会将非正数或非有限值按默认值 `1.0` 处理。
 
 ## 调用说明
 
