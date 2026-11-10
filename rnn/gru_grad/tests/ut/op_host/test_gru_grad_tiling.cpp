@@ -18,9 +18,11 @@
  *       拒绝并上报正式码 EZ0010; 用例校验失败返回、正式码以及不再产生 EZ9999/E89999。
  */
 
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <gtest/gtest.h>
+#include "base/err_mgr.h"
 #include "tiling_context_faker.h"
 #include "tiling_case_executor.h"
 #include "op_host/arch22/gru_grad_tiling.h"
@@ -31,63 +33,65 @@ using TensorDesc = gert::TilingContextPara::TensorDescription;
 constexpr int64_t GATE_NUM = 3;
 const std::vector<uint32_t> kInputIr{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0}; // 12 输入, batch_sizes 缺省
 const std::vector<uint32_t> kOutputIr{1, 1, 1, 1, 1, 1};                  // 6 输出
+
+// 使用独立的 ErrorManager 上下文隔离本用例记录，避免共享 Host UT 进程内串扰。
+// 不定义全局 weak 上报替身，否则会截获同一可执行文件中其他算子的错误。
+class ScopedErrorContext {
+public:
+    ScopedErrorContext() : savedContext_(error_message::GetErrMgrContext())
+    {
+        auto context = savedContext_;
+        context.work_stream_id = reinterpret_cast<std::uintptr_t>(this);
+        error_message::SetErrMgrContext(context);
+        (void)error_message::GetErrMgrRawErrorMessages();
+    }
+
+    ~ScopedErrorContext()
+    {
+        (void)error_message::GetErrMgrRawErrorMessages();
+        error_message::SetErrMgrContext(savedContext_);
+    }
+
+private:
+    error_message::ErrorManagerContext savedContext_;
+};
+
+struct CapturedError {
+    size_t count = 0;
+    std::string code;
+    std::vector<std::string> keys;
+    std::vector<std::string> values;
+};
+
+// EZ0010 由 third_party/opbase 的格式注册对象提供；单算子 UT 构建时该对象可能因静态库
+// 按需链接未被拉入。这里在用例内显式注册一次，避免改动公共 UT 配置或引入 weak 桩。
+constexpr const char kEz0010ErrorMessage[] = R"json({"error_info_list":[
+    {"errClass":"Operator Errors","errTitle":"Invalid_Argument_Tensor_Shape",
+     "ErrCode":"EZ0010",
+     "ErrMessage":"Parameters %s of %s have incorrect shapes %s. Reason: %s.",
+     "Arglist":"param_names, op_name, incorrect_shapes, reason",
+     "suggestion":{"Possible Cause":"N/A","Solution":"Check whether the shapes of input/output tensors meet the relationship."}}
+]})json";
+
+CapturedError CaptureError()
+{
+    CapturedError captured;
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    captured.count = errors.size();
+    if (errors.empty()) {
+        return captured;
+    }
+    const auto& error = errors.back();
+    captured.code = error.error_id == nullptr ? "" : error.error_id.get();
+    for (const auto& key : error.args_key) {
+        captured.keys.emplace_back(key == nullptr ? "" : key.get());
+    }
+    for (const auto& value : error.args_value) {
+        captured.values.emplace_back(value == nullptr ? "" : value.get());
+    }
+    return captured;
+}
 } // namespace
-
-// 通过弱符号截获 ErrorManager 上报，校验负向路径使用正式错误码且不再产生内部码。
-namespace error_message {
-static thread_local std::string g_last_code;
-static thread_local std::string g_last_detail;
-static thread_local std::vector<std::string> g_all_codes;
-
-__attribute__((weak)) void ResetCapture()
-{
-    g_last_code.clear();
-    g_last_detail.clear();
-    g_all_codes.clear();
-}
-__attribute__((weak)) std::string GetLastError() { return g_last_code; }
-__attribute__((weak)) std::string GetLastDetail() { return g_last_detail; }
-__attribute__((weak)) bool HasCode(const std::string& c)
-{
-    for (const auto& code : g_all_codes) {
-        if (code == c) {
-            return true;
-        }
-    }
-    return false;
-}
-__attribute__((weak)) int32_t ReportPredefinedErrMsg(const char* error_code, const std::vector<const char*>&,
-                                                     const std::vector<const char*>& values)
-{
-    g_last_code = error_code ? error_code : "";
-    if (error_code != nullptr) {
-        g_all_codes.push_back(error_code);
-    }
-    std::string detail;
-    for (const auto& v : values) {
-        detail += std::string(v ? v : "") + " | ";
-    }
-    g_last_detail = detail;
-    return 0;
-}
-__attribute__((weak)) int32_t ReportPredefinedErrMsg(const char* error_code)
-{
-    g_last_code = error_code ? error_code : "";
-    if (error_code != nullptr) {
-        g_all_codes.push_back(error_code);
-    }
-    return 0;
-}
-__attribute__((weak)) int32_t ReportInnerErrMsg(const char*, const char*, uint32_t, const char* error_code, const char*,
-                                                ...)
-{
-    g_last_code = error_code ? error_code : "";
-    if (error_code != nullptr) {
-        g_all_codes.push_back(error_code);
-    }
-    return 0;
-}
-} // namespace error_message
 
 class GruGradTiling : public testing::Test {
 protected:
@@ -125,10 +129,13 @@ TEST_F(GruGradTiling, gru_grad_tiling_invalid_shape_reports_formal_code)
     optiling::GruGradCompileInfo compileInfo{};
     gert::TilingContextPara para("GruGrad", inputs, outputs, attrs, kInputIr, kOutputIr, &compileInfo, 1U, 196608ULL,
                                  8192U);
-    error_message::ResetCapture();
+    (void)error_message::RegisterFormatErrorMessage(kEz0010ErrorMessage, sizeof(kEz0010ErrorMessage) - 1);
+    ScopedErrorContext errorContext;
     ExecuteTestCase(para, ge::GRAPH_FAILED);
-    EXPECT_EQ(error_message::GetLastError(), "EZ0010") << error_message::GetLastDetail();
-    EXPECT_TRUE(error_message::HasCode("EZ0010"));
-    EXPECT_FALSE(error_message::HasCode("EZ9999"));
-    EXPECT_FALSE(error_message::HasCode("E89999"));
+    const auto error = CaptureError();
+    ASSERT_EQ(error.count, 1U);
+    EXPECT_EQ(error.code, "EZ0010");
+    // 截获的是真实 ErrorManager 记录，共享可执行文件中不再产生内部兜底码。
+    EXPECT_NE(error.code, "EZ9999");
+    EXPECT_NE(error.code, "E89999");
 }
