@@ -209,11 +209,11 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的self、indices是空指针。</td>
+      <td>传入的self、indices、gradOutput是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="11">161002</td>
+      <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="10">161002</td>
       <td>gradOutput、self、indices、gradInput的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
@@ -238,7 +238,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
       <td>padding的长度不等于1或2。</td>
     </tr>
     <tr>
-      <td>padding的数值中存在小于0或者大于kernelSize的数值</td>
+      <td>padding的数值中存在小于0或者大于kernelSize/2的数值。</td>
     </tr>
     <tr>
       <td>dilation的数值不等于1。</td>
