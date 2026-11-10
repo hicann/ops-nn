@@ -104,12 +104,18 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
 
     const gert::Shape* xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    const gert::Shape* offsetShape = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, offsetShape);
+    if (Ops::Base::IsUnknownRank(*xShape) || Ops::Base::IsUnknownRank(*offsetShape)) {
+        gert::Shape* outputShape = context->GetOutputShape(0);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+        Ops::Base::SetUnknownRank(*outputShape);
+        return GRAPH_SUCCESS;
+    }
     OP_CHECK_IF((xShape->GetDimNum() != kDimNum),
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xShape->GetDimNum()).c_str(),
                                              std::to_string(kDimNum).c_str()),
                 return ge::GRAPH_FAILED);
-    const gert::Shape* offsetShape = context->GetInputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, offsetShape);
     OP_CHECK_IF(
         (offsetShape->GetDimNum() != kDimNum),
         OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "offset", std::to_string(offsetShape->GetDimNum()).c_str(),
@@ -133,10 +139,11 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     auto padL = pads[2];
     auto padR = pads[3];
 
-    auto convOutH = (xH + padU + padD - dilKsizeH) / strideH + 1;
-    auto convOutW = (xW + padL + padR - dilKsizeW) / strideW + 1;
+    auto convOutH = (xH == ge::UNKNOWN_DIM) ? ge::UNKNOWN_DIM : (xH + padU + padD - dilKsizeH) / strideH + 1;
+    auto convOutW = (xW == ge::UNKNOWN_DIM) ? ge::UNKNOWN_DIM : (xW + padL + padR - dilKsizeW) / strideW + 1;
 
-    if ((convOutH != offsetH) || (convOutW != offsetW)) {
+    if (((convOutH != ge::UNKNOWN_DIM) && (offsetH != ge::UNKNOWN_DIM) && (convOutH != offsetH)) ||
+        ((convOutW != ge::UNKNOWN_DIM) && (offsetW != ge::UNKNOWN_DIM) && (convOutW != offsetW))) {
         OP_LOGE(context->GetNodeName(),
                 "Input_offsets h/w should be same as h/w after convolution, but now offset: [h:%ld, w:%ld]. conv_out: "
                 "[h:%ld, w:%ld].",
@@ -147,8 +154,8 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     auto outputShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
     *outputShape = *xShape;
-    outputShape->SetDim(posH, offsetH * ksizeH);
-    outputShape->SetDim(posW, offsetW * ksizeW);
+    outputShape->SetDim(posH, (offsetH == ge::UNKNOWN_DIM) ? ge::UNKNOWN_DIM : offsetH * ksizeH);
+    outputShape->SetDim(posW, (offsetW == ge::UNKNOWN_DIM) ? ge::UNKNOWN_DIM : offsetW * ksizeW);
     OP_LOGD(context->GetNodeName(), "x shape is %s, offset shape is %s, output shape is %s, dataFormat is %s",
             Ops::Base::ToString(*xShape).c_str(), Ops::Base::ToString(*offsetShape).c_str(),
             Ops::Base::ToString(*outputShape).c_str(), dataFormat);
