@@ -21,6 +21,8 @@ grad_x &= grad \cdot \frac{\partial s}{\partial x} \\
 \end{aligned}
 $$
 
+其中，公式中的 `scale` 是 Swish 系数：图模式对应可选 float 属性 `sconf`，默认值为 `1.0`；ACLNN 调用对应可选标量 `betaOptional`，为空指针时默认值为 `1.0`。
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>
@@ -54,18 +56,25 @@ $$
       <td>ND,FRACTAL_NZ,NC1HWC0</td>
     </tr>
     <tr>
-      <td>scale</td>
-      <td>输入</td>
-      <td>待进行SwishGrad计算的入参，公式中的scale。</td>
-      <td>fp32</td>
-      <td>1</td>
-    </tr>
-    <tr>
       <td>y</td>
       <td>输入</td>
       <td>待进行SwishGrad计算的入参, 暂时不参与运算。</td>
       <td>fp16、fp32、bf16</td>
       <td>ND,FRACTAL_NZ,NC1HWC0</td>
+    </tr>
+    <tr>
+      <td>sconf</td>
+      <td>属性</td>
+      <td>图模式下的可选Swish系数，对应公式中的scale，默认值为1.0。</td>
+      <td>float</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>betaOptional</td>
+      <td>ACLNN可选标量</td>
+      <td>ACLNN接口中的Swish系数，对应公式中的scale；为空指针时默认值为1.0。</td>
+      <td>可转换为FLOAT的数据类型</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>grad_x</td>
