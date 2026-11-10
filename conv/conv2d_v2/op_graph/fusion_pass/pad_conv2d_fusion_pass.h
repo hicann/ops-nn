@@ -44,7 +44,6 @@ const ge::AscendString SAME_LOWER = "SAME_LOWER";
 const ge::AscendString NOTSET = "NOTSET";
 
 const std::string FUSION_NAME = "PadConv2dFusionPass";
-const std::string DN2NZ_INTRINSIC = "Intrinsic_data_move_out2l1_dn2nz";
 
 // Only DAV_3510 needs a dedicated branch, unlisted socs keep the original behavior as DAV_RESV.
 const std::map<std::string, NpuArch> SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"Ascend350", NpuArch::DAV_3510}};
@@ -92,7 +91,6 @@ private:
     bool UpdateCubeNodes(ge::Graph& graph, ge::GNode& convNode);
     bool SetPaddingAttrs(ge::GNode& cubeNode) const;
 
-    bool hasDn2Nz = false;
     ge::GNodePtr padNode = nullptr;
     std::vector<std::vector<int64_t>> paddings = {};
     std::vector<int64_t> combinedPads = {};

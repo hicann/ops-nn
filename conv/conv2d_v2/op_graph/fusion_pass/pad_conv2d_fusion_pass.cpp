@@ -45,7 +45,6 @@ void PadConv2dFusionPass::InitMember()
 {
     npuArch = NpuArch::DAV_RESV;
     convDescInfo = ConvDescInfo();
-    hasDn2Nz = false;
     padNode = nullptr;
     paddings.clear();
     combinedPads.clear();
@@ -76,12 +75,9 @@ void PadConv2dFusionPass::InitPlatform()
     fe::OptionalInfo optionalInfo;
     if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
         PLATFORM_INFO_OK) {
-        OP_LOGW(convDescInfo.nodeNameStr, "Get platform info failed, keep default arch and no dn2nz.");
+        OP_LOGW(convDescInfo.nodeNameStr, "Get platform info failed, keep default arch.");
         return;
     }
-
-    const auto& intrinsicMap = platformInfo.ai_core_intrinsic_dtype_map;
-    hasDn2Nz = intrinsicMap.find(DN2NZ_INTRINSIC) != intrinsicMap.end();
 
     auto socIter = SOC_LIST.find(platformInfo.str_info.short_soc_version);
     if (socIter != SOC_LIST.end()) {
@@ -461,11 +457,9 @@ bool PadConv2dFusionPass::MeetRequirements(const GNode& convNode)
 
 void PadConv2dFusionPass::PrintGraphStructure() const
 {
-    OP_LOGI(FUSION_NAME,
-            "%s PadConv2dFusionPass done, pads [%ld, %ld, %ld, %ld], dn2nz [%d], with dw [%d], "
-            "with slice [%d].",
+    OP_LOGI(FUSION_NAME, "%s PadConv2dFusionPass done, pads [%ld, %ld, %ld, %ld], with dw [%d], with slice [%d].",
             convDescInfo.nodeNameStr.c_str(), combinedPads[INDEX_0], combinedPads[INDEX_1], combinedPads[INDEX_2],
-            combinedPads[INDEX_3], static_cast<int32_t>(hasDn2Nz), static_cast<int32_t>(backpropFilterNode != nullptr),
+            combinedPads[INDEX_3], static_cast<int32_t>(backpropFilterNode != nullptr),
             static_cast<int32_t>(sliceNode != nullptr));
 }
 
@@ -516,7 +510,7 @@ bool PadConv2dFusionPass::SetPaddingAttrs(GNode& cubeNode) const
                       OP_LOGE(convDescInfo.nodeNameStr, "Get cube node type failed."), return false);
 
     AscendString paddingValue = SAME;
-    if (hasDn2Nz && cubeType == CONV2D) {
+    if (cubeType == CONV2D) {
         paddingValue = EXPLICIT;
         AscendString autoPadValue = NOTSET;
         FUSION_PASS_CHECK(cubeNode.SetAttr(AUTO_PAD, autoPadValue) != GRAPH_SUCCESS,

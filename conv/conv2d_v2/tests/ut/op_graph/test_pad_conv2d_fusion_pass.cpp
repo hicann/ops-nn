@@ -735,7 +735,7 @@ TEST_F(PadConv2dFusionPassTest, combined_pad_eq_255_success)
 }
 
 // ==========================================================================================
-// Attr verification: padding / auto_pad depend on the dn2nz capability
+// Attr verification: Conv2D uses EXPLICIT+NOTSET regardless of the dn2nz capability
 // ==========================================================================================
 TEST_F(PadConv2dFusionPassTest, padding_attr_without_dn2nz)
 {
@@ -749,9 +749,10 @@ TEST_F(PadConv2dFusionPassTest, padding_attr_without_dn2nz)
     ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "Conv2D", convNode));
     std::string padding;
     EXPECT_TRUE(GraphChecker::GetNodeStringAttr(convNode, "padding", padding));
-    EXPECT_EQ(padding, "SAME");
+    EXPECT_EQ(padding, "EXPLICIT");
     std::string autoPad;
-    EXPECT_FALSE(GraphChecker::GetNodeStringAttr(convNode, "auto_pad", autoPad));
+    EXPECT_TRUE(GraphChecker::GetNodeStringAttr(convNode, "auto_pad", autoPad));
+    EXPECT_EQ(autoPad, "NOTSET");
 }
 
 TEST_F(PadConv2dFusionPassTest, padding_attr_with_dn2nz)
