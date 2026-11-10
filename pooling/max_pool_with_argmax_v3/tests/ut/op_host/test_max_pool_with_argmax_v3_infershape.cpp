@@ -15,7 +15,6 @@
 #include "kernel_run_context_facker.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
-#include "platform/platform_info.h"
 #include "../../../op_graph/max_pool_with_argmax_v3_proto.h"
 
 namespace {
@@ -194,46 +193,5 @@ TEST_F(MaxPoolWithArgmaxV3Infer, maxpool_with_argmax_v3_infershape_test_5)
     gert::Shape* indices = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
     ASSERT_EQ(Shape2String(*output), "[-2]");
     ASSERT_EQ(Shape2String(*indices), "[-2]");
-}
-
-TEST_F(MaxPoolWithArgmaxV3Infer, max_pool_with_argmax_v3_inferdtype_success_01)
-{
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optiCompilationInfo;
-    platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950PR_9589";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
-    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-
-    auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolWithArgmaxV3")->infer_datatype;
-
-    ge::DataType x_dtype = ge::DT_FLOAT16;
-    ge::DataType y_dtype = ge::DT_FLOAT16;
-    ge::DataType argmax_dtype = ge::DT_INT32;
-    ge::DataType expect_output_dtype = ge::DT_FLOAT16;
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(1, 2)
-                      .IrInstanceNum({
-                          1,
-                      })
-                      .InputDataTypes({&x_dtype})
-                      .OutputDataTypes({&y_dtype, &argmax_dtype})
-                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4})},
-                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({4, 4})},
-                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0})},
-                                  {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1})},
-                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
-                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .Build();
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_EQ(inferDtypeFunc(context), ge::GRAPH_SUCCESS);
-    ASSERT_NE(context, nullptr);
-    EXPECT_EQ(context->GetOutputDataType(0), expect_output_dtype);
 }
 } // namespace

@@ -31,7 +31,7 @@ constexpr size_t DIM_5 = 5;
 constexpr size_t LEN_1 = 1;
 constexpr size_t LEN_3 = 3;
 constexpr size_t LEN_6 = 6;
-constexpr size_t kConv3dInputSizeLimit = 5;
+constexpr size_t kAvgPool3DInputSizeLimit = 5;
 
 // NDHWC
 constexpr size_t kDDimNDHWCIdx = 1;
@@ -44,6 +44,7 @@ constexpr size_t kAvgPool3DKSizeIdx = 0;
 constexpr size_t kAvgPool3DStridesIdx = 1;
 constexpr size_t kAvgPool3DPadsIdx = 2;
 constexpr size_t kAvgPool3DCeilModeIdx = 3;
+constexpr size_t kAvgPool3DDataFormatIdx = 6;
 constexpr size_t kAvgPool3DPaddingIdx = 7;
 
 // DHWCN
@@ -68,7 +69,7 @@ using ge::Format;
 using ge::FORMAT_DHWCN;
 using ge::FORMAT_NCDHW;
 using ge::FORMAT_NDHWC;
-struct Conv3DInputShapesForAvgPool3d {
+struct AvgPool3DInputShapes {
     int64_t in = 0;
     int64_t id = 0;
     int64_t ih = 0;
@@ -82,7 +83,7 @@ struct Conv3DInputShapesForAvgPool3d {
     int64_t kc = 0;
 };
 
-struct Conv3DAttrsForAvgPool3d {
+struct AvgPool3DAttrs {
     bool ceil_mode = false; // only for AvgPool3D
 
     int64_t strd = 0;
@@ -103,15 +104,15 @@ struct Conv3DAttrsForAvgPool3d {
     int64_t padr = 0;
 };
 
-static bool GetConv3DXShape(const InferShapeContext* context, size_t x_idx, Format x_format, bool avg_pool3d,
-                            Conv3DInputShapesForAvgPool3d& shapes)
+static bool GetAvgPool3DXShape(const InferShapeContext* context, size_t x_idx, Format x_format,
+                               AvgPool3DInputShapes& shapes)
 {
     const auto x_shape = context->GetInputShape(x_idx);
     OP_CHECK_IF(
         x_shape == nullptr,
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "x", "required input x shape is missing"),
         return false);
-    if (x_shape->GetDimNum() != kConv3dInputSizeLimit) {
+    if (x_shape->GetDimNum() != kAvgPool3DInputSizeLimit) {
         OP_LOGE_FOR_INVALID_SHAPEDIM("AvgPool3D", "X", std::to_string(x_shape->GetDimNum()).c_str(), "5");
         return false;
     }
@@ -129,7 +130,7 @@ static bool GetConv3DXShape(const InferShapeContext* context, size_t x_idx, Form
         shapes.ih = x_shape->GetDim(idx++);
         shapes.iw = x_shape->GetDim(idx++);
         shapes.ic = x_shape->GetDim(idx++);
-    } else if (avg_pool3d && x_format == FORMAT_DHWCN) {
+    } else if (x_format == FORMAT_DHWCN) {
         shapes.id = x_shape->GetDim(idx++);
         shapes.ih = x_shape->GetDim(idx++);
         shapes.iw = x_shape->GetDim(idx++);
@@ -145,8 +146,8 @@ static bool GetConv3DXShape(const InferShapeContext* context, size_t x_idx, Form
     return true;
 }
 
-static void SetPads(Conv3DAttrsForAvgPool3d& attrs, int64_t padf, int64_t padb, int64_t padu, int64_t padd,
-                    int64_t padl, int64_t padr)
+static void SetPads(AvgPool3DAttrs& attrs, int64_t padf, int64_t padb, int64_t padu, int64_t padd, int64_t padl,
+                    int64_t padr)
 {
     attrs.padf = padf;
     attrs.padb = padb;
@@ -156,8 +157,8 @@ static void SetPads(Conv3DAttrsForAvgPool3d& attrs, int64_t padf, int64_t padb, 
     attrs.padr = padr;
 }
 
-static bool GetConv3DPads(const InferShapeContext* context, const Conv3DInputShapesForAvgPool3d& shapes,
-                          size_t pads_idx, size_t padding_idx, Conv3DAttrsForAvgPool3d& attrs)
+static bool GetAvgPool3DPads(const InferShapeContext* context, const AvgPool3DInputShapes& shapes, size_t pads_idx,
+                             size_t padding_idx, AvgPool3DAttrs& attrs)
 {
     const auto runtime_attrs = context->GetAttrs();
     OP_CHECK_IF(runtime_attrs == nullptr,
@@ -220,8 +221,7 @@ static bool GetConv3DPads(const InferShapeContext* context, const Conv3DInputSha
     return true;
 }
 
-static bool GetStridesForAvgPool3D(const InferShapeContext* context, ge::Format x_format,
-                                   Conv3DAttrsForAvgPool3d& attrs)
+static bool GetStridesForAvgPool3D(const InferShapeContext* context, ge::Format x_format, AvgPool3DAttrs& attrs)
 {
     const auto runtime_attrs = context->GetAttrs();
     OP_CHECK_IF(runtime_attrs == nullptr,
@@ -247,7 +247,7 @@ static bool GetStridesForAvgPool3D(const InferShapeContext* context, ge::Format 
         attrs.strd = strides_list_data[idx++];
         attrs.strh = strides_list_data[idx++];
         attrs.strw = strides_list_data[idx++];
-    } else if (strides_list->GetSize() == kConv3dInputSizeLimit) {
+    } else if (strides_list->GetSize() == kAvgPool3DInputSizeLimit) {
         if (x_format == ge::FORMAT_NCDHW) {
             attrs.strd = strides_list_data[kDDimNCDHWIdx];
             attrs.strh = strides_list_data[kHDimNCDHWIdx];
@@ -275,7 +275,7 @@ static bool GetStridesForAvgPool3D(const InferShapeContext* context, ge::Format 
     return true;
 }
 
-static bool GetKSize(const InferShapeContext* context, ge::Format x_format, Conv3DInputShapesForAvgPool3d& shapes)
+static bool GetKSize(const InferShapeContext* context, ge::Format x_format, AvgPool3DInputShapes& shapes)
 {
     const auto runtime_attrs = context->GetAttrs();
     OP_CHECK_IF(runtime_attrs == nullptr,
@@ -291,7 +291,7 @@ static bool GetKSize(const InferShapeContext* context, ge::Format x_format, Conv
                                                          "required parameter ksize is missing"),
                 return false);
     if (ksize_list->GetSize() != LEN_1 && ksize_list->GetSize() != kDHWSizeLimit &&
-        ksize_list->GetSize() != kConv3dInputSizeLimit) {
+        ksize_list->GetSize() != kAvgPool3DInputSizeLimit) {
         OP_LOGE_FOR_INVALID_LISTSIZE("AvgPool3D", "Size of ksize", std::to_string(ksize_list->GetSize()).c_str(),
                                      "[1, 3, 5]");
         return false;
@@ -307,7 +307,7 @@ static bool GetKSize(const InferShapeContext* context, ge::Format x_format, Conv
         shapes.kd = ksize_list_data[idx++];
         shapes.kh = ksize_list_data[idx++];
         shapes.kw = ksize_list_data[idx++];
-    } else if (ksize_list->GetSize() == kConv3dInputSizeLimit) {
+    } else if (ksize_list->GetSize() == kAvgPool3DInputSizeLimit) {
         if (x_format == ge::FORMAT_NCDHW) {
             shapes.kd = ksize_list_data[kDDimNCDHWIdx];
             shapes.kh = ksize_list_data[kHDimNCDHWIdx];
@@ -353,8 +353,8 @@ static int64_t CalcAvgPool3DOutDim(int64_t inDim, int64_t padFront, int64_t padB
     return outDim;
 }
 
-static bool CalcAvgPool3DOutputShape(const char* op_name, const Conv3DInputShapesForAvgPool3d& shapes,
-                                     const Conv3DAttrsForAvgPool3d& attrs, ge::Format y_format, gert::Shape* y_shape)
+static bool CalcAvgPool3DOutputShape(const char* op_name, const AvgPool3DInputShapes& shapes,
+                                     const AvgPool3DAttrs& attrs, ge::Format y_format, gert::Shape* y_shape)
 {
     int64_t outd = CalcAvgPool3DOutDim(shapes.id, attrs.padf, attrs.padb, shapes.kd, attrs.strd, attrs.ceil_mode);
     int64_t outh = CalcAvgPool3DOutDim(shapes.ih, attrs.padu, attrs.padd, shapes.kh, attrs.strh, attrs.ceil_mode);
@@ -389,6 +389,34 @@ static bool CalcAvgPool3DOutputShape(const char* op_name, const Conv3DInputShape
     return true;
 }
 
+static bool ResolveAvgPool3DFormat(const InferShapeContext* context, ge::Format format, ge::Format& resolvedFormat)
+{
+    if (format != ge::FORMAT_ND) {
+        resolvedFormat = format;
+        return true;
+    }
+    const auto runtime_attrs = context->GetAttrs();
+    const auto data_format = runtime_attrs == nullptr ? nullptr :
+                                                        runtime_attrs->GetAttrPointer<char>(kAvgPool3DDataFormatIdx);
+    if (data_format == nullptr || strcmp(data_format, "NDHWC") == 0) {
+        // 属性缺省时取 def 注册默认值 NDHWC
+        resolvedFormat = ge::FORMAT_NDHWC;
+        return true;
+    }
+    if (strcmp(data_format, "NCDHW") == 0) {
+        resolvedFormat = ge::FORMAT_NCDHW;
+        return true;
+    }
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("AvgPool3D", "data_format", data_format,
+                                          "The value of data_format should be NDHWC or NCDHW when format is ND");
+    REPORT_PREDEFINED_ERR_MSG("EZ0026",
+                              (std::vector<const char*>{"param_name", "op_name", "incorrect_value", "reason"}),
+                              (std::vector<const char*>{"data_format", "AvgPool3D", data_format,
+                                                        "The value of data_format should be NDHWC or NCDHW when "
+                                                        "format is ND"}));
+    return false;
+}
+
 static ge::graphStatus InferShapeForAvgPool3D(InferShapeContext* context)
 {
     if (context == nullptr) {
@@ -416,7 +444,10 @@ static ge::graphStatus InferShapeForAvgPool3D(InferShapeContext* context)
         x_desc == nullptr,
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "x", "required input x descriptor is missing"),
         return ge::GRAPH_FAILED);
-    const auto x_format = x_desc->GetOriginFormat();
+    ge::Format x_format = ge::FORMAT_ND;
+    if (!ResolveAvgPool3DFormat(context, x_desc->GetOriginFormat(), x_format)) {
+        return ge::GRAPH_FAILED;
+    }
 
     const auto y_shape = context->GetOutputShape(0);
     OP_CHECK_IF(
@@ -440,14 +471,17 @@ static ge::graphStatus InferShapeForAvgPool3D(InferShapeContext* context)
             "EZ1014", (std::vector<const char*>{"opName", "reason"}),
             (std::vector<const char*>{context->GetNodeName(), "y_desc is null; shape/type inference cannot continue"})),
         return ge::GRAPH_FAILED);
-    const auto y_format = y_desc->GetOriginFormat();
+    ge::Format y_format = ge::FORMAT_ND;
+    if (!ResolveAvgPool3DFormat(context, y_desc->GetOriginFormat(), y_format)) {
+        return ge::GRAPH_FAILED;
+    }
 
-    Conv3DInputShapesForAvgPool3d shapes;
-    Conv3DAttrsForAvgPool3d attrs;
+    AvgPool3DInputShapes shapes;
+    AvgPool3DAttrs attrs;
     attrs.ceil_mode = *ceil_mode;
-    if (GetConv3DXShape(context, 0UL, x_format, true, shapes) && GetKSize(context, x_format, shapes) &&
+    if (GetAvgPool3DXShape(context, 0UL, x_format, shapes) && GetKSize(context, x_format, shapes) &&
         GetStridesForAvgPool3D(context, x_format, attrs) &&
-        GetConv3DPads(context, shapes, kAvgPool3DPadsIdx, kAvgPool3DPaddingIdx, attrs) &&
+        GetAvgPool3DPads(context, shapes, kAvgPool3DPadsIdx, kAvgPool3DPaddingIdx, attrs) &&
         CalcAvgPool3DOutputShape(op_name, shapes, attrs, y_format, y_shape)) {
         OP_LOGD(context->GetNodeName(), "y_shape: %s", Shape2String(*y_shape).c_str());
         return ge::GRAPH_SUCCESS;

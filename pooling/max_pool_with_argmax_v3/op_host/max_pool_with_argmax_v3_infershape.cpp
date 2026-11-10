@@ -25,7 +25,6 @@ namespace ops {
 static constexpr size_t INDEX_KSIZE = 0;
 static constexpr size_t INDEX_STRIDES = 1;
 static constexpr size_t INDEX_PADS = 2;
-static constexpr size_t INDEX_DTYPE = 3;
 static constexpr size_t INDEX_DILATION = 4;
 static constexpr size_t INDEX_CEIL_MODE = 5;
 static constexpr size_t INDEX_DATA_FORMAT = 6;
@@ -39,8 +38,6 @@ static constexpr size_t PARAM_W_DIM = 1;
 static constexpr size_t SHAPE_H_DIM = 2;
 static constexpr size_t SHAPE_W_DIM = 3;
 static constexpr size_t CHW_DIM = 3;
-static constexpr size_t INT32_DTYPE = 3;
-static constexpr size_t INT64_DTYPE = 9;
 
 static int64_t DivRtn(int64_t x, int64_t y)
 {
@@ -237,35 +234,5 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForMaxPoolWithArgmaxV3(gert::InferDataTypeContext* context)
-{
-    if (context == nullptr) {
-        return GRAPH_FAILED;
-    }
-
-    const ge::DataType x = context->GetInputDataType(0);
-    context->SetOutputDataType(INDEX_OUT_MAX, x);
-
-    auto attrsPtr = context->GetAttrs();
-    OP_CHECK_IF(
-        attrsPtr == nullptr,
-        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(Ops::Base::GetOpInfo(context).c_str(), "attributes",
-                                                 "required input, descriptor, attribute or attribute data is missing"),
-        return ge::GRAPH_FAILED);
-    const int64_t* dstDtype = attrsPtr->GetAttrPointer<int64_t>(INDEX_DTYPE);
-    OP_CHECK_IF(
-        dstDtype == nullptr,
-        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(Ops::Base::GetOpInfo(context).c_str(), "dtype",
-                                                 "required input, descriptor, attribute or attribute data is missing"),
-        return ge::GRAPH_FAILED);
-    ge::DataType indicesDtype = *dstDtype == INT32_DTYPE ? ge::DT_INT32 : ge::DT_INT64;
-
-    context->SetOutputDataType(INDEX_OUT_INDICES, indicesDtype);
-
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(MaxPoolWithArgmaxV3)
-    .InferShape(InferShapeForMaxPoolWithArgmaxV3)
-    .InferDataType(InferDataTypeForMaxPoolWithArgmaxV3);
+IMPL_OP_INFERSHAPE(MaxPoolWithArgmaxV3).InferShape(InferShapeForMaxPoolWithArgmaxV3);
 } // namespace ops

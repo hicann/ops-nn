@@ -75,8 +75,10 @@ def max_pool_with_argmax_v3_golden(
     ):
         pass
 
-    # NHWC -> NCHW
-    if input_x_format == "NHWC":
+    # NHWC -> NCHW（ND 格式下布局由 data_format 属性决定）
+    if input_x_format == "NHWC" or (
+        input_x_format == "ND" and attr_op_format == "NHWC"
+    ):
         input_x = input_x.transpose(0, 3, 1, 2)
     # numpy -> torch
     if "float16" == str(inpu_x_dtype) or "bfloat16" == str(inpu_x_dtype):
@@ -100,7 +102,7 @@ def max_pool_with_argmax_v3_golden(
     else:
         out_y = max_out.numpy().astype(inpu_x_dtype)
     # NCHW -> NHWC
-    if out_y_format == "NHWC":
+    if out_y_format == "NHWC" or (out_y_format == "ND" and attr_op_format == "NHWC"):
         out_y = out_y.transpose(0, 2, 3, 1)
 
     if attr_op_dtype == 3 or attr_op_dtype is None:
@@ -111,7 +113,9 @@ def max_pool_with_argmax_v3_golden(
         out_argmax = max_indices.numpy()
 
     # NCHW -> NHWC
-    if out_argmax_format == "NHWC":
+    if out_argmax_format == "NHWC" or (
+        out_argmax_format == "ND" and attr_op_format == "NHWC"
+    ):
         out_argmax = out_argmax.transpose(0, 2, 3, 1)
 
     return out_y, out_argmax
