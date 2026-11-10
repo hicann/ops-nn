@@ -483,7 +483,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>weightOptional（aclTensor*）</td>
@@ -493,7 +493,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>groupIndexOptional（aclTensor*）</td>

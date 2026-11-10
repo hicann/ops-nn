@@ -122,7 +122,7 @@ cann_ops_nn.swiglu_group_quant(
 - 所有支持的`quant_mode`均可通过`output_origin=True`输出weight加权前的`y_origin`。
 - group_index中的元素值须大于等于0。
 - quant_mode为0、1时，x、weight支持为空Tensor，group_index不支持单独为空Tensor；quant_mode为2、3时不支持空Tensor。
-- quant_mode=5的Torch接口支持非连续`x`和`weight`；其他模式不支持非连续Tensor。
+- 输入`x`和`weight`支持非连续Tensor；`group_index`和`scale`不支持非连续Tensor。
 
 ## 确定性计算
 

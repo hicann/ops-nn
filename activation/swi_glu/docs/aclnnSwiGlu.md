@@ -87,7 +87,7 @@ aclnnStatus aclnnSwiGlu(
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>-</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
       <tr>
       <td>dim（int64_t）</td>

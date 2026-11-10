@@ -116,7 +116,7 @@ where `D = x.shape[-1]`.
 - When `quant_mode=3`, `group_index` can be used for group dynamic quantization in MoE use cases. The shape of `y_scale` is `group_index.shape`, or `[1]` when `group_index` is not passed.
 - When `clamp_limit` is disabled, the default placeholder value `-1.0` is used; when enabled, it must be greater than 0.
 - Element values in group_index must be greater than or equal to 0.
-- Non-contiguous tensors are not supported.
+- Inputs `x` and `weight` support non-contiguous tensors. Non-contiguous `group_index` and `scale` are not supported.
 - When quant_mode is 0 or 1, empty tensors are supported for x and weight, but group_index cannot be an empty tensor alone.
 
 ## Deterministic Computation
