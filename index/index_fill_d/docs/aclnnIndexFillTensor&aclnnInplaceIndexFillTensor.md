@@ -145,7 +145,7 @@ aclnnStatus aclnnInplaceIndexFillTensor(
         <td>index</td>
         <td>输入</td>
         <td>指定self在dim维度将要填充的下标。</td>
-        <td>其中的元素值小于self对应dim的维度大小。</td>
+        <td>其中的元素值小于self对应dim的维度大小。当index为空数组（数组长度为0）时，不填充任何位置，输出与输入一致。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -329,7 +329,7 @@ aclnnStatus aclnnInplaceIndexFillTensor(
         <td>index</td>
         <td>输入</td>
         <td>指定self在dim维度将要填充的下标。</td>
-        <td>其中的元素值小于selfRef对应的dim的维度大小。</td>
+        <td>其中的元素值小于selfRef对应的dim的维度大小。当index为空数组（数组长度为0）时，不填充任何位置，输出与输入一致。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>

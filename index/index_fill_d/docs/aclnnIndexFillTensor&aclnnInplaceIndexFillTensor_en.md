@@ -147,7 +147,7 @@ aclnnStatus aclnnInplaceIndexFillTensor(
         <td>index</td>
         <td>Input</td>
         <td>Specifies the indices along dim to fill in self.</td>
-        <td>The element values must be smaller than the size of self along dim.</td>
+        <td>The element values must be smaller than the size of self along dim. When index is an empty array (array length is 0), no position is filled and the output is the same as the input.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -331,7 +331,7 @@ aclnnStatus aclnnInplaceIndexFillTensor(
         <td>index</td>
         <td>Input</td>
         <td>Specifies the indices along the dim dimension of self to be filled.</td>
-        <td>Each element value is less than the size of the dim dimension corresponding to selfRef.</td>
+        <td>Each element value is less than the size of the dim dimension corresponding to selfRef. When index is an empty array (array length is 0), no position is filled and the output is the same as the input.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>

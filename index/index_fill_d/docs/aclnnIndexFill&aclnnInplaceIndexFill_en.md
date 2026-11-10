@@ -144,7 +144,7 @@
         <td>index</td>
         <td>Input</td>
         <td>Specifies the indices to fill self along dim.</td>
-        <td>Each element value is smaller than the dimension size of self along dim. Negative values are supported. Out-of-bound values are allowed and directly skipped.</td>
+        <td>Each element value is smaller than the dimension size of self along dim. Negative values are supported. Out-of-bound values are allowed and directly skipped. When index is an empty array (array length is 0), no position is filled and the output is the same as the input.</td>
         <td>INT32, INT64</td>
         <td>-</td>
         <td>-</td>
@@ -331,7 +331,7 @@
         <td>index</td>
         <td>input</td>
         <td>Specifies the indices used to fill self along the dim dimension.</td>
-        <td>Each element value is smaller than the size of the dim dimension in self. Negative values are supported. Values that exceed the dimension size are supported and skipped directly.</td>
+        <td>Each element value is smaller than the size of the dim dimension in self. Negative values are supported. Values that exceed the dimension size are supported and skipped directly. When index is an empty array (array length is 0), no position is filled and the output is the same as the input.</td>
         <td>INT32, INT64</td>
         <td>-</td>
         <td>-</td>
