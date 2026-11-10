@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
+#include "conv/common/op_graph/fusion_pass/tensor_desc_origin_dtype_api.h"
 #include "platform/platform_info.h"
 #include "register/register_custom_pass.h"
 #include "version/ge-compiler_version.h"
@@ -35,13 +36,12 @@ using namespace fusion;
 
 namespace {
 
+// Syncs the origin dtype when the public API is available; old GE has no origin dtype field.
 void SyncOriginDataType(TensorDesc& desc)
 {
-#if GE_COMPILER_VERSION_NUM >= 90300000U
-    if (desc.GetOriginDataType() == DT_UNDEFINED) {
-        desc.SetOriginDataType(desc.GetDataType());
+    if (Conv::GetOriginDataType(desc) == DT_UNDEFINED) {
+        Conv::SetOriginDataType(desc, desc.GetDataType());
     }
-#endif
 }
 
 bool IsConstCandidate(const GNode& consumer, int32_t inputIndex)

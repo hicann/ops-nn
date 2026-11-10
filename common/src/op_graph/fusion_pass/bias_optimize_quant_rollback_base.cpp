@@ -31,6 +31,16 @@
 #include "platform/platform_info.h"
 #include "platform/platform_infos_def.h"
 
+// Weakly import the public TensorDesc origin-dtype methods so a GE runtime without them can still
+// load this plugin: the version macro below compiles the calls out against old headers, and these
+// weak references resolve to null on old runtimes (null-checked in SetOriginDtype/GetOriginDtype).
+namespace ops {
+namespace bias_quant_rollback_public_api {
+extern void GetOriginDataType() __asm__("_ZNK2ge10TensorDesc17GetOriginDataTypeEv") __attribute__((weak));
+extern void SetOriginDataType() __asm__("_ZN2ge10TensorDesc17SetOriginDataTypeENS_8DataTypeE") __attribute__((weak));
+} // namespace bias_quant_rollback_public_api
+} // namespace ops
+
 namespace ops {
 namespace {
 constexpr const char* const kLogTag = "BiasOptQuant";
@@ -126,6 +136,10 @@ uint64_t GetHostCpuAtomicId() { return gHostCpuAtomicId.fetch_add(1U); }
 void SetOriginDtype(ge::TensorDesc& desc, const ge::DataType& dstDtype)
 {
 #if GE_COMPILER_VERSION_NUM >= 90300000U
+    if (bias_quant_rollback_public_api::GetOriginDataType == nullptr ||
+        bias_quant_rollback_public_api::SetOriginDataType == nullptr) {
+        return;
+    }
     if (desc.GetOriginDataType() != dstDtype) {
         desc.SetOriginDataType(dstDtype);
     }
@@ -135,10 +149,12 @@ void SetOriginDtype(ge::TensorDesc& desc, const ge::DataType& dstDtype)
 ge::DataType GetOriginDtype(const ge::TensorDesc& desc)
 {
 #if GE_COMPILER_VERSION_NUM >= 90300000U
-    return desc.GetOriginDataType();
-#else
-    return desc.GetDataType();
+    if (bias_quant_rollback_public_api::GetOriginDataType != nullptr &&
+        bias_quant_rollback_public_api::SetOriginDataType != nullptr) {
+        return desc.GetOriginDataType();
+    }
 #endif
+    return desc.GetDataType();
 }
 
 std::string NodeName(const ge::GNode& node)

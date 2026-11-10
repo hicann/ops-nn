@@ -10,6 +10,7 @@
 
 #include "conv3d_quant_process_fusion_pass.h"
 
+#include "conv/common/op_graph/fusion_pass/tensor_desc_origin_dtype_api.h"
 #include "register/register_custom_pass.h"
 #include "version/ge-compiler_version.h"
 
@@ -197,9 +198,7 @@ ge::Status Conv3DQuantProcessFusionPass::SetPadNodeDataType(ge::GNode& padNode) 
     FUSION_PASS_CHECK(padNode.GetInputDesc(INPUT_FMAP_INDEX, padInDesc) != GRAPH_SUCCESS,
                       OP_LOGE(FUSION_NAME, "Get pad input desc failed."), return FAILED);
     padInDesc.SetDataType(ge::DT_FLOAT16);
-#if GE_COMPILER_VERSION_NUM >= 90300000U
-    padInDesc.SetOriginDataType(ge::DT_FLOAT16);
-#endif
+    SetOriginDataType(padInDesc, ge::DT_FLOAT16);
     FUSION_PASS_CHECK(padNode.UpdateInputDesc(INPUT_FMAP_INDEX, padInDesc) != GRAPH_SUCCESS,
                       OP_LOGE(FUSION_NAME, "Fail to update input desc of pad node."), return FAILED);
 
@@ -207,9 +206,7 @@ ge::Status Conv3DQuantProcessFusionPass::SetPadNodeDataType(ge::GNode& padNode) 
     FUSION_PASS_CHECK(padNode.GetOutputDesc(OUTPUT_INDEX, padOutDesc) != GRAPH_SUCCESS,
                       OP_LOGE(FUSION_NAME, "Get pad output desc failed."), return FAILED);
     padOutDesc.SetDataType(ge::DT_FLOAT16);
-#if GE_COMPILER_VERSION_NUM >= 90300000U
-    padOutDesc.SetOriginDataType(ge::DT_FLOAT16);
-#endif
+    SetOriginDataType(padOutDesc, ge::DT_FLOAT16);
     FUSION_PASS_CHECK(padNode.UpdateOutputDesc(OUTPUT_INDEX, padOutDesc) != GRAPH_SUCCESS,
                       OP_LOGE(FUSION_NAME, "Fail to update output desc of pad node."), return FAILED);
 

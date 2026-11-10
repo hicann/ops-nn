@@ -13,6 +13,7 @@
 #include "ge/compliant_node_builder.h"
 #include "platform/platform_info.h"
 #include "runtime/runtime/base.h"
+#include "tensor_desc_origin_dtype_api.h"
 #include "version/ge-compiler_version.h"
 
 namespace Ops {
@@ -588,11 +589,7 @@ bool ConvFusionUtilsPass::CopyDumpOutputMapping(const GNode& source, GNode& targ
     AscendString dtype;
     if (!readText("_datadump_origin_data_type", dtype) ||
         TypeUtils::SerialStringToDataType(dtype.GetString()) == DT_UNDEFINED) {
-#if GE_COMPILER_VERSION_NUM >= 90300000U
-        const auto originType = desc.GetOriginDataType();
-#else
-        const auto originType = DT_UNDEFINED;
-#endif
+        const auto originType = GetOriginDataType(desc);
         dtype = AscendString(originType == DT_UNDEFINED ? "RESERVED" :
                                                           TypeUtils::DataTypeToSerialString(originType).c_str());
     }
