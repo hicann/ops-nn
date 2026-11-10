@@ -24,6 +24,7 @@ constexpr static int64_t BLOCK_SIZE = 32;
 constexpr static int64_t BLOCK_ELEM = BLOCK_SIZE / sizeof(float);
 constexpr static int64_t SWI_FACTOR = 2;
 constexpr static int64_t DTYPE_FACTOR = 2;
+constexpr static int64_t ZERO_CHUNK_BYTES = 65535 / BLOCK_SIZE * BLOCK_SIZE;
 
 template <typename inType>
 class ClippedSwigluBase {
@@ -42,6 +43,8 @@ public:
                                    LocalTensor<float>& yFloatLocal);
     __aicore__ inline void GetAB(LocalTensor<float>& tmpA, LocalTensor<float>& tmpB, LocalTensor<float>& xFloatLocal);
     __aicore__ inline void CopyOut(int64_t yOffset);
+    __aicore__ inline void InitZeroBuffer();
+    __aicore__ inline void ZeroInvalidRows();
 
 protected:
     /* global memory address */
@@ -56,6 +59,7 @@ protected:
     TQue<QuePosition::VECOUT, 1> yQueue_;
     TBuf<TPosition::VECCALC> tmpBuf1_;
     TBuf<TPosition::VECCALC> tmpBuf2_;
+    TBuf<TPosition::VECCALC> zeroBuf_;
 
     uint32_t blockIdx_ = GetBlockIdx();
     uint32_t usedCoreNum_ = 0;
@@ -157,11 +161,27 @@ __aicore__ inline void ClippedSwigluBase<inType>::Process()
             }
         }
     }
+
+    // group 未覆盖 batch 时，kernel 侧仅补零未覆盖行（与 grad 侧 ZeroInvalidRows 机制对齐）。
+    // 非 group 路径核间无依赖，跳过 SyncAll，避免空闲核在屏障汇合（tiling 侧仅 group 分支设置 batch mode）
+    if (tl_->isGroup == 1) {
+        SyncAll();
+        if (realBatchSize_ < tl_->dimBatchSize) {
+            InitZeroBuffer();
+            ZeroInvalidRows();
+        }
+    }
 }
 
 template <typename inType>
 __aicore__ inline void ClippedSwigluBase<inType>::CalTilingParam()
 {
+    // 非空但 sum=0 的 group_index（如 [0]）会得到 realBatchSize_=0，
+    // 此时计算切分退化：usedCoreNum_=0，所有核不进入计算循环，统一走 SyncAll 后的补零分支
+    if (realBatchSize_ == 0) {
+        usedCoreNum_ = 0;
+        return;
+    }
     // 前后排列
     if (tl_->isInterleaved == 0) {
         // 核间batch切分
@@ -374,6 +394,67 @@ __aicore__ inline void ClippedSwigluBase<inType>::CopyOut(int64_t yOffset)
     }
     DataCopyPad(yGm_[yOffset], yDTypeLocal, dataCopyParams);
     yQueue_.FreeTensor(yDTypeLocal);
+}
+
+template <typename inType>
+__aicore__ inline void ClippedSwigluBase<inType>::InitZeroBuffer()
+{
+    // 计算完成后重用 pipe: 清掉计算阶段的队列缓冲，只保留 zeroBuf_
+    pipe_->Reset();
+    int64_t elemBytes = static_cast<int64_t>(sizeof(inType));
+    int64_t chunkElems = ZERO_CHUNK_BYTES / elemBytes;
+    int64_t zeroBufSize = AlignBytes(ZERO_CHUNK_BYTES);
+    pipe_->InitBuffer(zeroBuf_, zeroBufSize);
+    LocalTensor<inType> zeroLocal = zeroBuf_.Get<inType>();
+    Duplicate(zeroLocal, static_cast<inType>(0), chunkElems);
+    event_t vToMte3 = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::V_MTE3>());
+    SetFlag<HardEvent::V_MTE3>(vToMte3);
+    WaitFlag<HardEvent::V_MTE3>(vToMte3);
+    GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE3>(vToMte3);
+}
+
+template <typename inType>
+__aicore__ inline void ClippedSwigluBase<inType>::ZeroInvalidRows()
+{
+    // 仅补零 [realBatchSize_, dimBatchSize) 区间的行，各核按 coreNumAll 均摊（对齐 grad 侧实现）
+    int64_t invalidRows = tl_->dimBatchSize - realBatchSize_;
+    if (invalidRows <= 0) {
+        return;
+    }
+    int64_t coreNum = static_cast<int64_t>(tl_->coreNumAll);
+    int64_t blockIdx = static_cast<int64_t>(blockIdx_);
+    int64_t base = invalidRows / coreNum;
+    int64_t remainder = invalidRows % coreNum;
+    int64_t rowsToZero = base + (blockIdx < remainder ? 1 : 0);
+    if (rowsToZero <= 0) {
+        return;
+    }
+    int64_t zeroStartRow = realBatchSize_ + blockIdx * base + (blockIdx < remainder ? blockIdx : remainder);
+
+    LocalTensor<inType> zeroLocal = zeroBuf_.Get<inType>();
+    DataCopyParams params;
+    params.blockCount = 1;
+    params.srcStride = 0;
+    params.dstStride = 0;
+    int64_t elemBytes = static_cast<int64_t>(sizeof(inType));
+    int64_t chunkElems = ZERO_CHUNK_BYTES / elemBytes;
+    int64_t rowLen = dimH_; // y 每行元素数（dim2H / SWI_FACTOR）
+    int64_t fullChunks = rowLen / chunkElems;
+    int64_t tailElems = rowLen % chunkElems;
+
+    for (int64_t row = 0; row < rowsToZero; ++row) {
+        int64_t rowBase = (zeroStartRow + row) * rowLen;
+        int64_t off = 0;
+        for (int64_t c = 0; c < fullChunks; ++c) {
+            params.blockLen = ZERO_CHUNK_BYTES;
+            DataCopyPad(yGm_[rowBase + off], zeroLocal, params);
+            off += chunkElems;
+        }
+        if (tailElems > 0) {
+            params.blockLen = tailElems * elemBytes;
+            DataCopyPad(yGm_[rowBase + off], zeroLocal, params);
+        }
+    }
 }
 
 } // namespace ClippedSwigluOps

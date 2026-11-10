@@ -37,6 +37,7 @@ constexpr int64_t DTYPE_FACTOR = 2;
 constexpr int64_t UB_RESERVE = 1024;
 constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t SIZE_OF_BF16_FP16 = 2;
+constexpr int64_t BATCH_MODE = 1;
 
 constexpr float CLAMP_LIMIT_DEFAULT = 7.0;
 constexpr float GLU_ALPHA_DEFAULT = 1.702;
@@ -120,6 +121,14 @@ ge::graphStatus ClippedSwigluTiling::PostTiling()
 {
     context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(coreNumAll_);
+    if (isGroup_ == 1) {
+        // group 路径 kernel 使用 SyncAll 核间同步，需设置为 batch mode；
+        // 非 group 路径核间无依赖，保持默认调度，避免多余的同步开销
+        uint32_t batchMode = static_cast<uint32_t>(BATCH_MODE);
+        auto scheduleRet = context_->SetScheduleMode(batchMode);
+        OP_CHECK_IF(scheduleRet != ge::GRAPH_SUCCESS, OP_LOGE(context_, "SetScheduleMode error"),
+                    return ge::GRAPH_FAILED);
+    }
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     workspaces[0] = workspaceSize_;
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());

@@ -53,6 +53,8 @@ at::Tensor clipped_swiglu(const at::Tensor& x, const c10::optional<at::Tensor>& 
     TORCH_CHECK(x.size(dim) % NUM_TWO == 0, "x size at dim ", dim, " must be even, but got ", x.size(dim));
     auto y_shape = op_infer::array_to_small_vector(x.sizes());
     y_shape[dim] /= NUM_TWO;
+    // kernel 侧在 group 未覆盖 batch 时由 ZeroInvalidRows() 补零未覆盖行
+    // (对齐 grad 侧 clipped_swiglu_grad_base.h 机制), host 侧无需初始化
     at::Tensor y = at::empty(y_shape, x.options());
 
     static bool npu_support_v2 = check_aclnn_kernel_available("aclnnClippedSwigluV2");
