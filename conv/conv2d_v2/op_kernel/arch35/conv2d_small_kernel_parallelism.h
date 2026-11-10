@@ -62,7 +62,7 @@ protected:
                                                uint32_t padBottom, uint32_t woOff, int32_t padLeft, int32_t padRight,
                                                uint32_t curWi, uint32_t curCin);
     __aicore__ inline uint32_t CalcKL0();
-    __aicore__ inline void SetupL1SplitLayout();
+    __aicore__ inline void SetupL1SplitLayout(uint32_t al1BufCount = 2);
     __aicore__ inline uint32_t ApplyL1SplitLayout(uint32_t al1BufCount);
     __aicore__ inline void PrepareCinBlock(uint32_t kl1, uint32_t kernelHxW, uint32_t& cinOff, uint32_t& curCin,
                                            uint32_t& curCinOri, uint32_t& kOff, uint32_t& curKL1, uint32_t& kl1Buf,
@@ -107,6 +107,11 @@ protected:
     uint32_t al1BufBytes_;
     uint32_t al1ElemPerBuf_;
     uint32_t l1Pingpong_ = 0;
+    // AL1 ping-pong switch, set by derived templates whose per-buffer size comes from
+    // the tiling (fm_partload: al1BufBytes_ = aL1SpaceSize) to mirror pBufferFlag bit3
+    // (AL1_DB): single A1 buffer with serialized cin-block preloads when the bit is off.
+    // Defaults to true; self-splitting users of this base keep the double buffer.
+    bool al1Db_ = true;
 
     GlobalTensor<FmapType> fmapGm_;
     GlobalTensor<weightType> filterGm_;
@@ -194,10 +199,13 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
           bool isNHWCin, bool isNHWCout, bool IsHwMode>
 __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin,
-                                                    isNHWCout, IsHwMode>::SetupL1SplitLayout()
+                                                    isNHWCout, IsHwMode>::SetupL1SplitLayout(uint32_t al1BufCount)
 {
     this->bl1ElemCount_ = this->k1Total_ * this->n1PerCore_ * GN0 * this->GK0;
-    ApplyL1SplitLayout(2);
+    // Double buffer by default; fm_partload passes 1 when the tiling's pBufferFlag
+    // bit3 (AL1_DB) leaves AL1 double buffering off, because its per-buffer size
+    // (aL1SpaceSize) is then budgeted for a single A1 buffer by the tiling side.
+    ApplyL1SplitLayout(al1BufCount);
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
@@ -378,7 +386,7 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
 
     kOff = cinOff * kernelHxW;
     curKL1 = curCin * kernelHxW;
-    kl1Buf = this->l1Pingpong_ % 2;
+    kl1Buf = this->al1Db_ ? (this->l1Pingpong_ % 2) : 0;
     kl1Ev = kl1Buf == 0 ? EVT_FMAP_BUF0 : EVT_FMAP_BUF1;
 }
 
@@ -481,7 +489,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
             p.ndNum = curHi;
             p.nValue = curWi;
             p.srcNdMatrixStride = static_cast<uint32_t>(t.win * t.cin);
-            p.dstNzMatrixStride = curWi * this->GK0;
+            p.dstNzMatrixStride = curWi * this->GK0Fmap;
         }
         p.dValue = curCin;
         p.srcDValue = static_cast<uint32_t>(t.cin);
@@ -505,7 +513,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
             p.dnNum = curHi;
             p.nValue = curWi;
             p.srcDnMatrixStride = static_cast<uint32_t>(t.win);
-            p.dstNzMatrixStride = curWi * this->GK0;
+            p.dstNzMatrixStride = curWi * this->GK0Fmap;
         }
         p.dValue = curCin;
         p.srcDValue = static_cast<uint32_t>(t.hin * t.win);
@@ -721,10 +729,14 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
 
     // Cin blocks [0, N-1): preload the next cin block into the alternate buffer while
     // MTE1/MMAD consume the current one — no bounds check needed inside this range.
+    // Single-buffer A1 (AL1 ping-pong off in pBufferFlag): the preload must wait until
+    // the current block's L0 loop releases the buffer, so it is issued after RunKL0Loop.
     for (uint32_t kl1 = 0; kl1 < cinL1Blocks_ - 1; kl1++) {
         PrepareCinBlock(kl1, kernelHxW, cinOff, curCin, curCinOri, kOff, curKL1, kl1Buf, kl1Ev);
-        PrefetchCinBlock(kl1 + 1, kernelHxW, curHi, hiLoadOff, curWi, wiLoadOff, (this->l1Pingpong_ + 1) % 2,
-                         loadWeight);
+        if (al1Db_) {
+            PrefetchCinBlock(kl1 + 1, kernelHxW, curHi, hiLoadOff, curWi, wiLoadOff, (this->l1Pingpong_ + 1) % 2,
+                             loadWeight);
+        }
 
         WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
         uint32_t curCinOriFmap = AlignB(curCinOri, this->GK0Fmap);
@@ -736,16 +748,21 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
         LocalTensor<FmapType> al1(TPosition::A1, al1BufOff, al1ElemCount);
         uint32_t curKL1Fmap = curCinOriFmap * kernelHxW;
         RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1Fmap, kl1, kL0, kL0Iters, kl1Ev, needLoadBias, nOff, curN);
+        if (!al1Db_) {
+            PrefetchCinBlock(kl1 + 1, kernelHxW, curHi, hiLoadOff, curWi, wiLoadOff, 0, loadWeight);
+        }
         this->l1Pingpong_++;
     }
     // Last cin block: the next N tile precedes the next spatial chunk or batch.
     uint32_t kl1 = cinL1Blocks_ - 1;
     PrepareCinBlock(kl1, kernelHxW, cinOff, curCin, curCinOri, kOff, curKL1, kl1Buf, kl1Ev);
-    if (nOff + curN < this->actualCo_) {
-        // The next N tile reuses this window before advancing M/H/W or batch.
-        PrefetchCinBlock(0, kernelHxW, curHi, hiLoadOff, curWi, wiLoadOff, (this->l1Pingpong_ + 1) % 2, false);
-    } else {
-        PrefetchNextUnit(setupMOff, curM, curHo, curWo, setupWoOff, kernelHxW, false, groupIter, x);
+    if (al1Db_) {
+        if (nOff + curN < this->actualCo_) {
+            // The next N tile reuses this window before advancing M/H/W or batch.
+            PrefetchCinBlock(0, kernelHxW, curHi, hiLoadOff, curWi, wiLoadOff, (this->l1Pingpong_ + 1) % 2, false);
+        } else {
+            PrefetchNextUnit(setupMOff, curM, curHo, curWo, setupWoOff, kernelHxW, false, groupIter, x);
+        }
     }
 
     WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
@@ -757,6 +774,15 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
     LocalTensor<FmapType> al1(TPosition::A1, al1BufOff, al1ElemCount);
     uint32_t curKL1Fmap = curCinOriFmap * kernelHxW;
     RunKL0Loop(al1, bl1Full, cl0, mp, kOff, curKL1Fmap, kl1, kL0, kL0Iters, kl1Ev, needLoadBias, nOff, curN);
+    if (!al1Db_) {
+        // Single-buffer A1: the boundary preload for the next N tile / chunk / batch
+        // can only start after this L0 loop has released the buffer.
+        if (nOff + curN < this->actualCo_) {
+            PrefetchCinBlock(0, kernelHxW, curHi, hiLoadOff, curWi, wiLoadOff, 0, false);
+        } else {
+            PrefetchNextUnit(setupMOff, curM, curHo, curWo, setupWoOff, kernelHxW, false, groupIter, x);
+        }
+    }
     this->l1Pingpong_++;
 
     // Drain the MTE2_FIX notification of this bias load after the full cin-block
@@ -850,7 +876,8 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
     uint32_t pfCurWi = this->orgWin_;
     uint32_t pfWiLoadOff = 0;
     CalcChunkWindow(pfHoOff, pfWoOff, pfCurHi, pfHiLoadOff, pfCurWi, pfWiLoadOff);
-    PrefetchCinBlock(0, kernelHxW, pfCurHi, pfHiLoadOff, pfCurWi, pfWiLoadOff, (this->l1Pingpong_ + 1) % 2, loadWeight);
+    PrefetchCinBlock(0, kernelHxW, pfCurHi, pfHiLoadOff, pfCurWi, pfWiLoadOff,
+                     this->al1Db_ ? ((this->l1Pingpong_ + 1) % 2) : 0, loadWeight);
     if (hasNextBatch) {
         SetFmapGmBatch(x, this->curBatchIdx_, pfGroupChanOff);
     }

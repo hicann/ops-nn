@@ -655,7 +655,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             p.ndNum = curHiLoadL1_;
             p.nValue = curWiLoadL1_;
             p.srcNdMatrixStride = static_cast<uint32_t>(tiling_->win * tiling_->cin);
-            p.dstNzMatrixStride = curWiLoadL1_ * GK0;
+            p.dstNzMatrixStride = curWiLoadL1_ * GK0Fmap;
         }
         p.dValue = static_cast<uint32_t>(tiling_->cin);
         p.srcDValue = static_cast<uint32_t>(tiling_->cin);
@@ -682,7 +682,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             p.dnNum = curHiLoadL1_;
             p.nValue = curWiLoadL1_;
             p.srcDnMatrixStride = static_cast<uint32_t>(tiling_->win);
-            p.dstNzMatrixStride = curWiLoadL1_ * GK0;
+            p.dstNzMatrixStride = curWiLoadL1_ * GK0Fmap;
         }
         p.dValue = static_cast<uint32_t>(tiling_->cin);
         p.srcDValue = static_cast<uint32_t>(tiling_->hin * tiling_->win);

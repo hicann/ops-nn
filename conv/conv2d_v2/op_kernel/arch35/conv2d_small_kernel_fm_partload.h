@@ -119,9 +119,17 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
     this->al1BufBytes_ = this->tiling_->aL1SpaceSize;
     this->al1ElemPerBuf_ = this->tiling_->aL1SpaceSize / sizeof(FmapType);
 
-    // L1 layout: [FM pingpong 2 bufs][Weight fullload][Bias][Scale0][ReluWeight0][Scale1][ReluWeight1]
-    // Adjacent batches reuse the same two buffers after the current batch finishes consuming A1.
-    this->SetupL1SplitLayout();
+    // The per-buffer size comes from the tiling (aL1SpaceSize), so the A1 buffer count
+    // must mirror the tiling's pBufferFlag bit3 (AL1_DB): single buffer when the tiling
+    // leaves AL1 double buffering off, with weight/bias/scale placed right after it.
+    // Self-splitting users of this base (which derive al1BufBytes_ from chunk geometry)
+    // keep the default double buffer of SetupL1SplitLayout.
+    this->al1Db_ = (this->tiling_->pBufferFlag & AL1_DB_IDX) != 0;
+
+    // L1 layout: [FM pingpong bufs (2, or 1 when AL1_DB off)][Weight
+    // fullload][Bias][Scale0][ReluWeight0][Scale1][ReluWeight1] Adjacent batches reuse the same buffers after the
+    // current batch finishes consuming A1.
+    this->SetupL1SplitLayout(this->al1Db_ ? 2 : 1);
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
