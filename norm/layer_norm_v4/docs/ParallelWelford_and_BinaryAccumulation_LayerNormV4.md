@@ -84,7 +84,6 @@ CANN算子开发者需要同时维护Host端和Kernel端代码。
 | 400-422 | Parallel Welford | 基数400 = Welford算法族的起始编号 |
 | 300-322 | Two-Pass + Binary累加 | 基数300 = TwoPass算法族的起始编号 |
 | 500-522 | Two-Pass Perf（优化版） | 基数500 = TwoPassPerf算法族的起始编号 |
-| 800-822 | SplitR 跨核分段归约 | 基数800 = SplitR算法族的起始编号 |
 
 每个算法族内的取值范围（如400-422）覆盖了不同的**数据类型组合**（如`FLOAT_FLOAT`、`HALF_FLOAT`、`BF16_FLOAT`等），即每个具体的`(src_dtype, accum_dtype)`组合占用一个TILING_KEY值。因此`400-422`意味着Welford族覆盖了约23种数据类型组合。这些范围值的设定是CANN框架的命名约定，与底层实现无直接数学关联。
 
@@ -99,7 +98,7 @@ if (TILING_KEY_IS(LNV4_REGBASE_WELFORD_FLOAT_FLOAT)) { ... }
 
 **TILING_KEY与Tiling模板优先级的关系：**
 
-Tiling模板注册时附带一个优先级数值（如SplitR为140，TwoPassPerf为150，TwoPass为200，Welford为4000）。框架按优先级数值从小到大依次尝试匹配：先检查SplitR（140）是否满足`IsCapable()`，不满足则尝试TwoPassPerf（150），再不满足则尝试TwoPass（200），最后尝试Welford（4000）。这与TILING_KEY的范围值（400/300/500/800）是两套独立的编号体系 —— 前者控制模板匹配顺序，后者是算法标识符。
+Tiling模板注册时附带一个优先级数值（如Welford为4000，TwoPass为200，TwoPassPerf为150）。框架按优先级从高到低尝试匹配：先检查Welford（4000）是否满足`IsCapable()`，不满足则尝试TwoPass（200），再不满足则尝试TwoPassPerf（150）。这与TILING_KEY的范围值（400/300/500）是两套独立的编号体系 —— 前者控制模板匹配顺序，后者是算法标识符。
 
 #### 0.3.4 regbase（寄存器基址寻址模式）
 
@@ -109,7 +108,7 @@ Tiling模板注册时附带一个优先级数值（如SplitR为140，TwoPassPerf
 - **支持向量融合**：部分CANN向量融合指令（如`FusedMulDstAdd`）要求在regbase模式下才能使用
 - **减少UB访问冲突**：通过寄存器中转减少了UB的读取次数
 
-`isRegBase`是一个由Host端根据输入shape和数据类型计算出的布尔值，通过tiling参数传递给Kernel端。如果当前shape不满足regbase的硬件要求（如对齐约束），`isRegBase`会被置为`false`，此时四个算法分支均不会被选中，算子回退到通用（非regbase）路径。
+`isRegBase`是一个由Host端根据输入shape和数据类型计算出的布尔值，通过tiling参数传递给Kernel端。如果当前shape不满足regbase的硬件要求（如对齐约束），`isRegBase`会被置为`false`，此时三个算法分支均不会被选中，算子回退到通用（非regbase）路径。
 
 **为什么Welford和TwoPass都要求isRegBase == true？**因为并行Welford和二分累加算法需要频繁访问M2累加器、临时缓冲区等，regbase模式能保证这些访问以最高效的方式进行。当前不存在不需要regbase的Welford/TwoPass降级路径 —— 如果不满足regbase条件，算子会回退到其他LayerNorm实现（如V3或通用路径）。
 
@@ -196,22 +195,19 @@ y = gamma * ((x - mean) * rstd) + beta         // 归一化 + 仿射变换
 
 ## 2. 总体架构
 
-LayerNormV4在950（arch35）平台上有四个算法分支，通过**TILING_KEY**在编译期动态选择：
+LayerNormV4在950（arch35）平台上有三个算法分支，通过**TILING_KEY**在编译期动态选择：
 
 | TILING_KEY | 算法 | 模板优先级 | 适用场景 |
 |-----------|------|--------|---------|
-| 800-822 | SplitR 跨核分段归约 | 最高（140，最先尝试） | 小A大R：R≥65536 且 A≤AIV核数/4，每核扫描连续片段后经workspace交换、一次全核同步与固定顺序合并 |
-| 400-422 | Parallel Welford | 最低（4000，最后尝试） | 通用场景，单遍扫描 |
+| 400-422 | Parallel Welford | 最高（4000） | 通用场景，单遍扫描 |
 | 300-322 | Two-Pass + Binary累加 | 中（200） | 超长轴场景（R较大，Welford不满足UB约束时） |
-| 500-522 | Two-Pass Perf | 次之（150） | 中等长度轴，极致性能（额外要求rowAlign不超硬限制、colSize/rowAlign不触发联立阈值） |
+| 500-522 | Two-Pass Perf | 低（150） | 中等长度轴，极致性能（额外要求rowAlign不超硬限制、colSize/rowAlign不触发联立阈值） |
 
-**分派逻辑**（入口代码位于`op_kernel/layer_norm_v4_apt.h:104-184`）：
+**分派逻辑**（入口代码位于`op_kernel/layer_norm_v4_apt.h:80-143`）：
 
 ```cpp
 __aicore__ inline void layer_norm_impl(...) {
-    if (TILING_KEY_IS(LNV4_REGBASE_SPLIT_R_FLOAT_FLOAT)) {
-        RegbaseSplitRImpl<float, float>(...);
-    } else if (TILING_KEY_IS(LNV4_REGBASE_TWO_PASS_FLOAT_FLOAT)) {
+    if (TILING_KEY_IS(LNV4_REGBASE_TWO_PASS_FLOAT_FLOAT)) {
         RegbaseTwoPassImpl<float, float, DTYPE_MEAN>(...);
     } else if (TILING_KEY_IS(LNV4_REGBASE_WELFORD_FLOAT_FLOAT)) {
         RegbaseWelfordImpl<float, float, DTYPE_MEAN>(...);
@@ -221,7 +217,7 @@ __aicore__ inline void layer_norm_impl(...) {
 }
 ```
 
-`TILING_KEY_IS()`宏在编译期展开为常量比较，四个分支中只有匹配的一个会被保留，其余在编译优化阶段被删除，无运行时开销。宏的参数命名规则参见 [前置知识0.3.3](#033-tiling_key--算法选择键)。
+`TILING_KEY_IS()`宏在编译期展开为常量比较，三个分支中只有匹配的一个会被保留，其余在编译优化阶段被删除，无运行时开销。宏的参数命名规则参见 [前置知识0.3.3](#033-tiling_key--算法选择键)。
 
 ---
 
@@ -413,7 +409,7 @@ Level 2:          (s0..s3)         (s4..s7)        ← 仍相近
 Level 3:              最终总和(s0..s7)
 ```
 
-**TwoPass的空间与性能代价：**两遍扫描意味着数据从Global Memory搬入UB至少3次（第1遍算均值、第2遍算方差、归一化再1次），相比Welford的2次多了约50% 的带宽开销。额外的带宽开销是模板准入与选择时权衡的因素之一。但它的优势在于**中间状态极紧凑** —— 仅需存放二分累加树的临时缓冲区，不依赖每行的M2累加器。
+**TwoPass的空间与性能代价：**两遍扫描意味着数据从Global Memory搬入UB至少3次（第1遍算均值、第2遍算方差、归一化再1次），相比Welford的2次多了约50% 的带宽开销。这是TwoPass的优先级低于Welford的核心理由。但它的优势在于**中间状态极紧凑** —— 仅需存放二分累加树的临时缓冲区，不依赖每行的M2累加器。
 
 ---
 
@@ -526,24 +522,23 @@ CANN框架在Host端按照注册的优先级顺序依次尝试匹配Tiling模板
 
 | 优先级 | 模板 | 文件 |
 |-------|------|------|
-| 140 | LayerNormV4SplitRTiling | `op_host/layer_norm_v4_split_r_tiling.cpp` |
 | 4000 | LayerNormV4WelfordTiling | `op_host/layer_norm_v4_welford_tiling.cpp` |
 | 200 | LayerNormV4RegBaseTwoPassTiling | `op_host/layer_norm_v4_regbase_two_pass_tiling.cpp` |
 | 150 | LayerNormV4RegBaseTwoPassPerfTiling | `op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp` |
 
-模板按优先级数值从小到大尝试：SplitR（140）→TwoPassPerf（150）→TwoPass（200）→Welford（4000）。模板优先级决定匹配顺序，TILING_KEY 标识最终选中的算法与类型组合。
+优先级4000/200/150是模板**匹配优先级**（越高越先尝试），与TILING_KEY的范围值（400/300/500）是两套独立编号。框架先按优先级找模板，模板再打出对应的TILING_KEY。
 
-SplitR 使用公共 `isRegBase` 平台判断，不额外限制确定性等级。准入形状为 `1 ≤ A ≤ floor(AIV核数/4)`、`65536 ≤ R ≤ INT32_MAX`；64个AIV核时即 `A ≤ 16`。每行分配 `min(16, floor(AIV核数/A), floor(R/16384))` 个核，至少2个核。其他形状继续按优先级尝试原模板。
+**选择逻辑：**
 
-每核以 Welford 计算连续片段的均值和总体方差，写入独立的 mean、variance workspace 平面；`SyncAll()` 后通过 `DataCopyPad<float, PaddingMode::Compact>` 将每核记录中的首个 float 紧凑搬入 UB。两个平面各占一个向量，空间系数2表示两个统计量，并非双缓冲。最多16段的统计量使用掩码向量归约，不再需要通用 BatchNorm 的多级归约暂存。
-
-令 `w_s = n_s / R`，以首段均值为参考计算 `mean = mean_0 + sum((mean_s - mean_0) * w_s)`，再计算 `variance = sum(variance_s * w_s + (mean_s - mean)^2 * w_s)`。权重先归一化再乘方差，避免 `variance_s * n_s` 的中间值溢出；平方项仍受 FP32 有限范围限制。每核归一化自身片段，仅首段输出 mean/rstd。
+1. **Welford优先（4000）**：当`isRegBase == true`且R不超过UB容量限制时被选中。Welford是首选的默认算法 —— 单遍扫描，精度最优，性价比最高
+2. **TwoPass备选（200）**：在Welford不可用时生效。Welford不可用的典型场景是R过大导致M2累加器数组超出UB容量。此时TwoPass的紧凑中间状态使其成为唯一可行的regbase选项
+3. **TwoPassPerf降级（150）**：优先级最低。在其适用范围内（中等轴长+满足附加约束），通过(x-mean) 复用和行配对优化，性能在适用shape下可达到更优
 
 ---
 
 ### 5.2 IsCapable() 检查条件详解
 
-每个模板都有一个`IsCapable()`方法，在Host端运行时根据实际shape判断该模板是否可用。下表列出原有三个算法的Capable条件；SplitR准入见5.1：
+每个模板都有一个`IsCapable()`方法，在Host端运行时根据实际shape判断该模板是否可用。下表完整解析三个算法的Capable条件及其设计意图：
 
 | 算法 | IsCapable条件 | 条件解释与设计意图 |
 |------|---------------|------------------|
@@ -553,9 +548,9 @@ SplitR 使用公共 `isRegBase` 平台判断，不额外限制确定性等级。
 
 **TwoPassPerf的附加条件解释：**
 
-- **rowAlign不超出硬限制**：`IsCapable()`的第一条几何判断（`op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp:70-73`）为`rowAlign > LN_NUM_TWO * vlFp32 * vlFp32 * LN_NUM_TWO`时返回false，即约`4 × VL_F32²`这一量级（`LN_NUM_TWO = 2`，代入后为`2 × 64 × 64 × 2 = 16384`）。这意味着rowAlign存在一个与`VL_F32²`相关的硬上限，超出则不可用。
+- **rowAlign不超出硬限制**：`IsCapable()`的第一条几何判断（约第63行）为`rowAlign > LN_NUM_TWO * vlFp32 * vlFp32 * LN_NUM_TWO`时返回false，即约`4 × VL_F32²`这一量级（`LN_NUM_TWO = 2`，代入后为`2 × 64 × 64 × 2 = 16384`）。这意味着rowAlign存在一个与`VL_F32²`相关的硬上限，超出则不可用。
 
-- **colSize/rowAlign不触发联立阈值**：第二条判断（第76-78行）为`colSize >= LN_ROW_THRESHOLD && rowAlign >= LN_COL_THRESHOLD`时返回false。其中两个阈值为静态常量（= 4096和8192），分别对应colSize和rowAlign的上限。两条件需同时满足才触发拒绝 —— 这避免了单独一个维度偏大但另一个维度较小时误判不可用。
+- **colSize/rowAlign不触发联立阈值**：第二条判断（约第68行）为`colSize >= LN_ROW_THRESHOLD && rowAlign >= LN_COL_THRESHOLD`时返回false。其中两个阈值为静态常量（= 4096和8192），分别对应colSize和rowAlign的上限。两条件需同时满足才触发拒绝 —— 这避免了单独一个维度偏大但另一个维度较小时误判不可用。
 
 - **满足UB容量约束**：通过`CanFitInBuffer(1)`校验tile大小 + (x-mean) 差值缓冲区 + 其他临时空间总和不超过UB容量。
 
@@ -567,7 +562,7 @@ TwoPass的IsCapable条件:     isRegBase + UB约束                             
 TwoPassPerf的IsCapable条件: isRegBase + rowAlign硬限制 + 联立阈值 + UB约束          ← 最严格
 ```
 
-以上条件宽松程度不代表匹配顺序。框架按 SplitR→TwoPassPerf→TwoPass→Welford 的顺序检查，首个成功模板负责生成 tiling。
+框架从Welford（最宽松）开始检查，若满足则直接选中；不满足才逐级尝试更严格的分支。这与模板优先级（4000→200→150）的设计完全一致。
 
 ### 5.3 三维权衡分析：精度、性能与适用性
 
@@ -579,7 +574,7 @@ TwoPassPerf的IsCapable条件: isRegBase + rowAlign硬限制 + 联立阈值 + UB
 | **TwoPass** | 超长轴适应性 | 多一遍全局数据搬运（3次vs 2次） | R小时性能损失明显，无精度优势 |
 | **TwoPassPerf** | 极致性能 + 极好精度 | rowAlign和colSize/rowAlign受联立阈值限制 | shape越界时不可用，回退到较慢分支 |
 
-**设计哲学：**三套算法不是互相替代的关系，而是对"**shape空间**"的一个覆盖性划分。框架通过优先级（140→150→200→4000）对常见case做最优配置，通过IsCapable条件在极端case下做兜底保证。
+**设计哲学：**三套算法不是互相替代的关系，而是对"**shape空间**"的一个覆盖性划分。框架通过优先级（4000→200→150）对常见case做最优配置，通过IsCapable条件在极端case下做兜底保证。
 
 对于软件领域的读者来说，这种"多算法覆盖shape空间"的模式类似于：
 
@@ -601,7 +596,7 @@ TwoPassPerf的IsCapable条件: isRegBase + rowAlign硬限制 + 联立阈值 + UB
 | `op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp` | Host CPU | TwoPass Perf tiling（含IsCapable中的A/R阈值定义） |
 | `op_kernel/layer_norm_v4_apt.h` | AI Core（设备端） | 950平台kernel入口和TILING_KEY分派 |
 | `op_host/layer_norm_v4_tiling.h` | Host CPU | Tiling数据结构定义（各模板共享） |
-| `op_host/layer_norm_v4_def.cpp:171` | Host CPU | 950平台配置，注册为`layer_norm_v4_apt` |
+| `op_host/layer_norm_v4_def.cpp:191` | Host CPU | 950平台配置，注册为`layer_norm_v4_apt` |
 
 代码分层小结：
 
@@ -617,7 +612,7 @@ LayerNormV4在Ascend 950平台上的精度优化体现了两个层面的设计�
 
 - **算法层面**：Parallel Welford通过在线递推更新方式将中心化操作融入每一步，从根源上避免了朴素方差公式中`E[X²] - (E[X])²`大数相减的灾难性抵消（catastrophic cancellation）；超长轴二分累加通过树状归约替代链式加法，使每一步相加的两个操作数量级相近，将累加舍入误差从O(n) 降至O(log n)
 
-- **工程层面**：三套算法通过TILING_KEY机制在编译期动态选择，以模板优先级（140/150/200/4000）和IsCapable条件构成两级筛选，不同算法分别追求精度（Welford）、极端适应性（TwoPass）、极致性能（TwoPassPerf），共同覆盖了从短轴到超长轴的完整shape空间；UB空间的精细化管理（double buffer、tile大小对齐、临时缓冲区容量校验）确保了数据搬运与计算在AI Core上的高效流水
+- **工程层面**：三套算法通过TILING_KEY机制在编译期动态选择，以模板优先级（4000/200/150）和IsCapable条件构成两级筛选，不同算法分别追求精度（Welford）、极端适应性（TwoPass）、极致性能（TwoPassPerf），共同覆盖了从短轴到超长轴的完整shape空间；UB空间的精细化管理（double buffer、tile大小对齐、临时缓冲区容量校验）确保了数据搬运与计算在AI Core上的高效流水
 
 这两种算法思想不仅适用于LayerNormV4，对于所有需要沿超长轴做归约的Norm类算子（如 **RMSNorm**、**GroupNorm**、**InstanceNorm**等），以及更广义的高精度浮点归约场景，都具有普适的参考价值。
 

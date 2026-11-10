@@ -81,7 +81,6 @@ Similarly, `LNV4_REGBASE_TWO_PASS_FLOAT_FLOAT` indicates the Two-Pass (binary ac
 
 | TILING_KEY range | Algorithm | Meaning of the base |
 |----------------|------|---------|
-| 800-822 | SplitR | Base 800 = starting number of the SplitR algorithm family |
 | 400-422 | Parallel Welford | Base 400 = starting number of the Welford algorithm family |
 | 300-322 | Two-Pass + Binary accumulation | Base 300 = starting number of the TwoPass algorithm family |
 | 500-522 | Two-Pass Perf (optimized version) | Base 500 = starting number of the TwoPassPerf algorithm family |
@@ -99,7 +98,7 @@ This lets the compiler eliminate mismatched branches at compile time and remove 
 
 **Relationship between TILING_KEY and Tiling template priority:**
 
-When a Tiling template is registered, it carries a priority value (for example, SplitR is 140, TwoPassPerf is 150, TwoPass is 200, and Welford is 4000). The framework tries matching in ascending priority order: it first checks whether SplitR (140) satisfies `IsCapable()`; if not, it tries TwoPassPerf (150), then TwoPass (200), and finally Welford (4000). This priority system and the TILING_KEY range values (400/300/500/800) are two independent numbering systems — the former controls the template matching order, and the latter is the algorithm identifier.
+When a Tiling template is registered, it carries a priority value (for example, Welford is 4000, TwoPass is 200, and TwoPassPerf is 150). The framework tries matching from the highest priority to the lowest: it first checks whether Welford (4000) satisfies `IsCapable()`; if not, it tries TwoPass (200); if that still fails, it tries TwoPassPerf (150). This priority system and the TILING_KEY range values (400/300/500) are two independent numbering systems — the former controls the template matching order, and the latter is the algorithm identifier.
 
 #### 0.3.4 regbase (Register Base Addressing Mode)
 
@@ -194,24 +193,21 @@ On the Ascend 950 platform, the LayerNormV4 operator uses two core algorithms, *
 
 ---
 
-## 2. Architecture
+## 2. Overall Architecture
 
-LayerNormV4 has four algorithm branches on the 950 (arch35) platform, dynamically selected at compile time through **TILING_KEY**:
+LayerNormV4 has three algorithm branches on the 950 (arch35) platform, dynamically selected at compile time through **TILING_KEY**:
 
 | TILING_KEY | Algorithm | Template Priority | Applicable Scenario |
 |-----------|------|--------|---------|
-| 800-822 | SplitR cross-core segmented reduction | Highest (140, tried first) | Small A, large R: R≥65536 and A≤AIV cores/4; each core scans a contiguous segment, then exchanges via workspace, one whole-core synchronization, and a fixed-order merge |
-| 400-422 | Parallel Welford | Lowest (4000, tried last) | General scenarios, single-pass scan |
+| 400-422 | Parallel Welford | Highest (4000) | General scenarios, single-pass scan |
 | 300-322 | Two-Pass + Binary accumulation | Medium (200) | Extra-long axis scenarios (R is large and Welford does not satisfy the UB constraint) |
-| 500-522 | Two-Pass Perf | Next (150) | Medium-length axes, extreme performance (additional requirements: rowAlign does not exceed the hard limit, and colSize/rowAlign does not trigger the joint threshold) |
+| 500-522 | Two-Pass Perf | Low (150) | Medium-length axes, extreme performance (additional requirements: rowAlign does not exceed the hard limit, and colSize/rowAlign does not trigger the joint threshold) |
 
-**Dispatch logic** (entry code in `op_kernel/layer_norm_v4_apt.h:104-184`):
+**Dispatch logic** (entry code in `op_kernel/layer_norm_v4_apt.h:80-143`):
 
 ```cpp
 __aicore__ inline void layer_norm_impl(...) {
-    if (TILING_KEY_IS(LNV4_REGBASE_SPLIT_R_FLOAT_FLOAT)) {
-        RegbaseSplitRImpl<float, float>(...);
-    } else if (TILING_KEY_IS(LNV4_REGBASE_TWO_PASS_FLOAT_FLOAT)) {
+    if (TILING_KEY_IS(LNV4_REGBASE_TWO_PASS_FLOAT_FLOAT)) {
         RegbaseTwoPassImpl<float, float, DTYPE_MEAN>(...);
     } else if (TILING_KEY_IS(LNV4_REGBASE_WELFORD_FLOAT_FLOAT)) {
         RegbaseWelfordImpl<float, float, DTYPE_MEAN>(...);
@@ -221,9 +217,9 @@ __aicore__ inline void layer_norm_impl(...) {
 }
 ```
 
-The `TILING_KEY_IS()` macro expands into a constant comparison at compile time. Only the matching one of the four branches is retained, and the others are removed during compile-time optimization, with no runtime overhead. For the naming rules of macro parameters, see [Prerequisite Knowledge 0.3.3](#033-tiling_key--algorithm-selection-key).
+The `TILING_KEY_IS()` macro expands into a constant comparison at compile time. Only the matching one of the three branches is retained, and the others are removed during compile-time optimization, with no runtime overhead. For the naming rules of macro parameters, see [Prerequisite Knowledge 0.3.3](#033-tiling_key--algorithm-selection-key).
 
-Welford and SplitR share buffer initialization, local statistics, normalization, and cache management in `LayerNormV4WelfordBase`. The whole-row Welford class controls row iteration. SplitR distributes one row across multiple cores and merges segment statistics. Unmatched SplitR shapes continue through Two-Pass Perf, Two-Pass, and Welford template selection. The selected key also encodes the supported input and parameter data types.
+---
 
 ## 3. Parallel Welford Algorithm
 
@@ -413,7 +409,7 @@ Level 2:          (s0..s3)         (s4..s7)        ← still similar
 Level 3:              final sum (s0..s7)
 ```
 
-**Space and performance cost of TwoPass:** Two passes mean the data is moved from Global Memory into UB at least 3 times (the first pass computes the mean, the second pass computes the variance, and normalization takes 1 more time), about 50% more bandwidth overhead than the 2 times of Welford. Its additional bandwidth cost is one tradeoff considered by template admission and selection. But its advantage is an **extremely compact intermediate state** — it only needs to store the temporary buffer of the binary accumulation tree and does not depend on per-row M2 accumulators.
+**Space and performance cost of TwoPass:** Two passes mean the data is moved from Global Memory into UB at least 3 times (the first pass computes the mean, the second pass computes the variance, and normalization takes 1 more time), about 50% more bandwidth overhead than the 2 times of Welford. This is the core reason why TwoPass has a lower priority than Welford. But its advantage is an **extremely compact intermediate state** — it only needs to store the temporary buffer of the binary accumulation tree and does not depend on per-row M2 accumulators.
 
 ---
 
@@ -518,45 +514,31 @@ The `LAST_LOOP_NUMS` template parameter controls the merge strategy of the **las
 
 ---
 
-## 5. Algorithm Selection
+## 5. Algorithm Selection Strategy
 
-### 5.1 Priority and SplitR admission
+### 5.1 Tiling Template Registration Priorities
 
-Templates are attempted in this order:
+On the Host side, the CANN framework tries to match Tiling templates one by one in the registered priority order:
 
-1. SplitR: priority 140.
-2. Two-Pass Perf: priority 150.
-3. Two-Pass: priority 200.
-4. Welford: priority 4000.
+| Priority | Template | File |
+|-------|------|------|
+| 4000 | LayerNormV4WelfordTiling | `op_host/layer_norm_v4_welford_tiling.cpp` |
+| 200 | LayerNormV4RegBaseTwoPassTiling | `op_host/layer_norm_v4_regbase_two_pass_tiling.cpp` |
+| 150 | LayerNormV4RegBaseTwoPassPerfTiling | `op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp` |
 
-SplitR uses the shared `isRegBase` platform check and excludes the V3 path. It does not add a deterministic-level restriction. Its shape conditions are:
+The priorities 4000/200/150 are the **matching priorities** of templates (higher values are tried first) and are independent of the TILING_KEY range values (400/300/500). The framework first finds a template by priority, and the template then produces the corresponding TILING_KEY.
 
-```text
-1 <= A <= floor(AIV_core_count / 4)
-65536 <= R <= INT32_MAX
-splitR = min(16, floor(AIV_core_count / A), floor(R / 16384))
-splitR >= 2
-```
+**Selection logic:**
 
-For 64 AIV cores, A must be at most 16. Segment boundaries are aligned, and the last segment uses its actual element count.
+1. **Welford first (4000)**: selected when `isRegBase == true` and R does not exceed the UB capacity limit. Welford is the preferred default algorithm — single-pass scan, best precision, and best cost-effectiveness
+2. **TwoPass as fallback (200)**: takes effect when Welford is unavailable. The typical scenario where Welford is unavailable is that R is so large that the M2 accumulator array exceeds the UB capacity. At this point, the compact intermediate state of TwoPass makes it the only feasible regbase option
+3. **TwoPassPerf downgrade (150)**: lowest priority. Within its applicable range (medium axis length + additional constraints satisfied), through (x-mean) reuse and row pairing optimizations, its performance can be better for the applicable shapes
 
-Each core computes a segment mean and population variance and publishes them into separate workspace planes. Each GM record occupies one UB block. After `SyncAll`, `DataCopyPad<float, PaddingMode::Compact>` gathers the first float of each record into adjacent UB lanes. Each of the two planes is rounded up to a whole number of vectors; the factor two represents mean and variance, independently of double buffering.
-
-At most sixteen segment statistics fit in one vector. The merge builds weighted contributions in vector-sized chunks and invokes the common `NormCommon::NormCommonRegbase::CalculateReduceSum` interface:
-
-```text
-weight_s = count_s / R
-mean = mean_0 + sum((mean_s - mean_0) * weight_s)
-variance = sum(variance_s * weight_s + (mean_s - mean)^2 * weight_s)
-```
-
-Centering the mean around the first segment retains the large-offset precision fix. Normalizing counts before multiplying variance avoids the intermediate `variance_s * count_s` overflow. The squared mean-difference term remains subject to FP32 range limits. No general multi-level BatchNorm reduction scratch is required.
-
-Each core normalizes its own input segment. Only the first segment writes mean/rstd. Workspace includes the system synchronization allocation plus the two statistic planes. Host UB budgeting reserves both vector-aligned compact planes before selecting tile length.
+---
 
 ### 5.2 Detailed IsCapable() Check Conditions
 
-Each template has an `IsCapable()` method that determines at runtime on the Host side whether the template is available for the actual shape. The following table lists the Capable conditions of the original three algorithms; SplitR admission is described in 5.1:
+Each template has an `IsCapable()` method that determines at runtime on the Host side whether the template is available for the actual shape. The following table fully analyzes the Capable conditions of the three algorithms and their design intent:
 
 | Algorithm | IsCapable Condition | Condition Explanation and Design Intent |
 |------|---------------|------------------|
@@ -566,20 +548,21 @@ Each template has an `IsCapable()` method that determines at runtime on the Host
 
 **Explanation of the additional conditions of TwoPassPerf:**
 
-- **rowAlign does not exceed the hard limit**: the first geometric judgment of `IsCapable()` (`op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp:70-73`) returns false when `rowAlign > LN_NUM_TWO * vlFp32 * vlFp32 * LN_NUM_TWO`, that is, the magnitude of about `4 × VL_F32²` (`LN_NUM_TWO = 2`, substituting gives `2 × 64 × 64 × 2 = 16384`). This means rowAlign has a hard upper limit related to `VL_F32²`; beyond it, the template is unavailable.
+- **rowAlign does not exceed the hard limit**: the first geometric judgment of `IsCapable()` (about line 63) returns false when `rowAlign > LN_NUM_TWO * vlFp32 * vlFp32 * LN_NUM_TWO`, that is, the magnitude of about `4 × VL_F32²` (`LN_NUM_TWO = 2`, substituting gives `2 × 64 × 64 × 2 = 16384`). This means rowAlign has a hard upper limit related to `VL_F32²`; beyond it, the template is unavailable.
 
-- **colSize/rowAlign does not trigger the joint threshold**: the second judgment (lines 76-78) returns false when `colSize >= LN_ROW_THRESHOLD && rowAlign >= LN_COL_THRESHOLD`. The two thresholds are static constants (= 4096 and 8192), corresponding to the upper limits of colSize and rowAlign respectively. Both conditions must be satisfied simultaneously to trigger rejection — this avoids misjudging unavailability when only one dimension is too large while the other is small.
+- **colSize/rowAlign does not trigger the joint threshold**: the second judgment (about line 68) returns false when `colSize >= LN_ROW_THRESHOLD && rowAlign >= LN_COL_THRESHOLD`. The two thresholds are static constants (= 4096 and 8192), corresponding to the upper limits of colSize and rowAlign respectively. Both conditions must be satisfied simultaneously to trigger rejection — this avoids misjudging unavailability when only one dimension is too large while the other is small.
 
 - **UB capacity constraint satisfied**: `CanFitInBuffer(1)` validates that the total of the tile size + the (x-mean) difference buffer + other temporary space does not exceed the UB capacity.
 
 **Logical relationship between the conditions (from strict to relaxed):**
+
 ```Cpp
 Welford IsCapable condition:     isRegBase == true                                    ← most relaxed
 TwoPass IsCapable condition:     isRegBase + UB constraint                            ← medium
 TwoPassPerf IsCapable condition: isRegBase + rowAlign hard limit + joint threshold + UB constraint ← strictest
 ```
 
-The strictness order above does not represent the matching order. The framework checks in the order SplitR → TwoPassPerf → TwoPass → Welford, and the first successful template generates the tiling.
+The framework starts checking from Welford (most relaxed); if satisfied, it selects it directly; only if not satisfied does it try stricter branches level by level. This fully matches the design of template priorities (4000→200→150).
 
 ### 5.3 Three-Way Trade-Off Analysis: Precision, Performance, and Applicability
 
@@ -591,33 +574,47 @@ No algorithm can be optimal in all three dimensions at the same time. Understand
 | **TwoPass** | Adaptability to extra-long axes | One extra global data transfer (3 times vs 2 times) | Obvious performance loss when R is small; no precision advantage |
 | **TwoPassPerf** | Extreme performance + excellent precision | rowAlign and colSize/rowAlign are limited by the joint threshold | Unavailable when the shape exceeds the bounds; falls back to a slower branch |
 
-**Design philosophy:** The three original algorithms do not replace each other; instead, they form a covering partition of the "**shape space**". The framework configures common cases optimally through priorities (140→150→200→4000), and IsCapable conditions guarantee a fallback in extreme cases. SplitR increases core utilization for small A and large R, adding workspace traffic and global synchronization. Shapes outside its threshold use the original templates.
+**Design philosophy:** The three algorithms do not replace each other; instead, they form a covering partition of the "**shape space**". The framework uses priorities (4000→200→150) to configure common cases optimally, and uses IsCapable conditions to guarantee a fallback in extreme cases.
 
 For readers from the software field, this "multiple algorithms covering the shape space" pattern is similar to:
 
 - **Multi-level optimization passes of compilers** — different optimization levels suit different code characteristics
-- **Multi-plan candidates of database query optimizers** — the cost model selects the best execution plan
-- **Kernel selection in BLAS libraries** — MKL/OpenBLAS dynamically switch kernels based on matrix size
+- **Multiple plan candidates of database query optimizers** — selecting the optimal execution plan based on a cost model
+- **Kernel selection of BLAS libraries** — MKL/OpenBLAS dynamically switches between different kernels based on matrix size
 
-## 6. Source Map
+---
 
-| File | Responsibility |
-| --- | --- |
-| `op_host/layer_norm_v4_split_r_tiling.cpp` | SplitR admission, UB budget, workspace and scheduling |
-| `op_kernel/arch35/layer_norm_v4_split_r.h` | Segmentation, publication, compact gather, merge and normalization |
-| `op_kernel/arch35/layer_norm_v4_welford_base.h` | Shared Welford buffers and computation |
-| `op_kernel/arch35/layer_norm_v4_welford.h` | Whole-row Welford execution |
-| `op_host/layer_norm_v4_welford_tiling.cpp` | Welford tile selection |
-| `op_kernel/arch35/layer_norm_v4_two_pass.h` | Two-Pass computation |
-| `op_kernel/arch35/layer_norm_v4_two_pass_perf.h` | Optimized Two-Pass computation |
-| `op_host/layer_norm_v4_regbase_two_pass_tiling.cpp` | Two-Pass tiling |
-| `op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp` | Two-Pass Perf tiling |
-| `op_kernel/layer_norm_v4_apt.h` | Kernel dispatch |
-| `op_host/layer_norm_v4_tiling.h` | Tiling data definitions |
+## 6. Quick Reference of Code Structure
+
+| File | Execution Location | Content |
+|------|---------|------|
+| `op_kernel/arch35/layer_norm_v4_welford.h` | AI Core (device side) | Parallel Welford kernel implementation |
+| `op_host/layer_norm_v4_welford_tiling.cpp` | Host CPU | Welford tiling parameter computation (including IsCapable) |
+| `op_kernel/arch35/layer_norm_v4_two_pass.h` | AI Core (device side) | TwoPass + binary accumulation kernel implementation |
+| `op_host/layer_norm_v4_regbase_two_pass_tiling.cpp` | Host CPU | TwoPass tiling parameter computation (including IsCapable, DoOpTiling) |
+| `op_kernel/arch35/layer_norm_v4_two_pass_perf.h` | AI Core (device side) | TwoPass Perf optimized kernel |
+| `op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp` | Host CPU | TwoPass Perf tiling (including A/R threshold definitions in IsCapable) |
+| `op_kernel/layer_norm_v4_apt.h` | AI Core (device side) | 950 platform kernel entry and TILING_KEY dispatch |
+| `op_host/layer_norm_v4_tiling.h` | Host CPU | Tiling data structure definitions (shared by templates) |
+| `op_host/layer_norm_v4_def.cpp:191` | Host CPU | 950 platform configuration, registered as `layer_norm_v4_apt` |
+
+Summary of code layering:
+
+- The `.h` files under `op_kernel/arch35/` are **architecture-specific device-side kernel code** and run on the AI Core of Ascend 950
+- The `.cpp`/`.h` files under `op_host/` are **Host-side control code** and run on the server CPU, responsible for parameter computation and scheduling
+- Developing an operator requires maintaining code on both sides — the Host side does "strategy computation", and the Kernel side does "strategy execution"
+
+---
 
 ## 7. Summary
 
-Centered statistics, tree accumulation, and shape-based template selection address different numerical and performance constraints. SplitR extends this selection to small-A/large-R inputs while reusing the local Welford and normalization paths. Changes to reduction order and memory layout require precision and bounds regression on the resulting binary.
+The precision optimization of LayerNormV4 on the Ascend 950 platform reflects design ideas at two levels:
+
+- **Algorithm level**: Parallel Welford integrates centering into every step through online recurrence updates, avoiding at the root the catastrophic cancellation of subtracting large numbers in the naive variance formula `E[X²] - (E[X])²`; extra-long-axis binary accumulation replaces chained addition with tree-shaped reduction, making the two operands of each addition similar in magnitude, and reduces the accumulation rounding error from O(n) to O(log n)
+
+- **Engineering level**: the three algorithms are dynamically selected at compile time through the TILING_KEY mechanism, with template priorities (4000/200/150) and IsCapable conditions forming a two-level filter. The algorithms pursue precision (Welford), extreme adaptability (TwoPass), and extreme performance (TwoPassPerf) respectively, jointly covering the complete shape space from short axes to extra-long axes; fine-grained management of UB space (double buffer, tile size alignment, temporary buffer capacity validation) ensures efficient pipelining of data transfer and computation on the AI Core
+
+These two algorithm ideas apply not only to LayerNormV4 but also to all Norm operators that need to reduce along extra-long axes (such as **RMSNorm**, **GroupNorm**, and **InstanceNorm**), and more broadly to high-precision floating-point reduction scenarios. They have universal reference value.
 
 ---
 
