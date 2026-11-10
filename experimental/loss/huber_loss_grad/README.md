@@ -47,14 +47,14 @@ $$
       <td>predictions</td>
       <td>输入</td>
       <td>预测值，公式中的 predictions。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>targets</td>
       <td>输入</td>
       <td>目标值，公式中的 targets。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -68,7 +68,7 @@ $$
       <td>grad_output</td>
       <td>输出</td>
       <td>HuberLoss 梯度计算结果。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
