@@ -41,8 +41,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "softsign_grad");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
