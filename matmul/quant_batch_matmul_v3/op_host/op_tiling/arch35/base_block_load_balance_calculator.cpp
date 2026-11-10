@@ -20,14 +20,11 @@
 #include "error_util.h"
 #include "graph/utils/type_utils.h"
 #include "platform/soc_spec.h"
+#include "quant_batch_matmul_v3_tiling_strategy.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
 #include "util/math_util.h"
 
 namespace {
-// ---- DAV_9201/9202(960DT/960PR) load-balance base-block search constants ----
-// Pertoken results are produced by one AIV on 9201/9202: cap the base tile area for a single vector pass.
-constexpr uint32_t LB_BASIC_BLOCK_LIMIT_ONE_VECTOR = 32768; // 128 * 256
-constexpr uint64_t LB_MAX_BASEM_ONE_VECTOR = 128UL;
 // L0C size for which M/N of one 256x256 tile must be split to keep baseK in L0A.
 constexpr uint64_t LB_SPLITMN_LOC_SIZE = 512UL * 1024UL;
 constexpr double LB_DOUBLE_EQUAL_EPS = 0.00001;
@@ -45,6 +42,9 @@ constexpr uint64_t LB_DEFAULT_CORE_CNT = 32UL;
 constexpr uint64_t LB_KB_SIZE = 1024UL;
 // 9202(960PR) doubles the mmad N-direction fragmentation for hif4/mxfp4 inputs
 constexpr uint64_t LB_COMPUTE_POWER_DOUBLE = 2UL;
+constexpr uint64_t FP32_OUTPUT_TIMES = 4;
+constexpr uint64_t PING_PONG_TIMES = 2;
+constexpr uint64_t UB_ALIGN_SIZE = 32;
 
 // 平台规格字符串转数值，非法/负值/未完全解析时回退默认值
 int64_t LbStrToIntWithDefault(const std::string& str, int64_t defaultValue)
@@ -286,6 +286,89 @@ bool BaseBlockCalculator::GetSocSpecAdjustBalanceInfo(SocSpecifyParams& outInfo)
     return true;
 }
 
+bool BaseBlockCalculator::IsBasicBlockUbOverflow(uint64_t baseM, uint64_t baseN)
+{
+    const uint32_t aivNumPerAic = strategy::GetAivNumPerAic(compileInfo_.npuArch);
+    uint64_t mForSingleVec = ops::CeilDiv(baseM, static_cast<uint64_t>(aivNumPerAic));
+    uint64_t usedUBSize = GetSizeWithDataType(mForSingleVec * baseN, ge::DT_FLOAT);
+    if (inputParams_.isPerChannel) {
+        usedUBSize += GetSizeWithDataType(baseN, inputParams_.scaleDtype);
+    }
+    if (inputParams_.isPertoken) {
+        usedUBSize += ops::CeilAlign(GetSizeWithDataType(mForSingleVec, inputParams_.perTokenScaleDtype),
+                                     UB_ALIGN_SIZE);
+    }
+    if (inputParams_.hasBias) {
+        usedUBSize += GetSizeWithDataType(baseN, inputParams_.biasDtype);
+    }
+    usedUBSize += GetSizeWithDataType(ops::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * baseN, inputParams_.cDtype) *
+                  PING_PONG_TIMES;
+    return usedUBSize > compileInfo_.ubSize;
+}
+
+bool BaseBlockCalculator::RecalcBaseMByUb(uint64_t& baseM, uint64_t baseN, bool& isUbOverflow)
+{
+    if (!isUbOverflow) {
+        return true;
+    }
+    // baseN 为 0 时每行占用为 0，会导致下方除法除零，基本块 N 必须为正值
+    OP_TILING_CHECK(
+        baseN == 0UL,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "RecalcBaseMByUb failed, baseN must be positive but it is 0."),
+        return false);
+    uint64_t leftUBSize = compileInfo_.ubSize;
+    if (inputParams_.isPerChannel) {
+        // 防无符号下溢翻转：scale 占用超出 UB 总量时直接失败
+        uint64_t scaleSize = GetSizeWithDataType(baseN, inputParams_.scaleDtype);
+        OP_TILING_CHECK(leftUBSize < scaleSize,
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                              "RecalcBaseMByUb failed, ubSize[%lu] cannot hold per-channel scale "
+                                              "size[%lu] with baseN[%lu].",
+                                              leftUBSize, scaleSize, baseN),
+                        return false);
+        leftUBSize -= scaleSize;
+    }
+    if (inputParams_.hasBias) {
+        // 防无符号下溢翻转：bias 占用超出剩余 UB 时直接失败
+        uint64_t biasSize = GetSizeWithDataType(baseN, inputParams_.biasDtype);
+        OP_TILING_CHECK(leftUBSize < biasSize,
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                              "RecalcBaseMByUb failed, left ubSize[%lu] cannot hold bias size[%lu] "
+                                              "with baseN[%lu].",
+                                              leftUBSize, biasSize, baseN),
+                        return false);
+        leftUBSize -= biasSize;
+    }
+    // The remaining space is baseM * baseN + baseM * baseN / 4 * 2 + (baseM), depending on whether it is pertoken.
+    uint64_t perRowSize = GetSizeWithDataType(baseN, ge::DT_FLOAT) +
+                          GetSizeWithDataType(ops::CeilDiv(baseN, FP32_OUTPUT_TIMES), inputParams_.cDtype) *
+                              PING_PONG_TIMES;
+    if (inputParams_.isPertoken) {
+        perRowSize += GetSizeWithDataType(1, inputParams_.perTokenScaleDtype);
+    }
+    // 兜底防除零：dtype 字节数异常为 0 时每行占用仍可能为 0
+    OP_TILING_CHECK(perRowSize == 0UL,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "RecalcBaseMByUb failed, per-row ub cost is 0 with baseN[%lu], dtype size "
+                                          "may be invalid.",
+                                          baseN),
+                    return false);
+    baseM = leftUBSize / perRowSize;
+    uint64_t baseMAlignNum = inputParams_.transA ?
+                                 GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype) :
+                                 qmmv3_tiling_const::CUBE_BLOCK;
+    baseM = ops::FloorAlign(baseM, baseMAlignNum);
+    // 对齐后为 0 说明 UB 连一个最小对齐块都放不下，避免下游按 baseM 切分时除零
+    OP_TILING_CHECK(baseM == 0UL,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "RecalcBaseMByUb failed, left ubSize[%lu] cannot hold one aligned block "
+                                          "with per-row cost[%lu], baseM is 0 after align.",
+                                          leftUBSize, perRowSize),
+                    return false);
+    isUbOverflow = false;
+    return true;
+}
+
 bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
 {
     if (compileInfo_.npuArch != NpuArch::DAV_9201 && compileInfo_.npuArch != NpuArch::DAV_9202) {
@@ -294,14 +377,20 @@ bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
     }
 
     BaseBlockRes baseBlockInit = ComputeBaseBlockPlain();
-    if (inputParams_.isPertoken && baseBlockInit.baseM * baseBlockInit.baseN > LB_BASIC_BLOCK_LIMIT_ONE_VECTOR) {
-        // 9201/9202上pertoken结果由单AIV一次产出，限制baseM*baseN面积（128*256）。
-        baseBlockInit.baseM = LB_MAX_BASEM_ONE_VECTOR;
-    }
     if (!RearrangeBasicBlock(baseBlockInit)) {
         return false;
     }
     baseBlockInit = baseBlockRes_;
+    // Mix 模板专属 UB 约束：IsBasicBlockUbOverflow/RecalcBaseMByUb 按 Mix 的 FP32 累加/scale/bias/
+    // ping-pong 输出布局估算，由 enableMixUbCheck_ 门控，且初始检查与候选过滤共用该开关；
+    // CubeBasic/MX/StreamK 等模板 UB 布局不同，不套用 Mix 的资源公式。
+    bool isUbOverflow = false;
+    if (enableMixUbCheck_) {
+        isUbOverflow = IsBasicBlockUbOverflow(baseBlockInit.baseM, baseBlockInit.baseN);
+    }
+    if (!RecalcBaseMByUb(baseBlockInit.baseM, baseBlockInit.baseN, isUbOverflow)) {
+        return false;
+    }
 
     bool curIsAFullLoad = IsBalanceAFullLoad(baseBlockInit.baseM, baseBlockInit.baseN);
     uint64_t curM = baseBlockInit.baseM;
@@ -309,7 +398,7 @@ bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
     uint64_t curTotalBlockCnt = batchCoreCnt_ * ops::CeilDiv(inputParams_.mSize, curM) *
                                 ops::CeilDiv(inputParams_.nSize, curN);
     // 计算达10轮及以上，避免局部最优，用默认基本块。
-    if (ops::CeilDiv(curTotalBlockCnt, static_cast<uint64_t>(compileInfo_.aicNum)) >= 10UL) {
+    if (!isUbOverflow && ops::CeilDiv(curTotalBlockCnt, static_cast<uint64_t>(compileInfo_.aicNum)) >= 10UL) {
         baseBlockRes_ = baseBlockInit;
         return true;
     }
@@ -331,7 +420,7 @@ bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
     SocSpecifyParams socSpecAdjustBalanceInfo;
     if (!GetSocSpecAdjustBalanceInfo(socSpecAdjustBalanceInfo)) {
         // 平台规格不可得时退回初始基块，保持功能可用。
-        OP_LOGE(inputParams_.opName, "SocSpecAdjustBalanceInfo is not found on this platform.");
+        OP_LOGW(inputParams_.opName, "SocSpecAdjustBalanceInfo is not found on this platform.");
         baseBlockRes_ = baseBlockInit;
         return true;
     }
@@ -349,6 +438,10 @@ bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
         uint64_t curMaxBaseN = std::min(
             maxBaseN, ops::FloorAlign(compileInfo_.l0cSize / qmmv3_tiling_const::DATA_SIZE_L0C / curBaseM, baseNAlign));
         for (uint64_t curBaseN = curMaxBaseN; curBaseN >= 1 && curBaseN <= curMaxBaseN; curBaseN -= baseNAlign) {
+            // 与初始检查共用 enableMixUbCheck_ 开关，非 Mix 模板不按 Mix 的 UB 布局排除候选。
+            if (enableMixUbCheck_ && IsBasicBlockUbOverflow(curBaseM, curBaseN)) {
+                continue;
+            }
             double curCubeBoundParam = (static_cast<double>(curBaseM) + curBaseN) /
                                        (static_cast<double>(curBaseM) * curBaseN);
             double curBalanceRate = GetBalanceRate(curBaseM, curBaseN);

@@ -169,15 +169,14 @@ TEST_F(QuantBatchMatmulV3LoadBalance, PlainTileRespectsSplitL0Buffers)
     }
 }
 
-TEST_F(QuantBatchMatmulV3LoadBalance, PertokenUsesOneVectorTileWithoutSmallShapeExpansion)
+TEST_F(QuantBatchMatmulV3LoadBalance, PertokenWithoutSmallShapeExpansion)
 {
     params.mSize = params.nSize = 256;
     params.isPertoken = true;
     BaseBlockCalculator calculator(params, info);
     ASSERT_TRUE(calculator.Compute(BaseBlockMode::LOAD_BALANCE));
-    EXPECT_EQ(calculator.GetOutput().baseM, 128);
+    EXPECT_EQ(calculator.GetOutput().baseM, 256);
     EXPECT_EQ(calculator.GetOutput().baseN, 256);
-    EXPECT_LE(calculator.GetOutput().baseM * calculator.GetOutput().baseN, 32768);
 }
 
 TEST_F(QuantBatchMatmulV3LoadBalance, ManyRoundsKeepPlainTile)

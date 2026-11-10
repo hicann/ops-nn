@@ -62,8 +62,12 @@ uint64_t GetStreamKSingleCoreKAlignSize(ge::DataType inputDtype);
 
 class BaseBlockCalculator {
 public:
+    // enableMixUbCheck：LOAD_BALANCE 基块搜索是否套用 Mix 模板的 UB 约束（IsBasicBlockUbOverflow 按 Mix 的
+    // FP32 累加/scale/bias/ping-pong 输出布局估算）。仅 Mix 模板传 true；其他模板（CubeBasic/MX/StreamK 等）
+    // UB 布局不同，须传 false，以免错误排除候选块。该开关同时门控初始基块检查与候选过滤。
     BaseBlockCalculator(const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo,
-                        uint64_t batchCoreCnt = 1UL, fe::PlatFormInfos* platformInfo = nullptr);
+                        uint64_t batchCoreCnt = 1UL, fe::PlatFormInfos* platformInfo = nullptr,
+                        bool enableMixUbCheck = false);
     virtual ~BaseBlockCalculator() = default;
 
     bool Compute(BaseBlockMode mode);
@@ -78,6 +82,7 @@ protected:
     const QuantBatchMatmulV3CompileInfo& compileInfo_;
     uint64_t batchCoreCnt_ = 1UL;
     fe::PlatFormInfos* platformInfo_ = nullptr;
+    bool enableMixUbCheck_ = false;
     BaseBlockRes baseBlockRes_;
 
 private:
@@ -96,6 +101,8 @@ private:
     // DAV_9201/9202(960DT/960PR) 负载均衡基块搜索
     // 实现位于 base_block_load_balance_calculator.cpp
     bool ComputeBaseBlockLoadBalance();
+    bool IsBasicBlockUbOverflow(uint64_t baseM, uint64_t baseN);
+    bool RecalcBaseMByUb(uint64_t& baseM, uint64_t baseN, bool& isUbOverflow);
     BaseBlockRes ComputeBaseBlockPlain();
     bool RearrangeBasicBlock(const BaseBlockRes& baseBlockInit);
     uint64_t CalMaxBasicBlockLimited(uint64_t shapeSize, uint64_t alignUnit, uint64_t l0BufferSize,
