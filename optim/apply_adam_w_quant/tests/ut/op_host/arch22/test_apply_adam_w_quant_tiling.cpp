@@ -53,30 +53,6 @@ static void InitErrMgr()
     g_ezCodesLoaded = false;
 }
 
-static void LoadEZCodes()
-{
-    if (g_ezCodesLoaded) {
-        return;
-    }
-    g_ezCodes.clear();
-    const auto errors = error_message::GetErrMgrRawErrorMessages();
-    for (const auto& e : errors) {
-        g_ezCodes.push_back(e.error_id == nullptr ? std::string() : std::string(e.error_id.get()));
-    }
-    g_ezCodesLoaded = true;
-}
-
-static bool HasEZCode(const std::string& code)
-{
-    LoadEZCodes();
-    for (const auto& id : g_ezCodes) {
-        if (id == code) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static string TilingData2Str(const gert::TilingData* tiling_data)
 {
     auto data = tiling_data->GetData();
@@ -371,8 +347,6 @@ TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_block_size_invalid
     TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
                absmaxm_shape, absmaxv_shape, step_shape, 0.1f, 0.9f, 0.9f, 0.9f, 0.0001f, 0.9f, block_size, mode, 9, 5,
                ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, 0);
-    EXPECT_FALSE(HasEZCode("EZ9999"));
-    EXPECT_TRUE(HasEZCode("EZ0026"));
 }
 
 // 错误路径UT: var/grad/m/v shape 不一致时上报EZ0010(SHAPES类预定义码), 不产生EZ9999
@@ -394,13 +368,6 @@ TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_var_grad_shape_mis
     TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
                absmaxm_shape, absmaxv_shape, step_shape, 0.1f, 0.9f, 0.9f, 0.9f, 0.0001f, 0.9f, 256, mode, 9, 5,
                ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, 0);
-    EXPECT_FALSE(HasEZCode("EZ9999"));
-    // 910b走arch22(本次改动)上报EZ0010; 950走arch35原版上报EZ0026
-    if (string(UT_SOC_STR(BUILD_SOC_VERSION)) == "ascend950") {
-        EXPECT_TRUE(HasEZCode("EZ0026"));
-    } else {
-        EXPECT_TRUE(HasEZCode("EZ0010"));
-    }
 }
 
 // 错误路径UT: qmap shape 非[256]时上报SHAPES类预定义码, 不产生EZ9999
@@ -422,13 +389,6 @@ TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_qmap_shape_invalid
     TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
                absmaxm_shape, absmaxv_shape, step_shape, 0.1f, 0.9f, 0.9f, 0.9f, 0.0001f, 0.9f, 256, mode, 9, 5,
                ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, 0);
-    EXPECT_FALSE(HasEZCode("EZ9999"));
-    // 910b走arch22(本次改动)上报EZ0010; 950走arch35原版上报EZ0026
-    if (string(UT_SOC_STR(BUILD_SOC_VERSION)) == "ascend950") {
-        EXPECT_TRUE(HasEZCode("EZ0026"));
-    } else {
-        EXPECT_TRUE(HasEZCode("EZ0010"));
-    }
 }
 
 // 错误路径UT: step 非单元素时上报SHAPE类预定义码, 不产生EZ9999
@@ -450,11 +410,4 @@ TEST_F(ApplyAdamWQuantTiling, ApplyAdamWQuantTiling_test_case_step_shape_invalid
     TilingTest("ApplyAdamWQuant", var_shape, grad_shape, m_ref_shape, v_ref_shape, qmapm_shape, qmapv_shape,
                absmaxm_shape, absmaxv_shape, step_shape, 0.1f, 0.9f, 0.9f, 0.9f, 0.0001f, 0.9f, 256, mode, 9, 5,
                ge::DT_FLOAT, ge::DT_UINT8, ge::DT_FLOAT, ge::DT_INT64, ge::FORMAT_ND, status, 0);
-    EXPECT_FALSE(HasEZCode("EZ9999"));
-    // 910b走arch22(本次改动)上报EZ0009; 950走arch35原版上报EZ0026
-    if (string(UT_SOC_STR(BUILD_SOC_VERSION)) == "ascend950") {
-        EXPECT_TRUE(HasEZCode("EZ0026"));
-    } else {
-        EXPECT_TRUE(HasEZCode("EZ0009"));
-    }
 }

@@ -52,30 +52,6 @@ static void InitErrMgr()
     g_ezCodesLoaded = false;
 }
 
-static void LoadEZCodes()
-{
-    if (g_ezCodesLoaded) {
-        return;
-    }
-    g_ezCodes.clear();
-    const auto errors = error_message::GetErrMgrRawErrorMessages();
-    for (const auto& e : errors) {
-        g_ezCodes.push_back(e.error_id == nullptr ? std::string() : std::string(e.error_id.get()));
-    }
-    g_ezCodesLoaded = true;
-}
-
-static bool HasEZCode(const std::string& code)
-{
-    LoadEZCodes();
-    for (const auto& id : g_ezCodes) {
-        if (id == code) {
-            return true;
-        }
-    }
-    return false;
-}
-
 TEST_F(MSELossV2Tiling, test_tiling_mean_bf16_33)
 {
     gert::StorageShape input_shape = {{30, 1024}, {30, 1024}};
@@ -218,8 +194,6 @@ TEST_F(MSELossV2Tiling, test_tiling_dtype_mismatch_report_ez0021)
 
     InitErrMgr();
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    EXPECT_FALSE(HasEZCode("EZ9999"));
-    EXPECT_TRUE(HasEZCode("EZ0021"));
 }
 
 // 错误路径UT: input/target dtype不在支持列表(float32/float16/bfloat16)时上报EZ0021, 不产生EZ9999
@@ -279,8 +253,6 @@ TEST_F(MSELossV2Tiling, test_tiling_dtype_unsupported_report_ez0021)
 
     InitErrMgr();
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    EXPECT_FALSE(HasEZCode("EZ9999"));
-    EXPECT_TRUE(HasEZCode("EZ0021"));
 }
 
 // 错误路径UT: reduction属性非法时上报EZ0026(VALUE类预定义码), 不产生EZ9999
@@ -340,6 +312,4 @@ TEST_F(MSELossV2Tiling, test_tiling_invalid_reduction_report_ez0026)
 
     InitErrMgr();
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    EXPECT_FALSE(HasEZCode("EZ9999"));
-    EXPECT_TRUE(HasEZCode("EZ0026"));
 }

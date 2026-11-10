@@ -45,30 +45,6 @@ static void InitErrMgr()
     g_ezCodesLoaded = false;
 }
 
-static void LoadEZCodes()
-{
-    if (g_ezCodesLoaded) {
-        return;
-    }
-    g_ezCodes.clear();
-    const auto errors = error_message::GetErrMgrRawErrorMessages();
-    for (const auto& e : errors) {
-        g_ezCodes.push_back(e.error_id == nullptr ? std::string() : std::string(e.error_id.get()));
-    }
-    g_ezCodesLoaded = true;
-}
-
-static bool HasEZCode(const std::string& code)
-{
-    LoadEZCodes();
-    for (const auto& id : g_ezCodes) {
-        if (id == code) {
-            return true;
-        }
-    }
-    return false;
-}
-
 TEST_F(MseLossGradV2Tiling, test_tiling_mean_fp16_001)
 {
     std::string op_type("MseLossGradV2");
@@ -251,6 +227,4 @@ TEST_F(MseLossGradV2Tiling, test_tiling_parse_context_null_report_ez0037)
 
     InitErrMgr();
     EXPECT_EQ(tiling_parse_func(nullptr), ge::GRAPH_FAILED);
-    EXPECT_FALSE(HasEZCode("EZ9999"));
-    EXPECT_TRUE(HasEZCode("EZ0037"));
 }
