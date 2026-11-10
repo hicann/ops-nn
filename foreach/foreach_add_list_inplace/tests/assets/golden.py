@@ -289,10 +289,58 @@ def _tp_one(t):
     return t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
 
 
-def _tp_num(v):
+def _dtype_name(d):
+    """torch.dtype / np.dtype / str 统一成 'int32' / 'bfloat16' 这类规范名。"""
+    name = getattr(d, "name", None) or str(d)
+    return str(name).replace("torch.", "")
+
+
+def _is_int_dtype(d):
+    """dtype 是否为整型。bf16 必须先排除(np.dtype('bfloat16') 会抛 TypeError)。"""
+    if d is None:
+        return False
+    name = _dtype_name(d)
+    if name == "bfloat16":
+        return False
+    try:
+        return np.issubdtype(np.dtype(name), np.integer)
+    except TypeError:
+        return False
+
+
+def _list_ref_dtype(xs):
+    """参考 dtype 取输出(x1)子张量: 同构直接返回, 异构仅全整型才按整型, 否则 None。"""
+    names = [_dtype_name(t.dtype) for t in xs if hasattr(t, "dtype")]
+    if not names:
+        return None
+    if len(set(names)) == 1:
+        return names[0]
+    return names[0] if all(_is_int_dtype(n) for n in names) else None
+
+
+def _tp_num(v, ref_dtype=None):
+    """标量还原: 整/浮语义由输出 dtype 决定, alpha 自身 dtype 仅兜底。
+
+    alpha 声明成浮点时, float 标量会把 int32 列表提升到 fp32, alpha*x2 丢低位/
+    溢出, 最终 .to(int32) 截断成 INT32_MIN。按输出整型归一回绕即与内核/竞品一致。
+    """
     if isinstance(v, torch.Tensor):
-        return float(v.reshape(-1)[0])
-    return float(v)
+        x = v.reshape(-1)[0].item()
+    elif isinstance(v, (np.ndarray, np.generic)):
+        a = np.asarray(v).reshape(-1)
+        if a.dtype.kind == "V" and _bf16 is not None:
+            a = a.view(_bf16)  # bf16 void 载体还原
+        x = a[0].item()
+    else:
+        x = v
+
+    if ref_dtype is not None:
+        if _is_int_dtype(ref_dtype):
+            # 按输出整型归一回绕, 再转 Python int 交给 torch 整型 foreach
+            return int(np.asarray(x).astype(np.dtype(_dtype_name(ref_dtype))))
+        return float(x)
+    # 兜底: 按 alpha 自身 dtype
+    return int(x) if isinstance(x, (int, np.integer)) else float(x)
 
 
 def _keep_dtype(res, ref):
@@ -333,10 +381,10 @@ class ForeachAddListInplaceAclnnSpec:
     def golden(x1, x2, alpha, **kwargs):
         a = [_tp_one(t) for t in x1]
         b = [_tp_one(t) for t in x2]
+        # 整/浮语义看输出子张量 dtype; int32 用例的 alpha 即使是浮点也走整型回绕
+        scalar = _tp_num(alpha, _list_ref_dtype(a))
         # 两步拼接, 不用 alpha= 的 FMA 单次舍入形式
-        return _keep_dtype(
-            torch._foreach_add(a, torch._foreach_mul(b, _tp_num(alpha))), x1
-        )
+        return _keep_dtype(torch._foreach_add(a, torch._foreach_mul(b, scalar)), x1)
 
     third_party = {"torch": _TpAclnn}
     tolerance = _TOL_KERNEL
