@@ -13,10 +13,12 @@
 - 计算公式：
 
 $$
-y = sigmoid(scale*x) + x*sigmoid(scale*x)
-$$
-$$
-sigmoid = sigmoid*(1 - sigmoid)
+\begin{aligned}
+s(x) &= x \cdot \sigma(scale \cdot x) \\
+\frac{\partial s}{\partial x} &= \sigma(scale \cdot x) \cdot \left(1 + scale \cdot x \cdot (1 - \sigma(scale \cdot x))\right) \\
+grad_x &= grad \cdot \frac{\partial s}{\partial x} \\
+\sigma(z) &= \frac{1}{1+e^{-z}}
+\end{aligned}
 $$
 
 ## 参数说明
