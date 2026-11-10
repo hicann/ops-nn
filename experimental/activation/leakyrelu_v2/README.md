@@ -17,7 +17,7 @@ $$ y = \begin{cases} x, & x \ge 0 \\ negative\_slope \times x, & x < 0 \end{case
 | 参数名 | 输入/输出/属性 | 描述                                                         | 数据类型 | 数据格式 |
 | :----- | :------------- | :----------------------------------------------------------- | :------- | :------- |
 | x      | 输入           | 输入张量。                                                   | 见下方   | ND       |
-| negative_slope | 属性           | 控制x < 0时的斜率。                                          | FLOAT    | -        |
+| negative_slope | 属性           | 控制x < 0时的斜率；图模式缺省时默认值为1.0。                   | FLOAT    | -        |
 | y      | 输出           | LeakyRelu计算的结果。                                        | 见下方   | ND       |
 
 - <term>Atlas A2系列产品</term>：数据类型支持FLOAT、FLOAT16。
