@@ -20,9 +20,9 @@ InplaceApplyFtrl 实现 FTRL-Proximal（Follow The Regularized Leader）优化�
 $$
 \begin{aligned}
 accum_{new} &= accum + grad \cdot grad \\
-\sigma &= |accum_{new}|^{-lr\_power} - |accum|^{-lr\_power} \\
+\sigma &= accum_{new}^{-lr\_power} - accum^{-lr\_power} \\
 linear_{new} &= linear + grad - \frac{\sigma}{lr} \cdot var \\
-y &= \frac{|accum_{new}|^{-lr\_power}}{lr} + 2 \cdot l2 \\
+y &= \frac{accum_{new}^{-lr\_power}}{lr} + 2 \cdot l2 \\
 x &= l1 \cdot sign(linear_{new}) - linear_{new} \\
 var &= \begin{cases} x / y, & |linear_{new}| > l1 \\ 0, & |linear_{new}| \le l1 \end{cases} \\
 accum &= accum_{new},\quad linear = linear_{new}

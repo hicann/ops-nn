@@ -19,6 +19,7 @@
 #define INPLACE_APPLY_FTRL_TILING_ARCH35_H
 
 #include <cstdint>
+#include <limits>
 #include "graph/types.h"
 #include "graph/ge_error_codes.h"
 #include "exe_graph/runtime/shape.h"
@@ -105,6 +106,7 @@ constexpr int32_t SHAPE_STATUS_OK = 0;
 constexpr int32_t SHAPE_STATUS_MISMATCH = 1;
 constexpr int32_t SHAPE_STATUS_BAD_DTYPE = 2;
 constexpr int32_t SHAPE_STATUS_BAD_RANK = 3;
+constexpr int32_t SHAPE_STATUS_BAD_SIZE = 4;
 
 constexpr int64_t MAX_TENSOR_RANK = 8;
 struct ShapeInfoResult {
@@ -124,7 +126,26 @@ inline ShapeInfoResult GetShapeInfoPure(const gert::Shape& var, const gert::Shap
     if (!IsSupportedDtype(dataType)) {
         return ShapeInfoResult{SHAPE_STATUS_BAD_DTYPE, 0};
     }
-    return ShapeInfoResult{SHAPE_STATUS_OK, EnsureNotScalar(var).GetShapeSize()};
+    bool empty = false;
+    for (size_t i = 0; i < var.GetDimNum(); ++i) {
+        const auto dim = var.GetDim(i);
+        if (dim < 0) {
+            return ShapeInfoResult{SHAPE_STATUS_BAD_SIZE, 0};
+        }
+        empty = empty || dim == 0;
+    }
+    if (empty) {
+        return ShapeInfoResult{SHAPE_STATUS_OK, 0};
+    }
+    int64_t elements = 1;
+    for (size_t i = 0; i < var.GetDimNum(); ++i) {
+        const auto dim = var.GetDim(i);
+        if (elements > std::numeric_limits<int64_t>::max() / dim) {
+            return ShapeInfoResult{SHAPE_STATUS_BAD_SIZE, 0};
+        }
+        elements *= dim;
+    }
+    return ShapeInfoResult{SHAPE_STATUS_OK, elements};
 }
 
 inline int64_t CalcBlockFactor(int64_t totalElements, int64_t coreNum, int64_t ubBlockSize)

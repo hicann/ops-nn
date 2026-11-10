@@ -18,6 +18,8 @@
  * InferDataType 移至 op_graph/inplace_apply_ftrl_graph_infer.cpp。
  */
 
+#include <string>
+#include <vector>
 #include "register/op_impl_registry.h"
 #include "op_common/log/log.h"
 
@@ -25,33 +27,34 @@ using namespace ge;
 
 namespace ops {
 
-static constexpr size_t VAR_INDEX = 0;
-static constexpr size_t ACCUM_INDEX = 1;
-static constexpr size_t LINEAR_INDEX = 2;
+static ge::graphStatus ReportInferenceFailure(const char* opName, const std::string& reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {opName, reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1014", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "%s", reason.c_str());
+    return ge::GRAPH_FAILED;
+}
 
 static ge::graphStatus InferShape4InplaceApplyFtrl(gert::InferShapeContext* context)
 {
-    const gert::Shape* varShape = context->GetInputShape(VAR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
-
-    gert::Shape* varOutShape = context->GetOutputShape(VAR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varOutShape);
-    *varOutShape = *varShape;
-
-    const gert::Shape* accumShape = context->GetInputShape(ACCUM_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, accumShape);
-
-    gert::Shape* accumOutShape = context->GetOutputShape(ACCUM_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, accumOutShape);
-    *accumOutShape = *accumShape;
-
-    const gert::Shape* linearShape = context->GetInputShape(LINEAR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, linearShape);
-
-    gert::Shape* linearOutShape = context->GetOutputShape(LINEAR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, linearOutShape);
-    *linearOutShape = *linearShape;
-
+    if (context == nullptr) {
+        return ReportInferenceFailure("InplaceApplyFtrl", "InferShapeContext is nullptr");
+    }
+    constexpr size_t OUTPUT_COUNT = 3;
+    const char* stateNames[] = {"var", "accum", "linear"};
+    for (size_t i = 0; i < OUTPUT_COUNT; ++i) {
+        OP_CHECK_IF(context->GetInputShape(i) == nullptr,
+                    OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), stateNames[i]), return ge::GRAPH_FAILED);
+        if (context->GetOutputShape(i) == nullptr) {
+            return ReportInferenceFailure(
+                context->GetNodeName(),
+                std::string("Output ") + stateNames[i] + " shape storage is nullptr; expected output-slot count=3");
+        }
+    }
+    for (size_t i = 0; i < OUTPUT_COUNT; ++i) {
+        *context->GetOutputShape(i) = *context->GetInputShape(i);
+    }
     return ge::GRAPH_SUCCESS;
 }
 

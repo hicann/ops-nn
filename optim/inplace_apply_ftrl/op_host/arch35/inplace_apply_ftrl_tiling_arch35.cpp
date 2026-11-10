@@ -17,6 +17,8 @@
 
 #include <cstdint>
 #include <cstring>
+#include <string>
+#include <vector>
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -34,141 +36,181 @@ constexpr size_t WORKSPACE_NUM = 1;
 constexpr int64_t TOTAL_INPUTS = 8;
 constexpr uint32_t USE_LOCKING_ATTR_INDEX = 0;
 
+static constexpr const char* INPUT_NAMES[] = {"var", "accum", "linear", "grad", "lr", "l1", "l2", "lr_power"};
+
+static ge::graphStatus ReportTilingFailure(const char* opName, const std::string& reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {opName, reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "%s", reason.c_str());
+    return ge::GRAPH_FAILED;
+}
+
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* ubSize, int64_t* coreNum)
 {
-    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    auto* platformInfo = context->GetPlatformInfo();
+    if (platformInfo == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "Platform info is nullptr");
+    }
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     *coreNum = ascendcPlatform.GetCoreNumAiv();
     if (*coreNum == 0) {
         *coreNum = ascendcPlatform.GetCoreNumAic();
     }
-    OP_CHECK_IF(*coreNum == 0,
-                OP_LOGE(context->GetNodeName(), "GetCoreNumAiv/Aic both 0, invalid coreNum=%ld", *coreNum),
-                return ge::GRAPH_FAILED);
+    if (*coreNum <= 0) {
+        return ReportTilingFailure(context->GetNodeName(), "GetCoreNumAiv/Aic returned no available cores");
+    }
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, *ubSize);
-    if (*ubSize == 0) {
-        OP_LOGE(context->GetNodeName(), "ubSize is 0, get platform UB size failed");
-        return ge::GRAPH_FAILED;
+    if (*ubSize == 0 || *ubSize > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+        return ReportTilingFailure(context->GetNodeName(), "Platform UB size is invalid");
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static bool IsScalarShape(const gert::Shape& shape)
+{
+    return shape.GetDimNum() == 0 || (shape.GetDimNum() == 1 && shape.GetDim(0) == 1);
+}
+
+static ge::graphStatus CheckInputs(gert::TilingContext* context, ge::DataType* dataType)
+{
+    for (size_t i = 0; i < TOTAL_INPUTS; ++i) {
+        const auto* shape = context->GetInputShape(i);
+        const auto* desc = context->GetInputDesc(i);
+        OP_CHECK_IF(shape == nullptr || desc == nullptr,
+                    OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), INPUT_NAMES[i]), return ge::GRAPH_FAILED);
+        const auto format = desc->GetStorageFormat();
+        OP_CHECK_IF(format != ge::FORMAT_ND,
+                    OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), INPUT_NAMES[i],
+                                               Ops::Base::ToString(format).c_str(), "ND"),
+                    return ge::GRAPH_FAILED);
+        if (i == IDX_VAR) {
+            *dataType = desc->GetDataType();
+        }
+        OP_CHECK_IF(!IsSupportedDtype(desc->GetDataType()) || desc->GetDataType() != *dataType,
+                    OP_LOGE_FOR_INVALID_DTYPE(
+                        context->GetNodeName(), INPUT_NAMES[i], Ops::Base::ToString(desc->GetDataType()).c_str(),
+                        i == IDX_VAR ? "FLOAT, FLOAT16 or BF16" : Ops::Base::ToString(*dataType).c_str()),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(i >= IDX_LR && !IsScalarShape(shape->GetStorageShape()),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), INPUT_NAMES[i],
+                                                          Ops::Base::ToString(shape->GetStorageShape()).c_str(),
+                                                          "Expected a scalar (0D) or shape [1]"),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckOutputs(gert::TilingContext* context, ge::DataType dataType)
+{
+    for (size_t i = 0; i < TOTAL_OUTPUTS; ++i) {
+        const auto* output = context->GetOutputShape(i);
+        const auto* desc = context->GetOutputDesc(i);
+        const std::string name = std::string("output ") + INPUT_NAMES[i];
+        if (output == nullptr || desc == nullptr) {
+            return ReportTilingFailure(context->GetNodeName(), name + " shape or descriptor is nullptr");
+        }
+        OP_CHECK_IF(desc->GetStorageFormat() != ge::FORMAT_ND,
+                    OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), name.c_str(),
+                                               Ops::Base::ToString(desc->GetStorageFormat()).c_str(), "ND"),
+                    return ge::GRAPH_FAILED);
+        const auto* input = context->GetInputShape(i);
+        const auto& inputStorage = input->GetStorageShape();
+        const auto& outputStorage = output->GetStorageShape();
+        // GE may normalize scalar storage from 0D to [1] while retaining its origin shape.
+        const bool scalarAlias = IsScalarShape(inputStorage) && IsScalarShape(outputStorage) &&
+                                 input->GetOriginShape() == output->GetOriginShape() &&
+                                 IsScalarShape(input->GetOriginShape()) &&
+                                 context->GetInputDesc(i)->GetOriginFormat() == ge::FORMAT_ND &&
+                                 desc->GetOriginFormat() == ge::FORMAT_ND;
+        OP_CHECK_IF(
+            !ShapeEqual(inputStorage, outputStorage) && !scalarAlias,
+            OP_LOGE_FOR_INVALID_SHAPE(context->GetNodeName(), name.c_str(), Ops::Base::ToString(outputStorage).c_str(),
+                                      Ops::Base::ToString(inputStorage).c_str()),
+            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(desc->GetDataType() != dataType,
+                    OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), name.c_str(),
+                                              Ops::Base::ToString(desc->GetDataType()).c_str(),
+                                              Ops::Base::ToString(dataType).c_str()),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalElements, ge::DataType* dataType)
 {
-    auto inputVar = context->GetInputShape(IDX_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
-    auto inputAccum = context->GetInputShape(IDX_ACCUM);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputAccum);
-    auto inputLinear = context->GetInputShape(IDX_LINEAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputLinear);
-    auto inputGrad = context->GetInputShape(IDX_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
-
-    const gert::Shape& varShape = inputVar->GetStorageShape();
-
-    auto inputDesc = context->GetInputDesc(IDX_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    *dataType = inputDesc->GetDataType();
-
-    const char* inputNames[] = {"var", "accum", "linear", "grad", "lr", "l1", "l2", "lr_power"};
-    const char* outputNames[] = {"var", "accum", "linear"};
-
-    // C1: format constraint — all inputs/outputs must be ND (README: 数据格式仅支持 ND)
-    for (int64_t i = 0; i < TOTAL_INPUTS; ++i) {
-        auto desc = context->GetInputDesc(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
-        const auto format = desc->GetFormat().GetStorageFormat();
-        OP_CHECK_IF(
-            format != ge::FORMAT_ND,
-            OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: input %s format %d is unsupported, legal format=ND",
-                    inputNames[i], static_cast<int>(format)),
-            return ge::GRAPH_FAILED);
+    auto status = CheckInputs(context, dataType);
+    if (status != ge::GRAPH_SUCCESS) {
+        return status;
     }
-    for (size_t i = 0; i < TOTAL_OUTPUTS; ++i) {
-        auto desc = context->GetOutputDesc(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
-        const auto format = desc->GetFormat().GetStorageFormat();
-        OP_CHECK_IF(
-            format != ge::FORMAT_ND,
-            OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: output %s format %d is unsupported, legal format=ND",
-                    outputNames[i], static_cast<int>(format)),
-            return ge::GRAPH_FAILED);
-    }
-
-    // C2: dtype consistency — 8 inputs must share the same dtype
-    for (int64_t i = 1; i < TOTAL_INPUTS; ++i) {
-        auto desc = context->GetInputDesc(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
-        auto dt = desc->GetDataType();
-        OP_CHECK_IF(dt != *dataType,
-                    OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: input %s dtype %d mismatch with var dtype %d",
-                            inputNames[i], static_cast<int>(dt), static_cast<int>(*dataType)),
+    const auto& var = context->GetInputShape(IDX_VAR)->GetStorageShape();
+    for (size_t i = IDX_ACCUM; i <= IDX_GRAD; ++i) {
+        const auto& shape = context->GetInputShape(i)->GetStorageShape();
+        OP_CHECK_IF(!ShapeEqual(shape, var),
+                    OP_LOGE_FOR_INVALID_SHAPE(context->GetNodeName(), INPUT_NAMES[i],
+                                              Ops::Base::ToString(shape).c_str(), Ops::Base::ToString(var).c_str()),
                     return ge::GRAPH_FAILED);
     }
-
-    // C3: lr/l1/l2/lr_power must be rank-0 scalars (GE normalizes rank-0 to storage
-    // shape {1}, so an explicit 1-element {1} tensor is also accepted)
-    for (size_t i = IDX_LR; i <= IDX_LR_POWER; ++i) {
-        auto inputShape = context->GetInputShape(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
-        const auto& s = inputShape->GetStorageShape();
-        OP_CHECK_IF(s.GetDimNum() != 0 && !(s.GetDimNum() == 1 && s.GetDim(0) == 1),
-                    OP_LOGE(context->GetNodeName(),
-                            "InplaceApplyFtrl: input %s must be a rank-0 scalar (or {1} after GE normalization), "
-                            "got %zu-dim shape",
-                            inputNames[i], s.GetDimNum()),
-                    return ge::GRAPH_FAILED);
-    }
-
-    // C4: use_locking only supports false (README: use_locking 当前仅支持默认值 false)
-    const auto* attrs = context->GetAttrs();
-    if (attrs != nullptr) {
-        const bool* useLockingPtr = attrs->GetBool(USE_LOCKING_ATTR_INDEX);
-        OP_CHECK_IF(useLockingPtr != nullptr && *useLockingPtr,
-                    OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: use_locking only supports false"),
-                    return ge::GRAPH_FAILED);
-    }
-
-    ShapeInfoResult r = GetShapeInfoPure(varShape, inputAccum->GetStorageShape(), inputLinear->GetStorageShape(),
-                                         inputGrad->GetStorageShape(), *dataType);
-    OP_CHECK_IF(r.status != SHAPE_STATUS_OK,
-                OP_LOGE(context->GetNodeName(), "InplaceApplyFtrl: GetShapeInfoPure failed, status=%d", r.status),
+    const auto result = GetShapeInfoPure(var, var, var, var, *dataType);
+    OP_CHECK_IF(result.status != SHAPE_STATUS_OK,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "var", Ops::Base::ToString(var).c_str(),
+                    "Storage rank must be at most 8; dimensions must be nonnegative and element count fit in int64"),
                 return ge::GRAPH_FAILED);
-    *totalElements = r.totalElements;
-
+    *totalElements = result.totalElements;
+    status = CheckOutputs(context, *dataType);
+    if (status != ge::GRAPH_SUCCESS) {
+        return status;
+    }
+    const auto* attrs = context->GetAttrs();
+    const auto* locking = attrs == nullptr ? nullptr : attrs->GetBool(USE_LOCKING_ATTR_INDEX);
+    OP_CHECK_IF(locking != nullptr && *locking,
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "use_locking", "true", "false"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     size_t* currentWorkspace = context->GetWorkspaceSizes(WORKSPACE_NUM);
-    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    if (currentWorkspace == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(),
+                                   "GetWorkspaceSizes(1) returned nullptr or insufficient capacity");
+    }
     currentWorkspace[0] = USER_WORKSPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus InplaceApplyFtrlTilingFunc(gert::TilingContext* context)
 {
+    if (context == nullptr) {
+        return ReportTilingFailure("InplaceApplyFtrl", "TilingContext is nullptr");
+    }
     OP_LOGI(context->GetNodeName(), "Enter InplaceApplyFtrlTilingFunc");
-
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
-    OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "GetPlatformInfo error"), return ge::GRAPH_FAILED);
-
-    int64_t totalElements;
-    ge::DataType dataType;
-    OP_CHECK_IF(GetShapeAttrsInfo(context, &totalElements, &dataType) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
-
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
-
-    InplaceApplyFtrlTilingData* tiling = context->GetTilingData<InplaceApplyFtrlTilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(InplaceApplyFtrlTilingData), 0, sizeof(InplaceApplyFtrlTilingData)) != EOK,
-                OP_LOGE(context->GetNodeName(), "memset tiling error"), return ge::GRAPH_FAILED);
+    auto status = GetPlatformInfo(context, &ubSize, &coreNum);
+    if (status != ge::GRAPH_SUCCESS) {
+        return status;
+    }
+    int64_t totalElements = 0;
+    ge::DataType dataType = ge::DT_UNDEFINED;
+    status = GetShapeAttrsInfo(context, &totalElements, &dataType);
+    if (status != ge::GRAPH_SUCCESS) {
+        return status;
+    }
+    status = GetWorkspaceSize(context);
+    if (status != ge::GRAPH_SUCCESS) {
+        return status;
+    }
+    auto* tiling = context->GetTilingData<InplaceApplyFtrlTilingData>();
+    if (tiling == nullptr) {
+        return ReportTilingFailure(context->GetNodeName(), "Tiling data buffer is nullptr or too small");
+    }
+    if (memset_s(tiling, sizeof(InplaceApplyFtrlTilingData), 0, sizeof(InplaceApplyFtrlTilingData)) != EOK) {
+        return ReportTilingFailure(context->GetNodeName(), "Failed to initialize tiling data");
+    }
     tiling->totalElements = totalElements;
 
     if (totalElements == 0) {
@@ -179,8 +221,9 @@ ge::graphStatus InplaceApplyFtrlTilingFunc(gert::TilingContext* context)
     int64_t ubBlockSize = GetDtypeUbBlockSize(dataType);
     int64_t blockFactor = CalcBlockFactor(totalElements, coreNum, ubBlockSize);
     int64_t ubFactor = CalcUbFactor(ubSize, blockFactor);
-    OP_CHECK_IF(ubFactor < 0, OP_LOGE(context->GetNodeName(), "CalcUbFactor error: ubFactor=%ld", ubFactor),
-                return ge::GRAPH_FAILED);
+    if (ubFactor < 0) {
+        return ReportTilingFailure(context->GetNodeName(), "Platform UB size is insufficient for tiling");
+    }
 
     tiling->blockFactor = blockFactor;
     tiling->ubFactor = ubFactor;

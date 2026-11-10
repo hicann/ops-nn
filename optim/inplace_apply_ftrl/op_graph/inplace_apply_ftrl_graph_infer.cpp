@@ -15,30 +15,50 @@
  * \brief InplaceApplyFtrl Graph InferDataType
  */
 
+#include <string>
+#include <vector>
 #include "register/op_impl_registry.h"
+#include "op_common/log/log.h"
 
 namespace ops {
 
 using namespace ge;
-static ge::graphStatus InferDataTypeForInplaceApplyFtrl(gert::InferDataTypeContext* context)
-{
-    const ge::DataType varDataType = context->GetInputDataType(0);
 
+static ge::graphStatus ReportInferenceFailure(const char* opName, const std::string& reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {opName, reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1014", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "%s", reason.c_str());
+    return ge::GRAPH_FAILED;
+}
+
+ge::graphStatus InferDataTypeForInplaceApplyFtrl(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ReportInferenceFailure("InplaceApplyFtrl", "InferDataTypeContext is nullptr");
+    }
+    const char* inputNames[] = {"var", "accum", "linear", "grad", "lr", "l1", "l2", "lr_power"};
+    const ge::DataType varDataType = context->GetInputDataType(0);
+    OP_CHECK_IF(varDataType != ge::DT_BF16 && varDataType != ge::DT_FLOAT16 && varDataType != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "var", Ops::Base::ToString(varDataType).c_str(),
+                                          "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
     constexpr size_t INPUT_COUNT = 8;
-    constexpr size_t FIRST_EXTRA_INPUT_IDX = 1;
-    for (size_t i = FIRST_EXTRA_INPUT_IDX; i < INPUT_COUNT; ++i) {
-        if (context->GetInputDataType(i) != varDataType) {
-            return ge::GRAPH_FAILED;
+    for (size_t i = 1; i < INPUT_COUNT; ++i) {
+        const auto dtype = context->GetInputDataType(i);
+        OP_CHECK_IF(dtype != varDataType,
+                    OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), inputNames[i], Ops::Base::ToString(dtype).c_str(),
+                                              Ops::Base::ToString(varDataType).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+    constexpr size_t OUTPUT_COUNT = 3;
+    for (size_t i = 0; i < OUTPUT_COUNT; ++i) {
+        if (context->SetOutputDataType(i, varDataType) != ge::GRAPH_SUCCESS) {
+            return ReportInferenceFailure(context->GetNodeName(), std::string("Failed to set output ") + inputNames[i] +
+                                                                      " dtype; expected output-slot count=3");
         }
     }
-
-    if (varDataType != ge::DT_BF16 && varDataType != ge::DT_FLOAT16 && varDataType != ge::DT_FLOAT) {
-        return ge::GRAPH_FAILED;
-    }
-
-    context->SetOutputDataType(0, varDataType);
-    context->SetOutputDataType(1, varDataType);
-    context->SetOutputDataType(2, varDataType);
     return ge::GRAPH_SUCCESS;
 }
 

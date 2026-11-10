@@ -16,7 +16,8 @@
  *
  * Formula:
  *   accum_new = accum + grad * grad
- *   pow_new = |accum_new| ^ (-lr_power)
+ *   pow_new = accum_new ^ (-lr_power)
+ *   pow_old = accum ^ (-lr_power)
  *   linear_new = linear + (grad - (pow_new - pow_old) / lr * var)
  *   quadratic = pow_new / lr + 2 * l2
  *   var_new = (|linear_new| > l1) ? (sign(linear_new) * l1 - linear_new) / quadratic : 0
@@ -33,6 +34,7 @@
 
 #include "kernel_operator.h"
 #include "adv_api/math/power.h"
+#include "adv_api/math/sign.h"
 #include "inplace_apply_ftrl_tiling_data.h"
 
 namespace NsInplaceApplyFtrl {
@@ -56,11 +58,10 @@ constexpr bool NO_LEFT_PAD = false;
 constexpr bool ENABLE_PAD = true;
 constexpr uint32_t NO_PAD_LEN = 0;
 
-constexpr float POW_FLOOR_EPS = 1e-30f; // Power-floor guard: |n| + eps before Ln
 constexpr PowerConfig FTRL_POW_HIGH_PRECISION = {PowerAlgo::DOUBLE_FLOAT_TECH};
+constexpr DivConfig FTRL_IEEE_DIV = {DivAlgo::PRECISION_0ULP_FTZ_FALSE};
 constexpr float ZERO_F = 0.0f;
 constexpr float ONE_F = 1.0f;
-constexpr float NEG_ONE_F = -1.0f;
 constexpr float TWO_F = 2.0f; // for 2*l2
 
 template <typename T>
@@ -124,7 +125,6 @@ private:
     float l1Scalar_ = 0.0f;
     float l2Scalar_ = 0.0f;
     float lrPowerScalar_ = 0.0f;
-    float invLr_ = 0.0f;      // 1/lr
     float negLrPower_ = 0.0f; // -lr_power
     float twoL2_ = 0.0f;      // 2*l2
 
@@ -256,7 +256,6 @@ __aicore__ inline void InplaceApplyFtrl<T>::Init(GM_ADDR var, GM_ADDR accum, GM_
     l1Scalar_ = LoadScalar(l1);
     l2Scalar_ = LoadScalar(l2);
     lrPowerScalar_ = LoadScalar(lrPower);
-    invLr_ = ONE_F / lrScalar_;
     negLrPower_ = -lrPowerScalar_;
     twoL2_ = TWO_F * l2Scalar_;
 }
@@ -361,7 +360,6 @@ __aicore__ inline void InplaceApplyFtrl<T>::PrepareFp32Sources(int64_t nDma, int
 
 // ============================================================================
 // ComputePow — S1-S3: accum_new, pow_new/pow_old
-// Power-floor guard: |x|+eps before Ln/Sqrt/Power
 // ============================================================================
 template <typename T>
 __aicore__ inline void InplaceApplyFtrl<T>::ComputePow(int32_t n)
@@ -375,24 +373,18 @@ __aicore__ inline void InplaceApplyFtrl<T>::ComputePow(int32_t n)
         Duplicate(powNew_, ONE_F, n);
         Duplicate(tmpB_, ONE_F, n);
     } else if (lrPowerScalar_ == -1.0f) {
-        Abs(powNew_, accumNew_, n);
-        Adds(powNew_, powNew_, POW_FLOOR_EPS, n);
-        Abs(tmpB_, srcAccum_, n);
-        Adds(tmpB_, tmpB_, POW_FLOOR_EPS, n);
+        DataCopy(powNew_, accumNew_, n);
+        DataCopy(tmpB_, srcAccum_, n);
     } else if (lrPowerScalar_ == -2.0f) {
-        Abs(tmpA_, accumNew_, n);
-        Adds(tmpA_, tmpA_, POW_FLOOR_EPS, n);
-        Mul(powNew_, tmpA_, tmpA_, n);
-        Abs(tmpB_, srcAccum_, n);
-        Adds(tmpB_, tmpB_, POW_FLOOR_EPS, n);
-        Mul(tmpB_, tmpB_, tmpB_, n);
+        Mul(powNew_, accumNew_, accumNew_, n);
+        Mul(tmpB_, srcAccum_, srcAccum_, n);
+    } else if (lrPowerScalar_ == 1.0f) {
+        Duplicate(tmpA_, ONE_F, n);
+        Div<float, FTRL_IEEE_DIV>(powNew_, tmpA_, accumNew_, n);
+        Div<float, FTRL_IEEE_DIV>(tmpB_, tmpA_, srcAccum_, n);
     } else if (lrPowerScalar_ == -0.5f) {
-        Abs(tmpA_, accumNew_, n);
-        Adds(tmpA_, tmpA_, POW_FLOOR_EPS, n);
-        Sqrt(powNew_, tmpA_, n);
-        Abs(tmpB_, srcAccum_, n);
-        Adds(tmpB_, tmpB_, POW_FLOOR_EPS, n);
-        Sqrt(tmpB_, tmpB_, n);
+        Sqrt(powNew_, accumNew_, n);
+        Sqrt(tmpB_, srcAccum_, n);
     } else {
         // High-precision pow (double-float tech) for non-special lr_power paths.
         // Tensors are fp32 regardless of the T template parameter, so use float explicitly.
@@ -409,13 +401,15 @@ __aicore__ inline void InplaceApplyFtrl<T>::ComputeLinearAndQuad(int32_t n)
 {
     // S4: delta_pow = (pow_new - pow_old) / lr
     Sub(tmpA_, powNew_, tmpB_, n);
-    Muls(tmpA_, tmpA_, invLr_, n);
+    Duplicate(tmpB_, lrScalar_, n);
+    Div<float, FTRL_IEEE_DIV>(tmpA_, tmpA_, tmpB_, n);
     // S5: linear_new = linear + (grad - delta_pow*var)
     Mul(tmpA_, tmpA_, srcVar_, n);
     Sub(tmpB_, srcGrad_, tmpA_, n);
     Add(linearNew_, srcLinear_, tmpB_, n);
     // S6: quadratic = pow_new/lr + 2*l2
-    Muls(quad_, powNew_, invLr_, n);
+    Duplicate(tmpB_, lrScalar_, n);
+    Div<float, FTRL_IEEE_DIV>(quad_, powNew_, tmpB_, n);
     Adds(quad_, quad_, twoL2_, n);
 }
 
@@ -426,15 +420,12 @@ template <typename T>
 __aicore__ inline void InplaceApplyFtrl<T>::ComputeVarOut(int32_t n)
 {
     // x_res = sign(linear_t)*l1 - linear_t
-    Muls(tmpA_, linearNew_, NEG_ONE_F, n);
-    Adds(tmpA_, tmpA_, l1Scalar_, n);
-    Adds(tmpB_, linearNew_, l1Scalar_, n);
-    Muls(tmpB_, tmpB_, NEG_ONE_F, n);
-    CompareScalar(mask_, linearNew_, ZERO_F, CMPMODE::GE, n);
-    Select(powNew_, mask_, tmpA_, tmpB_, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
+    Sign(powNew_, linearNew_, n);
+    Muls(powNew_, powNew_, l1Scalar_, n);
+    Sub(powNew_, powNew_, linearNew_, n);
 
     // var_true = x_res / quadratic
-    Div(tmpA_, powNew_, quad_, n);
+    Div<float, FTRL_IEEE_DIV>(tmpA_, powNew_, quad_, n);
 
     // gate: |linear_t| > l1 ? var_true : 0
     Abs(tmpB_, linearNew_, n);

@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
+#include "experiment/metadef/common/util/error_manager/error_manager.h"
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
 #include "../../../op_graph/inplace_apply_ftrl_proto.h"
@@ -102,4 +103,40 @@ TEST_F(InplaceApplyFtrlInferShapeTest, infershape_rank0_test)
 {
     gert::StorageShape rank0Shape = {{}, {}};
     DoInferShapeTest(rank0Shape, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(InplaceApplyFtrlInferShapeTest, MissingStateOrOutputReportsOneError)
+{
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyFtrl");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->infer_shape, nullptr);
+    auto& manager = ErrorManager::GetInstance();
+    ASSERT_EQ(manager.Init(), 0);
+    for (bool missingOutput : {false, true}) {
+        for (size_t slot = 0; slot < 3; ++slot) {
+            SCOPED_TRACE(slot);
+            SCOPED_TRACE(missingOutput);
+            gert::StorageShape state = {{2, 3}, {2, 3}};
+            auto holder = gert::InferShapeContextFaker()
+                              .SetOpType("InplaceApplyFtrl")
+                              .NodeIoNum(8, 3)
+                              .InputShapes({&state, &state, &state, &state, &state, &state, &state, &state})
+                              .OutputShapes({&state, &state, &state})
+                              .Build();
+            auto* kernel = holder.GetContext<gert::KernelContext>();
+            auto* value = missingOutput ? kernel->GetOutput(slot) : kernel->MutableInput(slot);
+            ASSERT_NE(value, nullptr);
+            value->Set(nullptr, nullptr);
+            manager.GetRawErrorMessages();
+            EXPECT_EQ(impl->infer_shape(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+            const auto errors = manager.GetRawErrorMessages();
+            ASSERT_EQ(errors.size(), 1U);
+            EXPECT_EQ(errors[0].error_id, missingOutput ? "EZ1014" : "EZ0004");
+        }
+    }
+    manager.GetRawErrorMessages();
+    EXPECT_EQ(impl->infer_shape(nullptr), ge::GRAPH_FAILED);
+    const auto errors = manager.GetRawErrorMessages();
+    ASSERT_EQ(errors.size(), 1U);
+    EXPECT_EQ(errors[0].error_id, "EZ1014");
 }

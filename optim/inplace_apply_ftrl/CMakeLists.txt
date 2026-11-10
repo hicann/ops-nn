@@ -16,6 +16,13 @@ add_all_modules_sources(
     DISABLE_IN_OPP TRUE
 )
 
+# Registry-backed tiling tests require the arch35 implementation.
+if((UT_TEST_ALL OR OP_HOST_UT)
+   AND ("${ASCEND_COMPUTE_UNIT}" STREQUAL "ascend950" OR "${ASCEND_COMPUTE_UNIT}" STREQUAL "ascend350")
+   AND TARGET ${OP_TILING_MODULE_NAME}_cases_obj)
+    target_compile_definitions(${OP_TILING_MODULE_NAME}_cases_obj PRIVATE INPLACE_APPLY_FTRL_TILING_UT)
+endif()
+
 add_kernel_sources(
     KERNEL_SRC arch35/inplace_apply_ftrl.cpp
     COMPUTE_UNITS ascend950 ascend350
