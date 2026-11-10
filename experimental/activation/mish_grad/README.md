@@ -14,7 +14,7 @@
 tanhx输入时：
 
 $$
-xgrad=grad*(tanhx-x*(1-tan^{2}x)*e^{x})/(1+e^{x})
+xgrad = grad * \left(tanhx + x * \frac{1 - tanhx^{2}}{1 + e^{-x}}\right)
 $$
 
 tanhx不输入时：
