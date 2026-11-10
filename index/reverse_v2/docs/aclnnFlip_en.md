@@ -95,7 +95,7 @@ aclnnStatus aclnnFlip(
         <td>dims</td>
         <td>Input</td>
         <td>aclIntArray type. Specifies the dimensions to flip.</td>
-        <td>Value range: [-self.dim(), self.dim()).</td>
+        <td>Value range: [-self.dim(), self.dim()). When dims is an empty array (with a length of 0), no axis is flipped, and out is the same as self.</td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>

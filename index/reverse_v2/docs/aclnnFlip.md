@@ -93,7 +93,7 @@ aclnnStatus aclnnFlip(
         <td>dims</td>
         <td>输入</td>
         <td>aclIntArray类型，表示需要翻转的轴。</td>
-        <td>取值范围为[-self.dim(), self.dim())。</td>
+        <td>取值范围为[-self.dim(), self.dim())。当dims为空数组（数组长度为0）时，不翻转任何维度，out与self的数据一致。</td>
         <td>INT64</td>
         <td>-</td>
         <td>-</td>
