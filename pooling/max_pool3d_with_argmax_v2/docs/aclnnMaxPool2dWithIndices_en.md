@@ -37,13 +37,21 @@
     out(N_j, C_j, h, w) = \max\limits_{{m\in[0,k_{H}-1],n\in[0,k_{W}-1]}}input(N_i,C_j,stride[0]\times h + m, stride[1]\times w + n)
     $$
 
-  - Formula for deriving the shape of the out tensor. The shape of the indices tensor is the same as that of the out tensor:
+  - Formula for deriving the shape of the out tensor. The shape of the indices tensor is the same as that of the out tensor.
+
+  - Shape derivation formula for the out tensor (ceilMode=false, i.e., floor rounding):
 
     $$
-    [N, C, H_{out}, W_{out}]=[N,C,\lfloor{\frac{H_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rfloor + 1,\lfloor{\frac{W_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rfloor + 1]
+    [N, C, H_{out}, W_{out}]=[N,C,\lfloor{\frac{H_{in}+2 \times padding[0] - dilation[0] \times (kernelSize[0] - 1) - 1}{stride[0]}}\rfloor + 1,\lfloor{\frac{W_{in}+2 \times padding[1] - dilation[1] \times (kernelSize[1] - 1) - 1}{stride[1]}}\rfloor + 1]
     $$
 
-    If $ceilMode$ is True and $(H_{out}-1) \times stride[0] \ge H_{in} + padding[0]$, $H_{out} = H_{out} - 1$. The same applies to the W dimension.
+  - Shape derivation formula for the out tensor (ceilMode=true, i.e., rounding up):
+
+    $$
+    [N, C, H_{out}, W_{out}]=[N,C,\lceil{\frac{H_{in}+2 \times padding[0] - dilation[0] \times (kernelSize[0] - 1) - 1}{stride[0]}}\rceil + 1,\lceil{\frac{W_{in}+2 \times padding[1] - dilation[1] \times (kernelSize[1] - 1) - 1}{stride[1]}}\rceil + 1]
+    $$
+
+    When $ceilMode$ is True, if a sliding window lies entirely in the right padding region, that output is ignored. Subtract 1 from the corresponding axis of the rounded-up shape above: if $(H_{out}-1) \times stride[0] \ge H_{in} + padding[0]$, then $H_{out} = H_{out} - 1$; if $(W_{out}-1) \times stride[1] \ge W_{in} + padding[1]$, then $W_{out} = W_{out} - 1$.
 
 ## Function Prototype
 

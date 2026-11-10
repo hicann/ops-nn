@@ -35,13 +35,21 @@
     out(N_j, C_j, h, w) = \max\limits_{{m\in[0,k_{H}-1],n\in[0,k_{W}-1]}}input(N_i,C_j,stride[0]\times h + m, stride[1]\times w + n)
     $$
 
-  - out tensor的shape推导公式，indices tensor的shape和out tensor相同：
+  - out tensor的shape推导公式，indices tensor的shape和out tensor相同。
+
+  - out tensor的shape推导公式（ceilMode=false，即向下取整）：
 
     $$
     [N, C, H_{out}, W_{out}]=[N,C,\lfloor{\frac{H_{in}+2 \times padding[0] - dilation[0] \times (kernelSize[0] - 1) - 1}{stride[0]}}\rfloor + 1,\lfloor{\frac{W_{in}+2 \times padding[1] - dilation[1] \times (kernelSize[1] - 1) - 1}{stride[1]}}\rfloor + 1]
     $$
 
-    当 $ceilMode$ 为True且 $(H_{out}-1) \times stride[0] \ge H_{in} + padding[0]$，则 $H_{out} = H_{out} - 1$；W维度同理。
+  - out tensor的shape推导公式（ceilMode=true，即向上取整）：
+
+    $$
+    [N, C, H_{out}, W_{out}]=[N,C,\lceil{\frac{H_{in}+2 \times padding[0] - dilation[0] \times (kernelSize[0] - 1) - 1}{stride[0]}}\rceil + 1,\lceil{\frac{W_{in}+2 \times padding[1] - dilation[1] \times (kernelSize[1] - 1) - 1}{stride[1]}}\rceil + 1]
+    $$
+
+    当 $ceilMode$ 为True时，若滑动窗口全部位于右侧padding区域，则该输出结果被忽略，需要在上述向上取整公式的基础上将对应轴减1：当 $(H_{out}-1) \times stride[0] \ge H_{in} + padding[0]$ 时，$H_{out} = H_{out} - 1$；当 $(W_{out}-1) \times stride[1] \ge W_{in} + padding[1]$ 时，$W_{out} = W_{out} - 1$。
 
 ## 函数原型
 
