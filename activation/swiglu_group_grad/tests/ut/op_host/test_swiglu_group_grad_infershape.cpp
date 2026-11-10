@@ -69,7 +69,7 @@ void ExecuteInferShapeCase(const InferShapeCase& testCase)
         1, 1, testCase.hasWeight ? 1U : 0U, testCase.hasYOrigin ? 1U : 0U, testCase.hasGroupIndex ? 1U : 0U,
     };
     std::vector<uint32_t> outputInstanceNum = {1, 1};
-    std::vector<void*> inputShapes = {&gradYShape, &xShape};
+    std::vector<gert::Shape*> inputShapes = {&gradYShape, &xShape};
     if (testCase.hasWeight) {
         inputShapes.emplace_back(&weightShape);
     }
@@ -81,7 +81,9 @@ void ExecuteInferShapeCase(const InferShapeCase& testCase)
     }
 
     gert::InferShapeContextFaker contextFaker;
-    contextFaker.IrInstanceNum(inputInstanceNum, outputInstanceNum)
+    // IrInstanceNum defines all IR slots, including absent optional inputs; do not mix it with NodeIoNum.
+    contextFaker.SetOpType("SwigluGroupGrad")
+        .IrInstanceNum(inputInstanceNum, outputInstanceNum)
         .InputShapes(inputShapes)
         .OutputShapes({&gradXShape, &gradWeightShape})
         .NodeInputTd(0, testCase.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -102,6 +104,12 @@ void ExecuteInferShapeCase(const InferShapeCase& testCase)
     auto holder = contextFaker.Build();
     auto* context = holder.GetContext<gert::InferShapeContext>();
     ASSERT_NE(context, nullptr);
+    ASSERT_EQ(context->GetOptionalInputShape(2) != nullptr, testCase.hasWeight);
+    ASSERT_EQ(context->GetOptionalInputShape(3) != nullptr, testCase.hasYOrigin);
+    ASSERT_EQ(context->GetOptionalInputShape(4) != nullptr, testCase.hasGroupIndex);
+    if (testCase.hasGroupIndex) {
+        ASSERT_EQ(*context->GetOptionalInputShape(4), groupIndexShape);
+    }
     ASSERT_EQ(inferShapeFunc(context), testCase.expectedStatus);
 
     if (testCase.expectedStatus != ge::GRAPH_SUCCESS) {
@@ -156,6 +164,14 @@ TEST_F(SwigluGroupGradInferShapeTest, infershape_group_index_only)
 {
     InferShapeCase testCase;
     testCase.hasGroupIndex = true;
+    ExecuteInferShapeCase(testCase);
+}
+
+TEST_F(SwigluGroupGradInferShapeTest, infershape_weight_and_y_origin)
+{
+    InferShapeCase testCase;
+    testCase.hasWeight = true;
+    testCase.hasYOrigin = true;
     ExecuteInferShapeCase(testCase);
 }
 
@@ -222,6 +238,24 @@ TEST_F(SwigluGroupGradInferShapeTest, infershape_rejects_unpaired_y_origin)
 {
     InferShapeCase testCase;
     testCase.hasYOrigin = true;
+    testCase.expectedStatus = ge::GRAPH_FAILED;
+    ExecuteInferShapeCase(testCase);
+}
+
+TEST_F(SwigluGroupGradInferShapeTest, infershape_rejects_unpaired_weight_with_group_index)
+{
+    InferShapeCase testCase;
+    testCase.hasWeight = true;
+    testCase.hasGroupIndex = true;
+    testCase.expectedStatus = ge::GRAPH_FAILED;
+    ExecuteInferShapeCase(testCase);
+}
+
+TEST_F(SwigluGroupGradInferShapeTest, infershape_rejects_unpaired_y_origin_with_group_index)
+{
+    InferShapeCase testCase;
+    testCase.hasYOrigin = true;
+    testCase.hasGroupIndex = true;
     testCase.expectedStatus = ge::GRAPH_FAILED;
     ExecuteInferShapeCase(testCase);
 }
