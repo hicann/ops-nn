@@ -54,6 +54,7 @@ static ge::graphStatus InferShapeValidateInputs(gert::InferShapeContext* context
 // 输出 shape 固定为 (8,)
 static ge::graphStatus InferShapeNPUClearFloatStatus(gert::InferShapeContext* context)
 {
+    OP_LOGI(context->GetNodeName(), "***runtime2.0 inferShape***");
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeNPUClearFloatStatus");
 
     OP_CHECK_IF(InferShapeValidateInputs(context) != ge::GRAPH_SUCCESS,

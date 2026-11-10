@@ -21,17 +21,9 @@ namespace ops {
 static constexpr size_t SC_IN_VAR_IDX = 0;
 static constexpr size_t SC_OUT_VAR_IDX = 0;
 
-graphStatus InferDataType4ScatterAdd(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "InferDataType4ScatterAdd enter");
-    auto input_x_dtype = context->GetInputDataType(0);
-    context->SetOutputDataType(0, input_x_dtype);
-    OP_LOGD(context->GetNodeName(), "InferDataType4ScatterAdd end");
-    return GRAPH_SUCCESS;
-}
-
 static ge::graphStatus InferShape4ScatterCommonInfer(gert::InferShapeContext* context)
 {
+    OP_LOGI(context->GetNodeName(), "***runtime2.0 inferShape***");
     OP_LOGD(context->GetNodeName(), "Begin to do ScatterAddInfershape.");
     const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
@@ -52,6 +44,6 @@ static ge::graphStatus InferShape4ScatterCommonInfer(gert::InferShapeContext* co
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ScatterAdd).InferShape(InferShape4ScatterCommonInfer).InferDataType(InferDataType4ScatterAdd);
+IMPL_OP_INFERSHAPE(ScatterAdd).InferShape(InferShape4ScatterCommonInfer);
 
 } // namespace ops

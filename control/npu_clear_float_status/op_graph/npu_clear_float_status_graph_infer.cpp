@@ -23,14 +23,15 @@ using namespace ge;
 
 static ge::graphStatus InferDataTypeNPUClearFloatStatus(gert::InferDataTypeContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeNPUClearFloatStatus");
+    OP_LOGI(context->GetNodeName(), "***runtime2.0 inferDtype***");
+    OP_LOGI(context->GetNodeName(), "Begin to do InferDataTypeNPUClearFloatStatus");
 
     // data dtype 固定为 float32，与输入 addr 的 dtype 无关
     // (addr 是地址占位符，非数据 Tensor)
     // 原实现跟随输入 dtype，若输入非 float32 会导致图编译阶段下游 dtype 推导异常
     context->SetOutputDataType(NpuCfs::DATA_IDX, ge::DT_FLOAT);
 
-    OP_LOGD(context->GetNodeName(), "End to do InferDataTypeNPUClearFloatStatus");
+    OP_LOGI(context->GetNodeName(), "End to do InferDataTypeNPUClearFloatStatus");
     return GRAPH_SUCCESS;
 }
 
