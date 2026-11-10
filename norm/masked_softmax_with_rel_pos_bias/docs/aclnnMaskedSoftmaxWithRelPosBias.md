@@ -92,7 +92,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>attenMaskOptional</td>
       <td>输入</td>
       <td>待计算入参，对应公式中的attenMaskOptional。</td>
-      <td>shape为3维(W, S1, S2)、4维(W, 1, S1, S2)或5维(1, W, 1, S1, S2)</td>
+      <td>shape为3维(W, S1, S2)、4维(W, 1, S1, S2)或5维(1, W, 1, S1, S2)；允许传nullptr，传nullptr时按无mask计算</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>√</td>
@@ -177,7 +177,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x、attenMaskOptional、relativePosBias或out是空指针。</td>
+      <td>传入的x、relativePosBias或out是空指针。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>

@@ -94,7 +94,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>attenMaskOptional</td>
       <td>Input</td>
       <td>Input to be computed, corresponding to attenMaskOptional in the formula.</td>
-      <td>3D (W, S1, S2), 4D (W, 1, S1, S2), or 5D (1, W, 1, S1, S2)</td>
+      <td>3D (W, S1, S2), 4D (W, 1, S1, S2), or 5D (1, W, 1, S1, S2); passing nullptr is allowed, which is equivalent to computing without a mask</td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>√</td>
@@ -179,7 +179,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>x, attenMaskOptional, relativePosBias, or out is a null pointer.</td>
+      <td>x, relativePosBias, or out is a null pointer.</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>
