@@ -135,7 +135,7 @@ aclnnStatus aclnnAvgPool2d(
       <td>paddings</td>
       <td>Input</td>
       <td>Number of padding layers filled with 0 in the H and W directions of the input, which is paddings in the formula.</td>
-      <td>The length is 1 (padH=padW) or 2 (padH, padW), and the value cannot be less than 0.</td>
+      <td>The length is 1 (padH=padW) or 2 (padH, padW), with values in the range [0, kernelSize/2].</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
