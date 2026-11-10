@@ -205,7 +205,7 @@ MatMulV3L0C2Out GetL0C2OutDav9201(const MatmulV3CompileInfo& compileInfo, const 
     uint64_t mCnt = MathUtil::CeilDivision(args.mValue, runInfo.singleCoreM);
     uint64_t nCnt = MathUtil::CeilDivision(args.nValue, runInfo.singleCoreN);
     bool isMultiRound = mCnt * nCnt > compileInfo.aicNum;
-    double hbmBW = MatMulV3TilingHelper::GetHbmBW(platformInfo);
+    double hbmBW = MatMulV3TilingHelper::GetHbmBW(static_cast<int64_t>(compileInfo.aicNum), compileInfo, platformInfo);
     double coreFreq = MatMulV3TilingHelper::GetCoreFreq(platformInfo);
     double fixpBoundEdge = static_cast<double>(
         MathUtil::CeilDivision(args.mValue * args.nValue, args.mValue + args.nValue));
@@ -513,8 +513,8 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
         OP_LOGE(context->GetNodeName(), "platformInfo is null");
         return;
     }
-    double hbmBW = GetHbmBW(platformInfo);
-    double l2BW = GetL2BW(platformInfo);
+    double hbmBW = GetHbmBW(static_cast<int64_t>(compileInfo.aicNum), compileInfo, platformInfo);
+    double l2BW = GetL2BW(static_cast<int64_t>(compileInfo.aicNum), compileInfo, platformInfo);
     double singleCoreComputePower = GetCoreFreq(platformInfo) * NUM_EIGHT;
     bool isFP32 = args.aType == ge::DT_FLOAT && !args.isHf32;
     if (IsNpuArch3510Series(compileInfo.npuArch) && isFP32) {
@@ -624,26 +624,35 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     runInfo.mixInfo.ubDB = MatMulV3TilingHelper::CalcUbDB(compileInfo, runInfo.baseM, runInfo.baseN);
 }
 
-double MatMulV3TilingHelper::GetHbmBW(fe::PlatFormInfos* platformInfo)
+double MatMulV3TilingHelper::GetHbmBW(int64_t usedCoreNum, const MatmulV3CompileInfo& compileInfo,
+                                      fe::PlatFormInfos* platformInfo)
 {
     std::string coreCntStr = "32";
     std::string ddrRateStr = "31";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "ddr_rate", ddrRateStr);
     // 32:default coreCntStr; 31:default ddrRateStr;
-    return GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) * StrToIntWithDefault(ddrRateStr, 31) /
-           KB_SIZE;
+    double totalHbmBandwidth = GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) *
+                               StrToIntWithDefault(ddrRateStr, 31) / KB_SIZE;
+    uint64_t bwSaturationCoreNum = static_cast<uint64_t>(compileInfo.aicNum);
+    if (compileInfo.npuArch == NpuArch::DAV_9202) {
+        // 9202的HBM带宽较小，使用核数达到总核数一半时就会把带宽打满，因此需要做出限制，HBM性能在前半段线性，后半段逼近峰值
+        bwSaturationCoreNum /= 2;
+    }
+    return std::min(totalHbmBandwidth, totalHbmBandwidth * (static_cast<double>(usedCoreNum) / bwSaturationCoreNum));
 }
 
-double MatMulV3TilingHelper::GetL2BW(fe::PlatFormInfos* platformInfo)
+double MatMulV3TilingHelper::GetL2BW(int64_t usedCoreNum, const MatmulV3CompileInfo& compileInfo,
+                                     fe::PlatFormInfos* platformInfo)
 {
     std::string coreCntStr = "32";
     std::string l2RateStr = "100";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "l2_rate", l2RateStr);
     // 32:default coreCntStr; 100:default coreCntStr;
-    return GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) * StrToIntWithDefault(l2RateStr, 100) /
-           KB_SIZE;
+    double totalL2Bandwidth = GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) *
+                              StrToIntWithDefault(l2RateStr, 100) / KB_SIZE;
+    return totalL2Bandwidth * (static_cast<double>(usedCoreNum) / compileInfo.aicNum);
 }
 
 double MatMulV3TilingHelper::GetCoreFreq(fe::PlatFormInfos* platformInfo)

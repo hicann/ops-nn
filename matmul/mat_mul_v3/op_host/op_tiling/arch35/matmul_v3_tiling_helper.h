@@ -56,8 +56,9 @@ public:
     static bool IsSelfNonContiguous(const gert::TilingContext* context);
     static void GetRebalanceBlock(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
                                   MatMulV3RunInfo& runInfo, const gert::TilingContext* context);
-    static double GetHbmBW(fe::PlatFormInfos* platformInfo);
-    static double GetL2BW(fe::PlatFormInfos* platformInfo);
+    static double GetHbmBW(int64_t usedCoreNum, const MatmulV3CompileInfo& compileInfo,
+                           fe::PlatFormInfos* platformInfo);
+    static double GetL2BW(int64_t usedCoreNum, const MatmulV3CompileInfo& compileInfo, fe::PlatFormInfos* platformInfo);
     static double GetCoreFreq(fe::PlatFormInfos* platformInfo);
     static bool IsTransposeNonContiguous(const gert::TilingContext* context, uint64_t idx);
     static bool IsContiguousStride(StrideIndexPairs& strideIndexPairs);

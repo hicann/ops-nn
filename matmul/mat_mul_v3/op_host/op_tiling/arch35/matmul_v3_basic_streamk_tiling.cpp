@@ -77,20 +77,20 @@ double GetMte2Perf(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& a
                      hbmSize;
     // 单位换算为B/us
     double timeConvert = TIME_CONVERT_UNIT * TIME_CONVERT_UNIT;
-    double mte2Perf = static_cast<double>(hbmSize) / (MatMulV3TilingHelper::GetHbmBW(platformInfo) * timeConvert) +
-                      static_cast<double>(l2Size) / (MatMulV3TilingHelper::GetL2BW(platformInfo) * timeConvert);
+    double realHbmBandwidth = MatMulV3TilingHelper::GetHbmBW(usedCoreNum, compileInfo, platformInfo);
+    double hbmPerf = static_cast<double>(hbmSize) / (realHbmBandwidth * timeConvert);
+    double realL2Bandwidth = MatMulV3TilingHelper::GetL2BW(usedCoreNum, compileInfo, platformInfo);
+    double l2Perf = static_cast<double>(l2Size) / (realL2Bandwidth * timeConvert);
     // 针对非128B的基本块，并且存在跳搬情况下，惩罚MTE2效率
     bool isMte2PerfDouble = (args.isATrans && runInfo.baseM < args.mValue &&
                              runInfo.baseM * args.aDtypeSize < BASIC_BLOCK_SIZE_128) ||
                             (!args.isBTrans && runInfo.baseN < args.nValue &&
                              runInfo.baseN * args.bDtypeSize < BASIC_BLOCK_SIZE_128);
     if (isMte2PerfDouble) {
-        mte2Perf *= NUM_TWO;
+        hbmPerf *= NUM_TWO;
+        l2Perf *= NUM_TWO;
     }
-    if (compileInfo.npuArch == NpuArch::DAV_9202) {
-        return mte2Perf;
-    }
-    return mte2Perf / (static_cast<double>(usedCoreNum) / compileInfo.aicNum);
+    return hbmPerf + l2Perf;
 }
 
 double GetCubePerf(const MatMulV3Args& args, const MatMulV3RunInfo& runInfo, uint64_t kCnt,
@@ -117,17 +117,15 @@ double GetCubePerf(const MatMulV3Args& args, const MatMulV3RunInfo& runInfo, uin
 double GetNegPerf(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, int64_t kCnt, int64_t usedCoreNum,
                   fe::PlatFormInfos* platformInfo)
 {
-    double hbmBw = MatMulV3TilingHelper::GetHbmBW(platformInfo);
+    double realHbmBandwidth = MatMulV3TilingHelper::GetHbmBW(usedCoreNum, compileInfo, platformInfo);
     double timeConvert = TIME_CONVERT_UNIT * TIME_CONVERT_UNIT;
     // y=60.0*x+1000.0 为经验值
-    double vecPerf = (kCnt * 60.0 + 1000.0) / (MatMulV3TilingHelper::GetCoreFreq(platformInfo) * TIME_CONVERT_UNIT) +
-                     args.mValue * args.nValue * kCnt * DATA_SIZE_FP32 / (hbmBw * timeConvert);
+
+    double vecCalPerf = (kCnt * 60.0 + 1000.0) / (MatMulV3TilingHelper::GetCoreFreq(platformInfo) * TIME_CONVERT_UNIT);
+    double vecHbmPerf = args.mValue * args.nValue * kCnt * DATA_SIZE_FP32 / (realHbmBandwidth * timeConvert);
     double dataTransferSize = args.mValue * args.nValue * (kCnt * DATA_SIZE_FP32 - args.aDtypeSize);
-    double fixpPerf = static_cast<double>(dataTransferSize) / (hbmBw * timeConvert);
-    if (compileInfo.npuArch == NpuArch::DAV_9202) {
-        return vecPerf + fixpPerf;
-    }
-    return (vecPerf + fixpPerf) / (static_cast<double>(usedCoreNum) / compileInfo.aicNum);
+    double fixpPerf = static_cast<double>(dataTransferSize) / (realHbmBandwidth * timeConvert);
+    return vecCalPerf / (static_cast<double>(usedCoreNum) / compileInfo.aicNum) + vecHbmPerf + fixpPerf;
 }
 
 // 纯FP32场景SK切K承担保精度职责(走SK模板的SK_SPLIT_K切分提升精度)，沿用原硬边界准入判定：
