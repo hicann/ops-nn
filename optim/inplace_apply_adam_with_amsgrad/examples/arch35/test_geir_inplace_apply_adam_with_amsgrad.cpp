@@ -35,7 +35,7 @@
 #include "ge_api.h"
 #include "array_ops.h"
 #include "ge_ir_build.h"
-#include "../op_graph/inplace_apply_adam_with_amsgrad_proto.h"
+#include "../../op_graph/inplace_apply_adam_with_amsgrad_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
