@@ -138,7 +138,7 @@ aclnnStatus aclnnAvgPool2dBackward(
       <td>padding</td>
       <td>输入</td>
       <td>在输入的H、W方向上padding补0的层数，公式中的paddings。</td>
-      <td>长度为1（padH=padW）或2（padH, padW），数值不能小于0。</td>
+      <td>长度为1（padH=padW）或2（padH, padW），数值在[0, kernelSize/2]的范围内。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>

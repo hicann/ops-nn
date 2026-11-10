@@ -140,7 +140,7 @@ aclnnStatus aclnnAvgPool2dBackward(
       <td>padding</td>
       <td>Input</td>
       <td>Number of zero-padding layers on the H and W dimensions of the input, corresponding to paddings in the formula.</td>
-      <td>Length is 1 (padH=padW) or 2 (padH, padW), and the value cannot be less than 0.</td>
+      <td>Length is 1 (padH=padW) or 2 (padH, padW), with values in the range [0, kernelSize/2].</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
