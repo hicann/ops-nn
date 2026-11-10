@@ -271,6 +271,7 @@ aclnnStatus aclnnQuantize(
 
 ## 约束说明
 
+- 当`scales`数据类型为BFLOAT16时，`x`、`zeroPoints`数据类型均为BFLOAT16。
 - 确定性计算：
   - aclnnQuantize默认确定性实现。
 
