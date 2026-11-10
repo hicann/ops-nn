@@ -44,6 +44,28 @@ TEST_F(scatter_min, scatter_min_infershape_static)
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
+// 未知rank（-2）场景：输出shape透传为(-2,)
+TEST_F(scatter_min, scatter_min_infershape_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterMin")->infer_shape;
+    gert::Shape varShape = {-2};
+    gert::Shape outputShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1}, {1})
+                      .InputShapes({&varShape})
+                      .OutputShapes({&outputShape})
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto outputDesc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expectedOutputShape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
+}
+
 TEST_F(scatter_min, scatter_min_infershape_dynamic)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterMin")->infer_shape;
@@ -65,22 +87,46 @@ TEST_F(scatter_min, scatter_min_infershape_dynamic)
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
-TEST_F(scatter_min, scatter_min_infer_datatype)
+// 与geir st用例scatter_min_geir_dyn_dim0_float32对齐：var第0维动态（-1）
+TEST_F(scatter_min, scatter_min_infershape_dim0_unknown)
 {
-    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterMin");
-    ASSERT_NE(opImpl, nullptr);
-    auto inferDtypeFunc = opImpl->infer_datatype;
-    ASSERT_NE(inferDtypeFunc, nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterMin")->infer_shape;
+    gert::Shape varShape = {-1, 32};
+    gert::Shape outputShape = {};
 
-    auto context_holder = gert::InferDataTypeContextFaker()
-                              .NodeIoNum(3, 1)
-                              .IrInstanceNum({1, 1, 1})
-                              .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .Build();
-    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_EQ(inferDtypeFunc(context), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1}, {1})
+                      .InputShapes({&varShape})
+                      .OutputShapes({&outputShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto outputDesc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expectedOutputShape = {-1, 32};
+    ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
+}
+
+// 与geir st用例scatter_min_geir_dyn_middim_int32对齐：var中间维动态（-1），updates该维不受影响
+TEST_F(scatter_min, scatter_min_infershape_middim_unknown)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterMin")->infer_shape;
+    gert::Shape varShape = {16, -1, 8};
+    gert::Shape outputShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1}, {1})
+                      .InputShapes({&varShape})
+                      .OutputShapes({&outputShape})
+                      .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto outputDesc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expectedOutputShape = {16, -1, 8};
+    ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }

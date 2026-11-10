@@ -31,6 +31,7 @@ static constexpr size_t SC_OUT_VAR_IDX = 0;
 
 static ge::graphStatus InferShape4ScatterMin(gert::InferShapeContext* context)
 {
+    OP_LOGI(context->GetNodeName(), "***runtime2.0 inferShape***");
     const gert::Shape* varShape = context->GetInputShape(SC_IN_VAR_IDX);
     OP_CHECK_IF(varShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "var"),
                 return ge::GRAPH_FAILED);
@@ -42,11 +43,5 @@ static ge::graphStatus InferShape4ScatterMin(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataType4ScatterMin(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(SC_OUT_VAR_IDX, context->GetInputDataType(SC_IN_VAR_IDX));
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(ScatterMin).InferShape(InferShape4ScatterMin).InferDataType(InferDataType4ScatterMin);
+IMPL_OP_INFERSHAPE(ScatterMin).InferShape(InferShape4ScatterMin);
 } // namespace ops

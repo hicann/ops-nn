@@ -24,6 +24,7 @@ static constexpr size_t SC_OUT_VAR_IDX = 0;
 
 static ge::graphStatus InferShape4ScatterCommonInfer(gert::InferShapeContext* context)
 {
+    OP_LOGI(context->GetNodeName(), "***runtime2.0 inferShape***");
     OP_LOGD(context->GetNodeName(), "Begin to do ScatterInfershape.");
     const gert::Shape* var_shape = context->GetInputShape(SC_IN_VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, var_shape);
