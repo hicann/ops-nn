@@ -80,11 +80,15 @@
 #define SIMD_GA_ALL_LOAD_SUPPORT_NEG_INDICE_TILING_KEY 3100UL
 
 #include "./arch35/gather_nd_simd.h"
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
 #include "./arch35/gather_nd_simt.h"
+#endif
 #include "./arch35/gather_nd_zero.h"
 #include "./arch35/gather_nd_full_load_vgather.h"
 #include "./arch35/gather_nd_all_load.h"
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
 #include "./arch35/gather_nd_mix.h"
+#endif
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
 #include "./arch35/gather_nd_simd_dma.h"
@@ -117,6 +121,7 @@ extern "C" __global__ __aicore__ void gather_nd(GM_ADDR x, GM_ADDR indices, GM_A
         GatherNdAllLoad<DTYPE_INDICES, true> op(&pipeIn);
         op.Init(x, indices, y, &tiling_data);
         op.Process();
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
     } else if (TILING_KEY_IS(SIMT_NOSUPPORT_NEGATIVE_X_B128_INDICES_64_INDEX_64)) {
         GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
         GatherNdSimt<int4, int64_t, uint64_t, false> op;
@@ -292,6 +297,7 @@ extern "C" __global__ __aicore__ void gather_nd(GM_ADDR x, GM_ADDR indices, GM_A
         GatherNdSimt<int8_t, int32_t, uint64_t, true> op;
         op.Init(x, indices, y, &tiling_data, &pipeIn);
         op.Process();
+#endif
     } else if (TILING_KEY_IS(ZERO_SHAPE_X_B64_INDICES_64)) {
         GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
         GatherNdZero<int64_t> op;
@@ -339,6 +345,7 @@ extern "C" __global__ __aicore__ void gather_nd(GM_ADDR x, GM_ADDR indices, GM_A
         op.Init(x, indices, y, &tiling_data, &pipeIn);
         op.Process();
 #endif
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
     } else if (TILING_KEY_IS(MIX_KERNEL_X_B8_INDICES_32_INDEX_32)) {
         GET_TILING_DATA_WITH_STRUCT(GatherNdTilingData, tiling_data, tiling);
         GatherNdMixKernel<int8_t, int32_t, int32_t> op;
@@ -399,5 +406,6 @@ extern "C" __global__ __aicore__ void gather_nd(GM_ADDR x, GM_ADDR indices, GM_A
         GatherNdMixKernel<int64_t, int64_t, int64_t> op;
         op.Init(x, indices, y, &tiling_data, &pipeIn);
         op.Process();
+#endif
     }
 }

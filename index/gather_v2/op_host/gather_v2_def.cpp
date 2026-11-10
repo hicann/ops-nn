@@ -275,6 +275,7 @@ public:
             .UnknownShapeFormat(gatherV2FormatKirin);
         this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);
+        this->AICore().AddConfig("ascend5162", aicoreConfig);
     }
 };
 

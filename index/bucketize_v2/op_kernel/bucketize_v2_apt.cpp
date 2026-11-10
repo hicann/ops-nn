@@ -9,8 +9,10 @@
  */
 
 #include "arch35/bucketize_v2_full_load.h"
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
 #include "arch35/bucketize_v2_cascade.h"
 #include "arch35/bucketize_v2_simt.h"
+#endif
 #include "arch35/bucketize_v2_tiling_key.h"
 #include "arch35/bucketize_v2_struct.h"
 using namespace AscendC;
@@ -31,6 +33,7 @@ __global__ __aicore__ void bucketize_v2(GM_ADDR x, GM_ADDR boundaries, GM_ADDR y
         BucketizeV2::BucketizeV2FullLoad<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, true> op(&pipe);
         op.Init(x, boundaries, y, &tilingDataIn);
         op.Process();
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_CASCADE && BOUNDARY_MODE == TPL_MODE_NO_RIGHT) {
         GET_TILING_DATA_WITH_STRUCT(BucketizeV2CascadeTilingData, tilingDataIn, tiling);
         BucketizeV2::BucketizeV2Cascade<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, false> op(&pipe);
@@ -61,5 +64,6 @@ __global__ __aicore__ void bucketize_v2(GM_ADDR x, GM_ADDR boundaries, GM_ADDR y
         BucketizeV2::BucketizeSimt<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, int64_t, true>(
             (__gm__ DTYPE_X*)(x), (__gm__ DTYPE_BOUNDARIES*)(boundaries), (__gm__ DTYPE_Y*)(y), tilingDataIn.xSize,
             tilingDataIn.maxIter, tilingDataIn.boundSize);
+#endif
     }
 }

@@ -8,13 +8,15 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "gather_v2_simt.h"
 #include "gather_v2_simd.h"
 #include "gather_v2_simd_two_dim.h"
 #include "gather_v2_simd_last_gather.h"
 #include "gather_v2_ga_all_load.h"
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
 #include "gather_v2_after_gather_full_load.h"
 #include "gather_v2_simt_two_dim.h"
+#include "gather_v2_simt.h"
+#endif
 #include "gather_v2_empty.h"
 
 using namespace AscendC;
@@ -157,7 +159,14 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
     Gatherv2GaAllLoad<DTYPE_INDICES, true> gatherv2Op(&pipe);
     gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
     gatherv2Op.Process();
-#elif TILING_KEY_VAR == SIMT_TWO_DIM_B8_INDEX_SIZE_64_TILING_KEY
+#elif TILING_KEY_VAR == TILING_KEY_EMPTY
+    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataEmptyInput, tilingDataIn, tiling);
+    Gatherv2Empty<int8_t> gatherv2Op;
+    gatherv2Op.Init(y, &tilingDataIn);
+    gatherv2Op.Process();
+#endif
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
+#if TILING_KEY_VAR == SIMT_TWO_DIM_B8_INDEX_SIZE_64_TILING_KEY
     GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataSimtTwoDim, tilingDataIn, tiling);
     Gatherv2SimtTwoDim<int8_t, DTYPE_INDICES, uint64_t> gatherv2Op;
     gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
@@ -257,10 +266,6 @@ extern "C" __global__ __aicore__ void gather_v2(GM_ADDR x, GM_ADDR indices, GM_A
     Gatherv2FullLoad<int64_t, DTYPE_INDICES, uint32_t> gatherv2Op(&pipe);
     gatherv2Op.Init(x, indices, axis, y, &tilingDataIn);
     gatherv2Op.Process();
-#elif TILING_KEY_VAR == TILING_KEY_EMPTY
-    GET_TILING_DATA_WITH_STRUCT(GatherV2TilingDataEmptyInput, tilingDataIn, tiling);
-    Gatherv2Empty<int8_t> gatherv2Op;
-    gatherv2Op.Init(y, &tilingDataIn);
-    gatherv2Op.Process();
+#endif
 #endif
 }

@@ -20,6 +20,7 @@
 #include "op_host/tiling_key.h"
 #include "util/const_util.h"
 #include "op_common/op_host/util/math_util.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 
@@ -780,6 +781,15 @@ ge::graphStatus Gatherv2TilingBase::DoOpTiling()
     if (IsGaAllLoad()) {
         tilingMode_ = TILING_GA_ALL_LOAD;
         return GaAllLoadTiling();
+    }
+    auto gatherV2PlatformInfo = context_->GetPlatformInfo();
+    if (gatherV2PlatformInfo != nullptr &&
+        platform_ascendc::PlatformAscendC(gatherV2PlatformInfo).GetCurNpuArch() != NpuArch::DAV_RESV &&
+        !Ops::NN::OpTiling::IsSimtSupportedNpuArch(
+            platform_ascendc::PlatformAscendC(gatherV2PlatformInfo).GetCurNpuArch())) {
+        tilingMode_ = TILING_SIMD;
+        CalcSimdTiling();
+        return ge::GRAPH_SUCCESS;
     }
     if (IsSimtTwoDim()) {
         tilingMode_ = TILING_SIMT_TWO_DIM;

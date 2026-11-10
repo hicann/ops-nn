@@ -16,7 +16,9 @@
 #include "bucketize_v2_simt_tiling.h"
 #include "../../op_kernel/arch35/bucketize_v2_struct.h"
 #include "../../op_kernel/arch35/bucketize_v2_tiling_key.h"
+#include "tiling/platform/platform_ascendc.h"
 #include "tiling/tiling_api.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 
@@ -31,6 +33,13 @@ static constexpr int64_t B64_VEC_BUND_THREHOLD = 8;
 using namespace BucketizeV2;
 bool BucketizeV2SimtTiling::IsCapable()
 {
+    auto platformInfo = context_->GetPlatformInfo();
+    if (platformInfo != nullptr) {
+        auto curNpuArch = platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch();
+        if (curNpuArch != NpuArch::DAV_RESV && !Ops::NN::OpTiling::IsSimtSupportedNpuArch(curNpuArch)) {
+            return false;
+        }
+    }
     if (boundSize_ == 0) {
         return true;
     }

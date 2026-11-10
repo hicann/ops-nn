@@ -16,6 +16,7 @@
 #include "log/log.h"
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_key.h"
+#include "op_host/tiling_util.h"
 #include "util/platform_util.h"
 #include "util/math_util.h"
 #include "gather_nd_tiling_arch35.h"
@@ -449,6 +450,15 @@ ge::graphStatus GatherNdSimtTiling::DoOpTiling()
     if (isZeroShape_) {
         return DoZeroShapeOpTiling();
     } else if (rank_ == static_cast<uint64_t>(0)) {
+        auto dav5162PlatformInfo = context_->GetPlatformInfo();
+        if (dav5162PlatformInfo != nullptr &&
+            platform_ascendc::PlatformAscendC(dav5162PlatformInfo).GetCurNpuArch() != NpuArch::DAV_RESV &&
+            !Ops::NN::OpTiling::IsSimtSupportedNpuArch(
+                platform_ascendc::PlatformAscendC(dav5162PlatformInfo).GetCurNpuArch())) {
+            isSimd_ = true;
+            CalcSimdTiling();
+            return ge::GRAPH_SUCCESS;
+        }
         return DoBroadCastOpTiling();
     } else if (IsGaAllLoad()) {
         isGaAllLoad_ = true;
@@ -461,6 +471,20 @@ ge::graphStatus GatherNdSimtTiling::DoOpTiling()
             isDma_ = true;
             CalcSimdDmaTiling();
             return ge::GRAPH_SUCCESS;
+        }
+        isSimd_ = true;
+        CalcSimdTiling();
+        return ge::GRAPH_SUCCESS;
+    }
+    auto dav5162PlatformInfo = context_->GetPlatformInfo();
+    if (dav5162PlatformInfo != nullptr &&
+        platform_ascendc::PlatformAscendC(dav5162PlatformInfo).GetCurNpuArch() != NpuArch::DAV_RESV &&
+        !Ops::NN::OpTiling::IsSimtSupportedNpuArch(
+            platform_ascendc::PlatformAscendC(dav5162PlatformInfo).GetCurNpuArch())) {
+        if (ubSize_ < BUFFER_NUM * INDICES_SIZE) {
+            OP_LOGE("GatherNdSimt", "ubSize_ %lu is less than %lu, not support on no-simt arch", ubSize_,
+                    BUFFER_NUM * INDICES_SIZE);
+            return ge::GRAPH_FAILED;
         }
         isSimd_ = true;
         CalcSimdTiling();

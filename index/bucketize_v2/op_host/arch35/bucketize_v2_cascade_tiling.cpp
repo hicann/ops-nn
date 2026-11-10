@@ -16,7 +16,9 @@
 #include "bucketize_v2_cascade_tiling.h"
 #include "../../op_kernel/arch35/bucketize_v2_struct.h"
 #include "../../op_kernel/arch35/bucketize_v2_tiling_key.h"
+#include "tiling/platform/platform_ascendc.h"
 #include "tiling/tiling_api.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 
@@ -30,7 +32,21 @@ static constexpr int64_t SIMT_DCACHE_SIZE = 32 * 1024;
 static constexpr uint64_t TEMPLATE_MODE = 2;
 
 using namespace BucketizeV2;
-bool BucketizeV2CascadeTiling::IsCapable() { return true; }
+bool BucketizeV2CascadeTiling::IsCapable()
+{
+    auto platformInfo = context_->GetPlatformInfo();
+    if (platformInfo == nullptr) {
+        return true;
+    }
+    auto curNpuArch = platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch();
+    if (curNpuArch == NpuArch::DAV_RESV) {
+        return true;
+    }
+    if (!Ops::NN::OpTiling::IsSimtSupportedNpuArch(curNpuArch)) {
+        return false;
+    }
+    return true;
+}
 
 uint64_t BucketizeV2CascadeTiling::GetTilingKey() const
 {
