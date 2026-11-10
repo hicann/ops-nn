@@ -59,9 +59,13 @@ When `reduction=mean`, the element-wise result is further divided by the number 
 ## Constraints
 
 - `pred`, `target`, `dout`, `grad`, and `weight` (when present) must be non-empty 2D ND tensors with completely identical shapes. Broadcasting is not supported.
-- `target` supports only INT32, and the business label semantics are 0 or 1. The IR and Kernel do not check device-side values element by element before running.
+- `target` supports only INT32, and the business label semantics are 0 or 1. The IR and Kernel do not check device-side values element by element before running; values other than 0/1 do not guarantee correct results.
 - `pred`, `dout`, and `weight` can use FLOAT16 or FLOAT respectively, and the data type of `grad` must be the same as that of `pred`.
+- FLOAT16 inputs are computed internally in FLOAT32, and the result is written back in the `pred` data type (FLOAT16 output is rounded to nearest). If an intermediate result exceeds the FLOAT16 range, it is written back as ±Inf.
+- Before computing `log(p)` and `log(1-p)`, `p` and `1-p` are clamped to the smallest positive normal number `1.17549435e-38` so that the two logarithmic terms remain finite. This clamp does not cover the subsequent weight/upstream-gradient multiplication or the write-back conversion, which can still produce non-finite results (for example, overflow to ±Inf).
+- When `pred`, `dout`, or `weight` contains NaN or ±Inf, the input is outside the supported scope and the result is not guaranteed to be correct.
 - `alpha` and `gamma` must be finite numbers. `reduction` can only be mean, sum, or none.
+- If an intermediate value such as the product of `alpha` and `gamma` exceeds the FP32 range, it propagates as IEEE Inf/NaN without additional interception; for scenarios requiring finite extremes, avoid such attribute combinations.
 - The Ascend 950 graph mode supports dynamic shapes (-1 for unknown dimensions) and does not support dynamic ranks (-2 for unknown ranks).
 
 ## Invocation Description

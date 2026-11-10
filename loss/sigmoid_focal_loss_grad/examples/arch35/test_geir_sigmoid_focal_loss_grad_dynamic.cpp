@@ -29,6 +29,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -44,8 +45,8 @@ constexpr uint32_t kGraphId = 1;
 constexpr uint32_t kUnknownRankGraphId = 2;
 constexpr float kAlpha = 0.25F;
 constexpr float kGamma = 2.0F;
-constexpr float kAtol = 1.0e-3F;
-constexpr float kRtol = 2.0e-3F;
+constexpr float kAtol = 1.0e-5F; // spec: fp32 rtol=atol=1e-5
+constexpr float kRtol = 1.0e-5F;
 constexpr float kLogEps = 1.17549435e-38F;
 
 using ShapeVector = std::vector<int64_t>;
@@ -312,9 +313,15 @@ int main()
     }
 
     const std::map<ge::AscendString, ge::AscendString> sessionOptions = {};
-    std::unique_ptr<ge::Session> session(new ge::Session(sessionOptions));
-    if (session == nullptr || session->AddGraph(kGraphId, graph, sessionOptions) != ge::SUCCESS) {
+    std::unique_ptr<ge::Session> session(new (std::nothrow) ge::Session(sessionOptions));
+    if (session == nullptr) {
+        std::fprintf(stderr, "create session failed\n");
+        ge::GEFinalize();
+        return result;
+    }
+    if (session->AddGraph(kGraphId, graph, sessionOptions) != ge::SUCCESS) {
         std::fprintf(stderr, "AddGraph failed\n");
+        session.reset();
         ge::GEFinalize();
         return result;
     }

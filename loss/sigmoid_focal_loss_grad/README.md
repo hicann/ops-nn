@@ -57,9 +57,13 @@ $$
 ## 约束说明
 
 - `pred`、`target`、`dout`、`grad`与存在时的`weight`必须是非空二维ND Tensor，shape完全相同，不支持广播。
-- `target`只支持INT32，业务标签语义为0或1；IR和Kernel不在运行前逐元素检查Device侧数值。
+- `target`只支持INT32，业务标签语义为0或1；IR和Kernel不在运行前逐元素检查Device侧数值，取0/1以外的值时不保证结果正确。
 - `pred`、`dout`和`weight`可分别使用FLOAT16或FLOAT，`grad`的数据类型必须与`pred`相同。
+- FLOAT16输入在算子内部统一按FLOAT32计算，结果再按`pred`的数据类型回写（FLOAT16输出按就近舍入）；中间结果超出FLOAT16可表示范围时回写为±Inf。
+- 计算`log(p)`与`log(1-p)`前，分别将`p`与`1-p`钳位到最小正规格化数`1.17549435e-38`，以保证两个对数项有限；该钳位不覆盖后续的权重、上游梯度乘法与结果回写，这些步骤仍可能产生非有限结果（例如溢出为±Inf）。
+- `pred`、`dout`或`weight`包含NaN或±Inf时不在支持范围内，结果不保证正确。
 - `alpha`和`gamma`必须为有限数；`reduction`只能为mean、sum或none。
+- `alpha`、`gamma` 的乘积等中间量超出 FP32 表示范围时按 IEEE Inf/NaN 传播，不额外拦截；需要有限极值的场景应在属性取值上避免此类组合。
 - Ascend 950图模式支持动态Shape（-1未知维），不支持动态Rank（-2未知秩）。
 
 ## 调用说明

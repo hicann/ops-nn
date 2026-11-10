@@ -13,6 +13,11 @@
 /*!
  * \file test_geir_sigmoid_focal_loss_grad.cpp
  * \brief GE graph construction and execution example for SigmoidFocalLossGrad.
+ *
+ * Runs three configurations on the same fixed [2, 3] inputs:
+ *   mean + weight, sum without weight, none + weight.
+ * Every output is checked against the CPU formula (FP32, same operation order
+ * as the kernel) with the spec FP32 tolerance rtol=atol=1e-5.
  */
 
 #include <array>
@@ -21,6 +26,8 @@
 #include <cstdio>
 #include <map>
 #include <memory>
+#include <new>
+#include <string>
 #include <vector>
 
 #include "ge_api.h"
@@ -31,9 +38,19 @@
 
 namespace {
 
-constexpr uint32_t kGraphId = 0;
 constexpr int64_t kElementCount = 6;
 const std::vector<int64_t> kShape = {2, 3};
+constexpr float kAlpha = 0.25F;
+constexpr float kGamma = 2.0F;
+constexpr float kLogEps = 1.17549435e-38F;
+constexpr float kAtol = 1.0e-5F;
+constexpr float kRtol = 1.0e-5F;
+
+struct Scenario {
+    const char* name;
+    bool hasWeight;
+    const char* reduction;
+};
 
 template <typename T>
 ge::Tensor MakeHostTensor(ge::DataType dataType, const std::array<T, kElementCount>& values)
@@ -63,38 +80,144 @@ void ConfigureDataOp(ge::op::Data& data, const ge::TensorDesc& desc)
     data.update_output_desc_y(desc);
 }
 
-bool BuildGraph(ge::Graph& graph, std::vector<ge::Operator>& graphInputs, std::vector<ge::Operator>& graphOutputs)
+bool BuildGraph(ge::Graph& graph, const Scenario& scenario, std::vector<ge::Operator>& graphInputs,
+                std::vector<ge::Operator>& graphOutputs)
 {
     auto predData = ge::op::Data("pred").set_attr_index(0);
     auto targetData = ge::op::Data("target").set_attr_index(1);
     auto doutData = ge::op::Data("dout").set_attr_index(2);
-    auto weightData = ge::op::Data("weight").set_attr_index(3);
     const ge::TensorDesc floatDesc = MakeTensorDesc(ge::DT_FLOAT);
     const ge::TensorDesc int32Desc = MakeTensorDesc(ge::DT_INT32);
     ConfigureDataOp(predData, floatDesc);
     ConfigureDataOp(targetData, int32Desc);
     ConfigureDataOp(doutData, floatDesc);
-    ConfigureDataOp(weightData, floatDesc);
 
     auto focalLossGrad = ge::op::SigmoidFocalLossGrad("sigmoid_focal_loss_grad");
     focalLossGrad.set_input_pred(predData);
     focalLossGrad.set_input_target(targetData);
     focalLossGrad.set_input_dout(doutData);
-    focalLossGrad.set_input_weight(weightData);
-    focalLossGrad.set_attr_alpha(0.25F);
-    focalLossGrad.set_attr_gamma(2.0F);
-    focalLossGrad.set_attr_reduction("mean");
+    focalLossGrad.set_attr_alpha(kAlpha);
+    focalLossGrad.set_attr_gamma(kGamma);
+    focalLossGrad.set_attr_reduction(scenario.reduction);
     focalLossGrad.update_output_desc_grad(floatDesc);
 
-    if (graph.AddOp(predData) != ge::GRAPH_SUCCESS || graph.AddOp(targetData) != ge::GRAPH_SUCCESS ||
-        graph.AddOp(doutData) != ge::GRAPH_SUCCESS || graph.AddOp(weightData) != ge::GRAPH_SUCCESS ||
-        graph.AddOp(focalLossGrad) != ge::GRAPH_SUCCESS) {
+    bool addOk = graph.AddOp(predData) == ge::GRAPH_SUCCESS && graph.AddOp(targetData) == ge::GRAPH_SUCCESS &&
+                 graph.AddOp(doutData) == ge::GRAPH_SUCCESS && graph.AddOp(focalLossGrad) == ge::GRAPH_SUCCESS;
+    graphInputs = {predData, targetData, doutData};
+    if (scenario.hasWeight) {
+        auto weightData = ge::op::Data("weight").set_attr_index(3);
+        ConfigureDataOp(weightData, floatDesc);
+        focalLossGrad.set_input_weight(weightData);
+        addOk = addOk && graph.AddOp(weightData) == ge::GRAPH_SUCCESS;
+        graphInputs.push_back(weightData);
+    }
+    if (!addOk) {
         return false;
     }
-    graphInputs = {predData, targetData, doutData, weightData};
     graphOutputs = {focalLossGrad};
     graph.SetInputs(graphInputs).SetOutputs(graphOutputs);
     return true;
+}
+
+float StableSigmoid(float value)
+{
+    if (value >= 0.0F) {
+        return 1.0F / (1.0F + std::exp(-value));
+    }
+    const float expValue = std::exp(value);
+    return expValue / (1.0F + expValue);
+}
+
+void ComputeGolden(const std::array<float, kElementCount>& pred, const std::array<int32_t, kElementCount>& target,
+                   const std::array<float, kElementCount>& dout, const std::array<float, kElementCount>* weight,
+                   bool meanReduction, std::array<float, kElementCount>& golden)
+{
+    const float coefficient = meanReduction ? (1.0F / static_cast<float>(kElementCount)) : 1.0F;
+    for (int64_t i = 0; i < kElementCount; ++i) {
+        const size_t index = static_cast<size_t>(i);
+        const float p = StableSigmoid(pred[index]);
+        const float q = 1.0F - p;
+        const float pFloor = std::max(p, kLogEps);
+        const float qFloor = std::max(q, kLogEps);
+        const float dpos = kAlpha * kGamma * p * std::pow(qFloor, kGamma) * std::log(pFloor) -
+                           kAlpha * std::pow(qFloor, kGamma + 1.0F);
+        const float dneg = kGamma * (kAlpha - 1.0F) * std::pow(pFloor, kGamma) * q * std::log(qFloor) +
+                           (1.0F - kAlpha) * std::pow(pFloor, kGamma + 1.0F);
+        const float raw = dpos * (1.0F - static_cast<float>(target[index])) + dneg * static_cast<float>(target[index]);
+        const float weightValue = (weight == nullptr) ? 1.0F : (*weight)[index];
+        golden[index] = raw * weightValue * dout[index] * coefficient;
+    }
+}
+
+bool VerifyOutput(const std::vector<ge::Tensor>& outputs, const std::array<float, kElementCount>& golden,
+                  const char* scenarioName)
+{
+    if (outputs.size() != 1U) {
+        std::fprintf(stderr, "[%s] unexpected output count: %zu\n", scenarioName, outputs.size());
+        return false;
+    }
+    const ge::Shape& gradShape = outputs[0].GetTensorDesc().GetShape();
+    const float* grad = reinterpret_cast<const float*>(outputs[0].GetData());
+    if (gradShape.GetDimNum() != kShape.size() || gradShape.GetDim(0) != kShape[0] ||
+        gradShape.GetDim(1) != kShape[1] || grad == nullptr) {
+        std::fprintf(stderr, "[%s] grad shape or data is invalid\n", scenarioName);
+        return false;
+    }
+    bool passed = true;
+    for (int64_t i = 0; i < kElementCount; ++i) {
+        const size_t index = static_cast<size_t>(i);
+        const float tolerance = kAtol + kRtol * std::fabs(golden[index]);
+        if (!std::isfinite(grad[index]) || std::fabs(grad[index] - golden[index]) > tolerance) {
+            std::fprintf(stderr, "[%s] grad[%zu] mismatch: actual=%f expected=%f tolerance=%f\n", scenarioName, index,
+                         grad[index], golden[index], tolerance);
+            passed = false;
+        }
+    }
+    return passed;
+}
+
+bool RunScenario(ge::Session& session, uint32_t graphId, const Scenario& scenario,
+                 const std::array<float, kElementCount>& pred, const std::array<int32_t, kElementCount>& target,
+                 const std::array<float, kElementCount>& dout, const std::array<float, kElementCount>& weight)
+{
+    ge::Graph graph("sigmoid_focal_loss_grad_graph");
+    std::vector<ge::Operator> graphInputs;
+    std::vector<ge::Operator> graphOutputs;
+    if (!BuildGraph(graph, scenario, graphInputs, graphOutputs)) {
+        std::fprintf(stderr, "[%s] BuildGraph failed\n", scenario.name);
+        return false;
+    }
+    const std::map<ge::AscendString, ge::AscendString> sessionOptions = {};
+    if (session.AddGraph(graphId, graph, sessionOptions) != ge::SUCCESS) {
+        std::fprintf(stderr, "[%s] AddGraph failed\n", scenario.name);
+        return false;
+    }
+
+    std::vector<ge::Tensor> inputs = {MakeHostTensor(ge::DT_FLOAT, pred), MakeHostTensor(ge::DT_INT32, target),
+                                      MakeHostTensor(ge::DT_FLOAT, dout)};
+    if (scenario.hasWeight) {
+        inputs.push_back(MakeHostTensor(ge::DT_FLOAT, weight));
+    }
+    std::vector<ge::Tensor> outputs;
+    if (session.RunGraph(graphId, inputs, outputs) != ge::SUCCESS) {
+        std::fprintf(stderr, "[%s] RunGraph failed\n", scenario.name);
+        session.RemoveGraph(graphId);
+        return false;
+    }
+
+    std::array<float, kElementCount> golden = {};
+    const bool meanReduction = std::string(scenario.reduction) == "mean";
+    ComputeGolden(pred, target, dout, scenario.hasWeight ? &weight : nullptr, meanReduction, golden);
+    const bool passed = VerifyOutput(outputs, golden, scenario.name);
+    if (passed) {
+        std::printf("[%s] PASSED: grad:", scenario.name);
+        for (int64_t i = 0; i < kElementCount; ++i) {
+            std::printf(" %.8f", golden[static_cast<size_t>(i)]);
+        }
+        std::printf("\n");
+    }
+    session.RemoveGraph(graphId);
+    return passed;
 }
 
 } // namespace
@@ -104,7 +227,12 @@ int main()
     const std::array<float, kElementCount> pred = {-1.25F, -1.0F, -0.75F, -0.5F, -0.25F, 0.0F};
     const std::array<int32_t, kElementCount> target = {0, 1, 0, 1, 0, 1};
     const std::array<float, kElementCount> dout = {-1.5F, -1.0F, -0.5F, 0.0F, 0.5F, 1.0F};
-    const std::array<float, kElementCount> weight = {1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F};
+    const std::array<float, kElementCount> weight = {1.0F, 0.5F, 1.5F, 0.75F, 1.25F, 0.25F};
+    const std::array<Scenario, 3> scenarios = {{
+        {"mean_with_weight", true, "mean"},
+        {"sum_without_weight", false, "sum"},
+        {"none_with_weight", true, "none"},
+    }};
 
     const std::map<ge::AscendString, ge::AscendString> globalOptions = {
         {"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}, {"ge.jit_compile", "0"}};
@@ -113,63 +241,29 @@ int main()
         return 1;
     }
 
-    int result = 1;
-    ge::Graph graph("sigmoid_focal_loss_grad_graph");
-    std::vector<ge::Operator> graphInputs;
-    std::vector<ge::Operator> graphOutputs;
-    if (!BuildGraph(graph, graphInputs, graphOutputs)) {
-        std::fprintf(stderr, "BuildGraph failed\n");
-        ge::GEFinalize();
-        return result;
-    }
-
     const std::map<ge::AscendString, ge::AscendString> sessionOptions = {};
-    std::unique_ptr<ge::Session> session(new ge::Session(sessionOptions));
-    if (session == nullptr || session->AddGraph(kGraphId, graph, sessionOptions) != ge::SUCCESS) {
-        std::fprintf(stderr, "AddGraph failed\n");
-        session.reset();
+    std::unique_ptr<ge::Session> session(new (std::nothrow) ge::Session(sessionOptions));
+    if (session == nullptr) {
+        std::fprintf(stderr, "create session failed\n");
         ge::GEFinalize();
-        return result;
-    }
-    std::vector<ge::Tensor> inputs = {MakeHostTensor(ge::DT_FLOAT, pred), MakeHostTensor(ge::DT_INT32, target),
-                                      MakeHostTensor(ge::DT_FLOAT, dout), MakeHostTensor(ge::DT_FLOAT, weight)};
-    std::vector<ge::Tensor> outputs;
-    if (session->RunGraph(kGraphId, inputs, outputs) != ge::SUCCESS || outputs.size() != 1) {
-        std::fprintf(stderr, "RunGraph failed or returned an unexpected output count\n");
-        session->RemoveGraph(kGraphId);
-        session.reset();
-        ge::GEFinalize();
-        return result;
+        return 1;
     }
 
-    const ge::Shape& gradShape = outputs[0].GetTensorDesc().GetShape();
-    const float* grad = reinterpret_cast<const float*>(outputs[0].GetData());
-    if (gradShape.GetDimNum() != kShape.size() || gradShape.GetDim(0) != kShape[0] ||
-        gradShape.GetDim(1) != kShape[1] || grad == nullptr) {
-        std::fprintf(stderr, "grad shape or data is invalid\n");
-        session->RemoveGraph(kGraphId);
-        session.reset();
-        ge::GEFinalize();
-        return result;
-    }
-    for (int64_t i = 0; i < kElementCount; ++i) {
-        if (!std::isfinite(grad[i])) {
-            std::fprintf(stderr, "grad contains a non-finite value\n");
-            session->RemoveGraph(kGraphId);
-            session.reset();
-            ge::GEFinalize();
-            return result;
+    bool allPassed = true;
+    uint32_t graphId = 0;
+    for (const Scenario& scenario : scenarios) {
+        if (!RunScenario(*session, graphId, scenario, pred, target, dout, weight)) {
+            allPassed = false;
         }
+        ++graphId;
     }
-    std::printf("grad:");
-    for (int64_t i = 0; i < kElementCount; ++i) {
-        std::printf(" %.8f", grad[i]);
-    }
-    std::printf("\n");
-    result = 0;
 
-    session->RemoveGraph(kGraphId);
     session.reset();
     ge::GEFinalize();
-    return result;
+    if (!allPassed) {
+        std::fprintf(stderr, "SigmoidFocalLossGrad static GEIR verification FAILED\n");
+        return 1;
+    }
+    std::printf("SigmoidFocalLossGrad static GEIR verification PASSED\n");
+    return 0;
 }
