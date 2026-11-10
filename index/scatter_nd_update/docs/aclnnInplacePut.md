@@ -331,13 +331,13 @@ int main() {
   std::vector<int64_t> indexHostData = {0,1,2,3,4,5,6,7};
   std::vector<float> sourceHostData={10,10,10,10,10,10,10,10};
   // 创建self aclTensor
-  ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_INT32, &self);
+  ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建index aclTensor
   ret = CreateAclTensor(indexHostData, indexShape, &indexDeviceAddr, aclDataType::ACL_INT64, &index);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建source aclTensor
-  ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_INT32, &source);
+  ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_FLOAT, &source);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 3. 调用CANN算子库API，需要修改为具体的API名称
