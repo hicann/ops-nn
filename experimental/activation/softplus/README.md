@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- 算子功能：求reluv2函数梯度。
+- 算子功能：计算 Softplus 激活函数值。
 - 计算公式：
 
 $$
@@ -36,7 +36,7 @@ $$
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>反向传播梯度</td>
+      <td>输入张量</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
