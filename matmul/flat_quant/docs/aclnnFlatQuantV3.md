@@ -24,7 +24,7 @@
 ## 功能说明
 
 - **与V2版本的差异**：
-  - V3版本新增了`groupList`、`groupListType`参数，用于指定量化分组情况。
+  - V3版本新增了`groupListOptional`、`groupListType`参数，用于指定量化分组情况。
   - V2版本新增了`dstTypeMax`参数，用于在pergroup量化方式（对应float4_e2m1输出类型）中控制目标数据类型的最大值。
   - V1版本不支持自定义目标数据类型最大值，默认使用目标精度能表示的最大值。
 
@@ -256,8 +256,8 @@ aclnnStatus aclnnFlatQuantV3(
     <tr>
       <td>groupListType（int64）</td>
       <td>输入</td>
-      <td>代表groupList输入的分组方式。</td>
-      <td><ul><li>当groupListOptional不为nullptr时支持取值0，1，2。</li></ul></td>
+      <td>代表groupListOptional输入的分组方式。</td>
+      <td><ul><li>当groupListOptional不为nullptr时支持取值0，1，2。当groupListOptional为nullptr时groupListType可以传任意值不影响计算结果。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -366,7 +366,7 @@ aclnnStatus aclnnFlatQuantV3(
       <td>out的数据类型为INT32时，x的shape尾轴不是out的shape尾轴大小的8倍，或者x与out的shape的非尾轴的大小不一致。</td>
     </tr>
     <tr>
-      <td>groupList、groupListType的数据类型、维度、shape或参数取值不符合约束。</td>
+      <td>groupListOptional、groupListType的数据类型、维度、shape或参数取值不符合约束。</td>
     </tr>
   </tbody></table>
 
@@ -429,6 +429,8 @@ aclnnStatus aclnnFlatQuantV3(
         - 当groupListType为0时，groupListOptional必须为非负单调非递减数列，表示分组后每组大小的cumsum结果（累计和），最后一个值应小于等于x中tensor的第一维。
         - 当groupListType为1时，groupListOptional必须为非负数列，表示分组后每组大小，数值的总和应小于等于x中tensor的第一维。
         - 当groupListType为2时，groupListOptional必须为非负数列，数据排布为[[groupIdx0, groupSize0], [groupIdx1, groupSize1]...]，其中groupSize为分组后每组大小，第二列数值的总和应小于等于x中tensor的第一维。
+    - groupListOptional为nullptr时：
+      - groupListType可以传任意值不影响计算结果。
   <!-- end id8 -->
 - 确定性计算：
   - aclnnFlatQuantV3默认确定性实现。
