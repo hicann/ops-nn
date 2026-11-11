@@ -79,7 +79,7 @@
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>scatter索引张量，1D shape=[M]，取值范围 [0, N)，M为索引数量。</td>
+      <td>scatter索引张量，形状可为任意维度，元素总数为M，取值范围 [0, N)。</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
@@ -109,16 +109,16 @@
 ## 约束说明
 
 - 输入x支持1D ~ 8D。
-- `indices` 必须为1D，shape = [M]。
-- `updates.shape[0]` 必须等于 `indices.shape[0]`(M一致)。
+- `indices` 支持ND，元素总数为M（兼容[M]与[M,1]）。
+- `updates.shape[0]` 必须等于 `indices` 元素总数M。
 - `updates.shape[1:]` 必须等于 `x.shape[1:]`(除第0维外其余维度一致)。
-- `x.shape[0]` 必须 >= max(indices)(索引不越界)。
+- 索引必须满足 0 <= indices[i] < x.shape[0]（索引不越界）。
 - 仅支持float32/int32数据类型组合。
 - 确定性保证：相同输入产生相同输出(GT严格大于比较，相等时保留先到索引)。
-- 未被任何index覆盖的位置，最终y输出0、argmax输出M；内部初始化负大值会在FillZeroForUncovered阶段被改写为0。
+- 未被任何index覆盖的位置，最终y输出0、argmax输出M；被index覆盖的位置即使所有update都不大于内部哨兵值（如-inf），也必须输出该位置的最大值，不能被当作未覆盖补0；NaN按约定忽略。
 
 ## 调用说明
 
-| 调用方式 | 调用样例                                                                   | 说明                                                           |
+| 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式调用 | [test_geir_scatter_max_with_argmax](examples/arch35/test_geir_scatter_max_with_argmax.cpp) | 通过[算子IR](./op_graph/scatter_max_with_argmax_proto.h)构图方式调用ScatterMaxWithArgmax算子。 |
+| GE图模式 | [test_geir_scatter_max_with_argmax](examples/arch35/test_geir_scatter_max_with_argmax.cpp) | 通过[算子IR](./op_graph/scatter_max_with_argmax_proto.h)构图方式调用ScatterMaxWithArgmax算子。 |

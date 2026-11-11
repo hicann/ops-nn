@@ -72,6 +72,7 @@ __simt_callee__ __aicore__ inline void ScatterMaxLoop(INDEX_T M, INDEX_T D, INDE
 {
     int32_t localTid = threadIdx.x;
     int32_t threadNum = blockDim.x;
+    int32_t mInt = static_cast<int32_t>(M);
     for (INDEX_T i = 0; i < M; i++) {
         int32_t idx = indicesGm[i];
         INDEX_T idxVal = static_cast<INDEX_T>(idx);
@@ -81,7 +82,12 @@ __simt_callee__ __aicore__ inline void ScatterMaxLoop(INDEX_T M, INDEX_T D, INDE
             for (INDEX_T p = static_cast<INDEX_T>(localTid); p < D; p += static_cast<INDEX_T>(threadNum)) {
                 T uVal = updatesGm[updateOffset + p];
                 T yVal = yGm[rowOffset + p];
-                if (uVal > yVal) { // GT 严格大于，相等不更新
+                if (argmaxGm[rowOffset + p] == mInt && uVal == uVal) {
+                    // 首次被有效 update 覆盖：即使 update 不大于内部哨兵（如 -inf）也要记录，
+                    // 避免 Phase 3 把已覆盖位置误判为未覆盖。NaN 仍按约定忽略。
+                    yGm[rowOffset + p] = uVal;
+                    argmaxGm[rowOffset + p] = static_cast<int32_t>(i);
+                } else if (uVal > yVal) { // GT 严格大于，相等不更新
                     yGm[rowOffset + p] = uVal;
                     argmaxGm[rowOffset + p] = static_cast<int32_t>(i);
                 }
@@ -119,11 +125,13 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpScatterMaxWit
     __gm__ int32_t* argmaxGm)
 {
     int32_t coreIdx = blockIdx.x;
-    INDEX_T coreRowStart = static_cast<INDEX_T>(coreIdx) * perCoreRows;
-    INDEX_T coreRowEnd = coreRowStart + perCoreRows;
-    if (coreRowEnd > N) {
-        coreRowEnd = N;
+    int64_t coreRowStart64 = static_cast<int64_t>(coreIdx) * static_cast<int64_t>(perCoreRows);
+    int64_t coreRowEnd64 = coreRowStart64 + static_cast<int64_t>(perCoreRows);
+    if (coreRowEnd64 > static_cast<int64_t>(N)) {
+        coreRowEnd64 = static_cast<int64_t>(N);
     }
+    INDEX_T coreRowStart = static_cast<INDEX_T>(coreRowStart64);
+    INDEX_T coreRowEnd = static_cast<INDEX_T>(coreRowEnd64);
     INDEX_T coreRows = coreRowEnd - coreRowStart;
     INDEX_T coreElements = coreRows * D;
     INDEX_T coreBaseOffset = coreRowStart * D;
@@ -157,8 +165,9 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_A
     int64_t updateElements = M * D;
     int64_t maxElements = (yElements > updateElements) ? yElements : updateElements;
 
-    if (maxElements <= static_cast<int64_t>(INT32_MAX)) {
-        // 32 位快速路径
+    const int64_t int32SafeLimit = static_cast<int64_t>(INT32_MAX) - static_cast<int64_t>(THREAD_NUM) + 1;
+    if (maxElements <= int32SafeLimit) {
+        // 32 位快速路径（为 grid-stride 的最后一次 p += threadNum 留出余量）
         asc_vf_call<OpScatterMaxWithArgmaxSimt<T, int32_t>>(
             dim3(THREAD_NUM), static_cast<int32_t>(M), static_cast<int32_t>(D), static_cast<int32_t>(N),
             static_cast<int32_t>(perCoreRows), indicesGm, updatesGm, yGm, argmaxGm);

@@ -81,7 +81,7 @@ Outputs:
     <tr>
       <td>indices</td>
       <td>Input</td>
-      <td>Scatter index tensor, 1D with shape=[M]. Value range: [0, N). M is the number of indexes.</td>
+      <td>Scatter index tensor with an arbitrary shape and M elements in total. Value range: [0, N).</td>
       <td>INT32</td>
       <td>ND</td>
     </tr>
@@ -111,13 +111,13 @@ Outputs:
 ## Constraints
 
 - The input x supports 1D to 8D.
-- `indices` must be 1D, with shape = [M].
-- `updates.shape[0]` must equal `indices.shape[0]` (M is consistent).
+- `indices` supports ND and contains M elements in total (both [M] and [M,1] are supported).
+- `updates.shape[0]` must equal the total number of indices elements M.
 - `updates.shape[1:]` must equal `x.shape[1:]` (all dimensions except dimension 0 are consistent).
-- `x.shape[0]` must be >= max(indices) (indexes do not go out of bounds).
+- Indices must satisfy 0 <= indices[i] < x.shape[0] (no out-of-bounds index).
 - Only the float32/int32 data type combination is supported.
 - Determinism guarantee: the same input produces the same output (the GT strictly-greater-than comparison is used, and the earliest index is retained when values are equal).
-- For positions not covered by any index, y finally outputs 0 and argmax outputs M. The internal large negative initialization value is rewritten to 0 in the FillZeroForUncovered stage.
+- For positions not covered by any index, y finally outputs 0 and argmax outputs M. If a position is covered but all updates are not greater than the internal sentinel value (for example, -inf), it must still output the maximum value at that position and must not be treated as uncovered; NaN is ignored by convention.
 
 ## Invocation Description
 

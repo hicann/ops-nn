@@ -22,6 +22,7 @@
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "util/math_util.h"
+#include "util/shape_util.h"
 #include "../../op_kernel/arch35/scatter_max_with_argmax_tiling_data.h"
 #include "../../op_kernel/arch35/scatter_max_with_argmax_tiling_key.h"
 
@@ -62,14 +63,9 @@ static ge::graphStatus ValidateInputs(gert::TilingContext* context, int64_t N, i
     OP_CHECK_IF(xDimNum < 1 || xDimNum > MAX_DIMS, OP_LOGE(context, "x dimNum=%d not in [1, %d]", xDimNum, MAX_DIMS),
                 return ge::GRAPH_FAILED);
 
-    // indices 必须为 1D（SE/MDE 规格：indices shape = [M]）
-    int32_t indicesDimNum = static_cast<int32_t>(indicesInput->GetStorageShape().GetDimNum());
-    OP_CHECK_IF(indicesDimNum != 1, OP_LOGE(context, "indices dimNum=%d must be 1", indicesDimNum),
-                return ge::GRAPH_FAILED);
-
     // updates.shape[0] == indices.shape[0] (M)
     int64_t updatesM = updatesInput->GetStorageShape().GetDim(0);
-    OP_CHECK_IF(updatesM != M, OP_LOGE(context, "updates.shape[0]=%ld != indices.shape[0]=%ld", updatesM, M),
+    OP_CHECK_IF(updatesM != M, OP_LOGE(context, "updates.shape[0]=%ld != indices element count M=%ld", updatesM, M),
                 return ge::GRAPH_FAILED);
 
     // updates.shape[1:] == x.shape[1:]
@@ -117,7 +113,31 @@ static ge::graphStatus ScatterMaxWithArgmaxTilingFunc(gert::TilingContext* conte
     auto indicesInput = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesInput);
 
+    auto updatesInput = context->GetInputShape(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesInput);
     auto xShape = xInput->GetStorageShape();
+    auto indicesShape = indicesInput->GetStorageShape();
+    auto updatesShape = updatesInput->GetStorageShape();
+
+    // GE compile-time tiling may see unknown rank/shape; runtime tiling runs again
+    // with concrete shapes. Keep a placeholder tiling so dynamic compilation can proceed.
+    if (Ops::Base::IsUnknownRank(xShape) || Ops::Base::IsUnknownRank(indicesShape) ||
+        Ops::Base::IsUnknownRank(updatesShape) || Ops::Base::IsUnknownShape(xShape) ||
+        Ops::Base::IsUnknownShape(indicesShape) || Ops::Base::IsUnknownShape(updatesShape)) {
+        auto placeholder = context->GetTilingData<ScatterMaxWithArgmaxTilingData>();
+        OP_CHECK_NULL_WITH_CONTEXT(context, placeholder);
+        OP_CHECK_IF(memset_s(placeholder, sizeof(ScatterMaxWithArgmaxTilingData), 0,
+                             sizeof(ScatterMaxWithArgmaxTilingData)) != EOK,
+                    OP_LOGE(context, "memset_s placeholder tiling data error"), return ge::GRAPH_FAILED);
+        placeholder->perCoreRows = 1;
+        context->SetBlockDim(1);
+        size_t* placeholderWs = context->GetWorkspaceSizes(1);
+        OP_CHECK_NULL_WITH_CONTEXT(context, placeholderWs);
+        placeholderWs[0] = 0;
+        context->SetTilingKey(GET_TPL_TILING_KEY(SCH_MODE_DEFAULT));
+        return ge::GRAPH_SUCCESS;
+    }
+
     int64_t N = xShape.GetDimNum() > 0 ? xShape.GetDim(0) : 0;
     int64_t M = indicesInput->GetStorageShape().GetShapeSize();
     OP_CHECK_IF(M < 0 || M > static_cast<int64_t>(std::numeric_limits<int32_t>::max()),

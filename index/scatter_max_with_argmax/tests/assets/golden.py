@@ -10,169 +10,143 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-"""
-Golden script for scatter_max_with_argmax.
+"""Golden for scatter_max_with_argmax, mirroring the arch35 kernel semantics.
 
-算子功能：沿第0维执行 scatter max 操作，同时记录每个位置最大值来自哪个 update（argmax 索引）。
+Kernel algorithm (arch35 simt):
+  Phase 1: y = -inf, argmax = M (M = number of indices, sentinel "uncovered").
+  Phase 2: iterate indices in ascending i order; a position p is updated with
+           update[i] when (a) p not covered yet and update is not NaN (first
+           valid cover, even if value <= sentinel, e.g. -inf), or (b) update[i]
+           is strictly greater than the current y (GT compare keeps first index
+           on ties). NaN is ignored.
+  Phase 3: positions still argmax == M (never covered by a non-NaN update) get
+           y = 0.
 
-输入：
-    x:       [N, D1, D2, ...] float32  # 仅用于确定输出 shape，不参与计算
-    indices: [M] int32                  # scatter 索引，0 <= indices[i] < N
-    updates: [M, D1, D2, ...] float32  # scatter 源数据
-
-输出：
-    y:      [N, D1, D2, ...] float32   # scatter max 结果，未被指到位置为 0（Phase 3 补零）
-    argmax: [N, D1, D2, ...] int32     # 最大值来源索引（0~M-1），未被指到位置为 M
-
-三阶段语义（与 Ascend TBE 实现一致）：
-    Phase 1: y 初始化为 -3.4e+38（-inf 近似），argmax 初始化为 M
-    Phase 2: scatter max + GT 严格大于比较（相等不更新 argmax，保证确定性）
-    Phase 3: 对未被 indices 覆盖的位置（argmax 仍为 M），将 y 改写为 0（argmax 保持 M）
-
-实现说明：
-    本脚本采用 SE 文档第6章 Golden B（numpy 自定义实现）作为主 golden 函数，
-    无额外依赖，确定性最强，适用于所有 TTK 测试环境。
-    供交叉验证使用（需 pip install torch_scatter）。
-
-参考：SE 文档第6章 Golden 计算（两个逻辑等价的 golden 实现用于交叉验证）。
+The reference is implemented with a vectorized torch.scatter_reduce (amax then
+amin over matched indices), which is provably equivalent to the kernel:
+  - y[p]      = max over non-NaN updates targeting p (or 0 if none).
+  - argmax[p] = smallest index i among non-NaN updates with value == y[p]
+                (or M if none).
+This vectorized form avoids the O(M) python loop of a naive per-index update and
+runs identically on CPU (golden) and remote device tensors (third_party).
 """
 
-import numpy as np
+import torch
 
 __golden__ = {
     "kernel": {"scatter_max_with_argmax": "scatter_max_with_argmax_golden"},
-    "aclnn": {"aclnnScatterMaxWithArgmax": "aclnn_scatter_max_with_argmax_golden"},
+}
+__spec__ = {
+    "scatter_max_with_argmax": "ScatterMaxWithArgmaxSpec",
 }
 
-# float32 的 -inf 近似值，与 Ascend TBE 实现的 MINUS_INF = -3.4e+38 保持一致
-_MINUS_INF = np.float32(-3.4e38)
+
+def _numel(t):
+    """Element count for torch.Tensor or numpy.ndarray."""
+    return t.numel() if torch.is_tensor(t) else t.size
 
 
-def _scatter_max_with_argmax_numpy(x, indices, updates):
-    """
-    Golden B：基于 numpy 的自定义实现（无额外依赖）。
+def _validate(x, indices, updates):
+    """Contract checks (README: rank 1-8, indices 1D, 0 <= indices < N)."""
+    if not 1 <= x.ndim <= 8:
+        raise ValueError(f"x must have rank 1-8, got {tuple(x.shape)}")
+    if indices.ndim != 1:
+        raise ValueError(f"indices must be 1D, got {tuple(indices.shape)}")
+    expected_upd = (indices.shape[0],) + tuple(x.shape[1:])
+    if tuple(updates.shape) != expected_upd:
+        raise ValueError(
+            f"updates must have shape {expected_upd}, got {tuple(updates.shape)}"
+        )
+    if _numel(indices) and (indices.min() < 0 or indices.max() >= x.shape[0]):
+        raise ValueError("indices values must be in [0, x.shape[0])")
 
-    功能：沿第0维执行 scatter max 操作，同时记录每个位置最大值来自哪个 update。
-    语义等同于 torch_scatter.scatter_max(src=updates, index=indices, dim=0)。
 
-    三阶段语义（与 Ascend TBE 实现一致）：
-      Phase 1: y 初始化为 -3.4e+38（-inf 近似），argmax 初始化为 M（"无更新"标记值）
-      Phase 2: 严格大于（>）比较，相等时不更新 argmax（保证确定性）；NaN > 任意值为 false，NaN 被忽略
-      Phase 3: 对未被 indices 覆盖的位置（argmax 仍为 M），将 y 改写为 0（argmax 保持 M）
+def _scatter_max_with_argmax_tensor(x, indices, updates):
+    """Device-agnostic core; returns (y, argmax) torch tensors on x's device."""
+    x_tensor = torch.as_tensor(x, dtype=torch.float32)
+    indices_tensor = torch.as_tensor(indices, dtype=torch.long).reshape(-1)
+    updates_tensor = torch.as_tensor(updates, dtype=torch.float32)
+    dev = x_tensor.device
 
-    越界索引被跳过（与 SE 文档"越界行为未定义"保持一致，golden 采取安全跳过策略）。
-    最终未覆盖位置输出：y=0, argmax=M。
-    """
-    x = np.asarray(x, dtype=np.float32)
-    indices = np.asarray(indices, dtype=np.int32)
-    updates = np.asarray(updates, dtype=np.float32)
+    out_shape = tuple(x_tensor.shape)
+    n = int(x_tensor.shape[0]) if x_tensor.dim() > 0 else 1
+    m = int(indices_tensor.numel())
+    d = int(x_tensor.numel() // n) if n > 0 else 0
 
-    out_shape = x.shape
-    N = out_shape[0]
-    M = indices.shape[0]
+    y = torch.full((n, d), float("-inf"), dtype=torch.float32, device=dev)
+    argmax = torch.full((n, d), m, dtype=torch.int32, device=dev)
+    if n == 0 or d == 0 or m == 0:
+        y = torch.where(argmax == m, torch.zeros((), dtype=y.dtype, device=dev), y)
+        return y.reshape(out_shape), argmax.reshape(out_shape)
 
-    # Phase 1: 初始化 y 为 -3.4e+38（-inf 近似），argmax 为 M（表示"无更新"标记值）
-    y = np.full(out_shape, _MINUS_INF, dtype=np.float32)
-    argmax = np.full(out_shape, M, dtype=np.int32)
+    updates_tensor = updates_tensor.reshape(m, d)
+    rows = indices_tensor.unsqueeze(1).expand(-1, d)
 
-    # Phase 2: scatter max + argmax 更新（严格大于比较，相等不更新）
-    if M > 0:
-        if x.ndim > 1:
-            rest_shape = x.shape[1:]
-            rest_size = int(np.prod(rest_shape)) if rest_shape else 1
-            y_flat = y.reshape(N, rest_size)
-            argmax_flat = argmax.reshape(N, rest_size)
-            updates_flat = updates.reshape(M, rest_size)
+    # NaN does not participate in max: replace with -inf so it never wins amax;
+    # `matched` below uses the original values and excludes NaN, so a position
+    # covered only by NaN stays uncovered (kernel-consistent).
+    reduce_updates = torch.where(
+        torch.isnan(updates_tensor),
+        torch.full_like(updates_tensor, float("-inf")),
+        updates_tensor,
+    )
+    y.scatter_reduce_(0, rows, reduce_updates, reduce="amax", include_self=True)
 
-            for i in range(M):
-                idx = int(indices[i])
-                if idx < 0 or idx >= N:
-                    continue
-                # 严格大于比较；NaN > 任意值 为 false，故 NaN 不会更新（被忽略）
-                mask = updates_flat[i] > y_flat[idx]
-                y_flat[idx] = np.where(mask, updates_flat[i], y_flat[idx])
-                argmax_flat[idx] = np.where(mask, i, argmax_flat[idx])
+    # argmax = smallest index among non-NaN updates equal to the row max.
+    max_per_update = y[indices_tensor]
+    matched = (updates_tensor == max_per_update) & ~torch.isnan(updates_tensor)
+    positions = (
+        torch.arange(m, dtype=torch.int32, device=dev).unsqueeze(1).expand(-1, d)
+    )
+    candidate = torch.where(
+        matched,
+        positions,
+        torch.full_like(matched, m, dtype=torch.int32),
+    )
+    argmax.scatter_reduce_(0, rows, candidate, reduce="amin", include_self=True)
 
-            y = y_flat.reshape(out_shape)
-            argmax = argmax_flat.reshape(out_shape)
-        else:
-            for i in range(M):
-                idx = int(indices[i])
-                if idx < 0 or idx >= N:
-                    continue
-                if updates[i] > y[idx]:
-                    y[idx] = updates[i]
-                    argmax[idx] = i
-
-    # Phase 3: 补零阶段
-    # 对未被 indices 覆盖的位置（argmax 仍为 M），将 y 从 -3.4e+38 改写为 0（argmax 保持 M 不变）
-    # 与 Ascend TBE 实现的 Phase 3 补零语义一致：未覆盖位置最终输出 y=0, argmax=M
-    mask_uncovered = argmax == M
-    y = np.where(mask_uncovered, np.float32(0.0), y)
-
-    return y, argmax
+    uncovered = argmax == m
+    y = torch.where(uncovered, torch.zeros((), dtype=y.dtype, device=dev), y)
+    return y.reshape(out_shape), argmax.reshape(out_shape)
 
 
 def scatter_max_with_argmax_golden(x, indices, updates, **kwargs):
-    """
-    Golden function for scatter_max_with_argmax.
-    All the parameters (names and order) follow ScatterMaxWithArgmax prototype definition
-    (REG_OP: x, indices, updates) without outputs.
-    All the input Tensors are numpy.ndarray.
-
-    计算逻辑（三阶段，与 Ascend TBE 实现一致）：
-    - Phase 1: y 初始化为 -3.4e+38（float32 -inf 近似），argmax 初始化为 M（indices 数量，"无更新"标记值）
-    - Phase 2: 严格大于（>）比较，相等时不更新 argmax（保证确定性）
-    - Phase 3: 对未被 indices 覆盖的位置（argmax 仍为 M），将 y 改写为 0（argmax 保持 M 不变）
-    - 最终未覆盖位置输出：y=0, argmax=M
-
-    Args:
-        x: np.ndarray, float32, shape [N, D1, D2, ...]，仅用于确定输出 shape，不参与计算。
-        indices: np.ndarray, int32, shape [M]，scatter 索引，取值范围 [0, N)。
-        updates: np.ndarray, float32, shape [M, D1, D2, ...]，scatter 源数据。
-        **kwargs: {input,output}_{dtypes,ori_shapes,formats,ori_formats},
-                  full_soc_version, short_soc_version, testcase_name
-
-    Returns:
-        tuple: (y, argmax)
-            y: np.ndarray, float32, shape [N, D1, D2, ...]，scatter max 结果，未覆盖位置为 0。
-            argmax: np.ndarray, int32, shape [N, D1, D2, ...]，最大值来源索引，未覆盖位置为 M。
-    """
-    return _scatter_max_with_argmax_numpy(x, indices, updates)
+    """Legacy kernel/GEIR entry: numpy in -> (y, argmax) numpy."""
+    del kwargs
+    _validate(x, indices, updates)
+    y, argmax = _scatter_max_with_argmax_tensor(x, indices, updates)
+    return y.numpy(), argmax.numpy()
 
 
-def aclnn_scatter_max_with_argmax_golden(x, indices, updates, y, argmax, **kwargs):
-    """
-    Aclnn golden for aclnnScatterMaxWithArgmax.
-    All the parameters (name & order) follow
-        function `aclnnScatterMaxWithArgmaxGetWorkspaceSize` in @aclnn_scatter_max_with_argmax.h
-        without `workspaceSize` & `executor`.
-    When all dtypes are natively supported by torch,
-        the Tensors in the parameters are all torch.Tensor.
-    Conversely, when not, the Tensors in the parameters are all numpy.ndarray.
+class ThirdPartyImpl:
+    """GPU-side (torch) reference; runs the identical core on device tensors."""
 
-    Args:
-        x: 输出 shape 参考张量，float32，不参与计算。
-        indices: scatter 索引张量，int32，取值范围 [0, N)。
-        updates: scatter 源数据张量，float32。
-        y: 输出张量（用于确定 dtype/shape），float32。
-        argmax: 输出张量（用于确定 dtype/shape），int32。
-        kwargs: tensor_{dtypes, formats}, scalar_dtypes, short_soc_version, testcase_name
+    def __init__(self, x, indices, updates, device=None, **kwargs):
+        del device, kwargs
+        _validate(x, indices, updates)
+        self.x = x
+        self.indices = indices
+        self.updates = updates
 
-    Returns:
-        tuple: (y_result, argmax_result)
-    """
+    def __call__(self, **kwargs):
+        del kwargs
+        y, argmax = _scatter_max_with_argmax_tensor(self.x, self.indices, self.updates)
+        return [y, argmax]
 
-    # 统一转为 numpy.ndarray 进行计算
-    def _to_numpy(t):
-        if isinstance(t, np.ndarray):
-            return t
-        try:
-            return t.numpy()
-        except AttributeError:
-            return np.asarray(t)
 
-    y_np, argmax_np = _scatter_max_with_argmax_numpy(
-        _to_numpy(x), _to_numpy(indices), _to_numpy(updates)
-    )
-    return y_np, argmax_np
+class ScatterMaxWithArgmaxSpec:
+    """golden (CPU numpy) and third_party (GPU tensor) share one implementation."""
+
+    @staticmethod
+    def golden(x, indices, updates, **kwargs):
+        del kwargs
+        _validate(x, indices, updates)
+        y, argmax = _scatter_max_with_argmax_tensor(x, indices, updates)
+        return y.numpy(), argmax.numpy()
+
+    third_party = {"torch": ThirdPartyImpl}
+
+    tolerance = {
+        "float32": {"standard": "mix_tolerance"},
+        "int32": {"standard": "binary_equal"},
+    }

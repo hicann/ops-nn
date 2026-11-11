@@ -198,14 +198,17 @@ TEST_F(ScatterMaxWithArgmaxTiling, scatter_max_with_argmax_updates_float16)
     EXPECT_EQ(st, ge::GRAPH_FAILED);
 }
 
-// indices must be 1D (SE/MDE spec: indices shape = [M]).
-TEST_F(ScatterMaxWithArgmaxTiling, scatter_max_with_argmax_indices_not_1d)
+// indices supports ND; [2, 2] has the same element count M=4 as the flat form.
+TEST_F(ScatterMaxWithArgmaxTiling, scatter_max_with_argmax_indices_2d)
 {
     uint64_t key = 0xFFFF;
     ScatterMaxWithArgmaxTilingData tilingData = {};
     auto st = RunScatterMaxWithArgmaxTiling({{4, 2}, {4, 2}}, {{2, 2}, {2, 2}}, {{4, 2}, {4, 2}}, ge::DT_FLOAT,
                                             ge::DT_INT32, ge::DT_FLOAT, key, &tilingData);
-    EXPECT_EQ(st, ge::GRAPH_FAILED);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tilingData.indicesNum, 4);
+    EXPECT_EQ(tilingData.innerNum, 2);
+    EXPECT_EQ(tilingData.rowNum, 4);
 }
 
 // M = INT32_MAX is the largest valid argmax sentinel.

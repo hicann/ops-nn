@@ -30,7 +30,7 @@
 
 #include "experiment_ops.h"
 #include "nn_other.h"
-#include "../op_graph/scatter_max_with_argmax_proto.h"
+#include "../../op_graph/scatter_max_with_argmax_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -289,6 +289,8 @@ int main(int argc, char* argv[])
     std::cout << "Warning message: " << warning_str << std::endl;
     printf("%s - INFO - [XIR]: Precision is ok\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
+    delete session;
+    session = nullptr;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
