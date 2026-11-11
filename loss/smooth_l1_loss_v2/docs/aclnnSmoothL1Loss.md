@@ -143,8 +143,8 @@ aclnnStatus aclnnSmoothL1Loss(
       <td class="tg-0lax">result（aclTensor*）</td>
       <td class="tg-0lax">输出</td>
       <td class="tg-0lax">公式中输出的损失函数ℓ(self,target)。</td>
-      <td class="tg-0lax">当reduction为none时，shape与self和target的<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>结果一致，当reduction为mean或sum时为[1]，数据类型为self和target推导后可转换的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）</td>
-      <td class="tg-0lax">FLOAT、FLOAT16、BFLOAT16</td>
+      <td class="tg-0lax">当reduction为none时，shape与self和target的<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>结果一致，当reduction为mean或sum时为[1]，数据类型为self和target推导后可转换的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。当reduction为mean或sum时，result的数据格式须为ND。当result为DOUBLE类型时，输出为计算结果按<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>转换（Cast）后的DOUBLE值。</td>
+      <td class="tg-0lax">FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td class="tg-0lax">ND、NCL、NCHW、NHWC</td>
       <td class="tg-0lax">1-8</td>
       <td class="tg-0lax">√</td>
