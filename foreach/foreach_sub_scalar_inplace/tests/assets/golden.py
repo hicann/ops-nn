@@ -272,9 +272,12 @@ def _tp_one(t):
 
 
 def _tp_num(v):
-    if isinstance(v, torch.Tensor):
-        return float(v.reshape(-1)[0])
-    return float(v)
+    """整型标量返回 Python int(weak-typed, 张量保持整型并按二补码回绕),
+    浮点返回 float; 与 _tp_scalar 口径一致。整型若转 float 会把 int32 张量
+    提升到 fp32, 运算丢精度且越界窄回时产生 INT32_MIN。"""
+    t = v if isinstance(v, torch.Tensor) else _tp_bf16_carrier(np.asarray(v))
+    val = t.reshape(-1)[0]
+    return float(val) if t.is_floating_point() else int(val)
 
 
 def _keep_dtype(res, ref):
