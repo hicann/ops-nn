@@ -49,7 +49,7 @@
     \frac{\partial L}{\partial x_{n, c_{in}, h, w}} = \sum_{c_{out}=1}^{C_{out}} \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} \frac{\partial L}{\partial y_{n, c_{out}, i, j}} \cdot w_{c_{out}, c_{in}, p, q} \cdot \delta(p_{n,c_{out},i,j} = (h, w))
     $$
 
-    where $L$ is the loss function, $\frac{\partial L}{\partial y}$ is the gradient of the output tensor $y$ with respect to $L$ (the gradOutput parameter in the prototype), and $\delta(\cdot)$ is the indicator function, which is 1 when the sampling position coincides with the input position $(h,w)$ and 0 otherwise. In the actual implementation, the gradient is distributed to neighboring pixel positions through bilinear interpolation.
+    where $L$ is the loss function, $\frac{\partial L}{\partial y}$ is the gradient of the output tensor $y$ with respect to $L$ (the gradOutput parameter in the prototype), $w_{c_{out}, c_{in}, p, q}$ denotes the $(p, q)$ element of the convolution kernel weight tensor $w$ (the weight parameter in the prototype, with shape $(C_{out}, C_{in}/groups, K_H, K_W)$), where $p$ and $q$ are the coordinate indexes of the kernel in the height and width directions, respectively, $p \in [1, K_H]$, $q \in [1, K_W]$, and $\delta(\cdot)$ is the indicator function, which is 1 when the sampling position coincides with the input position $(h,w)$ and 0 otherwise. In the actual implementation, the gradient is distributed to neighboring pixel positions through bilinear interpolation.
 
   - For the gradient of $w$, $\frac{\partial L}{\partial w}$ (corresponding to the gradWeight parameter in the function prototype):
 
@@ -137,7 +137,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>Input</td>
       <td>Input</td>
       <td>Indicates the input data for forward propagation.</td>
-      <td><ul><li>Does not support empty Tensor.</li><li>The shape is [N, inC, inH, inW].</li></ul></td>
+      <td><ul><li>Does not support empty Tensor.</li><li>The shape is [N, C<sub>in</sub>, H<sub>in</sub>, W<sub>in</sub>].</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>NCHW</td>
       <td>4</td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradOutput</td>
       <td>Input</td>
       <td>Indicates the gradient of the forward propagation output.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with input.</li><li>The shape is [N, outC, outH, outW].</li></ul></td>
+      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with input.</li><li>The shape is [N, C<sub>out</sub>, H<sub>out</sub>, W<sub>out</sub>].</li></ul></td>
       <td>Keep consistent with input</td>
       <td>NCHW</td>
       <td>4</td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>offsetOut</td>
       <td>Input</td>
       <td>Indicates the output sampling points of deformable convolution in forward propagation.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with input.</li><li>The shape is [N, inC, outH * K_H, outW * K_W].</li></ul></td>
+      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with input.</li><li>The shape is [N, C<sub>in</sub>, H<sub>out</sub> * K<sub>H</sub>, W<sub>out</sub> * K<sub>W</sub>].</li></ul></td>
       <td>Keep consistent with input</td>
       <td>NCHW</td>
       <td>4</td>
@@ -167,7 +167,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>weight</td>
       <td>Input</td>
       <td>Indicates the convolution kernel weight in forward propagation.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with those of input.</li><li>The shape is [outC, inC/groups, K_H, K_W].</li></ul></td>
+      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with those of input.</li><li>The shape is [C<sub>out</sub>, C<sub>in</sub>/groups, K<sub>H</sub>, K<sub>W</sub>].</li></ul></td>
       <td>Keep consistent with input</td>
       <td>NCHW</td>
       <td>4</td>
@@ -177,7 +177,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>offset</td>
       <td>Input</td>
       <td>Indicates the x-y coordinate offset and mask for forward propagation.</td>
-      <td><ul><li>Does not support empty Tensor.</li><li>The data type and data format keep consistent with input.</li><li>If modulated is True, the shape is [N, 3 * deformableGroups * K_H * K_W, outH, outW].</li></ul></td>
+      <td><ul><li>Does not support empty Tensor.</li><li>The data type and data format keep consistent with input.</li><li>If modulated is True, the shape is [N, 3 * deformableGroups * K<sub>H</sub> * K<sub>W</sub>, H<sub>out</sub>, W<sub>out</sub>].</li></ul></td>
       <td>Consistent with input</td>
       <td>NCHW</td>
       <td>4</td>
@@ -186,8 +186,8 @@ aclnnStatus aclnnDeformableConv2dBackward(
     <tr>
       <td>kernelSize</td>
       <td>Input</td>
-      <td>Indicates the kernel size, corresponding to K_H and K_W in the formula.</td>
-      <td>size is 2(K_H, K_W), each element is greater than zero, K_H * K_W cannot exceed 2048, and K_H * K_W * inC/groups cannot exceed 65535.</td>
+      <td>Indicates the kernel size, corresponding to K<sub>H</sub> and K<sub>W</sub> in the formula.</td>
+      <td>size is 2(K<sub>H</sub>, K<sub>W</sub>), each element is greater than zero, K<sub>H</sub> * K<sub>W</sub> cannot exceed 2048, and K<sub>H</sub> * K<sub>W</sub> * inC/groups cannot exceed 65535.</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -257,7 +257,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradInput</td>
       <td>Output</td>
       <td>Indicates the gradient of the input data.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format must keep consistent with input.</li><li>The shape is [N, inC, inH, inW].</li></ul></td>
+      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format must keep consistent with input.</li><li>The shape is [N, C<sub>in</sub>, H<sub>in</sub>, W<sub>in</sub>].</li></ul></td>
       <td>Keep consistent with input</td>
       <td>NCHW</td>
       <td>4</td>
@@ -267,7 +267,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradWeight</td>
       <td>Output</td>
       <td>Indicates the gradient of the convolution kernel weight.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with those of input.</li><li>The shape is [outC, inC/groups, K_H, K_W].</li></ul></td>
+      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with those of input.</li><li>The shape is [C<sub>out</sub>, C<sub>in</sub>/groups, K<sub>H</sub>, K<sub>W</sub>].</li></ul></td>
       <td>Keep consistent with input</td>
       <td>NCHW</td>
       <td>4</td>
@@ -277,7 +277,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradOffset</td>
       <td>Output</td>
       <td>Indicates the gradient of the offset.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with those of input.</li><li>If modulated is True, the shape is [N, 3 * deformableGroups * K_H * K_W, outH, outW]; if modulated is False, the shape is [N, 2 * deformableGroups * K_H * K_W, outH, outW].</li></ul></td>
+      <td><ul><li>Does not support empty tensors.</li><li>The data type and data format keep consistent with those of input.</li><li>If modulated is True, the shape is [N, 3 * deformableGroups * K<sub>H</sub> * K<sub>W</sub>, H<sub>out</sub>, W<sub>out</sub>]; if modulated is False, the shape is [N, 2 * deformableGroups * K<sub>H</sub> * K<sub>W</sub>, H<sub>out</sub>, W<sub>out</sub>].</li></ul></td>
       <td>Consistent with input</td>
       <td>NCHW</td>
       <td>4</td>
@@ -287,7 +287,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradBias</td>
       <td>Output</td>
       <td>Gradient of the bias.</td>
-      <td><ul><li>Does not support empty tensors.</li><li>shape is [outC].</li></ul></td>
+      <td><ul><li>Does not support empty tensors.</li><li>shape is [C<sub>out</sub>].</li></ul></td>
       <td>Keep consistent with input</td>
       <td>ND</td>
       <td>1</td>
@@ -352,7 +352,7 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>The sizes of kernelSize, stride, padding, and dilation are inconsistent with those described in Parameters.</td>
     </tr>
     <tr>
-      <td>K_H*K_W is greater than 2048, or K_H*K_W*inC/groups is greater than 65535.</td>
+      <td>K<sub>H</sub>*K<sub>W</sub> is greater than 2048, or K<sub>H</sub>*K<sub>W</sub>*inC/groups is greater than 65535.</td>
     </tr>
     <tr>
       <td>The groups or deformableGroups parameter does not meet the constraints.</td>

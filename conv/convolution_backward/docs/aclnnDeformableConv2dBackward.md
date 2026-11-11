@@ -47,7 +47,7 @@
     \frac{\partial L}{\partial x_{n, c_{in}, h, w}} = \sum_{c_{out}=1}^{C_{out}} \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} \frac{\partial L}{\partial y_{n, c_{out}, i, j}} \cdot w_{c_{out}, c_{in}, p, q} \cdot \delta(p_{n,c_{out},i,j} = (h, w))
     $$
 
-    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数），$\delta(\cdot)$ 为指示函数，当采样位置与输入位置$(h,w)$重合时为1，否则为0。实际实现中通过双线性插值将梯度分配到邻近的像素位置。
+    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数），$w_{c_{out}, c_{in}, p, q}$ 表示卷积核权重张量 $w$（对应函数原型中的weight参数，shape为$(C_{out}, C_{in}/groups, K_H, K_W)$）中第$(p, q)$个元素，$p$ 和 $q$ 分别为卷积核内高度和宽度方向的坐标索引，$p \in [1, K_H]$，$q \in [1, K_W]$，$\delta(\cdot)$ 为指示函数，当采样位置与输入位置$(h,w)$重合时为1，否则为0。实际实现中通过双线性插值将梯度分配到邻近的像素位置。
 
   - 对于 $w$ 的梯度 $\frac{\partial L}{\partial w}$（对应函数原型中的gradWeight参数）：
 
@@ -73,7 +73,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用"aclnnDeformableConv2dBackwardGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnDeformableConv2dBackward"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnDeformableConv2dBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDeformableConv2dBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnDeformableConv2dBackwardGetWorkspaceSize(
@@ -135,7 +135,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>input</td>
       <td>输入</td>
       <td>表示前向传播的输入数据。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[N, inC, inH, inW]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[N, C<sub>in</sub>, H<sub>in</sub>, W<sub>in</sub>]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>NCHW</td>
       <td>4</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>表示前向传播输出的梯度。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[N, outC, outH, outW]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[N, C<sub>out</sub>, H<sub>out</sub>, W<sub>out</sub>]。</li></ul></td>
       <td>与input保持一致</td>
       <td>NCHW</td>
       <td>4</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>offsetOut</td>
       <td>输入</td>
       <td>表示前向传播可变形卷积的输出采样点。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[N, inC, outH * K_H, outW * K_W]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[N, C<sub>in</sub>, H<sub>out</sub> * K<sub>H</sub>, W<sub>out</sub> * K<sub>W</sub>]。</li></ul></td>
       <td>与input保持一致</td>
       <td>NCHW</td>
       <td>4</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>weight</td>
       <td>输入</td>
       <td>表示前向传播的卷积核权重。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[outC, inC/groups, K_H, K_W]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[C<sub>out</sub>, C<sub>in</sub>/groups, K<sub>H</sub>, K<sub>W</sub>]。</li></ul></td>
       <td>与input保持一致</td>
       <td>NCHW</td>
       <td>4</td>
@@ -175,7 +175,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>offset</td>
       <td>输入</td>
       <td>表示前向传播的x-y坐标偏移和掩码。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>当modulated为True时，shape为[N, 3 * deformableGroups * K_H * K_W, outH, outW]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>当modulated为True时，shape为[N, 3 * deformableGroups * K<sub>H</sub> * K<sub>W</sub>, H<sub>out</sub>, W<sub>out</sub>]。</li></ul></td>
       <td>与input保持一致</td>
       <td>NCHW</td>
       <td>4</td>
@@ -184,8 +184,8 @@ aclnnStatus aclnnDeformableConv2dBackward(
     <tr>
       <td>kernelSize</td>
       <td>输入</td>
-      <td>表示卷积核大小，对应公式中的K_H、K_W。</td>
-      <td>size为2(K_H, K_W)，各元素均大于零，K_H * K_W不能超过2048，K_H * K_W * inC/groups不能超过65535。</td>
+      <td>表示卷积核大小，对应公式中的K<sub>H</sub>，K<sub>W</sub>。</td>
+      <td>size为2(K<sub>H</sub>, K<sub>W</sub>)，各元素均大于零，K<sub>H</sub> * K<sub>W</sub>不能超过2048，K<sub>H</sub> * K<sub>W</sub> * inC/groups不能超过65535。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -255,7 +255,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradInput</td>
       <td>输出</td>
       <td>表示输入数据的梯度。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[N, inC, inH, inW]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[N, C<sub>in</sub>, H<sub>in</sub>, W<sub>in</sub>]。</li></ul></td>
       <td>与input保持一致</td>
       <td>NCHW</td>
       <td>4</td>
@@ -265,7 +265,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradWeight</td>
       <td>输出</td>
       <td>表示卷积核权重的梯度。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[outC, inC/groups, K_H, K_W]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>shape为[C<sub>out</sub>, C<sub>in</sub>/groups, K<sub>H</sub>, K<sub>W</sub>]。</li></ul></td>
       <td>与input保持一致</td>
       <td>NCHW</td>
       <td>4</td>
@@ -275,7 +275,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradOffset</td>
       <td>输出</td>
       <td>表示偏移量的梯度。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>当modulated为True时，shape为[N, 3 * deformableGroups * K_H * K_W, outH, outW]；当modulated为False时，shape为[N, 2 * deformableGroups * K_H * K_W, outH, outW]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型、数据格式与input保持一致。</li><li>当modulated为True时，shape为[N, 3 * deformableGroups * K<sub>H</sub> * K<sub>W</sub>, H<sub>out</sub>, W<sub>out</sub>]；当modulated为False时，shape为[N, 2 * deformableGroups * K<sub>H</sub> * K<sub>W</sub>, H<sub>out</sub>, W<sub>out</sub>]。</li></ul></td>
       <td>与input保持一致</td>
       <td>NCHW</td>
       <td>4</td>
@@ -285,7 +285,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>gradBias</td>
       <td>输出</td>
       <td>表示偏置的梯度。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[outC]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[C<sub>out</sub>]。</li></ul></td>
       <td>与input保持一致</td>
       <td>ND</td>
       <td>1</td>
@@ -350,7 +350,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
       <td>kernelSize、stride、padding、dilation的size与参数说明中不一致。</td>
     </tr>
     <tr>
-      <td>K_H*K_W超过2048，或者K_H*K_W*inC/groups超过65535。</td>
+      <td>K<sub>H</sub>*K<sub>W</sub>超过2048，或者K<sub>H</sub>*K<sub>W</sub>*inC/groups超过65535。</td>
     </tr>
     <tr>
       <td>groups或deformableGroups参数不满足约束条件。</td>
