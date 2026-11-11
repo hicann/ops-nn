@@ -190,17 +190,15 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
 
     std::vector<int64_t> batchMeanShape = {128};
     std::vector<int64_t> batchInvstdShape = {128};
-    std::vector<int64_t> meanShape = {128};
-    std::vector<int64_t> varianceShape = {128};
     ADD_INPUT(1, total_sum, inDtype, totalSumShape);
     ADD_INPUT(2, total_square_sum, inDtype, totalSquareSumShape);
     ADD_INPUT(3, sample_count, DT_INT32, sampleCountShape);
     ADD_INPUT(4, mean, inDtype, meanShape);
     ADD_INPUT(5, variance, inDtype, varianceShape);
     ADD_OUTPUT(1, batch_mean, inDtype, batchMeanShape);
-    ADD_OUTPUT(2, batch_invstd, batch_invstd, batchInvstdShape);
-    ADD_OUTPUT(3, mean, batch_invstd, meanShape);
-    ADD_OUTPUT(4, variance, batch_invstd, varianceShape);
+    ADD_OUTPUT(2, batch_invstd, inDtype, batchInvstdShape);
+    ADD_OUTPUT(3, mean, inDtype, meanShape);
+    ADD_OUTPUT(4, variance, inDtype, varianceShape);
     ADD_INPUT_ATTR(momentum, 0.001);
     ADD_INPUT_ATTR(eps, 0.001);
     outputs.push_back(SyncBatchNormGatherStats_1);
