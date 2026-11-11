@@ -15,7 +15,7 @@ import numpy as np
 __golden__ = {"kernel": {"max_pool_v2": "max_pool_v2_golden"}}
 
 
-def max_pool_v2_golden(x, ksize, strides, *, padding, data_format="NCHW", **kwargs):
+def max_pool_v2_golden(x, ksize, strides, *, padding, data_format="NHWC", **kwargs):
     """
     Golden function for max_pool_v2.
     All the parameters (names and order) follow @max_pool_v2_def.cpp without outputs.

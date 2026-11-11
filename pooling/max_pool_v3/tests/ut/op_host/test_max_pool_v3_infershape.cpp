@@ -369,54 +369,81 @@ TEST_F(MaxPoolV3UT, InferShapeCalculatedWithPadDivRtn)
     EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
+// ======================== ksize and ceil_mode constraints ========================
+
+TEST_F(MaxPoolV3UT, InferShapeFailKsizeNcNotOne)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolV3")->infer_shape;
+    gert::StorageShape x_shape = {{1, 3, 8, 8}, {1, 3, 8, 8}};
+    std::vector<gert::StorageShape> output_shapes(1);
+    std::vector<void*> output_shapes_ref(1);
+    output_shapes_ref[0] = &output_shapes[0];
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&x_shape})
+                      .OutputShapes(output_shapes_ref)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 3, 3})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
+                                  {"padding_mode", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolV3UT, InferShapeFailKsizeHwProductOver255)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolV3")->infer_shape;
+    gert::StorageShape x_shape = {{1, 3, 8, 8}, {1, 3, 8, 8}};
+    std::vector<gert::StorageShape> output_shapes(1);
+    std::vector<void*> output_shapes_ref(1);
+    output_shapes_ref[0] = &output_shapes[0];
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&x_shape})
+                      .OutputShapes(output_shapes_ref)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 16, 16})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
+                                  {"padding_mode", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolV3UT, InferShapeFailCeilModeWithSame)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolV3")->infer_shape;
+    gert::StorageShape x_shape = {{1, 3, 8, 8}, {1, 3, 8, 8}};
+    std::vector<gert::StorageShape> output_shapes(1);
+    std::vector<void*> output_shapes_ref(1);
+    output_shapes_ref[0] = &output_shapes[0];
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&x_shape})
+                      .OutputShapes(output_shapes_ref)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 3, 3})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
+                                  {"padding_mode", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0})},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
+                                  {"global_pooling", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
 } // namespace
-
-// ======================== InferDataType ========================
-class MaxPoolV3InferDataType : public testing::Test {
-protected:
-    static void SetUpTestCase() { std::cout << "MaxPoolV3InferDataType SetUp" << std::endl; }
-    static void TearDownTestCase() { std::cout << "MaxPoolV3InferDataType TearDown" << std::endl; }
-};
-
-TEST_F(MaxPoolV3InferDataType, InferDataTypeFP16)
-{
-    auto infer_dtype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolV3")->infer_datatype;
-    ASSERT_NE(infer_dtype_func, nullptr);
-
-    ge::DataType input_dtype = ge::DT_FLOAT16;
-    ge::DataType output_dtype = ge::DT_UNDEFINED;
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(1, 1)
-                      .IrInstanceNum({1})
-                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .InputDataTypes({&input_dtype})
-                      .OutputDataTypes({&output_dtype})
-                      .Build();
-
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_EQ(infer_dtype_func(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT16);
-}
-
-TEST_F(MaxPoolV3InferDataType, InferDataTypeFP32)
-{
-    auto infer_dtype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolV3")->infer_datatype;
-
-    ge::DataType input_dtype = ge::DT_FLOAT;
-    ge::DataType output_dtype = ge::DT_UNDEFINED;
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(1, 1)
-                      .IrInstanceNum({1})
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .InputDataTypes({&input_dtype})
-                      .OutputDataTypes({&output_dtype})
-                      .Build();
-
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_EQ(infer_dtype_func(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
-}

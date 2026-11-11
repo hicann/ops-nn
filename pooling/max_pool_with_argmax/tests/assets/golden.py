@@ -6,7 +6,7 @@
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -56,6 +56,9 @@ def max_pool_with_argmax_golden(
     All the parameters (names and order) follow @max_pool_with_argmax_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
 
+    布局仅由 data_format 属性决定，与本仓 infershape/tiling 的属性单一来源实现一致；
+    张量 format（input_formats/output_formats）仅为元数据，不参与布局计算。
+
     Args:
         **kwargs: {input,output}_{dtypes,ori_shapes,formats,ori_formats},
                   full_soc_version, short_soc_version, testcase_name
@@ -68,7 +71,6 @@ def max_pool_with_argmax_golden(
     import tensorflow as tf
 
     input_x = deepcopy(x)
-    input_format = kwargs["input_formats"][0]
     x_dtype = input_x.dtype
 
     ksize = list(ksize)
@@ -77,25 +79,19 @@ def max_pool_with_argmax_golden(
 
     # ============================================================
     # 强制 NCHW → NHWC（golden 内部统一 NHWC）
+    # 布局按 data_format 属性判定（与本仓 infershape/tiling 属性单一来源一致），
+    # 张量 format 仅为元数据；属性 NCHW 时 kernel 按 NCHW 解释同一 buffer
     # ============================================================
     force_nhwc = False
 
-    if input_format == "NCHW" and data_format == "NCHW":
+    if data_format == "NCHW":
         force_nhwc = True
 
         input_x = input_x.transpose(0, 2, 3, 1)
         ksize = nchw_to_nhwc_ksize_stride(ksize)
         strides = nchw_to_nhwc_ksize_stride(strides)
         data_format = "NHWC"
-
-    if not force_nhwc:
-        if input_format != data_format:
-            if input_format == "NHWC" and data_format == "NCHW":
-                input_x = input_x.transpose(0, 3, 1, 2)
-            elif input_format == "NCHW" and data_format == "NHWC":
-                input_x = input_x.transpose(0, 2, 3, 1)
-            else:
-                raise RuntimeError("Unsupported format conversion")
+    # 属性 NHWC：TF 与 kernel 对同一 buffer 的 NHWC 视图一致，直通
 
     x_tf = tf.convert_to_tensor(input_x)
 
@@ -129,21 +125,11 @@ def max_pool_with_argmax_golden(
         arg_np = arg_flat.reshape(arg_np.shape)
 
     # ============================================================
-    # 输出 format 转换
+    # 输出 format 转换：内部统一 NHWC，按 data_format 属性还原 NCHW 排布
+    # （kernel 按属性布局写出 buffer，golden 与其对齐）
     # ============================================================
-    y_fmt = kwargs["output_formats"][0]
-    arg_fmt = kwargs["output_formats"][1]
-
-    if data_format != y_fmt:
-        if data_format == "NHWC" and y_fmt == "NCHW":
-            y_np = y_np.transpose(0, 3, 1, 2)
-        elif data_format == "NCHW" and y_fmt == "NHWC":
-            y_np = y_np.transpose(0, 2, 3, 1)
-
-    if data_format != arg_fmt:
-        if data_format == "NHWC" and arg_fmt == "NCHW":
-            arg_np = arg_np.transpose(0, 3, 1, 2)
-        elif data_format == "NCHW" and arg_fmt == "NHWC":
-            arg_np = arg_np.transpose(0, 2, 3, 1)
+    if force_nhwc:
+        y_np = y_np.transpose(0, 3, 1, 2)
+        arg_np = arg_np.transpose(0, 3, 1, 2)
 
     return y_np, arg_np

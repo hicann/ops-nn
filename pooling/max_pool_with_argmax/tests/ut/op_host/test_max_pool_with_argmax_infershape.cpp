@@ -164,46 +164,6 @@ TEST_F(MaxPoolWithArgmaxInfer, max_pool_with_argmax_infershape_test_4)
     ASSERT_EQ(Shape2String(*indices), "[-2]");
 }
 
-TEST_F(MaxPoolWithArgmaxInfer, max_pool_with_argmax_inferdtype_success_01)
-{
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optiCompilationInfo;
-    platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-
-    auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolWithArgmax")->infer_datatype;
-
-    ge::DataType x_dtype = ge::DT_FLOAT16;
-    ge::DataType y_dtype = ge::DT_FLOAT16;
-    ge::DataType argmax_dtype = ge::DT_INT32;
-    ge::DataType expect_output_dtype = ge::DT_FLOAT16;
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(1, 2)
-                      .IrInstanceNum({
-                          1,
-                      })
-                      .InputDataTypes({&x_dtype})
-                      .OutputDataTypes({&y_dtype, &argmax_dtype})
-                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 4, 4, 1})},
-                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 4, 4, 1})},
-                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                                  {"Targmax", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                                  {"includeBatchInIndex", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"dataFormat", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                  {"nanProp", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .Build();
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_EQ(inferDtypeFunc(context), ge::GRAPH_SUCCESS);
-    ASSERT_NE(context, nullptr);
-    EXPECT_EQ(context->GetOutputDataType(0), expect_output_dtype);
-}
 static constexpr int64_t INT32_DTYPE = 3;
 
 static void ExecuteMaxPoolWithArgmaxInfershapeTest(const gert::StorageShape& xShape, ge::Format xFormat,
@@ -329,39 +289,16 @@ TEST_F(MaxPoolWithArgmaxInfer, infer_shape_null_context)
     ASSERT_EQ(inferShapeFunc(nullptr), ge::GRAPH_FAILED);
 }
 
-TEST_F(MaxPoolWithArgmaxInfer, infer_dtype_float32_int64)
+TEST_F(MaxPoolWithArgmaxInfer, fail_invalid_targmax)
 {
-    ge::DataType xDtype = ge::DT_FLOAT;
-    ge::DataType yDtype = ge::DT_UNDEFINED;
-    ge::DataType argmaxDtype = ge::DT_UNDEFINED;
-    auto holder = gert::InferDataTypeContextFaker()
-                      .SetOpType("MaxPoolWithArgmax")
-                      .NodeIoNum(1, 2)
-                      .IrInstanceNum({1, 2})
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .InputDataTypes({&xDtype})
-                      .OutputDataTypes({&yDtype, &argmaxDtype})
-                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
-                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 2, 2})},
-                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                                  {"Targmax", Ops::NN::AnyValue::CreateFrom<int64_t>(5)},
-                                  {"includeBatchInIndex", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                  {"dataFormat", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")},
-                                  {"nanProp", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
-                      .Build();
-    auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolWithArgmax")->infer_datatype;
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_NE(context, nullptr);
-    ASSERT_EQ(inferDtypeFunc(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
-    EXPECT_EQ(context->GetOutputDataType(1), ge::DT_INT64);
+    ExecuteMaxPoolWithArgmaxInfershapeTest({{4, 3, 8, 8}, {}}, ge::FORMAT_NCHW, ge::DT_FLOAT, {1, 1, 2, 2},
+                                           {1, 1, 2, 2}, "SAME", 5, "NCHW", ge::GRAPH_FAILED);
 }
 
-TEST_F(MaxPoolWithArgmaxInfer, infer_dtype_null_context)
+TEST_F(MaxPoolWithArgmaxInfer, success_targmax_int64)
 {
-    auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolWithArgmax")->infer_datatype;
-    ASSERT_EQ(inferDtypeFunc(nullptr), ge::GRAPH_FAILED);
+    ExecuteMaxPoolWithArgmaxInfershapeTest({{4, 3, 8, 8}, {}}, ge::FORMAT_NCHW, ge::DT_FLOAT, {1, 1, 2, 2},
+                                           {1, 1, 2, 2}, "SAME", 9, "NCHW", ge::GRAPH_SUCCESS);
 }
+
 } // namespace

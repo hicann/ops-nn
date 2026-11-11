@@ -365,6 +365,9 @@ ge::graphStatus MaxPoolV3BaseTiling::GetAttrsInfo()
         }
     }
     std::string inputFormatStr("NCHW");
+    if (std::string(context_->GetNodeType()) == "MaxPoolV2") {
+        inputFormatStr = "NHWC";
+    }
     const char* inputFormat = nullptr;
     if (std::string(context_->GetNodeType()) == "MaxPoolV2") {
         inputFormat = runtimeAttrs->GetAttrPointer<char>(1);

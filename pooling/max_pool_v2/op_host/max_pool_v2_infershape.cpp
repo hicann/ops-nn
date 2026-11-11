@@ -25,6 +25,16 @@ constexpr size_t SHAPE_NHWC_SIZE = 4;
 constexpr size_t INSHAPE_DIM_NUM = 4;
 constexpr size_t INPUT_KSIZE_IDX = 1;
 constexpr size_t INPUT_STRIDES_IDX = 2;
+constexpr size_t INDEX_PADDING = 0;
+constexpr size_t INDEX_DATA_FORMAT = 1;
+constexpr size_t INDEX_ZERO = 0;
+constexpr size_t INDEX_ONE = 1;
+constexpr size_t INDEX_TWO = 2;
+constexpr size_t INDEX_THREE = 3;
+constexpr int32_t KSIZE_STRIDES_FIXED_DIM_VALUE = 1;
+constexpr int64_t MIN_STRIDES_HW_VALUE = 1LL;
+constexpr int64_t MAX_STRIDES_HW_VALUE = 63LL;
+constexpr int64_t MAX_KSIZE_HW_PRODUCT = 255LL;
 
 using InferShapePaddingFunc = ge::graphStatus (*)(gert::InferShapeContext*, size_t, size_t);
 
@@ -154,15 +164,6 @@ static ge::graphStatus InferShape4MaxPoolV2(gert::InferShapeContext* context)
         return ge::GRAPH_SUCCESS;
     }
 
-    auto srcTd = context->GetInputDesc(0);
-    OP_CHECK_IF(
-        srcTd == nullptr,
-        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "x", "required input x descriptor is missing"),
-        return ge::GRAPH_FAILED);
-    auto inputFormat = srcTd->GetOriginFormat();
-    size_t hDim = inputFormat == FORMAT_NHWC ? 1 : 2;
-    size_t wDim = inputFormat == FORMAT_NHWC ? 2 : 3;
-
     auto attrs = context->GetAttrs();
     OP_CHECK_IF(
         attrs == nullptr,
@@ -171,11 +172,98 @@ static ge::graphStatus InferShape4MaxPoolV2(gert::InferShapeContext* context)
             (std::vector<const char*>{context->GetNodeName(), "attrs is null; shape/type inference cannot continue"})),
         return ge::GRAPH_FAILED);
 
-    auto paddingMode = attrs->GetAttrPointer<char>(0);
+    const char* dataFormatPtr = attrs->GetAttrPointer<char>(INDEX_DATA_FORMAT);
+    std::string dataFormatStr = dataFormatPtr == nullptr ? "NHWC" : dataFormatPtr;
+    if (dataFormatStr != "NHWC" && dataFormatStr != "NCHW") {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "data_format", dataFormatStr.c_str(), "must be in (NHWC, NCHW)");
+        return GRAPH_FAILED;
+    }
+    size_t hDim = dataFormatStr == "NHWC" ? INDEX_ONE : INDEX_TWO;
+    size_t wDim = dataFormatStr == "NHWC" ? INDEX_TWO : INDEX_THREE;
+
+    auto paddingMode = attrs->GetAttrPointer<char>(INDEX_PADDING);
     OP_CHECK_IF(paddingMode == nullptr,
                 OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "padding",
                                                          "required parameter padding is missing"),
                 return ge::GRAPH_FAILED);
+
+    auto ksize = context->GetInputTensor(INPUT_KSIZE_IDX);
+    OP_CHECK_IF(ksize == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "ksize",
+                                                         "required parameter ksize is missing"),
+                return ge::GRAPH_FAILED);
+    if (ksize->GetShapeSize() != SHAPE_NHWC_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of ksize", std::to_string(ksize->GetShapeSize()).c_str(), "4");
+        return GRAPH_FAILED;
+    }
+    auto ksizeData = ksize->GetData<int32_t>();
+    OP_CHECK_IF(ksizeData == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "ksize",
+                                                         "required parameter ksize data is missing"),
+                return ge::GRAPH_FAILED);
+
+    auto strides = context->GetInputTensor(INPUT_STRIDES_IDX);
+    OP_CHECK_IF(strides == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "strides",
+                                                         "required parameter strides is missing"),
+                return ge::GRAPH_FAILED);
+    if (strides->GetShapeSize() != SHAPE_NHWC_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of strides", std::to_string(strides->GetShapeSize()).c_str(),
+                                     "4");
+        return GRAPH_FAILED;
+    }
+    auto stridesData = strides->GetData<int32_t>();
+    OP_CHECK_IF(stridesData == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "strides",
+                                                         "required parameter strides data is missing"),
+                return ge::GRAPH_FAILED);
+
+    if (dataFormatStr == "NHWC") {
+        if (ksizeData[INDEX_ZERO] != KSIZE_STRIDES_FIXED_DIM_VALUE ||
+            ksizeData[INDEX_THREE] != KSIZE_STRIDES_FIXED_DIM_VALUE ||
+            stridesData[INDEX_ZERO] != KSIZE_STRIDES_FIXED_DIM_VALUE ||
+            stridesData[INDEX_THREE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
+            std::string attrMsg = "[" + std::to_string(ksizeData[INDEX_ZERO]) + ", " +
+                                  std::to_string(ksizeData[INDEX_THREE]) + "], [" +
+                                  std::to_string(stridesData[INDEX_ZERO]) + ", " +
+                                  std::to_string(stridesData[INDEX_THREE]) + "]";
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                opName_, "ksize[0,3], strides[0,3]", attrMsg.c_str(),
+                "MaxPoolV2 only supports pooling across height/width and other ksize/strides dimension should be one");
+            return GRAPH_FAILED;
+        }
+    } else {
+        if (ksizeData[INDEX_ZERO] != KSIZE_STRIDES_FIXED_DIM_VALUE ||
+            ksizeData[INDEX_ONE] != KSIZE_STRIDES_FIXED_DIM_VALUE ||
+            stridesData[INDEX_ZERO] != KSIZE_STRIDES_FIXED_DIM_VALUE ||
+            stridesData[INDEX_ONE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
+            std::string attrMsg = "[" + std::to_string(ksizeData[INDEX_ZERO]) + ", " +
+                                  std::to_string(ksizeData[INDEX_ONE]) + "], [" +
+                                  std::to_string(stridesData[INDEX_ZERO]) + ", " +
+                                  std::to_string(stridesData[INDEX_ONE]) + "]";
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                opName_, "ksize[0,1], strides[0,1]", attrMsg.c_str(),
+                "MaxPoolV2 only supports pooling across height/width and other ksize/strides dimension should be one");
+            return GRAPH_FAILED;
+        }
+    }
+
+    int64_t ksizeHwProduct = static_cast<int64_t>(ksizeData[hDim]) * static_cast<int64_t>(ksizeData[wDim]);
+    if (ksizeHwProduct > MAX_KSIZE_HW_PRODUCT) {
+        std::string attrMsg = "[" + std::to_string(ksizeData[hDim]) + ", " + std::to_string(ksizeData[wDim]) + "]";
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName_, "ksize[h,w]", attrMsg.c_str(),
+            "the product of ksize in H and W dimensions should be less than or equal to 255");
+        return GRAPH_FAILED;
+    }
+    if (stridesData[hDim] < MIN_STRIDES_HW_VALUE || stridesData[hDim] > MAX_STRIDES_HW_VALUE ||
+        stridesData[wDim] < MIN_STRIDES_HW_VALUE || stridesData[wDim] > MAX_STRIDES_HW_VALUE) {
+        std::string attrMsg = "[" + std::to_string(stridesData[hDim]) + ", " + std::to_string(stridesData[wDim]) + "]";
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "strides[h,w]", attrMsg.c_str(),
+                                               "strides of H and W dimensions should be in range [1, 63]");
+        return GRAPH_FAILED;
+    }
+
     auto it = std::find_if(kFuncMap.begin(), kFuncMap.end(),
                            [&paddingMode](const std::pair<std::string, InferShapePaddingFunc>& item) -> bool {
                                return item.first == paddingMode;
@@ -189,20 +277,7 @@ static ge::graphStatus InferShape4MaxPoolV2(gert::InferShapeContext* context)
     return it->second(context, hDim, wDim);
 }
 
-static ge::graphStatus InferDtype4MaxPoolV2(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "MaxPoolV2InferDtype enter");
-    // Get input tout
-    auto inputDtype = context->GetInputDataType(0);
-    context->SetOutputDataType(0, inputDtype);
-
-    OP_LOGD(context->GetNodeName(), "MaxPoolV2InferDtype end");
-
-    return GRAPH_SUCCESS;
-}
-
 IMPL_OP_INFERSHAPE(MaxPoolV2)
     .InputsDataDependency({INPUT_KSIZE_IDX, INPUT_STRIDES_IDX})
-    .InferShape(InferShape4MaxPoolV2)
-    .InferDataType(InferDtype4MaxPoolV2);
+    .InferShape(InferShape4MaxPoolV2);
 } // namespace ops

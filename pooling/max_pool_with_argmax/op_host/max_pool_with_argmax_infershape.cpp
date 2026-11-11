@@ -36,6 +36,7 @@ static constexpr size_t PARAM_W_DIM = 1;
 static constexpr size_t SHAPE_H_DIM = 1;
 static constexpr size_t SHAPE_W_DIM = 2;
 static constexpr size_t INT32_DTYPE = 3;
+constexpr size_t INT64_DTYPE = 9;
 static constexpr size_t INDEX_ZERO = 0;
 static constexpr size_t INDEX_ONE = 1;
 static constexpr size_t INDEX_TWO = 2;
@@ -166,6 +167,17 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
         return GRAPH_FAILED;
     }
 
+    auto targmaxPtr = attrs->GetAttrPointer<int64_t>(INDEX_DTYPE);
+    OP_CHECK_IF(targmaxPtr == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "Targmax",
+                                                         "required parameter Targmax is missing"),
+                return ge::GRAPH_FAILED);
+    if (*targmaxPtr != static_cast<int64_t>(INT32_DTYPE) && *targmaxPtr != static_cast<int64_t>(INT64_DTYPE)) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "Targmax", std::to_string(*targmaxPtr).c_str(),
+                                              "Targmax only supports 3(int32) or 9(int64)");
+        return GRAPH_FAILED;
+    }
+
     const gert::Shape* in_shape = context->GetInputShape(0);
     OP_CHECK_IF(
         in_shape == nullptr,
@@ -254,35 +266,5 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForMaxPoolWithArgmax(gert::InferDataTypeContext* context)
-{
-    if (context == nullptr) {
-        return GRAPH_FAILED;
-    }
-
-    const ge::DataType x = context->GetInputDataType(0);
-    context->SetOutputDataType(INDEX_OUT_MAX, x);
-
-    auto attrsPtr = context->GetAttrs();
-    OP_CHECK_IF(
-        attrsPtr == nullptr,
-        REPORT_PREDEFINED_ERR_MSG("EZ1014", (std::vector<const char*>{"opName", "reason"}),
-                                  (std::vector<const char*>{context->GetNodeName(),
-                                                            "attrsPtr is null; shape/type inference cannot continue"})),
-        return ge::GRAPH_FAILED);
-    const int64_t* dstDtype = attrsPtr->GetAttrPointer<int64_t>(INDEX_DTYPE);
-    OP_CHECK_IF(dstDtype == nullptr,
-                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "Targmax",
-                                                         "required parameter Targmax is missing"),
-                return ge::GRAPH_FAILED);
-    ge::DataType indicesDtype = *dstDtype == INT32_DTYPE ? ge::DT_INT32 : ge::DT_INT64;
-
-    context->SetOutputDataType(INDEX_OUT_INDICES, indicesDtype);
-
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(MaxPoolWithArgmax)
-    .InferShape(InferShapeForMaxPoolWithArgmax)
-    .InferDataType(InferDataTypeForMaxPoolWithArgmax);
+IMPL_OP_INFERSHAPE(MaxPoolWithArgmax).InferShape(InferShapeForMaxPoolWithArgmax);
 } // namespace ops

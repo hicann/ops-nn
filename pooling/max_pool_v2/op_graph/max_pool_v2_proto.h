@@ -15,7 +15,7 @@
 
 namespace ge {
 /**
-* @brief Performs max_pool_ext2 on the input .
+* @brief Performs max_pool_v2 on the input .
 
 * @par Inputs:
 * Three inputs:
