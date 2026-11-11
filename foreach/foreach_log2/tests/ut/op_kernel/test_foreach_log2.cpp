@@ -54,13 +54,15 @@ TEST_F(foreach_log2_test, test_case_float_1)
     uint8_t* x2 = CreateTensorListForeachLog2<float>(shapeInfos, "float32"); // output tensor
 
     ICPU_SET_TILING_KEY(2);
+    ICPU_RUN_KF(foreach_log2, blockDim, x1, x2, workspace, tiling);
 
     FreeTensorListForeachLog2<float>(x2, shapeInfos, "float32");
     AscendC::GmFree((void*)x1);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./log2_data/ && python3 compare_data.py 'float32'");
+    int cmpRc = system("cd ./log2_data/ && python3 compare_data.py 'float32'");
+    ASSERT_EQ(cmpRc, 0);
 }
 
 TEST_F(foreach_log2_test, test_case_float16_2)
@@ -86,13 +88,15 @@ TEST_F(foreach_log2_test, test_case_float16_2)
     uint8_t* x2 = CreateTensorListForeachLog2<half>(shapeInfos, "float16"); // output tensor
 
     ICPU_SET_TILING_KEY(1);
+    ICPU_RUN_KF(foreach_log2, blockDim, x1, x2, workspace, tiling);
 
     FreeTensorListForeachLog2<half>(x2, shapeInfos, "float16");
     AscendC::GmFree((void*)x1);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./log2_data/ && python3 compare_data.py 'float16'");
+    int cmpRc = system("cd ./log2_data/ && python3 compare_data.py 'float16'");
+    ASSERT_EQ(cmpRc, 0);
 }
 
 TEST_F(foreach_log2_test, test_case_bfloat16_3)
@@ -118,10 +122,12 @@ TEST_F(foreach_log2_test, test_case_bfloat16_3)
     uint8_t* x2 = CreateTensorListForeachLog2<bfloat16_t>(shapeInfos, "bfloat16_t");
 
     ICPU_SET_TILING_KEY(4); // bfloat16_t
+    ICPU_RUN_KF(foreach_log2, blockDim, x1, x2, workspace, tiling);
 
     FreeTensorListForeachLog2<bfloat16_t>(x2, shapeInfos, "bfloat16_t");
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./log2_data/ && python3 compare_data.py 'bfloat16_t'");
+    int cmpRc = system("cd ./log2_data/ && python3 compare_data.py 'bfloat16_t'");
+    ASSERT_EQ(cmpRc, 0);
 }
