@@ -46,7 +46,10 @@ namespace ge {
 *@par Attributes:
 *use_locking: An optional bool. Defaults to "False".
 *     Lock-protected update is not implemented: passing "True" is
-*     rejected with an error at the tiling stage . \n
+*     accepted and ignored (computed normally), consistent with the
+*     CANN TBE built-in ApplyAdagradDA and TensorFlow semantics
+*     (locking is a concurrency guard; no concurrent-update scenario
+*     exists for single-operator execution) . \n
 
 *@par Outputs:
 *var: A mutable Tensor. Has the same type as "var".
