@@ -381,7 +381,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_tiling.h
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_mdc_tiling.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_tiling.cpp
-        - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_51_tiling.cpp
+        - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_arch51_tiling.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/arch35/
         - ops/ops-nn/conv/conv2d_v2/op_kernel/arch35/
         - ops/ops-nn/conv/conv2d_v2/op_kernel/arch51/
@@ -396,7 +396,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/extend_conv2d/op_host/config/ascend950/
         - ops/ops-nn/conv/extend_conv2d/op_host/extend_conv2d_def.cpp
         - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
-        - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_51_tiling.cpp
+        - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_arch51_tiling.cpp
         - ops/ops-nn/conv/extend_conv2d/op_kernel/
         - ops/ops-nn/conv/extend_conv2d/op_graph/fusion_pass/conv2d_postcube_to_extendconv2d_fusion_pass.h
         - ops/ops-nn/conv/quant_conv3d/op_graph/
@@ -425,11 +425,13 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/conv2d_v2/op_kernel/
         - ops/ops-nn/conv/conv2d_v2/op_host/conv2d_v2_def.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_mdc_tiling.cpp
+        - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_arch51_tiling.cpp
         - ops/ops-nn/conv/conv3d_v2/op_kernel/
         - ops/ops-nn/conv/conv3d_v2/op_host/op_tiling/arch35/conv3d_v2_api_tilingdata.h
         - ops/ops-nn/conv/extend_conv2d/op_kernel/
         - ops/ops-nn/conv/extend_conv2d/op_host/extend_conv2d_def.cpp
         - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
+        - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_arch51_tiling.cpp
         - ops/ops-nn/conv/quant_conv3d/op_kernel/
         - ops/ops-nn/conv/quant_conv3d/op_host/quant_conv3d_def.cpp
         - ops/ops-nn/conv/quant_conv3d/op_host/op_tiling/quant_conv3d_tiling.cpp
