@@ -116,6 +116,9 @@ void AvgPoolCommonNHWCSmallKernelTiling::InitializationVars()
     oneBlockNum_ = platform::GetUbBlockSize(context_) / inputData_.dtypeSize;
     // 并发度
     paraNum_ = platform::GetVRegSize(context_) / DIGIT_FOUR / inputData_.dtypeSize;
+    // gather 路径 kernel 侧按 wFactor = VRegSize / sizeof(index) / channels 切分, 要求 channels * dtypeSize
+    // 不超过一个向量寄存器, 否则 wFactor 为 0; VRegSize 小于 NOT_GATHER_THRESHOLD 的芯片(如 5162)需收紧门限
+    notGatherThreshold_ = std::min(NOT_GATHER_THRESHOLD, static_cast<int64_t>(platform::GetVRegSize(context_)) + 1);
     CalcDivsiorUbSize(isPadding_);
     availableUb_ = static_cast<int64_t>(ubSize_ - divisorUbSize_ - UB_RESVERVED_SIZE) / inputData_.dtypeSize;
 }
@@ -222,7 +225,7 @@ void AvgPoolCommonNHWCSmallKernelTiling::DoBlockTiling()
     }
     inUbSize_ = ubFactorN_ * inRows * Ops::Base::CeilAlign(inCols * inputData_.channels, oneBlockNum_);
     outUbSize_ = ubFactorN_ * Ops::Base::CeilAlign(outUbFactorW_ * outUbFactorH_ * inputData_.channels, oneBlockNum_);
-    if (inputData_.channels * inputData_.dtypeSize >= NOT_GATHER_THRESHOLD) {
+    if (inputData_.channels * inputData_.dtypeSize >= notGatherThreshold_) {
         inUbSize_ = ubFactorN_ * inRows * inCols * Ops::Base::CeilAlign(inputData_.channels, oneBlockNum_);
         outUbSize_ = ubFactorN_ * outUbFactorW_ * outUbFactorH_ *
                      Ops::Base::CeilAlign(inputData_.channels, oneBlockNum_);
@@ -245,7 +248,7 @@ int64_t AvgPoolCommonNHWCSmallKernelTiling::CalcBufferSize(int64_t inRows, int64
 {
     int64_t tmpInDataBufferSize = inRows * Ops::Base::CeilAlign(inCols * inputData_.channels, oneBlockNum_);
     int64_t tmpOutDataBufferSize = Ops::Base::CeilAlign(outRows * outCols * inputData_.channels, oneBlockNum_);
-    if (inputData_.channels * inputData_.dtypeSize >= NOT_GATHER_THRESHOLD) {
+    if (inputData_.channels * inputData_.dtypeSize >= notGatherThreshold_) {
         tmpInDataBufferSize = inRows * inCols * Ops::Base::CeilAlign(inputData_.channels, oneBlockNum_);
         tmpOutDataBufferSize = outRows * outCols * Ops::Base::CeilAlign(inputData_.channels, oneBlockNum_);
     }
@@ -364,7 +367,7 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcSplitMaxBatch(int64_t oneBacthBuffe
 void AvgPoolCommonNHWCSmallKernelTiling::CalcGatherMode()
 {
     // c轴较大时，ub内c轴对齐存储计算
-    if (inputData_.channels * inputData_.dtypeSize >= NOT_GATHER_THRESHOLD) {
+    if (inputData_.channels * inputData_.dtypeSize >= notGatherThreshold_) {
         gatherMode_ = NOT_GATHER;
         return;
     }
@@ -380,7 +383,7 @@ void AvgPoolCommonNHWCSmallKernelTiling::CalcGatherMode()
 
 void AvgPoolCommonNHWCSmallKernelTiling::CalcCopyMode()
 {
-    if (inputData_.channels * inputData_.dtypeSize > NOT_GATHER_THRESHOLD) {
+    if (inputData_.channels * inputData_.dtypeSize >= notGatherThreshold_) {
         copyMode_ = COPY_SINGLE_ROW;
         return;
     }

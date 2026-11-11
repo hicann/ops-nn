@@ -24,3 +24,12 @@ add_kernel_sources(
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )
+
+add_kernel_sources(
+    KERNEL_SRC avg_pool_apt.cpp
+    COMPUTE_UNITS ascend5162
+    SIMPLIFIED_KEY 0
+    IMPL_MODE high_performance
+    AUTO_SYNC false
+    OPTIONS "--cce-long-scbz=true" "-mllvm --cce-aicore-jump-expand=false"
+)

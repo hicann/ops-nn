@@ -18,6 +18,8 @@
 
 #include <cstdint>
 
+#include "op_common/op_host/util/platform_util.h"
+
 namespace optiling {
 namespace platform {
 
@@ -36,7 +38,7 @@ inline uint32_t GetUbBlockSize(T* context)
 template <typename T>
 inline uint32_t GetVRegSize(T* context)
 {
-    return 256U;
+    return Ops::Base::GetVRegSize(context);
 }
 
 /**

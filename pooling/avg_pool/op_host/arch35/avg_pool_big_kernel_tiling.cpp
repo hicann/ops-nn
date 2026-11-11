@@ -16,6 +16,7 @@
 #include "platform_util.h"
 #include "util/math_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "log/log.h"
 #include "avg_pool_big_kernel_tiling.h"
 
@@ -40,7 +41,9 @@ bool AvgPoolCommonBigKernelTiling::IsCapable()
     if (inputData_.inputFormat != ge::Format::FORMAT_NCHW) {
         return false;
     }
-    if ((inputData_.stride[W_DIM] < inputData_.kernelSize[W_DIM] / EIGHT ||
+    const bool simtSupported = Ops::NN::OpTiling::IsSimtSupported(context_);
+    if (simtSupported &&
+        (inputData_.stride[W_DIM] < inputData_.kernelSize[W_DIM] / EIGHT ||
          inputData_.stride[W_DIM] < SIMT_STRIDE_THREHOLD) &&
         (inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] < SIMT_kSIZE_THREHOLD) &&
         (inputData_.batches * inputData_.channels * inputData_.outShape[H_DIM] * inputData_.outShape[W_DIM] >
@@ -51,7 +54,7 @@ bool AvgPoolCommonBigKernelTiling::IsCapable()
         static_cast<int64_t>(coreNum_ * TWO)) {
         return true;
     }
-    if (inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * inputData_.dtypeSize < NUM256) {
+    if (simtSupported && inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * inputData_.dtypeSize < NUM256) {
         return false;
     }
     return true;

@@ -17,6 +17,7 @@
 #include "util/math_util.h"
 
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "avg_pool_common_nchw_small_kernel_tiling.h"
 
 namespace optiling {
@@ -51,12 +52,22 @@ static constexpr int64_t MIN_DIVISOR_UB = 1024;
 static constexpr int64_t NO_NEED_CALC_DIVISOR = 10;
 static constexpr int64_t MAX_STRIDE = 2;
 static constexpr int64_t W_SPARSE_THREHOLD = 128;
+static constexpr int64_t W_SPARSE_THREHOLD_V516 = 64;
 static constexpr int64_t SIMT_k_SIZE_THREHOLD1 = 3600;
 static constexpr int64_t SIMT_k_SIZE_THREHOLD2 = 4900;
 static constexpr int64_t SIMT_STRIDE_SIZE_THREHOLD1 = 58;
 static constexpr int64_t SIMT_STRIDE_SIZE_THREHOLD2 = 64;
 static constexpr int64_t SIMT_BATCHES_THREHOLD = 64;
 static constexpr int64_t OVERLEAP_THREHOULD = 30;
+
+static int64_t GetWSparseThreshold(gert::TilingContext* context)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    if (ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_5162) {
+        return W_SPARSE_THREHOLD_V516;
+    }
+    return W_SPARSE_THREHOLD;
+}
 
 void AvgPoolCommonNCHWSmallKernelTiling::CalcDivsiorUbSize(bool isPad)
 {
@@ -186,10 +197,12 @@ bool AvgPoolCommonNCHWSmallKernelTiling::IsCapable()
     if (inputData.batches * inputData.outShape[W_DIM] * inputData.outShape[H_DIM] < static_cast<int64_t>(coreNum)) {
         return false;
     }
+    const bool simtSupported = Ops::NN::OpTiling::IsSimtSupported(context_);
     int64_t kSize = inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM];
     int64_t strideSize = inputData.stride[H_DIM] * inputData.stride[W_DIM];
-    if (kSize >= SIMT_k_SIZE_THREHOLD1 && kSize <= SIMT_k_SIZE_THREHOLD2 && strideSize >= SIMT_STRIDE_SIZE_THREHOLD1 &&
-        strideSize <= SIMT_STRIDE_SIZE_THREHOLD2 && inputData.batches >= SIMT_BATCHES_THREHOLD &&
+    if (simtSupported && kSize >= SIMT_k_SIZE_THREHOLD1 && kSize <= SIMT_k_SIZE_THREHOLD2 &&
+        strideSize >= SIMT_STRIDE_SIZE_THREHOLD1 && strideSize <= SIMT_STRIDE_SIZE_THREHOLD2 &&
+        inputData.batches >= SIMT_BATCHES_THREHOLD &&
         (inputData.kernelSize[H_DIM] / inputData.stride[H_DIM] >= OVERLEAP_THREHOULD ||
          inputData.kernelSize[W_DIM] / inputData.stride[W_DIM] >= OVERLEAP_THREHOULD)) {
         return false;
@@ -197,9 +210,10 @@ bool AvgPoolCommonNCHWSmallKernelTiling::IsCapable()
 
     InitializationVars();
 
+    const int64_t wSparseThreshold = GetWSparseThreshold(context_);
     if ((inputData.outShape[H_DIM] > 1 && inputData.stride[H_DIM] >= MAX_STRIDE * inputData.kernelSize[H_DIM]) ||
         (inputData.outShape[W_DIM] > 1 && inputData.stride[W_DIM] >= MAX_STRIDE * inputData.kernelSize[W_DIM] &&
-         inputData.stride[W_DIM] > W_SPARSE_THREHOLD)) {
+         inputData.stride[W_DIM] > wSparseThreshold)) {
         // stride 较大的离散场景不处理
         return false;
     }

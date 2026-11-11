@@ -18,7 +18,9 @@
 #include "../avg_pool/arch35/avg_pool_nhwc_small_kernel.h"
 #include "../avg_pool/arch35/avg_pool_nhwc_small_kernel_pad.h"
 #include "../avg_pool/arch35/avg_pool_nchw_small_kernel_pad.h"
+#if __CCE_AICORE_SUPPORT_SIMT__
 #include "../avg_pool/arch35/avg_pool_simt.h"
+#endif
 #include "../avg_pool/arch35/avg_pool_nchw_small_kernel.h"
 #include "../avg_pool/arch35/avg_pool_big_kernel_nhwc.h"
 #include "../avg_pool/arch35/avg_pool_big_kernel.h"
@@ -100,6 +102,7 @@ extern "C" __global__ __aicore__ void avg_pool_v2(GM_ADDR x, GM_ADDR y, GM_ADDR 
         AvgPool::AvgPoolBigKernel<DTYPE_X> op(&pipeBase, &tilingData);
         op.Init(x, y);
         op.Process();
+#if __CCE_AICORE_SUPPORT_SIMT__
     } else if (TILING_KEY_IS(AVG_POOL_TILING_KEY_SIMT_NCHW_INT32)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 911100", AvgPoolSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(AvgPool::AvgPoolSimtTilingData, tilingData, tiling);
@@ -124,5 +127,8 @@ extern "C" __global__ __aicore__ void avg_pool_v2(GM_ADDR x, GM_ADDR y, GM_ADDR 
         AvgPoolSimt::AvgPoolSimtImpl<DTYPE_X, int64_t, NHWC> op(&pipeBase, &tilingData);
         op.Init(x, y);
         op.Process();
+#endif
+    } else {
+        ascendc_assert(false, "avg_pool_v2: unsupported tiling key");
     }
 }

@@ -83,6 +83,7 @@ private:
     int64_t gatherMode_{0};
     int64_t copyMode_{0};
     int64_t maxGatherScatterElm_{0};
+    int64_t notGatherThreshold_{64};
     int64_t onceCopyRow_{1};
     int64_t splitMode_{0};
     bool isZero_{false};

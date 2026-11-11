@@ -14,6 +14,7 @@
  */
 
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "error_util.h"
 #include "platform/platform_info.h"
 #include "pooling/avg_pool_v2/op_host/arch35/avg_pool_v2_common_tiling.h"
@@ -29,7 +30,9 @@ static constexpr uint64_t POOL_TILING_KEY_SIMT_NHWC_INT32 = 911101;
 static constexpr uint64_t POOL_TILING_KEY_SIMT_NCHW_INT64 = 911110;
 static constexpr uint64_t POOL_TILING_KEY_SIMT_NHWC_INT64 = 911111;
 
-bool PoolSimtTiling::IsCapable() { return true; }
+// 该判据必须与 kernel 侧 avg_pool_apt.cpp / avg_pool_v2_apt.cpp 的 #if __CCE_AICORE_SUPPORT_SIMT__ 保持一致，
+// 否则会出现 host 产出 SIMT tiling key 而 kernel 无对应分支。当前实测: 3510/5102 定义该宏，5162(dav-516r2) 不定义。
+bool PoolSimtTiling::IsCapable() { return Ops::NN::OpTiling::IsSimtSupported(context_); }
 
 ge::graphStatus PoolSimtTiling::DoOpTiling()
 {

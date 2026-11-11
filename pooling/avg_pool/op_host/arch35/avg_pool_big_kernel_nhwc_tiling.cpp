@@ -17,6 +17,7 @@
 #include "util/math_util.h"
 #include "platform_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "avg_pool_big_kernel_nhwc_tiling.h"
 #include "pooling/avg_pool_v2/op_host/arch35/avg_pool_v2_common_tiling.h"
 
@@ -46,8 +47,9 @@ bool AvgPoolCommonNHWCBigKernelTiling::IsCapable()
         static_cast<int64_t>(totalCoreNum_ * DIGIT_TWO)) {
         return true;
     }
-    if (inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * inputData_.channels * inputData_.dtypeSize <
-        MIN_KERNEL) {
+    if (Ops::NN::OpTiling::IsSimtSupported(context_) &&
+        inputData_.kernelSize[H_DIM] * inputData_.kernelSize[W_DIM] * inputData_.channels * inputData_.dtypeSize <
+            MIN_KERNEL) {
         return false;
     }
     return true;
