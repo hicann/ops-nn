@@ -49,6 +49,13 @@ struct MatmulEmuSplitWeightTilingDataParam {
 
     // expect
     ge::graphStatus expect_status{ge::GRAPH_SUCCESS};
+
+    // 均分切分期望值, 0表示不校验
+    uint32_t expect_baseM{0};
+    uint32_t expect_baseN{0};
+    uint32_t expect_baseK{0};
+    uint32_t expect_kL1{0};
+    uint32_t expect_usedCoreNum{0};
 };
 
 class TilingMatmulEmuSplitWeight : public ::testing::TestWithParam<MatmulEmuSplitWeightTilingDataParam> {
@@ -72,6 +79,12 @@ static void GetPlatFormInfosDavAware(const string& compileInfo, map<string, stri
     if (IsDav3510CompileInfo(compileInfo)) {
         socVersion.clear();
         socVersion["NpuArch"] = "3510";
+    } else if (compileInfo.find(R"("npuArch": "dav9201")") != string::npos ||
+               compileInfo.find(R"("npuArch":"dav9201")") != string::npos) {
+        socVersion["NpuArch"] = "9201";
+    } else if (compileInfo.find(R"("npuArch": "dav9202")") != string::npos ||
+               compileInfo.find(R"("npuArch":"dav9202")") != string::npos) {
+        socVersion["NpuArch"] = "9202";
     }
 }
 
@@ -166,6 +179,21 @@ TEST_P(TilingMatmulEmuSplitWeight, matmul_emu_split_weight_tiling)
             EXPECT_GT(tilingDataPtr->baseM, 0U);
             EXPECT_GT(tilingDataPtr->baseN, 0U);
             EXPECT_GT(tilingDataPtr->baseK, 0U);
+            if (param.expect_baseM != 0U) {
+                EXPECT_EQ(tilingDataPtr->baseM, param.expect_baseM) << param.case_name;
+            }
+            if (param.expect_baseN != 0U) {
+                EXPECT_EQ(tilingDataPtr->baseN, param.expect_baseN) << param.case_name;
+            }
+            if (param.expect_baseK != 0U) {
+                EXPECT_EQ(tilingDataPtr->baseK, param.expect_baseK) << param.case_name;
+            }
+            if (param.expect_kL1 != 0U) {
+                EXPECT_EQ(tilingDataPtr->kL1, param.expect_kL1) << param.case_name;
+            }
+            if (param.expect_usedCoreNum != 0U) {
+                EXPECT_EQ(tilingDataPtr->usedCoreNum, param.expect_usedCoreNum) << param.case_name;
+            }
         }
         EXPECT_GT(tilingDataPtr->usedCoreNum, 0U);
         EXPECT_EQ(tiling_context->GetBlockDim(), tilingDataPtr->usedCoreNum);
@@ -191,6 +219,41 @@ static const string COMPILE_INFO_DAV_3510_BAD_RATIO = R"({
     "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
     "CORE_NUM": 32, "npuArch": "dav3510",
+    "core_type_list": "CubeCore,VectorCore",
+    "cube_core_cnt": 32, "vector_core_cnt": 48}
+})";
+
+// 9201/9202: AIC:AIV = 1:1, UB 384KB; buffer规格除UB外暂按Arch3510占位
+static const string COMPILE_INFO_DAV_9201 = R"({
+    "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown",
+    "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,
+    "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
+    "UB_SIZE": 393216, "L2_SIZE": 134217728, "L1_SIZE": 524288,
+    "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
+    "CORE_NUM": 32, "npuArch": "dav9201",
+    "core_type_list": "CubeCore,VectorCore",
+    "cube_core_cnt": 32, "vector_core_cnt": 32}
+})";
+
+static const string COMPILE_INFO_DAV_9202 = R"({
+    "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown",
+    "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,
+    "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
+    "UB_SIZE": 393216, "L2_SIZE": 134217728, "L1_SIZE": 524288,
+    "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
+    "CORE_NUM": 32, "npuArch": "dav9202",
+    "core_type_list": "CubeCore,VectorCore",
+    "cube_core_cnt": 32, "vector_core_cnt": 32}
+})";
+
+// 9201 with non-1:1 aic:aiv ratio (cube=32, vector=48), used to verify the 控核 restriction
+static const string COMPILE_INFO_DAV_9201_BAD_RATIO = R"({
+    "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown",
+    "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,
+    "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true,
+    "UB_SIZE": 393216, "L2_SIZE": 134217728, "L1_SIZE": 524288,
+    "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
+    "CORE_NUM": 32, "npuArch": "dav9201",
     "core_type_list": "CubeCore,VectorCore",
     "cube_core_cnt": 32, "vector_core_cnt": 48}
 })";
@@ -396,6 +459,153 @@ static MatmulEmuSplitWeightTilingDataParam tiling_cases[] = {
      false,
      0,
      ge::GRAPH_FAILED},
+    // 13: Arch3510 n=192 均分为 2x96, 锁定均分切分行为 (perf case 8000x192x4096)
+    {"dav3510_n192_equal_split",
+     COMPILE_INFO_DAV_3510,
+     {{8000, 4096}, {8000, 4096}},
+     {{4096, 192}, {4096, 192}},
+     {{4096, 192}, {4096, 192}},
+     {{8000, 192}, {8000, 192}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS,
+     256,
+     96,
+     64,
+     256,
+     32},
+    // 14: 9201 n=192 均分 (cap=128 时 ceil(192/128)=2, 同样均分为 2x96)
+    {"dav9201_n192_equal_split",
+     COMPILE_INFO_DAV_9201,
+     {{8000, 4096}, {8000, 4096}},
+     {{4096, 192}, {4096, 192}},
+     {{4096, 192}, {4096, 192}},
+     {{8000, 192}, {8000, 192}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS,
+     256,
+     96,
+     64,
+     256,
+     32},
+    // 15: Arch3510 n=256 均分为 3 tile (96+96+64)
+    {"dav3510_n256_equal_split",
+     COMPILE_INFO_DAV_3510,
+     {{8000, 4096}, {8000, 4096}},
+     {{4096, 256}, {4096, 256}},
+     {{4096, 256}, {4096, 256}},
+     {{8000, 256}, {8000, 256}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS,
+     256,
+     96,
+     64,
+     256,
+     32},
+    // 16: 9201 n=256 均分为 2 tile (128+128), 验证 cap=128 少一个条带
+    {"dav9201_n256_equal_split",
+     COMPILE_INFO_DAV_9201,
+     {{8000, 4096}, {8000, 4096}},
+     {{4096, 256}, {4096, 256}},
+     {{4096, 256}, {4096, 256}},
+     {{8000, 256}, {8000, 256}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS,
+     256,
+     128,
+     64,
+     256,
+     32},
+    // 17: Arch3510 n=112 单条带, 上限值直取
+    {"dav3510_n112_single_strip",
+     COMPILE_INFO_DAV_3510,
+     {{8000, 4096}, {8000, 4096}},
+     {{4096, 112}, {4096, 112}},
+     {{4096, 112}, {4096, 112}},
+     {{8000, 112}, {8000, 112}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS,
+     256,
+     112,
+     64,
+     256,
+     32},
+    // 18: 9202 n=128 单条带, 验证 9202 fixture 与 cap=128
+    {"dav9202_n128_single_strip",
+     COMPILE_INFO_DAV_9202,
+     {{8000, 4096}, {8000, 4096}},
+     {{4096, 128}, {4096, 128}},
+     {{4096, 128}, {4096, 128}},
+     {{8000, 128}, {8000, 128}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS,
+     256,
+     128,
+     64,
+     256,
+     32},
+    // 19: Arch3510 n=113 (非16对齐) 均分 2 tile, 名义 [64,64] 尾tile有效列收缩为 49
+    {"dav3510_n113_tail_shrink",
+     COMPILE_INFO_DAV_3510,
+     {{8000, 4096}, {8000, 4096}},
+     {{4096, 113}, {4096, 113}},
+     {{4096, 113}, {4096, 113}},
+     {{8000, 113}, {8000, 113}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_SUCCESS,
+     256,
+     64,
+     64,
+     320,
+     32},
+    // 20: 9201 aic:aiv not 1:1 (cube=32, vector=48) -> 控核校验失败 (IsCapable returns false)
+    {"dav9201_core_ratio_not_1to1_fail",
+     COMPILE_INFO_DAV_9201_BAD_RATIO,
+     {{128, 256}, {128, 256}},
+     {{256, 128}, {256, 128}},
+     {{256, 128}, {256, 128}},
+     {{128, 128}, {128, 128}},
+     ge::DT_BF16,
+     ge::DT_FLOAT,
+     0.00390625f,
+     false,
+     false,
+     0,
+     ge::GRAPH_PARAM_INVALID},
 };
 
 INSTANTIATE_TEST_SUITE_P(MatmulEmuSplitWeightTilingCases, TilingMatmulEmuSplitWeight, testing::ValuesIn(tiling_cases));

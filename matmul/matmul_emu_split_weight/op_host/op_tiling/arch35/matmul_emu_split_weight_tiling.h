@@ -67,6 +67,9 @@ private:
     int32_t yDtype_{0};
     uint64_t aicNum_{0};
     uint64_t aivNum_{0};
+    uint64_t aivPerAic_{2UL}; // Arch3510: AIC:AIV=1:2; Arch9201/Arch9202: 1:1, 由GetPlatformInfo按arch设置
+    uint64_t baseNCap_{
+        112UL}; // baseN上限: Arch3510=112(UB 248KB), Arch9201/Arch9202=128(UB 384KB), 由GetPlatformInfo按arch设置
     uint64_t l1Size_{0};
     uint64_t l0aSize_{0};
     uint64_t l0bSize_{0};

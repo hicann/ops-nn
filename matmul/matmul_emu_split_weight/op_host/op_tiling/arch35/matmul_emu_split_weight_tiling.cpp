@@ -30,10 +30,14 @@ static constexpr uint64_t DATA_SIZE_FP32 = 4UL;
 static constexpr uint64_t DB_SIZE = 2UL;
 static constexpr uint64_t BASIC_BLOCK_SIZE_16 = 16UL;
 static constexpr uint64_t HARDCODED_BASE_M = 256UL;
-static constexpr uint64_t HARDCODED_BASE_N = 112;
+// Arch3510: UB 248KB(半区124KB)下 fp32 256×N 的 16 对齐最大值
+static constexpr uint64_t HARDCODED_BASE_N_950 = 112UL;
+// Arch9201/Arch9202: UB 384KB(半区192KB)不再受限, 取 L0C DB 半区(128KB)恰好容纳的 256×128
+static constexpr uint64_t HARDCODED_BASE_N_960 = 128UL;
 static constexpr uint64_t NUM_TWO = 2UL;
 static constexpr uint64_t NUM_FOUR = 4UL;
-static constexpr uint64_t AIV_PER_AIC = 2UL; // 要求 AIC:AIV = 1:2
+static constexpr uint64_t AIV_PER_AIC_950 = 2UL; // Arch3510: AIC:AIV = 1:2
+static constexpr uint64_t AIV_PER_AIC_960 = 1UL; // Arch9201/Arch9202: AIC:AIV = 1:1
 static constexpr float EXPECTED_SCALE = 0.00390625f;
 } // namespace
 
@@ -42,10 +46,11 @@ namespace matmul_emu_split_weight {
 
 bool MatmulEmuSplitWeightTiling::IsCapable()
 {
-    if (aicNum_ == 0 || aivNum_ != aicNum_ * AIV_PER_AIC) {
+    // 3510: AIC:AIV = 1:2; 9201/9202: AIC:AIV = 1:1
+    if (aicNum_ == 0 || aivNum_ != aicNum_ * aivPerAic_) {
         CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                              "MatmulEmuSplitWeight is only supported for aicNum:aivNum=1:2, aicNum=%lu, aivNum=%lu",
-                              aicNum_, aivNum_);
+                              "MatmulEmuSplitWeight is only supported for aicNum:aivNum=1:%lu, aicNum=%lu, aivNum=%lu",
+                              aivPerAic_, aicNum_, aivNum_);
         return false;
     }
     return true;
@@ -58,12 +63,15 @@ ge::graphStatus MatmulEmuSplitWeightTiling::GetPlatformInfo()
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    OP_TILING_CHECK(npuArch != Ops::Base::DAV_3510,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "MatmulEmuSplitWeight only supports dav3510, "
-                                          "current npuArch is %d",
-                                          static_cast<int32_t>(npuArch)),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202,
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
+                              "MatmulEmuSplitWeight only supports Ascend950, Ascend350, Ascend960DT and Ascend960PR, "
+                              "current npuArch is %u",
+                              static_cast<uint32_t>(npuArch)),
+        return ge::GRAPH_FAILED);
+    aivPerAic_ = (npuArch == NpuArch::DAV_3510) ? AIV_PER_AIC_950 : AIV_PER_AIC_960;
+    baseNCap_ = (npuArch == NpuArch::DAV_3510) ? HARDCODED_BASE_N_950 : HARDCODED_BASE_N_960;
     aicNum_ = ascendcPlatform.GetCoreNumAic();
     aivNum_ = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, l1Size_);
@@ -246,10 +254,17 @@ void MatmulEmuSplitWeightTiling::CalcBaseMN()
     uint64_t nAlign = ops::CeilAlign(n_, BASIC_BLOCK_SIZE_16);
 
     baseM_ = std::min(mAlign, HARDCODED_BASE_M);
-    baseN_ = std::min(nAlign, HARDCODED_BASE_N);
+    // N方向均分: tile数由上限值决定, 各tile宽度向上16对齐均分(有效列不足时尾tile收缩),
+    // 避免大小条带经核间奇偶聚簇后造成负载不均(如192按贪心切成[112,80]时偶数核恒取大条带)
+    uint64_t nTileNum = ops::CeilDiv(nAlign, baseNCap_);
+    if (nTileNum <= 1UL) {
+        baseN_ = std::min(nAlign, baseNCap_);
+    } else {
+        baseN_ = ops::CeilAlign(ops::CeilDiv(nAlign, nTileNum), BASIC_BLOCK_SIZE_16);
+    }
 
     uint64_t mTileNum = ops::CeilDiv(m_, baseM_);
-    uint64_t nTileNum = ops::CeilDiv(n_, baseN_);
+    nTileNum = ops::CeilDiv(n_, baseN_);
     if (mTileNum * nTileNum < aicNum_) {
         CalcBasicBlock();
     }

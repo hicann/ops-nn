@@ -47,8 +47,9 @@ static ge::graphStatus MatmulEmuSplitWeightTilingFunc(gert::TilingContext* conte
         },
         return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    // Arch3510与Arch9201/Arch9202共用arch35 tiling路径
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    if (npuArch == Ops::Base::DAV_3510) {
+    if (npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
         return MatmulEmuSplitWeightTiling(context).DoTiling();
     }
 

@@ -8,7 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+// arch35 路径: Arch3510与Arch9201/Arch9202共用 Blaze kernel
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
 
 #include "kernel_operator.h"
 #include "matmul_emu_split_weight_tiling_key.h"
