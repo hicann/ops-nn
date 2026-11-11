@@ -24,6 +24,8 @@ static constexpr uint32_t INDEX_ATTR_ALPHA = 0;
 static constexpr uint32_t INDEX_ATTR_BETA = 1;
 static constexpr uint32_t INDEX_ATTR_TRANSPOSE_X = 2;
 static constexpr uint32_t INDEX_ATTR_FILL_MODE = 3;
+static constexpr uint32_t INDEX_ATTR_OP_IMPL_MODE = 4;
+static constexpr int64_t OP_IMPL_MODE_HF32 = 0x40;
 static constexpr uint64_t NUM_TWO = 2UL;
 static constexpr uint64_t INT32_MAX_LIMIT = static_cast<uint64_t>(INT32_MAX);
 static constexpr size_t MIN_SHAPE_DIM = 2;
@@ -100,8 +102,15 @@ ge::graphStatus GemmSyrkTiling::ExtractAttrs()
     const char* fillMode = attrs->GetAttrPointer<char>(INDEX_ATTR_FILL_MODE);
     fillMode_ = (fillMode != nullptr) ? std::string(fillMode) : std::string(FILL_MODE_FULL);
 
+    const auto* opImplMode = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_OP_IMPL_MODE);
+    opImplMode_ = (opImplMode != nullptr) ? *opImplMode : 0x1L;
+
     aType_ = context_->GetInputDesc(INDEX_A)->GetDataType();
     dtypeSize_ = ge::GetSizeByDataType(aType_);
+    // FP32 inputs only support the HF32 (TF32-mantissa) cube mode; the
+    // op_impl_mode 0x40 bit must be set explicitly. The 16-bit element types
+    // keep the full-precision cube path.
+    isHf32_ = (aType_ == ge::DT_FLOAT && (opImplMode_ & OP_IMPL_MODE_HF32) != 0) ? 1U : 0U;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -142,12 +151,19 @@ ge::graphStatus GemmSyrkTiling::ValidateDtype() const
     ge::DataType cType = context_->GetInputDesc(INDEX_C)->GetDataType();
     ge::DataType outType = context_->GetOutputDesc(0)->GetDataType();
     OP_TILING_CHECK(
-        (aType_ != ge::DT_FLOAT16 && aType_ != ge::DT_BF16) || cType != aType_ || outType != aType_,
+        (aType_ != ge::DT_FLOAT16 && aType_ != ge::DT_BF16 && aType_ != ge::DT_FLOAT) || cType != aType_ ||
+            outType != aType_,
         CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                              "a and c must use the same dtype, either FLOAT16 or BF16, got a=%d, c=%d, "
-                              "out=%d",
+                              "a and c must use the same dtype, either FLOAT16, BF16 or FLOAT (HF32), got a=%d, "
+                              "c=%d, out=%d",
                               static_cast<int32_t>(aType_), static_cast<int32_t>(cType), static_cast<int32_t>(outType)),
         return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(aType_ == ge::DT_FLOAT && (opImplMode_ & OP_IMPL_MODE_HF32) == 0,
+                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
+                                          "FLOAT32 input only supports HF32 cube mode; set op_impl_mode=0x40 "
+                                          "(enable_hi_float_32_execution), got 0x%llx",
+                                          static_cast<unsigned long long>(opImplMode_)),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -314,6 +330,7 @@ void GemmSyrkTiling::SetTilingData(const BatchMatMulV3BasicTilingData& bmmTiling
     tilingData_.baseK = bmmTiling.matMulTilingData.baseK;
     tilingData_.kL1 = bmmTiling.matMulTilingData.kL1;
     tilingData_.usedCoreNum = bmmTiling.matMulTilingData.usedCoreNum;
+    tilingData_.isHf32 = isHf32_;
     tilingData_.alpha = alpha_;
     tilingData_.beta = beta_;
 }
@@ -341,6 +358,7 @@ ge::graphStatus GemmSyrkTiling::DoTiling()
         tilingData_.baseK = static_cast<uint32_t>(BASIC_BLOCK_SIZE_16);
         tilingData_.kL1 = static_cast<uint32_t>(BASIC_BLOCK_SIZE_16);
         tilingData_.usedCoreNum = 1U;
+        tilingData_.isHf32 = isHf32_;
         tilingData_.alpha = alpha_;
         tilingData_.beta = beta_;
         context_->SetTilingKey(GetTilingKey());

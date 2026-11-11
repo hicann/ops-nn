@@ -83,6 +83,8 @@ private:
     std::string fillMode_{"full"};
     ge::DataType aType_{ge::DT_FLOAT16};
     uint64_t dtypeSize_{0};
+    uint32_t isHf32_{0};
+    int64_t opImplMode_{0x1};
 
     // The matmul compile info consumed by the basic tiling strategy.
     MatmulV3CompileInfo mmCompileInfo_{};

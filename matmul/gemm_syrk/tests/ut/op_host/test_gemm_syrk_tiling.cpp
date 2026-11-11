@@ -47,6 +47,7 @@ struct GemmSyrkTilingTestParam {
     uint32_t expect_batch{1};
     uint32_t expect_base_block{0}; // 0: do not check
     ge::graphStatus expect_status{ge::GRAPH_SUCCESS};
+    int64_t op_impl_mode{0x1};
 };
 
 class GemmSyrkTilingRuntime : public testing::TestWithParam<GemmSyrkTilingTestParam> {
@@ -117,7 +118,8 @@ void TestOneParamCase(const GemmSyrkTilingTestParam& param)
                  .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(param.alpha)},
                              {"beta", Ops::NN::AnyValue::CreateFrom<float>(param.beta)},
                              {"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(param.transpose_x)},
-                             {"fill_mode", Ops::NN::AnyValue::CreateFrom<std::string>(param.fill_mode)}})
+                             {"fill_mode", Ops::NN::AnyValue::CreateFrom<std::string>(param.fill_mode)},
+                             {"op_impl_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(param.op_impl_mode)}})
                  .NodeInputTd(0, param.a_dtype, param.a_format, param.a_format)
                  .NodeInputTd(1, param.c_dtype, param.c_format, param.c_format)
                  .NodeOutputTd(0, param.c_dtype, param.c_format, param.c_format)
@@ -169,8 +171,10 @@ void TestOneParamCase(const GemmSyrkTilingTestParam& param)
     EXPECT_FLOAT_EQ(syrkTilingData->beta, param.beta);
 
     // Symmetric square contract: one 16-aligned block (baseM == baseN ==
-    // mL1 == nL1), bounded by floor16(sqrt(L0C/2/4)) = 176 on Ascend 950
-    // (single L0C half-slot accumulator).
+    // mL1 == nL1). On Ascend 950 the L0C half-slot caps the block side at
+    // 176; the L0A ping-pong half holds a (block, baseK) tile, so it does
+    // not reduce that cap for FP16/BF16/FP32 with the selected baseK. The
+    // cost model may select a smaller block for core balance.
     ASSERT_GT(syrkTilingData->baseBlock, 0U);
     EXPECT_EQ(syrkTilingData->baseBlock % 16U, 0U);
     EXPECT_LE(syrkTilingData->baseBlock, 176U);
@@ -183,6 +187,8 @@ void TestOneParamCase(const GemmSyrkTilingTestParam& param)
     EXPECT_GT(syrkTilingData->usedCoreNum, 0U);
     EXPECT_LE(syrkTilingData->usedCoreNum, 32U);
     EXPECT_EQ(block_dim, syrkTilingData->usedCoreNum);
+    // FP32 inputs run with the HF32 cube mode enabled.
+    EXPECT_EQ(syrkTilingData->isHf32, param.a_dtype == ge::DT_FLOAT ? 1U : 0U) << param.case_name;
 }
 
 static const string kAscend950CompileInfo = R"({
@@ -264,6 +270,43 @@ static const GemmSyrkTilingTestParam general_cases_params[] = {
      1,
      ge::GRAPH_SUCCESS},
     // transpose_x, 2D: a stored (k, m) = (512, 256).
+    {"GemmSyrk_950_fp32_hf32",
+     kAscend950CompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::DT_FLOAT,
+     ge::DT_FLOAT,
+     {128, 64},
+     {128, 128},
+     1.0F,
+     1.0F,
+     false,
+     "full",
+     128,
+     128,
+     64,
+     1,
+     0,
+     ge::GRAPH_SUCCESS,
+     0x40},
+    {"GemmSyrk_950_reject_fp32_without_hf32",
+     kAscend950CompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::DT_FLOAT,
+     ge::DT_FLOAT,
+     {128, 64},
+     {128, 128},
+     1.0F,
+     1.0F,
+     false,
+     "full",
+     0,
+     0,
+     0,
+     1,
+     0,
+     ge::GRAPH_FAILED},
     {"GemmSyrk_950_trans_2d",
      kAscend950CompileInfo,
      ge::FORMAT_ND,

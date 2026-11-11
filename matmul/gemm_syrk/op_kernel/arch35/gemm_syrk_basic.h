@@ -100,8 +100,9 @@ __aicore__ inline void GemmSyrkBlazeKernel(GM_ADDR aGm, GM_ADDR cInGm, GM_ADDR c
                            // x3 == output == C: in-place read of beta * C and overwrite with the result.
                            {cInGm, cGm, tilingData.alpha, tilingData.beta},
                            // Scheduler params: the single symmetric block; no tail splitting (a
-                           // single tail block per axis carries the remainder).
-                           {block}};
+                           // single tail block per axis carries the remainder). FP32 runs with
+                           // the HF32 cube mode.
+                           {block, static_cast<uint8_t>(tilingData.isHf32)}};
 
     params.epilogueParams.problemShape = params.problemShape;
 

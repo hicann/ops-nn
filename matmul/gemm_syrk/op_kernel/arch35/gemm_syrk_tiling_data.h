@@ -34,6 +34,8 @@ struct alignas(8) GemmSyrkTilingData {
     uint32_t baseK{0};     // L0 K step, 16-aligned
     uint32_t kL1{0};       // L1 K chunk (>= baseK), 16-aligned
     uint32_t usedCoreNum{0};
+    // FP32 inputs run with the HF32 (TF32-mantissa) cube mode enabled.
+    uint32_t isHf32{0};
     float alpha{1.0F};
     float beta{1.0F};
 };
