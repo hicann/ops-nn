@@ -23,7 +23,7 @@ English | [简体中文](./README.md)
 
     $$
     \begin{cases}
-    \text{grad\_x} = \text{grad\_output} \odot \left(1 + \text{scale}^{\uparrow L}\right) \\
+    \text{grad\_x} = \text{grad\_output} \odot \text{scale}^{\uparrow L} \\
     \text{grad\_scale} = \sum_{l=1}^{L} (\text{grad\_output} \odot \text{input})_{b,l,d} \\
     \text{grad\_shift} = \sum_{l=1}^{L} \text{grad\_output}_{b,l,d}
     \end{cases}
