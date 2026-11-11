@@ -3315,3 +3315,151 @@ TEST_F(BatchMatmulL0OpDirectTest, Util_ProcessEmptyTensor_NonEmptyOut)
 
     EXPECT_EQ(bmmu::CallProcessEmptyTensor(self, mat2, executor), nullptr);
 }
+
+TEST_F(l2_batch_matmul_test, ascend960dt_bmm_fp16_basic)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    auto x1_desc = TensorDesc({2, 2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 2, 4}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960dt_bmm_fp32)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    auto x1_desc = TensorDesc({2, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960dt_bmm_trans)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    auto x1_desc_t = TensorDesc({16, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {512, 1, 16}, 0, {16, 32, 16})
+                         .ValueRange(-2, 2);
+    auto x2_desc_t = TensorDesc({16, 32, 64}, ACL_FLOAT16, ACL_FORMAT_ND, {2048, 1, 32}, 0, {16, 64, 32})
+                         .ValueRange(-2, 2);
+    auto out_desc = TensorDesc({16, 16, 64}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc_t, x2_desc_t), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960dt_bmm_nz)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    auto x1_desc = TensorDesc({2, 2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 2, 4}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960dt_bmm_empty_tensor)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    auto x1_desc = TensorDesc({2, 0, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 4, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 0, 8}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960dt_bmm_invalid_dtype)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    auto x1_desc = TensorDesc({2, 2, 3}, ACL_BOOL, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 3, 4}, ACL_BOOL, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 2, 4}, ACL_BOOL, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960pr_bmm_fp16_basic)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    auto x1_desc = TensorDesc({2, 2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 2, 4}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960pr_bmm_fp32)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    auto x1_desc = TensorDesc({2, 2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960pr_bmm_trans)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    auto x1_desc_t = TensorDesc({16, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {512, 1, 16}, 0, {16, 32, 16})
+                         .ValueRange(-2, 2);
+    auto x2_desc_t = TensorDesc({16, 32, 64}, ACL_FLOAT16, ACL_FORMAT_ND, {2048, 1, 32}, 0, {16, 64, 32})
+                         .ValueRange(-2, 2);
+    auto out_desc = TensorDesc({16, 16, 64}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc_t, x2_desc_t), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960pr_bmm_nz)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    auto x1_desc = TensorDesc({2, 2, 3}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 2, 4}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960pr_bmm_empty_tensor)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    auto x1_desc = TensorDesc({2, 0, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 4, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 0, 8}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, ascend960pr_bmm_invalid_dtype)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    auto x1_desc = TensorDesc({2, 2, 3}, ACL_BOOL, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto x2_desc = TensorDesc({2, 3, 4}, ACL_BOOL, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_desc = TensorDesc({2, 2, 4}, ACL_BOOL, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(x1_desc, x2_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}

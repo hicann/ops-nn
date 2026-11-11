@@ -2485,3 +2485,111 @@ TEST_F(MatmulUtilWhiteboxTest, L0_MatMulV3NzNzNdFp162Fp32Adj)
     EXPECT_NE(matmul_util_whitebox::l0op::MatMulV3NzNzNdFp162Fp32(x1, x2, nullptr, true, true, false, 0, executor),
               nullptr);
 }
+
+TEST_F(l2_matmul_test, ascend960dt_matmul_fp16_basic)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960dt_matmul_fp16_trans)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc a_t_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 16}, 0, {32, 16});
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960dt_matmul_fp32_splitk)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc a_desc = TensorDesc({16, 128}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({128, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960dt_matmul_bf16)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960dt_matmul_empty_tensor)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc a_desc = TensorDesc({0, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({0, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960dt_matmul_invalid_dtype)
+{
+    NpuArchManager archManager(NpuArch::DAV_9201);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_BOOL, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_BOOL, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_BOOL, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_matmul_test, ascend960pr_matmul_fp16_basic)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960pr_matmul_fp16_trans)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc a_t_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 16}, 0, {32, 16});
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960pr_matmul_fp32_splitk)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc a_desc = TensorDesc({16, 128}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({128, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960pr_matmul_bf16)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960pr_matmul_empty_tensor)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc a_desc = TensorDesc({0, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({0, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend960pr_matmul_invalid_dtype)
+{
+    NpuArchManager archManager(NpuArch::DAV_9202);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_BOOL, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_BOOL, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_BOOL, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
