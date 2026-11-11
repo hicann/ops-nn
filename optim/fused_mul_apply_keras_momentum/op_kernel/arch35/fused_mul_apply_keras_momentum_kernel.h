@@ -21,14 +21,17 @@
  *   grad_lr  = grad * lr                     (lr 标量, 两分支复用)
  *   accum'   = accum * momentum - grad_lr    (两分支一致)
  *   标准    : var' = var + accum'
- *   Nesterov: var' = (var + accum' * momentum) - grad_lr
+ *   Nesterov: var' = var + (accum' * momentum - grad_lr)
  *
- * FP16：CopyIn → Cast(CAST_NONE)升FP32 → 全程FP32 → Cast(CAST_ROUND)还原FP16 → DataCopyPad 写回。
- * FP32：全程 FP32，无 Cast。in-place 更新 var/accum。
+ * FP16：Cast(CAST_NONE)升FP32计算，结果Cast(CAST_RINT)回FP16；FP32全程FP32。
+ * FP32 的 accum' 与 Nesterov 二级乘加使用 FMA，避免乘积中间舍入。
+ * in-place 更新 var/accum。
  *
  * GM 输入索引: 0=var 1=accum 2=lr 3=x1 4=momentum 5=x2
- * 张量输入(参与 NDDMA)只有 var/accum/x1 → tiling 张量槽 {0:var, 1:accum, 2:x1}
+ * 张量输入(参与搬运)只有 var/accum/x1 → tiling 张量槽 {0:var, 1:accum, 2:x1}
  * 标量 lr/momentum/x2 循环前一次读入 float 寄存器，不占每 tile data buffer。
+ *
+ * 连续输入（input_contig 置位）走 flat DataCopyPad，否则回退 NDDMA。
  */
 #pragma once
 #include "kernel_operator.h"
@@ -118,7 +121,7 @@ class FusedMulApplyKerasMomentumKernel {
     AscendC::GlobalTensor<T> gmVarOut_;
     AscendC::GlobalTensor<T> gmAccumOut_;
     AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[kPhysNodes];
-    AscendC::MultiCopyParams<T, ND> nddmaParams_[kNumTensorInputs];
+    AscendC::MultiCopyParams<T, ND> nddmaParams_[kNumTensorInputs] = {};
     int64_t nddmaOuterIters_[kNumTensorInputs];
     int64_t nddma_dims_;
 
@@ -173,21 +176,22 @@ public:
         }
 
         LoadScalars();
+
+        if constexpr (std::is_same<T, float>::value) {
+            // 预广播 momentum 到 B_T2，供 FP32 FMA 使用。
+            AscendC::Duplicate(buf_[5].template Get<T>(), static_cast<T>(mom_),
+                               static_cast<int32_t>(td_->per_buf_bytes / static_cast<int64_t>(sizeof(T))));
+        }
     }
 
     __aicore__ inline void Process()
     {
         int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
-        int32_t evVtoMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
         int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
 
         int64_t start, end;
         FmakmGetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tiles_main, td_->multicore.cores_tail, start, end);
-
-        constexpr int B0 = 0, B1 = 1, B2 = 2, B3 = 3, B4 = 4;
-        constexpr int VAR = 0, ACCUM = 1, X1 = 2; // 张量槽
-        constexpr int OUT_VAR = 0, OUT_ACCUM = 1;
 
         int64_t inner_count = 1;
         for (int64_t d = td_->split.axis + 1; d < RANK; d++)
@@ -204,128 +208,87 @@ public:
             if (flat > start)
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
 
-            ProcessTile(flat, coord, a_i_seg, count, evMTE2toV, evVtoMTE2, evVtoMTE3, B0, B1, B2, B3, B4, VAR, ACCUM,
-                        X1, OUT_VAR, OUT_ACCUM);
+            ProcessTile(flat, coord, a_i_seg, count, evMTE2toV, evVtoMTE3);
 
             if (flat != end - 1)
                 AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
         }
     }
 
+    // 单 tile：三输入批量搬入、计算后原位写回 var/accum。
     __aicore__ inline void ProcessTile(int64_t flat, const int64_t* coord, int64_t a_i_seg, int64_t count,
-                                       int32_t evMTE2toV, int32_t evVtoMTE2, int32_t evVtoMTE3, int B0, int B1, int B2,
-                                       int B3, int B4, int VAR, int ACCUM, int X1, int OUT_VAR, int OUT_ACCUM)
+                                       int32_t evMTE2toV, int32_t evVtoMTE3)
     {
         (void)flat; // 用于未来扩展
+        // B0/B1/B2 = x1/accum/var 输入 staging（B0/B1 复用为输出），B3/B4/B5 = 计算 temp
+        constexpr int B_X1 = 0, B_ACCUM = 1, B_VAR = 2, B_T0 = 3, B_T1 = 4, B_T2 = 5;
+        constexpr int SLOT_VAR = 0, SLOT_ACCUM = 1, SLOT_X1 = 2;
+        constexpr int OUT_VAR = 0, OUT_ACCUM = 1;
+
+        CopyInBrc(coord, SLOT_X1, B_X1, a_i_seg, count);
+        CopyInBrc(coord, SLOT_ACCUM, B_ACCUM, a_i_seg, count);
+        CopyInBrc(coord, SLOT_VAR, B_VAR, a_i_seg, count);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+
         if constexpr (std::is_same<T, half>::value) {
             // ---------------- FP16 路径（FP32 中间态）----------------
-            // 注：B0 全程仅以 half 视图使用（承载 var/accum/x1 的 CopyIn 与 var' 写回），
-            // 不再以 float 视图复用，避免跨 dtype 视图读写错位（见下方 Nesterov 分支根因修复注释）。
-            auto b1f = buf_[B1].template Get<float>();
-            auto b2f = buf_[B2].template Get<float>();
+            // 每个 buffer 在 tile 内保持单一 dtype，避免跨 float/half 视图复用。
+            auto b0h = buf_[B_X1].template Get<half>();
+            auto b1h = buf_[B_ACCUM].template Get<half>();
+            auto b2h = buf_[B_VAR].template Get<half>();
+            auto b3f = buf_[B_T0].template Get<float>();
+            auto b4f = buf_[B_T1].template Get<float>();
 
             // grad_lr = (x1 * x2) * lr
-            CopyInBrc(coord, X1, B0, a_i_seg);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            AscendC::Cast(b1f, buf_[B0].template Get<half>(), AscendC::RoundMode::CAST_NONE, count);
-            AscendC::Muls(b1f, b1f, x2_, count);
-            AscendC::Muls(b1f, b1f, lr_, count); // B1 = grad_lr
-
+            AscendC::Cast(b3f, b0h, AscendC::RoundMode::CAST_NONE, count);
+            AscendC::Muls(b3f, b3f, x2_, count);
+            AscendC::Muls(b3f, b3f, lr_, count);
             // accum' = accum * momentum - grad_lr
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2); // WAR: Cast 读 B0 毕
-            AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-            CopyInBrc(coord, ACCUM, B0, a_i_seg);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            AscendC::Cast(b2f, buf_[B0].template Get<half>(), AscendC::RoundMode::CAST_NONE, count);
-            AscendC::Muls(b2f, b2f, mom_, count);
-            AscendC::Sub(b2f, b2f, b1f, count); // B2 = accum'
-
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2); // WAR: Cast 读 B0 毕
-            AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-            CopyInBrc(coord, VAR, B0, a_i_seg);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+            AscendC::Cast(b4f, b1h, AscendC::RoundMode::CAST_NONE, count);
+            AscendC::Muls(b4f, b4f, mom_, count);
+            AscendC::Sub(b4f, b4f, b3f, count);
 
             if (td_->use_nesterov == 0) {
-                AscendC::Cast(b1f, buf_[B0].template Get<half>(), AscendC::RoundMode::CAST_NONE, count); // B1 = var_f
-                AscendC::Add(b1f, b1f, b2f, count);                                                      // B1 = var'
-                AscendC::Cast(buf_[B0].template Get<half>(), b1f, AscendC::RoundMode::CAST_ROUND,
-                              count); // B0 = var'(h)
-                AscendC::Cast(buf_[B3].template Get<half>(), b2f, AscendC::RoundMode::CAST_ROUND,
-                              count); // B3 = accum'(h)
-                AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-                AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-                CopyOutOne(coord, OUT_VAR, B0, a_i_seg);
-                CopyOutOne(coord, OUT_ACCUM, B3, a_i_seg);
+                // var' = var + accum'
+                AscendC::Cast(b3f, b2h, AscendC::RoundMode::CAST_NONE, count);
+                AscendC::Add(b3f, b3f, b4f, count);
+                AscendC::Cast(b0h, b3f, AscendC::RoundMode::CAST_RINT, count);
             } else {
-                auto b3f = buf_[B3].template Get<float>(); // 仅 Nesterov 分支需要 B3 的 float 视图
-                AscendC::Cast(b3f, buf_[B0].template Get<half>(), AscendC::RoundMode::CAST_NONE, count); // B3 = var_f
-                // 根因修复（跨 dtype 视图复用）：Nesterov 分支需同时存活 3 个 float 中间量
-                // (grad_lr=B1 / accum'=B2 / var=B3) + 2 个 half 输出(var'=B0 / accum')。此前 kPhysNodes=4
-                // 槽位不足，只能让 B1 先作 float(grad_lr, 后又承 accum'*mom) 再作 half(accum' 输出)——
-                // 同一 buffer 在一个 tile 内跨 float/half 视图读写，触发 RegBase 向量核元素级寻址错乱
-                // （单 tile 内约前 1728=27×64 元素正确，其后成对乱值；accum 因写 B1 half 同样受损）。
-                // 修复：kPhysNodes 提到 5，新增单 dtype 槽 B4 专载 accum'(half) 输出；B1 全程仅 float，
-                // B0 全程仅 half。每个 buffer 在 tile 内单一 dtype，消除视图复用。
-                AscendC::Sub(b3f, b3f, b1f, count);   // B3 = var_f - grad_lr（grad_lr(B1) 此后不再被消费）
-                AscendC::Muls(b1f, b2f, mom_, count); // B1 = accum'*mom（B1 复用仍为 float，不跨 dtype）
-                AscendC::Add(b3f, b3f, b1f, count);   // B3 = var' = (var - grad_lr) + accum'*mom
-                AscendC::Cast(buf_[B0].template Get<half>(), b3f, AscendC::RoundMode::CAST_ROUND,
-                              count); // B0 = var'(h)
-                AscendC::Cast(buf_[B4].template Get<half>(), b2f, AscendC::RoundMode::CAST_ROUND,
-                              count); // B4 = accum'(h)，单 dtype 槽
-                AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-                AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-                CopyOutOne(coord, OUT_VAR, B0, a_i_seg);
-                CopyOutOne(coord, OUT_ACCUM, B4, a_i_seg);
+                auto b5f = buf_[B_T2].template Get<float>(); // Nesterov 额外 temp
+                // var' = var + (accum' * momentum - grad_lr)
+                AscendC::Muls(b5f, b4f, mom_, count);
+                AscendC::Sub(b5f, b5f, b3f, count);
+                AscendC::Cast(b3f, b2h, AscendC::RoundMode::CAST_NONE, count);
+                AscendC::Add(b3f, b3f, b5f, count);
+                AscendC::Cast(b0h, b3f, AscendC::RoundMode::CAST_RINT, count);
             }
+            AscendC::Cast(b1h, b4f, AscendC::RoundMode::CAST_RINT, count);
         } else {
             // ---------------- FP32 路径（全程 FP32）----------------
-            auto b0 = buf_[B0].template Get<T>();
-            auto b1 = buf_[B1].template Get<T>();
-            auto b2 = buf_[B2].template Get<T>();
-            auto b3 = buf_[B3].template Get<T>();
-
-            // grad_lr = (x1 * x2) * lr
-            CopyInBrc(coord, X1, B0, a_i_seg);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+            auto b0 = buf_[B_X1].template Get<T>();
+            auto b1 = buf_[B_ACCUM].template Get<T>();
+            auto b2 = buf_[B_VAR].template Get<T>();
+            auto b5 = buf_[B_T2].template Get<T>(); // Init 中预广播的 momentum 标量
+            // b0 = -grad_lr = -(x1 * x2 * lr)
             AscendC::Muls(b0, b0, (T)x2_, count);
-            AscendC::Muls(b0, b0, (T)lr_, count); // B0 = grad_lr
-
-            // accum' = accum * momentum - grad_lr
-            CopyInBrc(coord, ACCUM, B1, a_i_seg);
-            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-            AscendC::Muls(b1, b1, (T)mom_, count);
-            AscendC::Sub(b1, b1, b0, count); // B1 = accum'
+            AscendC::Muls(b0, b0, (T)(-lr_), count);
+            // b1 = accum' = accum * momentum - grad_lr（FMA，乘积不中间舍入）
+            AscendC::FusedMulAdd(b1, b5, b0, count);
 
             if (td_->use_nesterov == 0) {
-                AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2); // WAR: Sub 读 B0 毕
-                AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-                CopyInBrc(coord, VAR, B0, a_i_seg);
-                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-                AscendC::Add(b0, b0, b1, count); // B0 = var'
-                AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-                AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-                CopyOutOne(coord, OUT_VAR, B0, a_i_seg);
-                CopyOutOne(coord, OUT_ACCUM, B1, a_i_seg);
+                AscendC::Add(b0, b2, b1, count); // var' = var + accum'
             } else {
-                CopyInBrc(coord, VAR, B2, a_i_seg);
-                AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-                AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-                AscendC::Muls(b3, b1, (T)mom_, count); // B3 = accum'*mom
-                AscendC::Add(b2, b2, b3, count);       // B2 = var + accum'*mom
-                AscendC::Sub(b2, b2, b0, count);       // B2 = var' = ... - grad_lr
-                AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-                AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-                CopyOutOne(coord, OUT_VAR, B2, a_i_seg);
-                CopyOutOne(coord, OUT_ACCUM, B1, a_i_seg);
+                // var' = var + (accum' * momentum - grad_lr)
+                AscendC::MulAddDst(b0, b5, b1, count);
+                AscendC::Add(b0, b2, b0, count);
             }
         }
+
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
+        CopyOutOne(coord, OUT_VAR, B_X1, a_i_seg);
+        CopyOutOne(coord, OUT_ACCUM, B_ACCUM, a_i_seg);
     }
 
 private:
@@ -347,17 +310,41 @@ private:
         AscendC::DataCopyPad(buf_[0].template Get<T>(), gmLr_, p, pad);
         AscendC::DataCopyPad(buf_[1].template Get<T>(), gmMomentum_, p, pad);
         AscendC::DataCopyPad(buf_[2].template Get<T>(), gmX2_, p, pad);
-        AscendC::PipeBarrier<PIPE_ALL>(); // 标量搬入(MTE2)完成后再 scalar 读取
+        int32_t evMTE2toS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_S));
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(evMTE2toS);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(evMTE2toS);
         lr_ = static_cast<float>(buf_[0].template Get<T>().GetValue(0));
         mom_ = static_cast<float>(buf_[1].template Get<T>().GetValue(0));
         x2_ = static_cast<float>(buf_[2].template Get<T>().GetValue(0));
     }
 
-    // 张量输入 NDDMA CopyIn（tensorSlot ∈ {0:var,1:accum,2:x1}）
-    __aicore__ inline void CopyInBrc(const int64_t* coord, int tensorSlot, int bufSlot, int64_t a_i_seg)
+    // 张量输入 CopyIn（tensorSlot ∈ {0:var,1:accum,2:x1}）
+    // input_contig 置位时本 tile 在 GM 连续，用单条 DataCopyPad 搬运；否则回退 NDDMA。
+    __aicore__ inline void CopyInBrc(const int64_t* coord, int tensorSlot, int bufSlot, int64_t a_i_seg, int64_t count)
     {
         int64_t k = td_->split.axis;
         int64_t off = FmakmCalcOffset(coord, td_->input_strides[tensorSlot], RANK);
+
+        if ((td_->input_contig >> tensorSlot) & 1LL) {
+            AscendC::DataCopyExtParams p;
+            p.blockCount = 1;
+            p.blockLen = static_cast<uint32_t>(count * sizeof(T));
+            p.srcStride = 0;
+            p.dstStride = 0;
+            AscendC::DataCopyPadExtParams<T> pad;
+            pad.isPad = false;
+            pad.leftPadding = 0;
+            pad.rightPadding = 0;
+            pad.paddingValue = 0;
+            if (tensorSlot == 0) {
+                AscendC::DataCopyPad(buf_[bufSlot].template Get<T>(), gmVar_[off], p, pad);
+            } else if (tensorSlot == 1) {
+                AscendC::DataCopyPad(buf_[bufSlot].template Get<T>(), gmAccum_[off], p, pad);
+            } else {
+                AscendC::DataCopyPad(buf_[bufSlot].template Get<T>(), gmX1_[off], p, pad);
+            }
+            return;
+        }
 
         auto params = nddmaParams_[tensorSlot];
         int64_t k_nd = RANK - 1 - k;

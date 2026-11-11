@@ -18,7 +18,7 @@
 #pragma once
 #include <cstdint>
 
-// === 算子特定常量（见 DESIGN.md §3.3 / §3.5 P trace）===
+// === 算子特定常量 ===
 constexpr int64_t kMaxInputSlots = 6;   // var, accum, lr, x1, momentum, x2
 constexpr int64_t kMaxOutputSlots = 2;  // var, accum（in-place）
 constexpr int64_t kNumTensorInputs = 3; // 参与 NDDMA 的张量输入数（var/accum/x1）
@@ -27,10 +27,9 @@ constexpr int64_t kMaxNdDim = 5;  // NDDMA DataCopy<T,dim,cfg> 的硬件维度�
 constexpr int64_t kFp16Bytes = 2; // sizeof(float16)
 constexpr int64_t kFp32Bytes = 4; // sizeof(float32)：per_buf_elems 恒按 FP32 核算
 constexpr int64_t kUbAlignMask = ~31LL; // 32B 对齐掩码（UB buffer 起始/大小对齐）
-constexpr int64_t kPhysNodes = 5;       // 物理存活节点 P（= TBuf 槽位数）。FP16 Nesterov 峰值：
-                                        // 3 个 float 中间量(grad_lr/accum'/var) + 2 个 half 输出(var'/accum')
-                                        // = 5 个单 dtype 槽位，避免同一 buffer 跨 float/half 视图复用
-// 触发 RegBase 向量寻址错乱（见 kernel.h Nesterov 分支根因注释）
+// TBuf 槽位数：B0-B2 为输入 staging（B0/B1 复用为输出），B3-B5 为计算 temp；
+// 每个 buffer 在 tile 内保持单一 dtype。
+constexpr int64_t kPhysNodes = 6;
 
 struct SplitResult {
     int64_t axis;
@@ -53,6 +52,9 @@ struct FusedMulApplyKerasMomentumTilingData {
     int64_t rank;          // 有效 rank（去 1 补 1 后），Kernel 运行期读取
     int64_t per_buf_bytes; // (UB / kPhysNodes) & ~31，Kernel 用此初始化 TBuf
     int64_t use_nesterov;  // 0=标准 Momentum，1=Nesterov（运行时分支）
+    int64_t input_contig;  // 连续输入掩码：bit i=1 表示张量输入 i 在 [split.axis, rank) 与
+                           // max_bro_shape 全等，可走 flat DataCopyPad；否则走 NDDMA。
+                           // tensor 槽位 {0:var, 1:accum, 2:x1}
     int64_t max_bro_shape[kRank];
     int64_t num_inputs;  // 参与 NDDMA 的张量输入数（var/accum/x1 = 3）
     int64_t num_outputs; // 2

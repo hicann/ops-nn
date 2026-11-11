@@ -42,6 +42,10 @@ bool MultiCoreSplit(const std::vector<int64_t>& max_bro_shape, const SplitResult
 
 bool PrecomputeStrides(const std::vector<int64_t>& s, std::vector<int64_t>& strides);
 
+// 标记在 [split_axis, rank) 与 max_bro_shape 全等、可按连续区间搬运的输入。
+int64_t CalcContigMask(const std::vector<std::vector<int64_t>>& normal_input_shapes,
+                       const std::vector<int64_t>& max_bro_shape, int64_t split_axis, int64_t rank);
+
 } // namespace fused_mul_apply_keras_momentum
 
 // ============================================================

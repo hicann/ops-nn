@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：Keras风格Momentum SGD优化器的融合算子。先融合一次梯度乘法得到梯度，再按Momentum SGD公式原地（in-place）更新权重var与动量累加器accum，支持标准Momentum与Nesterov Momentum两种模式。对标TensorFlow中`tf.raw_ops.ResourceApplyKerasMomentum`接口的计算语义。
+- 算子功能：Keras风格Momentum SGD优化器的融合算子。先融合一次梯度乘法得到梯度，再按Momentum SGD公式以inplace方式更新权重var与动量累加器accum，支持标准Momentum与Nesterov Momentum两种模式。对标TensorFlow中`tf.raw_ops.ResourceApplyKerasMomentum`接口的计算语义。
 - 计算公式：
 
   梯度与动量累加器更新（两种模式一致）：
@@ -61,15 +61,15 @@
 <tbody>
   <tr>
     <td>var</td>
-    <td>输入/输出（in-place）</td>
-    <td>待更新的权重参数，对应公式中的var。Kernel内原地更新，输出var与输入var共享Device内存。</td>
+    <td>输入</td>
+    <td>待更新的权重参数，对应公式中的var。与输出端口var同名（inplace别名），Kernel写输出即写回该输入存储。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>accum</td>
-    <td>输入/输出（in-place）</td>
-    <td>动量累加器，对应公式中的accum。shape与dtype必须与var一致，Kernel内原地更新并写回输入Device内存。</td>
+    <td>输入</td>
+    <td>动量累加器，对应公式中的accum。与输出端口accum同名（inplace别名），Kernel写输出即写回该输入存储；shape与dtype必须与var一致。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
@@ -102,6 +102,20 @@
     <td>ND</td>
   </tr>
   <tr>
+    <td>var</td>
+    <td>输出</td>
+    <td>更新后的权重参数，对应公式中的var_new。与输入var共享Device内存（inplace别名），shape/dtype与输入var相同。</td>
+    <td>FLOAT16、FLOAT</td>
+    <td>ND</td>
+  </tr>
+  <tr>
+    <td>accum</td>
+    <td>输出</td>
+    <td>更新后的动量累加器，对应公式中的accum_new。与输入accum共享Device内存（inplace别名），shape/dtype与输入accum相同。</td>
+    <td>FLOAT16、FLOAT</td>
+    <td>ND</td>
+  </tr>
+  <tr>
     <td>use_locking</td>
     <td>可选属性</td>
     <td><ul><li>是否对更新操作加锁保护。</li><li>默认值为false。</li></ul></td>
@@ -117,11 +131,10 @@
   </tr>
 </tbody></table>
 
-> **说明**：var、accum既是输入也是输出，计算结果原地（in-place）写回输入的Device内存，与TensorFlow`ResourceApplyKerasMomentum`的资源变量更新语义一致。
-
 ## 约束说明
 
 - var、accum、x1必须具有相同的数据类型和数据格式，且shape一致。
+- var、accum的输出端口与输入端口同名（inplace别名），shape分别与对应输入相同，调用方必须把这两个输入视为可写。
 - lr、momentum、x2为shape为[1]的标量Tensor，数据类型与var一致。
 - var、accum、x1的维度数不超过8。
 - 不支持非连续Tensor输入。
@@ -131,13 +144,13 @@
 <table><thead>
   <tr>
     <th>调用方式</th>
-    <th>调用入口</th>
+    <th>调用样例</th>
     <th>说明</th>
   </tr></thead>
 <tbody>
   <tr>
     <td>图模式调用</td>
-    <td><a href="./op_graph/fused_mul_apply_keras_momentum_proto.h">算子IR</a></td>
-    <td>本算子生产路径为GE IR图模式，通过算子IR构图方式调用FusedMulApplyKerasMomentum算子。TensorFlow训练经tf_plugin与融合PASS调度生成本算子。</td>
+    <td><a href="./examples/test_geir_fused_mul_apply_keras_momentum.cpp">调用样例</a></td>
+    <td>本算子生产路径为GE IR图模式，通过<a href="./op_graph/fused_mul_apply_keras_momentum_proto.h">算子IR</a>构图方式调用FusedMulApplyKerasMomentum算子。TensorFlow训练经tf_plugin与融合PASS调度生成本算子。</td>
   </tr>
 </tbody></table>

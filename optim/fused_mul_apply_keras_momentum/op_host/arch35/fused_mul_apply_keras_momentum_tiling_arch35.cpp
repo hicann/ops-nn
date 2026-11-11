@@ -140,7 +140,7 @@ bool FindSplitAxis(const std::vector<int64_t>& max_bro_shape, int64_t dtype_size
         }
         if (k == 0) {
             out.axis = 0;
-            out.a_i = max_bro_shape[0];
+            out.a_i = std::max<int64_t>(max_bro_shape[0], 1);
             out.a_o = 1;
             out.a_i_tail = max_bro_shape[0];
             return true;
@@ -153,6 +153,15 @@ bool FindSplitAxis(const std::vector<int64_t>& max_bro_shape, int64_t dtype_size
 bool MultiCoreSplit(const std::vector<int64_t>& max_bro_shape, const SplitResult& ub_split, int64_t max_cores,
                     MultiCoreResult& out)
 {
+    for (int64_t d : max_bro_shape) {
+        if (d == 0) {
+            out.total_tiles = 0;
+            out.num_cores = 1;
+            out.tiles_main = 0;
+            out.cores_tail = 0;
+            return true;
+        }
+    }
     int64_t k = ub_split.axis, outer_prod = 1;
     for (int64_t j = 0; j < k; j++)
         outer_prod *= max_bro_shape[j];
@@ -191,6 +200,27 @@ bool PrecomputeStrides(const std::vector<int64_t>& s, std::vector<int64_t>& stri
     return true;
 }
 
+int64_t CalcContigMask(const std::vector<std::vector<int64_t>>& normal_input_shapes,
+                       const std::vector<int64_t>& max_bro_shape, int64_t split_axis, int64_t rank)
+{
+    // 输入在 [split_axis, rank) 与 max_bro_shape 全等时，tile 覆盖的数据在 GM 连续；
+    // 否则（含 broadcast）回退 NDDMA。
+    int64_t mask = 0;
+    for (size_t i = 0; i < normal_input_shapes.size(); i++) {
+        bool contig = true;
+        for (int64_t d = split_axis; d < rank; d++) {
+            if (normal_input_shapes[i][d] != max_bro_shape[d]) {
+                contig = false;
+                break;
+            }
+        }
+        if (contig) {
+            mask |= (1LL << i);
+        }
+    }
+    return mask;
+}
+
 } // namespace fused_mul_apply_keras_momentum
 
 // ============================================================
@@ -200,11 +230,36 @@ namespace optiling {
 
 using namespace fused_mul_apply_keras_momentum;
 
-// workspace 字节数：ELEWISE 无跨核规约，仅需最小系统占位（16MB）
-constexpr size_t kWorkspaceBytes = 16UL * 1024UL * 1024UL;
-
 // 张量输入的 GM 下标：var=0, accum=1, x1=3（lr/momentum/x2 为标量，不参与切分）
 static const int kTensorGmIdx[kNumTensorInputs] = {0, 1, 3};
+static const int kScalarGmIdx[] = {2, 4, 5};
+static const char* const kInputNames[kMaxInputSlots] = {"var", "accum", "lr", "x1", "momentum", "x2"};
+
+static std::string ShapeToStr(const std::vector<int64_t>& dims)
+{
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t d = 0; d < dims.size(); ++d) {
+        if (d != 0)
+            oss << ",";
+        oss << dims[d];
+    }
+    oss << "]";
+    return oss.str();
+}
+
+static std::string ShapeToStr(const gert::Shape& shape)
+{
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t d = 0; d < shape.GetDimNum(); ++d) {
+        if (d != 0)
+            oss << ",";
+        oss << shape.GetDim(d);
+    }
+    oss << "]";
+    return oss.str();
+}
 
 FusedMulApplyKerasMomentumTiling::FusedMulApplyKerasMomentumTiling(gert::TilingContext* ctx) : ctx_(ctx) {}
 
@@ -222,6 +277,24 @@ ge::graphStatus FusedMulApplyKerasMomentumTiling::GetShapeInfo()
             dims.push_back(s.GetDim(d));
         raw_input_shapes_.push_back(dims);
     }
+
+    for (int idx : kScalarGmIdx) {
+        auto shape = ctx_->GetInputShape(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(ctx_, shape);
+        gert::Shape s = shape->GetStorageShape();
+        OP_CHECK_IF(s.GetDimNum() != 1 || s.GetDim(0) != 1,
+                    OP_LOGE_FOR_INVALID_SHAPE(ctx_->GetNodeName(), kInputNames[idx], ShapeToStr(s).c_str(), "[1]"),
+                    return ge::GRAPH_FAILED);
+    }
+
+    for (int t = 1; t < kNumTensorInputs; ++t) {
+        OP_CHECK_IF(raw_input_shapes_[t] != raw_input_shapes_[0],
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        ctx_->GetNodeName(), kInputNames[kTensorGmIdx[t]], ShapeToStr(raw_input_shapes_[t]).c_str(),
+                        (std::string("shape must equal var shape ") + ShapeToStr(raw_input_shapes_[0])).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
     auto nodeInfo = ctx_->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, nodeInfo);
     for (size_t i = 0; i < nodeInfo->GetOutputsNum(); ++i) {
@@ -239,11 +312,10 @@ ge::graphStatus FusedMulApplyKerasMomentumTiling::GetShapeInfo()
     ge::DataType dtype = inputDesc->GetDataType();
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT};
-    OP_CHECK_IF(
-        supportedDtypes.count(dtype) == 0,
-        OP_LOGE(ctx_->GetNodeName(), "FusedMulApplyKerasMomentum: unsupported dtype %d, only FP16/FP32 supported",
-                static_cast<int>(dtype)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(supportedDtypes.count(dtype) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(ctx_->GetNodeName(), "var",
+                                          ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "FLOAT16/FLOAT"),
+                return ge::GRAPH_FAILED);
 
     dtype_size_ = (dtype == ge::DT_FLOAT16) ? kFp16Bytes : kFp32Bytes;
 
@@ -251,8 +323,13 @@ ge::graphStatus FusedMulApplyKerasMomentumTiling::GetShapeInfo()
     for (int64_t gmIdx = 0; gmIdx < kMaxInputSlots; ++gmIdx) {
         auto desc = ctx_->GetInputDesc(gmIdx);
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, desc);
-        OP_CHECK_IF(desc->GetDataType() != dtype,
-                    OP_LOGE(ctx_->GetNodeName(), "input %ld dtype mismatch var dtype", gmIdx), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            desc->GetDataType() != dtype,
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                ctx_->GetNodeName(), kInputNames[gmIdx],
+                ge::TypeUtils::DataTypeToSerialString(desc->GetDataType()).c_str(),
+                (std::string("dtype must equal var dtype ") + ge::TypeUtils::DataTypeToSerialString(dtype)).c_str()),
+            return ge::GRAPH_FAILED);
     }
 
     // 获取 use_nesterov 属性（OpDef 中顺序：use_locking=0, use_nesterov=1）
@@ -270,11 +347,16 @@ ge::graphStatus FusedMulApplyKerasMomentumTiling::GetShapeInfo()
 
     // rank 上界校验：TilingData 数组容量为 kRank（最大 kMaxRank=8）。若有效 rank_ > 8，
     // 后续 delta = R - rank_ 转负会导致 tiling->max_bro_shape[d+delta] 等负下标越界写。
-    OP_CHECK_IF(rank_ > kMaxRank, OP_LOGE(ctx_->GetNodeName(), "effective rank %ld exceeds max %ld", rank_, kMaxRank),
+    OP_CHECK_IF(rank_ > kMaxRank,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(ctx_->GetNodeName(), "effective rank", std::to_string(rank_).c_str(),
+                                             (std::string("at most ") + std::to_string(kMaxRank) + "D").c_str()),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(!CheckBroadcastShape(normal_input_shapes_, normal_output_shapes_, rank_),
-                OP_LOGE(ctx_->GetNodeName(), "check broadcast shape failed"), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(ctx_->GetNodeName(), "var, accum, x1 and outputs",
+                                                       ShapeToStr(max_bro_shape_).c_str(),
+                                                       "normalized shapes must be broadcast-compatible"),
+                return ge::GRAPH_FAILED);
 
     OP_LOGI(ctx_->GetNodeName(), "GetShapeInfo done rank=%ld dtype=%ld nesterov=%ld ub=%lu core=%lu", rank_,
             dtype_size_, use_nesterov_, compileInfo->ubSize, compileInfo->coreNum);
@@ -296,6 +378,8 @@ ge::graphStatus FusedMulApplyKerasMomentumTiling::DoTilingAndSet()
     MultiCoreSplit(max_bro_shape_, tiling->split, (int64_t)compileInfo->coreNum, tiling->multicore);
     tiling->per_buf_bytes = per_buf_bytes;
     tiling->use_nesterov = use_nesterov_;
+    // 此时 split.axis 尚未加 delta，与 normal_input_shapes_/max_bro_shape_ 同坐标系。
+    tiling->input_contig = CalcContigMask(normal_input_shapes_, max_bro_shape_, tiling->split.axis, rank_);
 
     int64_t num_in = (int64_t)normal_input_shapes_.size();
     int64_t num_out = (int64_t)normal_output_shapes_.size();
@@ -379,7 +463,7 @@ static ge::graphStatus TilingFuncFmakm(gert::TilingContext* context)
         return ret;
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
-    workspaces[0] = kWorkspaceBytes; // ELEWISE 无跨核规约，最小占位
+    workspaces[0] = 0;
     return GRAPH_SUCCESS;
 }
 
@@ -392,6 +476,9 @@ ge::graphStatus TilingPrepareForFmakm(gert::TilingParseContext* context)
     auto ap = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ap.GetCoreNumAiv();
     ap.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
+    OP_CHECK_IF(compileInfo->ubSize == 0,
+                OP_LOGE_FOR_INVALID_VALUE("FusedMulApplyKerasMomentum", "ubSize", "0", "greater than 0"),
+                return ge::GRAPH_FAILED);
     return GRAPH_SUCCESS;
 }
 

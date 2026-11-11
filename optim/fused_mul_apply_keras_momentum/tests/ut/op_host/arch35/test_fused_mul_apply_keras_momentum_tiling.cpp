@@ -20,6 +20,7 @@
  * 覆盖矩阵：两 TilingKey（RANK_4 / RANK_8）× 两 dtype（fp16/fp32）× 标准/Nesterov 分支
  * + 边界（rank0 标量 / 空 tensor / 标量广播 / 8D 最大 rank / 大 shape 多核）
  * + 三个新增负例/正例：rank>8 拒绝、8D 最大合法 rank 正例、六输入 dtype 不一致拒绝。
+ * + 连续输入掩码：同 shape 全槽置位、广播输入拒绝、CalcContigMask 逐维判定。
  *
  * TilingKey 由 GET_TPL_TILING_KEY 生成，其数值编码不硬编码；本 UT 通过
  * "同组一致、跨组相异" 的关系断言验证两档 RANK Key 正确分流：
@@ -102,6 +103,40 @@ static bool RunOneCase(const std::vector<int64_t>& tensorShape, ge::DataType dty
     return ok;
 }
 
+// 广播输入（x1 与 var 部分维不一致）应被 Tiling 拒绝。
+static bool RunBroadcastCase(const std::vector<int64_t>& tensorShape, const std::vector<int64_t>& x1Shape,
+                             ge::DataType dtype, ge::graphStatus expectStatus, TilingInfo& info)
+{
+    gert::StorageShape tShape = MakeStorageShape(tensorShape);
+    gert::StorageShape xShape = MakeStorageShape(x1Shape);
+    gert::StorageShape sShape = MakeStorageShape({1});
+    std::vector<gert::TilingContextPara::TensorDescription> inputs = {
+        {tShape, dtype, ge::FORMAT_ND}, // var
+        {tShape, dtype, ge::FORMAT_ND}, // accum
+        {sShape, dtype, ge::FORMAT_ND}, // lr
+        {xShape, dtype, ge::FORMAT_ND}, // x1（广播）
+        {sShape, dtype, ge::FORMAT_ND}, // momentum
+        {sShape, dtype, ge::FORMAT_ND}, // x2
+    };
+    std::vector<gert::TilingContextPara::TensorDescription> outputs = {
+        {tShape, dtype, ge::FORMAT_ND},
+        {tShape, dtype, ge::FORMAT_ND},
+    };
+    std::vector<gert::TilingContextPara::OpAttr> attrs = {
+        {"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+        {"use_nesterov", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+    };
+    optiling::FusedMulApplyKerasMomentumCompileInfo compileInfo{kCoreNum, kUbSize};
+    gert::TilingContextPara para(OP_NAME, inputs, outputs, attrs, &compileInfo, kCoreNum, kUbSize, kTilingDataSize);
+    bool ok = ExecuteTiling(para, info);
+    if (expectStatus == ge::GRAPH_SUCCESS) {
+        EXPECT_TRUE(ok);
+    } else {
+        EXPECT_FALSE(ok);
+    }
+    return ok;
+}
+
 // 六输入 dtype 混合场景：var 用 varDtype，accum 用 accumDtype，其余用 varDtype。
 // 用于验证 GetShapeInfo 的六输入 dtype 一致性校验（不一致应拒绝）。
 static bool RunMixedDtypeCase(const std::vector<int64_t>& tensorShape, ge::DataType varDtype, ge::DataType accumDtype,
@@ -134,6 +169,43 @@ static bool RunMixedDtypeCase(const std::vector<int64_t>& tensorShape, ge::DataT
         EXPECT_FALSE(ok);
     }
     return ok;
+}
+
+static bool RunShapeCase(const std::vector<int64_t>& varShape, const std::vector<int64_t>& accumShape,
+                         const std::vector<int64_t>& x1Shape, const std::vector<int64_t>& scalarShape,
+                         ge::graphStatus expectStatus, TilingInfo& info)
+{
+    gert::StorageShape varSs = MakeStorageShape(varShape);
+    gert::StorageShape accumSs = MakeStorageShape(accumShape);
+    gert::StorageShape x1Ss = MakeStorageShape(x1Shape);
+    gert::StorageShape scalarSs = MakeStorageShape(scalarShape);
+    std::vector<gert::TilingContextPara::TensorDescription> inputs = {
+        {varSs, ge::DT_FLOAT, ge::FORMAT_ND},    {accumSs, ge::DT_FLOAT, ge::FORMAT_ND},
+        {scalarSs, ge::DT_FLOAT, ge::FORMAT_ND}, {x1Ss, ge::DT_FLOAT, ge::FORMAT_ND},
+        {scalarSs, ge::DT_FLOAT, ge::FORMAT_ND}, {scalarSs, ge::DT_FLOAT, ge::FORMAT_ND},
+    };
+    std::vector<gert::TilingContextPara::TensorDescription> outputs = {
+        {varSs, ge::DT_FLOAT, ge::FORMAT_ND},
+        {accumSs, ge::DT_FLOAT, ge::FORMAT_ND},
+    };
+    std::vector<gert::TilingContextPara::OpAttr> attrs = {
+        {"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+        {"use_nesterov", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+    };
+    optiling::FusedMulApplyKerasMomentumCompileInfo compileInfo{kCoreNum, kUbSize};
+    gert::TilingContextPara para(OP_NAME, inputs, outputs, attrs, &compileInfo, kCoreNum, kUbSize, kTilingDataSize);
+    bool ok = ExecuteTiling(para, info);
+    if (expectStatus == ge::GRAPH_SUCCESS) {
+        EXPECT_TRUE(ok);
+    } else {
+        EXPECT_FALSE(ok);
+    }
+    return ok;
+}
+
+static bool RunScalarShapeCase(const std::vector<int64_t>& scalarShape, ge::graphStatus expectStatus, TilingInfo& info)
+{
+    return RunShapeCase({2, 3}, {2, 3}, {2, 3}, scalarShape, expectStatus, info);
 }
 
 class FmakmTilingTest : public testing::Test {
@@ -294,6 +366,144 @@ TEST_F(FmakmTilingTest, DtypeMismatch_Rejected)
 {
     TilingInfo info;
     ASSERT_FALSE(RunMixedDtypeCase({2, 3}, ge::DT_FLOAT, ge::DT_FLOAT16, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(FmakmTilingTest, ScalarShape_Empty_Rejected)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunScalarShapeCase({0}, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(FmakmTilingTest, ScalarShape_NonUnit_Rejected)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunScalarShapeCase({2}, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(FmakmTilingTest, ScalarShape_TwoDim_Rejected)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunScalarShapeCase({4, 4}, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(FmakmTilingTest, ScalarShape_Rank0_Rejected)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunScalarShapeCase({}, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(FmakmTilingTest, ScalarShape_Unit_Ok)
+{
+    TilingInfo info;
+    ASSERT_TRUE(RunScalarShapeCase({1}, ge::GRAPH_SUCCESS, info));
+}
+
+TEST_F(FmakmTilingTest, TensorShape_AccumBroadcast_Rejected)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunShapeCase({4, 3}, {1, 3}, {4, 3}, {1}, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(FmakmTilingTest, TensorShape_X1Broadcast_Rejected)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunShapeCase({4, 3}, {4, 3}, {1, 3}, {1}, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(FmakmTilingTest, TensorShape_VarBroadcast_Rejected)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunShapeCase({1, 3}, {4, 3}, {4, 3}, {1}, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(FmakmTilingTest, TensorShape_SameShape_Ok)
+{
+    TilingInfo info;
+    ASSERT_TRUE(RunShapeCase({4, 3}, {4, 3}, {4, 3}, {1}, ge::GRAPH_SUCCESS, info));
+}
+
+TEST_F(FmakmTilingTest, WorkspaceSize_Zero)
+{
+    TilingInfo info;
+    ASSERT_TRUE(RunOneCase({2, 3}, ge::DT_FLOAT, false, ge::GRAPH_SUCCESS, info));
+    ASSERT_FALSE(info.workspaceSizes.empty());
+    EXPECT_EQ(info.workspaceSizes[0], 0u);
+}
+
+TEST_F(FmakmTilingTest, FindSplitAxis_EmptyTensor_ClampsAi)
+{
+    SplitResult split;
+    ASSERT_TRUE(fused_mul_apply_keras_momentum::FindSplitAxis({0, 4}, 4, 248UL * 1024UL, 5, split));
+    EXPECT_EQ(split.a_i, 1);
+    EXPECT_EQ(split.a_o, 1);
+    EXPECT_EQ(split.a_i_tail, 0);
+}
+
+TEST_F(FmakmTilingTest, MultiCoreSplit_EmptyTensor_ZeroTiles)
+{
+    SplitResult split{0, 1, 1, 0};
+    MultiCoreResult out;
+    ASSERT_TRUE(fused_mul_apply_keras_momentum::MultiCoreSplit({0, 4}, split, 32, out));
+    EXPECT_EQ(out.total_tiles, 0);
+    EXPECT_EQ(out.num_cores, 1);
+    EXPECT_EQ(out.tiles_main, 0);
+    EXPECT_EQ(out.cores_tail, 0);
+}
+
+TEST_F(FmakmTilingTest, MultiCoreSplit_TailZeroDim_ZeroTiles)
+{
+    SplitResult split{0, 4, 1, 4};
+    MultiCoreResult out;
+    ASSERT_TRUE(fused_mul_apply_keras_momentum::MultiCoreSplit({4, 0}, split, 32, out));
+    EXPECT_EQ(out.total_tiles, 0);
+}
+
+// 同 shape 输入应全槽置位；大 shape 覆盖 RANK_8 + UB 切分。
+TEST_F(FmakmTilingTest, ContigMask_SameShape_AllSlots)
+{
+    TilingInfo info;
+    ASSERT_TRUE(RunOneCase({2, 2, 589279, 2, 2, 2, 2, 2}, ge::DT_FLOAT, false, ge::GRAPH_SUCCESS, info));
+    ASSERT_GE(info.tilingDataSize, sizeof(FusedMulApplyKerasMomentumTilingData<8>));
+    const auto* td = reinterpret_cast<const FusedMulApplyKerasMomentumTilingData<8>*>(info.tilingData.get());
+    EXPECT_EQ(td->input_contig, 0b111) << "var/accum/x1 同 shape 时三槽位均应命中连续快路径";
+    EXPECT_GT(td->split.a_i, 1) << "大 shape 应产生 UB 切分（a_i>1），否则场景不成立";
+    EXPECT_EQ(td->rank, 8);
+}
+
+// RANK_4 档同 shape 输入应全置位。
+TEST_F(FmakmTilingTest, ContigMask_SameShape_Rank4)
+{
+    TilingInfo info;
+    ASSERT_TRUE(RunOneCase({1024, 1024}, ge::DT_FLOAT, false, ge::GRAPH_SUCCESS, info));
+    ASSERT_GE(info.tilingDataSize, sizeof(FusedMulApplyKerasMomentumTilingData<4>));
+    const auto* td = reinterpret_cast<const FusedMulApplyKerasMomentumTilingData<4>*>(info.tilingData.get());
+    EXPECT_EQ(td->input_contig, 0b111);
+}
+
+// x1 广播违反 shape 全等约束，应拒绝。
+TEST_F(FmakmTilingTest, ContigMask_BroadcastInput_Rejected)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunBroadcastCase({2, 4}, {4}, ge::DT_FLOAT, ge::GRAPH_FAILED, info));
+}
+
+// CalcContigMask 逐维判定。
+TEST_F(FmakmTilingTest, CalcContigMask_PureFunction)
+{
+    using namespace fused_mul_apply_keras_momentum;
+    const std::vector<int64_t> maxBro = {8, 16, 32};
+    // 全等 → 全置位
+    std::vector<std::vector<int64_t>> same = {{8, 16, 32}, {8, 16, 32}};
+    EXPECT_EQ(CalcContigMask(same, maxBro, /*axis*/ 1, /*rank*/ 3), 0b11);
+    // split 轴（axis=1）广播 → 不置位
+    std::vector<std::vector<int64_t>> axisBrc = {{8, 16, 32}, {8, 1, 32}};
+    EXPECT_EQ(CalcContigMask(axisBrc, maxBro, 1, 3), 0b01);
+    // 内维（axis 右侧）广播 → 不置位
+    std::vector<std::vector<int64_t>> innerBrc = {{8, 16, 32}, {8, 16, 1}};
+    EXPECT_EQ(CalcContigMask(innerBrc, maxBro, 1, 3), 0b01);
+    // 外维（axis 左侧）广播 → 仍置位（tile 覆盖域内数据连续，flat 搬运仍正确）
+    std::vector<std::vector<int64_t>> outerBrc = {{8, 16, 32}, {1, 16, 32}};
+    EXPECT_EQ(CalcContigMask(outerBrc, maxBro, 1, 3), 0b11);
 }
 
 } // namespace FmakmTilingUT

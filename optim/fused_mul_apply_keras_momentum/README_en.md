@@ -63,15 +63,15 @@ English | [简体中文](./README.md)
 <tbody>
   <tr>
     <td>var</td>
-    <td>Input/Output (in-place)</td>
-    <td>Weight parameter to be updated, which corresponds to var in the formula. The Kernel updates it in place, and the output var shares device memory with the input var.</td>
+    <td>Input</td>
+    <td>Weight parameter to be updated, which corresponds to var in the formula. It has the same name as the output port var (in-place alias). The Kernel writes the output back to this input storage.</td>
     <td>FLOAT16, FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>accum</td>
-    <td>Input/Output (in-place)</td>
-    <td>Momentum accumulator, which corresponds to accum in the formula. The shape and dtype must be the same as those of var. The Kernel updates it in place and writes back to the input device memory.</td>
+    <td>Input</td>
+    <td>Momentum accumulator, which corresponds to accum in the formula. It has the same name as the output port accum (in-place alias). The Kernel writes the output back to this input storage. The shape and dtype must be the same as those of var.</td>
     <td>FLOAT16, FLOAT</td>
     <td>ND</td>
   </tr>
@@ -104,6 +104,20 @@ English | [简体中文](./README.md)
     <td>ND</td>
   </tr>
   <tr>
+    <td>var</td>
+    <td>Output</td>
+    <td>Updated weight parameter, which corresponds to var_new in the formula. It shares device memory with the input var (in-place alias), and its shape and dtype are the same as those of the input var.</td>
+    <td>FLOAT16, FLOAT</td>
+    <td>ND</td>
+  </tr>
+  <tr>
+    <td>accum</td>
+    <td>Output</td>
+    <td>Updated momentum accumulator, which corresponds to accum_new in the formula. It shares device memory with the input accum (in-place alias), and its shape and dtype are the same as those of the input accum.</td>
+    <td>FLOAT16, FLOAT</td>
+    <td>ND</td>
+  </tr>
+  <tr>
     <td>use_locking</td>
     <td>Optional attribute</td>
     <td><ul><li>Whether to lock and protect the update operation.</li><li>Default value: false.</li></ul></td>
@@ -119,11 +133,10 @@ English | [简体中文](./README.md)
   </tr>
 </tbody></table>
 
-> **NOTE**: var and accum are both inputs and outputs. The computation result is written back in place to the device memory of the inputs, which is consistent with the resource variable update semantics of TensorFlow `ResourceApplyKerasMomentum`.
-
 ## Constraints
 
 - var, accum, and x1 must have the same data type and data format, and their shapes must be identical.
+- The output ports of var and accum have the same names as their input ports (in-place aliases). Their shapes are the same as those of the corresponding inputs. You must treat these two inputs as writable.
 - lr, momentum, and x2 are scalar tensors with shape [1], and their data type is the same as that of var.
 - The number of dimensions of var, accum, and x1 does not exceed 8.
 - Non-contiguous tensor inputs are not supported.
@@ -133,13 +146,13 @@ English | [简体中文](./README.md)
 <table><thead>
   <tr>
     <th>Invocation method</th>
-    <th>Invocation entry</th>
+    <th>Sample</th>
     <th>Description</th>
   </tr></thead>
 <tbody>
   <tr>
     <td>Graph-mode invocation</td>
-    <td><a href="./op_graph/fused_mul_apply_keras_momentum_proto.h">Operator IR</a></td>
-    <td>The production path of this operator is the GE IR graph mode. Call the FusedMulApplyKerasMomentum operator through graph construction with the operator IR. TensorFlow training generates this operator through tf_plugin and fused PASS scheduling.</td>
+    <td><a href="./examples/test_geir_fused_mul_apply_keras_momentum.cpp">Sample</a></td>
+    <td>The production path of this operator is the GE IR graph mode. Call the FusedMulApplyKerasMomentum operator through graph construction with the <a href="./op_graph/fused_mul_apply_keras_momentum_proto.h">operator IR</a>. TensorFlow training generates this operator through tf_plugin and fused PASS scheduling.</td>
   </tr>
 </tbody></table>
