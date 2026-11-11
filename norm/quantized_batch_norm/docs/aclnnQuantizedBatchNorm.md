@@ -259,8 +259,8 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>传入的input或output是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>数据类型不在支持的范围之内，或者参数不满足上述约束。</td>
     </tr>
   </tbody></table>

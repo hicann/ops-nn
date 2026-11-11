@@ -140,8 +140,8 @@ aclnnStatus aclnnForeachZeroInplace(
       <td>The input x is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The data type of x is not supported.</td>
     </tr>
     <tr>

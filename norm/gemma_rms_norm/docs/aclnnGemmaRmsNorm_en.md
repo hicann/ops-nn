@@ -179,8 +179,8 @@ aclnnStatus aclnnGemmaRmsNorm(
       <td>If a mandatory input, output, or mandatory attribute is a null pointer, 161001 is returned.</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The data type of the input or output is out of the supported range.</td>
     </tr>
     <tr>

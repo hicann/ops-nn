@@ -206,8 +206,8 @@ aclnnStatus aclnnRmsNormGrad(
       <td>If a required input, output, or attribute is a null pointer, 161001 is returned.</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The input or output data type is not within the supported range.</td>
     </tr>
     <tr>

@@ -162,8 +162,8 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>传入的scaledGrads、foundInf、invScale、workspaceSize或executor是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>scaledGrads、foundInf、invScale的数据类型不在支持的范围之内，或TensorList中存在空指针元素，或Tensor使用私有格式。</td>
     </tr>
     <tr>

@@ -261,8 +261,8 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>The input or output is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The data type is not in the supported range, or the parameters do not meet the preceding constraints.</td>
     </tr>
   </tbody></table>

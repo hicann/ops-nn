@@ -187,8 +187,8 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
   </tbody></table>

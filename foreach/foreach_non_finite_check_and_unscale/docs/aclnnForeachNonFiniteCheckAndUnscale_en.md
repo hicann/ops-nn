@@ -164,8 +164,8 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>scaledGrads, foundInf, or invScale is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The data types of scaledGrads, foundInf, or invScale are not within the supported range.</td>
     </tr>
     <tr>

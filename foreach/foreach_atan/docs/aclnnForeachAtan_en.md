@@ -169,8 +169,7 @@ aclnnStatus aclnnForeachAtan(
     <tr>
       <td>The data types of Tensors in x or out are inconsistent.</td>
     </tr>
-    <tr>
-        </tbody></table>
+    </tbody></table>
 
 ## aclnnForeachAtan
 

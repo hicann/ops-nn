@@ -260,8 +260,8 @@ aclnnStatus aclnnGroupNormSwish(
       <td>Returned when x, gamma, beta, yOut, meanOut, or rstdOut is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The data types of x, gamma, beta, yOut, meanOut, and rstdOut are not in the supported range.</td>
     </tr>
   </tbody></table>

@@ -342,8 +342,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>If a passed-in parameter is a required input, output, or required attribute, and is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The data type of the input or output is not within the supported range.
       </td>
     </tr>
