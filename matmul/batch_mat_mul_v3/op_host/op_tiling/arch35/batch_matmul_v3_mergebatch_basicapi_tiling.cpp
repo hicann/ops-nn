@@ -24,6 +24,8 @@ namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3MergeBatchBasicApiTiling, DAV_3510, MERGE_BATCH_BASICAPI);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3MergeBatchBasicApiTiling, DAV_9201, MERGE_BATCH_BASICAPI);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3MergeBatchBasicApiTiling, DAV_9202, MERGE_BATCH_BASICAPI);
 
 bool BatchMatMulV3MergeBatchBasicApiTiling::IsCapable()
 {

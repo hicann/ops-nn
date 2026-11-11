@@ -25,6 +25,8 @@ namespace batch_matmul_v3_advanced {
 
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3ToMulTiling, DAV_3510, BATCH_MATMUL_TO_MUL);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3ToMulTiling, DAV_9201, BATCH_MATMUL_TO_MUL);
+MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3ToMulTiling, DAV_9202, BATCH_MATMUL_TO_MUL);
 
 ge::graphStatus BatchMatMulV3ToMulTiling::DoOpTiling()
 {
