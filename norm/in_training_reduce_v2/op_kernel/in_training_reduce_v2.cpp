@@ -18,11 +18,13 @@
 #include "arch35/in_training_reduce_v2_common.h"
 #include "arch35/in_training_reduce_v2_ar_full_reduce.h"
 #include "arch35/in_training_reduce_v2_ara_reduce.h"
+#include "arch35/in_training_reduce_v2_split_r.h"
 
 using namespace AscendC;
 using namespace INTrainingReduceV2Ops;
 
 #define TILINGKEY_AR_FULL_REDUCE 200000
+#define TILINGKEY_SPLIT_R 300000
 #define TILINGKEY_ARA_REDUCE 400000
 
 // Expand the key into one literal without expanding the reserved TILING_KEY_VAR token.
@@ -33,6 +35,8 @@ extern "C" __global__ __aicore__ void in_training_reduce_v2(GM_ADDR x, GM_ADDR s
                                                             GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    // Hardware SyncAll needs inter-core scheduling only on the split-R route.
+    KERNEL_TASK_TYPE(TILINGKEY_SPLIT_R, KERNEL_TYPE_MIX_AIV_1_0);
     REGISTER_TILING_DEFAULT(INTrainingReduceV2ARFullReduceTilingData);
     // OOM instrumentation locates tensor bounds after the registered TilingData.
     REGISTER_TILING_FOR_TILINGKEY(IN_TRAINING_REDUCE_V2_TILING_EXPR(TILINGKEY_ARA_REDUCE),
@@ -41,6 +45,11 @@ extern "C" __global__ __aicore__ void in_training_reduce_v2(GM_ADDR x, GM_ADDR s
         GET_TILING_DATA_WITH_STRUCT(INTrainingReduceV2ARFullReduceTilingData, tilingData, tiling);
         INTrainingReduceV2ARFullReduce<DTYPE_X> op(&tilingData);
         op.Init(x, sum, square_sum);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_SPLIT_R)) {
+        GET_TILING_DATA_WITH_STRUCT(INTrainingReduceV2ARFullReduceTilingData, tilingData, tiling);
+        INTrainingReduceV2SplitR<DTYPE_X> op;
+        op.Init(x, sum, square_sum, workspace, &tilingData);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_ARA_REDUCE)) {
         GET_TILING_DATA_WITH_STRUCT(INTrainingReduceV2ARAReduceTilingData, tilingData, tiling);

@@ -48,6 +48,7 @@ protected:
 namespace {
 constexpr uint64_t EXPECTED_ARA_TILING_KEY = 400000UL;
 constexpr uint64_t EXPECTED_AR_TILING_KEY = 200000UL;
+constexpr uint64_t EXPECTED_SPLIT_R_TILING_KEY = 300000UL;
 constexpr uint64_t MOCK_UB_SIZE = 245760;
 
 // 公共 compile_info（Ascend950，CORE_NUM=64，UB=245760）
@@ -71,7 +72,8 @@ static uint64_t RunTiling(gert::StorageShape& xShape, gert::StorageShape& outSha
                           ge::DataType sumDtype = ge::DT_FLOAT, ge::DataType squareSumDtype = ge::DT_FLOAT,
                           uint64_t ubSize = 245760, INTrainingReduceV2ARAReduceTilingData* araOut = nullptr,
                           gert::StorageShape* squareSumShape = nullptr, ge::graphStatus* tilingStatus = nullptr,
-                          uint32_t* blockDimOut = nullptr)
+                          uint32_t* blockDimOut = nullptr, size_t* workspaceOut = nullptr,
+                          uint32_t* scheduleModeOut = nullptr)
 {
     std::map<std::string, std::string> socVersionInfos = {{"NpuArch", "3510"}};
     map<string, string> socInfos;
@@ -157,6 +159,17 @@ static uint64_t RunTiling(gert::StorageShape& xShape, gert::StorageShape& outSha
     if (blockDimOut != nullptr) {
         *blockDimOut = tilingContext->GetBlockDim();
     }
+    if (scheduleModeOut != nullptr) {
+        *scheduleModeOut = tilingContext->GetScheduleMode();
+    }
+    if (workspaceOut != nullptr) {
+        const auto* workspaceSizes = tilingContext->GetWorkspaceSizes(1);
+        if (workspaceSizes == nullptr) {
+            ADD_FAILURE() << "Missing tiling workspace sizes";
+            return UINT64_MAX;
+        }
+        *workspaceOut = workspaceSizes[0];
+    }
     if (tdOut != nullptr) {
         auto raw = tilingContext->GetRawTilingData();
         if (raw == nullptr || raw->GetDataSize() < sizeof(*tdOut)) {
@@ -216,6 +229,31 @@ static void ExpectSubRSelfConsistent(const INTrainingReduceV2ARFullReduceTilingD
     ASSERT_EQ(td.partialBufferBytes, (slots + kVlFp32 - 1U) / kVlFp32 * kVlFp32 * sizeof(float) * 2);
     ASSERT_EQ(SubRUbBytes(td, elemSize),
               td.inputBufferBytes * 2U + td.partialBufferBytes * 2U + td.outputBufferBytes * 4U);
+}
+
+static void ExpectSplitRBounds(const INTrainingReduceV2ARFullReduceTilingData& td, uint64_t elemSize,
+                               uint64_t ubSize = MOCK_UB_SIZE)
+{
+    ASSERT_EQ(td.isSubRTiling, IN_TRAINING_REDUCE_V2_SPLIT_R_MODE);
+    ASSERT_GE(td.cOuter, 2);
+    ASSERT_LE(td.cOuter, 64);
+    ASSERT_EQ(td.cInner % 64, 0);
+    ASSERT_GT(td.cTail, 0);
+    ASSERT_LE(td.cTail, td.cInner);
+    ASSERT_EQ((td.cOuter - 1) * td.cInner + td.cTail, td.numR);
+    ASSERT_EQ(td.totalTiles, td.totalRows * td.cOuter);
+    ASSERT_LE(td.totalTiles, 64);
+    ASSERT_GT(td.rFactor, 0U);
+    ASSERT_EQ(td.rFactor % 64U, 0U);
+    ASSERT_LE(td.rFactor / 64U, UINT16_MAX);
+    ASSERT_LE((td.cInner + td.rFactor - 1) / td.rFactor, 64U);
+    ASSERT_EQ(td.inputBufferBytes, td.rFactor * elemSize);
+    ASSERT_LE(td.inputBufferBytes, (1UL << 21) - 1U);
+    ASSERT_EQ(td.outputBufferBytes, 64U);
+    ASSERT_EQ(td.scratchBufferBytes, static_cast<uint64_t>(td.cOuter) * 32U);
+    ASSERT_EQ(td.partialBufferBytes, 64U * sizeof(float) * 2U);
+    ASSERT_LE(2U * td.inputBufferBytes + 2U * td.partialBufferBytes + td.scratchBufferBytes + td.outputBufferBytes,
+              ubSize - 512U);
 }
 } // namespace
 
@@ -363,14 +401,14 @@ TEST_F(INTrainingReduceV2TilingTest, ShortRPacksRowsWithinUbAndDmaBounds)
 
 TEST_F(INTrainingReduceV2TilingTest, ShortRRetainsFullArFallbackAndLargeRowOffsets)
 {
-    for (int64_t reduceSize : {2, 64, 65}) {
+    for (int64_t reduceSize : {2, 64, 65, 256, 257, 513}) {
         gert::StorageShape input = {{65537, 65537, reduceSize}, {65537, 65537, reduceSize}};
         gert::StorageShape output = {{65537, 65537, 1}, {65537, 65537, 1}};
         INTrainingReduceV2ARFullReduceTilingData td{};
         ASSERT_EQ(RunTiling(input, output, ge::DT_FLOAT, ge::FORMAT_ND, &td), EXPECTED_AR_TILING_KEY);
         EXPECT_EQ(td.totalRows, 4295098369LL);
         EXPECT_EQ(td.totalElements, td.totalRows * reduceSize);
-        if (reduceSize <= 64) {
+        if (reduceSize <= 512) {
             EXPECT_EQ(td.rAlign, 0U);
             EXPECT_GT((td.totalTiles - 1) * td.cInner * reduceSize, static_cast<int64_t>(UINT32_MAX));
         } else {
@@ -402,7 +440,7 @@ TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_nchw_200000_001)
     EXPECT_EQ(td.totalTiles, td.numN * td.cOuter);
     EXPECT_GT(td.inputBufferBytes, 0U);
     EXPECT_GT(td.outputBufferBytes, 0U);
-    EXPECT_GT(td.scratchBufferBytes, 0U);
+    EXPECT_EQ(td.scratchBufferBytes, 0U);
     EXPECT_EQ(td.partialBufferBytes, 0U);
 }
 
@@ -476,39 +514,37 @@ TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_nd_c0_guard_graph_fai
 }
 
 // ---------------------------------------------------------------------------
-// sub-R 分块路径：R 超大（超单次 UB 容量）时触发 DoSubRTiling，
-// TilingKey 仍为 200000（同 key + isSubRTiling 标志区分）。
-// fp32 [1,1,316,316] → R=99856，单行全载超 UB → sub-R 分块。
+// split-R 路径：少量输出行、较大 R 使用空闲核并行规约，独立 TilingKey 为 300000。
+// fp32 [1,1,316,316] → R=99856。
 // ---------------------------------------------------------------------------
-TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_nchw_fp32_200000_009)
+TEST_F(INTrainingReduceV2TilingTest, tiling_split_r_nchw_fp32_300000_009)
 {
     gert::StorageShape x_shape = {{1, 1, 316, 316}, {1, 1, 316, 316}};
     gert::StorageShape out_shape = {{1, 1, 1, 1}, {1, 1, 1, 1}};
     uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_NCHW);
-    ASSERT_EQ(key, 200000U);
+    ASSERT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
 }
 
 // ---------------------------------------------------------------------------
-// sub-R 分块路径：fp16 输入，5D NCDHW，R 超大 → sub-R 分块。
-// [1,1,100,100,100] → R=1,000,000，fp16 elemSize=2 → sub-R。
+// split-R 路径：fp16 输入，5D NCDHW，[1,1,100,100,100] → R=1,000,000。
 // ---------------------------------------------------------------------------
-TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_ncdhw_fp16_200000_010)
+TEST_F(INTrainingReduceV2TilingTest, tiling_split_r_ncdhw_fp16_300000_010)
 {
     gert::StorageShape x_shape = {{1, 1, 100, 100, 100}, {1, 1, 100, 100, 100}};
     gert::StorageShape out_shape = {{1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}};
     uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT16, ge::FORMAT_NCDHW);
-    ASSERT_EQ(key, 200000U);
+    ASSERT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
 }
 
 // ---------------------------------------------------------------------------
-// sub-R 分块路径：ND format，3D [1,1,1000000] → R=1,000,000，fp32 → sub-R。
+// split-R 路径：ND format，3D [1,1,1000000] → R=1,000,000，fp32。
 // ---------------------------------------------------------------------------
-TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_nd_fp32_200000_011)
+TEST_F(INTrainingReduceV2TilingTest, tiling_split_r_nd_fp32_300000_011)
 {
     gert::StorageShape x_shape = {{1, 1, 1000000}, {1, 1, 1000000}};
     gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
     uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND);
-    ASSERT_EQ(key, 200000U);
+    ASSERT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
 }
 
 // ---------------------------------------------------------------------------
@@ -666,10 +702,15 @@ TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_partial_buf_fit
     gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
     INTrainingReduceV2ARFullReduceTilingData td{};
     uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND, &td);
-    ASSERT_EQ(key, 200000U);
+    ASSERT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
     ASSERT_EQ(td.numR, 104439809LL);
+    ExpectSplitRBounds(td, sizeof(float));
+
+    // With no idle cores, retain the original single-core partial-buffer check.
+    gert::StorageShape manyRows = {{64, 1, 104439809}, {64, 1, 104439809}};
+    gert::StorageShape manyOutputs = {{64, 1, 1}, {64, 1, 1}};
+    ASSERT_EQ(RunTiling(manyRows, manyOutputs, ge::DT_FLOAT, ge::FORMAT_ND, &td), EXPECTED_AR_TILING_KEY);
     ExpectSubRSelfConsistent(td, sizeof(float));
-    // 快路径：单次全折叠塞得进 UB，不分组 —— 参数与分组改造前逐位一致
     ASSERT_EQ(td.numGroups, 1U);
     ASSERT_EQ(td.chunksPerGroup, td.numChunks);
 }
@@ -841,8 +882,9 @@ TEST_F(INTrainingReduceV2TilingTest, NhwcSingleChannelReusesContiguousArTiling)
             gert::StorageShape output = {{3, 1, 1, 1}, {3, 1, 1, 1}};
             INTrainingReduceV2ARFullReduceTilingData nhwcData{};
             INTrainingReduceV2ARFullReduceTilingData nchwData{};
-            ASSERT_EQ(RunTiling(nhwc, output, dtype, ge::FORMAT_NHWC, &nhwcData), 200000U);
-            ASSERT_EQ(RunTiling(nchw, output, dtype, ge::FORMAT_NCHW, &nchwData), 200000U);
+            const auto expectedKey = rows == 221 ? EXPECTED_AR_TILING_KEY : EXPECTED_SPLIT_R_TILING_KEY;
+            ASSERT_EQ(RunTiling(nhwc, output, dtype, ge::FORMAT_NHWC, &nhwcData), expectedKey);
+            ASSERT_EQ(RunTiling(nchw, output, dtype, ge::FORMAT_NCHW, &nchwData), expectedKey);
             EXPECT_EQ(std::memcmp(&nhwcData, &nchwData, sizeof(nhwcData)), 0);
         }
     }
@@ -895,6 +937,13 @@ TEST_F(INTrainingReduceV2TilingTest, FullArPartitionsIndependentRowsAcrossAvaila
             INTrainingReduceV2ARFullReduceTilingData td{};
             ASSERT_EQ(RunTiling(input, output, dtype, ge::FORMAT_NCHW, &td), EXPECTED_AR_TILING_KEY);
             ASSERT_EQ(td.isSubRTiling, 0U);
+            if (batches == 65) {
+                EXPECT_EQ(td.rAlign, 0U);
+                EXPECT_EQ(td.totalTiles, td.cOuter);
+                EXPECT_EQ((td.totalTiles - 1) * td.cInner + td.cTail, batches * 256);
+                EXPECT_LE(td.inputBufferBytes * 2U + td.outputBufferBytes * 4U, MOCK_UB_SIZE);
+                continue;
+            }
             const uint64_t tilesPerInstance = std::max(uint64_t{1}, 64U / static_cast<uint64_t>(batches));
             const uint64_t balancedRows = (256U + tilesPerInstance - 1U) / tilesPerInstance;
             EXPECT_LE(static_cast<uint64_t>(td.cInner), balancedRows);
@@ -907,6 +956,65 @@ TEST_F(INTrainingReduceV2TilingTest, FullArPartitionsIndependentRowsAcrossAvaila
                 EXPECT_EQ(td.perCoreCnt, 1);
             }
         }
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, MediumRPacksOnlyPopulatedRowsAndHonorsGatherAndUbBounds)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        const uint64_t elementBytes = dtype == ge::DT_FLOAT16 ? 2U : 4U;
+        for (int64_t rows : {2047, 2048, 2049, 4080, 4096}) {
+            for (int64_t reduceSize : {65, 96, 129, 137, 144, 192, 255, 256, 257, 302, 352, 511, 512, 513}) {
+                SCOPED_TRACE(::testing::Message() << "rows=" << rows << " R=" << reduceSize << " dtype=" << dtype);
+                gert::StorageShape input = {{rows, 1, reduceSize}, {rows, 1, reduceSize}};
+                gert::StorageShape output = {{rows, 1, 1}, {rows, 1, 1}};
+                INTrainingReduceV2ARFullReduceTilingData td{};
+                ASSERT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, &td), EXPECTED_AR_TILING_KEY);
+                EXPECT_EQ(td.isSubRTiling, 0U);
+                const bool padded = reduceSize * elementBytes % 64U == 0;
+                const uint64_t rowBytes = reduceSize * elementBytes + (padded ? 32U : 0U);
+                const bool fitsPacked = 64U * (2U * rowBytes + 4U * sizeof(float)) + 512U <= MOCK_UB_SIZE;
+                if (rows >= 2048 && reduceSize <= 512 && fitsPacked) {
+                    ASSERT_EQ(td.rAlign, 0U);
+                    EXPECT_EQ(td.cInner % 64, 0);
+                    EXPECT_EQ((td.totalTiles - 1) * td.cInner + td.cTail, rows);
+                    EXPECT_EQ(td.rFactor, padded ? rowBytes / elementBytes : 0U);
+                    EXPECT_LT(64 * (rowBytes / elementBytes), UINT16_MAX);
+                    EXPECT_EQ(td.inputBufferBytes, td.cInner * rowBytes);
+                    EXPECT_LE(td.cInner, UINT16_MAX);
+                    EXPECT_LE(td.inputBufferBytes, (1UL << 21) - 1U);
+                } else {
+                    EXPECT_GT(td.rAlign, 0U);
+                }
+                EXPECT_LE(td.inputBufferBytes * 2U + td.outputBufferBytes * 4U, MOCK_UB_SIZE);
+            }
+        }
+        gert::StorageShape input = {{4096, 1, 137}, {4096, 1, 137}};
+        gert::StorageShape output = {{4096, 1, 1}, {4096, 1, 1}};
+        INTrainingReduceV2ARFullReduceTilingData td{};
+        ASSERT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, &td, ge::DT_FLOAT, ge::DT_FLOAT, 32768),
+                  EXPECTED_AR_TILING_KEY);
+        EXPECT_GT(td.rAlign, 0U);
+        EXPECT_LE(td.inputBufferBytes * 2U + td.outputBufferBytes * 4U, 32768U);
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, PaddedMediumRBoundsDmaRowCountForLargeUb)
+{
+    constexpr uint64_t largeUb = 1U << 30;
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        const uint64_t elementBytes = dtype == ge::DT_FLOAT16 ? 2U : 4U;
+        gert::StorageShape input = {{1, 1L << 32, 96}, {1, 1L << 32, 96}};
+        gert::StorageShape output = {{1, 1L << 32, 1}, {1, 1L << 32, 1}};
+        INTrainingReduceV2ARFullReduceTilingData td{};
+        ASSERT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, &td, ge::DT_FLOAT, ge::DT_FLOAT, largeUb),
+                  EXPECTED_AR_TILING_KEY);
+        ASSERT_EQ(td.rAlign, 0U);
+        EXPECT_EQ(td.rFactor, 96U + 32U / elementBytes);
+        EXPECT_EQ(td.cInner, UINT16_MAX / 64U * 64U);
+        EXPECT_EQ(td.inputBufferBytes, td.cInner * td.rFactor * elementBytes);
+        EXPECT_LE(td.outputBufferBytes, (1UL << 21) - 1U);
+        EXPECT_LE(2U * td.inputBufferBytes + 4U * td.outputBufferBytes + 512U, largeUb);
     }
 }
 
@@ -930,6 +1038,186 @@ TEST_F(INTrainingReduceV2TilingTest, LargeArRowsUseCompensatedSubRAtHorizontalFo
                 }
             }
         }
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, SplitRCoversOriginalSingleRowFailuresAndWorkspace)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        const uint64_t elementBytes = dtype == ge::DT_FLOAT16 ? 2U : 4U;
+        gert::StorageShape small = {{1, 1, 2}, {1, 1, 2}};
+        gert::StorageShape output = {{1, 1, 1}, {1, 1, 1}};
+        size_t baseWorkspace = 0;
+        ASSERT_EQ(RunTiling(small, output, dtype, ge::FORMAT_ND, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, MOCK_UB_SIZE,
+                            nullptr, nullptr, nullptr, nullptr, &baseWorkspace),
+                  EXPECTED_AR_TILING_KEY);
+        for (int64_t reduceSize : {697174, 945972, 1969140, 6293268}) {
+            gert::StorageShape input = {{1, 1, reduceSize}, {1, 1, reduceSize}};
+            INTrainingReduceV2ARFullReduceTilingData td{};
+            uint32_t blocks = 0;
+            size_t workspace = 0;
+            ASSERT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, &td, ge::DT_FLOAT, ge::DT_FLOAT, MOCK_UB_SIZE,
+                                nullptr, nullptr, nullptr, &blocks, &workspace),
+                      EXPECTED_SPLIT_R_TILING_KEY);
+            ExpectSplitRBounds(td, elementBytes);
+            EXPECT_EQ(blocks, td.totalTiles);
+            EXPECT_EQ(workspace, baseWorkspace + blocks * 32U);
+        }
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, SplitRUsesDedicatedKeyAndBatchScheduleAtBoundary)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        for (int64_t reduceSize : {65535, 65536, 65537}) {
+            gert::StorageShape input = {{1, 1, reduceSize}, {1, 1, reduceSize}};
+            gert::StorageShape output = {{1, 1, 1}, {1, 1, 1}};
+            INTrainingReduceV2ARFullReduceTilingData td{};
+            uint32_t blocks = 0;
+            uint32_t scheduleMode = UINT32_MAX;
+            const auto key = RunTiling(input, output, dtype, ge::FORMAT_ND, &td, ge::DT_FLOAT, ge::DT_FLOAT,
+                                       MOCK_UB_SIZE, nullptr, nullptr, nullptr, &blocks, nullptr, &scheduleMode);
+            if (reduceSize == 65535) {
+                EXPECT_EQ(key, EXPECTED_AR_TILING_KEY);
+                EXPECT_EQ(scheduleMode, 0U);
+                EXPECT_EQ(td.isSubRTiling, 1U);
+            } else {
+                EXPECT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
+                EXPECT_EQ(scheduleMode, 1U);
+                EXPECT_EQ(td.isSubRTiling, IN_TRAINING_REDUCE_V2_SPLIT_R_MODE);
+                EXPECT_EQ(blocks, td.totalTiles);
+                if (reduceSize == 65536) {
+                    EXPECT_EQ(blocks, 4U);
+                    EXPECT_EQ(td.cInner, 16384);
+                }
+            }
+        }
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, NonSplitRRoutesKeepNormalSchedule)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        for (int64_t reduceSize : {1, 137, 65537}) {
+            gert::StorageShape input = {{64, 1, reduceSize}, {64, 1, reduceSize}};
+            gert::StorageShape output = {{64, 1, 1}, {64, 1, 1}};
+            uint32_t scheduleMode = UINT32_MAX;
+            EXPECT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, MOCK_UB_SIZE,
+                                nullptr, nullptr, nullptr, nullptr, nullptr, &scheduleMode),
+                      EXPECTED_AR_TILING_KEY);
+            EXPECT_EQ(scheduleMode, 0U);
+        }
+        gert::StorageShape input = {{1, 1, 65537, 3}, {1, 1, 65537, 3}};
+        gert::StorageShape output = {{1, 1, 1, 3}, {1, 1, 1, 3}};
+        uint32_t scheduleMode = UINT32_MAX;
+        EXPECT_EQ(RunTiling(input, output, dtype, ge::FORMAT_NHWC, nullptr, ge::DT_FLOAT, ge::DT_FLOAT, MOCK_UB_SIZE,
+                            nullptr, nullptr, nullptr, nullptr, nullptr, &scheduleMode),
+                  EXPECTED_ARA_TILING_KEY);
+        EXPECT_EQ(scheduleMode, 0U);
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, SplitRPreservesRowOwnershipAndPartitionTails)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        const uint64_t elementBytes = dtype == ge::DT_FLOAT16 ? 2U : 4U;
+        for (int64_t rows : {1, 2, 3, 17, 31, 32, 33, 64}) {
+            for (int64_t reduceSize : {65535, 65536, 65537, 262145}) {
+                gert::StorageShape input = {{rows, 1, reduceSize}, {rows, 1, reduceSize}};
+                gert::StorageShape output = {{rows, 1, 1}, {rows, 1, 1}};
+                INTrainingReduceV2ARFullReduceTilingData td{};
+                const auto key = RunTiling(input, output, dtype, ge::FORMAT_ND, &td);
+                if (reduceSize >= 65536 && rows <= 32) {
+                    ASSERT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
+                    ExpectSplitRBounds(td, elementBytes);
+                } else {
+                    ASSERT_EQ(key, EXPECTED_AR_TILING_KEY);
+                    ExpectSubRSelfConsistent(td, elementBytes);
+                }
+            }
+        }
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, SplitRSupportsContiguousFormatsAndKeepsAraSeparate)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        for (auto format : {ge::FORMAT_NHWC, ge::FORMAT_NDHWC}) {
+            for (int64_t channels : {1, 3}) {
+                gert::StorageShape input = format == ge::FORMAT_NHWC ?
+                                               gert::StorageShape({3, 1, 65537, channels}, {3, 1, 65537, channels}) :
+                                               gert::StorageShape({3, 1, 1, 65537, channels},
+                                                                  {3, 1, 1, 65537, channels});
+                gert::StorageShape output = format == ge::FORMAT_NHWC ?
+                                                gert::StorageShape({3, 1, 1, channels}, {3, 1, 1, channels}) :
+                                                gert::StorageShape({3, 1, 1, 1, channels}, {3, 1, 1, 1, channels});
+                INTrainingReduceV2ARFullReduceTilingData td{};
+                const uint64_t key = RunTiling(input, output, dtype, format, channels == 1 ? &td : nullptr);
+                if (channels == 1) {
+                    ASSERT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
+                    ExpectSplitRBounds(td, dtype == ge::DT_FLOAT16 ? 2U : 4U);
+                } else {
+                    EXPECT_EQ(key, EXPECTED_ARA_TILING_KEY);
+                }
+            }
+        }
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, SplitRFallsBackForSmallUbOrTooManyLocalChunks)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        const uint64_t elementBytes = dtype == ge::DT_FLOAT16 ? 2U : 4U;
+        for (int64_t reduceSize : {65537, 6293268}) {
+            gert::StorageShape input = {{1, 1, reduceSize}, {1, 1, reduceSize}};
+            gert::StorageShape output = {{1, 1, 1}, {1, 1, 1}};
+            INTrainingReduceV2ARFullReduceTilingData td{};
+            // 2 KiB cannot hold even the grouped fallback's minimum buffers.
+            EXPECT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, &td, ge::DT_FLOAT, ge::DT_FLOAT, 2048),
+                      UINT64_MAX);
+        }
+        {
+            gert::StorageShape input = {{1, 1, 6293268}, {1, 1, 6293268}};
+            gert::StorageShape output = {{1, 1, 1}, {1, 1, 1}};
+            INTrainingReduceV2ARFullReduceTilingData td{};
+            ASSERT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, &td, ge::DT_FLOAT, ge::DT_FLOAT, 4096),
+                      EXPECTED_AR_TILING_KEY);
+            EXPECT_EQ(td.isSubRTiling, 1U);
+            EXPECT_LE(SubRUbBytes(td, elementBytes), 4096U - 512U);
+        }
+        gert::StorageShape input = {{1, 1, 2000000000}, {1, 1, 2000000000}};
+        gert::StorageShape output = {{1, 1, 1}, {1, 1, 1}};
+        INTrainingReduceV2ARFullReduceTilingData td{};
+        ASSERT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, &td), EXPECTED_AR_TILING_KEY);
+        ExpectSubRSelfConsistent(td, elementBytes);
+        EXPECT_GT(td.numGroups, 1U);
+    }
+}
+
+TEST_F(INTrainingReduceV2TilingTest, FullArFusedRowsHonorVfAndDmaCountLimitsWithoutScratch)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        for (int64_t reduceSize : {65, 96, 128, 129, 137, 144, 302, 564, 1120, 16384}) {
+            gert::StorageShape input = {{1, 10000000, reduceSize}, {1, 10000000, reduceSize}};
+            gert::StorageShape output = {{1, 10000000, 1}, {1, 10000000, 1}};
+            INTrainingReduceV2ARFullReduceTilingData td{};
+            constexpr uint64_t largeUb = 1UL << 30;
+            ASSERT_EQ(RunTiling(input, output, dtype, ge::FORMAT_ND, &td, ge::DT_FLOAT, ge::DT_FLOAT, largeUb),
+                      EXPECTED_AR_TILING_KEY);
+            EXPECT_EQ(td.isSubRTiling, 0U);
+            EXPECT_LE(td.cInner, UINT16_MAX);
+            EXPECT_GT(td.cInner, 0);
+            EXPECT_EQ(td.scratchBufferBytes, 0U);
+            EXPECT_LE(td.inputBufferBytes * 2U + td.outputBufferBytes * 4U, largeUb);
+        }
+        gert::StorageShape splitInput = {{1, 1, 104439809}, {1, 1, 104439809}};
+        gert::StorageShape splitOutput = {{1, 1, 1}, {1, 1, 1}};
+        INTrainingReduceV2ARFullReduceTilingData splitTd{};
+        constexpr uint64_t largeUb = 1UL << 30;
+        ASSERT_EQ(
+            RunTiling(splitInput, splitOutput, dtype, ge::FORMAT_ND, &splitTd, ge::DT_FLOAT, ge::DT_FLOAT, largeUb),
+            EXPECTED_SPLIT_R_TILING_KEY);
+        ExpectSplitRBounds(splitTd, dtype == ge::DT_FLOAT16 ? 2U : 4U, largeUb);
     }
 }
 
@@ -1442,28 +1730,28 @@ TEST_F(INTrainingReduceV2TilingTest, ndhwc_c1_ar_dt_float)
     EXPECT_EQ(td.totalElements, 90UL);
 }
 
-TEST_F(INTrainingReduceV2TilingTest, ndhwc_c1_sub_r_dt_float16)
+TEST_F(INTrainingReduceV2TilingTest, ndhwc_c1_split_r_dt_float16)
 {
     gert::StorageShape inputShape = {{1, 1, 1, 262145, 1}, {1, 1, 1, 262145, 1}};
     gert::StorageShape outputShape = {{1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}};
     INTrainingReduceV2ARFullReduceTilingData td{};
     const uint64_t key = RunTiling(inputShape, outputShape, ge::DT_FLOAT16, ge::FORMAT_NDHWC, &td, ge::DT_FLOAT,
                                    ge::DT_FLOAT, MOCK_UB_SIZE);
-    ASSERT_EQ(key, EXPECTED_AR_TILING_KEY);
+    ASSERT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
     EXPECT_EQ(td.numN, 1UL);
     EXPECT_EQ(td.numC, 1UL);
     EXPECT_EQ(td.numR, 262145UL);
     EXPECT_EQ(td.totalElements, 262145UL);
 }
 
-TEST_F(INTrainingReduceV2TilingTest, ndhwc_c1_sub_r_dt_float)
+TEST_F(INTrainingReduceV2TilingTest, ndhwc_c1_split_r_dt_float)
 {
     gert::StorageShape inputShape = {{1, 1, 1, 262145, 1}, {1, 1, 1, 262145, 1}};
     gert::StorageShape outputShape = {{1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}};
     INTrainingReduceV2ARFullReduceTilingData td{};
     const uint64_t key = RunTiling(inputShape, outputShape, ge::DT_FLOAT, ge::FORMAT_NDHWC, &td, ge::DT_FLOAT,
                                    ge::DT_FLOAT, MOCK_UB_SIZE);
-    ASSERT_EQ(key, EXPECTED_AR_TILING_KEY);
+    ASSERT_EQ(key, EXPECTED_SPLIT_R_TILING_KEY);
     EXPECT_EQ(td.numN, 1UL);
     EXPECT_EQ(td.numC, 1UL);
     EXPECT_EQ(td.numR, 262145UL);

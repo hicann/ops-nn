@@ -22,6 +22,7 @@ using namespace ge;
 
 namespace optiling {
 constexpr int64_t TILINGKEY_AR_FULL_REDUCE = 200000;
+constexpr int64_t TILINGKEY_SPLIT_R = 300000;
 constexpr int64_t RESERVE_FOR_ALIGN = 512;
 constexpr int64_t FP32_BYTE = 4;
 constexpr int64_t FP16_BYTE = 2;
@@ -30,9 +31,14 @@ constexpr uint64_t BINARY_FOLD_RADIX = 2;
 constexpr uint64_t DOUBLE_BUFFER_COUNT = 2;
 constexpr uint64_t ACC_COMPONENTS = 2;
 constexpr uint64_t REDUCE_OUTPUT_COUNT = 2;
-constexpr uint64_t REDUCE_SCRATCH_COUNT = 2;
 constexpr uint64_t BALANCED_BUDGET_PARTS = 2;
-constexpr uint64_t MAX_FULL_AR_HORIZONTAL_REDUCTIONS = 256;
+constexpr uint64_t MAX_FULL_AR_VECTOR_SEGMENTS = 256;
+constexpr uint64_t MAX_PACKED_R_VECTOR_SEGMENTS = 8;
+constexpr uint64_t MEDIUM_R_CORE_ROW_DIVISOR = 2;
+constexpr uint64_t MIN_SPLIT_R_ELEMENTS = 65536;
+constexpr uint64_t MIN_SPLIT_R_CORE_ELEMENTS = 16384;
+// DAV_3510 DataCopyExtParams::blockLen is a 21-bit byte count.
+constexpr uint64_t MAX_DMA_BLOCK_BYTES = (1UL << 21) - 1;
 // 部分和缓存初始预留比例：numChunks 未知时先按 usable/8 估一版 rFactor，估偏了由联合求解收敛。
 constexpr uint64_t PARTIAL_RESERVE_DIV = 8;
 // 限制单组快路径的联合求解轮数。双分量 partial 增大时逐步缩小 rFactor；
@@ -58,13 +64,18 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
         return false;
     }
 
-    uint64_t ubfp32 = ubBlockSize / sizeof(float);
     // 数据类型的元素宽度
     int64_t elemSize = FP32_BYTE;
     if (dataType == ge::DT_FLOAT16) {
         elemSize = FP16_BYTE;
     }
-    if (r <= vlfp32 && DoPackedRowTiling(static_cast<uint64_t>(elemSize))) {
+    // Medium reductions also benefit from parallel output lanes when enough
+    // rows provide at least half a vector per core. Keep sparse-row cases on
+    // the horizontal VF path.
+    const bool packedMediumR = r <= vlfp32 * MAX_PACKED_R_VECTOR_SEGMENTS &&
+                               totalRows_ / aicoreParams_.blockDim >=
+                                   static_cast<uint64_t>(vlfp32) / MEDIUM_R_CORE_ROW_DIVISOR;
+    if ((r <= vlfp32 || packedMediumR) && DoPackedRowTiling(static_cast<uint64_t>(elemSize))) {
         return true;
     }
     if (r == 1) {
@@ -82,21 +93,19 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
     // 计算二分累加折叠点：小于 rAlign 的最大 2 的幂
     uint64_t binAddQuotient = rAlign == 0 ? 1 : (1UL << (ULONG_BIT_LEN - 1 - __builtin_clzl(rAlign)));
     binAddQuotient = (binAddQuotient == rAlign) ? binAddQuotient / BINARY_FOLD_RADIX : binAddQuotient;
-    // Large full-load rows repeatedly reduce each vector horizontally. The
-    // compensated sub-R implementation accumulates vectors before that fold.
-    if (Ops::Base::CeilDiv(binAddQuotient, static_cast<uint64_t>(vlfp32)) >= MAX_FULL_AR_HORIZONTAL_REDUCTIONS) {
+    if (DoSplitRTiling(rAlign, binAddQuotient, elemSizeValue)) {
+        return true;
+    }
+    // Bound the per-row VF loop; larger rows retain the bounded sub-R path.
+    if (Ops::Base::CeilDiv(rValue, static_cast<uint64_t>(vlfp32)) > MAX_FULL_AR_VECTOR_SEGMENTS) {
         return DoSubRTiling(rAlign, binAddQuotient, elemSize);
     }
-    // 折叠临时缓存单行字节数（保守按字节计）
-    uint64_t binAddBufferOneline = Ops::Base::CeilAlign((binAddQuotient + vlfp32 - 1) / vlfp32, ubfp32) *
-                                   sizeof(float) * ACC_COMPONENTS;
 
     // 单行 UB 占用（删 gamma/beta/y/mean/var/rstd/meanFp32）：
     //   inQueueX_:            rAlign * elemSize        # 双 buf → * 2
     //   outQueueSum_:         sizeof(float)            # 双 buf → * 2
     //   outQueueSquareSum_:   sizeof(float)            # 双 buf → * 2
-    //   binaryAddBuf_:        binAddBufferOneline      # Σx  折叠 scratch
-    //   squareBinaryAddBuf_:  binAddBufferOneline      # Σx² 折叠 scratch（独立，消除跨 VEC_SCOPE 冒险）
+    // 高低部分和保留在寄存器中，不再分配逐向量水平折叠的scratch。
     const uint64_t usable = aicoreParams_.ubSize - RESERVE_FOR_ALIGN;
     if (rAlign > usable / elemSizeValue) {
         return DoSubRTiling(rAlign, binAddQuotient, elemSize);
@@ -104,14 +113,11 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
     const uint64_t alignedInputBytes = rAlign * elemSizeValue;
     const uint64_t outputBytesPerRow = sizeof(float) * DOUBLE_BUFFER_COUNT * REDUCE_OUTPUT_COUNT;
     if (alignedInputBytes > usable / DOUBLE_BUFFER_COUNT ||
-        outputBytesPerRow > usable - alignedInputBytes * DOUBLE_BUFFER_COUNT ||
-        binAddBufferOneline >
-            (usable - alignedInputBytes * DOUBLE_BUFFER_COUNT - outputBytesPerRow) / REDUCE_SCRATCH_COUNT) {
+        outputBytesPerRow > usable - alignedInputBytes * DOUBLE_BUFFER_COUNT) {
         // 单行 R 全载超单次 UB 容量 → sub-R 分块路径，同 TilingKey + isSubRTiling 标志。
         return DoSubRTiling(rAlign, binAddQuotient, elemSize);
     }
-    const uint64_t bytesPerRow = alignedInputBytes * DOUBLE_BUFFER_COUNT + outputBytesPerRow +
-                                 binAddBufferOneline * REDUCE_SCRATCH_COUNT;
+    const uint64_t bytesPerRow = alignedInputBytes * DOUBLE_BUFFER_COUNT + outputBytesPerRow;
     // Unmasked vector loads on the final row must stay within this input allocation.
     const uint64_t lastVectorBytes = Ops::Base::CeilAlign(rValue, static_cast<uint64_t>(vlfp32)) * elemSizeValue;
     const uint64_t inputTailBytes = lastVectorBytes - alignedInputBytes;
@@ -123,16 +129,15 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
     const uint64_t tilesPerInstance = std::max(uint64_t{1}, aicoreParams_.blockDim / static_cast<uint64_t>(a1));
     const uint64_t balancedRows = Ops::Base::CeilDiv(static_cast<uint64_t>(a0), tilesPerInstance);
     cInner = std::min(cInner, balancedRows);
+    // Both the VF row loop and DMA blockCount use uint16_t.
+    cInner = std::min(cInner, static_cast<uint64_t>(std::numeric_limits<uint16_t>::max()));
     uint64_t inputBufferBytes = 0;
     uint64_t outputBufferBytes = 0;
-    uint64_t scratchBufferBytes = 0;
     while (cInner > 0) {
         inputBufferBytes = alignedInputBytes * cInner + inputTailBytes;
         outputBufferBytes = Ops::Base::CeilAlign(cInner * sizeof(float), blockSize);
-        scratchBufferBytes = binAddBufferOneline * cInner + static_cast<uint64_t>(vlfp32) * sizeof(float);
         const uint64_t exactUbBytes = inputBufferBytes * DOUBLE_BUFFER_COUNT +
-                                      outputBufferBytes * DOUBLE_BUFFER_COUNT * REDUCE_OUTPUT_COUNT +
-                                      scratchBufferBytes * REDUCE_SCRATCH_COUNT;
+                                      outputBufferBytes * DOUBLE_BUFFER_COUNT * REDUCE_OUTPUT_COUNT;
         if (exactUbBytes <= aicoreParams_.ubSize) {
             break;
         }
@@ -173,19 +178,87 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
     td_.totalTiles = static_cast<int64_t>(totalTileCnt);
     td_.inputBufferBytes = inputBufferBytes;
     td_.outputBufferBytes = outputBufferBytes;
-    td_.scratchBufferBytes = scratchBufferBytes;
+    td_.scratchBufferBytes = 0;
     td_.partialBufferBytes = 0;
     return true;
 }
 
-// Pack consecutive N*C rows without per-row DMA padding. For short reductions,
-// each vector lane owns one output row; R=1 keeps the elementwise fast path.
+// Borrow idle cores along R, retaining unrounded high/low components until the
+// row owner performs the final compensated reduction. Larger grouped cases
+// fall back to the existing sub-R implementation without a growing workspace.
+bool INTrainingReduceV2ARFullReduceTiling::DoSplitRTiling(uint64_t rAlign, uint64_t binAddQuotient, uint64_t elemSize)
+{
+    const uint64_t rValue = static_cast<uint64_t>(r);
+    const uint64_t vectorElements = static_cast<uint64_t>(vlfp32);
+    if (rValue < MIN_SPLIT_R_ELEMENTS || totalRows_ >= aicoreParams_.blockDim) {
+        return false;
+    }
+    uint64_t parts = std::min(
+        {aicoreParams_.blockDim / totalRows_, vectorElements, Ops::Base::CeilDiv(rValue, MIN_SPLIT_R_CORE_ELEMENTS)});
+    if (parts < 2) {
+        return false;
+    }
+    const uint64_t coreElements = Ops::Base::CeilAlign(Ops::Base::CeilDiv(rValue, parts), vectorElements);
+    parts = Ops::Base::CeilDiv(rValue, coreElements);
+    if (parts < 2) {
+        return false;
+    }
+    const uint64_t usable = aicoreParams_.ubSize - RESERVE_FOR_ALIGN;
+    const uint64_t blockSize = static_cast<uint64_t>(ubBlockSize);
+    const uint64_t partialBytes = vectorElements * sizeof(float) * ACC_COMPONENTS;
+    const uint64_t workspaceRowBytes = parts * blockSize;
+    const uint64_t outputBytes = REDUCE_OUTPUT_COUNT * blockSize;
+    const uint64_t fixedBytes = REDUCE_OUTPUT_COUNT * partialBytes + workspaceRowBytes + outputBytes;
+    if (fixedBytes >= usable) {
+        return false;
+    }
+    const uint64_t maxLoopElements = std::numeric_limits<uint16_t>::max() * vectorElements;
+    const uint64_t maxCopyElements = MAX_DMA_BLOCK_BYTES / elemSize / vectorElements * vectorElements;
+    const uint64_t inputElements = (usable - fixedBytes) / DOUBLE_BUFFER_COUNT / elemSize / vectorElements *
+                                   vectorElements;
+    const uint64_t rFactor = std::min({inputElements, coreElements, maxLoopElements, maxCopyElements});
+    if (rFactor == 0 || Ops::Base::CeilDiv(coreElements, rFactor) > vectorElements) {
+        return false;
+    }
+    blockNum_ = static_cast<int64_t>(totalRows_ * parts);
+    td_.numN = a1;
+    td_.numC = a0;
+    td_.numR = r;
+    td_.rAlign = rAlign;
+    td_.cInner = static_cast<int64_t>(coreElements);
+    td_.cOuter = static_cast<int64_t>(parts);
+    td_.cTail = static_cast<int64_t>(rValue - (parts - 1) * coreElements);
+    td_.binaryAddQuotient = binAddQuotient;
+    td_.perCoreCnt = 1;
+    td_.isSubRTiling = IN_TRAINING_REDUCE_V2_SPLIT_R_MODE;
+    td_.rFactor = rFactor;
+    td_.numChunks = Ops::Base::CeilDiv(coreElements, rFactor);
+    td_.tailLen = coreElements - (td_.numChunks - 1) * rFactor;
+    td_.chunksPerGroup = vectorElements;
+    td_.numGroups = 1;
+    td_.tailChunks = td_.numChunks;
+    td_.totalRows = static_cast<int64_t>(totalRows_);
+    td_.totalElements = static_cast<int64_t>(totalElements_);
+    td_.totalTiles = blockNum_;
+    td_.inputBufferBytes = rFactor * elemSize;
+    td_.outputBufferBytes = outputBytes;
+    td_.scratchBufferBytes = workspaceRowBytes;
+    td_.partialBufferBytes = partialBytes;
+    return true;
+}
+
+// Each vector lane owns one output row. Medium-R rows with an even number
+// of UB blocks add one block between rows to spread gathered lanes across banks.
+// Short reductions retain contiguous DMA; R=1 keeps the elementwise fast path.
 bool INTrainingReduceV2ARFullReduceTiling::DoPackedRowTiling(uint64_t elemSize)
 {
     const uint64_t usable = aicoreParams_.ubSize - RESERVE_FOR_ALIGN;
     const uint64_t vectorElements = static_cast<uint64_t>(vlfp32);
     const uint64_t rowBytes = static_cast<uint64_t>(r) * elemSize;
-    const uint64_t bytesPerRow = DOUBLE_BUFFER_COUNT * (rowBytes + REDUCE_OUTPUT_COUNT * sizeof(float));
+    const uint64_t blockSize = static_cast<uint64_t>(ubBlockSize);
+    const bool padRows = r > vlfp32 && rowBytes % (BINARY_FOLD_RADIX * blockSize) == 0;
+    const uint64_t ubRowBytes = rowBytes + (padRows ? blockSize : 0);
+    const uint64_t bytesPerRow = DOUBLE_BUFFER_COUNT * (ubRowBytes + REDUCE_OUTPUT_COUNT * sizeof(float));
     const uint64_t maxTileRows = usable / bytesPerRow / vectorElements * vectorElements;
     // Small mocked UB capacities can still use the original full-AR path.
     if (maxTileRows == 0) {
@@ -194,7 +267,9 @@ bool INTrainingReduceV2ARFullReduceTiling::DoPackedRowTiling(uint64_t elemSize)
     const uint64_t balancedRows = Ops::Base::CeilAlign(Ops::Base::CeilDiv(totalRows_, aicoreParams_.blockDim),
                                                        vectorElements);
     const uint64_t maxLoopRows = std::numeric_limits<uint16_t>::max() * vectorElements;
-    const uint64_t maxCopyRows = std::numeric_limits<uint32_t>::max() / rowBytes / vectorElements * vectorElements;
+    // Padded DMA uses one block per row; contiguous DMA uses one byte-count block.
+    const uint64_t maxCopyRows = padRows ? std::numeric_limits<uint16_t>::max() / vectorElements * vectorElements :
+                                           MAX_DMA_BLOCK_BYTES / rowBytes / vectorElements * vectorElements;
     const uint64_t tileRows = std::min({maxTileRows, balancedRows, maxLoopRows, maxCopyRows});
     const uint64_t totalTiles = Ops::Base::CeilDiv(totalRows_, tileRows);
     const uint64_t tilesPerCore = Ops::Base::CeilDiv(totalTiles, aicoreParams_.blockDim);
@@ -203,7 +278,8 @@ bool INTrainingReduceV2ARFullReduceTiling::DoPackedRowTiling(uint64_t elemSize)
     td_.numN = a1;
     td_.numC = a0;
     td_.numR = r;
-    td_.rAlign = 0; // Packed rows use masked gathers, with no per-row padding.
+    td_.rAlign = 0; // Packed rows use masked gathers.
+    td_.rFactor = padRows ? ubRowBytes / elemSize : 0;
     td_.cInner = static_cast<int64_t>(tileRows);
     td_.cOuter = static_cast<int64_t>(totalTiles);
     td_.cTail = static_cast<int64_t>(totalRows_ - (totalTiles - 1) * tileRows);
@@ -212,7 +288,7 @@ bool INTrainingReduceV2ARFullReduceTiling::DoPackedRowTiling(uint64_t elemSize)
     td_.totalElements = static_cast<int64_t>(totalElements_);
     td_.totalTiles = static_cast<int64_t>(totalTiles);
     // Full vector loads, including the last partial vector, stay inside UB.
-    td_.inputBufferBytes = tileRows * rowBytes;
+    td_.inputBufferBytes = tileRows * ubRowBytes;
     td_.outputBufferBytes = tileRows * sizeof(float);
     return true;
 }
@@ -378,7 +454,10 @@ bool INTrainingReduceV2ARFullReduceTiling::DoSubRTiling(uint64_t rAlign, uint64_
 
 ge::graphStatus INTrainingReduceV2ARFullReduceTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
-uint64_t INTrainingReduceV2ARFullReduceTiling::GetTilingKey() const { return TILINGKEY_AR_FULL_REDUCE; }
+uint64_t INTrainingReduceV2ARFullReduceTiling::GetTilingKey() const
+{
+    return td_.isSubRTiling == IN_TRAINING_REDUCE_V2_SPLIT_R_MODE ? TILINGKEY_SPLIT_R : TILINGKEY_AR_FULL_REDUCE;
+}
 
 ge::graphStatus INTrainingReduceV2ARFullReduceTiling::PostTiling()
 {
@@ -387,6 +466,12 @@ ge::graphStatus INTrainingReduceV2ARFullReduceTiling::PostTiling()
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;
+    if (td_.isSubRTiling == IN_TRAINING_REDUCE_V2_SPLIT_R_MODE) {
+        // All participating cores must be scheduled together for hardware SyncAll.
+        OP_CHECK_IF(context_->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(GetNodeName(), "Failed to set batch schedule mode for split-R"), return ge::GRAPH_FAILED);
+        currentWorkspace[0] += static_cast<uint64_t>(td_.totalTiles) * static_cast<uint64_t>(ubBlockSize);
+    }
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, rawTilingData);
     OP_CHECK_IF(rawTilingData->GetCapacity() < sizeof(td_),

@@ -114,6 +114,7 @@ protected:
 
 private:
     bool DoPackedRowTiling(uint64_t elemSize);
+    bool DoSplitRTiling(uint64_t rAlign, uint64_t binAddQuotient, uint64_t elemSize);
     // sub-R 分块 tiling（R 超单次 UB 容量）
     bool DoSubRTiling(uint64_t rAlign, uint64_t binAddQuotient, int64_t elemSize);
     // sub-R 路径 Kernel 侧 UB 精确占用（须与 op_kernel/arch35 的 InitSubR() 逐项一致）
