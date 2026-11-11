@@ -41,6 +41,8 @@ constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int64_t BUFFER_NUM = 4;
 // 双缓冲阈值：数据量大于此值时启用双缓冲（迭代三扩展）
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
+// 小 shape 每核最少元素数：低于该粒度时减少开核数，避免每核仅 1~2 个元素的固定开销
+constexpr int64_t MIN_ELEMS_PER_CORE = 2048;
 // 维度约束：proto.h 声明输入支持 1D~8D，拒绝 0 维标量与超过 8 维的输入
 constexpr size_t RELU6_MIN_RANK = 1;
 constexpr size_t RELU6_MAX_RANK = 8;
@@ -137,9 +139,16 @@ static ge::graphStatus Relu6TilingFunc(gert::TilingContext* context)
         return ge::GRAPH_SUCCESS;
     }
 
-    // 多核切分：将总元素按核数均分
+    // 多核切分：小 shape 限制开核数，避免每核仅 1~2 个元素时调度与初始化开销占主导
+    int64_t targetCores = CeilDiv(totalNum, MIN_ELEMS_PER_CORE);
+    if (targetCores > coreNum) {
+        targetCores = coreNum;
+    }
+    if (targetCores < 1) {
+        targetCores = 1;
+    }
     tiling->totalNum = totalNum;
-    tiling->blockFactor = CeilDiv(totalNum, coreNum);
+    tiling->blockFactor = CeilDiv(totalNum, targetCores);
     int64_t usedCoreNum = CeilDiv(totalNum, tiling->blockFactor);
 
     // UB 切分：

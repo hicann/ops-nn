@@ -94,14 +94,18 @@ __aicore__ inline void Relu6<T>::Init(GM_ADDR x, GM_ADDR y, const Relu6TilingDat
     inputGM.SetGlobalBuffer((__gm__ T*)x + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
     outputGM.SetGlobalBuffer((__gm__ T*)y + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
-    // 初始化 UB Buffer：每个 LocalTensor 大小为 ubLength_ * sizeof(T)
-    // 32 字节对齐由 AscendC AllocTensor 自动保证
+    // 初始化 UB Buffer：按本核实际数据量分配，避免小 shape 也按满块 ubFactor 占用 UB
+    // 按 32 字节 UB block 向上对齐（与 DataCopyPad/向量块口径一致）
     // inputQueue: 2 个 buffer（双缓冲），支持 CopyIn 与 Compute/CopyOut 流水并行
     // outputQueue: 1 个 buffer（输出结果）
     // tmpBuf: 1 个 buffer（Maxs 中间结果，独立管理）
-    pipe.InitBuffer(inputQueue, 2, ubLength_ * sizeof(T));
-    pipe.InitBuffer(outputQueue, 1, ubLength_ * sizeof(T));
-    pipe.InitBuffer(tmpBuf, ubLength_ * sizeof(T));
+    constexpr int64_t UB_BLOCK_BYTES = 32;
+    int64_t allocElems = (blockLength_ < ubLength_) ? blockLength_ : ubLength_;
+    int64_t allocBytes = allocElems * static_cast<int64_t>(sizeof(T));
+    allocBytes = (allocBytes + UB_BLOCK_BYTES - 1) / UB_BLOCK_BYTES * UB_BLOCK_BYTES;
+    pipe.InitBuffer(inputQueue, 2, allocBytes);
+    pipe.InitBuffer(outputQueue, 1, allocBytes);
+    pipe.InitBuffer(tmpBuf, allocBytes);
 }
 
 template <typename T>
