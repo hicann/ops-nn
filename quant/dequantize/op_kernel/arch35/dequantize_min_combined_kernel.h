@@ -20,7 +20,7 @@
  *
  * Compute chain:
  *   Cast(T->int32) -> Cast(int32->float32) [two-step for int8/uint8]
- *   VF: Adds(bias) -> Sub(B2,B1)->range -> Mul(range) -> Muls(inv_range) -> Add(B1)
+ *   VF: Sub(B2,B1)->range -> Div(range/denom)->scale -> Adds(bias) -> Mul(scale) -> Add(B1)
  */
 #ifndef DEQUANTIZE_MIN_COMBINED_KERNEL_H_
 #define DEQUANTIZE_MIN_COMBINED_KERNEL_H_
@@ -28,6 +28,9 @@
 #include "kernel_operator.h"
 #include "dequantize_tiling_struct.h"
 #include "dequantize_struct.h"
+
+constexpr AscendC::Reg::DivSpecificMode kMinCombinedDivMode = {AscendC::Reg::MaskMergeMode::ZEROING, false,
+                                                               AscendC::DivAlgo::PRECISION_0ULP_FTZ_TRUE};
 
 // ============================================================
 // Kernel-side helper functions (shared across all modes)
@@ -83,9 +86,10 @@ __simd_vf__ inline void DequantizeMinCombinedVF(__ubuf__ T* dstAddr, // B3 (floa
                                                 __ubuf__ T* minAddr, // B1 (float32, min_range broadcast)
                                                 __ubuf__ T* maxAddr, // B2 (float32, max_range broadcast)
                                                 uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes,
-                                                float bias, float inv_range)
+                                                float bias, float denom)
 {
     AscendC::Reg::RegTensor<T> srcReg, minReg, maxReg, dstReg, rangeReg;
+    AscendC::Reg::RegTensor<T> denomReg, scaleReg;
     AscendC::Reg::MaskReg mask;
     AscendC::Reg::AddrReg aReg;
 
@@ -95,11 +99,12 @@ __simd_vf__ inline void DequantizeMinCombinedVF(__ubuf__ T* dstAddr, // B3 (floa
         AscendC::Reg::LoadAlign(srcReg, srcAddr, aReg);
         AscendC::Reg::LoadAlign(minReg, minAddr, aReg);
         AscendC::Reg::LoadAlign(maxReg, maxAddr, aReg);
-        // VF chain: Adds(bias) -> Sub(max,min)->range -> Mul(range) -> Muls(inv_range) -> Add(min)
-        AscendC::Reg::Adds(dstReg, srcReg, bias, mask);
+        // VF chain: Sub(max,min)->range -> Div(range/denom)->scale -> Adds(bias) -> Mul(scale) -> Add(min)
         AscendC::Reg::Sub(rangeReg, maxReg, minReg, mask);
-        AscendC::Reg::Mul(dstReg, dstReg, rangeReg, mask);
-        AscendC::Reg::Muls(dstReg, dstReg, inv_range, mask);
+        AscendC::Reg::Duplicate(denomReg, denom, mask);
+        AscendC::Reg::Div<T, &kMinCombinedDivMode>(scaleReg, rangeReg, denomReg, mask);
+        AscendC::Reg::Adds(dstReg, srcReg, bias, mask);
+        AscendC::Reg::Mul(dstReg, dstReg, scaleReg, mask);
         AscendC::Reg::Add(dstReg, dstReg, minReg, mask);
         AscendC::Reg::StoreAlign(dstAddr, dstReg, aReg, mask);
     }
@@ -156,6 +161,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (td_->x_numel == 0) {
+            return;
+        }
         int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
         int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
@@ -170,7 +178,7 @@ public:
             inner_count *= td_->max_bro_shape[d];
 
         float bias = td_->bias;
-        float inv_range = td_->inv_range;
+        float denom = td_->denom;
 
         int64_t coord[8] = {};
         for (int64_t flat = start; flat < end; flat++) {
@@ -201,7 +209,7 @@ public:
                                                         (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
                                                         (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
                                                         (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-                                                        count, VL, rep, bias, inv_range);
+                                                        count, VL, rep, bias, denom);
 
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
@@ -220,6 +228,7 @@ private:
     __aicore__ inline void SetupNddmaParams(AscendC::MultiCopyParams<U, ND>& params, int64_t slot, int64_t& outerIters,
                                             int64_t k, const int64_t* dstShape)
     {
+        params.constantValue = static_cast<U>(0);
         int64_t inner = 1;
         int64_t nd = 0;
         for (int64_t d = RANK - 1; d >= k && nd < ND; d--) {

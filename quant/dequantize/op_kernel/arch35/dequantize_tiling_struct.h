@@ -46,8 +46,9 @@ struct DequantizeTilingData {
     int64_t input_strides[kMaxInputSlots][kRank];
     int64_t output_shapes[kMaxOutputSlots][kRank];
     int64_t output_strides[kMaxOutputSlots][kRank];
-    float bias;      // int8: 128.0, uint8: 0.0, int32: 2147483648.0; SCALED: 0.0
-    float inv_range; // MIN_COMBINED/MIN_FIRST: 1/(2^bits-1); SCALED: 1/max_fixed
+    float bias;  // MIN_COMBINED/MIN_FIRST: int8 128.0, uint8 0.0, int32 2147483648.0; SCALED: 0.0
+    float denom; // MIN_COMBINED/MIN_FIRST: 255.0 or 4294967296.0; SCALED: 127.0, 255.0 or 2147483648.0
+    int64_t x_numel;
 };
 
 #endif // DEQUANTIZE_TILING_STRUCT_H_

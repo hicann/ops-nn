@@ -23,21 +23,29 @@
 
 namespace dequantize_ns {
 
-bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
-                         const std::vector<std::vector<int64_t>>& padded_out, int64_t max_rank);
+enum class XDtype : int64_t { INT8 = 0, UINT8 = 1, INT32 = 2 };
 
-bool PadAndSqueeze(const std::vector<std::vector<int64_t>>& input_shapes,
+struct PerBufferLayout {
+    int64_t bytes = 0;
+    int64_t elems = 0;
+};
+
+bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& in_shapes,
+                         const std::vector<std::vector<int64_t>>& out_shapes, int64_t max_rank, const char* op_name);
+
+void PadAndSqueeze(const std::vector<std::vector<int64_t>>& input_shapes,
                    const std::vector<std::vector<int64_t>>& output_shapes, std::vector<int64_t>& maximum_bro_shape,
                    std::vector<std::vector<int64_t>>& normal_input_shapes,
                    std::vector<std::vector<int64_t>>& normal_output_shapes);
 
-bool FindSplitAxis(const std::vector<int64_t>& max_bro_shape, int64_t dtype_size, int64_t ub_per_core,
-                   int64_t phys_nodes, SplitResult& out);
+bool CalcPerBufferLayout(int64_t ub_per_core, int64_t phys_nodes, int64_t dtype_size, PerBufferLayout& out);
+
+bool FindSplitAxis(const std::vector<int64_t>& max_bro_shape, const PerBufferLayout& layout, SplitResult& out);
 
 bool MultiCoreSplit(const std::vector<int64_t>& max_bro_shape, const SplitResult& ub_split, int64_t max_cores,
                     MultiCoreResult& out);
 
-bool PrecomputeStrides(const std::vector<int64_t>& s, std::vector<int64_t>& strides);
+void PrecomputeStrides(const std::vector<int64_t>& s, std::vector<int64_t>& strides);
 
 } // namespace dequantize_ns
 
@@ -55,17 +63,41 @@ public:
 
 private:
     ge::graphStatus GetShapeInfo();
+    ge::graphStatus ValidateNodeInfo();
+    ge::graphStatus ValidateCompileInfo();
+    ge::graphStatus ReadAndValidateShapes();
+    ge::graphStatus ReadOneTensorShape(bool is_input, size_t index, std::vector<int64_t>& dims);
+    ge::graphStatus ResolveDtypeAndMode();
+    ge::graphStatus ResolveInputDtype();
+    ge::graphStatus ValidateRangeDtypes();
+    ge::graphStatus ValidateOutputDtype();
+    ge::graphStatus ParseMode();
+    ge::graphStatus BuildAndValidateBroadcast();
+    void LogShapeInfo();
+
+    int64_t GetModeNum() const;
+    uint64_t GetTilingKey(int64_t rank) const;
+    template <int64_t R>
+    ge::graphStatus RunWithRank();
     template <int64_t R>
     ge::graphStatus DoTilingAndSet();
+    template <int64_t R>
+    bool PrepareSplit(DequantizeTilingData<R>* tiling, int64_t& per_buf_bytes);
+    template <int64_t R>
+    void FillShapeAndStrideTiling(DequantizeTilingData<R>* tiling);
+    template <int64_t R>
+    void FillScalarTiling(DequantizeTilingData<R>* tiling, int64_t per_buf_bytes);
+    template <int64_t R>
+    void LogTilingData(const DequantizeTilingData<R>* tiling) const;
+
     template <int64_t R>
     void FillInputTilingData(DequantizeTilingData<R>* tiling, int64_t num_in, int64_t delta,
                              const std::vector<std::vector<int64_t>>& in_strides);
     template <int64_t R>
     void FillOutputTilingData(DequantizeTilingData<R>* tiling, int64_t num_out, int64_t delta,
                               const std::vector<std::vector<int64_t>>& out_strides);
-    ge::graphStatus ResolveDtype();
+
     void PrecomputeConstants();
-    ge::graphStatus ReadTensorShapes(bool is_input, std::vector<std::vector<int64_t>>& raw_shapes);
 
     gert::TilingContext* ctx_;
     std::vector<std::vector<int64_t>> raw_input_shapes_;
@@ -73,12 +105,12 @@ private:
     std::vector<int64_t> max_bro_shape_;
     std::vector<std::vector<int64_t>> normal_input_shapes_;
     std::vector<std::vector<int64_t>> normal_output_shapes_;
-    int64_t dtype_size_ = 0;
     int64_t rank_ = 0;
+    int64_t x_numel_ = 0;
     std::string mode_;
-    int64_t dtype_x_ = 0;
+    dequantize_ns::XDtype dtype_x_ = dequantize_ns::XDtype::INT8;
     float bias_ = 0.0f;
-    float inv_range_ = 0.0f;
+    float denom_ = 0.0f;
 };
 
 } // namespace optiling

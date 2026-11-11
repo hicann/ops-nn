@@ -20,7 +20,7 @@
  *   B2 = max_range (float32) via NDDMA broadcast
  *   B3 = output y (float32)
  *
- * VF chain: Mul(B3, B2) -> Muls(inv_range)
+ * VF chain: Div(B2/denom)->scale -> Mul(B3, scale)
  */
 #ifndef DEQUANTIZE_SCALED_KERNEL_H_
 #define DEQUANTIZE_SCALED_KERNEL_H_
@@ -29,13 +29,16 @@
 #include "dequantize_tiling_struct.h"
 #include "dequantize_struct.h"
 
+constexpr AscendC::Reg::DivSpecificMode kScaledDivMode = {AscendC::Reg::MaskMergeMode::ZEROING, false,
+                                                          AscendC::DivAlgo::PRECISION_0ULP_FTZ_TRUE};
+
 // VF function: SCALED compute chain
 template <typename T>
 __simd_vf__ inline void DequantizeScaledVF(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, __ubuf__ T* maxAddr,
-                                           uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes,
-                                           float inv_range)
+                                           uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes, float denom)
 {
     AscendC::Reg::RegTensor<T> srcReg, maxReg, dstReg;
+    AscendC::Reg::RegTensor<T> denomReg, scaleReg;
     AscendC::Reg::MaskReg mask;
     AscendC::Reg::AddrReg aReg;
 
@@ -44,9 +47,10 @@ __simd_vf__ inline void DequantizeScaledVF(__ubuf__ T* dstAddr, __ubuf__ T* srcA
         mask = AscendC::Reg::UpdateMask<T>(count);
         AscendC::Reg::LoadAlign(srcReg, srcAddr, aReg);
         AscendC::Reg::LoadAlign(maxReg, maxAddr, aReg);
-        // VF chain: Mul(src, max_range) -> Muls(inv_range)
-        AscendC::Reg::Mul(dstReg, srcReg, maxReg, mask);
-        AscendC::Reg::Muls(dstReg, dstReg, inv_range, mask);
+        // VF chain: Div(max_range, denom)->scale -> Mul(src, scale)
+        AscendC::Reg::Duplicate(denomReg, denom, mask);
+        AscendC::Reg::Div<T, &kScaledDivMode>(scaleReg, maxReg, denomReg, mask);
+        AscendC::Reg::Mul(dstReg, srcReg, scaleReg, mask);
         AscendC::Reg::StoreAlign(dstAddr, dstReg, aReg, mask);
     }
 }
@@ -92,6 +96,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (td_->x_numel == 0) {
+            return;
+        }
         int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
         int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
@@ -105,7 +112,7 @@ public:
         for (int64_t d = td_->split.axis + 1; d < RANK; d++)
             inner_count *= td_->max_bro_shape[d];
 
-        float inv_range = td_->inv_range;
+        float denom = td_->denom;
 
         int64_t coord[8] = {};
         for (int64_t flat = start; flat < end; flat++) {
@@ -133,7 +140,7 @@ public:
             asc_vf_call<DequantizeScaledVF<float>>((__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
                                                    (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
                                                    (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(), count,
-                                                   VL, rep, inv_range);
+                                                   VL, rep, denom);
 
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
@@ -151,6 +158,7 @@ private:
     __aicore__ inline void SetupNddmaParams(AscendC::MultiCopyParams<U, ND>& params, int64_t slot, int64_t& outerIters,
                                             int64_t k, const int64_t* dstShape)
     {
+        params.constantValue = static_cast<U>(0);
         int64_t inner = 1;
         int64_t nd = 0;
         for (int64_t d = RANK - 1; d >= k && nd < ND; d--) {

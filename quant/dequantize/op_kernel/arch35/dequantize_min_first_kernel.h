@@ -16,7 +16,7 @@
  * int32 path is identical to MIN_COMBINED
  * offset correction is handled by ProcessMinFirstOffset
  *
- * VF chain: Adds(bias) -> Sub(max,min)->range -> Mul(range) -> Muls(inv_range) -> Add(min)
+ * VF chain: Sub(max,min)->range -> Div(range/denom)->scale -> Adds(bias) -> Mul(scale) -> Add(min)
  */
 #ifndef DEQUANTIZE_MIN_FIRST_KERNEL_H_
 #define DEQUANTIZE_MIN_FIRST_KERNEL_H_
@@ -25,13 +25,21 @@
 #include "dequantize_tiling_struct.h"
 #include "dequantize_struct.h"
 
+// scale = (max-min)/denom 只参与浮点乘加，0ULP 精度即可；
+constexpr AscendC::Reg::DivSpecificMode kMinFirstScaleDivMode = {AscendC::Reg::MaskMergeMode::ZEROING, false,
+                                                                 AscendC::DivAlgo::PRECISION_0ULP_FTZ_TRUE};
+// q = round(-min*denom/(max-min)) 需要 0ULP 正确舍入；
+constexpr AscendC::Reg::DivSpecificMode kMinFirstQDivMode = {AscendC::Reg::MaskMergeMode::ZEROING, false,
+                                                             AscendC::DivAlgo::PRECISION_0ULP_FTZ_TRUE};
+
 // VF function: MIN_FIRST compute chain
 template <typename T>
 __simd_vf__ inline void DequantizeMinFirstVF(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, __ubuf__ T* minAddr,
                                              __ubuf__ T* maxAddr, uint32_t count, uint32_t oneRepeatSize,
-                                             uint16_t repeatTimes, float bias, float inv_range)
+                                             uint16_t repeatTimes, float bias, float denom)
 {
     AscendC::Reg::RegTensor<T> srcReg, minReg, maxReg, dstReg, rangeReg;
+    AscendC::Reg::RegTensor<T> denomReg, scaleReg;
     AscendC::Reg::MaskReg mask;
     AscendC::Reg::AddrReg aReg;
 
@@ -41,11 +49,12 @@ __simd_vf__ inline void DequantizeMinFirstVF(__ubuf__ T* dstAddr, __ubuf__ T* sr
         AscendC::Reg::LoadAlign(srcReg, srcAddr, aReg);
         AscendC::Reg::LoadAlign(minReg, minAddr, aReg);
         AscendC::Reg::LoadAlign(maxReg, maxAddr, aReg);
-        // VF chain: Adds(bias) -> Sub(max,min) -> Mul(range) -> Muls(inv_range) -> Add(min)
-        AscendC::Reg::Adds(dstReg, srcReg, bias, mask);
+        // VF chain: Sub(max,min)->range -> Div(range/denom)->scale -> Adds(bias) -> Mul(scale) -> Add(min)
         AscendC::Reg::Sub(rangeReg, maxReg, minReg, mask);
-        AscendC::Reg::Mul(dstReg, dstReg, rangeReg, mask);
-        AscendC::Reg::Muls(dstReg, dstReg, inv_range, mask);
+        AscendC::Reg::Duplicate(denomReg, denom, mask);
+        AscendC::Reg::Div<T, &kMinFirstScaleDivMode>(scaleReg, rangeReg, denomReg, mask);
+        AscendC::Reg::Adds(dstReg, srcReg, bias, mask);
+        AscendC::Reg::Mul(dstReg, dstReg, scaleReg, mask);
         AscendC::Reg::Add(dstReg, dstReg, minReg, mask);
         AscendC::Reg::StoreAlign(dstAddr, dstReg, aReg, mask);
     }
@@ -53,7 +62,8 @@ __simd_vf__ inline void DequantizeMinFirstVF(__ubuf__ T* dstAddr, __ubuf__ T* sr
 
 template <typename T>
 __simd_vf__ inline void DequantizeMinFirstOffsetPreVF(__ubuf__ T* tempAddr, __ubuf__ T* minAddr, __ubuf__ T* maxAddr,
-                                                      uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+                                                      uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes,
+                                                      float denom)
 {
     AscendC::Reg::RegTensor<T> minReg, maxReg, rangeReg, tmpReg;
     AscendC::Reg::MaskReg mask;
@@ -66,8 +76,8 @@ __simd_vf__ inline void DequantizeMinFirstOffsetPreVF(__ubuf__ T* tempAddr, __ub
         AscendC::Reg::LoadAlign(maxReg, maxAddr, aReg);
         AscendC::Reg::Sub(rangeReg, maxReg, minReg, mask);
         AscendC::Reg::Maxs(rangeReg, rangeReg, 1e-30f, mask);
-        AscendC::Reg::Muls(tmpReg, minReg, -255.0f, mask);
-        AscendC::Reg::Div(tmpReg, tmpReg, rangeReg, mask);
+        AscendC::Reg::Muls(tmpReg, minReg, -denom, mask);
+        AscendC::Reg::Div<T, &kMinFirstQDivMode>(tmpReg, tmpReg, rangeReg, mask);
         AscendC::Reg::StoreAlign(tempAddr, tmpReg, aReg, mask);
     }
 }
@@ -75,10 +85,11 @@ __simd_vf__ inline void DequantizeMinFirstOffsetPreVF(__ubuf__ T* tempAddr, __ub
 template <typename T>
 __simd_vf__ inline void DequantizeMinFirstOffsetPostVF(__ubuf__ T* dstAddr, __ubuf__ T* minAddr, __ubuf__ T* maxAddr,
                                                        __ubuf__ T* roundAddr, uint32_t count, uint32_t oneRepeatSize,
-                                                       uint16_t repeatTimes, float inv_range)
+                                                       uint16_t repeatTimes, float denom)
 {
     AscendC::Reg::RegTensor<T> dstReg, minReg, maxReg, rangeReg, roundReg, tmpReg;
-    AscendC::Reg::MaskReg mask;
+    AscendC::Reg::RegTensor<T> denomReg, scaleReg;
+    AscendC::Reg::MaskReg mask, zeroMask;
     AscendC::Reg::AddrReg aReg;
 
     for (uint16_t i = 0; i < repeatTimes; ++i) {
@@ -89,10 +100,14 @@ __simd_vf__ inline void DequantizeMinFirstOffsetPostVF(__ubuf__ T* dstAddr, __ub
         AscendC::Reg::LoadAlign(maxReg, maxAddr, aReg);
         AscendC::Reg::LoadAlign(roundReg, roundAddr, aReg);
         AscendC::Reg::Sub(rangeReg, maxReg, minReg, mask);
-        AscendC::Reg::Mul(tmpReg, roundReg, rangeReg, mask);
-        AscendC::Reg::Muls(tmpReg, tmpReg, inv_range, mask);
+        // zero-range (max==min)按 TF/DESIGN 退化为 MIN_COMBINED，输出 min。
+        AscendC::Reg::Compares<T, AscendC::CMPMODE::EQ>(zeroMask, rangeReg, 0.0f, mask);
+        AscendC::Reg::Duplicate(denomReg, denom, mask);
+        AscendC::Reg::Div<T, &kMinFirstScaleDivMode>(scaleReg, rangeReg, denomReg, mask);
+        AscendC::Reg::Mul(tmpReg, roundReg, scaleReg, mask);
         AscendC::Reg::Add(tmpReg, minReg, tmpReg, mask);
         AscendC::Reg::Sub(dstReg, dstReg, tmpReg, mask);
+        AscendC::Reg::Select<T>(dstReg, minReg, dstReg, zeroMask);
         AscendC::Reg::StoreAlign(dstAddr, dstReg, aReg, mask);
     }
 }
@@ -143,6 +158,9 @@ public:
 
     __aicore__ inline void Process()
     {
+        if (td_->x_numel == 0) {
+            return;
+        }
         int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
         int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
@@ -157,7 +175,7 @@ public:
             inner_count *= td_->max_bro_shape[d];
 
         float bias = td_->bias;
-        float inv_range = td_->inv_range;
+        float denom = td_->denom;
 
         int64_t coord[8] = {};
         for (int64_t flat = start; flat < end; flat++) {
@@ -184,10 +202,10 @@ public:
                                                      (__ubuf__ float*)buf_[B3].template Get<float>().GetPhyAddr(),
                                                      (__ubuf__ float*)buf_[B1].template Get<float>().GetPhyAddr(),
                                                      (__ubuf__ float*)buf_[B2].template Get<float>().GetPhyAddr(),
-                                                     count, VL, rep, bias, inv_range);
+                                                     count, VL, rep, bias, denom);
 
             if constexpr (!std::is_same_v<T, int32_t>) {
-                ProcessMinFirstOffset(count, inv_range);
+                ProcessMinFirstOffset(count, denom);
             }
 
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
@@ -206,6 +224,7 @@ private:
     __aicore__ inline void SetupNddmaParams(AscendC::MultiCopyParams<U, ND>& params, int64_t slot, int64_t& outerIters,
                                             int64_t k, const int64_t* dstShape)
     {
+        params.constantValue = static_cast<U>(0);
         int64_t inner = 1;
         int64_t nd = 0;
         for (int64_t d = RANK - 1; d >= k && nd < ND; d--) {
@@ -229,13 +248,13 @@ private:
             outerIters *= (d == k) ? td_->split.a_i : dstShape[d];
     }
 
-    __aicore__ inline void ProcessMinFirstOffset(int64_t count, float inv_range)
+    __aicore__ inline void ProcessMinFirstOffset(int64_t count, float denom)
     {
         uint16_t rep_off = AscendC::CeilDivision(count, (int64_t)VL);
         asc_vf_call<DequantizeMinFirstOffsetPreVF<float>>((__ubuf__ float*)buf_[4].template Get<float>().GetPhyAddr(),
                                                           (__ubuf__ float*)buf_[1].template Get<float>().GetPhyAddr(),
                                                           (__ubuf__ float*)buf_[2].template Get<float>().GetPhyAddr(),
-                                                          count, VL, rep_off);
+                                                          count, VL, rep_off, denom);
         AscendC::Cast(buf_[0].template Get<int32_t>(), buf_[4].template Get<float>(), AscendC::RoundMode::CAST_ROUND,
                       count);
         AscendC::Cast(buf_[4].template Get<float>(), buf_[0].template Get<int32_t>(), AscendC::RoundMode::CAST_NONE,
@@ -244,7 +263,7 @@ private:
                                                            (__ubuf__ float*)buf_[1].template Get<float>().GetPhyAddr(),
                                                            (__ubuf__ float*)buf_[2].template Get<float>().GetPhyAddr(),
                                                            (__ubuf__ float*)buf_[4].template Get<float>().GetPhyAddr(),
-                                                           count, VL, rep_off, inv_range);
+                                                           count, VL, rep_off, denom);
     }
 
     __aicore__ inline void DoCast(int srcSlot, int dstSlot, int64_t count)

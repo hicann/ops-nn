@@ -55,9 +55,14 @@ static ge::graphStatus InferShape4Dequantize(gert::InferShapeContext* context)
 
     *output_shape = *x_shape;
 
-    // Unknown rank (-2): pass through, skip broadcast check
-    if (IsUnknownRank(x_shape)) {
-        OP_LOGD(context, "Dequantize: input x is unknown rank [-2], skip broadcast check.");
+    // Unknown rank (-2) only exists at compile time: pass through x shape and skip broadcast checks.
+    const bool xUnknownRank = IsUnknownRank(x_shape);
+    const bool minUnknownRank = IsUnknownRank(min_shape);
+    const bool maxUnknownRank = IsUnknownRank(max_shape);
+    if (xUnknownRank || minUnknownRank || maxUnknownRank) {
+        OP_LOGI(context->GetNodeName(),
+                "Dequantize: unknown rank inputs: x=%d, min_range=%d, max_range=%d, skip broadcast check.",
+                static_cast<int>(xUnknownRank), static_cast<int>(minUnknownRank), static_cast<int>(maxUnknownRank));
         OP_LOGI(context->GetNodeName(), "Dequantize output shape: %s.", Ops::Base::ToString(*output_shape).c_str());
         return ge::GRAPH_SUCCESS;
     }
