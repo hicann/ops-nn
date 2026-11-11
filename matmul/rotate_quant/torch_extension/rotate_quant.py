@@ -25,6 +25,7 @@ _FP8_E4M3FN = 24
 _NPU_FP8_E5M2 = 291
 _NPU_FP8_E4M3FN = 292
 _FP4 = 296
+_MX_SCALE_DTYPE = getattr(torch, "float8_e8m0fnu", None)
 
 _MIN_INPUT_RANK = 1
 _MAX_INPUT_RANK = 7
@@ -135,6 +136,10 @@ def _check_params(
     torch._check(n % k == 0, lambda: "x last dimension must be divisible by K")
     if is_mx:
         torch._check(
+            _MX_SCALE_DTYPE is not None,
+            lambda: "MX output requires torch.float8_e8m0fnu support",
+        )
+        torch._check(
             k in _SUPPORTED_MX_ROT_K_SIZES,
             lambda: "MX rotation K must be 32, 64, 128 or 256",
         )
@@ -243,7 +248,7 @@ class RotateQuantOpBuilder(OpBuilder):
                     (x.shape[-1] + _MX_SCALE_PAIR_SIZE - 1) // _MX_SCALE_PAIR_SIZE,
                     _MX_SCALES_PER_PAIR,
                 ]
-                scale_dtype = torch.uint8
+                scale_dtype = _MX_SCALE_DTYPE
             return (
                 x.new_empty(out_shape, dtype=_OUTPUT_DTYPES[dst_dtype]),
                 x.new_empty(scale_shape, dtype=scale_dtype),
@@ -277,6 +282,7 @@ def rotate_quant(
             Grouped: [E, K, K] or [E, N/K, K, K], with 1 <= E <= 1024.
         alpha: Optional bfloat16 [1] clipping factor for MX output.
         dst_dtype: INT8 (default), packed INT4, MXFP4 or MXFP8 target enum.
+            FP4 uses torch_npu.float4_e2m1fn_x2.
             Ascend 950 requires an explicit MX target; A2/A3 support INT8/INT4.
         axis: -1 or x.dim()-1, default -1.
         round_mode: 'rint', 'round' or 'floor'; MXFP8 requires 'rint'.
@@ -288,10 +294,11 @@ def rotate_quant(
         group_list_type: 0 for cumulative row counts, 1 for row counts.
 
     Returns:
-        (y, scale) on x.device. INT4 uses int32 [M, N/8]; FP4 uses uint8 [*, N/2];
-        other targets retain x.shape. INT scale is float32 [M]; MX scale is
-        uint8 [*, ceil(N/64), 2] containing E8M0 codes. Uncovered grouped rows
-        have unspecified contents. See docs/torchapi_rotate_quant.md for limits.
+        (y, scale) on x.device. INT4 uses int32 [M, N/8]; FP4 uses packed
+        uint8 [*, N/2] and requires unpacking. Other targets retain x.shape.
+        INT scale is float32 [M]; MX scale is native float8_e8m0fnu [*, ceil(N/64), 2].
+        Uncovered grouped rows have unspecified contents.
+        See docs/torchapi_rotate_quant.md for limits.
     """
     _check_params(
         x,

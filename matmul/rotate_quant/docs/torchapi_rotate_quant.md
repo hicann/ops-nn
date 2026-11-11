@@ -56,10 +56,10 @@ x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_mode="rint", scale_al
 | x | Tensor | 必选 | 待旋转量化的输入张量。 | torch.float16、torch.bfloat16 | (*, N)或(M, N) |
 | rotation | Tensor | 必选 | 旋转矩阵，数据类型与x一致。 | torch.float16、torch.bfloat16 | (K, K)或(N/K, K, K)或(E, K, K)或(E, N/K, K, K) |
 | alpha | Tensor | 可选 | 裁剪系数，用于控制旋转结果的clamp范围。默认值None，表示不执行clamp。 | torch.bfloat16 | (1,) |
-| dst_dtype | int | 可选 | 指定量化目标类型。支持torch.int8、torch.quint4x2、torch_npu.float4_e2m1fn_x2、torch.float8_e5m2和torch.float8_e4m3fn；FP8也支持对应的torch_npu类型。默认值None，按torch.int8处理，MX量化需显式指定目标类型。 | - | - |
+| dst_dtype | int | 可选 | 指定量化目标类型。支持torch.int8、torch.quint4x2、torch_npu.float4_e2m1fn_x2、torch.float8_e5m2和torch.float8_e4m3fn。默认值None，按torch.int8处理。 | - | - |
 | axis | int | 可选 | 量化轴，只支持-1或x.dim()-1。默认值-1。 | - | - |
-| round_mode | str | 可选 | 量化结果的取整方式，支持rint、round、floor；MXFP8仅支持rint。默认值rint。 | - | - |
-| scale_alg | int | 可选 | 缩放因子计算方法。MXFP4支持0、2，MXFP8支持0、1，INT8/INT4仅支持0。默认值0。 | - | - |
+| round_mode | str | 可选 | 量化结果的取整方式，支持rint、round、floor。默认值rint。 | - | - |
+| scale_alg | int | 可选 | 缩放因子计算方法。默认值0。 | - | - |
 | dst_type_max | float | 可选 | 量化目标类型的最大值。scale_alg为2时取值范围为[6, 12]，其他情况仅支持0.0。默认值0.0。 | - | - |
 | transpose_y | bool | 可选 | 是否对输出y进行转置，当前仅支持False。默认值False。 | - | - |
 | group_list | Tensor | 可选 | 代表量化分组大小分布，E为分组数，满足1≤E≤1024，默认值None。 | torch.int64 | (E,) |
@@ -69,8 +69,8 @@ x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_mode="rint", scale_al
 
 | 输出名 | 输出类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| y | Tensor | 必选 | 输出的量化结果，数据类型根据dst_dtype决定。数据格式支持ND。 | torch.int8、torch.int32、torch.uint8、torch.float8_e5m2、torch.float8_e4m3fn | INT8为(M, N)；INT4为(M, N/8)；其余场景为(*, N) |
-| scale | Tensor | 必选 | 输出的缩放因子。当dst_dtype为MX类型时，scale为存储E8M0编码的torch.uint8 Tensor；当dst_dtype为INT8或INT4类型时，scale为torch.float32类型的pertoken缩放因子。 | torch.float32、torch.uint8 | pertoken量化时为(M,)；MX量化时为(*, ceil(N/64), 2) |
+| y | Tensor | 必选 | 输出的量化结果。FP4场景使用torch.uint8承载打包编码，每字节存储两个FP4值，查看实际值需自行解包；其他场景的数据类型根据dst_dtype决定。数据格式支持ND。 | torch.int8、torch.int32、torch.uint8、torch.float8_e5m2、torch.float8_e4m3fn | INT8为(M, N)；INT4为(M, N/8)；FP4为(*, N/2)；FP8为(*, N) |
+| scale | Tensor | 必选 | 输出的缩放因子。当dst_dtype为MX类型时，scale的数据类型为torch.float8_e8m0fnu，对应底层ACL的FLOAT8_E8M0类型；当dst_dtype为INT8或INT4类型时，scale为torch.float32类型的pertoken缩放因子。 | torch.float32、torch.float8_e8m0fnu | pertoken量化时为(M,)；MX量化时为(*, ceil(N/64), 2) |
 
 ## 约束说明
 
@@ -87,11 +87,13 @@ x, rotation, *, alpha=None, dst_dtype=None, axis=-1, round_mode="rint", scale_al
   - group_list不为None时，x的shape为(M, N)，维度仅限二维；rotation的shape为(E, K, K)或(E, N/K, K, K)，维度范围[3, 4]。
   - K值仅支持取32，64，128，256。
   - x最后一维的长度(N)必须是K的整数倍。
-  - dst_dtype支持torch_npu.float4_e2m1fn_x2、torch.float8_e4m3fn或torch.float8_e5m2，FP8也支持对应的torch_npu类型。
+  - 当dst_dtype为torch_npu.float4_e2m1fn_x2时，输入x最后一维的长度(N)必须同时可被2整除。
+  - dst_dtype支持torch_npu.float4_e2m1fn_x2、torch.float8_e4m3fn或torch.float8_e5m2。
   - x和rotation的数据类型必须相同，必须同时为torch.bfloat16或torch.float16。
   - rotation最后两维的长度必须一致。
-  - scale的shape为(*, ceil(N/64), 2)，维度支持2-8，返回的Tensor数据类型为torch.uint8，存储E8M0编码，对应底层ACL的FLOAT8_E8M0格式。
-  - 当dst_dtype为torch_npu.float4_e2m1fn_x2时，y以torch.uint8存储，每字节打包两个FP4值，shape为(*, N/2)；当dst_dtype为FP8类型时，y的数据类型为对应的torch.float8_e4m3fn或torch.float8_e5m2，shape与x相同。
+  - scale的shape为(*, ceil(N/64), 2)，维度支持2-8，返回的Tensor数据类型为torch.float8_e8m0fnu，对应底层ACL的FLOAT8_E8M0类型。
+  - 当dst_dtype为FP4类型时，为兼容未提供原生FP4类型的Torch版本，y使用torch.uint8返回，每字节打包两个FP4值，shape为(*, N/2)，查看实际值需按FP4编码自行解包。当dst_dtype为FP8类型时，y的数据类型为对应的torch.float8_e4m3fn或torch.float8_e5m2，shape与x相同。
+  - MX量化需要运行环境支持原生torch.float8_e8m0fnu，以保证scale返回E8M0类型；不支持时接口报错。
   - alpha为可选输入，不为None时，shape为(1,)，数据类型为torch.bfloat16，有效取值范围(0.0, 1.0)。传入None或者不在有效取值范围内不做clamp处理。
   - axis目前只支持-1或者D-1，D为x的shape的维数。
   - round_mode支持"rint"、"round"、"floor"，传入None时，采用"rint"模式。当dst_dtype为FP8类型时，round_mode仅支持"rint"。
@@ -139,8 +141,6 @@ M, N, K = 640, 4096, 128
 x = torch.randn(M, N, dtype=torch.bfloat16, device="npu:0")
 rotation = torch.randn(N // K, K, K, dtype=x.dtype, device=x.device)
 y, scale = cann_ops_nn.rotate_quant(x, rotation, dst_dtype=torch.float8_e4m3fn)
-assert y.shape == (M, N)
-assert scale.shape == (M, (N + 63) // 64, 2)
 ```
 
 带可选输入：
@@ -162,14 +162,11 @@ for rotation_shape in ((E, K, K), (E, N // K, K, K)):
         x, rotation, alpha=alpha, dst_dtype=torch_npu.float4_e2m1fn_x2,
         scale_alg=2, dst_type_max=6.0, group_list=group_list, group_list_type=1,
     )
-    assert y.shape == (M, N // 2)
-    assert scale.shape == (M, (N + 63) // 64, 2)
 
     # 仅将组表改为 cumsum 表达，保持输入、rotation 和量化参数一致。
     y_cumsum, scale_cumsum = cann_ops_nn.rotate_quant(
         x, rotation, alpha=alpha, dst_dtype=torch_npu.float4_e2m1fn_x2,
         scale_alg=2, dst_type_max=6.0, group_list=group_cumsum, group_list_type=0,
     )
-    assert torch.equal(y, y_cumsum)
-    assert torch.equal(scale, scale_cumsum)
+
 ```

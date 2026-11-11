@@ -74,6 +74,8 @@ std::tuple<at::Tensor, at::Tensor> rotate_quant(const at::Tensor& x, const at::T
             out_scalar_type = at::kInt;
             break;
         case ACL_FLOAT4_E2M1:
+            TORCH_CHECK(dst_dtype_value == static_cast<int64_t>(ACL_FLOAT4_E2M1) + g_toAclOffset,
+                        "FP4 output must be requested with dst_dtype=torch_npu.float4_e2m1fn_x2");
             out_scalar_type = at::kByte;
             break;
         case ACL_FLOAT8_E5M2:
@@ -110,7 +112,13 @@ std::tuple<at::Tensor, at::Tensor> rotate_quant(const at::Tensor& x, const at::T
     }
     auto y = at::empty(out_shape, x.options().dtype(out_scalar_type));
     auto scale = at::empty(scale_shape, x.options().dtype(is_mx ? at::kByte : at::kFloat));
-    TensorWrapper y_wrapper{y, out_acl_type};
+    // Keep FP4 output packed in uint8 for Torch versions without native FP4 support.
+    // Expose E8M0 scales with their native dtype for subsequent operators.
+    if (is_mx) {
+        scale = scale.view(at::ScalarType::Float8_e8m0fnu);
+    }
+    // Torch counts packed FP4 bytes; ACLNN uses logical FP4 elements.
+    TensorWrapper y_wrapper{y, out_acl_type, out_acl_type == ACL_FLOAT4_E2M1 ? y.dim() - 1 : -1};
     TensorWrapper scale_wrapper{scale, is_mx ? ACL_FLOAT8_E8M0 : ACL_FLOAT};
 
     const int64_t axis_value = axis.value_or(-1);

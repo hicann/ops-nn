@@ -15,19 +15,17 @@ import os
 import sys
 
 import numpy as np
+import torch
 
 sys.path.insert(0, os.path.dirname(__file__))
 from rotate_quant_kernel_golden import (
     _as_numpy,
-    _shape_dtype_failure,
     compare_grouped_outputs,
-    compare_quantized,
     compute_grouped_rotate_mx,
     compute_rotate_mx,
     np_fp4_e2m1,
     np_mx_scale,
 )
-
 
 _DST_TO_MX = {
     296: "float4_e2m1",
@@ -43,29 +41,50 @@ def _mx_dtype(dst_dtype):
     name = str(dst_dtype).split(".")[-1]
     if name in ("float8_e5m2", "float8_e4m3fn"):
         return name
-    if name == "float4_e2m1fn_x2":
-        return "float4_e2m1"
     if dst_dtype not in _DST_TO_MX:
         raise ValueError("Ascend 950 E2E golden requires an explicit MX dst_dtype")
     return _DST_TO_MX[dst_dtype]
 
 
-def _pack_fp4(values):
-    """Two E2M1 codes per byte: the first logical element is the low nibble."""
-    codes = np.ascontiguousarray(values).view(np.uint8) & 0x0F
-    if codes.shape[-1] % 2:
-        raise ValueError("Packed FP4 requires an even last dimension")
-    return codes[..., 0::2] | (codes[..., 1::2] << 4)
-
-
-def _unpack_fp4(packed):
-    packed = _as_numpy(packed)
-    if packed.dtype != np.uint8:
-        raise ValueError("Torch FP4 storage must be uint8")
+def _unpack_fp4(value):
+    """Decode the public uint8 FP4 carrier without numerically converting its bytes."""
+    packed = _as_numpy(value)
+    if packed.dtype != np.dtype(np.uint8):
+        raise ValueError("Packed FP4 output dtype must equal uint8")
     codes = np.empty(packed.shape[:-1] + (packed.shape[-1] * 2,), dtype=np.uint8)
     codes[..., 0::2] = packed & 0x0F
     codes[..., 1::2] = packed >> 4
     return codes.view(np_fp4_e2m1)
+
+
+def _logical_output(value, golden, name):
+    """Validate public Torch dtypes before using byte views for NumPy comparison."""
+    if isinstance(value, torch.Tensor):
+        dtype_names = {
+            "float4_e2m1": "uint8",
+            "float8_e4m3fn": "float8_e4m3fn",
+            "float8_e5m2": "float8_e5m2",
+            "float8_e8m0": "float8_e8m0fnu",
+        }
+        expected = getattr(torch, dtype_names[golden.dtype.name])
+        if value.dtype != expected:
+            return None, {
+                "pass": False,
+                "precision": 0.0,
+                "error_info": f"{name} dtype mismatch: actual={value.dtype}, expected={expected}",
+            }
+        if golden.dtype == np.dtype(np_fp4_e2m1):
+            return _unpack_fp4(value), None
+    array = _as_numpy(value)
+    if golden.dtype == np.dtype(np_fp4_e2m1) and array.dtype == np.dtype(np.uint8):
+        return _unpack_fp4(array), None
+    if array.dtype != golden.dtype:
+        return None, {
+            "pass": False,
+            "precision": 0.0,
+            "error_info": f"{name} dtype mismatch: actual={array.dtype}, expected={golden.dtype}",
+        }
+    return array, None
 
 
 def _ordinary_torch_golden(
@@ -92,7 +111,7 @@ def _ordinary_torch_golden(
         scale_alg=0 if scale_alg is None else int(scale_alg),
         dst_type_max=0.0 if dst_type_max is None else float(dst_type_max),
     )
-    return [_pack_fp4(y) if dtype == "float4_e2m1" else y, scale]
+    return [y, scale]
 
 
 def _compare_torch_outputs(
@@ -103,34 +122,29 @@ def _compare_torch_outputs(
     *,
     compare_context=None,
 ):
-    y, golden_y = _as_numpy(y), _as_numpy(golden_y)
-    y_failure = _shape_dtype_failure(y, golden_y)
-    if y_failure is None and golden_y.dtype == np.uint8:
-        y, golden_y = _unpack_fp4(y), _unpack_fp4(golden_y)
-
-    scale, golden_scale = _as_numpy(scale), _as_numpy(golden_scale)
-    valid = scale.dtype == np.uint8 and golden_scale.dtype == np.uint8
-    if valid:
-        return compare_grouped_outputs(
-            y,
-            scale.view(np_mx_scale),
-            golden_y,
-            golden_scale.view(np_mx_scale),
-            compare_context,
-            preserve_tail=False,
-        )
-    return [
-        y_failure or compare_quantized(y, golden_y, compare_context),
-        {
-            "pass": False,
-            "precision": 0.0,
-            "error_info": "Torch scale must retain its uint8 E8M0 storage dtype",
-        },
-    ]
+    golden_y, golden_scale = _as_numpy(golden_y), _as_numpy(golden_scale)
+    if golden_y.dtype.name not in ("float4_e2m1", "float8_e4m3fn", "float8_e5m2"):
+        raise ValueError("Torch golden y must retain its logical FP4/FP8 dtype")
+    if golden_scale.dtype != np.dtype(np_mx_scale):
+        raise ValueError("Torch golden scale must retain its E8M0 dtype")
+    y, y_failure = _logical_output(y, golden_y, "y")
+    scale, scale_failure = _logical_output(scale, golden_scale, "scale")
+    results = compare_grouped_outputs(
+        golden_y if y_failure is not None else y,
+        golden_scale if scale_failure is not None else scale,
+        golden_y,
+        golden_scale,
+        compare_context,
+        preserve_tail=False,
+    )
+    for index, failure in enumerate((y_failure, scale_failure)):
+        if failure is not None:
+            results[index] = failure
+    return results
 
 
 class CannOpsNnRotateQuantTestSpec:
-    """Operator-repository interface: packed FP4 Y and raw uint8 scale."""
+    """Packed uint8 FP4, native FP8 and E8M0 scales with logical NumPy references."""
 
     @staticmethod
     def golden(
@@ -167,10 +181,7 @@ class CannOpsNnRotateQuantTestSpec:
                 0 if scale_alg is None else int(scale_alg),
                 0.0 if dst_type_max is None else float(dst_type_max),
             )
-            return [
-                _pack_fp4(y) if dtype == "float4_e2m1" else y,
-                scale.view(np.uint8).copy(),
-            ]
+            return [y, scale]
         y, scale = _ordinary_torch_golden(
             x,
             rotation,
@@ -182,8 +193,7 @@ class CannOpsNnRotateQuantTestSpec:
             dst_type_max=dst_type_max,
             transpose_y=transpose_y,
         )
-        # Torch exports raw E8M0 codes, including the zero padding code.
-        return [y, scale.view(np.uint8).copy()]
+        return [y, scale]
 
     @staticmethod
     def compare(y, scale, golden_y, golden_scale, *, compare_context=None, **kwargs):
