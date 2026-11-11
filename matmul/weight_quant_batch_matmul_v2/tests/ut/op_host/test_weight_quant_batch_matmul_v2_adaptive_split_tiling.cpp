@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 #include <stdlib.h>
+#include <cstring>
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -21,6 +22,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "kernel_run_context_facker.h"
 #include "../../../op_host/op_tiling/arch35/weight_quant_batch_matmul_v2_adaptive_split_tiling.h"
+#include "../../../op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 #include "test_cube_util.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
 
@@ -308,6 +310,14 @@ static WeightQuantBatchMatmulV2TilingTestParam casesParams[] = {
     {"davidCase_8_8192_512_0_0_0_0_0_1_-1_BF16_FP8E4M3_BF16_UINT64_BF16_32_64_0_0", 32, 310517762UL},
     // a16F8 perchannel support n=1(reuse perchannel)
     {"davidCase_8_8192_1_0_0_0_0_0_1_0_BF16_FP8E4M3_BF16_UINT64_BF16_32_64_0_0", 1, 310517762UL},
+    // AS template L1 budget regression anchors (al1RealSize + weightL1 + bias must fit in L1)
+    {"davidCase_80_1632_9216_0_0_0_0_0_1_-1_BF16_INT4_BF16_UINT64_BF16_32_64_0_0", 32, 310386690UL},
+    {"davidCase_80_1632_9216_1_0_0_1_0_1_-1_BF16_INT4_BF16_UINT64_BF16_32_64_0_0", 32, 21785223170UL},
+    // AS template A preload regression anchor (aPreloadSize must be capped by real remaining L1)
+    {"davidCase_256_6144_6912_0_0_0_0_0_1_-1_BF16_INT4_BF16_UINT64_BF16_16_32_0_0", 16, 310386690UL},
+    // AS template no-tail-block regression anchors (baseN/singleCoreN must not be 0)
+    {"davidCase_256_3456_6144_0_0_0_0_0_1_-1_BF16_INT4_BF16_UINT64_BF16_16_32_0_0", 16, 310386690UL},
+    {"davidCase_256_3456_6144_1_0_0_1_0_1_-1_BF16_INT4_BF16_UINT64_BF16_16_32_0_0", 16, 21785223170UL},
 };
 
 INSTANTIATE_TEST_CASE_P(MM, TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, testing::ValuesIn(casesParams));
@@ -558,4 +568,191 @@ TEST_F(TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, mxfp4_nz_not_transpose_p
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr);
     tilingFunc(tilingContext);
+}
+
+namespace {
+constexpr uint64_t kL1SizeBytes = 512UL * 1024UL;
+constexpr uint64_t kBiasL1Size = 4UL * 1024UL; // 与tiling侧BIAS_L1_SIZE(kernel BT_SIZE)一致
+constexpr uint64_t kBf16ElemSize = 2UL;
+constexpr uint64_t kBlockCube = 16UL;
+
+uint64_t UtCeilDiv(uint64_t a, uint64_t b) { return (a + b - 1) / b; }
+
+uint64_t UtCeilAlign(uint64_t v, uint64_t align) { return UtCeilDiv(v, align) * align; }
+
+// 构造A16W4 perchannel用例并执行tiling，要求路由到AS模板；weightNz对应use_wq_preprocess预处理后的NZ weight
+void RunAsTilingCase(int64_t m, int64_t k, int64_t n, bool hasBias, bool hasAntiquantOffset, uint32_t aicNum,
+                     gert::TilingContext*& tilingContext, std::unique_ptr<gert::KernelRunContextHolder>& contextHolder,
+                     std::unique_ptr<uint8_t[]>& tilingDataHolder, bool transB = true, bool weightNz = false)
+{
+    ge::DataType xDtype = ge::DT_BF16;
+    ge::DataType biasDtype = ge::DT_FLOAT;
+
+    gert::StorageShape xShape({m, k}, {m, k});
+    gert::StorageShape weigthShape;
+    if (weightNz) {
+        // NZ int4分形块为16x16: storage为[n1, k1, 16, 16](weight不转置)或[k1, n1, 16, 16](转置)
+        weigthShape.MutableStorageShape() = transB ? gert::Shape({(k + 15) / 16, (n + 15) / 16, 16, 16}) :
+                                                     gert::Shape({(n + 15) / 16, (k + 15) / 16, 16, 16});
+        weigthShape.MutableOriginShape() = transB ? gert::Shape({n, k}) : gert::Shape({k, n});
+    } else {
+        weigthShape.MutableStorageShape() = transB ? gert::Shape({n, k}) : gert::Shape({k, n});
+        weigthShape.MutableOriginShape() = transB ? gert::Shape({n, k}) : gert::Shape({k, n});
+    }
+    gert::StorageShape antiQuantScaleShape({n}, {n});
+    gert::StorageShape antiQuantOffsetShape({n}, {n});
+    gert::StorageShape biasShape({n}, {n});
+    gert::StorageShape outputShape({m, n}, {m, n});
+
+    string compileInfoStr = R"({
+         "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
+                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l12bt": true,
+                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 196352, "L2_SIZE": 33554432, "L1_SIZE": 524032,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": aicNum,
+                           "cube_core_cnt": aicNum, "vector_core_cnt": aivNum, "core_type_list": "CubeCore,VectorCore"}
+                            })";
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aivNum"), 6, to_string(aicNum * 2));
+
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
+    aicoreSpec["cube_freq"] = "1800";
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    MatmulV3CompileInfo compileInfo;
+
+    auto kernelHold = gert::KernelRunContextFaker()
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
+
+    std::string opType("WeightQuantBatchMatmulV2");
+    auto rawTilingData = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+
+    contextHolder = std::make_unique<gert::KernelRunContextHolder>(
+        gert::TilingContextFaker()
+            .NodeIoNum(7, 1)
+            .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+            .InputShapes({&xShape, &weigthShape, &antiQuantScaleShape,
+                          hasAntiquantOffset ? &antiQuantOffsetShape : nullptr, nullptr, nullptr,
+                          hasBias ? &biasShape : nullptr})
+            .OutputShapes({&outputShape})
+            .CompileInfo(&compileInfo)
+            .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+            .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(1, ge::DT_INT4, ge::FORMAT_ND, weightNz ? ge::FORMAT_FRACTAL_NZ : ge::FORMAT_ND)
+            .NodeInputTd(2, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(3, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(4, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(5, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(6, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeOutputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeAttrs({{"transpose_x", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                        {"transpose_weight", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                        {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+            .TilingData(rawTilingData.get())
+            .Workspace(workspace)
+            .SetOpType(opType)
+            .Build());
+    tilingDataHolder = std::move(rawTilingData);
+
+    tilingContext = contextHolder->GetContext<gert::TilingContext>();
+    tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    map<string, string> soc_version_infos;
+    soc_version_infos.insert(make_pair("Short_SoC_version", "Ascend950"));
+    soc_version_infos.insert(make_pair("NpuArch", "3510"));
+    tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
+    ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
+}
+
+// 守护: 无尾块场景baseN/singleCoreN等分核参数不得为0(为0时kernel除0 core dump)
+void CheckAsBaseParamsNonZero(const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams& td, int64_t m,
+                              int64_t k, int64_t n)
+{
+    EXPECT_GT(td.matmulTiling.baseN, 0) << "m=" << m << " k=" << k << " n=" << n;
+    EXPECT_GT(td.matmulTiling.singleCoreN, 0) << "m=" << m << " k=" << k << " n=" << n;
+    EXPECT_GT(td.matmulTiling.baseM, 0) << "m=" << m << " k=" << k << " n=" << n;
+    EXPECT_GT(td.matmulTiling.baseK, 0) << "m=" << m << " k=" << k << " n=" << n;
+    EXPECT_GT(td.matmulTiling.stepKa, 0) << "m=" << m << " k=" << k << " n=" << n;
+    EXPECT_GT(td.matmulTiling.stepKb, 0) << "m=" << m << " k=" << k << " n=" << n;
+    EXPECT_GT(td.matmulTiling.depthA1, 0) << "m=" << m << " k=" << k << " n=" << n;
+    EXPECT_GT(td.matmulTiling.depthB1, 0) << "m=" << m << " k=" << k << " n=" << n;
+}
+
+// 守护: kernel L1布局中AL1被双缓冲WeightL1与Bias(单块4KB双缓冲)夹住，预算不得超过L1容量
+void CheckAsL1Budget(const wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams& td, int64_t m, int64_t k,
+                     int64_t n)
+{
+    bool hasBias = (td.hasBias != 0);
+    uint64_t weightL1AndBiasBytes = 2 * (static_cast<uint64_t>(td.matmulTiling.baseN) * td.matmulTiling.baseK *
+                                             td.matmulTiling.stepKb * kBf16ElemSize +
+                                         (hasBias ? kBiasL1Size : 0UL));
+
+    // A预载场景: 预载区 + WeightL1 + Bias <= L1
+    if (td.aPreloadSize > 0) {
+        uint64_t preloadBytes = static_cast<uint64_t>(td.aPreloadSize) * kBf16ElemSize;
+        EXPECT_LE(preloadBytes + weightL1AndBiasBytes, kL1SizeBytes)
+            << "m=" << m << " k=" << k << " n=" << n << " aPreloadSize=" << td.aPreloadSize;
+    }
+
+    // A全载场景(stepKa*baseK覆盖整K): 全载AL1 + WeightL1 + Bias <= L1
+    uint64_t kAlign = UtCeilAlign(static_cast<uint64_t>(k), kBlockCube);
+    if (static_cast<uint64_t>(td.matmulTiling.stepKa) * td.matmulTiling.baseK >= kAlign &&
+        td.matmulTiling.depthA1 == td.matmulTiling.stepKa) {
+        uint64_t al1RealBytes = static_cast<uint64_t>(td.matmulTiling.baseM) *
+                                UtCeilAlign(kAlign, static_cast<uint64_t>(td.matmulTiling.baseK)) * kBf16ElemSize;
+        EXPECT_LE(al1RealBytes + weightL1AndBiasBytes, kL1SizeBytes)
+            << "m=" << m << " k=" << k << " n=" << n << " baseM=" << td.matmulTiling.baseM;
+    }
+}
+
+void CheckAsTilingCase(int64_t m, int64_t k, int64_t n, bool hasBias, bool hasAntiquantOffset, uint32_t aicNum,
+                       bool transB = true, bool weightNz = false)
+{
+    gert::TilingContext* tilingContext = nullptr;
+    std::unique_ptr<gert::KernelRunContextHolder> contextHolder;
+    std::unique_ptr<uint8_t[]> tilingDataHolder;
+    RunAsTilingCase(m, k, n, hasBias, hasAntiquantOffset, aicNum, tilingContext, contextHolder, tilingDataHolder,
+                    transB, weightNz);
+
+    ASSERT_EQ(tilingContext->GetRawTilingData()->GetDataSize(),
+              sizeof(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams))
+        << "m=" << m << " k=" << k << " n=" << n << " not routed to AS template";
+    wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams td;
+    std::memcpy(&td, tilingContext->GetRawTilingData()->GetData(), sizeof(td));
+
+    CheckAsBaseParamsNonZero(td, m, k, n);
+    CheckAsL1Budget(td, m, k, n);
+}
+} // namespace
+
+TEST_F(TestWeightQuantBatchMatmulV2AdaptiveSplitTiling, as_template_regression_guard)
+{
+    // 16核下N向无尾块场景, baseN不得为0
+    CheckAsTilingCase(256, 3456, 6144, false, false, 16);
+    CheckAsTilingCase(256, 3456, 6144, true, true, 16);
+    // A预载须按真实剩余L1封顶, 与WeightL1/Bias不得超账
+    CheckAsTilingCase(256, 6144, 6912, false, false, 16);
+    // A全载真实占用(baseK对齐粒度)须扣减WeightL1/Bias后落在L1内
+    CheckAsTilingCase(80, 1632, 9216, false, false, 32);
+    CheckAsTilingCase(80, 1632, 9216, true, true, 32);
+    // NZ weight(use_wq_preprocess路径)、weight不转置场景同样命中无尾块baseN=0 (fuzz 3102x100x7158 @16核)
+    CheckAsTilingCase(3102, 100, 7158, false, false, 16, false, true);
+    CheckAsTilingCase(3102, 100, 7158, true, false, 16, false, true);
 }

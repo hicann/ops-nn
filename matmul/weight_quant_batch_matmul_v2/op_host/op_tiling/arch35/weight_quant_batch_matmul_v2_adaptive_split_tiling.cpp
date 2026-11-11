@@ -702,6 +702,11 @@ void WeightQuantBatchMatmulV2TilingAS::RecalculateBaseBlockSize()
                        tilingData_->mainBlockCount * tilingData_->mainBlockL1Size / static_cast<uint64_t>(BLOCK_CUBE);
         }
 
+        // 无尾块时无需扩展baseN：tailSize为0会算出全0尾块参数，扩展将把baseN置0导致kernel越界
+        if (tailSize == 0UL) {
+            return;
+        }
+
         uint64_t tailBlockCount = tilingData_->cubeNumBlocksN;
         if (tailBlockCount == 0UL) {
             return;
