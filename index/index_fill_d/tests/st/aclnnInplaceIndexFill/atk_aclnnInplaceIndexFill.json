@@ -1,0 +1,962 @@
+[
+  {
+    "id": 10000,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-1, 0], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10001,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [33], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-33, 32], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10002,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-2, 1], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10003,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-3, 2], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10004,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10005,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10006,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [2, 3, 16384], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-16384, 16383], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10007,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [0], "range_values": [-5, 4], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10008,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-1, 0], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10009,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [33], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-33, 32], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10010,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-2, 1], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10011,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-3, 2], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10012,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10013,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10014,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [2, 3, 16384], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-16384, 16383], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10015,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "int8", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [0], "range_values": [-5, 4], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": -128, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10016,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-1, 0], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10017,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [33], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-33, 32], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10018,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [2, 3, 5], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-2, 1], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10019,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [2, 3, 5], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-3, 2], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10020,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [4, 8], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10021,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [4, 8], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10022,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [2, 3, 16384], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-16384, 16383], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10023,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [2, 3, 5], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [0], "range_values": [-5, 4], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10024,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-1, 0], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10025,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [33], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-33, 32], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10026,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [2, 3, 5], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-2, 1], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10027,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [2, 3, 5], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-3, 2], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10028,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [4, 8], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10029,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [4, 8], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10030,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [2, 3, 16384], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-16384, 16383], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10031,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "uint8", "shape": [2, 3, 5], "range_values": [0, 100], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [0], "range_values": [-5, 4], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 255, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10032,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-1, 0], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10033,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [33], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-33, 32], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10034,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-2, 1], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10035,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-3, 2], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10036,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10037,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10038,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [2, 3, 16384], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-16384, 16383], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10039,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [0], "range_values": [-5, 4], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10040,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-1, 0], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10041,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [33], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-33, 32], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10042,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-2, 1], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10043,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-3, 2], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10044,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10045,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10046,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [2, 3, 16384], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-16384, 16383], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10047,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp16", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [0], "range_values": [-5, 4], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.5, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10048,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-1, 0], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10049,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [33], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-33, 32], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10050,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-2, 1], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10051,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-3, 2], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10052,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10053,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10054,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [2, 3, 16384], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [5], "range_values": [-16384, 16383], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10055,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int32", "shape": [0], "range_values": [-5, 4], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10056,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-1, 0], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10057,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [33], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-33, 32], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10058,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 0, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-2, 1], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10059,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-3, 2], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10060,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": 1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10061,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [4, 8], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-8, 7], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10062,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [2, 3, 16384], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [5], "range_values": [-16384, 16383], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  },
+  {
+    "id": 10063,
+    "name": "torch.Tensor.index_fill_",
+    "aclnn_name": "InplaceIndexFill",
+    "api_type": "function_aclnnInplaceIndexFill",
+    "standard": {"acc": "equal", "perf": "not_key"},
+    "inputs": [
+      {"name": "self", "type": "tensor", "required": true, "dtype": "fp64", "shape": [2, 3, 5], "range_values": [-3, 3], "backward": false, "align_32B": null},
+      {"name": "dim", "type": "attr", "required": true, "dtype": "int", "shape": null, "range_values": -1, "backward": false, "align_32B": null},
+      {"name": "index", "type": "tensor", "required": true, "dtype": "int64", "shape": [0], "range_values": [-5, 4], "backward": false, "align_32B": null},
+      {"name": "value", "type": "scalar", "required": true, "dtype": "fp64", "shape": null, "range_values": 1.0000000000000002, "backward": false, "align_32B": null}
+    ],
+    "is_boundary": true,
+    "aclnn_api_type": "pyaclnn_inplace_index_fill"
+  }
+]

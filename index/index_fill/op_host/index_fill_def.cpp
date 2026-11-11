@@ -16,15 +16,15 @@
 #include "register/op_def_registry.h"
 #include "version/metadef_version.h"
 namespace {
-static const std::vector<ge::DataType> xDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,    ge::DT_INT64,
-                                                    ge::DT_INT32,   ge::DT_BOOL,  ge::DT_FLOAT16, ge::DT_FLOAT,
-                                                    ge::DT_BF16,    ge::DT_INT64, ge::DT_INT32,   ge::DT_BOOL};
-static const std::vector<ge::Format> formatList = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                                   ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-static const std::vector<ge::DataType> indicesDataType = {ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
-                                                          ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64,
-                                                          ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::DataType> xDataType = {
+    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,   ge::DT_INT64,   ge::DT_INT32, ge::DT_BOOL,
+    ge::DT_INT8,    ge::DT_UINT8, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,
+    ge::DT_INT64,   ge::DT_INT32, ge::DT_BOOL,   ge::DT_INT8,    ge::DT_UINT8, ge::DT_DOUBLE};
+static const std::vector<ge::Format> formatList(xDataType.size(), ge::FORMAT_ND);
+static const std::vector<ge::DataType> indicesDataType = {
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+    ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64,
+    ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
 static const std::vector<ge::DataType> ascend950XDataType = {
     ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,   ge::DT_INT64,   ge::DT_INT32, ge::DT_BOOL,  ge::DT_INT8,
     ge::DT_UINT8,   ge::DT_INT16, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,  ge::DT_INT64,

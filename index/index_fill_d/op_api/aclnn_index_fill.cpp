@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <cstring>
 #include "aclnn_index_fill.h"
 #include "index_fill.h"
 #include "level0/unsqueeze.h"
@@ -47,7 +48,8 @@ static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
 
 static const std::initializer_list<op::DataType> DTYPE_910B_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT,
-    op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16};
+    op::DataType::DT_INT64, op::DataType::DT_BOOL,    op::DataType::DT_BF16,
+    op::DataType::DT_INT8,  op::DataType::DT_UINT8,   op::DataType::DT_DOUBLE};
 
 static const std::initializer_list<op::DataType> DTYPE_950_SUPPORT_LIST = {
     op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_INT64,
@@ -236,7 +238,9 @@ static bool NeedTranspose(const aclTensor* self, int64_t dim)
         return false;
     }
 
-    if (self->GetDataType() == op::DataType::DT_INT64 || self->GetDataType() == op::DataType::DT_BOOL) {
+    auto dtype = self->GetDataType();
+    if (dtype == op::DataType::DT_INT64 || dtype == op::DataType::DT_BOOL || dtype == op::DataType::DT_INT8 ||
+        dtype == op::DataType::DT_UINT8 || dtype == op::DataType::DT_DOUBLE) {
         auto selfDimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
         dim = dim >= 0 ? dim : dim + selfDimNum;
         if (dim == selfDimNum - 1) {
@@ -244,6 +248,23 @@ static bool NeedTranspose(const aclTensor* self, int64_t dim)
         }
     }
     return false;
+}
+
+static bool NeedInt64View(const aclTensor* self)
+{
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    return self->GetDataType() == op::DataType::DT_DOUBLE &&
+           (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93);
+}
+
+static aclTensor* CreateInt64View(const aclTensor* self, aclOpExecutor* executor)
+{
+    // Equal-width views preserve the bits and leave the caller's tensor metadata unchanged.
+    auto view = executor->CreateView(self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(),
+                                     self->GetViewOffset());
+    OP_CHECK_NULL(view, return nullptr);
+    view->SetDataType(op::DataType::DT_INT64);
+    return view;
 }
 
 static const aclTensor* SwapDim(const aclTensor* self, aclOpExecutor* executor)
@@ -281,11 +302,27 @@ aclnnStatus ExecIndexFillGetWorkspaceSize(const aclTensor* self, int64_t dim, co
         return ACLNN_SUCCESS;
     }
 
+    // Reuse the complete INT64 path, including layout operations, without numerical casts.
+    if (NeedInt64View(self)) {
+        auto inputView = CreateInt64View(self, uniqueExecutor.get());
+        CHECK_RET(inputView != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto outputView = CreateInt64View(out, uniqueExecutor.get());
+        CHECK_RET(outputView != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        const double doubleValue = value->ToDouble();
+        int64_t valueBits = 0;
+        std::memcpy(&valueBits, &doubleValue, sizeof(valueBits));
+        value = uniqueExecutor->AllocScalar(&valueBits, op::DataType::DT_INT64);
+        CHECK_RET(value != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        self = inputView;
+        out = outputView;
+    }
+
     if (index->IsEmpty()) {
         auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
         CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto viewCopyResult = l0op::ViewCopy(selfContiguous, out, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
@@ -308,7 +345,7 @@ aclnnStatus ExecIndexFillGetWorkspaceSize(const aclTensor* self, int64_t dim, co
     // 将value 转为和self同类型的Tensor
     auto valueTensor = uniqueExecutor.get()->ConvertToTensor(value, selfContiguous->GetDataType());
     CHECK_RET(valueTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    // self为bool和int64时，暂时只支持非尾轴计算，遇到尾轴需转置首轴
+    // 1字节和8字节类型使用FrontQ分支，尾轴场景先转置到首轴。
     bool needTranspose = NeedTranspose(selfContiguous, dim);
     if (needTranspose) {
         selfContiguous = SwapDim(selfContiguous, uniqueExecutor.get());

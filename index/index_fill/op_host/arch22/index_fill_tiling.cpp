@@ -137,7 +137,8 @@ void IndexFillTilingOp::ComputeTilingKey()
             tilingData.tilingKey = FRONT_P_KEY;
         }
         auto dtype = context->GetInputDesc(0)->GetDataType();
-        if (dtype == ge::DT_INT64 || dtype == ge::DT_BOOL || dtype == ge::DT_UINT8) {
+        if (dtype == ge::DT_INT64 || dtype == ge::DT_BOOL || dtype == ge::DT_UINT8 || dtype == ge::DT_INT8 ||
+            dtype == ge::DT_DOUBLE) {
             tilingData.tilingKey = 0;
         }
     } else {
@@ -236,6 +237,26 @@ void IndexFillTilingOp::Init()
 static ge::graphStatus IndexFillTilingFunc(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling for IndexFill start.");
+    const auto* inputDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    const auto* inputShape = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+    const auto* attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const auto* axisPtr = attrs->GetAttrPointer<int64_t>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, axisPtr);
+
+    const auto dtype = inputDesc->GetDataType();
+    const int64_t rank = inputShape->GetStorageShape().GetDimNum();
+    const int64_t axis = *axisPtr >= 0 ? *axisPtr : *axisPtr + rank;
+    const bool needsNonTailAxis = dtype == ge::DT_INT64 || dtype == ge::DT_BOOL || dtype == ge::DT_UINT8 ||
+                                  dtype == ge::DT_INT8 || dtype == ge::DT_DOUBLE;
+    if (needsNonTailAxis && rank > 1 && axis == rank - 1) {
+        OP_LOGE(context->GetNodeName(),
+                "IndexFill requires a non-tail dim for 1-byte and 8-byte inputs with rank greater than 1. "
+                "Use aclnnIndexFill or aclnnInplaceIndexFill for tail-axis filling.");
+        return ge::GRAPH_FAILED;
+    }
     IndexFillTilingOp tilingOp(context);
     tilingOp.Init();
     OP_LOGD(context->GetNodeName(), "Tiling for IndexFill end.");

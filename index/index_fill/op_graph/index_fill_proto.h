@@ -23,8 +23,8 @@ namespace ge {
 * @par Inputs:
 * Three inputs, including:
 * @li x: A tensor that serves as the source; its duplicate is created and subsequently filled with the specified values.
-* In Atlas A2 products or Atlas A3 products, a tensor of type float16, float32, bfloat16, int64, int32, bool can be
-supported. \n
+* In Atlas A2 products or Atlas A3 products, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8,
+uint8, double can be supported. \n
 * In Ascend 950PR&950DT products, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8, uint8, int16,
 double can be supported. \n
 * In Ascend 960 AI Processor, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8, uint8, int16,
@@ -33,8 +33,8 @@ double, hifloat4, float4_e2m1, float4_e1m2 can be supported. \n
 following types:
 *     int32, int64. \n
 * @li val: The value to fill with. It's a scalar or a one-dimensional tensor with only one element.
-* In Atlas A2 products or Atlas A3 products, a tensor of type float16, float32, bfloat16, int64, int32, bool can be
-supported. \n
+* In Atlas A2 products or Atlas A3 products, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8,
+uint8, double can be supported. \n
 * In Ascend 950PR&950DT products, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8, uint8, int16,
 double can be supported. \n
 * In Ascend 960 AI Processor, a tensor of type float16, float32, bfloat16, int64, int32, bool, int8, uint8, int16,
@@ -52,6 +52,9 @@ double, hifloat4, float4_e2m1, float4_e1m2 can be supported. \n
 * @li The input x and output y must have same shape.
 * @li The data type of element in tensor x must be same with the data type of input val.
 * @li The input indices must be either a 1D tensor (equivalent to vector) or a 0D tensor (equivalent to scalar).
+* @li On Atlas A2/A3, for int8, uint8, bool, int64 or double inputs with rank greater than one, dim must not select
+* the last dimension. The aclnnIndexFill and aclnnInplaceIndexFill interfaces handle the last dimension by transposing
+* the input before invoking IndexFill.
 *
 */
 
