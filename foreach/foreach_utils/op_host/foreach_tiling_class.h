@@ -159,6 +159,9 @@ public:
         opCode = theCode;
         opInputType = inputType;
         opReturnType = returnType;
+        OP_CHECK_IF(CheckInputTensorlistCount() != ge::GRAPH_SUCCESS,
+                    OP_LOGE_WITHOUT_REPORT(tilingContext->GetNodeName(), "CheckInputTensorlistCount failed."),
+                    return ge::GRAPH_FAILED);
         int dynamicIdx = opCode == FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE ? 1 : 0;
         for (uint32_t i = 0; i < MAX_TENSOR_CONT; i++) {
             auto srcTensor = tilingContext->GetDynamicInputTensor(dynamicIdx, i);
@@ -573,6 +576,43 @@ private:
                 return ge::GRAPH_FAILED;
             }
         }
+        return ge::GRAPH_SUCCESS;
+    }
+
+    /**
+     ** function: Check the real tensor count of the anchor input tensor list
+     */
+    ge::graphStatus CheckInputTensorlistCount()
+    {
+        uint64_t anchorIdx = opCode == FOREACH_POW_SCALAR_AND_TENSOR_OP_CODE ? 1 : 0;
+        auto computeNodeInfo = tilingContext->GetComputeNodeInfo();
+        if (computeNodeInfo == nullptr) {
+            const std::string msgOpName = (tilingContext == nullptr || tilingContext->GetNodeName() == nullptr ?
+                                               "Foreach" :
+                                               tilingContext->GetNodeName());
+            OP_LOGE_WITHOUT_REPORT(msgOpName.c_str(), "%s", "GetComputeNodeInfo failed.");
+            REPORT_PREDEFINED_ERR_MSG("EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                                      (std::vector<const char*>{msgOpName.c_str(), "GetComputeNodeInfo failed."}));
+            return ge::GRAPH_FAILED;
+        };
+        auto anchorInstanceInfo = computeNodeInfo->GetInputInstanceInfo(anchorIdx);
+        if (anchorInstanceInfo == nullptr) {
+            const std::string msgOpName = (tilingContext == nullptr || tilingContext->GetNodeName() == nullptr ?
+                                               "Foreach" :
+                                               tilingContext->GetNodeName());
+            OP_LOGE_WITHOUT_REPORT(msgOpName.c_str(), "%s", "GetInputInstanceInfo failed.");
+            REPORT_PREDEFINED_ERR_MSG("EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                                      (std::vector<const char*>{msgOpName.c_str(), "GetInputInstanceInfo failed."}));
+            return ge::GRAPH_FAILED;
+        };
+        // The tiling data buffers are sized for MAX_TENSOR_CONT tensors and the enumeration in Init stops at the
+        // same bound without any error, so a longer tensor list must be rejected here instead of being truncated.
+        size_t tensorListSize = anchorInstanceInfo->GetInstanceNum();
+        OP_CHECK_IF(
+            tensorListSize > MAX_TENSOR_CONT,
+            OP_LOGE_FOR_INVALID_TENSORNUM(tilingContext->GetNodeName(), "x", static_cast<int64_t>(tensorListSize),
+                                          ("within the range [0, " + std::to_string(MAX_TENSOR_CONT) + "]").c_str()),
+            return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
 
