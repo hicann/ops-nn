@@ -15,6 +15,7 @@
 #include "optim/adam_apply_one_assign/op_kernel/arch35/adam_tiling_struct.h"
 #include "optim/adam_apply_one_assign/op_kernel/arch35/adam_struct.h"
 #include <algorithm>
+#include <limits>
 #include <graph/utils/type_utils.h>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
@@ -87,6 +88,50 @@ bool PadAndSqueeze(const std::vector<std::vector<int64_t>>& input_shapes,
             normal_output_shapes[i].push_back(1);
     }
     return true;
+}
+
+// Dense ND axes can share one DMA loop when every tensor has the same
+// broadcast role on both axes. This also flattens every no-broadcast shape.
+static void CoalesceDimensions(std::vector<int64_t>& shape, std::vector<std::vector<int64_t>>& inputs,
+                               std::vector<std::vector<int64_t>>& outputs)
+{
+    if (shape.size() < 2) {
+        return;
+    }
+    auto sameBroadcastRole = [](const std::vector<std::vector<int64_t>>& tensors, size_t left, size_t right) {
+        return std::all_of(tensors.begin(), tensors.end(),
+                           [=](const auto& tensor) { return (tensor[left] == 1) == (tensor[right] == 1); });
+    };
+    size_t last = 0;
+    for (size_t axis = 1; axis < shape.size(); ++axis) {
+        const bool fits = shape[last] > 0 && shape[axis] > 0 &&
+                          shape[last] <= std::numeric_limits<int64_t>::max() / shape[axis];
+        if (fits && sameBroadcastRole(inputs, last, axis) && sameBroadcastRole(outputs, last, axis)) {
+            shape[last] *= shape[axis];
+            for (auto& input : inputs) {
+                input[last] *= input[axis];
+            }
+            for (auto& output : outputs) {
+                output[last] *= output[axis];
+            }
+        } else {
+            ++last;
+            shape[last] = shape[axis];
+            for (auto& input : inputs) {
+                input[last] = input[axis];
+            }
+            for (auto& output : outputs) {
+                output[last] = output[axis];
+            }
+        }
+    }
+    shape.resize(last + 1);
+    for (auto& input : inputs) {
+        input.resize(last + 1);
+    }
+    for (auto& output : outputs) {
+        output.resize(last + 1);
+    }
 }
 
 // 5.2 FindSplitAxis
@@ -339,6 +384,7 @@ ge::graphStatus AdamTiling::GetShapeInfo()
     }
 
     PadAndSqueeze(raw_input_shapes_, raw_output_shapes_, max_bro_shape_, normal_input_shapes_, normal_output_shapes_);
+    CoalesceDimensions(max_bro_shape_, normal_input_shapes_, normal_output_shapes_);
     rank_ = (int64_t)max_bro_shape_.size();
 
     // 维测: 输入预处理结果
