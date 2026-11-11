@@ -5,7 +5,7 @@
 ## Applicable Products
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR&950DT products</term>: Not supported
+- <term>Ascend 950PR&950DT products</term>: Supported
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 products</term>: Supported
@@ -52,7 +52,7 @@ $$
 $$
 
 $$
-\text{grad\_input} = \text{softmax} \cdot \text{weight}^T \in \mathbb{R}^{BT \times H}
+\text{grad\_input} = \text{softmax} \cdot \text{weight} \in \mathbb{R}^{BT \times H}
 $$
 
 $$
@@ -189,7 +189,7 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
         <td>weight</td>
         <td>Input</td>
         <td>Weight matrix for matrix multiplication, corresponding to weight in the formula.</td>
-        <td>Data type is the same as that of input input. The length of the first dimension of the shape cannot be less than 128, and the length of the second dimension is the same as that of the second dimension of input input.</td>
+        <td>Data type is the same as input. Shape is [V, H], with its second dimension equal to that of input. Only high-performance mode (softmaxOptional is not nullptr) requires V >= 128; memory-saving mode has no such lower bound.</td>
         <td>FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>2</td>
@@ -198,9 +198,9 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
       <tr>
         <td>targetMask</td>
         <td>Input</td>
-        <td>Intermediate variable, indicating whether the corresponding token ID is within the target range. It is the target_mask in the formula.</td>
-        <td><ul><li>Each bit represents a Boolean value: 0 indicates false, and 1 indicates true.</li><li>The shape length multiplied by 8 must not be less than the length of input grad.</li></ul></td>
-        <td>UINT8</td>
+        <td>Intermediate variable, target_mask in the formula. A value of 1 means the row's target is outside the current vocabulary shard and skips the one-hot subtraction; 0 subtracts 1 at the local index in maskedTarget. Masking does not skip subsequent gradient scaling or matrix multiplication.</td>
+        <td><ul><li>BOOL: one element per row; length must equal BT (the length of grad).</li><li>UINT8: bit-packed; length multiplied by 8 must be at least BT. Row i uses bit (i % 8) of targetMask[i / 8], unpacked least significant bit (LSB) first.</li></ul></td>
+        <td>BOOL, UINT8</td>
         <td>ND</td>
         <td>1</td>
         <td>√</td>
@@ -208,8 +208,8 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
       <tr>
         <td>maskedTarget</td>
         <td>Input</td>
-        <td>Intermediate variable representing the local index that maps the corresponding word ID to the vocabulary shard on the current device. Invalid targets are masked by targetMask. This is masked_target in the formula.</td>
-        <td>Shape length is the same as the input grad.</td>
+        <td>Intermediate variable representing the local index of the corresponding token ID in the vocabulary shard on the current device, masked_target in the formula.</td>
+        <td><ul><li>Length must equal the length of grad.</li><li>For each row whose unpacked targetMask is 0, 0 &lt;= maskedTarget[i] &lt; V is required. Rows with mask 1 skip the one-hot subtraction without using their target index.</li><li>Out-of-range indices are skipped defensively by the kernel, never clamped. This does not make them normal targets: callers must still supply valid indices for unmasked rows.</li></ul></td>
         <td>INT64, INT32</td>
         <td>ND</td>
         <td>1</td>
@@ -269,7 +269,7 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
         <td>weightGradOut</td>
         <td>Output</td>
         <td>Gradient corresponding to the leaf node weight, that is, grad_weight in the formula.</td>
-        <td><ul><li>The data type is the same as that of input input.</li><li>The length of the first dimension of shape is the same as that of the first dimension of input weight, and the length of the second dimension is the same as that of input grad.</li></ul></td>
+        <td><ul><li>The data type is the same as input.</li><li>Shape is [V, H]: its first dimension equals the first dimension of weight, and its second dimension equals the second dimension of input.</li></ul></td>
         <td>FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>2</td>
@@ -390,6 +390,12 @@ Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md).
 
 ## Constraints
 
+- Let BT be the length of grad, H the second dimension of input, and V the first dimension of weight. The output shapes are [BT, H] for inputGradOut and [V, H] for weightGradOut.
+- For non-empty computation, both modes require H <= 65535.
+- High-performance mode (softmaxOptional is not nullptr) additionally requires BT <= 65536, 128 <= V <= 65280, and sufficient UB capacity: `2 * align_up(4 * V, 64) <= UBBytes - 32`. UBBytes is the per-core device UB capacity in bytes; align_up rounds up to a multiple of 64 bytes. Thus, the effective V upper bound also depends on UB capacity. Memory-saving mode is not subject to these high-performance BT/V bounds or this UB formula.
+- These dimension and UB conditions do not guarantee successful tiling; Matmul tiling and platform resource limitations still apply.
+- Subject to parameter validation, if input or weight is empty, non-empty outputs are zero-filled and empty outputs are not written. No computation is scheduled when both outputs are empty. Use the actual workspaceSize returned by the first-phase API; an empty input does not necessarily imply zero workspace.
+- In the formulas, target_mask denotes the unpacked per-row mask. The one-hot subtraction applies only to rows with targetMask=0 and a valid index; targetMask=1 takes precedence and skips the target update.
 - Deterministic computation:
   - aclnnFusedLinearCrossEntropyLossGrad defaults to a deterministic implementation.
 

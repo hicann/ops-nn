@@ -30,6 +30,15 @@ def _unpack_target_mask_vec(target_mask, BT):
     return _unpack_target_mask_vec_torch(tm_t, BT)
 
 
+def _subtract_target_one_hot(grad_logits, target_mask, masked_target):
+    # Invalid indices are skipped defensively, never clamped to a vocabulary entry.
+    # Callers must provide a valid local target for every unmasked row.
+    V = grad_logits.shape[1]
+    valid = (target_mask == 0) & (masked_target >= 0) & (masked_target < V)
+    rows = torch.arange(grad_logits.shape[0], device=grad_logits.device)[valid]
+    grad_logits[rows, masked_target[rows]] -= 1.0
+
+
 def fused_linear_cross_entropy_loss_grad_golden(
     grad,
     input,
@@ -43,7 +52,6 @@ def fused_linear_cross_entropy_loss_grad_golden(
 ):
     """Kernel golden (torch BLAS). Params follow def.cpp inputs (without outputs)."""
     BT = input.shape[0]
-    V = weight.shape[0]
 
     input_t = torch.from_numpy(input.astype(np.float32))
     weight_t = torch.from_numpy(weight.astype(np.float32))
@@ -68,9 +76,8 @@ def fused_linear_cross_entropy_loss_grad_golden(
         grad_logits = torch.exp(logits - lm) / se
 
     tm = _unpack_target_mask_vec(target_mask, BT)
-    mt = torch.from_numpy(masked_target.astype(np.int64)).clamp(0, V - 1)
-    update = 1.0 - tm
-    grad_logits[torch.arange(BT), mt] -= update
+    mt = torch.from_numpy(masked_target.astype(np.int64))
+    _subtract_target_one_hot(grad_logits, tm, mt)
     grad_logits = grad_logits * grad_t.unsqueeze(1)
 
     # 对齐 kernel CastVecFull 语义: gl 先量化到输入 dtype 再参与 matmul。
@@ -103,7 +110,6 @@ def aclnn_fused_linear_cross_entropy_loss_grad_golden(
     import torch
 
     BT = input.shape[0]
-    V = weight.shape[0]
 
     input_f32 = input.float()
     weight_f32 = weight.float()
@@ -138,9 +144,8 @@ def aclnn_fused_linear_cross_entropy_loss_grad_golden(
         grad_logits = torch.exp(logits - lm) / se
 
     tm = _unpack_target_mask_vec_torch(targetMask, BT)
-    mt = maskedTarget.long().clamp(0, V - 1)
-    update = 1.0 - tm
-    grad_logits[torch.arange(BT), mt] -= update
+    mt = maskedTarget.long()
+    _subtract_target_one_hot(grad_logits, tm, mt)
     grad_logits = grad_logits * grad_f32.unsqueeze(1)
 
     # 对齐 kernel CastVecFull 语义: gl 先量化到输入 dtype 再参与 matmul
@@ -170,7 +175,6 @@ def e2e_fused_linear_cross_entropy_loss_grad_golden(
     语义: softmax(可选) -> update -> mul(grad) -> cast(输入dtype) -> matmul。
     """
     BT = input.shape[0]
-    V = weight.shape[0]
 
     if softmax is not None and getattr(softmax, "dim", lambda: 0)() >= 2:
         grad_logits = softmax.float().clone()
@@ -189,9 +193,8 @@ def e2e_fused_linear_cross_entropy_loss_grad_golden(
         grad_logits = torch.exp(logits - lm) / se
 
     tm = _unpack_target_mask_vec_torch(target_mask, BT)
-    mt = masked_target.long().clamp(0, V - 1)
-    update = 1.0 - tm
-    grad_logits[torch.arange(BT), mt] -= update
+    mt = masked_target.long()
+    _subtract_target_one_hot(grad_logits, tm, mt)
     grad_v = grad.float() if grad.dim() >= 1 else torch.ones(BT)
     grad_logits = grad_logits * grad_v.unsqueeze(1)
 
@@ -254,7 +257,6 @@ class FusedLinearCrossEntropyLossGradTestSpec:
         import torch
 
         BT = input.shape[0]
-        V = weight.shape[0]
 
         if softmax is not None and softmax.dim() >= 2:
             grad_logits = softmax.clone()
@@ -273,9 +275,8 @@ class FusedLinearCrossEntropyLossGradTestSpec:
             grad_logits = torch.exp(logits - lm) / se
 
         tm = _unpack_target_mask_vec_torch(target_mask, BT)
-        mt = masked_target.long().clamp(0, V - 1)
-        update = 1.0 - tm
-        grad_logits[torch.arange(BT, device=input.device), mt] -= update
+        mt = masked_target.long()
+        _subtract_target_one_hot(grad_logits, tm, mt)
         if grad.dim() >= 1:
             grad_logits = grad_logits * grad.unsqueeze(1)
 

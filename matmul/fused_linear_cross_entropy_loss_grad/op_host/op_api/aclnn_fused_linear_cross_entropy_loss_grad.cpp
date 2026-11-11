@@ -15,6 +15,7 @@
 #include "aclnn_fused_linear_cross_entropy_loss_grad.h"
 #include "fused_linear_cross_entropy_loss_grad.h"
 #include "aclnn_kernels/contiguous.h"
+#include "level0/zero_op.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
@@ -295,9 +296,20 @@ aclnnStatus aclnnFusedLinearCrossEntropyLossGradGetWorkspaceSize(
     auto ret = CheckParam(inputs, outputs);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 空tensor处理
+    // 空tensor处理：仅对非空输出置零，兼容非连续输出视图。
     if (input->IsEmpty() || weight->IsEmpty()) {
-        *workspaceSize = 0;
+        for (auto out : {inputGradOut, weightGradOut}) {
+            if (out->IsEmpty()) {
+                continue;
+            }
+            auto output = uniqueExecutor->AllocTensor(out->GetViewShape(), out->GetDataType());
+            OP_CHECK_NULL(output, return ACLNN_ERR_PARAM_NULLPTR);
+            auto zeroOut = l0op::ZerosLike(output, uniqueExecutor.get());
+            CHECK_RET(zeroOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto viewCopyOut = l0op::ViewCopy(zeroOut, out, uniqueExecutor.get());
+            CHECK_RET(viewCopyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }

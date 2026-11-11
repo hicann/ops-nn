@@ -42,7 +42,7 @@ $$
 $$
 
 $$
-\text{grad\_input} = \text{softmax} \cdot \text{weight}^T \in \mathbb{R}^{BT \times H}
+\text{grad\_input} = \text{softmax} \cdot \text{weight} \in \mathbb{R}^{BT \times H}
 $$
 
 $$
@@ -101,7 +101,13 @@ $$
 
 ## Constraints
 
-None.
+- Let BT be the length of grad, H the second dimension of input, and V the first dimension of weight. The shapes of input and inputGradOut are [BT, H], and the shapes of weight and weightGradOut are [V, H].
+- targetMask supports BOOL and UINT8. BOOL represents one mask value per row, and its length must equal BT. UINT8 is bit-packed, and its length multiplied by 8 must be at least BT. Row i uses bit (i % 8) of targetMask[i / 8], with the least significant bit (LSB) first.
+- targetMask=1 means that the row's target is outside the current vocabulary shard and skips the one-hot subtraction of 1. When targetMask=0, 1 is subtracted at the local index in maskedTarget. Masking does not skip subsequent gradient scaling or matrix multiplication. In the formulas, target_mask denotes the unpacked per-row mask.
+- The length of maskedTarget must equal BT. Unmasked rows must satisfy `0 <= maskedTarget[i] < V`. Masked rows do not use their target indices. The kernel only skips out-of-range indices defensively; it does not clamp them or treat them as valid targets.
+- For non-empty computation, both modes require H <= 65535. Only high-performance mode (softmaxOptional is not nullptr) additionally requires BT <= 65536, 128 <= V <= 65280, and `2 * align_up(4 * V, 64) <= UBBytes - 32`. UBBytes is the per-core UB capacity in bytes, and align_up rounds up to a multiple of 64 bytes. Therefore, the effective upper bound of V also depends on UB capacity. Memory-saving mode is not subject to these high-performance BT/V bounds or this UB formula.
+- These dimension and UB conditions do not guarantee successful tiling; Matmul tiling and platform resource limitations still apply.
+- After parameter validation succeeds, if input or weight is empty, only non-empty outputs are zero-filled. No computation is scheduled when both outputs are empty. Use the actual workspaceSize returned by the first-phase API.
 
 ## Invocation Description
 

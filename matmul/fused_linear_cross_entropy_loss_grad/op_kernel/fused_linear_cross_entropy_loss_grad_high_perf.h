@@ -186,8 +186,12 @@ private:
                 targetMask = targetMaskForUpdateGM.GetValue(btIdx);
             }
             if (!targetMask) {
-                auto maskedTarget1d = maskedTarget1dForUpdateGM.GetValue(i);
-                auto idx = tilingData.V * i + maskedTarget1d;
+                int64_t maskedTarget1d = static_cast<int64_t>(maskedTarget1dForUpdateGM.GetValue(i));
+                // Defensive skip only: an invalid target must never form a softmax address.
+                if (maskedTarget1d < 0 || maskedTarget1d >= static_cast<int64_t>(tilingData.V)) {
+                    continue;
+                }
+                auto idx = tilingData.V * i + static_cast<uint64_t>(maskedTarget1d);
                 SetFlag<HardEvent::MTE3_S>(evtIDMTE3ToS);
                 WaitFlag<HardEvent::MTE3_S>(evtIDMTE3ToS);
                 updateUB.SetValue(0, softmaxForUpdateGM.GetValue(idx) - 1.0f);

@@ -50,7 +50,7 @@ $$
 $$
 
 $$
-\text{grad\_input} = \text{softmax} \cdot \text{weight}^T \in \mathbb{R}^{BT \times H}
+\text{grad\_input} = \text{softmax} \cdot \text{weight} \in \mathbb{R}^{BT \times H}
 $$
 
 $$
@@ -187,7 +187,7 @@ $$
         <td>weight</td>
         <td>输入</td>
         <td>矩阵乘的权重矩阵，公式中的weight。</td>
-        <td>数据类型与输入input相同，shape第1维长度不支持小于128，第2维长度与输入input的第2维长度相同。</td>
+        <td>数据类型与输入input相同，shape为[V, H]，第2维长度与输入input的第2维长度相同。仅高性能模式（softmaxOptional非nullptr）要求V不小于128；省显存模式无此下限。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>2</td>
@@ -196,9 +196,9 @@ $$
       <tr>
         <td>targetMask</td>
         <td>输入</td>
-        <td>中间变量，代表对应词ID是否在目标范围内，公式中的target_mask。</td>
-        <td><ul><li>每1bit数据代表1个布尔值，0代表false，1代表true。</li><li>shape长度乘以8须不小于输入grad的长度。</li></ul></td>
-        <td>UINT8</td>
+        <td>中间变量，公式中的target_mask。1表示该行目标不属于当前词汇表分片，跳过one-hot减1；0表示按maskedTarget中的局部索引减1。掩码不跳过后续梯度缩放和矩阵乘。</td>
+        <td><ul><li>BOOL：每个元素表示一行的掩码，长度须等于BT（输入grad长度）。</li><li>UINT8：按bit打包，长度乘以8须不小于BT；第i行对应targetMask[i / 8]的第(i % 8)位，按最低有效位（LSB）优先解包。</li></ul></td>
+        <td>BOOL、UINT8</td>
         <td>ND</td>
         <td>1</td>
         <td>√</td>
@@ -206,8 +206,8 @@ $$
       <tr>
         <td>maskedTarget</td>
         <td>输入</td>
-        <td>中间变量，代表对应词ID映射到当前设备词汇表分片的局部索引，无效目标会被掩码targetMask处理，公式中的masked_target。</td>
-        <td>shape长度与输入grad相同。</td>
+        <td>中间变量，代表对应词ID映射到当前设备词汇表分片的局部索引，公式中的masked_target。</td>
+        <td><ul><li>shape长度与输入grad相同。</li><li>targetMask解包后为0的行必须满足0 &lt;= maskedTarget[i] &lt; V；为1的行跳过one-hot减1，不使用该行目标索引。</li><li>内核对越界索引仅做防御性跳过，不执行clamp；这不表示越界值是正常目标，调用方仍须保证未掩码行索引合法。</li></ul></td>
         <td>INT64、INT32</td>
         <td>ND</td>
         <td>1</td>
@@ -267,7 +267,7 @@ $$
         <td>weightGradOut</td>
         <td>输出</td>
         <td>对应叶子节点weight的梯度，公式中的grad_weight。</td>
-        <td><ul><li>数据类型与输入input相同。</li><li>shape第1维长度与输入weight的第1维长度相同，第2维长度与输入grad长度相同。</li></ul></td>
+        <td><ul><li>数据类型与输入input相同。</li><li>shape为[V, H]，第1维长度与输入weight的第1维长度相同，第2维长度与输入input的第2维长度相同。</li></ul></td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>2</td>
@@ -388,6 +388,12 @@ $$
 
 ## 约束说明
 
+- 记BT为grad长度、H为input第2维长度、V为weight第1维长度；inputGradOut和weightGradOut的shape分别为[BT, H]和[V, H]。
+- 非空计算时，两种模式均要求H <= 65535。
+- 高性能模式（softmaxOptional非nullptr）额外要求BT <= 65536、128 <= V <= 65280，并满足UB容量要求：`2 * align_up(4 * V, 64) <= UBBytes - 32`。UBBytes为设备每核UB容量（字节），align_up表示向上对齐至64字节；因此V的实际可用上限也受UB容量约束。省显存模式不受上述高性能模式的BT/V上下限及此UB公式约束。
+- 上述维度及UB条件不是tiling成功的充分保证，仍受Matmul tiling和平台资源限制。
+- 在满足参数校验的前提下，input或weight为空时，非空输出会被置零，空输出不写入；两个输出均为空时不下发计算。workspaceSize应使用第一段接口实际返回值，不应假设空输入时一定为0。
+- 公式中的target_mask指解包后的逐行掩码；仅对targetMask=0且索引合法的行执行one-hot减1，targetMask=1时优先跳过目标更新。
 - 确定性说明：
   - aclnnFusedLinearCrossEntropyLossGrad默认确定性实现。
 

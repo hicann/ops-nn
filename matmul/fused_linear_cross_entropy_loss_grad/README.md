@@ -40,7 +40,7 @@ $$
 $$
 
 $$
-\text{grad\_input} = \text{softmax} \cdot \text{weight}^T \in \mathbb{R}^{BT \times H}
+\text{grad\_input} = \text{softmax} \cdot \text{weight} \in \mathbb{R}^{BT \times H}
 $$
 
 $$
@@ -99,7 +99,13 @@ $$
 
 ## 约束说明
 
-无
+- 记BT为grad长度、H为input第2维长度、V为weight第1维长度。input和inputGradOut的shape为[BT, H]，weight和weightGradOut的shape为[V, H]。
+- targetMask支持BOOL和UINT8。BOOL按元素表示逐行掩码，长度须等于BT；UINT8按bit打包，长度乘以8须不小于BT，第i行对应targetMask[i / 8]的第(i % 8)位，最低有效位（LSB）优先。
+- targetMask=1表示该行目标不属于当前词汇表分片，跳过one-hot减1；targetMask=0时按maskedTarget中的局部索引减1。掩码不跳过后续梯度缩放和矩阵乘，公式中的target_mask指解包后的逐行掩码。
+- maskedTarget长度须等于BT，未掩码行必须满足`0 <= maskedTarget[i] < V`。掩码行不使用目标索引；内核对越界索引仅做防御性skip，不执行clamp，不将越界值视为正常目标。
+- 非空计算时，两种模式均要求H <= 65535。仅高性能模式（softmaxOptional非nullptr）额外要求BT <= 65536、128 <= V <= 65280，且`2 * align_up(4 * V, 64) <= UBBytes - 32`。UBBytes为每核UB容量（字节），align_up为向上对齐至64字节，故V实际可用上限还受UB容量约束。省显存模式无上述高性能BT/V上下限及此UB公式约束。
+- 上述维度及UB条件不是tiling成功的充分保证，仍受Matmul tiling和平台资源限制。
+- 参数校验通过后，input或weight为空时仅将非空输出置零；两个输出均为空时不下发计算。workspaceSize须使用第一段接口实际返回值。
 
 ## 调用说明
 
