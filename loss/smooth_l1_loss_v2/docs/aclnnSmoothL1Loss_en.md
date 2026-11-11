@@ -108,7 +108,7 @@ aclnnStatus aclnnSmoothL1Loss(
       <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with target.<br>The data type must satisfy the data type derivation rule with target (see also <a href="../../../docs/en/context/conversion_relationship.md" target="_blank">conversion relationship</a>).</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND, NCL, NCHW, NHWC</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -118,7 +118,7 @@ aclnnStatus aclnnSmoothL1Loss(
       <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with self.<br>The data type must comply with the data type derivation rule with self (see also <a href="../../../docs/en/context/conversion_relationship.md" target="_blank">conversion relationship</a>).</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND, NCL, NCHW, NHWC</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -148,7 +148,7 @@ aclnnStatus aclnnSmoothL1Loss(
       <td class="tg-0lax">When reduction is none, the shape is the same as the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> result of self and target. When reduction is mean or sum, the shape is [1]. The data type is the data type that self and target can be converted to after derivation (see also <a href="../../../docs/en/context/conversion_relationship.md" target="_blank">conversion relationship</a>). When reduction is mean or sum, the format of result must be ND. When result is of the DOUBLE type, the output is the DOUBLE value obtained by casting (<a href="../../../docs/en/context/conversion_relationship.md" target="_blank">conversion relationship</a>) the computation result.</td>
       <td class="tg-0lax">FLOAT, FLOAT16, BFLOAT16, DOUBLE</td>
       <td class="tg-0lax">ND, NCL, NCHW, NHWC</td>
-      <td class="tg-0lax">1-8</td>
+      <td class="tg-0lax">0-8</td>
       <td class="tg-0lax">√</td>
     </tr>
     <tr>
