@@ -138,7 +138,10 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
     auto tiling_key = tiling_context->GetTilingKey();
     auto block_dim = tiling_context->GetBlockDim();
     auto raw_tiling_data = tiling_context->GetRawTilingData();
-    auto tiling_data_result = to_string<int64_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize() - 608);
+    // 比对窗口为标量字段 + tailRowList 前 74 项（与 golden 基线一致），截断量随 MAX_CORE_COUNT 缩放
+    auto tiling_data_result = to_string<int64_t>(
+        raw_tiling_data->GetData(),
+        raw_tiling_data->GetDataSize() - (optiling::MAX_CORE_COUNT * 3 - 74) * sizeof(int64_t));
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
@@ -239,7 +242,11 @@ static void ExecuteTestCaseA2(ge::DataType inDtype, ge::DataType outDtype, gert:
     auto tiling_key = tiling_context->GetTilingKey();
     auto block_dim = tiling_context->GetBlockDim();
     auto raw_tiling_data = tiling_context->GetRawTilingData();
-    auto tiling_data_result = to_string<int64_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize() - 600);
+    // 比对窗口为标量字段 + 完整 tailRowList + tailColBlockStartList 前 25 项（与 golden 字段对齐），截断量随
+    // MAX_CORE_COUNT 缩放，数组扩容时窗口随字段边界同步生长
+    auto tiling_data_result = to_string<int64_t>(
+        raw_tiling_data->GetData(),
+        raw_tiling_data->GetDataSize() - (optiling::MAX_CORE_COUNT * 2 - 25) * sizeof(int64_t));
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
@@ -667,9 +674,18 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_1)
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
     float dstTypeMax = 0.0;
-    string expectTilingData = "10 48 196352 0 0 1 2 1 128 0 0 40 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 2 "
-                              "2 3 3 4 4 5 5 6 6 7 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 "
-                              "30 31 32 33 34 35 36 37 38 39 0 0 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 0 0 0 0 0 0 0 0 ";
+    string expectTilingData = "10 48 196352 0 0 1 2 1 128 0 0 40 256 0 0 "
+                              "0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 1 1 2 2 3 3 4 4 5 5 6 "
+                              "6 7 7 8 9 10 11 12 13 14 15 16 17 18 19 "
+                              "20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 "
+                              "35 36 37 38 39 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 1 0 1 0 1 0 1 0 1 0 1 0 "
+                              "1 0 1 0 0 0 0 0 0 0 0 0 ";
 
     ExecuteTestCaseA2(ge::DT_BF16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
                       dstTypeMax, expectTilingData);
@@ -684,9 +700,18 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_fploat16_1)
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
     float dstTypeMax = 0.0;
-    string expectTilingData = "0 48 196352 0 0 1 2 1 128 0 0 40 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 2 2 "
-                              "3 3 4 4 5 5 6 6 7 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 "
-                              "31 32 33 34 35 36 37 38 39 0 0 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 0 0 0 0 0 0 0 0 ";
+    string expectTilingData = "0 48 196352 0 0 1 2 1 128 0 0 40 256 0 0 "
+                              "0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 1 1 2 2 3 3 4 4 5 5 6 "
+                              "6 7 7 8 9 10 11 12 13 14 15 16 17 18 19 "
+                              "20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 "
+                              "35 36 37 38 39 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 1 0 1 0 1 0 1 0 1 0 1 0 "
+                              "1 0 1 0 0 0 0 0 0 0 0 0 ";
 
     ExecuteTestCaseA2(ge::DT_FLOAT16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
                       dstTypeMax, expectTilingData);
@@ -833,10 +858,18 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_3D_bfloat16_sin
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
     float dstTypeMax = 0.0;
-    string expectTilingData = "10 48 196352 0 0 1 2 1 128 0 0 80 256 0 0 0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 0 1 48 48 49 "
-                              "49 50 50 51 51 52 52 53 53 54 54 55 55 56 56 57 57 58 58 59 59 60 60 61 61 62 62 63 63 "
-                              "64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 0 0 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 "
-                              "0 1 0 1 0 1 0 ";
+    string expectTilingData = "10 48 196352 0 0 1 2 1 128 0 0 80 256 0 0 "
+                              "0 0 0 0 0 48 0 0 0 0 0 0 0 0 0 "
+                              "0 1 48 48 49 49 50 50 51 51 52 52 53 53 54 "
+                              "54 55 55 56 56 57 57 58 58 59 59 60 60 61 61 "
+                              "62 62 63 63 64 65 66 67 68 69 70 71 72 73 74 "
+                              "75 76 77 78 79 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+                              "0 0 0 1 0 1 0 1 0 1 0 1 0 1 0 "
+                              "1 0 1 0 1 0 1 0 1 0 1 0 ";
 
     ExecuteTestCaseA2(ge::DT_BF16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
                       dstTypeMax, expectTilingData);

@@ -19,7 +19,7 @@
 #include "op_host/tiling_base.h"
 
 namespace optiling {
-constexpr uint16_t MAX_CORE_COUNT = 50;
+constexpr uint16_t MAX_CORE_COUNT = 120;
 
 BEGIN_TILING_DATA_DEF(DynamicBlockQuantTilingData)
 TILING_DATA_FIELD_DEF(int64_t, tilingKey);
