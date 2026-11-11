@@ -1686,8 +1686,8 @@ private:
                         engine.entityName, "outputPadding, strides, dilations",
                         op::FVectorToString(engine.meta.outputPadding) + ", " +
                             op::FVectorToString(engine.meta.stride) + ", " + op::FVectorToString(engine.meta.dilation),
-                        "outputPadding[" + std::to_string(i) + "] must be less than both stride[" + std::to_string(i) +
-                            "] and dilation[" + std::to_string(i) + "]");
+                        "outputPadding[" + std::to_string(i) + "] must be less than stride[" + std::to_string(i) +
+                            "] or dilation[" + std::to_string(i) + "]");
                     return ACLNN_ERR_PARAM_INVALID;
                 }
 
@@ -4610,7 +4610,8 @@ public:
     {
         if (specialConv1d) {
             // assert x and weight format = NCHW, C=H=1
-            // x view to shape n*w/s s, the batch dim is fold to the dim 1,
+            // x view to shape n*w/s s, the batch dim is fold to the dim 1
+            // isSpecialConv1d has checked stride[1] greater than 1, the division is safe
             op::Shape inputShape2d = op::Shape(
                 {input->GetViewShape()[0] * input->GetViewShape()[3] / (*stride)[1], (*stride)[1]});
             auto input2d = ViewWithShape(input, inputShape2d, executor);

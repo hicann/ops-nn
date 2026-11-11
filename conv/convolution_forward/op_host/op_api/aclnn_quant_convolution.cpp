@@ -385,6 +385,7 @@ private:
         auto newPad = ConstructPadding(meta.padding, inputShape);
         int64_t inferredShapeSize = inputShape.size() - 2;
         for (int64_t i = 0; i < inferredShapeSize; ++i) {
+            // CheckInOutDimND has guaranteed inputShape and weightShape have the same size
             int64_t xOut = (inputShape[i + INPUT_C_INDEX + 1] + newPad[i] -
                             meta.dilation[i] * (weightShape[i + INPUT_C_INDEX + 1] - 1) - 1) /
                                meta.stride[i] +

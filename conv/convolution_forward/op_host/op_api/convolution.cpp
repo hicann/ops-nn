@@ -415,6 +415,7 @@ static bool CheckV2Functionality(const Conv3DTransPoseV2Prarams& params)
     }
 
     auto outputShape = params.output->GetViewShape();
+    // aclnn L1 func has checked stride > 0
     if ((outputShape[D_DIM_NCDHW_INDEX] + padding[0] + padding[0] -
          ((kernelShape[D_DIM_NCDHW_INDEX] - 1) * dilation[0] + 1)) %
             stride[0] >
@@ -687,7 +688,9 @@ const aclTensor* Conv2dV2NCHW(const aclTensor* input, const aclTensor* weight, c
 {
     L0_DFX(Conv2dV2NCHW, input, weight, bias, outputDtype, stride, padding, dilation, groups, useHf32);
     auto convOut = executor->AllocTensor(outputDtype, input->GetStorageFormat(), input->GetOriginalFormat());
-    Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, useHf32, convOut, executor);
+    OP_CHECK(Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, useHf32, convOut, executor) ==
+                 ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv2dV2NCHW L0 func failed."), return nullptr);
     return convOut;
 }
 
@@ -698,7 +701,9 @@ const aclTensor* Conv2d5HdFp16(const aclTensor* input, const aclTensor* weight, 
     L0_DFX(Conv2d5HdFp16, input, weight, stride, padding, dilation, groups);
     auto convOut = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(),
                                          input->GetOriginalFormat());
-    Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, convOut, executor);
+    OP_CHECK(Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, convOut, executor) ==
+                 ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv2d5HdFp16 L0 func failed."), return nullptr);
     return convOut;
 }
 
@@ -709,7 +714,9 @@ const aclTensor* Conv2d5HdFp1625HdFp32(const aclTensor* input, const aclTensor* 
 {
     L0_DFX(Conv2d5HdFp1625HdFp32, input, weight, stride, padding, dilation, groups);
     auto convOut = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), input->GetOriginalFormat());
-    Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, convOut, executor);
+    OP_CHECK(Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, convOut, executor) ==
+                 ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv2d5HdFp1625HdFp32 L0 func failed."), return nullptr);
     return convOut;
 }
 
@@ -719,7 +726,9 @@ const aclTensor* Conv2d5HdFp32(const aclTensor* input, const aclTensor* weight, 
 {
     L0_DFX(Conv2d5HdFp32, input, weight, bias, stride, padding, dilation, groups, useHf32);
     auto convOut = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), input->GetOriginalFormat());
-    Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, useHf32, convOut, executor);
+    OP_CHECK(Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, useHf32, convOut, executor) ==
+                 ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv2d5HdFp32 L0 func failed."), return nullptr);
     return convOut;
 }
 
@@ -730,7 +739,9 @@ const aclTensor* Conv2d5HdBf16(const aclTensor* input, const aclTensor* weight, 
 {
     L0_DFX(Conv2d5HdBf16, input, weight, bias, stride, padding, dilation, groups);
     auto convOut = executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), input->GetOriginalFormat());
-    Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, convOut, executor);
+    OP_CHECK(Conv2dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, convOut, executor) ==
+                 ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv2d5HdBf16 L0 func failed."), return nullptr);
     return convOut;
 }
 
@@ -742,6 +753,7 @@ static aclnnStatus Conv3dWithFlag(const aclTensor* input, const aclTensor* weigh
 
     aclIntArray* stride5;
     aclIntArray* dilation5;
+    // in aclnn L1 func, stride/dilation must be 3D
     if (input->GetOriginalFormat() == op::Format::FORMAT_NCDHW) {
         FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1], (*stride)[2]};
         FVector<int64_t> newDilation{1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
@@ -753,7 +765,7 @@ static aclnnStatus Conv3dWithFlag(const aclTensor* input, const aclTensor* weigh
         stride5 = executor->AllocIntArray(newStrides.data(), conv3dDimNum);
         dilation5 = executor->AllocIntArray(newDilation.data(), conv3dDimNum);
     }
-
+    // in aclnn L1 func, padding must be 3D
     FVector<int64_t> newPad{(*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1], (*padding)[2], (*padding)[2]};
 
     auto pad6 = executor->AllocIntArray(newPad.data(), PAD_DIM_6);
@@ -894,11 +906,14 @@ const aclTensor* Conv3d6HdFp16(const aclTensor* input, const aclTensor* weight, 
     auto output = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(),
                                         input->GetOriginalFormat());
     if (!IsSupportConv3DToConv3DV2()) {
-        Conv3dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, output, executor);
+        OP_CHECK(Conv3dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, output, executor) ==
+                     ACLNN_SUCCESS,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3d6HdFp16 L0 func failed."), return nullptr);
     } else {
         OP_LOGD("Conv3dFp16 to Conv3dv2Fp16!");
-        Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output,
-                         executor);
+        OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false,
+                                  output, executor) == ACLNN_SUCCESS,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3d6HdFp16 L0 func failed."), return nullptr);
     }
     return output;
 }
@@ -910,11 +925,14 @@ const aclTensor* Conv3d6HdFp32(const aclTensor* input, const aclTensor* weight, 
     L0_DFX(Conv3d6HdFp32, input, weight, bias, stride, padding, dilation, groups, useHf32);
     auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), input->GetOriginalFormat());
     if (!IsSupportConv3DToConv3DV2()) {
-        Conv3dWithFlag(input, weight, bias, stride, padding, dilation, groups, useHf32, output, executor);
+        OP_CHECK(Conv3dWithFlag(input, weight, bias, stride, padding, dilation, groups, useHf32, output, executor) ==
+                     ACLNN_SUCCESS,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3d6HdFp32 L0 func failed."), return nullptr);
     } else {
         OP_LOGD("Conv3dFp32 to Conv3dv2Fp32!");
-        Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, useHf32, output,
-                         executor);
+        OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, useHf32,
+                                  output, executor) == ACLNN_SUCCESS,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3d6HdFp32 L0 func failed."), return nullptr);
     }
     return output;
 }
@@ -926,11 +944,14 @@ const aclTensor* Conv3d6HdBf16(const aclTensor* input, const aclTensor* weight, 
     L0_DFX(Conv3d6HdBf16, input, weight, bias, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), input->GetOriginalFormat());
     if (!IsSupportConv3DToConv3DV2()) {
-        Conv3dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, output, executor);
+        OP_CHECK(Conv3dWithFlag(input, weight, bias, stride, padding, dilation, groups, false, output, executor) ==
+                     ACLNN_SUCCESS,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3d6HdBf16 L0 func failed."), return nullptr);
     } else {
         OP_LOGD("Conv3dBf16 to Conv3dv2Bf16!");
-        Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output,
-                         executor);
+        OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false,
+                                  output, executor) == ACLNN_SUCCESS,
+                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3d6HdBf16 L0 func failed."), return nullptr);
     }
     return output;
 }
@@ -941,7 +962,9 @@ const aclTensor* Conv3dv26HdBf16(const aclTensor* input, const aclTensor* weight
 {
     L0_DFX(Conv3dv26HdBf16, input, weight, bias, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output, executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3dv26HdBf16 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -951,8 +974,9 @@ const aclTensor* Conv3dv26HdFp32(const aclTensor* input, const aclTensor* weight
 {
     L0_DFX(Conv3dv26HdFp32, input, weight, bias, stride, padding, dilation, groups, useHf32);
     auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, useHf32, output,
-                     executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, useHf32, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3dv26HdFp32 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -963,7 +987,9 @@ const aclTensor* Conv3dv26HdFp16(const aclTensor* input, const aclTensor* weight
     L0_DFX(Conv3dv26HdFp16, input, weight, bias, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(),
                                         input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output, executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3dv26HdFp16 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -974,7 +1000,9 @@ const aclTensor* QuantConv3d6HdInt8ToNCDHWBf16(const aclTensor* input, const acl
 {
     L0_DFX(QuantConv3d6HdInt8ToNCDHWBf16, input, weight, bias, scale, offset, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(op::DataType::DT_BF16, input->GetOriginalFormat(), input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, scale, offset, stride, padding, dilation, groups, false, output, executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, scale, offset, stride, padding, dilation, groups, false, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "QuantConv3d6HdInt8ToNCDHWBf16 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -986,7 +1014,9 @@ const aclTensor* QuantConv3d6HdInt8ToNCDHWFp16(const aclTensor* input, const acl
     L0_DFX(QuantConv3d6HdInt8ToNCDHWFp16, input, weight, bias, scale, offset, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetOriginalFormat(),
                                         input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, scale, offset, stride, padding, dilation, groups, false, output, executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, scale, offset, stride, padding, dilation, groups, false, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "QuantConv3d6HdInt8ToNCDHWFp16 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -997,7 +1027,9 @@ const aclTensor* Conv3dv2NCDHWHif8(const aclTensor* input, const aclTensor* weig
     L0_DFX(Conv3dv2NCDHWHif8, input, weight, bias, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(op::DataType::DT_HIFLOAT8, input->GetStorageFormat(),
                                         input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output, executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3dv2NCDHWHif8 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -1007,8 +1039,9 @@ const aclTensor* Conv3dv2NCDHWFp32(const aclTensor* input, const aclTensor* weig
 {
     L0_DFX(Conv3dv2NCDHWFp32, input, weight, bias, stride, padding, dilation, groups, useHf32);
     auto output = executor->AllocTensor(op::DataType::DT_FLOAT, input->GetStorageFormat(), input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, useHf32, output,
-                     executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, useHf32, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3dv2NCDHWFp32 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -1018,7 +1051,9 @@ const aclTensor* Conv3dv2NCDHWBf16(const aclTensor* input, const aclTensor* weig
 {
     L0_DFX(Conv3dv2NCDHWBf16, input, weight, bias, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(op::DataType::DT_BF16, input->GetStorageFormat(), input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output, executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3dv2NCDHWBf16 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -1029,7 +1064,9 @@ const aclTensor* Conv3dv2NCDHWFp16(const aclTensor* input, const aclTensor* weig
     L0_DFX(Conv3dv2NCDHWFp16, input, weight, bias, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(op::DataType::DT_FLOAT16, input->GetStorageFormat(),
                                         input->GetOriginalFormat());
-    Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output, executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, nullptr, nullptr, stride, padding, dilation, groups, false, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3dv2NCDHWFp16 L0 func failed."), return nullptr);
     return output;
 }
 
@@ -1040,7 +1077,9 @@ const aclTensor* Conv3dv2L0Func(const aclTensor* input, const aclTensor* weight,
 {
     L0_DFX(Conv3dv2L0Func, input, weight, bias, scale, outputDtype, outputFormat, stride, padding, dilation, groups);
     auto output = executor->AllocTensor(outputDtype, outputFormat, outputFormat);
-    Conv3dv2WithFlag(input, weight, bias, scale, nullptr, stride, padding, dilation, groups, useHf32, output, executor);
+    OP_CHECK(Conv3dv2WithFlag(input, weight, bias, scale, nullptr, stride, padding, dilation, groups, useHf32, output,
+                              executor) == ACLNN_SUCCESS,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER, "Conv3dv2L0Func L0 func failed."), return nullptr);
     return output;
 }
 
@@ -1075,6 +1114,7 @@ static aclnnStatus ConvTranspose2dWithFlag(const aclTensor* input, const aclTens
     aclIntArray* dilation4;
     aclIntArray* outputPad4;
     const int64_t hf32 = useHf32 ? 0x40 : 0x20;
+    // in aclnn L1 func, stride/dilation/outputPadding must be 2D
     if (input->GetOriginalFormat() == op::Format::FORMAT_NCHW) {
         FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1]};
         FVector<int64_t> newDalition{1, 1, (*dilation)[0], (*dilation)[1]};
@@ -1092,6 +1132,7 @@ static aclnnStatus ConvTranspose2dWithFlag(const aclTensor* input, const aclTens
     }
 
     auto pad4 = ConstructNewPad(padding, executor);
+    CHECK_RET(pad4 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (pad4->Size() != PAD_DIM_4) {
         OP_LOGE(ACLNN_ERR_INNER,
                 "L0 func construct conv2dTranspose new pad failed, the legal pad dim is %ld, but got %lu.", PAD_DIM_4,
@@ -1396,6 +1437,7 @@ static void N2HChangeOutput(aclTensor*& output, TransposeAdaptParam* params, acl
 {
     // change output shape and format
     auto oriShape = output->GetStorageShape();
+    // 5D output shape is checked in aclnn L1 func
     Shape outShape({oriShape[H_DIM_NCDHW_INDEX], oriShape[D_DIM_NCDHW_INDEX], oriShape[N_DIM_NCDHW_INDEX],
                     oriShape[W_DIM_NCDHW_INDEX], oriShape[C_DIM_NCDHW_INDEX]});
     output->SetStorageShape(outShape);
@@ -1410,6 +1452,7 @@ static void N2HChangeOutput(aclTensor*& output, TransposeAdaptParam* params, acl
     // change stride pos
     if (params->adaptStride->Size() == conv3dDimNum) {
         auto oriStrideData = params->adaptStride->GetData();
+        // stride is created in GetConv3DTransposeAdapterParam, so it is guaranteed to be 5D
         FVector<int64_t> newStrides = {oriStrideData[H_DIM_NCDHW_INDEX], oriStrideData[D_DIM_NCDHW_INDEX],
                                        oriStrideData[N_DIM_NCDHW_INDEX], oriStrideData[W_DIM_NCDHW_INDEX],
                                        oriStrideData[C_DIM_NCDHW_INDEX]};
@@ -1418,6 +1461,7 @@ static void N2HChangeOutput(aclTensor*& output, TransposeAdaptParam* params, acl
     // change output padding pos
     if (params->adaptoutputPad->Size() == conv3dDimNum) {
         auto oriOutputPadData = params->adaptoutputPad->GetData();
+        // output padding is created in GetConv3DTransposeAdapterParam, so it is guaranteed to be 5D
         FVector<int64_t> newOutputPad = {oriOutputPadData[H_DIM_NCDHW_INDEX], oriOutputPadData[D_DIM_NCDHW_INDEX],
                                          oriOutputPadData[N_DIM_NCDHW_INDEX], oriOutputPadData[W_DIM_NCDHW_INDEX],
                                          oriOutputPadData[C_DIM_NCDHW_INDEX]};

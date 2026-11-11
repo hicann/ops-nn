@@ -55,6 +55,8 @@ constexpr int64_t BLK_N = 16;
 constexpr int64_t POSK_LIMIT = 65535;
 constexpr int64_t BLK_LEN = 32;
 constexpr int64_t CONST_DOUBLE = 2;
+constexpr int64_t CONV_ATTR_DIM_4 = 4;
+constexpr int64_t CONV_ATTR_DIM_2 = 2;
 std::map<op::DataType, uint32_t> gDataTypeSizeTab = {
     {op::DataType::DT_FLOAT16, 2}, {op::DataType::DT_FLOAT, 4}, {op::DataType::DT_BF16, 2},
     {op::DataType::DT_INT8, 1},    {op::DataType::DT_UINT8, 1}, {op::DataType::DT_INT64, 8},
@@ -98,6 +100,7 @@ void Conv2DSplitWInfo::InitConv2DSplitWInfo(const aclTensor* input, const aclTen
     wi = input->GetViewShape().GetDim(SplitWInfo::WI_INDEX);
     kh = weight->GetViewShape().GetDim(SplitWInfo::HI_INDEX);
     kw = weight->GetViewShape().GetDim(SplitWInfo::WI_INDEX);
+    // the dim sizes of stride/padding/dilation are checked before in DimChecker function
     strideH = (*stride)[0];
     strideW = (*stride)[1];
     dilationH = (*dilation)[0];
@@ -389,6 +392,10 @@ void GetUbSize()
     }
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, ubSize);
     OP_LOGD("GetUbSize returned: %lu", ubSize);
+    if (ubSize <= RESERVED_SIZE_8K) {
+        OP_LOGW("ubSize %lu is not greater than reserved size %ld, ubSize fallback to 0.", ubSize, RESERVED_SIZE_8K);
+        return;
+    }
     g_ubSize = ubSize - RESERVED_SIZE_8K;
 }
 
@@ -398,6 +405,10 @@ bool CheckC04UbSize(struct ConvolutionOpInfo& opInfo, int64_t cin, int64_t orgKh
         return false;
     }
     GetUbSize();
+    if (g_ubSize <= VGATHER_REGISTER_SIZE) {
+        OP_LOGD("ubSize %lu is not greater than vgather register size, skip C04 path.", g_ubSize);
+        return false;
+    }
     auto it = SplitWInfo::gDataTypeSizeTab.find(opInfo.weightDtype);
     if (it == SplitWInfo::gDataTypeSizeTab.end()) {
         return false;
@@ -435,6 +446,7 @@ bool CheckDmaLimits(const aclTensor* input, const aclTensor* weight, const aclIn
     int64_t orgKw = static_cast<int64_t>(weight->GetViewShape().GetDim(SplitWInfo::WI_INDEX));
     int64_t hin = static_cast<int64_t>(input->GetViewShape().GetDim(SplitWInfo::HI_INDEX));
     int64_t win = static_cast<int64_t>(input->GetViewShape().GetDim(SplitWInfo::WI_INDEX));
+    // the dim sizes of stride/padding/dilation are checked before in DimChecker function
     int64_t strideH = (*stride)[0];
     int64_t strideW = (*stride)[1];
     int64_t dilationH = (*dilation)[0];

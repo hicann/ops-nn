@@ -308,6 +308,9 @@ static aclnnStatus DeformableConv2dV2(DeformableConv2dInputTensor& inputTensor, 
     const aclTensor* tmpOut = l0op::Conv2dV2NCHW(deformOut, inputTensor.weight, inputTensor.biasOptional,
                                                  outputTensor.out->GetDataType(), newStrideArray, params.padding,
                                                  params.dilation, params.groups, false, executor);
+    OP_CHECK(tmpOut != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv2dV2NCHW L0 func failed, deformable conv2d return nullptr."),
+             return ACLNN_ERR_INNER_NULLPTR);
     ConvolutionResult resultTensor = {tmpOut, deformOut};
     auto result = ResultViewProcess(inputTensor, resultTensor, outputTensor, executor);
     CHECK_RET(result == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
