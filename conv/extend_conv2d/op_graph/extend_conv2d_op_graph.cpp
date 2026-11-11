@@ -29,11 +29,15 @@
 
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
+#include "op_common/op_host/util/op_const_def.h"
+#include "platform/platform_info.h"
+#include "platform/soc_spec.h"
 #include "register/op_impl_registry.h"
 
 namespace ops {
 namespace {
 constexpr size_t NUM_OF_DTYPE = 192;
+const std::map<std::string, NpuArch> SOC_LIST_ARCH51 = {{"Ascend5162", Ops::Base::DAV_5162}};
 
 std::vector<ge::DataType> extendConv2dFmpDataTypeList = {
     ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT8,    ge::DT_INT8,    ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT8,
@@ -338,6 +342,38 @@ std::vector<ge::Format> extendConv2dOutputFormatList = {
     ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NCHW,
     ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NCHW,
     ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NCHW, ge::FORMAT_NHWC};
+
+std::vector<ge::DataType> extendConv2dFmpDataTypeListArch5162 = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT8,
+                                                                 ge::DT_INT8};
+
+std::vector<ge::DataType> extendConv2dWeightDataTypeListArch5162 = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT8,
+                                                                    ge::DT_INT8};
+
+std::vector<ge::DataType> extendConv2dBiasDataTypeListArch5162 = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32,
+                                                                  ge::DT_INT32};
+
+std::vector<ge::DataType> extendConv2dOffsetWDataTypeListArch5162 = {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
+                                                                     ge::DT_INT8};
+
+std::vector<ge::DataType> extendConv2dScaleAttrDataTypeListArch5162 = {ge::DT_UINT64, ge::DT_UINT64, ge::DT_UINT64,
+                                                                       ge::DT_UINT64};
+
+std::vector<ge::DataType> extendConv2dReluWeightAttrDataTypeListArch5162 = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                                                                            ge::DT_FLOAT};
+
+std::vector<ge::DataType> extendConv2dOutputDataTypeListArch5162 = {ge::DT_FLOAT16, ge::DT_INT8, ge::DT_FLOAT16,
+                                                                    ge::DT_INT8};
+
+std::vector<ge::Format> extendConv2dFmapFormatListArch5162 = {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                                                              ge::FORMAT_NCHW};
+
+std::vector<ge::Format> extendConv2dWeightFormatListArch5162 = {ge::FORMAT_FRACTAL_Z, ge::FORMAT_FRACTAL_Z,
+                                                                ge::FORMAT_FRACTAL_Z, ge::FORMAT_FRACTAL_Z};
+
+std::vector<ge::Format> extendConv2dNDFormatListArch5162 = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+
+std::vector<ge::Format> extendConv2dOutputFormatListArch5162 = {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW,
+                                                                ge::FORMAT_NCHW};
 
 std::string DtToString(ge::DataType dt)
 {
@@ -644,12 +680,27 @@ std::vector<T> FilterListByC04Flag(const std::vector<T>& list, bool c04EnableFla
 } // namespace
 
 static ge::graphStatus ExtendConv2dOpSelectFormatByFlag(bool c04EnableFlag, ge::AscendString& result);
+static ge::graphStatus ExtendConv2dOpSelectFormatArch5162(ge::AscendString& result);
+
+bool IsArch5162()
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiInfo;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optiInfo) != 0) {
+        OP_LOGD("", "[OpSelectFormat] IsArch5162: get platform instance failed, treat as non-5162.");
+        return false;
+    }
+    return SOC_LIST_ARCH51.find(platformInfo.str_info.short_soc_version) != SOC_LIST_ARCH51.end();
+}
 
 static ge::graphStatus ExtendConv2dOpSelectFormat(const gert::OpCheckContext* context, ge::AscendString& result)
 {
     OP_LOGD(context == nullptr ? "" : context->GetNodeName(),
             "[OpSelectFormat] ExtendConv2dOpSelectFormat enter, context=%p.", context);
     bool c04EnableFlag = false;
+    if (IsArch5162()) {
+        return ExtendConv2dOpSelectFormatArch5162(result);
+    }
     if (context != nullptr) {
         const auto* fmapDesc = context->GetInputDesc(0);
         const auto* fmapShape = context->GetInputShape(0);
@@ -743,6 +794,44 @@ static ge::graphStatus ExtendConv2dOpSelectFormatByFlag(bool c04EnableFlag, ge::
     opInfo.push_back(GenTensorSpec("input9", "clip_value1", output1DataTypeList, ndFormatList));
     opInfo.push_back(GenTensorSpec("output0", "y0", output0DataTypeList, outputFormatList));
     opInfo.push_back(GenTensorSpec("output1", "y1", output1DataTypeList, outputFormatList));
+
+    nlohmann::json jsonResult = nlohmann::json::object();
+    ToJson(jsonResult, opInfo);
+    const std::string jsonStr = jsonResult.dump();
+    result = ge::AscendString(jsonStr.c_str());
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ExtendConv2dOpSelectFormatArch5162(ge::AscendString& result)
+{
+    OP_LOGD("", "[OpSelectFormat] ExtendConv2dOpSelectFormatArch5162: list size=%zu.",
+            extendConv2dFmpDataTypeListArch5162.size());
+    std::vector<TensorSpec> opInfo;
+    opInfo.push_back(
+        GenTensorSpec("input0", "x", extendConv2dFmpDataTypeListArch5162, extendConv2dFmapFormatListArch5162));
+    opInfo.push_back(GenTensorSpec("input1", "filter", extendConv2dWeightDataTypeListArch5162,
+                                   extendConv2dWeightFormatListArch5162));
+    opInfo.back().desc.subFormats = {"0"};
+    opInfo.push_back(
+        GenTensorSpec("input2", "bias", extendConv2dBiasDataTypeListArch5162, extendConv2dNDFormatListArch5162));
+    opInfo.push_back(
+        GenTensorSpec("input3", "offset_w", extendConv2dOffsetWDataTypeListArch5162, extendConv2dNDFormatListArch5162));
+    opInfo.push_back(
+        GenTensorSpec("input4", "scale0", extendConv2dScaleAttrDataTypeListArch5162, extendConv2dNDFormatListArch5162));
+    opInfo.push_back(GenTensorSpec("input5", "relu_weight0", extendConv2dReluWeightAttrDataTypeListArch5162,
+                                   extendConv2dNDFormatListArch5162));
+    opInfo.push_back(GenTensorSpec("input6", "clip_value0", extendConv2dOutputDataTypeListArch5162,
+                                   extendConv2dNDFormatListArch5162));
+    opInfo.push_back(
+        GenTensorSpec("input7", "scale1", extendConv2dScaleAttrDataTypeListArch5162, extendConv2dNDFormatListArch5162));
+    opInfo.push_back(GenTensorSpec("input8", "relu_weight1", extendConv2dReluWeightAttrDataTypeListArch5162,
+                                   extendConv2dNDFormatListArch5162));
+    opInfo.push_back(GenTensorSpec("input9", "clip_value1", extendConv2dOutputDataTypeListArch5162,
+                                   extendConv2dNDFormatListArch5162));
+    opInfo.push_back(
+        GenTensorSpec("output0", "y0", extendConv2dOutputDataTypeListArch5162, extendConv2dOutputFormatListArch5162));
+    opInfo.push_back(
+        GenTensorSpec("output1", "y1", extendConv2dOutputDataTypeListArch5162, extendConv2dOutputFormatListArch5162));
 
     nlohmann::json jsonResult = nlohmann::json::object();
     ToJson(jsonResult, opInfo);

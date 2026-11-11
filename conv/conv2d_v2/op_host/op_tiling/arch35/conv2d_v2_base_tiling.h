@@ -220,8 +220,8 @@ private:
     ge::graphStatus CheckNullPtr();
     ge::graphStatus CheckOptionalInputLeagal();
     ge::graphStatus CheckExtendScaleLegal();
-    ge::graphStatus CheckExtendReluWeightLegal();
-    ge::graphStatus CheckExtendClipValueLegal();
+    ge::graphStatus CheckExtendReluWeightLegal() const;
+    ge::graphStatus CheckExtendClipValueLegal() const;
     ge::graphStatus CheckExtendConv2dReluWeightAndClipValue(const uint32_t outputIdx, uint8_t& reluMode);
     ge::graphStatus CheckAttrsLeagal();
     ge::graphStatus CheckExtendReluLegal();
@@ -238,7 +238,7 @@ private:
     gert::Shape GetWeightShape(const gert::StorageShape* weightShapePtr) const;
     void SetUnionDataXt(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
     void PrintInputArgs(shared_ptr<tuningtiling::Conv2DV2InputArgs> conv2DInput);
-    void SetArch5162BufferSize();
+    void SetArch5162BufferSize() const;
     uint64_t GetConvToL1Mode() const;
 };
 } // namespace conv_ops_tiling

@@ -625,9 +625,9 @@ bool Conv2dBaseTiling::CheckScaleLegal(uint32_t scaleIndex, uint8_t& quantMode, 
     return true;
 }
 
-ge::graphStatus Conv2dBaseTiling::CheckExtendReluWeightLegal() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus Conv2dBaseTiling::CheckExtendReluWeightLegal() const { return ge::GRAPH_SUCCESS; }
 
-ge::graphStatus Conv2dBaseTiling::CheckExtendClipValueLegal() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus Conv2dBaseTiling::CheckExtendClipValueLegal() const { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus Conv2dBaseTiling::CheckExtendDualOutputSpecial()
 {

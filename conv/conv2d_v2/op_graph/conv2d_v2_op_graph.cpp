@@ -27,6 +27,9 @@
 
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
+#include "op_common/op_host/util/op_const_def.h"
+#include "platform/platform_info.h"
+#include "platform/soc_spec.h"
 #include "register/op_impl_registry.h"
 
 namespace ops {
@@ -38,6 +41,8 @@ static const std::string kNhwc = "NHWC";
 static const std::string kFractalZ = "FRACTAL_Z";
 static const std::string kFractalZC04 = "FRACTAL_Z_C04";
 static const std::string kNd = "ND";
+
+const std::map<std::string, NpuArch> SOC_LIST_ARCH51 = {{"Ascend5162", Ops::Base::DAV_5162}};
 
 struct DtFmtSpec {
     std::string dtype;
@@ -137,6 +142,16 @@ const DtFmtSpecList listConv2DV2FractalZC04 = {
       {kFp16, kNhwc, kNhwc}}},
     {{{kFp16, kNhwc, kNhwc},
       {kFp16, kFractalZC04, kFractalZC04},
+      {kFp16, kNd, kNd},
+      {kInt8, kNd, kNd},
+      {kFp16, kNchw, kNchw}}},
+};
+
+// Arch5162 全量组合
+const DtFmtSpecList listConv2DV2FractalZArch5162 = {
+    // {{[X],              [FILTER],                 [BIAS],          [OFFSET_W],      [Y]}}
+    {{{kFp16, kNchw, kNchw},
+      {kFp16, kFractalZ, kFractalZ},
       {kFp16, kNd, kNd},
       {kInt8, kNd, kNd},
       {kFp16, kNchw, kNchw}}},
@@ -337,12 +352,28 @@ inline bool CheckC04HwSplitModeL1Valid(const gert::OpCheckContext* context)
     return valid;
 }
 
+bool IsArch5162()
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiInfo;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optiInfo) != 0) {
+        OP_LOGD("", "[OpSelectFormat] IsArch5162: get platform instance failed, treat as non-5162.");
+        return false;
+    }
+    return SOC_LIST_ARCH51.find(platformInfo.str_info.short_soc_version) != SOC_LIST_ARCH51.end();
+}
+
 // 从context判定是否走FRACTAL_Z_C04分支（c04 HwSplit模式条件全满足时使能）
 bool GetC04EnableFlag(const gert::OpCheckContext* context)
 {
     OP_LOGD(context == nullptr ? "" : context->GetNodeName(), "[OpSelectFormat] Conv2dV2CheckHelper enter, context=%p.",
             context);
     bool c04EnableFlag = false;
+    if (IsArch5162()) {
+        OP_LOGD(context == nullptr ? "" : context->GetNodeName(),
+                "[OpSelectFormat] Conv2dV2CheckHelper: Arch5162 not support C04, disable it.");
+        return false;
+    }
     if (context != nullptr) {
         const auto* fmapDesc = context->GetInputDesc(0);
         const auto* fmapShape = context->GetInputShape(0);
@@ -408,6 +439,10 @@ private:
 
 Conv2dV2CheckHelper::Conv2dV2CheckHelper(bool c04EnableFlag)
 {
+    if (IsArch5162()) {
+        dtFmtSpecList_ = listConv2DV2FractalZArch5162;
+        return;
+    }
     dtFmtSpecList_ = c04EnableFlag ? listConv2DV2FractalZC04 : listConv2DV2FractalZ;
 }
 

@@ -49,7 +49,7 @@ void Conv2dToConv2dV2FusionPass::PrintGraphStructure() const
 
 bool Conv2dToConv2dV2FusionPass::AdjustLayout(const GraphPtr& graph, GNode& fusedNode)
 {
-    if (!ConvFusionUtilsPass::IsFuseSoc()) {
+    if (!ConvFusionUtilsPass::IsFuseSoc() || npuArch == Ops::Base::DAV_5162) {
         OP_LOGD(convDescInfo.nodeNameStr, "Current soc not support adjust layout, skip.");
         return true;
     }

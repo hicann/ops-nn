@@ -386,7 +386,7 @@ ge::graphStatus Conv2dBaseTiling::ParseAndCheckInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-void Conv2dBaseTiling::SetArch5162BufferSize()
+void Conv2dBaseTiling::SetArch5162BufferSize() const
 {
     if (IsArch5162(opInfo_->npuArch)) {
         opInfo_->l1Size = L1_SIZE;

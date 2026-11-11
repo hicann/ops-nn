@@ -171,6 +171,13 @@ Status Conv2DPostCubeToExtendConv2DFusionPass::ConvFusionPreImpl(GraphPtr& graph
                       OP_LOGD(convDescInfo.nodeNameStr, "SelectPostCubeNodeList failed, no fusion."),
                       return CONV_NOT_CHANGED);
 
+    if (npuArch == Ops::Base::DAV_5162) {
+        auto convOutputNodes = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
+        FUSION_PASS_CHECK(convOutputNodes.size() != 1,
+                          OP_LOGD(convDescInfo.nodeNameStr, "DAV_5162 only support single output, skip fusion."),
+                          return CONV_NOT_CHANGED);
+    }
+
     float leakySlope = 0.0f;
     bool hasLeakyRelu = false;
     ScanLeakyReluSlope(postCubeUtils.m_matchpasses_, leakySlope, hasLeakyRelu);
@@ -629,7 +636,7 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::UpdateScaleReluDesc(GNodePtr postCu
 
 bool Conv2DPostCubeToExtendConv2DFusionPass::AdjustLayout(const GraphPtr& graph, GNode& fusedNode)
 {
-    if (!ConvFusionUtilsPass::IsFuseSoc()) {
+    if (!ConvFusionUtilsPass::IsFuseSoc() || npuArch == Ops::Base::DAV_5162) {
         OP_LOGD(convDescInfo.nodeNameStr, "Current soc not support adjust layout, skip.");
         return true;
     }

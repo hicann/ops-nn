@@ -18,6 +18,7 @@
 
 #include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "ge/fusion/subgraph_boundary.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "platform/soc_spec.h"
 
 namespace Ops {
@@ -28,7 +29,8 @@ namespace Conv2dToConv2dV2Fusion {
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
                                                          {"Ascend350", NpuArch::DAV_3510},
                                                          {"Ascend960DT", NpuArch::DAV_9201},
-                                                         {"Ascend960PR", NpuArch::DAV_9202}};
+                                                         {"Ascend960PR", NpuArch::DAV_9202},
+                                                         {"Ascend5162", Ops::Base::DAV_5162}};
 
 } // namespace Conv2dToConv2dV2Fusion
 

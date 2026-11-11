@@ -18,6 +18,7 @@
 #include "cube_utils/cube_utils.h"
 #include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "ge/fusion/subgraph_boundary.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "platform/soc_spec.h"
 
 namespace Ops {
@@ -41,7 +42,8 @@ const ge::AscendString RELU_WEIGHT_1 = "relu_weight1";
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
                                                          {"Ascend350", NpuArch::DAV_3510},
                                                          {"Ascend960DT", NpuArch::DAV_9201},
-                                                         {"Ascend960PR", NpuArch::DAV_9202}};
+                                                         {"Ascend960PR", NpuArch::DAV_9202},
+                                                         {"Ascend5162", Ops::Base::DAV_5162}};
 
 const ge::AscendString REARRANGE_A16W8_WEIGHT_FZ_OP = "RearrangeA16W8WeightFzOp";
 const ge::AscendString REFORMAT_OP = "ReFormat";
