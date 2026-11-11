@@ -103,10 +103,8 @@ protected:
     constexpr static uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
 
-    // pred 的 padding 值取开区间 (0,1) 内的 0.5, target 的 padding 值取 0。
-    // 于是 padding 位上 ce = -log(0.5)*0*w = 0, fw = alpha*exp(gamma*log(0.5))*0 = 0,
-    // 恰为求和的单位元, 对任意 gamma 均成立, 无需再对归约缓冲显式清零。
-    // (不能 pad 0: -log(0)*0 = inf*0 = NaN; 不能 pad 1: gamma=0 时 0*log(0) = NaN)
+    // Keep copied pred padding inside (0, 1). CeFwTailSeg excludes padding from
+    // arithmetic and explicitly stores zero CE/FW values before row reduction.
     constexpr static float PRED_PAD_VALUE = 0.5f;
     // 行槽粒度 = 一个 32B 块能放的 float 数: StoreAlign 要求 32B 对齐, 单元素偏移是非法地址
     constexpr static uint32_t ROW_SLOT_ELEM = BLOCK_SIZE / sizeof(float);
@@ -252,8 +250,34 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::ProcessTile(int64_t
         }
     }
 
-    // y 整行同值 = CE * FW
+    // Combine low cross terms before the final rounding; retain ordinary nonfinite products.
     AscendC::Mul(rowVal, ceAcc, fwAcc, static_cast<int32_t>(rows));
+    AscendC::Mul(ceBuf, ceLo, fwAcc, static_cast<int32_t>(rows));
+    AscendC::Mul(fwBuf, fwLo, ceAcc, static_cast<int32_t>(rows));
+    AscendC::Add(ceBuf, ceBuf, fwBuf, static_cast<int32_t>(rows));
+    __ubuf__ float* output = (__ubuf__ float*)rowVal.GetPhyAddr();
+    __ubuf__ float* correction = (__ubuf__ float*)ceBuf.GetPhyAddr();
+    uint16_t repeats = static_cast<uint16_t>((rows + VL_FP32 - 1) / VL_FP32);
+    uint32_t remaining = static_cast<uint32_t>(rows);
+    __VEC_SCOPE__
+    {
+        RegTensor<float> base, low, result, absValue, zero;
+        MaskReg finite;
+        AscendC::Reg::Duplicate(zero, 0.0f);
+        for (uint16_t i = 0; i < repeats; ++i) {
+            MaskReg active = AscendC::Reg::UpdateMask<float>(remaining);
+            AscendC::Reg::LoadAlign(base, output + i * VL_FP32);
+            AscendC::Reg::LoadAlign(low, correction + i * VL_FP32);
+            AscendC::Reg::Abs(absValue, low, active);
+            AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LE>(finite, absValue, 3.4028234663852886e38f, active);
+            AscendC::Reg::Select(low, low, zero, finite);
+            AscendC::Reg::Add(result, base, low, active);
+            AscendC::Reg::Abs(absValue, base, active);
+            AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LE>(finite, absValue, 3.4028234663852886e38f, active);
+            AscendC::Reg::Select(result, result, base, finite);
+            AscendC::Reg::StoreAlign(output + i * VL_FP32, result, active);
+        }
+    }
 
     for (int64_t c = 0; c < chunkNum_; ++c) {
         int64_t colOff = c * colsPerChunk_;

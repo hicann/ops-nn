@@ -26,7 +26,7 @@ using namespace AscendC;
 #define DTYPE_WEIGHT DTYPE_PRED
 #endif
 
-template <uint64_t hasWeight>
+template <uint64_t hasWeight, uint64_t gammaMode>
 __global__ __aicore__ void softmax_focal_loss_grad(GM_ADDR pred, GM_ADDR target, GM_ADDR dout, GM_ADDR weight,
                                                    GM_ADDR grad, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -34,7 +34,7 @@ __global__ __aicore__ void softmax_focal_loss_grad(GM_ADDR pred, GM_ADDR target,
     GET_TILING_DATA_WITH_STRUCT(SoftmaxFocalLossGradArch35TilingData, tilingData, tiling);
 
     TPipe pipe;
-    SoftmaxFocalLossGrad::SoftmaxFocalLossGradND<DTYPE_PRED, DTYPE_WEIGHT, hasWeight> op;
+    SoftmaxFocalLossGrad::SoftmaxFocalLossGradND<DTYPE_PRED, DTYPE_WEIGHT, hasWeight, gammaMode> op;
     op.Init(pred, target, dout, weight, grad, &tilingData, &pipe);
     op.Process();
 }

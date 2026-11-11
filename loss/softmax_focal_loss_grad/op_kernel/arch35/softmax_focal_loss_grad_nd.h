@@ -42,7 +42,7 @@ using AscendC::Reg::MaskReg;
 using AscendC::Reg::RegTensor;
 using AscendC::Reg::UpdateMask;
 
-template <typename T, typename TW, uint64_t hasWeight>
+template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
 class SoftmaxFocalLossGradND {
 public:
     __aicore__ inline SoftmaxFocalLossGradND() {}
@@ -66,7 +66,8 @@ private:
                                    MaskReg preg);
     __aicore__ inline void SumsOfSeg(__ubuf__ float* wfAddr, __ubuf__ float* wdAddr, __ubuf__ float* ceAddr,
                                      __ubuf__ float* wtAddr, RegTensor<float>& p32, RegTensor<float>& t32,
-                                     RegTensor<float>& w32, AscendC::Reg::AddrReg offF, MaskReg preg);
+                                     RegTensor<float>& w32, AscendC::Reg::AddrReg offF, MaskReg preg,
+                                     MaskReg storePreg);
     // 精确路径判据(与单链版逐字相同): 每行 blocks 次未补偿的块级舍入 vs 竞品 pairwise 的 log2(len) 次
     __aicore__ inline bool ExactPath() const
     {
@@ -92,7 +93,8 @@ private:
     __aicore__ inline void GradOfSeg(__ubuf__ float* gradAddr, RegTensor<float>& p32, RegTensor<float>& t32,
                                      RegTensor<float>& w32, RegTensor<float>& d32, RegTensor<float>& wfB,
                                      RegTensor<float>& wdB, RegTensor<float>& ceB, RegTensor<float>& wB,
-                                     AscendC::Reg::AddrReg offO, MaskReg preg);
+                                     AscendC::Reg::AddrReg offO, MaskReg preg, __ubuf__ float* accAddr,
+                                     int64_t accStride, uint16_t rowIdx);
     __aicore__ inline void MakeSegOffsets(AscendC::Reg::AddrReg& offT, AscendC::Reg::AddrReg& offW,
                                           AscendC::Reg::AddrReg& offF, AscendC::Reg::AddrReg& offO, uint16_t i,
                                           uint16_t j, int64_t strideT, int64_t strideW, int64_t strideF,
@@ -215,8 +217,8 @@ private:
     float coef_ = 1.0f;
 };
 
-template <typename T, typename TW, uint64_t hasWeight>
-__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::Init(
+template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
+__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::Init(
     GM_ADDR pred, GM_ADDR target, GM_ADDR dout, GM_ADDR weight, GM_ADDR grad,
     const SoftmaxFocalLossGradArch35TilingData* tiling, TPipe* pipe)
 {
@@ -296,8 +298,8 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::Init(
     }
 }
 
-template <typename T, typename TW, uint64_t hasWeight>
-__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::Process()
+template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
+__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::Process()
 {
     int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
     if (blockIdx >= realCoreNum_) {
@@ -313,8 +315,8 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::Process()
     }
 }
 
-template <typename T, typename TW, uint64_t hasWeight>
-__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::ProcessTile(int64_t rowGm, int64_t rows)
+template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
+__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::ProcessTile(int64_t rowGm, int64_t rows)
 {
     LocalTensor<float> accBuf = accBuf_.template Get<float>();
     LocalTensor<float> wfAcc = accBuf[0];
@@ -358,10 +360,12 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::ProcessTile(int
     }
 
     // 低位残差并回行标量: 至此才产生唯一一次舍入
-    AscendC::Add(wfAcc, wfAcc, wfLo, rowCnt);
-    AscendC::Add(wbAcc, wbAcc, wbLo, rowCnt);
-    AscendC::Add(ceAcc, ceAcc, ceLo, rowCnt);
-    AscendC::Add(wtAcc, wtAcc, wtLo, rowCnt);
+    if (sizeof(T) != sizeof(half) || r_ <= static_cast<int64_t>(VL_FP32)) {
+        AscendC::Add(wfAcc, wfAcc, wfLo, rowCnt);
+        AscendC::Add(wbAcc, wbAcc, wbLo, rowCnt);
+        AscendC::Add(ceAcc, ceAcc, ceLo, rowCnt);
+        AscendC::Add(wtAcc, wtAcc, wtLo, rowCnt);
+    }
 
     // 第二趟: 逐元素组合出 grad
     for (int64_t c = 0; c < chunkNum_; ++c) {
@@ -375,12 +379,10 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::ProcessTile(int
     }
 }
 
-template <typename T, typename TW, uint64_t hasWeight>
+template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
 template <typename TE>
-__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::MakeCopyParams(DataCopyExtParams& params,
-                                                                                DataCopyPadExtParams<TE>& pad,
-                                                                                int64_t rows, int64_t len,
-                                                                                int64_t stride, TE padValue)
+__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::MakeCopyParams(
+    DataCopyExtParams& params, DataCopyPadExtParams<TE>& pad, int64_t rows, int64_t len, int64_t stride, TE padValue)
 {
     int64_t blkElemsE = static_cast<int64_t>(BLOCK_SIZE / sizeof(TE));
     if (stride == len) {
@@ -410,9 +412,9 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::MakeCopyParams(
     pad.paddingValue = padValue;
 }
 
-template <typename T, typename TW, uint64_t hasWeight>
-__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::CopyIn(int64_t rowGm, int64_t colOff, int64_t rows,
-                                                                        int64_t len)
+template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
+__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::CopyIn(int64_t rowGm, int64_t colOff,
+                                                                                   int64_t rows, int64_t len)
 {
     int64_t gmOffset = rowGm * r_ + colOff;
 
@@ -447,9 +449,9 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::CopyIn(int64_t 
     }
 }
 
-template <typename T, typename TW, uint64_t hasWeight>
-__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight>::CopyOut(int64_t rowGm, int64_t colOff, int64_t rows,
-                                                                         int64_t len)
+template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
+__aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::CopyOut(int64_t rowGm, int64_t colOff,
+                                                                                    int64_t rows, int64_t len)
 {
     LocalTensor<T> outBuf = gradQue_.template DeQue<T>();
     DataCopyExtParams outParams;

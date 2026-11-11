@@ -151,12 +151,15 @@ class _Compose:
     会让竞品凭空更准约 2 倍, cross_check 假红。
     """
 
-    def __init__(self, gamma=2.0, alpha=0.25, reduction="mean", **kwargs):
-        self.gamma = float(gamma)
-        self.alpha = float(alpha)
-        self.reduction = str(reduction).lower()  # 同上: 大小写不敏感
+    def __init__(self, **kwargs):
+        self.gamma = float(_attr(kwargs, "gamma", 2.0))
+        self.alpha = float(_attr(kwargs, "alpha", 0.25))
+        self.reduction = str(_attr(kwargs, "reduction", "mean"))
 
     def __call__(self, pred, target, dout, weight=None, **kwargs):
+        gamma = float(_attr(kwargs, "gamma", self.gamma))
+        alpha = float(_attr(kwargs, "alpha", self.alpha))
+        reduction = str(_attr(kwargs, "reduction", self.reduction)).lower()
         out_dtype = pred.dtype
         narrow = pred.dtype in (torch.float16, torch.bfloat16)
         p = _tp_widen(pred)
@@ -165,18 +168,24 @@ class _Compose:
         w = _tp_widen(weight) if weight is not None else torch.ones_like(p)
 
         log_1sub_p = torch.log(1.0 - p)
-        wf = self.alpha * torch.exp(self.gamma * log_1sub_p) * t
-        wb = self.alpha * torch.exp((self.gamma - 1.0) * log_1sub_p) * t
+        wf = alpha * torch.exp(gamma * log_1sub_p) * t
+        wb = alpha * torch.exp((gamma - 1.0) * log_1sub_p) * t
         wf_sum = wf.sum(dim=-1, keepdim=True)
         wb_sum = wb.sum(dim=-1, keepdim=True)
         ce_sum = (-torch.log(p) * t * w).sum(dim=-1, keepdim=True)
         wt_sum = (w * t).sum(dim=-1, keepdim=True)
 
         d_ce = p * wt_sum - t * w
-        d_wf = -self.gamma * ((wf_sum - wb_sum) + wb) * p
-        grad = (d_ce * wf_sum + d_wf * ce_sum) * d
-        if self.reduction == "mean" and p.numel() > 0:
-            grad = grad * (1.0 / float(p.numel()))
+        d_wf = -gamma * ((wf_sum - wb_sum) + wb) * p
+        grad = d_ce * wf_sum + d_wf * ce_sum
+        if reduction == "mean" and p.numel() > 0:
+            coef = 1.0 / float(p.numel())
+            normalize_first = d.abs() > 1.0
+            scaled_dout = torch.where(normalize_first, d * coef, d)
+            grad = grad * scaled_dout
+            grad = torch.where(normalize_first, grad, grad * coef)
+        else:
+            grad = grad * d
         # 浮点输出必须 cast 回 NPU 输出 dtype, 否则竞品天然更准, ratio 失真
         return [grad.contiguous().to(out_dtype) if narrow else grad.contiguous()]
 
@@ -214,16 +223,18 @@ class SoftmaxFocalLossGradKernelSpec:
 
     def golden(*inputs, **kwargs):
         t = [
-            None if a is None else torch.from_numpy(np.ascontiguousarray(a))
+            None
+            if a is None
+            else torch.from_numpy(np.ascontiguousarray(a)).to(torch.float64)
+            if np.issubdtype(a.dtype, np.floating)
+            else torch.from_numpy(np.ascontiguousarray(a))
             for a in inputs
         ]
         outs = _compute(*t, **kwargs)
-        od = kwargs.get("output_dtypes") or []
-        od = [d[0] if isinstance(d, (list, tuple)) else str(d) for d in od]
-        return [
-            o.numpy().astype(od[i]) if i < len(od) else o.numpy()
-            for i, o in enumerate(outs)
-        ]
+        # Preserve the FP64 reference through the overflow check. Casting to
+        # promoted FP32 here moves values on either side of the FP16 limit to
+        # the same tie value and creates false NaN/Inf mismatches.
+        return [o.numpy() for o in outs]
 
     def customize_inputs(pred, target, dout, weight=None, **kwargs):
         return (

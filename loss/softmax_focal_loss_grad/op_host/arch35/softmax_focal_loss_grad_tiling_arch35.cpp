@@ -335,7 +335,7 @@ ge::graphStatus SoftmaxFocalLossGradTiling::ParseAttrs()
         int64_t numel = tilingData_->a * tilingData_->r;
         // numel == 0 时输出为空张量, 没有元素会被缩放, 系数取值无意义; 此处仅防除零
         if (numel > 0) {
-            tilingData_->reductionCoef = 1.0f / static_cast<float>(numel);
+            tilingData_->reductionCoef = static_cast<float>(1.0 / static_cast<double>(numel));
         }
     }
     return ge::GRAPH_SUCCESS;
@@ -366,7 +366,8 @@ ge::graphStatus SoftmaxFocalLossGradTiling::DoTiling()
                 return ge::GRAPH_FAILED);
     PrintTilingData();
 
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(hasWeight_);
+    const uint64_t gammaMode = tilingData_->gamma == 1.0f ? 1 : (tilingData_->gamma == 2.0f ? 2 : 0);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(hasWeight_, gammaMode);
     context_->SetTilingKey(tilingKey);
     context_->SetBlockDim(tilingData_->realCoreNum > 0 ? tilingData_->realCoreNum : 1);
     context_->SetScheduleMode(1);

@@ -18,10 +18,13 @@
 #include "ascendc/host_api/tiling/template_argument.h"
 
 // hasWeight: 0 = weight 缺省(按全 1 语义, A5 相对 A2 的功能补齐), 1 = weight 传入
-#define SOFTMAX_FOCAL_LOSS_GRAD_TPL_KEY_DECL() \
-    ASCENDC_TPL_UINT_DECL(hasWeight, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1)
+#define SOFTMAX_FOCAL_LOSS_GRAD_TPL_KEY_DECL()                                     \
+    ASCENDC_TPL_UINT_DECL(hasWeight, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1), \
+        ASCENDC_TPL_UINT_DECL(gammaMode, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1, 2)
 
-#define SOFTMAX_FOCAL_LOSS_GRAD_TPL_KEY_SEL() ASCENDC_TPL_UINT_SEL(hasWeight, ASCENDC_TPL_UI_LIST, 0, 1)
+#define SOFTMAX_FOCAL_LOSS_GRAD_TPL_KEY_SEL()                   \
+    ASCENDC_TPL_UINT_SEL(hasWeight, ASCENDC_TPL_UI_LIST, 0, 1), \
+        ASCENDC_TPL_UINT_SEL(gammaMode, ASCENDC_TPL_UI_LIST, 0, 1, 2)
 
 ASCENDC_TPL_ARGS_DECL(SoftmaxFocalLossGrad, SOFTMAX_FOCAL_LOSS_GRAD_TPL_KEY_DECL());
 
