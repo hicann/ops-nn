@@ -15,16 +15,8 @@
 #include "matmul_common_infershape.h"
 #include "log/log.h"
 #include "matmul/common/op_host/matmul_error_report.h"
-#include <cstdio>
 #include <string>
 #include <vector>
-
-#define MATMUL_REPORT_PARAM_ERR(opName, errMsg, ...)                                           \
-    do {                                                                                       \
-        char _matmul_ez1001_buf[1024];                                                         \
-        (void)snprintf(_matmul_ez1001_buf, sizeof(_matmul_ez1001_buf), errMsg, ##__VA_ARGS__); \
-        Ops::NN::ReportMatmulParamError(opName, _matmul_ez1001_buf);                           \
-    } while (0)
 
 using namespace gert;
 namespace {
@@ -151,8 +143,9 @@ static bool InferNWithBias(const char* op_name, const int64_t bias_n, const int6
     }
     if (bias_n > 0 && out_n > 0) {
         OP_CHECK_IF(bias_n != out_n,
-                    MATMUL_REPORT_PARAM_ERR(op_name, "[InferShape] dimensions bias_n(%ld) and out_n(%ld) must be equal",
-                                            bias_n, out_n),
+                    Ops::NN::ReportMatmulParamError(op_name, std::string("[InferShape] dimensions bias_n(") +
+                                                                 std::to_string(bias_n) + ") and out_n(" +
+                                                                 std::to_string(out_n) + ") must be equal"),
                     return false);
         n = bias_n;
         return true;
@@ -207,28 +200,26 @@ bool InferShapeBatchMatMul::InferBias()
 bool InferShapeBatchMatMul::InferShape()
 {
     if (shape_a.GetDimNum() < BATCH_MATMUL_MIN_SHAPE_SIZE || shape_b.GetDimNum() < BATCH_MATMUL_MIN_SHAPE_SIZE) {
-        MATMUL_REPORT_PARAM_ERR(
+        Ops::NN::ReportMatmulParamError(
             op_name,
             "[InferShape] Invalid input: The rank (number of dimensions) of tensors x1 and x2 must be at least 2.");
         return false;
     }
     for (size_t i = 0; i < shape_a.GetDimNum(); ++i) {
-        OP_CHECK_IF(
-            shape_a.GetDim(i) < UNKNOWN_DIM_NUM,
-            MATMUL_REPORT_PARAM_ERR(
-                op_name,
-                "[InferShape] Invalid x1 [%zu] dimension: value %ld is less than the minimum allowed value (-2)", i,
-                static_cast<int64_t>(shape_a.GetDim(i))),
-            return false);
+        OP_CHECK_IF(shape_a.GetDim(i) < UNKNOWN_DIM_NUM,
+                    Ops::NN::ReportMatmulParamError(
+                        op_name, std::string("[InferShape] Invalid x1 [") + std::to_string(i) + "] dimension: value " +
+                                     std::to_string(static_cast<int64_t>(shape_a.GetDim(i))) +
+                                     " is less than the minimum allowed value (-2)"),
+                    return false);
     }
     for (size_t i = 0; i < shape_b.GetDimNum(); ++i) {
-        OP_CHECK_IF(
-            shape_b.GetDim(i) < UNKNOWN_DIM_NUM,
-            MATMUL_REPORT_PARAM_ERR(
-                op_name,
-                "[InferShape] Invalid x2 [%zu] dimension: value %ld is less than the minimum allowed value (-2)", i,
-                static_cast<int64_t>(shape_b.GetDim(i))),
-            return false);
+        OP_CHECK_IF(shape_b.GetDim(i) < UNKNOWN_DIM_NUM,
+                    Ops::NN::ReportMatmulParamError(
+                        op_name, std::string("[InferShape] Invalid x2 [") + std::to_string(i) + "] dimension: value " +
+                                     std::to_string(static_cast<int64_t>(shape_b.GetDim(i))) +
+                                     " is less than the minimum allowed value (-2)"),
+                    return false);
     }
     // using index - 2 to get m_dim
     size_t idx_m = num_dima - 2;
@@ -250,8 +241,9 @@ bool InferShapeBatchMatMul::InferShape()
     // Check k dim in static shape
     if ((shape_a.GetDim(idx_k_a) != UNKNOWN_DIM && shape_b.GetDim(idx_k_b) != UNKNOWN_DIM) &&
         (shape_a.GetDim(idx_k_a) != shape_b.GetDim(idx_k_b))) {
-        MATMUL_REPORT_PARAM_ERR(op_name, "[InferShape] The k-axis of a(%ld) and b(%ld) tensors must be the same",
-                                shape_a.GetDim(idx_k_a), shape_b.GetDim(idx_k_b));
+        Ops::NN::ReportMatmulParamError(
+            op_name, std::string("[InferShape] The k-axis of a(") + std::to_string(shape_a.GetDim(idx_k_a)) +
+                         ") and b(" + std::to_string(shape_b.GetDim(idx_k_b)) + ") tensors must be the same");
         return false;
     }
     OP_CHECK_IF(!InferBatch(), OP_LOGE_WITHOUT_REPORT(op_name, "[InferShape] failed. infer Batch."), return false);
@@ -288,7 +280,8 @@ bool BroadcastBatchDim(const char* op_name, int64_t dim_a, int64_t dim_b, int64_
     if (dim_a > 1 && dim_b > 1) {
         OP_CHECK_IF(
             dim_a != dim_b,
-            MATMUL_REPORT_PARAM_ERR(op_name, "[InferShape] dimensions a(%ld) and b(%ld) must be equal", dim_a, dim_b),
+            Ops::NN::ReportMatmulParamError(op_name, std::string("[InferShape] dimensions a(") + std::to_string(dim_a) +
+                                                         ") and b(" + std::to_string(dim_b) + ") must be equal"),
             return false);
 
         dim_out = dim_a;
@@ -348,9 +341,10 @@ static ge::graphStatus UpdateX2NewShape(const gert::InferShapeContext* context, 
         int64_t k_dim = new_shape.GetDim(k_x2_dim);
         int64_t n_dim = new_shape.GetDim(n_x2_dim);
         if (desc->GetDataType() == ge::DT_FLOAT && k_dim > 0 && n_dim > 0) {
-            OP_CHECK_IF(dim_num < 1UL,
-                        MATMUL_REPORT_PARAM_ERR(op_name, "[InferShape] The shape of x2 should not smaller than 1"),
-                        return ge::GRAPH_FAILED);
+            OP_CHECK_IF(
+                dim_num < 1UL,
+                Ops::NN::ReportMatmulParamError(op_name, "[InferShape] The shape of x2 should not smaller than 1"),
+                return ge::GRAPH_FAILED);
             bool trans_x2_float = CalculateTransX2Float(context, new_shape, trans_x1, trans_x2);
             if (trans_x2 || trans_x2_float) {
                 new_shape.SetDim(k_x2_dim, new_shape.GetDim(k_x2_dim) * B4_NUMS_IN_B32);
@@ -362,18 +356,20 @@ static ge::graphStatus UpdateX2NewShape(const gert::InferShapeContext* context, 
 
     if (strcmp(fused_op_type, FUSED_OP_TYPE_SWIGLU) == 0) {
         if (new_shape.GetDimNum() != SWIGLU_CONCAT_WEIGHT_DIM_NUM) {
-            MATMUL_REPORT_PARAM_ERR(op_name, "[InferShape] For swiglu fused operation, x2 shape must be 3-dimensional, \
-                but got %zu dimensions (shape: %s)",
-                                    new_shape.GetDimNum(), Ops::Base::ToString(new_shape).c_str());
+            Ops::NN::ReportMatmulParamError(
+                op_name, std::string("[InferShape] For swiglu fused operation, x2 shape must be 3-dimensional, ") +
+                             "                but got " + std::to_string(new_shape.GetDimNum()) +
+                             " dimensions (shape: " + Ops::Base::ToString(new_shape) + ")");
             return ge::GRAPH_FAILED;
         }
 
         int64_t highest_dim = new_shape.GetDim(0);
         // the highest dimension (dimension 0) equals 2 (indicating concatenation of two weights)
         if (highest_dim != SWIGLU_CONCAT_DIM_VALUE) {
-            MATMUL_REPORT_PARAM_ERR(
-                op_name, "[InferShape] For swiglu fused operation, the highest dimension must be 2, but got %ld",
-                highest_dim);
+            Ops::NN::ReportMatmulParamError(
+                op_name,
+                std::string("[InferShape] For swiglu fused operation, the highest dimension must be 2, but got ") +
+                    std::to_string(highest_dim));
             return ge::GRAPH_FAILED;
         }
 
@@ -414,7 +410,7 @@ ge::graphStatus InferShapeForBatchMatMul(gert::InferShapeContext* context, const
 
     auto dim_num = std::max(shape_x1->GetDimNum(), shape_x2->GetDimNum());
     if (dim_num < 1 || dim_num > BATCH_MATMUL_MAX_SHAPE_SIZE) {
-        MATMUL_REPORT_PARAM_ERR(op_name, "[InferShape] The shape can only be in the range of 1 to 8.");
+        Ops::NN::ReportMatmulParamError(op_name, "[InferShape] The shape can only be in the range of 1 to 8.");
         return ge::GRAPH_FAILED;
     }
 
@@ -462,8 +458,9 @@ static bool InitializeRange(size_t num, const std::vector<std::pair<int64_t, int
     }
     for (size_t i = 0; i < range.size(); ++i) {
         if (range.at(i).first < 0) {
-            MATMUL_REPORT_PARAM_ERR("MatMulCommon", "[InferShapeRange] range[%ld, %ld] is incorrect.",
-                                    range.at(i).first, range.at(i).second);
+            Ops::NN::ReportMatmulParamError("MatMulCommon", std::string("[InferShapeRange] range[") +
+                                                                std::to_string(range.at(i).first) + ", " +
+                                                                std::to_string(range.at(i).second) + "] is incorrect.");
             return false;
         }
         if (range.at(i).second == INFINITE_RANGE) {
@@ -502,9 +499,10 @@ static bool GetBatchIntersection(const char* op_name, std::pair<int64_t, int64_t
     out.second = std::min(a.second, b.second);
     // 交集不存在
     if (out.first > out.second || out.first == NORMALIZE_INFINITE_RANGE) {
-        MATMUL_REPORT_PARAM_ERR(op_name,
-                                "[GetBatchIntersection] range[%ld, %ld] and range[%ld, %ld] don't have intersection.",
-                                a.first, a.second, b.first, b.second);
+        Ops::NN::ReportMatmulParamError(op_name, std::string("[GetBatchIntersection] range[") +
+                                                     std::to_string(a.first) + ", " + std::to_string(a.second) +
+                                                     "] and range[" + std::to_string(b.first) + ", " +
+                                                     std::to_string(b.second) + "] don't have intersection.");
         return false;
     }
     return true;
@@ -518,9 +516,10 @@ static bool GetKNIntersection(const char* op_name, const std::pair<int64_t, int6
     out.second = std::min(a.second, b.second);
     // 交集不存在
     if (out.first > out.second || out.first == NORMALIZE_INFINITE_RANGE) {
-        MATMUL_REPORT_PARAM_ERR(op_name,
-                                "[GetKNIntersection] range[%ld, %ld] and range[%ld, %ld] don't have intersection.",
-                                a.first, a.second, b.first, b.second);
+        Ops::NN::ReportMatmulParamError(op_name, std::string("[GetKNIntersection] range[") + std::to_string(a.first) +
+                                                     ", " + std::to_string(a.second) + "] and range[" +
+                                                     std::to_string(b.first) + ", " + std::to_string(b.second) +
+                                                     "] don't have intersection.");
         return false;
     }
     return true;
