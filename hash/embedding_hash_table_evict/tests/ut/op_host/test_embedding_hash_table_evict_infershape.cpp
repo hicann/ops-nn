@@ -37,8 +37,8 @@ TEST_F(EmbeddingHashTableEvictInferTest, infer_dtype_without_optional_sampled_va
     ge::DataType tableHandleDtype = ge::DT_INT64;
     ge::DataType keysDtype = ge::DT_INT64;
     ge::DataType outputDtype = ge::DT_INT64;
+    // NodeIoNum and IrInstanceNum are mutually exclusive; use IrInstanceNum for the absent optional input.
     auto contextHolder = gert::InferDataTypeContextFaker()
-                             .NodeIoNum(3, 1)
                              .IrInstanceNum({1, 1, 0}, {1})
                              .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                              .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -83,7 +83,7 @@ TEST_F(EmbeddingHashTableEvictInferTest, infer_dtype_fail_when_keys_not_int64)
     ge::DataType keysDtype = ge::DT_INT32;
     ge::DataType outputDtype = ge::DT_INT64;
     auto contextHolder = gert::InferDataTypeContextFaker()
-                             .NodeIoNum(3, 1)
+                             .IrInstanceNum({1, 1, 0}, {1})
                              .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                              .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                              .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
