@@ -37,6 +37,7 @@ constexpr size_t kCapAdd2 = 4U;
 // 边界输入：[0]=x [1]=axes1 [2]=axes2 [3]=eps [4]=gamma [5]=beta
 constexpr size_t kInputNum = 6U;
 constexpr size_t kInputX = 0U;
+constexpr size_t kInputEps = 3U;
 constexpr size_t kInputGamma = 4U;
 constexpr size_t kInputBeta = 5U;
 
@@ -133,13 +134,11 @@ bool GetReduceOpAttr(const GNode& node, std::vector<int64_t>& axes, bool& keep_d
     return true;
 }
 
-float32_t GetEpsilon(const GNode& add1)
+float32_t GetEpsilon(const NodeIo& eps)
 {
     float32_t epsilon = 1e-7f;
-    if (!ReadConstFloatScalar(add1, 0, epsilon)) {
-        if (!ReadConstFloatScalar(add1, 1, epsilon)) {
-            OPS_LOG_D(kPassName.c_str(), "guard_probe : set epsilon to default value.");
-        }
+    if (!ReadConstFloatScalar(eps.node, static_cast<int32_t>(eps.index), epsilon)) {
+        OPS_LOG_D(kPassName.c_str(), "Use default epsilon.");
     }
     return epsilon;
 }
@@ -150,16 +149,32 @@ struct Matched {
     GNode add1;
     GNode rsqrt;
     GNode add2;
+    NodeIo eps;
     std::vector<int64_t> axes;
 };
 
 bool CollectMatched(const std::unique_ptr<MatchResult>& match_result, Matched& matched)
 {
-    return GetCapturedNode(match_result, kCapMean1, matched.mean1) &&
-           GetCapturedNode(match_result, kCapMean2, matched.mean2) &&
-           GetCapturedNode(match_result, kCapAdd1, matched.add1) &&
-           GetCapturedNode(match_result, kCapRsqrt, matched.rsqrt) &&
-           GetCapturedNode(match_result, kCapAdd2, matched.add2);
+    if (!GetCapturedNode(match_result, kCapMean1, matched.mean1) ||
+        !GetCapturedNode(match_result, kCapMean2, matched.mean2) ||
+        !GetCapturedNode(match_result, kCapAdd1, matched.add1) ||
+        !GetCapturedNode(match_result, kCapRsqrt, matched.rsqrt) ||
+        !GetCapturedNode(match_result, kCapAdd2, matched.add2)) {
+        return false;
+    }
+    std::vector<SubgraphInput> inputs;
+    const auto boundary = match_result->ToSubgraphBoundary();
+    if (boundary == nullptr || boundary->GetAllInputs(inputs) != SUCCESS || inputs.size() != kInputNum) {
+        OPS_LOG_D(kPassName.c_str(), "Cannot get matched input boundaries.");
+        return false;
+    }
+    const auto eps_inputs = inputs[kInputEps].GetAllInputs();
+    if (eps_inputs.empty()) {
+        OPS_LOG_D(kPassName.c_str(), "Epsilon boundary has no consumer.");
+        return false;
+    }
+    matched.eps = eps_inputs.front();
+    return true;
 }
 
 bool CheckReduceOpAttr(const GNode& mean1, const GNode& mean2, std::vector<int64_t>& axes1)
@@ -210,7 +225,7 @@ PatternUniqPtr MakePattern(size_t config)
     const auto& x = inputs[kInputX];
     const auto& axes1 = inputs[1];
     const auto& axes2 = inputs[2];
-    const auto& eps = inputs[3];
+    const auto& eps = inputs[kInputEps];
     const auto& gamma = inputs[kInputGamma];
     const auto& beta = inputs[kInputBeta];
 
@@ -278,7 +293,7 @@ std::unique_ptr<Graph> LayerNormInferenceFusionPass::Replacement(const std::uniq
     if (!CheckReduceOpAttr(matched.mean1, matched.mean2, matched.axes)) {
         return nullptr;
     }
-    const float32_t epsilon = GetEpsilon(matched.add1);
+    const float32_t epsilon = GetEpsilon(matched.eps);
 
     std::vector<SubgraphInput> subgraph_inputs;
     const auto boundary = match_result->ToSubgraphBoundary();

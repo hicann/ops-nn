@@ -10,6 +10,7 @@
 
 #include "add_rms_norm_fusion_pass.h"
 
+#include <algorithm>
 #include <array>
 #include <set>
 #include <string>
@@ -104,6 +105,10 @@ bool AddRmsNormFusionGraphPass::MeetRequirements(const std::unique_ptr<ge::fusio
     const auto x2_dims = x2_desc.GetShape().GetDims();
     if (x1_dims != x2_dims) {
         OPS_LOG_D(kPassName.c_str(), "guard_rejected : x1 and x2 shapes differ.");
+        return false;
+    }
+    if (!x1_dims.empty() && std::all_of(x1_dims.begin(), x1_dims.end(), [](int64_t dim) { return dim == -1; })) {
+        OPS_LOG_D(kPassName.c_str(), "guard_rejected : all input dimensions are unknown.");
         return false;
     }
     if (x1_desc.GetDataType() != x2_desc.GetDataType()) {

@@ -113,19 +113,17 @@ bool GetConstIntVec(const GNode& node, int32_t index, std::vector<int64_t>& valu
 }
 
 // 只接受 float / fp16，其余不融合。此处保持一致。
-bool GetEpsilon(const GNode& add0, float32_t& epsilon)
+bool GetEpsilon(const NodeIo& eps, float32_t& epsilon)
 {
+    const auto index = static_cast<int32_t>(eps.index);
     Tensor tensor;
-    if (add0.GetInputConstData(0, tensor) != GRAPH_SUCCESS) {
-        OPS_LOG_D(kPassName.c_str(), "guard_probe : add0 x1 is not const, check x2.");
-        if (add0.GetInputConstData(1, tensor) != GRAPH_SUCCESS) {
-            OPS_LOG_D(kPassName.c_str(), "guard_rejected : add0 has no const input.");
-            return false;
-        }
+    if (eps.node.GetInputConstData(index, tensor) != GRAPH_SUCCESS) {
+        OPS_LOG_D(kPassName.c_str(), "Cannot read epsilon constant.");
+        return false;
     }
 
     TensorDesc desc;
-    if (add0.GetInputDesc(0, desc) != GRAPH_SUCCESS) {
+    if (eps.node.GetInputDesc(index, desc) != GRAPH_SUCCESS) {
         return false;
     }
     const uint8_t* data = tensor.GetData();
@@ -199,13 +197,15 @@ bool CheckConstInput(const std::vector<int64_t>& add1_dims, const std::vector<in
 
 bool CheckAdd1Source(const GNode& add1)
 {
-    Tensor tensor;
-    if (add1.GetInputConstData(0, tensor) == GRAPH_SUCCESS) {
+    const auto peer = add1.GetInDataNodesAndPortIndexs(0);
+    if (peer.first == nullptr) {
+        return false;
+    }
+    if (TypeOf(*peer.first) == "Enter") {
         return true;
     }
-    OPS_LOG_D(kPassName.c_str(), "guard_probe : add1 x1 is not const, check peer node.");
-    const auto peer = add1.GetInDataNodesAndPortIndexs(0);
-    if ((peer.first == nullptr) || (TypeOf(*peer.first) != "Enter")) {
+    Tensor tensor;
+    if (add1.GetInputConstData(0, tensor) != GRAPH_SUCCESS) {
         OPS_LOG_D(kPassName.c_str(), "guard_rejected : add1 x1 is neither const nor produced by Enter.");
         return false;
     }
@@ -217,6 +217,7 @@ struct Matched {
     GNode mean1;
     GNode add0;
     GNode add1;
+    NodeIo eps;
     std::vector<int64_t> axes0;
     std::vector<int64_t> axes1;
     std::vector<int64_t> input_dims;
@@ -230,6 +231,19 @@ bool CollectMatched(const std::unique_ptr<MatchResult>& match_result, Matched& m
         !GetCapturedNode(match_result, kCapAdd1, matched.add1)) {
         return false;
     }
+
+    std::vector<SubgraphInput> inputs;
+    const auto boundary = match_result->ToSubgraphBoundary();
+    if (boundary == nullptr || boundary->GetAllInputs(inputs) != SUCCESS || inputs.size() != kInputNum) {
+        OPS_LOG_D(kPassName.c_str(), "Cannot get matched input boundaries.");
+        return false;
+    }
+    const auto eps_inputs = inputs[kInputEps].GetAllInputs();
+    if (eps_inputs.empty()) {
+        OPS_LOG_D(kPassName.c_str(), "Epsilon boundary has no consumer.");
+        return false;
+    }
+    matched.eps = eps_inputs.front();
 
     if (!GetConstIntVec(matched.mean0, 1, matched.axes0)) {
         OPS_LOG_D(kPassName.c_str(), "guard_rejected : the first mean cannot get axis const input.");
@@ -331,7 +345,7 @@ bool LayerNormFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& m
     }
 
     float32_t epsilon = 0.0f;
-    if (!GetEpsilon(matched.add0, epsilon)) {
+    if (!GetEpsilon(matched.eps, epsilon)) {
         return false;
     }
 
@@ -360,7 +374,7 @@ std::unique_ptr<Graph> LayerNormFusionPass::Replacement(const std::unique_ptr<Ma
     }
 
     float32_t epsilon = 0.0f;
-    if (!GetEpsilon(matched.add0, epsilon)) {
+    if (!GetEpsilon(matched.eps, epsilon)) {
         return nullptr;
     }
 
