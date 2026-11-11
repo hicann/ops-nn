@@ -137,12 +137,12 @@ namespace ge {
 | :--------------: | :------------------: | :----------: |\n
 | x size           | n                    | [1, 1000000] |\n
 |                  | in_channels          | [1, 1000000] |\n
-|                  | d                    | [1, 1000000] |\n
+|                  | d                    | [1, 10000000] |\n
 |                  | h                    | [1, 100000]  |\n
 |                  | w                    | [1, 4096]    |\n
 | filter size      | out_channels         | [1, 1000000] |\n
 |                  | in_channels / groups | [1, 1000000] |\n
-|                  | kernel_d             | [1, 1000000] |\n
+|                  | kernel_d             | [1, 10000000] |\n
 |                  | kernel_h             | [1, 255]     |\n
 |                  | kernel_w             | [1, 255]     |\n
 | bias size        | out_channels         | [1, 1000000] |\n
@@ -169,7 +169,9 @@ namespace ge {
 * @li The w dimension of the input image supports cases exceeding 4096, but it may
 * cause compilation errors.
 *\n
-* @li If any dimension of x/filter/bias/scale/offset/y shape exceeds max 1000000,
+* @li If any dimension of x/filter/bias/scale/offset/y shape exceeds max 1000000
+* (the D-axis dimensions, i.e., the d of x, the kernel_d of filter and the d of y,
+* support up to 10000000),
 * the product of each dimension of x/filter/bias/scale/offset/y
 * shape exceeds max int32 minus one (2147483646) or the value of
 * strides/pads/dilations/groups/data_format/offset_x/pad_mode/enable_hf32

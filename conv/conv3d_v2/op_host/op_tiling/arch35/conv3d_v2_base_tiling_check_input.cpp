@@ -132,6 +132,22 @@ ge::graphStatus Conv3dBaseTilingV2::CheckWeightShape()
                 .c_str());
         return ge::GRAPH_FAILED;
     }
+    // kernelHxkernelWxkernelD of the tiling data is a uint32 scalar param consumed by the kernel,
+    // reject the shapes whose product of kernel_d, kernel_h and kernel_w cannot be held.
+    uint64_t kernelSizeDxHxW = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightD) *
+                               static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightH) *
+                               static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightW);
+    if (kernelSizeDxHxW > MAX_32_BIT_NUM) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeType(), "filter",
+            VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
+            FormatString("The product of shape[%zu], shape[%zu] and shape[%zu] of this parameter must not exceed %lu",
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX],
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX],
+                         paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX], MAX_32_BIT_NUM)
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
     if (oriShapeAttrInfo_.oriWeightH < 1 || oriShapeAttrInfo_.oriWeightH > MAX_KH_BF16_SHAPE) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeType(), "filter",

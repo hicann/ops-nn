@@ -221,8 +221,19 @@ uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2T
 
 bool Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)
 {
-    uint32_t kernelHxkernelW = convRepoTiling->kernelH * convRepoTiling->kernelW;
-    uint32_t kernelValueInKSize = flagInfo_.isKernelSplit ? convRepoTiling->khL1 * convRepoTiling->kwL1 :
+    uint64_t kernelHxkernelW = convRepoTiling->kernelH * convRepoTiling->kernelW;
+    // kernelHxkernelWxkernelD of the tiling data is a uint32 scalar param consumed by the kernel,
+    // fall back to the fast tiling path (which rejects the shape in CheckWeightShape) once the
+    // product cannot be held.
+    uint64_t kernelHxkernelWxkernelD = kernelHxkernelW * convRepoTiling->kernelD;
+    if (kernelHxkernelWxkernelD > MAX_32_BIT_NUM) {
+        OP_LOGW(paramInfo_.nodeType.c_str(),
+                "AscendC: repo tiling scalar overflow, kernelH: %lu, kernelW: %lu, kernelD: %lu, fall back to fast "
+                "tiling.",
+                convRepoTiling->kernelH, convRepoTiling->kernelW, convRepoTiling->kernelD);
+        return false;
+    }
+    uint64_t kernelValueInKSize = flagInfo_.isKernelSplit ? convRepoTiling->khL1 * convRepoTiling->kwL1 :
                                                             kernelHxkernelW;
     if (kernelValueInKSize == 0) {
         OP_LOGE(paramInfo_.nodeType.c_str(),
@@ -230,16 +241,16 @@ bool Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
                 convRepoTiling->kwL1, convRepoTiling->kernelH, convRepoTiling->kernelW);
         return false;
     }
-    uint32_t cinAInCore = convRepoTiling->kAL1 / kernelValueInKSize;
-    uint32_t kAL1Tail = (ConvAlignB(convRepoTiling->singleCoreCi, convOpsConstParams_.k0) * kernelValueInKSize *
+    uint64_t cinAInCore = convRepoTiling->kAL1 / kernelValueInKSize;
+    uint64_t kAL1Tail = (ConvAlignB(convRepoTiling->singleCoreCi, convOpsConstParams_.k0) * kernelValueInKSize *
                          convRepoTiling->kernelD) %
                         convRepoTiling->kAL1;
     kAL1Tail = kAL1Tail == 0 ? convRepoTiling->kAL1 : kAL1Tail;
-    uint32_t kBL1Tail = (convRepoTiling->singleCoreCi * kernelValueInKSize) % convRepoTiling->kBL1;
+    uint64_t kBL1Tail = (convRepoTiling->singleCoreCi * kernelValueInKSize) % convRepoTiling->kBL1;
     kBL1Tail = kBL1Tail == 0 ? convRepoTiling->kBL1 : kBL1Tail;
     uint32_t cinATailInCore = kAL1Tail / kernelValueInKSize;
     uint32_t cinBTailInCore = kBL1Tail / kernelValueInKSize;
-    uint32_t orgHixWi = convRepoTiling->orgHi * convRepoTiling->orgWi;
+    uint64_t orgHixWi = convRepoTiling->orgHi * convRepoTiling->orgWi;
     uint32_t cinOffsetBlockInGM = convRepoTiling->kAL1 / kernelValueInKSize * orgHixWi;
     uint32_t mStep = (!flagInfo_.mSplitModeFlag) ?
                          ConvAlignB(convRepoTiling->hoL0 * convRepoTiling->woL0, convOpsConstParams_.m0) :
@@ -249,9 +260,10 @@ bool Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
     uint32_t kStep = convRepoTiling->kL0 / convOpsConstParams_.k0;
     uint32_t weightKStride = ConvCeilDiv(convRepoTiling->nBL1, convOpsConstParams_.n0);
     uint32_t coutOffsetBlock = (convRepoTiling->orgCi / convRepoTiling->groups) * kernelHxkernelW;
+
     tilingData_.orgHixWi = orgHixWi;
     tilingData_.kernelHxkernelW = kernelHxkernelW;
-    tilingData_.kernelHxkernelWxkernelD = kernelHxkernelW * convRepoTiling->kernelD;
+    tilingData_.kernelHxkernelWxkernelD = static_cast<uint32_t>(kernelHxkernelWxkernelD);
     tilingData_.multiNBL1 = ConvCeilDiv(convRepoTiling->nBL1, convRepoTiling->nL0);
     tilingData_.cinAInCore = cinAInCore;
     tilingData_.cinATailInCore = cinATailInCore;

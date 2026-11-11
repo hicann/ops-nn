@@ -183,9 +183,11 @@ void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tili
     uint32_t kernelHxkernelW = tiling.kernelH * tiling.kernelW;
     uint32_t kernelValueInKSize = isKernelSplit ? tiling.khL1 * tiling.kwL1 : kernelHxkernelW;
     uint32_t cinAInCore = tiling.kAL1 / kernelValueInKSize;
-    uint32_t kAL1Tail = (AlignB(tiling.singleCoreCi, cubeInfo.k0) * tiling.kernelD * kernelValueInKSize) % tiling.kAL1;
+    uint64_t kAL1Tail = (static_cast<uint64_t>(AlignB(tiling.singleCoreCi, cubeInfo.k0)) * tiling.kernelD *
+                         kernelValueInKSize) %
+                        tiling.kAL1;
     kAL1Tail = kAL1Tail == 0 ? tiling.kAL1 : kAL1Tail;
-    uint32_t kBL1Tail = (tiling.singleCoreCi * kernelValueInKSize) % tiling.kBL1;
+    uint64_t kBL1Tail = (static_cast<uint64_t>(tiling.singleCoreCi) * kernelValueInKSize) % tiling.kBL1;
     kBL1Tail = kBL1Tail == 0 ? tiling.kBL1 : kBL1Tail;
     uint32_t cinATailInCore = kAL1Tail / kernelValueInKSize;
     uint32_t cinBTailInCore = kBL1Tail / kernelValueInKSize;
@@ -206,7 +208,10 @@ void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tili
     uint32_t nL1DivBlockSize = tiling.nBL1 / cubeInfo.n0;
 
     tiling.kernelHxkernelW = kernelHxkernelW;
-    tiling.kernelHxkernelWxkernelD = tiling.kernelD * tiling.kernelHxkernelW;
+    // kh*kw*kd has been guaranteed <= UINT32_MAX by the guard in CheckWeightShape, the uint32
+    // tiling field below does not overflow.
+    tiling.kernelHxkernelWxkernelD = static_cast<uint32_t>(static_cast<uint64_t>(tiling.kernelD) *
+                                                           tiling.kernelHxkernelW);
     // l0TilingInfo.nL0 != 0 is checked before
     tiling.multiNBL1 = static_cast<uint32_t>(CeilDiv(tiling.nBL1, tiling.nL0));
     tiling.cinAInCore = cinAInCore;

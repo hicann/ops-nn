@@ -240,7 +240,7 @@ English | [简体中文](./README.md)
 - Ascend 950PR&950DT products:
   - When the data type of `x` is `HIFLOAT8`, the data type of `filter` must be consistent with that of `x`, and the formats of both `x` and `filter` support only `NCDHW`.
   - For the `filter` input, the sizes of `H` and `W` should be within the range [1, 511].
-  - For `x`, `filter`, `bias`, `scale`, and `y`, the size of each dimension of each `tensor` should be within the range [1, 1000000].
+  - For `x`, `filter`, `bias`, `scale`, and `y`, the size of each dimension of each `tensor` should be within the range [1, 1000000], except that the D-axis dimensions (the `d` of `x`, the `kernel_d` of `filter`, and the `d` of `y`) support up to 10000000.
   - When the data type of `x` is `INT8`, the data format of `x` supports only `NCDHW`, the data format of `filter` supports `NCDHW` and `FRACTAL_Z_3D`, and the data format of `output` supports only `NDHWC`.
   - The supported combinations of data types and formats are as follows:
   <table>

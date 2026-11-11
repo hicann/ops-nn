@@ -36,6 +36,7 @@ using namespace ut_util;
 
 constexpr uint64_t NUM_4 = 4;
 constexpr int64_t MAX_VAL = 1000000;
+constexpr int64_t MAX_D_VAL = 10000000;
 
 namespace {
 struct ConvShape {
@@ -373,7 +374,7 @@ CONV3D_INPUT_ERR(check_fmap_shape_w_zero_fail, {"fmap_W_zero",
 
 // 8. CheckFmapShape �?D out of max range �?FAILED
 CONV3D_INPUT_ERR(check_fmap_shape_d_overflow_fail, {"fmap_D_overflow",
-                                                    {1, 16, MAX_VAL + 1, 16, 16},
+                                                    {1, 16, MAX_D_VAL + 1, 16, 16},
                                                     {},
                                                     DFL_WT_SHAPE,
                                                     {},
@@ -535,7 +536,7 @@ CONV3D_INPUT_ERR(check_weight_shape_kw_zero_fail, {"weight_kw_zero",
 CONV3D_INPUT_ERR(check_weight_shape_kd_overflow_fail, {"weight_kd_overflow",
                                                        DFL_FM_SHAPE,
                                                        {},
-                                                       {16, 16, MAX_VAL + 1, 1, 1},
+                                                       {16, 16, MAX_D_VAL + 1, 1, 1},
                                                        {},
                                                        DFL_BIAS,
                                                        {},
@@ -731,7 +732,7 @@ CONV3D_INPUT_ERR(check_output_shape_d_overflow_fail, {"out_D_overflow",
                                                       {},
                                                       DFL_BIAS,
                                                       {},
-                                                      {1, 16, MAX_VAL + 1, 16, 16},
+                                                      {1, 16, MAX_D_VAL + 1, 16, 16},
                                                       {},
                                                       DFL_PADS,
                                                       DFL_STRIDES,
