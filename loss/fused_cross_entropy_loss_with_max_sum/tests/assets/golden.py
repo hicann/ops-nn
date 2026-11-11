@@ -232,12 +232,22 @@ def _make_torch_bridge_aclnn():
         vocabParallelLogitsOptional=None,
         **kwargs,
     ):
-        return _compute(
+        import torch
+
+        outs = _compute(
             logitsMax,
             sumExpLogits,
             predictedLogits,
             _bridge(vocabParallelLogitsOptional),
         )
+        # vocab 缺省时 aclnn 用例仍声明 2 个输出槽（loss+softmax），三方桥
+        # 只回 1 个会触发 cross_check 的 third_parties<outputs 数量硬校验
+        # （issue 215：third_parties(1) < outputs(2) → COMPARE_FAILURE）。
+        # 与 kernel 桥对齐：补一个占位输出，golden 侧仍只回 [loss]，
+        # zip 截断保证 softmax 槽不参与数值比对。
+        if vocabParallelLogitsOptional is None and len(outs) == 1:
+            outs = outs + [torch.ones(1, dtype=outs[0].dtype)]
+        return outs
 
     return functools.partial(_fce_aclnn_call)
 
