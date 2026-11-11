@@ -95,7 +95,7 @@ aclnnStatus aclnnForeachAbs(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行绝对值计算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape与入参`x`对应位置的Tensor一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -149,8 +149,8 @@ aclnnStatus aclnnForeachAbs(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -169,9 +169,7 @@ aclnnStatus aclnnForeachAbs(
       <td>x与out中对应位置的Tensor的shape不一致。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td>561002</td>
-      <td>x或out中单个Tensor列表的Tensor数量超过256。</td>
+      <td>x或out的Tensor列表中存在空指针的Tensor。</td>
     </tr>
   </tbody></table>
 
@@ -220,7 +218,6 @@ aclnnStatus aclnnForeachAbs(
 
 ## 约束说明
 
-- x/out中单个Tensor列表的Tensor数量不能超过256。
 - x与out的Tensor数量必须一致。
 - x中所有Tensor的数据类型必须一致，支持的数据类型见参数说明。
 - out中对应位置的Tensor的数据类型与x一致。

@@ -60,7 +60,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Denotes the output tensor list for negation computation, corresponding to `y` in the formula. The data type and data format are consistent with those of the input parameter `x`, and the shape size equals the shape size of the input parameter `x`. The data types of all tensors in this parameter are consistent.</td>
+      <td>Denotes the output tensor list for negation computation, corresponding to `y` in the formula. The data type and data format are consistent with those of the input parameter `x`, and the shape is the same as that of the input parameter `x`. The data types of all tensors in this parameter are consistent.</td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16, INT16, INT8, UINT8</td>
       <td>ND</td>
     </tr>
@@ -71,11 +71,11 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The number of tensors in x is consistent with that in out, and the shapes of the tensors at corresponding positions are exactly equal.
-- The data types of all tensors within a single tensor list of x or out are consistent, and the data types of x and out are consistent; all of them must be within the supported range declared in the parameter table.
+- The number of tensors in x is consistent with that in y, and the shapes of the tensors at corresponding positions are exactly equal.
+- The data types of all tensors within a single tensor list of x or y are consistent, and the data types of x and y are consistent; all of them must be within the supported range declared in the parameter table.
 - A single tensor has no more than 8 dimensions.
-- The number of tensors in a single tensor list of x/y cannot exceed 256.
-- When the numbers of x and out are 0 (empty lists), the operator directly returns success without executing the computation.
+- The number of tensors in a single tensor list in x/y cannot exceed 256.
+- Empty tensors (with 0 elements) are supported.
 
 ## Invocation Description
 

@@ -85,7 +85,7 @@ aclnnStatus aclnnForeachTanh(
       <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行双曲正切函数运算的输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnForeachTanh(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行双曲正切函数运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size等于入参`x`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape与入参`x`对应位置的Tensor一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -156,23 +156,18 @@ aclnnStatus aclnnForeachTanh(
     <tr>
       <td>x和out的数据类型不一致。</td></tr>
     <tr>
-      <td>x与out的shape不满足约束。</td>
-    </tr>
-    <tr>
       <td>x或out中的Tensor的数据类型不一致。</td></tr>
-    <tr>
-      <td>x或out中的Tensor维度超过8维。</td>
-    </tr>
     <tr>
       <td>x与out的Tensor数量不一致。</td>
     </tr>
     <tr>
-      <td>x或out的Tensor列表中存在空指针的Tensor。</td>
+      <td>x或out中的Tensor维度超过8维。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td>561002</td>
-      <td>x或out中单个Tensor列表的Tensor数量超过256。</td>
+      <td>x与out中对应位置的Tensor的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>x或out的Tensor列表中存在空指针的Tensor。</td>
     </tr>
   </tbody></table>
 
@@ -221,8 +216,13 @@ aclnnStatus aclnnForeachTanh(
 
 ## 约束说明
 
-- x/out中单个Tensor列表的Tensor数量不能超过256。
-- x与out数量为0（空列表）时，接口直接返回成功，不执行计算。
+- x与out的Tensor数量必须一致。
+- x中所有Tensor的数据类型必须一致，支持的数据类型见参数说明。
+- out中对应位置的Tensor的数据类型与x一致。
+- x/out中单个Tensor的维度取值范围为0-8维，超过时报错。
+- out中对应位置的Tensor的shape必须与x一致。
+- 支持空Tensor（元素数为0）。
+- 支持非连续Tensor：x与out均支持非连续Tensor，非连续时接口内部先转为连续Tensor计算，再将结果写回。
 - 确定性计算：
   - aclnnForeachTanh默认确定性实现。
 

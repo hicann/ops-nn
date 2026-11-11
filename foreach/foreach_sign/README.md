@@ -62,7 +62,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行符号值提取运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size等于入参`x`的shape size。</td>
+      <td>表示进行符号值提取运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape与入参`x`对应位置的Tensor一致。</td>
       <td>FLOAT32、FLOAT16、INT32、INT8、INT64、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -72,11 +72,11 @@
 
 ## 约束说明
 
-- x与out的Tensor数量一致，且对应位置Tensor的shape完全相等。
-- x或out的单个Tensor列表内所有Tensor的数据类型保持一致，且x与out的数据类型一致，均须在参数表声明的支持范围内。
+- x与y的Tensor数量一致，且对应位置Tensor的shape完全相等。
+- x或y的单个Tensor列表内所有Tensor的数据类型保持一致，且x与y的数据类型一致，均须在参数表声明的支持范围内。
 - 单个Tensor的维度不超过8。
 - x/y中单个Tensor列表的Tensor数量不能超过256。
-- x与out数量为0（空列表）时直接返回成功，不执行计算。
+- 支持空Tensor（元素数为0）。
 
 ## 调用说明
 

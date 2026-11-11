@@ -64,7 +64,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Output tensor list for the sign value extraction operation, corresponding to `y` in the formula. All tensors in this parameter have the same data type. The data type and data format are the same as those of input parameter `x`, and the shape size equals the shape size of input parameter `x`.</td>
+      <td>Output tensor list for the sign value extraction operation, corresponding to `y` in the formula. All tensors in this parameter have the same data type. The data type and data format are the same as those of input parameter `x`, and the shape is the same as that of input parameter `x`.</td>
       <td>FLOAT32, FLOAT16, INT32, INT8, INT64, BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -74,11 +74,11 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The number of tensors in x is the same as that in out, and the shapes of tensors at corresponding positions are exactly equal.
-- All tensors within a single tensor list of x or out have the same data type, and the data types of x and out are the same. They must be within the supported range declared in the parameter table.
+- The number of tensors in x is the same as that in y, and the shapes of tensors at corresponding positions are exactly equal.
+- All tensors within a single tensor list of x or y have the same data type, and the data types of x and y are the same. They must be within the supported range declared in the parameter table.
 - A single tensor has no more than 8 dimensions.
-- A single tensor list in x/y contains no more than 256 tensors.
-- When the number of x and out is 0 (empty lists), the API directly returns success without performing computation.
+- The number of tensors in a single tensor list in x/y cannot exceed 256.
+- Empty tensors (with 0 elements) are supported.
 
 ## Invocation Description
 

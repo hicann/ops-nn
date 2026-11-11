@@ -103,11 +103,11 @@ aclnnStatus aclnnForeachSign(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list for sign value extraction, corresponding to `y` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type and data format are the same as those of input `x`. The shape size is greater than or equal to that of input `x`.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type and data format are the same as those of input `x`. The shape is the same as that of input `x`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT8, INT32, INT64</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -136,6 +136,8 @@ aclnnStatus aclnnForeachSign(
 
   aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
 
+  The first-phase API performs input parameter validation and returns an error in the following scenarios:
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -155,21 +157,27 @@ aclnnStatus aclnnForeachSign(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data type of x or out is not supported.</td>
     </tr>
     <tr>
-      <td>The data types of x and out are inconsistent.</td></tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
+      <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The data types of tensors in x or out are inconsistent.</td></tr>
+      <td>The data types of tensors in x or out are inconsistent.</td>
+    </tr>
     <tr>
-      <td>The dimensions of tensors in x or out exceed 8.</td>
+      <td>The number of tensors in x and out is inconsistent.</td>
+    </tr>
+    <tr>
+      <td>The tensors in x or out have more than 8 dimensions.</td>
+    </tr>
+    <tr>
+      <td>The shapes of the tensors at the corresponding positions in x and out are inconsistent.</td>
+    </tr>
+    <tr>
+      <td>A tensor in the x or out tensor list is a null pointer.</td>
     </tr>
   </tbody></table>
 
@@ -218,6 +226,13 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 ## Constraints
 
+- The number of tensors in x and out must be the same.
+- All tensors in x must have the same data type, and the data type must be supported as described in the parameter table.
+- The data type of the tensor at the corresponding position in out must be the same as that of x.
+- The dimensions of each tensor in x/out must be in the range [0, 8].
+- The shape of the tensor at the corresponding position in out must be the same as that in x.
+- Empty tensors (0 elements) are supported.
+- Non-contiguous tensors are supported for both x and out. When a tensor is non-contiguous, the API converts it to a contiguous tensor for computation and writes the result back.
 - Deterministic computation:
   - aclnnForeachSign defaults to a deterministic implementation.
 

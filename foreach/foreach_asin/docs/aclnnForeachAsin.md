@@ -85,7 +85,7 @@ aclnnStatus aclnnForeachAsin(
       <td>x（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行反正弦运算的输入张量列表，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>Tensor列表的Tensor数量取值范围为0~256，数量为0（空列表）时接口直接返回成功、不执行计算。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnForeachAsin(
       <td>x与out中对应位置的Tensor的shape不一致。</td>
     </tr>
     <tr>
-      <td>x或out中单个Tensor列表的Tensor数量超过256。</td>
+      <td>x或out的Tensor列表中存在空指针的Tensor。</td>
     </tr>
   </tbody></table>
 
@@ -218,7 +218,6 @@ aclnnStatus aclnnForeachAsin(
 
 ## 约束说明
 
-- x/out中单个Tensor列表的Tensor数量不能超过256。
 - x与out的Tensor数量必须一致。
 - x中所有Tensor的数据类型必须一致，支持的数据类型见参数说明。
 - out中对应位置的Tensor的数据类型与x一致。

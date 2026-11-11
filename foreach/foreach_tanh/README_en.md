@@ -57,7 +57,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Denotes the output tensor list on which the hyperbolic tangent function computation is performed, corresponding to `y` in the formula. The data types of all tensors in this parameter are the same. The data type and data format are consistent with the data type and data format of the input parameter `x`, and the shape size equals the shape size of the input parameter `x`.</td>
+      <td>Denotes the output tensor list on which the hyperbolic tangent function computation is performed, corresponding to `y` in the formula. The data types of all tensors in this parameter are the same. The data type and data format are consistent with the data type and data format of the input parameter `x`, and the shape is the same as that of the input parameter `x`.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -67,11 +67,11 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The number of tensors in x is the same as that in out, and the shapes of the tensors at corresponding positions are exactly equal.
-- The data types of all tensors in a single tensor list of x or out are the same, and the data types of x and out are the same. All of them must be within the support range declared in the parameter table.
+- The number of tensors in x is the same as that in y, and the shapes of the tensors at corresponding positions are exactly equal.
+- The data types of all tensors in a single tensor list of x or y are the same, and the data types of x and y are the same. All of them must be within the support range declared in the parameter table.
 - The dimensions of a single tensor do not exceed 8.
-- The number of tensors in a single tensor list of x/y does not exceed 256.
-- When the counts of x and out are 0 (empty lists), the call directly returns success without executing the computation.
+- The number of tensors in a single tensor list in x/y cannot exceed 256.
+- Empty tensors (with 0 elements) are supported.
 
 ## Invocation Description
 

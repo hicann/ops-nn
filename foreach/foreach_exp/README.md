@@ -55,7 +55,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行指数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。当`x`的数据类型为INT16、INT8、UINT8时，数据类型为FLOAT32，其他情况下与入参`x`的数据类型一致。数据格式与入参`x`的数据格式一致，shape size等于入参`x`的shape size。</td>
+      <td>表示进行指数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。当`x`的数据类型为INT16、INT8、UINT8时，数据类型为FLOAT32，其他情况下与入参`x`的数据类型一致。数据格式与入参`x`的数据格式一致，shape与入参`x`对应位置的Tensor一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

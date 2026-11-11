@@ -97,11 +97,11 @@ aclnnStatus aclnnForeachTanh(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list for the hyperbolic tangent computation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type and data format must be the same as those of input parameter `x`, and the shape size must be greater than or equal to the shape size of input parameter `x`.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li><li>The data type and data format must be the same as those of input parameter `x`, and the shape must be the same as that of input parameter `x`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -148,24 +148,30 @@ aclnnStatus aclnnForeachTanh(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>The input x or out is a null pointer.</td>
+      <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data type of x or out is not supported.</td>
     </tr>
     <tr>
-      <td>The data types of x and out are inconsistent.</td></tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
+      <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The data types of the tensors in x or out are inconsistent.</td></tr>
+      <td>The data types of tensors in x or out are inconsistent.</td>
+    </tr>
     <tr>
-      <td>The number of dimensions of the tensors in x or out exceeds 8.</td>
+      <td>The number of tensors in x and out is inconsistent.</td>
+    </tr>
+    <tr>
+      <td>The tensors in x or out have more than 8 dimensions.</td>
+    </tr>
+    <tr>
+      <td>The shapes of the tensors at the corresponding positions in x and out are inconsistent.</td>
+    </tr>
+    <tr>
+      <td>A tensor in the x or out tensor list is a null pointer.</td>
     </tr>
   </tbody></table>
 
@@ -214,6 +220,13 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 ## Constraints
 
+- The number of tensors in x and out must be the same.
+- All tensors in x must have the same data type, and the data type must be supported as described in the parameter table.
+- The data type of the tensor at the corresponding position in out must be the same as that of x.
+- The dimensions of each tensor in x/out must be in the range [0, 8].
+- The shape of the tensor at the corresponding position in out must be the same as that in x.
+- Empty tensors (0 elements) are supported.
+- Non-contiguous tensors are supported for both x and out. When a tensor is non-contiguous, the API converts it to a contiguous tensor for computation and writes the result back.
 - Deterministic computation:
   - aclnnForeachTanh defaults to a deterministic implementation.
 

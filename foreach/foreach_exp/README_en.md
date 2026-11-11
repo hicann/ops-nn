@@ -57,7 +57,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Represents the output tensor list for the exponential operation, corresponding to `y` in the formula. The data types of all tensors in this parameter are the same. When the data type of `x` is INT16, INT8, or UINT8, the data type is FLOAT32; in other cases, it is consistent with the data type of input parameter `x`. The data format is consistent with the data format of input parameter `x`, and the shape size equals the shape size of input parameter `x`.</td>
+      <td>Represents the output tensor list for the exponential operation, corresponding to `y` in the formula. The data types of all tensors in this parameter are the same. When the data type of `x` is INT16, INT8, or UINT8, the data type is FLOAT32; in other cases, it is consistent with the data type of input parameter `x`. The data format is consistent with the data format of input parameter `x`, and the shape is the same as that of input parameter `x`.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
