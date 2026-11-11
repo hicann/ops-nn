@@ -132,6 +132,12 @@ static bool CheckShape(const aclTensor* self, const aclTensor* target, int64_t r
                 op::ToString(BroadcastShape).GetString(), op::ToString(result->GetViewShape()).GetString());
         return false;
     }
+    if (reduction != 0 && result->GetViewShape().GetShapeSize() != 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Shape of result should be [1] when reduction is mean or sum, but current is %s.",
+                op::ToString(result->GetViewShape()).GetString());
+        return false;
+    }
     return true;
 }
 
