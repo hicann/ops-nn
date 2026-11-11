@@ -72,10 +72,10 @@ const aclTensor* MseLossGrad(const aclTensor* gradOutput, const aclTensor* self,
     }
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     auto out = executor->AllocTensor(broadcastShape, self->GetDataType());
-    // ascend950(regbase) 走 MseLossGradV2(原生支持 broadcast); 非 regbase SoC 维持原有逻辑
+    // ascend950 走 MseLossGradV2(原生支持 broadcast); 非 ascend950 SoC 维持原有逻辑
     // (仅 910B/910_93/310P 且三 shape/format 相等时走 V2, 否则 V1)。
-    bool isRegBase = Ops::NN::AclnnUtil::IsRegbase();
-    if (isRegBase ||
+    bool isAscend950 = (socVersion == SocVersion::ASCEND950);
+    if (isAscend950 ||
         ((socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
           socVersion == SocVersion::ASCEND310P) && // MseLossGradV2算子仅支持910B/910_93和310P芯片
          self->GetViewShape() == target->GetViewShape() &&
