@@ -220,8 +220,8 @@ aclnnStatus aclnnAscendQuant(
       <td>传入的x、scale、y或roundMode是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x、scale、offset、y的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

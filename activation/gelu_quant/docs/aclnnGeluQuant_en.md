@@ -272,8 +272,8 @@ The first-phase API performs input parameter validation and returns an error in 
       <td><ul><li>self, inputScaleOptional, inputOffsetOptional, y, or outScaleOptional is an empty tensor.</li><li>The data type of self, inputScaleOptional, inputOffsetOptional, y, or outScaleOptional is not within the supported range.</li><li>approximate, quantMode, roundMode, or dstType is not within the supported range.</li><li>The shape of self, inputScaleOptional, inputOffsetOptional, y, or outScaleOptional does not meet the verification conditions.</li></ul></td>
   </tr>
   <tr>
-    <td rowspan="3">ACLNN_ERR_RUNTIME_ERROR</td>
-    <td rowspan="3">361001</td>
+    <td rowspan="1">ACLNN_ERR_RUNTIME_ERROR</td>
+    <td rowspan="1">361001</td>
     <td>The current platform is not within the range of supported platforms.</td>
   </tr>
 </tbody>

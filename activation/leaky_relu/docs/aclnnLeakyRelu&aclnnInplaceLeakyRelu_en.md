@@ -336,8 +336,8 @@ aclnnStatus aclnnInplaceLeakyRelu(
       <td>selfRef or negativeSlope is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="1">161002</td>
       <td>The data type of selfRef is not within the supported range.</td>
     </tr>
   </tbody></table>

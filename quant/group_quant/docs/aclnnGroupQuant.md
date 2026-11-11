@@ -188,8 +188,8 @@ aclnnStatus aclnnGroupQuant(
       <td>传入的x、scale、groupIndex、y是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x、scale、groupIndex、offsetOptional、y的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>

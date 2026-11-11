@@ -316,8 +316,8 @@ aclnnStatus aclnnInplaceMish(
       <td>The input selfRef is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>The data type of selfRef is out of the supported range.</td>
     </tr>
     <tr>

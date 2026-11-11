@@ -460,8 +460,8 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>The self or noise parameter is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>The data type of self or noise is out of the supported range.</td>
     </tr>
        <tr>

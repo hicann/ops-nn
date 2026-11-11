@@ -190,8 +190,8 @@ aclnnStatus aclnnGroupQuant(
       <td>x, scale, groupIndex, or y is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data type or data format of x, scale, groupIndex, offsetOptional, or y is not supported.</td>
     </tr>
     <tr>

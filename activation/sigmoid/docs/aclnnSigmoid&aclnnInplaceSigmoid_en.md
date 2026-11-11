@@ -166,8 +166,8 @@ aclnnStatus aclnnInplaceSigmoid(
       <td>self or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>The data types and data formats of self and out are not within the supported range.</td>
     </tr>
     <tr>

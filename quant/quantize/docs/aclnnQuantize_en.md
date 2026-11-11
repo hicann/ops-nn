@@ -207,8 +207,8 @@ aclnnStatus aclnnQuantize(
       <td>x, scales, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>The data type/data format/dimension of x, scales, zeroPoints, or out is out of the supported range.</td>
     </tr>
     <tr>

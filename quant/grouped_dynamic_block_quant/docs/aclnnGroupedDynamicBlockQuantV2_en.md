@@ -252,7 +252,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuantV2(
       <td>The parameter x, groupList, yOut, or scaleOut is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
       <td>The input or output data format or data type is out of the supported range.</td>
     </tr>

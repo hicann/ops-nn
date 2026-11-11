@@ -108,7 +108,7 @@ aclnnStatus aclnnFatreluMul(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>输入的张量，公式中的x。</td>
-      <td><ul><li>支持空Tensor。</li><li>最后一维值为偶数。</li><li>Atlas A2系列、Atlas A3系列、kirin系列产品：最后一维值不大于1024，其他维度的乘积不大于200000。</li><li>Atlas推理系列、Atlas训练系列产品：最后一维值不大于1024，其他维度的乘积不大于200000。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>最后一维值为偶数。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>不小于2</td>
@@ -156,7 +156,9 @@ aclnnStatus aclnnFatreluMul(
     </tr>
   </tbody>
   </table>
-
+<!-- npu="A3,910b" id7 -->
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：最后一维值不大于1024，其他维度的乘积不大于200000。
+<!-- end id7 -->
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。

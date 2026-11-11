@@ -213,8 +213,8 @@ aclnnStatus aclnnGroupedQuantMax(
       <td>x, scale, groupList, y, or amax is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>The data type of x, scale, or groupList is not supported.</td>
     </tr>
     <tr>

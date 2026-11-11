@@ -222,8 +222,8 @@ aclnnStatus aclnnAscendQuant(
       <td>x, scale, or y is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>The data types of x, scale, offset, and y are not in the supported range.</td>
     </tr>
     <tr>

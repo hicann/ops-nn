@@ -169,8 +169,8 @@ aclnnStatus aclnnHardshrink(
       <td>self, lambd, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>The data type of self, lambd, or out is not supported.</td>
     </tr>
     <tr>

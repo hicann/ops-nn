@@ -270,8 +270,8 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
       <td><ul><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional为空tensor。</li><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional的数据类型不在支持的范围之内。</li><li>approximate、quantMode、roundMode、dstType不在支持的范围之内。</li><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional的shape不满足校验条件。</li></ul></td>
   </tr>
   <tr>
-    <td rowspan="3">ACLNN_ERR_RUNTIME_ERROR</td>
-    <td rowspan="3">361001</td>
+    <td rowspan="1">ACLNN_ERR_RUNTIME_ERROR</td>
+    <td rowspan="1">361001</td>
     <td>当前平台不在支持的平台范围内。</td>
   </tr>
 </tbody>
