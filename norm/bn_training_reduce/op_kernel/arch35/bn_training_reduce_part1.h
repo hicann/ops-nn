@@ -115,7 +115,7 @@ __aicore__ inline int32_t BuildUBAxes(int64_t aLen, int64_t rLen, UBAxisDesc out
 
 __aicore__ inline void DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLen, LocalTensor<D_T>& preInLocal)
 {
-    UBAxisDesc ubAxes[MAX_PATTERN_RANK];
+    UBAxisDesc ubAxes[MAX_PATTERN_RANK] = {};
     const int32_t axisCount = BuildUBAxes(aLen, rLen, ubAxes);
     const int64_t typeBytes = static_cast<int64_t>(sizeof(D_T));
 
@@ -138,7 +138,7 @@ __aicore__ inline void DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLe
         ext.srcStride = 0;
     }
 
-    int64_t ubStride[MAX_PATTERN_RANK];
+    int64_t ubStride[MAX_PATTERN_RANK] = {};
     ubStride[0] = typeBytes;
     for (int32_t i = 1; i < axisCount; ++i) {
         ubStride[i] = ubStride[i - 1] * ubAxes[i - 1].paddedSize;

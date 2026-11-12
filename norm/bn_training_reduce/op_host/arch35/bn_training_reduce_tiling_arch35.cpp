@@ -292,10 +292,10 @@ bool IsLegalTilingKey(int64_t tilingKey)
 
 ge::graphStatus TilingFunc(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     if (context == nullptr) {
         return ge::GRAPH_FAILED;
     }
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
 
     OP_LOGI(context->GetNodeName(), "Enter TilingFunc");
     BNTrainingReducePublicInputs inputs;

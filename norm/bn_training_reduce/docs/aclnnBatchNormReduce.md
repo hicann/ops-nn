@@ -94,7 +94,7 @@ aclnnStatus aclnnBatchNormReduce(
       <td>sum（aclTensor*）</td>
       <td>输出</td>
       <td>表示求和的输出Tensor，对应公式中的`sum`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x`的第二维的值一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape必须为一维 `[C]`，其中 `C=x.shape[1]`。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1</td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnBatchNormReduce(
       <td>squareSum（aclTensor*）</td>
       <td>输出</td>
       <td>表示求平方和的输出Tensor，对应公式中的`squareSum`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x`的第二维的值一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape必须为一维 `[C]`，其中 `C=x.shape[1]`。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1</td>

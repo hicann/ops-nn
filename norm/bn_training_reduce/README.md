@@ -75,7 +75,7 @@
   - 图模式支持动态Shape（-1未知维）和动态Rank（-2未知秩）。
 - sum和square_sum的逻辑shape均为一维[C]，长度等于x的C维，数据类型固定为FLOAT。
 - FLOAT16和BFLOAT16输入按FLOAT精度执行平方与累加。
-- 算子无属性，支持空Tensor；归约集合为空时输出为零或空向量。
+- 算子无属性，支持空Tensor；C=0时输出为空Tensor，C>0且归约集合为空时输出为shape [C]的全零Tensor。
 
 ## 调用说明
 

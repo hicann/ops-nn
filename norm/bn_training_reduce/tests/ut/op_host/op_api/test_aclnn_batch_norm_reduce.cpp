@@ -83,7 +83,7 @@ TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_rejects_nhwc)
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_NE(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_rejects_empty_nhwc)
@@ -96,5 +96,57 @@ TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_rejects_empty_nhwc)
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_NE(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_rejects_float64)
+{
+    auto x = TensorDesc({1, 2, 3, 4}, ACL_DOUBLE, ACL_FORMAT_NCHW);
+    auto sum = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto squareSum = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnBatchNormReduce, INPUT(x), OUTPUT(sum, squareSum));
+
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_rejects_rank_nine)
+{
+    auto x = TensorDesc({1, 2, 1, 1, 1, 1, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto sum = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto squareSum = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnBatchNormReduce, INPUT(x), OUTPUT(sum, squareSum));
+
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_rejects_null_workspace_size)
+{
+    auto xDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto outDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    aclTensor* x = DescToAclContainer(xDesc);
+    aclTensor* sum = DescToAclContainer(outDesc);
+    aclTensor* squareSum = DescToAclContainer(outDesc);
+    aclOpExecutor* executor = nullptr;
+    EXPECT_EQ(aclnnBatchNormReduceGetWorkspaceSize(x, sum, squareSum, nullptr, &executor), ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(executor, nullptr);
+    Release(x);
+    Release(sum);
+    Release(squareSum);
+}
+
+TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_rejects_null_executor)
+{
+    auto xDesc = TensorDesc({1, 2, 3, 4}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto outDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    aclTensor* x = DescToAclContainer(xDesc);
+    aclTensor* sum = DescToAclContainer(outDesc);
+    aclTensor* squareSum = DescToAclContainer(outDesc);
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(aclnnBatchNormReduceGetWorkspaceSize(x, sum, squareSum, &workspaceSize, nullptr),
+              ACLNN_ERR_PARAM_NULLPTR);
+    Release(x);
+    Release(sum);
+    Release(squareSum);
 }

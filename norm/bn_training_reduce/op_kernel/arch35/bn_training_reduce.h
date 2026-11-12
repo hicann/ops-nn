@@ -246,7 +246,8 @@ class BNTrainingReduceKernel {
 public:
     using D_T = DType;
 
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR sum, GM_ADDR squareSum, const BNTrainingReduceTilingData* td)
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR sum, GM_ADDR squareSum, const BNTrainingReduceTilingData* td,
+                                bool initBuffers = true)
     {
         axisNum_ = td->axisNum;
         for (int32_t i = 0; i < MAX_PATTERN_RANK; ++i) {
@@ -299,16 +300,16 @@ public:
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ D_T*>(x));
         sumGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sum));
         squareSumGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(squareSum));
-        pipe_.InitBuffer(preInQue_, kDoubleBufferDepth, td->preReduceUbSize);
-        pipe_.InitBuffer(tmpBuf_, kDoubleBufferDepth * td->tmpBufUbSize);
-        pipe_.InitBuffer(cacheBuf_, td->cacheBufUbSize);
-        pipe_.InitBuffer(outQue_, 1, td->postReduceUbSize);
+        if (initBuffers) {
+            InitBuffers(td);
+        }
     }
 
     __aicore__ inline void InitGroup(GM_ADDR x, GM_ADDR sum, GM_ADDR squareSum, GM_ADDR workspace,
                                      const BNTrainingReduceTilingData* td)
     {
-        Init(x, sum, squareSum, td);
+        // InitOutput borrows unallocated UB; tiling may use the entire UB for computation.
+        Init(x, sum, squareSum, td, false);
         if constexpr (isDeterministic) {
             wsGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace));
         }
@@ -324,6 +325,8 @@ public:
             }
             SyncAll();
         }
+        // The first SyncAll completes output initialization before its temporary UB is reused.
+        InitBuffers(td);
     }
 
     __aicore__ inline void Process(int32_t outputIdx)
@@ -358,6 +361,14 @@ public:
     }
 
 private:
+    __aicore__ inline void InitBuffers(const BNTrainingReduceTilingData* td)
+    {
+        pipe_.InitBuffer(preInQue_, kDoubleBufferDepth, td->preReduceUbSize);
+        pipe_.InitBuffer(tmpBuf_, kDoubleBufferDepth * td->tmpBufUbSize);
+        pipe_.InitBuffer(cacheBuf_, td->cacheBufUbSize);
+        pipe_.InitBuffer(outQue_, 1, td->postReduceUbSize);
+    }
+
     __aicore__ inline uint64_t FindNearestPower2(uint64_t value) const
     {
         if (value == 0) {

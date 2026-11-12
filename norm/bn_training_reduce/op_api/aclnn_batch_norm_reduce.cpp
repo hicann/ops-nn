@@ -93,7 +93,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* sum, const aclTensor
              return false);
     OP_CHECK(squareSumShape.GetDimNum() == OUT_SIZE,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "It is expected dimNum of squareSum equals to 1, but size is %zu",
-                     sumShape.GetDimNum()),
+                     squareSumShape.GetDimNum()),
              return false);
 
     const int64_t inputC = xShape.GetDim(DIM_ONE);
@@ -147,6 +147,7 @@ aclnnStatus aclnnBatchNormReduceGetWorkspaceSize(const aclTensor* x, aclTensor* 
                                                  uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnBatchNormReduce, DFX_IN(x), DFX_OUT(sum, squareSum));
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

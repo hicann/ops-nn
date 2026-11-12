@@ -77,7 +77,7 @@ The formulas use 4D NCHW as an example. All other supported ranks and data forma
   - Graph mode supports dynamic shapes (-1 for an unknown dimension) and dynamic ranks (-2 for an unknown rank).
 - The logical shapes of sum and square_sum are both 1D [C], with a length equal to the C dimension of x, and the data type is fixed to FLOAT.
 - FLOAT16 and BFLOAT16 inputs perform squaring and accumulation at FLOAT precision.
-- The operator has no attributes and supports empty tensors. When the reduction set is empty, the output is zero or an empty vector.
+- The operator has no attributes and supports empty tensors. When C = 0, the outputs are empty tensors. When C > 0 and the reduction set is empty, both outputs are all-zero tensors of shape [C].
 
 ## Invocation Description
 
