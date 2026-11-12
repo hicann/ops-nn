@@ -72,7 +72,7 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>y</td>
+      <td>loss</td>
       <td>输出</td>
       <td>表示predict与label经smooth_l1_loss_v2计算得到的损失值输出</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>

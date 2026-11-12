@@ -74,7 +74,7 @@ English | [简体中文](./README.md)
       <td>ND</td>
     </tr>
     <tr>
-      <td>y</td>
+      <td>loss</td>
       <td>Output</td>
       <td>Indicates the loss value output obtained by computing predict and label through smooth_l1_loss_v2</td>
       <td>FLOAT16, BFLOAT16, FLOAT32</td>

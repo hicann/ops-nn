@@ -52,7 +52,7 @@ ge::graphStatus SmoothL1LossV2Tiling::CheckShape()
     this->outputDtype = outputDesc->GetDataType();
     auto iter = DTYEP_2_INT_KEY.find(this->outputDtype);
     OP_CHECK_IF(iter == DTYEP_2_INT_KEY.end(),
-                OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
+                OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "loss", ToString(this->outputDtype).c_str(),
                                           "FLOAT, FLOAT16 or BF16"),
                 return ge::GRAPH_FAILED);
     if (inputPDesc->GetDataType() != inputLDesc->GetDataType()) {
@@ -104,7 +104,7 @@ ge::graphStatus SmoothL1LossV2Tiling::TilingEle()
                         ge::GRAPH_SUCCESS,
                     OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "loss", ToString(this->outputDtype).c_str(),
                                   "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
