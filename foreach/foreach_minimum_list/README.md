@@ -80,4 +80,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn API  | [test_aclnn_foreach_minimum_list](examples/test_aclnn_foreach_minimum_list.cpp) | 通过[aclnnForeachMinimumList](docs/aclnnForeachMinimumList.md)接口方式调用ForeachMinimumList算子。 |
-| GE图模式 | -  | 通过[算子IR](op_graph/foreach_minimum_list_proto.h)构图方式调用ForeachMinimumList算子。         |
+| GE图模式 | [test_geir_foreach_minimum_list](examples/test_geir_foreach_minimum_list.cpp) | 通过[算子IR](op_graph/foreach_minimum_list_proto.h)构图方式调用ForeachMinimumList算子。         |

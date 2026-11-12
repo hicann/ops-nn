@@ -81,4 +81,4 @@ English | [简体中文](./README.md)
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn API  | [test_aclnn_foreach_minimum_list](examples/test_aclnn_foreach_minimum_list.cpp) | Invokes the ForeachMinimumList operator through the [aclnnForeachMinimumList](docs/aclnnForeachMinimumList_en.md) interface. |
-| GE Graph-mode invocation | -  | Builds the graph and invokes the ForeachMinimumList operator through the [operator IR](op_graph/foreach_minimum_list_proto.h).         |
+| GE Graph-mode invocation | [test_geir_foreach_minimum_list](examples/test_geir_foreach_minimum_list.cpp) | Builds the graph and invokes the ForeachMinimumList operator through the [operator IR](op_graph/foreach_minimum_list_proto.h).         |

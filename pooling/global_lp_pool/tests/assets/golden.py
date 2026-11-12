@@ -9,45 +9,59 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""TTK TestSpec golden for global_lp_pool (Kernel / GEIR path).
+"""TTK TestSpec golden for global_lp_pool (Kernel path).
 
-y = (sum_spatial |x|^p)^(1/p), keepdims=True, p != 0.
-p edge behaviour: p == 0 or non-finite (+inf/-inf/NaN) -> ValueError;
-empty reduction (prod(spatial) == 0) -> 0 (operator EMPTY_R convention).
-数值口径：直接调用 torch.linalg.vector_norm，不做 dtype 提升或手写算法；
-golden 与 third_party(torch) 同源，cross_check 退化为 NPU vs torch。
+Independent CPU reference implementation — does NOT import or reuse any kernel product.
+Implements the GlobalLpPool formula per spec.yaml math_semantics + DESIGN.md §1.3:
+
+    y = (sum(|x|^p over spatial dims))^(1/p), keepdims=True
+
+  Spatial dims = dims[2:] (H,W for 4D NCHW; D0,D1,D2 for 5D NCD0D1D2).
+  All intermediate computation done in FP32 for precision (per spec.yaml
+  numerical_stability: intermediate_accumulation_in_float32).
+
+Operator classification: computational (max_relative tolerance, not bitwise_equal).
+  -> cross_check tolerance (NPU vs torch third_party reference).
+
+Supported dtypes: float16, float32, bfloat16 (input/output same dtype).
+
+Attributes:
+  p: optional float, default 2.0 (L2 norm). p=1 -> L1 (Abs fast path),
+     p=2 -> L2 (Mul fast path), general p -> Abs->Pow->Sum->Pow chain.
+
+Tolerance:
+  - Kernel (GlobalLpPoolKernelSpec): cross_check (NPU output vs torch
+    third_party reference).
 """
-
-import math
-
-import ml_dtypes
-import numpy as np
-import torch
 
 __spec__ = {
     "global_lp_pool": "GlobalLpPoolKernelSpec",
     "GlobalLpPool": "GlobalLpPoolKernelSpec",
 }
 
+import math
+
+import numpy as np
+import torch
+import ml_dtypes
+
 
 def _np_to_torch(arr):
+    """numpy -> torch, preserving bf16 bit-exactly via int16 bridge (no fp32 round-trip)."""
     if arr is None:
         return None
     if isinstance(arr, torch.Tensor):
         return arr
-    arr = np.ascontiguousarray(np.asarray(arr))
+    arr = np.asarray(arr)
     if arr.dtype == ml_dtypes.bfloat16:
-        return torch.from_numpy(arr.view(np.int16)).view(torch.bfloat16)
+        return torch.from_numpy(np.ascontiguousarray(arr).view(np.int16)).view(
+            torch.bfloat16
+        )
     return torch.from_numpy(arr)
 
 
-def _as_numpy(x):
-    if isinstance(x, torch.Tensor):
-        return _torch_to_np(x)
-    return np.asarray(x)
-
-
 def _torch_to_np(t):
+    """torch -> numpy, preserving bf16 bit-exactly via int16 bridge."""
     if t is None:
         return None
     if isinstance(t, np.ndarray):
@@ -59,6 +73,7 @@ def _torch_to_np(t):
 
 
 def _norm_p(v):
+    """Normalize p attribute (numpy scalar / tensor / python float) -> python float."""
     if isinstance(v, (np.ndarray, np.generic)):
         return float(v.item()) if v.ndim == 0 else float(v.reshape(-1)[0])
     if isinstance(v, torch.Tensor):
@@ -66,66 +81,76 @@ def _norm_p(v):
     return float(v)
 
 
-def _spatial_size(shape):
-    n = 1
-    for d in shape[2:]:
-        n *= int(d)
-    return n
+def _core_compute(x_t, p):
+    """Core compute in torch (FP32 intermediate). Returns torch.Tensor.
 
+    y = (sum(|x|^p over spatial dims))^(1/p), keepdims=True.
 
-def _out_shape(shape):
-    return tuple(shape[:2]) + (1,) * (len(shape) - 2)
+    Inputs:
+        x_t: torch.Tensor (already converted, any float dtype)
+        p:   python float, Lp norm exponent (p > 0)
 
+    Computation order (per DESIGN.md §10.6/§10.10):
+        1. Cast to FP32 (if not already)
+        2. |x|^p  (torch.abs + torch.pow)
+        3. ReduceSum over spatial dims (dims[2:]), keepdims=True
+        4. ^(1/p)  (torch.pow)
+        5. Cast back to original dtype
+    """
+    orig_dtype = x_t.dtype
 
-def _check_p(p_val):
-    if p_val == 0.0 or not math.isfinite(p_val):
-        raise ValueError(
-            "global_lp_pool golden requires a finite non-zero p, got %r" % (p_val,)
-        )
+    spatial_size = 1
+    for d in x_t.shape[2:]:
+        spatial_size *= int(d)
+    if spatial_size == 0 and math.isfinite(p) and p != 0.0:
+        out_shape = tuple(x_t.shape[:2]) + (1,) * (x_t.ndim - 2)
+        return torch.zeros(out_shape, dtype=orig_dtype, device=x_t.device)
 
+    x_f32 = x_t.to(torch.float32)
 
-def _lp_norm(x, p_val):
-    """函数形态 golden：numpy 输入 → numpy 输出；空归约按算子约定置 0。"""
-    if _spatial_size(x.shape) == 0:
-        return np.zeros(_out_shape(x.shape), dtype=x.dtype)
-    xt = _np_to_torch(x)
-    dims = tuple(range(2, xt.ndim))
-    return _torch_to_np(
-        torch.linalg.vector_norm(xt, ord=float(p_val), dim=dims, keepdim=True)
-    )
+    spatial_dims = list(range(2, x_f32.ndim))
 
+    powered = torch.pow(torch.abs(x_f32), p)
+    summed = torch.sum(powered, dim=spatial_dims, keepdim=True)
+    result = torch.pow(summed, 1.0 / p)
 
-def global_lp_pool_golden(x, p=2.0, **kwargs):
-    p_val = _norm_p(p)
-    _check_p(p_val)
-    return [_lp_norm(_as_numpy(x), p_val)]
+    return result.to(orig_dtype)
 
 
 class GlobalLpPoolTorchSpec:
-    def __init__(self, *, p=2.0, **kwargs):
-        # 前置处理全部在此：p 归一化 + 合法性校验
-        self.p = _norm_p(p)
-        _check_p(self.p)
+    """third_party: GPU PyTorch independent implementation (for cross_check).
+
+    Parameter names match global_lp_pool_def.cpp (snake_case); server binds
+    by named_values. Reuses _core_compute to ensure structural identity with
+    golden (torch floating-point ops are consistent across CPU/GPU, cross_check
+    metric measures NPU vs torch reference numerical deviation).
+    """
 
     def __call__(self, x, p=2.0, **kwargs):
-        # x 已是 server 转好的 torch.Tensor（device 上）；空归约按算子约定置 0
-        if _spatial_size(x.shape) == 0:
-            return [x.new_zeros(_out_shape(x.shape))]
-        return [
-            torch.linalg.vector_norm(
-                x, ord=self.p, dim=tuple(range(2, x.ndim)), keepdim=True
-            )
-        ]
+        p_val = _norm_p(p)
+        return [_core_compute(x, p_val)]
 
 
 class GlobalLpPoolKernelSpec:
+    """Kernel / GEIR flow — golden receives numpy.ndarray, returns list[numpy.ndarray].
+
+    Parameters follow global_lp_pool_def.cpp (without output y):
+      input: x (REQUIRED, 4D NCHW or 5D NCD0D1D2, fp16/fp32/bf16)
+      attr:  p (OPTIONAL float, default 2.0)
+
+    p is optional with a default; no required attrs -> no ``*`` separator needed.
+    """
+
     def golden(x, p=2.0, **kwargs):
-        return global_lp_pool_golden(x, p, **kwargs)
+        p_val = _norm_p(p)
+        x_t = _np_to_torch(x)
+        y_t = _core_compute(x_t, p_val)
+        return [_torch_to_np(y_t)]
 
     third_party = {"torch": GlobalLpPoolTorchSpec}
 
     tolerance = {
-        "float16": {"standard": "cross_check", "level": "L1"},
-        "float32": {"standard": "cross_check", "level": "L1"},
-        "bfloat16": {"standard": "cross_check", "level": "L1"},
+        "float16": {"standard": "cross_check"},
+        "float32": {"standard": "cross_check"},
+        "bfloat16": {"standard": "cross_check"},
     }
