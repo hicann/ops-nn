@@ -46,7 +46,7 @@ struct ScatterTilingResult {
 static ScatterTilingResult RunScatterNdUpdateTiling(const std::vector<int64_t>& varShape, ge::DataType varDtype,
                                                     const std::vector<int64_t>& indicesShape, ge::DataType indicesDtype,
                                                     const std::vector<int64_t>& updatesShape,
-                                                    const std::string& npuArch = "")
+                                                    const std::string& npuArch = "", int32_t deterministic = 0)
 {
     ScatterTilingResult result;
     std::string compileInfoString = R"({
@@ -132,6 +132,7 @@ static ScatterTilingResult RunScatterNdUpdateTiling(const std::vector<int64_t>& 
                       .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .TilingData(tilingDataHolder.get())
                       .Workspace(wsSize)
+                      .DeterministicInfo(deterministic)
                       .Build();
     auto tilingContext = holder.GetContext<gert::TilingContext>();
     tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
@@ -200,4 +201,21 @@ TEST_F(ScatterNdUpdateArch35TilingTest, Hif4OddAfterAxisRejected)
 {
     auto result = RunScatterNdUpdateTiling({4, 7}, ge::DT_HIFLOAT4, {3, 1}, ge::DT_INT32, {3, 7}, "9201");
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// （非 SIMT 平台）未适配确定性：tiling 直接拒绝，避免下发无可用 kernel 模板的配置
+TEST_F(ScatterNdUpdateArch35TilingTest, DeterministicOnNonSimtPlatformRejected)
+{
+    auto result = RunScatterNdUpdateTiling({8, 4}, ge::DT_FLOAT, {3, 1}, ge::DT_INT32, {3, 4}, "5162", 1);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// 非确定性：窄行（4 * 4B < 128B）强制走 SIMD 非确定性模板，并禁用 SIMT 排序分支
+TEST_F(ScatterNdUpdateArch35TilingTest, NonDeterministicOnNonSimtPlatformForcesSimd)
+{
+    auto result = RunScatterNdUpdateTiling({8, 4}, ge::DT_FLOAT, {3, 1}, ge::DT_INT32, {3, 4}, "5162", 0);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.tilingData.isDeterminstic, 0);
+    EXPECT_EQ(result.tilingData.isSimdNonDeterminstic, 1);
+    EXPECT_EQ(result.tilingData.isSimtWithSort, 0);
 }

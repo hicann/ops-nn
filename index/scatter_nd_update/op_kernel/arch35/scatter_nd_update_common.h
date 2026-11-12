@@ -21,10 +21,12 @@
 #include "scatter_nd_update_struct.h"
 #include "indices_sort_utils.h"
 #include "op_kernel/math_util.h"
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
 #include "simt_api/asc_simt.h"
 #include "simt_api/device_atomic_functions.h"
 #include "simt_api/asc_fp16.h"
 #include "simt_api/asc_bf16.h"
+#endif
 namespace ScatterNdUpdate {
 using namespace AscendC;
 
@@ -343,6 +345,7 @@ public:
     }
 };
 
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCalcMask(
     __gm__ INDICES_T* idxGmAddr, __gm__ TYPE_T* maskGmAddr, __gm__ PARAMS_T* outputGmAddr,
@@ -415,6 +418,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
         }
     }
 }
+#endif
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 class ScatterNdUpdateDeterministicCommon : public ScatterNdUpdateBase<PARAMS_T, INDICES_T, OFFSET_T> {
@@ -608,6 +612,7 @@ ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Deter
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::CalcMask()
 {
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
     if (blockIdx >= tiling_.calcMaskUsedCoreNum) {
         return;
     }
@@ -675,6 +680,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
                 varIdxGmAddr, flatOfstAddr, this->tiling_.sliceSize);
         }
     }
+#endif
 }
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>

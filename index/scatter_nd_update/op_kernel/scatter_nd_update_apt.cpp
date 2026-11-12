@@ -12,12 +12,14 @@
  * \file scatter_nd_update.cpp
  * \brief scatter_nd_update
  */
-#include "./arch35/scatter_nd_update_simt.h"
 #include "./arch35/scatter_nd_update_simd.h"
 #include "./arch35/scatter_nd_update_simd_mask.h"
-#include "./arch35/scatter_nd_update_simt_sort.h"
 #include "./arch35/scatter_nd_update_deterministic_simd.h"
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
+#include "./arch35/scatter_nd_update_simt.h"
+#include "./arch35/scatter_nd_update_simt_sort.h"
 #include "./arch35/scatter_nd_update_deterministic_simt.h"
+#endif
 #define TILING_KEY_NOT_EXCEED_INT32 100
 #define TILING_KEY_EXCEED_INT32 200
 
@@ -47,10 +49,12 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
             ScatterNdUpdateSimdMask<updateType, DTYPE_INDICES> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
         } else if (tilingData.isDeterminstic == 1 && tilingData.isDeterminSimt == 1) {
             ScatterNdUpdateDeterministicSimt<updateType, DTYPE_INDICES, uint32_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#endif
         } else if (tilingData.isDeterminstic == 1 && tilingData.isDeterminSimt != 1) {
             ScatterNdUpdateDeterministicSimd<updateType, DTYPE_INDICES, uint32_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
@@ -59,6 +63,7 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
             ScatterNdUpdateSimd<updateType, DTYPE_INDICES> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
         } else if (tilingData.isSimtWithSort == 1) {
             ScatterNdUpdateSimtSort<updateType, DTYPE_INDICES, uint32_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
@@ -67,6 +72,7 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
             ScatterNdUpdateSimt<updateType, DTYPE_INDICES, uint32_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#endif
         }
     } else if (TILING_KEY_IS(TILING_KEY_EXCEED_INT32) && tilingData.outputStorageShapeSize < INT32_MAX) {
         // outputStorageShapeSize 在 int32 范围内不需要升精度，使用 DTYPE_INDICES 作为 OFFSET_T
@@ -78,14 +84,17 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
             ScatterNdUpdateSimd<updateType, DTYPE_INDICES> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
         } else if (tilingData.isDeterminstic == 1 && tilingData.isDeterminSimt == 1) {
             ScatterNdUpdateDeterministicSimt<updateType, DTYPE_INDICES, uint64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#endif
         } else if (tilingData.isDeterminstic == 1 && tilingData.isDeterminSimt != 1) {
             ScatterNdUpdateDeterministicSimd<updateType, DTYPE_INDICES, uint64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
         } else if (tilingData.isSimtWithSort == 1) {
             ScatterNdUpdateSimtSort<updateType, DTYPE_INDICES, uint64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
@@ -94,6 +103,7 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
             ScatterNdUpdateSimt<updateType, DTYPE_INDICES, uint64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#endif
         }
     } else if (TILING_KEY_IS(TILING_KEY_EXCEED_INT32)) {
         // outputStorageShapeSize 超出 int32 范围，必须使用 int64_t 作为 OFFSET_T
@@ -105,14 +115,17 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
             ScatterNdUpdateSimd<updateType, DTYPE_INDICES, int64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
         } else if (tilingData.isDeterminstic == 1 && tilingData.isDeterminSimt == 1) {
             ScatterNdUpdateDeterministicSimt<updateType, DTYPE_INDICES, uint64_t, int64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#endif
         } else if (tilingData.isDeterminstic == 1 && tilingData.isDeterminSimt != 1) {
             ScatterNdUpdateDeterministicSimd<updateType, DTYPE_INDICES, uint64_t, int64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#ifdef __CCE_AICORE_SUPPORT_SIMT__
         } else if (tilingData.isSimtWithSort == 1) {
             ScatterNdUpdateSimtSort<updateType, DTYPE_INDICES, uint64_t, int64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
@@ -121,6 +134,7 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
             ScatterNdUpdateSimt<updateType, DTYPE_INDICES, uint64_t, int64_t> op(tilingData, pipe);
             op.Init(var, indices, updates, varRef, workspace);
             op.Process();
+#endif
         }
     }
 }

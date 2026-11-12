@@ -21,6 +21,7 @@
 #include "log/log.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_common/op_host/util/math_util.h"
+#include "op_host/tiling_util.h"
 #include "error_util.h"
 #include "../../../../common/inc/op_host/op_const_def_nn.h"
 
@@ -271,6 +272,10 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(const gert::Shape&
                 return ge::GRAPH_FAILED);
 
     if (context_->GetDeterministic() == 1 && indicesAxis_ > 1) {
+        OP_CHECK_IF(!Ops::NN::OpTiling::IsSimtSupported(context_),
+                    OP_LOGE(opName, "ScatterNdUpdate does not support deterministic computation on current SoC. "
+                                    "Please disable deterministic mode."),
+                    return ge::GRAPH_FAILED);
         isDeterminstic_ = 1;
         context_->SetScheduleMode(1);
     }
@@ -281,6 +286,14 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(const gert::Shape&
     if (indicesAxis_ / varInAxis_ >= SIMT_SORT_LIMIT) {
         isSimtWithSort_ = 1;
     }
+
+    if (!Ops::NN::OpTiling::IsSimtSupported(context_)) {
+        isSimtWithSort_ = 0;
+        if (isDeterminstic_ != 1) {
+            isSimdNonDeterminstic_ = 1;
+        }
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
