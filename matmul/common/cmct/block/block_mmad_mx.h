@@ -332,7 +332,11 @@ public:
         nd2nzParams.dstNzC0Stride = transA ? tileL1L0Param.curPadAKL1 : tileL1L0Param.curAlignM;
         nd2nzParams.dstNzNStride = 1;
         nd2nzParams.dstNzMatrixStride = 1;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::DataCopy(al1Local, aGlobal, nd2nzParams, true);
+#else
+        AscendC::DataCopy(al1Local, aGlobal, nd2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyInA1Dn2NZ(const AscendC::GlobalTensor<AType>& aGlobal,
@@ -355,7 +359,11 @@ public:
                                                           AscendC::BLOCK_CUBE); // 单位:c0_size, 即32B
         dn2nzParams.dstNzNStride = 1;                                           // 单位:c0_size
         dn2nzParams.dstNzMatrixStride = 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::DataCopy(al1Local, aGlobal, dn2nzParams, true);
+#else
+        AscendC::DataCopy(al1Local, aGlobal, dn2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyInB1(const AscendC::GlobalTensor<BType>& bGlobal,
@@ -379,7 +387,11 @@ public:
         nd2nzParams.dstNzC0Stride = transB ? tileL1L0Param.curAlignN : tileL1L0Param.curPadBKL1;
         nd2nzParams.dstNzNStride = 1;
         nd2nzParams.dstNzMatrixStride = 1;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::DataCopy(bl1Local, bGlobal, nd2nzParams, true);
+#else
+        AscendC::DataCopy(bl1Local, bGlobal, nd2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyInB1Dn2NZ(const AscendC::GlobalTensor<BType>& bGlobal,
@@ -401,7 +413,11 @@ public:
                                                           AscendC::BLOCK_CUBE); // Nz矩阵间的stride需要cube_block对齐
         dn2nzParams.dstNzNStride = 1;
         dn2nzParams.dstNzMatrixStride = 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::DataCopy(bl1Local, bGlobal, dn2nzParams, true);
+#else
+        AscendC::DataCopy(bl1Local, bGlobal, dn2nzParams);
+#endif
     }
 
     __aicore__ inline void CopyInB1WeightNz(const AscendC::GlobalTensor<BType>& bGlobal,
@@ -439,7 +455,11 @@ public:
             }
             dataCopyParams.dstStride = tileL1L0Param.curPadBKL1 - curGmBKL1NZ;
         }
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::DataCopyPad(bl1LocalUint8, bGlobalUInt8, dataCopyParams, padParams, true);
+#else
+        AscendC::DataCopyPad(bl1LocalUint8, bGlobalUInt8, dataCopyParams, padParams);
+#endif
     }
 
     __aicore__ inline void InitA1(const AscendC::LocalTensor<AType>& al1Local, TileL1L0Param& tileL1L0Param)
@@ -447,27 +467,21 @@ public:
         AscendC::LocalTensor<half> al1LocalHalf = al1Local.template ReinterpretCast<half>();
         AscendC::InitConstValueParams<half> initConstValueParams;
         uint64_t offset = 0;
-        if constexpr (!transA) {
+        if (!transA || dn2nzMTE2TransA_) {
             // nd2nz pading to 64 align
             if (!SetInitParamsMTE1NotTransA(tileL1L0Param, initConstValueParams, offset)) {
                 return;
             }
         } else {
-            if (dn2nzMTE2TransA_) {
-                if (!SetInitParamsMTE1NotTransA(tileL1L0Param, initConstValueParams, offset)) {
-                    return;
-                }
-            } else {
-                if (tileL1L0Param.curPadAKL1 == tileL1L0Param.curGmAKL1) {
-                    return;
-                }
-                uint64_t m1 = Cmct::Gemm::CeilDiv(tileL1L0Param.curAlignM, C0_SIZE);
-                offset = tileL1L0Param.curGmAKL1 * AscendC::BLOCK_CUBE;
-                initConstValueParams.repeatTimes = m1;
-                initConstValueParams.blockNum = tileL1L0Param.curPadAKL1 - tileL1L0Param.curGmAKL1;
-                initConstValueParams.dstGap = tileL1L0Param.curGmAKL1;
-                initConstValueParams.initValue = 0;
+            if (tileL1L0Param.curPadAKL1 == tileL1L0Param.curGmAKL1) {
+                return;
             }
+            uint64_t m1 = Cmct::Gemm::CeilDiv(tileL1L0Param.curAlignM, C0_SIZE);
+            offset = tileL1L0Param.curGmAKL1 * AscendC::BLOCK_CUBE;
+            initConstValueParams.repeatTimes = m1;
+            initConstValueParams.blockNum = tileL1L0Param.curPadAKL1 - tileL1L0Param.curGmAKL1;
+            initConstValueParams.dstGap = tileL1L0Param.curGmAKL1;
+            initConstValueParams.initValue = 0;
         }
         AscendC::InitConstValue(al1LocalHalf[offset], initConstValueParams);
     }
@@ -495,35 +509,28 @@ public:
         AscendC::LocalTensor<half> bl1LocalHalf = bl1Local.template ReinterpretCast<half>();
         AscendC::InitConstValueParams<half> initConstValueParams;
         uint64_t offset = 0;
-        if constexpr (transB) {
+        if (transB || dn2nzMTE2TransB_) {
             // nd2nz pading to 64 align
             if (!SetInitParamsMTE1NotTransB(tileL1L0Param, initConstValueParams, offset)) {
                 return;
             }
         } else {
-            if (dn2nzMTE2TransB_) {
-                if (!SetInitParamsMTE1NotTransB(tileL1L0Param, initConstValueParams, offset)) {
+            if constexpr (formatB == CubeFormat::NZ) {
+                if (tileL1L0Param.curPadBKL1 == Cmct::Gemm::CeilAlign(tileL1L0Param.curGmBKL1, AscendC::BLOCK_CUBE)) {
                     return;
                 }
             } else {
-                if constexpr (formatB == CubeFormat::NZ) {
-                    if (tileL1L0Param.curPadBKL1 ==
-                        Cmct::Gemm::CeilAlign(tileL1L0Param.curGmBKL1, AscendC::BLOCK_CUBE)) {
-                        return;
-                    }
-                } else {
-                    if (tileL1L0Param.curPadBKL1 == tileL1L0Param.curGmBKL1) {
-                        return;
-                    }
+                if (tileL1L0Param.curPadBKL1 == tileL1L0Param.curGmBKL1) {
+                    return;
                 }
-                // when format of B is NZ, we reuse code for ND even though we initialize unnecessary extra space
-                uint64_t n1 = Cmct::Gemm::CeilDiv(tileL1L0Param.curAlignN, C0_SIZE);
-                offset = tileL1L0Param.curGmBKL1 * AscendC::BLOCK_CUBE;
-                initConstValueParams.repeatTimes = n1;
-                initConstValueParams.blockNum = tileL1L0Param.curPadBKL1 - tileL1L0Param.curGmBKL1;
-                initConstValueParams.dstGap = tileL1L0Param.curGmBKL1;
-                initConstValueParams.initValue = 0;
             }
+            // when format of B is NZ, we reuse code for ND even though we initialize unnecessary extra space
+            uint64_t n1 = Cmct::Gemm::CeilDiv(tileL1L0Param.curAlignN, C0_SIZE);
+            offset = tileL1L0Param.curGmBKL1 * AscendC::BLOCK_CUBE;
+            initConstValueParams.repeatTimes = n1;
+            initConstValueParams.blockNum = tileL1L0Param.curPadBKL1 - tileL1L0Param.curGmBKL1;
+            initConstValueParams.dstGap = tileL1L0Param.curGmBKL1;
+            initConstValueParams.initValue = 0;
         }
         AscendC::InitConstValue(bl1LocalHalf[offset], initConstValueParams);
     }
@@ -553,7 +560,11 @@ public:
         AscendC::DataCopyPadParams padParams;
         // 单位为Byte
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(curNL1 * sizeof(BiasType)), 0, 0};
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         AscendC::DataCopyPad(cl1Local, biasGlobal, biasParam, padParams, true);
+#else
+        AscendC::DataCopyPad(cl1Local, biasGlobal, biasParam, padParams);
+#endif
     }
 
     __aicore__ inline void CopyInScaleA(const GlobalTensor<ScaleAType>& aScaleGlobal,
@@ -595,7 +606,11 @@ public:
             }
             dn2nzParams.dstNzNStride = 1;
             dn2nzParams.dstNzMatrixStride = 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
             AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], dn2nzParams, true);
+#else
+            AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], dn2nzParams);
+#endif
         } else {
             AscendC::Nd2NzParams nd2nzParams;
             nd2nzParams.ndNum = 1;
@@ -615,7 +630,11 @@ public:
             }
             nd2nzParams.dstNzNStride = 1;
             nd2nzParams.dstNzMatrixStride = 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
             AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], nd2nzParams, true);
+#else
+            AscendC::DataCopy(aScaleL1LocalImpl, aScaleGlobalB16[offsetScaleAGM], nd2nzParams);
+#endif
         }
     }
 
@@ -655,7 +674,11 @@ public:
             }
             dn2nzParams.dstNzNStride = 1;
             dn2nzParams.dstNzMatrixStride = 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
             AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], dn2nzParams, true);
+#else
+            AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], dn2nzParams);
+#endif
         } else {
             AscendC::Nd2NzParams nd2nzParams;
             nd2nzParams.ndNum = 1;
@@ -675,7 +698,11 @@ public:
             }
             nd2nzParams.dstNzNStride = 1;
             nd2nzParams.dstNzMatrixStride = 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
             AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], nd2nzParams, true);
+#else
+            AscendC::DataCopy(bScaleL1LocalImpl, bScaleGlobalB16[offsetScaleBGM], nd2nzParams);
+#endif
         }
     }
 
@@ -702,15 +729,7 @@ public:
         AscendC::LoadData2DMxParams loadData2DMxParams;
         uint64_t realMStep = Cmct::Gemm::CeilDiv(realMte1M, AscendC::BLOCK_CUBE);
         uint64_t srcStrideA = Cmct::Gemm::CeilDiv(tileL1L0Param.curM, AscendC::BLOCK_CUBE);
-        if constexpr (!transA) {
-            loadDataParams.mStartPosition = 0;
-            loadDataParams.kStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, C0_SIZE);
-            loadDataParams.mStep = realMStep;
-            loadDataParams.kStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, C0_SIZE);
-            loadDataParams.srcStride = srcStrideA;
-            loadDataParams.dstStride = loadDataParams.mStep;
-            loadDataParams.ifTranspose = false;
-        } else if (dn2nzMTE2TransA_) {
+        if (!transA || dn2nzMTE2TransA_) {
             loadDataParams.mStartPosition = 0;
             loadDataParams.kStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, C0_SIZE);
             loadDataParams.mStep = realMStep;
@@ -762,25 +781,10 @@ public:
                 LocalTensor<AType> l0a = l0aLocal.template ReinterpretCast<AType>();
                 uint64_t loadTimes = Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, BLOCK_CUBE),
                                                          MIN_STEP);
-                if constexpr (IS_FP4) {
-                    loadData2DMxParams.xStartPosition = 0;
-                    loadData2DMxParams.yStartPosition = 0;
-                    loadData2DMxParams.xStep = 0;
-                    loadData2DMxParams.yStep = 0;
-                    loadData2DMxParams.srcStride = 0;
-                    loadData2DMxParams.dstStride = 0;
-                    for (uint64_t i = 1; i < loadTimes; i++) {
-                        loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
-                        AscendC::LoadData(l0a[i * realMStep * BLOCK_CUBE * C0_SIZE], al1Local, scaleAl1Local,
-                                          loadDataParams, loadData2DMxParams);
-                        PipeBarrier<PIPE_MTE1>();
-                    }
-                } else {
-                    for (uint64_t i = 1; i < loadTimes; i++) {
-                        loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
-                        AscendC::LoadData(l0a[i * realMStep * BLOCK_CUBE * C0_SIZE], al1Local, loadDataParams);
-                        PipeBarrier<PIPE_MTE1>();
-                    }
+                for (uint64_t i = 1; i < loadTimes; i++) {
+                    loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
+                    AscendC::LoadData(l0a[i * realMStep * BLOCK_CUBE * C0_SIZE], al1Local, loadDataParams);
+                    PipeBarrier<PIPE_MTE1>();
                 }
             }
         }
@@ -795,15 +799,7 @@ public:
         AscendC::LoadData2DMxParams loadData2DMxParams;
         uint64_t realNStep = Cmct::Gemm::CeilDiv(realMte1N, AscendC::BLOCK_CUBE);
         uint64_t srcStrideB = Cmct::Gemm::CeilDiv(tileL1L0Param.curN, AscendC::BLOCK_CUBE);
-        if constexpr (transB) {
-            loadDataParams.mStartPosition = 0;
-            loadDataParams.kStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, C0_SIZE);
-            loadDataParams.mStep = realNStep;
-            loadDataParams.kStep = Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, C0_SIZE);
-            loadDataParams.srcStride = srcStrideB;
-            loadDataParams.dstStride = loadDataParams.mStep;
-            loadDataParams.ifTranspose = false;
-        } else if (dn2nzMTE2TransB_) {
+        if (transB || dn2nzMTE2TransB_) {
             loadDataParams.mStartPosition = 0;
             loadDataParams.kStartPosition = Cmct::Gemm::CeilDiv(iter * baseK_, C0_SIZE);
             loadDataParams.mStep = realNStep;
@@ -854,25 +850,10 @@ public:
                 LocalTensor<BType> l0b = l0bLocal.template ReinterpretCast<BType>();
                 uint64_t loadTimes = Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, BLOCK_CUBE),
                                                          MIN_STEP);
-                if constexpr (IS_FP4) {
-                    loadData2DMxParams.xStartPosition = 0;
-                    loadData2DMxParams.yStartPosition = 0;
-                    loadData2DMxParams.xStep = 0;
-                    loadData2DMxParams.yStep = 0;
-                    loadData2DMxParams.srcStride = 0;
-                    loadData2DMxParams.dstStride = 0;
-                    for (uint64_t i = 1; i < loadTimes; i++) {
-                        loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
-                        AscendC::LoadData(l0b[i * realNStep * AscendC::BLOCK_CUBE * C0_SIZE], bl1Local, scaleBl1Local,
-                                          loadDataParams, loadData2DMxParams);
-                        PipeBarrier<PIPE_MTE1>();
-                    }
-                } else {
-                    for (uint64_t i = 1; i < loadTimes; i++) {
-                        loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
-                        AscendC::LoadData(l0b[i * realNStep * AscendC::BLOCK_CUBE * C0_SIZE], bl1Local, loadDataParams);
-                        PipeBarrier<PIPE_MTE1>();
-                    }
+                for (uint64_t i = 1; i < loadTimes; i++) {
+                    loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
+                    AscendC::LoadData(l0b[i * realNStep * AscendC::BLOCK_CUBE * C0_SIZE], bl1Local, loadDataParams);
+                    PipeBarrier<PIPE_MTE1>();
                 }
             }
         }
@@ -919,18 +900,10 @@ public:
 
     __aicore__ inline void GetAlignMN(TileL1L0Param& tileL1L0Param)
     {
-        if constexpr (transA) {
-            tileL1L0Param.curAlignM = Cmct::Gemm::CeilAlign(tileL1L0Param.curM,
-                                                            dn2nzMTE2TransA_ ? BLOCK_CUBE : C0_SIZE);
-        } else {
-            tileL1L0Param.curAlignM = Cmct::Gemm::CeilAlign(tileL1L0Param.curM, BLOCK_CUBE);
-        }
-        if constexpr (!transB) {
-            tileL1L0Param.curAlignN = Cmct::Gemm::CeilAlign(tileL1L0Param.curN,
-                                                            dn2nzMTE2TransB_ ? BLOCK_CUBE : C0_SIZE);
-        } else {
-            tileL1L0Param.curAlignN = Cmct::Gemm::CeilAlign(tileL1L0Param.curN, BLOCK_CUBE);
-        }
+        tileL1L0Param.curAlignM = Cmct::Gemm::CeilAlign(tileL1L0Param.curM,
+                                                        (!transA || dn2nzMTE2TransA_) ? BLOCK_CUBE : C0_SIZE);
+        tileL1L0Param.curAlignN = Cmct::Gemm::CeilAlign(tileL1L0Param.curN,
+                                                        (transB || dn2nzMTE2TransB_) ? BLOCK_CUBE : C0_SIZE);
     }
 
     __aicore__ inline void CopyScalesInL1(AscendC::GlobalTensor<ScaleAType>& scaleAGlobal,
@@ -1074,18 +1047,11 @@ public:
         // MTE1需要拆分M时，MTE1加载 A/B 和scaleA/B的起始地址 相对A和scaleA在L1 上的首地址的offset
         OffsetsForSplitMN result{0, 0};
 
-        if constexpr (isScaleA) {
-            if (!transA || dn2nzMTE2TransA_) {
-                result.offsetABL1 = mnLoopId * C0_SIZE * baseMN0;
-            } else {
-                result.offsetABL1 = mnLoopId * baseMN0 * (kL1Iter != kL1Iter_ - 1 ? kL1_ : (k_ - kL1_ * (kL1Iter)));
-            }
+        const bool nonTransposed = isScaleA ? (!transA || dn2nzMTE2TransA_) : (transB || dn2nzMTE2TransB_);
+        if (nonTransposed) {
+            result.offsetABL1 = mnLoopId * C0_SIZE * baseMN0;
         } else {
-            if (transB || dn2nzMTE2TransB_) {
-                result.offsetABL1 = mnLoopId * C0_SIZE * baseMN0;
-            } else {
-                result.offsetABL1 = mnLoopId * baseMN0 * (kL1Iter != kL1Iter_ - 1 ? kL1_ : (k_ - kL1_ * (kL1Iter)));
-            }
+            result.offsetABL1 = mnLoopId * baseMN0 * (kL1Iter != kL1Iter_ - 1 ? kL1_ : (k_ - kL1_ * (kL1Iter)));
         }
         result.offsetScaleABL1 = BLOCK_CUBE * scaleKl1 * (mnLoopId * baseMN0 / BLOCK_CUBE);
 
