@@ -27,7 +27,7 @@ SUPPORTED_SHORT_OPTS="hj:vO:uf:-:"
 # 所有支持的长选项
 SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
-   "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
+   "jit" "pkg" "asan" "valgrind" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "tfplugin" "dump_cce"
   "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn" "mssanitizer" "rule_launch=" "ccache=" "torch_extension" "pkg-type="
   "ut_mode=" "ut_timeout="
@@ -393,6 +393,7 @@ usage() {
   echo "    --make_clean make clean"
   echo "    --make_clean_all make clean and delete related file"
   echo "    --asan enable asan on the host side"
+  echo "    --valgrind run ut with valgrind. This option will disable asan and direct execution (same as --noexec, ut is only run under valgrind)"
   echo "    --ccache=<VALUE> Enable or disable ccache compilation acceleration"
   echo "                     VALUE options: on/off/true/false/disable, Default: on"
   echo "                     Example: --ccache=off to disable ccache"
@@ -496,6 +497,12 @@ check_param() {
   if [[ "$PACKAGE_TYPE_SET" == "TRUE" && "$ENABLE_PACKAGE" != "TRUE" ]]; then
     echo "[ERROR] --pkg-type can only be used with --pkg"
     exit 1
+  fi
+
+  if [[ "$ENABLE_VALGRIND" == "TRUE" && "$ENABLE_ASAN" == "TRUE" ]]; then
+    # 按文档约定：--valgrind 生效时自动关闭 ASAN（与 --asan 传参顺序无关），不中断构建
+    echo "[INFO] --valgrind is enabled, disabling ASAN"
+    ENABLE_ASAN=FALSE
   fi
 
   if [[ "$PACKAGE_TYPE" != "run" && "$PACKAGE_TYPE" != "all" ]]; then
@@ -925,6 +932,10 @@ checkopts() {
           ENABLE_TORCH_EXTENSION_ONLY=TRUE
           ;;
         asan) ENABLE_ASAN=TRUE ;;
+        valgrind)
+          ENABLE_VALGRIND=TRUE
+          ENABLE_UT_EXEC=FALSE
+          ;;
         run_example) ENABLE_RUN_EXAMPLE=TRUE
           set_example_opt "$@"
           ;;
