@@ -56,6 +56,7 @@ constexpr uint64_t PER_GROUP_WEIGHT_MIN_TILE_SIZE = 16 * 1024UL;
 constexpr uint64_t MX_GROUP_SIZE = 32UL;
 constexpr uint64_t HIF4_GROUP_SIZE = 64UL;
 constexpr uint64_t B4_C0_SIZE = 64UL;
+constexpr uint64_t B4_HALF_BYTES = 2;
 
 ge::graphStatus WeightQuantBatchMatmulV2TilingASWMix::DoOpTiling()
 {
@@ -535,8 +536,8 @@ bool WeightQuantBatchMatmulV2TilingASWMix::CheckBasicBlockL1BufferSize(uint64_t 
     // A16Fp4 perchannel 在L1上还需要占用一个全1的矩阵用于MX的计算
     if (matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1 && matmulInfoPtr_->antiQuantType == QuantType::PER_CHANNEL) {
         l1Size = baseM * baseK * DB_SIZE * MAX_PERF_STEPKB * aByteSize + scaleByteSize * DB_SIZE * baseN +
-                 baseN * baseK * DB_SIZE * MAX_PERF_STEPKB / 2 +
-                 MAX_PERF_STEPKB * baseN * baseK / MX_GROUP_SIZE; // 2：4 bit 位宽为 0.5，乘 0.5 即除以 2
+                 baseN * baseK * DB_SIZE * MAX_PERF_STEPKB / B4_HALF_BYTES +
+                 MAX_PERF_STEPKB * baseN * baseK / MX_GROUP_SIZE;
     } else if (matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1 && matmulInfoPtr_->antiQuantType == QuantType::MX) {
         // 2：4 bit 位宽为 0.5，乘 0.5 即除以 2；sizeof(float8_e8m0) = 1
         l1Size = baseM * baseK * DB_SIZE * MAX_PERF_STEPKB * aByteSize + baseN * baseK * DB_SIZE * MAX_PERF_STEPKB / 2 +

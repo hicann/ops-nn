@@ -877,7 +877,7 @@ static bool CheckValForWeightInt8Nz(const aclTensor* x, const aclTensor* weight,
     return true;
 }
 
-static bool CheckValForWeightB4Nz9201(const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale,
+static bool CheckValForWeightB4Nz9201(const aclTensor* weight, const aclTensor* antiquantScale,
                                       const aclTensor* antiquantOffsetOptional, int antiquantGroupSize)
 {
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
@@ -1038,8 +1038,7 @@ static bool CheckValForWeightC032B89201(const aclTensor* weight, bool transposeW
     return true;
 }
 
-static bool CheckValForWeightC016B89201(const aclTensor* x, const aclTensor* weight, bool transposeWeight,
-                                        int antiquantGroupSize)
+static bool CheckValForWeightC016B89201(bool transposeWeight, int antiquantGroupSize)
 {
     // per-group场景 C016 B8系列不存在perchannel/perTensor场景
     OP_CHECK(!transposeWeight,
@@ -1084,7 +1083,7 @@ static bool CheckValForWeightB89201(const aclTensor* x, const aclTensor* weight,
         return CheckValForWeightC032B89201(weight, transposeWeight, antiquantGroupSize, antiquantScale,
                                            antiquantOffsetOptional);
     } else if (soc96C0Size == ALIGN_VALUE_VC_SOC96) {
-        return CheckValForWeightC016B89201(x, weight, transposeWeight, antiquantGroupSize);
+        return CheckValForWeightC016B89201(transposeWeight, antiquantGroupSize);
     } else {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             kOpName, "weight C0", std::to_string(soc96C0Size).c_str(),
@@ -2204,7 +2203,7 @@ static aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleTensor optiona
     CHECK_RET(advanceCheckRes, ACLNN_ERR_PARAM_INVALID);
 
     advanceCheckRes = AdvancedParamsCheck(x, tensorWeight, antiquantScale, antiquantGroupSize, transposeWeight) &&
-                      CheckValForWeightB4Nz9201(x, tensorWeight, antiquantScale, antiquantOffsetOptional,
+                      CheckValForWeightB4Nz9201(tensorWeight, antiquantScale, antiquantOffsetOptional,
                                                 antiquantGroupSize) &&
                       CheckValForWeightB89201(x, tensorWeight, antiquantGroupSize, antiquantScale,
                                               antiquantOffsetOptional);

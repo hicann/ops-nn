@@ -15,8 +15,9 @@
 
 #ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_DATA_H
 #define WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_DATA_H
-
 #include "kernel_tiling/kernel_tiling.h"
+
+constexpr uint8_t B8_ALIGNED = 8;
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
@@ -187,7 +188,7 @@ struct alignas(8) WeightQuantBatchMatmulV2MsdTilingData {
 
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
-struct alignas(8) WeightQuantBatchMatmulV2NzTilingData {
+struct alignas(B8_ALIGNED) WeightQuantBatchMatmulV2NzTilingData {
     uint8_t cubeBlockDimN;
     uint8_t cubeBlockDimM;
     uint16_t AL1Pingpong;
