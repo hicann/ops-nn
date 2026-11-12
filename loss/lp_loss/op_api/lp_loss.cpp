@@ -95,7 +95,8 @@ const aclTensor* LpLoss(const aclTensor* self, const aclTensor* target, int64_t 
     if (lpLossResult == nullptr) {
         return lpLossResult;
     }
-    LpLossAiCore(self, target, p, reduction, lpLossResult, executor);
-    return lpLossResult;
+    // 检查LpLossAiCore的失败返回：ADD_TO_LAUNCHER_LIST_AICORE失败时返回nullptr，
+    // 必须向上传播失败，避免把未初始化的lpLossResult当作成功结果交付给调用方。
+    return LpLossAiCore(self, target, p, reduction, lpLossResult, executor);
 }
 } // namespace l0op
