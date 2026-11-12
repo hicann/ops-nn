@@ -58,6 +58,8 @@ constexpr int32_t POST_CUBE_INPUT_QUANT_SCALE_0_INDEX = 2;
 constexpr int32_t POST_CUBE_INPUT_RELU_WEIGHT_0_INDEX = 3;
 constexpr int32_t OUTPUT_1_INDEX = 1;
 constexpr size_t DUAL_OUTPUTNUM = 2;
+constexpr size_t DN2NZ_UNSUPPORT_PASS_NODE_NUM = 2;
+constexpr size_t RELU_NODE_INDEX_IN_PASS = 1;
 
 const std::vector<ge::AscendString> SUPPORTED_NODE_TYPES = {"Conv2D",      "AscendDequant", "AscendRequant",
                                                             "AscendQuant", "Relu",          "LeakyRelu"};

@@ -534,8 +534,9 @@ void Conv2DPostCubeToExtendConv2DFusionPass::SelectPostCubePassByWhiteList(
                 break;
             }
 
-            if (isDn2NzSoc && nodeType == Conv2DPostCubeToExtendConv2DFusion::RELU && index == 1 &&
-                postCubePass.m_opnodes.size() == 2) {
+            if (isDn2NzSoc && nodeType == Conv2DPostCubeToExtendConv2DFusion::RELU &&
+                index == Conv2DPostCubeToExtendConv2DFusion::RELU_NODE_INDEX_IN_PASS &&
+                postCubePass.m_opnodes.size() == Conv2DPostCubeToExtendConv2DFusion::DN2NZ_UNSUPPORT_PASS_NODE_NUM) {
                 OP_LOGD(convDescInfo.nodeNameStr,
                         "Conv2D + node[%s] fusion path is not supported on dn2nz soc, removing cur list.",
                         nodeType.GetString());
