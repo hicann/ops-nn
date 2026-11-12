@@ -512,6 +512,7 @@ ge::graphStatus Conv2dBaseTiling::DoLibApiTiling()
     }
     SetNumBlocksRes();
     CalcASWTStrategy();
+    ClampMSplitHoL1();
     if (SetTilingKey() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -548,6 +549,7 @@ ge::graphStatus Conv2dBaseTiling::DoOpTiling()
     if (flagInfo_.useTilingCache || flagInfo_.useTilingRepo) {
         SetNumBlocksRes();
         CalcASWTStrategy();
+        ClampMSplitHoL1();
         if (SetTilingKey() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }

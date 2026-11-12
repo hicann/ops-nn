@@ -202,6 +202,7 @@ private:
     uint64_t GetGroupTypeVal();
     uint64_t GetSmallKernelVal();
     bool IsSmallKernelBlocked();
+    void ClampMSplitHoL1();
 
     ge::graphStatus GetConv2DAxisPosInfo();
     bool GetPosByFormat(const ge::Format format, const std::string& pos, const std::string& inputStr,

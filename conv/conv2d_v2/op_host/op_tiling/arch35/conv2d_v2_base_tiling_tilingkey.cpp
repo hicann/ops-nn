@@ -27,14 +27,7 @@ uint64_t Conv2dBaseTiling::GetGroupTypeVal()
         return static_cast<uint64_t>(flagInfo_.convGroupType);
     }
 
-    if (shapeInfo_.ci != attrInfo_.groups || shapeInfo_.co != shapeInfo_.ci) {
-        return CONV_GROUP_TYPE_OPT_GROUP_CONV;
-    }
-
-    uint64_t dilatedKernelH = (shapeInfo_.kh - 1) * attrInfo_.dilationH + 1;
-    uint64_t dilatedKernelW = (shapeInfo_.kw - 1) * attrInfo_.dilationW + 1;
-    if (dilatedKernelH < attrInfo_.padTop || dilatedKernelH < attrInfo_.padBottom ||
-        dilatedKernelW < attrInfo_.padLeft || dilatedKernelW < attrInfo_.padRight) {
+    if (shapeInfo_.ci != attrInfo_.groups) {
         return CONV_GROUP_TYPE_OPT_GROUP_CONV;
     }
 
@@ -270,6 +263,27 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
         return true;
     }
     return false;
+}
+
+void Conv2dBaseTiling::ClampMSplitHoL1()
+{
+    // M 模式主路径/simplified 的 L0A 2D set mStartPt 为 16bit, 窗口起点 posM 最大约
+    // mAL1 + orgWo, 超 65535 地址回绕导致取数错位; 需在 tilingKey 生成前约束 hoL1。
+    // SmallKernel 路径的 posM 为块内相对位置(不含 mAL1 累计项), 约束对其无正确性收益,
+    // 且会扰动 smallKernel SEL 判定(al1Fullload 含 hoL1), 故跳过。
+    if (!flagInfo_.mSplitModeFlag || GetSmallKernelVal() != CONV_NOT_SMALL_KERNEL) {
+        return;
+    }
+    uint64_t hoL1 = tilingData_.get_hoL1();
+    uint64_t hoL0 = tilingData_.get_hoL0();
+    constexpr uint64_t M_START_PT_MAX = 0xFFFF;
+    uint64_t mAL1Limit = M_START_PT_MAX > shapeInfo_.wo ? M_START_PT_MAX - shapeInfo_.wo : 0;
+    if (hoL1 > mAL1Limit && hoL0 != 0) {
+        OP_LOGD(paramInfo_.nodeType.c_str(),
+                "AscendC: clamp M-mode hoL1 %lu -> %lu for 16bit mStartPt (orgWo %lu, hoL0 %lu).", hoL1,
+                mAL1Limit / hoL0 * hoL0, shapeInfo_.wo, hoL0);
+        tilingData_.set_hoL1(static_cast<uint32_t>(mAL1Limit / hoL0 * hoL0));
+    }
 }
 
 uint64_t Conv2dBaseTiling::GetFmpTilingValForHWSplit(bool kAL1FullloadFlag)
