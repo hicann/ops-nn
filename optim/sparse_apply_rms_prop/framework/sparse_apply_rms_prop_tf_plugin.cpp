@@ -15,10 +15,13 @@
 #include "register/register.h"
 
 namespace domi {
-// SparseApplyRMSProp maps directly from the TensorFlow op of the same name; auto operator mapping suffices.
+// SparseApplyRMSProp maps directly from the TensorFlow op of the same name.
+// ResourceSparseApplyRMSProp is the resource-variable variant of the same
+// operator; registering it too is required so TF models containing that node
+// do not fail at the graph-mapping stage. Auto operator mapping suffices.
 REGISTER_CUSTOM_OP("SparseApplyRMSProp")
     .FrameworkType(TENSORFLOW)
-    .OriginOpType("SparseApplyRMSProp")
+    .OriginOpType({"SparseApplyRMSProp", "ResourceSparseApplyRMSProp"})
     .ParseParamsByOperatorFn(AutoMappingByOpFn)
     .ImplyType(ImplyType::TVM);
 } // namespace domi

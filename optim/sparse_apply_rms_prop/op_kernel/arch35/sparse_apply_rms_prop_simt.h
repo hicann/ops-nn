@@ -79,7 +79,7 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void SparseApplyRMSP
 
         // Read index, compute GM offsets
         IndexT row = indices[idxIdx];
-        if (row < static_cast<IndexT>(0) || row >= static_cast<IndexT>(varFirstDim)) {
+        if (row < 0 || static_cast<int64_t>(row) >= varFirstDim) {
             continue;
         }
         uint64_t rowOffset = static_cast<uint64_t>(row) * static_cast<uint64_t>(innerDim) + innerIdx;
@@ -95,7 +95,7 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void SparseApplyRMSP
         float fMsNew = fRho * fMsOld + fOneMinusRho * fGrad * fGrad;
 
         // Step 2: mom_new = momentum * mom_old + lr * grad / sqrt(ms_new + epsilon)
-        float fMomNew = fMomentum * fMomOld + fLr * fGrad * rsqrtf(fMsNew + fEpsilon);
+        float fMomNew = fMomentum * fMomOld + fLr * fGrad * (1.0f / sqrtf(fMsNew + fEpsilon));
 
         // Step 3: var_new = var_old - mom_new
         float fVarNew = fVarOld - fMomNew;

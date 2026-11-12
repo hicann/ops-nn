@@ -210,10 +210,18 @@ static ge::graphStatus GetShapeInfo(const gert::TilingContext* context, int64_t&
     varFirstDim = varStorageShape.GetDim(0);
     totalIndices = indicesStorageShape.GetDim(0);
 
-    // Compute innerDim = product(var.shape[1:])
+    // Compute innerDim = product(var.shape[1:]); reject negative dims and int64 overflow
+    // before they corrupt scheduling.
     innerDim = 1;
     for (size_t i = 1; i < varStorageShape.GetDimNum(); i++) {
-        innerDim *= varStorageShape.GetDim(i);
+        int64_t dim = varStorageShape.GetDim(i);
+        OP_CHECK_IF(dim < 0, OP_LOGE(context, "var shape[%zu] is negative (%ld)", i, dim), return ge::GRAPH_FAILED);
+        int64_t product = 0;
+        if (__builtin_mul_overflow(innerDim, dim, &product)) {
+            OP_LOGE(context, "var shape[1:] product overflows int64");
+            return ge::GRAPH_FAILED;
+        }
+        innerDim = product;
     }
 
     OP_CHECK_IF(ValidateInputs(context, totalIndices) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateInputs failed"),
@@ -238,11 +246,10 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 // capped at the physical core count, clamped to a minimum of 1.
 static int32_t CalcNeedCoreNum(int64_t totalWork, int64_t coreNum)
 {
-    int32_t calcCoreNum = static_cast<int32_t>((totalWork + MIN_ELEMENTS_PER_CORE - 1) / MIN_ELEMENTS_PER_CORE);
-    int32_t maxCoreNum = static_cast<int32_t>(coreNum);
-    int32_t needCoreNum = (calcCoreNum < maxCoreNum) ? calcCoreNum : maxCoreNum;
-    needCoreNum = std::max(needCoreNum, 1);
-    return needCoreNum;
+    int64_t calcCoreNum = totalWork / MIN_ELEMENTS_PER_CORE + ((totalWork % MIN_ELEMENTS_PER_CORE != 0) ? 1 : 0);
+    int64_t needCoreNum = std::min(calcCoreNum, coreNum);
+    needCoreNum = std::max(needCoreNum, int64_t{1});
+    return static_cast<int32_t>(needCoreNum);
 }
 
 // Set local (UB) memory size after reserving the DCACHE region.
@@ -303,7 +310,12 @@ static ge::graphStatus SparseApplyRMSPropTilingFunc(gert::TilingContext* context
     // and totalIndices == 0, matching the dedicated empty-tensor path; the kernel
     // early-exits on M == 0. The UB LocalMemorySize is still set so the framework
     // always receives a valid value before launch (aligned with ftrl_v2 / proximal_adagrad).
-    int32_t needCoreNum = CalcNeedCoreNum(totalIndices * innerDim, coreNum);
+    int64_t totalWork = 0;
+    if (__builtin_mul_overflow(totalIndices, innerDim, &totalWork)) {
+        OP_LOGE(context, "totalIndices * innerDim overflows int64");
+        return ge::GRAPH_FAILED;
+    }
+    int32_t needCoreNum = CalcNeedCoreNum(totalWork, coreNum);
     FillTilingData(tiling, needCoreNum, totalIndices, innerDim, varFirstDim);
     context->SetBlockDim(needCoreNum);
     OP_CHECK_IF(SetUbLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetUbLocalMemory error"),

@@ -156,6 +156,6 @@ $$
 
 ## Invocation Description
 
-| Invocation method | Invocation sample | Description |
+| Invocation method | Sample code | Description |
 |---|---|---|
-| Graph mode | [test_geir_sparse_apply_rms_prop](./examples/arch35/test_geir_sparse_apply_rms_prop.cpp) | Calls the SparseApplyRMSProp operator by building a graph through the [operator IR](./op_graph/sparse_apply_rms_prop_proto.h). |
+| GE graph mode | [test_geir_sparse_apply_rms_prop](./examples/arch35/test_geir_sparse_apply_rms_prop.cpp) | Invokes the SparseApplyRMSProp operator by constructing a graph with the [SparseApplyRMSProp operator IR](./op_graph/sparse_apply_rms_prop_proto.h). A [TensorFlow plugin](./framework/sparse_apply_rms_prop_tf_plugin.cpp) is also provided to map the TensorFlow operators SparseApplyRMSProp and ResourceSparseApplyRMSProp to this operator. |

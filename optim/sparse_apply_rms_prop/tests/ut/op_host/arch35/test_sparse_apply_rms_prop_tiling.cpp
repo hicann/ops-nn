@@ -274,3 +274,46 @@ TEST_F(TestSparseApplyRMSPropTiling, sparse_apply_rms_prop_large_multicore)
     EXPECT_EQ(result.varFirstDim, 4096);
     EXPECT_GT(result.needCoreNum, 1);
 }
+
+// =====================================================================
+// T07 Negative dim (-1, unresolved) -> GRAPH_FAILED
+// =====================================================================
+TEST_F(TestSparseApplyRMSPropTiling, sparse_apply_rms_prop_negative_dim)
+{
+    SparseApplyRMSPropTilingArgs args{/*var=*/{4, -1}, /*grad=*/{2, -1}, /*indices=*/{2},
+                                      ge::DT_FLOAT,    ge::DT_INT32,     ge::FORMAT_ND};
+    auto result = DoSparseApplyRMSPropTilingCase(args);
+    ASSERT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// =====================================================================
+// T08 innerDim int64 overflow -> GRAPH_FAILED
+// var {1, 2^62, 4}: innerDim = 2^62 * 4 overflows int64
+// =====================================================================
+TEST_F(TestSparseApplyRMSPropTiling, sparse_apply_rms_prop_innerdim_overflow)
+{
+    SparseApplyRMSPropTilingArgs args{/*var=*/{1, 4611686018427387904L, 4},
+                                      /*grad=*/{2, 4611686018427387904L, 4},
+                                      /*indices=*/{2},
+                                      ge::DT_FLOAT,
+                                      ge::DT_INT32,
+                                      ge::FORMAT_ND};
+    auto result = DoSparseApplyRMSPropTilingCase(args);
+    ASSERT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// =====================================================================
+// T09 totalIndices * innerDim int64 overflow -> GRAPH_FAILED
+// var {2, 2^62}, indices {3}: totalWork = 3 * 2^62 overflows int64
+// =====================================================================
+TEST_F(TestSparseApplyRMSPropTiling, sparse_apply_rms_prop_totalwork_overflow)
+{
+    SparseApplyRMSPropTilingArgs args{/*var=*/{2, 4611686018427387904L},
+                                      /*grad=*/{3, 4611686018427387904L},
+                                      /*indices=*/{3},
+                                      ge::DT_FLOAT,
+                                      ge::DT_INT32,
+                                      ge::FORMAT_ND};
+    auto result = DoSparseApplyRMSPropTilingCase(args);
+    ASSERT_EQ(result.status, ge::GRAPH_FAILED);
+}

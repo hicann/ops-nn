@@ -154,6 +154,6 @@ $$
 
 ## 调用说明
 
-| 调用方式 | 调用样例 | 说明 |
+| 调用方式 | 样例代码 | 说明 |
 |---|---|---|
-| 图模式 | [test_geir_sparse_apply_rms_prop](./examples/arch35/test_geir_sparse_apply_rms_prop.cpp) | 通过[算子IR](./op_graph/sparse_apply_rms_prop_proto.h)构图方式调用SparseApplyRMSProp算子。 |
+| GE图模式 | [test_geir_sparse_apply_rms_prop](./examples/arch35/test_geir_sparse_apply_rms_prop.cpp) | 通过[算子IR](./op_graph/sparse_apply_rms_prop_proto.h)构图方式调用SparseApplyRMSProp算子；另提供[TensorFlow插件](./framework/sparse_apply_rms_prop_tf_plugin.cpp)将TensorFlow算子SparseApplyRMSProp与ResourceSparseApplyRMSProp映射到本算子。 |
