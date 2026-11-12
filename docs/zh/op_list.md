@@ -5989,6 +5989,16 @@
     <td>AI Core</td>
     <td>执行带L1/L2正则的近端梯度下降单步更新，显式输出更新后的var_out；本仓提供Ascend950的GE图模式实现，对齐TensorFlow近端梯度下降更新语义。</td>
   </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/sparse_apply_adadelta/README.md">sparse_apply_adadelta</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>稀疏版本的AdaDelta优化器算子，仅更新indices指定的参数行，原地更新var、accum与accum_update（inplace语义）。</td>
+  </tr>
     <tr>
     <td>optim</td>
     <td><a href="../../optim/sparse_apply_adagrad_v2/README.md">sparse_apply_adagrad_v2</a></td>

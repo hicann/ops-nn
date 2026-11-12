@@ -16,6 +16,8 @@
  *
  * Output shapes: var_out=var, accum_out=accum, accum_update_out=accum_update
  */
+#include <string>
+#include <vector>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/shape_util.h"
@@ -26,6 +28,9 @@ namespace ops {
 static constexpr int64_t IDX_VAR = 0;
 static constexpr int64_t IDX_ACCUM = 1;
 static constexpr int64_t IDX_ACCUM_UPDATE = 2;
+static constexpr int64_t IDX_LR = 3;
+static constexpr int64_t IDX_RHO = 4;
+static constexpr int64_t IDX_EPSILON = 5;
 static constexpr int64_t IDX_GRAD = 6;
 static constexpr int64_t IDX_INDICES = 7;
 static constexpr int64_t UNKNOWN_DIM = -1;
@@ -36,6 +41,32 @@ static void CopyShape(const gert::Shape* src, gert::Shape* dst)
     for (size_t i = 0; i < src->GetDimNum(); i++) {
         dst->SetDim(i, src->GetDim(i));
     }
+}
+
+// lr/rho/epsilon 的合法形态：0 维标量，或仅含 1 个元素的 1 维张量；维值未知(-1)时视为未确定
+static bool IsScalarShape(const gert::Shape* shape)
+{
+    if (shape->GetDimNum() == 0) {
+        return true;
+    }
+    if (shape->GetDimNum() == 1) {
+        int64_t dim0 = shape->GetDim(0);
+        return dim0 == 1 || dim0 == UNKNOWN_DIM;
+    }
+    return false;
+}
+
+// 逐维比较两个同秩 shape，任一侧维值未知(-1)时跳过该维
+static bool IsSameDims(const gert::Shape* lhs, const gert::Shape* rhs)
+{
+    for (size_t i = 0; i < lhs->GetDimNum(); i++) {
+        int64_t lhsDim = lhs->GetDim(i);
+        int64_t rhsDim = rhs->GetDim(i);
+        if (lhsDim != UNKNOWN_DIM && rhsDim != UNKNOWN_DIM && lhsDim != rhsDim) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static ge::graphStatus InferShapeSparseApplyAdadelta(gert::InferShapeContext* context)
@@ -67,6 +98,12 @@ static ge::graphStatus InferShapeSparseApplyAdadelta(gert::InferShapeContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
     const gert::Shape* indicesShape = context->GetInputShape(IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+    const gert::Shape* lrShape = context->GetInputShape(IDX_LR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, lrShape);
+    const gert::Shape* rhoShape = context->GetInputShape(IDX_RHO);
+    OP_CHECK_NULL_WITH_CONTEXT(context, rhoShape);
+    const gert::Shape* epsilonShape = context->GetInputShape(IDX_EPSILON);
+    OP_CHECK_NULL_WITH_CONTEXT(context, epsilonShape);
 
     // Unknown rank (-2) 场景：任一参与校验的输入 rank 未知时跳过维度校验，输出已透传对应输入 shape
     if (Ops::Base::IsUnknownRank(*varShape) || Ops::Base::IsUnknownRank(*accumShape) ||
@@ -76,13 +113,50 @@ static ge::graphStatus InferShapeSparseApplyAdadelta(gert::InferShapeContext* co
         return GRAPH_SUCCESS;
     }
 
+    // 校验：各输入秩至少为 1。gert::Shape::GetDim 不校验 rank，0 维时会读到未进入 dim_num_ 的维槽
+    const char* inputNames[5] = {"var", "accum", "accum_update", "grad", "indices"};
+    const gert::Shape* checkShapes[5] = {varShape, accumShape, accumUpdateShape, gradShape, indicesShape};
+    for (size_t i = 0; i < 5; i++) {
+        if (checkShapes[i]->GetDimNum() == 0) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), inputNames[i],
+                                         (std::to_string(checkShapes[i]->GetDimNum()) + "D").c_str(), "at least 1D");
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     // 校验：var/accum/accum_update rank 一致
     if (varShape->GetDimNum() != accumShape->GetDimNum()) {
-        OP_LOGE(context->GetNodeName(), "var and accum must have same rank");
+        std::string rankMsg = std::string("The rank of accum must be the same as var, but got ") +
+                              std::to_string(accumShape->GetDimNum()) + "D and " +
+                              std::to_string(varShape->GetDimNum()) + "D";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "var, accum",
+            Ops::Base::ToString(std::vector<const gert::Shape*>{varShape, accumShape}).c_str(), rankMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     if (varShape->GetDimNum() != accumUpdateShape->GetDimNum()) {
-        OP_LOGE(context->GetNodeName(), "var and accum_update must have same rank");
+        std::string rankMsg = std::string("The rank of accum_update must be the same as var, but got ") +
+                              std::to_string(accumUpdateShape->GetDimNum()) + "D and " +
+                              std::to_string(varShape->GetDimNum()) + "D";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "var, accum_update",
+            Ops::Base::ToString(std::vector<const gert::Shape*>{varShape, accumUpdateShape}).c_str(), rankMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    // 校验：accum/accum_update 元素形状与 var 一致（逐维比较）
+    if (!IsSameDims(varShape, accumShape)) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "var, accum",
+            Ops::Base::ToString(std::vector<const gert::Shape*>{varShape, accumShape}).c_str(),
+            "The shape of accum must be the same as var");
+        return ge::GRAPH_FAILED;
+    }
+    if (!IsSameDims(varShape, accumUpdateShape)) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "var, accum_update",
+            Ops::Base::ToString(std::vector<const gert::Shape*>{varShape, accumUpdateShape}).c_str(),
+            "The shape of accum_update must be the same as var");
         return ge::GRAPH_FAILED;
     }
 
@@ -90,20 +164,51 @@ static ge::graphStatus InferShapeSparseApplyAdadelta(gert::InferShapeContext* co
     int64_t gradDim0 = gradShape->GetDim(0);
     int64_t indicesDim0 = indicesShape->GetDim(0);
     if (gradDim0 != UNKNOWN_DIM && indicesDim0 != UNKNOWN_DIM && gradDim0 != indicesDim0) {
-        OP_LOGE(context->GetNodeName(), "grad first dim must equal indices length");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "grad, indices",
+            Ops::Base::ToString(std::vector<const gert::Shape*>{gradShape, indicesShape}).c_str(),
+            "The first dimension of grad must be equal to the length of indices");
         return ge::GRAPH_FAILED;
     }
 
     // 校验：grad.shape[1:] == var.shape[1:]（SE §5.4 约束）；任一侧维值未知(-1)时跳过该维校验
     if (gradShape->GetDimNum() != varShape->GetDimNum()) {
-        OP_LOGE(context->GetNodeName(), "grad and var must have same rank");
+        std::string rankMsg = std::string("The rank of grad must be the same as var, but got ") +
+                              std::to_string(gradShape->GetDimNum()) + "D and " +
+                              std::to_string(varShape->GetDimNum()) + "D";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "grad, var",
+            Ops::Base::ToString(std::vector<const gert::Shape*>{gradShape, varShape}).c_str(), rankMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     for (size_t i = 1; i < varShape->GetDimNum(); i++) {
         int64_t gradDimI = gradShape->GetDim(i);
         int64_t varDimI = varShape->GetDim(i);
         if (gradDimI != UNKNOWN_DIM && varDimI != UNKNOWN_DIM && gradDimI != varDimI) {
-            OP_LOGE(context->GetNodeName(), "grad trailing dims must match var trailing dims");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context->GetNodeName(), "grad, var",
+                Ops::Base::ToString(std::vector<const gert::Shape*>{gradShape, varShape}).c_str(),
+                "The trailing dimensions of grad must be the same as var from dimension 1 on");
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    // 校验：indices 为一维索引向量
+    if (indicesShape->GetDimNum() != 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices",
+                                     (std::to_string(indicesShape->GetDimNum()) + "D").c_str(), "1D");
+        return ge::GRAPH_FAILED;
+    }
+
+    // 校验：lr/rho/epsilon 为标量（0 维或仅 1 个元素）
+    const char* scalarNames[3] = {"lr", "rho", "epsilon"};
+    const gert::Shape* scalarShapes[3] = {lrShape, rhoShape, epsilonShape};
+    for (size_t i = 0; i < 3; i++) {
+        if (!Ops::Base::IsUnknownRank(*scalarShapes[i]) && !IsScalarShape(scalarShapes[i])) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), scalarNames[i],
+                                                  Ops::Base::ToString(*scalarShapes[i]).c_str(),
+                                                  "The parameter must be a scalar, that is a 0-D tensor or "
+                                                  "a 1-D tensor with a single element");
             return ge::GRAPH_FAILED;
         }
     }

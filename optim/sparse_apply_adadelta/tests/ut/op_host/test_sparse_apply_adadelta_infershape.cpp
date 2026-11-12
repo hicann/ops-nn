@@ -156,3 +156,118 @@ TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_unknown_r
     };
     ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
+
+// accum 元素形状与 var 不一致时拒绝（var=[4,8], accum=[4,6]）
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_accum_shape_mismatch)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+            {{{4, 6}, {4, 6}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // lr
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // rho
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // epsilon
+            {{{2, 8}, {2, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
+            {{{2}, {2}}, ge::DT_INT32, ge::FORMAT_ND},       // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_FAILED);
+}
+
+// accum_update 元素形状与 var 不一致时拒绝
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_accum_update_shape_mismatch)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+            {{{4, 6}, {4, 6}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // lr
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // rho
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // epsilon
+            {{{2, 8}, {2, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
+            {{{2}, {2}}, ge::DT_INT32, ge::FORMAT_ND},       // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_FAILED);
+}
+
+// 0 维 var 时拒绝，避免后续按维取值读到未定义维槽
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_var_rank_zero)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},   // var
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},   // accum
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},   // accum_update
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // lr
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // rho
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND}, // epsilon
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},   // grad
+            {{{2}, {2}}, ge::DT_INT32, ge::FORMAT_ND}, // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_FAILED);
+}
+
+// indices 必须是 1 维
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_indices_not_1d)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // lr
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // rho
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // epsilon
+            {{{2, 8}, {2, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
+            {{{2, 1}, {2, 1}}, ge::DT_INT32, ge::FORMAT_ND}, // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_FAILED);
+}
+
+// lr 非标量形态时拒绝
+TEST_F(SparseApplyAdadeltaInfershape, sparse_apply_adadelta_infershape_lr_not_scalar)
+{
+    gert::InfershapeContextPara infershapeContextPara(
+        "SparseApplyAdadelta",
+        {
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+            {{{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update
+            {{{2}, {2}}, ge::DT_FLOAT, ge::FORMAT_ND},       // lr
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // rho
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},       // epsilon
+            {{{2, 8}, {2, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // grad
+            {{{2}, {2}}, ge::DT_INT32, ge::FORMAT_ND},       // indices
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // var output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum output
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND}, // accum_update output
+        });
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_FAILED);
+}

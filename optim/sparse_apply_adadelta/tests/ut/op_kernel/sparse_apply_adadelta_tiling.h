@@ -25,7 +25,8 @@
 
 #define __aicore__
 #ifdef __NPU_TILING__
-inline [aicore] void InitTilingData(const __gm__ uint8_t* tiling, SparseApplyAdadeltaTilingData* constData) {
+inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, SparseApplyAdadeltaTilingData* constData)
+{
     const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
     uint32_t* dst = (uint32_t*)constData;
     for (size_t i = 0; i < sizeof(SparseApplyAdadeltaTilingData) / 4; i++) {

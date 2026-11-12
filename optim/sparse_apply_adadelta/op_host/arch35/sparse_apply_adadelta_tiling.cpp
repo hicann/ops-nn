@@ -19,7 +19,11 @@
  */
 
 #include <algorithm>
+#include <limits>
+#include <string>
+#include <vector>
 #include "log/log.h"
+#include "graph/utils/type_utils.h"
 #include "platform/platform_ascendc.h"
 #include "util/math_util.h"
 #include "op_host/tiling_util.h"
@@ -58,17 +62,9 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-static float GetScalarFloat(gert::TilingContext* context, int32_t idx)
+static bool MulOverflow(int64_t lhs, int64_t rhs)
 {
-    auto tensor = context->GetInputTensor(idx);
-    if (tensor == nullptr) {
-        return 0.0f;
-    }
-    const float* data = tensor->GetData<float>();
-    if (data == nullptr) {
-        return 0.0f;
-    }
-    return *data;
+    return lhs < 0 || rhs < 0 || (lhs != 0 && rhs > std::numeric_limits<int64_t>::max() / lhs);
 }
 
 static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
@@ -105,107 +101,128 @@ static ge::graphStatus SparseApplyAdadeltaTilingFunc(gert::TilingContext* contex
 
     auto varShape = varInput->GetStorageShape();
     auto indicesShape = indicesInput->GetStorageShape();
+    // 先判秩再取维：gert::Shape::GetDim 不校验 rank，0 维时会读到未进入 dim_num_ 的维槽
+    OP_CHECK_IF(varShape.GetDimNum() == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var",
+                                             (std::to_string(varShape.GetDimNum()) + "D").c_str(), "at least 1D"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indicesShape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices",
+                                             (std::to_string(indicesShape.GetDimNum()) + "D").c_str(), "1D"),
+                return ge::GRAPH_FAILED);
     int64_t kCount = indicesShape.GetShapeSize();
     int64_t varShapeSize = varShape.GetShapeSize();
+    // GetShapeSize 在元素乘积溢出 int64 时返回 INT64_MIN（负数），与真实负尺寸一并拦截
+    OP_CHECK_IF(kCount < 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    context->GetNodeName(), "indices", std::to_string(kCount).c_str(),
+                    "The shape size of indices is negative, which means the shape is invalid or overflows int64"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varShapeSize < 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    context->GetNodeName(), "var", std::to_string(varShapeSize).c_str(),
+                    "The shape size of var is negative, which means the shape is invalid or overflows int64"),
+                return ge::GRAPH_FAILED);
     int64_t firstDim = varShape.GetDim(0);
     int64_t rowSize = (firstDim > 0) ? (varShapeSize / firstDim) : 0;
 
     auto indicesDesc = context->GetInputDesc(IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
     auto indicesDtypeVal = indicesDesc->GetDataType();
-    OP_CHECK_IF(indicesDtypeVal != ge::DT_INT32 && indicesDtypeVal != ge::DT_INT64,
-                OP_LOGE(context, "indices dtype %d must be int32 or int64", static_cast<int32_t>(indicesDtypeVal)),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        indicesDtypeVal != ge::DT_INT32 && indicesDtypeVal != ge::DT_INT64,
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices",
+                                  ge::TypeUtils::DataTypeToSerialString(indicesDtypeVal).c_str(), "DT_INT32, DT_INT64"),
+        return ge::GRAPH_FAILED);
     int32_t indicesDType = (indicesDtypeVal == ge::DT_INT64) ? 1 : 0;
 
-    auto varDtype = context->GetInputDesc(IDX_VAR)->GetDataType();
-    auto accumDtype = context->GetInputDesc(IDX_ACCUM)->GetDataType();
-    auto accumUpdateDtype = context->GetInputDesc(IDX_ACCUM_UPDATE)->GetDataType();
-    auto lrDtype = context->GetInputDesc(IDX_LR)->GetDataType();
-    auto rhoDtype = context->GetInputDesc(IDX_RHO)->GetDataType();
-    auto epsilonDtype = context->GetInputDesc(IDX_EPSILON)->GetDataType();
-    auto gradDtype = context->GetInputDesc(IDX_GRAD)->GetDataType();
-    OP_CHECK_IF(varDtype != ge::DT_FLOAT,
-                OP_LOGE(context, "var dtype %d must be float32", static_cast<int32_t>(varDtype)),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(accumDtype != ge::DT_FLOAT,
-                OP_LOGE(context, "accum dtype %d must be float32", static_cast<int32_t>(accumDtype)),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(accumUpdateDtype != ge::DT_FLOAT,
-                OP_LOGE(context, "accum_update dtype %d must be float32", static_cast<int32_t>(accumUpdateDtype)),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(lrDtype != ge::DT_FLOAT, OP_LOGE(context, "lr dtype %d must be float32", static_cast<int32_t>(lrDtype)),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(rhoDtype != ge::DT_FLOAT,
-                OP_LOGE(context, "rho dtype %d must be float32", static_cast<int32_t>(rhoDtype)),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(epsilonDtype != ge::DT_FLOAT,
-                OP_LOGE(context, "epsilon dtype %d must be float32", static_cast<int32_t>(epsilonDtype)),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(gradDtype != ge::DT_FLOAT,
-                OP_LOGE(context, "grad dtype %d must be float32", static_cast<int32_t>(gradDtype)),
-                return ge::GRAPH_FAILED);
+    const char* dtypeNames[7] = {"var", "accum", "accum_update", "lr", "rho", "epsilon", "grad"};
+    const int32_t dtypeIdx[7] = {IDX_VAR, IDX_ACCUM, IDX_ACCUM_UPDATE, IDX_LR, IDX_RHO, IDX_EPSILON, IDX_GRAD};
+    for (size_t i = 0; i < 7; i++) {
+        auto inputDesc = context->GetInputDesc(dtypeIdx[i]);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+        auto inputDtype = inputDesc->GetDataType();
+        OP_CHECK_IF(inputDtype != ge::DT_FLOAT,
+                    OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), dtypeNames[i],
+                                              ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(), "DT_FLOAT"),
+                    return ge::GRAPH_FAILED);
+    }
 
-    OP_CHECK_IF(indicesShape.GetDimNum() != 1,
-                OP_LOGE(context, "indices must be 1D, but got %zu dims", indicesShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
-
-    auto lrShape = context->GetInputShape(IDX_LR)->GetStorageShape();
-    auto rhoShape = context->GetInputShape(IDX_RHO)->GetStorageShape();
-    auto epsilonShape = context->GetInputShape(IDX_EPSILON)->GetStorageShape();
-    OP_CHECK_IF(
-        lrShape.GetDimNum() != 0 && !(lrShape.GetDimNum() == 1 && lrShape.GetDim(0) == 1),
-        OP_LOGE(context, "lr must be a scalar (shape empty or [1]), but got shape with %zu dims", lrShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(rhoShape.GetDimNum() != 0 && !(rhoShape.GetDimNum() == 1 && rhoShape.GetDim(0) == 1),
-                OP_LOGE(context, "rho must be a scalar (shape empty or [1]), but got shape with %zu dims",
-                        rhoShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(epsilonShape.GetDimNum() != 0 && !(epsilonShape.GetDimNum() == 1 && epsilonShape.GetDim(0) == 1),
-                OP_LOGE(context, "epsilon must be a scalar (shape empty or [1]), but got shape with %zu dims",
-                        epsilonShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
+    const char* scalarNames[3] = {"lr", "rho", "epsilon"};
+    const int32_t scalarIdx[3] = {IDX_LR, IDX_RHO, IDX_EPSILON};
+    for (size_t i = 0; i < 3; i++) {
+        auto scalarInput = context->GetInputShape(scalarIdx[i]);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarInput);
+        auto scalarShape = scalarInput->GetStorageShape();
+        OP_CHECK_IF(scalarShape.GetDimNum() != 0 && !(scalarShape.GetDimNum() == 1 && scalarShape.GetDim(0) == 1),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), scalarNames[i],
+                                                          Ops::Base::ToString(scalarShape).c_str(),
+                                                          "The parameter must be a scalar, that is a 0-D tensor "
+                                                          "(shape is empty) or a 1-D tensor with a single element "
+                                                          "(shape is [1])"),
+                    return ge::GRAPH_FAILED);
+    }
 
     auto gradInput = context->GetInputShape(IDX_GRAD);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradInput);
     auto gradShape = gradInput->GetStorageShape();
-    OP_CHECK_IF(gradShape.GetDimNum() != varShape.GetDimNum(),
-                OP_LOGE(context, "grad dim num %zu != var dim num %zu", gradShape.GetDimNum(), varShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        gradShape.GetDimNum() != varShape.GetDimNum(),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "var, grad",
+            (std::to_string(varShape.GetDimNum()) + "D, " + std::to_string(gradShape.GetDimNum()) + "D").c_str(),
+            "The rank of grad must be the same as var"),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(gradShape.GetDim(0) != kCount,
-                OP_LOGE(context, "grad first dim %ld != indices length %ld", gradShape.GetDim(0), kCount),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "grad, indices",
+                    (Ops::Base::ToString(gradShape) + ", " + Ops::Base::ToString(indicesShape)).c_str(),
+                    "The first dimension of grad must be equal to the length of indices"),
                 return ge::GRAPH_FAILED);
     for (size_t i = 1; i < varShape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            gradShape.GetDim(i) != varShape.GetDim(i),
-            OP_LOGE(context, "grad dim[%zu]=%ld != var dim[%zu]=%ld", i, gradShape.GetDim(i), i, varShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(gradShape.GetDim(i) != varShape.GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "grad, var",
+                        (Ops::Base::ToString(gradShape) + ", " + Ops::Base::ToString(varShape)).c_str(),
+                        "The trailing dimensions of grad must be the same as var from dimension 1 on"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto accumInput = context->GetInputShape(IDX_ACCUM);
     OP_CHECK_NULL_WITH_CONTEXT(context, accumInput);
     auto accumShape = accumInput->GetStorageShape();
-    OP_CHECK_IF(accumShape.GetDimNum() != varShape.GetDimNum(),
-                OP_LOGE(context, "accum dim num %zu != var dim num %zu", accumShape.GetDimNum(), varShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        accumShape.GetDimNum() != varShape.GetDimNum(),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "var, accum",
+            (std::to_string(varShape.GetDimNum()) + "D, " + std::to_string(accumShape.GetDimNum()) + "D").c_str(),
+            "The rank of accum must be the same as var"),
+        return ge::GRAPH_FAILED);
     for (size_t i = 0; i < varShape.GetDimNum(); i++) {
-        OP_CHECK_IF(
-            accumShape.GetDim(i) != varShape.GetDim(i),
-            OP_LOGE(context, "accum dim[%zu]=%ld != var dim[%zu]=%ld", i, accumShape.GetDim(i), i, varShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(accumShape.GetDim(i) != varShape.GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "var, accum",
+                        (Ops::Base::ToString(varShape) + ", " + Ops::Base::ToString(accumShape)).c_str(),
+                        "The shape of accum must be the same as var"),
+                    return ge::GRAPH_FAILED);
     }
 
     auto accumUpdateInput = context->GetInputShape(IDX_ACCUM_UPDATE);
     OP_CHECK_NULL_WITH_CONTEXT(context, accumUpdateInput);
     auto accumUpdateShape = accumUpdateInput->GetStorageShape();
-    OP_CHECK_IF(accumUpdateShape.GetDimNum() != varShape.GetDimNum(),
-                OP_LOGE(context, "accum_update dim num %zu != var dim num %zu", accumUpdateShape.GetDimNum(),
-                        varShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        accumUpdateShape.GetDimNum() != varShape.GetDimNum(),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "var, accum_update",
+            (std::to_string(varShape.GetDimNum()) + "D, " + std::to_string(accumUpdateShape.GetDimNum()) + "D").c_str(),
+            "The rank of accum_update must be the same as var"),
+        return ge::GRAPH_FAILED);
     for (size_t i = 0; i < varShape.GetDimNum(); i++) {
         OP_CHECK_IF(accumUpdateShape.GetDim(i) != varShape.GetDim(i),
-                    OP_LOGE(context, "accum_update dim[%zu]=%ld != var dim[%zu]=%ld", i, accumUpdateShape.GetDim(i), i,
-                            varShape.GetDim(i)),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "var, accum_update",
+                        (Ops::Base::ToString(varShape) + ", " + Ops::Base::ToString(accumUpdateShape)).c_str(),
+                        "The shape of accum_update must be the same as var"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -218,16 +235,22 @@ static ge::graphStatus SparseApplyAdadeltaTilingFunc(gert::TilingContext* contex
     tiling->rowSize = rowSize;
     tiling->varTotalSize = varShapeSize;
     tiling->firstDim = firstDim;
-    tiling->lr = GetScalarFloat(context, IDX_LR);
-    tiling->rho = GetScalarFloat(context, IDX_RHO);
-    tiling->epsilon = GetScalarFloat(context, IDX_EPSILON);
     tiling->indicesDType = indicesDType;
 
-    int64_t totalSparseElements = (kCount == 0) ? 0 : (kCount * rowSize);
-    int32_t calcCoreNum = static_cast<int32_t>((totalSparseElements + MIN_ELEMENTS_PER_CORE - 1) /
-                                               MIN_ELEMENTS_PER_CORE);
-    int32_t maxCoreNum = static_cast<int32_t>(coreNum);
-    int32_t needCoreNum = std::max(std::min(calcCoreNum, maxCoreNum), 1);
+    int64_t totalSparseElements = 0;
+    if (kCount != 0) {
+        OP_CHECK_IF(MulOverflow(kCount, rowSize),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "indices, var",
+                        (Ops::Base::ToString(indicesShape) + ", " + Ops::Base::ToString(varShape)).c_str(),
+                        "The product of the indices length and the var row size overflows int64"),
+                    return ge::GRAPH_FAILED);
+        totalSparseElements = kCount * rowSize;
+    }
+    // 全程用 int64 计算核数，避免先窄化成 int32 再与 coreNum 取 min/max
+    int64_t calcCoreNum = totalSparseElements / MIN_ELEMENTS_PER_CORE +
+                          ((totalSparseElements % MIN_ELEMENTS_PER_CORE) != 0 ? 1 : 0);
+    int64_t needCoreNum = std::max(std::min(calcCoreNum, coreNum), static_cast<int64_t>(1));
     context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
 
     OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
@@ -244,8 +267,9 @@ static ge::graphStatus TilingParseForSparseApplyAdadelta([[maybe_unused]] gert::
     return ge::GRAPH_SUCCESS;
 }
 
+// lr/rho/epsilon 的数值由 kernel 直接从 GM 读取（simt.h），tiling 不读取也不下发：
+// 未声明 ValueDepend 时框架不会把设备标量搬到 Host，读取恒为空，故不声明 TilingInputsDataDependency。
 IMPL_OP_OPTILING(SparseApplyAdadelta)
     .Tiling(SparseApplyAdadeltaTilingFunc)
     .TilingParse<SparseApplyAdadeltaCompileInfo>(TilingParseForSparseApplyAdadelta);
-
 } // namespace optiling

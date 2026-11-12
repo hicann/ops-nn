@@ -17,21 +17,25 @@
 
 - 计算公式：
 
+  记第 $k$ 个索引（$k \in [0, N)$，$N$ 为 `indices` 的长度），参数行号 $i = \text{indices}[k]$。下式中带 $_{old}$ 的下标表示更新前的输入值，$\text{grad}[k]$ 取梯度的第 $k$ 行：
+
 $$
-\text{accum}[i] = \rho \times \text{accum}[i] + (1 - \rho) \times \text{grad}[i]^2
+\text{accum}_{new}[i] = \rho \times \text{accum}_{old}[i] + (1 - \rho) \times \text{grad}[k]^2
 $$
 
 $$
-\text{update} = \sqrt{\frac{\text{accum\_update}[i] + \epsilon}{\text{accum}[i] + \epsilon}} \times \text{grad}[i]
+\text{update} = \frac{\sqrt{\text{accum\_update}_{old}[i] + \epsilon}}{\sqrt{\text{accum}_{new}[i] + \epsilon}} \times \text{grad}[k]
 $$
 
 $$
-\text{var}[i] = \text{var}[i] - \text{update} \times \text{lr}
+\text{var}_{new}[i] = \text{var}_{old}[i] - \text{update} \times \text{lr}
 $$
 
 $$
-\text{accum\_update}[i] = \rho \times \text{accum\_update}[i] + (1 - \rho) \times \text{update}^2
+\text{accum\_update}_{new}[i] = \rho \times \text{accum\_update}_{old}[i] + (1 - \rho) \times \text{update}^2
 $$
+
+  未被 `indices` 选中的行保持原值，不参与计算。
 
 ## 参数说明
 
@@ -75,21 +79,21 @@ $$
     <tr>
       <td>lr</td>
       <td>输入</td>
-      <td>学习率，标量。</td>
+      <td>学习率，标量，支持0维标量（shape为{}）或仅含1个元素的1维张量（shape为{1}）。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rho</td>
       <td>输入</td>
-      <td>衰减率，标量，取值范围[0, 1]。</td>
+      <td>衰减率，标量（形态同lr），取值范围[0, 1]。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>epsilon</td>
       <td>输入</td>
-      <td>数值稳定性参数，标量，通常很小（如1e-6）。</td>
+      <td>数值稳定性参数，标量（形态同lr），通常取很小正数（如1e-6）。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
@@ -110,21 +114,21 @@ $$
     <tr>
       <td>var</td>
       <td>输出</td>
-      <td>更新后的参数张量，与输入var同shape同dtype。</td>
+      <td>更新后的参数张量，与输入var同shape同dtype，并与输入var共享Device内存（inplace）。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>accum</td>
       <td>输出</td>
-      <td>更新后的梯度累积器。</td>
+      <td>更新后的梯度累积器，与输入accum共享Device内存（inplace）。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>accum_update</td>
       <td>输出</td>
-      <td>更新后的更新量累积器。</td>
+      <td>更新后的更新量累积器，与输入accum_update共享Device内存（inplace）。</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
@@ -139,10 +143,14 @@ $$
 
 ## 约束说明
 
-- var、accum、accum_update三者shape必须一致。
+- var、accum、accum_update三者shape必须一致（逐维相等），且秩至少为1，第一维为稀疏维度。
 - grad的第一维（N）等于indices的长度，其余维度与var的后续维度一致。
-- indices值必须唯一，不支持越界索引。
-- 仅支持float32数值类型，indices支持int32和int64。
+- indices必须为一维张量，dtype支持int32和int64。
+- indices取值须落在[0, var的第一维大小)内，且值必须唯一。
+- lr、rho、epsilon为标量，支持0维标量（shape为{}）或仅含1个元素的1维张量（shape为{1}）；三者与var、grad同为float32。
+- 仅支持float32数值类型。
+- 支持动态shape（`-1`）与动态Rank（`-2`）构图：某个输入Rank未知时跳过形状校验，输出沿用对应输入的具体shape；构建图时仍须满足上表参数形态要求。
+- 支持空张量：当indices为空（N=0）时不更新任何行，算子直接返回；var某一维为0时，其元素数为0，同样不执行元素计算。
 
 ## 调用说明
 

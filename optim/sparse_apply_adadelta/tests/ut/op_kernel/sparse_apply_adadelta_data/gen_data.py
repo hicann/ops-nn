@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-# This program is free software, you can redistribute it and/or modify it.
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This file is a part of the CANN Open Software.
-# Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
-# BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
@@ -19,20 +17,20 @@ import numpy as np
 
 
 def parse_str_to_shape_list(shape_str):
-    shape_str = shape_str.strip('(').strip(')')
+    shape_str = shape_str.strip("(").strip(")")
     shape_list = [int(x) for x in shape_str.split(",") if x.strip()]
     return tuple(shape_list)
 
 
-def gen_data_and_golden(var_shape_str, grad_shape_str, indices_shape_str, idx_dtype="int32", d_type="float32"):
-    d_type_dict = {
-        "float32": np.float32,
-        "float16": np.float16
-    }
-    idx_type_dict = {
-        "int32": np.int32,
-        "int64": np.int64
-    }
+def gen_data_and_golden(
+    var_shape_str,
+    grad_shape_str,
+    indices_shape_str,
+    idx_dtype="int32",
+    d_type="float32",
+):
+    d_type_dict = {"float32": np.float32, "float16": np.float16}
+    idx_type_dict = {"int32": np.int32, "int64": np.int64}
     np_type = d_type_dict[d_type]
     idx_type = idx_type_dict[idx_dtype]
 
@@ -72,34 +70,49 @@ def gen_data_and_golden(var_shape_str, grad_shape_str, indices_shape_str, idx_dt
         # Step 1: accum[idx] = rho * accum[idx] + (1 - rho) * g^2
         accum_out[idx] = rho_val * accum_out[idx] + one_minus_rho * g * g
 
-        # Step 2: update = g * sqrt((accum_update[idx] + eps) / (accum[idx] + eps))
-        update = g * np.sqrt((accum_update_out[idx] + epsilon_val) / (accum_out[idx] + epsilon_val))
+        # Step 2: update = sqrt(accum_update[idx] + eps) / sqrt(accum[idx] + eps) * g
+        # 先算 sqrt 比值再乘 grad
+        update = (
+            np.sqrt(accum_update_out[idx] + epsilon_val)
+            / np.sqrt(accum_out[idx] + epsilon_val)
+            * g
+        )
 
         # Step 3: var[idx] = var[idx] - update * lr
         var_out[idx] = var_out[idx] - update * lr_val
 
         # Step 4: accum_update[idx] = rho * accum_update[idx] + (1 - rho) * update^2
-        accum_update_out[idx] = rho_val * accum_update_out[idx] + one_minus_rho * update * update
+        accum_update_out[idx] = (
+            rho_val * accum_update_out[idx] + one_minus_rho * update * update
+        )
 
     # Save inputs
     var_data.astype(np_type).tofile(f"{d_type}_var_sparse_apply_adadelta.bin")
     accum_data.astype(np_type).tofile(f"{d_type}_accum_sparse_apply_adadelta.bin")
-    accum_update_data.astype(np_type).tofile(f"{d_type}_accum_update_sparse_apply_adadelta.bin")
+    accum_update_data.astype(np_type).tofile(
+        f"{d_type}_accum_update_sparse_apply_adadelta.bin"
+    )
     lr_data.astype(np_type).tofile(f"{d_type}_lr_sparse_apply_adadelta.bin")
     rho_data.astype(np_type).tofile(f"{d_type}_rho_sparse_apply_adadelta.bin")
     epsilon_data.astype(np_type).tofile(f"{d_type}_epsilon_sparse_apply_adadelta.bin")
     grad_data.astype(np_type).tofile(f"{d_type}_grad_sparse_apply_adadelta.bin")
-    indices_data.astype(idx_type).tofile(f"{idx_dtype}_indices_sparse_apply_adadelta.bin")
+    indices_data.astype(idx_type).tofile(
+        f"{idx_dtype}_indices_sparse_apply_adadelta.bin"
+    )
 
     # Save golden outputs
     var_out.astype(np_type).tofile(f"{d_type}_var_golden_sparse_apply_adadelta.bin")
     accum_out.astype(np_type).tofile(f"{d_type}_accum_golden_sparse_apply_adadelta.bin")
-    accum_update_out.astype(np_type).tofile(f"{d_type}_accum_update_golden_sparse_apply_adadelta.bin")
+    accum_update_out.astype(np_type).tofile(
+        f"{d_type}_accum_update_golden_sparse_apply_adadelta.bin"
+    )
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 6:
-        print("Usage: gen_data.py '<var_shape>' '<grad_shape>' '<indices_shape>' '<idx_dtype>' '<dtype>'")
+        print(
+            "Usage: gen_data.py '<var_shape>' '<grad_shape>' '<indices_shape>' '<idx_dtype>' '<dtype>'"
+        )
         exit(1)
     os.system("rm -rf *.bin")
     gen_data_and_golden(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])

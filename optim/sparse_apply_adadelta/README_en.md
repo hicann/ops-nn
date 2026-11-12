@@ -19,21 +19,25 @@ English | [简体中文](./README.md)
 
 - Formula:
 
+  Let the k-th index be k in [0, N), where N is the length of `indices`, and the parameter row number be $i = \text{indices}[k]$. In the following formulas, the $_{old}$ subscript denotes the input value before the update, and $\text{grad}[k]$ takes the k-th row of the gradient:
+
 $$
-\text{accum}[i] = \rho \times \text{accum}[i] + (1 - \rho) \times \text{grad}[i]^2
+\text{accum}_{new}[i] = \rho \times \text{accum}_{old}[i] + (1 - \rho) \times \text{grad}[k]^2
 $$
 
 $$
-\text{update} = \sqrt{\frac{\text{accum\_update}[i] + \epsilon}{\text{accum}[i] + \epsilon}} \times \text{grad}[i]
+\text{update} = \frac{\sqrt{\text{accum\_update}_{old}[i] + \epsilon}}{\sqrt{\text{accum}_{new}[i] + \epsilon}} \times \text{grad}[k]
 $$
 
 $$
-\text{var}[i] = \text{var}[i] - \text{update} \times \text{lr}
+\text{var}_{new}[i] = \text{var}_{old}[i] - \text{update} \times \text{lr}
 $$
 
 $$
-\text{accum\_update}[i] = \rho \times \text{accum\_update}[i] + (1 - \rho) \times \text{update}^2
+\text{accum\_update}_{new}[i] = \rho \times \text{accum\_update}_{old}[i] + (1 - \rho) \times \text{update}^2
 $$
+
+  Rows not selected by `indices` keep their original values and do not participate in the computation.
 
 ## Parameters
 
@@ -77,21 +81,21 @@ $$
     <tr>
       <td>lr</td>
       <td>Input</td>
-      <td>Learning rate, a scalar.</td>
+      <td>Learning rate, a scalar. A 0-D scalar (shape {}) or a 1-D tensor with a single element (shape {1}) is supported.</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rho</td>
       <td>Input</td>
-      <td>Decay rate, a scalar, with a value range of [0, 1].</td>
+      <td>Decay rate, a scalar (same form as lr), with a value range of [0, 1].</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>epsilon</td>
       <td>Input</td>
-      <td>Numerical stability parameter, a scalar, usually very small (for example, 1e-6).</td>
+      <td>Numerical stability parameter, a scalar (same form as lr), usually a very small positive value (for example, 1e-6).</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
@@ -112,21 +116,21 @@ $$
     <tr>
       <td>var</td>
       <td>Output</td>
-      <td>Updated parameter tensor, with the same shape and dtype as the input var.</td>
+      <td>Updated parameter tensor, with the same shape and dtype as the input var, sharing Device memory with the input var (inplace).</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>accum</td>
       <td>Output</td>
-      <td>Updated gradient accumulator.</td>
+      <td>Updated gradient accumulator, sharing Device memory with the input accum (inplace).</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>accum_update</td>
       <td>Output</td>
-      <td>Updated update-amount accumulator.</td>
+      <td>Updated update-amount accumulator, sharing Device memory with the input accum_update (inplace).</td>
       <td>FLOAT</td>
       <td>ND</td>
     </tr>
@@ -141,10 +145,14 @@ $$
 
 ## Constraints
 
-- The shapes of var, accum, and accum_update must be the same.
+- The shapes of var, accum, and accum_update must be identical (equal in every dimension), the rank must be at least 1, and the first dimension is the sparse dimension.
 - The first dimension (N) of grad equals the length of indices, and the remaining dimensions are the same as the subsequent dimensions of var.
-- The values of indices must be unique, and out-of-bounds indices are not supported.
-- Only the float32 numeric type is supported, and indices supports int32 and int64.
+- indices must be a 1-D tensor, and its dtype supports int32 and int64.
+- The values of indices must be within [0, the size of the first dimension of var) and must be unique.
+- lr, rho, and epsilon are scalars: a 0-D scalar (shape {}) or a 1-D tensor with a single element (shape {1}). They are float32, the same as var and grad.
+- Only the float32 numeric type is supported.
+- Dynamic shape (`-1`) and dynamic rank (`-2`) graphs are supported: when the rank of an input is unknown, shape validation is skipped and the output keeps the concrete shape of the corresponding input. The parameter forms in the table above must still be satisfied when the graph is built.
+- Empty tensors are supported: when indices is empty (N=0), no row is updated and the operator returns directly; when one dimension of var is 0, it contains no element and no element-wise computation is performed.
 
 ## Invocation Description
 

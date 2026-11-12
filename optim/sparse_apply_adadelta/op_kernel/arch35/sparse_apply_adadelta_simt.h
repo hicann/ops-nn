@@ -70,7 +70,8 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyAd
         float newA = rhoVal * a + gSq * (1.0f - rhoVal);
         float numer = au + epsVal;
         float denom = newA + epsVal;
-        float update = sqrtf(numer) * (g / sqrtf(denom));
+        // 先算 sqrt 比值再乘 grad，避免先除后乘导致中间商下溢为 0
+        float update = (sqrtf(numer) / sqrtf(denom)) * g;
         float updateSq = update * update;
         float newAu = rhoVal * au + updateSq * (1.0f - rhoVal);
         float newV = v - lrVal * update;

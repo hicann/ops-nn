@@ -23,9 +23,6 @@ struct SparseApplyAdadeltaTilingData {
     int64_t rowSize = 0;
     int64_t varTotalSize = 0;
     int64_t firstDim = 0;
-    float lr = 0.0f;
-    float rho = 0.0f;
-    float epsilon = 0.0f;
     int32_t indicesDType = 0;
 };
 
