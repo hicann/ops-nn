@@ -1578,7 +1578,7 @@ build_single_example() {
   elif [[ "${EXAMPLE_MODE}" == "graph" ]]; then
     g++ ${file} -I ${GRAPH_INCLUDE_PATH} -I ${GE_INCLUDE_PATH} -I ${INCLUDE_PATH} -I ${EXTERNAL_INCLUDE_PATH} -I ${LINUX_INCLUDE_PATH} -I ${INC_INCLUDE_PATH} \
                 -L ${GRAPH_LIBRARY_STUB_PATH} -L ${GRAPH_LIBRARY_PATH} \
-                -lgraph -lge_runner -lgraph_base -lge_compiler -o test_geir_${example}
+                -lgraph -lge_runner -lgraph_base -lge_compiler -lc_sec -o test_geir_${example}
   fi
   ${BUILD_PATH}/"${pattern}${example}" | tail -n 10
   status=${PIPESTATUS[0]}
