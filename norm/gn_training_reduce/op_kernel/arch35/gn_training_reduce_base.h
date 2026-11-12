@@ -47,11 +47,23 @@ constexpr float PAD_CLEAR_VALUE = 0.0f;          // sum reducer pad_value
 constexpr int64_t COMPENSATED_SUM_MAX_R = 4096;
 // VEC 访问 UB 要求 32B 对齐：对齐补偿路径的每 A 标量结果按 8 float 步长写回 src 临时槽。
 constexpr uint32_t COMPENSATED_OUT_STRIDE = 8;
+// 3 个结果槽须落在首个整 chunk 内；槽步长 = 1 个 UB block；尾块读越界受 slack 约束。
+constexpr uint32_t COMPENSATED_RESULT_PARTS = 3;
+constexpr uint32_t COMPENSATED_HEAD_SLOT_FLOATS = COMPENSATED_RESULT_PARTS * COMPENSATED_OUT_STRIDE;
+static_assert(REP_F32 >= COMPENSATED_HEAD_SLOT_FLOATS,
+              "a full vector chunk must be wide enough to hold the 3 aligned result slots");
+static_assert(static_cast<uint32_t>(COMPENSATED_OUT_STRIDE * sizeof(float)) == UB_BLOCK_BYTES,
+              "one result slot must occupy exactly one 32B UB block");
+static_assert(static_cast<int64_t>((REP_F32 - COMPENSATED_OUT_STRIDE) * sizeof(float)) <=
+                  GN_TRAINING_REDUCE_UB_READ_SLACK,
+              "tail-chunk load overrun must stay inside the reserved UB read slack");
 
 // Σx 累加数值稳定缩放（极端输入超出 fp32 上限时须按
 // IEEE 754 溢出为 ±Inf，不得出现 +Inf + -Inf 的伪 NaN）。缩放因子取 2 的幂 → 逐位精确
 // （significand 不变），有限结果与不缩放 fp32 累加完全一致；指数余量 2^-32 使中间 partial
 // 不溢出，末次反缩放再把精确符号的 ±Inf 还原，与 fp64 golden 的溢出符号对齐。
+// 逐位精确仅限正规数域：fp32 |x| < 2^-94 ≈ 5.05e-29 缩放后落次正规，< 2^-118 ≈ 3.0e-36 下溢为 0。
+// fp16 最小次正规 2^-24 缩放后仍正规，不受影响。
 constexpr float SUM_ACC_SCALE = 1.0f / 4294967296.0f; // 2^-32，精确
 constexpr float SUM_ACC_UNSCALE = 4294967296.0f;      // 2^32，精确
 
@@ -175,65 +187,49 @@ __simd_vf__ inline void MergeTmpBufVfImpl(__ubuf__ float* mainBuf, __ubuf__ floa
 }
 
 // ── Σx 补偿（double-double two-sum）的向量化归约（AR 布局：每 A lane 的 R 连续）──
-// 对每个 A lane 的 rProd 个 fp32 元素做 error-free two-sum，向量 lane 各自独立累加
-// （hi/lo 两个累加器），末尾对 hi、lo 分别做向量水平归约再相加。数值语义与标量版
-// 完全一致（含 ±Inf/NaN：NaN 误差 lane 清零，令 hi 主导传播），但标量开销由
-// O(laneA·rProd) 降为 O(laneA·log2(VL))，消除小 R 补偿路径的标量瓶颈。
-__simd_vf__ inline void CompensatedSumArVfImpl(__ubuf__ float* src, uint32_t laneA, uint32_t rProd, uint32_t chunkLanes)
+// 只处理整 chunk，末次不满 chunk 的余量交调用方标量 two-sum 续算；勿改回运行期 UpdateMask 尾块写法——
+// 实测在 shape 特化编译产物中整块失效（A5K-F1），掩码一律用编译期常量模式。
+// 精度上界：Reduce<SUM> 是普通 fp32 水平归约，跨 lane 抵消时不优于普通归约；纯标量分支才是基准。
+// 结果回写：每 A lane 行首 3 个槽依次为 shi / slo / ssum，步长 COMPENSATED_OUT_STRIDE。
+template <bool kFullChunk>
+__simd_vf__ inline void CompensatedSumArVfImpl(__ubuf__ float* src, uint32_t laneA, uint32_t rProd)
 {
-    // 每 lane 做 Neumaier 两和（精度 ~2^-48），逐 chunk 向量累加后再跨 lane 归约；
-    // 同时以 psum 记录普通和，输入含 ±Inf/NaN 时回退到 psum（与 golden/标量路径同语义）。
     // 注意：Reg::Duplicate(dst,src,mask) 是「广播 src[pos]」而非逐 lane 拷贝，故用 t+0 复制。
-    // 掩码现取现用（CreateMask/UpdateMask 会复用同一物理掩码寄存器）。
-    AscendC::Reg::RegTensor<float> hi, lo, psum, x, t, bb, s1, err, zero, shi, slo, ssum, res;
+    constexpr uint32_t chunkLanes = kFullChunk ? REP_F32 : COMPENSATED_OUT_STRIDE;
+    AscendC::Reg::MaskReg fm;
+    if constexpr (kFullChunk) {
+        fm = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
+    } else {
+        fm = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::VL8>();
+    }
     AscendC::Reg::MaskReg one = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::VL1>();
+    AscendC::Reg::RegTensor<float> hi, lo, psum, x, t, bb, s1, err, zero, shi, slo, ssum;
     AscendC::Reg::Duplicate(zero, 0.0f);
     for (uint32_t a = 0; a < laneA; ++a) {
         AscendC::Reg::Duplicate(hi, 0.0f);
         AscendC::Reg::Duplicate(lo, 0.0f);
         AscendC::Reg::Duplicate(psum, 0.0f);
         __ubuf__ float* sp = src + a * rProd;
-        uint32_t r = 0;
-        for (; r + chunkLanes <= rProd; r += chunkLanes) {
-            uint32_t cnt = chunkLanes;
-            AscendC::Reg::MaskReg m = AscendC::Reg::UpdateMask<float>(cnt);
+        // 与调用方 rMainLinear 同一公式，必须同步改，否则重叠或漏计。
+        const uint32_t rMain = (rProd / chunkLanes) * chunkLanes;
+        for (uint32_t r = 0; r < rMain; r += chunkLanes) {
             AscendC::Reg::LoadAlign(x, sp + r);
-            AscendC::Reg::Add(psum, psum, x, m);
-            AscendC::Reg::Add(t, hi, x, m);     // t = hi + x
-            AscendC::Reg::Sub(bb, t, hi, m);    // bb = t - hi
-            AscendC::Reg::Sub(s1, t, bb, m);    // s1 = t - bb
-            AscendC::Reg::Sub(s1, hi, s1, m);   // s1 = hi - (t - bb)
-            AscendC::Reg::Sub(err, x, bb, m);   // err = x - bb
-            AscendC::Reg::Add(err, s1, err, m); // err = (hi-(t-bb)) + (x-bb)
-            AscendC::Reg::Add(lo, lo, err, m);  // lo += err
-            AscendC::Reg::Add(hi, t, zero, m);  // hi = t
+            AscendC::Reg::Add(psum, psum, x, fm);
+            AscendC::Reg::Add(t, hi, x, fm);     // t = hi + x
+            AscendC::Reg::Sub(bb, t, hi, fm);    // bb = t - hi
+            AscendC::Reg::Sub(s1, t, bb, fm);    // s1 = t - bb
+            AscendC::Reg::Sub(s1, hi, s1, fm);   // s1 = hi - (t - bb)
+            AscendC::Reg::Sub(err, x, bb, fm);   // err = x - bb
+            AscendC::Reg::Add(err, s1, err, fm); // err = (hi-(t-bb)) + (x-bb)
+            AscendC::Reg::Add(lo, lo, err, fm);  // lo += err
+            AscendC::Reg::Add(hi, t, zero, fm);  // hi = t
         }
-        if (r < rProd) {
-            uint32_t rem = rProd - r;
-            AscendC::Reg::MaskReg mt = AscendC::Reg::UpdateMask<float>(rem);
-            AscendC::Reg::LoadAlign(x, sp + r);
-            // 累加器用 MERGING：尾块只更新有效 lane，保留 hi/lo/psum 其余 lane 的既有累加
-            // （默认 ZEROING 会把非活跃 lane 清零，直接抹掉其余 lane 的累加）。
-            AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::MERGING>(psum, psum, x, mt);
-            AscendC::Reg::Add(t, hi, x, mt);
-            AscendC::Reg::Sub(bb, t, hi, mt);
-            AscendC::Reg::Sub(s1, t, bb, mt);
-            AscendC::Reg::Sub(s1, hi, s1, mt);
-            AscendC::Reg::Sub(err, x, bb, mt);
-            AscendC::Reg::Add(err, s1, err, mt);
-            AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::MERGING>(lo, lo, err, mt);
-            AscendC::Reg::Add<float, AscendC::Reg::MaskMergeMode::MERGING>(hi, t, zero, mt);
-        }
-        uint32_t cntf = chunkLanes;
-        AscendC::Reg::MaskReg fm = AscendC::Reg::UpdateMask<float>(cntf);
         AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(shi, hi, fm);
         AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(slo, lo, fm);
         AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(ssum, psum, fm);
-        AscendC::Reg::Add(res, shi, slo, one);
-        AscendC::Reg::MaskReg resNan;
-        AscendC::Reg::Compare<float, AscendC::CMPMODE::NE>(resNan, res, res, one);
-        AscendC::Reg::Select(res, ssum, res, resNan);
-        AscendC::Reg::StoreAlign(src + a * COMPENSATED_OUT_STRIDE, res, one);
+        AscendC::Reg::StoreAlign(sp, shi, one);
+        AscendC::Reg::StoreAlign(sp + COMPENSATED_OUT_STRIDE, slo, one);
+        AscendC::Reg::StoreAlign(sp + 2 * COMPENSATED_OUT_STRIDE, ssum, one);
     }
 }
 
@@ -883,7 +879,7 @@ __aicore__ inline void GNTrainingReduceBaseKernel<DType>::PreElewise(__ubuf__ DT
 // 逐 (A lane) 用 error-free two-sum 累加 R 个 pre-scale 后的 fp32 元素：
 //   t = s + x; bb = t - s; err = (s - (t - bb)) + (x - bb); c += err; s = t
 // 结果 s + c 含约 48 bit 有效精度，可对齐 fp64 golden 在全值域极端输入下的结果；
-// 高部分与低部分分别经 PostElewise 反缩放（sum 路径）后写回。布局随 isTailR_ 切换：
+// 合并值经 PostElewise 反缩放（sum 路径）后写回。布局随 isTailR_ 切换：
 //   AR: src[A, Rprod] row-major → (a,r) @ a*Rprod + r
 //   RA: src[Rprod, A] row-major → (r,a) @ r*laneA + a
 template <typename DType>
@@ -896,20 +892,44 @@ __aicore__ inline void GNTrainingReduceBaseKernel<DType>::ReduceSumCompensated(i
     // AR 布局：laneA 个 A lane 各含 rProd 连续元素 → 向量 lane = R，逐 A 做两和；
     // RA 布局：rProd 行各含 laneA 连续 A → 向量 lane = A，逐 R 行做两和。
     // 不满足整向量宽/对齐条件时回退标量精确 two-sum（数值语义一致）。
-    if (isTailR_ && rProd >= static_cast<int32_t>(COMPENSATED_OUT_STRIDE) &&
+    if (isTailR_ && rProd >= static_cast<int32_t>(COMPENSATED_HEAD_SLOT_FLOATS) &&
         (rProd % static_cast<int32_t>(COMPENSATED_OUT_STRIDE) == 0)) {
-        // rProd ≥ 整向量宽用 64-lane chunk；不足一个向量时降到 8-lane chunk，保证每 lane
-        // 仍累积多个元素（否则退化为普通和、丢失补偿）。
-        uint32_t chunkLanes = (rProd >= static_cast<int32_t>(REP_F32)) ? REP_F32 : COMPENSATED_OUT_STRIDE;
+        // 门控 rProd ≥ 24：每 A lane 行首要放 3 个结果槽。VF 只算整 chunk 段，尾项
+        // [rMainLinear, rProd) 由下面按标量 two-sum 续算。
+        const bool useFullChunk = (rProd >= static_cast<int32_t>(REP_F32));
+        const int32_t chunkLanes = useFullChunk ? static_cast<int32_t>(REP_F32) :
+                                                  static_cast<int32_t>(COMPENSATED_OUT_STRIDE);
+        const int32_t rMainLinear = (rProd / chunkLanes) * chunkLanes;
         __ubuf__ float* prePtr = reinterpret_cast<__ubuf__ float*>(pre.GetPhyAddr());
-        asc_vf_call<CompensatedSumArVfImpl>(prePtr, static_cast<uint32_t>(laneA), static_cast<uint32_t>(rProd),
-                                            chunkLanes);
-        // VF 结果写回 src 的 32B 对齐临时槽；标量读取后写入 cache。
+        if (useFullChunk) {
+            asc_vf_call<CompensatedSumArVfImpl<true>>(prePtr, static_cast<uint32_t>(laneA),
+                                                      static_cast<uint32_t>(rProd));
+        } else {
+            asc_vf_call<CompensatedSumArVfImpl<false>>(prePtr, static_cast<uint32_t>(laneA),
+                                                       static_cast<uint32_t>(rProd));
+        }
         SetFlag<HardEvent::V_S>(evVtoS_);
         WaitFlag<HardEvent::V_S>(evVtoS_);
+        const int32_t slotStride = static_cast<int32_t>(COMPENSATED_OUT_STRIDE);
         for (int32_t a = 0; a < laneA; ++a) {
-            cache.SetValue(static_cast<uint32_t>(levelOff + a),
-                           pre.GetValue(static_cast<uint32_t>(a * COMPENSATED_OUT_STRIDE)));
+            const int32_t rowBase = a * rProd;
+            float s = pre.GetValue(static_cast<uint32_t>(rowBase));
+            float c = pre.GetValue(static_cast<uint32_t>(rowBase + slotStride));
+            float psum = pre.GetValue(static_cast<uint32_t>(rowBase + 2 * slotStride));
+            // 输入含 ±Inf/NaN 时跳过误差累加，由另轨 psum 兜底 NaN。
+            for (int32_t r = rMainLinear; r < rProd; ++r) {
+                const float x = pre.GetValue(static_cast<uint32_t>(rowBase + r));
+                const float t = s + x;
+                const float bb = t - s;
+                const float err = (s - (t - bb)) + (x - bb);
+                if (err == err) {
+                    c += err;
+                }
+                psum += x;
+                s = t;
+            }
+            const float res = s + c;
+            cache.SetValue(static_cast<uint32_t>(levelOff + a), (res == res) ? res : psum);
         }
         SetFlag<HardEvent::S_V>(evStoV_);
         WaitFlag<HardEvent::S_V>(evStoV_);

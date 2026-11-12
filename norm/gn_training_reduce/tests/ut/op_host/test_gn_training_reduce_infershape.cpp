@@ -132,4 +132,89 @@ TEST(GNTrainingReduceInferShapeTest, RejectsNumGroupsZero)
     EXPECT_EQ(RunInferShape(inputShape, ge::FORMAT_NCHW, 0, sumShape, squareSumShape), ge::GRAPH_FAILED);
 }
 
+// 动态维（-1）：图推导放行并原样传播到输出第 0 维。
+TEST(GNTrainingReduceInferShapeTest, PropagatesDynamicDimN)
+{
+    gert::Shape inputShape = {-1, 4, 8, 8};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    ASSERT_EQ(RunInferShape(inputShape, ge::FORMAT_NCHW, 2, sumShape, squareSumShape), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(sumShape.GetDimNum(), 5U);
+    EXPECT_EQ(sumShape.GetDim(0), -1);
+    EXPECT_EQ(sumShape.GetDim(1), 2);
+    EXPECT_EQ(sumShape.GetDim(2), 1);
+    EXPECT_EQ(sumShape.GetDim(3), 1);
+    EXPECT_EQ(sumShape.GetDim(4), 1);
+    ASSERT_EQ(squareSumShape.GetDimNum(), 5U);
+    EXPECT_EQ(squareSumShape.GetDim(0), -1);
+    EXPECT_EQ(squareSumShape.GetDim(1), 2);
+}
+
+// 动态通道维（-1）：C 未知时不校验 C % num_groups，输出组数仍由 num_groups 决定。
+TEST(GNTrainingReduceInferShapeTest, PropagatesDynamicChannel)
+{
+    gert::Shape inputShape = {2, -1, 8, 8};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    ASSERT_EQ(RunInferShape(inputShape, ge::FORMAT_NCHW, 2, sumShape, squareSumShape), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(sumShape.GetDimNum(), 5U);
+    EXPECT_EQ(sumShape.GetDim(0), 2);
+    EXPECT_EQ(sumShape.GetDim(1), 2);
+    EXPECT_EQ(sumShape.GetDim(2), 1);
+    EXPECT_EQ(sumShape.GetDim(3), 1);
+    EXPECT_EQ(sumShape.GetDim(4), 1);
+    ASSERT_EQ(squareSumShape.GetDimNum(), 5U);
+    EXPECT_EQ(squareSumShape.GetDim(1), 2);
+}
+
+// 未知秩标记（[-2]）：早退并按未知秩原样传播。
+TEST(GNTrainingReduceInferShapeTest, PropagatesUnknownRank)
+{
+    gert::Shape inputShape = {-2};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    ASSERT_EQ(RunInferShape(inputShape, ge::FORMAT_NCHW, 2, sumShape, squareSumShape), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(sumShape.GetDimNum(), 1U);
+    EXPECT_EQ(sumShape.GetDim(0), -2);
+    ASSERT_EQ(squareSumShape.GetDimNum(), 1U);
+    EXPECT_EQ(squareSumShape.GetDim(0), -2);
+}
+
+// rank-4 中出现的 -2 不是动态维：确定性拒绝（不再随 C 的取值时拒时放）。
+TEST(GNTrainingReduceInferShapeTest, RejectsMinusTwoDim)
+{
+    gert::Shape inputShape = {-2, 4, 8, 8};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    EXPECT_EQ(RunInferShape(inputShape, ge::FORMAT_NCHW, 2, sumShape, squareSumShape), ge::GRAPH_FAILED);
+}
+
+// num_groups 的属性校验不依赖 shape：未知秩同样要拒绝 G=0（不再被早退绕过）。
+TEST(GNTrainingReduceInferShapeTest, RejectsNumGroupsZeroOnUnknownRank)
+{
+    gert::Shape inputShape = {-2};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    EXPECT_EQ(RunInferShape(inputShape, ge::FORMAT_NCHW, 0, sumShape, squareSumShape), ge::GRAPH_FAILED);
+}
+
+// num_groups 校验前移后，未知秩 + 合法 G 的正常传播路径不受影响。
+TEST(GNTrainingReduceInferShapeTest, PropagatesUnknownRankWithValidGroups)
+{
+    gert::Shape inputShape = {-2};
+    gert::Shape sumShape;
+    gert::Shape squareSumShape;
+
+    ASSERT_EQ(RunInferShape(inputShape, ge::FORMAT_NCHW, 2, sumShape, squareSumShape), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(sumShape.GetDimNum(), 1U);
+    EXPECT_EQ(sumShape.GetDim(0), -2);
+    ASSERT_EQ(squareSumShape.GetDimNum(), 1U);
+    EXPECT_EQ(squareSumShape.GetDim(0), -2);
+}
+
 } // namespace ops

@@ -10,82 +10,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-"""TTK TestSpec golden for gn_training_reduce (GroupNorm training statistical reduction).
-
-Fact sources — spec/spec.yaml ONLY.  Nothing under op/ (kernel artifacts) is
-imported, executed or reused: the reference math below is derived from
-math_semantics.formula / math_semantics.format_variants, the tolerance from
-cross_check + numerical_tolerance, and the competitor from reference_oracle.
-
-Semantics (spec math_semantics.formula; REQUIREMENTS §2.1 / §5.3.1):
-    x is rank-4, layout NCHW (canonical) or NHWC, dtype fp16/fp32,
-    attr num_groups = G, D = C/G, M = D*H*W.
-        NCHW: xg = x[N,C,H,W] -> [N,G,D,H,W], reduce axes (2,3,4)
-        NHWC: xg = x[N,H,W,C] -> [N,H,W,G,D], reduce axes (1,2,4)
-        sum        = reduce_sum(xg)        keepdims -> fp32, shape (N,G,1,1,1) / (N,1,1,G,1)
-        square_sum = reduce_sum(xg * xg)  keepdims -> fp32, shape (N,G,1,1,1) / (N,1,1,G,1)
-
-Backend priority ladder (spec reference_oracle = {framework: torch, absent: true}):
-  * tier 1 — single PyTorch API: SKIPPED.  No torch API returns BOTH (sum,
-    square_sum) for a per-(n,g) grouped reduction.  torch.nn.functional.group_norm /
-    torch.ops.aten.native_group_norm / torch.native_group_norm return the normalized
-    output (plus Welford mean/rstd), never the raw Σx / Σx²; torch.var_mean returns the
-    Welford mean/var, not the raw first/second moments; torch.sum yields only one of
-    the two outputs.  (REQUIREMENTS §4.5 / §4.6)
-  * tier 2 — single TensorFlow API: SKIPPED.  TF has no operator producing grouped
-    [N,G] Σx / Σx².  tf.nn.moments returns mean/variance; tf.math.reduce_sum yields a
-    single reduction; FusedBatchNormV3 reduces per-channel over N·H·W, a different
-    grouping.  (REQUIREMENTS §3.2–§3.6)
-  * tier 3 — PyTorch API composition: TAKEN.  torch.reshape (regroup C into the grouped
-    view) + torch.square (xg²) + torch.sum (reduce the group axes).  Exact APIs used:
-    torch.reshape, torch.square, torch.sum.
-  * tiers 4 (TensorFlow composition) / 5 (numpy) — not reached: tier 3 holds.
-
-Accumulation rule — **follow the NPU's widening ladder** (golden_standard.md §三/§五,
-"浮点 + 两方泛化": NPU 不宽 → 也不宽, NPU 宽到哪 → 就宽到哪, 出口跟随其窄回行为):
-the arch35 kernel widens fp16/bf16 inputs to fp32 (Cast<float, DType, CAST_NONE> /
-DIST_UNPACK_B16) and keeps a plain fp32 lane otherwise, accumulates in fp32 registers
-throughout, and stores both outputs as fp32 with **no narrowing**
-(`op_kernel/arch35/gn_training_reduce_base.h:63-107,485-486,1075-1079`,
-`gn_training_reduce_onepass.h:170-192`; both outputs are declared DT_FLOAT in
-`op_host/gn_training_reduce_def.cpp:35,42`).  The golden mirrors exactly that ladder —
-lift fp16/bf16 to fp32, keep fp32 as fp32, accumulate in fp32 — and never widens
-fp32 → fp64 on its own.  The Σx path additionally pre-scales by SUM_ACC_SCALE = 2^-32
-and unscales on write-out (`..._base.h:55-56,81,1042`): that is an exact power-of-two
-overflow guard, bit-identical to unscaled fp32 accumulation for every finite result,
-so it is an implementation detail and is deliberately not reproduced here.
-Each output is cast once — **to the dtype TTK hands down in `output_dtypes`** (never
-hard-coded): Promote/three-party mode hands down the lifted fp64, so a hard
-`.to(torch.float32)` would cut the truth back (golden_standard.md §八#2); when
-`output_dtypes` is absent the fallback is the operator contract dtype fp32
-(spec.yaml accumulator_dtype float32 — the ladder above agrees with it).
-
-Tolerance derivation (spec.yaml, never the operator name):
-  * default by op.paradigms [Reduction] (float output) = stat_rel_err;
-  * the spec top-level cross_check block {standard: cross_check, level: L1} overrides
-    every fp16/fp32 output dtype -> {standard: cross_check, level: L1}.  This op's
-    outputs are always fp32 (with an fp16 input path), so those are the keys.
-
-third_party: spec reference_oracle is absent (no single framework API), so the competitor
-is declared here as the torch reduction composition — an independent computation form
-(ones-vector multiply-accumulate, not torch.sum) reached only through this declaration.
-The competitor runs at the operator's fp32 contract precision (mirroring the arch35
-kernel): cross_check compares peer error levels, so an fp64 competitor would be exact
-and collapse the ratio denominator.  The golden/competitor pair is now dtype-symmetric
-on that rung — both lift only fp16/bf16 to fp32 and both keep a promoted fp64 as-is —
-so the ratio measures summation-form differences, not an artificial fp64-vs-fp32 width
-gap.
-
-cross_check applicability (both outputs are raw moments): the `rmse` leg of cross_check
-is an *absolute* RMS ratio against a floor-clamped denominator, so it is only stable when
-the raw sum is far from zero and not of extreme magnitude. Here Σx may cancel to ~0 and
-Σx² scales with the input range squared, so extreme-range / cancellation cases make the
-ratio blow up even when the NPU is strictly more accurate than the competitor (its
-relative-error ratios are then ~1e-3). Convention (per bn3d_training_reduce/tests/assets/
-golden.py): keep the random cross_check regression on a non-zero-mean range, and accept
-cancellation / near-zero / extreme-value cases with the formal `--compare close`
-(FLOAT32 rtol/atol/ptol) tolerance instead.
-"""
+"""TTK TestSpec golden for gn_training_reduce (GroupNorm training statistical reduction)."""
 
 __spec__ = {
     "gn_training_reduce": "GNTrainingReduceTestSpec",  # legacy official IR op name
@@ -142,16 +67,75 @@ def _resolve_format(kwargs):
     )
 
 
-def _grouped_view(shape, num_groups, fmt):
-    """(grouped_shape, reduction_axes) per spec math_semantics.format_variants."""
+# 归约分块宽度:每块内部 fp32 求和,块结果再 fp32 成对归约(same dtype end to end)。
+# 见 `_chunked_row_sum` 的注释 —— 这是纯规约顺序调整,不改变任何语义或 dtype 档位。
+_REDUCE_CHUNK = 8192
+
+
+def _grouped_rows(x, num_groups, fmt):
+    """View x as ``[outer=N*G, R]`` — one row per output, reduction on the last axis.
+
+    NCHW ``(N,C,H,W)``: the grouped view ``(N,G,D,H,W)`` already keeps D,H,W as its
+    trailing dims, so flattening is a pure reshape (no data movement).
+
+    NHWC ``(N,H,W,C)``: the grouped view ``(N,H,W,G,D)`` interleaves the group axis
+    inside the reduced dims, so ``torch.sum(..., dim=(1,2,4))`` runs over strided
+    axes.  Moving G next to N first makes the reduction one contiguous last axis.
+    That layout change alone is worth ~30x on the fp32 golden: on the dumped
+    L1_309/L1_496 inputs the strided multi-axis sum sits 33-99 ULP away from the
+    fp64 truth, while the same elements reduced as a contiguous axis sit at 1-2 ULP
+    (the strided path is the slow scalar-accumulate iterator, not the blocked one).
+    """
     g = int(num_groups)
     if fmt == _NHWC:
-        n, h, w, c = (int(s) for s in shape)
+        n, h, w, c = (int(s) for s in x.shape)
         d = c // g
-        return (n, h, w, g, d), (1, 2, 4)
-    n, c, h, w = (int(s) for s in shape)
+        xg = torch.reshape(x, (n, h, w, g, d))
+        xg = torch.permute(xg, (0, 3, 1, 2, 4))  # (N,G,H,W,D)
+        return torch.reshape(xg, (n * g, h * w * d))
+    n, c, h, w = (int(s) for s in x.shape)
     d = c // g
-    return (n, g, d, h, w), (2, 3, 4)
+    return torch.reshape(x, (n * g, d * h * w))
+
+
+def _pairwise_sum_last(x):
+    """Balanced pairwise sum along the last (contiguous) axis of a 2D tensor."""
+    while int(x.shape[1]) > 1:
+        width = int(x.shape[1])
+        half = width // 2
+        head = torch.sum(torch.reshape(x[:, : 2 * half], (-1, half, 2)), dim=2)
+        if width % 2:
+            x = torch.cat((head, x[:, 2 * half :]), dim=1)
+        else:
+            x = head
+    return x[:, 0]
+
+
+def _chunked_row_sum(rows, square=False):
+    """fp32 sum of every row: blockwise fp32 sums, then a pairwise fp32 merge.
+
+    A single long ``torch.sum`` over R = 4e5 .. 1.7e8 elements accumulates in one
+    long chain, so its own fp32 rounding grows with R: on the dumped long-reduce
+    cases the current golden is 33.9 (L1_160, R=9.2e6) and 41.0 (L1_309, R=4.2e6)
+    fp32 ULP away from the fp64 truth — larger than the 32 ULP judgement cap, i.e.
+    the reference noise alone exhausts the two-party budget.  Splitting the axis
+    into ``_REDUCE_CHUNK`` blocks bounds the chain, and merging the block results
+    as a balanced tree makes the total depth ~log2(R) instead of R.  Same
+    dtype throughout: fp32 blocks -> fp32 merge (fp64 only ever arrives as the
+    Promote-tier input dtype and is then reduced in fp64 as before).
+    """
+    width = int(rows.shape[1])
+    if width == 0:  # empty reduce: torch.sum over an empty dim is 0
+        return torch.zeros((int(rows.shape[0]),), dtype=rows.dtype, device=rows.device)
+    parts = []
+    for start in range(0, width, _REDUCE_CHUNK):
+        block = rows[:, start : start + _REDUCE_CHUNK]
+        if square:
+            block = block * block
+        parts.append(torch.sum(block, dim=1))
+    if len(parts) == 1:
+        return parts[0]
+    return _pairwise_sum_last(torch.stack(parts, dim=1))
 
 
 def _torch_group_reduce(x, num_groups, fmt):
@@ -159,21 +143,29 @@ def _torch_group_reduce(x, num_groups, fmt):
 
     加宽档**跟随 NPU**(golden_standard.md §三/§五「浮点 + 两方泛化」):arch35 内核的
     累加寄存器与输出恒为 fp32 —— fp16/bf16 入口升 fp32、fp32 入口原样,两级归约与
-    cache 缓冲全是 `<float>`,出口直接写 fp32 不窄回(`gn_training_reduce_base.h:63-107,
-    485-486,1075-1079`;输出声明恒 DT_FLOAT,`gn_training_reduce_def.cpp:35,42`)。
+    cache 缓冲全是 `<float>`,出口直接写 fp32 不窄回。
     故此处只对 fp16/bf16 抬 fp32;**不无条件抬 fp64**(NPU 从不宽到 fp64)。
     Promote(三方档)下入参与 output_dtypes 均已被 TTK 抬到 fp64,原样保留 = 零 cast
     (§三/§四「浮点 + 三方」格),故抬档判断只看入参 dtype,不写死任何档位。
     出口**不写死 fp32**:dtype 由 `_group_reduce` 按 TTK **下发**的 output_dtypes 决定 ——
     Promote(三方档)下下发值是抬档后的 fp64,写死 fp32 会把真值砍回(golden_standard.md §八#2)。
+
+    归约**只在同一个 dtype 内做**,唯一变化是规约顺序:`_grouped_rows` 把每个输出的
+    被归约元素摊到最后一根连续轴上,再按 `_REDUCE_CHUNK` 分块 + 块间成对合并。
+    语义(哪些元素进同一个输出、NCHW/NHWC 轴、num_groups、D=C/G)与逐元素加法完全相同,
+    只是把一条 O(R) 的累加链换成 O(log R) 的树 —— 见 `_chunked_row_sum`。
     """
     if x.dtype in (torch.float16, torch.bfloat16):
         x = x.to(torch.float32)
-    view, axes = _grouped_view(tuple(x.shape), num_groups, fmt)
-    xg = torch.reshape(x, view)
-    sum_out = torch.sum(xg, dim=axes, keepdim=True)
-    square_sum_out = torch.sum(torch.square(xg), dim=axes, keepdim=True)
-    return sum_out, square_sum_out
+    rows = _grouped_rows(x, num_groups, fmt)
+    sum_out = _chunked_row_sum(rows)
+    square_sum_out = _chunked_row_sum(rows, square=True)
+    g = int(num_groups)
+    if fmt == _NHWC:
+        out_shape = (int(x.shape[0]), 1, 1, g, 1)
+    else:
+        out_shape = (int(x.shape[0]), g, 1, 1, 1)
+    return torch.reshape(sum_out, out_shape), torch.reshape(square_sum_out, out_shape)
 
 
 def _torch_oracle_group_reduce(x, num_groups, fmt):
@@ -192,7 +184,7 @@ def _torch_oracle_group_reduce(x, num_groups, fmt):
     """
     g = int(num_groups)
     if not isinstance(x, torch.Tensor):
-        x = torch.from_numpy(np.asarray(x))
+        x = torch.from_numpy(np.ascontiguousarray(np.asarray(x)))
     if x.dtype in (torch.float16, torch.bfloat16):
         x = x.to(torch.float32)
     if fmt == _NHWC:
@@ -256,12 +248,12 @@ def _dtype_from_token(token):
 def _group_reduce(x, num_groups, fmt, output_dtypes=None):
     """Dispatch on the input container: torch (ACLNN) vs numpy (Kernel/GEIR).
 
-    出口 dtype 取 TTK **下发**的 `output_dtypes`(Promote 下已被抬高,§八#2);
+    出口 dtype 取 TTK **下发**的 `output_dtypes`;
     下发缺省时回落到算子契约 dtype fp32(两方泛化档跟 NPU 输出 dtype)。
     不读算子"声明"的 dtype —— 那会把 Promote 抬上去的精度砍回来。
     """
     is_torch = isinstance(x, torch.Tensor)
-    x_t = x if is_torch else torch.from_numpy(np.asarray(x))
+    x_t = x if is_torch else torch.from_numpy(np.ascontiguousarray(np.asarray(x)))
     outs = list(_torch_group_reduce(x_t, num_groups, fmt))
     names = [_normalize_dtype_name(d) for d in (output_dtypes or ())]
     result = []

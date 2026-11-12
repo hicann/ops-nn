@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <string>
 
 using namespace Ops::Base;
@@ -298,6 +299,26 @@ ge::graphStatus TilingForGNTrainingReduce(gert::TilingContext* context)
             ("The channel dim C=" + std::to_string(C) + " of input x must be divisible by num_groups").c_str());
         return ge::GRAPH_FAILED;
     }
+    // 先确认非零维乘积能在 int64 内表示（按 fp32 4 字节折算并留 4096 元素余量给对齐/pad），
+    // 否则乘法式判定会静默回绕。空 tensor（任一维为 0）乘积为 0，放行后走下方空 tensor 短路。
+    constexpr int64_t kNumelLimit = (std::numeric_limits<int64_t>::max() - 4096) / 4;
+    int64_t nonZeroDimProduct = 1;
+    for (size_t i = 0; i < 4; ++i) {
+        const int64_t dim = xOrigin.GetDim(i);
+        if (dim == 0) {
+            continue;
+        }
+        if (nonZeroDimProduct > kNumelLimit / dim) {
+            // 报「实际乘积」而不是上限；该乘积本身已溢出 int64，故以未求值的乘积式
+            // "accumulated * dim" 表述，避免为了打日志再算一次溢出乘法。
+            const std::string productExpr = std::to_string(nonZeroDimProduct) + " * " + std::to_string(dim);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                kOpName, "x", productExpr.c_str(),
+                ("The product of the non-zero dims of input x must not exceed " + std::to_string(kNumelLimit)).c_str());
+            return ge::GRAPH_FAILED;
+        }
+        nonZeroDimProduct *= dim;
+    }
 
     // shape 一致性：storageShape == originShape (单输入算子)
     if (xStorage.GetDimNum() != xOrigin.GetDimNum()) {
@@ -473,7 +494,9 @@ ge::graphStatus TilingForGNTrainingReduce(gert::TilingContext* context)
         int64_t idx = axisNum - 1;
         while (idx >= 0) {
             const int64_t axisSize = (idx == axisNum - 1) ? AlignUp(axisShape[idx], bsElem) : axisShape[idx];
-            if (product * axisSize > cachelineTmp) {
+            // 除法式比较
+            // x*y > c ⟺ x > c/y。
+            if (axisSize > cachelineTmp / product) {
                 break;
             }
             product *= axisSize;
@@ -531,7 +554,8 @@ ge::graphStatus TilingForGNTrainingReduce(gert::TilingContext* context)
         while (rSplitIdx > 1) {
             const int64_t axisSize = (rSplitIdx == lastR && isTailR) ? AlignUp(axisShape[rSplitIdx], bsElem) :
                                                                        axisShape[rSplitIdx];
-            if (axisSize * innerRProdAlign > rIMax) {
+            // 除法式比较
+            if (axisSize > rIMax / innerRProdAlign) {
                 break;
             }
             innerRProdAlign *= axisSize;
@@ -550,7 +574,8 @@ ge::graphStatus TilingForGNTrainingReduce(gert::TilingContext* context)
                 rUbFactorAlign = rUbFactor;
             } else {
                 rUbFactorAlign = AlignUp(rUbFactor, bsElem);
-                if (rUbFactorAlign * innerRProdAlign > rIMax) {
+                // 除法式比较
+                if (rUbFactorAlign > rIMax / innerRProdAlign) {
                     rUbFactor = AlignDown(rUbFactor, bsElem);
                     if (rUbFactor < 1) {
                         OP_LOGE(kOpName, "tiling fail: rUbFactor underflow after align-down");
@@ -588,7 +613,8 @@ ge::graphStatus TilingForGNTrainingReduce(gert::TilingContext* context)
             while (idx >= 0) {
                 const int64_t axisSize = (idx == axisNum - 1 && isTailA) ? AlignUp(axisShape[idx], bsElem) :
                                                                            axisShape[idx];
-                if (product * axisSize > aUnitMax) {
+                // 除法式比较
+                if (axisSize > aUnitMax / product) {
                     break;
                 }
                 product *= axisSize;

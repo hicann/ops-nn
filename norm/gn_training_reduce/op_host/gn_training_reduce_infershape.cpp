@@ -74,6 +74,17 @@ static ge::graphStatus InferShapeGNTrainingReduce(gert::InferShapeContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, sumShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, squareSumShape);
 
+    int64_t numGroups = kDefaultNumGroups;
+    const gert::RuntimeAttrs* attrs = context->GetAttrs();
+    if (attrs != nullptr && attrs->GetAttrPointer<int64_t>(0) != nullptr) {
+        numGroups = *attrs->GetAttrPointer<int64_t>(0);
+    }
+    if (numGroups < 1) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups", std::to_string(numGroups).c_str(),
+                                              "The attribute num_groups must be greater than or equal to 1");
+        return GRAPH_FAILED;
+    }
+
     // Unknown rank propagates to both outputs unchanged.
     if (IsUnknownRank(xShape)) {
         *sumShape = *xShape;
@@ -86,6 +97,18 @@ static ge::graphStatus InferShapeGNTrainingReduce(gert::InferShapeContext* conte
                                                  std::to_string(xShape->GetDimNum()).c_str(),
                                                  "The shape dim of input x must be 4");
         return GRAPH_FAILED;
+    }
+
+    for (size_t i = 0; i < kRank; ++i) {
+        const int64_t dim = xShape->GetDim(i);
+        if (dim < ge::UNKNOWN_DIM) {
+            const std::string dimName = "x[" + std::to_string(i) + "]";
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                context->GetNodeName(), dimName.c_str(), std::to_string(dim).c_str(),
+                "Only -1 (dynamic dim) is allowed as a negative dim; -2 marks unknown rank "
+                "and is only valid as x=[-2]");
+            return GRAPH_FAILED;
+        }
     }
 
     // Channel axis depends on the input layout (NCHW -> 1, NHWC -> 3).
@@ -114,18 +137,6 @@ static ge::graphStatus InferShapeGNTrainingReduce(gert::InferShapeContext* conte
                                                    "The origin format of output must be ND");
             return GRAPH_FAILED;
         }
-    }
-
-    // num_groups is optional with default 2; GE fills the default into the attrs.
-    int64_t numGroups = kDefaultNumGroups;
-    const gert::RuntimeAttrs* attrs = context->GetAttrs();
-    if (attrs != nullptr && attrs->GetAttrPointer<int64_t>(0) != nullptr) {
-        numGroups = *attrs->GetAttrPointer<int64_t>(0);
-    }
-    if (numGroups < 1) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups", std::to_string(numGroups).c_str(),
-                                              "The attribute num_groups must be greater than or equal to 1");
-        return GRAPH_FAILED;
     }
 
     const int64_t channel = xShape->GetDim(channelAxis);

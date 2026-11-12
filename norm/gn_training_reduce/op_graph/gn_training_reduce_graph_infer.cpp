@@ -45,8 +45,8 @@ static ge::graphStatus InferDataTypeForGNTrainingReduce(gert::InferDataTypeConte
     }
     const ge::DataType xDataType = context->GetInputDataType(0);
     if (xDataType != ge::DT_FLOAT16 && xDataType != ge::DT_FLOAT) {
-        OP_LOGE(context, "GNTrainingReduce only supports float16/float32 input, but got %d.",
-                static_cast<int32_t>(xDataType));
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", Ops::Base::ToString(xDataType).c_str(),
+                                  "float16 or float32");
         return ge::GRAPH_FAILED;
     }
 

@@ -41,7 +41,11 @@ __global__ __aicore__ void gn_training_reduce(GM_ADDR x, GM_ADDR sum, GM_ADDR sq
     } else if constexpr (isGroup) {
         GET_TILING_DATA_WITH_STRUCT(GNTrainingReduceTilingData, tilingData, tiling);
         GNTrainingReduceGroupKernel<DTYPE_X> op;
-        op.InitGroup(x, sum, squareSum, workspace, &tilingData, &pipe);
+        // 用户 workspace 基址：950 运行时在 workspace 头部保留 16MB 系统区
+        // （RESERVED_WORKSPACE = 16MB，与 host ws[0] 的 sysWorkspaceSize 对应，ffts 跨核
+        // 同步 mailbox 即在该区）。group 分支带 SyncAll 硬同步，直绑原始 workspace 会踩
+        // mailbox；GetUserWorkspace 换算到用户区起始（host 侧 ws[0] 已含系统段，无需改动）。
+        op.InitGroup(x, sum, squareSum, AscendC::GetUserWorkspace(workspace), &tilingData, &pipe);
         for (int32_t processIdx = 0; processIdx < N_REDUCES; processIdx++) {
             op.ProcessGroup(processIdx);
             AscendC::SyncAll();

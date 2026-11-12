@@ -389,4 +389,17 @@ TEST_F(GNTrainingReduceTilingTest, RejectNumGroupsZero)
     EXPECT_FALSE(RunTiling({2, 4, 3, 3}, ge::DT_FLOAT, ge::FORMAT_NCHW, 0).ok);
 }
 
+// Rejections: non-zero dim product gate (CODE.06/1 numel guard).  Both shapes are legal
+// rank-4 NCHW inputs (C divisible by num_groups, storage == origin, non-empty), but their
+// element count is far past kNumelLimit = (INT64_MAX - 4096) / 4 ≈ 2.3058e18, so every
+// downstream size / stride / UB-budget product would wrap int64.  The gate must reject
+// instead of returning a wrapped tiling.
+TEST_F(GNTrainingReduceTilingTest, RejectNonZeroDimProductOverflow)
+{
+    // 2^60 * 4 = 2^62 elements; the gate trips on the C axis.
+    EXPECT_FALSE(RunTiling({1LL << 60, 4, 1, 1}, ge::DT_FLOAT, ge::FORMAT_NCHW, 2).ok);
+    // 2^60 * 2 = 2^61 elements; the gate trips on the C axis right after the N axis.
+    EXPECT_FALSE(RunTiling({1LL << 60, 2, 1, 1}, ge::DT_FLOAT, ge::FORMAT_NCHW, 2).ok);
+}
+
 } // namespace GNTrainingReduceTilingUT
