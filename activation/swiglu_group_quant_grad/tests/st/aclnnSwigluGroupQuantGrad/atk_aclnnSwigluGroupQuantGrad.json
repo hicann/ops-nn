@@ -1,0 +1,1907 @@
+[
+    {
+      "id": 0,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            512
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            512
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 1,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            768
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            1536
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            768
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 2,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 3,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            4096
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 4,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            256
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            512
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            256
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 5,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            512
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            512
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 6,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            768
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            1536
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            768
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 7,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 8,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            4096
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp16",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 9,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            256
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            512
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            256
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 10,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            512
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            512
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 11,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            768
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1536
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            768
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 12,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1024
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 13,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            4096
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            2048
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    },
+    {
+      "id": 14,
+      "default_seed": null,
+      "name": "npu_swiglu_group_quant_grad",
+      "aclnn_name": "SwigluGroupQuantGrad",
+      "version": "v2.1",
+      "api": "pytorch",
+      "api_type": "function_aclnnSwigluGroupQuantGrad",
+      "aclnn_api_type": "aclnnfunction_aclnnSwigluGroupQuantGrad",
+      "backward": false,
+      "standard": {
+        "acc": {
+          "single_bm": {
+            "type": "high_performance"
+          }
+        },
+        "perf": "not_key",
+        "mem": 1.1
+      },
+      "outputs": null,
+      "inputs": [
+        {
+          "name": "grad_y",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            1280
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "x",
+          "type": "tensor",
+          "required": true,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            2560
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "weight",
+          "type": "tensor",
+          "required": false,
+          "dtype": "fp32",
+          "shape": [
+            385,
+            1
+          ],
+          "range_values": [
+            -2,
+            2
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "y_origin",
+          "type": "tensor",
+          "required": false,
+          "dtype": "bf16",
+          "shape": [
+            385,
+            1280
+          ],
+          "range_values": [
+            -5,
+            5
+          ],
+          "backward": true,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "group_index",
+          "type": "tensor",
+          "required": false,
+          "dtype": "int64",
+          "shape": [
+            384
+          ],
+          "range_values": [
+            1,
+            128
+          ],
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        },
+        {
+          "name": "clamp_limit",
+          "type": "attr",
+          "required": true,
+          "dtype": "double",
+          "shape": null,
+          "range_values": -1.0,
+          "backward": false,
+          "align_32B": null,
+          "outlier_values": null
+        }
+      ],
+      "acl_json": "",
+      "method_inputs": null,
+      "compute_times": null,
+      "save_name": null,
+      "uuid": null,
+      "downloaded": false,
+      "is_boundary": false,
+      "xrun_cs_name": null,
+      "xrun_data": null
+    }
+  ]
