@@ -29,7 +29,6 @@ const ge::AscendString PAD = "Pad";
 const ge::AscendString PADDINGS = "paddings";
 const ge::AscendString VALID_PADDING = "VALID";
 const ge::AscendString SAME_PADDING = "SAME";
-
 const std::string FUSION_NAME = "PadDepthwiseConv2dFusionPass";
 
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},

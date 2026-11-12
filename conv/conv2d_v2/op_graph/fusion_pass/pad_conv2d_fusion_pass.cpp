@@ -444,6 +444,13 @@ bool PadConv2dFusionPass::DiscoverAndCheckBackward()
 
 bool PadConv2dFusionPass::MeetRequirements(const GNode& convNode)
 {
+    // CanFuse 成环检测：融合会成环的候选不满足融合条件，跳过
+    std::vector<GNode> nodesBeforeFuse = {convNode, *padNode};
+    if (!CanFuseNodes(nodesBeforeFuse)) {
+        OP_LOGD(convDescInfo.nodeNameStr, "Candidate can not fuse, skip.");
+        return false;
+    }
+
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do PadConv2dFusionPass.");
     InitPlatform();
 
@@ -555,7 +562,6 @@ bool PadConv2dFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
 
     std::vector<GNode> nodesBeforeFuse = {convNode, *padNode};
     FUSION_PASS_CHECK_NOLOG(!ReportMatchNodes(nodesBeforeFuse, passContext), return false);
-    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     FUSION_PASS_CHECK_NOLOG(!HandleBackwardPath(*graph), return false);
     FUSION_PASS_CHECK_NOLOG(!UpdateCubeNodes(*graph, convNode), return false);

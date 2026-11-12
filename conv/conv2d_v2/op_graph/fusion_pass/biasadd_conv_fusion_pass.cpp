@@ -451,6 +451,13 @@ bool AABiasaddConvFusion::CheckMatchStructure(const GNode& matchNode)
 
 bool AABiasaddConvFusion::MeetRequirements(const GNode& convNode)
 {
+    // CanFuse 成环检测：融合会成环的候选不满足融合条件，跳过
+    std::vector<GNode> nodesBeforeFuse = {*addNode, convNode};
+    if (!CanFuseNodes(nodesBeforeFuse)) {
+        OP_LOGD(convDescInfo.nodeNameStr, "Candidate can not fuse, skip.");
+        return false;
+    }
+
     const char* candidateType = isReshapeMode ? (reshapeHasOtherConsumer ? "R dual-output" : "R single-output") :
                                                 (isReversedAdd ? "ordinary reversed" : "ordinary");
     OP_LOGD(FUSION_NAME, "Begin to check BiasaddConv fusion requirements, candidate is %s.", candidateType);
@@ -564,12 +571,8 @@ bool AABiasaddConvFusion::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode
     FUSION_PASS_CHECK(graph == nullptr, OP_LOGE(FUSION_NAME, "%s graph is nullptr.", convDescInfo.nodeNameStr.c_str()),
                       return false);
 
-    // Removed node first: the legacy pattern framework records the fused (removed)
-    // output node before the surviving conv, and the om graph keeps that order in
-    // _datadump_original_op_names/_original_op_attrs_in_fusion_process.
     std::vector<GNode> nodesBeforeFuse = {*addNode, convNode};
     FUSION_PASS_CHECK_NOLOG(!ReportMatchNodes(nodesBeforeFuse, passContext), return false);
-    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     FUSION_PASS_CHECK(!LinkBiasSourceToConv(*graph, convNode), OP_LOGE(FUSION_NAME, "Link bias source to conv failed."),
                       return false);

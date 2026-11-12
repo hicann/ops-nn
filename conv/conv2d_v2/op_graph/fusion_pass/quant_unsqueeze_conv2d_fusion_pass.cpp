@@ -122,6 +122,16 @@ bool QuantUnsqueezeConv2DFusionPass::CheckUnsqueezeDim() const
 
 bool QuantUnsqueezeConv2DFusionPass::MeetRequirements(const GNode& convNode)
 {
+    // CanFuse 成环检测：融合会成环的候选不满足融合条件，跳过
+    std::vector<GNode> nodesBeforeFuse = {*quantNode, *unsqueezeNode, convNode, *squeezeNode, *dequantNode};
+    if (broadcastFlag && broadcastNode != nullptr) {
+        nodesBeforeFuse.emplace_back(*broadcastNode);
+    }
+    if (!CanFuseNodes(nodesBeforeFuse)) {
+        OP_LOGD(convDescInfo.nodeNameStr, "Candidate can not fuse, skip.");
+        return false;
+    }
+
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do QuantUnsqueezeConv2DFusionPass.");
     FUSION_PASS_CHECK_NOLOG(!CheckSocCapability(), return false);
 
@@ -294,9 +304,7 @@ bool QuantUnsqueezeConv2DFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNod
     if (broadcastFlag && broadcastNode != nullptr) {
         nodesBeforeFuse.emplace_back(*broadcastNode);
     }
-
     FUSION_PASS_CHECK_NOLOG(!ReportMatchNodes(nodesBeforeFuse, passContext), return false);
-    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     FUSION_PASS_CHECK(!UpdateQuantUnsqueezeDesc(),
                       OP_LOGE(convDescInfo.nodeNameStr, "Update quant/unsqueeze desc failed."), return false);

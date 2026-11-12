@@ -5886,3 +5886,115 @@ TEST_F(AABiasaddConvFusionTest, twoBranchesFusedWithDumpMappingInherited)
     }
     ClearPlatform();
 }
+
+// ==========================================================================================
+// 成环候选（issue: while 循环体 conv1d+BiasAdd 融合成环）：filter 生产链来自 BiasAdd 输出下游，
+// {BiasAdd, Conv2D} 融合成单节点后经外部路径回到自身 -> CanFuse 拒绝。
+// 对齐老 pattern 框架语义：仅跳过该候选（GRAPH_NOT_CHANGED），不得整 pass FAILED。
+// ==========================================================================================
+TEST_F(AABiasaddConvFusionTest, conv2dBiasAddCycleCandidateSkip)
+{
+    SetUpFixpipePlatform();
+
+    std::vector<int64_t> dimsX{1, 56, 56, 64};
+    std::vector<int64_t> dimsFilter{64, 1, 1, 64};
+    std::vector<int64_t> dimsBias{64};
+    std::vector<int64_t> dimsOut{1, 28, 28, 64};
+
+    auto graphBuilder = es::EsGraphBuilder("conv2d_biasadd_cycle_skip");
+    auto x = graphBuilder.CreateInput(0, "x", DT_FLOAT, FORMAT_NHWC, dimsX);
+    auto bias = BuildConstNodeWithValue(graphBuilder, "bias_const", dimsBias, FORMAT_NHWC, DT_FLOAT);
+
+    auto filterSource = graphBuilder.CreateInput(1, "filter_src", DT_FLOAT, FORMAT_NHWC, dimsFilter);
+    auto filterOutput = BuildUnaryNode(graphBuilder, filterSource,
+                                       {"filter_square", "Square", dimsFilter, FORMAT_NHWC, DT_FLOAT});
+
+    auto convOutput = BuildConvNode(graphBuilder, "conv", x, filterOutput,
+                                    {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    auto convNode = convOutput.GetProducer();
+    SetOutputDesc(*convNode, 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+
+    auto biasaddOutput = BuildBiasAddNode(graphBuilder, "biasadd", convOutput, bias);
+    auto biasaddNode = biasaddOutput.GetProducer();
+    SetOutputDesc(*biasaddNode, 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+
+    // 成环：断开占位 filter 边，biasadd 输出 -> Square(输出 filter 形状) -> conv.filter
+    auto graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    GNode cycleNode = es::CompliantNodeBuilder(graph)
+                          .OpType("Square")
+                          .Name("cycle_filter")
+                          .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                          .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                          .Build();
+    es::AddEdgeAndUpdatePeerDesc(*graph, *biasaddNode, 0, cycleNode, 0);
+    SetOutputDesc(cycleNode, 0, dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto cycleOutput = es::EsTensorHolder(graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(cycleNode, 0));
+    ASSERT_EQ(graph->RemoveEdge(*filterOutput.GetProducer(), filterOutput.GetProducerOutIndex(), *convNode, 1),
+              GRAPH_SUCCESS);
+    es::AddEdgeAndUpdatePeerDesc(*graph, cycleNode, 0, *convNode, 1);
+
+    std::shared_ptr<Graph> graphPtr = graphBuilder.BuildAndReset({biasaddOutput});
+    RunPass(graphPtr, GRAPH_NOT_CHANGED);
+
+    EXPECT_EQ(CountNodes(graphPtr, "BiasAdd"), 1);
+    EXPECT_EQ(CountNodes(graphPtr, "Conv2D"), 1);
+
+    ClearPlatform();
+}
+
+// 成环候选 + 正常候选共存：正常链正常融合，成环链跳过，pass 整体 SUCCESS
+TEST_F(AABiasaddConvFusionTest, conv2dBiasAddCycleSkipWithNormalCandidate)
+{
+    SetUpFixpipePlatform();
+
+    std::vector<int64_t> dimsX{1, 56, 56, 64};
+    std::vector<int64_t> dimsFilter{64, 1, 1, 64};
+    std::vector<int64_t> dimsBias{64};
+    std::vector<int64_t> dimsOut{1, 28, 28, 64};
+
+    auto graphBuilder = es::EsGraphBuilder("conv2d_biasadd_cycle_with_normal");
+
+    auto x1 = graphBuilder.CreateInput(0, "x1", DT_FLOAT, FORMAT_NHWC, dimsX);
+    auto filter1 = BuildConstNode(graphBuilder, "filter1", dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto bias1 = BuildConstNodeWithValue(graphBuilder, "bias1", dimsBias, FORMAT_NHWC, DT_FLOAT);
+    auto conv1Output = BuildConvNode(graphBuilder, "conv1", x1, filter1,
+                                     {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    SetOutputDesc(*conv1Output.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto biasadd1Output = BuildBiasAddNode(graphBuilder, "biasadd1", conv1Output, bias1);
+    SetOutputDesc(*biasadd1Output.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+
+    auto x2 = graphBuilder.CreateInput(1, "x2", DT_FLOAT, FORMAT_NHWC, dimsX);
+    auto bias2 = BuildConstNodeWithValue(graphBuilder, "bias2", dimsBias, FORMAT_NHWC, DT_FLOAT);
+    auto filter2Source = graphBuilder.CreateInput(2, "filter2_src", DT_FLOAT, FORMAT_NHWC, dimsFilter);
+    auto filter2Output = BuildUnaryNode(graphBuilder, filter2Source,
+                                        {"filter2_square", "Square", dimsFilter, FORMAT_NHWC, DT_FLOAT});
+    auto conv2Output = BuildConvNode(graphBuilder, "conv2", x2, filter2Output,
+                                     {"Conv2D", {1, 2, 2, 1}, {1, 1, 1, 1}, "NHWC"});
+    SetOutputDesc(*conv2Output.GetProducer(), 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+    auto biasadd2Output = BuildBiasAddNode(graphBuilder, "biasadd2", conv2Output, bias2);
+    auto biasadd2Node = biasadd2Output.GetProducer();
+    SetOutputDesc(*biasadd2Node, 0, dimsOut, FORMAT_NHWC, DT_FLOAT);
+
+    auto graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+    GNode cycleNode = es::CompliantNodeBuilder(graph)
+                          .OpType("Square")
+                          .Name("cycle_filter2")
+                          .IrDefInputs({{"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                          .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                          .Build();
+    es::AddEdgeAndUpdatePeerDesc(*graph, *biasadd2Node, 0, cycleNode, 0);
+    SetOutputDesc(cycleNode, 0, dimsFilter, FORMAT_NHWC, DT_FLOAT);
+    auto cycleOutput = es::EsTensorHolder(graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(cycleNode, 0));
+    ASSERT_EQ(graph->RemoveEdge(*filter2Output.GetProducer(), filter2Output.GetProducerOutIndex(),
+                                *conv2Output.GetProducer(), 1),
+              GRAPH_SUCCESS);
+    es::AddEdgeAndUpdatePeerDesc(*graph, cycleNode, 0, *conv2Output.GetProducer(), 1);
+
+    std::shared_ptr<Graph> graphPtr = graphBuilder.BuildAndReset({biasadd1Output, biasadd2Output});
+    RunPass(graphPtr, SUCCESS);
+
+    EXPECT_EQ(CountNodes(graphPtr, "BiasAdd"), 1);
+    EXPECT_EQ(CountNodes(graphPtr, "Conv2D"), 2);
+
+    ClearPlatform();
+}

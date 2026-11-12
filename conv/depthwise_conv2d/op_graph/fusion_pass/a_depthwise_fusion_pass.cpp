@@ -47,6 +47,13 @@ void ADepthwiseFusionPass::InitMember()
 
 bool ADepthwiseFusionPass::MeetRequirements(const GNode& depthwiseNode)
 {
+    // CanFuse 成环检测：融合会成环的候选不满足融合条件，跳过
+    std::vector<GNode> nodesBeforeFuse = {depthwiseNode};
+    if (!CanFuseNodes(nodesBeforeFuse)) {
+        OP_LOGD(convDescInfo.nodeNameStr, "Candidate can not fuse, skip.");
+        return false;
+    }
+
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do ADepthwiseFusionPass.");
 
     auto filterShape = convDescInfo.filterDesc.GetOriginShape().GetDims();
@@ -89,7 +96,6 @@ bool ADepthwiseFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& depthwi
 
     std::vector<GNode> nodesBeforeFuse = {depthwiseNode};
     FUSION_PASS_CHECK_NOLOG(!ReportMatchNodes(nodesBeforeFuse, passContext), return false);
-    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     GNodePtr filterProducer = depthwiseNode.GetInDataNodesAndPortIndexs(FILTER_INPUT_INDEX).first;
     FUSION_PASS_CHECK(

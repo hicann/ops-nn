@@ -198,8 +198,22 @@ ge::Status Conv2DQuantProcessFusionPass::GetQuantProcessMode(const ge::GNodePtr&
 
 bool Conv2DQuantProcessFusionPass::MeetRequirements(const ge::GNode& convNode)
 {
-    (void)convNode;
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do Conv2DQuantProcessFusionPass.");
+    // CanFuse 成环检测：融合会成环的候选不满足融合条件，跳过
+    std::vector<ge::GNode> nodesBeforeFuse = {convNode};
+    if (quantNode != nullptr) {
+        nodesBeforeFuse.emplace_back(*quantNode);
+    }
+    if (padNode != nullptr) {
+        nodesBeforeFuse.emplace_back(*padNode);
+    }
+    if (dequantNode != nullptr) {
+        nodesBeforeFuse.emplace_back(*dequantNode);
+    }
+    if (!CanFuseNodes(nodesBeforeFuse)) {
+        OP_LOGD(convDescInfo.nodeNameStr, "Candidate can not fuse, skip.");
+        return false;
+    }
     if (quantNode == nullptr || dequantNode == nullptr) {
         return false;
     }
@@ -459,7 +473,6 @@ bool Conv2DQuantProcessFusionPass::ConvFusionReplaceImpl(ge::GraphPtr& graph, ge
     if (dequantNode != nullptr) {
         nodesBeforeFuse.emplace_back(*dequantNode);
     }
-    FUSION_PASS_CHECK_NOLOG(!CanFuseNodes(nodesBeforeFuse), return false);
 
     auto cubeNodePtr = dequantNode->GetInDataNodesAndPortIndexs(INPUT_INDEX_0).first;
     FUSION_PASS_CHECK(cubeNodePtr == nullptr,
