@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "acl/acl.h"
-#include "aclnnop/aclnn_mish_backward.h"
+#include "aclnnop/aclnn_mish_backward_v2.h"
 
 #define CHECK_RET(cond, expr) \
     do {                      \
@@ -104,7 +104,7 @@ int RunCase(aclrtStream stream)
     CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(outHost, shape, &outDevice, ACL_FLOAT, &outTensor);
     CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
-    ret = aclnnMishBackwardGetWorkspaceSize(gradTensor, xTensor, outTensor, &workspaceSize, &executor);
+    ret = aclnnMishBackwardV2GetWorkspaceSize(gradTensor, xTensor, outTensor, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, std::printf("GetWorkspaceSize failed: %d\n", ret); goto cleanup);
 
     if (workspaceSize > 0) {
@@ -112,8 +112,8 @@ int RunCase(aclrtStream stream)
         CHECK_RET(ret == ACL_SUCCESS, std::printf("workspace malloc failed: %d\n", ret); goto cleanup);
     }
 
-    ret = aclnnMishBackward(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, std::printf("aclnnMishBackward failed: %d\n", ret); goto cleanup);
+    ret = aclnnMishBackwardV2(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, std::printf("aclnnMishBackwardV2 failed: %d\n", ret); goto cleanup);
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, std::printf("aclrtSynchronizeStream failed: %d\n", ret); goto cleanup);
 

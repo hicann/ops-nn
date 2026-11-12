@@ -21,9 +21,9 @@ $$
 y = \frac{x}{1 + e^{-\text{scale} \times x}}
 $$
 
-- 目录 `experimental/activation/swish_v2` 对外导出 `aclnnSwish` 两段式 ACLNN 接口。
+- 目录 `experimental/activation/swish_v2` 对外导出 `aclnnSwishV2` 两段式 ACLNN 接口。
 - 当前仅导出普通接口，未导出任何 inplace 接口。
-- `op_host/op_api/aclnn_swish.cpp` 是对外 ACLNN 接口入口。
+- `op_host/op_api/aclnn_swish_v2.cpp` 是对外 ACLNN 接口入口。
 - `op_host/op_api/swish.h` 和 `op_host/op_api/swish.cpp` 提供内部 `l0op::SwishV2` 封装，当前由 ACLNN 接口直接调用。
 - `betaOptional` 为空时按 `scale = 1.0f` 执行。
 
@@ -40,21 +40,21 @@ $$
 当前 experimental Swish 提供两段式 ACLNN 接口：
 
 ```cpp
-aclnnStatus aclnnSwishGetWorkspaceSize(
+aclnnStatus aclnnSwishV2GetWorkspaceSize(
     const aclTensor *self,
     const aclScalar *betaOptional,
     aclTensor *out,
     uint64_t *workspaceSize,
     aclOpExecutor **executor);
 
-aclnnStatus aclnnSwish(
+aclnnStatus aclnnSwishV2(
     void *workspace,
     uint64_t workspaceSize,
     aclOpExecutor *executor,
     const aclrtStream stream);
 ```
 
-详细参数和返回值说明见 [docs/aclnnSwish.md](docs/aclnnSwish.md)。
+详细参数和返回值说明见 [docs/aclnnSwishV2.md](docs/aclnnSwishV2.md)。
 
 ## 参数说明
 
@@ -116,12 +116,12 @@ aclnnStatus aclnnSwish(
 
 | 路径 | 说明 |
 | :--- | :--- |
-| [examples/test_aclnn_swish.cpp](examples/test_aclnn_swish.cpp) | `aclnnSwish` 两段式调用示例。 |
+| [examples/test_aclnn_swish_v2.cpp](examples/test_aclnn_swish_v2.cpp) | `aclnnSwishV2` 两段式调用示例。 |
 | [examples/run.sh](examples/run.sh) | 编译并运行 example 的脚本。 |
-| [docs/aclnnSwish.md](docs/aclnnSwish.md) | `aclnnSwish` 接口文档。 |
-| [tests/ut/op_api/test_aclnn_swish.cpp](tests/ut/op_api/test_aclnn_swish.cpp) | `op_api` 单元测试。 |
-| [tests/st/aclnnSwish/all_aclnnSwish.json](tests/st/aclnnSwish/all_aclnnSwish.json) | 适用于 ATK 的小规模标准化测试集。 |
-| [tests/st/aclnnSwish/executor_aclnnSwish.py](tests/st/aclnnSwish/executor_aclnnSwish.py) | ATK CPU benchmark 执行器。 |
+| [docs/aclnnSwishV2.md](docs/aclnnSwishV2.md) | `aclnnSwishV2` 接口文档。 |
+| [tests/ut/op_api/test_aclnn_swish_v2.cpp](tests/ut/op_api/test_aclnn_swish_v2.cpp) | `op_api` 单元测试。 |
+| [tests/st/aclnnSwishV2/all_aclnnSwishV2.json](tests/st/aclnnSwishV2/all_aclnnSwishV2.json) | 适用于 ATK 的小规模标准化测试集。 |
+| [tests/st/aclnnSwishV2/executor_aclnnSwishV2.py](tests/st/aclnnSwishV2/executor_aclnnSwishV2.py) | ATK CPU benchmark 执行器。 |
 
 ## Example 运行
 
@@ -153,6 +153,6 @@ source /root/src/kernel/ascend-kernel/.venv/bin/activate
 cd /root/src/testcase
 atk node --backend npu --devices 2 \
   node --backend cpu task --task accuracy \
-  -c <ops-nn-repo>/experimental/activation/swish_v2/tests/st/aclnnSwish/all_aclnnSwish.json \
-  -p <ops-nn-repo>/experimental/activation/swish_v2/tests/st/aclnnSwish/executor_aclnnSwish.py
+  -c <ops-nn-repo>/experimental/activation/swish_v2/tests/st/aclnnSwishV2/all_aclnnSwishV2.json \
+  -p <ops-nn-repo>/experimental/activation/swish_v2/tests/st/aclnnSwishV2/executor_aclnnSwishV2.py
 ```

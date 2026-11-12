@@ -26,8 +26,35 @@
 using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(IndexFillD);
-OP_TYPE_REGISTER(IndexFill);
-OP_TYPE_REGISTER(InplaceIndexFill);
+
+// 框架的 OP_TYPE_REGISTER 除生成 <OpType>OpTypeId() 外，还会定义一个全局的
+// <OpType>_kernelName_Be_Defined_Multi_Times__ 变量用于发现重复注册。IndexFill / InplaceIndexFill 已由
+// experimental/index/index_fill 注册，而本文件的两个 *ByTensor 接口仍按历史行为下发这两个 OpType，
+// 若此处再次使用 OP_TYPE_REGISTER，experimental 全量编译时会与 index_fill 重复定义上述全局变量
+// （multiple definition of 'l0op::IndexFill_kernelName_Be_Defined_Multi_Times__'）。
+// 这里只复用其 OpType 注册逻辑（资源表为 TU 内链接，不产生重复符号），不再定义保护变量。
+#ifdef ACLNN_WITH_BINARY
+#define OPS_NN_REUSE_OP_TYPE_ID(kernelName)                                                          \
+    OP_RESOURCE(kernelName);                                                                         \
+    [[maybe_unused]] inline uint32_t kernelName##OpTypeId()                                          \
+    {                                                                                                \
+        op::GenInternalOpTypeId();                                                                   \
+        static uint32_t kernelName##OpTypeId = op::GenOpTypeId(#kernelName, kernelName##_RESOURCES); \
+        return kernelName##OpTypeId;                                                                 \
+    }
+#else
+#define OPS_NN_REUSE_OP_TYPE_ID(kernelName)                                  \
+    [[maybe_unused]] inline uint32_t kernelName##OpTypeId()                  \
+    {                                                                        \
+        op::GenInternalOpTypeId();                                           \
+        static uint32_t kernelName##OpTypeId = op::GenOpTypeId(#kernelName); \
+        return kernelName##OpTypeId;                                         \
+    }
+#endif
+
+OPS_NN_REUSE_OP_TYPE_ID(IndexFill);
+OPS_NN_REUSE_OP_TYPE_ID(InplaceIndexFill);
+#undef OPS_NN_REUSE_OP_TYPE_ID
 
 // AICORE
 static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
@@ -70,27 +97,28 @@ const aclTensor* IndexFillD(const aclTensor* self, const aclTensor* assist1, con
     }
 }
 
-const aclTensor* IndexFill(const aclTensor* self, const aclTensor* indices, const aclTensor* value, int64_t dim,
-                           aclOpExecutor* executor)
+const aclTensor* IndexFillDByTensor(const aclTensor* self, const aclTensor* indices, const aclTensor* value,
+                                    int64_t dim, aclOpExecutor* executor)
 {
     auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-    L0_DFX(IndexFill, self, indices, value);
+    L0_DFX(IndexFillDByTensor, self, indices, value);
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将indexfill算子加入任务队列
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(IndexFill, OP_INPUT(self, indices, value), OP_OUTPUT(out), OP_ATTR(dim));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexFillAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexFillDByTensor ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return out;
 }
 
-const aclTensor* InplaceIndexFill(const aclTensor* self, const aclTensor* indices, const aclTensor* value, int64_t dim,
-                                  aclOpExecutor* executor)
+const aclTensor* InplaceIndexFillDByTensor(const aclTensor* self, const aclTensor* indices, const aclTensor* value,
+                                           int64_t dim, aclOpExecutor* executor)
 {
-    L0_DFX(InplaceIndexFill, self, indices, value);
+    L0_DFX(InplaceIndexFillDByTensor, self, indices, value);
     // 使用框架宏 ADD_TO_LAUNCHER_LIST_AICORE，将inplaceindexfill算子加入任务队列
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(InplaceIndexFill, OP_INPUT(self, indices, value), OP_OUTPUT(self),
                                            OP_ATTR(dim));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexFillAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "InplaceIndexFillDByTensor ADD_TO_LAUNCHER_LIST_AICORE failed."),
              return nullptr);
     return self;
 }

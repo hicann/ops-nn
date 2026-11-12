@@ -16,9 +16,9 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class EluDef : public OpDef {
+class Elu : public OpDef {
 public:
-    explicit EluDef(const char* name) : OpDef(name)
+    explicit Elu(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -46,5 +46,5 @@ public:
     }
 };
 
-OP_ADD(EluDef);
+OP_ADD(Elu);
 } // namespace ops

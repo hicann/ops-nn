@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "acl/acl.h"
-#include "aclnnop/aclnn_hardsigmoid_backward.h"
+#include "aclnnop/aclnn_hardsigmoid_backward_v3.h"
 
 namespace {
 
@@ -141,7 +141,7 @@ int main()
         goto CLEANUP;
     }
 
-    ret = aclnnHardsigmoidBackwardGetWorkspaceSize(grad_tensor, self_tensor, out_tensor, &workspace_size, &executor);
+    ret = aclnnHardsigmoidBackwardV3GetWorkspaceSize(grad_tensor, self_tensor, out_tensor, &workspace_size, &executor);
     if (ret != ACL_SUCCESS) {
         exitCode = ret;
         goto CLEANUP;
@@ -154,7 +154,7 @@ int main()
         }
     }
 
-    ret = aclnnHardsigmoidBackward(workspace, workspace_size, executor, stream);
+    ret = aclnnHardsigmoidBackwardV3(workspace, workspace_size, executor, stream);
     if (ret != ACL_SUCCESS) {
         exitCode = ret;
         goto CLEANUP;

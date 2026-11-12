@@ -25,8 +25,8 @@ $$
 \end{cases}
 $$
 
-- 目录 `experimental/activation/hard_sigmoid_grad_v3` 对外导出 `aclnnHardsigmoidBackward` 两段式 ACLNN 接口。
-- `op_host/op_api/aclnn_hardsigmoid_backward.cpp` 是对外 ACLNN 接口入口。
+- 目录 `experimental/activation/hard_sigmoid_grad_v3` 对外导出 `aclnnHardsigmoidBackwardV3` 两段式 ACLNN 接口。
+- `op_host/op_api/aclnn_hardsigmoid_backward_v3.cpp` 是对外 ACLNN 接口入口。
 - `op_host/op_api/hard_sigmoid_grad_v3.h` 和 `op_host/op_api/hard_sigmoid_grad_v3.cpp` 提供内部 `l0op::HardSigmoidGradV3` 封装，当前由 ACLNN 接口直接调用。
 - `gradOutput` 和 `self` 允许混合精度输入，接口内部先按 `PromoteType(gradOutput, self)` 对齐计算 dtype。
 - 当提升后的 dtype 为 `FLOAT16` 时，接口内部会进一步提升到 `FLOAT32` 计算，再 cast 回输出 dtype。
@@ -44,21 +44,21 @@ $$
 当前 experimental HardsigmoidBackward 提供两段式 ACLNN 接口：
 
 ```cpp
-aclnnStatus aclnnHardsigmoidBackwardGetWorkspaceSize(
+aclnnStatus aclnnHardsigmoidBackwardV3GetWorkspaceSize(
     const aclTensor *gradOutput,
     const aclTensor *self,
     aclTensor *out,
     uint64_t *workspaceSize,
     aclOpExecutor **executor);
 
-aclnnStatus aclnnHardsigmoidBackward(
+aclnnStatus aclnnHardsigmoidBackwardV3(
     void *workspace,
     uint64_t workspaceSize,
     aclOpExecutor *executor,
     const aclrtStream stream);
 ```
 
-详细参数和返回值说明见 [docs/aclnnHardsigmoidBackward.md](docs/aclnnHardsigmoidBackward.md)。
+详细参数和返回值说明见 [docs/aclnnHardsigmoidBackwardV3.md](docs/aclnnHardsigmoidBackwardV3.md)。
 
 ## 参数说明
 
@@ -128,12 +128,12 @@ aclnnStatus aclnnHardsigmoidBackward(
 
 | 路径 | 说明 |
 | :--- | :--- |
-| [examples/test_aclnn_hard_sigmoid_grad_v3.cpp](examples/test_aclnn_hard_sigmoid_grad_v3.cpp) | `aclnnHardsigmoidBackward` 两段式调用示例。 |
+| [examples/test_aclnn_hard_sigmoid_grad_v3.cpp](examples/test_aclnn_hard_sigmoid_grad_v3.cpp) | `aclnnHardsigmoidBackwardV3` 两段式调用示例。 |
 | [examples/run.sh](examples/run.sh) | 编译并运行 example 的脚本。 |
-| [docs/aclnnHardsigmoidBackward.md](docs/aclnnHardsigmoidBackward.md) | `aclnnHardsigmoidBackward` 接口文档。 |
-| [tests/ut/op_api/test_aclnn_hardsigmoid_backward.cpp](tests/ut/op_api/test_aclnn_hardsigmoid_backward.cpp) | `op_api` 单元测试。 |
-| [tests/st/aclnnHardsigmoidBackward/all_aclnnHardsigmoidBackward.json](tests/st/aclnnHardsigmoidBackward/all_aclnnHardsigmoidBackward.json) | 适用于 ATK 的小规模标准化测试集。 |
-| [tests/st/aclnnHardsigmoidBackward/executor_aclnnHardsigmoidBackward.py](tests/st/aclnnHardsigmoidBackward/executor_aclnnHardsigmoidBackward.py) | ATK CPU benchmark 执行器。 |
+| [docs/aclnnHardsigmoidBackwardV3.md](docs/aclnnHardsigmoidBackwardV3.md) | `aclnnHardsigmoidBackwardV3` 接口文档。 |
+| [tests/ut/op_api/test_aclnn_hardsigmoid_backward_v3.cpp](tests/ut/op_api/test_aclnn_hardsigmoid_backward_v3.cpp) | `op_api` 单元测试。 |
+| [tests/st/aclnnHardsigmoidBackwardV3/all_aclnnHardsigmoidBackwardV3.json](tests/st/aclnnHardsigmoidBackwardV3/all_aclnnHardsigmoidBackwardV3.json) | 适用于 ATK 的小规模标准化测试集。 |
+| [tests/st/aclnnHardsigmoidBackwardV3/executor_aclnnHardsigmoidBackwardV3.py](tests/st/aclnnHardsigmoidBackwardV3/executor_aclnnHardsigmoidBackwardV3.py) | ATK CPU benchmark 执行器。 |
 
 ## Example 运行
 
@@ -165,6 +165,6 @@ source /root/src/kernel/ascend-kernel/.venv/bin/activate
 cd <testcase-repo>
 atk node --backend npu --devices 2 \
   node --backend cpu task --task accuracy \
-  -c <ops-nn-repo>/experimental/activation/hard_sigmoid_grad_v3/tests/st/aclnnHardsigmoidBackward/all_aclnnHardsigmoidBackward.json \
-  -p <ops-nn-repo>/experimental/activation/hard_sigmoid_grad_v3/tests/st/aclnnHardsigmoidBackward/executor_aclnnHardsigmoidBackward.py
+  -c <ops-nn-repo>/experimental/activation/hard_sigmoid_grad_v3/tests/st/aclnnHardsigmoidBackwardV3/all_aclnnHardsigmoidBackwardV3.json \
+  -p <ops-nn-repo>/experimental/activation/hard_sigmoid_grad_v3/tests/st/aclnnHardsigmoidBackwardV3/executor_aclnnHardsigmoidBackwardV3.py
 ```

@@ -97,7 +97,7 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_index_fill_tensor](./examples/test_aclnn_index_fill_tensor.cpp) | 通过[aclnnIndexFillTensor](./docs/aclnnIndexFillTensor&aclnnInplaceIndexFillTensor.md)接口方式调用IndexFillD算子。 |
+| aclnn调用 | [test_aclnn_index_fill_tensor_d](./examples/test_aclnn_index_fill_tensor_d.cpp) | 通过[aclnnIndexFillTensorD](./docs/aclnnIndexFillTensorD&aclnnInplaceIndexFillTensorD.md)接口方式调用IndexFillD算子。 |
 
 ## 贡献说明
 

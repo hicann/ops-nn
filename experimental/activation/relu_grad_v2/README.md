@@ -26,8 +26,8 @@ gradOutput, & self = \mathrm{NaN}\ \text{且 dtype 为浮点类型} \\
 \end{cases}
 $$
 
-- 目录 `experimental/activation/relu_grad_v2` 对外导出 `aclnnThresholdBackward` 两段式 ACLNN 接口。
-- `op_host/op_api/aclnn_threshold_backward.cpp` 是对外 ACLNN 接口入口。
+- 目录 `experimental/activation/relu_grad_v2` 对外导出 `aclnnReluGradV2` 两段式 ACLNN 接口。
+- `op_host/op_api/aclnn_relu_grad_v2.cpp` 是对外 ACLNN 接口入口。
 - `op_host/op_api/relu_grad_v2.h` 和 `op_host/op_api/relu_grad_v2.cpp` 提供内部 `l0op::ReluGradV2` 封装，当前由 ACLNN 接口直接调用。
 - 当前实现仅接受 `threshold == 0`，与 ReLU backward 语义保持一致。
 
@@ -44,7 +44,7 @@ $$
 当前 experimental ThresholdBackward 提供两段式 ACLNN 接口：
 
 ```cpp
-aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(
+aclnnStatus aclnnReluGradV2GetWorkspaceSize(
     const aclTensor *gradOutput,
     const aclTensor *self,
     const aclScalar *threshold,
@@ -52,14 +52,14 @@ aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(
     uint64_t *workspaceSize,
     aclOpExecutor **executor);
 
-aclnnStatus aclnnThresholdBackward(
+aclnnStatus aclnnReluGradV2(
     void *workspace,
     uint64_t workspaceSize,
     aclOpExecutor *executor,
     const aclrtStream stream);
 ```
 
-详细参数和返回值说明见 [docs/aclnnThresholdBackward.md](docs/aclnnThresholdBackward.md)。
+详细参数和返回值说明见 [docs/aclnnReluGradV2.md](docs/aclnnReluGradV2.md)。
 
 ## 参数说明
 
@@ -129,12 +129,12 @@ aclnnStatus aclnnThresholdBackward(
 
 | 路径 | 说明 |
 | :--- | :--- |
-| [examples/test_aclnn_relu_grad_v2.cpp](examples/test_aclnn_relu_grad_v2.cpp) | `aclnnThresholdBackward` 两段式调用示例。 |
+| [examples/test_aclnn_relu_grad_v2.cpp](examples/test_aclnn_relu_grad_v2.cpp) | `aclnnReluGradV2` 两段式调用示例。 |
 | [examples/run.sh](examples/run.sh) | 编译并运行 example 的脚本。 |
-| [docs/aclnnThresholdBackward.md](docs/aclnnThresholdBackward.md) | `aclnnThresholdBackward` 接口文档。 |
-| [tests/ut/op_api/test_aclnn_threshold_backward.cpp](tests/ut/op_api/test_aclnn_threshold_backward.cpp) | `op_api` 单元测试。 |
-| [tests/st/aclnnThresholdBackward/all_aclnnThresholdBackward.json](tests/st/aclnnThresholdBackward/all_aclnnThresholdBackward.json) | 适用于 ATK 的小规模标准化测试集。 |
-| [tests/st/aclnnThresholdBackward/executor_aclnnThresholdBackward.py](tests/st/aclnnThresholdBackward/executor_aclnnThresholdBackward.py) | ATK CPU benchmark 执行器。 |
+| [docs/aclnnReluGradV2.md](docs/aclnnReluGradV2.md) | `aclnnReluGradV2` 接口文档。 |
+| [tests/ut/op_api/test_aclnn_relu_grad_v2.cpp](tests/ut/op_api/test_aclnn_relu_grad_v2.cpp) | `op_api` 单元测试。 |
+| [tests/st/aclnnReluGradV2/all_aclnnReluGradV2.json](tests/st/aclnnReluGradV2/all_aclnnReluGradV2.json) | 适用于 ATK 的小规模标准化测试集。 |
+| [tests/st/aclnnReluGradV2/executor_aclnnReluGradV2.py](tests/st/aclnnReluGradV2/executor_aclnnReluGradV2.py) | ATK CPU benchmark 执行器。 |
 
 ## Example 运行
 
@@ -166,6 +166,6 @@ source /root/src/kernel/ascend-kernel/.venv/bin/activate
 cd /root/src/testcase
 atk node --backend npu --devices 2 \
   node --backend cpu task --task accuracy \
-  -c ./experimental/activation/relu_grad_v2/tests/st/aclnnThresholdBackward/all_aclnnThresholdBackward.json \
-  -p ./experimental/activation/relu_grad_v2/tests/st/aclnnThresholdBackward/executor_aclnnThresholdBackward.py
+  -c ./experimental/activation/relu_grad_v2/tests/st/aclnnReluGradV2/all_aclnnReluGradV2.json \
+  -p ./experimental/activation/relu_grad_v2/tests/st/aclnnReluGradV2/executor_aclnnReluGradV2.py
 ```

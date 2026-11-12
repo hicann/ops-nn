@@ -183,7 +183,7 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalId
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);

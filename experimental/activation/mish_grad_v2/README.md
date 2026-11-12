@@ -14,7 +14,7 @@
 ## 功能说明
 
 - 算子功能：计算 Mish 的反向梯度。
-- 目录 `experimental/activation/mish_grad_v2` 复用 `ascend-kernel/csrc/ops/mish_grad` 中已经验证的 AscendC 实现，目录名保留 `v2` 仅用于区分新实现，对外导出的 ACLNN 接口仍为 `aclnnMishBackward`。
+- 目录 `experimental/activation/mish_grad_v2` 复用 `ascend-kernel/csrc/ops/mish_grad` 中已经验证的 AscendC 实现，目录名保留 `v2` 仅用于区分新实现，对外导出的 ACLNN 接口仍为 `aclnnMishBackwardV2`。
 - `op_host/op_api/aclnn_mish_backward_v2.cpp` 是对外 ACLNN 两段式接口入口。
 - `op_host/op_api/mish_grad_v2.h` 和 `op_host/op_api/mish_grad_v2.cpp` 提供内部 `l0op::MishGradV2` 封装。
 
@@ -41,21 +41,21 @@ $$
 ### 函数原型
 
 ```cpp
-aclnnStatus aclnnMishBackwardGetWorkspaceSize(
+aclnnStatus aclnnMishBackwardV2GetWorkspaceSize(
     const aclTensor *gradOutput,
     const aclTensor *self,
     aclTensor *gradInput,
     uint64_t *workspaceSize,
     aclOpExecutor **executor);
 
-aclnnStatus aclnnMishBackward(
+aclnnStatus aclnnMishBackwardV2(
     void *workspace,
     uint64_t workspaceSize,
     aclOpExecutor *executor,
     const aclrtStream stream);
 ```
 
-详细参数和返回值说明见 [docs/aclnnMishBackward.md](docs/aclnnMishBackward.md)。
+详细参数和返回值说明见 [docs/aclnnMishBackwardV2.md](docs/aclnnMishBackwardV2.md)。
 
 ## 参数说明
 
@@ -112,10 +112,10 @@ aclnnStatus aclnnMishBackward(
 
 | 路径 | 说明 |
 | :--- | :--- |
-| [examples/test_aclnn_mish_grad_v2.cpp](examples/test_aclnn_mish_grad_v2.cpp) | `aclnnMishBackward` 两段式调用示例。 |
+| [examples/test_aclnn_mish_grad_v2.cpp](examples/test_aclnn_mish_grad_v2.cpp) | `aclnnMishBackwardV2` 两段式调用示例。 |
 | [examples/run.sh](examples/run.sh) | 编译并运行 example 的脚本。 |
-| [docs/aclnnMishBackward.md](docs/aclnnMishBackward.md) | `aclnnMishBackward` 接口文档。 |
-| [tests/ut/op_host/test_aclnn_mish_backward.cpp](tests/ut/op_host/test_aclnn_mish_backward.cpp) | `op_api` 单元测试。 |
+| [docs/aclnnMishBackwardV2.md](docs/aclnnMishBackwardV2.md) | `aclnnMishBackwardV2` 接口文档。 |
+| [tests/ut/op_host/test_aclnn_mish_backward_v2.cpp](tests/ut/op_host/test_aclnn_mish_backward_v2.cpp) | `op_api` 单元测试。 |
 
 ## Example 运行
 

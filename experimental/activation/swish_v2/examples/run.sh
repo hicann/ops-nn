@@ -21,13 +21,13 @@ BUILD_DIR="${SCRIPT_DIR}/build"
 mkdir -p "${BUILD_DIR}"
 
 g++ -std=c++17 -O2 \
-    "${SCRIPT_DIR}/test_aclnn_swish.cpp" \
+    "${SCRIPT_DIR}/test_aclnn_swish_v2.cpp" \
     -I"${CANN_ROOT}/aarch64-linux/include" \
     -I"${CANN_ROOT}/opp/vendors/customize_nn/op_api/include" \
     -L"${CANN_ROOT}/lib64" \
     -L"${CANN_ROOT}/opp/vendors/customize_nn/op_api/lib" \
     -Wl,-rpath,"${CANN_ROOT}/lib64:${CANN_ROOT}/opp/vendors/customize_nn/op_api/lib" \
     -lcust_opapi -lnnopbase -lascendcl \
-    -o "${BUILD_DIR}/test_aclnn_swish"
+    -o "${BUILD_DIR}/test_aclnn_swish_v2"
 
-"${BUILD_DIR}/test_aclnn_swish"
+"${BUILD_DIR}/test_aclnn_swish_v2"

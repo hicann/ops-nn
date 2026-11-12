@@ -110,21 +110,21 @@ static aclnnStatus ExecMishBackwardV2GetWorkspaceSize(const aclTensor* grad, con
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnMishBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self, aclTensor* gradInput,
-                                              uint64_t* workspaceSize, aclOpExecutor** executor)
+aclnnStatus aclnnMishBackwardV2GetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
+                                                aclTensor* gradInput, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     const aclTensor* grad = gradOutput;
     const aclTensor* x = self;
     aclTensor* xGrad = gradInput;
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    L2_DFX_PHASE_1(aclnnMishBackward, DFX_IN(grad, x), DFX_OUT(xGrad));
+    L2_DFX_PHASE_1(aclnnMishBackwardV2, DFX_IN(grad, x), DFX_OUT(xGrad));
     return ExecMishBackwardV2GetWorkspaceSize(grad, x, xGrad, workspaceSize, executor);
 }
 
-aclnnStatus aclnnMishBackward(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                              const aclrtStream stream)
+aclnnStatus aclnnMishBackwardV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                const aclrtStream stream)
 {
-    L2_DFX_PHASE_2(aclnnMishBackward);
+    L2_DFX_PHASE_2(aclnnMishBackwardV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 

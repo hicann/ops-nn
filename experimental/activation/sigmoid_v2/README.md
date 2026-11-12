@@ -1,4 +1,4 @@
-# Sigmoid
+# SigmoidV2
 
 ## 产品支持情况
 
@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入 Tensor 完成 Sigmoid 运算。
+- 算子功能：对输入 Tensor 完成 Sigmoid 运算。算子名为 `SigmoidV2`，对外 ACLNN 接口为 `aclnnSigmoidV2` / `aclnnInplaceSigmoidV2`。
 
 计算公式：
 
@@ -21,9 +21,9 @@ $$
 out = \frac{1}{1 + e^{-input}}
 $$
 
-- 目录 `experimental/activation/sigmoid_v2` 对外导出 `aclnnSigmoid` 和 `aclnnInplaceSigmoid` 两段式 ACLNN 接口。
-- `op_host/op_api/aclnn_sigmoid.cpp` 是对外 ACLNN 接口入口。
-- `op_host/op_api/sigmoid.h` 和 `op_host/op_api/sigmoid.cpp` 提供内部 `l0op::Sigmoid` 封装，当前由 ACLNN 接口直接调用。
+- 目录 `experimental/activation/sigmoid_v2` 对外导出 `aclnnSigmoidV2` 和 `aclnnInplaceSigmoidV2` 两段式 ACLNN 接口。
+- `op_host/op_api/aclnn_sigmoid_v2.cpp` 是对外 ACLNN 接口入口。
+- `op_host/op_api/sigmoid_v2.h` 和 `op_host/op_api/sigmoid_v2.cpp` 提供内部 `l0op::SigmoidV2` 封装，当前由 ACLNN 接口直接调用。
 
 ## 调用方式
 
@@ -36,16 +36,16 @@ $$
 
 ### 函数原型
 
-当前 experimental Sigmoid 提供两段式 ACLNN 接口：
+当前 experimental SigmoidV2 提供两段式 ACLNN 接口：
 
 ```cpp
-aclnnStatus aclnnSigmoidGetWorkspaceSize(
+aclnnStatus aclnnSigmoidV2GetWorkspaceSize(
     const aclTensor *self,
     aclTensor *out,
     uint64_t *workspaceSize,
     aclOpExecutor **executor);
 
-aclnnStatus aclnnSigmoid(
+aclnnStatus aclnnSigmoidV2(
     void *workspace,
     uint64_t workspaceSize,
     aclOpExecutor *executor,
@@ -55,19 +55,19 @@ aclnnStatus aclnnSigmoid(
 原地版本接口如下：
 
 ```cpp
-aclnnStatus aclnnInplaceSigmoidGetWorkspaceSize(
+aclnnStatus aclnnInplaceSigmoidV2GetWorkspaceSize(
     aclTensor *selfRef,
     uint64_t *workspaceSize,
     aclOpExecutor **executor);
 
-aclnnStatus aclnnInplaceSigmoid(
+aclnnStatus aclnnInplaceSigmoidV2(
     void *workspace,
     uint64_t workspaceSize,
     aclOpExecutor *executor,
     const aclrtStream stream);
 ```
 
-详细参数和返回值说明见 [docs/aclnnSigmoid&aclnnInplaceSigmoid.md](docs/aclnnSigmoid&aclnnInplaceSigmoid.md)。
+详细参数和返回值说明见 [docs/aclnnSigmoidV2&aclnnInplaceSigmoidV2.md](docs/aclnnSigmoidV2&aclnnInplaceSigmoidV2.md)。
 
 ## 参数说明
 
@@ -92,7 +92,7 @@ aclnnStatus aclnnInplaceSigmoid(
   <tr>
     <td>self</td>
     <td>输入</td>
-    <td>待进行 Sigmoid 计算的入参，公式中的 input。</td>
+    <td>待进行 SigmoidV2 计算的入参，公式中的 input。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -127,13 +127,13 @@ aclnnStatus aclnnInplaceSigmoid(
 
 | 路径 | 说明 |
 | :--- | :--- |
-| [examples/test_aclnn_sigmoid.cpp](examples/test_aclnn_sigmoid.cpp) | `aclnnSigmoid` 两段式调用示例。 |
-| [examples/test_aclnn_inplace_sigmoid.cpp](examples/test_aclnn_inplace_sigmoid.cpp) | `aclnnInplaceSigmoid` 两段式调用示例。 |
+| [examples/test_aclnn_sigmoid_v2.cpp](examples/test_aclnn_sigmoid_v2.cpp) | `aclnnSigmoidV2` 两段式调用示例。 |
+| [examples/test_aclnn_inplace_sigmoid_v2.cpp](examples/test_aclnn_inplace_sigmoid_v2.cpp) | `aclnnInplaceSigmoidV2` 两段式调用示例。 |
 | [examples/run.sh](examples/run.sh) | 编译并运行 example 的脚本。 |
-| [docs/aclnnSigmoid&aclnnInplaceSigmoid.md](docs/aclnnSigmoid&aclnnInplaceSigmoid.md) | `aclnnSigmoid` / `aclnnInplaceSigmoid` 接口文档。 |
-| [tests/ut/op_api/test_aclnn_sigmoid.cpp](tests/ut/op_api/test_aclnn_sigmoid.cpp) | `op_api` 单元测试。 |
-| [tests/st/aclnnSigmoid/all_aclnnSigmoid.json](tests/st/aclnnSigmoid/all_aclnnSigmoid.json) | 适用于 ATK 的小规模标准化测试集。 |
-| [tests/st/aclnnSigmoid/executor_aclnnSigmoid.py](tests/st/aclnnSigmoid/executor_aclnnSigmoid.py) | ATK CPU benchmark 执行器。 |
+| [docs/aclnnSigmoidV2&aclnnInplaceSigmoidV2.md](docs/aclnnSigmoidV2&aclnnInplaceSigmoidV2.md) | `aclnnSigmoidV2` / `aclnnInplaceSigmoidV2` 接口文档。 |
+| [tests/ut/op_api/test_aclnn_sigmoid_v2.cpp](tests/ut/op_api/test_aclnn_sigmoid_v2.cpp) | `op_api` 单元测试。 |
+| [tests/st/aclnnSigmoidV2/all_aclnnSigmoidV2.json](tests/st/aclnnSigmoidV2/all_aclnnSigmoidV2.json) | 适用于 ATK 的小规模标准化测试集。 |
+| [tests/st/aclnnSigmoidV2/executor_aclnnSigmoidV2.py](tests/st/aclnnSigmoidV2/executor_aclnnSigmoidV2.py) | ATK CPU benchmark 执行器。 |
 
 ## Example 运行
 
@@ -146,7 +146,7 @@ cd <ops-nn-repo>/experimental/activation/sigmoid_v2/examples
 bash run.sh
 ```
 
-示例会编译 `test_aclnn_sigmoid.cpp` 和 `test_aclnn_inplace_sigmoid.cpp` 并直接运行，默认检查输入 `[[0, 1], [2, 3]]` 的输出是否与 CPU 参考值一致。
+示例会编译 `test_aclnn_sigmoid_v2.cpp` 和 `test_aclnn_inplace_sigmoid_v2.cpp` 并直接运行，默认检查输入 `[[0, 1], [2, 3]]` 的输出是否与 CPU 参考值一致。
 
 ## Tests 运行
 
@@ -155,7 +155,7 @@ bash run.sh
 ```bash
 source /usr/local/Ascend/cann/set_env.sh
 cd <ops-nn-repo>
-bash build.sh --experimental --ops=sigmoid -u --opapi -j8 -O2
+bash build.sh --experimental --ops=sigmoid_v2 -u --opapi -j8 -O2
 ```
 
 ### 2. ATK 小规模标准化测试
@@ -167,6 +167,6 @@ source /root/src/kernel/ascend-kernel/.venv/bin/activate
 cd /root/src/testcase
 atk node --backend npu --devices 2 \
   node --backend cpu task --task accuracy \
-  -c <ops-nn-repo>/experimental/activation/sigmoid_v2/tests/st/aclnnSigmoid/all_aclnnSigmoid.json \
-  -p <ops-nn-repo>/experimental/activation/sigmoid_v2/tests/st/aclnnSigmoid/executor_aclnnSigmoid.py
+  -c <ops-nn-repo>/experimental/activation/sigmoid_v2/tests/st/aclnnSigmoidV2/all_aclnnSigmoidV2.json \
+  -p <ops-nn-repo>/experimental/activation/sigmoid_v2/tests/st/aclnnSigmoidV2/executor_aclnnSigmoidV2.py
 ```

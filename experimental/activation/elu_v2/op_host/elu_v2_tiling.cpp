@@ -91,7 +91,7 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& inputDa
 
     return ge::GRAPH_SUCCESS;
 }
-ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     // 获取工作空间大小数组
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
@@ -144,9 +144,9 @@ static ge::graphStatus EluV2TilingFunc(gert::TilingContext* context)
     // 单次处理最大的元素数量
     int64_t tileDataNum = tileBlockNum * blockElemNum;
     // 输入元素数量对应的block数量
-    int64_t inputBlockNum = (inputDataNum + blockElemNum - 1) / blockElemNum; //向上取整
+    int64_t inputBlockNum = (inputDataNum + blockElemNum - 1) / blockElemNum; // 向上取整
 
-    int64_t maxCoreNum = (inputBlockNum + tileBlockNum - 1) / tileBlockNum; //向上取整
+    int64_t maxCoreNum = (inputBlockNum + tileBlockNum - 1) / tileBlockNum; // 向上取整
 
     int64_t usedCoreNum = (coreNum < maxCoreNum) ? coreNum : maxCoreNum;
     usedCoreNum = (usedCoreNum >= 1) ? usedCoreNum : 1;

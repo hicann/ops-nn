@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "acl/acl.h"
-#include "aclnnop/aclnn_threshold_backward.h"
+#include "aclnnop/aclnn_relu_grad_v2.h"
 
 #define CHECK_RET(cond, expr) \
     do {                      \
@@ -289,10 +289,10 @@ int RunReluGradV2(const std::vector<char>& gradients_host, const std::vector<cha
         return cleanup();
     }
 
-    ret = aclnnThresholdBackwardGetWorkspaceSize(gradients_tensor, features_tensor, threshold_scalar, output_tensor,
-                                                 &workspace_size, &executor);
+    ret = aclnnReluGradV2GetWorkspaceSize(gradients_tensor, features_tensor, threshold_scalar, output_tensor,
+                                          &workspace_size, &executor);
     if (ret != ACL_SUCCESS) {
-        final_ret = ReportAclError("aclnnThresholdBackwardGetWorkspaceSize", ret);
+        final_ret = ReportAclError("aclnnReluGradV2GetWorkspaceSize", ret);
         return cleanup();
     }
     if (workspace_size > 0) {
@@ -303,9 +303,9 @@ int RunReluGradV2(const std::vector<char>& gradients_host, const std::vector<cha
         }
     }
 
-    ret = aclnnThresholdBackward(workspace, workspace_size, executor, stream);
+    ret = aclnnReluGradV2(workspace, workspace_size, executor, stream);
     if (ret != ACL_SUCCESS) {
-        final_ret = ReportAclError("aclnnThresholdBackward", ret);
+        final_ret = ReportAclError("aclnnReluGradV2", ret);
         return cleanup();
     }
     ret = aclrtSynchronizeStream(stream);
