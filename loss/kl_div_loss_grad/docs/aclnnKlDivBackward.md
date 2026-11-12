@@ -23,7 +23,20 @@
 
 ## 功能说明
 
-进行[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) api的结果的反向计算。
+- 接口功能：计算KL散度损失对输入self的梯度，即[aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md)的反向传播。
+- 计算公式：
+
+  - 当logTarget取值为false时：
+    $$
+    out = -target \times gradOutput
+    $$
+
+  - 当logTarget取值为true时：
+    $$
+    out = -e^{target} \times gradOutput
+    $$
+
+  其中gradOutput为梯度反向输入，target为真实的标签，out为计算输出的梯度，logTarget表示target是否已处于log空间。
 
 ## 函数原型
 
@@ -79,7 +92,7 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">gradOutput（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">梯度反向输入。</td>
-      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>关系。</td>
+      <td class="tg-0pky">shape需能broadcast到self与target做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的结果形状。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -88,8 +101,8 @@ aclnnStatus aclnnKlDivBackward(
     <tr>
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">输入张量。</td>
-      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">输入张量，计算梯度的目标。</td>
+      <td class="tg-0pky">shape需与target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>关系，且与out的shape相同。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -99,7 +112,7 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实的标签。</td>
-      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>关系。</td>
+      <td class="tg-0pky">shape需与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>关系。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -123,14 +136,14 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">BOOL</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">out（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
-      <td class="tg-0pky">输出的损失。</td>
+      <td class="tg-0pky">输出的梯度。</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">数据类型要为self可推导的数据类型，推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）</td>
+      <td class="tg-0pky">与self保持一致</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
       <td class="tg-0pky">√</td>
@@ -181,12 +194,12 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">传入的gradOutput、self、target和out是空指针。</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="7">161002</td>
+      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="6">161002</td>
       <td class="tg-0pky">gradOutput、self、target和out的数据类型不在支持的范围内时。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self不可cast到out的数据类型。</td>
+      <td class="tg-0pky">self、out的数据类型不一致。</td>
     </tr>
     <tr>
       <td class="tg-0pky">gradOutput的shape不能向self或者target做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>。</td>
@@ -199,9 +212,6 @@ aclnnStatus aclnnKlDivBackward(
     </tr>
     <tr>
       <td class="tg-0lax">gradOutput、self、target或者out维度大于8。</td>
-    </tr>
-    <tr>
-      <td class="tg-0lax">reduction值不在0~3范围之内。</td>
     </tr>
   </tbody>
   </table>

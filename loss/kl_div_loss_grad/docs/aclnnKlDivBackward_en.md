@@ -1,8 +1,6 @@
 # aclnnKlDivBackward
 
-<!-- md-trans-meta sourceCommit=unknown translatedAt=2026-09-22T17:26:08.947Z -->
-
-## Applicable Products
+## Product Support
 
 <!-- npu="950" id1 -->
 - <term>Ascend 950PR&950DT products</term>: Supported
@@ -23,13 +21,26 @@
 - <term>Atlas training products</term>: Not supported
 <!-- end id6 -->
 
-## Function
+## Function Description
 
-Performs backward computation of the result of the [aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) API.
+- Interface function: Computes the gradient of the KL divergence loss with respect to the input `self`, which is the backward propagation of the [aclnnKlDiv](https://gitcode.com/cann/ops-math/blob/master/math/kl_div_v2/docs/aclnnKlDiv.md) interface.
+- Computation formula:
+
+  - When the value of `logTarget` is false:
+    $$
+    out = -target \times gradOutput
+    $$
+
+  - When the value of `logTarget` is true:
+    $$
+    out = -e^{target} \times gradOutput
+    $$
+
+  Where `gradOutput` is the gradient input, `target` is the ground-truth label, `out` is the computed output gradient, and `logTarget` indicates whether `target` is already in log space.
 
 ## Function Prototype
 
-Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). Call the "aclnnKlDivBackwardGetWorkspaceSize" API first to obtain the workspace size required for computation and the executor containing the operator computation process, and then call the "aclnnKlDivBackward" API to execute the computation.
+Each operator is divided into [two-phase interfaces](../../../docs/zh/context/two_phase_api.md). You must first call the "aclnnKlDivBackwardGetWorkspaceSize" interface to obtain the workspace size required for computation and the executor containing the operator computation flow, and then call the "aclnnKlDivBackward" interface to perform the computation.
 
 ```Cpp
 aclnnStatus aclnnKlDivBackwardGetWorkspaceSize(
@@ -53,7 +64,7 @@ aclnnStatus aclnnKlDivBackward(
 
 ## aclnnKlDivBackwardGetWorkspaceSize
 
-- **Parameters:**
+- **Parameter Description:**
 
   <table class="tg" style="undefined;table-layout: fixed; width: 1435px"><colgroup>
   <col style="width: 205px">
@@ -67,21 +78,21 @@ aclnnStatus aclnnKlDivBackward(
   </colgroup>
   <thead>
     <tr>
-      <th class="tg-0pky">Parameter</th>
+      <th class="tg-0pky">Parameter Name</th>
       <th class="tg-0pky">Input/Output</th>
       <th class="tg-0pky">Description</th>
-      <th class="tg-0pky">Instruction</th>
+      <th class="tg-0pky">Usage Description</th>
       <th class="tg-0pky">Data Type</th>
       <th class="tg-0pky">Data Format</th>
-      <th class="tg-0pky">Dimensions (shape)</th>
-      <th class="tg-0pky">Non-Contiguous Tensor</th>
+      <th class="tg-0pky">Dimension (shape)</th>
+      <th class="tg-0pky">Non-contiguous Tensor</th>
     </tr></thead>
   <tbody>
     <tr>
       <td class="tg-0pky">gradOutput (aclTensor*)</td>
       <td class="tg-0pky">Input</td>
-      <td class="tg-0pky">Backward input gradient.</td>
-      <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> relationship with self.</td>
+      <td class="tg-0pky">Gradient input of the backward propagation.</td>
+      <td class="tg-0pky">The shape must be able to broadcast to the result shape of <a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcasting</a> self and target.</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -90,18 +101,18 @@ aclnnStatus aclnnKlDivBackward(
     <tr>
       <td class="tg-0pky">self (aclTensor*)</td>
       <td class="tg-0pky">Input</td>
-      <td class="tg-0pky">Input tensor.</td>
-      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">Input tensor, the target for which the gradient is computed.</td>
+      <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a> relationship with target, and must be the same as the shape of out.</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
-      <td class="tg-0pky">target(aclTensor*)</td>
+      <td class="tg-0pky">target (aclTensor*)</td>
       <td class="tg-0pky">Input</td>
-      <td class="tg-0pky">Ground truth labels.</td>
-      <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> relationship with self.</td>
+      <td class="tg-0pky">Ground-truth label.</td>
+      <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a> relationship with self.</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -110,8 +121,8 @@ aclnnStatus aclnnKlDivBackward(
     <tr>
       <td class="tg-0pky">reduction (int64_t)</td>
       <td class="tg-0pky">Input</td>
-      <td class="tg-0pky">Specifies the reduction to apply to the output.</td>
-      <td class="tg-0pky">Supported values are 0(none)|1(mean)|2(sum)|3(batchmean).<br>'none' indicates that no reduction is applied.<br>'mean' indicates that the sum of the output is divided by the number of elements in the output.<br>'sum' indicates that the output is summed.<br>'batchmean' indicates that the sum of the output is divided by the number of batches.</td>
+      <td class="tg-0pky">Specifies the reduction to be applied to the output.</td>
+      <td class="tg-0pky">Supports 0(none) | 1(mean) | 2(sum) | 3(batchmean).<br>'none' means no reduction is applied.<br>'mean' means the total output is divided by the number of elements in the output.<br>'sum' means the output is summed.<br>'batchmean' means the total output is divided by the number of batches.</td>
       <td class="tg-0pky">INT64</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
@@ -120,17 +131,17 @@ aclnnStatus aclnnKlDivBackward(
     <tr>
       <td class="tg-0pky">logTarget (bool)</td>
       <td class="tg-0pky">Input</td>
-      <td class="tg-0pky">Whether to convert the target to log space.</td>
+      <td class="tg-0pky">Specifies whether to convert target to log space.</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">BOOL</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">out (aclTensor*)</td>
       <td class="tg-0pky">Output</td>
-      <td class="tg-0pky">Output loss.</td>
+      <td class="tg-0pky">Computed output gradient.</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">Same as self</td>
       <td class="tg-0pky">ND</td>
@@ -138,9 +149,9 @@ aclnnStatus aclnnKlDivBackward(
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
-      <td class="tg-0pky">workspaceSize(uint64_t*)</td>
+      <td class="tg-0pky">workspaceSize (uint64_t*)</td>
       <td class="tg-0pky">Output</td>
-      <td class="tg-0pky">Returns the size of the workspace to be applied on the side of Device.</td>
+      <td class="tg-0pky">Returns the workspace size to be applied for on the Device side.</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
@@ -159,11 +170,11 @@ aclnnStatus aclnnKlDivBackward(
     </tr>
   </tbody></table>
 
-- **Return value**
+- **Return Value:**
 
-  aclnnStatus: return value, which is a status code. For details, see [aclnn return codes](../../../docs/en/context/aclnn_return_code.md).
+  aclnnStatus: Returns a status code. For details, see [aclnn Return Codes](../../../docs/zh/context/aclnn_return_code.md).
 
-  The first-phase API performs input parameter validation and returns an error in the following scenarios:
+  The first-stage interface performs input parameter validation and reports an error in the following scenarios:
 
   <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
   <col style="width: 269px">
@@ -180,21 +191,21 @@ aclnnStatus aclnnKlDivBackward(
     <tr>
       <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
       <td class="tg-0pky">161001</td>
-      <td class="tg-0pky">gradOutput, self, target, and out are null pointers.</td>
+      <td class="tg-0pky">The gradOutput, self, target, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="7">161002</td>
-      <td class="tg-0pky">The data types of gradOutput, self, target, and out are not within the supported range.</td>
+      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="6">161002</td>
+      <td class="tg-0pky">The data type of gradOutput, self, target, or out is not within the supported range.</td>
     </tr>
     <tr>
       <td class="tg-0pky">The data types of self and out are inconsistent.</td>
     </tr>
     <tr>
-      <td class="tg-0pky">The shape of gradOutput cannot be <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> to self or target.</td>
+      <td class="tg-0pky">The shape of gradOutput cannot <a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a> to self or target.</td>
     </tr>
     <tr>
-      <td class="tg-0pky">The shape of target and the shape of self do not meet the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> relationship.</td>
+      <td class="tg-0pky">The shapes of target and self do not satisfy the <a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a> relationship.</td>
     </tr>
     <tr>
       <td class="tg-0lax">The shape of self is different from the shape of out.</td>
@@ -202,15 +213,12 @@ aclnnStatus aclnnKlDivBackward(
     <tr>
       <td class="tg-0lax">The dimension of gradOutput, self, target, or out is greater than 8.</td>
     </tr>
-    <tr>
-      <td class="tg-0lax">The value of reduction is not within the range of 0-3.</td>
-    </tr>
   </tbody>
   </table>
 
 ## aclnnKlDivBackward
 
-- **Parameters:**
+- **Parameter Description:**
 
    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
       <col style="width: 200px">
@@ -219,7 +227,7 @@ aclnnStatus aclnnKlDivBackward(
       </colgroup>
       <thead>
         <tr>
-          <th>Parameter</th>
+          <th>Parameter Name</th>
           <th>Input/Output</th>
           <th>Description</th>
         </tr></thead>
@@ -227,38 +235,38 @@ aclnnStatus aclnnKlDivBackward(
         <tr>
           <td>workspace</td>
           <td>Input</td>
-          <td>Memory address of the workspace applied on the Device side.</td>
+          <td>Address of the workspace memory applied for on the Device side.</td>
         </tr>
         <tr>
           <td>workspaceSize</td>
           <td>Input</td>
-          <td>Size of the workspace applied on the Device side, obtained by calling the first-phase API aclnnKlDivBackwardGetWorkspaceSize.</td>
+          <td>Size of the workspace applied for on the Device side, which is obtained by the first-stage interface aclnnKlDivBackwardGetWorkspaceSize.</td>
         </tr>
         <tr>
           <td>executor</td>
           <td>Input</td>
-          <td>Executor of the op, containing the operator computation process.</td>
+          <td>Op executor, which contains the operator computation flow.</td>
         </tr>
         <tr>
           <td>stream</td>
           <td>Input</td>
-          <td>Stream used to execute the task.</td>
+          <td>Specifies the stream on which the task is executed.</td>
         </tr>
       </tbody>
     </table>
 
-- **Return value**
+- **Return Value:**
 
-  aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
+  aclnnStatus: Returns a status code. For details, see [aclnn Return Codes](../../../docs/zh/context/aclnn_return_code.md).
 
 ## Constraints
 
 - Deterministic computation:
-    - aclnnKlDivBackward defaults to a deterministic implementation.
+    - aclnnKlDivBackward implements deterministic computation by default.
 
 ## Example
 
-The following sample code is for reference only. For details about compilation and execution, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
+The following example code is for reference only. For details about compilation and execution, see [Compilation and Running Example](../../../docs/zh/context/compile_and_run_sample.md).
 
 ```Cpp
 #include <iostream>
@@ -287,7 +295,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
 }
 
 int Init(int32_t deviceId, aclrtStream* stream) {
-  // Boilerplate: resource initialization.
+  // Fixed implementation for resource initialization
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
@@ -301,35 +309,35 @@ template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                     aclDataType dataType, aclTensor** tensor) {
   auto size = GetShapeSize(shape) * sizeof(T);
-  // Call aclrtMalloc to apply for memory on the device side.
+  // Call aclrtMalloc to allocate memory on the Device side
   auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
 
-  // Call aclrtMemcpy to copy host-side data to device-side memory.
+  // Call aclrtMemcpy to copy host-side data to the Device side
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-  // Calculate the strides of the contiguous tensor.
+  // Calculate the strides of the contiguous tensor
   std::vector<int64_t> strides(shape.size(), 1);
   for (int64_t i = shape.size() - 2; i >= 0; i--) {
     strides[i] = shape[i + 1] * strides[i + 1];
   }
 
-  // Call the aclCreateTensor API to create an aclTensor.
+  // Call aclCreateTensor to create an aclTensor
   *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                             shape.data(), shape.size(), *deviceAddr);
   return 0;
 }
 
 int main() {
-  // 1. (Boilerplate) Initialize device/stream. For details, see the acl API manual.
-  // Set deviceId based on the actual device.
+  // 1. (Fixed implementation) Initialize device/stream. For details, see the acl API manual.
+  // Set deviceId according to the actual device.
   int32_t deviceId = 0;
   aclrtStream stream;
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. Construct the input and output, with custom construction based on the API.
+  // 2. Construct inputs and outputs. Customize the construction according to the API.
   std::vector<int64_t> gradOutputShape = {2, 2};
   std::vector<int64_t> selfShape = {2, 2};
   std::vector<int64_t> targetShape = {2, 2};
@@ -348,40 +356,40 @@ int main() {
   std::vector<float> outHostData = {2, 3, 5, 8};
   int64_t reduction = 0;
   bool logTarget = false;
-  // Create the gradOutput aclTensor.
+  // Create gradOutput aclTensor
   ret = CreateAclTensor(gradOutputHostData, gradOutputShape, &gradOutputDeviceAddr, aclDataType::ACL_FLOAT, &gradOutput);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create the self aclTensor.
+  // Create self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create the target aclTensor.
+  // Create target aclTensor
   ret = CreateAclTensor(targetHostData, targetShape, &targetDeviceAddr, aclDataType::ACL_FLOAT, &target);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create the out aclTensor
+  // Create out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. Call the CANN operator library APIs
+  // 3. Call the CANN operator library API.
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  // Call the first-phase API of aclnnKlDivBackward
+  // Call the first-stage interface aclnnKlDivBackwardGetWorkspaceSize
   ret = aclnnKlDivBackwardGetWorkspaceSize(gradOutput, self, target, reduction, logTarget, out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnKlDivBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // Allocate device memory based on the workspaceSize calculated by the first-phase API
+  // Allocate Device memory according to the workspaceSize calculated by the first-stage interface
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
-  // Call the second-phase API of aclnnKlDivBackward
+  // Call the second-stage interface aclnnKlDivBackward
   ret = aclnnKlDivBackward(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnKlDivBackward failed. ERROR: %d\n", ret); return ret);
 
-  // 4. (Boilerplate) Synchronize and wait for the task execution to complete
+  // 4. (Fixed implementation) Wait for the task to complete
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 5. Obtain the output value, copy the result on device memory to the host side, and modify it based on the specific API definition
+  // 5. Obtain the output value and copy the result from the Device side to the host side. Modify according to the API.
   auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]),
@@ -392,13 +400,13 @@ int main() {
     LOG_PRINT("resultData[%ld] is: %f\n", i, resultData[i]);
   }
 
-  // 6. Release the aclTensor, which needs to be modified based on the specific API definition
+  // 6. Release aclTensor. Modify according to the API.
   aclDestroyTensor(gradOutput);
   aclDestroyTensor(self);
   aclDestroyTensor(target);
   aclDestroyTensor(out);
 
-  // 7. Release device resources, which need to be modified based on the specific API definition
+  // 7. Release Device resources. Modify according to the API.
   aclrtFree(gradOutputDeviceAddr);
   aclrtFree(selfDeviceAddr);
   aclrtFree(targetDeviceAddr);
