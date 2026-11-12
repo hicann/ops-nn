@@ -64,28 +64,28 @@ English | [简体中文](./README.md)
   <tr>
     <td>lr</td>
     <td>Input</td>
-    <td>Learning rate, corresponding to lr in the formula. The shape must be a scalar tensor of [1].</td>
+    <td>Learning rate, corresponding to lr in the formula. The shape must be a scalar tensor of [1] or 0-D ([]).</td>
     <td>BFLOAT16, FLOAT16, FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>logbase</td>
     <td>Input</td>
-    <td>Logarithm base, corresponding to logbase in the formula. The shape must be a scalar tensor of [1].</td>
+    <td>Logarithm base, corresponding to logbase in the formula. The shape must be a scalar tensor of [1] or 0-D ([]).</td>
     <td>BFLOAT16, FLOAT16, FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>sign_decay</td>
     <td>Input</td>
-    <td>Sign decay factor, corresponding to sign_decay in the formula. The shape must be a scalar tensor of [1].</td>
+    <td>Sign decay factor, corresponding to sign_decay in the formula. The shape must be a scalar tensor of [1] or 0-D ([]).</td>
     <td>BFLOAT16, FLOAT16, FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>beta</td>
     <td>Input</td>
-    <td>First moment decay rate, corresponding to β in the formula, with the value range [0, 1). The shape must be a scalar tensor of [1].</td>
+    <td>First moment decay rate, corresponding to β in the formula, with the value range [0, 1). The shape must be a scalar tensor of [1] or 0-D ([]).</td>
     <td>BFLOAT16, FLOAT16, FLOAT</td>
     <td>ND</td>
   </tr>
@@ -95,13 +95,6 @@ English | [简体中文](./README.md)
     <td>Current gradient tensor, corresponding to grad in the formula. The shape/dtype must be consistent with var.</td>
     <td>BFLOAT16, FLOAT16, FLOAT</td>
     <td>ND</td>
-  </tr>
-  <tr>
-    <td>use_locking</td>
-    <td>Attribute</td>
-    <td>Whether to lock during the update. The default value is false. The current implementation does not enforce a mutex lock; it serves only as a semantic placeholder.</td>
-    <td>BOOL</td>
-    <td>-</td>
   </tr>
   <tr>
     <td>var</td>
@@ -117,17 +110,25 @@ English | [简体中文](./README.md)
     <td>BFLOAT16, FLOAT16, FLOAT</td>
     <td>ND</td>
   </tr>
+  <tr>
+    <td>use_locking</td>
+    <td>Attribute</td>
+    <td>Whether to lock during the update. The default value is false. The current implementation does not enforce a mutex lock; it serves only as a semantic placeholder.</td>
+    <td>BOOL</td>
+    <td>-</td>
+  </tr>
 </tbody></table>
 
 ## Constraints
 
 - The shapes of the three tensors var, m, and grad must be consistent.
-- lr, logbase, sign_decay, and beta must be scalar tensors with shape=[1].
+- lr, logbase, sign_decay, and beta must be scalar tensors with shape=[1] or 0-D ([]).
 - The DataTypes of all inputs and outputs must be consistent.
 - FP16/BF16 inputs are internally promoted to FP32 for computation and cast back to the original type.
+- Dynamic shape and dynamic rank are supported (GE graph mode): the output shape is the same as that of the corresponding input, with rank not exceeding 8; in dynamic scenarios, each input must still satisfy the shape-consistency constraints above at graph construction.
 
 ## Invocation Description
 
-| Invocation method | Invocation sample                                                                   | Description                                                           |
+| Invocation method | Sample code | Description |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| Graph-mode invocation | [test_geir_inplace_apply_power_sign](./examples/arch35/test_geir_inplace_apply_power_sign.cpp) | Invokes the InplaceApplyPowerSign operator through graph construction with the [operator IR](./op_graph/inplace_apply_power_sign_proto.h). |
+| GE graph mode | [test_geir_inplace_apply_power_sign](./examples/arch35/test_geir_inplace_apply_power_sign.cpp) | Invokes the InplaceApplyPowerSign operator through graph construction with the [operator IR](./op_graph/inplace_apply_power_sign_proto.h). |

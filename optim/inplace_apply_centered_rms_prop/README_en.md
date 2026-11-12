@@ -162,6 +162,6 @@ English | [简体中文](./README.md)
 
 ## Invocation Description
 
-| Invocation method | Invocation sample | Description |
+| Invocation method | Sample code | Description |
 |:---------|:---------|:-----|
-| Graph mode | [test_geir_inplace_apply_centered_rms_prop](./examples/arch35/test_geir_inplace_apply_centered_rms_prop.cpp) | Calls the InplaceApplyCenteredRMSProp operator through graph construction with the [operator IR](./op_graph/inplace_apply_centered_rms_prop_proto.h). |
+| GE graph mode | [test_geir_inplace_apply_centered_rms_prop](./examples/arch35/test_geir_inplace_apply_centered_rms_prop.cpp) | Calls the InplaceApplyCenteredRMSProp operator through graph construction with the [operator IR](./op_graph/inplace_apply_centered_rms_prop_proto.h). |

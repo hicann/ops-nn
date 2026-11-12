@@ -62,28 +62,28 @@
   <tr>
     <td>lr</td>
     <td>输入</td>
-    <td>学习率，对应公式中的lr。shape必须为 [1] 的scalar Tensor。</td>
+    <td>学习率，对应公式中的lr。shape必须为 [1] 或 0-D（[]）的scalar Tensor。</td>
     <td>BFLOAT16、FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>logbase</td>
     <td>输入</td>
-    <td>对数基底，对应公式中的logbase。shape必须为 [1] 的scalar Tensor。</td>
+    <td>对数基底，对应公式中的logbase。shape必须为 [1] 或 0-D（[]）的scalar Tensor。</td>
     <td>BFLOAT16、FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>sign_decay</td>
     <td>输入</td>
-    <td>符号衰减因子，对应公式中的sign_decay。shape必须为 [1] 的scalar Tensor。</td>
+    <td>符号衰减因子，对应公式中的sign_decay。shape必须为 [1] 或 0-D（[]）的scalar Tensor。</td>
     <td>BFLOAT16、FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>beta</td>
     <td>输入</td>
-    <td>一阶矩衰减率，对应公式中的β，取值范围 [0, 1)。shape必须为 [1] 的scalar Tensor。</td>
+    <td>一阶矩衰减率，对应公式中的β，取值范围 [0, 1)。shape必须为 [1] 或 0-D（[]）的scalar Tensor。</td>
     <td>BFLOAT16、FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
@@ -93,13 +93,6 @@
     <td>当前梯度张量，对应公式中的grad。shape/dtype必须与var一致。</td>
     <td>BFLOAT16、FLOAT16、FLOAT</td>
     <td>ND</td>
-  </tr>
-  <tr>
-    <td>use_locking</td>
-    <td>属性</td>
-    <td>是否在更新时加锁。默认false。当前实现不强制互斥锁，仅作语义占位。</td>
-    <td>BOOL</td>
-    <td>-</td>
   </tr>
   <tr>
     <td>var</td>
@@ -115,17 +108,25 @@
     <td>BFLOAT16、FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
+  <tr>
+    <td>use_locking</td>
+    <td>属性</td>
+    <td>是否在更新时加锁。默认false。当前实现不强制互斥锁，仅作语义占位。</td>
+    <td>BOOL</td>
+    <td>-</td>
+  </tr>
 </tbody></table>
 
 ## 约束说明
 
 - var、m、grad三个张量的shape必须一致。
-- lr、logbase、sign_decay、beta必须为shape=[1]的scalar Tensor。
+- lr、logbase、sign_decay、beta必须为shape=[1]或0-D（[]）的scalar Tensor。
 - 所有输入输出的DataType必须一致。
 - FP16/BF16输入内部提升至FP32计算后cast回原类型。
+- 支持动态Shape与动态Rank（GE图模式）：输出shape与对应输入shape一致，rank不超过8；动态场景下各输入需在构图时满足上述shape一致性约束。
 
 ## 调用说明
 
-| 调用方式 | 调用样例                                                                   | 说明                                                           |
+| 调用方式 | 样例代码 | 说明 |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式 | [test_geir_inplace_apply_power_sign](./examples/arch35/test_geir_inplace_apply_power_sign.cpp) | 通过[算子IR](./op_graph/inplace_apply_power_sign_proto.h)构图方式调用InplaceApplyPowerSign算子。 |
+| GE图模式 | [test_geir_inplace_apply_power_sign](./examples/arch35/test_geir_inplace_apply_power_sign.cpp) | 通过[算子IR](./op_graph/inplace_apply_power_sign_proto.h)构图方式调用InplaceApplyPowerSign算子。 |

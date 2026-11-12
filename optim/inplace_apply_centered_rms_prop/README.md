@@ -109,13 +109,6 @@
     <td>ND</td>
   </tr>
   <tr>
-    <td>use_locking</td>
-    <td>属性</td>
-    <td>可选兼容属性，默认值为false，取值不影响计算结果。</td>
-    <td>BOOL</td>
-    <td>-</td>
-  </tr>
-  <tr>
     <td>var</td>
     <td>输出</td>
     <td>更新后的模型参数，与输入var共享存储。</td>
@@ -143,6 +136,13 @@
     <td>FLOAT、FLOAT16</td>
     <td>ND</td>
   </tr>
+  <tr>
+    <td>use_locking</td>
+    <td>属性</td>
+    <td>可选兼容属性，默认值为false，取值不影响计算结果。</td>
+    <td>BOOL</td>
+    <td>-</td>
+  </tr>
 </tbody></table>
 
 ## 约束说明
@@ -160,6 +160,6 @@
 
 ## 调用说明
 
-| 调用方式 | 调用样例 | 说明 |
+| 调用方式 | 样例代码 | 说明 |
 |:---------|:---------|:-----|
-| 图模式 | [test_geir_inplace_apply_centered_rms_prop](./examples/arch35/test_geir_inplace_apply_centered_rms_prop.cpp) | 通过[算子IR](./op_graph/inplace_apply_centered_rms_prop_proto.h)构图方式调用InplaceApplyCenteredRMSProp算子。 |
+| GE图模式 | [test_geir_inplace_apply_centered_rms_prop](./examples/arch35/test_geir_inplace_apply_centered_rms_prop.cpp) | 通过[算子IR](./op_graph/inplace_apply_centered_rms_prop_proto.h)构图方式调用InplaceApplyCenteredRMSProp算子。 |

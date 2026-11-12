@@ -44,7 +44,10 @@ namespace NsInplaceApplyCenteredRmsProp {
 
 using namespace AscendC;
 
-constexpr int64_t BUFFER_NUM = 2; // 双缓冲（DoubleBuffer）
+// TQUE.01：同一 TPosition（VECIN）5 个双缓冲队列峰值 5×2=10 块 Buffer，超过 A5 已知上限 8。
+// 修复：VECIN 5 个输入队列改为单缓冲（5 块 ≤ 8），VECOUT 4 个输出队列保持双缓冲（4×2=8 恰达上限）。
+constexpr int64_t INPUT_BUFFER_NUM = 1; // VECIN 单缓冲，满足同位置 ≤ 8 块约束
+constexpr int64_t BUFFER_NUM = 2;       // VECOUT 双缓冲（DoubleBuffer）
 
 // ============================================================================
 // VF function 前向声明
@@ -263,12 +266,12 @@ __aicore__ inline void InplaceApplyCenteredRmsProp<T>::Init(GM_ADDR var, GM_ADDR
     msOutGm_.SetGlobalBuffer((__gm__ T*)msOut + offset);
     momOutGm_.SetGlobalBuffer((__gm__ T*)momOut + offset);
 
-    // 5. InitBuffer：5 输入 TQue + 4 输出 TQue（双缓冲）
-    pipe.InitBuffer(inQueueVar_, BUFFER_NUM, ubFormer_ * sizeof(T));
-    pipe.InitBuffer(inQueueMg_, BUFFER_NUM, ubFormer_ * sizeof(T));
-    pipe.InitBuffer(inQueueMs_, BUFFER_NUM, ubFormer_ * sizeof(T));
-    pipe.InitBuffer(inQueueMom_, BUFFER_NUM, ubFormer_ * sizeof(T));
-    pipe.InitBuffer(inQueueGrad_, BUFFER_NUM, ubFormer_ * sizeof(T));
+    // 5. InitBuffer：5 输入 TQue 单缓冲（VECIN 峰值 5 块 ≤ A5 上限 8）+ 4 输出 TQue 双缓冲（8 块）
+    pipe.InitBuffer(inQueueVar_, INPUT_BUFFER_NUM, ubFormer_ * sizeof(T));
+    pipe.InitBuffer(inQueueMg_, INPUT_BUFFER_NUM, ubFormer_ * sizeof(T));
+    pipe.InitBuffer(inQueueMs_, INPUT_BUFFER_NUM, ubFormer_ * sizeof(T));
+    pipe.InitBuffer(inQueueMom_, INPUT_BUFFER_NUM, ubFormer_ * sizeof(T));
+    pipe.InitBuffer(inQueueGrad_, INPUT_BUFFER_NUM, ubFormer_ * sizeof(T));
     pipe.InitBuffer(outQueueVar_, BUFFER_NUM, ubFormer_ * sizeof(T));
     pipe.InitBuffer(outQueueMg_, BUFFER_NUM, ubFormer_ * sizeof(T));
     pipe.InitBuffer(outQueueMs_, BUFFER_NUM, ubFormer_ * sizeof(T));
