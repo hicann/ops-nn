@@ -36,7 +36,7 @@
   git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git && cd ops-nn
   ```
 
-> 说明：如需切换源码分支版本，请参见如下指导。
+> 说明：如需切换源码分支版本，请参见如下指导：
 >
 > 1. 在源码目录执行`git status --short --branch`，查询当前检出状态。检出版本标签时会处于分离头指针（detached HEAD）状态，这是正常现象；可执行`git describe --tags --exact-match`确认当前标签。
 > 2. 先执行`git fetch origin --tags`更新远端分支和标签信息，再执行`git checkout ${tag_version}`检出目标版本，注意满足源码与CANN版本配套关系。检出版本标签后不要执行`git pull`；如需更新开发分支，应先切换到相应分支，再执行`git pull --ff-only`。
@@ -57,15 +57,15 @@
 bash build.sh --pkg --soc=${soc_version} --ops=add_example -j16
 ```
 
-产品名对应的\$\{soc\_version\}取值如下，请按实际场景传参。
+产品名对应的\$\{soc\_version\}取值如下，请按实际场景传参：
 
 - Atlas A2系列产品：取值为ascend910b
 - Atlas A3系列产品：取值为ascend910_93
 - 950系列产品：取值为ascend950
 
-若提示如下信息，说明编译成功。
+若提示如下信息，说明编译成功：
 
-```bash
+```output
 Self-extractable archive "cann-ops-nn-custom_linux-${arch}.run" successfully created.
 ```
 
@@ -85,11 +85,11 @@ Self-extractable archive "cann-ops-nn-custom_linux-${arch}.run" successfully cre
 >
 > 错误使用`--force`可能导致算子在运行时加载失败，因此不建议默认使用。
 
-`AddExample`安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录。
+`AddExample`安装在`${ASCEND_HOME_PATH}/opp/vendors`路径中，`${ASCEND_HOME_PATH}`表示CANN软件安装目录。
 
 ### 4. 配置环境变量
 
-将自定义算子包的路径加入环境变量，确保运行时能够找到。
+将自定义算子包的路径加入环境变量，确保运行时能够找到对应库文件。
 
 ```bash
 export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/custom_nn/op_api/lib:${LD_LIBRARY_PATH}
@@ -108,7 +108,7 @@ bash build.sh --run_example add_example eager cust --vendor_name=custom --soc=${
 - <算子名>：add_example
 - <运行模式>：eager
 - <包模式>：cust
-- --vendor_name(可选)：vendorname表示构建的自定义算子包名，默认名为custom
+- --vendor_name（可选）：vendor_name表示构建的自定义算子包名，默认名为custom
 
 > **注意**：运行样例时需确保`--soc`参数与编译算子包时使用的`--soc`取值一致，否则可能报`error 161001`（如`aclnnXxxGetWorkspaceSize failed`）。如遇此错误，请回到[第2节](#2-编译addexample算子)核对`--soc`取值后重新编译安装。
 
@@ -132,7 +132,7 @@ add_example first input[7] is: 1.000000, second input[7] is: 1.000000, result[7]
 
 ### 1. 修改Kernel实现
 
-找到AddExample算子的核心kernel实现文件`examples/add_example/op_kernel/add_example.h`，尝试将算子中的Add操作改为Mul操作：
+找到AddExample算子的核心Kernel实现文件`examples/add_example/op_kernel/add_example.h`，尝试将算子中的Add操作改为Mul操作：
 
 ```cpp
 __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
@@ -161,7 +161,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
     bash build.sh --pkg --soc=${soc_version} --ops=add_example -j16
     ```
 
-    产品名对应的\$\{soc\_version\}取值如下，请按实际场景传参。
+    产品名对应的\$\{soc\_version\}取值如下，请按实际场景传参：
 
     - Atlas A2系列产品：取值为ascend910b
     - Atlas A3系列产品：取值为ascend910_93
@@ -255,7 +255,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 
 找到并编辑`AddExample`的`examples/add_example/examples/test_aclnn_add_example.cpp`，修改输入张量的形状和数值。
 
-**修改输入/输出数据**：修改输入、输出的shape信息，以及初始化数据，构造相应的输入、输出tensor。
+**修改输入/输出数据**：修改输入、输出的shape信息，以及初始化数据，构造相应的输入、输出Tensor。
 
 ```cpp
 int aclnnAddExampleTest(int32_t deviceId, aclrtStream& stream) {
@@ -276,7 +276,7 @@ int aclnnAddExampleTest(int32_t deviceId, aclrtStream& stream) {
 }
 ```
 
-> **注意**：修改shape时需同步修改对应host侧数据vector的长度（本例`selfX`、`selfY`、`out`三者的vector长度都要从默认的2048改为4096 = 8×8×8×8），并保证三者shape一致，否则会出现数据越界或结果不匹配。
+> **注意**：修改shape时需同步修改对应Host侧数据Vector的长度（本例`selfX`、`selfY`、`out`三者的vector长度都要从默认的2048改为4096 = 8×8×8×8），并保证三者shape一致，否则会出现数据越界或结果不匹配。
 
 ### 2. 重新编译并验证
 
