@@ -156,7 +156,9 @@ ge::graphStatus MseLossTiling::RunTiling(const MseLossCompileInfo* compileInfo)
                 return ge::GRAPH_FAILED);
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
-    const std::string reductionStr = std::string(attrs->GetAttrPointer<char>(0));
+    const char* reductionPtr = attrs->GetAttrPointer<char>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, reductionPtr);
+    const std::string reductionStr = std::string(reductionPtr);
     auto iter = STR_2_INT.find(reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
@@ -165,6 +167,7 @@ ge::graphStatus MseLossTiling::RunTiling(const MseLossCompileInfo* compileInfo)
     this->reduction = iter->second;
     key.Reduction = this->reduction;
     tiling = tilingContext->GetTilingData<MseLossTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tiling);
     if (reductionStr == "none") {
         OP_CHECK_IF(TilingEle() != ge::GRAPH_SUCCESS,
                     OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for elewise"), return ge::GRAPH_FAILED);
