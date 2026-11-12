@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "foreach_pow_scalar_and_tensor.h"
+#include "foreach_pow_scalar_and_tensor_wrap.h"
 
 using namespace ForeachPowScalarAndTensor;
 

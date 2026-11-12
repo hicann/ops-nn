@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file foreach_pow_scalar_and_tensor.h
+ * \file foreach_pow_scalar_and_tensor_wrap.h
  * \brief
  */
 
-#ifndef FOREACH_POW_SCALAR_AND_TENSOR_H
-#define FOREACH_POW_SCALAR_AND_TENSOR_H
+#ifndef FOREACH_POW_SCALAR_AND_TENSOR_WRAP_H
+#define FOREACH_POW_SCALAR_AND_TENSOR_WRAP_H
 
 #include <type_traits>
 #include "kernel_operator.h"
@@ -279,4 +279,4 @@ __aicore__ inline __gm__ T* ForeachPowScalarAndTensorND<T>::GetOutputTensorAddr(
 
 } // namespace ForeachPowScalarAndTensor
 
-#endif // FOREACH_POW_SCALAR_AND_TENSOR_H
+#endif // FOREACH_POW_SCALAR_AND_TENSOR_WRAP_H
