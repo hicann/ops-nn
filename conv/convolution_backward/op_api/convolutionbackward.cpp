@@ -69,10 +69,11 @@ constexpr int64_t N2H_W_IN_FORTY = 40;
 constexpr int64_t STRIDEH_TRANSPOSE_LIMIT = 2;
 constexpr int64_t BASEM_TRANSPOSE_LIMIT = 256;
 constexpr int64_t BATCH_TRANSPOSE_LIMIT = 2;
+constexpr int64_t MMAD_COVER_MTE2_960_LIMIT = 2048;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MIN = 16;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 256;
 constexpr float MAX_CIN_MULTIPLIER = 1.5f;
-constexpr uint64_t PRE_TRANSPOSE_MAX_CIN_RATIO = 2;
+constexpr uint64_t PRE_TRANSPOSE_MAX_CIN_RATIO = 8;
 constexpr uint64_t PRE_TRANSPOSE_MIN_FILTER_BYTES = 1UL << 20; // filter字节数小于1M,前置transpose无收益
 static constexpr const char* ACLNN_CONV_TBC_BACKWARD_NAME = "aclnnConvTbcBackward";
 
@@ -1238,13 +1239,15 @@ static bool CheckPreTransposeGainOn960(uint64_t cout, uint64_t cin, uint64_t dk,
 static bool CheckStrideTransposeConstraint(int64_t strideH, op::DataType dataType, uint64_t dk, uint64_t di,
                                            uint64_t hi, uint64_t wi, uint64_t batch)
 {
-    if (strideH < STRIDEH_TRANSPOSE_LIMIT) {
-        // 16bit只支持dk>1且di>1
-        bool isTrans16bit = dataType != op::DataType::DT_FLOAT && (dk <= 1 || di <= 1);
-        bool isMmadCoverMte2 = hi * wi >= BASEM_TRANSPOSE_LIMIT && batch <= BATCH_TRANSPOSE_LIMIT;
-        if (isTrans16bit || isMmadCoverMte2) {
-            return false;
-        }
+    if (strideH >= STRIDEH_TRANSPOSE_LIMIT) {
+        return true;
+    }
+    // 16bit只支持dk>1且di>1
+    bool isTrans16bit = dataType != op::DataType::DT_FLOAT && (dk <= 1 || di <= 1);
+    bool isMmadCoverMte2 = IsSocVersion960() ? hi * wi >= MMAD_COVER_MTE2_960_LIMIT :
+                                               hi * wi >= BASEM_TRANSPOSE_LIMIT && batch <= BATCH_TRANSPOSE_LIMIT;
+    if (isTrans16bit || isMmadCoverMte2) {
+        return false;
     }
     return true;
 }
