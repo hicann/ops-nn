@@ -105,6 +105,15 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* target, const ac
     return true;
 }
 
+static bool CheckReduction(int64_t reduction)
+{
+    if (reduction < REDUCTION_NONE_NUM || reduction > REDUCTION_SUM_NUM) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "reduction must be 0 (none), 1 (mean) or 2 (sum), but got %ld.", reduction);
+        return false;
+    }
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, int64_t reduction, const aclTensor* out)
 {
     // 1. 检查参数是否为空指针
@@ -113,7 +122,10 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, i
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(self, target, out), ACLNN_ERR_PARAM_INVALID);
 
-    // 3. 检查输出shape
+    // 3. 检查reduction取值
+    CHECK_RET(CheckReduction(reduction), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查输出shape
     CHECK_RET(CheckShape(self, target, out, reduction), ACLNN_ERR_PARAM_INVALID);
 
     // Ascend 950 rejects private formats; other devices retain the original behavior.

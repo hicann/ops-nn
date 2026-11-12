@@ -19,6 +19,7 @@
 #include "op_host/tiling_base.h"
 #include "tiling/tiling_api.h"
 #include "util/math_util.h"
+#include "util/shape_util.h"
 #include "loss/soft_margin_loss/op_kernel/arch35/soft_margin_loss_dag.h"
 #include "loss/soft_margin_loss/op_kernel/arch35/soft_margin_loss_tiling_key.h"
 #include "soft_margin_loss_tiling_arch35.h"
@@ -28,8 +29,12 @@
 namespace optiling {
 using namespace Ops::Base;
 static const int64_t ASCEND_WORKSPACE = static_cast<int64_t>(16 * 1024 * 1024);
+static const size_t MAX_SUPPORTED_RANK = 8;
+static const uint32_t REDUCTION_NONE = 0;
+static const uint32_t REDUCTION_SUM = 1;
 static const uint32_t REDUCTION_MEAN = 2;
-static const std::map<std::string, uint32_t> STR_2_INT = {{"none", 0}, {"sum", 1}, {"mean", 2}};
+static const std::map<std::string, uint32_t> STR_2_INT = {
+    {"none", REDUCTION_NONE}, {"sum", REDUCTION_SUM}, {"mean", REDUCTION_MEAN}};
 static const std::map<ge::DataType, uint32_t> DTYPE_2_INT_KEY{
     {ge::DT_FLOAT16, 10}, {ge::DT_FLOAT, 20}, {ge::DT_BF16, 30}};
 
@@ -50,20 +55,45 @@ ge::graphStatus SoftMarginLossTiling::CheckShape()
     this->outputDtype = outputDesc->GetDataType();
     auto iter = DTYPE_2_INT_KEY.find(this->outputDtype);
     OP_CHECK_IF(iter == DTYPE_2_INT_KEY.end(),
-                OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "loss", ToString(this->outputDtype).c_str(),
+                OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output_z", ToString(this->outputDtype).c_str(),
                                           "FLOAT, FLOAT16 or BF16"),
                 return ge::GRAPH_FAILED);
     if (inputSelfDesc->GetDataType() != inputTargetDesc->GetDataType()) {
         std::string dtypeMsg = ToString(inputSelfDesc->GetDataType()) + " and " +
                                ToString(inputTargetDesc->GetDataType());
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "self and target", dtypeMsg.c_str(),
-                                               "The dtypes of input self and input target must be the same");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "input_x and input_y", dtypeMsg.c_str(),
+                                               "The dtypes of input_x and input_y must be the same");
         return ge::GRAPH_FAILED;
     }
-    if (inputSelfShape != inputTargetShape) {
+    const bool selfUnknownRank = Ops::Base::IsUnknownRank(inputSelfShape);
+    const bool targetUnknownRank = Ops::Base::IsUnknownRank(inputTargetShape);
+    if ((!selfUnknownRank && inputSelfShape.GetDimNum() > MAX_SUPPORTED_RANK) ||
+        (!targetUnknownRank && inputTargetShape.GetDimNum() > MAX_SUPPORTED_RANK)) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext->GetNodeName(), "input_x and input_y",
+            (ToString(inputSelfShape) + " and " + ToString(inputTargetShape)).c_str(),
+            "The ranks of input_x and input_y must not exceed 8");
+        return ge::GRAPH_FAILED;
+    }
+    bool shapeMismatch = false;
+    if (!selfUnknownRank && !targetUnknownRank) {
+        if (inputSelfShape.GetDimNum() != inputTargetShape.GetDimNum()) {
+            shapeMismatch = true;
+        } else {
+            for (size_t i = 0; i < inputSelfShape.GetDimNum(); ++i) {
+                const int64_t selfDim = inputSelfShape.GetDim(i);
+                const int64_t targetDim = inputTargetShape.GetDim(i);
+                if (selfDim >= 0 && targetDim >= 0 && selfDim != targetDim) {
+                    shapeMismatch = true;
+                    break;
+                }
+            }
+        }
+    }
+    if (shapeMismatch) {
         std::string shapeMsg = ToString(inputSelfShape) + " and " + ToString(inputTargetShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "self and target", shapeMsg.c_str(),
-                                               "The shapes of input self and input target must be the same");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "input_x and input_y", shapeMsg.c_str(),
+                                               "The known shapes of input_x and input_y must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -80,7 +110,7 @@ ge::graphStatus SoftMarginLossTiling::SetTilingData()
             "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%llu, Reduction is : %u, Dtype is %u",
             key.ReduceTiling.patternID, key.ReduceTiling.loopARCount, key.ReduceTiling.loopInnerARCount, tilingKey,
             key.Reduction, key.Dtype);
-    if (static_cast<int32_t>(this->reduction) < 1) {
+    if (this->reduction == REDUCTION_NONE) {
         size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
         currentWorkspace[0] = static_cast<size_t>(ASCEND_WORKSPACE);
         tilingContext->SetBlockDim(tiling->baseTiling.blockNum);
@@ -102,7 +132,7 @@ ge::graphStatus SoftMarginLossTiling::TilingEle()
                         ge::GRAPH_SUCCESS,
                     OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "loss", ToString(this->outputDtype).c_str(),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output_z", ToString(this->outputDtype).c_str(),
                                   "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
@@ -119,7 +149,7 @@ ge::graphStatus SoftMarginLossTiling::TilingReduce(const SoftMarginLossCompileIn
         opInput.axes[i] = i;
     }
     if (this->outputDtype == ge::DT_FLOAT16 || this->outputDtype == ge::DT_BF16) {
-        if (static_cast<int32_t>(this->reduction) == 1) {
+        if (this->reduction == REDUCTION_SUM) {
             OP_CHECK_IF((Tiling4ReduceOp<SoftMarginLoss::SoftMarginLossSumDag<half, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) ==
                          ge::GRAPH_FAILED),
@@ -131,7 +161,7 @@ ge::graphStatus SoftMarginLossTiling::TilingReduce(const SoftMarginLossCompileIn
                         OP_LOGE(tilingContext->GetNodeName(), "SoftMarginLoss Tiling failed"), return ge::GRAPH_FAILED);
         }
     } else {
-        if (static_cast<int32_t>(this->reduction) == 1) {
+        if (this->reduction == REDUCTION_SUM) {
             OP_CHECK_IF((Tiling4ReduceOp<SoftMarginLoss::SoftMarginLossSumDag<float, float>::OpDag>(
                              tilingContext, opInput, key.ReduceTiling, &compileInfo->opInfo, &tiling->reduceTiling) ==
                          ge::GRAPH_FAILED),

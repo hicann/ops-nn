@@ -13,6 +13,8 @@
 #ifndef CANN_OPS_SOFT_MARGIN_LOSS_DAG_H
 #define CANN_OPS_SOFT_MARGIN_LOSS_DAG_H
 
+#include <limits>
+
 #include "atvoss/util/dag.h"
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
@@ -23,13 +25,67 @@ namespace SoftMarginLoss {
 using namespace Ops::Base;
 using namespace AscendC;
 
+// Accurate log1p(e) for e = exp(-target*self).
+// u = 1 + e rounds to 1 when e is below half an ULP at 1.0; in that case return e
+// instead of log(1)=0. Otherwise log(u) * e / (u - 1) recovers log(1+e) without
+// the cancellation of log(u) alone. exp overflow (u = inf) maps to inf.
+#ifdef __CCE_AICORE__
+template <typename T>
+__simd_vf__ inline void SoftMarginLog1pVF(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, uint32_t count)
+{
+    constexpr uint32_t vlSize = VECTOR_REG_WIDTH / sizeof(T);
+    const uint16_t loopNum = static_cast<uint16_t>(CeilDivision(count, vlSize));
+    const T one = static_cast<T>(1.0f);
+    const T negOne = static_cast<T>(-1.0f);
+    const T inf = std::numeric_limits<T>::infinity();
+
+    Reg::RegTensor<T, Reg::RegTraitNumOne> e;
+    Reg::RegTensor<T, Reg::RegTraitNumOne> u;
+    Reg::RegTensor<T, Reg::RegTraitNumOne> v;
+    Reg::RegTensor<T, Reg::RegTraitNumOne> logU;
+    Reg::RegTensor<T, Reg::RegTraitNumOne> ratio;
+    Reg::RegTensor<T, Reg::RegTraitNumOne> result;
+    Reg::RegTensor<T, Reg::RegTraitNumOne> infReg;
+    Reg::MaskReg mask;
+    Reg::MaskReg uIsOne;
+    Reg::MaskReg uIsInf;
+
+    Reg::Duplicate(infReg, inf);
+    for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
+        mask = Reg::UpdateMask<T, Reg::RegTraitNumOne>(count);
+        Reg::LoadAlign(e, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+        Reg::Adds(u, e, one, mask);
+        Reg::Compares<T, CMPMODE::EQ>(uIsOne, u, one, mask);
+        Reg::Adds(v, u, negOne, mask);
+        Reg::Log(logU, u, mask);
+        Reg::Div(ratio, e, v, mask);
+        Reg::Mul(result, logU, ratio, mask);
+        Reg::Select(result, e, result, uIsOne);
+        Reg::Compare<T, CMPMODE::EQ>(uIsInf, u, infReg, mask);
+        Reg::Select(result, infReg, result, uIsInf);
+        Reg::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), result, mask);
+    }
+}
+#endif
+
+template <typename T>
+struct SoftMarginLog1p : public Vec::ElemwiseUnaryOP<T, T> {
+    __aicore__ inline SoftMarginLog1p(LocalTensor<T>& dst, LocalTensor<T>& src, uint32_t count)
+    {
+#ifdef __CCE_AICORE__
+        __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
+        __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
+        asc_vf_call<SoftMarginLog1pVF<T>>(dstAddr, srcAddr, count);
+#endif
+    }
+};
+
 // L[i] = log(1 + exp(-target*self))
 // (neg_out().mul_().exp_().log1p_()): exp overflows to +inf when
-// -target*self > ~88.72, and log(1 + inf) = inf.
+// -target*self > ~88.72, and log1p(inf) = inf.
 template <typename T, typename PromoteT = float>
 struct SoftMarginLossOp {
     using ConstNegOne = MAKE_CONST(float, -1);
-    using ConstOne = MAKE_CONST(float, 1);
 
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
     using OpCopyIn1 = Bind<Vec::CopyIn<T>, Placeholder::In1<T>>;
@@ -42,10 +98,8 @@ struct SoftMarginLossOp {
     using OpNegTx = Bind<Vec::Muls<PromoteT>, OpMulTx, ConstNegOne>;
     // e = exp(-tx)
     using OpExp = Bind<Vec::Exp<PromoteT>, OpNegTx>;
-    // 1 + e
-    using OpAddOne = Bind<Vec::Adds<PromoteT>, OpExp, ConstOne>;
-    // L = log(1 + exp(-tx))
-    using OpResult = Bind<Vec::Log<PromoteT>, OpAddOne>;
+    // L = log1p(exp(-tx))
+    using OpResult = Bind<SoftMarginLog1p<PromoteT>, OpExp>;
 
     using OpResultCast = Bind<Vec::Cast<T, PromoteT, 1>, OpResult>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpResultCast>;
@@ -57,7 +111,6 @@ struct SoftMarginLossOp {
 template <typename T, typename PromoteT>
 struct SoftMarginLossSumDag {
     using ConstNegOne = MAKE_CONST(float, -1);
-    using ConstOne = MAKE_CONST(float, 1);
 
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
     using OpCopyIn1 = Bind<Vec::CopyIn<T>, Placeholder::In1<T>>;
@@ -70,10 +123,8 @@ struct SoftMarginLossSumDag {
     using OpNegTx = Bind<Vec::Muls<PromoteT>, OpMulTx, ConstNegOne>;
     // e = exp(-tx)
     using OpExp = Bind<Vec::Exp<PromoteT>, OpNegTx>;
-    // 1 + e
-    using OpAddOne = Bind<Vec::Adds<PromoteT>, OpExp, ConstOne>;
-    // L = log(1 + exp(-tx))
-    using OpResult = Bind<Vec::Log<PromoteT>, OpAddOne>;
+    // L = log1p(exp(-tx))
+    using OpResult = Bind<SoftMarginLog1p<PromoteT>, OpExp>;
 
     using ReduceOp0 = Bind<PairwiseReduceSumOp<PromoteT>, OpResult>;
     using Cast1 = Bind<Vec::Cast<T, PromoteT, 1>, ReduceOp0>;
@@ -87,7 +138,6 @@ struct SoftMarginLossSumDag {
 template <typename T, typename PromoteT>
 struct SoftMarginLossMeanDag {
     using ConstNegOne = MAKE_CONST(float, -1);
-    using ConstOne = MAKE_CONST(float, 1);
 
     using OpCopyIn0 = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
     using OpCopyIn1 = Bind<Vec::CopyIn<T>, Placeholder::In1<T>>;
@@ -100,10 +150,8 @@ struct SoftMarginLossMeanDag {
     using OpNegTx = Bind<Vec::Muls<PromoteT>, OpMulTx, ConstNegOne>;
     // e = exp(-tx)
     using OpExp = Bind<Vec::Exp<PromoteT>, OpNegTx>;
-    // 1 + e
-    using OpAddOne = Bind<Vec::Adds<PromoteT>, OpExp, ConstOne>;
-    // L = log(1 + exp(-tx))
-    using OpResult = Bind<Vec::Log<PromoteT>, OpAddOne>;
+    // L = log1p(exp(-tx))
+    using OpResult = Bind<SoftMarginLog1p<PromoteT>, OpExp>;
 
     using ReduceOp0 = Bind<Vec::ReduceSumOp<PromoteT>, OpResult>;
     using Mul0 = Bind<Vec::Muls<PromoteT>, ReduceOp0, Placeholder::Var<PromoteT, 0>>;

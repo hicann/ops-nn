@@ -97,7 +97,7 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0pky">shape需要与target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与target数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -107,7 +107,7 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与self数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -127,7 +127,7 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0lax">若reduction取值为'none'，则shape需要与self和target进行<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape一致，否则out为0维标量（shape=[]）。</td>
       <td class="tg-0lax">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0lax">ND</td>
-      <td class="tg-0lax">reduction='none'时为1-8（与broadcast后的shape一致）；reduction='mean'或'sum'时为0维标量</td>
+      <td class="tg-0lax">reduction='none'时为0-8（与broadcast后的shape一致）；reduction='mean'或'sum'时为0维标量</td>
       <td class="tg-0lax">√</td>
     </tr>
     <tr>
@@ -176,12 +176,15 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0pky">传入的self、target或out是空指针。</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="2">161002</td>
+      <td class="tg-0pky" rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="3">161002</td>
       <td class="tg-0pky">self、target或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td class="tg-0pky">self和target的shape不满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>规则，或者<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape与out不一致。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction取值不在0('none')、1('mean')、2('sum')范围内。</td>
     </tr>
   </tbody>
   </table>
@@ -233,10 +236,13 @@ aclnnStatus aclnnSoftMarginLoss(
 
 - 确定性计算：
   - aclnnSoftMarginLoss默认确定性实现。
+- 形状与维度：self/target 的维度不超过 8 维（0 维标量亦可）。
+- 空 tensor：支持空输入。
+- 数据格式：仅支持 ND。
 
 - 数值边界（算子在float32精度下计算，FLOAT16/BFLOAT16输入同样适用）：
   - 溢出：当逐元素满足 $-target \times self > \ln(FLT\_MAX) \approx 88.72$ 时，$\exp(-target \times self)$ 溢出为+inf，输出 $log(1+inf)=inf$；reduction为'mean'或'sum'时，任一元素为inf会使标量输出为inf。典型场景为预测方向严重错误（如target=1且self取较大的负值）。
-  - 下溢：当逐元素满足 $target \times self > \ln(2^{24}) \approx 16.64$ 时，$\exp(-target \times self) < 2^{-24}$，$1+\exp(-target \times self)$ 舍入为1，输出为0。
+  - 下溢：实现使用 log1p 稳定计算 $\log(1+\exp(-target \times self))$。当 $target \times self$ 较大时，输出约为 $\exp(-target \times self)$，不会因 $1+\exp(-target \times self)$ 舍入为1而提前变为0。
 
 ## 调用示例
 

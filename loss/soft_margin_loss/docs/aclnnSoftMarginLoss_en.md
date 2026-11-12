@@ -35,7 +35,7 @@
   \text{out}(self,target)=L=log(1+\exp(-target[i]*self[i]))
   $$
 
-  When reduction is 'none':
+  When reduction is not 'none':
 
 $$
 \text{out}(self,target)=
@@ -99,7 +99,7 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with target.<br>The data type must comply with the data type deduction rule with target.</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -109,7 +109,7 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0pky">The shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with self.<br>The data type must conform to the data type deduction rule with self.</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -129,7 +129,7 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0lax">If reduction is set to 'none', the shape must be the same as the shape of self and target after <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a>. Otherwise, out is a scalar.</td>
       <td class="tg-0lax">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0lax">ND</td>
-      <td class="tg-0lax">1-8</td>
+      <td class="tg-0lax">0-8 when reduction is 'none' (matching the broadcast shape); 0-dimensional scalar when reduction is 'mean' or 'sum'</td>
       <td class="tg-0lax">√</td>
     </tr>
     <tr>
@@ -178,12 +178,15 @@ aclnnStatus aclnnSoftMarginLoss(
       <td class="tg-0pky">The self, target, or out pointer is null.</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="2">161002</td>
+      <td class="tg-0pky" rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="3">161002</td>
       <td class="tg-0pky">The data type of self, target, or out is not supported.</td>
     </tr>
     <tr>
       <td class="tg-0pky">The shapes of self and target do not comply with the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> rules, or the shape after <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> is inconsistent with that of out.</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction is not one of 0('none'), 1('mean'), or 2('sum').</td>
     </tr>
   </tbody>
   </table>
@@ -235,6 +238,12 @@ aclnnStatus aclnnSoftMarginLoss(
 
 - Deterministic computation:
   - aclnnSoftMarginLoss defaults to a deterministic implementation.
+- Shape and rank: self/target must have a rank of at most 8 (0-dimensional scalars are also accepted).
+- Empty tensors: empty inputs are supported.
+- Data format: only ND is supported.
+- Numerical boundaries (the operator computes in float32 precision, which also applies to FLOAT16/BFLOAT16 inputs):
+  - Overflow: when an element satisfies $-target \times self > \ln(FLT\_MAX) \approx 88.72$, $\exp(-target \times self)$ overflows to +inf, and the output is $log(1+inf)=inf$; when reduction is 'mean' or 'sum', any element being inf makes the scalar output inf. A typical scenario is a severely wrong prediction direction (for example, target=1 and self takes a large negative value).
+  - Underflow: the implementation uses a stable log1p form of $\log(1+\exp(-target \times self))$. For large $target \times self$, the output is approximately $\exp(-target \times self)$ instead of becoming 0 because $1+\exp(-target \times self)$ rounds to 1.
 
 ## Example
 

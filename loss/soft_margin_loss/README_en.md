@@ -83,12 +83,16 @@ $$
 
 ## Constraints
 
+- Shape and rank: self/target must have a rank of at most 8 (0-dimensional scalars are also accepted).
+- Empty tensors: the aclnn interface supports empty inputs.
+- Data format: only ND is supported.
 - Numerical boundaries (the operator computes in float32 precision, which also applies to FLOAT16/BFLOAT16 inputs):
   - Overflow: when an element satisfies $-target \times self > \ln(FLT\_MAX) \approx 88.72$, $\exp(-target \times self)$ overflows to +inf, and the output is $log(1+inf)=inf$; when `reduction` is 'mean' or 'sum', any element being inf makes the scalar output inf. A typical scenario is a severely wrong prediction direction (for example, target=1 and self takes a large negative value).
-  - Underflow: when an element satisfies $target \times self > \ln(2^{24}) \approx 16.64$, $\exp(-target \times self) < 2^{-24}$, $1+\exp(-target \times self)$ rounds to 1, and the output is 0.
+  - Underflow: the implementation uses a stable log1p form of $\log(1+\exp(-target \times self))$. For large $target \times self$, the output is approximately $\exp(-target \times self)$ instead of becoming 0 because $1+\exp(-target \times self)$ rounds to 1.
 
 ## Invocation Description
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn interface  | [test_aclnn_soft_margin_loss.cpp](examples/test_aclnn_soft_margin_loss.cpp) | Calls the SoftMarginLoss operator through the [aclnnSoftMarginLoss](docs/aclnnSoftMarginLoss_en.md) interface. |
+| Graph mode (GEIR) | [test_geir_soft_margin_loss.cpp](examples/arch35/test_geir_soft_margin_loss.cpp) | Builds a GE graph through the [operator IR](op_graph/soft_margin_loss_proto.h) and calls SoftMarginLoss. |

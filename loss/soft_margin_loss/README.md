@@ -81,12 +81,16 @@ $$
 
 ## 约束说明
 
+- 形状与维度：self/target 的维度不超过 8 维（0 维标量亦可）。
+- 空 tensor：aclnn 接口支持空输入。
+- 数据格式：仅支持 ND。
 - 数值边界（算子在float32精度下计算，FLOAT16/BFLOAT16输入同样适用）：
   - 溢出：当逐元素满足 $-target \times self > \ln(FLT\_MAX) \approx 88.72$ 时，$\exp(-target \times self)$ 溢出为+inf，输出 $log(1+inf)=inf$；`reduction`为'mean'或'sum'时，任一元素为inf会使标量输出为inf。典型场景为预测方向严重错误（如target=1且self取较大的负值）。
-  - 下溢：当逐元素满足 $target \times self > \ln(2^{24}) \approx 16.64$ 时，$\exp(-target \times self) < 2^{-24}$，$1+\exp(-target \times self)$ 舍入为1，输出为0。
+  - 下溢：实现使用 log1p 稳定计算 $\log(1+\exp(-target \times self))$。当 $target \times self$ 较大时，输出约为 $\exp(-target \times self)$，不会因 $1+\exp(-target \times self)$ 舍入为1而提前变为0。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_soft_margin_loss.cpp](examples/test_aclnn_soft_margin_loss.cpp) | 通过[aclnnSoftMarginLoss](docs/aclnnSoftMarginLoss.md)接口方式调用SoftMarginLoss算子。 |
+| 图模式（GEIR） | [test_geir_soft_margin_loss.cpp](examples/arch35/test_geir_soft_margin_loss.cpp) | 通过[算子IR](op_graph/soft_margin_loss_proto.h)构图方式调用SoftMarginLoss算子。 |

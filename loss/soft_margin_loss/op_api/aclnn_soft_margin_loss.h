@@ -23,13 +23,13 @@ extern "C" {
  *
  * 算子功能：计算输入self和目标target的二分类逻辑损失函数。
  *
- * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16，shape需要与target满足broadcast关系。
+ * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，shape需要与target满足broadcast关系。
  * 支持非连续的Tensor，数据格式支持ND。
- * @param [in] target: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16，shape需要与self满足broadcast关系。
+ * @param [in] target: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，shape需要与self满足broadcast关系。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] reduction: host侧的int64，指定要应用到输出的缩减，支持 0('none') | 1('mean') | 2('sum')。
  * 'none' 表示不应用减少，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
- * @param [in] out: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16。支持非连续的Tensor，数据格式支持ND。
+ * @param [out] out: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16。支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

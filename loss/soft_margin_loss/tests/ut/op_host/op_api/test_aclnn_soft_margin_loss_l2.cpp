@@ -213,7 +213,7 @@ TEST_F(l2_soft_margin_loss_test, soft_margin_loss_reduction_3)
     auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
     // ut.TestPrecision();
 }
 
@@ -228,52 +228,70 @@ TEST_F(l2_soft_margin_loss_test, soft_margin_loss_reduction_negative_4)
     auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    // ut.TestPrecision();
+}
+
+// target broadcast: target {2,1} 广播到 {2,2}
+TEST_F(l2_soft_margin_loss_test, soft_margin_loss_target_broadcast)
+{
+    auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto targetDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-1, 1});
+    auto outDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t reduction = 0;
+
+    auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
     // ut.TestPrecision();
 }
 
-/*
-// target broadcast
-TEST_F(l2_soft_margin_loss_test, soft_margin_loss_target_broadcast) {
-  auto selfDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto targetDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-1, 1, 1, -1});
-  auto outDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  int64_t reduction = 0;
+// self broadcast: self {2,1} 广播到 {2,2}，aclnn 侧对 self/target 双向广播
+TEST_F(l2_soft_margin_loss_test, soft_margin_loss_self_broadcast)
+{
+    auto selfDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto targetDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-1, 1, 1, -1});
+    auto outDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t reduction = 0;
 
-  auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-  ut.TestPrecision();
+    auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // ut.TestPrecision();
 }
 
-// self broadcast
-TEST_F(l2_soft_margin_loss_test, soft_margin_loss_self_broadcast) {
-  auto selfDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
-  auto targetDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-1, 1, 1, -1});
-  auto outDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  int64_t reduction = 0;
+// not contiguous: self 非连续（stride {1,2}），接口内部先做 Contiguous
+TEST_F(l2_soft_margin_loss_test, soft_margin_loss_not_contiguous)
+{
+    auto selfDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).ValueRange(0, 1);
+    auto targetDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-1, 1, 1, -1, -1, 1, 1, -1});
+    auto outDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t reduction = 0;
 
-  auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // ut.TestPrecision();
 }
 
-// not contiguous
-TEST_F(l2_soft_margin_loss_test, soft_margin_loss_not_contiguous) {
-  auto selfDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).ValueRange(0, 1);
-  auto targetDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-1, 1, 1, -1});
-  auto outDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
-  int64_t reduction = 0;
+// scalar input: 0 维输入同样支持，reduction='none' 时输出同为 0 维
+TEST_F(l2_soft_margin_loss_test, soft_margin_loss_scalar_input)
+{
+    auto selfDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.5});
+    auto targetDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1});
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    int64_t reduction = 0;
 
-  auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
-  uint64_t workspaceSize = 0;
-  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACL_SUCCESS);
-  ut.TestPrecision();
+    auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    // ut.TestPrecision();
 }
-*/
+
 // shape 9d
 TEST_F(l2_soft_margin_loss_test, soft_margin_loss_shape_9d)
 {
