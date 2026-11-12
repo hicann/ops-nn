@@ -22,7 +22,8 @@
  *
  * 算子接口（REG_OP InplaceApplyFtrlV2）：
  *   9 输入: var, accum, linear, grad (ND state), lr, l1, l2, l2_shrinkage, lr_power (scalar {1})
- *   3 输出: var, accum, linear（状态更新语义；是否复用输入 buffer 由图编译器决定）
+ *   3 输出: var, accum, linear（状态更新语义；三个输出 GM 地址分别别名到对应
+ * 输入 GM 地址，inplace 原地更新生效，属正式接口契约）
  *   1 属性: use_locking (Bool, 默认 false)
  */
 
@@ -206,7 +207,8 @@ static int CreateOppInGraph(const vector<int64_t>& tensorShape, DataType dtype, 
         8, "lr_power", scalarShape, scalarDtype, graph, inputs, [&](Operator& d) { op1.set_input_lr_power(d); },
         [&](const TensorDesc& d) -> graphStatus { return op1.update_input_desc_lr_power(d); });
 
-    // 3 outputs: state-update results; physical input/output buffer reuse is graph-managed.
+    // 3 outputs: state-update results; each output GM address is aliased to the
+    // corresponding input GM address (inplace_with contract).
     TensorDesc outDesc = TensorDesc(ge::Shape(tensorShape), FORMAT_ND, dtype);
     outDesc.SetFormat(FORMAT_ND);
     outDesc.SetRealDimCnt(tensorShape.size());

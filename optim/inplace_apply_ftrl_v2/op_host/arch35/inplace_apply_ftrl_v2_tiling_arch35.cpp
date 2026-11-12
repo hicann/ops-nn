@@ -15,6 +15,7 @@
  */
 
 #include <cstring>
+#include <limits>
 #include "tiling/platform/platform_ascendc.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "exe_graph/runtime/runtime_attrs.h"
@@ -239,36 +240,35 @@ static uint32_t CalcBlockTiling(InplaceApplyFtrlV2TilingData* tiling, int64_t to
     // SetBlockDim 的块数在运行时按 16 位调度：超过 65535 的块不会被任何核执行，
     // 对应输出区间将保持输入原值。将并行度钳制到 MAX_BLOCK_NUM，超出部分通过
     // 增大 blockFactor（每块多次 UB 迭代）吸收。
+    // 比较与钳制全程使用 64 位整数，确认块数落在 32 位范围内后再收窄；否则超大
+    // 合法 shape 的真实块数经 uint32 回绕成 0/小值后会绕过 MAX_BLOCK_NUM 守卫。
     constexpr uint32_t MAX_BLOCK_NUM = 65535;
-    uint32_t calcCoreNum = static_cast<uint32_t>((totalElements * minDtypeBits + MIN_TILING_BITS - 1) /
-                                                 MIN_TILING_BITS);
-    calcCoreNum = std::min(calcCoreNum, static_cast<uint32_t>(coreNum));
-    calcCoreNum = std::min(calcCoreNum, MAX_BLOCK_NUM);
-    if (calcCoreNum == 0) {
+    constexpr int64_t MIN_TILING_BITS_I64 = static_cast<int64_t>(MIN_TILING_BITS);
+    int64_t calcCoreNum = (totalElements * static_cast<int64_t>(minDtypeBits) + MIN_TILING_BITS_I64 - 1) /
+                          MIN_TILING_BITS_I64;
+    calcCoreNum = std::min(calcCoreNum, coreNum);
+    calcCoreNum = std::min<int64_t>(calcCoreNum, static_cast<int64_t>(MAX_BLOCK_NUM));
+    if (calcCoreNum <= 0) {
         calcCoreNum = 1;
     }
 
-    tiling->blockFactor = CeilAlign(
-        static_cast<int64_t>(CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(calcCoreNum))),
-        static_cast<int64_t>(ELEM_ALIGN_FACTOR));
+    tiling->blockFactor = CeilAlign(CeilDiv(totalElements, calcCoreNum), static_cast<int64_t>(ELEM_ALIGN_FACTOR));
     if (tiling->blockFactor > tiling->ubFactor) {
-        tiling->blockFactor = (tiling->ubFactor / ELEM_ALIGN_FACTOR) * ELEM_ALIGN_FACTOR;
+        tiling->blockFactor = (tiling->ubFactor / static_cast<int64_t>(ELEM_ALIGN_FACTOR)) *
+                              static_cast<int64_t>(ELEM_ALIGN_FACTOR);
         if (tiling->blockFactor == 0) {
-            tiling->blockFactor = ELEM_ALIGN_FACTOR;
+            tiling->blockFactor = static_cast<int64_t>(ELEM_ALIGN_FACTOR);
         }
     }
-    uint32_t blockNum = static_cast<uint32_t>(
-        CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(tiling->blockFactor)));
+    int64_t blockNum = CeilDiv(totalElements, tiling->blockFactor);
     // blockFactor 被 ubFactor 钳制后 blockNum 仍可能超过 MAX_BLOCK_NUM（如超大 shape 小 dtype 场景），
     // 此时按 MAX_BLOCK_NUM 反推 blockFactor，保证最终 blockNum 不越过 16 位调度上限。
-    if (blockNum > MAX_BLOCK_NUM) {
-        tiling->blockFactor = CeilAlign(
-            static_cast<int64_t>(CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(MAX_BLOCK_NUM))),
-            static_cast<int64_t>(ELEM_ALIGN_FACTOR));
-        blockNum = static_cast<uint32_t>(
-            CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(tiling->blockFactor)));
+    if (blockNum > static_cast<int64_t>(MAX_BLOCK_NUM)) {
+        tiling->blockFactor = CeilAlign(CeilDiv(totalElements, static_cast<int64_t>(MAX_BLOCK_NUM)),
+                                        static_cast<int64_t>(ELEM_ALIGN_FACTOR));
+        blockNum = CeilDiv(totalElements, tiling->blockFactor);
     }
-    return blockNum;
+    return static_cast<uint32_t>(blockNum);
 }
 
 static ge::graphStatus InplaceApplyFtrlV2TilingFunc(gert::TilingContext* context)
@@ -301,6 +301,18 @@ static ge::graphStatus InplaceApplyFtrlV2TilingFunc(gert::TilingContext* context
         context->SetBlockDim(1);
         OP_LOGD(context, "InplaceApplyFtrlV2: empty tensor path | dtype=%d", static_cast<int>(dataType));
         return ge::GRAPH_SUCCESS;
+    }
+
+    if (totalElements < 0) {
+        // GetShapeSize 在维度乘积溢出时返回 INT64_MIN 等负值；此类 shape 不能参与分块算术。
+        OP_LOGE(context, "InplaceApplyFtrlV2: invalid totalElements %ld (shape size overflow)", totalElements);
+        return ge::GRAPH_FAILED;
+    }
+    // 分核算术使用 int64 乘法；先确认 totalElements * minDtypeBits + (MIN_TILING_BITS - 1) 不会溢出。
+    const int64_t maxTilingNumerator = std::numeric_limits<int64_t>::max() - static_cast<int64_t>(MIN_TILING_BITS - 1);
+    if (totalElements > maxTilingNumerator / static_cast<int64_t>(minDtypeBits)) {
+        OP_LOGE(context, "InplaceApplyFtrlV2: totalElements %ld is too large for tiling arithmetic", totalElements);
+        return ge::GRAPH_FAILED;
     }
 
     CalcUbTiling(tiling, ubSize, minDtypeBits, dataType);
