@@ -5,8 +5,8 @@
 | 产品                                                         |  是否支持   |
 | :----------------------------------------------------------- |:-------:|
 | <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
-| <term>Atlas A3系列产品</term>    |    ×    |
-| <term>Atlas A2系列产品</term> |    ×    |
+| <term>Atlas A3系列产品</term>    |    √    |
+| <term>Atlas A2系列产品</term> |    √    |
 |  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
 |  <term>Atlas推理系列产品</term>    |     ×    |
 |  <term>Atlas训练系列产品</term>    |     ×    |
@@ -40,15 +40,15 @@
     <td>x1</td>
     <td>输入</td>
     <td>矩阵乘运算中的左矩阵。</td>
-    <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8</td>
+    <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8, INT8</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>x2</td>
     <td>输入</td>
     <td>矩阵乘运算中的右矩阵。</td>
-    <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8</td>
-    <td>ND</td>
+    <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8, INT8</td>
+    <td>ND, FRACTAL_NZ</td>
   </tr>
   <tr>
     <td>bias</td>
@@ -126,6 +126,7 @@
 
 ## 约束说明
 
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：仅支持 INT8 W8A8 K-C。x1、x2 为 INT8，x1Scale、x2Scale 为 FLOAT32，y 为 BF16。x1 为 [M, B, K]，x2 为 [B, K, N]，x1Scale 为 [M, B]，x2Scale 为 [B, N]，y 为 [M, B, N]。permX1、permY 为 [1, 0, 2]，permX2 为 [0, 1, 2]。K 为 32 的倍数，N 为 16 的倍数，batchSplitFactor 为 1。A2 上 B*K 小于 65536。x2 支持 ND 与 FRACTAL_NZ。
 - <term>Ascend 950PR&950DT系列产品</term>：
     - permX1和permY支持[1, 0, 2]。
     - K-C量化场景，permX2支持输入[0, 1, 2]；MX和T-C量化场景，permX2支持输入[0, 1, 2]或[0, 2, 1]。
@@ -145,5 +146,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_quant_batch_mat_mul](examples/arch35/test_aclnn_transpose_quant_batch_mat_mul.cpp) | 通过<br>- [aclnnTransposeQuantBatchMatMul](docs/aclnnTransposeQuantBatchMatMul.md)<br>- [aclnnTransposeQuantBatchMatMulWeightNz](docs/aclnnTransposeQuantBatchMatMulWeightNz.md)<br>等方式调用TransposeQuantBatchMatMul算子。|
-| torch接口  | [torchapi_transpose_quant_batch_mat_mul](docs/torchapi_transpose_quant_batch_mat_mul.md) | 通过`cann_ops_nn.transpose_quant_batch_mat_mul`调用TransposeQuantBatchMatMul算子，支持MX（MXFP8/MXFP4）、FP8（K-C）与HIFP8量化模式。|
+| aclnn接口  | [test_aclnn_transpose_quant_batch_mat_mul](examples/test_aclnn_transpose_quant_batch_mat_mul.cpp)<br>[test_aclnn_quant_batch_mat_mul](examples/arch35/test_aclnn_transpose_quant_batch_mat_mul.cpp) | 通过<br>- [aclnnTransposeQuantBatchMatMul](docs/aclnnTransposeQuantBatchMatMul.md)<br>- [aclnnTransposeQuantBatchMatMulWeightNz](docs/aclnnTransposeQuantBatchMatMulWeightNz.md)<br>等方式调用TransposeQuantBatchMatMul算子。顶层样例为 Atlas A2/A3 的 INT8 W8A8，arch35 样例为 Ascend 950 的 FP8。|
+| torch接口  | [torchapi_transpose_quant_batch_mat_mul](docs/torchapi_transpose_quant_batch_mat_mul.md) | 通过`cann_ops_nn.transpose_quant_batch_mat_mul`调用TransposeQuantBatchMatMul算子，支持MX（MXFP8/MXFP4）、FP8（K-C）、HIFP8与INT8 W8A8量化模式。|

@@ -8,10 +8,10 @@
 - <term>Ascend 950PR&950DT products</term>: Supported
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 products</term>: Not supported
+- <term>Atlas A3 products</term>: Supported
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 products</term>: Not supported
+- <term>Atlas A2 products</term>: Supported
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 inference products</term>: Not supported
@@ -92,7 +92,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>First matrix of the matrix multiplication.</td>
         <td>          The data type must comply with the data type deduction rule with x2 (see <a href="../../../docs/en/context/deduction_relationship.md">deduction relationship</a> and <a href="#constraints">Constraints</a>).
         </td>
-        <td>FLOAT8_E4M3FN, FLOAT4_E2M1</td>
+        <td>FLOAT8_E4M3FN, FLOAT4_E2M1, INT8</td>
         <td>ND</td>
         <td>3</td>
         <td>√</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
             <li>The k dimension of x2 must be of the same size as the K dimension of x1.</li>
         </ul>
         </td>
-        <td>FLOAT8_E4M3FN, FLOAT4_E2M1</td>
+        <td>FLOAT8_E4M3FN, FLOAT4_E2M1, INT8</td>
         <td>NZ</td>
         <td>5</td>
         <td>√</td>
@@ -125,11 +125,11 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
       <td>x1Scale (aclTensor*)</td>
         <td>Input</td>
         <td>Represents the quantization scale of the left matrix.</td>
-        <td>          The shape must be (M, B, K/64, 2).
+        <td>          The shape must be (M, B, K/64, 2) in the MX scenario. For INT8 W8A8 K-C on Atlas A2/A3, the shape is [M, B] and the data type is FLOAT32.
         </td>
-        <td>FLOAT8_E8M0</td>
+        <td>FLOAT8_E8M0, FLOAT32</td>
         <td>ND</td>
-        <td>4</td>
+        <td>4 or 2</td>
         <td>√</td>
       </tr>
       <tr>
@@ -138,10 +138,11 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>Represents the quantization scale of the right matrix.</td>
         <td>          <li>If permX2 is [0, 1, 2], the shape must be (B, K/64, N, 2)</li>
           <li>If permX2 is [0, 2, 1], the shape must be (B, N, K/64, 2)</li>
+          <li>For INT8 W8A8 K-C on Atlas A2/A3, the shape is [B, N], the data type is FLOAT32, and permX2 supports only [0, 1, 2].</li>
         </td>
-        <td>FLOAT8_E8M0</td>
+        <td>FLOAT8_E8M0, FLOAT32</td>
         <td>ND</td>
-        <td>4</td>
+        <td>4 or 2</td>
         <td>√</td>
       </tr>
       <tr>
@@ -150,7 +151,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>Used to specify the data type of the output matrix. Supported values: 1 and 27.</td>
         <td>        <ul>
           <li>If the value is 1, the output matrix type is FLOAT16.</li>
-          <li>If the value is 27, the output matrix type is BFLOAT16.</li>
+          <li>If the value is 27, the output matrix type is BFLOAT16. INT8 W8A8 on Atlas A2/A3 supports only this value.</li>
         </ul>
         </td>
         <td>INT32</td>
@@ -338,6 +339,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
 ## Constraints
 
 - Deterministic computation: aclnnTransposeQuantBatchMatMulWeightNz defaults to a deterministic implementation.
+
+- <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: Only INT8 W8A8 K-C is supported. x1 is INT8 ND with shape [M, B, K]. x2 is INT8 FRACTAL_NZ with logical shape [B, K, N]. x1Scale and x2Scale are FLOAT32, x1Scale is [M, B], x2Scale is [B, N], and y is BF16 [M, B, N]. permX1 and permY are [1, 0, 2], and permX2 is [0, 1, 2]. K is a multiple of 32, N is a multiple of 16, and batchSplitFactor is 1. On A2, B*K must be less than 65536. dtype supports only 27 (BF16).
 
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR&950DT products</term>:

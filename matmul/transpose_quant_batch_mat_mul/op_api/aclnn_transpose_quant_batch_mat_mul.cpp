@@ -25,6 +25,7 @@
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
+#include "aclnn_kernels/transpose.h"
 #include "level0/dot.h"
 #include "level0/fill.h"
 #include "matmul/common/op_host/op_api/matmul.h"
@@ -58,6 +59,8 @@ static const std::vector<std::vector<op::DataType>> X_SCALE_DTYPE_SUPPORT_LIST =
     {DataType::DT_HIFLOAT8, DataType::DT_HIFLOAT8, DataType::DT_UNDEFINED, DataType::DT_UINT64},
     // HIFP4
     {Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4, Ops::NN::DT_HIFLOAT4_SCALE, Ops::NN::DT_HIFLOAT4_SCALE},
+    // A2/A3 INT8 W8A8: per-token x1Scale and per-channel x2Scale are both FP32
+    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_FLOAT, DataType::DT_FLOAT},
 };
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_BF16};
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST_HIFP8 = {
@@ -68,6 +71,8 @@ static constexpr size_t EXPECTED_MX_SCALE_DIM = 4;
 static constexpr size_t EXPECTED_NZ_DIM = 5;
 static constexpr int TQBMM_VALID_K = 512;
 static constexpr int TQBMM_VALID_N = 128;
+static constexpr int64_t W8A8_K_ALIGN = 32;
+static constexpr int64_t W8A8_N_ALIGN = 16;
 static const uint64_t GROUP_M_OFFSET = 32;
 static const uint64_t GROUP_N_OFFSET = 16;
 static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
@@ -183,8 +188,17 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, con
                 .c_str());
         return false;
     }
-    // 输出 dtype 检查（HIFP8 支持 HIFLOAT8 输出）
-    if (IsHIFP8(x1, x2)) {
+    // A2/A3 INT8 W8A8 二进制只注册了 BF16。FP16 能通过下面的通用列表，但选 bin 时才会失败。
+    if (x1->GetDataType() == DataType::DT_INT8 && x2->GetDataType() == DataType::DT_INT8) {
+        if (out->GetDataType() != DataType::DT_BF16 || dtype != static_cast<int32_t>(DataType::DT_BF16)) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                OP_NAME, "out", op::ToString(out->GetDataType()).GetString(),
+                Ops::NN::FormatString("INT8 W8A8 requires %s to be BF16 and dtype to be %d", "out",
+                                      static_cast<int32_t>(DataType::DT_BF16))
+                    .c_str());
+            return false;
+        }
+    } else if (IsHIFP8(x1, x2)) {
         if (!CheckType(out->GetDataType(), OUT_DTYPE_SUPPORT_LIST_HIFP8)) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 OP_NAME, "out", op::ToString(out->GetDataType()).GetString(),
@@ -385,7 +399,7 @@ inline static bool CheckScaleValid(const aclTensor* x1Scale, const aclTensor* x2
 }
 
 static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY, bool isMxFp,
-                           bool isHIFP8, bool isHIFP4 = false)
+                           bool isHIFP8, bool isHIFP4 = false, bool isW8A8 = false)
 {
     if (permX1->Size() != EXPECTED_DIM) {
         OP_LOGE_FOR_INVALID_LISTSIZE(OP_NAME, "permX1", std::to_string(permX1->Size()).c_str(),
@@ -484,6 +498,28 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
         return false;
     }
     bool isHIFP8 = IsHIFP8(x1, x2);
+    bool isW8A8 = x1->GetDataType() == DataType::DT_INT8 && x2->GetDataType() == DataType::DT_INT8;
+    if (isW8A8) {
+        if (x1KDim % W8A8_K_ALIGN != 0 || n % W8A8_N_ALIGN != 0) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                OP_NAME, "x1, x2", Ops::NN::FormatString("K=%ld, N=%ld", x1KDim, n).c_str(),
+                Ops::NN::FormatString("INT8 W8A8 requires K divisible by %ld and N divisible by %ld", W8A8_K_ALIGN,
+                                      W8A8_N_ALIGN)
+                    .c_str());
+            return false;
+        }
+        if (x1Scale->GetViewShape().GetDimNum() != 2 || x2Scale->GetViewShape().GetDimNum() != 2 ||
+            x1Scale->GetViewShape().GetDim(0) != m || x1Scale->GetViewShape().GetDim(1) != x1BatchDim ||
+            x2Scale->GetViewShape().GetDim(0) != x1BatchDim || x2Scale->GetViewShape().GetDim(1) != n) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                OP_NAME, "x1Scale, x2Scale", "invalid",
+                Ops::NN::FormatString("INT8 W8A8 requires x1Scale [M, B] = [%ld, %ld] and x2Scale [B, N] = [%ld, %ld]",
+                                      m, x1BatchDim, x1BatchDim, n)
+                    .c_str());
+            return false;
+        }
+        return true;
+    }
     if (!isMxFp && !isHIFP8 && !isHIFP4) {
         // Check shape k n
         if (x1KDim != TQBMM_VALID_K || n != TQBMM_VALID_N) {
@@ -505,9 +541,9 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     return CheckScaleValid(x1Scale, x2Scale, x1BatchDim, m, n, x1KDim, permX2, isMxFp, isHIFP8, isHIFP4);
 }
 
-static inline bool CheckWeightNz(const aclTensor* x2, bool isMxFp, bool isHIFP8)
+static inline bool CheckWeightNz(const aclTensor* x2, bool isMxFp, bool isHIFP8, bool isW8A8 = false)
 {
-    if (!isMxFp && !isHIFP8) {
+    if (!isMxFp && !isHIFP8 && !isW8A8) {
         OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(OP_NAME, "x2", "FRACTAL_NZ",
                                                Ops::NN::FormatString("In %s case, the format of %s cannot be %s",
                                                                      "non-mx and non-hifp8 mode", "x2", "FRACTAL_NZ")
@@ -557,8 +593,19 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
                                       const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY,
                                       int32_t batch_split_factor, int64_t groupSize)
 {
-    // Only support DAV_3510 or DAV_9201 or DAV_9202
-    if (!IsNpuArch3510Series()) {
+    // Check null
+    CHECK_RET(CheckNotNull(x1, x2, out, x1Scale, x2Scale, permX1, permX2, permY), ACLNN_ERR_PARAM_NULLPTR);
+    bool isW8A8 = x1->GetDataType() == DataType::DT_INT8 && x2->GetDataType() == DataType::DT_INT8;
+    auto soc = GetCurrentPlatformInfo().GetSocVersion();
+    bool isA2A3 = soc == SocVersion::ASCEND910B || soc == SocVersion::ASCEND910_93;
+    if (isW8A8) {
+        if (!isA2A3) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                OP_NAME, "platform", Ops::NN::FormatString("%d", static_cast<int>(soc)).c_str(),
+                Ops::NN::FormatString("INT8 W8A8 only supports %s", "Ascend910B or Ascend910_93").c_str());
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    } else if (!IsNpuArch3510Series()) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             OP_NAME, "platform",
             Ops::NN::FormatString("%d", static_cast<int>(GetCurrentPlatformInfo().GetCurNpuArch())).c_str(),
@@ -566,19 +613,17 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
                 .c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
-    // Check null
-    CHECK_RET(CheckNotNull(x1, x2, out, x1Scale, x2Scale, permX1, permX2, permY), ACLNN_ERR_PARAM_NULLPTR);
     bool isMxFp = IsMicroScaling(x1Scale, x2Scale);
     bool isHIFP8 = IsHIFP8(x1, x2);
     bool isHIFP4 = IsHIFP4(x1, x2, x1Scale, x2Scale);
-    CHECK_RET(CheckPermValid(permX1, permX2, permY, isMxFp, isHIFP8, isHIFP4), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckPermValid(permX1, permX2, permY, isMxFp, isHIFP8, isHIFP4, isW8A8), ACLNN_ERR_PARAM_INVALID);
     // check shape
     CHECK_RET(CheckShapeValid(x1, x2, x1Scale, x2Scale, permX1, permX2, isMxFp, isHIFP4), ACLNN_ERR_PARAM_INVALID);
     // check dtype
     CHECK_RET(CheckDtypeValid(x1, x2, x1Scale, x2Scale, out, dtype), ACLNN_ERR_PARAM_INVALID);
     // check nz
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
-        CHECK_RET(CheckWeightNz(x2, isMxFp, isHIFP8), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckWeightNz(x2, isMxFp, isHIFP8, isW8A8), ACLNN_ERR_PARAM_INVALID);
     }
     // 不支持x1Format、 outFormat、 x1scaleFormat、 x2scaleFormat为NZ
     if (ge::GetPrimaryFormat(x1->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ ||
@@ -642,6 +687,20 @@ static const aclTensor* BuildTransposeQuantBatchMatMulGraph(const aclTensor* x1,
         OP_CHECK(contiguousX1Scale != nullptr,
                  OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1Scale preprocess failed, contiguous return nullptr."),
                  return nullptr);
+        // Public x1Scale is [M, B]. The W8A8 kernel reads a contiguous [B, M] token scale.
+        if (x1->GetDataType() == DataType::DT_INT8) {
+            int64_t permData[2] = {1, 0};
+            auto perm = executor->AllocIntArray(permData, 2);
+            OP_CHECK(perm != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "W8A8 x1Scale perm alloc failed."),
+                     return nullptr);
+            contiguousX1Scale = l0op::Transpose(contiguousX1Scale, perm, executor);
+            OP_CHECK(contiguousX1Scale != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "W8A8 x1Scale transpose failed."),
+                     return nullptr);
+            contiguousX1Scale = l0op::Contiguous(contiguousX1Scale, executor);
+            OP_CHECK(contiguousX1Scale != nullptr,
+                     OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "W8A8 x1Scale post-transpose contiguous failed."),
+                     return nullptr);
+        }
     }
     auto contiguousX2Scale = x2Scale;
     if (contiguousX2Scale != nullptr) {

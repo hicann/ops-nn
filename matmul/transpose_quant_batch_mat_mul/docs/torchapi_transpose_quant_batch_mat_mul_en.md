@@ -8,10 +8,10 @@
 - <term>Ascend 950PR&950DT products</term>: Supported
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 products</term>: Not supported
+- <term>Atlas A3 products</term>: Supported
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 products</term>: Not supported
+- <term>Atlas A2 products</term>: Supported
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 inference products</term>: Not supported
@@ -25,7 +25,7 @@
 
 ## Function
 
-- Description: Performs [MX quantization](../../../docs/en/context/quant_mode_introduction.md) matrix multiplication on tensor x1 and tensor x2. The bottom layer encapsulates aclnnTransposeQuantBatchMatMul; when x2 is in FRACTAL_NZ format, it encapsulates aclnnTransposeQuantBatchMatMulWeightNz. This API only supports the MX quantization mode (MXFP8 and MXFP4). For K-C and T-C quantization modes, use the aclnn API.
+- Description: Performs [MX quantization](../../../docs/en/context/quant_mode_introduction.md) matrix multiplication on tensor x1 and tensor x2. The bottom layer encapsulates aclnnTransposeQuantBatchMatMul; when x2 is in FRACTAL_NZ format, it encapsulates aclnnTransposeQuantBatchMatMulWeightNz. On Ascend 950 this page describes the MX quantization mode (MXFP8 and MXFP4). On Atlas A2 and Atlas A3, only INT8 W8A8 K-C is supported: x1 and x2 are torch.int8, x1_scale is torch.float32 with shape (M, B), x2_scale is torch.float32 with shape (B, N), and y is torch.bfloat16. K is a multiple of 32, N is a multiple of 16, perm_x2 is only [0, 1, 2], batch_split_factor is 1, and dtype is only 27. On A2, B*K must be less than 65536. For K-C and T-C quantization modes on Ascend 950, use the aclnn API.
 - Formula (taking each slice along the batch dimension as an example):
 
   $$
@@ -88,7 +88,8 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 ## Constraints
 
 - This API currently supports calls in single-operator mode.
-- Only the MX quantization mode is supported: x1, x2, x1_scale, and x2_scale must be NPU tensors, and x1_scale and x2_scale are required inputs.
+- Only the MX quantization mode is supported on Ascend 950: x1, x2, x1_scale, and x2_scale must be NPU tensors, and x1_scale and x2_scale are required inputs.
+- <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: Only INT8 W8A8 K-C is supported. x1 and x2 are torch.int8 with shapes (M, B, K) and (B, K, N). x1_scale and x2_scale are torch.float32 with shapes (M, B) and (B, N). y is torch.bfloat16 and dtype is only 27. K is a multiple of 32, N is a multiple of 16, perm_x2 is only [0, 1, 2], and batch_split_factor is 1. On A2, B*K must be less than 65536. bias must be None. When x2 is FRACTAL_NZ, the WeightNz API is used.
 - x1 and x2 must have the same data type: torch.float8_e4m3fn in MXFP8 use cases and torch.uint8 in MXFP4 use cases.
 - x1_scale and x2_scale must have the data type torch.float8_e8m0fnu.
 - Only 3D tensors are supported: the shape of x1 is (M, B, K), the shape of x2 is (B, K, N) or (B, N, K), the batch and K dimensions of x1 and x2 must be the same, and batch dimension broadcasting is not supported.

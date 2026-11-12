@@ -7,8 +7,8 @@ English | [简体中文](./README.md)
 | Product                                                         |  Support   |
 | :----------------------------------------------------------- |:-------:|
 | <term>Ascend 950PR&950DT products</term>                             |    √     |
-| <term>Atlas A3 products</term>    |    ×    |
-| <term>Atlas A2 products</term> |    ×    |
+| <term>Atlas A3 products</term>    |    √    |
+| <term>Atlas A2 products</term> |    √    |
 |  <term>Atlas 200I/500 A2 inference products</term>    |     ×    |
 |  <term>Atlas inference products</term>    |     ×    |
 |  <term>Atlas training products</term>    |     ×    |
@@ -42,15 +42,15 @@ English | [简体中文](./README.md)
     <td>x1</td>
     <td>Input</td>
     <td>Left matrix in the matrix multiplication.</td>
-    <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8</td>
+    <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8, INT8</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>x2</td>
     <td>Input</td>
     <td>Right matrix in the matrix multiplication.</td>
-    <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8</td>
-    <td>ND</td>
+    <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8, INT8</td>
+    <td>ND, FRACTAL_NZ</td>
   </tr>
   <tr>
     <td>bias</td>
@@ -128,6 +128,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
+- <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: Only INT8 W8A8 K-C is supported. x1 and x2 are INT8, x1Scale and x2Scale are FLOAT32, and y is BF16. x1 is [M, B, K], x2 is [B, K, N], x1Scale is [M, B], x2Scale is [B, N], and y is [M, B, N]. permX1 and permY are [1, 0, 2], and permX2 is [0, 1, 2]. K is a multiple of 32, N is a multiple of 16, and batchSplitFactor is 1. On A2, B*K must be less than 65536. x2 supports ND and FRACTAL_NZ.
 - <term>Ascend 950PR&950DT products</term>:
     - permX1 and permY support [1, 0, 2].
     - In the K-C quantization scenario, permX2 supports the input [0, 1, 2]; in the MX and T-C quantization scenarios, permX2 supports the input [0, 1, 2] or [0, 2, 1].
@@ -147,5 +148,5 @@ English | [简体中文](./README.md)
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn API  | [test_aclnn_quant_batch_mat_mul](examples/arch35/test_aclnn_transpose_quant_batch_mat_mul.cpp) | Invoke the TransposeQuantBatchMatMul operator through<br>- [aclnnTransposeQuantBatchMatMul](docs/aclnnTransposeQuantBatchMatMul_en.md)<br>- [aclnnTransposeQuantBatchMatMulWeightNz](docs/aclnnTransposeQuantBatchMatMulWeightNz_en.md)<br>and other APIs.|
-| torch API  | [torchapi_transpose_quant_batch_mat_mul](docs/torchapi_transpose_quant_batch_mat_mul_en.md) | Invoke the TransposeQuantBatchMatMul operator through `cann_ops_nn.transpose_quant_batch_mat_mul`, supporting the MX (MXFP8/MXFP4), FP8 (K-C), and HIFP8 quantization modes.|
+| aclnn API  | [test_aclnn_transpose_quant_batch_mat_mul](examples/test_aclnn_transpose_quant_batch_mat_mul.cpp)<br>[test_aclnn_quant_batch_mat_mul](examples/arch35/test_aclnn_transpose_quant_batch_mat_mul.cpp) | Invoke the TransposeQuantBatchMatMul operator through<br>- [aclnnTransposeQuantBatchMatMul](docs/aclnnTransposeQuantBatchMatMul_en.md)<br>- [aclnnTransposeQuantBatchMatMulWeightNz](docs/aclnnTransposeQuantBatchMatMulWeightNz_en.md)<br>and other APIs. The top-level example is INT8 W8A8 on Atlas A2/A3; the arch35 example is FP8 on Ascend 950.|
+| torch API  | [torchapi_transpose_quant_batch_mat_mul](docs/torchapi_transpose_quant_batch_mat_mul_en.md) | Invoke the TransposeQuantBatchMatMul operator through `cann_ops_nn.transpose_quant_batch_mat_mul`, supporting MX (MXFP8/MXFP4), FP8 (K-C), HIFP8, and INT8 W8A8 quantization modes.|

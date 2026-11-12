@@ -31,6 +31,13 @@ namespace ops {
 #define TQBMM_HIF4_Y
 #define TQBMM_HIF4_FMT
 #endif
+// INT8 W8A8 只挂 A2/A3 的 OpAICoreConfig，不得并进上面的 A5 共用列表。
+#define TQBMM_W8A8_X1 ge::DT_INT8, ge::DT_INT8
+#define TQBMM_W8A8_X2 ge::DT_INT8, ge::DT_INT8
+#define TQBMM_W8A8_F32 ge::DT_FLOAT, ge::DT_FLOAT
+#define TQBMM_W8A8_Y ge::DT_BF16, ge::DT_BF16
+#define TQBMM_W8A8_ND ge::FORMAT_ND, ge::FORMAT_ND
+#define TQBMM_W8A8_X2FMT ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ
 class TransposeQuantBatchMatMul : public OpDef {
 public:
     explicit TransposeQuantBatchMatMul(const char* name) : OpDef(name)
@@ -622,6 +629,46 @@ public:
         this->AICore().AddConfig("ascend960dt", aicore_config);
         this->AICore().AddConfig("ascend960pr", aicore_config);
         this->AICore().AddConfig("ascend350", aicore_config);
+
+        OpAICoreConfig a2a3_config;
+        a2a3_config.Input("x1")
+            .ParamType(REQUIRED)
+            .DataType({TQBMM_W8A8_X1})
+            .Format({TQBMM_W8A8_ND})
+            .UnknownShapeFormat({TQBMM_W8A8_ND});
+        a2a3_config.Input("x2")
+            .ParamType(REQUIRED)
+            .DataType({TQBMM_W8A8_X2})
+            .Format({TQBMM_W8A8_X2FMT})
+            .UnknownShapeFormat({TQBMM_W8A8_X2FMT});
+        a2a3_config.Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({TQBMM_W8A8_F32})
+            .Format({TQBMM_W8A8_ND})
+            .UnknownShapeFormat({TQBMM_W8A8_ND});
+        a2a3_config.Input("x1_scale")
+            .ParamType(OPTIONAL)
+            .DataType({TQBMM_W8A8_F32})
+            .Format({TQBMM_W8A8_ND})
+            .UnknownShapeFormat({TQBMM_W8A8_ND});
+        a2a3_config.Input("x2_scale")
+            .ParamType(OPTIONAL)
+            .DataType({TQBMM_W8A8_F32})
+            .Format({TQBMM_W8A8_ND})
+            .UnknownShapeFormat({TQBMM_W8A8_ND});
+        a2a3_config.Output("y")
+            .ParamType(REQUIRED)
+            .DataType({TQBMM_W8A8_Y})
+            .Format({TQBMM_W8A8_ND})
+            .UnknownShapeFormat({TQBMM_W8A8_ND});
+        a2a3_config.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .ExtendCfgInfo("softsync.flag", "true");
+        this->AICore().AddConfig("ascend910b", a2a3_config);
+        this->AICore().AddConfig("ascend910_93", a2a3_config);
     }
 };
 

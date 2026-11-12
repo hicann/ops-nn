@@ -8,10 +8,10 @@
 - <term>Ascend 950PR&950DT products</term>: Supported
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 products</term>: Not supported
+- <term>Atlas A3 products</term>: Supported
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 products</term>: Not supported
+- <term>Atlas A2 products</term>: Supported
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 inference products</term>: Not supported
@@ -93,10 +93,10 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>Denotes the first matrix of the matrix multiplication.</td>
         <td>          <ul>
             <li>The data type must conform to the data type deduction rule with x2 (see <a href="../../../docs/en/context/deduction_relationship.md">deduction relationship</a> and <a href="#constraints">Constraints</a>).</li>
-            <li>Currently, only FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, and HIFLOAT8 are supported.</li>
+            <li>Currently, FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, and HIFLOAT8 are supported. Atlas A2/A3 also support INT8.</li>
           </ul>
         </td>
-        <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8</td>
+        <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8, INT8</td>
         <td>ND</td>
         <td>3</td>
         <td>√</td>
@@ -108,10 +108,10 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>        <ul>
             <li>The data type must satisfy the data type deduction rules with x1 (see <a href="../../../docs/en/context/deduction_relationship.md">deduction relationship</a> and <a href="#constraints">Constraints</a>).</li>
             <li>The k dimension of x2 must be of the same size as the k dimension of x1.</li>
-            <li>Currently, only the data types FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, and HIFLOAT8 are supported.</li>
+            <li>Currently, the data types FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, and HIFLOAT8 are supported. Atlas A2/A3 also support INT8.</li>
         </ul>
         </td>
-        <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8</td>
+        <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, HIFLOAT8, INT8</td>
         <td>ND</td>
         <td>3</td>
         <td>√</td>
@@ -132,6 +132,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>Represents the quantization scale of the left matrix.</td>
         <td>        <ul>
           <li>For the K-C Quantization Scenario, the shape supports one dimension and must equal [m].</li>
+          <li>For INT8 W8A8 K-C on Atlas A2/A3, the shape is [M, B].</li>
           <li>For the MX Quantization Scenario, the shape supports four dimensions.</li>
           <li>For the T-C Quantization Scenario, the shape can be empty. If not empty, it supports one dimension and must equal [1].</li>
         </ul>
@@ -147,6 +148,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>Represents the quantization coefficients of the right matrix.</td>
         <td>        <ul>
           <li>For K-C and T-C Quantization Scenarios, shape is one-dimensional and must be [n].</li>
+          <li>For INT8 W8A8 K-C on Atlas A2/A3, the shape is [B, N].</li>
           <li>For the MX Quantization Scenario, shape is four-dimensional.</li>
         </ul>
         </td>
@@ -161,7 +163,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>Specifies the data type of the output matrix. Supported values: 1, 27, 34.</td>
         <td>        <ul>
           <li>Value Range 1, indicating the output matrix type is FLOAT16.</li>
-          <li>Value Range 27, indicating the output matrix type is BFLOAT16.</li>
+          <li>Value Range 27, indicating the output matrix type is BFLOAT16. INT8 W8A8 on Atlas A2/A3 supports only this value.</li>
           <li>Value Range 34, indicating the output matrix type is HIFLOAT8 (only supported in T-C quantization).</li>
         </ul>
         </td>
@@ -349,6 +351,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 ## Constraints
 
 - Deterministic computation description: aclnnTransposeQuantBatchMatMul defaults to a deterministic implementation.
+
+- <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: Only INT8 W8A8 K-C is supported. x1 and x2 are INT8 ND, x1Scale and x2Scale are FLOAT32, and y is BF16. x1 is [M, B, K], x2 is [B, K, N], x1Scale is [M, B], x2Scale is [B, N], and y is [M, B, N]. permX1 and permY are [1, 0, 2], and permX2 is [0, 1, 2]. K is a multiple of 32, N is a multiple of 16, and batchSplitFactor is 1. On A2, B*K must be less than 65536. dtype supports only 27 (BF16). When x2 is FRACTAL_NZ, use [aclnnTransposeQuantBatchMatMulWeightNz](aclnnTransposeQuantBatchMatMulWeightNz_en.md).
 
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR&950DT products</term>:

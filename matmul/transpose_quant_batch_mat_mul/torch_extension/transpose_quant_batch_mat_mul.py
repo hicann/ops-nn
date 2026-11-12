@@ -10,6 +10,7 @@
 # -----------------------------------------------------------------------------------------------------------
 
 from typing import Optional, List
+import os
 import torch
 import torch_npu
 from torch.library import impl
@@ -63,7 +64,7 @@ _DTYPE_TO_TORCH = {1: torch.float16, 27: torch.bfloat16, 34: torch.uint8}
 
 def _check_supported_input(x, name, acl_dtype=None):
     """Check that x1/x2 is a supported input dtype (MX fp4/fp8, FP8, or HIFP8)."""
-    if x.dtype in _FP8_TORCH_DTYPES:
+    if x.dtype == torch.int8 or x.dtype in _FP8_TORCH_DTYPES:
         return
     if (
         acl_dtype is not None
@@ -91,6 +92,11 @@ class TransposeQuantBatchMatMulOpBuilder(OpBuilder):
         super().__init__("transpose_quant_batch_mat_mul")
 
     def sources(self) -> list:
+        local = os.path.join(
+            os.path.dirname(__file__), "csrc", "transpose_quant_batch_mat_mul.cpp"
+        )
+        if os.path.isfile(local):
+            return [local]
         return [self.resolve_source("transpose_quant_batch_mat_mul.cpp")]
 
     def schema(self) -> str:

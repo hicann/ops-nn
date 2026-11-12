@@ -10,7 +10,7 @@
 
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
-    DEPENDENCIES batch_mat_mul_v3 mat_mul_v3 quant_batch_matmul_v3
+    DEPENDENCIES batch_mat_mul_v3 mat_mul_v3 quant_batch_matmul_v3 transpose_batch_mat_mul
 )
 
 add_kernel_sources(
@@ -22,6 +22,12 @@ add_kernel_sources(
     COMPUTE_UNITS ascend950 ascend960dt ascend960pr ascend350
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true"
+)
+
+add_kernel_sources(
+    KERNEL_SRC transpose_quant_batch_mat_mul_w8a8.cpp
+    COMPUTE_UNITS ascend910b ascend910_93
+    AUTO_SYNC false
 )
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)

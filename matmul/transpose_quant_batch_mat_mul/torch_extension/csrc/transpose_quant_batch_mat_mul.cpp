@@ -53,20 +53,25 @@ at::Tensor transpose_quant_batch_mat_mul(
     const at::Tensor& x2_scale_real = x2_scale.value_or(at::Tensor());
 
     // The torch interface supports MX fp4/fp8 (float4_e2m1/float8_e4m3fn with
-    // e8m0 scale), FP8 (float8_e4m3fn with float scale), and HIFP8 (hifloat8
-    // with uint64 scale).  The aclnn op_api layer handles dtype dispatch.
+    // e8m0 scale), FP8 (float8_e4m3fn/float8_e5m2 with float scale), HIFP8
+    // (hifloat8 with uint64 scale), and A2/A3 INT8 W8A8. The aclnn op_api layer
+    // handles dtype dispatch.
     const aclDataType x1_acl = x1_dtype.has_value() ? GetAclDataType(x1_dtype.value()) :
                                                       ConvertToAclDataType(x1.scalar_type());
     const aclDataType x2_acl = x2_dtype.has_value() ? GetAclDataType(x2_dtype.value()) :
                                                       ConvertToAclDataType(x2.scalar_type());
     const bool x1_supported = (x1_acl == ACL_FLOAT4_E2M1) || (x1_acl == ACL_FLOAT8_E4M3FN) ||
-                              (x1_acl == ACL_FLOAT8_E5M2) || (x1_acl == ACL_HIFLOAT8);
+                              (x1_acl == ACL_FLOAT8_E5M2) || (x1_acl == ACL_HIFLOAT8) || (x1_acl == ACL_INT8);
     const bool x2_supported = (x2_acl == ACL_FLOAT4_E2M1) || (x2_acl == ACL_FLOAT8_E4M3FN) ||
-                              (x2_acl == ACL_FLOAT8_E5M2) || (x2_acl == ACL_HIFLOAT8);
+                              (x2_acl == ACL_FLOAT8_E5M2) || (x2_acl == ACL_HIFLOAT8) || (x2_acl == ACL_INT8);
     TORCH_CHECK(x1_supported,
-                "x1 must be float4_e2m1, float8_e4m3fn, or hifloat8 in the torch interface, got aclDataType ", x1_acl);
+                "x1 must be float4_e2m1, float8_e4m3fn, float8_e5m2, hifloat8, or int8 in the torch interface, got "
+                "aclDataType ",
+                x1_acl);
     TORCH_CHECK(x2_supported,
-                "x2 must be float4_e2m1, float8_e4m3fn, or hifloat8 in the torch interface, got aclDataType ", x2_acl);
+                "x2 must be float4_e2m1, float8_e4m3fn, float8_e5m2, hifloat8, or int8 in the torch interface, got "
+                "aclDataType ",
+                x2_acl);
     const aclDataType x1_scale_acl = x1_scale_dtype.has_value() ?
                                          GetAclDataType(x1_scale_dtype.value()) :
                                          (x1_scale_real.defined() ? ConvertToAclDataType(x1_scale_real.scalar_type()) :

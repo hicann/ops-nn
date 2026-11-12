@@ -20,15 +20,38 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"
 #include "transpose_quant_batch_mat_mul_simplifiedkey.h"
+#include "transpose_batch_mat_mul_w8a8_tiling.h"
 #include "op_cache_tiling.h"
 #include "error_util.h"
+#include "platform/platform_ascendc.h"
 
 using Ops::NN::TilingPrepareForOpCache;
 
 namespace optiling {
 
+static bool IsAscend910BOr910_93(gert::TilingContext* context)
+{
+    auto platformInfo = context->GetPlatformInfo();
+    if (platformInfo == nullptr) {
+        return false;
+    }
+    const auto socVer = platform_ascendc::PlatformAscendC(platformInfo).GetSocVersion();
+    return socVer == platform_ascendc::SocVersion::ASCEND910B || socVer == platform_ascendc::SocVersion::ASCEND910_93;
+}
+
 static ge::graphStatus TransposeQuantBatchMatMulTilingFunc(gert::TilingContext* context)
 {
+    const bool isW8a8 = transpose_batch_mat_mul::IsW8A8Mode(context);
+    const bool isA2A3 = IsAscend910BOr910_93(context);
+    if (isW8a8) {
+        OP_TILING_CHECK(
+            !isA2A3, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "INT8 W8A8 only supports Ascend910B / Ascend910_93"),
+            return ge::GRAPH_FAILED);
+        return transpose_batch_mat_mul::TransposeBatchMatMulW8A8DoTiling(context);
+    }
+    OP_TILING_CHECK(isA2A3,
+                    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "Ascend910B / Ascend910_93 only supports INT8 W8A8"),
+                    return ge::GRAPH_FAILED);
     return transpose_quant_batch_mat_mul_advanced::TransposeQuantBatchMatMulTiling(context).DoTiling();
 }
 

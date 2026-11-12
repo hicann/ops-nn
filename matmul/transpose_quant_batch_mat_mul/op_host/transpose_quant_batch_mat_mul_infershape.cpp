@@ -63,6 +63,12 @@ static inline bool IsHIFP4(const ge::DataType& dtypeX1, const ge::DataType& dtyp
 static bool CheckDtypeValid(const ge::DataType& dtypeX1, const ge::DataType& dtypeX2, const ge::DataType& dtypeX1Scale,
                             const ge::DataType& dtypeX2Scale)
 {
+    // A2/A3 INT8 W8A8: per-token and per-channel scales are both FP32.
+    if (dtypeX1 == ge::DT_INT8 && dtypeX2 == ge::DT_INT8) {
+        CHECK(dtypeX1Scale != ge::DT_FLOAT || dtypeX2Scale != ge::DT_FLOAT,
+              CUBE_INNER_ERR_REPORT("TQBMM", "INT8 W8A8 scale dtype only supports FLOAT."), return false);
+        return true;
+    }
     // MXFP8 / MXFP4
     if (IsMicroScaling(dtypeX1Scale, dtypeX2Scale)) {
         bool isMxFp4 = (dtypeX1 == ge::DT_FLOAT4_E2M1 && dtypeX2 == ge::DT_FLOAT4_E2M1);
@@ -207,6 +213,12 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
     const auto batchSplitFactor = attrs->GetAttrPointer<int32_t>(5); // batchSplitFactor index is 5
     CHECK(!CheckPerm(permX1, permX2, permY), CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] Failed to check perm"),
           return ge::GRAPH_FAILED);
+    if (dtypeX1 == ge::DT_INT8 && dtypeX2 == ge::DT_INT8) {
+        const auto permX2Attr = permX2->GetData();
+        const bool kcPerm = permX2Attr[0] == 0 && permX2Attr[1] == 1 && permX2Attr[2] == 2;
+        CHECK(!kcPerm, CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] INT8 K-C perm_x2 should be {0, 1, 2}"),
+              return ge::GRAPH_FAILED);
+    }
     Shape shapeX1Transposed;
     Shape shapeX2Transposed;
     CHECK(!TransposeShape(*shapeX1, *permX1, shapeX1Transposed),

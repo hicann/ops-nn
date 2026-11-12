@@ -6,10 +6,10 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3系列产品</term>：不支持
+- <term>Atlas A3系列产品</term>：支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2系列产品</term>：不支持
+- <term>Atlas A2系列产品</term>：支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2推理产品</term>：不支持
@@ -91,7 +91,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>
           数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。
         </td>
-        <td>FLOAT8_E4M3FN、FLOAT4_E2M1、HIFLOAT8</td>
+        <td>FLOAT8_E4M3FN、FLOAT4_E2M1、HIFLOAT8、INT8</td>
         <td>ND</td>
         <td>3</td>
         <td>√</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
             <li>x2的k维度需要与x1的K维度大小相等。</li>
         </ul>
         </td>
-        <td>FLOAT8_E4M3FN、FLOAT4_E2M1、HIFLOAT8</td>
+        <td>FLOAT8_E4M3FN、FLOAT4_E2M1、HIFLOAT8、INT8</td>
         <td>NZ</td>
         <td>5</td>
         <td>√</td>
@@ -128,12 +128,13 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>
           <ul>
             <li>MX量化场景：shape要求为(M, B, K/64, 2)。</li>
+            <li>Atlas A2/A3 的 INT8 W8A8 K-C：shape为[M, B]，数据类型为FLOAT32。</li>
             <li>HIFP8量化场景：可选输入，若传入则shape要求为(1,)。</li>
           </ul>
         </td>
-        <td>FLOAT8_E8M0、UINT64</td>
+        <td>FLOAT8_E8M0、UINT64、FLOAT32</td>
         <td>ND</td>
-        <td>4或1</td>
+        <td>4、2或1</td>
         <td>√</td>
       </tr>
       <tr>
@@ -143,12 +144,13 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>
           <ul>
             <li>MX量化场景：permX2为[0, 1, 2]时，shape要求为(B, K/64, N, 2)；permX2为[0, 2, 1]时，shape要求为(B, N, K/64, 2)。</li>
+            <li>Atlas A2/A3 的 INT8 W8A8 K-C：shape为[B, N]，数据类型为FLOAT32，permX2仅支持[0, 1, 2]。</li>
             <li>HIFP8量化场景：shape要求为(N,)，元素为float32位模式（低32位有效），dtype按UINT64承载。</li>
           </ul>
         </td>
-        <td>FLOAT8_E8M0、UINT64</td>
+        <td>FLOAT8_E8M0、UINT64、FLOAT32</td>
         <td>ND</td>
-        <td>4或1</td>
+        <td>4、2或1</td>
         <td>√</td>
       </tr>
       <tr>
@@ -158,7 +160,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>
         <ul>
           <li>取值为1,表示输出矩阵类型为FLOAT16。</li>
-          <li>取值为27,表示输出矩阵类型为BFLOAT16。</li>
+          <li>取值为27,表示输出矩阵类型为BFLOAT16。Atlas A2/A3 的 INT8 W8A8 仅支持该取值。</li>
           <li>取值为34,表示输出矩阵类型为HIFLOAT8（仅HIFP8量化场景支持，需用户自行按HIFLOAT8解析）。</li>
         </ul>
         </td>
@@ -351,6 +353,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
 ## 约束说明
 
 - 确定性说明： aclnnTransposeQuantBatchMatMulWeightNz默认确定性实现。
+
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：仅支持 INT8 W8A8 K-C。x1 为 INT8 ND，形状 [M, B, K]；x2 为 INT8 FRACTAL_NZ，逻辑形状 [B, K, N]。x1Scale、x2Scale 为 FLOAT32，x1Scale 为 [M, B]，x2Scale 为 [B, N]，y 为 BF16 [M, B, N]。permX1、permY 为 [1, 0, 2]，permX2 为 [0, 1, 2]。K 为 32 的倍数，N 为 16 的倍数，batchSplitFactor 为 1。A2 上 B*K 小于 65536。dtype 仅支持 27（BF16）。
 
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR&950DT系列产品</term>：
