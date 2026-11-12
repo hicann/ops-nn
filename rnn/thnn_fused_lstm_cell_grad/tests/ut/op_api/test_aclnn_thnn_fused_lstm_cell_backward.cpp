@@ -75,3 +75,144 @@ TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_dhy_dim_invalid)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// 可选输入gradHyOptional传nullptr(等价零梯度),不应返回161001
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_grad_hy_nullptr)
+{
+    auto dc = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dgates_out = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dc_prev_out = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_out = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(nullptr, dc, cx, cy, storage, true),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 可选输入gradCOptional传nullptr(等价零梯度),不应返回161001
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_grad_c_nullptr)
+{
+    auto dhy = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dgates_out = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dc_prev_out = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_out = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(dhy, nullptr, cx, cy, storage, true),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 两个可选梯度均传nullptr(等价全零梯度),不应返回161001
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_both_grad_nullptr)
+{
+    auto cx = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dgates_out = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dc_prev_out = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_out = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(nullptr, nullptr, cx, cy, storage, true),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// gradHyOptional为空且hasBias=false: 可选梯度补零路径与bias可选路径叠加
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_grad_hy_nullptr_no_bias)
+{
+    auto dc = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dgates_out = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dc_prev_out = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_out = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(nullptr, dc, cx, cy, storage, false),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 两个可选梯度均为空且hasBias=false: 直出零路径不写bias输出
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_both_grad_nullptr_no_bias)
+{
+    auto cx = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dgates_out = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dc_prev_out = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_out = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(nullptr, nullptr, cx, cy, storage, false),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// gradHyOptional为空时以cx为基准继续做shape校验: dc shape与cx不一致应报161002
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_grad_hy_nullptr_dc_shape_invalid)
+{
+    auto dc = TensorDesc({1, 4}, ACL_FLOAT, ACL_FORMAT_ND); // 与cx的[1,8]不一致
+    auto cx = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dgates_out = TensorDesc({1, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dc_prev_out = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_out = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(nullptr, dc, cx, cy, storage, true),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 两个可选梯度均传nullptr的FLOAT16形态: 置零快路径不受dtype影响
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_both_grad_nullptr_float16)
+{
+    auto cx = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto cy = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto storage = TensorDesc({2, 8}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto dgates_out = TensorDesc({2, 8}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto dc_prev_out = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto db_out = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(nullptr, nullptr, cx, cy, storage, true),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 两个可选梯度均传nullptr且输出为非连续张量: 置零快路径需经ViewCopy写回带stride的出参
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_both_grad_nullptr_non_contiguous_out)
+{
+    auto cx = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc({2, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    // view [2,8]/[2,2], stride 跨步, storage 相应放大
+    auto dgates_out = TensorDesc({2, 8}, ACL_FLOAT, ACL_FORMAT_ND, {16, 1}, 0, {2, 16});
+    auto dc_prev_out = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND, {4, 1}, 0, {2, 4});
+    auto db_out = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(nullptr, nullptr, cx, cy, storage, true),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

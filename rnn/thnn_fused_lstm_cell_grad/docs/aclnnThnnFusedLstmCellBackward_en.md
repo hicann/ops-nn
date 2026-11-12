@@ -121,10 +121,10 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td>gradHy</td>
+      <td>gradHyOptional</td>
       <td>Optional input</td>
       <td>Indicates the gradient of the hidden state in the forward output of LSTMCell.</td>
-      <td>-</td>
+      <td>Optional input. Passing nullptr indicates that the gradient is absent, which is equivalent to an all-zero gradient of the same shape.</td>
       <td>FLOAT32, FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradCOptional</td>
       <td>Optional input</td>
       <td>Indicates the gradient of the cell state in the forward output of LSTMCell.</td>
-      <td>The data type must be consistent with that of gradHy.</td>
+      <td>Optional input. Passing nullptr indicates that the gradient is absent, which is equivalent to an all-zero gradient of the same shape. When it is not null, the data type must be consistent with that of the other inputs.</td>
       <td>FLOAT32, FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>cx</td>
       <td>Input</td>
       <td>Indicates the forward input cell state of LSTMCell.</td>
-      <td>The data type must be consistent with that of gradHy.</td>
+      <td>The data type must be consistent with that of input.</td>
       <td>FLOAT32, FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>cy</td>
       <td>Input</td>
       <td>Indicates the cell state of the LSTMCell forward output.</td>
-      <td>Data type is consistent with gradHy.</td>
+      <td>The data type is consistent with input.</td>
       <td>FLOAT32, FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -254,8 +254,8 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>If the input parameter is an aclTensor that is a non-optional input and is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="12">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>If the input parameter is an aclTensor and the data type is out of the supported range.</td>
     </tr>
     <tr>
@@ -312,6 +312,8 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
 
 - Deterministic computation:
   - aclnnThnnFusedLstmCellBackward defaults to a deterministic implementation.
+- Data types: all inputs and outputs that are actually passed must have the same data type. Optional inputs passed as nullptr are not involved in the data type consistency check.
+- Optional inputs: gradHyOptional and gradCOptional can be nullptr, indicating that the corresponding gradient is absent and an all-zero gradient of the same shape is used instead. If both are nullptr, the output gradients are directly set to zero without running the backward computation (Inf/NaN propagation is not performed in this case).
 - Boundary value scenario description:
   - When the input is Inf, the output is NAN.
   - When the input is NaN, the output is NaN.

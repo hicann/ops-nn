@@ -122,7 +122,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradHyOptional</td>
       <td>可选输入</td>
       <td>表示LSTMCell正向输出隐藏状态的梯度。</td>
-      <td>-</td>
+      <td>可选输入，传入nullptr表示无该梯度，等价于同shape全零梯度。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradCOptional</td>
       <td>可选输入</td>
       <td>表示LSTMCell正向输出细胞状态的梯度。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td>可选输入，传入nullptr表示无该梯度，等价于同shape全零梯度；非空时数据类型与其余输入保持一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>cx</td>
       <td>输入</td>
       <td>表示LSTMCell正向输入细胞状态。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td>数据类型与输入保持一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>cy</td>
       <td>输入</td>
       <td>表示LSTMCell正向输出细胞状态。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td>数据类型与输入保持一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>storage</td>
       <td>输入</td>
       <td>表示LSTMCell正向输出四个门的激活值。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td>数据类型与输入保持一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, 4 * hidden_size]</td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradGatesOut</td>
       <td>输出</td>
       <td>表示LSTMCell正向中四个门预激活值的梯度。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td>数据类型与输入保持一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, 4 * hidden_size]</td>
@@ -192,7 +192,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradCxOut</td>
       <td>输出</td>
       <td>表示LSTMCell正向中输入细胞状态的梯度。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td>数据类型与输入保持一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[batch, hidden_size]</td>
@@ -202,7 +202,7 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>gradBiasOut</td>
       <td>输出</td>
       <td>表示LSTM正向中输入偏置的梯度。</td>
-      <td>数据类型与gradHy一致。</td>
+      <td>数据类型与输入保持一致。</td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[4 * hidden_size]</td>
@@ -252,8 +252,8 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
       <td>如果传入参数为aclTensor且非可选输入，是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="12">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>如果传入参数为aclTensor，数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -310,6 +310,8 @@ aclnnStatus aclnnThnnFusedLstmCellBackward(
 
 - 确定性计算：
   - aclnnThnnFusedLstmCellBackward默认确定性实现。
+- 数据类型：实际传入的输入、输出参数的数据类型需保持一致；未传入（nullptr）的可选输入不参与类型一致性校验。
+- 可选输入：gradHyOptional、gradCOptional可传入nullptr，表示该梯度不存在，按同shape全零梯度参与计算；两者均为nullptr时输出梯度直接置零、不执行反传计算（该情形下不做Inf/NaN传播）。
 - 边界值场景说明：
   - 当输入是Inf时，输出为NaN。
   - 当输入是NaN时，输出为NaN。
