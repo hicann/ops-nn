@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file nn_norm_ops.h
+ * \file mse_loss_grad_proto.h
  * \brief
  */
-#ifndef OPS_BUILT_IN_OP_PROTO_INC_NN_NORM_OPS_H_
-#define OPS_BUILT_IN_OP_PROTO_INC_NN_NORM_OPS_H_
+#ifndef MSE_LOSS_GRAD_PROTO_H_
+#define MSE_LOSS_GRAD_PROTO_H_
 
 #include "graph/operator_reg.h"
 #include "graph/types.h"
@@ -32,7 +32,8 @@ namespace ge {
 * reduction: An optional string.Defaults to "mean". \n
 
 * @par Outputs:
-* y: An ND tensor tensor with the same shape and type as "predict". \n
+ * y: An ND tensor whose shape is the broadcast result of the shapes of "predict", "label" and "dout",
+ * with the same type as the inputs. \n
 
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator MseLossGrad.
@@ -46,4 +47,4 @@ REG_OP(MseLossGrad)
     .OP_END_FACTORY_REG(MseLossGrad)
 
 } // namespace ge
-#endif // OPS_BUILT_IN_OP_PROTO_INC_NN_NORM_OPS_H_
+#endif // MSE_LOSS_GRAD_PROTO_H_
