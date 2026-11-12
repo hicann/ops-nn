@@ -9,14 +9,14 @@
  */
 
 /* !
- * \file fused_matmul_mergebatch_basic_tiling.cpp
+ * \file fused_mat_mul_mergebatch_basic_tiling.cpp
  * \brief
  */
 
-#include "fused_matmul_mergebatch_basic_tiling.h"
-#include "fused_matmul_builtin_tiling.h"
-#include "fused_matmul_builtin_tiling_strategy.h"
-#include "fused_matmul_common.h"
+#include "fused_mat_mul_mergebatch_basic_tiling.h"
+#include "fused_mat_mul_builtin_tiling.h"
+#include "fused_mat_mul_builtin_tiling_strategy.h"
+#include "fused_mat_mul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_helper.h"
 
@@ -38,8 +38,8 @@ bool FusedMatMulMergeBatchBasicApiTiling::IsCapable()
         OP_LOGD(args_.opName, "MergeBatch add/mul does not support a non-contiguous x2 view");
         return false;
     }
-    if (opType != "relu" && opType != "add" && opType != "mul" && !opType.empty()) {
-        OP_LOGD(args_.opName, "MergeBatch model only supports add, mul, relu or empty op type in FusedMatMul");
+    if (opType != "relu" && opType != "add" && opType != "mul") {
+        OP_LOGD(args_.opName, "MergeBatch model only supports add, mul or relu op type in FusedMatMul");
         return false;
     }
     bool status = BatchMatMulV3MergeBatchBasicApiTiling::IsCapable();

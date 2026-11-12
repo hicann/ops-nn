@@ -19,7 +19,7 @@
 #include "matmul/common/op_host/op_api/matmul.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
-#include "matmul/common/op_host/op_api/fusedmatmul.h"
+#include "matmul/common/op_host/op_api/fused_mat_mul.h"
 #include "level0/muls.h"
 
 #include "aclnn/aclnn_base.h"

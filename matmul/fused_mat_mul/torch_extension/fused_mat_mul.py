@@ -54,7 +54,7 @@ class FusedMatmulOpBuilder(OpBuilder):
         super().__init__("fused_matmul")
 
     def sources(self) -> list:
-        return [self.resolve_source("fused_matmul.cpp")]
+        return [self.resolve_source("fused_mat_mul.cpp")]
 
     def schema(self) -> str:
         return (

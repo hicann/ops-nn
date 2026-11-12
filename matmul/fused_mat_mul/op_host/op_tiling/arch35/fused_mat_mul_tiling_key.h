@@ -9,14 +9,14 @@
  */
 
 /* !
- * \file fused_matmul_tiling_key.h
+ * \file fused_mat_mul_tiling_key.h
  * \brief
  */
 #pragma once
 
 #include <sstream>
 #include "op_host/tiling_key.h"
-#include "fused_matmul_common.h"
+#include "fused_mat_mul_common.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_key.h"
 
 namespace optiling {

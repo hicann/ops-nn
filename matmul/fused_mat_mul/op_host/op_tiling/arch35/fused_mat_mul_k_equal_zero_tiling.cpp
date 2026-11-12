@@ -9,13 +9,13 @@
  */
 
 /*!
- * \file fused_matmul_k_equal_zero_tiling.cpp
+ * \file fused_mat_mul_k_equal_zero_tiling.cpp
  * \brief
  */
-#include "fused_matmul_k_equal_zero_tiling.h"
+#include "fused_mat_mul_k_equal_zero_tiling.h"
 
-#include "fused_matmul_builtin_tiling_strategy.h"
-#include "fused_matmul_common.h"
+#include "fused_mat_mul_builtin_tiling_strategy.h"
+#include "fused_mat_mul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/mat_mul_v3/op_kernel/arch35/mat_mul_tiling_data.h"
 
@@ -53,9 +53,9 @@ uint64_t FusedMatMulKEqZeroTiling::GetTilingKey() const
             auto it = FUSED_OP_TYPE_MAP.find(opType);
             if (it != FUSED_OP_TYPE_MAP.end()) {
                 if (IsFusedMatMulBmmShape(context_)) {
-                    // BMM K=0 add/mul stays on the legacy basic-level kernels.
+                    // BMM K=0 uses the Tensor key and retains batch tiling for x3 broadcasting.
                     return GET_TPL_TILING_KEY(
-                        static_cast<uint64_t>(MAT_MUL_BASIC_LEVEL), static_cast<uint64_t>(F_NO_TRANS),
+                        static_cast<uint64_t>(MAT_MUL_TENSOR_LEVEL), static_cast<uint64_t>(F_NO_TRANS),
                         MAT_MUL_FOR_FUSED_BATCH, static_cast<uint64_t>(MAT_MUL_K_EQUAL_ZERO),
                         static_cast<uint64_t>(MAT_MUL_NO_FULL_LOAD), static_cast<uint64_t>(MAT_MUL_ON_THE_FLY),
                         static_cast<uint64_t>(it->second), static_cast<uint64_t>(F_INNER_PRECISE_HIGH_PERFORMANCE));
@@ -73,7 +73,7 @@ uint64_t FusedMatMulKEqZeroTiling::GetTilingKey() const
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
     return tilingKey.SetTrans(false, false)
-        .SetApiLevel(MatMulV3ApiLevel::HIGH_LEVEL)
+        .SetApiLevel(MatMulV3ApiLevel::TENSOR_LEVEL)
         .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
         .SetModel(MatMulV3Model::K_EQUAL_ZERO)
         .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)

@@ -9,13 +9,13 @@
  */
 
 /* !
- * \file fused_matmul_asw_basic_tiling.cpp
+ * \file fused_mat_mul_basic_streamk_tiling.cpp
  * \brief
  */
-#include "fused_matmul_basic_streamk_tiling.h"
-#include "fused_matmul_builtin_tiling.h"
-#include "fused_matmul_builtin_tiling_strategy.h"
-#include "fused_matmul_common.h"
+#include "fused_mat_mul_basic_streamk_tiling.h"
+#include "fused_mat_mul_builtin_tiling.h"
+#include "fused_mat_mul_builtin_tiling_strategy.h"
+#include "fused_mat_mul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util_nn.h"
 
@@ -35,10 +35,6 @@ bool FusedMatMulStreamKTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if ((compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) && opType != "relu" &&
-        opType != "16cast32") {
-        return false;
-    }
     // Only the op types in FusedOpTypeSupportStreamK support Stream-K.
     if (FusedOpTypeSupportStreamK.find(opType) == FusedOpTypeSupportStreamK.end()) {
         return false;
@@ -82,7 +78,7 @@ bool FusedMatMulBatchStreamKTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if (opType != "relu" && opType != "add" && opType != "mul" && !opType.empty()) {
+    if (opType != "relu" && opType != "add" && opType != "mul") {
         return false;
     }
 
@@ -96,9 +92,7 @@ uint64_t FusedMatMulBatchStreamKTiling::GetTilingKey() const
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    MatMulV3ApiLevel apiLevel = ((opType == "relu" || opType == "") && compileInfo_.npuArch != NpuArch::DAV_RESV) ?
-                                    MatMulV3ApiLevel::TENSOR_LEVEL :
-                                    MatMulV3ApiLevel::BASIC_LEVEL;
+    MatMulV3ApiLevel apiLevel = opType == "relu" ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
         .SetBatchModel(MatMulV3BatchModel::FUSED_BATCH_MODEL)
         .SetModel(MatMulV3Model::STREAM_K)

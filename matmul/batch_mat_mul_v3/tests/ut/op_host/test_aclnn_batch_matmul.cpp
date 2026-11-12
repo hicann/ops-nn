@@ -2083,7 +2083,7 @@ bool MmCheckHitV3Shape(const aclTensor*, const aclTensor*, const aclTensor*, boo
 } // namespace l0op
 
 // ---- 直调被测源文件及其依赖（覆盖目标：batch_matmul_util.cpp 96~673、1210~1324） ----
-// batch_matmul_util.cpp 及其依赖的 matmul_util.cpp/cube_util.cpp/matmul.cpp/fused_matmul.cpp
+// batch_matmul_util.cpp 及其依赖的 matmul_util.cpp/cube_util.cpp/matmul.cpp/fused_mat_mul.cpp
 // 在 libophost_nn_opapi.so 中为本地符号（不可跨 DSO 链接），公开入口用例经 so 内同源实现执行
 // （gcov 按源文件路径合并统计），直调用例则在本 TU 内编译执行，故在此显式 include 下列源文件。
 // 先于隔离命名空间补齐 batch_matmul_util.cpp 的 include 列表，使 wrapper 内同名 include 幂等空操作，
@@ -2146,7 +2146,7 @@ int BmmUtRtGetSocSpec(const char* label, const char* key, char* val, unsigned in
 
 #include "../../../../common/op_host/op_api/cube_util.cpp"
 #include "../../../../common/op_host/op_api/matmul.cpp"
-#include "../../../../common/op_host/op_api/fused_matmul.cpp"
+#include "../../../../common/op_host/op_api/fused_mat_mul.cpp"
 #include "../../../../common/op_host/op_api/matmul_util.cpp"
 
 // batch_matmul_util.cpp 与 matmul_util.cpp 的匿名命名空间静态符号同名

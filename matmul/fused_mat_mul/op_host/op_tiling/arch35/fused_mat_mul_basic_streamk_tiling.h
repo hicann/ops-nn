@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file fused_matmul_basic_streamk_tiling.h
+ * \file fused_mat_mul_basic_streamk_tiling.h
  * \brief
  */
 #pragma once

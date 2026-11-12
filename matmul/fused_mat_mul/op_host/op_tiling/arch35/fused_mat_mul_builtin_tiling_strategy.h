@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file fused_matmul_builtin_tiling_strategy.h
+ * \file fused_mat_mul_builtin_tiling_strategy.h
  * \brief
  */
 #pragma once

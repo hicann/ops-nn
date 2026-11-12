@@ -13,7 +13,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "matmul/common/op_host/op_api/fusedmatmul.h"
+#include "matmul/common/op_host/op_api/fused_mat_mul.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"

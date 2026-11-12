@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file fused_matmul_mergebatch_basic_tiling.h
+ * \file fused_mat_mul_mergebatch_basic_tiling.h
  * \brief
  */
 
@@ -24,7 +24,7 @@ using batch_matmul_v3_advanced::BatchMatMulV3MergeBatchBasicApiTiling;
 class FusedMatMulMergeBatchBasicApiTiling : public BatchMatMulV3MergeBatchBasicApiTiling {
 public:
     FusedMatMulMergeBatchBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3MergeBatchBasicApiTiling(context, cfg){};
+        : BatchMatMulV3MergeBatchBasicApiTiling(context, cfg) {};
 
     ~FusedMatMulMergeBatchBasicApiTiling() override = default;
 

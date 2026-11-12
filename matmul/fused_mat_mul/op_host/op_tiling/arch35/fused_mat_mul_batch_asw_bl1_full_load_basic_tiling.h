@@ -9,23 +9,23 @@
  */
 
 /* !
- * \file fused_matmul_batch_asw_al1_full_load_basic_tiling.h
+ * \file fused_mat_mul_batch_asw_bl1_full_load_basic_tiling.h
  * \brief
  */
 #pragma once
 
-#include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_asw_al1_full_load_basic_tiling.h"
+#include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_asw_bl1_full_load_basic_tiling.h"
 
 namespace optiling {
 namespace fused_matmul {
-using batch_matmul_v3_advanced::BatchMatMulV3AswAL1FullLoadBasicTiling;
+using batch_matmul_v3_advanced::BatchMatMulV3AswBL1FullLoadBasicTiling;
 
-class FusedMatMulBatchAswAL1FullLoadBasicTiling : public BatchMatMulV3AswAL1FullLoadBasicTiling {
+class FusedMatMulBatchAswBL1FullLoadBasicTiling : public BatchMatMulV3AswBL1FullLoadBasicTiling {
 public:
-    FusedMatMulBatchAswAL1FullLoadBasicTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3AswAL1FullLoadBasicTiling(context, cfg){};
+    FusedMatMulBatchAswBL1FullLoadBasicTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : BatchMatMulV3AswBL1FullLoadBasicTiling(context, cfg) {};
 
-    ~FusedMatMulBatchAswAL1FullLoadBasicTiling() override = default;
+    ~FusedMatMulBatchAswBL1FullLoadBasicTiling() override = default;
 
 protected:
     bool IsCapable() override;

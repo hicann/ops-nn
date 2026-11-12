@@ -9,12 +9,12 @@
  */
 
 /* !
- * \file fused_matmul_asw_basic_tiling.cpp
+ * \file fused_mat_mul_asw_basic_tiling.cpp
  * \brief
  */
-#include "fused_matmul_asw_basic_tiling.h"
-#include "fused_matmul_builtin_tiling_strategy.h"
-#include "fused_matmul_common.h"
+#include "fused_mat_mul_asw_basic_tiling.h"
+#include "fused_mat_mul_builtin_tiling_strategy.h"
+#include "fused_mat_mul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/common/op_host/log_format_util.h"
@@ -240,6 +240,14 @@ ge::graphStatus FusedMatMulAswBasicApiTiling::DoOpTiling()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if (opType.empty()) {
+        // Empty fusion uses the non-full-load, on-the-fly MM template.
+        ge::graphStatus status = MatMulV3AswTiling::DoOpTiling();
+        fullLoad_ = MatMulV3FullLoad::NONE_FULL_LOAD;
+        l0C2Out_ = MatMulV3L0C2Out::ON_THE_FLY;
+        runInfo_.splitKBase = args_.kValue;
+        return status;
+    }
     if (IsGeluOpType(opType)) {
         OP_TILING_CHECK((MatMulV3AswTiling::DoOpTiling() != ge::GRAPH_SUCCESS),
                         CUBE_INNER_ERR_REPORT(args_.opName, "Do MatMul AswTiling failed in FusedMatMul."),
@@ -261,7 +269,7 @@ ge::graphStatus FusedMatMulAswBasicApiTiling::DoOpTiling()
         UpdateAswDepth();
         return ge::GRAPH_SUCCESS;
     }
-    // 16cast32 "" 等支持基础API全载模板
+    // 16cast32等支持基础API全载模板
     ge::graphStatus status = MatMulV3BasicAswtTiling::DoOpTiling();
     if (l0C2Out_ == MatMulV3L0C2Out::ND_FIXPIPE_1_1) {
         l0C2Out_ = MatMulV3L0C2Out::ON_THE_FLY;
@@ -293,7 +301,7 @@ uint64_t FusedMatMulAswBasicApiTiling::GetTilingKey() const
     std::string opType = opTypePtr == nullptr ? "" : opTypePtr;
     // relu/empty(主线)与add/mul(本分支)同切TENSOR_LEVEL; add/mul无需平台判断.
     MatMulV3ApiLevel apiLevel = MatMulV3ApiLevel::BASIC_LEVEL;
-    if ((opType == "relu" || opType == "") && compileInfo_.npuArch != NpuArch::DAV_RESV) {
+    if ((opType == "relu" || opType.empty() || opType == "sigmoid") && compileInfo_.npuArch != NpuArch::DAV_RESV) {
         apiLevel = MatMulV3ApiLevel::TENSOR_LEVEL;
     } else if (IsAddMulOpType(opType) && !isSplitK_) {
         // splitK的add/mul保持BASIC(remap也排除了splitK; TENSOR侧无splitK处理).

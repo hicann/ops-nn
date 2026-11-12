@@ -9,14 +9,14 @@
  */
 
 /* !
- * \file fused_matmul_tiling.cpp
+ * \file fused_mat_mul_tiling.cpp
  * \brief FusedMatMul tiling entry: routes to built-in tiling (BatchMatMulV3-based).
  */
-#include "fused_matmul_tiling.h"
+#include "fused_mat_mul_tiling.h"
 
-#include "fused_matmul_builtin_tiling.h"
-#include "fused_matmul_common.h"
-#include "fused_matmul_simplifiedkey.h"
+#include "fused_mat_mul_builtin_tiling.h"
+#include "fused_mat_mul_common.h"
+#include "fused_mat_mul_simplifiedkey.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"

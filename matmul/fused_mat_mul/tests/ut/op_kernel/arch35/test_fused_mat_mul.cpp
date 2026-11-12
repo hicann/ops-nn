@@ -231,7 +231,7 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_k_equal_zero_test)
 
     auto fusedMatMulWrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x3, GM_ADDR y, GM_ADDR workspace,
                                  GM_ADDR tiling) {
-        ::fused_mat_mul<MAT_MUL_HIGH_LEVEL, F_NO_TRANS, MAT_MUL_FOR_BATCH, MAT_MUL_K_EQUAL_ZERO, MAT_MUL_NO_FULL_LOAD,
+        ::fused_mat_mul<MAT_MUL_TENSOR_LEVEL, F_NO_TRANS, MAT_MUL_FOR_BATCH, MAT_MUL_K_EQUAL_ZERO, MAT_MUL_NO_FULL_LOAD,
                         MAT_MUL_ON_THE_FLY, F_OPTYPE_GELU_ERF, F_INNER_PRECISE_HIGH_PERFORMANCE>(x1, x2, bias, x3, y,
                                                                                                  workspace, tiling);
     };

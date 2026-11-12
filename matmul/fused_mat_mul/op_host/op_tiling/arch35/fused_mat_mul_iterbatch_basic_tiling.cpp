@@ -9,13 +9,13 @@
  */
 
 /* !
- * \file fused_matmul_iterbatch_basic_tiling.cpp
+ * \file fused_mat_mul_iterbatch_basic_tiling.cpp
  * \brief
  */
-#include "fused_matmul_iterbatch_basic_tiling.h"
-#include "fused_matmul_builtin_tiling.h"
-#include "fused_matmul_builtin_tiling_strategy.h"
-#include "fused_matmul_common.h"
+#include "fused_mat_mul_iterbatch_basic_tiling.h"
+#include "fused_mat_mul_builtin_tiling.h"
+#include "fused_mat_mul_builtin_tiling_strategy.h"
+#include "fused_mat_mul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util_nn.h"
 #include "op_common/op_host/util/op_const_def.h"
@@ -72,7 +72,7 @@ bool FusedMatMulIterBatchApiTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if ((compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) && opType != "relu") {
+    if (opType.empty()) {
         return false;
     }
     if (IsGeluOpType(opType) || opType == "scale_add" || opType == "sigmoid") {

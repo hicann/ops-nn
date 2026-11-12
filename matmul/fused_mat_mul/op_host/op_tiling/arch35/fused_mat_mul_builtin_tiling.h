@@ -9,14 +9,14 @@
  */
 
 /* !
- * \file fused_matmul_builtin_tiling.h
+ * \file fused_mat_mul_builtin_tiling.h
  * \brief FusedMatMul built-in tiling, inherits BatchMatMulV3Tiling.
  */
 #pragma once
 
 #include <string>
-#include "fused_matmul_common.h"
-#include "fused_matmul_tiling_key.h"
+#include "fused_mat_mul_common.h"
+#include "fused_mat_mul_tiling_key.h"
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_tiling_advanced.h"
 #include "platform/platform_ascendc.h"
 

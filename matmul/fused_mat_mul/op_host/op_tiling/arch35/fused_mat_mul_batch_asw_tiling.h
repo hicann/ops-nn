@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file fused_matmul_asw_tiling.h
+ * \file fused_mat_mul_batch_asw_tiling.h
  * \brief
  */
 #pragma once
@@ -23,7 +23,7 @@ using batch_matmul_v3_advanced::BatchMatMulV3AswTiling;
 class FusedMatMulBatchAswTiling : public BatchMatMulV3AswTiling {
 public:
     FusedMatMulBatchAswTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3AswTiling(context, cfg){};
+        : BatchMatMulV3AswTiling(context, cfg) {};
 
     ~FusedMatMulBatchAswTiling() override = default;
 

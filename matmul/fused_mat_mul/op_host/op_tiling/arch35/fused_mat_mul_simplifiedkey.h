@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file fused_matmul_simplifiedkey.h
+ * \file fused_mat_mul_simplifiedkey.h
  * \brief
  */
 

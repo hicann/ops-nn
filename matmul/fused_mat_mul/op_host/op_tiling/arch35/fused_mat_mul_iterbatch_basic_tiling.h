@@ -4,35 +4,35 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/*!
- * \file fused_matmul_k_equal_zero_tiling.h
+/* !
+ * \file fused_mat_mul_iterbatch_basic_tiling.h
  * \brief
  */
+
 #pragma once
 
-#include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_k_equal_zero_tiling.h"
+#include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_iterbatch_basicapi_tiling.h"
 
 namespace optiling {
 namespace fused_matmul {
-using batch_matmul_v3_advanced::BatchMatMulV3KEqZeroTiling;
+using batch_matmul_v3_advanced::BatchMatMulV3IterBatchBasicApiTiling;
 
-class FusedMatMulKEqZeroTiling : public BatchMatMulV3KEqZeroTiling {
+class FusedMatMulIterBatchApiTiling : public BatchMatMulV3IterBatchBasicApiTiling {
 public:
-    FusedMatMulKEqZeroTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3KEqZeroTiling(context, cfg) {};
+    FusedMatMulIterBatchApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : BatchMatMulV3IterBatchBasicApiTiling(context, cfg) {};
 
-    ~FusedMatMulKEqZeroTiling() override = default;
+    ~FusedMatMulIterBatchApiTiling() override = default;
 
 protected:
     bool IsCapable() override;
-
     uint64_t GetTilingKey() const override;
-
-    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
+    ge::graphStatus DoOpTiling() override;
+    void SetNeedNdDma();
 };
 } // namespace fused_matmul
 } // namespace optiling

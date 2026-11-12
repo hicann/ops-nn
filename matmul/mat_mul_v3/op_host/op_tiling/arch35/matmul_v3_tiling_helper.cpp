@@ -326,8 +326,11 @@ namespace optiling {
 namespace matmul_v3_advanced {
 bool IsMatMulTiling(const MatMulV3Args& args, NpuArch npuArch)
 {
-    return args.batchInfo == nullptr || (npuArch == Ops::Base::DAV_3510 && args.batchInfo->batchA == 1UL &&
-                                         args.batchInfo->batchB == 1UL && args.batchInfo->batchC == 1UL);
+    if (npuArch != Ops::Base::DAV_3510) {
+        return args.batchInfo == nullptr;
+    }
+    return args.batchInfo == nullptr ||
+           (args.batchInfo->batchA == 1UL && args.batchInfo->batchB == 1UL && args.batchInfo->batchC == 1UL);
 }
 
 void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,

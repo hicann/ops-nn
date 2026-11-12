@@ -33,7 +33,7 @@
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "matmul/common/op_host/op_api/batch_matmul_util.h"
-#include "matmul/common/op_host/op_api/fusedmatmul.h"
+#include "matmul/common/op_host/op_api/fused_mat_mul.h"
 
 using namespace Ops::NN;
 using namespace op;

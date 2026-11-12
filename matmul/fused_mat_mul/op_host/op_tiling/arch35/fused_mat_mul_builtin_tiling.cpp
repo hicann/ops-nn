@@ -9,15 +9,15 @@
  */
 
 /* !
- * \file fused_matmul_builtin_tiling.cpp
+ * \file fused_mat_mul_builtin_tiling.cpp
  * \brief FusedMatMul built-in tiling implementation.
  */
 
-#include "fused_matmul_builtin_tiling.h"
+#include "fused_mat_mul_builtin_tiling.h"
 
-#include "fused_matmul_common.h"
-#include "fused_matmul_builtin_tiling_strategy.h"
-#include "fused_matmul_tiling_key.h"
+#include "fused_mat_mul_common.h"
+#include "fused_mat_mul_builtin_tiling_strategy.h"
+#include "fused_mat_mul_tiling_key.h"
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_tiling_strategy.h"
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_tiling_advanced.h"
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_common_advanced.h"
@@ -176,7 +176,13 @@ void FusedMatMulBuiltInTiling::ExtractAttrFlags()
     if (args_.isHf32 && !IsDav3510Series(arch_)) {
         OP_LOGW(args_.opName, "Hf32 flag is: %d, which is not supported yet", args_.isHf32);
     }
-    innerPrecise_ = *context_->GetAttrs()->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX);
+    const int64_t innerPrecise = *context_->GetAttrs()->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX);
+    const bool supportsInnerPrecise = IsAddMulOpType(opType_) &&
+                                      (args_.aType == ge::DT_FLOAT16 || args_.aType == ge::DT_BF16);
+    // Normalize valid modes here; keep invalid values for ValidateOpSpecific to reject.
+    innerPrecise_ = !supportsInnerPrecise && innerPrecise == INNER_PRECISE_HIGH_PRECISION ?
+                        INNER_PRECISE_HIGH_PERFORMANCE :
+                        innerPrecise;
     OP_LOGI(args_.opName, "FusedMatMul built-in tiling inner_precise is %ld", innerPrecise_);
     OP_LOGD(args_.opName, "Hf32 flag is: %d", args_.isHf32);
 }
@@ -467,6 +473,18 @@ ge::graphStatus FusedMatMulBuiltInTiling::ValidateDtype()
 // ====== Phase 8: ValidateMatrixBatchInfo (A5 Relu supports merging all x1 batch axes into M) ======
 ge::graphStatus FusedMatMulBuiltInTiling::ValidateMatrixBatchInfo()
 {
+    // Check before batch axes can be merged into M; 3D inputs with batch=1 remain valid.
+    if (opType_ == "16cast32" && (batchInfo_.batchA != 1UL || batchInfo_.batchB != 1UL || batchInfo_.batchC != 1UL)) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args_.opName, "x1, x2, y",
+            Ops::NN::FormatString("%s, %s, %s",
+                                  Ops::Base::ToString(context_->GetInputShape(INPUT_X1_IDX)->GetOriginShape()).c_str(),
+                                  Ops::Base::ToString(context_->GetInputShape(INPUT_X2_IDX)->GetOriginShape()).c_str(),
+                                  Ops::Base::ToString(context_->GetOutputShape(0)->GetOriginShape()).c_str())
+                .c_str(),
+            "16cast32 requires the effective batch of x1, x2 and y to be 1");
+        return ge::GRAPH_FAILED;
+    }
     if (arch_ != NpuArch::DAV_RESV && !(IsDav3510Series(arch_) && CanReluMergeBatchAndMAxis(context_))) {
         const auto& aShape = context_->GetInputShape(0)->GetOriginShape();
         const auto& bShape = context_->GetInputShape(1)->GetOriginShape();

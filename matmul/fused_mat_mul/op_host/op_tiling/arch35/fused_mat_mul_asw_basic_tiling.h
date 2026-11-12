@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file fused_matmul_asw_basic_tiling.h
+ * \file fused_mat_mul_asw_basic_tiling.h
  * \brief
  */
 #pragma once
