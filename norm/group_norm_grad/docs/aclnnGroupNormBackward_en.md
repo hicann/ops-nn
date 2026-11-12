@@ -147,7 +147,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>gamma (aclTensor*)</td>
       <td>Input</td>
       <td>Scaling coefficient for each channel, corresponding to `gamma` in the formula.</td>
-      <td><ul><li>Supports null tensors.</li><li>The data type must be the same as that of `mean`.</li><li>The number of elements must be the same as that of `C`.</li></ul></td>
+      <td><ul><li>Supports null tensors.</li><li>Optional input: a null pointer is allowed; when it is null, γ is set to 1 in the calculation.</li><li>The data type must be the same as that of `mean`.</li><li>The number of elements must be the same as that of `C`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

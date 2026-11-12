@@ -145,7 +145,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示每个channel的缩放系数，对应公式中的`gamma`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`mean`相同。</li><li>元素数量需与`C`相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选输入：允许传空指针，为空时按γ=1代入计算。</li><li>数据类型与`mean`相同。</li><li>元素数量需与`C`相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
