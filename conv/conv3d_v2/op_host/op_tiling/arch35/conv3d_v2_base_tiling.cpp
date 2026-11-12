@@ -33,8 +33,8 @@ ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
 {
     // Temporary Solution: aclnn use GetCompileInfo; others use PlatformInfo
     Conv3dTilingCache& tilingCache = Conv3dTilingCache::GetInstance();
-    opInfo_ = tilingCache.GetPlatFormInfo();
-    if (tilingCache.GetSocVersion() == NpuArch::DAV_RESV) {
+    *opInfo_ = tilingCache.GetPlatFormInfo();
+    if (opInfo_->npuArch == NpuArch::DAV_RESV) {
         fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
         OPS_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);

@@ -376,10 +376,10 @@ __aicore__ inline bool IterateMFirstHWMode(Intf* self)
         self->ctx.vecId = (self->ctx.groupOptIter % VEC_NUM) * VEC_ID_MAX;
         CalcGroupOptParamForHWMode<Intf>(self);
         if (self->ctx.groupOptIter != self->ctx.singleGroupOpt) {
-            return true;
-        } else if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1) {
-            if (self->ctx.updateSingleCoOpt == 0 && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
-                return false;
+            if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1) {
+                if (self->ctx.updateSingleCoOpt == 0 && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
+                    return false;
+                }
             }
             return true;
         } else {

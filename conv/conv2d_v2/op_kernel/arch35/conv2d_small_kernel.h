@@ -124,10 +124,10 @@ protected:
     const Conv2DTilingData* tiling_;
     bool coreActive_;
 
-    uint32_t batchIdx_;
-    uint32_t groupIdx_;
-    uint32_t nIdx_;
-    uint32_t mIdx_;
+    uint32_t batchIdx_ = 0;
+    uint32_t groupIdx_ = 0;
+    uint32_t nIdx_ = 0;
+    uint32_t mIdx_ = 0;
 
     uint32_t innerBatchIter_;
     uint32_t curBatchIdx_;
@@ -191,8 +191,8 @@ protected:
     uint32_t hiLoadStart_;
 
     // HW-mode (Ho/Wo split) specific
-    uint32_t hoIdx_;
-    uint32_t woIdx_;
+    uint32_t hoIdx_ = 0;
+    uint32_t woIdx_ = 0;
     uint32_t hoIdxStart_;
     uint32_t woIdxStart_;
     uint32_t actualHo_;

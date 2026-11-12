@@ -451,7 +451,7 @@ __aicore__ inline void CopyOutToolsHWMode<Intf, OutputT, FixpipeIdx>::CopyOut(co
 #endif
     if constexpr (Intf::posOutput == TPosition::VECCALC) {
         SetFixpipeIntriParamsUb<config.format>(intriParams, ubInfo);
-        if (ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
+        if (ubInfo == nullptr || ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
             return;
         }
     } else if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {

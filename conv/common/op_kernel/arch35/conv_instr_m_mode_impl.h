@@ -212,7 +212,7 @@ public:
 #endif
             if constexpr (Intf::posOutput == TPosition::VECCALC) {
                 SetFixpipeIntriParamsUb<config.format>(intriParams, ubInfo);
-                if (ubInfo->realWUb == 0 || ubInfo->realNUb == 0) {
+                if (ubInfo == nullptr || ubInfo->realWUb == 0 || ubInfo->realNUb == 0) {
                     return;
                 }
             } else if constexpr (Intf::formatOutput == ConvFormat::NHWC || Intf::formatOutput == ConvFormat::NDHWC) {
@@ -249,7 +249,7 @@ private:
 #endif
         if constexpr (Intf::posOutput == TPosition::VECCALC) {
             SetFixpipeIntriParamsUb<format>(intriParams, ubInfo);
-            if (ubInfo->realBatchUb == 0 || ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
+            if (ubInfo == nullptr || ubInfo->realBatchUb == 0 || ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {
                 return;
             }
         } else if constexpr (Intf::formatOutput == ConvFormat::NHWC) {

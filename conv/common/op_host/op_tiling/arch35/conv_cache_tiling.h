@@ -381,7 +381,11 @@ public:
         convTilingParseInfo_ = std::move(convTilingParseInfo);
     }
 
-    ConvTilingParseInfo* GetPlatFormInfo() { return &convTilingParseInfo_; }
+    ConvTilingParseInfo GetPlatFormInfo()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return convTilingParseInfo_;
+    }
 
 protected:
     std::unordered_map<ConvInputArgs, Tiling, ConvInputArgsHash> cachedTiling;

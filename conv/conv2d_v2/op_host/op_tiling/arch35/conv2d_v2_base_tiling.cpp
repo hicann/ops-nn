@@ -29,16 +29,14 @@ namespace conv_ops_tiling {
 ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
 {
     // aclnn use GetCompileInfo, others use PlatformInfo
-    NpuArch npuArch;
     paramInfo_.nodeType = context_->GetNodeType();
     Conv2dTilingCache& tilingCache = Conv2dTilingCache::GetInstance();
-    opInfo_ = tilingCache.GetPlatFormInfo();
-    npuArch = tilingCache.GetSocVersion();
+    *opInfo_ = tilingCache.GetPlatFormInfo();
     fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
     if (platformInfoPtr != nullptr) {
         opInfo_->isCubeVectorFuse = IsCubeVectorFuseSoc(*platformInfoPtr);
     }
-    if (npuArch == NpuArch::DAV_RESV) {
+    if (opInfo_->npuArch == NpuArch::DAV_RESV) {
         OPS_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
         opInfo_->aicoreNum = ascendcPlatform.GetCoreNumAic();
@@ -720,7 +718,14 @@ ge::graphStatus Conv2dBaseTiling::PostTiling()
         }
         context_->GetRawTilingData()->SetDataSize(tilingDataSize);
     } else {
-        tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+        void* tilingBuf = context_->GetRawTilingData()->GetData();
+        size_t tilingBufCap = context_->GetRawTilingData()->GetCapacity();
+        if (tilingBuf == nullptr || tilingBufCap < tilingData_.GetDataSize()) {
+            OP_LOGE(paramInfo_.nodeType.c_str(), "Tiling buffer null or capacity too small, cap=%zu need=%zu.",
+                    tilingBufCap, tilingData_.GetDataSize());
+            return ge::GRAPH_FAILED;
+        }
+        tilingData_.SaveToBuffer(tilingBuf, tilingBufCap);
         context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     }
     if (flagInfo_.isASWT) {

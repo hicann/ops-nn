@@ -406,7 +406,7 @@ TEST_F(ConvCommonUtilsTest, ConvTilingCacheBasic)
     parseInfo.aicoreNum = UT_AICORE_NUM;
     cache.SetSocVersion(NpuArch::DAV_3510, parseInfo);
     EXPECT_EQ(cache.GetSocVersion(), NpuArch::DAV_3510);
-    EXPECT_EQ(cache.GetPlatFormInfo()->aicoreNum, UT_AICORE_NUM);
+    EXPECT_EQ(cache.GetPlatFormInfo().aicoreNum, UT_AICORE_NUM);
 }
 
 TEST_F(ConvCommonUtilsTest, ConvTilingCacheFull)

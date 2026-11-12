@@ -80,7 +80,8 @@ private:
     optiling::conv_ops_tiling::ConvOptGroupInfo optGroupInfo_;
     conv_tiling::PlatformInfo apiInputPlatformInfo_;
     optiling::conv_ops_tiling::FixpipeInfo fixpipeInfo_;
-    ConvTilingParseInfo* opInfo_ = nullptr;
+    ConvTilingParseInfo opInfoStorage_;
+    ConvTilingParseInfo* opInfo_ = &opInfoStorage_;
     ConvAscendcShapesInfo shapeInfo_;
     ConvAscendcAttrInfo attrInfo_;
     ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo_;

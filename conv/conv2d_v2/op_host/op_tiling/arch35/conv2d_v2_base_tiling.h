@@ -107,7 +107,8 @@ private:
     optiling::conv_ops_tiling::FixpipeInfo fixpipeInfo_;
     Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling Conv2DMNFullLoadKPartialTiling_;
 
-    ConvTilingParseInfo* opInfo_ = nullptr;
+    ConvTilingParseInfo opInfoStorage_;
+    ConvTilingParseInfo* opInfo_ = &opInfoStorage_;
     ConvAscendcShapesInfo shapeInfo_;
     ConvAscendcAttrInfo attrInfo_;
     ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo_;
