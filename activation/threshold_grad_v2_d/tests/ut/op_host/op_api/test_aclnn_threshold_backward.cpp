@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -263,7 +263,7 @@ TEST_F(l2_threshold_backward_test, ascend910B2_l2_test_relu_grad_bfp16_success)
     EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
-//校验维度超过8维的场景
+// 校验维度超过8维的场景
 TEST_F(l2_threshold_backward_test, ascend910B2_l2_test_relu_grad_check_max_dim)
 {
     auto gradOutputDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -481,4 +481,96 @@ TEST_F(l2_threshold_backward_test, l2_test_threshold_nullptr)
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+// issue #8230：threshold是host侧标量，判零须精确比较，|threshold|<=FLT_EPSILON的非零阈值
+// 不得被静默当作0走ReluGrad分支（丢弃threshold），应按公式 self(i) > threshold 走
+// ThresholdGradV2D分支。以下用例覆盖容差判零边界（UT为host第一段校验，精度由ST/repro覆盖）
+TEST_F(l2_threshold_backward_test, l2_test_threshold_flt_epsilon_success)
+{
+    auto gradOutputDesc = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    auto selfDesc = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    // 1.1920928955078125e-07f 即 2^-23（FLT_EPSILON），恰在原容差判零分界点上，
+    // 修复前会被当作0静默路由到ReluGrad
+    auto scalarDesc = ScalarDesc(1.1920928955078125e-07f);
+    auto outDesc = TensorDesc(selfDesc);
+    auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_threshold_nextafter_epsilon_success)
+{
+    auto gradOutputDesc = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    auto selfDesc = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    // nextafter(FLT_EPSILON)在原容差外，修复前后行为一致（对照组）
+    auto scalarDesc = ScalarDesc(1.1920930e-7f);
+    auto outDesc = TensorDesc(selfDesc);
+    auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_threshold_tiny_positive_success)
+{
+    auto gradOutputDesc = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    auto selfDesc = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    // 远小于FLT_EPSILON的非零正阈值，修复前同样被容差判零吞掉
+    auto scalarDesc = ScalarDesc(1e-9f);
+    auto outDesc = TensorDesc(selfDesc);
+    auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_threshold_tiny_negative_success)
+{
+    auto gradOutputDesc = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    auto selfDesc = TensorDesc(
+        {
+            8,
+        },
+        ACL_FLOAT, ACL_FORMAT_ND);
+    // 负侧小阈值：修复前|threshold|<=FLT_EPSILON同样被归零路由到ReluGrad，丢失负阈值语义
+    auto scalarDesc = ScalarDesc(-1e-7f);
+    auto outDesc = TensorDesc(selfDesc);
+    auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    ut.TestPrecision();
 }

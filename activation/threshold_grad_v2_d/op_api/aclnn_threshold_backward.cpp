@@ -32,7 +32,6 @@ extern "C" {
 #endif
 
 namespace {
-float thresholdVal_ = 0.0;
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_INT8,
@@ -46,8 +45,6 @@ static const std::initializer_list<op::DataType> REGBASE_DTYPE_DTYPE_SUPPORT_LIS
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_INT8,
     op::DataType::DT_UINT8, op::DataType::DT_BF16,  op::DataType::DT_INT64};
 
-static bool IsFloatEqual(float a, float b) { return std::abs(a - b) <= std::numeric_limits<float>::epsilon(); }
-
 static bool CheckPtrValid(const aclTensor* gradOutput, const aclTensor* self)
 {
     OP_CHECK_NULL(gradOutput, return false);
@@ -55,11 +52,11 @@ static bool CheckPtrValid(const aclTensor* gradOutput, const aclTensor* self)
     return true;
 }
 
-static const std::initializer_list<DataType>& GetDtypeSupportList()
+static const std::initializer_list<DataType>& GetDtypeSupportList(float thresholdVal)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-        if (Ops::NN::AclnnUtil::IsRegbase(curArch) && IsFloatEqual(thresholdVal_, 0.0)) {
+        if (Ops::NN::AclnnUtil::IsRegbase(curArch) && thresholdVal == 0.0f) {
             // relugrad 支持int64
             return REGBASE_DTYPE_DTYPE_SUPPORT_LIST;
         } else {
@@ -70,9 +67,10 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
-static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
+static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out,
+                            float thresholdVal)
 {
-    const auto& supportList = GetDtypeSupportList();
+    const auto& supportList = GetDtypeSupportList(thresholdVal);
     // 检查gradOutput和self数据类型是否在ThresholdBackward算子的支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
@@ -88,14 +86,15 @@ static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self)
     return true;
 }
 
-static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out)
+static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* out,
+                               float thresholdVal)
 {
     // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckPtrValid(gradOutput, self), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(gradOutput, self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(gradOutput, self, out, thresholdVal), ACLNN_ERR_PARAM_INVALID);
 
     // 3.输入维度校验
     CHECK_RET(CheckShape(gradOutput, self), ACLNN_ERR_PARAM_INVALID);
@@ -114,10 +113,10 @@ aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(const aclTensor* gradOutput, 
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     // 固定写法，参数检查
     CHECK_RET(threshold != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-    thresholdVal_ = threshold->ToFloat();
+    const float thresholdVal = threshold->ToFloat();
     CHECK_RET(out != nullptr, ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(workspaceSize != nullptr, ACLNN_ERR_PARAM_NULLPTR);
-    auto ret = CheckParams(gradOutput, self, out);
+    auto ret = CheckParams(gradOutput, self, out, thresholdVal);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     // 校验输入shape是否可broadcast
     op::Shape broadcastShape;
@@ -147,14 +146,16 @@ aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(const aclTensor* gradOutput, 
     // 调用 ReluGrad or ThresholdGradV2D 算子kernel
     const aclTensor* opOut;
 
-    if (IsFloatEqual(thresholdVal_, 0.0)) {
+    // threshold是host侧标量，判零须精确比较：容差判零会把|threshold|<=FLT_EPSILON的非零阈值静默当作0，
+    // 丢弃threshold走ReluGrad分支，与资料公式 self(i) > threshold 不符（issue #8230）
+    if (thresholdVal == 0.0f) {
         opOut = l0op::ReluGrad(gradOutputContiguous, selfContiguous, uniqueExecutor.get());
     } else if (Ops::NN::AclnnUtil::IsRegbase()) {
         auto thresholdTensor = uniqueExecutor->ConvertToTensor(threshold, selfContiguous->GetDataType());
         CHECK_RET(thresholdTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         opOut = l0op::ThresholdGradV2(gradOutputContiguous, selfContiguous, thresholdTensor, uniqueExecutor.get());
     } else {
-        opOut = l0op::ThresholdGradV2D(gradOutputContiguous, selfContiguous, thresholdVal_, uniqueExecutor.get());
+        opOut = l0op::ThresholdGradV2D(gradOutputContiguous, selfContiguous, thresholdVal, uniqueExecutor.get());
     }
     CHECK_RET(opOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
