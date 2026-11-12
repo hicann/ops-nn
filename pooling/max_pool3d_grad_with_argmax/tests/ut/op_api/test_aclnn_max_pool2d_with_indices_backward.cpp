@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <vector>
 #include <array>
@@ -829,16 +828,16 @@ TEST_F(l2_max_pool2d_with_indices_backward_test, ascend910B2_abnormal_dilationSi
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// 异常场景：out与indices的shape不一致
+// 异常场景：gradOutput合法，仅indices与gradOutput的shape不一致
 TEST_F(l2_max_pool2d_with_indices_backward_test, ascend910B2_abnormal_out_indices_diff)
 {
-    vector<int64_t> self_dims = {3, 2, 2, 2};
+    vector<int64_t> self_dims = {1, 1, 4, 4};
     vector<int64_t> kernel_dims = {2, 2};
-    vector<int64_t> stride_dims = {1, 1};
+    vector<int64_t> stride_dims = {2, 2};
     vector<int64_t> padding_dims = {0, 0};
     vector<int64_t> dilation_dims = {1, 1};
-    vector<int64_t> out_dims = {3, 1, 1, 2};
-    vector<int64_t> indices_dims = {3, 1, 2, 2};
+    vector<int64_t> out_dims = {1, 1, 2, 2};
+    vector<int64_t> indices_dims = {1, 1, 2, 1};
 
     auto kernel_desc = IntArrayDesc(kernel_dims);
     auto stride_desc = IntArrayDesc(stride_dims);

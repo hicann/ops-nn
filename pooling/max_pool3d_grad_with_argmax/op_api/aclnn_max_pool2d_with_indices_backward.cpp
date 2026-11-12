@@ -348,10 +348,8 @@ static bool CheckGradInputAndIndicesShape(const aclTensor* gradOutput, const acl
     } // 判断out的shape与推导出的输出shape是否相等
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(gradOutput, calcOutShape, return false);
 
-    CheckGradInputAndIndicesShapeIsMask(outHeight, outWidth, is3d, nInputPlane, isMask2ND, isMask, kH, kW, nBatch,
-                                        indices, gradOutput, calcOutShape);
-
-    return true;
+    return CheckGradInputAndIndicesShapeIsMask(outHeight, outWidth, is3d, nInputPlane, isMask2ND, isMask, kH, kW,
+                                               nBatch, indices, gradOutput, calcOutShape);
 }
 
 static bool CheckShape(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices,
