@@ -138,7 +138,10 @@ class _TfCompetitor:
         self.num_bits = 8 if num_bits is None else int(num_bits)
         self.narrow_range = False if narrow_range is None else bool(narrow_range)
 
-    def __call__(self, gradients, x, min, max, **kwargs):
+    def __call__(self, gradients, x=None, min=None, max=None, inputs=None, **kwargs):
+        # TF 新版签名第二形参由 x 改名 inputs：双名兼容新旧形态，未传 inputs 时回落旧名 x。
+        if inputs is None:
+            inputs = x
         import tensorflow as tf
 
         try:
@@ -153,7 +156,7 @@ class _TfCompetitor:
 
         return tf.quantization.fake_quant_with_min_max_vars_per_channel_gradient(
             arr(gradients),
-            arr(x),
+            arr(inputs),
             arr(min),
             arr(max),
             num_bits=self.num_bits,
