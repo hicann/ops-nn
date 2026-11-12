@@ -42,6 +42,7 @@
 - [aclnnAscendAntiQuant](../../quant/ascend_anti_quant_v2/docs/aclnnAscendAntiQuant.md)
 - [aclnnAscendQuant](../../quant/ascend_quant_v2/docs/aclnnAscendQuant.md)
 - [aclnnAscendQuantV3](../../quant/ascend_quant_v2/docs/aclnnAscendQuantV3.md)
+- [aclnnAssertAsync](../../control/assert_async/docs/aclnnAssertAsync.md)
 - [aclnnAvgPool2d](../../pooling/avg_pool3_d/docs/aclnnAvgPool2d.md)
 - [aclnnAvgPool2dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool2dBackward.md)
 - [aclnnAvgPool3d](../../pooling/avg_pool3_d/docs/aclnnAvgPool3d.md)

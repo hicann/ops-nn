@@ -71,6 +71,7 @@
 | [aclnnAscendAntiQuant](../../quant/ascend_anti_quant_v2/docs/aclnnAscendAntiQuant.md) | 根据输入的scale和offset对输入x进行反量化。 | 默认确定性实现 | 默认确定性实现  |
 | [aclnnAscendQuant](../../quant/ascend_quant_v2/docs/aclnnAscendQuant.md) | 根据输入的scale和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。 | 默认确定性实现 | - |
 | [aclnnAscendQuantV3](../../quant/ascend_quant_v2/docs/aclnnAscendQuantV3.md) | 对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnAssertAsync](../../control/assert_async/docs/aclnnAssertAsync.md) | 断言输入张量（numel==1）数值非0：为0时设备侧打印assertMsg并触发算子失败，语义对齐torch._assert_async。 | - | 默认确定性实现 |
 | [aclnnAvgPool2d](../../pooling/avg_pool3_d/docs/aclnnAvgPool2d.md) | 对输入Tensor进行窗口为$kH * kW$、步长为$sH * sW$的二维平均池化操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAvgPool2dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool2dBackward.md) | 二维平均池化的反向传播，计算二维平均池化正向传播的输入梯度。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnAvgPool3d](../../pooling/avg_pool3_d/docs/aclnnAvgPool3d.md) | 对输入Tensor进行窗口为$kD * kH * kW$、步长为$sD * sH * sW$的三维平均池化操作。 | 默认确定性实现 | 默认确定性实现 |

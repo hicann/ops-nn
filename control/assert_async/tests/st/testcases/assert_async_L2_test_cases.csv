@@ -1,0 +1,12 @@
+case_id,level,description,input_dtype,input_value,input_shape,assert_msg,expect_result,expect_msg,signal_b,carrier,verdict,note
+AA-L2-01,L2,numel!=1: shape [2],FP32,1.0,[2],,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp
+AA-L2-02,L2,"numel!=1: shape [1,2]",FP32,1.0,"[1, 2]",,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp
+AA-L2-03,L2,"numel!=1: shape [3,3]",FP32,1.0,"[3, 3]",,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp
+AA-L2-04,L2,empty tensor [0],FP32,1.0,[0],,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp
+AA-L2-05,L2,"empty tensor [0,1]",FP32,1.0,"[0, 1]",,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp
+AA-L2-06,L2,unsupported dtype INT4,INT4,1.0,[1],,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,op_api UT (tests/ut/op_api),PASS,op_api UT: tests/ut/op_api/test_aclnn_assert_async.cpp AA_WB_A06_int4
+AA-L2-07,L2,unsupported dtype STRING,STRING,1.0,[1],,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp
+AA-L2-08,L2,unsupported dtype STRING,STRING,1.0,[1],,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp AA_L2_07_string
+AA-L2-09,L2,unsupported dtype UINT16,UINT16,1.0,[1],,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp AA_L2_11_uint16_rejected
+AA-L2-10,L2,unsupported dtype UINT32,UINT32,1.0,[1],,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp AA_L2_12_uint32_rejected
+AA-L2-11,L2,unsupported dtype UINT64,UINT64,1.0,[1],,"reject (返回非 ACLNN_SUCCESS, 不启动 kernel)",N/A,N/A,host UT (tests/ut/op_host),PASS,host UT: tests/ut/op_host/arch35/test_assert_async_tiling.cpp AA_L2_13_uint64_rejected

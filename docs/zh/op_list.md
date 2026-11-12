@@ -919,6 +919,16 @@
   </tr>
   <tr>
     <td>control</td>
+    <td><a href="../../control/assert_async/README.md">assert_async</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>断言单元素条件张量非0，为0时打印消息并触发算子失败，语义对齐PyTorch的torch._assert_async。</td>
+  </tr>
+  <tr>
+    <td>control</td>
     <td><a href="../../control/npu_get_float_status/README.md">npu_get_float_status</a></td>
     <td>✓</td>
     <td>✓</td>
