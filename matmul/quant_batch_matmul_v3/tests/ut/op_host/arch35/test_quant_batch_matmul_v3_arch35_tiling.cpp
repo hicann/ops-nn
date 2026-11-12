@@ -14,6 +14,7 @@
 #include "op_common/op_host/util/op_const_def.h"
 #include "../../../../op_host/op_tiling/arch35/adaptive_sliding_window_mix_basic_api_tiling.h"
 #include "../../../../op_host/op_tiling/arch35/adaptive_sliding_window_mix_tiling.h"
+#include "../../../../op_host/op_tiling/arch35/base_block_calculator.h"
 #include "../../../../op_host/op_tiling/arch35/quant_batch_matmul_v3_iterbatch_tiling.h"
 #define private public
 #include "../../../../op_host/op_tiling/arch35/adaptive_sliding_window_mx_basic_api_tiling.h"
@@ -70,6 +71,12 @@ namespace {
 class MixCapabilityProbe : public optiling::AdaptiveSlidingWindowMixBasicAPITiling {
 public:
     MixCapabilityProbe() : AdaptiveSlidingWindowMixBasicAPITiling(nullptr) {}
+    using AdaptiveSlidingWindowMixBasicAPITiling::CalcBasicBlock;
+    using AdaptiveSlidingWindowTiling::adaptiveWin_;
+    using QuantBatchMatmulV3TilingBase::aicoreParams_;
+    using QuantBatchMatmulV3TilingBase::compileInfo_;
+    using QuantBatchMatmulV3TilingBase::inputParams_;
+
     bool Check(const optiling::QuantBatchMatmulInfo& info)
     {
         const auto saved = inputParams_;
@@ -494,6 +501,62 @@ TEST(QbmmMixNdCapability, Int8NzMixUsesBlazeForEveryTranspose)
                     EXPECT_EQ(tiling.Check(info), supported);
                 }
             }
+        }
+    }
+}
+
+TEST(QbmmMixNdCapability, OnlyNewMixRoutesUseCommonBaseBlockForLongK)
+{
+    using optiling::BaseBlockCalculator;
+    using optiling::BaseBlockMode;
+    MixCapabilityProbe tiling;
+    auto& info = tiling.inputParams_;
+    info = MakeNdMixInfo();
+    info.opName = "QuantBatchMatmulV3";
+    info.mSize = 160;
+    info.nSize = 384;
+    info.kSize = 16384;
+    info.transB = true;
+    info.batchA = info.batchB = info.batchC = 1;
+    auto& compileInfo = tiling.compileInfo_;
+    compileInfo.npuArch = Ops::Base::DAV_3510;
+    compileInfo.l0aSize = compileInfo.l0bSize = 64 * 1024;
+    compileInfo.l0cSize = tiling.aicoreParams_.l0cSize = 256 * 1024;
+    struct TestCase {
+        ge::Format format;
+        bool transA;
+        ge::DataType output;
+        ge::DataType bias;
+        bool wasSupported;
+    };
+    const TestCase cases[] = {
+        {ge::FORMAT_ND, false, ge::DT_BF16, ge::DT_UNDEFINED, false},
+        {ge::FORMAT_FRACTAL_NZ, false, ge::DT_BF16, ge::DT_UNDEFINED, true},
+        {ge::FORMAT_FRACTAL_NZ, false, ge::DT_BF16, ge::DT_BF16, true},
+        {ge::FORMAT_FRACTAL_NZ, false, ge::DT_BF16, ge::DT_FLOAT, true},
+        {ge::FORMAT_FRACTAL_NZ, true, ge::DT_BF16, ge::DT_UNDEFINED, false},
+        {ge::FORMAT_FRACTAL_NZ, false, ge::DT_FLOAT16, ge::DT_UNDEFINED, false},
+        {ge::FORMAT_FRACTAL_NZ, false, ge::DT_BF16, ge::DT_INT32, false},
+    };
+    for (auto aicNum : {28U, 32U}) {
+        compileInfo.aicNum = aicNum;
+        for (const auto& test : cases) {
+            SCOPED_TRACE(::testing::Message() << "aicNum=" << aicNum << ", weight format=" << test.format << ", transA="
+                                              << test.transA << ", output=" << test.output << ", bias=" << test.bias);
+            info.bFormat = test.format;
+            info.transA = test.transA;
+            info.cDtype = test.output;
+            info.hasBias = test.bias != ge::DT_UNDEFINED;
+            info.biasDtype = test.bias;
+            BaseBlockCalculator calculator(info, compileInfo, info.batchC);
+            ASSERT_TRUE(calculator.Compute(BaseBlockMode::DEFAULT));
+            ASSERT_TRUE(tiling.CalcBasicBlock());
+            const auto& expected = calculator.GetOutput();
+            const bool useOptimizedBlock = test.wasSupported && aicNum == 28U;
+            EXPECT_EQ(tiling.adaptiveWin_.baseM, useOptimizedBlock ? 160UL : expected.baseM);
+            EXPECT_EQ(tiling.adaptiveWin_.baseN, useOptimizedBlock ? 16UL : expected.baseN);
+            EXPECT_EQ(tiling.adaptiveWin_.baseK, useOptimizedBlock ? 128UL : expected.baseK);
+            EXPECT_EQ(tiling.adaptiveWin_.useTailWinLogic, expected.useTailWinLogic);
         }
     }
 }

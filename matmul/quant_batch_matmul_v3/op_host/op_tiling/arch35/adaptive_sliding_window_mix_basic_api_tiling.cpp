@@ -276,7 +276,18 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::CalcBasicBlock()
     adaptiveWin_.baseM = baseBlockRes.baseM;
     adaptiveWin_.baseN = baseBlockRes.baseN;
     adaptiveWin_.baseK = baseBlockRes.baseK;
-    OptimizeBaseBlock();
+    const bool isInt8WeightNz = inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.aDtype == ge::DT_INT8 &&
+                                inputParams_.bDtype == ge::DT_INT8;
+    // Before the ND/INT8 WeightNZ migration, Mix Tensor API already supported this INT8 WeightNZ subset.
+    const bool wasSupportedInt8WeightNz = isInt8WeightNz && !inputParams_.transA &&
+                                          inputParams_.cDtype == ge::DT_BF16 &&
+                                          (!inputParams_.hasBias || inputParams_.biasDtype == ge::DT_BF16 ||
+                                           inputParams_.biasDtype == ge::DT_FLOAT);
+    const bool skipOptimizeBaseBlock = inputParams_.bFormat == ge::FORMAT_ND ||
+                                       (isInt8WeightNz && !wasSupportedInt8WeightNz);
+    if (!skipOptimizeBaseBlock) {
+        OptimizeBaseBlock();
+    }
     adaptiveWin_.useTailWinLogic = baseBlockRes.useTailWinLogic;
     return true;
 }
