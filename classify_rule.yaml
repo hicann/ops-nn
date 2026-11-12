@@ -503,6 +503,9 @@ convolution_backprop@ops-nn:
       - ops/ops-nn/conv/extend_conv_transpose_v2/op_host/*.h
       - ops/ops-nn/conv/extend_conv_transpose_v2/op_host/*/*.h
       - ops/ops-nn/conv/extend_conv_transpose_v2/op_kernel/
+      - ops/ops-nn/conv/extend_conv_transpose/op_kernel/
+      - ops/ops-nn/conv/extend_conv_transpose/op_host/*.h
+      - ops/ops-nn/conv/extend_conv_transpose/op_host/*/*.h
 
 convolution_backprop_51@ops-nn:
   src:
