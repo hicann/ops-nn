@@ -572,4 +572,172 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_fixed_shift_value)
     }
 }
 
+// ==========================================================================================
+// Groups implicit derivation (infershape 1.0 parity): when attr groups is 1 and fmap C is a
+// multiple of filter Cin, derive groups = fmap C / filter Cin; keep explicit groups and
+// non-derivable cases unchanged.
+// ==========================================================================================
+TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive)
+{
+    struct Point {
+        const char* pointName;
+        std::function<GraphPtr()> build;
+        int64_t expectedGroups;
+    } const points[] = {
+        {"nchw_fmap_nchw_filter_derive",
+         []() {
+             TestGraph builder("groups_nchw");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 64, 56, 56},
+                                                {4, 16, 3, 3}, {1, 4, 56, 56}))
+                 .SetOutput("Conv2D")
+                 .Build();
+         },
+         4},
+        {"nhwc_fmap_hwcn_filter_derive",
+         []() {
+             TestGraph builder("groups_nhwc_hwcn");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NHWC, {1, 56, 56, 64},
+                                                {3, 3, 16, 4}, {1, 56, 56, 4}))
+                 .SetOutput("Conv2D")
+                 .Build();
+         },
+         4},
+        {"nhwc_fmap_nhwc_filter_derive",
+         []() {
+             TestGraph builder("groups_nhwc_nhwc");
+             Conv2DConfig convCfg;
+             convCfg.SetName("Conv2D")
+                 .AddInput(DT_FLOAT16, FORMAT_NHWC, {1, 56, 56, 64}, "Conv2D_x")
+                 .AddInput(DT_FLOAT16, FORMAT_NHWC, {4, 3, 2, 16}, "Conv2D_filter")
+                 .AddOutput(DT_FLOAT16, FORMAT_NHWC, {1, 56, 56, 4}, "y")
+                 .SetAttr("data_format", std::string("NHWC"));
+             return builder.SetSocAscend950().AddConv2D(convCfg).SetOutput("Conv2D").Build();
+         },
+         4},
+        {"fmap_c_equals_filter_cin_keeps_default",
+         []() {
+             TestGraph builder("groups_c_equal");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 16, 56, 56},
+                                                {4, 16, 3, 3}, {1, 4, 56, 56}))
+                 .SetOutput("Conv2D")
+                 .Build();
+         },
+         1},
+        {"fmap_c_less_filter_cin_keeps_default",
+         []() {
+             TestGraph builder("groups_c_less");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 8, 56, 56},
+                                                {4, 16, 3, 3}, {1, 4, 56, 56}))
+                 .SetOutput("Conv2D")
+                 .Build();
+         },
+         1},
+        {"explicit_groups_valid_preserved",
+         []() {
+             TestGraph builder("groups_explicit_valid");
+             Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 64, 56, 56},
+                                                        {4, 16, 3, 3}, {1, 4, 56, 56});
+             convCfg.SetAttr("groups", int64_t(4));
+             return builder.SetSocAscend950().AddConv2D(convCfg).SetOutput("Conv2D").Build();
+         },
+         4},
+        {"explicit_groups_mismatch_preserved",
+         []() {
+             TestGraph builder("groups_explicit_mismatch");
+             Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 64, 56, 56},
+                                                        {4, 16, 3, 3}, {1, 4, 56, 56});
+             convCfg.SetAttr("groups", int64_t(2));
+             return builder.SetSocAscend950().AddConv2D(convCfg).SetOutput("Conv2D").Build();
+         },
+         2},
+        {"non_divisible_keeps_default",
+         []() {
+             TestGraph builder("groups_non_divisible");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 63, 56, 56},
+                                                {4, 16, 3, 3}, {1, 4, 56, 56}))
+                 .SetOutput("Conv2D")
+                 .Build();
+         },
+         1},
+        {"dynamic_shape_keeps_default",
+         []() {
+             TestGraph builder("groups_dynamic");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {-1, -1, -1, -1},
+                                                {-1, -1, -1, -1}, {-1, -1, -1, -1}))
+                 .SetOutput("Conv2D")
+                 .Build();
+         },
+         1},
+        {"fractal_z_filter_keeps_default",
+         []() {
+             TestGraph builder("groups_fractal_z");
+             auto graph = builder.SetSocAscend950()
+                              .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
+                                                             {1, 64, 56, 56}, {4, 16, 3, 3}, {1, 4, 56, 56}))
+                              .SetOutput("Conv2D")
+                              .Build();
+             builder.UpdateNodeInputDesc("Conv2D", 1, DT_FLOAT16, FORMAT_FRACTAL_Z);
+             return graph;
+         },
+         1},
+    };
+
+    for (const auto& p : points) {
+        SCOPED_TRACE(p.pointName);
+        auto graph = p.build();
+        TestTotalPass(std::string("groups_derive_") + p.pointName, graph, SUCCESS);
+        GNode fused = GetFirstConv2dV2Node(graph);
+        int64_t groups = 0;
+        if (fused.GetAttr(AscendString("groups"), groups) == GRAPH_SUCCESS) {
+            EXPECT_EQ(groups, p.expectedGroups);
+        } else {
+            // Es builder omits optional attrs equal to the IR default, absent groups means 1.
+            EXPECT_EQ(p.expectedGroups, int64_t{1});
+        }
+    }
+}
+
+// Re-entrancy: multiple Conv2D nodes derive their own groups in one graph, convDescInfo must
+// be reset per node by InitMember.
+TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_derive_multi_conv)
+{
+    auto graph = TestGraph("groups_derive_multi")
+                     .SetSocAscend950()
+                     .AddConv2D(Conv2DConfig::Basic("Conv2D_1", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 64, 56, 56},
+                                                    {4, 16, 3, 3}, {1, 4, 56, 56}))
+                     .AddConv2D(Conv2DConfig::Basic("Conv2D_2", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 32, 28, 28},
+                                                    {8, 16, 3, 3}, {1, 8, 28, 28}))
+                     .SetOutput("Conv2D_1")
+                     .SetOutput("Conv2D_2")
+                     .Build();
+    TestTotalPass("groups_derive_multi_conv", graph, SUCCESS);
+    EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2DV2"), 2);
+
+    int32_t groups4Cnt = 0;
+    int32_t groups2Cnt = 0;
+    for (auto node : graph->GetAllNodes()) {
+        AscendString nodeType;
+        ASSERT_EQ(node.GetType(nodeType), GRAPH_SUCCESS);
+        if (std::string(nodeType.GetString()) != "Conv2DV2") {
+            continue;
+        }
+        int64_t groups = 0;
+        ASSERT_EQ(node.GetAttr(AscendString("groups"), groups), GRAPH_SUCCESS);
+        if (groups == 4) {
+            groups4Cnt++;
+        }
+        if (groups == 2) {
+            groups2Cnt++;
+        }
+    }
+    EXPECT_EQ(groups4Cnt, 1);
+    EXPECT_EQ(groups2Cnt, 1);
+}
+
 #endif

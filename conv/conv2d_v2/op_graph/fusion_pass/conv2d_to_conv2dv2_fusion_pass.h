@@ -43,6 +43,7 @@ protected:
     bool ConvFusionReplaceImpl(ge::GraphPtr& graph, ge::GNode& convNode, ge::CustomPassContext& passContext) override;
 
 private:
+    int64_t DeriveGroups(const int64_t defaultGroups) const;
     bool AdjustLayout(const ge::GraphPtr& graph, ge::GNode& fusedNode);
     ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode) override;
     std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode& convNode) override;

@@ -23,6 +23,13 @@ using namespace Conv2dToConv2dV2Fusion;
 using namespace ge;
 using namespace fusion;
 
+namespace {
+constexpr uint32_t CONV_2D_DIM = 4;
+constexpr uint32_t NCHW_C_IDX = 1;
+constexpr uint32_t NHWC_C_IDX = 3;
+constexpr uint32_t HWCN_C_IDX = 2;
+} // namespace
+
 void Conv2dToConv2dV2FusionPass::InitMember()
 {
     npuArch = NpuArch::DAV_RESV;
@@ -45,6 +52,50 @@ void Conv2dToConv2dV2FusionPass::PrintGraphStructure() const
 {
     OP_LOGI(convDescInfo.nodeNameStr, "graph structure: cube node: [%s] -> Conv2DV2.",
             convDescInfo.nodeNameStr.c_str());
+}
+
+int64_t Conv2dToConv2dV2FusionPass::DeriveGroups(const int64_t defaultGroups) const
+{
+    if (defaultGroups != 1) {
+        return defaultGroups;
+    }
+
+    const auto& fmapShape = convDescInfo.fmapShape;
+    const auto& filterShape = convDescInfo.filterShape;
+    if (fmapShape.size() != CONV_2D_DIM || filterShape.size() != CONV_2D_DIM) {
+        return defaultGroups;
+    }
+
+    Format fmapFormat = static_cast<Format>(ge::GetPrimaryFormat(static_cast<int32_t>(convDescInfo.fmapFormat)));
+    Format filterFormat = static_cast<Format>(ge::GetPrimaryFormat(static_cast<int32_t>(convDescInfo.filterFormat)));
+
+    int64_t fmapC = -1;
+    if (fmapFormat == FORMAT_NCHW) {
+        fmapC = fmapShape[NCHW_C_IDX];
+    } else if (fmapFormat == FORMAT_NHWC) {
+        fmapC = fmapShape[NHWC_C_IDX];
+    }
+
+    int64_t filterCin = -1;
+    if (filterFormat == FORMAT_NCHW) {
+        filterCin = filterShape[NCHW_C_IDX];
+    } else if (filterFormat == FORMAT_HWCN) {
+        filterCin = filterShape[HWCN_C_IDX];
+    } else if (filterFormat == FORMAT_NHWC) {
+        filterCin = filterShape[NHWC_C_IDX];
+    }
+
+    // fmapC <= filterCin isolates the cases where derivedGroups would be 1 (= no change) or 0 (= invalid),
+    // so the quotient below is always a legal groups greater than 1.
+    if (fmapC <= 0 || filterCin <= 0 || fmapC <= filterCin || fmapC % filterCin != 0) {
+        return defaultGroups;
+    }
+
+    int64_t derivedGroups = fmapC / filterCin;
+
+    OP_LOGD(convDescInfo.nodeNameStr, "Derive groups from fmap C[%ld] and filter Cin[%ld] as %ld.", fmapC, filterCin,
+            derivedGroups);
+    return derivedGroups;
 }
 
 bool Conv2dToConv2dV2FusionPass::AdjustLayout(const GraphPtr& graph, GNode& fusedNode)
@@ -95,6 +146,8 @@ GraphUniqPtr Conv2dToConv2dV2FusionPass::Replacement(const GNode& convNode)
 
     ConvBaseAttrs baseAttrs;
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvBaseAttr(convNode, baseAttrs, convDescInfo), return nullptr);
+
+    baseAttrs.groups = DeriveGroups(baseAttrs.groups);
 
     auto [fmap, filter] = graphBuilder.CreateInputs<REQUIRED_INPUT_NUMS>();
     auto bias = convDescInfo.hasBias ? graphBuilder.CreateInput(static_cast<int64_t>(INPUT_BIAS_INDEX)) : nullptr;

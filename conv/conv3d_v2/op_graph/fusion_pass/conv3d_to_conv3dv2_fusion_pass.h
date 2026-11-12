@@ -53,6 +53,7 @@ private:
     bool CheckPostCubeInOutNode(const ge::GNode& convNode) const;
     bool CheckTransDataInInputNode(const ge::GNode& convNode) const;
     bool CheckIFMRInSameOutputNode(const ge::GNode& convNode) const;
+    int64_t DeriveGroups(const int64_t defaultGroups) const;
     void InitMember();
 
     bool supportOut2L1Dn2Nz = false;

@@ -725,4 +725,145 @@ TEST_F(Conv3dToConv3dV2FusionPassTest, conv3d_to_conv3dv2_graph_topology)
     }
 }
 
+// ==========================================================================================
+// Groups implicit derivation (infershape 1.0 parity): when attr groups is 1 and fmap C is a
+// multiple of filter Cin, derive groups = fmap C / filter Cin; keep explicit groups and
+// non-derivable cases unchanged.
+// ==========================================================================================
+TEST_F(Conv3dToConv3dV2FusionPassTest, conv3d_to_conv3dv2_groups_implicit_derive)
+{
+    struct Point {
+        const char* pointName;
+        std::function<GraphPtr()> build;
+        int64_t expectedGroups;
+    } const points[] = {
+        {"ncdhw_fmap_ncdhw_filter_derive",
+         [this]() {
+             return BuildSingleConvGraph("groups_ncdhw", SocProfile::Arch35,
+                                         Conv3DConfig::Basic("Conv3D", DT_FLOAT16, FORMAT_NCDHW, {1, 64, 16, 56, 56},
+                                                             {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54}));
+         },
+         4},
+        {"ndhwc_fmap_dhwcn_filter_derive",
+         [this]() {
+             return BuildSingleConvGraph("groups_ndhwc_dhwcn", SocProfile::Arch35,
+                                         Conv3DConfig::Basic("Conv3D", DT_FLOAT16, FORMAT_NDHWC, {1, 16, 56, 56, 64},
+                                                             {3, 3, 3, 16, 4}, {1, 14, 54, 54, 4}));
+         },
+         4},
+        {"ndhwc_fmap_ndhwc_filter_derive",
+         [this]() {
+             TestGraph builder("groups_ndhwc_ndhwc");
+             Conv3DConfig convCfg;
+             convCfg.SetName("Conv3D")
+                 .AddInput(DT_FLOAT16, FORMAT_NDHWC, {1, 16, 56, 56, 64}, "Conv3D_x")
+                 .AddInput(DT_FLOAT16, FORMAT_NDHWC, {4, 3, 3, 3, 16}, "Conv3D_filter")
+                 .AddOutput(DT_FLOAT16, FORMAT_NDHWC, {1, 14, 54, 54, 4}, "y")
+                 .SetAttr("data_format", std::string("NDHWC"));
+             ApplySoc(SocProfile::Arch35);
+             auto graph = builder.AddConv3D(convCfg).SetOutput("Conv3D").Build();
+             FixOutputDtype(builder, "Conv3D", DT_FLOAT16);
+             return graph;
+         },
+         4},
+        {"fmap_c_equals_filter_cin_keeps_default",
+         [this]() {
+             return BuildSingleConvGraph("groups_c_equal", SocProfile::Arch35,
+                                         Conv3DConfig::Basic("Conv3D", DT_FLOAT16, FORMAT_NCDHW, {1, 16, 16, 56, 56},
+                                                             {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54}));
+         },
+         1},
+        {"fmap_c_less_filter_cin_keeps_default",
+         [this]() {
+             return BuildSingleConvGraph("groups_c_less", SocProfile::Arch35,
+                                         Conv3DConfig::Basic("Conv3D", DT_FLOAT16, FORMAT_NCDHW, {1, 8, 16, 56, 56},
+                                                             {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54}));
+         },
+         1},
+        {"explicit_groups_valid_preserved",
+         [this]() {
+             Conv3DConfig convCfg = Conv3DConfig::Basic("Conv3D", DT_FLOAT16, FORMAT_NCDHW, {1, 64, 16, 56, 56},
+                                                        {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54});
+             convCfg.SetAttr("groups", int64_t(4));
+             return BuildSingleConvGraph("groups_explicit_valid", SocProfile::Arch35, convCfg);
+         },
+         4},
+        {"explicit_groups_mismatch_preserved",
+         [this]() {
+             Conv3DConfig convCfg = Conv3DConfig::Basic("Conv3D", DT_FLOAT16, FORMAT_NCDHW, {1, 64, 16, 56, 56},
+                                                        {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54});
+             convCfg.SetAttr("groups", int64_t(2));
+             return BuildSingleConvGraph("groups_explicit_mismatch", SocProfile::Arch35, convCfg);
+         },
+         2},
+        {"non_divisible_keeps_default",
+         [this]() {
+             return BuildSingleConvGraph("groups_non_divisible", SocProfile::Arch35,
+                                         Conv3DConfig::Basic("Conv3D", DT_FLOAT16, FORMAT_NCDHW, {1, 63, 16, 56, 56},
+                                                             {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54}));
+         },
+         1},
+        {"dynamic_shape_keeps_default",
+         [this]() {
+             return BuildSingleConvGraph("groups_dynamic", SocProfile::Arch35,
+                                         Conv3DConfig::Basic("Conv3D", DT_FLOAT16, FORMAT_NCDHW, {-1, -1, -1, -1, -1},
+                                                             {-1, -1, -1, -1, -1}, {-1, -1, -1, -1, -1}));
+         },
+         1},
+    };
+
+    for (const auto& p : points) {
+        SCOPED_TRACE(p.pointName);
+        auto graph = p.build();
+        TestTotalPass(std::string("groups_derive_") + p.pointName, graph, SUCCESS);
+        GNode fused = GetFirstConv3dV2Node(graph);
+        int64_t groups = 0;
+        if (fused.GetAttr(AscendString("groups"), groups) == GRAPH_SUCCESS) {
+            EXPECT_EQ(groups, p.expectedGroups);
+        } else {
+            // Es builder omits optional attrs equal to the IR default, absent groups means 1.
+            EXPECT_EQ(p.expectedGroups, int64_t{1});
+        }
+    }
+}
+
+// Re-entrancy: multiple Conv3D nodes derive their own groups in one graph.
+TEST_F(Conv3dToConv3dV2FusionPassTest, conv3d_to_conv3dv2_groups_derive_multi_conv)
+{
+    ApplySoc(SocProfile::Arch35);
+    TestGraph builder("groups_derive_multi");
+    auto graph = builder
+                     .AddConv3D(Conv3DConfig::Basic("Conv3D_1", DT_FLOAT16, FORMAT_NCDHW, {1, 64, 16, 56, 56},
+                                                    {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54}))
+                     .AddConv3D(Conv3DConfig::Basic("Conv3D_2", DT_FLOAT16, FORMAT_NCDHW, {1, 32, 14, 28, 28},
+                                                    {8, 16, 3, 3, 3}, {1, 8, 12, 26, 26}))
+                     .SetOutput("Conv3D_1")
+                     .SetOutput("Conv3D_2")
+                     .Build();
+    FixOutputDtype(builder, "Conv3D_1", DT_FLOAT16);
+    FixOutputDtype(builder, "Conv3D_2", DT_FLOAT16);
+    TestTotalPass("groups_derive_multi_conv", graph, SUCCESS);
+    EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv3DV2"), 2);
+
+    int32_t groups4Cnt = 0;
+    int32_t groups2Cnt = 0;
+    for (auto node : graph->GetAllNodes()) {
+        AscendString nodeType;
+        ASSERT_EQ(node.GetType(nodeType), GRAPH_SUCCESS);
+        if (std::string(nodeType.GetString()) != "Conv3DV2") {
+            continue;
+        }
+        int64_t groups = 0;
+        ASSERT_EQ(node.GetAttr(AscendString("groups"), groups), GRAPH_SUCCESS);
+        if (groups == 4) {
+            groups4Cnt++;
+        }
+        if (groups == 2) {
+            groups2Cnt++;
+        }
+    }
+    EXPECT_EQ(groups4Cnt, 1);
+    EXPECT_EQ(groups2Cnt, 1);
+}
+
 #endif

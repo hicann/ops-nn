@@ -28,6 +28,7 @@ using namespace ge;
 using namespace fusion;
 
 namespace {
+constexpr uint32_t CONV_2D_DIM = 4;
 constexpr uint32_t FILTER_DIM_NUM = 4;
 constexpr uint32_t NCHW_N_IDX = 0;
 constexpr uint32_t NCHW_C_IDX = 1;
@@ -37,6 +38,7 @@ constexpr uint32_t NHWC_N_IDX = 0;
 constexpr uint32_t NHWC_H_IDX = 1;
 constexpr uint32_t NHWC_W_IDX = 2;
 constexpr uint32_t NHWC_C_IDX = 3;
+constexpr uint32_t HWCN_C_IDX = 2;
 constexpr int64_t FRACTAL_Z_C0_INT8 = 32;
 constexpr int64_t FRACTAL_Z_C0_FP16 = 16;
 constexpr int64_t FRACTAL_Z_N0 = 16;
@@ -268,6 +270,7 @@ GraphUniqPtr Conv2DPostCubeToExtendConv2DFusionPass::Replacement(const GNode& co
 
     ConvBaseAttrs baseAttrs;
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvBaseAttr(convNode, baseAttrs, convDescInfo), return nullptr);
+    baseAttrs.groups = DeriveGroups(baseAttrs.groups);
     int64_t opImplModeEnum = 0;
     (void)convNode.GetAttr(OP_IMPL_MODE_ENUM, opImplModeEnum);
     baseAttrs.enableHf32 = std::any_of(
@@ -633,6 +636,50 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::UpdateScaleReluDesc(GNodePtr postCu
                       return false);
 
     return true;
+}
+
+int64_t Conv2DPostCubeToExtendConv2DFusionPass::DeriveGroups(const int64_t defaultGroups) const
+{
+    if (defaultGroups != 1) {
+        return defaultGroups;
+    }
+
+    const auto& fmapShape = convDescInfo.fmapShape;
+    const auto& filterShape = convDescInfo.filterShape;
+    if (fmapShape.size() != CONV_2D_DIM || filterShape.size() != CONV_2D_DIM) {
+        return defaultGroups;
+    }
+
+    Format fmapFormat = static_cast<Format>(ge::GetPrimaryFormat(static_cast<int32_t>(convDescInfo.fmapFormat)));
+    Format filterFormat = static_cast<Format>(ge::GetPrimaryFormat(static_cast<int32_t>(convDescInfo.filterFormat)));
+
+    int64_t fmapC = -1;
+    if (fmapFormat == FORMAT_NCHW) {
+        fmapC = fmapShape[NCHW_C_IDX];
+    } else if (fmapFormat == FORMAT_NHWC) {
+        fmapC = fmapShape[NHWC_C_IDX];
+    }
+
+    int64_t filterCin = -1;
+    if (filterFormat == FORMAT_NCHW) {
+        filterCin = filterShape[NCHW_C_IDX];
+    } else if (filterFormat == FORMAT_HWCN) {
+        filterCin = filterShape[HWCN_C_IDX];
+    } else if (filterFormat == FORMAT_NHWC) {
+        filterCin = filterShape[NHWC_C_IDX];
+    }
+
+    // fmapC <= filterCin isolates the cases where derivedGroups would be 1 (= no change) or 0 (= invalid),
+    // so the quotient below is always a legal groups greater than 1.
+    if (fmapC <= 0 || filterCin <= 0 || fmapC <= filterCin || fmapC % filterCin != 0) {
+        return defaultGroups;
+    }
+
+    int64_t derivedGroups = fmapC / filterCin;
+
+    OP_LOGD(convDescInfo.nodeNameStr, "Derive groups from fmap C[%ld] and filter Cin[%ld] as %ld.", fmapC, filterCin,
+            derivedGroups);
+    return derivedGroups;
 }
 
 bool Conv2DPostCubeToExtendConv2DFusionPass::AdjustLayout(const GraphPtr& graph, GNode& fusedNode)

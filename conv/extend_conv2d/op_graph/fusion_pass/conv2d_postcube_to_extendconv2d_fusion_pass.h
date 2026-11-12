@@ -93,6 +93,7 @@ private:
     bool UpdateScaleReluDesc(ge::GNodePtr postCube, ge::GNode* extendConv2D, const int32_t getIndex,
                              const int32_t updateIndex, const ge::AscendString& name) const;
 
+    int64_t DeriveGroups(const int64_t defaultGroups) const;
     bool AdjustLayout(const ge::GraphPtr& graph, ge::GNode& fusedNode);
     bool InsertA16W8WeightRearrange(const ge::GraphPtr& graph, ge::GNode& extendConv2DNode);
     bool InsertWeightReFormatOp(const ge::GraphPtr& graph, ge::GNode& extendConv2DNode, int64_t groups);

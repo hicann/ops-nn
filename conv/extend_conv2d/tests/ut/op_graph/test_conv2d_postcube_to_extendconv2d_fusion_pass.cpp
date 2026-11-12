@@ -1160,3 +1160,180 @@ TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_postcube_w8w8_scale_by
     ASSERT_EQ(producer->GetType(producerType), GRAPH_SUCCESS);
     EXPECT_STREQ(std::string(producerType.GetString()).c_str(), "SetM1Dequant");
 }
+
+// ==========================================================================================
+// Groups implicit derivation (infershape 1.0 parity): when attr groups is 1 and fmap C is a
+// multiple of filter Cin, derive groups = fmap C / filter Cin; keep explicit groups and
+// non-derivable cases unchanged.
+// ==========================================================================================
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_postcube_groups_implicit_derive)
+{
+    struct Point {
+        const char* pointName;
+        std::function<GraphPtr()> build;
+        int64_t expectedGroups;
+    } const points[] = {
+        {"nchw_fmap_nchw_filter_derive",
+         []() {
+             TestGraph builder("groups_nchw");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NCHW, {1, 64, 56, 56},
+                                                {4, 16, 3, 3}, {1, 4, 56, 56}))
+                 .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCHW, {1, 4, 56, 56}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         4},
+        {"nhwc_fmap_hwcn_filter_derive",
+         []() {
+             TestGraph builder("groups_nhwc_hwcn");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NHWC, {1, 56, 56, 64},
+                                                {3, 3, 16, 4}, {1, 56, 56, 4}))
+                 .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NHWC, {1, 56, 56, 4}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         4},
+        {"nhwc_fmap_nhwc_filter_derive",
+         []() {
+             TestGraph builder("groups_nhwc_nhwc");
+             Conv2DConfig convCfg;
+             convCfg.SetName("Conv2D")
+                 .AddInput(DT_INT8, FORMAT_NHWC, {1, 56, 56, 64}, "Conv2D_x")
+                 .AddInput(DT_INT8, FORMAT_NHWC, {4, 3, 2, 16}, "Conv2D_filter")
+                 .AddOutput(DT_INT32, FORMAT_NHWC, {1, 56, 56, 4}, "y")
+                 .SetAttr("data_format", std::string("NHWC"));
+             return builder.SetSocAscend950()
+                 .AddConv2D(convCfg)
+                 .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NHWC, {1, 56, 56, 4}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         4},
+        {"fmap_c_equals_filter_cin_keeps_default",
+         []() {
+             TestGraph builder("groups_c_equal");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NCHW, {1, 16, 56, 56},
+                                                {4, 16, 3, 3}, {1, 4, 56, 56}))
+                 .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCHW, {1, 4, 56, 56}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         1},
+        {"fmap_c_less_filter_cin_keeps_default",
+         []() {
+             TestGraph builder("groups_c_less");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NCHW, {1, 8, 56, 56}, {4, 16, 3, 3},
+                                                {1, 4, 56, 56}))
+                 .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCHW, {1, 4, 56, 56}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         1},
+        {"explicit_groups_valid_preserved",
+         []() {
+             TestGraph builder("groups_explicit_valid");
+             Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NCHW, {1, 64, 56, 56},
+                                                        {4, 16, 3, 3}, {1, 4, 56, 56});
+             convCfg.SetAttr("groups", int64_t(4));
+             return builder.SetSocAscend950()
+                 .AddConv2D(convCfg)
+                 .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCHW, {1, 4, 56, 56}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         4},
+        {"explicit_groups_mismatch_preserved",
+         []() {
+             TestGraph builder("groups_explicit_mismatch");
+             Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NCHW, {1, 64, 56, 56},
+                                                        {4, 16, 3, 3}, {1, 4, 56, 56});
+             convCfg.SetAttr("groups", int64_t(2));
+             return builder.SetSocAscend950()
+                 .AddConv2D(convCfg)
+                 .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCHW, {1, 4, 56, 56}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         2},
+        {"non_divisible_keeps_default",
+         []() {
+             TestGraph builder("groups_non_divisible");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NCHW, {1, 63, 56, 56},
+                                                {4, 16, 3, 3}, {1, 4, 56, 56}))
+                 .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCHW, {1, 4, 56, 56}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         1},
+        {"dynamic_shape_keeps_default",
+         []() {
+             TestGraph builder("groups_dynamic");
+             return builder.SetSocAscend950()
+                 .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NCHW, {-1, -1, -1, -1},
+                                                {-1, -1, -1, -1}, {-1, -1, -1, -1}))
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCHW, {-1, -1, -1, -1}))
+                 .Connect("Conv2D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         1},
+    };
+
+    for (const auto& p : points) {
+        SCOPED_TRACE(p.pointName);
+        auto graph = p.build();
+        TestTotalPass(std::string("groups_derive_") + p.pointName, graph, SUCCESS);
+        GNode fused = GetFirstExtendConv2DNode(graph);
+        int64_t groups = 0;
+        if (fused.GetAttr(AscendString("groups"), groups) == GRAPH_SUCCESS) {
+            EXPECT_EQ(groups, p.expectedGroups);
+        } else {
+            // Es builder omits optional attrs equal to the IR default, absent groups means 1.
+            EXPECT_EQ(p.expectedGroups, int64_t{1});
+        }
+    }
+}
+
+// A16W8 chain consistency: the rearrange node reads groups from the derived ExtendConv2D node,
+// so the derived groups must propagate to RearrangeA16W8WeightFzOp.
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_postcube_groups_derive_a16w8_rearrange)
+{
+    TestGraph builder("groups_derive_a16w8");
+    Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_INT32, FORMAT_NCHW, {1, 64, 56, 56},
+                                               {4, 16, 3, 3}, {1, 4, 56, 56});
+    convCfg.inputs[1].SetDtype(DT_INT8);
+    convCfg.inputs[1].tensorDesc.SetDataType(DT_INT8);
+    auto graph = builder.SetSocFuse()
+                     .AddConv2D(convCfg)
+                     .AddAscendDequant(
+                         AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCHW, {1, 4, 56, 56}))
+                     .Connect("Conv2D", 0, "AscendDequant", 0)
+                     .SetOutput("AscendDequant")
+                     .Build();
+
+    TestTotalPass("groups_derive_a16w8_rearrange", graph, SUCCESS);
+    GNode fused = GetFirstExtendConv2DNode(graph);
+    int64_t groups = 0;
+    ASSERT_EQ(fused.GetAttr(AscendString("groups"), groups), GRAPH_SUCCESS);
+    EXPECT_EQ(groups, int64_t{4});
+
+    GNode rearrange;
+    ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "RearrangeA16W8WeightFzOp", rearrange));
+    int64_t rearrangeGroups = 0;
+    ASSERT_EQ(rearrange.GetAttr(AscendString("groups"), rearrangeGroups), GRAPH_SUCCESS);
+    EXPECT_EQ(rearrangeGroups, int64_t{4});
+}

@@ -253,4 +253,141 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_a
     }
 }
 
+// ==========================================================================================
+// Groups implicit derivation (infershape 1.0 parity): when attr groups is 1 and fmap C is a
+// multiple of filter Cin, derive groups = fmap C / filter Cin; keep explicit groups and
+// non-derivable cases unchanged.
+// ==========================================================================================
+TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_groups_implicit_derive)
+{
+    struct Point {
+        const char* pointName;
+        std::function<GraphPtr()> build;
+        int64_t expectedGroups;
+    } const points[] = {
+        {"ncdhw_fmap_ncdhw_filter_derive",
+         []() {
+             TestGraph builder("groups_ncdhw");
+             return builder.SetSocAscend950()
+                 .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 64, 16, 56, 56}, {4, 16, 3, 3, 3},
+                                                {1, 4, 14, 54, 54}))
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {1, 4, 14, 54, 54}))
+                 .Connect("Conv3D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         4},
+        {"ndhwc_fmap_dhwcn_filter_derive",
+         []() {
+             TestGraph builder("groups_ndhwc_dhwcn");
+             return builder.SetSocAscend950()
+                 .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NDHWC, {1, 16, 56, 56, 64}, {3, 3, 3, 16, 4},
+                                                {1, 14, 54, 54, 4}))
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NDHWC, {1, 14, 54, 54, 4}))
+                 .Connect("Conv3D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         4},
+        {"fmap_c_equals_filter_cin_keeps_default",
+         []() {
+             TestGraph builder("groups_c_equal");
+             return builder.SetSocAscend950()
+                 .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 16, 16, 56, 56}, {4, 16, 3, 3, 3},
+                                                {1, 4, 14, 54, 54}))
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {1, 4, 14, 54, 54}))
+                 .Connect("Conv3D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         1},
+        {"fmap_c_less_filter_cin_keeps_default",
+         []() {
+             TestGraph builder("groups_c_less");
+             return builder.SetSocAscend950()
+                 .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 8, 16, 56, 56}, {4, 16, 3, 3, 3},
+                                                {1, 4, 14, 54, 54}))
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {1, 4, 14, 54, 54}))
+                 .Connect("Conv3D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         1},
+        {"explicit_groups_valid_preserved",
+         []() {
+             TestGraph builder("groups_explicit_valid");
+             Conv3DConfig convCfg = Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 64, 16, 56, 56},
+                                                        {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54});
+             convCfg.SetAttr("groups", int64_t(4));
+             return builder.SetSocAscend950()
+                 .AddConv3D(convCfg)
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {1, 4, 14, 54, 54}))
+                 .Connect("Conv3D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         4},
+        {"explicit_groups_mismatch_preserved",
+         []() {
+             TestGraph builder("groups_explicit_mismatch");
+             Conv3DConfig convCfg = Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 64, 16, 56, 56},
+                                                        {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54});
+             convCfg.SetAttr("groups", int64_t(2));
+             return builder.SetSocAscend950()
+                 .AddConv3D(convCfg)
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {1, 4, 14, 54, 54}))
+                 .Connect("Conv3D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         2},
+        {"non_divisible_keeps_default",
+         []() {
+             TestGraph builder("groups_non_divisible");
+             return builder.SetSocAscend950()
+                 .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 63, 16, 56, 56}, {4, 16, 3, 3, 3},
+                                                {1, 4, 14, 54, 54}))
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {1, 4, 14, 54, 54}))
+                 .Connect("Conv3D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         1},
+        {"dynamic_shape_keeps_default",
+         []() {
+             TestGraph builder("groups_dynamic");
+             return builder.SetSocAscend950()
+                 .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {-1, -1, -1, -1, -1},
+                                                {-1, -1, -1, -1, -1}, {-1, -1, -1, -1, -1}))
+                 .AddAscendDequant(
+                     AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {-1, -1, -1, -1, -1}))
+                 .Connect("Conv3D", 0, "AscendDequant", 0)
+                 .SetOutput("AscendDequant")
+                 .Build();
+         },
+         1},
+    };
+
+    for (const auto& p : points) {
+        SCOPED_TRACE(p.pointName);
+        auto graph = p.build();
+        TestTotalPass(std::string("groups_derive_") + p.pointName, graph, SUCCESS);
+        GNode fused = GetFirstQuantConv3DNode(graph);
+        int64_t groups = 0;
+        if (fused.GetAttr(AscendString("groups"), groups) == GRAPH_SUCCESS) {
+            EXPECT_EQ(groups, p.expectedGroups);
+        } else {
+            // Es builder omits optional attrs equal to the IR default, absent groups means 1.
+            EXPECT_EQ(p.expectedGroups, int64_t{1});
+        }
+    }
+}
+
 #endif

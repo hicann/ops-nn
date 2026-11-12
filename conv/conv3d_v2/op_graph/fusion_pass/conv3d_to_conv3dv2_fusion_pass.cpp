@@ -26,6 +26,13 @@ using namespace ge;
 using namespace fe;
 using namespace fusion;
 
+namespace {
+constexpr uint32_t CONV_3D_DIM = 5;
+constexpr uint32_t NCDHW_C_IDX = 1;
+constexpr uint32_t NDHWC_C_IDX = 4;
+constexpr uint32_t DHWCN_C_IDX = 3;
+} // namespace
+
 void Conv3dToConv3dV2FusionPass::InitMember()
 {
     supportOut2L1Dn2Nz = false;
@@ -174,12 +181,58 @@ bool Conv3dToConv3dV2FusionPass::MeetRequirements(const GNode& convNode)
     return true;
 }
 
+int64_t Conv3dToConv3dV2FusionPass::DeriveGroups(const int64_t defaultGroups) const
+{
+    if (defaultGroups != 1) {
+        return defaultGroups;
+    }
+
+    const auto& fmapShape = convDescInfo.fmapShape;
+    const auto& filterShape = convDescInfo.filterShape;
+    if (fmapShape.size() != CONV_3D_DIM || filterShape.size() != CONV_3D_DIM) {
+        return defaultGroups;
+    }
+
+    Format fmapFormat = static_cast<Format>(ge::GetPrimaryFormat(static_cast<int32_t>(convDescInfo.fmapFormat)));
+    Format filterFormat = static_cast<Format>(ge::GetPrimaryFormat(static_cast<int32_t>(convDescInfo.filterFormat)));
+
+    int64_t fmapC = -1;
+    if (fmapFormat == FORMAT_NCDHW) {
+        fmapC = fmapShape[NCDHW_C_IDX];
+    } else if (fmapFormat == FORMAT_NDHWC) {
+        fmapC = fmapShape[NDHWC_C_IDX];
+    }
+
+    int64_t filterCin = -1;
+    if (filterFormat == FORMAT_NCDHW) {
+        filterCin = filterShape[NCDHW_C_IDX];
+    } else if (filterFormat == FORMAT_DHWCN) {
+        filterCin = filterShape[DHWCN_C_IDX];
+    } else if (filterFormat == FORMAT_NDHWC) {
+        filterCin = filterShape[NDHWC_C_IDX];
+    }
+
+    // fmapC <= filterCin isolates the cases where derivedGroups would be 1 (= no change) or 0 (= invalid),
+    // so the quotient below is always a legal groups greater than 1.
+    if (fmapC <= 0 || filterCin <= 0 || fmapC <= filterCin || fmapC % filterCin != 0) {
+        return defaultGroups;
+    }
+
+    int64_t derivedGroups = fmapC / filterCin;
+
+    OP_LOGD(convDescInfo.nodeNameStr, "Derive groups from fmap C[%ld] and filter Cin[%ld] as %ld.", fmapC, filterCin,
+            derivedGroups);
+    return derivedGroups;
+}
+
 GraphUniqPtr Conv3dToConv3dV2FusionPass::Replacement(const GNode& convNode)
 {
     auto graphBuilder = es::EsGraphBuilder("replacement");
 
     ConvBaseAttrs baseAttrs = {};
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvBaseAttr(convNode, baseAttrs, convDescInfo), return nullptr);
+
+    baseAttrs.groups = DeriveGroups(baseAttrs.groups);
 
     if (!supportOut2L1Dn2Nz) {
         OP_LOGD(convDescInfo.nodeNameStr, "Current soc not supported Hf32, set enable_hf32 to false.");

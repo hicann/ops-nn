@@ -69,6 +69,7 @@ private:
     bool GetPostCubeNodes(const ge::GNode& convNode);
     void SelectPostCubePassByWhiteList(std::vector<ops::PostCubePassInfo>& matchVec);
     bool UpdateQuantConv3DDesc(ge::GNode* quantConv3D, ge::TensorDesc& postCubeOutDesc);
+    int64_t DeriveGroups(const int64_t defaultGroups) const;
 
     ge::GNodePtr postCubeNode = nullptr;
 };
