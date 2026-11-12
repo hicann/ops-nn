@@ -772,7 +772,7 @@ TEST_F(l2_matmul_test, dav3510_test_mm_slice_invalid)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_matmul_test, dav3510_test_mm_slice_valid)

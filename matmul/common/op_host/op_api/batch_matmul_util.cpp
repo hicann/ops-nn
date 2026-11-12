@@ -80,8 +80,9 @@ static inline bool CheckNpuArchIsSupportBf16(void)
 
 static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor)
 {
-    // 获取shape信息
-    op::Shape bmmEmptyShape = {(self->GetViewShape())[0], (self->GetViewShape())[1], (mat2->GetViewShape())[2]};
+    // 获取shape信息：batch 维允许单侧为 1 广播，结果 batch = max(self[0], mat2[0])
+    op::Shape bmmEmptyShape = {std::max((self->GetViewShape())[0], (mat2->GetViewShape())[0]),
+                               (self->GetViewShape())[1], (mat2->GetViewShape())[2]};
     auto output = executor->AllocTensor(bmmEmptyShape, self->GetDataType());
     OP_CHECK_NULL(output, return nullptr);
     if (output->IsEmpty()) {

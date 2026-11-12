@@ -175,6 +175,22 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
     OP_CHECK_MAX_DIM(self, maxDims, return false);
     OP_CHECK_MAX_DIM(mat2, maxDims, return false);
 
+    // 维度值不能为负
+    for (size_t i = 0; i < selfShape.GetDimNum(); i++) {
+        if (selfShape.GetDim(i) < 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value of self is negative, shape is [%s].",
+                    op::ToString(selfShape).GetString());
+            return false;
+        }
+    }
+    for (size_t i = 0; i < mat2Shape.GetDimNum(); i++) {
+        if (mat2Shape.GetDim(i) < 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value of mat2 is negative, shape is [%s].",
+                    op::ToString(mat2Shape).GetString());
+            return false;
+        }
+    }
+
     // Tensor1 dims number is 0 OR error dims number is 0
     if (dimTensor1 == 0 || dimTensor2 == 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Matmul does not support %s, %s", op::ToString(selfShape).GetString(),
@@ -226,6 +242,71 @@ static bool CheckFormat(const aclTensor* selfTensor, [[maybe_unused]] const aclT
     return true;
 }
 
+// 校验 out 与 matmul 推导结果的元素数契约：PostProcess 为 Reshape(convOut, out)，
+// 允许 out 的 shape 与推导 shape 不同（如 batch 折叠），但元素总数必须一致
+static bool CheckOutputShapeValid(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
+{
+    // 维度值不能为负，负维度属非法参数，应在入参阶段拦截
+    op::Shape outShape = out->GetViewShape();
+    for (size_t i = 0; i < outShape.GetDimNum(); i++) {
+        if (outShape.GetDim(i) < 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value of out is negative, shape is [%s].",
+                    op::ToString(outShape).GetString());
+            return false;
+        }
+    }
+
+    // 空输入场景由 MatMulEmptyTensorGraph 按给定 out shape 补零填充（或走空输出早退），不比对元素数
+    if (self->IsEmpty() || mat2->IsEmpty()) {
+        return true;
+    }
+
+    // 按广播语义推导输出元素个数
+    op::Shape selfShape = self->GetViewShape();
+    op::Shape mat2Shape = mat2->GetViewShape();
+    auto dimTensor1 = selfShape.GetDimNum();
+    auto dimTensor2 = mat2Shape.GetDimNum();
+    int64_t expectNumel = 0;
+    if (dimTensor1 == 1 && dimTensor2 == 1) {
+        // 1D @ 1D -> dot 输出标量
+        expectNumel = 1;
+    } else if (dimTensor1 == 1) {
+        // 1D @ nD -> (..., n)：batch 维取 mat2，移除 self 的维度
+        int64_t batchNum = 1;
+        for (size_t idx = 0; idx + 2 < dimTensor2; idx++) {
+            batchNum *= mat2Shape.GetDim(idx);
+        }
+        expectNumel = batchNum * mat2Shape.GetDim(dimTensor2 - 1);
+    } else if (dimTensor2 == 1) {
+        // nD @ 1D -> (..., m)：batch 维取 self，移除 mat2 的维度
+        int64_t batchNum = 1;
+        for (size_t idx = 0; idx + 2 < dimTensor1; idx++) {
+            batchNum *= selfShape.GetDim(idx);
+        }
+        expectNumel = batchNum * selfShape.GetDim(dimTensor1 - 2);
+    } else {
+        // nD @ nD -> broadcast(batch 维) + (m, n)
+        op::Shape broadcastShape;
+        auto selfBroadcastShape = GetBroadcastShape(self);
+        auto mat2BroadcastShape = GetBroadcastShape(mat2);
+        if (!BroadcastInferShape(selfBroadcastShape, mat2BroadcastShape, broadcastShape)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Broadcast [%s] and [%s] failed.", op::ToString(selfShape).GetString(),
+                    op::ToString(mat2Shape).GetString());
+            return false;
+        }
+        expectNumel = broadcastShape.GetShapeSize() * selfShape.GetDim(dimTensor1 - 2) *
+                      mat2Shape.GetDim(dimTensor2 - 1);
+    }
+
+    if (outShape.GetShapeSize() != expectNumel) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "output's shape [%s] does not match input, element number of out [%ld] should be [%ld].",
+                op::ToString(outShape).GetString(), outShape.GetShapeSize(), expectNumel);
+        return false;
+    }
+    return true;
+}
+
 inline static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* mat2, const aclTensor* out,
                                            int8_t cubeMathType)
 {
@@ -244,6 +325,9 @@ inline static aclnnStatus CheckInputParams(const aclTensor* self, const aclTenso
 
     // 4. 检查self和mat2的format是否符合要求
     CHECK_RET(CheckFormat(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
+
+    // 5. 检查out的shape契约：元素数需与推导结果一致（与 PostProcess 的 Reshape 契约对齐）
+    CHECK_RET(CheckOutputShapeValid(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }

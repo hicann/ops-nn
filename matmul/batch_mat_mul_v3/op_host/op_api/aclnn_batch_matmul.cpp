@@ -149,8 +149,10 @@ static bool CheckFormat(const aclTensor* selfTensor, [[maybe_unused]] const aclT
 
 static inline bool CheckBmmResIsEmpty(const aclTensor* self, const aclTensor* mat2)
 {
-    return self->GetViewShape().GetDim(FIRST_DIM) == 0 || self->GetViewShape().GetDim(SECOND_DIM) == 0 ||
-           mat2->GetViewShape().GetDim(THIRD_DIM) == 0;
+    // batch 维允许单侧为 1 广播，结果 batch = max(self[0], mat2[0])，
+    // 仅当 self[0] 与 mat2[0] 同时为 0 时结果才为空，可按空 tensor 早退
+    return (self->GetViewShape().GetDim(FIRST_DIM) == 0 && mat2->GetViewShape().GetDim(FIRST_DIM) == 0) ||
+           self->GetViewShape().GetDim(SECOND_DIM) == 0 || mat2->GetViewShape().GetDim(THIRD_DIM) == 0;
 }
 
 static aclnnStatus CheckParamsV2(const aclTensor* self, const aclTensor* mat2, const aclTensor* out,
