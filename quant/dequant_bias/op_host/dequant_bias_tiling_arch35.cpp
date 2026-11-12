@@ -18,6 +18,7 @@
 #include "tiling/tiling_api.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include <string>
 #include <cstdint>
 
 using namespace ge;
@@ -35,6 +36,9 @@ constexpr int64_t RESERVED_UB = 2048;
 constexpr int64_t SIZE_INT32 = sizeof(int32_t);
 constexpr int64_t SIZE_FLOAT = sizeof(float);
 constexpr int64_t ALIGN_ELEM = 16;
+constexpr int64_t SIZE_25000 = 25000;
+constexpr int64_t SIZE_1 = 1;
+constexpr int64_t SIZE_27 = 27;
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* ubSize, int64_t* coreNum,
                                        uint32_t* blockSize, uint32_t* vectorLength)
@@ -179,10 +183,19 @@ static ge::graphStatus DequantBiasTilingFunc(gert::TilingContext* context)
         N > INT32_MAX,
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "N of input x exceeds the supported range, N=%ld.", N),
         return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        M > SIZE_25000,
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "x", std::to_string(M),
+                                                   "M of input x exceeds the supported range, M must be <= 25000"),
+        return ge::GRAPH_FAILED);
 
     auto wsShapePtr = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, wsShapePtr);
     auto wsShape = wsShapePtr->GetStorageShape();
+    OP_TILING_CHECK(wsShape.GetDimNum() != 1,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
+                                                    "Dims of weight_scale should be 1, got %zu.", wsShape.GetDimNum()),
+                    return ge::GRAPH_FAILED);
     OP_TILING_CHECK(wsShape.GetShapeSize() != N,
                     VECTOR_INNER_ERR_REPORT_TILIING(
                         context->GetNodeName(), "Length of weight_scale must equal N of x, weight_scale=%ld, N=%ld.",
@@ -191,15 +204,32 @@ static ge::graphStatus DequantBiasTilingFunc(gert::TilingContext* context)
 
     auto asShapePtr = context->GetOptionalInputShape(2);
     bool hasActivate = (asShapePtr != nullptr) && (asShapePtr->GetStorageShape().GetShapeSize() > 0);
+    OP_TILING_CHECK(
+        asShapePtr != nullptr && asShapePtr->GetStorageShape().GetDimNum() != 1,
+        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Dims of activate_scale should be 1, got %zu.",
+                                        asShapePtr->GetStorageShape().GetDimNum()),
+        return ge::GRAPH_FAILED);
     OP_TILING_CHECK(hasActivate && asShapePtr->GetStorageShape().GetShapeSize() != M,
                     VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
                                                     "Length of activate_scale must equal M of x, activate_scale=%ld, "
                                                     "M=%ld.",
                                                     asShapePtr->GetStorageShape().GetShapeSize(), M),
                     return ge::GRAPH_FAILED);
+    if (hasActivate) {
+        auto asDesc = context->GetOptionalInputDesc(2);
+        OP_TILING_CHECK(
+            asDesc != nullptr && asDesc->GetDataType() != ge::DT_FLOAT,
+            VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Dtype of activate_scale must be float, got %d.",
+                                            static_cast<int>(asDesc->GetDataType())),
+            return ge::GRAPH_FAILED);
+    }
 
     auto biasShapePtr = context->GetOptionalInputShape(3);
     bool hasBias = (biasShapePtr != nullptr) && (biasShapePtr->GetStorageShape().GetShapeSize() > 0);
+    OP_TILING_CHECK(biasShapePtr != nullptr && biasShapePtr->GetStorageShape().GetDimNum() != 1,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Dims of bias should be 1, got %zu.",
+                                                    biasShapePtr->GetStorageShape().GetDimNum()),
+                    return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         hasBias && biasShapePtr->GetStorageShape().GetShapeSize() != N,
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Length of bias must equal N of x, bias=%ld, N=%ld.",
@@ -210,13 +240,39 @@ static ge::graphStatus DequantBiasTilingFunc(gert::TilingContext* context)
         auto biasDesc = context->GetOptionalInputDesc(3);
         if (biasDesc != nullptr) {
             biasDtype = biasDesc->GetDataType();
+            OP_TILING_CHECK(
+                biasDtype != ge::DT_FLOAT && biasDtype != ge::DT_FLOAT16 && biasDtype != ge::DT_BF16 &&
+                    biasDtype != ge::DT_INT32,
+                VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
+                                                "Dtype of bias must be float, float16, bfloat16 or int32, got %d.",
+                                                static_cast<int>(biasDtype)),
+                return ge::GRAPH_FAILED);
         }
     }
+
+    auto yShapePtr = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
+    auto yShape = yShapePtr->GetStorageShape();
+    OP_TILING_CHECK(yShape.GetDimNum() != 2,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Dims of output y should be 2, got %zu.",
+                                                    yShape.GetDimNum()),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(yShape.GetDim(0) != M || yShape.GetDim(1) != N,
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
+                                                    "Shape of output y must equal [M, N] of x, M=%ld, N=%ld, "
+                                                    "y=[%ld, %ld].",
+                                                    M, N, yShape.GetDim(0), yShape.GetDim(1)),
+                    return ge::GRAPH_FAILED);
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const int64_t* outputDtypePtr = attrs->GetAttrPointer<int64_t>(0);
     int64_t outputDtype = (outputDtypePtr == nullptr) ? 1 : *outputDtypePtr;
+    OP_TILING_CHECK(
+        outputDtype != SIZE_1 && outputDtype != SIZE_27,
+        VECTOR_INNER_ERR_REPORT_TILIING(
+            context->GetNodeName(), "Attr output_dtype must be 1 (float16) or 27 (bfloat16), got %ld.", outputDtype),
+        return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
