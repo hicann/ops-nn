@@ -26,17 +26,17 @@
 - 接口功能：计算[aclnnSmoothL1Loss](../../smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md) api的反向传播。
 - 计算公式：
 
-  SmoothL1Loss的反向传播可以通过求导计算。对于SmoothL1Loss的第一种情况，即|x-y|<1，其导数为：
+  SmoothL1Loss的反向传播可以通过求导计算。对于SmoothL1Loss的第一种情况，即|x-y|<beta，其导数为：
   $$
-  \frac{\partial SmoothL1Loss(x,y)}{\partial x} = x - y
+  \frac{\partial SmoothL1Loss(x,y)}{\partial x} = \frac{x-y}{beta}
   $$
 
-  对于SmoothL1Loss的第二种情况，即|x-y|≥1，其导数为：
+  对于SmoothL1Loss的第二种情况，即|x-y|≥beta，其导数为：
   $$
   \frac{\partial SmoothL1Loss(x,y)}{\partial x} = sign(x - y)
   $$
 
-  其中sign(x)表示x的符号函数，即：
+  其中x为self，y为target；beta为L1与L2损失的分界阈值（对应算子属性sigma），该值必须是非负的。sign(x)表示x的符号函数，即：
   $$
   sign(x) =\begin{cases}
   1,& if　x>0 \\
@@ -109,7 +109,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">输入张量，公式中的输入x。</td>
-      <td class="tg-0pky">shape需要与gradout、target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与gradout、target的数据类型需满足数据类型推导规则。</td>
+      <td class="tg-0pky">shape需要与gradOut、target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOut、target的数据类型需满足数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实的标签，公式中的输入y。</td>
-      <td class="tg-0pky">shape需要与gradout、self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与gradout、target的数据类型需满足数据类型推导规则。</td>
+      <td class="tg-0pky">shape需要与gradOut、self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOut、target的数据类型需满足数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">INT64</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">beta（float）</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">gradInput（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">计算输出。</td>
-      <td class="tg-0pky">shape为gradout，self，target的<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>结果</td>
+      <td class="tg-0pky">shape为gradOut，self，target的<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>结果</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -198,21 +198,24 @@ aclnnStatus aclnnSmoothL1LossBackward(
     <tr>
       <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
       <td class="tg-0pky">161001</td>
-      <td class="tg-0pky">传入的self、target、gradout或gradInput为空指针。</td>
+      <td class="tg-0pky">传入的self、target、gradOut或gradInput为空指针。</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="4">161002</td>
-      <td class="tg-0pky">self、target、gradout或gradInput的数据类型不在支持的范围之内。</td>
+      <td class="tg-0pky" rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="5">161002</td>
+      <td class="tg-0pky">self、target、gradOut或gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self、target、gradout或gradInput的shape不符合约束。</td>
+      <td class="tg-0pky">self、target、gradOut或gradInput的shape不符合约束。</td>
     </tr>
     <tr>
       <td class="tg-0pky">reduction不符合约束。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self、target、gradout的shape不满足参数说明中的要求。</td>
+      <td class="tg-0pky">self、target、gradOut的shape不满足参数说明中的要求。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">beta的取值小于0。</td>
     </tr>
   </tbody>
   </table>
@@ -264,6 +267,17 @@ aclnnStatus aclnnSmoothL1LossBackward(
 
 - 确定性计算：
     - aclnnSmoothL1LossBackward默认确定性实现。
+- 空 Tensor：
+    - aclnn API 通路：任一输入（gradOut、self、target）为空 Tensor 时，aclnnSmoothL1LossBackwardGetWorkspaceSize直接返回成功，workspaceSize为0，不执行计算。
+- 动态 Shape 与动态 Rank：
+    - 算子定义开启动态编译、动态 Rank 与动态 Shape 能力，Host推导阶段接受未知维（-1/-2）标记。
+    - tiling阶段要求各维度为正数，具体化后维度小于等于0的输入会被拒绝。
+- 维度上界：各输入/输出 Tensor 的维度（rank）上限为8；rank-0标量输入会被按{1}归一处理。
+- 数据格式：仅支持ND。
+- 精度与特殊值：
+    - FLOAT16、BFLOAT16输入在算子内部提升至FLOAT32计算后回写为输出数据类型。
+    - 输入包含NaN/Inf时，输出按浮点语义传播。
+    - beta（sigma）为0时，当前实现在|x-y|<beta分段输出NaN，属已知缺陷（另行整改），此处仅如实记录，不构成使用承诺。
 
 ## 调用示例
 

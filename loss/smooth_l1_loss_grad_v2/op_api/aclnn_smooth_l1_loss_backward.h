@@ -23,15 +23,20 @@ extern "C" {
  * @domain aclnn_ops_train
  *
  * 算子功能： 对输入Tensor完成SmoothL1Loss backward操作
- * 对于smoothL1Loss的第一种情况, 即$|x-y|<1$,其导数为：$$\frac{\partial SmoothL1Loss(x,y)}{\partial x} = x - y $$
- * 对于smoothL1Loss的第一种情况, 即$|x-y|\geq 1$,其导数为：$$\frac{\partial SmoothL1Loss(x,y)}{\partial x} = sign(x-y)$$
- * @param [in] gradOut: npu device侧的aclTensor, 数据类型支持FLOAT、FLOAT16, 数据格式支持ND, 支持非连续的Tensor。
- * @param [in] self: npu device侧的aclTensor, 数据类型支持FLOAT、FLOAT16, 数据格式支持ND, 支持非连续的Tensor。
- * @param [in] target: npu device侧的aclTensor, 数据类型支持FLOAT、FLOAT16, 数据格式支持ND, 支持非连续的Tensor。
- * @param [in] reduction: host侧的参数，数据类型为int64_t，指定要应用到输出的缩减，支持0("none"),1("mean"),2"sum")。
- * @param [in] beta:指定在L1和L2损失之间更改的阈值，数据类型为double，该值必须是非负的。
- * @param [in] gradInput:npu device侧的aclTensor, 数据类型支持FLOAT、FLOAT16, 数据格式支持ND, 支持非连续的Tensor。
- * 当reduction为"none"时，shape与self相同，否则shape为[1]
+ * 计算公式（beta为L1与L2损失的分界阈值，对应算子属性sigma，该值必须是非负的）：
+ *
+ * 对于第一种情况, 即$|x-y|<beta$,其导数为：$$\frac{\partial SmoothL1Loss(x,y)}{\partial x} = \frac{x-y}{beta}$$
+ * 对于第二种情况, 即$|x-y|\geq beta$,其导数为：$$\frac{\partial SmoothL1Loss(x,y)}{\partial x} = sign(x-y)$$
+ *
+ * @param [in] gradOut: npu device侧的aclTensor, 数据类型支持FLOAT、FLOAT16、BFLOAT16,
+ * 数据格式支持ND, 支持非连续的Tensor。
+ * @param [in] self: npu device侧的aclTensor, 数据类型支持FLOAT、FLOAT16、BFLOAT16, 数据格式支持ND, 支持非连续的Tensor。
+ * @param [in] target: npu device侧的aclTensor, 数据类型支持FLOAT、FLOAT16、BFLOAT16,
+ * 数据格式支持ND, 支持非连续的Tensor。
+ * @param [in] reduction: host侧的参数，数据类型为int64_t，指定要应用到输出的缩减，支持0("none"),1("mean"),2("sum")。
+ * @param [in] beta:指定在L1和L2损失之间更改的阈值，数据类型为float，该值必须是非负的。
+ * @param [out] gradInput:npu device侧的aclTensor, 数据类型支持FLOAT、FLOAT16、BFLOAT16,
+ * 数据格式支持ND, 支持非连续的Tensor。shape为gradOut、self、target的broadcast结果，本算子反向输出不随reduction收缩。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码， 成功返回ACLNN_SUCCESS, 失败返回对应错误码。
@@ -46,7 +51,8 @@ ACLNN_API aclnnStatus aclnnSmoothL1LossBackwardGetWorkspaceSize(const aclTensor*
  *
  * 算子功能： 对输入Tensor完成SmoothL1Loss backward操作
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnSigmoidBackwardGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口
+ * aclnnSmoothL1LossBackwardGetWorkspaceSize获取。
  * @param [in] stream: acl stream流。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码,成功返回ACLNN_SUCCESS, 失败返回对应错误码。

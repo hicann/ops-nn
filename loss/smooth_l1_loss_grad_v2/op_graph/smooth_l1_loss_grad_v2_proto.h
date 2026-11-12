@@ -25,9 +25,12 @@ namespace ge {
 
 * @par Inputs:
 * Three Inputs, including:
-* @li predict: A ND multi-dimensional tensor of type float16, bfloat16 or float32, specifying the predictive value.
-* @li label: A ND multi-dimensional tensor, has same type and shape as "predict", specifying the target value.
-* @li dout: A tensor. Has the same type as "predict". \n
+* @li predict: A ND multi-dimensional tensor of type float16, bfloat16 or float32 (rank 1-8),
+* specifying the predictive value. \n
+* @li label: A ND multi-dimensional tensor of the same type as "predict" (rank 1-8), whose shape
+* must satisfy the broadcast relationship with "predict", specifying the target value. \n
+* @li dout: A ND tensor of the same type as "predict", whose shape must satisfy the broadcast
+* relationship with "predict" and "label". \n
 
 * @par Attributes:
 * Two Attributes, including:
@@ -39,7 +42,8 @@ namespace ge {
 * the output;'sum': the output will be summed. Default: 'mean'. \n
 
 * @par Outputs:
-*  gradient: A tensor. Has the same type as "predict". \n
+*  gradient: A tensor. Has the same type as "predict", with the shape of the broadcast result
+* of "predict", "label" and "dout". \n
 
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator SmoothL1LossBackward.

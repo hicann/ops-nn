@@ -28,17 +28,17 @@
 - Description: Computes the backward propagation of the [aclnnSmoothL1Loss](../../smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md) API.
 - Formula:
 
-  The backward propagation of SmoothL1Loss can be computed by derivation. For the first case of SmoothL1Loss, i.e., |x-y|<1, its derivative is:
+  The backward propagation of SmoothL1Loss can be computed by derivation. For the first case of SmoothL1Loss, i.e., |x-y|<beta, its derivative is:
   $
-  \frac{\partial SmoothL1Loss(x,y)}{\partial x} = x - y
+  \frac{\partial SmoothL1Loss(x,y)}{\partial x} = \frac{x-y}{beta}
   $
 
-  For the second case of SmoothL1Loss, where |x-y|≥1, the derivative is:
+  For the second case of SmoothL1Loss, where |x-y|≥beta, the derivative is:
   $
   \frac{\partial SmoothL1Loss(x,y)}{\partial x} = sign(x - y)
   $
 
-  where sign(x) denotes the sign function of x, that is:
+  In this formula, x is self, y is target; beta is the threshold that switches between the L1 and L2 losses (corresponding to the operator attribute sigma), and it must be non-negative. sign(x) denotes the sign function of x, that is:
   $
   sign(x) =\begin{cases}
   1,& if　x>0 \\
@@ -111,7 +111,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">self (aclTensor*)</td>
       <td class="tg-0pky">Input</td>
       <td class="tg-0pky">Input tensor, corresponding to input x in the formula.</td>
-      <td class="tg-0pky">shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with gradout and target.<br>The data type must satisfy the data type derivation rule with the data types of gradout and target.</td>
+      <td class="tg-0pky">shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with gradOut and target.<br>The data type must satisfy the data type derivation rule with the data types of gradOut and target.</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">target (aclTensor*)</td>
       <td class="tg-0pky">Input</td>
       <td class="tg-0pky">Actual label, that is, the input y in the formula.</td>
-      <td class="tg-0pky">shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with gradout and self.<br>The data type must satisfy the data type derivation rule with the data types of gradout and target.</td>
+      <td class="tg-0pky">shape must satisfy the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast relationship</a> with gradOut and self.<br>The data type must satisfy the data type derivation rule with the data types of gradOut and target.</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">INT64</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">beta (float)</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">gradInput (aclTensor*)</td>
       <td class="tg-0pky">Output</td>
       <td class="tg-0pky">Calculation output.</td>
-      <td class="tg-0pky">Shape is the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> result of gradout, self, and target</td>
+      <td class="tg-0pky">Shape is the <a href="../../../docs/en/context/broadcast_relationship.md" target="_blank">broadcast</a> result of gradOut, self, and target</td>
       <td class="tg-0pky">FLOAT, FLOAT16, BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -200,21 +200,24 @@ aclnnStatus aclnnSmoothL1LossBackward(
     <tr>
       <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
       <td class="tg-0pky">161001</td>
-      <td class="tg-0pky">self, target, gradout, or gradInput is a null pointer.</td>
+      <td class="tg-0pky">self, target, gradOut, or gradInput is a null pointer.</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="4">161002</td>
-      <td class="tg-0pky">The data type of self, target, gradout, or gradInput is not within the supported range.</td>
+      <td class="tg-0pky" rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="5">161002</td>
+      <td class="tg-0pky">The data type of self, target, gradOut, or gradInput is not within the supported range.</td>
     </tr>
     <tr>
-      <td class="tg-0pky">The shape of self, target, gradout, or gradInput does not meet the constraints.</td>
+      <td class="tg-0pky">The shape of self, target, gradOut, or gradInput does not meet the constraints.</td>
     </tr>
     <tr>
       <td class="tg-0pky">reduction does not meet the constraints.</td>
     </tr>
     <tr>
-      <td class="tg-0pky">The shape of self, target, or gradout does not meet the requirements in Parameters.</td>
+      <td class="tg-0pky">The shape of self, target, or gradOut does not meet the requirements in Parameters.</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">The value of beta is less than 0.</td>
     </tr>
   </tbody>
   </table>
@@ -266,6 +269,17 @@ aclnnStatus aclnnSmoothL1LossBackward(
 
 - Deterministic computation:
     - aclnnSmoothL1LossBackward defaults to a deterministic implementation.
+- Empty tensor:
+    - aclnn API path: when any input (gradOut, self, or target) is an empty tensor, aclnnSmoothL1LossBackwardGetWorkspaceSize returns success directly with workspaceSize being 0, and no computation is performed.
+- Dynamic shape and dynamic rank:
+    - The operator definition enables dynamic compilation, dynamic rank, and dynamic shape capabilities; the host inference stage accepts unknown-dimension markers (-1/-2).
+    - The tiling stage requires every dimension to be a positive number; inputs whose dimensions are less than or equal to 0 after concretization are rejected.
+- Rank upper bound: the rank of each input/output tensor is at most 8; rank-0 scalar inputs are normalized as {1}.
+- Data format: only ND is supported.
+- Precision and special values:
+    - FLOAT16 and BFLOAT16 inputs are promoted to FLOAT32 for computation inside the operator and written back as the output data type.
+    - When the input contains NaN/Inf, the output propagates according to floating-point semantics.
+    - When beta (sigma) is 0, the current implementation outputs NaN in the |x-y| < beta segment. This is a known defect (to be fixed separately) and is recorded here as-is; it is not a usage commitment.
 
 ## Example
 
