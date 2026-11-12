@@ -16,7 +16,7 @@ add_modules_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/apply_ftrl.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     AUTO_SYNC false
     OPTIONS "-ffp-contract=off"
 )

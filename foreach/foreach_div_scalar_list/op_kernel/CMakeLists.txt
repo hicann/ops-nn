@@ -14,7 +14,7 @@ add_kernel_sources(
 )
 add_kernel_sources(
     KERNEL_SRC arch35/foreach_div_scalar_list.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

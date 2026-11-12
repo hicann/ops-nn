@@ -109,7 +109,8 @@ void InplaceIndexAddTiling::CheckNpuArch()
 {
     auto platformInfo = context_->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                     ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
     return;
 }
 

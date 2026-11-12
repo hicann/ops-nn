@@ -258,7 +258,7 @@ __aicore__ inline void SparseSliceDimension<T>::Process()
     LocalTensor<int64_t> sliceStartUb = sliceStartBuf_.Get<int64_t>();
     LocalTensor<int64_t> sliceEndUb = sliceEndBuf_.Get<int64_t>();
     LocalTensor<int32_t> counterUb = countBuf_.Get<int32_t>(REDUCE_OUTPUT_NUM);
-#if (__NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     for (int32_t i = 0; i < rankNumbers_; i++) {
         sliceStartUb.SetValue(i, sliceStart_[i]);
         sliceEndUb.SetValue(i, sliceEnd_[i]);

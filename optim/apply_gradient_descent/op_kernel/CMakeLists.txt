@@ -11,6 +11,6 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/apply_gradient_descent.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     AUTO_SYNC false
 )

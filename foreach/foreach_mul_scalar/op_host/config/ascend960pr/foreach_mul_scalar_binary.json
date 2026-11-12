@@ -1,0 +1,210 @@
+{
+    "op_type": "ForeachMulScalar",
+    "op_list": [
+        {
+            "bin_filename": "ForeachMulScalar_ed6580b17c50fcff7cc61d0037e6ecc9",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachMulScalar_e573c2f50bace431b4b3f11dd4fbf7b1",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachMulScalar_da3759a7f7951f6a026fbb0f0dd5c60c",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "int32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "int32",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachMulScalar_e1a1857e547fdb51843e5102cccc2191",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "bfloat16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
+            "bin_filename": "ForeachMulScalar_e1a1857e547fdb51843e5102ddcc2191",
+            "inputs": [
+                [
+                    {
+                        "name": "x",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "scalar",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        }
+    ]
+}

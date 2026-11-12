@@ -58,7 +58,7 @@ public:
     __aicore__ inline QuantUpdateScatterBase(){};
     __aicore__ inline void SetFloatOverflowModeForRegbase()
     {
-#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         if constexpr (IsSameType<VarType, hifloat8_t>::value || IsSameType<VarType, fp8_e5m2_t>::value ||
                       IsSameType<VarType, fp8_e4m3fn_t>::value) {
             AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(FLOAT_OVERFLOW_MODE_SATURATE);

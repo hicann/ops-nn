@@ -82,7 +82,7 @@ template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg,
 __aicore__ inline void GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::Init(
     GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR mxScale)
 {
-#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
 

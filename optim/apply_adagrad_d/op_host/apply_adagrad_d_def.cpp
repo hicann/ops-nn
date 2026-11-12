@@ -60,6 +60,7 @@ public:
             .PrecisionReduceFlag(false);
         this->AICore().AddConfig("ascend950", aicoreConfig);
         this->AICore().AddConfig("ascend960dt", aicoreConfig);
+        this->AICore().AddConfig("ascend960pr", aicoreConfig);
         this->AICore().AddConfig("ascend350", aicoreConfig);
     }
 };

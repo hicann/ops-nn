@@ -22,7 +22,7 @@ using namespace fusion;
 
 /**
  * @brief Define fusion where pattern
- * @details Only support MC62CM12A and Ascend950 and Ascend960DT
+ * @details Only support MC62CM12A and Ascend950 and Ascend960DT and Ascend960PR
  *                  input                    input
  *                    |          ==>           |
  *                  Where                   Nonzero
@@ -70,9 +70,11 @@ bool WhereFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match
     bool is_platform950 = (soc == "Ascend950");
     bool is_platform350 = (soc == "Ascend350");
     bool is_platform960DT = (soc == "Ascend960DT");
+    bool is_platform960PR = (soc == "Ascend960PR");
     OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Platform short soc: %s", soc.c_str());
-    if (!(is_platform5102 || is_platform950 || is_platform350 || is_platform960DT)) {
-        OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Only support Ascend910_93 and Ascend950 and Ascend350 and Ascend960DT");
+    if (!(is_platform5102 || is_platform950 || is_platform350 || is_platform960DT || is_platform960PR)) {
+        OPS_LOG_D(FUSION_PASS_NAME.c_str(),
+                  "Only support Ascend910_93 and Ascend950 and Ascend350 and Ascend960DT and Ascend960PR");
         return false;
     }
 

@@ -203,7 +203,7 @@ template <typename T, typename U, AscendC::RoundMode roundMode, uint64_t scaleAl
 __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale1,
                                                                                 GM_ADDR mxScale2)
 {
-#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
     InitParams();

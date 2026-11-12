@@ -1,0 +1,1605 @@
+{
+  "op_type": "QuantUpdateScatter",
+  "op_list": [
+    {
+      "bin_filename": "QuantUpdateScatter_int8int32bf16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_int8int32fp16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_int8int64bf16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_int8int64fp16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_hifloat8int32bf16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_hifloat8int32fp16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_hifloat8int64bf16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_hifloat8int64fp16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "hifloat8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_float8e4m3fnint32bf16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_float8e4m3fnint32fp16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_float8e4m3fnint64bf16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_float8e4m3fnint64fp16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_float8e5m2int32bf16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_float8e5m2int32fp16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_float8e5m2int64bf16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "QuantUpdateScatter_float8e5m2int64fp16",
+      "inputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "indices",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "updates",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_scales",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "quant_zero_points",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "reduce",
+          "dtype": "string",
+          "value": "update"
+        },
+        {
+          "name": "axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "quant_axis",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "reciprocal_scale",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "round_mode",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

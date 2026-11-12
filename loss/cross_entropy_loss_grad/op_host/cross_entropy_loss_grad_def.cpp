@@ -126,6 +126,7 @@ public:
         this->AICore().AddConfig("ascend950", aicoreRegbaseConfig);
         this->AICore().AddConfig("ascend350", aicoreRegbaseConfig);
         this->AICore().AddConfig("ascend960dt", aicoreRegbaseConfig);
+        this->AICore().AddConfig("ascend960pr", aicoreRegbaseConfig);
     }
 };
 OP_ADD(CrossEntropyLossGrad);

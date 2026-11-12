@@ -18,7 +18,7 @@ add_kernel_sources(
 # A6(arch92) 使用 arch92 目录下的入口，额外引入 arch92 的 ScatterDMA 模板
 add_kernel_sources(
     KERNEL_SRC arch92/inplace_index_add.cpp
-    COMPUTE_UNITS ascend960dt
+    COMPUTE_UNITS ascend960dt ascend960pr
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

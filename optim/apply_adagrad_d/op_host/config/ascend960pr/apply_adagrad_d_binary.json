@@ -1,0 +1,260 @@
+{
+    "op_type": "ApplyAdagradD",
+    "op_list": [
+      {
+        "bin_filename": "ApplyAdagradD_a954281c73ec33d2c858019e7cd3deb6",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "accum",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "lr",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "grad",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "accum",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "update_slots",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "ApplyAdagradD_c998ba454ba9a8f4ce307fb6c3046276",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "accum",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "lr",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "grad",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "accum",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "update_slots",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "ApplyAdagradD_n2o3p4q5r6s7t8u9v0w1x2y3z4a5b6c7",
+        "inputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "accum",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "lr",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "grad",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "var",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "accum",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "update_slots",
+            "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "use_locking",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }

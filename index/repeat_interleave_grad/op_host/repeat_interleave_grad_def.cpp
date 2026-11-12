@@ -53,6 +53,7 @@ public:
         this->AICore().AddConfig("ascend950", config_91095);
         this->AICore().AddConfig("ascend350", config_91095);
         this->AICore().AddConfig("ascend960dt", config_91095);
+        this->AICore().AddConfig("ascend960pr", config_91095);
     }
 };
 OP_ADD(RepeatInterleaveGrad);

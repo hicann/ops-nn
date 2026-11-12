@@ -34,7 +34,7 @@ __global__ __aicore__ void quant_update_scatter(GM_ADDR var, GM_ADDR indices, GM
                                                 GM_ADDR quant_zero_points, GM_ADDR out, GM_ADDR workSpace,
                                                 GM_ADDR tiling)
 {
-#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
     GET_TILING_DATA(tilingData, tiling);
@@ -78,7 +78,7 @@ __global__ __aicore__ void quant_update_scatter(GM_ADDR var, GM_ADDR indices, GM
         op.Init(var, indices, updates, quant_scales, quant_zero_points, out, &tilingData);
         op.Process();
     }
-#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 #endif
 }

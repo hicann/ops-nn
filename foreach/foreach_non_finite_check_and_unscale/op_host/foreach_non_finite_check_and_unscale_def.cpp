@@ -73,6 +73,7 @@ public:
         this->AICore().AddConfig("ascend950", config_910d);
         this->AICore().AddConfig("ascend350", config_910d);
         this->AICore().AddConfig("ascend960dt", config_910d);
+        this->AICore().AddConfig("ascend960pr", config_910d);
     }
 
 private:
