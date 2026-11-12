@@ -7030,6 +7030,50 @@ TEST_F(MatMulV3StreamKTilingDirectTest, GetL0C2Out_Non3510Arch_DefaultOnTheFly)
         MatMulV3L0C2Out::ON_THE_FLY);
 }
 
+// GetL0C2OutDav3510：fixpipe Bound 场景按输出 dtype 选择 1V1/1V2，splitM 仅在 FP32 输出时置位
+TEST_F(MatMulV3StreamKTilingDirectTest, GetL0C2Out_Dav3510_Fp32Out_Fixpipe1V2WithSplitM)
+{
+    compileInfo_.npuArch = Ops::Base::DAV_3510;
+    SetShape(256UL, 300UL, 256UL);
+    args_.aType = ge::DT_FLOAT;
+    args_.bType = ge::DT_FLOAT;
+    args_.cType = ge::DT_FLOAT;
+    optiling::matmul_v3_advanced::MatMulV3RunInfo runInfo{};
+    runInfo.singleCoreM = 128UL;
+    runInfo.singleCoreN = 64UL;
+    EXPECT_EQ(
+        optiling::matmul_v3_advanced::MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo, false, nullptr),
+        MatMulV3L0C2Out::ND_FIXPIPE_1_2);
+    EXPECT_TRUE(runInfo.splitM);
+}
+
+TEST_F(MatMulV3StreamKTilingDirectTest, GetL0C2Out_Dav3510_Fp16InFp32Out_Fixpipe1V2WithSplitM)
+{
+    compileInfo_.npuArch = Ops::Base::DAV_3510;
+    SetShape(256UL, 300UL, 256UL);
+    args_.cType = ge::DT_FLOAT;
+    optiling::matmul_v3_advanced::MatMulV3RunInfo runInfo{};
+    runInfo.singleCoreM = 128UL;
+    runInfo.singleCoreN = 64UL;
+    EXPECT_EQ(
+        optiling::matmul_v3_advanced::MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo, false, nullptr),
+        MatMulV3L0C2Out::ND_FIXPIPE_1_2);
+    EXPECT_TRUE(runInfo.splitM);
+}
+
+TEST_F(MatMulV3StreamKTilingDirectTest, GetL0C2Out_Dav3510_Fp16Out_Fixpipe1V1WithoutSplitM)
+{
+    compileInfo_.npuArch = Ops::Base::DAV_3510;
+    SetShape(256UL, 300UL, 256UL);
+    optiling::matmul_v3_advanced::MatMulV3RunInfo runInfo{};
+    runInfo.singleCoreM = 128UL;
+    runInfo.singleCoreN = 64UL;
+    EXPECT_EQ(
+        optiling::matmul_v3_advanced::MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo, false, nullptr),
+        MatMulV3L0C2Out::ND_FIXPIPE_1_1);
+    EXPECT_FALSE(runInfo.splitM);
+}
+
 TEST_F(MatMulV3TilingAdvancedDirectTest, GetFormat_NdFormats)
 {
     gert::StorageShape a = {{2, 32}, {2, 32}};

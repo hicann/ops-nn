@@ -180,13 +180,14 @@ MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo& compileInfo, const 
     if (!fixpipeBound || (compileInfo.aivNum != (compileInfo.aicNum * NUM_TWO)) || isSplitK) {
         return MatMulV3L0C2Out::ON_THE_FLY;
     }
+    if (args.cType == ge::DT_FLOAT) {
+        runInfo.splitM = true;
+        return MatMulV3L0C2Out::ND_FIXPIPE_1_2;
+    }
     if (args.aType == ge::DT_FLOAT16 || args.aType == ge::DT_BF16) {
         return MatMulV3L0C2Out::ND_FIXPIPE_1_1;
     }
-    if (args.aType == ge::DT_FLOAT) {
-        runInfo.splitM = true;
-    }
-    return MatMulV3L0C2Out::ND_FIXPIPE_1_2;
+    return MatMulV3L0C2Out::ON_THE_FLY;
 }
 
 // 全 dtype 统一走 ND_FIXPIPE_1_1
