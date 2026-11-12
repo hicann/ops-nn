@@ -240,7 +240,7 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
   )
   ```
 
-- 图模式（torchair）调用
+- 图模式（TorchAir）调用
 
   ```python
   import torch, torch_npu, cann_ops_nn

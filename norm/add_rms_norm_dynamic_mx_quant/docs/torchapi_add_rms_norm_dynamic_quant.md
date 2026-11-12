@@ -129,7 +129,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
         <td>x1</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>标准化过程中的源数据张量，公式中的x1。</td>
+        <td>归一化过程中的源数据张量，公式中的x1。</td>
         <td>float16、bfloat16</td>
         <td>(..., D)</td>
     </tr>
@@ -137,7 +137,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
         <td>x2</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>标准化过程中的源数据张量，公式中的x2。shape和数据类型需与x1一致。</td>
+        <td>归一化过程中的源数据张量，公式中的x2。shape和数据类型需与x1一致。</td>
         <td>float16、bfloat16</td>
         <td>(..., D)</td>
     </tr>
@@ -319,7 +319,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
     print(f"rstd: shape={tuple(rstd.shape)}, dtype={rstd.dtype}")
     ```
 
-- 图模式（torchair）调用
+- 图模式（TorchAir）调用
 
     ```python
     import torch, torch_npu, cann_ops_nn

@@ -25,11 +25,11 @@
 
 - 接口功能：
 
-  融合算子，实现CLA（Cross-Layer Attention）gate merge的反向梯度计算。输入上游梯度G = ∂L/∂O、两路原始 Attention输出O_g/O_l与两路 gate logits z_g/z_l，一次性计算并返回四个梯度：两路Attention输出梯度（dO_g、dO_l）与两路 gate logits 梯度（dz_g、dz_l）。本接口不做梯度量化：输出保持输入精度（BF16/FP16），不生成FP8梯度。反向算子不接收前向sigmoid中间结果，s_g/s_l由算子内重新计算。
+  融合算子，实现CLA（Cross-Layer Attention）gate merge的反向梯度计算。输入上游梯度G = ∂L/∂O、两路原始 Attention输出O_g/O_l与两路 gate logits z_g/z_l，一次性计算并返回四个梯度：两路Attention输出梯度（dO_g、dO_l）与两路 gate logits 梯度（dz_g、dz_l）。本接口不做梯度量化：输出保持输入精度（BF16/FP16），不生成FP8梯度。反向算子不接收前向Sigmoid中间结果，s_g/s_l由算子内重新计算。
 
 - 计算公式：
 
-  记本rank上token数为T，attention head数为N，value head dim为D。
+  记本rank上token数为T，Attention head数为N，value head dim为D。
 
   **阶段1：Sigmoid重算（算子内重算，FP32域）**
 
@@ -78,7 +78,7 @@ cann_ops_nn.cla_gate_backward(
 | `local_attn` | Tensor | 必选 | 前向Local/SWA分支Attention输出，对应公式中的`O_l`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与grad_merged一致 | 3维 `[T, N, D]`，与 `grad_merged`完全一致 |
 | `global_gate_logits` | Tensor | 必选 | 前向Global gate logits，对应公式中的`z_g`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与grad_merged一致 | 2维 `[T, N]`，`T`、`N`与三路TND输入的前两维一致 |
 | `local_gate_logits` | Tensor | 必选 | 前向Local gate logits，对应公式中的`z_l`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与grad_merged一致 | 2维 `[T, N]`，与 `global_gate_logits`完全一致 |
-| `input_attn_layout` | str | 可选 | 输入tensor的排布格式字符串，当前仅支持 `"TND"`。默认值 `"TND"`。 | - | - |
+| `input_attn_layout` | str | 可选 | 输入Tensor的排布格式字符串，当前仅支持 `"TND"`。默认值 `"TND"`。 | - | - |
 
 ## 返回值说明
 

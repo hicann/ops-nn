@@ -25,11 +25,11 @@
 
 - 接口功能：
 
-  对输入`x`执行SwiGLU激活后进行分组低比特量化，支持Block FP8、MX FP8、HiFloat8静态量化和HiFloat8动态量化。`quant_mode=5`底层封装`aclnnSwigluGroupQuantV2`，其余模式封装`aclnnSwigluGroupQuant`。
+  对输入`x`执行SwiGLU后进行分组低比特量化，支持Block FP8、MX FP8、HiFloat8静态量化和HiFloat8动态量化。`quant_mode=5`底层封装`aclnnSwigluGroupQuantV2`，其余模式封装`aclnnSwigluGroupQuant`。
 
 - 计算流程：
 
-  1. 将`x`的最后一维均分为`A`、`B`两部分，计算SwiGLU结果；mode 5使用`A * sigmoid(alpha * A) * (B + bias)`。
+  1. 将`x`的最后一维均分为`A`、`B`两部分，计算SwiGLU结果；当`quant_mode=5`时使用`A * sigmoid(alpha * A) * (B + bias)`。
   2. 当`weight`非空时，对SwiGLU结果逐token乘以`weight`，得到量化输入。
   3. 按`quant_mode`对加权后的结果量化，输出`y`和`y_scale`。
   4. 当`output_origin=True`时，额外返回weight加权前的SwiGLU结果`y_origin`；否则返回shape为`[0]`的占位Tensor。
@@ -120,7 +120,7 @@ cann_ops_nn.swiglu_group_quant(
 - `quant_mode=3`时，`group_index`可用于MoE场景的分组动态量化；`y_scale`的shape为`group_index.shape`，未传`group_index`时为`[1]`。
 - `clamp_limit`不启用时使用默认占位值`-1.0`；启用时必须大于0。`quant_mode=5`时还必须为有限值。
 - 所有支持的`quant_mode`均可通过`output_origin=True`输出weight加权前的`y_origin`。
-- group_index中的元素值须大于等于0。
+- `group_index`中的元素值须大于等于0。
 - quant_mode为0、1时，x、weight支持为空Tensor，group_index不支持单独为空Tensor；quant_mode为2、3时不支持空Tensor。
 - 输入`x`和`weight`支持非连续Tensor；`group_index`和`scale`不支持非连续Tensor。
 

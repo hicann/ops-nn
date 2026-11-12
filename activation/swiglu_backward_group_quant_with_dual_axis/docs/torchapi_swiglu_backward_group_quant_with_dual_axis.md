@@ -90,7 +90,7 @@ cann_ops_nn.swiglu_backward_group_quant_with_dual_axis(
 
 ## 约束说明
 
-- 该接口支持单算子模式和ACLGraph图模式调用。
+- 该接口支持单算子模式和TorchAir图模式调用。
 - `grad_y` 和 `x` 必须为 NPU Tensor，且分别为二维 `[T, H]` 和 `[T, 2H]`；`x` 的最后一维必须为 64 的整数倍。
 - 非 group 场景不传入 `group_index`、`weight` 和 `y_origin`；group 场景必须传入 `group_index`。
 - `group_index` 采用 cumsum 模式；`T>0`时必须严格递增且末元素等于`T`。

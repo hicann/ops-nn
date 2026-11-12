@@ -41,7 +41,7 @@
 
     | 输入     | 输出       | MAX_OFFSET |
     | -------- | ---------- | ---------- |
-    | FP4_E2M1 | FP8_E5M2   | 13         |
+    | FLOAT4_E2M1 | FLOAT8_E5M2 | 13 |
     | FP4_E1M2 | FP8_E5M2   | 15         |
     | FP4_E2M1 | FP8_E4M3FN | 6          |
     | FP4_E1M2 | FP8_E4M3FN | 8          |
@@ -86,7 +86,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
         <td>mxscale </td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>调用DynamicMxQuant计算得到的量化尺度，公式中的mxscale_fp4_block。shape需满足约束说明中的公式。</td>
+        <td>调用npu_dynamic_mx_quant计算得到的量化尺度，公式中的mxscale_fp4_block。shape需满足约束说明中的公式。</td>
         <td>FLOAT8_E8M0</td>
         <td>3-4</td>
     </tr>

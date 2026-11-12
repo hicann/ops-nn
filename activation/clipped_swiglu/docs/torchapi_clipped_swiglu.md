@@ -25,7 +25,7 @@
 
 - 接口功能：
 
-  带截断的 Swish 门控线性单元（ClippedSwiGLU）激活函数。相较于标准 SwiGLU，新增 `group_index`、`alpha`、`limit`、`bias`、`interleaved`、`clamp_mode` 等参数，用于支持 GPT-OSS 模型使用的变体 SwiGlu、MoE 模型的分组场景以及部分新模型需要将clamp操作后移至silu激活之后的场景。
+  带截断的 Swish 门控线性单元（ClippedSwiGLU）激活函数。相较于标准 SwiGLU，新增 `group_index`、`alpha`、`limit`、`bias`、`interleaved`、`clamp_mode` 等参数，用于支持 GPT-OSS 模型使用的变体 SwiGLU、MoE 模型的分组场景以及部分新模型需要将clamp操作后移至silu激活之后的场景。
 
 - 计算公式：
 
@@ -63,7 +63,7 @@
      A = x[ : , : h], \quad B = x[ : , h : ]
      $$
 
-  4. 根据 `alpha`、`limit`、`bias`、`clamp_mode` 进行变体 SwiGlu 计算：
+  4. 根据 `alpha`、`limit`、`bias`、`clamp_mode` 进行变体 SwiGLU 计算：
 
      当 `clamp_mode=0`（clamp 操作在 silu 之前）：
 
@@ -126,7 +126,7 @@ cann_ops_nn.clipped_swiglu(
 | `x` | Tensor | 必选 | 公式中的输入 `x`，在 `dim` 对应维度上必须为偶数。 | `torch.float16`、`torch.bfloat16`、`torch.float32` | 1-8 维 |
 | `group_index` | Tensor | 可选 | 公式中的 `group_index`。第 `i` 个元素代表第 `i` 组需要处理 `x` 的 batch 数量。传入 `None` 表示不分组。 | `torch.int64` | 1 维，每个元素必须为大于等于 0 的整数，所有元素之和必须大于 0，且必须小于等于 `x` 的 shape 中 `dim` 轴之前所有维度的乘积（即总行数）；当 `dim=0` 时，`dim` 轴之前无维度，该乘积视为 1，所有元素之和必须大于 0 且小于等于 1。支持的 group 分组数量由 UB 空间大小决定。 |
 | `dim` | int | 可选 | 对 `x` 进行合轴以及切分的维度序号，取值范围 `[-x.dim(), x.dim()-1]`。默认值 `-1`。 | - | - |
-| `alpha` | float | 可选 | 变体 SwiGlu 的缩放参数，建议值 `1.702`。默认值 `1.702`。 | - | - |
+| `alpha` | float | 可选 | 变体 SwiGLU 的缩放参数，建议值 `1.702`。默认值 `1.702`。 | - | - |
 | `limit` | float | 可选 | 变体 SwiGlu 的门限值，必须大于 0，建议值 `7.0`。默认值 `7.0`。 | - | - |
 | `bias` | float | 可选 | 变体 SwiGlu 的偏差参数，建议值 `1.0`。默认值 `1.0`。 | - | - |
 | `interleaved` | bool | 可选 | 切分 `x` 的方式。`True` 表示奇偶切分，`False` 表示前后切分。默认值 `True`。 | - | - |
@@ -136,7 +136,7 @@ cann_ops_nn.clipped_swiglu(
 
 | 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- |
-| `y` | Tensor | ClippedSwiglu 激活结果。 | 与 `x` 相同 | 与 `x` 相同，但 `dim` 对应维度上为 `x.shape[dim] // 2` |
+| `y` | Tensor | ClippedSwiGLU 激活结果。 | 与 `x` 相同 | 与 `x` 相同，但 `dim` 对应维度上为 `x.shape[dim] // 2` |
 
 ## 约束说明
 

@@ -67,7 +67,7 @@ cann_ops_nn.swiglu_group_quant_with_dual_axis(
 | --- | --- | --- | --- | --- | --- |
 | `x` | Tensor | 必选 | SwiGLU输入，最后一维前后均分为A、B两部分。支持非连续Tensor。 | `torch.float16`、`torch.bfloat16` | 2维`[T, 2H]`，`2H >= 64`且能被64整除 |
 | `weight` | Tensor | 可选 | 逐token权重；非空时乘到激活结果上，加权后舍入回`x`的dtype再量化。**仅group场景支持**。支持非连续Tensor。 | `torch.float16`、`torch.bfloat16`、`torch.float32` | 1-8维，元素个数等于`T` |
-| `group_index` | Tensor | 可选 | **累积组端索引（cumsum语义，元素值本身即组端行索引）**，仅用于第二路分组量化，不承担输出截断。元素非负、非递减、末元素等于`T`；相邻相等表示空组。不传表示non-group。支持非连续Tensor。 | `torch.int64` | 1维`[G]`，非空 |
+| `group_index` | Tensor | 可选 | **累积组端索引（cumsum语义，元素值本身即组端行索引）**，仅用于第二路分组量化，不参与输出截断。元素非负、非递减、末元素等于`T`；相邻相等表示空组。不传表示non-group。支持非连续Tensor。 | `torch.int64` | 1维`[G]`，非空 |
 | `dst_type` | int | 可选 | 目标量化类型。Torch编码：`291`=`float8_e5m2`、`292`=`float8_e4m3fn`（默认`292`）；实现同时兼容ACLNN/GE编码`35`=`FLOAT8_E5M2`、`36`=`FLOAT8_E4M3FN`。 | - | - |
 | `quant_mode` | int | 可选 | 量化模式，**仅支持`1`**（双轴MX FP8）。 | - | - |
 | `clamp_limit` | float | 可选 | Clipped-SwiGLU的clamp门限，默认`-1.0`表示不启用；启用时必须为有限正数。 | - | - |
@@ -99,9 +99,9 @@ cann_ops_nn.swiglu_group_quant_with_dual_axis(
 | 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- |
 | `y1` | Tensor | 第一路（-1轴）量化输出。 | 与`dst_type`一致（`float8_e5m2` / `float8_e4m3fn`） | `[T, H]` |
-| `mxscale1` | Tensor | 第一路量化尺度；最后一维最多存放相邻的2个32-element block scale。未使用的padding位置无有效值保证。 | `torch.float8_e8m0fnu` | `[T, ceil(ceil(H/32)/2), 2]` |
+| `mxscale1` | Tensor | 第一路量化尺度；最后一维最多存放相邻的2个32-element block scale。未使用的padding位置不保证为有效值。 | `torch.float8_e8m0fnu` | `[T, ceil(ceil(H/32)/2), 2]` |
 | `y2` | Tensor | 第二路（-2轴）量化输出。 | 与`dst_type`一致 | `[T, H]` |
-| `mxscale2` | Tensor | 第二路量化尺度；最后一维slot0/slot1最多对应两个相邻的32-row block scale。group场景可能包含为分组边界保留的物理位置；未使用的预留槽位无有效值保证。 | `torch.float8_e8m0fnu` | group：`[floor(T/64) + G, H, 2]`；non-group：`[ceil(T/64), H, 2]` |
+| `mxscale2` | Tensor | 第二路量化尺度；最后一维slot0/slot1最多对应两个相邻的32-row block scale。group场景可能包含为分组边界保留的物理位置；未使用的预留槽位不保证为有效值。 | `torch.float8_e8m0fnu` | group：`[floor(T/64) + G, H, 2]`；non-group：`[ceil(T/64), H, 2]` |
 | `y_origin` | Tensor | 乘weight前的激活（含clamp/alpha/bias效果）。 | 与`x`一致 | `output_origin=True`时为`[T, H]`，否则为`[0]`占位 |
 
 其中`H = x.shape[-1] / 2`，`G = group_index.numel()`。`mxscale1`/`mxscale2`中未使用的padding或预留位置不属于有效结果，调用方不应依赖其内容。

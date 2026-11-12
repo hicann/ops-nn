@@ -54,7 +54,7 @@
     y[m, n] = \left(\sum_{k=0}^{K-1} x1[m, k] \cdot x2[k, n]\right) \cdot x2Scale[n]
     $$
 
-    其中x1、x2为HIFLOAT8数据，x2Scale为FIXPIPE per-channel 反量化缩放因子。
+    其中x1、x2为HIFLOAT8数据，x2Scale为Fixpipe per-channel 反量化缩放因子。
 
 - 示例：假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，输出y的shape是(M, B, N)。
 
@@ -111,7 +111,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 
 - 该接口支持单算子模式和TorchAir图模式调用。
 - 图模式（TorchAir）下三种量化模式复用同一个GE Converter，按输入/scale数据类型自动分派：MXFP8（torch.float8_e4m3fn + torch.float8_e8m0fnu scale）与MXFP4（torch.uint8 + x1_dtype/x2_dtype指定float4_e2m1fn_x2 + torch.float8_e8m0fnu scale）可以在同一个图中同时使用；FP8（K-C，torch.float32 scale）与HIFP8（x1_dtype/x2_dtype指定hifloat8 + torch.uint64/int64 scale）同样由该Converter支持。图模式下MXFP4、HIFP8仍需传入x1_dtype/x2_dtype，其语义与单算子模式一致。
-- x1、x2必须是NPU Tensor；x1_scale、x2_scale按量化模式要求传入（见下表）。
+- x1、x2必须是NPU Tensor；x1_scale、x2_scale按量化模式要求传入（见下文"各量化模式的差异化约束"）。
 - 仅支持3维Tensor：x1的shape为(M, B, K)，x2的shape为(B, K, N)或(B, N, K)，x1与x2的batch轴和K轴必须一致，不支持batch轴广播。
 - perm_x1仅支持[1, 0, 2]；perm_y仅支持[1, 0, 2]；perm_x2支持[0, 1, 2]和[0, 2, 1]（FP8（K-C）量化模式仅支持[0, 1, 2]）。
 - batch_split_factor当前仅支持取值1（单算子模式由Tiling校验，图模式由GE Converter在转换时校验）。
@@ -257,7 +257,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
     print(y.shape, y.dtype)
     ```
 
-- 图模式（torchair）调用
+- 图模式（TorchAir）调用
 
   图模式使用与单算子模式相同的接口参数与约束（如batch_split_factor仅支持1，见"约束说明"），TorchAir在执行时通过GE Converter将其转换为`TransposeQuantBatchMatMul`图算子。
 

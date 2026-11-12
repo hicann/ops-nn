@@ -25,7 +25,7 @@
 
 - 接口功能：
 
-  对输入`x`执行SwiGLU激活，支持可选的逐token权重和count模式分组。底层封装`aclnnSwigluGroup`。
+  对输入`x`执行SwiGLU，支持可选的逐token权重和count模式分组。底层封装`aclnnSwigluGroup`。
 
 - 计算公式：
 

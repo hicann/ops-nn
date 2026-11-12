@@ -25,11 +25,11 @@
 
 - 接口功能：
 
-  完成ClampedSwiglu激活函数的反向梯度计算。从上游梯度`grad_output`和前向输入`x`重算clamp mask与sigmoid，输出`grad_x`与可选 `grad_weight`。底层调用`aclnnSwigluGroupGrad`。
+  完成ClampedSwiGLU激活函数的反向梯度计算。从上游梯度`grad_output`和前向输入`x`重算clamp mask与sigmoid，输出`grad_x`与可选 `grad_weight`。底层调用`aclnnSwigluGroupGrad`。
 
 - 计算公式：
 
-  前向分解：`x`按hidden维劈半得到gate(`g`)和up(`u`)；可选clamp产生`g̃ = min(c, g)`、`ũ = clip(u, −c, c)`；`SiLU(g̃) = g̃·σ(g̃)`；`y = SiLU(g̃)·ũ·w_t`。
+  前向分解：`x`按hidden维均分得到gate(`g`)和up(`u`)；可选clamp产生`g̃ = min(c, g)`、`ũ = clip(u, −c, c)`；`SiLU(g̃) = g̃·σ(g̃)`；`y = SiLU(g̃)·ũ·w_t`。
 
   $$
   silu'(g̃) = s + f − f·s

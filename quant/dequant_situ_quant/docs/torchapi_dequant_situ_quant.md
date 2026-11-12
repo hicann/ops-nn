@@ -174,7 +174,7 @@ cann_ops_nn.dequant_situ_quant(
         <td>Tensor</td>
         <td>可选</td>
         <td>MoE group索引，各专家连续排布的行计数（段长），总和不超过x行数；
-            超出计数总和的死尾行不参与计算、输出保持0。不支持非连续，数据格式支持ND。</td>
+            超出计数总和的尾部多余行不参与计算、输出保持0。不支持非连续，数据格式支持ND。</td>
         <td>int64</td>
         <td>1维，shape为(K,)</td>
     </tr>

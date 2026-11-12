@@ -82,7 +82,7 @@ cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mo
         <td>c</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>对称矩阵C，对应公式中的C。原地更新：计算结果直接写回该tensor的内存。最后两维相等且等于a的m轴，batch轴与a一致（不支持广播）。支持非连续Tensor。</td>
+        <td>对称矩阵C，对应公式中的C。原地更新：计算结果直接写回该Tensor的内存。最后两维相等且等于a的m轴，batch轴与a一致（不支持广播）。支持非连续Tensor。</td>
         <td>float16、bfloat16</td>
         <td>(…, m, m)（与 a 的 batch 轴一致）</td>
     </tr>
@@ -162,7 +162,7 @@ cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mo
 - fill_mode当前仅支持"full"，"up"/"low"为预留值尚未实现。
 - 建议输入c为对称矩阵：beta不为0时输出矩阵的对称性依赖输入c对称。
 - 支持非连续Tensor，无需额外做contiguous。
-- m轴或batch轴乘积为0时，接口直接返回成功，不启动kernel。
+- m轴或batch轴乘积为0时，接口直接返回成功，不启动Kernel。
 - m、k各维度及多维batch乘积的取值范围为[0, 2147483647]。
 
 ## 确定性计算

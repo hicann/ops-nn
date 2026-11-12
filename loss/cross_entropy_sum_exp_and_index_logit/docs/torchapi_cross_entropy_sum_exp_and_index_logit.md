@@ -94,7 +94,7 @@ cann_ops_nn.cross_entropy_sum_exp_and_index_logit(vocab_parallel_logits, target,
         <td>必选</td>
         <td>全局vocab索引，公式中的target。支持非连续Tensor，数据格式ND，取值为非负整数。不支持空Tensor。</td>
         <td>int32</td>
-        <td>shape与vocab_parallel_logits.shape[:-1] 一致，展平后N范围 [1, 32K]</td>
+        <td>shape与vocab_parallel_logits.shape[:-1] 一致，展平后N范围 [1, 32k]</td>
     </tr>
     <tr>
         <td>global_logits_max</td>
@@ -193,7 +193,7 @@ cann_ops_nn.cross_entropy_sum_exp_and_index_logit(vocab_parallel_logits, target,
 - 该接口支持单算子模式和TorchAir图模式调用。
 - `vocab_parallel_logits`仅支持2维`[N, V_local]`或3维`[S, B, V_local]`，且`shape[:-1]`与`target.shape`、`global_logits_max.shape`完全一致。
 - V_local对齐约束：`bfloat16`输入时V_local需为16的倍数，`float32`输入时V_local需为8的倍数（保证UB 32字节对齐）。
-- N（`prod(target.shape)`）范围：[1, 32K]；V_local范围：[16, 200K]。
+- N（`prod(target.shape)`）范围：[1, 32K]；V_local范围：[16, 200k]。
 - 算子不支持空Tensor输入。
 
 ## 确定性/Batch一致性

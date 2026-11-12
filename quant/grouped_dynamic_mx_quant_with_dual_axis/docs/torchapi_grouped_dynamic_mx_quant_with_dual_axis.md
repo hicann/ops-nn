@@ -200,7 +200,7 @@ cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
         <td>mxscale1</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>-1轴每个分组对应的量化尺度。最后一维每2个scale成对存放，N方向按32个元素生成一个scale，进行偶数pad，pad填充值为0。</td>
+        <td>-1轴每个分组对应的块缩放因子。最后一维每2个scale成对存放，N方向按32个元素生成一个scale，进行偶数pad，pad填充值为0。</td>
         <td>torch.uint8（FLOAT8_E8M0）</td>
         <td>(M, ceil(N/64), 2)</td>
     </tr>
@@ -238,7 +238,7 @@ cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
   - `y1`、`y2`的shape需与`x`一致，均为(M, N)。
   - `mxscale1`的shape为(M, ceil(N/64), 2)。
   - `mxscale2`的shape为(floor(M/64)+G, N, 2)，其中G为group_index的元素个数。
-- x的第0维M允许为0；N和group_index的长度仍需大于0。
+- `x`的第0维M允许为0；N和`group_index`的长度仍需大于0。
 
 ## 确定性计算
 

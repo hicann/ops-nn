@@ -33,7 +33,7 @@
   y = \operatorname{RmsNorm}(x)=\frac{x}{\operatorname{Rms}(\mathbf{x})}\cdot gamma + beta, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
   $$
 
-  - 若smooth_scales不输入，则直接对rmsnorm输出做量化：
+  - 若smooth_scales不输入，则直接对RMSNorm输出做量化：
 
   $$
    scaleOut=row\_max(abs(y))/max\_val
@@ -107,7 +107,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>smooth_scales</td>
         <td>Tensor</td>
         <td>可选</td>
-        <td>量化过程中使用的smoothScale张量，公式中的smooth_scales。shape和dtype需与gamma一致。</td>
+        <td>量化过程中使用的smoothScale张量，公式中的smooth_scales，shape和dtype需与gamma一致。</td>
         <td>float16、bfloat16</td>
         <td>(D,)</td>
     </tr>
@@ -115,7 +115,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>beta</td>
         <td>Tensor</td>
         <td>可选</td>
-        <td>标准化过程中的偏置项，公式中的beta。shape和dtype需gamma一致。</td>
+        <td>标准化过程中的偏置项，公式中的beta。shape和dtype需与gamma一致。</td>
         <td>float16、bfloat16</td>
         <td>(D,)</td>
     </tr>
