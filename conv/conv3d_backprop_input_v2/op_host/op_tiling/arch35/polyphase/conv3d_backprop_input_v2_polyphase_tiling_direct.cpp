@@ -389,7 +389,8 @@ void SearchGroupTile(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Res
 
 void EnlargeGroups(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Resources& resources, Plan& plan)
 {
-    if (runInfo.groups <= 1 || DirectTasks(runInfo, plan.mDim, plan.nDim) <= resources.cores) {
+    if (runInfo.groups <= 1 || resources.accBytes == 0U ||
+        DirectTasks(runInfo, plan.mDim, plan.nDim) <= resources.cores) {
         return;
     }
     const uint64_t ci = runInfo.dedy_cout / runInfo.groups;
@@ -404,12 +405,12 @@ void EnlargeGroups(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Resou
         const uint64_t c = e * co;
         const uint64_t k = Ops::Base::CeilAlign<uint64_t>(e * ci, BASIC_BLOCK_SIZE_16);
         const uint64_t n = Ops::Base::CeilAlign<uint64_t>(c * runInfo.kernel_w, BASIC_BLOCK_SIZE_16);
-        if (c * runInfo.kernel_w > DIRECT_MAX_N ||
+        if (c == 0U || c * runInfo.kernel_w > DIRECT_MAX_N ||
             REFINE_RATIO_DENOMINATOR * k * n > REFINE_MAX_OVERHEAD_NUMERATOR * e * baseK * baseN) {
             continue;
         }
         const uint64_t maxTile = std::min<uint64_t>(
-            DIRECT_MAX_WIDTH, std::min<uint64_t>(runInfo.dedx_w, resources.ub / (resources.accBytes * c)));
+            DIRECT_MAX_WIDTH, std::min<uint64_t>(runInfo.dedx_w, resources.ub / resources.accBytes / c));
         for (uint64_t ordinal = 0U; ordinal <= maxTile / BASIC_BLOCK_SIZE_16; ++ordinal) {
             const uint64_t tile = ordinal == 0U ? maxTile : ordinal * BASIC_BLOCK_SIZE_16;
             if (tile == 0U) {
@@ -493,7 +494,6 @@ bool RejectDirectSetup(const Conv3dBpInputV2RunInfo& runInfo, uint64_t live, uin
 }
 
 } // namespace Polyphase
-
 } // namespace Conv
 } // namespace NN
 } // namespace Ops

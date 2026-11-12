@@ -15,6 +15,10 @@
 #ifndef CONV3D_BACKPROP_INPUT_V2_INNER_PRODUCT_TILING_H
 #define CONV3D_BACKPROP_INPUT_V2_INNER_PRODUCT_TILING_H
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
 #include <register/tilingdata_base.h>
 #include <tiling/tiling_api.h>
 #include "op_host/tiling_base.h"

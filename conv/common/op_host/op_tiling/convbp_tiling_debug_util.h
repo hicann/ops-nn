@@ -45,7 +45,8 @@ std::string DebugString(const std::vector<T>& v)
     return oss.str();
 }
 
-inline void DebugShape(gert::TilingContext* context, const int64_t index, std::vector<int64_t>& shape, bool isInput)
+inline void DebugShape(const gert::TilingContext* context, const int64_t index, std::vector<int64_t>& shape,
+                       bool isInput)
 {
     const gert::StorageShape* geShapePtr = isInput ? context->GetInputShape(index) : context->GetOutputShape(index);
     OP_CHECK_IF(geShapePtr == nullptr,
@@ -58,7 +59,7 @@ inline void DebugShape(gert::TilingContext* context, const int64_t index, std::v
     }
 }
 
-inline TensorInfo GetTensorInfo(gert::TilingContext* context, int64_t index, bool isInput, int64_t dimCount)
+inline TensorInfo GetTensorInfo(const gert::TilingContext* context, int64_t index, bool isInput, int64_t dimCount)
 {
     TensorInfo info;
     auto tensor = isInput ? context->GetInputDesc(index) : context->GetOutputDesc(index);
@@ -77,7 +78,7 @@ inline TensorInfo GetTensorInfo(gert::TilingContext* context, int64_t index, boo
     return info;
 }
 
-inline std::vector<int64_t> GetAttrVector(gert::TilingContext* context, int attrIndex, int expectedSize,
+inline std::vector<int64_t> GetAttrVector(const gert::TilingContext* context, int attrIndex, int expectedSize,
                                           const char* attrName)
 {
     auto attrs = context->GetAttrs();

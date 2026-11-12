@@ -25,8 +25,9 @@ namespace Polyphase {
 constexpr uint32_t INTERLEAVE_STRIDE = 2U;
 constexpr uint8_t ALL_PHASE_B1 = 1U;
 constexpr uint32_t MAX_LOAD_WIDTH = 65535U;
+constexpr uint32_t PHASED_SCORE_SIZE = 12U;
 
-using PhasedScore = std::array<uint64_t, 12>;
+using PhasedScore = std::array<uint64_t, PHASED_SCORE_SIZE>;
 
 bool AivFits(uint64_t stride, uint64_t outputM, bool dense, const Resources& resources)
 {

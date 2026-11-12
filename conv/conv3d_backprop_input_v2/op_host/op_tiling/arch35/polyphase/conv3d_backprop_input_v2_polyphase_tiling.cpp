@@ -48,7 +48,7 @@ inline bool IsStrictDense(const Conv3dBpInputV2RunInfo& runInfo)
            runInfo.kernel_w == STRICT_DENSE_TAPS * runInfo.stride_w && runInfo.dilation_w == 1 && runInfo.pad_l == 0 &&
            runInfo.pad_r == 0;
 }
-// 以下准入边界来自已有实测，不是时延方程。
+
 constexpr uint32_t LEGACY_SMALL_CHANNELS = 32U;
 constexpr uint32_t LEGACY_FANOUT_CHANNELS = 256U;
 constexpr uint32_t LEGACY_MAX_TAPS_PER_STRIDE = 2U;
@@ -103,13 +103,17 @@ inline bool PreferSegmentedLegacy(const Conv3dBpInputV2RunInfo& runInfo, const P
     const bool raggedPhase = plan.phaseGroups > 1U && kernelW > strideW && kernelW - strideW < strideW &&
                              channelTail != 0U && channelTail <= LEGACY_HALF_CHANNELS;
     const bool tinyOutput = runInfo.dedx_w < BASIC_BLOCK_SIZE_16 && tapAmortized;
-    return parallelSetup || sparseOutput || underfilledChannels || raggedPhase || tinyOutput;
+    // 串行单 tap 没有累加收益。
+    const bool serialSparse = plan.strategy == Strategy::SERIAL_DEPTHWISE && (kernelW < strideW) &&
+                              (static_cast<uint64_t>(runInfo.batch_n) * plan.mDim * plan.nDim > plan.coreNum);
+    return parallelSetup || sparseOutput || underfilledChannels || raggedPhase || tinyOutput || serialSparse;
 }
 
 inline LegacyPreference GetLegacyPreference(const Conv3dBpInputV2RunInfo& runInfo, const Plan& plan, uint64_t cores)
 {
     if (plan.mode == Mode::DIRECT_DENSE) {
-        return plan.enlarge == 1U ? DirectLegacyPreference(runInfo, cores) : LegacyPreference::NONE;
+        return plan.enlarge == 1U ? DirectLegacyPreference(runInfo, cores / plan.mDim / plan.nDim) :
+                                    LegacyPreference::NONE;
     }
     if (plan.strategy == Strategy::SERIAL_DEPTHWISE || plan.strategy == Strategy::PARALLEL_DEPTHWISE) {
         return PreferSegmentedLegacy(runInfo, plan) ? LegacyPreference::FULL_FILTER : LegacyPreference::NONE;
@@ -378,7 +382,7 @@ bool Conv3DBackpropInputV2PolyphaseTiling::BuildPlan()
 
 bool Conv3DBackpropInputV2PolyphaseTiling::IsCapable()
 {
-    // Ascend950转置卷积准入
+    // Ascend950 转置卷积准入
     if (opType_ != optiling::OpTypeV2::kConv3DTransposeV2 || !IsSocVersion950()) {
         return false;
     }
@@ -395,7 +399,7 @@ bool Conv3DBackpropInputV2PolyphaseTiling::IsCapable()
 bool Conv3DBackpropInputV2PolyphaseTiling::IsPhasedCapable()
 {
     auto& data = tilingData_;
-    // 短输入跨多输出块或 dense 分段，准备和同步难以摊销。
+    // 短输入跨多输出块或 dense 分段，数据搬运无法掩盖，暂不准入。
     return !((data.get_polyphaseStrategy() == static_cast<uint8_t>(Polyphase::Strategy::SERIAL_DEPTHWISE) &&
               runInfo_.dedy_w < data.get_baseM() && data.get_mDim() > 1) ||
              data.get_polyphaseStrategy() == static_cast<uint8_t>(Polyphase::Strategy::DENSE_SEGMENTED));
@@ -404,8 +408,8 @@ bool Conv3DBackpropInputV2PolyphaseTiling::IsPhasedCapable()
 bool Conv3DBackpropInputV2PolyphaseTiling::IsDirectDenseCapable()
 {
     auto& data = tilingData_;
-    // 浅归约的短输入配大 stride，准备开销难以摊销。
-    if (data.get_enlarge() == 1 && runInfo_.dedy_cout / runInfo_.groups < BASIC_BLOCK_SIZE_16 &&
+    const bool shortExpanded = runInfo_.batch_n > 1 && runInfo_.kernel_w < runInfo_.stride_w;
+    if ((data.get_enlarge() == 1 || shortExpanded) && runInfo_.dedy_cout / runInfo_.groups < BASIC_BLOCK_SIZE_16 &&
         runInfo_.dedy_w <= BASIC_BLOCK_SIZE_16 && runInfo_.stride_w >= BASIC_BLOCK_SIZE_16) {
         return false;
     }
@@ -441,7 +445,6 @@ bool Conv3DBackpropInputV2PolyphaseTiling::IsDirectDenseCapable()
                            (ci >= c0 * co || (stride <= 2U * kernel && tasks * co <= cores * channels));
     const bool wide = stride * channels >= c0 * co && stride <= 2U * kernel &&
                       static_cast<long double>(kernel) * live * channels >= minKernelSpanWork * co;
-    // C0 通道条带的展开字节量，以 L1 双缓冲单 bank 为经验成本尺度；不改变资源合法性。
     const uint64_t inputBankLimit = platformInfo_.l1_size / DB_ON / c0 / runInfo_.a_dtype_bytes / stride;
     return live != 0U && (compact || reduction || wide) &&
            !RejectDirectSetup(runInfo_, live, tile, data, hasBiasFlag_, inputBankLimit);

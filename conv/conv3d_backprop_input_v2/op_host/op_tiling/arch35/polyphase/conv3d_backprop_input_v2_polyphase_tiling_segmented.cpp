@@ -29,9 +29,12 @@ constexpr uint32_t MIN_PARALLEL_PHASES = 8U;
 constexpr uint32_t GATHER_INDEX_LIMIT = static_cast<uint32_t>(UINT16_MAX) + 1U;
 constexpr uint32_t PHASE_MAX_STRIDE = 63U;
 constexpr uint32_t SEGMENT_CAPACITY = 64U;
+constexpr uint32_t PARALLEL_RANK_SIZE = 3U;
+constexpr uint32_t DEPTHWISE_RANK_SIZE = 6U;
+constexpr uint32_t SHAPE_TUPLE_SIZE = 3U;
 
-using ParallelRank = std::array<uint64_t, 3>;
-using DepthwiseRank = std::array<uint64_t, 6>;
+using ParallelRank = std::array<uint64_t, PARALLEL_RANK_SIZE>;
+using DepthwiseRank = std::array<uint64_t, DEPTHWISE_RANK_SIZE>;
 
 bool SegmentedProduct(uint64_t left, uint64_t right, uint64_t& result)
 {
@@ -277,12 +280,13 @@ bool IsExpandedDense(const Conv3dBpInputV2RunInfo& runInfo, bool bias)
     }
     uint64_t elements = 0U;
     for (const auto& shape :
-         {std::array<uint64_t, 3>{static_cast<uint64_t>(runInfo.batch_n), static_cast<uint64_t>(runInfo.dedy_cout),
-                                  static_cast<uint64_t>(wi)},
-          std::array<uint64_t, 3>{static_cast<uint64_t>(runInfo.batch_n), static_cast<uint64_t>(runInfo.dedx_cin),
-                                  static_cast<uint64_t>(runInfo.dedx_w)},
-          std::array<uint64_t, 3>{static_cast<uint64_t>(runInfo.dedy_cout), static_cast<uint64_t>(runInfo.dedx_cin),
-                                  static_cast<uint64_t>(kw)}}) {
+         {std::array<uint64_t, SHAPE_TUPLE_SIZE>{static_cast<uint64_t>(runInfo.batch_n),
+                                                 static_cast<uint64_t>(runInfo.dedy_cout), static_cast<uint64_t>(wi)},
+          std::array<uint64_t, SHAPE_TUPLE_SIZE>{static_cast<uint64_t>(runInfo.batch_n),
+                                                 static_cast<uint64_t>(runInfo.dedx_cin),
+                                                 static_cast<uint64_t>(runInfo.dedx_w)},
+          std::array<uint64_t, SHAPE_TUPLE_SIZE>{static_cast<uint64_t>(runInfo.dedy_cout),
+                                                 static_cast<uint64_t>(runInfo.dedx_cin), static_cast<uint64_t>(kw)}}) {
         if (!SegmentedProduct(shape[0], shape[1], elements) || !SegmentedProduct(elements, shape[2], elements) ||
             elements > static_cast<uint64_t>(INT64_MAX) / runInfo.a_dtype_bytes) {
             return false;
