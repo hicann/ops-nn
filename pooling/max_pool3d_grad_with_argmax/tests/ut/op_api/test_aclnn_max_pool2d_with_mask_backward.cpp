@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <vector>
 #include <array>
@@ -619,6 +618,38 @@ TEST_F(l2_max_pool2d_with_mask_backward_test, ascend910B2_abnormal_self_privateF
     auto tensor_self = TensorDesc(self_dims, ACL_FLOAT, ACL_FRACTAL_Z_3D);
     auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT8, ACL_FRACTAL_Z_3D);
     auto gradInput_tensor_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FRACTAL_Z_3D);
+
+    auto ut = OP_API_UT(aclnnMaxPool2dWithMaskBackward,
+                        INPUT(tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc,
+                              padding_desc, dilation_desc, ceilMode),
+                        OUTPUT(gradInput_tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 异常场景：kernelSize长度非法（不等于1或2）
+TEST_F(l2_max_pool2d_with_mask_backward_test, ascend910B2_abnormal_kernelSize_length)
+{
+    vector<int64_t> self_dims = {1, 1, 4, 4};
+    vector<int64_t> kernel_dims = {2, 2, 2};
+    vector<int64_t> stride_dims = {2, 2};
+    vector<int64_t> padding_dims = {0, 0};
+    vector<int64_t> dilation_dims = {1, 1};
+    vector<int64_t> out_dims = {1, 1, 2, 2};
+    vector<int64_t> indices_dims = {1, 1, 4, 64};
+
+    auto kernel_desc = IntArrayDesc(kernel_dims);
+    auto stride_desc = IntArrayDesc(stride_dims);
+    auto padding_desc = IntArrayDesc(padding_dims);
+    auto dilation_desc = IntArrayDesc(dilation_dims);
+    bool ceilMode = false;
+
+    auto tensor_gradOutput = TensorDesc(out_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto tensor_self = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto indices_tensor_desc = TensorDesc(indices_dims, ACL_INT8, ACL_FORMAT_NCHW);
+    auto gradInput_tensor_desc = TensorDesc(self_dims, ACL_FLOAT, ACL_FORMAT_NCHW);
 
     auto ut = OP_API_UT(aclnnMaxPool2dWithMaskBackward,
                         INPUT(tensor_gradOutput, tensor_self, indices_tensor_desc, kernel_desc, stride_desc,

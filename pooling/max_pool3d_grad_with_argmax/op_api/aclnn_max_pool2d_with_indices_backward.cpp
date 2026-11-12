@@ -885,12 +885,15 @@ aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(const aclTensor* grad
     OP_CHECK_NULL(kernelSize, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(self, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(gradOutput, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(stride, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(padding, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(dilation, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK(CheckAttrSize1Or2(kernelSize),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                      "param size must be a single int, or a tuple of two ints. "
                      "stride can be empty. kernelSize:%zu, stride:%zu, padding:%zu, dilation:%zu",
                      kernelSize->Size(), stride->Size(), padding->Size(), dilation->Size()),
-             return ACLNN_ERR_PARAM_NULLPTR);
+             return ACLNN_ERR_PARAM_INVALID);
     const aclIntArray& kernelRef = *kernelSize;
     const int64_t kH = kernelRef[0];
     const int64_t kW = (kernelRef.Size() == 1) ? kH : kernelRef[1];
