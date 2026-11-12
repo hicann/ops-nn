@@ -141,6 +141,7 @@ public:
         this->AICore().AddConfig("ascend950", configRegbase);
         this->AICore().AddConfig("ascend350", configRegbase);
         this->AICore().AddConfig("ascend960dt", configRegbase);
+        this->AICore().AddConfig("ascend960pr", configRegbase);
     }
 };
 OP_ADD(RmsNormQuantV3);

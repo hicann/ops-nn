@@ -92,7 +92,8 @@ ge::graphStatus ScatterNdAddSimtTiling::GetShapeAttrsInfo()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context_, "platformInfo is nullptr."), return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                     ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
 
     auto var = context_->GetInputTensor(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, var);

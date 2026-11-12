@@ -104,7 +104,7 @@ ge::graphStatus AdaptivePool3dBaseTiling::GetShapeAttrsInfo()
     auto nodeName = context_->GetNodeName() == nullptr ? "AdaptivePool3d" : context_->GetNodeName();
     OP_LOGD(nodeName, "GetShapeAttrsInfo begin 950, arch:%d.", npuArch);
 
-    if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_9201) {
+    if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202) {
         return ge::GRAPH_PARAM_INVALID;
     }
     OP_LOGD(nodeName, "GetShapeAttrsInfo begin.");

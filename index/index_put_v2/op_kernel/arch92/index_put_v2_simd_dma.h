@@ -16,7 +16,7 @@
 #ifndef INDEX_PUT_V2_SIMD_DMA
 #define INDEX_PUT_V2_SIMD_DMA
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
@@ -160,5 +160,5 @@ __aicore__ inline void IndexPutV2SimdDma<TX, TIDX, IsAtomicAdd>::Process()
 
 } // namespace IndexPutV2
 
-#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #endif // INDEX_PUT_V2_SIMD_DMA

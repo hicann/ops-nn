@@ -42,8 +42,8 @@ ASCENDC_TPL_ARGS_DECL(IndexPutV2,
                       ASCENDC_TPL_BOOL_DECL(IS_SIMD, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_NOCON, 0, 1),
                       ASCENDC_TPL_BOOL_DECL(IS_ACCUMULATE, 0, 1), ASCENDC_TPL_BOOL_DECL(IS_OVERLENGTH, 0, 1));
 
-// Host tiling describes both paths; device compilation enables DMA only on DAV_9201.
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 9201)
+// Host tiling describes both paths; device compilation enables DMA only on DAV_9201/DAV_9202.
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 9201) && (__NPU_ARCH__ != 9202)
 #define INDEX_PUT_V2_DMA_SEL ASCENDC_TPL_BOOL_SEL(IS_PERF, 0)
 #else
 #define INDEX_PUT_V2_DMA_SEL ASCENDC_TPL_BOOL_SEL(IS_PERF, 0, 1)

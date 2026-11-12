@@ -83,7 +83,8 @@ static bool CheckNotNull(const aclTensor* self, const aclTensor* other, const ac
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || curArch == NpuArch::DAV_3510 || curArch == NpuArch::DAV_9201) {
+    if (curArch == NpuArch::DAV_2201 || curArch == NpuArch::DAV_3510 || curArch == NpuArch::DAV_9201 ||
+        curArch == NpuArch::DAV_9202) {
         return DTYPE_SUPPORT_LIST_WITH_BF16;
     } else {
         return DTYPE_SUPPORT_LIST_WITHOUT_BF16;

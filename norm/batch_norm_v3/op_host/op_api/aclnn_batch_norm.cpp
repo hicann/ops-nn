@@ -54,11 +54,9 @@ static const std::initializer_list<op::DataType>& GetSupportDtypeList(NpuArch np
     static const std::initializer_list<op::DataType> DTYPE_SUPPORT_310P_910_LIST = {op::DataType::DT_FLOAT,
                                                                                     op::DataType::DT_FLOAT16};
     static const std::map<NpuArch, std::initializer_list<op::DataType>> dataTypeSupportedMap = {
-        {NpuArch::DAV_2002, DTYPE_SUPPORT_310P_910_LIST},
-        {NpuArch::DAV_1001, DTYPE_SUPPORT_310P_910_LIST},
-        {NpuArch::DAV_2201, DTYPE_SUPPORT_910BCD_LIST},
-        {NpuArch::DAV_3510, DTYPE_SUPPORT_910BCD_LIST},
-        {NpuArch::DAV_9201, DTYPE_SUPPORT_910BCD_LIST}};
+        {NpuArch::DAV_2002, DTYPE_SUPPORT_310P_910_LIST}, {NpuArch::DAV_1001, DTYPE_SUPPORT_310P_910_LIST},
+        {NpuArch::DAV_2201, DTYPE_SUPPORT_910BCD_LIST},   {NpuArch::DAV_3510, DTYPE_SUPPORT_910BCD_LIST},
+        {NpuArch::DAV_9201, DTYPE_SUPPORT_910BCD_LIST},   {NpuArch::DAV_9202, DTYPE_SUPPORT_910BCD_LIST}};
 
     auto found = dataTypeSupportedMap.find(npuArch);
     if (found == dataTypeSupportedMap.end()) {

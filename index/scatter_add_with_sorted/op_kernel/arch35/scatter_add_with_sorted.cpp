@@ -18,7 +18,7 @@
 #include "scatter_add_with_sorted_determ_workspace.h"
 #include "scatter_add_with_sorted_simt.h"
 #include "scatter_add_with_sorted_simt_determ.h"
-#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 9201
+#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202
 #include "../arch92/scatter_add_with_sorted_simd_dma.h"
 #include "../arch92/scatter_add_with_sorted_determ_workspace_dma.h"
 #endif
@@ -37,7 +37,7 @@ __global__ __aicore__ void scatter_add_with_sorted(GM_ADDR var, GM_ADDR updates,
     if constexpr (TEMPLATE_MODE == TPL_MODE_EMPTY) {
         return;
     }
-#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 9201
+#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202
     else if constexpr (TEMPLATE_MODE == TPL_MODE_SIMD_DMA) {
         REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_SIMD_DMA", ScatterAddWithSortedSimdDMATilingData);
         GET_TILING_DATA_WITH_STRUCT(ScatterAddWithSortedSimdDMATilingData, tilingData, tiling);

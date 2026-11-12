@@ -9,13 +9,13 @@
 # ----------------------------------------------------------------------------
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend350" "ascend960dt")
+set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend350" "ascend960dt" "ascend960pr")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35")
+set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE avg_pool3_d_grad ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DEPENDENCIES avg_pool3_d convolution_backward pool_3d_common)
 
 # A5/A6 均使用 arch35 目录下的 avg_pool3_d_grad.cpp 作为 kernel 入口
 add_kernel_sources(
-    COMPUTE_UNITS ascend960dt
+    COMPUTE_UNITS ascend960dt ascend960pr
     OPTIONS "--cce-no-dcache-flush" "--cce-long-scbz=true" "-mllvm --cce-aicore-jump-expand=false"
 )

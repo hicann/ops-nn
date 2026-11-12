@@ -1,0 +1,191 @@
+{
+    "op_type": "EluGradV2",
+    "op_list": [
+      {
+        "bin_filename": "EluGradV2_bca8d7b97fd48624e0f393b4822421a3",
+        "inputs": [
+          {
+            "name": "grads",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "activations",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "input_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_result",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "EluGradV2_1c2d311a52d715e2d830e5c82c5ce2a7",
+        "inputs": [
+          {
+            "name": "grads",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "activations",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "input_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_result",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "EluGradV2_b10fb8d3846dab1d7af1173889aff103",
+        "inputs": [
+          {
+            "name": "grads",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "activations",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "input_scale",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_result",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }

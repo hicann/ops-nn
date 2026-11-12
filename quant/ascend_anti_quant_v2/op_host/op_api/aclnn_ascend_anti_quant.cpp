@@ -287,7 +287,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
     // x的数据维度不能超过8
     OP_CHECK_MAX_DIM(x, MAX_DIM_LEN, return false);
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_9201) {
+    if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202) {
         if (scale->GetViewShape().GetDimNum() != 1) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale dim num must be 1. scale:%zu", scale->GetViewShape().GetDimNum());
             return false;

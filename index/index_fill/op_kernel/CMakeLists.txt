@@ -28,7 +28,7 @@ add_kernel_sources(
 # A6(arch92) 使用 arch92 目录下的入口，额外引入 arch92 的 SIMD_DMA 模板
 add_kernel_sources(
     KERNEL_SRC arch92/index_fill.cpp
-    COMPUTE_UNITS ascend960dt
+    COMPUTE_UNITS ascend960dt ascend960pr
     SIMPLIFIED_KEY 0
     IMPL_MODE high_performance
     AUTO_SYNC false

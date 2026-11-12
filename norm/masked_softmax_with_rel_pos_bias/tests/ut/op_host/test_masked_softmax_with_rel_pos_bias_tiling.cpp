@@ -317,7 +317,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_52)
     int32_t B = 1023;
     int32_t W = 4;
     int32_t N = 2;
-    int32_t S1 = 16;
+    int32_t S1 = 8;
     int32_t S2 = 16;
     gert::StorageShape x_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
@@ -408,7 +408,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_40)
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
     gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
     gert::StorageShape y_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
-    //因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
+    // 因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 2.0, true, 401);
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 1.0, true, 402);
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 2.0, false, 403);
@@ -422,7 +422,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_41)
     int32_t N = 1;
     int32_t S1 = 8;
     int32_t S2 = 8;
-    //因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
+    // 因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
     gert::StorageShape x_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
     gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
@@ -440,7 +440,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_42)
     int32_t N = 5;
     int32_t S1 = 8;
     int32_t S2 = 7;
-    //因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
+    // 因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
     gert::StorageShape x_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
     gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
@@ -552,7 +552,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_20_12)
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
     gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
     gert::StorageShape y_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
-    //因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
+    // 因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 2.0, true, 201);
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 1.0, true, 202);
 }
@@ -593,7 +593,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_21_12)
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
     gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
     gert::StorageShape y_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
-    //因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
+    // 因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 2.0, true, 201);
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 1.0, true, 202);
 }
@@ -637,7 +637,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, tiling_4_dim)
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
     gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
     gert::StorageShape y_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
-    //因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
+    // 因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 2.0, true, 401);
 }
 
@@ -652,7 +652,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_ShapeCheckFailed)
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
     gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
     gert::StorageShape y_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
-    //校验xshpae中有0的场景
+    // 校验xshpae中有0的场景
     testTilingShapeCheckFailed(x_shape, atten_mask_shape, bias_shape, y_shape);
 
     N = 3;
@@ -809,7 +809,7 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_s2_1)
     gert::StorageShape atten_mask_shape = {{W, S1, S2}, {W, S1, S2}};
     gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
     gert::StorageShape y_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
-    //因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
+    // 因为要根据此处的tilingdata来进行kernel的UT, scaleValue固定为1.0和2.0，勿改
     testTiling(x_shape, atten_mask_shape, bias_shape, y_shape, 1.0, true, 402);
 }
 

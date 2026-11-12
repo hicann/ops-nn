@@ -69,7 +69,7 @@ constexpr static AscendC::Reg::CastTrait castTraitB322B16Odd = {
     AscendC::RoundMode::CAST_RINT,
 };
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 // Keep the even halfwords written by the first Cast when packing the odd part.
 constexpr static AscendC::Reg::CastTrait castTraitB322B16OddMerging = {
     AscendC::Reg::RegLayout::ONE,
@@ -1297,7 +1297,7 @@ __aicore__ inline void VFInnerNormalizeAndSwishUnAlign(__ubuf__ T1* xLocal, __ub
             LoadGammaAndBetaData<T2, hasGamma, hasBeta>(gamma, beta, gammaLocal, betaLocal, pregMain, i);
             if constexpr (IsSameType<T1, half>::value || IsSameType<T1, bfloat16_t>::value) {
                 RegTensor<T1> xTmp;
-#if !defined(__NPU_ARCH__) || (__NPU_ARCH__ != 9201)
+#if !defined(__NPU_ARCH__) || (__NPU_ARCH__ != 9201 && __NPU_ARCH__ != 9202)
                 RegTensor<T1> yEvenTmp;
                 RegTensor<T1> yOddTmp;
 #endif
@@ -1313,7 +1313,7 @@ __aicore__ inline void VFInnerNormalizeAndSwishUnAlign(__ubuf__ T1* xLocal, __ub
                         VFInnerNormalize<hasGamma, hasBeta>(xEven, mean, rstd, gamma, beta, yEven, pregMain);
                         VFInnerNormalize<hasGamma, hasBeta>(xOdd, mean, rstd, gamma, beta, yOdd, pregMain);
                     }
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
                     Cast<T1, float, castTraitB322B16Even>(yTmp, yEven, pregMain);
                     Cast<T1, float, castTraitB322B16OddMerging>(yTmp, yOdd, pregMain);
 #else
@@ -1337,7 +1337,7 @@ __aicore__ inline void VFInnerNormalizeAndSwishUnAlign(__ubuf__ T1* xLocal, __ub
                         VFInnerNormalize<hasGamma, hasBeta>(xEven, mean, rstd, gamma, beta, yEven, pregLoop);
                         VFInnerNormalize<hasGamma, hasBeta>(xOdd, mean, rstd, gamma, beta, yOdd, pregLoop);
                     }
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
                     Cast<T1, float, castTraitB322B16Even>(yTmp, yEven, pregLoop);
                     Cast<T1, float, castTraitB322B16OddMerging>(yTmp, yOdd, pregLoop);
 #else

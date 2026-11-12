@@ -50,6 +50,7 @@ static bool CheckSocVersionIsSupportBf16(void)
     switch (curArch) {
         case NpuArch::DAV_2201:
         case NpuArch::DAV_3510:
+        case NpuArch::DAV_9202:
         case NpuArch::DAV_9201: {
             return true;
         }

@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/rms_norm_quant_v3.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     SIMPLIFIED_KEY 0
     AUTO_SYNC false
 )

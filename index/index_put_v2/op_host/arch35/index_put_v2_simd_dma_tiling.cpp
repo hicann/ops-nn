@@ -40,7 +40,8 @@ bool IndexPutV2SimdDmaTiling::IsCapable()
 {
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr ||
-        platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch() != NpuArch::DAV_9201) {
+        (platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch() != NpuArch::DAV_9201 &&
+         platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch() != NpuArch::DAV_9202)) {
         return false;
     }
     return IndexPutV2SimdTiling::IsCapable();

@@ -59,7 +59,9 @@ static bool IsAscend950()
         OPS_LOG_D(PASS_NAME.c_str(), "Get platformInfo failed.");
         return false;
     }
-    return platformInfo.str_info.short_soc_version == "Ascend950" || ops::IsDav3510Arch();
+    return platformInfo.str_info.short_soc_version == "Ascend950" ||
+           platformInfo.str_info.short_soc_version == "Ascend960DT" ||
+           platformInfo.str_info.short_soc_version == "Ascend960PR" || ops::IsDav3510Arch();
 }
 
 static void GetInputsInfo(const std::vector<SubgraphInput>& subgraphInputs, std::vector<Shape>& inputShapes,

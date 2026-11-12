@@ -17,7 +17,7 @@
 #include "../index/arch35/index.h"
 #include "../index/arch35/index_no_continuous.h"
 #include "arch35/index_put_v2_simd.h"
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #include "arch92/index_put_v2_simd_dma.h"
 #endif
 #include "arch35/index_put_v2_tiling_key.h"
@@ -56,8 +56,8 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(Index::IndexSimtTilingData);
 
-#if !defined(__NPU_ARCH__) || (__NPU_ARCH__ != 9201)
-    static_assert(!IS_PERF, "IndexPutV2 DMA is supported only on DAV_9201");
+#if !defined(__NPU_ARCH__) || ((__NPU_ARCH__ != 9201) && (__NPU_ARCH__ != 9202))
+    static_assert(!IS_PERF, "IndexPutV2 DMA is supported only on DAV_9201/DAV_9202");
 #endif
 
     using indexOffsetType = std::conditional_t<IS_OVERLENGTH, uint64_t, uint32_t>;
@@ -118,7 +118,7 @@ __global__ __aicore__ void index_put_v2(GM_ADDR inputX, GM_ADDR value, GM_ADDR i
         IndexPutV2Simd<DTYPE_X, DTYPE_INDICES, true> op;
         op.Init(inputX, value, indexedSizes, indexedStrides, indices, tilingData);
         op.Process();
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
         // IS_PERF selects the additional SIMD DMA templates without changing the mainline tiling keys.
     } else if constexpr (IS_SIMD && IS_PERF && !IS_ACCUMULATE) {
         REGISTER_TILING_FOR_TILINGKEY(

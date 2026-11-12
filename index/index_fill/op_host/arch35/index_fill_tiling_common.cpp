@@ -40,7 +40,7 @@ void CalculatePNQ(gert::Shape& xShape, int64_t dim, IndexFillInputInfo& inputDat
 
 ge::graphStatus CheckSupportForHif4(gert::TilingContext* context, IndexFillInputInfo& inputData)
 {
-    // FLOAT4在Ascend 960DT且尾轴是偶数时支持
+    // FLOAT4在Ascend 960系列(960DT/960PR)且尾轴是偶数时支持
 #if defined(METADEF_VERSION_NUM) && METADEF_VERSION_NUM >= 90300000
     if (inputData.dtype != ge::DataType::DT_HIFLOAT4 && inputData.dtype != ge::DataType::DT_FLOAT4_E2M1 &&
         inputData.dtype != ge::DataType::DT_FLOAT4_E1M2) {
@@ -50,7 +50,8 @@ ge::graphStatus CheckSupportForHif4(gert::TilingContext* context, IndexFillInput
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    bool isAscend960DT = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    bool isAscend960DT = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                         ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
 
     OP_CHECK_IF(
         !isAscend960DT,
@@ -181,7 +182,8 @@ ge::graphStatus IndexFillCommonTiling::GetPlatformInfo()
         sysWorkspaceSize_ = compileInfo->sysWorkspaceSize;
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-        inputData.isAscend960DT = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+        inputData.isAscend960DT = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                                  ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
         coreNum_ = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatform;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
