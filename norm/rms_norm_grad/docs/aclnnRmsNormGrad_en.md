@@ -142,7 +142,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>dgammaOut (aclTensor*)</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
