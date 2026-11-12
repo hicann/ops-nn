@@ -27,7 +27,7 @@ English | [简体中文](./README.md)
 
   When scale_alg is 0:
 
-   - Groups the RmsNorm output y along the tail axis dimension by k = 32 values, and dynamically quantizes a group of k values $\{\{V_i\}_{i=1}^{k}\}$ into $\{mxscale,\{P_i\}_{i=1}^{k}\}$
+   - Groups the RmsNorm output y along the tail axis dimension by k = 32 values, and dynamically quantizes a group of k values $\{V_i\}_{i=1}^{k}$ into $\{mxscale,\{P_i\}_{i=1}^{k}\}$
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax
     $$

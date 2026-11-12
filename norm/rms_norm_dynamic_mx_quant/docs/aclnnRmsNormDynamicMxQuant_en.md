@@ -33,7 +33,7 @@
   $$
   Use case 1: When scaleAlg is 0:
 
-   - Group the RmsNorm output y along the last axis into groups of k = 32 values. Each group of k values $\{\{V_i\}_{i=1}^{k}\}$ is dynamically quantized to $\{mxscale,\{P_i\}_{i=1}^{k}\}$
+   - Group the RmsNorm output y along the last axis into groups of k = 32 values. Each group of k values $\{V_i\}_{i=1}^{k}$ is dynamically quantized to $\{mxscale,\{P_i\}_{i=1}^{k}\}$
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax
     $$
