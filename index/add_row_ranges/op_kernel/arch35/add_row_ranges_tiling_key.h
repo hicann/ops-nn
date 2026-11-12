@@ -24,11 +24,14 @@
 #include "ascendc/host_api/tiling/template_argument.h"
 
 #define ADD_ROW_RANGES_TPL_SCH_MODE_DEFAULT 0
+#define ADD_ROW_RANGES_TPL_SCH_MODE_KAHAN 1
 
 ASCENDC_TPL_ARGS_DECL(AddRowRanges,
-                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, ADD_ROW_RANGES_TPL_SCH_MODE_DEFAULT));
+                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, ADD_ROW_RANGES_TPL_SCH_MODE_DEFAULT,
+                                            ADD_ROW_RANGES_TPL_SCH_MODE_KAHAN));
 
 ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
-                                                          ADD_ROW_RANGES_TPL_SCH_MODE_DEFAULT)));
+                                                          ADD_ROW_RANGES_TPL_SCH_MODE_DEFAULT,
+                                                          ADD_ROW_RANGES_TPL_SCH_MODE_KAHAN)));
 
 #endif // ADD_ROW_RANGES_TILING_KEY_H_

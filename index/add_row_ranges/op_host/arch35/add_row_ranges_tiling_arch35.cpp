@@ -23,6 +23,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/add_row_ranges_tiling_data.h"
 #include "../../op_kernel/arch35/add_row_ranges_tiling_key.h"
+#include "add_row_ranges_regbase_kahan_tiling.h"
 
 namespace optiling {
 
@@ -133,6 +134,13 @@ static ge::graphStatus AddRowRangesTilingFunc(gert::TilingContext* context)
         perCoreElements = PER_CORE_MIN_ELEMENTS;
     }
     int64_t needCoreNum = (totalElements > 0) ? Ops::Base::CeilDiv(totalElements, perCoreElements) : 1;
+    if (platform_ascendc::PlatformAscendC(context->GetPlatformInfo()).GetSocVersion() ==
+        platform_ascendc::SocVersion::ASCEND950) {
+        if (KahanRoutePreferred(M, N, K, coreNum)) {
+            return AddRowRangesKahanTiling(context, M, N, K, ubSize, coreNum);
+        }
+        OP_LOGD(context, "AddRowRanges kahan route skipped (M=%ld N=%ld K=%ld): SIMT path preferred", M, N, K);
+    }
 
     AddRowRangesTilingData* tiling = context->GetTilingData<AddRowRangesTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);

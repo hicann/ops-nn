@@ -32,6 +32,14 @@ struct AddRowRangesTilingData {
     int64_t totalElements = 0; // M × N，输出元素总数
     int32_t N = 0;             // 矩阵列数（坐标分解用）
     int32_t K = 0;             // src 矩阵行数（indices 范围裁剪用）
+    int32_t M = 0;             // 矩阵行数（Kahan 任务分解用）
+    int32_t tileCols = 0;      // 每任务列宽 = numLaneGroups * 64
+    int32_t numLaneGroups = 0; // 每任务独立 64-fp32-lane 组数（1 或 2）
+    int32_t numColTiles = 0;   // ceil(N / tileCols)
+    int32_t usedCoreNum = 0;   // 实际使用核数
+    int32_t blockRows = 0;     // 每次 DataCopyPad 的 j 行数
+    int32_t rowsPerTask = 0;   // 每个任务顺序处理的行数（row block）
+    int32_t numRowBlocks = 0;  // ceil(M / rowsPerTask)
 };
 
 #endif // ADD_ROW_RANGES_TILING_DATA_H_

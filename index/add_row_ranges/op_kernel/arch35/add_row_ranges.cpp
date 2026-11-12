@@ -16,6 +16,7 @@
  */
 
 #include "add_row_ranges_simt.h"
+#include "add_row_ranges_regbase_kahan.h"
 
 template <uint32_t schMode>
 __global__ __aicore__ void add_row_ranges(GM_ADDR x, GM_ADDR src, GM_ADDR indices, GM_ADDR x_out, GM_ADDR workspace,
@@ -26,5 +27,8 @@ __global__ __aicore__ void add_row_ranges(GM_ADDR x, GM_ADDR src, GM_ADDR indice
 
     if constexpr (schMode == static_cast<uint32_t>(ADD_ROW_RANGES_TPL_SCH_MODE_DEFAULT)) {
         NsAddRowRanges::Process<DTYPE_X>(x, src, indices, x_out, &tilingData);
+    }
+    if constexpr (schMode == static_cast<uint32_t>(ADD_ROW_RANGES_TPL_SCH_MODE_KAHAN)) {
+        NsAddRowRangesRegBaseKahan::Process<DTYPE_X>(x, src, indices, x_out, &tilingData);
     }
 }
