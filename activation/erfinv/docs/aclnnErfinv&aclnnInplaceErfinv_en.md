@@ -111,8 +111,8 @@ aclnnStatus aclnnInplaceErfinv(
       <td>out (aclTensor*)</td>
       <td>Output</td>
       <td>Output tensor for the erfinv computation. Corresponds to y in the formula.</td>
-      <td>shape must be the same as that of self.</td>
-      <td>FLOAT, FLOAT16, BFLOAT16</td>
+      <td>The shape must be the same as that of self. out must be a floating-point type.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16, DOUBLE</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>

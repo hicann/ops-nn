@@ -81,7 +81,7 @@ static inline bool CheckShape(const aclTensor* gradOutput, const aclTensor* self
 
     // 检查weight的元素个数是否为1, 或shape是否满足self的通道数约束
     int64_t weightNum = weight->Numel();
-    int64_t selfDimNum = self->GetViewShape().GetDimNum();
+    size_t selfDimNum = self->GetViewShape().GetDimNum();
     if (weightNum != 1) {
         // 不支持0维Tensor
         OP_CHECK_MIN_DIM(self, 1, return false);
