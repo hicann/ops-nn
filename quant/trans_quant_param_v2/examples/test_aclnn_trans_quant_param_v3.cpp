@@ -9,6 +9,8 @@
  */
 
 #include <memory>
+#include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -76,6 +78,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
     return 0;
 }
 
@@ -123,7 +126,7 @@ int aclnnTransQuantParamV3Test(int32_t deviceId, aclrtStream& stream)
 
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
-    aclOpExecutor* executor;
+    aclOpExecutor* executor = nullptr;
     // 调用aclnnTransQuantParamV3第一段接口
     ret = aclnnTransQuantParamV3GetWorkspaceSize(scale, offset, roundMode, out, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV3GetWorkspaceSize failed. ERROR: %d\n", ret);
@@ -162,7 +165,7 @@ int main()
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
-    aclrtStream stream;
+    aclrtStream stream = nullptr;
     auto ret = aclnnTransQuantParamV3Test(deviceId, stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV3Test failed. ERROR: %d\n", ret); return ret);
 
