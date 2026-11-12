@@ -61,16 +61,27 @@ def _load_op(name, target):
             elif hasattr(_mod, name):
                 globals()[name] = getattr(_mod, name)
             else:
-                globals()[name] = _mod
-        except (ImportError, RuntimeError) as e:
-            logger.warning("Failed to load op '%s': %s", name, e)
+                # 模块可导入但未导出算子同名符号：不绑定模块对象，避免静默故障
+                logger.error(
+                    "Failed to load op '%s' [AttributeError]: module '%s' has no attribute '%s'",
+                    name,
+                    module_path,
+                    attr_name,
+                )
+        except Exception as e:
+            logger.debug("Op '%s' failed to load via ops loader: %s", name, e)
         return
     try:
         _mod = importlib.import_module(target)
         if hasattr(_mod, name):
             globals()[name] = getattr(_mod, name)
         else:
-            globals()[name] = _mod
+            logger.error(
+                "Failed to load op '%s' [AttributeError]: module '%s' has no attribute '%s'",
+                name,
+                target,
+                name,
+            )
         try:
             _gmod = importlib.import_module(
                 "%s.graph_convert_%s" % (target.rsplit(".", 1)[0], name)
@@ -80,8 +91,8 @@ def _load_op(name, target):
                 globals()[_func] = getattr(_gmod, _func)
         except ImportError:
             pass
-    except (ImportError, RuntimeError) as e:
-        logger.warning("Failed to load op '%s': %s", name, e)
+    except Exception as e:
+        logger.debug("Op '%s' failed to load via ops loader: %s", name, e)
 
 
 _ep_ops = _discover_ops_from_entry_points()

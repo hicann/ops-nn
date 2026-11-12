@@ -8,22 +8,87 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-from .mx_to_block_mx_quant import mx_to_block_mx_quant
-from .dequant_situ_quant import dequant_situ_quant
-from .situ_mx_quant import situ_mx_quant
-from .swiglu_hi_f4_quant import swiglu_hi_f4_quant
-from .dynamic_hi_f4_quant import dynamic_hi_f4_quant
-from .dynamic_block_hi_f4_quant import dynamic_block_hi_f4_quant
-from .grouped_dynamic_hi_f4_quant import grouped_dynamic_hi_f4_quant
-from .anti_hi_f4_quant import anti_hi_f4_quant
+import importlib
+import logging
+
+_logger = logging.getLogger(__name__)
+
+_failed_ops = {}
+
+
+class OpLoadError(AttributeError):
+    """算子加载失败；直接访问抛出并携带根因。"""
+
+
+def _load_op_module(*names):
+    """导入 names[0] 模块并绑定算子名；失败仅记录不中断兄弟算子，访问时经 __getattr__ 回抛根因。"""
+    module_name = names[0]
+    try:
+        module = importlib.import_module("." + module_name, __name__)
+    except Exception as _load_err:
+        for name in names:
+            _failed_ops[name] = _load_err
+        _logger.error(
+            "Failed to load op '%s' [%s]: %s",
+            module_name,
+            type(_load_err).__name__,
+            _load_err,
+        )
+        return
+    for name in names:
+        op = getattr(module, name, None)
+        if op is None:
+            # 模块可导入但未导出同名符号（重构改名/命名空间包等）：
+            # 记入 _failed_ops 并回抛，而不是静默绑定模块对象掩盖故障
+            _failed_ops[name] = AttributeError(
+                "module '%s' has no attribute '%s'" % (module_name, name)
+            )
+            _logger.error(
+                "Failed to load op '%s' [%s]: %s",
+                name,
+                "AttributeError",
+                _failed_ops[name],
+            )
+            continue
+        globals()[name] = op
+
+
+_load_op_module("mx_to_block_mx_quant")
+
+_load_op_module("dequant_situ_quant")
+
+_load_op_module("situ_mx_quant")
+
+_load_op_module("swiglu_hi_f4_quant")
+
+_load_op_module("dynamic_hi_f4_quant")
+
+_load_op_module("dynamic_block_hi_f4_quant")
+
+_load_op_module("grouped_dynamic_hi_f4_quant")
+
+_load_op_module("anti_hi_f4_quant")
 
 __all__ = [
-    "mx_to_block_mx_quant",
-    "dequant_situ_quant",
-    "situ_mx_quant",
-    "swiglu_hi_f4_quant",
-    "dynamic_hi_f4_quant",
-    "dynamic_block_hi_f4_quant",
-    "grouped_dynamic_hi_f4_quant",
-    "anti_hi_f4_quant",
+    name
+    for name in (
+        "mx_to_block_mx_quant",
+        "dequant_situ_quant",
+        "situ_mx_quant",
+        "swiglu_hi_f4_quant",
+        "dynamic_hi_f4_quant",
+        "dynamic_block_hi_f4_quant",
+        "grouped_dynamic_hi_f4_quant",
+        "anti_hi_f4_quant",
+    )
+    if name not in _failed_ops
 ]
+
+
+def __getattr__(name):
+    _err = _failed_ops.get(name)
+    if _err is not None:
+        raise OpLoadError(
+            "op '%s' failed to load [%s]: %s" % (name, type(_err).__name__, _err)
+        ) from _err
+    raise AttributeError("module %r has no attribute %r" % (__name__, name))

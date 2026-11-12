@@ -123,6 +123,61 @@ def _collect_cpp(csrc_dir):
         _op_cpp_files.append((dst_rel, src_abs))
 
 
+def _write_category_init(f, names):
+    # 生成 category __init__：单算子加载失败只记录（error 日志 + _failed_ops），不中断兄弟算子；
+    # __all__ 剔除失败算子；OpLoadError 继承 AttributeError（直接访问抛根因、hasattr/getattr 探测按缺属性处理）。
+    f.write("import importlib\nimport logging\n\n")
+    f.write("_logger = logging.getLogger(__name__)\n\n")
+    f.write("_failed_ops = {}\n\n")
+    f.write("class OpLoadError(AttributeError):\n")
+    f.write("    pass\n\n\n")
+    f.write("def _load_op_module(*names):\n")
+    f.write("    module_name = names[0]\n")
+    f.write("    try:\n")
+    f.write('        module = importlib.import_module("." + module_name, __name__)\n')
+    f.write("    except Exception as _load_err:\n")
+    f.write("        for name in names:\n")
+    f.write("            _failed_ops[name] = _load_err\n")
+    f.write(
+        "        _logger.error(\n"
+        "            \"Failed to load op '%s' [%s]: %s\",\n"
+        "            module_name, type(_load_err).__name__, _load_err,\n"
+        "        )\n"
+    )
+    f.write("        return\n")
+    f.write("    for name in names:\n")
+    f.write("        op = getattr(module, name, None)\n")
+    f.write("        if op is None:\n")
+    f.write("            _failed_ops[name] = AttributeError(\n")
+    f.write(
+        "                \"module '%s' has no attribute '%s'\" % (module_name, name)\n"
+    )
+    f.write("            )\n")
+    f.write("            _logger.error(\n")
+    f.write("                \"Failed to load op '%s' [%s]: %s\",\n")
+    f.write('                name, "AttributeError", _failed_ops[name],\n')
+    f.write("            )\n")
+    f.write("            continue\n")
+    f.write("        globals()[name] = op\n")
+    f.write("\n")
+    for name in names:
+        f.write("_load_op_module(%r)\n" % name)
+    f.write(
+        "\n__all__ = [name for name in %r if name not in _failed_ops]\n"
+        % (tuple(names),)
+    )
+    f.write("\n")
+    f.write("def __getattr__(name):\n")
+    f.write("    _err = _failed_ops.get(name)\n")
+    f.write("    if _err is not None:\n")
+    f.write(
+        "        raise OpLoadError(\"op '%s' failed to load [%s]: %s\" % (name, type(_err).__name__, _err)) from _err\n"
+    )
+    f.write(
+        '    raise AttributeError("module %r has no attribute %r" % (__name__, name))\n'
+    )
+
+
 def _collect_op(cat, name, torch_extension, extra_py_files=_OP_EXTRA_PY_FILES):
     # Collect one operator's torch_extension dir, staging its files under (cat, name).
     _selected_op_categories.append((cat, name))
@@ -287,8 +342,7 @@ class BuildPyWithOps(_build_py):
                 dst = os.path.join(build_pkg, "ops", cat, "__init__.py")
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 with open(dst, "w") as f:
-                    for name in names:
-                        f.write("from .%s import %s\n" % (name, name))
+                    _write_category_init(f, names)
         else:
             for category, init_src in _op_category_inits.items():
                 dst = os.path.join(build_pkg, "ops", category, "__init__.py")
@@ -302,8 +356,7 @@ class BuildPyWithOps(_build_py):
                 dst = os.path.join(build_pkg, "ops", category, "__init__.py")
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 with open(dst, "w") as f:
-                    for name in names:
-                        f.write("from .%s import *\n" % name)
+                    _write_category_init(f, names)
         for rel_path, src_abs in _op_py_files:
             dst = os.path.join(build_pkg, rel_path)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
