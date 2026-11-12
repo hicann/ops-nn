@@ -125,6 +125,7 @@ public:
             .ExtendCfgInfo("partial.flag", "true")
             .ExtendCfgInfo("async.flag", "false");
         this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend350", aicore_config);
         this->AICore().AddConfig("ascend960dt", aicore_config);
         this->AICore().AddConfig("ascend960pr", aicore_config);
     }
