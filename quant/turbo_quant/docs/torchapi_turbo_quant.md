@@ -29,27 +29,27 @@
 
   1. 计算每个token的L2 norm：
 
-    $$
-    scale_i = norm_i = \sqrt{\sum_d latent_{i,d}^2 + 10^{-16}}
-    $$
+      $$
+      scale_i = norm_i = \sqrt{\sum_d latent_{i,d}^2 + 10^{-16}}
+      $$
 
   2. 使用`norm_i`归一化：
 
-    $$
-    u_{i,d} = latent_{i,d} / scale_i
-    $$
+      $$
+      u_{i,d} = latent_{i,d} / scale_i
+      $$
 
   3. 根据相邻codebook中心点的中点选择最近的4bit索引：
 
-    $$
-    nibble_{i,d} = \sum_{b=0}^{14} [u_{i,d} \ge (centroids_b + centroids_{b+1}) / 2]
-    $$
+      $$
+      nibble_{i,d} = \sum_{b=0}^{14} [u_{i,d} \ge (centroids_b + centroids_{b+1}) / 2]
+      $$
 
   4. 相邻两个维度的索引打包到一个字节中，低nibble保存偶数维索引，高nibble保存奇数维索引：
 
-    $$
-    y_{i,k} = nibble_{i,2k} \mathbin{|} (nibble_{i,2k+1} \ll 4)
-    $$
+      $$
+      y_{i,k} = nibble_{i,2k} \mathbin{|} (nibble_{i,2k+1} \ll 4)
+      $$
 
 ## 函数原型
 

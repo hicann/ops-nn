@@ -74,10 +74,10 @@ cann_ops_nn.cla_gate_backward(
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
 | `grad_merged` | Tensor | 必选 | 输出投影反传到gate merge的梯度，对应公式中的`G`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16` | 3维 `[T, N, D]`，`D`仅支持128或256 |
-| `global_attn` | Tensor | 必选 | 前向Global/CLA分支Attention输出，对应公式中的`O_g`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与 gradMerged 一致 | 3维 `[T, N, D]`，与 `grad_merged`完全一致 |
-| `local_attn` | Tensor | 必选 | 前向Local/SWA分支Attention输出，对应公式中的`O_l`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与 gradMerged 一致 | 3维 `[T, N, D]`，与 `grad_merged`完全一致 |
-| `global_gate_logits` | Tensor | 必选 | 前向Global gate logits，对应公式中的`z_g`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与 gradMerged 一致 | 2维 `[T, N]`，`T`、`N`与三路TND输入的前两维一致 |
-| `local_gate_logits` | Tensor | 必选 | 前向Local gate logits，对应公式中的`z_l`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与 gradMerged 一致 | 2维 `[T, N]`，与 `global_gate_logits`完全一致 |
+| `global_attn` | Tensor | 必选 | 前向Global/CLA分支Attention输出，对应公式中的`O_g`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与grad_merged一致 | 3维 `[T, N, D]`，与 `grad_merged`完全一致 |
+| `local_attn` | Tensor | 必选 | 前向Local/SWA分支Attention输出，对应公式中的`O_l`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与grad_merged一致 | 3维 `[T, N, D]`，与 `grad_merged`完全一致 |
+| `global_gate_logits` | Tensor | 必选 | 前向Global gate logits，对应公式中的`z_g`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与grad_merged一致 | 2维 `[T, N]`，`T`、`N`与三路TND输入的前两维一致 |
+| `local_gate_logits` | Tensor | 必选 | 前向Local gate logits，对应公式中的`z_l`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与grad_merged一致 | 2维 `[T, N]`，与 `global_gate_logits`完全一致 |
 | `input_attn_layout` | str | 可选 | 输入tensor的排布格式字符串，当前仅支持 `"TND"`。默认值 `"TND"`。 | - | - |
 
 ## 返回值说明

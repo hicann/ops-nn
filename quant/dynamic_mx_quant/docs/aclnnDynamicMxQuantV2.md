@@ -65,7 +65,7 @@
     - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
-  - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
+  - 场景3，当scaleAlg为2时，只涉及FLOAT4_E2M1类型：
     - 当dstTypeMax = 0.0/6.0/7.0时：
       - 将输入x在axis维度上按k = blocksize个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = blocksize：
       $$
@@ -81,7 +81,7 @@
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
-      - 将FP32映射到目标数据类型可表示的范围内，其中当dst_max_value=0时，$Amax(DType)$是目标精度能表示的最大值；当dst_max_value!=0时，$Amax(DType)$是dst_max_value传入值。
+      - 将FP32映射到目标数据类型可表示的范围内，其中当dstTypeMax=0时，$Amax(DType)$是目标精度能表示的最大值；当dstTypeMax!=0时，$Amax(DType)$是dst_max_value传入值。
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$
@@ -212,8 +212,8 @@ aclnnStatus aclnnDynamicMxQuantV2(
     <tr>
       <td>dstTypeMax（double）</td>
       <td>输入</td>
-      <td>表示maxType的取值，对应公式中的Amax(DType)。</td>
-      <td><ul><li>支持取值0.0和6.0-12.0，取值为0.0代表Amax(DType)为量化结果数据类型的最大值；取值为6.0-12.0代表Amax(DType)为传入值。仅支持在FP4E2M1和blocksize取32时设置该值</li></ul></td>
+      <td>表示dstTypeMax的取值，对应公式中的Amax(DType)。</td>
+      <td><ul><li>支持取值0.0和6.0-12.0，取值为0.0代表Amax(DType)为量化结果数据类型的最大值；取值为6.0-12.0代表Amax(DType)为传入值。仅支持在FLOAT4_E2M1和blocksize取32时设置该值</li></ul></td>
       <td>DOUBLE</td>
       <td>ND</td>
       <td>-</td>

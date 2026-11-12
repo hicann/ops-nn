@@ -27,7 +27,6 @@
 - 计算公式：
 
     设输入input的shape为[B, L, D]计算公式如下：
-    公式：
 
     $$
     \begin{cases}

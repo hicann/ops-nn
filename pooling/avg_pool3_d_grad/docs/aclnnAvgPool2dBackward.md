@@ -33,7 +33,7 @@
 
   各参数意义如下：
 
-  * $L$为损失函数，$\lfloor\cdot\rfloor$表示向上取整。
+  * $L$为损失函数，$\lfloor\cdot\rfloor$表示向下取整，即取不大于该值的最大整数。
   * $X_{i,j}$表示输入特征图中第$i$行，第$j$列。
   * $Y_{\lfloor\frac{i*s+m}{k}\rfloor,\lfloor\frac{j*s+n}{k}\rfloor}$表示输出特征图中第$\lfloor\frac{i*s+m}{k}\rfloor$行，第$\lfloor\frac{j*s+n}{k}\rfloor$列的像素值。
   * $k$表示池化窗口的大小。

@@ -184,7 +184,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     <tr>
       <td>axis（int64_t）</td>
       <td>输入</td>
-      <td>表示需要进行量化的elewise轴，其他的轴做broadcast，指定的轴不能超过输入`x1`的维度数。当前仅支持-1，传其他值均不生效。</td>
+      <td>表示需要进行量化的elementwise轴，其他的轴做broadcast，指定的轴不能超过输入`x1`的维度数。当前仅支持-1，传其他值均不生效。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

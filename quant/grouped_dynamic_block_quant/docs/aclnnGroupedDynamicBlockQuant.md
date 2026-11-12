@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：根据传入的分组索引的起始值（groupList）对各个group以基本块的粒度进行量化，量化为（FP8/HiFP8），并输出量化参数scale（FP32）。
+- 接口功能：根据传入的分组索引的起始值（groupList）对各个group以基本块的粒度进行量化，量化为（FP8/HiF8），并输出量化参数scale（FP32）。
 
 - 计算公式：
 
@@ -145,7 +145,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
     <tr>
       <td>rowBlockSize (int64_t)</td>
       <td>输入</td>
-      <td>表示指定M轴上的量化粒度。</td>
+      <td>表示M轴上的量化粒度。</td>
       <td>当前支持取值为1/128/256/512。</td>
       <td>INT64</td>
       <td>-</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
     <tr>
       <td>colBlockSize (int64_t)</td>
       <td>输入</td>
-      <td>表示指定N轴上的量化粒度。</td>
+      <td>表示N轴上的量化粒度。</td>
       <td>当前支持取值64/128/192/256。</td>
       <td>INT64</td>
       <td>-</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
     <tr>
       <td>groupListType (int64_t)</td>
       <td>输入</td>
-      <td>表示group_list的功能类型。</td>
+      <td>表示groupList的功能类型。</td>
       <td>当前支持取值为0，对应cumsum模式。</td>
       <td>INT64</td>
       <td>-</td>

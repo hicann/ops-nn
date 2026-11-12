@@ -127,7 +127,7 @@ aclnnStatus aclnnBatchNormElemt(
     <tr>
       <td>mean（aclTensor*）</td>
       <td>输入</td>
-      <td>表示输入数据均值，对应公式中的`E(x)`。</td>
+      <td>表示输入数据均值，对应公式中的`E[x]`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>

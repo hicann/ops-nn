@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本接口相较于aclnnSwiGlu，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
+- 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGLU计算。本接口相较于aclnnSwiGlu，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGLU以及MoE模型使用的分组场景。
 
 - 计算公式：
 
@@ -68,7 +68,7 @@
      $$
      B = x[ : , h : ]
      $$
-  4. 根据输入参数alpha、limit、bias进行变体SwiGlu计算，公式如下：
+  4. 根据输入参数alpha、limit、bias进行变体SwiGLU计算，公式如下：
 
      $$
      A = A.clamp(min=None, max=limit)
@@ -171,7 +171,7 @@ aclnnStatus aclnnClippedSwiglu(
     <tr>
       <td>alpha（double）</td>
       <td>输入</td>
-      <td>公式中的输入alpha，表示变体SwiGlu使用的参数。</td>
+      <td>公式中的输入alpha，表示变体SwiGLU使用的参数。</td>
       <td>建议为1.702。</td>
       <td>-</td>
       <td>-</td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnClippedSwiglu(
     <tr>
       <td>limit（double）</td>
       <td>输入</td>
-      <td>公式中的输入limit，表示变体SwiGlu使用的门限值。</td>
+      <td>公式中的输入limit，表示变体SwiGLU使用的门限值。</td>
       <td>必须大于0，建议为7.0。</td>
       <td>-</td>
       <td>-</td>
@@ -191,7 +191,7 @@ aclnnStatus aclnnClippedSwiglu(
     <tr>
       <td>bias（double）</td>
       <td>输入</td>
-      <td>公式中的输入bias，表示变体SwiGlu使用的偏差参数。</td>
+      <td>公式中的输入bias，表示变体SwiGLU使用的偏差参数。</td>
       <td>建议为1.0。</td>
       <td>-</td>
       <td>-</td>

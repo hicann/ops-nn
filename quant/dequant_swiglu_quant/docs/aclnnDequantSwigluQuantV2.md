@@ -560,7 +560,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
 - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
   - 当groupIndexOptional输入时，算子支持的输入张量的内存大小有上限，x的尾轴不超过7232。
   - x的最后一维必须能被64整除。
-  - quant_mode为dynamic时，quant_offset必须为空。
+  - quantModeOptional为dynamic时，quantOffsetOptional必须为空。
 <!-- end id10 -->
 
 ## 调用示例

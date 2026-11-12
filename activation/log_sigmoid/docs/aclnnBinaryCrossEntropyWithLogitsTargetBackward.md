@@ -80,7 +80,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
       <td class="tg-0pky">gradOutput（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">网络反向传播前一步的梯度值。</td>
-      <td class="tg-0pky">shape需要可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape</td>
+      <td class="tg-0pky">shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape</td>
       <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -110,7 +110,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
       <td class="tg-0pky">weightOptional（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">二分交叉熵权重。</td>
-      <td class="tg-0pky">shape需要可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape，当weightOptional为空时，将以self的shape创建一个全1的Tensor。</td>
+      <td class="tg-0pky">shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape，当weightOptional为空时，将以self的shape创建一个全1的Tensor。</td>
       <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>

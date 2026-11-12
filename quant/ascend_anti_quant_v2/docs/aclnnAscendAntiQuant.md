@@ -104,7 +104,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>输入</td>
       <td>表示需要做反量化的输入。对应公式中的x。</td>
       <td><ul><li>支持空Tensor；</li><li>当数据类型是INT32时，每个数据被作为8个INT4数据使用；</li><li>当数据类型是INT4时，shape的尾轴为偶数。</li></ul></td>
-      <td>INT4、INT8、INT32、HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2</td>
+      <td>INT4、INT8、INT32、HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>反量化中的scale值。对应公式中的scale。</td>
-      <td><ul><li>支持空Tensor；</li><li>scale的维度数必须与x相同，或者是1维；</li><li>如果x是1维，scale的形状必须是[1]或与x相同；</li><li>如果scale是1维，其大小必须是1、x[-1]或x[-2]；</li><li>如果scale是多维，最多只能有一个非1的维度，且这个非1的维度只能是-1或-2轴；</li><li>当输入x为INT32类型且反量化轴为尾轴时，scale的尾轴需要等于x尾轴大小的8倍；</li><li>当x的类型为HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2时，scale只支持FLOAT32。</li></ul></td>
+      <td><ul><li>支持空Tensor；</li><li>scale的维度数必须与x相同，或者是1维；</li><li>如果x是1维，scale的形状必须是[1]或与x相同；</li><li>如果scale是1维，其大小必须是1、x[-1]或x[-2]；</li><li>如果scale是多维，最多只能有一个非1的维度，且这个非1的维度只能是-1或-2轴；</li><li>当输入x为INT32类型且反量化轴为尾轴时，scale的尾轴需要等于x尾轴大小的8倍；</li><li>当x的类型为HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2时，scale只支持FLOAT32。</li></ul></td>
       <td>FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>sqrtMode（bool）</td>
       <td>输入</td>
       <td>指定scale参与计算的逻辑。对应公式中的sqrtMode。</td>
-      <td>当x的数据类型为HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2时，sqrtMode为false。</td>
+      <td>当x的数据类型为HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2时，sqrtMode为false。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

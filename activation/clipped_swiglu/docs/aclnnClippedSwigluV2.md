@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本接口相较于aclnnClippedSwiglu，新增了一个输入参数：clamp_mode，用于支持部分新模型需要将clamp操作后移至silu激活之后的场景。
+- 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本接口相较于aclnnClippedSwiglu，新增了一个输入参数：clampMode，用于支持部分新模型需要将clamp操作后移至silu激活之后的场景。
 
 - 计算公式：
 

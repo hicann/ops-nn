@@ -62,7 +62,7 @@ cann_ops_nn.swiglu_group_quant(
 | `x` | Tensor | 必选 | SwiGLU输入，最后一维会被均分为两部分。 | `torch.float16`、`torch.bfloat16`（quant_mode为2/3时额外支持`torch.float32`） | quant_mode=5仅支持2维；其他模式为2-8维（quant_mode为1时为2-7维） |
 | `weight` | Tensor | 可选 | 逐token权重，非空时乘到SwiGLU结果上，加权后的结果用于量化。 | quant_mode=5支持`torch.float16`、`torch.bfloat16`、`torch.float32`，其他模式仅支持`torch.float32` | 1-8维，元素个数等于`x`除最后一维外的元素个数 |
 | `group_index` | Tensor | 可选 | count模式分组token数。 | `torch.int64` | 1维 |
-| `scale` | Tensor | 可选 | HiFloat8静态量化使用的scale，仅quant mode为2时使用。 | `torch.float32` | 1维 |
+| `scale` | Tensor | 可选 | HiFloat8静态量化使用的scale，仅quant_mode为2时使用。 | `torch.float32` | 1维 |
 | `dst_type` | int | 可选 | 目标量化类型的torch dtype编码，默认`291`。 | - | - |
 | `quant_mode` | int | 可选 | 量化模式，支持`0`、`1`、`2`、`3`、`5`。其中`1`为原MX公式，`5`为MX V2公式。 | - | - |
 | `block_size` | int | 可选 | 量化块大小，`0`表示使用模式默认值。 | - | - |

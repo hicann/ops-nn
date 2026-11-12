@@ -225,7 +225,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     <tr>
       <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
-      <td>可选输入参数，表示第二个被融合的量化计算子中的scale/smooth输入。对应公式中的scales2Optional。</td>
+      <td>可选输入参数，表示第二个被融合的量化算子中的scale/smooth输入。对应公式中的scales2Optional。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与scales1Optional保持一致。</li><li>可选输入参数传入时，取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -235,7 +235,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     <tr>
       <td>zeroPoints1Optional（aclTensor*）</td>
       <td>输入</td>
-      <td>可选输入参数，表示第一个被融合的量化计算子中的zeroPoints输入，仅在quantMode = "static"时有效。对应公式中的zeroPoints1Optional。</td>
+      <td>可选输入参数，表示第一个被融合的量化算子中的zeroPoints输入，仅在quantMode = "static"时有效。对应公式中的zeroPoints1Optional。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与scales1Optional保持一致。</li><li>可选输入参数传入时，取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -245,7 +245,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     <tr>
       <td>zeroPoints2Optional（aclTensor*）</td>
       <td>输入</td>
-      <td>可选输入参数，表示第二个被融合的量化计算子中的zeroPoints输入，仅在quantMode = "static"时有效。对应公式中的zeroPoints2Optional。</td>
+      <td>可选输入参数，表示第二个被融合的量化算子中的zeroPoints输入，仅在quantMode = "static"时有效。对应公式中的zeroPoints2Optional。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与scales1Optional保持一致。</li><li>可选输入参数传入时，取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>

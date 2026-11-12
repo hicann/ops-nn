@@ -183,8 +183,8 @@ aclnnStatus aclnnMaxUnpool2d(
       <td>传入的self、indices、outputSize或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="9">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>self和indices的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -207,9 +207,6 @@ aclnnStatus aclnnMaxUnpool2d(
     </tr>
     <tr>
       <td>out在H、W维度上的size大小与outputSize中的两个元素值不相等。</td>
-    </tr>
-    <tr>
-      <td>outputSize的乘积小于self的H轴与W轴的乘积。 </td>
     </tr>
   </tbody>
   </table>

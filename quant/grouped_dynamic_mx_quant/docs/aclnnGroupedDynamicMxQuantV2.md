@@ -96,7 +96,7 @@
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
-      - 将FP32映射到目标数据类型可表示的范围内，其中当`dst_type_max`为0时，$Amax(DType)$是目标精度能表示的最大值；当`dst_type_max`不为0时，$Amax(DType)$是`dst_type_max`传入值。
+      - 将FP32映射到目标数据类型可表示的范围内，其中当`dstTypeMax`为0时，$Amax(DType)$是目标精度能表示的最大值；当`dstTypeMax`不为0时，$Amax(DType)$是`dstTypeMax`传入值。
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$

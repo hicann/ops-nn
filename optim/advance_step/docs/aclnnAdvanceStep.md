@@ -115,7 +115,7 @@ aclnnStatus aclnnAdvanceStep(
     <tr>
       <td>sampledTokenIds（aclTensor*）</td>
       <td>输入</td>
-      <td>待进行AdvanceStep计算的入参，用于储存tokenID，公式中的输入sampledTokenIds。</td>
+      <td>待进行AdvanceStep计算的入参，用于存储tokenID，公式中的输入sampledTokenIds。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numQueries一致，第二维长度为1。</li><li>取值范围是大于0的正整数。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>

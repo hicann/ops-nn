@@ -179,7 +179,7 @@ aclnnStatus aclnnRepeatInterleave(
         <td>repeats不为0D/1D tensor。</td>
       </tr>
       <tr>
-        <td>当repeats为1D tensors，repeats的size不为1，且不为self的元素个数。</td>
+        <td>当repeats为1D tensor，repeats的size不为1，且不为self的元素个数。</td>
       </tr>
       <tr>
         <td>self的维度数超过8。</td>

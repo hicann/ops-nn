@@ -444,13 +444,6 @@ aclnnStatus aclnnInplaceBaddbmm(
     </tr>
   </tbody></table>
 
-  <!-- npu="910,310p" id10 -->
-  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：
-    - 不支持BFLOAT16数据类型；
-    - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
-    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
-    - 不支持cubeMathType=3、4。
-  <!-- end id10 -->
   <!-- npu="910,310p" id11 -->
   - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：
     - 不支持BFLOAT16数据类型；

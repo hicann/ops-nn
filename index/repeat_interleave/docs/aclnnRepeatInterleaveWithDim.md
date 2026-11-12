@@ -193,7 +193,7 @@ aclnnStatus aclnnRepeatInterleaveWithDim(
         <td>dim的值不在[-self的维度数量, self的维度数量-1]之间。</td>
       </tr>
       <tr>
-        <td>当repeats为1D tensors，repeats的size不为1，且不为self的dim维度的size。</td>
+        <td>当repeats为1D tensor，repeats的size不为1，且不为self的dim维度的size。</td>
       </tr>
       <tr>
         <td>self的维度数超过8。</td>

@@ -331,7 +331,7 @@
         <td>输入/输出</td>
         <td>公式中的self。</td>
         <td>scatter的目标张量。selfRef的维度数量需要与index相同，支持空tensor。</td>
-        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。</td>
+        <td>UINT8、INT8、INT16、INT32、INT64、BOOL、FLOAT16、FLOAT32、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16。</td>
         <td>ND</td>
         <td>0-8</td>
         <td>√</td>

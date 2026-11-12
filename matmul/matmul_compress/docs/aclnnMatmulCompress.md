@@ -126,7 +126,7 @@ aclnnStatus aclnnMatmulCompress(
       <td>out</td>
       <td>输出</td>
       <td>输出Tensor。</td>
-      <td>通过示例中的msModelSlim工具获取</td>
+      <td>-</td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>2</td>

@@ -145,7 +145,7 @@ aclnnStatus aclnnForeachMulScalar(
   <!-- end id7 -->
 
   <!-- npu="950" id8 -->
-  - <term>Ascend 950PR&950DT系列产品</term>：数据类型与入参`x`的数据类型具有一定对应关系：
+  - <term>Ascend 950PR&950DT系列产品</term>：
     - 参数`x`、`out`支持包含的最大Tensor个数均为50。
     - 参数`scalar`的数据类型与入参`x`的数据类型具有一定对应关系：
       - 当`x`的数据类型为FLOAT32、INT32时，数据类型与`x`的数据类型保持一致。

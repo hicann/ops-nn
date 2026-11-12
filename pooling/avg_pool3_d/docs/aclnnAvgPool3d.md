@@ -136,7 +136,7 @@ aclnnStatus aclnnAvgPool3d(
     <tr>
       <td>padding</td>
       <td>输入</td>
-      <td>在输入的D、H、W方向上padding补0的层数，公式中的paddings。</td>
+      <td>在输入的D、H、W方向上padding补0的层数，公式中的padding。</td>
       <td>长度为1(PD = PH = PW)或3(PD, PH, PW)，数值在[0, kernelSize/2]的范围内。</td>
       <td>INT64</td>
       <td>-</td>

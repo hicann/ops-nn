@@ -295,10 +295,10 @@ aclnnStatus aclnnLayerNormBackward(
       <td>normalizedShape维度小于1维。</td>
     </tr>
     <tr>
-      <td>mean的shape乘积与input从第0根轴到第len(input) - len(normalizedShape)轴的乘积不相等。</td>
+      <td>mean的shape乘积与input从第0轴到第len(input) - len(normalizedShape)轴的乘积不相等。</td>
     </tr>
     <tr>
-      <td>rstd的shape乘积与input从第0根轴到第len(input) - len(normalizedShape)轴的乘积不相等。</td>
+      <td>rstd的shape乘积与input从第0轴到第len(input) - len(normalizedShape)轴的乘积不相等。</td>
     </tr>
     <tr>
       <td>weightOptional非空且shape与normalizedShape不相等。</td>
