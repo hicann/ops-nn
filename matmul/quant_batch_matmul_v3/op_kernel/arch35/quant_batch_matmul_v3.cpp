@@ -48,7 +48,7 @@
 #define QBMMV3_IS_HIF4_DTYPE_TPL false
 #endif
 
-#if ((__NPU_ARCH__ != 9201 && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0) || QBMMV3_IS_HIF4_DTYPE_TPL)
+#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0 || QBMMV3_IS_HIF4_DTYPE_TPL)
 #include "qbmm_mx_basic_api_cmct.h"
 #else
 #include "qbmm_cube_basic_api_cmct.h"
