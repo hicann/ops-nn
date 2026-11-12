@@ -45,6 +45,17 @@ constexpr char const* kAttrSingleOp = "_is_single_op";
 constexpr char const* kAttrOutDtype = "dequantouttype";
 constexpr char const* kAttrOffset = "offset";
 constexpr char const* kSetQuantOffsetScaleOp = "SetQuantOffsetScale";
+
+bool IsDav5162Arch()
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optionalInfo;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
+        ge::GRAPH_SUCCESS) {
+        return false;
+    }
+    return platformInfo.str_info.short_soc_version == "Ascend5162";
+}
 // the SetM1Dequant host op packs the requant zero point into M1 bits[45:37] as a 9-bit
 // two's-complement field: it reads the "offset" attr as a float, converts it to an int and
 // shifts it left by 37, so a negative zero point must be pre-encoded with the 9-bit mask
@@ -174,6 +185,9 @@ bool Conv2DTransposeFixpipeFusionPass::GetNodeDesc(const GNode& node)
     if (hasBias) {
         OP_CHECK_IF(node.GetInputDesc(BIAS_INDEX, biasDesc) != GRAPH_SUCCESS,
                     OP_LOGE(GetNodeType().GetString(), "Get bias desc failed"), return false);
+        if (IsDav5162Arch() && biasDesc.GetDataType() == ge::DT_FLOAT) {
+            biasDesc.SetDataType(ge::DT_FLOAT16);
+        }
     }
 
     return true;
