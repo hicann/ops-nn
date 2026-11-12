@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file inplace_index_add.cpp
+ * \file l1_loss_grad.cpp
  * \brief
  */
 #include "l1_loss_grad.h"

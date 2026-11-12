@@ -112,12 +112,12 @@ aclnnStatus aclnnL1LossBackward(
       <td class="tg-0pky">INT64</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">gradInput（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
-      <td class="tg-0pky">输出的损失</td>
+      <td class="tg-0pky">计算输出</td>
       <td class="tg-0pky">shape为gradOutput、self、target三个输入做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape。<br>数据类型要与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td class="tg-0pky">ND</td>
@@ -146,6 +146,24 @@ aclnnStatus aclnnL1LossBackward(
     </tr>
   </tbody></table>
 
+  上表“数据类型”列为各产品支持的数据类型全集，按产品的差异如下：
+
+  <!-- npu="950" id7 -->
+  - <term>Ascend 950PR&950DT系列产品</term>：gradOutput、self、target、gradInput的数据类型支持FLOAT、FLOAT16、BFLOAT16。
+  <!-- end id7 -->
+  <!-- npu="A3" id8 -->
+  - <term>Atlas A3系列产品</term>：gradOutput、self、target、gradInput的数据类型支持FLOAT、FLOAT16、BFLOAT16。
+  <!-- end id8 -->
+  <!-- npu="910b" id9 -->
+  - <term>Atlas A2系列产品</term>：gradOutput、self、target、gradInput的数据类型支持FLOAT、FLOAT16、BFLOAT16。
+  <!-- end id9 -->
+  <!-- npu="310p" id10 -->
+  - <term>Atlas推理系列产品</term>：gradOutput、self、target、gradInput的数据类型支持FLOAT、FLOAT16，不支持BFLOAT16。数据类型推导结果为BFLOAT16时返回161002。
+  <!-- end id10 -->
+  <!-- npu="910" id11 -->
+  - <term>Atlas训练系列产品</term>：gradOutput、self、target、gradInput的数据类型支持FLOAT、FLOAT16，不支持BFLOAT16。数据类型推导结果为BFLOAT16时返回161002。
+  <!-- end id11 -->
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
@@ -172,28 +190,30 @@ aclnnStatus aclnnL1LossBackward(
       <tr>
         <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
         <td class="tg-0pky" rowspan="7">161002</td>
-        <td class="tg-0pky">self、gradOutput、target的数据类型不满足数据类型推导规则。</td>
+        <td class="tg-0pky">reduction值不在0~2范围之内。</td>
       </tr>
       <tr>
-        <td class="tg-0pky">gradOutput、target、self做数据类型推导后的结果不在支持的范围之内。</td>
+        <td class="tg-0pky">gradOutput、self、target三者的数据类型两两之间无法完成数据类型推导（推导结果为未定义），例如其中之一为COMPLEX类型而其余为浮点类型。</td>
       </tr>
       <tr>
-        <td class="tg-0pky">gradOutput、self和target的shape无法做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>。</td>
+        <td class="tg-0pky">数据类型推导成功，但推导结果无法cast到gradInput的数据类型。例如推导结果为FLOAT而gradInput为INT32。</td>
       </tr>
       <tr>
-        <td class="tg-0pky">gradOutput、self和target的shape超过8维。</td>
+        <td class="tg-0pky">数据类型推导成功且可cast到gradInput，但推导结果不在当前产品支持的数据类型范围之内。例如在<term>Atlas训练系列产品</term>或<term>Atlas推理系列产品</term>上推导结果为BFLOAT16，或在任意产品上推导结果为UINT16、INT32等非上表所列类型。</td>
+      </tr>
+      <tr>
+        <td class="tg-0pky">gradOutput、self、target或gradInput的维度超过8维。</td>
+      </tr>
+      <tr>
+        <td class="tg-0lax">gradOutput、self和target的shape无法做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>。</td>
       </tr>
       <tr>
         <td class="tg-0lax">gradOutput、self和target做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape与gradInput不一致。</td>
       </tr>
-      <tr>
-        <td class="tg-0lax">reduction值不在0~2范围之内。</td>
-      </tr>
-      <tr>
-        <td class="tg-0lax">计算结果无法cast到gradInput的dtype。</td>
-      </tr>
     </tbody>
     </table>
+
+  上表各条件按接口内部的实际校验顺序排列：reduction取值 → 数据类型推导 → 推导结果到gradInput的cast可行性 → 推导结果是否在产品支持列表内 → 维度上限 → broadcast关系 → 输出shape一致性。当一次调用同时命中多个条件时，以排序在前的条件为实际触发原因；所有条件均返回同一错误码161002，无法通过错误码区分具体原因，需结合日志判断。
 
 ## aclnnL1LossBackward
 
@@ -238,6 +258,25 @@ aclnnStatus aclnnL1LossBackward(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
+
+- 数据类型与维度：
+    - gradOutput、self、target三者的数据类型需满足[互推导关系](../../../docs/zh/context/deduction_relationship.md)，推导结果需在当前产品支持的数据类型范围之内（见“参数说明”中的产品差异说明），且需可cast到gradInput的数据类型。
+    - gradOutput、self、target、gradInput的shape支持0~8维，其中0维表示标量输入。
+
+- 空Tensor：
+    - 当gradOutput、self、target中任一输入为空Tensor（包含长度为0的轴）时，aclnnL1LossBackwardGetWorkspaceSize返回ACLNN_SUCCESS且workspaceSize为0，不对gradInput写入任何数据，gradInput保持调用前的内存内容。调用者需自行保证该场景下不使用gradInput的内容。
+
+- inf/nan输入：
+    - 输入包含inf或nan时的输出行为未定义，本接口不做保证。
+
+- 动态shape与动态rank：
+    - 算子注册了动态shape与动态rank能力标记，但动态维标记-1、动态rank标记-2在本接口上的公开语义未定义，不建议依赖。
+
+- 数据格式：
+    - 数据格式仅声明支持ND。传入非ND的存储格式（如FRACTAL_NZ、NCHW）时，本接口不做拦截，仅在FRACTAL_NZ场景打印告警日志，计算结果的精度不做保证。
+
+- 非连续Tensor：
+    - 本接口支持非连续的Tensor：内部对gradOutput、self、target各做一次连续化转换，输出经ViewCopy写回，故gradInput也可为非连续Tensor。
 
 - 确定性计算：
     - aclnnL1LossBackward默认确定性实现。

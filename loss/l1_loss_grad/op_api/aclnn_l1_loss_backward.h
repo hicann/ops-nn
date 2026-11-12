@@ -25,15 +25,19 @@ extern "C" {
  * 算子功能：平均绝对误差函数的反向传播。
  *
  * @param [in] gradOutput：npu device侧的aclTensor，数据类型需要与self、target满足数据类型推导规则，
- * 且推导后数据类型支持FLOAT、FLOAT16，shape需要与self、target满足broadcast关系。支持非连续的Tensor，数据格式支持ND。
+ * 且推导后数据类型支持FLOAT、FLOAT16、BFLOAT16（Atlas 训练系列产品与Atlas 推理系列产品不支持BFLOAT16），
+ * shape支持0~8维，需要与self、target满足broadcast关系。支持非连续的Tensor，数据格式支持ND。
  * @param [in] self：npu device侧的aclTensor，数据类型需要与gradOutput、target满足数据类型推导规则，
- * 且推导后数据类型支持FLOAT、FLOAT16，shape需要与gradOutput、target满足broadcast关系。支持非连续的Tensor，数据格式支持ND。
+ * 且推导后数据类型支持FLOAT、FLOAT16、BFLOAT16（Atlas 训练系列产品与Atlas 推理系列产品不支持BFLOAT16），
+ * shape支持0~8维，需要与gradOutput、target满足broadcast关系。支持非连续的Tensor，数据格式支持ND。
  * @param [in] target：npu device侧的aclTensor，数据类型需要与self、gradOutput满足数据类型推导规则，
- * 且推导后数据类型支持FLOAT、FLOAT16。shape需要与gradOutput、self满足broadcast关系。支持非连续的Tensor，数据格式支持ND。
+ * 且推导后数据类型支持FLOAT、FLOAT16、BFLOAT16（Atlas 训练系列产品与Atlas 推理系列产品不支持BFLOAT16），
+ * shape支持0~8维，需要与gradOutput、self满足broadcast关系。支持非连续的Tensor，数据格式支持ND。
  * @param [in] reduction：host侧的int64，指定要应用到输出的缩减，支持 0('none') | 1('mean') | 2('sum')。'none'
  * 表示不应用减少， 'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
- * @param [in] gradInput：npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16。
- * shape需要是target与self、gradOutput broadcast之后的shape。支持非连续的Tensor，数据格式支持ND。
+ * @param [out] gradInput：npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16
+ * （Atlas 训练系列产品与Atlas 推理系列产品不支持BFLOAT16），且需要与self满足数据类型推导规则。
+ * shape支持0~8维，需要是target与self、gradOutput broadcast之后的shape。支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
@@ -46,7 +50,7 @@ ACLNN_API aclnnStatus aclnnL1LossBackwardGetWorkspaceSize(const aclTensor* gradO
 /**
  * @brief aclnnL1LossBackward的第二段接口，用于执行计算。
  *
- * 算子功能：均方误差函数的反向传播。
+ * 算子功能：平均绝对误差（L1 Loss）函数的反向传播。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
  * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口aclnnL1LossBackwardGetWorkspaceSize获取。

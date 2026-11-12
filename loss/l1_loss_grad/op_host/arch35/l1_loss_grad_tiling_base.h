@@ -9,8 +9,8 @@
  */
 
 /*!
- * \file l1_loss_grad_tiling.h
- * \brief l1_loss_grad_tiling
+ * \file l1_loss_grad_tiling_base.h
+ * \brief l1_loss_grad_tiling_base
  */
 
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_L1_LOSS_GRAD_TILING_H
@@ -23,7 +23,7 @@
 namespace optiling {
 class L1LossGradTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit L1LossGradTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context){};
+    explicit L1LossGradTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {};
 
 protected:
     bool IsCapable() override;

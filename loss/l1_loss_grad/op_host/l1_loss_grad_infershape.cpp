@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file broadcast_infer.cc
+ * \file l1_loss_grad_infershape.cpp
  * \brief
  */
 #include "register/op_impl_registry.h"
