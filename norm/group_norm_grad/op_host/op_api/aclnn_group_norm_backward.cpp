@@ -597,12 +597,17 @@ static aclnnStatus GetDbeta(const aclTensor* gradOutReshape, aclTensor* gradBeta
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* GetgammaContiguous(const aclTensor* gradOut, const aclTensor* gamma, int64_t C,
-                                           aclOpExecutor* executor)
+static const aclTensor* GetgammaContiguous(const aclTensor* gradOut, const aclTensor* mean, const aclTensor* gamma,
+                                           int64_t C, aclOpExecutor* executor)
 {
     auto gammaContiguous = gamma;
     if (gamma == nullptr) {
-        auto gammaTmp = executor->AllocTensor(op::Shape({C}), gradOut->GetDataType());
+        // 非Regbase平台保持既有行为：按gradOut的dtype构造全1填充；
+        ge::DataType fillDtype = gradOut->GetDataType();
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
+            fillDtype = mean->GetDataType();
+        }
+        auto gammaTmp = executor->AllocTensor(op::Shape({C}), fillDtype);
         CHECK_RET(gammaTmp != nullptr, nullptr);
         gammaContiguous = FillValue(gammaTmp, 1.0, executor);
     } else {
@@ -704,7 +709,7 @@ aclnnStatus aclnnGroupNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
     CHECK_RET(meanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto rstdContiguous = l0op::Contiguous(rstd, uniqueExecutor.get());
     CHECK_RET(rstdContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto gammaContiguous = GetgammaContiguous(gradOut, gamma, C, uniqueExecutor.get());
+    auto gammaContiguous = GetgammaContiguous(gradOut, mean, gamma, C, uniqueExecutor.get());
     CHECK_RET(gammaContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 空tensor在kernel中支持，91095场景
