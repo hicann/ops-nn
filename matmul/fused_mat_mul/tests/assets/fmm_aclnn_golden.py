@@ -26,6 +26,13 @@ sys.path.insert(
 )
 import matmul_golden_util as _util
 
+# mathcubetype枚举
+CUBE_MATH_KEEP_DTYPE = 0
+CUBE_MATH_ALLOW_FP32_DOWN_PRECISION = 1
+CUBE_MATH_USE_FP16 = 2
+CUBE_MATH_USE_HF32 = 3
+CUBE_MATH_USE_FP32_ADD = 4
+
 
 def hf32_truncate_torch(tensor):
     """Convert fp32 torch tensor to HF32 via numpy."""
@@ -45,6 +52,21 @@ def _apply_cube_precision(tensors, cube_math_type):
     if cube_math_type == 2 and tensors[0].dtype == torch.float32:
         return [t.to(torch.float16) for t in tensors]
     return list(tensors)
+
+
+def _use_fp32_domain_fusion(x1, x2, x3, cube_math_type):
+    import torch
+
+    if cube_math_type != CUBE_MATH_USE_FP32_ADD or x3 is None:
+        return False
+    if x1.dim() != x2.dim() or x1.dim() not in (2, 3):
+        return False
+    x1_dtype = x1.dtype
+    return (
+        x1_dtype in (torch.float16, torch.bfloat16)
+        and x2.dtype == x1_dtype
+        and x3.dtype == x1_dtype
+    )
 
 
 def torch_fused_matmul_core(
@@ -67,9 +89,13 @@ def torch_fused_matmul_core(
       * bf16/fp16 inputs -> upcast to fp32 (mirrors NPU cube fp32 accumulator)
       * matmul + bias (if present)
       * fused op applied: relu/add/mul/gelu_erf/gelu_tanh/sigmoid/16cast32
+        - add/mul:cmt==4,fp32域融合，中间不舍入
       * result cast to out_dtype
+
     """
     import torch
+
+    fp32_domain_fusion = _use_fp32_domain_fusion(x1, x2, x3, cube_math_type)
 
     x1, x2 = _apply_cube_precision([x1, x2], cube_math_type)
 
@@ -85,6 +111,11 @@ def torch_fused_matmul_core(
     if fused_op_type in ("add", "mul") and out_dtype is not None:
         if fused_op_type == "add" and (alpha != 1.0 or beta != 1.0):
             mm_out = alpha * mm_out + beta * x3.to(torch.float32)
+        elif fp32_domain_fusion:
+            if fused_op_type == "add":
+                mm_out = mm_out + x3.to(torch.float32)
+            else:
+                mm_out = mm_out * x3.to(torch.float32)
         else:
             mm_out = mm_out.to(out_dtype)
             if fused_op_type == "add":

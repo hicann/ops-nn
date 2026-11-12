@@ -46,6 +46,47 @@ def _enable_hf32_for_fp32(*tensors):
     return 3
 
 
+def _compat_impl_cmt(x1, x2, x3, fused_op_type):
+    """兼容模式高精度判定（TORCH_NPU_USE_COMPATIBLE_IMPL=1）：fusedOpType 为
+    add/mul、x1 为 fp16/bf16、x1/x2/x3 同 dtype 时传 USE_FP32_ADD(4)，对齐
+    op-plugin（npu_fused_matmul）与 cann_ops wrapper（NeedFusedAddMulHighPrecision）
+    的兼容语义；aclnn 侧 GetInnerPrecise 命中后 NPU 在 fp32 域融合（中间不
+    round）。dim 的 2D/3D 对齐由 torch_fused_matmul_core 内的
+    _use_fp32_domain_fusion 完成。"""
+    if os.environ.get("TORCH_NPU_USE_COMPATIBLE_IMPL") != "1":
+        return None
+    if fused_op_type not in ("add", "mul") or x3 is None:
+        return None
+    if x1.dtype not in (torch.float16, torch.bfloat16):
+        return None
+    if x2.dtype != x1.dtype or x3.dtype != x1.dtype:
+        return None
+    return 4
+
+
+def _cann_ops_cmt(x1, x2, x3, fused_op_type):
+    """镜像 cann_ops wrapper 的 cmt 链路（fused_mat_mul.py 的 _get_cube_math_type
+    + csrc/fused_matmul.cpp 的 NeedFusedAddMulHighPrecision 无条件覆盖）：
+    1. 兼容模式命中 -> 4（最高优先级，覆盖显式配置）
+    2. 显式 torch_npu.npu.matmul.cube_math_type -> int(cmt)
+    3. torch.npu.matmul.allow_hf32 -> 3（USE_HF32）
+    4. 默认 -> 0（KEEP_DTYPE）"""
+    cmt = _compat_impl_cmt(x1, x2, x3, fused_op_type)
+    if cmt is not None:
+        return cmt
+    try:
+        import torch_npu
+
+        explicit = torch_npu.npu.matmul.cube_math_type
+        if explicit is not None:
+            return int(explicit)
+        if torch.npu.matmul.allow_hf32:
+            return 3
+    except Exception:  # noqa: BLE001  (CPU/离线环境无 torch_npu)
+        pass
+    return 0
+
+
 class TorchNpuFusedMatmulTestSpec:
     compare = _util.isclose_compare
 
@@ -60,6 +101,10 @@ class TorchNpuFusedMatmulTestSpec:
         """torch_npu.npu_fused_matmul: y = FUSED_OP(x1 @ x2 + bias, x3)."""
         out_dtype = torch.float32 if fused_op_type == "16cast32" else x1.dtype
         cube_math_type = _enable_hf32_for_fp32(x1, x2, bias, x3)
+        if cube_math_type is None:
+            # fp32 已按 hf32(3) 建模；低精度 add/mul 在兼容模式下 op-plugin 传
+            # USE_FP32_ADD(4)，golden 同步走 fp32 域融合。
+            cube_math_type = _compat_impl_cmt(x1, x2, x3, fused_op_type)
         return torch_fused_matmul_core(
             x1,
             x2,
@@ -95,7 +140,7 @@ class CannOpsNnFusedMatmulTestSpec:
             x3,
             fused_op_type=fused_op_type,
             out_dtype=out_dtype,
-            cube_math_type=None,
+            cube_math_type=_cann_ops_cmt(x, x2, x3, fused_op_type),
             alpha=alpha_value,
             beta=beta_value,
         )
