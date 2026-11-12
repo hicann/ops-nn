@@ -152,6 +152,10 @@ aclnnStatus aclnnSoftMarginLoss(
     </tr>
   </tbody></table>
 
+  <!-- npu="910,310p" id7 -->
+  - <term>Atlas推理系列产品</term>、<term>Atlas训练系列产品</term>：数据类型不支持BFLOAT16。
+  <!-- end id7 -->
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
