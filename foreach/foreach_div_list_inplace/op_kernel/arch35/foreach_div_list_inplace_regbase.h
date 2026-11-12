@@ -23,11 +23,12 @@ using namespace AscendC;
 // （实测 8.3% 的元素偏 1 ULP）；竞品 fp32 除法是 0 ULP 正确舍入，cross_check 的 rmse
 // 比值因此在大量级输出上被抬高。显式选 0 ULP 档与竞品对齐。
 //
-// 取 FTZ_TRUE 而非仓内他处常见的 FTZ_FALSE：两档精度实测完全相同（全泛化集 34/34 PASS，
-// 网络级用例 3126 万元素均 100% 偏 0 ULP），但 FTZ_FALSE 的非规格数完整处理代价极大——
-// 同条件 --run 12 实测 218.7us -> 2028.1us（9.3x）。本算子输入域内不产生 fp32 非规格数
-// （最小 |商| 远大于 1.18e-38），故取快档。若后续需覆盖非规格数商，再评估换 FTZ_FALSE。
-static constexpr DivConfig DIV_PRECISE = {DivAlgo::PRECISION_0ULP_FTZ_TRUE};
+// 显式选 PRECISION_0ULP_FTZ_FALSE：完整 IEEE 语义，非规格数操作数与结果均正确处理。
+// 此前为性能取 FTZ_TRUE，但 FTZ_TRUE 会把 fp32 **非规格数操作数**冲零（正常/非规格 ->
+// x/0 = ±inf）；此时真商往往仍是 float32可表示的有限值（如 2.5e38），
+// 却被算成 ±inf，cross_check 判 "NaN/Inf mismatch"
+// FTZ_FALSE 消除该偏差；代价是性能，属 IEEE 语义与性能的取舍。
+static constexpr DivConfig DIV_PRECISE = {DivAlgo::PRECISION_0ULP_FTZ_FALSE};
 // In-place foreach div-list: y(=x1) = x1 * x2. Reuses the shared ForeachRegbaseBinary base
 // (two input tensor lists); the apt entry feeds x1 as both the first input and the output.
 template <typename T, typename Tiling>
