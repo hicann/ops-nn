@@ -313,10 +313,12 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitH(const uint32_t best
     return true;
 }
 
-bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHEnable(const uint32_t bestBaseMN)
+bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHEnable(const uint32_t bestBaseMN, const bool relaxSmallShapeGate)
 {
     // 32 : 经验阈值 cin cout wi较小时，转置及输出重排性能较差, kenrel拆分性能差
-    if (runInfo_.dedx_cin_g < BLOCK_CUBE || runInfo_.dedy_cout_g < BLOCK_CUBE || runInfo_.dedx_w < 32) {
+    // 性能模型判 H 优时放宽 wi 门禁(小 wi 的性能风险已由模型条件覆盖)
+    if (runInfo_.dedx_cin_g < BLOCK_CUBE || runInfo_.dedy_cout_g < BLOCK_CUBE ||
+        (runInfo_.dedx_w < 32 && !relaxSmallShapeGate)) {
         return false;
     }
 
@@ -332,6 +334,62 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHEnable(const uint32_t bestBas
 
     kernelSplitMode_ = KERNEL_SPLIT_H;
     return true;
+}
+
+// H 与 HW 拆分模式选择: 比较两模式各管道的引擎周期(总量口径, 核数两侧同除抵消,
+// 频率在比值中消去), 时长由最慢管道决定, H 优于 HW 当且仅当其最慢管道严格更快。
+//   HW: 输出经 workspace 中转, L0C->workspace(fixpipe) -> workspace->UB(MTE2) -> UB->GM(MTE2)
+//       共 3 趟串行搬运;
+//   H:  直出 L0C->GM 仅 1 趟, 但 K 轴含全部 kw 个 tap(kernel==stride 时 kw=stride_w),
+//       计算/A 侧各管道时间放大 kw 倍。
+// 管道口径:
+//   计算      = outVol×cout×kd / 每周期 MAC 数;
+//   A 的 GM 装载 = batchDepth×(ho×wo)×cout×kd×dtypeA / MTE2 带宽(原生直搬无 im2col);
+//   A 的 L0 装载 = 计算量/nValue×dtypeA / L0 装载带宽(每 (m,n) 任务装载 baseM×kValue 展开);
+//   输出搬运  = outVol×dtypeL0c×趟数 / MTE2 带宽。
+// 时长由最慢管道决定, H 优于 HW 当且仅当 H 的最慢管道严格更快。
+// 收益下限: 每核至少一个标准基本块(256*256)的输出搬运节省, 低于此固定开销占比过高。
+bool Conv3DDXV2KernelSplitTiling::IsPreferKernelSplitHOverHW()
+{
+    if (!IsSocVersion960() || runInfo_.groups != 1) {
+        return false;
+    }
+    // 仅对 kernel == stride 的完美切分建模(HW 限定 stride=2, 此时 kernel 即 2x2);
+    // kernel > stride 场景 H 的 W 向放大倍数未建模, 维持 HW 优先
+    if (runInfo_.kernel_h != runInfo_.stride_h || runInfo_.kernel_w != runInfo_.stride_w) {
+        return false;
+    }
+
+    // MTE2(GM->L1) 每周期有效搬运字节数: 多核并发及跳读/跳写场景下无法达到规格带宽, 取保守值
+    constexpr uint64_t mte2BytesPerCycle = 48;
+    constexpr uint64_t l0LoadBytesPerCycle = 128;                      // L1->L0 片内装载每周期字节数
+    constexpr uint64_t outputPassesHw = 3;                             // HW 输出链路串行搬运趟数
+    const uint64_t amplify = static_cast<uint64_t>(runInfo_.kernel_w); // H 的 K 轴 tap 放大倍数
+    // cube 每周期 16*16*16 个 16bit MAC, 按 B 数据类型位宽折算 MAC 吞吐
+    const uint64_t cubeMacsPerCycle = BLOCK_CUBE * BLOCK_CUBE * BLOCK_CUBE * 2 / dtypeByteL0b_;
+    const uint64_t nValue = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
+
+    const uint64_t batchDepth = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
+    const uint64_t outVolElems = batchDepth * runInfo_.dedx_h * runInfo_.dedx_w * runInfo_.dedx_cin_g;
+    const uint64_t macCycles = outVolElems * runInfo_.dedy_cout_g * runInfo_.kernel_d / cubeMacsPerCycle;
+    const uint64_t splitHiWiHW = static_cast<uint64_t>(Ops::Base::CeilDiv(runInfo_.dedx_h, runInfo_.stride_h)) *
+                                 Ops::Base::CeilDiv(runInfo_.dedx_w, runInfo_.stride_w);
+    const uint64_t aGmCycles = batchDepth * splitHiWiHW * runInfo_.dedy_cout_g * runInfo_.kernel_d * dtypeByteL0a_ /
+                               mte2BytesPerCycle;
+    const uint64_t aL0Cycles = outVolElems * runInfo_.dedy_cout_g * runInfo_.kernel_d * dtypeByteL0a_ /
+                               (nValue * l0LoadBytesPerCycle);
+    const uint64_t outCyclesHW = outputPassesHw * outVolElems * dtypeByteL0c_ / mte2BytesPerCycle;
+    const uint64_t outCyclesH = outVolElems * dtypeByteL0c_ / mte2BytesPerCycle;
+    const uint64_t hwDur = std::max({macCycles, aGmCycles, aL0Cycles, outCyclesHW});
+    const uint64_t hDur = std::max({macCycles * amplify, aGmCycles * amplify, aL0Cycles * amplify, outCyclesH});
+    if (hDur >= hwDur) {
+        return false;
+    }
+
+    // 收益下限: 输出搬运量须超过每核一个标准基本块(256*256), 否则固定开销占比过高不翻转
+    const uint64_t minSavedCycles = static_cast<uint64_t>(coreNum_) * BASIC_BLOCK_SIZE_256 * BASIC_BLOCK_SIZE_256 *
+                                    dtypeByteL0c_ / mte2BytesPerCycle;
+    return outCyclesHW - outCyclesH > minSavedCycles;
 }
 
 bool Conv3DDXV2KernelSplitTiling::CheckDtypeCompatibility()
@@ -426,7 +484,7 @@ bool Conv3DDXV2KernelSplitTiling::TryKernelSplitHW(uint32_t bestBaseMN)
     return CheckKernelSplitHWEnable(isEnableKernelSplitFlag2, kernelSplitStrideVal, bestBaseMN);
 }
 
-bool Conv3DDXV2KernelSplitTiling::TryKernelSplitH(uint32_t bestBaseMN)
+bool Conv3DDXV2KernelSplitTiling::TryKernelSplitH(uint32_t bestBaseMN, bool relaxSmallShapeGate)
 {
     constexpr int32_t kernelSplitStrideVal = 2;
     if (runInfo_.stride_h < kernelSplitStrideVal || runInfo_.kernel_h < kernelSplitStrideVal) {
@@ -434,7 +492,7 @@ bool Conv3DDXV2KernelSplitTiling::TryKernelSplitH(uint32_t bestBaseMN)
     }
 
     SetParamForKernelSplit();
-    return CheckKernelSplitHEnable(bestBaseMN);
+    return CheckKernelSplitHEnable(bestBaseMN, relaxSmallShapeGate);
 }
 
 bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitEnable()
@@ -450,9 +508,14 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitEnable()
 
     constexpr uint32_t bestBaseMN = 256;
 
-    // 开启双输出不支持KernelSplitHW场景
-    if (!hasDualOutput_ && TryKernelSplitHW(bestBaseMN)) {
-        return true;
+    // 性能模型判 H 更优时优先尝试 H 拆分(放宽 wi 门禁), H 不可行时回退 HW, 保持原 HW 优先语义
+    if (!hasDualOutput_) {
+        if (IsPreferKernelSplitHOverHW() && TryKernelSplitH(bestBaseMN, true)) {
+            return true;
+        }
+        if (TryKernelSplitHW(bestBaseMN)) {
+            return true;
+        }
     }
 
     return TryKernelSplitH(bestBaseMN);
@@ -735,6 +798,44 @@ void Conv3DDXV2KernelSplitTiling::ShrinkBaseKForKernelSplit(L1TilingParams& l1Pa
 {
     uint32_t baseKStart = l0Params.baseK;
     uint64_t minCout1 = coutA1 > coutB1 ? coutB1 : coutA1;
+
+    // 检查当前 baseK 下 cout1*lenHkWkC0 是否对齐，不对齐则需处理
+    bool needShrink = (minCout1 * kernelSplitPara_.splitHkWkC0) % baseKStart != 0 ||
+                      (minCout1 * kernelSplitPara_.subSplitHkWkC0) % baseKStart != 0;
+    // 960 族优先对齐 cout1（保持大 baseK 不浪费 L0 容量）；非 960 走原有缩 baseK 路径
+    if (IsSocVersion960() && needShrink && minCout1 > 1) {
+        uint64_t alignedMin = minCout1;
+        while (alignedMin > 1) {
+            alignedMin--;
+            if ((alignedMin * kernelSplitPara_.splitHkWkC0) % baseKStart == 0 &&
+                (alignedMin * kernelSplitPara_.subSplitHkWkC0) % baseKStart == 0) {
+                break;
+            }
+        }
+        // 仅当找到 >1 的对齐解时才缩放 cout1；递减到 1 仍未对齐说明该 baseK 下
+        // 无法通过对齐 cout1 满足约束，需回退到缩小 baseK 的路径（否则 baseK 与
+        // cout1*splitHkWkC0 不对齐，后续 L1 装载参数非法导致 950 L1 兜底失败）
+        if (alignedMin > 1) {
+            // 按比例缩放 coutA1/coutB1，保持 AL1/BL1 利用率均衡
+            uint32_t ratioA = static_cast<uint32_t>(minCout1 > 0 ? alignedMin * coutA1 / minCout1 : coutA1);
+            uint32_t ratioB = static_cast<uint32_t>(minCout1 > 0 ? alignedMin * coutB1 / minCout1 : coutB1);
+            coutA1 = (coutA1 == minCout1) ? static_cast<uint32_t>(alignedMin) : ratioA;
+            coutB1 = (coutB1 == minCout1) ? static_cast<uint32_t>(alignedMin) : ratioB;
+            if (coutA1 < 1) {
+                coutA1 = 1;
+            }
+            if (coutB1 < 1) {
+                coutB1 = 1;
+            }
+            l1Params.stepKa = Ops::Base::CeilDiv(static_cast<uint64_t>(coutA1) * kernelSplitPara_.splitHkWkC0,
+                                                 static_cast<uint64_t>(baseKStart));
+            l1Params.stepKb = Ops::Base::CeilDiv(static_cast<uint64_t>(coutB1) * kernelSplitPara_.splitHkWkC0,
+                                                 static_cast<uint64_t>(baseKStart));
+            return;
+        }
+    }
+
+    // 对齐 cout1 失败时回退：逐步缩小 baseK 直到满足对齐
     while (baseKStart > static_cast<uint32_t>(tilingRunInfo_.k0) &&
            ((minCout1 * kernelSplitPara_.splitHkWkC0) % baseKStart != 0 ||
             (minCout1 * kernelSplitPara_.subSplitHkWkC0) % baseKStart != 0)) {
@@ -884,8 +985,86 @@ void Conv3DDXV2KernelSplitTiling::SetSingleCoreInfo(CoreTilingParams& coreParams
         coreParams.singleCoreM = l0Params.baseM;
         uint32_t splitWi = Ops::Base::CeilDiv(runInfo_.dedx_w, runInfo_.stride_w);
         if (totalCnt <= static_cast<uint64_t>(coreNum_)) {
-            coreParams.singleCoreM = Ops::Base::CeilAlign(kernelSplitPara_.splitHiWi / mCnt,
-                                                          static_cast<uint64_t>(splitWi));
+            // 未分满核：优先向下对齐 singleCoreM（按 splitWi）以切出更多核参与计算；
+            // 若向下对齐后 totalCnt 超过 coreNum_（轮次由 1 增为 2），则改为在合法范围内向上对齐。
+            uint64_t origSingleCoreM = Ops::Base::CeilAlign(kernelSplitPara_.splitHiWi / mCnt,
+                                                            static_cast<uint64_t>(splitWi));
+            // 向下对齐候选：以未向上对齐的原始商为基准按 splitWi 向下对齐，
+            // 才能真正缩小跨度切出更多核参与计算（对已对齐值再向下取整恒等于原值）
+            uint64_t downBySplitWi = std::max((kernelSplitPara_.splitHiWi / mCnt) / splitWi, ONE_U64) * splitWi;
+            // 评估向下对齐后的分核数：若仍 <= coreNum_ 则采用（切出更多核参与计算）
+            uint64_t batchDepthDn = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
+            uint64_t nCntDn = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
+            uint64_t mCntDn = Ops::Base::CeilDiv(kernelSplitPara_.splitHiWi, downBySplitWi);
+            uint64_t totalCntDn = batchDepthDn * groupCnt * mCntDn * nCntDn;
+            bool downAlignFeasible = (totalCntDn <= static_cast<uint64_t>(coreNum_));
+            if (downAlignFeasible) {
+                coreParams.singleCoreM = downBySplitWi;
+            } else {
+                // 向下对齐导致轮次增加（1轮变2轮）：改为在合法范围内向上对齐。
+                // 以 origSingleCoreM 为基准，按 splitWi 递增寻找 > origSingleCoreM 且 <= splitHiWi 的最小值，
+                // 要求该值对应的 totalCnt 仍 <= coreNum_（保持 1 轮）。
+                uint64_t splitHiWi = kernelSplitPara_.splitHiWi;
+                uint64_t bestUp = origSingleCoreM;
+                for (uint64_t upCandidate = origSingleCoreM + splitWi; upCandidate <= splitHiWi;
+                     upCandidate += splitWi) {
+                    uint64_t mCntUp = Ops::Base::CeilDiv(splitHiWi, upCandidate);
+                    uint64_t totalCntUp = batchDepthDn * groupCnt * mCntUp * nCntDn;
+                    if (totalCntUp > static_cast<uint64_t>(coreNum_)) {
+                        continue;
+                    }
+                    bestUp = upCandidate;
+                    break;
+                }
+                coreParams.singleCoreM = bestUp;
+            }
+            // singleCoreM > baseM 时尝试把 baseM 按 m0 向上对齐到 singleCoreM；
+            // 若向上对齐后超出 L0A/L0B 或 L1 容量，则优先把 singleCoreM 按 splitWi 向下对齐一步（与上方
+            // “切出更多核参与计算”的意图一致），但要求 candBaseM = CeilAlign(shrunkScM, m0) 不超过原 baseM
+            // （原 baseM 已通过上游容量校验，保证不超容量），且分核数不超过 coreNum（不增加轮次）；
+            // 不满足时兜底：singleCoreM 保持不变（保持分核决策），baseM 回退为 ≤ 原 baseM 的最大 m0 倍数
+            // （原 baseM < m0 时保留原值）。
+            if (coreParams.singleCoreM > l0Params.baseM) {
+                uint32_t alignedBaseM = static_cast<uint32_t>(
+                    Ops::Base::CeilAlign(coreParams.singleCoreM, static_cast<uint64_t>(tilingRunInfo_.m0)));
+                // L0 容量检查：baseM 增大后是否仍可放下（沿用现有 CheckL0Size，pb 取 al0Pbuffer）
+                bool l0Fit = CheckL0Size(alignedBaseM, l0Params.baseN, l0Params.baseK, l0Params.al0Pbuffer);
+                // L0C 容量检查：C 矩阵按 fp32 累加占用 baseM×baseN×4B，CheckL0Size 不含此项
+                bool l0cFit = static_cast<uint64_t>(alignedBaseM) * l0Params.baseN *
+                                  ge::GetSizeByDataType(ge::DT_FLOAT) <=
+                              platformInfo_.l0_c_size;
+                // L1 容量检查：用满足 hkwk 周期对齐的最小 stepK 单缓冲配置构造临时参数，调用 IsL1ParamsValid。
+                // stepK=1 在 baseK%lenHkWkC0!=0（kernel>stride 场景）时会被 IsHkWkAligned 对齐门禁误拒，
+                // 取 lenHkWkC0/gcd(baseK, lenHkWkC0) 作为最小合法装载步长
+                L1TilingParams tmpL1Params;
+                uint32_t minAlignedStepK = static_cast<uint32_t>(tilingRunInfo_.lenHkWkC0) /
+                                           std::gcd(l0Params.baseK, static_cast<uint32_t>(tilingRunInfo_.lenHkWkC0));
+                tmpL1Params.stepKa = minAlignedStepK;
+                tmpL1Params.stepKb = minAlignedStepK;
+                L0TilingParams tmpL0Params = l0Params;
+                tmpL0Params.baseM = alignedBaseM;
+                bool l1Fit = IsL1ParamsValid(tmpL1Params, tmpL0Params);
+                if (l0Fit && l0cFit && l1Fit) {
+                    l0Params.baseM = alignedBaseM;
+                } else {
+                    uint64_t shrunkScM = std::max(coreParams.singleCoreM / splitWi - ONE_U64, ONE_U64) * splitWi;
+                    uint32_t candBaseM = static_cast<uint32_t>(
+                        Ops::Base::CeilAlign(shrunkScM, static_cast<uint64_t>(tilingRunInfo_.m0)));
+                    uint64_t mCntCand = Ops::Base::CeilDiv(kernelSplitPara_.splitHiWi, shrunkScM);
+                    uint64_t totalCntCand = batchDepthDn * groupCnt * mCntCand * nCntDn;
+                    if (shrunkScM < coreParams.singleCoreM && candBaseM <= l0Params.baseM &&
+                        totalCntCand <= static_cast<uint64_t>(coreNum_)) {
+                        coreParams.singleCoreM = shrunkScM;
+                        l0Params.baseM = candBaseM;
+                    } else {
+                        uint32_t downBaseM = static_cast<uint32_t>(Ops::Base::FloorAlign(
+                            static_cast<uint64_t>(l0Params.baseM), static_cast<uint64_t>(tilingRunInfo_.m0)));
+                        if (downBaseM > 0) {
+                            l0Params.baseM = downBaseM;
+                        }
+                    }
+                }
+            }
         } else {
             coreParams.singleCoreM = std::max(coreParams.singleCoreM / splitWi, ONE_U64) * splitWi;
         }

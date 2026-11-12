@@ -123,6 +123,7 @@ protected:
     void EqualL1MatchStepMNKCore(L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t curHiWiSize,
                                  bool isNeedShrinkStepKa = false);
     bool IsHkWkAligned(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
+    bool PredictB2TransposePath() const;
     bool UpdateIsBiasFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CalcBL1Size(const L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t& bL1Size);
     void SetSingleCoreInfoCore(CoreTilingParams& coreParams, L0TilingParams& l0Params, uint64_t hwI, uint32_t kernelDHW,
@@ -157,6 +158,7 @@ protected:
     void AlignCout1(uint32_t& cout1A, uint32_t& cout1B, bool adaptFP32);
     void LadderMatchStepKWithFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CloseL0PingPong(L0TilingParams& l0Params);
+    bool CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t l0Pbuffer = DB_ON);
     uint64_t GetCVRation();
     bool CheckVectorCoreNum();
     size_t GetSysWorkspaceSize();
@@ -242,6 +244,28 @@ protected:
     TilingRunInfo tilingRunInfo_;
 
 private:
+    // ---------- SearchOptimalBaseMN 子函数 ----------
+    struct CandidateScheme {
+        uint32_t schemeM;
+        uint32_t schemeN;
+        uint64_t schemeTotalIter;
+    };
+
+    // 搜索上下文：缓存 SearchOptimalBaseMN 中用到的局部参数，避免在每个子函数中重复计算
+    struct SearchMNContext {
+        uint64_t hwI;
+        uint64_t nVal;
+        uint64_t batchDepth;
+        uint64_t groupCnt;
+        uint64_t dedxW;
+        uint64_t splitWi;
+        bool preferLargeM;
+        // B2 走转置逆序路径(B 装载按 fractal 计价), 搜索入口按 case 常量预判
+        bool b2TransposePath = false;
+        // KERNEL_SPLIT_HW 时 hwI 为切分虚拟视图, iterScale 将任务数换算为真实 M 轴任务数
+        uint64_t iterScale = 1;
+    };
+
     bool CheckC04Enable();
     bool CheckBasicSplitKCondition();
 
@@ -264,6 +288,23 @@ private:
     void AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo);
     uint32_t CalculateOptimalBaseK(uint32_t baseM, uint32_t baseN, const L0TilingParams& l0Params,
                                    const TilingRunInfo& tilingRunInfo);
+    void SearchOptimalBaseMN(uint32_t& baseM, uint32_t& baseN, const L0TilingParams& l0Params);
+
+    // 计算给定 (baseM, baseN) 下的总迭代次数，KernelSplit HW 模式下 singleCoreM 按 splitWi 对齐
+    uint64_t CalcSearchTotalIter(const SearchMNContext& ctx, uint32_t tryM, uint32_t tryN) const;
+    // 检查候选 (tryM, tryN) 是否满足 L0A/L0B/L0C 空间约束及 blockLimit 上限
+    bool CheckSearchL0Constraint(const SearchMNContext& ctx, uint32_t tryM, uint32_t tryN, uint64_t blockLimit,
+                                 const L0TilingParams& l0Params) const;
+    // 判断候选方案 cand 是否优于当前最优方案 best
+    // l0Params 用于按 L0A/L0B 容量推算最大 baseK，进而计算含 K 轴的 workload
+    bool IsBetterSearchScheme(const CandidateScheme& cand, const CandidateScheme& best, const SearchMNContext& ctx,
+                              const L0TilingParams& l0Params) const;
+    // 计算 baseK：L0A/L0B 能装载的最大值（kValue 上限保护）
+    uint32_t CalcMaxBaseK(uint32_t baseM, uint32_t baseN, const L0TilingParams& l0Params) const;
+    // 在 blockLimit 约束下搜索最优 (baseM, baseN) 组合
+    CandidateScheme DoSearchWithBlockLimit(const SearchMNContext& ctx, uint32_t baseM, uint32_t baseN,
+                                           uint64_t blockLimit, const L0TilingParams& l0Params,
+                                           uint64_t maxTasksPerCore = 0) const;
     uint32_t GetLoadB1Condition();
     uint32_t GetLoadB2Condition(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
     uint32_t GetLoadB2ConditionByFormatAndKernel(const L0TilingParams& l0Params);

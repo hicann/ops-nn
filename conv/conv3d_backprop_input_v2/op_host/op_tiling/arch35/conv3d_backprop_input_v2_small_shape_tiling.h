@@ -40,6 +40,10 @@ protected:
     void EqualL1MatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
     void LadderMatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
 
+    // 当 nValue 或 mValue < 256 时，无法切出 256×256 的标准基本块，
+    // blockSizeLimit_ 限制小维度到其实际大小，放大另一维度到 min(实际值, MAX_BASE_MN)
+    uint64_t blockSizeLimit_ = 256 * 256;
+
 private:
     void AdjustSingleCoreAndL0Info(CoreTilingParams& coreParams, L0TilingParams& l0Params);
     ge::graphStatus CalcAndValidateTiling(L0TilingParams& l0Params, L1TilingParams& l1Params,
@@ -50,7 +54,7 @@ private:
     static constexpr uint64_t FULLLOAD_MIN_KVALUE = 64U;
     void EvalBaseMNCandidate(uint64_t i, uint64_t j, uint64_t hwI, uint64_t batchDepth, uint64_t kernelHW,
                              uint64_t& maxTotalCnt, uint64_t& minTotalCnt, uint64_t& minL1LoadSize,
-                             L0TilingParams& l0Params, uint64_t& singleCoreM);
+                             L0TilingParams& l0Params);
 };
 
 } // namespace Conv

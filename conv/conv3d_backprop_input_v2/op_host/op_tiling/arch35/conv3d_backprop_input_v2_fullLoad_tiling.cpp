@@ -135,6 +135,9 @@ void Conv3DDXV2FullLoadTiling::InitBaseMNK(L0TilingParams& l0Params)
     l0Params.al0Pbuffer = DB_ON;
     l0Params.bl0Pbuffer = DB_ON;
     l0Params.cl0Pbuffer = DB_OFF;
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9202) {
+        l0Params.cl0Pbuffer = DB_ON;
+    }
 
     // 选取原则一: K较大时在保证B矩阵全载的情况下, 尽可能让BaseN变大，让左矩阵少搬多算
     // 选取原则二: K小N大是FIXP Bound，L0C开PingPong; K小N小根据两边数量关系决定是否开pingpong

@@ -62,9 +62,23 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
     }
 
     // 小shape的情况下, 负载均衡的矛盾占主导，优先保证分核的均匀性
+    // 当 nValue 或 mValue < 256 时，无法切出 256×256 的标准基本块，
+    // 需要调整 blockSizeLimit_：限制小维度到其实际大小，放大另一维度到 min(实际值, MAX_BASE_MN)
+    blockSizeLimit_ = static_cast<uint64_t>(BASIC_BLOCK_SIZE_256) * BASIC_BLOCK_SIZE_256;
+    uint64_t alignedNVal = Ops::Base::CeilAlign(tilingRunInfo_.nValue, static_cast<uint64_t>(tilingRunInfo_.n0));
+    uint64_t alignedMVal = Ops::Base::CeilAlign(tilingRunInfo_.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
+    if (alignedNVal < BASIC_BLOCK_SIZE_256 && alignedMVal >= BASIC_BLOCK_SIZE_256) {
+        uint64_t limitedM = std::min(alignedMVal, static_cast<uint64_t>(MAX_BASE_MN));
+        blockSizeLimit_ = limitedM * alignedNVal;
+    } else if (alignedMVal < BASIC_BLOCK_SIZE_256 && alignedNVal >= BASIC_BLOCK_SIZE_256) {
+        uint64_t limitedN = std::min(alignedNVal, static_cast<uint64_t>(MAX_BASE_MN));
+        blockSizeLimit_ = alignedMVal * limitedN;
+    }
+    // 保护：放宽后的块上限不允许超过标准基本块 256*256，避免切出超出 kernel 支持范围的大基本块
+    blockSizeLimit_ = std::min(blockSizeLimit_, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256) * BASIC_BLOCK_SIZE_256);
     uint64_t expectedMaxCnt = Ops::Base::CeilDiv(
                                   tilingRunInfo_.nValue * tilingRunInfo_.mValue * ge::GetSizeByDataType(ge::DT_FLOAT),
-                                  static_cast<uint64_t>(platformInfo_.l0_c_size)) *
+                                  static_cast<uint64_t>(blockSizeLimit_ * ge::GetSizeByDataType(ge::DT_FLOAT))) *
                               runInfo_.batch_n * runInfo_.dedx_d * runInfo_.real_g;
     // 经验值，平均任务伦次小于2.5且不能均分时负载均衡矛盾占主导
     auto thresholdCnt = (static_cast<uint64_t>(coreNum_) * 5U / 2U);
@@ -150,8 +164,7 @@ ge::graphStatus Conv3DDXV2SmallShapeTiling::CalcAndValidateTiling(L0TilingParams
 
 void Conv3DDXV2SmallShapeTiling::EvalBaseMNCandidate(uint64_t i, uint64_t j, uint64_t hwI, uint64_t batchDepth,
                                                      uint64_t kernelHW, uint64_t& maxTotalCnt, uint64_t& minTotalCnt,
-                                                     uint64_t& minL1LoadSize, L0TilingParams& l0Params,
-                                                     uint64_t& singleCoreM)
+                                                     uint64_t& minL1LoadSize, L0TilingParams& l0Params)
 {
     uint64_t tmpBaseM = Ops::Base::CeilAlign(Ops::Base::CeilDiv(hwI, i), static_cast<uint64_t>(tilingRunInfo_.m0));
     uint64_t tmpSingleCoreM = tmpBaseM;
@@ -162,7 +175,7 @@ void Conv3DDXV2SmallShapeTiling::EvalBaseMNCandidate(uint64_t i, uint64_t j, uin
     }
     uint64_t tmpBaseN = Ops::Base::CeilAlign(Ops::Base::CeilDiv(tilingRunInfo_.nValue, j),
                                              static_cast<uint64_t>(tilingRunInfo_.n0));
-    if (tmpBaseM * tmpBaseN * ge::GetSizeByDataType(ge::DT_FLOAT) > platformInfo_.l0_c_size) {
+    if (tmpBaseM * tmpBaseN > blockSizeLimit_) {
         return;
     }
     if (tilingRunInfo_.enableFullLoadTiling) {
@@ -195,7 +208,6 @@ void Conv3DDXV2SmallShapeTiling::EvalBaseMNCandidate(uint64_t i, uint64_t j, uin
         minL1LoadSize = tmpL1LoadSize;
         l0Params.baseM = tmpBaseM;
         l0Params.baseN = tmpBaseN;
-        singleCoreM = tmpSingleCoreM;
     }
 }
 
@@ -220,7 +232,6 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
 {
     // 内积模板不切K，stepM和stepN固定为1
     coreParams.singleCoreCout = static_cast<uint32_t>(runInfo_.dedy_cout_g);
-    coreParams.singleCoreM = l0Params.baseM;
     uint64_t batchDepth = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
@@ -251,11 +262,13 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
     uint64_t maxNCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(BASIC_BLOCK_SIZE_64));
     for (uint64_t i = minMCnt; i <= maxMCnt; ++i) {
         for (uint64_t j = minNCnt; j <= maxNCnt; ++j) {
-            EvalBaseMNCandidate(i, j, hwI, batchDepth, kernelHW, maxTotalCnt, minTotalCnt, minL1LoadSize, l0Params,
-                                coreParams.singleCoreM);
+            EvalBaseMNCandidate(i, j, hwI, batchDepth, kernelHW, maxTotalCnt, minTotalCnt, minL1LoadSize, l0Params);
         }
     }
     AdjustBaseMNK(l0Params, tilingRunInfo_);
+    // AdjustBaseMNK 可能重新调整 baseM（L0 上界保护/960 基本块搜索等），
+    // singleCoreM 需与最终 baseM 保持一致（不超过实际 M 维 hwI），避免下发不一致的 tiling
+    coreParams.singleCoreM = std::min(static_cast<uint64_t>(l0Params.baseM), hwI);
     coreParams.singleCoreCin = l0Params.baseN;
     coreParams.singleCoreDin = ONE_U32;
 }

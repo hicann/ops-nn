@@ -81,7 +81,7 @@ protected:
     bool CheckKernelSizeStrideMatch(int32_t kernelSplitStrideVal, uint32_t splitKernelSize1, uint32_t splitKernelSize2,
                                     uint32_t splitKernelSize3, uint32_t splitKernelSize4);
     bool TryKernelSplitHW(uint32_t bestBaseMN);
-    bool TryKernelSplitH(uint32_t bestBaseMN);
+    bool TryKernelSplitH(uint32_t bestBaseMN, bool relaxSmallShapeGate = false);
     void UpdateWorkSpaceSize(L0TilingParams& l0Params);
 
     // for kernel split param
@@ -103,7 +103,8 @@ private:
     bool CheckKernelSplitHWEnable(bool isEnableKernelSplitFlag2, const int32_t kernelSplitStrideVal,
                                   const uint32_t bestBaseMN);
     bool IsBaseShapeFitKernelSplitH(const uint32_t bestBaseMN);
-    bool CheckKernelSplitHEnable(const uint32_t bestBaseMN);
+    bool CheckKernelSplitHEnable(const uint32_t bestBaseMN, const bool relaxSmallShapeGate);
+    bool IsPreferKernelSplitHOverHW();
 
     void ShrinkCoutA1B1(L1TilingParams& l1Params, L0TilingParams& l0Params, const uint64_t minAl1Size,
                         const uint64_t minBl1Size);

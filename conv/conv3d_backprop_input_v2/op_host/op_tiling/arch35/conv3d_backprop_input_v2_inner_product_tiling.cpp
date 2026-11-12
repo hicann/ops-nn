@@ -59,6 +59,10 @@ constexpr uint8_t DEFAULT_FIXED_SHIFT_VAL = 42;
 constexpr uint8_t DEFAULT_FIXED_SHIFT_VAL_A16W8 = 13;
 constexpr uint32_t NO_SPLIT_KERNEL = 0;
 constexpr uint32_t RESERVED_SIZE = 4;
+constexpr uint64_t SMALL_BLOCK_SIZE_LIMIT = static_cast<int64_t>(256 * 256); // 最优基本块限制
+constexpr uint64_t BIG_BLOCK_SIZE_LIMIT = static_cast<int64_t>(2 * 256 * 256);
+constexpr uint8_t KERNEL_SPLIT_HW = 1;
+constexpr uint8_t KERNEL_SPLIT_H = 2;
 struct MSplitChoice {
     bool enabled = false;
     uint64_t tileW = 0;
@@ -1274,6 +1278,38 @@ uint32_t Conv3DDXV2InnerProductTiling::GetLoadB2ConditionByFormatAndKernel(const
     }
 }
 
+// 预判 B2 是否走转置逆序路径：与 GetLoadB2Condition 的 case 常量分支一致，供搜索装载代价估算。
+// enableVecTransFlag 由 SetTilingCondition 在搜索之后才最终确定，此处取搜索时点的当前值；
+// NDHWC 分支的 baseN 条件按搜索下界(64)近似。
+bool Conv3DDXV2InnerProductTiling::PredictB2TransposePath() const
+{
+    if (IsSocVersionFuse(context_) &&
+        static_cast<ge::Format>(ge::GetPrimaryFormat(runInfo_.filterFormat)) == ge::FORMAT_FRACTAL_Z) {
+        return false;
+    }
+    if (tilingRunInfo_.enableC04Flag) {
+        return false;
+    }
+    if (runInfo_.filterFormat == ge::FORMAT_DHWCN) {
+        return false;
+    }
+    if (groupConvMode_ == TILING_GROUP_MODE_ENLARGE || tilingRunInfo_.enableVecTransFlag ||
+        static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_FLOAT) ||
+        static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8)) {
+        return false;
+    }
+    const uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
+    const uint64_t kernelDHW = static_cast<uint64_t>(runInfo_.kernel_d) * kernelHW;
+    if (kernelDHW == ONE_U64 && tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK &&
+        groupConvMode_ == TILING_GROUP_MODE_ORIGIN) {
+        return false; // kernel 为 1, 仅转置不逆序
+    }
+    if (runInfo_.filterFormat == ge::FORMAT_NDHWC) {
+        return kernelHW > BASIC_BLOCK_SIZE_64; // baseN>=64 搜索下界, kernelHW<=64 时恒走仅逆序
+    }
+    return kernelDHW * runInfo_.dedx_cin * dtypeByteL0b_ > BYTE_64; // NCDHW 小 kernel 走仅逆序
+}
+
 void Conv3DDXV2InnerProductTiling::SetTilingCondition(const CoreTilingParams& coreParams,
                                                       const L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
@@ -1854,6 +1890,13 @@ void Conv3DDXV2InnerProductTiling::CloseL0PingPong(L0TilingParams& l0Params)
     l0Params.cl0Pbuffer = DB_OFF;
 }
 
+bool Conv3DDXV2InnerProductTiling::CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t l0Pbuffer)
+{
+    uint64_t l0aSize = static_cast<uint64_t>(baseM) * baseK * dtypeByteL0a_ * l0Pbuffer;
+    uint64_t l0bSize = static_cast<uint64_t>(baseN) * baseK * dtypeByteL0b_ * l0Pbuffer;
+    return l0aSize <= platformInfo_.l0_ab_size && l0bSize <= platformInfo_.l0_ab_size;
+}
+
 void Conv3DDXV2InnerProductTiling::InitLocalWBaseMNK(L0TilingParams& l0Params)
 {
     // 局部 A1 窗口解除了整行 W 的 L1 限制，M 块取满足 L0A/L0C 的最大值。
@@ -1939,7 +1982,8 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMWhenSmallN(uint32_t& baseM, uint32
                                                          const L0TilingParams& l0Params,
                                                          const TilingRunInfo& tilingRunInfo)
 {
-    uint32_t l0cMaxNum = platformInfo_.l0_c_size / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT);
+    uint32_t l0cMaxNum = std::min(platformInfo_.l0_c_size / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT),
+                                  SMALL_BLOCK_SIZE_LIMIT);
     uint64_t alignedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
     uint32_t maxBaseM = CalculateMaxBaseM(baseN);
     int64_t bpPadRight = runInfo_.dedx_w - (static_cast<int64_t>(runInfo_.dedy_w - 1) * runInfo_.stride_w + 1) +
@@ -1963,7 +2007,8 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseNWhenSmallM(uint32_t& baseN, uint32
                                                          const L0TilingParams& l0Params,
                                                          const TilingRunInfo& tilingRunInfo)
 {
-    uint32_t l0cMaxNum = platformInfo_.l0_c_size / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT);
+    uint32_t l0cMaxNum = std::min(platformInfo_.l0_c_size / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT),
+                                  SMALL_BLOCK_SIZE_LIMIT);
     uint32_t nL0cMax = ONE_U32;
     if (baseM > 0 && tilingRunInfo_.m0 > 0) {
         nL0cMax = std::max(l0cMaxNum / baseM / tilingRunInfo_.m0, ONE_U32) * tilingRunInfo_.m0;
@@ -2012,6 +2057,453 @@ void Conv3DDXV2InnerProductTiling::UpdateL0CBufferMode(L0TilingParams& l0Params)
     } else {
         l0Params.cl0Pbuffer = DB_OFF;
     }
+}
+
+/*
+ * SearchOptimalBaseMN —— 搜索最优的 (baseM, baseN) 组合
+ *
+ * 整体思路：
+ *   1. 计算搜索上下文（hwI / nVal / batchDepth 等）和自适应 blockLimit
+ *   2. 判断是否需要搜索：
+ *      - B 矩阵全载时直接返回
+ *      - 初始方案完美分核（totalIter % coreNum == 0，按真实任务数）时直接返回
+ *   3. 在 BIG_BLOCK_SIZE_LIMIT 约束下遍历 baseM×baseN（按 m0/n0 步长），
+ *      通过 IsBetterSearchScheme 选出最优方案
+ */
+void Conv3DDXV2InnerProductTiling::SearchOptimalBaseMN(uint32_t& baseM, uint32_t& baseN, const L0TilingParams& l0Params)
+{
+    // B矩阵全载时不搜索
+    if (tilingRunInfo_.enableFullLoadTiling) {
+        return;
+    }
+    SearchMNContext ctx;
+    ctx.preferLargeM = (runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1);
+    ctx.hwI = Ops::Base::CeilAlign(tilingRunInfo_.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
+    ctx.nVal = tilingRunInfo_.nValue;
+    ctx.batchDepth = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
+    ctx.groupCnt = static_cast<uint64_t>(runInfo_.real_g);
+    ctx.dedxW = static_cast<uint64_t>(runInfo_.dedx_w);
+    ctx.splitWi = (kernelSplitMode_ == KERNEL_SPLIT_HW) ?
+                      static_cast<uint64_t>(Ops::Base::CeilDiv(runInfo_.dedx_w, runInfo_.stride_w)) :
+                      0;
+    ctx.b2TransposePath = PredictB2TransposePath();
+    if (kernelSplitMode_ == KERNEL_SPLIT_HW) {
+        // KERNEL_SPLIT_HW: hwI 为切分后的虚拟视图, 与 kernel 实际按真实 M 轴切任务相差
+        // stride_h*stride_w 倍; iterScale 用于按真实任务数评估轮次和均衡
+        uint64_t splitHiWi = static_cast<uint64_t>(Ops::Base::CeilDiv(runInfo_.dedx_h, runInfo_.stride_h)) *
+                             Ops::Base::CeilDiv(runInfo_.dedx_w, runInfo_.stride_w);
+        ctx.hwI = splitHiWi;
+        ctx.iterScale = static_cast<uint64_t>(runInfo_.stride_h) * runInfo_.stride_w;
+    } else if (kernelSplitMode_ == KERNEL_SPLIT_H) {
+        // KERNEL_SPLIT_H: hwI 为 H 切分后的虚拟视图(仅按 stride_h 切, W 不切)
+        ctx.hwI = static_cast<uint64_t>(Ops::Base::CeilDiv(runInfo_.dedx_h, runInfo_.stride_h)) * runInfo_.dedx_w;
+    }
+    uint64_t initTotalIter = CalcSearchTotalIter(ctx, baseM, baseN);
+    uint64_t initTasksPerCore = (initTotalIter + coreNum_ - 1) / coreNum_;
+    // 完美分核：totalIter 是 coreNum 的整数倍且无尾块浪费，不进行后续搜索
+    if (initTotalIter > 0 && initTotalIter % static_cast<uint64_t>(coreNum_) == 0) {
+        return;
+    }
+    // mValue<256 且 nValue>256 时允许 initTasksPerCore+1，寻找更均衡的方案
+    uint64_t maxTasksPerCore = initTasksPerCore;
+    if (((tilingRunInfo_.mValue < BASIC_BLOCK_SIZE_256 && tilingRunInfo_.nValue > BASIC_BLOCK_SIZE_256)) ||
+        (initTasksPerCore == 1 && kernelSplitMode_ != KERNEL_SPLIT_HW)) {
+        maxTasksPerCore = initTasksPerCore + 1;
+    }
+    // 动态调整轮次上界：原轮次大于 1 且尾轮使用的核数小于等于总核数的一半时，轮次上界加一，
+    // 允许搜索通过缩小基本块多跑一轮，换取更均衡的分核；单轮方案不拆分
+    if (initTotalIter > 0 && initTasksPerCore > 1) {
+        uint64_t tailRoundCores = initTotalIter - (initTasksPerCore - 1) * static_cast<uint64_t>(coreNum_);
+        if (tailRoundCores <= static_cast<uint64_t>(coreNum_) / 2) {
+            maxTasksPerCore = initTasksPerCore + 1;
+        }
+    }
+    // 极端shape 不放宽轮次
+    if (ctx.hwI <= tilingRunInfo_.m0 || ctx.nVal <= tilingRunInfo_.n0) {
+        maxTasksPerCore = initTasksPerCore;
+    }
+    CandidateScheme best = DoSearchWithBlockLimit(ctx, baseM, baseN, BIG_BLOCK_SIZE_LIMIT, l0Params, maxTasksPerCore);
+    // KERNEL_SPLIT_HW 真实任务数已完美分核时的 B 流量否决：虚拟视图的轮次判断不可靠，
+    // 不能仅凭真实任务完美就放弃搜索(搜索可能在均衡/块大小上仍有真实收益)；
+    // 但搜索结果使 baseN/baseM 增大(B 矩阵重复装载流量上升)时，真实任务已完美分核的场景
+    // 不存在流量换均衡的空间，回退初始方案
+    bool vetoKernelSplitSearch = false;
+    if (kernelSplitMode_ == KERNEL_SPLIT_HW && best.schemeM != 0 && best.schemeN != 0) {
+        uint64_t initRealIter = initTotalIter * ctx.iterScale;
+        bool realPerfect = (initRealIter > 0 && initRealIter % static_cast<uint64_t>(coreNum_) == 0);
+        bool bTrafficWorse = static_cast<uint64_t>(best.schemeN) * baseM > static_cast<uint64_t>(best.schemeM) * baseN;
+        vetoKernelSplitSearch = realPerfect && bTrafficWorse;
+    }
+    // 搜索失败(两者任一为 0)时保留搜索前的 baseM/baseN,避免下发非法 tiling
+    if (!vetoKernelSplitSearch && best.schemeM != 0 && best.schemeN != 0) {
+        baseM = best.schemeM;
+        baseN = best.schemeN;
+    }
+}
+
+/*
+ * CalcSearchTotalIter —— 计算给定 (tryM, tryN) 下的总迭代次数
+ *
+ * totalIter = batchDepth × groupCnt × ceilDiv(hwI, singleCoreM) × ceilDiv(nVal, tryN)
+ *   - KernelSplit HW 模式下 singleCoreM 按 splitWi 向下对齐
+ *   - 非 KernelSplit 且任务不足以填满所有核时，按 m0 对齐 singleCoreM 减少碎片搬运
+ */
+uint64_t Conv3DDXV2InnerProductTiling::CalcSearchTotalIter(const SearchMNContext& ctx, uint32_t tryM,
+                                                           uint32_t tryN) const
+{
+    uint64_t singleCoreM = static_cast<uint64_t>(tryM);
+    // KernelSplit HW: 参考 splitWi 将 singleCoreM 向下对齐到 splitWi 倍数
+    if (ctx.splitWi > 0) {
+        singleCoreM = (singleCoreM / ctx.splitWi) * ctx.splitWi;
+        if (singleCoreM == 0) {
+            singleCoreM = static_cast<uint64_t>(tilingRunInfo_.m0);
+        }
+    }
+    uint64_t mCnt = Ops::Base::CeilDiv(ctx.hwI, singleCoreM);
+    uint64_t nCnt = Ops::Base::CeilDiv(ctx.nVal, static_cast<uint64_t>(tryN));
+    uint64_t rawTotal = ctx.batchDepth * ctx.groupCnt * mCnt * nCnt;
+    // 总任务数不足以填满所有核时，按 m0 对齐 singleCoreM 以减少碎片
+    if (ctx.splitWi == 0 && rawTotal <= static_cast<uint64_t>(coreNum_) && ctx.dedxW > 0) {
+        uint64_t realSCM = Ops::Base::CeilAlign(ctx.hwI / mCnt, static_cast<uint64_t>(tilingRunInfo_.m0));
+        mCnt = Ops::Base::CeilDiv(ctx.hwI, realSCM);
+    }
+    uint64_t total = ctx.batchDepth * ctx.groupCnt * mCnt * nCnt;
+    return total;
+}
+
+/*
+ * CheckSearchL0Constraint —— 检查候选 (tryM, tryN) 是否满足 L0 Buffer 空间约束
+ *
+ * 约束条件（任一不满足则返回 false）：
+ *   1. tryM ≤ L0A 能容纳的最大 M（L0A_SIZE / (k0 × al0Pbuffer × dtypeByte)）
+ *   2. tryN ≤ L0B 能容纳的最大 N（L0AB_SIZE / (k0 × bl0Pbuffer × dtypeByte)）
+ *   3. tryM × tryN ≤ L0C 有效上限（物理容量 ≥ BIG_BLOCK 时直接用物理容量，否则扣除 ping-pong 帧数）
+ *   4. tryM × tryN ≤ blockLimit（自适应或 BIG 分块约束）
+ *   5. tryM ≤ CeilAlign(hwI, m0)（不超出按 m0 对齐后的 M 维范围）
+ *   6. tryN ≤ nVal（不超出实际 N 维范围）
+ */
+bool Conv3DDXV2InnerProductTiling::CheckSearchL0Constraint(const SearchMNContext& ctx, uint32_t tryM, uint32_t tryN,
+                                                           uint64_t blockLimit, const L0TilingParams& l0Params) const
+{
+    uint32_t l0cPhysicalMax = static_cast<uint32_t>(platformInfo_.l0_c_size / ge::GetSizeByDataType(ge::DT_FLOAT));
+    // L0C 有效上限按 ping-pong 帧数折算, 与 AdjustBaseMWhenSmallN 等处的 l0_c_size/cl0Pbuffer 口径一致
+    uint32_t l0cMaxNum = (l0cPhysicalMax >= BIG_BLOCK_SIZE_LIMIT * l0Params.cl0Pbuffer) ?
+                             l0cPhysicalMax / l0Params.cl0Pbuffer :
+                             std::min(l0cPhysicalMax / l0Params.cl0Pbuffer,
+                                      static_cast<uint32_t>(SMALL_BLOCK_SIZE_LIMIT));
+    uint32_t maxL0ABaseM = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByteL0a_);
+    uint32_t maxL0BBaseN = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.bl0Pbuffer * dtypeByteL0b_);
+    uint64_t tryMN = static_cast<uint64_t>(tryM) * tryN;
+    if (tryM > maxL0ABaseM || tryN > maxL0BBaseN || tryMN > l0cMaxNum || tryMN > blockLimit ||
+        tryM > Ops::Base::CeilAlign(ctx.hwI, static_cast<uint64_t>(tilingRunInfo_.m0)) || tryN > ctx.nVal) {
+        return false;
+    }
+    return true;
+}
+
+/*
+ * CalcMaxBaseK —— 计算 baseK：L0A/L0B 单 buffer 能容纳的最大 K 元素数（kValue 上限保护）
+ */
+uint32_t Conv3DDXV2InnerProductTiling::CalcMaxBaseK(uint32_t baseM, uint32_t baseN,
+                                                    const L0TilingParams& l0Params) const
+{
+    // baseK 上限需同时满足 L0A(baseM 侧)与 L0B(baseN 侧)容量, 取两侧预算的较小者
+    uint32_t l0aMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByteL0a_;
+    uint32_t l0bMaxNum = platformInfo_.l0_ab_size / l0Params.bl0Pbuffer / dtypeByteL0b_;
+    uint32_t maxBaseK = std::max(std::min(l0aMaxNum / baseM, l0bMaxNum / baseN) / tilingRunInfo_.k0, ONE_U32) *
+                        tilingRunInfo_.k0;
+    maxBaseK = std::min(static_cast<uint64_t>(maxBaseK), tilingRunInfo_.kValue);
+    uint32_t ret = maxBaseK < tilingRunInfo_.k0 ? tilingRunInfo_.k0 : maxBaseK;
+    return ret;
+}
+
+/*
+ * IsBetterSearchScheme —— 判断候选方案 cand 是否优于当前最优方案 best
+ *
+ * 优先级（从高到低）：
+ *   (1) 轮次相同：waste → workload → KTaskCnt → baseM
+ *       - waste 小者更优（尾块浪费少）
+ *       - workload 小者更优（先粗算 baseM×baseN，再精算，翻转时回退粗算）
+ *       - KTaskCnt×tasksPerCore 小者更优
+ *       - baseM：fp32&!hf32 选更大；否则按 preferLargeM 取 512/256 阈值，
+ *         一个≤阈值另一个不满足选满足的，都满足/都不满足选更大
+ *   (2) 轮次不同：workload → KTaskCnt → waste → 轮次（少者更优）
+ */
+bool Conv3DDXV2InnerProductTiling::IsBetterSearchScheme(const CandidateScheme& cand, const CandidateScheme& best,
+                                                        const SearchMNContext& ctx,
+                                                        const L0TilingParams& l0Params) const
+{
+    uint64_t candTasksPerCore = (cand.schemeTotalIter + coreNum_ - 1) / coreNum_;
+    uint64_t bestTasksPerCore = (best.schemeTotalIter + coreNum_ - 1) / coreNum_;
+
+    // 公共计算
+    uint64_t candWaste = candTasksPerCore * coreNum_ - cand.schemeTotalIter;
+    uint64_t bestWaste = bestTasksPerCore * coreNum_ - best.schemeTotalIter;
+    // 缓存 baseK，避免下游重复调用 CalcMaxBaseK
+    uint32_t candBaseK = CalcMaxBaseK(cand.schemeM, cand.schemeN, l0Params);
+    uint32_t bestBaseK = CalcMaxBaseK(best.schemeM, best.schemeN, l0Params);
+    // K 轴任务数 = ceilDiv(kValue, baseK)
+    uint64_t candKTaskCnt = Ops::Base::CeilDiv(tilingRunInfo_.kValue, static_cast<uint64_t>(candBaseK));
+    uint64_t bestKTaskCnt = Ops::Base::CeilDiv(tilingRunInfo_.kValue, static_cast<uint64_t>(bestBaseK));
+    // workload = tasksPerCore × blockCompute × kAxisCompute, kAxisCompute = min(kTaskCnt×baseK, kValue)
+    uint64_t candKAxisCompute = std::min(candKTaskCnt * candBaseK, tilingRunInfo_.kValue);
+    uint64_t bestKAxisCompute = std::min(bestKTaskCnt * bestBaseK, tilingRunInfo_.kValue);
+    uint64_t candWorkload = candTasksPerCore * cand.schemeM * cand.schemeN * candKAxisCompute;
+    uint64_t bestWorkload = bestTasksPerCore * best.schemeM * best.schemeN * bestKAxisCompute;
+    // 引擎代价融合(NO_SPLIT): 计算量与 MTE2 装载量折算为引擎周期后取较大者比较
+    // (两者重叠流水, 时长由较慢一侧决定)。
+    //   A 装载量 = 任务数 × A1 原生切片(hoSpan×dedy_w×cout×dtypeA, 原生直搬无 im2col), 按规格带宽计价;
+    //   B 装载量: B2 转置逆序路径的 DN2NZ 格式转换按 fractal 节拍流水, 每 fractal(n0×baseK 单元)
+    //     固定周期, 转换吞吐随 baseK 增大而提高; 转换吞吐不足时跟不上 cube 消费, 该代价需进判据;
+    //     其他路径按字节/规格带宽计价;
+    //   装载总量按核数摊到每核。
+    // DN2NZ 转换节拍为芯片微架构属性, 各代不同; 搜索仅在 IsSocVersion960() 的
+    // AdjustBaseMNK 门控下调用, 本判据的作用域即由此限定, 其余芯片不受影响。
+    // 非 NO_SPLIT(KERNEL_SPLIT 为虚拟视图语义, 字节口径不同)退化为原有 workload 比较。
+    uint64_t candCost = candWorkload;
+    uint64_t bestCost = bestWorkload;
+    if (kernelSplitMode_ == 0) {
+        constexpr uint64_t mte2BytesPerCycle = 64; // MTE2 每周期搬运字节数(规格)
+        // DN2NZ 格式转换每 fractal 固定周期(与字节量无关)
+        constexpr uint64_t transposeCyclesPerFractal = 57;
+        const uint64_t cubeMacsPerCycle = BLOCK_CUBE * BLOCK_CUBE * BLOCK_CUBE * 2 / dtypeByteL0b_;
+        const uint64_t candACycles = Ops::Base::CeilDiv(static_cast<uint64_t>(cand.schemeM),
+                                                        static_cast<uint64_t>(runInfo_.dedy_w)) *
+                                     runInfo_.dedy_w * runInfo_.dedy_cout_g * dtypeByteL0a_ / mte2BytesPerCycle;
+        const uint64_t bestACycles = Ops::Base::CeilDiv(static_cast<uint64_t>(best.schemeM),
+                                                        static_cast<uint64_t>(runInfo_.dedy_w)) *
+                                     runInfo_.dedy_w * runInfo_.dedy_cout_g * dtypeByteL0a_ / mte2BytesPerCycle;
+        uint64_t candBCycles = static_cast<uint64_t>(cand.schemeN) * tilingRunInfo_.kValue * dtypeByteL0b_ /
+                               mte2BytesPerCycle;
+        uint64_t bestBCycles = static_cast<uint64_t>(best.schemeN) * tilingRunInfo_.kValue * dtypeByteL0b_ /
+                               mte2BytesPerCycle;
+        if (ctx.b2TransposePath) {
+            // B1 单片 K 跨度需为 lenHkWkC0 的倍数(hkwk 对齐, 全量装载除外), 最小跨度 = lcm(baseK, lenHkWkC0);
+            // B1 超出 L1 时, CalStepK 之后的 L1 合法性兜底会缩减 baseK, 此处按缩减后的
+            // 有效 baseK 计价, 避免奖励 L1 放不下的深 baseK 方案
+            auto effectiveBaseK = [this](uint32_t baseK, uint32_t schemeN) -> uint64_t {
+                uint64_t kEff = baseK;
+                while (kEff > tilingRunInfo_.k0) {
+                    uint64_t kSlice = kEff;
+                    while (kSlice % tilingRunInfo_.lenHkWkC0 != 0 && kSlice < tilingRunInfo_.kValue) {
+                        kSlice += kEff;
+                    }
+                    if (kSlice >= tilingRunInfo_.kValue ||
+                        static_cast<uint64_t>(schemeN) * kSlice * dtypeByteL0b_ * 2 <= platformInfo_.l1_size) {
+                        break; // 2: B1 双缓冲
+                    }
+                    kEff -= tilingRunInfo_.k0;
+                }
+                return kEff;
+            };
+            candBCycles = static_cast<uint64_t>(cand.schemeN) / tilingRunInfo_.n0 *
+                          Ops::Base::CeilDiv(tilingRunInfo_.kValue, effectiveBaseK(candBaseK, cand.schemeN)) *
+                          transposeCyclesPerFractal;
+            bestBCycles = static_cast<uint64_t>(best.schemeN) / tilingRunInfo_.n0 *
+                          Ops::Base::CeilDiv(tilingRunInfo_.kValue, effectiveBaseK(bestBaseK, best.schemeN)) *
+                          transposeCyclesPerFractal;
+        }
+        const uint64_t candMte2Cycles = cand.schemeTotalIter * (candACycles + candBCycles) / coreNum_;
+        const uint64_t bestMte2Cycles = best.schemeTotalIter * (bestACycles + bestBCycles) / coreNum_;
+        // 时长由计算与搬运的较大者决定(两者重叠流水), 取 max
+        candCost = std::max(candWorkload / cubeMacsPerCycle, candMte2Cycles);
+        bestCost = std::max(bestWorkload / cubeMacsPerCycle, bestMte2Cycles);
+    }
+    bool isFp32NoHf32 = static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT) &&
+                        !runInfo_.hf32_flag;
+
+    // (1) 轮次相同：waste → 极小块过滤 → workload → KTaskCnt → baseM
+    if (candTasksPerCore == bestTasksPerCore) {
+        if (candWaste != bestWaste) {
+            return candWaste < bestWaste;
+        }
+        // 优选 baseM 整除 hwI 且 baseN 整除 nVal 的方案（无尾部碎片）
+        bool candAligned = (ctx.hwI % static_cast<uint64_t>(cand.schemeM) == 0) &&
+                           (ctx.nVal % static_cast<uint64_t>(cand.schemeN) == 0);
+        bool bestAligned = (ctx.hwI % static_cast<uint64_t>(best.schemeM) == 0) &&
+                           (ctx.nVal % static_cast<uint64_t>(best.schemeN) == 0);
+        if (candAligned != bestAligned) {
+            return candAligned;
+        }
+        // 极小块过滤：baseM*baseN*baseK ≤ 1024*64*k0 时受 scalar bound 限制，
+        // 若仅一方极小则选另一方，都极小或都不极小则继续比较
+        constexpr uint64_t tinyBlockVolLimit = 1024UL * 64UL;
+        uint64_t tinyThreshold = tinyBlockVolLimit * static_cast<uint64_t>(tilingRunInfo_.k0);
+        uint64_t candBlockVol = static_cast<uint64_t>(cand.schemeM) * cand.schemeN * candBaseK;
+        uint64_t bestBlockVol = static_cast<uint64_t>(best.schemeM) * best.schemeN * bestBaseK;
+        bool candTiny = (candBlockVol <= tinyThreshold);
+        bool bestTiny = (bestBlockVol <= tinyThreshold);
+        if (candTiny != bestTiny && candBaseK != bestBaseK && !isFp32NoHf32) {
+            return !candTiny;
+        }
+        if (candCost != bestCost) {
+            return candCost < bestCost;
+        }
+        if (candKTaskCnt != bestKTaskCnt) {
+            if (candKTaskCnt * candTasksPerCore < bestKTaskCnt * bestTasksPerCore) {
+                return true;
+            }
+        }
+        // KTaskCnt 相同：fp32&!hf32 选更大 baseM；非 fp32&!hf32 时，
+        // preferLargeM 用 512 阈值，!preferLargeM 用 256 阈值：
+        //   一个满足≤阈值另一个不满足 → 选满足的；都满足 → 选较大；都不满足 → 选较大
+        if (cand.schemeM != best.schemeM) {
+            if (isFp32NoHf32) {
+                return cand.schemeM > best.schemeM;
+            }
+            constexpr uint32_t thresholdLarge = BASIC_BLOCK_SIZE_512;
+            constexpr uint32_t thresholdSmall = BASIC_BLOCK_SIZE_256;
+            uint32_t threshold = (runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1) ? thresholdLarge :
+                                                                                                   thresholdSmall;
+            bool candWithin = cand.schemeM <= threshold;
+            bool bestWithin = best.schemeM <= threshold;
+            if (candWithin != bestWithin) {
+                return candWithin;
+            }
+            return cand.schemeM > best.schemeM;
+        }
+        return false;
+    }
+
+    // (2) 轮次不同：workload → waste → KTaskCnt → 轮次
+    // waste(空闲核槽数)优先于 KTaskCnt: 多轮方案若尾轮利用率更差, 不应仅凭 K 迭代次数少而胜出
+    if (candCost != bestCost) {
+        return candCost < bestCost;
+    }
+    if (candWaste != bestWaste) {
+        return candWaste < bestWaste;
+    }
+    if (candBaseK != bestBaseK) {
+        if (candKTaskCnt * candTasksPerCore < bestKTaskCnt * bestTasksPerCore) {
+            return true;
+        }
+    }
+    return candTasksPerCore < bestTasksPerCore;
+}
+
+/*
+ * DoSearchWithBlockLimit —— 在 blockLimit 约束下搜索最优 (baseM, baseN)
+ *
+ * baseM/baseN 按 m0/n0 步长在 [minBaseM, maxBaseM] × [minBaseN, maxBaseN] 范围内
+ * 从大到小遍历，通过 IsBetterSearchScheme 选出最优方案。
+ * splitWi 对齐在 CalcSearchTotalIter 内部处理，搜索覆盖所有可切出的 baseM。
+ */
+Conv3DDXV2InnerProductTiling::CandidateScheme Conv3DDXV2InnerProductTiling::DoSearchWithBlockLimit(
+    const SearchMNContext& ctx, uint32_t baseM, uint32_t baseN, uint64_t blockLimit, const L0TilingParams& l0Params,
+    uint64_t maxTasksPerCore) const
+{
+    constexpr uint32_t searchMinBlock = 64;
+    uint32_t m0 = tilingRunInfo_.m0;
+    uint32_t n0 = tilingRunInfo_.n0;
+    uint32_t minBaseM = (ctx.hwI < searchMinBlock) ?
+                            static_cast<uint32_t>(Ops::Base::CeilAlign(ctx.hwI, static_cast<uint64_t>(m0))) :
+                            searchMinBlock;
+    uint32_t minBaseN = (ctx.nVal < searchMinBlock) ?
+                            static_cast<uint32_t>(Ops::Base::CeilAlign(ctx.nVal, static_cast<uint64_t>(n0))) :
+                            searchMinBlock;
+    // baseM/baseN 搜索范围上界，按 m0/n0 对齐
+    uint32_t maxBaseM = static_cast<uint32_t>(Ops::Base::CeilAlign(ctx.hwI, static_cast<uint64_t>(m0)));
+    uint32_t maxBaseN = static_cast<uint32_t>(Ops::Base::CeilAlign(ctx.nVal, static_cast<uint64_t>(n0)));
+    // DAV_9201 且 cin 超过门限值时限制搜索上界 baseM<=512，避免 baseM 过大导致 baseK 被压低
+    constexpr uint32_t largeCinLimit = 64;
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_9201 &&
+        runInfo_.dedx_cin > largeCinLimit) {
+        maxBaseM = std::min(maxBaseM, BASIC_BLOCK_SIZE_512);
+    }
+
+    // 预计算 L0 约束不变量，避免内层循环重复调用 CheckSearchL0Constraint
+    uint32_t l0cPhysicalMax = static_cast<uint32_t>(platformInfo_.l0_c_size / ge::GetSizeByDataType(ge::DT_FLOAT));
+    uint32_t l0cMaxNum = (l0cPhysicalMax >= BIG_BLOCK_SIZE_LIMIT * l0Params.cl0Pbuffer) ?
+                             l0cPhysicalMax / l0Params.cl0Pbuffer :
+                             std::min(l0cPhysicalMax / l0Params.cl0Pbuffer,
+                                      static_cast<uint32_t>(SMALL_BLOCK_SIZE_LIMIT));
+    uint32_t maxL0BBaseN = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.bl0Pbuffer * dtypeByteL0b_);
+    // L0A 单帧能容纳的最大 baseM：baseM 超过该值时 baseK×baseM×dtypeA×al0Pbuffer 放不进 L0A，
+    // 搜索候选必须显式受限（L0C/blockLimit 口径的上界可大于它，不能互相替代）
+    uint32_t maxL0ABaseM = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByteL0a_);
+
+    CandidateScheme initScheme{baseM, baseN, CalcSearchTotalIter(ctx, baseM, baseN)};
+    bool limitBaseN256Init = (runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w == 1) &&
+                             (baseN > BASIC_BLOCK_SIZE_256);
+    bool initSchemeValid = (static_cast<uint64_t>(baseM) * baseN <= blockLimit) && !limitBaseN256Init &&
+                           CheckSearchL0Constraint(ctx, baseM, baseN, blockLimit, l0Params);
+    CandidateScheme best = initSchemeValid ? initScheme : CandidateScheme{0, 0, UINT64_MAX};
+    bool bestInitialized = initSchemeValid;
+    // hkwkdk=1 时约束 baseN <= 256
+    bool limitBaseN256 = (runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w == 1);
+    if (limitBaseN256) {
+        maxBaseN = std::min(maxBaseN, BASIC_BLOCK_SIZE_256);
+    }
+    // baseN 按 n0 步长从大到小搜索
+    for (uint32_t candBaseN = maxBaseN; candBaseN >= minBaseN; candBaseN -= n0) {
+        // L0B 容量约束 + nVal 上界
+        if (candBaseN > maxL0BBaseN || candBaseN > ctx.nVal) {
+            continue;
+        }
+        // preferLargeM 时跳过 baseN >= hwI 的候选(希望 M 方向更大);
+        // 但 hwI 较小(小 M shape)时该条件会误杀全部候选,仅对 hwI >= 128 启用
+        if (ctx.preferLargeM && candBaseN >= ctx.hwI && ctx.hwI >= BASIC_BLOCK_SIZE_128) {
+            continue;
+        }
+
+        // 预算内层 baseM 上界: L0C 容量(l0cMaxNum/candBaseN) + blockLimit/candBaseN，向下对齐 m0
+        uint32_t innerMaxBaseM = std::min({maxBaseM, maxL0ABaseM, static_cast<uint32_t>(l0cMaxNum / candBaseN),
+                                           static_cast<uint32_t>(blockLimit / candBaseN)});
+        innerMaxBaseM = (innerMaxBaseM / m0) * m0;
+        if (innerMaxBaseM < minBaseM) {
+            continue;
+        }
+
+        // baseM 按 m0 步长从大到小搜索
+        for (uint32_t candBaseM = innerMaxBaseM; candBaseM >= minBaseM; candBaseM -= m0) {
+            // 除非用例M太小，否则不允许切出来BaseN比BaseM大1.5倍以上的基本块
+            constexpr uint32_t aspectRatioNum = 3;
+            constexpr uint32_t aspectRatioDen = 2;
+            if (ctx.preferLargeM && candBaseM * aspectRatioNum < candBaseN * aspectRatioDen &&
+                ctx.hwI >= BASIC_BLOCK_SIZE_128) {
+                continue;
+            }
+            // 跳过 baseM 或 baseN < 64 的候选，除非 mValue 或 nValue < 64
+            if ((candBaseM < BASIC_BLOCK_SIZE_64 || candBaseN < BASIC_BLOCK_SIZE_64) &&
+                tilingRunInfo_.mValue >= BASIC_BLOCK_SIZE_64 && tilingRunInfo_.nValue >= BASIC_BLOCK_SIZE_64) {
+                continue;
+            }
+
+            uint64_t candTotalIter = CalcSearchTotalIter(ctx, candBaseM, candBaseN);
+            CandidateScheme cand{candBaseM, candBaseN, candTotalIter};
+            if (maxTasksPerCore > 0) {
+                uint64_t candTasksPerCore = (candTotalIter + coreNum_ - 1) / coreNum_;
+                if (candTasksPerCore > maxTasksPerCore) {
+                    continue;
+                }
+            }
+            if (!bestInitialized) {
+                best = cand;
+                bestInitialized = true;
+            } else if (IsBetterSearchScheme(cand, best, ctx, l0Params)) {
+                best = cand;
+            }
+        }
+    }
+
+    // MTE2 带宽保护：初始方案有效且搜索结果的 baseN×baseK 乘积较初始方案缩减超过 30% 时回退初始方案。
+    // 乘积大幅缩减意味着 B 矩阵单次装载量（baseN×baseK）与 K 轴覆盖能力的乘积下降，
+    // memory bound 用例会导致 B 重复装载次数增加而恶化。
+    // baseK 放大 / coreNum 提升的优化路径乘积不缩减，不受影响；初始方案无效时（如 1x1 kernel
+    // 限制 baseN<=256 导致初始方案超界）无回退基准，保持搜索结果。
+    // KERNEL_SPLIT_HW 不生效：搜索在 splitWi 虚拟视图上运行，(M,N) 语义与真实 M 轴不同，乘积判据
+    // 不可靠；split 用例的搜索结果多为轮次/均衡的真实改善，盲回退会丢失收益
+    if (initSchemeValid && best.schemeM != 0 && best.schemeN != 0 && kernelSplitMode_ != KERNEL_SPLIT_HW) {
+        uint32_t searchBaseK = CalcMaxBaseK(best.schemeM, best.schemeN, l0Params);
+        uint32_t initBaseK = CalcMaxBaseK(initScheme.schemeM, initScheme.schemeN, l0Params);
+        constexpr uint32_t retreatRatioNum = 10;
+        constexpr uint32_t retreatRatioDen = 7;
+        if (static_cast<uint64_t>(best.schemeN) * searchBaseK * retreatRatioNum <
+            static_cast<uint64_t>(initScheme.schemeN) * initBaseK * retreatRatioDen) {
+            best = initScheme;
+        }
+    }
+    return best;
 }
 
 void Conv3DDXV2InnerProductTiling::AdjustBaseMNCommon(L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo,
@@ -2094,6 +2586,11 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMNK(L0TilingParams& l0Params, const
     uint32_t baseK = l0Params.baseK;
 
     AdjustBaseMNCommon(l0Params, tilingRunInfo, baseM, baseN, baseK);
+
+    if (IsSocVersion960() && tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK && !enableLocalWSplit_ &&
+        !tilingRunInfo_.enableC04Flag) {
+        SearchOptimalBaseMN(baseM, baseN, l0Params);
+    }
 
     baseK = CalculateOptimalBaseK(baseM, baseN, l0Params, tilingRunInfo);
 
@@ -2253,7 +2750,49 @@ void Conv3DDXV2InnerProductTiling::CalStepK(L1TilingParams& l1Params, const L0Ti
     LadderMatchStepMNK(params2, l0Params);
 
     // 优选基本块个数多的，载入一次尽可能多算
-    if (IsL1ParamsValid(params1, l0Params) && (params1.stepKa + params1.stepKb > params2.stepKa + params2.stepKb)) {
+    // 当 L1A/L1B 均开乒乓且 EqualL1 方案 stepKa/stepKb 严重不对称时, A1/B1 流水失衡会导致性能下降,
+    // 此时改选 Ladder 方案(stepKa==stepKb, 天然平衡); 单 buffer 无乒乓流水, 保留原逻辑
+    constexpr uint32_t stepKRatioLimit = 3;
+    bool isDoubleBuffer = (params1.al1Pbuffer == DB_ON) && (params1.bl1Pbuffer == DB_ON);
+    bool isParams1Balanced = !isDoubleBuffer || std::max(params1.stepKa, params1.stepKb) <=
+                                                    stepKRatioLimit * std::min(params1.stepKa, params1.stepKb);
+    bool preferParams1;
+    if (IsSocVersion960() && !isParams1Balanced) {
+        // 960 族 B 主导(memory bound)场景的流量加权决策: 4:1 均衡门超限且 B 流量占比高(>75%)时,
+        // 不再无条件选 Ladder, 而按 MTE2 传输成本择优 ——
+        //   B 矩阵(weight)按 M 任务数重复装载: B_traffic ∝ mValue × baseN/baseM
+        //   A 矩阵(dedy)  按 N 任务数重复装载: A_traffic ∝ nValue × baseM/baseN
+        //   cost = B_traffic × ceil(KTaskCnt/stepKb) + A_traffic × ceil(KTaskCnt/stepKa)
+        // B 强主导时 A 大块驻留方案(stepKa 覆盖长 K, A 传输次数少)是 MTE2 最优, 不应被均衡门拒绝;
+        // A 主导(compute bound)时均衡方案的流水收益大于传输差异, 维持原 4:1 均衡门
+        const uint64_t bTraffic = tilingRunInfo_.mValue * l0Params.baseN / l0Params.baseM;
+        const uint64_t aTraffic = tilingRunInfo_.nValue * l0Params.baseM / l0Params.baseN;
+        constexpr uint64_t bDominantRatio = 3;
+        const bool isBDominant = bTraffic > bDominantRatio * aTraffic;
+        if (isBDominant) {
+            const uint64_t kTaskCnt = Ops::Base::CeilDiv(tilingRunInfo_.kValue, static_cast<uint64_t>(l0Params.baseK));
+            auto reloadCost = [&kTaskCnt, &bTraffic, &aTraffic](const L1TilingParams& candidateParams) -> uint64_t {
+                uint64_t aReload = (candidateParams.stepKa == 0) ?
+                                       kTaskCnt :
+                                       Ops::Base::CeilDiv(kTaskCnt, static_cast<uint64_t>(candidateParams.stepKa));
+                uint64_t bReload = (candidateParams.stepKb == 0) ?
+                                       kTaskCnt :
+                                       Ops::Base::CeilDiv(kTaskCnt, static_cast<uint64_t>(candidateParams.stepKb));
+                return bTraffic * bReload + aTraffic * aReload;
+            };
+            const uint64_t cost1 = reloadCost(params1);
+            const uint64_t cost2 = reloadCost(params2);
+            preferParams1 = IsL1ParamsValid(params1, l0Params) &&
+                            (cost1 < cost2 ||
+                             (cost1 == cost2 && params1.stepKa + params1.stepKb > params2.stepKa + params2.stepKb));
+        } else {
+            preferParams1 = false;
+        }
+    } else {
+        preferParams1 = IsL1ParamsValid(params1, l0Params) && (!IsSocVersion960() || isParams1Balanced) &&
+                        (params1.stepKa + params1.stepKb > params2.stepKa + params2.stepKb);
+    }
+    if (preferParams1) {
         l1Params.stepKa = params1.stepKa;
         l1Params.stepKb = params1.stepKb;
     } else {
