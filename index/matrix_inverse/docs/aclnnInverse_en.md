@@ -85,7 +85,7 @@ aclnnStatus aclnnInverse(
         <td>Input</td>
         <td>Square input matrix.</td>
         <td>The last two dimensions must be equal. Empty tensors are not supported.</td>
-        <td>FLOAT, FLOAT16, DOUBLE</td>
+        <td>FLOAT, FLOAT16, DOUBLE, COMPLEX64, COMPLEX128</td>
         <td>ND</td>
         <td>2-8</td>
         <td>√</td>
@@ -94,8 +94,8 @@ aclnnStatus aclnnInverse(
         <td>out (aclTensor*)</td>
         <td>Output</td>
         <td>Output inverse matrix.</td>
-        <td>The data type and shape must be the same as those of self.</td>
-        <td>FLOAT, FLOAT16, DOUBLE</td>
+        <td>The data type must be a type to which self can be converted (see <a href="../../../docs/en/context/conversion_relationship.md">Conversion Relationship</a>). The shape must be the same as that of self.</td>
+        <td>FLOAT, FLOAT16, DOUBLE, BFLOAT16, COMPLEX64, COMPLEX128</td>
         <td>ND</td>
         <td>2-8</td>
         <td>√</td>
@@ -157,7 +157,7 @@ aclnnStatus aclnnInverse(
       <td>The data type of self or out is not supported.</td>
       </tr>
       <tr>
-      <td>The data types of self and out are different.</td>
+      <td>The data type of out cannot be converted from self.</td>
       </tr>
       <tr>
       <td>The shapes of self and out are different.</td>

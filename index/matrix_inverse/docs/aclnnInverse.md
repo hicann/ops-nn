@@ -83,7 +83,7 @@ aclnnStatus aclnnInverse(
         <td>输入</td>
         <td>输入方阵。</td>
         <td>最后两个维度必须相等，不支持空Tensor。</td>
-        <td>FLOAT、FLOAT16、DOUBLE</td>
+        <td>FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
         <td>2-8</td>
         <td>√</td>
@@ -92,8 +92,8 @@ aclnnStatus aclnnInverse(
         <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>输出逆矩阵。</td>
-        <td>数据类型和shape需要与self一致。</td>
-        <td>FLOAT、FLOAT16、DOUBLE</td>
+        <td>数据类型需要是self可转换的数据类型（参见[互转换关系](../../../docs/zh/context/conversion_relationship.md)），shape需要与self一致。</td>
+        <td>FLOAT、FLOAT16、DOUBLE、BFLOAT16、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
         <td>2-8</td>
         <td>√</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnInverse(
       <td>self或out的数据类型不在支持范围内。</td>
       </tr>
       <tr>
-      <td>self和out的数据类型不同。</td>
+      <td>out的数据类型不是self可转换的。</td>
       </tr>
       <tr>
       <td>self和out的shape不一致。</td>
