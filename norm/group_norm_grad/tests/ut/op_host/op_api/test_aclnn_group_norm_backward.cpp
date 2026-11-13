@@ -16,6 +16,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 using namespace std;
@@ -451,6 +452,35 @@ TEST_F(l2_group_norm_backward_test, case_gamma_nullptr_normal)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_group_norm_backward_test, case_gamma_nullptr_mix_f16f32_normal)
+{
+    // Regbase平台：gamma缺省时内部按mean的dtype构造全1填充，mix组合（gradOut/input=fp16、
+    // mean/rstd=fp32）可正常匹配binary并正确计算；非Regbase平台不支持mix组合，跳过。
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        const int64_t N = 2;
+        const int64_t C = 3;
+        const int64_t HxW = 4;
+        const int64_t group = 1;
+        auto grad_out_desc = TensorDesc({N, C, HxW}, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto input_desc = TensorDesc({N, C, HxW}, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto mean_desc = TensorDesc({N, group}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto rstd_desc = TensorDesc({N, group}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+        auto grad_input_desc = TensorDesc({N, C, HxW}, ACL_FLOAT16, ACL_FORMAT_ND);
+        auto dgamma_desc = TensorDesc({C}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto dbeta_desc = TensorDesc({C}, ACL_FLOAT, ACL_FORMAT_ND);
+
+        auto ut = OP_API_UT(
+            aclnnGroupNormBackward,
+            INPUT(grad_out_desc, input_desc, mean_desc, rstd_desc, (aclTensor*)nullptr, N, C, HxW, group, output_mask),
+            OUTPUT(grad_input_desc, dgamma_desc, dbeta_desc));
+
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+        EXPECT_EQ(aclRet, ACL_SUCCESS);
+    }
 }
 
 TEST_F(l2_group_norm_backward_test, case_gradinput_nullptr_normal)
