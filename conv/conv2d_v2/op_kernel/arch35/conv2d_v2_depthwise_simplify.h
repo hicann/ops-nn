@@ -254,7 +254,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
     }
 
     uint32_t totalM = static_cast<uint32_t>(t.hout * t.wout);
-    uint32_t maxMPerCore = GAlignUp(GCeilDiv(totalM, t.hoDim), GM0);
+    uint32_t maxMPerCore = GAlignUp(GCeilDiv(totalM, t.hoDim), M0);
     mIdxStart_ = mDimIdx * maxMPerCore;
     if (mIdxStart_ >= totalM) {
         coreActive_ = false;
@@ -283,8 +283,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
     kUbSize_ = cinAligned_ * khkw;
     kTotal_ = kUbSize_;
     uint32_t K1 = GCeilDiv(kTotal_, K0_VAL);
-    uint32_t N1 = GCeilDiv(t.coutOpt, GN0);
-    nzBufElems_ = K1 * N1 * GN0 * K0_VAL;
+    uint32_t N1 = GCeilDiv(t.coutOpt, N0);
+    nzBufElems_ = K1 * N1 * N0 * K0_VAL;
 
     // L1 buffers: both AIC and AIV allocate in same order/size for address agreement
     uint32_t hiAL1 = t.aL1SpaceSize / (orgWin_ * cinAligned_ * sizeof(DTYPE));
@@ -403,8 +403,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
             WaitFlag<HardEvent::V_MTE2>(EVENT_ID0);
 
             if constexpr (aFormat == ConvFormat::NHWC) {
-                uint32_t co1Opt = GCeilDiv(t.coutOpt, GN0);
-                uint32_t coOptAlign = co1Opt * GN0;
+                uint32_t co1Opt = GCeilDiv(t.coutOpt, N0);
+                uint32_t coOptAlign = co1Opt * N0;
                 NdDmaParams<DTYPE, G_NDDMA_HWC_DIMS> copyParamsHWC;
                 copyParamsHWC.loopInfo.loopSize[G_NDDMA_LOOP0_INDEX] = (t.cout / t.groups);
                 copyParamsHWC.loopInfo.loopSrcStride[G_NDDMA_LOOP0_INDEX] = 1;
@@ -457,10 +457,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
                 CrossCoreWaitFlag<G_CV_ENHANCE_MODE, PIPE_MTE3>(syncMte1Mte3);
             }
 
-            uint32_t co1Opt = GCeilDiv(t.coutOpt, GN0);
+            uint32_t co1Opt = GCeilDiv(t.coutOpt, N0);
             DataCopyParams nzCp;
             nzCp.blockCount = static_cast<uint16_t>(kTotal_ / K0_VAL);
-            nzCp.blockLen = static_cast<uint16_t>(co1Opt * GN0 * K0_VAL * sizeof(DTYPE) / BLOCK_BYTES);
+            nzCp.blockLen = static_cast<uint16_t>(co1Opt * N0 * K0_VAL * sizeof(DTYPE) / BLOCK_BYTES);
             nzCp.srcStride = 0;
             nzCp.dstStride = 0;
             DataCopy(bl1, ubNz, nzCp);
@@ -524,7 +524,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
                     WaitFlag<HardEvent::MTE2_MTE1>(static_cast<event_t>(l1BufId));
 
                     LocalTensor<DTYPE> al1(TPosition::A1, l1BufId * al1HalfSize_ * sizeof(DTYPE), al1HalfSize_);
-                    uint32_t curNVal = (enlargeActual_ == t.enlarge) ? coutOpt : enlargeActual_ * (t.cout / t.groups);
+                    uint32_t curNVal = (enlargeActual_ == t.enlarge) ? coutOpt : enlargeActual_;
                     ComputeL0(al1, bl1, mGlobal, curMAL1, 0, curNVal, kTotal_);
                     SetFlag<HardEvent::MTE1_MTE2>(static_cast<event_t>(l1BufId));
                     if constexpr (AL1_PINGPONG) {
@@ -558,8 +558,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
     const auto& t = Tiling();
     LocalTensor<IndexT> indexTensor(TPosition::VECIN, ubIndexOffBytes_, G_REG_SIZE / sizeof(IndexT));
     uint32_t khkw = t.kh * t.kw;
-    uint32_t co1Opt = GCeilDiv(t.coutOpt, GN0);
-    uint32_t coOptAlign = co1Opt * GN0;
+    uint32_t co1Opt = GCeilDiv(t.coutOpt, N0);
+    uint32_t coOptAlign = co1Opt * N0;
     IndexT curValue = 0;
     uint32_t gatherStep = (aFormat == ConvFormat::NHWC) ? coOptAlign : khkw;
     for (uint8_t idx = 0; idx < K0_VAL; ++idx) {
@@ -584,9 +584,9 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
     LocalTensor<IndexT> indexTensor(TPosition::VECIN, ubIndexOffBytes_, G_REG_SIZE / sizeof(IndexT));
 
     uint32_t khkw = t.kh * t.kw;
-    uint32_t co1Opt = GCeilDiv(t.coutOpt, GN0);
-    uint32_t coOptAlign = co1Opt * GN0;
-    uint16_t coPerReg = GN0 / G_CO0_LOOP_TIMES;
+    uint32_t co1Opt = GCeilDiv(t.coutOpt, N0);
+    uint32_t coOptAlign = co1Opt * N0;
+    uint16_t coPerReg = N0 / G_CO0_LOOP_TIMES;
     uint16_t ciLoopTimes = GCeilDiv(cinAligned_, K0_VAL);
     uint16_t coLoopTimes = co1Opt * G_CO0_LOOP_TIMES;
     uint16_t khkwLoopTimes = khkw;
@@ -746,7 +746,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
         // GM→L1: MTE2 writes bias to L1
         uint64_t biasByteNum = curN * sizeof(DTYPE);
         LocalTensor<DTYPE> biasL1(TPosition::A1, biasL1OffBytes_, t.coutOpt);
-        InitConstValueParams<DTYPE> initParams(1, static_cast<uint16_t>(AlignB(curN, GN0) * sizeof(DTYPE) / C0_SIZE), 0,
+        InitConstValueParams<DTYPE> initParams(1, static_cast<uint16_t>(AlignB(curN, N0) * sizeof(DTYPE) / C0_SIZE), 0,
                                                0);
         WaitFlag<HardEvent::MTE1_MTE2>(EVENT_ID2);
         InitConstValue<DTYPE>(biasL1, initParams);
@@ -761,7 +761,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
         // L1→C2: MTE1 reads L1, writes biasTable
         WaitFlag<HardEvent::M_MTE1>(EVENT_ID3);
         LocalTensor<L0cT> biasBT(TPosition::C2, 0, btElemNum);
-        uint32_t blkCnt = GAlignUp(curN, GN0) * sizeof(DTYPE) / BLOCK_BYTES;
+        uint32_t blkCnt = GAlignUp(curN, N0) * sizeof(DTYPE) / BLOCK_BYTES;
         DataCopyParams cp(1, blkCnt, 0, 0);
         DataCopy(biasBT, biasL1[nIter], cp);
         SetFlag<HardEvent::MTE1_MTE2>(EVENT_ID2);
@@ -773,13 +773,13 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
         uint32_t curML0 = mL0;
         if (mL0It + curML0 > curMAL1)
             curML0 = curMAL1 - mL0It;
-        uint32_t curML0Align = GAlignUp(curML0, GM0);
+        uint32_t curML0Align = GAlignUp(curML0, M0);
         uint32_t mL0Pos = mL0It + (mGlobal % orgWo_);
         uint32_t safeMAlign = curML0Align;
         if (mL0Pos + safeMAlign > maxLocalM && maxLocalM > mL0Pos) {
-            safeMAlign = GAlignUp(maxLocalM - mL0Pos, GM0);
-            if (safeMAlign < GM0)
-                safeMAlign = GM0;
+            safeMAlign = GAlignUp(maxLocalM - mL0Pos, M0);
+            if (safeMAlign < M0)
+                safeMAlign = M0;
         }
         uint32_t loadMValue = safeMAlign;
         if (mL0Pos + safeMAlign > maxLocalM && maxLocalM > mL0Pos) {
@@ -787,7 +787,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
         }
 
         // Set Load3D repeat register (once per mL0 block)
-        LoadDataRepeatParamWithStride repeatParams = {0, 1, 0, static_cast<uint16_t>(safeMAlign / GM0)};
+        LoadDataRepeatParamWithStride repeatParams = {0, 1, 0, static_cast<uint16_t>(safeMAlign / M0)};
         SetLoadDataRepeatWithStride(repeatParams);
         // Cache xmTmp (mStep + posM)
         load3dXmTmp_ = ((static_cast<uint64_t>(loadMValue) & G_MASK_16) << G_MSTEP_OFFSET) |
@@ -861,13 +861,13 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
 {
     const auto& t = Tiling();
     uint32_t kStep = GCeilDiv(curK, K0_VAL);
-    uint32_t mStep = GCeilDiv(curN, GN0);
+    uint32_t mStep = GCeilDiv(curN, N0);
     Load2DBitModeParam param;
-    param.SetMStartPosition(nOff / GN0);
+    param.SetMStartPosition(nOff / N0);
     param.SetKStartPosition(kOff / K0_VAL);
     param.SetMStep(static_cast<uint16_t>(mStep));
     param.SetKStep(static_cast<uint16_t>(kStep));
-    param.SetSrcStride(static_cast<int32_t>(GCeilDiv(t.coutOpt, GN0)));
+    param.SetSrcStride(static_cast<int32_t>(GCeilDiv(t.coutOpt, N0)));
     param.SetDstStride(static_cast<uint16_t>(mStep));
     param.SetIfTranspose(false);
     LoadData<TPosition::B2, TPosition::B1, DTYPE>(bl0, bl1, param);
@@ -933,7 +933,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
     fp.deqScalar = FP32_ONE_BITS;
     fp.reluEn = false;
     fp.params.dnNum = 1;
-    fp.params.srcNzMatrixStride = (curN + GN0 - 1) / GN0 * (GAlignUp(curM, GN0) / GN0);
+    fp.params.srcNzMatrixStride = (curN + N0 - 1) / N0 * (GAlignUp(curM, N0) / N0);
     fp.params.dstDnMatrixStride = hwOut;
     fp.params.srcNzC0Stride = 1;
     Fixpipe<DTYPE, L0cT, CFG_COLUMN_MAJOR>(outputGm_[outOff], cl0, fp);

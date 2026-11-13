@@ -23,9 +23,9 @@ using Conv2DTilingData = Ops::NN::Conv2dV2::Conv2DTilingData;
 #include "../conv2d_v2/arch35/conv2d_v2.h"
 #include "../conv2d_v2/arch35/conv2d_v2_group.h"
 #include "../conv2d_v2/arch35/conv2d_v2_tilingkey.h"
-#include "../conv2d_v2/arch35/conv2d_small_kernel.h"
-#include "../conv2d_v2/arch35/conv2d_small_kernel_parallelism.h"
-#include "../conv2d_v2/arch35/conv2d_small_kernel_fm_partload.h"
+#include "../conv2d_v2/arch35/small_case_opt/full_load/full_load_pipeline.h"
+#include "../conv2d_v2/arch35/small_case_opt/cin_split/cin_split_pipeline.h"
+#include "../conv2d_v2/arch35/small_case_opt/fm_partload/fm_partload_pipeline.h"
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5162)
 #include "../conv2d_v2/arch51/conv2d_v2_instr_impl_arch51.h"
 #include "../common/arch51/conv_common_func_arch51.h"
@@ -134,11 +134,10 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
         constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC);
         constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
         constexpr bool isHw = (OutputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE));
-        Conv2dSmallKernelFmPartload<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
-                                    isHw>
+        small_conv::FmPartloadPipeline<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
+                                       ConvFormat::FRACTAL_Z, isHw, Conv2DTilingData>
             op;
-        op.Init(tilingData);
-        op.Process(x, filter, bias, y0, &extendParams);
+        op(tilingData, x, filter, bias, y0, &extendParams);
     } else if constexpr (SmallKernel == CONV_SMALL_KERNEL && weightFormat == ConvFormat::FRACTAL_Z) {
         constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC);
         constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
@@ -156,17 +155,15 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
         }
 
         if (isParallelism) {
-            Conv2dSmallKernelParallelism<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
-                                         isHw>
+            small_conv::CinSplitPipeline<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
+                                         ConvFormat::FRACTAL_Z, isHw, Conv2DTilingData>
                 op;
-            op.Init(tilingData);
-            op.Process(x, filter, bias, y0, &extendParams);
+            op(tilingData, x, filter, bias, y0, &extendParams);
         } else {
-            Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
-                              ConvFormat::FRACTAL_Z, isHw>
+            small_conv::FullLoadPipeline<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
+                                         ConvFormat::FRACTAL_Z, isHw, Conv2DTilingData>
                 op;
-            op.Init(tilingData);
-            op.Process(x, filter, bias, y0, &extendParams);
+            op(tilingData, x, filter, bias, y0, &extendParams);
         }
     } else {
         if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
