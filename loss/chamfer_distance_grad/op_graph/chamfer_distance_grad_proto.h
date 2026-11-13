@@ -31,9 +31,9 @@ namespace ge {
 \n
 
 * @par Outputs:
-* @li grad_xyz1: A Tensor. Must be one of the following types: float16, bfloat16, float32. grad of xyz1 with shape (B,
+* @li grad_xyz1: A Tensor. Must be one of the following types: float16, float32. grad of xyz1 with shape (B,
 N, 2).
-* @li grad_xyz2: A Tensor. Must be one of the following types: float16, bfloat16, float32. grad of xyz2 with shape (B,
+* @li grad_xyz2: A Tensor. Must be one of the following types: float16, float32. grad of xyz2 with shape (B,
 N, 2).
 */
 
