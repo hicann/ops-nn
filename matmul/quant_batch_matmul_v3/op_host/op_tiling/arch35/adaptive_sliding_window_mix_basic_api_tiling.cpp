@@ -29,7 +29,6 @@ constexpr uint32_t DB_SIZE = 2;
 constexpr uint32_t DATA_SIZE_L0C = 4;
 constexpr uint8_t L1_TWO_BUFFER = 2;
 constexpr uint8_t L1_FOUR_BUFFER = 4;
-constexpr uint32_t CORE_RATIO = 2U;
 constexpr uint64_t AFULLLOAD_SINGLE_CORE_A_SCALER = 2UL;
 constexpr uint64_t MIXFP_DIVISOR_SIZE = 64UL;
 constexpr uint64_t CUBE_BLOCK = 16UL;
@@ -40,7 +39,8 @@ constexpr uint64_t L2_ALIGN_SIZE = 128UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_32 = 32UL;
 constexpr uint64_t BASEK_LIMIT = 4095UL;
 
-const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510)};
+const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510),
+                                               static_cast<int32_t>(NpuArch::DAV_9201)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MIX_BASIC_API_ASW;
 } // namespace
 
@@ -111,9 +111,10 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::IsCapable()
 
 bool AdaptiveSlidingWindowMixBasicAPITiling::CheckCoreNum() const
 {
-    if (compileInfo_.aivNum != CORE_RATIO * compileInfo_.aicNum) {
-        OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
-                compileInfo_.aicNum, compileInfo_.aivNum);
+    const uint32_t aivNumPerAic = strategy::GetAivNumPerAic(compileInfo_.npuArch);
+    if (aivNumPerAic == 0U || compileInfo_.aivNum != aivNumPerAic * compileInfo_.aicNum) {
+        OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:%u, actual aicNum: %u, aivNum: %u.",
+                aivNumPerAic, compileInfo_.aicNum, compileInfo_.aivNum);
         return false;
     }
     return true;
@@ -267,8 +268,10 @@ void AdaptiveSlidingWindowMixBasicAPITiling::OptimizeBaseBlock()
 
 bool AdaptiveSlidingWindowMixBasicAPITiling::CalcBasicBlock()
 {
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
-    if (!calculator.Compute(BaseBlockMode::DEFAULT)) {
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), context_->GetPlatformInfo(), true);
+    BaseBlockMode mode = (compileInfo_.npuArch == NpuArch::DAV_9201) ? BaseBlockMode::LOAD_BALANCE :
+                                                                       BaseBlockMode::DEFAULT;
+    if (!calculator.Compute(mode)) {
         return false;
     }
     const BaseBlockRes& baseBlockRes = calculator.GetOutput();
@@ -285,7 +288,7 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::CalcBasicBlock()
                                            inputParams_.biasDtype == ge::DT_FLOAT);
     const bool skipOptimizeBaseBlock = inputParams_.bFormat == ge::FORMAT_ND ||
                                        (isInt8WeightNz && !wasSupportedInt8WeightNz);
-    if (!skipOptimizeBaseBlock) {
+    if (compileInfo_.npuArch == NpuArch::DAV_3510 && !skipOptimizeBaseBlock) {
         OptimizeBaseBlock();
     }
     adaptiveWin_.useTailWinLogic = baseBlockRes.useTailWinLogic;

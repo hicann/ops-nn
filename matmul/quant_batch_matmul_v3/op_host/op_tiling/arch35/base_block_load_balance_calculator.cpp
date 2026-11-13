@@ -43,6 +43,7 @@ constexpr uint64_t LB_KB_SIZE = 1024UL;
 // 9202(960PR) doubles the mmad N-direction fragmentation for hif4/mxfp4 inputs
 constexpr uint64_t LB_COMPUTE_POWER_DOUBLE = 2UL;
 constexpr uint64_t FP32_OUTPUT_TIMES = 4;
+constexpr uint64_t FP16_OUTPUT_TIMES = 2;
 constexpr uint64_t PING_PONG_TIMES = 2;
 constexpr uint64_t UB_ALIGN_SIZE = 32;
 
@@ -289,6 +290,11 @@ bool BaseBlockCalculator::GetSocSpecAdjustBalanceInfo(SocSpecifyParams& outInfo)
 bool BaseBlockCalculator::IsBasicBlockUbOverflow(uint64_t baseM, uint64_t baseN)
 {
     const uint32_t aivNumPerAic = strategy::GetAivNumPerAic(compileInfo_.npuArch);
+    // 兜底防除零：GetAivNumPerAic 对未维护 AIV/AIC 配比的架构返回 0，此时无法估算单 AIV 的 UB 占用，直接失败
+    OP_TILING_CHECK(aivNumPerAic == 0UL,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                          "IsBasicBlockUbOverflow failed, aivNumPerAic must be positive but it is 0."),
+                    return false);
     uint64_t mForSingleVec = ops::CeilDiv(baseM, static_cast<uint64_t>(aivNumPerAic));
     uint64_t usedUBSize = GetSizeWithDataType(mForSingleVec * baseN, ge::DT_FLOAT);
     if (inputParams_.isPerChannel) {
@@ -301,7 +307,8 @@ bool BaseBlockCalculator::IsBasicBlockUbOverflow(uint64_t baseM, uint64_t baseN)
     if (inputParams_.hasBias) {
         usedUBSize += GetSizeWithDataType(baseN, inputParams_.biasDtype);
     }
-    usedUBSize += GetSizeWithDataType(ops::CeilDiv(mForSingleVec, FP32_OUTPUT_TIMES) * baseN, inputParams_.cDtype) *
+    uint64_t outputTimes = inputParams_.cDtype == ge::DT_FLOAT ? FP32_OUTPUT_TIMES : FP16_OUTPUT_TIMES;
+    usedUBSize += GetSizeWithDataType(ops::CeilDiv(mForSingleVec, outputTimes) * baseN, inputParams_.cDtype) *
                   PING_PONG_TIMES;
     return usedUBSize > compileInfo_.ubSize;
 }
@@ -339,10 +346,10 @@ bool BaseBlockCalculator::RecalcBaseMByUb(uint64_t& baseM, uint64_t baseN, bool&
                         return false);
         leftUBSize -= biasSize;
     }
-    // The remaining space is baseM * baseN + baseM * baseN / 4 * 2 + (baseM), depending on whether it is pertoken.
+    // The remaining space is baseM * baseN + baseM * baseN / 4(2) * 2 + (baseM), depending on whether it is pertoken.
+    uint64_t outputTimes = inputParams_.cDtype == ge::DT_FLOAT ? FP32_OUTPUT_TIMES : FP16_OUTPUT_TIMES;
     uint64_t perRowSize = GetSizeWithDataType(baseN, ge::DT_FLOAT) +
-                          GetSizeWithDataType(ops::CeilDiv(baseN, FP32_OUTPUT_TIMES), inputParams_.cDtype) *
-                              PING_PONG_TIMES;
+                          GetSizeWithDataType(ops::CeilDiv(baseN, outputTimes), inputParams_.cDtype) * PING_PONG_TIMES;
     if (inputParams_.isPertoken) {
         perRowSize += GetSizeWithDataType(1, inputParams_.perTokenScaleDtype);
     }

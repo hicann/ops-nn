@@ -22,6 +22,7 @@
 #include "../test_quant_batch_matmul_v3_tiling.h"
 #include "../../../../op_host/mx_scale_nz_shape.h"
 #include "../../../../op_host/op_tiling/quant_batch_matmul_v3_tiling_cache_key.h"
+#include "tiling_context_faker.h"
 
 static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParamsDav3510 = GetParams("Dav3510");
 
@@ -71,6 +72,7 @@ namespace {
 class MixCapabilityProbe : public optiling::AdaptiveSlidingWindowMixBasicAPITiling {
 public:
     MixCapabilityProbe() : AdaptiveSlidingWindowMixBasicAPITiling(nullptr) {}
+    MixCapabilityProbe(gert::TilingContext* context) : AdaptiveSlidingWindowMixBasicAPITiling(context) {}
     using AdaptiveSlidingWindowMixBasicAPITiling::CalcBasicBlock;
     using AdaptiveSlidingWindowTiling::adaptiveWin_;
     using QuantBatchMatmulV3TilingBase::aicoreParams_;
@@ -509,7 +511,26 @@ TEST(QbmmMixNdCapability, OnlyNewMixRoutesUseCommonBaseBlockForLongK)
 {
     using optiling::BaseBlockCalculator;
     using optiling::BaseBlockMode;
-    MixCapabilityProbe tiling;
+    // CalcBasicBlock() 经 context_->GetPlatformInfo() 读平台信息。tiling 上下文的读取端按固定下标取槽：
+    // [io]=compileInfo、[io+1]=platformInfo、[io+3]=deterministic，而 faker 按 setter 调用顺序从 [io]
+    // 起写入扩展槽。因此必须先挂 CompileInfo 再挂 PlatformInfo，否则 platformInfo 落位到 [io]、
+    // GetPlatformInfo() 从 [io+1] 读到未初始化内存并解引用，导致 SEGV。占位 compileInfo 不会被读取
+    // （本用例直接设置 tiling.compileInfo_ 成员）。
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    optiling::QuantBatchMatmulV3CompileInfo contextCompileInfo{};
+    gert::StorageShape shape({16, 16}, {16, 16});
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("QuantBatchMatmulV3")
+                      .NodeIoNum(1, 1)
+                      .InputShapes({&shape})
+                      .OutputShapes({&shape})
+                      .NodeInputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&contextCompileInfo)
+                      .PlatformInfo(&platformInfo)
+                      .Build();
+    MixCapabilityProbe tiling(holder.GetContext<gert::TilingContext>());
     auto& info = tiling.inputParams_;
     info = MakeNdMixInfo();
     info.opName = "QuantBatchMatmulV3";
