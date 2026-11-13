@@ -2007,19 +2007,245 @@ TEST(RmsNormTemplatesTiling, ExistingFallbackAndInvalidPlatform)
     EXPECT_EQ(RunTiling(1, 0, ge::DT_FLOAT16, ge::DT_FLOAT16, 0, "GemmaRmsNorm").status, ge::GRAPH_FAILED);
 }
 
+void ExpectRmsNormMissingShapeFailure(bool missingX)
+{
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNorm");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->tiling, nullptr);
+    gert::StorageShape x = {{2, 4, 16}, {2, 4, 16}};
+    gert::StorageShape rstd = {{1, 1, 1}, {1, 1, 1}};
+    fe::PlatFormInfos platform;
+    ASSERT_TRUE(platform.Init());
+    optiling::Tiling4RmsNormCompileInfo compileInfo;
+    auto raw = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(1);
+    auto* workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("RmsNorm")
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&x, &x})
+                      .OutputShapes({&x, &rstd})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(&platform)
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6f)}})
+                      .TilingData(raw.get())
+                      .Workspace(workspace)
+                      .Build();
+    auto* context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+    const auto* nodeInfo = context->GetComputeNodeInfo();
+    ASSERT_NE(nodeInfo, nullptr);
+    // Inject a missing shape after the SDK builder has created the required tensors.
+    auto* shapeSlot = holder.GetContext<gert::KernelContext>()->MutableInput(missingX ? 0U :
+                                                                                        nodeInfo->GetInputsNum() + 1U);
+    ASSERT_NE(shapeSlot, nullptr);
+    shapeSlot->Set(nullptr, nullptr);
+    ASSERT_EQ(missingX ? context->GetInputShape(0) : context->GetOutputShape(1), nullptr);
+    EXPECT_EQ(impl->tiling(context), ge::GRAPH_FAILED);
+}
+
+TEST(RmsNormTemplatesTiling, RejectsMissingXShape) { ExpectRmsNormMissingShapeFailure(true); }
+
+TEST(RmsNormTemplatesTiling, RejectsMissingRstdShape) { ExpectRmsNormMissingShapeFailure(false); }
+
+gert::StorageShape MakeRstdRankTestShape(size_t rank, int64_t lastDim = 1)
+{
+    gert::StorageShape shape;
+    for (size_t i = 0; i < rank; ++i) {
+        const int64_t dim = i + 1 == rank ? lastDim : 1;
+        shape.MutableOriginShape().AppendDim(dim);
+        shape.MutableStorageShape().AppendDim(dim);
+    }
+    return shape;
+}
+
+TEST(RmsNormTemplatesTiling, RejectsRstdRankAboveLimit)
+{
+    const gert::StorageShape x = {{2, 4, 16}, {2, 4, 16}};
+    for (const auto& platform : {std::make_pair("Ascend950", "3510"), std::make_pair("Ascend910B", "2201"),
+                                 std::make_pair("Ascend910_93", "2201"), std::make_pair("Ascend310P", "2002")}) {
+        SCOPED_TRACE(platform.first);
+        for (const auto& [dx, dg] : DTYPES) {
+            if (std::string(platform.first) == "Ascend310P" && (dx == ge::DT_BF16 || dx != dg)) {
+                continue;
+            }
+            SCOPED_TRACE(dx);
+            SCOPED_TRACE(dg);
+            for (size_t rank : {9U, 10U, 25U}) {
+                SCOPED_TRACE(rank);
+                const auto rstd = MakeRstdRankTestShape(rank);
+                EXPECT_EQ(RunShapeTiling(x, x, rstd, dx, dg, 0, "RmsNorm", 64, 253952, platform.first, platform.second)
+                              .status,
+                          ge::GRAPH_FAILED);
+            }
+        }
+    }
+}
+
+TEST(RmsNormTemplatesTiling, RejectsRstdRankAboveInputRank)
+{
+    const gert::StorageShape x = {{2, 4, 16}, {2, 4, 16}};
+    for (const auto& platform : {std::make_pair("Ascend950", "3510"), std::make_pair("Ascend910B", "2201"),
+                                 std::make_pair("Ascend910_93", "2201"), std::make_pair("Ascend310P", "2002")}) {
+        SCOPED_TRACE(platform.first);
+        for (const auto& [dx, dg] : DTYPES) {
+            if (std::string(platform.first) == "Ascend310P" && (dx == ge::DT_BF16 || dx != dg)) {
+                continue;
+            }
+            SCOPED_TRACE(dx);
+            SCOPED_TRACE(dg);
+            for (size_t rank = 4; rank <= 8; ++rank) {
+                SCOPED_TRACE(rank);
+                for (int64_t lastDim : {1, 4}) {
+                    SCOPED_TRACE(lastDim);
+                    const auto rstd = MakeRstdRankTestShape(rank, lastDim);
+                    EXPECT_EQ(
+                        RunShapeTiling(x, x, rstd, dx, dg, 0, "RmsNorm", 64, 253952, platform.first, platform.second)
+                            .status,
+                        ge::GRAPH_FAILED);
+                }
+            }
+        }
+    }
+}
+
+TEST(RmsNormTemplatesTiling, AcceptsRstdRanksWithinLimit)
+{
+    for (const auto& platform : {std::make_pair("Ascend950", "3510"), std::make_pair("Ascend910B", "2201"),
+                                 std::make_pair("Ascend910_93", "2201"), std::make_pair("Ascend310P", "2002")}) {
+        SCOPED_TRACE(platform.first);
+        for (const auto& [dx, dg] : DTYPES) {
+            if (std::string(platform.first) == "Ascend310P" && (dx == ge::DT_BF16 || dx != dg)) {
+                continue;
+            }
+            SCOPED_TRACE(dx);
+            SCOPED_TRACE(dg);
+            for (size_t rank = 1; rank <= 8; ++rank) {
+                SCOPED_TRACE(rank);
+                const auto x = MakeRstdRankTestShape(rank, 64);
+                const auto rstd = MakeRstdRankTestShape(rank);
+                EXPECT_EQ(RunShapeTiling(x, x, rstd, dx, dg, 0, "RmsNorm", 64, 253952, platform.first, platform.second)
+                              .status,
+                          ge::GRAPH_SUCCESS);
+            }
+        }
+    }
+}
+
+TEST(RmsNormTemplatesTiling, RejectsNonemptyRstdRankBelowInputRank)
+{
+    const gert::StorageShape x = {{2, 3, 4}, {2, 3, 4}};
+    const gert::StorageShape gamma = {{4}, {4}};
+    for (const auto& platform : {std::make_pair("Ascend950", "3510"), std::make_pair("Ascend910B", "2201")}) {
+        SCOPED_TRACE(platform.first);
+        for (const auto& [dx, dg] : DTYPES) {
+            SCOPED_TRACE(dx);
+            SCOPED_TRACE(dg);
+            // Includes a scalar and the squeezed, equal-numel representation (2, 3).
+            for (const gert::StorageShape& rstd :
+                 {gert::StorageShape{{}, {}}, gert::StorageShape{{2}, {2}}, gert::StorageShape{{2, 3}, {2, 3}}}) {
+                SCOPED_TRACE(rstd.GetStorageShape().GetDimNum());
+                EXPECT_EQ(
+                    RunShapeTiling(x, gamma, rstd, dx, dg, 0, "RmsNorm", 64, 253952, platform.first, platform.second)
+                        .status,
+                    ge::GRAPH_FAILED);
+            }
+            // Full-axis normalization still retains all dimensions for nonempty inputs.
+            EXPECT_EQ(RunShapeTiling(x, x, {{}, {}}, dx, dg, 0, "RmsNorm", 64, 253952, platform.first, platform.second)
+                          .status,
+                      ge::GRAPH_FAILED);
+        }
+    }
+}
+
+TEST(RmsNormTemplatesTiling, RejectsNonemptyRstdDimensionMismatch)
+{
+    struct ShapeCase {
+        gert::StorageShape x;
+        gert::StorageShape gamma;
+        gert::StorageShape rstd;
+    };
+    const ShapeCase cases[] = {
+        // Each non-reduced dimension must match x, even when the supplied dimension is 1.
+        {{{2, 3, 4}, {2, 3, 4}}, {{4}, {4}}, {{1, 3, 1}, {1, 3, 1}}},
+        {{{2, 3, 4}, {2, 3, 4}}, {{4}, {4}}, {{2, 1, 1}, {2, 1, 1}}},
+        // A reduced dimension cannot retain the corresponding non-unit x dimension.
+        {{{2, 3, 4}, {2, 3, 4}}, {{4}, {4}}, {{2, 3, 4}, {2, 3, 4}}},
+        // Same element count as (2, 3, 1), but the axes are wrong.
+        {{{2, 3, 2}, {2, 3, 2}}, {{2}, {2}}, {{1, 3, 2}, {1, 3, 2}}},
+        // Both dimensions of a multi-axis normalization must be 1.
+        {{{2, 3, 4, 8}, {2, 3, 4, 8}}, {{4, 8}, {4, 8}}, {{2, 3, 4, 1}, {2, 3, 4, 1}}},
+        {{{2, 3, 4, 8}, {2, 3, 4, 8}}, {{4, 8}, {4, 8}}, {{2, 3, 1, 8}, {2, 3, 1, 8}}},
+        // Full-axis normalization requires all output dimensions to be 1.
+        {{{2, 3, 4}, {2, 3, 4}}, {{2, 3, 4}, {2, 3, 4}}, {{2, 1, 1}, {2, 1, 1}}},
+    };
+    for (const auto& platform : {std::make_pair("Ascend950", "3510"), std::make_pair("Ascend910B", "2201")}) {
+        SCOPED_TRACE(platform.first);
+        for (const auto& [dx, dg] : DTYPES) {
+            SCOPED_TRACE(dx);
+            SCOPED_TRACE(dg);
+            size_t caseIndex = 0;
+            for (const auto& shape : cases) {
+                SCOPED_TRACE(caseIndex++);
+                EXPECT_EQ(RunShapeTiling(shape.x, shape.gamma, shape.rstd, dx, dg, 0, "RmsNorm", 64, 253952,
+                                         platform.first, platform.second)
+                              .status,
+                          ge::GRAPH_FAILED);
+            }
+        }
+    }
+}
+
+TEST(RmsNormTemplatesTiling, AcceptsNonemptyRstdReducedShape)
+{
+    struct ShapeCase {
+        gert::StorageShape x;
+        gert::StorageShape gamma;
+        gert::StorageShape rstd;
+    };
+    const ShapeCase cases[] = {
+        {{{2, 3, 4}, {2, 3, 4}}, {{4}, {4}}, {{2, 3, 1}, {2, 3, 1}}},
+        {{{2, 3, 4, 8}, {2, 3, 4, 8}}, {{4, 8}, {4, 8}}, {{2, 3, 1, 1}, {2, 3, 1, 1}}},
+        {{{2, 3, 4}, {2, 3, 4}}, {{2, 3, 4}, {2, 3, 4}}, {{1, 1, 1}, {1, 1, 1}}},
+        // Unit dimensions are valid in both the outer and normalized portions.
+        {{{1, 3, 1, 8}, {1, 3, 1, 8}}, {{1, 8}, {1, 8}}, {{1, 3, 1, 1}, {1, 3, 1, 1}}},
+        {{{3, 1, 8}, {3, 1, 8}}, {{8}, {8}}, {{3, 1, 1}, {3, 1, 1}}},
+    };
+    for (const auto& platform : {std::make_pair("Ascend950", "3510"), std::make_pair("Ascend910B", "2201")}) {
+        SCOPED_TRACE(platform.first);
+        for (const auto& [dx, dg] : DTYPES) {
+            SCOPED_TRACE(dx);
+            SCOPED_TRACE(dg);
+            size_t caseIndex = 0;
+            for (const auto& shape : cases) {
+                SCOPED_TRACE(caseIndex++);
+                EXPECT_EQ(RunShapeTiling(shape.x, shape.gamma, shape.rstd, dx, dg, 0, "RmsNorm", 64, 253952,
+                                         platform.first, platform.second)
+                              .status,
+                          ge::GRAPH_SUCCESS);
+            }
+        }
+    }
+}
+
 TEST(RmsNormTemplatesTiling, NonRegbaseRstdNumelMustEqualRows)
 {
     // 非 regbase 平台（910B，NpuArch=2201）：rstdOut 元素数小于归一化行数 x.numel / gamma.numel 时，
     // GemmaRmsNorm 内核按行数写 rstd 会产生越界写（issue #7333），tiling 应失败。
-    // 该校验仅作用于 GemmaRmsNorm 的 tiling 实现；RmsNorm 不做此校验，保持原有行为。
+    // RmsNorm 通过独立的完整输出形状校验拒绝同样的非法形态。
     auto badGemma = RunShapeTiling({{8, 128}, {8, 128}}, {{128}, {128}}, {{1, 1}, {1, 1}}, ge::DT_FLOAT16, ge::DT_FLOAT,
                                    0, "GemmaRmsNorm", 64, 253952, "Ascend910B", "2201");
     EXPECT_EQ(badGemma.status, ge::GRAPH_FAILED);
 
-    // RmsNorm 不受该校验影响：同样的 rstd 形态仍按原行为放行。
+    // RmsNorm 的非归一化维必须与 x 相等，因此拒绝 (1, 1)。
     auto rmsBad = RunShapeTiling({{8, 128}, {8, 128}}, {{128}, {128}}, {{1, 1}, {1, 1}}, ge::DT_FLOAT16, ge::DT_FLOAT,
                                  0, "RmsNorm", 64, 253952, "Ascend910B", "2201");
-    EXPECT_EQ(rmsBad.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(rmsBad.status, ge::GRAPH_FAILED);
 
     // 合法形态（rstdOut 元素数等于行数）不被新增校验误伤。
     auto goodGemma = RunShapeTiling({{8, 128}, {8, 128}}, {{128}, {128}}, {{8, 1}, {8, 1}}, ge::DT_FLOAT16,

@@ -108,6 +108,13 @@ class RmsNormXpuRef:
         return y.to(x.dtype), rstd
 
 
+class TorchRmsNormXpuRef(RmsNormXpuRef):
+    """Match the e2e API's ``input`` name for TTK's name-based XPU dispatch."""
+
+    def __call__(self, input, gamma, epsilon=1e-6, **kwargs):
+        return super().__call__(input, gamma, epsilon, **kwargs)
+
+
 class RmsNormSpec:
     # 沿用 TTK 默认精度标准；GPU 参考由 xpu-server 在目标设备上实例化。
     golden = staticmethod(rms_norm_golden)
@@ -119,4 +126,4 @@ class AclnnRmsNormSpec(RmsNormSpec):
 
 
 class TorchRmsNormSpec(AclnnRmsNormSpec):
-    pass
+    third_party = {"torch": TorchRmsNormXpuRef}

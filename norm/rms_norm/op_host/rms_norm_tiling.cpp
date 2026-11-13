@@ -291,9 +291,57 @@ bool CalMixDtypeTiling(uint32_t& modeKey, uint64_t& rowFactor, uint64_t& ubFacto
     return true;
 }
 
+static bool CheckRstdShape4RmsNorm(const gert::TilingContext* context)
+{
+    const auto& xShape = context->GetInputShape(0)->GetStorageShape();
+    const auto& rstdShape = context->GetOutputShape(1)->GetStorageShape();
+    const size_t xDimNum = xShape.GetDimNum();
+    // CheckInputShape4RmsNorm has already validated the supported empty-input shapes.
+    for (size_t i = 0; i < xDimNum; ++i) {
+        if (xShape.GetDim(i) == 0) {
+            return true;
+        }
+    }
+    OP_TILING_CHECK(rstdShape.GetDimNum() != xDimNum,
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                        context->GetNodeName(), "rstd and x",
+                        (std::to_string(rstdShape.GetDimNum()) + " and " + std::to_string(xDimNum)).c_str(),
+                        "The shape dims of output rstd and input x must be the same"),
+                    return false);
+    const size_t outerDimNum = xDimNum - context->GetInputShape(1)->GetStorageShape().GetDimNum();
+    for (size_t i = 0; i < xDimNum; ++i) {
+        const int64_t expectedDim = i < outerDimNum ? xShape.GetDim(i) : 1;
+        OP_TILING_CHECK(rstdShape.GetDim(i) != expectedDim,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                            context->GetNodeName(), "rstd", ToString(rstdShape).c_str(),
+                            "Non-reduced dimensions must match x and reduced dimensions must be 1"),
+                        return false);
+    }
+    return true;
+}
+
 static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
 {
+    const gert::StorageShape* rstdShape = context->GetOutputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, rstdShape);
+    const size_t rstdDimNum = rstdShape->GetStorageShape().GetDimNum();
+    OP_TILING_CHECK(rstdDimNum > MAX_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "rstd", std::to_string(rstdDimNum).c_str(),
+                                                 "not greater than 8"),
+                    return ge::GRAPH_FAILED);
+    const gert::StorageShape* xShape = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    const size_t xRank = xShape->GetStorageShape().GetDimNum();
+    if (rstdDimNum > xRank) {
+        const std::string dimsMsg = std::to_string(rstdDimNum) + " and " + std::to_string(xRank);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "rstd and x", dimsMsg.c_str(),
+            "The shape dim of output rstd must be less than or equal to that of input x");
+        return ge::GRAPH_FAILED;
+    }
     OP_TILING_CHECK(!CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!CheckRstdShape4RmsNorm(context), OP_LOGE(context, "Output rstd shape invalid."),
                     return ge::GRAPH_FAILED);
     bool isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     RMSNormTilingData tiling;
