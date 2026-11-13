@@ -128,10 +128,10 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>out</td>
       <td>输出</td>
       <td>待计算出参，对应公式中的out。</td>
-      <td>shape与x相同。</td>
+      <td>shape与x相同，仅支持连续tensor。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
@@ -246,7 +246,8 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   - innerPrecisionMode为保留字段，当前仅支持取值0，传入其他值时算子报错。
 
 - 非连续Tensor支持：
-  - x、attenMaskOptional、relativePosBias、out均支持非连续Tensor（即strides不满足连续存储条件的Tensor），传入后由框架自动转为连续Tensor再参与计算。
+  - x、attenMaskOptional、relativePosBias支持非连续Tensor（即strides不满足连续存储条件的Tensor），传入后由框架自动转为连续Tensor再参与计算。
+  - out不支持非连续Tensor，仅支持连续Tensor。
 
 <!-- npu="310p" id8 -->
 - <term>Atlas推理系列产品</term>：不支持入参x的最后一个维度S2非32Byte对齐的场景。

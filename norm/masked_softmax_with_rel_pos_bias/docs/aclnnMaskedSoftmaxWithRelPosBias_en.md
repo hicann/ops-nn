@@ -130,10 +130,10 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>out</td>
       <td>Output</td>
       <td>Output to be computed, corresponding to out in the formula.</td>
-      <td>Same shape as x.</td>
+      <td>Same shape as x. Only contiguous tensors are supported.</td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
@@ -251,7 +251,8 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   - innerPrecisionMode is a reserved field. Currently, only the value 0 is supported. The operator reports an error if any other value is passed in.
 
 - Non-contiguous tensor support:
-  - x, attenMaskOptional, relativePosBias, and out support non-contiguous tensors (that is, tensors whose strides do not meet the contiguous storage condition). After being passed in, they are automatically converted to contiguous tensors by the framework before computation.
+  - x, attenMaskOptional, and relativePosBias support non-contiguous tensors (that is, tensors whose strides do not meet the contiguous storage condition). After being passed in, they are automatically converted to contiguous tensors by the framework before computation.
+  - out does not support non-contiguous tensors and must be a contiguous tensor.
 
 <!-- npu="310p" id8 -->
 - <term>Atlas inference products</term>: The scenario where the last dimension S2 of the input parameter x is not aligned to 32 bytes is not supported.

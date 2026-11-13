@@ -129,11 +129,11 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
         <td>out</td>
         <td>Output</td>
         <td>Output in the formula.</td>
-        <td>The shape is (outputSize).</td>
+        <td>The shape is (outputSize). Only contiguous tensors are supported.</td>
         <td>Consistent with permute.</td>
         <td>ND</td>
         <td>-</td>
-        <td>√</td>
+        <td>×</td>
     </tr>
     <tr>
         <td>workspaceSize</td>
@@ -254,6 +254,8 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
 
 4. Let P be the length of permute. When P is 0, outputSize must be 0. When P is greater than 0, outputSize must be
    greater than or equal to P.
+
+5. out does not support non-contiguous tensors and must be a contiguous tensor.
 
 ## Example
 

@@ -127,11 +127,11 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
         <td>out</td>
         <td>输出</td>
         <td>公式中的输出。</td>
-        <td>shape为(outputSize)。</td>
+        <td>shape为(outputSize)，仅支持连续tensor。</td>
         <td>与permute一致。</td>
         <td>ND</td>
         <td>-</td>
-        <td>√</td>
+        <td>×</td>
     </tr>
     <tr>
         <td>workspaceSize</td>
@@ -250,6 +250,8 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
    总元素数，outputOffsets最后一个值等于outputSize。
 
 4. 设P为permute的长度。P=0时outputSize必须为0；P>0时outputSize必须大于等于P。
+
+5. out不支持非连续Tensor，仅支持连续Tensor。
 
 ## 调用示例
 
