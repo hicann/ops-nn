@@ -8,6 +8,11 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <algorithm>
+#include <limits>
+#include <tuple>
+#include <vector>
+
 #include "aclnn_kthvalue.h"
 #include "level0/sort.h"
 #include "index/kth_value/op_api/kth_value.h"
@@ -21,13 +26,10 @@
 #include "opdev/common_types.h"
 #include "opdev/shape_utils.h"
 #include "opdev/data_type_utils.h"
-#include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
-#include "opdev/tensor_view_utils.h"
-#include "opdev/small_vector.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
@@ -291,7 +293,24 @@ aclnnStatus aclnnKthvalueGetWorkspaceSize(const aclTensor* self, int64_t k, int6
 
     // 支持空tensor
     if (self->IsEmpty()) {
-        // 根据实际支持情况补充
+        const auto& selfShape = self->GetViewShape();
+        const auto positiveDim = static_cast<size_t>(DimMakeWrap(dim, selfShape.GetDimNum()));
+        op::Shape expectedShape;
+        for (size_t axis = 0; axis < selfShape.GetDimNum(); ++axis) {
+            if (axis != positiveDim) {
+                expectedShape.AppendDim(selfShape.GetDim(axis));
+            } else if (keepdim) {
+                expectedShape.AppendDim(1);
+            }
+        }
+        // CheckParams guarantees a nonempty reduction axis, so the result is empty.
+        // Compare every dimension: equal element counts do not imply equal shapes.
+        if (valuesOut->GetViewShape() != expectedShape || indicesOut->GetViewShape() != expectedShape) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected both output shapes to be %s, but got %s and %s.",
+                    op::ToString(expectedShape).GetString(), op::ToString(valuesOut->GetViewShape()).GetString(),
+                    op::ToString(indicesOut->GetViewShape()).GetString());
+            return ACLNN_ERR_PARAM_INVALID;
+        }
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;

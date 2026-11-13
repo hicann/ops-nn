@@ -7,12 +7,12 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include <cstdint>
+#include <iostream>
 #include <vector>
-#include <array>
 #include "gtest/gtest.h"
 #include "../../../op_api/aclnn_kthvalue.h"
 #include "op_api_ut_common/tensor_desc.h"
-#include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 
 using namespace op;
@@ -64,8 +64,8 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_nullptr_indices0)
     EXPECT_NE(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
-// self为空tensor
-TEST_F(l2_kthvalue_test, l2_kthvalue_test_nullptr_self)
+// Empty input still requires the reduced output shape [1, 0].
+TEST_F(l2_kthvalue_test, empty_self_rejects_nonempty_outputs)
 {
     auto selfDesc = TensorDesc({1, 0}, ACL_FLOAT, ACL_FORMAT_ND);
     auto valDesc = TensorDesc({1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -75,7 +75,53 @@ TEST_F(l2_kthvalue_test, l2_kthvalue_test_nullptr_self)
 
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_kthvalue_test, empty_self_rejects_invalid_values_or_indices_shape)
+{
+    const std::vector<int64_t> emptyShape{0};
+    const std::vector<int64_t> invalidShape{5};
+    for (const auto& valuesShape : {emptyShape, invalidShape}) {
+        for (const auto& indicesShape : {emptyShape, invalidShape}) {
+            if (valuesShape == emptyShape && indicesShape == emptyShape) {
+                continue;
+            }
+            auto selfDesc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+            auto valDesc = TensorDesc(valuesShape, ACL_FLOAT, ACL_FORMAT_ND);
+            auto indDesc = TensorDesc(indicesShape, ACL_INT64, ACL_FORMAT_ND);
+            auto ut = OP_API_UT(aclnnKthvalue, INPUT(selfDesc, 2, 1, false), OUTPUT(valDesc, indDesc));
+            uint64_t workspaceSize = 0;
+            EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+        }
+    }
+}
+
+TEST_F(l2_kthvalue_test, empty_self_accepts_reduced_output_shapes)
+{
+    for (bool keepdim : {false, true}) {
+        auto shape = keepdim ? std::vector<int64_t>{2, 1, 0} : std::vector<int64_t>{2, 0};
+        auto selfDesc = TensorDesc({2, 4, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto valDesc = TensorDesc(shape, ACL_FLOAT, ACL_FORMAT_ND);
+        auto indDesc = TensorDesc(shape, ACL_INT64, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnKthvalue, INPUT(selfDesc, 2, -2, keepdim), OUTPUT(valDesc, indDesc));
+        uint64_t workspaceSize = 0;
+        ASSERT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+        EXPECT_EQ(workspaceSize, 0U);
+    }
+}
+
+TEST_F(l2_kthvalue_test, empty_self_rejects_wrong_zero_element_shapes)
+{
+    for (bool keepdim : {false, true}) {
+        auto shape = keepdim ? std::vector<int64_t>{2, 0, 1} : std::vector<int64_t>{0, 2};
+        auto selfDesc = TensorDesc({2, 4, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto valDesc = TensorDesc(shape, ACL_FLOAT, ACL_FORMAT_ND);
+        auto indDesc = TensorDesc(shape, ACL_INT64, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnKthvalue, INPUT(selfDesc, 2, 1, keepdim), OUTPUT(valDesc, indDesc));
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+    }
 }
 
 // 正常路径，float32

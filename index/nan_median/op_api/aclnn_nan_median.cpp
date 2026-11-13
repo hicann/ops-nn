@@ -127,7 +127,8 @@ aclnnStatus aclnnNanMedianGetWorkspaceSize(const aclTensor* self, aclTensor* out
 
     // 空Tensor处理
     if (self->IsEmpty()) {
-        DealNanMedianEmptyTensor(out, uniqueExecutor.get());
+        ret = DealNanMedianEmptyTensor(out, uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;

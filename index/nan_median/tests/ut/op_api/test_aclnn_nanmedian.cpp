@@ -8,15 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <array>
+#include <cstdint>
+#include <iostream>
 #include <vector>
-#include <math.h>
 #include "gtest/gtest.h"
 
 #include "../../../op_api/aclnn_nan_median.h"
 
 #include "op_api_ut_common/op_api_ut.h"
-#include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
 
 using namespace std;
@@ -38,4 +37,26 @@ TEST_F(l2_nanmedian_test, case_001_self_out_shape_not_euqal)
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_nanmedian_test, empty_self_rejects_invalid_output_shape)
+{
+    for (const auto& shape : std::vector<std::vector<int64_t>>{{8}, {0}, {0, 2}}) {
+        auto selfTensor = TensorDesc({0, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto outTensor = TensorDesc(shape, ACL_FLOAT, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnNanMedian, INPUT(selfTensor), OUTPUT(outTensor));
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+    }
+}
+
+TEST_F(l2_nanmedian_test, empty_self_accepts_single_element_output_shapes)
+{
+    for (const auto& shape : std::vector<std::vector<int64_t>>{{}, {1}, {1, 1}}) {
+        auto selfTensor = TensorDesc({0, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto outTensor = TensorDesc(shape, ACL_FLOAT, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnNanMedian, INPUT(selfTensor), OUTPUT(outTensor));
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+    }
 }

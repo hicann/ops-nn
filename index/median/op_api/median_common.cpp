@@ -68,6 +68,16 @@ bool CheckShape(const aclTensor* self, const aclTensor* valuesOut)
 {
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(valuesOut, MAX_SUPPORT_DIMS_NUMS, return false);
+    // Global median always produces one element, including for an empty input.
+    // Match CheckReduceOutShape's compatibility between single-element shapes.
+    const auto& outShape = valuesOut->GetViewShape();
+    for (size_t axis = 0; axis < outShape.GetDimNum(); ++axis) {
+        if (outShape.GetDim(axis) != 1) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected a single-element output, but got shape %s.",
+                    op::ToString(outShape).GetString());
+            return false;
+        }
+    }
     return true;
 }
 
