@@ -27,6 +27,7 @@
 #endif
 
 #include <cstdint>
+#include <cstring>
 
 using namespace std;
 
@@ -95,4 +96,101 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
     AscendC::GmFree(output);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
+}
+
+template <typename Index>
+static void RunSumIncludeSelfCase(bool includeSelf, bool splitIndices)
+{
+    constexpr uint32_t rows = 2;
+    constexpr uint32_t columns = 16;
+    constexpr uint32_t updatesPerRow = 24;
+    vector<float> initial(rows * columns);
+    vector<Index> indices(rows * updatesPerRow);
+    vector<float> updates(rows * updatesPerRow);
+    vector<float> expected(rows * columns);
+    for (uint32_t row = 0; row < rows; ++row) {
+        for (uint32_t column = 0; column < columns; ++column) {
+            initial[row * columns + column] = 100.0f + row * columns + column;
+            expected[row * columns + column] = initial[row * columns + column];
+        }
+        for (uint32_t column : {0U, 9U, 15U}) {
+            if (!includeSelf) {
+                expected[row * columns + column] = 0.0f;
+            }
+        }
+        for (uint32_t update = 0; update < updatesPerRow; ++update) {
+            uint32_t column = update % 3 == 0 ? 0 : (update % 3 == 1 ? 9 : 15);
+            indices[row * updatesPerRow + update] = static_cast<Index>(column);
+            updates[row * updatesPerRow + update] = static_cast<float>(update + row + 1);
+            expected[row * columns + column] += updates[row * updatesPerRow + update];
+        }
+    }
+
+    auto* inputGm = static_cast<float*>(AscendC::GmAlloc(initial.size() * sizeof(float)));
+    auto* indicesGm = static_cast<Index*>(AscendC::GmAlloc(indices.size() * sizeof(Index)));
+    auto* updatesGm = static_cast<float*>(AscendC::GmAlloc(updates.size() * sizeof(float)));
+    auto* tilingGm = static_cast<uint8_t*>(AscendC::GmAlloc(sizeof(ScatterElementsV2TilingData)));
+    memcpy(inputGm, initial.data(), initial.size() * sizeof(float));
+    memcpy(indicesGm, indices.data(), indices.size() * sizeof(Index));
+    memcpy(updatesGm, updates.data(), updates.size() * sizeof(float));
+    memset(tilingGm, 0, sizeof(ScatterElementsV2TilingData));
+    auto* tiling = reinterpret_cast<ScatterElementsV2TilingData*>(tilingGm);
+    tiling->usedCoreNum = splitIndices ? 4 : rows;
+    tiling->eachNum = splitIndices ? 0 : 1;
+    tiling->eachPiece = splitIndices ? 2 : 1;
+    tiling->inputOnePiece = splitIndices ? columns / 2 : columns;
+    tiling->inputCount = initial.size();
+    tiling->indicesCount = indices.size();
+    tiling->updatesCount = updates.size();
+    tiling->inputOneTime = columns;
+    tiling->indicesOneTime = updatesPerRow;
+    tiling->updatesOneTime = updatesPerRow;
+    tiling->inputEach = splitIndices ? columns / 2 : columns;
+    tiling->inputLast = tiling->inputEach;
+    tiling->inputLoop = 1;
+    tiling->indicesEach = splitIndices ? 8 : 1;
+    tiling->indicesLast = tiling->indicesEach;
+    tiling->indicesLoop = splitIndices ? 3 : 1;
+    tiling->inputAlign = splitIndices ? columns / 2 : columns;
+    tiling->indicesAlign = splitIndices ? 8 : updatesPerRow;
+    tiling->updatesAlign = tiling->indicesAlign;
+    tiling->lastIndicesLoop = 1;
+    tiling->lastIndicesEach = 1;
+    tiling->lastIndicesLast = 1;
+    tiling->oneTime = 1;
+    tiling->lastOneTime = 1;
+    tiling->modeFlag = splitIndices ? 0 : 1;
+    tiling->includeSelf = includeSelf ? 1 : 0;
+    tiling->mode = 2; // ADD
+
+    ICPU_SET_TILING_KEY(sizeof(Index) == sizeof(int64_t) ? 120 : 110);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(scatter_elements_v2, static_cast<uint32_t>(tiling->usedCoreNum), reinterpret_cast<uint8_t*>(inputGm),
+                reinterpret_cast<uint8_t*>(indicesGm), reinterpret_cast<uint8_t*>(updatesGm),
+                reinterpret_cast<uint8_t*>(inputGm), nullptr, tilingGm);
+    for (size_t index = 0; index < expected.size(); ++index) {
+        EXPECT_FLOAT_EQ(inputGm[index], expected[index]) << "output index=" << index;
+    }
+    AscendC::GmFree(inputGm);
+    AscendC::GmFree(indicesGm);
+    AscendC::GmFree(updatesGm);
+    AscendC::GmFree(tilingGm);
+}
+
+TEST_F(scatter_elements_v2_test, sum_include_self_false_small)
+{
+    RunSumIncludeSelfCase<int32_t>(false, false);
+    RunSumIncludeSelfCase<int64_t>(false, false);
+}
+
+TEST_F(scatter_elements_v2_test, sum_include_self_false_split_indices)
+{
+    RunSumIncludeSelfCase<int32_t>(false, true);
+    RunSumIncludeSelfCase<int64_t>(false, true);
+}
+
+TEST_F(scatter_elements_v2_test, sum_include_self_true_regression)
+{
+    RunSumIncludeSelfCase<int32_t>(true, false);
+    RunSumIncludeSelfCase<int64_t>(true, true);
 }

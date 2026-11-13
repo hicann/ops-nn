@@ -21,14 +21,6 @@
 - <term>Atlas训练系列产品</term>：不支持
 <!-- end id6 -->
 
-> 说明：
-      <!-- npu="950" id7 -->
-      > - <term>Ascend 950PR&950DT系列产品</term> 已支持本接口，其中AI Core路径支持 `none/add/mul`，其他reduction模式是否可用取决于后端回退能力。
-      <!-- end id7 -->
-      <!-- npu="A3,910b" id8 -->
-      > - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term> 当前仅支持 `self/src/out` 为 `FLOAT32`、`reduce=1(add)` 且 `includeSelf=true` 的组合；其他 dtype、reduce 或 includeSelf 组合会返回参数错误。
-      <!-- end id8 -->
-
 ## 功能说明
 
 - 接口功能：将 tensor `src` 中的值按指定的轴和 `index` 指定的位置关系写入或规约到 tensor `self` 中。
@@ -195,7 +187,7 @@ aclnnStatus aclnnInplaceScatterReduce(
         <td>includeSelf（bool）</td>
         <td>输入</td>
         <td>规约计算时是否将self中的原始值参与计算。</td>
-        <td>true表示参与规约；false表示不参与规约。</td>
+        <td>true表示self参与规约；false表示命中位置仅累加src，未命中位置保留self；空index保留self。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -406,7 +398,7 @@ aclnnStatus aclnnInplaceScatterReduce(
         <td>includeSelf（bool）</td>
         <td>输入</td>
         <td>规约计算时是否将selfRef中的原始值参与计算。</td>
-        <td>true表示参与规约；false表示不参与规约。</td>
+        <td>true表示self参与规约；false表示命中位置仅累加src，未命中位置保留self；空index保留self。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -526,15 +518,21 @@ aclnnStatus aclnnInplaceScatterReduce(
 
 ## 约束说明
 
-- 确定性计算：
-  - 是否进入确定性路径取决于底层后端能力与上层 deterministic 配置。
-  - 在 `Atlas A2/Atlas A3` 上，当 `TilingContext::GetDeterministic()` 为真时，`none/add` 不会因此强制单核，仍保留多核调度能力；`mul/min/max/mean` 会禁用 `cache-op/low-memory`，收敛到 `ScatterElementsV2` legacy kernel 的单核调度路径。
-  - 在 `Ascend 950PR&950DT系列产品` 上，deterministic 能力由独立的 tiling / kernel 分支承接，AICORE 路径当前支持的 reduction 范围为 `none/add/mul`。
-- 接口边界约束：
-  - 本页接口显式透传 `includeSelf`，是规约 scatter 的统一公共入口。
-  - 在 `Atlas A2/Atlas A3` 上，本页接口当前仅支持 `self/src/out` 为 `FLOAT32`、`reduce=1(add)` 且 `includeSelf=true` 的组合。
-  - 若只需要固定 `add` 语义且不想透传 `includeSelf`，可使用 `aclnnScatterAdd`。
-  - `aclnnScatter/aclnnInplaceScatter` 仍保留传统 `none/add/mul` 路径，但不显式透传 `include_self`。
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT系列产品</term>：
+  - AI Core路径仅支持 `reduce=0(none)`、`reduce=1(add)` 和 `reduce=2(mul)`。
+  - 当 `reduce` 为1（add）或2（mul）时，仅支持 `includeSelf=true`。
+  - 默认非确定性实现。当 `reduce` 为0（none）或1（add）时，支持通过 `aclrtSetSysParamOpt` 开启确定性；当 `reduce` 为2（mul）时，不支持开启确定性。
+<!-- end id7 -->
+
+<!-- npu="A3,910b" id8 -->
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
+  - 默认确定性实现。
+  - `reduce` 仅支持1（add）。
+  - `reduce=1(add)`：
+    - `self/src/out` 的数据类型仅支持 `FLOAT32`。
+    - `includeSelf=false` 且输入非空时，将 `dim` 归一化为非负轴 `d`：`d=0` 时，除首轴和末轴外，`self/index/src` 的各维大小分别相同；`d>0` 时，除第 0 轴和第 `d` 轴外，各维大小分别相同。
+<!-- end id8 -->
 
 ## 调用示例
 

@@ -152,8 +152,8 @@
           1
         ],
         "range_values": [
-          -5,
-          5
+          16,
+          32
         ],
         "backward": true,
         "align_32B": null,
@@ -219,7 +219,7 @@
         "required": true,
         "dtype": "int",
         "shape": null,
-        "range_values": 1,
+        "range_values": 0,
         "backward": false,
         "align_32B": null,
         "outlier_values": null
@@ -268,11 +268,11 @@
         "required": true,
         "dtype": "fp32",
         "shape": [
-          1
+          17
         ],
         "range_values": [
-          -5,
-          5
+          16,
+          32
         ],
         "backward": true,
         "align_32B": null,
@@ -295,11 +295,11 @@
         "required": true,
         "dtype": "int64",
         "shape": [
-          1
+          97
         ],
         "range_values": [
           0,
-          0
+          15
         ],
         "backward": true,
         "align_32B": null,
@@ -311,7 +311,7 @@
         "required": true,
         "dtype": "fp32",
         "shape": [
-          1
+          97
         ],
         "range_values": [
           -5,
@@ -338,7 +338,7 @@
         "required": true,
         "dtype": "int",
         "shape": null,
-        "range_values": 1,
+        "range_values": 0,
         "backward": false,
         "align_32B": null,
         "outlier_values": null
@@ -387,12 +387,12 @@
         "required": true,
         "dtype": "fp32",
         "shape": [
-          1,
-          1
+          3,
+          17
         ],
         "range_values": [
-          -5,
-          5
+          16,
+          32
         ],
         "backward": true,
         "align_32B": null,
@@ -404,7 +404,7 @@
         "required": true,
         "dtype": "int",
         "shape": null,
-        "range_values": 1,
+        "range_values": -1,
         "backward": false,
         "align_32B": null,
         "outlier_values": null
@@ -415,12 +415,12 @@
         "required": true,
         "dtype": "int64",
         "shape": [
-          1,
-          1
+          3,
+          97
         ],
         "range_values": [
           0,
-          0
+          15
         ],
         "backward": true,
         "align_32B": null,
@@ -432,8 +432,8 @@
         "required": true,
         "dtype": "fp32",
         "shape": [
-          1,
-          1
+          3,
+          97
         ],
         "range_values": [
           -5,
@@ -460,7 +460,7 @@
         "required": true,
         "dtype": "int",
         "shape": null,
-        "range_values": 1,
+        "range_values": 0,
         "backward": false,
         "align_32B": null,
         "outlier_values": null
@@ -3481,6 +3481,1015 @@
         "dtype": "int",
         "shape": null,
         "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null
+  },
+  {
+    "id": 198,
+    "default_seed": null,
+    "name": "torch.scatter_reduce",
+    "aclnn_name": "ScatterReduce",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": "v1.11",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "function_scatter_reduce_for_aclnn_scatter_reduce",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": "single_bm",
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          5
+        ],
+        "range_values": [
+          100,
+          110
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "dim",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": -1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "index",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int64",
+        "shape": [
+          9
+        ],
+        "range_values": [
+          0,
+          3
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "src",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          11
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "reduce",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "include_self",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null
+  },
+  {
+    "id": 199,
+    "default_seed": null,
+    "name": "torch.scatter_reduce",
+    "aclnn_name": "ScatterReduce",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": "v1.11",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "function_scatter_reduce_for_aclnn_scatter_reduce",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": "single_bm",
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          5,
+          3,
+          7
+        ],
+        "range_values": [
+          100,
+          110
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "dim",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "index",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int64",
+        "shape": [
+          9,
+          3,
+          4
+        ],
+        "range_values": [
+          0,
+          3
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "src",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          11,
+          3,
+          6
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "reduce",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "include_self",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null
+  },
+  {
+    "id": 200,
+    "default_seed": null,
+    "name": "torch.scatter_reduce",
+    "aclnn_name": "ScatterReduce",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": "v1.11",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "function_scatter_reduce_for_aclnn_scatter_reduce",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": "single_bm",
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          5,
+          3,
+          7
+        ],
+        "range_values": [
+          100,
+          110
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "dim",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": -3,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "index",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int64",
+        "shape": [
+          9,
+          3,
+          4
+        ],
+        "range_values": [
+          0,
+          3
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "src",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          11,
+          3,
+          6
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "reduce",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "include_self",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null
+  },
+  {
+    "id": 201,
+    "default_seed": null,
+    "name": "torch.scatter_reduce",
+    "aclnn_name": "ScatterReduce",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": "v1.11",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "function_scatter_reduce_for_aclnn_scatter_reduce",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": "single_bm",
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          4,
+          5,
+          7
+        ],
+        "range_values": [
+          100,
+          110
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "dim",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "index",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int64",
+        "shape": [
+          2,
+          9,
+          7
+        ],
+        "range_values": [
+          0,
+          3
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "src",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          3,
+          11,
+          7
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "reduce",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "include_self",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null
+  },
+  {
+    "id": 202,
+    "default_seed": null,
+    "name": "torch.scatter_reduce",
+    "aclnn_name": "ScatterReduce",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": "v1.11",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "function_scatter_reduce_for_aclnn_scatter_reduce",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": "single_bm",
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          4,
+          5,
+          7
+        ],
+        "range_values": [
+          100,
+          110
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "dim",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": -2,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "index",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int64",
+        "shape": [
+          2,
+          9,
+          7
+        ],
+        "range_values": [
+          0,
+          3
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "src",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          3,
+          11,
+          7
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "reduce",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "include_self",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null
+  },
+  {
+    "id": 203,
+    "default_seed": null,
+    "name": "torch.scatter_reduce",
+    "aclnn_name": "ScatterReduce",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": "v1.11",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "function_scatter_reduce_for_aclnn_scatter_reduce",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": "single_bm",
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          4,
+          3,
+          5
+        ],
+        "range_values": [
+          100,
+          110
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "dim",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 2,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "index",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int64",
+        "shape": [
+          2,
+          3,
+          9
+        ],
+        "range_values": [
+          0,
+          3
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "src",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          3,
+          3,
+          11
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "reduce",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "include_self",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null
+  },
+  {
+    "id": 204,
+    "default_seed": null,
+    "name": "torch.scatter_reduce",
+    "aclnn_name": "ScatterReduce",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": "v1.11",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "function_scatter_reduce_for_aclnn_scatter_reduce",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": "single_bm",
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          4,
+          3,
+          5
+        ],
+        "range_values": [
+          100,
+          110
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "dim",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": -1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "index",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int64",
+        "shape": [
+          2,
+          3,
+          9
+        ],
+        "range_values": [
+          0,
+          3
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "src",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          3,
+          3,
+          11
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "reduce",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "include_self",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null
+  },
+  {
+    "id": 205,
+    "default_seed": null,
+    "name": "torch.scatter_reduce",
+    "aclnn_name": "ScatterReduce",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": "v1.11",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "function_scatter_reduce_for_aclnn_scatter_reduce",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": "single_bm",
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          3,
+          2,
+          2,
+          5,
+          2,
+          2,
+          2,
+          2
+        ],
+        "range_values": [
+          100,
+          110
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "dim",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": -5,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "index",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int64",
+        "shape": [
+          2,
+          2,
+          2,
+          9,
+          2,
+          2,
+          2,
+          2
+        ],
+        "range_values": [
+          0,
+          3
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "src",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          3,
+          2,
+          2,
+          11,
+          2,
+          2,
+          2,
+          2
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "reduce",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "include_self",
+        "type": "attr",
+        "required": true,
+        "dtype": "int",
+        "shape": null,
+        "range_values": 0,
         "backward": false,
         "align_32B": null,
         "outlier_values": null

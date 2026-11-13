@@ -23,14 +23,6 @@
 - <term>Atlas training products</term>: Not supported
 <!-- end id6 -->
 
-> Description:
- 	 <!-- npu="950" id7 -->
- 	 > - <term>Ascend 950PR&950DT products</term> Supports this API. The AICORE path supports `none/add/mul`. The availability of other reduction modes depends on backend fallback capability.
- 	 <!-- end id7 -->
- 	 <!-- npu="A3,910b" id8 -->
- 	 > - <term>Atlas A3 products</term> And <term>Atlas A2 products</term> Currently support only the combination of `self/src/out` set to `FLOAT32`, `reduce=1(add)`, and `includeSelf=true`. Other dtype, reduce, or includeSelf combinations return a parameter error.
- 	 <!-- end id8 -->
-
 ## Function
 
 - Description: Writes or reduces values in tensor `src` into tensor `self` along the specified axis and at the positions specified by `index`.
@@ -197,7 +189,7 @@ aclnnStatus aclnnInplaceScatterReduce(
         <td>includeSelf (bool)</td>
         <td>Input</td>
         <td>Whether the original values in self participate in the reduction computation.</td>
-        <td>true indicates participation in the reduction; false indicates no participation.</td>
+        <td>true includes self in the reduction; false sums src at updated positions and preserves self elsewhere. Empty index preserves self.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -408,7 +400,7 @@ aclnnStatus aclnnInplaceScatterReduce(
         <td>includeSelf (bool)</td>
         <td>Input</td>
         <td>Whether the original values in selfRef participate in the reduction computation.</td>
-        <td>true indicates that the original values participate in the reduction; false indicates that they do not.</td>
+        <td>true includes self in the reduction; false sums src at updated positions and preserves self elsewhere. Empty index preserves self.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -528,15 +520,21 @@ aclnnStatus aclnnInplaceScatterReduce(
 
 ## Constraints
 
-- Deterministic computation:
-  - Whether the deterministic path is entered depends on the underlying backend capability and the upper-layer deterministic configuration.
-  - On `Atlas A2/Atlas A3`, when `TilingContext::GetDeterministic()` is true, `none/add` is not forced to single-core execution and retains multi-core scheduling; `mul/min/max/mean` disables `cache-op/low-memory` and falls back to the single-core scheduling path of the `ScatterElementsV2` legacy kernel.
-  - On `Ascend 950PR&950DT products`, the deterministic capability is handled by separate tiling / kernel branches, and the AICORE path currently supports reduction types `none/add/mul`.
-- API boundary constraints:
-  - The APIs on this page explicitly pass through `includeSelf` and serve as the unified common entry point for reduction scatter.
-  - On `Atlas A2/Atlas A3`, the APIs on this page currently support only the combination where `self/src/out` is `FLOAT32`, `reduce=1(add)`, and `includeSelf=true`.
-  - To use only the fixed `add` semantics without passing through `includeSelf`, use `aclnnScatterAdd`.
-  - `aclnnScatter/aclnnInplaceScatter` still retain the traditional `none/add/mul` path but do not explicitly pass through `include_self`.
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT products</term>:
+  - The AI Core path supports only `reduce=0(none)`, `reduce=1(add)`, and `reduce=2(mul)`.
+  - When `reduce` is 1 (add) or 2 (mul), only `includeSelf=true` is supported.
+  - The implementation is nondeterministic by default. When `reduce` is 0 (none) or 1 (add), deterministic computation can be enabled through `aclrtSetSysParamOpt`; it cannot be enabled when `reduce` is 2 (mul).
+<!-- end id7 -->
+
+<!-- npu="A3,910b" id8 -->
+- <term>Atlas A3 products</term> and <term>Atlas A2 products</term>:
+  - The implementation is deterministic by default.
+  - `reduce` supports only 1 (add).
+  - `reduce=1(add)`:
+    - The data type of `self/src/out` must be `FLOAT32`.
+    - For nonempty inputs with `includeSelf=false`, normalize `dim` to a nonnegative axis `d`. If `d=0`, `self/index/src` sizes must match on every axis except the first and last axes. If `d>0`, their sizes must match on every axis except axis 0 and axis `d`.
+<!-- end id8 -->
 
 ## Example
 

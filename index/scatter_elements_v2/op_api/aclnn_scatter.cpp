@@ -41,6 +41,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/tensor_view_utils.h"
+#include "log/log.h"
 #include "op_api/aclnn_util.h"
 #include "runtime/context.h"
 #include "acl/acl_rt.h"
@@ -782,6 +783,18 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
         dimInput = selfDimNum - 1;
     }
 
+    if (aicore910b && !includeSelf &&
+        !l0op::UseScatterElementsV2(selfContiguous, indexContiguous, srcContiguous, dimInput, selfDimNum, reduction)) {
+        const auto shapes = std::string(op::ToString(self->GetViewShape()).GetString()) + ", " +
+                            op::ToString(index->GetViewShape()).GetString() + ", " +
+                            op::ToString(src->GetViewShape()).GetString();
+        const auto reason = "For includeSelf=false with dim=" + std::to_string(dim) + " (normalized to " +
+                            std::to_string(dimFinal) + "), self/index/src sizes must match on every axis except " +
+                            std::to_string(dimFinal) + " and " + std::to_string(perm[0]);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON("ScatterReduce", "self, index, src", shapes.c_str(), reason.c_str());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
     if (aicore910b) {
         // linear index，转换负数索引并输出int32索引
         indexContiguous = l0op::LinearIndex(indexContiguous, selfContiguous, -1, false, executor);
@@ -1043,15 +1056,16 @@ aclnnStatus aclnnScatterReduceGetWorkspaceSize(const aclTensor* self, int64_t di
 
     L2_DFX_PHASE_1(aclnnScatterReduce, DFX_IN(self, dim, index, src, reduce, includeSelf), DFX_OUT(out));
 
-    // On 910B/910_93, only fp32+sum+include_self=true is verified safe.
+    // On 910B/910_93, only FP32 sum is supported. ExecScatterBase checks the
+    // AI Core shape constraints before dispatching include_self=false.
     // 310P (NpuArch::DAV_2002) is not affected.
     if (self != nullptr) {
         auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
         if (curArch == NpuArch::DAV_2201) {
             const std::string& reduction = GetReduceStr(reduce);
-            if (!(self->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD && includeSelf)) {
+            if (!(self->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD)) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                        "scatter_reduce only supports dtype=float32, reduce=sum, include_self=true. "
+                        "scatter_reduce only supports dtype=float32, reduce=sum. "
                         "Got dtype=%s, reduce=%s, include_self=%d.",
                         op::ToString(self->GetDataType()).GetString(), reduction.c_str(), includeSelf ? 1 : 0);
                 return ACLNN_ERR_PARAM_INVALID;
@@ -1121,15 +1135,16 @@ aclnnStatus aclnnInplaceScatterReduceGetWorkspaceSize(aclTensor* selfRef, int64_
 
     L2_DFX_PHASE_1(aclnnInplaceScatterReduce, DFX_IN(selfRef, dim, index, src, reduce, includeSelf), DFX_OUT(selfRef));
 
-    // On 910B/910_93, only fp32+sum+include_self=true is verified safe.
+    // On 910B/910_93, only FP32 sum is supported. ExecScatterBase checks the
+    // AI Core shape constraints before dispatching include_self=false.
     // 310P (NpuArch::DAV_2002) is not affected.
     if (selfRef != nullptr) {
         auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
         if (curArch == NpuArch::DAV_2201) {
             const std::string& reduction = GetReduceStr(reduce);
-            if (!(selfRef->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD && includeSelf)) {
+            if (!(selfRef->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD)) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                        "scatter_reduce only supports dtype=float32, reduce=sum, include_self=true. "
+                        "scatter_reduce only supports dtype=float32, reduce=sum. "
                         "Got dtype=%s, reduce=%s, include_self=%d.",
                         op::ToString(selfRef->GetDataType()).GetString(), reduction.c_str(), includeSelf ? 1 : 0);
                 return ACLNN_ERR_PARAM_INVALID;

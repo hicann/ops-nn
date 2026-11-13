@@ -40,6 +40,7 @@ struct ReduceCase {
     std::vector<float> selfHostData;
     std::vector<int64_t> indexHostData;
     std::vector<float> srcHostData;
+    std::vector<float> expected;
 };
 
 const char* GetReduceName(int64_t reduce)
@@ -193,6 +194,10 @@ int RunReduceCase(const ReduceCase& reduceCase, aclrtStream stream)
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, localResultData[i]);
     }
+    const bool matchesExpected = localResultData == reduceCase.expected;
+    if (!matchesExpected) {
+        LOG_PRINT("result mismatch for %s\n", reduceCase.name.c_str());
+    }
 
     DestroyTensorAndBuffer(self, selfDeviceAddr);
     DestroyTensorAndBuffer(index, indexDeviceAddr);
@@ -201,7 +206,7 @@ int RunReduceCase(const ReduceCase& reduceCase, aclrtStream stream)
     if (workspaceAddr != nullptr) {
         aclrtFree(workspaceAddr);
     }
-    return 0;
+    return matchesExpected ? 0 : 1;
 }
 
 int main()
@@ -212,7 +217,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     const std::vector<int64_t> indexHostData = {0, 1, 2, 1, 0, 1, 2, 0, 2, 2, 1, 0};
-    // Only fp32 + sum + include_self=true is supported for stability.
+    // FP32 sum supports both include_self values on Atlas A2/A3.
     // Other reductions (none/max/min/mean/mul) are intercepted at the API level.
     const std::vector<ReduceCase> cases = {
         {"scatter_reduce_add",
@@ -220,7 +225,15 @@ int main()
          true,
          std::vector<float>(16, 3),
          indexHostData,
-         {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
+         {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+         {7, 3, 3, 21, 3, 9, 13, 6, 11, 12, 11, 3, 3, 3, 3, 3}},
+        {"scatter_reduce_add_without_self",
+         kReduceAdd,
+         false,
+         std::vector<float>(16, 3),
+         indexHostData,
+         {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+         {4, 3, 3, 18, 3, 6, 10, 3, 8, 9, 8, 3, 3, 3, 3, 3}},
     };
 
     for (const auto& reduceCase : cases) {
