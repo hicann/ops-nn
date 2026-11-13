@@ -14,26 +14,25 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "op_api/runtime2_util_nn.h"
 
 using namespace ge;
 namespace ops {
-ge::graphStatus CopyShapeInput2OutputWithIdx(gert::InferShapeContext* context, int64_t input_idx, int64_t output_idx)
+static ge::graphStatus InferShape4SyncBNTrainingUpdate(gert::InferShapeContext* context)
 {
-    auto in_shape = context->GetInputShape(input_idx);
+    auto in_shape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
-    auto out_shape = context->GetOutputShape(output_idx);
+    auto out_shape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
     *out_shape = *in_shape;
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShape4InIdx1AndOutIdx0(gert::InferShapeContext* context)
+static ge::graphStatus InferDataType4SyncBNTrainingUpdate(gert::InferDataTypeContext* context)
 {
-    constexpr size_t input_index = 1;
-    constexpr size_t output_index = 0;
-    return CopyShapeInput2OutputWithIdx(context, input_index, output_index);
+    return context->SetOutputDataType(0, context->GetInputDataType(1));
 }
 
-IMPL_OP_INFERSHAPE(SyncBNTrainingUpdate).InferShape(InferShape4InIdx1AndOutIdx0);
+IMPL_OP_INFERSHAPE(SyncBNTrainingUpdate)
+    .InferShape(InferShape4SyncBNTrainingUpdate)
+    .InferDataType(InferDataType4SyncBNTrainingUpdate);
 } // namespace ops

@@ -29,11 +29,17 @@ static ge::graphStatus InferShape4Renorm(gert::InferShapeContext* context)
     gert::Shape* outputShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
 
+    // The RegBase kernel returns the normalized tensor rather than per-slice scale factors.
     *outputShape = *inputShape;
 
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(Renorm).InferShape(InferShape4Renorm);
+static ge::graphStatus InferDataType4Renorm(gert::InferDataTypeContext* context)
+{
+    return context->SetOutputDataType(0, context->GetInputDataType(0));
+}
+
+IMPL_OP_INFERSHAPE(Renorm).InferShape(InferShape4Renorm).InferDataType(InferDataType4Renorm);
 
 } // namespace ops
