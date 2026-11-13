@@ -5180,6 +5180,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/ascend_weight_quant/README.md">ascend_weight_quant</a></td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>量化链路中的权重量化算子（opFile=Null，无kernel实现，仅由融合pass在图编译期处理），x/offset为int8 HWCN必选输入，y为int8 HWCN输出，dst_type可选默认DT_INT8。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/dequant_bias/README.md">dequant_bias</a></td>
     <td>✓</td>
     <td>✓</td>
