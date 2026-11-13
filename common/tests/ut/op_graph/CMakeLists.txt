@@ -13,5 +13,9 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
         add_op_graph_ut_modules(${OP_GRAPH_MODULE_NAME})
     endif()
     target_sources(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/test_bias_optimize_quant_rollback_base.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_bias_optimize_quant_rollback_base.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_fixpipe_ability_process_pass.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_fixpipe_fusion_pass.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_fixpipe_pre_quant_pass.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_fixpipe_relu_quant_pass.cpp)
 endif()
