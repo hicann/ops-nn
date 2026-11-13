@@ -83,14 +83,6 @@ static ge::graphStatus CheckTensor(gert::TilingContext* context, const std::stri
                 OP_LOGE_FOR_INVALID_DTYPE(opName, paramName, Ops::Base::ToString(desc->GetDataType()),
                                           Ops::Base::ToString(dtype)),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(desc->GetStorageFormat() != ge::FORMAT_ND,
-                OP_LOGE_FOR_INVALID_FORMAT(opName, paramName + ".storage_format",
-                                           Ops::Base::ToString(desc->GetStorageFormat()), "ND"),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(desc->GetOriginFormat() != ge::FORMAT_ND,
-                OP_LOGE_FOR_INVALID_FORMAT(opName, paramName + ".origin_format",
-                                           Ops::Base::ToString(desc->GetOriginFormat()), "ND"),
-                return ge::GRAPH_FAILED);
     const auto& storageShape = shape->GetStorageShape();
     OP_CHECK_IF(storageShape.GetDimNum() > MAX_DIMS,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(opName, paramName, std::to_string(storageShape.GetDimNum()), "[0, 8]"),

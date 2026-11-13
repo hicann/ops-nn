@@ -219,17 +219,20 @@ TEST_F(ForeachMaximumScalarTilingTest, rejects_wrong_output_dtype)
     RunCase(test, ge::GRAPH_FAILED, 0, "EZ0019", "y[0]");
 }
 
-TEST_F(ForeachMaximumScalarTilingTest, rejects_non_nd_formats)
+TEST_F(ForeachMaximumScalarTilingTest, accepts_non_nd_storage_formats)
 {
-    TilingCase test;
-    test.inputFormat = ge::FORMAT_NCHW;
-    RunCase(test, ge::GRAPH_FAILED, 0, "EZ0017", "x[0].storage_format");
-    test = TilingCase{};
-    test.scalarFormat = ge::FORMAT_NCHW;
-    RunCase(test, ge::GRAPH_FAILED, 0, "EZ0017", "scalar.storage_format");
-    test = TilingCase{};
-    test.outputFormat = ge::FORMAT_NCHW;
-    RunCase(test, ge::GRAPH_FAILED, 0, "EZ0017", "y[0].storage_format");
+    for (auto format : {ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC}) {
+        SCOPED_TRACE(static_cast<int>(format));
+        TilingCase test;
+        test.inputFormat = format;
+        RunCase(test, ge::GRAPH_SUCCESS, GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_FLOAT));
+        test = TilingCase{};
+        test.scalarFormat = format;
+        RunCase(test, ge::GRAPH_SUCCESS, GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_FLOAT));
+        test = TilingCase{};
+        test.outputFormat = format;
+        RunCase(test, ge::GRAPH_SUCCESS, GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_FLOAT));
+    }
 }
 
 TEST_F(ForeachMaximumScalarTilingTest, rejects_small_output)
@@ -281,17 +284,20 @@ TEST_F(ForeachMaximumScalarTilingTest, checks_tensorlist_limit)
     RunCase(test, ge::GRAPH_FAILED, 0, "EZ0023", "x");
 }
 
-TEST_F(ForeachMaximumScalarTilingTest, rejects_non_nd_origin_formats)
+TEST_F(ForeachMaximumScalarTilingTest, accepts_non_nd_origin_formats)
 {
-    TilingCase test;
-    test.inputOriginFormat = ge::FORMAT_NCHW;
-    RunCase(test, ge::GRAPH_FAILED, 0, "EZ0017", "x[0].origin_format");
-    test = TilingCase{};
-    test.scalarOriginFormat = ge::FORMAT_NCHW;
-    RunCase(test, ge::GRAPH_FAILED, 0, "EZ0017", "scalar.origin_format");
-    test = TilingCase{};
-    test.outputOriginFormat = ge::FORMAT_NCHW;
-    RunCase(test, ge::GRAPH_FAILED, 0, "EZ0017", "y[0].origin_format");
+    for (auto format : {ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC}) {
+        SCOPED_TRACE(static_cast<int>(format));
+        TilingCase test;
+        test.inputOriginFormat = format;
+        RunCase(test, ge::GRAPH_SUCCESS, GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_FLOAT));
+        test = TilingCase{};
+        test.scalarOriginFormat = format;
+        RunCase(test, ge::GRAPH_SUCCESS, GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_FLOAT));
+        test = TilingCase{};
+        test.outputOriginFormat = format;
+        RunCase(test, ge::GRAPH_SUCCESS, GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_FLOAT));
+    }
 }
 
 TEST_F(ForeachMaximumScalarTilingTest, rejects_excessive_rank)
