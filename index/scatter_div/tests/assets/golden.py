@@ -39,6 +39,169 @@ except ImportError:
 _INT_DTYPES = {"int32", "int8", "uint8"}
 
 
+_CHAIN_SEQ_CELLS = 1 << 28  # 单块 seq 槽位上限(~1GiB@fp32); 峰值与用例规模解耦
+
+
+def _chain_row_blocks(row_starts, counts, slice_size, cap_cells=None):
+    """按累计条目数切连续行块, 使每块 seq 槽位 (条目数+行数) * slice_size <= cap_cells。
+
+    不排序、不分桶: 条目在 order 里按行连续, 故"连续行块"即"连续条目区间", 用一次
+    searchsorted 定右端即可。热点行(单行吃百万条目)自成一块, 冷行成批, 两种分布都有界。
+    """
+    nrows = counts.shape[0]
+    if cap_cells is None:  # 取调用时的全局值, 便于用例把块调小来压分块路径
+        cap_cells = _CHAIN_SEQ_CELLS
+    per = max(2, int(cap_cells // max(slice_size, 1)))
+    r0 = 0
+    while r0 < nrows:
+        # 槽位 = 条目 + 行, 各给一半预算, 两者同时有界
+        by_rows = r0 + per // 2
+        by_ents = (
+            int(np.searchsorted(row_starts, row_starts[r0] + per // 2, side="right"))
+            - 1
+        )
+        r1 = min(nrows, by_rows, max(by_ents, r0 + 1))
+        yield r0, r1
+        r0 = r1
+
+
+def _chain_seq_layout(counts, row_starts, r0, r1):
+    """返回该行块的 (条目数, 行数, 段起点 seg, updates 槽位 upd_pos)。
+
+    seq 逐行拼接 [var行 | 按稳定序的 updates], 无填充; 行 m 的 var 槽位 = seg[m-r0],
+    其第 t 个 update 槽位 = (条目局部下标) + (m-r0) + 1。
+    """
+    a, b = int(row_starts[r0]), int(row_starts[r1])
+    cb = counts[r0:r1]
+    nb, rb = b - a, r1 - r0
+    seg = np.empty(rb, dtype=np.int64)
+    seg[0] = 0
+    np.cumsum(cb[:-1] + 1, out=seg[1:])
+    upd_pos = np.arange(nb, dtype=np.int64)
+    upd_pos += np.repeat(np.arange(rb, dtype=np.int64), cb)
+    upd_pos += 1
+    return a, b, nb, rb, seg, upd_pos
+
+
+def _chain_div_seq(work_np, upd_np, order, counts, row_starts):
+    """fp 除链的序无关真值: 链 = var / Πu, 在 log2 域求值。
+
+    为什么不用顺序除法链: ttk 的比对以本函数为真值, 而 kernel 的排序折叠(合并排序)对
+    同段内更新**不稳定**, 侧序 ≠ 位置序; f32/f64 的顺序除法链在溢出/下溢边界是序敏感的
+    (实测 ScatterDiv_L1_033: 位置序 f64 链 inf, 另序 0), 拿"某种顺序的中间量伪影"当真值
+    会制造不可收敛的分歧。数学真值 var/Πu 本身序无关, log2 域求值天然无中间溢出:
+      exp_sum = Σ log2|u| (add.reduceat, 交换律); sign = Πsign(u) (±1 精确乘);
+      值 = ldexp(var × sign, -exp_sum), 指数超界由 ldexp 归 ±inf/±0(IEEE 语义)。
+    除 0: exp_sum=-inf 时段内确有 u==0, 按 IEEE var/±0 = ±inf(var=0 时 NaN)单独处理。
+    f64 精度: 5600 项 log 求和误差 ~1e-12 相对指数, 折算值误差远低于任何容差档。
+    """
+    slice_size = work_np.shape[1]
+    # 执行域零 cast: 完全随 ttk Promote 下发域(fp32 var->f64, fp16 var->f32), 不自行上浮。
+    w64 = work_np
+    u64 = upd_np
+    for r0, r1 in _chain_row_blocks(row_starts, counts, slice_size):
+        a, b, nb, rb, seg, upd_pos = _chain_seq_layout(counts, row_starts, r0, r1)
+        den = u64[order[a:b]]
+        head = w64[r0:r1]
+        # 符号与绝对值分解(u=0 的 log2(|0|)=-inf 会污染指数和, 单独走 IEEE 支路)
+        # 符号必须按 IEEE signbit: -0.0 的 den<0 为 False 会丢掉"除以负零"的符号
+        # (实测 L0_001: var/(-0.0) 应为 -inf, den<0 版给 +inf)。
+        sgn = np.where(np.signbit(den), np.float64(-1.0), np.float64(1.0))
+        absden = np.abs(den)
+        ustart = (row_starts[r0:r1] - row_starts[r0]).astype(np.int64)
+        q_sgn = np.multiply.reduceat(sgn.reshape(-1, slice_size), ustart, axis=0)
+        d2 = den.reshape(-1, slice_size)
+        # 必须是 add 归约: subtract.reduceat 给的是"首项减其余", 单个零会按位置给 ±1,
+        # 两个零还会相消成 0 被误判成无零段。
+        zero_cnt = np.add.reduceat((d2 == 0).astype(np.float64), ustart, axis=0)
+        nan_cnt = np.add.reduceat(np.isnan(d2).astype(np.float64), ustart, axis=0)
+        inf_cnt = np.add.reduceat(np.isinf(d2).astype(np.float64), ustart, axis=0)
+        exp_sum = np.add.reduceat(
+            np.log2(
+                absden.reshape(-1, slice_size),
+                out=np.zeros_like(absden.reshape(-1, slice_size)),
+                where=(absden.reshape(-1, slice_size) != 0),
+            ),
+            ustart,
+            axis=0,
+        )
+        res = np.empty((rb, slice_size), dtype=w64.dtype)
+        nz = (zero_cnt == 0) & (nan_cnt == 0) & (inf_cnt == 0)
+        # 与 kernel 的缩放域同构: 尾数 x 整数指数分开累, 中间量恒在 [0.5,2) 不会饱和。
+        # (ldexp 单用会截掉 Σlog2 的小数位丢 2^frac; exp2 单用在 |Σ|>1024 时中间就溢出。)
+        with np.errstate(over="ignore", under="ignore", invalid="ignore"):
+            e = -exp_sum[nz]
+            ei = np.floor(e)
+            man, hex_ = np.frexp((head * q_sgn)[nz])
+            res[nz] = np.ldexp(
+                man * np.exp2(e - ei),
+                np.clip(ei + hex_, -2100.0, 2100.0).astype(np.int32),
+            )
+        # 特殊段按 IEEE 定类: 0 与 inf 同段(或 0/0、inf/inf)给 NaN; 仅含 0 给 ±inf; 仅含 inf 给 ±0。
+        zmask = ~nz
+        if zmask.any():
+            hz = head[zmask]
+            zc = zero_cnt[zmask]
+            ic = inf_cnt[zmask]
+            sgn_h = (
+                np.where(np.signbit(hz), np.float64(-1.0), np.float64(1.0))
+                * q_sgn[zmask]
+            )
+            nan_seg = (
+                (nan_cnt[zmask] > 0)
+                | np.isnan(hz)
+                | ((zc > 0) & ((ic > 0) | (hz == 0)))
+                | ((ic > 0) & np.isinf(hz))
+            )
+            res[zmask] = np.where(
+                nan_seg,
+                np.float64(np.nan),
+                np.where(zc > 0, sgn_h * np.float64(np.inf), sgn_h * np.float64(0.0)),
+            )
+        w64[r0:r1] = res
+    work_np[...] = w64.astype(work_np.dtype, copy=False)
+
+
+def _chain_intdiv_seq(work_np, upd_np, order, counts, row_starts):
+    """整型链: torch 原生宽度的分层截断除 —— 每步在内核 AccT 域回绕, 与 kernel 逐位一致。
+
+    语义依据: ttk 对整型不 Promote(降级两方 + binary_equal 逐位判据), 真值 = 内核 AccT
+    域上逐步 C++ 截断除(INT_MIN÷-1 回绕为 INT_MIN, 之后 ÷-2 得 +2^30 ...)。
+    不做任何宽化: int64 域的除法链不回绕, INT_MIN÷-1 之后符号全错 —— 实测 ScatterDiv_
+    L1_133(var 全 INT32_MIN, 除数 -2/-1) 有 253,824/6,506,501 个元素与 kernel 不一致;
+    早期版本在 int32 域取 abs 更是直接溢出(仍为负)。
+    仓内范式: scatter_mul golden 委托 torch index_reduce_("prod") 拿到原生回绕; div 无
+    对应竞品归约, 故用 torch 分层向量化复刻(_int_trunc_div: trunc + -1 走 neg 复刻回绕
+    + 除 0 保原值)。分层 = 按"行内第 t 次作用"逐层批量, 层内全为独立行可并行。
+    深链热点行的层循环代价按 b026 先例记录为 golden 限制。
+    """
+    slice_size = work_np.shape[1]
+    for r0, r1 in _chain_row_blocks(row_starts, counts, slice_size):
+        a, b = int(row_starts[r0]), int(row_starts[r1])
+        cnt = counts[r0:r1]
+        starts = (row_starts[r0:r1] - row_starts[r0]).astype(
+            np.int64
+        )  # 行首在块内的条目偏移
+        depth = int(cnt.max()) if cnt.size else 0
+        wt = torch.from_numpy(work_np[r0:r1])  # 共享内存, 原地写回
+        upd_blk = upd_np[order[a:b]]
+        blk = work_np[r0:r1]
+        nz = (blk != 0).any(axis=1)  # 行是否还有非零元素
+        for t in range(depth):
+            # 第 t 层下标有闭式(行首偏移 + t), 避免每层全扫条目的 O(depth x 条目数)。
+            # 0 在截断除下是吸收态(含除 0 保原值), 故全零行不必再走后续层。
+            alive = np.flatnonzero((cnt > t) & nz)
+            if alive.size == 0:
+                break
+            sel = starts[alive] + t
+            rows = torch.from_numpy(alive)
+            wt[rows] = _int_trunc_div(
+                wt[rows], torch.from_numpy(np.ascontiguousarray(upd_blk[sel]))
+            )
+            nz[alive] = (blk[alive] != 0).any(axis=1)
+        work_np[r0:r1] = wt.numpy()
+
+
 def _int_trunc_div(row, denom):
     """整型截断除(向零), 除数为 0 保持原值。全程 torch, 停留在入参 dtype。
 
@@ -84,6 +247,11 @@ def __golden_scatter_div(*input_arrays, **kwargs):
     need_narrow = sub_int or narrow_fp
     acc = torch.int32 if sub_int else (torch.float32 if narrow_fp else None)
 
+    # 注(11-10): 此处不做任何 cast —— Promote 下 ttk 已把入参抬档(f32->f64)下发, golden
+    # 在收到的域里直接算即为高精度真值(用户铁律, L0_014 先例)。曾试过"fp 链降回 f32 域算"
+    # 来对齐 kernel 的粘性 inf 语义, 属于人为改真值域, 已回退; f64 真值与 f32 kernel 在
+    # 溢出形态(var 全 ±FLT_MAX)下的 inf 语义鸿沟按 golden 限制如实记录(见 b026 先例)。
+
     # 只把"被索引命中的行"搬进 work: scatter 语义下未命中的行原值输出, 故无需为整个 var
     # 开 acc 缓冲。var 首维支持到 2^30 以上(两趟基数排序), 全尺寸 work 在 dim0=2^30、
     # int8 入参时(acc=int32)就要 4.3GB + 原拷贝 1GB, dim0=2^32 时 17GB —— golden 会先于
@@ -98,41 +266,53 @@ def __golden_scatter_div(*input_arrays, **kwargs):
     # stable 排序保证同行内次序不变, 与逐条相除逐位等价。
     if n and var_first:
         in_range = (idx_flat >= 0) & (idx_flat < var_first)
-        ix = idx_flat[in_range]
-        src = np.nonzero(in_range)[0]
+        # 全界内时 ix/src 都是恒等映射: 不物化这两个 k 级 int64 数组(2^31 件上各 17GB,
+        # bound_034 的索引范围恰为 0..varFirst-1, 正属此类)。
+        if bool(in_range.all()):
+            ix, src = idx_flat, None
+            del in_range
+        else:
+            ix = idx_flat[in_range]
+            src = np.nonzero(in_range)[0]
         k = ix.shape[0]
         if k:
-            # touched 为去重后的真实行号(有序), cix 是压缩后的行号。np.unique 的 inverse 是
-            # ix 的单调重标号, 故 stable 排序与分层结果与用真实行号时逐位相同。
-            touched, cix = np.unique(ix, return_inverse=True)
+            # O(N) 计数定位替代 unique+多重 argsort: 2^31 级边界件上, np.unique 的排序+inverse 与
+            # order/rank/lay/sel_all 四个 2^31 规模 int64 临时数组(各 17GB)既是内存峰值又是耗时
+            # (实测 bound_030 golden 40min+ 不归, worker RSS 103GB)。bincount 计数 + 全量 cumsum
+            # 重标号 + 一次 stable 基数 argsort, 产出与原机制逐位等价的 (touched, cix, order, rank)。
+            counts_full = np.bincount(ix, minlength=var_first)
+            touched = np.flatnonzero(counts_full)
             work = torch.from_numpy(
                 np.ascontiguousarray(var.reshape(var_first, slice_size)[touched])
             )
-            upd = torch.from_numpy(np.ascontiguousarray(upd_2d[src]))
+            upd = torch.from_numpy(
+                np.ascontiguousarray(upd_2d if src is None else upd_2d[src])
+            )
             if acc is not None:
                 work, upd = work.to(acc), upd.to(acc)
-            order = np.argsort(cix, kind="stable")
-            grouped = cix[order]
-            rank = np.arange(k) - np.searchsorted(grouped, grouped, side="left")
-            lay = np.argsort(rank, kind="stable")
-            # upd 已按 src 压缩过, 故这里索引的是压缩后的下标(0..k-1)而非原始条目号
-            sel_all = torch.from_numpy(np.arange(k)[order[lay]])
-            row_all = torch.from_numpy(cix[order[lay]])
-            rk = rank[lay]
-            bounds = np.searchsorted(rk, np.arange(int(rk.max()) + 2))
-            for r in range(len(bounds) - 1):
-                a, b = int(bounds[r]), int(bounds[r + 1])
-                if a == b:
-                    continue
-                rows, sel = row_all[a:b], sel_all[a:b]
-                cur = work.index_select(0, rows)
-                den = upd.index_select(0, sel)
-                res = _int_trunc_div(cur, den) if is_int else torch.div(cur, den)
-                work.index_copy_(0, rows, res)
+            # 行内稳定序只需要一次 stable argsort(int 键走基数排序); varFirst < 2^31 时键收窄到
+            # int32 减半基数趟数。
+            # argsort 交给 torch: CPU 并行排序(numpy stable 是单线程, 2^31 元素实测 10min+ 不归,
+            # py-spy 栈实锤); torch.argsort stable=True 语义相同, 数十核并行下 2^31 为分钟级。
+            ix_key = ix.astype(np.int32) if var_first < 2**31 else ix
+            order = torch.argsort(torch.from_numpy(ix_key), stable=True).numpy()
+            del ix_key
+            counts = counts_full[touched]
+            row_starts = np.empty(len(touched) + 1, dtype=np.int64)
+            row_starts[0] = 0
+            np.cumsum(counts, out=row_starts[1:])
+            del counts_full
+            # 分段 reduceat: 无填充、无转置拷贝、不需要 cix/rank, 峰值只与块大小有关。
+            # 旧的填充立方体版在 bound_034 上被 OOM killer 打死(详见 _chain_div_seq 文档)。
+            work_np, upd_np = work.numpy(), upd.numpy()
+            if not is_int:
+                _chain_div_seq(work_np, upd_np, order, counts, row_starts)
+            else:
+                _chain_intdiv_seq(work_np, upd_np, order, counts, row_starts)
+            res_np = work.numpy()
 
             # 浮点出口不 cast —— TTK 负责窄回; 自行 astype 会把 Promote 出来的高精度真值砍回去。
             # 整型没有 Promote, TTK 也不会窄回, 故由本函数复刻内核的 NarrowStore(仅 int8/uint8)。
-            res_np = work.numpy()
             if need_narrow:
                 res_np = res_np.astype(var.dtype)  # 复刻 NarrowStore
             out.reshape(var_first, slice_size)[touched] = res_np

@@ -54,6 +54,9 @@ def __golden_scatter_mul(*input_arrays, **kwargs):
     # 宽档用例一例也验不了。逐元素结果与全量计算相同。
     out = var.copy()
     var_first = var.shape[0] if var.ndim >= 1 else 1
+    # 0 维 var: 唯一标量槽按 (1,) 参与行索引(numpy 不允许对 0 维数组下非空索引), 写回走同源视图
+    var_rows = var.reshape(1) if var.ndim == 0 else var
+    out_rows = out.reshape(1) if var.ndim == 0 else out
     idx_flat = indices.reshape(-1).astype(np.int64)
     n_idx = idx_flat.shape[0]
     slice_shape = tuple(var.shape[1:])
@@ -68,26 +71,77 @@ def __golden_scatter_mul(*input_arrays, **kwargs):
         return [out]
     # touched 为去重后的真实行号(有序), inverse 是各条目在 touched 中的下标。
     # 行号重标号不改变归约结果 —— prod 对重复索引顺序无关。
-    touched, inverse = np.unique(idx_flat[pos], return_inverse=True)
-    sub = np.ascontiguousarray(var[touched]).astype(acc_dtype, copy=False)
+    # np.unique(排序+inverse)在 2^31 级边界件上单线程 10min+ 不归(与 div golden 同病,
+    # py-spy 栈实锤); index_reduce_ 本身无序, 连排序都不需要 —— bincount 计数 + 全量
+    # cumsum 重标号即得 (touched, inverse), 纯 O(N) 零排序。
+    ix = idx_flat[pos]
+    counts_full = np.bincount(ix, minlength=var_first)
+    touched = np.flatnonzero(counts_full)
+    inverse = np.cumsum(counts_full > 0)[ix] - 1
+    del counts_full
+    sub = np.ascontiguousarray(var_rows[touched]).astype(acc_dtype, copy=False)
     upd_sel = np.ascontiguousarray(updates.reshape((n_idx,) + slice_shape)[pos]).astype(
         acc_dtype, copy=False
     )
 
-    sub_t = torch.from_numpy(sub)
-    sub_t.index_reduce_(
-        0,
-        torch.from_numpy(inverse.astype(np.int64)),
-        torch.from_numpy(upd_sel),
-        "prod",
-        include_self=True,
-    )
-
-    # 出口不 cast —— TTK 负责窄回。自行 astype 会把 Promote 出来的高精度真值砍回去。
-    res = sub_t.numpy()
+    if np.issubdtype(sub.dtype, np.floating):
+        # fp 连乘走缩放域: frexp 拆尾数([0.5,1) 不溢出)+整型精确指数, 分段 reduceat 左折, 末端 ldexp 重组。
+        # 分块只为防尾数积下溢(块长<=96 ⇒ 块积>=2^-96 仍是正规数), 故短链恰好一块。
+        kBlk = 96
+        n_rows = sub.shape[0]
+        order = np.argsort(inverse, kind="stable")
+        g_sorted = inverse[order]
+        cnt0 = np.bincount(g_sorted, minlength=n_rows)
+        gstart0 = np.concatenate(([0], np.cumsum(cnt0)[:-1]))
+        # var 槽插在每行链首, 使 reduceat 左折序 == kernel ScaledStep 的求值序;
+        # 浮点乘不可结合, 折在链尾会差 1 ulp, 而 1 ulp 在溢出线上足以翻 finite<->inf。
+        n_all = g_sorted.size + n_rows
+        ins = gstart0 + np.arange(n_rows)  # 插入后各行 var 槽的下标
+        upd_slot = np.ones(n_all, dtype=bool)
+        upd_slot[ins] = False
+        m_all = np.empty((n_all,) + sub.shape[1:], dtype=sub.dtype)
+        e_all = np.empty((n_all,) + sub.shape[1:], dtype=np.int32)
+        m_all[ins], e_all[ins] = np.frexp(sub)
+        m_all[upd_slot], e_all[upd_slot] = np.frexp(upd_sel[order])
+        g_cur = np.repeat(np.arange(n_rows), cnt0 + 1)
+        m_cur, e_cur = m_all, e_all
+        del order, m_all, e_all, g_sorted
+        with np.errstate(over="ignore", under="ignore", invalid="ignore"):
+            while True:
+                cnt = np.bincount(g_cur, minlength=n_rows)
+                nblk = (cnt + kBlk - 1) // kBlk
+                gstart = np.concatenate(([0], np.cumsum(cnt)[:-1]))
+                blk_row = np.repeat(np.arange(n_rows), nblk)
+                boff = np.concatenate(([0], np.cumsum(nblk)[:-1]))
+                bstart = gstart[blk_row] + kBlk * (
+                    np.arange(blk_row.size) - boff[blk_row]
+                )
+                m_blk = np.multiply.reduceat(m_cur, bstart, axis=0)
+                # 块内指数和: 首轮 int32 安全(|e|≤2100 × 块长 96 ≈ 2e5), 次轮起已是 int64
+                e_blk = np.add.reduceat(e_cur, bstart, axis=0).astype(np.int64)
+                mm, ee = np.frexp(m_blk)  # 块积重归一, 溢出的 2 的幂回收进整型指数
+                e_blk += ee
+                if nblk.max() <= 1:  # 每行恰一块: 收口(blk_row 逐行唯一)
+                    break
+                m_cur, e_cur, g_cur = mm, e_blk, blk_row
+            # ldexp 指数钳位: 绕开超界整数化未定义, 超出即自然物化成 ±inf/±0。
+            res = np.empty_like(sub)
+            res[blk_row] = np.ldexp(
+                mm.astype(np.float64), np.clip(e_blk, -2200, 2200).astype(np.int32)
+            ).astype(sub.dtype)
+    else:
+        sub_t = torch.from_numpy(sub)
+        sub_t.index_reduce_(
+            0,
+            torch.from_numpy(inverse.astype(np.int64)),
+            torch.from_numpy(upd_sel),
+            "prod",
+            include_self=True,
+        )
+        res = sub_t.numpy()
     if need_narrow:
         res = res.astype(var.dtype)  # 复刻 NarrowStore
-    out[touched] = res
+    out_rows[touched] = res
     return [out]
 
 
@@ -168,14 +222,14 @@ def _tp_widen(t):
 
     本算子对重复索引是链式规约, 内核**整条链都在 fp32 accUb 上做**, 只在 NarrowStore
     时窄一次。三方若在 fp16 上逐步截断, 就不是同一个算法: 实测 A100 上中间量会溢出成
-    inf(链长 257 的用例 13 个位置), 而内核算得出有限值。整型不涉及: 整型判据是 binary_equal, need_3party=False, TTK 不执行 GPU 腿。
+    inf(链长 257 的用例 13 个位置), 而内核算得出有限值。
+
+    只处理浮点: 整型判据是 binary_equal, need_3party=False, 本腿对整型从不执行
+    (子字整型的 int32 提升由 golden 侧 numpy 复刻)。若将来整型要走三方(如性能采集),
+    原生位宽即正确 —— 模 2^8 乘法下零扩展精确, 且子字 IO 才对应 NPU 内核的搬运宽度。
     """
     if t.dtype in (torch.float16, torch.bfloat16):
         return t.float()
-    if t.dtype in (torch.int8, torch.uint8):
-        return t.to(
-            torch.int32
-        )  # 内核 AccT 对 1 字节类型提升到 int32(SubwordWidenToI32)
     return t
 
 

@@ -104,12 +104,22 @@ def __golden_scatter_list(var_list, indice, updates, mask=None, **kwargs):
         axis_size = vt.shape[var_nax]
         lead = int(np.prod(vt.shape[:var_nax])) if var_nax > 0 else 1
         trail = int(np.prod(vt.shape[var_nax + 1 :])) if var_nax + 1 < vt.ndim else 1
-        numel = vt.numel()
+        axis_idx = start + torch.arange(
+            n_rows, dtype=torch.int64
+        )  # (n_rows,) 目标轴下标
+        # 越界语义: 逐元素按 scatter 轴边界判定, 落在轴外的元素不写、轴内的照写。
+        # 与 A5 kernel 一致, 也与竞品"越界忽略"的口径一致(torch 原生对越界索引直接报错,
+        # 不存在"写到别处"的行为)。
+        # 此处不再采用"平坦偏移继续写、越过轴长就落到相邻前导维"的旧语义 —— 那会把数据
+        # 写到错误的前导维上, 既非任何竞品行为, 也与 kernel 现行为不符。
+        # 轴下标在界内 ⇒ 平坦地址 (lead_i*axis_size + axis_idx)*trail + t 必落在本 tensor
+        # 之内, 故无需再按 numel 兜底。
+        valid_axis = (axis_idx >= 0) & (axis_idx < axis_size)  # (n_rows,)
         base = (
             torch.arange(lead, dtype=torch.int64).unsqueeze(1) * (axis_size * trail)
-            + (start + torch.arange(n_rows, dtype=torch.int64)).unsqueeze(0) * trail
+            + axis_idx.unsqueeze(0) * trail
         )  # (lead, n_rows) 每行写入的起始平坦偏移
-        valid = (base >= 0) & (base + trail <= numel)
+        valid = valid_axis.unsqueeze(0).expand(lead, n_rows)
         if not bool(valid.any()):
             continue
         flat_idx = base.unsqueeze(-1) + torch.arange(
@@ -162,16 +172,36 @@ def scatter_list_input(var_list, indice, updates, *rest, axis=-2, **kwargs):
     Returns:
         Input tensors (var_list, indice, updates[, mask]) —— 槽位数与入参一致
     """
+    # 异常注入用例会把必选输入整个置为 None(如 L2_exc_missing_* 的 var), 期望算子返回
+    # 参数非法。这里原样透传、不做重采样, 由算子去拒绝; 否则下面按形状取值会抛
+    # TypeError, 用例在输入生成阶段就失败, 算子对缺失参数的行为反而测不到。
+    if var_list is None or indice is None or updates is None or len(var_list) == 0:
+        return [var_list, indice, updates, *rest]
+
     var0 = np.asarray(var_list[0])
     updates = np.asarray(updates)
     nax = axis if axis >= 0 else updates.ndim + axis
     var_nax = nax - 1  # updates has extra leading list dim
+    # 维度下溢用例(L2_exc_dimval_*: var/updates 退化成 0 维)取不到轴长: 与上面 None 透传、
+    # 下面 indice 契约外透传同一范式 —— 原样交给算子 tiling 去拒绝(用例 expect 的正是
+    # ACL_ERROR_INVALID_DIMENSION)。否则 var0.shape[var_nax] 抛 IndexError, 用例死在输入
+    # 生成阶段(实测 dimval_014: "IndexError: tuple index out of range"), 算子对该形态的
+    # 实际行为完全测不到。
+    if not (0 <= var_nax < var0.ndim and 0 <= nax < updates.ndim):
+        return [var_list, indice, updates, *rest]
     var_axis = var0.shape[var_nax]
     S2 = updates.shape[nax]
     B = len(var_list)
 
     indice = np.asarray(indice)
     dt = indice.dtype
+    # 契约(README/aclnn md): indice shape 为 (B,) 或 (B, 2)。元素数既非 B 也非 2B 的
+    # 形态属契约外, 这里原样透传、不做重采样, 由算子 tiling 去校验并拒绝。
+    # 否则下方按 B 生成再 reshape 回 indice.shape 必抛 ValueError(例: size 1 -> (2^31,)
+    # 或 size 2 -> (1,1)), 用例在输入生成阶段就失败成 INPUT_GEN_FAILURE,
+    # 算子对非法形态的实际行为反而完全测不到。
+    if indice.size not in (B, 2 * B):
+        return [var_list, indice, updates, *rest]
     if indice.ndim == 2:
         lens = np.minimum(indice[:, 1], S2)
         lens = np.clip(lens, 1, max(1, var_axis))
@@ -242,9 +272,18 @@ class _ScatterListCompose:
             else:
                 start, n_rows = int(idx.reshape(-1)[i]), s2
             vt = outs[i]
-            if n_rows <= 0 or start < 0 or start + n_rows > vt.shape[var_nax]:
-                continue  # 契约外(越界)不比对, 见类注释
-            vt.narrow(var_nax, start, n_rows).copy_(upd[i].narrow(var_nax, 0, n_rows))
+            if n_rows <= 0:
+                continue
+            # 越界语义与 golden/kernel 对齐: 轴内部分照写, 轴外跳过。narrow 表达不了
+            # "部分越界"(越界时直接抛异常), 故先把写入区间夹到轴边界内再整段拷贝,
+            # updates 侧相应偏移 lo-start 行。
+            lo = max(start, 0)
+            hi = min(start + n_rows, vt.shape[var_nax])
+            if hi <= lo:
+                continue
+            vt.narrow(var_nax, lo, hi - lo).copy_(
+                upd[i].narrow(var_nax, lo - start, hi - lo)
+            )
         return outs
 
 

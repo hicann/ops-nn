@@ -80,7 +80,7 @@ aclnnStatus aclnnScatterMul(
     <tr>
       <td>varRef</td>
       <td>输入/输出</td>
-      <td>公式中的输入varRef，要进行更新的初始张量，原地更新。</td>
+      <td>公式中的输入varRef，要进行更新的初始张量，原地更新。stride需连续，支持storage偏移的连续视图，不支持广播视图与跨步视图。</td>
       <td>-</td>
       <td>FLOAT16、FLOAT32、INT32、INT8、UINT8</td>
       <td>ND</td>
@@ -91,10 +91,10 @@ aclnnStatus aclnnScatterMul(
       <td>indices</td>
       <td>输入</td>
       <td>公式中的输入indices，要更新的索引位置。</td>
-      <td>索引值的取值范围为[0, varRef.shape[0])（varRef.shape[0]为varRef首维大小）。</td>
+      <td>索引值的取值范围为[0, varRef.shape[0])（varRef.shape[0]为varRef首维大小）。支持标量索引（0维张量，或updates形状等于varRef.shape[1:]时形状为(1,)的张量）。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>

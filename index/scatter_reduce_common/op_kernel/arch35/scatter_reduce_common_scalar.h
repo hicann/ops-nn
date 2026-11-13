@@ -138,6 +138,130 @@ __aicore__ inline void ScalarDiv1D(TPipe& pipe, GlobalTensor<INDICES_T>& idxGm, 
     }
 }
 
+// ---------------------------------------------------------------------------------------------------
+// 溢出安全的缩放折叠(仅浮点 MUL/DIV): 把累加值保持成 m * 2^e —— m 的量级被箍在 [2^-32, 2^32) 内,
+// e 是独立的 int64 指数, 于是**中间步既不溢出也不下溢**, 终值一次性物化, 只有真值确实超出 dtype
+// 范围时才给 ±inf。
+//
+// 为什么需要: fp32 的顺序链一旦中间步溢出成 inf 就再也回不来, 而真值往往是可表示的。
+// 实测 ScatterDiv_L0_040: var 全 -3.4e38(fp32 最负有限值), updates (-100,100), 先除到一个
+// |u|<1 的更新即 6.8e38 > fp32 上限 -> inf, 此后无论再除多少都是 inf;
+// 而真值 3.6e32 稳稳在 fp32 范围内(dump 原文 "Expected: 3.60988...e+32  Actual: inf")。
+// ttk 的 mix_tolerance 对此有专门机制(代码注释标 !292): actual=±inf 处把 golden 按被测 dtype
+// RNE 收窄, 超范围才算同号 inf 一致 —— 即判据明确只接受"真值确实超范围"的 inf, 所以这是
+// 算子缺陷而非判据瑕疵。同族: ScatterMul_L1_985。
+//
+// 口径: 本函数只在快路径算出**非有限**结果时才被调用(见 sort.h 的调用点), 常规形态零开销。
+// 非有限输入(±inf/NaN)与除 0 原样按 IEEE 走, 不做任何"吸收"—— 见 ScalarReduceFold 的回退记录。
+// ---------------------------------------------------------------------------------------------------
+
+// 有限判定: inf - inf = NaN、NaN - NaN = NaN, 故"自减为 0"当且仅当有限。
+// (不用 a > MAX 之类的常量比较, 省去对 T 取上限常量。)
+template <typename T>
+__aicore__ inline bool ScaledIsFinite(T v)
+{
+    return (v - v) == static_cast<T>(0);
+}
+
+// 把 |v| 归一回 [2^-32, 2^32), 搬动量记进 e。每轮搬 32 个指数, guard 封顶 8 轮
+// (8*32=256 已覆盖 fp32 的全部指数域 2^-149..2^128), 防任何意外的死循环。
+template <typename T>
+__aicore__ inline void ScaledNormalize(T& v, int64_t& e)
+{
+    constexpr int64_t K = 32;
+    constexpr int GUARD = 8;
+    const T up = static_cast<T>(4294967296.0);       // 2^32
+    const T dn = static_cast<T>(1.0 / 4294967296.0); // 2^-32
+    if (v == static_cast<T>(0) || !ScaledIsFinite(v)) {
+        return;
+    }
+    T a = (v < static_cast<T>(0)) ? -v : v;
+    int g = 0;
+    while (a >= up && g < GUARD) {
+        v = v * dn;
+        e += K;
+        a = (v < static_cast<T>(0)) ? -v : v;
+        g++;
+    }
+    while (a < dn && g < GUARD) {
+        v = v * up;
+        e -= K;
+        a = (v < static_cast<T>(0)) ? -v : v;
+        g++;
+    }
+}
+
+// 把 m * 2^e 物化成 T。|m| ∈ [2^-32, 2^32), 故 |e| > 200 时真值必然已越过 fp32 的
+// 上/下限(2^128 / 2^-149), 直接给 ±inf / ±0, 避免 e 达 2^31 量级时逐步搬指数的死循环。
+//
+// 离线穷举(probe/sim_scaled.py, numpy float32 严格模拟本文件三个 helper, 8000 组随机链):
+//   判据=分类(有限/±inf/NaN)是否与"f64 走链再按 fp32 窄回"的真值一致(即 ttk !292 的判法)
+//   新缩放折叠 1/8000 不一致, 旧 fp32 顺序链 302/8000 不一致; 有限情形 ULP 误差 p50 两者同为 0。
+// 已知残留角: 真值恰为 fp32 最小非规格数(2^-149)时本函数给 0 —— 逐级物化在非规格区必然
+// 渐进下溢。该角在判据上无害(|0 - 1e-45| 远小于 atol), 不额外补偿, 以免把常规路径搞复杂。
+
+template <typename T>
+__aicore__ inline T ScaledMaterialize(T m, int64_t e)
+{
+    if (m != m || m == static_cast<T>(0)) { // NaN 原样传播; 0 乘任何 2 的幂仍是 0(含符号)
+        return m;
+    }
+    // 不做 E_SAT 式粗粒度饱和: 指数 128~200 且 |m| 小时真值仍可表示(粗闸会把可表示值误判成
+    // ±inf, 实测 ScatterDiv_L0_001 的 25/20.24M 边界元素)。改为步进中检查: m 已非有限或已
+    // 冲洗为 0, 说明真值确实超出 T 的表示域, 立即返回(剩余指数无意义, 也避免超大指数空转)。
+    constexpr int64_t E_STEP = 30;
+    const T up = static_cast<T>(1073741824.0);       // 2^30
+    const T dn = static_cast<T>(1.0 / 1073741824.0); // 2^-30
+    while (e >= E_STEP) {
+        m = m * up;
+        if (!ScaledIsFinite(m)) {
+            return m; // 真值超出上限, IEEE 溢出语义已生效
+        }
+        e -= E_STEP;
+    }
+    while (e <= -E_STEP) {
+        m = m * dn;
+        if (m == static_cast<T>(0)) {
+            return m; // 真值低于下限(含符号的 ±0)
+        }
+        e += E_STEP;
+    }
+    // 残余 |e| < 30: 逐个 2 倍搬完(最多 29 次, 且溢出/下溢在此自然发生 = 真值确实超范围)
+    while (e > 0) {
+        m = m + m;
+        e--;
+    }
+    while (e < 0) {
+        m = m * static_cast<T>(0.5);
+        e++;
+    }
+    return m;
+}
+
+// 一步缩放乘/除。关键: **先把 u 也归一化**, 再做运算 —— 否则单步自己就可能溢出成 inf,
+// 而 inf 乘任何缩放因子还是 inf, 信息已丢, 缩放就白做了(第一版犯过这个错)。
+// 归一后 |m| < 2^32 且 |u| ∈ [2^-32, 2^32), 故 |m*u| 与 |m/u| 都 < 2^64, 单步不可能溢出。
+// u 非有限或为 0 时直接走 IEEE —— 那些情形的 IEEE 结果(inf/NaN/除 0 规则)本身就是要的答案,
+// 不做任何"吸收"(见 ScalarReduceFold 里零吸收的回退记录)。
+template <bool IsDiv, typename T>
+__aicore__ inline void ScaledStep(T& m, int64_t& e, T u)
+{
+    if (u == static_cast<T>(0) || !ScaledIsFinite(u)) {
+        m = IsDiv ? (m / u) : (m * u);
+        return;
+    }
+    int64_t eu = 0;
+    ScaledNormalize(u, eu);
+    if constexpr (IsDiv) {
+        m = m / u;
+        e -= eu;
+    } else {
+        m = m * u;
+        e += eu;
+    }
+    ScaledNormalize(m, e);
+}
+
 // One core stages indices + updates + var in UB and reduces sliceSize==1 with scalar GetValue/SetValue: no
 // vector Mul (which crashes at width 1), no atomic (single owner), no SyncAll. The var-first init and the
 // narrow are VECTORISED over varFirstDim (width > 1, so safe) -- only the data-dependent scatter
@@ -157,6 +281,29 @@ __aicore__ inline T ScalarReduceFold(T a, T b)
     } else if constexpr (Mode == MODE_MIN) {
         return (a != a) ? a : (a < b ? a : b);
     } else {
+        // MUL/DIV: 严格 IEEE 逐条相乘/相除, **不做"任一侧为 0 即返回 0"的零吸收**。
+        //
+        // 曾在此加过零吸收, 为的是修 aclnnScatterMul_L0_bound_053(var 含 0.0 的那个元素被
+        // 跨核偏积溢出的 inf 乘成 NaN)。该补丁已回退, 原因有二:
+        //   1. 位置错。这个折叠函数既用于**单核顺序折叠**(sort.h 的 SortScalarSliceSize1Chunk
+        //      是 `acc = var[r]` 起折, 顺序乘下去, var==0 时 0*有限=0 恒成立, 本就不会出 NaN),
+        //      也用于**跨核偏积合并**(ubresident_merge.h 各核从单位元 1 起折)。b053 的 inf 只在
+        //      后者产生, 在此处一刀切等于拿全局语义换一条路径的 bug。
+        //   2. 它改坏了 IEEE 语义, 而原注释声称的"该形态在用例集中无覆盖"是**错的** ——
+        //      官方 GEIR l0 里直接有 var 全 ±inf 且 updates 含精确 0 的用例:
+        //        ScatterMul_L0_026  var 范围(inf, inf)   updates fp16 (0, 0.001)
+        //        ScatterMul_L0_028  同族
+        //        ScatterMul_L0_030  var 范围(-inf, -inf) updates fp32 (-0.0, 0)
+        //        ScatterDiv_L0_040  DIV 侧同族(本 else 分支同时覆盖 MODE_MUL 与 MODE_DIV)
+        //        ScatterMul_L1_985
+        //      inf*0 / inf/0 的 IEEE 结果是 NaN, 参考实现(golden)也给 NaN, 零吸收给 0 =>
+        //      上述 5 例 2026-11-10 全部由 PASS 转 FAIL(matched_ratio 0.999998~0.99999997,
+        //      reason "NaN/Inf"), 11-07/11-08 的历史结果均为 PASS。
+        //
+        // b053 的正确修法在偏积产生处(ubresident_merge.h), 判据是"**全部输入有限**时零才吸收":
+        // 偏积的 inf 若由有限输入溢出而来, 它是拆分带来的人工产物, 数学真值仍是 0; 而若某条输入
+        // 本身是 ±inf/NaN, 就必须按 IEEE 出 NaN。二者在数值上不可区分, 必须由各核额外上报
+        // "我这份偏积的输入里有无非有限值"一位标志, 合并时才能判。见该文件 TODO。
         return a * b;
     }
 }

@@ -17,6 +17,7 @@
 
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "../../op_kernel/arch35/scatter_reduce_common_struct.h"
 
 namespace optiling {
 struct ScatterReduceCompileInfo {
@@ -24,7 +25,7 @@ struct ScatterReduceCompileInfo {
 };
 
 ge::graphStatus TilingPrepareForScatterReduce(gert::TilingParseContext* context);
-ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context);
+ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context, uint64_t mode);
 } // namespace optiling
 
 #endif // SCATTER_REDUCE_COMMON_TILING_H

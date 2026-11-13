@@ -13,16 +13,20 @@
  * \brief Dispatcher for the non-nd scatter-reduce ops (Mul/Div/Max/Min). For each index entry m:
  *        var[indices[m]] (slice of sliceSize elems) = reduce(var[...], updates[m]). This file holds the
  *        ScatterReduceSimt class (Init + Process dispatch). All compute paths live in sibling files,
- *        dispatched from Process() — there is no SIMT-atomic path (a single scalar/sort cover every case):
+ *        dispatched from Process():
  *          - scatter_reduce_common_sort.h   : sort + count-balanced multi-core split; sliceSize>=2 column
  *                                             tiling, sliceSize==1 large-M scalar row-fold (all modes)
  *          - scatter_reduce_common_scalar.h : single-core scalar reduction for small sliceSize==1
+ *          - scatter_reduce_common_atomic.h : sliceSize==1 MAX/MIN 走硬件原子归约, 跳过全局排序
  */
 #ifndef SCATTER_REDUCE_COMMON_SIMT_H
 #define SCATTER_REDUCE_COMMON_SIMT_H
 
 #include "scatter_reduce_common_struct.h"
 #include "kernel_operator.h"
+// GetVRegSize(): 向量寄存器宽度, 供原子路径的向量化筛选算每轮元素数。
+// 相对路径按构建树解析(memory: dag-header-compiled-in-two-trees), 写法同 index/arg_max_grad。
+#include "../inc/platform.h"
 
 namespace ScatterReduceCommon {
 using namespace AscendC;
@@ -85,6 +89,14 @@ __aicore__ inline void SubwordNarrowFromI32(const LocalTensor<T>& dst, const Loc
 // in here, after the subword widen/narrow helpers it reuses, so the dispatcher can route to it.
 #include "scatter_reduce_common_scalar.h"
 
+// sliceSize==1 的 MAX/MIN 硬件原子路径(同款 FRAGMENT 约定)。放在 scalar.h 之后, 供 Process() 在
+// 落到 sort 行折叠之前优先路由。
+#include "scatter_reduce_common_atomic_common.h" // 共用件: 判据/单位元/翻转/命中压缩/UbBufSpec
+#include "scatter_reduce_common_atomic.h"        // AtomicReduceRow1D (ss==1)
+#include "scatter_reduce_common_ubresident.h"    // UbResidentReduceRow1D (ss==1 与 ss>=2)
+#include "scatter_reduce_common_bucket.h"        // BucketReduceWideSpan (宽 span MUL)
+#include "scatter_reduce_common_atomic_slicen.h" // AtomicReduceSliceN (ss>=2)
+
 template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
 class ScatterReduceSimt {
 public:
@@ -94,6 +106,18 @@ public:
     // workspace defaults to nullptr: only the MUL sort path consumes it; DIV/MAX/MIN call Init(var,idx,upd).
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace = nullptr);
     __aicore__ inline void Process();
+    // Process 的选路链: 每条候选路径一个 TryXxx, 返回"本核已处理"。原先全挤在 Process 里,
+    // 圈复杂度 55(全仓 16650 个 arch35 内核函数里排第 29)。拆法同 sort.h 的 SortIndices。
+    __aicore__ inline UbBufSpec MakeUbSpec() const;
+    __aicore__ inline bool ProcessReduceModes(ADDR_T sliceSize, ADDR_T varFirstDim);
+    __aicore__ inline bool ProcessDivMode(ADDR_T sliceSize, ADDR_T varFirstDim);
+    __aicore__ inline bool TryScalarReduce1D(ADDR_T sliceSize, ADDR_T varFirstDim);
+    __aicore__ inline bool TryUbResident(ADDR_T sliceSize, ADDR_T varFirstDim, const UbBufSpec& ubSpec);
+    __aicore__ inline bool TryBucketReduce(ADDR_T sliceSize, ADDR_T varFirstDim);
+    __aicore__ inline bool TryAtomicSliceN(ADDR_T sliceSize, ADDR_T varFirstDim, const UbBufSpec& ubSpec);
+    __aicore__ inline bool TryAtomicRow1D(ADDR_T sliceSize, ADDR_T varFirstDim, const UbBufSpec& ubSpec);
+    __aicore__ inline bool TrySortSliceN(ADDR_T sliceSize, ADDR_T varFirstDim);
+    __aicore__ inline bool TrySortScalar1D(ADDR_T sliceSize, ADDR_T varFirstDim);
     // ACC: float for fp16, native for fp32/int32, int32 for int8/uint8 (forced by hardware -- vmul has no
     // 8-bit form). Used by the sort-based product and the cross-core partial-combine. Declared before the
     // sort-phase helper declarations below, which take LocalTensor<AccT>& parameters.
@@ -104,13 +128,49 @@ public:
     // UB_BLOCK_BYTES 定义在 struct.h(host/kernel 共用, 不便引 AscendC 命名空间), 在此绑定校验。
     static_assert(ScatterReduceCommon::UB_BLOCK_BYTES == AscendC::ONE_BLK_SIZE,
                   "UB_BLOCK_BYTES 必须与 AscendC::ONE_BLK_SIZE 一致");
-    static constexpr int32_t PREFETCH_DEPTH = 8;
+    static constexpr int32_t PREFETCH_DEPTH = static_cast<int32_t>(ScatterReduceCommon::SORT_PREFETCH_DEPTH);
     static constexpr int32_t PREFETCH_AHEAD = PREFETCH_DEPTH - 1;
+
+    // 缩放域折叠生效条件: 浮点 MUL/DIV。与 host 的 SortFoldPlan().scaledFold 同一判据。
+    static constexpr bool kScaledFold = (AscendC::IsSameType<PARAMS_T, half>::value ||
+                                         AscendC::IsSameType<PARAMS_T, float>::value) &&
+                                        (Mode == ScatterReduceCommon::MODE_MUL ||
+                                         Mode == ScatterReduceCommon::MODE_DIV);
+
+    // bTmp 切分: 非缩放域一份(int8 符号扩展/整型 0->1); 缩放域另加指数累加、指数增量、两张掩码。
+    // 掩码区必须整到 32B —— 比较指令的掩码目标要求 block 对齐, 否则 VEC_ERROR。
+    __aicore__ static inline uint32_t MaskElems(uint32_t cPad)
+    {
+        const uint32_t bytes = (cPad + 7U) / 8U;
+        return ((bytes + ScatterReduceCommon::UB_BLOCK_BYTES - 1U) / ScatterReduceCommon::UB_BLOCK_BYTES) *
+               (ScatterReduceCommon::UB_BLOCK_BYTES / sizeof(int32_t));
+    }
+    __aicore__ static inline uint32_t ScaledTmpElems(uint32_t cPad)
+    {
+        return kScaledFold ? (2U * cPad + 2U * MaskElems(cPad)) : cPad;
+    }
+    __aicore__ inline void BindScaledState(LocalTensor<int32_t>& tmp, uint32_t cPad)
+    {
+        if constexpr (kScaledFold) {
+            scaledExp_ = tmp;
+            scaledDlt_ = tmp[cPad];
+            scaledMk_ = tmp[2U * cPad].template ReinterpretCast<uint8_t>();
+            scaledMk2_ = tmp[2U * cPad + MaskElems(cPad)].template ReinterpretCast<uint8_t>();
+        }
+    }
     // sort-based POSITION-split reducer for MUL/MAX/MIN (defined in scatter_reduce_common_sort.h): core 0
     // globally sorts indices into workspace, SyncAll, then every core reduces a count-balanced range of sorted
     // segments (each segment = one var row) with sliceSize column-tiling and a cross-core partial combine
     // (MUL: product; MAX/MIN: max/min -- all associative+commutative, so splittable & combinable). No atomics.
+    // 外壳: 把全量 M 切成固定长度的片依次处理, 片间插集合屏障(var 读改写依赖)。
+    // 排序 scratch 只按一片定尺, workspace 因此与 M 无关, 支持的更新条数无上限。
     __aicore__ inline void SortReduceProcess(ADDR_T M, ADDR_T sliceSize, ADDR_T varFirstDim);
+    // 单片处理: [base, base+M) 这一片的排序 + 折叠。
+    __aicore__ inline void SortReduceProcessChunk(ADDR_T base, ADDR_T M, ADDR_T sliceSize, ADDR_T varFirstDim);
+    // M <= blockNum(每核摊不到 2 个排序位)时的列并行折叠(scatter_reduce_common_sort.h): 位置切分在该
+    // 档退化为"每核 1 位 + 跨核分段/部分合并"的重机械, 实测死锁(SMsortD/E/F: MAX, M==blockNum, 索引
+    // 分散)。归约按列独立, 列条带单写者, 全程零集合同步。
+    __aicore__ inline void SortColumnsParallel(ADDR_T M, ADDR_T sliceSize, ADDR_T varFirstDim);
     // SortReduceProcess per-chunk sub-phases (pure code-motion split; same execution order + sync pairing):
     //   SortPhase3aFold     : in-range fold for columns [c0,c0+chunkW). Whole segments -> var; a segment that
     //                         spans this core's right boundary -> in-range partial to partialGm_[core] and the
@@ -123,27 +183,38 @@ public:
                                            TQue<QuePosition::VECIN, PREFETCH_DEPTH>& updQue, event_t evMV0,
                                            event_t evVM3, event_t evM3M2, const DataCopyExtParams& cp,
                                            const DataCopyExtParams& cpAcc, const DataCopyPadExtParams<PARAMS_T>& pad,
-                                           ADDR_T& ownerSplitRow, ADDR_T& ownerSplitEnd);
+                                           ADDR_T& ownerSplitRow, ADDR_T& ownerSplitEnd, event_t evVS, event_t evSM3);
     __aicore__ inline void SortPhase3bCombine(ADDR_T M, ADDR_T sliceSize, ADDR_T c0, ADDR_T chunkW, ADDR_T sAlign,
                                               ADDR_T ownerSplitRow, ADDR_T ownerSplitEnd, LocalTensor<AccT>& accUb,
                                               LocalTensor<PARAMS_T>& varUb, LocalTensor<AccT>& rowAccUb,
                                               LocalTensor<int32_t>& tmp, event_t evMV0, event_t evVM3, event_t evM3M2,
                                               event_t evVM2, const DataCopyExtParams& cp,
                                               const DataCopyExtParams& cpAcc, const DataCopyPadExtParams<PARAMS_T>& pad,
-                                              const DataCopyPadExtParams<AccT>& padAcc);
+                                              const DataCopyPadExtParams<AccT>& padAcc, event_t evVS, event_t evSM3);
     // sort-based ROW-split reducer for DIV (defined in scatter_reduce_common_sort.h): same global sort, but
     // every core owns the segments whose START is in its count-balanced position range and divides those whole
     // rows IN PLACE across the full slice -- a divide chain cannot be split across cores (the divisor product
     // overflows), so each row is owned by one core, no combine. Each core walks only O(M/P) positions (the
     // column-split's O(M) walk blew up at large M). Shares Phase 1 via SortIndices.
+    // 外壳: 把全量 M 切成固定长度的片依次处理, 片间插集合屏障(var 读改写依赖)。
+    // 排序 scratch 只按一片定尺, workspace 因此与 M 无关, 支持的更新条数无上限。
     __aicore__ inline void SortDivRowProcess(ADDR_T M, ADDR_T sliceSize, ADDR_T varFirstDim);
+    // 单片处理: [base, base+M) 这一片的排序 + 折叠。
+    __aicore__ inline void SortDivRowProcessChunk(ADDR_T base, ADDR_T M, ADDR_T sliceSize, ADDR_T varFirstDim);
     // sliceSize==1 for M (or varFirstDim) beyond the scalar UB cap, ALL modes (MUL/DIV/MAX/MIN): reuse Phase-1
     // SortIndices, then fold each var row's updates with a SCALAR op (no width-1 vector, so sort CAN do
     // sliceSize==1). Row-ownership split (each core owns segments STARTING in its range, whole, no combine, no
     // barrier); DataCopyPad coherent write. AccT intermediate -> correct (no fp16 overflow) for every dtype.
+    // 外壳: 把全量 M 切成固定长度的片依次处理, 片间插集合屏障(var 读改写依赖)。
+    // 排序 scratch 只按一片定尺, workspace 因此与 M 无关, 支持的更新条数无上限。
     __aicore__ inline void SortScalarSliceSize1(ADDR_T M, ADDR_T varFirstDim);
+    // 单片处理: [base, base+M) 这一片的排序 + 折叠。
+    __aicore__ inline void SortScalarSliceSize1Chunk(ADDR_T base, ADDR_T M, ADDR_T varFirstDim);
     // Phase 1 of both sort reducers: core 0 sorts indices into sortedIdx/originPos workspace, then SyncAll.
-    __aicore__ inline void SortIndices(ADDR_T M);
+    // 分片排序: 只对 idx[base, base+M) 这一片排序, 结果落在固定大小的 scratch 里。
+    // 排序 scratch 是 O(片长) 而非 O(全量 M), workspace 因此恒定, 算子支持的更新条数无上限。
+    // 位置数组存**全局**下标(base + 片内局部位置), 折叠阶段据此取 updates 行。
+    __aicore__ inline void SortIndices(ADDR_T base, ADDR_T M);
     // 取排序槽 k 对应的**完整**行号。窄档直接读 sortedIdx(它就是完整 index); 宽档 sortedIdx 只存
     // lo(低 30 位), 完整值由 originPos 回读原始 int64 索引得到 —— 这样消费者无需桶边界表, 也天然
     // 避免"跨桶 lo 相同被误判为同一行"的坑。
@@ -153,8 +224,8 @@ public:
     //   SortLocalRuns      : large-M phase 2 -- each core sorts its runLen0-wide chunks (pad tail with SENT),
     //                        writes them into the curSel buffer, then the collective DCCI + SyncAll.
     //   SortMergeTree      : large-M merge tree -- each round each core emits its merge-path slice; flips curSel.
-    __aicore__ inline void SortIndicesSmallM(ADDR_T M);
-    __aicore__ inline void SortLocalRuns(ADDR_T M, ADDR_T P2, ADDR_T runLen0, int curSel);
+    __aicore__ inline void SortIndicesSmallM(ADDR_T base, ADDR_T M);
+    __aicore__ inline void SortLocalRuns(ADDR_T base, ADDR_T M, ADDR_T P2, ADDR_T runLen0, int curSel);
     __aicore__ inline void SortMergeTree(ADDR_T M, ADDR_T P2, ADDR_T runLen0, ADDR_T nRounds, int curSel);
     // 左边缘段的折叠(定义在 scatter_reduce_common_sort.h): 只算范围内部分, 落 partial 供 3b 合并。
     __aicore__ inline void FoldSpilledLeftEdge(
@@ -238,6 +309,17 @@ private:
     // in-range partial product to partialGm_[core] (one CHUNK-wide slot); the row's owner reads back the
     // consecutive covering cores' partials and combines (4 bytes per elem, reinterpreted to the ACC type).
     GlobalTensor<int32_t> partialGm_; // workspace: per-core partial product [blockNum * chunk]
+    // 缩放域折叠的状态(仅浮点 MUL/DIV 绑定): 指数累加、指数增量、两张比较掩码。
+    // 全部从 bTmp 一块里切, 由分配点一次绑定 —— 做成成员是为了不给五个折叠调用点扩散签名。
+    LocalTensor<int32_t> scaledExp_;
+    LocalTensor<int32_t> scaledDlt_;
+    LocalTensor<uint8_t> scaledMk_;
+    LocalTensor<uint8_t> scaledMk2_;
+    // 分桶路径复用整块排序 scratch(分桶不排序, 该区全程空闲), 需要知道它有多大。mAlign 只在 Init
+    // 里算一次并在此留存 —— 不在第二处重算 padM: 两处算出不同 padM 会让各子区基址错位(见 Init 内
+    // "分片阈值必须与 SortIndices 同源"那段), 这是同一个坑。
+    ADDR_T wsUserBytes_{0};
+    GM_ADDR userWsBase_{nullptr};
     uint32_t blockIdx_{0};
     ADDR_T xBlockOffSet_{0};
     ADDR_T currBlockTilingSize_{0};
@@ -284,16 +366,19 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Ini
         // 写死常量会与 SortIndices 算出不同的 padM(阈值越小 -> P2 越大 -> padM 越大), 差值可达 P2 量级,
         // 远超下面 +128 的余量, 于是各子区基址错位、排序写出区间重叠 -> 越界写/静默错值。
         const ADDR_T sortTile = static_cast<ADDR_T>(tiling_.sortTile);
-        ADDR_T padM = totalIdxn_;
-        if (totalIdxn_ > sortTile) {
+        // scratch 只按**一片**定尺(与 host 的 workspace 公式同源): 全量 M 被切成若干片,
+        // 每片独立排序+折叠, 复用同一块 scratch, workspace 因此与 M 无关。
+        const ADDR_T chunkM = MinAddr(totalIdxn_, static_cast<ADDR_T>(tiling_.sortChunkM));
+        ADDR_T padM = chunkM;
+        if (chunkM > sortTile) {
             ADDR_T p2 = 1;
             while (p2 * 2 <= static_cast<ADDR_T>(tiling_.blockNum)) {
                 p2 *= 2;
             }
-            while ((totalIdxn_ + p2 - 1) / p2 > sortTile) {
+            while ((chunkM + p2 - 1) / p2 > sortTile) {
                 p2 *= 2;
             }
-            padM = p2 * ((totalIdxn_ + p2 - 1) / p2);
+            padM = p2 * ((chunkM + p2 - 1) / p2);
         }
         const ADDR_T mAlign = (padM + 7) / 8 * 8 + 128; // 32B align (8 x 4B) on top of the true padM
         // layout: sortedIdx[M] | originPos[M] | scratchKeys[M] | scratchPos[M] | per-core partials.
@@ -309,6 +394,11 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Ini
         scratchKeysGm_.SetGlobalBuffer((__gm__ INDICES_T*)(userWs + mAlign * (KEY_SZ + POS_SZ)));
         scratchPosGm_.SetGlobalBuffer((__gm__ int64_t*)(userWs + mAlign * (2 * KEY_SZ + POS_SZ)));
         partialGm_.SetGlobalBuffer((__gm__ int32_t*)(userWs + mAlign * 2 * (KEY_SZ + POS_SZ)));
+        // 分桶路径要整块复用这片 scratch。容量按 host 的 workspace 公式同源取:
+        // 四个排序子区(sortedIdx/originPos/scratchKeys/scratchPos) + per-core partials。
+        // partials 段按 host 公式是 blockNum * sliceAlign * 4, 这里保守只认前四段, 不把余量算进来。
+        userWsBase_ = userWs;
+        wsUserBytes_ = mAlign * 2 * (KEY_SZ + POS_SZ);
     }
 }
 
@@ -316,63 +406,7 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Ini
 // it is not SIMT. Defines ScatterReduceSimt::SortReduceProcess and its helpers.
 #include "scatter_reduce_common_sort.h"
 
-template <typename PARAMS_T, typename INDICES_T, typename ADDR_T, uint8_t Mode>
-__aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Process()
-{
-    if (tiling_.sliceSize == 0 || blockIdx_ >= tiling_.blockNum) {
-        return;
-    }
-    const ADDR_T sliceSize = static_cast<ADDR_T>(tiling_.sliceSize);
-    const ADDR_T varFirstDim = static_cast<ADDR_T>(tiling_.varFirstDim);
-    if constexpr (Mode == MODE_MUL || Mode == MODE_MAX || Mode == MODE_MIN) {
-        // Product/max/min are order-independent (assoc.+comm.), so MUL/MAX/MIN share ONE path: global sort (core 0) +
-        // count-balanced segment split (all cores), no atomics. Its only ceiling is fitting core 0's UB --
-        // the M-index sort plus a single column chunk of the per-segment product -- both derived from the
-        // buffer layout and UB size (no magic thresholds). sliceSize is column-tiled so it never limits; M
-        // is bounded only by the single-core sort capacity.
-        // sliceSize==1, small (M + varFirstDim fit single-core UB): 1D scalar reduce (product/max/min). One core
-        // stages it all in UB and scalar-folds in fp32 -- crisply bounded, beats the multi-core sort's setup for
-        // the tiny work. Cap is UB capacity (not a magic 256), so all realistic 1-D cases land here.
-        if (sliceSize == 1 && totalIdxn_ > 0 && varFirstDim > 0 && tiling_.scalarPath != 0) {
-            if (blockIdx_ == 0) {
-                ScalarReduce1D<Mode, PARAMS_T, INDICES_T, ADDR_T>(pipe_, idxGm_, xGm_, outputGm_, totalIdxn_,
-                                                                  varFirstDim);
-            }
-            return; // single core owns the whole 1D reduction (separate file: scatter_reduce_common_scalar.h)
-        }
-        // sliceSize>=2 -> sort with the column-tiled VECTOR fold (any M).
-        if (sliceSize >= 2 && totalIdxn_ > 0 && varFirstDim > 0) {
-            SortReduceProcess(totalIdxn_, sliceSize, varFirstDim);
-            return;
-        }
-        // sliceSize==1 too big for the scalar UB cap -> sort + SCALAR row-fold. The vector fold crashes at
-        // width 1, but a scalar product per sorted row segment does not -- so sort handles sliceSize==1 here,
-        // no UB limit and no SIMT atomic CAS storm. Replaces the old fp16-overflowing SIMT-atomic fallback.
-        if (sliceSize == 1 && totalIdxn_ > 0 && varFirstDim > 0) {
-            SortScalarSliceSize1(totalIdxn_, varFirstDim);
-            return;
-        }
-    }
-    if constexpr (Mode == MODE_DIV) {
-        // sliceSize==1 small -> single-core scalar sequential divide (ScalarDiv1D: /0 keeps var for int, ->inf
-        // for float, reference-exact). Large -> sort + scalar row-fold (sequential divide, same /0 rule).
-        if (sliceSize == 1 && totalIdxn_ > 0 && varFirstDim > 0 && tiling_.scalarPath != 0) {
-            if (blockIdx_ == 0) {
-                ScalarDiv1D<PARAMS_T, INDICES_T, ADDR_T>(pipe_, idxGm_, xGm_, outputGm_, totalIdxn_, varFirstDim);
-            }
-            return;
-        }
-        if (sliceSize >= 2 && totalIdxn_ > 0 && varFirstDim > 0) {
-            SortDivRowProcess(totalIdxn_, sliceSize, varFirstDim); // sliceSize>=2: row-split in-place divide
-            return;
-        }
-        if (sliceSize == 1 && totalIdxn_ > 0 && varFirstDim > 0) {
-            SortScalarSliceSize1(totalIdxn_, varFirstDim); // sliceSize==1 large: sort + scalar divide
-            return;
-        }
-    }
-    // Empty (M==0 or varFirstDim==0): nothing to reduce -> fall through and return (no-op). No SIMT path remains.
-}
+#include "scatter_reduce_common_dispatch.h" // Process 与各 TryXxx 选路候选
 } // namespace ScatterReduceCommon
 
 #endif // SCATTER_REDUCE_COMMON_SIMT_H

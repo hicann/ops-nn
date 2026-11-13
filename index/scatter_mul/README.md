@@ -40,14 +40,14 @@
     <tr>
       <td>var</td>
       <td>输入</td>
-      <td>支持空Tensor。表示待被更新的张量，Device侧的aclTensor，原地更新。shape支持1维及以上，数据类型需与updates一致。</td>
+      <td>支持空Tensor。表示待被更新的张量，Device侧的aclTensor，原地更新。shape支持1维及以上，数据类型需与updates一致。stride需连续，支持storage偏移的连续视图，不支持广播视图与跨步视图。</td>
       <td>FLOAT16、FLOAT32、INT32、INT8、UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>支持空Tensor。表示待更新的索引张量，Device侧的aclTensor。shape支持1维及以上，数据类型为INT32或INT64。支持索引越界，越界索引（小于0或大于等于var第一维）会被静默跳过，不做更新。</td>
+      <td>支持空Tensor。表示待更新的索引张量，Device侧的aclTensor。shape支持0维及以上，支持标量索引（0维张量，或updates形状等于var.shape[1:]时形状为(1,)的张量），数据类型为INT32或INT64。支持索引越界，越界索引（小于0或大于等于var第一维）会被静默跳过，不做更新。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>

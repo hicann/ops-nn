@@ -103,7 +103,7 @@ aclnnStatus aclnnScatterList(
     <tr>
       <td>indice（aclTensor*）</td>
       <td>输入</td>
-      <td>写入位置张量，逐varRef列表元素给出写入的起始位置（1维时）或起始位置与长度（2维时）。<br>1维：indice[i]为第i个张量在axis轴上的写入起始位置，写入长度为updates在axis轴上的大小。<br>2维：indice[i][0]为起始位置，indice[i][1]为写入长度。</td>
+      <td>写入位置张量，逐varRef列表元素给出写入的起始位置（1维时）或起始位置与长度（2维时）。<br>1维：indice[i]为第i个张量在axis轴上的写入起始位置，写入长度为updates在axis轴上的大小。<br>2维：indice[i][0]为起始位置，indice[i][1]为写入长度。<br>取值范围：起始位置不小于0，且起始位置与写入长度之和不超过varRef在axis轴的大小。</td>
       <td>-</td>
       <td>INT32、INT64</td>
       <td>ND</td>
@@ -267,9 +267,9 @@ aclnnStatus aclnnScatterList(
   - maskOptional：shape支持1维，第一维大小等于B。
   - axis：归一化（负数按updates的维度数折算）后的取值必须落在开区间(0, updates的维度数)内，即不能指向第0维，也不能越界。默认值-2要求updates的维度数大于等于3。
 
-- indice语义与取值范围（取值由调用方保证，算子不做校验）：indice给出的是**写入起始位置**，不是散射目标下标。写入是从该位置开始的一段连续区间，需保证整段不越出axis轴。
+- indice语义（取值范围见参数说明，取值由调用方保证，算子不做校验）：indice给出的是**写入起始位置**，不是散射目标下标。写入是从该位置开始的一段连续区间。
   - 1维：`indice[i]`为第i个张量的写入起始位置，写入长度为updates在axis轴上的大小。
-  - 2维：`indice[i][0]`为起始位置，`indice[i][1]`为写入长度，长度不应超过updates在axis轴上的大小。
+  - 2维：`indice[i][0]`为起始位置，`indice[i][1]`为写入长度。
 
 - maskOptional取值范围（调用方保证，算子不做校验）：取值仅支持0和1，0表示该列表元素不执行写入，1表示执行写入，其余取值行为未定义。
 

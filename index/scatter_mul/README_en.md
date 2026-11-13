@@ -42,14 +42,14 @@ English | [简体中文](./README.md)
     <tr>
       <td>var</td>
       <td>Input</td>
-      <td>Empty tensors are supported. It denotes the tensor to be updated, an aclTensor on the Device side, updated in place. The shape supports 1 dimension or more, and its data type must be the same as updates.</td>
+      <td>Empty tensors are supported. It denotes the tensor to be updated, an aclTensor on the Device side, updated in place. The shape supports 1 dimension or more, and its data type must be the same as updates. The strides must be contiguous: a contiguous view with a storage offset is supported, while broadcast views and strided views are not.</td>
       <td>FLOAT16, FLOAT32, INT32, INT8, UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>Input</td>
-      <td>Empty tensors are supported. It denotes the index tensor to be updated, an aclTensor on the Device side. The shape supports 1 dimension or more, and the data type is INT32 or INT64. Out-of-bounds indexing is supported. Out-of-bounds indices (less than 0 or greater than or equal to the first dimension of var) are silently skipped and do not trigger an update.</td>
+      <td>Empty tensors are supported. It denotes the index tensor to be updated, an aclTensor on the Device side. The shape supports 0 dimension or more, including a scalar index (a 0-dimensional tensor, or a tensor of shape (1,) when the updates shape equals var.shape[1:]), and the data type is INT32 or INT64. Out-of-bounds indexing is supported. Out-of-bounds indices (less than 0 or greater than or equal to the first dimension of var) are silently skipped and do not trigger an update.</td>
       <td>INT32, INT64</td>
       <td>ND</td>
     </tr>

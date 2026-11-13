@@ -47,7 +47,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>indice</td>
       <td>Input</td>
-      <td>Empty tensors are not supported. Denotes the write-position tensor, an aclTensor on the Device side. The shape supports 1D or 2D: when 1D, the shape is (B,) and only the write start position is given; when 2D, the shape is (B, 2) and the write start position and length are given. B is the number of tensors in the var list. The data type is INT32 or INT64.</td>
+      <td>Empty tensors are not supported. Denotes the write-position tensor, an aclTensor on the Device side. The shape supports 1D or 2D: when 1D, the shape is (B,) and only the write start position is given; when 2D, the shape is (B, 2) and the write start position and length are given. B is the number of tensors in the var list. Value range: the start position is not less than 0, and the sum of the start position and the write length does not exceed the size of var on the axis dimension. The data type is INT32 or INT64.</td>
       <td>INT32, INT64.</td>
       <td>ND</td>
     </tr>
@@ -92,9 +92,9 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- indice semantics and value range (the values are guaranteed by the caller, and the operator performs no validation): indice gives the **write start position**, not the scatter target index. The write is a contiguous interval starting at that position, and the whole interval must not go out of the axis dimension.
+- indice semantics (for the value range see the parameter description; the values are guaranteed by the caller, and the operator performs no validation): indice gives the **write start position**, not the scatter target index. The write is a contiguous interval starting at that position.
   - 1D: `indice[i]` is the write start position of the i-th tensor, and the write length is the size of updates on the axis dimension.
-  - 2D: `indice[i][0]` is the start position, `indice[i][1]` is the write length, and the length should not exceed the size of updates on the axis dimension.
+  - 2D: `indice[i][0]` is the start position and `indice[i][1]` is the write length.
 
 - mask value range (guaranteed by the caller, and the operator performs no validation): only values 0 and 1 are supported. 0 means that no write is performed for that list element, and 1 means that the write is performed. The behavior of other values is undefined.
 

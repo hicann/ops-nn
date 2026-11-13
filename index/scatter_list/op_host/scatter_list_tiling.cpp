@@ -21,6 +21,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "scatter_list_tiling.h"
+#include "scatter_list_arch35_tiling.h"
 #include "op_host/tiling_util.h"
 
 namespace optiling {
@@ -786,6 +787,11 @@ ge::graphStatus ScatterListTiling::SetTilingData()
 
 static ge::graphStatus Tiling4ScatterList(gert::TilingContext* context)
 {
+    // A5(regbase) 由 scatter_list_arch35_tiling.cpp 的独立实现承接, 下方逻辑仅服务其余芯片
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        return Tiling4ScatterListArch35(context);
+    }
+
     ScatterListTiling tilingObject(context);
     if (tilingObject.GetPlatformData() != ge::GRAPH_SUCCESS) {
         OP_LOGE_WITHOUT_REPORT(context, "GetPlatformData failed");
