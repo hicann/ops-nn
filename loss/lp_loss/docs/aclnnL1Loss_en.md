@@ -258,6 +258,10 @@ aclnnStatus aclnnL1Loss(
 - Deterministic computation:
     - aclnnL1Loss defaults to a deterministic implementation.
 - In LpLoss, p is the parameter for computing the loss. Only p=1 is supported, and the aclnn API name is aclnnL1Loss.
+- Dtype combination constraints for int64 inputs (`161002` is returned when not met):
+    - reduction=0 ('none'): available when both `self` and `target` are int64; an error is reported when `self` is int64 and `target` is a floating-point type; available when `self` is a floating-point type and `target` is int64, where inputs are promoted to floating-point for computation.
+    - reduction=1 ('mean'): an error is reported when both `self` and `target` are int64; available when one of `self` and `target` is a floating-point type and the other is int64, where inputs are promoted to floating-point for computation.
+    - reduction=2 ('sum'): any combination involving int64 is available; two int64 inputs use the integer path, and a single int64 input is promoted to floating-point for computation.
 
 ## Example
 

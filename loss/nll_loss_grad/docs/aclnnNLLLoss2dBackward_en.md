@@ -144,7 +144,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>totalWeight (aclTensor*)</td>
         <td>Input</td>
         <td>-</td>
-        <td>Only when reduction is mean, totalWeight is the sum of the weights taken from target at the corresponding positions after removing the weights corresponding to ignoreIndex. When reduction is another value, this parameter is not processed by default.</td>
+        <td>totalWeight is an input. When reduction is mean, the caller must pass in the sum of weights calculated based on target, weight, and ignoreIndex; when reduction is set to other values, this parameter is not involved in the computation.</td>
         <td>Data type is the same as that of weight.</td>
         <td>ND</td>
         <td>(1,)</td>

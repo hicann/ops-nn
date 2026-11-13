@@ -256,7 +256,10 @@ aclnnStatus aclnnL1Loss(
 - 确定性计算：
     - aclnnL1Loss默认确定性实现。
 - LpLoss中p为计算loss的参数，只支持p=1，aclnn接口名称为aclnnL1Loss。
-- out为int64数据类型时，仅reduction=2时可用。
+- int64输入的dtype组合约束（不满足时返回`161002`）：
+    - reduction=0（none）：`self`和`target`均为int64时可用；`self`为int64而`target`为浮点时报错；`self`为浮点而`target`为int64时可用，提升为浮点计算。
+    - reduction=1（mean）：`self`和`target`均为int64时报错；`self`和`target`至少一侧为浮点，一侧为int64时可用，提升为浮点计算。
+    - reduction=2（sum）：含int64的任意组合均可用；双int64走整数路径，单侧int64提升为浮点计算。
 
 ## 调用示例
 

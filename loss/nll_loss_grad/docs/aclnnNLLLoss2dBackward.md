@@ -142,7 +142,7 @@ aclnnStatus aclnnNLLLoss2dBackward(
         <td>totalWeight（aclTensor*）</td>
         <td>输入</td>
         <td>-</td>
-        <td>仅当reduction为mean时，totalWeight是通过target取相应位置的weight，然后去除掉ignoreIndex对应的weight，将剩下的weight求和；当reduction为其他值时，该参数默认不处理。</td>
+        <td>totalWeight是输入。reduction为mean时，调用方必须传入按target、weight和ignoreIndex计算得到的权重和；其他reduction下该参数不参与计算。</td>
         <td>数据类型与weight相同。</td>
         <td>ND</td>
         <td>(1,)</td>
