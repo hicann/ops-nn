@@ -129,6 +129,7 @@ public:
         this->AICore().AddConfig("ascend950", config950);
         this->AICore().AddConfig("ascend350", config950);
         this->AICore().AddConfig("ascend960dt", config950);
+        this->AICore().AddConfig("ascend960pr", config950);
     }
 };
 OP_ADD(AddRmsNormDynamicMxQuant);

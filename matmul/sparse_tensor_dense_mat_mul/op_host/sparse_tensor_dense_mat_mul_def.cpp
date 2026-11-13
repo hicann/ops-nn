@@ -78,6 +78,7 @@ public:
             .NeedCheckSupportFlag(true);
         opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, config);
         this->AICore().AddConfig("ascend960dt", config);
+        this->AICore().AddConfig("ascend960pr", config);
         this->AICore().AddConfig("ascend350", config);
     }
 };

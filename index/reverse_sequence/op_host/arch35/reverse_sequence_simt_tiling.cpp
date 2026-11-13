@@ -232,7 +232,8 @@ ge::graphStatus ReverseSequenceSimtTiling::GetPlatformInfo()
     auto platformInfoPtr = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    isDv121_ = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201);
+    isDv121_ = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202);
     return GetReverseSequencePlatformInfo(context_, ubSize, coreNum);
 }
 

@@ -26,7 +26,7 @@ using namespace AntiHiF4QuantOp;
 template <uint64_t quantMode>
 __global__ __aicore__ void anti_hi_f4_quant(GM_ADDR x, GM_ADDR scale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-#if (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
     REGISTER_TILING_DEFAULT(AntiHiF4QuantNotTailTilingData);
@@ -47,7 +47,7 @@ __global__ __aicore__ void anti_hi_f4_quant(GM_ADDR x, GM_ADDR scale, GM_ADDR y,
         op.Process();
     }
 
-#if (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 #endif
 }

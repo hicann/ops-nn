@@ -1,0 +1,93 @@
+{
+  "op_type": "AntiHiF4Quant",
+  "op_list": [
+    {
+      "bin_filename": "AntiHiF4Quant_toFp16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "hifloat4",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "hifloat4_scale",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "AntiHiF4Quant_toBf16",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "hifloat4",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale",
+          "index": 1,
+          "dtype": "hifloat4_scale",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": 27
+        }
+      ]
+    }
+  ]
+}

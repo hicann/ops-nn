@@ -30,7 +30,7 @@ public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR scale, GM_ADDR rstd,
                                 GM_ADDR workspace, const RmsNormHiF4QuantTilingData* tiling)
     {
-#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __CCE_AICORE__ == 920)
+#if (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202 || __CCE_AICORE__ == 920)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
 #endif
         ASSERT(GetBlockNum() != 0 && "Block dim can not be zero!");

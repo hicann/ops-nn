@@ -1,0 +1,81 @@
+{
+  "op_type": "EmbeddingHashTableImport",
+  "op_list": [
+    {
+      "bin_filename": "EmbeddingHashTableImport_b2cb2b97546beb85efbca38148db9aef",
+      "inputs": [
+        {
+          "name": "table_handles",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "embedding_dims",
+          "index": 1,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bucket_sizes",
+          "index": 2,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        [{
+          "name": "keys",
+          "index": 3,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "dynamic",
+          "shape": [
+            -2
+          ]
+        }],
+        [{
+          "name": "counters",
+          "index": 4,
+          "dtype": "uint64",
+          "format": "ND",
+          "paramType": "dynamic",
+          "shape": [
+            -2
+          ]
+        }],
+        [{
+          "name": "filter_flags",
+          "index": 5,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "dynamic",
+          "shape": [
+            -2
+          ]
+        }],
+        [{
+          "name": "values",
+          "index": 6,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "dynamic",
+          "shape": [
+            -2
+          ]
+        }]
+      ],
+      "outputs": []
+    }
+  ]
+}

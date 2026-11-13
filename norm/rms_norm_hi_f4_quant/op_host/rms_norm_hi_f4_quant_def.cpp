@@ -83,6 +83,7 @@ public:
         OpAICoreConfig config960;
         config960.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend960dt", config960);
+        this->AICore().AddConfig("ascend960pr", config960);
     }
 };
 OP_ADD(RmsNormHiF4Quant);

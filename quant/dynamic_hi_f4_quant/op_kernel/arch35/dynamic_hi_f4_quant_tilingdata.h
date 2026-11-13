@@ -10,7 +10,7 @@
 
 /* !
  * \file dynamic_hi_f4_quant_tilingdata.h
- * \brief TilingData structure for DynamicHiF4Quant kernel on ascend960dt
+ * \brief TilingData structure for DynamicHiF4Quant kernel on ascend960dt/ascend960pr
  */
 
 #ifndef OPS_NN_DYNAMIC_HIF4_QUANT_TILINGDATA_H

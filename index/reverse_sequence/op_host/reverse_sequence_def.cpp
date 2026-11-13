@@ -58,6 +58,7 @@ public:
             .ExtendCfgInfo("opFile.value", "reverse_sequence_apt");
         this->AICore().AddConfig("ascend950", aicConfig);
         this->AICore().AddConfig("ascend960dt", aicConfig);
+        this->AICore().AddConfig("ascend960pr", aicConfig);
         this->AICore().AddConfig("ascend350", aicConfig);
     }
 };

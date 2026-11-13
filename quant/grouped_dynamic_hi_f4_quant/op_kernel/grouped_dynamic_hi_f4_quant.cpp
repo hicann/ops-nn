@@ -30,7 +30,7 @@ __global__ __aicore__ void grouped_dynamic_hi_f4_quant(GM_ADDR x, GM_ADDR group_
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
 
-#if (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
     REGISTER_TILING_DEFAULT(GroupedDynamicHiF4QuantTilingData);
@@ -47,7 +47,7 @@ __global__ __aicore__ void grouped_dynamic_hi_f4_quant(GM_ADDR x, GM_ADDR group_
         op.Process();
     }
 
-#if (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 9201)
+#if (__NPU_ARCH__ == 3101 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 #endif
 }

@@ -20,7 +20,7 @@
 
 add_kernel_sources(
     KERNEL_SRC rms_norm_grad_quant.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush" "--cce-simd-vf-fusion=false"
 )

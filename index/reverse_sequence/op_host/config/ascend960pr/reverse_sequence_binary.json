@@ -1,0 +1,421 @@
+{
+    "op_type": "ReverseSequence",
+    "op_list": [
+        {
+            "bin_filename": "ReverseSequence_6cf72db9b4713e277ef441586f709a73",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                },
+                {
+                    "name": "seq_lengths",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "seq_dim",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "batch_dim",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "ReverseSequence_659b092d30499ad92fddaebd5ed53de9",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                },
+                {
+                    "name": "seq_lengths",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "seq_dim",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "batch_dim",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "ReverseSequence_1346f88992bcfd132c44e8ecdc88bf62",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                },
+                {
+                    "name": "seq_lengths",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "seq_dim",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "batch_dim",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "ReverseSequence_3488bf016a0259a2f1a27342334eb698",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                },
+                {
+                    "name": "seq_lengths",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "seq_dim",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "batch_dim",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "ReverseSequence_a630318e45df3153bfffbffe7711b98a",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                },
+                {
+                    "name": "seq_lengths",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "seq_dim",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "batch_dim",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "ReverseSequence_ac6c75a5673790107cb8dfe8da3652d0",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                },
+                {
+                    "name": "seq_lengths",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "seq_dim",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "batch_dim",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "ReverseSequence_e5f8bdd8777b510e809385bfdb7b0f55",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                },
+                {
+                    "name": "seq_lengths",
+                    "index": 1,
+                    "dtype": "int64",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "seq_dim",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "batch_dim",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        },
+        {
+            "bin_filename": "ReverseSequence_f82ca4dfc83c33e36af3f4902a0d47c4",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                },
+                {
+                    "name": "seq_lengths",
+                    "index": 1,
+                    "dtype": "int32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "int8",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "dtype_match_mode": "DtypeByte"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "seq_dim",
+                    "dtype": "int",
+                    "value": 0
+                },
+                {
+                    "name": "batch_dim",
+                    "dtype": "int",
+                    "value": null
+                }
+            ]
+        }
+    ]
+}

@@ -11,7 +11,7 @@
 # A5/A6 均使用 arch35 目录下的 sorted_sparse_segment_mean_grad.cpp 作为 kernel 入口
 add_kernel_sources(
     KERNEL_SRC arch35/sorted_sparse_segment_mean_grad.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

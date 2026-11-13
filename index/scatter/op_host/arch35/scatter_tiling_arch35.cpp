@@ -114,7 +114,8 @@ ge::graphStatus ScatterTiling::GetPlatformInfo()
         ubSize = static_cast<int32_t>(compileInfoPtr->ub_size);
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-        isDav9201_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+        isDav9201_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                     ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
         aivCoreNum = static_cast<int32_t>(ascendcPlatform.GetCoreNumAiv());
 
         uint64_t ubSizePlatform;
@@ -497,7 +498,7 @@ ge::graphStatus ScatterTiling::DoDeterministicTiling()
 
 void ScatterTiling::SimdScatterDMATilingPrepare()
 {
-    // DAV_9201 的 SIMD scatter：由 vector 计算偏移，再通过 scatter DMA 将整行写回
+    // DAV_9201/DAV_9202 的 SIMD scatter：由 vector 计算偏移，再通过 scatter DMA 将整行写回
     int64_t boNum = updatesNewShape[DIM0] * updatesNewShape[DIM1];
     int64_t idxSize = static_cast<int64_t>(indicesDim) * static_cast<int64_t>(ge::GetSizeByDataType(indicesDtype));
     int64_t colsNormal = updatesNewShape[DIM2] * updatesNewShape[DIM3];
@@ -609,7 +610,7 @@ ge::graphStatus ScatterTiling::DoOpTiling()
     int64_t srcStride = updatesNewShape[DIM2] * updatesNewShape[DIM3];
     if (isPcieThrough || srcStride * dtypeSize > MIN_FACTOR) {
         if (isDav9201_ && !isPcieThrough) {
-            // DAV_9201 优先走 SIMD scatter DMA 模板，单行放不下时回退普通 ScatterSimd
+            // DAV_9201/DAV_9202 优先走 SIMD scatter DMA 模板，单行放不下时回退普通 ScatterSimd
             SimdScatterDMATilingPrepare();
         } else {
             indicesUbSize = INDICES_SIZE;
@@ -710,7 +711,7 @@ uint64_t ScatterTiling::GetTilingKey() const
         uint64_t factorStart = 100;
         uint64_t tilingKey = simdTemp * factorStart;
         if (isDav9201_ && isScatterDmaTiling_) {
-            // DAV_9201 的 SIMD scatter DMA 模板：100/200 基础上 +1 得到 101/201
+            // DAV_9201/DAV_9202 的 SIMD scatter DMA 模板：100/200 基础上 +1 得到 101/201
             tilingKey += 1;
         }
         return tilingKey;

@@ -18,7 +18,7 @@ add_kernel_sources(
 # A6(arch92) 使用 arch92 目录下的入口，支持 128b dtype 提升与 SIMD scatter DMA 模板
 add_kernel_sources(
     KERNEL_SRC arch92/scatter_apt.cpp
-    COMPUTE_UNITS ascend960dt
+    COMPUTE_UNITS ascend960dt ascend960pr
     AUTO_SYNC false
     IMPL_MODE high_performance,optional
 )
