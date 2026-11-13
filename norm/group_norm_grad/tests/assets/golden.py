@@ -65,9 +65,15 @@ def _check_mask(mask):
 
 
 def _nchw(x_tensor):
-    """(N, C, ...) → (N, C, HxW)。"""
+    """(N, C, ...) → (N, C, HxW)。0元素张量时-1维存在歧义（torch无法从0推断），
+    显式按原始后缀维乘积折叠。"""
     n, c = x_tensor.shape[0], x_tensor.shape[1]
-    return x_tensor.reshape(n, c, -1)
+    if x_tensor.numel() != 0:
+        return x_tensor.reshape(n, c, -1)
+    hw = 1
+    for dim in x_tensor.shape[2:]:
+        hw *= dim
+    return x_tensor.reshape(n, c, hw)
 
 
 def _unify_for_aten(*tensors):
@@ -171,11 +177,15 @@ class GroupNormGradSpec:
         def __call__(self, dy, mean, rstd, x, gamma, **kwargs):
             orig_dtype = dy.dtype
             dy, mean, rstd, x, gamma = _unify_for_aten(dy, mean, rstd, x, gamma)
-            n, c = x.shape[0], x.shape[1]
-            hw = max(x.numel() // (n * c), 1)
+            # 复用_nchw折叠：N=0时原numel//(n*c)除零崩溃、HW=0时被错误置1，
+            # reshape(n,c,-1)对0元素张量存在-1维歧义
+            xv = _nchw(x)
+            g = _nchw(dy)
+            n, c = xv.shape[0], xv.shape[1]
+            hw = xv.shape[2]
             dx, dgamma, dbeta = torch.ops.aten.native_group_norm_backward(
-                dy.reshape(n, c, -1),
-                x.reshape(n, c, -1),
+                g,
+                xv,
                 mean,
                 rstd,
                 gamma,
