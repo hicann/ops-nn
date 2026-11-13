@@ -2803,3 +2803,182 @@ TEST_F(AddRmsNormTiling, add_rms_norm_regbase_post_mode_rejected)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
+
+// InplaceAddRmsNorm 的 rstdOut 为必选输出：空 rstdOut 会被模式推导误判为 PRE_RMS_NORM，
+// 导致第一段静默通过、第二段执行失败（#7407）。tiling 须在第一段显式拒绝（561002）。
+TEST_F(AddRmsNormTiling, inplace_add_rms_norm_empty_rstd_rejected)
+{
+    gert::StorageShape input_shape_x1 = {{2, 64}, {2, 64}};
+    gert::StorageShape input_shape_x2 = {{2, 64}, {2, 64}};
+    gert::StorageShape gamma_shape = {{64}, {64}};
+    gert::StorageShape out_shape_y = {{2, 64}, {2, 64}};
+    gert::StorageShape rstd_shape = {{0}, {0}};
+    gert::StorageShape out_shape_x = {{2, 64}, {2, 64}};
+
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    string compile_info_string = R"({
+             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                               "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
+                               "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                               "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                               "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                               "CORE_NUM": 40}
+                               })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::AddRmsNormCompileInfo compile_info;
+
+    std::string op_type("InplaceAddRmsNorm");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("InplaceAddRmsNorm")
+                      .NodeIoNum(3, 3)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape})
+                      .OutputShapes({&out_shape_y, &rstd_shape, &out_shape_x})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// epsilon=NaN 与任何比较恒为假，epsilon < 0 拦不住（#7397）：legacy tiling 须以
+// !(epsilon >= 0) 拒绝，第一段返回 561002。
+TEST_F(AddRmsNormTiling, add_rms_norm_epsilon_non_finite_rejected)
+{
+    gert::StorageShape input_shape_x1 = {{2, 64}, {2, 64}};
+    gert::StorageShape input_shape_x2 = {{2, 64}, {2, 64}};
+    gert::StorageShape gamma_shape = {{64}, {64}};
+    gert::StorageShape out_shape_y = {{2, 64}, {2, 64}};
+    gert::StorageShape rstd_shape = {{2, 1}, {2, 1}};
+    gert::StorageShape out_shape_x = {{2, 64}, {2, 64}};
+
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend910B"}, {"NpuArch", "2201"}};
+    string compile_info_string = R"({
+             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                               "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
+                               "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                               "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                               "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                               "CORE_NUM": 40}
+                               })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::AddRmsNormCompileInfo compile_info;
+
+    std::string op_type("AddRmsNorm");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+    ASSERT_NE(param, nullptr);
+    // NaN/-Inf/+Inf 三种非有限值均须被 !(std::isfinite(epsilon) || epsilon < 0) 拦截：
+    // epsilon < 0 拦不住 NaN（比较恒假）与 +Inf（+Inf >= 0 为真）（issue #7397）。
+    const float nonFiniteEpsilons[] = {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(),
+                                       -std::numeric_limits<float>::infinity()};
+    for (float epsilon : nonFiniteEpsilons) {
+        auto holder = gert::TilingContextFaker()
+                          .NodeIoNum(3, 3)
+                          .IrInstanceNum({1, 1, 1})
+                          .InputShapes({&input_shape_x1, &input_shape_x2, &gamma_shape})
+                          .OutputShapes({&out_shape_y, &rstd_shape, &out_shape_x})
+                          .CompileInfo(&compile_info)
+                          .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(epsilon)}})
+                          .TilingData(param.get())
+                          .Workspace(ws_size)
+                          .Build();
+
+        gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+        ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                    intrinsics);
+        holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+
+        SCOPED_TRACE(::testing::Message() << "epsilon is non-finite, case " << static_cast<int>(epsilon < 0));
+        EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    }
+}

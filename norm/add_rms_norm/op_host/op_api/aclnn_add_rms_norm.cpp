@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include <cmath>
 #include "aclnn/aclnn_base.h"
 #include "op_api/op_api_def_nn.h"
 
@@ -194,10 +195,13 @@ static bool CheckShapeDim(AddRmsNormInputTensor& inputTensor, AddRmsNormOutputTe
 
 static bool CheckAttr(double epsilon)
 {
-    OP_CHECK(
-        epsilon >= 0.0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The epsilon value must be greater than or equal to 0, but got %lf.", epsilon),
-        return false);
+    // OP_CHECK 为断言式宏（条件为合法条件，不成立即失败，同本文件 137 行用法），
+    // 与 OP_CHECK_IF（条件为真即失败）语义相反；此处须写合法性条件：
+    // std::isfinite(epsilon) && epsilon >= 0.0，NaN/±Inf/负值全部拒绝（issue #7397）。
+    OP_CHECK(std::isfinite(epsilon) && epsilon >= 0.0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "The epsilon value must be a finite number greater than or equal to 0, but got %lf.", epsilon),
+             return false);
     return true;
 }
 

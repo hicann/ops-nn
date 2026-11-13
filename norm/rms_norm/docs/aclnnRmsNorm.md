@@ -93,7 +93,7 @@ aclnnStatus aclnnRmsNorm(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行归一化计算的缩放因子（权重），对应公式中的`gamma`。</td>
-      <td>shape需要满足gamma_shape = x_shape[n:], n < x_shape.dims()。</td>
+      <td>shape需要满足gamma_shape = x_shape[n:]，n的取值范围为[0, x_shape.dims()-1]；当n = 0时gamma与x同shape，等价于对全部轴归一化，此时rstdOut的有效元素数为1。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>

@@ -191,6 +191,11 @@ aclnnStatus aclnnInplaceAddRmsNorm(
       <td>161002</td>
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>输入/输出的维度数（rank）不满足约束说明要求（如gamma与x1Ref需要归一化的维度不一致或rstdOut的维度数/前缀维/尾维与x1Ref、gamma的关系不成立），shape关系不满足约束说明中的要求（如x2Ref与x1Ref的shape不一致）, epsilon取值为非有限值/负值，x1Ref、x2Ref、gamma、rstdOut中的部分Tensor为空而其余非空。</td>
+    </tr>
   </tbody></table>
 
 ## aclnnInplaceAddRmsNorm
@@ -238,6 +243,8 @@ aclnnStatus aclnnInplaceAddRmsNorm(
 
 ## 约束说明
 
+- 空Tensor说明：
+  - 支持`x1Ref`、`x2Ref`、`gamma`、`rstdOut`**同时**为空Tensor（shape中存在0，不等同于空指针或标量）的场景：此时两段接口均返回成功且不执行计算（空转），输出不写入数据。
 - 边界值场景说明：
   - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。

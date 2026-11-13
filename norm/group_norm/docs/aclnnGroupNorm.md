@@ -351,6 +351,14 @@ aclnnStatus aclnnGroupNorm(
 
 ## 约束说明
 
+- 空Tensor说明：
+  - 空Tensor指shape中存在0的Tensor，不等同于空指针或标量。
+  - 满足其余shape、数据类型约束时，支持`self`为空Tensor，此时`out`为空Tensor，不写入数据。
+  - `meanOut`、`rstdOut`的shape为(N, group)，仅由N与group决定：
+    - 当N=0时，`meanOut`、`rstdOut`为空Tensor；
+    - 当N>0且C=0或HxW=0时，`meanOut`、`rstdOut`非空，约定`meanOut`输出全0、`rstdOut`输出全NaN（约定值，非计算结果）。
+  - 必选参数仍须提供Tensor对象。
+
 - 确定性计算：
   - aclnnGroupNorm默认确定性实现。
 

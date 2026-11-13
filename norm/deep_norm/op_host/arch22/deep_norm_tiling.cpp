@@ -115,6 +115,14 @@ static bool CheckInputOutputShapeValue(const gert::TilingContext* context)
                     OP_LOGE(context, "Output rstd/mean shape invaild, shape is not equal x first few dim."),
                     return false);
     }
+    // 归约维（被 norm 的维度）必须为 1：kernel 按前导维乘积写 mean/rstd，
+    // 尾维非 1 会导致部分写甚至越界写（issue #7296）。动态维（负数）跳过。
+    for (uint32_t i = xDimNum - gammaDimNum; i < xDimNum; i++) {
+        OP_CHECK_IF((rstdShape->GetStorageShape().GetDim(i) >= 0 && rstdShape->GetStorageShape().GetDim(i) != 1) ||
+                        (meanShape->GetStorageShape().GetDim(i) >= 0 && meanShape->GetStorageShape().GetDim(i) != 1),
+                    OP_LOGE(context, "Output rstd/mean shape invaild, the normalized dims of rstd/mean must be 1."),
+                    return false);
+    }
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_CHECK_IF(
             (gammaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i)) ||

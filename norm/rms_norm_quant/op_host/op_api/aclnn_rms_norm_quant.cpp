@@ -487,6 +487,13 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
             return ACLNN_SUCCESS;
         }
     }
+    if (!isRegbase) {
+        // 与 regbase 同序：先校验 2 维 gamma/beta 首维必须为 1（issue #7399）。
+        // 否则 PreDealData 的 Reshape 会以内部错误 561103 失败，而非资料声明的 161002。
+        CHECK_RET(CheckShapeBeforeReshape(inputTensorOri.gamma, "gamma") &&
+                      CheckShapeBeforeReshape(inputTensorOri.beta, "beta"),
+                  ACLNN_ERR_PARAM_INVALID);
+    }
     CHECK_RET(PreDealData(inputTensorOri, uniqueExecutor.get()) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     if (!isRegbase) {
         const auto paramRet = CheckParams(inputTensorOri, y);

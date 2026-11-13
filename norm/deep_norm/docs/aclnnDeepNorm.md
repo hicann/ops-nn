@@ -225,15 +225,17 @@ aclnnStatus aclnnDeepNorm(
       <td>如果传入参数是必选输入，输出或者必选属性，且是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>输入和输出的shape不匹配或者不在支持的维度范围内。</td>
+      <td>输入和输出的数据类型不满足参数说明中的约束。</td>
     </tr>
     <tr>
-      <td>输入和输出的数据类型不满足参数说明中的约束。</td>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>输入和输出的shape不匹配或者不在支持的维度范围内（如x/gx/y的维度数不在[2, 8]、gamma/beta的维度数不在[1, 7]、x的维度数不大于gamma的维度数、meanOut/rstdOut的shape关系不满足参数说明中的约束等）。</td>
     </tr>
   </tbody></table>
 

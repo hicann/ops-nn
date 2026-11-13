@@ -194,7 +194,7 @@ TEST_F(l2_rms_norm_quant_test, ascend950_null_gamma_and_beta_remain_param_nullpt
     EXPECT_EQ(nullBetaUt.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_NULLPTR);
 }
 
-TEST_F(l2_rms_norm_quant_test, legacy_norm_preprocessing_behavior_is_unchanged)
+TEST_F(l2_rms_norm_quant_test, gamma_beta_2d_first_dim_validation)
 {
     for (auto socVersion : {op::SocVersion::ASCEND910B, op::SocVersion::ASCEND910_93}) {
         op::SocVersionManager versionManager(socVersion);
@@ -202,16 +202,19 @@ TEST_F(l2_rms_norm_quant_test, legacy_norm_preprocessing_behavior_is_unchanged)
         TensorCase testCase;
         testCase.dtypes[3] = ACL_FLOAT16;
         testCase.dtypes[4] = ACL_INT8;
+        // gamma/beta = [1, H]：合法形态，第一段返回成功。
         testCase.shapes[1] = {1, 16};
         testCase.shapes[2] = {1, 16};
         EXPECT_EQ(RunTensorCase(testCase), ACLNN_SUCCESS);
 
-        // The new early shape check is RegBase-only; legacy reshape failures keep their previous status.
+        // gamma/beta 2维且首维≠1：资料声明该形态 shape 关系非法，非 regbase 路径
+        // 已在 PreDealData 前按契约拒绝（#7399），返回 161002，
+        // 不再走 PreDealData 的 Reshape 内部失败（561103）。
         testCase.shapes[1] = {2, 16};
-        EXPECT_EQ(RunTensorCase(testCase), ACLNN_ERR_INNER_NULLPTR);
+        EXPECT_EQ(RunTensorCase(testCase), ACLNN_ERR_PARAM_INVALID);
         testCase.shapes[1] = {1, 16};
         testCase.shapes[2] = {2, 16};
-        EXPECT_EQ(RunTensorCase(testCase), ACLNN_ERR_INNER_NULLPTR);
+        EXPECT_EQ(RunTensorCase(testCase), ACLNN_ERR_PARAM_INVALID);
     }
 }
 
@@ -324,4 +327,102 @@ TEST_F(l2_rms_norm_quant_test, ascend910b_int4_output_must_be_int32_packed)
     auto utWrong = OP_API_UT(aclnnRmsNormQuant,
                              INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offsetDesc, 1e-6, yInt32WrongDesc), OUTPUT());
     EXPECT_EQ(utWrong.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rms_norm_quant_test, ascend910b_dtype_mismatch_returns_param_invalid)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    uint64_t workspaceSize = 0;
+
+    // x dtype 不在支持列表（910B 仅支持 FLOAT16/BFLOAT16）→ OP_CHECK_DTYPE_NOT_SUPPORT → 161002。
+    auto xInt8Desc = TensorDesc({2, 16}, ACL_INT8, ACL_FORMAT_ND);
+    auto gammaFp16Desc = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto betaFp16Desc = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto scaleFp16Desc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto offsetInt8Desc = TensorDesc({1}, ACL_INT8, ACL_FORMAT_ND);
+    auto yInt8Desc = TensorDesc({2, 16}, ACL_INT8, ACL_FORMAT_ND);
+    auto utX = OP_API_UT(aclnnRmsNormQuant,
+                         INPUT(xInt8Desc, gammaFp16Desc, betaFp16Desc, scaleFp16Desc, offsetInt8Desc, 1e-6, yInt8Desc),
+                         OUTPUT());
+    EXPECT_EQ(utX.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+
+    // gamma dtype 与 x 不一致（BF16 vs FP16）→ OP_CHECK_DTYPE_NOT_SAME → 161002。
+    auto xFp16Desc = TensorDesc({2, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gammaBf16Desc = TensorDesc({16}, ACL_BF16, ACL_FORMAT_ND);
+    auto betaBf16Desc = TensorDesc({16}, ACL_BF16, ACL_FORMAT_ND);
+    auto utGamma = OP_API_UT(
+        aclnnRmsNormQuant,
+        INPUT(xFp16Desc, gammaBf16Desc, betaBf16Desc, scaleFp16Desc, offsetInt8Desc, 1e-6, yInt8Desc), OUTPUT());
+    EXPECT_EQ(utGamma.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+
+    // 非 regbase 平台 scale dtype 必须与 x 一致（FLOAT vs FP16）→ 161002。
+    auto scaleFp32Desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gammaFp16 = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto betaFp16 = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto utScale = OP_API_UT(aclnnRmsNormQuant,
+                             INPUT(xFp16Desc, gammaFp16, betaFp16, scaleFp32Desc, offsetInt8Desc, 1e-6, yInt8Desc),
+                             OUTPUT());
+    EXPECT_EQ(utScale.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+
+    // 非 regbase 平台 offset dtype 必须为 INT8（FLOAT vs INT8）→ 161002。
+    auto scaleFp16 = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto offsetFp32Desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto utOffset = OP_API_UT(
+        aclnnRmsNormQuant, INPUT(xFp16Desc, gammaFp16, betaFp16, scaleFp16, offsetFp32Desc, 1e-6, yInt8Desc), OUTPUT());
+    EXPECT_EQ(utOffset.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rms_norm_quant_test, ascend910b_int32_packed_output_returns_success)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto xDesc = TensorDesc({3, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gammaDesc = TensorDesc({1, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto betaDesc = TensorDesc({1, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto scaleDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto offsetDesc = TensorDesc({1}, ACL_INT8, ACL_FORMAT_ND);
+    auto yInt32Desc = TensorDesc({3, 2}, ACL_INT32, ACL_FORMAT_ND);
+
+    // INT32 打包形态（y 末维 = x 末维/8）在 A2/A3 上两段均应成功，
+    // 覆盖 RunRmsNormQuantKernel 的 INT4→INT32 打包分支。
+    auto ut = OP_API_UT(aclnnRmsNormQuant, INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offsetDesc, 1e-6, yInt32Desc),
+                        OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_rms_norm_quant_test, ascend950_empty_tensor_returns_success)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto xDesc = TensorDesc({0, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gammaDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto betaDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto scaleDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto offsetDesc = TensorDesc({1}, ACL_INT8, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({0, 5}, ACL_INT8, ACL_FORMAT_ND);
+
+    // 950 支持 x/y 同时为空 Tensor：第一段返回成功且 workspace 为 0（空转），
+    // 覆盖 regbase 路径的空 Tensor 早退分支。
+    auto ut = OP_API_UT(aclnnRmsNormQuant, INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offsetDesc, 1e-6, yDesc),
+                        OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+    EXPECT_EQ(workspaceSize, 0);
+}
+
+TEST_F(l2_rms_norm_quant_test, ascend950_int32_packed_output_returns_success)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto xDesc = TensorDesc({3, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gammaDesc = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto betaDesc = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto scaleDesc = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto offsetDesc = TensorDesc({1}, ACL_INT8, ACL_FORMAT_ND);
+    auto yInt32Desc = TensorDesc({3, 2}, ACL_INT32, ACL_FORMAT_ND);
+
+    // 950 上 INT32 打包形态（y 末维 = x 末维/8）两段均成功，
+    // 覆盖 regbase INT32 分支的 front-n-1 校验与打包路径。
+    auto ut = OP_API_UT(aclnnRmsNormQuant, INPUT(xDesc, gammaDesc, betaDesc, scaleDesc, offsetDesc, 1e-6, yInt32Desc),
+                        OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
 }

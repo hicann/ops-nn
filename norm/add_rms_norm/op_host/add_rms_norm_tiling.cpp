@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <cmath>
 #include <limits>
 #include "op_host/tiling_util.h"
 #include "add_rms_norm_tiling.h"
@@ -268,12 +269,24 @@ static bool CheckRstdGammaShapeByMode(const gert::TilingContext* context, const 
 
 static bool CheckInputOutputShape(const gert::TilingContext* context)
 {
+    // InplaceAddRmsNorm 的 rstdOut 为必选输出，且资料声明不支持空Tensor。空 rstdOut 会在
+    // CheckNullptr 的模式推导中被误判为 PRE_RMS_NORM 而跳过 rstd 相关校验，导致第一段
+    // 静默通过、第二段执行失败（#7407 实测 361001）。此处按算子类型显式拒绝，
+    // 第一段返回 561002；不影响 AddRmsNorm 以空 rstd 选择 PRE/POST 模式的既有用法。
+    const gert::StorageShape* rstd_shape = context->GetOutputShape(RMS_OUTPUT_RSTD_INDEX);
+    if (std::string(context->GetNodeType()) == "InplaceAddRmsNorm" && rstd_shape != nullptr &&
+        rstd_shape->GetOriginShape().GetShapeSize() <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rstdOut",
+                                              Ops::Base::ToString(rstd_shape->GetOriginShape()).c_str(),
+                                              "rstdOut cannot be an empty tensor for InplaceAddRmsNorm");
+        return false;
+    }
+
     OP_CHECK_IF(!CheckInputOutputDim(context), OP_LOGE(context, "Input Dim invalid."), return false);
     const gert::StorageShape* x1_shape = context->GetInputShape(RMS_INPUT_X1_INDEX);
     const gert::StorageShape* x2_shape = context->GetInputShape(RMS_INPUT_X2_INDEX);
     const gert::StorageShape* gamma_shape = context->GetInputShape(RMS_INPUT_GAMMA_INDEX);
     const gert::StorageShape* y_shape = context->GetOutputShape(RMS_OUTPUT_Y_INDEX);
-    const gert::StorageShape* rstd_shape = context->GetOutputShape(RMS_OUTPUT_RSTD_INDEX);
     const gert::StorageShape* x_shape = context->GetOutputShape(RMS_OUTPUT_X_INDEX);
 
     size_t x1DimNum = x1_shape->GetStorageShape().GetDimNum();
@@ -384,9 +397,11 @@ static ge::graphStatus GetEpsilonParameter(gert::TilingContext* context, float& 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     epsilon = *attrs->GetFloat(0);
-    OP_CHECK_IF(epsilon < 0,
+    // 用 !std::isfinite(epsilon) || epsilon < 0 而非 epsilon < 0：NaN 与任何比较恒为假，
+    // 且 +Inf >= 0 为真，二者都会被 epsilon < 0 放行并污染全部输出（issue #7397）。
+    OP_CHECK_IF(!std::isfinite(epsilon) || epsilon < 0,
                 OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "epsilon", std::to_string(epsilon).c_str(),
-                                          "greater than or equal to zero"),
+                                          "a finite value greater than or equal to zero"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -539,7 +554,8 @@ static ge::graphStatus Tiling4AddRmsNorm(gert::TilingContext* context)
 
     float epsilon = 0;
     GetEpsilonParameter(context, epsilon);
-    if (epsilon < 0) {
+    // 与 GetEpsilonParameter 一致，用 !std::isfinite(epsilon) || epsilon < 0 拦截 NaN/±Inf（issue #7397）。
+    if (!std::isfinite(epsilon) || epsilon < 0) {
         return ge::GRAPH_FAILED;
     }
 
