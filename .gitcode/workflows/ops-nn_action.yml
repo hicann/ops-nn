@@ -50,6 +50,9 @@ stages:
         if: "${{ default() }}"
         runs-on: ["self-hosted", "arch=x64", "spec=small"]
       JOB_pre:
+        permissions:
+          repository: read
+          id-token: write
         name: Test_PreBuild
         uses: cann/.gitcode/.gitcode/workflows/pre_action.yml@master
     pre:
@@ -59,6 +62,9 @@ stages:
     name: Compile
     jobs:
       JOB_check_example:
+        permissions:
+          repository: read
+          id-token: write
         name: Check_Example
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -68,12 +74,18 @@ stages:
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86 }}
         if: env.TARGET_BRANCH == 'master'
       JOB_codecheck:
+        permissions:
+          repository: read
+          id-token: write
         name: CodeCheck
         uses: cann/.gitcode/.gitcode/workflows/codecheck_action.yml@master
         with:
           precommit_image_version: ${{ jobs.JOB_image.outputs.precommit }}
           codecheck_image_version: ${{ jobs.JOB_image.outputs.codecheck }}
       JOB_x86_compile:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_X86
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -83,6 +95,9 @@ stages:
           package_name: 'cann-ops-nn_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86 }}
       JOB_x86_compile_ubuntu24:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_X86_ubuntu24
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -92,6 +107,9 @@ stages:
           package_name: 'cann-ops-nn_linux-x86_64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_ubuntu24 }}
       JOB_X86_monitor_910b:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_X86_monitor_910b
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -101,6 +119,9 @@ stages:
           package_name: 'cann-ops-nn-monitor-910b_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor }}
       JOB_X86_monitor_910c:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_X86_monitor_910c
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -110,6 +131,9 @@ stages:
           package_name: 'cann-ops-nn-monitor-910c_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor }}
       JOB_X86_monitor_950:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_X86_monitor_950
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -119,6 +143,9 @@ stages:
           package_name: 'cann-ops-nn-monitor-950_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_9_0_0 }}
       JOB_Compile_Ascend_X86_950_ubuntu24:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_X86_950_ubuntu24
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -128,6 +155,9 @@ stages:
           package_name: 'cann-ops-nn-custom_linux-x86_64_950_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_950_ubuntu24 }}
       JOB_Compile_Ascend_X86_mobile_station:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_X86_mobile_station
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -137,6 +167,9 @@ stages:
           package_name: 'cann-ops-nn-kirinx90_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station }}
       JOB_Compile_Ascend_X86_mobile_station_ubuntu24:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_X86_mobile_station_ubuntu24
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -146,6 +179,9 @@ stages:
           package_name: 'cann-ops-nn-kirinx90_linux-x86_64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station_ubuntu24 }}
       JOB_Compile_Ascend_X86_950:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_X86_950
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -155,6 +191,9 @@ stages:
           package_name: 'cann-ops-nn-custom_linux-x86_64_950.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_950 }}
       JOB_Pre_compile:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Pre
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -164,6 +203,9 @@ stages:
           package_name: 'cann-ops-nn-fatrelu_mul_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Pre_Compile }}
       JOB_compile_single:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_single
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -173,6 +215,9 @@ stages:
           package_name: 'single.tar.gz'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_single }}
       JOB_arm_compile:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_arm
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -182,6 +227,9 @@ stages:
           package_name: 'cann-ops-nn_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM }}
       JOB_arm_compile_ubuntu24:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_arm_ubuntu24
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -191,6 +239,9 @@ stages:
           package_name: 'cann-ops-nn_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_ubuntu24 }}
       JOB_compile_single_ubuntu24:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_single_ubuntu24
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -200,6 +251,9 @@ stages:
           package_name: 'single_ubuntu24.tar.gz'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_single_ubuntu24 }}
       JOB_Compile_Ascend_experimental:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_experimental
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -209,6 +263,9 @@ stages:
           package_name: 'cann-ops-nn-experimental_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_experimental }}
       JOB_Compile_Ascend_experimental_ubuntu24:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_experimental_ubuntu24
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -218,6 +275,9 @@ stages:
           package_name: 'cann-ops-nn-experimental_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_experimental_ubuntu24 }}
       JOB_Compile_Ascend_ARM_950_ubuntu24:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_ARM_950_ubuntu24
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -227,6 +287,9 @@ stages:
           package_name: 'cann-ops-nn-950_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950_ubuntu24 }}
       JOB_Compile_Ascend_ARM_950:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_ARM_950
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -236,6 +299,9 @@ stages:
           package_name: 'cann-ops-nn-950_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950 }}
       JOB_Compile_Ascend_X86_mobile_station_9030_ubuntu24:
+        permissions:
+          repository: read
+          id-token: write
         name: Compile_Ascend_X86_mobile_station_9030_ubuntu24
         uses: .gitcode/workflows/compile_action.yml
         with:
@@ -245,6 +311,9 @@ stages:
           package_name: 'cann-ops-nn-kirin9030_linux-x86_64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station_ubuntu24 }}
       JOB_staticcheck_md_check:
+        permissions:
+          repository: read
+          id-token: write
         name: staticcheck_md_check
         uses: .gitcode/workflows/staticcheck_action.yml
         with:
@@ -273,6 +342,9 @@ stages:
         container:
           image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ jobs.JOB_image.outputs.API_Check }}
       JOB_UT_Test_ophost:
+        permissions:
+          repository: read
+          id-token: write
         name: UT_Test_ophost
         uses: .gitcode/workflows/ut_action.yml
         with:
@@ -280,6 +352,9 @@ stages:
           ut_package: 'coverage_*.info'
           image_version: ${{ jobs.JOB_image.outputs.UT_Test_ophost }}
       JOB_UT_Test_opapi:
+        permissions:
+          repository: read
+          id-token: write
         name: UT_Test_opapi
         uses: .gitcode/workflows/ut_action.yml
         with:
@@ -287,6 +362,9 @@ stages:
           ut_package: 'coverage_*.info'
           image_version: ${{ jobs.JOB_image.outputs.UT_Test_opapi }}
       JOB_UT_Test_kernel:
+        permissions:
+          repository: read
+          id-token: write
         name: UT_Test_kernel
         uses: .gitcode/workflows/ut_action.yml
         with:
@@ -294,6 +372,9 @@ stages:
           ut_package: 'coverage_*.info'
           image_version: ${{ jobs.JOB_image.outputs.UT_Test_kernel }}
       JOB_UT_Test_opgraph:
+        permissions:
+          repository: read
+          id-token: write
         name: UT_Test_opgraph
         uses: .gitcode/workflows/ut_action.yml
         with:
@@ -308,6 +389,9 @@ stages:
     select: selected_by_default
     jobs:
       JOB_ut_report:
+        permissions:
+          repository: read
+          id-token: write
         name: ut_report
         steps:
           -
@@ -317,6 +401,15 @@ stages:
             with:
               ref: ${{ atomgit.event.pull_request.merge_commit_sha }}
               allow-unsafe-pr-checkout: true
+          -
+            name: oidc_auth
+            uses: huaweicloud-oidc-auth
+            with:
+              audience: ${{ secrets.audience }}
+              agency_urn: ${{ secrets.agency_urn }}
+              provider_urn: ${{ secrets.provider_urn }}
+              region: cn-north-4
+              duration: 3600
           -
             name: download
             uses: obs-download
@@ -350,8 +443,6 @@ stages:
             with:
               endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
               bucket: "ascend-ci"
-              access-key: ${{secrets.AK}}
-              secret-key: ${{secrets.SK}}
               artifact-path: |
                 ${{ steps.process_checkout.outputs.path }}/ut_cov_*.tar.gz
               object-prefix: ${{ env.obs_path }}/
@@ -366,6 +457,9 @@ stages:
     name: PreSmoke
     jobs:
       A2_smoke:
+        permissions:
+          repository: read
+          id-token: write
         name: PreSmoke_A2
         steps:
           -
@@ -376,14 +470,21 @@ stages:
               ref: ${{ atomgit.event.pull_request.merge_commit_sha }}
               allow-unsafe-pr-checkout: true
           -
+            name: oidc_auth
+            uses: huaweicloud-oidc-auth
+            with:
+              audience: ${{ secrets.audience }}
+              agency_urn: ${{ secrets.agency_urn }}
+              provider_urn: ${{ secrets.provider_urn }}
+              region: cn-north-4
+              duration: 3600
+          -
             name: download
             uses: obs-download
             if: ${{ always() }}
             with:
               endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
               bucket: "ascend-ci"
-              access-key: ${{ secrets.AK }}
-              secret-key: ${{ secrets.SK }}
               key: |
                 ${{ env.obs_path }}/pr_filelist.txt
                 ${{ env.obs_path }}/pr_filelist_mod.txt
@@ -402,16 +503,13 @@ stages:
                 export fatrelu_run_url=${{jobs.JOB_Pre_compile.outputs.arm_run_url}}
                 export repo_name=${{env.repo_name}}
                 export pr_id=${{ env.MERGE_ID }}
-                export AK=${{secrets.AK}}
-                export SK=${{secrets.SK}}
                 bash ${{ steps.process_checkout.outputs.path }}/pre_smoke.sh
           - name: upload
+            if: ${{ always() }}
             uses: obs-upload
             with:
               endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
               bucket: "ascend-ci"
-              access-key: ${{ secrets.AK }}
-              secret-key: ${{ secrets.SK }}
               artifact-path: "${{ steps.process_checkout.outputs.path }}/slog*.tar.gz"
               object-prefix: ${obs_smoke_path}/plog/
         if: env.TARGET_BRANCH == 'master'
@@ -419,6 +517,9 @@ stages:
         container:
           image: swr.cn-south-1.myhuaweicloud.com/pre_smoke/${{ jobs.JOB_image.outputs.PreSmoke_A900 }}
       A5_smoke:
+        permissions:
+          repository: read
+          id-token: write
         name: PreSmoke_A5
         uses: .gitcode/workflows/st_test_action.yml
         if: env.TARGET_BRANCH == 'master'
@@ -426,6 +527,9 @@ stages:
           task_name: 'opkernel'
           image_version: ${{ jobs.JOB_image.outputs.UT_Test_kernel }}
       PreSmoke_harmony-infer-chs-nn:
+        permissions:
+          repository: read
+          id-token: write
         name: PreSmoke_harmony-infer-chs-nn
         uses: .gitcode/workflows/kirin_pre_smoke_action.yml
         with:
@@ -436,6 +540,9 @@ stages:
           cases_pool: 'nn_all.json'
           cases_baseline: 'nn.json'
       PreSmoke_harmony-infer-cpro-nn:
+        permissions:
+          repository: read
+          id-token: write
         name: PreSmoke_harmony-infer-cpro-nn
         uses: .gitcode/workflows/kirin_pre_smoke_action.yml
         with:
