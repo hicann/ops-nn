@@ -170,13 +170,32 @@ ge::graphStatus FusedCrossEntropyLossWithMaxSumRegbaseTiling::DoTilingFull()
     tilingData_->vLen = v;
     tilingData_->elementsNumber = 0;
     tilingData_->vocabDtypeId = vocabDtypeId;
+    // 小V快路：按"多行打包成平坦向量"重排UB预算，行数由host按V与dtype算出塞满UB
+    tilingData_->aPerLoop = FUSED_CE_MAX_SUM_A_PER_LOOP;
+    if (v <= FUSED_CE_MAX_SUM_SMALL_V_MAX) {
+        // 每行开销：vocab双缓冲 + softmax双缓冲 + vocab的fp32展开副本 + 行向量buffer
+        // （max/sum/pred/loss四队列深2支撑跨tile预取流水 + invSum单buffer，共9个）
+        constexpr int64_t SCALAR_BYTES_PER_ROW = 9 * FLOAT_BYTES;
+        constexpr int64_t SMALL_V_A_ALIGN = 128;
+        constexpr int64_t SMALL_V_A_MAX = 8192;
+        int64_t bytesPerRow = DOUBLE_BUFFER_NUM * v * dtypeSize + DOUBLE_BUFFER_NUM * v * FLOAT_BYTES +
+                              v * FLOAT_BYTES + SCALAR_BYTES_PER_ROW;
+        // 向量访存按VL对齐多预留一个向量寄存器的余量，避免尾块越界读
+        int64_t budget = ubSize_ - RESERVED_UB -
+                         DOUBLE_BUFFER_NUM * FUSED_CE_MAX_SUM_V_ALIGN * (dtypeSize + FLOAT_BYTES);
+        int64_t aPerLoop = FloorAlign(budget / bytesPerRow, SMALL_V_A_ALIGN);
+        OP_CHECK_IF(aPerLoop < SMALL_V_A_ALIGN,
+                    OP_LOGE(context_, "ub is not enough for smallV, aPerLoop is %ld", aPerLoop),
+                    return ge::GRAPH_FAILED);
+        tilingData_->aPerLoop = aPerLoop > SMALL_V_A_MAX ? SMALL_V_A_MAX : aPerLoop;
+    }
 
     constexpr uint64_t tilingKey = 0; // TILINGKEY_FULL
     OP_LOGI(context_,
             "DoTilingFull: bt is %ld, v is %ld, vPerLoop is %ld, formerCoreNum is %ld, formerRows is %ld, "
-            "latterRows is %ld, vCores is %ld, vChunk is %ld, tilingKey is %lu",
+            "latterRows is %ld, vCores is %ld, vChunk is %ld, aPerLoop is %ld, tilingKey is %lu",
             bt, v, vPerLoop, tilingData_->formerCoreNum, tilingData_->formerRows, tilingData_->latterRows,
-            tilingData_->vCores, tilingData_->vChunk, tilingKey);
+            tilingData_->vCores, tilingData_->vChunk, tilingData_->aPerLoop, tilingKey);
     context_->SetTilingKey(tilingKey);
     return ge::GRAPH_SUCCESS;
 }
@@ -207,6 +226,7 @@ ge::graphStatus FusedCrossEntropyLossWithMaxSumRegbaseTiling::DoTilingForMemory(
     tilingData_->elementsNumber = elementsNumber;
     tilingData_->vCores = 1; // 省显存路径只有bt一维，不切v
     tilingData_->vChunk = 0;
+    tilingData_->aPerLoop = 0;
 
     constexpr uint64_t tilingKey = 1; // TILINGKEY_MEMORY
     OP_LOGI(context_,

@@ -20,6 +20,10 @@
 constexpr int64_t FUSED_CE_MAX_SUM_A_PER_LOOP = 8;
 // v维分块列数的对齐粒度，需不小于一个向量寄存器可容纳的fp32元素数（64）
 constexpr int64_t FUSED_CE_MAX_SUM_V_ALIGN = 64;
+// 小V快路上限：vLen不超过该值时走"多行打包+Gather展开max/inv"的行主序平坦通路。
+// 大V通路按行广播（每行一次DIST_BRC_B32），小V时每行仅1~8个有效lane，广播与
+// 2-D小搬运（blockLen=V*sizeof(T)）的固定开销占满流水，实测带宽退化两个数量级。
+constexpr int64_t FUSED_CE_MAX_SUM_SMALL_V_MAX = 8;
 
 // vocab_parallel_logits dtype id（kernel运行时分发用）
 constexpr int64_t FUSED_CE_MAX_SUM_DTYPE_FP32 = 0;
@@ -36,6 +40,7 @@ struct FusedCrossEntropyLossWithMaxSumRegBaseTilingData {
     int64_t vocabDtypeId;   // vocab_parallel_logits的dtype：0=fp32, 1=fp16, 2=bf16
     int64_t vCores;         // 每行在v维上切分的核数（1=不切分）；bt<coreNum且v>vPerLoop时>1
     int64_t vChunk; // v切分时每核负责的v长度（已按FUSED_CE_MAX_SUM_V_ALIGN对齐）；不切分时为vLen
+    int64_t aPerLoop; // 小V快路下每个UB分块处理的行数（大V通路恒为FUSED_CE_MAX_SUM_A_PER_LOOP）
 };
 
 #endif // _FUSED_CROSS_ENTROPY_LOSS_WITH_MAX_SUM_REGBASE_TILING_DATA_H_

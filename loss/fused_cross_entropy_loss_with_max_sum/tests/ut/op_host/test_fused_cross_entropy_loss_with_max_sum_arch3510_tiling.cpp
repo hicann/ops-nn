@@ -137,6 +137,121 @@ TEST_F(FusedCrossEntropyLossWithMaxSumArch3510Tiling, test_regbase_tiling_full_f
     EXPECT_EQ(tilingData.vChunk, 4096);
 }
 
+TEST_F(FusedCrossEntropyLossWithMaxSumArch3510Tiling, test_regbase_tiling_full_fp16_small_v)
+{
+    fe::PlatFormInfos platFormInfo;
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    map<string, string> socVersionInfos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    InitRegbasePlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, socVersionInfos);
+
+    FusedCeMaxSumUtCompileInfo compileInfo;
+    gert::StorageShape input0 = {{1024}, {1024}};
+    gert::StorageShape input1 = {{1024}, {1024}};
+    gert::StorageShape input2 = {{1024}, {1024}};
+    gert::StorageShape input3 = {{1024}, {1024}};
+    gert::StorageShape input4 = {{1024}, {1024}};
+    gert::StorageShape input5 = {{1024, 1}, {1024, 1}};
+    gert::StorageShape output0 = {{1024}, {1024}};
+    gert::StorageShape output1 = {{1024, 1}, {1024, 1}};
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input0, &input1, &input2, &input3, &input4, &input5})
+                      .OutputShapes({&output0, &output1})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+
+    FusedCrossEntropyLossWithMaxSumRegBaseTilingData tilingData;
+    // 小V快路(v=1<=8)：vPerLoop按常规公式取64；aPerLoop按平坦通路UB预算
+    // 每行52B(vocab双缓冲4+softmax双缓冲8+fp32副本4+行向量9buffer36)
+    // = FloorAlign((253952-2048-2*64*(2+4))/52, 128) = FloorAlign(251136/52, 128) = FloorAlign(4829.5, 128) = 4736
+    // （2*64*(dtypeSize+4B)余量吸收vocab双缓冲+fp32副本各一个VL的防越界padding与尾块对齐）
+    DoRegbaseTiling(holder, platFormInfo, socInfos, aicoreSpec, intrinsics, socVersionInfos, 0, 64, tilingData);
+    EXPECT_EQ(tilingData.formerCoreNum, 0);
+    EXPECT_EQ(tilingData.formerRows, 17);
+    EXPECT_EQ(tilingData.latterRows, 16);
+    EXPECT_EQ(tilingData.vPerLoop, 64);
+    EXPECT_EQ(tilingData.vLen, 1);
+    EXPECT_EQ(tilingData.vCores, 1);
+    EXPECT_EQ(tilingData.vChunk, 1);
+    EXPECT_EQ(tilingData.aPerLoop, 4736);
+}
+
+TEST_F(FusedCrossEntropyLossWithMaxSumArch3510Tiling, test_regbase_tiling_full_fp32_small_v3)
+{
+    fe::PlatFormInfos platFormInfo;
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    map<string, string> socVersionInfos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    InitRegbasePlatForm(platFormInfo, socInfos, aicoreSpec, intrinsics, socVersionInfos);
+
+    FusedCeMaxSumUtCompileInfo compileInfo;
+    gert::StorageShape input0 = {{1024}, {1024}};
+    gert::StorageShape input1 = {{1024}, {1024}};
+    gert::StorageShape input2 = {{1024}, {1024}};
+    gert::StorageShape input3 = {{1024}, {1024}};
+    gert::StorageShape input4 = {{1024}, {1024}};
+    gert::StorageShape input5 = {{1024, 3}, {1024, 3}};
+    gert::StorageShape output0 = {{1024}, {1024}};
+    gert::StorageShape output1 = {{1024, 3}, {1024, 3}};
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(6, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input0, &input1, &input2, &input3, &input4, &input5})
+                      .OutputShapes({&output0, &output1})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
+
+    FusedCrossEntropyLossWithMaxSumRegBaseTilingData tilingData;
+    // V=3边界：G=16时G*v=48<VL=64，末组向量读越过tileElems，依赖vocab源缓冲的VL padding防越界
+    // 每行96B(vocab双缓冲24+softmax双缓冲24+fp32副本12+行向量9buffer36)
+    // = FloorAlign((253952-2048-2*64*(4+4))/96, 128) = FloorAlign(250112/96, 128) = FloorAlign(2605.3, 128) = 2560
+    DoRegbaseTiling(holder, platFormInfo, socInfos, aicoreSpec, intrinsics, socVersionInfos, 0, 64, tilingData);
+    EXPECT_EQ(tilingData.formerCoreNum, 0);
+    EXPECT_EQ(tilingData.formerRows, 17);
+    EXPECT_EQ(tilingData.latterRows, 16);
+    EXPECT_EQ(tilingData.vPerLoop, 64);
+    EXPECT_EQ(tilingData.vLen, 3);
+    EXPECT_EQ(tilingData.vCores, 1);
+    EXPECT_EQ(tilingData.vChunk, 3);
+    EXPECT_EQ(tilingData.aPerLoop, 2560);
+}
+
 TEST_F(FusedCrossEntropyLossWithMaxSumArch3510Tiling, test_regbase_tiling_full_bf16_small_bt)
 {
     fe::PlatFormInfos platFormInfo;
