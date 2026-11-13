@@ -87,7 +87,7 @@ aclnnStatus aclnnAntiMxQuant(
       <td>x (aclTensor*)</td>
       <td>Input</td>
       <td>Quantization tensor input of the operator. Corresponds to Xq in the formula.</td>
-      <td>Supports empty tensors.</td>
+      <td><ul><li>Supports empty tensors.</li><li>If x is an empty tensor, y and mxscale must also be empty tensors.</li></ul></td>
       <td>FLOAT4_E2M1, FLOAT4_E1M2, FLOAT8_E4M3FN, FLOAT8_E5M2</td>
       <td>ND</td>
       <td>1-7, must be consistent with the output of DynamicMxQuant</td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnAntiMxQuant(
       <td>mxscale (aclTensor*)</td>
       <td>Input</td>
       <td>Quantization scale computed by calling DynamicMxQuant. Corresponds to sf in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>The shape must satisfy the formula in Constraints.</li></ul></td>
+      <td><ul><li>Empty tensors are allowed only when x is an empty tensor. Otherwise, empty tensors (shapes containing a 0 dimension) are not supported and 161002 is returned.</li><li>The shape must satisfy the formula in Constraints.</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>2-8, must be consistent with the output of DynamicMxQuant</td>
@@ -127,7 +127,7 @@ aclnnStatus aclnnAntiMxQuant(
       <td>y (aclTensor*)</td>
       <td>Output</td>
       <td>Indicates the dequantized output tensor. Corresponds to Xdq in the corresponding formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>The shape must be the same as that of x.</li><li>The data type must correspond to dstType.</li></ul></td>
+      <td><ul><li>Empty tensors are allowed only when x is an empty tensor. Otherwise, empty tensors are not supported.</li><li>The shape must be exactly the same as that of x.</li><li>The data type must correspond to dstType.</li></ul></td>
       <td>FLOAT16, BFLOAT16, FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
@@ -181,8 +181,8 @@ aclnnStatus aclnnAntiMxQuant(
   <tr>
   </tr>
   <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>The data type of x, mxscale, or y is not within the supported range.</td>
   </tr>
   <tr>
@@ -196,6 +196,9 @@ aclnnStatus aclnnAntiMxQuant(
   </tr>
   <tr>
     <td>The data type of y does not satisfy the corresponding relationship with dstType.</td>
+  </tr>
+  <tr>
+    <td>Only some of x, mxscale, and y are empty tensors.</td>
   </tr>
   <tr>
     <td rowspan="1">ACLNN_ERR_RUNTIME_ERROR</td>
@@ -258,6 +261,7 @@ aclnnStatus aclnnAntiMxQuant(
   - mxscale.shape[-1] = 2.
   - rank(mxscale) = rank(x) + 1.
   - Other dimensions are the same as those of input x.
+- Empty tensor constraint: only the scenario where x, y, and mxscale are all empty tensors is supported. In this case, the API returns success and workspaceSize is 0. If only some of the inputs are empty tensors (for example, mxscale contains a 0 dimension in its shape while x is not empty), the input is invalid and 161002 is returned.
 
 ## Example
 

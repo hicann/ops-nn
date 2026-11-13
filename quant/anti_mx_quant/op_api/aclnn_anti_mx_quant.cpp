@@ -12,6 +12,8 @@
 #include "anti_mx_quant.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "log/log.h"
+#include <string>
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -33,6 +35,8 @@ static constexpr int64_t FP4_NUMS_IN_UINT8 = 2;
 static constexpr int64_t NUM_FLOAT32 = 0;
 static constexpr int64_t NUM_FLOAT16 = 1;
 static constexpr int64_t NUM_BFLOAT16 = 27;
+static constexpr int64_t MX_BLOCK_SIZE = 32;
+static constexpr int64_t MXSCALE_TAIL_DIM = 2;
 
 static const std::initializer_list<DataType> X_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT4_E2M1, op::DataType::DT_FLOAT4_E1M2, op::DataType::DT_FLOAT8_E5M2,
@@ -78,6 +82,14 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
         return false;
     }
 
+    // y和x的shape必须一致
+    OP_CHECK(xShape == yShape,
+             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                 "aclnnAntiMxQuant", "y,x",
+                 (std::string(op::ToString(yShape).GetString()) + ", " + op::ToString(xShape).GetString()).c_str(),
+                 "shapes of y and x should be the same"),
+             return false);
+
     // x dim num check
     OP_CHECK_MAX_DIM(x, MAX_DIM_LEN, return false);
 
@@ -101,6 +113,23 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "axis is out of range. axis:%ld, x dim num:%zu.", axis, xDimNum);
         return false;
     }
+
+    // Construct expected mxscale shape:
+    // mxscale.shape[axis] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2
+    // mxscale.shape[-1] = 2
+    // mxscale rank = x rank + 1
+    auto expectedMxscaleShape = xShape;
+    int64_t axisScaledSize = (xShape.GetDim(axisChange) + MX_BLOCK_SIZE - 1) / MX_BLOCK_SIZE;
+    axisScaledSize = (axisScaledSize + 1) / MXSCALE_TAIL_DIM;
+    expectedMxscaleShape.SetDim(axisChange, axisScaledSize);
+    expectedMxscaleShape.AppendDim(MXSCALE_TAIL_DIM);
+    // mxscale与期望形状必须一致
+    const std::string expectedShapeStr = op::ToString(expectedMxscaleShape).GetString();
+    OP_CHECK(
+        mxscaleShape == expectedMxscaleShape,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON("aclnnAntiMxQuant", "mxscale", op::ToString(mxscaleShape).GetString(),
+                                              ("shape of mxscale should be " + expectedShapeStr).c_str()),
+        return false);
 
     OP_LOGD("CheckShape end");
     return true;
@@ -146,8 +175,8 @@ aclnnStatus aclnnAntiMxQuantGetWorkspaceSize(const aclTensor* x, const aclTensor
     auto ret = CheckParams(x, mxscale, axis, dstType, y);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 空Tensor处理
-    if (x->IsEmpty() || mxscale->IsEmpty()) {
+    // 空Tensor处理，CheckShape已保证mxscale为空时x必为空
+    if (x->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;

@@ -23,18 +23,21 @@ extern "C" {
  * @param [in] x: 待进行AntiMxQuant计算的入参。npu device侧的aclTensor，
  * 数据类型支持FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E5M2、FLOAT8_E4M3FN，
  * 数据格式支持ND，FLOAT8支持非连续的Tensor，FLOAT4不支持非连续的Tensor。
- * @param [in] mxscale: npu device侧的aclTensor, 数据类型支持FLOAT8_E8M0
+ * 支持空Tensor，x为空Tensor时y与mxscale也须为空Tensor。
+ * @param [in] mxscale: npu device侧的aclTensor, 数据类型支持FLOAT8_E8M0，
+ * shape需满足算子约束说明中的公式，仅当x为空Tensor时允许为空Tensor。
  * @param [in] axis: host侧的aclScalar, 数据类型int64，指定反量化轴。
  * @param [in] dstType: host侧的aclScalar, 数据类型int64，指定输出y的数据类型
  * @param [in] y: AntiMxQuant计算的出参。npu device侧的aclTensor，
- * 数据类型支持FLOAT16、BF16、FLOAT32，数据格式支持ND，支持非连续的Tensor。
+ * 数据类型支持FLOAT16、BF16、FLOAT32，数据格式支持ND，支持非连续的Tensor，
+ * shape需与x完全一致，仅当x为空Tensor时允许为空Tensor。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-__attribute__((visibility("default"))) aclnnStatus aclnnAntiMxQuantGetWorkspaceSize(
-    const aclTensor* x, const aclTensor* mxscale, int64_t axis, int64_t dstType, const aclTensor* y,
-    uint64_t* workspaceSize, aclOpExecutor** executor);
+__attribute__((visibility("default"))) aclnnStatus
+aclnnAntiMxQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* mxscale, int64_t axis, int64_t dstType,
+                                 const aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
  * @brief aclnnAntiMxQuant的第二段接口，用于执行计算。

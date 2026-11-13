@@ -85,7 +85,7 @@ aclnnStatus aclnnAntiMxQuant(
       <td>x (aclTensor*)</td>
       <td>输入</td>
       <td>表示算子输入的量化Tensor。对应公式中的Xq。</td>
-      <td>支持空Tensor。</td>
+      <td><ul><li>支持空Tensor。</li><li>x为空Tensor时，y与mxscale也须为空Tensor。</li></ul></td>
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>1-7，需要和DynamicMxQuant的输出保持一致</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnAntiMxQuant(
       <td>mxscale (aclTensor*)</td>
       <td>输入</td>
       <td>调用DynamicMxQuant计算得到的量化尺度。对应公式中的sf。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需满足约束说明中的公式。</li></ul></td>
+      <td><ul><li>仅当x为空Tensor时允许为空Tensor，其余情况不支持空Tensor（shape中含0维），返回161002。</li><li>shape需满足约束说明中的公式。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>2-8，需要和DynamicMxQuant的输出保持一致</td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnAntiMxQuant(
       <td>y (aclTensor*)</td>
       <td>输出</td>
       <td>表示反量化后的输出Tensor。对应公式中的Xdq。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape维度与x保持一致。</li><li>数据类型需与dstType对应。</li></ul></td>
+      <td><ul><li>仅当x为空Tensor时允许为空Tensor，其余情况不支持空Tensor。</li><li>shape需与x完全一致。</li><li>数据类型需与dstType对应。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
@@ -179,8 +179,8 @@ aclnnStatus aclnnAntiMxQuant(
   <tr>
   </tr>
   <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>x、mxscale、y的数据类型不在支持的范围之内。</td>
   </tr>
   <tr>
@@ -194,6 +194,9 @@ aclnnStatus aclnnAntiMxQuant(
   </tr>
   <tr>
     <td>y的数据类型和dstType不符合对应关系。</td>
+  </tr>
+  <tr>
+    <td>仅x、mxscale、y中的部分输入为空Tensor。</td>
   </tr>
   <tr>
     <td rowspan="1">ACLNN_ERR_RUNTIME_ERROR</td>
@@ -256,6 +259,7 @@ aclnnStatus aclnnAntiMxQuant(
   - mxscale.shape[-1] = 2。
   - rank(mxscale) = rank(x) + 1。
   - 其它维度与输入x一致。
+- 空Tensor约束：仅支持x、y、mxscale同时为空Tensor的场景，此时接口返回成功且workspaceSize为0；仅部分输入为空Tensor（如mxscale的shape含0维而x非空）属于非法入参，返回161002。
 
 ## 调用示例
 
