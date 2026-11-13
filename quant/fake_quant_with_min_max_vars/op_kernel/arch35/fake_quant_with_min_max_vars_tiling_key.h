@@ -20,8 +20,13 @@
  *   ROUND_MODE: 0 = CAST_FLOOR, 1 = CAST_RINT (round-half-to-even)
  *   HAS_ZP:     0 = no explicit zero_point (min/max inputs, kernel nudge is internal)
  *
- * Current combination (PT fake-quant):
- *   (MODE=0, BUFFER_MODE=0/1, ROUND_MODE=1, HAS_ZP=0) → 2 instances
+ * UI_LIST instantiation grid (all instances compiled into the .so):
+ *   MODE{0} × BUFFER_MODE{0,1} × ROUND_MODE{0,1} × HAS_ZP{0} → 4 instances
+ *
+ * Current selection (PT fake-quant, both tiling paths — empty fast path and main):
+ *   (MODE=0, BUFFER_MODE=1, ROUND_MODE=0(FLOOR), HAS_ZP=0) → TilingKey = 4,
+ *   consistent with the kernel's hardcoded CAST_FLOOR rounding (ROUND_MODE is
+ *   not consumed by the kernel body; kept for template interface consistency).
  */
 
 #ifndef __FAKE_QUANT_WITH_MIN_MAX_VARS_TILING_KEY_H__

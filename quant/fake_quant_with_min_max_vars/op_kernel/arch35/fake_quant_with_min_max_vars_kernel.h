@@ -28,8 +28,8 @@
  *     - DeQue scalars → compute nudge params (scale, invScale, nmin, nmax) on-device
  *     - Loop over column tiles: CopyInX → Compute(clamp→round→dequant) → CopyOutY
  *
- *   Compute (pipe-level API, CAST_RINT for round-half-to-even):
- *     clamp(x, nmin, nmax) → (x - nmin) * invScale → CAST_RINT → * scale + nmin
+ *   Compute (register-level intrinsics, CAST_FLOOR for round-half-up):
+ *     y = floor(clamp(x, nmin, nmax) * invScale + 0.5) * scale
  *
  * Quantization params are loaded from GM scalar inputs (NOT from TilingData).
  * Nudge computation happens on-device from raw min/max scalar tensors.

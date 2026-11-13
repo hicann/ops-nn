@@ -38,9 +38,20 @@ struct TilingCase {
     int32_t blockTailFactor;
     int32_t baseLen;
 };
+
+// min/max are per-tensor scalar inputs: the kernel unconditionally copies a
+// fixed 4-byte float from each of them, so any shape other than (1,) would
+// read out of bounds or take an undefined value and must be rejected by tiling.
+struct InvalidScalarCase {
+    gert::StorageShape xShape;
+    gert::StorageShape minShape;
+    gert::StorageShape maxShape;
+};
 } // namespace
 
 class FakeQuantWithMinMaxVarsTilingTest : public testing::TestWithParam<TilingCase> {};
+
+class FakeQuantWithMinMaxVarsTilingRejectTest : public testing::TestWithParam<InvalidScalarCase> {};
 
 TEST_P(FakeQuantWithMinMaxVarsTilingTest, tiling_data)
 {
@@ -114,8 +125,9 @@ TEST_P(FakeQuantWithMinMaxVarsTilingTest, tiling_data)
     EXPECT_EQ(td->narrowRange, testCase.narrowRange);
     EXPECT_EQ(td->numCore, testCase.numCore);
     EXPECT_EQ(context->GetBlockDim(), testCase.numCore);
-    // MODE=0, BUFFER_MODE=1, ROUND_MODE=1, HAS_ZP=0.
-    EXPECT_EQ(context->GetTilingKey(), 12U);
+    // MODE=0, BUFFER_MODE=1, ROUND_MODE=0, HAS_ZP=0 → key = 4. ROUND_MODE is
+    // selected as 0 (CAST_FLOOR) to match the kernel's hardcoded rounding.
+    EXPECT_EQ(context->GetTilingKey(), 4U);
     EXPECT_EQ(context->GetWorkspaceNum(), 1U);
     ASSERT_NE(context->GetWorkspaceSizes(1), nullptr);
     EXPECT_EQ(context->GetWorkspaceSizes(1)[0], 0U);
@@ -131,7 +143,7 @@ TEST_P(FakeQuantWithMinMaxVarsTilingTest, tiling_data)
         EXPECT_EQ(td->ubAxis, 1);
         EXPECT_EQ(td->blockUnion, 1);
         EXPECT_EQ(td->baseN, 1);
-        EXPECT_EQ(td->roundMode, 1);
+        EXPECT_EQ(td->roundMode, 0); // synced to the kernel's CAST_FLOOR rounding
         EXPECT_EQ(td->baseLen % 32, 0);
         EXPECT_LE(static_cast<int64_t>(td->baseLen) * 20 + 160 + 2048, 196608);
     }
@@ -150,4 +162,76 @@ INSTANTIATE_TEST_SUITE_P(ShapesAndAttrs, FakeQuantWithMinMaxVarsTilingTest,
                                          TilingCase{{{256}, {256}}, 8, true, false, 8, 32, 32, 32},
                                          TilingCase{{{256}, {256}}, 8, false, true, 8, 32, 32, 32},
                                          TilingCase{{{0, 4}, {0, 4}}, 8, false, false, 1, 0, 0, 0},
-                                         TilingCase{{{0}, {0}}, 16, true, false, 1, 0, 0, 0}));
+                                         TilingCase{{{0}, {0}}, 16, true, false, 1, 0, 0, 0},
+                                         // Empty x with valid min/max still goes through the
+                                         // empty-input fast path and succeeds — the success
+                                         // counterpart of the empty-x reject case below.
+                                         TilingCase{{{0}, {0}}, 8, false, false, 1, 0, 0, 0}));
+
+// Tiling must reject min/max inputs whose shape is not (1,) before any kernel
+// launch: an empty or multi-element scalar tensor is read by a fixed 4-byte
+// DataCopyPad in the kernel, which is out of bounds for shape (0,) and takes
+// an undefined element for multi-element shapes.
+// The check must also fire for an empty x: it runs before the empty-input
+// early exit, so an empty x combined with an invalid min/max is rejected
+// instead of silently taking the fast path.
+TEST_P(FakeQuantWithMinMaxVarsTilingRejectTest, tiling_reject_invalid_min_max_shape)
+{
+    auto testCase = GetParam();
+    fe::PlatFormInfos platformInfo;
+    std::map<std::string, std::string> socInfos;
+    std::map<std::string, std::string> aicoreSpec;
+    std::map<std::string, std::string> intrinsics;
+    GetPlatFormInfos(kCompileInfo, socInfos, aicoreSpec, intrinsics);
+    ASSERT_TRUE(platformInfo.Init());
+    platformInfo.SetPlatformRes("SoCInfo", socInfos);
+    platformInfo.SetPlatformRes("AICoreSpec", aicoreSpec);
+    platformInfo.SetCoreNumByCoreType("AICore");
+    platformInfo.SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    auto impl = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVars");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->tiling_parse, nullptr);
+    ASSERT_NE(impl->tiling, nullptr);
+    FakeQuantWithMinMaxVarsCompileInfo compileInfo;
+    auto parseHolder = gert::KernelRunContextFaker()
+                           .KernelIONum(2, 1)
+                           .Inputs({const_cast<char*>(kCompileInfo), &platformInfo})
+                           .Outputs({&compileInfo})
+                           .Build();
+    ASSERT_EQ(impl->tiling_parse(parseHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    gert::StorageShape yShape = testCase.xShape;
+    auto tilingData = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(1);
+    ASSERT_NE(tilingData, nullptr);
+    ASSERT_NE(workspaceHolder, nullptr);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto faker = gert::TilingContextFaker();
+    faker.NodeIoNum(3, 1)
+        .IrInstanceNum({1, 1, 1})
+        .InputShapes({&testCase.xShape, &testCase.minShape, &testCase.maxShape})
+        .OutputShapes({&yShape})
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .TilingData(tilingData.get())
+        .Workspace(workspace);
+    auto holder = faker.Build();
+    auto context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_NE(impl->tiling(context), ge::GRAPH_SUCCESS);
+}
+
+INSTANTIATE_TEST_SUITE_P(InvalidMinMaxShape, FakeQuantWithMinMaxVarsTilingRejectTest,
+                         testing::Values(InvalidScalarCase{{{8}, {8}}, {{0}, {0}}, {{1}, {1}}},
+                                         InvalidScalarCase{{{8}, {8}}, {{1}, {1}}, {{0}, {0}}},
+                                         InvalidScalarCase{{{8}, {8}}, {{2}, {2}}, {{1}, {1}}},
+                                         InvalidScalarCase{{{8}, {8}}, {{1}, {1}}, {{2}, {2}}},
+                                         // Empty x with an invalid min: the scalar shape check must
+                                         // fire before the empty-input early exit, otherwise this
+                                         // combination would silently succeed.
+                                         InvalidScalarCase{{{0}, {0}}, {{0}, {0}}, {{1}, {1}}}));

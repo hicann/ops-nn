@@ -17,7 +17,7 @@
  * Template parameters (matching TilingKey ASCENDC_TPL_ARGS_DECL):
  *   - MODODE:      0=PER_TENSOR (unused, hardcoded PT)
  *   - BUFFER_MODE: 0=single buffer, 1=double buffer
- *   - ROUND_MODE:  0=CAST_FLOOR, 1=CAST_RINT (unused, hardcoded RINT)
+ *   - ROUND_MODE:  0=CAST_FLOOR, 1=CAST_RINT (unused, hardcoded CAST_FLOOR)
  *   - HAS_ZP:      0=no explicit zero_point (unused, nudge is kernel-internal)
  */
 

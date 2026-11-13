@@ -25,6 +25,7 @@
  */
 
 #include <cmath>
+#include <string>
 #include <algorithm>
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
@@ -93,6 +94,40 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     return ge::GRAPH_SUCCESS;
 }
 
+static std::string DescribeShape(const gert::Shape& shape)
+{
+    std::string dims;
+    for (size_t d = 0; d < shape.GetDimNum(); d++) {
+        if (d != 0) {
+            dims += ",";
+        }
+        dims += std::to_string(shape.GetDim(d));
+    }
+    return dims;
+}
+
+// min/max are per-tensor quantization scalars: the kernel unconditionally
+// copies a fixed 4-byte float from each of them, so any shape other than (1,)
+// would read out of bounds (empty tensor) or take an undefined element
+// (multi-element tensor). Reject them here, before any kernel launch.
+static ge::graphStatus CheckScalarInputShape(gert::TilingContext* context)
+{
+    const char* scalarInputNames[2] = {"min", "max"};
+    for (size_t i = 0; i < sizeof(scalarInputNames) / sizeof(scalarInputNames[0]); i++) {
+        auto input = context->GetInputShape(i + 1); // input 1 = min, input 2 = max
+        OP_CHECK_NULL_WITH_CONTEXT(context, input);
+        auto shape = input->GetStorageShape();
+        if (shape.GetDimNum() != 1 || shape.GetDim(0) != 1) {
+            OP_LOGE(context,
+                    "FakeQuantWithMinMaxVars: scalar input '%s' (input index %zu) must have shape (1,), "
+                    "but got dimNum=%zu dims=[%s]",
+                    scalarInputNames[i], i + 1, shape.GetDimNum(), DescribeShape(shape).c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
     size_t* currentWorkspace = context->GetWorkspaceSizes(WORKSPACE_NUM);
@@ -116,7 +151,6 @@ static void LogTilingData(gert::TilingContext* context, const FakeQuantWithMinMa
 static ge::graphStatus FakeQuantWithMinMaxVarsTilingFunc(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
-    OP_LOGD(context, "test xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
@@ -129,6 +163,12 @@ static ge::graphStatus FakeQuantWithMinMaxVarsTilingFunc(gert::TilingContext* co
     bool narrowRange;
     OP_CHECK_IF(GetShapeAttrsInfo(context, &totalLength, &numBits, &narrowRange) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+
+    // 2.5 min/max scalar shape check — must run before the empty-tensor fast
+    // path below so that an x-only-empty input with invalid min/max is still
+    // rejected instead of silently skipping the kernel launch.
+    OP_CHECK_IF(CheckScalarInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckScalarInputShape error"),
+                return ge::GRAPH_FAILED);
 
     // 3. Workspace size
     OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
@@ -158,10 +198,8 @@ static ge::graphStatus FakeQuantWithMinMaxVarsTilingFunc(gert::TilingContext* co
         tiling->blockTailFactor = 0;
         tiling->numCore = 1;
         context->SetBlockDim(1);
-        // TilingKey: MODE=0(PT), BUFFER_MODE=1, ROUND_MODE=1(RINT), HAS_ZP=0
-        uint64_t key = GET_TPL_TILING_KEY(0, 1, 1, 0);
-        OP_LOGD(context, "test xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %ul", key);
-        ASCENDC_TPL_SEL_PARAM(context, 0, 1, 1, 0);
+        // TilingKey: MODE=0(PT), BUFFER_MODE=1, ROUND_MODE=0(FLOOR), HAS_ZP=0
+        ASCENDC_TPL_SEL_PARAM(context, 0, 1, 0, 0);
         LogTilingData(context, tiling);
         return ge::GRAPH_SUCCESS;
     }
@@ -209,14 +247,14 @@ static ge::graphStatus FakeQuantWithMinMaxVarsTilingFunc(gert::TilingContext* co
     tiling->baseLen = static_cast<int32_t>(baseLen);
     tiling->hasZeroPoint = false; // no explicit zp input
     tiling->axis = 0;             // unused for PT
-    tiling->roundMode = 1;        // 1=CAST_RINT (round-half-to-even)
+    tiling->roundMode = 0;        // 0=CAST_FLOOR (kernel hardcodes CAST_FLOOR rounding)
     tiling->sqrtMode = 0;         // no sqrt
 
     // 9. Set block dim
     context->SetBlockDim(static_cast<uint32_t>(actCore));
 
-    // 10. TilingKey: MODE=0(PT), BUFFER_MODE=1(double), ROUND_MODE=1(RINT), HAS_ZP=0
-    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(0), static_cast<uint32_t>(1), static_cast<uint32_t>(1),
+    // 10. TilingKey: MODE=0(PT), BUFFER_MODE=1(double), ROUND_MODE=0(FLOOR), HAS_ZP=0
+    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(0), static_cast<uint32_t>(1), static_cast<uint32_t>(0),
                           static_cast<uint32_t>(0));
 
     LogTilingData(context, tiling);

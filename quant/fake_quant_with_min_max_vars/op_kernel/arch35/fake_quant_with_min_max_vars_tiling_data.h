@@ -39,7 +39,7 @@ struct FakeQuantWithMinMaxVarsTilingData {
     int32_t baseLen = 0;         // UB tile column count
     bool hasZeroPoint = false;   // no explicit zp input (nudge is kernel-internal)
     int32_t axis = 0;            // unused (PT)
-    int32_t roundMode = 0;       // 0 = CAST_RINT
+    int32_t roundMode = 0;       // 0 = CAST_FLOOR (field unused; kernel hardcodes CAST_FLOOR)
     int32_t sqrtMode = 0;        // unused (no sqrt)
 
     // Extension: total length for multi-core partitioning

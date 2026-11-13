@@ -109,10 +109,11 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The data types of the input `x` and the output `y` support only FLOAT32, and their shapes must be exactly the same.
-- The data types of the inputs `min` and `max` are FLOAT32, and their shapes must be (1,).
+- The data types of the inputs `min` and `max` are FLOAT32, and their shapes must be (1,); when the shape of `min`/`max` is not (1,) (including empty tensors, e.g. with the shape (0,)), the operator validates it and rejects execution at the tiling stage (returning an error). An empty dimension of `x` is a valid input, and an empty input produces an empty output.
 - The rank range of `x` is [1, 8].
 - The value range of `num_bits` is [2, 16].
 - When `min == max`, the output is all zeros (degenerate processing).
+- Exception scenarios: for scenarios that violate the input constraints (such as a data type outside the supported list, an invalid or empty shape of `min`/`max`, a value of `num_bits` outside [2, 16], an unsupported data format, or a missing required input), the shape constraints of `min`/`max` are enforced by the operator at the tiling stage, which rejects non-conforming inputs; for other violations, the disposition (rejection of execution, an error report, or undefined computation results) and the specific error code are determined by the execution environment/framework, and no exact behavior or error code is guaranteed.
 
 ## Invocation Description
 
