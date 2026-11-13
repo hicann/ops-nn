@@ -44,6 +44,10 @@ constexpr uint32_t OP_CODE_SUB = 1;
 constexpr uint32_t OP_CODE_MUL = 2;
 constexpr uint32_t OP_CODE_DIV = 3;
 
+// ========== 等长小张量按张量并行的门槛 ==========
+constexpr int64_t UNIFORM_TENSOR_MAX_ELEMS = 16; // 单张量元素数上限
+constexpr int32_t UNIFORM_TENSOR_MIN_NUM = 8;    // 张量数下限(要能填满线程)
+
 // ========== Thread count by index type width ==========
 template <typename IDX_T>
 constexpr uint32_t THREAD_NUM_VF = (sizeof(IDX_T) == 4) ? 1024 : 512;
@@ -138,31 +142,108 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<IDX_T>) inline void OpForeachB
     }
 }
 
-// ========== Process: per-core multi-tensor iteration with 32/64-bit dispatch ==========
+// ========== 等长子张量场景的按张量并行 ==========
+// 元素级并行下线程只在单个张量内展开，张量之间仍是串行；当每张量元素很少(典型 0 维/1 元素)时
+// N 个子张量 = N 次串行 GM 往返(实测 ~0.6us/张量)，延迟完全无法掩盖。这里改为**一个线程处理
+// 一个子张量**，N 个张量的访存同轮并发，只剩 1 次延迟。
+// 刻意不传 per-tensor counts：本路径要求「本核所有子张量元素数相同(=perTensor)」，
+// 因此无需任何 GM 侧 tiling/counts 数据（const 折叠模式下 GM tiling 指针可能无效，不能依赖）。
+template <typename T, uint32_t OP, int32_t CAST>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_VF<int32_t>) inline void OpForeachBinaryUniformListSimt(
+    int32_t tensorNum, int64_t perTensor, __gm__ uint64_t* x1Ptrs, __gm__ uint64_t* x2Ptrs, __gm__ uint64_t* yPtrs,
+    int64_t firstOffset, int64_t lastEndOffset)
+{
+    for (int32_t base = 0; base < tensorNum; base += static_cast<int32_t>(blockDim.x)) {
+        int32_t t = base + static_cast<int32_t>(threadIdx.x);
+        if (t >= tensorNum) {
+            continue;
+        }
+        int64_t lo = (t == 0) ? firstOffset : 0;
+        int64_t hi = (t == tensorNum - 1) ? lastEndOffset : perTensor;
+        if (hi <= lo) {
+            continue;
+        }
+        // 注意：指针已按 lo 前移，元素循环必须用相对偏移 0..(hi-lo)，
+        // 否则会变成 base + lo + e 的双重偏移（越界读写相邻张量）。
+        __gm__ T* x1 = reinterpret_cast<__gm__ T*>(x1Ptrs[t]) + lo;
+        __gm__ T* x2 = reinterpret_cast<__gm__ T*>(x2Ptrs[t]) + lo;
+        __gm__ T* y = reinterpret_cast<__gm__ T*>(yPtrs[t]) + lo;
+        const int64_t n = hi - lo;
+        for (int64_t e = 0; e < n; ++e) {
+            if constexpr (CAST == 0) {
+                y[e] = BinaryApply<T, OP>(x1[e], x2[e]);
+            } else if constexpr (CAST == 1) {
+                y[e] = __float2half_rn(BinaryApply<float, OP>(__half2float(x1[e]), __half2float(x2[e])));
+            } else {
+                y[e] = CastFloatToBf16(BinaryApply<float, OP>(CastBf16ToFloat(x1[e]), CastBf16ToFloat(x2[e])));
+            }
+        }
+    }
+}
 
-template <uint32_t OP>
-__aicore__ inline void ForeachBinaryOpProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+// TensorList 描述符里的 dataPtr 数组(连续 uint64，每个子张量一项)，偏移字段与 ListTensorDesc 相同
+__aicore__ inline __gm__ uint64_t* GetListDataPtrArray(GM_ADDR blob)
+{
+    __gm__ uint64_t* head = reinterpret_cast<__gm__ uint64_t*>(blob);
+    uint64_t offsetBytes = *head;
+    return reinterpret_cast<__gm__ uint64_t*>(reinterpret_cast<__gm__ uint8_t*>(blob) + offsetBytes);
+}
+
+template <typename T, uint32_t OP, int32_t CAST>
+__aicore__ inline void ForeachBinaryOpProcessList(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
                                                   const ForeachBinaryOpTilingData* tilingData)
 {
     int32_t coreId = GetBlockIdx();
     int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
     int32_t endT = static_cast<int32_t>(tilingData->tensorEndList[coreId]);
+    if (endT < startT) {
+        return;
+    }
 
+    // 只用 UB 内的 tiling 副本判断形态，不读 GM tiling。
+    // 判定：本核所有子张量元素数相同(等长) 且长度较小 且张量数够多 → 按张量并行。
+    int32_t tensorNum = endT - startT + 1;
+    int64_t perTensor = tilingData->tensorDataCountList[startT];
+    bool uniform = (perTensor > 0) && (perTensor <= UNIFORM_TENSOR_MAX_ELEMS) && (tensorNum >= UNIFORM_TENSOR_MIN_NUM);
+    for (int32_t t = startT + 1; uniform && t <= endT; ++t) {
+        if (tilingData->tensorDataCountList[t] != perTensor) {
+            uniform = false;
+        }
+    }
+
+    if (uniform) {
+        asc_vf_call<OpForeachBinaryUniformListSimt<T, OP, CAST>>(
+            dim3(THREAD_NUM_VF<int32_t>), tensorNum, perTensor, GetListDataPtrArray(x1) + startT,
+            GetListDataPtrArray(x2) + startT, GetListDataPtrArray(y) + startT,
+            tilingData->tensorStartOffsetList[coreId], tilingData->tensorEndOffsetList[coreId] + 1);
+        return;
+    }
+
+    // 其它形态：原始逐张量循环 + 元素级并行（与改造前完全一致，双模式已验证）
     ListTensorDesc x1List(reinterpret_cast<__gm__ void*>(x1));
     ListTensorDesc x2List(reinterpret_cast<__gm__ void*>(x2));
     ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
-
     for (int32_t t = startT; t <= endT; t++) {
-        __gm__ half* x1_t = x1List.GetDataPtr<half>(t);
-        __gm__ half* x2_t = x2List.GetDataPtr<half>(t);
-        __gm__ half* y_t = yList.GetDataPtr<half>(t);
-
+        __gm__ T* x1_t = x1List.GetDataPtr<T>(t);
+        __gm__ T* x2_t = x2List.GetDataPtr<T>(t);
+        __gm__ T* y_t = yList.GetDataPtr<T>(t);
         int64_t totalCount = tilingData->tensorDataCountList[t];
         int64_t localStart = (t == startT) ? tilingData->tensorStartOffsetList[coreId] : 0;
         int64_t localEnd = (t == endT) ? tilingData->tensorEndOffsetList[coreId] + 1 : totalCount;
         int64_t localCount = localEnd - localStart;
-
-        if (localCount > 0) {
+        if (localCount <= 0) {
+            continue;
+        }
+        if constexpr (CAST == 0) {
+            if (localCount <= static_cast<int64_t>(INT32_MAX)) {
+                asc_vf_call<OpForeachBinaryDirectSimt<T, int32_t, OP>>(
+                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
+                    x2_t + localStart, y_t + localStart);
+            } else {
+                asc_vf_call<OpForeachBinaryDirectSimt<T, int64_t, OP>>(
+                    dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, y_t + localStart);
+            }
+        } else if constexpr (CAST == 1) {
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 asc_vf_call<OpForeachBinaryFp16CastSimt<int32_t, OP>>(
                     dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
@@ -171,103 +252,7 @@ __aicore__ inline void ForeachBinaryOpProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADD
                 asc_vf_call<OpForeachBinaryFp16CastSimt<int64_t, OP>>(
                     dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, y_t + localStart);
             }
-        }
-    }
-}
-
-template <uint32_t OP>
-__aicore__ inline void ForeachBinaryOpProcessFp32(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-                                                  const ForeachBinaryOpTilingData* tilingData)
-{
-    int32_t coreId = GetBlockIdx();
-    int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
-    int32_t endT = static_cast<int32_t>(tilingData->tensorEndList[coreId]);
-
-    ListTensorDesc x1List(reinterpret_cast<__gm__ void*>(x1));
-    ListTensorDesc x2List(reinterpret_cast<__gm__ void*>(x2));
-    ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
-
-    for (int32_t t = startT; t <= endT; t++) {
-        __gm__ float* x1_t = x1List.GetDataPtr<float>(t);
-        __gm__ float* x2_t = x2List.GetDataPtr<float>(t);
-        __gm__ float* y_t = yList.GetDataPtr<float>(t);
-
-        int64_t totalCount = tilingData->tensorDataCountList[t];
-        int64_t localStart = (t == startT) ? tilingData->tensorStartOffsetList[coreId] : 0;
-        int64_t localEnd = (t == endT) ? tilingData->tensorEndOffsetList[coreId] + 1 : totalCount;
-        int64_t localCount = localEnd - localStart;
-
-        if (localCount > 0) {
-            if (localCount <= static_cast<int64_t>(INT32_MAX)) {
-                asc_vf_call<OpForeachBinaryDirectSimt<float, int32_t, OP>>(
-                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
-                    x2_t + localStart, y_t + localStart);
-            } else {
-                asc_vf_call<OpForeachBinaryDirectSimt<float, int64_t, OP>>(
-                    dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, y_t + localStart);
-            }
-        }
-    }
-}
-
-template <uint32_t OP>
-__aicore__ inline void ForeachBinaryOpProcessInt32(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-                                                   const ForeachBinaryOpTilingData* tilingData)
-{
-    int32_t coreId = GetBlockIdx();
-    int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
-    int32_t endT = static_cast<int32_t>(tilingData->tensorEndList[coreId]);
-
-    ListTensorDesc x1List(reinterpret_cast<__gm__ void*>(x1));
-    ListTensorDesc x2List(reinterpret_cast<__gm__ void*>(x2));
-    ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
-
-    for (int32_t t = startT; t <= endT; t++) {
-        __gm__ int32_t* x1_t = x1List.GetDataPtr<int32_t>(t);
-        __gm__ int32_t* x2_t = x2List.GetDataPtr<int32_t>(t);
-        __gm__ int32_t* y_t = yList.GetDataPtr<int32_t>(t);
-
-        int64_t totalCount = tilingData->tensorDataCountList[t];
-        int64_t localStart = (t == startT) ? tilingData->tensorStartOffsetList[coreId] : 0;
-        int64_t localEnd = (t == endT) ? tilingData->tensorEndOffsetList[coreId] + 1 : totalCount;
-        int64_t localCount = localEnd - localStart;
-
-        if (localCount > 0) {
-            if (localCount <= static_cast<int64_t>(INT32_MAX)) {
-                asc_vf_call<OpForeachBinaryDirectSimt<int32_t, int32_t, OP>>(
-                    dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
-                    x2_t + localStart, y_t + localStart);
-            } else {
-                asc_vf_call<OpForeachBinaryDirectSimt<int32_t, int64_t, OP>>(
-                    dim3(THREAD_NUM_VF<int64_t>), localCount, x1_t + localStart, x2_t + localStart, y_t + localStart);
-            }
-        }
-    }
-}
-
-template <uint32_t OP>
-__aicore__ inline void ForeachBinaryOpProcessBf16(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
-                                                  const ForeachBinaryOpTilingData* tilingData)
-{
-    int32_t coreId = GetBlockIdx();
-    int32_t startT = static_cast<int32_t>(tilingData->tensorStartList[coreId]);
-    int32_t endT = static_cast<int32_t>(tilingData->tensorEndList[coreId]);
-
-    ListTensorDesc x1List(reinterpret_cast<__gm__ void*>(x1));
-    ListTensorDesc x2List(reinterpret_cast<__gm__ void*>(x2));
-    ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
-
-    for (int32_t t = startT; t <= endT; t++) {
-        __gm__ bfloat16_t* x1_t = x1List.GetDataPtr<bfloat16_t>(t);
-        __gm__ bfloat16_t* x2_t = x2List.GetDataPtr<bfloat16_t>(t);
-        __gm__ bfloat16_t* y_t = yList.GetDataPtr<bfloat16_t>(t);
-
-        int64_t totalCount = tilingData->tensorDataCountList[t];
-        int64_t localStart = (t == startT) ? tilingData->tensorStartOffsetList[coreId] : 0;
-        int64_t localEnd = (t == endT) ? tilingData->tensorEndOffsetList[coreId] + 1 : totalCount;
-        int64_t localCount = localEnd - localStart;
-
-        if (localCount > 0) {
+        } else {
             if (localCount <= static_cast<int64_t>(INT32_MAX)) {
                 asc_vf_call<OpForeachBinaryBf16CastSimt<int32_t, OP>>(
                     dim3(THREAD_NUM_VF<int32_t>), static_cast<int32_t>(localCount), x1_t + localStart,
@@ -278,6 +263,36 @@ __aicore__ inline void ForeachBinaryOpProcessBf16(GM_ADDR x1, GM_ADDR x2, GM_ADD
             }
         }
     }
+}
+
+// ========== Process: per-core multi-tensor iteration with 32/64-bit dispatch ==========
+
+template <uint32_t OP>
+__aicore__ inline void ForeachBinaryOpProcessFp16(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachBinaryOpTilingData* tilingData)
+{
+    ForeachBinaryOpProcessList<half, OP, 1>(x1, x2, y, tilingData);
+}
+
+template <uint32_t OP>
+__aicore__ inline void ForeachBinaryOpProcessFp32(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachBinaryOpTilingData* tilingData)
+{
+    ForeachBinaryOpProcessList<float, OP, 0>(x1, x2, y, tilingData);
+}
+
+template <uint32_t OP>
+__aicore__ inline void ForeachBinaryOpProcessInt32(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                   const ForeachBinaryOpTilingData* tilingData)
+{
+    ForeachBinaryOpProcessList<int32_t, OP, 0>(x1, x2, y, tilingData);
+}
+
+template <uint32_t OP>
+__aicore__ inline void ForeachBinaryOpProcessBf16(GM_ADDR x1, GM_ADDR x2, GM_ADDR y,
+                                                  const ForeachBinaryOpTilingData* tilingData)
+{
+    ForeachBinaryOpProcessList<bfloat16_t, OP, 2>(x1, x2, y, tilingData);
 }
 
 } // namespace NsForeachBinaryOp
