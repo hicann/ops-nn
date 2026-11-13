@@ -12,7 +12,10 @@
 
 import numpy as np
 
-__golden__ = {"kernel": {"relu6": "relu6_golden"}}
+__golden__ = {
+    "kernel": {"relu6": "relu6_golden"},
+    "e2e": {"torch.nn.functional.relu6": "torch_relu6_e2e_golden"},
+}
 
 _TOL_KERNEL = {
     "float32": {"standard": "cross_check", "level": "L0"},
@@ -95,16 +98,46 @@ class Relu6TensorFlowSpec:
     tolerance = _TOL_KERNEL
 
 
+def torch_relu6_e2e_golden(x, inplace=False, **kwargs):
+    """
+    E2E golden for torch.nn.functional.relu6.
+
+    Independent CPU torch computation (clamp) rather than calling the tested API.
+    The E2E contract preserves the input dtype, including BF16 and INT32.
+    """
+    del inplace, kwargs
+    import torch
+
+    if isinstance(x, torch.Tensor):
+        tensor = x.detach().cpu()
+    else:
+        tensor = torch.as_tensor(np.ascontiguousarray(x))
+    if tensor.dtype in (torch.int8, torch.int16, torch.int32, torch.int64, torch.uint8):
+        result = torch.clamp(tensor, min=0, max=6)
+    else:
+        result = torch.clamp(tensor, min=0.0, max=6.0)
+    return [result]
+
+
+class Relu6TorchE2ESpec:
+    """Torch E2E spec registered by the CSV ``api_name`` torch.nn.functional.relu6."""
+
+    golden = staticmethod(torch_relu6_e2e_golden)
+    third_party = {"torch": "torch.nn.functional.relu6"}
+    tolerance = _TOL_KERNEL
+
+
 __spec__ = {
     "relu6": "Relu6KernelSpec",
     "tf.nn.relu6": "Relu6TensorFlowSpec",
+    "torch.nn.functional.relu6": "Relu6TorchE2ESpec",
 }
 
 
 # 通路交付情况
-# 已注册: kernel + GEIR(复用 kernel spec) + TensorFlow E2E(tf.nn.relu6)。
+# 已注册: kernel + GEIR(复用 kernel spec) + TensorFlow E2E(tf.nn.relu6)
+#         + Torch E2E(torch.nn.functional.relu6)。
 # aclnn: 未交付——算子 CMakeLists 设置 ACLNNTYPE aclnn_exclude 且无 op_api/ 目录，
 #        未注册 aclnnRelu6。
-# Torch E2E / torch 图模式: 未交付——无 torch_extension，未注册 torch api_name，
-#        因此不声明 torch_graph。
+# Torch 图模式: 未交付——无 torch_extension，未声明 torch_graph。
 # 融合 pass / ONNX: 未交付。

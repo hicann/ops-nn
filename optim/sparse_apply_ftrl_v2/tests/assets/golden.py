@@ -12,7 +12,6 @@ import hashlib
 from typing import ClassVar
 
 import numpy as np
-import tensorflow as tf
 
 __golden__ = {"kernel": {"sparse_apply_ftrl_v2": "sparse_apply_ftrl_v2_golden"}}
 
@@ -109,6 +108,7 @@ def _run_tf_ftrl_v2(
     var, accum, linear, grad, indices, lr, l1, l2, l2_shrinkage, lr_power, use_locking
 ):
     """Run tf.raw_ops.ResourceSparseApplyFtrlV2 on already-prepared arrays."""
+    import tensorflow as tf
 
     def to_idx(arr):
         return tf.constant(arr, dtype=tf.int32 if arr.dtype == np.int32 else tf.int64)
@@ -278,8 +278,92 @@ class _TfSparseApplyFtrlV2:
         )
 
 
+class _TorchSparseApplyFtrlV2:
+    """PyTorch third-party baseline (GPU/CPU), mirroring the TF FtrlV2 formula.
+
+    Runs on the remote XPU server, where only the torch provider is available.
+    fp16/bf16 inputs are promoted to fp32 for the computation and cast back once
+    at the end, matching the delivered TensorFlow golden.
+    """
+
+    def __init__(self, *, use_locking=False, **kwargs):
+        self.use_locking = bool(use_locking)
+
+    def __call__(
+        self,
+        var,
+        accum,
+        linear,
+        grad,
+        indices,
+        lr,
+        l1,
+        l2,
+        l2_shrinkage,
+        lr_power,
+        **kwargs,
+    ):
+        import torch
+
+        def as_tensor(value):
+            if isinstance(value, torch.Tensor):
+                return value
+            return torch.as_tensor(value)
+
+        var_t = as_tensor(var)
+        out_dtype = var_t.dtype
+        promote = out_dtype in (torch.float16, torch.bfloat16)
+
+        def to_compute(t):
+            return t.to(torch.float32) if promote else t
+
+        v = to_compute(var_t).clone()
+        a = to_compute(as_tensor(accum)).clone()
+        lin = to_compute(as_tensor(linear)).clone()
+        g = to_compute(as_tensor(grad))
+        idx = as_tensor(indices).reshape(-1)
+
+        def scalar(value):
+            return float(as_tensor(value).reshape(-1)[0].item())
+
+        lr_v = scalar(lr)
+        l1_v = scalar(l1)
+        l2_v = scalar(l2)
+        l2s_v = scalar(l2_shrinkage)
+        lrp_v = scalar(lr_power)
+        n_rows = v.shape[0]
+
+        with torch.no_grad():
+            for pos in range(idx.numel()):
+                row = int(idx[pos].item())
+                if row < 0 or row >= n_rows:
+                    continue
+                v_row = v[row]
+                a_row = a[row]
+                g_row = g[pos]
+                grad_shrink = g_row + (2.0 * l2s_v) * v_row if l2s_v != 0.0 else g_row
+                old_pow = torch.pow(a_row, -lrp_v)
+                new_acc = a_row + g_row * g_row
+                new_pow = torch.pow(new_acc, -lrp_v)
+                a[row] = new_acc
+                delta = (old_pow - new_pow) / lr_v
+                new_lin = lin[row] + grad_shrink + delta * v_row
+                lin[row] = new_lin
+                l1_adj = torch.clamp(new_lin, min=-l1_v, max=l1_v)
+                v[row] = (l1_adj - new_lin) / (new_pow / lr_v + 2.0 * l2_v)
+
+        if promote:
+            v = v.to(out_dtype)
+            a = a.to(out_dtype)
+            lin = lin.to(out_dtype)
+        return [v, a, lin]
+
+
 class SparseApplyFtrlV2TestSpec:
     """SparseApplyFtrlV2 kernel TestSpec (GEIR pathway)."""
 
     golden = staticmethod(sparse_apply_ftrl_v2_golden)
-    third_party: ClassVar[dict] = {"tf": _TfSparseApplyFtrlV2}
+    third_party: ClassVar[dict] = {
+        "torch": _TorchSparseApplyFtrlV2,
+        "tf": _TfSparseApplyFtrlV2,
+    }
