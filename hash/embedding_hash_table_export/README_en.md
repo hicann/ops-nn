@@ -73,7 +73,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>counters</td>
       <td>Output</td>
-      <td>Number of exported keys.</td>
+      <td>Counter value of each exported key, corresponding to keys one-to-one by position.</td>
       <td>UINT64</td>
       <td>ND</td>
     </tr>

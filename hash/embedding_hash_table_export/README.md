@@ -71,7 +71,7 @@
     <tr>
       <td>counters</td>
       <td>输出</td>
-      <td>导出key数量。</td>
+      <td>各导出key对应的计数器值，与keys按位置一一对应。</td>
       <td>UINT64</td>
       <td>ND</td>
     </tr>
