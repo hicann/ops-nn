@@ -215,6 +215,9 @@ aclnnStatus aclnnBatchNormReduce(
 
 ## 约束说明
 
+- 输入仅支持4维NCHW，两个输出均为FLOAT32、ND格式的一维`[C]`，其中`C=x.shape[1]`。图模式的其他格式和维数不适用于本接口。
+- 支持非连续输入和输出；输出保持调用方提供的shape、stride和storage offset。
+- 支持空Tensor：C=0时输出为空；C>0且N、H、W中任一维为0时，两个输出均为`[C]`全零Tensor。
 - 确定性计算：
   - aclnnBatchNormReduce默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性。
 

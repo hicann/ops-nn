@@ -96,7 +96,7 @@ aclnnStatus aclnnBatchNormReduce(
       <td>sum (aclTensor*)</td>
       <td>Output</td>
       <td>Output tensor of the sum. It corresponds to `sum` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>The shape must be the same as the value of the second dimension of input `x`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>The shape must be 1D `[C]`, where `C=x.shape[1]`.</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnBatchNormReduce(
       <td>squareSum (aclTensor*)</td>
       <td>Output</td>
       <td>Output tensor of the sum of squares, corresponding to `squareSum` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>The shape must be the same as the value of the second dimension of input `x`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>The shape must be 1D `[C]`, where `C=x.shape[1]`.</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1</td>
@@ -217,6 +217,9 @@ aclnnStatus aclnnBatchNormReduce(
 
 ## Constraints
 
+- The input must be 4D NCHW. Both outputs must be FLOAT32, ND, and 1D `[C]`, where `C=x.shape[1]`. Other formats and ranks supported by graph mode do not apply to this API.
+- Non-contiguous inputs and outputs are supported. Output shapes, strides, and storage offsets remain as provided by the caller.
+- Empty tensors are supported: when C = 0, the outputs are empty; when C > 0 and any of N, H, or W is zero, both outputs are all-zero tensors of shape `[C]`.
 - Deterministic computation:
   - aclnnBatchNormReduce defaults to a non-deterministic implementation. Deterministic computation can be enabled through aclrtCtxSetSysParamOpt.
 

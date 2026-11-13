@@ -60,31 +60,6 @@ __simd_vf__ inline void CastToF32VfImpl(__ubuf__ DType* src, __ubuf__ float* dst
 }
 
 template <typename DType>
-__simd_vf__ inline void CastScaleToF32VfImpl(__ubuf__ DType* src, __ubuf__ float* dst, float scale, uint32_t totalElems,
-                                             uint16_t repeatTime)
-{
-    constexpr bool kNeedCast = !std::is_same_v<DType, float>;
-    AscendC::Reg::RegTensor<float> scaleReg;
-    AscendC::Reg::Duplicate(scaleReg, scale);
-    AscendC::Reg::MaskReg mask;
-    uint32_t remaining = totalElems;
-    for (uint16_t i = 0; i < repeatTime; ++i) {
-        const int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-        mask = AscendC::Reg::UpdateMask<float>(remaining);
-        AscendC::Reg::RegTensor<float> f32Reg;
-        if constexpr (kNeedCast) {
-            AscendC::Reg::RegTensor<DType> b16Reg;
-            AscendC::Reg::LoadAlign<DType, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(b16Reg, src + off);
-            AscendC::Reg::Cast<float, DType, kCastTraitToFp32>(f32Reg, b16Reg, mask);
-        } else {
-            AscendC::Reg::LoadAlign(f32Reg, src + off);
-        }
-        AscendC::Reg::Mul(f32Reg, f32Reg, scaleReg, mask);
-        AscendC::Reg::StoreAlign(dst + off, f32Reg, mask);
-    }
-}
-
-template <typename DType>
 __simd_vf__ inline void CastSquareVfImpl(__ubuf__ DType* src, __ubuf__ float* dst, uint32_t totalElems,
                                          uint16_t repeatTime)
 {
@@ -217,23 +192,6 @@ __simd_vf__ inline void Phase2PostElewiseVfImpl(__ubuf__ float* src, __ubuf__ fl
     }
 }
 
-__simd_vf__ inline void RestoreSumVfImpl(__ubuf__ float* src, __ubuf__ float* dst, float scale, uint32_t elems,
-                                         uint16_t repeats)
-{
-    AscendC::Reg::RegTensor<float> scaleReg;
-    AscendC::Reg::Duplicate(scaleReg, scale);
-    AscendC::Reg::MaskReg mask;
-    uint32_t remaining = elems;
-    for (uint16_t i = 0; i < repeats; ++i) {
-        const int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-        mask = AscendC::Reg::UpdateMask<float>(remaining);
-        AscendC::Reg::RegTensor<float> value;
-        AscendC::Reg::LoadAlign(value, src + off);
-        AscendC::Reg::Mul(value, value, scaleReg, mask);
-        AscendC::Reg::StoreAlign(dst + off, value, mask);
-    }
-}
-
 struct UBAxisDesc {
     int32_t gmIdx;
     int64_t ubSize;
@@ -274,17 +232,6 @@ public:
         postReduceUbSize_ = td->postReduceUbSize;
         tmpSlotElems_ = td->tmpBufUbSize / static_cast<int64_t>(sizeof(float));
         cacheBufElems_ = td->cacheBufUbSize / static_cast<int64_t>(sizeof(float));
-
-        int64_t reductionTotal = 1;
-        for (int32_t i = 1; i < axisNum_; i += kAxisPairStride) {
-            reductionTotal *= axisShape_[i];
-        }
-        uint64_t scaleSteps = static_cast<uint64_t>(reductionTotal - 1);
-        while (scaleSteps > 0U) {
-            sumInputScale_ *= 0.5F;
-            sumOutputScale_ *= 2.0F;
-            scaleSteps >>= 1U;
-        }
 
         const int64_t bisectionPos = static_cast<int64_t>(FindNearestPower2(static_cast<uint64_t>(rLoopCntTotal_)));
         cacheCount_ = static_cast<int64_t>(CalLog2(static_cast<uint64_t>(bisectionPos))) + 1;
@@ -346,7 +293,7 @@ public:
             UnravelALoop(aLoopIdx, aLen, inputBaseOff, outputOff);
             ClearCacheTreeVf();
             ComputeR(inputBaseOff, aLen, outputIdx);
-            PostElewise(outputIdx);
+            PostElewise();
             CopyOut<false>(outputOff, aLen, outputIdx);
         }
     }

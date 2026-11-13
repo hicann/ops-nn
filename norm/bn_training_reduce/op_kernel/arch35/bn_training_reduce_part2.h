@@ -10,7 +10,7 @@
 
 /* Internal implementation section of bn_training_reduce.h. Include only from bn_training_reduce.h. */
 
-__aicore__ inline void PostGroupPartial(int64_t rCount, int32_t outputIdx)
+__aicore__ inline void PostGroupPartial(int64_t rCount)
 {
     const uint32_t lanes = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_);
     const uint32_t levelStride = (lanes + kBlockF32 - 1U) / kBlockF32 * kBlockF32;
@@ -21,13 +21,7 @@ __aicore__ inline void PostGroupPartial(int64_t rCount, int32_t outputIdx)
     __ubuf__ float* srcPtr = reinterpret_cast<__ubuf__ float*>(cache[rootOff].GetPhyAddr());
     __ubuf__ float* dstPtr = reinterpret_cast<__ubuf__ float*>(out.GetPhyAddr());
     const uint16_t repeats = static_cast<uint16_t>((lanes + kRepF32 - 1U) / kRepF32);
-    if constexpr (isTailR) {
-        asc_vf_call<Phase2PostElewiseVfImpl>(srcPtr, dstPtr, lanes, repeats);
-    } else if (outputIdx == 0) {
-        asc_vf_call<RestoreSumVfImpl>(srcPtr, dstPtr, sumOutputScale_, lanes, repeats);
-    } else {
-        asc_vf_call<Phase2PostElewiseVfImpl>(srcPtr, dstPtr, lanes, repeats);
-    }
+    asc_vf_call<Phase2PostElewiseVfImpl>(srcPtr, dstPtr, lanes, repeats);
     outQue_.EnQue(out);
 }
 
@@ -68,7 +62,7 @@ __aicore__ inline void Phase1Process(int32_t outputIdx)
     if constexpr (isDeterministic) {
         Phase1OutputToWorkspace(outputOff, aLen, rGroupIdx, rCount);
     } else {
-        PostGroupPartial(rCount, outputIdx);
+        PostGroupPartial(rCount);
         CopyOut<true>(outputOff, aLen, outputIdx);
     }
 }
@@ -136,13 +130,7 @@ __aicore__ inline void Phase2Process(int32_t outputIdx)
         __ubuf__ float* dstPtr = reinterpret_cast<__ubuf__ float*>(out.GetPhyAddr());
         const uint32_t elems = static_cast<uint32_t>(aLen);
         const uint16_t repeats = static_cast<uint16_t>((elems + kRepF32 - 1U) / kRepF32);
-        if constexpr (isTailR) {
-            asc_vf_call<Phase2PostElewiseVfImpl>(srcPtr, dstPtr, elems, repeats);
-        } else if (outputIdx == 0) {
-            asc_vf_call<RestoreSumVfImpl>(srcPtr, dstPtr, sumOutputScale_, elems, repeats);
-        } else {
-            asc_vf_call<Phase2PostElewiseVfImpl>(srcPtr, dstPtr, elems, repeats);
-        }
+        asc_vf_call<Phase2PostElewiseVfImpl>(srcPtr, dstPtr, elems, repeats);
         outQue_.EnQue(out);
 
         auto deq = outQue_.DeQue<float>();
@@ -160,7 +148,7 @@ __aicore__ inline void Phase2Process(int32_t outputIdx)
     }
 }
 
-__aicore__ inline void PostElewise(int32_t outputIdx)
+__aicore__ inline void PostElewise()
 {
     const uint32_t lanes = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_);
     const uint32_t levelStride = (lanes + kBlockF32 - 1U) / kBlockF32 * kBlockF32;
@@ -169,11 +157,7 @@ __aicore__ inline void PostElewise(int32_t outputIdx)
     auto out = outQue_.AllocTensor<float>();
     __ubuf__ float* output = reinterpret_cast<__ubuf__ float*>(out.GetPhyAddr());
     const uint16_t repeats = static_cast<uint16_t>((lanes + kRepF32 - 1U) / kRepF32);
-    if (outputIdx == 0) {
-        asc_vf_call<RestoreSumVfImpl>(root, output, sumOutputScale_, lanes, repeats);
-    } else {
-        asc_vf_call<PostElewiseVfImpl>(root, output, lanes, repeats);
-    }
+    asc_vf_call<PostElewiseVfImpl>(root, output, lanes, repeats);
     outQue_.EnQue(out);
 }
 
@@ -244,8 +228,6 @@ int64_t tmpSlotElems_ = 0;
 int64_t cacheBufElems_ = 0;
 int64_t rGroupCnt_ = 0;
 int64_t aTotal_ = 0;
-float sumInputScale_ = 1.0F;
-float sumOutputScale_ = 1.0F;
 
 GlobalTensor<D_T> xGm_;
 GlobalTensor<float> sumGm_;

@@ -184,7 +184,6 @@ __aicore__ inline void DoCopyInTile(int64_t baseGmOff, int64_t aLen, int64_t rLe
     }
 }
 
-template <bool groupPhase>
 __aicore__ inline void PreElewise(LocalTensor<D_T>& src, uint32_t slot, int32_t outputIdx)
 {
     __ubuf__ D_T* srcPtr = reinterpret_cast<__ubuf__ D_T*>(src.GetPhyAddr());
@@ -195,15 +194,7 @@ __aicore__ inline void PreElewise(LocalTensor<D_T>& src, uint32_t slot, int32_t 
                                                  innerRProdAlign_);
     const uint16_t repeats = static_cast<uint16_t>((count + kRepF32 - 1U) / kRepF32);
     if (outputIdx == 0) {
-        if constexpr (groupPhase && isTailR) {
-            asc_vf_call<CastToF32VfImpl<D_T>>(srcPtr, dstPtr, count, repeats);
-        } else {
-            if (sumInputScale_ == 1.0F) {
-                asc_vf_call<CastToF32VfImpl<D_T>>(srcPtr, dstPtr, count, repeats);
-            } else {
-                asc_vf_call<CastScaleToF32VfImpl<D_T>>(srcPtr, dstPtr, sumInputScale_, count, repeats);
-            }
-        }
+        asc_vf_call<CastToF32VfImpl<D_T>>(srcPtr, dstPtr, count, repeats);
     } else {
         asc_vf_call<CastSquareVfImpl<D_T>>(srcPtr, dstPtr, count, repeats);
     }
@@ -296,11 +287,10 @@ __aicore__ inline void CopyInRChunk(int64_t inputBaseOff, int64_t aLen, int64_t 
     preInQue_.EnQue(preIn);
 }
 
-template <bool groupPhase>
 __aicore__ inline void ConsumeRChunk(int64_t aLen, int64_t rLen, uint32_t slot, int32_t outputIdx)
 {
     auto deq = preInQue_.DeQue<D_T>();
-    PreElewise<groupPhase>(deq, slot, outputIdx);
+    PreElewise(deq, slot, outputIdx);
     preInQue_.FreeTensor(deq);
     if (rLen < rUbFactor_ || aLen < aUbFactor_) {
         ClearChunkExtensionVf(slot, aLen, rLen);
@@ -318,7 +308,6 @@ __aicore__ inline int64_t GetScheduledRLoopIdx(int64_t flatIdx, int64_t rStart, 
     return rStart + bisectionTail + flatIdx - pairChunkCount;
 }
 
-template <bool groupPhase>
 __aicore__ inline void ComputeRRange(int64_t inputBaseOff, int64_t aLen, int64_t rStart, int64_t rCount,
                                      int32_t outputIdx)
 {
@@ -338,7 +327,7 @@ __aicore__ inline void ComputeRRange(int64_t inputBaseOff, int64_t aLen, int64_t
         const uint32_t slot = isPairedUnit ? static_cast<uint32_t>(flatIdx & 1) : 0U;
         const int64_t cacheIdx = isPairedUnit ? flatIdx / 2 : bisectionTail + flatIdx - pairChunkCount;
         const bool isUnitEnd = !isPairedUnit || slot == 1U;
-        ConsumeRChunk<groupPhase>(aLen, queuedRLen[flatIdx & 1], slot, outputIdx);
+        ConsumeRChunk(aLen, queuedRLen[flatIdx & 1], slot, outputIdx);
 
         const int64_t nextFlatIdx = flatIdx + 2;
         if (nextFlatIdx < rCount) {
@@ -358,7 +347,7 @@ __aicore__ inline void ComputeRRange(int64_t inputBaseOff, int64_t aLen, int64_t
 
 __aicore__ inline void ComputeR(int64_t inputBaseOff, int64_t aLen, int32_t outputIdx)
 {
-    ComputeRRange<false>(inputBaseOff, aLen, 0, rLoopCntTotal_, outputIdx);
+    ComputeRRange(inputBaseOff, aLen, 0, rLoopCntTotal_, outputIdx);
 }
 
 __aicore__ inline void DoOneAChunkGroup(int64_t inputBaseOff, int64_t aLen, int64_t rStart, int64_t rEnd,
@@ -366,7 +355,7 @@ __aicore__ inline void DoOneAChunkGroup(int64_t inputBaseOff, int64_t aLen, int6
 {
     const int64_t rCount = rEnd - rStart;
     ClearCacheTreeVf();
-    ComputeRRange<true>(inputBaseOff, aLen, rStart, rCount, outputIdx);
+    ComputeRRange(inputBaseOff, aLen, rStart, rCount, outputIdx);
 }
 
 __aicore__ inline void Phase1OutputToWorkspace(int64_t outputOff, int64_t aLen, int64_t rGroupIdx, int64_t rCount)

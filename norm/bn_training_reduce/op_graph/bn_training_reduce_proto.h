@@ -18,15 +18,15 @@ namespace ge {
 * @brief Performs reduced batch normalization .
 
 * @par Inputs:
-* x: A 4D tensor of type float16 or float32 or bfloat16, with format NHWC or NCHW.
+* x: A tensor of type float16 or float32 or bfloat16, with format NHWC, NCHW or NCDHW.
 * Indicates the input tensor, that is, the original data to be normalized.
 
 * @par Outputs:
-* @li sum: A 1D tensor of type float32 for SUM reduced "x". It represents the sum of the input tensor "x" on the C axis.
+* @li sum: A 1D tensor of type float32 for SUM reduced "x". It represents the sum of "x" over all axes except C.
 * The shape of sum is consistent with the C axis of "x". Has the same format as "x".
 * @li square_sum: A 1D tensor of type float32 for SUMSQ reduced "x". It represents the sum of squares of the input
-tensor "x" on the C axis.
-* The shape of sum is consistent with the C axis of "x". Has the same format as "x". \n
+* tensor "x" over all axes except C.
+* The shape of square_sum is consistent with the C axis of "x". Has the same format as "x". \n
 
 * @attention Constraints:
 * This operator is a BatchNorm fusion operator for updating the moving
