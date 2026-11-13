@@ -30,7 +30,6 @@ public:
     ge::graphStatus CreatePostCubeNode(const string& pass_name, ge::Graph& graph, std::vector<ge::GNodePtr>& new_nodes);
 
     void ClearPasses();
-    void ResetNotSupportPostCubeFusionAttr();
     std::string GetIsaArchVersionStr(const ISAArchVersion isa_arch_version);
     void ParseIsaArchVersion(fe::PlatFormInfos& platform_infos);
     bool ReadConfig(const ge::CustomPassContext& context);

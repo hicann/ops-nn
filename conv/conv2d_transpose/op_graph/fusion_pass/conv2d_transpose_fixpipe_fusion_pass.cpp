@@ -698,7 +698,6 @@ PostCubeFusionResult Conv2DTransposeFixpipeFusionPass::PostCubeFusionImpl(ge::Gr
     // find engine", so every post-creation check is derived from the selected passes and the
     // original graph before the graph is changed
     if (!CheckPostCubePassesPrepared(convTransposeNode, postCubeUtils.m_matchpasses_)) {
-        postCubeUtils.ResetNotSupportPostCubeFusionAttr();
         OP_LOGW(GetNodeType().GetString(), "PostCube case not supported before creation, skip this node.");
         return PostCubeFusionResult::kSkipNode;
     }
@@ -1425,12 +1424,12 @@ Status Conv2DTransposeFixpipeFusionPass::Run(GraphPtr& graph, CustomPassContext&
         OP_CHECK_IF(!GetNodeAttrs(node), OP_LOGE(GetNodeType().GetString(), "GetNodeAttrs failed."), return FAILED);
 
         // mark the multiple output ability on the conv2dtranspose node before the postcube
-        // fusion so that PostCubeUtils creates one FixPipe branch per output path: without the
-        // ability attr PostCubeUtils silently prunes the multi-consumer branches at the DFS
-        // stage, the pre-creation skip checks in CheckPostCubePassesPrepared never see the
-        // postcube/other consumers and the plain conversion below would change the conv output
-        // dtype (int32 -> int8) while the unfolded consumers still expect the original dtype
-        PostCubeComm::SetPostCubeAbilityAttr(std::make_shared<GNode>(node), PostCubeAbilityType::SupportMultipleOutput);
+        // fusion so that PostCubeUtils creates one FixPipe branch per output path (migrated
+        // from the updated fixpipe pass, the cube vector fuse soc provides the ability)
+        if (IsCubeVectorFusePlatform()) {
+            PostCubeComm::SetPostCubeAbilityAttr(std::make_shared<GNode>(node),
+                                                 PostCubeAbilityType::SupportMultipleOutput);
+        }
 
         // A16W8 weight trans scenario flag, the RearrangeA16W8WeightFzOp host node is rebuilt in
         // Replacement when the flag is set

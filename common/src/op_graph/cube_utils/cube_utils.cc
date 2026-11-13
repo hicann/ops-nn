@@ -359,13 +359,13 @@ bool PostCubeUtils::NeedToCutPass(PostCubePassInfo& m_pass) const
         return true;
     }
     PostCubeNodeInfo node = m_pass.m_opnodes[m_pass.m_opnodes.size() - 1];
-    if (PostCubeComm::GetOutDataNodesSize(node.GetNode()) == 0) {
+    if (node.GetNode()->GetOutputsSize() == 0) {
         OPS_LOG_D("PostCube", "GetOutDataNodes.empty");
         m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKNOWN
         return false;
     }
     std::string cube_type = GetMergeInputNodeType(m_pass.m_opnodes[0].GetNode());
-    if (cube_type == kConv2DTransposeD && PostCubeComm::GetOutDataNodesSize(m_pass.m_opnodes[0].GetNode()) > 1) {
+    if (cube_type == kConv2DTransposeD && m_pass.m_opnodes[0].GetNode()->GetOutputsSize() > 1) {
         if (GNodeGetType(m_pass.m_opnodes[1].GetNode()) == kAscendQuantAsc ||
             GNodeGetType(m_pass.m_opnodes[1].GetNode()) == kAscendDequantAsc) {
             OPS_LOG_D(
@@ -383,7 +383,7 @@ bool PostCubeUtils::NeedToCutPass(PostCubePassInfo& m_pass) const
             return true;
         }
     }
-    if (cube_type != CONV2D && PostCubeComm::GetOutDataNodesSize(node.GetNode()) > 1) {
+    if (cube_type != CONV2D && node.GetNode()->GetOutputsSize() > 1) {
         m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKNOWN
         return false;
     }
@@ -797,7 +797,7 @@ void PostCubeUtils::GenerateMatchedPassesImpl(PostCubeNodeInfo& node, PostCubeMa
               node.GetBelongUnitType().c_str(), tmp_cur_index);
 
     GenerateMatchedPassesFromStack(fp_mch_params.cur_pass, fp_mch_params.post_cube_index++, tmp_cur_index);
-    if (PostCubeComm::GetOutDataNodesSize(post_cube_node) > 1) {
+    if (post_cube_node->GetOutputsSize() > 1) {
         if (!PostCubeComm::CheckPostCubeAbilityAttr(node.GetCubeNode(), PostCubeAbilityType::SupportMultipleOutput)) {
             OPS_LOG_D("PostCube",
                       "GenerateMatchedPassesImpl node does not support multiple output post_cube name = %s type = %s",
@@ -922,7 +922,7 @@ ge::GNodePtr PostCubeUtils::FindBranchNode(const ge::GNodePtr& cube_node, int32_
         return cube_node;
     }
     for (int32_t i = 1; i < min_length; i++) {
-        if (PostCubeComm::GetOutDataNodesSize(m_matchpasses_[0].m_opnodes[i].GetNode()) > 1) {
+        if (m_matchpasses_[0].m_opnodes[i].GetNode()->GetOutputsSize() > 1) {
             return m_matchpasses_[0].m_opnodes[i].GetNode();
         }
     }
@@ -1052,7 +1052,7 @@ void PostCubeUtils::GeneratePass(const ge::GNodePtr& cube_node, const ge::GNodeP
 void PostCubeUtils::GeneratePostCubePasses(std::vector<std::vector<ge::GNodePtr>>& matched_pass,
                                            std::map<ge::GNodePtr, PostCubeNodeInfo>& post_cube_info)
 {
-    std::vector<PostCubePassInfo> rebuildPasses;
+    m_matchpasses_.clear();
     uint32_t index_count = 0;
     for (auto& pass : matched_pass) {
         if (pass.size() < kPassMinSize) {
@@ -1069,17 +1069,8 @@ void PostCubeUtils::GeneratePostCubePasses(std::vector<std::vector<ge::GNodePtr>
             post_cube_pass.unit_index = unit_index;
         }
         index_count++;
-        rebuildPasses.emplace_back(post_cube_pass);
+        m_matchpasses_.emplace_back(post_cube_pass);
     }
-    // 事务性重建：第二轮分支重构结果为空时保留第一轮剪枝结果（canndev 门禁剪枝的产物——
-    // 无多输出能力的cube已在遍历期剪枝，到达此处的重叠候选均属多输出使能平台，其双FixPipe
-    // 连线各自从cube重算并认领各自尾节点的边，回退后仍正确）。重建清空会导致融合候选丢失、
-    // 融合机会退化为无融合（conv2d不再被ExtendConv2D替换而暴露给后续错误转换）
-    if (rebuildPasses.empty()) {
-        OPS_LOG_W("PostCube", "PostCube sec-round rebuild result is empty, keep first-round passes.");
-        return;
-    }
-    m_matchpasses_ = std::move(rebuildPasses);
 }
 
 void PostCubeUtils::ChangeOrInsertPass(PostCubePassInfo& tmp_pass)
@@ -1936,21 +1927,14 @@ ge::graphStatus PostCubeUtils::CreatePostCubeNode(const string& pass_name, ge::G
     OPS_LOG_D("PostCube", "Fusion 4");
     if (InitInput() != ge::GRAPH_SUCCESS) {
         OPS_LOG_W("PostCube", "The initialization of the post_cube node construction strategy was not successful");
-        ResetNotSupportPostCubeFusionAttr();
         return ge::GRAPH_FAILED;
     }
     ge::graphStatus res = FusionImpl(pass_name, *cur_head_info_, graph, new_nodes);
-    ResetNotSupportPostCubeFusionAttr();
-    return res;
-}
-
-void PostCubeUtils::ResetNotSupportPostCubeFusionAttr()
-{
     for (auto& node : not_support_post_cube_fusion_nodes_) {
         bool not_support = false;
         GNodeSetAttr(node, kNotSupportPostCubeFusion, not_support);
     }
-    not_support_post_cube_fusion_nodes_.clear();
+    return res;
 }
 // api end
 
