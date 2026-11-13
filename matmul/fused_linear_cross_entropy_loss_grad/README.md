@@ -112,3 +112,4 @@ $$
 | 调用方式   | 调用样例                              | 说明                                |
 |-----------|-------------------------------------|-------------------------------------|
 | aclnn调用 | [test_aclnn_fused_linear_cross_entropy_loss_grad](./examples/test_aclnn_fused_linear_cross_entropy_loss_grad.cpp) | 通过aclnnFusedLinearCrossEntropyLossGrad接口方式调用FusedLinearCrossEntropyLossGrad算子。 |
+| PyTorch接口 | - | 通过torch_npu的npu_fused_linear_cross_entropy_loss_with_max_sum_backward接口调用FusedLinearCrossEntropyLossGrad算子。**需torch_npu 2.12.0及以上版本**。 |

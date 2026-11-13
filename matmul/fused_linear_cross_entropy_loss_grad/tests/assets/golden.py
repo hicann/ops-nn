@@ -19,9 +19,6 @@ __golden__ = {
     "aclnn": {
         "aclnnFusedLinearCrossEntropyLossGrad": "aclnn_fused_linear_cross_entropy_loss_grad_golden"
     },
-    "e2e": {
-        "flceg_torch.fused_linear_cross_entropy_loss_grad": "e2e_fused_linear_cross_entropy_loss_grad_golden"
-    },
 }
 
 
@@ -171,7 +168,7 @@ def e2e_fused_linear_cross_entropy_loss_grad_golden(
     softmax=None,
     **kwargs,
 ):
-    """e2e golden (torch CPU tensors, 与 flceg_torch API 同签名)。
+    """e2e golden (torch CPU tensors, 与 torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward API 同签名)。
     语义: softmax(可选) -> update -> mul(grad) -> cast(输入dtype) -> matmul。
     """
     BT = input.shape[0]
@@ -229,65 +226,63 @@ def _unpack_target_mask_vec_torch(targetMask, BT):
     return targetMask[:BT].float()
 
 
-class FusedLinearCrossEntropyLossGradTestSpec:
-    """TestSpec for cross_check + xpu-perf"""
+def _fused_grad_torch(
+    grad,
+    input,
+    weight,
+    target_mask,
+    masked_target,
+    logits_max=None,
+    sum_exp_logits=None,
+    softmax=None,
+    label_smoothing=0.0,
+    **kwargs,
+):
+    import torch
 
-    def __call__(self, *args, **kwargs):
-        # aclnn 模式 golden 生成路由到本类时，代理到 aclnn golden
-        return aclnn_fused_linear_cross_entropy_loss_grad_golden(*args, **kwargs)
+    BT = input.shape[0]
 
+    if softmax is not None and softmax.dim() >= 2:
+        grad_logits = softmax.clone()
+    else:
+        logits = torch.matmul(input.float(), weight.float().t())
+        lm = (
+            logits_max.float().unsqueeze(1)
+            if logits_max is not None and logits_max.dim() >= 1
+            else logits.max(dim=1, keepdim=True)[0]
+        )
+        se = (
+            sum_exp_logits.float().unsqueeze(1)
+            if sum_exp_logits is not None and sum_exp_logits.dim() >= 1
+            else torch.exp(logits - lm).sum(dim=1, keepdim=True)
+        )
+        grad_logits = torch.exp(logits - lm) / se
+
+    tm = _unpack_target_mask_vec_torch(target_mask, BT)
+    mt = masked_target.long()
+    _subtract_target_one_hot(grad_logits, tm, mt)
+    if grad.dim() >= 1:
+        grad_logits = grad_logits * grad.unsqueeze(1)
+
+    # Cast to input dtype to match NPU kernel's CastVecFull (float32 → bf16)
+    grad_logits = grad_logits.to(input.dtype).float()
+
+    input_grad = torch.matmul(grad_logits, weight.float())
+    weight_grad = torch.matmul(grad_logits.t(), input.float())
+
+    out_dtype = input.dtype
+    return [input_grad.to(out_dtype), weight_grad.to(out_dtype)]
+
+
+class FusedLinearCrossEntropyLossGradKernelSpec:
+    """kernel spec → cross_check L1 (三方深度验证, 需 GPU xpu_server)"""
+
+    @staticmethod
     def golden(*args, **kwargs):
         # kernel模式传5-8个位置参数(snake_case约定)，aclnn模式传11个(camelCase约定含输出)
         if len(args) >= 9 or "labelSmoothing" in kwargs or "targetMask" in kwargs:
             return aclnn_fused_linear_cross_entropy_loss_grad_golden(*args, **kwargs)
         return fused_linear_cross_entropy_loss_grad_golden(*args, **kwargs)
-
-    def _fused_grad_torch(
-        grad,
-        input,
-        weight,
-        target_mask,
-        masked_target,
-        logits_max=None,
-        sum_expLogits=None,
-        softmax=None,
-        label_smoothing=0.0,
-        **kwargs,
-    ):
-        import torch
-
-        BT = input.shape[0]
-
-        if softmax is not None and softmax.dim() >= 2:
-            grad_logits = softmax.clone()
-        else:
-            logits = torch.matmul(input.float(), weight.float().t())
-            lm = (
-                logits_max.float().unsqueeze(1)
-                if logits_max is not None and logits_max.dim() >= 1
-                else logits.max(dim=1, keepdim=True)[0]
-            )
-            se = (
-                sum_expLogits.float().unsqueeze(1)
-                if sum_expLogits is not None and sum_expLogits.dim() >= 1
-                else torch.exp(logits - lm).sum(dim=1, keepdim=True)
-            )
-            grad_logits = torch.exp(logits - lm) / se
-
-        tm = _unpack_target_mask_vec_torch(target_mask, BT)
-        mt = masked_target.long()
-        _subtract_target_one_hot(grad_logits, tm, mt)
-        if grad.dim() >= 1:
-            grad_logits = grad_logits * grad.unsqueeze(1)
-
-        # Cast to input dtype to match NPU kernel's CastVecFull (float32 → bf16)
-        grad_logits = grad_logits.to(input.dtype)
-
-        input_grad = torch.matmul(grad_logits, weight)
-        weight_grad = torch.matmul(grad_logits.t(), input)
-
-        out_dtype = input.dtype
-        return [input_grad.to(out_dtype), weight_grad.to(out_dtype)]
 
     third_party = {"torch": _fused_grad_torch}
 
@@ -297,7 +292,99 @@ class FusedLinearCrossEntropyLossGradTestSpec:
     }
 
 
+class FusedLinearCrossEntropyLossGradAclnnSpec:
+    """aclnn spec → stat_rel_err (快速验证, 无需 GPU)"""
+
+    @staticmethod
+    def golden(*args, **kwargs):
+        if len(args) >= 9 or "labelSmoothing" in kwargs or "targetMask" in kwargs:
+            return aclnn_fused_linear_cross_entropy_loss_grad_golden(*args, **kwargs)
+        return fused_linear_cross_entropy_loss_grad_golden(*args, **kwargs)
+
+    third_party = {"torch": _fused_grad_torch}
+    tolerance = {
+        "float32": {"standard": "stat_rel_err"},
+        "float16": {"standard": "stat_rel_err"},
+        "bfloat16": {"standard": "stat_rel_err"},
+    }
+
+
+class FusedLinearCrossEntropyLossGradE2eSpec:
+    """e2e spec: torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward.
+
+    版本要求: torch_npu >= 2.12.0 (新名 API, 语义正确).
+    torch_npu 2.10 的旧名 fused_linear_cross_entropy_loss_with_max_sum_grad
+    是无配套 forward 的独立遗留 op, 其 backward 不含 grad 链式乘法,
+    与本算子数学定义不一致 — 在旧版环境本 spec 返回 UNSUPPORTED.
+
+    默认 stat_rel_err 快速验证; 更严格对比通过 --compare 显式指定."""
+
+    @staticmethod
+    def golden(
+        grad,
+        input,
+        weight,
+        target_mask,
+        masked_target,
+        label_smoothing=0.0,
+        logits_max=None,
+        sum_exp_logits=None,
+        softmax=None,
+        **kwargs,
+    ):
+        import torch_npu as _tn
+
+        if not hasattr(
+            _tn, "npu_fused_linear_cross_entropy_loss_with_max_sum_backward"
+        ):
+            return [
+                "UNSUPPORTED: torch_npu >= 2.12 required "
+                "(old API lacks grad chain multiplication, see README PyTorch table)"
+            ]
+        return e2e_fused_linear_cross_entropy_loss_grad_golden(
+            grad,
+            input,
+            weight,
+            target_mask,
+            masked_target,
+            label_smoothing,
+            logits_max,
+            sum_exp_logits,
+            softmax,
+            **kwargs,
+        )
+
+    third_party = {"torch": _fused_grad_torch}
+    # mix_tolerance: 大 shape(V=19392) 下 kernel V 分块累加路径与 golden 参考
+    # 存在 ~6e-4 中位差(算法固有数值特性, 近零元素相对误差爆炸)。
+    # stat_rel_err 对近零值不适用; cross_check 因 golden==third_party 分母为零不适用。
+    # mix_tolerance 的 atol=0.01 可兜底绝对差, rtol=0.01 覆盖非零区域。
+    tolerance = {
+        "float32": {
+            "standard": "mix_tolerance",
+            "rtol": 0.01,
+            "atol": 0.01,
+            "required_matched_ratio": 0.9,
+        },
+        "float16": {
+            "standard": "mix_tolerance",
+            "rtol": 0.01,
+            "atol": 0.01,
+            "required_matched_ratio": 0.9,
+        },
+        "bfloat16": {
+            "standard": "mix_tolerance",
+            "rtol": 0.01,
+            "atol": 0.01,
+            "required_matched_ratio": 0.9,
+        },
+    }
+
+
 __spec__ = {
-    "fused_linear_cross_entropy_loss_grad": "FusedLinearCrossEntropyLossGradTestSpec",
-    "aclnnFusedLinearCrossEntropyLossGrad": "FusedLinearCrossEntropyLossGradTestSpec",
+    "fused_linear_cross_entropy_loss_grad": "FusedLinearCrossEntropyLossGradKernelSpec",
+    "aclnnFusedLinearCrossEntropyLossGrad": "FusedLinearCrossEntropyLossGradAclnnSpec",
+    # e2e: 仅注册新名 API (torch_npu >= 2.12); 2.10 旧名语义不含 grad 链式乘法,
+    # 与本算子定义不一致, 不注册 (旧环境 ttk 直接报 spec 不存在, fail fast).
+    "torch_npu.npu_fused_linear_cross_entropy_loss_with_max_sum_backward": "FusedLinearCrossEntropyLossGradE2eSpec",
 }

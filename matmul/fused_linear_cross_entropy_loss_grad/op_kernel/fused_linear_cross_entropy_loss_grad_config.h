@@ -47,7 +47,13 @@ constexpr uint32_t BUFFER_NUM = 2;
 constexpr uint32_t SIZE_2 = 2;
 constexpr uint32_t SIZE_3 = 3;
 constexpr uint32_t SIZE_8 = 8;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+// mem_friendly 模板 per-core workspace 数组的编译期容量。
+// 覆盖 3510 场景 28-36 AIC。
+constexpr uint32_t SIZE_MAX_AIC_NUM = 36;
+#else
 constexpr uint32_t SIZE_MAX_AIC_NUM = 30;
+#endif
 constexpr uint32_t SIZE_32 = 32;
 constexpr uint32_t SIZE_64 = 64;
 constexpr uint32_t SIZE_BASE_TASK_MAX = 65536 * 3;
@@ -57,7 +63,7 @@ constexpr uint8_t CVModeId = 2;
 constexpr float NEG = -1.0f;
 
 #ifdef __CCE_KT_TEST__
-void EmptyTestFunc(){};
+void EmptyTestFunc() {};
 #endif // __CCE_KT_TEST__
 
 } // namespace FusedLinearCrossEntropyLossGradNS

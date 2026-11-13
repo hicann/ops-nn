@@ -114,3 +114,4 @@ $$
 | Invocation method   | Invocation sample                              | Description                                |
 |-----------|-------------------------------------|-------------------------------------|
 | aclnn invocation | [test_aclnn_fused_linear_cross_entropy_loss_grad](./examples/test_aclnn_fused_linear_cross_entropy_loss_grad.cpp) | Invokes the FusedLinearCrossEntropyLossGrad operator through the aclnnFusedLinearCrossEntropyLossGrad interface. |
+| PyTorch interface | - | Invokes the FusedLinearCrossEntropyLossGrad operator through the torch_npu interface npu_fused_linear_cross_entropy_loss_with_max_sum_backward. **torch_npu 2.12.0 or later is required**. |
