@@ -33,6 +33,9 @@ using namespace ge;
 using std::string;
 using std::vector;
 
+// Both outputs are always FP32, including when the input is FP16.
+constexpr DataType OUTPUT_DTYPE = DT_FLOAT;
+
 string GetTime()
 {
     time_t timep;
@@ -145,7 +148,7 @@ bool CheckOutputs(const ExampleOptions& options, const vector<Tensor>& outputs)
     for (size_t outputIndex = 0; outputIndex < outputs.size(); ++outputIndex) {
         const auto desc = outputs[outputIndex].GetTensorDesc();
         const auto& expected = outputIndex == 0 ? sums : squares;
-        if (desc.GetDataType() != DT_FLOAT || desc.GetFormat() != FORMAT_ND ||
+        if (desc.GetDataType() != OUTPUT_DTYPE || desc.GetFormat() != FORMAT_ND ||
             desc.GetShape().GetDims() != expectedShape || outputs[outputIndex].GetData() == nullptr ||
             outputs[outputIndex].GetSize() != expected.size() * sizeof(float)) {
             printf("Output %zu has an unexpected descriptor or buffer size\n", outputIndex);
@@ -165,8 +168,23 @@ bool CheckOutputs(const ExampleOptions& options, const vector<Tensor>& outputs)
     return true;
 }
 
+ge::graphStatus InferExampleOutputFormats(ge::Operator& op)
+{
+    // Keep the declared ND outputs through GE's format propagation stage.
+    for (uint32_t index = 0; index < 2; ++index) {
+        auto desc = op.GetOutputDesc(index);
+        desc.SetFormat(FORMAT_ND);
+        desc.SetOriginFormat(FORMAT_ND);
+        if (op.UpdateOutputDesc(index, desc) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 int32_t RunExample(const ExampleOptions& options)
 {
+    const ge::InferFormatFuncRegister outputFormatRegistration("INTrainingReduceV2", InferExampleOutputFormats);
     Graph graph("tc_ge_irrun_in_training_reduce_v2");
     auto xData = op::Data("placeholder_x").set_attr_index(0);
     TensorDesc xDesc(ge::Shape(options.shape), options.format, options.dtype);
@@ -179,6 +197,19 @@ int32_t RunExample(const ExampleOptions& options)
     }
     auto reduceOp = op::INTrainingReduceV2("in_training_reduce_v2");
     reduceOp.set_input_x(xData);
+    // Both outputs use ND storage, independently of the input's channel layout.
+    const bool channelLast = options.format == FORMAT_NHWC || options.format == FORMAT_NDHWC;
+    const size_t channelAxis = channelLast ? options.shape.size() - 1 : 1;
+    vector<int64_t> outputShape(options.shape.size(), 1);
+    outputShape[0] = options.shape[0];
+    outputShape[channelAxis] = options.shape[channelAxis];
+    TensorDesc outputDesc(ge::Shape(outputShape), FORMAT_ND, OUTPUT_DTYPE);
+    outputDesc.SetOriginFormat(FORMAT_ND);
+    if (reduceOp.update_output_desc_sum(outputDesc) != ge::GRAPH_SUCCESS ||
+        reduceOp.update_output_desc_square_sum(outputDesc) != ge::GRAPH_SUCCESS) {
+        printf("Set output descriptors failed\n");
+        return FAILED;
+    }
     const vector<Operator> inputs = {xData};
     const vector<Operator> outputs = {reduceOp};
     graph.SetInputs(inputs).SetOutputs(outputs);
