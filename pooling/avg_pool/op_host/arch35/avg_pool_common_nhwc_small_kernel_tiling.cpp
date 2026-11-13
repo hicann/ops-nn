@@ -116,9 +116,8 @@ void AvgPoolCommonNHWCSmallKernelTiling::InitializationVars()
     oneBlockNum_ = platform::GetUbBlockSize(context_) / inputData_.dtypeSize;
     // 并发度
     paraNum_ = platform::GetVRegSize(context_) / DIGIT_FOUR / inputData_.dtypeSize;
-    // gather 路径 kernel 侧按 wFactor = VRegSize / sizeof(index) / channels 切分, 要求 channels * dtypeSize
-    // 不超过一个向量寄存器, 否则 wFactor 为 0; VRegSize 小于 NOT_GATHER_THRESHOLD 的芯片(如 5162)需收紧门限
-    notGatherThreshold_ = std::min(NOT_GATHER_THRESHOLD, static_cast<int64_t>(platform::GetVRegSize(context_)) + 1);
+    // gather 需 channels <= maxGatherScatterElm_（= repeatElm，b8/b16 用 uint16 索引），否则 kernel wFactor=0 除零
+    notGatherThreshold_ = std::min(NOT_GATHER_THRESHOLD, maxGatherScatterElm_ * inputData_.dtypeSize + 1);
     CalcDivsiorUbSize(isPadding_);
     availableUb_ = static_cast<int64_t>(ubSize_ - divisorUbSize_ - UB_RESVERVED_SIZE) / inputData_.dtypeSize;
 }

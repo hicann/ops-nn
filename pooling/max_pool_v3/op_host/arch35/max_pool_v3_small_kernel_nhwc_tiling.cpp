@@ -71,6 +71,9 @@ void MaxPoolV3NHWCSmallKernelTiling::InitializationVars()
     oneBlockNum_ = Ops::Base::GetUbBlockSize(context_) / dtypeSize;
     // 并发度
     paraNum_ = Ops::Base::GetVRegSize(context_) / DIGIT_FOUR / dtypeSize;
+    // gather 需 channels <= maxGatherScatterElm_（= repeatElm，IndexTypeGet: b8/b16→uint16），否则 kernel wFactor=0
+    // 除零
+    notGatherThreshold_ = std::min(NOT_GATHER_THRESHOLD, maxGatherScatterElm_ * dtypeSize);
 }
 
 bool MaxPoolV3NHWCSmallKernelTiling::IsCapable()
@@ -102,7 +105,7 @@ int64_t MaxPoolV3NHWCSmallKernelTiling::CalcBufferSize(int64_t inRows, int64_t i
 {
     int64_t tmpInDataBufferSize = inRows * Ops::Base::CeilAlign(inCols * inputData.channels, oneBlockNum_);
     int64_t tmpOutDataBufferSize = Ops::Base::CeilAlign(outRows * outCols * inputData.channels, oneBlockNum_);
-    if (inputData.channels * dtypeSize > NOT_GATHER_THRESHOLD) {
+    if (inputData.channels * dtypeSize > notGatherThreshold_) {
         tmpInDataBufferSize = inRows * inCols * Ops::Base::CeilAlign(inputData.channels, oneBlockNum_);
         tmpOutDataBufferSize = outRows * outCols * Ops::Base::CeilAlign(inputData.channels, oneBlockNum_);
     }
@@ -298,7 +301,7 @@ void MaxPoolV3NHWCSmallKernelTiling::DoBlockTiling()
     }
     inUbSize_ = ubFactorN_ * inRows * Ops::Base::CeilAlign(inCols * inputData.channels, oneBlockNum_);
     outUbSize_ = ubFactorN_ * Ops::Base::CeilAlign(outUbFactorW_ * outUbFactorH_ * inputData.channels, oneBlockNum_);
-    if (inputData.channels * dtypeSize > NOT_GATHER_THRESHOLD) {
+    if (inputData.channels * dtypeSize > notGatherThreshold_) {
         inUbSize_ = ubFactorN_ * inRows * inCols * Ops::Base::CeilAlign(inputData.channels, oneBlockNum_);
         outUbSize_ = ubFactorN_ * outUbFactorW_ * outUbFactorH_ *
                      Ops::Base::CeilAlign(inputData.channels, oneBlockNum_);
@@ -312,7 +315,7 @@ void MaxPoolV3NHWCSmallKernelTiling::DoBlockTiling()
 void MaxPoolV3NHWCSmallKernelTiling::CalcGatherMode()
 {
     // c轴较大时，ub内c轴对齐存储计算
-    if (inputData.channels * dtypeSize > NOT_GATHER_THRESHOLD) {
+    if (inputData.channels * dtypeSize > notGatherThreshold_) {
         gatherMode_ = NOT_GATHER;
         return;
     }
@@ -328,7 +331,7 @@ void MaxPoolV3NHWCSmallKernelTiling::CalcGatherMode()
 
 void MaxPoolV3NHWCSmallKernelTiling::CalcCopyMode()
 {
-    if (inputData.channels * dtypeSize > NOT_GATHER_THRESHOLD) {
+    if (inputData.channels * dtypeSize > notGatherThreshold_) {
         copyMode_ = COPY_SINGLE_ROW;
         return;
     }
