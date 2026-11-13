@@ -19,7 +19,7 @@
 #include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_init_output_arch35.h"
 #include "conv3d_backprop_filter_v2/conv3d_dw_v2_basic_block_arch35.h"
 #include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
-#include "conv3d_backprop_filter_v2/conv2d_dw_winograd.h"
+#include "conv3d_backprop_filter_v2/conv3d_dw_winograd.h"
 #include "conv3d_backprop_filter_v2/conv3d_dw_dload.h"
 
 using namespace AscendC;
@@ -62,8 +62,9 @@ __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR f
     // 1982的AscendC::SyncAll()在camodel中不生效，因此在单算子运行camodel时需注释清零动作；
 
     if constexpr (winogradTilingFlag != TPL_WINOGRAD_DISABLE) {
+        // tiling侧仅放通pad小于kd的场景, 每个kdIdx切片均存在合法dout, y全部由计算写入, 无需预清零
         TPipe pipe;
-        CONV3D_DW_INPUT_RUN_OP(Conv2dDwWinograd<DTYPE_X, DTYPE_Y, winogradTilingFlag, winogradResidentFlag>);
+        CONV3D_DW_INPUT_RUN_OP(Conv3dDwWinograd<DTYPE_X, DTYPE_Y, winogradTilingFlag, winogradResidentFlag>);
         return;
     }
 

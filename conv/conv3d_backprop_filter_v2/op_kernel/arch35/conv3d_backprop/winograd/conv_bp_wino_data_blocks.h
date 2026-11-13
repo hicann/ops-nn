@@ -32,12 +32,15 @@ using BpUtils::BlockIterDirection;
 using BpUtils::CIN;
 using BpUtils::COUT;
 using BpUtils::GetBlockFromSwizzle2D;
+using BpUtils::GetBlockFromSwizzle2DFlatten;
 using BpUtils::SwizzleTopology2D;
 
 template <typename TilingT>
 class BatchTileKIterator {
 public:
-    // 支持切K,K的维度为[batch,CeilDiv(tileH,SingleShapeTileH)] //当前简单点不切tileW
+    // 支持切K,K的维度为[dout,batch,CeilDiv(tileH,SingleShapeTileH)] //当前简单点不切tileW
+    // d放在k的最外层: 单个d内的batch*tileH全部耗尽后才切下一个d, 保证输入D切片的读取局部性
+    // (d轴上界由kBegin+kLength隐含约束, k轴总量即dout*batch*hSteps, 无需单独传入dCnt)
     __aicore__ inline explicit BatchTileKIterator(uint32_t batch, uint32_t tilesH, uint32_t tilesW, uint32_t kBegin,
                                                   uint32_t kLength)
         : batch_(batch),
@@ -45,6 +48,7 @@ public:
           tilesW_(tilesW),
           hSteps_(Ops::Base::CeilDiv(tilesH, SingleShapeTileH)),
           wSteps_(Ops::Base::CeilDiv(tilesW, SingleShapeTileW)),
+          dSteps_(batch * Ops::Base::CeilDiv(tilesH, SingleShapeTileH)),
           kBegin_(kBegin),
           kLength_(kLength)
     {
@@ -90,12 +94,26 @@ public:
 
     __aicore__ inline uint32_t BatchIdx() const { return batchIdx_; }
 
+    __aicore__ inline uint32_t DIdx() const { return dIdx_; }
+
+    // d折叠后驻留staging的n维 = dIdx * batch + batchIdx, 所有D切片共享同一份staging布局
+    __aicore__ inline uint32_t NIdx() const { return dIdx_ * batch_ + batchIdx_; }
+
+    // fmap侧合并n索引: NDC1HWC0布局下fmap切片的n维 = (dIdx + kdIdx - padF) * batch + batchIdx
+    // (fmap的D切片索引随kdIdx偏移, dy切片索引即NIdx); 仅在合法k步进调用(dIdx + kdIdx >= padF保证非负)
+    __aicore__ inline uint32_t FmapNIdx(uint32_t kdIdx, uint32_t padF) const
+    {
+        return (dIdx_ + kdIdx - padF) * batch_ + batchIdx_;
+    }
+
 private:
     __aicore__ inline void Update(uint32_t processedSteps, uint32_t tileWIdx)
     {
         uint32_t kStep = processedSteps + kBegin_;
-        batchIdx_ = kStep / hSteps_;
-        uint32_t singleShapeTileHIdx = kStep - batchIdx_ * hSteps_;
+        dIdx_ = kStep / dSteps_;
+        uint32_t batchHStep = kStep - dIdx_ * dSteps_;
+        batchIdx_ = batchHStep / hSteps_;
+        uint32_t singleShapeTileHIdx = batchHStep - batchIdx_ * hSteps_;
         tileHIdx_ = singleShapeTileHIdx * SingleShapeTileH;
         tileWIdx_ = tileWIdx;
         uint32_t singleShapeTileWIdx = tileWIdx_ / SingleShapeTileW;
@@ -109,11 +127,13 @@ private:
     const uint32_t batch_;
     const uint32_t hSteps_;
     const uint32_t wSteps_;
+    const uint32_t dSteps_;
     const uint32_t kBegin_;
     const uint32_t kLength_;
     uint32_t tileHIdx_ = 0;
     uint32_t tileWIdx_ = 0;
     uint32_t batchIdx_ = 0;
+    uint32_t dIdx_ = 0;
     uint32_t tileKIdx_ = 0;
     uint32_t processedKStep_ = 0;
     bool end_ = false;
@@ -143,6 +163,12 @@ public:
     __aicore__ inline uint32_t TileKIdx() const { return kIter_.TileKIdx(); }
 
     __aicore__ inline uint32_t BatchIdx() const { return kIter_.BatchIdx(); }
+
+    __aicore__ inline uint32_t DIdx() const { return kIter_.DIdx(); }
+
+    __aicore__ inline uint32_t NIdx() const { return kIter_.NIdx(); }
+
+    __aicore__ inline uint32_t FmapNIdx(uint32_t kdIdx, uint32_t padF) const { return kIter_.FmapNIdx(kdIdx, padF); }
 
     __aicore__ inline void ResetSegmentsLimit() { count_ = 0; }
 
@@ -182,7 +208,6 @@ public:
                                               uint16_t singleShapeCout)
         : topology_(topology),
           tailBlockCnt_(tailBlockCnt),
-          topologyTailIter_((topology.TotalCnt() - tailBlockCnt) / GetBlockNum()),
           totalK_(totalK),
           cout_(cout),
           cin_(cin),
@@ -239,8 +264,10 @@ public:
 
         uint16_t tailBlockIdx = coreId - k.kGroupStartCoreId;
         k.tailBlockId = tailBlockIdx;
-        GetBlockFromSwizzle2D<MainBlockIterDir>(topology_, topologyTailIter_, tailBlockIdx, singleShapeCout_,
-                                                singleShapeCin_, cout_, cin_, cRange);
+        // 尾块索引折算网格内展平索引: 尾块数之外的核flattenIdx越界得到空块, 仅参与队列同步不参与计算
+        const uint32_t flattenIdx = topology_.TotalCnt() - tailBlockCnt_ + tailBlockIdx;
+        GetBlockFromSwizzle2DFlatten<MainBlockIterDir>(topology_, flattenIdx, singleShapeCout_, singleShapeCin_, cout_,
+                                                       cin_, cRange);
     }
 
 private:
@@ -248,7 +275,6 @@ private:
     const uint32_t singleShapeCin_;
     const SwizzleTopology2D topology_;
     const uint16_t tailBlockCnt_;
-    const uint32_t topologyTailIter_;
     const uint32_t totalK_;
     const uint32_t cout_;
     const uint32_t cin_;

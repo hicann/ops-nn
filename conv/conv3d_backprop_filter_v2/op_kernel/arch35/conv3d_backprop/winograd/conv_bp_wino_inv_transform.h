@@ -23,7 +23,10 @@ using namespace AscendC;
 namespace WinoInvBufUtil {
 // 需要申请26个CoutCin空间,16个用来放原始数据,9个用来放逆变换转置后的数据
 static constexpr uint32_t COUT_CIN_BUF_CNT = 25;
-static constexpr uint8_t CROSS_CORE_INTERLEAVE_MTE3_SYNC_FLAG = 11;
+// 不可使用11-14: 与AscendC::SyncAll内部FFTS保留flag(SYNC_AIC/AIV/AIC_AIV/AIV_ONLY_ALL)同号冲突,
+// 会打穿SyncAll屏障代际计数(尾轮kd子轮屏障失效); 本kernel的CrossCore flag占用(mode4): 0-6数据队列,
+// 7本握手(mode0, 与mode4的DN2NZ同号不冲突), 15为kernel入口
+static constexpr uint8_t CROSS_CORE_INTERLEAVE_MTE3_SYNC_FLAG = 7;
 
 template <typename TilingT>
 static constexpr __aicore__ inline uint32_t InvTransSinglePointBufSize()
@@ -72,11 +75,15 @@ public:
         v2mte2_[1] = pipe->AllocEventID<HardEvent::V_MTE2>();
     }
 
+    // kd信息随调用传入(不设独立set接口): kd为基本块维度, 当前基本块的kdIdx/kdTotal由上层解算
+    // segmentHasValidK: 本段是否存在合法k步进; 整段均为D轴pad区时本段无任何MmadCompute,
+    // Fixpipe搬出的是上一段残留L0C, 将输入槽清零后照常逆变换(逆变换线性, 零输入输出零),
+    // 本段对y/tailGm写零/加零, 与AIC/AIV间l0c2ubSync等队列同步配对保持不变
     template <bool WriteToTailGM = false, typename QueConfig>
     __aicore__ inline void TransformOutput(CVSyncQue<QueConfig>& l0c2ubSync, const CoutCinRange& localBlock,
                                            const uint32_t cinSrc, const LocalTensor<float>& vBuf,
                                            uint32_t tailKGroupIdx, uint32_t tailKGroups, uint16_t tailBlockId,
-                                           bool atomicAdd)
+                                           bool atomicAdd, uint32_t kdIdx, uint32_t kdTotal, bool segmentHasValidK)
     {
         constexpr uint16_t aivNums = AivNumInBlock();
         constexpr uint16_t singleBlockCout = BlockConfig::SingleShapeInvTransformCout<TilingT>() * aivNums;
@@ -102,6 +109,10 @@ public:
                 const uint32_t coutCin = processCoutLength * alignedCin;
 
                 LocalTensor<float> buf = vBuf[bufIdx_ * INV_TRANS_BUF_SIZE];
+                if (unlikely(!segmentHasValidK)) {
+                    Duplicate(buf, 0.0f,
+                              static_cast<int32_t>(F23_TRANSFORM_TILE_ELEMENTS_16 * INV_TRANS_SINGLE_POINT_BUF_SIZE));
+                }
                 ProcessInvTransform(reinterpret_cast<__ubuf__ float*>(buf.GetPhyAddr()), coutCin,
                                     Ops::Base::CeilDiv(coutCin, VL<float>()));
 
@@ -160,9 +171,9 @@ public:
                     }
                 } else {
                     if (hasGap) {
-                        CopyOut<true>(localBlock, processCoutLength, coutIdx, cinSrc, outBuf);
+                        CopyOut<true>(localBlock, processCoutLength, coutIdx, cinSrc, outBuf, kdIdx, kdTotal);
                     } else {
-                        CopyOut<false>(localBlock, processCoutLength, coutIdx, cinSrc, outBuf);
+                        CopyOut<false>(localBlock, processCoutLength, coutIdx, cinSrc, outBuf, kdIdx, kdTotal);
                     }
                 }
             }
@@ -177,7 +188,8 @@ public:
     }
 
     __aicore__ inline void TailInterleaveWrite(const CoutCinRange& localBlock, const uint32_t cinSrc,
-                                               uint32_t tailKGroup, uint32_t tailKGroupIdx, uint16_t tailBlockId)
+                                               uint32_t tailKGroup, uint32_t tailKGroupIdx, uint16_t tailBlockId,
+                                               uint32_t kdIdx, uint32_t kdTotal)
     {
         CrossCoreSetFlag<0, PIPE_MTE3>(WinoInvBufUtil::CROSS_CORE_INTERLEAVE_MTE3_SYNC_FLAG);
         CrossCoreWaitFlag<0, PIPE_MTE2>(WinoInvBufUtil::CROSS_CORE_INTERLEAVE_MTE3_SYNC_FLAG);
@@ -201,7 +213,7 @@ public:
         SetFlag<HardEvent::V_MTE3>(v2mte3_);
         WaitFlag<HardEvent::V_MTE3>(v2mte3_);
 
-        CopyOut<false>(localBlock, coutLength, localBlock.coutIdx + coutOffset, cinSrc, accumulateBuf);
+        CopyOut<false>(localBlock, coutLength, localBlock.coutIdx + coutOffset, cinSrc, accumulateBuf, kdIdx, kdTotal);
     }
 
     __aicore__ inline void BlockMTE2ByMTE3() const
@@ -271,17 +283,44 @@ private:
         return accumulateBuf;
     }
 
-    // HasGap=true: UB上行步长为alignedCin*9(有空隙), 需用LoopMode跳过空隙
-    // HasGap=false: UB上行步长为cin*9(无空隙, 紧凑), 用原始DataCopy逻辑
     template <bool HasGap = true>
     __aicore__ inline void CopyOut(const CoutCinRange& localBlock, uint32_t processCoutLength, uint32_t coutIdx,
-                                   uint32_t cinSrc, const LocalTensor<DstT>& buf)
+                                   uint32_t cinSrc, const LocalTensor<DstT>& buf, uint32_t kdIdx, uint32_t kdTotal)
     {
-        uint64_t gmOffset = (static_cast<uint64_t>(coutIdx) * cinSrc + localBlock.cinIdx) * KERNEL_3x3;
-        if constexpr (HasGap) {
+        const uint32_t kernelElems = (kdTotal > 1) ? KERNEL_3x3x3 : KERNEL_3x3;
+        const uint32_t kdOffset = kdIdx * KERNEL_3x3;
+        // y的GM布局: (cout, cinSrc, kd*9)，本kdIdx切片整体偏移kdIdx*9，行内kdIdx切片为每ci位置9个连续元素
+        uint64_t gmOffset = (static_cast<uint64_t>(coutIdx) * cinSrc + localBlock.cinIdx) * kernelElems + kdOffset;
+        if (kdTotal > 1) {
+            // kd>1时每次只需搬出逆变换结果中当前kdIdx的9元素切片，无法复用kd=1的整行搬运:
+            // 1) 不能用LoopMode: UB_TO_OUT方向srcStride要求32B对齐，而fp32下单切片仅36B；
+            //    且Compact模式srcStride被底层忽略(要求src连续)，行距36B无法表达
+            // 2) 因此拆成按co行循环: 同一co内各ci的9元素切片在UB中连续(每ci占9个)，
+            //    可用单条DataCopyPad(blockCount=cinLength, srcStride=0)搬出，
+            //    dst侧相邻ci块间隔=(kd*9-9)*sizeof(DstT)，远小于16bit dstStride字段上限65535B
+            // ubCinPitch区分两种UB行距: 主路径(HasGap)逆变换UB按16元素对齐有padding空隙；
+            // TailInterleaveWrite传入的是紧凑布局accumulateBuf(无padding)，行距=cinLength，
+            // 若不区分会导致后续co行源地址偏移错误
+            uint32_t ubCinPitch = HasGap ? Ops::Base::CeilAlign(localBlock.cinLength, C0<float>()) :
+                                           localBlock.cinLength;
+
+            DataCopyExtParams params;
+            // block=一个ci位置的kdIdx切片(9元素)；src连续填零区间，dst相邻块间隔=(kd*9-9)元素
+            params.blockCount = localBlock.cinLength;
+            params.blockLen = KERNEL_3x3 * sizeof(DstT);
+            params.srcStride = 0;
+            params.dstStride = static_cast<int64_t>(kernelElems - KERNEL_3x3) * sizeof(DstT);
+
+            uint64_t ubRowStride = static_cast<uint64_t>(ubCinPitch) * KERNEL_3x3;
+            uint64_t gmRowStride = static_cast<uint64_t>(cinSrc) * kernelElems;
+            for (uint32_t co = 0; co < processCoutLength; co++) {
+                DataCopyPad<DstT, PaddingMode::Compact>(yGm_[gmOffset + static_cast<uint64_t>(co) * gmRowStride],
+                                                        buf[co * ubRowStride], params);
+            }
+        } else if constexpr (HasGap) {
             uint32_t alignedCin = Ops::Base::CeilAlign(localBlock.cinLength, C0<float>());
             uint32_t ubRowBytes = alignedCin * KERNEL_3x3 * sizeof(DstT);
-            uint64_t gmRowBytes = static_cast<uint64_t>(cinSrc) * KERNEL_3x3 * sizeof(DstT);
+            uint64_t gmRowBytes = static_cast<uint64_t>(cinSrc) * kernelElems * sizeof(DstT);
 
             DataCopyExtParams params;
             params.blockCount = 1;
@@ -305,13 +344,16 @@ private:
             params.blockCount = processCoutLength;
             params.blockLen = localBlock.cinLength * KERNEL_3x3 * sizeof(DstT);
             params.srcStride = 0;
-            params.dstStride = (static_cast<uint64_t>(cinSrc) - localBlock.cinLength) * KERNEL_3x3 * sizeof(DstT);
+            params.dstStride = (static_cast<uint64_t>(cinSrc) * kernelElems -
+                                static_cast<uint64_t>(localBlock.cinLength) * KERNEL_3x3) *
+                               sizeof(DstT);
             DataCopyPad<DstT, PaddingMode::Compact>(yGm_[gmOffset], buf, params);
         }
     }
 
     static constexpr uint32_t KERNEL_3 = 3;
     static constexpr uint32_t KERNEL_3x3 = 9;
+    static constexpr uint32_t KERNEL_3x3x3 = 27;
 
     __simd_vf__ static inline void Accumulate(__ubuf__ float* buf, __ubuf__ float* accBuf, uint16_t blockCnt,
                                               uint32_t blockLength, uint16_t blockLoopCnt)

@@ -43,8 +43,11 @@ public:
         }
     }
 
+    // D轴计入totalTasks(最外层任务因子), 单次调用直接转置出NDC1HWC0结果:
+    // 输入布局(n, c, d, hw), 输出布局(d, n, c1, hw, c0);
+    // 不在外侧按D循环调用, 否则D间循环每次任务分核不连续
     __aicore__ inline void TransData2NC1HWC0(__gm__ T* in, __gm__ T* out, uint32_t n, uint32_t c, uint32_t h,
-                                             uint32_t w, bool disableInputL2Cache)
+                                             uint32_t w, bool disableInputL2Cache, uint32_t srcD = 1)
     {
         GlobalTensor<T> src, dst;
         src.SetGlobalBuffer(in);
@@ -61,12 +64,16 @@ public:
         const uint32_t blockC = blockC0 * C0<T>();
         const uint32_t cBlockCnt = Ops::Base::CeilDiv(c, blockC);
         const uint32_t hwBlockCnt = Ops::Base::CeilDiv(hw, blockHW);
-        const uint32_t totalTasks = cBlockCnt * hwBlockCnt * n;
+        const uint32_t perDTasks = cBlockCnt * hwBlockCnt * n;
+        const uint32_t totalTasks = perDTasks * srcD;
+        const uint32_t srcDStride = srcD * hw;
 
         for (uint32_t i = AicCoreId(); i < totalTasks; i += coreNum) {
-            uint32_t hwBlockIdx = i % hwBlockCnt;
-            uint32_t cBlockIdx = (i / hwBlockCnt) % cBlockCnt;
-            uint32_t nIdx = i / (hwBlockCnt * cBlockCnt);
+            uint32_t dIdx = i / perDTasks;
+            uint32_t localI = i % perDTasks;
+            uint32_t hwBlockIdx = localI % hwBlockCnt;
+            uint32_t cBlockIdx = (localI / hwBlockCnt) % cBlockCnt;
+            uint32_t nIdx = localI / (hwBlockCnt * cBlockCnt);
 
             uint32_t hwIdx = hwBlockIdx * blockHW;
             uint32_t cIdx = cBlockIdx * blockC;
@@ -78,11 +85,10 @@ public:
             LocalTensor<T> ub(TPosition::VECIN, pingPongFlag_ * UB_HALF_BYTES, UB_HALF_BYTES);
 
             if ASCEND_IS_AIC {
-                // dn2nz拷贝进l1没法直接考出去，得传到ub
-                CopyInDN2NZ2UB(src, l1, ub, c, hw, nIdx, cIdx, hwIdx, cLen, hwLen);
+                CopyInDN2NZ2UB(src, l1, ub, c, hw, nIdx, cIdx, hwIdx, cLen, hwLen, srcDStride, dIdx);
             }
             if ASCEND_IS_AIV {
-                CopyOutInAiv(dst, ub, c, hw, nIdx, cIdx, hwIdx, cLen, hwLen);
+                CopyOutInAiv(dst, ub, n, c, hw, nIdx, cIdx, hwIdx, cLen, hwLen, dIdx);
             }
 
             pingPongFlag_ = !pingPongFlag_;
@@ -135,7 +141,8 @@ private:
 
     __aicore__ inline void CopyInDN2NZ2UB(const GlobalTensor<T>& src, const LocalTensor<T>& l1,
                                           const LocalTensor<T>& ub, uint32_t c, uint32_t hw, uint32_t nIdx,
-                                          uint32_t cIdx, uint32_t hwIdx, uint32_t cLen, uint32_t hwLen)
+                                          uint32_t cIdx, uint32_t hwIdx, uint32_t cLen, uint32_t hwLen,
+                                          uint32_t srcDStride, uint32_t dIdx)
     {
         const TEventID mte12mte2 = mte12mte2_[pingPongFlag_];
         const TEventID mte22mte1 = mte22mte1_[pingPongFlag_];
@@ -146,12 +153,13 @@ private:
         dn2nz.dnNum = 1;
         dn2nz.dValue = cLen;
         dn2nz.nValue = hwLen;
-        dn2nz.srcDValue = hw;
+        // 输入布局(n, c, d, hw): n与c的步长需跨过整个D轴
+        dn2nz.srcDValue = srcDStride;
         dn2nz.dstNzC0Stride = hwLen;
         dn2nz.dstNzNStride = 1;
 
-        uint64_t gmOffset = static_cast<uint64_t>(nIdx) * c * hw + static_cast<uint64_t>(cIdx) * hw +
-                            static_cast<uint64_t>(hwIdx);
+        uint64_t gmOffset = static_cast<uint64_t>(nIdx) * c * srcDStride + static_cast<uint64_t>(cIdx) * srcDStride +
+                            static_cast<uint64_t>(dIdx) * hw + static_cast<uint64_t>(hwIdx);
 
         DataCopy(l1, src[gmOffset], dn2nz);
 
@@ -168,15 +176,18 @@ private:
         syncQue_.EnQue();
     }
 
-    __aicore__ inline void CopyOutInAiv(const GlobalTensor<T>& dst, const LocalTensor<T>& ub, uint32_t c, uint32_t hw,
-                                        uint32_t nIdx, uint32_t cIdx, uint32_t hwIdx, uint32_t cLen, uint32_t hwLen)
+    __aicore__ inline void CopyOutInAiv(const GlobalTensor<T>& dst, const LocalTensor<T>& ub, uint32_t n, uint32_t c,
+                                        uint32_t hw, uint32_t nIdx, uint32_t cIdx, uint32_t hwIdx, uint32_t cLen,
+                                        uint32_t hwLen, uint32_t dIdx)
     {
         syncQue_.WaitData();
         // l1->ub当前只会写到0核上
         if (GetSubBlockIdx() == 0) {
             const uint32_t c1 = Ops::Base::CeilDiv(c, C0<T>());
             const uint32_t c1Idx = cIdx / C0<T>();
-            const uint64_t gmOffset = static_cast<uint64_t>(nIdx) * c1 * hw * C0<T>() +
+            // 输出NDC1HWC0: D为最外层, 单个D切片大小为n*c1*hw*C0
+            const uint64_t gmOffset = static_cast<uint64_t>(dIdx) * n * c1 * hw * C0<T>() +
+                                      static_cast<uint64_t>(nIdx) * c1 * hw * C0<T>() +
                                       static_cast<uint64_t>(c1Idx) * hw * C0<T>() +
                                       static_cast<uint64_t>(hwIdx) * C0<T>();
 

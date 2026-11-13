@@ -95,7 +95,12 @@ public:
 
     __aicore__ inline bool GetHW(uint32_t loopIdx, uint16_t coreId, uint32_t& outH, uint32_t& outW) const
     {
-        uint32_t flattenIdx = loopIdx * coreNum_ + coreId;
+        return GetHWAtFlatten(loopIdx * coreNum_ + coreId, outH, outW);
+    }
+
+    // 按网格内展平索引直接解算坐标(供尾块等无法用"轮次*核数+核号"表达的场景)
+    __aicore__ inline bool GetHWAtFlatten(uint32_t flattenIdx, uint32_t& outH, uint32_t& outW) const
+    {
         // 越界判断
         if (unlikely(flattenIdx >= totalCnt_)) {
             outH = h_;
@@ -203,17 +208,45 @@ static __aicore__ inline bool GetBlockFromSwizzle2D(const SwizzleTopology2D& top
     return valid;
 }
 
+// 按网格内展平索引直接解算基本块(轮次与核号已在外部折算为展平索引)
+template <BlockIterDirection IterDir>
+static __aicore__ inline bool GetBlockFromSwizzle2DFlatten(const SwizzleTopology2D& topology, uint32_t flattenIdx,
+                                                           uint32_t singleShapeCout, uint32_t singleShapeCin,
+                                                           uint32_t cout, uint32_t cin, CoutCinRange& cRange)
+{
+    uint32_t topoH, topoW;
+    bool valid = topology.GetHWAtFlatten(flattenIdx, topoH, topoW);
+
+    uint32_t coutBlockIdx = (IterDir == CIN) ? topoH : topoW;
+    uint32_t cinBlockIdx = (IterDir == CIN) ? topoW : topoH;
+
+    cRange.coutIdx = coutBlockIdx * singleShapeCout;
+    cRange.cinIdx = cinBlockIdx * singleShapeCin;
+    cRange.coutLength = valid ? AscendC::Std::min(singleShapeCout, cout - cRange.coutIdx) : 0;
+    cRange.cinLength = valid ? AscendC::Std::min(singleShapeCin, cin - cRange.cinIdx) : 0;
+
+    return valid;
+}
+
 template <BlockIterDirection IterDir>
 class BlockIterator {
 public:
-    inline __aicore__ bool More() const { return loopIdx_ < blocksIterCnt_; }
+    // kdTotal>1时kd作为最外层基本块维度(kd对齐轮次): 一个kd的cout/cin蛇形循环完成后
+    // 进入下一个kd的cout/cin, 尾块数按单个kd网格统计(不含kd维度倍乘, 调用方按kd串行
+    // 分子轮处理尾轮切k)。
+    // kdTotal=1(默认)时行为与原有2D网格完全一致
+    inline __aicore__ bool More() const { return loopIdx_ < blocksIterCnt_ * kdTotal_; }
 
     // 获取当前aic计算的基本块范围,若当前核无基本块计算则返回false并且将length设置为0
     inline __aicore__ bool GetLocalBlock(CoutCinRange& cRange) const { return GetBlock(AicCoreId(), cRange); }
 
+    // 当前轮次所属kd(kd对齐轮次下同轮所有核处于同一kd)
+    inline __aicore__ uint32_t GetLocalKdIdx() const { return kdTotal_ > 1 ? loopIdx_ / blocksIterCnt_ : 0; }
+
     inline __aicore__ bool GetBlock(uint16_t coreId, CoutCinRange& cRange) const
     {
-        return GetBlockFromSwizzle2D<IterDir>(topology_, loopIdx_, coreId, singleShapeCout_, singleShapeCin_, cout_,
+        const uint32_t localLoopIdx = kdTotal_ > 1 ? loopIdx_ % blocksIterCnt_ : loopIdx_;
+        return GetBlockFromSwizzle2D<IterDir>(topology_, localLoopIdx, coreId, singleShapeCout_, singleShapeCin_, cout_,
                                               cin_, cRange);
     }
 
@@ -221,7 +254,8 @@ public:
     inline __aicore__ void GetClusterBlockUpperBound(uint32_t& outCoutBound, uint32_t& outCinBound) const
     {
         uint32_t boundH, boundW;
-        topology_.GetBoundHW(loopIdx_, boundH, boundW);
+        const uint32_t localLoopIdx = kdTotal_ > 1 ? loopIdx_ % blocksIterCnt_ : loopIdx_;
+        topology_.GetBoundHW(localLoopIdx, boundH, boundW);
 
         // 边界反向映射
         uint32_t boundCoutBlockIdx = (IterDir == CIN) ? boundH : boundW;
@@ -238,6 +272,7 @@ public:
 
     inline __aicore__ uint32_t GetTailBlockCnt() const
     {
+        // 返回单个kd网格内未被主轮消化的尾块数(kdTotal=1时即整个网格的尾块数)
         const uint32_t mainBlockNum = blocksIterCnt_ * coreNum_;
         return topology_.TotalCnt() > mainBlockNum ? topology_.TotalCnt() - mainBlockNum : 0;
     }
@@ -245,7 +280,7 @@ public:
     // blockNum：核数来源，0 = GetBlockNum()（Create 内一次兜底），>0 = 显式指定
     static inline __aicore__ BlockIterator Create(bool onlyIterMainBlocks, uint32_t cout, uint32_t cin,
                                                   uint32_t singleShapeCout, uint32_t singleShapeCin,
-                                                  uint32_t blockNum = 0)
+                                                  uint32_t blockNum = 0, uint32_t kdTotal = 1)
     {
         if (blockNum == 0) {
             blockNum = static_cast<uint32_t>(AscendC::GetBlockNum());
@@ -257,20 +292,22 @@ public:
         uint16_t blockH, blockW;
         SwizzleTopology2D::CalBlockGrid(topologyH, topologyW, blockH, blockW, blockNum);
         return BlockIterator(cout, cin, topologyH, topologyW, blockH, blockW, singleShapeCout, singleShapeCin,
-                             onlyIterMainBlocks, blockNum);
+                             onlyIterMainBlocks, blockNum, kdTotal);
     }
 
 private:
     inline __aicore__ explicit BlockIterator(uint32_t cout, uint32_t cin, uint32_t topologyH, uint32_t topologyW,
                                              uint16_t topologyBlockH, uint16_t topologyBlockW, uint32_t singleShapeCout,
-                                             uint32_t singleShapeCin, bool onlyIterMainBlocks, uint32_t blockNum)
+                                             uint32_t singleShapeCin, bool onlyIterMainBlocks, uint32_t blockNum,
+                                             uint32_t kdTotal)
         : cout_(cout),
           cin_(cin),
           singleShapeCout_(singleShapeCout),
           singleShapeCin_(singleShapeCin),
           topology_(topologyH, topologyW, topologyBlockH, topologyBlockW, blockNum),
           coreNum_(blockNum),
-          blocksIterCnt_(GetBlockIterCnt(onlyIterMainBlocks, coreNum_, topology_.TotalCnt()))
+          blocksIterCnt_(GetBlockIterCnt(onlyIterMainBlocks, coreNum_, topology_.TotalCnt())),
+          kdTotal_(kdTotal)
     {}
 
     inline __aicore__ static uint32_t GetBlockIterCnt(bool onlyIterMainBlocks, uint32_t coreNum, uint32_t totalBlocks)
@@ -292,7 +329,9 @@ private:
     const uint32_t singleShapeCin_;
     const SwizzleTopology2D topology_;
     const uint32_t coreNum_;
+    // 单个kd网格内的主轮轮次数(kdTotal=1时即整个网格的轮次数)
     const uint32_t blocksIterCnt_;
+    const uint32_t kdTotal_;
     uint32_t loopIdx_ = 0;
 };
 

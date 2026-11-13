@@ -28,7 +28,6 @@ namespace Conv {
 namespace {
 constexpr uint32_t WINO_KERNEL_SIZE_3 = 3;
 constexpr uint32_t SINGLE_SHAPE_C = 64;
-constexpr uint32_t MIN_SINGLE_SHAPE_BLOCKS = 16;
 constexpr uint32_t FP32_BYTES = 4;
 constexpr uint32_t FP16_BYTES = 2;
 constexpr uint32_t TILE_W_8 = 8;
@@ -42,25 +41,34 @@ bool CheckWinoDtype(const Conv3dBpFilterV2RunInfo& runInfo, const char* opName)
         OP_LOGD(opName, "Winograd tiling only support float");
         return false;
     }
-    // 当前目标网络case里面没有hf32且能命中winograd的，先不测了，后面有时间有需求了在实测下效果放开
-    if (runInfo.hf32Flag == 1) {
-        OP_LOGD(opName, "Winograd tiling not support hf32");
-        return false;
-    }
     return true;
 }
 
 bool CheckWinoAttrs(const Conv3dBpFilterV2RunInfo& runInfo, const char* opName)
 {
-    if (runInfo.di != 1 || runInfo.dout != 1 || runInfo.kd != 1 || runInfo.dilation_d != 1 || runInfo.stride_d != 1 ||
-        runInfo.pad_f != 0 || runInfo.pad_b != 0) {
-        OP_LOGD(opName, "Winograd tiling is only supported for 2d");
+    if (runInfo.kd != 1 && runInfo.kd != WINO_KERNEL_SIZE_3) {
+        OP_LOGD(opName, "Winograd tiling only support kd=1 or kd=3");
         return false;
     }
-
+    if (runInfo.stride_d != 1 || runInfo.dilation_d != 1) {
+        OP_LOGD(opName, "Winograd tiling only support stride_d=1 and dilation_d=1");
+        return false;
+    }
     if (runInfo.dilation_h != 1 || runInfo.dilation_w != 1 || runInfo.stride_h != 1 || runInfo.stride_w != 1 ||
         runInfo.groups != 1 || runInfo.pad_u != runInfo.pad_d || runInfo.pad_l != runInfo.pad_r) {
         OP_LOGD(opName, "Winograd tiling is not support current attrs");
+        return false;
+    }
+
+    // D轴pad精确放通: kd=1(2D)时无D轴pad; kd=3时由卷积关系(dout=di+padF+padB-kd+1, stride_d=1)
+    // 取padF=padB=1。其余pad组合不属于目标场景; pad小于kd也保证每个kdIdx切片均存在合法dout,
+    // kernel侧无需对无效kd切片做特殊处理
+    if (runInfo.kd == 1 && (runInfo.pad_f != 0 || runInfo.pad_b != 0)) {
+        OP_LOGD(opName, "Winograd tiling only support pad_f=pad_b=0 when kd=1");
+        return false;
+    }
+    if (runInfo.kd == WINO_KERNEL_SIZE_3 && (runInfo.pad_f != 1 || runInfo.pad_b != 1)) {
+        OP_LOGD(opName, "Winograd tiling only support pad_f=pad_b=1 when kd=3");
         return false;
     }
 
@@ -79,35 +87,36 @@ bool CheckWinoAttrs(const Conv3dBpFilterV2RunInfo& runInfo, const char* opName)
 
 bool CheckWinoShape(const Conv3dBpFilterV2RunInfo& runInfo, const char* opName)
 {
+    // kd=3的3D场景放通各空间维不小于6的shape: 6x6x6实测收益明确, 更大shape有效tile占比更优;
+    // 小空间(如3x3x3)有效tile占比低存在劣化风险, 拦截退回stream_k
+    if (runInfo.kd == WINO_KERNEL_SIZE_3) {
+        constexpr uint32_t WINO_3D_MIN_SPATIAL_SIZE = 6;
+        bool isSpatialDimEnough = runInfo.dout >= WINO_3D_MIN_SPATIAL_SIZE && runInfo.ho >= WINO_3D_MIN_SPATIAL_SIZE &&
+                                  runInfo.wo >= WINO_3D_MIN_SPATIAL_SIZE && runInfo.di >= WINO_3D_MIN_SPATIAL_SIZE &&
+                                  runInfo.hi >= WINO_3D_MIN_SPATIAL_SIZE && runInfo.wi >= WINO_3D_MIN_SPATIAL_SIZE;
+        if (!isSpatialDimEnough) {
+            OP_LOGD(opName, "Winograd tiling only support spatial dims not less than 6 for kd=3");
+            return false;
+        }
+    }
+
     uint64_t tileH = Ops::Base::CeilDiv(runInfo.ho, 2);
     uint64_t tileW = Ops::Base::CeilDiv(runInfo.wo, 2);
-    if (tileH * tileW * runInfo.batch > Conv3DBackpropFilterV2WinogradTiling::RECOMMEND_K_MAX_SIZE) {
+    uint64_t kAxis = tileH * tileW * runInfo.batch * runInfo.dout;
+    // hf32使用专用K轴上限(按目标网络hf32用例提取的最大kAxis), 保证目标用例放通; 其余场景沿用通用上限
+    uint64_t kMaxSize = Conv3DBackpropFilterV2WinogradTiling::RECOMMEND_K_MAX_SIZE;
+    if (runInfo.hf32Flag == 1) {
+        kMaxSize = Conv3DBackpropFilterV2WinogradTiling::RECOMMEND_HF32_K_MAX_SIZE;
+    }
+    if (kAxis > kMaxSize) {
         OP_LOGD(opName, "current reduce axis is too large for Winograd impl");
         return false;
     }
-    // c轴太小时winograd性能不一定比原始kernel性能好，所以当前限制c轴能划出至少16个基本块
-    if ((runInfo.co / SINGLE_SHAPE_C) * (runInfo.ci / SINGLE_SHAPE_C) < MIN_SINGLE_SHAPE_BLOCKS) {
-        OP_LOGD(opName, "the cout/cin is too small for winograd");
-        return false;
-    }
-
-    // Winograd当前无法跳过全pad tile，当pad占比过高时计算密度优势会被无效开销抵消
-    // 有效fmap区域(不含pad)对应的tile数与总tile数(含pad)的比值需达标
-    // 有效输出尺寸 = fmap尺寸 - (kernel - 1)，stride=1时有效ho = hi - 2
-    int32_t validHo = runInfo.hi - (runInfo.kh - 1);
-    int32_t validWo = runInfo.wi - (runInfo.kw - 1);
-    if (validHo <= 0 || validWo <= 0) {
-        OP_LOGD(opName, "valid fmap area is too small for winograd");
-        return false;
-    }
-    uint64_t validTileH = Ops::Base::CeilDiv(validHo, 2);
-    uint64_t validTileW = Ops::Base::CeilDiv(validWo, 2);
-    uint64_t validTiles = validTileH * validTileW;
-    uint64_t totalTiles = tileH * tileW;
-    float validRatio = static_cast<float>(validTiles) / static_cast<float>(totalTiles);
-    if (validRatio < Conv3DBackpropFilterV2WinogradTiling::RECOMMEND_FMAP_VALID_TILE_RATIO) {
-        OP_LOGD(opName, "fmap pad ratio is too high (validRatio=%f, threshold=%f) for winograd", validRatio,
-                Conv3DBackpropFilterV2WinogradTiling::RECOMMEND_FMAP_VALID_TILE_RATIO);
+    // pad判据: pad小于kernel时输入侧任意滑窗内至少含1个有效元素, 不会产生全pad tile;
+    // pad不小于kernel时边缘窗口整体落在pad区, 无法跳过的无效计算占比过高, 退回基本块kernel
+    // (D轴pad已在CheckWinoAttrs按kd精确放通, 此处仅校验H/W轴)
+    if (runInfo.kh <= runInfo.pad_u || runInfo.kw <= runInfo.pad_l) {
+        OP_LOGD(opName, "Winograd tiling requires pad smaller than kernel");
         return false;
     }
     return true;
@@ -161,6 +170,12 @@ bool Conv3DBackpropFilterV2WinogradTiling::IsCapable()
 
     if (!CheckFormat()) {
         OP_LOGD(opName_, "current format is not support by winograd tiling");
+        return false;
+    }
+
+    // hf32与3D(kd=3)场景仅在A6(960)上放通, 其余平台仅支持fp32的2D(kd=1)场景
+    if (!IsSocVersion960() && (runInfo_.hf32Flag == 1 || runInfo_.kd != 1)) {
+        OP_LOGD(opName_, "Winograd tiling only support fp32 2D scenario on non-A6 soc");
         return false;
     }
 
@@ -275,12 +290,14 @@ ge::graphStatus Conv3DBackpropFilterV2WinogradTiling::GetWorkspaceSize()
     uint32_t c1c0Fmap = Ops::Base::CeilAlign(static_cast<uint32_t>(runInfo_.ci * runInfo_.a_dtype_bytes), c0Byte);
     uint32_t c1c0Dy = Ops::Base::CeilAlign(static_cast<uint32_t>(runInfo_.co * runInfo_.b_dtype_bytes), c0Byte);
 
-    // 全局驻留的空间
-    size_t userWorkSpaceSize = static_cast<size_t>(runInfo_.batch) * std::max(c1c0Fmap, c1c0Dy) * k0 * k1;
+    // 全局驻留的空间: dout全折叠进k轴, staging需容纳所有D切片
+    // 驻留侧为ci/co中较小的一侧, 与GetTilingKey的residentFlag选择一致
+    uint64_t stagingPerDBytes = static_cast<uint64_t>(runInfo_.batch) * std::min(c1c0Fmap, c1c0Dy) * k0 * k1;
+    size_t userWorkSpaceSize = static_cast<size_t>(stagingPerDBytes * runInfo_.dout);
 
-    // nc1hwc0转换的空间
-    userWorkSpaceSize += static_cast<size_t>(runInfo_.batch) * c1c0Fmap * runInfo_.hi * runInfo_.wi;
-    userWorkSpaceSize += static_cast<size_t>(runInfo_.batch) * c1c0Dy * runInfo_.ho * runInfo_.wo;
+    // nc1hwc0转换的空间，3D场景需乘以di/dout
+    userWorkSpaceSize += static_cast<size_t>(runInfo_.batch) * c1c0Fmap * runInfo_.di * runInfo_.hi * runInfo_.wi;
+    userWorkSpaceSize += static_cast<size_t>(runInfo_.batch) * c1c0Dy * runInfo_.dout * runInfo_.ho * runInfo_.wo;
 
     // 切k的空间
     userWorkSpaceSize += SINGLE_SHAPE_C * SINGLE_SHAPE_C * WINO_KERNEL_SIZE_3 * WINO_KERNEL_SIZE_3 * sizeof(float) *

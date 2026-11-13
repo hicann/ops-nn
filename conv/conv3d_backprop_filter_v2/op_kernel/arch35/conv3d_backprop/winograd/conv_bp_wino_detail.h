@@ -87,10 +87,14 @@ public:
         }
     }
 
-    __aicore__ inline void IterateK(const CoutCinRange& localBlock, SegmentTileKIterator<TilingT>& kIter,
+    // kd随IterateK参数传入: kd视为基本块维度由上层BlockIterator解算, 本类无D轴配置状态
+    // 返回值: 本段是否存在合法(非D轴pad区)k步进, 供上层跳过/清零本段逆变换输出;
+    // AIC侧RunMmad用同一WinoIsValidD谓词对同一segment迭代, 结论与AIV侧逐段一致
+    __aicore__ inline bool IterateK(const CoutCinRange& localBlock, SegmentTileKIterator<TilingT>& kIter,
                                     FwdTransformGM2L1Queue<T>& gm2l1Que, FwdTransformUB2L1Queue<T>& ub2l1Que,
                                     uint32_t watermarkResidentC, uint32_t residentCBound,
-                                    uint16_t residentKGroupStartCoreIdx, uint16_t residentKGroupCoreNum)
+                                    uint16_t residentKGroupStartCoreIdx, uint16_t residentKGroupCoreNum, uint32_t kdIdx,
+                                    uint32_t di, uint32_t padF)
     {
         using BlockConfig::InputTensor;
         constexpr InputTensor ResidentTarget = BlockConfig::ResidentTarget<TilingT>();
@@ -105,30 +109,53 @@ public:
         ComputeT1TaskInfo<TensorT1>(localBlock, residentCBound, watermarkResidentC, streamT1, residentT1);
 
         uint32_t residentTaskOffset = 0;
+        bool segmentHasValidK = false;
         while (kIter.More()) {
             HWBox tile = kIter.TileBox();
 
-            if (residentCBound > watermarkResidentC) {
-                typename TransformFunctions::GM2L1Ctx gm2l1Ctx = {kIter.BatchIdx(), kIter.TileKIdx(), {gm2l1Que}};
+            // 不预切dout有效区间, 遍历时逐点判断: fmap切片dinIdx落在[0, di)外(纯pad区)的k步进
+            // 跳过数据生产(驻留/流式均不产出), 与AIC侧MMAD的跳过判定保持一致;
+            // 驻留轮内仍需空转握手保持gm2l1全核barrier计数一致(见AIC侧NullGm2L1Handshake)
+            if (WinoIsValidD(kIter.DIdx(), kdIdx, di, padF)) {
+                segmentHasValidK = true;
+                // 合并n索引: 3D下正变换处理NDC1HWC0数据, batch与D轴合轴;
+                // fmap切片索引随kdIdx偏移(FmapNIdx), dy切片索引即NIdx, staging统一按NIdx布局
+                const uint32_t nIdxT1 = TensorNIdx<TensorT1>(kIter, kdIdx, padF);
+                const uint32_t nIdxT0 = TensorNIdx<TensorT0>(kIter, kdIdx, padF);
+                const uint32_t stagingNIdx = kIter.NIdx();
+
+                if (residentCBound > watermarkResidentC) {
+                    typename TransformFunctions::GM2L1Ctx gm2l1Ctx = {
+                        nIdxT1, stagingNIdx, kIter.TileKIdx(), {gm2l1Que}};
+                    gm2l1Que.WaitSlot();
+
+                    ProcessResidentTransform<TensorT1>(tile, gm2l1Ctx, residentT1, residentTaskOffset,
+                                                       residentKGroupStartCoreIdx, residentKGroupCoreNum);
+
+                    gm2l1Que.EnQue();
+                }
+
+                typename TransformFunctions::UB2L1Ctx ub2l1CtxT1 = {
+                    nIdxT1, stagingNIdx, kIter.TileKIdx(), {ub2l1Que, 0}};
+                ub2l1Que.WaitSlot();
+
+                ProcessStreamingTransform<TensorT1>(tile, ub2l1CtxT1, streamT1);
+
+                typename TransformFunctions::UB2L1Ctx ub2l1CtxT0 = {
+                    nIdxT0, stagingNIdx, kIter.TileKIdx(), {ub2l1Que, 0}};
+                ProcessStreamingTransform<TensorT0>(tile, ub2l1CtxT0, streamT0);
+
+                ub2l1Que.EnQue();
+            } else if (residentCBound > watermarkResidentC) {
+                // pad区k步进空转握手: 不产出数据, 仅与AIC侧NullGm2L1Handshake的WaitData/DeQue
+                // 配对, 保证gm2l1全核barrier调用次数为kLength*wSteps, 与pad跳过模式无关
                 gm2l1Que.WaitSlot();
-
-                ProcessResidentTransform<TensorT1>(tile, gm2l1Ctx, residentT1, residentTaskOffset,
-                                                   residentKGroupStartCoreIdx, residentKGroupCoreNum);
-
                 gm2l1Que.EnQue();
             }
 
-            typename TransformFunctions::UB2L1Ctx ub2l1Ctx = {kIter.BatchIdx(), kIter.TileKIdx(), {ub2l1Que, 0}};
-            ub2l1Que.WaitSlot();
-
-            ProcessStreamingTransform<TensorT1>(tile, ub2l1Ctx, streamT1);
-
-            ProcessStreamingTransform<TensorT0>(tile, ub2l1Ctx, streamT0);
-
-            ub2l1Que.EnQue();
-
             kIter.Next();
         }
+        return segmentHasValidK;
     }
 
     __aicore__ inline void End()
@@ -202,7 +229,10 @@ private:
 
         template <typename L1Method>
         struct Context {
+            // 本张量侧的合并n索引(2D下即batchIdx; 3D下fmap为FmapNIdx, dy为NIdx), 供CopyIn寻址NDC1HWC0
             uint32_t batchIdx = 0;
+            // staging侧的合并n索引(NIdx), 供CopyOut写驻留staging
+            uint32_t nIdx = 0;
             uint32_t kIdx = 0;
             L1Method l1method;
 
@@ -232,7 +262,7 @@ private:
                                               Context<L1Method>& ctx, LocalTensor<T>& transformFwdOutVBuf)
         {
             NK1C1K0C0::CopyK0Params ckp;
-            ckp.batchIdx = ctx.batchIdx;
+            ckp.batchIdx = ctx.nIdx;
             ckp.k1Idx = ctx.kIdx;
             transformer.SetNK1C1K0C0CopyParams(ckp, box);
 
@@ -385,12 +415,25 @@ private:
     }
 
     template <BlockConfig::InputTensor t>
-    __aicore__ inline auto& GetTransformer() const
+    __aicore__ inline const auto& GetTransformer() const
     {
         if constexpr (t == BlockConfig::InputTensor::FMAP) {
             return fmapFwd_;
-        } else if (t == BlockConfig::InputTensor::DY) {
+        } else if constexpr (t == BlockConfig::InputTensor::DY) {
             return dyFwd_;
+        }
+    }
+
+    // 张量相关的合并n索引: fmap切片为(dIdx + kdIdx - padF) * batch + batchIdx(随kdIdx偏移),
+    // dy切片为dIdx * batch + batchIdx(即NIdx); 仅在合法k步进内调用
+    template <BlockConfig::InputTensor TensorT>
+    static __aicore__ inline uint32_t TensorNIdx(const SegmentTileKIterator<TilingT>& kIter, uint32_t kdIdx,
+                                                 uint32_t padF)
+    {
+        if constexpr (TensorT == BlockConfig::InputTensor::FMAP) {
+            return kIter.FmapNIdx(kdIdx, padF);
+        } else {
+            return kIter.NIdx();
         }
     }
 
@@ -416,7 +459,7 @@ private:
 
     const WinoFmapFwdTransformer<T, TilingT>& fmapFwd_;
     const WinoDyFwdTransformer<T, TilingT>& dyFwd_;
-    // 运行时C轴分块（Conv2dDwWinograd::Init统一计算，构造时以const引用传入），
+    // 运行时C轴分块（Conv3dDwWinograd::Init统一计算，构造时以const引用传入），
     // 驻留任务切分与BlockIterator共用同一份分块大小，避免两套块边界错位
     const BlockConfig::RtTiling& rtTiling_;
 
@@ -451,16 +494,17 @@ public:
 
     inline void __aicore__ End() { winoMmad_.End(); }
 
-    __aicore__ inline void IterateK(const CoutCinRange& blockRange, SegmentTileKIterator<TilingT>& kIter,
+    // 返回值: 本段是否存在合法(非D轴pad区)k步进, 供上层对本段无有效步进时将逆变换输入清零,
+    // 避免无MmadCompute时Fixpipe搬出上一段残留L0C(与AIV侧AivFwdTransformer::IterateK结论一致)
+    __aicore__ inline bool IterateK(const CoutCinRange& blockRange, SegmentTileKIterator<TilingT>& kIter,
                                     FwdTransformGM2L1Queue<T>& gm2l1, FwdTransformUB2L1Queue<T>& ub2l1,
-                                    bool waitResidentTransform)
+                                    bool waitResidentTransform, uint32_t kdIdx, uint32_t di, uint32_t padF)
     {
         if (blockRange.NotEmpty()) {
-            RunMmad<true>(blockRange, kIter, gm2l1, ub2l1, waitResidentTransform);
-        } else {
-            // 闲置核仅参与 Queue 信号同步，维持集群流水线运转，不进行实际 Compute
-            RunMmad<false>(blockRange, kIter, gm2l1, ub2l1, waitResidentTransform);
+            return RunMmad<true>(blockRange, kIter, gm2l1, ub2l1, waitResidentTransform, kdIdx, di, padF);
         }
+        // 闲置核仅参与 Queue 信号同步，维持集群流水线运转，不进行实际 Compute
+        return RunMmad<false>(blockRange, kIter, gm2l1, ub2l1, waitResidentTransform, kdIdx, di, padF);
     }
 
     __aicore__ inline void Fixpipe2UB(InvTransformL0C2UBSyncQueue<TilingT>& syncQue, const CoutCinRange& localBlock,
@@ -471,15 +515,16 @@ public:
 
 private:
     template <bool NotIdle>
-    __aicore__ inline void RunMmad(const CoutCinRange& cRange, SegmentTileKIterator<TilingT>& iter,
+    __aicore__ inline bool RunMmad(const CoutCinRange& cRange, SegmentTileKIterator<TilingT>& iter,
                                    FwdTransformGM2L1Queue<T>& gm2l1, FwdTransformUB2L1Queue<T>& ub2l1,
-                                   bool waitResidentTransform)
+                                   bool waitResidentTransform, uint32_t kdIdx, uint32_t di, uint32_t padF)
     {
         static constexpr uint16_t SingleShapeResidentC = BlockConfig::SingleShapeResidentC<TilingT>();
         uint32_t coutC1Length = 0;
         uint32_t cinC1Length = 0;
         uint32_t residentC1Idx = 0;
         uint32_t residentC1Length = 0;
+        bool segmentHasValidK = false;
 
         if constexpr (NotIdle) {
             coutC1Length = Ops::Base::CeilDiv(cRange.coutLength, C0<T>());
@@ -492,10 +537,21 @@ private:
 
         if (likely(iter.More())) {
             HWBox tiles = iter.TileBox();
+            // pad区k步进与AIV侧判定一致地跳过载入与计算, 但仍做空转握手:
+            // gm2l1.WaitData内嵌全核barrier, 调用次数必须逐核相等(kLength*wSteps),
+            // 不能随kdIdx相关的pad跳过模式变化, 否则尾轮各kGroup的kRange跨pad区时死锁
+            bool tilesValid = WinoIsValidD(iter.DIdx(), kdIdx, di, padF);
+            segmentHasValidK = tilesValid;
+            // 记录各k步进载入所用的L1 pingpong位, 保证跳过后Compute仍与自身载入的buffer配对
+            bool curLoadBuf = loadPingPong_;
 
             // ================= 阶段 1: Prologue (预载入第一轮数据) =================
-            MmadLoadResident<NotIdle>(tiles, gm2l1, iter.BatchIdx(), iter.TileKIdx(), residentC1Idx, residentC1Length,
-                                      waitResidentTransform, loadPingPong_);
+            if (tilesValid) {
+                MmadLoadResident<NotIdle>(tiles, gm2l1, iter.NIdx(), iter.TileKIdx(), residentC1Idx, residentC1Length,
+                                          waitResidentTransform, loadPingPong_);
+            } else {
+                NullGm2L1Handshake(gm2l1, waitResidentTransform);
+            }
 
             iter.Next();
             bool firstK = true;
@@ -507,43 +563,52 @@ private:
                 // 即便按批一次处理4个点，那么加上一个wait flag,也最多处理12个点就block住
                 // 让下一轮的mte2无法执行,导致整体串行化
                 // 所以这里用预取下一轮的数据的方式来解决
-                //
-                //  首次Compute前直接下发PingPong两块L1的搬运指令:
-                //   LoadL1 Ping
-                //   LoadL1 Pong
-                //
-                //  然后在L1Ping上做计算,此时scalar单元会由于issue queue满而被阻塞
-                //   Compute Ping (block scalar)
-                //
-                //  ComputePing的scalar执行完后在下发L1Ping的搬运指令,即便scalar被卡主也没关系,因为
-                //  L1Ping搬入时为了下下轮计算,下一轮所需要的L1Pong已经被预载了
-                //   LoadL1 Ping
-                //
-                //  下发L1Pong的计算指令,由于L1Pong的搬运指令已经提前下发,所以在vector正变换更得上的情况下L1Pong应该搬运的差不多了
-                //  ComputePong可以立刻执行
-                //   Compute Pong
                 HWBox nextTiles = iter.TileBox();
+                bool nextValid = WinoIsValidD(iter.DIdx(), kdIdx, di, padF);
+                segmentHasValidK = segmentHasValidK || nextValid;
+                bool nextLoadBuf = loadPingPong_;
 
-                MmadLoadResident<NotIdle>(nextTiles, gm2l1, iter.BatchIdx(), iter.TileKIdx(), residentC1Idx,
-                                          residentC1Length, waitResidentTransform, loadPingPong_);
+                if (nextValid) {
+                    MmadLoadResident<NotIdle>(nextTiles, gm2l1, iter.NIdx(), iter.TileKIdx(), residentC1Idx,
+                                              residentC1Length, waitResidentTransform, loadPingPong_);
+                } else {
+                    NullGm2L1Handshake(gm2l1, waitResidentTransform);
+                }
 
-                MmadCompute<NotIdle>(tiles, ub2l1, cRange.coutLength, coutC1Length, cRange.cinLength, cinC1Length,
-                                     firstK, computePingPong_);
+                if (tilesValid) {
+                    MmadCompute<NotIdle>(tiles, ub2l1, cRange.coutLength, coutC1Length, cRange.cinLength, cinC1Length,
+                                         firstK, curLoadBuf);
+                    firstK = false;
+                }
 
-                firstK = false;
+                tilesValid = nextValid;
+                curLoadBuf = nextLoadBuf;
                 tiles = nextTiles;
 
                 iter.Next();
             }
 
             // ================= 阶段 3: Epilogue (计算最后一轮数据) =================
-            MmadCompute<NotIdle>(tiles, ub2l1, cRange.coutLength, coutC1Length, cRange.cinLength, cinC1Length, firstK,
-                                 computePingPong_);
+            if (tilesValid) {
+                MmadCompute<NotIdle>(tiles, ub2l1, cRange.coutLength, coutC1Length, cRange.cinLength, cinC1Length,
+                                     firstK, curLoadBuf);
+            }
+        }
+        return segmentHasValidK;
+    }
+
+    // pad区k步进的gm2l1空转握手: 不载L1仅同步, 与AIV侧跳过步进的WaitSlot/EnQue配对,
+    // 保证全核barrier调用次数与kdIdx相关的pad跳过模式无关
+    __aicore__ inline void NullGm2L1Handshake(FwdTransformGM2L1Queue<T>& gm2l1, bool waitResidentFinished)
+    {
+        if (waitResidentFinished) {
+            gm2l1.WaitData();
+            gm2l1.DeQue();
         }
     }
 
     template <bool NotIdle>
-    __aicore__ inline void MmadLoadResident(const HWBox& tiles, FwdTransformGM2L1Queue<T>& gm2l1, uint32_t batchIdx,
+    __aicore__ inline void MmadLoadResident(const HWBox& tiles, FwdTransformGM2L1Queue<T>& gm2l1, uint32_t nIdx,
                                             uint32_t k1Idx, uint32_t c1Idx, uint32_t c1Length,
                                             bool waitResidentFinished, bool& l1PingPongFlag)
     {
@@ -554,7 +619,7 @@ private:
         if constexpr (NotIdle) {
             NK1C1K0C0::CopyK0Params params;
             params.tiles = tiles.elements;
-            params.batchIdx = batchIdx;
+            params.batchIdx = nIdx;
             params.k1Idx = k1Idx;
             params.c1Idx = c1Idx;
             params.c1Length = c1Length;
@@ -572,15 +637,13 @@ private:
 
     template <bool NotIdle>
     __aicore__ inline void MmadCompute(const HWBox& tiles, FwdTransformUB2L1Queue<T>& ub2l1, uint32_t cout,
-                                       uint32_t coutC1, uint32_t cin, uint32_t cinC1, bool firstK, bool& l1PingPongFlag)
+                                       uint32_t coutC1, uint32_t cin, uint32_t cinC1, bool firstK, bool l1PingPongFlag)
     {
         // 阻塞等待 AIV 的 DY 生产信号
         ub2l1.WaitData();
 
         if constexpr (NotIdle) {
             winoMmad_.Compute(tiles, cout, coutC1, cin, cinC1, firstK, l1PingPongFlag);
-            // pingpong和ub2l1更新同步
-            l1PingPongFlag = !l1PingPongFlag;
         }
 
         ub2l1.DeQue();
@@ -588,7 +651,6 @@ private:
 
     WinoMMAD<T, TilingT>& winoMmad_;
     bool loadPingPong_ = false;
-    bool computePingPong_ = false;
 };
 } // namespace WinoDetail
 

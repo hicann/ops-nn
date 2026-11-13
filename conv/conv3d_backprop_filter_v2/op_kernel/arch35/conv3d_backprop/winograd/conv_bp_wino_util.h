@@ -301,6 +301,17 @@ static __aicore__ inline void CalRtSingleShapeBlock(RtTiling& tiling, uint32_t c
 
 } // namespace BlockConfig
 
+// D轴映射公式: dinIdx = d * stride_d + kdIdx * dilation_d - padF，
+// winograd路径限定stride_d=dilation_d=1(见tiling侧CheckWinoAttrs)，退化为 dinIdx = d + kdIdx - padF，
+// d合法当且仅当dinIdx落在[0, di)内; stride_d=1保证合法d连续, 存在非法d即位于两端(pad区)。
+// tiling侧精确放通pad(kd=1时padF=padB=0, kd=3立方体场景padF=padB=1, 均满足padF<kd),
+// 不预切dout有效区间(scalar不友好), k步进遍历时按该谓词逐点跳过pad区
+inline __aicore__ bool WinoIsValidD(uint32_t d, uint32_t kdIdx, uint32_t di, uint32_t padF)
+{
+    int32_t dinIdx = static_cast<int32_t>(d) + static_cast<int32_t>(kdIdx) - static_cast<int32_t>(padF);
+    return dinIdx >= 0 && dinIdx < static_cast<int32_t>(di);
+}
+
 // ConvBpUtil（winograd/fullload 共用），此处保留全局别名兼容既有引用
 using CoutCinRange = BpUtils::CoutCinRange;
 using BpUtils::AicCoreId;
