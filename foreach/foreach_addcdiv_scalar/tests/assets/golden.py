@@ -61,6 +61,22 @@ def _to_scalar(value):
     return value
 
 
+def _is_f16_tensor(t):
+    if isinstance(t, torch.Tensor):
+        return t.dtype == torch.float16
+    dt = getattr(t, "dtype", None)
+    return dt is not None and getattr(dt, "name", "") == "float16"
+
+
+def _scalar_for_dtype(scalar, tensors):
+    """按算子实际 scalar 精度取整（对齐 DtypeScalarToTensor2）：x1=FLOAT16 时 scalar 按 FLOAT16
+    参与计算；x1=FLOAT32/BFLOAT16 时按 FLOAT32。避免 golden 用全精度 scalar 与算子结果差 1 ULP。"""
+    s = float(_to_scalar(scalar))
+    if tensors and _is_f16_tensor(tensors[0]):
+        return float(np.float16(s))
+    return float(np.float32(s))
+
+
 def _per_tensor_dtypes(output_dtypes):
     if output_dtypes is None:
         return None
@@ -102,7 +118,7 @@ class ForeachAddcdivScalarKernelSpec:
 
     def golden(x1, x2, x3, scalar, **kwargs):
         output_dtypes = _per_tensor_dtypes(kwargs.get("output_dtypes"))
-        s = _to_scalar(scalar)
+        s = _scalar_for_dtype(scalar, x1)
         results = []
         for index, (a, b, c) in enumerate(zip(x1, x2, x3)):
             ta = _to_torch_tensor(a)
@@ -124,7 +140,7 @@ class AclnnForeachAddcdivScalarSpec:
     """ACLNN 路径（V1/V2）— list[torch.Tensor] -> list[torch.Tensor]。"""
 
     def golden(x1, x2, x3, scalar, out=None, **kwargs):
-        s = _to_scalar(scalar)
+        s = _scalar_for_dtype(scalar, x1)
         result = list(torch._foreach_addcdiv(x1, x2, x3, s))
         if out is not None:
             for o, r in zip(out, result):
@@ -139,7 +155,7 @@ class TorchForeachAddcdivScalarSpec:
     """E2E 路径 — list[torch.Tensor] -> list[torch.Tensor]。"""
 
     def golden(x1, x2, x3, scalar, **kwargs):
-        s = _to_scalar(scalar)
+        s = _scalar_for_dtype(scalar, x1)
         return list(torch._foreach_addcdiv(x1, x2, x3, s))
 
     tolerance = _TOLERANCE
