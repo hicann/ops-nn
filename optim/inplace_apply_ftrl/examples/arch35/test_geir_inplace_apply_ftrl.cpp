@@ -335,7 +335,7 @@ int main(int argc, char* argv[])
     printf("InplaceApplyFtrl GE IR Static Shape Example\n");
     printf("Start to initialize ge\n");
     const char* envDev = std::getenv("GE_DEVICE_ID");
-    std::string devId = (envDev && *envDev) ? std::string(envDev) : std::string("7");
+    std::string devId = (envDev && *envDev) ? std::string(envDev) : std::string("0");
     std::map<AscendString, AscendString> global_options = {{"ge.exec.deviceId", devId.c_str()},
                                                            {"ge.graphRunMode", "1"}};
     Status ret = ge::GEInitialize(global_options);
