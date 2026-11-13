@@ -21,25 +21,31 @@ English | [简体中文](./README.md)
 
 - Formula:
 
+  The following formulas apply only to the **V1 path** (when neither or only one of the optional inputs specToken/acceptedNum is passed, numSeqs > numQueries). The V2 speculative-sampling path (both optional inputs passed) has different output semantics; see the function description in [aclnnAdvanceStepV2](./docs/aclnnAdvanceStepV2_en.md).
+
+  Let $i \in [0, numQueries)$ be the query row index, $pos_i$ the pre-update $seqLens[i]$, and $blockTablesFlat$ the row-flattened one-dimensional view of $blockTables$:
+
   $$
-  blockIdx is the index of the core on which the current code is executed.
+  blockTablesStride = blockTables.stride(0)
   $$
 
   $$
-  inputTokens[blockIdx] = sampledTokenIds[blockIdx]
+  inputTokens[i] = sampledTokenIds[i, 0]
   $$
 
   $$
-  inputPositions[blockIdx] = seqLens[blockIdx]
+  inputPositions[i] = pos_i
   $$
 
   $$
-  seqLens[blockIdx] = seqLens[blockIdx] + 1
+  seqLens[i] = pos_i + 1
   $$
 
   $$
-  slotMapping[blockIdx] = blockTables[blockIdx][inputPositions[blockIdx] / blockSize] * blockSize + (inputPositions[blockIdx] \% blockSize)
+  slotMapping[i] = blockTablesFlat[blockTablesStride * i + \lfloor pos_i / blockSize \rfloor] * blockSize + (pos_i \% blockSize)
   $$
+
+  The V1 path (optional inputs not passed, numSeqs > numQueries) additionally clears all padding rows: for every $j \in [numQueries, numSeqs)$ it writes $inputTokens[j]=0$, $inputPositions[j]=0$, and $slotMapping[j]=-1$ (the padding rows of $seqLens$ keep their input values).
 
 ## Parameters
 
@@ -146,8 +152,9 @@ English | [简体中文](./README.md)
 ### User guarantee constraints (involving data content or memory layout; the host side cannot validate them, and the caller guarantees them. Violations may cause computation errors or out-of-bounds access)
 
 - All input tensors must be contiguous, and non-contiguous tensors are not supported.
-- The data values of inputTokens, sampledTokenIds, inputPositions, seqLens, slotMapping, and blockTables must be valid values consistent with the business semantics (positive integers, such as token IDs, sequence lengths, block numbers, and physical slots).
+- The data values of inputTokens, sampledTokenIds, inputPositions, seqLens, slotMapping, and blockTables must be valid values consistent with the business semantics (non-negative integers, such as token IDs, sequence lengths, block numbers, and physical slots; 0 is a legal value).
 - The second-dimension length of blockTables must be greater than the maximum value in seqLens divided by blockSize, ensuring that the block table can cover the maximum block index of all sequences.
+- Out-of-range violations (such as negative positions or positions beyond the blockTables coverage) are out-of-contract inputs: when the lookup column index falls outside the row-local blockTables coverage ($q = pos/blockSize \notin [0, blockTablesStride)$), both the V1 and V2 paths defensively write 0 — both the block number and the remainder are masked, and no out-of-bounds GM read occurs. This behavior is defined as the public contract for the V1 path (out-of-range rows get slotMapping=0 while the other outputs are computed from the input values by the formulas, mirrored by golden; out-of-contract value-range cases can be accuracy-compared). For the V2 path, when position values exceed the int32 representable range, the kernel (int32 pipeline) and golden (int64 computation) have representation differences; value consistency is not guaranteed in that subdomain.
 
 ## Invocation Description
 

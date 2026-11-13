@@ -18,6 +18,7 @@
 
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
+#include "tiling/platform/platform_ascendc.h"
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(AdvanceStepTilingData)
@@ -30,6 +31,7 @@ TILING_DATA_FIELD_DEF(int64_t, perCoreSeqs);
 TILING_DATA_FIELD_DEF(int64_t, lastCoreSeqs);
 TILING_DATA_FIELD_DEF(int64_t, perLoopMaxSeqs);
 TILING_DATA_FIELD_DEF(int64_t, specNum);
+TILING_DATA_FIELD_DEF(int64_t, vectorGather); // 1=V2 slotMapping 走分块搬运+向量 gather；0=标量防护路径
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AdvanceStep, AdvanceStepTilingData)
@@ -72,6 +74,7 @@ private:
 
     uint64_t aivNum_{1};
     uint64_t ubSize_{1};
+    platform_ascendc::SocVersion socVersion_{platform_ascendc::SocVersion::RESERVED_VERSION};
 
     int64_t numSeqs_{1};
     int64_t numQueries_{1};
@@ -87,6 +90,7 @@ private:
 
     bool specTokenExist{};
     bool acceptedNumExist{};
+    bool vectorGather_{};
 
     UB_TILING_POLICY ubTilingPolicy_{UB_TILING_POLICY::FULL_LOAD};
 };

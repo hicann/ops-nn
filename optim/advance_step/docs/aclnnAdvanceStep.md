@@ -29,25 +29,29 @@
 
 - 计算公式：
 
+  记query行序号 i ∈ [0, numQueries)（与AIV核数无关），pos_i为更新前的seqLens[i]，blockTablesFlat为blockTables按行展开的一维视图：
+
   $$
-  blockIdx是当前查询序列的索引，取值范围为0到numQueries-1，与AIV核数无关。
+  blockTablesStride = blockTables.stride(0)
   $$
 
   $$
-  inputTokens[blockIdx] = sampledTokenIds[blockIdx]
+  inputTokens[i] = sampledTokenIds[i, 0]
   $$
 
   $$
-  inputPositions[blockIdx] = seqLens[blockIdx]
+  inputPositions[i] = pos_i
   $$
 
   $$
-  seqLens[blockIdx] = seqLens[blockIdx] + 1
+  seqLens[i] = pos_i + 1
   $$
 
   $$
-  slotMapping[blockIdx] = blockTables[blockIdx][inputPositions[blockIdx] / blockSize] * blockSize + (inputPositions[blockIdx] \% blockSize)
+  slotMapping[i] = blockTablesFlat[blockTablesStride * i + ⌊pos_i / blockSize⌋] * blockSize + (pos_i \% blockSize)
   $$
+
+  padding 行为：numSeqs大于numQueries时，kernel对所有padding行 j ∈ [numQueries, numSeqs) 写入 inputTokens[j]=0、inputPositions[j]=0、slotMapping[j]=-1，seqLens的padding行保留输入原值；该写回作用于调用方输入Tensor的对应区域，调用方须保证其可写。
 
 ## 函数原型
 
@@ -55,11 +59,11 @@
 
 ```Cpp
 aclnnStatus aclnnAdvanceStepGetWorkspaceSize(
-  const aclTensor *inputTokens,
+  aclTensor *inputTokensRef,
   const aclTensor *sampledTokenIds,
-  const aclTensor *inputPositions,
-  const aclTensor *seqLens,
-  const aclTensor *slotMapping,
+  aclTensor *inputPositionsRef,
+  aclTensor *seqLensRef,
+  aclTensor *slotMappingRef,
   const aclTensor *blockTables,
   int64_t          numSeqs,
   int64_t          numQueries,
@@ -106,7 +110,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>inputTokens（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStep计算的入参/出参，公式中的输出inputTokens，用于更新vLLM模型中的token值。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -116,7 +120,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>sampledTokenIds（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStep计算的入参，用于存储tokenID，公式中的输入sampledTokenIds。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numQueries一致，第二维长度为1。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numQueries一致，第二维长度为1。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
@@ -126,7 +130,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>inputPositions（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStep计算的入参/出参，公式中的输出inputPositions，用于记录token的index。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -136,7 +140,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>seqLens（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStep计算的入参/出参，用于记录不同blockIdx下seq的长度，公式中的输入/输出seqLens。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -146,7 +150,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>slotMapping（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStep计算的入参/出参，公式中的输出slotMapping，用于将token值在序列中的位置映射到物理位置。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -156,7 +160,7 @@ aclnnStatus aclnnAdvanceStep(
       <td>blockTables（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStep计算的入参，用于记录不同blockIdx下block的物理块编号，公式中的输入blockTables。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维大于（seqLens中的最大值）/blockSize。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维长度须覆盖更新后位置的block索引（V1路径更新后位置等于更新前的seqLens值），即大于（seqLens中的最大值）/blockSize。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
@@ -244,9 +248,18 @@ aclnnStatus aclnnAdvanceStep(
     <td>inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables的数据类型不在支持的范围之内。</td>
   </tr>
   <tr>
-    <td rowspan="3">aclnnAdvanceStepGetWorkspaceSize failed</td>
-    <td rowspan="3">561002</td>
+    <td rowspan="6">aclnnAdvanceStepGetWorkspaceSize failed</td>
+    <td rowspan="6">561002</td>
     <td>输入inputTokens、inputPositions、seqLens、slotMapping、blockTables的shape的第一维长度与numSeqs不一致。</td>
+  </tr>
+  <tr>
+    <td>属性numSeqs、numQueries、blockSize非正整数，或numSeqs大于等于200000000。</td>
+  </tr>
+  <tr>
+    <td>输入的存储格式非ND。</td>
+  </tr>
+  <tr>
+    <td>输入存在空Tensor（所有必选输入不支持空Tensor）。</td>
   </tr>
   <tr>
     <td>输入sampledTokenIds的shape的第一维长度与numQueries不一致，或者shape的第二维长度不为1。</td>
@@ -302,6 +315,18 @@ aclnnStatus aclnnAdvanceStep(
 
 ## 约束说明
 
+- Host侧校验约束（tiling阶段校验，不满足时报错终止）：
+  - 数据类型：所有输入、输出仅支持INT64。
+  - 数据格式：所有输入仅支持ND。
+  - 属性约束：numSeqs、numQueries、blockSize必须为大于0的整数，且numSeqs必须小于200000000；numSeqs必须大于numQueries。
+  - 形状约束：inputTokens、inputPositions、seqLens、slotMapping、blockTables的第一维长度必须等于numSeqs；sampledTokenIds的shape必须为[numQueries, 1]；blockTables为2-D [numSeqs, blockTablesStride]，第二维长度必须大于0。
+  - 所有必选输入不支持空Tensor。
+- 用户保证约束（涉及数据内容或内存布局，Host侧与kernel侧均不校验数据值，由调用方保证，违反时可能导致计算错误或越界访问）：
+  - 所有输入Tensor必须连续，不支持非连续Tensor。
+  - 入参默认值域：输入数据值须为符合业务语义的非负整数（token ID、序列长度、block编号、物理槽位等，0为合法值），token ID按INT64非负全域取值；其中inputTokens、slotMapping为原地输出张量（输入值不参与计算），[numQueries, numSeqs)中未被padding标记覆盖的行保留输入原值。
+  - blockTables的第二维长度必须大于seqLens中最大值除以blockSize，保证block表能覆盖所有序列的最大block索引（查表下标⌊seqLens[i]/blockSize⌋落在blockTables第0行内）。
+  - 值域违约（如负的位置值或超出blockTables覆盖范围的位置）属契约外输入：查表列号越出本行blockTables覆盖范围（q = pos/blockSize ∉ [0, blockTablesStride)）时，kernel防御性不读GM、slotMapping防御性写0（块号与余数同时屏蔽，与aclnnAdvanceStepV2路径的越界防护语义一致）。该行为已定义为公开契约——越界行slotMapping写0、其余输出按公式对输入原值计算，golden已同步镜像，契约外值域用例可正常精度比对。
+- 内存约束：本算子不使用workspace（GetWorkspaceSize返回的workspaceSize为0）。
 - 确定性计算：
   - aclnnAdvanceStep默认确定性实现。
 
@@ -350,7 +375,11 @@ int Init(int64_t deviceId, aclrtStream* stream) {
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+    if (ret != ACL_SUCCESS) {
+    LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret);
+    (void)aclFinalize();
+    return ret;
+    }
     ret = aclrtCreateStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
     return 0;
@@ -388,10 +417,15 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> inputShape = {8};
+    std::vector<int64_t> inputShape = {8};  // 1-D 状态张量
+    // blockTables 为 2-D [numSeqs, blockTablesStride]；约束要求第二维长度大于
+    // seqLens 最大值/blockSize（本例 7/2=3.5，故取 4），每行按序列给出 block 索引
+    std::vector<int64_t> blockTablesShape = {8, 4};
     std::vector<int64_t> input2Shape = {4,1};
     std::vector<int64_t> inputHostData = {0, 1, 2, 3, 4, 5, 6, 7};
     std::vector<int64_t> input2HostData = {0, 1, 2, 3};
+    std::vector<int64_t> blockTablesHostData = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                                                16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
 
     void* input1DeviceAddr = nullptr;
     aclTensor* input1 = nullptr;
@@ -417,7 +451,7 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = CreateAclTensor(inputHostData, inputShape, &input5DeviceAddr, aclDataType::ACL_INT64, &input5);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(inputHostData, inputShape, &input6DeviceAddr, aclDataType::ACL_INT64, &input6);
+    ret = CreateAclTensor(blockTablesHostData, blockTablesShape, &input6DeviceAddr, aclDataType::ACL_INT64, &input6);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     int64_t numseq = 8;

@@ -46,6 +46,7 @@ private:
     int64_t num_seqs;
     int64_t num_queries;
     int64_t block_size;
+    int64_t per_core_queries;
 };
 
 template <typename T>
@@ -66,6 +67,7 @@ __aicore__ inline void KernelAdvanceStep<T>::Init(GM_ADDR input_tokens, GM_ADDR 
     num_seqs = tilingData->numSeqs;
     num_queries = tilingData->numQueries;
     block_size = tilingData->blockSize;
+    per_core_queries = tilingData->perCoreSeqs;
 }
 
 template <typename T>
@@ -81,8 +83,22 @@ __aicore__ inline void KernelAdvanceStep<T>::Process()
         }
     }
 
-    // The legacy tiling launches one core to advance all queries.
-    for (int64_t index = 0; index < num_queries; ++index) {
+    // 更新 [0, numQueries) 的 query 行（REQUIREMENTS §4.1 公式），多核分块切分：核 b 处理
+    // [b*perCoreQueries, min((b+1)*perCoreQueries, numQueries))，各核行区间连续且之并为全量。
+    // perCoreQueries 来自 tiling（多核时 CeilDiv(numQueries, aivNum)、单核时 = numQueries）。
+    // blockTables 查表列号 q = pos/blockSize 由 GM 数据值（seqLens）驱动，host 侧无法校验：
+    // 契约要求 max(seqLens)/blockSize < blockTablesStride；契约外输入（越列、跨行平坦
+    // 下标、负值）防御性 slot 写 0 且不读 GM——与 V2 路径 qMask 掩码语义一致。
+    // 查表公式与 V2 及 issue #6573 修正对齐：物理块号按平坦下标 stride*i + q 读取。
+    const int64_t rowStart = blockIdx * per_core_queries;
+    if (rowStart >= num_queries) {
+        return;
+    }
+    int64_t rowEnd = rowStart + per_core_queries;
+    if (rowEnd > num_queries) {
+        rowEnd = num_queries;
+    }
+    for (int64_t index = rowStart; index < rowEnd; index++) {
         // Update input_tokens
         input_tokens_ptr.SetValue(index, sampled_token_ids_ptr.GetValue(index));
 
@@ -97,8 +113,16 @@ __aicore__ inline void KernelAdvanceStep<T>::Process()
         int64_t block_index = next_input_pos / block_size; // 第几个q块
         int64_t block_offset = next_input_pos % block_size;
 
-        int64_t physical_block = block_tables_ptr.GetValue(block_tables_stride * index + block_index);
-        int64_t slot_num = physical_block * block_size + block_offset;
+        // 行内列校验（0 ≤ block_index < stride，q 由 GM 数据驱动、host 侧无法校验）：
+        // 契约要求 max(seqLens)/blockSize < blockTablesStride；契约外（负值/越列/跨行
+        // 平坦下标）防御性写 0——块号与余数同时屏蔽（与 V2 qMask 掩码语义一致，兑现
+        // "越界防御性写 0"公开契约），行内蕴含平坦下标落在张量内、不发生 GM 越界读
+        const bool inRow = block_index >= 0 && block_index < block_tables_stride;
+        int64_t slot_num = 0;
+        if (inRow) {
+            const int64_t physical_block = block_tables_ptr.GetValue(block_tables_stride * index + block_index);
+            slot_num = physical_block * block_size + block_offset;
+        }
         // Update slot_mapping
         slot_mapping_ptr.SetValue(index, slot_num);
     }

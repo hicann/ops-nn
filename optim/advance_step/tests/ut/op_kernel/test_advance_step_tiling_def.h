@@ -27,6 +27,7 @@ struct AdvanceStepTilingDataTest {
     int64_t lastCoreSeqs = 8;
     int64_t perLoopMaxSeqs = 8;
     int64_t specNum = 8;
+    int64_t vectorGather = 0;
 };
 
 inline void IAdvanceStepTilingData(uint8_t* tiling, AdvanceStepTilingDataTest* const_data)

@@ -31,28 +31,28 @@
 
 - Formula:
 
-  $
-  blockIdx is the index of the kernel where the current code is executed.
-  $
+  Let $blockTablesFlat$ be the row-flattened one-dimensional view of $blockTables$:
 
   $$
   blockTablesStride = blockTables.stride(0)
   $$
 
+  Let $i \in [0, numQueries)$ be the query row index, $pos_i$ the pre-update $seqLens[i]$:
+
   $$
-  inputTokens[blockIdx] = sampledTokenIds[blockIdx]
+  inputTokens[i] = sampledTokenIds[i, 0]
   $$
 
   $$
-  inputPositions[blockIdx] = seqLens[blockIdx]
+  inputPositions[i] = pos_i
   $$
 
   $$
-  seqLens[blockIdx] = seqLens[blockIdx] + 1
+  seqLens[i] = pos_i + 1
   $$
 
   $$
-  slotMapping[blockIdx] = (blockTables[blockIdx] + blockTablesStride * blockIdx) * blockSize + (seqLens[blockIdx] \% blockSize)
+  slotMapping[i] = blockTablesFlat[blockTablesStride * i + \lfloor pos_i / blockSize \rfloor] * blockSize + (pos_i \% blockSize)
   $$
 
 ## Function Prototype
@@ -340,6 +340,7 @@ The first-phase API performs input parameter validation and returns an error in 
   - The V2 path requires specToken and acceptedNum to be passed together and to be non-empty, specNum (the length of the second dimension of specToken) to be greater than 0, and numSeqs to be equal to numQueries.
   - When only one of specToken and acceptedNum is passed, or neither is passed (including passing an empty tensor; when specNum is 0, specToken is an empty tensor), the V1 path is used. The V1 path requires numSeqs to be greater than numQueries; otherwise, 561002 is returned.
   - For the no-speculative-decoding scenario, evaluate aclnnAdvanceStep, but the numSeqs and numQueries constraints of the V1 path differ from those of the V2 path, so it is not a direct equivalent replacement.
+- Out-of-range protection: for out-of-contract lookup column indices ($q \notin [0, blockTablesStride)$, including cross-row flat indices and negative values), the V2 path defensively writes 0 — both the block number and the remainder are masked, and no out-of-bounds GM read occurs; the computation semantics of that input domain are undefined.
 - deterministic computation:
   - aclnnAdvanceStepV2 defaults to a deterministic implementation.
 

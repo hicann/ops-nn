@@ -31,29 +31,31 @@
 
 - Formula:
 
-  $
-  blockIdx is the index of the kernel where the current code is executed.
-  $
+  Let $blockTablesFlat$ be the row-flattened one-dimensional view of $blockTables$:
 
   $$
   blockTablesStride = blockTables.stride(0)
   $$
 
+  Let $i \in [0, numQueries)$ be the query row index, $pos_i$ the pre-update $seqLens[i]$:
+
   $$
-  inputTokens[blockIdx] = sampledTokenIds[blockIdx]
+  inputTokens[i] = sampledTokenIds[i, 0]
   $$
 
   $$
-  inputPositions[blockIdx] = seqLens[blockIdx]
+  inputPositions[i] = pos_i
   $$
 
   $$
-  seqLens[blockIdx] = seqLens[blockIdx] + 1
+  seqLens[i] = pos_i + 1
   $$
 
   $$
-  slotMapping[blockIdx] = (blockTables[blockIdx] + blockTablesStride * blockIdx) * blockSize + (seqLens[blockIdx] \% blockSize)
+  slotMapping[i] = blockTablesFlat[blockTablesStride * i + \lfloor pos_i / blockSize \rfloor] * blockSize + (pos_i \% blockSize)
   $$
+
+  Padding behavior: when numSeqs is greater than numQueries, the kernel writes inputTokens[j]=0, inputPositions[j]=0, and slotMapping[j]=-1 for all padding rows $j \in [numQueries, numSeqs)$, while the padding rows of seqLens keep their input values. This write-back acts on the corresponding regions of the caller's input tensors, and the caller must ensure they are writable.
 
 ## Function Prototype
 
@@ -308,6 +310,7 @@ aclnnStatus aclnnAdvanceStep(
 
 ## Constraints
 
+- Out-of-range inputs (such as negative positions or positions beyond the blockTables coverage) are out-of-contract inputs: when the lookup column index falls outside the row-local blockTables coverage ($q = pos/blockSize \notin [0, blockTablesStride)$), the kernel defensively skips the GM read and writes slotMapping=0 for that row (both the block number and the remainder are masked). This behavior is defined as the public contract, and golden mirrors it.
 - Deterministic computation:
   - aclnnAdvanceStep defaults to a deterministic implementation.
 

@@ -39,7 +39,8 @@ TEST_F(advance_step_test, test_advance_step_int_0)
            "../../../../optim/advance_step/tests/ut/op_kernel/advance_step_data ./");
 
     system("chmod -R 755 ./advance_step_data/");
-    system("cd ./advance_step_data/ && python3 gen_data.py '(16, 1)' '(8, 1)' 'int64'");
+    // aiv_num 与下方 needCoreNum 一致（ascend910B1 为 40，ascend950pr_9599 为 56）
+    system("cd ./advance_step_data/ && python3 gen_data.py '(16, 1)' '(8, 1)' 'int64' 40");
     size_t M = 16;
     size_t N = 8;
     size_t D = N / 2;
@@ -86,8 +87,13 @@ TEST_F(advance_step_test, test_advance_step_int_0)
     tilingDatafromBin->numSeqs = numSeqs;
     tilingDatafromBin->numQueries = numQueries;
     tilingDatafromBin->blockSize = blockSize;
+    // 单核执行（blockDim=1）：每核行数 = numQueries，核 0 覆盖全部 query 行
+    tilingDatafromBin->perCoreSeqs = numQueries;
 
     ICPU_SET_TILING_KEY(tilingKey);
+    // CPU 仿真默认 MIX_MODE 会为混合核组派生多个子进程重复执行 kernel（blockDim=1 时为 3 次），
+    // 导致 inplace 累加型输出与单次执行的 golden 不一致；AIV_MODE 下按 blockDim 1:1 派生
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
                 block_tables, nullptr, nullptr, input_tokens, input_positions, seq_lens, slot_mapping, workspace,
                 (uint8_t*)tilingDatafromBin);
@@ -108,40 +114,57 @@ TEST_F(advance_step_test, test_advance_step_int_0)
     AscendC::GmFree((void*)block_tables);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
-    system("cd ./advance_step_data/ && python3 compare_data.py 'int64'");
+    EXPECT_EQ(system("cd ./advance_step_data/ && python3 compare_data.py 'int64'"), 0);
 }
 
-TEST_F(advance_step_test, test_advance_step_int_2)
+// V1 路径契约外值域（垃圾数据）防御见证：seqLens 含越上界/负值/压界位置时，
+// 查表下标越出 blockTables 张量包络则不读 GM、查表值取 0（与 V2 A5 防护语义一致）；
+// 对应 issue「AdvanceStep kernel 内存越界」的修复验证
+TEST_F(advance_step_test, test_advance_step_int_1)
 {
-    size_t num_seqs = 16;
-    size_t spec_num = 2;
-    size_t block_size = 8;
+    system("cp -rf "
+           "../../../../optim/advance_step/tests/ut/op_kernel/advance_step_data ./");
+    system("chmod -R 755 ./advance_step_data/");
+    // aiv_num 与下方 needCoreNum 一致（ascend910B1 为 40，ascend950pr_9599 为 56）
+    system("cd ./advance_step_data/ && python3 gen_data.py v1oob 40");
+    size_t M = 16;
+    size_t N = 8;
 
-    size_t inputTokenSize = num_seqs * (spec_num + 1) * sizeof(int64_t) + 1024;
-    size_t sampledTokenSize = num_seqs * (spec_num + 1) * sizeof(int64_t) + 1024;
-    size_t blockTableSize = num_seqs * 1000 * sizeof(int64_t) * 2;
-    size_t acceptedNumSize = num_seqs * sizeof(int64_t) + 1024;
+    size_t inputTokenSize = M * sizeof(int64_t);
+    size_t sampledTokenSize = N * sizeof(int64_t);
 
     uint8_t* input_tokens = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
     uint8_t* sampled_token_ids = (uint8_t*)AscendC::GmAlloc(sampledTokenSize);
     uint8_t* input_positions = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
     uint8_t* seq_lens = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
     uint8_t* slot_mapping = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
-    uint8_t* block_tables = (uint8_t*)AscendC::GmAlloc(blockTableSize);
-    uint8_t* accepted_num = (uint8_t*)AscendC::GmAlloc(acceptedNumSize);
-    uint8_t* spec_token = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
+    uint8_t* block_tables = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
 
-    uint64_t tilingKey = 2;
-    uint32_t blockDim = 16;
+    uint64_t tilingKey = 1;
+    uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
-    int64_t needCoreNum = 16;
-    int64_t blockTablesStride = 10000;
+    int64_t needCoreNum = 40;
+    int64_t blockTablesStride = 1;
     int64_t numSeqs = 16;
-    int64_t numQueries = 16;
-    int64_t blockSize = 128;
+    int64_t numQueries = 8;
+    int64_t blockSize = 8;
     size_t tilingDataSize = sizeof(AdvanceStepTilingDataTest);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    std::string fileName1 = "./advance_step_data/oob_input_tokens_input_advance_step.bin";
+    std::string fileName2 = "./advance_step_data/oob_sampled_token_ids_input_advance_step.bin";
+    std::string fileName3 = "./advance_step_data/oob_input_positions_input_advance_step.bin";
+    std::string fileName4 = "./advance_step_data/oob_seq_lens_input_advance_step.bin";
+    std::string fileName5 = "./advance_step_data/oob_slot_mapping_input_advance_step.bin";
+    std::string fileName6 = "./advance_step_data/oob_block_tables_input_advance_step.bin";
+
+    ReadFile(fileName1, inputTokenSize, input_tokens, inputTokenSize);
+    ReadFile(fileName2, sampledTokenSize, sampled_token_ids, sampledTokenSize);
+    ReadFile(fileName3, inputTokenSize, input_positions, inputTokenSize);
+    ReadFile(fileName4, inputTokenSize, seq_lens, inputTokenSize);
+    ReadFile(fileName5, inputTokenSize, slot_mapping, inputTokenSize);
+    ReadFile(fileName6, inputTokenSize, block_tables, inputTokenSize);
 
     AdvanceStepTilingDataTest* tilingDatafromBin = reinterpret_cast<AdvanceStepTilingDataTest*>(tiling);
     tilingDatafromBin->needCoreNum = needCoreNum;
@@ -149,15 +172,200 @@ TEST_F(advance_step_test, test_advance_step_int_2)
     tilingDatafromBin->numSeqs = numSeqs;
     tilingDatafromBin->numQueries = numQueries;
     tilingDatafromBin->blockSize = blockSize;
+    // 单核执行（blockDim=1）：每核行数 = numQueries，核 0 覆盖全部 query 行
+    tilingDatafromBin->perCoreSeqs = numQueries;
+
+    ICPU_SET_TILING_KEY(tilingKey);
+    // CPU 仿真默认 MIX_MODE 会为混合核组派生多个子进程重复执行 kernel
+    // （blockDim=1 时为 3 次），导致 inplace 累加型输出与单次执行的 golden 不一致；
+    // AIV_MODE 下按 blockDim 1:1 派生
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
+                block_tables, nullptr, nullptr, input_tokens, input_positions, seq_lens, slot_mapping, workspace,
+                (uint8_t*)tilingDatafromBin);
+    fileName1 = "./advance_step_data/oob_1_output_advance_step.bin";
+    fileName2 = "./advance_step_data/oob_2_output_advance_step.bin";
+    fileName3 = "./advance_step_data/oob_3_output_advance_step.bin";
+    fileName4 = "./advance_step_data/oob_4_output_advance_step.bin";
+    WriteFile(fileName1, input_tokens, inputTokenSize);
+    WriteFile(fileName2, input_positions, inputTokenSize);
+    WriteFile(fileName3, seq_lens, inputTokenSize);
+    WriteFile(fileName4, slot_mapping, inputTokenSize);
+
+    AscendC::GmFree((void*)input_tokens);
+    AscendC::GmFree((void*)sampled_token_ids);
+    AscendC::GmFree((void*)input_positions);
+    AscendC::GmFree((void*)seq_lens);
+    AscendC::GmFree((void*)slot_mapping);
+    AscendC::GmFree((void*)block_tables);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    EXPECT_EQ(system("cd ./advance_step_data/ && python3 compare_data.py 'int64' oob_"), 0);
+}
+
+// V1（legacy）路径多核切分：blockDim=8、每核 1 行（perCoreSeqs=1，与真实 tiling 对
+// numQueries<aivNum 的切分一致），数据与 golden 与单核用例完全相同——见证分区不改变输出
+TEST_F(advance_step_test, test_advance_step_int_4)
+{
+    system("cp -rf "
+           "../../../../optim/advance_step/tests/ut/op_kernel/advance_step_data ./");
+
+    system("chmod -R 755 ./advance_step_data/");
+    // aiv_num 与下方 needCoreNum 一致（ascend910B1 为 40，ascend950pr_9599 为 56）
+    system("cd ./advance_step_data/ && python3 gen_data.py '(16, 1)' '(8, 1)' 'int64' 40");
+    size_t M = 16;
+    size_t N = 8;
+
+    size_t inputTokenSize = M * sizeof(int64_t);
+    size_t sampledTokenSize = N * sizeof(int64_t);
+
+    uint8_t* input_tokens = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
+    uint8_t* sampled_token_ids = (uint8_t*)AscendC::GmAlloc(sampledTokenSize);
+    uint8_t* input_positions = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
+    uint8_t* seq_lens = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
+    uint8_t* slot_mapping = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
+    uint8_t* block_tables = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
+
+    uint64_t tilingKey = 1;
+    uint32_t blockDim = 8;
+    size_t workspaceFileSize = 16781184;
+    int64_t needCoreNum = 40;
+    int64_t blockTablesStride = 1;
+    int64_t numSeqs = 16;
+    int64_t numQueries = 8;
+    int64_t blockSize = 8;
+    size_t tilingDataSize = sizeof(AdvanceStepTilingDataTest);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    std::string fileName1 = "./advance_step_data/input_tokens_input_advance_step.bin";
+    std::string fileName2 = "./advance_step_data/sampled_token_ids_input_advance_step.bin";
+    std::string fileName3 = "./advance_step_data/input_positions_input_advance_step.bin";
+    std::string fileName4 = "./advance_step_data/seq_lens_input_advance_step.bin";
+    std::string fileName5 = "./advance_step_data/slot_mapping_input_advance_step.bin";
+    std::string fileName6 = "./advance_step_data/block_tables_input_advance_step.bin";
+
+    ReadFile(fileName1, inputTokenSize, input_tokens, inputTokenSize);
+    ReadFile(fileName2, sampledTokenSize, sampled_token_ids, sampledTokenSize);
+    ReadFile(fileName3, inputTokenSize, input_positions, inputTokenSize);
+    ReadFile(fileName4, inputTokenSize, seq_lens, inputTokenSize);
+    ReadFile(fileName5, inputTokenSize, slot_mapping, inputTokenSize);
+    ReadFile(fileName6, inputTokenSize, block_tables, inputTokenSize);
+
+    AdvanceStepTilingDataTest* tilingDatafromBin = reinterpret_cast<AdvanceStepTilingDataTest*>(tiling);
+    tilingDatafromBin->needCoreNum = needCoreNum;
+    tilingDatafromBin->blockTablesStride = blockTablesStride;
+    tilingDatafromBin->numSeqs = numSeqs;
+    tilingDatafromBin->numQueries = numQueries;
+    tilingDatafromBin->blockSize = blockSize;
+    // 多核执行（blockDim=8）：每核行数 = CeilDiv(8, 40) = 1，核 b 处理行 b
+    tilingDatafromBin->perCoreSeqs = 1;
+
+    ICPU_SET_TILING_KEY(tilingKey);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
+                block_tables, nullptr, nullptr, input_tokens, input_positions, seq_lens, slot_mapping, workspace,
+                (uint8_t*)tilingDatafromBin);
+    fileName1 = "./advance_step_data/1_output_advance_step.bin";
+    fileName2 = "./advance_step_data/2_output_advance_step.bin";
+    fileName3 = "./advance_step_data/3_output_advance_step.bin";
+    fileName4 = "./advance_step_data/4_output_advance_step.bin";
+    WriteFile(fileName1, input_tokens, inputTokenSize);
+    WriteFile(fileName2, input_positions, inputTokenSize);
+    WriteFile(fileName3, seq_lens, inputTokenSize);
+    WriteFile(fileName4, slot_mapping, inputTokenSize);
+
+    AscendC::GmFree((void*)input_tokens);
+    AscendC::GmFree((void*)sampled_token_ids);
+    AscendC::GmFree((void*)input_positions);
+    AscendC::GmFree((void*)seq_lens);
+    AscendC::GmFree((void*)slot_mapping);
+    AscendC::GmFree((void*)block_tables);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    EXPECT_EQ(system("cd ./advance_step_data/ && python3 compare_data.py 'int64'"), 0);
+}
+
+static void RunV2Case(bool vectorGather)
+{
+    // V2（投机采样）路径：参数与 gen_data.py v2 模式保持一致
+    size_t numSeqs = 16;
+    size_t specNum = 2;
+    const size_t tokenEachReqs = specNum + 1;
+    const size_t blockTablesStride = 1000;
+    const int64_t blockSize = 128;
+
+    system("cp -rf "
+           "../../../../optim/advance_step/tests/ut/op_kernel/advance_step_data ./");
+    system("chmod -R 755 ./advance_step_data/");
+    system("cd ./advance_step_data/ && python3 gen_data.py v2");
+
+    size_t stateSize = numSeqs * tokenEachReqs * sizeof(int64_t);
+    size_t sampledTokenSize = numSeqs * tokenEachReqs * sizeof(int64_t);
+    size_t specTokenSize = numSeqs * specNum * sizeof(int64_t);
+    size_t acceptedNumSize = numSeqs * sizeof(int64_t);
+    size_t blockTableSize = numSeqs * blockTablesStride * sizeof(int64_t);
+
+    uint8_t* input_tokens = (uint8_t*)AscendC::GmAlloc(stateSize);
+    uint8_t* sampled_token_ids = (uint8_t*)AscendC::GmAlloc(sampledTokenSize);
+    uint8_t* input_positions = (uint8_t*)AscendC::GmAlloc(stateSize);
+    uint8_t* seq_lens = (uint8_t*)AscendC::GmAlloc(stateSize);
+    uint8_t* slot_mapping = (uint8_t*)AscendC::GmAlloc(stateSize);
+    uint8_t* block_tables = (uint8_t*)AscendC::GmAlloc(blockTableSize);
+    uint8_t* accepted_num = (uint8_t*)AscendC::GmAlloc(acceptedNumSize);
+    uint8_t* spec_token = (uint8_t*)AscendC::GmAlloc(specTokenSize);
+
+    uint64_t tilingKey = 2;
+    uint32_t blockDim = 16;
+    size_t workspaceFileSize = 16781184;
+    size_t tilingDataSize = sizeof(AdvanceStepTilingDataTest);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    std::string fileName1 = "./advance_step_data/v2_input_tokens_input_advance_step.bin";
+    std::string fileName2 = "./advance_step_data/v2_sampled_token_ids_input_advance_step.bin";
+    std::string fileName3 = "./advance_step_data/v2_input_positions_input_advance_step.bin";
+    std::string fileName4 = "./advance_step_data/v2_seq_lens_input_advance_step.bin";
+    std::string fileName5 = "./advance_step_data/v2_slot_mapping_input_advance_step.bin";
+    std::string fileName6 = "./advance_step_data/v2_block_tables_input_advance_step.bin";
+    std::string fileName7 = "./advance_step_data/v2_spec_token_input_advance_step.bin";
+    std::string fileName8 = "./advance_step_data/v2_accepted_num_input_advance_step.bin";
+    ReadFile(fileName1, stateSize, input_tokens, stateSize);
+    ReadFile(fileName2, sampledTokenSize, sampled_token_ids, sampledTokenSize);
+    ReadFile(fileName3, stateSize, input_positions, stateSize);
+    ReadFile(fileName4, stateSize, seq_lens, stateSize);
+    ReadFile(fileName5, stateSize, slot_mapping, stateSize);
+    ReadFile(fileName6, blockTableSize, block_tables, blockTableSize);
+    ReadFile(fileName7, specTokenSize, spec_token, specTokenSize);
+    ReadFile(fileName8, acceptedNumSize, accepted_num, acceptedNumSize);
+
+    AdvanceStepTilingDataTest* tilingDatafromBin = reinterpret_cast<AdvanceStepTilingDataTest*>(tiling);
+    tilingDatafromBin->needCoreNum = 16;
+    tilingDatafromBin->blockTablesStride = blockTablesStride;
+    tilingDatafromBin->numSeqs = numSeqs;
+    tilingDatafromBin->numQueries = numSeqs;
+    tilingDatafromBin->blockSize = blockSize;
     tilingDatafromBin->perCoreSeqs = 1;
     tilingDatafromBin->lastCoreSeqs = 1;
     tilingDatafromBin->perLoopMaxSeqs = 1;
-    tilingDatafromBin->specNum = 2;
+    tilingDatafromBin->specNum = specNum;
+    // vectorGather=true 走分块搬运+向量 gather；false 走标量防护回退（两条路径均需覆盖）
+    tilingDatafromBin->vectorGather = vectorGather ? 1 : 0;
 
     ICPU_SET_TILING_KEY(tilingKey);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
                 block_tables, spec_token, accepted_num, input_tokens, input_positions, seq_lens, slot_mapping,
                 workspace, (uint8_t*)tilingDatafromBin);
+
+    fileName1 = "./advance_step_data/v2_1_output_advance_step.bin";
+    fileName2 = "./advance_step_data/v2_2_output_advance_step.bin";
+    fileName3 = "./advance_step_data/v2_3_output_advance_step.bin";
+    fileName4 = "./advance_step_data/v2_4_output_advance_step.bin";
+    WriteFile(fileName1, input_tokens, stateSize);
+    WriteFile(fileName2, input_positions, stateSize);
+    WriteFile(fileName3, seq_lens, stateSize);
+    WriteFile(fileName4, slot_mapping, stateSize);
 
     AscendC::GmFree((void*)input_tokens);
     AscendC::GmFree((void*)sampled_token_ids);
@@ -169,8 +377,115 @@ TEST_F(advance_step_test, test_advance_step_int_2)
     AscendC::GmFree((void*)spec_token);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
+    EXPECT_EQ(system("cd ./advance_step_data/ && python3 compare_data.py 'int64' v2_"), 0);
 }
 
+// V2（投机采样）路径：分块搬运 + 向量 gather（tiling vectorGather=1）
+TEST_F(advance_step_test, test_advance_step_int_2) { RunV2Case(true); }
+
+// V2（投机采样）路径：标量防护回退（vectorGather=0，超大 stride 场景路径）
+TEST_F(advance_step_test, test_advance_step_int_3) { RunV2Case(false); }
+
+// V2（投机采样）specNum=1（tokenEachReqs=2）路径：覆盖 ComputeInputTokens 的 te==2
+// 向量化哨兵检索快速路径（lastToken 三分支：行首 -1 / 行内 -1 / 无 -1）与逐行标量化调用
+// 向量化后的行展开/flat 计算；参数与 gen_data.py v2spec1 模式保持一致
+static void RunV2Spec1Case(bool vectorGather)
+{
+    size_t numSeqs = 16;
+    size_t specNum = 1;
+    const size_t tokenEachReqs = specNum + 1;
+    const size_t blockTablesStride = 1000;
+    const int64_t blockSize = 128;
+
+    system("cp -rf "
+           "../../../../optim/advance_step/tests/ut/op_kernel/advance_step_data ./");
+    system("chmod -R 755 ./advance_step_data/");
+    system("cd ./advance_step_data/ && python3 gen_data.py v2spec1");
+
+    size_t stateSize = numSeqs * tokenEachReqs * sizeof(int64_t);
+    size_t sampledTokenSize = numSeqs * tokenEachReqs * sizeof(int64_t);
+    size_t specTokenSize = numSeqs * specNum * sizeof(int64_t);
+    size_t acceptedNumSize = numSeqs * sizeof(int64_t);
+    size_t blockTableSize = numSeqs * blockTablesStride * sizeof(int64_t);
+
+    uint8_t* input_tokens = (uint8_t*)AscendC::GmAlloc(stateSize);
+    uint8_t* sampled_token_ids = (uint8_t*)AscendC::GmAlloc(sampledTokenSize);
+    uint8_t* input_positions = (uint8_t*)AscendC::GmAlloc(stateSize);
+    uint8_t* seq_lens = (uint8_t*)AscendC::GmAlloc(stateSize);
+    uint8_t* slot_mapping = (uint8_t*)AscendC::GmAlloc(stateSize);
+    uint8_t* block_tables = (uint8_t*)AscendC::GmAlloc(blockTableSize);
+    uint8_t* accepted_num = (uint8_t*)AscendC::GmAlloc(acceptedNumSize);
+    uint8_t* spec_token = (uint8_t*)AscendC::GmAlloc(specTokenSize);
+
+    uint64_t tilingKey = 2;
+    uint32_t blockDim = 16;
+    size_t workspaceFileSize = 16781184;
+    size_t tilingDataSize = sizeof(AdvanceStepTilingDataTest);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    std::string fileName1 = "./advance_step_data/v2_input_tokens_input_advance_step.bin";
+    std::string fileName2 = "./advance_step_data/v2_sampled_token_ids_input_advance_step.bin";
+    std::string fileName3 = "./advance_step_data/v2_input_positions_input_advance_step.bin";
+    std::string fileName4 = "./advance_step_data/v2_seq_lens_input_advance_step.bin";
+    std::string fileName5 = "./advance_step_data/v2_slot_mapping_input_advance_step.bin";
+    std::string fileName6 = "./advance_step_data/v2_block_tables_input_advance_step.bin";
+    std::string fileName7 = "./advance_step_data/v2_spec_token_input_advance_step.bin";
+    std::string fileName8 = "./advance_step_data/v2_accepted_num_input_advance_step.bin";
+    ReadFile(fileName1, stateSize, input_tokens, stateSize);
+    ReadFile(fileName2, sampledTokenSize, sampled_token_ids, sampledTokenSize);
+    ReadFile(fileName3, stateSize, input_positions, stateSize);
+    ReadFile(fileName4, stateSize, seq_lens, stateSize);
+    ReadFile(fileName5, stateSize, slot_mapping, stateSize);
+    ReadFile(fileName6, blockTableSize, block_tables, blockTableSize);
+    ReadFile(fileName7, specTokenSize, spec_token, specTokenSize);
+    ReadFile(fileName8, acceptedNumSize, accepted_num, acceptedNumSize);
+
+    AdvanceStepTilingDataTest* tilingDatafromBin = reinterpret_cast<AdvanceStepTilingDataTest*>(tiling);
+    tilingDatafromBin->needCoreNum = 16;
+    tilingDatafromBin->blockTablesStride = blockTablesStride;
+    tilingDatafromBin->numSeqs = numSeqs;
+    tilingDatafromBin->numQueries = numSeqs;
+    tilingDatafromBin->blockSize = blockSize;
+    tilingDatafromBin->perCoreSeqs = 1;
+    tilingDatafromBin->lastCoreSeqs = 1;
+    tilingDatafromBin->perLoopMaxSeqs = 1;
+    tilingDatafromBin->specNum = specNum;
+    tilingDatafromBin->vectorGather = vectorGather ? 1 : 0;
+
+    ICPU_SET_TILING_KEY(tilingKey);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(advance_step, blockDim, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping,
+                block_tables, spec_token, accepted_num, input_tokens, input_positions, seq_lens, slot_mapping,
+                workspace, (uint8_t*)tilingDatafromBin);
+
+    fileName1 = "./advance_step_data/v2_1_output_advance_step.bin";
+    fileName2 = "./advance_step_data/v2_2_output_advance_step.bin";
+    fileName3 = "./advance_step_data/v2_3_output_advance_step.bin";
+    fileName4 = "./advance_step_data/v2_4_output_advance_step.bin";
+    WriteFile(fileName1, input_tokens, stateSize);
+    WriteFile(fileName2, input_positions, stateSize);
+    WriteFile(fileName3, seq_lens, stateSize);
+    WriteFile(fileName4, slot_mapping, stateSize);
+
+    AscendC::GmFree((void*)input_tokens);
+    AscendC::GmFree((void*)sampled_token_ids);
+    AscendC::GmFree((void*)input_positions);
+    AscendC::GmFree((void*)seq_lens);
+    AscendC::GmFree((void*)slot_mapping);
+    AscendC::GmFree((void*)block_tables);
+    AscendC::GmFree((void*)accepted_num);
+    AscendC::GmFree((void*)spec_token);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    EXPECT_EQ(system("cd ./advance_step_data/ && python3 compare_data.py 'int64' v2_"), 0);
+}
+
+TEST_F(advance_step_test, test_advance_step_int_5) { RunV2Spec1Case(true); }
+TEST_F(advance_step_test, test_advance_step_int_6) { RunV2Spec1Case(false); }
+
+// V1 宽表（blockTablesStride>1）查表公式见证（issue #6573）：物理块号按平坦下标
+// stride*i + pos/blockSize 读取，兼容 CPU 仿真单核执行（perCoreSeqs=numQueries）
 TEST_F(advance_step_test, test_advance_step_wide_block_tables)
 {
     constexpr int64_t kNumSeqs = 3;
@@ -209,6 +524,8 @@ TEST_F(advance_step_test, test_advance_step_wide_block_tables)
     tilingData->numSeqs = kNumSeqs;
     tilingData->numQueries = kNumQueries;
     tilingData->blockSize = kBlockSize;
+    // CPU 仿真单核（blockIdx=0）覆盖全部 query 行：perCoreSeqs 按单核语义取 numQueries
+    tilingData->perCoreSeqs = kNumQueries;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(1);
@@ -270,6 +587,8 @@ static void RunLegacyQueryCase(int64_t kNumQueries)
     tilingData->numSeqs = kNumSeqs;
     tilingData->numQueries = kNumQueries;
     tilingData->blockSize = kBlockSize;
+    // CPU 仿真单核（blockIdx=0）覆盖全部 query 行：perCoreSeqs 按单核语义取 numQueries
+    tilingData->perCoreSeqs = kNumQueries;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(1);
     ICPU_RUN_KF(advance_step, 1, input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables,

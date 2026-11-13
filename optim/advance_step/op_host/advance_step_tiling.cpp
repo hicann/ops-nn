@@ -19,6 +19,10 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "tiling/tiling_api.h"
 #include "platform/platform_infos_def.h"
+
+// V1 多核启用阈值：每核行数低于该值时维持单核（短 kernel 标量存储丢失窗口，见
+// Tiling4AdvanceStepLegacy 注释）；1000 为 950PR 实测已验证安全点
+constexpr int64_t ADV_V1_MULTICORE_MIN_PERCORE = 1000;
 #include "advance_step_tiling_def.h"
 #include <string>
 #include "util/shape_util.h"
@@ -30,7 +34,6 @@ static constexpr uint16_t SOC_VERSION_310 = 200;
 static constexpr uint16_t SOC_VERSION_910 = 220;
 static constexpr int64_t ONE_BLOCK_BYTE = 32;
 static constexpr int64_t UB_RESERVED_BYTE = 768;
-static constexpr int32_t RESERVED_WORKSPACE_SIZE = 32 * 1024 * 1024;
 static constexpr int64_t IDX_INPUT__INPUT_TOKENS = 0;
 static constexpr int64_t IDX_INPUT__SAMPLED_TOKEN_IDS = 1;
 static constexpr int64_t IDX_INPUT__INPUT_POSITIONS = 2;
@@ -75,6 +78,7 @@ bool AdvanceStepTilingHelper::GetBaseInfo()
     OP_LOGD(context_, "Enter GetBaseInfo");
     auto platformInfo = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     this->aivNum_ = platformInfo.GetCoreNumAiv();
+    this->socVersion_ = platformInfo.GetSocVersion();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, this->ubSize_);
     OP_LOGD(context_, "End GetBaseInfo");
@@ -357,15 +361,41 @@ bool AdvanceStepTilingHelper::Tiling4Seqs()
     this->needCoreNum_ = CeilDiv(this->numSeqs_, this->perCoreSeqs_);
     this->lastCoreSeqs_ = this->numSeqs_ - (this->needCoreNum_ - 1) * this->perCoreSeqs_;
 
+    // V2 kernel 向量管线以 int32 参与 blockSize/stride 运算（static_cast<int32_t> 与
+    // ArithProgression<int32_t>），属性超出 int32 表示域时截断为脏值甚至 0（除零），
+    // host 侧直接拒绝；输入数据值的 int32 域仍为用户保证约束（REQUIREMENTS §5.3）
+    constexpr int64_t INT32_DOMAIN_LIMIT = 1LL << 31;
+    OP_CHECK_IF(this->blockSize_ >= INT32_DOMAIN_LIMIT,
+                OP_LOGE(context_, "blockSize %ld must be smaller than 2^31 for the spec path.", this->blockSize_),
+                return false);
+    OP_CHECK_IF(this->blockTablesStride_ >= INT32_DOMAIN_LIMIT,
+                OP_LOGE(context_, "blockTablesStride %ld must be smaller than 2^31 for the spec path.",
+                        this->blockTablesStride_),
+                return false);
+
     // input oneline buffers, use 4 int64 buffers and 1 int32 buffer with an addtional block
+    // 每 seq 实际占用与 kernel InitBuffer 逐项对齐：4 x (AlignBytes(te,8) + 32B) + (AlignBytes(te,4) + 32B)。
+    // int32 项此前按 AlignBytes(te + 4, 4) 估算，在 te mod 8 ∈ {1,2,3,4} 时比实际少 32B/seq，
+    // 导致 perLoopMaxSeqs 偏大、大 numSeqs 时 UB 越界
     int64_t perCoreInBufSize = 4 * AlignBytes(this->tokenEachReqs_ +
                                               ONE_BLOCK_BYTE / static_cast<int64_t>(sizeof(int64_t))) +
-                               AlignBytes(this->tokenEachReqs_ + ONE_BLOCK_BYTE / static_cast<int64_t>(sizeof(int64_t)),
-                                          static_cast<int64_t>(sizeof(int32_t)));
+                               AlignBytes(this->tokenEachReqs_, static_cast<int64_t>(sizeof(int32_t))) + ONE_BLOCK_BYTE;
+    // 向量化行展开 scratch（kernel rowIdxBuf_/byteOffBuf_）：2 x rowStride x 4B + acc32 4B；
+    // rowStride 按 align 上界 AlignBytes(te,8)/8 + 4 元素计（与 kernel InitBuffer 预留一致）
+    perCoreInBufSize += 2 *
+                            (AlignBytes(this->tokenEachReqs_, static_cast<int64_t>(sizeof(int64_t))) /
+                                 static_cast<int64_t>(sizeof(int64_t)) +
+                             ONE_BLOCK_BYTE / static_cast<int64_t>(sizeof(int64_t))) *
+                            static_cast<int64_t>(sizeof(int32_t)) +
+                        2 * static_cast<int64_t>(sizeof(int64_t)) + static_cast<int64_t>(sizeof(int32_t));
     // buffers to calc ReduceMin
     int64_t perCoreTempBufSize = AlignBytes(1 + this->tokenEachReqs_, static_cast<int64_t>(sizeof(float)));
     // calc: ubRequired = perCoreInBufSize + tempBufSize + UB_RESERVED_BYTE
-    int64_t perCoreAvaliableSize = static_cast<int64_t>(this->ubSize_) - perCoreTempBufSize - UB_RESERVED_BYTE;
+    // 向量化 scratch 常量开销：各 buffer 尾部对齐余量（VEC_SCRATCH_ALIGN_SLACK×3 + buffer3 余量）
+    // 与 colQue 256b 取整上溢，合计按 4KB 预留（与 kernel InitBuffer 常量项对齐）
+    constexpr int64_t ADV_VEC_SCRATCH_CONST_BYTES = 4096;
+    int64_t perCoreAvaliableSize = static_cast<int64_t>(this->ubSize_) - perCoreTempBufSize - UB_RESERVED_BYTE -
+                                   ADV_VEC_SCRATCH_CONST_BYTES;
     OP_CHECK_IF(perCoreAvaliableSize <= perCoreInBufSize,
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                     context_->GetNodeName(), "spec_token", std::to_string(this->specNum_),
@@ -374,6 +404,35 @@ bool AdvanceStepTilingHelper::Tiling4Seqs()
                 return false);
     // calc perLoopSeqs
     this->perLoopMaxSeqs_ = FloorDiv(perCoreAvaliableSize, perCoreInBufSize);
+    // V2 向量化 gather 预算：blockTables 分块搬运缓冲（固定 CAP）+ 每序列 valid01 掩码草稿
+    // （行步长按 align 上界 AlignBytes(te,8)/8 + 4 元素计——元素槽数而非字节数，
+    //  与 kernel ComputeSlotMapping 的 rowStride = Align(te,8)+4 逐项一致，
+    //  常量须与 op_kernel/advance_step_common.h 保持一致）。
+    // **仅 Ascend950 启用向量路径**：分块搬运+向量 gather 及配套向量化链路只在 950 上板
+    // 验证过（910B4 CI 真机首跑流同步失败 507035）；其余 SoC（910B/910_93 等）走
+    // 基线逐行标量路径（master 已验证），接受面与原实现一致。
+    // 仅当预留后每循环仍 ≥1 序列且单行可分块时启用向量路径并收紧 perLoopMaxSeqs；
+    // 否则维持原公式与标量路径——不新增任何拒绝，接受面与原实现完全一致。
+    static constexpr int64_t VEC_BT_CHUNK_CAP_BYTES = 32 * 1024;
+    static constexpr int64_t VEC_GATHER_MAX_LANES = 255 * 64;
+    const bool socSupportsVecGather = (this->socVersion_ == platform_ascendc::SocVersion::ASCEND950);
+    const int64_t rowStrideMax = AlignBytes(this->tokenEachReqs_, sizeof(int64_t)) / sizeof(int64_t) +
+                                 ONE_BLOCK_BYTE / sizeof(int64_t);
+    const int64_t tailPerSeqBytes = rowStrideMax * static_cast<int64_t>(sizeof(int32_t));
+    const bool chunkFits = this->blockTablesStride_ * static_cast<int64_t>(sizeof(int64_t)) <= VEC_BT_CHUNK_CAP_BYTES;
+    const int64_t availAfterCap = perCoreAvaliableSize - VEC_BT_CHUNK_CAP_BYTES;
+    if (socSupportsVecGather && chunkFits && availAfterCap > perCoreInBufSize + tailPerSeqBytes) {
+        int64_t perLoopVec = FloorDiv(availAfterCap, perCoreInBufSize + tailPerSeqBytes);
+        const int64_t laneCap = FloorDiv(VEC_GATHER_MAX_LANES, rowStrideMax);
+        if (perLoopVec > laneCap) {
+            perLoopVec = laneCap;
+        }
+        // 每循环至少 1 序列：防止 perLoopMaxSeqs=0 传入 kernel 造成 perLoopSeqs_ 除零
+        if (perLoopVec >= 1) {
+            this->perLoopMaxSeqs_ = perLoopVec;
+            this->vectorGather_ = true;
+        }
+    }
     // only supports full-load
     this->ubTilingPolicy_ = UB_TILING_POLICY::FULL_LOAD;
     OP_LOGD(context_, "End Tiling4Seqs");
@@ -422,21 +481,21 @@ ge::graphStatus AdvanceStepTilingHelper::PostTiling(AdvanceStepTilingData* tilin
     tilingData->set_lastCoreSeqs(this->lastCoreSeqs_);
     tilingData->set_perLoopMaxSeqs(this->perLoopMaxSeqs_);
     tilingData->set_specNum(this->specNum_);
+    tilingData->set_vectorGather(this->vectorGather_ ? 1 : 0);
     OP_LOGD("AdvanceStepTilingHelper::PostTiling", "Tilingdata perCoreSeqs: %ld, lastCoreSeqs: %ld, specNum: %ld",
             this->perCoreSeqs_, this->lastCoreSeqs_, this->specNum_);
 
     // set tiling key
     uint32_t tilingKey = static_cast<uint32_t>(this->ubTilingPolicy_);
     context_->SetTilingKey(tilingKey);
-    if (tilingKey == 1) {
-        tilingData->set_needCoreNum(this->aivNum_);
-    }
     tilingData->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData->GetDataSize());
 
     // set workspace size
+    // kernel 侧不访问 workspace（Init 从未消费该参数），保留 32MB 仅造成每次执行
+    // 无意义的 device 内存申请/释放，置 0 消除
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    currentWorkspace[0] = static_cast<size_t>(RESERVED_WORKSPACE_SIZE);
+    currentWorkspace[0] = 0;
 
     OP_LOGD(context_, "End PostTiling");
     return ge::GRAPH_SUCCESS;
@@ -457,7 +516,45 @@ ge::graphStatus AdvanceStepTilingHelper::Tiling4AdvanceStepLegacy()
                     ("numSeqs " + std::to_string(this->numSeqs_) + " should not be smaller or equal to numQueries " +
                      std::to_string(this->numQueries_) + " ")),
                 return ge::GRAPH_FAILED);
-
+    // rank 校验必须先于 GetDim 调用：rank 不足时 GetDim 读取 shape 维度数组外的
+    // 未初始化数据，校验结果不确定（公开契约 inputTokens/inputPositions/seqLens/
+    // slotMapping 为 1-D、sampledTokenIds 为 2-D、blockTables 为 2-D）
+    OP_CHECK_IF(input0_storage_shape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    "CheckAdvTiling", "input_tokens", std::to_string(input0_storage_shape.GetDimNum()),
+                    ("inputTokens must be 1-D, got rank " + std::to_string(input0_storage_shape.GetDimNum()) + " ")),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        input1_storage_shape.GetDimNum() != 2,
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            "CheckAdvTiling", "sampled_token_ids", std::to_string(input1_storage_shape.GetDimNum()),
+            ("sampledTokenIds must be 2-D, got rank " + std::to_string(input1_storage_shape.GetDimNum()) + " ")),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(input2_storage_shape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    "CheckAdvTiling", "input_positions", std::to_string(input2_storage_shape.GetDimNum()),
+                    ("inputPositions must be 1-D, got rank " + std::to_string(input2_storage_shape.GetDimNum()) + " ")),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(input3_storage_shape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    "CheckAdvTiling", "seq_lens", std::to_string(input3_storage_shape.GetDimNum()),
+                    ("seqLens must be 1-D, got rank " + std::to_string(input3_storage_shape.GetDimNum()) + " ")),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(input4_storage_shape.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    "CheckAdvTiling", "slot_mapping", std::to_string(input4_storage_shape.GetDimNum()),
+                    ("slotMapping must be 1-D, got rank " + std::to_string(input4_storage_shape.GetDimNum()) + " ")),
+                return ge::GRAPH_FAILED);
+    // blockTables 契约为 2-D [numSeqs, blockTablesStride]（torch_npu 公开文档声明
+    // 非投机/投机场景均为二维；spec.yaml rank_range [2,2]；与 V2 路径检查对称）。
+    // 此前仅要求 rank>=1，1-D/3-D+ 输入被放行后 stride 按 numel/dim0 计算，
+    // 与公开资料的 2-D 声明不一致，统一收紧并同步资料（2026-10-16）
+    OP_CHECK_IF(input5_storage_shape.GetDimNum() != 2,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    "CheckAdvTiling", "block_tables", std::to_string(input5_storage_shape.GetDimNum()),
+                    ("blockTables must be 2-D [numSeqs, blockTablesStride], got rank " +
+                     std::to_string(input5_storage_shape.GetDimNum()) + " ")),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(input0_storage_shape.GetDim(0) != this->numSeqs_,
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                     "CheckAdvTiling", "input_tokens", std::to_string(input0_storage_shape.GetDim(0)),
@@ -501,6 +598,28 @@ ge::graphStatus AdvanceStepTilingHelper::Tiling4AdvanceStepLegacy()
                                                           "sampledTokenIds's last dim should be 1"),
                 return ge::GRAPH_FAILED);
     this->blockTablesStride_ = input5_storage_shape.GetShapeSize() / input5_storage_shape.GetDim(0);
+    // 空 blockTables 防护：stride < 1（如 [numSeqs, 0] 使 GetShapeSize()==0）被放行时，
+    // kernel 将以未受限下标读取该 0 元素张量并越界；空 Tensor 语义由可选输入承载
+    OP_CHECK_IF(this->blockTablesStride_ < 1,
+                OP_LOGE("CheckAdvTiling", "blockTables stride %ld must be positive, empty tensor is not supported.",
+                        this->blockTablesStride_),
+                return ge::GRAPH_FAILED);
+
+    // V1 主循环多核切分（阈值启用）：多核短 kernel（每核行数过小）实测存在标量 GM 存储
+    // 在栅格拆除时的丢失窗口（950PR 实测每核 ≤3 行时部分行写入丢失、每核 1000 行正常），
+    // 仅当每核行数达到已验证安全量级（≥1000）时启用多核，否则维持单核全量循环（历史基线路径）。
+    // kernel V1 分区为连续切块：核 b 处理 [b*perCoreSeqs, min((b+1)*perCoreSeqs, numQueries))；
+    // padding 行由核 0 密集清零（issue #7889 修复），needCoreNum 不再承担稀疏标记步长契约
+    this->perCoreSeqs_ = CeilDiv(this->numQueries_, static_cast<int64_t>(this->aivNum_));
+    OP_CHECK_IF(this->perCoreSeqs_ <= 0, OP_LOGE("CheckAdvTiling", "Invalid perCoreQueries %ld", this->perCoreSeqs_),
+                return ge::GRAPH_FAILED);
+    if (this->perCoreSeqs_ >= ADV_V1_MULTICORE_MIN_PERCORE) {
+        this->needCoreNum_ = CeilDiv(this->numQueries_, this->perCoreSeqs_);
+    } else {
+        // 单核全量：核 0 的行区间须覆盖 [0, numQueries)
+        this->perCoreSeqs_ = this->numQueries_;
+        this->needCoreNum_ = 1;
+    }
 
     this->ubTilingPolicy_ = UB_TILING_POLICY::ONE_CORE_NO_SPEC;
     return ge::GRAPH_SUCCESS;

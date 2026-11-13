@@ -29,28 +29,34 @@
 
 - 计算公式：
 
-  $$
-  blockIdx是当前代码被执行的核的index。
-  $$
+  V2投机采样路径（specToken与acceptedNum同时传入，numSeqs == numQueries，specNum为specToken第二维长度，tokenEachReqs = specNum + 1）。
 
   $$
   blockTablesStride = blockTables.stride(0)
   $$
 
+  记序列序号 i ∈ [0, numSeqs)、序列内token序号 j ∈ [0, tokenEachReqs)，更新后位置 nextPos_{i,j} = inputPositions[i * tokenEachReqs + j] + acceptedNum[i] + 1：
+
   $$
-  inputTokens[blockIdx] = sampledTokenIds[blockIdx]
+  inputTokens[i * tokenEachReqs] = lastToken_i
+  $$
+
+  其中lastToken_i取sampledTokenIds[i]行末补-1后首个-1的前一元素；行首为-1时 lastToken_i = -1。
+
+  $$
+  inputTokens[i * tokenEachReqs + 1 : (i+1) * tokenEachReqs] = specToken[i, :]
   $$
 
   $$
-  inputPositions[blockIdx] = seqLens[blockIdx]
+  inputPositions[i * tokenEachReqs + j] = nextPos_{i,j}
   $$
 
   $$
-  seqLens[blockIdx] = seqLens[blockIdx] + 1
+  seqLens[i * tokenEachReqs + j] = nextPos_{i,j} + 1
   $$
 
   $$
-  slotMapping[blockIdx] = (blockTables[blockIdx] + blockTablesStride * blockIdx) * blockSize + (seqLens[blockIdx] \% blockSize)
+slotMapping[i * tokenEachReqs + j] = blockTablesFlat[⌊nextPos_{i,j} / blockSize⌋ + blockTablesStride * i] * blockSize + nextPos_{i,j} \% blockSize
   $$
 
 ## 函数原型
@@ -59,14 +65,14 @@
 
 ```Cpp
 aclnnStatus aclnnAdvanceStepV2GetWorkspaceSize(
-  const aclTensor *inputTokens,
+  aclTensor *inputTokensRef,
   const aclTensor *sampledTokenIds,
-  const aclTensor *inputPositions,
-  const aclTensor *seqLens,
-  const aclTensor *slotMapping,
+  aclTensor *inputPositionsRef,
+  aclTensor *seqLensRef,
+  aclTensor *slotMappingRef,
   const aclTensor *blockTables,
-  const aclTensor *specToken,
-  const aclTensor *acceptedNum,
+  const aclTensor *specTokenOptional,
+  const aclTensor *acceptedNumOptional,
   int64_t          numSeqs,
   int64_t          numQueries,
   int64_t          blockSize,
@@ -112,7 +118,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>inputTokens（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，公式中的输出inputTokens，用于更新vLLM模型中的token值。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]，specNum为specToken第二维长度。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]，specNum为specToken第二维长度。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -122,7 +128,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>sampledTokenIds（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStepV2计算的入参，用于储存tokenID，公式中的输入sampledTokenIds。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维长度为1+specNum。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维长度为1+specNum。</li><li>取值范围为非负整数（0为合法值），-1为无接受token哨兵值。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
@@ -132,7 +138,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>inputPositions（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，公式中的输出inputPositions，用于记录token的index。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -142,7 +148,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>seqLens（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，用于记录不同blockIdx下seq的长度，公式中的输入/输出seqLens。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -152,7 +158,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>slotMapping（aclTensor*）</td>
       <td>输入/输出</td>
       <td>待进行AdvanceStepV2计算的入参/出参，公式中的输出slotMapping，用于将token值在序列中的位置映射到物理位置。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[numSeqs * (1+specNum)]。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -162,27 +168,27 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>blockTables（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStepV2计算的入参，用于记录不同blockIdx下block的物理块编号，公式中的输入blockTables。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维大于（seqLens中的最大值）/blockSize且不为0。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape第一维长度与numSeqs一致，第二维长度blockTablesStride大于0，且须覆盖更新后位置的block索引：V2路径按每序列更新后位置（inputPositions值+acceptedNum[i]+1）计，须满足其小于blockTablesStride*blockSize；回落V1路径时按更新前seqLens最大值/blockSize计。</li><li>取值范围为非负整数（0为合法值）。</li><li>更新后位置越出blockTables覆盖范围属未定义输入域，kernel对查表下标越界做防御性检查并写入0。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
       <td>×</td>
     </tr>
       <tr>
-      <td>specToken（aclTensor*）</td>
+      <td>specTokenOptional（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStepV2计算的入参，用于记录当前投机模型的token的index。</td>
-      <td><ul><li>可选输入；传入空Tensor视为未传入。</li><li>非空时shape第一维长度与numSeqs一致，第二维长度为specNum，且specNum必须大于0。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>可选输入：传入空Tensor（numel==0）视为未传入，此时回落V1路径。</li><li>shape第一维长度与numSeqs一致，第二维长度为specNum。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
       <td>×</td>
     </tr>
       <tr>
-      <td>acceptedNum（aclTensor*）</td>
+      <td>acceptedNumOptional（aclTensor*）</td>
       <td>输入</td>
       <td>待进行AdvanceStepV2计算的入参，用于记录每个request接受的投机的数量。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape长度与numSeqs一致。</li><li>取值范围是大于0的正整数。</li></ul></td>
+      <td><ul><li>可选输入：传入空Tensor（numel==0）视为未传入，此时回落V1路径。</li><li>shape长度与numSeqs一致。</li><li>取值范围为非负整数（0为合法值）。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -192,7 +198,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>numSeqs（int64_t）</td>
       <td>输入</td>
       <td>记录输入的seq数量，大小与seqLens的长度一致。</td>
-      <td><ul><li>取值范围是大于0且小于200000000的正整数。</li><li>numSeqs的值与输入numQueries的值一致。</li></ul></td>
+      <td><ul><li>取值范围是大于0且小于200000000的正整数。</li><li>V2路径（specToken与acceptedNum同时传入）：numSeqs的值与输入numQueries的值一致。</li><li>可选输入未传入或仅传入其一时回落V1路径：此时要求numSeqs大于numQueries，inputTokens等1-D输入长度为numSeqs，sampledTokenIds为[numQueries, 1]，适用约束见aclnnAdvanceStep。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -262,7 +268,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   <tr>
     <td>ACLNN_ERR_PARAM_NULLPTR</td>
     <td>161001</td>
-    <td>传入的inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables是空指针（specToken、acceptedNum为可选输入，允许为空指针）。</td>
+    <td>传入的inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables是空指针。可选输入specTokenOptional、acceptedNumOptional允许传空指针（等价于未传入，走V1路径）。</td>
   </tr>
   <tr>
     <td>ACLNN_ERR_PARAM_INVALID</td>
@@ -270,29 +276,32 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>inputTokens、sampledTokenIds、inputPositions、seqLens、slotMapping、blockTables、specToken、acceptedNum的数据类型不在支持的范围之内。</td>
   </tr>
   <tr>
-    <td rowspan="7">aclnnAdvanceStepV2GetWorkspaceSize failed</td>
-    <td rowspan="7">561002</td>
-    <td>输入inputTokens、inputPositions、seqLens、slotMapping的shape长度不为numSeqs * (1 + specNum)。</td>
+    <td rowspan="8">aclnnAdvanceStepV2GetWorkspaceSize failed</td>
+    <td rowspan="8">561002</td>
+    <td>（V2路径）输入inputTokens、inputPositions、seqLens、slotMapping的shape长度不为numSeqs * (1 + specNum)。</td>
   </tr>
   <tr>
-    <td>输入sampledTokenIds的shape的第一维长度与numSeqs不一致，或者shape的第二维长度不为1 + specNum。</td>
+    <td>（V2路径）输入sampledTokenIds的shape的第一维长度与numSeqs不一致，或者shape的第二维长度不为1 + specNum。</td>
   </tr>
   <tr>
-    <td>输入specToken非空时，shape的第一维长度与numSeqs不一致，或者shape的维度不为2。</td>
+    <td>（V2路径）输入specToken非空时，shape的第一维长度与numSeqs不一致，或者shape的维度不为2。</td>
   </tr>
   <tr>
-    <td>输入acceptedNum的shape长度与numSeqs不一致。</td>
+    <td>（V2路径）输入acceptedNum的shape长度与numSeqs不一致。</td>
   </tr>
   <tr>
     <td>输入blockTables的shape的第一维长度与numSeqs不一致，或者shape的第二维长度不为正数。</td>
   </tr>
   <tr>
-    <td>输入numSeqs的值不等于输入numQueries的值。</td>
+    <td>（V2路径）输入numSeqs的值不等于输入numQueries的值。</td>
   </tr>
   <tr>
     <td>numSeqs、numQueries、blockSize不是大于0的正整数，或者numSeqs不小于200000000。</td>
   </tr>
-</tbody>
+  <tr>
+    <td>（V2路径）specNum过大导致每序列输入缓冲超出可用UB预算（Invalid ubRequired）；specNum规模上限取决于芯片可用UB，须保证tokenEachReqs对应的每序列缓冲在UB预算内。</td>
+  </tr>
+ </tbody>
 </table>
 
 ## aclnnAdvanceStepV2
@@ -344,6 +353,24 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   - V2路径要求specToken与acceptedNum同时传入且均非空，specNum（specToken第二维长度）大于0，且numSeqs与numQueries相等。
   - 仅传入specToken或acceptedNum中的一个，或两者均未传入（含传入空Tensor；specNum为0时specToken为空Tensor）时，走V1路径；V1路径要求numSeqs大于numQueries，不满足时返回561002。
   - 无投机解码场景可评估使用aclnnAdvanceStep，但V1路径的numSeqs与numQueries约束与V2路径不同，不能直接等价替换。
+- Host侧校验约束（tiling阶段校验，不满足时报错终止）：
+  - 数据类型：所有输入、输出仅支持INT64。
+  - 数据格式：所有输入仅支持ND。
+  - 属性约束：numSeqs、numQueries、blockSize必须为大于0的整数，且numSeqs必须小于200000000；V2路径要求numSeqs等于numQueries。
+  - 形状约束：inputTokens、inputPositions、seqLens、slotMapping的shape必须为[numSeqs * (1 + specNum)]（specNum为specToken第二维长度）；sampledTokenIds的shape必须为[numSeqs, (1 + specNum)]；specToken的shape必须为[numSeqs, specNum]；acceptedNum的shape必须为[numSeqs]；blockTables为2-D [numSeqs, blockTablesStride]，第二维长度必须大于0。
+  - 可选输入约束：specToken与acceptedNum须同时传入或同时不传入；传入空Tensor视为未传入（回落V1路径）；仅传入其一时走V1路径，该输入不参与计算。
+  - 所有必选输入不支持空Tensor。
+- 用户保证约束（涉及数据内容或内存布局，Host侧与kernel侧均不校验数据值，由调用方保证，违反时可能导致计算错误或未定义行为）：
+  - 所有输入Tensor必须连续，不支持非连续Tensor。
+  - 入参默认值域：输入数据值须为符合业务语义的非负整数（token ID、序列长度、block编号、物理槽位等，0为合法值），token ID按INT64非负全域取值；sampledTokenIds另支持-1哨兵值（表示无接受token，行首为-1时lastToken为-1）；其中inputTokens、slotMapping为原地输出张量（输入值不参与计算，V2路径全量覆盖写回）。
+  - blockTables查表覆盖约束：blockTables第二维须覆盖更新后位置的block索引，即满足 pos + acceptedNum + 1 < blockTablesStride * blockSize（pos为更新前的inputPositions值）。
+  - 越界防护行为：V2路径对契约外查表列号（q ∉ [0, blockTablesStride)，含跨行平坦下标与负值）防御性写0——块号与余数同时屏蔽，不发生GM越界读；该输入域的计算语义未定义。
+- V2路径规模约束：
+  - specNum受每序列输入缓冲的UB预算限制：tokenEachReqs=specNum+1过大时tiling以Invalid ubRequired失败（561002拒绝），specNum规模上限取决于芯片可用UB。
+- V2路径取值域约束：
+  - blockSize与blockTablesStride须小于2^31（tiling校验，违反时报561002）。
+  - 中间计算以int32参与运算：inputPositions、acceptedNum的值及slotMapping计算结果须在int32表示域内。token ID（sampledTokenIds、specToken）按INT64非负全域取值，仅-1哨兵检索经fp32（fp32不可精确表示的非-1值不会误判为哨兵，边界外取值已由用例验证）。
+- 内存约束：本算子不使用workspace（GetWorkspaceSize返回的workspaceSize为0）。
 - 确定性计算：
   - aclnnAdvanceStepV2默认确定性实现。
 
@@ -392,7 +419,11 @@ int Init(int64_t deviceId, aclrtStream* stream) {
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+    if (ret != ACL_SUCCESS) {
+    LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret);
+    (void)aclFinalize();
+    return ret;
+    }
     ret = aclrtCreateStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
     return 0;

@@ -23,6 +23,11 @@ constexpr int64_t BLOCK_BYTES = 32;
 constexpr int64_t INT32_ONE_BLOCK_NUM = 8;
 constexpr int64_t INT64_ONE_BLOCK_NUM = 4;
 constexpr int64_t MAX_ELEMENT_ONE_LOOP = 100;
+// V2 向量化 gather 常量（向量 Gather 已回退标量查表，kernel 侧仅保留 Gather 对齐粒度；
+// tiling 侧的 VEC_BT_CHUNK_CAP_BYTES / VEC_GATHER_MAX_LANES 预算常量见 advance_step_tiling.cpp）
+constexpr int64_t GATHER_LANES_PER_REPEAT = 64; // Gather 每 repeat 偏移读取粒度（256B/4B，仅 kernel 侧使用）
+constexpr int64_t VEC_SCRATCH_ALIGN_SLACK = 1024; // 向量化 scratch 尾部对齐槽余量（子张量 32B 对齐 + Compares/Select
+                                                  // 256b 粒度计数取整）
 
 __aicore__ inline int64_t Ceil(int64_t a, int64_t b)
 {

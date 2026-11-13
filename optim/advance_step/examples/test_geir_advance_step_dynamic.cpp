@@ -649,14 +649,18 @@ int main()
     // construction with unknown (-1/-2) declared shapes (see file header).
     (void)setenv("IGNORE_INFER_ERROR", "1", 1);
 
-    std::map<ge::AscendString, ge::AscendString> globalOptions = {{"ge.exec.deviceId", "6"}, {"ge.graphRunMode", "1"}};
+    // 按实际环境填写 deviceId（亦可通过环境变量 ADVANCE_STEP_DEVICE_ID 覆盖，默认 0）
+    const char* deviceIdEnv = getenv("ADVANCE_STEP_DEVICE_ID");
+    const std::string deviceId = (deviceIdEnv != nullptr && deviceIdEnv[0] != '\0') ? deviceIdEnv : "0";
+    std::map<ge::AscendString, ge::AscendString> globalOptions = {{"ge.exec.deviceId", deviceId.c_str()},
+                                                                  {"ge.graphRunMode", "1"}};
     if (ge::GEInitialize(globalOptions) != kSuccess) {
         std::cerr << "ERROR: GEInitialize failed: " << ge::GEGetErrorMsgV2().GetString() << std::endl;
         return kFailed;
     }
 
     std::map<ge::AscendString, ge::AscendString> buildOptions = {
-        {"ge.exec.deviceId", "6"}, {"ge.jit_compile", "1"}, {"ge.compile_dynamic_mode", "1"}};
+        {"ge.exec.deviceId", deviceId.c_str()}, {"ge.jit_compile", "1"}, {"ge.compile_dynamic_mode", "1"}};
     ge::Session* session = new (std::nothrow) ge::Session(buildOptions);
     if (session == nullptr) {
         std::cerr << "ERROR: unable to create GE Session" << std::endl;
