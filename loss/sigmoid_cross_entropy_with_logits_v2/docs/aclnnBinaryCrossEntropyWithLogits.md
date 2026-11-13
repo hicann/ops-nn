@@ -160,10 +160,10 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>输出误差。</td>
-        <td>如果reduction = 0，shape与self一致；其他情况须为单元素（推荐[1]或标量）</td>
+        <td>如果reduction = 0，shape与self一致；其他情况须为单元素（推荐[1]或标量），此时支持元素数为1的任意维度数</td>
         <td>与target保持一致</td>
         <td>ND</td>
-        <td>reduction = 0时与self一致；reduction ≠ 0时元素个数为1</td>
+        <td>reduction = 0时与self一致；reduction ≠ 0时元素个数为1，此时维度数不做限制</td>
         <td>√</td>
       </tr>
       <tr>

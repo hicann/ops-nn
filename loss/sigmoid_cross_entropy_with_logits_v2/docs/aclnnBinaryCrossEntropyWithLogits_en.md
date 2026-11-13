@@ -162,10 +162,10 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogits(
         <td>out (aclTensor*)</td>
         <td>Output</td>
         <td>Output error.</td>
-        <td>If reduction = 0, the shape is the same as that of self. Otherwise, the shape is [1].</td>
+        <td>If reduction = 0, the shape is the same as that of self. Otherwise, it must contain exactly one element ([1] or a scalar is recommended). In this case, a tensor of any number of dimensions is supported, as long as the number of elements is 1.</td>
         <td>Keep consistent with target</td>
         <td>ND</td>
-        <td>Keep consistent with self</td>
+        <td>Same as self when reduction = 0; when reduction ≠ 0, the number of elements is 1 and the number of dimensions is not restricted</td>
         <td>√</td>
       </tr>
       <tr>
