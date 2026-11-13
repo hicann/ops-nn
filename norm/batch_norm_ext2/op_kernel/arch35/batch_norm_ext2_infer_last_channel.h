@@ -262,8 +262,10 @@ private:
                     // compute
                     Sub(x, x, mean, pregMaskFp32);
                     Mul(x, x, gamma, pregMaskFp32);
-                    Mul(x, x, rstd, pregMaskFp32);
-                    Add(y, x, beta, pregMaskFp32);
+                    // 与 torch.compile 的 FMA 融合对齐，减少一次舍入：y = beta + x * rstd
+                    // 保持推理段 (x-m)*gamma*rstd+beta 的相乘顺序，只融合最后的 Mul+Add
+                    AscendC::Reg::Move(y, beta);
+                    Mula(y, x, rstd, pregMaskFp32);
 
                     // store y
                     StoreTensorForDtypeT<T1>(yLocal, y, pregMaskFp32, xOffset);

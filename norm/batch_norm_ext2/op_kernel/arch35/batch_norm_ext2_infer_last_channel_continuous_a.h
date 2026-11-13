@@ -316,7 +316,11 @@ private:
                 for (uint16_t bIdx = 0; bIdx < curTileBLoop; bIdx++) {
                     uint32_t elemOffset = static_cast<uint32_t>(bIdx) * totalALen + aOffset;
                     NormCommon::LoadTensorUnAlignForDtypeT(xLocal + elemOffset, x, preg, activeLen);
-                    NormCommon::NormalizeWithScaleBiasReg(x, gamma, beta, mean, rstd, y, preg);
+                    // 与 torch.compile 的 FMA 融合对齐，减少一次舍入：y = beta + x * rstd
+                    Sub(x, x, mean, preg);
+                    Mul(x, x, gamma, preg);
+                    AscendC::Reg::Move(y, beta);
+                    Mula(y, x, rstd, preg);
                     NormCommon::StoreTensorUnAlignForDtypeT(yLocal + elemOffset, y, preg, activeLen);
                 }
             }

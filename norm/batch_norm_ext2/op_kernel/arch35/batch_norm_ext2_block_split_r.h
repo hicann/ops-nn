@@ -32,6 +32,49 @@ using AscendC::MicroAPI::UpdateMask;
 using AscendC::Reg::LoadAlign;
 using AscendC::Reg::StoreAlign;
 
+// ===================== 末级归约的补偿(TwoSum)求和（BLOCK_SPLIT_R 专用） =====================
+// LastFinalize 的末级把 usedCoreNum 个 per-core 部分和（count 加权的 mean / M2）用 BinaryAddVF
+// 折半成一列结果，每个 lane 是一个独立通道。这一段是整条归约链的末级：朴素树形加法每层一次
+// fp32 舍入都会原样留在 batch_mean 与 batch_var（第 5 个输出 output_reserve_space_2）上，
+// 而 batch_mean 随后还要参与 (x-mean) 的近零对消、batch_var 要过 rsqrt，对这段累加误差最敏感。
+// 改成补偿求和可把误差从 O(log2(N)·ε·Σ|x|) 压到 O(ε·Σ|x|)：每次加法的低位残差留在 low 里，
+// 全部加完后一次性加回，末级只额外舍入一次。该收尾每个通道只跑一次、不在元素热循环里。
+// 只在 LastFinalize（末级）启用；CalculateMeanVar 里每核内部的归约保持原样，不改既有口径。
+// 与 full_reduce.h 的 CompensatedLastLevelReduce 同一机理，但那里归约的是同一通道的多个
+// lane（需要跨 lane 合并残差），这里每个 lane 就是独立通道，残差可逐 lane 直接累加。
+constexpr static float BATCH_SPLIT_MAX_FINITE_FP32 = 3.4028234663852886e38F;
+
+// (hi, lo) += value：hi 是舍入后的和，lo 累积每次加法被舍掉的低位残差，使 hi + lo 精确等于
+// 真实累加和。Knuth TwoSum 求残差，不要求 |hi| >= |value|，与 Neumaier 的分支补偿逐位等价。
+__simd_callee__ inline void BatchSplitAccumulateWithError(RegTensor<float>& hi, RegTensor<float>& lo,
+                                                          RegTensor<float>& value, MaskReg& mask)
+{
+    RegTensor<float> total;
+    RegTensor<float> back;
+    RegTensor<float> error;
+    Add(total, hi, value, mask);
+    Sub(back, total, hi, mask);
+    Sub(error, total, back, mask);
+    Sub(error, hi, error, mask);
+    Sub(back, value, back, mask);
+    Add(error, error, back, mask);
+    Add(lo, lo, error, mask);
+    AscendC::Reg::Move(hi, total, mask);
+}
+
+// 低位残差非有限即置 0：hi 溢出成 ±inf 时 lo 会退化成 inf - inf = NaN，再加回 hi 会把本该是
+// inf 的和污染成 NaN。补偿只在有限域有意义，非有限值按 IEEE 自然传播。
+__simd_callee__ inline void BatchSplitClampResidual(RegTensor<float>& lo, MaskReg& mask)
+{
+    RegTensor<float> zeroReg;
+    MaskReg finiteMask;
+    Duplicate(zeroReg, 0.0f, mask);
+    AscendC::Reg::Compares<float, AscendC::CMPMODE::LE>(finiteMask, lo, BATCH_SPLIT_MAX_FINITE_FP32, mask);
+    AscendC::Reg::Select(lo, lo, zeroReg, finiteMask);
+    AscendC::Reg::Compares<float, AscendC::CMPMODE::GE>(finiteMask, lo, -BATCH_SPLIT_MAX_FINITE_FP32, mask);
+    AscendC::Reg::Select(lo, lo, zeroReg, finiteMask);
+}
+
 template <typename T1, typename T2>
 class BatchNormExt2BlockSplitR {
 public:
@@ -43,8 +86,9 @@ public:
     {
         this->pipe = pipeIn;
         tilingData = tilingDataIn;
-        this->unbiasedEstimationCoeff = static_cast<float>(tilingData->patternR) /
-                                        static_cast<float>(tilingData->patternR - 1);
+        // 无偏方差不再乘 Bessel 常数 n/(n-1)：该常数无法在 fp32 中精确表示，其舍入误差会
+        // 变成所有通道同向的系统性常数偏差（实测约 -0.3 ULP）。改为在 LastFinalize 里用
+        // 真除法直接算 M2/(n-1)（n 与 n-1 均 < 2^24，fp32 精确可表示）。
     }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR mean, GM_ADDR var, GM_ADDR y,
@@ -68,9 +112,17 @@ public:
         uint32_t nowCoreRConutPowOfTow = FindCofFactor(nowCoreRConut);
         uint32_t rPowOfTow = FindCofFactor(tilingData->patternR);
         this->nFactor = static_cast<float>(1) / static_cast<float>(nowCoreRConutPowOfTow);
-        this->nCorrectionFactor = static_cast<float>(nowCoreRConutPowOfTow) / static_cast<float>(nowCoreRConut);
         this->lastNFactor = static_cast<float>(1) / static_cast<float>(rPowOfTow);
-        this->lastNCorrectionFactor = static_cast<float>(rPowOfTow) / static_cast<float>(tilingData->patternR);
+        // mean / var 缩放走「真除法 + 乘回 2 的幂」，所需标量：
+        //   nCount / lastNCount       —— 除数 n（本核 r 元素数 / patternR），< 2^24，fp32 精确表示
+        //   nPowOfTwo / lastNPowOfTwo —— 累加时预缩放的 2 的幂，除法后乘回（精确）
+        //   lastNMinusOne             —— patternR - 1（无偏方差除数）
+        // 原来的倒数常数 2^k/n 与 2^m/patternR 已不再使用（其舍入是所有通道同向的常量偏置）。
+        this->nCount = static_cast<float>(nowCoreRConut);
+        this->nPowOfTwo = static_cast<float>(nowCoreRConutPowOfTow);
+        this->lastNCount = static_cast<float>(tilingData->patternR);
+        this->lastNPowOfTwo = static_cast<float>(rPowOfTow);
+        this->lastNMinusOne = static_cast<float>(tilingData->patternR - 1);
 
         xGm.SetGlobalBuffer((__gm__ T1*)x + rBlockOffset * tilingData->patternA);
         betaGm.SetGlobalBuffer((__gm__ T2*)beta);
@@ -200,8 +252,9 @@ public:
                 }
                 LocalTensor<T2> runningMeanOutTensor = runningMeanOutQueue.AllocTensor<T2>();
                 LocalTensor<T2> runningVarOutTensor = runningVarOutQueue.AllocTensor<T2>();
+                // alllVarTensor(tmpTbuf2) 在 LastFinalize 里被复用为「无偏方差」输出。
                 CalculateRunningMeanVar(runningMeanInTensor, runningVarInTensor, runningMeanOutTensor,
-                                        runningVarOutTensor, batchMeanTensor, batchVarTensor);
+                                        runningVarOutTensor, batchMeanTensor, alllVarTensor);
                 if (useRunningMeanVar) {
                     runningMeanInQueue.FreeTensor(runningMeanInTensor);
                     runningVarInQueue.FreeTensor(runningVarInTensor);
@@ -489,7 +542,12 @@ private:
         uint16_t binaryAddLastLoop = tilingData->binaryAddLast;
 
         float numScale = this->nFactor;
-        float scaleCorrection = this->nCorrectionFactor;
+        // mean 缩放改「真除法」：累加时每行已乘 numScale = 1/2^k（2 的幂，精确），故此时 x1 = Σ(count_i·mean_i)/2^k。
+        // 先真除 n（= nowCoreRConut，< 2^24 可精确表示）再乘回 2^k（精确），整体等价于一次正确舍入的除法。
+        // 原写法 ×(2^k/n) 的倒数常数舍入是所有通道同向的常量偏置（实测 δmean 均值 +6.63e-8），故不再使用。
+        // 复用方差路径已在 Init 里建好的 nCount / nPowOfTwo 标量，不新增 buffer。
+        float meanDivN = this->nCount;
+        float meanPowOfTwo = this->nPowOfTwo;
 
         uint32_t twoRLoopSize = ROW_TWO_OFFSET * rLoopStride;
         uint32_t threeRLoopSize = ROW_THREE_OFFSET * rLoopStride;
@@ -508,8 +566,11 @@ private:
             RegTensor<float> nextRowCount;
             RegTensor<float> remCount;
             RegTensor<float> nextRemCount;
+            RegTensor<float> nReg; // 除数 n（本核参与累加的 r 元素数）
 
             MaskReg pregLoop;
+            MaskReg pregAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            Duplicate(nReg, meanDivN, pregAll);
             uint32_t sreg0 = currentA;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
@@ -554,7 +615,9 @@ private:
                 BinaryAddVF(binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
                             pregLoop, aLoopOffset, x1, x2, x3, x4);
                 LoadAlign(x1, ((__ubuf__ float*)binaryAddTmpAddr + aLoopOffset));
-                Muls(x1, x1, scaleCorrection, pregLoop);
+                // 此时 x1 = Σ(count_i·mean_i)/2^k。真除法 ÷n 后乘回 2^k（精确）= 一次正确舍入的均值。
+                Div(x1, x1, nReg, pregLoop);
+                Muls(x1, x1, meanPowOfTwo, pregLoop);
                 StoreAlign(((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset), x1, pregLoop);
             }
         }
@@ -579,7 +642,10 @@ private:
         uint16_t binaryAddLastLoop = tilingData->binaryAddLast;
 
         float numScale = this->nFactor;
-        float scaleCorrection = this->nCorrectionFactor;
+        // 方差：先用真除法除以 n，再乘回 2 的幂 nPowOfTwo（精确），
+        // 等价于原来的 ×(2^k/n) 但消除了倒数常数的系统性舍入偏差。
+        float varTrueDivN = this->nCount;
+        float varPowOfTwo = this->nPowOfTwo;
 
         uint32_t twoRLoopSize = ROW_TWO_OFFSET * rLoopStride;
         uint32_t threeRLoopSize = ROW_THREE_OFFSET * rLoopStride;
@@ -605,8 +671,11 @@ private:
             RegTensor<float> nextRowM2;
             RegTensor<float> remM2;
             RegTensor<float> nextRemM2;
+            RegTensor<float> nReg;
 
             MaskReg pregLoop;
+            MaskReg pregAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            Duplicate(nReg, varTrueDivN, pregAll);
             uint32_t sreg0 = currentA;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
@@ -652,7 +721,10 @@ private:
                 BinaryAddVF(binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
                             pregLoop, aLoopOffset, x1, x2, x3, x4);
                 LoadAlign(x1, ((__ubuf__ float*)binaryAddTmpAddr + aLoopOffset));
-                Muls(x1, x1, scaleCorrection, pregLoop);
+                // 此时 x1 = M2_sum/2^k（累加时逐项乘 numScale=1/2^k，精确）。
+                // 真除法 ÷n 后再乘回 2^k（精确），得到 M2_sum/n；不再乘倒数常数 (2^k/n)。
+                Div(x1, x1, nReg, pregLoop);
+                Muls(x1, x1, varPowOfTwo, pregLoop);
                 StoreAlign(((__ubuf__ float*)batchVarInUbAddr + aLoopOffset), x1, pregLoop);
             }
         }
@@ -687,6 +759,51 @@ private:
             StoreAlign(((__ubuf__ float*)binaryAddTmpAddr + offset), x1, pregLoop);
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         }
+    }
+
+    // 与 BinaryAddVF 结构逐位等价的末级归约，只把每一次加法换成补偿加法（Knuth TwoSum），
+    // 末级再把低位残差 low 一次性加回、只额外舍入这一次。结构（4 路折半 + 串行尾加）、
+    // 读写位置与 BinaryAddVF 完全一致，故调用点的 resMean/resVar 读取口径不变。
+    // low 由调用点在 __VEC_SCOPE__ 里声明并传入（与 x1~x4 同一做法），函数内部不额外申请寄存器。
+    __aicore__ inline void CompensatedBinaryAddVF(__ubuf__ float* binaryAddTmpAddr, uint32_t rLoopStride,
+                                                  uint16_t binaryAddKLoop, uint16_t binaryAddInnerLoop,
+                                                  uint16_t binaryAddLastLoop, MaskReg& pregLoop, uint32_t offset,
+                                                  RegTensor<float>& x1, RegTensor<float>& x2, RegTensor<float>& x3,
+                                                  RegTensor<float>& x4, RegTensor<float>& low)
+    {
+        uint16_t curBinaryAddInnerLoop = binaryAddInnerLoop;
+        // 有效 lane 之外是脏值，先清零（x + 0 = x，残差也是 0，不引入偏差）。
+        Duplicate(low, 0.0f, pregLoop);
+        for (uint16_t i = 0; i < binaryAddKLoop; i++) {
+            curBinaryAddInnerLoop = curBinaryAddInnerLoop / ROW_FOUR_OFFSET;
+            for (uint16_t j = 0; j < curBinaryAddInnerLoop; j++) {
+                LoadAlign(x1, ((__ubuf__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET) * rLoopStride + offset));
+                LoadAlign(x2, ((__ubuf__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET + 1) * rLoopStride + offset));
+                BatchSplitAccumulateWithError(x1, low, x2, pregLoop);
+                LoadAlign(x3, ((__ubuf__ float*)binaryAddTmpAddr +
+                               (j * ROW_FOUR_OFFSET + ROW_TWO_OFFSET) * rLoopStride + offset));
+                LoadAlign(x4, ((__ubuf__ float*)binaryAddTmpAddr +
+                               (j * ROW_FOUR_OFFSET + ROW_THREE_OFFSET) * rLoopStride + offset));
+                BatchSplitAccumulateWithError(x3, low, x4, pregLoop);
+                // 与 BinaryAddVF 一致：x1 = (row0+row1) + (row2+row3)，两级加法的残差都进 low。
+                BatchSplitAccumulateWithError(x1, low, x3, pregLoop);
+                StoreAlign(((__ubuf__ float*)binaryAddTmpAddr + j * rLoopStride + offset), x1, pregLoop);
+            }
+            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+        }
+        for (uint16_t i = 0; i < binaryAddLastLoop; i++) {
+            LoadAlign(x1, ((__ubuf__ float*)binaryAddTmpAddr + offset));
+            LoadAlign(x2, ((__ubuf__ float*)binaryAddTmpAddr + rLoopStride + offset));
+            BatchSplitAccumulateWithError(x1, low, x2, pregLoop);
+            StoreAlign(((__ubuf__ float*)binaryAddTmpAddr + offset), x1, pregLoop);
+            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+        }
+        // 折半结束后最终结果落在 row 0（不论上面的循环是否执行过），显式读回再补上残差，
+        // 保证与 BinaryAddVF「结果在 row 0」的语义一致。
+        LoadAlign(x1, ((__ubuf__ float*)binaryAddTmpAddr + offset));
+        BatchSplitClampResidual(low, pregLoop);
+        Add(x1, x1, low, pregLoop);
+        StoreAlign(((__ubuf__ float*)binaryAddTmpAddr + offset), x1, pregLoop);
     }
 
     __aicore__ inline void TwoRowAddForMeanWithTail(RegTensor<float>& dst, __ubuf__ float* input,
@@ -829,7 +946,13 @@ private:
         uint16_t binaryAddInnerLoop = tilingData->lastBinaryAddQuotient;
         uint16_t binaryAddLastLoop = tilingData->lastBinaryAddLast;
         float numScale = this->lastNFactor;
-        float scaleCorrection = this->lastNCorrectionFactor;
+        // 最后一级缩放统一走「真除法 + 乘回 2 的幂」，mean 与 var 共用同一组标量：
+        //   累加时每行已乘 numScale = 1/2^m（2 的幂，精确），故 BinaryAddVF 的结果是 Σ/2^m。
+        //   ÷patternR（mean 与有偏方差共用）、÷(patternR-1)（无偏方差）后再乘回 2^m（精确），
+        //   等价于一次正确舍入的除法；不再乘倒数常数 2^m/patternR 与 Bessel 常数 n/(n-1)。
+        float divN = this->lastNCount;
+        float divNMinusOne = this->lastNMinusOne;
+        float powOfTwo = this->lastNPowOfTwo;
         __VEC_SCOPE__
         {
             RegTensor<float> quot;
@@ -840,8 +963,15 @@ private:
             RegTensor<float> oriRemMean;
             RegTensor<float> resMean;
             RegTensor<float> resVar;
+            RegTensor<float> resVarUnbiased;
+            RegTensor<float> nReg;
+            RegTensor<float> nMinusOneReg;
+            RegTensor<float> addLow; // 末级补偿归约的低位残差（每通道独立，逐次归约内复用）
 
             MaskReg pregLoop;
+            MaskReg pregAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            Duplicate(nReg, divN, pregAll);
+            Duplicate(nMinusOneReg, divNMinusOne, pregAll);
             uint32_t sreg0 = currentA;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
@@ -879,10 +1009,14 @@ private:
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 // 最后对2的幂次行 二分累加
-                BinaryAddVF(tmpUbAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop, pregLoop,
-                            aLoopOffset, quot, rem, quotCount, remCount);
+                // 末级换成补偿归约：mean 的错误会原样传进 (x-mean) 的近零对消，最敏感。
+                CompensatedBinaryAddVF(tmpUbAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
+                                       pregLoop, aLoopOffset, quot, rem, quotCount, remCount, addLow);
                 LoadAlign(resMean, ((__ubuf__ float*)tmpUbAddr + aLoopOffset));
-                Muls(resMean, resMean, scaleCorrection, pregLoop);
+                // 此时 resMean = Σ(count_i·mean_i)/2^m。真除法 ÷patternR 后乘回 2^m（精确），
+                // 得到一次正确舍入的全局均值；不再乘倒数常数 (2^m/patternR)。
+                Div(resMean, resMean, nReg, pregLoop);
+                Muls(resMean, resMean, powOfTwo, pregLoop);
                 StoreAlign(((__ubuf__ float*)batchMeanTensorAddr + aLoopOffset), resMean, pregLoop);
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
@@ -930,13 +1064,21 @@ private:
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 // 最后对2的幂次行 二分累加
-                BinaryAddVF(tmpUbAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop, pregLoop,
-                            aLoopOffset, quot, rem, quotCount, remCount);
+                // 末级换成补偿归约：M2 的误差会被 ÷n 与 rsqrt 折算到第 5 个输出。
+                CompensatedBinaryAddVF(tmpUbAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
+                                       pregLoop, aLoopOffset, quot, rem, quotCount, remCount, addLow);
                 LoadAlign(resVar, ((__ubuf__ float*)tmpUbAddr + aLoopOffset));
-                // 累加时已乘 numScale = 1/2^ceil(log2(patternR))，再乘 scaleCorrection = 2^k/patternR，
-                // 合计 1/patternR，得到**有偏方差** M2/n，即第 5 个输出 output_reserve_space_2 的契约值。
-                Muls(resVar, resVar, scaleCorrection, pregLoop);
+                // 累加时已乘 numScale = 1/2^m = 1/2^ceil(log2(patternR))（精确），故此时 resVar = M2_sum/2^m。
+                // 真除法直接得到**有偏方差** M2/n（第 5 个输出 output_reserve_space_2 的契约值）
+                // 与**无偏方差** M2/(n-1)（供 running var 使用，替代原来乘 Bessel 常数）。
+                Div(resVarUnbiased, resVar, nMinusOneReg, pregLoop);
+                Div(resVar, resVar, nReg, pregLoop);
+                Muls(resVarUnbiased, resVarUnbiased, powOfTwo, pregLoop);
+                Muls(resVar, resVar, powOfTwo, pregLoop);
                 StoreAlign(((__ubuf__ float*)batchVarTensorAddr + aLoopOffset), resVar, pregLoop);
+                // 复用 tmpVarLocal(tmpTbuf2) 存放无偏方差：LastFinalize 对该列的读取已在本次
+                // aIndex 内完成，后续 aIndex 只访问自己那一列，故不会互相覆盖。
+                StoreAlign(((__ubuf__ float*)tmpVarLocal + aLoopOffset), resVarUnbiased, pregLoop);
             }
         }
     }
@@ -974,10 +1116,13 @@ private:
         DataCopyPad(runningVarInUb, runningVarGm[gmOffset], copyInParams, dataCopyPadExtParams);
     }
 
+    // unbiasedVarTensor 里是 LastFinalize 用真除法算出的无偏方差 M2/(n-1)，
+    // running_var = (1-m)*running_var + m * M2/(n-1)。
+    // 原实现把 batch_var(=M2/n) 再乘 Bessel 常数 fl(n/(n-1))，该常数舍入会带来系统性偏差。
     __aicore__ inline void CalculateRunningMeanVar(LocalTensor<T2>& runningMeanInUb, LocalTensor<T2>& runningVarInUb,
                                                    LocalTensor<T2>& runningMeanOutUb, LocalTensor<T2>& runningVarOutUb,
                                                    LocalTensor<float>& batchMeanTensor,
-                                                   LocalTensor<float>& batchVarTensor)
+                                                   LocalTensor<float>& unbiasedVarTensor)
     {
         __ubuf__ T2* runningMeanInUbAddr = nullptr;
         __ubuf__ T2* runningVarInUbAddr = nullptr;
@@ -988,10 +1133,9 @@ private:
         __ubuf__ T2* runningMeanOutUbAddr = (__ubuf__ T2*)runningMeanOutUb.GetPhyAddr();
         __ubuf__ T2* runningVarOutUbAddr = (__ubuf__ T2*)runningVarOutUb.GetPhyAddr();
         __ubuf__ float* batchMeanTensorAddr = (__ubuf__ float*)batchMeanTensor.GetPhyAddr();
-        __ubuf__ float* batchVarTensorAddr = (__ubuf__ float*)batchVarTensor.GetPhyAddr();
+        __ubuf__ float* unbiasedVarTensorAddr = (__ubuf__ float*)unbiasedVarTensor.GetPhyAddr();
         uint16_t aLoop = CEIL_DIV(currentA, VL_F32);
 
-        float besselCorrection = this->unbiasedEstimationCoeff;
         float m = tilingData->momentum;
         float oneSubM = tilingData->momentumReverse;
         bool vfUseRunningMeanVar = useRunningMeanVar;
@@ -1007,10 +1151,9 @@ private:
             uint32_t sreg2 = currentA;
             for (uint16_t k = 0; k < aLoop; k++) {
                 pregLoop = UpdateMask<float>(sreg2);
-                // running var
-                LoadAlign(var, ((__ubuf__ float*)batchVarTensorAddr + k * VL_F32));
-                Muls(saveVar, var, besselCorrection, pregLoop);
-                Muls(saveVar, saveVar, m, pregLoop);
+                // running var（无偏方差已由真除法得到，这里只乘 momentum，不再乘 Bessel 常数）
+                LoadAlign(var, ((__ubuf__ float*)unbiasedVarTensorAddr + k * VL_F32));
+                Muls(saveVar, var, m, pregLoop);
                 if (vfUseRunningMeanVar) {
                     LoadTensorForDtypeT<T2>(runningVar, runningVarInUbAddr, pregLoop, k * VL_F32);
                     Muls(runningVar, runningVar, oneSubM, pregLoop);
@@ -1106,8 +1249,9 @@ private:
                     LoadTensorForDtypeT<T1>(x1, xTensorAddr, mask0, i * VL_F32 + j * currentAAlign);
                     Sub(x1, x1, mean, mask0);
                     Mul(x1, x1, rstd, mask0);
-                    Mul(x1, x1, gamma, mask0);
-                    Add(y, x1, beta, mask0);
+                    // 与 torch.compile 的 FMA 融合对齐，减少一次舍入：y = beta + x * gamma
+                    AscendC::Reg::Move(y, beta);
+                    Mula(y, x1, gamma, mask0);
                     if constexpr (IsSameType<T1, half>::value) {
                         RegTensor<half> yFp16;
                         Cast<half, float, castTraitB322B16>(yFp16, y, mask0);
@@ -1160,12 +1304,16 @@ private:
     int64_t currentA = 0;
     int64_t currentAAlign = 0;
     int64_t currentR = 0;
-    float unbiasedEstimationCoeff = 0;
 
     float nFactor = 0;
-    float nCorrectionFactor = 0;
     float lastNFactor = 0;
-    float lastNCorrectionFactor = 0;
+
+    // mean / var 的真除法标量（n 与 n-1 均 < 2^24，fp32 精确可表示）
+    float nCount = 0;        // 本核 r 元素数 n
+    float nPowOfTwo = 0;     // 累加预缩放用的 2 的幂（除法后乘回，精确）
+    float lastNCount = 0;    // patternR
+    float lastNMinusOne = 0; // patternR - 1
+    float lastNPowOfTwo = 0; // 最后一级累加预缩放用的 2 的幂
 
     uint32_t usedCoreNum = 0;
     uint32_t blockIdx = 0;

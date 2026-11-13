@@ -906,9 +906,10 @@ private:
                     uint32_t offset = rIndex * rLoopStride + aLoopOffset;
                     LoadTensorForDtypeT<T1>(x2, xInUbAddr, pregLoop, offset);
                     Sub(x2, x2, mean, pregLoop);
-                    Mul(y2, x2, rstd, pregLoop);
-                    Mul(y2, y2, beta, pregLoop);
-                    Add(y2, y2, gamma, pregLoop);
+                    Mul(x2, x2, rstd, pregLoop);
+                    // 与 torch.compile 的 FMA 融合对齐，减少一次舍入（本函数 beta 为 scale、gamma 为 offset）
+                    AscendC::Reg::Move(y2, gamma);
+                    Mula(y2, x2, beta, pregLoop);
                     StoreTensorForDtypeT<T1>(yInUbAddr, y2, pregLoop, offset);
                 }
             }

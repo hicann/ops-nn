@@ -423,6 +423,37 @@ private:
         }
     }
 
+    // 某通道的所有 R 行若完全同值且有限，fp32 直接求和/求均值可能因中间量上溢得到 ±inf，
+    // 进而把方差算成 inf/NaN（典型：x 恒为 ±FLT_MAX；fp64 真值的均值就是该常量、方差为 0）。
+    // 这里扫描原始 x 的 R 行取 min/max：命中公共有限值时把均值还原成该常量，令后续
+    // (x - mean) 精确为 0，方差随之精确为 0。掩码不命中时 Select 选回原值，正常输入逐位不变。
+    __aicore__ inline void RestoreUniformFiniteMean(RegTensor<float>& mean, __ubuf__ float* xInUb, uint32_t offset,
+                                                    MaskReg& mask)
+    {
+        RegTensor<float> values;
+        RegTensor<float> minX;
+        RegTensor<float> maxX;
+        RegTensor<float> absMin;
+        MaskReg uniformMask;
+        MaskReg tempMask;
+        Duplicate(minX, POS_INF, mask);
+        Duplicate(maxX, -POS_INF, mask);
+        for (int64_t row = 0; row < this->r1; row++) {
+            LoadAlign(values, xInUb + row * this->currentANumAlign + offset);
+            AscendC::Reg::Min(minX, minX, values, mask);
+            AscendC::Reg::Max(maxX, maxX, values, mask);
+        }
+        // uniform = (minX == maxX) && (|minX| < POS_INF) && (mean == mean)。
+        // POS_INF 字面量在编译期上溢为 +inf，故 `|minX| < POS_INF` 的语义正是「有限」。
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(uniformMask, minX, maxX, mask);
+        AscendC::Reg::Abs(absMin, minX, mask);
+        AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(tempMask, absMin, POS_INF, mask);
+        AscendC::MicroAPI::And(uniformMask, uniformMask, tempMask, mask);
+        AscendC::Reg::Compare<float, AscendC::CMPMODE::EQ>(tempMask, mean, mean, mask);
+        AscendC::MicroAPI::And(uniformMask, uniformMask, tempMask, mask);
+        AscendC::Reg::Select(mean, minX, mean, uniformMask);
+    }
+
     __aicore__ inline void CalculateMean(__ubuf__ float* xInUb, __ubuf__ T1* yInUb, __ubuf__ float* batchMeanInUbAddr,
                                          int64_t currentA)
     {
@@ -461,6 +492,7 @@ private:
                     Muls(xmuls, xld, n, pregLoop);
                     Add(sum, sum, xmuls, pregLoop);
                 }
+                RestoreUniformFiniteMean(sum, xInUb, k * VL_FP32, pregLoop);
                 StoreAlign(((__ubuf__ float*)batchMeanInUbAddr + k * VL_FP32), sum, pregLoop);
             }
         }
@@ -503,6 +535,7 @@ private:
                                          aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, rem, nextRow,
                                          remNextRow, n);
                 Muls(x1, x1, nCorrection, pregLoop);
+                RestoreUniformFiniteMean(x1, xInUb, aLoopOffset, pregLoop);
                 StoreAlign(((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset), x1, pregLoop);
             }
         }
@@ -554,6 +587,7 @@ private:
                                          remainderTailOffset3 + aLoopOffset, rem, nextRow, remNextRow, n);
                 Add(x1, x1, x2, pregLoop);
                 Muls(x1, x1, nCorrection, pregLoop);
+                RestoreUniformFiniteMean(x1, xInUb, aLoopOffset, pregLoop);
                 StoreAlign(((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset), x1, pregLoop);
             }
         }
@@ -694,6 +728,7 @@ private:
                             binaryAddLastLoop, pregLoop, x1, x2, x3, x4);
                 LoadAlign(x1, ((__ubuf__ float*)yInUb + aLoopOffset));
                 Muls(x1, x1, nCorrection, pregLoop);
+                RestoreUniformFiniteMean(x1, xInUb, aLoopOffset, pregLoop);
                 StoreAlign(((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset), x1, pregLoop);
             }
         }
@@ -1094,9 +1129,10 @@ private:
                 for (uint16_t r = 0; r < rLoopCount; r++) {
                     LoadAlign(x2, ((__ubuf__ float*)xInUb + r * rStride + k * VL_FP32));
                     Sub(x2, x2, mean, pregLoop);
-                    Mul(y2, x2, rsqrtVar, pregLoop);
-                    Mul(y2, y2, beta, pregLoop);
-                    Add(y2, y2, gamma, pregLoop);
+                    Mul(x2, x2, rsqrtVar, pregLoop);
+                    // 与 torch.compile 的 FMA 融合对齐，减少一次舍入（本函数 beta 为 scale、gamma 为 offset）
+                    AscendC::Reg::Move(y2, gamma);
+                    Mula(y2, x2, beta, pregLoop);
                     if constexpr (IsSameType<T1, half>::value) {
                         RegTensor<half> yFp16;
                         Cast<half, float, castTraitB322B16>(yFp16, y2, pregLoop);

@@ -334,7 +334,11 @@ private:
                 MaskReg pregMask = AscendC::MicroAPI::UpdateMask<float>(maskLen);
 
                 NormCommon::LoadTensorUnAlignForDtypeT(xLocalTmp, x, uX, pregMask, activeLen);
-                NormCommon::NormalizeWithScaleBiasReg(x, gamma, beta, mean, rstd, y, pregMask);
+                // 与 torch.compile 的 FMA 融合对齐，减少一次舍入：y = beta + x * rstd
+                Sub(x, x, mean, pregMask);
+                Mul(x, x, gamma, pregMask);
+                AscendC::Reg::Move(y, beta);
+                Mula(y, x, rstd, pregMask);
                 NormCommon::StoreTensorUnAlignForDtypeT(yLocalTmp, y, uY, pregMask, activeLen);
             }
             AscendC::MicroAPI::StoreUnAlignPost(yLocalTmp, uY, 0);

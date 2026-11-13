@@ -1377,8 +1377,9 @@ private:
                     LoadTensorForDtypeT(x1, xTensorAddr, mask0, i * VL_F32 + j * formerRAlignNum);
                     Sub(x1, x1, mean, mask0);
                     Mul(x1, x1, rstd, mask0);
-                    Mul(x1, x1, gamma, mask0);
-                    Add(y, x1, beta, mask0);
+                    // 与 torch.compile 的 FMA 融合对齐，减少一次舍入：y = beta + x * gamma
+                    AscendC::Reg::Move(y, beta);
+                    Mula(y, x1, gamma, mask0);
                     if constexpr (IsSameType<T1, half>::value) {
                         RegTensor<half> yFp16;
                         Cast<half, float, castTraitB322B16>(yFp16, y, mask0);

@@ -11,16 +11,15 @@
 # ----------------------------------------------------------------------------
 """bn3d_training_update golden(竞品算子拼接实现,torch 张量算子)+ 多通路 TestSpec.
 
-- 上库件(随算子工程):`__golden__` / `__input__`(TTK kernel 模式,签名照 def.cpp)。
-- 验证件(同文件):`__spec__` —— kernel 与 geir 共用同一注册键与 Spec 类;aclnn/e2e 不存在
-  (依据见文件末尾)。
+- 上库件:`__golden__` / `__input__`(TTK kernel 模式,签名照 def.cpp)。
+- 验证件:`__spec__` —— kernel 与 geir 共用同一注册键与 Spec 类;aclnn/e2e 不存在
+  (见文件末尾)。
 - 计算核只写一遍:`_compute()` torch 进出;KernelSpec.golden 只做 numpy↔torch 容器转换。
-- 三方腿(`_Bn3dThirdPartyCompose`)按下列算术步骤实现(框架 torch):
-  乘倒数求矩、先减后乘的方差、`(x−bm)·mult+offset`、展开式 EMA。
+- 三方腿(`_Bn3dThirdPartyCompose`):乘倒数求矩、先减后乘的方差、
+  `(x−bm)·mult+offset`、展开式 EMA。
 
-golden 采用竞品算子拼接(torch 张量算子:mul/sub/div/sqrt 等),不手写 numpy 纯公式。
-计算顺序与算子契约一致:非折叠式 y = (x − batch_mean)·mult + offset(Sub → Mul → Add,
-三次舍入),中间精度 fp32,y 回 cast 到 x 的 dtype(fp16/bf16/fp32)。
+y = (x − batch_mean)·mult + offset(Sub → Mul → Add 三次舍入),中间精度 fp32,
+y 回 cast 到 x 的 dtype(fp16/bf16/fp32)。
 """
 
 import numpy as np
@@ -34,9 +33,7 @@ except ImportError:
 _FORMAT_CH_AXIS = {"NCHW": 1, "NCDHW": 1, "NHWC": 3, "NDHWC": 4}
 
 # ---------------------------------------------------------------------------
-# 三方腿共用件:C 轴在 dim1 的规范布局 + 竞品原生批量归一化(eval 形态)。
-# 这是三方腿与计算核 `_compute` 之间「不共享实现」的落点:归一化由 torch 内建
-# (cudnn/native) 核完成,不是本文件手写的算子链。
+# C 轴置于 dim1 的规范布局,三方腿与计算核 `_compute` 不共享实现。
 # ---------------------------------------------------------------------------
 _C1_PERM = {
     "NCHW": (0, 1, 2, 3),
@@ -55,8 +52,7 @@ def _inv_perm(perm):
 
 
 # ---------------------------------------------------------------------------
-# numpy(ml_dtypes bf16)↔ torch 位保真转换:torch.from_numpy 不认 ml_dtypes
-# bfloat16 ndarray,经 uint16 view 逐位搬运,无任何舍入。
+# numpy(ml_dtypes bf16)↔ torch 位保真转换:经 uint16 view 搬运,无舍入。
 # ---------------------------------------------------------------------------
 def _to_torch(a):
     a = np.asarray(a)
@@ -79,9 +75,8 @@ __spec__ = {"bn3_d_training_update": "Bn3dKernelSpec"}
 
 
 # ---------------------------------------------------------------------------
-# 工具:channel 轴解析 —— 纯 format 驱动
-# format 在 TTK 场景恒有(input_formats 经 X-Input-Schema 内嵌传给 golden/compose),
-# NCHW/NHWC 且空间维等于 C 的歧义 shape 由 format 唯一确定;拿不到 format 直接报错。
+# 工具:channel 轴解析 —— 纯 format 驱动(TTK 恒有 input_formats),
+# 歧义 shape 由 format 唯一确定;拿不到 format 直接报错。
 # ---------------------------------------------------------------------------
 def _resolve_ch_axis(x_shape, C, kwargs):
     fmt = kwargs.get("input_formats", None)
@@ -94,8 +89,7 @@ def _resolve_ch_axis(x_shape, C, kwargs):
 
 
 # ---------------------------------------------------------------------------
-# 输入生成器:sum/square_sum 由 x 重算,保证与前驱 BN3DTrainingReduce 的语义一致。
-# (输入生成属数据准备,非 golden 计算,保持 numpy。)
+# 输入生成器:sum/square_sum 由 x 重算(numpy),与前驱 BN3DTrainingReduce 语义一致。
 # ---------------------------------------------------------------------------
 def bn3_d_training_update_input_gen(*input_arrays, **kwargs):
     if len(input_arrays) < 7:
@@ -127,10 +121,8 @@ def _compute(
     # 空 tensor 守卫:C=0 时 num 无定义(python 整除零直接抛 ZeroDivisionError)。
     num = (numel // C) if C > 0 else 0
 
-    # 与算子实现同序:乘倒数(num_rec),非除法(除法与倒数乘在 fp32 下差 1ULP)。
-    # 空 batch 契约(tiling num_rec=0 同款):num=0 时零统计——bm/bv=0、
-    # mean_out=mean·(1-f)、var_out=var·(1-f)。竞品佐证:torch CUDA native 对空
-    # 归约域 save_mean=0(非 nan),CPU/拼接原版则直接拒绝/崩溃,无 nan 语义。
+    # 与算子实现同序:乘倒数 num_rec(非除法,fp32 下差 1ULP)。
+    # num=0 时零统计:bm/bv=0、mean_out=mean·(1-f)、var_out=var·(1-f)。
     num_rec = (1.0 / num) if num > 0 else 0.0
     batch_mean = sum_t * num_rec
     save_variance = square_sum * num_rec - batch_mean * batch_mean
@@ -161,34 +153,15 @@ def _compute(
 
 
 def _pin_eager_fp32_numerics():
-    """把 `torch.compile` 的融合形态钉在「eager fp32 逐步舍入」精度档(禁 FMA 收缩)。
+    """把 `torch.compile` 钉在「eager fp32 逐步舍入」精度档(禁 FMA 收缩)。
 
-    背景:Inductor 的 Triton 后端默认把 `a * b ± c` 收缩成**单次舍入的 FMA**,
-    比 eager fp32 少一次中间乘积舍入 → 竞品被抬到 fp32 以上,三方 ratio 失去
-    「同算法同精度档」(「融合 FMA vs 分步乘加」)。本算子内核刻意用三步非融合
-    `Reg::Sub + Reg::Mul + Reg::Add`(新实现 `op_kernel/arch35/bn3_d_training_update_common.h`
-    的 `VFChannelFirst` / `VFChannelLast` 热循环里是三条独立的 `AscendC::Reg::Sub` +
-    `AscendC::Reg::Mul` + `AscendC::Reg::Add`,系数折叠同文件 `FoldRegs` 亦为分步
-    `Muls`/`Muls`/`Mul`/`Sub`/`Adds`/`Sqrt`/`Div`),竞品侧必须同档。
+    Inductor 的 Triton 后端默认把 `a * b ± c` 融合成单次舍入的 FMA,而内核刻意走
+    三步非融合 `Sub + Mul + Add`;置 `emulate_precision_casts=True` 即关闭 Triton 的
+    `contract` 标志,使竞品与内核同精度档。只关 fp 融合,融合图 / 单 kernel 形态不变。
+    该配置参与 Inductor 缓存键,不会复用带 FMA 的旧产物;且必须在进程内首次编译前
+    置位(先编译过再置位不会重编)。
 
-    机制(已在交付 GPU host 上静态核实):
-      - Inductor 生成 `triton_meta["enable_fp_fusion"] = not config.emulate_precision_casts`
-        (torch 2.12 `_inductor/codegen/triton.py:5560`;
-         交付 host torch 2.14.0+cu126 `_inductor/codegen/triton.py:6960`);
-      - 该值经 `TritonHeuristics._get_compile_options` 透传给 `triton.compile`
-        (`_inductor/runtime/triton_heuristics.py:810-811`);
-      - 置 True 即令 Triton 的 mul/add 不带 `contract` 标志 → 不产生 FMA。
-    只关 fp 融合:**融合图 / 单 kernel 形态不变**,性能腿仍是最优形态;
-    精度腿则与 eager fp32 逐位同档。
-
-    该配置进入 Inductor FX graph 缓存键(`codecache.py:1014`
-    `FxGraphCacheKey.inductor_config = config.save_config_portable(...)`),
-    故不会复用此前「带 FMA」的旧编译产物。
-    ⚠️ 该配置在**编译时刻**读取,必须在进程内**首次编译之前**置位 —— 故本函数在
-    `__call__` 里先调用、再 `torch.compile`(实测:A100 同进程内若先按旧形态编译过一次,
-    后续再置位不会重编,仍带 FMA)。
-
-    返回旋钮是否已生效;torch 版本无此旋钮 → False,调用方回落 eager(仍 fp32 同档)。
+    返回旋钮是否已生效;不可用 → False,由 `__call__` 直接报错。
     """
     try:
         from torch._inductor import config as _inductor_config
@@ -202,40 +175,42 @@ def _pin_eager_fp32_numerics():
     return bool(getattr(_inductor_config, "emulate_precision_casts", False))
 
 
-class _Bn3dThirdPartyCompose:
-    """三方腿:竞品(torch)独立实现。
+def _fp32_pin_unavailable_error():
+    """`_pin_eager_fp32_numerics()` 失败时的报错(原因 + 实际环境 + 处置)。"""
+    try:
+        from torch._inductor import config as _inductor_config
 
-    算术步骤(框架 torch):
+        where = "torch._inductor.config 可导入"
+        has_attr = hasattr(_inductor_config, "emulate_precision_casts")
+    except Exception as exc:
+        where = "torch._inductor.config 不可导入(%s: %s)" % (
+            type(exc).__name__,
+            exc,
+        )
+        has_attr = False
+    return RuntimeError(
+        "三方腿需要 torch._inductor.config.emulate_precision_casts=True"
+        "(禁 Inductor/Triton 的 FMA 收缩,与内核三步非融合 Sub/Mul/Add 同精度档),"
+        "当前环境不可用。实际环境:torch.__version__=%s;%s;"
+        "emulate_precision_casts 属性存在=%s。"
+        "处置:升级 torch >=2.12,或在进程内首次 torch.compile 前显式置位。"
+        % (torch.__version__, where, has_attr)
+    )
+
+
+class _Bn3dThirdPartyCompose:
+    """三方腿:竞品(torch)独立实现(框架固定 torch)。
+
+    算术步骤与内核同序:
       1. 逐通道矩:乘倒数 `bm = Σx·num_rec`,先减后乘 `(Σx² − Σx·bm)·num_rec`;
       2. 元素级仿射:`(x − bm)·mult + offset`(Sub → Mul → Add),`mult = scale/sqrt(var+eps)`;
       3. running 统计:展开式 `bm·f + mean·(1−f)`(非 lerp)。
-    三者数学语义与契约一致:`y = (x − μ)/sqrt(σ² + ε)·scale + offset`。
+    入口按内核加宽行为 cast(f16/bf16 → f32),出口窄回输入 dtype(与 CAST_RINT
+    round-half-even 同口径);x 仅 f16/f32/bf16,无整型分支。
 
-    精度档位(「浮点 + 三方」格):
-      - 框架固定 **torch**;
-      - 入口**按 NPU 的加宽行为同步 cast**:arch35 内核
-        `Cast(xf, xb, CAST_NONE)` 只对 f16/bf16 升 f32,fp32 不加宽
-        (新实现 `op_kernel/arch35/bn3_d_training_update_common.h` 的
-        `LoadAlignedXToFp32` / `LoadUnalignedXToFp32`,随路 `LoadDist::DIST_UNPACK_B16` +
-        `AscendC::Reg::Cast`);本类同款;
-      - 出口**对应地窄回** f32 → 下发输入 dtype:内核 `Cast(yT, yf, CAST_RINT)`
-        (同文件的 `kCastFp32ToB16` 定的是 `RoundMode::CAST_RINT`,经 `StoreAlignedYFromFp32` /
-        `StoreUnalignedYFromFp32` 写出,round-half-even),torch `.to()` 同口径;不回停加宽类型,
-        否则与走 Promote 的 golden 逼近逐位相等,双标杆塌成单标杆;
-      - 类型覆盖:本算子 def 的 x 仅 f16/f32/bf16(xDTypes,
-        op_host/bn3_d_training_update_def.cpp:21-25),**无整型 dtype**,
-        故无整型分支(整型另有「不提升、无三方」规则,此处不适用)。
-      - **算法档位(同算法同精度档)**:`sum_t * batch_mean` 必须是**分步乘 +
-        分步减**(各一次 RN 舍入);
-        **不得**被收缩成单次舍入的 FMA。
-        故 `__call__` 在 `torch.compile` 前调用 `_pin_eager_fp32_numerics()`。
-
-    形态与两条腿的关系(同一 compose 同时驱动精度腿与性能腿,TTK 不透传腿别,
-    见 ops-test-kit `executor.py:1104-1126`:mode 只选 `_run_perf` / `_invoke`,
-    `compose_kwargs` 仅 attrs + input_formats):
-      - 性能腿(竞品必须开融合):保留 `torch.compile(mode="reduce-overhead")`,
-        仍是融合图 / 单 kernel 的最优形态,不拿分解实现虚高 G/N;
-      - 精度腿:融合图内**禁 FMA 收缩**,逐步舍入与 eager fp32 / 内核同档。
+    形态:同一 compose 同时驱动精度腿与性能腿(TTK 不透传腿别)——保留
+    `torch.compile(mode="reduce-overhead")` 融合形态,融合图内禁 FMA 收缩,
+    逐步舍入与 eager fp32 / 内核同档。环境不满足或 `torch.compile` 失败直接报错。
     """
 
     def __init__(self, **kwargs):
@@ -245,10 +220,8 @@ class _Bn3dThirdPartyCompose:
         self.input_formats = kwargs.get("input_formats") or None
 
     def _perm(self, x):
-        """format 驱动定「C 轴在 dim1」的重排元组;拿不到 format 直接报错,不猜轴。
-
-        `input_formats` 的序列形态与裸字符串形态都收(与同文件 `_resolve_ch_axis`
-        的宽容口径一致),避免下发形态变化时三方腿静默失联。
+        """format 驱动定「C 轴在 dim1」的重排元组;拿不到直接报错。
+        `input_formats` 的序列与裸字符串形态都收。
         """
         fmts = self.input_formats
         if not fmts:
@@ -301,7 +274,7 @@ class _Bn3dThirdPartyCompose:
             if not identity:
                 y = y.permute(*_inv_perm(perm))
         else:
-            # C==0 的空输入:本算子 infershape 只做 shape 拷贝(不拒零维),tiling 亦支持 C==0 ⇒ 产出空 y。
+            # C==0:infershape 只拷贝 shape、tiling 支持 ⇒ 产出空 y。
             y = torch.empty_like(xn)
         # 出口:窄回下发输入 dtype,与内核 CAST_RINT(round-half-even)同口径。
         y = y.to(out_dt)
@@ -316,16 +289,22 @@ class _Bn3dThirdPartyCompose:
 
     def __call__(self, x, sum, square_sum, scale, offset, mean, variance):
         args = (x, sum, square_sum, scale, offset, mean, variance)
-        # 竞品形态 = 融合(性能腿要求,不拿分解实现虚高 G/N)且**禁 FMA 收缩**
-        # (精度腿要求,与内核三步非融合同档)。旋钮不可用 → 直接走 eager
-        # (仍是 fp32 同精度档,只是不融合),绝不放行「带 FMA 的融合形态」。
-        if _pin_eager_fp32_numerics():
-            try:
-                fn = torch.compile(self._update_eager, mode="reduce-overhead")
-                return fn(*args)
-            except Exception:
-                pass
-        return self._update_eager(*args)
+        # 融合形态(性能腿)+ 禁 FMA 收缩(精度腿,同内核三步非融合)。环境不满足直接报错。
+        if not _pin_eager_fp32_numerics():
+            raise _fp32_pin_unavailable_error()
+        try:
+            fn = torch.compile(self._update_eager, mode="reduce-overhead")
+            return fn(*args)
+        except ValueError:
+            # `_perm` 的契约校验原样抛出。
+            raise
+        except Exception as exc:
+            # 编译/首执行失败:包装成 RuntimeError 并保留异常链。
+            raise RuntimeError(
+                "三方腿 torch.compile(mode='reduce-overhead') 编译或首执行失败"
+                "(%s: %s);torch.__version__=%s"
+                % (type(exc).__name__, exc, torch.__version__)
+            ) from exc
 
 
 class Bn3dKernelSpec:
@@ -357,9 +336,8 @@ class Bn3dKernelSpec:
         )
         return [_to_numpy(o) for o in outs]
 
-    # 三方标杆(远端 GPU 执行):竞品原生原语拼接的独立实现(见类 docstring),
-    # torch.compile 融合为最优形态(**但融合图内禁 FMA 收缩**,见
-    # `_pin_eager_fp32_numerics`),编译失败回落 eager。
+    # 三方标杆(远端 GPU 执行):竞品原生原语拼接的独立实现(见类 docstring);
+    # torch.compile 融合为最优形态,融合图内禁 FMA 收缩(`_pin_eager_fp32_numerics`)。
     third_party = {"torch": _Bn3dThirdPartyCompose}
 
     tolerance = {
@@ -399,14 +377,10 @@ def bn3d_training_update_golden(
 
 
 # ---------------------------------------------------------------------------
-# 三方 compose(远端 GPU 上执行):类形式,属性喂 __init__、输入喂 __call__;
-# 参数名与 proto REG_OP 注册名逐字一致(x, sum, square_sum, scale, offset,
-# mean, variance, factor, epsilon)。torch.compile 包一层拿最优形态(融合图内禁 FMA
-# 收缩,见 `_pin_eager_fp32_numerics`),失败回落 eager。
-# 输出必须 cast 到 NPU 输出 dtype(y 回 x dtype;统计量 fp32),保证 cross_check 同精度对等。
-# `_compute` 是独立参考(golden 腿,按数学语义实现);
-# `_Bn3dThirdPartyCompose` 是三方腿,按被测实现的运算序列拼接——避免竞品选用更优的等价
-# 写法而凭空更准,把实现差异误判成内核缺陷。
+# 三方 compose(远端 GPU 上执行):属性喂 __init__、输入喂 __call__,参数名与 proto
+# REG_OP 注册名逐字一致。输出 cast 到 NPU 输出 dtype(y 回 x dtype;统计量 fp32)。
+# `_compute` 为 golden 腿独立参考;`_Bn3dThirdPartyCompose` 按被测实现的运算序列拼接,
+# 避免等价写法凭空更准而把实现差异误判成内核缺陷。
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------

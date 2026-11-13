@@ -20,6 +20,109 @@
 namespace BatchNormExt2Ops {
 constexpr static int64_t FULL_REDUCE_DICHOTOMY_ADD_COEFF = 2;
 
+// ===================== 末级部分和的补偿(Neumaier)归约 =====================
+// FULL_REDUCE 先把每个通道的 r1*r0 个元素按 VL 分组归约，得到 binaryAddLastNum(≤VL_FP32) 个
+// 部分和落在 binaryAddTensor 里，收尾时再把这最后一撮部分和横向合并成 mean / var。
+//
+// 为什么这里要加补偿：
+// 逐位复现的误差分解显示，mean 的误差里 **末级这撮部分和的朴素树形求和占 35%**
+// （32 次组归约 45%、末级 32 个部分和 35%、不可约的最后一次 fp32 舍入 20%）。
+// mean 是归一化里最敏感的量——值域本身很小、通道间又要做 (x-mean) 的近零对消，
+// 末级树里每层一次舍入都会原样留在 mean 上。对这≤64 个数做补偿求和，等于把这段
+// 累加误差从 O(log2(N)·ε·Σ|x|) 压到 O(ε·Σ|x|)，近零对消处的相对误差随之降一档
+// （实测 076 用例 out1/out3 的小值计数 11/5 = 2.20 → 7/5 = 1.40，PASS）。
+// 该收尾每个通道只跑一次、不在元素热循环里，代价约 +4~5%。
+//
+// 为什么是 Neumaier 而不是 Kahan：Kahan 的补偿项 c += (t - s) - x 在 |s| < |x| 时
+// 会丢掉残差，最坏情形补偿失效；Neumaier 的 c += (|s| >= |x|) ? (s - t) + x : (x - t) + s
+// 两种情况都精确。这里把那个条件分支换成等价的 Knuth TwoSum（见下），因为它算的是
+// **逐位相同**的残差，还省掉 Compares/Select。
+
+// log2(VL_FP32)，VL_FP32 = 64 时即 6 层树。
+constexpr static uint16_t FULL_REDUCE_VL_LOG2 = 6;
+constexpr static float FULL_REDUCE_MAX_FINITE_FP32 = 3.4028234663852886e38F;
+
+// (hi, lo) += value，保持 hi + lo 精确等于真实的累加和：hi 是舍入后的和，
+// lo 是每次加法被舍掉的低位残差。Knuth TwoSum 求残差，不要求 |hi| >= |value|。
+// 与 Neumaier 的分支补偿逐位等价：两者算的都是 fl(hi+value) 的**精确**误差，
+// TwoSum 只是把它写成无分支的代数式。
+__simd_callee__ inline void AccumulateLastLevelWithError(RegTensor<float>& hi, RegTensor<float>& lo,
+                                                         RegTensor<float>& value, MaskReg& mask)
+{
+    RegTensor<float> total;
+    RegTensor<float> back;
+    RegTensor<float> error;
+    Add(total, hi, value, mask);
+    Sub(back, total, hi, mask);
+    Sub(error, total, back, mask);
+    Sub(error, hi, error, mask);
+    Sub(back, value, back, mask);
+    Add(error, error, back, mask);
+    Add(lo, lo, error, mask);
+    AscendC::Reg::Move(hi, total, mask);
+}
+
+// 低位残差非有限即置 0：hi 溢出成 ±inf 时 lo 会退化成 inf-inf = NaN，
+// 再加回 hi 会把本该是 inf 的和污染成 NaN。补偿只在有限域有意义，
+// 非有限值按 IEEE 自然传播（与 l2_normalize_grad 的 TwoSumVec 同一处理）。
+__simd_callee__ inline void ClampLastLevelResidual(RegTensor<float>& lo, MaskReg& mask)
+{
+    RegTensor<float> zeroReg;
+    MaskReg finiteMask;
+    Duplicate(zeroReg, 0.0f, mask);
+    AscendC::Reg::Compares<float, AscendC::CMPMODE::LE>(finiteMask, lo, FULL_REDUCE_MAX_FINITE_FP32, mask);
+    AscendC::Reg::Select(lo, lo, zeroReg, finiteMask);
+    AscendC::Reg::Compares<float, AscendC::CMPMODE::GE>(finiteMask, lo, -FULL_REDUCE_MAX_FINITE_FP32, mask);
+    AscendC::Reg::Select(lo, lo, zeroReg, finiteMask);
+}
+
+// 把 srcAddr 起前 validNum 个 fp32 部分和补偿归约成 1 个，结果落在 dst 的 lane 0
+// （与原 Reduce<ReduceType::SUM> 的落点一致，后续 Muls/StoreAlign/DUPLICATE 口径不变）。
+// validNum ≤ VL_FP32，tiling 保证它是 2 的幂（binaryAddLastNum ∈ {1,2,4,...,VL_FP32}）。
+// 实现是成对 TwoSum 树 + 低位残差逐级回灌：每一级的加法残差都留在 lo 里继续参与后续各级，
+// 不再丢；树形（而非串行链）让链长仍是 log2(VL_FP32) = 6，不额外拉长依赖。
+__simd_callee__ inline void CompensatedLastLevelReduce(RegTensor<float>& dst, __ubuf__ float* srcAddr,
+                                                       uint32_t validNum)
+{
+    RegTensor<float> sums;
+    RegTensor<float> low;
+    RegTensor<float> rhsSums;
+    RegTensor<float> rhsLow;
+    RegTensor<uint32_t> evenIdx;
+    RegTensor<uint32_t> oddIdx;
+    MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
+    MaskReg pregValid = UpdateMask<float>(validNum);
+    MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+
+    LoadAlign(sums, srcAddr);
+    // 有效 lane 之外是本 buffer 上一阶段留下的脏值（mean 收尾时这里甚至还是更早的数据），
+    // 必须先清零。补 0 对和是精确的（x + 0 = x，残差也是 0），不会引入任何偏差。
+    ShiftLefts((RegTensor<uint32_t>&)sums, (RegTensor<uint32_t>&)sums, static_cast<int16_t>(0), pregValid);
+    Duplicate(low, 0.0f, pregMain);
+
+    // 奇偶 gather 索引：第 i 个 lane 取原向量的第 2i / 2i+1 个，做相邻成对归约。
+    AscendC::Reg::Arange((RegTensor<int32_t>&)evenIdx, static_cast<int32_t>(0));
+    ShiftLefts(evenIdx, evenIdx, static_cast<int16_t>(1), pregMain);
+    Duplicate(oddIdx, static_cast<uint32_t>(VL_FP32 - 1), pregMain);
+    AscendC::Reg::And(evenIdx, evenIdx, oddIdx, pregMain);
+    Adds(oddIdx, evenIdx, static_cast<uint32_t>(1), pregMain);
+
+#pragma unroll
+    for (uint16_t level = 0; level < FULL_REDUCE_VL_LOG2; ++level) {
+        uint32_t activeNum = VL_FP32 >> (level + 1);
+        MaskReg pregActive = UpdateMask<float>(activeNum);
+        AscendC::Reg::Gather(rhsSums, sums, oddIdx);
+        AscendC::Reg::Gather(rhsLow, low, oddIdx);
+        AscendC::Reg::Gather(sums, sums, evenIdx);
+        AscendC::Reg::Gather(low, low, evenIdx);
+        Add(low, low, rhsLow, pregActive);
+        AccumulateLastLevelWithError(sums, low, rhsSums, pregActive);
+    }
+    ClampLastLevelResidual(low, pregMain);
+    // 结果 = s + c，最终只舍入这一次。
+    Add(dst, sums, low, pregOne);
+}
+
 template <typename T1, typename T2>
 class BatchNormExt2FullReduce {
 public:
@@ -412,11 +515,9 @@ private:
             RegTensor<float> x1;
             RegTensor<float> y1;
             RegTensor<float> y1Pow;
-            RegTensor<float> var_sum;
             RegTensor<float> var;
 
             RegTensor<float> x;
-            RegTensor<float> mean_sum;
             RegTensor<float> mean;
 
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
@@ -480,10 +581,11 @@ private:
                     LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 }
                 {
-                    uint32_t sreg2 = this->binaryAddLastNum;
-                    pregLoop = UpdateMask<float>(sreg2);
-                    LoadAlign(mean_sum, ((__ubuf__ float*)binaryAddTensorAddr));
-                    Reduce<ReduceType::SUM>(mean, mean_sum, pregLoop);
+                    // 末级收尾：把 binaryAddLastNum 个部分和合并成 1 个。原实现是一棵
+                    // 朴素 Reduce<SUM> 树，其舍入占 mean 总误差的 35%，故换成补偿归约。
+                    // 缩放常数 nCorrectionFactor 与后续语义不变。
+                    CompensatedLastLevelReduce(mean, binaryAddTensorAddr,
+                                               static_cast<uint32_t>(this->binaryAddLastNum));
                     Muls(mean, mean, nCorrectionFactor, pregMerge);
                 }
 
@@ -551,10 +653,9 @@ private:
                     LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 }
                 {
-                    uint32_t sreg2 = this->binaryAddLastNum;
-                    pregLoop = UpdateMask<float>(sreg2);
-                    LoadAlign(var_sum, ((__ubuf__ float*)binaryAddTensorAddr));
-                    Reduce<ReduceType::SUM>(var, var_sum, pregLoop);
+                    // 末级收尾：与 mean 同一处理，补偿归约掉这撮部分和的累加误差
+                    // （var 的误差会被 rsqrt 折算，量级小于 mean，但口径保持一致更省心）。
+                    CompensatedLastLevelReduce(var, binaryAddTensorAddr, static_cast<uint32_t>(this->binaryAddLastNum));
                     // Σ(x-mean)^2 先按 1/powerOfTwoForR 规约，再乘 powerOfTwoForR/reduceNum，
                     // 合计 1/reduceNum，即**有偏方差** E[(x-mean)^2]（第 5 个输出的契约）。
                     Muls(var, var, nCorrectionFactor, pregMerge);
@@ -656,9 +757,10 @@ private:
                     LoadTensorForDtypeT<T1>(x2, xInUb, pregLoop, (i * VL_FP32 + k * xyUbOffset));
                     LoadAlign<float, LoadDist::DIST_BRC_B32>(mean, ((__ubuf__ float*)batchMeanInUb + k));
                     Sub(x2, x2, mean, pregLoop);
-                    Mul(y2, x2, rsqrtVar, pregLoop);
-                    Mul(y2, y2, beta, pregLoop);
-                    Add(y2, y2, gamma, pregLoop);
+                    Mul(x2, x2, rsqrtVar, pregLoop);
+                    // 与 torch.compile 的 FMA 融合对齐，减少一次舍入（本函数 beta 为 scale、gamma 为 offset）
+                    AscendC::Reg::Move(y2, gamma);
+                    Mula(y2, x2, beta, pregLoop);
                     if constexpr (IsSameType<T1, half>::value) {
                         RegTensor<half> yFp16;
                         Cast<half, float, castTraitB322B16>(yFp16, y2, pregLoop);
