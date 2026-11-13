@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file matrix_calculation_ops.h
+ * \file l2_loss_proto.h
  * \brief
  */
 #ifndef L2_LOSS_OP_PROTO_H_
@@ -23,14 +23,13 @@ namespace ge {
 * @brief Computes half the L2 norm of a tensor without the sqrt .
 
 * @par Inputs:
-* x: A Tensor. TensorType::FloatingDataType() or bfloat16. \n
+* x: A Tensor. TensorType::FloatingDataType() or bfloat16. Format support ND. \n
 
 * @par Outputs:
-* y: A Tensor. Has the same type as "x". \n
+* y: A 0-D (scalar) Tensor. Has the same type and format as "x". \n
 
 * @attention Constraints:
-* if performances better in format NZ, please close
-* "MatmulTransdataFusionPass" in fusion configuration. \n
+* The output "y" is always a 0-D scalar regardless of the shape of "x". \n
 
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator L2Loss.
