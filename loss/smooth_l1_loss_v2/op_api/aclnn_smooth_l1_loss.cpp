@@ -124,6 +124,7 @@ static bool CheckShape(const aclTensor* self, const aclTensor* target, int64_t r
     // tensor维度不超过8维
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(target, MAX_SUPPORT_DIMS_NUMS, return false);
+    OP_CHECK_MAX_DIM(result, MAX_SUPPORT_DIMS_NUMS, return false);
 
     op::Shape BroadcastShape;
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, target, BroadcastShape, return false);
