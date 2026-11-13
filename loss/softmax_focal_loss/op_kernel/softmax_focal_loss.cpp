@@ -14,7 +14,7 @@
  */
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
-#include "arch35/softmax_focal_loss_nd_vec.h"
+#include "arch35/softmax_focal_loss_parallel.h"
 #include "arch35/softmax_focal_loss_tiling_data.h"
 #include "arch35/softmax_focal_loss_tiling_key.h"
 
@@ -22,7 +22,7 @@ using namespace AscendC;
 
 // weight 的 dtype 由 weightIsHalf 模板参数决定, 不用 DTYPE_WEIGHT ——
 // 见 softmax_focal_loss_tiling_key.h 中关于 simplifiedKey 塌键的说明。
-template <uint64_t hasWeight, uint64_t weightIsHalf>
+template <uint64_t hasWeight, uint64_t weightIsHalf, uint64_t kernelMode>
 __global__ __aicore__ void softmax_focal_loss(GM_ADDR pred, GM_ADDR target, GM_ADDR weight, GM_ADDR y,
                                               GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -30,13 +30,17 @@ __global__ __aicore__ void softmax_focal_loss(GM_ADDR pred, GM_ADDR target, GM_A
     GET_TILING_DATA_WITH_STRUCT(SoftmaxFocalLossArch35TilingData, tilingData, tiling);
 
     TPipe pipe;
+    GM_ADDR userWorkspace = nullptr;
+    if constexpr (kernelMode >= 3) {
+        userWorkspace = GetUserWorkspace(workspace);
+    }
     if constexpr (weightIsHalf == 1) {
         SoftmaxFocalLoss::SoftmaxFocalLossND<DTYPE_PRED, half, hasWeight> op;
-        op.Init(pred, target, weight, y, &tilingData, &pipe);
-        op.Process();
+        op.template Init<(kernelMode == 1)>(pred, target, weight, y, &tilingData, &pipe, userWorkspace);
+        op.template Process<kernelMode>();
     } else {
         SoftmaxFocalLoss::SoftmaxFocalLossND<DTYPE_PRED, float, hasWeight> op;
-        op.Init(pred, target, weight, y, &tilingData, &pipe);
-        op.Process();
+        op.template Init<(kernelMode == 1)>(pred, target, weight, y, &tilingData, &pipe, userWorkspace);
+        op.template Process<kernelMode>();
     }
 }

@@ -23,9 +23,10 @@
 // weight 的 dtype 独立于 pred(A2 ini 声明四种组合), 但二进制匹配用的 simplifiedKey
 // 会把 optional 输入的 dtype 槽填成 pred 的 dtype, 四条 binary 会塌成两组键而选错 .o。
 // 故不依赖 binary 匹配区分 weight dtype, 改由 host tiling 按实际 dtype 下发本模板参数。
-#define SOFTMAX_FOCAL_LOSS_TPL_KEY_DECL()                                          \
-    ASCENDC_TPL_UINT_DECL(hasWeight, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1), \
-        ASCENDC_TPL_UINT_DECL(weightIsHalf, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1)
+#define SOFTMAX_FOCAL_LOSS_TPL_KEY_DECL()                                                 \
+    ASCENDC_TPL_UINT_DECL(hasWeight, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1),        \
+        ASCENDC_TPL_UINT_DECL(weightIsHalf, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1), \
+        ASCENDC_TPL_UINT_DECL(kernelMode, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, 0, 1, 2, 3, 4)
 
 #define SOFTMAX_FOCAL_LOSS_TPL_KEY_SEL()                        \
     ASCENDC_TPL_UINT_SEL(hasWeight, ASCENDC_TPL_UI_LIST, 0, 1), \
@@ -33,5 +34,20 @@
 
 ASCENDC_TPL_ARGS_DECL(SoftmaxFocalLoss, SOFTMAX_FOCAL_LOSS_TPL_KEY_DECL());
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(SOFTMAX_FOCAL_LOSS_TPL_KEY_SEL()));
+// 0: ordinary rows, 1: dense single column, 2: streamed rows with FW compensation.
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                                     SOFTMAX_FOCAL_LOSS_TPL_KEY_SEL(),
+                                     ASCENDC_TPL_UINT_SEL(kernelMode, ASCENDC_TPL_UI_LIST, 0)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                                     ASCENDC_TPL_UINT_SEL(hasWeight, ASCENDC_TPL_UI_LIST, 1),
+                                     ASCENDC_TPL_UINT_SEL(weightIsHalf, ASCENDC_TPL_UI_LIST, 0),
+                                     ASCENDC_TPL_UINT_SEL(kernelMode, ASCENDC_TPL_UI_LIST, 1, 2)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                                     ASCENDC_TPL_UINT_SEL(hasWeight, ASCENDC_TPL_UI_LIST, 0),
+                                     ASCENDC_TPL_UINT_SEL(weightIsHalf, ASCENDC_TPL_UI_LIST, 0),
+                                     ASCENDC_TPL_UINT_SEL(kernelMode, ASCENDC_TPL_UI_LIST, 2)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIV_1_0),
+                                     SOFTMAX_FOCAL_LOSS_TPL_KEY_SEL(),
+                                     ASCENDC_TPL_UINT_SEL(kernelMode, ASCENDC_TPL_UI_LIST, 3, 4)));
+
 #endif // SOFTMAX_FOCAL_LOSS_TILING_KEY_H

@@ -43,14 +43,35 @@ class SoftmaxFocalLossND {
 public:
     __aicore__ inline SoftmaxFocalLossND() {}
 
+    template <bool denseRows = false>
     __aicore__ inline void Init(GM_ADDR pred, GM_ADDR target, GM_ADDR weight, GM_ADDR y,
-                                const SoftmaxFocalLossArch35TilingData* tiling, TPipe* pipe);
+                                const SoftmaxFocalLossArch35TilingData* tiling, TPipe* pipe,
+                                GM_ADDR workspace = nullptr);
+    template <uint64_t kernelMode = 0>
     __aicore__ inline void Process();
 
 private:
+    template <bool compensateFw>
+    __aicore__ inline void ProcessSplitRow();
+    __aicore__ inline bool UseExactSum(int64_t len) const;
+    __aicore__ inline void StagePartial(int64_t chunk, bool exact);
+    template <bool compensateFw>
+    __aicore__ inline void MergePartials();
+    __aicore__ inline void MergePartialBatch(__ubuf__ float* partials, __ubuf__ float* acc, uint16_t count,
+                                             bool plainChunks, bool plainTail);
+    __aicore__ inline void MergeCompensated(RegTensor<float>& hi, RegTensor<float>& lo, RegTensor<float>& partHi,
+                                            RegTensor<float>& partLo, MaskReg mask);
+    __aicore__ inline void ProcessDenseRows();
+    __aicore__ inline void DenseRowsVec(__ubuf__ T* pred, __ubuf__ int32_t* target, __ubuf__ TW* weight,
+                                        __ubuf__ float* output, uint32_t count);
+    template <bool compensateFw>
     __aicore__ inline void ProcessTile(int64_t rowGm, int64_t rows);
+    __aicore__ inline void ComputeCompensatedProduct();
+    __aicore__ inline void ReduceFwWithResidual(RegTensor<float>& hi, RegTensor<float>& lo, RegTensor<float>& value,
+                                                RegTensor<float>& zero, MaskReg mask);
     // 少行形状的精确行求和: 逐块双二元组累加, 行尾一次精确合并
     // 双链交错版: ce/fw 同一循环, 各带独立临时寄存器(大 D 精确路径)
+    template <bool compensateFw, bool mergeResult = true>
     __aicore__ inline void ExactRowSum2(__ubuf__ float* srcCe, __ubuf__ float* srcFw, __ubuf__ float* ceHi,
                                         __ubuf__ float* ceLo, __ubuf__ float* fwHi, __ubuf__ float* fwLo, int64_t rows,
                                         int64_t len);
@@ -61,7 +82,8 @@ private:
     __aicore__ inline void ComputeCeFw(int64_t rows, int64_t len);
     __aicore__ inline void CeFwTailSeg(__ubuf__ T* predAddr, __ubuf__ int32_t* targetAddr, __ubuf__ TW* weightAddr,
                                        __ubuf__ float* ceAddr, __ubuf__ float* fwAddr, int64_t rowIdx, int64_t strideT,
-                                       int64_t strideW, int64_t strideF, uint32_t doneCols, MaskReg preg);
+                                       int64_t strideW, int64_t strideF, uint32_t doneCols, MaskReg preg,
+                                       MaskReg storeMask);
     __aicore__ inline void CeFwVec(__ubuf__ T* predAddr, __ubuf__ int32_t* targetAddr, __ubuf__ TW* weightAddr,
                                    __ubuf__ float* ceAddr, __ubuf__ float* fwAddr, int64_t rows, int64_t len);
     __aicore__ inline void CopyOutRow(int64_t rowGm, int64_t colOff, int64_t rows, int64_t len);
@@ -103,13 +125,15 @@ protected:
     constexpr static uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
 
-    // Keep copied pred padding inside (0, 1). CeFwTailSeg excludes padding from
-    // arithmetic and explicitly stores zero CE/FW values before row reduction.
+    // pred 的 padding 值取开区间 (0,1) 内的 0.5, target 的 padding 值取 0。
+    // 极端 gamma/alpha 仍可能让 padding 算出 inf*0；CeFwTailSeg 只计算有效 lane，
+    // 利用 ZEROING 将对齐补齐位置写成求和单位元 0。
     constexpr static float PRED_PAD_VALUE = 0.5f;
     // 行槽粒度 = 一个 32B 块能放的 float 数: StoreAlign 要求 32B 对齐, 单元素偏移是非法地址
     constexpr static uint32_t ROW_SLOT_ELEM = BLOCK_SIZE / sizeof(float);
 
 private:
+    GlobalTensor<float> partialGm_;
     GlobalTensor<T> predGm_;
     GlobalTensor<int32_t> targetGm_;
     GlobalTensor<TW> weightGm_;
@@ -141,10 +165,11 @@ private:
 };
 
 template <typename T, typename TW, uint64_t hasWeight>
+template <bool denseRows>
 __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::Init(GM_ADDR pred, GM_ADDR target, GM_ADDR weight,
                                                                   GM_ADDR y,
                                                                   const SoftmaxFocalLossArch35TilingData* tiling,
-                                                                  TPipe* pipe)
+                                                                  TPipe* pipe, GM_ADDR workspace)
 {
     a_ = tiling->a;
     r_ = tiling->r;
@@ -157,12 +182,27 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::Init(GM_ADDR pred, 
     gamma_ = tiling->gamma;
     alpha_ = tiling->alpha;
     pipe_ = pipe;
+    if (workspace != nullptr) {
+        partialGm_.SetGlobalBuffer((__gm__ float*)workspace);
+    }
 
     predGm_.SetGlobalBuffer((__gm__ T*)pred);
     targetGm_.SetGlobalBuffer((__gm__ int32_t*)target);
     yGm_.SetGlobalBuffer((__gm__ T*)y);
     if constexpr (hasWeight == 1) {
         weightGm_.SetGlobalBuffer((__gm__ TW*)weight);
+    }
+
+    if constexpr (denseRows) {
+        // Dense rows have no row padding or reductions. The tile is a whole number of vectors.
+        pipe_->InitBuffer(predQue_, 1, rowsPerTile_ * sizeof(T));
+        pipe_->InitBuffer(targetQue_, 1, rowsPerTile_ * sizeof(int32_t));
+        if constexpr (hasWeight == 1) {
+            pipe_->InitBuffer(weightQue_, 1, rowsPerTile_ * sizeof(TW));
+        }
+        pipe_->InitBuffer(yQue_, 1, rowsPerTile_ * sizeof(T));
+        pipe_->InitBuffer(yF32Buf_, rowsPerTile_ * sizeof(float));
+        return;
     }
 
     // VF 的 LoadAlign 按整向量取数, 末行可能越过有效区, 故每块留一个向量的余量
@@ -186,8 +226,17 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::Init(GM_ADDR pred, 
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
+template <uint64_t kernelMode>
 __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::Process()
 {
+    if constexpr (kernelMode >= 3) {
+        ProcessSplitRow<(kernelMode == 4)>();
+        return;
+    }
+    if constexpr (kernelMode == 1) {
+        ProcessDenseRows();
+        return;
+    }
     int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
     if (blockIdx >= realCoreNum_) {
         return;
@@ -198,11 +247,12 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::Process()
     for (int64_t off = 0; off < rowNum; off += rowsPerTile_) {
         int64_t rows = rowNum - off;
         rows = rows > rowsPerTile_ ? rowsPerTile_ : rows;
-        ProcessTile(rowStart + off, rows);
+        ProcessTile<(kernelMode == 2)>(rowStart + off, rows);
     }
 }
 
 template <typename T, typename TW, uint64_t hasWeight>
+template <bool compensateFw>
 __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::ProcessTile(int64_t rowGm, int64_t rows)
 {
     LocalTensor<float> accBuf = accBuf_.template Get<float>();
@@ -237,10 +287,12 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::ProcessTile(int64_t
         // 判据与 SFLG 一致, 由误差计数推导: 本路径每行有 blocksRow 次未补偿的块级舍入
         // (块内树形规约 + 块间无补偿裸加), 竞品 pairwise 约 logLenRow 次;
         // blocksRow == 1 时没有跨块累积, 块内树形即竞品算法本身, 无需也无从补偿。
-        if (blocksRow > 1 && blocksRow > logLenRow) {
-            ExactRowSum2((__ubuf__ float*)ceBuf.GetPhyAddr(), (__ubuf__ float*)fwBuf.GetPhyAddr(),
-                         (__ubuf__ float*)ceAcc.GetPhyAddr(), (__ubuf__ float*)ceLo.GetPhyAddr(),
-                         (__ubuf__ float*)fwAcc.GetPhyAddr(), (__ubuf__ float*)fwLo.GetPhyAddr(), rows, len);
+        // Keep the short final tile in the compensated sum when its residual will be used.
+        if (compensateFw || (blocksRow > 1 && blocksRow > logLenRow)) {
+            ExactRowSum2<compensateFw>((__ubuf__ float*)ceBuf.GetPhyAddr(), (__ubuf__ float*)fwBuf.GetPhyAddr(),
+                                       (__ubuf__ float*)ceAcc.GetPhyAddr(), (__ubuf__ float*)ceLo.GetPhyAddr(),
+                                       (__ubuf__ float*)fwAcc.GetPhyAddr(), (__ubuf__ float*)fwLo.GetPhyAddr(), rows,
+                                       len);
         } else {
             uint32_t srcShape[2] = {static_cast<uint32_t>(rows), static_cast<uint32_t>(StrideOfF32(len))};
             AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(redTmp, ceBuf, srcShape, false);
@@ -250,33 +302,11 @@ __aicore__ inline void SoftmaxFocalLossND<T, TW, hasWeight>::ProcessTile(int64_t
         }
     }
 
-    // Combine low cross terms before the final rounding; retain ordinary nonfinite products.
-    AscendC::Mul(rowVal, ceAcc, fwAcc, static_cast<int32_t>(rows));
-    AscendC::Mul(ceBuf, ceLo, fwAcc, static_cast<int32_t>(rows));
-    AscendC::Mul(fwBuf, fwLo, ceAcc, static_cast<int32_t>(rows));
-    AscendC::Add(ceBuf, ceBuf, fwBuf, static_cast<int32_t>(rows));
-    __ubuf__ float* output = (__ubuf__ float*)rowVal.GetPhyAddr();
-    __ubuf__ float* correction = (__ubuf__ float*)ceBuf.GetPhyAddr();
-    uint16_t repeats = static_cast<uint16_t>((rows + VL_FP32 - 1) / VL_FP32);
-    uint32_t remaining = static_cast<uint32_t>(rows);
-    __VEC_SCOPE__
-    {
-        RegTensor<float> base, low, result, absValue, zero;
-        MaskReg finite;
-        AscendC::Reg::Duplicate(zero, 0.0f);
-        for (uint16_t i = 0; i < repeats; ++i) {
-            MaskReg active = AscendC::Reg::UpdateMask<float>(remaining);
-            AscendC::Reg::LoadAlign(base, output + i * VL_FP32);
-            AscendC::Reg::LoadAlign(low, correction + i * VL_FP32);
-            AscendC::Reg::Abs(absValue, low, active);
-            AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LE>(finite, absValue, 3.4028234663852886e38f, active);
-            AscendC::Reg::Select(low, low, zero, finite);
-            AscendC::Reg::Add(result, base, low, active);
-            AscendC::Reg::Abs(absValue, base, active);
-            AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LE>(finite, absValue, 3.4028234663852886e38f, active);
-            AscendC::Reg::Select(result, result, base, finite);
-            AscendC::Reg::StoreAlign(output + i * VL_FP32, result, active);
-        }
+    // y 整行同值 = CE * FW
+    if constexpr (compensateFw) {
+        ComputeCompensatedProduct();
+    } else {
+        AscendC::Mul(rowVal, ceAcc, fwAcc, static_cast<int32_t>(rows));
     }
 
     for (int64_t c = 0; c < chunkNum_; ++c) {

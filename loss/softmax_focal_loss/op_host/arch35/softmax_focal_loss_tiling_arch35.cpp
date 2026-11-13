@@ -83,6 +83,7 @@ public:
 private:
     ge::graphStatus CheckInput();
     ge::graphStatus CalUbSplit();
+    ge::graphStatus CalSingleColumnSplit();
     void CalCoreSplit();
     void PrintTilingData();
 
@@ -162,6 +163,28 @@ void SoftmaxFocalLossTiling::CalCoreSplit()
     tilingData_->blockFactor = blockFactor;
     tilingData_->realCoreNum = realCoreNum;
     tilingData_->tailBlockFactor = a - blockFactor * (realCoreNum - 1);
+}
+
+ge::graphStatus SoftmaxFocalLossTiling::CalSingleColumnSplit()
+{
+    // Contiguous rows become vector lanes. Keep every core's output start aligned,
+    // including fp16, so only the final core may end in a partial 32B block.
+    int64_t rowUnits = Ops::Base::CeilDiv(tilingData_->a, vlFp32_);
+    tilingData_->blockFactor = Ops::Base::CeilDiv(rowUnits, coreNum_) * vlFp32_;
+    tilingData_->realCoreNum = Ops::Base::CeilDiv(tilingData_->a, tilingData_->blockFactor);
+    tilingData_->tailBlockFactor = tilingData_->a - tilingData_->blockFactor * (tilingData_->realCoreNum - 1);
+
+    // pred(T), target(int32), optional weight(TW), output(T), and output fp32 scratch.
+    // No row accumulators or reduction buffers are allocated by this specialization.
+    int64_t bytesPerElem = 2 * predDtypeLen_ + TARGET_BUF_BYTES + weightDtypeLen_ + DTYPE_LEN_FP32;
+    int64_t tile = Ops::Base::FloorAlign(static_cast<int64_t>(ubSize_) / bytesPerElem, vlFp32_);
+    OP_CHECK_IF((tile < vlFp32_),
+                OP_LOGE(context_->GetNodeName(), "ub size %lu is too small for a single-column tile", ubSize_),
+                return ge::GRAPH_FAILED);
+    tilingData_->rowsPerTile = std::min(tile, tilingData_->blockFactor);
+    tilingData_->colsPerChunk = 1;
+    tilingData_->chunkNum = 1;
+    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SoftmaxFocalLossTiling::CalUbSplit()
@@ -304,12 +327,29 @@ ge::graphStatus SoftmaxFocalLossTiling::DoTiling()
         return ge::GRAPH_FAILED;
     }
 
-    CalCoreSplit();
-    OP_CHECK_IF((CalUbSplit() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalUbSplit failed"),
-                return ge::GRAPH_FAILED);
+    // The dense path is limited to the FP16 / FP32-weight single-column workload.
+    const uint64_t denseRows = tilingData_->r == 1 && predDtypeLen_ == DTYPE_LEN_FP16 &&
+                               weightDtypeLen_ == DTYPE_LEN_FP32 && tilingData_->a >= coreNum_ * vlFp32_;
+    if (denseRows) {
+        OP_CHECK_IF((CalSingleColumnSplit() != ge::GRAPH_SUCCESS),
+                    OP_LOGE(context_->GetNodeName(), "CalSingleColumnSplit failed"), return ge::GRAPH_FAILED);
+    } else {
+        CalCoreSplit();
+        OP_CHECK_IF((CalUbSplit() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalUbSplit failed"),
+                    return ge::GRAPH_FAILED);
+    }
     PrintTilingData();
 
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(hasWeight_, weightIsHalf_);
+    // Compensate streamed FP32 rows without weight, and weighted FP32 rows with nonpositive gamma.
+    const bool compensateFw = predDtypeLen_ == DTYPE_LEN_FP32 && tilingData_->chunkNum > 1 &&
+                              (hasWeight_ == 0 || (weightDtypeLen_ == DTYPE_LEN_FP32 && tilingData_->gamma <= 0.0f));
+    // Long single rows otherwise use only one AIV. Preserve chunk boundaries for both FP16 and FP32.
+    const bool splitRow = tilingData_->a == 1 && coreNum_ > 1 && tilingData_->chunkNum >= 2 * coreNum_;
+    const uint64_t kernelMode = splitRow ? (compensateFw ? 4 : 3) : (denseRows ? 1 : (compensateFw ? 2 : 0));
+    if (splitRow) {
+        tilingData_->realCoreNum = coreNum_;
+    }
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(hasWeight_, weightIsHalf_, kernelMode);
     context_->SetTilingKey(tilingKey);
     // 空 tensor 时不进核, 但 blockDim 必须合法
     context_->SetBlockDim(tilingData_->realCoreNum > 0 ? tilingData_->realCoreNum : 1);
@@ -318,6 +358,11 @@ ge::graphStatus SoftmaxFocalLossTiling::DoTiling()
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = 0;
+    if (splitRow) {
+        auto platform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+        workspaces[0] = static_cast<size_t>(tilingData_->chunkNum) * 4 * UB_BLOCK_BYTES +
+                        platform.GetLibApiWorkSpaceSize();
+    }
     return ge::GRAPH_SUCCESS;
 }
 

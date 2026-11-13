@@ -115,13 +115,11 @@ class _Compose:
     pow 比 exp∘log 更准, 换写法会让竞品凭空更准约 2 倍, cross_check 假红。
     """
 
-    def __init__(self, **kwargs):
-        self.gamma = float(_attr(kwargs, "gamma", 2.0))
-        self.alpha = float(_attr(kwargs, "alpha", 0.25))
+    def __init__(self, gamma=2.0, alpha=0.25, reduction="mean", **kwargs):
+        self.gamma = float(gamma)
+        self.alpha = float(alpha)
 
     def __call__(self, pred, target, weight=None, **kwargs):
-        gamma = float(_attr(kwargs, "gamma", self.gamma))
-        alpha = float(_attr(kwargs, "alpha", self.alpha))
         out_dtype = pred.dtype
         narrow = pred.dtype in (torch.float16, torch.bfloat16)
         p = _tp_widen(pred)
@@ -129,7 +127,7 @@ class _Compose:
         w = _tp_widen(weight) if weight is not None else torch.ones_like(p)
 
         ce_sum = (-torch.log(p) * t * w).sum(dim=-1, keepdim=True)
-        fw_sum = (alpha * torch.exp(gamma * torch.log(1.0 - p)) * t).sum(
+        fw_sum = (self.alpha * torch.exp(self.gamma * torch.log(1.0 - p)) * t).sum(
             dim=-1, keepdim=True
         )
         y = (ce_sum * fw_sum).expand_as(p).contiguous()
@@ -193,15 +191,16 @@ class SoftmaxFocalLossKernelSpec:
 
     def golden(*inputs, **kwargs):
         t = [
-            None
-            if a is None
-            else torch.from_numpy(np.ascontiguousarray(a)).to(torch.float64)
-            if np.issubdtype(a.dtype, np.floating)
-            else torch.from_numpy(np.ascontiguousarray(a))
+            None if a is None else torch.from_numpy(np.ascontiguousarray(a))
             for a in inputs
         ]
         outs = _compute(*t, **kwargs)
-        return [o.numpy() for o in outs]
+        od = kwargs.get("output_dtypes") or []
+        od = [d[0] if isinstance(d, (list, tuple)) else str(d) for d in od]
+        return [
+            o.numpy().astype(od[i]) if i < len(od) else o.numpy()
+            for i, o in enumerate(outs)
+        ]
 
     def customize_inputs(pred, target, weight=None, **kwargs):
         name = kwargs.get("testcase_name", "")
