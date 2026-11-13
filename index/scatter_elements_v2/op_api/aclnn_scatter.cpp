@@ -988,7 +988,7 @@ static aclnnStatus ExecScatterValueGetWorkspaceSize(const aclTensor* self, int64
     OP_CHECK(src != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "ConvertToTensor value failed!"),
              return ACLNN_ERR_INNER_NULLPTR);
     aclnnStatus res;
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
+    if (Ops::NN::AclnnUtil::IsRegbase() &&
         l0op::UseScatterElementsV2(self, index, src, dim, self->GetViewShape().GetDimNum(), GetReduceStr(reduce))) {
         res = ExecScatterScalar(self, dim, index, src, reduce, out, uniqueExecutor.get());
         CHECK_RET(res == ACLNN_SUCCESS, res);
