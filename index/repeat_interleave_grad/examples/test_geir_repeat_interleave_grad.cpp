@@ -34,7 +34,7 @@
 
 #include "experiment_ops.h"
 #include "nn_other.h"
-#include "../op_graph/embedding_bag_proto.h"
+#include "../op_graph/repeat_interleave_grad_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -51,8 +51,13 @@ using std::vector;
     placeholder##intputIndex##_desc.SetPlacement(ge::kPlacementHost);                                               \
     placeholder##intputIndex##_desc.SetFormat(FORMAT_ND);                                                           \
     Tensor tensor_placeholder##intputIndex;                                                                         \
-    ret = GenOnesDataFloat32(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                     \
-                             placeholder##intputIndex##_desc, 2);                                                   \
+    if (intputDtype == DT_INT32) {                                                                                  \
+        ret = GenOnesData(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                        \
+                          placeholder##intputIndex##_desc, intputDtype, 2);                                         \
+    } else {                                                                                                        \
+        ret = GenOnesDataFloat32(placeholder##intputIndex##_shape, tensor_placeholder##intputIndex,                 \
+                                 placeholder##intputIndex##_desc, 2);                                               \
+    }                                                                                                               \
     if (ret != SUCCESS) {                                                                                           \
         printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                              \
         return FAILED;                                                                                              \
@@ -181,10 +186,11 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     Status ret = SUCCESS;
     // 自定义代码：添加单算子定义到图中
     auto add1 = op::RepeatInterleaveGrad("add1");
+    add1.set_attr_axis(0);
     std::vector<int64_t> yGradShape = {4, 2};
-    std::vector<int64_t> repeatsShape = {4};
+    std::vector<int64_t> repeatsShape = {2};
     ADD_INPUT(1, y_grad, inDtype, yGradShape);
-    ADD_INPUT(1, repeats, DT_INT32, repeatsShape);
+    ADD_INPUT(2, repeats, DT_INT32, repeatsShape);
 
     outputs.push_back(add1);
     // 添加完毕
@@ -209,7 +215,9 @@ int main(int argc, char* argv[])
     std::vector<Operator> inputs{};
     std::vector<Operator> outputs{};
 
-    std::cout << argv[1] << std::endl;
+    if (argc > 1) {
+        std::cout << argv[1] << std::endl;
+    }
     char* endptr;
 
     DataType inDtype = DT_FLOAT;

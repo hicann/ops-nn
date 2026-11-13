@@ -292,6 +292,34 @@ TEST_F(RepeatInterleaveGradTiling, int_repeat_invalid_axis_chained) // OP_LOGE("
     RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 100, true, kSoc950, ge::GRAPH_FAILED);
 }
 
+TEST_F(RepeatInterleaveGradTiling,
+       int_repeat_repeats_dim_exceeds_1) // OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON("repeats")
+{
+    gert::StorageShape in = {{2, 32, 16}, {2, 32, 16}};
+    gert::StorageShape rpt = {{2, 4, 33}, {2, 4, 33}};
+    gert::StorageShape out = {{2, 16, 16}, {2, 16, 16}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 1, true, kSoc950, ge::GRAPH_FAILED);
+}
+
+// axis为int64属性：超int32正值（David路径，非标量repeats）
+TEST_F(RepeatInterleaveGradTiling,
+       repeat_interleave_grad_tiling_axis_exceed_int32) // OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("axis")
+{
+    gert::StorageShape in = {{2, 32, 16}, {2, 32, 16}};
+    gert::StorageShape rpt = {{16}, {16}};
+    gert::StorageShape out = {{2, 2, 16}, {2, 2, 16}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 2147484000, true, kSoc950, ge::GRAPH_FAILED);
+}
+
+// axis负溢出：回绕后仍为负（此前无上/下界校验会越界读dims_导致host段错误）
+TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_axis_negative_overflow)
+{
+    gert::StorageShape in = {{2, 32, 16}, {2, 32, 16}};
+    gert::StorageShape rpt = {{16}, {16}};
+    gert::StorageShape out = {{2, 2, 16}, {2, 2, 16}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, -2147484000, true, kSoc950, ge::GRAPH_FAILED);
+}
+
 // BLOCK_SPLIT_MN: lenM*lenN >= coreNum, lenM <= coreNum/2, alignN*lenRepeat > ubSize
 TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_block_split_mn)
 {

@@ -123,7 +123,7 @@ private:
     uint32_t templateNum_ = 0;
     gert::TilingContext* context_;
     size_t workspaceSizeExt_ = 0; // 额外的workspace，用于block切Repeat时使用
-};                                // class RIGDavidTilingImpl
+}; // class RIGDavidTilingImpl
 
 ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* compileInfo)
 {
@@ -158,6 +158,12 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
                                               std::to_string(repeatShapeSize).c_str(), "> 0"),
                 return ge::GRAPH_FAILED);
 
+    OP_CHECK_IF(repeatShape.GetDimNum() > 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "repeats",
+                                                          (std::to_string(repeatShape.GetDimNum()) + "D").c_str(),
+                                                          "repeats must be 0D or 1D tensor"),
+                return ge::GRAPH_FAILED);
+
     // 获取axis 如果axis为null，处理逻辑不同
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
@@ -177,6 +183,12 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     if (!isAxisNone_ && axis_ < 0) {
         axis_ = axis_ + xDimNum;
     }
+    OP_CHECK_IF(
+        (!isAxisNone_ && (axis_ < 0 || axis_ >= xDimNum)),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "axis", std::to_string(axis_).c_str(),
+            ("axis must be in [" + std::to_string(-xDimNum) + ", " + std::to_string(xDimNum - 1) + "]").c_str()),
+        return ge::GRAPH_FAILED);
 
     // 校验axis是none时，输入的长度是否为1
     OP_CHECK_IF((isAxisNone_ && xDimNum != 1),
