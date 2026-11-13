@@ -154,7 +154,8 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OutputPrecomput
     const IdxT threadNum = static_cast<IdxT>(blockDim.x);
     const IdxT gridSize = static_cast<IdxT>(gridDim.x);
     const IdxT globalStep = threadNum * gridSize;
-    for (IdxT index = coreIdx * threadNum + localTid; index < totalOutputElements; index += globalStep) {
+    for (IdxT index = coreIdx * threadNum + localTid; index < totalOutputElements;
+         index = NextGridStrideIndex(index, globalStep, totalOutputElements)) {
         ProcessOnePrecomputed(index, outputDim, groupSize, groupArea, x, y, stableQWs, batchOffsetsWs, boundsWs,
                               params);
     }
@@ -171,7 +172,8 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void PrecomputeOutpu
     const IdxT threadNum = static_cast<IdxT>(blockDim.x);
     const IdxT gridSize = static_cast<IdxT>(gridDim.x);
     const IdxT globalStep = threadNum * gridSize;
-    for (IdxT index = coreIdx * threadNum + localTid; index < totalOutputElements; index += globalStep) {
+    for (IdxT index = coreIdx * threadNum + localTid; index < totalOutputElements;
+         index = NextGridStrideIndex(index, globalStep, totalOutputElements)) {
         const OutputLocation<IdxT> output = DecodeOutput(index, params);
         const IdxT metaBase = index * static_cast<IdxT>(OUTPUT_META_FIELDS);
         outputMetaWs[metaBase + static_cast<IdxT>(META_YB)] = output.yb;
@@ -229,7 +231,7 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void MaterializeCont
     const IdxT threadNum = static_cast<IdxT>(blockDim.x);
     const IdxT gridSize = static_cast<IdxT>(gridDim.x);
     const IdxT globalStep = threadNum * gridSize;
-    for (IdxT q = coreIdx * threadNum + localTid; q < totalRois; q += globalStep) {
+    for (IdxT q = coreIdx * threadNum + localTid; q < totalRois; q = NextGridStrideIndex(q, globalStep, totalRois)) {
         const IdxT roiBatch = roiBatchWs[q];
         for (IdxT outputIndex = 0; outputIndex < totalOutputElements; ++outputIndex) {
             WriteMaterializedContribution(q, outputIndex, totalRois, outputDim, groupArea, roiBatch, x, boundsWs,
@@ -254,7 +256,8 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ReduceMateriali
     }
     const IdxT coreIdx = static_cast<IdxT>(blockIdx.x);
     const IdxT coreCount = static_cast<IdxT>(gridDim.x);
-    for (IdxT outputIndex = coreIdx; outputIndex < totalOutputElements; outputIndex += coreCount) {
+    for (IdxT outputIndex = coreIdx; outputIndex < totalOutputElements;
+         outputIndex = NextGridStrideIndex(outputIndex, coreCount, totalOutputElements)) {
         const IdxT pairBase = outputIndex * totalRois;
         float sum = 0.0f;
         for (IdxT q = 0; q < totalRois; ++q) {

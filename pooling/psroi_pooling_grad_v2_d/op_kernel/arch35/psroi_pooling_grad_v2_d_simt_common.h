@@ -48,6 +48,20 @@ static constexpr uint32_t META_HEIGHT = 3;
 static constexpr uint32_t META_WIDTH = 4;
 
 template <typename IdxT>
+__simt_callee__ inline IdxT NextGridStrideIndex(IdxT index, IdxT step, IdxT total)
+{
+    // Called only for index < total. Stop before the addition can wrap.
+    return step < total - index ? index + step : total;
+}
+
+template <typename IdxT>
+__simt_callee__ inline float IndexUpperExclusive()
+{
+    // The uint32/uint64 conversion limits are exactly representable in FP32.
+    return sizeof(IdxT) == sizeof(uint32_t) ? 0x1p32f : 0x1p64f;
+}
+
+template <typename IdxT>
 __simt_callee__ inline IdxT FastDiv(IdxT value, __ubuf__ const IdxT* params, uint32_t offset)
 {
     return Simt::UintDiv<IdxT>(value, params[offset + 1], params[offset + 2]);
@@ -87,10 +101,11 @@ __simt_callee__ inline IdxT ClampFloor(float value, IdxT upper)
     if (!(value > 0.0f)) {
         return static_cast<IdxT>(0);
     }
-    if (value >= static_cast<float>(upper)) {
+    if (value >= IndexUpperExclusive<IdxT>()) {
         return upper;
     }
-    return static_cast<IdxT>(floorf(value));
+    const IdxT rounded = static_cast<IdxT>(floorf(value));
+    return rounded < upper ? rounded : upper;
 }
 
 template <typename IdxT>
@@ -99,10 +114,11 @@ __simt_callee__ inline IdxT ClampCeil(float value, IdxT upper)
     if (!(value > 0.0f)) {
         return static_cast<IdxT>(0);
     }
-    if (value >= static_cast<float>(upper)) {
+    if (value >= IndexUpperExclusive<IdxT>()) {
         return upper;
     }
-    return static_cast<IdxT>(ceilf(value));
+    const IdxT rounded = static_cast<IdxT>(ceilf(value));
+    return rounded < upper ? rounded : upper;
 }
 
 template <typename RoisType, typename IdxT>
@@ -122,7 +138,8 @@ __simt_callee__ inline bool LoadRoi(IdxT srcB, IdxT r, IdxT roiCount, IdxT batch
         return false;
     }
     const float batchRounded = rintf(batchRaw);
-    const bool batchValid = batchRaw == batchRounded && batchRaw >= 0.0f && batchRaw < static_cast<float>(batchSize);
+    const bool batchValid = batchRaw == batchRounded && batchRaw >= 0.0f && batchRaw < IndexUpperExclusive<IdxT>() &&
+                            static_cast<IdxT>(batchRaw) < batchSize;
     if (!batchValid) {
         __asc_simt_vf::__trap();
         return false;
@@ -214,7 +231,8 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpPSROIPoolingG
     const IdxT threadNum = static_cast<IdxT>(blockDim.x);
     const IdxT gridSize = static_cast<IdxT>(gridDim.x);
     const IdxT globalStep = threadNum * gridSize;
-    for (IdxT index = coreIdx * threadNum + localTid; index < totalOutputElements; index += globalStep) {
+    for (IdxT index = coreIdx * threadNum + localTid; index < totalOutputElements;
+         index = NextGridStrideIndex(index, globalStep, totalOutputElements)) {
         ProcessOne(index, batchSize, roiCount, outputDim, height, width, groupSize, spatialScale, x, rois, y, params);
     }
 }
@@ -230,7 +248,7 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void PrecomputeRoiBo
     const IdxT threadNum = static_cast<IdxT>(blockDim.x);
     const IdxT gridSize = static_cast<IdxT>(gridDim.x);
     const IdxT globalStep = threadNum * gridSize;
-    for (IdxT q = coreIdx * threadNum + localTid; q < totalRois; q += globalStep) {
+    for (IdxT q = coreIdx * threadNum + localTid; q < totalRois; q = NextGridStrideIndex(q, globalStep, totalRois)) {
         const IdxT srcB = q / roiCount;
         const IdxT r = q - srcB * roiCount;
         IdxT roiBatch = 0;
@@ -272,7 +290,8 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ZeroFillOutput(
     const IdxT threadNum = static_cast<IdxT>(blockDim.x);
     const IdxT gridSize = static_cast<IdxT>(gridDim.x);
     const IdxT globalStep = threadNum * gridSize;
-    for (IdxT index = coreIdx * threadNum + localTid; index < totalOutputElements; index += globalStep) {
+    for (IdxT index = coreIdx * threadNum + localTid; index < totalOutputElements;
+         index = NextGridStrideIndex(index, globalStep, totalOutputElements)) {
         y[index] = static_cast<YType>(0.0f);
     }
 }

@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <limits>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -24,6 +25,13 @@
 namespace {
 constexpr char OP_NAME[] = "PSROIPoolingGradV2D";
 
+struct InferAttrs {
+    float scale = 1.0F;
+    int64_t outputDim = 2;
+    int64_t groupSize = 3;
+    std::vector<int64_t> inputSize{8, 9};
+};
+
 void ExpectShape(const gert::Shape* actual, const std::vector<int64_t>& expected)
 {
     ASSERT_NE(actual, nullptr);
@@ -34,7 +42,8 @@ void ExpectShape(const gert::Shape* actual, const std::vector<int64_t>& expected
 }
 
 void ExecuteInferShapeCase(std::initializer_list<int64_t> xShape, std::initializer_list<int64_t> roisShape,
-                           ge::graphStatus expectedStatus, const std::vector<int64_t>& expected = {})
+                           ge::graphStatus expectedStatus, const std::vector<int64_t>& expected = {},
+                           const InferAttrs& attrs = {})
 {
     auto inferShape = gert::OpImplRegistry::GetInstance().GetOpImpl(OP_NAME)->infer_shape;
     ASSERT_NE(inferShape, nullptr);
@@ -49,10 +58,10 @@ void ExecuteInferShapeCase(std::initializer_list<int64_t> xShape, std::initializ
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .InputShapes({&xStorageShape, &roisStorageShape})
                       .OutputShapes({&yStorageShape})
-                      .NodeAttrs({{"spatial_scale", Ops::NN::AnyValue::CreateFrom<float>(1.0F)},
-                                  {"output_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
-                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
-                                  {"input_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({8, 9})}})
+                      .NodeAttrs({{"spatial_scale", Ops::NN::AnyValue::CreateFrom<float>(attrs.scale)},
+                                  {"output_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(attrs.outputDim)},
+                                  {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(attrs.groupSize)},
+                                  {"input_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(attrs.inputSize)}})
                       .Build();
     auto* context = holder.GetContext<gert::InferShapeContext>();
     ASSERT_NE(context, nullptr);
@@ -89,4 +98,65 @@ TEST_F(PSROIPoolingGradV2DInfershape, RoIsUnknownRankUsesUnknownBatch)
 TEST_F(PSROIPoolingGradV2DInfershape, KnownWrongRankFails)
 {
     ExecuteInferShapeCase({6, 2, 3, 3}, {2, 5}, ge::GRAPH_FAILED);
+}
+
+TEST_F(PSROIPoolingGradV2DInfershape, ScalarsAreNotUnknownRank)
+{
+    ExecuteInferShapeCase({}, {2, 5, 3}, ge::GRAPH_FAILED);
+    ExecuteInferShapeCase({6, 2, 3, 3}, {}, ge::GRAPH_FAILED);
+}
+
+TEST_F(PSROIPoolingGradV2DInfershape, EmptyBatchAndEmptyRois)
+{
+    ExecuteInferShapeCase({0, 2, 3, 3}, {0, 5, 3}, ge::GRAPH_SUCCESS, {0, 18, 8, 9});
+    ExecuteInferShapeCase({0, 2, 3, 3}, {0, 5, 0}, ge::GRAPH_SUCCESS, {0, 18, 8, 9});
+    ExecuteInferShapeCase({0, 2, 3, 3}, {2, 5, 0}, ge::GRAPH_SUCCESS, {2, 18, 8, 9});
+}
+
+TEST_F(PSROIPoolingGradV2DInfershape, GroupSizeEndpoints)
+{
+    ExecuteInferShapeCase({1, 1, 1, 1}, {1, 5, 1}, ge::GRAPH_SUCCESS, {1, 1, 1, 1}, {1.0F, 1, 1, {1, 1}});
+    ExecuteInferShapeCase({1, 1, 127, 127}, {1, 5, 1}, ge::GRAPH_SUCCESS, {1, 16129, 1, 1}, {1.0F, 1, 127, {1, 1}});
+    for (const int64_t group : {0, 128}) {
+        ExecuteInferShapeCase({-2}, {-2}, ge::GRAPH_FAILED, {}, {1.0F, 1, group, {1, 1}});
+    }
+}
+
+TEST_F(PSROIPoolingGradV2DInfershape, RejectsInvalidScales)
+{
+    for (const float scale :
+         {0.0F, -1.0F, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()}) {
+        ExecuteInferShapeCase({6, 2, 3, 3}, {2, 5, 3}, ge::GRAPH_FAILED, {}, {scale, 2, 3, {8, 9}});
+    }
+    ExecuteInferShapeCase({6, 2, 3, 3}, {2, 5, 3}, ge::GRAPH_SUCCESS, {2, 18, 8, 9}, {0.5F, 2, 3, {8, 9}});
+}
+
+TEST_F(PSROIPoolingGradV2DInfershape, RejectsInvalidOutputDimAndInputSize)
+{
+    for (const int64_t outputDim : {0, -1}) {
+        ExecuteInferShapeCase({-2}, {-2}, ge::GRAPH_FAILED, {}, {1.0F, outputDim, 3, {8, 9}});
+    }
+    for (const std::vector<int64_t>& inputSize :
+         std::vector<std::vector<int64_t>>{{}, {8}, {8, 9, 10}, {0, 9}, {8, 0}, {-1, 9}, {8, -1}}) {
+        ExecuteInferShapeCase({6, 2, 3, 3}, {2, 5, 3}, ge::GRAPH_FAILED, {}, {1.0F, 2, 3, inputSize});
+    }
+}
+
+TEST_F(PSROIPoolingGradV2DInfershape, RejectsShapeMismatchAndInvalidDimensions)
+{
+    ExecuteInferShapeCase({5, 2, 3, 3}, {2, 5, 3}, ge::GRAPH_FAILED);
+    ExecuteInferShapeCase({6, 1, 3, 3}, {2, 5, 3}, ge::GRAPH_FAILED);
+    ExecuteInferShapeCase({6, 2, 2, 3}, {2, 5, 3}, ge::GRAPH_FAILED);
+    ExecuteInferShapeCase({6, 2, 3, 3}, {2, 4, 3}, ge::GRAPH_FAILED);
+    ExecuteInferShapeCase({6, 2, 3, 3}, {-2, 5, 3}, ge::GRAPH_FAILED);
+    ExecuteInferShapeCase({6, 2, 3, 3}, {2, 5, -2}, ge::GRAPH_FAILED);
+}
+
+TEST_F(PSROIPoolingGradV2DInfershape, RejectsProductsExceedingInt64)
+{
+    constexpr int64_t maxDim = std::numeric_limits<int64_t>::max();
+    ExecuteInferShapeCase({-1, 2, 3, 3}, {maxDim, 5, 2}, ge::GRAPH_FAILED);
+    ExecuteInferShapeCase({-2}, {-2}, ge::GRAPH_FAILED, {}, {1.0F, maxDim / 4 + 1, 2, {1, 1}});
+    ExecuteInferShapeCase({0, maxDim, 1, 1}, {0, 5, 0}, ge::GRAPH_SUCCESS, {0, maxDim, 1, 1},
+                          {1.0F, maxDim, 1, {1, 1}});
 }

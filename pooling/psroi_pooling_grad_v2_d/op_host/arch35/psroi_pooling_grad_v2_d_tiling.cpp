@@ -144,6 +144,28 @@ static ge::graphStatus ValidateDtype(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus ValidateFormat(gert::TilingContext* context)
+{
+    const auto* xDesc = context->GetInputDesc(X_INDEX);
+    const auto* roisDesc = context->GetInputDesc(ROIS_INDEX);
+    const auto* yDesc = context->GetOutputDesc(Y_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(context, roisDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
+    const auto xFormat = xDesc->GetStorageFormat();
+    const auto roisFormat = roisDesc->GetStorageFormat();
+    const auto yFormat = yDesc->GetStorageFormat();
+    const auto validFeatureFormat = [](ge::Format format) {
+        return format == ge::FORMAT_ND || format == ge::FORMAT_NCHW;
+    };
+    // Validate the physical layout used by GetStorageShape() and kernel indexing.
+    OP_CHECK_IF(roisFormat != ge::FORMAT_ND || !validFeatureFormat(xFormat) || xFormat != yFormat,
+                OP_LOGE(context, "PSROIPoolingGradV2D: rois storage format must be ND; "
+                                 "x and y must have the same storage format, either ND or NCHW"),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus ValidateShape(gert::TilingContext* context, ShapeInfo& info)
 {
     const auto* xShapePtr = context->GetInputShape(X_INDEX);
@@ -219,6 +241,9 @@ static ge::graphStatus ValidateAttr(gert::TilingContext* context, AttrInfo& info
 static ge::graphStatus ValidateInputs(gert::TilingContext* context, ShapeInfo& shape, AttrInfo& attrs)
 {
     if (ValidateDtype(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (ValidateFormat(context) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (ValidateShape(context, shape) != ge::GRAPH_SUCCESS) {
