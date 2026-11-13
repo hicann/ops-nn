@@ -31,13 +31,13 @@
 
   $$
   \begin{aligned}
-  scale_{fp8} &= max(mxscale_{fp4\_block}) / MAX\_OFFSET \\
+  scale_{fp8} &= max(mxscale_{fp4\_block}) / 2^{MAX\_OFFSET} \\
   offset &= mxscale_{fp4\_block} / scale_{fp8} \\
   x_{fp8} &= x_{fp4} \times offset
   \end{aligned}
   $$
 
-  - where $mxscale_{fp4\_block}$ is the FP8_E8M0 scaling factor provided by the input mxscale; $MAX\_OFFSET$ is the maximum offset between the input and output data types; $x_{fp4}$ is the quantized FLOAT4 tensor; and $x_{fp8}$ is the converted FLOAT8 tensor.
+  - where $mxscale_{fp4\_block}$ is the FP8_E8M0 scaling factor provided by the input mxscale; $MAX\_OFFSET$ is the exponent offset between the input and output data types; $x_{fp4}$ is the quantized FLOAT4 tensor; and $x_{fp8}$ is the converted FLOAT8 tensor.
 
   - MAX_OFFSET reference table:
 
