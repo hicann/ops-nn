@@ -14,7 +14,7 @@
  * \file act_ulq_clamp_min_grad_def.cpp
  * \brief ActULQClampMinGrad 算子定义。
  *
- * QAT ULQ clamp-min backward：clamp_min_grad = Σ_全轴( y_grad × ((1 - clamp_min_mask) - x_clamped_loss) )。
+ * QAT ULQ clamp-min backward：clamp_min_grad = Σ_全轴( y_grad × (x_clamped_loss + abs(clamp_min_mask)) )。
  *   3 输入同 shape、无 broadcast、无属性；输出 0 维标量，dtype 跟随 y_grad。
  *
  * 4 组合法 dtype 组合（按列对位）：

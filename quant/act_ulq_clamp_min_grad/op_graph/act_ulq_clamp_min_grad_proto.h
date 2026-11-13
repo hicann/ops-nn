@@ -13,7 +13,7 @@
  * \brief ActULQClampMinGrad 算子 GE IR 原型定义（图模式）。
  *
  * QAT ULQ clamp-min backward：
- *   clamp_min_grad = reduce_sum_over_all_axes( y_grad * ((1 - clamp_min_mask) - x_clamped_loss) )
+ *   clamp_min_grad = reduce_sum_over_all_axes( y_grad * (x_clamped_loss + abs(clamp_min_mask)) )
  *   输出为 0 维标量，dtype 跟随 y_grad；三输入同 shape，无 broadcast，无属性。
  *
  * 算子注册名 ActULQClampMinGrad（ULQ 全大写，兼容 MindSpore GEIR）。
@@ -28,11 +28,13 @@ namespace ge {
 
 /**
  *@brief QAT ULQ clamp-min backward gradient.
- *   clamp_min_grad = sum_over_all_axes( y_grad * ((1 - clamp_min_mask) - x_clamped_loss) ).
+ *   clamp_min_grad = sum_over_all_axes( y_grad * (x_clamped_loss + abs(clamp_min_mask)) ).
+ *@par Restrictions:
+ * This is an experimental operator, compatible with the MindSpore GEIR interface.
  *@par Inputs:
  *Three inputs (identical shape, no broadcast):
  * @li y_grad: upstream gradient. Must be one of the following types: float16, float32.
- * @li clamp_min_mask: clamp-min mask (values in {0, 1}). Must be one of: bool, float16, float32.
+ * @li clamp_min_mask: clamp-min mask (bool values are interpreted as 0 or 1). Must be one of: bool, float16, float32.
  * @li x_clamped_loss: clamp loss term. Must be one of: float16, float32. \n
  *@par Outputs:
  *clamp_min_grad: 0-D scalar gradient for the learnable clamp-min bound. dtype follows y_grad.

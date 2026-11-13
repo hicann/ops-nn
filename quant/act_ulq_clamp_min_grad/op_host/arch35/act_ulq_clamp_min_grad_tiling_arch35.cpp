@@ -34,9 +34,11 @@
 #include <vector>
 #include <set>
 #include <cstring>
+#include <limits>
 
 #include "act_ulq_clamp_min_grad_tiling_arch35.h"
 
+#include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
@@ -71,6 +73,10 @@ static constexpr int64_t kTmpBufCopies = 2; // tmpBuf 主+尾 2 份 fp32
 //   故承载 fp32 视图的 UB buffer 必须按 VL(256B) 对齐分配，否则末 repeat 整寄存器 Store 越界 → 507015
 //   (UB access address overflow)。rUbFactorAlign 仅 blockSize(32B) 对齐不足以覆盖此越界。
 static constexpr int64_t kVlBytes = 256; // VL = 256B（= 64 fp32 lane）
+
+// 跨核 workspace 中每个部分和占用的 FP32 分量数
+static constexpr size_t kFp32PartialFloatCount = 2;
+static constexpr size_t kFp16PartialFloatCount = 1;
 
 // 空 tensor 分类：本算子输出恒 0 维标量 → 仅 EMPTY_R（∃ 轴 size==0）；NORMAL 其余
 enum class EmptyKind { NORMAL = 0, EMPTY_R };
@@ -201,27 +207,28 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, Ctx& ctx)
     // dtype 校验（来源：proto.h:40-44, def.cpp:39-65）
     // y_grad ∈ {fp16, fp32}；clamp_min_mask ∈ {bool, fp16, fp32}；x_clamped_loss ∈ {fp16, fp32}
     const std::set<ge::DataType> yGradDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT};
-    OP_CHECK_IF(
-        yGradDtypes.count(ctx.dtype) == 0,
-        OP_LOGE_WITH_INVALID_INPUT_DTYPE(context->GetNodeName(), "y_grad", "unsupported", "DT_FLOAT16, DT_FLOAT"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yGradDtypes.count(ctx.dtype) == 0,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y_grad",
+                                          ge::TypeUtils::DataTypeToSerialString(ctx.dtype), "DT_FLOAT16, DT_FLOAT"),
+                return ge::GRAPH_FAILED);
 
     auto maskDesc = context->GetInputDesc(kInputMaskIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, maskDesc);
     auto maskDtype = maskDesc->GetDataType();
     const std::set<ge::DataType> maskDtypes = {ge::DT_BOOL, ge::DT_FLOAT16, ge::DT_FLOAT};
-    OP_CHECK_IF(maskDtypes.count(maskDtype) == 0,
-                OP_LOGE_WITH_INVALID_INPUT_DTYPE(context->GetNodeName(), "clamp_min_mask", "unsupported",
-                                                 "DT_BOOL, DT_FLOAT16, DT_FLOAT"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        maskDtypes.count(maskDtype) == 0,
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "clamp_min_mask",
+                                  ge::TypeUtils::DataTypeToSerialString(maskDtype), "DT_BOOL, DT_FLOAT16, DT_FLOAT"),
+        return ge::GRAPH_FAILED);
 
     auto xDesc = context->GetInputDesc(kInputXLossIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xDtype = xDesc->GetDataType();
     const std::set<ge::DataType> xDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT};
     OP_CHECK_IF(xDtypes.count(xDtype) == 0,
-                OP_LOGE_WITH_INVALID_INPUT_DTYPE(context->GetNodeName(), "x_clamped_loss", "unsupported",
-                                                 "DT_FLOAT16, DT_FLOAT"),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x_clamped_loss",
+                                          ge::TypeUtils::DataTypeToSerialString(xDtype), "DT_FLOAT16, DT_FLOAT"),
                 return ge::GRAPH_FAILED);
 
     // 4 组合法 dtype 组合校验（来源：def.cpp:39-65 按列对位）
@@ -253,6 +260,17 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, Ctx& ctx)
         return ge::GRAPH_FAILED);
 
     ctx.dtypeSize = static_cast<int64_t>(ge::GetSizeByDataType(ctx.dtype));
+    // Validate before FuseAxis/stride multiplication; empty tensors have no input storage.
+    if (std::find(ctx.inShape.begin(), ctx.inShape.end(), 0) == ctx.inShape.end()) {
+        const int64_t maxElements = std::numeric_limits<int64_t>::max() / ctx.dtypeSize;
+        int64_t elements = 1;
+        for (int64_t dim : ctx.inShape) {
+            OP_CHECK_IF(elements > maxElements / dim,
+                        OP_LOGE(context, "ActULQClampMinGrad: input storage size exceeds int64 range"),
+                        return ge::GRAPH_FAILED);
+            elements *= dim;
+        }
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -656,7 +674,7 @@ static void ComputeFusedALoopSplit(Ctx& ctx)
         outerAProd *= ctx.axisShape[static_cast<size_t>(i)];
     }
     const int64_t aSplitAxisSize = ctx.axisShape[static_cast<size_t>(ctx.aSplitAxisIdx)];
-    ctx.aSplitChunkCnt = (aSplitAxisSize + ctx.aUbFactor - 1) / ctx.aUbFactor;
+    ctx.aSplitChunkCnt = aSplitAxisSize / ctx.aUbFactor + (aSplitAxisSize % ctx.aUbFactor != 0);
     ctx.aLoopCntTotal = outerAProd * ctx.aSplitChunkCnt;
 
     ctx.aSmallCoreLoopCnt = ctx.aLoopCntTotal / ctx.coreNum;
@@ -674,7 +692,8 @@ static void ComputeRLoopCnt(Ctx& ctx)
             outerR *= ctx.axisShape[static_cast<size_t>(i)];
         }
     }
-    const int64_t rChunks = (ctx.axisShape[static_cast<size_t>(ctx.rSplitAxisIdx)] + ctx.rUbFactor - 1) / ctx.rUbFactor;
+    const int64_t rChunks = ctx.axisShape[static_cast<size_t>(ctx.rSplitAxisIdx)] / ctx.rUbFactor +
+                            (ctx.axisShape[static_cast<size_t>(ctx.rSplitAxisIdx)] % ctx.rUbFactor != 0);
     ctx.rLoopCntTotal = outerR * rChunks;
 }
 
@@ -741,11 +760,11 @@ static ge::graphStatus SetWorkspaceSize(gert::TilingContext* context, const Ctx&
                 aTotal *= ctx.axisShape[static_cast<size_t>(i)];
             }
         }
-        usrSize = static_cast<size_t>(ctx.rGroupCnt) * static_cast<size_t>(aTotal) * sizeof(float);
+        // FP32 carries a high/low pair across cores; FP16 retains one FP32 partial.
+        const size_t partialFloats = ctx.dtype == ge::DT_FLOAT ? kFp32PartialFloatCount : kFp16PartialFloatCount;
+        usrSize = static_cast<size_t>(ctx.rGroupCnt) * static_cast<size_t>(aTotal) * sizeof(float) * partialFloats;
     }
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    ws[0] = usrSize + sysWorkspaceSize;
+    ws[0] = usrSize;
     OP_LOGI(context, "set ws size:%zu, usrSize:%zu", ws[0], usrSize);
     return ge::GRAPH_SUCCESS;
 }

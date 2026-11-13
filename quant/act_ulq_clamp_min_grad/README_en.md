@@ -19,13 +19,13 @@ English | [简体中文](./README.md)
 - Formula:
 
   $$
-  clamp\_min\_grad = \sum_{\text{all axes}}(y\_grad \times ((1 - clamp\_min\_mask) - x\_clamped\_loss))
+  clamp\_min\_grad = \sum_{\text{all axes}}(y\_grad \times (x\_clamped\_loss + |clamp\_min\_mask|))
   $$
 
   where:
 
   - $y\_grad$: the gradient tensor from the subsequent layer
-  - $clamp\_min\_mask$: the clamp lower-bound mask (Boolean or floating point, with the value 0 or 1)
+  - $clamp\_min\_mask$: the clamp lower-bound mask (Boolean or floating point; cast to the computation type before taking the absolute value)
   - $x\_clamped\_loss$: the loss value tensor after clamp
   - $clamp\_min\_grad$: the output scalar gradient (0-dimensional tensor)
 
@@ -90,11 +90,15 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The shapes of the three input tensors must be exactly the same; broadcasting is not supported.
+- Mixed FLOAT16/FLOAT32 inputs are not supported. Only the four data type combinations listed above are supported.
 - When clamp_min_mask is of the BOOL type, y_grad and x_clamped_loss must be of the same floating-point type (both FLOAT16 or both FLOAT32).
 - When clamp_min_mask is of a floating-point type, the three inputs must be of the same floating-point type.
 - The input tensors must be stored contiguously.
-- Dynamic format is not supported.
-- Dynamic shape and dynamic rank are supported.
+- Only ND format is accepted, including dynamic shape/rank graphs.
+- Dynamic shape, dynamic rank and rank-zero scalar inputs are supported. Empty inputs reduce to scalar zero.
+- Nonempty input storage bytes must fit in int64.
+- FP16 inputs use FP32 intermediate arithmetic and reduction before conversion to FP16. FP32 uses high/low error compensation for addition, multiplication and reduction, retaining both components across cores before the final FP32 rounding.
+- NaN/Inf propagate through floating-point arithmetic; zero multiplied by infinity may produce NaN.
 
 ## Invocation Description
 

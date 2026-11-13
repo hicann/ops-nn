@@ -29,7 +29,7 @@ static constexpr size_t kInputXLossIdx = 2;
 static constexpr size_t kOutputIdx = 0;
 
 // clamp_min_grad.dtype = y_grad.dtype
-// 同时校验三输入 dtype 联动组合（def.cpp:39-65 的 4 组合法组合）：
+// 同时校验三输入 dtype 联动组合（OpDef 的 4 组合法组合）：
 //   (fp16, fp16, fp16) / (fp32, fp32, fp32) / (fp16, bool, fp16) / (fp32, bool, fp32)
 //   规则：x_clamped_loss dtype 必须等于 y_grad dtype；mask 为 bool 或等于 y_grad dtype
 //   canndev runtime 的 InferShapeActULQClampMaxGrad 只校验 shape 不校验 dtype 组合，
@@ -40,8 +40,9 @@ static ge::graphStatus InferDataType4ActULQClampMinGrad(gert::InferDataTypeConte
     const ge::DataType maskDt = context->GetInputDataType(kInputMaskIdx);
     const ge::DataType xLossDt = context->GetInputDataType(kInputXLossIdx);
 
-    const bool maskIsFloat = (maskDt == ge::DT_FLOAT16 || maskDt == ge::DT_FLOAT);
-    const bool comboValid = maskIsFloat ? (maskDt == yGradDt && xLossDt == yGradDt) : (xLossDt == yGradDt);
+    const bool yGradValid = (yGradDt == ge::DT_FLOAT16 || yGradDt == ge::DT_FLOAT);
+    const bool maskValid = (maskDt == ge::DT_BOOL || maskDt == yGradDt);
+    const bool comboValid = yGradValid && maskValid && xLossDt == yGradDt;
     OP_CHECK_IF(!comboValid,
                 OP_LOGE(context,
                         "ActULQClampMinGrad: illegal dtype combination: y_grad=%d, mask=%d, "

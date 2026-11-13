@@ -36,12 +36,13 @@
  */
 
 #include <iostream>
+#include <limits>
 #include <gtest/gtest.h>
 #include "tiling_context_faker.h"
 #include "tiling_case_executor.h"
-#include "math/act_ulq_clamp_min_grad/op_host/arch35/act_ulq_clamp_min_grad_tiling_arch35.h"
-#include "math/act_ulq_clamp_min_grad/op_kernel/arch35/act_ulq_clamp_min_grad_tiling_data.h"
-#include "math/act_ulq_clamp_min_grad/op_kernel/arch35/act_ulq_clamp_min_grad_tiling_key.h"
+#include "quant/act_ulq_clamp_min_grad/op_host/arch35/act_ulq_clamp_min_grad_tiling_arch35.h"
+#include "quant/act_ulq_clamp_min_grad/op_kernel/arch35/act_ulq_clamp_min_grad_tiling_data.h"
+#include "quant/act_ulq_clamp_min_grad/op_kernel/arch35/act_ulq_clamp_min_grad_tiling_key.h"
 
 namespace ActULQClampMinGradUT {
 using namespace std;
@@ -114,7 +115,8 @@ TEST_F(ActULQClampMinGradTilingTest, normal_2d_small_fp16)
     EXPECT_GT(td->tmpBufUbSize, 0);
     EXPECT_GT(td->postReduceUbSize, 0);
     EXPECT_EQ(td->cacheBufUbSize, 16 * 1024);
-    EXPECT_TRUE(info.workspaceSizes.empty() || info.workspaceSizes[0] >= 0); // normal 无 usrSize
+    ASSERT_EQ(info.workspaceSizes.size(), 1U);
+    EXPECT_EQ(info.workspaceSizes[0], 0U);
 }
 
 // [T-N2] normal 高 rank(4D) 合轴：多轴 reduce 合并为单一 R
@@ -159,6 +161,8 @@ TEST_F(ActULQClampMinGradTilingTest, empty_tensor_fp16)
     EXPECT_EQ(td->preReduceUbSize, 0);
     EXPECT_EQ(td->tmpBufUbSize, 0);
     EXPECT_GT(td->postReduceUbSize, 0);
+    ASSERT_EQ(info.workspaceSizes.size(), 1U);
+    EXPECT_EQ(info.workspaceSizes[0], 0U);
     EXPECT_EQ(td->axisShape[0], 1); // aTotalEmpty 恒 1（输出标量）
     EXPECT_GE(td->usedCoreNum, 1);
 }
@@ -189,9 +193,13 @@ TEST_F(ActULQClampMinGradTilingTest, group_large_r_fp32)
     EXPECT_GE(td->rGroupCnt, 1);   // group 独有：Phase1 分组数
     EXPECT_GT(td->usedCoreNum, 1); // 借 R 并行度做跨核二次 reduce
     ASSERT_FALSE(info.workspaceSizes.empty());
-    // group 使用 workspace 存 Phase1 局部结果（usrSize = rGroupCnt*aTotal*sizeof(float) > 0，
-    // 叠加 sysWorkspaceSize），故 workspace 大小 > 纯 sys 情况
-    EXPECT_GT(info.workspaceSizes[0], 0);
+    TilingInfo scalarInfo;
+    const ActULQClampMinGradTilingData* scalarTd = nullptr;
+    ASSERT_TRUE(RunTiling(MakePara({1}, ge::DT_FLOAT, ge::DT_FLOAT), scalarInfo, scalarTd));
+    ASSERT_FALSE(scalarInfo.workspaceSizes.empty());
+    // The cross-core FP32 partial carries both high and low components.
+    EXPECT_EQ(scalarInfo.workspaceSizes[0], 0U);
+    EXPECT_EQ(info.workspaceSizes[0], static_cast<size_t>(td->rGroupCnt) * 2 * sizeof(float));
 }
 
 TEST_F(ActULQClampMinGradTilingTest, group_large_r_fp16)
@@ -202,6 +210,8 @@ TEST_F(ActULQClampMinGradTilingTest, group_large_r_fp16)
     ASSERT_TRUE(RunTiling(para, info, td));
     EXPECT_GE(td->rGroupCnt, 1);
     EXPECT_GT(td->usedCoreNum, 1);
+    ASSERT_EQ(info.workspaceSizes.size(), 1U);
+    EXPECT_EQ(info.workspaceSizes[0], static_cast<size_t>(td->rGroupCnt) * sizeof(float));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -320,4 +330,25 @@ TEST_F(ActULQClampMinGradTilingTest, fail_shape_mismatch)
     ExecuteTestCase(para, ge::GRAPH_FAILED, 0, std::string(""), {});
 }
 
+// Regression: reject impossible storage metadata before the shape product overflows.
+TEST_F(ActULQClampMinGradTilingTest, reject_shape_storage_overflow)
+{
+    for (const auto& shape : {std::initializer_list<int64_t>{1LL << 33, 1LL << 33},
+                              std::initializer_list<int64_t>{std::numeric_limits<int64_t>::max()}}) {
+        auto para = MakePara(shape, ge::DT_FLOAT, ge::DT_BOOL);
+        TilingInfo info;
+        const ActULQClampMinGradTilingData* td = nullptr;
+        EXPECT_FALSE(RunTiling(para, info, td));
+    }
+}
+
+TEST_F(ActULQClampMinGradTilingTest, reject_int8_mask)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        auto para = MakePara({8, 8}, dtype, ge::DT_INT8);
+        TilingInfo info;
+        const ActULQClampMinGradTilingData* td = nullptr;
+        EXPECT_FALSE(RunTiling(para, info, td));
+    }
+}
 } // namespace ActULQClampMinGradUT

@@ -17,13 +17,13 @@
 - 计算公式：
 
   $$
-  clamp\_min\_grad = \sum_{全轴}(y\_grad \times ((1 - clamp\_min\_mask) - x\_clamped\_loss))
+  clamp\_min\_grad = \sum_{全轴}(y\_grad \times (x\_clamped\_loss + |clamp\_min\_mask|))
   $$
 
   其中：
 
   - $y\_grad$：来自后续层的梯度张量
-  - $clamp\_min\_mask$：clamp下界掩码（布尔型或浮点型，取值为0或1）
+  - $clamp\_min\_mask$：clamp下界掩码（布尔型或浮点型；先转为计算精度再取绝对值）
   - $x\_clamped\_loss$：经过clamp后的损失值张量
   - $clamp\_min\_grad$：输出的标量梯度（0维张量）
 
@@ -88,14 +88,18 @@
 ## 约束说明
 
 - 三个输入张量的shape必须完全一致，不支持广播。
+- 不支持FLOAT16与FLOAT32混合输入，仅支持上述四种数据类型组合。
 - 当clamp_min_mask为BOOL类型时，y_grad和x_clamped_loss必须为相同的浮点类型（均为FLOAT16或均为FLOAT32）。
 - 当clamp_min_mask为浮点类型时，三个输入必须为相同的浮点类型。
 - 输入张量必须是连续存储。
-- 不支持动态Format。
-- 支持动态Shape和动态Rank。
+- 当前仅接受ND格式；动态Shape/Rank下仍使用ND格式。
+- 支持动态Shape和动态Rank；支持rank=0标量输入。空输入归约输出标量0。
+- 非空输入的元素总数乘以输入元素字节数不得超出int64表示范围。
+- FP16输入的中间计算和归约使用FP32，输出再转换为FP16；FP32输入使用FP32高低位误差补偿完成加法、乘法及归约，跨核保留高低位部分和，最终舍入为一个FP32标量。
+- NaN/Inf按浮点运算传播，0乘Inf可能产生NaN；不能无条件要求零梯度输入的输出为0。
 
 ## 调用说明
 
-| 调用方式   | 调用样例            | 说明                          |
+| 调用方式   | 样例代码            | 说明                          |
 |-----------|--------------------|----------------------------------------------|
 | GE图模式 | [test_geir_act_ulq_clamp_min_grad](examples/test_geir_act_ulq_clamp_min_grad.cpp) | 通过[算子IR](op_graph/act_ulq_clamp_min_grad_proto.h)构图方式调用ActULQClampMinGrad算子。 |

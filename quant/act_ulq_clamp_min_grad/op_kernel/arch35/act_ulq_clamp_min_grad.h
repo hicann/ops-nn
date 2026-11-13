@@ -12,7 +12,7 @@
  * \file act_ulq_clamp_min_grad.h
  * \brief ActULQClampMinGrad 算子 kernel 类实现（arch35 / RegBase，normal + group 同一 class）。
  *
- * 数学：clamp_min_grad = Σ_全轴( y_grad × ((1 - clamp_min_mask) - x_clamped_loss) ) → 0 维标量
+ * 数学：clamp_min_grad = Σ_全轴( y_grad × (x_clamped_loss + abs(clamp_min_mask)) ) → 0 维标量
  *
  * 算子类别 = All Reduce（axis_source: implicit_all）：合轴后 pattern 恒为 AR（tail-R），
  *   isTailR 恒 true → kernel 类去掉 isTailR 模板参数，只保留 tail-R 路径。
@@ -20,11 +20,12 @@
  * Reducer = sum：
  *   identity = 0.0f，combine = a + b，pad_value = 0，
  *   post_op = identity（无 mean 除法，仅最终缩位 Cast），
- *   needs_bisection = true（二分缓存树 Phase A/B，cacheBuf 16KB），
+ *   fp16: needs_bisection = true（二分缓存树 Phase A/B，cacheBuf 16KB），
+ *   fp32: compensated high/low pairs reuse the same cacheBuf and retain residuals across cores，
  *   is_fast_path = true（pre_elewise(pad=0) 在 fp32 视图等价 identity 0，不清行 pad）。
  *
- * pre-elewise 融合（fp32 视图）：signal = 1 - mask（Duplicate 1.0f + Sub）→ x_min_grad = signal -
- * x_clamped_loss（Sub，符号负） → prod = y_grad × x_min_grad（Mul）。⚠ 与同族 Max 的 |mask|(Abs)+vadd 相反，不可互换。
+ * pre-elewise 融合（fp32 视图）：signal = abs(mask)（Abs）→ x_min_grad = signal +
+ * x_clamped_loss（Add） → prod = y_grad × x_min_grad（Mul）。与 910B 动态实现保持相同公式。
  *
  * dtype（编译期 if constexpr 分发）：
  *   DType（y_grad/x_clamped_loss/输出）：fp16→UNPACK_B16+Cast / fp32→直通
@@ -49,6 +50,107 @@ constexpr uint32_t kRepF32 = kVlBytes / sizeof(float); // = 64
 constexpr uint16_t kRepF32U = static_cast<uint16_t>(kRepF32);
 constexpr uint32_t kBlockBytes = 32;                        // 32B
 constexpr uint32_t kBlockF32 = kBlockBytes / sizeof(float); // = 8
+
+namespace Precision {
+using namespace AscendC::Reg;
+
+constexpr float kMaxFiniteFloat = 0x1.fffffep127f;
+constexpr float kOverflowOperandScale = 0.5f;
+constexpr float kOverflowGradientScale = 2.0f;
+
+// Retain IEEE NaN/Inf in the leading value. Only the rounding correction
+// is cleared when an error-free transform cannot produce a finite residual.
+__simd_callee__ inline void FiniteResidual(RegTensor<float>& value, MaskReg& mask)
+{
+    RegTensor<float> magnitude, zero;
+    MaskReg finite;
+    Abs(magnitude, value, mask);
+    CompareScalar<float, AscendC::CMPMODE::LE>(finite, magnitude, kMaxFiniteFloat, mask);
+    Duplicate(zero, 0.0f, mask);
+    Select(value, value, zero, finite);
+}
+
+__simd_callee__ inline void TwoSum(RegTensor<float>& hi, RegTensor<float>& lo, RegTensor<float>& a, RegTensor<float>& b,
+                                   MaskReg& mask)
+{
+    RegTensor<float> sum, back, error, temp;
+    Add(sum, a, b, mask);
+    Sub(back, sum, a, mask);
+    Sub(temp, sum, back, mask);
+    Sub(error, a, temp, mask);
+    Sub(temp, b, back, mask);
+    Add(error, error, temp, mask);
+    FiniteResidual(error, mask);
+    Move(hi, sum, mask);
+    Move(lo, error, mask);
+}
+
+__simd_callee__ inline void AddPair(RegTensor<float>& hi, RegTensor<float>& lo, RegTensor<float>& rhsHi,
+                                    RegTensor<float>& rhsLo, MaskReg& mask)
+{
+    RegTensor<float> sum, error, correction;
+    TwoSum(sum, error, hi, rhsHi, mask);
+    Add(correction, lo, rhsLo, mask);
+    Add(correction, correction, error, mask);
+    TwoSum(hi, lo, sum, correction, mask);
+}
+
+// Recover both the coefficient-addition error and the multiplication error.
+// FMA computes the residual without rounding the product a second time.
+__simd_callee__ inline void WeightedValue(RegTensor<float>& hi, RegTensor<float>& lo, RegTensor<float>& y,
+                                          RegTensor<float>& maskValue, RegTensor<float>& loss, MaskReg& mask)
+{
+    RegTensor<float> magnitude, coefficient, coefficientLow, scaledLoss, scaledMagnitude, scaledY;
+    MaskReg finiteLoss, finiteMagnitude, coefficientOverflow;
+    Abs(magnitude, maskValue, mask);
+    Add(coefficient, loss, magnitude, mask);
+    Abs(scaledLoss, loss, mask);
+    CompareScalar<float, AscendC::CMPMODE::LE>(finiteLoss, scaledLoss, kMaxFiniteFloat, mask);
+    CompareScalar<float, AscendC::CMPMODE::LE>(finiteMagnitude, magnitude, kMaxFiniteFloat, mask);
+    CompareScalar<float, AscendC::CMPMODE::GT>(coefficientOverflow, coefficient, kMaxFiniteFloat, mask);
+    MaskAnd(coefficientOverflow, coefficientOverflow, finiteLoss, mask);
+    MaskAnd(coefficientOverflow, coefficientOverflow, finiteMagnitude, mask);
+
+    // A finite loss + abs(mask) can exceed FP32 while its product with y is finite.
+    // Halve both addends and double y only on those lanes. The power-of-two
+    // rescaling is exact here and leaves genuine NaN/Inf addends on the usual path.
+    Muls(scaledLoss, loss, kOverflowOperandScale, mask);
+    Muls(scaledMagnitude, magnitude, kOverflowOperandScale, mask);
+    Muls(scaledY, y, kOverflowGradientScale, mask);
+    Select(scaledLoss, scaledLoss, loss, coefficientOverflow);
+    Select(scaledMagnitude, scaledMagnitude, magnitude, coefficientOverflow);
+    Select(scaledY, scaledY, y, coefficientOverflow);
+    TwoSum(coefficient, coefficientLow, scaledLoss, scaledMagnitude, mask);
+    Mul(hi, scaledY, coefficient, mask);
+    Muls(lo, hi, -1.0f, mask);
+    MulAddDst(lo, scaledY, coefficient, mask);
+    MulAddDst(lo, scaledY, coefficientLow, mask);
+    FiniteResidual(lo, mask);
+}
+
+// All register-gather indices are within [0, 63]. Carry the low part through
+// every tree level rather than rounding each partial sum to one float.
+__simd_callee__ inline void ReducePair(RegTensor<float>& hi, RegTensor<float>& lo, MaskReg& full)
+{
+    RegTensor<uint32_t> even, odd;
+    RegTensor<float> rhsHi, rhsLo;
+    Arange((RegTensor<int32_t>&)even, static_cast<int32_t>(0));
+    ShiftLefts(even, even, static_cast<int16_t>(1), full);
+    Duplicate(odd, static_cast<uint32_t>(63), full);
+    And(even, even, odd, full);
+    Adds(odd, even, static_cast<uint32_t>(1), full);
+#pragma unroll
+    for (uint16_t level = 0; level < 6; ++level) {
+        uint32_t active = 64 >> (level + 1);
+        MaskReg mask = UpdateMask<float>(active);
+        Gather(rhsHi, hi, odd);
+        Gather(rhsLo, lo, odd);
+        Gather(hi, hi, even);
+        Gather(lo, lo, even);
+        AddPair(hi, lo, rhsHi, rhsLo, mask);
+    }
+}
+} // namespace Precision
 
 // UB 内一根轴的描述（innermost-first 排列）
 struct UBAxisDesc {
@@ -138,6 +240,13 @@ private:
     __aicore__ inline void ReduceRPattern();
     __aicore__ inline void ClearCacheTreeVf();
     __aicore__ inline void DoCachingVf(uint16_t cacheID);
+
+    // FP32 compensated all-reduce. The two 64-lane accumulators reuse the
+    // existing cache buffer; no extra UB queues or allocations are required.
+    __aicore__ inline void AccumulateFp32(AscendC::LocalTensor<D_T>& y, AscendC::LocalTensor<float>& mask,
+                                          AscendC::LocalTensor<D_T>& loss, int64_t length);
+    __aicore__ inline void FinishFp32(bool workspacePair);
+    __aicore__ inline void Phase2Fp32();
 
     // ─── 辅助 ───
     __aicore__ inline uint16_t GetCacheID(int64_t idx) const;
@@ -268,7 +377,7 @@ __aicore__ inline int64_t ActULQClampMinGradKernel<DType, MaskType>::RLenOfChunk
 {
     const int64_t rAxisSize = axisShape_[rSplit_];
     const int64_t start = rChunkIdx * rUbFactor_;
-    return (start + rUbFactor_ > rAxisSize) ? (rAxisSize - start) : rUbFactor_;
+    return (rAxisSize - start < rUbFactor_) ? (rAxisSize - start) : rUbFactor_;
 }
 
 // rIdx → (外层 R chunk idx, rLen)；返回外层 R 贡献的 GM 偏移
@@ -276,7 +385,7 @@ template <typename DType, typename MaskType>
 __aicore__ inline int64_t ActULQClampMinGradKernel<DType, MaskType>::UnravelOuterR(int64_t rIdx, int64_t& rChunkIdxOut,
                                                                                    int64_t& rLenOut) const
 {
-    const int64_t rChunksOnSplit = (axisShape_[rSplit_] + rUbFactor_ - 1) / rUbFactor_;
+    const int64_t rChunksOnSplit = axisShape_[rSplit_] / rUbFactor_ + (axisShape_[rSplit_] % rUbFactor_ != 0);
     rChunkIdxOut = rIdx % rChunksOnSplit;
     int64_t cur = rIdx / rChunksOnSplit;
     int64_t gmOff = 0;
@@ -470,16 +579,25 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::ProcessOneRChu
         AscendC::PipeBarrier<PIPE_V>();
         AscendC::Cast<float, half>(mF32, mHalf, AscendC::RoundMode::CAST_NONE, static_cast<uint32_t>(totalElems));
         AscendC::PipeBarrier<PIPE_V>();
-        FusePreElewiseVfF32Mask(yDeq, mF32, xDeq, slot);
+        if constexpr (kIsFp32) {
+            AccumulateFp32(yDeq, mF32, xDeq, rLen);
+        } else {
+            FusePreElewiseVfF32Mask(yDeq, mF32, xDeq, slot);
+        }
     } else {
-        FusePreElewiseVf(yDeq, mDeq, xDeq, slot);
+        if constexpr (kIsFp32) {
+            auto mF32 = mDeq.template ReinterpretCast<float>();
+            AccumulateFp32(yDeq, mF32, xDeq, rLen);
+        } else {
+            FusePreElewiseVf(yDeq, mDeq, xDeq, slot);
+        }
     }
 
     yGradQue_.FreeTensor(yDeq);
     maskQue_.FreeTensor(mDeq);
     xLossQue_.FreeTensor(xDeq);
 
-    if (rLen < rUbFactor_) {
+    if (!kIsFp32 && rLen < rUbFactor_) {
         ClearChunkExtensionVf(slot, rLen);
     }
 }
@@ -491,6 +609,12 @@ template <typename DType, typename MaskType>
 __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::DoOneAChunk(int64_t outerGmOff, int64_t aLen)
 {
     ClearCacheTreeVf();
+    if constexpr (kIsFp32) {
+        for (int64_t i = 0; i < rLoopCntTotal_; ++i) {
+            ProcessOneRChunk(outerGmOff, aLen, i, 0U);
+        }
+        return;
+    }
 
     // Phase A：主-尾配对
     for (int64_t i = 0; i < bisectionTail_; ++i) {
@@ -669,7 +793,7 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::DoCopyInTile(i
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// FusePreElewiseVf：Load 3 输入 → Cast→fp32 → signal=1-mask → x_min_grad=signal-xLoss
+// FusePreElewiseVf：Load 3 输入 → Cast→fp32 → signal=abs(mask) → x_min_grad=signal+xLoss
 //   → prod=yGrad×x_min_grad → Store(tmpBuf[slot])。全程 fp32 视图。
 //
 // mask 两路径（编译期 if constexpr；bool 走 FusePreElewiseVfF32Mask，不进本函数）：
@@ -699,8 +823,7 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::FusePreElewise
 
     __VEC_SCOPE__
     {
-        AscendC::Reg::RegTensor<float> yReg, mReg, xReg, onesReg;
-        AscendC::Reg::Duplicate(onesReg, 1.0f); // signal = 1 - mask 的常量 1（提到 loop 外）
+        AscendC::Reg::RegTensor<float> yReg, mReg, xReg;
         AscendC::Reg::MaskReg mask;
         uint32_t remaining = totalElems;
 
@@ -735,10 +858,10 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::FusePreElewise
                 AscendC::Reg::Cast<float, M_T, kCastB16ToF32>(mReg, mB16, mask);
             }
 
-            // ── Min 融合链：signal = 1 - mask ；x_min_grad = signal - x_clamped_loss ；prod = y_grad × x_min_grad ──
-            AscendC::Reg::Sub(mReg, onesReg, mReg, mask); // signal = 1 - mask（ones 在前、mask 在后）
-            AscendC::Reg::Sub(mReg, mReg, xReg, mask);    // x_min_grad = signal - x_clamped_loss（符号负）
-            AscendC::Reg::Mul(yReg, yReg, mReg, mask);    // prod = y_grad × x_min_grad
+            // ── Min 融合链：signal = abs(mask) ；x_min_grad = signal + x_clamped_loss ；prod = y_grad × x_min_grad ──
+            AscendC::Reg::Abs(mReg, mReg, mask);       // 910B dynamic: signal = abs(mask)
+            AscendC::Reg::Add(mReg, mReg, xReg, mask); // x_min_grad = x_clamped_loss + abs(mask)
+            AscendC::Reg::Mul(yReg, yReg, mReg, mask); // prod = y_grad × x_min_grad
 
             AscendC::Reg::StoreAlign(dstPtr + off, yReg, mask);
         }
@@ -768,8 +891,7 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::FusePreElewise
 
     __VEC_SCOPE__
     {
-        AscendC::Reg::RegTensor<float> yReg, mReg, xReg, onesReg;
-        AscendC::Reg::Duplicate(onesReg, 1.0f); // signal = 1 - mask 的常量 1（提到 loop 外）
+        AscendC::Reg::RegTensor<float> yReg, mReg, xReg;
         AscendC::Reg::MaskReg mask;
         uint32_t remaining = totalElems;
 
@@ -798,10 +920,10 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::FusePreElewise
             // ── clamp_min_mask（已 fp32）直载 ──
             AscendC::Reg::LoadAlign(mReg, mPtr + off);
 
-            // ── Min 融合链：signal = 1 - mask ；x_min_grad = signal - x_clamped_loss ；prod = y_grad × x_min_grad ──
-            AscendC::Reg::Sub(mReg, onesReg, mReg, mask); // signal = 1 - mask（ones 在前、mask 在后）
-            AscendC::Reg::Sub(mReg, mReg, xReg, mask);    // x_min_grad = signal - x_clamped_loss（符号负）
-            AscendC::Reg::Mul(yReg, yReg, mReg, mask);    // prod = y_grad × x_min_grad
+            // ── Min 融合链：signal = abs(mask) ；x_min_grad = signal + x_clamped_loss ；prod = y_grad × x_min_grad ──
+            AscendC::Reg::Abs(mReg, mReg, mask);       // 910B dynamic: signal = abs(mask)
+            AscendC::Reg::Add(mReg, mReg, xReg, mask); // x_min_grad = x_clamped_loss + abs(mask)
+            AscendC::Reg::Mul(yReg, yReg, mReg, mask); // prod = y_grad × x_min_grad
 
             AscendC::Reg::StoreAlign(dstPtr + off, yReg, mask);
         }
@@ -968,6 +1090,11 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::DoCachingVf(ui
 template <typename DType, typename MaskType>
 __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::PostElewise(int64_t aLen)
 {
+    if constexpr (kIsFp32) {
+        FinishFp32(false);
+        return;
+    }
+
     const uint32_t laneN = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_);
     const uint32_t levelStride = (laneN + kBlockF32 - 1) / kBlockF32 * kBlockF32;
     const int32_t rootOff = static_cast<int32_t>(cacheCount_ - 1) * static_cast<int32_t>(levelStride);
@@ -1109,6 +1236,14 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::DoOneAChunkGro
         return;
     }
 
+    if constexpr (kIsFp32) {
+        ClearCacheTreeVf();
+        for (int64_t i = rStart; i < rEnd; ++i) {
+            ProcessOneRChunk(outerGmOff, aLen, i, 0U);
+        }
+        return;
+    }
+
     int64_t bisectionPos = static_cast<int64_t>(FindNearestPower2(static_cast<uint64_t>(rCount)));
     int64_t bisectionTail = rCount - bisectionPos;
 
@@ -1134,6 +1269,17 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::Phase1OutputTo
                                                                                           int64_t rChunkIdx,
                                                                                           int64_t rCount)
 {
+    if constexpr (kIsFp32) {
+        FinishFp32(true);
+        auto cacheLocal = cacheBuf_.Get<float>();
+        event_t event = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(event);
+        WaitFlag<HardEvent::V_MTE3>(event);
+        DataCopyExtParams ext{1, 2 * sizeof(float), 0, 0, 0};
+        DataCopyPad(wsGm_[2 * rChunkIdx], cacheLocal, ext);
+        return;
+    }
+
     int64_t bisectionPos = static_cast<int64_t>(FindNearestPower2(static_cast<uint64_t>(rCount)));
     int64_t cacheCount = static_cast<int64_t>(CalLog2(static_cast<uint64_t>(bisectionPos))) + 1;
     int64_t laneN = aUbFactorAlign_ * innerAProdAlign_;
@@ -1159,6 +1305,11 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::Phase1OutputTo
 template <typename DType, typename MaskType>
 __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::Phase2Process()
 {
+    if constexpr (kIsFp32) {
+        Phase2Fp32();
+        return;
+    }
+
     int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
 
     const int64_t preInElems = preReduceUbSize_ / static_cast<int64_t>(sizeof(float));
@@ -1272,6 +1423,138 @@ __aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::Phase2Process(
             outQue_.FreeTensor(outDeq);
         }
     }
+}
+
+// FP32 uses a normalized (high, low) pair for each lane, across every R chunk.
+// All-reduce shape fusion guarantees A=1 and a single contiguous R axis.
+template <typename DType, typename MaskType>
+__aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::AccumulateFp32(AscendC::LocalTensor<D_T>& y,
+                                                                                 AscendC::LocalTensor<float>& mask,
+                                                                                 AscendC::LocalTensor<D_T>& loss,
+                                                                                 int64_t length)
+{
+    __ubuf__ float* yPtr = reinterpret_cast<__ubuf__ float*>(y.GetPhyAddr());
+    __ubuf__ float* mPtr = reinterpret_cast<__ubuf__ float*>(mask.GetPhyAddr());
+    __ubuf__ float* xPtr = reinterpret_cast<__ubuf__ float*>(loss.GetPhyAddr());
+    __ubuf__ float* cache = reinterpret_cast<__ubuf__ float*>(cacheBuf_.Get<float>().GetPhyAddr());
+    uint16_t repeats = static_cast<uint16_t>((length + kRepF32 - 1) / kRepF32);
+    __VEC_SCOPE__
+    {
+        using namespace AscendC::Reg;
+        RegTensor<float> hi, lo, yReg, mReg, lossReg, valueHi, valueLo, nextHi, nextLo;
+        MaskReg full = CreateMask<float, MaskPattern::ALL>();
+        LoadAlign(hi, cache);
+        LoadAlign(lo, cache + kRepF32);
+        uint32_t remaining = static_cast<uint32_t>(length);
+        for (uint16_t i = 0; i < repeats; ++i) {
+            MaskReg active = UpdateMask<float>(remaining);
+            int32_t off = static_cast<int32_t>(i) * kRepF32;
+            LoadAlign(yReg, yPtr + off);
+            LoadAlign(mReg, mPtr + off);
+            LoadAlign(lossReg, xPtr + off);
+            Precision::WeightedValue(valueHi, valueLo, yReg, mReg, lossReg, active);
+            Move(nextHi, hi, full);
+            Move(nextLo, lo, full);
+            Precision::AddPair(nextHi, nextLo, valueHi, valueLo, active);
+            // Tail masking must preserve partial sums in the other lanes.
+            Select(hi, nextHi, hi, active);
+            Select(lo, nextLo, lo, active);
+        }
+        StoreAlign(cache, hi, full);
+        StoreAlign(cache + kRepF32, lo, full);
+    }
+}
+
+template <typename DType, typename MaskType>
+__aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::FinishFp32(bool workspacePair)
+{
+    __ubuf__ float* cache = reinterpret_cast<__ubuf__ float*>(cacheBuf_.Get<float>().GetPhyAddr());
+    // Both destinations are inside buffers already allocated by Init.
+    auto outLocal = outQue_.template AllocTensor<D_T>();
+    __ubuf__ float* output = reinterpret_cast<__ubuf__ float*>(outLocal.GetPhyAddr());
+    __VEC_SCOPE__
+    {
+        using namespace AscendC::Reg;
+        RegTensor<float> hi, lo, packed;
+        MaskReg full = CreateMask<float, MaskPattern::ALL>();
+        LoadAlign(hi, cache);
+        LoadAlign(lo, cache + kRepF32);
+        Precision::ReducePair(hi, lo, full);
+        uint32_t one = 1;
+        MaskReg first = UpdateMask<float>(one);
+        if (workspacePair) {
+            RegTensor<uint32_t> zeroIndices;
+            Duplicate(zeroIndices, static_cast<uint32_t>(0), full);
+            Gather(packed, lo, zeroIndices);
+            Select(packed, hi, packed, first);
+            uint32_t two = 2;
+            MaskReg pair = UpdateMask<float>(two);
+            StoreAlign(cache, packed, pair);
+        } else {
+            Add(hi, hi, lo, first);
+            StoreAlign(output, hi, first);
+        }
+    }
+    if (workspacePair) {
+        outQue_.FreeTensor(outLocal);
+    } else {
+        outQue_.EnQue(outLocal);
+    }
+}
+
+template <typename DType, typename MaskType>
+__aicore__ inline void ActULQClampMinGradKernel<DType, MaskType>::Phase2Fp32()
+{
+    if (GetBlockIdx() != 0) {
+        return;
+    }
+    ClearCacheTreeVf();
+    for (int64_t start = 0; start < rGroupCnt_; start += kRepF32 / 2) {
+        int64_t groups = rGroupCnt_ - start;
+        groups = groups < kRepF32 / 2 ? groups : kRepF32 / 2;
+        auto local = wsInQue_.template AllocTensor<float>();
+        // Zero the entire vector before copying a possibly short group tail.
+        AscendC::Duplicate(local, 0.0f, kRepF32);
+        event_t event = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+        SetFlag<HardEvent::V_MTE2>(event);
+        WaitFlag<HardEvent::V_MTE2>(event);
+        DataCopyExtParams ext{1, static_cast<uint32_t>(2 * groups * sizeof(float)), 0, 0, 0};
+        DataCopyPadExtParams<float> pad{false, 0, 0, 0.0f};
+        DataCopyPad(local, wsGm_[2 * start], ext, pad);
+        wsInQue_.EnQue(local);
+        auto input = wsInQue_.template DeQue<float>();
+        __ubuf__ float* inputPtr = reinterpret_cast<__ubuf__ float*>(input.GetPhyAddr());
+        __ubuf__ float* cache = reinterpret_cast<__ubuf__ float*>(cacheBuf_.Get<float>().GetPhyAddr());
+        __VEC_SCOPE__
+        {
+            using namespace AscendC::Reg;
+            RegTensor<float> hi, lo, packed, rhsHi, rhsLo, nextHi, nextLo;
+            RegTensor<uint32_t> even, odd;
+            MaskReg full = CreateMask<float, MaskPattern::ALL>();
+            uint32_t count = static_cast<uint32_t>(groups);
+            MaskReg active = UpdateMask<float>(count);
+            LoadAlign(hi, cache);
+            LoadAlign(lo, cache + kRepF32);
+            LoadAlign(packed, inputPtr);
+            Arange((RegTensor<int32_t>&)even, static_cast<int32_t>(0));
+            ShiftLefts(even, even, static_cast<int16_t>(1), full);
+            Duplicate(odd, static_cast<uint32_t>(63), full);
+            And(even, even, odd, full);
+            Adds(odd, even, static_cast<uint32_t>(1), full);
+            Gather(rhsHi, packed, even);
+            Gather(rhsLo, packed, odd);
+            Move(nextHi, hi, full);
+            Move(nextLo, lo, full);
+            Precision::AddPair(nextHi, nextLo, rhsHi, rhsLo, active);
+            Select(hi, nextHi, hi, active);
+            Select(lo, nextLo, lo, active);
+            StoreAlign(cache, hi, full);
+            StoreAlign(cache + kRepF32, lo, full);
+        }
+        wsInQue_.FreeTensor(input);
+    }
+    FinishFp32(false);
+    CopyOut(0, 1);
 }
 
 } // namespace NsActULQClampMinGrad

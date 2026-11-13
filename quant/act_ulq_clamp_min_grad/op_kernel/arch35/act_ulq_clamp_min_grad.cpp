@@ -44,7 +44,9 @@ __global__ __aicore__ void act_ulq_clamp_min_grad(GM_ADDR y_grad, GM_ADDR clamp_
         (void)workspace;
     } else if constexpr (templateType) {
         NsActULQClampMinGrad::ActULQClampMinGradKernel<DTYPE_Y_GRAD, DTYPE_CLAMP_MIN_MASK> op;
-        op.InitGroup(y_grad, clamp_min_mask, x_clamped_loss, clamp_min_grad, workspace, &tilingData);
+        // The generated wrapper advances workspace past the system reservation.
+        // This kernel reserves only reduction partials, so use the allocation base.
+        op.InitGroup(y_grad, clamp_min_mask, x_clamped_loss, clamp_min_grad, GetSysWorkSpacePtr(), &tilingData);
         op.ProcessGroup();
     } else {
         NsActULQClampMinGrad::ActULQClampMinGradKernel<DTYPE_Y_GRAD, DTYPE_CLAMP_MIN_MASK> op;
