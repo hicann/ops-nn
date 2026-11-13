@@ -218,7 +218,7 @@ aclnnStatus aclnnIndex(
 
 - 确定性计算：
   - aclnnIndex默认确定性实现。
-- self非0维Tensor时，indices中tensor的个数需要小于等于self的维度数，self为0维Tensor时，indices中只能有1个tensor。
+- self支持1-8维Tensor，indices中tensor的个数需要小于等于self的维度数。
 - indices中的各个tensor中的值不能超过self中对应维度的大小，否则会产生不可预知行为，如地址越界。
 <!-- npu="950" id9 -->
 - <term>Ascend 950PR&950DT系列产品</term>：indices各tensor之间shape需相同或满足broadcast关系。
