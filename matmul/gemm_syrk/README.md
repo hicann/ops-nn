@@ -33,6 +33,8 @@
     Mmad 链产出 C[i,j]，AIV sub0 以 nz2nd fixpipe 写出 (i,j)、AIV sub1 以
     nz2dn fixpipe（硬件转置）写出镜像 (j,i)，无 GM 回读、无软件转置，
     cube 计算量约为通用矩阵乘的一半；
+  - HF32/FP16：FP32 输入可通过 `cubeMathType=1/3` 以 HF32（TF32 尾数）cube 模式运行，
+    累加器与输出仍为 FP32；也可通过 `cubeMathType=2` 转为 FP16 计算后再转回 FP32 输出；
   - 特殊路径：k = 0 或 α = 0 时由 aclnn 层路由为逐元素C = β × C（`l0op::Muls`），不启动 matmul kernel；
     m 或 batch 为 0 时直接返回成功（空张量 no-op）。
   - cuBLAS 语义对齐：β = 0 时不读取 C（C 无需为有效输入，其中的 NaN/Inf 不会传播到输出），
@@ -42,8 +44,8 @@
 
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
 | ---- | ---- | ---- | ---- | ---- |
-| a | 输入 | 输入矩阵A，shape为(…, m, k)，2-6维，前面为batch轴；transpose_x为true时为(…, k, m)。 | FLOAT16, BFLOAT16 | ND |
-| c | 输入&输出 | 对称矩阵C，shape为(…, m, m)（与a的batch轴一致），输入输出同地址原地更新。 | FLOAT16, BFLOAT16 | ND |
+| a | 输入 | 输入矩阵A，shape为(…, m, k)，2-6维，前面为batch轴；transpose_x为true时为(…, k, m)。 | FLOAT16, BFLOAT16, FLOAT | ND |
+| c | 输入&输出 | 对称矩阵C，shape为(…, m, m)（与a的batch轴一致），输入输出同地址原地更新。 | FLOAT16, BFLOAT16, FLOAT | ND |
 | alpha | 属性 | 矩阵乘结果的缩放系数，默认1.0。 | FLOAT | - |
 | beta | 属性 | C的缩放系数，默认1.0。 | FLOAT | - |
 | transpose_x | 属性 | 为true时按转置布局解读a，计算C = alpha * (A^T @ A) + beta * C。 | BOOL | - |
@@ -52,7 +54,11 @@
 ## 约束说明
 
 - 仅支持 DAV_3510（Ascend 950PR/Ascend 950DT）平台，要求 `aivNum == aicNum * 2`（MIX 1:2）。
-- a 与 c 数据类型必须一致（FLOAT16 或 BFLOAT16），格式仅支持 ND。
+- a 与 c 数据类型必须一致（FLOAT16、BFLOAT16 或 FLOAT），格式仅支持 ND；FLOAT 输入以
+  HF32（TF32 尾数）或 FP16 精度运行，aclnn 接口可传 `cubeMathType=1/3`（HF32）或 `2`（FP16），
+  不支持 `0`；FLOAT16/BFLOAT16 输入建议传 `cubeMathType=0`。
+- GEIR 直调时 FLOAT32 输入必须显式设置 `op_impl_mode=0x40`（enable_hi_float_32_execution），
+  否则 tiling 返回参数错误；aclnn 接口由 `cubeMathType` 自动设置。
 - c 的最后两维必须相等且等于 a 的 m 轴（transpose_x 为 true 时 m 为 a 的最后一维）；
   batch 轴必须与 a 一致（原地更新不支持广播）。
 - m、k、n各维度及多维batch乘积的取值范围为 [0, 2147483647]。
@@ -85,7 +91,7 @@
     <td>torch调用</td>
     <td><a href="./docs/torchapi_gemm_syrk.md">torchapi_gemm_syrk</a></td>
     <td>`cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mode="full")`，
-    原地更新 c 并返回 c。</td>
+    原地更新 c 并返回 c。float32 的 Cube 计算精度跟随全局 hf32 配置，不提供逐算子参数。</td>
   </tr>
   <tr>
     <td>图模式调用</td>

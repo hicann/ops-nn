@@ -137,7 +137,7 @@ English | [简体中文](./README.md)
 
 - When fusedOpType is "gelu_erf" or "gelu_tanh", the data types of x1 and x2 must be BFLOAT16 or FLOAT16; when fusedOpType is "" or "relu", the data types of x1 and x2 must be FLOAT32 (only the scenario with HFLOAT32 enabled is supported), BFLOAT16, or FLOAT16; when fusedOpType is "16cast32", the data types of x1 and x2 must be BFLOAT16 or FLOAT16; when fusedOpType is "add" or "mul", the data types of x1, x2, and x3 must be FLOAT32 (only the scenario with HFLOAT32 enabled is supported), BFLOAT16, or FLOAT16.
 - When fusedOpType is "16cast32", the data type of the output y must be FLOAT32.
-- When alpha or beta is a non-default value, only the three-dimensional non-transposed add scenario on the Ascend 950PR&950DT products is supported; bias and broadcast along the batch axis are not supported, and x1, x2, x3, and y must have the same FLOAT16 or BFLOAT16 data type.
+- When alpha or beta is a non-default value, only the three-dimensional non-transposed add scenario on the Ascend 950PR&950DT products is supported; bias and broadcast along the batch axis are not supported, and x1, x2, x3, and y must have the same FLOAT16, BFLOAT16 or FLOAT32 data type (FLOAT32 requires HF32 and runs in HF32 mode).
 
 ## Invocation Description
 

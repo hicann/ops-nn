@@ -11,14 +11,14 @@
 """
 GemmSyrk golden spec for TTK aclnn path (ops-test-kit, aclnnGemmSyrk C API direct invoke).
 
-aclnnGemmSyrkGetWorkspaceSize(a, cRef, alphaOptional, betaOptional, transposeX, fillMode, ws, exec):
+aclnnGemmSyrkGetWorkspaceSize(a, cRef, alphaOptional, betaOptional, transposeX, fillMode, cubeMathType, ws, exec):
     C = alpha * (A @ A^T) + beta * C (transposeX=false, a is (m, k)),
     C = alpha * (A^T @ A) + beta * C (transposeX=true, a is the transposed (k, m) storage),
     in-place on cRef (a and cRef share one device buffer).
 
 TTK aclnn calling convention (AclnnParamPlan.build_args):
     - customize_inputs / golden receive parameters POSITIONALLY in C header
-      order: (a, cRef, alpha, beta, transposeX, fillMode) — tensors, then scalars,
+      order: (a, cRef, alpha, beta, transposeX, fillMode, cubeMathType) — tensors, then scalars,
       then non-tensor params filled from CSV attributes; use *args to capture and
       avoid the context kwargs collision.
     - Tensors arrive as torch.Tensor (fp16/bf16 are torch-native dtypes).
@@ -53,7 +53,7 @@ def _matmul_syrk(a_t, transpose_x):
 class AclnnGemmSyrkTestSpec:
     @staticmethod
     def customize_inputs(*args, **kwargs):
-        # Positional args in C header order: (a, cRef, alpha, beta, transposeX, fillMode).
+        # Positional args in C header order: (a, cRef, alpha, beta, transposeX, fillMode, cubeMathType).
         c = args[1]
         c_t = _to_torch(c)
         c_sym = ((c_t.float() + c_t.float().transpose(-1, -2)) / 2).to(c_t.dtype)

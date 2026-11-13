@@ -24,18 +24,19 @@ extern "C" {
  * transposeX为true时，a以转置的(k, m)存储，计算C = alpha * (A^T @ A) + beta * C。
  * @brief aclnnGemmSyrk的第一段接口，根据具体的计算流程，计算workspace大小。
  * @param a [in] 输入矩阵A，shape为(m, k)或(batch, m, k)；transposeX为true时为(k, m)或(batch, k,
- * m)，数据类型float16/bfloat16。
+ * m)，数据类型float16/bfloat16/float32（float32以HF32模式计算）。
  * @param cRef [in/out] 对称矩阵C，shape为(m, m)或(batch, m, m)，原地读入beta*C并写回结果。
  * @param alphaOptional [in] 缩放标量alpha，nullptr时默认为1.0。
  * @param betaOptional [in] 缩放标量beta，nullptr时默认为1.0。
  * @param transposeX [in] 是否按转置布局解读a，默认语义为false（调用方直接传false/true）。
  * @param fillMode [in] 输出区域模式，支持"full"（完整对称矩阵）/"up"（上三角）/"low"（下三角）；
  * 当前仅支持"full"，传"up"/"low"返回参数错误；传nullptr时默认"full"。
+ * @param cubeMathType [in] Cube单元计算逻辑，取值0/1/2/3；float32输入仅支持1/3（HF32）或2（FP16计算）。
  * @return aclnnStatus: 返回状态码
  */
 ACLNN_API aclnnStatus aclnnGemmSyrkGetWorkspaceSize(const aclTensor* a, aclTensor* cRef, const aclScalar* alphaOptional,
                                                     const aclScalar* betaOptional, bool transposeX,
-                                                    const char* fillMode, uint64_t* workspaceSize,
+                                                    const char* fillMode, int8_t cubeMathType, uint64_t* workspaceSize,
                                                     aclOpExecutor** executor);
 
 /**

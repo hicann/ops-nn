@@ -10,13 +10,26 @@
 
 # GemmSyrk PTA (PyTorch Adapter) Python 前端
 # 管理 JIT 编译(csrc/gemm_syrk.cpp)并把算子注册到 PyTorch Dispatcher。
-# 注册后可通过 torch.ops.cann_ops_nn.gemm_syrk(a, c, alpha=..., beta=..., transpose_x=..., fill_mode=...) 调用。
+# 注册后可通过 torch.ops.cann_ops_nn.gemm_syrk(a, c, alpha=..., beta=..., transpose_x=..., fill_mode=...)
+# 调用。float32 的 cubeMathType 跟随全局 hf32 配置（torch_npu.npu.matmul.cube_math_type /
+# torch.npu.matmul.allow_hf32），不提供逐算子参数。
 # 参考: torch_extension/README.md「新增算子」+ docs/torchapi_gemm_syrk.md。
 
 import torch
+import torch_npu
 from torch.library import impl
 
 from cann_ops_nn.op_builder import OpBuilder, get_as_library
+
+
+def _get_cube_math_type() -> int:
+    """Resolve cubeMathType from the global hf32 configuration."""
+    cube_math_type = torch_npu.npu.matmul.cube_math_type
+    if cube_math_type is not None:
+        return int(cube_math_type)
+    if torch.npu.matmul.allow_hf32:
+        return int(torch_npu.npu.CubeMathType.USE_HF32)
+    return int(torch_npu.npu.CubeMathType.KEEP_DTYPE)
 
 
 class GemmSyrkOpBuilder(OpBuilder):
@@ -63,5 +76,8 @@ def gemm_syrk(
     fill_mode="full",
 ):
     """Dispatcher 的 NPU 实现。PrivateUse1 是 NPU 后端分发键。"""
+    cube_math_type = _get_cube_math_type()
     op_module = gemm_syrk_builder.load()
-    return op_module.gemm_syrk(a, c, alpha, beta, transpose_x, fill_mode)
+    return op_module.gemm_syrk(
+        a, c, alpha, beta, transpose_x, fill_mode, cube_math_type
+    )

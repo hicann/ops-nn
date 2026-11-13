@@ -393,7 +393,7 @@ aclnnStatus aclnnFusedMatmulV2(
 - 当fusedOpType取值为"add"、"mul"时，在BMM（三维）场景下，x1、x2和y支持三维；x3支持2-3维，二维x3可按矩阵广播用于三维输出，三维x3的batch轴需要与y一致或为1。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
 - 当x1或x2为空Tensor时，fusedOpType取值为""、"relu"、"gelu_erf"、"gelu_tanh"、"add"、"mul"时支持，取值为"16cast32"、"sigmoid"时不支持。
-- aclnnFusedMatmulV2中，alphaOptional或betaOptional不等于1时，仅支持B、M、N、K均大于0的三维"add"场景。该场景不支持bias、转置和batch轴广播，x1、x2、x3和y的数据类型必须同为FLOAT16或BFLOAT16。
+- aclnnFusedMatmulV2中，alphaOptional或betaOptional不等于1时，仅支持B、M、N、K均大于0的三维"add"场景。该场景不支持bias、转置和batch轴广播，x1、x2、x3和y的数据类型必须同为FLOAT16、BFLOAT16或FLOAT32（FLOAT32时cubeMathType仅支持3，以HF32模式计算）。
 
 ## 调用示例
 

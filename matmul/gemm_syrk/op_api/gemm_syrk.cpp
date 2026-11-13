@@ -30,8 +30,11 @@ aclTensor* GemmSyrk(const aclTensor* a, aclTensor* cRef, float alpha, float beta
     // No INFER_SHAPE call: the in-place cRef carries the complete output
     // descriptor (same-name input/output port), so the launcher consumes it
     // directly and the registered infer-shape hook is unnecessary here.
+    // FLOAT32 only runs in HF32 cube mode; advertise 0x40 in op_impl_mode so
+    // the tiling layer accepts it. FP16/BF16 keep the default 0x1.
+    const int64_t opImplMode = a->GetDataType() == DataType::DT_FLOAT ? 0x40L : 0x1L;
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(GemmSyrk, OP_INPUT(a, cRef), OP_OUTPUT(cRef),
-                                           OP_ATTR(alpha, beta, transposeX, fillMode));
+                                           OP_ATTR(alpha, beta, transposeX, fillMode, opImplMode));
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;

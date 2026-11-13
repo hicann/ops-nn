@@ -423,7 +423,8 @@ static bool CheckScaleParams(const aclScalar* alphaOptional, const aclScalar* be
 }
 
 static bool CheckFmmWithScaleAddScenario(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
-                                         const aclTensor* x3, const char* fusedOpType, const aclTensor* y)
+                                         const aclTensor* x3, const char* fusedOpType, int8_t cubeMathType,
+                                         const aclTensor* y)
 {
     if (std::strcmp(fusedOpType, "add") != 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Alpha or beta scale is only supported when fusedOpType is add.");
@@ -442,10 +443,14 @@ static bool CheckFmmWithScaleAddScenario(const aclTensor* x1, const aclTensor* x
         return false;
     }
     auto dataType = x1->GetDataType();
-    if ((dataType != DataType::DT_FLOAT16 && dataType != DataType::DT_BF16) || x2->GetDataType() != dataType ||
-        x3->GetDataType() != dataType || y->GetDataType() != dataType) {
+    if ((dataType != DataType::DT_FLOAT16 && dataType != DataType::DT_BF16 && dataType != DataType::DT_FLOAT) ||
+        x2->GetDataType() != dataType || x3->GetDataType() != dataType || y->GetDataType() != dataType) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The scale_add scenario requires x1, x2, x3 and y to have the same FP16 or BF16 dtype.");
+                "The scale_add scenario requires x1, x2, x3 and y to have the same FP16, BF16 or FP32(HF32) dtype.");
+        return false;
+    }
+    if (cubeMathType != USE_HF32 && dataType == DataType::DT_FLOAT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The scale_add scenario only support cubeMathType 3 when dtype is FP32.");
         return false;
     }
     if (IsTransposeLastTwoDims(x1) || IsTransposeLastTwoDims(x2)) {
@@ -504,7 +509,8 @@ static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const a
 
     CHECK_RET(CheckScaleParams(alphaOptional, betaOptional), ACLNN_ERR_PARAM_INVALID);
     if (HasNonDefaultScale(alphaOptional) || HasNonDefaultScale(betaOptional)) {
-        CHECK_RET(CheckFmmWithScaleAddScenario(x1, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckFmmWithScaleAddScenario(x1, x2, bias, x3, fusedOpType, cubeMathType, y),
+                  ACLNN_ERR_PARAM_INVALID);
     }
 
     return ACLNN_SUCCESS;

@@ -38,7 +38,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_2d_fp16)
     auto alpha_desc = ScalarDesc(3.0f);
     auto beta_desc = ScalarDesc(2.0f);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, alpha_desc, beta_desc), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, alpha_desc, beta_desc), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -53,7 +53,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_3d_bf16_default_scale)
     auto a_desc = TensorDesc({2, 128, 64}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 1);
     auto c_desc = TensorDesc({2, 128, 128}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 1);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -68,7 +68,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_3d_ncl_label_dense)
     auto a_desc = TensorDesc({2, 128, 64}, ACL_BF16, ACL_FORMAT_NCL).ValueRange(0, 1);
     auto c_desc = TensorDesc({2, 128, 128}, ACL_BF16, ACL_FORMAT_NCL).ValueRange(0, 1);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -85,7 +85,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_transpose_x)
     auto alpha_desc = ScalarDesc(1.0f);
     auto beta_desc = ScalarDesc(1.5f);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, alpha_desc, beta_desc), OUTPUT(), true, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, alpha_desc, beta_desc), OUTPUT(), true, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -100,7 +100,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_6d)
     auto a_desc = TensorDesc({2, 2, 2, 1, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
     auto c_desc = TensorDesc({2, 2, 2, 1, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -116,7 +116,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_beta_zero_main_path)
     auto alpha_desc = ScalarDesc(0.5f);
     auto beta_desc = ScalarDesc(0.0f);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, alpha_desc, beta_desc), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, alpha_desc, beta_desc), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -131,7 +131,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_k_zero_beta_nonzero)
     auto c_desc = TensorDesc({32, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
     auto beta_desc = ScalarDesc(2.0f);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, beta_desc), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, beta_desc), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -146,7 +146,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_k_zero_beta_zero)
     auto c_desc = TensorDesc({32, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 1);
     auto beta_desc = ScalarDesc(0.0f);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, beta_desc), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, beta_desc), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -159,7 +159,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_1d)
     auto a_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -172,7 +172,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_7d)
     auto a_desc = TensorDesc({2, 2, 2, 2, 2, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({2, 2, 2, 2, 2, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -185,7 +185,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_dim_mismatch)
     auto a_desc = TensorDesc({2, 128, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({128, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -198,7 +198,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_non_square_c)
     auto a_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -211,7 +211,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_m_mismatch)
     auto a_desc = TensorDesc({64, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({32, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -224,7 +224,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_m_mismatch_transpose)
     auto a_desc = TensorDesc({64, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({32, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), true, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), true, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -237,20 +237,44 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_batch_mismatch)
     auto a_desc = TensorDesc({2, 128, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({3, 128, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// 拒绝: 不支持的数据类型 (fp32)
-TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_fp32)
+// FLOAT32 输入走 HF32（cubeMathType=3/1）
+TEST_F(l2_gemm_syrk_test, gemm_syrk_fp32_hf32)
+{
+    op::SocVersionManager socVersionManager(op::SocVersion::ASCEND950);
+    auto a_desc = TensorDesc({64, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto c_desc = TensorDesc({64, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", USE_HF32);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+// FLOAT32 输入走 FP16 计算路径（cubeMathType=2）
+TEST_F(l2_gemm_syrk_test, gemm_syrk_fp32_use_fp16)
+{
+    op::SocVersionManager socVersionManager(op::SocVersion::ASCEND950);
+    auto a_desc = TensorDesc({64, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto c_desc = TensorDesc({64, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", USE_FP16);
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+// 拒绝: FLOAT32 输入 + KEEP_DTYPE（未开启 HF32/FP16）
+TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_fp32_keep_dtype)
 {
     auto a_desc = TensorDesc({64, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({64, 64}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -263,7 +287,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_dtype_mismatch)
     auto a_desc = TensorDesc({64, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -276,7 +300,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_fill_mode_up)
     auto a_desc = TensorDesc({64, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto c_desc = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "up");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(a_desc, c_desc, nullptr, nullptr), OUTPUT(), false, "up", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
@@ -288,7 +312,7 @@ TEST_F(l2_gemm_syrk_test, gemm_syrk_reject_null_a)
 {
     auto c_desc = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(nullptr, c_desc, nullptr, nullptr), OUTPUT(), false, "full");
+    auto ut = OP_API_UT(aclnnGemmSyrk, INPUT(nullptr, c_desc, nullptr, nullptr), OUTPUT(), false, "full", 0);
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);

@@ -45,8 +45,8 @@
 ## 函数原型
 
 ```python
-cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mode="full")
-    -> Tensor
+cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False,
+                     fill_mode="full") -> Tensor
 ```
 
 ## 参数说明
@@ -75,7 +75,7 @@ cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mo
         <td>Tensor</td>
         <td>必选</td>
         <td>输入矩阵A，对应公式中的A。transpose_x为True时为转置的(k, m)存储，m为a的最后一维。数据类型必须与c一致。支持非连续Tensor。</td>
-        <td>float16、bfloat16</td>
+        <td>float16、bfloat16、float32（HF32/FP16）</td>
         <td>(…, m, k)，2-6 维，前面为 batch 轴；transpose_x=True时为(…, k, m)</td>
     </tr>
     <tr>
@@ -83,7 +83,7 @@ cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mo
         <td>Tensor</td>
         <td>必选</td>
         <td>对称矩阵C，对应公式中的C。原地更新：计算结果直接写回该Tensor的内存。最后两维相等且等于a的m轴，batch轴与a一致（不支持广播）。支持非连续Tensor。</td>
-        <td>float16、bfloat16</td>
+        <td>float16、bfloat16、float32（HF32/FP16）</td>
         <td>(…, m, m)（与 a 的 batch 轴一致）</td>
     </tr>
     <tr>
@@ -147,7 +147,7 @@ cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mo
         <td>Tensor</td>
         <td>必选</td>
         <td>原地更新后的对称矩阵C（即输入的c本身，同一tensor对象）。计算结果完整写回整个对称矩阵。</td>
-        <td>float16、bfloat16</td>
+        <td>float16、bfloat16、float32（HF32/FP16）</td>
         <td>(…, m, m)（与 a 的 batch 轴一致）</td>
     </tr>
 </tbody>
@@ -156,7 +156,8 @@ cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mo
 ## 约束说明
 
 - 该接口支持推理场景下使用。
-- a与c的数据类型必须一致（float16或bfloat16），数据格式仅支持ND，维度为2~6维。
+- a与c的数据类型必须一致（float16、bfloat16或float32），数据格式仅支持ND，维度为2~6维。
+- float32输入的Cube计算精度跟随全局hf32配置：优先使用`torch_npu.npu.matmul.cube_math_type`；未设置时按`torch.npu.matmul.allow_hf32`选择USE_HF32（开启）或KEEP_DTYPE（关闭，此时float32输入不支持）。该接口不提供逐算子`cube_math_type`参数。
 - c必须为方阵且m轴与a一致（transpose_x为True时m为a的最后一维），batch轴与a一致（原地更新不支持广播）。
 - k轴为0或alpha为0时，接口自动路由为逐元素计算C = beta * C，不进入matmul计算路径。
 - fill_mode当前仅支持"full"，"up"/"low"为预留值尚未实现。

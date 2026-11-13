@@ -25,6 +25,7 @@
 
 - 接口功能：完成对称秩k更新（syrk，参考 cublas `syrk`），计算 α 乘以 A 与其转置的乘积，再与
   β 和 C 的乘积求和，结果原地写回 C（输出完整对称矩阵，上三角和下三角均写出，而非只写单个三角）。
+  支持通过 `cubeMathType` 指定Cube单元的计算逻辑；FLOAT32输入支持 HF32（cubeMathType=1/3）或 FP16（cubeMathType=2）计算路径。
 - 计算公式（transposeX = false，a 为 (…, m, k)，2-6 维，前面为 batch 轴）：
 
   <div>
@@ -46,6 +47,7 @@ aclnnStatus aclnnGemmSyrkGetWorkspaceSize(
   const aclScalar *betaOptional,
   bool            transposeX,
   const char      *fillMode,
+  int8_t          cubeMathType,
   uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
@@ -87,9 +89,9 @@ aclnnStatus aclnnGemmSyrk(
       <td>a</td>
       <td>输入</td>
       <td>表示矩阵乘的输入矩阵，公式中的A。</td>
-      <td><ul><li>数据类型需要与cRef一致（FLOAT16或BFLOAT16），参见<a href="#约束说明">约束说明</a>。</li>
+      <td><ul><li>数据类型需要与cRef一致（FLOAT16、BFLOAT16或FLOAT32），参见<a href="#约束说明">约束说明</a>。</li>
       <li>transposeX为true时，a为转置的(…, k, m)存储（2-6维），m为a的最后一维。</li></ul></td>
-      <td>BFLOAT16、FLOAT16</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2~6</td>
       <td>√</td>
@@ -100,7 +102,7 @@ aclnnStatus aclnnGemmSyrk(
       <td>表示对称矩阵C，公式中的C。原地更新：结果直接写回该tensor的内存，输入输出为同一地址。</td>
       <td><ul><li>shape为(…, m, m)（2-6维，与a的batch轴一致），最后两维相等且等于a的m轴（transposeX为true时m为a的最后一维）。</li>
       <li>batch轴需要与a一致（原地更新不支持广播）。</li></ul></td>
-      <td>BFLOAT16、FLOAT16</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2~6</td>
       <td>√</td>
@@ -141,6 +143,23 @@ aclnnStatus aclnnGemmSyrk(
       <td>输出区域模式。</td>
       <td>可选值为"full"（完整对称矩阵）/"up"（上三角）/"low"（下三角）；当前仅支持"full"，传"up"/"low"返回参数错误。</td>
       <td>STRING</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>cubeMathType</td>
+      <td>输入</td>
+      <td>用于指定Cube单元的计算逻辑。</td>
+      <td><ul><li>支持的枚举值如下：
+        <ul><li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
+        <li>1：ALLOW_FP32_DOWN_PRECISION，FLOAT32输入转换为HFLOAT32计算，其他数据类型不做处理。</li>
+        <li>2：USE_FP16，FLOAT32输入转换为FLOAT16计算，结果转回FLOAT32输出；其他数据类型不做处理。</li>
+        <li>3：USE_HF32，FLOAT32输入转换为HFLOAT32计算，其他数据类型不做处理。</li></ul></li>
+        <li>a、cRef为FLOAT32时，支持取1/3（HF32模式，累加器与输出保持FLOAT32）或取2（FP16计算，结果转回FLOAT32输出）。</li>
+        <li>a、cRef为FLOAT16、BFLOAT16时，取0、1、2、3均保持输入数据类型计算（1、2、3不做处理），推荐取0以保持原有精度行为。</li>
+        <li>传入[0, 3]之外的值返回参数错误。</li></ul></td>
+      <td>INT8</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -190,8 +209,8 @@ aclnnStatus aclnnGemmSyrk(
       <td>传入的a或cRef是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>a和cRef的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -202,6 +221,12 @@ aclnnStatus aclnnGemmSyrk(
     </tr>
     <tr>
       <td>fillMode不为"full"。</td>
+    </tr>
+    <tr>
+      <td>cubeMathType不在[0, 3]范围内。</td>
+    </tr>
+    <tr>
+      <td>a、cRef为FLOAT32时，cubeMathType为0（KEEP_DTYPE）。</td>
     </tr>
     <tr>
       <td>当前产品不在支持的范围内。</td>
@@ -267,6 +292,8 @@ aclnnStatus aclnnGemmSyrk(
 - β为0时对齐cuBLAS语义：不读取C，输出为α × (A @ A<sup>T</sup>)。
 - m轴或batch轴乘积为0时，接口直接返回成功，不启动kernel。
 - 建议输入C为对称矩阵：β ≠ 0时输出矩阵的对称性依赖输入C对称。
+- a、cRef支持FLOAT16、BFLOAT16、FLOAT32，且两者数据类型需一致；FLOAT32输入可选择 HF32（cubeMathType=1/3，累加器与输出保持FLOAT32）或 FP16（cubeMathType=2，FP16计算后转回FLOAT32输出）路径。
+- cubeMathType仅支持取值0、1、2、3，传入其他值返回参数错误；FLOAT32输入不支持取0，FLOAT16、BFLOAT16输入推荐取0以保持原有精度行为。
 
 ## 调用示例
 
@@ -386,12 +413,15 @@ int main() {
   CHECK_RET(alpha != nullptr && beta != nullptr, LOG_PRINT("aclCreateScalar failed\n"); return ACL_ERROR_INTERNAL_ERROR);
   bool transposeX = false;
   const char* fillMode = "full";
+  // 保持输入数据类型计算；FLOAT32输入可传1/3启用HF32，或传2走FP16计算
+  int8_t cubeMathType = 0;
 
   // 3. 调用CANN算子库API，需要修改为具体的API名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor = nullptr;
   // 调用aclnnGemmSyrk第一段接口
-  ret = aclnnGemmSyrkGetWorkspaceSize(a, cRef, alpha, beta, transposeX, fillMode, &workspaceSize, &executor);
+  ret = aclnnGemmSyrkGetWorkspaceSize(a, cRef, alpha, beta, transposeX, fillMode, cubeMathType, &workspaceSize,
+                                      &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGemmSyrkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;

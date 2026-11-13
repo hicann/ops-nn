@@ -67,6 +67,7 @@ static const std::vector<std::vector<ge::DataType>> DTYPE_LIST_ADDMUL_DAV_3510 =
 static const std::vector<std::vector<ge::DataType>> DTYPE_LIST_SCALE_ADD_DAV_3510 = {
     {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_UNDEFINED, ge::DT_FLOAT16},
     {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_UNDEFINED, ge::DT_BF16},
+    {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_UNDEFINED, ge::DT_FLOAT},
 };
 
 // opType group: 16cast32 (no x3, only DAV_3510)
@@ -287,6 +288,10 @@ ge::graphStatus FusedMatMulBuiltInTiling::ValidateOpSpecific()
     }
 
     if (opType_ == "scale_add") {
+        if (args_.aType == ge::DT_FLOAT && !args_.isHf32) {
+            OP_LOGE(args_.opName, "FusedMatMul scale_add with FLOAT32 input requires HF32 (enable_hf32=true)");
+            return ge::GRAPH_FAILED;
+        }
         const auto* compileInfo = reinterpret_cast<const MatmulV3CompileInfo*>(context_->GetCompileInfo());
         OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
         const auto& x3Shape = context_->GetOptionalInputShape(INPUT_X3_IDX)->GetOriginShape();

@@ -83,8 +83,8 @@ void CheckGemmSyrkInputs(const at::Tensor& a, const at::Tensor& c, bool transpos
 {
     TORCH_CHECK(a.device().type() == at::kPrivateUse1, "gemm_syrk: a must be on NPU device");
     TORCH_CHECK(c.device().type() == at::kPrivateUse1, "gemm_syrk: c must be on NPU device");
-    TORCH_CHECK(a.scalar_type() == at::kHalf || a.scalar_type() == at::kBFloat16,
-                "gemm_syrk: a dtype must be float16 or bfloat16, got ", a.scalar_type());
+    TORCH_CHECK(a.scalar_type() == at::kHalf || a.scalar_type() == at::kBFloat16 || a.scalar_type() == at::kFloat,
+                "gemm_syrk: a dtype must be float16, bfloat16 or float32 (HF32), got ", a.scalar_type());
     TORCH_CHECK(a.scalar_type() == c.scalar_type(), "gemm_syrk: a and c must have the same dtype");
     TORCH_CHECK(a.dim() >= MIN_DIM_NUM && a.dim() <= MAX_DIM_NUM,
                 "gemm_syrk: a must be 2D..6D (..., m, k) or the transposed (..., k, m), got ", a.dim(), " dims");
@@ -104,10 +104,11 @@ void CheckGemmSyrkInputs(const at::Tensor& a, const at::Tensor& c, bool transpos
 } // namespace
 
 // GemmSyrk: C = alpha * (A @ A^T) + beta * C（transpose_x=True 时 C = alpha * (A^T @ A) + beta * C），
-// 原地写回 c 并返回 c。a: (m, k)/(batch, m, k) 或转置 (k, m)/(batch, k, m)，fp16/bf16；
+// 原地写回 c 并返回 c。a: (m, k)/(batch, m, k) 或转置 (k, m)/(batch, k, m)，fp16/bf16/fp32(HF32)；
 // c: (m, m)/(batch, m, m) 对称矩阵（输入输出同地址）。
 at::Tensor gemm_syrk(const at::Tensor& a, const at::Tensor& c, const c10::optional<double>& alpha,
-                     const c10::optional<double>& beta, bool transposeX, const std::string& fillMode)
+                     const c10::optional<double>& beta, bool transposeX, const std::string& fillMode,
+                     int64_t cubeMathType)
 {
     CheckGemmSyrkInputs(a, c, transposeX);
 
@@ -150,11 +151,11 @@ at::Tensor gemm_syrk(const at::Tensor& a, const at::Tensor& c, const c10::option
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    using GetWorkspaceSizeFunc = int (*)(aclTensor*, aclTensor*, aclScalar*, aclScalar*, bool, const char*, uint64_t*,
-                                         aclOpExecutor**);
+    using GetWorkspaceSizeFunc = int (*)(aclTensor*, aclTensor*, aclScalar*, aclScalar*, bool, const char*, int8_t,
+                                         uint64_t*, aclOpExecutor**);
     auto getWorkspaceSizeFunc = reinterpret_cast<GetWorkspaceSizeFunc>(getWorkspaceSizeAddr);
     auto workspaceStatus = getWorkspaceSizeFunc(aclA, aclC, alphaScalar, betaScalar, transposeX, fillModeCStr,
-                                                &workspaceSize, &executor);
+                                                static_cast<int8_t>(cubeMathType), &workspaceSize, &executor);
     if (workspaceStatus != 0) {
         Release(aclA);
         Release(aclC);

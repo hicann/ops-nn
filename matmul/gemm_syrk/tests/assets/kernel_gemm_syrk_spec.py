@@ -20,12 +20,15 @@ The kernel pathway feeds the golden numpy arrays (bfloat16 arrives as
 ml_dtypes.bfloat16, which torch.from_numpy cannot ingest — bridge through the
 bit-identical uint16 view). The golden computes in float32 (matching the fp32
 accumulator of the kernel) and casts back to the input dtype. Attributes
-(alpha, beta, transpose_x, fill_mode) arrive as keyword arguments.
+(alpha, beta, transpose_x, fill_mode) arrive as keyword arguments; opImplMode=64
+emulates the HF32 cube path by truncating the fp32 A operand before the matmul.
 """
 
 import numpy
 import torch
 from ml_dtypes import bfloat16 as ml_bfloat16
+
+import matmul_golden_util as _util
 
 __spec__ = {"gemm_syrk": "GemmSyrkTestSpec"}
 
@@ -52,9 +55,19 @@ def _matmul_syrk(a_t, transpose_x):
 
 
 def gemm_syrk_golden(
-    a, c, alpha=1.0, beta=1.0, transpose_x=False, fill_mode="full", **kwargs
+    a,
+    c,
+    alpha=1.0,
+    beta=1.0,
+    transpose_x=False,
+    fill_mode="full",
+    opImplMode=0,
+    **kwargs,
 ):
-    a_t = _np_to_torch(a).float()
+    a_np = numpy.asarray(a)
+    if opImplMode == 64 and a_np.dtype == numpy.float32:
+        a_np = _util.hf32_truncate_np(a_np)
+    a_t = _np_to_torch(a_np).float()
     c_t = _np_to_torch(c).float()
     aat = alpha * _matmul_syrk(a_t, transpose_x)
     if beta != 0:

@@ -15,6 +15,7 @@
 
 #include "opdev/make_op_executor.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/muls.h"
@@ -45,6 +46,7 @@ struct GemmSyrkParams {
     const aclScalar* betaOptional{nullptr};
     bool transposeX{false};
     const char* fillMode{nullptr};
+    int8_t cubeMathType{0};
 };
 
 static aclnnStatus CheckNotNull(const GemmSyrkParams& params)
@@ -70,8 +72,8 @@ static bool CheckScaleParam(const aclScalar* scaleOptional, const char* name)
 static aclnnStatus CheckDtype(const GemmSyrkParams& params)
 {
     auto aType = params.a->GetDataType();
-    if (aType != DataType::DT_FLOAT16 && aType != DataType::DT_BF16) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "a only supports float16 or bfloat16.");
+    if (aType != DataType::DT_FLOAT16 && aType != DataType::DT_BF16 && aType != DataType::DT_FLOAT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "a only supports float16, bfloat16 or float32 (HF32 cube mode).");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.cRef->GetDataType() != aType) {
@@ -190,6 +192,24 @@ static aclnnStatus CheckFillMode(const GemmSyrkParams& params)
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus CheckCubeMathType(const GemmSyrkParams& params)
+{
+    if (params.cubeMathType < KEEP_DTYPE || params.cubeMathType > USE_HF32) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "cubeMathType only supports 0 (KEEP_DTYPE), 1 (ALLOW_FP32_DOWN_PRECISION), 2 (USE_FP16), "
+                "3 (USE_HF32), but got %d.",
+                static_cast<int32_t>(params.cubeMathType));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (params.a->GetDataType() == DataType::DT_FLOAT && params.cubeMathType == KEEP_DTYPE) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "For float32 input, cubeMathType 0 (KEEP_DTYPE) is not supported; use 1/3 for HF32 or 2 for FP16 compute.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus CheckParams(const GemmSyrkParams& params)
 {
     CHECK_RET(CheckNotNull(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR);
@@ -197,6 +217,7 @@ static aclnnStatus CheckParams(const GemmSyrkParams& params)
     CHECK_RET(CheckDtype(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFillMode(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckCubeMathType(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     if (!IsNpuArch3510Series()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GemmSyrk only supports Ascend 950 / 350 (DAV_3510).");
         return ACLNN_ERR_PARAM_INVALID;
@@ -258,14 +279,32 @@ static aclnnStatus GemmSyrkGetWorkspaceSizeCommon(const GemmSyrkParams& params, 
         return ACLNN_SUCCESS;
     }
 
+    // FP32 + USE_FP16: cast the operands to FP16, run the regular FP16 kernel
+    // path, then cast the result back to FP32. The user-visible cRef stays
+    // FLOAT32; only the cube compute precision changes.
+    const bool useFp16Compute = params.a->GetDataType() == DataType::DT_FLOAT && params.cubeMathType == USE_FP16;
+    const aclTensor* opA = aContig;
+    const aclTensor* opC = cContig;
+    if (useFp16Compute) {
+        opA = l0op::Cast(aContig, DataType::DT_FLOAT16, executor);
+        CHECK_RET(opA != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        opC = l0op::Cast(cContig, DataType::DT_FLOAT16, executor);
+        CHECK_RET(opC != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
     // The in-place addend tensor is bound as both the op input and output; drop
     // the const the same way l0op::GemmV3Nd aliases the user's c tensor.
-    auto result = l0op::GemmSyrk(aContig, const_cast<aclTensor*>(cContig), alphaValue, betaValue, params.transposeX,
+    auto result = l0op::GemmSyrk(opA, const_cast<aclTensor*>(opC), alphaValue, betaValue, params.transposeX,
                                  params.fillMode == nullptr ? "full" : params.fillMode, executor);
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* opResult = result;
+    if (useFp16Compute) {
+        opResult = l0op::Cast(result, DataType::DT_FLOAT, executor);
+        CHECK_RET(opResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
     // result aliases cContig; bind the graph output back to the user tensor
     // (a self-copy no-op when cRef is already the contiguous buffer).
-    auto viewCopyResult = l0op::ViewCopy(result, params.cRef, executor);
+    auto viewCopyResult = l0op::ViewCopy(opResult, params.cRef, executor);
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
@@ -277,9 +316,9 @@ extern "C" {
 
 aclnnStatus aclnnGemmSyrkGetWorkspaceSize(const aclTensor* a, aclTensor* cRef, const aclScalar* alphaOptional,
                                           const aclScalar* betaOptional, bool transposeX, const char* fillMode,
-                                          uint64_t* workspaceSize, aclOpExecutor** executor)
+                                          int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    GemmSyrkParams params{a, cRef, alphaOptional, betaOptional, transposeX, fillMode};
+    GemmSyrkParams params{a, cRef, alphaOptional, betaOptional, transposeX, fillMode, cubeMathType};
 
     L2_DFX_PHASE_1(aclnnGemmSyrk, DFX_IN(a, cRef, alphaOptional, betaOptional), DFX_OUT(cRef));
 

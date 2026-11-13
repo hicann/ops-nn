@@ -138,7 +138,7 @@ int AclnnGemmSyrkTest(aclrtStream& stream)
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    ret = aclnnGemmSyrkGetWorkspaceSize(a, cRef, alpha, beta, false, "full", &workspaceSize, &executor);
+    ret = aclnnGemmSyrkGetWorkspaceSize(a, cRef, alpha, beta, false, "full", 0, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGemmSyrkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
@@ -203,7 +203,7 @@ int AclnnGemmSyrkTransTest(aclrtStream& stream)
 
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    ret = aclnnGemmSyrkGetWorkspaceSize(a, cRef, alpha, beta, true, "full", &workspaceSize, &executor);
+    ret = aclnnGemmSyrkGetWorkspaceSize(a, cRef, alpha, beta, true, "full", 0, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGemmSyrkGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);

@@ -93,7 +93,7 @@ cann_ops_nn.fused_matmul(
 - When x is torch.float16 or torch.bfloat16, the data type of bias must be the same as that of x or torch.float32. When x is torch.float32, bias must be torch.float32.
 - When fused_op_type is "add" or "mul", the data type of x3 must be the same as that of x.
 - When fused_op_type is "add" or "mul", in BMM (3D) use cases, x3 supports 2-3 dimensions. A 2D x3 can be broadcast as a matrix for a 3D output, and the batch axis of a 3D x3 must be the same as that of y or 1.
-- When alpha or beta is not 1, only the 3D non-transposed use case with fused_op_type="add" is supported. Broadcasting of bias and the batch axis is not supported. x, x2, x3, and y must be of the same data type, either torch.float16 or torch.bfloat16.
+- When alpha or beta is not 1, only the 3D non-transposed use case with fused_op_type="add" is supported. Broadcasting of bias and the batch axis is not supported. x, x2, x3, and y must be of the same data type: torch.float16, torch.bfloat16 or torch.float32. The float32 scenario requires HF32 (cube_math_type=USE_HF32 or allow_hf32=True).
 - The string length of fused_op_type cannot exceed 100.
 - torch_npu.npu.matmul.cube_math_type has the highest priority. If the value is not None, the API directly uses the Cube computation mode set by it, and torch.npu.matmul.allow_hf32 does not take effect. If the value is None, the API selects USE_HF32 or KEEP_DTYPE based on torch.npu.matmul.allow_hf32.
 

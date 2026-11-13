@@ -52,13 +52,85 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_scale_add_mixed_scalar_dtype)
     TensorDesc out_desc = TensorDesc({2, 3, 4}, ACL_BF16, ACL_FORMAT_ND);
     ScalarDesc alpha_desc = ScalarDesc(2.0F, ACL_FLOAT);
     ScalarDesc beta_desc = ScalarDesc(3.0F, ACL_FLOAT16);
-    int8_t cubeMathType = 0;
+    int8_t cubeMathType = op::USE_HF32;
     auto ut = OP_API_UT(
         aclnnFusedMatmulV2,
         INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, x3_desc, alpha_desc, beta_desc, "add", cubeMathType),
         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, dav3510_test_scale_add_bf16_keep_dtype_valid)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({2, 3, 10}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({2, 10, 4}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x3_desc = TensorDesc({2, 3, 4}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 3, 4}, ACL_BF16, ACL_FORMAT_ND);
+    ScalarDesc alpha_desc = ScalarDesc(2.0F, ACL_FLOAT);
+    ScalarDesc beta_desc = ScalarDesc(3.0F, ACL_FLOAT);
+    int8_t cubeMathType = op::KEEP_DTYPE;
+    auto ut = OP_API_UT(
+        aclnnFusedMatmulV2,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, x3_desc, alpha_desc, beta_desc, "add", cubeMathType),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, dav3510_test_scale_add_fp16_fp32_add_valid)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({2, 3, 10}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({2, 10, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x3_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    ScalarDesc alpha_desc = ScalarDesc(2.0F, ACL_FLOAT);
+    ScalarDesc beta_desc = ScalarDesc(3.0F, ACL_FLOAT);
+    int8_t cubeMathType = op::USE_FP32_ADD;
+    auto ut = OP_API_UT(
+        aclnnFusedMatmulV2,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, x3_desc, alpha_desc, beta_desc, "add", cubeMathType),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, dav3510_test_scale_add_fp32_hf32)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({2, 3, 10}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({2, 10, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x3_desc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    ScalarDesc alpha_desc = ScalarDesc(2.0F, ACL_FLOAT);
+    ScalarDesc beta_desc = ScalarDesc(3.0F, ACL_FLOAT);
+    int8_t cubeMathType = op::USE_HF32;
+    auto ut = OP_API_UT(
+        aclnnFusedMatmulV2,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, x3_desc, alpha_desc, beta_desc, "add", cubeMathType),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, dav3510_test_scale_add_fp32_keep_dtype_invalid)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1_desc = TensorDesc({2, 3, 10}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({2, 10, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x3_desc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    ScalarDesc alpha_desc = ScalarDesc(2.0F, ACL_FLOAT);
+    ScalarDesc beta_desc = ScalarDesc(3.0F, ACL_FLOAT);
+    int8_t cubeMathType = op::KEEP_DTYPE;
+    auto ut = OP_API_UT(
+        aclnnFusedMatmulV2,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, x3_desc, alpha_desc, beta_desc, "add", cubeMathType),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_hf32_bias)

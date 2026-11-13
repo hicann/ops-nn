@@ -374,7 +374,7 @@ aclnnStatus aclnnFusedMatmulV2(
 - When fusedOpType is "add" or "mul", in the BMM (3-dimensional) use case, x1, x2, and y support 3 dimensions. x3 supports 2-3 dimensions. A 2-dimensional x3 can be broadcast as a matrix for a 3-dimensional output. For a 3-dimensional x3, its batch axis must be the same as that of y or be 1.
 - When fusedOpType is "16cast32", the data type of the output y must be FLOAT32.
 - If x1 or x2 is an empty tensor, the values "", "relu", "gelu_erf", "gelu_tanh", "add", and "mul" of fusedOpType are supported, but the value "16cast32" is not supported.
-- In aclnnFusedMatmulV2, if alphaOptional or betaOptional is not 1, only the 3-dimensional "add" use case where B, M, N, and K are all greater than 0 is supported. This use case does not support bias, transposition, or batch axis broadcasting. The data types of x1, x2, x3, and y must all be FLOAT16 or BFLOAT16.
+- In aclnnFusedMatmulV2, if alphaOptional or betaOptional is not 1, only the 3-dimensional "add" use case where B, M, N, and K are all greater than 0 is supported. This use case does not support bias, transposition, or batch axis broadcasting. The data types of x1, x2, x3, and y must all be FLOAT16, BFLOAT16 or FLOAT32 (FLOAT32 requires cubeMathType=3 and runs in HF32 mode).
 
 ## Example
 

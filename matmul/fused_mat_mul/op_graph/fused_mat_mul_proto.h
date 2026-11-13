@@ -23,9 +23,9 @@ namespace ge {
  * @par Inputs:
  * Four inputs, including:
  * @li x1: A matrix tensor. Must be one of the following types: float16, bfloat16, float32.
- * float32 is supported for the the following fused_op_types: "","relu","add","mul".
+ * float32 is supported for the the following fused_op_types: "","relu","add","mul","scale_add".
  * @li x2: A matrix tensor. Must be one of the following types: float16, bfloat16, float32.
- * float32 is supported for the the following fused_op_types: "","relu","add","mul".
+ * float32 is supported for the the following fused_op_types: "","relu","add","mul","scale_add".
  * @li bias: An optional tensor. When supported, its shape is [N] or [1, N].
  * For "quant" and "relu_quant", only [N] is supported. It must have type float16, bfloat16, or float32.
  * bfloat16 is only supported in Ascend 950PR&950DT products. For "quant" and "relu_quant", bias only supports float16.
@@ -37,7 +37,8 @@ namespace ge {
  * [K, M] before multiplication.
  * @li transpose_x2: A bool. If True, changes the shape of "x2" from [K, N] to
  * [N, K] before multiplication.
- * @li enable_hf32: A bool. This input is supported for the the following fused_op_types: "","relu","add","mul".
+ * @li enable_hf32: A bool. This input is supported for the the following fused_op_types:
+ * "","relu","add","mul","scale_add".
  * @li fused_op_type: A string. The fused_op_type include "","add","mul","gelu_erf","gelu_tanh","relu",
  * "sigmoid","quant","relu_quant","scale_add". Default type is defined as "".
  * @li inner_precise: An int. 0 means high precision vector fusion, 1 means high performance vector fusion.

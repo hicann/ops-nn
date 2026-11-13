@@ -46,8 +46,8 @@ English | [简体中文](./README.md)
 
 | Parameter name | Input/Output/Attribute | Description | Data type | Data format |
 | ---- | ---- | ---- | ---- | ---- |
-| a | Input | Input matrix A, with shape (…, m, k), 2-6 dimensions, with batch axes in front; (…, k, m) when transpose_x is true. | FLOAT16, BFLOAT16 | ND |
-| c | Input & Output | Symmetric matrix C, with shape (…, m, m) (consistent with the batch axes of a); the input and output share the same address for in-place update. | FLOAT16, BFLOAT16 | ND |
+| a | Input | Input matrix A, with shape (…, m, k), 2-6 dimensions, with batch axes in front; (…, k, m) when transpose_x is true. | FLOAT16, BFLOAT16, FLOAT | ND |
+| c | Input & Output | Symmetric matrix C, with shape (…, m, m) (consistent with the batch axes of a); the input and output share the same address for in-place update. | FLOAT16, BFLOAT16, FLOAT | ND |
 | alpha | Attribute | Scaling factor of the matrix multiplication result. Default value: 1.0. | FLOAT | - |
 | beta | Attribute | Scaling factor of C. Default value: 1.0. | FLOAT | - |
 | transpose_x | Attribute | When true, the operator interprets a in the transposed layout and computes C = alpha * (A^T @ A) + beta * C. | BOOL | - |
@@ -56,7 +56,11 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - Only the DAV_3510 (Ascend 950PR/Ascend 950DT) platform is supported, and `aivNum == aicNum * 2` (MIX 1:2) is required.
-- The data types of a and c must be the same (FLOAT16 or BFLOAT16), and only the ND format is supported.
+- The data types of a and c must be the same (FLOAT16, BFLOAT16 or FLOAT), and only the ND format is supported.
+  FLOAT inputs can use `cubeMathType=1/3` (HF32) or `2` (FP16), and do not support `0`;
+  FLOAT16/BFLOAT16 inputs should use `cubeMathType=0`.
+- For direct GEIR invocation, FLOAT32 input must set `op_impl_mode=0x40` (enable_hi_float_32_execution),
+  otherwise tiling returns a parameter error; the aclnn interface sets it via `cubeMathType`.
 - The last two dimensions of c must be equal and must equal the m axis of a (m is the last dimension of a when transpose_x is true);
   the batch axes must be consistent with those of a (in-place update does not support broadcasting).
 - The value range of each of the m, k, and n dimensions and of the multi-dimensional batch product is [0, 2147483647].
@@ -89,7 +93,8 @@ English | [简体中文](./README.md)
     <td>torch invocation</td>
     <td><a href="./docs/torchapi_gemm_syrk.md">torchapi_gemm_syrk</a></td>
     <td>`cann_ops_nn.gemm_syrk(a, c, *, alpha=None, beta=None, transpose_x=False, fill_mode="full")`,
-    which updates c in place and returns c.</td>
+    which updates c in place and returns c. float32 cube precision follows the global hf32
+    configuration and is not exposed as a per-operator parameter.</td>
   </tr>
   <tr>
     <td>Graph-mode invocation</td>
