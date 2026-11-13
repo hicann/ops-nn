@@ -26,8 +26,8 @@ English | [简体中文](./README.md)
   b &= b_{ih} + b_{hh} \\
   gates &= inputGates + hiddenGates + b \\
   i_{out} &= \sigma(gates_{i}) \\
-  g_{out} &= \tanh(gates_{g}) \\
   f_{out} &= \sigma(gates_{f}) \\
+  g_{out} &= \tanh(gates_{g}) \\
   o_{out} &= \sigma(gates_{o})
   \end{aligned}
   $$
@@ -50,8 +50,8 @@ English | [简体中文](./README.md)
   Description of related symbols:
 
   * Biases $b_{ih} = \text{inputBias}$, $b_{hh} = \text{hiddenBias}$
-  * $gates$ is evenly split along the last dimension into 4 components, that is, $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
-  * The obtained 4 gate activation values are concatenated along the last dimension into $\text{storage}$, that is, $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storage}$
+  * $gates$ is evenly split along the last dimension into 4 components, that is, $gates \xrightarrow{\text{split}} [gates_i, gates_f, gates_g, gates_o]$
+  * The obtained 4 gate activation values are concatenated along the last dimension into $\text{storage}$, that is, $[i_{out}, f_{out}, g_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storage}$
   * $\sigma$ is the Sigmoid activation function, and $\odot$ is the element-wise product
 
 ## Parameters
@@ -75,64 +75,68 @@ English | [简体中文](./README.md)
     <tr>
       <td>inputGates</td>
       <td>Input</td>
-      <td>The 4 gates of the input layer, that is, the values of the input gate (Input Gate), candidate cell state (Cell Candidate), forget gate (Forget Gate), and output gate (Output Gate).</td>
-      <td>FLOAT, FLOAT16</td>
+      <td>The 4 gates of the input layer, that is, the values of the input gate (Input Gate), forget gate (Forget Gate), candidate cell state (Cell Candidate), and output gate (Output Gate). Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>hiddenGates</td>
       <td>Input</td>
-      <td>The values of the 4 gates of the hidden layer.</td>
-      <td>FLOAT, FLOAT16</td>
+      <td>The values of the 4 gates of the hidden layer. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>cx</td>
       <td>Input</td>
-      <td>The cell state at the previous time step.</td>
-      <td>FLOAT, FLOAT16</td>
+      <td>The cell state at the previous time step. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>inputBias</td>
       <td>Input</td>
-      <td>Input bias.</td>
-      <td>FLOAT, FLOAT16</td>
+      <td>Input bias. Optional; equivalent to an all-zero bias when omitted. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>hiddenBias</td>
       <td>Input</td>
-      <td>Hidden layer bias.</td>
-      <td>FLOAT, FLOAT16</td>
+      <td>Hidden layer bias. Optional; equivalent to an all-zero bias when omitted. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>hy</td>
       <td>Output</td>
-      <td>The hidden state at the current time step, that is, the output at the current time step.</td>
-      <td>FLOAT, FLOAT16</td>
+      <td>The hidden state at the current time step, that is, the output at the current time step. Non-contiguous output tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>cy</td>
       <td>Output</td>
-      <td>The cell state at the current time step.</td>
-      <td>FLOAT, FLOAT16</td>
+      <td>The cell state at the current time step. Non-contiguous output tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>storage</td>
       <td>Output</td>
-      <td>The activation values of the 4 gates, provided for backward computation.</td>
-      <td>FLOAT, FLOAT16</td>
+      <td>The activation values of the 4 gates, provided for backward computation. Non-contiguous output tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
+- <term>Atlas A3 products</term>, <term>Atlas A2 products</term>:
+  The BFLOAT16 data type is not supported.
+
 ## Constraints
 
-None.
+- The data types of inputs and outputs must be the same, and only FLOAT, FLOAT16, and BFLOAT16 are supported.
+- The shapes of inputGates and hiddenGates must be the same and be (B, 4H), and the shape of cx must be (B, H), satisfying inputGates.shape[1] == 4 × cx.shape[1]. When provided, the shape of inputBias and hiddenBias must be (4H,).
 
 ## Invocation Description
 

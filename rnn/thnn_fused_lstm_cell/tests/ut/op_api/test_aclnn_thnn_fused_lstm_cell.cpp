@@ -121,6 +121,327 @@ TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_normal_float)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+// 空inputGates+其余张量一致: 合法空batch(B=0),首段校验通过后空早退直接成功
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_empty_input_gates_consistent)
+{
+    int64_t B = 0;
+    int64_t H = 5;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 空inputGates+cx非空且shape关系不满足: 空早退不得旁路shape校验,须报161002
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_empty_input_gates_shape_mismatch)
+{
+    int64_t H = 5;
+    vector<int64_t> gates_shape = {0, 4 * H}; // inputGates空
+    vector<int64_t> common_shape = {3, H};    // cx非空,与空gates的B不一致
+    vector<int64_t> bias_shape = {4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 空inputGates+hiddenGates维度错误: 空早退不得旁路dim校验,须报161002
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_empty_input_gates_dim_mismatch)
+{
+    int64_t H = 5;
+    vector<int64_t> gates_shape = {0, 4 * H}; // inputGates空
+    vector<int64_t> wrong_shape = {4 * H};    // hiddenGates一维,rank!=2
+    vector<int64_t> common_shape = {0, H};
+    vector<int64_t> bias_shape = {4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(wrong_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 空inputGates dtype与其余张量不一致: 空早退不得旁路dtype校验,须报161002
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_empty_input_gates_dtype_mismatch)
+{
+    int64_t H = 5;
+    vector<int64_t> gates_shape = {0, 4 * H};
+    vector<int64_t> common_shape = {0, H};
+    vector<int64_t> bias_shape = {4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT16, ACL_FORMAT_ND); // 空且fp16
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 全量不支持dtype(int32): CheckDtypes NOT_SUPPORT(161002)
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_all_int32_dtype_not_support)
+{
+    int64_t B = 2;
+    int64_t H = 4;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_INT32, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_INT32, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_INT32, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_INT32, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_INT32, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_INT32, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_INT32, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_INT32, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 非空cx dtype与基准inputGates不一致: CheckDtypes NOT_MATCH(161002)
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_cx_dtype_mismatch)
+{
+    int64_t B = 2;
+    int64_t H = 4;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 非空输出hyOut dtype与基准inputGates不一致: CheckDtypes NOT_MATCH(161002)
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_output_dtype_mismatch)
+{
+    int64_t B = 2;
+    int64_t H = 4;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 输出hyOut shape与期望(B,H)不匹配: CheckShapes(161002)
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_output_shape_mismatch)
+{
+    int64_t B = 2;
+    int64_t H = 4;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> wrong_shape = {999, 999};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(wrong_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 非空hiddenGates shape与期望(B,4H)不匹配: CheckShapes(161002)
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_hidden_gates_shape_mismatch)
+{
+    int64_t B = 2;
+    int64_t H = 4;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> wrong_gates_shape = {2, 8};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(wrong_gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 非空inputBias shape与期望(4H,)不匹配: CheckShapes(161002)
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_input_bias_shape_mismatch)
+{
+    int64_t B = 2;
+    int64_t H = 4;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> wrong_bias_shape = {8};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(wrong_bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                        OUTPUT(hy, cy, storage));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 输出空指针(hyOut/storageOut为nullptr): CheckParamsNullptr(161001)
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_output_nullptr)
+{
+    int64_t B = 2;
+    int64_t H = 4;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    uint64_t workspace_size = 0;
+    auto ut_hy = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                           OUTPUT(nullptr, cy, storage));
+    aclnnStatus aclRet = ut_hy.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+
+    auto ut_storage = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
+                                OUTPUT(hy, cy, nullptr));
+    aclRet = ut_storage.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+// bias不成对(inputBias有效+hiddenBias为nullptr,或反之): CheckParamsNullptr(161001)
+TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_bias_unpaired)
+{
+    int64_t B = 2;
+    int64_t H = 4;
+    vector<int64_t> common_shape = {B, H};
+    vector<int64_t> bias_shape = {4 * H};
+    vector<int64_t> gates_shape = {B, 4 * H};
+
+    auto inputGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenGates = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inputBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hiddenBias = TensorDesc(bias_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto hy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc(common_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    uint64_t workspace_size = 0;
+    auto ut_l = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, inputBias, nullptr),
+                          OUTPUT(hy, cy, storage));
+    aclnnStatus aclRet = ut_l.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+
+    auto ut_r = OP_API_UT(aclnnThnnFusedLstmCell, INPUT(inputGates, hiddenGates, cx, nullptr, hiddenBias),
+                          OUTPUT(hy, cy, storage));
+    aclRet = ut_r.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}
+
 TEST_F(l2_thnn_fused_lstm_cell_test, ascend910B2_concurrent_get_workspace_size)
 {
     constexpr size_t thread_num = 8;

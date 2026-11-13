@@ -247,13 +247,6 @@ aclnnStatus aclnnThnnFusedLstmCellGetWorkspaceSize(const aclTensor* inputGates, 
              return ret);
 
     // 预处理
-    // 空tensor处理
-    if (aclnnParams.inputGates->IsEmpty()) {
-        *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
-    }
-
     // tensor dim校验
     ret = CheckDimsAndListLength(aclnnParams);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -265,6 +258,14 @@ aclnnStatus aclnnThnnFusedLstmCellGetWorkspaceSize(const aclTensor* inputGates, 
     // dtype校验
     ret = CheckDtypes(aclnnParams, &info);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 空tensor处理: 完成全部参数校验后早退;全空输入(B=0)为合法场景,
+    // 空inputGates与其余张量不一致时按161002拒绝
+    if (aclnnParams.inputGates->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
 
     // 转连续
     ret = MakeParamsContig(&aclnnParams, info);

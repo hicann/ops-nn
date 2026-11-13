@@ -24,8 +24,8 @@
   b &= b_{ih} + b_{hh} \\
   gates &= inputGates + hiddenGates + b \\
   i_{out} &= \sigma(gates_{i}) \\
-  g_{out} &= \tanh(gates_{g}) \\
   f_{out} &= \sigma(gates_{f}) \\
+  g_{out} &= \tanh(gates_{g}) \\
   o_{out} &= \sigma(gates_{o})
   \end{aligned}
   $$
@@ -48,8 +48,8 @@
   相关符号说明：
 
   * 偏置 $b_{ih} = \text{inputBias}$, $b_{hh} = \text{hiddenBias}$
-  * 将 $gates$ 沿最后一维平均切分为4个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
-  * 将得到的4个门控激活值沿最后一维拼接成$\text{storage}$，即 $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storage}$
+  * 将 $gates$ 沿最后一维平均切分为4个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_f, gates_g, gates_o]$
+  * 将得到的4个门控激活值沿最后一维拼接成$\text{storage}$，即 $[i_{out}, f_{out}, g_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storage}$
   * $\sigma$ 为Sigmoid激活函数，$\odot$ 为逐元素乘积
 
 ## 参数说明
@@ -73,64 +73,68 @@
     <tr>
       <td>inputGates</td>
       <td>输入</td>
-      <td>输入层的4个门，即输入门（Input Gate）、候选细胞状态（Cell Candidate）、遗忘门（Forget Gate）、输出门（Output Gate）的值。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>输入层的4个门，即输入门（Input Gate）、遗忘门（Forget Gate）、候选细胞状态（Cell Candidate）、输出门（Output Gate）的值。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>hiddenGates</td>
       <td>输入</td>
-      <td>隐藏层的4个门的值。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>隐藏层的4个门的值。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>cx</td>
       <td>输入</td>
-      <td>上一时的刻细胞状态。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>上一时刻的细胞状态。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>inputBias</td>
       <td>输入</td>
-      <td>输入偏置。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>输入偏置。可选参数，缺省时等价于全零偏置。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>hiddenBias</td>
       <td>输入</td>
-      <td>隐藏层偏置。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>隐藏层偏置。可选参数，缺省时等价于全零偏置。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>hy</td>
       <td>输出</td>
-      <td>当前时刻的隐状态，即当前时刻的输出。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>当前时刻的隐状态，即当前时刻的输出。非连续Tensor输出由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>cy</td>
       <td>输出</td>
-      <td>当前时刻的细胞状态。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>当前时刻的细胞状态。非连续Tensor输出由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>storage</td>
       <td>输出</td>
-      <td>4个门的激活值，提供给反向计算。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>4个门的激活值，提供给反向计算。非连续Tensor输出由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
+  数据类型不支持BFLOAT16。
+
 ## 约束说明
 
-无
+- 输入与输出的数据类型必须一致，仅支持FLOAT、FLOAT16、BFLOAT16。
+- inputGates与hiddenGates的shape必须相同且为（B, 4H），cx的shape为（B, H），需满足inputGates.shape[1] == 4 × cx.shape[1]；inputBias与hiddenBias传入时shape为（4H,）。
 
 ## 调用说明
 

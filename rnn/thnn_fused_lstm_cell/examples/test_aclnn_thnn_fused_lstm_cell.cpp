@@ -100,6 +100,7 @@ int main()
     void* hyDeviceAddr = nullptr;
     void* cyDeviceAddr = nullptr;
     void* storageDeviceAddr = nullptr;
+    void* workspaceAddr = nullptr;
 
     // 输入ACL Tensor 指针
     aclTensor* inputGates = nullptr;
@@ -121,22 +122,68 @@ int main()
     std::vector<float> cyHostData(batchSize * hiddenSize, 0.0f);
     std::vector<float> storageHostData(batchSize * hiddenSize * 4, 0.0f);
 
+    // 失败路径统一释放已申请的资源，避免中途失败时泄漏
+    auto releaseResources = [&]() {
+        if (inputGates != nullptr) {
+            aclDestroyTensor(inputGates);
+        }
+        if (hiddenGates != nullptr) {
+            aclDestroyTensor(hiddenGates);
+        }
+        if (cx != nullptr) {
+            aclDestroyTensor(cx);
+        }
+        if (hy != nullptr) {
+            aclDestroyTensor(hy);
+        }
+        if (cy != nullptr) {
+            aclDestroyTensor(cy);
+        }
+        if (storage != nullptr) {
+            aclDestroyTensor(storage);
+        }
+        if (inputGatesDeviceAddr != nullptr) {
+            aclrtFree(inputGatesDeviceAddr);
+        }
+        if (hiddenGatesDeviceAddr != nullptr) {
+            aclrtFree(hiddenGatesDeviceAddr);
+        }
+        if (cxDeviceAddr != nullptr) {
+            aclrtFree(cxDeviceAddr);
+        }
+        if (hyDeviceAddr != nullptr) {
+            aclrtFree(hyDeviceAddr);
+        }
+        if (cyDeviceAddr != nullptr) {
+            aclrtFree(cyDeviceAddr);
+        }
+        if (storageDeviceAddr != nullptr) {
+            aclrtFree(storageDeviceAddr);
+        }
+        if (workspaceAddr != nullptr) {
+            aclrtFree(workspaceAddr);
+        }
+        aclrtDestroyStream(stream);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+    };
+
     // 创建 input aclTensor
     ret = CreateAclTensor(inputGatesHostData, gatesShape, &inputGatesDeviceAddr, aclDataType::ACL_FLOAT, &inputGates);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, releaseResources(); return ret);
     ret = CreateAclTensor(hiddenGatesHostData, gatesShape, &hiddenGatesDeviceAddr, aclDataType::ACL_FLOAT,
                           &hiddenGates);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, releaseResources(); return ret);
     ret = CreateAclTensor(cxHostData, commonShape, &cxDeviceAddr, aclDataType::ACL_FLOAT, &cx);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, releaseResources(); return ret);
 
     // 创建输出 aclTensor
     ret = CreateAclTensor(hyHostData, commonShape, &hyDeviceAddr, aclDataType::ACL_FLOAT, &hy);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, releaseResources(); return ret);
     ret = CreateAclTensor(cyHostData, commonShape, &cyDeviceAddr, aclDataType::ACL_FLOAT, &cy);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, releaseResources(); return ret);
     ret = CreateAclTensor(storageHostData, gatesShape, &storageDeviceAddr, aclDataType::ACL_FLOAT, &storage);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, releaseResources(); return ret);
 
     // 3. 调用aclnn API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
@@ -145,20 +192,22 @@ int main()
     ret = aclnnThnnFusedLstmCellGetWorkspaceSize(inputGates, hiddenGates, cx, inputBias, hiddenBias, hy, cy, storage,
                                                  &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThnnFusedLstmCellGetWorkspaceSize failed. ERROR: %d\n", ret);
-              return ret);
+              releaseResources(); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); releaseResources();
+                  return ret);
     }
     // 调用aclnnThnnFusedLstmCell第二段接口
     ret = aclnnThnnFusedLstmCell(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThnnFusedLstmCell failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThnnFusedLstmCell failed. ERROR: %d\n", ret); releaseResources();
+              return ret);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); releaseResources();
+              return ret);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     // 打印 hy 结果
@@ -166,7 +215,8 @@ int main()
     std::vector<float> resultData(commonSize, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), hyDeviceAddr,
                       commonSize * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy hy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy hy result from device to host failed. ERROR: %d\n", ret);
+              releaseResources(); return ret);
     for (int64_t i = 0; i < commonSize and i < 10; i++) {
         LOG_PRINT("result hy[%ld] is: %f\n", i, resultData[i]);
     }

@@ -422,8 +422,8 @@ public:
     GlobalTensor<dtype> igatesGM; // [B, 4H]
     GlobalTensor<dtype> hgatesGM; // [B, 4H]
     GlobalTensor<dtype> c0GM;     // [B, H]
-    GlobalTensor<dtype> bIhGM;    // [B, H]
-    GlobalTensor<dtype> bHhGM;    // [B, H]
+    GlobalTensor<dtype> bIhGM;    // (4H,)
+    GlobalTensor<dtype> bHhGM;    // (4H,)
     // output
     GlobalTensor<dtype> hyGM;      // [B, H]
     GlobalTensor<dtype> cyGM;      // [B, H]

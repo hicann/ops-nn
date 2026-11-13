@@ -18,6 +18,7 @@
 #include <iostream>
 #include <string>
 #include <cstdint>
+#include <cmath>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "test_thnn_fused_lstm_cell_tiling_def.h"
@@ -85,18 +86,40 @@ void TestThnnFusedLstmCellKernel(uint64_t batchSize, uint64_t hiddenSize, uint64
 
     ThnnFusedLstmCellTilingDataTest* tilingDatafromBin = reinterpret_cast<ThnnFusedLstmCellTilingDataTest*>(tiling);
 
-    tilingDatafromBin->B = 3;
-    tilingDatafromBin->H = 5;
-    tilingDatafromBin->BH = 15;
-    tilingDatafromBin->col = 1;
-    tilingDatafromBin->taskTotal = 3;
-    tilingDatafromBin->taskSingle = 1;
-    tilingDatafromBin->taskSize = 1280;
-    tilingDatafromBin->tailSize = 5;
+    // tiling配置与模板分配形状(batchSize×hiddenSize)一致;taskSize=1280对齐生产UB切块
+    const uint32_t taskSize = 1280;
+    const uint32_t tailSize = (hiddenSize % taskSize != 0U) ? static_cast<uint32_t>(hiddenSize % taskSize) : taskSize;
+    tilingDatafromBin->B = batchSize;
+    tilingDatafromBin->H = hiddenSize;
+    tilingDatafromBin->BH = batchSize * hiddenSize;
+    tilingDatafromBin->col = (hiddenSize + taskSize - 1) / taskSize;
+    tilingDatafromBin->taskTotal = batchSize * tilingDatafromBin->col;
+    tilingDatafromBin->taskSingle = (tilingDatafromBin->taskTotal + blockDim - 1) / blockDim;
+    tilingDatafromBin->taskSize = taskSize;
+    tilingDatafromBin->tailSize = tailSize;
 
     ICPU_SET_TILING_KEY(tilingKey);
     ICPU_RUN_KF(thnn_fused_lstm_cell, blockDim, inputGates, hiddenGates, cx, inputBias, hiddenBias, hy, cy, storage,
                 workspace, (uint8_t*)(tilingDatafromBin));
+
+    // 输出数值断言: 全1.0输入下四门求和恒为4.0,按实现门序[i,f,g,o]解析期望
+    const double iExp = 1.0 / (1.0 + std::exp(-4.0));
+    const double gExp = std::tanh(4.0);
+    const double cyExp = iExp * 1.0 + iExp * gExp;
+    const double hyExp = iExp * std::tanh(cyExp);
+    const T* hyOut = reinterpret_cast<const T*>(hy);
+    const T* cyOut = reinterpret_cast<const T*>(cy);
+    const T* storageOut = reinterpret_cast<const T*>(storage);
+    for (uint64_t b = 0; b < batchSize; ++b) {
+        for (uint64_t j = 0; j < hiddenSize; ++j) {
+            EXPECT_NEAR(static_cast<double>(hyOut[b * hiddenSize + j]), hyExp, 1e-5);
+            EXPECT_NEAR(static_cast<double>(cyOut[b * hiddenSize + j]), cyExp, 1e-5);
+            EXPECT_NEAR(static_cast<double>(storageOut[(b * 4 + 0) * hiddenSize + j]), iExp, 1e-5); // i门
+            EXPECT_NEAR(static_cast<double>(storageOut[(b * 4 + 1) * hiddenSize + j]), iExp, 1e-5); // f门
+            EXPECT_NEAR(static_cast<double>(storageOut[(b * 4 + 2) * hiddenSize + j]), gExp, 1e-5); // g门
+            EXPECT_NEAR(static_cast<double>(storageOut[(b * 4 + 3) * hiddenSize + j]), iExp, 1e-5); // o门
+        }
+    }
 
     AscendC::GmFree(inputGates);
     AscendC::GmFree(hiddenGates);

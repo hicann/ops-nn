@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：实现长短期记忆网络单元（LSTM Cell）的单步前向计算中，矩阵乘法后的后续计算。输出当前时刻的隐状态和细胞状态，同时输出当前遗忘门、输入门、输出门和候选状态用于反向计算。
+- 接口功能：实现长短期记忆网络单元（LSTM Cell）的单步前向计算中，矩阵乘法后的后续计算。输出当前时刻的隐状态和细胞状态，同时输出当前输入门、遗忘门、候选状态和输出门的激活值用于反向计算。
 - 计算公式：
 
   计算门控激活值：
@@ -33,8 +33,8 @@
   b &= b_{ih} + b_{hh} \\
   gates &= inputGates + hiddenGates + b \\
   i_{out} &= \sigma(gates_{i}) \\
-  g_{out} &= \tanh(gates_{g}) \\
   f_{out} &= \sigma(gates_{f}) \\
+  g_{out} &= \tanh(gates_{g}) \\
   o_{out} &= \sigma(gates_{o})
   \end{aligned}
   $$
@@ -57,8 +57,8 @@
   相关符号说明：
 
   * 偏置 $b_{ih} = \text{inputBiasOptional}$, $b_{hh} = \text{hiddenBiasOptional}$ ，如未输入偏置则为零
-  * 将 $gates$ 沿最后一维平均切分为4个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
-  * 将得到的4个门控激活值沿最后一维拼接成$\text{storageOut}$，即 $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storageOut}$
+  * 将 $gates$ 沿最后一维平均切分为4个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_f, gates_g, gates_o]$
+  * 将得到的4个门控激活值沿最后一维拼接成$\text{storageOut}$，即 $[i_{out}, f_{out}, g_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storageOut}$
   * $\sigma$ 为Sigmoid激活函数，$\odot$ 为逐元素乘积
 
 ## 函数原型
@@ -116,8 +116,10 @@ aclnnStatus aclnnThnnFusedLstmCell(
       <tr>
         <td>inputGates（aclTensor*）</td>
         <td>输入</td>
-        <td>输入层的4个门，即输入门（Input Gate）、候选细胞状态（Cell Candidate）、遗忘门（Forget Gate）、输出门（Output Gate）的值。</td>
-        <td>无。</td>
+        <td>输入层的4个门，即输入门（Input Gate）、遗忘门（Forget Gate）、候选细胞状态（Cell Candidate）、输出门（Output Gate）的值。</td>
+        <td><ul>
+          <li>不能传入空指针，支持空Tensor：inputGates为numel为0的空Tensor（如batch_size=0或hidden_size=0）时，接口完成入参校验后直接返回成功，不执行计算，输出Tensor内容保持不变。</li>
+        </ul></td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4*hidden_size)</td>
@@ -127,7 +129,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>hiddenGates（aclTensor*）</td>
         <td>输入</td>
         <td>隐藏层的4个门的值。</td>
-        <td>无。</td>
+        <td><ul>
+          <li>不能传入空指针，支持空Tensor。</li>
+        </ul></td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4*hidden_size)</td>
@@ -137,7 +141,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>cx（aclTensor*）</td>
         <td>输入</td>
         <td>上一时刻的细胞状态。</td>
-        <td>无。</td>
+        <td><ul>
+          <li>不能传入空指针，支持空Tensor。</li>
+        </ul></td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
@@ -147,7 +153,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>inputBiasOptional（aclTensor*）</td>
         <td>可选输入</td>
         <td>可选的输入偏置。传入nullptr时，代表没有偏置。</td>
-        <td>无。</td>
+        <td><ul>
+          <li>可选输入，传入空指针表示无偏置，等价于全零偏置。</li>
+        </ul></td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(4*hidden_size,)</td>
@@ -157,7 +165,10 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>hiddenBiasOptional（aclTensor*）</td>
         <td>可选输入</td>
         <td>可选的隐藏层偏置。传入nullptr时，代表没有偏置。</td>
-        <td>当inputBiasOptional输入有效时，hiddenBiasOptional须有效，否则须为nullptr。</td>
+        <td><ul>
+          <li>可选输入，传入空指针表示无偏置，等价于全零偏置。</li>
+          <li>当inputBiasOptional输入有效时，hiddenBiasOptional须有效，否则须为nullptr。</li>
+        </ul></td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(4*hidden_size,)</td>
@@ -167,7 +178,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>hyOut（aclTensor*）</td>
         <td>输出</td>
         <td>当前时刻的隐状态，即当前时刻的输出。</td>
-        <td>无。</td>
+        <td><ul>
+          <li>不能传入空指针，支持空Tensor（inputGates为空Tensor时，接口不执行计算，输出内容保持不变）。</li>
+        </ul></td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
@@ -177,7 +190,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>cyOut（aclTensor*）</td>
         <td>输出</td>
         <td>当前时刻的细胞状态。</td>
-        <td>无。</td>
+        <td><ul>
+          <li>不能传入空指针，支持空Tensor（inputGates为空Tensor时，接口不执行计算，输出内容保持不变）。</li>
+        </ul></td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
@@ -187,7 +202,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>storageOut（aclTensor*）</td>
         <td>输出</td>
         <td>4个门的激活值，提供给反向计算。</td>
-        <td>无。</td>
+        <td><ul>
+          <li>不能传入空指针，支持空Tensor（inputGates为空Tensor时，接口不执行计算，输出内容保持不变）。</li>
+        </ul></td>
         <td>FLOAT、FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4 * hidden_size)</td>
@@ -249,7 +266,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
       <tr>
         <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="2">161002</td>
-        <td>参数的数据类型或数据格式不在支持的范围之内。</td>
+        <td>参数的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
         <td>参数的维度不在支持的范围内，或shape不满足参数之间的数量关系。</td>
@@ -303,6 +320,8 @@ aclnnStatus aclnnThnnFusedLstmCell(
 
 - 确定性说明：aclnnThnnFusedLstmCell默认确定性实现。
 - 所有输入、输出参数的数据类型需保持一致。
+- 支持动态shape与动态rank：图模式下shape中的-1表示未知维、[-2]表示未知rank，实际shape与rank在执行期推导，推导结果仍须满足参数说明中的shape约束；本接口直调时传入的Tensor须为具体的非负维度，shape中含字面负值（如-1、-2）时接口报错，不执行计算。
+- BFLOAT16数据类型仅<term>Ascend 950PR&950DT系列产品</term>支持，<term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>不支持。
 
 ## 调用示例
 

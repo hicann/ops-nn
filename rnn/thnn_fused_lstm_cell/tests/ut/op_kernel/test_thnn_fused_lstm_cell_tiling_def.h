@@ -19,14 +19,15 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 struct ThnnFusedLstmCellTilingDataTest {
+    // 与生产ThnnFusedLstmCellTilingData ABI一致: 6×uint64 + 2×uint32(56B, taskSize@偏移48, tailSize@偏移52)
     uint64_t B = 0;
     uint64_t H = 0;
     uint64_t BH = 0;
     uint64_t col = 0;
     uint64_t taskTotal = 0;
     uint64_t taskSingle = 0;
-    uint64_t taskSize = 0;
-    uint64_t tailSize = 0;
+    uint32_t taskSize = 0;
+    uint32_t tailSize = 0;
 };
 
 inline void InitThnnFusedLstmCellTilingDataTest(uint8_t* tiling, ThnnFusedLstmCellTilingDataTest* data)

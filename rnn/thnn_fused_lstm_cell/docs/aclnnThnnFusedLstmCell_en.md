@@ -25,7 +25,7 @@
 
 ## Function
 
-- Description: Performs the subsequent computation after matrix multiplication in a single-step forward computation of a long short-term memory (LSTM) cell. Outputs the hidden state and cell state at the current time step, as well as the current forget gate, input gate, output gate, and candidate state for backward computation.
+- Description: Performs the subsequent computation after matrix multiplication in a single-step forward computation of a long short-term memory (LSTM) cell. Outputs the hidden state and cell state at the current time step, as well as the current input gate, forget gate, candidate state, and output gate activations for backward computation.
 - Formula:
 
   Compute the gate activation values:
@@ -35,8 +35,8 @@
   b &= b_{ih} + b_{hh} \\
   gates &= inputGates + hiddenGates + b \\
   i_{out} &= \sigma(gates_{i}) \\
-  g_{out} &= \tanh(gates_{g}) \\
   f_{out} &= \sigma(gates_{f}) \\
+  g_{out} &= \tanh(gates_{g}) \\
   o_{out} &= \sigma(gates_{o})
   \end{aligned}
   $$
@@ -59,8 +59,8 @@
   Description of related symbols:
 
   * Bias $b_{ih} = \text{inputBiasOptional}$, $b_{hh} = \text{hiddenBiasOptional}$; zero if no bias is provided.
-  * Split $gates$ evenly into 4 components along the last dimension, i.e., $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
-  * Concatenate the four gate activation values along the last dimension into $\text{storageOut}$, i.e., $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storageOut}$.
+  * Split $gates$ evenly into 4 components along the last dimension, i.e., $gates \xrightarrow{\text{split}} [gates_i, gates_f, gates_g, gates_o]$
+  * Concatenate the four gate activation values along the last dimension into $\text{storageOut}$, i.e., $[i_{out}, f_{out}, g_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storageOut}$.
   * $\sigma$ is the Sigmoid activation function, and $\odot$ is the element-wise product
 
 ## Function Prototype
@@ -118,8 +118,10 @@ aclnnStatus aclnnThnnFusedLstmCell(
       <tr>
         <td>inputGates (aclTensor*)</td>
         <td>Input</td>
-        <td>Values of the 4 gates of the input layer, namely the input gate, cell candidate, forget gate, and output gate.</td>
-        <td>None</td>
+        <td>Values of the 4 gates of the input layer, namely the input gate, forget gate, cell candidate, and output gate.</td>
+        <td><ul>
+          <li>Do not pass a null pointer. Empty tensors are supported: when inputGates is an empty tensor with numel 0 (for example, batch_size=0 or hidden_size=0), the API returns success directly after input parameter validation, without performing computation, and the output tensor contents remain unchanged.</li>
+        </ul></td>
         <td>FLOAT, FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4*hidden_size)</td>
@@ -129,7 +131,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>hiddenGates (aclTensor*)</td>
         <td>Input</td>
         <td>Values of the 4 gates of the hidden layer.</td>
-        <td>None.</td>
+        <td><ul>
+          <li>Do not pass a null pointer. Empty tensors are supported.</li>
+        </ul></td>
         <td>FLOAT, FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4*hidden_size)</td>
@@ -139,7 +143,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>cx (aclTensor*)</td>
         <td>Input</td>
         <td>Cell state at the previous time step.</td>
-        <td>None.</td>
+        <td><ul>
+          <li>Do not pass a null pointer. Empty tensors are supported.</li>
+        </ul></td>
         <td>FLOAT, FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
@@ -149,7 +155,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>inputBiasOptional (aclTensor*)</td>
         <td>Optional input</td>
         <td>Optional input bias. Passing nullptr indicates no bias.</td>
-        <td>None.</td>
+        <td><ul>
+          <li>Optional input. Passing a null pointer indicates no bias, which is equivalent to an all-zero bias.</li>
+        </ul></td>
         <td>FLOAT, FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>(4*hidden_size,)</td>
@@ -159,7 +167,10 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>hiddenBiasOptional (aclTensor*)</td>
         <td>Optional input</td>
         <td>Optional hidden bias. Passing nullptr indicates no bias.</td>
-        <td>Must be valid when the inputBiasOptional input is valid; otherwise, must be nullptr.</td>
+        <td><ul>
+          <li>Optional input. Passing a null pointer indicates no bias, which is equivalent to an all-zero bias.</li>
+          <li>hiddenBiasOptional must be valid when the inputBiasOptional input is valid; otherwise, it must be nullptr.</li>
+        </ul></td>
         <td>FLOAT, FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>(4*hidden_size,)</td>
@@ -169,7 +180,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>hyOut (aclTensor*)</td>
         <td>Output</td>
         <td>Hidden state at the current time step, that is, the output of the current time step.</td>
-        <td>None.</td>
+        <td><ul>
+          <li>Do not pass a null pointer. Empty tensors are supported (when inputGates is an empty tensor, the API does not perform computation, and the output contents remain unchanged).</li>
+        </ul></td>
         <td>FLOAT, FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
@@ -179,7 +192,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>cyOut (aclTensor*)</td>
         <td>Output</td>
         <td>Cell state at the current time step.</td>
-        <td>None</td>
+        <td><ul>
+          <li>Do not pass a null pointer. Empty tensors are supported (when inputGates is an empty tensor, the API does not perform computation, and the output contents remain unchanged).</li>
+        </ul></td>
         <td>FLOAT, FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, hidden_size)</td>
@@ -189,7 +204,9 @@ aclnnStatus aclnnThnnFusedLstmCell(
         <td>storageOut (aclTensor*)</td>
         <td>Output</td>
         <td>Activation values of the four gates, provided for backward computation.</td>
-        <td>None</td>
+        <td><ul>
+          <li>Do not pass a null pointer. Empty tensors are supported (when inputGates is an empty tensor, the API does not perform computation, and the output contents remain unchanged).</li>
+        </ul></td>
         <td>FLOAT, FLOAT16, BFLOAT16</td>
         <td>ND</td>
         <td>(batch_size, 4 * hidden_size)</td>
@@ -237,7 +254,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
     </colgroup>
     <thead>
       <tr>
-        <th>Error Code</th>
+        <th>Return Code</th>
         <th>Error Code</th>
         <th>Description</th>
       </tr>
@@ -251,7 +268,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
       <tr>
         <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="2">161002</td>
-        <td>The data type or data format of the parameter is not within the supported range.</td>
+        <td>The data type of the parameter is not within the supported range.</td>
       </tr>
       <tr>
         <td>The dimension of the parameter is not within the supported range, or the shape does not satisfy the quantity relationship between parameters.</td>
@@ -305,6 +322,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
 
 - Deterministic computation: aclnnThnnFusedLstmCell defaults to a deterministic implementation.
 - The data types of all input and output parameters must be consistent.
+- Dynamic shapes and dynamic ranks are supported: in graph mode, -1 in a shape denotes an unknown dimension and [-2] denotes an unknown rank. The actual shape and rank are derived at execution time and must still satisfy the shape constraints in the parameter description. Tensors passed in through direct calls of this API must have specific non-negative dimensions; literal negative values in a shape (such as -1 or -2) cause the API to return an error, and no computation is performed.
 - The BFLOAT16 data type is supported only on Ascend 950PR&950DT products; Atlas A3 training/inference products and Atlas A2 training/inference products do not support it.
 
 ## Example

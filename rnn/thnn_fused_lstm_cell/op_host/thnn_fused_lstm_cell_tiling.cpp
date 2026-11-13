@@ -19,10 +19,25 @@
 #include "tiling/tiling_api.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "error_util.h"
+#include <limits>
 #include <string>
+#include <vector>
 
 namespace optiling {
 namespace {
+
+std::string Shape2String(const gert::Shape& shape)
+{
+    std::string s = "[";
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        if (i != 0) {
+            s += ", ";
+        }
+        s += std::to_string(shape.GetDim(i));
+    }
+    s += "]";
+    return s;
+}
 
 struct ThnnFusedLstmCellTilingInfo {
     gert::Shape cxShape;
@@ -42,9 +57,110 @@ const uint32_t bufCnt = 17;
 const uint32_t BUFFER_NUM = 2;
 const size_t INDEX_2 = 2;
 const size_t CX_DIM_NUM = 2;
+const size_t INPUT_GATES_INDEX = 0;
+const size_t HIDDEN_GATES_INDEX = 1;
+const size_t INPUT_BIAS_INDEX = 3;
+const size_t HIDDEN_BIAS_INDEX = 4;
+const size_t OUTPUT_HY_INDEX = 0;
+const size_t OUTPUT_CY_INDEX = 1;
+const size_t OUTPUT_STORAGE_INDEX = 2;
+const int64_t GATES_NUM = 4;
 const uint32_t SIZE_UNIT_BYTE = 256;
 const uint32_t FP32CNT_UNIT = SIZE_UNIT_BYTE / sizeof(float);
 const uint32_t UB_RSV_SIZE = 8 * 1024;
+
+ge::graphStatus ValidateInputShape(const gert::TilingContext* context, size_t index, const std::string& paramName,
+                                   const std::vector<int64_t>& expectedDims)
+{
+    auto input = context->GetInputShape(index);
+    if (input == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), paramName.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    auto shape = input->GetStorageShape();
+    if (shape.GetDimNum() != expectedDims.size()) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), paramName.c_str(), std::to_string(shape.GetDimNum()),
+            "rank of " + paramName + " must be " + std::to_string(expectedDims.size()));
+        return ge::GRAPH_FAILED;
+    }
+    for (size_t i = 0; i < expectedDims.size(); ++i) {
+        if (shape.GetDim(i) != expectedDims[i]) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), paramName.c_str(), Shape2String(shape),
+                "dimension " + std::to_string(i) + " of " + paramName + " must be " + std::to_string(expectedDims[i]));
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ValidateOutputShape(const gert::TilingContext* context, size_t index, const std::string& paramName,
+                                    const std::vector<int64_t>& expectedDims)
+{
+    auto output = context->GetOutputShape(index);
+    if (output == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), paramName.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    auto shape = output->GetStorageShape();
+    if (shape.GetDimNum() != expectedDims.size()) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), paramName.c_str(), std::to_string(shape.GetDimNum()),
+            "rank of " + paramName + " must be " + std::to_string(expectedDims.size()));
+        return ge::GRAPH_FAILED;
+    }
+    for (size_t i = 0; i < expectedDims.size(); ++i) {
+        if (shape.GetDim(i) != expectedDims[i]) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), paramName.c_str(), Shape2String(shape),
+                "dimension " + std::to_string(i) + " of " + paramName + " must be " + std::to_string(expectedDims[i]));
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus CheckParamsShape(const gert::TilingContext* context)
+{
+    // cx的rank已在GetInfo校验(恒为2);以cx的(B,H)为准校验跨输入/输出shape关系:
+    // gates=(B,4H)、cx=(B,H)、bias=(4H,)、hy/cy=(B,H)、storage=(B,4H)
+    // shape取storage口径: 算子注册面为ND格式(GE构图与aclnn路径的连续化转换均保证
+    // tiling期storage shape与origin shape恒等),即kernel按B*H线性寻址的物理形状,
+    // 与GetInfo/FillTilingInfo按origin shape计算的B/H数值恒同
+    auto cxShapePtr = context->GetInputShape(INDEX_2);
+    if (cxShapePtr == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "cx");
+        return ge::GRAPH_FAILED;
+    }
+    auto cxShape = cxShapePtr->GetStorageShape();
+    const int64_t batch = cxShape.GetDim(0);
+    const int64_t hidden = cxShape.GetDim(1);
+    if (batch < 0 || hidden < 0) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "cx", Shape2String(cxShape),
+                                              "dimensions of cx must be non-negative");
+        return ge::GRAPH_FAILED;
+    }
+    if (hidden > std::numeric_limits<int64_t>::max() / GATES_NUM) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "cx", Shape2String(cxShape),
+                                              "dimension 1 of cx is too large");
+        return ge::GRAPH_FAILED;
+    }
+    const std::vector<int64_t> gatesDims = {batch, GATES_NUM * hidden};
+    const std::vector<int64_t> commonDims = {batch, hidden};
+    const std::vector<int64_t> biasDims = {GATES_NUM * hidden};
+
+    if (ValidateInputShape(context, INPUT_GATES_INDEX, "inputGates", gatesDims) != ge::GRAPH_SUCCESS ||
+        ValidateInputShape(context, HIDDEN_GATES_INDEX, "hiddenGates", gatesDims) != ge::GRAPH_SUCCESS ||
+        ValidateInputShape(context, INPUT_BIAS_INDEX, "inputBias", biasDims) != ge::GRAPH_SUCCESS ||
+        ValidateInputShape(context, HIDDEN_BIAS_INDEX, "hiddenBias", biasDims) != ge::GRAPH_SUCCESS ||
+        ValidateOutputShape(context, OUTPUT_HY_INDEX, "hy", commonDims) != ge::GRAPH_SUCCESS ||
+        ValidateOutputShape(context, OUTPUT_CY_INDEX, "cy", commonDims) != ge::GRAPH_SUCCESS ||
+        ValidateOutputShape(context, OUTPUT_STORAGE_INDEX, "storage", gatesDims) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
 
 ge::graphStatus GetInfo(const gert::TilingContext* context, ThnnFusedLstmCellTilingInfo* info)
 {
@@ -67,7 +183,7 @@ ge::graphStatus GetInfo(const gert::TilingContext* context, ThnnFusedLstmCellTil
         return ge::GRAPH_FAILED;
     }
     auto cxOriginShape = cxShape->GetOriginShape();
-    if (cxOriginShape.GetDimNum() < CX_DIM_NUM) {
+    if (cxOriginShape.GetDimNum() != CX_DIM_NUM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "cx",
                                                  std::to_string(cxOriginShape.GetDimNum()), "rank of cx must be 2");
         return ge::GRAPH_FAILED;
@@ -92,7 +208,8 @@ ge::graphStatus FillTilingInfo(const gert::TilingContext* context, ThnnFusedLstm
         return ge::GRAPH_FAILED;
     }
     info->col = (info->H + static_cast<uint64_t>(info->taskSize) - 1ULL) / static_cast<uint64_t>(info->taskSize);
-    info->tailSize = static_cast<uint32_t>(info->H) % info->taskSize;
+    // H % taskSize 恒小于 taskSize(<=uint32上限),先在uint64域取模再收窄,避免H>=2^32时先截断致tailSize与col失配
+    info->tailSize = static_cast<uint32_t>(info->H % static_cast<uint64_t>(info->taskSize));
     info->tailSize = (info->tailSize != 0U) ? info->tailSize : info->taskSize;
     info->taskTotal = info->col * info->B;
     info->taskSingle = (info->taskTotal + static_cast<uint64_t>(info->aivNum) - 1ULL) /
@@ -134,6 +251,10 @@ ge::graphStatus ThnnFusedLstmCellTilingFunc(gert::TilingContext* context)
 
     // 信息获取
     if (GetInfo(context, &info) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    // 跨输入/输出shape关系校验(GE路tiling为唯一host校验点)
+    if (CheckParamsShape(context) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     // 参数计算
