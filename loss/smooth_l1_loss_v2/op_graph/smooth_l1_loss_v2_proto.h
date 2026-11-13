@@ -40,9 +40,10 @@ namespace ge {
 * the output;'sum': the output will be summed. Default: 'mean'. \n
 
 * @par Outputs:
-* loss: A multi-dimensional Tensor of type float16, bfloat16 or float32. Indicates the loss between the predictive value
+* loss: A Tensor of type float16, bfloat16 or float32. Indicates the loss between the predictive value
 and target value.
-* Has the same dimensions as "predict". \n
+* When reduction is "none", it has the same dimensions as "predict"; when reduction is "mean" or "sum", it is a scalar.
+\n
 
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator smooth_l1_loss. \n
