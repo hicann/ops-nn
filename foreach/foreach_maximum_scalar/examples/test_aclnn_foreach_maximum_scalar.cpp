@@ -40,9 +40,18 @@ int Init(int32_t deviceId, aclrtStream* stream)
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret);
+        aclFinalize();
+        return ret;
+    }
     ret = aclrtCreateStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+        return ret;
+    }
     return 0;
 }
 
@@ -67,6 +76,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return 1);
     return 0;
 }
 
@@ -75,7 +85,7 @@ int main()
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
-    aclrtStream stream;
+    aclrtStream stream = nullptr;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
@@ -100,83 +110,113 @@ int main()
     std::vector<float> out1HostData(6, 0);
     std::vector<float> out2HostData(3, 0);
     std::vector<float> alphaValueHostData = {1.2f};
-    // 创建input1 aclTensor
-    ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建input2 aclTensor
-    ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_FLOAT, &input2);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建alpha aclTensor
-    ret = CreateAclTensor(alphaValueHostData, alphaShape, &alphaDeviceAddr, aclDataType::ACL_FLOAT, &alpha);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建out1 aclTensor
-    ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建out2 aclTensor
-    ret = CreateAclTensor(out2HostData, outShape2, &out2DeviceAddr, aclDataType::ACL_FLOAT, &out2);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    std::vector<aclTensor*> tempInput{input1, input2};
-    aclTensorList* tensorListInput = aclCreateTensorList(tempInput.data(), tempInput.size());
-    std::vector<aclTensor*> tempOutput{out1, out2};
-    aclTensorList* tensorListOutput = aclCreateTensorList(tempOutput.data(), tempOutput.size());
-
-    // 3. 调用CANN算子库API，需要修改为具体的API名称
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor;
-    // 调用aclnnForeachMaximumScalar第一段接口
-    ret = aclnnForeachMaximumScalarGetWorkspaceSize(tensorListInput, alpha, tensorListOutput, &workspaceSize,
-                                                    &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMaximumScalarGetWorkspaceSize failed. ERROR: %d\n", ret);
-              return ret);
-    // 根据第一段接口计算出的workspaceSize申请device内存
+    aclTensorList* tensorListInput = nullptr;
+    aclTensorList* tensorListOutput = nullptr;
     void* workspaceAddr = nullptr;
-    if (workspaceSize > 0) {
-        ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    aclOpExecutor* executor = nullptr;
+    auto run = [&]() -> int {
+        // 创建input1 aclTensor
+        ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        // 创建input2 aclTensor
+        ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_FLOAT, &input2);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        // 创建alpha aclTensor
+        ret = CreateAclTensor(alphaValueHostData, alphaShape, &alphaDeviceAddr, aclDataType::ACL_FLOAT, &alpha);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        // 创建out1 aclTensor
+        ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        // 创建out2 aclTensor
+        ret = CreateAclTensor(out2HostData, outShape2, &out2DeviceAddr, aclDataType::ACL_FLOAT, &out2);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        std::vector<aclTensor*> tempInput{input1, input2};
+        tensorListInput = aclCreateTensorList(tempInput.data(), tempInput.size());
+        CHECK_RET(tensorListInput != nullptr, LOG_PRINT("aclCreateTensorList input failed.\n"); return 1);
+        std::vector<aclTensor*> tempOutput{out1, out2};
+        tensorListOutput = aclCreateTensorList(tempOutput.data(), tempOutput.size());
+        CHECK_RET(tensorListOutput != nullptr, LOG_PRINT("aclCreateTensorList output failed.\n"); return 1);
+
+        // 3. 调用CANN算子库API，需要修改为具体的API名称
+        uint64_t workspaceSize = 0;
+        // 调用aclnnForeachMaximumScalar第一段接口
+        ret = aclnnForeachMaximumScalarGetWorkspaceSize(tensorListInput, alpha, tensorListOutput, &workspaceSize,
+                                                        &executor);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMaximumScalarGetWorkspaceSize failed. ERROR: %d\n", ret);
+                  return ret);
+        // 根据第一段接口计算出的workspaceSize申请device内存
+        if (workspaceSize > 0) {
+            ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+            CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        }
+        // 调用aclnnForeachMaximumScalar第二段接口
+        ret = aclnnForeachMaximumScalar(workspaceAddr, workspaceSize, executor, stream);
+        executor = nullptr; // The second-stage call consumes the executor.
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMaximumScalar failed. ERROR: %d\n", ret); return ret);
+
+        // 4. （固定写法）同步等待任务执行结束
+        ret = aclrtSynchronizeStream(stream);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+
+        // 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
+        auto size = GetShapeSize(outShape1);
+        std::vector<float> out1Data(size, 0);
+        ret = aclrtMemcpy(out1Data.data(), out1Data.size() * sizeof(out1Data[0]), out1DeviceAddr,
+                          size * sizeof(out1Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+                  return ret);
+        for (int64_t i = 0; i < size; i++) {
+            LOG_PRINT("out1 result[%ld] is: %f\n", i, out1Data[i]);
+        }
+
+        size = GetShapeSize(outShape2);
+        std::vector<float> out2Data(size, 0);
+        ret = aclrtMemcpy(out2Data.data(), out2Data.size() * sizeof(out2Data[0]), out2DeviceAddr,
+                          size * sizeof(out2Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+                  return ret);
+        for (int64_t i = 0; i < size; i++) {
+            LOG_PRINT("out2 result[%ld] is: %f\n", i, out2Data[i]);
+        }
+
+        return ACL_SUCCESS;
+    };
+    ret = run();
+    // Keep the first failure while attempting every cleanup operation.
+    auto cleanup = [&](int status, const char* operation) {
+        if (status != ACL_SUCCESS) {
+            LOG_PRINT("%s failed. ERROR: %d\n", operation, status);
+            if (ret == ACL_SUCCESS) {
+                ret = status;
+            }
+        }
+    };
+    cleanup(aclrtSynchronizeStream(stream), "aclrtSynchronizeStream");
+    if (executor != nullptr) {
+        cleanup(aclDestroyAclOpExecutor(executor), "aclDestroyAclOpExecutor");
     }
-    // 调用aclnnForeachMaximumScalar第二段接口
-    ret = aclnnForeachMaximumScalar(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMaximumScalar failed. ERROR: %d\n", ret); return ret);
-
-    // 4. （固定写法）同步等待任务执行结束
-    ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
-    // 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
-    auto size = GetShapeSize(outShape1);
-    std::vector<float> out1Data(size, 0);
-    ret = aclrtMemcpy(out1Data.data(), out1Data.size() * sizeof(out1Data[0]), out1DeviceAddr,
-                      size * sizeof(out1Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("out1 result[%ld] is: %f\n", i, out1Data[i]);
+    // A successfully created TensorList owns its tensor descriptors.
+    if (tensorListInput != nullptr) {
+        cleanup(aclDestroyTensorList(tensorListInput), "aclDestroyTensorList input");
+    } else {
+        cleanup(aclDestroyTensor(input1), "aclDestroyTensor input1");
+        cleanup(aclDestroyTensor(input2), "aclDestroyTensor input2");
     }
-
-    size = GetShapeSize(outShape2);
-    std::vector<float> out2Data(size, 0);
-    ret = aclrtMemcpy(out2Data.data(), out2Data.size() * sizeof(out2Data[0]), out2DeviceAddr,
-                      size * sizeof(out2Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("out2 result[%ld] is: %f\n", i, out2Data[i]);
+    if (tensorListOutput != nullptr) {
+        cleanup(aclDestroyTensorList(tensorListOutput), "aclDestroyTensorList output");
+    } else {
+        cleanup(aclDestroyTensor(out1), "aclDestroyTensor out1");
+        cleanup(aclDestroyTensor(out2), "aclDestroyTensor out2");
     }
-
-    // 6. 释放aclTensor，需要根据具体API的接口定义修改
-    aclDestroyTensorList(tensorListInput);
-    aclDestroyTensorList(tensorListOutput);
-    aclDestroyTensor(alpha);
-
-    // 7.释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(input1DeviceAddr);
-    aclrtFree(input2DeviceAddr);
-    aclrtFree(out1DeviceAddr);
-    aclrtFree(out2DeviceAddr);
-    aclrtFree(alphaDeviceAddr);
-    if (workspaceSize > 0) {
-        aclrtFree(workspaceAddr);
+    cleanup(aclDestroyTensor(alpha), "aclDestroyTensor scalar");
+    for (auto address :
+         {input1DeviceAddr, input2DeviceAddr, out1DeviceAddr, out2DeviceAddr, alphaDeviceAddr, workspaceAddr}) {
+        if (address != nullptr) {
+            cleanup(aclrtFree(address), "aclrtFree");
+        }
     }
-    aclrtDestroyStream(stream);
-    aclrtResetDevice(deviceId);
-    aclFinalize();
-    return 0;
+    cleanup(aclrtDestroyStream(stream), "aclrtDestroyStream");
+    cleanup(aclrtResetDevice(deviceId), "aclrtResetDevice");
+    cleanup(aclFinalize(), "aclFinalize");
+    return ret;
 }

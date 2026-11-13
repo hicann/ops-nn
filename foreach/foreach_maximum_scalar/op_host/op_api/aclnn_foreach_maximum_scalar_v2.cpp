@@ -18,6 +18,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
+#include <new>
 #include "../../foreach_utils/op_host/foreach_null_check_helper.h"
 #include <cmath>
 #include <string>
@@ -153,6 +154,15 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
+    if (self->Size() != out->Size()) {
+        const auto counts = std::to_string(self->Size()) + ", " + std::to_string(out->Size());
+        const char* reason = "x and out must have the same number of tensors";
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s, but got %s.", reason, counts.c_str());
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ0023", (std::vector<const char*>{"param_names", "op_name", "incorrect_nums", "reason"}),
+            (std::vector<const char*>{"x, out", "aclnnForeachMaximumScalarV2", counts.c_str(), reason}));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShapeValid/CheckFormat.
@@ -271,6 +281,7 @@ static aclnnStatus ExecForeachMaximumScalarV2GetWorkspaceSize(const aclTensorLis
     } else {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x)[0]->GetDataType());
     }
+    CHECK_RET(otherTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 调用l0算子ForeachMaximumScalarV2进行计算，输出到连续buffer
     auto result = l0op::ForeachMaximumScalarV2(contiguousTensors, otherTensor, contiguousOut, uniqueExecutor.get());
@@ -289,8 +300,13 @@ aclnnStatus aclnnForeachMaximumScalarV2GetWorkspaceSize(const aclTensorList* x, 
                                                         aclTensorList* out, uint64_t* workspaceSize,
                                                         aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnForeachMaximumScalarV2, DFX_IN(x, scalar), DFX_OUT(out));
-    return ExecForeachMaximumScalarV2GetWorkspaceSize(x, scalar, out, workspaceSize, executor);
+    try {
+        L2_DFX_PHASE_1(aclnnForeachMaximumScalarV2, DFX_IN(x, scalar), DFX_OUT(out));
+        return ExecForeachMaximumScalarV2GetWorkspaceSize(x, scalar, out, workspaceSize, executor);
+    } catch (const std::bad_alloc&) {
+        OP_LOGE(ACLNN_ERR_INNER_CREATE_EXECUTOR, "Failed to allocate ForeachMaximumScalarV2 execution resources.");
+        return ACLNN_ERR_INNER_CREATE_EXECUTOR;
+    }
 }
 
 aclnnStatus aclnnForeachMaximumScalarV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,

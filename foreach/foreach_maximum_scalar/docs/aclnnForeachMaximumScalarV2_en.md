@@ -25,7 +25,7 @@
 
 ## Function
 
-- Description: Performs element-wise comparison between the tensor list and the scalar value, and computes the maximum value of each element. Compared with [aclnnForeachMaximumScalar](aclnnForeachMaximumScalar.md), this API changes the structure type of the input parameter scalar from aclTensor to aclScalar. Select an appropriate API based on your actual requirements.
+- Description: Performs element-wise comparison between the tensor list and the scalar value, and computes the maximum value of each element. Compared with [aclnnForeachMaximumScalar](aclnnForeachMaximumScalar_en.md), this API changes the structure type of the input parameter scalar from aclTensor to aclScalar. Select an appropriate API based on your actual requirements.
 - Formula:
 
   $$
@@ -41,7 +41,7 @@
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). Call the "aclnnForeachMaximumScalarV2GetWorkspaceSize" API to obtain the workspace size required for computation and the executor containing the operator computation flow. Then call the "aclnnForeachMaximumScalarV2" API to execute the computation.
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachMaximumScalarV2GetWorkspaceSize(
   const aclTensorList *x,
   const aclScalar     *scalar,
@@ -50,7 +50,7 @@ aclnnStatus aclnnForeachMaximumScalarV2GetWorkspaceSize(
   aclOpExecutor      **executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachMaximumScalarV2(
   void          *workspace,
   uint64_t       workspaceSize,
@@ -61,7 +61,7 @@ aclnnStatus aclnnForeachMaximumScalarV2(
 ## aclnnForeachMaximumScalarV2GetWorkspaceSize
 
 - **Parameters**
-  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <table style="table-layout: fixed; width: 1550px"><colgroup>
     <col style="width: 170px">
     <col style="width: 120px">
     <col style="width: 271px">
@@ -84,9 +84,9 @@ aclnnStatus aclnnForeachMaximumScalarV2(
       </tr></thead>
     <tbody>
     <tr>
-      <td>x (aclTensorList*)</td>
+      <td>x (const aclTensorList*)</td>
       <td>Input</td>
-      <td>Input tensor list that represents the maximum value operation. Corresponds to `x` in the formula.</td>
+      <td>Input tensor list that represents the maximum value operation. Corresponds to <code>x</code> in the formula.</td>
       <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32</td>
       <td>ND</td>
@@ -94,13 +94,13 @@ aclnnStatus aclnnForeachMaximumScalarV2(
       <td>√</td>
     </tr>
     <tr>
-      <td>scalar (aclScalar*)</td>
+      <td>scalar (const aclScalar*)</td>
       <td>Input</td>
-      <td>Input scalar that represents the maximum value operation. Corresponds to `scalar` in the formula.</td>
-      <td>Has a specific correspondence with the data type of input parameter `x`, and the values do not exceed the value range of the data type corresponding to input parameter `x`:
-      <ul><li>If the data type of `x` is FLOAT32 or BFLOAT16, the supported data types are FLOAT32 and DOUBLE.</li>
-      <li>If the data type of `x` is FLOAT16, the supported data types are FLOAT16 and DOUBLE.</li>
-      <li>If the data type of `x` is INT32, the supported data types are INT32 and INT64.</li></ul></td>
+      <td>Input scalar that represents the maximum value operation. Corresponds to <code>scalar</code> in the formula.</td>
+      <td>The data type must follow the mapping from <code>x</code> listed below. Finite values must be within the range of the data type of <code>x</code>. NaN and Inf are supported when <code>x</code> has a floating-point data type.
+      <ul><li>If the data type of <code>x</code> is FLOAT32 or BFLOAT16, the supported data types are FLOAT32 and DOUBLE.</li>
+      <li>If the data type of <code>x</code> is FLOAT16, the supported data types are FLOAT16 and DOUBLE.</li>
+      <li>If the data type of <code>x</code> is INT32, the supported data types are INT32 and INT64.</li></ul></td>
       <td>FLOAT32, FLOAT16, INT32, DOUBLE, INT64</td>
       <td>-</td>
       <td>-</td>
@@ -109,8 +109,8 @@ aclnnStatus aclnnForeachMaximumScalarV2(
     <tr>
       <td>out (aclTensorList*)</td>
       <td>Output</td>
-      <td>Output tensor list that represents the maximum value operation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape size is greater than or equal to the shape size of input parameter `x`.</li></ul></td>
+      <td>Output tensor list that represents the maximum value operation, corresponding to <code>y</code> in the formula.</td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The list has the same number of tensors as <code>x</code>. Each output has the same data type, data format and view shape as the corresponding input.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -145,42 +145,62 @@ aclnnStatus aclnnForeachMaximumScalarV2(
 
   The first-phase API performs input parameter validation and returns an error in the following scenarios:
 
-  <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
-  <col style="width: 268px">
-  <col style="width: 140px">
-  <col style="width: 762px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Error Code</th>
-      <th>Error Code</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>ACLNN_ERR_PARAM_NULLPTR</td>
-      <td>161001</td>
-      <td>x or out is a null pointer.</td>
-    </tr>
-    <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
-      <td>The data types of x, scalar, and out are not within the supported range.</td>
-    </tr>
-    <tr>
-      <td>The data types of x and out are inconsistent.</td></tr>
-    <tr><td>The shapes of x and out do not meet the constraints.</td></tr>
-    <tr><td>The data types of tensors in x or out are inconsistent.</td></tr>
-    <tr><td>The dimensions of tensors in x or out exceed 8.</td>
-    </tr>
-  </tbody></table>
+  <table style="table-layout: fixed; width: 1170px">
+    <colgroup>
+      <col style="width: 268px">
+      <col style="width: 140px">
+      <col style="width: 762px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Return Code</th>
+        <th>Code Value</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ACLNN_ERR_PARAM_NULLPTR</td>
+        <td>161001</td>
+        <td>One of <code>x</code>, <code>scalar</code>, or <code>out</code> is a null pointer.</td>
+      </tr>
+      <tr>
+        <td rowspan="9">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="9">161002</td>
+        <td>The data type of <code>x</code>, <code>scalar</code>, or <code>out</code> is not supported.</td>
+      </tr>
+      <tr>
+        <td>The data types of tensors in <code>x</code> or <code>out</code> are inconsistent, or the data type of <code>scalar</code> does not match the required mapping from <code>x</code>.</td>
+      </tr>
+      <tr>
+        <td>The view shape of an output tensor differs from that of the corresponding input tensor.</td>
+      </tr>
+      <tr>
+        <td>A tensor in <code>x</code> has more than 8 dimensions.</td>
+      </tr>
+      <tr>
+        <td><code>x</code> and <code>out</code> contain different numbers of tensors.</td>
+      </tr>
+      <tr>
+        <td>A tensor pointer in <code>x</code> or <code>out</code> is null.</td>
+      </tr>
+      <tr>
+        <td>The number of elements in a tensor in <code>x</code> or <code>out</code> is outside the representable range.</td>
+      </tr>
+      <tr>
+        <td>A tensor in <code>x</code> or <code>out</code> uses a private format.</td>
+      </tr>
+      <tr>
+        <td>The finite value of <code>scalar</code> is outside the range of the data type of <code>x</code>.</td>
+      </tr>
+    </tbody>
+  </table>
 
 ## aclnnForeachMaximumScalarV2
 
 - **Parameters**
 
-  <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
+  <table style="table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
   <col style="width: 112px">
   <col style="width: 668px">
@@ -221,6 +241,10 @@ aclnnStatus aclnnForeachMaximumScalarV2(
 
 ## Constraints
 
+- Non-contiguous input tensors in `x` and output tensors in `out` are supported.
+
+- The input tensor list `x` contains at most 256 tensors.
+
 - Deterministic computation:
   - aclnnForeachMaximumScalarV2 defaults to a deterministic implementation.
 
@@ -228,168 +252,214 @@ aclnnStatus aclnnForeachMaximumScalarV2(
 
 The following sample code is for reference only. For details about compilation and execution, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).
 
-```Cpp
+```cpp
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_foreach_maximum_scalar_v2.h"
 
 #define CHECK_RET(cond, return_expr) \
-  do {                               \
-    if (!(cond)) {                   \
-      return_expr;                   \
-    }                                \
-  } while (0)
+    do {                             \
+        if (!(cond)) {               \
+            return_expr;             \
+        }                            \
+    } while (0)
 
-#define LOG_PRINT(message, ...)     \
-  do {                              \
-    printf(message, ##__VA_ARGS__); \
-  } while (0)
+#define LOG_PRINT(message, ...)         \
+    do {                                \
+        printf(message, ##__VA_ARGS__); \
+    } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
-  int64_t shapeSize = 1;
-  for (auto i : shape) {
-    shapeSize *= i;
-  }
-  return shapeSize;
+int64_t GetShapeSize(const std::vector<int64_t>& shape)
+{
+    int64_t shapeSize = 1;
+    for (auto i : shape) {
+        shapeSize *= i;
+    }
+    return shapeSize;
 }
 
-int Init(int32_t deviceId, aclrtStream* stream) {
-  // Boilerplate, resource initialization.
-  auto ret = aclInit(nullptr);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
-  ret = aclrtSetDevice(deviceId);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
-  ret = aclrtCreateStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
-  return 0;
+int Init(int32_t deviceId, aclrtStream* stream)
+{
+    // Initialize the ACL resources.
+    auto ret = aclInit(nullptr);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
+    ret = aclrtSetDevice(deviceId);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret);
+        aclFinalize();
+        return ret;
+    }
+    ret = aclrtCreateStream(stream);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+        return ret;
+    }
+    return 0;
 }
 
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
-                    aclDataType dataType, aclTensor** tensor) {
-  auto size = GetShapeSize(shape) * sizeof(T);
-  // Call aclrtMalloc to allocate device memory.
-  auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-  // Call aclrtMemcpy to copy host data to device memory.
-  ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+                    aclDataType dataType, aclTensor** tensor)
+{
+    auto size = GetShapeSize(shape) * sizeof(T);
+    // Call aclrtMalloc to allocate device memory.
+    auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
+    // Call aclrtMemcpy to copy host data to device memory.
+    ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-  // Calculate the strides of the contiguous tensor.
-  std::vector<int64_t> strides(shape.size(), 1);
-  for (int64_t i = shape.size() - 2; i >= 0; i--) {
-    strides[i] = shape[i + 1] * strides[i + 1];
-  }
+    // Compute the strides of the contiguous tensor.
+    std::vector<int64_t> strides(shape.size(), 1);
+    for (int64_t i = shape.size() - 2; i >= 0; i--) {
+        strides[i] = shape[i + 1] * strides[i + 1];
+    }
 
-  // Call the aclCreateTensor API to create an aclTensor.
-  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                            shape.data(), shape.size(), *deviceAddr);
-  return 0;
+    // Call aclCreateTensor to create an aclTensor.
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return 1);
+    return 0;
 }
 
-int main() {
-  // 1. (Boilerplate) Initialize device/stream. For details, see the acl API manual.
-  // Set deviceId based on the actual device.
-  int32_t deviceId = 0;
-  aclrtStream stream;
-  auto ret = Init(deviceId, &stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+int main()
+{
+    // 1. Initialize the device and stream. For details, see the ACL API reference.
+    // Set deviceId to the actual device ID.
+    int32_t deviceId = 0;
+    aclrtStream stream = nullptr;
+    auto ret = Init(deviceId, &stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. Construct inputs and outputs. Customize the construction based on the API.
-  std::vector<int64_t> selfShape1 = {2, 3};
-  std::vector<int64_t> selfShape2 = {1, 3};
-  std::vector<int64_t> outShape1 = {2, 3};
-  std::vector<int64_t> outShape2 = {1, 3};
-  void* input1DeviceAddr = nullptr;
-  void* input2DeviceAddr = nullptr;
-  void* out1DeviceAddr = nullptr;
-  void* out2DeviceAddr = nullptr;
-  aclTensor* input1 = nullptr;
-  aclTensor* input2 = nullptr;
-  aclScalar* alpha = nullptr;
-  aclTensor* out1 = nullptr;
-  aclTensor* out2 = nullptr;
-  std::vector<float> input1HostData = {1, 2, 3, 4, 5, 6};
-  std::vector<float> input2HostData = {7, 8, 9};
-  std::vector<float> out1HostData(6, 0);
-  std::vector<float> out2HostData(3, 0);
-  float alphaValue = 5.2f;
-  // Create the input1 aclTensor.
-  ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create the input2 aclTensor.
-  ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_FLOAT, &input2);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create the alpha aclScalar.
-  alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha != nullptr, return ret);
-  // Create out1 aclTensor.
-  ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create out2 aclTensor.
-  ret = CreateAclTensor(out2HostData, outShape2, &out2DeviceAddr, aclDataType::ACL_FLOAT, &out2);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  std::vector<aclTensor*> tempInput{input1, input2};
-  aclTensorList* tensorListInput = aclCreateTensorList(tempInput.data(), tempInput.size());
-  std::vector<aclTensor*> tempOutput{out1, out2};
-  aclTensorList* tensorListOutput = aclCreateTensorList(tempOutput.data(), tempOutput.size());
+    // 2. Construct the inputs and outputs according to the API.
+    std::vector<int64_t> selfShape1 = {2, 3};
+    std::vector<int64_t> selfShape2 = {1, 3};
+    std::vector<int64_t> outShape1 = {2, 3};
+    std::vector<int64_t> outShape2 = {1, 3};
+    void* input1DeviceAddr = nullptr;
+    void* input2DeviceAddr = nullptr;
+    void* out1DeviceAddr = nullptr;
+    void* out2DeviceAddr = nullptr;
+    aclTensor* input1 = nullptr;
+    aclTensor* input2 = nullptr;
+    aclScalar* alpha = nullptr;
+    aclTensor* out1 = nullptr;
+    aclTensor* out2 = nullptr;
+    std::vector<float> input1HostData = {1, 2, 3, 4, 5, 6};
+    std::vector<float> input2HostData = {7, 8, 9};
+    std::vector<float> out1HostData(6, 0);
+    std::vector<float> out2HostData(3, 0);
+    float alphaValue = 5.2f;
+    aclTensorList* tensorListInput = nullptr;
+    aclTensorList* tensorListOutput = nullptr;
+    void* workspaceAddr = nullptr;
+    aclOpExecutor* executor = nullptr;
+    auto run = [&]() -> int {
+        // Create the input1 aclTensor.
+        ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        // Create the input2 aclTensor.
+        ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_FLOAT, &input2);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        // Create the alpha aclScalar.
+        alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
+        CHECK_RET(alpha != nullptr, LOG_PRINT("aclCreateScalar failed.\n"); return 1);
+        // Create the out1 aclTensor.
+        ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        // Create the out2 aclTensor.
+        ret = CreateAclTensor(out2HostData, outShape2, &out2DeviceAddr, aclDataType::ACL_FLOAT, &out2);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+        std::vector<aclTensor*> tempInput{input1, input2};
+        tensorListInput = aclCreateTensorList(tempInput.data(), tempInput.size());
+        CHECK_RET(tensorListInput != nullptr, LOG_PRINT("aclCreateTensorList input failed.\n"); return 1);
+        std::vector<aclTensor*> tempOutput{out1, out2};
+        tensorListOutput = aclCreateTensorList(tempOutput.data(), tempOutput.size());
+        CHECK_RET(tensorListOutput != nullptr, LOG_PRINT("aclCreateTensorList output failed.\n"); return 1);
 
-  // 3. Call the CANN operator library API. Replace it with the specific API name.
-  uint64_t workspaceSize = 0;
-  aclOpExecutor* executor;
-  // Call the aclnnForeachMaximumScalarV2 first-phase API.
-  ret = aclnnForeachMaximumScalarV2GetWorkspaceSize(tensorListInput, alpha, tensorListOutput, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMaximumScalarV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // Allocate device memory based on the workspaceSize computed by the first-phase API.
-  void* workspaceAddr = nullptr;
-  if (workspaceSize > 0) {
-    ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
-  }
-  // Call the aclnnForeachMaximumScalarV2 second-phase API.
-  ret = aclnnForeachMaximumScalarV2(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMaximumScalarV2 failed. ERROR: %d\n", ret); return ret);
+        // 3. Call the CANN operator library API.
+        uint64_t workspaceSize = 0;
+        // Call the first-phase API aclnnForeachMaximumScalarV2GetWorkspaceSize.
+        ret = aclnnForeachMaximumScalarV2GetWorkspaceSize(tensorListInput, alpha, tensorListOutput, &workspaceSize,
+                                                          &executor);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMaximumScalarV2GetWorkspaceSize failed. ERROR: %d\n", ret);
+                  return ret);
+        // Allocate device memory using the workspaceSize returned by the first-phase API.
+        if (workspaceSize > 0) {
+            ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+            CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        }
+        // Call the second-phase API aclnnForeachMaximumScalarV2.
+        ret = aclnnForeachMaximumScalarV2(workspaceAddr, workspaceSize, executor, stream);
+        executor = nullptr; // The second-stage call consumes the executor.
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMaximumScalarV2 failed. ERROR: %d\n", ret); return ret);
 
-  // 4. (boilerplate) Wait for the task execution to complete synchronously.
-  ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+        // 4. Wait for task execution to complete.
+        ret = aclrtSynchronizeStream(stream);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 5. Obtain the output value. Copy the result on the device side to the host side. Modify it based on the specific API definition.
-  auto size = GetShapeSize(outShape1);
-  std::vector<float> out1Data(size, 0);
-  ret = aclrtMemcpy(out1Data.data(), out1Data.size() * sizeof(out1Data[0]), out1DeviceAddr,
-                    size * sizeof(out1Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("out1 result[%ld] is: %f\n", i, out1Data[i]);
-  }
+        // 5. Copy the outputs from device memory to host memory.
+        auto size = GetShapeSize(outShape1);
+        std::vector<float> out1Data(size, 0);
+        ret = aclrtMemcpy(out1Data.data(), out1Data.size() * sizeof(out1Data[0]), out1DeviceAddr,
+                          size * sizeof(out1Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+                  return ret);
+        for (int64_t i = 0; i < size; i++) {
+            LOG_PRINT("out1 result[%ld] is: %f\n", i, out1Data[i]);
+        }
 
-  size = GetShapeSize(outShape2);
-  std::vector<float> out2Data(size, 0);
-  ret = aclrtMemcpy(out2Data.data(), out2Data.size() * sizeof(out2Data[0]), out2DeviceAddr,
-                    size * sizeof(out2Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("out2 result[%ld] is: %f\n", i, out2Data[i]);
-  }
+        size = GetShapeSize(outShape2);
+        std::vector<float> out2Data(size, 0);
+        ret = aclrtMemcpy(out2Data.data(), out2Data.size() * sizeof(out2Data[0]), out2DeviceAddr,
+                          size * sizeof(out2Data[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+                  return ret);
+        for (int64_t i = 0; i < size; i++) {
+            LOG_PRINT("out2 result[%ld] is: %f\n", i, out2Data[i]);
+        }
 
-  // 6. Release aclTensor and aclScalar. Modify it based on the specific API definition.
-  aclDestroyTensorList(tensorListInput);
-  aclDestroyTensorList(tensorListOutput);
-  aclDestroyScalar(alpha);
-
-  // 7.Release device resources. Modify it based on the specific API definition.
-  aclrtFree(input1DeviceAddr);
-  aclrtFree(input2DeviceAddr);
-  aclrtFree(out1DeviceAddr);
-  aclrtFree(out2DeviceAddr);
-  if (workspaceSize > 0) {
-    aclrtFree(workspaceAddr);
-  }
-  aclrtDestroyStream(stream);
-  aclrtResetDevice(deviceId);
-  aclFinalize();
-  return 0;
+        return ACL_SUCCESS;
+    };
+    ret = run();
+    // Keep the first failure while attempting every cleanup operation.
+    auto cleanup = [&](int status, const char* operation) {
+        if (status != ACL_SUCCESS) {
+            LOG_PRINT("%s failed. ERROR: %d\n", operation, status);
+            if (ret == ACL_SUCCESS) {
+                ret = status;
+            }
+        }
+    };
+    cleanup(aclrtSynchronizeStream(stream), "aclrtSynchronizeStream");
+    if (executor != nullptr) {
+        cleanup(aclDestroyAclOpExecutor(executor), "aclDestroyAclOpExecutor");
+    }
+    // A successfully created TensorList owns its tensor descriptors.
+    if (tensorListInput != nullptr) {
+        cleanup(aclDestroyTensorList(tensorListInput), "aclDestroyTensorList input");
+    } else {
+        cleanup(aclDestroyTensor(input1), "aclDestroyTensor input1");
+        cleanup(aclDestroyTensor(input2), "aclDestroyTensor input2");
+    }
+    if (tensorListOutput != nullptr) {
+        cleanup(aclDestroyTensorList(tensorListOutput), "aclDestroyTensorList output");
+    } else {
+        cleanup(aclDestroyTensor(out1), "aclDestroyTensor out1");
+        cleanup(aclDestroyTensor(out2), "aclDestroyTensor out2");
+    }
+    cleanup(aclDestroyScalar(alpha), "aclDestroyScalar");
+    for (auto address : {input1DeviceAddr, input2DeviceAddr, out1DeviceAddr, out2DeviceAddr, workspaceAddr}) {
+        if (address != nullptr) {
+            cleanup(aclrtFree(address), "aclrtFree");
+        }
+    }
+    cleanup(aclrtDestroyStream(stream), "aclrtDestroyStream");
+    cleanup(aclrtResetDevice(deviceId), "aclrtResetDevice");
+    cleanup(aclFinalize(), "aclFinalize");
+    return ret;
 }
 ```

@@ -61,7 +61,7 @@ struct ComputeType<bfloat16_t> {
 };
 
 /**
- * \brief NaN-propagating maximum for float type (IEEE 754-2019 maximum)
+ * \brief NaN-propagating maximum for float type, preserving the input on ties
  */
 __simt_callee__ inline float SimtMaximum(float a, float b)
 {
@@ -77,9 +77,7 @@ __simt_callee__ inline float SimtMaximum(float a, float b)
     if (b > a) {
         return b;
     }
-    if (a == 0.0f) {
-        return a + b;
-    }
+    // Match torch.maximum: equal values, including signed zeros, select x.
     return a;
 }
 

@@ -19,6 +19,9 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
+#include "base/err_msg.h"
+#include <string>
+#include <vector>
 
 using namespace op;
 
@@ -120,6 +123,24 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
+    if (scalar->GetViewShape().GetShapeSize() != 1) {
+        const auto scalarSize = std::to_string(scalar->GetViewShape().GetShapeSize());
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "scalar must contain exactly one element, but got %s.",
+                               scalarSize.c_str());
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ0014", (std::vector<const char*>{"param_name", "op_name", "incorrect_size", "correct_size"}),
+            (std::vector<const char*>{"scalar", "aclnnForeachMaximumScalar", scalarSize.c_str(), "1"}));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (self->Size() != out->Size()) {
+        const auto counts = std::to_string(self->Size()) + ", " + std::to_string(out->Size());
+        const char* reason = "x and out must have the same number of tensors";
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s, but got %s.", reason, counts.c_str());
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ0023", (std::vector<const char*>{"param_names", "op_name", "incorrect_nums", "reason"}),
+            (std::vector<const char*>{"x, out", "aclnnForeachMaximumScalar", counts.c_str(), reason}));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShapeValid/CheckFormat.
@@ -162,8 +183,11 @@ static aclnnStatus ExecForeachMaximumScalarGetWorkspaceSize(const aclTensorList*
     auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 复用V2桥接，scalar(aclTensor*)直接透传，输出到连续buffer
-    auto result = l0op::ForeachMaximumScalarV2(contiguousTensors, scalar, contiguousOut, uniqueExecutor.get());
+    // Normalize the scalar view as well: Tiling consumes storage shapes.
+    auto contiguousScalar = l0op::Contiguous(scalar, uniqueExecutor.get());
+    CHECK_RET(contiguousScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto result = l0op::ForeachMaximumScalarV2(contiguousTensors, contiguousScalar, contiguousOut,
+                                               uniqueExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）

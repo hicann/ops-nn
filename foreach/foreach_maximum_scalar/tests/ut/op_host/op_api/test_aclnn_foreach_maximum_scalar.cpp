@@ -9,6 +9,9 @@
  */
 
 #include <vector>
+#include <map>
+#include <string>
+#include "experiment/metadef/common/util/error_manager/error_manager.h"
 #include <array>
 #include <float.h>
 #include "gtest/gtest.h"
@@ -22,6 +25,30 @@ using namespace std;
 
 class l2_foreach_maximum_scalar_test : public testing::Test {
 protected:
+    void SetUp() override
+    {
+        auto& errorManager = ErrorManager::GetInstance();
+        errorManager.GenWorkStreamIdDefault();
+        (void)errorManager.GetRawErrorMessages();
+    }
+
+    static void ExpectError(const char* code, const std::map<std::string, std::string>& expectedArgs)
+    {
+        // The host executor can also emit EE runtime context diagnostics without an NPU.
+        std::vector<ErrorManager::ErrorItem> errors;
+        for (const auto& error : ErrorManager::GetInstance().GetRawErrorMessages()) {
+            if (error.error_id.compare(0, 2, "EZ") == 0) {
+                errors.push_back(error);
+            }
+        }
+        ASSERT_EQ(errors.size(), 1U);
+        EXPECT_EQ(errors[0].error_id, code);
+        for (const auto& [key, value] : expectedArgs) {
+            ASSERT_NE(errors[0].args_map.count(key), 0U) << key;
+            EXPECT_EQ(errors[0].args_map.at(key), value) << key;
+        }
+    }
+
     static void SetUpTestCase() { cout << "foreach_maximum_scalar_test SetUp" << endl; }
 
     static void TearDownTestCase() { cout << "foreach_maximum_scalar_test TearDown" << endl; }
@@ -42,4 +69,39 @@ TEST_F(l2_foreach_maximum_scalar_test, ascend910B2_foreach_maximum_scalar_test_n
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+TEST_F(l2_foreach_maximum_scalar_test, rejects_mismatched_output_list)
+{
+    auto x = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto scalar = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnForeachMaximumScalar, INPUT(TensorListDesc({x, x}), scalar), OUTPUT(TensorListDesc({x})));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+    ExpectError("EZ0023",
+                {{"param_names", "x, out"}, {"incorrect_nums", "2, 1"}, {"op_name", "aclnnForeachMaximumScalar"}});
+}
+
+TEST_F(l2_foreach_maximum_scalar_test, accepts_scalar_view_with_offset_and_larger_storage)
+{
+    auto x = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto scalar = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND, {1}, 2, {4});
+    auto ut = OP_API_UT(aclnnForeachMaximumScalar, INPUT(TensorListDesc({x}), scalar), OUTPUT(TensorListDesc({x})));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_foreach_maximum_scalar_test, rejects_non_scalar_tensor)
+{
+    auto x = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    for (int64_t size : {0, 2}) {
+        auto scalar = TensorDesc({size}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnForeachMaximumScalar, INPUT(TensorListDesc({x}), scalar), OUTPUT(TensorListDesc({x})));
+        uint64_t workspaceSize = 0;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+        ExpectError("EZ0014", {{"param_name", "scalar"},
+                               {"incorrect_size", std::to_string(size)},
+                               {"correct_size", "1"},
+                               {"op_name", "aclnnForeachMaximumScalar"}});
+    }
 }

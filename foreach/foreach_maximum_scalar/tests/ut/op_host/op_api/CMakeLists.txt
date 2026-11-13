@@ -11,4 +11,6 @@
 file(GLOB CURRENT_DIR RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
 if(UT_TEST_ALL OR OP_API_UT)
     add_modules_ut_sources(HOSTNAME ${OP_API_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    target_include_directories(${OP_API_MODULE_NAME}_cases_obj PRIVATE
+        ${OPS_NN_DIR}/tests/ut/op_api/op_api_ut_common/inc)
 endif()

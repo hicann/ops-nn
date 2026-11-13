@@ -63,7 +63,7 @@ TEST_F(foreach_maximum_scalar_test, test_case_float_1)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
     AscendC::GmFree((void*)xs);
-    system("cd ./maximum_scalar_data/ && python3 compare_data.py 'float32'");
+    EXPECT_EQ(system("cd ./maximum_scalar_data/ && python3 compare_data.py 'float32'"), 0);
 }
 
 TEST_F(foreach_maximum_scalar_test, test_case_float16_2)
@@ -98,7 +98,7 @@ TEST_F(foreach_maximum_scalar_test, test_case_float16_2)
     AscendC::GmFree((void*)tiling);
     AscendC::GmFree((void*)xs);
 
-    system("cd ./maximum_scalar_data/ && python3 compare_data.py 'float16'");
+    EXPECT_EQ(system("cd ./maximum_scalar_data/ && python3 compare_data.py 'float16'"), 0);
 }
 
 TEST_F(foreach_maximum_scalar_test, test_case_int32_3)
@@ -132,7 +132,7 @@ TEST_F(foreach_maximum_scalar_test, test_case_int32_3)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
     AscendC::GmFree((void*)xs);
-    system("cd ./maximum_scalar_data/ && python3 compare_data.py 'int32'");
+    EXPECT_EQ(system("cd ./maximum_scalar_data/ && python3 compare_data.py 'int32'"), 0);
 }
 
 TEST_F(foreach_maximum_scalar_test, test_case_bfloat16_4)
@@ -166,5 +166,5 @@ TEST_F(foreach_maximum_scalar_test, test_case_bfloat16_4)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
     AscendC::GmFree((void*)xs);
-    system("cd ./maximum_scalar_data/ && python3 compare_data.py 'bfloat16_t'");
+    EXPECT_EQ(system("cd ./maximum_scalar_data/ && python3 compare_data.py 'bfloat16_t'"), 0);
 }

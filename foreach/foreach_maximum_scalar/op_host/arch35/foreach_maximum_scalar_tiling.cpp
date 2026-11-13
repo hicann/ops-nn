@@ -22,6 +22,9 @@
 #include "op_host/tiling_templates_registry.h"
 #include "../../op_kernel/arch35/foreach_maximum_scalar_tiling_data.h"
 #include "../../op_kernel/arch35/foreach_maximum_scalar_tiling_key.h"
+#include <limits>
+#include <string>
+#include <vector>
 
 namespace optiling {
 
@@ -32,18 +35,77 @@ constexpr int32_t INPUT_IDX_0 = 0;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t MIN_PER_CORE = 1024;
 constexpr int32_t MAX_TENSOR_NUM = 256;
+constexpr size_t MAX_DIMS = 8;
 
 struct ForeachMaximumScalarCompileInfo {};
+
+static const char* GetTilingOpName(gert::TilingContext* context)
+{
+    const char* name = context->GetNodeName();
+    return name != nullptr ? name : "ForeachMaximumScalar";
+}
+
+static void ReportTilingError(gert::TilingContext* context, const std::string& reason)
+{
+    const char* opName = GetTilingOpName(context);
+    OP_LOGE_WITHOUT_REPORT(opName, "%s", reason.c_str());
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {opName, reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+}
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
+    OP_CHECK_IF(platformInfoPtr == nullptr, ReportTilingError(context, "Platform information is missing"),
+                return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum == 0, ReportTilingError(context, "Available AIV core count is 0"), return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        ubSize <= DCACHE_SIZE || ubSize - DCACHE_SIZE > std::numeric_limits<uint32_t>::max(),
+        ReportTilingError(context, "Invalid UB size " + std::to_string(ubSize) + ": must exceed reserved size " +
+                                       std::to_string(DCACHE_SIZE) + " and leave at most UINT32_MAX bytes available"),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckTensor(gert::TilingContext* context, const std::string& paramName,
+                                   const gert::CompileTimeTensorDesc* desc, const gert::StorageShape* shape,
+                                   ge::DataType dtype, int64_t& numel)
+{
+    const char* opName = GetTilingOpName(context);
+    OP_CHECK_IF(desc == nullptr || shape == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(opName, paramName, "Tensor descriptor or shape is missing"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(desc->GetDataType() != dtype,
+                OP_LOGE_FOR_INVALID_DTYPE(opName, paramName, Ops::Base::ToString(desc->GetDataType()),
+                                          Ops::Base::ToString(dtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(desc->GetStorageFormat() != ge::FORMAT_ND,
+                OP_LOGE_FOR_INVALID_FORMAT(opName, paramName + ".storage_format",
+                                           Ops::Base::ToString(desc->GetStorageFormat()), "ND"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(desc->GetOriginFormat() != ge::FORMAT_ND,
+                OP_LOGE_FOR_INVALID_FORMAT(opName, paramName + ".origin_format",
+                                           Ops::Base::ToString(desc->GetOriginFormat()), "ND"),
+                return ge::GRAPH_FAILED);
+    const auto& storageShape = shape->GetStorageShape();
+    OP_CHECK_IF(storageShape.GetDimNum() > MAX_DIMS,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(opName, paramName, std::to_string(storageShape.GetDimNum()), "[0, 8]"),
+                return ge::GRAPH_FAILED);
+    for (size_t dim = 0; dim < storageShape.GetDimNum(); ++dim) {
+        OP_CHECK_IF(storageShape.GetDim(dim) < 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, paramName, Ops::Base::ToString(storageShape),
+                                                          "Dimension " + std::to_string(dim) + " must be non-negative"),
+                    return ge::GRAPH_FAILED);
+    }
+    numel = storageShape.GetShapeSize();
+    OP_CHECK_IF(numel < 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, paramName, Ops::Base::ToString(storageShape),
+                                                      "Tensor element count exceeds INT64_MAX"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -52,39 +114,90 @@ static ge::graphStatus ForeachMaximumScalarTilingFunc(gert::TilingContext* conte
     // 1. Get platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    if (GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    const char* opName = GetTilingOpName(context);
 
     // 2. Get tensor list info
     auto computeNodeInfoPtr = context->GetComputeNodeInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
+    OP_CHECK_IF(computeNodeInfoPtr == nullptr, ReportTilingError(context, "Compute node information is missing"),
+                return ge::GRAPH_FAILED);
     auto idxInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(INPUT_IDX_0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
+    OP_CHECK_IF(idxInstanceInfoPtr == nullptr, ReportTilingError(context, "x instance information is missing"),
+                return ge::GRAPH_FAILED);
     uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
+    OP_CHECK_IF(tensorNum == 0 || tensorNum > MAX_TENSOR_NUM,
+                OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(opName, "x", std::to_string(tensorNum),
+                                                           "Tensor count must be in [1, 256]"),
+                return ge::GRAPH_FAILED);
+    auto scalarInstanceInfo = computeNodeInfoPtr->GetInputInstanceInfo(1);
+    auto outputInstanceInfo = computeNodeInfoPtr->GetOutputInstanceInfo(0);
+    OP_CHECK_IF(scalarInstanceInfo == nullptr || outputInstanceInfo == nullptr,
+                ReportTilingError(context, "scalar or y instance information is missing"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(scalarInstanceInfo->GetInstanceNum() != 1,
+                OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(opName, "scalar",
+                                                           std::to_string(scalarInstanceInfo->GetInstanceNum()),
+                                                           "Exactly one scalar tensor is required"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        outputInstanceInfo->GetInstanceNum() != tensorNum,
+        OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(
+            opName, "x, y", std::to_string(tensorNum) + ", " + std::to_string(outputInstanceInfo->GetInstanceNum()),
+            "x and y must have the same number of tensors"),
+        return ge::GRAPH_FAILED);
 
     // 3. Get dtype for tiling key
     auto inputDesc = context->GetDynamicInputDesc(INPUT_IDX_0, 0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    OP_CHECK_IF(inputDesc == nullptr,
+                OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(opName, "x[0]", "Tensor descriptor is missing"),
+                return ge::GRAPH_FAILED);
     ge::DataType dataType = inputDesc->GetDataType();
+    OP_CHECK_IF(
+        dataType != ge::DT_FLOAT && dataType != ge::DT_FLOAT16 && dataType != ge::DT_INT32 && dataType != ge::DT_BF16,
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "x[0]", Ops::Base::ToString(dataType), "FLOAT, FLOAT16, INT32, BF16"),
+        return ge::GRAPH_FAILED);
+    int64_t scalarElements = 0;
+    auto scalarType = dataType == ge::DT_BF16 ? ge::DT_FLOAT : dataType;
+    if (CheckTensor(context, "scalar", context->GetDynamicInputDesc(1, 0), context->GetDynamicInputShape(1, 0),
+                    scalarType, scalarElements) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_CHECK_IF(scalarElements != 1,
+                OP_LOGE_FOR_INVALID_SHAPESIZE(opName, "scalar", std::to_string(scalarElements), "1"),
+                return ge::GRAPH_FAILED);
 
     // 4. Fill tiling data
     ForeachMaximumScalarTilingData* tiling = context->GetTilingData<ForeachMaximumScalarTilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
+    OP_CHECK_IF(tiling == nullptr, ReportTilingError(context, "Tiling data buffer is missing"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(ForeachMaximumScalarTilingData), 0, sizeof(ForeachMaximumScalarTilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+        ReportTilingError(context, "Failed to clear tiling data buffer"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM,
-                OP_LOGE(context, "tensorNum[%lu] should be less than or equal to %u", tensorNum, MAX_TENSOR_NUM),
-                return ge::GRAPH_FAILED);
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     int64_t totalElements = 0;
 
     for (uint64_t i = 0; i < tensorNum; i++) {
-        auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
-        auto storageShape = shapePtr->GetStorageShape();
-        int64_t numel = storageShape.GetShapeSize();
+        int64_t numel = 0;
+        int64_t outputElements = 0;
+        const auto inputName = "x[" + std::to_string(i) + "]";
+        const auto outputName = "y[" + std::to_string(i) + "]";
+        if (CheckTensor(context, inputName, context->GetDynamicInputDesc(INPUT_IDX_0, i),
+                        context->GetDynamicInputShape(INPUT_IDX_0, i), dataType, numel) != ge::GRAPH_SUCCESS ||
+            CheckTensor(context, outputName, context->GetOutputDesc(i), context->GetOutputShape(i), dataType,
+                        outputElements) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+        OP_CHECK_IF(outputElements < numel,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(opName, outputName, std::to_string(outputElements),
+                                                  ">= " + std::to_string(numel)),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(numel > std::numeric_limits<int64_t>::max() - totalElements,
+                    OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                        opName, "x", std::to_string(totalElements) + " + " + std::to_string(numel),
+                        "Total tensor element count exceeds INT64_MAX"),
+                    return ge::GRAPH_FAILED);
         tiling->tensorElements[i] = numel;
         totalElements += numel;
     }
@@ -102,7 +215,8 @@ static ge::graphStatus ForeachMaximumScalarTilingFunc(gert::TilingContext* conte
 
     // 6. Set workspace
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    OP_CHECK_IF(currentWorkspace == nullptr, ReportTilingError(context, "Workspace size buffer is missing"),
+                return ge::GRAPH_FAILED);
     currentWorkspace[0] = WS_SYS_SIZE;
 
     // 7. Set local memory size
@@ -116,11 +230,8 @@ static ge::graphStatus ForeachMaximumScalarTilingFunc(gert::TilingContext* conte
         tilingKey = GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_FLOAT16);
     } else if (dataType == ge::DT_INT32) {
         tilingKey = GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_INT32);
-    } else if (dataType == ge::DT_BF16) {
-        tilingKey = GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_BF16);
     } else {
-        OP_LOGE(context, "unsupported dtype for foreach_maximum_scalar");
-        return ge::GRAPH_FAILED;
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_MAXIMUM_SCALAR_TPL_SCH_MODE_BF16);
     }
     context->SetTilingKey(tilingKey);
 

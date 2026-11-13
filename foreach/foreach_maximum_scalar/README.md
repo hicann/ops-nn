@@ -10,8 +10,8 @@
 |  <term>Atlas 200I/500 A2推理产品</term>    |     ×    |
 |  <term>Atlas推理系列产品</term>    |     ×    |
 |  <term>Atlas训练系列产品</term>    |     ×    |
-|  <term>Kirin X90处理器系列产品</term> | √ |
-|  <term>Kirin 9030处理器系列产品</term> | √ |
+|  <term>KirinX90处理器系列产品</term> | √ |
+|  <term>Kirin9030处理器系列产品</term> | √ |
 
 ## 功能说明
 
@@ -30,7 +30,7 @@
 
 ## 参数说明
 
-<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+<table style="table-layout: fixed; width: 1005px"><colgroup>
   <col style="width: 170px">
   <col style="width: 170px">
   <col style="width: 352px">
@@ -49,31 +49,31 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示取最大值运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示取最大值运算的输入张量列表，对应公式中的<code>x</code>。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scalar</td>
       <td>输入</td>
-      <td>表示取最大值运算的输入张量，对应公式中的`scalar`。元素个数为1。数据类型与入参`x`的数据类型具有一定对应关系：当`x`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x`的数据类型保持一致；当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</td>
+      <td>表示取最大值运算的输入张量，对应公式中的<code>scalar</code>。元素个数为1。数据类型与入参<code>x</code>的数据类型具有一定对应关系：当<code>x</code>的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与<code>x</code>的数据类型保持一致；当<code>x</code>的数据类型为BFLOAT16时，数据类型支持FLOAT32。</td>
       <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示取最大值运算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示取最大值运算的输出张量列表，对应公式中的<code>y</code>。成员数量与<code>x</code>一致，对应成员的数据类型、数据格式和shape与<code>x</code>一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-- <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：x和y的数据类型不支持BFLOAT16。
+- <term>KirinX90处理器系列产品</term>、<term>Kirin9030处理器系列产品</term>：x和y的数据类型不支持BFLOAT16。
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+- 输入张量列表`x`中Tensor的数量不超过256。
 
 ## 调用说明
 

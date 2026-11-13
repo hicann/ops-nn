@@ -27,8 +27,9 @@ extern "C" {
  * @param [in]   x
  * 输入Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16，INT32。数据格式支持ND。
  * @param [in]   scalar
- * 输入Scalar，数据类型支持FLOAT、FLOAT32和INT32。数据格式支持ND。
- * @param [in]   out
+ * 输入Scalar，无数据格式。x为FLOAT或BFLOAT16时支持FLOAT、DOUBLE；
+ * x为FLOAT16时支持FLOAT16、DOUBLE；x为INT32时支持INT32、INT64。
+ * @param [out]  out
  * 输出Tensor，数据类型支持FLOAT，FLOAT16，BFLOAT16，INT32。数据格式支持ND。
  * @param [out]  workspaceSize   返回用户需要在npu device侧申请的workspace大小。
  * @param [out]  executor         返回op执行器，包含了算子计算流程。

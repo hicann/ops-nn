@@ -12,8 +12,8 @@ English | [简体中文](./README.md)
 |  <term>Atlas 200I/500 A2 inference products</term>    |     ×    |
 |  <term>Atlas inference products</term>    |     ×    |
 |  <term>Atlas training products</term>    |     ×    |
-|  <term>Kirin X90 processor series products</term> | √ |
-|  <term>Kirin 9030 processor series products</term> | √ |
+|  <term>KirinX90 processor series products</term> | √ |
+|  <term>Kirin9030 processor series products</term> | √ |
 
 ## Function
 
@@ -32,7 +32,7 @@ English | [简体中文](./README.md)
 
 ## Parameters
 
-<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+<table style="table-layout: fixed; width: 1005px"><colgroup>
   <col style="width: 170px">
   <col style="width: 170px">
   <col style="width: 352px">
@@ -51,31 +51,31 @@ English | [简体中文](./README.md)
     <tr>
       <td>x</td>
       <td>Input</td>
-      <td>Denotes the input tensor list of the maximum operation, corresponding to `x` in the formula. The data types of all tensors in this parameter are consistent.</td>
+      <td>Denotes the input tensor list of the maximum operation, corresponding to <code>x</code> in the formula. The data types of all tensors in this parameter are consistent.</td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scalar</td>
       <td>Input</td>
-      <td>Denotes the input tensor of the maximum operation, corresponding to `scalar` in the formula. The number of elements is 1. The data type has a certain correspondence with the data type of the input parameter `x`: when the data type of `x` is FLOAT32, FLOAT16, or INT32, the data type is consistent with the data type of `x`; when the data type of `x` is BFLOAT16, the data type supports FLOAT32.</td>
+      <td>Denotes the input tensor of the maximum operation, corresponding to <code>scalar</code> in the formula. The number of elements is 1. The data type has a certain correspondence with the data type of the input parameter <code>x</code>: when the data type of <code>x</code> is FLOAT32, FLOAT16, or INT32, the data type is consistent with the data type of <code>x</code>; when the data type of <code>x</code> is BFLOAT16, the data type supports FLOAT32.</td>
       <td>FLOAT32, FLOAT16, INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Denotes the output tensor list of the maximum operation, corresponding to `y` in the formula. The data type and data format are consistent with those of the input parameter `x`, and the shape size is greater than or equal to the shape size of the input parameter `x`. The data types of all tensors in this parameter are consistent.</td>
+      <td>Denotes the output tensor list of the maximum operation, corresponding to <code>y</code> in the formula. The list has the same number of tensors as <code>x</code>. Each output has the same data type, data format and shape as the corresponding input tensor.</td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-- <term>Kirin X90 processor series products</term>, <term>Kirin 9030 processor series products</term>: the data types of x and y do not support BFLOAT16.
+- <term>KirinX90 processor series products</term>, <term>Kirin9030 processor series products</term>: the data types of x and y do not support BFLOAT16.
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- The input tensor list `x` contains at most 256 tensors.
 
 ## Invocation Description
 
