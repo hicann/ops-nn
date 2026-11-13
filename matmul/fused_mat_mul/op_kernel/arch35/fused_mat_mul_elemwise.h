@@ -39,12 +39,9 @@
 namespace FusedMatMulAdvanced {
 // inner_precise = 0(高精度)累加器保持FP32并FP32域融合; 1(高性能)在元素域融合,
 // 对齐legacy MatMulMixWithoutQueActKernel的MmOutTypeSelector语义.
-// ForceFloatAcc: 1V2重映射路径(NONE全载)累加器恒FP32——B16累加器+DUAL_DST_SPLIT_M
-// 存在设备侧缺口(tensor_api的l0c_to_ub n_size推导不做c0对齐), 无法按B16开splitM双AIV;
-// 此时融合域仍随inner_precise(1=融合前acc先舍回CType输出域, 恢复legacy bf16累加语义).
-template <typename CType, int8_t InnerPrecise, bool ForceFloatAcc = false>
+template <typename CType, int8_t InnerPrecise>
 struct FmmAccTypeSelector {
-    static constexpr bool useFloat = (InnerPrecise == 0) || ForceFloatAcc;
+    static constexpr bool useFloat = (InnerPrecise == 0);
     using type = AscendC::Std::conditional_t<useFloat, float, CType>;
 };
 
@@ -54,10 +51,7 @@ template <typename AType, typename BType, typename CType, typename BiasType, boo
 __aicore__ inline void FusedMatMulAddMulKernel(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM,
                                                GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tiling)
 {
-    // 1V2重映射产出(NONE全载+1V2): 累加器恒FP32(splitM双AIV, 设备侧缺口); 融合域仍随InnerPrecise.
-    static constexpr bool kRemapTo1V2 = (FullLoadMode == MAT_MUL_NO_FULL_LOAD) &&
-                                        (L0C2OutMode == MAT_MUL_1V2_ND_ALIG_FIXPIPE);
-    using AccType = typename FmmAccTypeSelector<CType, InnerPrecise, kRemapTo1V2>::type;
+    using AccType = typename FmmAccTypeSelector<CType, InnerPrecise>::type;
     using LayoutA = AscendC::Std::conditional_t<ATran, asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn>;
     using LayoutB = AscendC::Std::conditional_t<BTran, asc::te::dn_ext_layout_ptn, asc::te::nd_ext_layout_ptn>;
     using Layout = asc::te::nd_ext_layout_ptn;
@@ -79,7 +73,10 @@ __aicore__ inline void FusedMatMulAddMulKernel(GM_ADDR x1GM, GM_ADDR x2GM, GM_AD
     using KernelParams = typename MatmulKernel::Params;
 
     // FP32累加器需要两个AIV分M, 使累加镜像+x3/输出staging能放进UB
-    const uint8_t splitM = AscendC::IsSameType<AccType, float>::value ? 1U : 0U;
+    // mmad侧对b16改走两条单目的地fixpipe, 双AIV各处理M/2行
+    const uint8_t splitM = FullLoadMode == MAT_MUL_NO_FULL_LOAD ?
+                               1U :
+                               (AscendC::IsSameType<AccType, float>::value ? 1U : 0U);
     // ubPitchGran恒0: 行距由AccType自然表达; 按1V2传16与bl1的c0写入错配会行错位.
     constexpr uint32_t ubPitchGran = 0U;
 
