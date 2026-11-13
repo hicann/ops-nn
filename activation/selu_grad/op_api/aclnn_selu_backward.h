@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OP_API_INC_LEVEL2_ACLNN_SILU_GRAD_H_
-#define OP_API_INC_LEVEL2_ACLNN_SILU_GRAD_H_
+#ifndef OP_API_INC_LEVEL2_ACLNN_SELU_BACKWARD_H_
+#define OP_API_INC_LEVEL2_ACLNN_SELU_BACKWARD_H_
 
 #include "aclnn/aclnn_base.h"
 #include "aclnn_util.h"
@@ -19,16 +19,17 @@ extern "C" {
 #endif
 
 /**
- * @brief aclnnSelu的第一段接口，根据具体的计算流程，计算workspace大小。
+ * @brief aclnnSeluBackward的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_train
  *
- * 算子功能： 对输入Tensor完成selubackward操作
- * @param [in] gradOutput: npu device侧的aclTensor, 数据类型支持INT8、INT32,
- * FLOAT、FLOAT16、shape为非空，支持非连续的Tensor，数据格式支持ND。
- * @param [in] result: npu device侧的aclTensor, 数据类型支持INT8、INT32, FLOAT、FLOAT16, shape与gradOutput
- *  保持相同，数据格式支持ND。
- * @param [in] gradInput: npu device侧的aclTensor, 数据类型支持INT8、INT32, FLOAT、FLOAT16, shape与gradOutput
- *  保持相同，数据格式支持ND。
+ * 算子功能：计算SELU反向梯度。
+ * 数据类型支持FLOAT、FLOAT16、INT32、INT8、BFLOAT16，具体产品支持范围参见接口文档。
+ * @param [in] gradOutput: npu device侧的上游梯度aclTensor，维度为1-8，支持空Tensor和非连续Tensor，
+ * 数据格式支持ND。
+ * @param [in] result: SELU正向输出，数据类型和shape与gradOutput相同，支持空Tensor和非连续Tensor，
+ * 数据格式支持ND。
+ * @param [out] gradInput: 反向梯度输出，数据类型和shape与gradOutput相同，支持空Tensor和非连续Tensor，
+ * 数据格式支持ND。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码
@@ -38,11 +39,11 @@ ACLNN_API aclnnStatus aclnnSeluBackwardGetWorkspaceSize(const aclTensor* gradOut
                                                         aclOpExecutor** executor);
 
 /**
- * @brief: aclnnSelu的第二段接口，用于执行计算
+ * @brief aclnnSeluBackward的第二段接口，用于执行计算。
  *
- * 算子功能： 对输入Tensor完成selu操作
+ * 算子功能：计算SELU反向梯度。
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnSeluGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由aclnnSeluBackwardGetWorkspaceSize获取。
  * @param [in] stream: acl stream流。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。

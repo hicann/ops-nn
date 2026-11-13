@@ -20,10 +20,13 @@
  * gradients、outputs 和 y 的 shape 必须完全一致。
  */
 
+#include <string>
+
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
+#include "op_common/op_host/util/shape_util.h"
 #include "../../op_kernel/arch35/selu_grad_tiling_data.h"
 #include "../../op_kernel/arch35/selu_grad_tiling_key.h"
 
@@ -56,6 +59,16 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
     return ge::GRAPH_SUCCESS;
 }
 
+static bool CheckRank(gert::TilingContext* context, const gert::Shape& shape, const char* tensorName)
+{
+    OP_CHECK_IF(
+        shape.GetDimNum() > MAX_SUPPORTED_RANK,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), tensorName, std::to_string(shape.GetDimNum()),
+                                                 "The rank must be in [0, " + std::to_string(MAX_SUPPORTED_RANK) + "]"),
+        return false);
+    return true;
+}
+
 // 获取并校验 shape、dtype 信息
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalElements, ge::DataType* dataType)
 {
@@ -71,15 +84,27 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     OP_CHECK_NULL_WITH_CONTEXT(context, outputY);
     auto yShape = outputY->GetStorageShape();
 
-    OP_CHECK_IF(gradShape.GetDimNum() == 0 || gradShape.GetDimNum() > MAX_SUPPORTED_RANK,
-                OP_LOGE(context, "gradients rank must be in [1, %zu]", MAX_SUPPORTED_RANK), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(outShape.GetDimNum() == 0 || outShape.GetDimNum() > MAX_SUPPORTED_RANK,
-                OP_LOGE(context, "outputs rank must be in [1, %zu]", MAX_SUPPORTED_RANK), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(yShape.GetDimNum() == 0 || yShape.GetDimNum() > MAX_SUPPORTED_RANK,
-                OP_LOGE(context, "y rank must be in [1, %zu]", MAX_SUPPORTED_RANK), return ge::GRAPH_FAILED);
+    if (!CheckRank(context, gradShape, "gradients") || !CheckRank(context, outShape, "outputs") ||
+        !CheckRank(context, yShape, "y")) {
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(gradShape != outShape || gradShape != yShape,
-                OP_LOGE(context, "gradients, outputs and y must have the same shape"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        gradShape != outShape || gradShape != yShape,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "gradients, outputs, y",
+            Ops::Base::ToString(gradShape) + ", " + Ops::Base::ToString(outShape) + ", " + Ops::Base::ToString(yShape),
+            "gradients, outputs and y must have the same storage shape without broadcasting"),
+        return ge::GRAPH_FAILED);
+
+    for (size_t i = 0; i < yShape.GetDimNum(); ++i) {
+        OP_CHECK_IF(
+            yShape.GetDim(i) < 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y", Ops::Base::ToString(yShape),
+                                                  "Storage shape must be resolved and non-negative, but dim[" +
+                                                      std::to_string(i) + "]=" + std::to_string(yShape.GetDim(i))),
+            return ge::GRAPH_FAILED);
+    }
 
     // 计算输出总元素数
     if (yShape.GetDimNum() == 0) {
@@ -87,16 +112,22 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     } else {
         *totalElements = yShape.GetShapeSize();
     }
+    OP_CHECK_IF(*totalElements < 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    context->GetNodeName(), "y", std::to_string(*totalElements),
+                    "The element count overflows int64 for storage shape " + Ops::Base::ToString(yShape)),
+                return ge::GRAPH_FAILED);
 
     auto gradientsDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradientsDesc);
     auto outputsDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputsDesc);
-    OP_CHECK_IF(
-        outputsDesc->GetDataType() != gradientsDesc->GetDataType(),
-        OP_LOGE(context, "gradients and outputs must have the same dtype, gradients=%d, outputs=%d",
-                static_cast<int32_t>(gradientsDesc->GetDataType()), static_cast<int32_t>(outputsDesc->GetDataType())),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputsDesc->GetDataType() != gradientsDesc->GetDataType(),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "gradients, outputs",
+                                                       Ops::Base::ToString(gradientsDesc->GetDataType()) + ", " +
+                                                           Ops::Base::ToString(outputsDesc->GetDataType()),
+                                                       "gradients and outputs must have the same dtype"),
+                return ge::GRAPH_FAILED);
     *dataType = gradientsDesc->GetDataType();
     return ge::GRAPH_SUCCESS;
 }
@@ -200,6 +231,12 @@ static ge::graphStatus SeluGradTilingFunc(gert::TilingContext* context)
 
     // 6. 校验 tiling 参数有效性
     if (tiling->blockFormer < 1 || tiling->ubFormer < 1) {
+        OP_LOGE(context,
+                "Calculated blockFormer and ubFormer must be positive: totalElements=%ld, dtype=%s, ubSize=%lu, "
+                "coreNum=%ld, "
+                "ubBlockSize=%ld, blockFormer=%ld, ubFormer=%ld",
+                totalElements, Ops::Base::ToString(dataType).c_str(), ubSize, coreNum, ubBlockSize, tiling->blockFormer,
+                tiling->ubFormer);
         return ge::GRAPH_FAILED;
     }
 

@@ -57,7 +57,7 @@
     <td>反向传播上游梯度。</td>
     <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT8、UINT8</td>
     <td>ND</td>
-    <td>1-8</td>
+    <td>0-8</td>
   </tr>
   <tr>
     <td>outputs</td>
@@ -65,7 +65,7 @@
     <td>SELU前向输出，shape必须与gradients完全一致（不支持广播）。</td>
     <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT8、UINT8</td>
     <td>ND</td>
-    <td>1-8</td>
+    <td>0-8</td>
   </tr>
   <tr>
     <td>y</td>
@@ -73,13 +73,14 @@
     <td>反向梯度结果，shape与gradients/outputs完全一致。</td>
     <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT8、UINT8</td>
     <td>ND</td>
-    <td>1-8</td>
+    <td>0-8</td>
   </tr>
 </tbody></table>
 
 ## 约束说明
 
 - gradients与outputs的shape必须完全一致（不支持广播），shape不一致时返回错误。
+- 支持0-8维，0维表示标量；支持含零长度维度的空Tensor。
 - 确定性计算：SeluGrad默认确定性实现。
 
 ## 调用说明
@@ -87,3 +88,4 @@
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_selu_grad](./examples/arch35/test_aclnn_selu_grad.cpp) | 通过[aclnnSeluBackward](./docs/aclnnSeluBackward.md)接口方式调用SeluGrad算子。 |
+| GEIR调用 | [test_geir_selu_grad](./examples/arch35/test_geir_selu_grad.cpp) | 使用[SeluGrad IR原型](./op_graph/selu_grad_proto.h)构图调用。 |

@@ -59,7 +59,7 @@ English | [简体中文](./README.md)
     <td>Upstream gradient of backward propagation.</td>
     <td>FLOAT, FLOAT16, BFLOAT16, INT32, INT8, UINT8</td>
     <td>ND</td>
-    <td>1-8</td>
+    <td>0-8</td>
   </tr>
   <tr>
     <td>outputs</td>
@@ -67,7 +67,7 @@ English | [简体中文](./README.md)
     <td>SELU forward output. Its shape must be exactly the same as gradients (broadcasting is not supported).</td>
     <td>FLOAT, FLOAT16, BFLOAT16, INT32, INT8, UINT8</td>
     <td>ND</td>
-    <td>1-8</td>
+    <td>0-8</td>
   </tr>
   <tr>
     <td>y</td>
@@ -75,13 +75,14 @@ English | [简体中文](./README.md)
     <td>Backward gradient result, with a shape exactly the same as gradients/outputs.</td>
     <td>FLOAT, FLOAT16, BFLOAT16, INT32, INT8, UINT8</td>
     <td>ND</td>
-    <td>1-8</td>
+    <td>0-8</td>
   </tr>
 </tbody></table>
 
 ## Constraints
 
 - The shapes of gradients and outputs must be exactly the same (broadcasting is not supported). An error is returned when the shapes are inconsistent.
+- Ranks 0-8 are supported, including rank-0 scalars and empty tensors with zero-length dimensions.
 - Deterministic computation: SeluGrad is a default deterministic implementation.
 
 ## Invocation Description
@@ -89,3 +90,4 @@ English | [简体中文](./README.md)
 | Invocation method | Invocation sample                                                                   | Description                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn invocation | [test_aclnn_selu_grad](./examples/arch35/test_aclnn_selu_grad.cpp) | Invokes the SeluGrad operator through the [aclnnSeluBackward](./docs/aclnnSeluBackward_en.md) interface. |
+| GEIR invocation | [test_geir_selu_grad](./examples/arch35/test_geir_selu_grad.cpp) | Builds a graph using the [SeluGrad IR prototype](./op_graph/selu_grad_proto.h). |

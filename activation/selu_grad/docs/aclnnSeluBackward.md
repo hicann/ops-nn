@@ -113,7 +113,7 @@ aclnnStatus aclnnSeluBackward(
       <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>表示Selu计算输入的梯度，公式中的∂E/∂X。</td>
-      <td>数据类型、shape需要与gradOutput，result一致。</td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型、shape需要与gradOutput，result一致。</li></ul></td>
       <td>FLOAT、FLOAT16、INT32、INT8、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -168,18 +168,21 @@ aclnnStatus aclnnSeluBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的gradOutput、result、gradInput是空指针。</td>
+      <td>传入的gradOutput、result、gradInput、workspaceSize或executor是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>gradOutput、result、gradInput的数据类型和数据格式不在支持的范围之内。</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td>gradOutput、result、gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>gradOutput、result、gradInput的shape不一致。</td>
     </tr>
     <tr>
       <td>gradOutput、result、gradInput的数据类型不满足数据类型推导规则。</td>
+    </tr>
+    <tr>
+      <td>gradOutput、result、gradInput的维度不在1-8范围内；0维标量不属于空Tensor。</td>
     </tr>
   </tbody></table>
 

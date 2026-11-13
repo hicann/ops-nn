@@ -32,7 +32,7 @@
   Computes the derivative of the activation function:
 
   $$
-  \frac{\partial selu(x)}{\partial x}=\begin{cases} \alpha e^x,x<0 \\1,x\geq 0\end{cases}
+  \frac{\partial selu(x)}{\partial x}=\begin{cases} scale \cdot\alpha e^x,x<0 \\scale,x\geq 0\end{cases}
   $$
 
   Computes the derivative of the error with respect to the input:
@@ -94,7 +94,7 @@ aclnnStatus aclnnSeluBackward(
      <tr>
       <td>gradOutput (aclTensor*)</td>
       <td>Input</td>
-      <td>Gradient of the Selu computation output, which is ∂E/∂X in the formula.</td>
+      <td>Gradient of the Selu computation output, which is ∂E/∂y in the formula.</td>
       <td><ul><li>Supports empty tensors.</li><li>The data type and shape must be consistent with those of result and gradInput.</li></ul></td>
       <td>FLOAT, FLOAT16, INT32, INT8, BFLOAT16</td>
       <td>ND</td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnSeluBackward(
       <td>result (aclTensor*)</td>
       <td>Input</td>
       <td>Forward output of the Selu computation, which is y in the formula.</td>
-      <td><ul><li>Empty tensors are not supported.</li><li>The data type and shape must be the same as those of gradOutput and gradInput.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>The data type and shape must be the same as those of gradOutput and gradInput.</li></ul></td>
       <td>FLOAT, FLOAT16, INT32, INT8, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnSeluBackward(
       <td>gradInput (aclTensor*)</td>
       <td>Output</td>
       <td>Gradient of the input in the Selu computation, that is, ∂E/∂X in the formula.</td>
-      <td>The data type and shape must be the same as those of gradOutput and result.</td>
+      <td><ul><li>Supports empty tensors.</li><li>The data type and shape must be the same as those of gradOutput and result.</li></ul></td>
       <td>FLOAT, FLOAT16, INT32, INT8, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -170,18 +170,21 @@ aclnnStatus aclnnSeluBackward(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>gradOutput, result, or gradInput is a null pointer.</td>
+      <td>gradOutput, result, gradInput, workspaceSize, or executor is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td>The data types and data formats of gradOutput, result, and gradInput are not within the supported range.</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td>The data types of gradOutput, result, and gradInput are not within the supported range.</td>
     </tr>
     <tr>
       <td>The shapes of gradOutput, result, and gradInput are inconsistent.</td>
     </tr>
     <tr>
       <td>The data types of gradOutput, result, and gradInput do not comply with the data type deduction rules.</td>
+    </tr>
+    <tr>
+      <td>The ranks of gradOutput, result, or gradInput are outside 1-8. A rank-0 scalar is not an empty tensor.</td>
     </tr>
   </tbody></table>
 

@@ -109,7 +109,7 @@ TEST_F(SeluGradInferShapeTest, UnknownGradientsRankDoesNotBypassOutputsRankLimit
     EXPECT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-TEST_F(SeluGradInferShapeTest, ScalarShapeFails)
+TEST_F(SeluGradInferShapeTest, ScalarShapeSucceeds)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SeluGrad")->infer_shape;
     gert::Shape gradientsShape = {};
@@ -123,5 +123,40 @@ TEST_F(SeluGradInferShapeTest, ScalarShapeFails)
                       .OutputShapes({&yShape})
                       .Build();
 
-    EXPECT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    auto* context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(inferShapeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 0);
+}
+
+TEST_F(SeluGradInferShapeTest, ScalarAndOneElementTensorAreNotSameShape)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SeluGrad")->infer_shape;
+    gert::Shape scalarShape = {};
+    gert::Shape tensorShape = {1};
+    gert::Shape yShape = {};
+    for (bool scalarFirst : {true, false}) {
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(2, 1)
+                          .InputShapes(
+                              {scalarFirst ? &scalarShape : &tensorShape, scalarFirst ? &tensorShape : &scalarShape})
+                          .OutputShapes({&yShape})
+                          .Build();
+        EXPECT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    }
+}
+
+TEST_F(SeluGradInferShapeTest, UnknownGradientsRankAllowsScalarOutputs)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SeluGrad")->infer_shape;
+    gert::Shape gradientsShape = {-2};
+    gert::Shape outputsShape = {};
+    gert::Shape yShape = {};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .InputShapes({&gradientsShape, &outputsShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+    auto* context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(inferShapeFunc(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(*context->GetOutputShape(0), gradientsShape);
 }

@@ -21,6 +21,7 @@
 #include "test_cube_util.h"
 #include "ut_op_common.h"
 #include "ut_op_util.h"
+#include "../../../../op_kernel/arch35/selu_grad_tiling_data.h"
 
 using namespace ge;
 using namespace ut_util;
@@ -51,7 +52,9 @@ std::string GetCompileInfo()
 }
 
 void ExpectTilingStatus(const gert::StorageShape& gradientsShape, const gert::StorageShape& outputsShape,
-                        const gert::StorageShape& yShape, ge::graphStatus expectedStatus)
+                        const gert::StorageShape& yShape, ge::graphStatus expectedStatus,
+                        int64_t expectedTotalElements = -1, ge::DataType dtype = ge::DT_FLOAT,
+                        ge::DataType outputsDtype = ge::DT_UNDEFINED)
 {
     std::string compileInfoString = GetCompileInfo();
     std::map<std::string, std::string> socInfos;
@@ -81,9 +84,10 @@ void ExpectTilingStatus(const gert::StorageShape& gradientsShape, const gert::St
                       .OutputShapes({const_cast<gert::StorageShape*>(&yShape)})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, outputsDtype == ge::DT_UNDEFINED ? dtype : outputsDtype, ge::FORMAT_ND,
+                                   ge::FORMAT_ND)
+                      .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .TilingData(tilingData.get())
                       .Workspace(workspaceSizes)
                       .Build();
@@ -94,7 +98,13 @@ void ExpectTilingStatus(const gert::StorageShape& gradientsShape, const gert::St
     context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    EXPECT_EQ(opImpl->tiling(context), expectedStatus);
+    ASSERT_EQ(opImpl->tiling(context), expectedStatus);
+    if (expectedStatus == ge::GRAPH_SUCCESS && expectedTotalElements >= 0) {
+        const auto* data = context->GetTilingData<SeluGradTilingData>();
+        ASSERT_NE(data, nullptr);
+        EXPECT_EQ(data->totalElements, expectedTotalElements);
+        EXPECT_GE(context->GetBlockDim(), 1U);
+    }
 }
 
 } // namespace
@@ -144,20 +154,63 @@ TEST(SeluGradTilingTest, OutputShapeMismatchFails)
     ExpectTilingStatus(gradientsShape, outputsShape, yShape, ge::GRAPH_FAILED);
 }
 
-TEST(SeluGradTilingTest, ScalarShapeFails)
+TEST(SeluGradTilingTest, InputDtypeMismatchFails)
+{
+    const gert::StorageShape shape({2, 3}, {2, 3});
+    ExpectTilingStatus(shape, shape, shape, ge::GRAPH_FAILED, -1, ge::DT_FLOAT, ge::DT_FLOAT16);
+}
+
+TEST(SeluGradTilingTest, ScalarShapeSucceedsForAllRegisteredDtypes)
 {
     const gert::StorageShape gradientsShape({}, {});
     const gert::StorageShape outputsShape({}, {});
     const gert::StorageShape yShape({}, {});
 
-    ExpectTilingStatus(gradientsShape, outputsShape, yShape, ge::GRAPH_FAILED);
+    for (auto dtype : {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32, ge::DT_INT8, ge::DT_UINT8}) {
+        ExpectTilingStatus(gradientsShape, outputsShape, yShape, ge::GRAPH_SUCCESS, 1, dtype);
+    }
+}
+
+TEST(SeluGradTilingTest, ScalarOriginWithNormalizedStorageSucceeds)
+{
+    const gert::StorageShape shape({}, {1});
+    ExpectTilingStatus(shape, shape, shape, ge::GRAPH_SUCCESS, 1);
+}
+
+TEST(SeluGradTilingTest, ScalarAndOneElementTensorAreNotSameShape)
+{
+    const gert::StorageShape scalar({}, {});
+    const gert::StorageShape tensor({1}, {1});
+    ExpectTilingStatus(scalar, tensor, scalar, ge::GRAPH_FAILED);
+    ExpectTilingStatus(tensor, scalar, tensor, ge::GRAPH_FAILED);
+}
+
+TEST(SeluGradTilingTest, UnresolvedNegativeDimensionsFail)
+{
+    const gert::StorageShape shape({-1, -1}, {-1, -1});
+    ExpectTilingStatus(shape, shape, shape, ge::GRAPH_FAILED);
+}
+
+TEST(SeluGradTilingTest, EmptyShapeDoesNotBypassNegativeDimensionCheck)
+{
+    const gert::StorageShape shape({0, -1}, {0, -1});
+    ExpectTilingStatus(shape, shape, shape, ge::GRAPH_FAILED);
+}
+
+TEST(SeluGradTilingTest, ShapeSizeOverflowFails)
+{
+    const gert::StorageShape shape({300, 300, 300, 300, 300, 300, 300, 300}, {300, 300, 300, 300, 300, 300, 300, 300});
+    ExpectTilingStatus(shape, shape, shape, ge::GRAPH_FAILED);
 }
 
 TEST(SeluGradTilingTest, RankLargerThanEightFails)
 {
+    const gert::StorageShape validShape({1}, {1});
     const gert::StorageShape gradientsShape({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     const gert::StorageShape outputsShape({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1});
     const gert::StorageShape yShape({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1});
 
     ExpectTilingStatus(gradientsShape, outputsShape, yShape, ge::GRAPH_FAILED);
+    ExpectTilingStatus(validShape, outputsShape, validShape, ge::GRAPH_FAILED);
+    ExpectTilingStatus(validShape, validShape, yShape, ge::GRAPH_FAILED);
 }

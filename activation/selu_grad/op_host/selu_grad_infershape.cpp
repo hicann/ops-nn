@@ -19,7 +19,6 @@
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
-#include "util/shape_util.h"
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
@@ -81,10 +80,6 @@ static ge::graphStatus InferShape4SeluGrad(gert::InferShapeContext* context)
         return ge::GRAPH_FAILED;
     };
 
-    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*gradShape) && gradShape->GetDimNum() == 0,
-                OP_LOGE(context, "The rank of gradients must be at least 1"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*outShape) && outShape->GetDimNum() == 0,
-                OP_LOGE(context, "The rank of outputs must be at least 1"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(!Ops::Base::IsUnknownRank(*gradShape) && gradShape->GetDimNum() > MAX_SUPPORTED_RANK,
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                     context->GetNodeName(), "gradients", std::to_string(gradShape->GetDimNum()),
