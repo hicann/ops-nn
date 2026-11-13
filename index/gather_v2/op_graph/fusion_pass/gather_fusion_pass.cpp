@@ -50,7 +50,8 @@ bool IsTargetPlatform()
     OP_LOGE_IF(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
                false, PASS_NAME.c_str(), "Get platformInfo failed.");
     const std::string soc = platformInfo.str_info.short_soc_version;
-    bool isSupported = (soc == "MC62" || soc == "Ascend950" || soc == "Ascend960DT" || ops::IsDav3510Arch());
+    bool isSupported = (soc == "MC62" || soc == "Ascend950" || soc == "Ascend960DT" || soc == "Ascend960PR" ||
+                        ops::IsDav3510Arch());
     if (!isSupported) {
         OPS_LOG_D(PASS_NAME.c_str(), "Platform %s is not supported.", soc.c_str());
         return false;

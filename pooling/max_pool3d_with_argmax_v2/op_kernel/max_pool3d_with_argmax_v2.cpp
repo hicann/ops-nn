@@ -16,7 +16,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
-    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 #include "./arch35/max_pool3d_with_argmax_v2_big_kernel_regbase.h"
 #include "./arch35/max_pool3d_with_argmax_v2_ksize_one.h"
 #include "./arch35/max_pool3d_with_argmax_v2_gather.h"
@@ -80,9 +80,9 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(GM_ADDR x, GM_AD
     // 111110 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=float(0)
     // 111111 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=half(1)
     // 111112 = 1, splitD=1 splitH=1 splitW=1 splitKernel=1 type=bfloat(2)
-// dav_9201(ascend960dt)的Compare接口仅支持uint8_t/int8_t类型的mask张量，不支持uint16_t
+// dav_9201/dav_9202(ascend960系列)的Compare接口仅支持uint8_t/int8_t类型的mask张量，不支持uint16_t
 #if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
-    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
     using mask_type = uint8_t;
 #else
     using mask_type = uint16_t;
@@ -90,7 +90,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(GM_ADDR x, GM_AD
     TPipe pipe;
 
 #if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || \
-    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
     using namespace MaxPool3DWithArgmaxV2WithSimt;

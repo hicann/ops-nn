@@ -23,7 +23,7 @@ add_kernel_sources(
 # A6(arch92) 使用 arch92 目录下的入口，额外引入 arch92 的 Gather_DMA 模板
 add_kernel_sources(
     KERNEL_SRC arch92/gather_v2_apt.cpp
-    COMPUTE_UNITS ascend960dt
+    COMPUTE_UNITS ascend960dt ascend960pr
     IMPL_MODE high_performance,high_precision,support_out_of_bound_index
     OPTIONS "--cce-no-dcache-flush"
 )

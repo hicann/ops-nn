@@ -257,6 +257,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "swiglu_group_quant");
         this->AICore().AddConfig("ascend960dt", config960dt);
+        this->AICore().AddConfig("ascend960pr", config960dt);
 #endif
     }
 };

@@ -9,6 +9,7 @@
  */
 #include <numeric>
 #include <vector>
+#include "op_api/aclnn_util.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_adaptive_avg_pool2d_backward.h"
 #include "pooling/common/op_api/adaptive_avg_pool3d_backward.h"
@@ -138,8 +139,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if (Ops::NN::AclnnUtil::IsRegbase() || (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+                                            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ORIGIN_DTYPE_SUPPORT_LIST;
@@ -244,8 +245,8 @@ static aclnnStatus DoFusionAdaptiveAvgPool2DBackward(const aclTensor* gradOutput
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         return ACLNN_SUCCESS;
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if (Ops::NN::AclnnUtil::IsRegbase() || (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+                                            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E)) {
         // 将2d参数转换为3d可以使用的参数
         auto inputContiguous = l0op::Contiguous(gradOutput, executor);
         CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);

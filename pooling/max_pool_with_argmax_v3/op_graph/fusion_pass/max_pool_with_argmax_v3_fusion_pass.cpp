@@ -76,7 +76,7 @@ inline static bool IsRegbaseArch()
                kPassName.c_str(), "Get platform_info failed.");
     const std::string shortSoc = platInfo.str_info.short_soc_version;
     bool isRegbaseArch = (shortSoc == "Ascend950" || shortSoc == "Ascend350" || shortSoc == "Ascend960DT" ||
-                          shortSoc == "MC62");
+                          shortSoc == "Ascend960PR" || shortSoc == "MC62");
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", shortSoc.c_str(), isRegbaseArch);
     return isRegbaseArch;
 }

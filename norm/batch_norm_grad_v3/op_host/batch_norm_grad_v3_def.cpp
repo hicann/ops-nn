@@ -156,6 +156,7 @@ public:
         this->AICore().AddConfig("ascend950", regbaseCfg);
         this->AICore().AddConfig("ascend350", regbaseCfg);
         this->AICore().AddConfig("ascend960dt", regbaseCfg);
+        this->AICore().AddConfig("ascend960pr", regbaseCfg);
 
         OpAICoreConfig config_a2a3;
 

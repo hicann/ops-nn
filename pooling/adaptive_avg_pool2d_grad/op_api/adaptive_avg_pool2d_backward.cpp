@@ -40,7 +40,7 @@ const aclTensor* AdaptiveAvgPool2dGrad(const aclTensor* gradOutput, const aclTen
 {
     L0_DFX(AdaptiveAvgPool2dGrad, gradOutput, self);
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "AdaptiveAvgPool2dGrad only support in Ascend950, ascend960dt.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "AdaptiveAvgPool2dGrad only support in Ascend950, ascend960dt, ascend960pr.");
         return nullptr;
     }
     op::Shape selfShape = self->GetViewShape();

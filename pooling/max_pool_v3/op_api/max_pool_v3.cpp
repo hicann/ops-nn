@@ -51,6 +51,7 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
         case NpuArch::DAV_3510: {
             return DTYPE_SUPPORT_950_LIST;
         }
+        case NpuArch::DAV_9202:
         case NpuArch::DAV_9201: {
             return DTYPE_SUPPORT_950_LIST;
         }

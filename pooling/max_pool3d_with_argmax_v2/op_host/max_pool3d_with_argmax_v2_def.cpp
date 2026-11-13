@@ -96,6 +96,7 @@ public:
         this->AICore().AddConfig("ascend950", aicore_config_950);
         this->AICore().AddConfig("ascend350", aicore_config_950);
         this->AICore().AddConfig("ascend960dt", aicore_config_950);
+        this->AICore().AddConfig("ascend960pr", aicore_config_950);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

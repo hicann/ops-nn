@@ -17,7 +17,7 @@
 
 namespace SwigluGroupQuant {
 using namespace AscendC;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 template <typename T0, typename T1, typename T2, bool outputOrigin = false>
 class SwigluHiF4QuantPerf {
 public:
@@ -252,7 +252,7 @@ private:
     int64_t rowOfFormerBlock = 0;
     int64_t rowOfTailBlock = 0;
 };
-#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 
 } // namespace SwigluGroupQuant
 

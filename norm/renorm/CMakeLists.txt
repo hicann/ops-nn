@@ -11,10 +11,10 @@
 message(STATUS "=== Debug: start ops.norm.renorm.CMakeLists.txt ")
 
 # 设置算子定义时支持的芯片类型
-# ascend960dt 复用 arch35 指令集（与 ascend950 同属 NpuArch=3510），tiling 目录沿用 arch35
-set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend960dt")
+# ascend960dt ascend960pr 复用 arch35 指令集（与 ascend950 同属 NpuArch=3510），tiling 目录沿用 arch35
+set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend960dt" "ascend960pr")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch35" "arch35")
+set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE renorm ACLNNTYPE aclnn_exclude
                     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE
                     DEPENDENCIES gather_v2)

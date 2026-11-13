@@ -9,9 +9,9 @@
 # ----------------------------------------------------------------------------
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend950" "mc62" "ascend350" "ascend960dt" "ascend5162" "kirinx90" "kirin9030")
+set(SUPPORT_COMPUTE_UNIT "ascend950" "mc62" "ascend350" "ascend960dt" "ascend960pr" "ascend5162" "kirinx90" "kirin9030")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35" "arch35" "arch35" "arch31" "arch31")
+set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35" "arch35" "arch35" "arch35" "arch31" "arch31")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE gelu ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE)
 
 # arch31: kirinx90/kirin9030 使用 arch31/gelu.cpp 作为 kernel 入口

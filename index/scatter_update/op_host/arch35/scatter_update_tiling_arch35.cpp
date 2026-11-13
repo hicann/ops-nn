@@ -258,7 +258,8 @@ ge::graphStatus ScatterUpdateTiling::CheckNpuArch()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                     ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -306,7 +307,7 @@ ge::graphStatus ScatterUpdateTiling::CheckInputDtype()
     auto dataPtr = context_->GetInputDesc(VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dataPtr);
     varDtype_ = dataPtr->GetDataType();
-    // var 与 updates 共用同一张按当前 SoC 选出的 dtype 白名单：Ascend960DT 额外支持 HIFLOAT4
+    // var 与 updates 共用同一张按当前 SoC 选出的 dtype 白名单：Ascend960系列(960DT/960PR)额外支持 HIFLOAT4
     auto isDtypeSupported = [this](ge::DataType dtype) -> bool {
         if (isAscend960DT_) {
             return VAR_DATA_TYPE_960DT.find(dtype) != VAR_DATA_TYPE_960DT.end();
@@ -810,7 +811,7 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
         templateKey_ = UPDATES_IN_SIMD;
         AutoTiling();
         if (isAscend960DT_) {
-            // 960DT收紧分核消除空核：CeilDiv后重算tileNum，保证 m*n 恰好覆盖所有数据
+            // 960系列(960DT/960PR)收紧分核消除空核：CeilDiv后重算tileNum，保证 m*n 恰好覆盖所有数据
             rowNormalNum_ = Ops::Base::CeilDiv(rowTotalNum_, rowTileNum_);
             colNormalNum_ = Ops::Base::CeilDiv(colTotalNum_, colTileNum_);
             rowTileNum_ = Ops::Base::CeilDiv(rowTotalNum_, rowNormalNum_);

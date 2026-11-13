@@ -251,7 +251,8 @@ ge::graphStatus GatherNdSimtTiling::GetXShapeInfo()
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    isAscend960DT_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                     ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -466,7 +467,7 @@ ge::graphStatus GatherNdSimtTiling::DoOpTiling()
     }
     if (gatherSize_ * xDtypeSize_ >= SIMD_THRES && ubSize_ >= BUFFER_NUM * INDICES_SIZE &&
         indicesNum_ >= coreNum_ / BUFFER_NUM) {
-        // 960DT部分场景使用GatherDMA增强性能
+        // 960系列(960DT/960PR)部分场景使用GatherDMA增强性能
         if (isAscend960DT_ && gatherSize_ * xDtypeSize_ <= DMA_THRES && indicesNum_ / gatherDimSize_ <= 1) {
             isDma_ = true;
             CalcSimdDmaTiling();

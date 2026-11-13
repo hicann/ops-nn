@@ -95,7 +95,8 @@ ge::graphStatus ScatterNdTiling::GetPlatformInfo()
                 return ge::GRAPH_FAILED);
     // UB Size Need reserve space for Dcache / CCEC Compile Stack.
     ubSize_ = static_cast<uint32_t>(ubSizePlatForm);
-    isDav9201_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201;
+    isDav9201_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
+                 ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
     return ge::GRAPH_SUCCESS;
 }
 

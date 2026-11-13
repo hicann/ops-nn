@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_hif4_quant_common.h
- * \brief HIFLOAT4 quantization helpers, only available on ascend960dt (arch 9201).
+ * \brief HIFLOAT4 quantization helpers, only available on ascend960dt/ascend960pr (arch 9201/9202).
  */
 
 #ifndef SWIGLU_HIF4_QUANT_COMMON_H
@@ -21,7 +21,7 @@
 
 namespace SwigluGroupQuant {
 using namespace AscendC;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 using namespace AscendC::Reg;
 using AscendC::Reg::MaskReg;
 using AscendC::Reg::RegTensor;
@@ -242,7 +242,7 @@ __aicore__ inline void VFProcessSwigluGroupQuantScale(const LocalTensor<uint16_t
     AscendC::VF_CALL<VFProcessSwigluGroupQuantScaleVf>(scaleLocalAddr, eaLocalAddr, ebLocalAddr, ecLocalAddr, loopCount,
                                                        vlForB8, vlForB16);
 }
-#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 
 } // namespace SwigluGroupQuant
 

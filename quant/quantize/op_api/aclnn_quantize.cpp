@@ -90,6 +90,11 @@ const inline std::map<int64_t, std::initializer_list<op::DataType>>& GetSocSuppo
           {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST},
           {INDEX_FOR_OUT, DTYPE_SUPPORT_A5_FOR_OUT_LIST}}},
+        {NpuArch::DAV_9202,
+         {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST},
+          {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
+          {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST},
+          {INDEX_FOR_OUT, DTYPE_SUPPORT_A5_FOR_OUT_LIST}}},
     };
 
     auto found = socSupportMap.find(curArch);

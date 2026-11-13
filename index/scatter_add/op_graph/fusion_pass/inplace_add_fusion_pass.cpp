@@ -38,7 +38,7 @@ namespace {
 const std::string kPassName = "AInplaceAddFusionPass";
 const char* kInplaceAddType = "InplaceAdd";
 const char* kNotSupportSoc = "Ascend310";
-const char* kNativeInplaceAddSoc = "Ascend950";
+const char* kNativeInplaceAddSoc = "Ascend950"; // Ascend960DT/PR same as 950
 const char* kAscend910Soc = "Ascend910";
 const int64_t kCaptureInplaceAdd = 0L;
 const int32_t kInplaceAddInputNum = 3;
@@ -100,8 +100,8 @@ std::string GetCurrentSocVersion()
     return platformInfo.str_info.short_soc_version;
 }
 
-// Ascend310 does not support the legacy lowering. Ascend950 and Ascend960DT provide a native InplaceAdd
-// implementation, so their graphs must keep the original node and dispatch to the native binary.
+// Ascend310 does not support the legacy lowering. Ascend950, Ascend960DT and Ascend960PR provide a native
+// InplaceAdd implementation, so their graphs must keep the original node and dispatch to the native binary.
 bool IsSupportSoc()
 {
     const std::string curSoc = GetCurrentSocVersion();
@@ -110,7 +110,8 @@ bool IsSupportSoc()
         return false;
     }
     OPS_LOG_D(kPassName.c_str(), "cur_soc is %s", curSoc.c_str());
-    if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc || ops::IsDav3510Arch() || curSoc == "Ascend960DT") {
+    if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc || curSoc == "Ascend960DT" ||
+        curSoc == "Ascend960PR" || ops::IsDav3510Arch()) {
         OPS_LOG_D(kPassName.c_str(), "cur_soc %s does not use the legacy fusion.", curSoc.c_str());
         return false;
     }

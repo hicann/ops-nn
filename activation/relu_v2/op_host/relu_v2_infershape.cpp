@@ -191,8 +191,9 @@ static ge::graphStatus InferShape4ReluV2(gert::InferShapeContext* context)
     };
     if (platformInfo.str_info.short_soc_version == "Ascend950" ||
         platformInfo.str_info.short_soc_version == "Ascend350" ||
-        platformInfo.str_info.short_soc_version == "Ascend960DT") {
-        // 950/350/960DT不支持NC1HWC0
+        platformInfo.str_info.short_soc_version == "Ascend960DT" ||
+        platformInfo.str_info.short_soc_version == "Ascend960PR") {
+        // 950/350/960系列(960DT/960PR)不支持NC1HWC0
         *mask_shape = *x_shape;
         return GRAPH_SUCCESS;
     }
@@ -215,8 +216,8 @@ static ge::graphStatus InferShape4ReluV2(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static std::list<std::string> gUint1List = {"Ascend910B",  "Ascend910_93", "Ascend950", "Ascend350",
-                                            "Ascend960DT", "AS31XM1",      "Ascend031", "Ascend310B"};
+static std::list<std::string> gUint1List = {"Ascend910B",  "Ascend910_93", "Ascend950", "Ascend350", "Ascend960DT",
+                                            "Ascend960PR", "AS31XM1",      "Ascend031", "Ascend310B"};
 
 static ge::graphStatus InferDataType4ReluV2(gert::InferDataTypeContext* context)
 {

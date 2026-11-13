@@ -39,9 +39,10 @@ public:
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "renorm_apt");
-        // AICore().AddConfig 为 per-soc 注册点：ascend960dt 复用 ascend950 的同一份配置
+        // AICore().AddConfig 为 per-soc 注册点：ascend960dt/ascend960pr 复用 ascend950 的同一份配置
         this->AICore().AddConfig("ascend950", aicoreConfig);
         this->AICore().AddConfig("ascend960dt", aicoreConfig);
+        this->AICore().AddConfig("ascend960pr", aicoreConfig);
     }
 };
 

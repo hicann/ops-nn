@@ -64,7 +64,8 @@ static bool IsRegbasePlatform()
         return false;
     }
     const std::string socVersion = platformInfo.str_info.short_soc_version;
-    bool isRegbase = (socVersion == "Ascend950" || socVersion == "MC62CM12A");
+    bool isRegbase = (socVersion == "Ascend950" || socVersion == "Ascend960DT" || socVersion == "Ascend960PR" ||
+                      socVersion == "MC62CM12A");
     OPS_LOG_D(PASS_NAME.c_str(), "Platform short soc: %s, is_regbase: %d", socVersion.c_str(), isRegbase);
     return isRegbase;
 }

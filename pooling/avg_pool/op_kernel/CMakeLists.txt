@@ -18,7 +18,7 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC avg_pool_apt.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
     SIMPLIFIED_KEY 0
     IMPL_MODE high_performance
     AUTO_SYNC false

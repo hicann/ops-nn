@@ -29,7 +29,7 @@ namespace ge {
 * @li var: The rewritten tensor. An ND tensor. Support 1D ~ 8D. Must be one of the following types:
 * float16, float32, int32, int8, uint8, bfloat16, int64, uint32, uint64, float8_e5m2, float8_e4m3, float8_e8m0,
 * hifloat4.
-* hifloat4 is only supported on Ascend960DT.
+* hifloat4 is only supported on Ascend960DT/Ascend960PR.
 * The size of vars in each line must be an even number when dtype of var is hifloat4.
 * @li indices: The index tensor. An ND tensor. Support 1D ~ 8D. Must be one of the following types: int32, int64.
 * @li updates: The source tensor. An ND Tensor. Support 0D ~ 8D. Shape should be equal to the shape of "indices" concats

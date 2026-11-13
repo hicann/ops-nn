@@ -85,7 +85,8 @@ static inline bool isBatchNormSupportNcdhw(void)
 {
     return ((GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) ||
             (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002) ||
-            (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201));
+            (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
+             GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202));
 }
 
 static bool CheckMaskNotNull(const aclTensor* gradInput, const aclTensor* gradGammaOut, const aclTensor* gradBetaOut,
@@ -192,7 +193,8 @@ static bool CheckAttr(int64_t C, int64_t group)
              return false);
 
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
-        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201) {
+        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
+        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202) {
         // 检查C//GROUP是否超过8000
         OP_CHECK(C / group <= UPPER_CARRYING_LIMIT,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected C / group <= 8000 to be true, but got false."),

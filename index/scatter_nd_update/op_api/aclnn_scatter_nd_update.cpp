@@ -63,7 +63,7 @@ static bool CheckNotNull(aclTensor* varRef, const aclTensor* indices, const aclT
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto socVersion = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (socVersion == NpuArch::DAV_9201) {
+    if (socVersion == NpuArch::DAV_9201 || socVersion == NpuArch::DAV_9202) {
         return ASCEND960_DTYPE_DTYPE_SUPPORT_LIST;
     }
     if (socVersion == NpuArch::DAV_3510) {

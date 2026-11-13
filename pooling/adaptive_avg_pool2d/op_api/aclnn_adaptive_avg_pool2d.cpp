@@ -9,6 +9,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_api/aclnn_util.h"
 #include "pooling/common/op_api/adaptive_avg_pool2d_assist_matrix.h"
 #include "../../adaptive_avg_pool3d/op_api/adaptive_avg_pool3d.h"
 #include "adaptive_avg_pool2d.h"
@@ -78,8 +79,8 @@ static bool IsSocVersion910B_310P()
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if (Ops::NN::AclnnUtil::IsRegbase() || (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+                                            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E)) {
         return dtypeSupportListAscend910B;
     } else {
         return dtypeSupportListOrigin;

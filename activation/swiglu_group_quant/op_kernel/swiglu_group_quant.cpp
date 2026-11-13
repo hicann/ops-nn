@@ -16,9 +16,9 @@
 #include "arch35/swiglu_group_quant_perf.h"
 #include "arch35/swiglu_mx_quant_perf.h"
 #include "arch35/swiglu_mxfp4_quant_perf.h"
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #include "arch92/swiglu_hif4_quant_perf.h"
-#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #include "arch35/swiglu_dynamic_group_quant_hifp8.h"
 #include "arch35/swiglu_static_group_quant_hifp8.h"
 #include "swiglu_group_quant_mx_dispatch.h"
@@ -91,7 +91,7 @@ extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weig
         SwigluGroupQuantStaticHifp8Ops::SwigluGroupQuantStaticHifp8Kernel<DTYPE_X> op;
         op.Init(x, weight, groupIndex, scale, y, yOrigin, nullptr, &hifp8TilingData, &pipe);
         op.Process();
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     } else if (TILING_KEY_IS(HIF4_QUANT_TILING_KEY)) { // hif4_quant fp4 (no y_origin)
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantTilingData, tilingData, tiling);
         SwigluGroupQuant::SwigluHiF4QuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false> op;
@@ -102,7 +102,7 @@ extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weig
         SwigluGroupQuant::SwigluHiF4QuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true> op;
         op.Init(x, weight, groupIndex, y, yScale, yOrigin, workspace, &tilingData, &pipe);
         op.Process();
-#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#endif // defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     }
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 }

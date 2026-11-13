@@ -78,7 +78,7 @@ bool IsTargetPlatform()
         PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) != SUCCESS,
         false, kPassName.c_str(), "Get platform_info failed.");
     const std::string soc = platform_info.str_info.short_soc_version;
-    bool is_platform950 = (soc == "Ascend950" || ops::IsDav3510Arch());
+    bool is_platform950 = (soc == "Ascend950" || soc == "Ascend960DT" || soc == "Ascend960PR" || ops::IsDav3510Arch());
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s", soc.c_str());
     if (!is_platform950) {
         OPS_LOG_D(kPassName.c_str(), "Platform is not support, only work on Ascend950.");

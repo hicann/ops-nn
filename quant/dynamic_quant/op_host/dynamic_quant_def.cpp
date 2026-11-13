@@ -104,6 +104,7 @@ public:
         this->AICore().AddConfig("ascend950", config950);
         this->AICore().AddConfig("ascend350", config950);
         this->AICore().AddConfig("ascend960dt", config950);
+        this->AICore().AddConfig("ascend960pr", config950);
 
         OpAICoreConfig config_310p_910;
         config_310p_910.Input("x")

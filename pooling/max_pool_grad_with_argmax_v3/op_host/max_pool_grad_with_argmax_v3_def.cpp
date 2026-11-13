@@ -68,6 +68,7 @@ public:
             .ExtendCfgInfo("opFile.value", "max_pool_grad_with_argmax_v3");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
         this->AICore().AddConfig("ascend960dt", aiCoreConfig);
+        this->AICore().AddConfig("ascend960pr", aiCoreConfig);
         this->AICore().AddConfig("ascend350", aiCoreConfig);
     }
 };

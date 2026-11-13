@@ -9,7 +9,7 @@
  */
 /*!
  * \file embedding_bag_apt.cpp
- * \brief 统一kernel入口: arch92(Ascend960dt)经 __NPU_ARCH__==9201 编译期门禁
+ * \brief 统一kernel入口: arch92(Ascend960dt/Ascend960pr)经 __NPU_ARCH__==9201/9202 编译期门禁
  *        启用GatherDMA(tiling key 210/211), 其余平台走公共分发
  */
 
@@ -19,7 +19,7 @@
 #include "arch35/embedding_bag_regbase_1d_mean.h"
 #include "arch35/embedding_bag_regbase_1d_max.h"
 #include "arch35/embedding_bag_regbase_2d.h"
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #include "arch92/embedding_bag_gather_dma.h"
 #endif
 #include "arch35/embedding_bag_regbase_1d_simt.h"
@@ -30,7 +30,7 @@
 #define TILING_KEY_INDICES_1D_PROMOTE 101
 #define TILING_KEY_INDICES_2D_SAME 200
 #define TILING_KEY_INDICES_2D_PROMOTE 201
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #define TILING_KEY_INDICES_2D_SAME_GATTER_DMA 210
 #define TILING_KEY_INDICES_2D_PROMOTE_GATTER_DMA 211
 #endif
@@ -138,7 +138,7 @@ extern "C" __global__ __aicore__ void embedding_bag(GM_ADDR weight, GM_ADDR indi
         EmbeddingBag::EmbeddingBagRegBaseIndx2d<DTYPE_WEIGHT, DTYPE_INDICES, int64_t> op(tilingData, pipe);
         op.Init(gmParam);
         op.Process();
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     } else if (TILING_KEY_IS(TILING_KEY_INDICES_2D_SAME_GATTER_DMA)) {
         EmbeddingBag::EmbeddingBagRegBaseIndx2d<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_INDICES, 1> op(tilingData, pipe);
         op.Init(gmParam);

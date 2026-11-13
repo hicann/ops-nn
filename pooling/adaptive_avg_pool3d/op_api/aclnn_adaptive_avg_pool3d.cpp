@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+#include "op_api/aclnn_util.h"
 #include "adaptive_avg_pool3d.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -93,8 +94,8 @@ static bool CheckInputOutputDims(const aclTensor* self, const aclTensor* out)
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+    if (Ops::NN::AclnnUtil::IsRegbase() || (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+                                            GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E)) {
         return dtypeSupportListOrigin;
     } else {
         return dtypeSupportList310P;

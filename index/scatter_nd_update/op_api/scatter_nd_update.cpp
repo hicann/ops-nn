@@ -48,7 +48,8 @@ static const std::initializer_list<op::DataType> ASCEND960DT_AICORE_DTYPE_SUPPOR
 inline static bool IsAiCoreSupport(const aclTensor* self)
 {
     // ScatterNdUpdate只需要判断self
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
+        GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202) {
         return CheckType(self->GetDataType(), ASCEND960DT_AICORE_DTYPE_SUPPORT_LIST);
     }
     if (Ops::NN::AclnnUtil::IsRegbase()) {

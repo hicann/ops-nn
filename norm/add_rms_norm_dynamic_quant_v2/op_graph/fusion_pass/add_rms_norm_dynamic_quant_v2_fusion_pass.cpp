@@ -114,7 +114,7 @@ static bool IsTargetPlatform()
                false, kPassName, "Get platform_info failed.");
     const std::string soc = platformInfo.str_info.short_soc_version;
     const bool isPlatform910B = (soc == "Ascend910B");
-    const bool isPlatform950 = (soc == "Ascend950");
+    const bool isPlatform950 = (soc == "Ascend950" || soc == "Ascend960DT" || soc == "Ascend960PR");
     OPS_LOG_D(kPassName, "Platform short soc: %s", soc.c_str());
     if (!isPlatform910B && !isPlatform950) {
         OPS_LOG_D(kPassName, "Platform %s is not supported, only Ascend910B and Ascend950.", soc.c_str());

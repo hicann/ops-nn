@@ -50,7 +50,8 @@ static bool IsAiCoreSupport(const aclTensor* self)
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_910B);
-    } else if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201) {
+    } else if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
+               GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202) {
         return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_960DT);
     } else if (Ops::NN::AclnnUtil::IsRegbase()) {
         return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_950);

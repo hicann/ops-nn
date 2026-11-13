@@ -45,9 +45,9 @@ const aclTensor* AdaptiveAvgPool2d(const aclTensor* self, const aclIntArray* out
     } else {
         REPORT_PREDEFINED_ERR_MSG(
             "EZ1009", (std::vector<const char*>{"opName", "reason"}),
-            (std::vector<const char*>{
-                "AdaptiveAvgPool2d",
-                "AdaptiveAvgPool2dAiCore only supports ascend950/ascend960dt; current SoC is not regbase"}));
+            (std::vector<const char*>{"AdaptiveAvgPool2d",
+                                      "AdaptiveAvgPool2dAiCore only supports ascend950/ascend960dt/ascend960pr; "
+                                      "current SoC is not regbase"}));
     }
     auto out = executor->AllocTensor(outShape, self->GetDataType(), self->GetStorageFormat());
     if (out == nullptr) {

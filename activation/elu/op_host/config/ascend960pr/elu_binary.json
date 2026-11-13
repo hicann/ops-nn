@@ -1,0 +1,143 @@
+{
+  "op_type": "Elu",
+  "op_list": [
+    {
+      "bin_filename": "Elu_ccb78600df288a689f3cc4accf9e018f",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "alpha",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "scale",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "input_scale",
+          "dtype": "float",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Elu_ccb78600df288a689f3cc4abbf7e007e",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "alpha",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "scale",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "input_scale",
+          "dtype": "float",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "Elu_5703d6e339578b11bc6d39a70205aa62",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "alpha",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "scale",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "input_scale",
+          "dtype": "float",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

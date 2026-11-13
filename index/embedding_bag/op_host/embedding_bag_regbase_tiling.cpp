@@ -97,7 +97,7 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetPlatformInfo()
     }
     totalCoreNum_ = aivNum;
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    isSupportGatterDMA_ = (npuArch == NpuArch::DAV_9201);
+    isSupportGatterDMA_ = (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202);
 
     return ge::GRAPH_SUCCESS;
 }

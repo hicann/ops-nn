@@ -1,0 +1,191 @@
+{
+    "op_type": "AvgPoolGrad",
+    "op_list": [
+      {
+        "bin_filename": "AvgPoolGrad_aa39a01270e5cc309f704228d56100aa",
+        "inputs": [
+          {
+            "name": "orig_input_shape",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+                -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+            },
+          {
+            "name": "input_grad",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "output_grad",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "padding",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AvgPoolGrad_bb9c950763acb46236b38d30f1a100bb",
+        "inputs": [
+          {
+            "name": "orig_input_shape",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+                -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+            },
+          {
+            "name": "input_grad",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "output_grad",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "padding",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "AvgPoolGrad_cc333e1910a01784d66f7e60fd0200cc",
+        "inputs": [
+          {
+            "name": "orig_input_shape",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+                -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+            },
+          {
+            "name": "input_grad",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "output_grad",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "ksize",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "strides",
+            "dtype": "list_int",
+            "value": null
+          },
+          {
+            "name": "padding",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "data_format",
+            "dtype": "string",
+            "value": null
+          }
+        ]
+      }
+    ]
+  }

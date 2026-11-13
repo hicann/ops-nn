@@ -90,7 +90,7 @@
 #include "./arch35/gather_nd_mix.h"
 #endif
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #include "./arch35/gather_nd_simd_dma.h"
 #endif
 
@@ -323,7 +323,7 @@ extern "C" __global__ __aicore__ void gather_nd(GM_ADDR x, GM_ADDR indices, GM_A
         GatherNdSimd<DTYPE_INDICES> op;
         op.Init(x, indices, y, &tiling_data, &pipeIn);
         op.Process();
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     } else if (TILING_KEY_IS(SIMD_TILING_KEY_DMA)) {
         GET_TILING_DATA_WITH_STRUCT(GatherNdGatherDmaTilingData, tiling_data, tiling);
         GatherNdSimdDma<DTYPE_INDICES, false, false> op;

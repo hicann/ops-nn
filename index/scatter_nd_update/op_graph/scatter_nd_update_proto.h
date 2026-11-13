@@ -22,7 +22,8 @@ namespace ge {
 * @par Inputs:
 * @li var: The rewritten tensor. An ND tensor. Support 1D ~ 8D. Must be one of the following types:
 * complex128, complex64, double, float32, float16, int16, int32, int64, int8, qint16, qint32, qint8, quint16, quint8,
-* uint16, uint32, uint64, uint8, bfloat16, bool, float8_e4m3fn, float8_e5m2, hifloat8. Only the Ascend960DT chip
+* uint16, uint32, uint64, uint8, bfloat16, bool, float8_e4m3fn, float8_e5m2, hifloat8. Only the Ascend960DT/Ascend960PR
+chip
 * supports hifloat4.
 * @li indices: The index tensor. An ND tensor. Support 1D ~ 8D. Must be one of the following types: int32, int64. The
 * last dimension of "indices" represents that the first few dimensions of "var" are the batch dimensions.

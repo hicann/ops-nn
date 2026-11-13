@@ -80,7 +80,7 @@ inline static bool IsRegbaseSoc()
         false, kPassName.c_str(), "Get platform_info failed.");
     const std::string socName = platform_info.str_info.short_soc_version;
     bool isRegbaseSoc = (socName == "Ascend950" || socName == "Ascend350" || socName == "Ascend960DT" ||
-                         socName == "MC62");
+                         socName == "Ascend960PR" || socName == "MC62");
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", socName.c_str(), isRegbaseSoc);
     return isRegbaseSoc;
 }
