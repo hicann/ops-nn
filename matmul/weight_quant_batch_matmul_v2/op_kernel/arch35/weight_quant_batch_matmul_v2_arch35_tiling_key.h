@@ -643,7 +643,7 @@ ASCENDC_TPL_SEL(
 #endif
 #endif
 
-#if !defined(__CCE_AICORE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+#if !defined(__CCE_AICORE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 #if !defined(__CCE_AICORE__) || (defined(WEIGHT_ND))
 #if (defined(A16) && defined(WQBMMV2_HIFP8))
         ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_1),

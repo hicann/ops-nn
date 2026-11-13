@@ -98,7 +98,8 @@ static ge::graphStatus WeightQuantBatchMatmulV2TilingFunc(gert::TilingContext* c
     }
     auto platformInfoPtr = context->GetPlatformInfo();
     if (platformInfoPtr != nullptr &&
-        platform_ascendc::PlatformAscendC(platformInfoPtr).GetCurNpuArch() == NpuArch::DAV_9201) {
+        (platform_ascendc::PlatformAscendC(platformInfoPtr).GetCurNpuArch() == NpuArch::DAV_9201 ||
+         platform_ascendc::PlatformAscendC(platformInfoPtr).GetCurNpuArch() == NpuArch::DAV_9202)) {
         WeightQuantBatchMatmulV2CheckerFor920R1 wqbmmv2Checker(context);
         OP_TILING_CHECK(
             wqbmmv2Checker.Check() != ge::GRAPH_SUCCESS,

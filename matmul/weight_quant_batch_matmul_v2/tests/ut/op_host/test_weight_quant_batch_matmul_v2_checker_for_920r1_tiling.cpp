@@ -694,7 +694,7 @@ vector<CheckerCase> BuildCheckerCases()
     {
         auto c = hiF4();
         c.n = 96;
-        add("align_hif4_n_not_64_fail", false, c);
+        add("align_hif4_n_not_64_ok", true, c);
     }
     {
         auto c = w8NzC032PerGroup();

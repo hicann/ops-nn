@@ -780,15 +780,7 @@ void WeightQuantBatchMatmulV2TilingASWMix::CalL1Tiling()
     OP_LOGD(opName_, "coreNum: %u", basicTiling_.usedCoreNum);
     basicTiling_.baseM = adaptiveWin_.baseM;
     basicTiling_.baseN = adaptiveWin_.baseN;
-
-    bool isA16MxFp4 = (matmulInfoPtr_->aDtype == ge::DT_FLOAT16 || matmulInfoPtr_->aDtype == ge::DT_BF16) &&
-                      matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1 && matmulInfoPtr_->antiQuantType == QuantType::MX;
-    if (isA16MxFp4) {
-        basicTiling_.baseK = std::min(adaptiveWin_.baseK, ops::CeilAlign<uint64_t>(matmulInfoPtr_->kSize, B4_C0_SIZE));
-    } else {
-        basicTiling_.baseK = std::min(adaptiveWin_.baseK, matmulInfoPtr_->kSize);
-    }
-
+    basicTiling_.baseK = std::min(adaptiveWin_.baseK, ops::CeilAlign<uint64_t>(matmulInfoPtr_->kSize, B4_C0_SIZE));
     basicTiling_.stepM = 1;
     basicTiling_.stepN = 1;
     basicTiling_.singleCoreM = std::min(matmulInfoPtr_->mSize, static_cast<uint64_t>(basicTiling_.baseM));

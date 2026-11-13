@@ -355,12 +355,9 @@ __aicore__ inline void WeightQuantBatchMatmulV2ASWMxKernel<LOCAL_TEMPLATE_FUNC_P
     uint64_t nL1Size = Min<uint64_t>(tiling_->matmulTiling.N - block_.offset_.offsetN, block_.params_.singleCoreN);
     uint64_t scaleGmOffset = (block_.offset_.offsetN * tiling_->matmulTiling.Kb + kOffset) / MX_GROUP_SIZE;
 
-    // Mx非对齐场景，weight和weight scale的K轴需要对齐到C0 Size(64)
-    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
-        kL1Size = CeilAlign<uint64_t>(kL1Size, C0<wType>::value);
-        uint64_t kAlignSize = CeilAlign<uint64_t>(tiling_->matmulTiling.Kb, C0<wType>::value);
-        scaleGmOffset = (block_.offset_.offsetN * kAlignSize + kOffset) / MX_GROUP_SIZE;
-    }
+    kL1Size = CeilAlign<uint64_t>(kL1Size, C0<wType>::value);
+    uint64_t kAlignSize = CeilAlign<uint64_t>(tiling_->matmulTiling.Kb, C0<wType>::value);
+    scaleGmOffset = (block_.offset_.offsetN * kAlignSize + kOffset) / MX_GROUP_SIZE;
 
     uint64_t scaleGmSize;
     Dn2NzParams dn2NzParams;
@@ -434,13 +431,11 @@ __aicore__ inline void WeightQuantBatchMatmulV2ASWMxKernel<LOCAL_TEMPLATE_FUNC_P
     dataCopyParams.dstStride = CeilAlign<uint64_t>(nL1Size, static_cast<uint64_t>(AscendC::BLOCK_CUBE)) - nL1Size;
 
     // weight shape:(k1,n1,(n0=16,k0=64))
-    if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
-        uint64_t nAlignSize = CeilAlign<uint64_t>(tiling_->matmulTiling.N, AscendC::BLOCK_CUBE);
-        weightGmOffset = (kOffset * nAlignSize + block_.offset_.offsetN * C0<wType>::value) >> 1;
+    uint64_t nAlignSize = CeilAlign<uint64_t>(tiling_->matmulTiling.N, AscendC::BLOCK_CUBE);
+    weightGmOffset = (kOffset * nAlignSize + block_.offset_.offsetN * C0<wType>::value) >> 1;
 
-        uint64_t nL1AlignSize = CeilAlign<uint64_t>(nL1Size, AscendC::BLOCK_CUBE);
-        dataCopyParams.srcStride = nAlignSize - nL1Size;
-    }
+    uint64_t nL1AlignSize = CeilAlign<uint64_t>(nL1Size, AscendC::BLOCK_CUBE);
+    dataCopyParams.srcStride = nAlignSize - nL1Size;
 
     // 最后一个参数enablePreReadIgnoreSync = true表示开启PreAllocation
     AscendC::DataCopy((l1DbFlag_ == IDX_0) ? bL1PingLocalTensor_.template ReinterpretCast<uint8_t>() :

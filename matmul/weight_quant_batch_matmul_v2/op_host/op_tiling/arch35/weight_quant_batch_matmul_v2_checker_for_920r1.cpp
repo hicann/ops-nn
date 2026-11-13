@@ -423,13 +423,14 @@ bool WeightQuantBatchMatmulV2CheckerFor920R1::CheckInputSize(const gert::Storage
                     return false);
 
     isA16MxFp4_ = inputParams_.bDtype == ge::DT_FLOAT4_E2M1 && inputParams_.antiQuantScaleDtype == ge::DT_FLOAT8_E8M0;
+    isA16HiF4_ = inputParams_.bDtype == Ops::NN::DT_HIFLOAT4;
     inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? weightShape->GetOriginShape().GetDim(0) :
                                                                      weightLastDim);
     auto weightStorageShape = weightShape->GetStorageShape();
     if (inputParams_.bFormat == ge::Format::FORMAT_FRACTAL_NZ && inputParams_.transB) {
         uint64_t n0 = weightStorageShape.GetDim(2);
         uint64_t n1 = weightStorageShape.GetDim(1);
-        OP_TILING_CHECK(!isA16MxFp4_ && n0 * n1 != inputParams_.nSize,
+        OP_TILING_CHECK(!isA16MxFp4_ && !isA16HiF4_ && n0 * n1 != inputParams_.nSize,
                         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                             inputParams_.opName, "weight",
                             Ops::NN::FormatString("%llu, %llu", static_cast<unsigned long long>(n0 * n1),
@@ -650,8 +651,7 @@ bool WeightQuantBatchMatmulV2CheckerFor920R1::CheckShapeAdvanced()
                     .c_str(),
                 "the K and N dimensions must be divisible by 2"),
             return false);
-    } else if (inputParams_.bDtype == ge::DT_FLOAT4_E2M1 ||
-               inputParams_.bDtype == Ops::NN::DT_HIFLOAT4) { // 其余 A16W4 仅支持 n 和 k 对 64 对齐
+    } else if (inputParams_.bDtype == ge::DT_FLOAT4_E2M1) {
         OP_TILING_CHECK(
             // 64对齐
             !isA16MxFp4_ && (inputParams_.nSize % 64 != 0 || inputParams_.kSize % 64 != 0),

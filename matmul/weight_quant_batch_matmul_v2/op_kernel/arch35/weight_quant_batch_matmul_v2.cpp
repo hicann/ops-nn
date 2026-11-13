@@ -26,14 +26,15 @@
 #include "lib/matmul_intf.h"
 #include "weight_quant_batch_matmul_v2_arch35_tiling_key.h"
 #include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
-#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 #include "asw/weight_quant_batch_matmul_v2_adaptive_sliding_window.h"
 #include "asw/weight_quant_batch_matmul_v2_adaptive_sliding_window_mix.h"
 #include "asw/weight_quant_batch_matmul_v2_adaptive_sliding_window_mx.h"
 #include "asw/weight_quant_batch_matmul_v2_adaptive_sliding_window_general.h"
 #endif
 
-#if !defined(__DAV_310R6__) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+#if !defined(__DAV_310R6__) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && \
+    !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 #if defined(A16) && (defined(WQBMMV2_S4) || defined(FP4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)))
 #include "weight_quant_batch_matmul_v2_reg_base.h"
 #endif
@@ -77,7 +78,7 @@ constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_T
                                                   BatchOutMode::SINGLE_BATCH};
 constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
 
-#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIGS[] = {
     {2, 512},  // idx 0
     {4, 512},  // idx 1
@@ -148,7 +149,7 @@ static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIG_5 = VEC_ANTIQUANT_CONFI
     } while (0)
 #endif
 
-#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 #define INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL_9201(templateClass, ...)                                                 \
     do {                                                                                                             \
         AscendC::TPipe tPipe;                                                                                        \
@@ -187,14 +188,15 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(GM_ADDR x, GM_ADDR weigh
                                                         GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
                                                         GM_ADDR tiling)
 {
-#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
     GM_ADDR userWS = GetUserWorkspace(workspace);
     if (userWS == nullptr) {
         return;
     }
 #endif
 
-#if !defined(__DAV_310R6__) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+#if !defined(__DAV_310R6__) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && \
+    !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     REGISTER_TILING_DEFAULT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams);
     using DtypeBias = AscendC::Std::conditional_t<IS_BIAS_FP32, float, DTYPE_X>;
@@ -328,7 +330,7 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(GM_ADDR x, GM_ADDR weigh
                                                        VEC_ANTIQUANT_CONFIG_5);
     }
 #endif
-#elif (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201))
+#elif (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
     using DtypeBias = AscendC::Std::conditional_t<IS_BIAS_FP32, float, DTYPE_X>;
     static constexpr WeightQuantBatchMatmulV2::QuantType
         AntiquantType = static_cast<WeightQuantBatchMatmulV2::QuantType>(ANTIQUANT_TYPE);

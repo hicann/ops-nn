@@ -151,7 +151,7 @@
                 {
                     "name": "antiquant_offset",
                     "index": 3,
-                    "dtype": "bfloat16",
+                    "dtype": "float16",
                     "format": "ND",
                     "paramType": "optional",
                     "shape": [
@@ -2659,7 +2659,7 @@
                 {
                     "name": "antiquant_offset",
                     "index": 3,
-                    "dtype": "float16",
+                    "dtype": "bfloat16",
                     "format": "ND",
                     "paramType": "optional",
                     "shape": [
