@@ -57,8 +57,10 @@ namespace ge {
  * Defaults to false.
 
  * @par Constraints:
- * @li All tensors are 2D ND tensors; "grad_hy" and "storage" must have the
- * identical dtype.
+ * @li Input tensors "grad_hy" and "storage", and outputs
+ * "grad_input_gates", "grad_hidden_gates", and "grad_hx" are 2D ND tensors.
+ * Bias gradient outputs "grad_input_bias" and "grad_hidden_bias" are 1D ND
+ * tensors. "grad_hy" and "storage" must have identical dtype.
  * @li "storage" must have shape (B, 5H) matching the shape (B, H) of
  * "grad_hy".
  * @li Dynamic shapes are supported for shape inference with unknown dims
