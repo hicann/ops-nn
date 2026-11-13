@@ -2069,7 +2069,7 @@ Conv3DBpInputV2TilingTestParam cases_params_950[] = {
      true,
      32,
      16777218,
-     "1 1 1 1 1 1 32 2 2 1 2 2 1 8 3 3 1 1 0 1 0 0 0 64 128 256 128 256 32 16 32 8 1 16 16 1 32 32 1 5 5 1 1 1 2 2 0 0 "
+     "1 1 1 1 1 1 32 2 2 1 2 2 1 8 3 3 1 1 0 1 1 0 0 64 128 256 128 256 32 16 32 8 1 16 16 1 32 32 1 5 5 1 1 1 2 2 0 0 "
      "1 2 1 2 0 3 2 3 2 1 1 1 1 256 128 1 512 16 128 25 25 1 1 512 0 80 16 2000 1 0 0 0 0 5 5 31 31 25 25 0 ",
      ""},
     {"conv3d_dx_ascend950_kb_case2_9589_fp32_batch64_cin32_cout128_k5x5_s2x2",
@@ -2103,7 +2103,7 @@ Conv3DBpInputV2TilingTestParam cases_params_950[] = {
      true,
      32,
      16777218,
-     "1 1 1 1 1 1 32 2 2 2 2 2 1 8 3 3 1 1 0 1 0 0 0 64 32 128 32 128 16 4 16 2 1 32 32 1 64 64 1 5 5 1 1 1 2 2 0 0 1 "
+     "1 1 1 1 1 1 32 2 2 2 2 2 1 8 3 3 1 1 0 1 1 0 0 64 32 128 32 128 16 4 16 2 1 32 32 1 64 64 1 5 5 1 1 1 2 2 0 0 1 "
      "2 1 2 0 3 2 3 2 1 1 1 1 128 32 1 1024 8 32 75 75 1 1 1024 0 80 48 2000 1 0 0 0 0 5 5 63 63 25 25 0 ",
      ""},
     {"conv3d_dx_ascend950_kb_case1_958b_fp32_batch64_cin128_cout256_k5x5_s2x2",
@@ -2137,7 +2137,7 @@ Conv3DBpInputV2TilingTestParam cases_params_950[] = {
      true,
      32,
      16777218,
-     "1 1 1 1 1 1 32 2 2 1 2 2 1 8 3 3 1 1 0 1 0 0 0 64 128 256 128 256 32 16 32 8 1 16 16 1 32 32 1 5 5 1 1 1 2 2 0 0 "
+     "1 1 1 1 1 1 32 2 2 1 2 2 1 8 3 3 1 1 0 1 1 0 0 64 128 256 128 256 32 16 32 8 1 16 16 1 32 32 1 5 5 1 1 1 2 2 0 0 "
      "1 2 1 2 0 3 2 3 2 1 1 1 1 256 128 1 512 16 128 25 25 1 1 512 0 80 16 2000 1 0 0 0 0 5 5 31 31 25 25 0 ",
      ""},
     {"conv3d_dx_ascend950_kb_case2_958b_fp32_batch64_cin32_cout128_k5x5_s2x2",
@@ -2171,7 +2171,7 @@ Conv3DBpInputV2TilingTestParam cases_params_950[] = {
      true,
      32,
      16777218,
-     "1 1 1 1 1 1 32 2 2 2 2 2 1 8 3 3 1 1 0 1 0 0 0 64 32 128 32 128 16 4 16 2 1 32 32 1 64 64 1 5 5 1 1 1 2 2 0 0 1 "
+     "1 1 1 1 1 1 32 2 2 2 2 2 1 8 3 3 1 1 0 1 1 0 0 64 32 128 32 128 16 4 16 2 1 32 32 1 64 64 1 5 5 1 1 1 2 2 0 0 1 "
      "2 1 2 0 3 2 3 2 1 1 1 1 128 32 1 1024 8 32 75 75 1 1 1024 0 80 48 2000 1 0 0 0 0 5 5 63 63 25 25 0 ",
      ""},
     {"conv3d_dx_kernel_split_h_NDHWC_1",
@@ -2602,6 +2602,100 @@ static void TestMultiThread(const Conv3DBpInputV2TilingTestParam* params, size_t
 TEST_F(Conv3DBackpropInputV2TilingRunTime3, general_cases_params_multi_thread)
 {
     TestMultiThread(cases_params_950, sizeof(cases_params_950) / sizeof(Conv3DBpInputV2TilingTestParam), 3);
+}
+
+// 为两个测试准备相同的非 SplitK、FP32 场景。
+static void PrepareVecTransBoundaryCase(Ops::NN::Conv::Conv3DDXV2InnerProductTiling& tiling,
+                                        Ops::NN::Conv::CoreTilingParams& coreParams,
+                                        Ops::NN::Conv::L1TilingParams& l1Params,
+                                        Ops::NN::Conv::L0TilingParams& l0Params, int32_t cout)
+{
+    tiling.runInfo_.groups = 1;
+    tiling.runInfo_.real_g = 1;
+    tiling.runInfo_.batch_n = 1;
+    tiling.runInfo_.filterFormat = ge::FORMAT_NCDHW;
+
+    tiling.runInfo_.dedx_cin = 512;
+    tiling.runInfo_.dedx_cin_g = 512;
+    tiling.runInfo_.dedy_cout = cout;
+    tiling.runInfo_.dedy_cout_g = cout;
+
+    tiling.runInfo_.dedx_d = 1;
+    tiling.runInfo_.dedx_h = 16;
+    tiling.runInfo_.dedx_w = 16;
+
+    tiling.runInfo_.kernel_d = 2;
+    tiling.runInfo_.kernel_h = 2;
+    tiling.runInfo_.kernel_w = 2;
+    tiling.runInfo_.hf32_flag = false;
+
+    // 4 字节使 CheckVecTransEnable 进入 FP32/HF32 的新准入逻辑。
+    tiling.dtypeByteL0a_ = 4;
+    tiling.dtypeByteL0b_ = 4;
+    tiling.platformInfo_.ub_size = 256 * 1024;
+    tiling.coreNum_ = 32;
+
+    tiling.tilingRunInfo_.enableSplitK = false;
+    tiling.tilingRunInfo_.enableC04Flag = false;
+    tiling.tilingRunInfo_.tilingHkWkMode = 0; // NO_TILING_HWK
+    tiling.tilingRunInfo_.n0 = 16;
+    tiling.tilingRunInfo_.nValue = 512;
+    tiling.tilingRunInfo_.kValue = 144;
+
+    coreParams.singleCoreDin = 1;
+    coreParams.singleCoreM = 256;
+    coreParams.singleCoreCin = 256;
+
+    l1Params.stepKb = 1;
+    l0Params.baseM = 128;
+    l0Params.baseK = 16;
+    l0Params.baseN = 256;
+}
+
+TEST_F(Conv3DBackpropInputV2TilingRunTime3, vec_trans_metric_at_threshold_rejected)
+{
+    TestOneParamCase(cases_params_950[0], [](gert::TilingContext* context) {
+        Ops::NN::Conv::Conv3DDXV2InnerProductTiling tiling(context);
+        Ops::NN::Conv::CoreTilingParams coreParams;
+        Ops::NN::Conv::L1TilingParams l1Params;
+        Ops::NN::Conv::L0TilingParams l0Params;
+
+        PrepareVecTransBoundaryCase(tiling, coreParams, l1Params, l0Params, 128);
+
+        // TotalCntDivNcnt = 1，cinCoreCnt = 2，coreNumNoTrans = 2。
+        // metric = 128 * 1 * 256 * 2 * 2 * 1 * 2 * 2 / (2 * 2)
+        //        = 131072，等于阈值时应拒绝。
+        EXPECT_FALSE(tiling.CheckVecTransEnable(coreParams, l1Params, l0Params));
+    });
+}
+
+TEST_F(Conv3DBackpropInputV2TilingRunTime3, vec_trans_metric_above_threshold_and_rejection)
+{
+    TestOneParamCase(cases_params_950[0], [](gert::TilingContext* context) {
+        Ops::NN::Conv::Conv3DDXV2InnerProductTiling tiling(context);
+        Ops::NN::Conv::CoreTilingParams coreParams;
+        Ops::NN::Conv::L1TilingParams l1Params;
+        Ops::NN::Conv::L0TilingParams l0Params;
+
+        PrepareVecTransBoundaryCase(tiling, coreParams, l1Params, l0Params, 129);
+
+        // metric = 129 * 1 * 256 * 2 * 2 * 1 * 2 * 2 / (2 * 2)
+        //        = 132096，大于阈值，应准入。
+        EXPECT_TRUE(tiling.CheckVecTransEnable(coreParams, l1Params, l0Params));
+
+        // baseK == 8 且 baseN < 320：即使评分超过阈值也应拒绝。
+        l0Params.baseK = 8;
+        EXPECT_FALSE(tiling.CheckVecTransEnable(coreParams, l1Params, l0Params));
+
+        // 恢复 baseK，再验证 dk == 1 && hk * wk <= 4 的拒绝条件。
+        // 将 cout 提高到 512，使得忽略该拒绝条件时 metric 仍大于阈值。
+        l0Params.baseK = 16;
+        tiling.runInfo_.kernel_d = 1;
+        tiling.runInfo_.dedy_cout = 512;
+        tiling.runInfo_.dedy_cout_g = 512;
+        tiling.tilingRunInfo_.kValue = 512;
+        EXPECT_FALSE(tiling.CheckVecTransEnable(coreParams, l1Params, l0Params));
+    });
 }
 
 TEST_F(Conv3DBackpropInputV2TilingRunTime3, direct_fz_b1_full_k_capacity_need_not_divide_hkw)

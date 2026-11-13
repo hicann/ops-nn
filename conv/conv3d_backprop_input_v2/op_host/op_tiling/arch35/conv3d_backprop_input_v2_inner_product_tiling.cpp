@@ -63,6 +63,11 @@ constexpr uint64_t SMALL_BLOCK_SIZE_LIMIT = static_cast<int64_t>(256 * 256); // 
 constexpr uint64_t BIG_BLOCK_SIZE_LIMIT = static_cast<int64_t>(2 * 256 * 256);
 constexpr uint8_t KERNEL_SPLIT_HW = 1;
 constexpr uint8_t KERNEL_SPLIT_H = 2;
+constexpr uint64_t VEC_TRANS_CIN_FULL_CORE_NUM = 10;
+constexpr uint64_t VEC_TRANS_METRIC_THRESHOLD = 131072;
+constexpr uint64_t VEC_TRANS_BASEK_8_MAX_BASEN = 320;
+constexpr uint64_t VEC_TRANS_BASEK_8 = 8;
+constexpr uint64_t VEC_TRANS_HKWK_MAX_WITH_DK1 = 4;
 struct MSplitChoice {
     bool enabled = false;
     uint64_t tileW = 0;
@@ -1193,27 +1198,95 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(const CoreTilingParams& c
     if (vecUseSize > platformInfo_.ub_size) {
         return false;
     }
+    // fp32/hf32 走新准入条件，16bit由于存在 CheckVecTrans16bitPlus 的准入条件，限制条件较多，故只准入fp32/hf32类型。
+    if (static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT)) {
+        return CheckVecTransBoundary(coreParams, l1Params, l0Params);
+    } else {
+        // 核内切K，一轮任务内多次LoadToB1
+        bool isMultiLoadToB1 = Ops::Base::CeilDiv(tilingRunInfo_.kValue, static_cast<uint64_t>(l1Params.stepKb) *
+                                                                             static_cast<uint64_t>(l0Params.baseK)) >
+                                   1 ||
+                               (runInfo_.kernel_d > 1 && runInfo_.dedx_d > 1);
+        // 正常数据类型，baseM>=512时MMAD基本能掩盖MTE2
+        bool isMmadCoverMte2 = l0Params.baseM >= BASIC_BLOCK_SIZE_512;
+        if (static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_BF16) &&
+            runInfo_.kernel_h <= NUM_THREE &&
+            runInfo_.kernel_w <= NUM_THREE) { // NUM_THREE = 3: loadToB1的效率与kernel大小有关
+            // 16bit的loadToB1不需要transpose，MTE2带宽压力相对较小，实测baseM>=384时MMAD基本能掩盖MTE2
+            isMmadCoverMte2 = l0Params.baseM >= (BASIC_BLOCK_SIZE_256 + BASIC_BLOCK_SIZE_128);
+        }
+        if (static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT) && !runInfo_.hf32_flag) {
+            // fp32 Cube计算慢8倍，baseM阈值取256。
+            isMmadCoverMte2 = l0Params.baseM >= BASIC_BLOCK_SIZE_256;
+        }
+        if (isMultiLoadToB1 && isMmadCoverMte2) {
+            return false;
+        }
+        return true;
+    }
+}
 
-    // 核内切K，一轮任务内多次LoadToB1
-    bool isMultiLoadToB1 = Ops::Base::CeilDiv(tilingRunInfo_.kValue, static_cast<uint64_t>(l1Params.stepKb) *
-                                                                         static_cast<uint64_t>(l0Params.baseK)) > 1 ||
-                           (runInfo_.kernel_d > 1 && runInfo_.dedx_d > 1);
-    // 正常数据类型，baseM>=512时MMAD基本能掩盖MTE2
-    bool isMmadCoverMte2 = l0Params.baseM >= BASIC_BLOCK_SIZE_512;
-    if (static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_BF16) && runInfo_.kernel_h <= NUM_THREE &&
-        runInfo_.kernel_w <= NUM_THREE) { // NUM_THREE = 3: loadToB1的效率与kernel大小有关
-        // 16bit的loadToB1不需要transpose，MTE2带宽压力相对较小，实测baseM>=384时MMAD基本能掩盖MTE2
-        isMmadCoverMte2 = l0Params.baseM >= (BASIC_BLOCK_SIZE_256 + BASIC_BLOCK_SIZE_128);
+bool Conv3DDXV2InnerProductTiling::CheckVecTransBoundary(const CoreTilingParams& coreParams,
+                                                         const L1TilingParams& l1Params,
+                                                         const L0TilingParams& l0Params) const
+{
+    if (tilingRunInfo_.enableSplitK) {
+        return true;
     }
-    if (static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT) && !runInfo_.hf32_flag) {
-        // fp32 Cube计算慢8倍，baseM阈值取256。
-        isMmadCoverMte2 = l0Params.baseM >= BASIC_BLOCK_SIZE_256;
-    }
-    if (isMultiLoadToB1 && isMmadCoverMte2) {
+    if (coreParams.singleCoreCin == 0 || l0Params.baseN == 0 || runInfo_.dedx_d == 0 || runInfo_.dedx_cin_g == 0 ||
+        runInfo_.dedy_cout_g == 0) {
         return false;
     }
-
-    return true;
+    // hwI 表示 hi * wi 的大小
+    uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
+    uint64_t TotalCntDivNcnt = static_cast<uint64_t>(runInfo_.batch_n) * static_cast<uint64_t>(runInfo_.real_g) *
+                               Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.dedx_d), coreParams.singleCoreDin) *
+                               Ops::Base::CeilDiv(hwI, coreParams.singleCoreM);
+    uint64_t cubeCnt = TotalCntDivNcnt *
+                       Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(coreParams.singleCoreCin));
+    uint64_t coreNumNoTrans = std::min(cubeCnt, static_cast<uint64_t>(coreNum_));
+    uint64_t cinCoreCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(coreParams.singleCoreCin));
+    if (TotalCntDivNcnt >= coreNumNoTrans) {
+        return true; // 此时N无分核效果，开启前置转置更佳
+    } else {
+        if (coreNumNoTrans / TotalCntDivNcnt >= VEC_TRANS_CIN_FULL_CORE_NUM) {
+            return false;
+        } else {
+            // 这时候N分核效果不太够，又没有 TotalCntDivNcnt 的重复加载 B
+            // 矩阵次数，就需要综合考虑cout、Cin、TotalCntDivNcnt等因子 核内切K，一轮任务内多次LoadToB1 baseK == 8 &&
+            // baseN不大 -> load2d/3d/MMAD 粒度太薄 -> MTE1/CUBE Bound 能够掩盖MTE2 -> 前置转置无收益
+            if (l0Params.baseK == VEC_TRANS_BASEK_8 && l0Params.baseN < VEC_TRANS_BASEK_8_MAX_BASEN) { // 320是经验值
+                return false;
+            }
+            // dk==1 && kh*kw<=4 -> 前置转置在dkhkwk维padding占比过高，有效带宽太低（带宽利用率低）
+            if (runInfo_.kernel_d == ONE_U64 && runInfo_.kernel_h * runInfo_.kernel_w <= VEC_TRANS_HKWK_MAX_WITH_DK1) {
+                return false;
+            }
+            bool isMultiLoadToB1 = Ops::Base::CeilDiv(tilingRunInfo_.kValue,
+                                                      static_cast<uint64_t>(l1Params.stepKb) *
+                                                          static_cast<uint64_t>(l0Params.baseK)) > 1 ||
+                                   (runInfo_.kernel_d > 1 && runInfo_.dedx_d > 1);
+            // 正常数据类型，baseM>=512时MMAD基本能掩盖MTE2
+            bool isMmadCoverMte2 = l0Params.baseM >= BASIC_BLOCK_SIZE_512;
+            if (static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_BF16) &&
+                runInfo_.kernel_h <= NUM_THREE &&
+                runInfo_.kernel_w <= NUM_THREE) { // NUM_THREE = 3: loadToB1的效率与kernel大小有关
+                // 16bit的loadToB1不需要transpose，MTE2带宽压力相对较小，实测baseM>=384时MMAD基本能掩盖MTE2
+                isMmadCoverMte2 = l0Params.baseM >= (BASIC_BLOCK_SIZE_256 + BASIC_BLOCK_SIZE_128);
+            }
+            if (static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT) && !runInfo_.hf32_flag) {
+                // fp32 Cube计算慢8倍，baseM阈值取256。
+                isMmadCoverMte2 = l0Params.baseM >= BASIC_BLOCK_SIZE_256;
+            }
+            if (isMultiLoadToB1 && isMmadCoverMte2) {
+                return false;
+            }
+            uint64_t metric = static_cast<uint64_t>(runInfo_.dedy_cout_g) * TotalCntDivNcnt * l0Params.baseN *
+                              coreNumNoTrans * runInfo_.kernel_d * runInfo_.dedx_d * runInfo_.kernel_h *
+                              runInfo_.kernel_w / (cinCoreCnt * cinCoreCnt);
+            return metric > VEC_TRANS_METRIC_THRESHOLD;
+        }
+    }
 }
 
 uint32_t Conv3DDXV2InnerProductTiling::GetLoadB1Condition()

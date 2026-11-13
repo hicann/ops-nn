@@ -278,6 +278,8 @@ private:
     bool CheckVecTrans16bitPlus(const CoreTilingParams& coreParams, const L0TilingParams& l0Params);
     bool CheckVecTransEnable(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
                              const L0TilingParams& l0Params);
+    bool CheckVecTransBoundary(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                               const L0TilingParams& l0Params) const;
     bool ShrinkBaseK(L1TilingParams& l1Params, L0TilingParams& l0Params, const uint32_t maxBaseK);
     void ShrinkBasicBlock(L1TilingParams& l1Params, L0TilingParams& l0Params);
     ge::graphStatus GetLargeHkWkTilingMode();
