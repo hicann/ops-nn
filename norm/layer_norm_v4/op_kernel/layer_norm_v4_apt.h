@@ -20,6 +20,8 @@
 #include "arch35/layer_norm_v4_two_pass.h"
 #include "arch35/layer_norm_v4_welford.h"
 #include "arch35/layer_norm_v4_two_pass_perf.h"
+#include "arch35/layer_norm_v4_regbase_transpose.h"
+#include "arch35/layer_norm_v4_regbase_reduce_empty.h"
 
 using namespace LayerNormV4;
 using AscendC::AIC;
@@ -40,6 +42,24 @@ using AscendC::AIC;
 #define LNV4_REGBASE_TWO_PASS_PERF_HALF_HALF 511
 #define LNV4_REGBASE_TWO_PASS_PERF_BF16_FLOAT 520
 #define LNV4_REGBASE_TWO_PASS_PERF_BF16_BF16 522
+
+#define LNV4_REGBASE_TRANSPOSE_FLOAT_FLOAT 800
+#define LNV4_REGBASE_TRANSPOSE_HALF_FLOAT 810
+#define LNV4_REGBASE_TRANSPOSE_HALF_HALF 811
+#define LNV4_REGBASE_TRANSPOSE_BF16_FLOAT 820
+#define LNV4_REGBASE_TRANSPOSE_BF16_BF16 822
+#define LNV4_REGBASE_REDUCE_EMPTY 900
+
+template <typename T, typename U>
+__aicore__ inline void RegbaseTransposeImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
+                                            GM_ADDR rstd, GM_ADDR tiling)
+{
+    TPipe pipe;
+    GET_TILING_DATA_WITH_STRUCT(LayerNormV4TilingDataRegBaseTranspose, tilingData, tiling);
+    LayerNormV4RegbaseTranspose<T, U> op(&tilingData, &pipe);
+    op.Init(x, gamma, beta, y, mean, rstd);
+    op.Process();
+}
 
 template <typename Tfm, typename Tweight, typename Tmean>
 __aicore__ inline void RegbaseTwoPassImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd,
@@ -127,6 +147,29 @@ static __aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR 
         return;
     } else if (TILING_KEY_IS(LNV4_REGBASE_TWO_PASS_PERF_BF16_BF16)) {
         RegbaseTwoPassPerfImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN>(x, gamma, beta, y, mean, rstd, tiling);
+        return;
+    }
+    // Append new keys to preserve the existing compiler discovery order.
+    if (TILING_KEY_IS(LNV4_REGBASE_TRANSPOSE_FLOAT_FLOAT)) {
+        RegbaseTransposeImpl<float, float>(x, gamma, beta, y, mean, rstd, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV4_REGBASE_TRANSPOSE_HALF_FLOAT)) {
+        RegbaseTransposeImpl<half, float>(x, gamma, beta, y, mean, rstd, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV4_REGBASE_TRANSPOSE_HALF_HALF)) {
+        RegbaseTransposeImpl<half, half>(x, gamma, beta, y, mean, rstd, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV4_REGBASE_TRANSPOSE_BF16_FLOAT)) {
+        RegbaseTransposeImpl<bfloat16_t, float>(x, gamma, beta, y, mean, rstd, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV4_REGBASE_TRANSPOSE_BF16_BF16)) {
+        RegbaseTransposeImpl<bfloat16_t, bfloat16_t>(x, gamma, beta, y, mean, rstd, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV4_REGBASE_REDUCE_EMPTY)) {
+        GET_TILING_DATA_WITH_STRUCT(LayerNormV4TilingDataRegBaseReduceEmpty, tilingData, tiling);
+        LayerNormV4RegbaseReduceEmpty op(&tilingData);
+        op.Init(mean, rstd);
+        op.Process();
         return;
     }
     return;

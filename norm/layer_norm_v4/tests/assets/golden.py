@@ -110,10 +110,15 @@ class LayerNormV4TorchThirdParty:
         ns = list(x.shape[-rank:])
         gamma = None if gamma is None or gamma.numel() == 0 else gamma
         beta = None if beta is None or beta.numel() == 0 else beta
+        out_dtype = x.dtype
+        if x.dtype in (torch.float16, torch.bfloat16) and any(
+            p is not None and p.dtype == torch.float32 for p in (gamma, beta)
+        ):
+            x = x.to(torch.float32)
         y, mean, rstd = torch.ops.aten.native_layer_norm(
             x, ns, gamma, beta, float(epsilon)
         )
-        return [y, mean.to(torch.float32), rstd.to(torch.float32)]
+        return [y.to(out_dtype), mean.to(torch.float32), rstd.to(torch.float32)]
 
 
 class AclnnLayerNormTorchThirdParty:

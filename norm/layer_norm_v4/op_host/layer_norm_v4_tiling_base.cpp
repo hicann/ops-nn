@@ -98,17 +98,27 @@ ge::graphStatus GetCommonShapeAttrsInfo(gert::TilingContext* context, uint64_t c
     OP_CHECK_IF(
         colSize <= 0,
         ReportTilingStageError(context->GetNodeName(), "GetShapeAttrsInfo: colSize is " + std::to_string(colSize) +
-                                                           "; the size of the normalized shape is invalid"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        rowSize <= 0,
-        ReportTilingStageError(context->GetNodeName(), "GetShapeAttrsInfo: rowSize is " + std::to_string(rowSize) +
                                                            "; the size of the non-normalized shape is invalid"),
         return ge::GRAPH_FAILED);
+    if (rowSize == 0) {
+        const auto* compileInfo = context->GetCompileInfo<LayerNormV4CompileInfo>();
+        OP_CHECK_IF(compileInfo == nullptr,
+                    ReportTilingStageError(
+                        context->GetNodeName(),
+                        "GetShapeAttrsInfo: compile info is null; cannot select the empty-reduction template"),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            !compileInfo->isRegBase,
+            ReportTilingStageError(context->GetNodeName(),
+                                   "GetShapeAttrsInfo: zero reduction size is only supported on regbase platforms"),
+            return ge::GRAPH_FAILED);
+    }
 
     commonParams.colSize = colSize;
     commonParams.rowSize = rowSize;
-    commonParams.coefficient = static_cast<float>(1.0) / static_cast<float>(commonParams.rowSize);
+    if (rowSize != 0) {
+        commonParams.coefficient = 1.0f / static_cast<float>(rowSize);
+    }
     uint64_t alignment = 16;
     if (DTYPE_SIZE_MAP.find(commonParams.tensorDtype) != DTYPE_SIZE_MAP.end()) {
         alignment = Ops::Base::GetUbBlockSize(context) / DTYPE_SIZE_MAP.at(commonParams.tensorDtype);

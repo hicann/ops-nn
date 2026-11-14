@@ -152,6 +152,25 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_511, LayerNormV4TilingDataRegBaseTwoPassP
 REGISTER_TILING_DATA_CLASS(LayerNormV4_520, LayerNormV4TilingDataRegBaseTwoPassPerf)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_522, LayerNormV4TilingDataRegBaseTwoPassPerf)
 
+BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataRegBaseTranspose)
+TILING_DATA_FIELD_DEF(uint64_t, a);
+TILING_DATA_FIELD_DEF(uint64_t, aBlockFactor);
+TILING_DATA_FIELD_DEF(uint32_t, tileA);
+TILING_DATA_FIELD_DEF(uint32_t, r);
+TILING_DATA_FIELD_DEF(uint32_t, rAlign);
+TILING_DATA_FIELD_DEF(uint32_t, paramAlign);
+TILING_DATA_FIELD_DEF(uint32_t, nullptrGamma);
+TILING_DATA_FIELD_DEF(uint32_t, nullptrBeta);
+TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormV4_800, LayerNormV4TilingDataRegBaseTranspose)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_810, LayerNormV4TilingDataRegBaseTranspose)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_811, LayerNormV4TilingDataRegBaseTranspose)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_820, LayerNormV4TilingDataRegBaseTranspose)
+REGISTER_TILING_DATA_CLASS(LayerNormV4_822, LayerNormV4TilingDataRegBaseTranspose)
+
 BEGIN_TILING_DATA_DEF(LayerNormV4CommonTilingData)
 TILING_DATA_FIELD_DEF(int64_t, numBlocks);
 TILING_DATA_FIELD_DEF(uint32_t, colSize);
@@ -198,6 +217,15 @@ REGISTER_TILING_DATA_CLASS(LayerNormV4_2601, LayerNormV4MergeNTilingData)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_602, LayerNormV4MergeNTilingData)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_1602, LayerNormV4MergeNTilingData)
 REGISTER_TILING_DATA_CLASS(LayerNormV4_2602, LayerNormV4MergeNTilingData)
+
+BEGIN_TILING_DATA_DEF(LayerNormV4TilingDataRegBaseReduceEmpty)
+TILING_DATA_FIELD_DEF(uint64_t, rows);
+TILING_DATA_FIELD_DEF(uint64_t, rowsPerCore);
+TILING_DATA_FIELD_DEF(uint32_t, rowsPerTile);
+TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormV4_900, LayerNormV4TilingDataRegBaseReduceEmpty)
 
 struct ParamsLayerNomrV4 {
     uint64_t coreNum;
@@ -352,6 +380,32 @@ private:
     void DoUbTiling(const BlockTilingData& blockTilingParams, UbTilingData& ubTilingParams);
     uint64_t CalcBorrowFactor(uint64_t oriFactor);
     uint32_t FindDichotomizeAddDiffSize();
+};
+
+class LayerNormV4RegBaseTransposeTiling : public LayerNormV4TilingBase {
+public:
+    explicit LayerNormV4RegBaseTransposeTiling(gert::TilingContext* context) : LayerNormV4TilingBase(context) {}
+    ~LayerNormV4RegBaseTransposeTiling() override = default;
+    LayerNormV4TilingDataRegBaseTranspose td_;
+
+protected:
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
+};
+
+class LayerNormV4RegBaseReduceEmptyTiling : public LayerNormV4TilingBase {
+public:
+    explicit LayerNormV4RegBaseReduceEmptyTiling(gert::TilingContext* context) : LayerNormV4TilingBase(context) {}
+    ~LayerNormV4RegBaseReduceEmptyTiling() override = default;
+    LayerNormV4TilingDataRegBaseReduceEmpty td_;
+
+protected:
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
 };
 
 class LayerNormV4RegBaseTwoPassTiling : public LayerNormV4TilingBase {

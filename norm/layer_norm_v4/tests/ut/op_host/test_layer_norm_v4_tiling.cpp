@@ -13,6 +13,8 @@
  * \brief
  */
 
+#include <cfenv>
+#include <map>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -2011,3 +2013,157 @@ static const auto _inst_LAYER_NORM_V4 = []() {
     testing::UnitTest::GetInstance()->listeners().Append(new LAYER_NORM_V4NoEz9999Check());
     return 0;
 }();
+
+namespace {
+struct LayerNormV4RouteResult {
+    ge::graphStatus status;
+    uint64_t key;
+    uint32_t blocks;
+};
+
+LayerNormV4RouteResult RunLayerNormV4Tiling(int64_t a, int64_t r, ge::DataType xType, ge::DataType parameterType,
+                                            bool isRegBase = true, ge::DataType shapeType = ge::DT_INT32)
+{
+    gert::StorageShape xShape{{a, r}, {a, r}};
+    gert::StorageShape normShape{{1}, {1}};
+    gert::StorageShape parameterShape{{r}, {r}};
+    gert::StorageShape statisticsShape{{a, 1}, {a, 1}};
+    LayerNormV4CompileInfo info;
+    info.coreNum = 56;
+    info.ubSizePlatForm = 253952;
+    info.isRegBase = isRegBase;
+    info.vectorLength = 256;
+    info.blockSize = 32;
+    fe::PlatFormInfos platform;
+    platform.Init();
+    std::map<std::string, std::string> arch{{"NpuArch", isRegBase ? "3510" : "2201"}};
+    platform.SetPlatformRes("SoCInfo", arch);
+    auto data = gert::TilingData::CreateCap(4096);
+    auto workspace = gert::ContinuousVector::Create<size_t>(16);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("LayerNormV4")
+                      .NodeIoNum(4, 3)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&xShape, &normShape, &parameterShape, &parameterShape})
+                      .OutputShapes({&xShape, &statisticsShape, &statisticsShape})
+                      .CompileInfo(&info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform))
+                      .NodeInputTd(0, xType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, shapeType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, parameterType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, parameterType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, xType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1.0e-5f)}})
+                      .TilingData(data.get())
+                      .Workspace(reinterpret_cast<gert::ContinuousVector*>(workspace.get()))
+                      .Build();
+    auto* context = holder.GetContext<gert::TilingContext>();
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("LayerNormV4");
+    EXPECT_NE(impl, nullptr);
+    if (impl == nullptr) {
+        return {ge::GRAPH_FAILED, 0, 0};
+    }
+    const auto status = impl->tiling(context);
+    return {status, context->GetTilingKey(), context->GetBlockDim()};
+}
+} // namespace
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_transpose_fp32_small_r)
+{
+    const auto result = RunLayerNormV4Tiling(65536, 16, ge::DT_FLOAT, ge::DT_FLOAT);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 800U);
+    EXPECT_GT(result.blocks, 0U);
+    EXPECT_LE(result.blocks, 56U);
+}
+
+// With 56 cores and 64 FP32 lanes, A must exceed 56 * 8 * 64 = 28672.
+TEST_F(LayerNormV4Tiling, layer_norm_v4_transpose_reject_workload_boundary)
+{
+    const auto result = RunLayerNormV4Tiling(28672, 16, ge::DT_FLOAT, ge::DT_FLOAT);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 500U);
+    EXPECT_GT(result.blocks, 0U);
+    EXPECT_LE(result.blocks, 56U);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_transpose_fp32_r_boundary)
+{
+    const auto result = RunLayerNormV4Tiling(65536, 17, ge::DT_FLOAT, ge::DT_FLOAT);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 500U);
+    EXPECT_GT(result.blocks, 0U);
+    EXPECT_LE(result.blocks, 56U);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_transpose_fp16_fp32)
+{
+    const auto result = RunLayerNormV4Tiling(65536, 16, ge::DT_FLOAT16, ge::DT_FLOAT);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 810U);
+    EXPECT_GT(result.blocks, 0U);
+    EXPECT_LE(result.blocks, 56U);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_transpose_fp16_fp16)
+{
+    const auto result = RunLayerNormV4Tiling(65536, 16, ge::DT_FLOAT16, ge::DT_FLOAT16);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 811U);
+    EXPECT_GT(result.blocks, 0U);
+    EXPECT_LE(result.blocks, 56U);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_transpose_bf16_fp32)
+{
+    const auto result = RunLayerNormV4Tiling(65536, 16, ge::DT_BF16, ge::DT_FLOAT);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 820U);
+    EXPECT_GT(result.blocks, 0U);
+    EXPECT_LE(result.blocks, 56U);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_transpose_bf16_bf16)
+{
+    const auto result = RunLayerNormV4Tiling(65536, 16, ge::DT_BF16, ge::DT_BF16);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 822U);
+    EXPECT_GT(result.blocks, 0U);
+    EXPECT_LE(result.blocks, 56U);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_reduce_empty_small_a)
+{
+    std::feclearexcept(FE_ALL_EXCEPT);
+    const auto result = RunLayerNormV4Tiling(3, 0, ge::DT_FLOAT, ge::DT_FLOAT);
+    EXPECT_EQ(std::fetestexcept(FE_DIVBYZERO | FE_INVALID), 0);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 900U);
+    EXPECT_EQ(result.blocks, 1U);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_reduce_empty_large_a)
+{
+    const auto result = RunLayerNormV4Tiling(4000001, 0, ge::DT_BF16, ge::DT_FLOAT, true, ge::DT_INT64);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 900U);
+    EXPECT_EQ(result.blocks, 56U);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_reduce_empty_reject_zero_a)
+{
+    const auto result = RunLayerNormV4Tiling(0, 8, ge::DT_FLOAT, ge::DT_FLOAT);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+    EXPECT_TRUE(HasEZCode("EZ1008"));
+    EXPECT_EQ(GetEZCodeCount(), 1);
+}
+
+TEST_F(LayerNormV4Tiling, layer_norm_v4_reduce_empty_reject_non_regbase)
+{
+    const auto result = RunLayerNormV4Tiling(3, 0, ge::DT_FLOAT, ge::DT_FLOAT, false);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+    EXPECT_TRUE(HasEZCode("EZ1008"));
+    EXPECT_EQ(GetEZCodeCount(), 1);
+}
