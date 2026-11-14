@@ -71,7 +71,7 @@ cann_ops_nn.cla_gate_backward(
 
 ## 参数说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | `grad_merged` | Tensor | 必选 | 输出投影反传到gate merge的梯度，对应公式中的`G`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16` | 3维 `[T, N, D]`，`D`仅支持128或256 |
 | `global_attn` | Tensor | 必选 | 前向Global/CLA分支Attention输出，对应公式中的`O_g`。支持非连续Tensor，不支持空Tensor。 | `torch.float16`、`torch.bfloat16`，数据类型与grad_merged一致 | 3维 `[T, N, D]`，与 `grad_merged`完全一致 |
@@ -82,7 +82,7 @@ cann_ops_nn.cla_gate_backward(
 
 ## 返回值说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | `grad_global_attn_out` | Tensor | 必选 | Global Attention分支梯度，对应公式中的`dO_g`。 | 与 `global_attn` 一致 | 与 `global_attn` 一致 |
 | `grad_local_attn_out` | Tensor | 必选 | Local Attention分支梯度，对应公式中的`dO_l`。 | 与 `local_attn` 一致 | 与 `local_attn` 一致 |

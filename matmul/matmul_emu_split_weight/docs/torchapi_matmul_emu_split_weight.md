@@ -101,7 +101,7 @@ cann_ops_nn.matmul_emu_split_weight(x, w_high, w_low, *, w_low_scale=0.00390625,
         <td>w_low_scale</td>
         <td>float</td>
         <td>可选</td>
-        <td>缩放因子，对应公式中的scale。仅支持1/256（0.00390625）。默认值0.00390625。</td>
+        <td>缩放因子，对应公式中的scale。仅支持1/256（0.00390625）。默认值：0.00390625。</td>
         <td>-</td>
         <td>-</td>
     </tr>
@@ -109,7 +109,7 @@ cann_ops_nn.matmul_emu_split_weight(x, w_high, w_low, *, w_low_scale=0.00390625,
         <td>y_dtype</td>
         <td>int</td>
         <td>可选</td>
-        <td>输出数据类型标识。仅支持0（FP32）。默认值0。</td>
+        <td>输出数据类型标识。仅支持0（FP32）。默认值：0。</td>
         <td>-</td>
         <td>-</td>
     </tr>
@@ -158,7 +158,7 @@ cann_ops_nn.matmul_emu_split_weight(x, w_high, w_low, *, w_low_scale=0.00390625,
 - M、K、N取值范围为(0, INT32_MAX]。
 - w_low_scale仅支持1/256（0.00390625），其他值将报错。
 - y_dtype仅支持0（FP32），其他值将报错。
-- 该接口本身不接收转置属性，如需转置调用方应在传入前对Tensor做permute处理，算子支持非连续Tensor，无需额外做contiguous。
+- 该接口本身不接收转置属性，如需转置，调用方应在传入前对Tensor做permute处理，算子支持非连续Tensor，无需额外做contiguous。
 
 ## 确定性计算
 

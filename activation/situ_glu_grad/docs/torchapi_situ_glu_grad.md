@@ -113,10 +113,10 @@ cann_ops_nn.situ_glu_grad(
 | --- | --- | --- | --- | --- | --- |
 | `grad_y` | Tensor | 必选 | 前向输出`y`的梯度。 | float16、float32、bfloat16 | 与`x`一致，但`dim`维度大小为`x.shape[dim] // 2` |
 | `x` | Tensor | 必选 | 前向输入，`dim`维度会被均分为gate与up两部分。`grad_y`与`x`数据类型需一致。 | float16、float32、bfloat16 | 1-8维，`dim`维度为偶数 |
-| `dim` | int | 可选 | 切分维度，取值范围`[-x.dim(), x.dim()-1]`，默认`-1`。需与前向`situ_glu`一致。 | - | - |
+| `dim` | int | 可选 | 切分维度，取值范围`[-x.dim(), x.dim()-1]`，默认`-1`，需与前向`situ_glu`一致。 | - | - |
 | `beta` | float | 可选 | SiTU门控部分的缩放系数，需与前向`situ_glu`保持一致，默认`1.0`。 | - | - |
-| `linear_beta` | float | 可选 | up路径线性tanh的缩放系数，需与前向`situ_glu`保持一致。默认`0.0`。 | - | - |
-| `activate_left` | bool | 可选 | 切分`x`时gate是否为前半部分，需与前向`situ_glu`保持一致。默认`True`。 | - | - |
+| `linear_beta` | float | 可选 | up路径线性tanh的缩放系数，需与前向`situ_glu`保持一致，默认`0.0`。 | - | - |
+| `activate_left` | bool | 可选 | 切分`x`时gate是否为前半部分，需与前向`situ_glu`保持一致，默认`True`。 | - | - |
 
 ## 返回值说明
 
@@ -127,7 +127,7 @@ cann_ops_nn.situ_glu_grad(
 ## 约束说明
 
 - 该接口支持单算子模式和TorchAir图模式调用。
-- `dim`非last维时，若尾部维度组合不满足半行32B对齐，会回退到Long-H路径，功能正确但性能略降。
+- `dim`非last维时，若尾部维度组合不满足半行32字节对齐，会回退到Long-H路径，功能正确但性能略降。
 - `beta`、`linear_beta`、`activate_left`、`dim`需与前向`situ_glu`调用时的取值一致，否则梯度结果不正确。
 
 ## 确定性计算

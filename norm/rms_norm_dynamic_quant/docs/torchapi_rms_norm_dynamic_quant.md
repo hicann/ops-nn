@@ -83,7 +83,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
     <th>可选/必选</th>
     <th>描述</th>
     <th>数据类型</th>
-    <th>维度(shape)</th>
+    <th>维度（shape）</th>
 </tr>
 </thead>
 <tbody>
@@ -115,7 +115,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>beta</td>
         <td>Tensor</td>
         <td>可选</td>
-        <td>标准化过程中的偏置项，公式中的beta。shape和dtype需与gamma一致。</td>
+        <td>标准化过程中的偏置项，公式中的beta，shape和dtype需与gamma一致。</td>
         <td>float16、bfloat16</td>
         <td>(D,)</td>
     </tr>
@@ -123,7 +123,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>epsilon</td>
         <td>float</td>
         <td>可选</td>
-        <td>用于防止除0错误，公式中的epsilon，必须大于零。默认值1e-6。</td>
+        <td>用于防止除0错误，公式中的epsilon，必须大于零。默认值：1e-6。</td>
         <td>float32</td>
         <td>-</td>
     </tr>
@@ -131,7 +131,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>dst_type</td>
         <td>int</td>
         <td>可选</td>
-        <td>输出 y 的数据类型枚举值。当前仅支持INT8量化，默认值2。</td>
+        <td>输出 y 的数据类型枚举值。当前仅支持INT8量化，默认值：2。</td>
         <td>int</td>
         <td>-</td>
     </tr>
@@ -155,7 +155,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
     <th>可选/必选</th>
     <th>描述</th>
     <th>数据类型</th>
-    <th>维度(shape)</th>
+    <th>维度（shape）</th>
 </tr>
 </thead>
 <tbody>

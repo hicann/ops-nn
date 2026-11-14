@@ -142,7 +142,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
         <td>scale1</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>表示-1轴每个分组对应的量化尺度。shape需满足约束说明中的公式。</td>
+        <td>表示-1轴每个分组对应的量化尺度，shape需满足约束说明中的公式。</td>
         <td>FLOAT8_E8M0</td>
         <td>3-4</td>
     </tr>
@@ -150,7 +150,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
         <td>scale2</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>表示-2轴每个分组对应的量化尺度，输出需要对每两行数据进行交织处理。shape需满足约束说明中的公式。</td>
+        <td>表示-2轴每个分组对应的量化尺度，输出需要对每两行数据进行交织处理，shape需满足约束说明中的公式。</td>
         <td>FLOAT8_E8M0</td>
         <td>3-4</td>
     </tr>

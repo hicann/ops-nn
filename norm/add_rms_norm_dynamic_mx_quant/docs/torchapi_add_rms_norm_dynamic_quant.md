@@ -121,7 +121,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
     <th>可选/必选</th>
     <th>描述</th>
     <th>数据类型</th>
-    <th>维度(shape)</th>
+    <th>维度（shape）</th>
 </tr>
 </thead>
 <tbody>
@@ -177,7 +177,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
         <td>scale_alg</td>
         <td>int</td>
         <td>可选</td>
-        <td>mxscale的计算方法，公式中的scale_alg。取值0表示Open Compute Project(OCP)实现，取值1表示cuBLAS实现（仅FP8输出支持）；dst_type为40/41（FP4）时仅支持取值0。默认值0。</td>
+        <td>mxscale的计算方法，公式中的scale_alg。取值0表示Open Compute Project（OCP）实现，取值1表示cuBLAS实现（仅FP8输出支持）；dst_type为40/41（FP4）时仅支持取值0。默认值0。</td>
         <td>int</td>
         <td>-</td>
     </tr>
@@ -225,7 +225,7 @@ cann_ops_nn.add_rms_norm_dynamic_quant(x1, x2, gamma, beta=None, x3=None, epsilo
     <th>可选/必选</th>
     <th>描述</th>
     <th>数据类型</th>
-    <th>维度(shape)</th>
+    <th>维度（shape）</th>
 </tr>
 </thead>
 <tbody>

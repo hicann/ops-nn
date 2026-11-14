@@ -192,7 +192,7 @@ cann_ops_nn.situ_mx_quant(
 - x的维数必须大于等于1，最后一维必须为偶数。
 - x的数据类型必须为torch.float16或torch.bfloat16。
 - beta参数必须大于0。
-- dst_type支持36(FLOAT8_E4M3FN)或35(FLOAT8_E5M2)。
+- dst_type支持36（FLOAT8_E4M3FN）或35（FLOAT8_E5M2）。
 - round_mode必须为"rint"。
 - axis固定为-1（最后一维），暂不支持其他轴。
 - 不支持空Tensor和非连续Tensor。
@@ -209,7 +209,7 @@ cann_ops_nn.situ_mx_quant(
 
 ## 调用示例
 
-- 单算子模式调用（eager）
+- 单算子模式调用（eager）：
 
     ```python
     import torch
@@ -232,7 +232,7 @@ cann_ops_nn.situ_mx_quant(
     print("y_bf16:============", y_bf16.shape, y_bf16.cpu())
     ```
 
-- 图模式（torchair）调用
+- 图模式（torchair）调用：
 
     ```python
     import torch

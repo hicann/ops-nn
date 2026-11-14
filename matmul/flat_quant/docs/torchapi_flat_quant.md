@@ -101,7 +101,7 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
         <td>clip_ratio</td>
         <td>float</td>
         <td>可选</td>
-        <td>量化裁剪比例，用于控制量化的裁剪幅度，范围(0, 1]。默认值1.0。</td>
+        <td>量化裁剪比例，用于控制量化的裁剪幅度，范围（0, 1]。默认值：1.0。</td>
         <td>-</td>
         <td>-</td>
     </tr>
@@ -117,7 +117,7 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
         <td>dst_type_max</td>
         <td>float</td>
         <td>可选</td>
-        <td>目标数据类型的最大值，输入值只能是0或[6, 12]范围内的数。默认值0.0。</td>
+        <td>目标数据类型的最大值，输入值只能是0或[6, 12]范围内的数。默认值：0.0。</td>
         <td>-</td>
         <td>-</td>
     </tr>
@@ -125,7 +125,7 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
         <td>group_list</td>
         <td>Tensor</td>
         <td>可选</td>
-        <td>分组列表，用于分组量化。支持1D或2D输入。默认值None。</td>
+        <td>分组列表，用于分组量化。支持1D或2D输入。默认值：None。</td>
         <td>int64</td>
         <td>(G,) 或 (G, 2)</td>
     </tr>
@@ -133,7 +133,7 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
         <td>group_list_type</td>
         <td>int</td>
         <td>可选</td>
-        <td>group_list输入的分组方式，取值范围0-2。默认值0。</td>
+        <td>group_list输入的分组方式，取值范围0-2。默认值：0。</td>
         <td>-</td>
         <td>-</td>
     </tr>
@@ -201,7 +201,7 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
     - group_list不为None时，group_list输入的数值需要满足以下条件，否则无法保证输出是否符合预期：
       - 当group_list_type为0时，group_list必须为非负单调非递减数列，表示分组后每组大小的cumsum结果（累计和），最后一个值应小于等于x中tensor的第一维。
       - 当group_list_type为1时，group_list必须为非负数列，表示分组后每组大小，数值的总和应小于等于x中tensor的第一维。
-      - 当group_list_type为2时，group_list必须为非负数列，数据排布为[[groupIdx0, groupSize0], [groupIdx1, groupSize1]...]，其中groupSize为分组后每组大小，第二列数值的总和应小于等于x中tensor的第一维。
+      - 当group_list_type为2时，group_list必须为非负数列，数据排布为[[groupIdx0, groupSize0], [groupIdx1, groupSize1]……]，其中groupSize为分组后每组大小，第二列数值的总和应小于等于x中tensor的第一维。
   <!-- end id8 -->
 
 ## 确定性计算

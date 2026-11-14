@@ -76,7 +76,7 @@ cann_ops_nn.confidence_head_fused(
 
 ## 参数说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | hidden | Tensor | 必选 | 待投影的特征，最后一维为K1。 | torch.float16、torch.bfloat16 | (N, K1) 或 (B, N, K1) |
 | weight | Tensor | 必选 | 所有行与batch共用的一维投影权重，长度为K1+K2。 | 与hidden一致 | (K1+K2,) |

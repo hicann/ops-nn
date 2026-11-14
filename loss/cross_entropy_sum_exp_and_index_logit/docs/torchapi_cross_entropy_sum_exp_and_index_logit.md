@@ -27,7 +27,7 @@
 
 - 计算公式：
 
-  设当前rank本地vocab shard为`vocab_parallel_logits`，全局最大logit为`global_logits_max`，vocab分片范围为`[vocab_start_index, vocab_end_index)`。对每个token `i`、每个本地vocab位置`j`：
+  设当前rank本地vocab shard为`vocab_parallel_logits`，全局最大logit为`global_logits_max`，vocab分片范围为`[vocab_start_index, vocab_end_index)`，对每个token `i`、每个本地vocab位置`j`：
 
   $$
   target\_mask[i] = \begin{cases} 1, & target[i] < vocab\_start\_index \text{ 或 } target[i] \geq vocab\_end\_index \\ 0, & \text{otherwise} \end{cases}
@@ -108,7 +108,7 @@ cann_ops_nn.cross_entropy_sum_exp_and_index_logit(vocab_parallel_logits, target,
         <td>vocab_start_index</td>
         <td>int</td>
         <td>必选</td>
-        <td>当前rank vocab分片起始索引（全局），公式中的vocab_start_index。需满足vocab_start_index大于等于0</td>
+        <td>当前rank vocab分片起始索引（全局），公式中的vocab_start_index。需满足vocab_start_index大于等于0。</td>
         <td>-</td>
         <td>-</td>
     </tr>
@@ -193,7 +193,7 @@ cann_ops_nn.cross_entropy_sum_exp_and_index_logit(vocab_parallel_logits, target,
 - 该接口支持单算子模式和TorchAir图模式调用。
 - `vocab_parallel_logits`仅支持2维`[N, V_local]`或3维`[S, B, V_local]`，且`shape[:-1]`与`target.shape`、`global_logits_max.shape`完全一致。
 - V_local对齐约束：`bfloat16`输入时V_local需为16的倍数，`float32`输入时V_local需为8的倍数（保证UB 32字节对齐）。
-- N（`prod(target.shape)`）范围：[1, 32K]；V_local范围：[16, 200k]。
+- N（`prod(target.shape)`）范围：[1, 32k]；V_local范围：[16, 200k]。
 - 算子不支持空Tensor输入。
 
 ## 确定性/Batch一致性

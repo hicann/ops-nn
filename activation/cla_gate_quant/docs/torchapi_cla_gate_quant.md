@@ -34,7 +34,7 @@
 
 - 计算流程：
 
-  1. 两路 head-wise Sigmoid 门控：`s_g = sigmoid(global_gate_logits)`，`s_l = sigmoid(local_gate_logits)`；
+  1. 两路 head-wise Sigmoid 门控：`s_g = sigmoid(global_gate_logits)`、`s_l = sigmoid(local_gate_logits)`；
   2. gate 融合：`merged = s_g * global_attn + s_l * local_attn`；
   3. 量化前逻辑矩阵：`X = reshape(merged, [T, K])`，`K = N × D`；
   4. row-wise 量化（K 方向，`[1,32]` block）得到 `row_data` 与 `row_scale`；
@@ -60,13 +60,13 @@ cann_ops_nn.cla_gate_quant(
 
 ## 参数说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | `global_attn` | Tensor | 必选 | Global/CLA 分支 Attention 输出 `O_g`。 | `torch.float16`、`torch.bfloat16` | 3 维 `[T, N, D]` |
 | `local_attn` | Tensor | 必选 | Local/SWA 分支 Attention 输出 `O_l`，shape 与 `global_attn` 一致。 | `torch.float16`、`torch.bfloat16` | 3 维 `[T, N, D]` |
 | `global_gate_logits` | Tensor | 必选 | Global gate 的 Sigmoid 前值 `z_g`，dtype 与 `global_attn` 一致。 | `torch.float16`、`torch.bfloat16` | 2 维 `[T, N]` |
 | `local_gate_logits` | Tensor | 必选 | Local gate 的 Sigmoid 前值 `z_l`，shape 与 `global_gate_logits` 一致。 | `torch.float16`、`torch.bfloat16` | 2 维 `[T, N]` |
-| `dst_type` | int | 可选 | 目标量化类型的 torch dtype 编码，见下方 `dst_type 编码说明`；传 `None` 等价于 `24`(`torch.float8_e4m3fn`)。支持传入torch.dtype类型。 | - | - |
+| `dst_type` | int | 可选 | 目标量化类型的 torch dtype 编码，见下方 `dst_type 编码说明`；传 `None` 等价于 `24`（`torch.float8_e4m3fn`）。支持传入torch.dtype类型。 | - | - |
 | `round_mode` | str | 可选 | 舍入模式。FP8 仅支持 `"rint"`；FP4 支持 `"rint"`、`"round"`、`"floor"`。默认 `"rint"`。 | - | - |
 | `scale_alg` | int | 可选 | scale 计算方法，`1` 为 cuBLAS、`0` 为 OCP；FP4 仅支持 `0`。默认 `1`。 | - | - |
 | `input_attn_layout` | str | 可选 | 输入 `global_attn`/`local_attn` 的排布格式，当前仅支持 `"TND"`。默认 `"TND"`。 | - | - |
@@ -87,10 +87,10 @@ cann_ops_nn.cla_gate_quant(
 
 ## 返回值说明
 
-| 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- |
-| `row_data` | Tensor | Row-wise（K 方向）量化数据 `P_i`。 | FP8 为 `torch.float8_e5m2`/`torch.float8_e4m3fn`；FP4 在 torch 侧以 `torch.uint8` 打包存储（2 个 FP4 值占 1 字节） | FP8 为 `[T, K]`；FP4 为 `[T, K/2]` |
-| `row_scale` | Tensor | Row-wise 每个 `[1,32]` 分组的 E8M0 缩放因子，两两一组存最后一维，偶数 pad 补 0。 | `torch.uint8`（E8M0 原始值） | `[T, ceil(K/64), 2]` |
+| `row_data` | Tensor | Row-wise（K 方向）量化数据 `P_i`。 | FP8 为 `torch.float8_e5m2`/`torch.float8_e4m3fn`；FP4 在 torch 侧以 `torch.uint8` 打包存储（2 个 FP4 值占 1 字节）。 | FP8 为 `[T, K]`；FP4 为 `[T, K/2]` |
+| `row_scale` | Tensor | Row-wise 每个 `[1,32]` 分组的 E8M0 缩放因子，两两一组存于最后一维，偶数 pad 补 0。 | `torch.uint8`（E8M0 原始值） | `[T, ceil(K/64), 2]` |
 | `col_data` | Tensor | Col-wise（T 方向）量化数据 `P_j`；`dual_axis_flag=False` 时为空 Tensor。 | 同 `row_data` | 双轴：同 `row_data`；单轴：`[0]` |
 | `col_scale` | Tensor | Col-wise 每个 `[32,1]` 分组的 E8M0 缩放因子，偶数 pad 补 0；`dual_axis_flag=False` 时为空 Tensor。 | `torch.uint8`（E8M0 原始值） | 双轴：`[ceil(T/64), K, 2]`；单轴：`[0]` |
 
@@ -112,7 +112,7 @@ cann_ops_nn.cla_gate_quant(
 
 ## 确定性/Batch一致性
 
-- 确定性计算
+- 确定性计算：
   - 默认支持确定性计算：分核方式固定、核内归约顺序与量化块划分固定，同输入同输出。
 
 - Batch一致性说明：

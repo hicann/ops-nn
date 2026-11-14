@@ -25,7 +25,7 @@
 
 - 接口功能：
 
-  完成ClampedSwiGLU激活函数的反向梯度计算。从上游梯度`grad_output`和前向输入`x`重算clamp mask与sigmoid，输出`grad_x`与可选 `grad_weight`。底层调用`aclnnSwigluGroupGrad`。
+  完成ClampedSwiGLU激活函数的反向梯度计算。从上游梯度`grad_output`和前向输入`x`重算clamp mask与sigmoid，输出`grad_x`与可选`grad_weight`。底层调用`aclnnSwigluGroupGrad`。
 
 - 计算公式：
 
@@ -65,7 +65,7 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
 
 ## 参数说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | `grad_output`| Tensor | 必选 | 上游梯度。 | `torch.float16`、`torch.bfloat16`、`torch.float32`| 1-8维 |
 | `x`| Tensor | 必选 | 前向输入，包含 gate 和 up 分支。 | `torch.float16`、`torch.bfloat16`、`torch.float32`| 1-8维，最后一维为 `2 * grad_output.shape[-1]`|
@@ -76,7 +76,7 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
 
 ## 返回值说明
 
-| 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- |
 |`grad_x`| Tensor | x的梯度。 | 与`grad_output`相同 | 与`x`相同 |
 | `grad_weight`| Tensor | weight的梯度，仅weight和y_origin同时提供时返回。 | `torch.float32`| 与`weight`相同 |

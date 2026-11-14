@@ -112,7 +112,7 @@ cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
     <th>可选/必选</th>
     <th>描述</th>
     <th>数据类型</th>
-    <th>维度(shape)</th>
+    <th>维度（shape）</th>
 </tr>
 </thead>
 <tbody>
@@ -184,7 +184,7 @@ cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
     <th>可选/必选</th>
     <th>描述</th>
     <th>数据类型</th>
-    <th>维度(shape)</th>
+    <th>维度（shape）</th>
 </tr>
 </thead>
 <tbody>
@@ -200,7 +200,7 @@ cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
         <td>mxscale1</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>-1轴每个分组对应的块缩放因子。最后一维每2个scale成对存放，N方向按32个元素生成一个scale，进行偶数pad，pad填充值为0。</td>
+        <td>-1轴每个分组对应的块缩放因子，最后一维每2个scale成对存放，N方向按32个元素生成一个scale，进行偶数pad，pad填充值为0。</td>
         <td>torch.uint8（FLOAT8_E8M0）</td>
         <td>(M, ceil(N/64), 2)</td>
     </tr>

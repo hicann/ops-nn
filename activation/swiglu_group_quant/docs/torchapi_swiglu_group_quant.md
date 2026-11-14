@@ -57,7 +57,7 @@ cann_ops_nn.swiglu_group_quant(
 
 ## 参数说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | `x` | Tensor | 必选 | SwiGLU输入，最后一维会被均分为两部分。 | `torch.float16`、`torch.bfloat16`（quant_mode为2/3时额外支持`torch.float32`） | quant_mode=5仅支持2维；其他模式为2-8维（quant_mode为1时为2-7维） |
 | `weight` | Tensor | 可选 | 逐token权重，非空时乘到SwiGLU结果上，加权后的结果用于量化。 | quant_mode=5支持`torch.float16`、`torch.bfloat16`、`torch.float32`，其他模式仅支持`torch.float32` | 1-8维，元素个数等于`x`除最后一维外的元素个数 |
@@ -97,7 +97,7 @@ cann_ops_nn.swiglu_group_quant(
 
 ## 返回值说明
 
-| 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- |
 | `y` | Tensor | 量化输出。 | 参见`quant_mode 与 dst_type` | `x.shape[:-1] + [D/2]` |
 | `y_scale` | Tensor | 量化scale输出。 | 参见`quant_mode 与 dst_type` | `quant_mode=0`为`x.shape[:-1] + [ceil((D/2)/128)]`；`quant_mode=1/5`为`x.shape[:-1] + [ceil(ceil((D/2)/32)/2), 2]`；`quant_mode=2`为`[0]`；`quant_mode=3`为`group_index.shape`或`[1]` |

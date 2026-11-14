@@ -121,7 +121,7 @@ cann_ops_nn.clipped_swiglu(
 
 ## 参数说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | `x` | Tensor | 必选 | 公式中的输入 `x`，在 `dim` 对应维度上必须为偶数。 | `torch.float16`、`torch.bfloat16`、`torch.float32` | 1-8 维 |
 | `group_index` | Tensor | 可选 | 公式中的 `group_index`。第 `i` 个元素代表第 `i` 组需要处理 `x` 的 batch 数量。传入 `None` 表示不分组。 | `torch.int64` | 1 维，每个元素必须为大于等于 0 的整数，所有元素之和必须大于 0，且必须小于等于 `x` 的 shape 中 `dim` 轴之前所有维度的乘积（即总行数）；当 `dim=0` 时，`dim` 轴之前无维度，该乘积视为 1，所有元素之和必须大于 0 且小于等于 1。支持的 group 分组数量由 UB 空间大小决定。 |
@@ -134,7 +134,7 @@ cann_ops_nn.clipped_swiglu(
 
 ## 返回值说明
 
-| 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- |
 | `y` | Tensor | ClippedSwiGLU 激活结果。 | 与 `x` 相同 | 与 `x` 相同，但 `dim` 对应维度上为 `x.shape[dim] // 2` |
 

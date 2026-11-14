@@ -68,14 +68,14 @@ torch.ops.cann_ops_nn.turbo_quant(latent, centroids)
 
 ## 参数说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | latent | Tensor | 必选 | 输入latent，对应公式中的`latent`。必须已完成signed Hadamard旋转，且未归一化。 | float32 | `[numTokens, 512]` |
 | centroids | Tensor | 必选 | 按升序排列的16个Lloyd-Max codebook中心点，对应公式中的`centroids`。 | float32 | `[16]` |
 
 ## 返回值说明
 
-| 输出名 | 输出类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 输出名 | 输出类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | y | Tensor | 必选 | 两个4bit索引打包后的量化结果，对应公式中的`y`，低nibble在前。 | uint8 | `[numTokens, 256]` |
 | scale | Tensor | 必选 | 每个token的L2 norm，对应公式中的`scale`。 | float16 | `[numTokens]` |

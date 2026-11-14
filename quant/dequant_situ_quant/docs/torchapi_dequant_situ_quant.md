@@ -23,63 +23,63 @@
 
 ## 功能说明
 
-- 接口功能：对输入x执行反量化(Dequant)、Situ激活函数和量化(Quant)的融合计算。底层封装aclnnDequantSituQuant。
+- 接口功能：对输入x执行反量化（Dequant）、Situ激活函数和量化（Quant）的融合计算。底层封装aclnnDequantSituQuant。
 
 - 计算公式：
 
   1. 根据输入数据类型x的不同，反量化路径不同：
 
-  - INT8路径：
+        - INT8路径：
 
-    $$
-    dequantOut_i = cast\_to\_float(x_i) \times weight\_scale_i + bias_i
-    $$
+            $$
+            dequantOut_i = cast\_to\_float(x_i) \times weight\_scale_i + bias_i
+            $$
 
-  - INT32路径：
+        - INT32路径：
 
-    $$
-    dequantOut_i = cast\_to\_float(x_i) \times weight\_scale_i \times activation\_scale_i + bias_i
-    $$
+            $$
+            dequantOut_i = cast\_to\_float(x_i) \times weight\_scale_i \times activation\_scale_i + bias_i
+            $$
 
-  - BFLOAT16/FLOAT16路径（预反量化）：
+        - BFLOAT16/FLOAT16路径（预反量化）：
 
-    $$
-    dequantOut_i = cast\_to\_float(x_i)
-    $$
+            $$
+            dequantOut_i = cast\_to\_float(x_i)
+            $$
   2. Situ激活：
 
-    $$
-    situ_a = \beta \times \tanh(gate / \beta) \times sigmoid(gate)
-    $$
+            $$
+            situ_a = \beta \times \tanh(gate / \beta) \times sigmoid(gate)
+            $$
 
-    当linear_beta > 0时：
+            当linear_beta > 0时：
 
-    $$
-    up = linear\_beta \times \tanh(up / linear\_beta)
-    $$
+            $$
+            up = linear\_beta \times \tanh(up / linear\_beta)
+            $$
 
-    $$
-    situOut = situ_a \times up
-    $$
+            $$
+            situOut = situ_a \times up
+            $$
 
-    其中，当activate_left为true时，gate取dequantOut的前半部分，up取后半部分；当activate_left为false时，gate取dequantOut的后半部分，up取前半部分。
+            其中，当activate_left为true时，gate取dequantOut的前半部分，up取后半部分；当activate_left为false时，gate取dequantOut的后半部分，up取前半部分。
   3. 量化：
 
-  - static模式：
+        - static模式：
 
-    $$
-    y_i = trunc(situOut_i / quant\_scale_i + quant\_offset_i)
-    $$
+            $$
+            y_i = trunc(situOut_i / quant\_scale_i + quant\_offset_i)
+            $$
 
-  - dynamic模式：
+        - dynamic模式：
 
-    $$
-    scale_i = absmax(situOut_i) / 127
-    $$
+            $$
+            scale_i = absmax(situOut_i) / 127
+            $$
 
-    $$
-    y_i = trunc(situOut_i / scale_i)
-    $$
+            $$
+            y_i = trunc(situOut_i / scale_i)
+            $$
 
 ## 函数原型
 
@@ -117,7 +117,7 @@ cann_ops_nn.dequant_situ_quant(
     <th>可选/必选</th>
     <th>描述</th>
     <th>数据类型</th>
-    <th>维度(shape)</th>
+    <th>维度（shape）</th>
 </tr>
 </thead>
 <tbody>
@@ -230,7 +230,7 @@ cann_ops_nn.dequant_situ_quant(
     <th>可选/必选</th>
     <th>描述</th>
     <th>数据类型</th>
-    <th>维度(shape)</th>
+    <th>维度（shape）</th>
 </tr>
 </thead>
 <tbody>

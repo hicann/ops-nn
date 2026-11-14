@@ -92,7 +92,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 
 ## 参数说明
 
-| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
+| 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- | --- |
 | x1 | Tensor | 必选 | 矩阵乘运算中的左矩阵，shape为(M, B, K)。MXFP4场景Tensor最后一维为FP4拼包后的物理长度K/2；HIFP8场景存储类型为torch.uint8，通过x1_dtype指定为HIFLOAT8。 | torch.float8_e4m3fn/torch.float8_e5m2/torch.int8；MXFP4、HIFP8场景为实际存储类型（如torch.uint8），并通过x1_dtype指定逻辑类型 | 3维，(M, B, K) |
 | x2 | Tensor | 必选 | 矩阵乘运算中的右矩阵，数据类型与x1一致，K轴长度与x1一致。perm_x2为[0, 1, 2]时shape为(B, K, N)；perm_x2为[0, 2, 1]时shape为(B, N, K)。MXFP4场景Tensor最后一维为FP4拼包后的物理长度（N/2或K/2）。 | 同x1 | 3维 |
@@ -112,7 +112,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 
 ## 返回值说明
 
-| 输出名 | 输出类型 | 描述 | 数据类型 | 维度(shape) |
+| 输出名 | 输出类型 | 描述 | 数据类型 | 维度（shape） |
 | --- | --- | --- | --- | --- |
 | y | Tensor | 量化矩阵乘的输出。dtype为34时输出HIFLOAT8（仅T-C量化支持），结果以torch.uint8承载，需用户自行按HIFLOAT8解析。 | dtype为1时为torch.float16，为27时为torch.bfloat16，为34时为torch.uint8 | (M, B, N) |
 
@@ -149,7 +149,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
   - x1_scale传入None，该参数不参与计算。
   - K、N无特殊对齐约束（均为正数即可），perm_x2支持[0, 1, 2]和[0, 2, 1]。
   - x2支持FRACTAL_NZ格式（与MXFP8一致，x2的NZ转换为viewshape视角下shape不变，仅物理排布不同）。
-  - dtype支持1(fp16)、27(bf16)、34(HIFLOAT8)；dtype=34（T-C）时输出HIFLOAT8，torch侧以torch.uint8承载，需自行按HIFLOAT8解析；x2是否NZ均支持。
+  - dtype支持1（fp16）、27（bf16）、34（HIFLOAT8）；dtype=34（T-C）时输出HIFLOAT8，torch侧以torch.uint8承载，需自行按HIFLOAT8解析；x2是否NZ均支持。
   - group_sizes传[0, 0, 0]。
 - **INT8 W8A8（K-C，仅 Atlas A2/A3）**：
   - x1与x2的数据类型为torch.int8。
@@ -274,7 +274,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 
 - 图模式（TorchAir）调用
 
-  图模式使用与单算子模式相同的接口参数与约束（如batch_split_factor仅支持1，见"约束说明"），TorchAir在执行时通过GE Converter将其转换为`TransposeQuantBatchMatMul`图算子。
+  图模式使用与单算子模式相同的接口参数与约束（如batch_split_factor仅支持1，见“约束说明”），TorchAir在执行时通过GE Converter将其转换为`TransposeQuantBatchMatMul`图算子。
 
   - FP8（K-C）场景示例：
 
