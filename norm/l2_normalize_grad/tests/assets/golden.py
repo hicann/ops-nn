@@ -114,7 +114,7 @@ def _compute(x, y, dy, **kwargs):
 
     # ── 以下全部为 torch 库算子拼接，不手写 numpy 数值公式（红线 R3）──
     sq, s = _reduce_pair(xf * xf, yf * dyf, axes)
-    n = torch.clamp(torch.sqrt(sq), min=eps)
+    n = torch.clamp(torch.sqrt(sq), min=float(torch.tensor(eps, dtype=work)))
     dx = (dyf - yf * s) / n
     return [dx]
 
@@ -145,7 +145,9 @@ class _L2NormalizeGradCompose:
         axes = _resolve_axis(self.dim, x.dim())
         xw, yw, dyw = _tp_widen(x), _tp_widen(y), _tp_widen(dy)
         sq, s = _reduce_pair(xw * xw, yw * dyw, axes)
-        n = torch.clamp(torch.sqrt(sq), min=self.eps)
+        n = torch.clamp(
+            torch.sqrt(sq), min=float(torch.tensor(self.eps, dtype=xw.dtype))
+        )
         return [((dyw - yw * s) / n).to(dy.dtype)]
 
 
