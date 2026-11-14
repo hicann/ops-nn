@@ -91,7 +91,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    <tr>
+
       <tr>
       <td>beta1_power</td>
       <td>计算输入</td>
@@ -99,7 +99,7 @@
       <td>FLOAT16、BFLOAT16、FLOAT32<</td>
       <td>ND</td>
     </tr>
-    <tr>
+
       <tr>
       <td>beta2_power</td>
       <td>计算输入</td>
@@ -107,14 +107,13 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    <tr>
+
       <tr>
       <td>lr</td>
       <td>计算输入</td>
       <td>学习率，公式中的eta</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
-    </tr>
     </tr>
       <tr>
       <td>weight_decay</td>
@@ -123,14 +122,12 @@
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
       <tr>
       <td>beta1</td>
       <td>计算输入</td>
       <td>beta1参数。</td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
-    </tr>
     </tr>
       <tr>
       <td>beta2</td>
@@ -141,7 +138,6 @@
     </tr>
 
     <tr>
-      <tr>
       <td>epsilon</td>
       <td>计算输入</td>
       <td>防止除数为0。</td>
@@ -150,7 +146,6 @@
     </tr>
 
     <tr>
-      <tr>
       <td>grad</td>
       <td>计算输入</td>
       <td>梯度数据，公式中的g_t。</td>
@@ -158,7 +153,6 @@
       <td>ND</td>
     </tr>
     <tr>
-      <tr>
       <td>max_grad_norm</td>
       <td>计算输入</td>
       <td>保存v参数的最大值，公式中的v。</td>

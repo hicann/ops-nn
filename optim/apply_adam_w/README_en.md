@@ -94,7 +94,7 @@ English | [简体中文](./README.md)
       <td>ND</td>
     </tr>
     <tr>
-      <tr>
+
       <td>beta1_power</td>
       <td>Computation input</td>
       <td>beta1^(t-1) parameter</td>
@@ -102,7 +102,7 @@ English | [简体中文](./README.md)
       <td>ND</td>
     </tr>
     <tr>
-      <tr>
+
       <td>beta2_power</td>
       <td>Computation input</td>
       <td>beta2^(t-1) parameter</td>
@@ -110,14 +110,14 @@ English | [简体中文](./README.md)
       <td>ND</td>
     </tr>
     <tr>
-      <tr>
+
       <td>lr</td>
       <td>Computation input</td>
       <td>Learning rate, which is eta in the formula</td>
       <td>FLOAT16, BFLOAT16, FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
+
       <tr>
       <td>weight_decay</td>
       <td>Computation input</td>
@@ -125,7 +125,7 @@ English | [简体中文](./README.md)
       <td>FLOAT16, BFLOAT16, FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
+
       <tr>
       <td>beta1</td>
       <td>Computation input</td>
@@ -133,7 +133,7 @@ English | [简体中文](./README.md)
       <td>FLOAT16, BFLOAT16, FLOAT32</td>
       <td>ND</td>
     </tr>
-    </tr>
+
       <tr>
       <td>beta2</td>
       <td>Computation input</td>
@@ -143,7 +143,7 @@ English | [简体中文](./README.md)
     </tr>
 
     <tr>
-      <tr>
+
       <td>epsilon</td>
       <td>Computation input</td>
       <td>Prevents the divisor from being 0.</td>
@@ -152,7 +152,7 @@ English | [简体中文](./README.md)
     </tr>
 
     <tr>
-      <tr>
+
       <td>grad</td>
       <td>Computation input</td>
       <td>Gradient data, which is g_t in the formula.</td>
@@ -160,7 +160,7 @@ English | [简体中文](./README.md)
       <td>ND</td>
     </tr>
     <tr>
-      <tr>
+
       <td>max_grad_norm</td>
       <td>Computation input</td>
       <td>Stores the maximum value of the v parameter, which is v in the formula.</td>
