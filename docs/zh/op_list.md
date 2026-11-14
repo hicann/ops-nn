@@ -2530,6 +2530,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/union_sparse_gen/README.md">union_sparse_gen</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>生成 sparse attention 的升序块并集、有效 count 与逐 token query membership mask。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/unique_consecutive/README.md">unique_consecutive</a></td>
     <td>✓</td>
     <td>✓</td>

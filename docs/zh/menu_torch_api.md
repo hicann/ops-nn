@@ -30,4 +30,5 @@
 - [transpose_quant_batch_mat_mul](../../matmul/transpose_quant_batch_mat_mul/docs/torchapi_transpose_quant_batch_mat_mul.md)
 - [transpose_batch_mat_mul](../../matmul/transpose_batch_mat_mul/docs/torchapi_transpose_batch_mat_mul.md)
 - [gemm_syrk](../../matmul/gemm_syrk/docs/torchapi_gemm_syrk.md)
+- [union_sparse_gen](../../index/union_sparse_gen/docs/torchapi_union_sparse_gen.md)
 - [quant_max](../../quant/quant_max_v2/docs/torchapi_quant_max.md)

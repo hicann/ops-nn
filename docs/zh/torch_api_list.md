@@ -56,4 +56,5 @@
 |[transpose_quant_batch_mat_mul](../../matmul/transpose_quant_batch_mat_mul/docs/torchapi_transpose_quant_batch_mat_mul.md)|完成张量x1与x2的量化矩阵乘计算，支持MX（MXFP8/MXFP4）、FP8（K-C、FLOAT8_E5M2/E4M3FN+float32 scale）与HIFP8（HIFLOAT8+uint64 scale）三种量化模式，输出FLOAT16/BFLOAT16结果。|-|默认支持确定性计算|
 |[transpose_batch_mat_mul](../../matmul/transpose_batch_mat_mul/docs/torchapi_transpose_batch_mat_mul.md)|完成三维张量x1与x2的矩阵乘计算，支持perm转置、batch_split_factor切分以及FLOAT16+scale的INT8量化输出。|默认支持确定性计算|默认支持确定性计算|
 |[gemm_syrk](../../matmul/gemm_syrk/docs/torchapi_gemm_syrk.md)|对称秩k更新：计算α乘以A与A转置的乘积，再与β和input C的乘积求和，原地更新对称矩阵C。|-|默认支持确定性计算|
+|[union_sparse_gen](../../index/union_sparse_gen/docs/torchapi_union_sparse_gen.md)|生成 sparse attention 块并集、有效 count 与精确 mask。|默认支持确定性计算|默认支持确定性计算|
 |[quant_max](../../quant/quant_max_v2/docs/torchapi_quant_max.md)|按分组（可选）求输入绝对值的最大值 amax 并输出量化结果 y；支持静态（传入 scale）与动态（按 amax 现算系数并输出 y_scale）两种量化模式。|-|默认确定性实现|
