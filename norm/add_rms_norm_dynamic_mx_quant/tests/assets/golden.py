@@ -13,9 +13,11 @@
 
 """Self-contained Add + RMSNorm + MX quantization reference for Ascend 950.
 
-Inputs and RMSNorm arithmetic use fp32. The normalized value is explicitly
-rounded to the original x1 storage dtype before MX quantization. TTK's Promote
-mode must not remove this operator-defined intermediate conversion.
+Inputs, reductions and affine arithmetic use fp32. The reciprocal square root
+of the fp32 variance-plus-epsilon is evaluated in fp64 and rounded back to fp32
+before use, avoiding an extra rounding error at cancellation points. The
+normalized value is rounded to the original x1 storage dtype before MX
+quantization. TTK's Promote mode must preserve this intermediate conversion.
 
 The MX encoding helpers come from quant/dynamic_mx_quant/tests/assets/golden.py
 at the frozen baseline 7429363a. The OCP exponent rule and RMSNorm calculation
@@ -386,6 +388,16 @@ def _np_to_torch_fp32(arr):
 _CHUNK_THRESHOLD = 200_000_000
 
 
+def _rms_norm_fp32(x, gamma, epsilon):
+    """Use one fp32 rstd for both normalization and the optional output."""
+    variance = torch.sum(x * x, dim=-1, keepdim=True) * (1.0 / x.shape[-1])
+    # Add epsilon in fp32 first. Only rsqrt is promoted: promoting the addition
+    # or affine operations would change the reference's intermediate rounding.
+    denominator = variance + float(epsilon)
+    rstd = torch.rsqrt(denominator.to(torch.float64)).to(torch.float32)
+    return (x * rstd) * gamma, rstd
+
+
 def _golden_chunked(
     x1,
     x2,
@@ -441,16 +453,10 @@ def _golden_chunked(
             x = x1_t + x2_t
         x_out_c = x.numpy().astype(in_dtype)
 
-        normed = torch.nn.functional.rms_norm(
-            x, [norm_dim], weight=gamma_t, eps=float(epsilon)
-        )
+        normed, rstd = _rms_norm_fp32(x, gamma_t, epsilon)
         if beta_t is not None:
             normed = normed + beta_t
         normed_f = _to_fp32(normed.numpy().astype(in_dtype))
-
-        inv_norm = 1.0 / float(norm_dim) if norm_dim != 0 else 0.0
-        var = torch.sum(x * x, dim=-1, keepdim=True) * inv_norm
-        rstd = torch.rsqrt(var + float(epsilon))
 
         scale_c, ele_c = _mx_quantize(
             normed_f,
@@ -462,7 +468,7 @@ def _golden_chunked(
         )
         rstd_c = rstd.numpy().astype(np.float32) if output_rstd else None
 
-        del x1_t, x2_t, x, normed, normed_f, var, rstd
+        del x1_t, x2_t, x, normed, normed_f, rstd
         return x_out_c, scale_c, ele_c, rstd_c
 
     # First chunk: determine output element-shapes, then pre-allocate full arrays.
@@ -578,9 +584,7 @@ def add_rms_norm_dynamic_mx_quant_golden(
 
     x_out = x.numpy().astype(in_dtype)
 
-    normed = torch.nn.functional.rms_norm(
-        x, [norm_dim], weight=gamma_t, eps=float(epsilon)
-    )
+    normed, rstd = _rms_norm_fp32(x, gamma_t, epsilon)
     if beta is not None:
         normed = normed + _np_to_torch_fp32(beta)
 
@@ -588,10 +592,6 @@ def add_rms_norm_dynamic_mx_quant_golden(
     # fp32 registers, then StoreTensorForDtypeTOut<T_X> casts to fp16/bf16 (T_X) for
     # MxQuant input. The golden must match this path — quantizing from fp16, not fp32.
     normed_f = _to_fp32(normed.numpy().astype(in_dtype))
-
-    inv_norm = 1.0 / float(norm_dim)
-    var = torch.sum(x * x, dim=-1, keepdim=True) * inv_norm
-    rstd = torch.rsqrt(var + float(epsilon))
 
     dst_type_str = DATA_TYPE_INT_TO_STR[dst_type]
     scale_array, ele_array = _mx_quantize(
@@ -686,6 +686,121 @@ _TOLERANCE = {
 }
 
 
+def _torch_device_reference(
+    x1, x2, gamma, beta, x3, epsilon, scale_alg, round_mode, dst_type, output_rstd
+):
+    """Device-side PyTorch reference; only encoded results are copied to host.
+
+    Eager operations retain separate multiplication and addition. The reference
+    uses its own representable-value lookup, not the primary golden's MX helpers.
+    """
+    import en_dtypes
+    import ml_dtypes
+
+    device, storage = x1.device, x1.dtype
+    element_type = {
+        35: ml_dtypes.float8_e5m2,
+        36: ml_dtypes.float8_e4m3fn,
+        40: en_dtypes.float4_e2m1,
+        41: en_dtypes.float4_e1m2,
+    }[dst_type]
+    columns = x1.shape[-1]
+    rows = x1.numel() // columns if columns else int(np.prod(x1.shape[:-1]))
+
+    def host(value):
+        value = value.detach().cpu()
+        if value.dtype == torch.bfloat16:
+            return value.float().numpy().astype(ml_dtypes.bfloat16)
+        return value.numpy()
+
+    if x1.numel() == 0:
+        return (
+            np.empty(tuple(x1.shape), dtype=element_type),
+            host(x1),
+            np.empty(
+                tuple(x1.shape[:-1]) + ((columns + 63) // 64, 2),
+                dtype=en_dtypes.float8_e8m0,
+            ),
+            host(torch.full(tuple(x1.shape[:-1]) + (1,), float("nan"), device=device))
+            if output_rstd
+            else None,
+        )
+    summed = x1.float()
+    if x3 is not None:
+        summed = x3.float() + summed
+    summed = summed + x2.float()
+    variance = torch.mean(summed * summed, dim=-1, keepdim=True)
+    denominator = variance + float(epsilon)
+    reciprocal = torch.reciprocal(torch.sqrt(denominator.double())).float()
+    normalized = (summed * reciprocal) * gamma.float()
+    if beta is not None:
+        normalized = normalized + beta.float()
+    normalized = normalized.to(storage).float()
+
+    block_count = (columns + 31) // 32
+    blocked = torch.nn.functional.pad(
+        normalized.reshape(rows, columns), (0, block_count * 32 - columns)
+    ).reshape(rows, block_count, 32)
+    maximum = torch.amax(torch.abs(blocked), dim=-1)
+    emax = {35: 15, 36: 8, 40: 2, 41: 0}[dst_type]
+    max_value = {35: 57344.0, 36: 448.0, 40: 6.0, 41: 1.75}[dst_type]
+    if scale_alg == 1 and dst_type in (35, 36):
+        fraction, exponent = torch.frexp(maximum / max_value)
+        exponent = exponent - (fraction == 0.5).to(exponent.dtype)
+    else:
+        _, exponent = torch.frexp(maximum)
+        exponent = exponent - 1 - emax
+    exponent = torch.where(maximum == 0, -127, exponent).clamp(-127, 127)
+    invalid = ~torch.isfinite(maximum)
+    scale = torch.ldexp(torch.ones_like(maximum), exponent)
+    scaled = blocked / scale.unsqueeze(-1)
+    scaled = torch.where(invalid.unsqueeze(-1), 0.0, scaled)
+
+    sign_bit = 3 if dst_type in (40, 41) else 7
+    raw_table = np.arange(1 << sign_bit, dtype=np.uint8)
+    values = raw_table.view(element_type).astype(np.float32)
+    finite = np.isfinite(values)
+    codes = torch.from_numpy(raw_table[finite].astype(np.int64)).to(device)
+    table = torch.from_numpy(values[finite]).to(device)
+    magnitude = torch.abs(scaled).clamp(0, max_value)
+    upper = torch.searchsorted(table, magnitude.contiguous()).clamp_max(len(table) - 1)
+    lower = (upper - 1).clamp_min(0)
+    lower = torch.where(table[upper] == magnitude, upper, lower)
+    if round_mode == "floor":
+        chosen = torch.where(torch.signbit(scaled), upper, lower)
+    else:
+        low_distance = magnitude - table[lower]
+        high_distance = table[upper] - magnitude
+        if round_mode == "rint":
+            use_upper = (high_distance < low_distance) | (
+                (high_distance == low_distance) & ((codes[upper] & 1) == 0)
+            )
+        elif round_mode == "round":
+            use_upper = high_distance <= low_distance
+        else:
+            raise ValueError(f"Unsupported round_mode: {round_mode}")
+        chosen = torch.where(use_upper, upper, lower)
+    encoded = codes[chosen] | (torch.signbit(scaled).to(torch.int64) << sign_bit)
+    quantized = host(encoded.to(torch.uint8)).view(element_type)
+    quantized = quantized.reshape(rows, block_count * 32)[:, :columns].reshape(
+        tuple(x1.shape)
+    )
+    scale_bytes = torch.where(invalid, 255, exponent + 127).to(torch.uint8)
+    if block_count % 2:
+        scale_bytes = torch.nn.functional.pad(scale_bytes, (0, 1))
+    scales = (
+        host(scale_bytes)
+        .view(en_dtypes.float8_e8m0)
+        .reshape(tuple(x1.shape[:-1]) + ((block_count + 1) // 2, 2))
+    )
+    return (
+        quantized,
+        host(summed.to(storage)),
+        scales,
+        host(reciprocal) if output_rstd else None,
+    )
+
+
 def _independent_reference(
     x1,
     x2,
@@ -698,13 +813,26 @@ def _independent_reference(
     dst_type=40,
     output_rstd=False,
 ):
-    """Independent NumPy reduction + representable-value lookup reference.
+    """Independent reduction + representable-value lookup reference.
 
     This path does not call the primary golden or any of its MX helpers.
     E8M0 bytes are constructed from mathematical exponents, and element
     rounding searches the target format's finite positive value table.
-    The torch provider supplies CPU input transport, not an NPU benchmark.
+    Device tensors are computed on their device; CPU callers retain NumPy.
     """
+    if isinstance(x1, torch.Tensor) and x1.device.type != "cpu":
+        return _torch_device_reference(
+            x1,
+            x2,
+            gamma,
+            beta,
+            x3,
+            epsilon,
+            scale_alg,
+            round_mode,
+            dst_type,
+            output_rstd,
+        )
     import en_dtypes
     import ml_dtypes
 
@@ -742,7 +870,10 @@ def _independent_reference(
         summed = extra.astype(np.float32) + summed
     summed = summed + b.astype(np.float32)
     variance = np.mean(np.square(summed), axis=-1, keepdims=True, dtype=np.float32)
-    reciprocal = np.reciprocal(np.sqrt(variance + np.float32(epsilon)))
+    denominator = variance + np.float32(epsilon)
+    reciprocal = np.reciprocal(np.sqrt(denominator.astype(np.float64))).astype(
+        np.float32
+    )
     normalized = (summed * reciprocal) * g.astype(np.float32)
     if bias is not None:
         normalized = normalized + bias.astype(np.float32)
