@@ -15,5 +15,6 @@
 add_kernel_sources(
     KERNEL_SRC arch92/unsorted_segment_sum_apt
     COMPUTE_UNITS ascend960dt ascend960pr
+    IMPL_MODE high_performance,high_precision,support_out_of_bound_index
     AUTO_SYNC false
 )
