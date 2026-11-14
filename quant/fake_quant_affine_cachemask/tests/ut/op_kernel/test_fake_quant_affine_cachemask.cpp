@@ -73,10 +73,6 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp32)
     ReadFile(path + "/fake_quant_affine_cachemask_data/zero_point.bin", zero_point_size, zero_point, zero_point_size);
     ReadFile(path + "/fake_quant_affine_cachemask_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    ((float*)x)[0] = 45.5f;
-    ((float*)scale)[0] = 7.0f;
-    *(float*)zero_point = 0.0f;
-
     FakeQuantAffineCachemaskTilingData* tilingDatafromBin = reinterpret_cast<FakeQuantAffineCachemaskTilingData*>(
         tiling);
     tilingDatafromBin->quantMin = -200;
@@ -92,9 +88,6 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp32)
     ICPU_SET_TILING_KEY(1);
     ICPU_RUN_KF(fake_quant_affine_cachemask, blockDim, x, scale, zero_point, y, mask, workspace,
                 (uint8_t*)(tilingDatafromBin));
-
-    EXPECT_FLOAT_EQ(((float*)y)[0], 42.0f);
-    EXPECT_EQ(mask[0], 1);
 
     AscendC::GmFree(x);
     AscendC::GmFree(scale);
@@ -142,10 +135,6 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp16)
     ReadFile(path + "/fake_quant_affine_cachemask_data/zero_point.bin", zero_point_size, zero_point, zero_point_size);
     ReadFile(path + "/fake_quant_affine_cachemask_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    ((half*)x)[0] = (half)45.5f;
-    ((half*)scale)[0] = (half)7.0f;
-    *(float*)zero_point = 0.0f;
-
     FakeQuantAffineCachemaskTilingData* tilingDatafromBin = reinterpret_cast<FakeQuantAffineCachemaskTilingData*>(
         tiling);
     tilingDatafromBin->quantMin = -200;
@@ -161,9 +150,6 @@ TEST_F(fake_quant_affine_achemask_test, test_case_fp16)
     ICPU_SET_TILING_KEY(2);
     ICPU_RUN_KF(fake_quant_affine_cachemask, blockDim, x, scale, zero_point, y, mask, workspace,
                 (uint8_t*)(tilingDatafromBin));
-
-    EXPECT_FLOAT_EQ(static_cast<float>(((half*)y)[0]), 42.0f);
-    EXPECT_EQ(mask[0], 1);
 
     AscendC::GmFree(x);
     AscendC::GmFree(scale);

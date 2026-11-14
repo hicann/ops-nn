@@ -91,15 +91,13 @@ private:
         LocalTensor<uint8_t> maskLocal = outQueueMask.AllocTensor<uint8_t>();
 
         curTemp = calcBuf.Get<float>();
-        LocalTensor<float> scaleTensor = curTemp[this->tileLength];
         curHf16Temp = calcHf16Buf.Get<yType>();
         curInt32Temp = calcInt32Buf.Get<int32_t>();
         selectTemp = selectBuf.Get<yType>();
         maskTemp = maskBuf.Get<uint8_t>();
 
         Cast(curTemp, xLocal, RoundMode::CAST_NONE, calCount);
-        Duplicate(scaleTensor, scaleValue, calCount);
-        Div(curTemp, curTemp, scaleTensor, calCount);
+        Muls(curTemp, curTemp, static_cast<float>(1.0f / scaleValue), calCount);
         if constexpr (IsSameType<DTYPE_ZERO_POINT, int32_t>::value) {
             // tmp = x / scale + zero_point
             Cast(curInt32Temp, curTemp, RoundMode::CAST_RINT, calCount);
