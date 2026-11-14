@@ -96,20 +96,20 @@ aclnnStatus aclnnL1Loss(
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">公式中的输入self。</td>
-      <td class="tg-0pky">shape需要与target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与self、target的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">shape需要与target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与target的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。<br>支持空Tensor。<br>INT64由本接口内部的小算子组合实现。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、INT64</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实的标签</td>
-      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。<br>支持空Tensor。<br>INT64由本接口内部的小算子组合实现。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、INT64</td>
       <td class="tg-0pky">ND</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
@@ -126,7 +126,7 @@ aclnnStatus aclnnL1Loss(
       <td class="tg-0pky">out（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">输出tensor，存放L1Loss计算结果。</td>
-      <td class="tg-0pky">输出tensor，存放L1Loss计算结果。out的数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out为0维tensor。</td>
+      <td class="tg-0pky">输出tensor，存放L1Loss计算结果。out的数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。<br><b>注意</b>：本接口按PyTorch的torch.can_cast语义校验，当self与target推导结果为浮点类型时，out<b>不可</b>为整型（如INT64），否则返回161002。即INT64的out仅在推导结果同为整型时可用。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out为0维tensor。<br>空Tensor场景（self或target含0元素）：reduction为0时out为空tensor；为1时out填充NaN；为2时out填充0。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、INT64、DOUBLE</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">0-8</td>
@@ -255,11 +255,33 @@ aclnnStatus aclnnL1Loss(
 
 - 确定性计算：
     - aclnnL1Loss默认确定性实现。
-- LpLoss中p为计算loss的参数，只支持p=1，aclnn接口名称为aclnnL1Loss。
+- LpLoss中p为计算loss的阶数，只支持p=1，aclnn API名称为aclnnL1Loss。
 - int64输入的dtype组合约束（不满足时返回`161002`）：
     - reduction=0（none）：`self`和`target`均为int64时可用；`self`为int64而`target`为浮点时报错；`self`为浮点而`target`为int64时可用，提升为浮点计算。
     - reduction=1（mean）：`self`和`target`均为int64时报错；`self`和`target`至少一侧为浮点，一侧为int64时可用，提升为浮点计算。
     - reduction=2（sum）：含int64的任意组合均可用；双int64走整数路径，单侧int64提升为浮点计算。
+
+- self与target推导后支持FLOAT、FLOAT16、INT64，以及BFLOAT16（按产品，见下）。其中INT64由本接口内部的小算子组合实现。
+
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT系列产品</term>：推导后支持FLOAT、FLOAT16、BFLOAT16、INT64。
+<!-- end id7 -->
+<!-- npu="A3" id8 -->
+- <term>Atlas A3系列产品</term>：推导后支持FLOAT、FLOAT16、BFLOAT16、INT64。
+<!-- end id8 -->
+<!-- npu="910b" id9 -->
+- <term>Atlas A2系列产品</term>：推导后支持FLOAT、FLOAT16、BFLOAT16、INT64。
+<!-- end id9 -->
+<!-- npu="310p" id10 -->
+- <term>Atlas推理系列产品</term>：推导后支持FLOAT、FLOAT16、INT64，**不支持BFLOAT16**（传入BFLOAT16将返回161002）。
+<!-- end id10 -->
+<!-- npu="910" id11 -->
+- <term>Atlas训练系列产品</term>：推导后支持FLOAT、FLOAT16、INT64，**不支持BFLOAT16**（传入BFLOAT16将返回161002）。
+<!-- end id11 -->
+
+- 数据类型与shape的拒绝义务：参数说明中声明的数据类型域、数据格式域与维度范围为本接口的完整支持范围。超出声明范围的输入（未枚举的数据类型、维度大于8等）会被第一段接口拒绝并返回相应错误码；调用方不应依赖未声明组合的行为。
+
+- 输入输出重叠：不支持self、target与out的内存重叠（别名）。三者须为彼此独立的内存，本接口不提供原地（in-place）计算语义，也不对重叠做检测；传入重叠内存的行为未定义。
 
 ## 调用示例
 
