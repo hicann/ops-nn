@@ -385,6 +385,7 @@
 | [aclnnQuantMatmulDequant](../../matmul/quant_matmul_dequant/docs/aclnnQuantMatmulDequant.md) | 对输入x进行量化，矩阵乘以及反量化。 | - | - |
 | [aclnnQuantMax](../../quant/quant_max/docs/aclnnQuantMax.md) | 完成输入的量化计算并得到输入绝对值的最大值。 | - | 默认确定性实现 |
 | [aclnnGroupedQuantMax](../../quant/grouped_quant_max/docs/aclnnGroupedQuantMax.md) | 完成输入分组的量化计算并得到输入分组绝对值的最大值。 | - | 默认确定性实现 |
+| [aclnnQuantMaxV2](../../quant/quant_max_v2/docs/aclnnQuantMaxV2.md) | 支持scale可选与分组可选的量化计算，输出量化结果与分组绝对值最大值amax；动态量化额外输出量化系数y_scale。 | - | 默认确定性实现 |
 | [aclnnRelu&aclnnInplaceRelu](../../activation/relu/docs/aclnnRelu&aclnnInplaceRelu.md) | 激活函数，返回与输入tensor shape相同的tensor, tensor中value大于等于0时，取值该value，小于0，取0。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRenorm&aclnnInplaceRenorm](../../norm/renorm/docs/aclnnRenorm&aclnnInplaceRenorm.md) | 返回一个张量，其中输入张量self沿维度dim的每个子张量都经过归一化，使得子张量的p范数低于maxNorm值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRepeatInterleave](../../index/repeat_interleave/docs/aclnnRepeatInterleave.md) | 将tensor self进行flatten后，重复Tensor repeats中的相应次数。 | 默认确定性实现 | 默认确定性实现 |

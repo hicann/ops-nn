@@ -354,6 +354,7 @@
 - [aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)
 - [aclnnQuantMatmulWeightNz](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulWeightNz.md)
 - [aclnnQuantMax](../../quant/quant_max/docs/aclnnQuantMax.md)
+- [aclnnQuantMaxV2](../../quant/quant_max_v2/docs/aclnnQuantMaxV2.md)
 - [aclnnQuantize](../../quant/quantize/docs/aclnnQuantize.md)
 - [aclnnQuantizedBatchNorm](../../norm/quantized_batch_norm/docs/aclnnQuantizedBatchNorm.md)
 - [aclnnRReluWithNoise&aclnnInplaceRReluWithNoise](../../activation/leaky_relu/docs/aclnnRReluWithNoise&aclnnInplaceRReluWithNoise.md)

@@ -104,6 +104,15 @@ _all_ops.update(_ep_ops)
 for _name, _target in _all_ops.items():
     _load_op(_name, _target)
 
+# Top-level function-name re-exports for ops whose directory name differs from
+# the public function name (e.g. quant_max_v2/ directory → quant_max function).
+try:
+    from .quant.quant_max_v2 import quant_max as _fn_quant_max
+
+    globals()["quant_max"] = _fn_quant_max
+except (ImportError, RuntimeError):
+    pass
+
 try:
     del _discover_ops_from_entry_points, _discover_ops_from_dir, _load_op
     del _ep_ops, _dir_ops, _all_ops, _name, _target

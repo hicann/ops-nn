@@ -5460,6 +5460,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/quant_max_v2/README.md">quant_max_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>支持scale可选与group_list分组可选的量化计算，输出量化结果y与分组绝对值最大值amax；动态量化额外输出量化系数y_scale。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/quantize/README.md">quantize</a></td>
     <td>✓</td>
     <td>✓</td>
