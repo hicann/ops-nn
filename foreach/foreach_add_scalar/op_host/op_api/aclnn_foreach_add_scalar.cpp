@@ -119,8 +119,13 @@ static inline bool ForeachAddScalarCheckDtypeValid(const aclTensorList* self, co
 
 static inline bool ForeachAddScalarCheckShape(const aclTensorList* self, const aclTensorList* out)
 {
-    // tensorlist size检查
-    OP_CHECK_TENSORLIST_SIZE_EQUAL(self, out, return false);
+    // x 与 out 的 tensor 个数：要求 x->Size() <= out->Size()，多传放行、少传拒绝
+    if (self->Size() > out->Size()) {
+        const std::string reason = (std::string("The tensor nums in {x, out} must satisfy x <= out, but got x=") +
+                                    std::to_string(self->Size()) + ", out=" + std::to_string(out->Size()));
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+        return false;
+    }
     // tensor 维度检查
     for (uint64_t i = 0; i < self->Size(); i++) {
         OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);

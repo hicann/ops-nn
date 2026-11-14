@@ -193,7 +193,7 @@ TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910B2_foreach_addcdiv_scalar_v2_
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-// out 列表比 x1 长：应拒绝，避免多余 out 静默未写
+// 接受out 列表比 x1 长
 TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910B2_foreach_addcdiv_scalar_v2_test_out_list_longer)
 {
     vector<int64_t> dims = {2, 2};
@@ -210,7 +210,7 @@ TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910B2_foreach_addcdiv_scalar_v2_
     auto ut = OP_API_UT(aclnnForeachAddcdivScalarV2, INPUT(xList, x2List, x3List, scalar_desc), OUTPUT(outList));
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
 // 对称空 Tensor：文档声明不支持，应拒绝

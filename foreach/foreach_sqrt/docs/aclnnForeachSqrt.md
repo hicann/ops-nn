@@ -164,7 +164,7 @@ aclnnStatus aclnnForeachSqrt(
       <td>x和out的数据类型不一致。</td></tr>
     <tr>
       <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td rowspan="3">161002</td>
       <td>x与out的shape不满足约束。</td>
     </tr>
     <tr>

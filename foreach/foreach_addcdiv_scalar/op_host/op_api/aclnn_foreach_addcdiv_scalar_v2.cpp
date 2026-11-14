@@ -166,10 +166,10 @@ static inline bool ForeachAddcdivScalarV2CheckShape(const aclTensorList* self, c
         return false;
     }
 
-    // tensorlist size检查
-    if (self->Size() != out->Size()) {
-        const std::string reason = (("Tensor lists must have the same number of tensors, got " +
-                                     std::to_string(self->Size()) + " and " + std::to_string(out->Size())));
+    // x 与 out 的 tensor 个数：要求 x->Size() <= out->Size()，多传放行、少传拒绝
+    if (self->Size() > out->Size()) {
+        const std::string reason = (std::string("The tensor nums in {x, out} must satisfy x <= out, but got x=") +
+                                    std::to_string(self->Size()) + ", out=" + std::to_string(out->Size()));
         OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
         REPORT_PREDEFINED_ERR_MSG("EZ0038",
                                   (std::vector<const char*>{"param_name", "op_name", "incorrect_size", "reason"}),
@@ -177,7 +177,6 @@ static inline bool ForeachAddcdivScalarV2CheckShape(const aclTensorList* self, c
                                                             (std::to_string(out->Size())).c_str(), reason.c_str()}));
         return false;
     }
-
     // 空Tensor检查：文档声明x1/x2/x3/out均不支持空Tensor，显式拒绝，避免依赖shape校验的副作用
     const aclTensorList* tensorLists[4] = {self, x2, x3, out};
     const char* listNames[4] = {"x1", "x2", "x3", "out"};

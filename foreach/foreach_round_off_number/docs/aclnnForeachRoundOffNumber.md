@@ -187,6 +187,11 @@ aclnnStatus aclnnForeachRoundOffNumber(
     </tr>
   </tbody></table>
 
+  <!-- npu="A3,910b" id10 -->
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
+    roundMode参数仅支持取值1、2、3、4、5、7；若传入其他值，系统将忽略舍入逻辑，返回原始结果。
+  <!-- end id10 -->
+
 ## aclnnForeachRoundOffNumber
 
 - **参数说明**

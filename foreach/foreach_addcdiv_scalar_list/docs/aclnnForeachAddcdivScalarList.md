@@ -197,7 +197,7 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>x1、x2、x3、out的shape不满足约束。</td>
     </tr>
     <tr>
-      <td>x1、x2、x3、out的Tensor列表长度不一致。</td>
+      <td>x1、x2、x3的Tensor列表长度不一致；x1的Tensor列表长度大于out的Tensor列表长度</td>
     </tr>
     <tr>
       <td>x1、x2、x3或out的Tensor列表内含空Tensor指针。</td>
@@ -261,6 +261,7 @@ aclnnStatus aclnnForeachAddcdivScalarList(
   - aclnnForeachAddcdivScalarList默认确定性实现。
 - 单个Tensor列表中Tensor的数量不超过256个，超出上限时算子执行失败。
 - 空TensorList（含0个Tensor的TensorList）为合法输入：`x1`、`x2`、`x3`、`out`均为空TensorList时，`scalars`的元素个数为0，接口返回成功，不执行计算、不修改`out`。
+- `out`的Tensor数量必须大于等于`x1`的tensor数量。
 
 ## 调用示例
 

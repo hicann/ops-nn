@@ -146,11 +146,11 @@ static inline bool CheckScalar(const aclTensor* scalar)
 static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, const aclTensorList* x3,
                               const aclTensorList* out)
 {
-    if (x1->Size() != x2->Size() || x1->Size() != x3->Size() || x1->Size() != out->Size()) {
+    if (x1->Size() != x2->Size() || x1->Size() != x3->Size()) {
         const bool x2Mismatch = x1->Size() != x2->Size();
         const bool x3Mismatch = x1->Size() != x3->Size();
-        const char* parameter = x2Mismatch ? "x2" : (x3Mismatch ? "x3" : "out");
-        const auto actualSize = x2Mismatch ? x2->Size() : (x3Mismatch ? x3->Size() : out->Size());
+        const char* parameter = x2Mismatch ? "x2" : "x3";
+        const auto actualSize = x2Mismatch ? x2->Size() : x3->Size();
         const std::string reason = (("Tensor lists must have the same number of tensors; x2=" +
                                      std::to_string(x2->Size()) + ", x1=" + std::to_string(x1->Size()) + ", x3=" +
                                      std::to_string(x3->Size()) + ", out=" + std::to_string(out->Size()) + "."));
@@ -162,6 +162,17 @@ static inline bool CheckShape(const aclTensorList* x1, const aclTensorList* x2, 
         return false;
     }
 
+    // x 与 out 的 tensor 个数：要求 x->Size() <= out->Size()，多传放行、少传拒绝
+    if (x1->Size() > out->Size()) {
+        const std::string reason = (std::string("The tensor nums in {x, out} must satisfy x <= out, but got x=") +
+                                    std::to_string(x1->Size()) + ", out=" + std::to_string(out->Size()));
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+        REPORT_PREDEFINED_ERR_MSG("EZ0038",
+                                  (std::vector<const char*>{"param_name", "op_name", "incorrect_size", "reason"}),
+                                  (std::vector<const char*>{"out", "aclnnForeachAddcdivScalar",
+                                                            (std::to_string(out->Size())).c_str(), reason.c_str()}));
+        return false;
+    }
     for (uint64_t i = 0; i < x1->Size(); i++) {
         OP_CHECK_SHAPE_NOT_EQUAL((*x1)[i], (*out)[i], return false);
     }

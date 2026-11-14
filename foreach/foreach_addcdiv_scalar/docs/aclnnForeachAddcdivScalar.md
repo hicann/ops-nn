@@ -252,7 +252,7 @@ aclnnStatus aclnnForeachAddcdivScalar(
 
 ## 约束说明
 
-- `x1`、`x2`、`x3`、`out`的Tensor列表长度必须一致，单个Tensor列表中Tensor的数量不超过256个。
+- `x1`、`x2`、`x3`的Tensor列表长度必须一致，`out`的Tensor数量必须大于等于`x1`的tensor数量， 单个Tensor列表中Tensor的数量不超过256个。
 - 确定性计算：
   - aclnnForeachAddcdivScalar默认确定性实现。
 

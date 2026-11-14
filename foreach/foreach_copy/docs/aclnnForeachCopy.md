@@ -217,6 +217,7 @@ aclnnStatus aclnnForeachCopy(
 
 - 确定性计算：
   - aclnnForeachCopy默认确定性实现。
+- 不支持x与out为同一存储且重叠场景，该场景下无法保证精度正确。
 
 ## 调用示例
 

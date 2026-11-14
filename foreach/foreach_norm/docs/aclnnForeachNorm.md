@@ -180,6 +180,11 @@ aclnnStatus aclnnForeachNorm(
   - <term>Ascend 950PR&950DT系列产品</term>：参数`x`、`out`支持的最大长度为256个。
   <!-- end id9 -->
 
+  <!-- npu="A3,910b" id10 -->
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
+    scalar参数仅支持1和2两种取值，其他取值无法保证精度。
+  <!-- end id10 -->
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。

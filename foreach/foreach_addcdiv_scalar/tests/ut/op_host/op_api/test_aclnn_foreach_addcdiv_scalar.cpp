@@ -89,3 +89,83 @@ TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_s
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
+
+// 增量覆盖：x1 与 x2 的 tensor 个数不一致 -> 161002（命中 x2Mismatch 分支）
+TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_x2_list_shorter)
+{
+    vector<int64_t> dims = {2, 2};
+    vector<int64_t> scalarDims = {1};
+    auto x = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x2 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x3 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0.1, 1.0);
+    auto scalar = TensorDesc(scalarDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1.0, 2.0);
+    auto out = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x, x});
+    auto x2List = TensorListDesc({x2});
+    auto x3List = TensorListDesc({x3, x3});
+    auto outList = TensorListDesc({out, out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcdivScalar, INPUT(xList, x2List, x3List, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+// 增量覆盖：x1 与 x3 的 tensor 个数不一致 -> 161002（x2 长度一致，走 x3Mismatch 分支）
+TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_x3_list_shorter)
+{
+    vector<int64_t> dims = {2, 2};
+    vector<int64_t> scalarDims = {1};
+    auto x = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x2 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x3 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0.1, 1.0);
+    auto scalar = TensorDesc(scalarDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1.0, 2.0);
+    auto out = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x, x});
+    auto x2List = TensorListDesc({x2, x2});
+    auto x3List = TensorListDesc({x3});
+    auto outList = TensorListDesc({out, out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcdivScalar, INPUT(xList, x2List, x3List, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+// 增量覆盖：x 列表比 out 长 -> 161002（"少传拒绝"）
+TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_x_list_longer_than_out)
+{
+    vector<int64_t> dims = {2, 2};
+    vector<int64_t> scalarDims = {1};
+    auto x = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x2 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x3 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0.1, 1.0);
+    auto scalar = TensorDesc(scalarDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1.0, 2.0);
+    auto out = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x, x});
+    auto x2List = TensorListDesc({x2, x2});
+    auto x3List = TensorListDesc({x3, x3});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcdivScalar, INPUT(xList, x2List, x3List, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+// 增量覆盖：x 列表比 out 短 -> 放行（"多传放行"），保证新增判据不是双向相等
+TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_x_list_shorter_than_out)
+{
+    vector<int64_t> dims = {2, 2};
+    vector<int64_t> scalarDims = {1};
+    auto x = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x2 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x3 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0.1, 1.0);
+    auto scalar = TensorDesc(scalarDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1.0, 2.0);
+    auto out = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto x3List = TensorListDesc({x3});
+    auto outList = TensorListDesc({out, out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcdivScalar, INPUT(xList, x2List, x3List, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
+}

@@ -32,6 +32,12 @@ constexpr int8_t CAST_TRUNC = 5;
 constexpr int8_t CAST_ODD = 6;
 constexpr int8_t CAST_FRAC = 7;
 
+// roundMode 仅 1/2/3/4/5/7 为有效舍入；其余取值（0、6、>=8 等）一律按“不舍入”处理
+__aicore__ inline bool IsSupportedRoundMode(int8_t mode)
+{
+    return (mode >= CAST_RINT && mode <= CAST_TRUNC) || (mode == CAST_FRAC);
+}
+
 constexpr uint8_t COPY_SPACE_MULTIPLE = 9;
 
 constexpr uint8_t INPUT_PARAMETER_COUNT = 2;
@@ -108,9 +114,15 @@ private:
             PipeBarrier<PIPE_V>();
             Sub(float32Tensor[maxCastDataCount], float32Tensor, float32Tensor[maxCastDataCount], dataCount);
             PipeBarrier<PIPE_V>();
-        } else {
+        } else if (IsSupportedRoundMode(roundModeValue)) {
             PipeBarrier<PIPE_V>();
             Cast(float32Tensor[maxCastDataCount], float32Tensor, ConvertRoundMode(roundModeValue), dataCount);
+            PipeBarrier<PIPE_V>();
+        } else {
+            // 不舍入：不做 f32->f32 变换，把升精度后的原值搬到回程源区
+            // （f16/bf16 -> f32 -> f16/bf16 精确可逆，回程 CAST_RINT 原样写回）
+            // 用乘 1.0 而非加 0.0：加 0 会把 -0.0 变成 +0.0
+            Muls(float32Tensor[maxCastDataCount], float32Tensor, 1.0f, dataCount);
             PipeBarrier<PIPE_V>();
         }
 
@@ -130,8 +142,12 @@ public:
             Cast(outLocal, dataLocal, RoundMode::CAST_TRUNC, dataCount);
             PipeBarrier<PIPE_V>();
             Sub(outLocal, dataLocal, outLocal, dataCount);
-        } else {
+        } else if (IsSupportedRoundMode(roundModeValue)) {
             Cast(outLocal, dataLocal, ConvertRoundMode(roundModeValue), dataCount);
+        } else {
+            // 不舍入：UB 内逐元素拷贝，不下发 f32->f32 的 Cast
+            // 用乘 1.0 而非加 0.0：加 0 会把 -0.0 变成 +0.0
+            Muls(outLocal, dataLocal, 1.0f, dataCount);
         }
     }
 };

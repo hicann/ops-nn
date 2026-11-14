@@ -128,7 +128,7 @@ aclnnStatus aclnnForeachAddcdivList(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示混合运算的输出张量列表。对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size，out与x1的tensorList长度需满足一定约束关系，参见<a href="#约束说明"> 约束说明</a>。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -207,9 +207,25 @@ aclnnStatus aclnnForeachAddcdivList(
       <td>scalars的元素个数与x1的Tensor数量不一致。</td>
     </tr>
     <tr>
+      <td>out的与x1的Tensor数量不满足约束关系。</td>
+    </tr>
+    <tr>
       <td>scalars维度超过8维。</td>
     </tr>
   </tbody></table>
+
+  <!-- npu="950" id13 -->
+  > 说明：
+  >
+  > <term>Ascend 950PR&950DT系列产品</term>：x与out的tensorList长度（包含的Tensor个数）不一致，报错的返回码和错误码分别为：'ACLNN_ERR_INNER_TILING_ERROR 和 561002'。
+
+  <!-- end id13 -->
+
+  <!-- npu="A3,910b" id14 -->
+  > 说明：
+  >
+  > <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：x的tensorList长度（包含的Tensor个数）大于out的tensorList长度（包含的Tensor个数），报错的返回码和错误码分别为：'ACLNN_ERR_INNER_TILING_ERROR 和 561002'。
+  <!-- end id14 -->
 
 ## aclnnForeachAddcdivList
 
@@ -258,6 +274,16 @@ aclnnStatus aclnnForeachAddcdivList(
 
 - 确定性计算：
   - aclnnForeachAddcdivList默认确定性实现。
+- 不同产品中out与x1的tensorList长度约束关系如下:
+  <!-- npu="A3,910b" id10 -->
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
+    out的tensorList长度（包含的Tensor个数）需大于等于x1的tensorList长度（包含的Tensor个数）。
+  <!-- end id10 -->
+
+  <!-- npu="950" id11 -->
+  - <term>Ascend 950PR&950DT系列产品</term>
+    x1与out的tensorList长度（包含的Tensor个数）需一致。
+  <!-- end id11 -->
 
 ## 调用示例
 

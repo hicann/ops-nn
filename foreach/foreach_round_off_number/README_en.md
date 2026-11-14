@@ -71,6 +71,7 @@ English | [简体中文](./README.md)
   </tbody></table>
 
 - <term>Kirin X90 processor series products</term> and <term>Kirin 9030 processor series products</term>: BFLOAT16 and INT16 are not supported.
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：roundMode参数仅支持取值1、2、3、4、5、7；若传入其他值，系统将忽略舍入逻辑，返回原始结果。
 
 ## Constraints
 

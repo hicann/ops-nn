@@ -155,8 +155,9 @@ static inline aclnnStatus CheckParams(const aclTensorList* x1, const aclTensorLi
                                                             (std::to_string(x3->Size())).c_str(), reason.c_str()}));
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (x1->Size() != out->Size()) {
-        const std::string reason = (std::string("Tensor lists must have equal lengths; x1=") +
+    // x 与 out 的 tensor 个数：要求 x1->Size() <= out->Size()，多传放行、少传拒绝
+    if (x1->Size() > out->Size()) {
+        const std::string reason = (std::string("The tensor nums in {x1, out} must satisfy x1 <= out, but got x1=") +
                                     std::to_string(x1->Size()) + ", out=" + std::to_string(out->Size()));
         OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
         REPORT_PREDEFINED_ERR_MSG("EZ0038",
@@ -165,7 +166,6 @@ static inline aclnnStatus CheckParams(const aclTensorList* x1, const aclTensorLi
                                                             (std::to_string(out->Size())).c_str(), reason.c_str()}));
         return ACLNN_ERR_PARAM_INVALID;
     }
-
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShape/CheckFormat.
     CHECK_RET(CheckTensorListNotNull(x1, "x1"), ACLNN_ERR_PARAM_INVALID);
