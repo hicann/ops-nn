@@ -11,7 +11,9 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <map>
 #include "log/log.h"
+#include "base/err_mgr.h"
 #include <gtest/gtest.h>
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"
@@ -196,6 +198,57 @@ TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_invalid_scale_al
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
                     ge::DT_FLOAT8_E8M0, xShape, yGradShape, y1Shape, mxScale1Shape, y2Shape, mxScale2Shape, false,
                     "rint", 36, 0, ge::GRAPH_FAILED);
+}
+
+static void CheckAttributeFirstError(bool activateLeft, const std::string& roundMode, int64_t scaleAlg,
+                                     const std::string& code, const std::string& parameter, const std::string& actual,
+                                     const std::string& constraint)
+{
+    ASSERT_EQ(error_message::ErrMgrInit(error_message::ErrorMessageMode::INTERNAL_MODE), 0);
+    (void)error_message::GetErrMgrRawErrorMessages();
+    ASSERT_TRUE(error_message::GetErrMgrRawErrorMessages().empty());
+    gert::StorageShape xShape = {{4, 4096}, {4, 4096}};
+    gert::StorageShape yGradShape = {{4, 2048}, {4, 2048}};
+    gert::StorageShape yShape = {{4, 4096}, {4, 4096}};
+    gert::StorageShape mxScale1Shape = {{4, 64, 2}, {4, 64, 2}};
+    gert::StorageShape mxScale2Shape = {{1, 4096, 2}, {1, 4096, 2}};
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN,
+                    ge::DT_FLOAT8_E8M0, xShape, yGradShape, yShape, mxScale1Shape, yShape, mxScale2Shape, activateLeft,
+                    roundMode, 36, scaleAlg, ge::GRAPH_FAILED);
+    auto messages = error_message::GetErrMgrRawErrorMessages();
+    ASSERT_EQ(messages.size(), 1U);
+    const auto& message = messages.front();
+    ASSERT_NE(message.error_id, nullptr);
+    EXPECT_EQ(std::string(message.error_id.get()), code);
+    ASSERT_EQ(message.args_key.size(), message.args_value.size());
+    ASSERT_EQ(message.args_key.size(), 4U);
+    std::map<std::string, std::string> arguments;
+    for (size_t i = 0; i < message.args_key.size(); ++i) {
+        ASSERT_NE(message.args_key[i], nullptr);
+        ASSERT_NE(message.args_value[i], nullptr);
+        EXPECT_TRUE(arguments.emplace(message.args_key[i].get(), message.args_value[i].get()).second);
+    }
+    EXPECT_EQ(arguments.at("param_name"), parameter);
+    EXPECT_FALSE(arguments.at("op_name").empty());
+    EXPECT_EQ(arguments.at("incorrect_value"), actual);
+    EXPECT_EQ(arguments.at(code == "EZ0026" ? "reason" : "correct_value"), constraint);
+    EXPECT_TRUE(error_message::GetErrMgrRawErrorMessages().empty());
+}
+
+TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, invalid_round_mode_reports_single_formal_error)
+{
+    CheckAttributeFirstError(true, "invalid_round", 1, "EZ0026", "round_mode", "invalid_round",
+                             "supported values are rint, floor and round");
+}
+
+TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, invalid_scale_alg_reports_single_formal_error)
+{
+    CheckAttributeFirstError(true, "rint", 0, "EZ0024", "scale_alg", "0", "1 (cuBLAS mode)");
+}
+
+TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, invalid_activate_left_reports_single_formal_error)
+{
+    CheckAttributeFirstError(false, "rint", 1, "EZ0024", "activate_left", "0", "1 (true)");
 }
 
 TEST_F(SwigluBackwardMxQuantWithDualAxisTilingTest, test_tiling_invalid_dst_type)

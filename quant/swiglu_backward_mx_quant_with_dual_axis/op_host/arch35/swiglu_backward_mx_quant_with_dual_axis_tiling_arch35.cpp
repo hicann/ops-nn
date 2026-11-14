@@ -82,10 +82,10 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::GetAttr()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrRoundMode);
     std::string roundModeStr = attrRoundMode;
     RoundModeList roundMode = GetRoundMode(roundModeStr);
-    OP_CHECK_IF(
-        roundMode == RoundModeList::MODE_UNDEFINED,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "round_mode", roundModeStr.c_str(), "[rint, floor, round]"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(roundMode == RoundModeList::MODE_UNDEFINED,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundModeStr.c_str(),
+                                                      "supported values are rint, floor and round"),
+                return ge::GRAPH_FAILED);
 
     // FP8 round_mode validation: FP8 only supports rint on Ascend950
     OP_CHECK_IF((Y_SUPPORT_DTYPE_FP8_SET.count(tilingParams_.yDtype) != 0 && roundMode != RoundModeList::MODE_RINT),
@@ -99,16 +99,14 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::GetAttr()
     auto* attrScaleAlg = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrScaleAlg);
     tilingParams_.scaleAlg = static_cast<int64_t>(*attrScaleAlg);
-    OP_CHECK_IF(
-        tilingParams_.scaleAlg != 1,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "scale_alg", std::to_string(tilingParams_.scaleAlg).c_str(),
-                                  "{1}, only cuBLAS mode is supported"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tilingParams_.scaleAlg != 1,
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "scale_alg",
+                                          std::to_string(tilingParams_.scaleAlg).c_str(), "1 (cuBLAS mode)"),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(tilingParams_.activateLeft != 1,
-                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "activate_left",
-                                          std::to_string(tilingParams_.activateLeft).c_str(),
-                                          "{1}, activate_left only support 1"),
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "activate_left",
+                                          std::to_string(tilingParams_.activateLeft).c_str(), "1 (true)"),
                 return ge::GRAPH_FAILED);
 
     // dst_dtype: Int attribute at position 3
@@ -595,7 +593,10 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::DoTiling()
     OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckDtype failed."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "GetAttr failed."),
+    const auto attrRet = GetAttr();
+    OP_CHECK_IF(attrRet != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(),
+                                       "DoTiling: GetAttr failed, rc=%u; propagate the reported root cause.", attrRet),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckShape failed."),
