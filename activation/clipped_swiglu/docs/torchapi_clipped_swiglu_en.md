@@ -110,8 +110,8 @@
 ```python
 cann_ops_nn.clipped_swiglu(
     x,
-    *,
     group_index=None,
+    *,
     dim=-1,
     alpha=1.702,
     limit=7.0,
