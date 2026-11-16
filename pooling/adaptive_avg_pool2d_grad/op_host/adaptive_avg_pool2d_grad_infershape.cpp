@@ -68,7 +68,7 @@ static ge::graphStatus InferShape4AdaptiveAvgPool2dGrad(gert::InferShapeContext*
     }
 
     for (int64_t i = 0; i < output_size_len; i++) {
-        if (output_size[i] <= 0) {
+        if (output_size[i] < 0) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "orig_input_shape",
                                                   std::to_string(output_size[i]),
                                                   "The value is invalid for orig_input_shape");

@@ -220,10 +220,10 @@ TEST_F(AdaptiveAvgPool2dGradInferShapeTest, infershape_input_output_dim_mismatch
     ExecuteInferShapeErrorTestCase({1, 4, 8, 8}, {1, 4, 16, 16, 16}, ge::DT_FLOAT, ge::Format::FORMAT_NCHW);
 }
 
-// OP_LOGE_FOR_INVALID_VALUE_WITH_REASON: output_size contains <=0 value (line 52)
+// OP_LOGE_FOR_INVALID_VALUE_WITH_REASON: output_size contains <0 value (line 52)
 TEST_F(AdaptiveAvgPool2dGradInferShapeTest, infershape_invalid_output_size_value)
 {
-    ExecuteInferShapeErrorTestCase({1, 4, 8, 8}, {1, 4, 0, 16}, ge::DT_FLOAT, ge::Format::FORMAT_NCHW);
+    ExecuteInferShapeErrorTestCase({1, 4, 8, 8}, {1, 4, -1, 16}, ge::DT_FLOAT, ge::Format::FORMAT_NCHW);
 }
 
 // OP_LOGE_FOR_INVALID_DTYPE: grad dtype not float/float16/bf16 (line 73, InferDataType)
