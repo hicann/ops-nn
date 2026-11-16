@@ -210,7 +210,7 @@ English | [简体中文](./README.md)
 
   | Invocation method | Sample code | Description |
   | --- | --- | --- |
-  | aclnn API | [test_aclnn_quant_matmul_v5_at2_at3](examples/test_aclnn_quant_matmul_v5_at2_at3.cpp) | Calls [aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5_en.md) to demonstrate quantized computation with INT8 inputs and 4-bit weights. |
+  | aclnn API | [test_aclnn_quant_matmul_v5_at2_at3](examples/arch22/test_aclnn_quant_matmul_v5_at2_at3.cpp) | Calls [aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5_en.md) to demonstrate quantized computation with INT8 inputs and 4-bit weights. |
 
 - <term>Ascend 950PR&950DT products</term>:
 

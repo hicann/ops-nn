@@ -208,7 +208,7 @@
 
   | 调用方式 | 样例代码 | 说明 |
   | --- | --- | --- |
-  | aclnn API | [test_aclnn_quant_matmul_v5_at2_at3](examples/test_aclnn_quant_matmul_v5_at2_at3.cpp) | 通过[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)调用，展示INT8输入与4位权重的量化计算。 |
+  | aclnn API | [test_aclnn_quant_matmul_v5_at2_at3](examples/arch22/test_aclnn_quant_matmul_v5_at2_at3.cpp) | 通过[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)调用，展示INT8输入与4位权重的量化计算。 |
 
 - <term>Ascend 950PR&950DT系列产品</term>：
 
