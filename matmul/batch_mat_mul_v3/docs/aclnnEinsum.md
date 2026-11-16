@@ -90,7 +90,7 @@ aclnnStatus aclnnEinsum(
       <td>equation</td>
       <td>输入</td>
       <td>表示爱因斯坦求和约定的简写公式。</td>
-      <td>当前取值只支持"abcd,abced-&gt;abce"、"a,b-&gt;ab"。Host侧表达式字符串。</td>
+      <td>字母名称不参与匹配：先按字母首次出现顺序归一化，再与注册表比对。目前注册表含"abcd,abced-&gt;abce"与"a,b-&gt;ab"两条，其它标签排列一律返回161002。Host侧表达式字符串。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -230,7 +230,7 @@ aclnnStatus aclnnEinsum(
 
 - 确定性说明：aclnnEinsum默认确定性实现。
 
-- 目前equation需完全匹配，才能找到对应函数。
+- equation的匹配按字母首次出现顺序归一化后再与注册表比对，因此`a,b->ab`与`i,j->ij`、`x,y->xy`等价；而`a,b->ba`（输出标签顺序不同）不在注册表内，返回161002。
 
 ## 调用示例
 
