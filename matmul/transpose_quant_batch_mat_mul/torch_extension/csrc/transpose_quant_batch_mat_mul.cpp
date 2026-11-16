@@ -54,23 +54,25 @@ at::Tensor transpose_quant_batch_mat_mul(
 
     // The torch interface supports MX fp4/fp8 (float4_e2m1/float8_e4m3fn with
     // e8m0 scale), FP8 (float8_e4m3fn/float8_e5m2 with float scale), HIFP8
-    // (hifloat8 with uint64 scale), and A2/A3 INT8 W8A8. The aclnn op_api layer
-    // handles dtype dispatch.
+    // (hifloat8 with uint64 scale), HIFP4 (hifloat4 with hifloat4_scale), and
+    // A2/A3 INT8 W8A8. The aclnn op_api layer handles dtype dispatch.
     const aclDataType x1_acl = x1_dtype.has_value() ? GetAclDataType(x1_dtype.value()) :
                                                       ConvertToAclDataType(x1.scalar_type());
     const aclDataType x2_acl = x2_dtype.has_value() ? GetAclDataType(x2_dtype.value()) :
                                                       ConvertToAclDataType(x2.scalar_type());
     const bool x1_supported = (x1_acl == ACL_FLOAT4_E2M1) || (x1_acl == ACL_FLOAT8_E4M3FN) ||
-                              (x1_acl == ACL_FLOAT8_E5M2) || (x1_acl == ACL_HIFLOAT8) || (x1_acl == ACL_INT8);
+                              (x1_acl == ACL_FLOAT8_E5M2) || (x1_acl == ACL_HIFLOAT8) || (x1_acl == ACL_INT8) ||
+                              (x1_acl == ACL_HIFLOAT4_NUM);
     const bool x2_supported = (x2_acl == ACL_FLOAT4_E2M1) || (x2_acl == ACL_FLOAT8_E4M3FN) ||
-                              (x2_acl == ACL_FLOAT8_E5M2) || (x2_acl == ACL_HIFLOAT8) || (x2_acl == ACL_INT8);
+                              (x2_acl == ACL_FLOAT8_E5M2) || (x2_acl == ACL_HIFLOAT8) || (x2_acl == ACL_INT8) ||
+                              (x2_acl == ACL_HIFLOAT4_NUM);
     TORCH_CHECK(x1_supported,
-                "x1 must be float4_e2m1, float8_e4m3fn, float8_e5m2, hifloat8, or int8 in the torch interface, got "
-                "aclDataType ",
+                "x1 must be float4_e2m1, float8_e4m3fn, float8_e5m2, hifloat8, hifloat4, or int8 in the torch "
+                "interface, got aclDataType ",
                 x1_acl);
     TORCH_CHECK(x2_supported,
-                "x2 must be float4_e2m1, float8_e4m3fn, float8_e5m2, hifloat8, or int8 in the torch interface, got "
-                "aclDataType ",
+                "x2 must be float4_e2m1, float8_e4m3fn, float8_e5m2, hifloat8, hifloat4, or int8 in the torch "
+                "interface, got aclDataType ",
                 x2_acl);
     const aclDataType x1_scale_acl = x1_scale_dtype.has_value() ?
                                          GetAclDataType(x1_scale_dtype.value()) :
@@ -80,12 +82,23 @@ at::Tensor transpose_quant_batch_mat_mul(
                                          GetAclDataType(x2_scale_dtype.value()) :
                                          (x2_scale_real.defined() ? ConvertToAclDataType(x2_scale_real.scalar_type()) :
                                                                     ACL_DT_UNDEFINED);
-    // Scale dtype validation: e8m0 for MX, float for FP8, uint64 for HIFP8.
-    // Mode is determined by scale dtype (mirroring op tiling): e8m0 scale => MX,
-    // uint64 scale => HIFP8, float32 scale => FP8 K-C.
-    const bool is_hifp8 = (x1_acl == ACL_HIFLOAT8) || (x2_acl == ACL_HIFLOAT8);
-    const bool is_mx = !is_hifp8 && (x1_scale_acl == ACL_FLOAT8_E8M0 || x2_scale_acl == ACL_FLOAT8_E8M0);
-    if (is_mx) {
+    // Scale dtype validation: e8m0 for MX, float for FP8, uint64 for HIFP8,
+    // hifloat4_scale for HIFP4.
+    const bool is_hifp4 = (x1_acl == ACL_HIFLOAT4_NUM) || (x2_acl == ACL_HIFLOAT4_NUM);
+    const bool is_hifp8 = !is_hifp4 && ((x1_acl == ACL_HIFLOAT8) || (x2_acl == ACL_HIFLOAT8));
+    const bool is_mx = !is_hifp4 && !is_hifp8 && (x1_scale_acl == ACL_FLOAT8_E8M0 || x2_scale_acl == ACL_FLOAT8_E8M0);
+    if (is_hifp4) {
+        TORCH_CHECK(x1_acl == ACL_HIFLOAT4_NUM && x2_acl == ACL_HIFLOAT4_NUM,
+                    "x1 and x2 must both be hifloat4 for HIFP4 input");
+        TORCH_CHECK(x1_scale_real.defined() && x2_scale_real.defined(),
+                    "x1_scale/x2_scale are required for HIFP4 input");
+        TORCH_CHECK(x1_scale_real.element_size() == 4 && x2_scale_real.element_size() == 4,
+                    "x1_scale/x2_scale must use 4-byte storage (e.g. float32) for HIFP4 input, got ",
+                    x1_scale_real.element_size(), " and ", x2_scale_real.element_size(), " bytes");
+        TORCH_CHECK(x1_scale_acl == ACL_HIFLOAT4_SCALE_NUM && x2_scale_acl == ACL_HIFLOAT4_SCALE_NUM,
+                    "x1_scale/x2_scale must be hifloat4_scale for HIFP4 input, got aclDataType ", x1_scale_acl, " and ",
+                    x2_scale_acl);
+    } else if (is_mx) {
         TORCH_CHECK(x1_scale_acl == ACL_DT_UNDEFINED || x1_scale_acl == ACL_FLOAT8_E8M0,
                     "x1_scale must be float8_e8m0 (MX scale) for MX input, got aclDataType ", x1_scale_acl);
         TORCH_CHECK(x2_scale_acl == ACL_DT_UNDEFINED || x2_scale_acl == ACL_FLOAT8_E8M0,
@@ -120,6 +133,8 @@ at::Tensor transpose_quant_batch_mat_mul(
                                                                                   at::IntArrayRef(default_group_sizes));
     int32_t batch_split_factor_value = static_cast<int32_t>(batch_split_factor.value_or(1));
 
+    // Is4BitDtype() covers ACL_HIFLOAT4_NUM (see aclnn_common.h), so HIFP4
+    // uses the same packed-axis logical-length doubling as MXFP4.
     const bool x1_is_fp4 = Is4BitDtype(x1_acl);
     const bool x2_is_fp4 = Is4BitDtype(x2_acl);
     const int64_t x1_last_dim = static_cast<int64_t>(x1.sizes().size()) - 1;
@@ -142,6 +157,7 @@ at::Tensor transpose_quant_batch_mat_mul(
     }
 
     aclDataType dtype_value = static_cast<aclDataType>(dtype);
+    TORCH_CHECK(!(is_hifp4 && dtype_value == ACL_HIFLOAT8), "hifp4 output supports only float16 (1) and bfloat16 (27)");
     at::ScalarType scalar_type;
     if (dtype_value == ACL_FLOAT16) {
         scalar_type = at::ScalarType::Half;
@@ -157,6 +173,7 @@ at::Tensor transpose_quant_batch_mat_mul(
     at::Tensor result = at::empty(output_size, at::TensorOptions().dtype(scalar_type).device(at::kPrivateUse1));
 
     bool is_nz = at_npu::native::get_npu_format(x2) == ACL_FORMAT_FRACTAL_NZ;
+    TORCH_CHECK(!(is_hifp4 && is_nz), "HIFP4 does not support x2 FRACTAL_NZ in the torch interface");
     bool is_nd_nz_format = is_nz && at_npu::native::get_npu_format(x1) != ACL_FORMAT_FRACTAL_NZ;
 
     TensorWrapper x1_wrapper = {

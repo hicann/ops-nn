@@ -17,7 +17,7 @@ from torch.library import impl
 from cann_ops_nn.op_builder import OpBuilder, get_as_library
 
 # Supported torch-level input dtypes: MXFP8 (float8_e4m3fn), FP8 (float8_e4m3fn with
-# float scale), and HIFP8 (via acl dtype override). MXFP4 uses acl dtype override.
+# float scale), HIFP8 (via acl dtype override), and HIFP4 (via acl dtype override).
 _FP8_E4M3FN_DTYPE = getattr(torch, "float8_e4m3fn", None)
 _FP8_E5M2_DTYPE = getattr(torch, "float8_e5m2", None)
 _FP8_TORCH_DTYPES = tuple(
@@ -31,6 +31,8 @@ _ACL_CODE_FLOAT4_E2M1 = 40
 _ACL_CODE_FLOAT8_E5M2 = 35
 _ACL_CODE_FLOAT8_E4M3FN = 36
 _ACL_CODE_HIFLOAT8 = 34
+_ACL_CODE_HIFLOAT4 = 42
+_ACL_CODE_HIFLOAT4_SCALE = 43
 
 
 def _acl_override_code(attr_name, acl_code):
@@ -44,10 +46,19 @@ _FP4_E2M1_ACL = _acl_override_code("float4_e2m1fn_x2", _ACL_CODE_FLOAT4_E2M1)
 _FP8_E5M2_ACL = _acl_override_code("float8_e5m2", _ACL_CODE_FLOAT8_E5M2)
 _FP8_E4M3FN_ACL = _acl_override_code("float8_e4m3fn", _ACL_CODE_FLOAT8_E4M3FN)
 _HIFLOAT8_ACL = _acl_override_code("hifloat8", _ACL_CODE_HIFLOAT8)
+_HIFLOAT4_ACL = _acl_override_code("hifloat4", _ACL_CODE_HIFLOAT4)
+_HIFLOAT4_SCALE_ACL = _acl_override_code("hifloat4_scale", _ACL_CODE_HIFLOAT4_SCALE)
 
 # All supported acl dtype codes (int values for x1_dtype/x2_dtype overrides)
 _SUPPORTED_ACL_DTYPES = tuple(
-    d for d in (_FP4_E2M1_ACL, _FP8_E5M2_ACL, _FP8_E4M3FN_ACL, _HIFLOAT8_ACL)
+    d
+    for d in (
+        _FP4_E2M1_ACL,
+        _FP8_E5M2_ACL,
+        _FP8_E4M3FN_ACL,
+        _HIFLOAT8_ACL,
+        _HIFLOAT4_ACL,
+    )
 )
 
 
@@ -58,12 +69,72 @@ def _normalize_acl_dtype(dtype_code):
     return dtype_code
 
 
+def _is_4bit_acl(dtype_code):
+    """Return True for the 4-bit overrides whose packed axis needs a logical view."""
+    return _normalize_acl_dtype(dtype_code) in (_FP4_E2M1_ACL, _HIFLOAT4_ACL)
+
+
+def _is_hifp4_acl(dtype_code):
+    return _normalize_acl_dtype(dtype_code) == _HIFLOAT4_ACL
+
+
+def _check_hifp4_scale_storage(scale, name):
+    """HIFP4 scale is 4 bytes/element; reject narrower torch storage."""
+    if scale is not None and scale.element_size() != 4:
+        raise NotImplementedError(
+            "%s must use a 4-byte storage dtype (e.g. float32) for hifp4 input, "
+            "got %s" % (name, scale.dtype)
+        )
+
+
+def _normalize_quant_overrides(
+    x1_dtype, x2_dtype, x1_scale, x2_scale, x1_scale_dtype, x2_scale_dtype
+):
+    """Normalize ACL codes and default the HIFP4 scale dtype override.
+
+    The HIFP4 scale is 4 bytes per element, so torch callers pass a float32
+    tensor and identify it through x1_scale_dtype/x2_scale_dtype. Default the
+    override when the data is HIFP4 and the caller did not specify it.
+    """
+    x1_dtype = None if x1_dtype is None else _normalize_acl_dtype(x1_dtype)
+    x2_dtype = None if x2_dtype is None else _normalize_acl_dtype(x2_dtype)
+    x1_scale_dtype = (
+        None if x1_scale_dtype is None else _normalize_acl_dtype(x1_scale_dtype)
+    )
+    x2_scale_dtype = (
+        None if x2_scale_dtype is None else _normalize_acl_dtype(x2_scale_dtype)
+    )
+    is_hifp4_x1 = _is_hifp4_acl(x1_dtype)
+    is_hifp4_x2 = _is_hifp4_acl(x2_dtype)
+    if is_hifp4_x1 != is_hifp4_x2:
+        raise NotImplementedError("x1 and x2 must both be hifp4 or both not hifp4")
+    for name, scale, scale_dtype in (
+        ("x1_scale", x1_scale, x1_scale_dtype),
+        ("x2_scale", x2_scale, x2_scale_dtype),
+    ):
+        if (
+            scale_dtype is not None
+            and _normalize_acl_dtype(scale_dtype) == _HIFLOAT4_SCALE_ACL
+        ):
+            _check_hifp4_scale_storage(scale, name)
+    if is_hifp4_x1:
+        if x1_scale is not None:
+            _check_hifp4_scale_storage(x1_scale, "x1_scale")
+        if x2_scale is not None:
+            _check_hifp4_scale_storage(x2_scale, "x2_scale")
+        if x1_scale is not None and x1_scale_dtype is None:
+            x1_scale_dtype = _HIFLOAT4_SCALE_ACL
+        if x2_scale is not None and x2_scale_dtype is None:
+            x2_scale_dtype = _HIFLOAT4_SCALE_ACL
+    return x1_dtype, x2_dtype, x1_scale_dtype, x2_scale_dtype
+
+
 # dtype attr (int) -> torch output dtype, matching op_api aclnn output rules.
 _DTYPE_TO_TORCH = {1: torch.float16, 27: torch.bfloat16, 34: torch.uint8}
 
 
 def _check_supported_input(x, name, acl_dtype=None):
-    """Check that x1/x2 is a supported input dtype (MX fp4/fp8, FP8, or HIFP8)."""
+    """Check that x1/x2 is a supported input dtype (MX fp4/fp8, FP8, HIFP8, or HIFP4)."""
     if x.dtype == torch.int8 or x.dtype in _FP8_TORCH_DTYPES:
         return
     if (
@@ -72,8 +143,8 @@ def _check_supported_input(x, name, acl_dtype=None):
     ):
         return
     raise NotImplementedError(
-        "%s torch interface supports fp8 (float8_e4m3fn/float8_e5m2), hifp8, and MX fp4/fp8 input, "
-        "got dtype %s (acl dtype %s)" % (name, x.dtype, acl_dtype)
+        "%s torch interface supports fp8 (float8_e4m3fn/float8_e5m2), hifp8, hifp4, "
+        "and MX fp4/fp8 input, got dtype %s (acl dtype %s)" % (name, x.dtype, acl_dtype)
     )
 
 
@@ -130,9 +201,16 @@ class TransposeQuantBatchMatMulOpBuilder(OpBuilder):
             x1_scale_dtype: Optional[int] = None,
             x2_scale_dtype: Optional[int] = None,
         ) -> torch.Tensor:
+            x1_dtype, x2_dtype, _, _ = _normalize_quant_overrides(
+                x1_dtype, x2_dtype, x1_scale, x2_scale, x1_scale_dtype, x2_scale_dtype
+            )
             # Reject unsupported inputs at meta time as well.
             _check_supported_input(x1, "x1", x1_dtype)
             _check_supported_input(x2, "x2", x2_dtype)
+            if _is_hifp4_acl(x1_dtype) and dtype == _ACL_CODE_HIFLOAT8:
+                raise NotImplementedError(
+                    "hifp4 output supports only float16 (1) and bfloat16 (27)"
+                )
             out_dtype = _output_dtype(dtype)
 
             default_perm_x1 = [1, 0, 2]
@@ -144,8 +222,8 @@ class TransposeQuantBatchMatMulOpBuilder(OpBuilder):
                 batch_split_factor if batch_split_factor is not None else 1
             )
 
-            x1_is_fp4 = x1_dtype == _FP4_E2M1_ACL
-            x2_is_fp4 = x2_dtype == _FP4_E2M1_ACL
+            x1_is_fp4 = _is_4bit_acl(x1_dtype)
+            x2_is_fp4 = _is_4bit_acl(x2_dtype)
             x1_last_dim = x1.dim() - 1
             x2_last_dim = x2.dim() - 1
 
@@ -192,8 +270,11 @@ def transpose_quant_batch_mat_mul(
     x1_scale_dtype: Optional[int] = None,
     x2_scale_dtype: Optional[int] = None,
 ) -> torch.Tensor:
-    # Torch entry accepts fp8, hifp8, and MX fp4/fp8 inputs. The csrc validates
-    # x1/x2 against the resolved acl dtypes (including x1_dtype/x2_dtype overrides).
+    # Torch entry accepts fp8, hifp8, hifp4, and MX fp4/fp8 inputs. The csrc
+    # validates x1/x2 against the resolved acl dtypes (including overrides).
+    x1_dtype, x2_dtype, x1_scale_dtype, x2_scale_dtype = _normalize_quant_overrides(
+        x1_dtype, x2_dtype, x1_scale, x2_scale, x1_scale_dtype, x2_scale_dtype
+    )
     _check_supported_input(x1, "x1", x1_dtype)
     _check_supported_input(x2, "x2", x2_dtype)
 

@@ -14,6 +14,9 @@
  */
 #pragma once
 
+#include <map>
+#include <type_traits>
+
 #include "matmul/common/op_host/math_util_nn.h"
 #include "matmul_base_tiling.h"
 #include "matmul_v3_common_advanced.h"
@@ -551,20 +554,40 @@ protected:
     MatMulV3TilingKey* tilingKeyObj;
 
 private:
+    // matmul_tiling::DataType::DT_HIFLOAT4 仅新版 CANN 提供。旧版 CANN 的枚举中没有该成员，
+    // 直接引用CI会编译失败；这里用编译期探测决定是否注册该映射（旧版跳过，新版正常注册）。
+    template <typename T, typename = void>
+    struct Hif4DtypeProvider {
+        static void Add(std::map<ge::DataType, matmul_tiling::DataType>&) {}
+    };
+    template <typename T>
+    struct Hif4DtypeProvider<T, std::void_t<decltype(T::DT_HIFLOAT4)>> {
+        static void Add(std::map<ge::DataType, matmul_tiling::DataType>& dtypeMap)
+        {
+            dtypeMap.emplace(Ops::NN::DT_HIFLOAT4, T::DT_HIFLOAT4);
+        }
+    };
+
+    static std::map<ge::DataType, matmul_tiling::DataType> BuildDtypeMap()
+    {
+        std::map<ge::DataType, matmul_tiling::DataType> dtypeMap = {
+            {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},
+            {ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT},
+            {ge::DT_BF16, matmul_tiling::DataType::DT_BF16},
+            {ge::DT_FLOAT8_E5M2, matmul_tiling::DataType::DT_FLOAT8_E5M2},
+            {ge::DT_FLOAT8_E4M3FN, matmul_tiling::DataType::DT_FLOAT8_E4M3FN},
+            {ge::DT_HIFLOAT8, matmul_tiling::DataType::DT_HIFLOAT8},
+            {ge::DT_FLOAT4_E2M1, matmul_tiling::DataType::DT_FLOAT4_E2M1},
+            {ge::DT_INT8, matmul_tiling::DataType::DT_INT8}};
+        Hif4DtypeProvider<matmul_tiling::DataType>::Add(dtypeMap);
+        return dtypeMap;
+    }
+
     bool enableUncache_ = false;
     static constexpr int64_t ORI_SHIFT_VALUE = 42; // 未设置shiftValue或设置为0，则使用默认值进行计算
     int64_t shiftValue_ = 0;
     bool supportMmadS8S4_ = false;
-    const std::map<ge::DataType, matmul_tiling::DataType> dtypeMap_ = {
-        {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},
-        {ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT},
-        {ge::DT_BF16, matmul_tiling::DataType::DT_BF16},
-        {ge::DT_FLOAT8_E5M2, matmul_tiling::DataType::DT_FLOAT8_E5M2},
-        {ge::DT_FLOAT8_E4M3FN, matmul_tiling::DataType::DT_FLOAT8_E4M3FN},
-        {ge::DT_HIFLOAT8, matmul_tiling::DataType::DT_HIFLOAT8},
-        {Ops::NN::DT_HIFLOAT4, static_cast<matmul_tiling::DataType>(Ops::NN::DT_HIFLOAT4)},
-        {ge::DT_FLOAT4_E2M1, matmul_tiling::DataType::DT_FLOAT4_E2M1},
-        {ge::DT_INT8, matmul_tiling::DataType::DT_INT8}};
+    const std::map<ge::DataType, matmul_tiling::DataType> dtypeMap_ = BuildDtypeMap();
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling

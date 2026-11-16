@@ -15,9 +15,11 @@
 #   指定为 torch_npu.float4_e2m1fn_x2；x1_scale/x2_scale 为 float8_e8m0fnu；
 # - FP8（K-C）：x1/x2 为 float8_e4m3fn / float8_e5m2（可任意组合），x1_scale/x2_scale 为 float32；
 # - HIFP8：x1/x2 为 uint8 存储并通过 x1_dtype/x2_dtype 指定为 torch_npu.hifloat8，
-#   x2_scale 为 uint64（int64 按位重解释）。
-# 模式在转换时按输入/scale 的数据类型分派，因此 MXFP8 与 MXFP4 可以在同一个图里同时使用。
-# x2 支持 FRACTAL_NZ 格式：MX（MXFP8/MXFP4）与 HIFP8 均支持，运行时注入的 NZ 描述符
+#   x2_scale 为 uint64（int64 按位重解释）；
+# - HIFP4：x1/x2 为 uint8 存储并通过 x1_dtype/x2_dtype 指定为 hifloat4，
+#   x1_scale/x2_scale 为 hifloat4_scale（4 字节存储），64 个元素一组。
+# 模式在转换时按输入/scale 的数据类型分派，因此 MXFP8、MXFP4、HIFP4 可以在同一个图里同时使用。
+# x2 支持 FRACTAL_NZ 格式：MX（MXFP8/MXFP4）与 HIFP8 支持；HIFP4 目前仅支持 ND。运行时注入的 NZ 描述符
 # 由 _relabel_nz_packed_chains 接回算子输入。
 
 try:
@@ -44,6 +46,14 @@ except ImportError:
 
 
 if _TORCHAIR_AVAILABLE:
+    # Keep older torchair versions importable: HIFP4 only has to fail when an
+    # HIFP4 call actually reaches the converter, not when this module loads.
+    _HIFLOAT4_GE_DTYPE = getattr(DataType, "DT_HIFLOAT4", None)
+    _HIFLOAT4_SCALE_GE_DTYPE = getattr(DataType, "DT_HIFLOAT4_SCALE", None)
+    _HIFLOAT4_IR = ", DT_HIFLOAT4" if _HIFLOAT4_GE_DTYPE is not None else ""
+    _HIFLOAT4_SCALE_IR = (
+        ", DT_HIFLOAT4_SCALE" if _HIFLOAT4_SCALE_GE_DTYPE is not None else ""
+    )
     _GROUP_DIM = 3
     _GROUP_VALUE_MAX = 65535
     _GROUP_M_SHIFT = 32
@@ -67,14 +77,28 @@ if _TORCHAIR_AVAILABLE:
         DataType.DT_FLOAT4_E2M1,
         DataType.DT_HIFLOAT8,
     }
+    if _HIFLOAT4_GE_DTYPE is not None:
+        _INPUT_DTYPE_SET.add(_HIFLOAT4_GE_DTYPE)
 
     _TQBMM_IR = (
         IrDef("TransposeQuantBatchMatMul")
-        .input("x1", "DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_HIFLOAT8")
-        .input("x2", "DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_HIFLOAT8")
+        .input(
+            "x1",
+            "DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_HIFLOAT8"
+            + _HIFLOAT4_IR,
+        )
+        .input(
+            "x2",
+            "DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_HIFLOAT8"
+            + _HIFLOAT4_IR,
+        )
         .optional_input("bias", "DT_FLOAT, DT_FLOAT16, DT_BF16")
-        .optional_input("x1_scale", "DT_FLOAT, DT_FLOAT8_E8M0, DT_UINT64")
-        .optional_input("x2_scale", "DT_FLOAT, DT_FLOAT8_E8M0, DT_UINT64")
+        .optional_input(
+            "x1_scale", "DT_FLOAT, DT_FLOAT8_E8M0, DT_UINT64" + _HIFLOAT4_SCALE_IR
+        )
+        .optional_input(
+            "x2_scale", "DT_FLOAT, DT_FLOAT8_E8M0, DT_UINT64" + _HIFLOAT4_SCALE_IR
+        )
         .required_attr("dtype", attr.Int)
         .attr("group_size", attr.Int(0))
         .attr("perm_x1", attr.ListInt([1, 0, 2]))
@@ -109,15 +133,27 @@ if _TORCHAIR_AVAILABLE:
             return dtype_value + 256
         return dtype_value
 
+    # ACL code (offset by 256 in the torch attr) -> GE dtype. The torchair
+    # lookup table may predate HIFP4, so keep an explicit fallback.
+    _HIFP4_ACL_CODES = (42, 298)
+    _HIFP4_SCALE_ACL_CODES = (43, 299)
+
     def _resolve_dtype(tensor, dtype_override):
         if dtype_override is not None:
+            normalized = _normalize_dtype_value(dtype_override)
+            if normalized in _HIFP4_ACL_CODES:
+                if _HIFLOAT4_GE_DTYPE is None:
+                    raise RuntimeError("current torchair does not support HIFP4")
+                return _HIFLOAT4_GE_DTYPE
+            if normalized in _HIFP4_SCALE_ACL_CODES:
+                if _HIFLOAT4_SCALE_GE_DTYPE is None:
+                    raise RuntimeError("current torchair does not support HIFP4")
+                return _HIFLOAT4_SCALE_GE_DTYPE
             try:
                 return torch_dtype_value_to_ge_type(dtype_override)
             except RuntimeError:
                 try:
-                    return torch_dtype_value_to_ge_type(
-                        _normalize_dtype_value(dtype_override)
-                    )
+                    return torch_dtype_value_to_ge_type(normalized)
                 except RuntimeError:
                     pass
         return None if tensor is None else tensor.dtype
@@ -126,7 +162,9 @@ if _TORCHAIR_AVAILABLE:
         """按位重解释为 ge_dtype（4bit 目标会显式将物理最后一维翻倍为逻辑长度）。"""
         if tensor is None or ge_dtype is None or tensor.dtype == ge_dtype:
             return tensor
-        if ge_dtype == DataType.DT_FLOAT4_E2M1:
+        if ge_dtype == DataType.DT_FLOAT4_E2M1 or (
+            _HIFLOAT4_GE_DTYPE is not None and ge_dtype == _HIFLOAT4_GE_DTYPE
+        ):
             # 与 MxToBlockMxQuant 等既有实现保持一致：显式按 2 倍逻辑长度 reshape，
             # 不依赖 GE Bitcast 对 4bit 类型的 shape 推导行为。
             bit_shape = [1] * (tensor.rank - 1) + [2]
@@ -203,27 +241,62 @@ if _TORCHAIR_AVAILABLE:
         perm_x2 = [0, 1, 2] if perm_x2 is None else [int(v) for v in perm_x2]
         perm_y = [1, 0, 2] if perm_y is None else [int(v) for v in perm_y]
 
-        # MXFP4/HIFP8 的 Tensor 以 uint8 承载，必须通过 x1_dtype/x2_dtype 指定逻辑类型，
+        # MXFP4/HIFP8/HIFP4 的 Tensor 以 uint8 承载，必须通过 x1_dtype/x2_dtype 指定逻辑类型，
         # 这里按 override 做按位重解释；FP8 与 MXFP8 的输入 dtype 已与算子一致，保持原样。
         x1_ge_dtype = _resolve_dtype(x1, x1_dtype)
         x2_ge_dtype = _resolve_dtype(x2, x2_dtype)
         if x1_ge_dtype not in _INPUT_DTYPE_SET:
             raise RuntimeError(
                 "unsupported x1 dtype %s, please pass x1_dtype to specify the logical dtype "
-                "(float4_e2m1fn_x2 / hifloat8) for packed inputs" % str(x1_ge_dtype)
+                "(float4_e2m1fn_x2 / hifloat8 / hifloat4) for packed inputs"
+                % str(x1_ge_dtype)
             )
         if x2_ge_dtype not in _INPUT_DTYPE_SET:
             raise RuntimeError(
                 "unsupported x2 dtype %s, please pass x2_dtype to specify the logical dtype "
-                "(float4_e2m1fn_x2 / hifloat8) for packed inputs" % str(x2_ge_dtype)
+                "(float4_e2m1fn_x2 / hifloat8 / hifloat4) for packed inputs"
+                % str(x2_ge_dtype)
             )
         x1 = _bitcast_to(x1, x1_ge_dtype)
         x2 = _bitcast_to(x2, x2_ge_dtype)
 
+        is_hifp4 = _HIFLOAT4_GE_DTYPE is not None and (
+            x1_ge_dtype == _HIFLOAT4_GE_DTYPE or x2_ge_dtype == _HIFLOAT4_GE_DTYPE
+        )
         is_hifp8 = (
             x1_ge_dtype == DataType.DT_HIFLOAT8 or x2_ge_dtype == DataType.DT_HIFLOAT8
         )
-        if is_hifp8:
+        if is_hifp4:
+            if x1_ge_dtype != _HIFLOAT4_GE_DTYPE or x2_ge_dtype != _HIFLOAT4_GE_DTYPE:
+                raise RuntimeError("x1 and x2 must both be hifloat4 for HIFP4 input")
+            if dtype == _HIFLOAT8_OUTPUT:
+                raise RuntimeError(
+                    "hifp4 output supports only float16(1) and bfloat16(27), but got %s"
+                    % dtype
+                )
+            for name, scale, override in (
+                ("x1_scale", x1_scale, x1_scale_dtype),
+                ("x2_scale", x2_scale, x2_scale_dtype),
+            ):
+                if scale is None:
+                    raise RuntimeError("%s is required for HIFP4 input" % name)
+                scale_dtype = _resolve_dtype(scale, override)
+                if scale_dtype != _HIFLOAT4_SCALE_GE_DTYPE:
+                    raise RuntimeError(
+                        "%s must be hifloat4_scale for HIFP4 input, got dtype %s"
+                        % (name, str(scale_dtype))
+                    )
+                if scale.dtype != DataType.DT_FLOAT:
+                    raise RuntimeError(
+                        "%s must use float32 storage for HIFP4 input, got dtype %s"
+                        % (name, str(scale.dtype))
+                    )
+                scale = _bitcast_to(scale, _HIFLOAT4_SCALE_GE_DTYPE)
+                if name == "x1_scale":
+                    x1_scale = scale
+                else:
+                    x2_scale = scale
+        elif is_hifp8:
             # HIFP8: x2_scale 为 uint64 位模式，int64 传入时按位重解释
             for name, scale, override in (
                 ("x1_scale", x1_scale, x1_scale_dtype),
@@ -313,6 +386,14 @@ if _TORCHAIR_AVAILABLE:
     _FP4_PROTO_DTYPE = _ge_dtype_to_ge_proto_dtype(DataType.DT_FLOAT4_E2M1)
     _UINT8_PROTO_DTYPE = _ge_dtype_to_ge_proto_dtype(DataType.DT_UINT8)
     _HIFLOAT8_PROTO_DTYPE = _ge_dtype_to_ge_proto_dtype(DataType.DT_HIFLOAT8)
+    try:
+        _HIFLOAT4_PROTO_DTYPE = (
+            _ge_dtype_to_ge_proto_dtype(_HIFLOAT4_GE_DTYPE)
+            if _HIFLOAT4_GE_DTYPE is not None
+            else None
+        )
+    except (AttributeError, ValueError, KeyError):
+        _HIFLOAT4_PROTO_DTYPE = None
     _ND_FORMAT = 2
 
     def _relabel_nz_packed_chains(graph):
@@ -375,7 +456,12 @@ if _TORCHAIR_AVAILABLE:
                 reshape = chain[0]
                 if not reshape.input or reshape.input[0].split(":")[0] != bitcast.name:
                     continue
-                new_dtype = _FP4_PROTO_DTYPE
+                new_dtype = (
+                    _HIFLOAT4_PROTO_DTYPE
+                    if _HIFLOAT4_PROTO_DTYPE is not None
+                    and bitcast_dtype == _HIFLOAT4_PROTO_DTYPE
+                    else _FP4_PROTO_DTYPE
+                )
                 tail = reshape
 
             chain = _real_consumers(tail.name)

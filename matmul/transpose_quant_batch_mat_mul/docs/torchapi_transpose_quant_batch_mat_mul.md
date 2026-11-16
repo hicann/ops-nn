@@ -23,14 +23,15 @@
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2的量化矩阵乘计算，底层封装aclnnTransposeQuantBatchMatMul；当x2为FRACTAL_NZ格式时，封装aclnnTransposeQuantBatchMatMulWeightNz。该接口支持四种量化模式：**MX量化**（MXFP8与MXFP4）、**FP8量化**（K-C场景）、**HIFP8量化**、**INT8 W8A8 K-C**（仅 Atlas A2/A3）。
-- 四种量化模式说明：
+- 接口功能：完成张量x1与张量x2的量化矩阵乘计算，底层封装aclnnTransposeQuantBatchMatMul；当x2为FRACTAL_NZ格式时，封装aclnnTransposeQuantBatchMatMulWeightNz。该接口支持五种量化模式：**MX量化**（MXFP8与MXFP4）、**FP8量化**（K-C场景）、**HIFP8量化**、**HIFP4量化**、**INT8 W8A8 K-C**（仅 Atlas A2/A3）。
+- 五种量化模式说明：
 
   | 量化模式 | x1/x2数据类型 | x1_scale | x2_scale | K/N约束 |
   | --- | --- | --- | --- | --- |
   | MX | torch.float8_e4m3fn（MXFP8）或torch.uint8（MXFP4，x1_dtype/x2_dtype指定为float4_e2m1fn_x2） | torch.float8_e8m0fnu，4维 | torch.float8_e8m0fnu，4维 | K为64的倍数，N无限制 |
   | FP8（K-C） | torch.float8_e4m3fn与torch.float8_e5m2（可任意组合） | torch.float32，1维(M,) | torch.float32，1维(N,) | K=512，N=128 |
   | HIFP8 | torch.uint8（hifloat8存储，x1_dtype/x2_dtype指定为torch_npu.hifloat8） | 不传（None） | torch.uint64或torch.int64（按位解释，低32位为float32位模式），1维(N,)，per-channel FIXPIPE反量化缩放因子 | K、N无限制，均为正数 |
+  | HIFP4 | torch.uint8（hifloat4 4-bit拼包存储，x1_dtype/x2_dtype指定为hifloat4） | torch.float32（4字节，x1_scale_dtype指定为hifloat4_scale），4维 | torch.float32（4字节，x2_scale_dtype指定为hifloat4_scale），4维 | K为64的倍数；仅Ascend 960PR/DT、CANN 9.3.0+ |
   | INT8 W8A8（K-C，仅 Atlas A2/A3） | torch.int8 | torch.float32，2维(M, B) | torch.float32，2维(B, N) | K为32的倍数，N为16的倍数；A2上B*K小于65536 |
 
 - 计算公式（以batch维的每个切片为例）：
@@ -64,6 +65,14 @@
     $$
 
     dtype 仅支持 27（torch.bfloat16）。perm_x2 仅支持 [0, 1, 2]。
+
+  - HIFP4量化：
+
+    $$
+    y[m, n] = \sum_{j=0}^{K/64-1} \left(\left(\sum_{k=0}^{63} x1[m, j \times 64 + k] \cdot x2[j \times 64 + k, n]\right) \cdot x1Scale[m, j] \cdot x2Scale[j, n]\right)
+    $$
+
+    其中K为矩阵乘的K轴长度，x1Scale/x2Scale为hifloat4_scale编码的三层缩放因子；仅支持Ascend 960PR/DT，K需为64的倍数。
 
 - 示例：假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，输出y的shape是(M, B, N)。
 
@@ -110,6 +119,8 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 | x1_scale_dtype | int | 可选 | x1_scale的数据类型枚举值，不传入时根据x1_scale的数据类型自动推导。 | int64 | - |
 | x2_scale_dtype | int | 可选 | x2_scale的数据类型枚举值，不传入时根据x2_scale的数据类型自动推导。 | int64 | - |
 
+> HIFP4 场景：x1/x2 以 torch.uint8 承载 4-bit 拼包数据，x1_dtype/x2_dtype 传 hifloat4；x1_scale/x2_scale 以 torch.float32 承载，x1_scale_dtype/x2_scale_dtype 传 hifloat4_scale；x1Scale shape 为 `(M, B, ceil(K/64), 1)`，x2Scale shape 在 perm_x2=[0,1,2] 时为 `(B, ceil(K/64), N, 1)`、perm_x2=[0,2,1] 时为 `(B, N, ceil(K/64), 1)`；输出仅支持 float16/bfloat16。
+
 ## 返回值说明
 
 | 输出名 | 输出类型 | 描述 | 数据类型 | 维度（shape） |
@@ -119,7 +130,7 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
 ## 约束说明
 
 - 该接口支持单算子模式和TorchAir图模式调用。
-- 图模式（TorchAir）下三种量化模式复用同一个GE Converter，按输入/scale数据类型自动分派：MXFP8（torch.float8_e4m3fn + torch.float8_e8m0fnu scale）与MXFP4（torch.uint8 + x1_dtype/x2_dtype指定float4_e2m1fn_x2 + torch.float8_e8m0fnu scale）可以在同一个图中同时使用；FP8（K-C，torch.float32 scale）与HIFP8（x1_dtype/x2_dtype指定hifloat8 + torch.uint64/int64 scale）同样由该Converter支持。图模式下MXFP4、HIFP8仍需传入x1_dtype/x2_dtype，其语义与单算子模式一致。
+- 图模式（TorchAir）下四种量化模式复用同一个GE Converter，按输入/scale数据类型自动分派：MXFP8（torch.float8_e4m3fn + torch.float8_e8m0fnu scale）与MXFP4（torch.uint8 + x1_dtype/x2_dtype指定float4_e2m1fn_x2 + torch.float8_e8m0fnu scale）可以在同一个图中同时使用；FP8（K-C，torch.float32 scale）、HIFP8（x1_dtype/x2_dtype指定hifloat8 + torch.uint64/int64 scale）与HIFP4（x1_dtype/x2_dtype指定hifloat4 + hifloat4_scale）同样由该Converter支持。图模式下MXFP4、HIFP8、HIFP4仍需传入x1_dtype/x2_dtype，其语义与单算子模式一致。
 - x1、x2必须是NPU Tensor；x1_scale、x2_scale按量化模式要求传入（见下文"各量化模式的差异化约束"）。
 - 仅支持3维Tensor：x1的shape为(M, B, K)，x2的shape为(B, K, N)或(B, N, K)，x1与x2的batch轴和K轴必须一致，不支持batch轴广播。
 - perm_x1仅支持[1, 0, 2]；perm_y仅支持[1, 0, 2]；perm_x2支持[0, 1, 2]和[0, 2, 1]（FP8（K-C）量化模式仅支持[0, 1, 2]）。
