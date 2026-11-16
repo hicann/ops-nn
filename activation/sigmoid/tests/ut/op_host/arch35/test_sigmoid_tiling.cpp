@@ -40,12 +40,24 @@ protected:
     static void TearDownTestCase() { std::cout << "SigmoidTilingTest TearDown" << std::endl; }
 };
 
+static string TilingData2Str(const gert::TilingData* tiling_data)
+{
+    auto data = tiling_data->GetData();
+    string result;
+    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
+        result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
+        result += " ";
+    }
+
+    return result;
+}
+
 TEST_F(SigmoidTilingTest, sigmoid_test_0)
 {
     gert::StorageShape x_shape = {{16, 1, 4, 4, 8}, {16, 1, 4, 4, 8}};
     gert::StorageShape y_shape = {{16, 1, 4, 4, 8}, {16, 1, 4, 4, 8}};
     string compile_info_string = R"({
-        "_pattern":"ElemWise", 
+        "_pattern":"ElemWise",
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                         "Intrinsic_fix_pipe_l0c2out": false,
                         "Intrinsic_data_move_l12ub": true,
@@ -119,8 +131,7 @@ TEST_F(SigmoidTilingTest, sigmoid_test_0)
     ASSERT_NE(tilingData, nullptr);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100000000000100);
-    // EXPECT_NE(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize()).find("2048 2048 30720 1 1 2048
-    // 2048 30720"), string::npos);
+    EXPECT_NE(TilingData2Str(tilingData).find("2048 2048 30720 1 1 2048 2048 30720"), string::npos);
 }
 
 TEST_F(SigmoidTilingTest, sigmoid_test_1)
@@ -128,7 +139,7 @@ TEST_F(SigmoidTilingTest, sigmoid_test_1)
     gert::StorageShape x_shape = {{12, 13, 9, 10, 12, 6}, {12, 13, 9, 10, 12, 6}};
     gert::StorageShape y_shape = {{12, 13, 9, 10, 12, 6}, {12, 13, 9, 10, 12, 6}};
     string compile_info_string = R"({
-        "_pattern":"ElemWise", 
+        "_pattern":"ElemWise",
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                         "Intrinsic_fix_pipe_l0c2out": false,
                         "Intrinsic_data_move_l12ub": true,
@@ -202,8 +213,7 @@ TEST_F(SigmoidTilingTest, sigmoid_test_1)
     ASSERT_NE(tilingData, nullptr);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 200000000000100);
-    // EXPECT_NE(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize()).find("1010880 15800 30720 1 1
-    // 15800 15480 30720"), string::npos);
+    EXPECT_NE(TilingData2Str(tilingData).find("1010880 15872 30720 1 1 15872 10944 30720"), string::npos);
 }
 
 TEST_F(SigmoidTilingTest, sigmoid_test_2)
@@ -211,7 +221,7 @@ TEST_F(SigmoidTilingTest, sigmoid_test_2)
     gert::StorageShape x_shape = {{16}, {16}};
     gert::StorageShape y_shape = {{16}, {16}};
     string compile_info_string = R"({
-        "_pattern":"ElemWise", 
+        "_pattern":"ElemWise",
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                         "Intrinsic_fix_pipe_l0c2out": false,
                         "Intrinsic_data_move_l12ub": true,
@@ -285,8 +295,7 @@ TEST_F(SigmoidTilingTest, sigmoid_test_2)
     ASSERT_NE(tilingData, nullptr);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 300000000000100);
-    // EXPECT_NE(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize()).find("16 16 15360 1 1 16 16
-    // 15360"), string::npos);
+    EXPECT_NE(TilingData2Str(tilingData).find("16 512 15360 1 1 512 16 15360"), string::npos);
 }
 
 TEST_F(SigmoidTilingTest, sigmoid_test_3)
@@ -294,7 +303,7 @@ TEST_F(SigmoidTilingTest, sigmoid_test_3)
     gert::StorageShape x_shape = {{0, 9, 1}, {0, 9, 1}};
     gert::StorageShape y_shape = {{4, 9, 1}, {4, 9, 1}};
     string compile_info_string = R"({
-        "_pattern":"ElemWise", 
+        "_pattern":"ElemWise",
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                         "Intrinsic_fix_pipe_l0c2out": false,
                         "Intrinsic_data_move_l12ub": true,

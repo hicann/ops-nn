@@ -144,7 +144,7 @@ TEST_F(l2_quantize_test, quantize_testcase_007_exception_zeroPoints_dtype_not_su
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 // Check scales' Size not equal x[axis]'s Size

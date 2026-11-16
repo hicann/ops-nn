@@ -98,70 +98,70 @@ TEST_F(SparseSliceRt2UTest, InferDataType_success)
     EXPECT_EQ(context->GetOutputDataType(2), ge::DT_INT64);
 }
 
-// TEST_F(SparseSliceRt2UTest, InferShapeRange_success)
-// {
-//     gert::Shape indices_min{0, 2};
-//     gert::Shape indices_max{100, 2};
-//     gert::Shape values_min{0};
-//     gert::Shape values_max{100};
-//     gert::Shape shape_min{2};
-//     gert::Shape shape_max{2};
-//     gert::Shape start_min{2};
-//     gert::Shape start_max{2};
-//     gert::Shape size_min{2};
-//     gert::Shape size_max{2};
+TEST_F(SparseSliceRt2UTest, InferShapeRange_success)
+{
+    gert::Shape indices_min{0, 2};
+    gert::Shape indices_max{100, 2};
+    gert::Shape values_min{0};
+    gert::Shape values_max{100};
+    gert::Shape shape_min{2};
+    gert::Shape shape_max{2};
+    gert::Shape start_min{2};
+    gert::Shape start_max{2};
+    gert::Shape size_min{2};
+    gert::Shape size_max{2};
 
-//     gert::Shape y_indices_min{0, 2};
-//     gert::Shape y_indices_max{100, 2};
-//     gert::Shape y_values_min{0};
-//     gert::Shape y_values_max{100};
-//     gert::Shape y_shape_min{2};
-//     gert::Shape y_shape_max{2};
+    gert::Shape y_indices_min{0, 2};
+    gert::Shape y_indices_max{100, 2};
+    gert::Shape y_values_min{0};
+    gert::Shape y_values_max{100};
+    gert::Shape y_shape_min{2};
+    gert::Shape y_shape_max{2};
 
-//     gert::Range<gert::Shape> range_indices(&indices_min, &indices_max);
-//     gert::Range<gert::Shape> range_values(&values_min, &values_max);
-//     gert::Range<gert::Shape> range_shape(&shape_min, &shape_max);
-//     gert::Range<gert::Shape> range_start(&start_min, &start_max);
-//     gert::Range<gert::Shape> range_size(&size_min, &size_max);
+    gert::Range<gert::Shape> range_indices(&indices_min, &indices_max);
+    gert::Range<gert::Shape> range_values(&values_min, &values_max);
+    gert::Range<gert::Shape> range_shape(&shape_min, &shape_max);
+    gert::Range<gert::Shape> range_start(&start_min, &start_max);
+    gert::Range<gert::Shape> range_size(&size_min, &size_max);
 
-//     gert::Range<gert::Shape> range_y_indices(&y_indices_min, &y_indices_max);
-//     gert::Range<gert::Shape> range_y_values(&y_values_min, &y_values_max);
-//     gert::Range<gert::Shape> range_y_shape(&y_shape_min, &y_shape_max);
+    gert::Range<gert::Shape> range_y_indices(&y_indices_min, &y_indices_max);
+    gert::Range<gert::Shape> range_y_values(&y_values_min, &y_values_max);
+    gert::Range<gert::Shape> range_y_shape(&y_shape_min, &y_shape_max);
 
-//     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseSlice"), nullptr);
-//     auto shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("SparseSlice")->infer_shape_range;
-//     ASSERT_NE(shape_range_func, nullptr);
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SparseSlice"), nullptr);
+    auto shape_range_func = gert::OpImplRegistry::GetInstance().GetOpImpl("SparseSlice")->infer_shape_range;
+    ASSERT_NE(shape_range_func, nullptr);
 
-//     ge::DataType indices_type = ge::DT_INT64;
-//     ge::DataType values_type = ge::DT_FLOAT;
-//     ge::DataType shape_type = ge::DT_INT64;
-//     ge::DataType sta_type = ge::DT_INT64;
-//     ge::DataType size_type = ge::DT_INT64;
-//     ge::DataType y_indices_type = ge::DT_INT64;
-//     ge::DataType y_values_type = ge::DT_FLOAT;
-//     ge::DataType y_shape_type = ge::DT_INT64;
-//     auto context_holder =
-//         gert::InferShapeRangeContextFaker()
-//             .NodeIoNum(5, 3)
-//             .IrInputNum(5)
-//             .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-//             .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-//             .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-//             .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-//             .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-//             .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-//             .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-//             .NodeOutputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-//             .InputShapeRanges({&range_indices, &range_values, &range_shape, &range_start, &range_size})
-//             .OutputShapeRanges({&range_y_indices, &range_y_values, &range_y_shape})
-//             .Build();
-//     auto context = context_holder.GetContext<gert::InferShapeRangeContext>();
-//     EXPECT_EQ(shape_range_func(context), ge::GRAPH_SUCCESS);
+    ge::DataType indices_type = ge::DT_INT64;
+    ge::DataType values_type = ge::DT_FLOAT;
+    ge::DataType shape_type = ge::DT_INT64;
+    ge::DataType sta_type = ge::DT_INT64;
+    ge::DataType size_type = ge::DT_INT64;
+    ge::DataType y_indices_type = ge::DT_INT64;
+    ge::DataType y_values_type = ge::DT_FLOAT;
+    ge::DataType y_shape_type = ge::DT_INT64;
+    auto context_holder = gert::InferShapeRangeContextFaker()
+                              .NodeIoNum(5, 3)
+                              .IrInputNum(5)
+                              .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeInputTd(4, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .NodeOutputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                              .InputShapeRanges(
+                                  {&range_indices, &range_values, &range_shape, &range_start, &range_size})
+                              .OutputShapeRanges({&range_y_indices, &range_y_values, &range_y_shape})
+                              .Build();
+    auto context = context_holder.GetContext<gert::InferShapeRangeContext>();
+    EXPECT_EQ(shape_range_func(context), ge::GRAPH_SUCCESS);
 
-//     EXPECT_EQ(context->GetOutputShapeRange(0)->GetMin(), &y_indices_min);
-//     EXPECT_EQ(context->GetOutputShapeRange(0)->GetMax(), &y_indices_max);
-//     EXPECT_EQ(context->GetOutputShapeRange(1)->GetMin(), &y_values_min);
-//     EXPECT_EQ(context->GetOutputShapeRange(1)->GetMax(), &y_values_max);
-//     EXPECT_EQ(context->GetOutputShapeRange(2)->GetMin(), &y_shape_min);
-//     EXPECT_EQ(context->GetOutputShapeRange(2)->GetMax(), &y_shape_max);
-// }
+    EXPECT_EQ(*context->GetOutputShapeRange(0)->GetMin(), y_indices_min);
+    EXPECT_EQ(*context->GetOutputShapeRange(0)->GetMax(), y_indices_max);
+    EXPECT_EQ(*context->GetOutputShapeRange(1)->GetMin(), y_values_min);
+    EXPECT_EQ(*context->GetOutputShapeRange(1)->GetMax(), y_values_max);
+    EXPECT_EQ(*context->GetOutputShapeRange(2)->GetMin(), y_shape_min);
+    EXPECT_EQ(*context->GetOutputShapeRange(2)->GetMax(), y_shape_max);
+}

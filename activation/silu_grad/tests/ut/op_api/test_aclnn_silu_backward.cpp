@@ -206,7 +206,7 @@ TEST_F(l2_silu_backward_test, silu_backward_testcase_010_normal_format)
         uint64_t workspaceSize = 0;
         aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
 
-        // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+        EXPECT_EQ(aclRet, ACLNN_SUCCESS);
     }
 }
 
@@ -237,7 +237,7 @@ TEST_F(l2_silu_backward_test, silu_backward_testcase_012_normal_different_format
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
 
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 // CheckShape
@@ -316,21 +316,21 @@ TEST_F(l2_silu_backward_test, silu_backward_testcase_017_exception_complex128_dt
 }
 
 // largeDim
-// TEST_F(l2_silu_backward_test, silu_backward_testcase_018_normal_large_dims)
-// {
-//     auto gradOutputDesc = TensorDesc({1,2,2,2,2,2,2,2,2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1,1);
-//     auto selfDesc = TensorDesc({1,2,2,2,2,2,2,2,2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
-//     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
-//     auto ut = OP_API_UT(aclnnSiluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+TEST_F(l2_silu_backward_test, silu_backward_testcase_018_normal_large_dims)
+{
+    auto gradOutputDesc = TensorDesc({1, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 1);
+    auto selfDesc = TensorDesc({1, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnSiluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
 
-//     // SAMPLE: only test GetWorkspaceSize
-//     uint64_t workspaceSize = 0;
-//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-//     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 
-//     // SAMPLE: precision simulate
-//     // ut.TestPrecision();
-// }
+    // SAMPLE: precision simulate
+    // ut.TestPrecision();
+}
 
 // empty
 TEST_F(l2_silu_backward_test, silu_backward_testcase_019_normal_self_empty_tensor)

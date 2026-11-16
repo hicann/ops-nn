@@ -44,7 +44,7 @@ TEST_F(l2_ascend_quant_test, ascend910B2_normal_1)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // ut.TestPrecision();
 }
@@ -67,7 +67,7 @@ TEST_F(l2_ascend_quant_test, ascend910B2_normal_2)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // ut.TestPrecision();
 }
@@ -90,7 +90,7 @@ TEST_F(l2_ascend_quant_test, ascend910B2_normal_3)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // ut.TestPrecision();
 }
@@ -111,7 +111,7 @@ TEST_F(l2_ascend_quant_test, ascend910B2_normal_4)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // ut.TestPrecision();
 }
@@ -134,7 +134,7 @@ TEST_F(l2_ascend_quant_test, ascend310P_normal_1)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // ut.TestPrecision();
 }
@@ -199,7 +199,7 @@ TEST_F(l2_ascend_quant_test, ascend910B2_output_int4)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_ascend_quant_test, ascend910B2_output_int32)
@@ -220,7 +220,7 @@ TEST_F(l2_ascend_quant_test, ascend910B2_output_int32)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_ascend_quant_test, ascend910B2_output_int32_error_shape)

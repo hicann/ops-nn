@@ -136,7 +136,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_sym)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 97);
+    ASSERT_EQ(tiling_key, 97);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -232,7 +232,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertoken_MOE_noSym)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 37);
+    ASSERT_EQ(tiling_key, 37);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -327,7 +327,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_fullload_
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 105);
+    ASSERT_EQ(tiling_key, 105);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -422,7 +422,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_fullload_
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 41);
+    ASSERT_EQ(tiling_key, 41);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -517,7 +517,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 107);
+    ASSERT_EQ(tiling_key, 107);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -612,7 +612,7 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_pertensor_largeshap
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    // ASSERT_EQ(tiling_key, 43);
+    ASSERT_EQ(tiling_key, 43);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -704,11 +704,11 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_recomput
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
 
     // workspaces nullptr return failed
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     std::cout << "tiling_key: " << tiling_key << std::endl;
-    // ASSERT_EQ(tiling_key, 113);
+    ASSERT_EQ(tiling_key, 113);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -800,11 +800,11 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_recomput
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
 
     // workspaces nullptr return failed
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     std::cout << "tiling_key: " << tiling_key << std::endl;
-    // ASSERT_EQ(tiling_key, 49);
+    ASSERT_EQ(tiling_key, 49);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -896,11 +896,11 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_full_loa
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
 
     // workspaces nullptr return failed
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     std::cout << "tiling_key: " << tiling_key << std::endl;
-    // ASSERT_EQ(tiling_key, 111);
+    ASSERT_EQ(tiling_key, 111);
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
 }
@@ -991,11 +991,11 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_full_loa
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
 
     // workspaces nullptr return failed
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     std::cout << "tiling_key: " << tiling_key << std::endl;
-    // ASSERT_EQ(tiling_key, 47);
+    ASSERT_EQ(tiling_key, 47);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
@@ -1087,11 +1087,11 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_split_m_
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
 
     // workspaces nullptr return failed
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     std::cout << "tiling_key: " << tiling_key << std::endl;
-    // ASSERT_EQ(tiling_key, 115);
+    ASSERT_EQ(tiling_key, 115);
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
 }
@@ -1182,11 +1182,11 @@ TEST_F(DynamicQuantV2Tiling, dynamic_quant_v2_tiling_regbase_perchannel_split_m_
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", npu_arch_infos);
 
     // workspaces nullptr return failed
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     std::cout << "tiling_key: " << tiling_key << std::endl;
-    // ASSERT_EQ(tiling_key, 51);
+    ASSERT_EQ(tiling_key, 51);
 
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;

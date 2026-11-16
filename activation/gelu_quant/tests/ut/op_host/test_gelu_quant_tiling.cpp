@@ -24,12 +24,12 @@
 
 using namespace std;
 
-// static uint32_t GetEndAxisLenFunc(optiling::GeluQuantTilingData& tilingData)
-// {
-//     auto dataPtr = tilingData.data_ptr_;
-//     auto offset = tilingData.endAxisLen_offset_;
-//     return *((uint32_t*)(dataPtr + offset));
-// }
+static int64_t GetEndAxisLenFunc(optiling::GeluQuantTilingData& tilingData)
+{
+    auto dataPtr = tilingData.data_ptr_;
+    auto offset = tilingData.endAxisLen_offset_;
+    return *((int64_t*)(dataPtr + offset));
+}
 
 struct GeluQuantCompileInfo {
     int32_t vectorCoreNum{0};
@@ -62,7 +62,7 @@ struct GeluQuantData {
     // expect
     ge::graphStatus expect_status{ge::GRAPH_FAILED};
     uint64_t expect_tiling_key{1013};
-    uint32_t expect_endAxisLen{6912};
+    int64_t expect_endAxisLen{6912};
     // others
     bool check_tiling_key{true};
     bool check_tiling_data{false};
@@ -174,12 +174,12 @@ TEST_P(TilingGeluQuantRegbase, gelu_quant_tiling)
         ASSERT_EQ(actual_tiling_key, test_params.expect_tiling_key) << test_params.debug_info;
     }
 
-    // if (test_params.check_tiling_data) {
-    //     optiling::GeluQuantTilingData tilingDataStruct;
-    //     tilingDataStruct.SetDataPtr(tiling_context->GetRawTilingData()->GetData());
-    //     auto actual_endAxisLen = GetEndAxisLenFunc(tilingDataStruct);
-    //     ASSERT_EQ(actual_endAxisLen, test_params.expect_endAxisLen) << test_params.debug_info;
-    // }
+    if (test_params.check_tiling_data) {
+        optiling::GeluQuantTilingData tilingDataStruct;
+        tilingDataStruct.SetDataPtr(tiling_context->GetRawTilingData()->GetData());
+        auto actual_endAxisLen = GetEndAxisLenFunc(tilingDataStruct);
+        ASSERT_EQ(actual_endAxisLen, test_params.expect_endAxisLen) << test_params.debug_info;
+    }
 }
 
 TEST_P(TilingGeluQuant, gelu_quant_tiling)
@@ -271,12 +271,12 @@ TEST_P(TilingGeluQuant, gelu_quant_tiling)
         ASSERT_EQ(actual_tiling_key, test_params.expect_tiling_key) << test_params.debug_info;
     }
 
-    // if (test_params.check_tiling_data) {
-    //     optiling::GeluQuantTilingData tilingDataStruct;
-    //     tilingDataStruct.SetDataPtr(tiling_context->GetRawTilingData()->GetData());
-    //     auto actual_endAxisLen = GetEndAxisLenFunc(tilingDataStruct);
-    //     ASSERT_EQ(actual_endAxisLen, test_params.expect_endAxisLen) << test_params.debug_info;
-    // }
+    if (test_params.check_tiling_data) {
+        optiling::GeluQuantTilingData tilingDataStruct;
+        tilingDataStruct.SetDataPtr(tiling_context->GetRawTilingData()->GetData());
+        auto actual_endAxisLen = GetEndAxisLenFunc(tilingDataStruct);
+        ASSERT_EQ(actual_endAxisLen, test_params.expect_endAxisLen) << test_params.debug_info;
+    }
 }
 
 const auto GeluQuantTestCases = ::testing::Values(

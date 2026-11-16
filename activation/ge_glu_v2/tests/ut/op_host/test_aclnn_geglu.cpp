@@ -272,9 +272,9 @@ TEST_F(l2_geglu_test, geglu_precision)
     int64_t approximate = 1;
     auto ut = OP_API_UT(aclnnGeGlu, INPUT(self_tensor_desc, dim, approximate),
                         OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
-    // uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
     // ut.TestPrecision();
 }
 
@@ -601,9 +601,9 @@ TEST_F(l2_geglu_test, gegluv_precision)
     for (auto activateLeft : activateLefts) {
         auto ut = OP_API_UT(aclnnGeGluV3, INPUT(self_tensor_desc, dim, approximate, activateLeft),
                             OUTPUT(out_tensor_desc, out_gelu_tensor_desc));
-        // uint64_t workspace_size = 0;
-        // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-        // EXPECT_EQ(aclRet, ACL_SUCCESS);
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+        EXPECT_EQ(aclRet, ACL_SUCCESS);
         // ut.TestPrecision();
     }
 }

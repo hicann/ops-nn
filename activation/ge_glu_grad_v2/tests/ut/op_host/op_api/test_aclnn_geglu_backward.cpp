@@ -43,9 +43,9 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_FLOAT16_ND_SHAPE1)
                         OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
-    // uint64_t workspaceSize = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // precision simulate
     // ut.TestPrecision();
@@ -91,9 +91,9 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_FLOAT16_ND_SHAPE2)
                         OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
-    // uint64_t workspaceSize = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // precision simulate
     // ut.TestPrecision();
@@ -113,9 +113,9 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_FLOAT16_ND_SHAPE3)
                         OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
-    // uint64_t workspaceSize = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // precision simulate
     // ut.TestPrecision();
@@ -135,9 +135,9 @@ TEST_F(l2_geglu_backward_test, l2_geglu_backward_normal_FLOAT16_ND_SHAPE4)
                         OUTPUT(gradInputDesc));
 
     // only test GetWorkspaceSize
-    // uint64_t workspaceSize = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // precision simulate
     // ut.TestPrecision();

@@ -78,7 +78,7 @@ TEST_F(l2_swish_backward_test, Ascend910B2_swish_backward_testcase_002_normal_bf
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
     // SAMPLE: precision simulate
     // ut.TestPrecision();

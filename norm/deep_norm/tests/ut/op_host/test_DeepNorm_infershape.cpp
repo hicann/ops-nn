@@ -27,9 +27,9 @@ TEST_F(DeepNorm, DeepNorm_infershape_case_0)
     op.UpdateInputDesc("gx", create_desc({4, 1, 8}, ge::DT_FLOAT16));
     op.UpdateInputDesc("beta", create_desc({8}, ge::DT_FLOAT16));
     op.UpdateInputDesc("gamma", create_desc({8}, ge::DT_FLOAT16));
-    //   op.SetAttr("epsilon", 0.1);
-    //   Runtime2TestParam param{{"epsilon"},{},{}};
-    //   EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    op.SetAttr("epsilon", static_cast<float>(0.1));
+    Runtime2TestParam param{{"epsilon"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
 
     auto output_mean_desc = op.GetOutputDesc(0);

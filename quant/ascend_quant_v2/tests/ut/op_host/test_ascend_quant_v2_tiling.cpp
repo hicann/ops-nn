@@ -984,7 +984,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_head_950_2)
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", socversions);
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 }
 
 TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_per_tensor_950_3)
@@ -1240,7 +1240,7 @@ TEST_F(AscendQuantV2Tiling, ascend_quant_v2_tiling_950_error_axis)
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", socversions);
     tiling_context->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
 
-    // EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
 }
 // namespace error_message
 

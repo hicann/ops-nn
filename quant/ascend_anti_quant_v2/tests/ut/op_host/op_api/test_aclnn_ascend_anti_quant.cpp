@@ -329,7 +329,7 @@ TEST_F(l2_ascend_anti_quant_test, ascend910A_empty_tensor0)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_ascend_anti_quant_test, ascend910B2_empty_tensor1)
@@ -363,7 +363,7 @@ TEST_F(l2_ascend_anti_quant_test, ascend310P_empty_tensor2)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_ascend_anti_quant_test, ascend310P_empty_tensor3)
@@ -380,7 +380,7 @@ TEST_F(l2_ascend_anti_quant_test, ascend310P_empty_tensor3)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_ascend_anti_quant_test, ascend310P_check_input_bf16)
@@ -397,7 +397,7 @@ TEST_F(l2_ascend_anti_quant_test, ascend310P_check_input_bf16)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_ascend_anti_quant_test, ascend310P_check_output_bf16)
@@ -414,7 +414,7 @@ TEST_F(l2_ascend_anti_quant_test, ascend310P_check_output_bf16)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_ascend_anti_quant_test, ascend910B2_scale_cannot_broadcast_1)
