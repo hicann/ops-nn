@@ -53,8 +53,10 @@ TEST_F(QuantMaxV2InferShapeTest, quant_max_v2_infershape_dynamic_tensor)
     gert::StorageShape amax_shape({1}, {1});
     gert::StorageShape y_scale_shape({1}, {1});
 
+    // IrInstanceNum（双参）已定义全部 IR 槽位（含缺席 optional 输入的 0），与 NodeIoNum 互斥：
+    // 混用会使紧凑顺序的 InputShapes 错位映射到 IR 槽（CI builder 实测，参照 !13836 同类修复）。
+    // NodeInputTd 槽位按 IR 逻辑槽位索引（x=0，scale=1，group_list=2）。
     auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 3)
                       .IrInstanceNum({1, 0, 0}, {1, 1, 1})
                       .InputShapes({&x_shape})
                       .OutputShapes({&y_shape, &amax_shape, &y_scale_shape})
@@ -91,13 +93,15 @@ TEST_F(QuantMaxV2InferShapeTest, quant_max_v2_infershape_dynamic_group)
     gert::StorageShape amax_shape({48}, {48});
     gert::StorageShape y_scale_shape({48}, {48});
 
+    // IrInstanceNum（双参）已定义全部 IR 槽位（含缺席 optional 输入的 0），与 NodeIoNum 互斥：
+    // 混用会使紧凑顺序的 InputShapes 错位映射到 IR 槽（CI builder 实测，参照 !13836 同类修复）。
+    // NodeInputTd 槽位按 IR 逻辑槽位索引（x=0，scale=1，group_list=2）。
     auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 3)
                       .IrInstanceNum({1, 0, 1}, {1, 1, 1})
                       .InputShapes({&x_shape, &group_shape})
                       .OutputShapes({&y_shape, &amax_shape, &y_scale_shape})
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(kAttrs)
                       .Build();
 
@@ -125,8 +129,10 @@ TEST_F(QuantMaxV2InferShapeTest, quant_max_v2_infershape_static_tensor)
     gert::StorageShape amax_shape({1}, {1});
     gert::StorageShape y_scale_shape({0}, {0});
 
+    // IrInstanceNum（双参）已定义全部 IR 槽位（含缺席 optional 输入的 0），与 NodeIoNum 互斥：
+    // 混用会使紧凑顺序的 InputShapes 错位映射到 IR 槽（CI builder 实测，参照 !13836 同类修复）。
+    // NodeInputTd 槽位按 IR 逻辑槽位索引（x=0，scale=1，group_list=2）。
     auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 3)
                       .IrInstanceNum({1, 1, 0}, {1, 1, 1})
                       .InputShapes({&x_shape, &scale_shape})
                       .OutputShapes({&y_shape, &amax_shape, &y_scale_shape})
@@ -159,8 +165,10 @@ TEST_F(QuantMaxV2InferShapeTest, quant_max_v2_infershape_static_group)
     gert::StorageShape amax_shape({4}, {4});
     gert::StorageShape y_scale_shape({0}, {0});
 
+    // IrInstanceNum（双参）已定义全部 IR 槽位（含缺席 optional 输入的 0），与 NodeIoNum 互斥：
+    // 混用会使紧凑顺序的 InputShapes 错位映射到 IR 槽（CI builder 实测，参照 !13836 同类修复）。
+    // NodeInputTd 槽位按 IR 逻辑槽位索引（x=0，scale=1，group_list=2）。
     auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 3)
                       .IrInstanceNum({1, 1, 1}, {1, 1, 1})
                       .InputShapes({&x_shape, &scale_shape, &group_shape})
                       .OutputShapes({&y_shape, &amax_shape, &y_scale_shape})
@@ -194,13 +202,15 @@ TEST_F(QuantMaxV2InferShapeTest, quant_max_v2_infershape_group_rank_invalid)
     gert::StorageShape amax_shape({1}, {1});
     gert::StorageShape y_scale_shape({1}, {1});
 
+    // IrInstanceNum（双参）已定义全部 IR 槽位（含缺席 optional 输入的 0），与 NodeIoNum 互斥：
+    // 混用会使紧凑顺序的 InputShapes 错位映射到 IR 槽（CI builder 实测，参照 !13836 同类修复）。
+    // NodeInputTd 槽位按 IR 逻辑槽位索引（x=0，scale=1，group_list=2）。
     auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 3)
                       .IrInstanceNum({1, 0, 1}, {1, 1, 1})
                       .InputShapes({&x_shape, &group_shape})
                       .OutputShapes({&y_shape, &amax_shape, &y_scale_shape})
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(kAttrs)
                       .Build();
 
@@ -223,13 +233,15 @@ TEST_F(QuantMaxV2InferShapeTest, quant_max_v2_infershape_group_count_invalid)
     gert::StorageShape amax_shape({385}, {385});
     gert::StorageShape y_scale_shape({385}, {385});
 
+    // IrInstanceNum（双参）已定义全部 IR 槽位（含缺席 optional 输入的 0），与 NodeIoNum 互斥：
+    // 混用会使紧凑顺序的 InputShapes 错位映射到 IR 槽（CI builder 实测，参照 !13836 同类修复）。
+    // NodeInputTd 槽位按 IR 逻辑槽位索引（x=0，scale=1，group_list=2）。
     auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(3, 3)
                       .IrInstanceNum({1, 0, 1}, {1, 1, 1})
                       .InputShapes({&x_shape, &group_shape})
                       .OutputShapes({&y_shape, &amax_shape, &y_scale_shape})
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(kAttrs)
                       .Build();
 
