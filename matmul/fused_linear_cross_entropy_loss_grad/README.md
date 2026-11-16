@@ -97,6 +97,22 @@ $$
 \text{grad\_weight} = \text{grad\_logits}^T \cdot \text{input} \quad \in \mathbb{R}^{V \times H}
 $$
 
+## 参数说明
+
+| 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
+|--------|---------------|------|----------|----------|
+| grad | 输入 | 表示上游损失对logits的梯度，即公式中的grad。shape为[BT]，BT为batch内token总数。支持空tensor（BT=0时非空输出置零）。 | FLOAT32 | ND |
+| input | 输入 | 表示语言模型隐藏层输出，即公式中的input。shape为[BT, H]，H为隐藏层维度。与weight数据类型须一致。支持空tensor。 | BFLOAT16、FLOAT16 | ND |
+| weight | 输入 | 表示语言模型输出层（LM head）权重，即公式中的weight。shape为[V, H]，V为当前词汇表分片大小。与input数据类型须一致。支持空tensor。 | BFLOAT16、FLOAT16 | ND |
+| target_mask | 输入 | 表示逐行掩码，即公式中的target_mask，标记该行目标是否属于当前词汇表分片：1表示不属于当前分片（跳过one-hot减1），0表示按masked_target中的局部索引参与计算。BOOL按元素表示，长度须等于BT；UINT8按bit打包，长度乘以8须不小于BT，第i行对应target_mask[i / 8]的第(i % 8)位，最低有效位（LSB）优先。 | BOOL、UINT8 | ND |
+| masked_target | 输入 | 表示逐行目标在当前词汇表分片内的局部索引，即公式中的masked_target。长度须等于BT；未掩码行必须满足0 <= masked_target[i] < V，掩码行不使用目标索引。取值范围为INT64或INT32可表示的非负整数。 | INT64、INT32 | ND |
+| logits_max | 可选输入 | 表示全局通信得到的logits最大值，即公式中的logits_max，用于省显存模式（softmax为nullptr）的数值稳定。shape为[BT]。省显存模式下必填；高性能模式不使用，传nullptr。默认值为nullptr。 | FLOAT32 | ND |
+| sum_exp_logits | 可选输入 | 表示全局通信得到的指数和，即公式中的sum_exp_logits，用于省显存模式（softmax为nullptr）的归一化。shape为[BT]。省显存模式下必填；高性能模式不使用，传nullptr。默认值为nullptr。 | FLOAT32 | ND |
+| softmax | 可选输入 | 表示前序aclnnFusedCrossEntropyLossWithMaxSum算子输出的概率矩阵，即公式中的softmax。shape为[BT, V]。传有效指针时走高性能模式（免重算前向，本算子将按公式就地更新该输入缓冲区，调用方不应复用其内容）；传nullptr时走省显存模式。默认值为nullptr。 | FLOAT32 | ND |
+| input_grad_out | 输出 | 表示叶子节点input的梯度，即公式中的grad_input。shape为[BT, H]，与input一致；数据类型与input一致。 | BFLOAT16、FLOAT16 | ND |
+| weight_grad_out | 输出 | 表示叶子节点weight的梯度，即公式中的grad_weight。shape为[V, H]，与weight一致；数据类型与weight一致；BT=0时输出置零（非未初始化内存）。 | BFLOAT16、FLOAT16 | ND |
+| label_smoothing | 可选属性 | 表示标签平滑系数。当前版本仅支持取值0.0（参数保留用于对齐前向接口签名），非0取值行为未定义。默认值为0.0。 | FLOAT | - |
+
 ## 约束说明
 
 - 记BT为grad长度、H为input第2维长度、V为weight第1维长度。input和inputGradOut的shape为[BT, H]，weight和weightGradOut的shape为[V, H]。
@@ -109,7 +125,7 @@ $$
 
 ## 调用说明
 
-| 调用方式   | 调用样例                              | 说明                                |
-|-----------|-------------------------------------|-------------------------------------|
-| aclnn调用 | [test_aclnn_fused_linear_cross_entropy_loss_grad](./examples/test_aclnn_fused_linear_cross_entropy_loss_grad.cpp) | 通过aclnnFusedLinearCrossEntropyLossGrad接口方式调用FusedLinearCrossEntropyLossGrad算子。 |
-| PyTorch接口 | - | 通过torch_npu的npu_fused_linear_cross_entropy_loss_with_max_sum_backward接口调用FusedLinearCrossEntropyLossGrad算子。**需torch_npu 2.12.0及以上版本**。 |
+| 调用方式 | 样例代码 | 说明 |
+|--------|---------|------|
+| aclnn API | [test_aclnn_fused_linear_cross_entropy_loss_grad](./examples/test_aclnn_fused_linear_cross_entropy_loss_grad.cpp) | 通过[aclnnFusedLinearCrossEntropyLossGrad](./docs/aclnnFusedLinearCrossEntropyLossGrad.md)接口调用FusedLinearCrossEntropyLossGrad算子。 |
+| PyTorch API | - | 通过torch_npu的[npu_fused_linear_cross_entropy_loss_with_max_sum_backward](https://gitcode.com/Ascend/op-plugin/blob/master/docs/zh/custom_APIs/torch_npu/torch_npu-npu_fused_linear_cross_entropy_loss_with_max_sum_backward.md)接口调用FusedLinearCrossEntropyLossGrad算子。**需torch_npu 2.12.0及以上版本**。接口详细说明见链接文档。 |

@@ -99,6 +99,22 @@ $$
 \text{grad\_weight} = \text{grad\_logits}^T \cdot \text{input} \quad \in \mathbb{R}^{V \times H}
 $$
 
+## Parameter Description
+
+| Parameter | Input/Output/Attribute | Description | Data Type | Format |
+|-----------|------------------------|-------------|------------|--------|
+| grad | Input | Upstream gradient of the loss w.r.t. logits, i.e. grad in the formula. Shape [BT], where BT is the total number of tokens in the batch. Empty tensor supported (non-empty outputs are zero-filled when BT=0). | FLOAT32 | ND |
+| input | Input | Hidden states of the language model, i.e. input in the formula. Shape [BT, H], where H is the hidden size. Data type must match weight. Empty tensor supported. | BFLOAT16, FLOAT16 | ND |
+| weight | Input | LM head weight, i.e. weight in the formula. Shape [V, H], where V is the current vocab shard size. Data type must match input. Empty tensor supported. | BFLOAT16, FLOAT16 | ND |
+| target_mask | Input | Per-row mask, i.e. target_mask in the formula, indicating whether the row's target belongs to the current vocab shard: 1 means not in this shard (one-hot subtraction skipped); 0 means the local index in masked_target is used. BOOL is element-wise with length equal to BT; UINT8 is bit-packed where length * 8 must be no less than BT, row i maps to bit (i % 8) of target_mask[i / 8], LSB first. | BOOL, UINT8 | ND |
+| masked_target | Input | Per-row local target index within the current vocab shard, i.e. masked_target in the formula. Length must equal BT; unmasked rows must satisfy 0 <= masked_target[i] < V; masked rows do not use the index. Value range: non-negative integers representable by INT64 or INT32. | INT64, INT32 | ND |
+| logits_max | Optional input | Global max of logits obtained via collective communication, i.e. logits_max in the formula, for numerical stability in memory-saving mode (softmax is nullptr). Shape [BT]. Required in memory-saving mode; unused in high-performance mode, pass nullptr. Default: nullptr. | FLOAT32 | ND |
+| sum_exp_logits | Optional input | Global sum of exponentials obtained via collective communication, i.e. sum_exp_logits in the formula, for normalization in memory-saving mode (softmax is nullptr). Shape [BT]. Required in memory-saving mode; unused in high-performance mode, pass nullptr. Default: nullptr. | FLOAT32 | ND |
+| softmax | Optional input | Probability matrix output by the preceding aclnnFusedCrossEntropyLossWithMaxSum operator, i.e. softmax in the formula. Shape [BT, V]. A valid pointer selects the high-performance mode (forward recomputation skipped; this input buffer is updated in place per the formula and must not be reused by the caller); nullptr selects the memory-saving mode. Default: nullptr. | FLOAT32 | ND |
+| input_grad_out | Output | Gradient w.r.t. the leaf input, i.e. grad_input in the formula. Shape [BT, H], same as input; data type same as input. | BFLOAT16, FLOAT16 | ND |
+| weight_grad_out | Output | Gradient w.r.t. the leaf weight, i.e. grad_weight in the formula. Shape [V, H], same as weight; data type same as weight; zero-filled when BT=0 (not uninitialized memory). | BFLOAT16, FLOAT16 | ND |
+| label_smoothing | Optional attribute | Label smoothing factor. Only 0.0 is supported in this version (parameter reserved to align with the forward interface signature); behavior of non-zero values is undefined. Default: 0.0. | FLOAT | - |
+
 ## Constraints
 
 - Let BT be the length of grad, H the second dimension of input, and V the first dimension of weight. The shapes of input and inputGradOut are [BT, H], and the shapes of weight and weightGradOut are [V, H].
@@ -111,7 +127,7 @@ $$
 
 ## Invocation Description
 
-| Invocation method   | Invocation sample                              | Description                                |
-|-----------|-------------------------------------|-------------------------------------|
-| aclnn invocation | [test_aclnn_fused_linear_cross_entropy_loss_grad](./examples/test_aclnn_fused_linear_cross_entropy_loss_grad.cpp) | Invokes the FusedLinearCrossEntropyLossGrad operator through the aclnnFusedLinearCrossEntropyLossGrad interface. |
-| PyTorch interface | - | Invokes the FusedLinearCrossEntropyLossGrad operator through the torch_npu interface npu_fused_linear_cross_entropy_loss_with_max_sum_backward. **torch_npu 2.12.0 or later is required**. |
+| Invocation method | Sample code | Description |
+|-------------------|-------------|-------------|
+| aclnn API | [test_aclnn_fused_linear_cross_entropy_loss_grad](./examples/test_aclnn_fused_linear_cross_entropy_loss_grad.cpp) | Invokes the FusedLinearCrossEntropyLossGrad operator through the [aclnnFusedLinearCrossEntropyLossGrad](./docs/aclnnFusedLinearCrossEntropyLossGrad_en.md) interface. |
+| PyTorch API | - | Invokes the FusedLinearCrossEntropyLossGrad operator through the torch_npu interface [npu_fused_linear_cross_entropy_loss_with_max_sum_backward](https://gitcode.com/Ascend/op-plugin/blob/master/docs/zh/custom_APIs/torch_npu/torch_npu-npu_fused_linear_cross_entropy_loss_with_max_sum_backward.md). **torch_npu 2.12.0 or later is required**. See the linked document for interface details. |
