@@ -36,6 +36,9 @@ static graphStatus InferShape4ArgMaxGrad(gert::InferShapeContext* context)
         Ops::Base::SetUnknownRank(*yShape);
         return ge::GRAPH_SUCCESS;
     }
+    // Reject scalar var before the compiler normalizes its storage shape to [1].
+    OP_CHECK_IF(varShape->GetDimNum() == 0, OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var", "0", ">= 1"),
+                return ge::GRAPH_FAILED);
     *yShape = *varShape;
 
     OP_LOGD(context, "InferShape4ArgMaxGrad End.");
