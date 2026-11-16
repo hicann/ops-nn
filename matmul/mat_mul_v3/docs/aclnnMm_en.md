@@ -108,7 +108,7 @@ aclnnStatus aclnnMm(
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
       <td>2</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>cubeMathType</td>
@@ -195,8 +195,8 @@ aclnnStatus aclnnMm(
       <td>self, mat2, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data type and data format of self and mat2 are not within the supported range.</td>
     </tr>
     <tr>
@@ -204,6 +204,18 @@ aclnnStatus aclnnMm(
     </tr>
     <tr>
       <td>The deduced data type cannot be converted to the type of the specified output out.</td>
+    </tr>
+    <tr>
+      <td>The dimensions of self and mat2 are not two.</td>
+    </tr>
+    <tr>
+      <td>The last dimension of self is not equal to the penultimate dimension of mat2.</td>
+    </tr>
+    <tr>
+      <td>The shape of out is inconsistent with the result deduced from self and mat2.</td>
+    </tr>
+    <tr>
+      <td>The value of cubeMathType is not within the supported range.</td>
     </tr>
   </tbody>
   </table>

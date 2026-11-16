@@ -106,7 +106,7 @@ aclnnStatus aclnnMm(
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>cubeMathType</td>
@@ -193,8 +193,8 @@ aclnnStatus aclnnMm(
       <td>传入的self、mat2或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>self和mat2的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -202,6 +202,18 @@ aclnnStatus aclnnMm(
     </tr>
     <tr>
       <td>推导出的数据类型无法转换为指定输出out的类型。</td>
+    </tr>
+    <tr>
+      <td>self和mat2的维度不是二维。</td>
+    </tr>
+    <tr>
+      <td>self的最后一维和mat2的倒数第二维不相等。</td>
+    </tr>
+    <tr>
+      <td>out的形状与self和mat2推导出的结果不一致。</td>
+    </tr>
+    <tr>
+      <td>cubeMathType取值不在支持的范围内。</td>
     </tr>
   </tbody>
   </table>
