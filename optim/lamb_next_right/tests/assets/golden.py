@@ -98,9 +98,8 @@ def lamb_next_right_golden(
     dt = input_square.dtype
     g, v = _t(input_square), _t(input_mul2)
     b2, omb2, recip, eps = _scalars(mul2_x, mul3_x, truediv1_recip, add2_y)
-    # 两步(先乘后加)拼接,不用 addcmul 的融合形式:后者可能走 FMA 单次舍入,与算子定义的
-    # 「Muls 再 Add」两步舍入不是同一个运算序列。golden 要如实转写定义。
-    next_v = v * b2 + (g * g) * omb2
+    # 与内核一致：先 g*omb2 再乘 g，避免 g*g 提前溢出；保持分步乘加，不引入 FMA。
+    next_v = v * b2 + (g * omb2) * g
     y2 = torch.sqrt(next_v * recip) + eps
     _shape = _decl_shape(
         input_square, input_mul2, mul2_x, mul3_x, truediv1_recip, add2_y
@@ -111,7 +110,7 @@ def lamb_next_right_golden(
 # ----------------------------------------------------------------------------
 # TTK 新版 spec 注册（kernel 通路）: 在保留原 golden 的基础上补三方标杆能力。
 # golden     = CPU 真值，如实转写算子定义（两步拼接，不用融合算子）
-# third_party= 三方标杆，用 torch 的自然形式（含融合算子）在设备侧跑，供 cross_check 比对
+# third_party= 三方标杆，用 torch 分步乘加在设备侧跑，供 cross_check 比对
 # ----------------------------------------------------------------------------
 _TOL_KERNEL = {
     "float32": {"standard": "cross_check", "level": "L1"},
@@ -184,9 +183,8 @@ class _LambNextRightCompose:
         b2, omb2, recip, eps = (
             _tp_s(v_) for v_ in (mul2_x, mul3_x, truediv1_recip, add2_y)
         )
-        # 与内核同运算序列: dag.h:46 `Add(Mul(V,B2), Mul(Mul(G,G),OmB2))` —— 先 g*g,
-        # 再乘 omb2, 最后相加, 四次舍入。不能用 addcmul(FMA 单次舍入会让竞品凭空更准)。
-        next_v = v * b2 + (g * g) * omb2
+        # 与内核一致：先 g*omb2，再乘 g，最后与 v*b2 相加；不使用融合乘加。
+        next_v = v * b2 + (g * omb2) * g
         y2 = torch.sqrt(next_v * recip) + eps
         _shape = _decl_shape(
             input_square, input_mul2, mul2_x, mul3_x, truediv1_recip, add2_y

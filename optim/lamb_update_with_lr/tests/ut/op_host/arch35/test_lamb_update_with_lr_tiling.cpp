@@ -8,6 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <vector>
 #include <gtest/gtest.h>
@@ -19,6 +21,8 @@
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
 #include "optim/lamb_update_with_lr/op_host/arch35/lamb_update_with_lr_tiling_arch35.h"
+#include "optim/lamb_update_with_lr/op_kernel/arch35/lamb_update_with_lr_dag.h"
+#include "atvoss/broadcast/broadcast_base_struct.h"
 
 using namespace ut_util;
 using namespace std;
@@ -313,4 +317,92 @@ TEST_F(LambUpdateWithLrTilingTest, lamb_update_with_lr_tiling_test_invalid_dtype
     tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+namespace {
+using EmptyTilingData = Ops::Base::BroadcastBaseTilingData<
+    LambUpdateWithLrOp::LambUpdateWithLrCompute<float, float>::OpDag>;
+
+void CheckEmptyTilingBuffer(gert::TilingData* data, ge::DataType dtype, ge::graphStatus expected)
+{
+    gert::StorageShape emptyShape = {{0}, {0}};
+    auto workspace = gert::ContinuousVector::Create<size_t>(1);
+    auto* ws = reinterpret_cast<gert::ContinuousVector*>(workspace.get());
+    ASSERT_NE(ws, nullptr);
+    optiling::LambUpdateWithLrCompileInfo compileInfo;
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    auto faker = gert::TilingContextFaker();
+    faker.SetOpType("LambUpdateWithLr")
+        .NodeIoNum(9, 1)
+        .InputShapes(std::vector<gert::StorageShape*>(9, &emptyShape))
+        .OutputShapes(std::vector<gert::StorageShape*>(1, &emptyShape))
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(&platformInfo)
+        .TilingData(data)
+        .Workspace(ws);
+    for (int32_t i = 0; i < 9; ++i) {
+        faker.NodeInputTd(i, dtype, ge::FORMAT_ND, ge::FORMAT_ND);
+    }
+    for (int32_t i = 0; i < 1; ++i) {
+        faker.NodeOutputTd(i, dtype, ge::FORMAT_ND, ge::FORMAT_ND);
+    }
+    auto holder = faker.Build();
+    auto* context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+    context->SetBlockDim(7);
+    context->SetTilingKey(99);
+    context->GetWorkspaceSizes(1)[0] = 123;
+    optiling::LambUpdateWithLrTiling tiling(context);
+    ASSERT_EQ(tiling.DoTiling(), expected);
+    if (expected == ge::GRAPH_SUCCESS) {
+        EXPECT_EQ(context->GetBlockDim(), 1);
+        EXPECT_EQ(context->GetTilingKey(), GET_TPL_TILING_KEY(1));
+        EXPECT_EQ(context->GetWorkspaceSizes(1)[0], 0);
+        ASSERT_NE(data, nullptr);
+        EXPECT_EQ(data->GetDataSize(), sizeof(EmptyTilingData));
+    } else {
+        EXPECT_EQ(context->GetBlockDim(), 7);
+        EXPECT_EQ(context->GetTilingKey(), 99);
+        EXPECT_EQ(context->GetWorkspaceSizes(1)[0], 123);
+        if (data != nullptr) {
+            EXPECT_EQ(data->GetDataSize(), 0);
+        }
+    }
+    if (data != nullptr && data->GetData() != nullptr) {
+        const auto* bytes = static_cast<const uint8_t*>(data->GetData());
+        const size_t initialized = expected == ge::GRAPH_SUCCESS ? sizeof(EmptyTilingData) : 0;
+        EXPECT_TRUE(std::all_of(bytes, bytes + initialized, [](uint8_t byte) { return byte == 0; }));
+        EXPECT_TRUE(
+            std::all_of(bytes + initialized, bytes + data->GetCapacity(), [](uint8_t byte) { return byte == 0x5a; }));
+    }
+}
+} // namespace
+
+TEST_F(LambUpdateWithLrTilingTest, empty_tiling_buffer_capacity_boundaries)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        for (size_t capacity : {size_t(0), size_t(1), sizeof(EmptyTilingData) - 1, sizeof(EmptyTilingData),
+                                sizeof(EmptyTilingData) + 16, size_t(2 * 1024 * 1024)}) {
+            SCOPED_TRACE(testing::Message() << "dtype=" << dtype << ", capacity=" << capacity);
+            auto buffer = gert::TilingData::CreateCap(capacity);
+            ASSERT_NE(buffer, nullptr);
+            auto* data = reinterpret_cast<gert::TilingData*>(buffer.get());
+            std::memset(data->GetData(), 0x5a, capacity);
+            CheckEmptyTilingBuffer(data, dtype,
+                                   capacity < sizeof(EmptyTilingData) ? ge::GRAPH_FAILED : ge::GRAPH_SUCCESS);
+        }
+    }
+}
+
+TEST_F(LambUpdateWithLrTilingTest, empty_tiling_rejects_null_buffers)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        CheckEmptyTilingBuffer(nullptr, dtype, ge::GRAPH_FAILED);
+        auto buffer = gert::TilingData::CreateCap(sizeof(EmptyTilingData));
+        ASSERT_NE(buffer, nullptr);
+        auto* data = reinterpret_cast<gert::TilingData*>(buffer.get());
+        data->Init(sizeof(EmptyTilingData), nullptr);
+        CheckEmptyTilingBuffer(data, dtype, ge::GRAPH_FAILED);
+    }
 }

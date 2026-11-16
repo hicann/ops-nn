@@ -60,8 +60,8 @@ struct LambNextRightCompute {
     using Recip = Bind<Vec::Cast<U, T, 0>, InRecip>;
     using Eps = Bind<Vec::Cast<U, T, 0>, InEps>;
 
-    // next_v = v*b2 + g^2*(1-b2)
-    using NextV = Bind<Vec::Add<U>, Bind<Vec::Mul<U>, V, B2>, Bind<Vec::Mul<U>, Bind<Vec::Mul<U>, G, G>, OmB2>>;
+    // next_v = v*b2 + (g*(1-b2))*g: multiply the coefficient before squaring.
+    using NextV = Bind<Vec::Add<U>, Bind<Vec::Mul<U>, V, B2>, Bind<Vec::Mul<U>, Bind<Vec::Mul<U>, G, OmB2>, G>>;
     // y2 = sqrt(next_v * recip) + eps
     using Y2 = Bind<Vec::Add<U>, Bind<SqrtFtzFalse<U>, Bind<Vec::Mul<U>, NextV, Recip>>, Eps>;
 

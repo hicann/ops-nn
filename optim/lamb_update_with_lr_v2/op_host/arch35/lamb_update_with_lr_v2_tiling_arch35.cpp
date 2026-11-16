@@ -89,15 +89,22 @@ ge::graphStatus LambUpdateWithLrV2Tiling::DoOpTiling()
     // 直接成功。
     auto emptyTensorOutShape0 = context_->GetOutputShape(0);
     if (emptyTensorOutShape0 != nullptr && emptyTensorOutShape0->GetStorageShape().GetShapeSize() == 0) {
+        // schMode=1 reads this layout for both fp16 and fp32. Serialize
+        // the structure size, not the caller's potentially 2 MB capacity.
+        using EmptyTilingData = BroadcastBaseTilingData<
+            LambUpdateWithLrV2Op::LambUpdateWithLrV2Compute<float, float>::OpDag>;
         auto emptyRawTiling = context_->GetRawTilingData();
-        if (emptyRawTiling != nullptr && emptyRawTiling->GetData() != nullptr) {
-            size_t emptyCap = emptyRawTiling->GetCapacity();
-            uint8_t* emptyPtr = static_cast<uint8_t*>(emptyRawTiling->GetData());
-            for (size_t emptyIdx = 0; emptyIdx < emptyCap; ++emptyIdx) {
-                emptyPtr[emptyIdx] = 0;
-            }
-            emptyRawTiling->SetDataSize(emptyCap);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, emptyRawTiling);
+        auto emptyPtr = static_cast<uint8_t*>(emptyRawTiling->GetData());
+        OP_CHECK_NULL_WITH_CONTEXT(context_, emptyPtr);
+        OP_CHECK_IF(
+            emptyRawTiling->GetCapacity() < sizeof(EmptyTilingData),
+            OP_LOGE(context_->GetNodeName(), "Tiling data capacity is smaller than the empty tiling structure."),
+            return ge::GRAPH_FAILED);
+        for (size_t emptyIdx = 0; emptyIdx < sizeof(EmptyTilingData); ++emptyIdx) {
+            emptyPtr[emptyIdx] = 0;
         }
+        emptyRawTiling->SetDataSize(sizeof(EmptyTilingData));
         size_t* emptyWs = context_->GetWorkspaceSizes(1);
         if (emptyWs != nullptr) {
             emptyWs[0] = 0;
