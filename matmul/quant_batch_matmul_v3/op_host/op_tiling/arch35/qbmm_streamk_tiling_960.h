@@ -10,9 +10,9 @@
 
 /*!
  * \file qbmm_streamk_tiling_960.h
- * \brief StreamK tiling implementation for Ascend960DT/PR(DAV_9201/9202) QuantBatchMatmulV3,
- *         960DT所有量化走Blaze（复用QbmmMxStreamKBasicApiKernel），
- *        960PR走CMCT BasicAPI。tiling data复用QuantBatchMatmulV3StreamKBasicAPITilingData
+ * \brief StreamK tiling implementation for DAV_9201/DAV_9202 QuantBatchMatmulV3,
+ *         DAV_9201所有量化走Blaze（复用QbmmMxStreamKBasicApiKernel），
+ *        DAV_9202走CMCT BasicAPI。tiling data复用QuantBatchMatmulV3StreamKBasicAPITilingData
  *        （与3510 Blaze StreamK共用布局），按SocVersion注册调度。
  */
 #ifndef QBMM_STREAMK_TILING_960_H

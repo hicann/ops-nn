@@ -1278,7 +1278,7 @@ bool QuantMatmulChecker::CheckScaleDimRange() const
 
 bool QuantMatmulChecker::CheckGroupSize() const
 {
-    if (npuArch_ != Ops::Base::DAV_3510 && npuArch_ != NpuArch::DAV_9201 && npuArch_ != NpuArch::DAV_9202) {
+    if (npuArch_ != Ops::Base::DAV_3510 && npuArch_ != Ops::Base::DAV_9201 && npuArch_ != Ops::Base::DAV_9202) {
         return true;
     }
     const GroupSizeMNK groupSizeMnk = DecodeGroupSizeMnk(groupSize_);
@@ -2008,7 +2008,7 @@ bool QuantMatmulChecker::IsHif4Scale(const aclTensor* x1Scale, const aclTensor* 
 
 bool QuantMatmulChecker::CheckHif4Scaling() const
 {
-    if (npuArch_ != NpuArch::DAV_9201 && npuArch_ != NpuArch::DAV_9202) {
+    if (npuArch_ != Ops::Base::DAV_9201 && npuArch_ != Ops::Base::DAV_9202) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "QuantBatchMatmul support for %s is not implemented in hif4 scenario.",
                 op::ToString(socVersion_).GetString());
         return false;
@@ -2125,8 +2125,8 @@ aclnnStatus QuantMatmulChecker::CheckDtype() const
             CHECK_RET(CheckDtypeOnlyL0c2out() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
         case Ops::Base::DAV_3510:
-        case NpuArch::DAV_9201:
-        case NpuArch::DAV_9202:
+        case Ops::Base::DAV_9201:
+        case Ops::Base::DAV_9202:
             CHECK_RET(CheckDtypeL0c2outOrL0c2ub() == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
             break;
         case NpuArch::DAV_2002:

@@ -10,7 +10,7 @@
 
 /*!
  * \file test_quant_batch_matmul_v3_arch92_tiling.cpp
- * \brief Ascend960 tiling internals and CSV regression registration.
+ * \brief DAV_9201/DAV_9202 tiling internals and CSV regression registration.
  */
 
 #include <array>

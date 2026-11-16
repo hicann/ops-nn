@@ -97,7 +97,7 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::DoLibApiTiling() { return ge
 uint64_t DualLevelQuantBatchMatmulTilingASW::GetTilingKey() const
 {
     uint64_t socVersionType = DLQBMM_SOC_MIX_AIC_1_2;
-    if (compileInfo_.npuArch == NpuArch::DAV_9201) {
+    if (compileInfo_.npuArch == Ops::Base::DAV_9201) {
         socVersionType = DLQBMM_SOC_MIX_AIC_1_1;
     }
     uint64_t subSocVersionType = DLQBMM_DEFAULT;
@@ -193,13 +193,13 @@ bool DualLevelQuantBatchMatmulTilingASW::AnalyseSlidingWinInfo()
 bool DualLevelQuantBatchMatmulTilingASW::CalcBasicBlock()
 {
     uint64_t baseMMax = static_cast<uint64_t>(BASIC_BLOCK_SIZE_256);
-    if (compileInfo_.npuArch == NpuArch::DAV_9201) {
+    if (compileInfo_.npuArch == Ops::Base::DAV_9201) {
         baseMMax = static_cast<uint64_t>(BASIC_BLOCK_SIZE_160);
     }
     // baseM=256(3510) or 160(9201), baseN=256, baseK=512
     adaptiveWin_.baseM = std::min(matmulInfo_.mSize, baseMMax);
     adaptiveWin_.baseM = ops::CeilAlign(adaptiveWin_.baseM,
-                                        compileInfo_.npuArch == NpuArch::DAV_9201 ?
+                                        compileInfo_.npuArch == Ops::Base::DAV_9201 ?
                                             CUBE_BLOCK :
                                             GetShapeWithDataType(L1_ALIGN_SIZE, matmulInfo_.x1Dtype));
     adaptiveWin_.baseN = std::min(matmulInfo_.nSize, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));

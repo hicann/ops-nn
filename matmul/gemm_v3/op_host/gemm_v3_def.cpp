@@ -85,9 +85,8 @@ public:
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("softsync.flag", "true");
         opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicConfig_95);
-        this->AICore().AddConfig("ascend350", aicConfig_95);
-        this->AICore().AddConfig("ascend960dt", aicConfig_95);
-        this->AICore().AddConfig("ascend960pr", aicConfig_95);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicConfig_95);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicConfig_95);
     }
 };
 

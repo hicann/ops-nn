@@ -418,7 +418,7 @@ bool WeightQuantBatchMatmulV2TilingASWGeneral::ClosePreAllocCond() const
 
 uint64_t WeightQuantBatchMatmulV2TilingASWGeneral::GetTilingKey() const
 {
-    uint64_t socVersionType = WQBMMV2_SOC_ASCEND960DT;
+    uint64_t socVersionType = WQBMMV2_SOC_DAV9201;
     uint64_t subSocVersionType = WQBMMV2_DEFAULT;
     uint64_t antiquantScenario = WQBMMV2_DEFAULT;
     uint64_t algorithm = WQBMMV2_ALGO_VECTOR_ANTIQUANT;

@@ -91,20 +91,20 @@ static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST_HIF4 =
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_IN_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &IN_DTYPE_SUPPORT_LIST},
     {Ops::Base::DAV_3510, &IN_DTYPE_SUPPORT_LIST},
-    {NpuArch::DAV_9201, &IN_DTYPE_SUPPORT_LIST},
-    {NpuArch::DAV_9202, &IN_DTYPE_SUPPORT_LIST}};
+    {Ops::Base::DAV_9201, &IN_DTYPE_SUPPORT_LIST},
+    {Ops::Base::DAV_9202, &IN_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_OUT_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &OUT_DTYPE_SUPPORT_LIST_INT},
     {Ops::Base::DAV_3510, &OUT_DTYPE_SUPPORT_LIST_MX},
-    {NpuArch::DAV_9201, &OUT_DTYPE_SUPPORT_LIST_MX},
-    {NpuArch::DAV_9202, &OUT_DTYPE_SUPPORT_LIST_MX}};
+    {Ops::Base::DAV_9201, &OUT_DTYPE_SUPPORT_LIST_MX},
+    {Ops::Base::DAV_9202, &OUT_DTYPE_SUPPORT_LIST_MX}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_SCALE_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST_INT},
     {Ops::Base::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_MX},
-    {NpuArch::DAV_9201, &SCALE_DTYPE_SUPPORT_LIST_MX},
-    {NpuArch::DAV_9202, &SCALE_DTYPE_SUPPORT_LIST_MX}};
+    {Ops::Base::DAV_9201, &SCALE_DTYPE_SUPPORT_LIST_MX},
+    {Ops::Base::DAV_9202, &SCALE_DTYPE_SUPPORT_LIST_MX}};
 
 static const std::initializer_list<op::DataType>& GetDtypeSupportList(
     const std::map<NpuArch, const std::initializer_list<op::DataType>*>& socSupportDtypes)
@@ -133,7 +133,7 @@ static bool CheckOutDtypeValid(const aclTensor* yOut)
         return true;
     }
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if ((curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) &&
+    if ((curArch == Ops::Base::DAV_9201 || curArch == Ops::Base::DAV_9202) &&
         std::find(OUT_DTYPE_SUPPORT_LIST_HIF4.begin(), OUT_DTYPE_SUPPORT_LIST_HIF4.end(), yDtype) !=
             OUT_DTYPE_SUPPORT_LIST_HIF4.end()) {
         return true;
@@ -143,7 +143,7 @@ static bool CheckOutDtypeValid(const aclTensor* yOut)
         fullListStr += op::ToString(dtype).GetString();
         fullListStr += ",";
     }
-    if (curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) {
+    if (curArch == Ops::Base::DAV_9201 || curArch == Ops::Base::DAV_9202) {
         for (auto dtype : OUT_DTYPE_SUPPORT_LIST_HIF4) {
             fullListStr += op::ToString(dtype).GetString();
             fullListStr += ",";

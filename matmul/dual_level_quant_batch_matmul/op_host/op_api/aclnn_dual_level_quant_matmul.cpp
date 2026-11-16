@@ -97,7 +97,7 @@ static aclnnStatus CheckSocValid()
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
         case Ops::Base::DAV_3510:
-        case NpuArch::DAV_9201:
+        case Ops::Base::DAV_9201:
             break;
         default: {
             OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented", op::ToString(socVersion).GetString());

@@ -205,8 +205,8 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4)
         switch (npuArch) {
             case NpuArch::DAV_2201:
             case Ops::Base::DAV_3510:
-            case NpuArch::DAV_9201:
-            case NpuArch::DAV_9202:
+            case Ops::Base::DAV_9201:
+            case Ops::Base::DAV_9202:
                 break;
             default: {
                 OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "QuantBatchMatmul support for %s is not implemented in a4w4 scenario.",
@@ -218,8 +218,8 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4)
         switch (npuArch) {
             case NpuArch::DAV_2201:
             case Ops::Base::DAV_3510:
-            case NpuArch::DAV_9201:
-            case NpuArch::DAV_9202:
+            case Ops::Base::DAV_9201:
+            case Ops::Base::DAV_9202:
             case NpuArch::DAV_2002:
                 break;
             default: {
@@ -290,7 +290,7 @@ static aclnnStatus WeightNZCaseProcess(const aclTensor*& x2, bool& transposeX2, 
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (formatX2 != op::Format::FORMAT_FRACTAL_NZ ||
         (isNotOneDim &&
-         (npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202))) {
+         (npuArch == Ops::Base::DAV_3510 || npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202))) {
         CHECK_RET(TensorContiguousProcess(x2, transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
     }
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == op::Format::FORMAT_FRACTAL_NZ) {
@@ -597,7 +597,7 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryT
     bool isA8W4I = isA8W4Int(x1, x2);
     bool isPseudoQuant = isA8W4F || isA8W4I;
     NpuArch npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if ((npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) &&
+    if ((npuArch == Ops::Base::DAV_3510 || npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202) &&
         !isPseudoQuant) {
         auto x1DimNum = x1->GetViewShape().GetDimNum();
         auto x2DimNum = x2->GetViewShape().GetDimNum();

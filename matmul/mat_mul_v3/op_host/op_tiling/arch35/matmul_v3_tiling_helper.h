@@ -18,6 +18,7 @@
 #include "matmul_v3_compile_info_advanced.h"
 #include "matmul_v3_tiling_key.h"
 #include "../../../op_kernel/arch35/mat_mul_v3_tiling_key_public.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
@@ -26,7 +27,7 @@ bool IsMatMulTiling(const MatMulV3Args& args, NpuArch npuArch);
 // 判断是否为DAV_3510系列(含9201/9202兼容版本)，语义与op_api层cube_util.h的IsNpuArch3510Series一致
 inline bool IsNpuArch3510Series(NpuArch npuArch)
 {
-    return npuArch == NpuArch::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+    return npuArch == NpuArch::DAV_3510 || npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202;
 }
 
 class MatMulV3TilingHelper {

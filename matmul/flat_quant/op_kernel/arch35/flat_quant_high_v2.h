@@ -69,7 +69,7 @@ public:
     aifunc void tiling()
     {
 #if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
-        // ascend960(v121): AIC:AIV = 1:1, block数即AIV数; 950/350为1:2需乘2
+        // dav9201/dav9202(v121): AIC:AIV = 1:1, block数即AIV数; 950/350为1:2需乘2
         aivNum = GetBlockNum();
 #else
         aivNum = GetBlockNum() * DOUBLE;

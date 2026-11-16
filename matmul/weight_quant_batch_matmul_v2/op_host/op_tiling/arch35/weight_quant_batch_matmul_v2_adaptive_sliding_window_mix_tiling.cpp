@@ -933,7 +933,7 @@ uint8_t WeightQuantBatchMatmulV2TilingASWMix::GetPerGroupCustomConfig() const
 
 uint64_t WeightQuantBatchMatmulV2TilingASWMix::GetTilingKey() const
 {
-    uint64_t socVersionType = WQBMMV2_SOC_ASCEND960DT;
+    uint64_t socVersionType = WQBMMV2_SOC_DAV9201;
     uint64_t subSocVersionType = WQBMMV2_DEFAULT;
     uint64_t antiquantScenario = WQBMMV2_DEFAULT;
 

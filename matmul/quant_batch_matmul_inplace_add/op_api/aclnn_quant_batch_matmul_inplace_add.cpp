@@ -705,7 +705,7 @@ static aclnnStatus CheckDtype(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddPa
     } else if (IsHiFloat8Input(params.x1, params.x2)) {
         return CheckHif8DtypeValid(params);
     } else if (IsHiFloat4Input(params.x1, params.x2)) {
-        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_9201) {
+        if (GetCurrentPlatformInfo().GetCurNpuArch() != Ops::Base::DAV_9201) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1, x2",
                 FormatString("%s, %s", op::ToString(x1Dtype).GetString(), op::ToString(x2Dtype).GetString()).c_str(),

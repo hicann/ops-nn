@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <tuple>
+#include "op_common/op_host/util/op_const_def.h"
 
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
@@ -104,7 +105,7 @@ using TupleAttr = std::tuple<bool, bool>;
 static inline bool IsNpuArch92()
 {
     const auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+    return npuArch == ::Ops::Base::DAV_9201 || npuArch == ::Ops::Base::DAV_9202;
 }
 
 static inline bool isA8W4Float(const aclTensor* x1, const aclTensor* x2)

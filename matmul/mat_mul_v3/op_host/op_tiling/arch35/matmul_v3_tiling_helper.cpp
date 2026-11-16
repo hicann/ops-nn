@@ -153,8 +153,8 @@ using ResetBaseFunc = void (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, 
 
 const static std::map<NpuArch, ResetBaseFunc> ResetBaseFuncMap = {
     {Ops::Base::DAV_3510, ResetBaseDav3510},
-    {NpuArch::DAV_9201, ResetBaseDav3510},
-    {NpuArch::DAV_9202, ResetBaseDav3510},
+    {Ops::Base::DAV_9201, ResetBaseDav3510},
+    {Ops::Base::DAV_9202, ResetBaseDav3510},
 };
 
 // ------------------------------ GetL0C2Out -------------------------------------------//
@@ -235,8 +235,8 @@ using GetL0C2OutFunc = MatMulV3L0C2Out (*)(const MatmulV3CompileInfo&, const Mat
 
 const static std::map<NpuArch, GetL0C2OutFunc> GetL0C2OutFuncMap = {
     {Ops::Base::DAV_3510, GetL0C2OutDav3510},
-    {NpuArch::DAV_9201, GetL0C2OutDav9201},
-    {NpuArch::DAV_9202, GetL0C2OutDav9201},
+    {Ops::Base::DAV_9201, GetL0C2OutDav9201},
+    {Ops::Base::DAV_9202, GetL0C2OutDav9201},
 };
 
 uint64_t GetMaxBaseWithLimit(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
@@ -345,7 +345,7 @@ void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo& compileInfo, con
 
 double MatMulV3TilingHelper::GetCubeBoundRatio(const MatmulV3CompileInfo& compileInfo)
 {
-    if (compileInfo.npuArch == NpuArch::DAV_9201 || compileInfo.npuArch == NpuArch::DAV_9202) {
+    if (compileInfo.npuArch == Ops::Base::DAV_9201 || compileInfo.npuArch == Ops::Base::DAV_9202) {
         return 0.95;
     }
     return CUBE_BOUND_RATIO; // 3510: 0.85
@@ -354,7 +354,7 @@ double MatMulV3TilingHelper::GetCubeBoundRatio(const MatmulV3CompileInfo& compil
 uint64_t MatMulV3TilingHelper::CalcUbDB(const MatmulV3CompileInfo& compileInfo, uint64_t baseM, uint64_t baseN)
 {
     uint64_t ubBufferSize = baseM * baseN * DATA_SIZE_FP32;
-    if (compileInfo.npuArch == NpuArch::DAV_9201 || compileInfo.npuArch == NpuArch::DAV_9202) {
+    if (compileInfo.npuArch == Ops::Base::DAV_9201 || compileInfo.npuArch == Ops::Base::DAV_9202) {
         // 9201/9202：需双倍UB空间才开启双缓冲
         ubBufferSize *= DB_SIZE;
     }
@@ -582,7 +582,7 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
                             curCubeBoundParam > runInfo.cubeBoundEdge && runInfo.cubeBoundEdge > 0;
             bool fp32SkipCond = false;
             if (isFP32 && curCubeBoundParam < runInfo.cubeBoundEdge) {
-                if (compileInfo.npuArch == NpuArch::DAV_9201 || compileInfo.npuArch == NpuArch::DAV_9202) {
+                if (compileInfo.npuArch == Ops::Base::DAV_9201 || compileInfo.npuArch == Ops::Base::DAV_9202) {
                     // 9201/9202：小shape场景baseM/baseN下限取min(64, m/n)，避免误剪
                     fp32SkipCond = curBaseM < std::min(FP32_MIN_BASE_BLOCK, args.mValue) ||
                                    curBaseN < std::min(FP32_MIN_BASE_BLOCK, args.nValue);
@@ -639,7 +639,7 @@ double MatMulV3TilingHelper::GetHbmBW(int64_t usedCoreNum, const MatmulV3Compile
     double totalHbmBandwidth = GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) *
                                StrToIntWithDefault(ddrRateStr, 31) / KB_SIZE;
     uint64_t bwSaturationCoreNum = static_cast<uint64_t>(compileInfo.aicNum);
-    if (compileInfo.npuArch == NpuArch::DAV_9202) {
+    if (compileInfo.npuArch == Ops::Base::DAV_9202) {
         // 9202的HBM带宽较小，使用核数达到总核数一半时就会把带宽打满，因此需要做出限制，HBM性能在前半段线性，后半段逼近峰值
         bwSaturationCoreNum /= 2;
     }

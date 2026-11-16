@@ -542,7 +542,7 @@ MC62CM12AA,QUANTMMMC62CM12AA/TestQuantBatchMatmulV3Tiling.generalTest/X2PG_A8W4_
 MC62CM12AA,QUANTMMMC62CM12AA/TestQuantBatchMatmulV3Tiling.generalTest/X2PG_A8W8_BIAS,,x2_pergroup_a8w8_bias,,,2,2,2,0,0,0,32,256,64,0,0,1,0,0,7,INT8,INT8,UINT64,FLOAT,FLOAT16,FLOAT16,ND,NZ,TRUE,0,0,,TRUE,A8W8 per-group uses shared FLOAT16 [N] bias
 MC62CM12AA,QUANTMMMC62CM12AA/TestQuantBatchMatmulV3Tiling.generalTest/X2PG_A8W4_ODD_N,,x2_pergroup_a8w4_odd_n,,,2,2,2,0,0,0,32,256,63,0,0,0,0,0,7,INT8,INT4,UINT64,FLOAT,INT32,FLOAT16,ND,NZ,FALSE,0,0,,FALSE,A8W4 per-group rejects packed INT4 odd N
 MC62CM12AA,QUANTMMMC62CM12AA/TestQuantBatchMatmulV3Tiling.generalTest/X2PG_A8W4_X2_BCAST,,x2_pergroup_a8w4_x2_bcast,,,3,3,3,2,1,2,35,256,80,0,0,0,0,1,7,INT8,INT4,UINT64,FLOAT,INT32,FLOAT16,ND,NZ,TRUE,0,0,,TRUE,A8W4 per-group transpose_x2=true x2 batch broadcast
-# Ascend960: 9201 ASW uses Blaze without batch (131088); 9202 uses BasicAPI (65536).
+# DAV_9201/DAV_9202: 9201 ASW uses Blaze without batch (131088); 9202 uses BasicAPI (65536).
 # StreamK uses Blaze on both architectures (133904); legacy Mix uses 512, or 768 with A full load.
 # Transpose bits add transA + 4 * transB. Invalid inputs must fail before selecting a kernel.
 Dav9201,Dav9201_int8_scalar_00,,ascend960,32,32,2,2,2,0,0,0,256,8192,256,0,0,0,0,0,0,INT8,INT8,UINT64,FLOAT,INT32,BF16,ND,ND,TRUE,32,131088,,FALSE,int8_scalar_00,0,

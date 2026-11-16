@@ -56,8 +56,8 @@ using CheckStreamKDPSKTilingFunc = bool (*)(const MatmulV3CompileInfo&, const Ma
 
 const static std::map<NpuArch, CheckStreamKDPSKTilingFunc> CheckStreamKDPSKTilingFuncMap = {
     {Ops::Base::DAV_3510, CheckStreamKDPSKTilingDav3510},
-    {NpuArch::DAV_9201, CheckStreamKDPSKTilingDav3510},
-    {NpuArch::DAV_9202, CheckStreamKDPSKTilingDav3510},
+    {Ops::Base::DAV_9201, CheckStreamKDPSKTilingDav3510},
+    {Ops::Base::DAV_9202, CheckStreamKDPSKTilingDav3510},
 };
 
 // ------------------------------ CheckStreamKSKTiling -------------------------------------------//
@@ -185,8 +185,8 @@ using IsStreamKSKBaseValidFunc = bool (*)(const MatMulV3RunInfo&, const MatMulV3
 
 const static std::map<NpuArch, IsStreamKSKBaseValidFunc> IsStreamKSKBaseValidFuncMap = {
     {NpuArch::DAV_3510, IsStreamKSKBaseValidDav3510},
-    {NpuArch::DAV_9201, IsStreamKSKBaseValidDefault},
-    {NpuArch::DAV_9202, IsStreamKSKBaseValidDefault},
+    {Ops::Base::DAV_9201, IsStreamKSKBaseValidDefault},
+    {Ops::Base::DAV_9202, IsStreamKSKBaseValidDefault},
 };
 
 // 性能模型SK准入主体（3510非FP32与9201/9202共用）：按k切分候选逐一评估cube/mem边界收益并采纳最优配置
@@ -278,8 +278,8 @@ using CheckStreamKSKTilingFunc = bool (*)(const MatmulV3CompileInfo&, const MatM
 
 const static std::map<NpuArch, CheckStreamKSKTilingFunc> CheckStreamKSKTilingFuncMap = {
     {Ops::Base::DAV_3510, CheckStreamKSKTilingDav3510},
-    {NpuArch::DAV_9201, CheckStreamKSKTilingDav9201},
-    {NpuArch::DAV_9202, CheckStreamKSKTilingDav9201},
+    {Ops::Base::DAV_9201, CheckStreamKSKTilingDav9201},
+    {Ops::Base::DAV_9202, CheckStreamKSKTilingDav9201},
 };
 
 // ------------------------------ GetL0C2OutFlag -------------------------------------------//
@@ -400,8 +400,8 @@ using DoSkOpTilingFunc = void (*)(const MatmulV3CompileInfo&, const MatMulV3Args
 
 const static std::map<NpuArch, DoSkOpTilingFunc> DoSkOpTilingFuncMap = {
     {NpuArch::DAV_3510, DoSkOpTilingDav9201}, // 3510性能模型准入与9201同构，复用薄实现
-    {NpuArch::DAV_9201, DoSkOpTilingDav9201},
-    {NpuArch::DAV_9202, DoSkOpTilingDav9201},
+    {Ops::Base::DAV_9201, DoSkOpTilingDav9201},
+    {Ops::Base::DAV_9202, DoSkOpTilingDav9201},
 };
 
 } // namespace
@@ -493,7 +493,7 @@ ge::graphStatus MatMulV3BasicStreamKTiling::DoOpTiling()
             runInfo_.singleCoreK = ops::CeilAlign(runInfo_.singleCoreK, BASIC_BLOCK_SIZE_16 / NUM_TWO);
         }
     }
-    if (compileInfo_.npuArch != NpuArch::DAV_9201 && compileInfo_.npuArch != NpuArch::DAV_9202) {
+    if (compileInfo_.npuArch != Ops::Base::DAV_9201 && compileInfo_.npuArch != Ops::Base::DAV_9202) {
         uint64_t baseKAlignValue = !args_.isATrans || args_.isBTrans ? BASIC_BLOCK_SIZE_128 / args_.aDtypeSize :
                                                                        BASIC_BLOCK_SIZE_16;
         uint64_t kValueMax = ops::FloorAlign(
@@ -539,7 +539,7 @@ std::vector<size_t> MatMulV3BasicStreamKTiling::GetWorkspaceSize() const
     size_t workspaceSize = compileInfo_.aicNum * runInfo_.baseM *
                            ops::CeilAlign(runInfo_.baseN, FIXPIPE_N_ALIGN_ELEMENTS) * DATA_SIZE_FP32;
     // 9201/9202申请workspacesize时先恢复额外RPC申请
-    if (compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) {
+    if (compileInfo_.npuArch == Ops::Base::DAV_9201 || compileInfo_.npuArch == Ops::Base::DAV_9202) {
         workspaceSize += RPC_WORKSIZE * MB_SIZE;
     }
     OP_LOGI(args_.opName, "MatMulV3 tiling workspace size is %lu", workspaceSize);

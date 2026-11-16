@@ -28,6 +28,7 @@
 #include "../../op_kernel/arch35/quant_batch_matmul_inplace_add_tiling_data.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_tiling_base.h"
 #include "../../../quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 using namespace QuantBatchMatmulInplaceAddTilingConstant;
@@ -287,11 +288,11 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::CheckDtype() const
     if (isHiFloat8) {
         return CheckScaleDtype("HIFLOAT8", ge::DT_FLOAT);
     }
-    if (isHiFloat4 && this->compileInfo_.npuArch == NpuArch::DAV_9201) {
+    if (isHiFloat4 && this->compileInfo_.npuArch == ::Ops::Base::DAV_9201) {
         return CheckScaleDtype("HIFLOAT4", Ops::NN::DT_HIFLOAT4_SCALE);
     }
     const char*
-        supportedDtypes = this->compileInfo_.npuArch == NpuArch::DAV_9201 ?
+        supportedDtypes = this->compileInfo_.npuArch == ::Ops::Base::DAV_9201 ?
                               "the dtypes of x1 and x2 must both be FLOAT8_E4M3FN/FLOAT8_E5M2/FLOAT4_E2M1, both be "
                               "HIFLOAT8 or both be HIFLOAT4" :
                               "the dtypes of x1 and x2 must both be FLOAT8_E4M3FN/FLOAT8_E5M2/FLOAT4_E2M1 or both be "

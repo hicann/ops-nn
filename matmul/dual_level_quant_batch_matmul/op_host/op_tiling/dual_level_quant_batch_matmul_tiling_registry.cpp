@@ -44,7 +44,7 @@ static ge::graphStatus DualLevelQuantBatchMatmulTilingFunc(gert::TilingContext* 
     auto* compileInfoPtr = reinterpret_cast<const DualLevelQuantBatchMatmulCompileInfo*>(context->GetCompileInfo());
     OPS_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
     NpuArch npuArch = compileInfoPtr->npuArch;
-    if (npuArch != Ops::Base::DAV_3510 && npuArch != NpuArch::DAV_9201) {
+    if (npuArch != Ops::Base::DAV_3510 && npuArch != Ops::Base::DAV_9201) {
         OP_LOGE(context->GetNodeName(), "Platform not supported, only supports dav3510 and dav9201 platforms");
         return ge::GRAPH_FAILED;
     }
@@ -70,7 +70,7 @@ static ge::graphStatus TilingParseForDualLevelQuantBatchMatmul(gert::TilingParse
         OP_LOGE_IF(compileInfoPtr->aivNum != CORE_RATIO * compileInfoPtr->aicNum, ge::GRAPH_FAILED,
                    context->GetNodeName(), "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
                    compileInfoPtr->aicNum, compileInfoPtr->aivNum);
-    } else if (compileInfoPtr->npuArch == NpuArch::DAV_9201) {
+    } else if (compileInfoPtr->npuArch == Ops::Base::DAV_9201) {
         OP_LOGE_IF(compileInfoPtr->aivNum != compileInfoPtr->aicNum, ge::GRAPH_FAILED, context->GetNodeName(),
                    "aicNum:aivNum should be 1:1, actual aicNum: %u, aivNum: %u.", compileInfoPtr->aicNum,
                    compileInfoPtr->aivNum);

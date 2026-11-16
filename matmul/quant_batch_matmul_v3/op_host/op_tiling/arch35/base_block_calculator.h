@@ -41,7 +41,7 @@ enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4, STREAMK, CUBE_BASIC
 
 constexpr uint64_t GHZ_TO_MHZ = 1000UL;
 
-// DAV_9201/9202(960DT/960PR) 负载均衡基块搜索所需的SoC规格参数（缺失项用默认值）
+// DAV_9201/DAV_9202 负载均衡基块搜索所需的SoC规格参数（缺失项用默认值）
 struct SocSpecifyParams {
     double hbmBw = 0;                  // HBM带宽 TB/s
     double l2Bw = 0;                   // L2带宽  TB/s
@@ -101,7 +101,7 @@ private:
     bool FinalizeStreamKBaseK();
     uint64_t GetBaseMAlignSize() const;
     uint64_t GetBaseKAlignSize() const;
-    // DAV_9201/9202(960DT/960PR) 负载均衡基块搜索
+    // DAV_9201/DAV_9202 负载均衡基块搜索
     // 实现位于 base_block_load_balance_calculator.cpp
     bool ComputeBaseBlockLoadBalance();
     bool IsBasicBlockUbOverflow(uint64_t baseM, uint64_t baseN);

@@ -538,7 +538,7 @@ class l2_QuantBatchMatmulWeightNzArch92S8S4_test : public testing::TestWithParam
 
 TEST_P(l2_QuantBatchMatmulWeightNzArch92S8S4_test, GetWorkspaceSize)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_9201);
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
     const auto& param = GetParam();
     TensorDesc x1Desc({16, param.k}, ACL_INT8, ACL_FORMAT_ND);
     // Non-transposed [K, N] uses [N1, K1, K0, N0]; N0=64 and K0=16.

@@ -36,10 +36,10 @@ const static std::map<NpuArch, std::vector<int32_t>> MatMulV3PrioritiesMap = {
     {Ops::Base::DAV_3510,
      {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::TO_MUL, strategy::TO_MULTI_MUL, strategy::BASIC_STREAM_K,
       strategy::BASIC_ASWT}},
-    {NpuArch::DAV_9201,
+    {::Ops::Base::DAV_9201,
      {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::TO_MUL, strategy::TO_MULTI_MUL, strategy::BASIC_STREAM_K,
       strategy::BASIC_ASWT}},
-    {NpuArch::DAV_9202,
+    {::Ops::Base::DAV_9202,
      {strategy::MATMUL_INPUT_K_EQUAL_ZERO, strategy::TO_MUL, strategy::TO_MULTI_MUL, strategy::BASIC_STREAM_K,
       strategy::BASIC_ASWT}},
     {NpuArch::DAV_RESV, {strategy::BASIC_ASWT}}, // supportMmadS8S4平台

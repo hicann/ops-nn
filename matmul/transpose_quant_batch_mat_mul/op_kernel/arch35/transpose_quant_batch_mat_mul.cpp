@@ -83,7 +83,7 @@ __global__ __aicore__ void transpose_quant_batch_mat_mul(GM_ADDR aGM, GM_ADDR bG
 {
     constexpr bool isMxfp8 = std::is_same_v<DTYPE_X1, __fp8e4m3> && std::is_same_v<DTYPE_X2_SCALE, __fp8e8m0>;
     constexpr bool isMxfp4 = std::is_same_v<DTYPE_X1, __fp4e2m1x2> && std::is_same_v<DTYPE_X2_SCALE, __fp8e8m0>;
-    // hif4 类型仅在 960 系列（9201/9202）工具链提供，其他平台用 false 占位，保证旧工具链可编译。
+    // hif4 类型仅在 DAV_9201/DAV_9202 工具链提供，其他平台用 false 占位，保证旧工具链可编译。
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     constexpr bool isHifp4 = std::is_same_v<DTYPE_X1, __hif4x2> && std::is_same_v<DTYPE_X2_SCALE, AscendC::hif4_scale>;
 #else

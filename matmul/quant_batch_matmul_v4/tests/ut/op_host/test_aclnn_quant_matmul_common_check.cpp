@@ -272,13 +272,13 @@ protected:
 
 TEST_F(QuantMatmulCommonCheckTest, IsNpuArch92_Dav9201ReturnsTrue)
 {
-    NpuArchManager archManager(NpuArch::DAV_9201);
+    NpuArchManager archManager(Ops::Base::DAV_9201);
     EXPECT_TRUE(qcc::IsNpuArch92());
 }
 
 TEST_F(QuantMatmulCommonCheckTest, IsNpuArch92_Dav9202ReturnsTrue)
 {
-    NpuArchManager archManager(NpuArch::DAV_9202);
+    NpuArchManager archManager(Ops::Base::DAV_9202);
     EXPECT_TRUE(qcc::IsNpuArch92());
 }
 

@@ -23,7 +23,7 @@
 #include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
-const std::initializer_list<NpuArch> AdvancedArch = {Ops::Base::DAV_3510, NpuArch::DAV_9201, NpuArch::DAV_9202,
+const std::initializer_list<NpuArch> AdvancedArch = {Ops::Base::DAV_3510, ::Ops::Base::DAV_9201, ::Ops::Base::DAV_9202,
                                                      NpuArch::DAV_RESV};
 
 class PlatformUtil {

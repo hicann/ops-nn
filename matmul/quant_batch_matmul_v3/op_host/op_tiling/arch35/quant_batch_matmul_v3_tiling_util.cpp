@@ -168,8 +168,8 @@ bool QuantBatchMatMulV3TilingUtil::CheckDtype(gert::TilingContext* context, cons
     switch (compileInfo.npuArch) {
         case Ops::Base::DAV_3510:
             return CheckDtypeWithChecker<QuantBatchMatmulV3Checker>(context, inputParams);
-        case NpuArch::DAV_9201:
-        case NpuArch::DAV_9202:
+        case Ops::Base::DAV_9201:
+        case Ops::Base::DAV_9202:
             return CheckDtypeWithChecker<QuantBatchMatmulV3CheckerArch9201>(context, inputParams);
         case NpuArch::DAV_RESV:
             return CheckDtypeWithChecker<QuantBatchMatmulV3Checker4MmadS8S4>(context, inputParams);
@@ -191,8 +191,8 @@ bool QuantBatchMatMulV3TilingUtil::CheckShape(gert::TilingContext* context, cons
         case Ops::Base::DAV_3510:
             return CheckShapeWithChecker<QuantBatchMatmulV3Checker>(context, inputParams, mandatoryShape, biasShape,
                                                                     pertokenShape, dimValueOfMKN);
-        case NpuArch::DAV_9201:
-        case NpuArch::DAV_9202:
+        case Ops::Base::DAV_9201:
+        case Ops::Base::DAV_9202:
             return CheckShapeWithChecker<QuantBatchMatmulV3CheckerArch9201>(context, inputParams, mandatoryShape,
                                                                             biasShape, pertokenShape, dimValueOfMKN);
         case NpuArch::DAV_RESV:

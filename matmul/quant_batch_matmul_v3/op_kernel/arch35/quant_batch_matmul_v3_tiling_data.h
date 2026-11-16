@@ -167,7 +167,7 @@ static_assert(sizeof(QuantBatchMatmulV3BasicAPITilingData) % 8U == 0U,
 struct StreamKBasicAPIParams {
     uint32_t singleCoreK = 0;
     uint32_t kL1 = 0;
-    // Ascend960 CMCT StreamK scheduler使用；3510 Blaze StreamK不消费该字段。
+    // DAV_9201/DAV_9202 CMCT StreamK scheduler使用；3510 Blaze StreamK不消费该字段。
     uint32_t usedCoreNum = 0;
     // K轴切分数，host侧收益评估与核数计算使用；当前kernel不消费。
     uint32_t kCnt = 0;

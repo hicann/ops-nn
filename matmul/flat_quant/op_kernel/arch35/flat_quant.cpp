@@ -14,7 +14,7 @@
  */
 #include "flat_quant_high_v2.h"
 #if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
-#include "flat_quant_cmct.h" // ascend960(v121): CMCT kernel
+#include "flat_quant_cmct.h" // dav9201/9202(v121): CMCT kernel
 #else
 #include "blaze/flat_quant.h" // ascend950/350(3510): Blaze kernel
 #endif
@@ -31,7 +31,7 @@ extern "C" __global__ __aicore__ void flat_quant(GM_ADDR x, GM_ADDR kronecker_p1
                                                  GM_ADDR workspace, GM_ADDR tiling)
 {
 #if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
-    // ascend960(v121): AIC:AIV = 1:1; 3510(950/350)保持隐式默认1:2, 不受影响
+    // dav9201/dav9202(v121): AIC:AIV = 1:1; 3510(950/350)保持隐式默认1:2, 不受影响
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #endif
     AscendC::InitSocState();

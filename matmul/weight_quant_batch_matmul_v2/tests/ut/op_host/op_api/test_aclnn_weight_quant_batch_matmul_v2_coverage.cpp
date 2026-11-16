@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 #include "gtest/gtest.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 #include "../../../../op_host/op_api/aclnn_weight_quant_batch_matmul_v2.h"
 #include "../../../../op_host/op_api/aclnn_weight_quant_batch_matmul_v3.h"
@@ -123,7 +124,7 @@ protected:
     {
         cout << "l2_weight_quant_batch_matmul_v2_cov_9201 SetUp" << endl;
         versionManager = std::make_unique<op::SocVersionManager>(op::SocVersion::RESERVED_VERSION);
-        archManager = std::make_unique<op::NpuArchManager>(NpuArch::DAV_9201);
+        archManager = std::make_unique<op::NpuArchManager>(Ops::Base::DAV_9201);
     }
     static void TearDownTestCase()
     {

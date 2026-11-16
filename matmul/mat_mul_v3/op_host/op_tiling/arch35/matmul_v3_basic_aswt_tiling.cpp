@@ -47,7 +47,7 @@ void MatMulV3BasicAswtTiling::ResetFullLoadLoadBalance()
 
 bool MatMulV3BasicAswtTiling::CheckFullLoadCnt(uint64_t cnt, bool isKAligned) const
 {
-    if (compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) {
+    if (compileInfo_.npuArch == Ops::Base::DAV_9201 || compileInfo_.npuArch == Ops::Base::DAV_9202) {
         // 9201/9202：要求切分份数大于核数
         return cnt > compileInfo_.aicNum;
     }
@@ -346,7 +346,7 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         DoBL1FullLoad();
         CheckApiLevelAndModel();
     } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY) {
-        if (compileInfo_.npuArch != NpuArch::DAV_9201 && compileInfo_.npuArch != NpuArch::DAV_9202) {
+        if (compileInfo_.npuArch != Ops::Base::DAV_9201 && compileInfo_.npuArch != Ops::Base::DAV_9202) {
             // 非fixpipe优化场景
             if (args_.isATrans && !args_.isBTrans) {
                 uint64_t remainSizeForAL1BL1 = args_.hasBias ? (compileInfo_.l1Size - BIAS_TABLE_NUM * DATA_SIZE_FP32) :

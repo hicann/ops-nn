@@ -10,7 +10,7 @@
 
 /*!
  * \file qbmm_fixpipe_quant_streamk.h
- * \brief Ascend960(DAV_9201/9202) per-tensor fixpipe quant StreamK kernel, CMCT BasicAPI implementation.
+ * \brief DAV_9201/DAV_9202 per-tensor fixpipe quant StreamK kernel, CMCT BasicAPI implementation.
  */
 #ifndef QBMM_FIXP_QUANT_STREAMK_H
 #define QBMM_FIXP_QUANT_STREAMK_H

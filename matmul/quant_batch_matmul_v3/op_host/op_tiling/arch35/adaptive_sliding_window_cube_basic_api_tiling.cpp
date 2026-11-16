@@ -32,8 +32,8 @@ constexpr uint64_t MAX_REDUCED_STEP_K = 8UL;
 constexpr double REPEAT_A_LOAD_RATIO_THRESHOLD = 0.20;
 
 const std::vector<int32_t> supportedNpuArch = {
-    static_cast<int32_t>(Ops::Base::DAV_3510), static_cast<int32_t>(NpuArch::DAV_9201),
-    static_cast<int32_t>(NpuArch::DAV_9202), static_cast<int32_t>(NpuArch::DAV_RESV)};
+    static_cast<int32_t>(Ops::Base::DAV_3510), static_cast<int32_t>(Ops::Base::DAV_9201),
+    static_cast<int32_t>(Ops::Base::DAV_9202), static_cast<int32_t>(NpuArch::DAV_RESV)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::CUBE_BASIC_API_ASW;
 } // namespace
 
@@ -70,7 +70,7 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::ResetTilingData()
 bool AdaptiveSlidingWindowCubeBasicAPITiling::IsWithoutBatchTilingData() const
 {
     // The software S4S4 fallback needs AIV preprocessing and the full tiling data layout.
-    return (compileInfo_.npuArch == Ops::Base::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201) &&
+    return (compileInfo_.npuArch == Ops::Base::DAV_3510 || compileInfo_.npuArch == Ops::Base::DAV_9201) &&
            IsTensorApiEnabled() && inputParams_.batchC == 1UL && !isSupportS4S4_;
 }
 
@@ -135,7 +135,7 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetApiLevel(NpuArch npuArch) c
 {
     switch (npuArch) {
         case Ops::Base::DAV_3510:
-        case NpuArch::DAV_9201: {
+        case Ops::Base::DAV_9201: {
             const bool tensorApiEnabled = IsTensorApiEnabled();
             if (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && !tensorApiEnabled) {
                 return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
@@ -143,7 +143,7 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetApiLevel(NpuArch npuArch) c
             return tensorApiEnabled ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
                                       static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
         }
-        case NpuArch::DAV_9202:
+        case Ops::Base::DAV_9202:
             return static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
         case NpuArch::DAV_RESV:
             if (inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8 &&
@@ -164,11 +164,11 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetBatchMode() const
 
 bool AdaptiveSlidingWindowCubeBasicAPITiling::CalcBasicBlock()
 {
-    if (compileInfo_.npuArch != Ops::Base::DAV_3510 && compileInfo_.npuArch != NpuArch::DAV_9201 &&
-        compileInfo_.npuArch != NpuArch::DAV_9202) {
+    if (compileInfo_.npuArch != Ops::Base::DAV_3510 && compileInfo_.npuArch != Ops::Base::DAV_9201 &&
+        compileInfo_.npuArch != Ops::Base::DAV_9202) {
         return AdaptiveSlidingWindowTiling::CalcBasicBlock();
     }
-    BaseBlockMode mode = (compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) ?
+    BaseBlockMode mode = (compileInfo_.npuArch == Ops::Base::DAV_9201 || compileInfo_.npuArch == Ops::Base::DAV_9202) ?
                              BaseBlockMode::LOAD_BALANCE :
                              BaseBlockMode::CUBE_BASIC;
     BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), context_->GetPlatformInfo());

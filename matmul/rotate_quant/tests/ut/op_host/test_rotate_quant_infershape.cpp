@@ -25,7 +25,7 @@ constexpr int32_t CASE1_X_N = 256;
 constexpr int32_t CASE0_X_M = 4;
 constexpr int32_t CASE0_X_N = 64;
 constexpr int32_t DIMENSION_3 = 3;
-constexpr int32_t AICORE_CNT_960DT = 64;
+constexpr int32_t AICORE_CNT_DAV9201 = 64;
 constexpr int32_t HIF4_X_M = 4;
 constexpr int32_t HIF4_X_N_64 = 64;
 constexpr int32_t HIF4_X_N_128 = 128;
@@ -245,8 +245,8 @@ TEST_F(RotateQuantInferShape, GroupedRotationRequiresAscend950)
 {
     CheckGroupedInferShapePlatform("Ascend350", ge::GRAPH_FAILED);
     CheckGroupedInferShapePlatform("Ascend910B", ge::GRAPH_FAILED);
-    CheckGroupedInferShapePlatform("Ascend960DT", ge::GRAPH_FAILED);
-    CheckGroupedInferShapePlatform("Ascend960PR", ge::GRAPH_FAILED);
+    CheckGroupedInferShapePlatform("dav9201", ge::GRAPH_FAILED);
+    CheckGroupedInferShapePlatform("dav9202", ge::GRAPH_FAILED);
 }
 
 TEST_F(RotateQuantInferShape, GroupedPerNRotation)
@@ -335,24 +335,24 @@ TEST_F(RotateQuantInferShape, OptionalAlphaPreservesOrdinaryAndGroupedInputs)
     }
 }
 
-// ==================== ascend960dt (v121) platform mock ====================
-static void SetPlatform960DT()
+// ==================== dav9201 (v121) platform mock ====================
+static void SetPlatformDav9201()
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
-    platformInfo.soc_info.ai_core_cnt = AICORE_CNT_960DT;
+    platformInfo.soc_info.ai_core_cnt = AICORE_CNT_DAV9201;
     // SocVersion→NpuArch迁移(#12680)后infershape按soc_info.arch_type判断平台, mock需同步补该字段
     platformInfo.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_9201);
-    platformInfo.str_info.short_soc_version = "Ascend960DT";
-    optiCompilationInfo.soc_version = "Ascend960DT";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend960DT"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav9201";
+    optiCompilationInfo.soc_version = "dav9201";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav9201"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 }
 
 // hif4 infershape: 2D x, scale shape = (M, CeilDiv(N,64), 1)
 TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_2d_k64)
 {
-    SetPlatform960DT();
+    SetPlatformDav9201();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -397,7 +397,7 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_2d_k64)
 // hif4 infershape: 2D x, K=128, scale shape = (M, CeilDiv(N,64), 1) = (4, 2, 1)
 TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_2d_k128)
 {
-    SetPlatform960DT();
+    SetPlatformDav9201();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -442,7 +442,7 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_2d_k128)
 // mxfp4 infershape: 2D x, K=64, scale shape = (M, CeilDiv(N,64), 2)
 TEST_F(RotateQuantInferShape, RotateQuant_infershape_mxfp4_2d_k64)
 {
-    SetPlatform960DT();
+    SetPlatformDav9201();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -487,7 +487,7 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_mxfp4_2d_k64)
 // mxfp8 infershape: 2D x, K=128, scale shape = (M, CeilDiv(N,64), 2) = (4, 2, 2)
 TEST_F(RotateQuantInferShape, RotateQuant_infershape_mxfp8_2d_k128)
 {
-    SetPlatform960DT();
+    SetPlatformDav9201();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -532,7 +532,7 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_mxfp8_2d_k128)
 // hif4 infershape: 3D x (M1, M2, N), scale shape = (M1, M2, CeilDiv(N,64), 1)
 TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_3d_k64)
 {
-    SetPlatform960DT();
+    SetPlatformDav9201();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -579,7 +579,7 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_hif4_3d_k64)
 // InferDataType: HIFLOAT4 output -> HIFLOAT4_SCALE
 TEST_F(RotateQuantInferShape, RotateQuant_InferDtype_hif4)
 {
-    SetPlatform960DT();
+    SetPlatformDav9201();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_datatype;
     ASSERT_NE(data_type_func, nullptr);
@@ -613,7 +613,7 @@ TEST_F(RotateQuantInferShape, RotateQuant_InferDtype_hif4)
 // InferDataType: mxfp4 (FLOAT4_E2M1) output -> FLOAT8_E8M0 scale
 TEST_F(RotateQuantInferShape, RotateQuant_InferDtype_mxfp4)
 {
-    SetPlatform960DT();
+    SetPlatformDav9201();
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_datatype;
     ASSERT_NE(data_type_func, nullptr);

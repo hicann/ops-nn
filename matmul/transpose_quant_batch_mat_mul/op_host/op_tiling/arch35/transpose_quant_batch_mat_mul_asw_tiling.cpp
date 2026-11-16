@@ -54,7 +54,7 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
     } else if (IsMxFp8(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX),
                        context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_MXFP8;
-        if (compileInfo_.npuArch == NpuArch::DAV_9201) {
+        if (compileInfo_.npuArch == Ops::Base::DAV_9201) {
             QuantBatchMatmulInfo qbmmParams;
             BuildQbmmParams(qbmmParams);
             QuantBatchMatmulV3CompileInfo qbmmCompileInfo = {};
@@ -79,7 +79,7 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
         CalL1Tiling();
     } else {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_FP8;
-        // 960 系列（9201/9202）为 fixpipe 1v1（AIC:AIV=1:1），dequant epilogue 需在单个 AIV 的
+        // DAV_9201/DAV_9202 为 fixpipe 1v1（AIC:AIV=1:1），dequant epilogue 需在单个 AIV 的
         // UB 内同时容纳整块 fp32 L0C 与 scale/bias/输出；先按 UB 预算收敛 baseM，再做 L1 切分。
         CapBaseMForDequantUb();
         MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
@@ -129,14 +129,14 @@ void TransposeQuantBatchMatMulAswTiling::GetTransposeBatchMatMulInfo()
     }
 }
 
-// 960 系列（9201/9202）AIC:AIV 核数比为 1:1（fixpipe 1v1，非 3510 的双 AIV 半 M 切分）：
+// DAV_9201/DAV_9202 AIC:AIV 核数比为 1:1（fixpipe 1v1，非 3510 的双 AIV 半 M 切分）：
 // AIC 会把整块 baseM x baseN 的 fp32 L0C 累加器一次 fixpipe 进单个 AIV 的 UB，
 // BlockEpilogueDequant::SetupUbLayout 按该整块预留 UB 空间。若 baseM*baseN*4 超出 UB
 // （如 256x256x4B=256KB > 248KB），UB 布局必然越界。此处按 epilogue 布局逐字节计算 UB 占用，
 // 以 16 为粒度下调 baseM，保证布局可放下；过小则保持不收敛。
 void TransposeQuantBatchMatMulAswTiling::CapBaseMForDequantUb()
 {
-    if (compileInfo_.npuArch != NpuArch::DAV_9201 && compileInfo_.npuArch != NpuArch::DAV_9202) {
+    if (compileInfo_.npuArch != Ops::Base::DAV_9201 && compileInfo_.npuArch != Ops::Base::DAV_9202) {
         return;
     }
     // 与 BlockEpilogueDequant::SetupUbLayout（CV=1）一致的预算公式：
@@ -637,7 +637,7 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::GetTilingDataProcess(BatchMa
         }
     }
     if (isMxScale) {
-        // 950/960 共用 Blaze MX kernel，两架构都消费 scaleKL1，不可按 npuArch 隔离写入；
+        // DAV_3510 与 DAV_9201/DAV_9202 共用 Blaze MX kernel，两架构都消费 scaleKL1，不可按 npuArch 隔离写入；
         // 未走 qbmm L1 tiling 时兜底值必须等于 kL1（scaleFactor=1），直接引用基类写入的
         // tilingData.kL1，避免重复推导公式与基类 kL1 的 min+钳4 定义产生偏差。
         tilingData.scaleKL1 = isMxL1Tiled_ ? scaleKL1_ : tilingData.kL1;

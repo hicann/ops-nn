@@ -113,7 +113,7 @@ bool BaseBlockCalculator::Compute(BaseBlockMode mode)
             }
             break;
         case BaseBlockMode::LOAD_BALANCE:
-            // DAV_9201/9202(960DT/960PR)专用：负载均衡基块搜索为完整独立流程，不再叠加3510的小shape调整。
+            // DAV_9201/DAV_9202专用：负载均衡基块搜索为完整独立流程，不再叠加3510的小shape调整。
             if (!ComputeBaseBlockLoadBalance()) {
                 return false;
             }
@@ -350,8 +350,8 @@ bool BaseBlockCalculator::OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode
     }
     switch (compileInfo_.npuArch) {
         case Ops::Base::DAV_3510:
-        case NpuArch::DAV_9201:
-        case NpuArch::DAV_9202:
+        case Ops::Base::DAV_9201:
+        case Ops::Base::DAV_9202:
             return mode == BaseBlockMode::PERBLOCK ? AdjustBaseBlockPerblock() : AdjustBaseBlockDefault();
         case NpuArch::DAV_RESV:
             return AdjustBaseBlockMmadS8S4(oriBlock);

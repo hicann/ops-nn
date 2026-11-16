@@ -27,8 +27,8 @@
 namespace {
 
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510),
-                                               static_cast<int32_t>(NpuArch::DAV_9201),
-                                               static_cast<int32_t>(NpuArch::DAV_9202)};
+                                               static_cast<int32_t>(Ops::Base::DAV_9201),
+                                               static_cast<int32_t>(Ops::Base::DAV_9202)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MIX_ASW;
 } // namespace
 
@@ -101,8 +101,8 @@ ge::graphStatus AdaptiveSlidingWindowMixTiling::GetWorkspaceSize()
 
 bool AdaptiveSlidingWindowMixTiling::CalcBasicBlock()
 {
-    // DAV_9201/9202(960DT/960PR)使用负载均衡基块搜索，其余架构沿用DEFAULT。
-    BaseBlockMode mode = (compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) ?
+    // DAV_9201/DAV_9202使用负载均衡基块搜索，其余架构沿用DEFAULT。
+    BaseBlockMode mode = (compileInfo_.npuArch == Ops::Base::DAV_9201 || compileInfo_.npuArch == Ops::Base::DAV_9202) ?
                              BaseBlockMode::LOAD_BALANCE :
                              BaseBlockMode::DEFAULT;
     // LOAD_BALANCE 搜索按 Mix 的 UB 布局（FP32 累加/scale/bias/ping-pong 输出）约束基块。

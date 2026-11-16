@@ -14,6 +14,7 @@
  */
 #include "weight_quant_batch_matmul_tiling_tool.h"
 #include "common/inc/op_host/op_const_def_nn.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 
@@ -75,7 +76,7 @@ bool Is4BitDtype(ge::DataType dtype)
     return false;
 }
 
-bool isNpuArch92(NpuArch npuArch) { return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202; }
+bool isNpuArch92(NpuArch npuArch) { return npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202; }
 
 const std::map<ge::DataType, matmul_tiling::DataType> DTYPE_MAP = {
     {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},

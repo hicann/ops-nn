@@ -572,7 +572,7 @@ public:
             return ACLNN_SUCCESS;
         }
         // fmm 一级路由: α=β=1 + 门禁 → fmm BMM+add 单kernel融合(CMCT kernel, 消除 Muls+BMM+Add 拼接的中间tensor往返)
-        // 平台限定 DAV_3510(仅950): 归一后 IsNpuArch3510Series 含 920x/960, 960 上 fmm tiling 走归一 basic 级,
+        // 平台限定 DAV_3510(仅950): 归一后 IsNpuArch3510Series 含 DAV_920x, DAV_920x 上 fmm tiling 走归一 basic 级,
         // 不含本路由假设的模板形态, 必须排除.
         if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
             CheckFmmBaddbmmSupport(bias, matA, matB, output, alpha, beta, cubeMathType)) {

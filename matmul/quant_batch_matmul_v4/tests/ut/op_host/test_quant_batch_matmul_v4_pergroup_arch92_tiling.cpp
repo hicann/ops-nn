@@ -17,6 +17,7 @@
 // 断言语义：RunArch92Tiling 返回 SUCCESS 即 arch92 tiling 成功；分析失败与 IsCapable 拒绝均表现为 GRAPH_FAILED。
 
 #include <gtest/gtest.h>
+#include "op_common/op_host/util/op_const_def.h"
 
 #include <cstdint>
 #include <memory>
@@ -161,7 +162,7 @@ private:
         compileInfo_.l0cSize = cfg.l0cSize;
         // TilingFunc 按 npuArch 路由：DAV_9201 -> {arch92, reg_base}，arch92 优先
         compileInfo_.socVersion = platform_ascendc::SocVersion::ASCEND950;
-        compileInfo_.npuArch = NpuArch::DAV_9201;
+        compileInfo_.npuArch = Ops::Base::DAV_9201;
         compileInfo_.supportMmadS8S4 = false;
 
         rawTilingData_ = gert::TilingData::CreateCap(cfg.tilingDataCap);

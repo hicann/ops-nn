@@ -13,6 +13,7 @@
  * \brief
  */
 #include "quant_matmul_common_check.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 using namespace ge;
@@ -22,8 +23,8 @@ using Ops::NN::SwapLastTwoDimValue;
 
 bool IsNpuArch92()
 {
-    return op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
-           op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202;
+    return op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9201 ||
+           op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9202;
 }
 
 bool CheckSpecialCase(const aclTensor* tensor, int64_t firstLastDim, int64_t secondLastDim)

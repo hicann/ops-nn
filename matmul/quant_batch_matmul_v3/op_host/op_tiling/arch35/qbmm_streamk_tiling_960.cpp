@@ -10,7 +10,7 @@
 
 /*!
  * \file qbmm_streamk_tiling_960.cpp
- * \brief Ascend960DT/PR(DAV_9201/9202) StreamK tiling,
+ * \brief DAV_9201/DAV_9202 StreamK tiling,
  *        与3510版qbmm_streamk_tiling的差异：面向CMCT BasicAPI StreamK kernel，
  *        tiling data复用QuantBatchMatmulV3StreamKBasicAPITilingData（与3510 Blaze
  * StreamK共用布局），按NpuArch注册调度。
@@ -36,8 +36,8 @@ constexpr uint64_t MB_SIZE = 1024UL * 1024UL;
 constexpr uint64_t EXTRA_WORKSPACE = 16UL;
 constexpr float SK_VALID_THRESHOLD = 0.3; // 所估计出的SK耗时比ASWT小0.3us及以上才走入SK模板
 
-const static std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_9201),
-                                                      static_cast<int32_t>(NpuArch::DAV_9202)};
+const static std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_9201),
+                                                      static_cast<int32_t>(Ops::Base::DAV_9202)};
 } // namespace
 
 using Ops::NN::MathUtil;
@@ -275,7 +275,7 @@ uint64_t QBMMV3StreamKTiling960::GetKernelType() const { return TPL_VEC_EPILOGUE
 
 uint64_t QBMMV3StreamKTiling960::GetApiLevel(NpuArch npuArch) const
 {
-    // 960DT/960PR(9201/9202)所有StreamK量化场景统一走Blaze路径：直接复用3510的
+    // DAV_9201/DAV_9202所有StreamK量化场景统一走Blaze路径：直接复用3510的
     // QbmmMxStreamKBasicApiKernel（tiling data已统一）。
     return static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL);
 }

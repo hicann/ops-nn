@@ -49,8 +49,8 @@ const MxTilingCapabilities& GetMxTilingCapabilities(NpuArch npuArch)
     static const MxTilingCapabilities loadBalanceCapabilities = {optiling::BaseBlockMode::LOAD_BALANCE, true, false,
                                                                  false, false};
     switch (npuArch) {
-        case NpuArch::DAV_9201:
-        case NpuArch::DAV_9202:
+        case Ops::Base::DAV_9201:
+        case Ops::Base::DAV_9202:
             return loadBalanceCapabilities;
         default:
             return defaultCapabilities;
@@ -58,8 +58,8 @@ const MxTilingCapabilities& GetMxTilingCapabilities(NpuArch npuArch)
 }
 
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510),
-                                               static_cast<int32_t>(NpuArch::DAV_9201),
-                                               static_cast<int32_t>(NpuArch::DAV_9202)};
+                                               static_cast<int32_t>(Ops::Base::DAV_9201),
+                                               static_cast<int32_t>(Ops::Base::DAV_9202)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MX_BASIC_API_ASW;
 
 uint64_t GetSingleRoundTailSplitBase(uint64_t axisSize, uint64_t baseSize, uint64_t tailTile, uint64_t alignSize)
@@ -107,14 +107,14 @@ void AdaptiveSlidingWindowMXBasicAPITiling::ResetTilingData()
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
 {
     return IsTensorApiEnabled() && inputParams_.batchC == 1UL &&
-           (compileInfo_.npuArch == Ops::Base::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201) &&
+           (compileInfo_.npuArch == Ops::Base::DAV_3510 || compileInfo_.npuArch == Ops::Base::DAV_9201) &&
            IsHif4BlazeCapable();
 }
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsHif4BlazeCapable() const
 {
     // 9202 上 hif4 内核只实现 CMCT(basic) 路径，不消费 WithoutBatchTilingData，禁止走 blaze/without-batch
-    if (inputParams_.isHif4PerGroup && compileInfo_.npuArch != NpuArch::DAV_9201) {
+    if (inputParams_.isHif4PerGroup && compileInfo_.npuArch != Ops::Base::DAV_9201) {
         return false;
     }
     // tensor-api crd2idx 对 hif4_scale 暂不支持奇数坐标，baseK 需为 64 的偶数倍
@@ -148,7 +148,7 @@ const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
-    const bool supportsBlaze = npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201;
+    const bool supportsBlaze = npuArch == Ops::Base::DAV_3510 || npuArch == Ops::Base::DAV_9201;
     return IsTensorApiEnabled() && supportsBlaze && IsHif4BlazeCapable() ?
                static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
                static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
@@ -162,7 +162,7 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchMode() const
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetKernelType() const
 {
-    // L0C ping-pong remains a DAV_3510-only template; Ascend960 does not register kernel type 9/10.
+    // L0C ping-pong remains a DAV_3510-only template; DAV_9201/DAV_9202 does not register kernel type 9/10.
     const bool useMxL0CPingpong = compileInfo_.npuArch == Ops::Base::DAV_3510 && IsMxL0CPingpong(inputParams_);
     if (isAFullLoad_ && useMxL0CPingpong) {
         return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG);
@@ -179,7 +179,7 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetKernelType() const
 bool AdaptiveSlidingWindowMXBasicAPITiling::CheckDtype() const
 {
     if (GetMxTilingCapabilities(compileInfo_.npuArch).useDedicatedChecker) {
-        // tiling_util's arch switch has no Ascend960 case, so the MX checker is invoked directly here.
+        // tiling_util's arch switch has no DAV_9201/DAV_9202 case, so the MX checker is invoked directly here.
         QuantBatchMatmulV3CheckerArch9201 checker(context_, inputParams_);
         return checker.CheckDtype();
     }

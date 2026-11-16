@@ -116,7 +116,10 @@ namespace NN {
 namespace RotateQuant {
 
 namespace {
-constexpr bool IsDav920Series(NpuArch npuArch) { return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202; }
+constexpr bool IsDav920Series(NpuArch npuArch)
+{
+    return npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202;
+}
 } // namespace
 
 ge::graphStatus RotateQuantAptTiling::GetPlatformInfo() { return ge::GRAPH_SUCCESS; }
@@ -789,13 +792,13 @@ static Ops::NN::Optiling::RegisterArch g_rotateQuantAptTiling9201Register = Ops:
                                                                                 .tiling<RotateQuantAptTiling>(
                                                                                     TEMPLATE_PRIORITY,
                                                                                     static_cast<int32_t>(
-                                                                                        NpuArch::DAV_9201));
+                                                                                        Ops::Base::DAV_9201));
 static Ops::NN::Optiling::RegisterArch g_rotateQuantAptTiling9202Register = Ops::NN::Optiling::RegisterArch(
                                                                                 "RotateQuant")
                                                                                 .tiling<RotateQuantAptTiling>(
                                                                                     TEMPLATE_PRIORITY,
                                                                                     static_cast<int32_t>(
-                                                                                        NpuArch::DAV_9202));
+                                                                                        Ops::Base::DAV_9202));
 
 static ge::graphStatus RotateQuantAptTilingFunc(gert::TilingContext* context)
 {

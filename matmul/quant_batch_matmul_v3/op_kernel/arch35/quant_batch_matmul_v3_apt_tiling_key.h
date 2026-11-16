@@ -51,7 +51,7 @@
 #define ORIG_DTYPE_X2 DT_INT8
 #endif
 
-// Mix-kernel task type: DAV_3510 pairs one AIC with two AIVs, DAV_9201/9202(960DT/960PR) pair one with one.
+// Mix-kernel task type: DAV_3510 pairs one AIC with two AIVs, DAV_9201/DAV_9202 pair one with one.
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
 #define QBMMV3_MIX_AIC_RATION ASCENDC_TPL_MIX_AIC_1_1
 #else

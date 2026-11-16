@@ -51,7 +51,7 @@ __aicore__ inline void QbmmCmctPertileKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR 
     using BlockMmad = Cmct::Gemm::Block::BlockMmadPertile<BlockMmadPolicy, AType, LayoutA, BType, LayoutB, CType,
                                                           LayoutC, biasType, LayoutBias, L1Tileshape, L0Tileshape>;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-    // DAV_9201/9202(960DT/960PR)的UB bank结构与DAV_3510不同，使用4-UB-bank布局的专用epilogue
+    // DAV_9201/DAV_9202的UB bank结构与DAV_3510不同，使用4-UB-bank布局的专用epilogue
     using BlockEpilogue = Cmct::Gemm::Block::BlockEpiloguePertile4UbBank<L0Tileshape, YType, CType, BiasType,
                                                                          ptScaleType, ScaleType, LayoutA, LayoutB>;
 #else

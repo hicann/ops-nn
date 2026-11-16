@@ -82,7 +82,6 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, configDav3510);
-        this->AICore().AddConfig("ascend350", configDav3510);
     }
 };
 

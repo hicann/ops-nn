@@ -37,10 +37,9 @@ public:
         this->AICore().AddConfig("ascend910b", aicConfig);
         this->AICore().AddConfig("ascend910_93", aicConfig);
         opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicConfig);
-        this->AICore().AddConfig("ascend350", aicConfig);
-        // Arch9201/Arch9202: 复用 arch35 kernel 路径
-        this->AICore().AddConfig("ascend960dt", aicConfig);
-        this->AICore().AddConfig("ascend960pr", aicConfig);
+        // DAV_9201/DAV_9202: 复用 arch35 kernel 路径
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicConfig);
     }
 };
 

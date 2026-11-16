@@ -955,8 +955,8 @@ std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(const aclTensor* self, con
         }
     }
 
-    // fmm(add) 单kernel融合: 3510(仅950, 归一后 IsNpuArch3510Series 含 920x/960, 但 TENSOR_LEVEL Blaze TPL
-    // 仅注册在 950 的 TPL 段, 960 上无对应 binary, 必须排除) && 门禁通过时路由到 FusedMatMul（MM 走 Blaze 通路），
+    // fmm(add) 单kernel融合: 3510(仅950, 归一后 IsNpuArch3510Series 含 DAV_920x, 但 TENSOR_LEVEL Blaze TPL
+    // 仅注册在 950 的 TPL 段, DAV_920x 上无对应 binary, 必须排除) && 门禁通过时路由到 FusedMatMul（MM 走 Blaze 通路），
     // 消除小算子拼接的中间tensor HBM往返与多次kernel下发。
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
         CheckFmmAddSupport(self, mat1, mat2, out, alpha, beta, cubeMathType)) {

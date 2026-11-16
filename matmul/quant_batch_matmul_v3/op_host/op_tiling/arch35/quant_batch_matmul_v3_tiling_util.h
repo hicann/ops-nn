@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
+#include "op_common/op_host/util/op_const_def.h"
 
 #include "acl/acl_rt.h"
 #include "common/inc/op_host/op_const_def_nn.h"
@@ -129,7 +130,7 @@ enum class QMMApiLevel : uint32_t { HIGH_LEVEL = 0, BASIC_LEVEL = 1, BLAZE_LEVEL
 // sqrt(aicNum), aligned with BaseBlockCalculator::CalShortWinLen; other archs use the fixed WINDOW_LEN.
 inline uint64_t GetAswWindowLen(NpuArch npuArch, uint64_t aicNum)
 {
-    if (npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202) {
+    if (npuArch != ::Ops::Base::DAV_9201 && npuArch != ::Ops::Base::DAV_9202) {
         return qmmv3_tiling_const::WINDOW_LEN;
     }
     const float sqrtNum = std::sqrt(aicNum * 1.0f);

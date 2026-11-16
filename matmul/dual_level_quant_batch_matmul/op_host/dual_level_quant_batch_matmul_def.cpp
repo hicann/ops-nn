@@ -75,8 +75,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, configDav3510);
-        this->AICore().AddConfig("ascend350", configDav3510);
-        this->AICore().AddConfig("ascend960dt", configDav3510);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, configDav3510);
     }
 
     static constexpr int64_t LEVEL0_GROUP_SIZE = 512L;

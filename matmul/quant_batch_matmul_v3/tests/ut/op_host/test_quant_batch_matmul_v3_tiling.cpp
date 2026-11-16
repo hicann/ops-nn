@@ -119,8 +119,8 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
     if (soc2ArchIter != soc2Arch.end()) {
         soc_version_infos["NpuArch"] = soc2ArchIter->second;
     }
-    const bool isDav960 = socVersion == "Dav9201" || socVersion == "Dav9202";
-    if (socVersion == "Dav3510" || isDav960) {
+    const bool isDav920Series = socVersion == "Dav9201" || socVersion == "Dav9202";
+    if (socVersion == "Dav3510" || isDav920Series) {
         soc_version_infos.clear();
         soc_version_infos["NpuArch"] = soc2ArchIter->second;
     }
@@ -153,7 +153,7 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
                             "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 20,
                             "cube_core_cnt": 20, "vector_core_cnt": 40, "core_type_list": "CubeCore,VectorCore"}
                             })";
-    } else if (socVersion.compare("Dav3510") == 0 || isDav960) {
+    } else if (socVersion.compare("Dav3510") == 0 || isDav920Series) {
         compileInfoStr = R"({
         "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0",
                           "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -181,8 +181,8 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
                         })";
     }
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
-    if (isDav960) {
-        // 960DT/PR bind one AIV per AIC. Keep the resource fixture explicit and independent of SDK INI files.
+    if (isDav920Series) {
+        // DAV_9201/DAV_9202 bind one AIV per AIC. Keep the resource fixture explicit and independent of SDK INI files.
         socInfos["ai_core_cnt"] = "32";
         socInfos["vector_core_cnt"] = "32";
         aicoreSpec["l0_c_size"] = socVersion == "Dav9202" ? "524288" : "262144";
@@ -197,7 +197,7 @@ static void InitPlatformInfo(const std::string& socVersion, gert::TilingContext*
     if (aicNum > 0) {
         socInfos["ai_core_cnt"] = std::to_string(aicNum);
         socInfos["cube_core_cnt"] = std::to_string(aicNum);
-        socInfos["vector_core_cnt"] = std::to_string(aicNum * (isDav960 ? 1 : 2));
+        socInfos["vector_core_cnt"] = std::to_string(aicNum * (isDav920Series ? 1 : 2));
     }
     if (aivNum > 0) {
         socInfos["vector_core_cnt"] = std::to_string(aivNum);

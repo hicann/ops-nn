@@ -26,8 +26,8 @@
 namespace {
 
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510),
-                                               static_cast<int32_t>(NpuArch::DAV_9201),
-                                               static_cast<int32_t>(NpuArch::DAV_9202)};
+                                               static_cast<int32_t>(Ops::Base::DAV_9201),
+                                               static_cast<int32_t>(Ops::Base::DAV_9202)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::PERBLOCK_BASIC_API_ASW;
 } // namespace
 
@@ -103,8 +103,8 @@ uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetKernelType() const
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CalcBasicBlock()
 {
-    if (compileInfo_.npuArch == NpuArch::DAV_9201 || compileInfo_.npuArch == NpuArch::DAV_9202) {
-        // DAV_9201/9202(960DT/960PR)固定128x128x128基块，不做核利用率调整。
+    if (compileInfo_.npuArch == Ops::Base::DAV_9201 || compileInfo_.npuArch == Ops::Base::DAV_9202) {
+        // DAV_9201/DAV_9202固定128x128x128基块，不做核利用率调整。
         adaptiveWin_.baseM = qmmv3_tiling_const::PER_BLOCK_SIZE;
         adaptiveWin_.baseN = qmmv3_tiling_const::PER_BLOCK_SIZE;
         adaptiveWin_.baseK = qmmv3_tiling_const::PER_BLOCK_SIZE;

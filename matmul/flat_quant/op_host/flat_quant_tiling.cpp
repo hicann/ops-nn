@@ -77,10 +77,10 @@ constexpr uint8_t MM_HIGH_MODE_ALIGN = 6;
 constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
 constexpr uint64_t WORK_SPACE_SIZE_APT = 48 * 1024 * 1024;
 
-// ascend950/350(DAV_3510)与ascend960dt/960pr(DAV_9201/DAV_9202)共用arch35 kernel路径
+// DAV_3510与DAV_9201/DAV_9202共用arch35 kernel路径
 static bool IsDavidFamilyArch(const NpuArch npuArch)
 {
-    return npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+    return npuArch == Ops::Base::DAV_3510 || npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202;
 }
 
 class FlatQuantTiling {
@@ -313,11 +313,11 @@ uint8_t FlatQuantTiling::DetermineMmMode(ge::DataType outDtype) const
     }
 
     if (outDtype == ge::DT_FLOAT4_E2M1) {
-        // A6(960dt/pr) CMCT 对齐路径要求 M/N 16 对齐, 非对齐回退 FlatQuantHighV2 (key4);
+        // A6(DAV_9201/DAV_9202) CMCT 对齐路径要求 M/N 16 对齐, 非对齐回退 FlatQuantHighV2 (key4);
         // A5(950/350) Blaze 路径可处理非对齐, 恒走 key6
         auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
         if (compileInfo != nullptr &&
-            (compileInfo->npuArch == NpuArch::DAV_9201 || compileInfo->npuArch == NpuArch::DAV_9202) &&
+            (compileInfo->npuArch == Ops::Base::DAV_9201 || compileInfo->npuArch == Ops::Base::DAV_9202) &&
             (m % CEIL_SIZE != 0 || n % CEIL_SIZE != 0)) {
             return MM_HIGH_MODE;
         }
@@ -635,15 +635,16 @@ bool FlatQuantTiling::ValidateAll()
         // A5 Blaze 路径两者均可处理, 不做限制
         auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
         if (compileInfo != nullptr &&
-            (compileInfo->npuArch == NpuArch::DAV_9201 || compileInfo->npuArch == NpuArch::DAV_9202)) {
+            (compileInfo->npuArch == Ops::Base::DAV_9201 || compileInfo->npuArch == Ops::Base::DAV_9202)) {
             int64_t mMxfp4 = xShape_.GetDim(INDEX_ONE);
             int64_t nMxfp4 = xShape_.GetDim(INDEX_TWO);
             OP_CHECK_IF(
                 mMxfp4 % CEIL_SIZE != 0 || nMxfp4 % CEIL_SIZE != 0,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                    tilingContext_->GetNodeName(), "ascend960",
+                    tilingContext_->GetNodeName(), "dav9201/dav9202",
                     (std::to_string(mMxfp4) + ", " + std::to_string(nMxfp4) + ", " + std::to_string(CEIL_SIZE)).c_str(),
-                    "on ascend960, FLOAT4_E2M1 output with empty kronecker_p2 requires M and N to be aligned to , or "
+                    "on dav9201/dav9202, FLOAT4_E2M1 output with empty kronecker_p2 requires M and N to be aligned to "
+                    ", or "
                     "provide kronecker_p2 of shape [N,N]"),
                 return false);
         }
@@ -714,8 +715,8 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
                                                ") on this architecture"),
                     return ge::GRAPH_FAILED);
     }
-    if (compileInfo->npuArch == NpuArch::DAV_9201 || compileInfo->npuArch == NpuArch::DAV_9202) {
-        // ascend960(v121): AIC:AIV = 1:1
+    if (compileInfo->npuArch == Ops::Base::DAV_9201 || compileInfo->npuArch == Ops::Base::DAV_9202) {
+        // dav9201/dav9202(v121): AIC:AIV = 1:1
         OP_CHECK_IF(compileInfo->aivNum != compileInfo->aicNum,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         context->GetNodeName(), "flat_quant_tiling", std::to_string(compileInfo->aivNum).c_str(),

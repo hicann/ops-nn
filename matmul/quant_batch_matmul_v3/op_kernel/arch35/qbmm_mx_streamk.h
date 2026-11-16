@@ -10,7 +10,7 @@
 
 /*!
  * \file qbmm_mx_streamk.h
- * \brief Ascend960(DAV_9201/9202) MX per-group StreamK kernel, CMCT BasicAPI implementation.
+ * \brief DAV_9201/DAV_9202 MX per-group StreamK kernel, CMCT BasicAPI implementation.
  */
 #ifndef QBMM_MX_STREAMK_H
 #define QBMM_MX_STREAMK_H

@@ -180,7 +180,7 @@ static void TestASWMixOneCase(const ASWMixTilingCaseParam& param)
     }
     biasShape.MutableStorageShape() = gert::Shape({n});
 
-    // platform info: Ascend960DT(DAV_9201), sizes are tunable per case
+    // platform info: dav9201, sizes are tunable per case
     string compileInfoStr = R"({
          "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "0", "Intrinsic_fix_pipe_l0c2out": true,
                            "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l12bt": true,
@@ -189,7 +189,7 @@ static void TestASWMixOneCase(const ASWMixTilingCaseParam& param)
                            "UB_SIZE": ubSize, "L2_SIZE": 134217728, "L1_SIZE": 1048576,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": l0cSize, "CORE_NUM": aicNum,
                            "cube_core_cnt": aicNum, "vector_core_cnt": aivNum, "core_type_list": "CubeCore,VectorCore",
-                           "socVersion": "Ascend960DT"}
+                           "npuArch": "dav9201"}
                             })";
     ReplacePlaceholder(compileInfoStr, "ubSize", to_string(ubSize));
     ReplacePlaceholder(compileInfoStr, "l0cSize", to_string(l0cSize));
@@ -202,6 +202,13 @@ static void TestASWMixOneCase(const ASWMixTilingCaseParam& param)
     map<string, string> intrinsics;
     map<string, string> versionInfos;
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics, versionInfos);
+    if (compileInfoStr.find(R"("npuArch": "dav9201")") != string::npos ||
+        compileInfoStr.find(R"("npuArch":"dav9201")") != string::npos) {
+        versionInfos["NpuArch"] = "9201";
+    } else if (compileInfoStr.find(R"("npuArch": "dav9202")") != string::npos ||
+               compileInfoStr.find(R"("npuArch":"dav9202")") != string::npos) {
+        versionInfos["NpuArch"] = "9202";
+    }
     aicoreSpec["cube_freq"] = "1800";
 
     fe::PlatFormInfos platformInfo;

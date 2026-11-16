@@ -218,7 +218,7 @@ static RotateQuantArch35Data MakeDav920SeriesCase(const string& soc, bool hif4, 
     data.case_name = soc + (hif4 ? "_hif4" : multiRot ? "_mx_multi_rot" : "_mx_shared");
     data.compile_info = COMPILE_INFO_DAV_3510;
     const string oldArch = "dav3510";
-    const string newArch = (soc == "Ascend960DT") ? "dav9201" : "dav9202";
+    const string newArch = (soc == "dav9201") ? "dav9201" : "dav9202";
     data.compile_info.replace(data.compile_info.find(oldArch), oldArch.size(), newArch);
     const string oldCores = "\"vector_core_cnt\": 64";
     data.compile_info.replace(data.compile_info.find(oldCores), oldCores.size(),
@@ -242,27 +242,27 @@ static RotateQuantArch35Data MakeDav920SeriesCase(const string& soc, bool hif4, 
     return data;
 }
 
-// v121 Ascend960DT platform: 32 AIC + 32 AIV (aicNum:aivNum = 1:1)
-static const string COMPILE_INFO_960DT = R"({
+// v121 dav9201 platform: 32 AIC + 32 AIV (aicNum:aivNum = 1:1)
+static const string COMPILE_INFO_DAV9201 = R"({
     "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "1",
     "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
     "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
     "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288,
     "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
-    "CORE_NUM": 32, "socVersion": "Ascend960DT",
+    "CORE_NUM": 32, "npuArch": "dav9201",
     "core_type_list": "CubeCore,VectorCore",
     "cube_core_cnt": 32, "vector_core_cnt": 32}
 })";
 
 static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
-    MakeDav920SeriesCase("Ascend960DT", false, false),
-    MakeDav920SeriesCase("Ascend960DT", false, true),
-    MakeDav920SeriesCase("Ascend960DT", true, false),
-    MakeDav920SeriesCase("Ascend960PR", false, false),
-    MakeDav920SeriesCase("Ascend960PR", false, true),
-    MakeDav920SeriesCase("Ascend960PR", true, false),
-    MakeDav920SeriesCase("Ascend960DT", false, false, 64),
-    MakeDav920SeriesCase("Ascend960PR", false, false, 64),
+    MakeDav920SeriesCase("dav9201", false, false),
+    MakeDav920SeriesCase("dav9201", false, true),
+    MakeDav920SeriesCase("dav9201", true, false),
+    MakeDav920SeriesCase("dav9202", false, false),
+    MakeDav920SeriesCase("dav9202", false, true),
+    MakeDav920SeriesCase("dav9202", true, false),
+    MakeDav920SeriesCase("dav9201", false, false, 64),
+    MakeDav920SeriesCase("dav9202", false, false, 64),
     {"bf16_fp8_k256_shared",
      COMPILE_INFO_DAV_3510,
      {{1025, 768}, {1025, 768}},
@@ -350,10 +350,10 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      false,
      ge::GRAPH_FAILED},
 
-    // ==================== ascend960dt (v121) hif4 success cases ====================
+    // ==================== dav9201 (v121) hif4 success cases ====================
     // 4: hif4 bf16 x, K=64, scale shape (M, CeilDiv(N,64), 1)
     {"v121_hif4_bf16_k64",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -370,7 +370,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      1}, // DAV_920系列 AIC:AIV=1:1 -> aivNumRatio=1
     // 5: hif4 fp16 x, K=128, scale shape (4, 2, 1)
     {"v121_hif4_fp16_k128",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 128}, {4, 128}},
      {{128, 128}, {128, 128}},
      {{4, 128}, {4, 128}},
@@ -387,7 +387,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      1}, // DAV_920系列 AIC:AIV=1:1 -> aivNumRatio=1
     // 6: hif4 bf16 x, K=64, N=256 (blocks4), scale shape (8, 4, 1)
     {"v121_hif4_bf16_k64_n256_blocks4",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{8, 256}, {8, 256}},
      {{64, 64}, {64, 64}},
      {{8, 256}, {8, 256}},
@@ -404,7 +404,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      1}, // DAV_920系列 AIC:AIV=1:1 -> aivNumRatio=1
     // 7: hif4 3D rot (nKRatio>1) -> tiling校验失败 (hif4 only supports 2D rotation)
     {"v121_hif4_bf16_k64_3d_rot_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 128}, {4, 128}},
      {{2, 64, 64}, {2, 64, 64}},
      {{4, 128}, {4, 128}},
@@ -419,10 +419,10 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      false,
      ge::GRAPH_FAILED},
 
-    // ==================== ascend960dt (v121) mxfp success cases ====================
+    // ==================== dav9201 (v121) mxfp success cases ====================
     // 8: mxfp4 bf16 x, K=64, scaleAlg=0, scale shape (4, 1, 2)
     {"v121_mxfp4_bf16_k64_alg0",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -439,7 +439,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      1}, // DAV_920系列 AIC:AIV=1:1 -> aivNumRatio=1
     // 9: mxfp4 fp16 x, K=128, scaleAlg=2, dstTypeMax=8.0, scale shape (4, 2, 2)
     {"v121_mxfp4_fp16_k128_alg2",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 128}, {4, 128}},
      {{128, 128}, {128, 128}},
      {{4, 128}, {4, 128}},
@@ -456,7 +456,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      1}, // DAV_920系列 AIC:AIV=1:1 -> aivNumRatio=1
     // 10: mxfp4 bf16 x, K=32, N=96 (blocks3), scale shape (8, 2, 2)
     {"v121_mxfp4_bf16_k32_n96_blocks3",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{8, 96}, {8, 96}},
      {{32, 32}, {32, 32}},
      {{8, 96}, {8, 96}},
@@ -473,7 +473,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      1}, // DAV_920系列 AIC:AIV=1:1 -> aivNumRatio=1
     // 11: mxfp8 e4m3 bf16 x, K=64, scaleAlg=0
     {"v121_mxfp8_e4m3_bf16_k64_alg0",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -490,7 +490,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      1}, // DAV_920系列 AIC:AIV=1:1 -> aivNumRatio=1
     // 12: mxfp8 e5m2 fp16 x, K=128, scaleAlg=1
     {"v121_mxfp8_e5m2_fp16_k128_alg1",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 128}, {4, 128}},
      {{128, 128}, {128, 128}},
      {{4, 128}, {4, 128}},
@@ -506,10 +506,10 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_SUCCESS,
      1}, // DAV_920系列 AIC:AIV=1:1 -> aivNumRatio=1
 
-    // ==================== ascend960dt (v121) hif4 fail cases ====================
+    // ==================== dav9201 (v121) hif4 fail cases ====================
     // 13: hif4 K=32 not allowed (must be 64 or 128)
     {"v121_hif4_k32_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 32}, {4, 32}},
      {{32, 32}, {32, 32}},
      {{4, 32}, {4, 32}},
@@ -525,7 +525,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 14: hif4 scaleAlg=2 not allowed (must be 0)
     {"v121_hif4_scaleAlg2_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -541,7 +541,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 15: hif4 roundMode="floor" not allowed (must be "rint")
     {"v121_hif4_roundMode_floor_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -557,7 +557,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 16: hif4 scale dtype mismatch (FLOAT8_E8M0 instead of HIFLOAT4_SCALE)
     {"v121_hif4_scale_dtype_e8m0_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -573,7 +573,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 17: hif4 dstTypeMax != 0.0
     {"v121_hif4_dstTypeMax_nonzero_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -588,10 +588,10 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      false,
      ge::GRAPH_FAILED},
 
-    // ==================== ascend960dt (v121) mxfp fail cases ====================
+    // ==================== dav9201 (v121) mxfp fail cases ====================
     // 18: mxfp4 K=48 not in {32, 64, 128}
     {"v121_mxfp4_k48_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 48}, {4, 48}},
      {{48, 48}, {48, 48}},
      {{4, 48}, {4, 48}},
@@ -607,7 +607,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 19: mxfp4 scaleAlg=2 but dstTypeMax=3.0 out of [6.0, 12.0]
     {"v121_mxfp4_alg2_dstTypeMax_3_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -623,7 +623,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 20: mxfp4 scale dtype mismatch (HIFLOAT4_SCALE instead of FLOAT8_E8M0)
     {"v121_mxfp4_scale_hif4scale_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -639,7 +639,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 21: mxfp8 roundMode="round" not allowed (must be "rint")
     {"v121_mxfp8_roundMode_round_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -655,7 +655,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 22: mxfp8 scaleAlg=2 not allowed for fp8 (must be 0 or 1)
     {"v121_mxfp8_scaleAlg2_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -670,10 +670,10 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      false,
      ge::GRAPH_FAILED},
 
-    // ==================== ascend960dt (v121) common fail cases ====================
+    // ==================== dav9201 (v121) common fail cases ====================
     // 23: x dtype unsupported (FP32)
     {"v121_x_fp32_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -689,7 +689,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 24: trans=true not supported
     {"v121_trans_true_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 64}, {4, 64}},
      {{64, 64}, {64, 64}},
      {{4, 64}, {4, 64}},
@@ -705,7 +705,7 @@ static RotateQuantArch35Data rotate_quant_arch35_cases[] = {
      ge::GRAPH_FAILED},
     // 25: N not divisible by K
     {"v121_hif4_n100_k64_not_divisible_fail",
-     COMPILE_INFO_960DT,
+     COMPILE_INFO_DAV9201,
      {{4, 100}, {4, 100}},
      {{64, 64}, {64, 64}},
      {{4, 100}, {4, 100}},
@@ -740,17 +740,17 @@ static vector<RotateQuantArch35Data> MakeEffectiveMOverflowCases()
         {"above_uint32_limit", 2000000000, 96, ge::GRAPH_FAILED, 0},
     };
     vector<RotateQuantArch35Data> cases;
-    for (const char* soc : {"Ascend950", "Ascend350", "Ascend960DT", "Ascend960PR"}) {
+    for (const char* soc : {"Ascend950", "Ascend350", "dav9201", "dav9202"}) {
         for (const auto& boundary : boundaries) {
             RotateQuantArch35Data data;
             data.case_name = string(soc) + "_shared_effective_m_" + boundary.name;
             data.compile_info = COMPILE_INFO_DAV_3510;
             const string oldArch = "dav3510";
-            const string newArch = (soc == string("Ascend960DT")) ? "dav9201" :
-                                   (soc == string("Ascend960PR")) ? "dav9202" :
-                                                                    oldArch;
+            const string newArch = (soc == string("dav9201")) ? "dav9201" :
+                                   (soc == string("dav9202")) ? "dav9202" :
+                                                                oldArch;
             data.compile_info.replace(data.compile_info.find(oldArch), oldArch.size(), newArch);
-            const bool isDav920Series = string(soc) == "Ascend960DT" || string(soc) == "Ascend960PR";
+            const bool isDav920Series = string(soc) == "dav9201" || string(soc) == "dav9202";
             if (isDav920Series) {
                 const string oldCores = "\"vector_core_cnt\": 64";
                 data.compile_info.replace(data.compile_info.find(oldCores), oldCores.size(), "\"vector_core_cnt\": 32");
@@ -779,7 +779,7 @@ INSTANTIATE_TEST_SUITE_P(RotateQuantEffectiveMOverflowCases, TilingRotateQuantAr
 static vector<RotateQuantArch35Data> MakeDav920SeriesRegressionCases()
 {
     vector<RotateQuantArch35Data> cases;
-    for (const char* soc : {"Ascend960DT", "Ascend960PR"}) {
+    for (const char* soc : {"dav9201", "dav9202"}) {
         for (ge::DataType inputType : {ge::DT_FLOAT16, ge::DT_BF16}) {
             for (ge::DataType outputType :
                  {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, Ops::NN::DT_HIFLOAT4}) {
@@ -819,7 +819,7 @@ static vector<RotateQuantArch35Data> MakeDav920SeriesRegressionCases()
         data.expect_status = ge::GRAPH_FAILED;
         cases.push_back(data);
     }
-    for (const char* soc : {"Ascend960DT", "Ascend960PR"}) {
+    for (const char* soc : {"dav9201", "dav9202"}) {
         auto data = MakeDav920SeriesCase(soc, false, false);
         data.case_name += "_k256_supported";
         data.x_shape = {{17, 768}, {17, 768}};
@@ -854,13 +854,11 @@ static void CheckGroupedTiling(int64_t groupNum, int64_t rotNum, int64_t groupTy
     RotateQuantArch35Data test_params;
     test_params.compile_info = COMPILE_INFO_DAV_3510;
     const string oldArch = "dav3510";
-    const string newArch = (socVersion == "Ascend960DT") ? "dav9201" :
-                           (socVersion == "Ascend960PR") ? "dav9202" :
-                                                           oldArch;
+    const string newArch = (socVersion == "dav9201") ? "dav9201" : (socVersion == "dav9202") ? "dav9202" : oldArch;
     const auto archPos = test_params.compile_info.find(oldArch);
     ASSERT_NE(archPos, string::npos);
     test_params.compile_info.replace(archPos, oldArch.size(), newArch);
-    const bool isDav920Series = socVersion == "Ascend960DT" || socVersion == "Ascend960PR";
+    const bool isDav920Series = socVersion == "dav9201" || socVersion == "dav9202";
     if (isDav920Series) {
         const string oldCores = "\"vector_core_cnt\": 64";
         test_params.compile_info.replace(test_params.compile_info.find(oldCores), oldCores.size(),
@@ -884,7 +882,7 @@ static void CheckGroupedTiling(int64_t groupNum, int64_t rotNum, int64_t groupTy
     map<string, string> soc_version;
     GetPlatFormInfosDavAware(test_params.compile_info, soc_infos, aicore_spec, intrinsics, soc_version);
     // Use the real core ratio and architecture so rejection reaches the group guard.
-    soc_version["NpuArch"] = isDav920Series ? (socVersion == "Ascend960DT" ? "9201" : "9202") : "3510";
+    soc_version["NpuArch"] = isDav920Series ? (socVersion == "dav9201" ? "9201" : "9202") : "3510";
     soc_version["Short_SoC_version"] = socVersion;
 
     fe::PlatFormInfos platform_info;
@@ -1014,7 +1012,7 @@ TEST(RotateQuantGroupedTiling, RejectAscend350EvenWithArch35Resources)
 
 TEST(RotateQuantGroupedTiling, RejectDav920SeriesWithMatchingCoreRatio)
 {
-    for (const char* soc : {"Ascend960DT", "Ascend960PR"}) {
+    for (const char* soc : {"dav9201", "dav9202"}) {
         CheckGroupedTiling(7, 7, 0, ge::DT_INT64, ge::GRAPH_FAILED, false, soc);
         CheckGroupedTiling(7, 7, 1, ge::DT_INT64, ge::GRAPH_FAILED, false, soc, 64, 3);
     }

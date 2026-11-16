@@ -42,6 +42,10 @@ bool FusedMatMulBatchAswAL1FullLoadBasicTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if ((compileInfo_.npuArch == Ops::Base::DAV_9201 || compileInfo_.npuArch == Ops::Base::DAV_9202) &&
+        opType != "relu") {
+        return false;
+    }
     if (opType != "relu" && opType != "add" && opType != "mul") {
         return false;
     }

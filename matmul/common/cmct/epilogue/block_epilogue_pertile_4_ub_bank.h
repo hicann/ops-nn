@@ -10,7 +10,7 @@
 
 /*!
  * \file block_epilogue_pertile_4_ub_bank.h
- * \brief DAV_9201/9202(960DT/960PR) 专用 perblock(pertile) epilogue：
+ * \brief DAV_9201/DAV_9202 专用 perblock(pertile) epilogue：
  *        9201/9202 的 UB 为 4-bank 交错布局且 AIV:AIC 为 1:1，累加/搬出按 4-bank stride 组织，
  *        单 AIV 承接完整 baseM（与 DAV_3510 的 BlockEpiloguePertile 双子块切分不同）。
  *        算法主流程（per-tile/per-block 缩放、bias 搬入与累加、类型转换、CopyOut、事件同步）与

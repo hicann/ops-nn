@@ -1136,7 +1136,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
         OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSize);
     }
 
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 && isA8W4FloatTCG(x1, x2, x1Scale)) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9201 && isA8W4FloatTCG(x1, x2, x1Scale)) {
         if (groupSize != SUPPORTED_GROUP_SIZE) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "groupSize", std::to_string(groupSize).c_str(),
                                                   "when the quant mode is A8W4 TCG, the value of groupSize must be 32");

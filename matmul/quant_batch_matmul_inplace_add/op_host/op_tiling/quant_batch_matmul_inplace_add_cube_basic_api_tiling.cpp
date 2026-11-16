@@ -23,7 +23,7 @@ using namespace QuantBatchMatmulInplaceAddArch35TilingKey;
 namespace {
 constexpr int32_t CUBE_BASIC_API_TILING_PRIORITY = 1;
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(Ops::Base::DAV_3510),
-                                               static_cast<int32_t>(NpuArch::DAV_9201)};
+                                               static_cast<int32_t>(Ops::Base::DAV_9201)};
 } // namespace
 
 namespace optiling {
