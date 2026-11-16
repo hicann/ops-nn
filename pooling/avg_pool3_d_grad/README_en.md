@@ -125,7 +125,7 @@ $$
 
 ## Constraints
 
-None.
+- divisor_override uses the INT type as the attribute input but is computed in FLOAT32 internally. If the absolute value of divisor_override is greater than 2^24 (16777216), it cannot be represented exactly and precision loss may occur.
 
 ## Invocation Description
 

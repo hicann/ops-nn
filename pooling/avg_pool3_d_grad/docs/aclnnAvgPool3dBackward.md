@@ -309,6 +309,8 @@ aclnnStatus aclnnAvgPool3dBackward(
   - <term>Ascend 950PR&950DT系列产品</term>：aclnnAvgPool3dBackward默认确定性实现。
   <!-- end id12 -->
 
+- divisorOverride使用INT64类型作为属性输入，而内部按FLOAT32进行计算。当divisorOverride的绝对值大于2^24（16777216）时，可能无法精确表示，存在精度损失。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。

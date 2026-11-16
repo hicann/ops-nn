@@ -355,6 +355,8 @@ aclnnStatus aclnnAvgPool2dBackward(
   - <term>Ascend 950PR&950DT products</term>: aclnnAvgPool2dBackward defaults to a deterministic implementation.
   <!-- end id20 -->
 
+- divisorOverride uses the INT64 type as the attribute input but is computed in FLOAT32 internally. If the absolute value of divisorOverride is greater than 2^24 (16777216), it cannot be represented exactly and precision loss may occur.
+
 <!-- npu="910,310p" id7 -->
 - <term>Atlas training products</term>, <term>Atlas inference products</term>: The Cube unit does not support FLOAT32 computation. When the input is FLOAT32, set cubeMathType=1 (ALLOW_FP32_DOWN_PRECISION) to allow the API to internally cast to FLOAT16 for computation.
 

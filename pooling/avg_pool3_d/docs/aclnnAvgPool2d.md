@@ -326,6 +326,8 @@ aclnnStatus aclnnAvgPool2d(
 - 确定性计算：
   - aclnnAvgPool2d默认确定性实现。
 
+- divisorOverride使用INT64类型作为属性输入，而内部按FLOAT32进行计算。当divisorOverride的绝对值大于2^24（16777216）时，可能无法精确表示，存在精度损失。
+
 <!-- npu="910" id7 -->
 - <term>Atlas训练系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1(ALLOW_FP32_DOWN_PRECISION)来允许接口内部cast到FLOAT16进行计算。
 

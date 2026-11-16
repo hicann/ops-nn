@@ -311,6 +311,8 @@ aclnnStatus aclnnAvgPool3dBackward(
   - <term>Ascend 950PR&950DT products</term>: aclnnAvgPool3dBackward defaults to a deterministic implementation.
   <!-- end id12 -->
 
+- divisorOverride uses the INT64 type as the attribute input but is computed in FLOAT32 internally. If the absolute value of divisorOverride is greater than 2^24 (16777216), it cannot be represented exactly and precision loss may occur.
+
 ## Example
 
 The following sample code is for reference only. For details about compilation and execution, see [Compile and Run Samples](../../../docs/en/context/compile_and_run_sample.md).

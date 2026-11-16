@@ -328,6 +328,8 @@ aclnnStatus aclnnAvgPool2d(
 - deterministic computation:
   - aclnnAvgPool2d defaults to a deterministic implementation.
 
+- divisorOverride uses the INT64 type as the attribute input but is computed in FLOAT32 internally. If the absolute value of divisorOverride is greater than 2^24 (16777216), it cannot be represented exactly and precision loss may occur.
+
 <!-- npu="910" id7 -->
 - <term>Atlas training products</term>: The Cube unit does not support FLOAT32 computation. When the input is FLOAT32, set cubeMathType=1 (ALLOW_FP32_DOWN_PRECISION) to allow the API to internally cast to FLOAT16 for computation.
 
