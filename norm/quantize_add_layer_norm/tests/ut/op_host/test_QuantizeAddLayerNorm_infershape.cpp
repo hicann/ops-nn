@@ -40,38 +40,3 @@ TEST_F(QuantizeAddLayerNorm, QuantizeAddLayerNorm_infershape_case_0)
     EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
     EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_x_shape);
 }
-
-TEST_F(QuantizeAddLayerNorm, QuantizeAddLayerNorm_InferDtype_case_0)
-{
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("QuantizeAddLayerNorm"), nullptr);
-    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("QuantizeAddLayerNorm")->infer_datatype;
-
-    if (data_type_func != nullptr) {
-        ge::DataType input_ref = ge::DT_BF16;
-        ge::DataType y_out_ref = ge::DT_INT8;
-        ge::DataType x_out_ref = ge::DT_BF16;
-        auto context_holder = gert::InferDataTypeContextFaker()
-                                  .IrInputNum(7)
-                                  .NodeIoNum(7, 2)
-                                  .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeInputTd(5, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeInputTd(6, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                                  .InputDataTypes({&input_ref, &input_ref, &input_ref, &input_ref, &input_ref,
-                                                   &input_ref, &input_ref})
-                                  .OutputDataTypes({&y_out_ref, &x_out_ref})
-                                  .Build();
-        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-        ASSERT_NE(context, nullptr);
-
-        EXPECT_EQ(context->GetInputDataType(0), input_ref);
-        EXPECT_EQ(context->GetOutputDataType(0), y_out_ref);
-        EXPECT_EQ(context->GetOutputDataType(1), x_out_ref);
-    }
-}

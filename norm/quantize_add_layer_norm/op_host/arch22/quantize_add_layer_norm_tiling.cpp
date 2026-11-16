@@ -16,7 +16,6 @@
 #include "op_host/tiling_util.h"
 
 namespace optiling {
-using namespace Ops::NN::OpTiling;
 // Tiling阶段框架契约类失败(框架对象为空/平台信息异常/策略失败)统一上报EZ1008, 不再生成EZ9999内部码
 static void ReportTilingStageError(const char* opName, const std::string& reason)
 {
@@ -155,51 +154,13 @@ static bool GetAndSetAttrs(gert::TilingContext* context, int64_t& qdtype, int64_
     return true;
 }
 
-static ge::graphStatus CanUseRegbase(gert::TilingContext* context, bool& useRegbase)
-{
-    auto platformInfo = context->GetPlatformInfo();
-    if (platformInfo != nullptr) {
-        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        auto npuArchType = ascendcPlatform.GetCurNpuArch();
-        useRegbase = (IsRegbaseSocVersion(context) || npuArchType == NpuArch::DAV_5102);
-    } else {
-        auto compileInfo = context->GetCompileInfo<QuantizeAddLayerNormCompileInfo>();
-        OP_CHECK_IF(
-            compileInfo == nullptr,
-            ReportTilingStageError(
-                context->GetNodeName(),
-                "GetPlatformInfo: compile info is null; check the SoC-specific OPP package and its loading logs"),
-            return ge::GRAPH_FAILED);
-        useRegbase = compileInfo->isRegbase;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-static ge::graphStatus Tiling4QuantizeAddLayerNormMembase(gert::TilingContext* context);
-
 static ge::graphStatus Tiling4QuantizeAddLayerNorm(gert::TilingContext* context)
 {
     OP_CHECK_IF(nullptr == context,
                 ReportTilingStageError("QuantizeAddLayerNorm",
                                        "the TilingContext is null; check the tiling framework invocation"),
                 return ge::GRAPH_FAILED);
-    bool useRegbase = false;
-    OP_CHECK_IF(CanUseRegbase(context, useRegbase) != ge::GRAPH_SUCCESS,
-                OP_LOGE_WITHOUT_REPORT(context, "Check SocInfo Failed"), return ge::GRAPH_FAILED);
-    if (useRegbase) {
-        OP_LOGW(context, "QuantizeAddLayerNorm Regbase tiling start");
-        QuantizeAddLayerNormRegbaseTiling regTiling(context);
-        OP_CHECK_IF(!(regTiling.DoTiling()), OP_LOGE_WITHOUT_REPORT(context, "Regbase tiling failed."),
-                    return ge::GRAPH_FAILED);
-        OP_LOGW(context, "QuantizeAddLayerNorm Regbase tiling success");
-        return ge::GRAPH_SUCCESS;
-    }
-    return Tiling4QuantizeAddLayerNormMembase(context);
-}
-
-static ge::graphStatus Tiling4QuantizeAddLayerNormMembase(gert::TilingContext* context)
-{
-    OP_LOGD("QuantizeAddLayerNorm", "Enter QuantizeAddLayerNorm Membase tiling");
+    OP_LOGD("QuantizeAddLayerNorm", "Enter QuantizeAddLayerNorm tiling");
 
     QuantizeAddLayerNormTilingData tiling;
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
@@ -270,35 +231,11 @@ static ge::graphStatus Tiling4QuantizeAddLayerNormMembase(gert::TilingContext* c
 
 static ge::graphStatus TilingPrepare4QuantizeAddLayerNorm(gert::TilingParseContext* context)
 {
-    OP_LOGW(context, "TilingPrepare4QuantizeAddLayerNorm start");
-    auto compileInfo = context->GetCompiledInfo<QuantizeAddLayerNormCompileInfo>();
-    OP_CHECK_IF(compileInfo == nullptr,
-                ReportTilingStageError(
-                    context->GetNodeName(),
-                    "GetCompiledInfo: compile info is null; check the SoC-specific OPP package and its loading logs"),
-                return ge::GRAPH_FAILED);
-    auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_IF(
-        platformInfo == nullptr,
-        ReportTilingStageError(
-            context->GetNodeName(),
-            "GetPlatformInfo returned null; check the TilingParseContext construction and the platform registration"),
-        return ge::GRAPH_FAILED);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    compileInfo->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
-    compileInfo->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
-    auto npuArch = ascendcPlatform.GetCurNpuArch();
-    compileInfo->isRegbase = (IsRegbaseSocVersion(context) || npuArch == NpuArch::DAV_5102) ? true : false;
-    uint64_t ubSizePlatform;
-    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
-    compileInfo->ubSize_ = ubSizePlatform;
-    compileInfo->vecRegSize_ = Ops::Base::GetVRegSize(context);
-    compileInfo->blockSize_ = Ops::Base::GetUbBlockSize(context);
-    OP_LOGW(context, "aivCoreNum %u, ubSize %lu, blockSize %u, vecRegSize %u, sysWorkspaceSize %u, isRegbase %d",
-            compileInfo->aivCoreNum_, compileInfo->ubSize_, compileInfo->blockSize_, compileInfo->vecRegSize_,
-            compileInfo->sysWorkspaceSize_, compileInfo->isRegbase);
+    OP_LOGD(context, "Enter TilingPrepare4QuantizeAddLayerNorm ");
     return ge::GRAPH_SUCCESS;
 }
+
+struct QuantizeAddLayerNormCompileInfo {};
 
 IMPL_OP_OPTILING(QuantizeAddLayerNorm)
     .Tiling(Tiling4QuantizeAddLayerNorm)

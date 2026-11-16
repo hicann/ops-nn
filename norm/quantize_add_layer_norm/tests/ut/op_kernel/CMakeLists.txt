@@ -9,7 +9,7 @@
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     if("ascend950" IN_LIST ASCEND_COMPUTE_UNIT OR "ascend950pr_9599" IN_LIST ASCEND_COMPUTE_UNIT)
         # The 950 op-kernel UT exercises the arch35 (regbase) implementation branch.
-        AddOpTestCase(quantize_add_layer_norm "ascend950pr_9599" "-DDTYPE_X1=float -DDTYPE_SCALES=float -DDTYPE_ZERO_POINTS=float" add_layer_norm norm_common)
+        AddOpTestCase(quantize_add_layer_norm "ascend950pr_9599" "-DDTYPE_X1=float -DDTYPE_SCALES=float -DDTYPE_ZERO_POINTS=float" MULTI_KERNEL_TARGET add_layer_norm norm_common)
     else()
         AddOpTestCase(quantize_add_layer_norm "ascend910B1" "" )
     endif()

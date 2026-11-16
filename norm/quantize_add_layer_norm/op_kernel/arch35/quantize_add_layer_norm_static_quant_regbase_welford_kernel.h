@@ -21,12 +21,75 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "quantize_add_layer_norm_regbase_stats.h"
+#include "quantize_add_layer_norm_tiling_data.h"
 
-namespace QuantizeAddLayerNormRegbase {
+namespace NsQuantizeAddLayerNorm {
+template <int32_t TILING_KEY, int32_t OPT_CODE>
+__simd_callee__ inline void WelfordYQuantMathChunk(RegTensor<float>& x, RegTensor<float>& y, RegTensor<float>& gamma,
+                                                   RegTensor<float>& beta, RegTensor<float>& scale,
+                                                   RegTensor<float>& offset, RegTensor<int8_t>& quantOut,
+                                                   MaskReg& pregLoop, float negMean, float rstd, uint16_t colLoop,
+                                                   uint32_t vlFp32, __ubuf__ int8_t* quantOutAddr)
+{
+    Adds(x, x, negMean, pregLoop);
+    Muls(y, x, rstd, pregLoop);
+    Mul(y, y, gamma, pregLoop);
+    Add(y, y, beta, pregLoop);
+
+    if constexpr (IS_DIV_SCALE) {
+        Div(x, y, scale, pregLoop);
+    } else {
+        Mul(x, y, scale, pregLoop);
+    }
+    CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, Add(x, x, offset, pregLoop));
+
+    Round2Int8(quantOut, x, pregLoop);
+    StoreAlign<int8_t, StoreDist::DIST_PACK4_B32>(quantOutAddr + static_cast<int32_t>(colLoop) * vlFp32, quantOut,
+                                                  pregLoop);
+}
+
+template <typename X1_TYPE, typename SCALE_TYPE, int32_t TILING_KEY, int32_t OPT_CODE>
+__simd_vf__ inline void WelfordYQuantVf(__ubuf__ X1_TYPE* x1Addr, __ubuf__ X1_TYPE* x2Addr, __ubuf__ X1_TYPE* biasAddr,
+                                        __ubuf__ X1_TYPE* betaAddr, __ubuf__ X1_TYPE* gammaAddr,
+                                        __ubuf__ SCALE_TYPE* scaleAddr, __ubuf__ SCALE_TYPE* offsetAddr,
+                                        __ubuf__ int8_t* quantOutAddr, float negMean, float rstd, uint32_t colsCount,
+                                        uint32_t vlFp32, uint16_t colsLoopCount)
+{
+    RegTensor<float> x;
+    RegTensor<float> y;
+    RegTensor<float> beta;
+    RegTensor<float> gamma;
+    RegTensor<float> scale;
+    RegTensor<float> offset;
+    RegTensor<int8_t> quantOut;
+    MaskReg pregLoop;
+    MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
+
+    if constexpr (IS_PER_TENSOR_SCALE) {
+        LoadScalarQuantParam(scaleAddr, scale, pregMain);
+        CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, LoadScalarQuantParam(offsetAddr, offset, pregMain));
+    }
+
+    uint32_t remaining = colsCount;
+    for (uint16_t colLoop = 0; colLoop < colsLoopCount; colLoop++) {
+        pregLoop = UpdateMask<float>(remaining);
+        uint32_t colOffset = static_cast<uint32_t>(colLoop) * vlFp32;
+        LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(x1Addr, x2Addr, biasAddr, x, pregLoop,
+                                                                            colOffset, colOffset, colOffset);
+        LoadGammaBetaResidual(gammaAddr, betaAddr, gamma, beta, pregLoop, colOffset);
+        if constexpr (!IS_PER_TENSOR_SCALE) {
+            LoadQuantParams(scaleAddr, scale, pregLoop, colOffset);
+            CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, LoadQuantParams(offsetAddr, offset, pregLoop, colOffset));
+        }
+        WelfordYQuantMathChunk<TILING_KEY, OPT_CODE>(x, y, gamma, beta, scale, offset, quantOut, pregLoop, negMean,
+                                                     rstd, colLoop, vlFp32, quantOutAddr);
+    }
+}
+
 template <typename X1_TYPE, typename SCALE_TYPE, int32_t TILING_KEY, int32_t OPT_CODE, int32_t BUFFER_NUM = 1>
 class KernelQuantizeAddLayerNormStaticQuantRegbaseWelford {
 public:
-    __aicore__ inline KernelQuantizeAddLayerNormStaticQuantRegbaseWelford(TPipe* pipe) { pipe_ = pipe; }
+    __aicore__ inline explicit KernelQuantizeAddLayerNormStaticQuantRegbaseWelford(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias, GM_ADDR scales,
                                 GM_ADDR zeroPoints, GM_ADDR y, GM_ADDR x, GM_ADDR workspace,
@@ -49,9 +112,9 @@ public:
             powerOfTwo_ *= AddLayerNorm::NUM_TWO;
         }
 
-        // split 1/cols into an exact power-of-two reciprocal (no rounding error accumulated through
+        // Split 1/cols into an exact power-of-two reciprocal (no rounding error accumulated through
         // the finalize reduction) plus a one-shot correction applied after DichotomyAdd, mirroring
-        // the upstream add_layer_norm welford finalize precision fix
+        // the upstream add_layer_norm Welford finalize precision fix.
         uint64_t reducePowerOfTwo = 1;
         while (reducePowerOfTwo < static_cast<uint64_t>(cols_)) {
             reducePowerOfTwo *= AddLayerNorm::NUM_TWO;
@@ -59,12 +122,12 @@ public:
         reduceScale_ = 1.0f / static_cast<float>(reducePowerOfTwo);
         reduceScaleCorrection_ = static_cast<float>(reducePowerOfTwo) / static_cast<float>(cols_);
 
-        uint64_t gmOffset = (tilingData->rowsPerCore * cols_) * coreIdx;
+        int64_t gmOffset = static_cast<int64_t>(tilingData->rowsPerCore) * cols_ * coreIdx;
         if (coreIdx < GetBlockNum() - 1) {
-            // non-tail cores
+            // Non-tail cores.
             rowsPerCore_ = tilingData->rowsPerCore;
         } else {
-            // tail cores
+            // Tail cores.
             rowsPerCore_ = tilingData->rowsPerTailCore;
         }
 
@@ -90,7 +153,7 @@ public:
                                           LocalTensor<X1_TYPE> biasLocal, int64_t inputOffset, int64_t biasOffset,
                                           int32_t copyLen)
     {
-        DataCopyPadExtParams<X1_TYPE> padParams = MakeZeroPadParams<X1_TYPE>(copyLen, blockSize_);
+        DataCopyPadExtParams<X1_TYPE> padParams = MakeZeroPadParams<X1_TYPE>(copyLen, QALN_BLOCK_SIZE);
         DataCopyExtParams dataCopyParams = MakeDataCopyParams<X1_TYPE>(copyLen);
         DataCopyPad(x1Local, x1Gm_[inputOffset], dataCopyParams, padParams);
         x1Queue_.EnQue(x1Local);
@@ -127,7 +190,7 @@ public:
     __aicore__ inline void CopyQuantParams2UB(LocalTensor<SCALE_TYPE> scaleLocal, LocalTensor<SCALE_TYPE> offsetLocal,
                                               int64_t offset, int32_t copyLen)
     {
-        // per_tensor quant: scales/zero_points are scalars, only element 0 is valid in GM
+        // Per-tensor quantization uses scalar scales/zero_points; only element 0 is valid in GM.
         int32_t realCopyLen = IS_PER_TENSOR_SCALE ? 1 : copyLen;
         int64_t realOffset = IS_PER_TENSOR_SCALE ? 0 : offset;
 
@@ -147,7 +210,7 @@ public:
     static __aicore__ inline void VFCalcYQuant(LocalTensor<X1_TYPE>& x1Local, LocalTensor<X1_TYPE>& x2Local,
                                                LocalTensor<X1_TYPE>& biasLocal, LocalTensor<X1_TYPE>& betaLocal,
                                                LocalTensor<X1_TYPE>& gammaLocal, LocalTensor<SCALE_TYPE>& scaleLocal,
-                                               LocalTensor<SCALE_TYPE>& offsetLocal, float mean, float rstd,
+                                               LocalTensor<SCALE_TYPE>& offsetLocal, float negMean, float rstd,
                                                LocalTensor<int8_t>& yLocal, uint32_t colsCount, uint32_t vlFp32)
     {
         __ubuf__ X1_TYPE* x1Addr = (__ubuf__ X1_TYPE*)x1Local[0].GetPhyAddr();
@@ -157,8 +220,8 @@ public:
         __ubuf__ SCALE_TYPE* scaleAddr = (__ubuf__ SCALE_TYPE*)scaleLocal[0].GetPhyAddr();
         __ubuf__ int8_t* quantOutAddr = (__ubuf__ int8_t*)yLocal[0].GetPhyAddr();
 
-        __ubuf__ X1_TYPE* biasAddr;
-        __ubuf__ SCALE_TYPE* offsetAddr;
+        __ubuf__ X1_TYPE* biasAddr = nullptr;
+        __ubuf__ SCALE_TYPE* offsetAddr = nullptr;
 
         if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
             biasAddr = (__ubuf__ X1_TYPE*)biasLocal[0].GetPhyAddr();
@@ -166,47 +229,13 @@ public:
         CONST_CONDITIONAL_ASSIGN(IS_OFFSET_EXIST, offsetAddr, (__ubuf__ SCALE_TYPE*)offsetLocal[0].GetPhyAddr());
 
         uint16_t colsLoopCount = CEIL_DIV(colsCount, vlFp32);
-
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x;
-            RegTensor<float> y;
-            RegTensor<float> beta;
-            RegTensor<float> gamma;
-            RegTensor<float> scale;
-            RegTensor<float> offset;
-            RegTensor<int8_t> quantOut;
-
-            MaskReg pregLoop;
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-
-            // per_tensor quant: scalar scales/zero_points, broadcast once and reused by all cols loops
-            if constexpr (IS_PER_TENSOR_SCALE) {
-                LoadScalarQuantParam(scaleAddr, scale, pregMain);
-                CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, LoadScalarQuantParam(offsetAddr, offset, pregMain));
-            }
-
-            uint32_t sreg0 = colsCount;
-            for (uint16_t i = 0; i < colsLoopCount; i++) {
-                pregLoop = UpdateMask<float>(sreg0);
-                LoadInputsToRegResidualFirst<X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
-                    x1Addr, x2Addr, biasAddr, x, pregLoop, i * vlFp32, i * vlFp32, i * vlFp32);
-                LoadGammaBeta(gammaAddr, betaAddr, gamma, beta, pregLoop, i * vlFp32);
-                if constexpr (!IS_PER_TENSOR_SCALE) {
-                    LoadQuantParams(scaleAddr, scale, pregLoop, i * vlFp32);
-                    CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, LoadQuantParams(offsetAddr, offset, pregLoop, i * vlFp32));
-                }
-
-                YQuantMathChunk(x, y, gamma, beta, scale, offset, quantOut, pregLoop, mean, rstd, i, vlFp32,
-                                quantOutAddr);
-            }
-        }
+        asc_vf_call<WelfordYQuantVf<X1_TYPE, SCALE_TYPE, TILING_KEY, OPT_CODE>>(
+            x1Addr, x2Addr, biasAddr, betaAddr, gammaAddr, scaleAddr, offsetAddr, quantOutAddr, negMean, rstd,
+            colsCount, vlFp32, colsLoopCount);
     }
 
     __aicore__ inline void Process()
     {
-        uint32_t coreIdx = GetBlockIdx();
-
         int64_t inputOffset = 0;
         int64_t outputOffset = 0;
 
@@ -223,13 +252,11 @@ public:
             event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
             SetFlag<HardEvent::V_S>(eventId);
             WaitFlag<HardEvent::V_S>(eventId);
-            float mean = meanLocal(0) * float(-1.0);
+            float negMean = meanLocal(0) * float(-1.0);
             float rstd = rstdLocal(0);
 
-            // calc y with VF (bisect cut3: the quant chunk is split at the MTE/VF boundary —
-            // alloc/load in QuantChunkPre, VF math via VFCalcYQuant called here in the loop,
-            // store/release in QuantChunkPost; a whole-iteration chunk function hung the device,
-            // see the MR #10498 real-card bisect log)
+            // Keep allocation and data movement outside the VF math region so MTE and VF ownership
+            // remain separated across the quantization chunk.
             int64_t inputOffsetTemp = inputOffset;
             int64_t outputOffsetTemp = outputOffset;
             int64_t biasOffset = 0;
@@ -251,8 +278,8 @@ public:
                               inputOffsetTemp, biasOffset, inputOffsetGamma, copyLen);
 
                 LocalTensor<int8_t> yLocal = yQueue_.template AllocTensor<int8_t>();
-                VFCalcYQuant(x1Local, x2Local, biasLocal, betaLocal, gammaLocal, scaleLocal, offsetLocal, mean, rstd,
-                             yLocal, copyLen, vlFp32_);
+                VFCalcYQuant(x1Local, x2Local, biasLocal, betaLocal, gammaLocal, scaleLocal, offsetLocal, negMean, rstd,
+                             yLocal, copyLen, QALN_VL_FP32);
 
                 QuantChunkPost(yLocal, x1Local, x2Local, biasLocal, gammaLocal, betaLocal, scaleLocal, offsetLocal,
                                outputOffsetTemp, copyLen);
@@ -270,7 +297,7 @@ public:
 private:
     __aicore__ inline void InitQueues()
     {
-        colsPerLoopAlign_ = BLOCK_ALIGN(colsPerLoop_ * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
+        colsPerLoopAlign_ = BLOCK_ALIGN(colsPerLoop_, QALN_VL_FP32);
 
         pipe_->InitBuffer(x1Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
         pipe_->InitBuffer(x2Queue_, BUFFER_NUM, (colsPerLoopAlign_ * sizeof(X1_TYPE)));
@@ -287,40 +314,13 @@ private:
         pipe_->InitBuffer(meanBuf_, colsPerLoopAlign_ * sizeof(float));
         pipe_->InitBuffer(varBuf_, colsPerLoopAlign_ * sizeof(float));
 
-        pipe_->InitBuffer(meanTmpBuf_, blockSize_);
-        pipe_->InitBuffer(rstdTmpBuf_, blockSize_);
+        pipe_->InitBuffer(meanTmpBuf_, QALN_BLOCK_SIZE);
+        pipe_->InitBuffer(rstdTmpBuf_, QALN_BLOCK_SIZE);
 
-        int64_t binaryAddBufSize = BLOCK_ALIGN((binaryAddNum_ / vlFp32_) * sizeof(float), blockSize_);
+        int64_t binaryAddBufSize = BLOCK_ALIGN((binaryAddNum_ / QALN_VL_FP32) * sizeof(float), QALN_BLOCK_SIZE);
         if (binaryAddBufSize > 0) {
             pipe_->InitBuffer(binaryAddBuf_, binaryAddBufSize);
         }
-    }
-
-    // Norm + quant math tail of one VFCalcYQuant cols iteration. Static like its caller;
-    // scope-less, called from inside VFCalcYQuant's __VEC_SCOPE__.
-    static __aicore__ inline void YQuantMathChunk(RegTensor<float>& x, RegTensor<float>& y, RegTensor<float>& gamma,
-                                                  RegTensor<float>& beta, RegTensor<float>& scale,
-                                                  RegTensor<float>& offset, RegTensor<int8_t>& quantOut,
-                                                  MaskReg& pregLoop, float mean, float rstd, uint16_t i,
-                                                  uint32_t vlFp32, __ubuf__ int8_t* quantOutAddr)
-    {
-        Adds(x, x, mean, pregLoop);
-        Muls(y, x, rstd, pregLoop);
-        Mul(y, y, gamma, pregLoop);
-        Add(y, y, beta, pregLoop); // LayerNorm result
-
-        // quant: y = round(norm / scales + zero_points)  (per_channel, div mode)
-        //        y = round(norm * scales + zero_points)  (mul_mode / per_tensor)
-        if constexpr (IS_DIV_SCALE) {
-            Div(x, y, scale, pregLoop);
-        } else {
-            Mul(x, y, scale, pregLoop);
-        }
-        CONST_CONDITIONAL_EXPR(IS_OFFSET_EXIST, Add(x, x, offset, pregLoop));
-
-        Round2Int8(quantOut, x, pregLoop);
-
-        StoreAlign<int8_t, StoreDist::DIST_PACK4_B32>((__ubuf__ int8_t*)quantOutAddr + i * vlFp32, quantOut, pregLoop);
     }
 
     // One Welford stats iteration: copy in, parallel update, copy out x. biasOffset is by
@@ -336,7 +336,7 @@ private:
         if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
             biasLocal = biasQueue_.template AllocTensor<X1_TYPE>();
         }
-        // copy in x1, x2, bias
+        // Copy x1, x2, and bias into UB.
         CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
 
         x1Local = x1Queue_.template DeQue<X1_TYPE>();
@@ -349,7 +349,7 @@ private:
         LocalTensor<X1_TYPE> xLocal = xQueue_.template AllocTensor<X1_TYPE>();
 
         count += 1;
-        uint16_t loopCount = CEIL_DIV(copyLen, vlFp32_);
+        uint16_t loopCount = CEIL_DIV(copyLen, QALN_VL_FP32);
         float scale = static_cast<float>(1.0) / static_cast<float>(count);
 
         if (j == 0) {
@@ -360,7 +360,7 @@ private:
                                                                       tmpVarLocal, copyLen, loopCount, scale);
         }
 
-        // copy out x
+        // Copy x to GM.
         if (outputX_) {
             xQueue_.EnQue(xLocal);
             xLocal = xQueue_.template DeQue<X1_TYPE>();
@@ -425,12 +425,12 @@ private:
         scaleLocal = scaleQueue_.template AllocTensor<SCALE_TYPE>();
         CONST_CONDITIONAL_ASSIGN(IS_OFFSET_EXIST, offsetLocal, zeroOffsetQueue_.template AllocTensor<SCALE_TYPE>());
 
-        // copy in x1, x2, bias
+        // Copy x1, x2, and bias into UB.
         CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
-        // copy in gamma, beta
+        // Copy gamma and beta into UB.
         CopyGammaAndBetaToUBCommon(gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_, inputOffsetGamma,
-                                   copyLen, blockSize_);
-        // copy in scale/offset
+                                   copyLen, QALN_BLOCK_SIZE);
+        // Copy scale and offset into UB.
         CopyQuantParams2UB(scaleLocal, offsetLocal, inputOffsetGamma, copyLen);
 
         x1Local = x1Queue_.template DeQue<X1_TYPE>();
@@ -451,7 +451,7 @@ private:
                                           LocalTensor<SCALE_TYPE>& scaleLocal, LocalTensor<SCALE_TYPE>& offsetLocal,
                                           int64_t outputOffsetTemp, int32_t copyLen)
     {
-        // copy out y
+        // Copy y to GM.
         yQueue_.EnQue(yLocal);
         yLocal = yQueue_.template DeQue<int8_t>();
         CopyYToGm(yLocal, outputOffsetTemp, copyLen);
@@ -518,5 +518,5 @@ private:
     bool outputX_;
     TPipe* pipe_ = nullptr;
 };
-} // namespace QuantizeAddLayerNormRegbase
+} // namespace NsQuantizeAddLayerNorm
 #endif // QUANTIZE_ADD_LAYER_NORM_STATIC_QUANT_REGBASE_WELFORD_H

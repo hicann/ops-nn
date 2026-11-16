@@ -19,15 +19,21 @@
  *           issue package npy files), replays exact dtype/shape/attrs (incl. zero_points and
  *           additional_output), dumps y (and x when additional_output=true).
  *
- * Usage: ./test_geir_qaln_mask_ab <rows> <cols> <zp 0|1> <epsilon> <outPrefix>
+ * Usage: ./test_geir_qaln_mask_ab <rows> <cols> <zp 0> <epsilon> <outPrefix>
  */
 
 #include <cassert>
+#include <cerrno>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <iostream>
+#include <limits>
 #include <map>
+#include <memory>
+#include <new>
 #include <string>
 #include <vector>
 
@@ -51,8 +57,66 @@ using std::string;
 using std::vector;
 
 namespace {
-constexpr int64_t gRowsDefault = 672;
-constexpr int64_t gColsDefault = 224;
+constexpr int64_t DEFAULT_ROWS = 672;
+constexpr int64_t DEFAULT_COLS = 224;
+constexpr size_t MAX_MANIFEST_LINE_LENGTH = 4096;
+
+bool CheckedMultiply(int64_t lhs, int64_t rhs, int64_t& result)
+{
+    if (lhs <= 0 || rhs <= 0 || rhs > std::numeric_limits<int64_t>::max() / lhs) {
+        return false;
+    }
+    result = lhs * rhs;
+    return true;
+}
+
+bool GetElementCount(const vector<int64_t>& shape, int64_t& elementCount)
+{
+    elementCount = 1;
+    for (int64_t dim : shape) {
+        int64_t next = 0;
+        if (!CheckedMultiply(elementCount, dim, next)) {
+            return false;
+        }
+        elementCount = next;
+    }
+    return true;
+}
+
+bool ParseInt64(const string& text, int64_t& value)
+{
+    errno = 0;
+    char* end = nullptr;
+    long long parsed = strtoll(text.c_str(), &end, 10);
+    if (errno == ERANGE || end == text.c_str() || end == nullptr || *end != '\0') {
+        return false;
+    }
+    value = static_cast<int64_t>(parsed);
+    return true;
+}
+
+bool ParseFlag(const string& text, int& value)
+{
+    int64_t parsed = 0;
+    if (!ParseInt64(text, parsed) || (parsed != 0 && parsed != 1)) {
+        return false;
+    }
+    value = static_cast<int>(parsed);
+    return true;
+}
+
+bool ParsePositiveFloat(const string& text, float& value)
+{
+    errno = 0;
+    char* end = nullptr;
+    float parsed = strtof(text.c_str(), &end);
+    if (errno == ERANGE || end == text.c_str() || end == nullptr || *end != '\0' || !std::isfinite(parsed) ||
+        parsed <= 0.0F) {
+        return false;
+    }
+    value = parsed;
+    return true;
+}
 
 int32_t WriteBin(const string& path, uint64_t bytes, const uint8_t* data)
 {
@@ -61,8 +125,12 @@ int32_t WriteBin(const string& path, uint64_t bytes, const uint8_t* data)
         printf("open %s for write failed\n", path.c_str());
         return FAILED;
     }
-    fwrite(data, sizeof(uint8_t), bytes, fp);
-    fclose(fp);
+    size_t written = fwrite(data, sizeof(uint8_t), bytes, fp);
+    int closeStatus = fclose(fp);
+    if (written != bytes || closeStatus != 0) {
+        printf("write %s failed\n", path.c_str());
+        return FAILED;
+    }
     printf("[AB] dumped %s (%llu bytes)\n", path.c_str(), static_cast<unsigned long long>(bytes));
     return SUCCESS;
 }
@@ -74,25 +142,30 @@ float GenX2(int64_t idx) { return static_cast<float>(((idx * 53) % 173) - 86) * 
 float GenGamma(int64_t c) { return 0.5f + static_cast<float>(c % 7) * 0.125f; }
 float GenBeta(int64_t c) { return static_cast<float>(((c * 13) % 41) - 20) * 0.125f; }
 float GenBias(int64_t c) { return static_cast<float>(((c * 29) % 61) - 30) * 0.0625f; }
-// negative per-channel div scales, mirroring bb_l2_941: in [-2.125, -0.125]
+// Negative per-channel division scales, mirroring bb_l2_941: in [-2.125, -0.125].
 float GenScale(int64_t c) { return -(0.125f * static_cast<float>(1 + (c % 16))); }
 
-int32_t GenFp32Tensor(int64_t elemNum, float (*gen)(int64_t), TensorDesc& desc, Tensor& tensor, const string& dumpPath)
+int32_t GenFp32Tensor(int64_t elemNum, float (*gen)(int64_t), const string& dumpPath, TensorDesc& desc, Tensor& tensor)
 {
+    if (elemNum <= 0 || static_cast<uint64_t>(elemNum) > std::numeric_limits<size_t>::max() / sizeof(float)) {
+        return FAILED;
+    }
     desc.SetRealDimCnt(1);
     uint64_t dataLen = static_cast<uint64_t>(elemNum) * sizeof(float);
-    float* pData = new (std::nothrow) float[elemNum];
-    if (pData == nullptr) {
+    std::vector<float> data;
+    try {
+        data.resize(static_cast<size_t>(elemNum));
+    } catch (const std::bad_alloc&) {
+        printf("[AB] allocation failed for %lld fp32 elements\n", static_cast<long long>(elemNum));
         return FAILED;
     }
     for (int64_t i = 0; i < elemNum; i++) {
-        pData[i] = gen(i);
+        data[static_cast<size_t>(i)] = gen(i);
     }
-    tensor = Tensor(desc, reinterpret_cast<uint8_t*>(pData), dataLen);
-    if (!dumpPath.empty()) {
-        WriteBin(dumpPath, dataLen, reinterpret_cast<uint8_t*>(pData));
+    tensor = Tensor(desc, reinterpret_cast<uint8_t*>(data.data()), dataLen);
+    if (!dumpPath.empty() && WriteBin(dumpPath, dataLen, reinterpret_cast<uint8_t*>(data.data())) != SUCCESS) {
+        return FAILED;
     }
-    delete[] pData;
     return SUCCESS;
 }
 
@@ -129,101 +202,161 @@ uint32_t DtItemBytes(ge::DataType dt)
 
 bool ParseCaseCfg(const string& path, CaseCfg& cfg)
 {
-    FILE* fp = fopen(path.c_str(), "r");
-    if (fp == nullptr) {
+    std::ifstream manifest(path);
+    if (!manifest.is_open()) {
         printf("[CASE] cannot open %s\n", path.c_str());
         return false;
     }
-    char line[512];
-    while (fgets(line, sizeof(line), fp) != nullptr) {
-        string s(line);
-        while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) {
-            s.pop_back();
+    bool hasCase = false;
+    bool hasDims = false;
+    bool hasXDtype = false;
+    bool hasScaleDtype = false;
+    bool hasZp = false;
+    bool hasOutX = false;
+    bool hasEpsilon = false;
+    string manifestLine;
+    while (std::getline(manifest, manifestLine)) {
+        if (manifestLine.size() > MAX_MANIFEST_LINE_LENGTH) {
+            printf("[CASE] manifest line is too long\n");
+            return false;
         }
-        size_t eq = s.find('=');
+        while (!manifestLine.empty() && manifestLine.back() == '\r') {
+            manifestLine.pop_back();
+        }
+        size_t eq = manifestLine.find('=');
         if (eq == string::npos) {
             continue;
         }
-        string k = s.substr(0, eq);
-        string v = s.substr(eq + 1);
-        if (k == "case") {
-            cfg.caseName = v;
-        } else if (k == "dims") {
+        string key = manifestLine.substr(0, eq);
+        string value = manifestLine.substr(eq + 1);
+        if (key == "case") {
+            cfg.caseName = value;
+            hasCase = true;
+        } else if (key == "dims") {
             cfg.xDims.clear();
             size_t pos = 0;
-            while (pos < v.size()) {
-                size_t comma = v.find(',', pos);
-                string tok = (comma == string::npos) ? v.substr(pos) : v.substr(pos, comma - pos);
-                if (!tok.empty()) {
-                    cfg.xDims.push_back(strtoll(tok.c_str(), nullptr, 10));
+            while (pos < value.size()) {
+                size_t comma = value.find(',', pos);
+                string tok = (comma == string::npos) ? value.substr(pos) : value.substr(pos, comma - pos);
+                int64_t dim = 0;
+                if (tok.empty() || !ParseInt64(tok, dim) || dim <= 0) {
+                    printf("[CASE] invalid dimension: %s\n", tok.c_str());
+                    return false;
                 }
+                cfg.xDims.push_back(dim);
                 if (comma == string::npos) {
                     break;
                 }
                 pos = comma + 1;
             }
-        } else if (k == "xdtype") {
-            cfg.xDtype = v;
-        } else if (k == "scaledtype") {
-            cfg.scaleDtype = v;
-        } else if (k == "zp") {
-            cfg.hasZp = atoi(v.c_str());
-        } else if (k == "outx") {
-            cfg.outX = atoi(v.c_str());
-        } else if (k == "epsilon") {
-            cfg.epsilon = strtof(v.c_str(), nullptr);
+            hasDims = true;
+        } else if (key == "xdtype") {
+            cfg.xDtype = value;
+            hasXDtype = true;
+        } else if (key == "scaledtype") {
+            cfg.scaleDtype = value;
+            hasScaleDtype = true;
+        } else if (key == "zp") {
+            if (!ParseFlag(value, cfg.hasZp)) {
+                printf("[CASE] invalid zp flag: %s\n", value.c_str());
+                return false;
+            }
+            hasZp = true;
+        } else if (key == "outx") {
+            if (!ParseFlag(value, cfg.outX)) {
+                printf("[CASE] invalid outx flag: %s\n", value.c_str());
+                return false;
+            }
+            hasOutX = true;
+        } else if (key == "epsilon") {
+            if (!ParsePositiveFloat(value, cfg.epsilon)) {
+                printf("[CASE] invalid epsilon: %s\n", value.c_str());
+                return false;
+            }
+            hasEpsilon = true;
         }
     }
-    fclose(fp);
-    if (cfg.xDims.empty()) {
-        printf("[CASE] manifest has no dims\n");
+    if (manifest.bad()) {
+        printf("[CASE] failed while reading manifest\n");
+        return false;
+    }
+    if (!hasCase || !hasDims || !hasXDtype || !hasScaleDtype || !hasZp || !hasOutX || !hasEpsilon ||
+        cfg.caseName.empty() || cfg.xDims.empty()) {
+        printf("[CASE] manifest is missing required fields\n");
+        return false;
+    }
+    int64_t elementCount = 0;
+    bool dtypePairSupported = ((cfg.xDtype == "fp16" || cfg.xDtype == "fp32") && cfg.scaleDtype == "fp32") ||
+                              (cfg.xDtype == "bf16" && (cfg.scaleDtype == "bf16" || cfg.scaleDtype == "fp32"));
+    if (!GetElementCount(cfg.xDims, elementCount) ||
+        (cfg.xDtype != "fp16" && cfg.xDtype != "bf16" && cfg.xDtype != "fp32") || !dtypePairSupported ||
+        !std::isfinite(cfg.epsilon) || cfg.epsilon <= 0.0F) {
+        printf("[CASE] manifest contains unsupported or unsafe values\n");
         return false;
     }
     cfg.cols = cfg.xDims.back();
     return true;
 }
 
-uint8_t* ReadBin(const string& path, uint64_t& bytes)
+std::unique_ptr<uint8_t[]> ReadBin(const string& path, uint64_t expectedBytes)
 {
+    if (expectedBytes == 0 || expectedBytes > std::numeric_limits<size_t>::max()) {
+        return {};
+    }
     FILE* fp = fopen(path.c_str(), "rb");
     if (fp == nullptr) {
         printf("[CASE] cannot open %s\n", path.c_str());
-        return nullptr;
+        return {};
     }
-    fseek(fp, 0, SEEK_END);
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        printf("[CASE] cannot seek %s\n", path.c_str());
+        fclose(fp);
+        return {};
+    }
     long sz = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    uint8_t* buf = new (std::nothrow) uint8_t[sz];
-    if (buf != nullptr && sz > 0) {
-        if (fread(buf, 1, static_cast<size_t>(sz), fp) != static_cast<size_t>(sz)) {
-            delete[] buf;
-            buf = nullptr;
+    if (sz <= 0 || static_cast<uint64_t>(sz) != expectedBytes || fseek(fp, 0, SEEK_SET) != 0) {
+        if (sz <= 0) {
+            printf("[CASE] cannot determine nonzero size for %s\n", path.c_str());
+        } else if (static_cast<uint64_t>(sz) != expectedBytes) {
+            printf("[CASE] %s size mismatch: file %lld bytes, expect %llu\n", path.c_str(), static_cast<long long>(sz),
+                   static_cast<unsigned long long>(expectedBytes));
+        } else {
+            printf("[CASE] cannot rewind %s\n", path.c_str());
         }
+        fclose(fp);
+        return {};
     }
-    fclose(fp);
-    bytes = static_cast<uint64_t>(sz);
-    return buf;
+    size_t bytesToRead = static_cast<size_t>(expectedBytes);
+    auto buffer = std::unique_ptr<uint8_t[]>(new (std::nothrow) uint8_t[bytesToRead]);
+    if (buffer == nullptr) {
+        printf("[CASE] allocation failed while reading %s (%zu bytes)\n", path.c_str(), bytesToRead);
+        fclose(fp);
+        return {};
+    }
+    if (fread(buffer.get(), 1, bytesToRead, fp) != bytesToRead) {
+        printf("[CASE] failed to read %s (%zu bytes)\n", path.c_str(), bytesToRead);
+        fclose(fp);
+        return {};
+    }
+    if (fclose(fp) != 0) {
+        return {};
+    }
+    return buffer;
 }
 
-Status AddFileInput(Graph& graph, std::vector<ge::Tensor>& inputTensors, std::vector<Operator>& inputs,
-                    op::QuantizeAddLayerNorm& add1, const string& name, const vector<int64_t>& shape,
-                    const string& path, ge::DataType dt)
+Status AddFileInput(const string& name, const vector<int64_t>& shape, const string& path, ge::DataType dt, Graph& graph,
+                    std::vector<ge::Tensor>& inputTensors, std::vector<Operator>& inputs,
+                    op::QuantizeAddLayerNorm& add1)
 {
-    uint64_t bytes = 0;
-    uint8_t* data = ReadBin(path, bytes);
-    if (data == nullptr) {
+    int64_t elem = 1;
+    uint32_t itemBytes = DtItemBytes(dt);
+    if (!GetElementCount(shape, elem) ||
+        static_cast<uint64_t>(elem) > std::numeric_limits<uint64_t>::max() / itemBytes) {
         return FAILED;
     }
-    int64_t elem = 1;
-    for (auto d : shape) {
-        elem *= d;
-    }
-    uint64_t expect = static_cast<uint64_t>(elem) * DtItemBytes(dt);
-    if (bytes != expect) {
-        printf("[CASE] %s size mismatch: file %llu bytes, expect %llu (%lld elems)\n", name.c_str(),
-               static_cast<unsigned long long>(bytes), static_cast<unsigned long long>(expect),
-               static_cast<long long>(elem));
-        delete[] data;
+    uint64_t expect = static_cast<uint64_t>(elem) * itemBytes;
+    auto data = ReadBin(path, expect);
+    if (data == nullptr) {
         return FAILED;
     }
     auto dataOp = op::Data("file_" + name).set_attr_index(0);
@@ -232,8 +365,11 @@ Status AddFileInput(Graph& graph, std::vector<ge::Tensor>& inputTensors, std::ve
     desc.SetFormat(FORMAT_ND);
     dataOp.update_input_desc_x(desc);
     dataOp.update_output_desc_y(desc);
-    inputTensors.push_back(Tensor(desc, data, bytes));
-    graph.AddOp(dataOp);
+    inputTensors.push_back(Tensor(desc, data.get(), expect));
+    if (graph.AddOp(dataOp) != ge::GRAPH_SUCCESS) {
+        printf("[CASE] failed to add input %s to graph\n", name.c_str());
+        return FAILED;
+    }
     if (name == "x1") {
         add1.set_input_x1(dataOp);
     } else if (name == "x2") {
@@ -252,14 +388,13 @@ Status AddFileInput(Graph& graph, std::vector<ge::Tensor>& inputTensors, std::ve
     inputs.push_back(dataOp);
     printf("[CASE] input %-11s dtype=%d elems=%lld\n", name.c_str(), static_cast<int>(dt),
            static_cast<long long>(elem));
-    delete[] data; // Tensor(desc, data, len) copies the buffer
     return SUCCESS;
 }
 } // namespace
 
-static Status AddProbeInput(Graph& graph, std::vector<ge::Tensor>& inputTensors, std::vector<Operator>& inputs,
-                            op::QuantizeAddLayerNorm& add1, const string& name, const vector<int64_t>& shape,
-                            float (*gen)(int64_t), const string& dumpPath)
+static Status AddProbeInput(const string& name, const vector<int64_t>& shape, float (*gen)(int64_t),
+                            const string& dumpPath, Graph& graph, std::vector<ge::Tensor>& inputTensors,
+                            std::vector<Operator>& inputs, op::QuantizeAddLayerNorm& add1)
 {
     auto data = op::Data("placeholder_" + name).set_attr_index(0);
     TensorDesc desc = TensorDesc(ge::Shape(shape), FORMAT_ND, DT_FLOAT);
@@ -267,18 +402,21 @@ static Status AddProbeInput(Graph& graph, std::vector<ge::Tensor>& inputTensors,
     desc.SetFormat(FORMAT_ND);
     Tensor tensor;
     int64_t elem = 1;
-    for (auto d : shape) {
-        elem *= d;
+    if (!GetElementCount(shape, elem)) {
+        return FAILED;
     }
     TensorDesc genDesc = desc;
-    if (GenFp32Tensor(elem, gen, genDesc, tensor, dumpPath) != SUCCESS) {
+    if (GenFp32Tensor(elem, gen, dumpPath, genDesc, tensor) != SUCCESS) {
         printf("gen tensor %s failed\n", name.c_str());
         return FAILED;
     }
     data.update_input_desc_x(desc);
     data.update_output_desc_y(desc);
     inputTensors.push_back(tensor);
-    graph.AddOp(data);
+    if (graph.AddOp(data) != ge::GRAPH_SUCCESS) {
+        printf("failed to add tensor %s to graph\n", name.c_str());
+        return FAILED;
+    }
     if (name == "x1") {
         add1.set_input_x1(data);
     } else if (name == "x2") {
@@ -306,15 +444,15 @@ int CreateOppInGraph(int64_t rows, int64_t cols, float epsilon, const string& ou
     vector<int64_t> xShape = {rows, cols};
     vector<int64_t> colShape = {cols};
 
-    if (AddProbeInput(graph, inputTensors, inputs, add1, "x1", xShape, GenX1, outPrefix + "_x1.bin") != SUCCESS ||
-        AddProbeInput(graph, inputTensors, inputs, add1, "x2", xShape, GenX2, outPrefix + "_x2.bin") != SUCCESS ||
-        AddProbeInput(graph, inputTensors, inputs, add1, "gamma", colShape, GenGamma, outPrefix + "_gamma.bin") !=
+    if (AddProbeInput("x1", xShape, GenX1, outPrefix + "_x1.bin", graph, inputTensors, inputs, add1) != SUCCESS ||
+        AddProbeInput("x2", xShape, GenX2, outPrefix + "_x2.bin", graph, inputTensors, inputs, add1) != SUCCESS ||
+        AddProbeInput("gamma", colShape, GenGamma, outPrefix + "_gamma.bin", graph, inputTensors, inputs, add1) !=
             SUCCESS ||
-        AddProbeInput(graph, inputTensors, inputs, add1, "beta", colShape, GenBeta, outPrefix + "_beta.bin") !=
+        AddProbeInput("beta", colShape, GenBeta, outPrefix + "_beta.bin", graph, inputTensors, inputs, add1) !=
             SUCCESS ||
-        AddProbeInput(graph, inputTensors, inputs, add1, "bias", colShape, GenBias, outPrefix + "_bias.bin") !=
+        AddProbeInput("bias", colShape, GenBias, outPrefix + "_bias.bin", graph, inputTensors, inputs, add1) !=
             SUCCESS ||
-        AddProbeInput(graph, inputTensors, inputs, add1, "scales", colShape, GenScale, outPrefix + "_scales.bin") !=
+        AddProbeInput("scales", colShape, GenScale, outPrefix + "_scales.bin", graph, inputTensors, inputs, add1) !=
             SUCCESS) {
         return FAILED;
     }
@@ -327,6 +465,10 @@ int CreateOppInGraph(int64_t rows, int64_t cols, float epsilon, const string& ou
     TensorDesc xDesc = TensorDesc(ge::Shape(xShape), FORMAT_ND, DT_FLOAT);
     add1.update_output_desc_x(xDesc);
 
+    if (graph.AddOp(add1) != ge::GRAPH_SUCCESS) {
+        printf("failed to add QuantizeAddLayerNorm to graph\n");
+        return FAILED;
+    }
     outputs.push_back(add1);
     return SUCCESS;
 }
@@ -357,22 +499,26 @@ int RunCase(const string& caseDir, const string& outPrefix)
     ge::DataType xDt = GeDt(cfg.xDtype);
     ge::DataType sDt = GeDt(cfg.scaleDtype);
     vector<int64_t> colShape = {cfg.cols};
-    string p = caseDir + "/bin/";
+    string inputBinPrefix = caseDir + "/bin/";
 
-    if (AddFileInput(graph, inputTensors, inputs, add1, "x1", cfg.xDims, p + "x1.bin", xDt) != SUCCESS ||
-        AddFileInput(graph, inputTensors, inputs, add1, "x2", cfg.xDims, p + "x2.bin", xDt) != SUCCESS ||
-        AddFileInput(graph, inputTensors, inputs, add1, "gamma", colShape, p + "gamma.bin", xDt) != SUCCESS ||
-        AddFileInput(graph, inputTensors, inputs, add1, "beta", colShape, p + "beta.bin", xDt) != SUCCESS ||
-        AddFileInput(graph, inputTensors, inputs, add1, "bias", colShape, p + "bias.bin", xDt) != SUCCESS ||
-        AddFileInput(graph, inputTensors, inputs, add1, "scales", colShape, p + "scales.bin", sDt) != SUCCESS) {
+    if (AddFileInput("x1", cfg.xDims, inputBinPrefix + "x1.bin", xDt, graph, inputTensors, inputs, add1) != SUCCESS ||
+        AddFileInput("x2", cfg.xDims, inputBinPrefix + "x2.bin", xDt, graph, inputTensors, inputs, add1) != SUCCESS ||
+        AddFileInput("gamma", colShape, inputBinPrefix + "gamma.bin", xDt, graph, inputTensors, inputs, add1) !=
+            SUCCESS ||
+        AddFileInput("beta", colShape, inputBinPrefix + "beta.bin", xDt, graph, inputTensors, inputs, add1) !=
+            SUCCESS ||
+        AddFileInput("bias", colShape, inputBinPrefix + "bias.bin", xDt, graph, inputTensors, inputs, add1) !=
+            SUCCESS ||
+        AddFileInput("scales", colShape, inputBinPrefix + "scales.bin", sDt, graph, inputTensors, inputs, add1) !=
+            SUCCESS) {
         return FAILED;
     }
-    if (cfg.hasZp != 0 && AddFileInput(graph, inputTensors, inputs, add1, "zero_points", colShape,
-                                       p + "zero_points.bin", sDt) != SUCCESS) {
+    if (cfg.hasZp != 0 && AddFileInput("zero_points", colShape, inputBinPrefix + "zero_points.bin", sDt, graph,
+                                       inputTensors, inputs, add1) != SUCCESS) {
         return FAILED;
     }
 
-    // attributes as recorded in the case metadata (dtype=DT_INT8, axis=-1)
+    // Apply attributes recorded in the case metadata (dtype=DT_INT8, axis=-1).
     add1.set_attr_dtype(static_cast<int64_t>(DT_INT8));
     add1.set_attr_axis(static_cast<int64_t>(-1));
     add1.set_attr_epsilon(cfg.epsilon);
@@ -385,22 +531,20 @@ int RunCase(const string& caseDir, const string& outPrefix)
         add1.update_output_desc_x(xDesc);
     }
 
-    outputs.push_back(add1);
-    graph.SetInputs(inputs).SetOutputs(outputs);
-    ge::Session* session = new Session(std::map<AscendString, AscendString>{});
-    if (session == nullptr) {
-        printf("[CASE] create session failed\n");
+    if (graph.AddOp(add1) != ge::GRAPH_SUCCESS) {
+        printf("[CASE] failed to add QuantizeAddLayerNorm to graph\n");
         return FAILED;
     }
-    if (session->AddGraph(0, graph, std::map<AscendString, AscendString>{}) != SUCCESS) {
+    outputs.push_back(add1);
+    graph.SetInputs(inputs).SetOutputs(outputs);
+    ge::Session session(std::map<AscendString, AscendString>{});
+    if (session.AddGraph(0, graph, std::map<AscendString, AscendString>{}) != SUCCESS) {
         printf("[CASE] AddGraph failed\n");
-        delete session;
         return FAILED;
     }
     std::vector<ge::Tensor> output;
-    if (session->RunGraph(0, inputTensors, output) != SUCCESS) {
+    if (session.RunGraph(0, inputTensors, output) != SUCCESS) {
         printf("[CASE] RunGraph failed\n");
-        delete session;
         return FAILED;
     }
     printf("[CASE] RunGraph success, output tensor num=%zu\n", output.size());
@@ -410,20 +554,74 @@ int RunCase(const string& caseDir, const string& outPrefix)
         auto dt = output[i].GetTensorDesc().GetDataType();
         printf("[CASE] output[%zu] dtype=%d elems=%lld\n", i, static_cast<int>(dt), static_cast<long long>(sz));
     }
-    // output[0] = y (int8)
-    if (!output.empty() && output[0].GetData() != nullptr) {
-        int64_t sz = output[0].GetTensorDesc().GetShape().GetShapeSize();
-        WriteBin(outPrefix + "_y.bin", static_cast<uint64_t>(sz), output[0].GetData());
+    if (output.empty() || output[0].GetTensorDesc().GetDataType() != DT_INT8 || output[0].GetData() == nullptr) {
+        printf("[CASE] required INT8 y output is missing\n");
+        return FAILED;
     }
-    // output[1] = x (residual, input dtype), only when additional_output
-    if (cfg.outX != 0 && output.size() > 1 && output[1].GetData() != nullptr) {
-        int64_t sz = output[1].GetTensorDesc().GetShape().GetShapeSize();
-        uint64_t bytes = static_cast<uint64_t>(sz) * DtItemBytes(output[1].GetTensorDesc().GetDataType());
-        WriteBin(outPrefix + "_x.bin", bytes, output[1].GetData());
+    int64_t ySize = output[0].GetTensorDesc().GetShape().GetShapeSize();
+    if (ySize <= 0 || WriteBin(outPrefix + "_y.bin", static_cast<uint64_t>(ySize), output[0].GetData()) != SUCCESS) {
+        return FAILED;
     }
 
-    delete session;
+    if (cfg.outX != 0) {
+        if (output.size() < 2 || output[1].GetTensorDesc().GetDataType() != GeDt(cfg.xDtype) ||
+            output[1].GetData() == nullptr) {
+            printf("[CASE] required x output is missing or has the wrong dtype\n");
+            return FAILED;
+        }
+        int64_t sz = output[1].GetTensorDesc().GetShape().GetShapeSize();
+        uint32_t itemBytes = DtItemBytes(output[1].GetTensorDesc().GetDataType());
+        if (sz <= 0 || static_cast<uint64_t>(sz) > std::numeric_limits<uint64_t>::max() / itemBytes) {
+            return FAILED;
+        }
+        uint64_t bytes = static_cast<uint64_t>(sz) * itemBytes;
+        if (WriteBin(outPrefix + "_x.bin", bytes, output[1].GetData()) != SUCCESS) {
+            return FAILED;
+        }
+    }
+
     printf("[CASE] OK\n");
+    return SUCCESS;
+}
+
+int RunGeneratedCase(int64_t rows, int64_t cols, int64_t expectedElements, float epsilon, const string& outPrefix)
+{
+    Graph graph("qaln_mask_ab");
+    std::vector<ge::Tensor> inputTensors;
+    std::vector<Operator> inputs;
+    std::vector<Operator> outputs;
+
+    if (CreateOppInGraph(rows, cols, epsilon, outPrefix, inputTensors, inputs, outputs, graph) != SUCCESS) {
+        printf("[AB] CreateOppInGraph failed\n");
+        return FAILED;
+    }
+
+    graph.SetInputs(inputs).SetOutputs(outputs);
+    ge::Session session(std::map<AscendString, AscendString>{});
+    if (session.AddGraph(0, graph, std::map<AscendString, AscendString>{}) != SUCCESS) {
+        printf("[AB] AddGraph failed\n");
+        return FAILED;
+    }
+    std::vector<ge::Tensor> output;
+    if (session.RunGraph(0, inputTensors, output) != SUCCESS) {
+        printf("[AB] RunGraph failed\n");
+        return FAILED;
+    }
+    printf("[AB] RunGraph success, output tensor num=%zu\n", output.size());
+
+    for (size_t i = 0; i < output.size(); i++) {
+        int64_t size = output[i].GetTensorDesc().GetShape().GetShapeSize();
+        auto dataType = output[i].GetTensorDesc().GetDataType();
+        printf("[AB] output[%zu] dtype=%d elems=%lld\n", i, static_cast<int>(dataType), static_cast<long long>(size));
+    }
+    if (output.empty() || output[0].GetTensorDesc().GetDataType() != DT_INT8 ||
+        output[0].GetTensorDesc().GetShape().GetShapeSize() != expectedElements || output[0].GetData() == nullptr ||
+        WriteBin(outPrefix + "_y.bin", static_cast<uint64_t>(expectedElements), output[0].GetData()) != SUCCESS) {
+        printf("[AB] required output[0] INT8 y is unavailable or could not be written\n");
+        return FAILED;
+    }
+
+    printf("[AB] OK\n");
     return SUCCESS;
 }
 
@@ -432,8 +630,8 @@ int main(int argc, char* argv[])
     // argv first, env fallback (build.sh --run_example launches the binary without args,
     // so the runbook steers shape via QALN_ROWS / QALN_COLS / QALN_PREFIX, or replays a
     // frozen representative case via QALN_CASE_DIR).
-    int64_t rows = gRowsDefault;
-    int64_t cols = gColsDefault;
+    int64_t rows = DEFAULT_ROWS;
+    int64_t cols = DEFAULT_COLS;
     int useZp = 0;
     float epsilon = 1e-5f;
     string outPrefix = "./qaln_ab";
@@ -441,29 +639,46 @@ int main(int argc, char* argv[])
     const char* envCols = getenv("QALN_COLS");
     const char* envPrefix = getenv("QALN_PREFIX");
     const char* envCaseDir = getenv("QALN_CASE_DIR");
-    if (envRows != nullptr) {
-        rows = strtoll(envRows, nullptr, 10);
+    if (envCaseDir != nullptr && (envRows != nullptr || envCols != nullptr || argc > 1)) {
+        printf("[CASE] replay mode reads shape, zero_points, and epsilon from manifest; do not pass generate-mode "
+               "arguments or QALN_ROWS/QALN_COLS\n");
+        return FAILED;
     }
-    if (envCols != nullptr) {
-        cols = strtoll(envCols, nullptr, 10);
+    if (envRows != nullptr && !ParseInt64(envRows, rows)) {
+        printf("[AB] invalid QALN_ROWS\n");
+        return FAILED;
+    }
+    if (envCols != nullptr && !ParseInt64(envCols, cols)) {
+        printf("[AB] invalid QALN_COLS\n");
+        return FAILED;
     }
     if (envPrefix != nullptr) {
         outPrefix = envPrefix;
     }
-    if (argc > 1) {
-        rows = strtoll(argv[1], nullptr, 10);
+    if (argc > 1 && !ParseInt64(argv[1], rows)) {
+        printf("[AB] invalid rows argument\n");
+        return FAILED;
     }
-    if (argc > 2) {
-        cols = strtoll(argv[2], nullptr, 10);
+    if (argc > 2 && !ParseInt64(argv[2], cols)) {
+        printf("[AB] invalid cols argument\n");
+        return FAILED;
     }
-    if (argc > 3) {
-        useZp = atoi(argv[3]);
+    if (argc > 3 && !ParseFlag(argv[3], useZp)) {
+        printf("[AB] invalid zero_points flag\n");
+        return FAILED;
     }
-    if (argc > 4) {
-        epsilon = strtof(argv[4], nullptr);
+    if (argc > 4 && !ParsePositiveFloat(argv[4], epsilon)) {
+        printf("[AB] invalid epsilon argument\n");
+        return FAILED;
     }
     if (argc > 5) {
         outPrefix = argv[5];
+    }
+    int64_t expectedElements = 0;
+    if (!CheckedMultiply(rows, cols, expectedElements) || !std::isfinite(epsilon) || epsilon <= 0.0F ||
+        (useZp != 0 && useZp != 1) || outPrefix.empty()) {
+        printf("[AB] rows, cols, epsilon, zero_points flag, or output prefix is invalid\n");
+        return FAILED;
     }
     if (envCaseDir != nullptr) {
         printf("[CASE] replay mode: caseDir=%s prefix=%s\n", envCaseDir, outPrefix.c_str());
@@ -472,11 +687,11 @@ int main(int argc, char* argv[])
                static_cast<long long>(cols), useZp, epsilon, outPrefix.c_str());
     }
 
-    const char* graphName = "qaln_mask_ab";
-    Graph graph(graphName);
-    std::vector<ge::Tensor> inputTensors;
-    std::vector<Operator> inputs;
-    std::vector<Operator> outputs;
+    if (envCaseDir == nullptr && useZp != 0) {
+        // Generate mode mirrors bb_l2_941, which has no zero_points; replay mode covers offset cases.
+        printf("[AB] zp=1 arm not supported by generate mode, use zp=0 or QALN_CASE_DIR\n");
+        return FAILED;
+    }
 
     std::map<AscendString, AscendString> globalOptions = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
     if (ge::GEInitialize(globalOptions) != SUCCESS) {
@@ -484,72 +699,16 @@ int main(int argc, char* argv[])
         return FAILED;
     }
 
-    int ret = FAILED;
-    if (envCaseDir != nullptr) {
-        ret = RunCase(string(envCaseDir), outPrefix);
-        if (ret != SUCCESS) {
-            printf("[CASE] RunCase failed\n");
-            GEFinalize();
-            return FAILED;
-        }
-        GEFinalize();
-        return SUCCESS;
-    }
-
-    if (useZp != 0) {
-        // zero_points arm intentionally not wired: the A/B mirrors bb_l2_941 (no zero_points);
-        // replay mode (QALN_CASE_DIR) covers zero_points cases from the package inputs.
-        printf("[AB] zp=1 arm not supported by generate mode, use zp=0 or QALN_CASE_DIR\n");
-        GEFinalize();
+    int runStatus = envCaseDir != nullptr ? RunCase(string(envCaseDir), outPrefix) :
+                                            RunGeneratedCase(rows, cols, expectedElements, epsilon, outPrefix);
+    Status finalizeStatus = GEFinalize();
+    if (finalizeStatus != SUCCESS) {
+        printf("[AB] GEFinalize failed\n");
         return FAILED;
     }
-    ret = CreateOppInGraph(rows, cols, epsilon, outPrefix, inputTensors, inputs, outputs, graph);
-    if (ret != SUCCESS) {
-        printf("[AB] CreateOppInGraph failed\n");
-        GEFinalize();
+    if (runStatus != SUCCESS) {
+        printf("[AB] graph execution failed\n");
         return FAILED;
     }
-
-    graph.SetInputs(inputs).SetOutputs(outputs);
-    ge::Session* session = new Session(std::map<AscendString, AscendString>{});
-    if (session == nullptr) {
-        printf("[AB] create session failed\n");
-        GEFinalize();
-        return FAILED;
-    }
-    if (session->AddGraph(0, graph, std::map<AscendString, AscendString>{}) != SUCCESS) {
-        printf("[AB] AddGraph failed\n");
-        delete session;
-        GEFinalize();
-        return FAILED;
-    }
-    std::vector<ge::Tensor> output;
-    if (session->RunGraph(0, inputTensors, output) != SUCCESS) {
-        printf("[AB] RunGraph failed\n");
-        delete session;
-        GEFinalize();
-        return FAILED;
-    }
-    printf("[AB] RunGraph success, output tensor num=%zu\n", output.size());
-
-    for (size_t i = 0; i < output.size(); i++) {
-        int64_t sz = output[i].GetTensorDesc().GetShape().GetShapeSize();
-        auto dt = output[i].GetTensorDesc().GetDataType();
-        printf("[AB] output[%zu] dtype=%d elems=%lld\n", i, static_cast<int>(dt), static_cast<long long>(sz));
-    }
-    // y is the int8 output: find it and dump
-    for (size_t i = 0; i < output.size(); i++) {
-        if (output[i].GetTensorDesc().GetDataType() == DT_INT8) {
-            int64_t sz = output[i].GetTensorDesc().GetShape().GetShapeSize();
-            const uint8_t* data = output[i].GetData();
-            if (data != nullptr && WriteBin(outPrefix + "_y.bin", static_cast<uint64_t>(sz), data) == SUCCESS) {
-                printf("[AB] OK\n");
-            }
-            break;
-        }
-    }
-
-    delete session;
-    GEFinalize();
     return SUCCESS;
 }

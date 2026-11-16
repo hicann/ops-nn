@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file rms_norm_proto.h
+ * \file quantize_add_layer_norm_proto.h
  * \brief
  */
 #ifndef OPS_BUILT_IN_OP_PROTO_INC_QUANTIZE_ADD_LAYER_NORM_OPS_H_

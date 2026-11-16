@@ -15,15 +15,12 @@
  *        LoadInputsToRegWithBias) accumulates x = (x2 + bias) + x1, while the 910-family
  *        kernels of this operator (normal_kernel / single_row_kernel) and the frozen
  *        golden compute (x1 + x2) + bias. Float addition is not associative, so the x
- *        output must be summed in exactly that order to stay bitwise comparable. The
- *        shared loader is deliberately left untouched: any edit to it recompiles
- *        add_layer_norm / add_layer_norm_quant arch35, which this change cannot
- *        cover-verify. The helpers below are local copies of the shared originals with
- *        only the association order corrected -- keep them in sync with
- *        add_layer_norm_regbase_common.h otherwise. Calling form follows the current
+ *        output must be summed in exactly that order to stay bitwise comparable. These
+ *        local helpers preserve that operator-specific order without changing the shared
+ *        loaders used by other operators. Keep them in sync with
+ *        add_layer_norm_regbase_common.h except for the association order. Calling form follows the current
  *        regbase conventions (the shared originals predate them): loaders are
- *        __simd_callee__ helpers callable from VF bodies and from plain __VEC_SCOPE__
- *        contexts alike (cf. add_layer_norm_grad arch35 common), and the Welford
+ *        __simd_callee__ helpers callable from VF bodies, and the Welford
  *        update is a __simd_vf__ function entered via asc_vf_call (cf. apply_adagrad
  *        arch35). A VF body can only call __simd_callee__ functions, so the two
  *        shared plain helpers it used (StoreRegToOutput, LoadInputsToRegWithBiasNone)
@@ -38,12 +35,11 @@
 #include "kernel_operator.h"
 #include "../../add_layer_norm/arch35/add_layer_norm_regbase_common.h"
 
-namespace QuantizeAddLayerNormRegbase {
+namespace NsQuantizeAddLayerNorm {
 using namespace AddLayerNorm;
 using namespace AscendC;
 
-// load one operand and cast to fp32; same instruction shape as the inline blocks of
-// the shared loader (cf. LoadTensor / LoadAsFp32 in add_layer_norm_grad / apply_adagrad)
+// Load one operand and cast to FP32 using the shared loader's instruction shape.
 template <typename T>
 __simd_callee__ inline void LoadInputToFp32(__ubuf__ T* addr, uint32_t offset, RegTensor<float>& dst, MaskReg& preg)
 {
@@ -56,10 +52,17 @@ __simd_callee__ inline void LoadInputToFp32(__ubuf__ T* addr, uint32_t offset, R
     }
 }
 
-// store an fp32 register back to a T output buffer; local __simd_callee__ copy of
-// AddLayerNorm::StoreRegToOutput (cf. apply_adagrad StoreFromFp32), body verbatim:
-// the plain shared helper is not callable from inside the __simd_vf__ body below
-// (ccec keeps only callee candidates in a VF context), while the shared one must
+template <typename T>
+__simd_callee__ inline void LoadGammaBetaResidual(__ubuf__ T* gammaAddr, __ubuf__ T* betaAddr, RegTensor<float>& gamma,
+                                                  RegTensor<float>& beta, MaskReg& preg, uint32_t offset)
+{
+    LoadInputToFp32(gammaAddr, offset, gamma, preg);
+    LoadInputToFp32(betaAddr, offset, beta, preg);
+}
+
+// Store an FP32 register back to a T output buffer. This is a local __simd_callee__ copy of
+// AddLayerNorm::StoreRegToOutput because the plain shared helper is not callable from the __simd_vf__ body below.
+// The compiler keeps only callee candidates in a VF context, while the shared one must
 // stay plain for its existing plain-context callers.
 template <typename T>
 __simd_callee__ inline void StoreFp32ToOutput(__ubuf__ T* dstAddr, RegTensor<float>& src, MaskReg& preg,
@@ -78,15 +81,17 @@ __simd_callee__ inline void StoreFp32ToOutput(__ubuf__ T* dstAddr, RegTensor<flo
     }
 }
 
-// residual order (x1 + x2) + bias: matches the 910-family kernels and the golden.
+// Residual order (x1 + x2) + bias: matches the 910-family kernels and the golden.
 // Local variant of AddLayerNorm::LoadInputsToRegWithBias (which is (x2 + bias) + x1).
-template <typename X1_TYPE, typename X2_TYPE, typename BIAS_TYPE>
+template <typename X1_TYPE, typename X2_TYPE, typename BiasT>
 __simd_callee__ inline void LoadInputsToRegWithBiasResidualFirst(__ubuf__ X1_TYPE* x1Addr, __ubuf__ X2_TYPE* x2Addr,
-                                                                 __ubuf__ BIAS_TYPE* biasAddr, RegTensor<float>& dst,
+                                                                 __ubuf__ BiasT* biasAddr, RegTensor<float>& dst,
                                                                  MaskReg& preg, uint32_t offset0, uint32_t offset1,
                                                                  uint32_t offset2)
 {
-    RegTensor<float> x1Fp32, x2Fp32, biasFp32;
+    RegTensor<float> x1Fp32;
+    RegTensor<float> x2Fp32;
+    RegTensor<float> biasFp32;
 
     LoadInputToFp32(x1Addr, offset0, x1Fp32, preg);
     LoadInputToFp32(x2Addr, offset1, x2Fp32, preg);
@@ -95,18 +100,18 @@ __simd_callee__ inline void LoadInputsToRegWithBiasResidualFirst(__ubuf__ X1_TYP
     Add<float>(dst, dst, biasFp32, preg);
 }
 
-// dispatcher mirroring AddLayerNorm::LoadInputsToReg. The bias-none path is a plain
+// Dispatch in the same way as AddLayerNorm::LoadInputsToReg. The bias-none path is a plain
 // two-operand add (no association-order question): it is inlined here via LoadInputToFp32
 // with the exact instruction sequence of AddLayerNorm::LoadInputsToRegWithBiasNone,
 // because the shared plain helper is not callable from inside the __simd_vf__ body below.
-template <typename X1_TYPE, typename X2_TYPE, typename BIAS_TYPE, int TILING_KEY>
+template <typename X1_TYPE, typename X2_TYPE, typename BiasT, int TILING_KEY>
 __simd_callee__ inline void LoadInputsToRegResidualFirst(__ubuf__ X1_TYPE* x1Addr, __ubuf__ X2_TYPE* x2Addr,
-                                                         __ubuf__ BIAS_TYPE* biasAddr, RegTensor<float>& dst,
-                                                         MaskReg& preg, uint32_t offset0, uint32_t offset1,
-                                                         uint32_t offset2)
+                                                         __ubuf__ BiasT* biasAddr, RegTensor<float>& dst, MaskReg& preg,
+                                                         uint32_t offset0, uint32_t offset1, uint32_t offset2)
 {
     if constexpr (IS_BIAS_NONE) {
-        RegTensor<float> x1Fp32, x2Fp32;
+        RegTensor<float> x1Fp32;
+        RegTensor<float> x2Fp32;
         LoadInputToFp32(x1Addr, offset0, x1Fp32, preg);
         LoadInputToFp32(x2Addr, offset1, x2Fp32, preg);
         Add<float>(dst, x1Fp32, x2Fp32, preg);
@@ -115,20 +120,16 @@ __simd_callee__ inline void LoadInputsToRegResidualFirst(__ubuf__ X1_TYPE* x1Add
     }
 }
 
-// local variant of AddLayerNorm::VFWelfordParallelUpdateCommon with the residual
-// order fixed; register instructions are a verbatim copy of the shared original
-// except for the loader and store calls (callee copies above: a VF body can only
-// call __simd_callee__ functions) and the enclosing __VEC_SCOPE__ wrapper, which
-// is dropped so the registers live directly at function scope (the VF body form
-// used by the devkit reg_compute tests and by apply_adagrad). Entry follows the
-// standard VF form (__simd_vf__ + asc_vf_call, cf. apply_adagrad ApplyAdagradVF);
-// the shared original keeps its legacy plain form. The UpdateMask POST_UPDATE
-// auto-decrement semantics of sreg0 are part of the loop contract (see the
-// tail-mask regression notes) and are preserved as is.
-template <bool INIT, typename X1_TYPE, typename X2_TYPE, typename BIAS_TYPE, int TILING_KEY>
+// Use a local AddLayerNorm::VFWelfordParallelUpdateCommon variant with the residual
+// order fixed. Register instructions match the shared original except for the loader
+// and store calls because a VF body can only call __simd_callee__ functions. The registers live at function scope (the
+// VF body form used by the devkit reg_compute tests and by apply_adagrad). Entry follows the standard VF form
+// (__simd_vf__ + asc_vf_call, cf. apply_adagrad ApplyAdagradVF); the shared original keeps its legacy plain form. The
+// UpdateMask POST_UPDATE auto-decrement semantics of sreg0 are part of the loop contract (see the tail-mask regression
+// notes) and are preserved as is.
+template <bool INIT, typename X1_TYPE, typename X2_TYPE, typename BiasT, int TILING_KEY>
 __simd_vf__ inline void VFWelfordParallelUpdateResidualFirst(__ubuf__ X1_TYPE* x1Local, __ubuf__ X2_TYPE* x2Local,
-                                                             __ubuf__ BIAS_TYPE* biasLocal,
-                                                             __ubuf__ BIAS_TYPE* xOutLocal,
+                                                             __ubuf__ BiasT* biasLocal, __ubuf__ BiasT* xOutLocal,
                                                              __ubuf__ float* tmpMeanLocal, __ubuf__ float* tmpVarLocal,
                                                              uint64_t calLen, uint16_t loopCount, float scale)
 {
@@ -137,14 +138,14 @@ __simd_vf__ inline void VFWelfordParallelUpdateResidualFirst(__ubuf__ X1_TYPE* x
     RegTensor<float> tmpVar;
     RegTensor<float> delta1;
     RegTensor<float> delta2;
-    RegTensor<float> delat4;
+    RegTensor<float> deltaProduct;
     RegTensor<float> delta3;
     MaskReg pregLoop;
     uint32_t sreg0 = calLen;
     for (uint16_t i = 0; i < loopCount; i++) {
         pregLoop = UpdateMask<float>(sreg0);
-        LoadInputsToRegResidualFirst<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(x1Local, x2Local, biasLocal, x1, pregLoop,
-                                                                              i * VL_FP32, i * VL_FP32, i * VL_FP32);
+        LoadInputsToRegResidualFirst<X1_TYPE, X2_TYPE, BiasT, TILING_KEY>(x1Local, x2Local, biasLocal, x1, pregLoop,
+                                                                          i * VL_FP32, i * VL_FP32, i * VL_FP32);
         StoreFp32ToOutput(xOutLocal, x1, pregLoop, i * VL_FP32);
         if constexpr (INIT) {
             Duplicate(tmpMean, 0.0, pregLoop);
@@ -162,12 +163,12 @@ __simd_vf__ inline void VFWelfordParallelUpdateResidualFirst(__ubuf__ X1_TYPE* x
             LoadAlign(tmpVar, tmpVarLocal + i * VL_FP32);
         }
         Sub(delta3, x1, tmpMean, pregLoop);
-        Mul(delat4, delta1, delta3, pregLoop);
-        Add(tmpVar, tmpVar, delat4, pregLoop);
+        Mul(deltaProduct, delta1, delta3, pregLoop);
+        Add(tmpVar, tmpVar, deltaProduct, pregLoop);
         StoreAlign(tmpVarLocal + i * VL_FP32, tmpVar, pregLoop);
     }
 }
 
-} // namespace QuantizeAddLayerNormRegbase
+} // namespace NsQuantizeAddLayerNorm
 
 #endif // QUANTIZE_ADD_LAYER_NORM_REGBASE_RESIDUAL_H

@@ -10,8 +10,10 @@
 #ifndef QUANTIZE_ADD_LAYER_NORM_NORM_TILING_H_
 #define QUANTIZE_ADD_LAYER_NORM_NORM_TILING_H_
 
+#include <cstddef>
 #include <cstring>
 #include "kernel_tiling/kernel_tiling.h"
+#include "../../../op_kernel/arch35/quantize_add_layer_norm_tiling_data.h"
 
 #define DT_BF16 bfloat16_t
 #define ORIG_DTYPE_START DT_BF16
@@ -26,26 +28,13 @@ struct QuantizeAddLayerNormTilingData {
     uint32_t firstDimPerCore = 26;
     uint32_t firstDimPerCoreTail = 10;
     uint32_t firstDimPerTime = 1;
-    float aveFactor = 0.00008878;
     float eps = 0.00001;
+    float aveFactor = 0.00008878;
 };
 
-// ascend950 (arch35 / regbase) tiling data, keep in sync with
-// BEGIN_TILING_DATA_DEF(QuantizeAddLayerNormRegbaseTilingData) in op_host/quantize_add_layer_norm_tiling.h
-struct QuantizeAddLayerNormRegbaseTilingData {
-    int64_t rowsPerCore;
-    int64_t rowsPerTailCore;
-    int64_t rowsPerLoop;
-    int64_t cols;
-    int64_t colsPerLoop;
-    int64_t colsLoopCount;
-    int64_t colsTail;
-    int64_t binaryAddNum;
-    int64_t binaryAddK;
-    int64_t binaryAddLastNum;
-    float eps;
-    uint32_t outputX;
-};
+static_assert(sizeof(QuantizeAddLayerNormTilingData) == 32);
+static_assert(offsetof(QuantizeAddLayerNormTilingData, eps) == 24);
+static_assert(offsetof(QuantizeAddLayerNormTilingData, aveFactor) == 28);
 
 #pragma pack()
 

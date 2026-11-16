@@ -78,16 +78,5 @@ static ge::graphStatus InferShape4QuantizeAddLayerNorm(gert::InferShapeContext* 
     return GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataType4QuantizeAddLayerNorm(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4QuantizeAddLayerNorm");
-    context->SetOutputDataType(Y_IDX, DT_INT8);
-    context->SetOutputDataType(X_IDX, context->GetInputDataType(X1_IDX));
-    OP_LOGD(context->GetNodeName(), "End to do InferDataType4QuantizeAddLayerNorm");
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(QuantizeAddLayerNorm)
-    .InferShape(InferShape4QuantizeAddLayerNorm)
-    .InferDataType(InferDataType4QuantizeAddLayerNorm);
+IMPL_OP_INFERSHAPE(QuantizeAddLayerNorm).InferShape(InferShape4QuantizeAddLayerNorm);
 } // namespace ops
