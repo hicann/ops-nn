@@ -29,7 +29,7 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> MAXIMUM_SCALAR_TENSOR_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32};
 
 // scalar(aclTensor*)的dtype须与x的dtype按def映射一致（DtypeScalarToTensor2：FLOAT16→FLOAT16，BFLOAT16→FLOAT，整型→INT32）
@@ -39,19 +39,21 @@ static const std::initializer_list<DataType> FOREACH_SCALAR_INT_SUPPORT_LIST = {
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
-static inline bool CheckNotNull(const aclTensorList* self, const aclTensor* scalar, const aclTensorList* out)
+static inline bool CheckNotNull(const aclTensorList* maximumScalarSelf, const aclTensor* scalar,
+                                const aclTensorList* out)
 {
-    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(maximumScalarSelf, return false);
     OP_CHECK_NULL(scalar, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
+static inline bool CheckFormat(const aclTensorList* maximumScalarSelf, const aclTensorList* out)
 {
-    for (uint64_t k = 0; k < self->Size(); k++) {
+    for (uint64_t k = 0; k < maximumScalarSelf->Size(); k++) {
         // self格式不能是私有格式
-        if (IsPrivateFormat((*self)[k]->GetStorageFormat()) || IsPrivateFormat((*out)[k]->GetStorageFormat())) {
+        if (IsPrivateFormat((*maximumScalarSelf)[k]->GetStorageFormat()) ||
+            IsPrivateFormat((*out)[k]->GetStorageFormat())) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
             return false;
         }
@@ -61,9 +63,9 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    auto curArch_1 = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch_1 == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch_1)) {
-        return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
+    auto maximumScalarArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (maximumScalarArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(maximumScalarArch)) {
+        return MAXIMUM_SCALAR_TENSOR_DTYPE_SUPPORT_LIST;
     } else {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
                 op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
@@ -71,7 +73,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
-static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* scalar, const aclTensorList* out)
+static inline bool CheckDtypeValid(const aclTensorList* maximumScalarSelf, const aclTensor* scalar,
+                                   const aclTensorList* out)
 {
     const auto& dtypeSupportList_1 = GetDtypeSupportList();
     if (dtypeSupportList_1.size() == 0) {
@@ -79,25 +82,25 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* s
                 op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
-    if (self->Size() == 0) {
+    if (maximumScalarSelf->Size() == 0) {
         return true;
     }
 
     // checkself input dtype, and check the releation of input and out
-    auto selfDtyte = (*self)[0]->GetDataType();
-    OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList_1, return false);
-    for (uint64_t j = 0; j < self->Size(); j++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*self)[j], selfDtyte, return false);
+    auto maximumScalarDtype = (*maximumScalarSelf)[0]->GetDataType();
+    OP_CHECK_DTYPE_NOT_SUPPORT((*maximumScalarSelf)[0], dtypeSupportList_1, return false);
+    for (uint64_t j = 0; j < maximumScalarSelf->Size(); j++) {
+        OP_CHECK_DTYPE_NOT_MATCH((*maximumScalarSelf)[j], maximumScalarDtype, return false);
     }
 
     for (uint64_t j = 0; j < out->Size(); j++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*out)[j], selfDtyte, return false);
+        OP_CHECK_DTYPE_NOT_MATCH((*out)[j], maximumScalarDtype, return false);
     }
 
     // check the releation of self and scalar
-    if (selfDtyte == DataType::DT_FLOAT16) {
+    if (maximumScalarDtype == DataType::DT_FLOAT16) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT16_SUPPORT_LIST, return false);
-    } else if (selfDtyte == DataType::DT_FLOAT || selfDtyte == DataType::DT_BF16) {
+    } else if (maximumScalarDtype == DataType::DT_FLOAT || maximumScalarDtype == DataType::DT_BF16) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT_SUPPORT_LIST, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_INT_SUPPORT_LIST, return false);
@@ -105,24 +108,25 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* s
     return true;
 }
 
-static inline bool CheckShapeValid(const aclTensorList* self, const aclTensorList* out)
+static inline bool CheckShapeValid(const aclTensorList* maximumScalarSelf, const aclTensorList* out)
 {
     // tensor 维度检查
-    for (uint64_t j = 0; j < self->Size(); j++) {
-        OP_CHECK_MAX_DIM((*self)[j], MAX_SUPPORT_DIMS_NUMS, return false);
+    for (uint64_t j = 0; j < maximumScalarSelf->Size(); j++) {
+        OP_CHECK_MAX_DIM((*maximumScalarSelf)[j], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
     // self和out的shape必须一致
-    for (uint64_t j = 0; j < self->Size(); j++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*self)[j], (*out)[j], return false);
+    for (uint64_t j = 0; j < maximumScalarSelf->Size(); j++) {
+        OP_CHECK_SHAPE_NOT_EQUAL((*maximumScalarSelf)[j], (*out)[j], return false);
     }
     return true;
 }
 
-static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor* scalar, const aclTensorList* out)
+static inline aclnnStatus CheckParams(const aclTensorList* maximumScalarSelf, const aclTensor* scalar,
+                                      const aclTensorList* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(maximumScalarSelf, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
     if (scalar->GetViewShape().GetShapeSize() != 1) {
         const auto scalarSize = std::to_string(scalar->GetViewShape().GetShapeSize());
         OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "scalar must contain exactly one element, but got %s.",
@@ -132,8 +136,8 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
             (std::vector<const char*>{"scalar", "aclnnForeachMaximumScalar", scalarSize.c_str(), "1"}));
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (self->Size() != out->Size()) {
-        const auto counts = std::to_string(self->Size()) + ", " + std::to_string(out->Size());
+    if (maximumScalarSelf->Size() != out->Size()) {
+        const auto counts = std::to_string(maximumScalarSelf->Size()) + ", " + std::to_string(out->Size());
         const char* reason = "x and out must have the same number of tensors";
         OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s, but got %s.", reason, counts.c_str());
         REPORT_PREDEFINED_ERR_MSG(
@@ -144,15 +148,15 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
 
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShapeValid/CheckFormat.
-    CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorListNotNull(maximumScalarSelf, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(maximumScalarSelf, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
-    CHECK_RET(CheckShapeValid(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeValid(maximumScalarSelf, out), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查Format是否满足约束
-    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFormat(maximumScalarSelf, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -161,8 +165,8 @@ static aclnnStatus ExecForeachMaximumScalarGetWorkspaceSize(const aclTensorList*
                                                             aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    auto maximumScalarExecutor = CREATE_EXECUTOR();
+    CHECK_RET(maximumScalarExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
     auto ret_2 = CheckParams(x, scalar, out);
@@ -171,31 +175,32 @@ static aclnnStatus ExecForeachMaximumScalarGetWorkspaceSize(const aclTensorList*
     // 空Tensorlist处理
     if (x->Size() == 0) {
         *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
+        maximumScalarExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
     // 输入如果非连续，需要转连续（空tensor直接用，保持索引一致）
-    auto contiguousTensors = ForeachMakeContiguousTensorList(x, uniqueExecutor.get());
+    auto contiguousTensors = ForeachMakeContiguousTensorList(x, maximumScalarExecutor.get());
     CHECK_RET(contiguousTensors != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 输出如果非连续，需要转连续作为kernel输出buffer；连续/空则直接使用
-    auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
+    auto contiguousOut = ForeachMakeContiguousTensorList(out, maximumScalarExecutor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // Normalize the scalar view as well: Tiling consumes storage shapes.
-    auto contiguousScalar = l0op::Contiguous(scalar, uniqueExecutor.get());
+    auto contiguousScalar = l0op::Contiguous(scalar, maximumScalarExecutor.get());
     CHECK_RET(contiguousScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto result = l0op::ForeachMaximumScalarV2(contiguousTensors, contiguousScalar, contiguousOut,
-                                               uniqueExecutor.get());
+                                               maximumScalarExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
-    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, maximumScalarExecutor.get()),
+              ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    *workspaceSize = maximumScalarExecutor->GetWorkspaceSize();
+    maximumScalarExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 

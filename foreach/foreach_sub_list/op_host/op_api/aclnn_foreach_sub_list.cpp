@@ -41,21 +41,22 @@ static const std::initializer_list<ge::DataType> FOREACH_SCALAR_SUPPORT_LIST = {
 
 static const std::initializer_list<ge::DataType> EMPTY_LIST = {};
 
-static inline bool CheckNotNull(const aclTensorList* self, const aclTensorList* x2, const aclTensor* alpha,
+static inline bool CheckNotNull(const aclTensorList* subListSelf, const aclTensorList* x2, const aclTensor* alpha,
                                 const aclTensorList* out)
 {
-    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(subListSelf, return false);
     OP_CHECK_NULL(x2, return false);
     OP_CHECK_NULL(alpha, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static inline bool CheckTensorListSize(const aclTensorList* self, const aclTensorList* x2, const aclTensorList* out)
+static inline bool CheckTensorListSize(const aclTensorList* subListSelf, const aclTensorList* x2,
+                                       const aclTensorList* out)
 {
-    if (self->Size() != x2->Size() || self->Size() != out->Size()) {
+    if (subListSelf->Size() != x2->Size() || subListSelf->Size() != out->Size()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Tensor lists must have the same number of tensors, got x1=%lu, x2=%lu, out=%lu", self->Size(),
+                "Tensor lists must have the same number of tensors, got x1=%lu, x2=%lu, out=%lu", subListSelf->Size(),
                 x2->Size(), out->Size());
         return false;
     }
@@ -75,8 +76,8 @@ static inline bool CheckAlpha(const aclTensor* alpha)
 
 static const std::initializer_list<ge::DataType>& GetDtypeSupportList()
 {
-    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    auto subListArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (subListArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(subListArch)) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
@@ -85,7 +86,7 @@ static const std::initializer_list<ge::DataType>& GetDtypeSupportList()
     }
 }
 
-static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensorList* x2, const aclTensor* alpha,
+static inline bool CheckDtypeValid(const aclTensorList* subListSelf, const aclTensorList* x2, const aclTensor* alpha,
                                    const aclTensorList* out)
 {
     const auto& dtypeSupportList = GetDtypeSupportList();
@@ -94,13 +95,13 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensorLis
                 op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
-    if (self->Size() == 0) {
+    if (subListSelf->Size() == 0) {
         return true;
     }
 
     // checkself input dtype, and check the releation of input and out
-    auto selfDtyte = (*self)[0]->GetDataType();
-    OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
+    auto selfDtyte = (*subListSelf)[0]->GetDataType();
+    OP_CHECK_DTYPE_NOT_SUPPORT((*subListSelf)[0], dtypeSupportList, return false);
 
     // check the releation of self and alpha
     if (selfDtyte == ge::DT_FLOAT16) {
@@ -111,8 +112,8 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensorLis
         OP_CHECK_DTYPE_NOT_SUPPORT(alpha, FOREACH_SCALAR_INT_SUPPORT_LIST, return false);
     }
 
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*self)[i], selfDtyte, return false);
+    for (uint64_t i = 0; i < subListSelf->Size(); i++) {
+        OP_CHECK_DTYPE_NOT_MATCH((*subListSelf)[i], selfDtyte, return false);
     }
 
     for (uint64_t i = 0; i < x2->Size(); i++) {
@@ -125,44 +126,44 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensorLis
     return true;
 }
 
-static inline bool CheckShape(const aclTensorList* self, const aclTensorList* x2, const aclTensorList* out)
+static inline bool CheckShape(const aclTensorList* subListSelf, const aclTensorList* x2, const aclTensorList* out)
 {
     // tensorlist中tensor shape一致性检查
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*self)[i], (*x2)[i], return false);
+    for (uint64_t i = 0; i < subListSelf->Size(); i++) {
+        OP_CHECK_SHAPE_NOT_EQUAL((*subListSelf)[i], (*x2)[i], return false);
     }
 
     // tensor 维度检查
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+    for (uint64_t i = 0; i < subListSelf->Size(); i++) {
+        OP_CHECK_MAX_DIM((*subListSelf)[i], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
     // self和out的shape必须一致
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*self)[i], (*out)[i], return false);
+    for (uint64_t i = 0; i < subListSelf->Size(); i++) {
+        OP_CHECK_SHAPE_NOT_EQUAL((*subListSelf)[i], (*out)[i], return false);
     }
     return true;
 }
 
-static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensorList* x2, const aclTensor* alpha,
+static inline aclnnStatus CheckParams(const aclTensorList* subListSelf, const aclTensorList* x2, const aclTensor* alpha,
                                       const aclTensorList* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, x2, alpha, out), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(subListSelf, x2, alpha, out), ACLNN_ERR_PARAM_NULLPTR);
 
-    CHECK_RET(CheckTensorListSize(self, x2, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorListSize(subListSelf, x2, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckAlpha(alpha), ACLNN_ERR_PARAM_INVALID);
 
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShape.
-    CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorListNotNull(subListSelf, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(x2, "x2"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, x2, alpha, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(subListSelf, x2, alpha, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
-    CHECK_RET(CheckShape(self, x2, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(subListSelf, x2, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -171,8 +172,8 @@ static aclnnStatus ExecForeachSubListGetWorkspaceSize(const aclTensorList* x1, c
                                                       uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    auto subListExecutor = CREATE_EXECUTOR();
+    CHECK_RET(subListExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
     auto ret = CheckParams(x1, x2, alpha, out);
@@ -181,32 +182,32 @@ static aclnnStatus ExecForeachSubListGetWorkspaceSize(const aclTensorList* x1, c
     // 空Tensorlist处理
     if (x1->Size() == 0 || x2->Size() == 0) {
         *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
+        subListExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
     // 输入如果非连续，需要转连续（空tensor直接用，保持索引一致）
-    auto contiguousTensorsX1 = ForeachMakeContiguousTensorList(x1, uniqueExecutor.get());
+    auto contiguousTensorsX1 = ForeachMakeContiguousTensorList(x1, subListExecutor.get());
     CHECK_RET(contiguousTensorsX1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto contiguousTensorsX2 = ForeachMakeContiguousTensorList(x2, uniqueExecutor.get());
+    auto contiguousTensorsX2 = ForeachMakeContiguousTensorList(x2, subListExecutor.get());
     CHECK_RET(contiguousTensorsX2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 输出如果非连续，需要转连续作为kernel输出buffer；连续/空则直接使用
-    auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
+    auto contiguousOut = ForeachMakeContiguousTensorList(out, subListExecutor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 复用V2桥接，alpha(aclTensor*)直接透传，输出到连续buffer
     auto result = l0op::ForeachSubListV2(contiguousTensorsX1, contiguousTensorsX2, alpha, contiguousOut,
-                                         uniqueExecutor.get());
+                                         subListExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
-    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, subListExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    *workspaceSize = subListExecutor->GetWorkspaceSize();
+    subListExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 

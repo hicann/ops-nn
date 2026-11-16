@@ -15,8 +15,8 @@
 #include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
-#include "op_api/aclnn_util.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/make_op_executor.h"
 #include "../../foreach_utils/op_host/foreach_null_check_helper.h"
 #include <string>
@@ -53,28 +53,30 @@ static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT_SUPPORT_LIST =
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
-static inline bool CheckNull(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+static inline bool CheckNull(const aclTensorList* minimumScalarV2Self, const aclScalar* scalar,
+                             const aclTensorList* out)
 {
-    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(minimumScalarV2Self, return false);
     OP_CHECK_NULL(scalar, return false);
     OP_CHECK_NULL(out, return false);
     return true;
 }
 
-static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
+static inline bool CheckFormat(const aclTensorList* minimumScalarV2Self, const aclTensorList* out)
 {
-    for (uint64_t m = 0; m < self->Size(); m++) {
+    for (uint64_t m = 0; m < minimumScalarV2Self->Size(); m++) {
         // self格式不能是私有格式
-        if (IsPrivateFormat((*self)[m]->GetStorageFormat()) || IsPrivateFormat((*out)[m]->GetStorageFormat())) {
+        if (IsPrivateFormat((*minimumScalarV2Self)[m]->GetStorageFormat()) ||
+            IsPrivateFormat((*out)[m]->GetStorageFormat())) {
             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s",
                                    "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.");
             REPORT_PREDEFINED_ERR_MSG(
                 "EZ0035", (std::vector<const char*>{"param_name", "op_name", "incorrect_format", "reason"}),
                 (std::vector<const char*>{
-                    std::string((IsPrivateFormat((*self)[m]->GetStorageFormat()) ? "x" : "out")).c_str(),
+                    std::string((IsPrivateFormat((*minimumScalarV2Self)[m]->GetStorageFormat()) ? "x" : "out")).c_str(),
                     "aclnnForeachMinimumScalarV2",
-                    (std::to_string(static_cast<int>((IsPrivateFormat((*self)[m]->GetStorageFormat()) ?
-                                                          (*self)[m]->GetStorageFormat() :
+                    (std::to_string(static_cast<int>((IsPrivateFormat((*minimumScalarV2Self)[m]->GetStorageFormat()) ?
+                                                          (*minimumScalarV2Self)[m]->GetStorageFormat() :
                                                           (*out)[m]->GetStorageFormat()))))
                         .c_str(),
                     "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW."}));
@@ -86,8 +88,8 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    auto curArch_2 = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (Ops::NN::AclnnUtil::IsRegbase(curArch_2) || curArch_2 == NpuArch::DAV_2201) {
+    auto minimumScalarV2Arch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(minimumScalarV2Arch) || minimumScalarV2Arch == NpuArch::DAV_2201) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         const std::string reason = (("support for " +
@@ -100,7 +102,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
-static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+static inline bool CheckDtypeValid(const aclTensorList* minimumScalarV2Self, const aclScalar* scalar,
+                                   const aclTensorList* out)
 {
     const auto& dtypeSupportList_2 = GetDtypeSupportList();
     if (dtypeSupportList_2.size() == 0) {
@@ -109,14 +112,14 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
         return false;
     }
     // 空列表直接返回，避免在列表长度判断前解引用首元素
-    if (self->Size() == 0) {
+    if (minimumScalarV2Self->Size() == 0) {
         return true;
     }
-    auto selfDtyte = (*self)[0]->GetDataType();
+    auto selfDtyte = (*minimumScalarV2Self)[0]->GetDataType();
     // checkself input dtype, and check the releation of input and out
-    OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList_2, return false);
-    for (uint64_t k = 0; k < self->Size(); k++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*self)[k], selfDtyte, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT((*minimumScalarV2Self)[0], dtypeSupportList_2, return false);
+    for (uint64_t k = 0; k < minimumScalarV2Self->Size(); k++) {
+        OP_CHECK_DTYPE_NOT_MATCH((*minimumScalarV2Self)[k], selfDtyte, return false);
     }
 
     for (uint64_t k = 0; k < out->Size(); k++) {
@@ -134,43 +137,44 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     return true;
 }
 
-static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out)
+static inline bool CheckShape(const aclTensorList* minimumScalarV2Self, const aclTensorList* out)
 {
     // tensor 维度检查
-    for (uint64_t k = 0; k < self->Size(); k++) {
-        OP_CHECK_MAX_DIM((*self)[k], MAX_SUPPORT_DIMS_NUMS, return false);
+    for (uint64_t k = 0; k < minimumScalarV2Self->Size(); k++) {
+        OP_CHECK_MAX_DIM((*minimumScalarV2Self)[k], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
     // self和out的tensor个数必须一致，避免后续按下标访问out越界
-    if (self->Size() != out->Size()) {
+    if (minimumScalarV2Self->Size() != out->Size()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensor lists must have the same number of tensors, got %lu and %lu",
-                self->Size(), out->Size());
+                minimumScalarV2Self->Size(), out->Size());
         return false;
     }
 
     // self和out的shape必须一致
-    for (uint64_t k = 0; k < self->Size(); k++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*self)[k], (*out)[k], return false);
+    for (uint64_t k = 0; k < minimumScalarV2Self->Size(); k++) {
+        OP_CHECK_SHAPE_NOT_EQUAL((*minimumScalarV2Self)[k], (*out)[k], return false);
     }
     return true;
 }
 
-static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
+static inline aclnnStatus CheckParams(const aclTensorList* minimumScalarV2Self, const aclScalar* scalar,
+                                      const aclTensorList* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNull(minimumScalarV2Self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShape/CheckFormat.
-    CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorListNotNull(minimumScalarV2Self, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(minimumScalarV2Self, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
-    CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(minimumScalarV2Self, out), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查Format是否满足约束
-    CHECK_RET(CheckFormat(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFormat(minimumScalarV2Self, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -240,8 +244,8 @@ static aclnnStatus ExecForeachMinimumScalarV2GetWorkspaceSize(const aclTensorLis
                                                               aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    auto minimumScalarV2Executor = CREATE_EXECUTOR();
+    CHECK_RET(minimumScalarV2Executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
     auto ret_3 = CheckParams(x, scalar, out);
@@ -250,16 +254,16 @@ static aclnnStatus ExecForeachMinimumScalarV2GetWorkspaceSize(const aclTensorLis
     // 空Tensorlist处理
     if (x->Size() == 0) {
         *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
+        minimumScalarV2Executor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
     // 输入如果非连续，需要转连续（空tensor直接用，保持索引一致）
-    auto contiguousTensors = ForeachMakeContiguousTensorList(x, uniqueExecutor.get());
+    auto contiguousTensors = ForeachMakeContiguousTensorList(x, minimumScalarV2Executor.get());
     CHECK_RET(contiguousTensors != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 输出如果非连续，需要转连续作为kernel输出buffer；连续/空则直接使用
-    auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
+    auto contiguousOut = ForeachMakeContiguousTensorList(out, minimumScalarV2Executor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 校验scalar的数值是否满足约束
@@ -269,21 +273,23 @@ static aclnnStatus ExecForeachMinimumScalarV2GetWorkspaceSize(const aclTensorLis
     // sclar to tensor
     const aclTensor* otherTensor;
     if ((*x)[0]->GetDataType() == DataType::DT_BF16) {
-        otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
+        otherTensor = minimumScalarV2Executor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
     } else {
-        otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x)[0]->GetDataType());
+        otherTensor = minimumScalarV2Executor.get()->ConvertToTensor(scalar, (*x)[0]->GetDataType());
     }
 
     // 调用l0算子ForeachMinimumScalarV2进行计算，输出到连续buffer
-    auto result = l0op::ForeachMinimumScalarV2(contiguousTensors, otherTensor, contiguousOut, uniqueExecutor.get());
+    auto result = l0op::ForeachMinimumScalarV2(contiguousTensors, otherTensor, contiguousOut,
+                                               minimumScalarV2Executor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
-    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, minimumScalarV2Executor.get()),
+              ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    *workspaceSize = minimumScalarV2Executor->GetWorkspaceSize();
+    minimumScalarV2Executor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 

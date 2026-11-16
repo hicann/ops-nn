@@ -45,9 +45,9 @@ static constexpr int64_t MAX_TENSOR_NUM_LIST = 256;
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
-static inline bool CheckNotNull(const aclTensorList* self, const aclTensor* roundMode, const aclTensorList* out)
+static inline bool CheckNotNull(const aclTensorList* roundOffSelf, const aclTensor* roundMode, const aclTensorList* out)
 {
-    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(roundOffSelf, return false);
     OP_CHECK_NULL(roundMode, return false);
     OP_CHECK_NULL(out, return false);
     return true;
@@ -55,10 +55,10 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclTensor* roun
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    auto roundOffArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (Ops::NN::AclnnUtil::IsRegbase(roundOffArch)) {
         return ASCEND950_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
-    } else if (curArch == NpuArch::DAV_2201) {
+    } else if (roundOffArch == NpuArch::DAV_2201) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
@@ -67,7 +67,8 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
-static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* roundMode, const aclTensorList* out)
+static inline bool CheckDtypeValid(const aclTensorList* roundOffSelf, const aclTensor* roundMode,
+                                   const aclTensorList* out)
 {
     const auto& dtypeSupportList = GetDtypeSupportList();
     if (dtypeSupportList.size() == 0) {
@@ -75,15 +76,15 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* r
                 op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
-    if (self->Size() == 0) {
+    if (roundOffSelf->Size() == 0) {
         return true;
     }
 
     // checkself input dtype, and check the releation of input and out
-    auto selfDtyte = (*self)[0]->GetDataType();
-    OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
-    for (uint64_t b = 0; b < self->Size(); b++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*self)[b], selfDtyte, return false);
+    auto selfDtyte = (*roundOffSelf)[0]->GetDataType();
+    OP_CHECK_DTYPE_NOT_SUPPORT((*roundOffSelf)[0], dtypeSupportList, return false);
+    for (uint64_t b = 0; b < roundOffSelf->Size(); b++) {
+        OP_CHECK_DTYPE_NOT_MATCH((*roundOffSelf)[b], selfDtyte, return false);
     }
 
     for (uint64_t b = 0; b < out->Size(); b++) {
@@ -101,40 +102,42 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* r
     return true;
 }
 
-static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out)
+static inline bool CheckShape(const aclTensorList* roundOffSelf, const aclTensorList* out)
 {
     // self和out的shape必须一致
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*self)[i], (*out)[i], return false);
+    for (uint64_t i = 0; i < roundOffSelf->Size(); i++) {
+        OP_CHECK_SHAPE_NOT_EQUAL((*roundOffSelf)[i], (*out)[i], return false);
     }
     return true;
 }
 
-static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor* roundMode, const aclTensorList* out)
+static inline aclnnStatus CheckParams(const aclTensorList* roundOffSelf, const aclTensor* roundMode,
+                                      const aclTensorList* out)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, roundMode, out), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(roundOffSelf, roundMode, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // Check every entry in tensor lists is not null, to avoid null pointer
     // dereference in CheckDtypeValid/CheckShape.
-    CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorListNotNull(roundOffSelf, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
 
     // 2. 检查x与out张量个数一致
-    if (self->Size() != out->Size()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x size[%llu] and out size[%llu] must be equal.", self->Size(), out->Size());
+    if (roundOffSelf->Size() != out->Size()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x size[%llu] and out size[%llu] must be equal.", roundOffSelf->Size(),
+                out->Size());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // 3. 检查列表长度不超过kernel TilingData容量上限
-    if (self->Size() > MAX_TENSOR_NUM_LIST) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor list size[%llu] exceeds max tensor num[%ld].", self->Size(),
+    if (roundOffSelf->Size() > MAX_TENSOR_NUM_LIST) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "tensor list size[%llu] exceeds max tensor num[%ld].", roundOffSelf->Size(),
                 MAX_TENSOR_NUM_LIST);
         return ACLNN_ERR_PARAM_INVALID;
     }
     // 4. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, roundMode, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(roundOffSelf, roundMode, out), ACLNN_ERR_PARAM_INVALID);
     // 5. 检查shape是否满足约束
-    CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(roundOffSelf, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -143,8 +146,8 @@ static aclnnStatus ExecForeachRoundOffNumberGetWorkspaceSize(const aclTensorList
                                                              aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
-    auto uniqueExecutor = CREATE_EXECUTOR();
-    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    auto roundOffExecutor = CREATE_EXECUTOR();
+    CHECK_RET(roundOffExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
     auto ret_1 = CheckParams(x, roundMode, out);
@@ -153,28 +156,28 @@ static aclnnStatus ExecForeachRoundOffNumberGetWorkspaceSize(const aclTensorList
     // 空Tensorlist处理
     if (x->Size() == 0) {
         *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
+        roundOffExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
     // 输入如果非连续，需要转连续（空tensor直接用，保持索引一致）
-    auto contiguousTensors = ForeachMakeContiguousTensorList(x, uniqueExecutor.get());
+    auto contiguousTensors = ForeachMakeContiguousTensorList(x, roundOffExecutor.get());
     CHECK_RET(contiguousTensors != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 输出如果非连续，需要转连续作为kernel输出buffer；连续/空则直接使用
-    auto contiguousOut = ForeachMakeContiguousTensorList(out, uniqueExecutor.get());
+    auto contiguousOut = ForeachMakeContiguousTensorList(out, roundOffExecutor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 复用V2桥接，roundMode(aclTensor*)直接透传，输出到连续buffer
-    auto result = l0op::ForeachRoundOffNumberV2(contiguousTensors, roundMode, contiguousOut, uniqueExecutor.get());
+    auto result = l0op::ForeachRoundOffNumberV2(contiguousTensors, roundMode, contiguousOut, roundOffExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
-    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, uniqueExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(ForeachViewCopyToOutputTensorList(contiguousOut, out, roundOffExecutor.get()), ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
+    *workspaceSize = roundOffExecutor->GetWorkspaceSize();
+    roundOffExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
 }
 

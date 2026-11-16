@@ -26,7 +26,7 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> POW_LIST_TENSOR_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_INT32, DataType::DT_BF16};
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
@@ -44,7 +44,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     switch (GetCurrentPlatformInfo().GetCurNpuArch()) {
         case NpuArch::DAV_2201:
         case NpuArch::DAV_3510:
-            return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
+            return POW_LIST_TENSOR_DTYPE_SUPPORT_LIST;
         default:
             return EMPTY_LIST;
     }
