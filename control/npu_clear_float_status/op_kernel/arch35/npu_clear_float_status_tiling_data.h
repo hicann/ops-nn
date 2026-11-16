@@ -15,6 +15,12 @@
 
 #include <cstdint>
 
+// vector_dup Tensor 元素数（half 类型），Host Tiling 与 Kernel 共用：
+// Host 据此计算 TBuf UB 容量，Kernel 据此分配 TBuf 并执行 Duplicate，
+// 单一来源避免两侧各自维护独立常量导致的不一致。
+constexpr uint32_t VEC_DUP_SIZE = 38400;
+constexpr uint32_t VEC_DUP_SIZE_BYTES = VEC_DUP_SIZE * 2; // half 占 2 字节
+
 struct NPUClearFloatStatusTilingData {
     int32_t needCoreNum = 0; // 需要启动的核数（= 物理核数）
 };

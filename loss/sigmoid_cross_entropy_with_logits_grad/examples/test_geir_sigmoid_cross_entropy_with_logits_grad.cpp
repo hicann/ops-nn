@@ -88,7 +88,7 @@ uint32_t GetDataTypeSize(DataType dt)
 }
 
 int32_t GenData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
-                float value)
+                float value, std::vector<std::vector<float>>& buffers)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -96,11 +96,9 @@ int32_t GenData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_
         size *= shapes[i];
     }
     uint32_t data_len = size * GetDataTypeSize(data_type);
-    float* pData = new (std::nothrow) float[size];
+    buffers.emplace_back(size, value);
+    float* pData = buffers.back().data();
 
-    for (size_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
-    }
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
     return SUCCESS;
 }
@@ -114,7 +112,7 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 }
 
 int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
-                     std::vector<Operator>& outputs, Graph& graph)
+                     std::vector<Operator>& outputs, Graph& graph, std::vector<std::vector<float>>& buffers)
 {
     Status ret = SUCCESS;
     auto sigmoidCrossEntropyWithLogitsGrad1 = op::SigmoidCrossEntropyWithLogitsGrad(
@@ -126,7 +124,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     placeholder1_desc.SetPlacement(ge::kPlacementHost);
     placeholder1_desc.SetFormat(FORMAT_ND);
     Tensor tensor_placeholder1;
-    ret = GenData(predictShape, tensor_placeholder1, placeholder1_desc, inDtype, 0.5);
+    ret = GenData(predictShape, tensor_placeholder1, placeholder1_desc, inDtype, 0.5, buffers);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());
         return FAILED;
@@ -144,7 +142,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     placeholder2_desc.SetPlacement(ge::kPlacementHost);
     placeholder2_desc.SetFormat(FORMAT_ND);
     Tensor tensor_placeholder2;
-    ret = GenData(targetShape, tensor_placeholder2, placeholder2_desc, inDtype, 0.3);
+    ret = GenData(targetShape, tensor_placeholder2, placeholder2_desc, inDtype, 0.3, buffers);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());
         return FAILED;
@@ -162,7 +160,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     placeholder3_desc.SetPlacement(ge::kPlacementHost);
     placeholder3_desc.SetFormat(FORMAT_ND);
     Tensor tensor_placeholder3;
-    ret = GenData(doutShape, tensor_placeholder3, placeholder3_desc, inDtype, 1.0);
+    ret = GenData(doutShape, tensor_placeholder3, placeholder3_desc, inDtype, 1.0, buffers);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());
         return FAILED;
@@ -198,10 +196,11 @@ int main(int argc, char* argv[])
 
     std::vector<Operator> inputs{};
     std::vector<Operator> outputs{};
+    std::vector<std::vector<float>> buffers{};
 
     DataType inDtype = DT_FLOAT;
 
-    ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
+    ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph, buffers);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
         return FAILED;
@@ -225,6 +224,12 @@ int main(int argc, char* argv[])
     std::map<AscendString, AscendString> graph_options = {};
     uint32_t graph_id = 0;
     ret = session->AddGraph(graph_id, graph, graph_options);
+    if (ret != SUCCESS) {
+        printf("%s - ERROR - [XIR]: Session add ir compute graph to ir session failed\n", GetTime().c_str());
+        delete session;
+        GEFinalize();
+        return FAILED;
+    }
 
     printf("%s - INFO - [XIR]: Session add ir compute graph to ir session success\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
@@ -277,8 +282,10 @@ int main(int argc, char* argv[])
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
+        delete session;
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Finalize ir graph session success\n", GetTime().c_str());
+    delete session;
     return SUCCESS;
 }

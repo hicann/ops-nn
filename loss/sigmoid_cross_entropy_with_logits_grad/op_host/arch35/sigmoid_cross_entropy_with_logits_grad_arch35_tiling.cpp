@@ -17,6 +17,7 @@
 #include "log/log.h"
 #include "../../op_kernel/arch35/sigmoid_cross_entropy_with_logits_grad_tiling_data.h"
 #include <algorithm>
+#include <limits>
 #include <set>
 
 using namespace ge;
@@ -51,7 +52,14 @@ static ge::graphStatus TilingForSigmoidCrossEntropyWithLogitsGrad(gert::TilingCo
 
     int64_t totalElements = 1;
     for (size_t i = 0; i < predictShape.GetDimNum(); ++i) {
-        totalElements *= predictShape.GetDim(i);
+        int64_t dim = predictShape.GetDim(i);
+        OP_CHECK_IF(dim < 0, OP_LOGE(nodeName, "predict dim must be non-negative, dim[%zu]=%ld", i, dim),
+                    return ge::GRAPH_FAILED);
+        if (dim != 0 && totalElements > std::numeric_limits<int64_t>::max() / dim) {
+            OP_LOGE(nodeName, "predict total elements overflow int64");
+            return ge::GRAPH_FAILED;
+        }
+        totalElements *= dim;
     }
 
     auto predictDesc = context->GetInputDesc(IDX_PREDICT);

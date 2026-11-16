@@ -15,11 +15,11 @@ English | [简体中文](./README.md)
 
 ## Function
 
-- Operator function: Backward gradient computation of the fused loss of Sigmoid and binary cross entropy (BCELoss). The operator passes the input `predict` through `sigmoid`, subtracts the label `target`, and then multiplies by the upstream gradient `d_out` to obtain the gradient with respect to `predict`.
+- Operator function: Backward gradient computation of the fused loss of Sigmoid and binary cross entropy (BCELoss). The operator passes the input `predict` through `sigmoid`, subtracts the label `target`, and then multiplies by the upstream gradient `dout` to obtain the gradient with respect to `predict`.
 - Formula:
 
   $$
-  gradient = (sigmoid(predict) - target) \cdot d_out
+  gradient = (sigmoid(predict) - target) \cdot dout
   $$
 
 ## Parameters
@@ -55,7 +55,7 @@ English | [简体中文](./README.md)
     <td class="tg-0lax">ND</td>
   </tr>
   <tr>
-    <td class="tg-0lax">d_out</td>
+    <td class="tg-0lax">dout</td>
     <td class="tg-0lax">Input</td>
     <td class="tg-0lax">Gradient value from the previous step of network backward propagation; the shape is consistent with that of predict (the total number of elements equals that of predict; broadcasting is not supported).</td>
     <td class="tg-0lax">Same as predict</td>

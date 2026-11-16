@@ -15,8 +15,6 @@ It clears the float overflow status register on each AI core.
 Output is always 8 float32 zeros, independent of input data.
 """
 
-import tensorflow as tf
-
 __spec__ = {
     "npu_clear_float_status": "NpuClearFloatStatusTestSpec",
 }
@@ -27,7 +25,7 @@ class NpuClearFloatStatusTestSpec:
     TestSpec shared by Kernel and GEIR for npu_clear_float_status.
 
     Input:
-        addr: numpy.ndarray (Kernel) / tf.Tensor (third_party)
+        addr: numpy.ndarray (Kernel) / torch.Tensor (third_party)
               float32, shape (8,) - address placeholder, data not used
 
     Output:
@@ -49,14 +47,16 @@ class NpuClearFloatStatusTestSpec:
         Returns:
             list: [numpy.ndarray of 8 float32 zeros]
         """
-        result = tf.zeros([8], dtype=tf.float32)
+        import torch
+
+        result = torch.zeros([8], dtype=torch.float32)
         return [result.numpy()]
 
     class ThirdPartyImpl:
         """
-        Provider third-party implementation for GEIR cross-check.
+        torch third-party implementation for GEIR cross-check.
 
-        Receives original dtype tf.Tensor, independently computes output.
+        Receives torch.Tensor, independently computes output.
         Since output is always zeros, the result is deterministic
         and bit-exact regardless of input data.
         """
@@ -65,10 +65,12 @@ class NpuClearFloatStatusTestSpec:
             pass
 
         def __call__(self, addr, **kwargs):
-            return [tf.zeros([8], dtype=tf.float32)]
+            import torch
+
+            return [torch.zeros([8], dtype=torch.float32)]
 
     # Maps framework key to its third-party implementation class
-    third_party = {"tf": ThirdPartyImpl}
+    third_party = {"torch": ThirdPartyImpl}
 
     # Bit-exact float32 output: use binary_equal (output is always zeros)
     tolerance = {

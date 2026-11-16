@@ -25,8 +25,7 @@ namespace NsNpuClearFloatStatus {
 using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 128;
-constexpr int32_t OUTPUT_SIZE = 8;      // 输出元素数（固定 8 个 float32）
-constexpr int32_t VEC_DUP_SIZE = 38400; // vector_dup Tensor 元素数（float16[38400]）
+constexpr int32_t OUTPUT_SIZE = 8; // 输出元素数（固定 8 个 float32）
 
 // SIMT VF: 写 totalElements 个零值到输出 GM (Grid-Stride 循环)
 // 由于 totalElements=8 远小于 blockDim*gridDim，实际仅 core 0 前 8 线程

@@ -21,17 +21,16 @@
 
 namespace optiling {
 
-// UB 分配策略 — TBuf float16[38400] = 75KB
+// UB 分配策略 — TBuf half[VEC_DUP_SIZE] = 75KB
 // DCACHE_SIZE = 128KB (默认), STATIC_UB_ESTIMATE = 0 (无 __ubuf__ 静态数组)
 // 动态 UB 池 = ubSize - 128KB, 需 >= 75KB (TBuf 分配)
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
-// TBuf 所需容量 = VEC_DUP_SIZE * sizeof(half) = 38400 * 2 = 75KB
-// VEC_DUP_SIZE 定义于 op_kernel/arch35/npu_clear_float_status_simt.h
-// 无法直接引用 simt.h 的 VEC_DUP_SIZE（kernel 头文件不应引入 host 代码），
-// 若 simt.h 的 VEC_DUP_SIZE 变化，此处需同步修改，static_assert 会校验一致性
-constexpr uint32_t TBUF_REQUIRED_SIZE = 38400 * 2;
-static_assert(TBUF_REQUIRED_SIZE == 38400 * 2, "TBUF_REQUIRED_SIZE must match VEC_DUP_SIZE * sizeof(half)");
+// TBuf 所需容量 = VEC_DUP_SIZE * sizeof(half) = 38400 * 2 = 75KB。
+// VEC_DUP_SIZE/VEC_DUP_SIZE_BYTES 定义于 op_kernel/arch35/npu_clear_float_status_tiling_data.h，
+// Host 与 Kernel 引用同一常量（单一来源），避免两侧各自维护独立常量。
+constexpr uint32_t TBUF_REQUIRED_SIZE = VEC_DUP_SIZE_BYTES;
+static_assert(VEC_DUP_SIZE_BYTES == VEC_DUP_SIZE * 2, "VEC_DUP_SIZE_BYTES must equal VEC_DUP_SIZE * sizeof(half)");
 
 struct NPUClearFloatStatusCompileInfo {};
 

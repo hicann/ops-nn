@@ -13,11 +13,11 @@
 
 ## 功能说明
 
-- 算子功能：Sigmoid与二元交叉熵（BCELoss）融合损失的反向梯度计算。将输入`predict`经`sigmoid`计算，与标签`target`相减后乘以上游梯度`d_out`，得到关于`predict`的梯度。
+- 算子功能：Sigmoid与二元交叉熵（BCELoss）融合损失的反向梯度计算。将输入`predict`经`sigmoid`计算，与标签`target`相减后乘以上游梯度`dout`，得到关于`predict`的梯度。
 - 计算公式：
 
   $$
-  gradient = (sigmoid(predict) - target) \cdot d_out
+  gradient = (sigmoid(predict) - target) \cdot dout
   $$
 
 ## 参数说明
@@ -53,7 +53,7 @@
     <td class="tg-0lax">ND</td>
   </tr>
   <tr>
-    <td class="tg-0lax">d_out</td>
+    <td class="tg-0lax">dout</td>
     <td class="tg-0lax">输入</td>
     <td class="tg-0lax">网络反向传播前一步的梯度值，shape与predict保持一致（元素总数与predict相等，不支持广播）。</td>
     <td class="tg-0lax">与predict保持一致</td>
