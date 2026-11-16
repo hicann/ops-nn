@@ -67,7 +67,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- Both the input and output support non-contiguous tensors (non-contiguous tensors are internally converted to contiguous tensors for computation, and the output is written back to the original non-contiguous tensors).
 
 ## Invocation Description
 

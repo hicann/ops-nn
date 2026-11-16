@@ -160,8 +160,8 @@ aclnnStatus aclnnForeachAddListV2(
     - `scalar`数据类型与入参`x1`的数据类型具有一定对应关系：
       - 当`x1`的数据类型为BFLOAT16、FLOAT32时，数据类型支持FLOAT32、DOUBLE。
       - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、FLOAT32、DOUBLE。
-      - 当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。
-    - 入参`x1`、`x2`和出参`y`支持包含的最大Tensor个数均为50。
+      - 当`x1`的数据类型为INT32、INT16、INT8、UINT8时，数据类型支持INT32、INT64。
+    - 入参`x1`、`x2`和出参`y`支持包含的最大Tensor个数均为256。
   <!-- end id8 -->
 
 - **返回值**

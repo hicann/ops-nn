@@ -130,6 +130,10 @@ ge::graphStatus Build(gert::TilingContext* context)
     int64_t totalDataCount = 0;
     for (uint16_t tensorIndex = 0; tensorIndex < tensorCount; ++tensorIndex) {
         int64_t dataCount = context->GetDynamicInputShape(0, tensorIndex)->GetStorageShape().GetShapeSize();
+        if (dataCount < 0 || totalDataCount > std::numeric_limits<int64_t>::max() - dataCount) {
+            OP_LOGE(context, "invalid or overflowing tensor-list element count");
+            return ge::GRAPH_FAILED;
+        }
         tilingData->tensorDataCountList[tensorIndex] = dataCount;
         totalDataCount += dataCount;
     }
@@ -165,8 +169,14 @@ ge::graphStatus Build(gert::TilingContext* context)
         int64_t remainderBlocks = totalBlocks % coreCount;
         int64_t flatCursor = 0;
         for (int64_t coreIndex = 0; coreIndex < coreCount; ++coreIndex) {
-            int64_t targetCount = (baseBlocks + static_cast<int64_t>(coreIndex < remainderBlocks)) * elementsPerBlock;
-            int64_t currentCount = std::min(targetCount, totalDataCount - flatCursor);
+            int64_t remainingCount = totalDataCount - flatCursor;
+            int64_t blockCount = baseBlocks + static_cast<int64_t>(coreIndex < remainderBlocks);
+            // Avoid overflowing blockCount * elementsPerBlock for totals close to INT64_MAX:
+            // when the aligned target exceeds the remaining count, the remaining count is the minimum.
+            int64_t currentCount = remainingCount;
+            if (blockCount <= remainingCount / elementsPerBlock) {
+                currentCount = blockCount * elementsPerBlock;
+            }
             LocateFlatOffset(flatCursor, tensorCount, tilingData->tensorDataCountList,
                              tilingData->tensorStartList[coreIndex], tilingData->tensorStartOffsetList[coreIndex]);
             LocateFlatOffset(flatCursor + currentCount - 1, tensorCount, tilingData->tensorDataCountList,

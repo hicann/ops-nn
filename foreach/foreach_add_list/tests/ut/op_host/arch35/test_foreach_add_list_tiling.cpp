@@ -87,6 +87,11 @@ TEST_F(ForeachAddListTilingArch35, test_tiling_float16_arch35) { DoCase({32, 4},
 
 TEST_F(ForeachAddListTilingArch35, test_tiling_float32_arch35) { DoCase({32, 4}, ge::DT_FLOAT, ge::DT_FLOAT, 0); }
 
+TEST_F(ForeachAddListTilingArch35, test_tiling_float16_float_alpha_arch35)
+{
+    DoCase({32, 4}, ge::DT_FLOAT16, ge::DT_FLOAT, 0);
+}
+
 TEST_F(ForeachAddListTilingArch35, test_tiling_int32_arch35) { DoCase({32, 4}, ge::DT_INT32, ge::DT_INT32, 0); }
 
 TEST_F(ForeachAddListTilingArch35, test_tiling_bfloat16_arch35) { DoCase({32, 4}, ge::DT_BF16, ge::DT_FLOAT, 0); }

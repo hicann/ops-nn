@@ -52,14 +52,14 @@ public:
         this->AICore().AddConfig("ascend910b");
 
         OpAICoreConfig aicoreConfig950;
-        std::vector<ge::DataType> tensor_dtype_list_ascend950 = {
-            ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16, ge::DT_INT16, ge::DT_INT8, ge::DT_UINT8};
+        // FLOAT16 x1 on RegBase (Ascend950/350/960DT) supports both FLOAT16 and FLOAT alpha.
+        std::vector<ge::DataType> tensor_dtype_list_ascend950 = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT,
+                                                                 ge::DT_INT32,   ge::DT_BF16,    ge::DT_INT16,
+                                                                 ge::DT_INT8,    ge::DT_UINT8};
         std::vector<ge::Format> format_list_ascend950(tensor_dtype_list_ascend950.size(), ge::FORMAT_ND);
-        std::vector<ge::DataType> scalar_tensor_dtype_list_ascend950;
-        std::for_each(tensor_dtype_list_ascend950.cbegin(), tensor_dtype_list_ascend950.cend(),
-                      [&scalar_tensor_dtype_list_ascend950](ge::DataType dtype) {
-                          scalar_tensor_dtype_list_ascend950.push_back(DtypeScalarToTensor2(dtype));
-                      });
+        std::vector<ge::DataType> scalar_tensor_dtype_list_ascend950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT,
+                                                                        ge::DT_INT32,   ge::DT_FLOAT, ge::DT_INT32,
+                                                                        ge::DT_INT32,   ge::DT_INT32};
         aicoreConfig950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)

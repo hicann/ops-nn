@@ -77,7 +77,7 @@ template <typename TX>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void ComputeSetValue(
     __gm__ TX* outputGm, const uint32_t blockNums, const uint32_t outputLength)
 {
-    for (uint32_t outputIndex = block_idx * Simt::GetThreadNum() + Simt::GetThreadIdx(); outputIndex < outputLength;
+    for (uint32_t outputIndex = blockIdx.x * Simt::GetThreadNum() + Simt::GetThreadIdx(); outputIndex < outputLength;
          outputIndex = outputIndex + blockNums * Simt::GetThreadNum()) {
         outputGm[outputIndex] = static_cast<TX>(0);
     }
@@ -106,7 +106,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
     __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums, const COM_T inputLength,
     const COM_T innerDimSize, const uint64_t outputOuterDimSize, const COM_T magic, const COM_T shift)
 {
-    for (COM_T inputIndex = block_idx * Simt::GetThreadNum() + Simt::GetThreadIdx(); inputIndex < inputLength;
+    for (COM_T inputIndex = blockIdx.x * Simt::GetThreadNum() + Simt::GetThreadIdx(); inputIndex < inputLength;
          inputIndex = inputIndex + blockNums * Simt::GetThreadNum()) {
         COM_T inputSegmentIndex = Simt::UintDiv(inputIndex, magic, shift);
         COM_T segmentOffset = inputIndex - inputSegmentIndex * innerDimSize;

@@ -45,6 +45,9 @@ static const std::initializer_list<DataType> FOREACH_ADD_LIST_FLOAT_SUPPORT_LIST
 static const std::initializer_list<DataType> FOREACH_ADD_LIST_FLOAT16_SUPPORT_LIST = {DataType::DT_FLOAT16,
                                                                                       DataType::DT_DOUBLE};
 
+static const std::initializer_list<DataType> FOREACH_ADD_LIST_FLOAT16_SUPPORT_LIST_910D = {
+    DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_DOUBLE};
+
 static const std::initializer_list<DataType> FOREACH_ADD_LIST_INT_SUPPORT_LIST = {DataType::DT_INT32,
                                                                                   DataType::DT_INT64};
 
@@ -128,7 +131,11 @@ static inline bool ForeachAddListV2CheckDtypeValid(const aclTensorList* self, co
     if (selfDtyte == DataType::DT_BF16 || selfDtyte == DataType::DT_FLOAT) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_ADD_LIST_FLOAT_SUPPORT_LIST, return false);
     } else if (selfDtyte == DataType::DT_FLOAT16) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_ADD_LIST_FLOAT16_SUPPORT_LIST, return false);
+        if (Ops::NN::AclnnUtil::IsRegbase()) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_ADD_LIST_FLOAT16_SUPPORT_LIST_910D, return false);
+        } else {
+            OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_ADD_LIST_FLOAT16_SUPPORT_LIST, return false);
+        }
     } else if (selfDtyte == DataType::DT_INT32 || selfDtyte == DataType::DT_INT16 || selfDtyte == DataType::DT_INT8 ||
                selfDtyte == DataType::DT_UINT8) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_ADD_LIST_INT_SUPPORT_LIST, return false);
@@ -253,6 +260,9 @@ static aclnnStatus ExecForeachAddListV2GetWorkspaceSize(const aclTensorList* x1,
     // sclar to tensor
     const aclTensor* otherTensor;
     if ((*x1)[0]->GetDataType() == DataType::DT_BF16) {
+        otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
+    } else if (Ops::NN::AclnnUtil::IsRegbase() && (*x1)[0]->GetDataType() == DataType::DT_FLOAT16 &&
+               (scalar->GetDataType() == DataType::DT_FLOAT || scalar->GetDataType() == DataType::DT_DOUBLE)) {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
     } else if ((*x1)[0]->GetDataType() == DataType::DT_INT16 || (*x1)[0]->GetDataType() == DataType::DT_INT8 ||
                (*x1)[0]->GetDataType() == DataType::DT_UINT8) {

@@ -55,6 +55,59 @@
             ]
         },
         {
+            "bin_filename": "ForeachAddList_0b6bedb45d293d296a08b96a13176e51",
+            "inputs": [
+                [
+                    {
+                        "name": "x1",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                [
+                    {
+                        "name": "x2",
+                        "index": 1,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ],
+                {
+                    "name": "alpha",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ]
+                }
+            ],
+            "outputs": [
+                [
+                    {
+                        "name": "y",
+                        "index": 0,
+                        "dtype": "float16",
+                        "format": "ND",
+                        "paramType": "dynamic",
+                        "shape": [
+                            -2
+                        ]
+                    }
+                ]
+            ]
+        },
+        {
             "bin_filename": "ForeachAddList_c9bcf5e1080bef9c91acf8ab3c450913",
             "inputs": [
                 [

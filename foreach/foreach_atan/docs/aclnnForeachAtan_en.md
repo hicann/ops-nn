@@ -151,23 +151,35 @@ aclnnStatus aclnnForeachAtan(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>The data type of x or out is not in the supported range.</td>
     </tr>
     <tr>
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
+      <td>The data types of Tensors in x or out are inconsistent.</td>
+    </tr>
+    <tr>
+      <td>The numbers of Tensors in x and out are inconsistent.</td>
+    </tr>
+    <tr>
       <td>The dimensions of tensors in x or out exceed 8.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="2">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
+      <td>The shapes of tensors at the same position in x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The data types of Tensors in x or out are inconsistent.</td>
+      <td>The data format of x or out is not in the supported range.</td>
+    </tr>
+    <tr>
+      <td>The TensorList of x or out contains a null Tensor.</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>The number of Tensors in a single TensorList of x or out exceeds 256.</td>
     </tr>
     </tbody></table>
 

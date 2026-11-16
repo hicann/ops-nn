@@ -26,16 +26,20 @@ static bool IsForeachAddListDtype(ge::DataType dtype)
 }
 
 // alpha scalar tensor dtype follows DtypeScalarToTensor2:
-// fp16->fp16, fp32->fp32, int32->int32, bf16->fp32, int16/int8/uint8->int32
-static ge::DataType GetExpectedAlphaDtype(ge::DataType dtype)
+// fp16->fp16 or fp32 (RegBase supports a FLOAT alpha for FP16 x1), fp32->fp32,
+// int32->int32, bf16->fp32, int16/int8/uint8->int32
+static bool IsExpectedAlphaDtype(ge::DataType dtype, ge::DataType alphaDtype)
 {
     if (dtype == ge::DT_BF16) {
-        return ge::DT_FLOAT;
+        return alphaDtype == ge::DT_FLOAT;
+    }
+    if (dtype == ge::DT_FLOAT16) {
+        return alphaDtype == ge::DT_FLOAT16 || alphaDtype == ge::DT_FLOAT;
     }
     if (dtype == ge::DT_INT16 || dtype == ge::DT_INT8 || dtype == ge::DT_UINT8) {
-        return ge::DT_INT32;
+        return alphaDtype == ge::DT_INT32;
     }
-    return dtype;
+    return alphaDtype == dtype;
 }
 
 static ge::graphStatus ValidateForeachAddList(gert::TilingContext* context)
@@ -51,7 +55,7 @@ static ge::graphStatus ValidateForeachAddList(gert::TilingContext* context)
         OP_LOGE(context, "x1 or alpha metadata is null");
         return ge::GRAPH_FAILED;
     }
-    if (alphaDesc->GetDataType() != GetExpectedAlphaDtype(xDesc->GetDataType())) {
+    if (!IsExpectedAlphaDtype(xDesc->GetDataType(), alphaDesc->GetDataType())) {
         OP_LOGE(context, "alpha dtype does not match the scalar mapping of x1 dtype");
         return ge::GRAPH_FAILED;
     }

@@ -162,8 +162,8 @@ aclnnStatus aclnnForeachAddListV2(
     - The data type of `scalar` has a specific correspondence with the data type of input parameter `x1`:
       - When the data type of `x1` is BFLOAT16 or FLOAT32, the supported data types are FLOAT32 and DOUBLE.
       - When the data type of `x1` is FLOAT16, the supported data types are FLOAT16, FLOAT32, and DOUBLE.
-      - When the data type of `x1` is INT32, the supported data types are INT32 and INT64.
-    - The maximum number of tensors supported by input parameters `x1`, `x2`, and output `y` is 50 each.
+      - When the data type of `x1` is INT32, INT16, INT8, or UINT8, the supported data types are INT32 and INT64.
+    - The maximum number of tensors supported by input parameters `x1`, `x2`, and output `y` is 256 each.
   <!-- end id8 -->
 
 - **Return Value**
