@@ -113,7 +113,9 @@ private:
                                              uint32_t count);
     __aicore__ inline void ComputeGammaBeta(LocalTensor<T>& dy, LocalTensor<T>& x, LocalTensor<T>& gx,
                                             LocalTensor<float>& mean, LocalTensor<float>& rstd,
-                                            LocalTensor<float>& dgamma, LocalTensor<float>& dbeta, uint32_t count);
+                                            LocalTensor<float>& dgamma, LocalTensor<float>& dbeta,
+                                            LocalTensor<float>& dgammaComp, LocalTensor<float>& dbetaComp,
+                                            uint32_t count);
     __aicore__ inline void ComputeSmallDSecondPass(LocalTensor<T>& dy, LocalTensor<T>& x, LocalTensor<T>& gx,
                                                    LocalTensor<T>& gamma, LocalTensor<float>& mean,
                                                    LocalTensor<float>& rstd, LocalTensor<float>& avgTmp,

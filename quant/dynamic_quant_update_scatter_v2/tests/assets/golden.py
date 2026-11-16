@@ -121,7 +121,13 @@ def __golden_dynamic_quant_update_scatter_v2(
         scale = torch.maximum((max_val - min_val) / scale_range, quant_eps)
         offset_quant = quant_max - max_val / scale
         back_scale = torch.tensor(1.0, dtype=compute_dtype) / scale
-        quantized = torch.round(row * back_scale + offset_quant)
+        # Compute as (row - max_val) * back_scale + quant_max, matching the arch35
+        # kernel (QuantizeVF). The algebraically-equal form row * back_scale +
+        # (quant_max - max_val / scale) suffers fp32 catastrophic cancellation when
+        # scale is clamped to QUANT_EPSILON (row max~=min): the +quant_max addend is
+        # lost against max_val / scale ~ 1e12. offset_quant above is kept solely for
+        # the offset output below.
+        quantized = torch.round((row - max_val) * back_scale + quant_max)
         quantized_i64 = _wrap_to_int4(quantized.to(torch.int64))
 
         dst = b * seq_len + valid_idx

@@ -101,7 +101,7 @@ private:
         paramsLocal.SetValue(PARAM_BLOCK_ELEMENTS, -offset);
 
         LocalTensor<uint8_t> outLocal = outQueue_.AllocTensor<uint8_t>();
-        QuantizeVF(xLocal, outLocal, static_cast<uint32_t>(tiling_->rowLen), backScale, offset);
+        QuantizeVF(xLocal, outLocal, static_cast<uint32_t>(tiling_->rowLen), backScale, offset, maxValue);
         outQueue_.EnQue(outLocal);
         xQueue_.FreeTensor(xLocal);
         CopyOut(dstRow, tiling_->rowLen);
@@ -196,7 +196,7 @@ private:
     }
 
     __aicore__ inline void QuantizeVF(const LocalTensor<XType>& xLocal, const LocalTensor<uint8_t>& outLocal,
-                                      uint32_t count, float backScale, float offset)
+                                      uint32_t count, float backScale, float offset, float maxValue)
     {
         __local_mem__ XType* xAddr = reinterpret_cast<__local_mem__ XType*>(xLocal.GetPhyAddr());
         __local_mem__ uint8_t* outAddr = reinterpret_cast<__local_mem__ uint8_t*>(outLocal.GetPhyAddr());
@@ -213,6 +213,7 @@ private:
             Reg::RegTensor<uint8_t> quantizedInt4;
             Reg::MaskReg packMask = Reg::CreateMask<float, Reg::MaskPattern::H>();
             Reg::MaskReg mask;
+            Reg::RegTensor<float> subtracted;
 
             uint32_t remaining = count;
             const uint16_t loops = static_cast<uint16_t>((count - 1) / VL + 1);
@@ -220,8 +221,13 @@ private:
                 mask = Reg::UpdateMask<float>(remaining);
                 Reg::DataCopy<XType, Reg::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + loop * VL);
                 Reg::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, mask);
-                Reg::Muls(scaledInput, inputFp32, backScale, mask);
-                Reg::Adds(quantizedFp32, scaledInput, offset, mask);
+                // Quantize as (x - max) * backScale + INT4_QUANT_MAX instead of
+                // x * backScale + (INT4_QUANT_MAX - max / scale).  The latter
+                // suffers catastrophic cancellation in fp32 when scale is tiny
+                // (row max~=min): the +7 addend is lost against max/scale ~ 1e12.
+                Reg::Adds(subtracted, inputFp32, -maxValue, mask);
+                Reg::Muls(scaledInput, subtracted, backScale, mask);
+                Reg::Adds(quantizedFp32, scaledInput, INT4_QUANT_MAX, mask);
                 Reg::Cast<int16_t, float, CAST_FP32_TO_INT16>(quantizedInt16, quantizedFp32, mask);
                 Reg::Cast<half, int16_t, CAST_INT16_TO_FP16>(quantizedFp16, quantizedInt16, mask);
                 Reg::Pack(packedFp16, (Reg::RegTensor<uint32_t>&)quantizedFp16);

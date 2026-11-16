@@ -139,8 +139,13 @@ __aicore__ inline void DeepNormGrad<T>::ProcessGammaBeta()
         uint32_t count = static_cast<uint32_t>(Min(static_cast<uint64_t>(tileLength_), colEnd - col));
         LocalTensor<float> dbeta = dbetaQueue_.template AllocTensor<float>();
         LocalTensor<float> dgamma = dgammaQueue_.template AllocTensor<float>();
+        // Kahan compensation buffers (class calc buffers free during GammaBeta path)
+        LocalTensor<float> dgammaComp = calc0Buf_.Get<float>();
+        LocalTensor<float> dbetaComp = calc1Buf_.Get<float>();
         Duplicate(dbeta, 0.0f, tileLengthAlign_);
         Duplicate(dgamma, 0.0f, tileLengthAlign_);
+        Duplicate(dgammaComp, 0.0f, tileLengthAlign_);
+        Duplicate(dbetaComp, 0.0f, tileLengthAlign_);
         for (uint64_t row = 0; row < tiling_->numRows; ++row) {
             uint64_t offset = row * tiling_->numCols + col;
             LocalTensor<float> mean = CopyInScalar(meanQueue_, meanGm_, row);
@@ -148,7 +153,7 @@ __aicore__ inline void DeepNormGrad<T>::ProcessGammaBeta()
             LocalTensor<T> dy = CopyInTensor(dyQueue_, dyGm_, offset, count);
             LocalTensor<T> x = CopyInTensor(xQueue_, xGm_, offset, count);
             LocalTensor<T> gx = CopyInTensor(gxQueue_, gxGm_, offset, count);
-            ComputeGammaBeta(dy, x, gx, mean, rstd, dgamma, dbeta, count);
+            ComputeGammaBeta(dy, x, gx, mean, rstd, dgamma, dbeta, dgammaComp, dbetaComp, count);
             meanQueue_.FreeTensor(mean);
             rstdQueue_.FreeTensor(rstd);
             dyQueue_.FreeTensor(dy);

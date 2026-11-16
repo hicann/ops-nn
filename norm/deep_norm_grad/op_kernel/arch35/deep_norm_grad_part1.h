@@ -136,6 +136,7 @@ template <typename T>
 __aicore__ inline void DeepNormGrad<T>::ComputeGammaBeta(LocalTensor<T>& dy, LocalTensor<T>& x, LocalTensor<T>& gx,
                                                          LocalTensor<float>& mean, LocalTensor<float>& rstd,
                                                          LocalTensor<float>& dgamma, LocalTensor<float>& dbeta,
+                                                         LocalTensor<float>& dgammaComp, LocalTensor<float>& dbetaComp,
                                                          uint32_t count)
 {
     __local_mem__ T* dyPtr = (__local_mem__ T*)dy.GetPhyAddr();
@@ -145,6 +146,8 @@ __aicore__ inline void DeepNormGrad<T>::ComputeGammaBeta(LocalTensor<T>& dy, Loc
     __local_mem__ float* rstdPtr = (__local_mem__ float*)rstd.GetPhyAddr();
     __local_mem__ float* dgammaPtr = (__local_mem__ float*)dgamma.GetPhyAddr();
     __local_mem__ float* dbetaPtr = (__local_mem__ float*)dbeta.GetPhyAddr();
+    __local_mem__ float* dgammaCompPtr = (__local_mem__ float*)dgammaComp.GetPhyAddr();
+    __local_mem__ float* dbetaCompPtr = (__local_mem__ float*)dbetaComp.GetPhyAddr();
     uint16_t loops = static_cast<uint16_t>((count + VL_FP32 - 1) / VL_FP32);
     uint32_t remaining = count;
     float alpha = alpha_;
@@ -160,9 +163,19 @@ __aicore__ inline void DeepNormGrad<T>::ComputeGammaBeta(LocalTensor<T>& dy, Loc
         RegTensor<float> dgammaReg;
         RegTensor<float> dbetaReg;
         RegTensor<float> productReg;
+        RegTensor<float> dgammaCompReg;
+        RegTensor<float> dbetaCompReg;
+        RegTensor<float> adjustedReg;
+        RegTensor<float> newSumReg;
+        RegTensor<float> deltaReg;
+        RegTensor<float> guardAbsReg;
+        RegTensor<float> guardZeroReg;
         MaskReg mask;
+        MaskReg guardCmpMask;
+        MaskReg allMask = CreateMask<float, Reg::MaskPattern::ALL>();
         DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanPtr);
         DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdPtr);
+        Duplicate(guardZeroReg, 0.0F, allMask);
         for (uint16_t i = 0; i < loops; ++i) {
             uint32_t valid = Min(remaining, VL_FP32);
             remaining -= valid;
@@ -173,15 +186,31 @@ __aicore__ inline void DeepNormGrad<T>::ComputeGammaBeta(LocalTensor<T>& dy, Loc
             NormCommon::NormCommonRegbase::LoadRegForDtype<T>(gxPtr, gxReg, mask, offset);
             DataCopy(dgammaReg, dgammaPtr + offset);
             DataCopy(dbetaReg, dbetaPtr + offset);
+            DataCopy(dgammaCompReg, dgammaCompPtr + offset);
+            DataCopy(dbetaCompReg, dbetaCompPtr + offset);
             Muls(xReg, xReg, alpha, mask);
             Add(normReg, xReg, gxReg, mask);
             Sub(normReg, normReg, meanReg, mask);
             Mul(normReg, normReg, rstdReg, mask);
             Mul(productReg, dyReg, normReg, mask);
-            Add(dgammaReg, dgammaReg, productReg, mask);
-            Add(dbetaReg, dbetaReg, dyReg, mask);
+            // Kahan accumulate dgamma += product (fp64-level precision across rows)
+            Sub(adjustedReg, productReg, dgammaCompReg, mask);
+            Add(newSumReg, dgammaReg, adjustedReg, mask);
+            Sub(deltaReg, newSumReg, dgammaReg, mask);
+            Sub(dgammaCompReg, deltaReg, adjustedReg, mask);
+            KahanGuardComp(dgammaCompReg, guardAbsReg, guardZeroReg, guardCmpMask, mask);
+            AscendC::Reg::Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(dgammaReg, newSumReg, mask);
+            // Kahan accumulate dbeta += dy
+            Sub(adjustedReg, dyReg, dbetaCompReg, mask);
+            Add(newSumReg, dbetaReg, adjustedReg, mask);
+            Sub(deltaReg, newSumReg, dbetaReg, mask);
+            Sub(dbetaCompReg, deltaReg, adjustedReg, mask);
+            KahanGuardComp(dbetaCompReg, guardAbsReg, guardZeroReg, guardCmpMask, mask);
+            AscendC::Reg::Copy<float, AscendC::Reg::MaskMergeMode::MERGING>(dbetaReg, newSumReg, mask);
             DataCopy<float, StoreDist::DIST_NORM_B32>(dgammaPtr + offset, dgammaReg, mask);
+            DataCopy<float, StoreDist::DIST_NORM_B32>(dgammaCompPtr + offset, dgammaCompReg, mask);
             DataCopy<float, StoreDist::DIST_NORM_B32>(dbetaPtr + offset, dbetaReg, mask);
+            DataCopy<float, StoreDist::DIST_NORM_B32>(dbetaCompPtr + offset, dbetaCompReg, mask);
         }
     }
 }
