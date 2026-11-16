@@ -5600,26 +5600,6 @@
   </tr>
   <tr>
     <td>rnn</td>
-    <td><a href="../../rnn/block_lstm_grad/README.md">block_lstm_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>实现统一的TF BlockLSTMGrad（V1+V2）反向传播计算。基于正向输入与前向缓存，计算BlockLSTM的输入、权重、偏置及各门控的梯度。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
-    <td><a href="../../rnn/block_lstm/README.md">block_lstm</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>进行LSTM网络计算，对应TensorFlow的BlockLSTM/BlockLSTMV2。按时间主序接收输入序列和初始状态，整个时间步循环收进一次kernel launch，返回各门控与状态的输出序列。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
     <td><a href="../../rnn/dynamic_rnn/README.md">dynamic_rnn</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -5650,26 +5630,6 @@
   </tr>
   <tr>
     <td>rnn</td>
-    <td><a href="../../rnn/gru_block_cell/README.md">gru_block_cell</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>GRU单步前向全融合算子（reset_before语义），对标TensorFlow的GRUBlockCell：单次调用融合门控GEMM、候选GEMM、sigmoid/tanh门控激活与隐状态更新，输出r/u/c/h四个[B, H]张量。仅支持float32与ND格式，GEIR-only交付。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
-    <td><a href="../../rnn/gru_block_cell_grad/README.md">gru_block_cell_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算GRU单时间步反向梯度，输出输入、上一时刻隐状态及门预激活梯度。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
     <td><a href="../../rnn/gru_grad/README.md">gru_grad</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -5677,26 +5637,6 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>GRU的反向传播，计算正向输入input、权重params、初始状态hx的梯度。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
-    <td><a href="../../rnn/lstm_block_cell_grad/README.md">lstm_block_cell_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算LSTMBlockCell单元（含窥孔连接）的反向梯度：cs_prev_grad、四门拼接梯度dicfo及三个窥孔权重梯度，对标TensorFlow tf.raw_ops.LSTMBlockCellGrad。</td>
-  </tr>
-  <tr>
-    <td>rnn</td>
-    <td><a href="../../rnn/lstm_block_cell/README.md">lstm_block_cell</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>LSTM单步cell前向计算，融合投影GEMM与ICFO四门激活，输出i/cs/f/o/ci/co/h七个[B, H]张量。仅支持float32/float16与ND格式，GEIR-only交付。</td>
   </tr>
   <tr>
     <td>index</td>
