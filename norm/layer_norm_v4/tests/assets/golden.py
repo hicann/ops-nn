@@ -14,12 +14,20 @@
 import numpy as np
 import torch
 
-__golden__ = {"kernel": {"layer_norm_v4": "layer_norm_v4_golden"}}
+__golden__ = {
+    "kernel": {"layer_norm_v4": "layer_norm_v4_golden"},
+    "aclnn": {
+        "aclnnLayerNorm": "aclnn_layer_norm_golden",
+        "aclnnFastLayerNorm": "aclnn_layer_norm_golden",
+    },
+    "e2e": {"torch.ops.aten.native_layer_norm": "torch_native_layer_norm_golden"},
+}
 
 __spec__ = {
     "layer_norm_v4": "LayerNormV4TestSpec",
     "aclnnLayerNorm": "AclnnLayerNormTestSpec",
-    "torch.nn.functional.layer_norm": "TorchLayerNormTestSpec",
+    "aclnnFastLayerNorm": "AclnnLayerNormTestSpec",
+    "torch.ops.aten.native_layer_norm": "TorchNativeLayerNormTestSpec",
 }
 
 
@@ -76,24 +84,23 @@ def aclnn_layer_norm_golden(
     rstdOutOptional=None,
     **kwargs,
 ):
-    """ACLNN：参数对应 aclnnLayerNormGetWorkspaceSize，不含 workspace/executor。"""
     outputs = _layer_norm_golden_impl(
         input, normalizedShape, weightOptional, biasOptional, eps
     )
-    dtypes = (
-        out.dtype if out is not None else input.dtype,
-        meanOutOptional.dtype if meanOutOptional is not None else torch.float32,
-        rstdOutOptional.dtype if rstdOutOptional is not None else torch.float32,
-    )
-    return [value.to(dtype) for value, dtype in zip(outputs, dtypes)]
+    return [
+        outputs[0].to(out.dtype),
+        outputs[1].to(meanOutOptional.dtype) if meanOutOptional is not None else None,
+        outputs[2].to(rstdOutOptional.dtype) if rstdOutOptional is not None else None,
+    ]
 
 
-def torch_layer_norm_golden(
+def torch_native_layer_norm_golden(
     input, normalized_shape, weight=None, bias=None, eps=1e-5, **kwargs
 ):
-    """PyTorch E2E：仅返回 y。"""
-    y, _, _ = _layer_norm_golden_impl(input, normalized_shape, weight, bias, eps)
-    return [y.to(input.dtype)]
+    """PyTorch NPU E2E：返回 y、mean、rstd，统计量使用累加类型。"""
+    y, mean, rstd = _layer_norm_golden_impl(input, normalized_shape, weight, bias, eps)
+    stats_dtype = torch.float64 if input.dtype == torch.float64 else torch.float32
+    return [y.to(input.dtype), mean.to(stats_dtype), rstd.to(stats_dtype)]
 
 
 class LayerNormV4TorchThirdParty:
@@ -136,15 +143,14 @@ class AclnnLayerNormTorchThirdParty:
         rstdOutOptional=None,
         **kwargs,
     ):
-        outputs = torch.ops.aten.native_layer_norm(
+        y, mean, rstd = torch.ops.aten.native_layer_norm(
             input, normalizedShape, weightOptional, biasOptional, float(eps)
         )
-        dtypes = (
-            out.dtype if out is not None else input.dtype,
-            meanOutOptional.dtype if meanOutOptional is not None else torch.float32,
-            rstdOutOptional.dtype if rstdOutOptional is not None else torch.float32,
-        )
-        return [value.to(dtype) for value, dtype in zip(outputs, dtypes)]
+        return [
+            y.to(out.dtype),
+            mean.to(meanOutOptional.dtype) if meanOutOptional is not None else None,
+            rstd.to(rstdOutOptional.dtype) if rstdOutOptional is not None else None,
+        ]
 
 
 class LayerNormV4TestSpec:
@@ -157,6 +163,6 @@ class AclnnLayerNormTestSpec:
     third_party = {"torch": AclnnLayerNormTorchThirdParty}
 
 
-class TorchLayerNormTestSpec:
-    golden = staticmethod(torch_layer_norm_golden)
-    third_party = {"torch": "torch.nn.functional.layer_norm"}
+class TorchNativeLayerNormTestSpec:
+    golden = staticmethod(torch_native_layer_norm_golden)
+    third_party = {"torch": "torch.ops.aten.native_layer_norm"}

@@ -16,6 +16,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
+#include "opdev/platform.h"
 
 #include "../../../../op_host/op_api/aclnn_layer_norm.h"
 #include "op_api_ut_common/op_api_ut.h"
@@ -30,6 +31,21 @@ protected:
 
     static void TearDownTestCase() { cout << "layer_norm_test TearDown" << endl; }
 };
+
+TEST(l2_fast_layer_norm_regbase_test, ascend3510_optional_affine_and_output_dtype)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    auto input = TensorDesc({2, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto output = TensorDesc({2, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto mean = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto rstd = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto normalizedShape = IntArrayDesc(vector<int64_t>{64});
+    auto ut = OP_API_UT(aclnnFastLayerNorm,
+                        INPUT(input, normalizedShape, (aclTensor*)nullptr, (aclTensor*)nullptr, 1e-5),
+                        OUTPUT(output, mean, rstd));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
 
 // float32
 TEST_F(l2_fast_layer_norm_test, ascend910B2_aclnnFastLayerNorm_float32_nd_float32_nd)

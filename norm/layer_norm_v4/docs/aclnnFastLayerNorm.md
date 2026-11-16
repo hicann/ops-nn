@@ -3,7 +3,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR&950DT系列产品</term>：不支持
+- <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3系列产品</term>：支持
@@ -117,7 +117,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的权重。对应公式中的`weightOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的Tensor。<ul><li>当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>当`biasOptional`不存在时，`weightOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`weightOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`biasOptional`存在时，`weightOptional`与`biasOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`weightOptional`为nullptr时，按默认值1参与计算。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -127,7 +127,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示进行归一化计算的偏移量。对应公式中的`biasOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的Tensor。<ul><li>当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>当`weightOptional`不存在时，`biasOptional`与输入`input`的数据类型相同。</li></ul></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当`biasOptional`非空时：<ul><li>数据类型与输入`input`一致或为FLOAT类型，且当`weightOptional`存在时，`biasOptional`与`weightOptional`的数据类型相同。</li><li>shape与`normalizedShape`相等，为[R1,...,Rj]。</li></ul></li><li>当`biasOptional`为nullptr时，按默认值0参与计算。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示进行归一化计算的结果。对应公式中的`out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape需要与`input`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与`input`的shape相等，为[A1,...,Ai,R1,...,Rj]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -303,6 +303,10 @@ aclnnStatus aclnnFastLayerNorm(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
+
+<!-- npu="A3,910b" id7 -->
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：`out`的数据类型必须与`input`一致。
+<!-- end id7 -->
 
 - input、normalizedShape、weightOptional（非空时）、biasOptional（非空时）、out、meanOutOptional（非空时）或rstdOutOptional（非空时）的shape不超过8维。
 - 确定性计算：

@@ -19,6 +19,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 #include "norm/norm_common/op_host/op_api/norm_tensor_util.h"
 #include "level0/fill.h"
 #include "layer_norm_v4.h"
@@ -26,6 +27,7 @@
 #include "log/log.h"
 
 using namespace op;
+using Ops::NN::AclnnUtil::IsRegbase;
 
 namespace {
 // aclnn op_api层空指针失败出口统一上报EZ1011(nnopbase注册码, Arglist={functionName,paraName})。
@@ -106,7 +108,9 @@ static bool CheckFastOutputDtype(const aclTensor* input, const aclTensor* out, c
 {
     const auto& supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(out, supportList, return false);
-    OP_CHECK_DTYPE_NOT_SAME(out, input, return false);
+    if (!IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SAME(out, input, return false);
+    }
     if (rstdOutOptional) {
         OP_CHECK_DTYPE_NOT_SUPPORT(rstdOutOptional, supportList, return false);
     }
@@ -293,10 +297,13 @@ static aclnnStatus doFastLayerNormInput(LayerNormTensor layerNormTensor, const a
                                         const aclTensor*& weightContiguous, const aclTensor*& biasContiguous,
                                         aclOpExecutor* executor)
 {
+    const bool isRegbase = IsRegbase();
+    weightContiguous = nullptr;
+    biasContiguous = nullptr;
     if (layerNormTensor.weightOptional) {
         weightContiguous = l0op::Contiguous(layerNormTensor.weightOptional, executor);
         CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else {
+    } else if (!isRegbase) {
         // 非目标设备按照原逻辑执行
         auto weightTensor = executor->ConvertToTensor(normalizedShape, DataType::DT_INT64);
         aclScalar* scalarOne = executor->AllocScalar(1);
@@ -310,7 +317,7 @@ static aclnnStatus doFastLayerNormInput(LayerNormTensor layerNormTensor, const a
     if (layerNormTensor.biasOptional) {
         biasContiguous = l0op::Contiguous(layerNormTensor.biasOptional, executor);
         CHECK_RET(biasContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else {
+    } else if (!isRegbase) {
         // 非目标设备按照原逻辑执行
         auto biasTensor = executor->ConvertToTensor(normalizedShape, DataType::DT_INT64);
         aclScalar* scalarZero = executor->AllocScalar(0);
@@ -346,8 +353,12 @@ static aclnnStatus doFastLayerNorm(LayerNormTensor layerNormTensor, const aclInt
     fastLayerNormOut = l0op::LayerNormV4(V4_params, layerNormTensor.eps, executor);
 
     // 处理第一个输出
-    auto outRes = fastLayerNormOut[Y_INDEX];
+    const aclTensor* outRes = fastLayerNormOut[Y_INDEX];
     CHECK_RET(outRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (IsRegbase()) {
+        outRes = l0op::Cast(outRes, layerNormTensor.out->GetDataType(), executor);
+        CHECK_RET(outRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
     auto outViewCopy = l0op::ViewCopy(outRes, layerNormTensor.out, executor);
     CHECK_RET(outViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 处理第三个输出

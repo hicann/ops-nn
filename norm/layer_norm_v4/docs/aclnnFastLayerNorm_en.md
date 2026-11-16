@@ -5,7 +5,7 @@
 ## Applicable Products
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR&950DT products</term>: Not supported
+- <term>Ascend 950PR&950DT products</term>: Supported
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 products</term>: Supported
@@ -119,7 +119,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>weightOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Optional input parameter, indicating the weight used for the normalization calculation. It corresponds to `weightOptional` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>When `weightOptional` is non-empty:<ul><li>The data type is the same as that of `input` or is FLOAT. When `biasOptional` is present, `weightOptional` and `biasOptional` have the same data type.</li><li>The shape is equal to `normalizedShape`, which is [R1,...,Rj].</li></ul></li><li>When `weightOptional` is empty, the API internally constructs a tensor with a shape of [R1,...,Rj] and all values set to 1.<ul><li>When `biasOptional` is present, `weightOptional` and `biasOptional` have the same data type.</li><li>When `biasOptional` is absent, `weightOptional` has the same data type as `input`.</li></ul></li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>When `weightOptional` is non-empty:<ul><li>The data type is the same as that of `input` or is FLOAT. When `biasOptional` is present, `weightOptional` and `biasOptional` have the same data type.</li><li>The shape is equal to `normalizedShape`, which is [R1,...,Rj].</li></ul></li><li>When `weightOptional` is nullptr, the calculation uses the default value 1.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>biasOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Optional input parameter. Indicates the offset for performing the normalization calculation. Corresponds to `biasOptional` in the corresponding formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>When `biasOptional` is non-empty:<ul><li>The data type is the same as that of input `input` or is FLOAT. When `weightOptional` is present, the data type of `biasOptional` is the same as that of `weightOptional`.</li><li>The shape is equal to `normalizedShape`, which is [R1,...,Rj].</li></ul></li><li>When `biasOptional` is empty, the API internally constructs a tensor with shape [R1,...,Rj] and all values 0.<ul><li>When `weightOptional` is present, the data type of `biasOptional` is the same as that of `weightOptional`.</li><li>When `weightOptional` is not present, the data type of `biasOptional` is the same as that of input `input`.</li></ul></li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>When `biasOptional` is non-empty:<ul><li>The data type is the same as that of input `input` or is FLOAT. When `weightOptional` is present, the data type of `biasOptional` is the same as that of `weightOptional`.</li><li>The shape is equal to `normalizedShape`, which is [R1,...,Rj].</li></ul></li><li>When `biasOptional` is nullptr, the calculation uses the default value 0.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>out (aclTensor*)</td>
       <td>Output</td>
       <td>Indicates the result of the normalization calculation. It corresponds to `out` in the corresponding formula.</td>
-      <td><ul><li>Supports empty Tensor.</li><li>The data type remains consistent with the data type of `input`.</li><li>The shape must be equal to the shape of `input`, which is [A1,...,Ai,R1,...,Rj].</li></ul></td>
+      <td><ul><li>Supports empty Tensor.</li><li>The shape must be equal to the shape of `input`, which is [A1,...,Ai,R1,...,Rj].</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>meanOutOptional (aclTensor*)</td>
       <td>Output</td>
       <td>Optional output, indicating the mean after normalization. It corresponds to `meanOutOptional` in the corresponding formula.</td>
-      <td><ul><li>Supports empty tensor.</li><li>The data type remains consistent with the data type of `input`.</li><li>The shape is [A1,...,Ai,1,...,1], with a total of j ones after Ai, and the number of ones must be equal to the length of the axis to be normalized. When `rstdOutOptional` is present, the shape is the same as that of `rstdOutOptional`.</li></ul></td>
+      <td><ul><li>Supports empty tensor.</li><li>The shape is [A1,...,Ai,1,...,1], with a total of j ones after Ai, and the number of ones must be equal to the length of the axis to be normalized. When `rstdOutOptional` is present, the shape is the same as that of `rstdOutOptional`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnFastLayerNorm(
       <td>rstdOutOptional (aclTensor*)</td>
       <td>Output</td>
       <td>Optional output, indicating the reciprocal of the standard deviation after performing normalization. It corresponds to `rstdOutOptional` in the formula.</td>
-      <td><ul><li>Supports empty tensor.</li><li>The data type remains consistent with the data type of `input`.</li><li>The shape is [A1,...,Ai,1,...,1], with a total of j ones after Ai, and the number of ones must be equal to the length of the axis to be normalized. When `meanOutOptional` is present, the shape is the same as that of `meanOutOptional`.</li></ul></td>
+      <td><ul><li>Supports empty tensor.</li><li>The shape is [A1,...,Ai,1,...,1], with a total of j ones after Ai, and the number of ones must be equal to the length of the axis to be normalized. When `meanOutOptional` is present, the shape is the same as that of `meanOutOptional`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -305,6 +305,10 @@ aclnnStatus aclnnFastLayerNorm(
   aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
 
 ## Constraints
+
+<!-- npu="A3,910b" id7 -->
+- <term>Atlas A3 series products</term> and <term>Atlas A2 series products</term>: The data type of `out` must be the same as that of `input`.
+<!-- end id7 -->
 
 - The shape of input, normalizedShape, weightOptional (when non-null), biasOptional (when non-null), out, meanOutOptional (when non-null), or rstdOutOptional (when non-null) does not exceed 8 dimensions.
 - deterministic computation:
