@@ -213,7 +213,7 @@ aclnnStatus aclnnPreluBackward(
       <td>weight的元素个数为1时，gradWeight的shape与weight不相同。</td>
     </tr>
     <tr>
-      <td>gradOutput和self的shape不满足条件broadcast关系条件。</td>
+      <td>gradOutput和self的shape不满足broadcast关系，或广播后的shape与self的shape不一致。</td>
     </tr>
   </tbody></table>
 

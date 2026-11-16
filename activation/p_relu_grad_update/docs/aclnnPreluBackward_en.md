@@ -215,7 +215,7 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>When weight has one element, the shape of gradWeight is not the same as that of weight.</td>
     </tr>
     <tr>
-      <td>The shapes of gradOutput and self do not meet the broadcastshape condition.</td>
+      <td>The shapes of gradOutput and self must satisfy the broadcast relationship, and their broadcasted shape must match the shape of self.</td>
     </tr>
   </tbody></table>
 
