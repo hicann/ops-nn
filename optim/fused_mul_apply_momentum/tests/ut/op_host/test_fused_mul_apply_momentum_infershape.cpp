@@ -61,3 +61,161 @@ TEST_F(FusedMulApplyMomentumInferShape, infershape_rank_6)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+
+static void CheckDynamicRanks(std::initializer_list<int64_t> varDims, std::initializer_list<int64_t> accumDims,
+                              ge::graphStatus expected, std::initializer_list<int64_t> expectedDims)
+{
+    auto infer = gert::OpImplRegistry::GetInstance().GetOpImpl("FusedMulApplyMomentum")->infer_shape;
+    ASSERT_NE(infer, nullptr);
+    gert::StorageShape varShape = {varDims, varDims};
+    gert::StorageShape accumShape = {accumDims, accumDims};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape outVar = {{}, {}};
+    gert::StorageShape outAccum = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(6, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes({&varShape, &accumShape, &scalarShape, &varShape, &scalarShape, &scalarShape})
+                      .OutputShapes({&outVar, &outAccum})
+                      .Build();
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(infer(context), expected);
+    if (expected == ge::GRAPH_SUCCESS) {
+        for (size_t output = 0; output < 2; ++output) {
+            const auto shape = context->GetOutputShape(output);
+            ASSERT_EQ(shape->GetDimNum(), expectedDims.size());
+            size_t i = 0;
+            for (auto dim : expectedDims) {
+                EXPECT_EQ(shape->GetDim(i++), dim);
+            }
+        }
+    }
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, dynamic_dim_is_not_unknown_rank)
+{
+    CheckDynamicRanks({-1}, {2, 3}, ge::GRAPH_SUCCESS, {-1});
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, unknown_rank_is_deferred)
+{
+    CheckDynamicRanks({-2}, {2, 3}, ge::GRAPH_SUCCESS, {2, 3});
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, same_rank_dynamic_dimension)
+{
+    CheckDynamicRanks({-1, 3}, {2, 3}, ge::GRAPH_SUCCESS, {2, 3});
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, known_var_dimensions_take_precedence_in_inference)
+{
+    CheckDynamicRanks({-1, 3}, {2, 4}, ge::GRAPH_SUCCESS, {2, 3});
+}
+
+static void CheckScalarBoundary(std::initializer_list<int64_t> dims, int scalarIndex, ge::graphStatus expected,
+                                int missingIndex = -1)
+{
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("FusedMulApplyMomentum");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->infer_shape, nullptr);
+    gert::StorageShape tensor = {{2, 0, 3}, {2, 0, 3}};
+    gert::StorageShape scalar = {{1}, {1}};
+    gert::StorageShape candidate = {dims, dims};
+    gert::StorageShape outVar = {{}, {}};
+    gert::StorageShape outAccum = {{}, {}};
+    std::vector<gert::StorageShape*> inputs = {&tensor, &tensor, &scalar, &tensor, &scalar, &scalar};
+    if (scalarIndex >= 0) {
+        inputs[scalarIndex] = &candidate;
+    }
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(6, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
+                      .InputShapes(inputs)
+                      .OutputShapes({&outVar, &outAccum})
+                      .Build();
+    auto* context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(context->GetComputeNodeInfo()->GetInputsNum(), 6U);
+    if (missingIndex >= 0) {
+        reinterpret_cast<gert::KernelContext*>(context)->MutableInput(missingIndex)->Set(nullptr, nullptr);
+        ASSERT_EQ(context->GetInputShape(missingIndex), nullptr);
+    }
+    EXPECT_EQ(impl->infer_shape(context), expected);
+    if (expected == ge::GRAPH_SUCCESS) {
+        bool dynamicScalar = false;
+        for (auto dim : dims) {
+            dynamicScalar |= dim < 0;
+        }
+        for (size_t output : {size_t{0}, size_t{1}}) {
+            const auto* shape = context->GetOutputShape(output);
+            ASSERT_NE(shape, nullptr);
+            if (dynamicScalar && scalarIndex >= 0) {
+                ASSERT_EQ(shape->GetDimNum(), 1U);
+                EXPECT_EQ(shape->GetDim(0), -2);
+            } else {
+                ASSERT_EQ(shape->GetDimNum(), 3U);
+                EXPECT_EQ(shape->GetDim(1), 0);
+            }
+        }
+    }
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, invalid_scalars_rejected_before_empty_graph_folding)
+{
+    for (int index : {2, 4, 5}) {
+        CheckScalarBoundary({0}, index, ge::GRAPH_FAILED);
+        CheckScalarBoundary({2}, index, ge::GRAPH_FAILED);
+        CheckScalarBoundary({1, 2}, index, ge::GRAPH_FAILED);
+        CheckScalarBoundary({-1, 2}, index, ge::GRAPH_FAILED);
+    }
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, scalar_dynamic_shapes_and_singletons_preserved)
+{
+    for (int index : {2, 4, 5}) {
+        CheckScalarBoundary({}, index, ge::GRAPH_SUCCESS);
+        CheckScalarBoundary({1, 1}, index, ge::GRAPH_SUCCESS);
+        CheckScalarBoundary({-1}, index, ge::GRAPH_SUCCESS);
+        CheckScalarBoundary({-2}, index, ge::GRAPH_SUCCESS);
+        CheckScalarBoundary({1, -1}, index, ge::GRAPH_SUCCESS);
+    }
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, all_required_shape_pointers_are_checked)
+{
+    for (int index = 0; index < 6; ++index) {
+        CheckScalarBoundary({1}, -1, ge::GRAPH_FAILED, index);
+    }
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, null_infer_context_is_rejected)
+{
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("FusedMulApplyMomentum");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->infer_shape, nullptr);
+    EXPECT_EQ(impl->infer_shape(nullptr), ge::GRAPH_FAILED);
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, legacy_unknown_dimension_completion)
+{
+    CheckDynamicRanks({-2}, {-2}, ge::GRAPH_SUCCESS, {-2});
+    CheckDynamicRanks({2, 3}, {-2}, ge::GRAPH_SUCCESS, {2, 3});
+    CheckDynamicRanks({-1, 3}, {2, -1}, ge::GRAPH_SUCCESS, {2, 3});
+    CheckDynamicRanks({-1, -1}, {-1, -1}, ge::GRAPH_SUCCESS, {-1, -1});
+    CheckDynamicRanks({2, 3}, {3, 2}, ge::GRAPH_SUCCESS, {2, 3});
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, rank9_inputs_and_scalars_are_allowed)
+{
+    CheckDynamicRanks({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}, ge::GRAPH_SUCCESS,
+                      {1, 1, 1, 1, 1, 1, 1, 1, 1});
+    CheckDynamicRanks({0, 1, 1, 1, 1, 1, 1, 1, 1}, {0, 1, 1, 1, 1, 1, 1, 1, 1}, ge::GRAPH_SUCCESS,
+                      {0, 1, 1, 1, 1, 1, 1, 1, 1});
+    for (int port : {2, 4, 5}) {
+        CheckScalarBoundary({1, 1, 1, 1, 1, 1, 1, 1, 1}, port, ge::GRAPH_SUCCESS);
+    }
+}
+
+TEST_F(FusedMulApplyMomentumInferShape, empty_main_shape_mismatch_cannot_be_folded)
+{
+    CheckDynamicRanks({0, 3}, {0, 4}, ge::GRAPH_FAILED, {});
+}

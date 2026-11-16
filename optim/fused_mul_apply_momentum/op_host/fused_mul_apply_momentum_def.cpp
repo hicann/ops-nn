@@ -16,9 +16,9 @@
  * 将梯度缩放（mul）与动量更新（apply_momentum）融合为一个算子。
  *
  * dtype scope：2 dtype 通路（FP16/FP32），dtype 组合按各输入 DataType 列表逐列对应：
- *   列0 FP16 通路：所有输入/输出均为 FP16（内部计算提升至 FP32）
+ *   列0 FP16 通路：所有输入/输出均为 FP16（运算按 FP16 边界回存）
  *   列1 FP32 通路：所有输入/输出均为 FP32
- * inplace：var_out↔var、accum_out↔accum（GM 地址复用）。
+ * 输出var和accum。
  *
  * 公式（标准动量，use_nesterov=false）：
  *   grad      = x1 * x2
@@ -74,13 +74,13 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
 
-        // 输出 var：更新后的权重（inplace 复用输入 var）
+        // 输出 var：更新后的权重
         this->Output("var")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
-        // 输出 accum：更新后的动量缓冲（inplace 复用输入 accum）
+        // 输出 accum：更新后的动量缓冲
         this->Output("accum")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT})
@@ -98,7 +98,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
+            .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "fused_mul_apply_momentum");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
         this->AICore().AddConfig("ascend350", aiCoreConfig);

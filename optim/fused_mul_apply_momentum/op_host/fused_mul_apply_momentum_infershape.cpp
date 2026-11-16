@@ -11,9 +11,10 @@
 
 /*!
  * \file fused_mul_apply_momentum_infershape.cpp
- * \brief InferShape and InferDataType for FusedMulApplyMomentum.
- *        Logic aligned with canndev runtime/fused_mul_apply_momentum.cc:
- *        output[0]=input[0], output[1]=input[0] via InferShape4InIdxAndOutVector(ctx, 0, {0,1}).
+ * \brief InferShape for FusedMulApplyMomentum.
+ *        Dimension inference follows legacy compile-time var/accum merging:
+ *        known accum dimensions complete unknown var dimensions; both outputs share the result.
+ *        Concrete shape consistency remains checked by tiling.
  */
 #include "util/shape_util.h"
 #include "log/log.h"
@@ -22,35 +23,132 @@
 using namespace ge;
 
 namespace ops {
+
+// Only (-2,) denotes unknown rank; (-1,) is a known rank-one tensor.
+static bool IsUnknownRankShape(const gert::Shape& s) { return s.GetDimNum() == 1 && s.GetDim(0) == -2; }
+
+// Dimension portion of legacy FixShapeRangeWithDims({}, var, accum, ...).
+static gert::Shape InferVarShape(const gert::Shape& var, const gert::Shape& accum)
+{
+    if (IsUnknownRankShape(var)) {
+        return accum;
+    }
+    gert::Shape result = var;
+    if (IsUnknownRankShape(accum) || var.GetDimNum() != accum.GetDimNum()) {
+        return result;
+    }
+    for (size_t i = 0; i < result.GetDimNum(); ++i) {
+        if (result.GetDim(i) == -1 && accum.GetDim(i) != -1) {
+            result.SetDim(i, accum.GetDim(i));
+        }
+    }
+    return result;
+}
+
+static bool KnownShapesCompatible(const gert::Shape& first, const gert::Shape& second)
+{
+    if (IsUnknownRankShape(first) || IsUnknownRankShape(second))
+        return true;
+    if (first.GetDimNum() != second.GetDimNum())
+        return false;
+    for (size_t i = 0; i < first.GetDimNum(); ++i) {
+        if (first.GetDim(i) >= 0 && second.GetDim(i) >= 0 && first.GetDim(i) != second.GetDim(i))
+            return false;
+    }
+    return true;
+}
+
+static bool ScalarShapeCanHaveOneElement(const gert::Shape& shape)
+{
+    if (IsUnknownRankShape(shape)) {
+        return true;
+    }
+    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
+        const int64_t dim = shape.GetDim(i);
+        if (dim != 1 && dim != -1) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static ge::graphStatus InferShapeForFusedMulApplyMomentum(gert::InferShapeContext* context)
 {
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "InferShapeForFusedMulApplyMomentum begin.");
     const auto inShape = context->GetInputShape(0);
     if (inShape == nullptr) {
-        OP_LOGE(context, "input[0] shape is null");
+        OP_LOGE_WITH_INVALID_INPUT("FusedMulApplyMomentum", "input[0] shape");
+        return ge::GRAPH_FAILED;
+    }
+    const auto accumShape = context->GetInputShape(1);
+    const auto x1Shape = context->GetInputShape(3);
+    if (accumShape == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT("FusedMulApplyMomentum", "input[1] shape");
+        return ge::GRAPH_FAILED;
+    }
+    if (x1Shape == nullptr) {
+        OP_LOGE_WITH_INVALID_INPUT("FusedMulApplyMomentum", "input[3] shape");
+        return ge::GRAPH_FAILED;
+    }
+    for (size_t i = 0; i < 6; ++i) {
+        const auto* shape = context->GetInputShape(i);
+        if (shape == nullptr) {
+            OP_LOGE_WITH_INVALID_INPUT("FusedMulApplyMomentum", "required input shape");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    const gert::Shape inferredShape = InferVarShape(*inShape, *accumShape);
+    bool scalarShapeIsDynamic = false;
+    for (size_t inputIndex : {size_t{2}, size_t{4}, size_t{5}}) {
+        const auto* scalarShape = context->GetInputShape(inputIndex);
+        if (scalarShape == nullptr) {
+            OP_LOGE_WITH_INVALID_INPUT("FusedMulApplyMomentum", "scalar input shape");
+            return ge::GRAPH_FAILED;
+        }
+        for (size_t dim = 0; dim < scalarShape->GetDimNum(); ++dim) {
+            scalarShapeIsDynamic |= scalarShape->GetDim(dim) < 0;
+        }
+        if (!ScalarShapeCanHaveOneElement(*scalarShape)) {
+            OP_LOGE(context->GetNodeName(), "lr, momentum and x2 must each contain exactly one element");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    bool mainShapeIsEmpty = false;
+    for (size_t dim = 0; dim < inferredShape.GetDimNum(); ++dim) {
+        mainShapeIsEmpty |= inferredShape.GetDim(dim) == 0;
+    }
+    bool mainShapeIsDynamic = false;
+    for (const auto* shape : {inShape, accumShape, x1Shape}) {
+        for (size_t dim = 0; dim < shape->GetDimNum(); ++dim)
+            mainShapeIsDynamic |= shape->GetDim(dim) < 0;
+    }
+    if (mainShapeIsEmpty &&
+        (!KnownShapesCompatible(*inShape, *accumShape) || !KnownShapesCompatible(*inShape, *x1Shape))) {
+        OP_LOGE(context->GetNodeName(), "Empty main tensors must have identical shapes");
         return ge::GRAPH_FAILED;
     }
     static const std::vector<int64_t> outIdxs{0, 1};
     for (int64_t idx : outIdxs) {
         auto outShape = context->GetOutputShape(idx);
         if (outShape == nullptr) {
-            OP_LOGE(context, "output[%ld] shape is null", idx);
+            OP_LOGE_WITH_INVALID_INPUT("FusedMulApplyMomentum", ("output[" + std::to_string(idx) + "] shape").c_str());
             return ge::GRAPH_FAILED;
         }
-        *outShape = *inShape;
+        if (mainShapeIsEmpty && (scalarShapeIsDynamic || mainShapeIsDynamic)) {
+            // Defer empty folding until scalar dimensions are concrete and validated.
+            outShape->SetDimNum(1);
+            outShape->SetDim(0, -2);
+        } else {
+            *outShape = inferredShape;
+        }
     }
-    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*inShape).c_str());
+    OP_LOGI(context->GetNodeName(), "[InferShape] merged var/accum shape=%s",
+            Ops::Base::ToString(inferredShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataTypeForFusedMulApplyMomentum(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(0, context->GetInputDataType(0));
-    context->SetOutputDataType(1, context->GetInputDataType(1));
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(FusedMulApplyMomentum)
-    .InferShape(InferShapeForFusedMulApplyMomentum)
-    .InferDataType(InferDataTypeForFusedMulApplyMomentum);
+IMPL_OP_INFERSHAPE(FusedMulApplyMomentum).InferShape(InferShapeForFusedMulApplyMomentum);
 } // namespace ops

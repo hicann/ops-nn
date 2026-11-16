@@ -12,12 +12,17 @@
 #pragma once
 #include <cstdint>
 
-// === Operator-specific constants ===
-constexpr int64_t kMaxInputSlots = 6;  // var, accum, lr, x1, momentum, x2
-constexpr int64_t kMaxOutputSlots = 2; // out_var, out_accum
-constexpr int64_t kPhysNodes = 3;      // Physical survival nodes P (= TBuf slots)
-constexpr int64_t kMaxRank = 8;        // Maximum supported tensor rank
-constexpr int64_t kMaxNDDMA = 5;       // Maximum NDDMA loop dimensions
+// 命名约定说明（design-check S5 / cpp-style STYLE-1.4、STYLE-1.5 豁免）：
+// 字段下划线命名（max_bro_shape/per_buf_bytes 等）与 k 前缀常量（kMaxInputSlots/kPhysNodes 等）
+// 沿用 Broadcast 范式约定；kernel/tiling 侧对字段名的引用均按此契约，
+// 改小驼峰/全大写会与既有引用脱节，故在规则层豁免并保留。
+
+constexpr int64_t kMaxInputSlots = 6;   // var, accum, lr, x1, momentum, x2
+constexpr int64_t kMaxOutputSlots = 2;  // out_var, out_accum
+constexpr int64_t kPhysNodes = 4;       // Physical survival nodes P (= TBuf slots)
+constexpr int64_t kScalarBufBytes = 32; // UB staging buffer for GM scalar loads (excluded from per-buf budget)
+constexpr int64_t kMaxRank = 8;         // Internal metadata capacity; higher input ranks are flattened
+constexpr int64_t kMaxNDDMA = 5;        // Maximum NDDMA loop dimensions
 
 struct SplitResult {
     int64_t axis;     // UB split axis
@@ -35,7 +40,6 @@ struct MultiCoreResult {
 
 template <int64_t kRank>
 struct FusedMulApplyMomentumTilingData {
-    // === Standard split fields ===
     SplitResult split;                              // UB split result (from FindSplitAxis)
     MultiCoreResult multicore;                      // Multi-core split result (from MultiCoreSplit)
     int64_t rank;                                   // Actual effective rank (after pad & squeeze)

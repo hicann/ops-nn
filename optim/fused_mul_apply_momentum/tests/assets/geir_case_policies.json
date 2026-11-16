@@ -1,0 +1,139 @@
+{
+  "l2_exc_dtype_mixed_var_accum_fp32_014": {
+    "compute_dtype": "float32"
+  },
+  "fmm_scalar_dtype_float16_lr_float32": {
+    "compute_dtype": "float16"
+  },
+  "fmm_scalar_dtype_float16_momentum_float32": {
+    "compute_dtype": "float16"
+  },
+  "fmm_scalar_dtype_float16_x2_float32": {
+    "compute_dtype": "float16"
+  },
+  "fmm_scalar_dtype_float32_lr_float16": {
+    "compute_dtype": "float32"
+  },
+  "fmm_scalar_dtype_float32_momentum_float16": {
+    "compute_dtype": "float32"
+  },
+  "fmm_scalar_dtype_float32_x2_float16": {
+    "compute_dtype": "float32"
+  },
+  "l2_exc_dtype_mixed_var_accum_fp32_014__b8d20cf363": {
+    "compute_dtype": "float32"
+  },
+  "r8_fmm_unsupported_bfloat16": {
+    "compute_dtype": "float32",
+    "output_dtype": "bfloat16"
+  },
+  "r50_fmm_x1_dtype_only_var_float16_x1_float32": {
+    "compute_dtype": "float16"
+  },
+  "r50_fmm_x1_dtype_only_var_float32_x1_float16": {
+    "compute_dtype": "float32"
+  },
+  "FusedMulApplyMomentum_L2_exc_dtype_004": {
+    "compute_dtype": "float16",
+    "reference_adapter": "input_cast_before_promote",
+    "input_dtypes": [
+      "float16",
+      "bfloat16",
+      "float16",
+      "float16",
+      "float16",
+      "float16"
+    ],
+    "expected": {
+      "kernel": "reject",
+      "geir": "pass"
+    },
+    "evidence": "FMAM_五条GEIR混合dtype_隔离适配补验_20261114.md"
+  },
+  "FusedMulApplyMomentum_L2_exc_dtype_007": {
+    "compute_dtype": "float32",
+    "reference_adapter": "input_cast_before_promote",
+    "input_dtypes": [
+      "float32",
+      "float16",
+      "bfloat16",
+      "float16",
+      "float16",
+      "float16"
+    ],
+    "expected": {
+      "kernel": "reject",
+      "geir": "pass"
+    },
+    "evidence": "FMAM_五条GEIR混合dtype_隔离适配补验_20261114.md"
+  },
+  "FusedMulApplyMomentum_L2_exc_dtype_010": {
+    "compute_dtype": "float16",
+    "reference_adapter": "input_cast_before_promote",
+    "input_dtypes": [
+      "float16",
+      "float16",
+      "float16",
+      "bfloat16",
+      "float16",
+      "float16"
+    ],
+    "expected": {
+      "kernel": "reject",
+      "geir": "pass"
+    },
+    "evidence": "FMAM_五条GEIR混合dtype_隔离适配补验_20261114.md"
+  },
+  "FusedMulApplyMomentum_L2_exc_dtype_013": {
+    "compute_dtype": "float32",
+    "reference_adapter": "input_cast_before_promote",
+    "input_dtypes": [
+      "float32",
+      "float16",
+      "float16",
+      "float16",
+      "bfloat16",
+      "float16"
+    ],
+    "expected": {
+      "kernel": "reject",
+      "geir": "pass"
+    },
+    "evidence": "FMAM_五条GEIR混合dtype_隔离适配补验_20261114.md"
+  },
+  "FusedMulApplyMomentum_L2_exc_dtype_016": {
+    "compute_dtype": "float16",
+    "reference_adapter": "input_cast_before_promote",
+    "input_dtypes": [
+      "float16",
+      "float32",
+      "float32",
+      "float32",
+      "float32",
+      "bfloat16"
+    ],
+    "expected": {
+      "kernel": "reject",
+      "geir": "pass"
+    },
+    "evidence": "FMAM_五条GEIR混合dtype_隔离适配补验_20261114.md"
+  },
+  "FusedMulApplyMomentum_L2_exc_dtype_001": {
+    "compute_dtype": "float32",
+    "output_dtype": "bfloat16",
+    "reference_adapter": "input_cast_before_promote",
+    "input_dtypes": [
+      "bfloat16",
+      "bfloat16",
+      "bfloat16",
+      "bfloat16",
+      "bfloat16",
+      "bfloat16"
+    ],
+    "expected": {
+      "kernel": "reject",
+      "geir": "pass"
+    },
+    "evidence": "FMAM_GEIR_BF16_001_参考链补验_20261114.md"
+  }
+}

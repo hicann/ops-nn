@@ -23,14 +23,11 @@
 
 namespace optiling {
 
-struct FusedMulApplyMomentumCompileInfo {
-    uint64_t ubSize = 0;
-    uint64_t coreNum = 0;
-};
+struct FusedMulApplyMomentumCompileInfo {};
 
 class FusedMulApplyMomentumTiling {
 public:
-    FusedMulApplyMomentumTiling(gert::TilingContext* ctx);
+    explicit FusedMulApplyMomentumTiling(gert::TilingContext* ctx);
     ge::graphStatus RunTiling();
 
 private:
@@ -46,6 +43,9 @@ private:
     std::vector<std::vector<int64_t>> normalOutputShapes_;
     int64_t rank_ = 0;
     int64_t dtypeSize_ = 4;
+    uint64_t ubSize_ = 0;
+    int64_t coreNum_ = 0;
+    bool isEmpty_ = false;
 };
 
 } // namespace optiling

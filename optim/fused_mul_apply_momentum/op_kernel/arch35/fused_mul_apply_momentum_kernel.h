@@ -15,10 +15,6 @@
 #include "fused_mul_apply_momentum_struct.h"
 #include <type_traits>
 
-// ============================================================
-// Kernel-side helper functions
-// ============================================================
-
 __aicore__ inline void GetCoreRange(int64_t core_id, int64_t tiles_main, int64_t cores_tail, int64_t& start,
                                     int64_t& end)
 {
@@ -59,33 +55,21 @@ __aicore__ inline int64_t CalcOffset(const int64_t* eff_coord, const int64_t* st
     return offset;
 }
 
-__aicore__ inline int64_t CalcOutputTransferCount(const int64_t* normal_shape, int64_t rank, int64_t split_axis,
-                                                  int64_t a_i_seg)
-{
-    int64_t split_elems = (normal_shape[split_axis] == 1) ? 1 : a_i_seg;
-    int64_t inner_elems = 1;
-    for (int64_t d = split_axis + 1; d < rank; d++)
-        inner_elems *= normal_shape[d];
-    return split_elems * inner_elems;
-}
-
-// ============================================================
-// Kernel class
-// ============================================================
-
 template <typename T, int64_t RANK>
 class FusedMulApplyMomentumKernel {
-    static constexpr int64_t ND = (RANK <= kMaxNDDMA) ? RANK : kMaxNDDMA;
-    static constexpr bool IS_FP16 = std::is_same<T, half>::value;
+    static constexpr int64_t kE = 32 / static_cast<int64_t>(sizeof(T));
 
     AscendC::TPipe pipe_;
     const FusedMulApplyMomentumTilingData<RANK>* td_;
     AscendC::GlobalTensor<T> gmIn_[kMaxInputSlots];
     AscendC::GlobalTensor<T> gmOut_[kMaxOutputSlots];
     AscendC::TBuf<AscendC::TPosition::VECCALC> buf_[kPhysNodes];
-    AscendC::MultiCopyParams<T, ND> nddmaParams_[kMaxInputSlots];
-    int64_t nddmaOuterIters_[kMaxInputSlots];
-    int64_t nddma_dims_;
+    AscendC::TBuf<AscendC::TPosition::VECCALC> scalarBuf_;
+    int32_t evMTE2toS_;
+    int32_t evStoMTE2_;
+    T x2Value_;
+    T momentumValue_;
+    T learningRateValue_;
 
 public:
     __aicore__ inline void Init(GM_ADDR inputs[kMaxInputSlots], GM_ADDR outputs[kMaxOutputSlots],
@@ -98,460 +82,99 @@ public:
             gmOut_[i].SetGlobalBuffer((__gm__ T*)outputs[i]);
         for (int i = 0; i < kPhysNodes; i++)
             pipe_.InitBuffer(buf_[i], td_->per_buf_bytes);
-
-        const int64_t* dstShape = td_->max_bro_shape;
-        int64_t k = td_->split.axis;
-        nddma_dims_ = (RANK - k <= ND) ? (RANK - k) : ND;
-        int64_t ndma_start = RANK - nddma_dims_;
-        for (int inp = 0; inp < kMaxInputSlots; inp++) {
-            int64_t inner = 1;
-            int64_t nd = 0;
-            for (int64_t d = RANK - 1; d >= ndma_start && nd < ND; d--) {
-                nddmaParams_[inp].loopInfo.loopSize[nd] = (d == k) ? 0 : dstShape[d];
-                nddmaParams_[inp].loopInfo.loopSrcStride[nd] = td_->input_strides[inp][d];
-                nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
-                nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
-                nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
-                inner *= (d == k) ? td_->split.a_i : dstShape[d];
-                nd++;
-            }
-            for (; nd < ND; nd++) {
-                nddmaParams_[inp].loopInfo.loopSize[nd] = 1;
-                nddmaParams_[inp].loopInfo.loopSrcStride[nd] = 0;
-                nddmaParams_[inp].loopInfo.loopDstStride[nd] = inner;
-                nddmaParams_[inp].loopInfo.loopLpSize[nd] = 0;
-                nddmaParams_[inp].loopInfo.loopRpSize[nd] = 0;
-            }
-            nddmaOuterIters_[inp] = 1;
-            for (int64_t d = k; d < ndma_start; d++)
-                nddmaOuterIters_[inp] *= (d == k) ? td_->split.a_i : dstShape[d];
-        }
+        pipe_.InitBuffer(scalarBuf_, kScalarBufBytes);
+        evMTE2toS_ = static_cast<int32_t>(pipe_.FetchEventID(AscendC::HardEvent::MTE2_S));
+        evStoMTE2_ = static_cast<int32_t>(pipe_.FetchEventID(AscendC::HardEvent::S_MTE2));
+        AscendC::SetPadValue<T>(static_cast<T>(0));
     }
 
-    __aicore__ inline void ProcessTile(int64_t flat, int64_t start, int64_t end, int64_t inner_count, int64_t* coord,
-                                       int32_t evMTE2toV, int32_t evVtoMTE2, int32_t evVtoMTE3, int32_t evMTE3toMTE2)
+    // Read one broadcast scalar (lr/momentum/x2) into a register. The scalar
+    // tensors sit at 32B-aligned addresses (stride 0, offset 0), so the exact
+    // 2/4-byte padded read is alignment-safe.
+    __aicore__ inline T ReadScalar(int inputIdx)
     {
-        constexpr int UB0 = 0, UB1 = 1, UB2 = 2;
-        constexpr int IN_VAR = 0, IN_ACCUM = 1, IN_LR = 2, IN_X1 = 3, IN_MOM = 4, IN_X2 = 5;
-        constexpr int OUT_VAR = 0, OUT_ACCUM = 1;
-
-        int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o, td_->split.a_i, td_->split.a_i_tail);
-        int64_t count = a_i_seg * inner_count;
-        FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK, td_->split.axis, td_->split.a_i, td_->split.a_o, coord);
-
-        if (flat != start) {
-            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
-            if constexpr (IS_FP16)
-                AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        }
-
-        if (td_->use_nesterov) {
-            if constexpr (IS_FP16) {
-                ProcessNesterovFp16(coord, count, a_i_seg, UB0, UB1, UB2, IN_VAR, IN_ACCUM, IN_LR, IN_X1, IN_MOM, IN_X2,
-                                    OUT_VAR, OUT_ACCUM, evMTE2toV, evVtoMTE2, evVtoMTE3, evMTE3toMTE2);
-            } else {
-                ProcessNesterov(coord, count, a_i_seg, UB0, UB1, UB2, IN_VAR, IN_ACCUM, IN_LR, IN_X1, IN_MOM, IN_X2,
-                                OUT_VAR, OUT_ACCUM, evMTE2toV, evVtoMTE2, evVtoMTE3, evMTE3toMTE2);
-            }
-        } else {
-            if constexpr (IS_FP16) {
-                ProcessStandardFp16(coord, count, a_i_seg, UB0, UB1, UB2, IN_VAR, IN_ACCUM, IN_LR, IN_X1, IN_MOM, IN_X2,
-                                    OUT_VAR, OUT_ACCUM, evMTE2toV, evVtoMTE2, evVtoMTE3, evMTE3toMTE2);
-            } else {
-                ProcessStandard(coord, count, a_i_seg, UB0, UB1, UB2, IN_VAR, IN_ACCUM, IN_LR, IN_X1, IN_MOM, IN_X2,
-                                OUT_VAR, OUT_ACCUM, evMTE2toV, evVtoMTE2, evVtoMTE3, evMTE3toMTE2);
-            }
-        }
-
-        if (flat != end - 1) {
-            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
-            if constexpr (IS_FP16)
-                AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        }
+        AscendC::LocalTensor<T> scalarTensor = scalarBuf_.template Get<T>();
+        AscendC::DataCopyExtParams scalarCopy{1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0};
+        AscendC::DataCopyPadExtParams<T> scalarPad{false, 0, 0, T(0)};
+        AscendC::DataCopyPad(scalarTensor, gmIn_[inputIdx][0], scalarCopy, scalarPad);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_S>(evMTE2toS_);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_S>(evMTE2toS_);
+        T value = scalarTensor.GetValue(0);
+        AscendC::SetFlag<AscendC::HardEvent::S_MTE2>(evStoMTE2_);
+        AscendC::WaitFlag<AscendC::HardEvent::S_MTE2>(evStoMTE2_);
+        return value;
     }
 
     __aicore__ inline void Process()
     {
         int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
-        int32_t evVtoMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
         int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
 
-        int64_t start, end;
+        int64_t start;
+        int64_t end;
         GetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tiles_main, td_->multicore.cores_tail, start, end);
 
-        int64_t inner_count = 1;
-        for (int64_t d = td_->split.axis + 1; d < RANK; d++)
-            inner_count *= td_->max_bro_shape[d];
-
+        if (start == end) {
+            return;
+        }
+        x2Value_ = ReadScalar(5);
+        momentumValue_ = ReadScalar(4);
+        learningRateValue_ = ReadScalar(2);
         int64_t coord[kMaxRank] = {};
         for (int64_t flat = start; flat < end; flat++) {
-            ProcessTile(flat, start, end, inner_count, coord, evMTE2toV, evVtoMTE2, evVtoMTE3, evMTE3toMTE2);
+            ProcessFlatTile(flat, coord, evMTE2toV, evVtoMTE3, evMTE3toMTE2);
         }
+        AscendC::PipeBarrier<PIPE_ALL>();
     }
 
 private:
-    // ============================================================
-    // Standard mode (FP32)
-    // ============================================================
-    __aicore__ inline void ProcessStandard(const int64_t* coord, int64_t count, int64_t a_i_seg, int UB0, int UB1,
-                                           int UB2, int IN_VAR, int IN_ACCUM, int IN_LR, int IN_X1, int IN_MOM,
-                                           int IN_X2, int OUT_VAR, int OUT_ACCUM, int32_t evMTE2toV, int32_t evVtoMTE2,
-                                           int32_t evVtoMTE3, int32_t evMTE3toMTE2)
+    __aicore__ inline void ProcessFlatTile(int64_t flat, int64_t* coord, int32_t evMTE2toV, int32_t evVtoMTE3,
+                                           int32_t evMTE3toMTE2)
     {
-        // S1: grad = x1 * x2
-        CopyInBrc(coord, IN_X1, UB0, a_i_seg);
-        CopyInBrc(coord, IN_X2, UB1, a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Mul(buf_[UB2].template Get<T>(), buf_[UB0].template Get<T>(), buf_[UB1].template Get<T>(), count);
-
-        // S2: accum_new = accum * momentum + grad
-        CopyInBrc(coord, IN_ACCUM, UB0, a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        T mom_val;
-        ReadScalar(coord, IN_MOM, mom_val);
-        AscendC::Muls(buf_[UB0].template Get<T>(), buf_[UB0].template Get<T>(), mom_val, count);
-        AscendC::Add(buf_[UB0].template Get<T>(), buf_[UB0].template Get<T>(), buf_[UB2].template Get<T>(), count);
-
-        // S3: delta = accum_new * lr
-        CopyInBrc(coord, IN_LR, UB1, a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Mul(buf_[UB1].template Get<T>(), buf_[UB0].template Get<T>(), buf_[UB1].template Get<T>(), count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-
-        // S4: var_new = var - delta
-        CopyInBrc(coord, IN_VAR, UB2, a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Sub(buf_[UB2].template Get<T>(), buf_[UB2].template Get<T>(), buf_[UB1].template Get<T>(), count);
-
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-        CopyOutOne(coord, OUT_VAR, UB2, a_i_seg);
-        CopyOutOne(coord, OUT_ACCUM, UB0, a_i_seg);
-    }
-
-    __aicore__ inline void StandardFp16ComputeGradAccumDelta(const int64_t* batch_coord, int64_t batch_count,
-                                                             int64_t batch_a_i_seg, int UB0, int UB1, int UB2,
-                                                             int IN_X1, int IN_ACCUM, float x2_val, float mom_val,
-                                                             float lr_val, int32_t evMTE2toV, int32_t evVtoMTE2)
-    {
-        using FT = float;
-        CopyInBrc(batch_coord, IN_X1, UB0, batch_a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Cast<FT, half>(buf_[UB2].template Get<FT>(), buf_[UB0].template Get<half>(),
-                                AscendC::RoundMode::CAST_NONE, batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::Muls(buf_[UB2].template Get<FT>(), buf_[UB2].template Get<FT>(), x2_val, batch_count);
-
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        CopyInBrc(batch_coord, IN_ACCUM, UB0, batch_a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Cast<FT, half>(buf_[UB1].template Get<FT>(), buf_[UB0].template Get<half>(),
-                                AscendC::RoundMode::CAST_NONE, batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::Muls(buf_[UB1].template Get<FT>(), buf_[UB1].template Get<FT>(), mom_val, batch_count);
-        AscendC::Add(buf_[UB1].template Get<FT>(), buf_[UB1].template Get<FT>(), buf_[UB2].template Get<FT>(),
-                     batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-
-        AscendC::Muls(buf_[UB2].template Get<FT>(), buf_[UB1].template Get<FT>(), lr_val, batch_count);
-    }
-
-    __aicore__ inline void StandardFp16UpdateVar(const int64_t* batch_coord, int64_t batch_count, int64_t batch_a_i_seg,
-                                                 int UB0, int UB1, int UB2, int IN_VAR, int OUT_VAR, int32_t evMTE2toV,
-                                                 int32_t evVtoMTE2, int32_t evVtoMTE3, int32_t evMTE3toMTE2)
-    {
-        using FT = float;
-        AscendC::Copy(buf_[UB0].template Get<FT>(), buf_[UB2].template Get<FT>(), batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-
-        CopyInBrc(batch_coord, IN_VAR, UB2, batch_a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-
-        AscendC::Cast<FT, half>(buf_[UB1].template Get<FT>(), buf_[UB2].template Get<half>(),
-                                AscendC::RoundMode::CAST_NONE, batch_count);
-        AscendC::Sub(buf_[UB1].template Get<FT>(), buf_[UB1].template Get<FT>(), buf_[UB0].template Get<FT>(),
-                     batch_count);
-        AscendC::Cast<half, FT>(buf_[UB1].template Get<half>(), buf_[UB1].template Get<FT>(),
-                                AscendC::RoundMode::CAST_ROUND, batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-        CopyOutOne(batch_coord, OUT_VAR, UB1, batch_a_i_seg);
-    }
-    __aicore__ inline void ProcessStandardFp16(const int64_t* coord, int64_t count, int64_t a_i_seg, int UB0, int UB1,
-                                               int UB2, int IN_VAR, int IN_ACCUM, int IN_LR, int IN_X1, int IN_MOM,
-                                               int IN_X2, int OUT_VAR, int OUT_ACCUM, int32_t evMTE2toV,
-                                               int32_t evVtoMTE2, int32_t evVtoMTE3, int32_t evMTE3toMTE2)
-    {
-        using FT = float;
-        constexpr int64_t BATCH_SIZE = 4096;
-
-        T x2_val_t, mom_val_t, lr_val_t;
-        ReadScalar(coord, IN_X2, x2_val_t);
-        ReadScalar(coord, IN_MOM, mom_val_t);
-        ReadScalar(coord, IN_LR, lr_val_t);
-        FT x2_val = static_cast<FT>(x2_val_t);
-        FT mom_val = static_cast<FT>(mom_val_t);
-        FT lr_val = static_cast<FT>(lr_val_t);
-
-        int64_t inner_dims = 1;
-        for (int64_t d = td_->split.axis + 1; d < RANK; d++)
-            inner_dims *= td_->max_bro_shape[d];
-
-        int64_t total_a_i_seg = (count + inner_dims - 1) / inner_dims;
-        int64_t batch_a_i_seg_max = BATCH_SIZE / inner_dims;
-
-        for (int64_t off = 0; off < total_a_i_seg; off += batch_a_i_seg_max) {
-            int64_t bseg = (off + batch_a_i_seg_max <= total_a_i_seg) ? batch_a_i_seg_max : (total_a_i_seg - off);
-            int64_t bcnt = bseg * inner_dims;
-
-            int64_t bc[kMaxRank];
-            for (int i = 0; i < kMaxRank; i++)
-                bc[i] = coord[i];
-            bc[td_->split.axis] += off;
-
-            StandardFp16ComputeGradAccumDelta(bc, bcnt, bseg, UB0, UB1, UB2, IN_X1, IN_ACCUM, x2_val, mom_val, lr_val,
-                                              evMTE2toV, evVtoMTE2);
-
-            AscendC::Cast<half, FT>(buf_[UB1].template Get<half>(), buf_[UB1].template Get<FT>(),
-                                    AscendC::RoundMode::CAST_ROUND, bcnt);
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-            CopyOutOne(bc, OUT_ACCUM, UB1, bseg);
-            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
-
-            StandardFp16UpdateVar(bc, bcnt, bseg, UB0, UB1, UB2, IN_VAR, OUT_VAR, evMTE2toV, evVtoMTE2, evVtoMTE3,
-                                  evMTE3toMTE2);
+        int64_t segment = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o, td_->split.a_i, td_->split.a_i_tail);
+        FlatToEffectiveCoord(flat, td_->max_bro_shape, RANK, td_->split.axis, td_->split.a_i, td_->split.a_o, coord);
+        int64_t base = CalcOffset(coord, td_->input_strides[0], RANK);
+        int64_t elements = segment;
+        for (int64_t axis = td_->split.axis + 1; axis < RANK; ++axis) {
+            elements *= td_->max_bro_shape[axis];
         }
-    }
-
-    // ============================================================
-    // Nesterov mode (FP32)
-    // ============================================================
-    __aicore__ inline void ProcessNesterov(const int64_t* coord, int64_t count, int64_t a_i_seg, int UB0, int UB1,
-                                           int UB2, int IN_VAR, int IN_ACCUM, int IN_LR, int IN_X1, int IN_MOM,
-                                           int IN_X2, int OUT_VAR, int OUT_ACCUM, int32_t evMTE2toV, int32_t evVtoMTE2,
-                                           int32_t evVtoMTE3, int32_t evMTE3toMTE2)
-    {
-        T mom_val, lr_val;
-        ReadScalar(coord, IN_MOM, mom_val);
-        ReadScalar(coord, IN_LR, lr_val);
-
-        // S1: grad = x1 * x2 -> UB2
-        CopyInBrc(coord, IN_X1, UB0, a_i_seg);
-        CopyInBrc(coord, IN_X2, UB1, a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Mul(buf_[UB2].template Get<T>(), buf_[UB0].template Get<T>(), buf_[UB1].template Get<T>(), count);
-
-        // S2: acc_new = accum * momentum + grad -> UB1
-        CopyInBrc(coord, IN_ACCUM, UB1, a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Muls(buf_[UB1].template Get<T>(), buf_[UB1].template Get<T>(), mom_val, count);
-        AscendC::Add(buf_[UB1].template Get<T>(), buf_[UB1].template Get<T>(), buf_[UB2].template Get<T>(), count);
-
-        // S3: acc_m_lr = acc_new * momentum * lr -> UB0
-        // FIX: Nesterov formula requires acc_new * momentum * lr, was missing * lr
-        AscendC::Muls(buf_[UB0].template Get<T>(), buf_[UB1].template Get<T>(), mom_val * lr_val, count);
-
-        // S4: grad_lr = grad * lr; delta = acc_m_lr + grad_lr
-        AscendC::Muls(buf_[UB2].template Get<T>(), buf_[UB2].template Get<T>(), lr_val, count);
-        AscendC::Add(buf_[UB0].template Get<T>(), buf_[UB0].template Get<T>(), buf_[UB2].template Get<T>(), count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-
-        // S5: var_new = var - delta
-        CopyInBrc(coord, IN_VAR, UB2, a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Sub(buf_[UB2].template Get<T>(), buf_[UB2].template Get<T>(), buf_[UB0].template Get<T>(), count);
-
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-        CopyOutOne(coord, OUT_VAR, UB2, a_i_seg);
-        CopyOutOne(coord, OUT_ACCUM, UB1, a_i_seg);
-    }
-
-    __aicore__ inline void NesterovFp16ComputeDelta(const int64_t* batch_coord, int64_t batch_count,
-                                                    int64_t batch_a_i_seg, int UB0, int UB1, int UB2, int IN_X1,
-                                                    int IN_ACCUM, float x2_val, float mom_val, float lr_val,
-                                                    int32_t evMTE2toV, int32_t evVtoMTE2)
-    {
-        using FT = float;
-        CopyInBrc(batch_coord, IN_X1, UB0, batch_a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Cast<FT, half>(buf_[UB2].template Get<FT>(), buf_[UB0].template Get<half>(),
-                                AscendC::RoundMode::CAST_NONE, batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::Muls(buf_[UB2].template Get<FT>(), buf_[UB2].template Get<FT>(), x2_val, batch_count);
-
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        CopyInBrc(batch_coord, IN_ACCUM, UB0, batch_a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::Cast<FT, half>(buf_[UB1].template Get<FT>(), buf_[UB0].template Get<half>(),
-                                AscendC::RoundMode::CAST_NONE, batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::Muls(buf_[UB1].template Get<FT>(), buf_[UB1].template Get<FT>(), mom_val, batch_count);
-        AscendC::Add(buf_[UB1].template Get<FT>(), buf_[UB1].template Get<FT>(), buf_[UB2].template Get<FT>(),
-                     batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-
-        AscendC::Muls(buf_[UB0].template Get<FT>(), buf_[UB1].template Get<FT>(), mom_val * lr_val, batch_count);
-        AscendC::Muls(buf_[UB2].template Get<FT>(), buf_[UB2].template Get<FT>(), lr_val, batch_count);
-        AscendC::Add(buf_[UB0].template Get<FT>(), buf_[UB0].template Get<FT>(), buf_[UB2].template Get<FT>(),
-                     batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-    }
-
-    __aicore__ inline void NesterovFp16UpdateVar(const int64_t* batch_coord, int64_t batch_count, int64_t batch_a_i_seg,
-                                                 int UB0, int UB1, int UB2, int IN_VAR, int OUT_VAR, int32_t evMTE2toV,
-                                                 int32_t evVtoMTE2, int32_t evVtoMTE3, int32_t evMTE3toMTE2)
-    {
-        using FT = float;
-        AscendC::Copy(buf_[UB2].template Get<FT>(), buf_[UB0].template Get<FT>(), batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-
-        CopyInBrc(batch_coord, IN_VAR, UB0, batch_a_i_seg);
-        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
-
-        AscendC::Cast<FT, half>(buf_[UB1].template Get<FT>(), buf_[UB0].template Get<half>(),
-                                AscendC::RoundMode::CAST_NONE, batch_count);
-        AscendC::Sub(buf_[UB1].template Get<FT>(), buf_[UB1].template Get<FT>(), buf_[UB2].template Get<FT>(),
-                     batch_count);
-        AscendC::Cast<half, FT>(buf_[UB1].template Get<half>(), buf_[UB1].template Get<FT>(),
-                                AscendC::RoundMode::CAST_ROUND, batch_count);
-        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-        CopyOutOne(batch_coord, OUT_VAR, UB1, batch_a_i_seg);
-    }
-    __aicore__ inline void ProcessNesterovFp16(const int64_t* coord, int64_t count, int64_t a_i_seg, int UB0, int UB1,
-                                               int UB2, int IN_VAR, int IN_ACCUM, int IN_LR, int IN_X1, int IN_MOM,
-                                               int IN_X2, int OUT_VAR, int OUT_ACCUM, int32_t evMTE2toV,
-                                               int32_t evVtoMTE2, int32_t evVtoMTE3, int32_t evMTE3toMTE2)
-    {
-        using FT = float;
-        constexpr int64_t BATCH_SIZE = 4096;
-
-        T mom_val_t, lr_val_t, x2_val_t;
-        ReadScalar(coord, IN_MOM, mom_val_t);
-        ReadScalar(coord, IN_LR, lr_val_t);
-        ReadScalar(coord, IN_X2, x2_val_t);
-        FT mom_val = static_cast<FT>(mom_val_t);
-        FT lr_val = static_cast<FT>(lr_val_t);
-        FT x2_val = static_cast<FT>(x2_val_t);
-
-        int64_t inner_dims = 1;
-        for (int64_t d = td_->split.axis + 1; d < RANK; d++)
-            inner_dims *= td_->max_bro_shape[d];
-
-        int64_t total_a_i_seg = (count + inner_dims - 1) / inner_dims;
-        int64_t batch_a_i_seg_max = BATCH_SIZE / inner_dims;
-
-        for (int64_t off = 0; off < total_a_i_seg; off += batch_a_i_seg_max) {
-            int64_t bseg = (off + batch_a_i_seg_max <= total_a_i_seg) ? batch_a_i_seg_max : (total_a_i_seg - off);
-            int64_t bcnt = bseg * inner_dims;
-
-            int64_t bc[kMaxRank];
-            for (int i = 0; i < kMaxRank; i++)
-                bc[i] = coord[i];
-            bc[td_->split.axis] += off;
-
-            NesterovFp16ComputeDelta(bc, bcnt, bseg, UB0, UB1, UB2, IN_X1, IN_ACCUM, x2_val, mom_val, lr_val, evMTE2toV,
-                                     evVtoMTE2);
-
-            AscendC::Cast<half, FT>(buf_[UB1].template Get<half>(), buf_[UB1].template Get<FT>(),
-                                    AscendC::RoundMode::CAST_ROUND, bcnt);
-            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
-            CopyOutOne(bc, OUT_ACCUM, UB1, bseg);
-            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
-            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
-
-            NesterovFp16UpdateVar(bc, bcnt, bseg, UB0, UB1, UB2, IN_VAR, OUT_VAR, evMTE2toV, evVtoMTE2, evVtoMTE3,
-                                  evMTE3toMTE2);
-        }
-    }
-
-    __aicore__ inline void ReadScalar(const int64_t* coord, int inputIdx, T& val)
-    {
-        int64_t off = CalcOffset(coord, td_->input_strides[inputIdx], RANK);
-        val = gmIn_[inputIdx][off].GetValue(0);
-    }
-
-    __aicore__ inline void CopyInBrc(const int64_t* coord, int inputIdx, int slot, int64_t a_i_seg)
-    {
-        int64_t k = td_->split.axis;
-        int64_t off = CalcOffset(coord, td_->input_strides[inputIdx], RANK);
-        const int64_t* dstShape = td_->max_bro_shape;
-        int64_t ndma_start = RANK - nddma_dims_;
-
-        auto params = nddmaParams_[inputIdx];
-        int64_t k_nd = RANK - 1 - k;
-        int64_t inner = 1;
-        for (int64_t nd = 0; nd < ND; nd++) {
-            if (nd == k_nd)
-                params.loopInfo.loopSize[nd] = a_i_seg;
-            params.loopInfo.loopDstStride[nd] = inner;
-            inner *= params.loopInfo.loopSize[nd];
-        }
-
-        static constexpr AscendC::NdDmaConfig cfg = {false, AscendC::NdDmaConfig::unsetPad,
-                                                     AscendC::NdDmaConfig::unsetPad, false};
-
-        if constexpr (RANK <= 5) {
-            AscendC::DataCopy<T, ND, cfg>(buf_[slot].template Get<T>(), gmIn_[inputIdx][off], params);
-        } else {
-            AscendC::LocalTensor<T> buf = buf_[slot].template Get<T>();
-            int64_t elem_base = off;
-            for (int64_t oi = 0; oi < nddmaOuterIters_[inputIdx]; oi++) {
-                int64_t elem_adj = 0, tmp = oi;
-                for (int64_t d = ndma_start - 1; d >= k; d--) {
-                    int64_t sz = (d == k) ? a_i_seg : dstShape[d];
-                    elem_adj += (tmp % sz) * td_->input_strides[inputIdx][d];
-                    tmp /= sz;
-                }
-                AscendC::DataCopy<T, ND, cfg>(buf[oi * inner], gmIn_[inputIdx][elem_base + elem_adj], params);
+        auto gradient = buf_[0].template Get<T>();
+        auto oldAccum = buf_[1].template Get<T>();
+        auto variable = buf_[2].template Get<T>();
+        auto newAccum = buf_[3].template Get<T>();
+        constexpr int64_t tileElements = 4096;
+        T negativeRate = static_cast<T>(-static_cast<float>(learningRateValue_));
+        for (int64_t offset = 0; offset < elements; offset += tileElements) {
+            int32_t count = static_cast<int32_t>(elements - offset < tileElements ? elements - offset : tileElements);
+            uint8_t padding = static_cast<uint8_t>((kE - count % kE) % kE);
+            AscendC::DataCopyExtParams params{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
+            AscendC::DataCopyPadExtParams<T> pad{true, 0, padding, static_cast<T>(0)};
+            AscendC::DataCopyPad(gradient, gmIn_[3][base + offset], params, pad);
+            AscendC::DataCopyPad(oldAccum, gmIn_[1][base + offset], params, pad);
+            AscendC::DataCopyPad(variable, gmIn_[0][base + offset], params, pad);
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+            AscendC::Muls(gradient, gradient, x2Value_, count);
+            uint32_t copyElements = static_cast<uint32_t>((count + kE - 1) / kE * kE);
+            AscendC::DataCopy(newAccum, gradient, copyElements);
+            // TensorFlow ApplyMomentum fuses accum*momentum+gradient, then stores T.
+            AscendC::Axpy(newAccum, oldAccum, momentumValue_, count);
+            if (td_->use_nesterov) {
+                // The two momentum products store T; gradient*lr joins the sum as FMA.
+                AscendC::Muls(oldAccum, newAccum, momentumValue_, count);
+                AscendC::Muls(oldAccum, oldAccum, learningRateValue_, count);
+                AscendC::Axpy(oldAccum, gradient, learningRateValue_, count);
+                AscendC::Sub(variable, variable, oldAccum, count);
+            } else {
+                AscendC::Axpy(variable, newAccum, negativeRate, count);
             }
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(evVtoMTE3);
+            AscendC::DataCopyPad(gmOut_[0][base + offset], variable, params);
+            AscendC::DataCopyPad(gmOut_[1][base + offset], newAccum, params);
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
         }
-    }
-
-    __aicore__ inline void CopyOutOne(const int64_t* coord, int outputIdx, int slot, int64_t a_i_seg)
-    {
-        int64_t off = CalcOffset(coord, td_->output_strides[outputIdx], RANK);
-        int64_t cnt = CalcOutputTransferCount(td_->output_shapes[outputIdx], RANK, td_->split.axis, a_i_seg);
-        AscendC::DataCopyExtParams extParams;
-        extParams.blockCount = 1;
-        extParams.blockLen = static_cast<uint32_t>(cnt * sizeof(T));
-        extParams.srcStride = 0;
-        extParams.dstStride = 0;
-        AscendC::DataCopyPad(gmOut_[outputIdx][off], buf_[slot].template Get<T>(), extParams);
     }
 };

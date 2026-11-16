@@ -14,7 +14,6 @@
  * \brief GE IR 图模式原型（REG_OP，6 输入 / 2 输出 + use_nesterov/use_locking 属性）
  *
  * CANN 图模式融合训练算子，将梯度缩放（Mul）与带动量的参数更新（ApplyMomentum）融合为单次逐元素更新。
- * 双输出 inplace 复用对应输入名（var↔var、accum↔accum，GM 地址复用）。
  */
 
 #ifndef FUSED_MUL_APPLY_MOMENTUM_PROTO_H_
@@ -30,15 +29,15 @@ namespace ge {
  *  var_delta = accum' * lr (standard) or grad*lr + accum'*momentum*lr (Nesterov);
  *  var' = var - var_delta.
  *@par Inputs:
- * @li var: weight tensor, in-place updated.
- * @li accum: momentum buffer, in-place updated.
+ * @li var: weight tensor.
+ * @li accum: momentum buffer.
  * @li lr: learning rate scalar.
  * @li x1: gradient component g1.
  * @li momentum: momentum coefficient scalar.
  * @li x2: LossScale reciprocal g2 scalar.
  *@par Outputs:
- * @li var: updated weight var' (in-place, reuses input var).
- * @li accum: updated momentum buffer accum' (in-place, reuses input accum).
+ * @li var: updated weight var'.
+ * @li accum: updated momentum buffer accum'.
  *@par Attributes:
  * @li use_nesterov: bool, default false. Standard/Nesterov var_delta.
  * @li use_locking: bool, default false. Reserved (no numerical effect).

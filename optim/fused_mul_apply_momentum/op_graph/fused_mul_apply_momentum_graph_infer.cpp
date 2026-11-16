@@ -28,7 +28,7 @@ static ge::graphStatus InferDataType4FusedMulApplyMomentum(gert::InferDataTypeCo
 {
     const ge::DataType dtype = context->GetInputDataType(0);
     context->SetOutputDataType(0, dtype);
-    context->SetOutputDataType(1, context->GetInputDataType(1));
+    context->SetOutputDataType(1, dtype);
     return GRAPH_SUCCESS;
 }
 
