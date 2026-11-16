@@ -67,8 +67,16 @@ private:
 
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 1> buffer1;
     TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 1> buffer2;
-    TQue<QuePosition::VECIN, 1> buffer3;
+    // buffer3（acceptedNum→中间暂存→lastTokens，经 MTE3 拷出）：同按绑定的 VECOUT(dst)
+    // 侧释放，消除 lastToken MTE3 读与下轮 MTE2 写的跨 loop WAR 窗口
+    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 1> buffer3;
     TQue<QuePosition::VECIN, 1> tempQue_;
+    // 独立队列整改：sampledTokenIds/specToken 不再复用 buffer1/2（同一 loop 两轮 MTE2 写
+    // 同一 UB 槽位被 racecheck 判定 WAW）。队列类型与原 buffer1/2 一致取
+    // TQueBind<VECIN,VECOUT>：FreeTensor 走绑定的 VECOUT(dst) 侧释放，MTE3 拷出与
+    // 下轮 MTE2 搬入按硬件 token 序（TQue<VECIN> 的释放走 MTE2 侧、丢失该次序）
+    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 1> buffer4;
+    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, 1> buffer5;
 
     TBuf<QuePosition::VECCALC> sampledTokenIdsBuf_;
     TBuf<QuePosition::VECCALC> outputInt32Buf_;
@@ -141,6 +149,8 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::Init(GM_ADDR input_tokens, GM_A
     pipe_->InitBuffer(buffer3, 1,
                       (AlignBytes(tokenEachReqs_, sizeof(T)) + BLOCK_BYTES) * perLoopSeqs_ + VEC_SCRATCH_ALIGN_SLACK);
     pipe_->InitBuffer(tempQue_, 1, (AlignBytes(tokenEachReqs_, sizeof(T)) + BLOCK_BYTES) * perLoopSeqs_);
+    pipe_->InitBuffer(buffer4, 1, (AlignBytes(tokenEachReqs_, sizeof(T)) + BLOCK_BYTES) * perLoopSeqs_);
+    pipe_->InitBuffer(buffer5, 1, (AlignBytes(specNum_, sizeof(T)) + BLOCK_BYTES) * perLoopSeqs_);
 
     pipe_->InitBuffer(sampledTokenIdsBuf_, AlignBytes(tokenEachReqs_ + 1, sizeof(float)));
     pipe_->InitBuffer(outputInt32Buf_, (AlignBytes(tokenEachReqs_, sizeof(int32_t)) + BLOCK_BYTES) * perLoopSeqs_);
@@ -286,7 +296,11 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyOut(int64_t loop, int64_t s
     DataCopyPad(inputPositionsGm_[offset], inputPositionsLocal, dataCopyParams);
     DataCopyPad(seqLensGm_[offset], seqLensLocal, dataCopyParams);
     SetWaitFlag<HardEvent::MTE3_V>(HardEvent::MTE3_V);
-    buffer1.EnQue(inputPositionsLocal);
+    // 生命周期收口：positions 拷出后本轮不再有 DeQue 消费者，FreeTensor 走绑定的
+    // VECOUT(dst) 侧按 MTE3 序归还槽位（EnQue 仅投递消费者事件、不释放，见
+    // kernel_tquebind_impl.h FreeBuffer）；否则第二轮起 AllocTensor 等待未注册的
+    // freeBufEvt 或无序抢占在途槽位（racecheck RAW/WAR UB 来源）
+    buffer1.FreeTensor(inputPositionsLocal);
     buffer2.EnQue(seqLensLocal);
 }
 
@@ -512,14 +526,15 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyOutSlotMapping(int64_t loop
     int64_t offset = loop * perLoopSeqs_ * tokenEachReqs_;
     DataCopyPad(slotMappingGm_[offset], slotMappingLocal, dataCopyParams);
     SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
-    buffer2.EnQue(slotMappingLocal);
+    // 同 CopyOut 的 buffer1：本轮终点无后续 DeQue 消费者，FreeTensor 按 MTE3 序归还
+    buffer2.FreeTensor(slotMappingLocal);
 }
 
 template <typename T>
 __aicore__ inline void KernelAdvanceStepSpec<T>::CopyInInputTokens(int64_t loop, int64_t seqsNum)
 {
-    LocalTensor<T> sampledTokenIdsLocal = buffer1.DeQue<T>();
-    LocalTensor<T> specTokenLocal = buffer2.DeQue<T>();
+    LocalTensor<T> sampledTokenIdsLocal = buffer4.AllocTensor<T>();
+    LocalTensor<T> specTokenLocal = buffer5.AllocTensor<T>();
 
     // 搬运sampledTokenIds，其第2维是specNum+1
     int64_t offset = loop * perLoopSeqs_ * tokenEachReqs_;
@@ -536,14 +551,14 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyInInputTokens(int64_t loop,
     DataCopyPadExtParams<T> specTokenDataCopyPadParams{false, 0, 0, 0};
     DataCopyPad(specTokenLocal, specTokenGm_[offset], specTokenDataCopyParams, specTokenDataCopyPadParams);
 
-    buffer1.EnQue(sampledTokenIdsLocal);
-    buffer2.EnQue(specTokenLocal);
+    buffer4.EnQue(sampledTokenIdsLocal);
+    buffer5.EnQue(specTokenLocal);
 }
 
 template <typename T>
 __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeInputTokens(int64_t loop, int64_t seqsNum)
 {
-    LocalTensor<T> sampledTokenIdsLocalInt64 = buffer1.DeQue<T>();
+    LocalTensor<T> sampledTokenIdsLocalInt64 = buffer4.DeQue<T>();
     LocalTensor<T> lastTokensInt64 = buffer3.DeQue<T>();
 
     LocalTensor<float> sampledTokenIdsLocalFp32 = sampledTokenIdsBuf_.Get<float>();
@@ -574,13 +589,13 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::ComputeInputTokens(int64_t loop
     // 队列事件不覆盖 S→MTE3 依赖，需显式同步（参照 layer_norm_v4_single_read.h 同步范式）
     SetWaitFlag<HardEvent::S_MTE3>(HardEvent::S_MTE3);
     buffer3.EnQue(lastTokensInt64);
-    buffer1.FreeTensor(sampledTokenIdsLocalInt64);
+    buffer4.FreeTensor(sampledTokenIdsLocalInt64);
 }
 
 template <typename T>
 __aicore__ inline void KernelAdvanceStepSpec<T>::CopyOutInputTokens(int64_t loop, int64_t seqsNum)
 {
-    LocalTensor<T> specTokenLocal = buffer2.DeQue<T>();
+    LocalTensor<T> specTokenLocal = buffer5.DeQue<T>();
     LocalTensor<T> lastTokensLocal = buffer3.DeQue<T>();
     // 搬运lastToken到inputTokens的第1列
     int64_t offset = loop * perLoopSeqs_ * tokenEachReqs_;
@@ -594,7 +609,7 @@ __aicore__ inline void KernelAdvanceStepSpec<T>::CopyOutInputTokens(int64_t loop
                                               static_cast<uint32_t>(sizeof(T)), 0};
     DataCopyPad(inputTokensGm_[offset + 1], specTokenLocal, specTokenDataCopyParams);
 
-    buffer2.FreeTensor(specTokenLocal);
+    buffer5.FreeTensor(specTokenLocal);
     buffer3.FreeTensor(lastTokensLocal);
 }
 

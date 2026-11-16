@@ -380,6 +380,10 @@ bool AdvanceStepTilingHelper::Tiling4Seqs()
     int64_t perCoreInBufSize = 4 * AlignBytes(this->tokenEachReqs_ +
                                               ONE_BLOCK_BYTE / static_cast<int64_t>(sizeof(int64_t))) +
                                AlignBytes(this->tokenEachReqs_, static_cast<int64_t>(sizeof(int32_t))) + ONE_BLOCK_BYTE;
+    // 独立队列整改（与 kernel buffer4/buffer5 逐项对齐）：sampledTokenIds/specToken 专用队列
+    // 各占 (AlignBytes(行宽,8)+32B)/seq，追加后 perLoopMaxSeqs 相应收紧、接受面不变
+    perCoreInBufSize += AlignBytes(this->tokenEachReqs_ + ONE_BLOCK_BYTE / static_cast<int64_t>(sizeof(int64_t))) +
+                        AlignBytes(this->tokenEachReqs_ - 1 + ONE_BLOCK_BYTE / static_cast<int64_t>(sizeof(int64_t)));
     // 向量化行展开 scratch（kernel rowIdxBuf_/byteOffBuf_）：2 x rowStride x 4B + acc32 4B；
     // rowStride 按 align 上界 AlignBytes(te,8)/8 + 4 元素计（与 kernel InitBuffer 预留一致）
     perCoreInBufSize += 2 *
