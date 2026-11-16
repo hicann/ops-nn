@@ -58,6 +58,9 @@ static constexpr int64_t kNPreReuse = 1;             // x 单输入，自身复�
 static constexpr int64_t kNPreParallel = 0;          // 无并行槽
 static constexpr int64_t kNOut = 1;                  // y 单输出
 static constexpr int64_t kTmpBufCopies = 2;          // 主+尾共 2 份 fp32
+// FR-03 回退轮上限（检视修复轮 C07 具名）：aUbFactor 折半 ≤ log2(cacheLineSize/dtypeSize) 轮
+//   + 吐轴 ≤ axisNum-1 次，理论有界远小于 200；仅作终止防御（每轮 laneN 单调不增，理论有限步）
+static constexpr int32_t kMaxCacheBufFallbackRounds = 200;
 
 // 空 tensor 分类；优先级 EMPTY_A > EMPTY_R > NORMAL
 enum class EuclideanNormEmptyKind {
@@ -78,7 +81,8 @@ struct EuclideanNormCtx {
     // 输入
     ge::DataType xDtype = ge::DT_UNDEFINED;
     int64_t dtypeSize = 0;           // sizeof(D_T)
-    std::vector<int64_t> xShape;     // x 各维 size
+    int32_t xOrigRank = 0;           // 原始 x rank（0-D 规格化之前；axes 值域按它校验，FR-04）
+    std::vector<int64_t> xShape;     // x 各维 size（0-D 已规格化为 [1]）
     std::vector<int64_t> reduceAxes; // 归一化、排序、去重后的 reduce 轴下标集合
 
     // 空 tensor 分类
@@ -155,6 +159,7 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, EuclideanN
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     const gert::Shape& xS = xShapePtr->GetStorageShape();
     const size_t rank = xS.GetDimNum();
+    ctx.xOrigRank = static_cast<int32_t>(rank); // FR-04：记录原始 rank（axes 值域按它校验）
     ctx.xShape.clear();
     if (rank == 0) {
         // Scalar (0-D) normalized to 1-element 1-D tensor for tiling.
@@ -188,7 +193,10 @@ static ge::graphStatus ParseAxesTensor(gert::TilingContext* context, EuclideanNo
     const gert::Tensor* axesTensor = context->GetInputTensor(kInputAxesIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, axesTensor);
     const int64_t axesNum = axesTensor->GetShapeSize();
-    const int64_t xRank = static_cast<int64_t>(ctx.xShape.size());
+    // FR-04：按原始 rank（规格化 0-D → [1] 之前）校验 axes 值域 [-rank, rank)——
+    //   rank=0 为空区间，非空 axes 一律非法；与 infershape HandleScalarInput 门、
+    //   README 值域声明三方一致。原实现先规格化再校验，使 0-D x + axes=[0]/[-1] 被 tiling 放行。
+    const int64_t xRank = static_cast<int64_t>(ctx.xOrigRank);
     ctx.reduceAxes.clear();
 
     if (axesNum == 0) {
@@ -197,6 +205,11 @@ static ge::graphStatus ParseAxesTensor(gert::TilingContext* context, EuclideanNo
         // 禁止展开为全归约：含 0 维的 x 会误判 EMPTY_R 而向 0 字节输出写标量（越界写）。
         return ge::GRAPH_SUCCESS;
     }
+
+    // FR-04：0-D（标量）x 的 axes 必须为空（对齐 infershape "scalar input: axes must be empty" 门；
+    // 值域 [-0, 0) 为空区间，任何非空 axes 均非法）
+    OP_CHECK_IF(xRank == 0, OP_LOGE(context, "scalar input: axes must be empty, got %ld axes", axesNum),
+                return ge::GRAPH_FAILED);
 
     // op_def 中 axes 支持 DT_INT32 / DT_INT64（IndexNumberType），两条解析分支必须并存。
     std::set<int64_t> seen;
@@ -271,13 +284,21 @@ static void DropSizeOneAxes(EuclideanNormCtx& ctx)
 }
 
 // 3.2 合轴：连续 A 合并为 1 根，连续 R 合并为 1 根
-static void FuseAxis(EuclideanNormCtx& ctx)
+//   C02（检视修复轮）：合轴乘法带溢出防护（shape 乘积溢出 int64 不可调度），
+//   与 infershape 侧 CountPatternAxesAfterPreprocess 同款保护、两门行为一致。
+static ge::graphStatus FuseAxis(gert::TilingContext* context, EuclideanNormCtx& ctx)
 {
     std::vector<int64_t> fusedShape;
     std::vector<bool> fusedIsR;
     for (size_t i = 0; i < ctx.axisShape.size(); ++i) {
         if (!fusedShape.empty() && fusedIsR.back() == ctx.isReduceAxis[i]) {
-            fusedShape.back() *= ctx.axisShape[i];
+            int64_t prod = 0;
+            if (__builtin_mul_overflow(fusedShape.back(), ctx.axisShape[i], &prod)) {
+                OP_LOGE(context, "fused axis shape multiply overflow at dim %zu: %ld * %ld", i, fusedShape.back(),
+                        ctx.axisShape[i]);
+                return ge::GRAPH_FAILED;
+            }
+            fusedShape.back() = prod;
         } else {
             fusedShape.push_back(ctx.axisShape[i]);
             fusedIsR.push_back(ctx.isReduceAxis[i]);
@@ -285,6 +306,7 @@ static void FuseAxis(EuclideanNormCtx& ctx)
     }
     ctx.axisShape = std::move(fusedShape);
     ctx.isReduceAxis = std::move(fusedIsR);
+    return ge::GRAPH_SUCCESS;
 }
 
 // 3.3 补 leading A：若第 0 轴是 R 轴，前置一根大小为 1 的 A 轴
@@ -363,7 +385,7 @@ static void ClassifyEmptyTensor(EuclideanNormCtx& ctx)
 static ge::graphStatus PreprocessPattern(gert::TilingContext* context, EuclideanNormCtx& ctx)
 {
     DropSizeOneAxes(ctx);
-    FuseAxis(ctx);
+    OP_CHECK_IF(FuseAxis(context, ctx) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
     PadLeadingOneA(ctx);
     PadRIfPureA(ctx);
 
@@ -507,7 +529,13 @@ static int64_t ComputeRiMax(const EuclideanNormCtx& ctx)
     const int64_t ubAvailable = ctx.ubSize - kCacheBufBytes;
     const int64_t aUnit = ctx.aUbFactorAlign * ctx.innerAProdAlign;
     const int64_t bytesPerRElem = (kDbFactor * kNPreReuse + kNPreParallel) * ctx.dtypeSize + kTmpBufCopies * kFp32Bytes;
-    const int64_t outBytes = kNOut * ctx.dtypeSize * aUnit;
+    // FR-01：outBytes 与 kernel 实际 postReduceUbSize 同口径：
+    //   post = CeilAlign(max(N_out × aUnit × dtypeSize, N_out × blockSize), blockSize)
+    //   （原预算只按 N_out × aUnit × dtypeSize 估计，忽略 blockSize 下限与对齐，
+    //    A 侧小 chunk 时最多低估 blockSize-1 字节）
+    int64_t outBytes = kNOut * aUnit * ctx.dtypeSize;
+    outBytes = std::max(outBytes, kNOut * ctx.blockSize);
+    outBytes = Ops::Base::CeilAlign(outBytes, ctx.blockSize);
     if (aUnit <= 0 || bytesPerRElem <= 0) {
         return -1;
     }
@@ -515,7 +543,18 @@ static int64_t ComputeRiMax(const EuclideanNormCtx& ctx)
     if (numer <= 0) {
         return -1;
     }
-    return numer / (aUnit * bytesPerRElem);
+    const int64_t rIMaxRaw = numer / (aUnit * bytesPerRElem);
+    // FR-01 预算对齐口径：tail-R 切分时 rUbFactor 会被 CeilAlign 到 block（padded 行宽
+    //   rUbFactorAlign，kernel 的 UB 步距按 padded 计），预算必须按 padded 计数反解：
+    //   CeilAlign(rIMax, bsAElem) ≤ rIMaxRaw ⟺ rIMax ≤ FloorAlign(rIMaxRaw, bsAElem)。
+    //   原预算按未对齐有效 R 元素数整除反解，R 落在 (FloorAlign 窗口, rIMaxRaw) 内时
+    //   rUbFactorAlign 越过预算，四缓冲总申请超物理 UB（fp32 R=11257 实测超 32B）。
+    //   非 tail-R（R 不切在最内）时 rUbFactor 无 block 对齐开销，保持原口径不损失切分精度。
+    if (ctx.isTailR) {
+        const int64_t bsAElem = ctx.blockSize / ctx.dtypeSize;
+        return Ops::Base::FloorAlign(rIMaxRaw, bsAElem);
+    }
+    return rIMaxRaw;
 }
 
 static ge::graphStatus ComputeRUbFactor(gert::TilingContext* context, EuclideanNormCtx& ctx)
@@ -603,11 +642,14 @@ static int64_t SolveAFromUbBudget(const EuclideanNormCtx& ctx)
     const int64_t bytesPerRElem = (kDbFactor * kNPreReuse + kNPreParallel) * ctx.dtypeSize + kTmpBufCopies * kFp32Bytes;
     const int64_t rPaddedElems = ctx.rUbFactorAlign * ctx.innerRProdAlign;
     // 不等式：aTotal × (rPaddedElems × bytesPerRElem + N_out × sizeof(D_T)) ≤ ubAvailable
+    // FR-01：post 实际 = CeilAlign(max(aTotal × dtypeSize, N_out × blockSize), blockSize)
+    //   ≤ aTotal × dtypeSize + blockSize（N_out=1 时逐段验证成立），预算预留一个 blockSize
+    //   的 post 对齐 slack，保证反解出的 aTotal 装得下四缓冲总量（2pre + 2tmp + cache + post）
     const int64_t coeff = rPaddedElems * bytesPerRElem + kNOut * ctx.dtypeSize;
     if (coeff <= 0) {
         return -1;
     }
-    return ubAvailable / coeff;
+    return (ubAvailable - ctx.blockSize) / coeff;
 }
 
 static ge::graphStatus ExpandAIfRFullyLoaded(gert::TilingContext* context, EuclideanNormCtx& ctx)
@@ -728,6 +770,129 @@ static void ComputeUbSizes(EuclideanNormCtx& ctx)
     // A=1 退化：outBuf 至少 N_out × blockSize
     outRaw = std::max(outRaw, kNOut * ctx.blockSize);
     ctx.postReduceUbSize = Ops::Base::CeilAlign(outRaw, ctx.blockSize);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9b) FR-01 法二：四缓冲总量终检与回退切分
+//
+//   kernel InitBuffer 实际申请（euclidean_norm.h :511-514）：
+//     preInQue  bufNum=2 × preReduceUbSize + tmpBuf × 2 份 tmpBufUbSize
+//     + cacheBuf 16KB + outQue 1 份 postReduceUbSize
+//   终检不等式：2×pre + 2×tmp + kCacheBufBytes + post ≤ ubSize。
+//   ComputeRiMax 已改对齐口径（法一），正常路径不会超限；本终检为纵深防御——
+//   超限时收缩 rUbFactor（padded 行宽随之收缩 → pre/tmp 单调下降）重算，直至装得下。
+// ─────────────────────────────────────────────────────────────────────────────
+static ge::graphStatus EnforceUbTotalBudget(gert::TilingContext* context, EuclideanNormCtx& ctx)
+{
+    auto sum4 = [&ctx]() {
+        return 2 * ctx.preReduceUbSize + 2 * ctx.tmpBufUbSize + kCacheBufBytes + ctx.postReduceUbSize;
+    };
+    const int64_t bsAElem = ctx.blockSize / ctx.dtypeSize;
+    const int32_t lastR = LastRAxisIdx(ctx);
+    while (sum4() > ctx.ubSize) {
+        // 回退切分：收缩 rUbFactor 一档。tail-R 切在最内 R 时步长取 bsAElem
+        //   （rUbFactorAlign = CeilAlign(rUbFactor, bsAElem)，非 bsAElem 倍数的收缩不生效）
+        const bool alignedInnerR = ctx.isTailR && ctx.rSplitAxisIdx == lastR;
+        if (ctx.rUbFactor > (alignedInnerR ? bsAElem : 1)) {
+            ctx.rUbFactor -= alignedInnerR ? bsAElem : 1;
+        } else {
+            OP_LOGE(context, "four-buffer total %ld exceeds ubSize %ld and rUbFactor=%ld already minimal (dtype=%d)",
+                    sum4(), ctx.ubSize, ctx.rUbFactor, static_cast<int>(ctx.xDtype));
+            return ge::GRAPH_FAILED;
+        }
+        // 同步 rUbFactorAlign（与 ComputeRUbFactor 同规则）
+        if (alignedInnerR) {
+            ctx.rUbFactorAlign = Ops::Base::CeilAlign(ctx.rUbFactor, bsAElem);
+        } else {
+            ctx.rUbFactorAlign = ctx.rUbFactor;
+        }
+        ComputeRLoopCnt(ctx);
+        ComputeUbSizes(ctx);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+// kernel 侧 cacheCount 公式镜像（euclidean_norm.h :493-495）：
+//   bisectionPos = FindNearestPower2(rLoopCntTotal)（kernel 语义：v<=2→1，v<=4→2，
+//   否则 2^floor(log2(v-1))，即严格小于 v 的最大 2 幂）；cacheCount = CalLog2(bisectionPos) + 1。
+//   group 模式按本核分片 rCount ≤ rLoopCntTotal 建树，本镜像为保守上界。
+static int64_t KernelCacheCount(int64_t rLoopCntTotal)
+{
+    if (rLoopCntTotal <= 2) {
+        return 1; // bisectionPos=1 → CalLog2(1)=0 → cacheCount=1
+    }
+    int64_t num = rLoopCntTotal - 1;
+    int64_t pow = 0;
+    while (num > 1) {
+        num >>= 1;
+        ++pow;
+    }
+    int64_t v = static_cast<int64_t>(1) << pow; // 2^floor(log2(rLoopCntTotal-1))
+    int64_t lg = 0;
+    while (v > 1) {
+        v >>= 1;
+        ++lg;
+    }
+    return lg + 1;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9c) FR-03：cacheBuf 容量一致性约束与回退切分（防御性加固）
+//
+//   kernel 二分累加树对固定 16KB cacheBuf 的访问上界（euclidean_norm.h :1021-1040）：
+//     laneN       = aUbFactorAlign × innerAProdAlign
+//     levelStride = CeilAlign(laneN, blockSize/sizeof(fp32))
+//     写入末尾 / 树根读末尾 rootEnd = (cacheCount-1) × levelStride + laneN
+//   约束：rootEnd ≤ cacheBufElems(=4096)，否则树根读写越过 cacheBuf 末尾（UB 越界写）。
+//   当前 A/R UB 预算平衡天然压制该乘积（T08 probe 40+ 形态 0 命中，max rootEnd=1216），
+//   但 FR-01 修复会漂移 cacheCount/laneN 分布，此处以 tiling 侧一致性约束收口：
+//   超限时收缩 A 侧 laneN（R 侧不动 → cacheCount 不变 → rootEnd 随 laneN 单调下降）。
+// ─────────────────────────────────────────────────────────────────────────────
+static ge::graphStatus EnforceCacheBufConstraint(gert::TilingContext* context, EuclideanNormCtx& ctx)
+{
+    const int64_t cacheBufElems = kCacheBufBytes / kFp32Bytes; // = 4096 fp32
+    const int64_t laneAlignElems = ctx.blockSize / kFp32Bytes; // = kernel kBlockF32（同源 32B/4B）
+    const int64_t bsAElem = ctx.blockSize / ctx.dtypeSize;
+    const int32_t lastA = LastAAxisIdx(ctx);
+    int32_t guard = 0;
+    while (true) {
+        const int64_t laneN = ctx.aUbFactorAlign * ctx.innerAProdAlign;
+        const int64_t levelStride = Ops::Base::CeilAlign(laneN, laneAlignElems);
+        const int64_t cacheCount = KernelCacheCount(ctx.rLoopCntTotal);
+        const int64_t rootEnd = (cacheCount - 1) * levelStride + laneN;
+        if (rootEnd <= cacheBufElems) {
+            return ge::GRAPH_SUCCESS;
+        }
+        if (++guard > kMaxCacheBufFallbackRounds) { // 终止防御（每轮 laneN 单调不增，理论有限步）
+            OP_LOGE(context, "cacheBuf constraint not satisfiable in %d rounds (laneN=%ld cacheCount=%ld rootEnd=%ld)",
+                    guard - 1, laneN, cacheCount, rootEnd);
+            return ge::GRAPH_FAILED;
+        }
+        if (ctx.aUbFactor > 1) {
+            ctx.aUbFactor = std::max(ctx.aUbFactor / 2, static_cast<int64_t>(1));
+        } else if (ctx.aSplitAxisIdx != lastA) {
+            // aUbFactor 已到 1：把最内层 A 从 inner bundle 吐出，改切在该轴上（先取半根）
+            ctx.aSplitAxisIdx = lastA;
+            ctx.innerAProd = 1;
+            ctx.innerAProdAlign = 1;
+            ctx.aUbFactor = std::max(ctx.axisShape[static_cast<size_t>(lastA)] / 2, static_cast<int64_t>(1));
+        } else {
+            // aSplit==lastA 且 aUbFactor==1：laneN 已达最小值（1 或 bsAElem），
+            // rootEnd 恒 ≤ ~1008 < 4096，到此处说明逻辑异常，显式拒绝
+            OP_LOGE(context, "cacheBuf rootEnd=%ld over %ld with minimal laneN=%ld (cacheCount=%ld)", rootEnd,
+                    cacheBufElems, laneN, cacheCount);
+            return ge::GRAPH_FAILED;
+        }
+        // 同步 aUbFactorAlign（与 ComputeAUbFactor 同规则：仅 tail-A 且切最内 A 时 CeilAlign）
+        if (!ctx.isTailR && ctx.aSplitAxisIdx == lastA) {
+            ctx.aUbFactorAlign = Ops::Base::CeilAlign(ctx.aUbFactor, bsAElem);
+        } else {
+            ctx.aUbFactorAlign = ctx.aUbFactor;
+        }
+        // laneN 变化 → 重算 A 侧多核切分与 UB sizes（FR-01 终检只随 laneN 收紧，无需回跑）
+        ComputeFusedALoopSplit(ctx);
+        ComputeUbSizes(ctx);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1010,15 +1175,20 @@ static ge::graphStatus EuclideanNormTilingFunc(gert::TilingContext* context)
 
     ComputeFusedALoopSplit(ctx);
     ComputeRLoopCnt(ctx);
+    ComputeUbSizes(ctx);
 
-    // Group 模板触发判定
+    // FR-01 法二：四缓冲总量终检与回退切分（法一预算对齐口径生效后正常不触发，纵深防御）
+    OP_CHECK_IF(EnforceUbTotalBudget(context, ctx) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
+    // FR-03：cacheBuf 容量一致性约束与回退切分（防御性加固；R 侧不动、只收缩 laneN，
+    //   sum4 随 laneN 单调收紧，不回退 FR-01 终检）
+    OP_CHECK_IF(EnforceCacheBufConstraint(context, ctx) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
+
+    // Group 模板触发判定（按回退切分后的最终 aLoop/rLoop 计数判定）
     if (ShouldUseGroup(ctx)) {
         ComputeGroupSplit(ctx);
         OP_CHECK_IF(context->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
                     OP_LOGE(context->GetNodeName(), "Failed to set ScheduleMode!"), return ge::GRAPH_FAILED);
     }
-    ComputeUbSizes(ctx);
-
     OP_CHECK_IF(FillAndLogTilingData(context, ctx) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
 
     const uint64_t tilingKey = GET_TPL_TILING_KEY(static_cast<uint64_t>(ctx.isGroup ? 1U : 0U),

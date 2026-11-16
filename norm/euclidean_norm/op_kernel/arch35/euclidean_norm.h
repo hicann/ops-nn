@@ -812,8 +812,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCopyInTile(int64_t
 
     if (K >= 2) {
         extParams.blockCount = static_cast<uint16_t>(ubAxes[1].ubSize);
-        extParams.srcStride = static_cast<uint32_t>(ubAxes[1].gmStride * dtBytes -
-                                                    static_cast<int64_t>(extParams.blockLen));
+        // arch35 ABI 的 srcStride 为 int64_t；GM 块间隔可超 uint32 范围，直赋避免窄化回绕
+        extParams.srcStride = ubAxes[1].gmStride * dtBytes - static_cast<int64_t>(extParams.blockLen);
     } else {
         extParams.blockCount = 1;
         extParams.srcStride = 0;
@@ -846,8 +846,9 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCopyInTile(int64_t
 
     // host for 拆 ubAxes[4..K)；如无超过 4 根，outerProd=1，循环一次。
     int64_t outerProd = 1;
-    for (int32_t k = 4; k < K; ++k)
+    for (int32_t k = 4; k < K; ++k) {
         outerProd *= ubAxes[k].ubSize;
+    }
 
     for (int64_t outerFlat = 0; outerFlat < outerProd; ++outerFlat) {
         int64_t addGmOffElem = 0;

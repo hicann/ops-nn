@@ -130,11 +130,15 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorD
     uint32_t byteSizeFloat32 = 4;
     uint32_t data_len = size * byteSizeFloat32;
     float* pData = new (std::nothrow) float[size];
+    if (pData == nullptr) {
+        return FAILED;
+    }
 
     for (size_t i = 0; i < size; ++i) {
         *(pData + i) = value;
     }
     input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -294,6 +298,8 @@ int main(int argc, char* argv[])
     ge::AscendString warning_msg = ge::GEGetWarningMsgV2();
     std::string warning_str(warning_msg.GetString());
     std::cout << "Warning message: " << warning_str << std::endl;
+    delete session;
+    session = nullptr;
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {

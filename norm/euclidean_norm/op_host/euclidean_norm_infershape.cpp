@@ -31,6 +31,7 @@
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
 #include "log/log.h"
+#include "../op_kernel/arch35/euclidean_norm_tiling_data.h" // MAX_PATTERN_RANK（与 tiling 门同上限）
 
 using namespace ge;
 
@@ -42,6 +43,7 @@ constexpr size_t kInputAxesIdx = 1;
 constexpr size_t kOutputYIdx = 0;
 constexpr size_t kAttrKeepDimsIdx = 0;
 constexpr bool kKeepDimsDefault = false; // op_def: Attr("keep_dims").AttrType(OPTIONAL).Bool(false)
+constexpr int32_t kMinAxisNum = 2;       // 与 tiling::kMinAxisNum 一致
 } // namespace
 
 // 解析 axes tensor 内容到 int64 数组：
@@ -123,6 +125,85 @@ static ge::graphStatus HandleScalarInput(gert::InferShapeContext* context, const
     return GRAPH_SUCCESS;
 }
 
+// FR-09 两门一致化：重放 tiling 侧 4 步 pattern 预处理（去 1 / 合轴 / 补 leading A / 补 R 增广，
+// 与 euclidean_norm_tiling_arch35.cpp 的 DropSizeOneAxes/FuseAxis/PadLeadingOneA/PadRIfPureA
+// 逐步同构），计算预处理后的 pattern 轴数。infershape 此前无该上限校验：rank-10 交替归约
+// 被 tiling 门（MAX_PATTERN_RANK）拒绝而 infershape 放行——两门不一致；现收紧到同拒。
+// C02：合轴乘法带溢出防护（shape 乘积溢出 int64 不可调度，GRAPH_FAILED），
+//   与 tiling 侧 FuseAxis 同款保护、两门行为一致。
+static ge::graphStatus CountPatternAxesAfterPreprocess(gert::InferShapeContext* context,
+                                                       const std::vector<int64_t>& xDims,
+                                                       const std::vector<int64_t>& axes, int64_t& patternAxisNum)
+{
+    std::vector<int64_t> shape = xDims;
+    std::vector<bool> isR(xDims.size(), false);
+    for (int64_t a : axes) {
+        isR[static_cast<size_t>(a)] = true;
+    }
+    // 1) 去 1：size==1 的轴整根删除；全删后保留 1 根 A=1 占位
+    {
+        std::vector<int64_t> newShape;
+        std::vector<bool> newIsR;
+        for (size_t i = 0; i < shape.size(); ++i) {
+            if (shape[i] != 1) {
+                newShape.push_back(shape[i]);
+                newIsR.push_back(isR[i]);
+            }
+        }
+        if (newShape.empty()) {
+            newShape.push_back(1);
+            newIsR.push_back(false);
+        }
+        shape = std::move(newShape);
+        isR = std::move(newIsR);
+    }
+    // 2) 合轴：连续同类型合并为 1 根
+    {
+        std::vector<int64_t> fused;
+        std::vector<bool> fusedIsR;
+        for (size_t i = 0; i < shape.size(); ++i) {
+            if (!fused.empty() && fusedIsR.back() == isR[i]) {
+                int64_t prod = 0;
+                if (__builtin_mul_overflow(fused.back(), shape[i], &prod)) {
+                    OP_LOGE(context->GetNodeName(), "fused axis shape multiply overflow at dim %zu: %ld * %ld", i,
+                            fused.back(), shape[i]);
+                    return ge::GRAPH_FAILED;
+                }
+                fused.back() = prod;
+            } else {
+                fused.push_back(shape[i]);
+                fusedIsR.push_back(isR[i]);
+            }
+        }
+        shape = std::move(fused);
+        isR = std::move(fusedIsR);
+    }
+    // 3) 补 leading A：第 0 轴是 R → 前置一根 A=1
+    if (!shape.empty() && isR.front()) {
+        shape.insert(shape.begin(), 1);
+        isR.insert(isR.begin(), false);
+    }
+    // 4) 补 R 增广：无 R 轴（纯 A 退化）——A=1 全退化末尾补 R=1；否则前置 [A=1, R=1]
+    bool hasR = false;
+    for (bool b : isR) {
+        if (b) {
+            hasR = true;
+            break;
+        }
+    }
+    if (!hasR) {
+        if (shape.size() == 1 && shape[0] == 1) {
+            shape.push_back(1);
+            isR.push_back(true);
+        } else {
+            shape.insert(shape.begin(), {1, 1});
+            isR.insert(isR.begin(), {false, true});
+        }
+    }
+    patternAxisNum = static_cast<int64_t>(shape.size());
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin InferShape4EuclideanNorm");
@@ -168,6 +249,43 @@ static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context
         OP_LOGE(context->GetNodeName(), "%s; xRank=%ld, axes size=%ld", errMsg.c_str(), xRank,
                 axesTensor->GetShapeSize());
         return GRAPH_FAILED;
+    }
+
+    // 4b) FR-09 两门一致化：pattern 轴数上限与 tiling 门（MAX_PATTERN_RANK）一致，
+    //     消除 rank-10 交替归约 infershape 放行 / tiling 拒绝的两门不一致（收紧方向；
+    //     全归约/合轴后 ≤MAX_PATTERN_RANK 的任意 rank 输入不受影响）。
+    //     C04（检视修复轮）：镜像 tiling 空 tensor 旁路——tiling 侧 ClassifyEmptyTensor
+    //     非 NORMAL 时早退（HandleEmptyTensor）先于 PreprocessPattern 轴数门，空 tensor
+    //     完全绕过轴数门；infershape 侧任一维为 0（空 tensor）或 -1（未知维，实际段数
+    //     运行时定、由 tiling 运行时门兜底）时同样跳过轴数校验，仅所有维已知且 >0 时执行校验。
+    std::vector<int64_t> xDims;
+    xDims.reserve(xShape->GetDimNum());
+    for (size_t i = 0; i < xShape->GetDimNum(); ++i) {
+        xDims.push_back(xShape->GetDim(i));
+    }
+    bool hasEmptyOrUnknownDim = false;
+    for (int64_t d : xDims) {
+        if (d == 0 || d == -1) {
+            hasEmptyOrUnknownDim = true;
+            break;
+        }
+    }
+    if (hasEmptyOrUnknownDim) {
+        OP_LOGI(context->GetNodeName(),
+                "x has zero-sized dim (empty tensor, mirrors tiling EMPTY_A/EMPTY_R early exit) or unknown dim "
+                "(-1); skip pattern axis-count gate");
+    } else {
+        int64_t patternAxisNum = 0;
+        if (CountPatternAxesAfterPreprocess(context, xDims, axes, patternAxisNum) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED; // 合轴乘积溢出 int64（不可调度），已在 helper 内 OP_LOGE
+        }
+        if (patternAxisNum < kMinAxisNum || patternAxisNum > MAX_PATTERN_RANK) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), "x", Ops::Base::ToString(*xShape).c_str(),
+                "the number of alternating reduce/non-reduce pattern segments after preprocessing exceeds the "
+                "supported maximum (max 9)");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     // 5) 调 opbase helper 计算输出 shape（已归一化、无重复，CheckAxisBounds 通过）

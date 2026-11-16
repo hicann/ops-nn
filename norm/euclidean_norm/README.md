@@ -46,7 +46,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示待求欧几里得范数的输入张量，公式中的x。支持任意维度，shape为 [D0, D1, ..., Dn-1]。</td>
+      <td>表示待求欧几里得范数的输入张量，公式中的x。shape为 [D0, D1, ..., Dn-1]。</td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
     </tr>
@@ -58,18 +58,18 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>keep_dims</td>
-      <td>可选属性</td>
-      <td><ul><li>表示是否在输出中保留被reduce的维度。true时被reduce的维度保留为长度1，false时从输出shape中删除。</li><li>默认值为false。</li></ul></td>
-      <td>BOOL</td>
-      <td>-</td>
-    </tr>
-    <tr>
       <td>y</td>
       <td>输出</td>
       <td>表示欧几里得范数的计算结果，公式中的y。数据类型与x一致；shape由x.shape、axes与keep_dims共同决定。</td>
       <td>FLOAT、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
+    </tr>
+    <tr>
+      <td>keep_dims</td>
+      <td>可选属性</td>
+      <td><ul><li>表示是否在输出中保留被reduce的维度。true时被reduce的维度保留为长度1，false时从输出shape中删除。</li><li>默认值为false。</li></ul></td>
+      <td>BOOL</td>
+      <td>-</td>
     </tr>
   </tbody></table>
 
@@ -78,10 +78,14 @@
 - axes为值依赖输入，图模式调用时需以`op::Const`注入；运行时通过placeholder Data注入将导致编译期无法推导输出shape与tiling。
 - axes元素必须落在[-rank(x), rank(x))范围内，且不允许重复。
 - axes为空张量（shape=(0,)）时表示无归约轴：输出shape与x相同，逐元素计算sqrt(x²)（对标TensorFlow `reduce_euclidean_norm` 的axis=[]行为）。
+- 0维标量输入（rank=0）要求axes必为空。
+- 输入rank无上限；归约/非归约轴经预处理（去1、合轴）后的交替pattern段数上限为9。
+- 支持零长度维输入：非归约轴含0维时输出为对应shape的空张量，归约轴含0维时对应输出元素为0。
+- 支持动态shape（图描述shape含-1，未知维）与动态rank（图描述shape为[-2]，未知维数）。
 - y的数据类型与x保持一致；当x为INT32时，输出仍为INT32（不做隐式类型提升），调用方需自行确保中间累加不溢出。
 
 ## 调用说明
 
-| 调用方式 | 调用样例                                                                   | 说明                                                           |
+| 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式调用 | [test_geir_euclidean_norm](./examples/arch35/test_geir_euclidean_norm.cpp)   | 通过[算子IR](./op_graph/euclidean_norm_proto.h)构图方式调用EuclideanNorm算子。 |
+| GE图模式 | [test_geir_euclidean_norm](./examples/arch35/test_geir_euclidean_norm.cpp)   | 通过[算子IR](./op_graph/euclidean_norm_proto.h)构图方式调用EuclideanNorm算子。 |

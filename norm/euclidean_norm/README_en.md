@@ -48,7 +48,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>x</td>
       <td>Input</td>
-      <td>Represents the input tensor for computing the Euclidean norm, x in the formula. Any number of dimensions is supported, with shape [D0, D1, ..., Dn-1].</td>
+      <td>Represents the input tensor for computing the Euclidean norm, x in the formula, with shape [D0, D1, ..., Dn-1].</td>
       <td>FLOAT, FLOAT16, BFLOAT16, INT32</td>
       <td>ND</td>
     </tr>
@@ -60,18 +60,18 @@ English | [简体中文](./README.md)
       <td>ND</td>
     </tr>
     <tr>
-      <td>keep_dims</td>
-      <td>Optional attribute</td>
-      <td><ul><li>Indicates whether to keep the reduced dimensions in the output. When it is true, the reduced dimensions are kept as length 1; when it is false, they are removed from the output shape.</li><li>The default value is false.</li></ul></td>
-      <td>BOOL</td>
-      <td>-</td>
-    </tr>
-    <tr>
       <td>y</td>
       <td>Output</td>
       <td>Represents the computation result of the Euclidean norm, y in the formula. Its data type is the same as x; its shape is jointly determined by x.shape, axes, and keep_dims.</td>
       <td>FLOAT, FLOAT16, BFLOAT16, INT32</td>
       <td>ND</td>
+    </tr>
+    <tr>
+      <td>keep_dims</td>
+      <td>Optional attribute</td>
+      <td><ul><li>Indicates whether to keep the reduced dimensions in the output. When it is true, the reduced dimensions are kept as length 1; when it is false, they are removed from the output shape.</li><li>The default value is false.</li></ul></td>
+      <td>BOOL</td>
+      <td>-</td>
     </tr>
   </tbody></table>
 
@@ -79,10 +79,15 @@ English | [简体中文](./README.md)
 
 - axes is a value-dependent input. In graph-mode invocation it must be injected with `op::Const`; injecting it at runtime through a placeholder Data operator makes it impossible to infer the output shape and tiling at compilation time.
 - The elements of axes must fall in the range [-rank(x), rank(x)), and duplicates are not allowed.
+- An empty axes tensor (shape=(0,)) means no reduction axis: the output shape is the same as x and each element is sqrt(x²) (aligned with the axis=[] behavior of TensorFlow `reduce_euclidean_norm`).
+- A 0-D scalar input (rank=0) requires axes to be empty.
+- The input rank has no upper limit; the number of alternating reduce/non-reduce pattern segments after preprocessing (size-1 removal and axis fusion) is limited to 9.
+- Zero-length dimensions are supported: when a non-reduced dimension is 0, the output is an empty tensor of the corresponding shape; when a reduced dimension is 0, the corresponding output elements are 0.
+- Dynamic shapes (the graph describes a shape containing -1, an unknown dimension) and dynamic ranks (the graph describes a shape of [-2], an unknown number of dimensions) are supported.
 - The data type of y is the same as x. When x is INT32, the output is still INT32 (no implicit type promotion), and the caller must ensure that the intermediate accumulation does not overflow.
 
 ## Invocation Description
 
-| Invocation method | Invocation sample                                                                   | Description                                                           |
+| Invocation method | Sample code                                                                   | Description                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| Graph-mode invocation | [test_geir_euclidean_norm](./examples/arch35/test_geir_euclidean_norm.cpp)   | Invokes the EuclideanNorm operator through the operator IR-based [graph construction](./op_graph/euclidean_norm_proto.h) method. |
+| GE graph mode | [test_geir_euclidean_norm](./examples/arch35/test_geir_euclidean_norm.cpp)   | Invokes the EuclideanNorm operator through the operator IR-based [graph construction](./op_graph/euclidean_norm_proto.h) method. |
