@@ -36,9 +36,6 @@
 using namespace AscendC;
 
 static constexpr int32_t BUFFER_NUM = 1;
-// 硬件常量
-static constexpr uint32_t SCALAR_UB_SIZE = 64;      // 标量读取 UB buffer 大小
-static constexpr uint32_t FP32_SCALAR_UB_SIZE = 32; // FP32 标量 Cast buffer 大小
 static constexpr DivConfig FP16_DIV_CONFIG = {DivAlgo::DIFF_COMPENSATION};
 static constexpr DivConfig FP32_DIV_CONFIG = {DivAlgo::PRECISION_0ULP_FTZ_FALSE};
 static constexpr SqrtConfig FP32_SQRT_CONFIG = {SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
@@ -107,22 +104,28 @@ private:
         Select(io, mask, tmp, io, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
     }
 
-    // CACHE-SAFE: Scalars are NOT in TilingData; read from GM at runtime.
+    // CACHE-SAFE: Scalars are NOT in TilingData; read from GM_ADDR directly into registers
+    // at runtime (对齐商用先例 inplace_apply_proximal_adagrad LoadScalar 非 BF16 分支:
+    // 零 UB 中转、零手工同步对; 本算子 dtype 域 fp16/fp32, 无 Cast 场景).
     __aicore__ inline void ReadScalars()
     {
-        DataCopyExtParams cpSc;
-        cpSc.blockCount = 1;
-        cpSc.blockLen = sizeof(float);
-        cpSc.srcStride = 0;
-        cpSc.dstStride = 0;
-        pipe_.InitBuffer(queSc_, 1, SCALAR_UB_SIZE);
+        GlobalTensor<T> lrGm, l1Gm, l2Gm;
+        lrGm.SetGlobalBuffer((__gm__ T*)lrAddr_, 1);
+        l1Gm.SetGlobalBuffer((__gm__ T*)l1Addr_, 1);
+        l2Gm.SetGlobalBuffer((__gm__ T*)l2Addr_, 1);
+        lrVal_ = static_cast<float>(lrGm.GetValue(0));
+        l1Val_ = static_cast<float>(l1Gm.GetValue(0));
+        l2Val_ = static_cast<float>(l2Gm.GetValue(0));
 
-        if constexpr (std::is_same_v<T, float>) {
-            ReadScalarsFloat(cpSc);
+        if (gsDtype_ == 0) {
+            GlobalTensor<int32_t> gsGm;
+            gsGm.SetGlobalBuffer((__gm__ int32_t*)globalStepAddr_, 1);
+            globalStepVal_ = static_cast<float>(gsGm.GetValue(0));
         } else {
-            ReadScalarsHalf(cpSc);
+            GlobalTensor<int64_t> gsGm;
+            gsGm.SetGlobalBuffer((__gm__ int64_t*)globalStepAddr_, 1);
+            globalStepVal_ = static_cast<float>(gsGm.GetValue(0));
         }
-        ReadGlobalStep(cpSc);
 
         // Compute derived scalar values
         // 分支极性对齐 TF/golden 的 if (l1 > 0): NaN 比较为 false, 与 l1<=0 同走直通分支,
@@ -131,112 +134,6 @@ private:
         // 对齐 TF: l2*(T*lr), 避免 |T*lr|>FP32_MAX 时分母不溢出的结合律差异;
         // TF CPU(Eigen) 以 DAZ+FTZ 语义执行, 中间量 T*lr 与最终结果均冲刷 denormal。
         l2Tlr_ = FtzScalar(l2Val_ * FtzScalar(globalStepVal_ * lrVal_));
-    }
-
-    __aicore__ inline void ReadScalarsFloat(DataCopyExtParams cpSc)
-    {
-        cpSc.blockLen = sizeof(float);
-        LocalTensor<float> scBuf = queSc_.template AllocTensor<float>();
-        GlobalTensor<float> lrGM, l1GM, l2GM;
-        lrGM.SetGlobalBuffer((__gm__ float*)lrAddr_, 1);
-        l1GM.SetGlobalBuffer((__gm__ float*)l1Addr_, 1);
-        l2GM.SetGlobalBuffer((__gm__ float*)l2Addr_, 1);
-
-        DataCopyPad(scBuf, lrGM[0], cpSc, {false, 0, 0, 0});
-        event_t evtMte2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-        SetFlag<HardEvent::MTE2_S>(evtMte2S);
-        WaitFlag<HardEvent::MTE2_S>(evtMte2S);
-        lrVal_ = scBuf.GetValue(0);
-
-        DataCopyPad(scBuf, l1GM[0], cpSc, {false, 0, 0, 0});
-        evtMte2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-        SetFlag<HardEvent::MTE2_S>(evtMte2S);
-        WaitFlag<HardEvent::MTE2_S>(evtMte2S);
-        l1Val_ = scBuf.GetValue(0);
-
-        DataCopyPad(scBuf, l2GM[0], cpSc, {false, 0, 0, 0});
-        evtMte2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-        SetFlag<HardEvent::MTE2_S>(evtMte2S);
-        WaitFlag<HardEvent::MTE2_S>(evtMte2S);
-        l2Val_ = scBuf.GetValue(0);
-        queSc_.FreeTensor(scBuf);
-    }
-
-    // fp16: read as T, cast to float
-    __aicore__ inline void ReadScalarsHalf(DataCopyExtParams cpSc)
-    {
-        cpSc.blockLen = sizeof(T);
-        TQue<QuePosition::VECOUT, 1> queScFloat;
-        pipe_.InitBuffer(queScFloat, 1, FP32_SCALAR_UB_SIZE);
-
-        LocalTensor<T> scBufT = queSc_.template AllocTensor<T>();
-        LocalTensor<float> scBufF = queScFloat.template AllocTensor<float>();
-
-        GlobalTensor<T> lrGM, l1GM, l2GM;
-        lrGM.SetGlobalBuffer((__gm__ T*)lrAddr_, 1);
-        l1GM.SetGlobalBuffer((__gm__ T*)l1Addr_, 1);
-        l2GM.SetGlobalBuffer((__gm__ T*)l2Addr_, 1);
-
-        DataCopyPad(scBufT, lrGM[0], cpSc, {false, 0, 0, 0});
-        event_t evtMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(evtMte2V);
-        WaitFlag<HardEvent::MTE2_V>(evtMte2V);
-        Cast(scBufF, scBufT, RoundMode::CAST_NONE, 1);
-        event_t evtVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(evtVS);
-        WaitFlag<HardEvent::V_S>(evtVS);
-        lrVal_ = scBufF.GetValue(0);
-
-        DataCopyPad(scBufT, l1GM[0], cpSc, {false, 0, 0, 0});
-        evtMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(evtMte2V);
-        WaitFlag<HardEvent::MTE2_V>(evtMte2V);
-        Cast(scBufF, scBufT, RoundMode::CAST_NONE, 1);
-        evtVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(evtVS);
-        WaitFlag<HardEvent::V_S>(evtVS);
-        l1Val_ = scBufF.GetValue(0);
-
-        DataCopyPad(scBufT, l2GM[0], cpSc, {false, 0, 0, 0});
-        evtMte2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(evtMte2V);
-        WaitFlag<HardEvent::MTE2_V>(evtMte2V);
-        Cast(scBufF, scBufT, RoundMode::CAST_NONE, 1);
-        evtVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(evtVS);
-        WaitFlag<HardEvent::V_S>(evtVS);
-        l2Val_ = scBufF.GetValue(0);
-
-        queSc_.FreeTensor(scBufT);
-        queScFloat.FreeTensor(scBufF);
-    }
-
-    // Read global_step (int32 or int64 based on globalStepDtype)
-    __aicore__ inline void ReadGlobalStep(DataCopyExtParams cpSc)
-    {
-        if (gsDtype_ == 0) {
-            cpSc.blockLen = sizeof(int32_t);
-            LocalTensor<int32_t> scBufI = queSc_.template AllocTensor<int32_t>();
-            GlobalTensor<int32_t> gsGM;
-            gsGM.SetGlobalBuffer((__gm__ int32_t*)globalStepAddr_, 1);
-            DataCopyPad(scBufI, gsGM[0], cpSc, {false, 0, 0, 0});
-            event_t evtMte2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-            SetFlag<HardEvent::MTE2_S>(evtMte2S);
-            WaitFlag<HardEvent::MTE2_S>(evtMte2S);
-            globalStepVal_ = static_cast<float>(scBufI.GetValue(0));
-            queSc_.FreeTensor(scBufI);
-        } else {
-            cpSc.blockLen = sizeof(int64_t);
-            LocalTensor<int64_t> scBufL = queSc_.template AllocTensor<int64_t>();
-            GlobalTensor<int64_t> gsGM;
-            gsGM.SetGlobalBuffer((__gm__ int64_t*)globalStepAddr_, 1);
-            DataCopyPad(scBufL, gsGM[0], cpSc, {false, 0, 0, 0});
-            event_t evtMte2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-            SetFlag<HardEvent::MTE2_S>(evtMte2S);
-            WaitFlag<HardEvent::MTE2_S>(evtMte2S);
-            globalStepVal_ = static_cast<float>(scBufL.GetValue(0));
-            queSc_.FreeTensor(scBufL);
-        }
     }
 
     __aicore__ inline void SetupGlobalTensors(GM_ADDR var, GM_ADDR gAcc, GM_ADDR ggAcc, GM_ADDR grad, GM_ADDR varOut,
@@ -248,10 +145,6 @@ private:
         varOutGM_.SetGlobalBuffer((__gm__ T*)varOut + startIdx_, blockLength_);
         gAccOutGM_.SetGlobalBuffer((__gm__ T*)gAccOut + startIdx_, blockLength_);
         ggAccOutGM_.SetGlobalBuffer((__gm__ T*)ggAccOut + startIdx_, blockLength_);
-        // DUAL-WRITE: Also write to input GM_ADDR.
-        varInGM_.SetGlobalBuffer((__gm__ T*)var + startIdx_, blockLength_);
-        gAccInGM_.SetGlobalBuffer((__gm__ T*)gAcc + startIdx_, blockLength_);
-        ggAccInGM_.SetGlobalBuffer((__gm__ T*)ggAcc + startIdx_, blockLength_);
     }
 
     __aicore__ inline void InitUBBuffers()
@@ -466,10 +359,6 @@ private:
         DataCopyPad(varOutGM_[ci * chunkSize_], varOutLocal, cpOut);
         DataCopyPad(gAccOutGM_[ci * chunkSize_], gAccOutLocal, cpOut);
         DataCopyPad(ggAccOutGM_[ci * chunkSize_], ggAccOutLocal, cpOut);
-        // DUAL-WRITE: 写回输入地址（inplace 语义）
-        DataCopyPad(varInGM_[ci * chunkSize_], varOutLocal, cpOut);
-        DataCopyPad(gAccInGM_[ci * chunkSize_], gAccOutLocal, cpOut);
-        DataCopyPad(ggAccInGM_[ci * chunkSize_], ggAccOutLocal, cpOut);
 
         varOutQue_.FreeTensor(varOutLocal);
         gAccOutQue_.FreeTensor(gAccOutLocal);
@@ -497,9 +386,6 @@ private:
     int64_t blockLength_ = 0;
     int64_t loopCount_ = 0;
 
-    // Scalar read queue
-    TQue<QuePosition::VECIN, 1> queSc_;
-
     // 输入 Queue（VECIN，存原始 dtype T，EnQue/DeQue 自动 MTE2_V 同步）
     TQue<QuePosition::VECIN, BUFFER_NUM> gAccInQue_, ggAccInQue_, gradInQue_;
 
@@ -516,9 +402,6 @@ private:
 
     // Output write paths (kernel output GM_ADDR params)
     GlobalTensor<T> varOutGM_, gAccOutGM_, ggAccOutGM_;
-
-    // DUAL-WRITE: 同时写回输入 GM_ADDR，保证 inplace 语义下输入地址被更新。
-    GlobalTensor<T> varInGM_, gAccInGM_, ggAccInGM_;
 
     // GM_ADDR for scalar reads (cache-safe)
     GM_ADDR lrAddr_ = nullptr;
