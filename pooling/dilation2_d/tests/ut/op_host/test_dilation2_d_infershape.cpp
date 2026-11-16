@@ -310,42 +310,6 @@ TEST_F(Dilation2DInferShapeTest, filter_channel_conflict_static)
     EXPECT_EQ(InferShapeTest(op, MakeParam()), ge::GRAPH_FAILED);
 }
 
-TEST_F(Dilation2DInferShapeTest, inferDataType)
-{
-    ge::op::Dilation2D op;
-    ge::DataType x_type = ge::DT_FLOAT16;
-    ge::Format x_format = ge::FORMAT_ND;
-    op.UpdateInputDesc("x", create_desc_with_ori({1, 8, 8, 4}, x_type, x_format, {1, 8, 8, 4}, x_format));
-    op.UpdateInputDesc("filter", create_desc_with_ori({3, 3, 4}, x_type, x_format, {3, 3, 4}, x_format));
-    op.SetAttr("strides", {1, 1, 1, 1});
-    op.SetAttr("rates", {1, 1, 1, 1});
-    op.SetAttr("padding_mode", "SAME");
-    op.SetAttr("pads", {0, 0, 0, 0});
-    op.SetAttr("ceil_mode", false);
-    op.SetAttr("data_format", "NHWC");
-    EXPECT_EQ(InferDataTypeTest(op, MakeParam()), ge::GRAPH_SUCCESS);
-    auto y_desc = op.GetOutputDescByName("y");
-    EXPECT_EQ(y_desc.GetDataType(), ge::DT_FLOAT16);
-}
-
-// 实际使能仅 FLOAT16：非 FLOAT16 dtype 在 InferDataType 阶段显式拒绝
-TEST_F(Dilation2DInferShapeTest, inferDataType_reject_non_float16)
-{
-    for (ge::DataType x_type : {ge::DT_FLOAT, ge::DT_INT32}) {
-        ge::op::Dilation2D op;
-        ge::Format x_format = ge::FORMAT_ND;
-        op.UpdateInputDesc("x", create_desc_with_ori({1, 8, 8, 4}, x_type, x_format, {1, 8, 8, 4}, x_format));
-        op.UpdateInputDesc("filter", create_desc_with_ori({3, 3, 4}, x_type, x_format, {3, 3, 4}, x_format));
-        op.SetAttr("strides", {1, 1, 1, 1});
-        op.SetAttr("rates", {1, 1, 1, 1});
-        op.SetAttr("padding_mode", "SAME");
-        op.SetAttr("pads", {0, 0, 0, 0});
-        op.SetAttr("ceil_mode", false);
-        op.SetAttr("data_format", "NHWC");
-        EXPECT_EQ(InferDataTypeTest(op, MakeParam()), ge::GRAPH_FAILED);
-    }
-}
-
 TEST_F(Dilation2DInferShapeTest, zero_dim_h_nchw_same)
 {
     ge::op::Dilation2D op;

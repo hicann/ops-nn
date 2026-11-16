@@ -314,3 +314,34 @@ TEST_F(BN3DTrainingReduceGradInfershapeTest, unknown_rank_propagate)
     ASSERT_EQ(outputDesc->GetDimNum(), 1u);
     ASSERT_EQ(outputDesc->GetDim(0), -2);
 }
+
+// ============================================================================
+// InferShape — 部分未知维（-1）：输出透传 grads（含-1）
+// ============================================================================
+TEST_F(BN3DTrainingReduceGradInfershapeTest, partial_unknown_dim_propagate)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BN3DTrainingReduceGrad")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape gradsShape = {{2, 3, -1, 5, 6}, {2, 3, -1, 5, 6}};
+    gert::StorageShape xShape = {{2, 3, 4, 5, 6}, {2, 3, 4, 5, 6}};
+    gert::StorageShape paramShape = {{3}, {3}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&gradsShape, &xShape, &paramShape, &paramShape, &paramShape, &paramShape, &paramShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+
+    auto* outputDesc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(outputDesc->GetDimNum(), 5u);
+    ASSERT_EQ(outputDesc->GetDim(0), 2);
+    ASSERT_EQ(outputDesc->GetDim(2), -1);
+}

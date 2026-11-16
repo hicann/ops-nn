@@ -16,19 +16,31 @@ namespace ops {
 
 static ge::graphStatus InferShape4FusedMulApplyMomentum(gert::InferShapeContext* context)
 {
-    static const std::vector<int64_t> out_idxs{0, 1};
-    auto in_shape = context->GetInputShape(0);
-    if (in_shape == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
-    for (int64_t idx : out_idxs) {
-        auto out_shape = context->GetOutputShape(idx);
-        if (out_shape == nullptr) {
-            return ge::GRAPH_FAILED;
+    const gert::Shape* varShape = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+    const gert::Shape* accumShape = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, accumShape);
+    gert::Shape* outVarShape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outVarShape);
+    gert::Shape* outAccumShape = context->GetOutputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outAccumShape);
+
+    // 与rt1.0（TwoInOneOutDynamicInferNoBroadcast）一致：两输出均取var的shape；
+    // var为未知rank时输出取accum的shape；var维为-1且accum对应维已知时用accum的值解析
+    gert::Shape resolvedShape = *varShape;
+    if (Ops::Base::IsUnknownRank(*varShape)) {
+        resolvedShape = *accumShape;
+    } else if (!Ops::Base::IsUnknownRank(*accumShape) && varShape->GetDimNum() == accumShape->GetDimNum()) {
+        for (size_t i = 0; i < resolvedShape.GetDimNum(); i++) {
+            if (resolvedShape.GetDim(i) == -1 && accumShape->GetDim(i) != -1) {
+                resolvedShape.SetDim(i, accumShape->GetDim(i));
+            }
         }
-        *out_shape = *in_shape;
     }
-    OP_LOGI(context->GetNodeName(), "[InferShape] output0 shape=%s", Ops::Base::ToString(*in_shape).c_str());
+
+    *outVarShape = resolvedShape;
+    *outAccumShape = resolvedShape;
+    OP_LOGI(context->GetNodeName(), "[InferShape] output shape=%s", Ops::Base::ToString(resolvedShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

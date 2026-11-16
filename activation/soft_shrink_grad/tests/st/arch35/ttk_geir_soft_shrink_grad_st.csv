@@ -1,0 +1,4 @@
+testcase_name,op_name,input_shapes,dyn_input_shapes,input_dtypes,input_formats,output_shapes,output_dtypes,output_formats,input_data_ranges,attributes,remark
+soft_shrink_grad_geir_normal,soft_shrink_grad,((4,16,32),(4,16,32)),((4,16,32),(4,16,32)),('float32','float32'),('ND', 'ND'),((4,16,32),),('float32',),('ND',),((-1,1),(-2,2)),{'lambd': 0.5},Static fp32 input_grad and input_x with lambd 0.5 exercising both shrink regions
+soft_shrink_grad_geir_dyn_dim,soft_shrink_grad,((4,16,32),(4,16,32)),((-1,16,32),(-1,16,32)),('float32','float32'),('ND', 'ND'),((4,16,32),),('float32',),('ND',),((-1,1),(-2,2)),{'lambd': 0.5},Dynamic first dim (-1) on input_grad and input_x
+soft_shrink_grad_geir_dyn_rank,soft_shrink_grad,((4,16,32),(4,16,32)),((-2,),(4,16,32)),('float32','float32'),('ND', 'ND'),((4,16,32),),('float32',),('ND',),((-1,1),(-2,2)),{'lambd': 0.5},input_grad declared unknown rank (-2); input_x keeps concrete shape

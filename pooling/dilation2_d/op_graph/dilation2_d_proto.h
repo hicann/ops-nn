@@ -27,7 +27,7 @@ namespace ge {
  *@par Inputs:
  *Two inputs, including:
  * @li x: A 4D Tensor (NHWC or NCHW). Dtype declared as real number types (f16/f32/f64/i32/i64/u8/i16/i8/u16);
- * only float16 is actually enabled (filtered at runtime by InferDataType). \n
+ * only float16 is actually enabled (dtype is declared in op def and further checked in tiling). \n
  * @li filter: A 3D Tensor (fH, fW, C). Must be the same type as x. \n
 
  *@par Outputs:

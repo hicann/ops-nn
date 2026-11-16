@@ -13,6 +13,7 @@
 #include <iostream>
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
+#include "log/log.h"
 #include "../../../op_graph/apply_adam_v2_proto.h"
 
 class ApplyAdamV2InferShape : public testing::Test {
@@ -78,4 +79,50 @@ TEST_F(ApplyAdamV2InferShape, optional_inputs_can_be_omitted)
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+// 部分未知shape（-1）场景：输出透传var/m/v
+TEST_F(ApplyAdamV2InferShape, infershape_partial_unknown_dim)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdamV2")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape varShape = {{-1, 16}, {-1, 16}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(12, 3)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&varShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &varShape, &scalarShape, &scalarShape, &scalarShape, &scalarShape})
+                      .OutputShapes({&varShape, &varShape, &varShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expectedShape = {-1, 16};
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectedShape));
+}
+
+// 未知rank（-2）场景：输出透传
+TEST_F(ApplyAdamV2InferShape, infershape_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdamV2")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::StorageShape varShape = {{-2}, {}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(12, 3)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&varShape, &varShape, &varShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &varShape, &scalarShape, &scalarShape, &scalarShape, &scalarShape})
+                      .OutputShapes({&varShape, &varShape, &varShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expectedShape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectedShape));
 }

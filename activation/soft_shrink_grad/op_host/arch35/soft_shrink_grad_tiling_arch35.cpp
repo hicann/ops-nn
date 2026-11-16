@@ -28,6 +28,10 @@
  */
 
 #include <cmath>
+#include <string>
+#include <vector>
+#include <graph/utils/type_utils.h>
+#include "base/err_msg.h"
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
@@ -78,80 +82,142 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* ubSize, int64_t* coreNum)
 {
+    const char* opName = context->GetNodeName() == nullptr ? "SoftShrinkGrad" : context->GetNodeName();
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
+    if (platformInfoPtr == nullptr) {
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{
+                opName,
+                "Platform information is unavailable; check the SoC-specific OPP package and platform loading logs."}));
+        return ge::GRAPH_FAILED;
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     *coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(*coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        *coreNum == 0,
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{opName, (std::string("GetCoreNumAiv must return a positive core count; actual=") +
+                                               std::to_string(*coreNum) + "; check platform metadata.")
+                                                  .c_str()})),
+        return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, *ubSize);
-    OP_CHECK_IF(*ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(*ubSize == 0,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{
+                        opName, "Platform UB size is zero; check the SoC-specific platform resource metadata."})),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalIdx, ge::DataType* dataType,
                                          float* lambd)
 {
+    const char* opName = context->GetNodeName() == nullptr ? "SoftShrinkGrad" : context->GetNodeName();
     // Get input shapes
     auto inputGrad = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
+    if (inputGrad == nullptr) {
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{
+                opName, "Validated input input_grad shape is unavailable; check Tiling context metadata."}));
+        return ge::GRAPH_FAILED;
+    }
     auto inputShapeGrad = EnsureNotScalar(inputGrad->GetStorageShape());
 
     auto inputX = context->GetInputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
+    if (inputX == nullptr) {
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{opName,
+                                      "Validated input input_x shape is unavailable; check Tiling context metadata."}));
+        return ge::GRAPH_FAILED;
+    }
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
 
     // Rank validation: contract supports 0D-8D (proto.h: "within the range of 0D to 8D")
     constexpr size_t MAX_SUPPORTED_RANK = 8;
-    OP_CHECK_IF(inputGrad->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
-                OP_LOGE(context, "SoftShrinkGrad: input_grad rank=%zu exceeds max supported 8",
-                        inputGrad->GetStorageShape().GetDimNum()),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(inputX->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
-                OP_LOGE(context, "SoftShrinkGrad: input_x rank=%zu exceeds max supported 8",
-                        inputX->GetStorageShape().GetDimNum()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        inputGrad->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName, "input_grad", (std::to_string(inputGrad->GetStorageShape().GetDimNum()) + "D").c_str(), "0D to 8D"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        inputX->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "input_x",
+                                     (std::to_string(inputX->GetStorageShape().GetDimNum()) + "D").c_str(), "0D to 8D"),
+        return ge::GRAPH_FAILED);
 
     // Shape validation: rank consistency
     OP_CHECK_IF(inputShapeGrad.GetDimNum() != inputShapeX.GetDimNum(),
-                OP_LOGE(context, "SoftShrinkGrad: input_grad and input_x rank mismatch: grad=%zu, x=%zu",
-                        inputShapeGrad.GetDimNum(), inputShapeX.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    opName, "input_grad,input_x",
+                    (std::to_string(inputShapeGrad.GetDimNum()) + "D, " + std::to_string(inputShapeX.GetDimNum()) + "D")
+                        .c_str(),
+                    "input_grad and input_x must have the same rank"),
                 return ge::GRAPH_FAILED);
 
     // Shape validation: per-dimension consistency
     for (size_t i = 0; i < inputShapeGrad.GetDimNum(); ++i) {
-        OP_CHECK_IF(
-            inputShapeGrad.GetDim(i) != inputShapeX.GetDim(i),
-            OP_LOGE(context, "SoftShrinkGrad: input_grad and input_x shape mismatch at dim %zu: grad=%ld, x=%ld", i,
-                    inputShapeGrad.GetDim(i), inputShapeX.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(inputShapeGrad.GetDim(i) != inputShapeX.GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        opName, "input_grad,input_x",
+                        (Ops::Base::ToString(inputShapeGrad) + ", " + Ops::Base::ToString(inputShapeX)).c_str(),
+                        "input_grad and input_x must have the same shape"),
+                    return ge::GRAPH_FAILED);
     }
 
     *totalIdx = inputShapeGrad.GetShapeSize();
 
     // dtype validation: input_grad
     auto inputDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    if (inputDesc == nullptr) {
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{
+                opName, "Validated input input_grad descriptor is unavailable; check Tiling context metadata."}));
+        return ge::GRAPH_FAILED;
+    }
     *dataType = inputDesc->GetDataType();
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
-    OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "SoftShrinkGrad: unsupported input_grad dtype=%d", static_cast<int>(*dataType)),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        supportedDtype.count(*dataType) == 0,
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "input_grad", ge::TypeUtils::DataTypeToSerialString(*dataType).c_str(),
+                                  "DT_FLOAT16, DT_FLOAT or DT_BF16"),
+        return ge::GRAPH_FAILED);
 
     // dtype validation: input_x and consistency
     auto inputDescX = context->GetInputDesc(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDescX);
+    if (inputDescX == nullptr) {
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{
+                opName, "Validated input input_x descriptor is unavailable; check Tiling context metadata."}));
+        return ge::GRAPH_FAILED;
+    }
     ge::DataType dataTypeX = inputDescX->GetDataType();
     OP_CHECK_IF(supportedDtype.count(dataTypeX) == 0,
-                OP_LOGE(context, "SoftShrinkGrad: unsupported input_x dtype=%d", static_cast<int>(dataTypeX)),
+                OP_LOGE_FOR_INVALID_DTYPE(opName, "input_x", ge::TypeUtils::DataTypeToSerialString(dataTypeX).c_str(),
+                                          "DT_FLOAT16, DT_FLOAT or DT_BF16"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(*dataType != dataTypeX,
-                OP_LOGE(context, "SoftShrinkGrad: input_grad and input_x dtype mismatch: grad=%d, x=%d",
-                        static_cast<int>(*dataType), static_cast<int>(dataTypeX)),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName, "input_grad,input_x",
+                                                       (ge::TypeUtils::DataTypeToSerialString(*dataType) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(dataTypeX))
+                                                           .c_str(),
+                                                       "input_grad and input_x must have the same dtype"),
                 return ge::GRAPH_FAILED);
 
     // Get lambd attribute
-    const float* lambdAttr = context->GetAttrs()->GetAttrPointer<float>(0);
+    auto attrs = context->GetAttrs();
+    if (attrs == nullptr) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(opName, "lambd", "GetShapeAttrsInfo: tiling attrs is unavailable");
+        return ge::GRAPH_FAILED;
+    }
+    const float* lambdAttr = attrs->GetAttrPointer<float>(0);
     if (lambdAttr != nullptr) {
         *lambd = *lambdAttr;
     } else {
@@ -159,7 +225,8 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     }
 
     OP_CHECK_IF(std::isnan(*lambd) || *lambd < 0.0f,
-                OP_LOGE(context, "SoftShrinkGrad: lambd must not be NaN and must be >= 0, got %f", *lambd),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "lambd", std::to_string(*lambd).c_str(),
+                                                      "lambd must not be NaN and must be greater than or equal to 0"),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -167,8 +234,15 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
 static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
+    const char* opName = context->GetNodeName() == nullptr ? "SoftShrinkGrad" : context->GetNodeName();
     size_t* currentWorkspace = context->GetWorkspaceSizes(WORKSPACE_NUM);
-    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    if (currentWorkspace == nullptr) {
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{
+                opName, "Tiling workspace-size buffer is unavailable; check Tiling context output construction."}));
+        return ge::GRAPH_FAILED;
+    }
     currentWorkspace[0] = WS_SYS_SIZE;
     return ge::GRAPH_SUCCESS;
 }
@@ -201,21 +275,54 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, ge::DataTy
                                         uint64_t ubSize, int64_t coreNum, SoftShrinkGradTilingData* tiling,
                                         uint32_t* bufferMode)
 {
+    const char* opName = context->GetNodeName() == nullptr ? "SoftShrinkGrad" : context->GetNodeName();
     int64_t inputElemBytes = GetInputElemBytes(dataType);
-    OP_CHECK_IF(inputElemBytes == 0, OP_LOGE(context, "unsupported dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputElemBytes == 0,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{opName, (std::string("Internal tiling reached unsupported dtype=") +
+                                                       ge::TypeUtils::DataTypeToSerialString(dataType) + ".")
+                                                          .c_str()})),
+                return ge::GRAPH_FAILED);
 
     *bufferMode = (totalIdx > MIN_SPLIT_THRESHOLD) ? 1 : 0;
     int64_t bufferDivisorBits = CalcBufferDivisorBits(dataType, *bufferMode != 0);
 
     int64_t availableUbBits = (static_cast<int64_t>(ubSize) - SELECT_MODE1_RESERVE) * 8;
-    OP_CHECK_IF(availableUbBits <= 0, OP_LOGE(context, "UB too small"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(bufferDivisorBits <= 0, OP_LOGE(context, "bufferDivisorBits is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(availableUbBits <= 0,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{
+                        opName, (std::string("Available UB is too small; ubSize=") + std::to_string(ubSize) +
+                                 " bytes, reserved=" + std::to_string(SELECT_MODE1_RESERVE) + " bytes.")
+                                    .c_str()})),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(bufferDivisorBits <= 0,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{opName, (std::string("bufferDivisorBits must be positive; actual=") +
+                                                       std::to_string(bufferDivisorBits) + ".")
+                                                          .c_str()})),
+                return ge::GRAPH_FAILED);
 
     int64_t maxElemNum = availableUbBits / bufferDivisorBits;
     int64_t alignFactor = ALIGN_256 / inputElemBytes;
-    OP_CHECK_IF(alignFactor <= 0, OP_LOGE(context, "alignFactor is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(alignFactor <= 0,
+                REPORT_PREDEFINED_ERR_MSG(
+                    "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                    (std::vector<const char*>{opName, (std::string("alignFactor must be positive; inputElemBytes=") +
+                                                       std::to_string(inputElemBytes) + ".")
+                                                          .c_str()})),
+                return ge::GRAPH_FAILED);
     int64_t ubFormer = (maxElemNum / alignFactor) * alignFactor;
-    OP_CHECK_IF(ubFormer <= 0, OP_LOGE(context, "ubFormer is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        ubFormer <= 0,
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{opName, (std::string("ubFormer must be positive; actual=") +
+                                               std::to_string(ubFormer) + "; check UB capacity against input dtype.")
+                                                  .c_str()})),
+        return ge::GRAPH_FAILED);
 
     int64_t minDtypeBits = inputElemBytes * 8;
     int64_t computedCoreNum = CeilDiv(totalIdx * minDtypeBits, MIN_TILING_BITS);
@@ -237,27 +344,46 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, ge::DataTy
 
 static ge::graphStatus SoftShrinkGradTilingFunc(gert::TilingContext* context)
 {
+    const char* opName = context->GetNodeName() == nullptr ? "SoftShrinkGrad" : context->GetNodeName();
     OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGI(context->GetNodeName(), "Enter SoftShrinkGradTilingFunc");
 
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "GetPlatformInfo failed; retain its first error."),
+                return ge::GRAPH_FAILED);
 
     int64_t totalIdx;
     ge::DataType dataType;
     float lambd;
     OP_CHECK_IF(GetShapeAttrsInfo(context, &totalIdx, &dataType, &lambd) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context, "GetShapeAttrsInfo failed; retain its first error."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context, "GetWorkspaceSize failed; retain its first error."),
                 return ge::GRAPH_FAILED);
 
     SoftShrinkGradTilingData* tiling = context->GetTilingData<SoftShrinkGradTilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(SoftShrinkGradTilingData), 0, sizeof(SoftShrinkGradTilingData)) != EOK,
-                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    if (tiling == nullptr) {
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{
+                opName,
+                "SoftShrinkGrad tiling-data buffer is unavailable; check Tiling context output construction."}));
+        return ge::GRAPH_FAILED;
+    }
+    const auto memsetRet = memset_s(tiling, sizeof(SoftShrinkGradTilingData), 0, sizeof(SoftShrinkGradTilingData));
+    OP_CHECK_IF(
+        memsetRet != EOK,
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{
+                opName, (std::string("memset_s failed while initializing tiling data; destMax=count=") +
+                         std::to_string(sizeof(SoftShrinkGradTilingData)) + ", ret=" + std::to_string(memsetRet) + ".")
+                            .c_str()})),
+        return ge::GRAPH_FAILED);
 
     if (totalIdx == 0) {
         // Empty tensor: zero scheduling params are safe because the kernel guards
@@ -271,7 +397,7 @@ static ge::graphStatus SoftShrinkGradTilingFunc(gert::TilingContext* context)
     uint32_t bufferMode;
     OP_CHECK_IF(
         CalcTilingParams(context, dataType, totalIdx, ubSize, coreNum, tiling, &bufferMode) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "CalcTilingParams error"), return ge::GRAPH_FAILED);
+        OP_LOGE_WITHOUT_REPORT(context, "CalcTilingParams failed; retain its first error."), return ge::GRAPH_FAILED);
 
     tiling->lambd = lambd;
     context->SetBlockDim(tiling->blockNum);

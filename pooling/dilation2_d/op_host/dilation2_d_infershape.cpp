@@ -307,15 +307,5 @@ static ge::graphStatus InferShapeDilation2D(gert::InferShapeContext* context)
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeDilation2D(gert::InferDataTypeContext* context)
-{
-    const ge::DataType xDtype = context->GetInputDataType(X_INPUT_INDEX);
-    OP_CHECK_IF((xDtype != ge::DT_FLOAT16),
-                OP_LOGE(context, "Dilation2D only supports FLOAT16, got input dtype %d.", static_cast<int>(xDtype)),
-                return ge::GRAPH_FAILED);
-    context->SetOutputDataType(Y_OUTPUT_INDEX, xDtype);
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(Dilation2D).InferShape(InferShapeDilation2D).InferDataType(InferDataTypeDilation2D);
+IMPL_OP_INFERSHAPE(Dilation2D).InferShape(InferShapeDilation2D);
 } // namespace ops

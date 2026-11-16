@@ -88,4 +88,69 @@ TEST_F(FmakmInfershape, EmptyTensor) { RunCase({0, 4}, ge::DT_FLOAT, {{0, 4}, {0
 
 TEST_F(FmakmInfershape, DynamicShape) { RunCase({-1, -1, 64}, ge::DT_FLOAT16, {{-1, -1, 64}, {-1, -1, 64}}); }
 
+// 与rt1.0（TwoInOneOutDynamicInferNoBroadcast）一致：var为未知rank时输出取accum的shape
+TEST_F(FmakmInfershape, VarUnknownRank_OutputTakesAccumShape)
+{
+    gert::StorageShape var = {{-2}, {}};
+    gert::StorageShape accum = {{16, 16}, {16, 16}};
+    gert::StorageShape s = MakeStorageShape({1});
+    gert::InfershapeContextPara para(OP_NAME,
+                                     {
+                                         {var, ge::DT_FLOAT, ge::FORMAT_ND},   // var
+                                         {accum, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND},     // lr
+                                         {accum, ge::DT_FLOAT, ge::FORMAT_ND}, // x1
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND},     // momentum
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND},     // x2
+                                     },
+                                     {
+                                         {MakeStorageShape({}), ge::DT_FLOAT, ge::FORMAT_ND},
+                                         {MakeStorageShape({}), ge::DT_FLOAT, ge::FORMAT_ND},
+                                     });
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, {{16, 16}, {16, 16}});
+}
+
+// 与rt1.0一致：var维为-1且accum对应维已知时，用accum的值解析
+TEST_F(FmakmInfershape, VarUnknownDim_ResolvedByAccum)
+{
+    gert::StorageShape var = MakeStorageShape({-1, -1, 64});
+    gert::StorageShape accum = MakeStorageShape({16, 16, 64});
+    gert::StorageShape s = MakeStorageShape({1});
+    gert::InfershapeContextPara para(OP_NAME,
+                                     {
+                                         {var, ge::DT_FLOAT, ge::FORMAT_ND},   // var
+                                         {accum, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND},     // lr
+                                         {accum, ge::DT_FLOAT, ge::FORMAT_ND}, // x1
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND},     // momentum
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND},     // x2
+                                     },
+                                     {
+                                         {MakeStorageShape({}), ge::DT_FLOAT, ge::FORMAT_ND},
+                                         {MakeStorageShape({}), ge::DT_FLOAT, ge::FORMAT_ND},
+                                     });
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, {{16, 16, 64}, {16, 16, 64}});
+}
+
+// 双侧未知rank：输出-2
+TEST_F(FmakmInfershape, BothUnknownRank)
+{
+    gert::StorageShape u = {{-2}, {}};
+    gert::StorageShape s = MakeStorageShape({1});
+    gert::InfershapeContextPara para(OP_NAME,
+                                     {
+                                         {u, ge::DT_FLOAT, ge::FORMAT_ND}, // var
+                                         {u, ge::DT_FLOAT, ge::FORMAT_ND}, // accum
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND}, // lr
+                                         {u, ge::DT_FLOAT, ge::FORMAT_ND}, // x1
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND}, // momentum
+                                         {s, ge::DT_FLOAT, ge::FORMAT_ND}, // x2
+                                     },
+                                     {
+                                         {MakeStorageShape({}), ge::DT_FLOAT, ge::FORMAT_ND},
+                                         {MakeStorageShape({}), ge::DT_FLOAT, ge::FORMAT_ND},
+                                     });
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, {{-2}, {-2}});
+}
+
 } // namespace FmakmInferShapeUT

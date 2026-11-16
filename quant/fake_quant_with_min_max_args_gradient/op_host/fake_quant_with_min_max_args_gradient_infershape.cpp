@@ -68,15 +68,27 @@ static graphStatus InferShapeForFakeQuantWithMinMaxArgsGradient(gert::InferShape
     gert::Shape* yShape = context->GetOutputShape(OUTPUT_IDX_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-    OP_CHECK_IF(gradShape->GetDimNum() != xShape->GetDimNum(),
+    // 未知rank（-2）时无法确定不一致，跳过校验，避免动态场景误拦
+    const bool gradUnknownRank = Ops::Base::IsUnknownRank(*gradShape);
+    const bool xUnknownRank = Ops::Base::IsUnknownRank(*xShape);
+    OP_CHECK_IF(!gradUnknownRank && !xUnknownRank && gradShape->GetDimNum() != xShape->GetDimNum(),
                 OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         xShape->GetDimNum() > MAX_RANK,
         OP_LOGE(context, "FakeQuantWithMinMaxArgsGradient supports rank in [0,8], got %zu.", xShape->GetDimNum()),
         return ge::GRAPH_FAILED);
-    for (size_t i = 0; i < xShape->GetDimNum(); ++i) {
-        OP_CHECK_IF(gradShape->GetDim(i) != xShape->GetDim(i),
-                    OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
+    // x为未知rank时跳过了rank相等校验，gradients的超秩须在此独立拦截（Host门禁）
+    OP_CHECK_IF(
+        !gradUnknownRank && gradShape->GetDimNum() > MAX_RANK,
+        OP_LOGE(context, "FakeQuantWithMinMaxArgsGradient supports rank in [0,8], got %zu.", gradShape->GetDimNum()),
+        return ge::GRAPH_FAILED);
+    if (!gradUnknownRank && !xUnknownRank) {
+        for (size_t i = 0; i < xShape->GetDimNum(); ++i) {
+            // 未知维（-1）视为通配，仅双侧已知且不等时才判定不一致
+            OP_CHECK_IF(gradShape->GetDim(i) != xShape->GetDim(i) && gradShape->GetDim(i) != ge::UNKNOWN_DIM &&
+                            xShape->GetDim(i) != ge::UNKNOWN_DIM,
+                        OP_LOGE(context, "gradients and x must have identical shape."), return ge::GRAPH_FAILED);
+        }
     }
     OP_CHECK_IF((ValidateAttrsForFakeQuantWithMinMaxArgsGradient(context) != ge::GRAPH_SUCCESS),
                 OP_LOGE(context->GetNodeName(), "attribute validation failed."), return ge::GRAPH_FAILED);

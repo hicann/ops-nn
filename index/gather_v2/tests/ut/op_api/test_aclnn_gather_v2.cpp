@@ -611,3 +611,31 @@ TEST_F(l2GatherV2Test, l2_gather_v2_dim_negative)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
+
+// 8D self + 2D index 构造 9D out，超过维度上限8，应在参数校验层拒绝
+TEST_F(l2GatherV2Test, l2_gather_v2_abnormal_out_dimNum_gt_8)
+{
+    auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({2, 2}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int>{0, 1, 0, 1});
+    auto outDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGatherV2, INPUT(selfDesc, 0, indexDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 8D self + 1D index 得到 8D out，维度边界合法
+TEST_F(l2GatherV2Test, l2_gather_v2_out_dimNum_boundary_8d)
+{
+    auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto indexDesc = TensorDesc({1}, ACL_INT32, ACL_FORMAT_ND).Value(vector<int>{1});
+    auto outDesc = TensorDesc({1, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGatherV2, INPUT(selfDesc, 0, indexDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}

@@ -52,6 +52,11 @@ static ge::graphStatus InferShapeForAdam(gert::InferShapeContext* context)
                                                "All inputs must be broadcast compatible"),
         return ge::GRAPH_FAILED);
     for (size_t state = 1; state <= 3; ++state) {
+        // 未知rank（-2）或含未知维（-1）时无法确定不一致，跳过校验，避免动态场景误拦
+        if (Ops::Base::IsUnknownRank(broadcastShape) || Ops::Base::IsUnknownRank(*inputs[state]) ||
+            Ops::Base::IsUnknownShape(broadcastShape) || Ops::Base::IsUnknownShape(*inputs[state])) {
+            continue;
+        }
         OP_CHECK_IF(*inputs[state] != broadcastShape,
                     OP_LOGE_FOR_INVALID_SHAPE(context->GetNodeName(), INPUT_NAMES[state],
                                               Ops::Base::ToString(*inputs[state]).c_str(),
@@ -74,13 +79,5 @@ static ge::graphStatus InferShapeForAdam(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForAdam(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(0, context->GetInputDataType(1));
-    context->SetOutputDataType(1, context->GetInputDataType(2));
-    context->SetOutputDataType(2, context->GetInputDataType(3));
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(AdamApplyOneAssign).InferShape(InferShapeForAdam).InferDataType(InferDataTypeForAdam);
+IMPL_OP_INFERSHAPE(AdamApplyOneAssign).InferShape(InferShapeForAdam);
 } // namespace ops

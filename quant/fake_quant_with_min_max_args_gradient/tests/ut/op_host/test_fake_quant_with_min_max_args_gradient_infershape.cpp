@@ -234,3 +234,115 @@ TEST_F(FakeQuantWithMinMaxArgsGradientProto, Gradient_proto_invalid_num_bits_rej
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
+
+// 部分未知shape（-1）场景：输出透传x
+TEST_F(FakeQuantWithMinMaxArgsGradientProto, Gradient_proto_partial_unknown_dim)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxArgsGradient")->infer_shape;
+
+    gert::StorageShape gradShape = {{4, -1}, {4, -1}};
+    gert::StorageShape xShape = {{4, -1}, {4, -1}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .InputShapes({&gradShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[4, -1]");
+}
+
+// 未知rank（-2）场景：两侧对称-2通过，输出-2
+TEST_F(FakeQuantWithMinMaxArgsGradientProto, Gradient_proto_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxArgsGradient")->infer_shape;
+
+    gert::StorageShape gradShape = {{-2}, {}};
+    gert::StorageShape xShape = {{-2}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .InputShapes({&gradShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[-2]");
+}
+
+// 单侧未知rank场景：gradients为-2而x已知时，跳过校验，输出透传x
+TEST_F(FakeQuantWithMinMaxArgsGradientProto, Gradient_proto_grad_unknown_rank_x_known)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxArgsGradient")->infer_shape;
+
+    gert::StorageShape gradShape = {{-2}, {}};
+    gert::StorageShape xShape = {{4, 16, 16}, {4, 16, 16}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .InputShapes({&gradShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[4, 16, 16]");
+}
+
+// 混合未知维场景：x首维为-1而gradients已知时，-1视为通配，输出透传x
+TEST_F(FakeQuantWithMinMaxArgsGradientProto, Gradient_proto_x_partial_unknown_grad_known)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxArgsGradient")->infer_shape;
+
+    gert::StorageShape gradShape = {{4, 16, 16}, {4, 16, 16}};
+    gert::StorageShape xShape = {{-1, 16, 16}, {-1, 16, 16}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeAttrs({{"min", Ops::NN::AnyValue::CreateFrom<float>(-6.0f)},
+                                  {"max", Ops::NN::AnyValue::CreateFrom<float>(6.0f)},
+                                  {"num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8)},
+                                  {"narrow_range", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .InputShapes({&gradShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*output), "[-1, 16, 16]");
+}

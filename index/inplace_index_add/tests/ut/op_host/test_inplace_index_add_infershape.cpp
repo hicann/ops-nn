@@ -53,3 +53,31 @@ TEST_F(inplace_index_add, inplace_index_add_infershape_diff_test)
     gert::Shape expectedOutputShape = {-1, 8, 375};
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
+
+// 未知rank（-2）场景：输出置为未知rank
+TEST_F(inplace_index_add, inplace_index_add_infershape_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceIndexAdd")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape varShape = {-2};
+    gert::Shape indicesShape = {-2};
+    gert::Shape updatesShape = {-2};
+    gert::Shape outputShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&varShape, &indicesShape, &updatesShape})
+                      .OutputShapes({&outputShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape expectedOutputShape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)),
+              Ops::Base::ToString(expectedOutputShape));
+}

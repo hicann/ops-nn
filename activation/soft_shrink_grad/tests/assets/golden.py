@@ -16,10 +16,16 @@ The operator computes the softshrink backward gradient:
 ``y = gradOutput`` when ``|self| > lambd`` else ``0``, with NaN positions
 passing ``gradOutput`` through (aligned with PyTorch ATen semantics).
 
-Reference oracle: the user-layer ``torch.nn.functional.softshrink`` autograd
-backward. Customers call the torch functional API, not the internal aten op;
-its registered derivative is exactly this gradient, so the reference is
-computed through the same user-layer path the delivery exposes.
+Reference oracle: ``torch.ops.aten.softshrink_backward``.
+
+Two coverage routes for the backward scenario:
+- ATen direct (``torch.ops.aten.softshrink_backward``): full input space,
+  including the broadcast semantics (grad_output vs self of different shapes).
+- Torch public interface (``torch.nn.functional.softshrink`` + ``.backward``
+  CSV suffix): the backward is reached through the autograd engine
+  (``torch.func.vjp`` / ``autograd.grad``), covering the public-API path for
+  same-shape cases only — autograd requires grad_output's shape to equal the
+  forward output (= input) shape, so broadcast rows stay on the ATen route.
 """
 
 import torch
@@ -155,6 +161,7 @@ def torch_softshrink_golden(input, lambd=0.5, **kwargs):
 
 class SoftShrinkVjpGraph(torch.nn.Module):
     def __init__(self, *args, **kwargs):
+        # 兜底：同 SoftShrinkGradGraph —— 编译前幂等重注册（含正向 converter）。
         super().__init__(*args, **kwargs)
         _register_graph_runtime_support()
 

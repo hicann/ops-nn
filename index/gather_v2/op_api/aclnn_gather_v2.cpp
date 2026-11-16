@@ -159,9 +159,10 @@ static inline bool CheckOutShape(const aclTensor* self, int64_t dim, const aclTe
 
 static inline bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* out)
 {
-    // self、index的数据维度不能超过8
+    // self、index、out的数据维度不能超过8
     OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
     OP_CHECK_MAX_DIM(index, MAX_DIM_LEN, return false);
+    OP_CHECK_MAX_DIM(out, MAX_DIM_LEN, return false);
 
     int64_t selfDimSize = static_cast<int64_t>(self->GetViewShape().GetDimNum());
     if (selfDimSize == 0) {

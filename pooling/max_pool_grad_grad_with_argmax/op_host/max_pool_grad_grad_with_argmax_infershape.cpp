@@ -114,6 +114,14 @@ ge::graphStatus InferShapeForMaxPoolGradGradWithArgmax(gert::InferShapeContext* 
         return ge::GRAPH_FAILED;
     }
 
+    // 与rt1.0一致：strides任一维非正即拒绝（避免后续除零），与提示语义对齐
+    for (size_t i = 0; i < ATTR_LIST_SHAPE_SIZE; i++) {
+        OP_CHECK_IF(stridesData[i] <= 0,
+                    OP_LOGE_FOR_INVALID_VALUE(opName, "strides", std::to_string(stridesData[i]).c_str(),
+                                              "strides must be greater than 0"),
+                    return ge::GRAPH_FAILED);
+    }
+
     auto padsPtr = attrs->GetAttrPointer<char>(ATTR_INDEX_PADS);
     OP_CHECK_IF(
         padsPtr == nullptr,
@@ -164,7 +172,11 @@ ge::graphStatus InferShapeForMaxPoolGradGradWithArgmax(gert::InferShapeContext* 
                 return ge::GRAPH_FAILED);
 
     if (Ops::Base::IsUnknownRank(*argmaxShape)) {
-        Ops::Base::SetUnknownRank(*yShape);
+        // 与rt1.0一致：argmax未知rank时输出固定4维全未知（保留rank=4信息）
+        yShape->SetDimNum(EXPECTED_RANK);
+        for (size_t i = 0; i < EXPECTED_RANK; i++) {
+            yShape->SetDim(i, -1);
+        }
         return ge::GRAPH_SUCCESS;
     }
 

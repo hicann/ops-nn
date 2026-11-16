@@ -34,13 +34,5 @@ static ge::graphStatus InferShape4L2NormalizeGrad(gert::InferShapeContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataType4L2NormalizeGrad(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context, "Begin to do InferDataType4L2NormalizeGrad");
-    context->SetOutputDataType(OUTPUT_DX_IDX, context->GetInputDataType(INPUT_X_IDX));
-    OP_LOGD(context, "End to do InferDataType4L2NormalizeGrad");
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(L2NormalizeGrad).InferShape(InferShape4L2NormalizeGrad).InferDataType(InferDataType4L2NormalizeGrad);
+IMPL_OP_INFERSHAPE(L2NormalizeGrad).InferShape(InferShape4L2NormalizeGrad);
 } // namespace ops

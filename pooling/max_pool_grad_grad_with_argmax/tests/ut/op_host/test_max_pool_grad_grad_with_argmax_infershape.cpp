@@ -97,6 +97,7 @@ TEST_F(MaxPoolGradGradWithArgmaxInfershape, max_pool_grad_grad_with_argmax_unkno
                       .Build();
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    gert::Shape expectedOutputShape = {-2};
+    // 与rt1.0一致：argmax未知rank时输出固定4维全未知（保留rank=4信息）
+    gert::Shape expectedOutputShape = {-1, -1, -1, -1};
     ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expectedOutputShape));
 }

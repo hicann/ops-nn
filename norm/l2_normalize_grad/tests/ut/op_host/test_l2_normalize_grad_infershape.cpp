@@ -55,34 +55,6 @@ TEST_F(L2NormalizeGradTest, l2_normalize_grad_infer_shape_test1)
     EXPECT_EQ(output_desc.GetShape().GetDim(1), 512);
 }
 
-TEST_F(L2NormalizeGradTest, l2_normalize_grad_infer_data_type)
-{
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("L2NormalizeGrad"), nullptr);
-    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("L2NormalizeGrad")->infer_datatype;
-    ASSERT_NE(data_type_func, nullptr);
-
-    ge::DataType input_x = ge::DT_FLOAT;
-    ge::DataType dx_datatype = ge::DT_FLOAT;
-    auto context_holder = gert::InferDataTypeContextFaker()
-                              .IrInputNum(3)
-                              .NodeIoNum(3, 1)
-                              .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1})},
-                                          {"eps", Ops::NN::AnyValue::CreateFrom<float>(1e-4f)}})
-                              .InputDataTypes({&input_x, &input_x, &input_x})
-                              .OutputDataTypes({&dx_datatype})
-                              .Build();
-    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-    EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-    ASSERT_NE(context, nullptr);
-
-    EXPECT_EQ(context->GetInputDataType(0), input_x);
-    EXPECT_EQ(context->GetOutputDataType(0), dx_datatype);
-}
-
 // -2 UNKNOWN_RANK：红线 R4 点名的必验项。dx 是 x 的整体拷贝，unknown-rank 应原样透传。
 TEST_F(L2NormalizeGradTest, l2_normalize_grad_infer_shape_unknown_rank)
 {
@@ -96,4 +68,27 @@ TEST_F(L2NormalizeGradTest, l2_normalize_grad_infer_shape_unknown_rank)
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     std::vector<int64_t> expected{-2};
     EXPECT_EQ(op.GetOutputDescByName("dx").GetShape().GetDims(), expected);
+}
+
+TEST_F(L2NormalizeGradTest, l2_normalize_grad_infer_shape_partial_unknown_dim)
+{
+    ge::op::L2NormalizeGrad op;
+
+    ge::DataType dtype = ge::DT_FLOAT;
+    ge::Format format = ge::FORMAT_ND;
+
+    auto input_tensor = create_desc_with_ori({32, -1}, dtype, format, {32, -1}, format);
+    op.UpdateInputDesc("x", input_tensor);
+    op.UpdateInputDesc("y", input_tensor);
+    op.UpdateInputDesc("dy", input_tensor);
+
+    op.SetAttr("dim", std::vector<int64_t>{1});
+    op.SetAttr("eps", 1e-4f);
+    Runtime2TestParam param{{"dim", "eps"}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_desc = op.GetOutputDescByName("dx");
+    EXPECT_EQ(output_desc.GetShape().GetDimNum(), 2);
+    EXPECT_EQ(output_desc.GetShape().GetDim(0), 32);
+    EXPECT_EQ(output_desc.GetShape().GetDim(1), -1);
 }

@@ -130,3 +130,43 @@ TEST_F(l2GatherV3Test, case_5)
     // SAMPLE: precision simulate
     ut.TestPrecision();
 }
+
+// 8D self + 2D index 构造 9D out，超过维度上限8，应在参数校验层拒绝
+TEST_F(l2GatherV3Test, case_6_out_dimNum_gt_8)
+{
+    auto tensorWeightDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto tensorIndicesDesc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int>{0, 1, 0, 1});
+    auto tensorOutDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    int64_t dim = 0;
+    int64_t batchDims = 0;
+    int64_t mode = 1;
+
+    auto ut = OP_API_UT(aclnnGatherV3, // host api第二段接口名称
+                        INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode), // host api输入
+                        OUTPUT(tensorOutDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 8D self + 1D index 得到 8D out，维度边界合法
+TEST_F(l2GatherV3Test, case_7_out_dimNum_boundary_8d)
+{
+    auto tensorWeightDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto tensorIndicesDesc = TensorDesc({1}, ACL_INT64, ACL_FORMAT_ND).Value(vector<int>{1});
+    auto tensorOutDesc = TensorDesc({1, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    int64_t dim = 0;
+    int64_t batchDims = 0;
+    int64_t mode = 1;
+
+    auto ut = OP_API_UT(aclnnGatherV3, // host api第二段接口名称
+                        INPUT(tensorWeightDesc, dim, tensorIndicesDesc, batchDims, mode), // host api输入
+                        OUTPUT(tensorOutDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}

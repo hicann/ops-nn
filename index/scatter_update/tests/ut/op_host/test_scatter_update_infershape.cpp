@@ -244,3 +244,78 @@ TEST_F(ScatterUpdateInferShapeTest, infer_datatype_int64)
     EXPECT_EQ(infer_datatype_func(context), ge::GRAPH_SUCCESS);
     EXPECT_EQ(context->GetOutputDataType(0), ge::DT_INT64);
 }
+
+// 部分未知shape（-1）场景：输出shape透传var
+TEST_F(ScatterUpdateInferShapeTest, infer_shape_partial_unknown_dim)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterUpdate"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterUpdate")->infer_shape;
+
+    gert::StorageShape var_shape = {{-1, 4}, {-1, 4}};
+    gert::StorageShape indices_shape = {{5}, {5}};
+    gert::StorageShape updates_shape = {{5, 4}, {5, 4}};
+    gert::StorageShape output_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&var_shape, &indices_shape, &updates_shape})
+                      .OutputShapes({&output_shape})
+                      .Build();
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    gert::Shape expectedOutputShape = {-1, 4};
+    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), Ops::Base::ToString(expectedOutputShape));
+}
+
+// 全未知shape（-1）场景
+TEST_F(ScatterUpdateInferShapeTest, infer_shape_all_unknown_dim)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterUpdate"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterUpdate")->infer_shape;
+
+    gert::StorageShape var_shape = {{-1, -1}, {-1, -1}};
+    gert::StorageShape indices_shape = {{5}, {5}};
+    gert::StorageShape updates_shape = {{5, -1}, {5, -1}};
+    gert::StorageShape output_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&var_shape, &indices_shape, &updates_shape})
+                      .OutputShapes({&output_shape})
+                      .Build();
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    gert::Shape expectedOutputShape = {-1, -1};
+    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), Ops::Base::ToString(expectedOutputShape));
+}
+
+// 未知rank（-2）场景：输出置为未知rank
+TEST_F(ScatterUpdateInferShapeTest, infer_shape_unknown_rank)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterUpdate"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ScatterUpdate")->infer_shape;
+
+    gert::StorageShape var_shape = {{-2}, {}};
+    gert::StorageShape indices_shape = {{-2}, {}};
+    gert::StorageShape updates_shape = {{-2}, {}};
+    gert::StorageShape output_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInputNum(3)
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&var_shape, &indices_shape, &updates_shape})
+                      .OutputShapes({&output_shape})
+                      .Build();
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    gert::Shape expectedOutputShape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), Ops::Base::ToString(expectedOutputShape));
+}

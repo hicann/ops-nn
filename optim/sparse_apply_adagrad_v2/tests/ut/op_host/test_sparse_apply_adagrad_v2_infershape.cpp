@@ -23,8 +23,8 @@
  *   S004  Unknown shape 部分 -1 {4,-1}          -> 两输出均 {4,-1}
  *   S005  Unknown shape lr/epsilon 为 {-1}      -> 两输出均 {-1,-1}（标量动态 shape 放宽）
  *   S006  Unknown rank {-2}                     -> 两输出均 {-2}
- *   S007  负例：accum 与 var 维度值不一致         -> GRAPH_FAILED（校验仍生效）
- *   S008  负例：var 秩 < 2                       -> GRAPH_FAILED（校验仍生效）
+ *   S007  accum 与 var 维度值不一致              -> 两输出各自透传（与rt1.0一致，不做输入校验）
+ *   S008  var 秩 < 2（1D var）                   -> 两输出各自透传（与rt1.0一致）
  */
 
 #include <gtest/gtest.h>
@@ -148,20 +148,20 @@ TEST_F(SparseApplyAdagradV2Infershape, S006_UnknownRank_PassThrough)
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
-// S007 负例：accum 与 var 维度值不一致（非 -1），应报错
-TEST_F(SparseApplyAdagradV2Infershape, S007_Negative_AccumShapeMismatch)
+// S007 accum 与 var 维度值不一致：两输出各自透传（与rt1.0一致，不做输入校验）
+TEST_F(SparseApplyAdagradV2Infershape, S007_AccumShapeMismatch_PassThrough)
 {
     gert::StorageShape var({4, 3}, {4, 3});
-    gert::StorageShape accum({4, 5}, {4, 5});
+    gert::StorageShape accum({5, 6}, {5, 6});
     gert::StorageShape scalar({}, {});
     gert::StorageShape grad({2, 3}, {2, 3});
     gert::StorageShape indices({2}, {2});
     auto para = MakeInfershapePara(var, accum, scalar, scalar, grad, indices);
-    ExecuteTestCase(para, ge::GRAPH_FAILED);
+    std::vector<std::vector<int64_t>> expect = {{4, 3}, {5, 6}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
-// S008 负例：var 秩 < 2，应报错
-TEST_F(SparseApplyAdagradV2Infershape, S008_Negative_VarRankLessThan2)
+TEST_F(SparseApplyAdagradV2Infershape, S008_VarRankLessThan2_PassThrough)
 {
     gert::StorageShape var({4}, {4});
     gert::StorageShape accum({4}, {4});
@@ -169,12 +169,13 @@ TEST_F(SparseApplyAdagradV2Infershape, S008_Negative_VarRankLessThan2)
     gert::StorageShape grad({2}, {2});
     gert::StorageShape indices({2}, {2});
     auto para = MakeInfershapePara(var, accum, scalar, scalar, grad, indices);
-    ExecuteTestCase(para, ge::GRAPH_FAILED);
+    std::vector<std::vector<int64_t>> expect = {{4}, {4}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
 // S009 var/accum 不一致 + 多个输入含 -2：var={-2}, accum={-1,-1}, lr={-2}, epsilon={1},
 //    grad={-2}, indices={1}。任一输入为 -2 即输出 unknown rank，跳过 var/accum 一致性校验
-TEST_F(SparseApplyAdagradV2Infershape, S009_AnyInputUnknownRank_VarAccumInconsistent_Case1)
+TEST_F(SparseApplyAdagradV2Infershape, S009_AnyInputUnknownRank_VarAccum_PassThrough_Case1)
 {
     gert::StorageShape var({-2}, {-2});
     gert::StorageShape accum({-1, -1}, {-1, -1});
@@ -183,13 +184,14 @@ TEST_F(SparseApplyAdagradV2Infershape, S009_AnyInputUnknownRank_VarAccumInconsis
     gert::StorageShape grad({-2}, {-2});
     gert::StorageShape indices({1}, {1});
     auto para = MakeInfershapePara(var, accum, lr, epsilon, grad, indices);
-    std::vector<std::vector<int64_t>> expect = {{-2}, {-2}};
+    // 与rt1.0一致：不做校验，var/accum各自透传（不因其他输入-2而降级）
+    std::vector<std::vector<int64_t>> expect = {{-2}, {-1, -1}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
 // S010 var/accum 不一致 + grad 含 -2：var={-1,-1}, accum={256,256}, lr={1},
 //    epsilon={-1}, grad={-2}, indices={-1}。grad 为 -2 即输出 unknown rank
-TEST_F(SparseApplyAdagradV2Infershape, S010_AnyInputUnknownRank_VarAccumInconsistent_Case2)
+TEST_F(SparseApplyAdagradV2Infershape, S010_GradUnknownRank_VarAccum_PassThrough_Case2)
 {
     gert::StorageShape var({-1, -1}, {-1, -1});
     gert::StorageShape accum({256, 256}, {256, 256});
@@ -198,7 +200,8 @@ TEST_F(SparseApplyAdagradV2Infershape, S010_AnyInputUnknownRank_VarAccumInconsis
     gert::StorageShape grad({-2}, {-2});
     gert::StorageShape indices({-1}, {-1});
     auto para = MakeInfershapePara(var, accum, lr, epsilon, grad, indices);
-    std::vector<std::vector<int64_t>> expect = {{-2}, {-2}};
+    // 与rt1.0一致：var/accum各自透传，不因grad为-2而降级
+    std::vector<std::vector<int64_t>> expect = {{-1, -1}, {256, 256}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
@@ -212,7 +215,8 @@ TEST_F(SparseApplyAdagradV2Infershape, S011_Mixed_PartialUnknownAndUnknownRank)
     gert::StorageShape grad({2, -1}, {2, -1});
     gert::StorageShape indices({-2}, {});
     auto para = MakeInfershapePara(var, accum, scalar, scalar, grad, indices);
-    std::vector<std::vector<int64_t>> expect = {{-2}, {-2}};
+    // 与rt1.0一致：indices为-2不影响输出，var/accum各自透传
+    std::vector<std::vector<int64_t>> expect = {{4, -1}, {4, -1}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
@@ -232,7 +236,7 @@ TEST_F(SparseApplyAdagradV2Infershape, S012_IndicesInt64_Accepted)
 }
 
 // S013 负例：var/accum rank > 8（超出公开声明 rank_range [2,8]），应报错
-TEST_F(SparseApplyAdagradV2Infershape, S013_Negative_VarRankGreaterThan8)
+TEST_F(SparseApplyAdagradV2Infershape, S013_VarRankGreaterThan8_PassThrough)
 {
     gert::StorageShape var({2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2});
     gert::StorageShape accum({2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2});
@@ -240,7 +244,9 @@ TEST_F(SparseApplyAdagradV2Infershape, S013_Negative_VarRankGreaterThan8)
     gert::StorageShape grad({1, 2, 2, 2, 2, 2, 2, 2, 2}, {1, 2, 2, 2, 2, 2, 2, 2, 2});
     gert::StorageShape indices({1}, {1});
     auto para = MakeInfershapePara(var, accum, scalar, scalar, grad, indices);
-    ExecuteTestCase(para, ge::GRAPH_FAILED);
+    // 与rt1.0一致：不校验rank上限，透传
+    std::vector<std::vector<int64_t>> expect = {{2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
 } // namespace SparseApplyAdagradV2UT

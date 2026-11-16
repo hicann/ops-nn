@@ -35,28 +35,6 @@ void RunInferShapeCase(gert::Shape inputShape)
     EXPECT_EQ(*inferredShape, inputShape);
 }
 
-void RunInferDataTypeCase(ge::DataType dtype)
-{
-    ge::DataType inputRef = dtype;
-    ge::DataType outputRef = ge::DT_UNDEFINED;
-    auto holder = gert::InferDataTypeContextFaker()
-                      .IrInputNum(1)
-                      .NodeIoNum(1, 1)
-                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .InputDataTypes({&inputRef})
-                      .OutputDataTypes({&outputRef})
-                      .Build();
-
-    auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("HardSigmoid");
-    ASSERT_NE(impl, nullptr);
-    auto inferDataType = impl->infer_datatype;
-    ASSERT_NE(inferDataType, nullptr);
-    auto* context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_NE(context, nullptr);
-    ASSERT_EQ(inferDataType(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), dtype);
-}
 } // namespace
 
 TEST(HardSigmoidInferShapeTest, TensorShape) { RunInferShapeCase({2, 3, 5, 7}); }
@@ -83,12 +61,4 @@ TEST(HardSigmoidInferShapeTest, RejectsMoreThanEightDimensions)
     ASSERT_NE(impl, nullptr);
     ASSERT_NE(impl->infer_shape, nullptr);
     EXPECT_EQ(impl->infer_shape(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
-}
-
-TEST(HardSigmoidInferShapeTest, InferDataType)
-{
-    RunInferDataTypeCase(ge::DT_FLOAT);
-    RunInferDataTypeCase(ge::DT_FLOAT16);
-    RunInferDataTypeCase(ge::DT_BF16);
-    RunInferDataTypeCase(ge::DT_INT32);
 }

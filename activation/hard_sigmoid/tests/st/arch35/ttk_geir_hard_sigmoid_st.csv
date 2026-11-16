@@ -1,0 +1,4 @@
+testcase_name,op_name,input_shapes,dyn_input_shapes,input_dtypes,input_formats,output_shapes,output_dtypes,output_formats,input_data_ranges,attributes,remark
+hard_sigmoid_geir_normal,hard_sigmoid,((4,16,32),),((4,16,32),),('float32',),('ND',),((4,16,32),),('float32',),('ND',),((-6,6),),{},Static fp32 input spanning both saturated regions of hard sigmoid with default alpha and beta
+hard_sigmoid_geir_dyn_dim,hard_sigmoid,((4,16,32),),((-1,16,32),),('float32',),('ND',),((4,16,32),),('float32',),('ND',),((-6,6),),{},Dynamic first dim (-1) on input_x
+hard_sigmoid_geir_dyn_rank,hard_sigmoid,((4,16,32),),((-2,),),('float32',),('ND',),((4,16,32),),('float32',),('ND',),((-6,6),),{},input_x declared unknown rank (-2)

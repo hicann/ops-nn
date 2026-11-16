@@ -54,11 +54,5 @@ static ge::graphStatus InferShape4HardSigmoid(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataType4HardSigmoid(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(0, context->GetInputDataType(0));
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(HardSigmoid).InferShape(InferShape4HardSigmoid).InferDataType(InferDataType4HardSigmoid);
+IMPL_OP_INFERSHAPE(HardSigmoid).InferShape(InferShape4HardSigmoid);
 } // namespace ops
