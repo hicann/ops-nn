@@ -1140,7 +1140,7 @@ bool ConvTilingAlgorithmBBmode::KAllSplit::GetL1LoadTilingParams(ConvTilingAlgor
     return true;
 }
 
-bool ConvTilingAlgorithmBBmode::KAllSplit::AdjustKL1(ConvTilingAlgorithmBBmode* bbPtr)
+bool ConvTilingAlgorithmBBmode::KAllSplit::AdjustKL1(ConvTilingAlgorithmBBmode* bbPtr) const
 {
     uint64_t kdValue = bbPtr->apiStrategy_->CalcDinFromCinSlice(bbPtr->l1TilingParams.kAL1, bbPtr->singleCi1xC0);
     bbPtr->l1TilingParams.kAL1 = bbPtr->apiStrategy_->ValidateAndAdjustKL1(bbPtr->l1TilingParams.kAL1, kdValue);
@@ -1312,7 +1312,7 @@ bool ConvTilingAlgorithmBBmode::GetL1TilingParams(ConvTilingAlgorithmBBmode* bbP
     return ret;
 }
 
-void ConvTilingAlgorithmBBmode::ScaleBiasUbTilingDecision()
+void ConvTilingAlgorithmBBmode::ScaleBiasUbTilingDecision() const
 {
     uint32_t mL0 = basicBlockInfoPtr->mTile;
     uint32_t nL0 = basicBlockInfoPtr->nTile;

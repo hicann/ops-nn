@@ -23,7 +23,7 @@ namespace conv_tiling {
 class Conv3DAPIStrategy : public ConvAPIStrategy {
 public:
     uint64_t ValidateAndAdjustKL1(uint64_t kValue, uint64_t scaleFactor) const override;
-    uint64_t CalcDinFromCinSlice(uint64_t cinSlice, uint64_t ci1) const override;
+    uint64_t CalcDinFromCinSlice(uint64_t cinSlice, uint64_t cin) const override;
 };
 
 } // namespace conv_tiling

@@ -434,7 +434,7 @@ bool ConvBasicBlock::EvalFWDimCandidate(const pair<uint32_t, uint32_t>& candidat
 }
 
 vector<ConvBasicBlock::FWDimCandidate> ConvBasicBlock::CollectMemoryBoundCandidates(
-    const vector<FWDimCandidate>& evaluated)
+    const vector<FWDimCandidate>& evaluated) const
 {
     vector<FWDimCandidate> fwCandidates;
     for (const auto& cand : evaluated) {
@@ -555,7 +555,7 @@ int32_t ConvBasicBlock::BasicBlockSortFWDimScores(vector<FWDimCandidate>& evalua
     return SelectCubeBoundBest(evaluated);
 }
 
-int32_t ConvBasicBlock::SelectMemoryBoundFallback(const vector<FWDimCandidate>& evaluated)
+int32_t ConvBasicBlock::SelectMemoryBoundFallback(const vector<FWDimCandidate>& evaluated) const
 {
     static constexpr double SCORE_TOLERANCE = 0.1;
     vector<int32_t> range(evaluated.size());
@@ -608,7 +608,8 @@ vector<uint64_t> ConvBasicBlock::CalcMDataSizes(size_t topK, vector<FWDimCandida
     return mDataSizes;
 }
 
-size_t ConvBasicBlock::PickBestByMDataSize(const vector<FWDimCandidate>& evaluated, const vector<uint64_t>& mDataSizes)
+size_t ConvBasicBlock::PickBestByMDataSize(const vector<FWDimCandidate>& evaluated,
+                                           const vector<uint64_t>& mDataSizes) const
 {
     static constexpr double SCORE_TOLERANCE = 0.1;
     size_t topK = mDataSizes.size();

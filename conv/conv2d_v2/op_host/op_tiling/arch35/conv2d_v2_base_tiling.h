@@ -24,7 +24,6 @@
 #include "../conv2d_v2_tiling.h"
 #include "conv2d_v2_tuning_tiling.h"
 #include "conv2d_v2_tiling_utils.h"
-#include "conv2d_v2_base_tiling_aswt.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_cache_tiling.h"
 #include "conv/common/op_host/op_tiling/arch35/conv2d_basic_block_strategy.h"
 #include "error_util.h"
@@ -94,7 +93,7 @@ protected:
                         uint64_t mWindow);
     void SetAWSTTilingdata(vector<tailRegion>& tailRegions, uint64_t mWindow);
     void ASWTDecision();
-    uint64_t ASWTDecisionMWindow(uint64_t mCuts);
+    uint64_t ASWTDecisionMWindow(uint64_t mCuts) const;
     void FillMNFullLoadKPartialTiling(Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling& tiling);
     bool IsMNFullLoadKPartia();
 

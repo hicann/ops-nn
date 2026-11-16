@@ -13,7 +13,6 @@
  * \brief
  */
 #include "conv2d_v2_base_tiling.h"
-#include "conv2d_v2_base_tiling_aswt.h"
 
 namespace optiling {
 namespace conv_ops_tiling {
@@ -67,7 +66,7 @@ void Conv2dBaseTiling::GetTailRegions(vector<tailRegion>& tailRegions, uint64_t 
         tailMCuts = tailMWindowsCuts % tailMWindow;
     }
 
-    if (tailMCuts) {
+    if (tailMCuts != 0) {
         uint64_t tailRegion0OrgM = tailMCuts * baseM;
         uint64_t standardNCuts = ConvCeilDiv(tailMWindowsCuts, mWindow);
         if (noExistRegion2) {
@@ -78,11 +77,11 @@ void Conv2dBaseTiling::GetTailRegions(vector<tailRegion>& tailRegions, uint64_t 
         uint64_t tailRegion0TailNCuts = tailRegion0AllNCuts % nCuts;
         tailRegions[TAIL_REGION0] = {tailRegion0StandardBatch, tailRegion0OrgM, shapeInfo_.co, 0,
                                      tailRegion0TailNCuts * baseN};
-        if (tailRegion0TailNCuts)
+        if (tailRegion0TailNCuts != 0)
             tailRegions[TAIL_REGION0].tailBatch = 1;
     }
 
-    if (tailMWindowsCuts) {
+    if (tailMWindowsCuts != 0) {
         uint64_t tailRegion1OrgM = (mWindow - tailMCuts) * baseM;
         uint64_t standardNCuts = tailMWindowsCuts / mWindow;
         if (noExistRegion2) {
@@ -97,7 +96,7 @@ void Conv2dBaseTiling::GetTailRegions(vector<tailRegion>& tailRegions, uint64_t 
         uint64_t tailRegion1TailNCuts = tailRegion1AllNCuts % nCuts;
         tailRegions[TAIL_REGION1] = {tailRegion1StandardBatch, tailRegion1OrgM, shapeInfo_.co, 0,
                                      tailRegion1TailNCuts * baseN};
-        if (tailRegion1TailNCuts)
+        if (tailRegion1TailNCuts != 0)
             tailRegions[TAIL_REGION1].tailBatch = 1;
     }
 
@@ -123,7 +122,7 @@ void Conv2dBaseTiling::SetAWSTTilingdata(vector<tailRegion>& tailRegions, uint64
         tailRegionOrgM[j] = tailRegions[j].oriM;
         tailRegionOrgN[j] = tailRegions[j].oriN;
         tailRegionBatchTailNs[j] = tailRegions[j].tailOriN % minAdaptBaseN;
-        if (!tailRegionBatchTailNs[j])
+        if (tailRegionBatchTailNs[j] == 0)
             tailRegionBatchTailNs[j] = minAdaptBaseN;
     }
 
@@ -153,7 +152,7 @@ void Conv2dBaseTiling::PrintASWTTilingInfo()
     OP_LOGD(context_->GetNodeType(), "%s AscendC: ASWT tilingdata: %s", paramInfo_.nodeType.c_str(), ss.str().c_str());
 }
 
-uint64_t Conv2dBaseTiling::ASWTDecisionMWindow(uint64_t mCuts)
+uint64_t Conv2dBaseTiling::ASWTDecisionMWindow(uint64_t mCuts) const
 {
     uint64_t mWindow = static_cast<uint64_t>(sqrt(static_cast<double>(opInfo_->aicoreNum)));
     while (opInfo_->aicoreNum % mWindow != 0) {

@@ -131,7 +131,7 @@ public:
     class KAllSplit : public L1LoadStrategyBase {
     public:
         bool GetL1LoadStrategy(ConvTilingAlgorithmBBmode* bbPtr) override;
-        bool AdjustKL1(ConvTilingAlgorithmBBmode* bbPtr);
+        bool AdjustKL1(ConvTilingAlgorithmBBmode* bbPtr) const;
         bool GetL1LoadTilingParams(ConvTilingAlgorithmBBmode* bbPtr) override;
         bool MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr) const;
         bool MultiLoadKAllSplit(ConvTilingAlgorithmBBmode* bbPtr, const Kl1MultiAxis& kL1MultiAxis) const;
@@ -233,7 +233,7 @@ private:
     void CheckL0CDoubleBuffer();
     void TryOptimizeL0MNTile();
     bool EvalL0MNTileCandidate(uint64_t tryMTile, uint64_t tryNTile, L0MNTileEvalResult& result) const;
-    void ScaleBiasUbTilingDecision();
+    void ScaleBiasUbTilingDecision() const;
     void GetUbTiling();
 
     void CalcMNFullLoadFlag() const;

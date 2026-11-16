@@ -115,6 +115,21 @@ constexpr size_t DIS_CONTINUOUS_W_IDX = 1;
 // Nd2nzParam's max nValue
 constexpr uint64_t SRC_D_VALUE_MAX = 65535;
 
+// ASWT
+constexpr static uint8_t TAIL_REGIONS = 3;
+constexpr static uint8_t TAIL_REGION0 = 0;
+constexpr static uint8_t TAIL_REGION1 = 1;
+constexpr static uint8_t TAIL_REGION2 = 2;
+constexpr static uint8_t MAX_DEPTH_RECURSION = 100;
+
+struct tailRegion {
+    uint64_t standardBatch = 0;
+    uint64_t oriM = 0;
+    uint64_t oriN = 0;
+    uint64_t tailBatch = 0;
+    uint64_t tailOriN = 0;
+};
+
 struct Conv2dOriginFormatAixsPosInfo {
     uint32_t nIndex = 0;
     uint32_t cIndex = 0;

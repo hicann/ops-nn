@@ -100,22 +100,23 @@ private:
         uint64_t total = 0;
     };
 
-    void ExecuteMemoryBoundFWDimDecision(const std::vector<FWDimCandidate>& candidates);
+    void ExecuteMemoryBoundFWDimDecision(const std::vector<FWDimCandidate>& fwCandidates);
     bool EvalFWDimCandidate(const std::pair<uint32_t, uint32_t>& candidate,
                             const std::tuple<uint32_t, uint32_t, uint32_t, uint32_t, uint64_t>& oriInfo,
                             std::vector<FWDimCandidate>& evaluated);
     static bool CompareMemoryBoundCandidate(const MemBoundCmpData& cur, const MemBoundCmpData& best);
 
-    std::vector<FWDimCandidate> CollectMemoryBoundCandidates(const std::vector<FWDimCandidate>& evaluated);
+    std::vector<FWDimCandidate> CollectMemoryBoundCandidates(const std::vector<FWDimCandidate>& evaluated) const;
 
     std::unordered_set<std::pair<uint32_t, uint32_t>, BBPairHash> BasicBlockGroupDimCandidates();
     std::unordered_set<std::pair<uint32_t, uint32_t>, BBPairHash> BasicBlockFWDimCandidates();
 
     int32_t BasicBlockSortFWDimScores(std::vector<FWDimCandidate>& evaluated);
-    int32_t SelectMemoryBoundFallback(const std::vector<FWDimCandidate>& evaluated);
+    int32_t SelectMemoryBoundFallback(const std::vector<FWDimCandidate>& evaluated) const;
     int32_t SelectCubeBoundBest(std::vector<FWDimCandidate>& evaluated);
     std::vector<uint64_t> CalcMDataSizes(size_t topK, std::vector<FWDimCandidate>& evaluated);
-    size_t PickBestByMDataSize(const std::vector<FWDimCandidate>& evaluated, const std::vector<uint64_t>& mDataSizes);
+    size_t PickBestByMDataSize(const std::vector<FWDimCandidate>& evaluated,
+                               const std::vector<uint64_t>& mDataSizes) const;
     void SetBasicBlockInfo(const FWDimCandidate& candidate);
 
     const BBCommonParams& params_;
