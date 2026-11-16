@@ -183,7 +183,7 @@ __aicore__ inline void BinaryQuery(LocalTensor<X_T>& xLocal, LocalTensor<B_T>& b
     constexpr uint16_t onRepeatSize = GetVecLen() / sizeof(INDICES_T);
     uint16_t repeatNum = CeilDivision(dataLen, onRepeatSize);
     constexpr uint16_t dstRepeatStride = sizeof(Y_T) / sizeof(INDICES_T) * onRepeatSize;
-    asc_vf_call<BinaryQueryVF<X_T, B_T, Y_T, INDICES_T, SHIFT_T, COMPUTE_T, RegT, RIGHT>>(
+    AscendC::VF_CALL<BinaryQueryVF<X_T, B_T, Y_T, INDICES_T, SHIFT_T, COMPUTE_T, RegT, RIGHT>>(
         xPtr, boundPtr, yPtr, dataLen, repeatNum, onRepeatSize, dstRepeatStride, maxIter, boundLength);
 }
 
