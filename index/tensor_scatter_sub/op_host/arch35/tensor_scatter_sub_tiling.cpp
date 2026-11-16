@@ -55,19 +55,20 @@ static ge::graphStatus ValidateDtype(gert::TilingContext* context)
     auto xDesc = context->GetInputDesc(kXIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     ge::DataType xDtype = xDesc->GetDataType();
-    OP_CHECK_IF(xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_FLOAT && xDtype != ge::DT_INT32 && xDtype != ge::DT_INT8 &&
-                    xDtype != ge::DT_UINT8,
-                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", std::to_string(xDtype).c_str(),
-                                          "float16, float32, int32, int8, uint8"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_FLOAT && xDtype != ge::DT_INT32 && xDtype != ge::DT_INT8 &&
+            xDtype != ge::DT_UINT8,
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+                                  "float16, float32, int32, int8, uint8"),
+        return ge::GRAPH_FAILED);
 
     // SE "参数约束"小节单参数约束: indices dtype ∈ {int32, int64}
     auto indicesDesc = context->GetInputDesc(kIndicesIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
     ge::DataType indicesDtype = indicesDesc->GetDataType();
     OP_CHECK_IF(indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64,
-                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices", std::to_string(indicesDtype).c_str(),
-                                          "int32, int64"),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices",
+                                          ge::TypeUtils::DataTypeToSerialString(indicesDtype).c_str(), "int32, int64"),
                 return ge::GRAPH_FAILED);
 
     // SE "参数约束"小节跨参数约束: x.dtype == updates.dtype
@@ -75,8 +76,9 @@ static ge::graphStatus ValidateDtype(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, updatesDesc);
     OP_CHECK_IF(updatesDesc->GetDataType() != xDtype,
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                    context->GetNodeName(), "updates", std::to_string(updatesDesc->GetDataType()).c_str(),
-                    ("updates dtype must match x dtype " + std::to_string(xDtype)).c_str()),
+                    context->GetNodeName(), "updates",
+                    ge::TypeUtils::DataTypeToSerialString(updatesDesc->GetDataType()).c_str(),
+                    ("updates dtype must match x dtype " + ge::TypeUtils::DataTypeToSerialString(xDtype)).c_str()),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -129,9 +131,26 @@ static ge::graphStatus ValidateShape(gert::TilingContext* context)
                                                          "indices last dim must be at least 1"),
                 return ge::GRAPH_FAILED);
 
-    // dynamic shape: indices last dim unknown, skip updates shape consistency check
-    if (indicesLastDim < 0) {
-        return ge::GRAPH_SUCCESS;
+    OP_CHECK_IF(indicesLastDim < 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    context->GetNodeName(), "indices", (std::to_string(indicesLastDim)).c_str(),
+                    "indices last dim must be a known dim (non-negative) when tiling is invoked"),
+                return ge::GRAPH_FAILED);
+
+    for (int64_t i = 0; i < indicesRank - 1; i++) {
+        OP_CHECK_IF(indicesShape.GetDim(i) < 0,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        context->GetNodeName(), "indices", (std::to_string(indicesShape.GetDim(i))).c_str(),
+                        "indices dim must be a known dim (non-negative) when tiling is invoked"),
+                    return ge::GRAPH_FAILED);
+    }
+
+    for (int64_t i = 0; i < xRank; i++) {
+        OP_CHECK_IF(xShape.GetDim(i) < 0,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        context->GetNodeName(), "x", (std::to_string(xShape.GetDim(i))).c_str(),
+                        "x dim must be a known dim (non-negative) when tiling is invoked"),
+                    return ge::GRAPH_FAILED);
     }
 
     // SE "参数约束"小节跨参数约束: updates.shape == indices.shape[:-1] + x.shape[indices.shape[-1]:]
@@ -218,27 +237,49 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static void ComputeScatterShapes(const gert::Shape& xShape, const gert::Shape& indicesShape, int64_t& numSlices,
-                                 int64_t& sliceSize, int64_t& indicesLastDim, int64_t& xRank,
-                                 int64_t xStrides[MAX_VAR_RANK])
+static ge::graphStatus ComputeScatterShapes(gert::TilingContext* context, const gert::Shape& xShape,
+                                            const gert::Shape& indicesShape, int64_t& numSlices, int64_t& sliceSize,
+                                            int64_t& indicesLastDim, int64_t& xRank, int64_t xStrides[MAX_VAR_RANK])
 {
     xRank = xShape.GetDimNum();
     int64_t indicesRank = indicesShape.GetDimNum();
     indicesLastDim = (indicesRank > 0) ? indicesShape.GetDim(indicesRank - 1) : 0;
     numSlices = 1;
     for (int64_t i = 0; i < indicesRank - 1; i++) {
-        numSlices *= indicesShape.GetDim(i);
+        OP_CHECK_IF(ge::MulOverflow(numSlices, indicesShape.GetDim(i), numSlices),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context->GetNodeName(), "indices", Ops::Base::ToString(indicesShape).c_str(),
+                        "numSlices (product of indices.shape[:-1]) overflows int64 range"),
+                    return ge::GRAPH_FAILED);
     }
     sliceSize = 1;
     for (int64_t i = indicesLastDim; i < xRank; i++) {
-        sliceSize *= xShape.GetDim(i);
+        OP_CHECK_IF(ge::MulOverflow(sliceSize, xShape.GetDim(i), sliceSize),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context->GetNodeName(), "x", Ops::Base::ToString(xShape).c_str(),
+                        "sliceSize (product of x.shape[indices.shape[-1]:]) overflows int64 range"),
+                    return ge::GRAPH_FAILED);
     }
     if (xRank > 0) {
         xStrides[xRank - 1] = 1;
         for (int64_t j = xRank - 2; j >= 0; j--) {
-            xStrides[j] = xStrides[j + 1] * xShape.GetDim(j + 1);
+            OP_CHECK_IF(
+                ge::MulOverflow(xStrides[j + 1], xShape.GetDim(j + 1), xStrides[j]),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", Ops::Base::ToString(xShape).c_str(),
+                                                      "xStrides computation overflows int64 range"),
+                return ge::GRAPH_FAILED);
         }
     }
+    OP_CHECK_IF(numSlices < 0 || sliceSize < 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "indices", Ops::Base::ToString(indicesShape).c_str(),
+                    ("numSlices (product of indices.shape[:-1]) and sliceSize (product of "
+                     "x.shape[indices.shape[-1]:]) must be non-negative when tiling is invoked, got numSlices " +
+                     std::to_string(numSlices) + ", sliceSize " + std::to_string(sliceSize) +
+                     ", x.shape = " + Ops::Base::ToString(xShape))
+                        .c_str()),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
 }
 
 static void ComputeScatterCoreNum(int64_t totalXElements, int64_t numSlices, int64_t coreNum,
@@ -289,13 +330,20 @@ static ge::graphStatus TensorScatterSubTilingFunc(gert::TilingContext* context)
     auto xShape = EnsureNotScalar(context->GetInputShape(kXIdx)->GetStorageShape());
     auto indicesShape = EnsureNotScalar(context->GetInputShape(kIndicesIdx)->GetStorageShape());
     int64_t totalXElements = xShape.GetShapeSize();
+    OP_CHECK_IF(totalXElements < 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "x", Ops::Base::ToString(xShape).c_str(),
+                    "shape size overflows int64 range (GetShapeSize sentinel kInvalidDimValue)"),
+                return ge::GRAPH_FAILED);
 
     int64_t numSlices = 0;
     int64_t sliceSize = 0;
     int64_t indicesLastDim = 0;
     int64_t xRank = 0;
     int64_t xStrides[MAX_VAR_RANK] = {0};
-    ComputeScatterShapes(xShape, indicesShape, numSlices, sliceSize, indicesLastDim, xRank, xStrides);
+    OP_CHECK_IF(ComputeScatterShapes(context, xShape, indicesShape, numSlices, sliceSize, indicesLastDim, xRank,
+                                     xStrides) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ComputeScatterShapes failed"), return ge::GRAPH_FAILED);
 
     // 4. fill tiling data
     TensorScatterSubTilingData* tiling = context->GetTilingData<TensorScatterSubTilingData>();

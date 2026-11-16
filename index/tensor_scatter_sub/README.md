@@ -79,10 +79,12 @@ $$
 - x、updates、y的dtype必须一致；indices的dtype为INT32或INT64。
 - y的shape与x的shape完全相同。
 - x的维度范围为1D~8D。
-- 记K=indices.shape[-1]，必须满足K<=x的维度数；updates的shape必须等于indices.shape[:-1]拼接x.shape[K:]。
-- indices中第j个索引分量的取值必须在x第j维的合法范围[0,x.shape[j])内，越界索引属于非法输入，kernel内跳过该条目。
+- indices、updates为ND张量，维度上限为8维。
+- 记K=indices.shape[-1]，必须满足1<=K<=x的维度数；updates的shape必须等于indices.shape[:-1]拼接x.shape[K:]。
+- 索引须在x的范围内（第j个索引分量的取值在[0, x.shape[j])内）；越界索引属于非法输入，不保证其行为。
 - indices存在重复索引时，按输入顺序逐条串行累减，结果确定。
-- x、indices、updates允许为空tensor（元素数为0），此时y为x的拷贝。
+- x、indices、updates允许为空tensor（元素数为0），此时y为x的拷贝。空indices指形状为(0, K)（K>=1）的形态；末维长度为0的形态（如(0,)）不支持。
+- 支持动态shape/动态rank：`-1`表示未知维度，`[-2]`表示未知rank。
 
 ## 调用说明
 

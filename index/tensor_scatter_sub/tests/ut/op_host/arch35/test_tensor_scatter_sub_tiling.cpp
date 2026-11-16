@@ -320,3 +320,118 @@ TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_indices_last_dim_exceeds_x
     auto result = DoTensorScatterSubTilingCase({4, 5}, {3, 3}, {3}, ge::DT_FLOAT, ge::DT_INT32);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
+
+// ===== tiling 溢出/负维守卫看护用例 =====
+// 大维常量：2^62（GetShapeSize 乘积溢出构造哨兵）、2^40（numSlices 累乘溢出）
+static constexpr int64_t HUGE_DIM_62 = static_cast<int64_t>(1) << 62;
+static constexpr int64_t HUGE_DIM_40 = static_cast<int64_t>(1) << 40;
+
+// 哨兵形态：x 维度乘积超 int64，GetShapeSize 返回 kInvalidDimValue，须拒绝
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_x_shape_size_sentinel_overflow_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({HUGE_DIM_62, HUGE_DIM_62}, {1, 2}, {1}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// 负维乘积形态：x 含负维时 GetShapeSize 乘积为负（如 (2,-1) -> -2，非哨兵），同样须拒绝
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_x_negative_shape_product_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({2, -1}, {1, 2}, {1}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// 空 tensor 边界：x 含 0 维为合法形态，须放行且 tiling 数据正确
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_x_empty_tensor_zero_dim_ok)
+{
+    auto result = DoTensorScatterSubTilingCase({0}, {4, 1}, {4}, ge::DT_FLOAT, ge::DT_INT32);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    ASSERT_EQ(result.tilingKey, TILING_KEY_DEFAULT);
+    EXPECT_EQ(result.totalXElements, 0);
+    EXPECT_EQ(result.numSlices, 4);
+    EXPECT_EQ(result.indicesLastDim, 1);
+    EXPECT_EQ(result.sliceSize, 1);
+    EXPECT_EQ(result.xRank, 1);
+    EXPECT_EQ(result.xStrides[0], 1);
+}
+
+// indices.shape[:-1] 乘积（numSlices）溢出 int64，须拒绝
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_numslices_overflow_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({2, 3}, {HUGE_DIM_40, HUGE_DIM_40, 2}, {HUGE_DIM_40, HUGE_DIM_40},
+                                               ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// 空 indices (0,K>=1) 形态 numSlices=0，照常放行且 tiling 数据正确
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_empty_indices_zero_slices_ok)
+{
+    auto result = DoTensorScatterSubTilingCase({3, 4}, {0, 2}, {0}, ge::DT_FLOAT, ge::DT_INT32);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    ASSERT_EQ(result.tilingKey, TILING_KEY_DEFAULT);
+    EXPECT_EQ(result.totalXElements, 12);
+    EXPECT_EQ(result.numSlices, 0);
+    EXPECT_EQ(result.indicesLastDim, 2);
+    EXPECT_EQ(result.sliceSize, 1);
+    EXPECT_EQ(result.xRank, 2);
+    EXPECT_EQ(result.xStrides[0], 4);
+    EXPECT_EQ(result.xStrides[1], 1);
+}
+
+// x.shape[K:] 乘积（sliceSize）溢出 int64，须拒绝；x 含 0 维时 GetShapeSize 早退 0，此处单独拦截 sliceSize 溢出
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_slicesize_overflow_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({0, HUGE_DIM_62, HUGE_DIM_62}, {5, 1}, {5, HUGE_DIM_62, HUGE_DIM_62},
+                                               ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// xStrides 累乘溢出 int64，须拒绝；x=(0,2^62,2^62)、K=2 时 GetShapeSize=0、sliceSize=x[2:]
+// 不触发溢出，xStrides[0]=2^62*2^62 溢出——本用例拦截
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_xstrides_overflow_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({0, HUGE_DIM_62, HUGE_DIM_62}, {3, 2}, {3, HUGE_DIM_62}, ge::DT_FLOAT,
+                                               ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// indices 末维为负（未知维到达 tiling）时须拒绝
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_indices_last_dim_negative_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({4, 5, 6}, {3, -1}, {3, 5, 6}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// x 与 indices 均空（(0,K>=1) 形态）：totalXElements==0 且 numSlices==0，须放行且整链 SUCCESS
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_x_and_indices_both_empty_ok)
+{
+    auto result = DoTensorScatterSubTilingCase({0}, {0, 1}, {0}, ge::DT_FLOAT, ge::DT_INT32);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    ASSERT_EQ(result.tilingKey, TILING_KEY_DEFAULT);
+    EXPECT_EQ(result.totalXElements, 0);
+    EXPECT_EQ(result.numSlices, 0);
+    EXPECT_EQ(result.indicesLastDim, 1);
+    EXPECT_EQ(result.sliceSize, 1);
+    EXPECT_EQ(result.xRank, 1);
+    EXPECT_EQ(result.xStrides[0], 1);
+}
+
+// indices 前缀维为负（未知维到达 tiling）时 numSlices 为负、scatter 条目被静默丢弃，须拒绝
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_indices_prefix_dim_negative_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({4, 5}, {-1, 2}, {1}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// x 任一维度为负（未知维到达 tiling）时须拒绝，与 shape 乘积负值拒绝互为独立守卫
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_x_negative_dim_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({-1, 5}, {2, 1}, {2, 5}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+// x 偶数负维乘积非负（totalXElements>0）时不再绕过拒绝静默放行，须在维度级拒绝
+TEST_F(TestTensorScatterSubTiling, tensor_scatter_sub_x_even_negative_dims_positive_product_fail)
+{
+    auto result = DoTensorScatterSubTilingCase({-1, -1, 4}, {1, 3}, {1}, ge::DT_FLOAT, ge::DT_INT32);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}

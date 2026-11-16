@@ -45,16 +45,60 @@ static constexpr int32_t UB_ALIGN_COUNT = ((UB_PARAM_COUNT * 8 + 31) / 32) * 32 
 template <typename IDX_T>
 static constexpr uint32_t THREADS_PHASE1 = (sizeof(IDX_T) == 4) ? 1024 : 512;
 
+// Largest value representable by the flat index type; the grid-stride loops check
+// their increment headroom against it.
+template <typename IDX_T>
+static constexpr IDX_T IDX_MAX = (sizeof(IDX_T) == 4) ? static_cast<IDX_T>(INT32_MAX) : static_cast<IDX_T>(INT64_MAX);
+
 // Phase 1: Copy x -> y (Grid-Stride, multi-core parallel)
 // R003: IDX_T selects int32/int64 index arithmetic; int32 used when totalXElements <= INT32_MAX
 template <typename T, typename IDX_T>
 __simt_vf__ __aicore__ __launch_bounds__(THREADS_PHASE1<IDX_T>) inline void OpTensorScatterSubPhase1Copy(
     IDX_T totalXElements, __gm__ T* xIn, __gm__ T* y)
 {
+    const IDX_T step = static_cast<IDX_T>(blockDim.x) * static_cast<IDX_T>(gridDim.x);
     for (IDX_T i = static_cast<IDX_T>(blockIdx.x) * static_cast<IDX_T>(blockDim.x) + static_cast<IDX_T>(threadIdx.x);
-         i < totalXElements; i += static_cast<IDX_T>(blockDim.x) * static_cast<IDX_T>(gridDim.x)) {
+         i < totalXElements;) {
         y[i] = xIn[i];
+        // Increment headroom: a final i within step of the IDX_T maximum would wrap its
+        // increment negative and keep the loop copying out of bounds. totalXElements never
+        // exceeds that maximum, so breaking here equals the natural loop exit.
+        if (i > IDX_MAX<IDX_T> - step) {
+            break;
+        }
+        i += step;
     }
+}
+
+// Overflow-checked int64 arithmetic for the scatter index math: the check runs before the
+// operation, and entries whose address or offset arithmetic would overflow are skipped like
+// out-of-bound ones, so wraparound can no longer bypass the bounds guard.
+__simt_callee__ __aicore__ inline bool MulOverflow(int64_t lhs, int64_t rhs)
+{
+    if (lhs == 0 || rhs == 0) {
+        return false;
+    }
+    if (lhs > 0) {
+        if (rhs > 0) {
+            return lhs > INT64_MAX / rhs;
+        }
+        return rhs < INT64_MIN / lhs;
+    }
+    if (rhs > 0) {
+        return lhs < INT64_MIN / rhs;
+    }
+    return lhs < INT64_MAX / rhs;
+}
+
+__simt_callee__ __aicore__ inline bool AddOverflow(int64_t lhs, int64_t rhs)
+{
+    if (rhs > 0) {
+        return lhs > INT64_MAX - rhs;
+    }
+    if (rhs < 0) {
+        return lhs < INT64_MIN - rhs;
+    }
+    return false;
 }
 
 // Phase 2: Scatter subtract (sequential slices, block 0 only, deterministic for duplicate indices)
@@ -75,17 +119,37 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpTensorScatter
 
     const int64_t indicesLastDim = tilingUb[MAX_RANK];
     const int64_t sliceSize = tilingUb[MAX_RANK + 1];
+    // Wrap-free upper bound for an accepted flatOffset: totalXElements - sliceSize cannot wrap
+    // while sliceSize <= totalXElements (legal shapes always satisfy it); a slice larger than y
+    // never fits, so maxFlatOffset stays -1 then.
+    int64_t maxFlatOffset = -1;
+    if (sliceSize >= 0 && sliceSize <= totalXElements) {
+        maxFlatOffset = totalXElements - sliceSize;
+    }
 
     // Process slices sequentially: ensures deterministic ordering for duplicate indices
     for (int64_t s = 0; s < numSlices; s++) {
+        // Indices/updates row bases must stay representable before they are formed
+        const bool basesValid = !MulOverflow(s, indicesLastDim) && !MulOverflow(s, sliceSize);
+        const int64_t indicesBase = basesValid ? s * indicesLastDim : 0;
+        const int64_t updatesBase = basesValid ? s * sliceSize : 0;
         int64_t flatOffset = 0;
-        for (int64_t j = 0; j < indicesLastDim; j++) {
-            int64_t idxVal = static_cast<int64_t>(indices[s * indicesLastDim + j]);
-            flatOffset += idxVal * tilingUb[j];
+        bool inRange = basesValid;
+        for (int64_t j = 0; inRange && j < indicesLastDim; j++) {
+            if (AddOverflow(indicesBase, j)) {
+                inRange = false;
+                break;
+            }
+            const int64_t idxVal = static_cast<int64_t>(indices[indicesBase + j]);
+            const int64_t stride = tilingUb[j];
+            if (MulOverflow(idxVal, stride) || AddOverflow(flatOffset, idxVal * stride)) {
+                inRange = false;
+                break;
+            }
+            flatOffset += idxVal * stride;
         }
         // Out-of-bound check: skip if slice range exceeds y bounds (negative index included)
-        if (flatOffset >= 0 && flatOffset + sliceSize <= totalXElements) {
-            int64_t updatesBase = s * sliceSize;
+        if (inRange && flatOffset >= 0 && flatOffset <= maxFlatOffset) {
             // Parallel element-wise subtraction within this slice
             for (int64_t e = static_cast<int64_t>(threadIdx.x); e < sliceSize; e += static_cast<int64_t>(blockDim.x)) {
                 y[flatOffset + e] = y[flatOffset + e] - updates[updatesBase + e];

@@ -25,14 +25,12 @@
 #include "graph.h"
 #include "types.h"
 #include "tensor.h"
-#include "ge_error_codes.h"
+#include "graph/error_codes.h"
 #include "ge_api_types.h"
 #include "ge_api.h"
-#include "array_ops.h"
+#include "ops_proto_legacy.h"
 #include "ge_ir_build.h"
 
-#include "experiment_ops.h"
-#include "nn_other.h"
 #include "../op_graph/tensor_scatter_sub_proto.h"
 
 #define FAILED -1
@@ -182,6 +180,8 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorD
         *(pData + i) = value;
     }
     input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    // Tensor 构造为深拷贝，分配缓冲在构造后即可安全释放
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -194,7 +194,13 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
         size *= shapes[i];
     }
     uint32_t data_len = size * GetDataTypeSize(data_type);
-    int32_t* pData = new (std::nothrow) int32_t[size];
+    // Tensor 深拷贝读 data_len 字节，而写入循环按 int32 填 size 个元素；分配须覆盖两者较大者，
+    // 避免 INT64/UINT64 场景（data_len = size*8 > size*4 分配）越界读；() 零初始化保证拷贝内容确定
+    size_t allocElems = size;
+    if (GetDataTypeSize(data_type) > sizeof(int32_t)) {
+        allocElems = data_len / sizeof(int32_t);
+    }
+    int32_t* pData = new (std::nothrow) int32_t[allocElems]();
     if (pData == nullptr) {
         printf("%s - ERROR - [XIR]: GenOnesData alloc failed\n", GetTime().c_str());
         return FAILED;
@@ -203,6 +209,8 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
         *(pData + i) = value;
     }
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+    // Tensor 构造为深拷贝，分配缓冲在构造后即可安全释放
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -224,6 +232,8 @@ int32_t GenZeroIndicesData(vector<int64_t> shapes, Tensor& input_tensor, TensorD
         return FAILED;
     }
     input_tensor = Tensor(input_tensor_desc, pData, data_len);
+    // Tensor 构造为深拷贝，分配缓冲在构造后即可安全释放
+    delete[] pData;
     return SUCCESS;
 }
 

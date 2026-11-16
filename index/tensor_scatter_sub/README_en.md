@@ -81,10 +81,12 @@ Here, N is the product of indices.shape[:-1], that is, the number of slices.
 - The dtypes of x, updates, and y must be consistent. The dtype of indices is INT32 or INT64.
 - The shape of y is exactly the same as the shape of x.
 - The dimension range of x is 1D to 8D.
-- Let K=indices.shape[-1]. K must be less than or equal to the number of dimensions of x. The shape of updates must be indices.shape[:-1] concatenated with x.shape[K:].
-- The value of the j-th index component in indices must be within the valid range [0,x.shape[j]) of the j-th dimension of x. Out-of-bounds indexes are invalid inputs, and the kernel skips these entries.
+- indices and updates are ND tensors with up to 8 dimensions.
+- Let K=indices.shape[-1]. K must satisfy 1<=K<=the number of dimensions of x. The shape of updates must be indices.shape[:-1] concatenated with x.shape[K:].
+- Indexes must be within the range of x (the j-th index component must be within [0, x.shape[j])). Out-of-bounds indexes are invalid inputs, and their behavior is not guaranteed.
 - When indices contain repeated indexes, subtraction is performed serially one by one in input order, and the result is deterministic.
-- x, indices, and updates can be empty tensors (with 0 elements). In this case, y is a copy of x.
+- x, indices, and updates can be empty tensors (with 0 elements). In this case, y is a copy of x. An empty indices tensor refers to the shape (0, K) with K>=1. Shapes whose last dimension length is 0 (such as (0,)) are not supported.
+- Dynamic shape and dynamic rank are supported: `-1` denotes an unknown dimension and `[-2]` denotes an unknown rank.
 
 ## Invocation Description
 
