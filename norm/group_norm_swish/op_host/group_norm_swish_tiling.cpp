@@ -17,6 +17,7 @@
 #include "log/log.h"
 #include "group_norm_swish_tiling.h"
 #include "register/op_impl_registry.h"
+#include <cmath>
 #include <string>
 #include <vector>
 #include "util/shape_util.h"
@@ -32,6 +33,7 @@ static const uint64_t OUTPUT_IDX_RSTD = 2;
 static const uint64_t X_SHAPE_MIN_LEN = 2;
 static const uint64_t X_SHAPE_MAX_LEN = 8;
 static const uint64_t ATTR_IDX_NUM_GROUPS = 0;
+static const uint64_t ATTR_IDX_DATA_FORMAT = 1;
 static const uint64_t ATTR_IDX_EPSILON = 2;
 static const uint64_t ATTR_IDX_ACTIVATE_SWISH = 3;
 static const uint64_t ATTR_IDX_SWISH_SCALE = 4;
@@ -252,7 +254,14 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext* context)
                                                          "operator registration and context construction."}));
         return ge::GRAPH_FAILED;
     };
+    const char* dataFormat = attrs->GetStr(ATTR_IDX_DATA_FORMAT);
+    OP_CHECK_NULL_WITH_CONTEXT(context, dataFormat);
+    OP_CHECK_IF(std::string(dataFormat) != "NCHW",
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "data_format", dataFormat,
+                                                      "Only NCHW is supported."),
+                return ge::GRAPH_FAILED);
     const int64_t* numGroups = attrs->GetAttrPointer<int64_t>(ATTR_IDX_NUM_GROUPS);
+    OP_CHECK_NULL_WITH_CONTEXT(context, numGroups);
     OP_CHECK_IF((*numGroups <= 0),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups", std::to_string(*numGroups),
                                                       "numGroups must be bigger than 0."),
@@ -261,6 +270,21 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext* context)
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups", std::to_string(*numGroups),
                                                       "channel must be integer multiples of numGroups."),
                 return ge::GRAPH_FAILED);
+    const float* epsilon = attrs->GetAttrPointer<float>(ATTR_IDX_EPSILON);
+    OP_CHECK_NULL_WITH_CONTEXT(context, epsilon);
+    OP_CHECK_IF(!std::isfinite(*epsilon) || *epsilon < 0.0f,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "eps", std::to_string(*epsilon),
+                                                      "eps must be a finite value and not less than 0."),
+                return ge::GRAPH_FAILED);
+    const bool* activateSwish = attrs->GetAttrPointer<bool>(ATTR_IDX_ACTIVATE_SWISH);
+    OP_CHECK_NULL_WITH_CONTEXT(context, activateSwish);
+    const float* swishScale = attrs->GetAttrPointer<float>(ATTR_IDX_SWISH_SCALE);
+    OP_CHECK_NULL_WITH_CONTEXT(context, swishScale);
+    OP_CHECK_IF(
+        *activateSwish && !std::isfinite(*swishScale),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "swish_scale", std::to_string(*swishScale),
+                                              "swishScale must be a finite value when activateSwish is true."),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

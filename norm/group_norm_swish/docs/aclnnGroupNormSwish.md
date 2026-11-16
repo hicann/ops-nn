@@ -145,7 +145,7 @@ aclnnStatus aclnnGroupNormSwish(
        <td>dataFormatOptional（char*）</td>
        <td>输入</td>
        <td>数据格式。</td>
-       <td>建议值NCHW。</td>
+       <td>仅支持NCHW，第0维为N，第1维为C。</td>
        <td>-</td>
        <td>-</td>
        <td>-</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnGroupNormSwish(
        <td>eps（double）</td>
        <td>输入</td>
        <td>防止产生除0的偏移，yOut和rstdOut计算公式中的eps值。</td>
-       <td>建议值1e-5。</td>
+       <td>建议值1e-5。转换为float后需为有限值且不小于0，允许正零和负零。</td>
        <td>-</td>
        <td>-</td>
        <td>-</td>
@@ -175,7 +175,7 @@ aclnnStatus aclnnGroupNormSwish(
        <td>swishScale（double）</td>
        <td>输入</td>
        <td>Swish计算时的scale值。</td>
-       <td>建议值1.0。</td>
+       <td>建议值1.0。activateSwish为true时，转换为float后需为有限值。</td>
        <td>-</td>
        <td>-</td>
        <td>-</td>
@@ -258,21 +258,38 @@ aclnnStatus aclnnGroupNormSwish(
       <td>传入的x、gamma、beta、yOut、meanOut、rstdOut是空指针时。</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>x、gamma、beta、yOut、meanOut、rstdOut数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
+      <td>输入输出参数的数据类型组合不满足支持要求。gamma与beta需一致，且与x相同或为FLOAT；yOut与x一致，meanOut、rstdOut与gamma一致。</td>
+    </tr>
+    <tr>
+      <td rowspan="8">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="8">561002</td>
       <td>输入或者输出的参数维度不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>输入输出参数的shape或数据类型不一致。</td>
+      <td>输入输出参数的shape不一致。</td>
     </tr>
     <tr>
       <td>x的第0、1维为0，不满足要求。</td>
     </tr>
     <tr>
       <td>x的第1维（C）不能被numGroups整除。</td>
+    </tr>
+    <tr>
+      <td>numGroups小于或等于0。</td>
+    </tr>
+    <tr>
+      <td>eps转换为float后为非有限值（NaN或Inf）或小于0。</td>
+    </tr>
+    <tr>
+      <td>activateSwish为true时，swishScale转换为float后为非有限值（NaN或Inf）。</td>
+    </tr>
+    <tr>
+      <td>dataFormatOptional不是NCHW。</td>
     </tr>
   </tbody></table>
 
@@ -316,6 +333,8 @@ aclnnStatus aclnnGroupNormSwish(
 
 ## 约束说明
 
+- 数据格式
+  - 请按参数表使用ND格式。本接口不承诺对所有非ND格式入参返回错误，返回成功不代表该格式受支持。
 - 确定性计算
   - aclnnGroupNormSwish默认确定性实现。
 
