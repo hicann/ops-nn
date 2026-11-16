@@ -219,13 +219,13 @@ aclnnStatus aclnnGemm(
     - C supports data types BFLOAT16, FLOAT16, and FLOAT32.
     - out supports the following data types: BFLOAT16, FLOAT16, and FLOAT32.
     - cubeMathType=1: When the input data type is FLOAT32, it is converted to HFLOAT32 for computation. When the input is of other data types, no processing is performed.
-    - cubeMathType=2: This option is not supported when the input data type is BFLOAT16.
+    - cubeMathType=2: This option does not take effect when the input data type is BFLOAT16 (computation is performed as KEEP_DTYPE), and only a warning is printed.
     - cubeMathType=3: When the input data type is FLOAT32, it will be converted to HFLOAT32 for computation. This option is not supported when the input is of other data types.
   <!-- end id6 -->
   <!-- npu="950" id11 -->
   - <term>Ascend 950PR&950DT products</term>:
     - cubeMathType=1: When the input data type is FLOAT32, it is converted to HFLOAT32 for computation. When the input is of other data types, no processing is performed.
-    - cubeMathType=2: This option is not supported when the input data type is BFLOAT16.
+    - cubeMathType=2: This option does not take effect when the input data type is BFLOAT16 (computation is performed as KEEP_DTYPE), and only a warning is printed.
     - cubeMathType=3: When the input data type is FLOAT32, it will be converted to HFLOAT32 for computation. This option is not supported when the input is of other data types.
     - cubeMathType=4: when the input data type is FLOAT16/BFLOAT16, the gemm process performs the computation at a higher precision. In this case, broadcasting between input C and the matmul result matrix is currently not supported. When the input data type is FLOAT32 and any of the following conditions is met, the vector core is used for computation to improve result precision (this may degrade operator performance in some use cases). Condition 1: m equals 1 or n equals 1. Condition 2: A is transposed and B is not transposed.
 
