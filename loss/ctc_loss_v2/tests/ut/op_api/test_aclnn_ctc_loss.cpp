@@ -364,3 +364,76 @@ TEST_F(l2_ctc_loss_test, test_ctc_loss_outLogAlpha_shape_error)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// 2维(T,C)形态fp16大类别数(C>8180)场景放行，N按rank解析为1，不再误用C与MAX_BATCH比较
+TEST_F(l2_ctc_loss_test, test_ctc_loss_logprobs_2dim_fp16_large_classnum)
+{
+    int64_t localT = 1;
+    int64_t localN = 1;
+    int64_t localC = 8181;
+    int64_t localS = 1;
+    int64_t logAlphaX = ((2 * localS + 1) + 7) / 8 * 8;
+    auto logProbs = TensorDesc({localT, localC}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto targets = TensorDesc({localN, localS}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto inputLengths = IntArrayDesc(vector<int64_t>{localT});
+    auto targetLengths = IntArrayDesc(vector<int64_t>{localS});
+    int64_t blank = 0;
+    bool zeroInfinity = false;
+    auto negLogLikelihoodOut = TensorDesc({}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto logAlphaOut = TensorDesc({localN, localT, logAlphaX}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// fp16场景max(targetLengths)=1000拒绝：inputS由logAlphaOut尾维对齐反算((2*1000+1+7)/8*8-1)/2=1003，超出上限1000，
+// 实际生效边界为999，与内核IsV3AiCoreSupport的对齐反算约束一致
+TEST_F(l2_ctc_loss_test, test_ctc_loss_fp16_targetlengths_1000)
+{
+    int64_t localT = 1000;
+    int64_t localN = 1;
+    int64_t localC = 2;
+    int64_t localS = 1000;
+    int64_t logAlphaX = ((2 * localS + 1) + 7) / 8 * 8;
+    auto logProbs = TensorDesc({localT, localN, localC}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto targets = TensorDesc({localN, localS}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto inputLengths = IntArrayDesc(vector<int64_t>{localT});
+    auto targetLengths = IntArrayDesc(vector<int64_t>{localS});
+    int64_t blank = 0;
+    bool zeroInfinity = false;
+    auto negLogLikelihoodOut = TensorDesc({localN}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto logAlphaOut = TensorDesc({localN, localT, logAlphaX}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// fp16场景max(targetLengths)=1001超出上限拒绝
+TEST_F(l2_ctc_loss_test, test_ctc_loss_fp16_targetlengths_1001)
+{
+    int64_t localT = 1001;
+    int64_t localN = 1;
+    int64_t localC = 2;
+    int64_t localS = 1001;
+    int64_t logAlphaX = ((2 * localS + 1) + 7) / 8 * 8;
+    auto logProbs = TensorDesc({localT, localN, localC}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto targets = TensorDesc({localN, localS}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto inputLengths = IntArrayDesc(vector<int64_t>{localT});
+    auto targetLengths = IntArrayDesc(vector<int64_t>{localS});
+    int64_t blank = 0;
+    bool zeroInfinity = false;
+    auto negLogLikelihoodOut = TensorDesc({localN}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto logAlphaOut = TensorDesc({localN, localT, logAlphaX}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnCtcLoss, INPUT(logProbs, targets, inputLengths, targetLengths, blank, zeroInfinity),
+                        OUTPUT(negLogLikelihoodOut, logAlphaOut));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

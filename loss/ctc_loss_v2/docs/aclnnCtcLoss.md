@@ -109,7 +109,7 @@ aclnnStatus aclnnCtcLoss(
         <td>-</td>
         <td>FLOAT16、FLOAT、BFLOAT16、DOUBLE</td>
         <td>ND</td>
-        <td>(T,N,C)或(T,C)<br>T为输入长度，N为批处理大小，C为类别数，必须大于0，包括空白标识</td>
+        <td>(T,N,C)或(T,C)<br>T为输入长度，N为批处理大小(N需要小于等于8180)，C为类别数(C需要小于等于200000)，必须大于0，包括空白标识<br>N、C的上限仅FLOAT16/BFLOAT16输入时生效</td>
         <td>√</td>
       </tr>
       <tr>
@@ -301,6 +301,10 @@ aclnnStatus aclnnCtcLoss(
   - `targetlengths`中的元素要求小于等于`inputLengths`中对应的元素。
 
   若不满足前三条值域约束，CPU/GPU可能存在越界行为，导致negLogLikelihoodOut和logAlphaOut的计算结果可能与CPU/GPU存在差异。若不满足第四条值域约束，logAlphaOut在对应batch上的计算结果与CPU/GPU存在差异。
+
+- **半精度规模限制：**
+  - `logProbs`数据类型为FLOAT16或BFLOAT16时，批次数N需小于等于8180，类别数C需小于等于200000，`targetlengths`的最大值需小于等于999（实现上由`logAlphaOut`尾维按8对齐后反算校验，实际生效边界为999），超出任一限制时接口返回`ACLNN_ERR_PARAM_INVALID`。
+  - `logProbs`数据类型为FLOAT或DOUBLE时，不受上述规模限制。
 
 - 确定性计算：
   - aclnnCtcLoss默认确定性实现。

@@ -47,7 +47,6 @@ constexpr int64_t MAX_SYMBOL_SET_LEN_V3 = 200000;
 constexpr int64_t MAX_LABEL_LEN = 1000;
 constexpr int64_t MAX_BATCH = 8180;
 constexpr int64_t DOUBLE = 2;
-constexpr int64_t CDIM = 2;
 constexpr int64_t SDIM = 2;
 
 // 根据API定义,需要列出log_prob&out参数所能支持的dtype
@@ -83,8 +82,13 @@ static bool CheckDtypeValid(const aclTensor* logProbs, const aclTensor* targets,
     bool is910bSocVersion = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                              GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93);
     bool IsRegbaseSocVersion = Ops::NN::AclnnUtil::IsRegbase();
-    int64_t inputN = logProbs->GetViewShape().GetDim(1);
-    int64_t inputC = logProbs->GetViewShape().GetDim(CDIM);
+    // 2维(T,C)形态N固定为1、C取第1维；3维(T,N,C)形态按各自轴解析，与CtcLossNpuOutputShape推导语义一致
+    int64_t inputN = 1;
+    int64_t inputC = logProbs->GetViewShape().GetDim(LOG_PROBS_2D_DIM_C);
+    if (logProbs->GetViewShape().GetDimNum() == DIM_NUM_THREE) {
+        inputN = logProbs->GetViewShape().GetDim(LOG_PROBS_3D_DIM_N);
+        inputC = logProbs->GetViewShape().GetDim(LOG_PROBS_3D_DIM_C);
+    }
     int64_t inputS = (logAlphaOut->GetViewShape().GetDim(SDIM) - 1) / DOUBLE;
     bool shapeCheck = inputC > MAX_SYMBOL_SET_LEN_V3 || inputN > MAX_BATCH || inputS > MAX_LABEL_LEN;
     bool dtypeCheck = logProbs->GetDataType() == op::DataType::DT_BF16 ||

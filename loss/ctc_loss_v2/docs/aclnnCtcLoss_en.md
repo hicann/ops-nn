@@ -111,7 +111,7 @@ aclnnStatus aclnnCtcLoss(
         <td>-</td>
         <td>FLOAT16, FLOAT, BFLOAT16, DOUBLE</td>
         <td>ND</td>
-        <td>(T,N,C) or (T,C)<br>T indicates the input length, N indicates the batch size, and C indicates the number of classes. C must be greater than 0 and includes the blank symbol.</td>
+        <td>(T,N,C) or (T,C)<br>T indicates the input length, N indicates the batch size(N must be less than or equal to 8180), and C indicates the number of classes. C must be greater than 0 and includes the blank symbol(C must be less than or equal to 200000).<br>The N and C upper limits apply only to FLOAT16/BFLOAT16 inputs.</td>
         <td>√</td>
       </tr>
       <tr>
@@ -303,6 +303,10 @@ aclnnStatus aclnnCtcLoss(
   - Each element in `targetlengths` must be less than or equal to the corresponding element in `inputLengths`.
 
   If the first three value range constraints are not met, out-of-bounds behavior may occur on CPU/GPU, causing the computation results of negLogLikelihoodOut and logAlphaOut to potentially differ from those on CPU/GPU. If the fourth value range constraint is not met, the computation result of logAlphaOut on the corresponding batch will differ from that on CPU/GPU.
+
+- **Half-Precision Scale Constraints:**
+  - When the data type of `logProbs` is FLOAT16 or BFLOAT16, the batch size N must be less than or equal to 8180, the number of classes C must be less than or equal to 200000, and the maximum value of `targetlengths` must be less than or equal to 999 (the validation back-calculates from the 8-byte-aligned tail dimension of `logAlphaOut`, so the effective boundary is 999). If any of these limits is exceeded, the interface returns `ACLNN_ERR_PARAM_INVALID`.
+  - When the data type of `logProbs` is FLOAT or DOUBLE, the above scale constraints do not apply.
 
 - Deterministic computation:
   - aclnnCtcLoss defaults to a deterministic implementation.
