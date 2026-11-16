@@ -16,6 +16,7 @@
 #pragma once
 
 #include "../../common/arch35/weight_quant_batch_matmul_cube_compute_tools.h"
+#include "tool.h"
 
 #define LOCAL_TEMPLATE_CLASS_PARAMS \
     template <typename xType, typename wType, typename yType, bool bTrans, typename x1ScaleType, typename x2ScaleType>

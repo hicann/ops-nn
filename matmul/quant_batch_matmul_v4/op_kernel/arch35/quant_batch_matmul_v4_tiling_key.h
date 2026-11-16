@@ -17,8 +17,10 @@
 
 #if defined(__NPU_ARCH__)
 #include "../../inc/macro.h"
+#include "../../quant_batch_matmul_v3/arch35/quant_batch_matmul_v3_tiling_data.h"
 #else
 #include "../../../../common/inc/op_kernel/macro.h"
+#include "../../../quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 #endif
 
 #include "ascendc/host_api/tiling/template_argument.h"
@@ -60,6 +62,8 @@
 #define QBMMV4_LUT_ASW 1
 #define QBMMV4_LUT_AL1FULL 2
 #define QBMMV4_ANTIQUANT_VECTOR 3
+#define QBMMV4_MX_BLAZE 4
+#define QBMMV4_MX_BLAZE_A_FULL_LOAD 5
 
 ASCENDC_TPL_ARGS_DECL(QuantBatchMatmulV4,
                       ASCENDC_TPL_UINT_DECL(TRANS, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, QBMMV4_NOT_TRANS,
@@ -72,18 +76,21 @@ ASCENDC_TPL_ARGS_DECL(QuantBatchMatmulV4,
                       ASCENDC_TPL_UINT_DECL(WEIGHTNZ, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST, QBMMV4_NOT_WEIGHT_NZ,
                                             QBMMV4_IS_WEIGHT_NZ),
                       ASCENDC_TPL_UINT_DECL(KERNEL_TEMPLATE_TYPE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, QBMMV4_BASIS,
-                                            QBMMV4_LUT_ASW, QBMMV4_LUT_AL1FULL, QBMMV4_ANTIQUANT_VECTOR), );
+                                            QBMMV4_LUT_ASW, QBMMV4_LUT_AL1FULL, QBMMV4_ANTIQUANT_VECTOR,
+                                            QBMMV4_MX_BLAZE, QBMMV4_MX_BLAZE_A_FULL_LOAD), );
 
 ASCENDC_TPL_SEL(
 #if !defined(__CCE_AICORE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
 #if !defined(__CCE_AICORE__) || (defined(IS_MX_TYPE) || defined(IS_FP8FP4_TYPE))
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
-                         ASCENDC_TPL_UINT_SEL(TRANS, ASCENDC_TPL_UI_LIST, QBMMV4_B_TRANS),
-                         ASCENDC_TPL_UINT_SEL(QUANT_TYPE, ASCENDC_TPL_UI_LIST, QBMMV4_MX),
-                         ASCENDC_TPL_UINT_SEL(OPTION_ATTRS, ASCENDC_TPL_UI_LIST, QBMMV4_OPTION_ATTR_NONE),
-                         ASCENDC_TPL_UINT_SEL(WEIGHTNZ, ASCENDC_TPL_UI_LIST, QBMMV4_IS_WEIGHT_NZ),
-                         ASCENDC_TPL_UINT_SEL(KERNEL_TEMPLATE_TYPE, ASCENDC_TPL_UI_LIST, QBMMV4_BASIS),
-                         ASCENDC_TPL_TILING_STRUCT_SEL(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams), ),
+    ASCENDC_TPL_ARGS_SEL(
+        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
+        ASCENDC_TPL_UINT_SEL(TRANS, ASCENDC_TPL_UI_LIST, QBMMV4_B_TRANS),
+        ASCENDC_TPL_UINT_SEL(QUANT_TYPE, ASCENDC_TPL_UI_LIST, QBMMV4_MX),
+        ASCENDC_TPL_UINT_SEL(OPTION_ATTRS, ASCENDC_TPL_UI_LIST, QBMMV4_OPTION_ATTR_NONE),
+        ASCENDC_TPL_UINT_SEL(WEIGHTNZ, ASCENDC_TPL_UI_LIST, QBMMV4_IS_WEIGHT_NZ),
+        ASCENDC_TPL_UINT_SEL(KERNEL_TEMPLATE_TYPE, ASCENDC_TPL_UI_LIST, QBMMV4_MX_BLAZE, QBMMV4_MX_BLAZE_A_FULL_LOAD),
+        ASCENDC_TPL_TILING_STRUCT_SEL(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData), ),
+
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_1),
                          ASCENDC_TPL_UINT_SEL(TRANS, ASCENDC_TPL_UI_LIST, QBMMV4_NOT_TRANS),
                          ASCENDC_TPL_UINT_SEL(QUANT_TYPE, ASCENDC_TPL_UI_LIST, QBMMV4_TCG),

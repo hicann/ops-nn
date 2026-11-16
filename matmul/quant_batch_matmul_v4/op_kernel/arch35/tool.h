@@ -38,6 +38,8 @@ using AscendC::ToFloat;
 using AscendC::WaitFlag;
 
 namespace QuantBatchMatmulV4 {
+constexpr int32_t IDX_0 = 0;
+constexpr int64_t ONE_BLK_ELEM_B4 = 64;
 constexpr uint64_t SYNC_MODE0 = 0;
 constexpr uint64_t SYNC_MODE2 = 2;
 constexpr uint64_t SYNC_MODE4 = 4;

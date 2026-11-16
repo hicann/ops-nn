@@ -18,12 +18,14 @@
 #include "quant_batch_matmul_v4_pergroup_tiling.h"
 #include "arch31/quant_batch_matmul_v4_arch31_tiling.h"
 #include "arch35/adaptive_sliding_window_basic_api_v4_tiling.h"
+#include "arch35/quant_batch_matmul_v4_weight_quant_mx_cube_tiling.h"
 #include "arch35/quant_batch_matmul_v4_asw_tiling.h"
 #include "arch35/quant_batch_matmul_v4_pergroup_arch35_tiling.h"
 #include "arch35/quant_batch_matmul_v4_pergroup_arch92_tiling.h"
 #include "arch35/quant_batch_matmul_v4_reg_base_tiling.h"
 #include "arch35/quant_batch_matmul_v4_weight_quant_mx_swat_tiling.h"
 #include "quant_batch_matmul_v4_compile_info.h"
+#include "quant_batch_matmul_v4_tiling_info.h"
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
 
@@ -39,6 +41,7 @@ constexpr int32_t LUT_PRIORITY = 5;
 constexpr int32_t PERGROUP_ARCH35_PRIORITY = 6;
 constexpr int32_t WEIGHT_QUANT_MX_SWAT_PRIORITY = 7;
 constexpr int32_t PERGROUP_ARCH92_PRIORITY = 8;
+constexpr int32_t WEIGHT_QUANT_MX_CUBE_BLAZE_PRIORITY = 9;
 
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", AdaptiveSlidingWindowBasicTilingV4, BASIC_PERBLOCK_PRIORITY);
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4RegBase, REG_BASE_PRIORITY);
@@ -50,6 +53,8 @@ REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4PergroupArch35T
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4WeightQuantMxSwatTiling,
                          WEIGHT_QUANT_MX_SWAT_PRIORITY);
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4PerGroupTiling, PERGROUP_ARCH92_PRIORITY);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", AdaptiveSlidingWindowWeightQuantMxCubeTiling,
+                         WEIGHT_QUANT_MX_CUBE_BLAZE_PRIORITY);
 
 ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext* context)
 {
@@ -85,7 +90,17 @@ ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext* context)
         std::vector<int32_t> regitserList = {MSD_PRIORITY, PERBLOCK_PRIORITY, PERGROUP_PRIORITY};
         return TilingRegistry::GetInstance().DoTilingImpl(context, regitserList);
     } else if (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
-        vector<int32_t> registerList = {PERGROUP_ARCH92_PRIORITY, REG_BASE_PRIORITY};
+        const auto isMxScale = [](const gert::CompileTimeTensorDesc* desc) {
+            if (desc == nullptr) {
+                return false;
+            }
+            const auto dtype = desc->GetDataType();
+            return dtype == ge::DT_FLOAT8_E8M0 || dtype == Ops::NN::DT_HIFLOAT4_SCALE;
+        };
+        const bool hasMxScale = isMxScale(context->GetOptionalInputDesc(X1_SCALE_IDX)) ||
+                                isMxScale(context->GetOptionalInputDesc(X2_SCALE_IDX));
+        std::vector<int32_t> registerList = {hasMxScale ? WEIGHT_QUANT_MX_CUBE_BLAZE_PRIORITY :
+                                                          PERGROUP_ARCH92_PRIORITY};
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     } else if (supportMmadS8S4) {
         vector<int32_t> regitserList = {LUT_PRIORITY};

@@ -25,7 +25,6 @@
 #include "tool.h"
 
 #include "matmul_custom_impl.h"
-#include "quant_batch_matmul_v4_constant.h"
 
 using AscendC::BLOCK_CUBE;
 using AscendC::DataCopyParams;

@@ -20,13 +20,12 @@
 #include "kernel_operator.h"
 #include "kernel_operator_intf.h"
 #endif
-#include "quant_batch_matmul_v4_constant.h"
 #include "quant_batch_matmul_v4_tiling_key.h"
 #include "quant_batch_matmul_v4_tiling_data_apt.h"
 #include "quant_batch_matmul_v4_general.h"
 
 #if (defined(IS_MX_TYPE))
-#include "quant_batch_matmul_v4_mx_cube.h"
+#include "quant_batch_matmul_v4_weight_quant_mx_cube_blaze.h"
 #else
 #include "quant_batch_matmul_v4_pergroup_fixpipe.h"
 #include "quant_batch_matmul_v4_pergroup_vector.h"
@@ -64,13 +63,10 @@ __aicore__ inline void InvokeWeightQuantMatmulOpImpl920(GM_ADDR x1, GM_ADDR x2, 
 #if (defined(IS_MX_TYPE) || defined(IS_FP8FP4_TYPE))
 #if (defined(IS_MX_TYPE))
     if constexpr (QUANT_TYPE == QBMMV4_MX) {
-        AscendC::TPipe tPipe;
-        KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
-        GET_TILING_DATA_WITH_STRUCT(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams, tilingDataIn, tiling);
-        QuantBatchMatmulV4MxCubeKernel<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, TRANS_B, DTYPE_X1_SCALE, DTYPE_X2_SCALE>
-            op;
-        op.Init(x1, x2, bias, x1_scale, x2_scale, y, userWS, &tilingDataIn, &tPipe);
-        op.Process();
+        constexpr uint64_t FULL_LOAD_MODE = KERNEL_TEMPLATE_TYPE == QBMMV4_MX_BLAZE_A_FULL_LOAD ?
+                                                Blaze::Gemm::A_FULL_LOAD_MODE :
+                                                Blaze::Gemm::NONE_FULL_LOAD_MODE;
+        InvokeWeightQuantMxCubeBlaze<FULL_LOAD_MODE>(x1, x2, bias, x1_scale, x2_scale, y, tiling);
     }
 #endif
     if constexpr (QUANT_TYPE == QBMMV4_TCG) {

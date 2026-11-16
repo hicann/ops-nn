@@ -240,7 +240,8 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeDtype()
     inputParams_.aDtype = context_->GetInputDesc(GetX1Idx())->GetDataType();
     auto x2Desc = context_->GetInputDesc(GetX2Idx());
     inputParams_.bDtype = x2Desc->GetDataType();
-    inputParams_.scaleDtype = context_->GetInputDesc(GetScaleIdx())->GetDataType();
+    auto scaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
+    inputParams_.scaleDtype = scaleDesc->GetDataType();
     auto pertokenScaleDesc = context_->GetOptionalInputDesc(GetPertokenIdx());
     inputParams_.perTokenScaleDtype = pertokenScaleDesc != nullptr ? pertokenScaleDesc->GetDataType() :
                                                                      inputParams_.perTokenScaleDtype;
@@ -249,8 +250,7 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeDtype()
     inputParams_.cDtype = context_->GetOutputDesc(0)->GetDataType();
     isUbQuant_ = inputParams_.cDtype == ge::DT_BF16 || pertokenScaleDesc != nullptr;
     SetFormat();
-    inputParams_.scaleFormat = static_cast<ge::Format>(
-        ge::GetPrimaryFormat(context_->GetInputDesc(GetScaleIdx())->GetStorageFormat()));
+    inputParams_.scaleFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(scaleDesc->GetStorageFormat()));
 
     OP_TILING_CHECK(!CheckDtype(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype failed!"), return false);
     return true;
@@ -349,8 +349,8 @@ but x1 dimension: %zu, x2 dimension: %zu",
 
     if (inputParams_.aDtype == ge::DT_INT4 && !inputParams_.isPertoken) {
         OP_TILING_CHECK(x2ShapeLen != A4W4_X2_LEN,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "If input dtype is int4 and without pertoken scale, \
-the dimension of x2 must be 2."),
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "If input dtype is int4 and without pertoken scale, "
+                                                                   "the dimension of x2 must be 2."),
                         return false);
     }
     return true;
@@ -1080,6 +1080,7 @@ void QuantBatchMatmulInfo::Reset()
     isPerBlock = false;
     isPerBlockPerToken = false;
     isHif4PerGroup = false;
+    isMxA8W4 = false;
     isX2PerGroup = false;
     isLut = false;
     outDtype = 0L;

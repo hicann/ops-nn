@@ -240,6 +240,7 @@ public:
         tilingData.x2QuantMode = param.groupSize > 0 ? MX_PERGROUP_MODE : PERTENSOR_MODE;
         tilingData.nBufferNum = 2;
         tilingData.dbL0C = 2;
+        tilingData.windowLen = 4U;
     }
 
     static void FillTilingBuffer(const QuantBatchMatmulInplaceAddTestParam& param, uint8_t* tiling)

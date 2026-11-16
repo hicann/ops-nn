@@ -416,7 +416,7 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::CalcMxFullKLoadSize(uint64_t out
                                                                     ge::DataType scaleDtype) const
 {
     uint64_t kAligned = ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
-    uint64_t scaleK = GetScaleBaseK(inputParams_, inputParams_.kSize);
+    uint64_t scaleK = GetScaleBaseK(scaleDtype, inputParams_.kSize);
     return GetSizeWithDataType(outerSize * kAligned, dataDtype) + GetSizeWithDataType(outerSize * scaleK, scaleDtype);
 }
 
@@ -434,8 +434,9 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::CalcUsedL1Size(const MxL1Estimat
 {
     uint64_t usedL1Size = GetSizeWithDataType(params.baseN * params.kL1, inputParams_.bDtype) * l1BufferNum;
     // B-side scale follows the scaleKL1 window and is double-buffered separately from B data.
-    usedL1Size += GetSizeWithDataType(params.baseN * ops::CeilDiv(params.scaleKL1, GetScaleGroupSize(inputParams_)),
-                                      inputParams_.scaleDtype) *
+    usedL1Size += GetSizeWithDataType(
+                      params.baseN * ops::CeilDiv(params.scaleKL1, GetScaleGroupSize(inputParams_.scaleDtype)),
+                      inputParams_.scaleDtype) *
                   qmmv3_tiling_const::L1_TWO_BUFFER;
     if (inputParams_.hasBias) {
         usedL1Size += GetSizeWithDataType(params.baseN, inputParams_.biasDtype) * qmmv3_tiling_const::L1_TWO_BUFFER;
@@ -444,8 +445,10 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::CalcUsedL1Size(const MxL1Estimat
         usedL1Size += CalcMxFullKLoadSize(params.baseM, inputParams_.aDtype, inputParams_.perTokenScaleDtype);
     } else {
         usedL1Size += GetSizeWithDataType(params.baseM * params.kL1, inputParams_.aDtype) * l1BufferNum;
-        usedL1Size += GetSizeWithDataType(params.baseM * ops::CeilDiv(params.scaleKL1, GetScaleGroupSize(inputParams_)),
-                                          inputParams_.perTokenScaleDtype) *
+        usedL1Size += GetSizeWithDataType(
+                          params.baseM *
+                              ops::CeilDiv(params.scaleKL1, GetScaleGroupSize(inputParams_.perTokenScaleDtype)),
+                          inputParams_.perTokenScaleDtype) *
                       qmmv3_tiling_const::L1_TWO_BUFFER;
     }
     return usedL1Size;
@@ -643,9 +646,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetTilingData()
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
     tilingData_.matmulTiling.weightMustHitL2 = static_cast<uint8_t>(
         IsWeightMustHitL2(inputParams_, basicTiling_.baseM));
-    const uint32_t perGroupQuantMode = static_cast<uint32_t>(GetPergroupQuantMode(inputParams_));
-    tilingData_.params.x1QuantMode = perGroupQuantMode;
-    tilingData_.params.x2QuantMode = perGroupQuantMode;
+    tilingData_.params.x1QuantMode = static_cast<uint32_t>(GetPergroupQuantMode(inputParams_.perTokenScaleDtype));
+    tilingData_.params.x2QuantMode = static_cast<uint32_t>(GetPergroupQuantMode(inputParams_.scaleDtype));
     tilingData_.adaptiveSlidingWin.mTailTile = adaptiveWin_.mTailTile;
     tilingData_.adaptiveSlidingWin.nTailTile = adaptiveWin_.nTailTile;
     tilingData_.adaptiveSlidingWin.mBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.mBaseTailSplitCnt);
@@ -680,9 +682,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.nBaseTailSplitCnt = static_cast<uint16_t>(adaptiveWin_.nBaseTailSplitCnt);
     withoutBatchTilingData_.mTailMain = static_cast<uint16_t>(adaptiveWin_.mTailMain);
     withoutBatchTilingData_.nTailMain = static_cast<uint16_t>(adaptiveWin_.nTailMain);
-    const uint8_t perGroupQuantMode = static_cast<uint8_t>(GetPergroupQuantMode(inputParams_));
-    withoutBatchTilingData_.x1QuantMode = perGroupQuantMode;
-    withoutBatchTilingData_.x2QuantMode = perGroupQuantMode;
+    withoutBatchTilingData_.x1QuantMode = static_cast<uint8_t>(GetPergroupQuantMode(inputParams_.perTokenScaleDtype));
+    withoutBatchTilingData_.x2QuantMode = static_cast<uint8_t>(GetPergroupQuantMode(inputParams_.scaleDtype));
     withoutBatchTilingData_.isBias = tilingData_.matmulTiling.isBias;
     withoutBatchTilingData_.biasDtype = static_cast<uint8_t>(inputParams_.biasDtype);
     withoutBatchTilingData_.nBufferNum = tilingData_.matmulTiling.nBufferNum;

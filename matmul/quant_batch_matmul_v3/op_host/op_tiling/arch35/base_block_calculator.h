@@ -18,6 +18,7 @@
 
 #include "graph/types.h"
 #include "platform/platform_infos_def.h"
+#include "quant_batch_matmul_v3_tiling_util.h"
 
 namespace optiling {
 
@@ -52,9 +53,11 @@ struct SocSpecifyParams {
     uint64_t mmadFracM = 16;           // 元素数
     uint64_t mmadFracN = 16;           // 元素数
     uint64_t mmadFracK = 32;           // 32B
-    void CalSingleCoreComputePower()
+    void CalSingleCoreComputePower(ge::DataType aDtype)
     {
-        singleCoreComputePower = mmadFracM * mmadFracN * mmadFracK * freq / 1024; // 1024: KB to B
+        // Keep mmadFracK in bytes for cost estimation; compute power uses logical K elements.
+        const uint64_t logicalMmadK = GetShapeWithDataType(mmadFracK, aDtype);
+        singleCoreComputePower = mmadFracM * mmadFracN * logicalMmadK * freq / 1024; // 1024: KB to B
     }
 };
 

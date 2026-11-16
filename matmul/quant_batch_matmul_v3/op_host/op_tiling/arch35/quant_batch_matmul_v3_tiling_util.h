@@ -180,34 +180,40 @@ inline uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype)
 // MX 与 hif4 均为 per-group scale 量化（32/64 元素一组），公共分支统一走此谓词。
 inline bool HasPerGroupScale(const QuantBatchMatmulInfo& inputParams)
 {
-    return inputParams.isMxPerGroup || inputParams.isHif4PerGroup;
+    return inputParams.isMxPerGroup || inputParams.isHif4PerGroup || inputParams.isMxA8W4;
 }
 
 // Pergroup 量化模式统一分发：hif4 走 HIF4_PERGROUP_MODE，MX 走 MX_PERGROUP_MODE。
-inline BasicQuantMode GetPergroupQuantMode(const QuantBatchMatmulInfo& inputParams)
+inline BasicQuantMode GetPergroupQuantMode(ge::DataType scaleDtype)
 {
-    return inputParams.isHif4PerGroup ? BasicQuantMode::HIF4_PERGROUP_MODE : BasicQuantMode::MX_PERGROUP_MODE;
+    return scaleDtype == ge::DT_FLOAT8_E8M0 ? BasicQuantMode::MX_PERGROUP_MODE : BasicQuantMode::HIF4_PERGROUP_MODE;
 }
 
 // hif4 每 64 个 K 元素共享 1 个 scale；MX 每 32 个 K 元素共享 1 个 scale（等价每 64 元素 2 个）。
-inline uint64_t GetScaleGroupSize(const QuantBatchMatmulInfo& inputParams)
+inline uint64_t GetScaleGroupSize(ge::DataType scaleDtype)
 {
-    return inputParams.isHif4PerGroup ? qmmv3_tiling_const::MXFP_DIVISOR_SIZE : qmmv3_tiling_const::MX_GROUP_SIZE;
+    return scaleDtype == ge::DT_FLOAT8_E8M0 ? qmmv3_tiling_const::MX_GROUP_SIZE : qmmv3_tiling_const::MXFP_DIVISOR_SIZE;
+}
+
+inline uint64_t GetScaleMultiBase(ge::DataType scaleDtype)
+{
+    return scaleDtype == ge::DT_FLOAT8_E8M0 ? qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE : 1UL;
 }
 
 // baseK 覆盖的 scale 元素个数：hif4 为 CeilDiv(baseK, 64)，MX 为 2 * CeilDiv(baseK, 64)。
-inline uint64_t GetScaleBaseK(const QuantBatchMatmulInfo& inputParams, uint64_t baseK)
+inline uint64_t GetScaleBaseK(ge::DataType scaleDtype, uint64_t baseK)
 {
-    if (inputParams.isHif4PerGroup) {
-        return ops::CeilDiv(baseK, qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
-    }
-    return ops::CeilAlign(ops::CeilDiv(baseK, qmmv3_tiling_const::MX_GROUP_SIZE),
-                          qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE);
+    return ops::CeilDiv(baseK, qmmv3_tiling_const::MXFP_DIVISOR_SIZE) * GetScaleMultiBase(scaleDtype);
 }
 
-inline uint64_t GetScaleMultiBase(const QuantBatchMatmulInfo& inputParams)
+inline double GetDtypeBytes(ge::DataType dtype)
 {
-    return inputParams.isHif4PerGroup ? 1UL : qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE;
+    constexpr double FOUR_BIT_DTYPE_BYTES = 0.5;
+    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 ||
+        dtype == Ops::NN::DT_HIFLOAT4) {
+        return FOUR_BIT_DTYPE_BYTES;
+    }
+    return static_cast<double>(ge::GetSizeByDataType(dtype));
 }
 
 inline bool IsBInnerAxisAligned(const QuantBatchMatmulInfo& inputParams)

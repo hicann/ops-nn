@@ -68,6 +68,13 @@ static void NormalizeTensorApiWithoutBatchPadding(const void* data, size_t dataS
     if (dataSize > paddingOffset) {
         normalized[paddingOffset] = 0;
     }
+    constexpr size_t tailPaddingOffset = offsetof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData,
+                                                  windowLen) +
+                                         sizeof(uint32_t);
+    for (size_t i = tailPaddingOffset;
+         i < dataSize && i < sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData); ++i) {
+        normalized[i] = 0;
+    }
 }
 
 template <typename T>
@@ -839,6 +846,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData&
                 actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData*>(
                     tilingContext->GetRawTilingData()->GetData());
+            EXPECT_EQ(actualTilingData.windowLen, 4U);
             if (biasFlag == false) {
                 SetExpectedTilingFieldIfPresent(
                     tilingDataInt, offsetof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData, biasDtype),

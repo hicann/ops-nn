@@ -213,6 +213,7 @@ struct alignas(TILING_DATA_ALIGNMENT) QuantBatchMatmulV3TensorAPIWithoutBatchTil
     uint8_t nBufferNum = 0;
     uint8_t dbL0C = 0;
     uint8_t weightMustHitL2 = 1U;
+    uint32_t windowLen = 4U;
 };
 #pragma pack(pop)
 } // namespace DequantBmm

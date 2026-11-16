@@ -175,7 +175,7 @@ ge::graphStatus QuantBatchMatmulV4PerGroupTiling::GetPlatformInfo()
 
 ge::graphStatus QuantBatchMatmulV4PerGroupTiling::GetShapeAttrsInfo()
 {
-    inputParams_.opName = context_->GetNodeName();
+    inputParams_.opName = context_->GetNodeType();
     OP_LOGD(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
 
     OP_TILING_CHECK(AnalyzeContext() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "invalid context"),

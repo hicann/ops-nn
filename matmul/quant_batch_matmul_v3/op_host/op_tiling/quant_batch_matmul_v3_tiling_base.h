@@ -99,6 +99,7 @@ public:
     bool isPerBlock = false;
     bool isPerBlockPerToken = false;
     bool isHif4PerGroup = false;
+    bool isMxA8W4 = false;
     bool isX2PerGroup = false;
     bool isLut = false;
     int64_t outDtype = 0L;

@@ -89,8 +89,9 @@ ge::graphStatus AdaptiveSlidingWindowTiling::CheckContext()
     auto x1Desc = context_->GetInputDesc(GetX1Idx());
     auto x2Shape = context_->GetInputShape(GetX2Idx());
     auto x2Desc = context_->GetInputDesc(GetX2Idx());
-    auto scaleShape = context_->GetInputShape(GetScaleIdx());
-    auto scaleDesc = context_->GetInputDesc(GetScaleIdx());
+    // GetScaleIdx is an IR index; V4 places optional bias before its scale inputs.
+    auto scaleShape = context_->GetOptionalInputShape(GetScaleIdx());
+    auto scaleDesc = context_->GetOptionalInputDesc(GetScaleIdx());
     auto outputShape = context_->GetOutputShape(0);
     auto outputDesc = context_->GetOutputDesc(0);
     auto attrs = context_->GetAttrs();

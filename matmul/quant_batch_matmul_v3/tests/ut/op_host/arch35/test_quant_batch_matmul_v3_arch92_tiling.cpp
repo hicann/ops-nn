@@ -131,20 +131,25 @@ TEST_F(QuantBatchMatmulV3LoadBalance, InvalidPlatformValuesUsePositiveDefaults)
 
 TEST_F(QuantBatchMatmulV3LoadBalance, Only9202FourBitGroupsDoubleMmadN)
 {
+    const ge::DataType inputDtypes[] = {ge::DT_INT8, ge::DT_FLOAT4_E2M1, Ops::NN::DT_HIFLOAT4};
+    const ge::DataType scaleDtypes[] = {ge::DT_FLOAT, ge::DT_FLOAT8_E8M0, Ops::NN::DT_HIFLOAT4_SCALE};
     for (const auto arch : {NpuArch::DAV_9201, NpuArch::DAV_9202}) {
+        const double fourBitComputePower = arch == NpuArch::DAV_9202 ? 52.8 : 26.4;
         for (int mode = 0; mode < 3; ++mode) {
             SCOPED_TRACE(mode);
             SCOPED_TRACE(static_cast<int>(arch));
             info.npuArch = arch;
             params.isMxPerGroup = mode == 1;
-            params.aDtype = mode == 1 ? ge::DT_FLOAT4_E2M1 : ge::DT_INT8;
-            params.scaleDtype = mode == 2 ? Ops::NN::DT_HIFLOAT4_SCALE : ge::DT_FLOAT8_E8M0;
+            params.isHif4PerGroup = mode == 2;
+            params.aDtype = params.bDtype = inputDtypes[mode];
+            params.perTokenScaleDtype = params.scaleDtype = scaleDtypes[mode];
             BaseBlockCalculator calculator(params, info, 1, &platform);
             SocSpecifyParams specs;
             ASSERT_TRUE(calculator.GetSocSpecAdjustBalanceInfo(specs));
             const bool doubled = arch == NpuArch::DAV_9202 && mode != 0;
             EXPECT_EQ(specs.mmadFracN, doubled ? 32 : 16);
-            EXPECT_DOUBLE_EQ(specs.singleCoreComputePower, doubled ? 26.4 : 13.2);
+            EXPECT_EQ(specs.mmadFracK, 32UL); // Shared with the cost evaluator in bytes.
+            EXPECT_DOUBLE_EQ(specs.singleCoreComputePower, mode == 0 ? 13.2 : fourBitComputePower);
         }
     }
 }

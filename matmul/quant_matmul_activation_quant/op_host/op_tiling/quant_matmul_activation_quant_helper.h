@@ -41,6 +41,8 @@ public:
 protected:
     using BaseT::BaseT;
 
+    uint32_t GetScaleIdx() const override { return X2_SCALE_INDEX; }
+
     ge::graphStatus GetShapeAttrsInfo() override;
     bool AnalyzeAttrs() override;
     bool AnalyzeDtype() override;

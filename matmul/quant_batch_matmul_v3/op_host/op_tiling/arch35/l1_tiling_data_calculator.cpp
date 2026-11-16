@@ -186,9 +186,10 @@ bool L1TilingDataCalculator::ComputeL1TilingDefault()
     if (HasPerGroupScale(inputParams_)) {
         uint64_t baseASize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype);
         uint64_t baseBSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype);
-        uint64_t scaleBaseK = GetScaleBaseK(inputParams_, baseK_);
-        uint64_t baseScaleASize = GetSizeWithDataType(scaleBaseK * baseM_, inputParams_.perTokenScaleDtype);
-        uint64_t baseScaleBSize = GetSizeWithDataType(scaleBaseK * baseN_, inputParams_.scaleDtype);
+        uint64_t scaleABaseK = GetScaleBaseK(inputParams_.perTokenScaleDtype, baseK_);
+        uint64_t scaleBBaseK = GetScaleBaseK(inputParams_.scaleDtype, baseK_);
+        uint64_t baseScaleASize = GetSizeWithDataType(scaleABaseK * baseM_, inputParams_.perTokenScaleDtype);
+        uint64_t baseScaleBSize = GetSizeWithDataType(scaleBBaseK * baseN_, inputParams_.scaleDtype);
         uint64_t baseL1Size = baseASize + baseBSize + baseScaleASize + baseScaleBSize;
         OP_TILING_CHECK(
             baseL1Size == 0UL,
@@ -236,7 +237,7 @@ bool L1TilingDataCalculator::ComputeL1TilingAL1FullLoad()
     uint64_t baseBSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype);
     if (HasPerGroupScale(inputParams_)) {
         uint64_t singleCoreScaleASize = GetSizeWithDataType(
-            std::min(inputParams_.mSize, baseM_) * GetScaleBaseK(inputParams_, inputParams_.kSize),
+            std::min(inputParams_.mSize, baseM_) * GetScaleBaseK(inputParams_.perTokenScaleDtype, inputParams_.kSize),
             inputParams_.perTokenScaleDtype);
         uint64_t alignedSingleCoreScaleASize = ops::CeilAlign(singleCoreScaleASize, qmmv3_tiling_const::L1_ALIGN_SIZE);
         l1TilingData_.scaleFactorA_ = 1UL;
@@ -387,7 +388,7 @@ bool L1TilingDataCalculator::CalStepKs()
             l1TilingData_.stepKb_ = limitedStepKb;
         }
     }
-    if (inputParams_.isMxPerGroup || inputParams_.isHif4PerGroup) {
+    if (HasPerGroupScale(inputParams_)) {
         // Limit max stepK to 4 to avoid issue queue stalls. MX unifies kAL1 and kBL1 later.
         l1TilingData_.stepKa_ = std::min(l1TilingData_.stepKa_, 4UL);
         l1TilingData_.stepKb_ = std::min(l1TilingData_.stepKb_, 4UL);
@@ -417,9 +418,11 @@ bool L1TilingDataCalculator::CalScaleFactors(uint64_t baseASize, uint64_t baseBS
 
     // MX scale: one 64-K group stores two scale values; hif4 scale: one 64-K group stores one scale value.
     // A/B scale buffers are double-buffered, so this is the L1 cost for extending scaleKL1 by one 64-element group.
-    uint64_t scaleGroupL1Size = (GetSizeWithDataType(baseM_, inputParams_.perTokenScaleDtype) +
-                                 GetSizeWithDataType(baseN_, inputParams_.scaleDtype)) *
-                                GetScaleMultiBase(inputParams_) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    uint64_t scaleGroupL1Size = (GetSizeWithDataType(baseM_, inputParams_.perTokenScaleDtype) *
+                                     GetScaleMultiBase(inputParams_.perTokenScaleDtype) +
+                                 GetSizeWithDataType(baseN_, inputParams_.scaleDtype) *
+                                     GetScaleMultiBase(inputParams_.scaleDtype)) *
+                                qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     OP_TILING_CHECK(scaleGroupL1Size == 0UL || kL1 == 0UL,
                     CUBE_INNER_ERR_REPORT(
                         inputParams_.opName,
@@ -552,19 +555,21 @@ uint64_t L1TilingDataCalculator::GetDepthA1B1() const
     uint64_t scaleKL1 = std::min(inputParams_.kSize, qmmv3_tiling_const::ESTIMATED_SCALE_K);
     uint64_t baseABSize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) +
                           GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype);
-    uint64_t baseScaleSize = GetSizeWithDataType(baseM_, inputParams_.perTokenScaleDtype) +
-                             GetSizeWithDataType(baseN_, inputParams_.scaleDtype);
+    uint64_t baseScaleSize = GetSizeWithDataType(baseM_, inputParams_.perTokenScaleDtype) *
+                                 GetScaleMultiBase(inputParams_.perTokenScaleDtype) +
+                             GetSizeWithDataType(baseN_, inputParams_.scaleDtype) *
+                                 GetScaleMultiBase(inputParams_.scaleDtype);
     // Reserve a bounded scale window while searching depth. If depth later covers more K than the estimate,
     // scaleL1Size is raised accordingly before accepting that depth.
     uint64_t scaleL1Size = baseScaleSize * ops::CeilDiv(scaleKL1, qmmv3_tiling_const::MXFP_DIVISOR_SIZE) *
-                           GetScaleMultiBase(inputParams_) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+                           qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     while (depth * baseABSize + scaleL1Size <= leftL1Size_) {
         depth *= INDEX;
         uint64_t kL1 = depth / qmmv3_tiling_const::DOUBLE_BUFFER_NUM * baseK_;
         if (kL1 > scaleKL1) {
             scaleKL1 = kL1;
             scaleL1Size = baseScaleSize * ops::CeilDiv(scaleKL1, qmmv3_tiling_const::MXFP_DIVISOR_SIZE) *
-                          GetScaleMultiBase(inputParams_) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+                          qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
         }
     }
     return depth == 1UL ? depth : depth / INDEX;
@@ -582,7 +587,7 @@ uint64_t L1TilingDataCalculator::GetDepthB1AfullLoad(uint64_t leftSize) const
     }
 
     // Keep single-copy size at least 32KB without exceeding L1.
-    uint64_t scaleBBaseK = HasPerGroupScale(inputParams_) ? GetScaleBaseK(inputParams_, baseK_) : 0UL;
+    uint64_t scaleBBaseK = HasPerGroupScale(inputParams_) ? GetScaleBaseK(inputParams_.scaleDtype, baseK_) : 0UL;
     uint64_t baseBSize = (GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) +
                           GetSizeWithDataType(baseN_ * scaleBBaseK, inputParams_.scaleDtype)) *
                          stepKbBase;
@@ -637,7 +642,7 @@ uint64_t L1TilingDataCalculator::GetDepthA1BfullLoad(uint64_t leftSize) const
 
 uint64_t L1TilingDataCalculator::GetScaleFactorBAfullLoad(uint64_t leftSize) const
 {
-    uint64_t scaleBaseK = GetScaleBaseK(inputParams_, baseK_);
+    uint64_t scaleBaseK = GetScaleBaseK(inputParams_.scaleDtype, baseK_);
     uint64_t baseScaleBSize = GetSizeWithDataType(baseN_ * scaleBaseK, inputParams_.scaleDtype);
     if (baseScaleBSize == 0UL || l1TilingData_.stepKb_ == 0UL || l1TilingData_.depthKb_ == 0UL) {
         return 1UL;

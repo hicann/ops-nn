@@ -47,6 +47,7 @@ constexpr size_t Y_OFFSET_INDEX = 8UL;
 // output index
 constexpr size_t Y_OUTPUT_INDEX = 0UL;
 // attr index
+constexpr size_t DTYPE_INDEX = 0UL;
 constexpr size_t TRANSPOSE_X1_INDEX = 2UL;
 constexpr size_t TRANSPOSE_X2_INDEX = 3UL;
 constexpr size_t GROUP_SIZE_INDEX = 4UL;
@@ -68,10 +69,8 @@ constexpr uint32_t WORKSPACE_SIZE = 16777216; // 16 * 1024 * 1024
 constexpr int32_t DB_BUFFER = 2;
 constexpr int32_t EXTRA_GROUP_NUM = 2;
 constexpr uint64_t K_ALIGN_SIZE_32 = 32;
-constexpr uint64_t K_ALIGN_SIZE_64 = 64;
 constexpr uint64_t K_ALIGN_SIZE_MX = 8;
 constexpr uint64_t N_ALIGN_SIZE_8 = 8;
-constexpr uint64_t N_ALIGN_SIZE_64 = 64;
 
 constexpr int64_t B64_BITS = 64;
 constexpr int64_t B8_BITS = 8;
@@ -91,13 +90,8 @@ constexpr int64_t VALID_MX_SCALE_LAST_DIM = 2UL; // MicroScaling场景下scale t
 constexpr int64_t VALID_MXHIF4_SCALE_LAST_DIM = 1UL;
 
 constexpr double FREQUENCY_V100 = 1.6;
-constexpr double FREQUENCY_V121 = 1.8;
-constexpr double FREQUENCY_V122 = 1.55;
 constexpr double HBM_BANDWIDTH_V100 = 1.6;
-constexpr double HBM_BANDWIDTH_V121 = 7.5;
-constexpr double HBM_BANDWIDTH_V122 = 2.25;
 constexpr double L2_BANDWIDTH_V100 = 5.4;
-constexpr double L2_BANDWIDTH_V121 = 13;
 
 enum class QuantType : uint32_t {
     NONE = 0,
@@ -184,7 +178,6 @@ protected:
     matmul_v4::QuantBatchMatmulInfo inputParams_;
     uint32_t aivNum_;
     uint32_t aicNum_;
-    NpuArch npuArch_;
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 
 private:
@@ -198,7 +191,6 @@ private:
     bool AnalyzeX2scaleDtype(const gert::CompileTimeTensorDesc* x2ScaleDesc);
     bool AnalyzeYScaleOffsetShape(const gert::StorageShape* yScaleShape, const gert::StorageShape* yOffsetShape) const;
     bool AnalyzeTranspose();
-    bool IsX2Hif4PerGroup();
     bool AnalyzeGroupSize();
     bool AnalyzeAttrs();
     bool AnalyzeX2InputDim(const gert::StorageShape* x2Shape);

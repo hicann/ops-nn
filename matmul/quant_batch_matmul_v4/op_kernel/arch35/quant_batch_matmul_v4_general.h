@@ -403,6 +403,7 @@ __aicore__ inline void QuantBatchMatmulV4GeneralKernel<LOCAL_TEMPLATE_FUNC_PARAM
 template <typename xType, typename wType, typename scaleType>
 __aicore__ inline void AntiquantW4PergroupKN(ParamsGroupKN<xType, wType, scaleType>& param)
 {
+    constexpr int32_t OFFSET_FOR_4BITS = 128;
     static constexpr MicroAPI::CastTrait castF162F32Trait0 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                                               MicroAPI::MaskMergeMode::ZEROING,
                                                               AscendC::RoundMode::UNKNOWN};

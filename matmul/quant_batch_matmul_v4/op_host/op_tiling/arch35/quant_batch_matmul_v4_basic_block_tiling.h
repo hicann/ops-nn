@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "error_util.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "quant_batch_matmul_v4_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data_apt.h"
 
@@ -88,7 +87,6 @@ struct PlatformParam {
     double frequency = 0.0;
     double hbmBW = 0.0;
     double l2BW = 0.0;
-    NpuArch npuArch = NpuArch::DAV_RESV;
 };
 
 struct BasicBlock {
@@ -153,7 +151,7 @@ public:
     void SetPlatformParam(const PlatformParam& param);
     void SetShape(int64_t mSize, int64_t nSize, int64_t kSize, int64_t groupSize);
     void SetAttr(const char* opName, bool transA, bool transB, bool hasBias, bool weightNzFlag);
-    void SetQuantType(bool isMxType, bool isHif4Type);
+    void SetQuantType(bool isMxType);
     void SetDtypeBits(const int64_t aDtypeBits, const int64_t bDtypeBits, const int64_t biasDtypeBits,
                       const int64_t yScaleDtypeBits);
     void SetScaleDtypeBits(const int64_t aScaleDtypeBits, const int64_t bScaleDtypeBits);
@@ -315,10 +313,8 @@ protected:
     bool hasBias_;
     bool weightNzFlag_;
     bool isMxType_;
-    bool isHif4Type_;
     double aByteSize_;
     double bByteSize_;
-    double bL1ByteSize_;
     double biasByteSize_;
     double yScaleByteSize_;
     double aScaleByteSize_;
@@ -326,7 +322,6 @@ protected:
 
     int64_t aDtypeBits_;
     int64_t bDtypeBits_;
-    int64_t bL1DtypeBits_;
     int64_t biasDtypeBits_;
 
     int64_t aScaleDtypeBits_;

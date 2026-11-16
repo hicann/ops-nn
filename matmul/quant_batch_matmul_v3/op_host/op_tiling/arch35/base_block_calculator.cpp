@@ -23,6 +23,7 @@
 #include "op_common/op_host/util/op_const_def.h"
 
 namespace {
+using optiling::GetDtypeBytes;
 constexpr uint64_t PER_BLOCK_BASE_SIZE_256 = 256UL;
 // Reject candidates whose baseN is not 128-wide when K is below this byte-scaled threshold.
 constexpr uint64_t LOAD_BALANCE_BASE_N_128_ALIGN_K_THRESHOLD = 2560UL;
@@ -41,7 +42,6 @@ constexpr uint32_t SMALL_MN_EXPAND_RATIO = 3U;
 // Do not switch a Cube/MX tile across the compute/memory roofline on a marginal estimate.  The margin absorbs
 // cache/pipeline effects that are not represented by the per-K tile arithmetic-intensity model.
 constexpr double LOAD_BALANCE_ROOFLINE_MARGIN = 0.05;
-constexpr double FOUR_BIT_DTYPE_BYTES = 0.5;
 
 uint64_t GetNextLoadBalanceBase(uint64_t curBase, uint64_t baseAlign)
 {
@@ -63,15 +63,6 @@ double GetMemoryComputeScore(uint64_t baseM, uint64_t baseN)
 {
     // This is (baseM + baseN) / (baseM * baseN); lower means smaller baseM + baseN for the same output area.
     return (static_cast<double>(baseM) + baseN) / (static_cast<double>(baseM) * baseN);
-}
-
-double GetDtypeBytes(ge::DataType dtype)
-{
-    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 ||
-        dtype == Ops::NN::DT_HIFLOAT4) {
-        return FOUR_BIT_DTYPE_BYTES;
-    }
-    return static_cast<double>(ge::GetSizeByDataType(dtype));
 }
 
 double GetTileArithmeticIntensity(uint64_t baseM, uint64_t baseN, ge::DataType aDtype, ge::DataType bDtype)

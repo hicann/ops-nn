@@ -201,14 +201,15 @@ void BaseBlockCalculator::GetBaseK(BaseBlockRes& baseBlockTemp)
     uint64_t baseMax = std::max(baseBlockTemp.baseM, baseBlockTemp.baseN);
     uint64_t baseMin = std::min(baseBlockTemp.baseM, baseBlockTemp.baseN);
 
-    uint64_t baseKAlignNum = inputParams_.isMxPerGroup ?
+    uint64_t baseKAlignNum = (inputParams_.isMxPerGroup || inputParams_.isMxA8W4) ?
                                  qmmv3_tiling_const::MXFP_DIVISOR_SIZE :
                                  GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.aDtype);
     uint64_t kValueAlign = ops::CeilAlign(inputParams_.kSize, baseKAlignNum);
     uint64_t maxBaseK = GetShapeWithDataType(compileInfo_.l0aSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM / baseMax,
                                              inputParams_.aDtype);
 
-    if (baseMax > qmmv3_tiling_const::BASIC_BLOCK_SIZE_256 && compileInfo_.l0cSize == LB_SPLITMN_LOC_SIZE) {
+    if (!inputParams_.isMxA8W4 && baseMax > qmmv3_tiling_const::BASIC_BLOCK_SIZE_256 &&
+        compileInfo_.l0cSize == LB_SPLITMN_LOC_SIZE) {
         // l0c为512KB且baseMN较大时，按L0A切半后的最大边重算baseK上限。
         constexpr uint64_t maxSplitNmNum = 2UL;
         uint64_t maxSplitedBase = ops::CeilDiv(ops::CeilDiv(baseMax, qmmv3_tiling_const::CUBE_BLOCK), maxSplitNmNum) *
@@ -277,13 +278,11 @@ bool BaseBlockCalculator::GetSocSpecAdjustBalanceInfo(SocSpecifyParams& outInfo)
     outInfo.hbmBw = outInfo.freq * static_cast<double>(coreCnt) * static_cast<double>(ddrRate) / LB_KB_SIZE;
     outInfo.l2Bw = outInfo.freq * static_cast<double>(coreCnt) * static_cast<double>(l2Rate) / LB_KB_SIZE;
 
-    // ops-nn 无 isHif4PerGroup 标志，hif4 逐组量化以 scaleDtype == DT_HIFLOAT4_SCALE 等价识别。
     if (compileInfo_.npuArch == NpuArch::DAV_9202 &&
-        (inputParams_.scaleDtype == Ops::NN::DT_HIFLOAT4_SCALE ||
-         (inputParams_.isMxPerGroup && inputParams_.aDtype == ge::DT_FLOAT4_E2M1))) {
+        (inputParams_.isHif4PerGroup || (inputParams_.isMxPerGroup && inputParams_.aDtype == ge::DT_FLOAT4_E2M1))) {
         outInfo.mmadFracN *= LB_COMPUTE_POWER_DOUBLE;
     }
-    outInfo.CalSingleCoreComputePower();
+    outInfo.CalSingleCoreComputePower(inputParams_.aDtype);
     return true;
 }
 
@@ -432,14 +431,16 @@ bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
         return true;
     }
 
-    double cmRange = (static_cast<double>(inputParams_.mSize) + inputParams_.nSize) /
+    // Use actual A/B element bytes for data traffic; scale traffic is not included.
+    const double aElementBytes = GetDtypeBytes(inputParams_.aDtype);
+    const double bElementBytes = GetDtypeBytes(inputParams_.bDtype);
+    double cmRange = (aElementBytes * inputParams_.mSize + bElementBytes * inputParams_.nSize) /
                      (static_cast<double>(inputParams_.mSize) * inputParams_.nSize);
     double computePower = socSpecAdjustBalanceInfo.singleCoreComputePower * compileInfo_.aicNum;
 
     double cubeBoundEdge = (socSpecAdjustBalanceInfo.l2Bw / computePower) +
                            (1 - socSpecAdjustBalanceInfo.l2Bw / socSpecAdjustBalanceInfo.hbmBw) * cmRange;
-    // 考虑scale的影响
-    double cubeBoundParam = (static_cast<double>(curM) + curN) / (static_cast<double>(curM) * curN);
+    double cubeBoundParam = (aElementBytes * curM + bElementBytes * curN) / (static_cast<double>(curM) * curN);
     double balanceRate = GetBalanceRate(curM, curN);
     for (uint64_t curBaseM = maxBaseM; curBaseM >= 1 && curBaseM <= maxBaseM; curBaseM -= baseMAlign) {
         uint64_t curMaxBaseN = std::min(
@@ -449,7 +450,7 @@ bool BaseBlockCalculator::ComputeBaseBlockLoadBalance()
             if (enableMixUbCheck_ && IsBasicBlockUbOverflow(curBaseM, curBaseN)) {
                 continue;
             }
-            double curCubeBoundParam = (static_cast<double>(curBaseM) + curBaseN) /
+            double curCubeBoundParam = (aElementBytes * curBaseM + bElementBytes * curBaseN) /
                                        (static_cast<double>(curBaseM) * curBaseN);
             double curBalanceRate = GetBalanceRate(curBaseM, curBaseN);
             bool cubeBoundCond = curCubeBoundParam <= cubeBoundEdge && curBalanceRate > balanceRate;

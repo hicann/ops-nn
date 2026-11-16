@@ -337,6 +337,7 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam& pa
         ASSERT_EQ(tilingData->m, static_cast<uint32_t>(param.m));
         ASSERT_EQ(tilingData->n, static_cast<uint32_t>(param.n));
         ASSERT_EQ(tilingData->k, static_cast<uint32_t>(param.k));
+        EXPECT_EQ(tilingData->windowLen, 4U);
     }
 }
 
