@@ -12,10 +12,10 @@
  * \file logsigmoid_grad_infershape.cpp
  * \brief
  */
-#include "infershape_elewise_util.h"
+#include "op_common/op_host/infershape_broadcast_util.h"
 #include "register/op_impl_registry.h"
 
 using namespace ge;
 namespace ops {
-IMPL_OP_INFERSHAPE(LogSigmoidGrad).InferShape(Ops::Base::InferShape4Elewise);
+IMPL_OP_INFERSHAPE(LogSigmoidGrad).InferShape(Ops::Base::InferShape4Broadcast);
 } // namespace ops

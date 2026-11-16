@@ -75,10 +75,12 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- Length range of `x`: [1, 24000].
-- Upper limit of `data_seq_length / x_length`: 256.
-- `x` and `data_seq` do not support dynamic shapes (unknown dim -1 / unknown rank -2 will be rejected).
-- When `level_index` is an unknown dim (-1) or an unknown rank (-2), the length check is skipped.
+| Constraint | <term>Ascend 950PR&950DT products</term> | Other products |
+| :--- | :--- | :--- |
+| Length range of `x` | [1, 24000] | [1, 400] |
+| Upper limit of `data_seq_length / x_length` | 256 | 100 |
+
+- `x`, `data_seq` and `level_index` do not support dynamic shapes (unknown dim -1 / unknown rank -2 will be rejected).
 
 ## Invocation Description
 

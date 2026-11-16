@@ -236,3 +236,119 @@ TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_gert_test_bf16)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+// 广播: grads {128} × features {32,128} -> {32,128}
+TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_gert_test_broadcast_lowrank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LogSigmoidGrad")->infer_shape;
+    gert::Shape input_shape_grads = {128};
+    gert::Shape input_shape_features = {32, 128};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_grads, &input_shape_features})
+                      .OutputShapes({&output_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {32, 128};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// 广播: grads {32,1} × features {32,128} -> {32,128}
+TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_gert_test_broadcast_dim1)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LogSigmoidGrad")->infer_shape;
+    gert::Shape input_shape_grads = {32, 1};
+    gert::Shape input_shape_features = {32, 128};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_grads, &input_shape_features})
+                      .OutputShapes({&output_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {32, 128};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// 广播不兼容: grads {3} × features {4} 拒绝
+TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_gert_test_broadcast_incompatible_rejected)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LogSigmoidGrad")->infer_shape;
+    gert::Shape input_shape_grads = {3};
+    gert::Shape input_shape_features = {4};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_grads, &input_shape_features})
+                      .OutputShapes({&output_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// 广播: grads {1} × features {32,128} -> {32,128}
+TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_gert_test_broadcast_scalar)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LogSigmoidGrad")->infer_shape;
+    gert::Shape input_shape_grads = {1};
+    gert::Shape input_shape_features = {32, 128};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_grads, &input_shape_features})
+                      .OutputShapes({&output_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {32, 128};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// 未知秩(-2)透传, 对齐 canndev ST dynamic 用例看护
+TEST_F(LogSigmoidGradTest, logsigmoid_grad_infershape_gert_test_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LogSigmoidGrad")->infer_shape;
+    gert::Shape input_shape_grads = {-2};
+    gert::Shape input_shape_features = {-2};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_grads, &input_shape_features})
+                      .OutputShapes({&output_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
