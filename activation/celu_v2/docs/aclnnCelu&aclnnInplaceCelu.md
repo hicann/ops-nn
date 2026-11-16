@@ -124,7 +124,7 @@ aclnnStatus aclnnInplaceCelu(
       <td>输出</td>
       <td>表示CELU激活函数的输出。</td>
       <td><ul><li>数据类型需要是self可转换的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</li><li>shape需要与self一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16、COMPLEX64</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
