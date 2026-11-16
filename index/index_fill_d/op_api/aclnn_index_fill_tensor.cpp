@@ -76,13 +76,13 @@ static bool CheckNotNull(const aclTensor* self, const aclIntArray* index, const 
 
 static bool CheckShape(const aclTensor* self, const aclIntArray* index, int64_t dim, const aclTensor* out)
 {
-    if (self->IsEmpty()) {
-        return true;
-    }
     // 校验self的shape是否等于out的shape
     OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
     // 最大维度限制
     OP_CHECK_MAX_DIM(self, MAX_DIM, return false);
+    if (self->IsEmpty()) {
+        return true;
+    }
 
     auto selfShape = self->GetViewShape();
     auto selfDim = static_cast<int64_t>(selfShape.GetDimNum());

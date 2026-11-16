@@ -548,3 +548,71 @@ TEST_F(l2_index_fill_tensor_test, test_index_fill_index_illegal_out)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// self非空且out与self形状一致的场景
+TEST_F(l2_index_fill_tensor_test, test_index_fill_self8x3_out8x3)
+{
+    int64_t dim = 1;
+    auto tensor_self = TensorDesc({8, 3}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto index = IntArrayDesc(vector<int64_t>{0, 2});
+    auto fillVal = ScalarDesc(static_cast<int32_t>(1));
+    auto output_tensor = TensorDesc(tensor_self);
+
+    auto ut = OP_API_UT(aclnnIndexFillTensor, INPUT(tensor_self, dim, index, fillVal), OUTPUT(output_tensor));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// self非空且out形状与self不一致的场景
+TEST_F(l2_index_fill_tensor_test, test_index_fill_self8x3_out5x3)
+{
+    int64_t dim = 1;
+    auto tensor_self = TensorDesc({8, 3}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto tensor_output = TensorDesc({5, 3}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto index = IntArrayDesc(vector<int64_t>{0, 2});
+    auto fillVal = ScalarDesc(static_cast<int32_t>(1));
+
+    auto ut = OP_API_UT(aclnnIndexFillTensor, INPUT(tensor_self, dim, index, fillVal), OUTPUT(tensor_output));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// self为空tensor且out形状与self不一致的场景
+TEST_F(l2_index_fill_tensor_test, test_index_fill_self0x3_out5x3)
+{
+    int64_t dim = 1;
+    auto tensor_self = TensorDesc({0, 3}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto tensor_output = TensorDesc({5, 3}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto index = IntArrayDesc(vector<int64_t>{0, 2});
+    auto fillVal = ScalarDesc(static_cast<int32_t>(1));
+
+    auto ut = OP_API_UT(aclnnIndexFillTensor, INPUT(tensor_self, dim, index, fillVal), OUTPUT(tensor_output));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// self为空tensor且out与self形状一致的场景
+TEST_F(l2_index_fill_tensor_test, test_index_fill_self0x3_out0x3)
+{
+    int64_t dim = 1;
+    auto tensor_self = TensorDesc({0, 3}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto index = IntArrayDesc(vector<int64_t>{0, 2});
+    auto fillVal = ScalarDesc(static_cast<int32_t>(1));
+    auto output_tensor = TensorDesc(tensor_self);
+
+    auto ut = OP_API_UT(aclnnIndexFillTensor, INPUT(tensor_self, dim, index, fillVal), OUTPUT(output_tensor));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
