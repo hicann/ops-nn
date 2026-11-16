@@ -102,6 +102,31 @@ inline static const std::string& GetReductionStr(int64_t reduction)
     }
 }
 
+// 空tensor场景按0轴归约语义填充out：mean时0轴ReduceMean结果逐元素为NaN，sum时0轴ReduceSum结果逐元素为0，
+// 需按out的实际view shape整体填充，out为空tensor时无需写入
+static aclnnStatus FillOutForEmptyInput(aclTensor* out, float val, aclOpExecutor* executor)
+{
+    if (out->GetViewShape().GetShapeSize() == 0) {
+        return ACLNN_SUCCESS;
+    }
+    auto outShape = op::ToShapeVector(out->GetViewShape());
+    auto dims = executor->ConvertToTensor(outShape.data(), outShape.size(), op::DataType::DT_INT64);
+    CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto shapeArray = executor->AllocIntArray(outShape.data(), outShape.size());
+    CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    FVector<float> valVector = {val};
+    auto valTensor = executor->ConvertToTensor(valVector.data(), valVector.size(), out->GetDataType());
+    CHECK_RET(valTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto fillOut = l0op::Fill(dims, valTensor, shapeArray, executor);
+    CHECK_RET(fillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    // 固定写法，将填充结果拷贝到输出out上，out可能是非连续的tensor
+    auto viewCopyResult = l0op::ViewCopy(fillOut, out, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnMseLossOutGetWorkspaceSize(const aclTensor* self, const aclTensor* target, int64_t reduction,
                                             aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
@@ -117,8 +142,14 @@ aclnnStatus aclnnMseLossOutGetWorkspaceSize(const aclTensor* self, const aclTens
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (self->IsEmpty() || target->IsEmpty()) {
-        // 根据实际支持情况补充
-        *workspaceSize = 0;
+        // reduction为mean时对0轴ReduceMean结果逐元素为NaN，为sum时对0轴ReduceSum结果逐元素为0，为none时不写out
+        if (reduction == REDUCTION_MEAN_NUM) {
+            ret = FillOutForEmptyInput(out, NAN, uniqueExecutor.get());
+        } else if (reduction == REDUCTION_SUM_NUM) {
+            ret = FillOutForEmptyInput(out, 0, uniqueExecutor.get());
+        }
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }

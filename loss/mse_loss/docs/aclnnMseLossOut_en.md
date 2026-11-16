@@ -249,6 +249,10 @@ aclnnStatus aclnnMseLossOut(
 
 - Deterministic computation:
     - aclnnMseLossOut defaults to a deterministic implementation.
+- Output semantics for empty tensor inputs (with 0 elements):
+    - When reduction is 0 ('none'), the output is an empty tensor and no element is written.
+    - When reduction is 1 ('mean'), the output is filled with NaN.
+    - When reduction is 2 ('sum'), the output is filled with 0.
 
 ## Example
 

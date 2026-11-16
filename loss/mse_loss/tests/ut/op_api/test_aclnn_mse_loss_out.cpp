@@ -164,6 +164,66 @@ TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_07_float_nd_empty_tensor_sum)
     ut.TestPrecision();
 }
 
+// 空输入+非空out场景: self/target为[0,4]空tensor, reduction=mean时out按标量广播填充NaN, 验证填充路径真实执行
+TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_08_float_nd_empty_input_mean_out_not_empty)
+{
+    auto selfDesc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t reduction = 1;
+
+    auto outDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMseLossOut, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
+// 空输入+非空out场景: self/target为[0,4]空tensor, reduction=sum时out按标量广播填充0, 验证填充路径真实执行
+TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_09_float16_nd_empty_input_sum_out_not_empty)
+{
+    auto selfDesc = TensorDesc({0, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({0, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int64_t reduction = 2;
+
+    auto outDesc = TensorDesc({4}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(aclnnMseLossOut, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
+// 空输入+非空out场景: reduction=none时空输入不写out, 非空out合法场景补充覆盖
+TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_10_float_nd_empty_input_none_out_empty)
+{
+    auto selfDesc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t reduction = 0;
+
+    auto outDesc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMseLossOut, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
 TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_11_float_hwcn_input_not_contiguous)
 {
     auto selfDesc = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_HWCN, {1, 5}, 0, {4, 5}).ValueRange(-2, 2);
@@ -367,4 +427,44 @@ TEST_F(l2_mse_loss_out_test, ascend910B2_aclnnMseLossOut_bf16_float_nhwc_mean)
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// 空输入+非空out场景: self/target为[0,4]空tensor, reduction=mean时out按标量广播填充NaN, bf16覆盖
+TEST_F(l2_mse_loss_out_test, ascend910B2_aclnnMseLossOut_bf16_nd_empty_input_mean_out_not_empty)
+{
+    auto selfDesc = TensorDesc({0, 4}, ACL_BF16, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({0, 4}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t reduction = 1;
+
+    auto outDesc = TensorDesc({4}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMseLossOut, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
+// 空输入+非空out场景: self/target为[0,4]空tensor, reduction=sum时out按标量广播填充0, bf16覆盖
+TEST_F(l2_mse_loss_out_test, ascend910B2_aclnnMseLossOut_bf16_nd_empty_input_sum_out_not_empty)
+{
+    auto selfDesc = TensorDesc({0, 4}, ACL_BF16, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({0, 4}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t reduction = 2;
+
+    auto outDesc = TensorDesc({4}, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMseLossOut, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
 }

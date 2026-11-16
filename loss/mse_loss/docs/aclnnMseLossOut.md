@@ -247,6 +247,10 @@ aclnnStatus aclnnMseLossOut(
 
 - 确定性计算：
     - aclnnMseLossOut默认确定性实现。
+- 空 tensor 输入（元素个数为0）的输出语义：
+    - reduction为0('none')时，输出为空 tensor，不写入任何元素；
+    - reduction为1('mean')时，输出填充为 NaN；
+    - reduction为2('sum')时，输出填充为 0。
 
 ## 调用示例
 
