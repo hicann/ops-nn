@@ -34,7 +34,7 @@
 $$
 dx_i=
 \begin{cases}
-NaN, & \text{if } x < \text0 \text{ or } x > 1 ,eps <0 \\
+NaN, & \text{if } x < \text{0} \text{ or } x > 1 ,eps <0 \\
 0, & \text{if } x < \text{eps} \text{ or } x > 1 - \text{eps},eps \geq 0 \\
 \frac{dy_i}{x_i \cdot (1 - x_i)}, & \text{if } \text{eps} \leq x_i \leq 1 - \text{eps} \\
 \end{cases}

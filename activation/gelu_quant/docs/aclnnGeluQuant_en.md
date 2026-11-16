@@ -150,6 +150,7 @@ aclnnStatus aclnnGeluQuant(
       <td>1</td>
       <td>√</td>
     </tr>
+    <tr>
       <td>inputOffsetOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Optional input of the operator, which is inputOffsetOptional in the formula.</td>
@@ -158,7 +159,6 @@ aclnnStatus aclnnGeluQuant(
       <td>ND</td>
       <td>1</td>
       <td>√</td>
-     <tr>
     </tr>
       <tr>
       <td>approximate (char*)</td>

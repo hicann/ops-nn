@@ -470,7 +470,7 @@ int main() {
     PrintOutResult(inputShape, &input4DeviceAddr);
     PrintOutResult(inputShape, &input5DeviceAddr);
 
-    // 6. Release aclTensor and aclTensor. Modify it based on the actual API definition.
+    // 6. Release aclTensor. Modify it based on the actual API definition.
     aclDestroyTensor(input1);
     aclDestroyTensor(input2);
     aclDestroyTensor(input3);
