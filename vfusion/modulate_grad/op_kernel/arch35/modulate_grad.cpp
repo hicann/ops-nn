@@ -681,7 +681,9 @@ private:
                     SetFlag<HardEvent::S_V>(EVENT_ID0);
                     WaitFlag<HardEvent::S_V>(EVENT_ID0);
                 }
-                Muls(computegradInputLocal[0], computegradOutputLocal[0], flatScale0_, static_cast<int32_t>(nPad));
+                // grad_input needs only the 32-byte padded output extent. nPad is
+                // reserved for the reduction scratch path below.
+                Muls(computegradInputLocal[0], computegradOutputLocal[0], flatScale0_, static_cast<int32_t>(n32));
                 PipeBarrier<PIPE_V>();
                 ReduceSum(prod, prod, prod, nPad);
                 PipeBarrier<PIPE_V>();
