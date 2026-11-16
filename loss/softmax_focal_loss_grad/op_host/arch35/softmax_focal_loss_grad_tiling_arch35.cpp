@@ -55,7 +55,6 @@ constexpr int64_t ROW_SLOT_ELEM = UB_BLOCK_BYTES / DTYPE_LEN_FP32;
 constexpr int64_t ACC_BUF_NUM = 8; // 4 个行标量 + 4 个低位残差
 constexpr int64_t ACC_ALIGN_ELEM = 8;
 constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
-constexpr size_t WORKSPACE_SIZE = static_cast<size_t>(16 * 1024 * 1024);
 constexpr int32_t TILING_ITER = 2;
 // reduction 的取值集合与大小写规则对齐 A2(canndev softmax_focal_loss_grad.py:242-243):
 // reduction.lower() 必须落在 {"none", "mean", "sum"} 内, 非法值报错; 只有 "mean" 需要缩放。
@@ -364,17 +363,27 @@ ge::graphStatus SoftmaxFocalLossGradTiling::DoTiling()
     CalCoreSplit();
     OP_CHECK_IF((CalUbSplit() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalUbSplit failed"),
                 return ge::GRAPH_FAILED);
+    // Distribute the available cores evenly across a small number of long rows.
+    const int64_t coresPerRow = tilingData_->a > 0 ? coreNum_ / tilingData_->a : 0;
+    const bool splitRow = coresPerRow > 1 && tilingData_->chunkNum >= 2 * coresPerRow;
+    if (splitRow) {
+        tilingData_->realCoreNum = tilingData_->a * coresPerRow;
+    }
     PrintTilingData();
 
     const uint64_t gammaMode = tilingData_->gamma == 1.0f ? 1 : (tilingData_->gamma == 2.0f ? 2 : 0);
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(hasWeight_, gammaMode);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(hasWeight_, gammaMode, static_cast<uint64_t>(splitRow));
     context_->SetTilingKey(tilingKey);
     context_->SetBlockDim(tilingData_->realCoreNum > 0 ? tilingData_->realCoreNum : 1);
     context_->SetScheduleMode(1);
     context_->SetLocalMemorySize(ubSize_);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = WORKSPACE_SIZE;
+    workspaces[0] = GetWorkspaceSize(context_);
+    if (splitRow) {
+        workspaces[0] += static_cast<size_t>(tilingData_->a) * static_cast<size_t>(tilingData_->chunkNum) * 8 *
+                         UB_BLOCK_BYTES;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

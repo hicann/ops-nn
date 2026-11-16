@@ -48,10 +48,15 @@ public:
     __aicore__ inline SoftmaxFocalLossGradND() {}
 
     __aicore__ inline void Init(GM_ADDR pred, GM_ADDR target, GM_ADDR dout, GM_ADDR weight, GM_ADDR grad,
-                                const SoftmaxFocalLossGradArch35TilingData* tiling, TPipe* pipe);
+                                const SoftmaxFocalLossGradArch35TilingData* tiling, TPipe* pipe,
+                                GM_ADDR workspace = nullptr);
+    template <bool splitRow = false>
     __aicore__ inline void Process();
 
 private:
+    __aicore__ inline void StorePartial(int64_t chunk);
+    __aicore__ inline void MergePartials(int64_t row);
+    __aicore__ inline void ProcessSplitRow();
     __aicore__ inline void ProcessTile(int64_t rowGm, int64_t rows);
     __aicore__ inline void CopyIn(int64_t rowGm, int64_t colOff, int64_t rows, int64_t len);
     // 搬运参数按 dtype 组装(blockLen/srcStride 走各自 sizeof, rightPadding 走各自行对齐)
@@ -183,6 +188,7 @@ protected:
     constexpr static float PRED_PAD_VALUE = 0.5f;
 
 private:
+    GlobalTensor<float> partialGm_;
     GlobalTensor<T> predGm_;
     GlobalTensor<int32_t> targetGm_;
     GlobalTensor<T> doutGm_;
@@ -220,7 +226,7 @@ private:
 template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
 __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::Init(
     GM_ADDR pred, GM_ADDR target, GM_ADDR dout, GM_ADDR weight, GM_ADDR grad,
-    const SoftmaxFocalLossGradArch35TilingData* tiling, TPipe* pipe)
+    const SoftmaxFocalLossGradArch35TilingData* tiling, TPipe* pipe, GM_ADDR workspace)
 {
     a_ = tiling->a;
     r_ = tiling->r;
@@ -234,6 +240,9 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::Init
     alpha_ = tiling->alpha;
     coef_ = tiling->reductionCoef;
     pipe_ = pipe;
+    if (workspace != nullptr) {
+        partialGm_.SetGlobalBuffer((__gm__ float*)workspace);
+    }
 
     predGm_.SetGlobalBuffer((__gm__ T*)pred);
     targetGm_.SetGlobalBuffer((__gm__ int32_t*)target);
@@ -299,8 +308,13 @@ __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::Init
 }
 
 template <typename T, typename TW, uint64_t hasWeight, uint64_t gammaMode>
+template <bool splitRow>
 __aicore__ inline void SoftmaxFocalLossGradND<T, TW, hasWeight, gammaMode>::Process()
 {
+    if constexpr (splitRow) {
+        ProcessSplitRow();
+        return;
+    }
     int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
     if (blockIdx >= realCoreNum_) {
         return;
