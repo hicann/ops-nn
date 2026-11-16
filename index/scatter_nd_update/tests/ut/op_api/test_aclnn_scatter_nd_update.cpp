@@ -41,14 +41,47 @@ TEST_F(l2_scatter_nd_update_test, case_1)
 // 空tensor
 TEST_F(l2_scatter_nd_update_test, case_2)
 {
-    auto varRef_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto indice_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
-    auto updates_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto varRef_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto indice_desc = TensorDesc({0, 1}, ACL_INT64, ACL_FORMAT_ND);
+    auto updates_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnScatterNdUpdate, INPUT(varRef_desc, indice_desc, updates_desc), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_scatter_nd_update_test, empty_varref_invalid_updates_shape)
+{
+    auto varRef_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto indice_desc = TensorDesc({1, 2}, ACL_INT64, ACL_FORMAT_ND);
+    auto updates_desc = TensorDesc({999}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnScatterNdUpdate, INPUT(varRef_desc, indice_desc, updates_desc), OUTPUT());
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_scatter_nd_update_test, empty_varref_invalid_updates_tail_shape)
+{
+    auto varRef_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto indice_desc = TensorDesc({1, 1}, ACL_INT64, ACL_FORMAT_ND);
+    auto updates_desc = TensorDesc({1, 999}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnScatterNdUpdate, INPUT(varRef_desc, indice_desc, updates_desc), OUTPUT());
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_scatter_nd_update_test, empty_indices_rank1_rejected)
+{
+    auto varRef_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto indice_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto updates_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnScatterNdUpdate, INPUT(varRef_desc, indice_desc, updates_desc), OUTPUT());
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
 // checkNotNull self index src
@@ -155,9 +188,9 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_8)
 // 空tensor
 TEST_F(l2_scatter_nd_update_test, ascend910B2_case_9)
 {
-    auto varRef_desc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto indice_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
-    auto updates_desc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto varRef_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto indice_desc = TensorDesc({0, 1}, ACL_INT64, ACL_FORMAT_ND);
+    auto updates_desc = TensorDesc({0, 4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnScatterNdUpdate, INPUT(varRef_desc, indice_desc, updates_desc), OUTPUT());
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;

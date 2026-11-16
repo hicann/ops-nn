@@ -145,6 +145,44 @@ static aclnnStatus CheckParams(aclTensor* varRef, const aclTensor* indices, cons
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckDtypeValid(varRef, indices, updates), ACLNN_ERR_PARAM_INVALID);
 
+    // 空输入短路前也要执行公开的 indices shape 合同校验。
+    auto indicesShape = indices->GetViewShape();
+    auto indicesDimNum = indicesShape.GetDimNum();
+    if (indicesDimNum < 2) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "indices must have at least 2 dimensions.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    auto indexAxisNum = indicesShape.GetDim(indicesDimNum - 1);
+    if (indexAxisNum < 1 || indexAxisNum > 7 || indexAxisNum > varRef->GetViewShape().GetDimNum()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "indices last dimension must be in [1, 7] and <= varRef rank.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
+    // The host tiling path validates this relation for non-empty tensors. Keep
+    // the same contract here because the empty-input fast path skips tiling.
+    auto varRefShape = varRef->GetViewShape();
+    auto updatesShape = updates->GetViewShape();
+    auto varRefDimNum = varRefShape.GetDimNum();
+    auto updatesDimNum = updatesShape.GetDimNum();
+    auto expectedUpdatesDimNum = indicesDimNum - 1 + varRefDimNum - static_cast<size_t>(indexAxisNum);
+    if (updatesDimNum != expectedUpdatesDimNum) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "updates shape does not match indices and varRef shapes.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    for (size_t i = 0; i < indicesDimNum - 1; ++i) {
+        if (updatesShape.GetDim(i) != indicesShape.GetDim(i)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "updates shape does not match indices and varRef shapes.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    auto updatesTailOffset = indicesDimNum - 1;
+    for (size_t i = static_cast<size_t>(indexAxisNum); i < varRefDimNum; ++i) {
+        if (updatesShape.GetDim(updatesTailOffset + i - static_cast<size_t>(indexAxisNum)) != varRefShape.GetDim(i)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "updates shape does not match indices and varRef shapes.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+
     // 3. 检查hifloat4仅支持连续
     CHECK_RET(CheckContiguousSupport(varRef, updates), ACLNN_ERR_PARAM_INVALID);
 
