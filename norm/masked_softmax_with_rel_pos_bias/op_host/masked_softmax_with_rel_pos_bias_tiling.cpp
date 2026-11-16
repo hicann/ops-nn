@@ -18,6 +18,7 @@
 #include <sstream>
 #include <algorithm>
 #include <numeric>
+#include "utils/extern_math_util.h"
 #include "register/op_impl_registry.h"
 #include "util/math_util.h"
 #include "log/log.h"
@@ -230,8 +231,25 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::CheckOutShape()
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus CheckDimsUint32(const gert::StorageShape* shape, const char* name, gert::TilingContext* ctx)
+{
+    const auto& dims = shape->GetStorageShape();
+    for (size_t i = 0; i < dims.GetDimNum(); ++i) {
+        int64_t d = dims.GetDim(i);
+        if (!ge::IntegerChecker<uint32_t>::Compat(d)) {
+            OP_LOGE(ctx, "Do tiling failed, %s dim %zu is out of uint32 range: %lld", name, i,
+                    static_cast<long long>(d));
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetXTensorDims(const gert::StorageShape* x_shape)
 {
+    if (CheckDimsUint32(x_shape, "x", context_) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (x_shape->GetStorageShape().GetDimNum() == 5) { // 5 is for 5 dim
         b_ = static_cast<uint32_t>(x_shape->GetStorageShape().GetDim(DIM_0));
         w_ = static_cast<uint32_t>(x_shape->GetStorageShape().GetDim(DIM_1));
@@ -258,6 +276,9 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetXTensorDims(const gert
 
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetAttenMaskTensorDims(const gert::StorageShape* attention_shape)
 {
+    if (CheckDimsUint32(attention_shape, "atten_mask", context_) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     auto attenDimNum = attention_shape->GetStorageShape().GetDimNum();
     if (attenDimNum == DIM_3) {
         // atten是三维，空shape校验，x和s1和s2对应
@@ -303,6 +324,9 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBaseTiling::GetBiasTensorDims()
         OP_LOGD(context_, "Do tiling, the bias shape is null");
     }
     OP_CHECK_NULL_WITH_CONTEXT(context_, bias_shape);
+    if (CheckDimsUint32(bias_shape, "bias", context_) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     auto biasDimNum = bias_shape->GetStorageShape().GetDimNum();
     if (biasDimNum == DIM_3) {
         // bias是三维，空shape校验，x和s1和s2对应
@@ -882,9 +906,11 @@ bool MaskedSoftmaxWithRelPosBiasBWTiling::IsCapable()
 
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBWTiling::DoOpTiling()
 {
-    int64_t singleCoreSize = b_ * w_ / aivNum;
-    OP_LOGD(context_, "b_[%u], w_[%u], aivNum[%u], singleCoreSize[%ld].", b_, w_, aivNum, singleCoreSize);
-    int64_t tailSize = b_ * w_ - singleCoreSize * aivNum;
+    const int64_t bTimesW = static_cast<int64_t>(b_) * static_cast<int64_t>(w_);
+    int64_t singleCoreSize = bTimesW / aivNum;
+    OP_LOGD(context_, "b_[%u], w_[%u], aivNum[%u], singleCoreSize[%ld].", b_, w_, aivNum,
+            static_cast<long>(singleCoreSize));
+    int64_t tailSize = bTimesW - singleCoreSize * aivNum;
     int64_t tailStartCoreIdx = aivNum;
     if (tailSize != 0) {
         tailStartCoreIdx = tailSize;
@@ -1183,7 +1209,9 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasS1BiasTiling::PostTiling()
 {
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize()); // already check capcity in CheckContext
-    context_->SetBlockDim(std::min(aivNum, static_cast<uint32_t>(static_cast<uint64_t>(b_) * w_ * n_ * s1_)));
+    const uint64_t totalRows64 = static_cast<uint64_t>(b_) * static_cast<uint64_t>(w_) * static_cast<uint64_t>(n_) *
+                                 static_cast<uint64_t>(s1_);
+    context_->SetBlockDim(static_cast<uint32_t>(std::min<uint64_t>(aivNum, totalRows64)));
     return ge::GRAPH_SUCCESS;
 }
 class MaskedSoftmaxWithRelPosBiasBWNTiling : public MaskedSoftmaxWithRelPosBiasBaseTiling {
@@ -1296,7 +1324,8 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBWNTiling::PostTiling()
 {
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize()); // already check capcity in CheckContext
-    context_->SetBlockDim(std::min(static_cast<uint32_t>(b_ * w_ * n_), aivNum));
+    const uint64_t totalBatches64 = static_cast<uint64_t>(b_) * static_cast<uint64_t>(w_) * static_cast<uint64_t>(n_);
+    context_->SetBlockDim(static_cast<uint32_t>(std::min<uint64_t>(totalBatches64, aivNum)));
     OP_LOGD(context_, "tiling data size: %zu.", tilingData.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
@@ -1514,7 +1543,9 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBWNS1Tiling::PostTiling()
 {
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize()); // already check capcity in CheckContext
-    context_->SetBlockDim(std::min(aivNum, static_cast<uint32_t>(static_cast<uint64_t>(b_) * w_ * n_ * s1_)));
+    const uint64_t totalRows64 = static_cast<uint64_t>(b_) * static_cast<uint64_t>(w_) * static_cast<uint64_t>(n_) *
+                                 static_cast<uint64_t>(s1_);
+    context_->SetBlockDim(static_cast<uint32_t>(std::min<uint64_t>(aivNum, totalRows64)));
     return ge::GRAPH_SUCCESS;
 }
 

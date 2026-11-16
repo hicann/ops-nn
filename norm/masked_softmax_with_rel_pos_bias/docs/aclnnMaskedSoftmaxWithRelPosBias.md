@@ -66,6 +66,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   <col style="width: 300px">
   <col style="width: 328px">
   <col style="width: 101px">
+  <col style="width: 120px">
   <col style="width: 146px">
   </colgroup>
   <thead>
@@ -76,6 +77,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <th>使用说明</th>
       <th>数据类型</th>
       <th>数据格式</th>
+      <th>维度(shape)</th>
       <th>非连续Tensor</th>
     </tr></thead>
   <tbody>
@@ -86,15 +88,17 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape为4维(B*W, N, S1, S2)或5维(B, W, N, S1, S2)</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+      <td>4-5</td>
       <td>√</td>
     </tr>
     <tr>
       <td>attenMaskOptional</td>
-      <td>输入</td>
-      <td>待计算入参，对应公式中的attenMaskOptional。</td>
+      <td>可选输入</td>
+      <td>待计算入参，对应公式中的attenMaskOptional；不需要时为空指针。</td>
       <td>shape为3维(W, S1, S2)、4维(W, 1, S1, S2)或5维(1, W, 1, S1, S2)；允许传nullptr，传nullptr时按无mask计算</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+      <td>3-5</td>
       <td>√</td>
     </tr>
     <tr>
@@ -104,15 +108,17 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape为3维(N, S1, S2)、4维(1, N, S1, S2)或5维(1, 1, N, S1, S2)</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+      <td>3-5</td>
       <td>√</td>
     </tr>
     <tr>
       <td>scaleValue</td>
       <td>输入</td>
-      <td>待计算入参，对应公式中的scaleValue。</td>
+      <td>待计算入参，对应公式中的scaleValue。须为float32可表示的有限值；NaN/±Inf报错。</td>
       <td>无</td>
       <td>DOUBLE</td>
-      <td>ND</td>
+      <td>-</td>
+      <td>-</td>
       <td>-</td>
     </tr>
     <tr>
@@ -121,7 +127,8 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>精度模式参数。保留字段，当前仅支持取值0。</td>
       <td>无</td>
       <td>INT64</td>
-      <td>ND</td>
+      <td>-</td>
+      <td>-</td>
       <td>-</td>
     </tr>
     <tr>
@@ -131,6 +138,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape与x相同，仅支持连续tensor。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
+      <td>4-5</td>
       <td>×</td>
     </tr>
     <tr>
@@ -141,11 +149,13 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>-</td>
       <td>-</td>
       <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -177,17 +187,17 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x、relativePosBias或out是空指针。</td>
+      <td>传入的x、relativePosBias或out是空指针（attenMaskOptional为可选输入，允许为空指针）。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
-      <td>传入的x、attenMaskOptional（非空时）、relativePosBias或out的数据类型不在支持的范围之内，或与x的数据类型不一致。</td>
+      <td>输入或输出的数据类型不支持，或数据格式需要布局转换（如FRACTAL_NZ）。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>561002</td>
-      <td>输入或输出的shape不匹配或者不在支持的维度范围内。</td>
+      <td>输入或输出的shape不匹配、维度/尺寸越界，或数据类型与x不一致；attenMaskOptional/relativePosBias为空且输出非空。</td>
     </tr>
   </tbody></table>
 
@@ -239,15 +249,24 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   - aclnnMaskedSoftmaxWithRelPosBias默认确定性实现。
 
 - 数据类型约束：
-  - x仅支持FLOAT、FLOAT16、BFLOAT16；attenMaskOptional（非空时）、relativePosBias、out的数据类型必须与x一致，不一致时算子报错。
+  - attenMaskOptional（非空时）、relativePosBias、out的数据类型必须与x一致，不一致时算子报错。
+
+- Shape约束：
+  - x为4维 (B*W, N, S1, S2) 且提供attenMaskOptional时，mask的W轴须整除D=B*W（D%W==0）。
 
 - 属性值域约束：
-  - scaleValue必须为有限值（支持NaN、+Inf、-Inf以外的任意DOUBLE值），传入NaN或±Inf时算子报错。
-  - innerPrecisionMode为保留字段，当前仅支持取值0，传入其他值时算子报错。
+  - scaleValue须为float32可表示的有限值；NaN或 ±Inf报错。
+  - innerPrecisionMode为保留字段，当前仅支持取值0；传入其他值时报错。
 
 - 非连续Tensor支持：
-  - x、attenMaskOptional、relativePosBias支持非连续Tensor（即strides不满足连续存储条件的Tensor），传入后由框架自动转为连续Tensor再参与计算。
-  - out不支持非连续Tensor，仅支持连续Tensor。
+  - x、attenMaskOptional、relativePosBias支持非连续Tensor。
+  - out必须为连续Tensor；传入非连续Tensor时不保证结果。
+
+- 空tensor约束：
+  - 空tensor不支持；输出为空时接口返回成功但不保证结果；attenMaskOptional或relativePosBias为空且输出非空时报错。
+
+- 数据格式约束：
+  - ACLNN接口按ND布局解释输入/输出；NCHW、NCDHW等与ND同布局的格式可接受。
 
 <!-- npu="310p" id8 -->
 - <term>Atlas推理系列产品</term>：不支持入参x的最后一个维度S2非32Byte对齐的场景。

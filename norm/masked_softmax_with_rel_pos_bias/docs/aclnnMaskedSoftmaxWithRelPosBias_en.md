@@ -68,6 +68,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   <col style="width: 300px">
   <col style="width: 328px">
   <col style="width: 101px">
+  <col style="width: 120px">
   <col style="width: 146px">
   </colgroup>
   <thead>
@@ -78,6 +79,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <th>Instruction</th>
       <th>Data Type</th>
       <th>Data Format</th>
+      <th>Shape</th>
       <th>Non-contiguous Tensor</th>
     </tr></thead>
   <tbody>
@@ -88,15 +90,17 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>4D (B*W, N, S1, S2) or 5D (B, W, N, S1, S2)</td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
+      <td>4-5</td>
       <td>√</td>
     </tr>
     <tr>
       <td>attenMaskOptional</td>
-      <td>Input</td>
-      <td>Input to be computed, corresponding to attenMaskOptional in the formula.</td>
+      <td>Optional input</td>
+      <td>Input to be computed, corresponding to attenMaskOptional in the formula; it is not required and a null pointer is allowed.</td>
       <td>3D (W, S1, S2), 4D (W, 1, S1, S2), or 5D (1, W, 1, S1, S2); passing nullptr is allowed, which is equivalent to computing without a mask</td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
+      <td>3-5</td>
       <td>√</td>
     </tr>
     <tr>
@@ -106,24 +110,27 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>shape is 3D (N, S1, S2), 4D (1, N, S1, S2), or 5D (1, 1, N, S1, S2).</td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
+      <td>3-5</td>
       <td>√</td>
     </tr>
     <tr>
       <td>scaleValue</td>
       <td>Input</td>
-      <td>Input to be computed, corresponding to scaleValue in the formula.</td>
+      <td>Input to be computed, corresponding to scaleValue in the formula. It must be a finite value representable by float32; NaN/±Inf is rejected.</td>
       <td>None</td>
       <td>DOUBLE</td>
-      <td>ND</td>
+      <td>-</td>
+      <td>-</td>
       <td>-</td>
     </tr>
     <tr>
       <td>innerPrecisionMode</td>
       <td>Input</td>
-      <td>Precision mode parameter. Reserved field. Currently, only the value 0 is supported.</td>
+      <td>Precision mode parameter. Reserved field; currently only the value 0 is supported.</td>
       <td>None</td>
       <td>INT64</td>
-      <td>ND</td>
+      <td>-</td>
+      <td>-</td>
       <td>-</td>
     </tr>
     <tr>
@@ -133,6 +140,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>Same shape as x. Only contiguous tensors are supported.</td>
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
+      <td>4-5</td>
       <td>×</td>
     </tr>
     <tr>
@@ -143,11 +151,13 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
       <td>-</td>
       <td>-</td>
       <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>Output</td>
       <td>Returns the op executor containing the operator computation flow.</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -170,7 +180,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -179,17 +189,17 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>x, relativePosBias, or out is a null pointer.</td>
+      <td>x, relativePosBias, or out is a null pointer (attenMaskOptional is optional and may be a null pointer).</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
-      <td>The data type of x, attenMaskOptional (when not null), relativePosBias, or out is not within the supported range, or is inconsistent with the data type of x.</td>
+      <td>Unsupported input/output data type, or a data format requiring a layout conversion (such as FRACTAL_NZ).</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>561002</td>
-      <td>The shape of an input or output parameter does not match or is not within the supported dimension range.</td>
+      <td>Input/output shape mismatch, dimension/size out of range, or dtype inconsistent with x; attenMaskOptional/relativePosBias is empty while the output is non-empty.</td>
     </tr>
   </tbody></table>
 
@@ -241,18 +251,24 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   - aclnnMaskedSoftmaxWithRelPosBias defaults to a deterministic implementation.
 
 - Data type constraint:
-  - x supports only FLOAT, FLOAT16, and BFLOAT16. The data types of attenMaskOptional (when not empty), relativePosBias, and out must be the same as that of x; otherwise, the operator reports an error.
+  - The data types of attenMaskOptional (when not empty), relativePosBias, and out must be the same as that of x; otherwise, the operator reports an error.
 
 - Data format constraint:
-  - x, attenMaskOptional, relativePosBias, and out support only the ND format.
+  - The ACLNN interface interprets inputs/outputs using the ND layout. Formats with the ND layout (such as NCHW or NCDHW) are accepted.
+
+- Shape constraint:
+  - For 4D x (B*W, N, S1, S2) with attenMaskOptional, the W axis of the mask must divide D=B*W (D%W==0).
 
 - Attribute value range constraint:
-  - scaleValue must be a finite value (any DOUBLE value except NaN, +Inf, and -Inf is supported). The operator reports an error if NaN or ±Inf is passed in.
-  - innerPrecisionMode is a reserved field. Currently, only the value 0 is supported. The operator reports an error if any other value is passed in.
+  - scaleValue must be finite and representable by float32; NaN or ±Inf is rejected.
+  - innerPrecisionMode is a reserved field. Only 0 is supported; other values are rejected.
 
 - Non-contiguous tensor support:
-  - x, attenMaskOptional, and relativePosBias support non-contiguous tensors (that is, tensors whose strides do not meet the contiguous storage condition). After being passed in, they are automatically converted to contiguous tensors by the framework before computation.
-  - out does not support non-contiguous tensors and must be a contiguous tensor.
+  - x, attenMaskOptional, and relativePosBias support non-contiguous tensors.
+  - out must be a contiguous tensor; the result is not guaranteed if a non-contiguous tensor is passed.
+
+- Empty tensor constraint:
+  - Empty tensors are not supported; an empty output returns success without a guaranteed result; if attenMaskOptional or relativePosBias is empty while the output is non-empty, an error is reported.
 
 <!-- npu="310p" id8 -->
 - <term>Atlas inference products</term>: The scenario where the last dimension S2 of the input parameter x is not aligned to 32 bytes is not supported.

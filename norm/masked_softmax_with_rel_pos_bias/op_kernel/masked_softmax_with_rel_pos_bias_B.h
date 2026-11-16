@@ -425,12 +425,16 @@ private:
             DataCopyParams attenMaskCopyParamsLast(this->tilingData->ws1, this->s2DtypeSize, (uint16_t)(0),
                                                    (uint16_t)(0));
             DataCopyPadParams padParamsNormal{false, 0, 0, 0};
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+            // 与基类非对齐路径保持一致：arch35(__CCE_AICORE__=310) 也支持 DataCopyPad，
+            // 原有限定只覆盖 220/3003/3113，会把 arch35 的 mask/bias 搬运整段剔除。
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
             DataCopyPad(maskLocal, this->attenMaskGm, attenMaskCopyParamsLast, padParamsNormal);
 #endif
             auto biasLocal = maskLocal[ws1s2Alingned];
             DataCopyParams biasCopyParamsLast(this->tilingData->ns1, this->s2DtypeSize, (uint16_t)(0), (uint16_t)(0));
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || __CCE_AICORE__ == 310 || \
+    (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
             DataCopyPad(biasLocal, this->biasGm, biasCopyParamsLast, padParamsNormal);
 #endif
             this->maskQueue.EnQue(maskLocal);

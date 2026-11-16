@@ -23,16 +23,9 @@
 #include <vector>
 
 #include "graph.h"
-#include "types.h"
-#include "tensor.h"
-#include "ge_error_codes.h"
-#include "ge_api_types.h"
 #include "ge_api.h"
-#include "ge_ir_build.h"
-#include "array_ops.h"
-#include "gnode.h"
+#include "ops_proto_math.h"
 #include "named_io_node_builder.h"
-#include "../op_graph/foreach_minimum_list_proto.h"
 
 using namespace ge;
 using std::map;

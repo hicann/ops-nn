@@ -66,16 +66,16 @@ English | [简体中文](./README.md)
     <tr>
       <td>scaleValue</td>
       <td>Optional attribute</td>
-      <td>Corresponds to scaleValue in the formula.</td>
+      <td>Corresponds to scaleValue in the formula. The IR attribute defaults to 1.0; ACLNN callers must pass it explicitly. It must be a finite value representable by float32; NaN/±Inf is rejected.</td>
       <td>DOUBLE</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>innerPrecisionMode</td>
       <td>Optional attribute</td>
-      <td>Precision mode parameter.</td>
+      <td>Precision mode parameter. Default: 0; reserved field; only 0 is supported.</td>
       <td>INT64</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>out</td>
@@ -86,16 +86,21 @@ English | [简体中文](./README.md)
     </tr>
   </tbody></table>
 
-- <term>Atlas training products</term>: BFLOAT16 is not supported.
+- <term>Atlas inference products</term>: BFLOAT16 is not supported, and the scenario where S2 of the input is not aligned to 32 bytes is not supported.
 - <term>Kirin X90 processor series products</term> and <term>Kirin 9030 processor series products</term>: The data types of all inputs and outputs do not support BFLOAT16.
 
 ## Constraints
 
-None
+> In the parameter table, `attenMaskOptional`, `relativePosBias`, `scaleValue`, and `innerPrecisionMode` are ACLNN C-header parameter names; the corresponding IR/OpDef names are `atten_mask`, `relative_pos_bias`, `scale_value`, and `inner_precision_mode`.
+
+- The dtype of attenMaskOptional (when not null), relativePosBias, and out must be the same as that of x.
+- scaleValue defaults to 1.0 and must be finite and representable by float32; NaN/±Inf is rejected. innerPrecisionMode is a reserved field; its default is 0 and only 0 is supported.
+- For 4D x (B*W, N, S1, S2) with attenMaskOptional, the W axis of the mask divides the D=B*W axis (D%W==0); this defines the merged-axis decomposition rule when B>1.
+- Empty tensors are not supported; callers must not rely on their behavior. An empty output returns success without a guaranteed result; if attenMaskOptional or relativePosBias is empty while the output is non-empty, an error is reported.
 
 ## Invocation Description
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn interface  | [test_aclnn_masked_softmax_with_rel_pos_bias](examples/test_aclnn_masked_softmax_with_rel_pos_bias.cpp) | Calls the MaskedSoftmaxWithRelPosBias operator through the [aclnnMaskedSoftmaxWithRelPosBias](docs/aclnnMaskedSoftmaxWithRelPosBias_en.md) interface. |
-| Graph mode | [test_aclnn_masked_softmax_with_rel_pos_bias](examples/test_aclnn_masked_softmax_with_rel_pos_bias.cpp)  | Calls the MaskedSoftmaxWithRelPosBias operator by building a graph through [operator IR](op_graph/masked_softmax_with_rel_pos_bias_proto.h).         |
+| Graph mode | [test_geir_masked_softmax_with_rel_pos_bias](examples/test_geir_masked_softmax_with_rel_pos_bias.cpp)  | Calls the MaskedSoftmaxWithRelPosBias operator by building a graph through [operator IR](op_graph/masked_softmax_with_rel_pos_bias_proto.h).         |

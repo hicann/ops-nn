@@ -64,16 +64,16 @@
     <tr>
       <td>scaleValue</td>
       <td>可选属性</td>
-      <td>对应公式中的scaleValue。</td>
+      <td>对应公式中的scaleValue。IR属性默认1.0；ACLNN调用需显式传入。须为float32可表示的有限值；NaN/±Inf报错。</td>
       <td>DOUBLE</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>innerPrecisionMode</td>
       <td>可选属性</td>
-      <td>精度模式参数。</td>
+      <td>精度模式参数。默认值0，保留字段，当前仅支持0。</td>
       <td>INT64</td>
-      <td>ND</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>out</td>
@@ -84,16 +84,21 @@
     </tr>
   </tbody></table>
 
-- <term>Atlas训练系列产品</term>：不支持BFLOAT16。
+- <term>Atlas推理系列产品</term>：不支持BFLOAT16，且不支持输入S2非32Byte对齐的场景。
 - <term>Kirin X90处理器系列产品</term>、<term>Kirin 9030处理器系列产品</term>：所有输入、输出的数据类型不支持BFLOAT16。
 
 ## 约束说明
 
-无
+> 参数表中的 `attenMaskOptional`、`relativePosBias`、`scaleValue`、`innerPrecisionMode` 为ACLNN C头参数名；对应IR/OpDef名为 `atten_mask`、`relative_pos_bias`、`scale_value`、`inner_precision_mode`。
+
+- attenMaskOptional（非空时）、relativePosBias、out的dtype必须与x一致。
+- scaleValue默认1.0，须为float32可表示的有限值；NaN/±Inf报错。innerPrecisionMode为保留字段，默认0，仅支持0。
+- x为4维 (B*W, N, S1, S2) 且提供attenMaskOptional时，按mask的W轴对D=B*W做整除分解（要求D%W==0）；B>1时该合并轴分解规则由本约束定义。
+- 空tensor不支持，调用方不应依赖其行为：输出为空时接口返回成功但不保证结果；attenMaskOptional或relativePosBias为空且输出非空时报错。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_masked_softmax_with_rel_pos_bias](examples/test_aclnn_masked_softmax_with_rel_pos_bias.cpp) | 通过[aclnnMaskedSoftmaxWithRelPosBias](docs/aclnnMaskedSoftmaxWithRelPosBias.md)接口方式调用MaskedSoftmaxWithRelPosBias算子。 |
-| 图模式 | [test_aclnn_masked_softmax_with_rel_pos_bias](examples/test_aclnn_masked_softmax_with_rel_pos_bias.cpp)  | 通过[算子IR](op_graph/masked_softmax_with_rel_pos_bias_proto.h)构图方式调用MaskedSoftmaxWithRelPosBias算子。         |
+| 图模式 | [test_geir_masked_softmax_with_rel_pos_bias](examples/test_geir_masked_softmax_with_rel_pos_bias.cpp)  | 通过[算子IR](op_graph/masked_softmax_with_rel_pos_bias_proto.h)构图方式调用MaskedSoftmaxWithRelPosBias算子。         |

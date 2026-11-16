@@ -45,12 +45,18 @@ static graphStatus MaskedSoftmaxWithRelPosBiasHostExecuteFunc(OpExecuteContext* 
     const float* scaleValue = attrs->GetAttrPointer<float>(SCALE_VALUE_ATTR_INDEX);
     OP_CHECK_IF(scaleValue == nullptr, OP_LOGE("aclnnfallback", "scale_value is null"), return GRAPH_FAILED);
 
-    const int32_t* innerPrecisionMode = attrs->GetAttrPointer<int32_t>(INNER_PRECISION_MODE_ATTR_INDEX);
+    const int64_t* innerPrecisionMode = attrs->GetAttrPointer<int64_t>(INNER_PRECISION_MODE_ATTR_INDEX);
     OP_CHECK_IF(innerPrecisionMode == nullptr, OP_LOGE("aclnnfallback", "inner_precision_mode is null"),
                 return GRAPH_FAILED);
 
+    // 属性在 OpDef 中是 Float(float32)/Int(int64)，按属性实际类型读取；
+    // 而 aclnn 入口形参是 double/int64，调用前需把 float32 提升为 double，
+    // 否则跨 DSO 传参会把 float 位型当作 double（1.0f 约为 5.26e-315）。
+    const double scaleValueArg = static_cast<double>(*scaleValue);
+    const int64_t innerPrecisionModeArg = *innerPrecisionMode;
+
     auto apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(hostApiCtx, aclnnMaskedSoftmaxWithRelPosBias, x, attenMask,
-                                              relativePosBias, *scaleValue, *innerPrecisionMode, y);
+                                              relativePosBias, scaleValueArg, innerPrecisionModeArg, y);
     OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE("aclnnfallback", "apiRet failed:%d", apiRet), return GRAPH_FAILED);
 
     return GRAPH_SUCCESS;

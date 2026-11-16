@@ -677,6 +677,46 @@ TEST_F(MaskedSoftmaxWithRelPosBiasTiling, B_tiling_ShapeCheckFailed)
     testTilingShapeCheckFailed(x_shape, atten_mask_shape, bias_shape, y_shape);
 }
 
+TEST_F(MaskedSoftmaxWithRelPosBiasTiling, dims_exceed_uint32_ShapeCheckFailed)
+{
+    int64_t B = 1;
+    int64_t W = 1;
+    int64_t N = 1;
+    int64_t S1 = 1;
+    int64_t S2 = 8;
+    gert::StorageShape x_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
+    // S2 = 2^32 + 8：维度必须按 int64 校验并拒绝，不能被截断成 8 后放行
+    int64_t maskS2 = 4294967304LL;
+    gert::StorageShape atten_mask_shape = {{B, W, N, S1, maskS2}, {B, W, N, S1, maskS2}};
+    gert::StorageShape bias_shape = {{N, S1, S2}, {N, S1, S2}};
+    gert::StorageShape y_shape = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
+    testTilingShapeCheckFailed(x_shape, atten_mask_shape, bias_shape, y_shape);
+
+    // x 自身维度超出 uint32 同样拒绝
+    int64_t xs2 = 4294967304LL;
+    gert::StorageShape big_x = {{B, W, N, S1, xs2}, {B, W, N, S1, xs2}};
+    gert::StorageShape big_y = {{B, W, N, S1, xs2}, {B, W, N, S1, xs2}};
+    gert::StorageShape normal_mask = {{B, W, N, S1, xs2}, {B, W, N, S1, xs2}};
+    gert::StorageShape big_bias = {{N, S1, xs2}, {N, S1, xs2}};
+    testTilingShapeCheckFailed(big_x, normal_mask, big_bias, big_y);
+
+    // 负维（动态 shape/rank）在 tiling 入口直接拒绝
+    gert::StorageShape neg_x = {{-1, W, N, S1, S2}, {-1, W, N, S1, S2}};
+    gert::StorageShape neg_y = {{-1, W, N, S1, S2}, {-1, W, N, S1, S2}};
+    testTilingShapeCheckFailed(neg_x, atten_mask_shape, bias_shape, neg_y);
+
+    gert::StorageShape neg_mask_shape = {{B, W, N, S1, -1}, {B, W, N, S1, -1}};
+    testTilingShapeCheckFailed(x_shape, neg_mask_shape, bias_shape, y_shape);
+
+    // bias 单独超界/负维（x、mask 合法，确保命中 bias 校验）
+    gert::StorageShape ok_mask = {{B, W, N, S1, S2}, {B, W, N, S1, S2}};
+    gert::StorageShape big_bias_only = {{N, S1, xs2}, {N, S1, xs2}};
+    testTilingShapeCheckFailed(x_shape, ok_mask, big_bias_only, y_shape);
+
+    gert::StorageShape neg_bias = {{N, S1, -1}, {N, S1, -1}};
+    testTilingShapeCheckFailed(x_shape, ok_mask, neg_bias, y_shape);
+}
+
 TEST_F(MaskedSoftmaxWithRelPosBiasTiling, input_output_ShapeCheckFailed)
 {
     int32_t B = 20;

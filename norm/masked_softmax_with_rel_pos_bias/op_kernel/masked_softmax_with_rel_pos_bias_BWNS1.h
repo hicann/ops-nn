@@ -63,8 +63,10 @@ public:
 
         scaleValue = tilingData->scaleValue;
 
-        xGm.SetGlobalBuffer((__gm__ T*)x + offset * s2_, batchSize * s2_);
-        yGm.SetGlobalBuffer((__gm__ T*)y + offset * s2_, batchSize * s2_);
+        // 全局 GM 偏移可能超过 2^32 元素：用 64 位计算，避免回绕
+        int64_t globalOffset = static_cast<int64_t>(offset) * static_cast<int64_t>(s2_);
+        xGm.SetGlobalBuffer((__gm__ T*)x + globalOffset, static_cast<int64_t>(batchSize) * s2_);
+        yGm.SetGlobalBuffer((__gm__ T*)y + globalOffset, static_cast<int64_t>(batchSize) * s2_);
         attenMaskGm.SetGlobalBuffer((__gm__ T*)attenMask);
         biasGm.SetGlobalBuffer((__gm__ T*)bias);
 

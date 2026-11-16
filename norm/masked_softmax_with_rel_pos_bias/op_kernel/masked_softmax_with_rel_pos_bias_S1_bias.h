@@ -45,7 +45,8 @@ public:
         s2Aligned = tilingData->s2Aligned;
         s2DtypeSize = tilingData->s2DtypeSize;
         stackNum = tilingData->stackNum;
-        uint32_t xOffset = s1StartOffset * s2_;
+        // 全局 GM 偏移可能超过 2^32 元素：用 64 位计算，避免回绕
+        int64_t xOffset = static_cast<int64_t>(s1StartOffset) * static_cast<int64_t>(s2_);
         // 因为每个核上处理的batchSize不一样，所以不能放到host侧计算
         uint64_t bufferSize = batchSize * s2_;
         xGm.SetGlobalBuffer((__gm__ T*)x + xOffset, bufferSize);

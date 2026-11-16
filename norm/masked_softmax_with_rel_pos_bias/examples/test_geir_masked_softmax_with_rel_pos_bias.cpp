@@ -155,7 +155,38 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorD
         *(pData + i) = value;
     }
     input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    delete[] pData;
     return SUCCESS;
+}
+
+// float -> IEEE754 half / bfloat16 位模式（样例数据只用到小整数，仍按通用公式转换）。
+static uint16_t FloatToHalfBits(float v)
+{
+    uint32_t f = 0;
+    memcpy(&f, &v, sizeof(f));
+    uint16_t sign = static_cast<uint16_t>((f >> 16) & 0x8000u);
+    int32_t exp = static_cast<int32_t>((f >> 23) & 0xFFu) - 127 + 15;
+    uint32_t mant = f & 0x7FFFFFu;
+    if (exp <= 0) {
+        if (exp < -10) {
+            return sign;
+        }
+        mant |= 0x800000u;
+        uint32_t shift = static_cast<uint32_t>(14 - exp);
+        return static_cast<uint16_t>(sign | (mant >> shift));
+    }
+    if (exp >= 31) {
+        return static_cast<uint16_t>(sign | 0x7C00u);
+    }
+    return static_cast<uint16_t>(sign | (static_cast<uint32_t>(exp) << 10) | (mant >> 13));
+}
+
+static uint16_t FloatToBf16Bits(float v)
+{
+    uint32_t f = 0;
+    memcpy(&f, &v, sizeof(f));
+    uint32_t rounded = f + 0x7FFFu + ((f >> 16) & 1u);
+    return static_cast<uint16_t>(rounded >> 16);
 }
 
 int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type,
@@ -166,12 +197,28 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
     for (uint32_t i = 0; i < shapes.size(); i++) {
         size *= shapes[i];
     }
+    // 按元素个数申请、按真实 dtype 写入：原实现把字节数当作 int32 元素个数，
+    // 在 FLOAT16/BF16 上只写入了错误的低位位型。
     uint32_t data_len = size * GetDataTypeSize(data_type);
-    int32_t* pData = new (std::nothrow) int32_t[data_len];
-    for (uint32_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
+    uint8_t* pData = new (std::nothrow) uint8_t[data_len];
+    if (pData == nullptr) {
+        return FAILED;
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+    memset(pData, 0, data_len);
+    float fvalue = static_cast<float>(value);
+    for (size_t i = 0; i < size; ++i) {
+        if (data_type == DT_FLOAT) {
+            reinterpret_cast<float*>(pData)[i] = fvalue;
+        } else if (data_type == DT_FLOAT16) {
+            reinterpret_cast<uint16_t*>(pData)[i] = FloatToHalfBits(fvalue);
+        } else if (data_type == DT_BF16) {
+            reinterpret_cast<uint16_t*>(pData)[i] = FloatToBf16Bits(fvalue);
+        } else {
+            reinterpret_cast<int32_t*>(pData)[i] = value;
+        }
+    }
+    input_tensor = Tensor(input_tensor_desc, pData, data_len);
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -240,8 +287,10 @@ static int RunSingleScenario(uint32_t scenarioIdx)
         return FAILED;
     }
 
-    // 内层作用域：Graph/Session/Tensor 等 GE 对象须在 GEFinalize 之前全部析构，
-    // 否则栈对象在 GEFinalize 之后析构会触发 double free
+    // 内层作用域：Graph/Session/Tensor 等 GE 对象必须在 GEFinalize 之前析构。
+    // 失败时只记录状态并退出作用域，统一在作用域外 GEFinalize，避免先 finalize
+    // 再析构导致的 double free。
+    Status runRet = SUCCESS;
     {
         Graph graph("tc_ge_irrun_test");
         std::vector<ge::Tensor> input;
@@ -250,53 +299,56 @@ static int RunSingleScenario(uint32_t scenarioIdx)
         ret = CreateOppInGraph(inDtype, useRank4, hasMask, input, inputs, outputs, graph);
         if (ret != SUCCESS) {
             printf("%s - ERROR - [XIR]: scenario %u create graph failed\n", GetTime().c_str(), scenarioIdx);
-            GEFinalize();
-            return FAILED;
+            runRet = FAILED;
         }
-        if (!inputs.empty() && !outputs.empty()) {
-            graph.SetInputs(inputs).SetOutputs(outputs);
-        }
-        if (scenarioIdx == 0) {
-            printf("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
-            std::string file_path = "./dump";
-            aclgrphDumpGraph(graph, file_path.c_str(), file_path.length());
-        }
+        if (runRet == SUCCESS) {
+            if (!inputs.empty() && !outputs.empty()) {
+                graph.SetInputs(inputs).SetOutputs(outputs);
+            }
+            if (scenarioIdx == 0) {
+                printf("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
+                std::string file_path = "./dump";
+                aclgrphDumpGraph(graph, file_path.c_str(), file_path.length());
+            }
 
-        std::map<AscendString, AscendString> build_options = {};
-        ge::Session* session = new Session(build_options);
-        if (session == nullptr) {
-            printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
-            GEFinalize();
-            return FAILED;
-        }
-        std::map<AscendString, AscendString> graph_options = {};
-        uint32_t graph_id = 0;
-        ret = session->AddGraph(graph_id, graph, graph_options);
-        if (ret != SUCCESS) {
-            printf("%s - ERROR - [XIR]: scenario %u add graph failed\n", GetTime().c_str(), scenarioIdx);
+            std::map<AscendString, AscendString> build_options = {};
+            ge::Session* session = new Session(build_options);
+            if (session == nullptr) {
+                printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
+                runRet = FAILED;
+            }
+            if (runRet == SUCCESS) {
+                std::map<AscendString, AscendString> graph_options = {};
+                uint32_t graph_id = 0;
+                ret = session->AddGraph(graph_id, graph, graph_options);
+                if (ret != SUCCESS) {
+                    printf("%s - ERROR - [XIR]: scenario %u add graph failed\n", GetTime().c_str(), scenarioIdx);
+                    runRet = FAILED;
+                }
+                if (runRet == SUCCESS) {
+                    printf("%s - INFO - [XIR]: Start to run ir compute graph\n", GetTime().c_str());
+                    std::vector<ge::Tensor> output;
+                    ret = session->RunGraph(graph_id, input, output);
+                    if (ret != SUCCESS) {
+                        printf("%s - ERROR - [XIR]: scenario %u run graph failed\n", GetTime().c_str(), scenarioIdx);
+                        runRet = FAILED;
+                    } else {
+                        printf("%s - INFO - [XIR]: scenario %u run success, output size=%ld\n", GetTime().c_str(),
+                               scenarioIdx, output.empty() ? 0 : output[0].GetTensorDesc().GetShape().GetShapeSize());
+                    }
+                }
+            }
             delete session;
-            GEFinalize();
-            return FAILED;
         }
-
-        printf("%s - INFO - [XIR]: Start to run ir compute graph\n", GetTime().c_str());
-        std::vector<ge::Tensor> output;
-        ret = session->RunGraph(graph_id, input, output);
-        if (ret != SUCCESS) {
-            printf("%s - ERROR - [XIR]: scenario %u run graph failed\n", GetTime().c_str(), scenarioIdx);
-            delete session;
-            GEFinalize();
-            return FAILED;
-        }
-        printf("%s - INFO - [XIR]: scenario %u run success, output size=%ld\n", GetTime().c_str(), scenarioIdx,
-               output.empty() ? 0 : output[0].GetTensorDesc().GetShape().GetShapeSize());
-
-        delete session;
     }
+
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
+        return FAILED;
+    }
+    if (runRet != SUCCESS) {
         return FAILED;
     }
     printf("%s - INFO - [XIR]: scenario %u finalize success\n", GetTime().c_str(), scenarioIdx);

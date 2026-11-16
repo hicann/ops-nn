@@ -60,7 +60,12 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
     // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
     ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret);
+        aclrtFree(*deviceAddr);
+        *deviceAddr = nullptr;
+        return ret;
+    }
 
     // 计算连续tensor的strides
     std::vector<int64_t> strides(shape.size(), 1);
@@ -71,108 +76,150 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
+    if (*tensor == nullptr) {
+        LOG_PRINT("aclCreateTensor failed; device memory released.\n");
+        aclrtFree(*deviceAddr);
+        *deviceAddr = nullptr;
+        return -1;
+    }
     return 0;
 }
 
 int main()
 {
     // 1. （固定写法）device/stream初始化，参考acl API
-    // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
-    aclrtStream stream;
-    auto ret = Init(deviceId, &stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-
-    // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> xShape = {1, 1, 1, 2, 16};
-    std::vector<int64_t> attenMaskOptionalShape = {1, 2, 16};
-    std::vector<int64_t> relativePosBiasShape = {1, 2, 16};
-    std::vector<int64_t> outShape = {1, 1, 1, 2, 16};
-
+    aclrtStream stream = nullptr;
     void* xDeviceAddr = nullptr;
     void* attenMaskOptionalDeviceAddr = nullptr;
     void* relativePosBiasDeviceAddr = nullptr;
     void* outDeviceAddr = nullptr;
-
+    void* workspaceAddr = nullptr;
+    uint64_t workspaceSize = 0;
     aclTensor* x = nullptr;
     aclTensor* attenMaskOptional = nullptr;
     aclTensor* relativePosBias = nullptr;
     aclTensor* out = nullptr;
+    int ret = 0;
 
-    std::vector<float> xHostData = {1.08,  -1.56, -1.3,  -2.01, 2.18,  -2.23, -3.58, 3.22,  1.25, -0.56, -0.3,
-                                    -1.01, 1.08,  -1.13, -3.08, -2.22, -0.08, -2.56, 1.35,  1.01, 0.35,  -1.03,
-                                    -1.28, 1.22,  0.08,  -2.56, -1.01, -1.01, -0.18, -6.23, 4.55, -1.82};
-    std::vector<float> attenMaskOptionalHostData = {
-        2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3,
-    };
-    std::vector<float> relativePosBiasHostData = {1, 1, 1, 1, 4, 4, 4, 4, 1, 1, 1, 1, 4, 4, 4, 4,
-                                                  1, 1, 1, 1, 4, 4, 4, 4, 1, 1, 1, 1, 4, 4, 4, 4};
-    std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    // 所有失败路径统一走下方 cleanup，避免提前 return 泄漏 aclTensor/device 内存。
+    do {
+        ret = Init(deviceId, &stream);
+        if (ret != ACL_SUCCESS) {
+            LOG_PRINT("Init acl failed. ERROR: %d\n", ret);
+            break;
+        }
 
-    ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(attenMaskOptionalHostData, attenMaskOptionalShape, &attenMaskOptionalDeviceAddr,
-                          aclDataType::ACL_FLOAT, &attenMaskOptional);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(relativePosBiasHostData, relativePosBiasShape, &relativePosBiasDeviceAddr,
-                          aclDataType::ACL_FLOAT, &relativePosBias);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+        // 2. 构造输入与输出，需要根据API的接口自定义构造
+        std::vector<int64_t> xShape = {1, 1, 1, 2, 16};
+        std::vector<int64_t> attenMaskOptionalShape = {1, 2, 16};
+        std::vector<int64_t> relativePosBiasShape = {1, 2, 16};
+        std::vector<int64_t> outShape = {1, 1, 1, 2, 16};
 
-    // 3. 调用CANN算子库API，需要修改为具体的API名称
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor;
+        std::vector<float> xHostData = {1.08,  -1.56, -1.3,  -2.01, 2.18,  -2.23, -3.58, 3.22,  1.25, -0.56, -0.3,
+                                        -1.01, 1.08,  -1.13, -3.08, -2.22, -0.08, -2.56, 1.35,  1.01, 0.35,  -1.03,
+                                        -1.28, 1.22,  0.08,  -2.56, -1.01, -1.01, -0.18, -6.23, 4.55, -1.82};
+        std::vector<float> attenMaskOptionalHostData = {
+            2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3,
+        };
+        std::vector<float> relativePosBiasHostData = {1, 1, 1, 1, 4, 4, 4, 4, 1, 1, 1, 1, 4, 4, 4, 4,
+                                                      1, 1, 1, 1, 4, 4, 4, 4, 1, 1, 1, 1, 4, 4, 4, 4};
+        std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    // 调用aclnnMaskedSoftmaxWithRelPosBias第一段接口
-    ret = aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize(x, attenMaskOptional, relativePosBias, 1.0, 0, out,
-                                                           &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize failed. ERROR: %d\n", ret);
-              return ret);
+        ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
+        if (ret != ACL_SUCCESS) {
+            break;
+        }
+        ret = CreateAclTensor(attenMaskOptionalHostData, attenMaskOptionalShape, &attenMaskOptionalDeviceAddr,
+                              aclDataType::ACL_FLOAT, &attenMaskOptional);
+        if (ret != ACL_SUCCESS) {
+            break;
+        }
+        ret = CreateAclTensor(relativePosBiasHostData, relativePosBiasShape, &relativePosBiasDeviceAddr,
+                              aclDataType::ACL_FLOAT, &relativePosBias);
+        if (ret != ACL_SUCCESS) {
+            break;
+        }
+        ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+        if (ret != ACL_SUCCESS) {
+            break;
+        }
 
-    // 根据第一段接口计算出的workspaceSize申请device内存
-    void* workspaceAddr = nullptr;
-    if (workspaceSize > 0) {
-        ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        // 3. 调用CANN算子库API，需要修改为具体的API名称
+        aclOpExecutor* executor = nullptr;
+        ret = aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize(x, attenMaskOptional, relativePosBias, 1.0, 0, out,
+                                                               &workspaceSize, &executor);
+        if (ret != ACL_SUCCESS) {
+            LOG_PRINT("aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize failed. ERROR: %d\n", ret);
+            break;
+        }
+        if (workspaceSize > 0) {
+            ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+            if (ret != ACL_SUCCESS) {
+                LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret);
+                break;
+            }
+        }
+        ret = aclnnMaskedSoftmaxWithRelPosBias(workspaceAddr, workspaceSize, executor, stream);
+        if (ret != ACL_SUCCESS) {
+            LOG_PRINT("aclnnMaskedSoftmaxWithRelPosBias failed. ERROR: %d\n", ret);
+            break;
+        }
+
+        // 4. （固定写法）同步等待任务执行结束
+        ret = aclrtSynchronizeStream(stream);
+        if (ret != ACL_SUCCESS) {
+            LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);
+            break;
+        }
+
+        // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+        auto size = GetShapeSize(outShape);
+        std::vector<float> resultData(size, 0);
+        ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                          size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+        if (ret != ACL_SUCCESS) {
+            LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret);
+            break;
+        }
+        for (int64_t i = 0; i < size; i++) {
+            LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
+        }
+    } while (0);
+
+    // 6. 统一清理：成功与失败路径都释放已分配的资源
+    if (x != nullptr) {
+        aclDestroyTensor(x);
     }
-
-    // 调用aclnnMaskedSoftmaxWithRelPosBias第二段接口
-    ret = aclnnMaskedSoftmaxWithRelPosBias(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMaskedSoftmaxWithRelPosBias failed. ERROR: %d\n", ret); return ret);
-
-    // 4. （固定写法）同步等待任务执行结束
-    ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-
-    // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    auto size = GetShapeSize(outShape);
-    std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
-                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
+    if (attenMaskOptional != nullptr) {
+        aclDestroyTensor(attenMaskOptional);
     }
-
-    // 6. 释放aclTensor，需要根据具体API的接口定义修改
-    aclDestroyTensor(x);
-    aclDestroyTensor(attenMaskOptional);
-    aclDestroyTensor(relativePosBias);
-    aclDestroyTensor(out);
-
-    // 7. 释放device资源
-    aclrtFree(xDeviceAddr);
-    aclrtFree(attenMaskOptionalDeviceAddr);
-    aclrtFree(relativePosBiasDeviceAddr);
-    aclrtFree(outDeviceAddr);
-    if (workspaceSize > 0) {
+    if (relativePosBias != nullptr) {
+        aclDestroyTensor(relativePosBias);
+    }
+    if (out != nullptr) {
+        aclDestroyTensor(out);
+    }
+    if (xDeviceAddr != nullptr) {
+        aclrtFree(xDeviceAddr);
+    }
+    if (attenMaskOptionalDeviceAddr != nullptr) {
+        aclrtFree(attenMaskOptionalDeviceAddr);
+    }
+    if (relativePosBiasDeviceAddr != nullptr) {
+        aclrtFree(relativePosBiasDeviceAddr);
+    }
+    if (outDeviceAddr != nullptr) {
+        aclrtFree(outDeviceAddr);
+    }
+    if (workspaceAddr != nullptr) {
         aclrtFree(workspaceAddr);
     }
-    aclrtDestroyStream(stream);
+    if (stream != nullptr) {
+        aclrtDestroyStream(stream);
+    }
     aclrtResetDevice(deviceId);
     aclFinalize();
-    return 0;
+    return ret;
 }
