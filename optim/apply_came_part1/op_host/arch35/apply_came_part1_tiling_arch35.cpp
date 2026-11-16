@@ -35,7 +35,7 @@ constexpr int64_t N_NUM_PER_CORE = 64;
 constexpr int64_t M_NUM_PER_CORE = 64;
 constexpr int64_t BLOCK_SIZE = 8;
 constexpr int32_t BATCH_MODE = 1;
-constexpr int64_t DIRECT_BATCH_ALIGNMENT = 8;
+constexpr int64_t DIRECT_BATCH_ALIGNMENT = 1;
 constexpr int64_t MAX_DIRECT_MATRIX_ELEMENTS = 8192;
 constexpr size_t MIN_USER_WORKSPACE_BYTES = 32;
 constexpr size_t WORKSPACE_ALIGNMENT_BYTES = 512;
@@ -130,8 +130,16 @@ static ge::graphStatus ApplyCamePart1SetTilingData(gert::TilingContext* context,
 static inline ge::graphStatus CalcNdimTiling(const gert::TilingContext* context, ApplyCamePart1TilingData& tilingData)
 {
     OP_LOGD(context->GetNodeName(), "TilingApplyCamePart1 Enter CalcNdimTiling.");
-    int64_t nNormalCoreNum = std::max(
-        CeilMul(tilingData.get_N(), tilingData.get_tileSize(), tilingData.get_totalCoreNum()), static_cast<int64_t>(1));
+    int64_t rowCoreBudget = tilingData.get_totalCoreNum();
+    // Very narrow matrices have enough rows to keep a smaller row group busy.
+    // Reserve independent groups for batches so the kernel does not serialize
+    // all batches behind a full-device row slice.
+    if (tilingData.get_M() == 2 && tilingData.get_batchCount() > 1) {
+        const int64_t batchGroups = std::min(tilingData.get_batchCount(), tilingData.get_totalCoreNum());
+        rowCoreBudget = std::max<int64_t>(1, tilingData.get_totalCoreNum() / batchGroups);
+    }
+    int64_t nNormalCoreNum = std::max(CeilMul(tilingData.get_N(), tilingData.get_tileSize(), rowCoreBudget),
+                                      static_cast<int64_t>(1));
     int64_t nTailCoreNum = tilingData.get_N() % nNormalCoreNum;
     if (nTailCoreNum == 0) {
         nTailCoreNum = nNormalCoreNum;
@@ -155,7 +163,6 @@ static inline ge::graphStatus CalcBatchSplit(const gert::TilingContext* context,
         sliceCoreNum <= 0,
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "TilingApplyCamePart1 slice core num is invalid."),
         return ge::GRAPH_FAILED);
-    // Assign independent batch groups to disjoint workspace regions.
     int64_t batchCoreNum = 1;
     if (tilingData.get_totalCoreNum() > sliceCoreNum && tilingData.get_batchCount() > 1) {
         batchCoreNum = std::min(tilingData.get_totalCoreNum() / sliceCoreNum, tilingData.get_batchCount());
@@ -250,6 +257,19 @@ static ge::graphStatus PlanUbBuffers(gert::TilingContext* context, ApplyCamePart
     data.set_ubArenaBytes(plan.arenaBytes);
     data.set_postUbElements(plan.postElements);
     data.set_directUbElements(plan.directElements);
+    data.set_gradQueueBytes(plan.gradQueueBytes);
+    data.set_epsQueueBytes(plan.epsQueueBytes);
+    data.set_sumGradRQueueBytes(plan.sumGradRQueueBytes);
+    data.set_sumGradCQueueBytes(plan.sumGradCQueueBytes);
+    data.set_sumGradRCQueueBytes(plan.sumGradRCQueueBytes);
+    data.set_syncWorkQueueBytes(plan.syncWorkQueueBytes);
+    data.set_directGradQueueBytes(plan.directGradQueueBytes);
+    data.set_directEpsQueueBytes(plan.directEpsQueueBytes);
+    data.set_directSumGradRQueueBytes(plan.directSumGradRQueueBytes);
+    data.set_directSumGradCQueueBytes(plan.directSumGradCQueueBytes);
+    data.set_directCastOutputBytes(plan.directCastOutputBytes);
+    data.set_directValueBytes(plan.directValueBytes);
+    data.set_directReduceBytes(plan.directReduceBytes);
     OP_LOGI(context->GetNodeName(),
             "UB plan: total=%lu tile=%lu persistent=%lu producerPeak=%lu arena=%lu postElements=%lu", ubBytes,
             plan.tile, plan.persistentBytes, plan.producerPeakBytes, plan.arenaBytes, plan.postElements);
@@ -328,26 +348,29 @@ static ge::graphStatus CalculateApplyCamePart1Workspace(gert::TilingContext* con
                     return ge::GRAPH_FAILED);
 
     size_t rcStorageElements = 0;
-    size_t rWorkspaceBytes = 0;
+    size_t rSingleWorkspaceBytes = 0;
     size_t cWorkspaceBytes = 0;
+    const size_t cWorkspaceSlotSize = tilingData.get_M() == 2 ? rcSlotSize :
+                                                                static_cast<size_t>(tilingData.get_tileSize());
     OP_TILING_CHECK(
         !CheckedMultiply(rcElements, rcSlotSize, rcStorageElements) ||
             !CheckedMultiply(rElements, static_cast<size_t>(tilingData.get_tileSize() * sizeof(float)),
-                             rWorkspaceBytes) ||
-            !CheckedMultiply(rcElements, static_cast<size_t>(tilingData.get_tileSize() * sizeof(float)),
-                             cWorkspaceBytes),
+                             rSingleWorkspaceBytes) ||
+            !CheckedMultiply(rcElements, cWorkspaceSlotSize * sizeof(float), cWorkspaceBytes),
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace byte size overflows."),
         return ge::GRAPH_FAILED);
 
     size_t rcAlignedElements = 0;
-    size_t rWorkspaceSize = 0;
+    size_t rSingleWorkspaceSize = 0;
+    size_t rPairWorkspaceSize = 0;
     size_t cWorkspaceSize = 0;
     size_t rcWorkspaceSize = 0;
     OP_TILING_CHECK(
         !CheckedCeilAlign(rcStorageElements, 128U, rcAlignedElements) ||
-            !CheckedCeilAlign(rWorkspaceBytes, 512U, rWorkspaceSize) ||
+            !CheckedCeilAlign(rSingleWorkspaceBytes, 512U, rSingleWorkspaceSize) ||
             !CheckedCeilAlign(cWorkspaceBytes, 512U, cWorkspaceSize) ||
-            !CheckedMultiply(rcAlignedElements, 2U * sizeof(float), rcWorkspaceSize),
+            !CheckedMultiply(rcAlignedElements, 2U * sizeof(float), rcWorkspaceSize) ||
+            !CheckedMultiply(rSingleWorkspaceSize, 2U, rPairWorkspaceSize),
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 workspace alignment overflows."),
         return ge::GRAPH_FAILED);
 
@@ -361,11 +384,13 @@ static ge::graphStatus CalculateApplyCamePart1Workspace(gert::TilingContext* con
     const size_t batchCoreNum = static_cast<size_t>(tilingData.get_batchCoreNum());
     size_t totalRcWorkspaceSize = 0;
     size_t totalRWorkspaceSize = 0;
+    size_t cPairWorkspaceSize = 0;
     size_t totalCWorkspaceSize = 0;
     OP_TILING_CHECK(
         batchCoreNum == 0 || !CheckedMultiply(rcWorkspaceSize, batchCoreNum, totalRcWorkspaceSize) ||
-            !CheckedMultiply(rWorkspaceSize, batchCoreNum, totalRWorkspaceSize) ||
-            !CheckedMultiply(cWorkspaceSize, batchCoreNum, totalCWorkspaceSize),
+            !CheckedMultiply(rPairWorkspaceSize, batchCoreNum, totalRWorkspaceSize) ||
+            !CheckedMultiply(cWorkspaceSize, 2U, cPairWorkspaceSize) ||
+            !CheckedMultiply(cPairWorkspaceSize, batchCoreNum, totalCWorkspaceSize),
         VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "ApplyCamePart1 batch workspace size overflows."),
         return ge::GRAPH_FAILED);
 

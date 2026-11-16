@@ -45,12 +45,16 @@ __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR s
     const int64_t batchPerGroup = ApplyCamePart1::CeilDivApplyCamePart1(tilingData.batchCount, batchCoreNum);
     const int64_t groupIdx = static_cast<int64_t>(GetBlockIdx()) / sliceCoreNum;
     const int64_t batchStart = groupIdx * batchPerGroup;
-    const bool isGroupPostBlock = (static_cast<int64_t>(GetBlockIdx()) % sliceCoreNum == 0);
+    const int64_t localBlockIdx = static_cast<int64_t>(GetBlockIdx()) % sliceCoreNum;
+    const bool isGroupPostBlock = (localBlockIdx == 0);
+    const bool isRowPostBlock = (localBlockIdx % tilingData.mCoreNum == 0);
+    const bool isColumnPostBlock = (localBlockIdx < tilingData.mCoreNum);
+    const int64_t rowShardIdx = localBlockIdx / tilingData.mCoreNum;
+    const int64_t columnShardIdx = localBlockIdx % tilingData.mCoreNum;
 
     if (tilingData.directBatchMode != 0) {
         ApplyCamePart1::ApplyCamePart1Batch<D_T> batchOp;
-        batchOp.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, tilingData.N, tilingData.M,
-                     tilingData.directUbElements);
+        batchOp.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, &tilingData);
         batchOp.Process(tilingData.batchCount, tilingData.usedCoreNum);
         return;
     }
@@ -59,11 +63,15 @@ __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR s
         ApplyCamePart1::ApplyCamePart1FP32<float> op;
         op.InitOnce(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData);
         ApplyCamePart1::ApplyCamePart1Post<float> opPost;
-        opPost.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData, op.GetUbArena());
-        // Clear outputs and workspace before concurrent atomic updates.
+        const bool directWidth2R = ApplyCamePart1UseDirectWidth2R(tilingData.N, tilingData.M, tilingData.mCoreNum,
+                                                                  tilingData.tileSize);
+        // The zeroing helpers reuse the shared UB arena. Load eps for the post
+        // phase only after zeroing, otherwise a long-lived scalar can be lost
+        // when the compiler spills it into the reused arena.
         op.ZeroWorkspace(userWS);
         op.ZeroOutputs(sum_grad_r, sum_grad_c, sum_grad_rc, tilingData.batchCount);
         SyncAll();
+        opPost.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData, op.GetUbArena());
         // Keep the iteration count identical across groups for paired barriers.
         for (int64_t iter = 0; iter < batchPerGroup; ++iter) {
             const int64_t batchIdx = batchStart + iter;
@@ -73,6 +81,14 @@ __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR s
                 op.Process();
             }
             SyncAll();
+            // R and C are intentionally finalized by independent shard
+            // leaders. ProcessBatch below owns only the scalar RC reduction.
+            if (active && isRowPostBlock && !directWidth2R) {
+                opPost.ProcessRShard(batchIdx, rowShardIdx);
+            }
+            if (active && isColumnPostBlock) {
+                opPost.ProcessCShard(batchIdx, columnShardIdx);
+            }
             if (active && isGroupPostBlock) {
                 opPost.ProcessBatch(batchIdx);
             }
@@ -82,10 +98,10 @@ __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR s
         ApplyCamePart1::ApplyCamePart1FP16<D_T> op;
         op.InitOnce(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData);
         ApplyCamePart1::ApplyCamePart1Post<float> opPost;
-        opPost.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData, op.GetUbArena());
         op.ZeroWorkspace(userWS);
         op.ZeroOutputs(sum_grad_r, sum_grad_c, sum_grad_rc, tilingData.batchCount);
         SyncAll();
+        opPost.Init(grad, eps, sum_grad_r, sum_grad_c, sum_grad_rc, userWS, &tilingData, op.GetUbArena());
         for (int64_t iter = 0; iter < batchPerGroup; ++iter) {
             const int64_t batchIdx = batchStart + iter;
             const bool active = batchIdx < tilingData.batchCount;
@@ -94,6 +110,12 @@ __global__ __aicore__ void apply_came_part1(GM_ADDR grad, GM_ADDR eps, GM_ADDR s
                 op.Process();
             }
             SyncAll();
+            if (active && isRowPostBlock) {
+                opPost.ProcessRShard(batchIdx, rowShardIdx);
+            }
+            if (active && isColumnPostBlock) {
+                opPost.ProcessCShard(batchIdx, columnShardIdx);
+            }
             if (active && isGroupPostBlock) {
                 opPost.ProcessBatch(batchIdx);
             }

@@ -57,20 +57,20 @@ private:
     int64_t arenaBytes_{0};
     TPipe pipe;
     TQue<QuePosition::VECIN, 1> gradQueue_;
-    TQue<QuePosition::VECIN, 1> epsQueue_;
 
     TQue<QuePosition::VECOUT, 1> sumGradRQueue_;
     TQue<QuePosition::VECOUT, 1> sumGradCQueue_;
     TQue<QuePosition::VECOUT, 1> sumGradRCQueue_;
 
     GlobalTensor<T> gmGrad_;
-    GlobalTensor<float> gmEps_;
     GlobalTensor<float> gmSumGradR_;
     GlobalTensor<float> gmSumGradC_;
     GlobalTensor<float> gmSumGradRC_;
 
     GlobalTensor<float> workspaceSumGradR_;
+    GlobalTensor<float> workspaceSumGradRLow_;
     GlobalTensor<float> workspaceSumGradC_;
+    GlobalTensor<float> workspaceSumGradCLow_;
     GlobalTensor<float> workspaceSumGradRC_;
     GlobalTensor<float> workspaceSumGradRCLow_;
     // multi-core sync
@@ -100,6 +100,7 @@ private:
     int64_t inputBase_{0};
 
     int64_t mCoreIdx_{0};
+    int64_t columnTileStart_{0};
     int64_t coreColumns_{0};
     int64_t mLoopCount_{1};
     int64_t regionFloats_{0};
@@ -167,22 +168,27 @@ __aicore__ inline void ApplyCamePart1FP16<T>::InitOnce(GM_ADDR grad, GM_ADDR eps
     sumGradCAddrBatch_ = sum_grad_c;
     sumGradRCAddrBatch_ = sum_grad_rc;
     regionFloats_ = InitApplyCamePart1OutputBuffers(
-        gmSumGradR_, gmSumGradC_, gmSumGradRC_, workspaceSumGradR_, workspaceSumGradRC_, workspaceSumGradRCLow_,
-        workspaceSumGradC_, sum_grad_r, sum_grad_c, sum_grad_rc, workspaceAddr_, M, mCoreNum_, nCoreNum_,
-        nLoopNormCore_, nLoopTailCore_, ONCE_HANDLE_NUM64, groupIdx_);
-    gmEps_.SetGlobalBuffer((__gm__ float*)eps, 1);
+        gmSumGradR_, gmSumGradC_, gmSumGradRC_, workspaceSumGradR_, workspaceSumGradRLow_, workspaceSumGradRC_,
+        workspaceSumGradRCLow_, workspaceSumGradC_, workspaceSumGradCLow_, sum_grad_r, sum_grad_c, sum_grad_rc,
+        workspaceAddr_, M, mCoreNum_, nCoreNum_, nLoopNormCore_, nLoopTailCore_, ONCE_HANDLE_NUM64, groupIdx_);
+    (void)eps;
 
     // buffer申请初始化
-    pipe.InitBuffer(gradQueue_, 1, ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 * sizeof(T));
-    pipe.InitBuffer(epsQueue_, 1, ONCE_ONE_SIZE8 * sizeof(float));
+    pipe.InitBuffer(gradQueue_, 1, tilingData->gradQueueBytes);
 
-    pipe.InitBuffer(sumGradRQueue_, 1, ONCE_HANDLE_NUM64 * sizeof(float));
-    pipe.InitBuffer(sumGradCQueue_, 1, ONCE_HANDLE_NUM64 * sizeof(float));
-    pipe.InitBuffer(sumGradRCQueue_, 1, 2 * ONCE_ONE_SIZE8 * sizeof(float));
-    pipe.InitBuffer(syncWorkQueue_, 1, totalCoreNum_ * 8 * sizeof(int32_t));
+    pipe.InitBuffer(sumGradRQueue_, 1, tilingData->sumGradRQueueBytes);
+    pipe.InitBuffer(sumGradCQueue_, 1, tilingData->sumGradCQueueBytes);
+    pipe.InitBuffer(sumGradRCQueue_, 1, tilingData->sumGradRCQueueBytes);
+    pipe.InitBuffer(syncWorkQueue_, 1, tilingData->syncWorkQueueBytes);
     mCoreIdx_ = blockIdxLocal_ % mCoreNum_;
-    coreColumns_ = ((mCoreIdx_ + 1 == mCoreNum_) && (mTailCoreNum_ > 0)) ? mTailCoreNum_ : mNormalCoreNum_;
-    mLoopCount_ = (coreColumns_ + ONCE_HANDLE_NUM64 - 1) / ONCE_HANDLE_NUM64;
+    const int64_t totalColumnTileCount = CeilDivApplyCamePart1(M, ONCE_HANDLE_NUM64);
+    const int64_t baseTilesPerCore = totalColumnTileCount / mCoreNum_;
+    const int64_t extraTileCoreCount = totalColumnTileCount % mCoreNum_;
+    mLoopCount_ = baseTilesPerCore + (mCoreIdx_ < extraTileCoreCount ? 1 : 0);
+    columnTileStart_ = mCoreIdx_ * baseTilesPerCore + (mCoreIdx_ < extraTileCoreCount ? mCoreIdx_ : extraTileCoreCount);
+    const int64_t columnStart = columnTileStart_ * ONCE_HANDLE_NUM64;
+    coreColumns_ = M - columnStart < mLoopCount_ * ONCE_HANDLE_NUM64 ? M - columnStart :
+                                                                       mLoopCount_ * ONCE_HANDLE_NUM64;
     batchCoreNum_ = usedCoreNum_ / (nCoreNum_ * mCoreNum_);
 
     // 缓存buf空间清零
@@ -209,7 +215,7 @@ __aicore__ inline void ApplyCamePart1FP16<T>::InitBatch(int64_t batchIdx)
     GM_ADDR alignedGrad = gradAddrBase_ + alignedBatchBytes;
     gmGrad_.SetGlobalBuffer((__gm__ T*)alignedGrad +
                             blockIdxLocal_ / mCoreNum_ * ONCE_HANDLE_NUM64 * nLoopNormCore_ * M +
-                            blockIdxLocal_ % mCoreNum_ * mNormalCoreNum_);
+                            columnTileStart_ * ONCE_HANDLE_NUM64);
 }
 
 template <typename T>
@@ -293,7 +299,6 @@ template <typename T>
 __aicore__ inline void ApplyCamePart1FP16<T>::CopyIn(int64_t nLoopIdx, int64_t mLoopIdx, int64_t curRepeatTimes)
 {
     LocalTensor<T> gradLocal = gradQueue_.AllocTensor<T>();
-    LocalTensor<float> epsLocal = epsQueue_.AllocTensor<float>();
 
     const int64_t tileColumns = coreColumns_ - mLoopIdx * ONCE_HANDLE_NUM64;
     if (tileColumns < ONCE_HANDLE_NUM64) {
@@ -302,16 +307,13 @@ __aicore__ inline void ApplyCamePart1FP16<T>::CopyIn(int64_t nLoopIdx, int64_t m
         CopyInNormal(nLoopIdx, mLoopIdx, curRepeatTimes, gradLocal);
     }
 
-    DataCopyPad(epsLocal, gmEps_, {1, sizeof(float), 0, 0, 0}, {false, 0, 0, 0});
     gradQueue_.EnQue(gradLocal);
-    epsQueue_.EnQue(epsLocal);
 }
 
 template <typename T>
 __aicore__ inline void ApplyCamePart1FP16<T>::Compute(int64_t nLoopIdx, int64_t mLoopIdx, int64_t curRepeatTimes)
 {
     LocalTensor<T> gradLocal = gradQueue_.DeQue<T>();
-    LocalTensor<float> epsLocal = epsQueue_.DeQue<float>();
 
     LocalTensor<float> gradCastTmpUb = phaseArena_
                                            .Get<float>()[ONCE_HANDLE_NUM64 * ONCE_HANDLE_NUM64 + 2 * ONCE_HANDLE_NUM64];
@@ -325,11 +327,6 @@ __aicore__ inline void ApplyCamePart1FP16<T>::Compute(int64_t nLoopIdx, int64_t 
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 
-    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    float eps = epsLocal.GetValue(0);
-
     int64_t calCount = curRepeatTimes * ONCE_HANDLE_NUM64;
     Cast(gradCastTmpUb, gradLocal, RoundMode::CAST_NONE, calCount);
     PipeBarrier<PIPE_V>();
@@ -338,17 +335,22 @@ __aicore__ inline void ApplyCamePart1FP16<T>::Compute(int64_t nLoopIdx, int64_t 
     Mul(gradSqrtTmpUb, gradCastTmpUb, gradCastTmpUb, calCount);
 
     PipeBarrier<PIPE_V>();
-    AddEpsApplyCamePart1(gradSqrtTmpUb, eps, coreColumns_ - mLoopIdx * ONCE_HANDLE_NUM64, curRepeatTimes,
-                         ONCE_HANDLE_NUM64);
-
-    PipeBarrier<PIPE_V>();
     (void)accuComTmpUb;
 
     ComputeR(mLoopIdx, curRepeatTimes, gradSqrtTmpUb, accuComTmpUb, reductionTmpUb);
     LocalTensor<float> sumGradRCLocal = sumGradRCQueue_.AllocTensor<float>();
     ComputeC(mLoopIdx, curRepeatTimes, gradSqrtTmpUb);
     LocalTensor<float> sumGradCLocal = sumGradCQueue_.DeQue<float>();
-    FinishApplyCamePart1Reduction(sumGradRCLocal, sumGradCLocal, reductionTmpUb, ONCE_HANDLE_NUM64);
+    if (M == 1) {
+        FinishM1ReductionApplyCamePart1(sumGradRCLocal, gradSqrtTmpUb, reductionTmpUb, curRepeatTimes,
+                                        ONCE_HANDLE_NUM64);
+        Duplicate(sumGradCLocal, 0.0f, 2 * ONCE_HANDLE_NUM64);
+        PipeBarrier<PIPE_V>();
+        Adds(sumGradCLocal, sumGradRCLocal, 0.0f, 1);
+        Adds(sumGradCLocal[ONCE_HANDLE_NUM64], sumGradRCLocal[8], 0.0f, 1);
+    } else {
+        FinishApplyCamePart1Reduction(sumGradRCLocal, sumGradCLocal, reductionTmpUb, ONCE_HANDLE_NUM64);
+    }
 
     if (mLoopIdx == (mLoopCount_ - 1)) {
         PipeBarrier<PIPE_V>();
@@ -360,7 +362,6 @@ __aicore__ inline void ApplyCamePart1FP16<T>::Compute(int64_t nLoopIdx, int64_t 
     sumGradRCQueue_.EnQue<float>(sumGradRCLocal);
 
     gradQueue_.FreeTensor(gradLocal);
-    epsQueue_.FreeTensor(epsLocal);
 }
 
 template <typename T>
@@ -368,8 +369,12 @@ __aicore__ inline void ApplyCamePart1FP16<T>::ComputeR(int64_t mLoopIdx, int64_t
                                                        LocalTensor<float> gradSqrtTmpUb, LocalTensor<float> rowTree,
                                                        LocalTensor<float> workLocal)
 {
+    int64_t validColumns = coreColumns_ - mLoopIdx * ONCE_HANDLE_NUM64;
+    if (validColumns > ONCE_HANDLE_NUM64) {
+        validColumns = ONCE_HANDLE_NUM64;
+    }
     ComputeRApplyCamePart1(sumGradRQueue_, curRepeatTimes, mLoopIdx, mLoopCount_, gradSqrtTmpUb, rowTree, workLocal,
-                           workLocal[4 * ONCE_HANDLE_NUM64], ONCE_HANDLE_NUM64);
+                           workLocal[4 * ONCE_HANDLE_NUM64], ONCE_HANDLE_NUM64, validColumns);
 }
 
 template <typename T>
@@ -388,18 +393,19 @@ template <typename T>
 __aicore__ inline void ApplyCamePart1FP16<T>::CopyOut(int64_t nLoopIdx, int64_t mLoopIdx, int64_t curRepeatTimes)
 {
     if (mLoopIdx == (mLoopCount_ - 1)) {
-        CopyOutSumGradRWorkspaceApplyCamePart1(sumGradRQueue_, workspaceSumGradR_, nLoopIdx, curRepeatTimes, mCoreNum_,
-                                               nLoopNormCore_, ONCE_HANDLE_NUM64, blockIdxLocal_);
+        CopyOutSumGradRWorkspaceApplyCamePart1(sumGradRQueue_, workspaceSumGradR_, workspaceSumGradRLow_, nLoopIdx,
+                                               curRepeatTimes, mCoreNum_, nLoopNormCore_, ONCE_HANDLE_NUM64,
+                                               blockIdxLocal_);
     }
     const int64_t nCoreIdx = blockIdxLocal_ / mCoreNum_;
     const int64_t mCoreIdx = blockIdxLocal_ % mCoreNum_;
     const int64_t totalColumnTileCount = CeilDivApplyCamePart1(M, ONCE_HANDLE_NUM64);
-    const int64_t globalColumnTileIdx = mCoreIdx * mLoopNumCore_ + mLoopIdx;
+    const int64_t globalColumnTileIdx = columnTileStart_ + mLoopIdx;
     int64_t offset = (nCoreIdx * nLoopNormCore_ + nLoopIdx) * totalColumnTileCount + globalColumnTileIdx;
 
-    CopyOutReductionWorkspaceApplyCamePart1(sumGradRCQueue_, sumGradCQueue_, workspaceSumGradRC_,
-                                            workspaceSumGradRCLow_, workspaceSumGradC_, offset, ONCE_ONE_SIZE8,
-                                            ONCE_HANDLE_NUM64);
+    CopyOutReductionWorkspaceApplyCamePart1(
+        sumGradRCQueue_, sumGradCQueue_, workspaceSumGradRC_, workspaceSumGradRCLow_, workspaceSumGradC_,
+        workspaceSumGradCLow_, offset, ONCE_ONE_SIZE8, ONCE_HANDLE_NUM64, M == 2 ? ONCE_ONE_SIZE8 : ONCE_HANDLE_NUM64);
 }
 
 template <typename T>

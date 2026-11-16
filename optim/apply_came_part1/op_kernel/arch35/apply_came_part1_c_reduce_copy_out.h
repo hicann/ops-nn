@@ -48,8 +48,8 @@ __aicore__ inline uint64_t AtomicAddAlignedCReduceResult(GlobalTensor<float>& ou
     return alignedCount;
 }
 
-__aicore__ inline void CopyOutCReduceResult(GlobalTensor<float>& output, LocalTensor<float> input, uint64_t offset,
-                                            uint64_t count)
+__aicore__ inline void AtomicAddCReduceResult(GlobalTensor<float>& output, LocalTensor<float> input, uint64_t offset,
+                                              uint64_t count)
 {
     // The reduction result is produced by the vector pipe. The scalar
     // prefix/tail reads it through the scalar pipe, while the aligned body is
@@ -61,9 +61,11 @@ __aicore__ inline void CopyOutCReduceResult(GlobalTensor<float>& output, LocalTe
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
 
-    // DataCopy requires both addresses to start at a 32B boundary. An
-    // unaligned GM offset cannot be repaired with a scalar prefix because it
-    // would make the UB source unaligned, so keep that whole tile scalar.
+    // Every write remains atomic because adjacent batch groups can share one
+    // 32B GM block. DataCopy requires both addresses to start at a 32B
+    // boundary; an unaligned GM offset cannot be repaired with a scalar prefix
+    // because it would make the UB source unaligned, so keep that whole tile
+    // on scalar AtomicAdd.
     uint64_t scalarBegin = 0;
     if ((offset % kApplyCamePart1Fp32BlockCount) == 0) {
         scalarBegin = AtomicAddAlignedCReduceResult(output, input, offset, count);

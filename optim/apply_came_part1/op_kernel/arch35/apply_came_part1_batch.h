@@ -11,6 +11,7 @@
 #define OPS_NN_APPLY_CAME_PART1_BATCH_H
 
 #include "apply_came_part1_common.h"
+#include "apply_came_part1_tiling_data.h"
 
 namespace ApplyCamePart1 {
 // Process independent matrices on disjoint batch ranges. The host selects this
@@ -21,27 +22,27 @@ template <typename T>
 class ApplyCamePart1Batch {
 public:
     __aicore__ inline void Init(GM_ADDR grad, GM_ADDR eps, GM_ADDR sumGradR, GM_ADDR sumGradC, GM_ADDR sumGradRC,
-                                int64_t n, int64_t m, int64_t ubElements)
+                                const ApplyCamePart1TilingData* tilingData)
     {
-        maxInputElements_ = ubElements;
-        maxOutputElements_ = ubElements + 2 * kMaxTileBatches + 3 * kOutputAlignmentElements;
-        n_ = n;
-        m_ = m;
-        matrixElements_ = n * m;
+        maxInputElements_ = tilingData->directUbElements;
+        maxOutputElements_ = tilingData->directCastOutputBytes / sizeof(float);
+        n_ = tilingData->N;
+        m_ = tilingData->M;
+        matrixElements_ = n_ * m_;
         gradGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(grad));
         epsGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(eps), 1);
         sumGradRGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumGradR));
         sumGradCGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumGradC));
         sumGradRCGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(sumGradRC));
 
-        pipe_.InitBuffer(gradQueue_, 1, maxInputElements_ * sizeof(T));
-        pipe_.InitBuffer(epsQueue_, 1, kBlockFloats * sizeof(float));
-        pipe_.InitBuffer(sumGradRQueue_, 1, kVectorTileWidth * sizeof(float));
-        pipe_.InitBuffer(sumGradCQueue_, 1, kVectorTileWidth * sizeof(float));
+        pipe_.InitBuffer(gradQueue_, 1, tilingData->directGradQueueBytes);
+        pipe_.InitBuffer(epsQueue_, 1, tilingData->directEpsQueueBytes);
+        pipe_.InitBuffer(sumGradRQueue_, 1, tilingData->directSumGradRQueueBytes);
+        pipe_.InitBuffer(sumGradCQueue_, 1, tilingData->directSumGradCQueueBytes);
         // Cast dies before output production, so both use this physical slot.
-        pipe_.InitBuffer(castOutputBuf_, maxOutputElements_ * sizeof(float));
-        pipe_.InitBuffer(valueBuf_, maxInputElements_ * sizeof(float));
-        pipe_.InitBuffer(reduceBuf_, kReduceScratchElements * sizeof(float));
+        pipe_.InitBuffer(castOutputBuf_, tilingData->directCastOutputBytes);
+        pipe_.InitBuffer(valueBuf_, tilingData->directValueBytes);
+        pipe_.InitBuffer(reduceBuf_, tilingData->directReduceBytes);
     }
 
     __aicore__ inline void Process(int64_t batchCount, int64_t blockCount)
@@ -102,15 +103,20 @@ private:
         return tileBatches > 0 ? tileBatches : 1;
     }
 
-    __aicore__ inline float KahanSum(LocalTensor<float> values, int64_t offset, int64_t count, int64_t stride)
+    __aicore__ inline float CompensatedSumWithEps(LocalTensor<float> values, int64_t offset, int64_t count,
+                                                  int64_t stride, float eps, int64_t epsFirst, int64_t epsSecond)
     {
-        float sum = 0.0f;
-        float correction = 0.0f;
+        float high = 0.0f;
+        float low = 0.0f;
         for (int64_t index = 0; index < count; ++index) {
             const float value = values.GetValue(offset + index * stride);
-            CompensatedAddApplyCamePart1(sum, correction, value, 0.0f, sum, correction);
+            CompensatedAddApplyCamePart1(high, low, value, 0.0f, high, low);
         }
-        return sum + correction;
+        float epsHigh = 0.0f;
+        float epsLow = 0.0f;
+        ScaleEpsApplyCamePart1(eps, epsFirst, epsSecond, epsHigh, epsLow);
+        CompensatedAddApplyCamePart1(high, low, epsHigh, epsLow, high, low);
+        return high + low;
     }
 
     __aicore__ inline void ProcessScalarTile(int64_t batchOffset, int64_t tileBatches, float epsValue)
@@ -136,8 +142,6 @@ private:
         }
         PipeBarrier<PIPE_V>();
         Mul(valueLocal, castLocal, castLocal, inputCount);
-        PipeBarrier<PIPE_V>();
-        Adds(valueLocal, valueLocal, epsValue, inputCount);
 
         event_t eventVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventVToS);
@@ -156,12 +160,14 @@ private:
         for (int64_t batch = 0; batch < tileBatches; ++batch) {
             const int64_t matrixBase = batch * matrixElements_;
             for (int64_t row = 0; row < n_; ++row) {
-                outR.SetValue(batch * n_ + row, KahanSum(valueLocal, matrixBase + row * m_, m_, 1));
+                outR.SetValue(batch * n_ + row,
+                              CompensatedSumWithEps(valueLocal, matrixBase + row * m_, m_, 1, epsValue, m_, 1));
             }
             for (int64_t column = 0; column < m_; ++column) {
-                outC.SetValue(batch * m_ + column, KahanSum(valueLocal, matrixBase + column, n_, m_));
+                outC.SetValue(batch * m_ + column,
+                              CompensatedSumWithEps(valueLocal, matrixBase + column, n_, m_, epsValue, n_, 1));
             }
-            outRC.SetValue(batch, KahanSum(outC, batch * m_, m_, 1));
+            outRC.SetValue(batch, CompensatedSumWithEps(valueLocal, matrixBase, matrixElements_, 1, epsValue, n_, m_));
         }
         CopyScalarOutputs(outputLocal, batchOffset, tileBatches);
         gradQueue_.FreeTensor(gradLocal);
@@ -228,22 +234,35 @@ private:
         PipeBarrier<PIPE_V>();
         Mul(valueLocal, castLocal, castLocal, paddedElements);
         PipeBarrier<PIPE_V>();
-        AddEpsApplyCamePart1(valueLocal, epsValue, m_, n_);
-        PipeBarrier<PIPE_V>();
         Duplicate(castLocal, static_cast<float>(0), 2 * kVectorTileWidth);
         PipeBarrier<PIPE_V>();
 
         ComputeRApplyCamePart1(sumGradRQueue_, n_, 0, 1, valueLocal, castLocal, reductionScratch,
-                               reductionScratch[4 * kVectorTileWidth], kVectorTileWidth);
+                               reductionScratch[4 * kVectorTileWidth], kVectorTileWidth, m_);
         ComputeCApplyCamePart1(sumGradCQueue_, n_, valueLocal, 1, 1, kVectorTileWidth, m_, 0);
         sumGradRLocal = sumGradRQueue_.DeQue<float>();
         sumGradCLocal = sumGradCQueue_.DeQue<float>();
         sumGradRCLocal = castOutputBuf_.Get<float>();
         FinishApplyCamePart1Reduction(sumGradRCLocal, sumGradCLocal, reductionScratch, kVectorTileWidth);
-        // The producer/post path carries this low slot through workspace.
-        // Direct writes RC immediately, so fold it before the one-float copy.
-        // Both slots already live in castOutputBuf_; no new UB allocation.
         constexpr int64_t kRcLowOffset = 8;
+        float epsHigh = 0.0f;
+        float epsLow = 0.0f;
+        ScaleEpsApplyCamePart1(epsValue, m_, 1, epsHigh, epsLow);
+        AddCompensatedScalarApplyCamePart1(sumGradRLocal, sumGradRLocal[kVectorTileWidth], reductionScratch,
+                                           reductionScratch[kVectorTileWidth], reductionScratch[2 * kVectorTileWidth],
+                                           epsHigh, epsLow, n_);
+        Add(sumGradRLocal, sumGradRLocal, sumGradRLocal[kVectorTileWidth], n_);
+
+        ScaleEpsApplyCamePart1(epsValue, n_, 1, epsHigh, epsLow);
+        AddCompensatedScalarApplyCamePart1(sumGradCLocal, sumGradCLocal[kVectorTileWidth], reductionScratch,
+                                           reductionScratch[kVectorTileWidth], reductionScratch[2 * kVectorTileWidth],
+                                           epsHigh, epsLow, m_);
+        Add(sumGradCLocal, sumGradCLocal, sumGradCLocal[kVectorTileWidth], m_);
+
+        ScaleEpsApplyCamePart1(epsValue, n_, m_, epsHigh, epsLow);
+        AddCompensatedScalarApplyCamePart1(sumGradRCLocal, sumGradRCLocal[kRcLowOffset], reductionScratch,
+                                           reductionScratch[kVectorTileWidth], reductionScratch[2 * kVectorTileWidth],
+                                           epsHigh, epsLow, 1);
         Add(sumGradRCLocal, sumGradRCLocal, sumGradRCLocal[kRcLowOffset], 1);
         PipeBarrier<PIPE_V>();
     }
@@ -252,16 +271,13 @@ private:
                                                LocalTensor<float> sumGradRLocal, LocalTensor<float> sumGradCLocal,
                                                LocalTensor<float> sumGradRCLocal)
     {
-        event_t eventSToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
-        SetFlag<HardEvent::S_MTE3>(eventSToMte3);
-        WaitFlag<HardEvent::S_MTE3>(eventSToMte3);
+        event_t eventVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(eventVToMte3);
+        WaitFlag<HardEvent::V_MTE3>(eventVToMte3);
         DataCopyExtParams rCopyParams{1, static_cast<uint32_t>(n_ * sizeof(float)), 0, 0, 0};
         DataCopyExtParams cCopyParams{1, static_cast<uint32_t>(m_ * sizeof(float)), 0, 0, 0};
         DataCopyPad<float, PaddingMode::Compact>(sumGradRGm_[batchIdx * n_], sumGradRLocal, rCopyParams);
         DataCopyPad<float, PaddingMode::Compact>(sumGradCGm_[batchIdx * m_], sumGradCLocal, cCopyParams);
-        event_t eventVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-        SetFlag<HardEvent::V_MTE3>(eventVToMte3);
-        WaitFlag<HardEvent::V_MTE3>(eventVToMte3);
         DataCopyExtParams rcCopyParams{1, sizeof(float), 0, 0, 0};
         DataCopyPad<float, PaddingMode::Compact>(sumGradRCGm_[batchIdx], sumGradRCLocal, rcCopyParams);
         WaitOutputBeforeNextInput();
@@ -301,7 +317,7 @@ private:
     static constexpr int64_t kMaxInputElements = 8192;
     static constexpr int64_t kScalarMatrixElementLimit = 256;
     static constexpr int64_t kMaxTileBatches = 32;
-    static constexpr int64_t kBatchAlignment = 8;
+    static constexpr int64_t kBatchAlignment = 1;
     static constexpr int64_t kBlockFloats = 8;
     // Output segments are independently aligned to 32B (8 float elements).
     // The extra three alignment slots cover the two segment boundaries and
