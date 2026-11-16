@@ -83,4 +83,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn API  | [test_aclnn_foreach_mul_list](examples/test_aclnn_foreach_mul_list.cpp) | 通过[aclnnForeachMulList](docs/aclnnForeachMulList.md)接口方式调用ForeachMulList算子。 |
-| GE图模式   | [foreach_mul_list_proto.h](op_graph/foreach_mul_list_proto.h) | 通过 GE 图方式调用ForeachMulList算子。 |
+| GE图模式   | [test_geir_foreach_mul_list](examples/test_geir_foreach_mul_list.cpp) | 通过[算子IR](op_graph/foreach_mul_list_proto.h)构图方式调用ForeachMulList算子。 |

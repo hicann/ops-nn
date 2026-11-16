@@ -85,4 +85,4 @@ English | [简体中文](./README.md)
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn API  | [test_aclnn_foreach_mul_list](examples/test_aclnn_foreach_mul_list.cpp) | Invokes the ForeachMulList operator through the [aclnnForeachMulList](docs/aclnnForeachMulList_en.md) interface. |
-| GE graph mode   | [foreach_mul_list_proto.h](op_graph/foreach_mul_list_proto.h) | Invokes the ForeachMulList operator by constructing a graph through [the operator IR](op_graph/foreach_mul_list_proto.h). |
+| GE graph mode   | [test_geir_foreach_mul_list](examples/test_geir_foreach_mul_list.cpp) | Invokes the ForeachMulList operator by constructing a graph through the [operator IR](op_graph/foreach_mul_list_proto.h). |
