@@ -121,7 +121,146 @@ TEST_F(ForeachAddcmulScalarListTiling, tiling_int32)
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
 
-// BF16 case: shape (4096,)
+// 异常校验用例：覆盖 ValidateForeachAddcmulScalarList 的约束（与 arch22 对齐）。
+
+// x2 与 x1 的 storage shape 不一致应失败。
+TEST_F(ForeachAddcmulScalarListTiling, tiling_shape_mismatch_x2)
+{
+    ForeachAddcmulScalarListCompileInfo compileInfo;
+    compileInfo.coreNum = 64;
+    compileInfo.ubSize = 262144;
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{512}, {512}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// x3 与 x1 的 dtype 不一致应失败。
+TEST_F(ForeachAddcmulScalarListTiling, tiling_dtype_mismatch_x3)
+{
+    ForeachAddcmulScalarListCompileInfo compileInfo;
+    compileInfo.coreNum = 64;
+    compileInfo.ubSize = 262144;
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_INT32, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// scalars 元素个数与 tensor 个数不一致应失败。
+TEST_F(ForeachAddcmulScalarListTiling, tiling_scalars_count_mismatch)
+{
+    ForeachAddcmulScalarListCompileInfo compileInfo;
+    compileInfo.coreNum = 64;
+    compileInfo.ubSize = 262144;
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{2}, {2}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// y 的 storage 容量小于 x1 元素数应失败。
+TEST_F(ForeachAddcmulScalarListTiling, tiling_y_capacity_small)
+{
+    ForeachAddcmulScalarListCompileInfo compileInfo;
+    compileInfo.coreNum = 64;
+    compileInfo.ubSize = 262144;
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{512}, {512}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// x1 dtype 不支持应失败（def.cpp 仅 float16/float32/int32/bf16）。
+TEST_F(ForeachAddcmulScalarListTiling, tiling_unsupported_dtype)
+{
+    ForeachAddcmulScalarListCompileInfo compileInfo;
+    compileInfo.coreNum = 64;
+    compileInfo.ubSize = 262144;
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_INT64, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_INT64, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_INT64, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_INT64, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
+
+// x1 维度超过 8 应失败。
+TEST_F(ForeachAddcmulScalarListTiling, tiling_dim_exceeds_8)
+{
+    ForeachAddcmulScalarListCompileInfo compileInfo;
+    compileInfo.coreNum = 64;
+    compileInfo.ubSize = 262144;
+    gert::TilingContextPara tilingContextPara(
+        "ForeachAddcmulScalarList",
+        {
+            {{{1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {
+            {{{1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {
+            /* attrs */
+        },
+        &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
+}
 TEST_F(ForeachAddcmulScalarListTiling, tiling_bf16)
 {
     ForeachAddcmulScalarListCompileInfo compileInfo;
@@ -149,4 +288,27 @@ TEST_F(ForeachAddcmulScalarListTiling, tiling_bf16)
                               "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
     std::vector<size_t> expectWorkspaces = {0};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
+}
+
+// scalars 与 x1 的 dtype 不一致应失败（kernel 以 x1 的 dtype 读取 scalarsGm[i]）。
+TEST_F(ForeachAddcmulScalarListTiling, tiling_scalars_dtype_mismatch)
+{
+    ForeachAddcmulScalarListCompileInfo compileInfo;
+    compileInfo.coreNum = 64;
+    compileInfo.ubSize = 262144;
+    gert::TilingContextPara tilingContextPara("ForeachAddcmulScalarList",
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                                  {{{1}, {1}}, ge::DT_INT32, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  {{{1024}, {1024}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                              },
+                                              {
+                                                  /* attrs */
+                                              },
+                                              &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED);
 }

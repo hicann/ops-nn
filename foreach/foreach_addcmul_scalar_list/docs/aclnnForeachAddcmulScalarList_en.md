@@ -185,23 +185,14 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>The passed-in x1, x2, x3, scalars, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The data types of x1, x2, x3, scalars, and out are not within the supported range.</td>
     </tr>
     <tr>
-      <td>The data types of x1, x2, x3, scalars, and out are inconsistent.</td>
-    </tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x1, x2, x3, and out do not meet the constraints.</td>
-    </tr>
-    <tr>
-      <td>The element data types of the tensors in x1, x2, x3, or out are inconsistent.</td>
-    </tr>
-    <tr>
-      <td>The dimension of a tensor in x1, x2, x3, or out exceeds 8.</td>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>The number of tensors in the input list exceeds the upper limit 128.</td>
     </tr>
   </tbody></table>
 
@@ -250,6 +241,7 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 ## Constraints
 
+- The maximum number of tensors in a list is 128.
 - deterministic computation:
   - aclnnForeachAddcmulScalarList defaults to a deterministic implementation.
 

@@ -22,6 +22,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "simt_api/asc_simt.h"
 #include "foreach_addcmul_scalar_list_tiling_data.h"
 #include "foreach_addcmul_scalar_list_tiling_key.h"
 
@@ -34,20 +35,9 @@ using namespace AscendC;
 // Compile-time thread count constant (must not come from tiling)
 static constexpr uint32_t THREAD_NUM = 512;
 
-// ========== Helper: get tensor address from tensor list ==========
-
-template <typename T>
-__simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int32_t idx)
-{
-    __gm__ uint64_t* dataAddr = reinterpret_cast<__gm__ uint64_t*>(tensorListPtr);
-    uint64_t tensorPtrOffset = *dataAddr;
-    __gm__ uint64_t* tensorPtr = dataAddr + (tensorPtrOffset >> TENSOR_PTR_SHIFT);
-    return reinterpret_cast<__gm__ T*>(*(tensorPtr + idx));
-}
-
 // Scalar-side variant of SimtGetTensorAddr for the per-tensor fallback path
 template <typename T>
-__aicore__ inline __gm__ T* SimtGetTensorAddrAicore(GM_ADDR tensorListPtr, int32_t idx)
+__aicore__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int32_t idx)
 {
     __gm__ uint64_t* dataAddr = reinterpret_cast<__gm__ uint64_t*>(tensorListPtr);
     uint64_t tensorPtrOffset = *dataAddr;
@@ -65,75 +55,39 @@ __simt_callee__ inline void AddcmulTensorCompute(int64_t elemCount, CalcT scalar
         CalcT cx1 = static_cast<CalcT>(x1Ptr[index]);
         CalcT cx2 = static_cast<CalcT>(x2Ptr[index]);
         CalcT cx3 = static_cast<CalcT>(x3Ptr[index]);
-        CalcT result = cx1 + scalarVal * cx2 * cx3;
+        CalcT result = cx1 + scalarVal * (cx2 * cx3);
         yPtr[index] = static_cast<T>(result);
     }
 }
 
-// ========== Per-tensor VF kernel (fallback path for few tensors) ==========
+// Below this non-empty tensor count, per-tensor VF launches on the scalar
+// side are cheaper than the merged VF's GM reads of the index map.
+// static constexpr int32_t MERGED_VF_MIN_TENSORS = 8;
 
 template <typename T, typename CalcT>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcmulScalarListPerTensorSimt(
-    int64_t tensorElemCount, __gm__ T* x1Ptr, __gm__ T* x2Ptr, __gm__ T* x3Ptr, T scalarValRaw, __gm__ T* yPtr)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SmallTensorSimt(int64_t tensorElemCount, __gm__ T* x1Ptr,
+                                                                            __gm__ T* x2Ptr, __gm__ T* x3Ptr,
+                                                                            T scalarValRaw, __gm__ T* yPtr)
 {
     // Cast scalar from original dtype T to CalcT inside VF (bf16 cast not supported in __aicore__)
+    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetThreadIdx());
+    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum());
     CalcT scalarVal = static_cast<CalcT>(scalarValRaw);
-    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                         AscendC::Simt::GetThreadIdx());
-    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
     AddcmulTensorCompute<T, CalcT>(tensorElemCount, scalarVal, x1Ptr, x2Ptr, x3Ptr, yPtr, tid, stride);
 }
 
-// ========== SIMT VF kernel: one launch for the whole tensor list ==========
-// Small tensors are owned per block (block-strided over smallTensorNum), so
-// per-tensor descriptor resolution is spread over all cores instead of being
-// serialized on one core or repeated on every core. Large tensors (fewer of
-// them) are processed cooperatively by all blocks with a global grid-stride.
-
 template <typename T, typename CalcT>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachAddcmulScalarListSimt(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, __gm__ ForeachAddcmulScalarListTilingData* tilingGm,
-    int32_t smallTensorNum, int32_t largeTensorNum)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void LargeTensorSimt(int64_t tensorElemCount, __gm__ T* x1Ptr,
+                                                                            __gm__ T* x2Ptr, __gm__ T* x3Ptr,
+                                                                            T scalarValRaw, __gm__ T* yPtr)
 {
-    const uint32_t threadIdx = AscendC::Simt::GetThreadIdx();
-    const uint32_t threadNum = AscendC::Simt::GetThreadNum();
-    const uint32_t blockIdx = AscendC::Simt::GetBlockIdx();
-    const uint32_t blockNum = AscendC::Simt::GetBlockNum();
-    __gm__ T* scalarsGm = reinterpret_cast<__gm__ T*>(scalars);
-
-    // Owned small tensors: each block takes every blockNum-th small tensor
-    for (int32_t k = static_cast<int32_t>(blockIdx); k < smallTensorNum; k += static_cast<int32_t>(blockNum)) {
-        int32_t i = tilingGm->tensorIdxMap[k];
-        int64_t elemCount = tilingGm->tensorElements[i];
-        __gm__ T* x1Ptr = SimtGetTensorAddr<T>(x1, i);
-        __gm__ T* x2Ptr = SimtGetTensorAddr<T>(x2, i);
-        __gm__ T* x3Ptr = SimtGetTensorAddr<T>(x3, i);
-        __gm__ T* yPtr = SimtGetTensorAddr<T>(y, i);
-        CalcT scalarVal = static_cast<CalcT>(scalarsGm[i]);
-        AddcmulTensorCompute<T, CalcT>(elemCount, scalarVal, x1Ptr, x2Ptr, x3Ptr, yPtr, threadIdx, threadNum);
-    }
-
-    // Cooperative large tensors: all blocks grid-stride over each tensor
-    const uint64_t tid = static_cast<uint64_t>(blockIdx) * threadNum + threadIdx;
-    const uint64_t stride = static_cast<uint64_t>(threadNum) * blockNum;
-    for (int32_t k = 0; k < largeTensorNum; k++) {
-        int32_t i = tilingGm->tensorIdxMap[smallTensorNum + k];
-        int64_t elemCount = tilingGm->tensorElements[i];
-        __gm__ T* x1Ptr = SimtGetTensorAddr<T>(x1, i);
-        __gm__ T* x2Ptr = SimtGetTensorAddr<T>(x2, i);
-        __gm__ T* x3Ptr = SimtGetTensorAddr<T>(x3, i);
-        __gm__ T* yPtr = SimtGetTensorAddr<T>(y, i);
-        CalcT scalarVal = static_cast<CalcT>(scalarsGm[i]);
-        AddcmulTensorCompute<T, CalcT>(elemCount, scalarVal, x1Ptr, x2Ptr, x3Ptr, yPtr, tid, stride);
-    }
+    // Cast scalar from original dtype T to CalcT inside VF (bf16 cast not supported in __aicore__)
+    const uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                               AscendC::Simt::GetThreadIdx());
+    const uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+    CalcT scalarVal = static_cast<CalcT>(scalarValRaw);
+    AddcmulTensorCompute<T, CalcT>(tensorElemCount, scalarVal, x1Ptr, x2Ptr, x3Ptr, yPtr, tid, stride);
 }
-
-// ========== Process entry: fast path for all-empty; merged VF for many
-// tensors; per-tensor VF loop for few tensors ==========
-
-// Below this non-empty tensor count, per-tensor VF launches on the scalar
-// side are cheaper than the merged VF's GM reads of the index map.
-static constexpr int32_t MERGED_VF_MIN_TENSORS = 8;
 
 template <typename T, typename CalcT>
 __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scalars, GM_ADDR y, GM_ADDR tiling,
@@ -147,28 +101,32 @@ __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR x3, GM_ADDR scala
 
     int32_t smallTensorNum = tilingData->smallTensorNum;
     int32_t largeTensorNum = tilingData->largeTensorNum;
-    int32_t nonEmptyNum = smallTensorNum + largeTensorNum;
-
-    if (nonEmptyNum >= MERGED_VF_MIN_TENSORS) {
-        __gm__ ForeachAddcmulScalarListTilingData*
-            tilingGm = reinterpret_cast<__gm__ ForeachAddcmulScalarListTilingData*>(tiling);
-        AscendC::Simt::VF_CALL<OpForeachAddcmulScalarListSimt<T, CalcT>>(
-            AscendC::Simt::Dim3(THREAD_NUM), x1, x2, x3, scalars, y, tilingGm, smallTensorNum, largeTensorNum);
-        return;
-    }
-
-    // Few non-empty tensors: per-tensor VF launch, tiling read from local copy
+    const uint32_t blockIdx = AscendC::GetBlockIdx();
+    const uint32_t blockNum = AscendC::GetBlockNum();
     __gm__ T* scalarsGm = reinterpret_cast<__gm__ T*>(scalars);
-    for (int32_t k = 0; k < nonEmptyNum; k++) {
+
+    // Owned small tensors: each block takes every blockNum-th small tensor
+    for (int32_t k = static_cast<int32_t>(blockIdx); k < smallTensorNum; k += static_cast<int32_t>(blockNum)) {
         int32_t i = tilingData->tensorIdxMap[k];
         int64_t elemCount = tilingData->tensorElements[i];
-        __gm__ T* x1Ptr = SimtGetTensorAddrAicore<T>(x1, i);
-        __gm__ T* x2Ptr = SimtGetTensorAddrAicore<T>(x2, i);
-        __gm__ T* x3Ptr = SimtGetTensorAddrAicore<T>(x3, i);
-        __gm__ T* yPtr = SimtGetTensorAddrAicore<T>(y, i);
-        T scalarValRaw = scalarsGm[i];
-        AscendC::Simt::VF_CALL<OpForeachAddcmulScalarListPerTensorSimt<T, CalcT>>(
-            AscendC::Simt::Dim3(THREAD_NUM), elemCount, x1Ptr, x2Ptr, x3Ptr, scalarValRaw, yPtr);
+        __gm__ T* x1Ptr = SimtGetTensorAddr<T>(x1, i);
+        __gm__ T* x2Ptr = SimtGetTensorAddr<T>(x2, i);
+        __gm__ T* x3Ptr = SimtGetTensorAddr<T>(x3, i);
+        __gm__ T* yPtr = SimtGetTensorAddr<T>(y, i);
+        T scalarVal = scalarsGm[i];
+        asc_vf_call<SmallTensorSimt<T, CalcT>>(dim3(THREAD_NUM), elemCount, x1Ptr, x2Ptr, x3Ptr, scalarVal, yPtr);
+    }
+
+    // Cooperative large tensors: all blocks grid-stride over each tensor
+    for (int32_t k = 0; k < largeTensorNum; k++) {
+        int32_t i = tilingData->tensorIdxMap[smallTensorNum + k];
+        int64_t elemCount = tilingData->tensorElements[i];
+        __gm__ T* x1Ptr = SimtGetTensorAddr<T>(x1, i);
+        __gm__ T* x2Ptr = SimtGetTensorAddr<T>(x2, i);
+        __gm__ T* x3Ptr = SimtGetTensorAddr<T>(x3, i);
+        __gm__ T* yPtr = SimtGetTensorAddr<T>(y, i);
+        T scalarVal = scalarsGm[i];
+        asc_vf_call<LargeTensorSimt<T, CalcT>>(dim3(THREAD_NUM), elemCount, x1Ptr, x2Ptr, x3Ptr, scalarVal, yPtr);
     }
 }
 

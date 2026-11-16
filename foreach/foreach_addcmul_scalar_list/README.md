@@ -88,10 +88,15 @@
 ## 约束说明
 
 - 输出不支持非连续Tensor。
+- x1、x2、x3 三个列表中 Tensor 数量一致，且对应位置 Tensor 的 shape 一致。
+- 列表内所有 Tensor 的数据类型保持一致。
+- 单个 Tensor 的维度不超过 8。
+- scalars 的元素个数与 x1 中 Tensor 的个数相等。
+- 列表的 Tensor 个数上限为 128。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_foreach_addcmul_scalar_list](examples/test_aclnn_foreach_addcmul_scalar_list.cpp) | 通过[aclnnForeachAddcmulScalarList](docs/aclnnForeachAddcmulScalarList.md)接口方式调用ForeachAddcmulScalarList算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_addcmul_scalar_list_proto.h)构图方式调用ForeachAddcmulScalarList算子。         |
+| aclnn API  | [test_aclnn_foreach_addcmul_scalar_list](examples/test_aclnn_foreach_addcmul_scalar_list.cpp) | 通过[aclnnForeachAddcmulScalarList](docs/aclnnForeachAddcmulScalarList.md)接口方式调用ForeachAddcmulScalarList算子。 |
+| GE图模式 | -  | 通过[算子IR](op_graph/foreach_addcmul_scalar_list_proto.h)构图方式调用ForeachAddcmulScalarList算子。         |

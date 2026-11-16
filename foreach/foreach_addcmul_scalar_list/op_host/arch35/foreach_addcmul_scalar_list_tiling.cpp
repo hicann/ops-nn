@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <limits>
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "platform/platform_info.h"
@@ -30,7 +31,10 @@ namespace optiling {
 
 constexpr int64_t SINGLE_CORE_MIN_ELEMENTS = 1024;
 constexpr int64_t ALIGN_SIZE = 32;
-constexpr int64_t INPUT_IDX = 0; // x1 is the first DYNAMIC_INPUT
+constexpr int64_t INPUT_IDX = 0;         // x1 is the first DYNAMIC_INPUT
+constexpr int64_t SCALARS_INPUT_IDX = 3; // scalars is the fourth input (REQUIRED)
+constexpr int64_t INPUT_LIST_COUNT = 3;  // x1/x2/x3 are the three tensor-list inputs
+constexpr int64_t MAX_DIM_NUM = 8;
 
 struct ForeachAddcmulScalarListCompileInfo {
     int64_t coreNum;
@@ -41,6 +45,11 @@ constexpr uint64_t TILING_KEY_FP16 = 0;
 constexpr uint64_t TILING_KEY_FP32 = 1;
 constexpr uint64_t TILING_KEY_INT32 = 2;
 constexpr uint64_t TILING_KEY_BF16 = 3;
+
+static bool IsSupportedDtype(ge::DataType dtype)
+{
+    return dtype == ge::DT_FLOAT16 || dtype == ge::DT_FLOAT || dtype == ge::DT_INT32 || dtype == ge::DT_BF16;
+}
 
 static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
 {
@@ -103,10 +112,108 @@ static ge::graphStatus ValidateAndGetTensorCount(const gert::TilingContext* cont
     OP_CHECK_NULL_WITH_CONTEXT(context, idxInstanceInfoPtr);
     tensorNum = idxInstanceInfoPtr->GetInstanceNum();
 
-    OP_CHECK_IF((static_cast<int32_t>(tensorNum) > MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST),
+    OP_CHECK_IF((tensorNum > static_cast<uint64_t>(MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST)),
                 OP_LOGE(context, "tensorNum %lu exceeds MAX_TENSOR_NUM %d", tensorNum,
                         MAX_TENSOR_NUM_FOREACH_ADDCMUL_SCALAR_LIST),
                 return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+// Validate input/output tensor lists: x1/x2/x3 must have the same list size and
+// per-tensor dtype/storage shape, y must match the dtype and have enough flat
+// capacity for each x1 tensor, and scalars must carry exactly one element per
+// tensor in the list. This mirrors the arch22 ForeachCommonTiling validation so
+// the arch35 path enforces the same constraints documented in the README.
+static ge::graphStatus ValidateForeachAddcmulScalarList(gert::TilingContext* context, uint64_t tensorNum)
+{
+    auto computeNodeInfoPtr = context->GetComputeNodeInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfoPtr);
+
+    // x2/x3 must have the same list size as x1.
+    for (int64_t listIdx = 1; listIdx < INPUT_LIST_COUNT; listIdx++) {
+        auto listInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(listIdx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, listInfoPtr);
+        OP_CHECK_IF((listInfoPtr->GetInstanceNum() != tensorNum),
+                    OP_LOGE(context, "input list %ld instance num %lu mismatch x1 instance num %lu", listIdx,
+                            listInfoPtr->GetInstanceNum(), tensorNum),
+                    return ge::GRAPH_FAILED);
+    }
+    // y must have the same list size as x1.
+    OP_CHECK_IF((computeNodeInfoPtr->GetOutputsNum() != tensorNum),
+                OP_LOGE(context, "output y instance num %lu mismatch x1 instance num %lu",
+                        computeNodeInfoPtr->GetOutputsNum(), tensorNum),
+                return ge::GRAPH_FAILED);
+
+    int64_t totalElements = 0;
+    ge::DataType listDtype = ge::DT_UNDEFINED;
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        auto x1Desc = context->GetDynamicInputDesc(INPUT_IDX, i);
+        auto x1Shape = context->GetDynamicInputShape(INPUT_IDX, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1Desc);
+        OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
+
+        ge::DataType currentDtype = x1Desc->GetDataType();
+        OP_CHECK_IF((!IsSupportedDtype(currentDtype)),
+                    OP_LOGE(context, "x1[%lu] unsupported dtype %d", i, static_cast<int32_t>(currentDtype)),
+                    return ge::GRAPH_FAILED);
+        if (listDtype == ge::DT_UNDEFINED) {
+            listDtype = currentDtype;
+        } else {
+            OP_CHECK_IF((currentDtype != listDtype),
+                        OP_LOGE(context, "x1[%lu] dtype %d mismatch x1[0] dtype %d", i,
+                                static_cast<int32_t>(currentDtype), static_cast<int32_t>(listDtype)),
+                        return ge::GRAPH_FAILED);
+        }
+
+        const gert::Shape& x1StorageShape = x1Shape->GetStorageShape();
+        OP_CHECK_IF((x1StorageShape.GetDimNum() > MAX_DIM_NUM),
+                    OP_LOGE(context, "x1[%lu] dim num %lu exceeds %ld", i, x1StorageShape.GetDimNum(), MAX_DIM_NUM),
+                    return ge::GRAPH_FAILED);
+
+        int64_t dataCount = x1StorageShape.GetShapeSize();
+        OP_CHECK_IF((dataCount < 0 || totalElements > std::numeric_limits<int64_t>::max() - dataCount),
+                    OP_LOGE(context, "totalElements overflow for x1[%lu]", i), return ge::GRAPH_FAILED);
+        totalElements += dataCount;
+
+        // x2/x3 must match x1 dtype and storage shape at the same position.
+        for (int64_t listIdx = 1; listIdx < INPUT_LIST_COUNT; listIdx++) {
+            auto inputDesc = context->GetDynamicInputDesc(listIdx, i);
+            auto inputShape = context->GetDynamicInputShape(listIdx, i);
+            OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+            OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+            OP_CHECK_IF((inputDesc->GetDataType() != listDtype || inputShape->GetStorageShape() != x1StorageShape),
+                        OP_LOGE(context, "input %ld[%lu] dtype or storage shape mismatch x1[%lu]", listIdx, i, i),
+                        return ge::GRAPH_FAILED);
+        }
+
+        // y must match x1 dtype and contain at least as many elements as x1.
+        auto yDesc = context->GetOutputDesc(i);
+        auto yShape = context->GetOutputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
+        OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
+        OP_CHECK_IF((yDesc->GetDataType() != listDtype), OP_LOGE(context, "y[%lu] dtype mismatch x1[%lu]", i, i),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF((yShape->GetStorageShape().GetShapeSize() < dataCount),
+                    OP_LOGE(context, "y[%lu] storage size %ld smaller than x1[%lu] element count %ld", i,
+                            yShape->GetStorageShape().GetShapeSize(), i, dataCount),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // scalars must carry exactly one element per tensor in the list, and its
+    // dtype must match x1 (the kernel reads scalarsGm[i] using the x1 dtype T).
+    auto scalarsDesc = context->GetRequiredInputDesc(SCALARS_INPUT_IDX);
+    auto scalarsShape = context->GetRequiredInputShape(SCALARS_INPUT_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarsDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarsShape);
+    OP_CHECK_IF((scalarsShape->GetStorageShape().GetShapeSize() != static_cast<int64_t>(tensorNum)),
+                OP_LOGE(context, "scalars element count %ld mismatch tensorNum %lu",
+                        scalarsShape->GetStorageShape().GetShapeSize(), tensorNum),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((listDtype != ge::DT_UNDEFINED && scalarsDesc->GetDataType() != listDtype),
+                OP_LOGE(context, "scalars dtype %d mismatch x1 dtype %d",
+                        static_cast<int32_t>(scalarsDesc->GetDataType()), static_cast<int32_t>(listDtype)),
+                return ge::GRAPH_FAILED);
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -233,6 +340,9 @@ static ge::graphStatus ForeachAddcmulScalarListTilingFunc(gert::TilingContext* c
     }
     auto* tilingData = context->GetTilingData<ForeachAddcmulScalarListTilingData>();
     if (ValidateAndGetTensorCount(context, tensorNum) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (ValidateForeachAddcmulScalarList(context, tensorNum) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (ComputeMaxTensorElements(context, tensorNum, maxTensorElements, dataType, tilingData) != ge::GRAPH_SUCCESS) {

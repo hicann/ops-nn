@@ -90,10 +90,15 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The output does not support non-contiguous tensors.
+- The three lists x1, x2, and x3 must have the same number of tensors, and the corresponding tensors must have the same shape.
+- All tensors in a list must have the same data type.
+- The dimension of a single tensor does not exceed 8.
+- The number of elements in scalars equals the number of tensors in x1.
+- The maximum number of tensors in a list is 128.
 
 ## Invocation Description
 
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn interface  | [test_aclnn_foreach_addcmul_scalar_list](examples/test_aclnn_foreach_addcmul_scalar_list.cpp) | Invokes the ForeachAddcmulScalarList operator through the [aclnnForeachAddcmulScalarList](docs/aclnnForeachAddcmulScalarList_en.md) interface. |
-| Graph mode | -  | Invokes the ForeachAddcmulScalarList operator through the [operator IR](op_graph/foreach_addcmul_scalar_list_proto.h) graph construction method.         |
+| aclnn API  | [test_aclnn_foreach_addcmul_scalar_list](examples/test_aclnn_foreach_addcmul_scalar_list.cpp) | Invokes the ForeachAddcmulScalarList operator through the [aclnnForeachAddcmulScalarList](docs/aclnnForeachAddcmulScalarList_en.md) interface. |
+| GE graph mode | -  | Invokes the ForeachAddcmulScalarList operator through the [operator IR](op_graph/foreach_addcmul_scalar_list_proto.h) graph construction method.         |
