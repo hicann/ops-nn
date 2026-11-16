@@ -127,7 +127,7 @@
 
     ```bash
     # 卸载命令
-    ./${install_path}/cann/share/info/ops_nn/script/uninstall.sh
+    bash ${install_path}/cann/share/info/ops_nn/script/uninstall.sh
     ```
 
 ### ops-nn静态库
