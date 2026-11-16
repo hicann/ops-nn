@@ -31,7 +31,7 @@
 - 新增`alpha`、`bias`两个属性，支持变体ClippedSwiGLU激活
   $A' \cdot \sigma(\alpha \cdot A') \cdot (B' + \beta)$；
 - `weightOptional`的数据类型由FLOAT32扩展为**FLOAT16、BFLOAT16、FLOAT32**；
-- 量化尺度采用**CuBALS**（`scale_alg=1`，无amax下限），与双轴算子
+- 量化尺度采用**cuBLAS**（`scale_alg=1`，无amax下限），与双轴算子
   `swiglu_group_quant_with_dual_axis`的第1路共享同一MX kernel，
   因此训练（双轴）与推理（单轴`quantMode=5`）的第1路量化数值保持一致。
 
@@ -49,7 +49,7 @@
 步骤二：Clamp处理（可选）
 步骤三：变体SwiGLU激活
 步骤四：Weight加权（可选）
-步骤五：MX FP8量化（CuBALS）
+步骤五：MX FP8量化（cuBLAS）
 ```
 
 > `quantMode=5`不支持`group_index`与`scale`，因此无分组截断与静态量化步骤；
@@ -151,7 +151,7 @@ $$
 </details>
 
 <details>
-<summary><strong>步骤五：MX FP8量化（CuBALS）</strong></summary>
+<summary><strong>步骤五：MX FP8量化（cuBLAS）</strong></summary>
 
 **MX量化原理**：采用**E8M0 Scale** + **FP8 Data**的组合。
 
@@ -161,7 +161,7 @@ $$
 \mathbf{y} = [\mathbf{g}_0, \mathbf{g}_1, \ldots, \mathbf{g}_K], \quad \mathbf{g}_i \in \mathbb{R}^{32}
 $$
 
-**Amax计算**（CuBALS无下限）：
+**Amax计算**（cuBLAS无下限）：
 
 $$
 a_i = \max_{j=0}^{31} |\mathbf{g}_i[j]|
@@ -178,7 +178,7 @@ $$
 - FP8 E4M3FN：$M_{\text{fp8}} = 448.0$
 - FP8 E5M2：$M_{\text{fp8}} = 57344.0$
 
-**指数向上取整（CuBALS）**：从 $s_i^{\text{raw}}$ 提取无偏指数 $E_i$ 与尾数 $M_i$，
+**指数向上取整（cuBLAS）**：从 $s_i^{\text{raw}}$ 提取无偏指数 $E_i$ 与尾数 $M_i$，
 为保证量化不溢出对指数向上取整：
 
 $$
@@ -555,7 +555,7 @@ aclnnStatus aclnnSwigluGroupQuantV2(
 - **weightOptional**支持FLOAT16、BFLOAT16、FLOAT32，元素数为`T`。
 - **`yOriginOut`语义**：输出的是weight加权前的SwiGLU激活结果（含clamp、alpha、bias的作用），
   与`weight`取值无关，可直接用于反向计算`grad_weight`。
-- **尺度算法**：固定CuBALS（`scale_alg=1`），无amax下限；全零块的scale编码为0。
+- **尺度算法**：固定cuBLAS（`scale_alg=1`），无amax下限；全零块的scale编码为0。
   该算法与双轴算子`swiglu_group_quant_with_dual_axis`的第1路复用同一kernel，
   保证训练与推理的第1路量化数值一致。
 - **与V1的差异**：`quantMode=5`只在本接口支持；`aclnnSwigluGroupQuant`的

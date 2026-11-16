@@ -134,7 +134,7 @@ $$
 <details>
 <summary><strong>步骤五：双轴MX FP8量化</strong></summary>
 
-两路量化均遵循CuBALS（`scaleAlg=1`）尺度算法，块大小固定为32。
+两路量化均遵循cuBLAS（`scaleAlg=1`）尺度算法，块大小固定为32。
 量化前先计算块内绝对值最大值，再映射到目标FP8类型的可表示范围：
 
 $$
@@ -144,7 +144,7 @@ $$
 其中 $Amax(DType)$：FP8_E4M3FN为 $448.0$，FP8_E5M2为 $57344.0$。
 
 对于有限非零的 $s^{raw}$，将其按FP32位模式解释。记 $E_b$ 为FP32的**8 bit偏置指数域**（biased exponent），
-$m \in [0,1)$ 为尾数域对应的小数部分。CuBALS对指数执行向上取整：
+$m \in [0,1)$ 为尾数域对应的小数部分。cuBLAS对指数执行向上取整：
 
 $$
 E_b^{*} =
@@ -174,7 +174,7 @@ amax[t, c] = \max_{i=0}^{31} |u[t, 32c + i]|
 $$
 
 $$
-mxScale1[t, c] = \text{CuBALS}(amax[t, c]), \qquad y1[t, j] = Q8\!\left(\frac{u[t, j]}{s[t, \lfloor j/32 \rfloor]}\right)
+mxScale1[t, c] = \text{cuBLAS}(amax[t, c]), \qquad y1[t, j] = Q8\!\left(\frac{u[t, j]}{s[t, \lfloor j/32 \rfloor]}\right)
 $$
 
 `mxScale1`物理排布为`[T, ceil(ceil(H/32)/2), 2]`，最后一维最多存放同一行相邻的2个32-element block scale。若最后一个pair未填满，未使用位置无有效值保证，调用方不应读取或依赖其内容。

@@ -21,7 +21,7 @@ SwigluGroupQuant算子实现SwiGLU激活函数与分组量化融合计算。支�
 - **quant_mode=1**: MX Quant（FP8 MX量化，固定32元素分组）
 - **quant_mode=2**: HiFp8 Static Quant（HiFp8静态量化）
 - **quant_mode=3**: HiFp8 Dynamic Quant（HiFp8动态量化）
-- **quant_mode=5**: MX Quant V2（变体Clipped SwiGLU + CuBALS MX FP8量化，固定32元素分组）
+- **quant_mode=5**: MX Quant V2（变体Clipped SwiGLU + cuBLAS MX FP8量化，固定32元素分组）
 
 ### 计算公式
 
@@ -436,7 +436,7 @@ $$
 </details>
 
 <details>
-<summary><strong>quant_mode=5 (MxQuant CuBALS)</strong></summary>
+<summary><strong>quant_mode=5 (MxQuant cuBLAS)</strong></summary>
 
 **MX量化原理**：采用**E8M0 Scale** + **FP8 Data**的组合。
 
@@ -446,7 +446,7 @@ $$
 \mathbf{y} = [\mathbf{g}_0, \mathbf{g}_1, \ldots, \mathbf{g}_K], \quad \mathbf{g}_i \in \mathbb{R}^{32}
 $$
 
-**Amax计算**（CuBALS无下限）：
+**Amax计算**（cuBLAS无下限）：
 
 $$
 a_i = \max_{j=0}^{31} |\mathbf{g}_i[j]|
@@ -463,7 +463,7 @@ $$
 - FP8 E4M3FN：$M_{\text{fp8}} = 448.0$
 - FP8 E5M2：$M_{\text{fp8}} = 57344.0$
 
-**指数向上取整（CuBALS）**：从 $s_i^{\text{raw}}$ 提取无偏指数 $E_i$ 与尾数 $M_i$，
+**指数向上取整（cuBLAS）**：从 $s_i^{\text{raw}}$ 提取无偏指数 $E_i$ 与尾数 $M_i$，
 为保证量化不溢出对指数向上取整：
 
 $$

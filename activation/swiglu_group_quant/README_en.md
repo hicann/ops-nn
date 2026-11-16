@@ -23,7 +23,7 @@ The SwigluGroupQuant operator implements the fused computation of the SwiGLU act
 - **quant_mode=1**: MX Quant (FP8 MX quantization, fixed 32-element groups)
 - **quant_mode=2**: HiFp8 Static Quant (HiFp8 static quantization)
 - **quant_mode=3**: HiFp8 Dynamic Quant (HiFp8 dynamic quantization)
-- **quant_mode=5**: MX Quant V2 (variant Clipped SwiGLU + CuBALS MX FP8 quantization, fixed 32-element groups)
+- **quant_mode=5**: MX Quant V2 (variant Clipped SwiGLU + cuBLAS MX FP8 quantization, fixed 32-element groups)
 
 ### Formula:
 
@@ -438,7 +438,7 @@ $$
 </details>
 
 <details>
-<summary><strong>quant_mode=5 (MxQuant CuBALS)</strong></summary>
+<summary><strong>quant_mode=5 (MxQuant cuBLAS)</strong></summary>
 
 **MX quantization principle**: adopts the combination of **E8M0 Scale** + **FP8 Data**.
 
@@ -448,7 +448,7 @@ $$
 \mathbf{y} = [\mathbf{g}_0, \mathbf{g}_1, \ldots, \mathbf{g}_K], \quad \mathbf{g}_i \in \mathbb{R}^{32}
 $$
 
-**Amax computation** (CuBALS has no lower bound):
+**Amax computation** (cuBLAS has no lower bound):
 
 $$
 a_i = \max_{j=0}^{31} |\mathbf{g}_i[j]|
@@ -465,7 +465,7 @@ where $M_{\text{fp8}}$ takes the following values:
 - FP8 E4M3FN: $M_{\text{fp8}} = 448.0$
 - FP8 E5M2: $M_{\text{fp8}} = 57344.0$
 
-**Exponent rounding up (CuBALS)**: extract the unbiased exponent $E_i$ and mantissa $M_i$ from $s_i^{\text{raw}}$.
+**Exponent rounding up (cuBLAS)**: extract the unbiased exponent $E_i$ and mantissa $M_i$ from $s_i^{\text{raw}}$.
 To ensure that quantization does not overflow, the exponent is rounded up:
 
 $$

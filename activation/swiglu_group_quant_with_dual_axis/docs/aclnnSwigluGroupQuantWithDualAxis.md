@@ -73,13 +73,13 @@ $$
 </details>
 
 <details>
-<summary><strong>阶段二：两路MX FP8量化（CuBALS，块大小32）</strong></summary>
+<summary><strong>阶段二：两路MX FP8量化（cuBLAS，块大小32）</strong></summary>
 
-两路均采用CuBALS（`scaleAlg=1`）尺度算法，块大小固定为32。块内绝对值最大值
+两路均采用cuBLAS（`scaleAlg=1`）尺度算法，块大小固定为32。块内绝对值最大值
 $amax$ 映射到目标类型可表示范围 $s^{raw} = amax / Amax(DType)$（E4M3FN为448，E5M2为57344）。
 
 对于有限非零的 $s^{raw}$，将其按FP32位模式解释。记 $E_b$ 为FP32的**8 bit偏置指数域**，
-$m \in [0,1)$ 为尾数域对应的小数部分，则CuBALS的指数取整规则为：
+$m \in [0,1)$ 为尾数域对应的小数部分，则cuBLAS的指数取整规则为：
 
 $$
 E_b^{*} =

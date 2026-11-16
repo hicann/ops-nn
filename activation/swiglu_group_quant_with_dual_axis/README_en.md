@@ -134,7 +134,7 @@ When `weight` is absent, $u = R_T(F)$. $u$ is the quantization input shared by t
 <details>
 <summary><strong>Step 5: Dual-axis MX FP8 quantization</strong></summary>
 
-Both quantization paths follow the CuBALS (`scaleAlg=1`) scale algorithm, with a fixed block size of 32.
+Both quantization paths follow the cuBLAS (`scaleAlg=1`) scale algorithm, with a fixed block size of 32.
 Before quantization, the maximum absolute value within a block is computed first, and then mapped to the representable range of the target FP8 type:
 
 $$
@@ -144,7 +144,7 @@ $$
 where $Amax(DType)$: $448.0$ for FP8_E4M3FN, and $57344.0$ for FP8_E5M2.
 
 For a finite and nonzero $s^{raw}$, interpret it according to the FP32 bit pattern. Let $E_b$ denote the **8 bit biased exponent field** of FP32 (biased exponent),
-and let $m \in [0,1)$ denote the fractional part corresponding to the mantissa field. CuBALS rounds the exponent up:
+and let $m \in [0,1)$ denote the fractional part corresponding to the mantissa field. cuBLAS rounds the exponent up:
 
 $$
 E_b^{*} =
@@ -174,7 +174,7 @@ amax[t, c] = \max_{i=0}^{31} |u[t, 32c + i]|
 $$
 
 $$
-mxScale1[t, c] = \text{CuBALS}(amax[t, c]), \qquad y1[t, j] = Q8\!\left(\frac{u[t, j]}{s[t, \lfloor j/32 \rfloor]}\right)
+mxScale1[t, c] = \text{cuBLAS}(amax[t, c]), \qquad y1[t, j] = Q8\!\left(\frac{u[t, j]}{s[t, \lfloor j/32 \rfloor]}\right)
 $$
 
 The physical layout of `mxScale1` is `[T, ceil(ceil(H/32)/2), 2]`; the last dimension stores at most 2 adjacent 32-element block scales of the same row. If the last pair is not filled, the unused positions carry no guarantee of valid values, and callers should not read or rely on their content.
