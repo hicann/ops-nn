@@ -194,15 +194,26 @@ public:
                     Sub(subReg, mulReg2, mulReg4, maskReg);
                     Mul(dxReg, subReg, rstdReg, maskReg);
                     // cal quant
-                    LoadTensorForDtypeTIn(scalesXAddr, scalesXReg, maskReg);
-                    if constexpr (DIV_MODE) {
-                        Div(scalesXResultReg, dxReg, scalesXReg, maskReg);
-                    } else {
-                        Mul(scalesXResultReg, dxReg, scalesXReg, maskReg);
-                    }
-                    if constexpr (HAS_OFFSET_X) {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+                    if constexpr (!DIV_MODE && HAS_OFFSET_X) {
+                        // scales 预载入 dst（MulDstAdd 为 read-modify-write），交换律下与两步版等价
+                        LoadTensorForDtypeTIn(scalesXAddr, scalesXResultReg, maskReg);
                         LoadTensorForDtypeTIn(offsetXAddr, offsetXReg, maskReg);
-                        Add(scalesXResultReg, scalesXResultReg, offsetXReg, maskReg);
+                        MulDstAdd<float, AscendC::Reg::MaskMergeMode::ZEROING>(scalesXResultReg, dxReg, offsetXReg,
+                                                                               maskReg);
+                    } else
+#endif
+                    {
+                        LoadTensorForDtypeTIn(scalesXAddr, scalesXReg, maskReg);
+                        if constexpr (DIV_MODE) {
+                            Div(scalesXResultReg, dxReg, scalesXReg, maskReg);
+                        } else {
+                            Mul(scalesXResultReg, dxReg, scalesXReg, maskReg);
+                        }
+                        if constexpr (HAS_OFFSET_X) {
+                            LoadTensorForDtypeTIn(offsetXAddr, offsetXReg, maskReg);
+                            Add(scalesXResultReg, scalesXResultReg, offsetXReg, maskReg);
+                        }
                     }
                     if constexpr (IsSameType<T_DX, hifloat8_t>::value) {
                         RegTensor<T_DX> dxRegHif8;

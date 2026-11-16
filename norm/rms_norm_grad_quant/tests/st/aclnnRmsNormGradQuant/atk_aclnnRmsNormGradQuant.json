@@ -1,0 +1,1149 @@
+[
+ {
+  "id": 0,
+  "name": "RmsNormGradQuant",
+  "aclnn_name": "RmsNormGradQuant",
+  "api_type": "aclnn_rms_norm_grad_quant",
+  "aclnn_api_type": "sample_aclnn_api",
+  "standard": {
+   "acc": "single_bm",
+   "perf": "not_key"
+  },
+  "inputs": [
+   {
+    "name": "dy",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     8,
+     128
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "x",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     8,
+     128
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "rstd",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     8
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "gamma",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     128
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "scalesX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0.01,
+     0.1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "offsetX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0,
+     5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "quant_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "string",
+    "shape": null,
+    "range_values": "static",
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "div_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "bool",
+    "shape": null,
+    "range_values": false,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "dst_type",
+    "type": "attr",
+    "required": true,
+    "dtype": "int32",
+    "shape": null,
+    "range_values": 2,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   }
+  ],
+  "remark": "融合分支专项:mul+offset(走MulDstAdd路径)"
+ },
+ {
+  "id": 1,
+  "name": "RmsNormGradQuant",
+  "aclnn_name": "RmsNormGradQuant",
+  "api_type": "aclnn_rms_norm_grad_quant",
+  "aclnn_api_type": "sample_aclnn_api",
+  "standard": {
+   "acc": "single_bm",
+   "perf": "not_key"
+  },
+  "inputs": [
+   {
+    "name": "dy",
+    "type": "tensor",
+    "required": true,
+    "dtype": "bf16",
+    "shape": [
+     4,
+     256
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "x",
+    "type": "tensor",
+    "required": true,
+    "dtype": "bf16",
+    "shape": [
+     4,
+     256
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "rstd",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     4
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "gamma",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     256
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "scalesX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0.01,
+     0.1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "offsetX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0,
+     5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "quant_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "string",
+    "shape": null,
+    "range_values": "static",
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "div_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "bool",
+    "shape": null,
+    "range_values": false,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "dst_type",
+    "type": "attr",
+    "required": true,
+    "dtype": "int32",
+    "shape": null,
+    "range_values": 2,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   }
+  ],
+  "remark": "融合分支专项:bf16+mul+offset"
+ },
+ {
+  "id": 2,
+  "name": "RmsNormGradQuant",
+  "aclnn_name": "RmsNormGradQuant",
+  "api_type": "aclnn_rms_norm_grad_quant",
+  "aclnn_api_type": "sample_aclnn_api",
+  "standard": {
+   "acc": "single_bm",
+   "perf": "not_key"
+  },
+  "inputs": [
+   {
+    "name": "dy",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     2,
+     512
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "x",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     2,
+     512
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "rstd",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     2
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "gamma",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     512
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "scalesX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0.01,
+     0.1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "offsetX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0,
+     5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "quant_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "string",
+    "shape": null,
+    "range_values": "static",
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "div_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "bool",
+    "shape": null,
+    "range_values": true,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "dst_type",
+    "type": "attr",
+    "required": true,
+    "dtype": "int32",
+    "shape": null,
+    "range_values": 2,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   }
+  ],
+  "remark": "对照:div模式(不走融合分支)"
+ },
+ {
+  "id": 3,
+  "name": "RmsNormGradQuant",
+  "aclnn_name": "RmsNormGradQuant",
+  "api_type": "aclnn_rms_norm_grad_quant",
+  "aclnn_api_type": "sample_aclnn_api",
+  "standard": {
+   "acc": "single_bm",
+   "perf": "not_key"
+  },
+  "inputs": [
+   {
+    "name": "dy",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     64,
+     4096
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "x",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     64,
+     4096
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "rstd",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     64
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "gamma",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     4096
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "scalesX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0.01,
+     0.1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "offsetX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0,
+     5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "quant_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "string",
+    "shape": null,
+    "range_values": "static",
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "div_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "bool",
+    "shape": null,
+    "range_values": false,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "dst_type",
+    "type": "attr",
+    "required": true,
+    "dtype": "int32",
+    "shape": null,
+    "range_values": 2,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   }
+  ],
+  "remark": "融合分支专项:LLM典型shape+mul+offset"
+ },
+ {
+  "id": 4,
+  "name": "RmsNormGradQuant",
+  "aclnn_name": "RmsNormGradQuant",
+  "api_type": "aclnn_rms_norm_grad_quant",
+  "aclnn_api_type": "sample_aclnn_api",
+  "standard": {
+   "acc": "single_bm",
+   "perf": "not_key"
+  },
+  "inputs": [
+   {
+    "name": "dy",
+    "type": "tensor",
+    "required": true,
+    "dtype": "bf16",
+    "shape": [
+     2,
+     8192
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "x",
+    "type": "tensor",
+    "required": true,
+    "dtype": "bf16",
+    "shape": [
+     2,
+     8192
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "rstd",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     2
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "gamma",
+    "type": "tensor",
+    "required": true,
+    "dtype": "bf16",
+    "shape": [
+     8192
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "scalesX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0.01,
+     0.1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "quant_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "string",
+    "shape": null,
+    "range_values": "static",
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "div_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "bool",
+    "shape": null,
+    "range_values": false,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "dst_type",
+    "type": "attr",
+    "required": true,
+    "dtype": "int32",
+    "shape": null,
+    "range_values": 2,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   }
+  ],
+  "remark": "对照:无offset+大cols(split_d路径)"
+ },
+ {
+  "id": 5,
+  "name": "RmsNormGradQuant",
+  "aclnn_name": "RmsNormGradQuant",
+  "api_type": "aclnn_rms_norm_grad_quant",
+  "aclnn_api_type": "sample_aclnn_api",
+  "standard": {
+   "acc": "single_bm",
+   "perf": "not_key"
+  },
+  "inputs": [
+   {
+    "name": "dy",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     2,
+     3,
+     4096
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "x",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     2,
+     3,
+     4096
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "rstd",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     2,
+     3
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "gamma",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     4096
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "scalesX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0.01,
+     0.1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "offsetX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0,
+     5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "quant_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "string",
+    "shape": null,
+    "range_values": "static",
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "div_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "bool",
+    "shape": null,
+    "range_values": false,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "dst_type",
+    "type": "attr",
+    "required": true,
+    "dtype": "int32",
+    "shape": null,
+    "range_values": 34,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   }
+  ],
+  "remark": "融合分支专项:3维+hif8输出+mul+offset"
+ },
+ {
+  "id": 6,
+  "name": "RmsNormGradQuant",
+  "aclnn_name": "RmsNormGradQuant",
+  "api_type": "aclnn_rms_norm_grad_quant",
+  "aclnn_api_type": "sample_aclnn_api",
+  "standard": {
+   "acc": "single_bm",
+   "perf": "not_key"
+  },
+  "inputs": [
+   {
+    "name": "dy",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     128,
+     1024
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "x",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     128,
+     1024
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "rstd",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     128
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "gamma",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     1024
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "scalesX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp16",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0.01,
+     0.1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "offsetX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0,
+     5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "quant_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "string",
+    "shape": null,
+    "range_values": "static",
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "div_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "bool",
+    "shape": null,
+    "range_values": true,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "dst_type",
+    "type": "attr",
+    "required": true,
+    "dtype": "int32",
+    "shape": null,
+    "range_values": 2,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   }
+  ],
+  "remark": "对照:大rows+div(多核切分覆盖)"
+ },
+ {
+  "id": 7,
+  "name": "RmsNormGradQuant",
+  "aclnn_name": "RmsNormGradQuant",
+  "api_type": "aclnn_rms_norm_grad_quant",
+  "aclnn_api_type": "sample_aclnn_api",
+  "standard": {
+   "acc": "single_bm",
+   "perf": "not_key"
+  },
+  "inputs": [
+   {
+    "name": "dy",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     8,
+     128
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "x",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     8,
+     128
+    ],
+    "range_values": [
+     -1,
+     1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "rstd",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     8
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "gamma",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     128
+    ],
+    "range_values": [
+     0.5,
+     1.5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "scalesX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "fp32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0.01,
+     0.1
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "offsetX",
+    "type": "tensor",
+    "required": true,
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "range_values": [
+     0,
+     5
+    ],
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "quant_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "string",
+    "shape": null,
+    "range_values": "static",
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "div_mode",
+    "type": "attr",
+    "required": true,
+    "dtype": "bool",
+    "shape": null,
+    "range_values": false,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   },
+   {
+    "name": "dst_type",
+    "type": "attr",
+    "required": true,
+    "dtype": "int32",
+    "shape": null,
+    "range_values": 2,
+    "backward": false,
+    "align_32B": null,
+    "outlier_values": null
+   }
+  ],
+  "remark": "融合分支专项:fp32+mul+offset(fp32融合分支覆盖)"
+ }
+]
