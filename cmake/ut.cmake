@@ -372,13 +372,14 @@ endif()
 function(add_modules_llt_sources)
     add_modules_ut_sources(${ARGN})
 endfunction()
-
 function(add_modules_ut_sources)
     set(options OPTION_RESERVED)
     set(oneValueArgs HOSTNAME MODE DIR)
-    set(multiValueArgs MULIT_RESERVED)
+    # TILING_DIR 支持多个目录（一个芯片型号可配置多个tiling目录）
+    set(multiValueArgs TILING_DIR MULIT_RESERVED)
 
-    cmake_parse_arguments(MODULE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    cmake_parse_arguments(MODULE "${options}" "${oneValueArgs}"
+                          "${multiValueArgs}" ${ARGN})
 
     message(STATUS "=== Debug<add_modules_ut_sources>: ${MODULE_HOSTNAME} ${MODULE_MODE} ${MODULE_DIR}")
 
@@ -394,6 +395,14 @@ function(add_modules_ut_sources)
     else()
         file(GLOB OPHOST_TILING_SRCS ${MODULE_DIR}/test_*_tiling.cpp ${MODULE_DIR}/${target_dir}/test_*_tiling.cpp)
     endif()
+    # MODULE_TILING_DIR 可为单个目录或目录列表（一个芯片型号可配置多个tiling目录），
+    # 逐目录拼接 glob 模式，避免列表展开后路径与通配符错位
+    foreach(_tiling_sub_dir IN LISTS MODULE_TILING_DIR)
+        if(NOT "${_tiling_sub_dir}" STREQUAL "")
+            file(GLOB _tiling_dir_srcs ${MODULE_DIR}/${_tiling_sub_dir}/test_*_tiling.cpp)
+            list(APPEND OPHOST_TILING_SRCS ${_tiling_dir_srcs})
+        endif()
+    endforeach()
     if(${TILING_FOUND_INDEX} GREATER_EQUAL 0 AND OPHOST_TILING_SRCS)
         if (NOT TARGET ${MODULE_HOSTNAME}_cases_obj)
             add_optiling_ut_modules(${OP_TILING_MODULE_NAME})

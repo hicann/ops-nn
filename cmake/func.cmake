@@ -506,6 +506,29 @@ function(find_value_by_key key_list value_list search_key result)
   set(${result} ${found_value} PARENT_SCOPE)
 endfunction()
 
+# 从两个长度一致的列表中收集所有 key 等于 search_key 的位置对应的 value（按出现顺序）
+# 同一 key 允许在 key_list 中重复出现，用于一个芯片型号配置多个 tiling 目录的场景
+function(find_values_by_key key_list value_list search_key result)
+  list(LENGTH key_list key_list_length)
+  list(LENGTH value_list value_list_length)
+  if(NOT ${key_list_length} EQUAL ${value_list_length})
+    message(FATAL_ERROR "key_list length is ${key_list_length}, value_list length is ${value_list_length}, not equal")
+  endif()
+  set(found_values "")
+  set(index 0)
+  while(index LESS key_list_length)
+    list(GET key_list ${index} key)
+    if("${key}" STREQUAL "${search_key}")
+      list(GET value_list ${index} value)
+      if(NOT "${value}" STREQUAL "")
+        list(APPEND found_values ${value})
+      endif()
+    endif()
+    math(EXPR index "${index} + 1")
+  endwhile()
+  set(${result} "${found_values}" PARENT_SCOPE)
+endfunction()
+
 
 # ------------------------------------------------------------------------------------------------------------
 # require_pypto_pro(<op_name>)
@@ -686,11 +709,15 @@ function(add_tiling_sources source_dir tiling_dir disable_in_opp)
     return()
   endif()
 
-  if("${tiling_dir}" STREQUAL "")
-    file(GLOB OPTILING_SRCS ${source_dir}/*_tiling*.cpp)
-  else()
-    file(GLOB OPTILING_SRCS ${source_dir}/*_tiling*.cpp ${source_dir}/${tiling_dir}/*_tiling*.cpp)
-  endif()
+  file(GLOB OPTILING_SRCS ${source_dir}/*_tiling*.cpp)
+  # tiling_dir 支持传入单个目录或目录列表（一个芯片型号可配置多个目录），
+  # 逐目录拼接 glob 模式，避免列表展开后路径与通配符错位
+  foreach(_tiling_sub_dir IN LISTS tiling_dir)
+    if(NOT "${_tiling_sub_dir}" STREQUAL "")
+      file(GLOB _tiling_dir_srcs ${source_dir}/${_tiling_sub_dir}/*_tiling*.cpp)
+      list(APPEND OPTILING_SRCS ${_tiling_dir_srcs})
+    endif()
+  endforeach()
   file(GLOB_RECURSE SUB_OPTILING_SRC ${source_dir}/op_tiling/*.cpp)
 
   if (OPTILING_SRCS OR SUB_OPTILING_SRC)
@@ -708,6 +735,10 @@ endfunction()
 # NPU_ARCH 设置支持的npuArch列表，必须与TILING_DIR一一对应，示例：dav_2201 dav_3510
 # COMPUTE_UNIT 兼容参数：设置支持芯片版本号（soc列表），必须与TILING_DIR一一对应，内部逐项转换为npuArch后统一按arch匹配；与NPU_ARCH互斥
 # TILING_DIR 设置所支持芯片类型对应的tiling文件目录，必须与NPU_ARCH（或COMPUTE_UNIT）一一对应，示例：arch22 arch35
+#            同一芯片型号如需配置多个tiling目录，可在NPU_ARCH（或COMPUTE_UNIT）中重复填写该型号并按位置配对多个目录，
+#            示例：NPU_ARCH dav_9202 dav_9202 dav_3510 TILING_DIR arch22 arch35 arch35
+#            注意：同一芯片的多个tiling目录中，算子注册（IMPL_OP_OPTILING，符号名按算子类型固定）只能存在于其中一个目录
+#            （建议首个主目录，其余目录仅放公共tiling代码）；同一芯片重复配对同一目录属于配置错误，configure阶段显式报错
 # DISABLE_IN_OPP 设置是否在opp包中编译tiling文件，布尔类型：TRUE，FALSE
 # ALLOW_HF32 配置算子允许HF32执行，取值：enable_hi_float_32_execution / enable_float_32_execution，
 #            配置后记录OPTYPE对应的算子并按OPTYPE去重，用于生成ops_allow_hf32_nn.ini
@@ -786,6 +817,7 @@ function(add_modules_sources)
   # 添加tiling文件：NPU_ARCH 与 TILING_DIR 按位置一一配对；兼容旧 COMPUTE_UNIT 参数，
   # 逐项转换为 npuArch（字符串拼接保留空元素位置，避免 list(APPEND) 丢弃空元素导致错位），
   # 当前构建芯片同样转换为 npuArch 后统一按 arch 匹配
+  # 同一芯片型号允许出现多次，此时会收集所有配对的 tiling 目录（一个芯片型号可配置多个目录）
   if(MODULE_NPU_ARCH)
     get_npu_arch_by_soc_version("${ASCEND_COMPUTE_UNIT}" _cur_key)
     set(_cur_keys "${MODULE_NPU_ARCH}")
@@ -794,7 +826,20 @@ function(add_modules_sources)
     set(_cur_keys "${MODULE_COMPUTE_UNIT}")
   endif()
 
-  find_value_by_key("${_cur_keys}" "${MODULE_TILING_DIR}" "${_cur_key}" tiling_dir)
+  find_values_by_key("${_cur_keys}" "${MODULE_TILING_DIR}" "${_cur_key}" tiling_dir)
+  # 同一芯片重复配对同一 tiling 目录属于算子配置错误，configure 阶段显式报错，避免链接期 multiple definition
+  if(tiling_dir)
+    set(_tiling_dir_dedup "${tiling_dir}")
+    list(LENGTH tiling_dir _tiling_dir_count)
+    list(REMOVE_DUPLICATES _tiling_dir_dedup)
+    list(LENGTH _tiling_dir_dedup _tiling_dir_dedup_count)
+    if(NOT _tiling_dir_count EQUAL _tiling_dir_dedup_count)
+      message(FATAL_ERROR
+          "add_modules_sources ${MODULE_OPTYPE}: 当前芯片 ${_cur_key} 重复配对了相同的 tiling 目录 [${tiling_dir}]，"
+          "请检查 NPU_ARCH/COMPUTE_UNIT 与 TILING_DIR 的配对配置")
+    endif()
+    unset(_tiling_dir_dedup)
+  endif()
   add_tiling_sources("${SOURCE_DIR}" "${tiling_dir}" "${MODULE_DISABLE_IN_OPP}")
 
   file(GLOB AICPU_SRCS ${SOURCE_DIR}/*_aicpu.cpp)
@@ -1629,16 +1674,32 @@ macro(add_all_modules_sources)
       HOSTCPU ${MODULE_HOSTCPU}
       ALLOW_HF32 ${MODULE_ALLOW_HF32})
 
-  add_all_ut_sources(OP_NAME ${_OP_NAME})
+  # UT 侧 tiling 目录与源侧同规则：只取当前构建芯片配对的目录，避免其他芯片的
+  # test_*_tiling.cpp 收进当前芯片 UT（其依赖的 tiling 实现未编译进本芯片静态库）
+  if(MODULE_NPU_ARCH)
+    get_npu_arch_by_soc_version("${ASCEND_COMPUTE_UNIT}" _ut_cur_key)
+    set(_ut_cur_keys "${MODULE_NPU_ARCH}")
+  else()
+    set(_ut_cur_key "${ASCEND_COMPUTE_UNIT}")
+    set(_ut_cur_keys "${MODULE_COMPUTE_UNIT}")
+  endif()
+  find_values_by_key("${_ut_cur_keys}" "${MODULE_TILING_DIR}" "${_ut_cur_key}" _ut_tiling_dir)
+
+  add_all_ut_sources(OP_NAME ${_OP_NAME} UT_TILING_DIR "${_ut_tiling_dir}")
+  unset(_ut_cur_key)
+  unset(_ut_cur_keys)
+  unset(_ut_tiling_dir)
   unset(_HOST_DIR)
   unset(_OP_NAME)
 endmacro()
 
 # usage: add_all_ut_sources(OP_NAME op_name)
 # 收集算子各类型 UT 源；op_api UT 同时扫描 tests/ut/op_api 与 tests/ut/op_host 两处位置以兼容历史。
+# UT_TILING_DIR 支持多个目录（宏内 ${ARGN} 会按分号重新展开，须声明为多值参数才能保留完整列表）
 macro(add_all_ut_sources)
   set(oneValueArgs OP_NAME)
-  cmake_parse_arguments(MODULE "" "${oneValueArgs}" "" ${ARGN})
+  set(multiValueArgs UT_TILING_DIR)
+  cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   set(_UT_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/tests/ut)
 
   if(UT_TEST_ALL OR OP_API_UT)
@@ -1656,7 +1717,7 @@ macro(add_all_ut_sources)
 
   if(UT_TEST_ALL OR OP_HOST_UT)
     if(EXISTS "${_UT_ROOT}/op_host")
-      add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${_UT_ROOT}/op_host)
+      add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${_UT_ROOT}/op_host TILING_DIR ${MODULE_UT_TILING_DIR})
       add_modules_ut_sources(HOSTNAME ${OP_INFERSHAPE_MODULE_NAME} MODE PRIVATE DIR ${_UT_ROOT}/op_host)
     endif()
     # onnx 插件（framework）解析逻辑属 host 侧，目录结构与 tiling/infershape 逻辑类似
