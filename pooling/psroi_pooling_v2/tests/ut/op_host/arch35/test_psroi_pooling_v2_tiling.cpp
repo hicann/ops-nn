@@ -13,11 +13,14 @@
 #include <gtest/gtest.h>
 
 #include <cstring>
+#include <map>
+#include <string>
 #include <vector>
 
 #include "../../../../op_kernel/arch35/psroi_pooling_v2_tiling_data.h"
-#include "any_value.h"
 #include "tiling_case_executor.h"
+#include "any_value.h"
+#include "test_cube_util.h"
 #include "tiling_context_faker.h"
 
 namespace {
@@ -76,6 +79,73 @@ void ExpectFailure(const gert::TilingContextPara& para)
 {
     TilingInfo info;
     EXPECT_FALSE(ExecuteTiling(para, info));
+}
+
+void ExpectSetterFailure(uint32_t missingOutput)
+{
+    const std::string platformJson = R"({
+        "hardware_info": {
+            "BT_SIZE": 0,
+            "load3d_constraints": "1",
+            "Intrinsic_fix_pipe_l0c2out": false,
+            "Intrinsic_data_move_l12ub": true,
+            "Intrinsic_data_move_l0c2ub": true,
+            "Intrinsic_data_move_out2l1_nd2nz": false,
+            "UB_SIZE": 262144,
+            "L2_SIZE": 33554432,
+            "L1_SIZE": 524288,
+            "L0A_SIZE": 65536,
+            "L0B_SIZE": 65536,
+            "L0C_SIZE": 131072,
+            "CORE_NUM": 64
+        }
+    })";
+    std::map<std::string, std::string> socInfos;
+    std::map<std::string, std::string> aicoreSpec;
+    std::map<std::string, std::string> intrinsics;
+    std::map<std::string, std::string> version = {{"Short_SoC_version", "Ascend950"}};
+    GetPlatFormInfos(platformJson.c_str(), socInfos, aicoreSpec, intrinsics);
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    EmptyCompileInfo compileInfo;
+    auto tilingData = gert::TilingData::CreateCap(4096);
+    auto workspace = gert::ContinuousVector::Create<size_t>(4096);
+    auto xShape = MakeStorageShape({2, 18, 8, 8});
+    auto roisShape = MakeStorageShape({2, 5, 4});
+    auto yShape = MakeStorageShape({8, 2, 3, 3});
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("PSROIPoolingV2")
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1}, {1})
+                      .InputShapes({&xShape, &roisShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Attr("spatial_scale", 0.25F)
+                      .Attr("output_dim", static_cast<int64_t>(2))
+                      .Attr("group_size", static_cast<int64_t>(3))
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .TilingData(tilingData.get())
+                      .Workspace(reinterpret_cast<gert::ContinuousVector*>(workspace.get()))
+                      .Build();
+    auto* context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+    context->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    context->GetPlatformInfo()->SetPlatformRes("version", version);
+
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("PSROIPoolingV2");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->tiling, nullptr);
+    auto* rawContext = context->GetContext();
+    ASSERT_LT(missingOutput, rawContext->output_size);
+    rawContext->values[rawContext->input_size + missingOutput] = nullptr;
+    EXPECT_EQ(impl->tiling(context), ge::GRAPH_FAILED);
 }
 
 class PSROIPoolingV2Tiling : public testing::Test {};
@@ -156,6 +226,15 @@ TEST_F(PSROIPoolingV2Tiling, RejectsInvalidShapes)
     ExpectFailure(MakeContext({2, 17, 8, 8}, {2, 5, 4}, {8, 2, 3, 3}));
 }
 
+TEST_F(PSROIPoolingV2Tiling, RejectsInvalidOutputShapes)
+{
+    ExpectFailure(MakeContext({2, 18, 8, 8}, {2, 5, 4}, {8, 2, 3}));
+    ExpectFailure(MakeContext({2, 18, 8, 8}, {2, 5, 4}, {7, 2, 3, 3}));
+    ExpectFailure(MakeContext({2, 18, 8, 8}, {2, 5, 4}, {8, 1, 3, 3}));
+    ExpectFailure(MakeContext({2, 18, 8, 8}, {2, 5, 4}, {8, 2, 2, 3}));
+    ExpectFailure(MakeContext({2, 18, 8, 8}, {2, 5, 4}, {8, 2, 3, 2}));
+}
+
 TEST_F(PSROIPoolingV2Tiling, RejectsInvalidAttributes)
 {
     ExpectFailure(MakeContext({2, 18, 8, 8}, {2, 5, 4}, {8, 2, 3, 3}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
@@ -166,6 +245,16 @@ TEST_F(PSROIPoolingV2Tiling, RejectsInvalidAttributes)
                               MakeAttrs(0.25F, 2, 0)));
     ExpectFailure(MakeContext({2, 18, 8, 8}, {2, 5, 4}, {8, 2, 3, 3}, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
                               MakeAttrs(0.25F, 2, 128)));
+}
+
+TEST_F(PSROIPoolingV2Tiling, PropagatesSetTilingKeyFailure)
+{
+    ExpectSetterFailure(gert::TilingContext::kOutputTilingKey);
+}
+
+TEST_F(PSROIPoolingV2Tiling, PropagatesSetBlockDimFailure)
+{
+    ExpectSetterFailure(gert::TilingContext::kOutputBlockDim);
 }
 
 } // namespace

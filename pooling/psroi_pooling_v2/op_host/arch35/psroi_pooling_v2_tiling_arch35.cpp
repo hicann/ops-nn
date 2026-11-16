@@ -64,6 +64,7 @@ struct AttrInfo {
 };
 
 struct DerivedInfo {
+    uint64_t totalRois;
     uint64_t totalOutputElements;
     uint64_t inputElements;
     uint64_t roiElements;
@@ -299,9 +300,8 @@ static ge::graphStatus ComputeDerived(gert::TilingContext* context, const ShapeI
                                               "the element count must fit in uint64");
         return ge::GRAPH_FAILED;
     }
-    uint64_t flattenedRois = 0;
-    if (!CheckedMul(shape.batchSize, shape.roiCount, flattenedRois) ||
-        !CheckedMul(flattenedRois, shape.channels, derived.totalOutputElements)) {
+    if (!CheckedMul(shape.batchSize, shape.roiCount, derived.totalRois) ||
+        !CheckedMul(derived.totalRois, shape.channels, derived.totalOutputElements)) {
         const std::string actual = "N=" + std::to_string(shape.batchSize) + ", R=" + std::to_string(shape.roiCount) +
                                    ", C=" + std::to_string(shape.channels);
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y", actual.c_str(),
@@ -315,6 +315,36 @@ static ge::graphStatus ComputeDerived(gert::TilingContext* context, const ShapeI
                                    "]";
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rois", actual.c_str(),
                                               "the element count must fit in uint64");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateOutputShape(gert::TilingContext* context, const AttrInfo& attrs,
+                                           const DerivedInfo& derived)
+{
+    const auto* yShapePtr = context->GetOutputShape(Y_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
+    const auto yShape = yShapePtr->GetStorageShape();
+    if (yShape.GetDimNum() != 4) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "y", std::to_string(yShape.GetDimNum()).c_str(), "4");
+        return ge::GRAPH_FAILED;
+    }
+    if (derived.totalRois > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y", Ops::Base::ToString(yShape).c_str(),
+                                              "the leading dimension N * R must fit in int64");
+        return ge::GRAPH_FAILED;
+    }
+    const int64_t expectedTotalRois = static_cast<int64_t>(derived.totalRois);
+    const int64_t expectedOutputDim = static_cast<int64_t>(attrs.outputDim);
+    const int64_t expectedGroupSize = static_cast<int64_t>(attrs.groupSize);
+    if (yShape.GetDim(0) != expectedTotalRois || yShape.GetDim(1) != expectedOutputDim ||
+        yShape.GetDim(2) != expectedGroupSize || yShape.GetDim(3) != expectedGroupSize) {
+        const std::string reason = "expected [N*R, output_dim, group_size, group_size]=[" +
+                                   std::to_string(expectedTotalRois) + ", " + std::to_string(expectedOutputDim) + ", " +
+                                   std::to_string(expectedGroupSize) + ", " + std::to_string(expectedGroupSize) + "]";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y", Ops::Base::ToString(yShape).c_str(),
+                                              reason.c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -388,7 +418,11 @@ static uint32_t SelectIndexMode(const ShapeInfo& shape, const AttrInfo& attrs, c
 
 static ge::graphStatus ConfigureResources(gert::TilingContext* context, const PlatformInfo& platform, uint32_t blockDim)
 {
-    context->SetBlockDim(blockDim);
+    const ge::graphStatus blockDimStatus = context->SetBlockDim(blockDim);
+    OP_CHECK_IF(blockDimStatus != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "SetBlockDim failed, blockDim=%u, status=%d", blockDim,
+                                       static_cast<int32_t>(blockDimStatus)),
+                return ge::GRAPH_FAILED);
     const ge::graphStatus localMemStatus = context->SetLocalMemorySize(static_cast<uint32_t>(DYNAMIC_UB_BYTES));
     OP_CHECK_IF(
         localMemStatus != ge::GRAPH_SUCCESS,
@@ -413,6 +447,9 @@ static ge::graphStatus PSROIPoolingV2TilingFunc(gert::TilingContext* context)
     if (ComputeDerived(context, shape, attrs, derived) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    if (ValidateOutputShape(context, attrs, derived) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (GetPlatformInfo(context, platform) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -431,7 +468,12 @@ static ge::graphStatus PSROIPoolingV2TilingFunc(gert::TilingContext* context)
                 return ge::GRAPH_FAILED);
     FillTilingData(tiling, shape, attrs, derived, needCoreNum);
     DumpTilingData(context, tiling);
-    context->SetTilingKey(GET_TPL_TILING_KEY(SelectIndexMode(shape, attrs, derived)));
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(SelectIndexMode(shape, attrs, derived));
+    const ge::graphStatus tilingKeyStatus = context->SetTilingKey(tilingKey);
+    OP_CHECK_IF(tilingKeyStatus != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "SetTilingKey failed, tilingKey=%lu, status=%d",
+                                       tilingKey, static_cast<int32_t>(tilingKeyStatus)),
+                return ge::GRAPH_FAILED);
     return ConfigureResources(context, platform, blockDim);
 }
 

@@ -113,7 +113,7 @@ int32_t GenZeroData(const vector<int64_t>& shape, Tensor& tensor, TensorDesc& te
     return TEST_SUCCESS;
 }
 
-#define ADD_INPUT_MODE(inputIndex, inputName, inputDtype, inputShape, mode)                                      \
+#define ADD_INPUT_MODE(inputIndex, inputName, inputDtype, inputShape, inputFormat, mode)                         \
     vector<int64_t> placeholder##inputIndex##_realShape = inputShape;                                            \
     vector<int64_t> placeholder##inputIndex##_graphShape = ((mode) == RUN_MODE_D) ?                              \
                                                                vector<int64_t>(                                  \
@@ -123,13 +123,13 @@ int32_t GenZeroData(const vector<int64_t>& shape, Tensor& tensor, TensorDesc& te
     auto placeholder##inputIndex = op::Data("placeholder" #inputIndex)                                           \
                                        .set_attr_index(static_cast<int64_t>(inputIndex));                        \
     TensorDesc placeholder##inputIndex##_graphDesc = TensorDesc(ge::Shape(placeholder##inputIndex##_graphShape), \
-                                                                FORMAT_ND, inputDtype);                          \
+                                                                inputFormat, inputDtype);                        \
     placeholder##inputIndex##_graphDesc.SetPlacement(ge::kPlacementHost);                                        \
-    placeholder##inputIndex##_graphDesc.SetFormat(FORMAT_ND);                                                    \
+    placeholder##inputIndex##_graphDesc.SetFormat(inputFormat);                                                  \
     TensorDesc placeholder##inputIndex##_realDesc = TensorDesc(ge::Shape(placeholder##inputIndex##_realShape),   \
-                                                               FORMAT_ND, inputDtype);                           \
+                                                               inputFormat, inputDtype);                         \
     placeholder##inputIndex##_realDesc.SetPlacement(ge::kPlacementHost);                                         \
-    placeholder##inputIndex##_realDesc.SetFormat(FORMAT_ND);                                                     \
+    placeholder##inputIndex##_realDesc.SetFormat(inputFormat);                                                   \
     Tensor tensorPlaceholder##inputIndex;                                                                        \
     ret = GenZeroData(placeholder##inputIndex##_realShape, tensorPlaceholder##inputIndex,                        \
                       placeholder##inputIndex##_realDesc, inputDtype);                                           \
@@ -144,14 +144,14 @@ int32_t GenZeroData(const vector<int64_t>& shape, Tensor& tensor, TensorDesc& te
     opNode.set_input_##inputName(placeholder##inputIndex);                                                       \
     inputs.push_back(placeholder##inputIndex)
 
-#define ADD_OUTPUT_MODE(outputIndex, outputName, outputDtype, outputShape, mode)                                    \
-    vector<int64_t> output##outputIndex##_realShape = outputShape;                                                  \
-    vector<int64_t> output##outputIndex##_graphShape = ((mode) == RUN_MODE_D) ?                                     \
-                                                           vector<int64_t>(output##outputIndex##_realShape.size(),  \
-                                                                           static_cast<int64_t>(-1)) :              \
-                                                           output##outputIndex##_realShape;                         \
-    TensorDesc output##outputIndex##_graphDesc = TensorDesc(ge::Shape(output##outputIndex##_graphShape), FORMAT_ND, \
-                                                            outputDtype);                                           \
+#define ADD_OUTPUT_MODE(outputIndex, outputName, outputDtype, outputShape, outputFormat, mode)                         \
+    vector<int64_t> output##outputIndex##_realShape = outputShape;                                                     \
+    vector<int64_t> output##outputIndex##_graphShape = ((mode) == RUN_MODE_D) ?                                        \
+                                                           vector<int64_t>(output##outputIndex##_realShape.size(),     \
+                                                                           static_cast<int64_t>(-1)) :                 \
+                                                           output##outputIndex##_realShape;                            \
+    TensorDesc output##outputIndex##_graphDesc = TensorDesc(ge::Shape(output##outputIndex##_graphShape), outputFormat, \
+                                                            outputDtype);                                              \
     opNode.update_output_desc_##outputName(output##outputIndex##_graphDesc)
 
 int32_t CreateOppInGraph(const RunMode mode, const DataType dataType, const ShapeCase& shapeCase,
@@ -160,9 +160,9 @@ int32_t CreateOppInGraph(const RunMode mode, const DataType dataType, const Shap
     int32_t ret = TEST_SUCCESS;
     auto opNode = op::PSROIPoolingV2("psroi_pooling_v2");
 
-    ADD_INPUT_MODE(0, x, dataType, shapeCase.xShape, mode);
-    ADD_INPUT_MODE(1, rois, dataType, shapeCase.roisShape, mode);
-    ADD_OUTPUT_MODE(0, y, dataType, shapeCase.yShape, mode);
+    ADD_INPUT_MODE(0, x, dataType, shapeCase.xShape, FORMAT_NCHW, mode);
+    ADD_INPUT_MODE(1, rois, dataType, shapeCase.roisShape, FORMAT_ND, mode);
+    ADD_OUTPUT_MODE(0, y, dataType, shapeCase.yShape, FORMAT_NCHW, mode);
 
     opNode.set_attr_spatial_scale(shapeCase.spatialScale);
     opNode.set_attr_output_dim(shapeCase.outputDim);

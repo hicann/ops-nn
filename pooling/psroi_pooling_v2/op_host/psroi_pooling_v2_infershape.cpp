@@ -15,6 +15,7 @@
  * \brief Shape inference for PSROIPoolingV2.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -192,6 +193,220 @@ static ge::graphStatus SetOutputShape(gert::InferShapeContext* context, const ge
     return GRAPH_SUCCESS;
 }
 
+static bool IsValidDimensionRange(const int64_t minValue, const int64_t maxValue)
+{
+    return minValue >= UNKNOWN_DIM && maxValue >= UNKNOWN_DIM &&
+           (minValue == UNKNOWN_DIM || maxValue == UNKNOWN_DIM || maxValue >= minValue);
+}
+
+static bool IntersectDimensionRange(const int64_t lhsMin, const int64_t lhsMax, const int64_t rhsMin,
+                                    const int64_t rhsMax, int64_t& resultMin, int64_t& resultMax)
+{
+    resultMin = std::max(lhsMin, rhsMin);
+    if (lhsMax == UNKNOWN_DIM) {
+        resultMax = rhsMax;
+    } else if (rhsMax == UNKNOWN_DIM) {
+        resultMax = lhsMax;
+    } else {
+        resultMax = std::min(lhsMax, rhsMax);
+    }
+    return resultMax == UNKNOWN_DIM || resultMin <= resultMax;
+}
+
+static bool MultiplyWithoutOverflow(const int64_t lhs, const int64_t rhs, int64_t& result)
+{
+    if (lhs < 0 || rhs < 0 || (lhs != 0 && rhs > std::numeric_limits<int64_t>::max() / lhs)) {
+        return false;
+    }
+    result = lhs * rhs;
+    return true;
+}
+
+static void SetOutputShapeRange(const int64_t minLeadingDim, const int64_t maxLeadingDim, const InferAttrs& attrs,
+                                gert::Range<gert::Shape>* yRange)
+{
+    gert::Shape* yMin = yRange->GetMin();
+    gert::Shape* yMax = yRange->GetMax();
+    yMin->SetDimNum(OUTPUT_RANK);
+    yMax->SetDimNum(OUTPUT_RANK);
+    yMin->SetDim(0, minLeadingDim);
+    yMax->SetDim(0, maxLeadingDim);
+    for (size_t i = 1; i < OUTPUT_RANK; ++i) {
+        const int64_t dim = (i == 1) ? attrs.outputDim : attrs.groupSize;
+        yMin->SetDim(i, dim);
+        yMax->SetDim(i, dim);
+    }
+}
+
+static ge::graphStatus ValidateRangeRanks(gert::InferShapeRangeContext* context, const gert::Shape& xMin,
+                                          const gert::Shape& xMax, const gert::Shape& roisMin,
+                                          const gert::Shape& roisMax, bool& xUnknownRank)
+{
+    if (roisMin.GetDimNum() != ROIS_RANK || roisMax.GetDimNum() != ROIS_RANK) {
+        const std::string actual = std::to_string(roisMin.GetDimNum()) + " and " + std::to_string(roisMax.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "rois shape range", actual.c_str(), "3 and 3");
+        return GRAPH_FAILED;
+    }
+    xUnknownRank = Ops::Base::IsUnknownRank(xMin) || Ops::Base::IsUnknownRank(xMax);
+    if (!xUnknownRank && (xMin.GetDimNum() != X_RANK || xMax.GetDimNum() != X_RANK)) {
+        const std::string actual = std::to_string(xMin.GetDimNum()) + " and " + std::to_string(xMax.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x shape range", actual.c_str(), "4 and 4");
+        return GRAPH_FAILED;
+    }
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateRoisRange(gert::InferShapeRangeContext* context, const gert::Shape& roisMin,
+                                         const gert::Shape& roisMax, int64_t& minBatch, int64_t& maxBatch,
+                                         int64_t& minRoiCount, int64_t& maxRoiCount)
+{
+    minBatch = roisMin.GetDim(0);
+    maxBatch = roisMax.GetDim(0);
+    const int64_t minFields = roisMin.GetDim(1);
+    const int64_t maxFields = roisMax.GetDim(1);
+    minRoiCount = roisMin.GetDim(2);
+    maxRoiCount = roisMax.GetDim(2);
+    if (!IsValidDimensionRange(minBatch, maxBatch) || !IsValidDimensionRange(minFields, maxFields) ||
+        !IsValidDimensionRange(minRoiCount, maxRoiCount) || minFields > 5 ||
+        (maxFields != UNKNOWN_DIM && maxFields < 5)) {
+        const std::string actual = "min=" + Ops::Base::ToString(roisMin) + ", max=" + Ops::Base::ToString(roisMax);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rois shape range", actual.c_str(),
+                                              "N and R ranges must be non-negative or unknown, and dimension 1 must "
+                                              "include 5");
+        return GRAPH_FAILED;
+    }
+    minBatch = (minBatch == UNKNOWN_DIM) ? 0 : minBatch;
+    minRoiCount = (minRoiCount == UNKNOWN_DIM) ? 0 : minRoiCount;
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateXRange(gert::InferShapeRangeContext* context, const gert::Shape& xMin,
+                                      const gert::Shape& xMax, const InferAttrs& attrs, int64_t& minBatch,
+                                      int64_t& maxBatch)
+{
+    for (size_t i = 0; i < X_RANK; ++i) {
+        if (!IsValidDimensionRange(xMin.GetDim(i), xMax.GetDim(i))) {
+            const std::string actual = "min=" + Ops::Base::ToString(xMin) + ", max=" + Ops::Base::ToString(xMax);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x shape range", actual.c_str(),
+                                                  "each dimension range must be ordered and use -1 only as unknown");
+            return GRAPH_FAILED;
+        }
+    }
+    const int64_t expectedChannels = attrs.outputDim * attrs.groupSize * attrs.groupSize;
+    const int64_t minChannels = xMin.GetDim(1);
+    const int64_t maxChannels = xMax.GetDim(1);
+    if ((minChannels != UNKNOWN_DIM && minChannels > expectedChannels) ||
+        (maxChannels != UNKNOWN_DIM && maxChannels < expectedChannels) || xMax.GetDim(2) == 0 || xMax.GetDim(3) == 0) {
+        const std::string actual = "min=" + Ops::Base::ToString(xMin) + ", max=" + Ops::Base::ToString(xMax);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x shape range", actual.c_str(),
+                                              "the channel range must include output_dim * group_size^2, and H/W must "
+                                              "allow positive values");
+        return GRAPH_FAILED;
+    }
+
+    const int64_t xMinBatch = xMin.GetDim(0);
+    const int64_t xMaxBatch = xMax.GetDim(0);
+    if (xMinBatch != UNKNOWN_DIM &&
+        !IntersectDimensionRange(minBatch, maxBatch, xMinBatch, xMaxBatch, minBatch, maxBatch)) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x and rois shape ranges",
+                                               "disjoint batch ranges", "the batch dimension ranges must overlap");
+        return GRAPH_FAILED;
+    }
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ComputeLeadingDimRange(gert::InferShapeRangeContext* context, const gert::Shape& roisMin,
+                                              const gert::Shape& roisMax, const int64_t minBatch,
+                                              const int64_t maxBatch, const int64_t minRoiCount,
+                                              const int64_t maxRoiCount, int64_t& minLeadingDim, int64_t& maxLeadingDim)
+{
+    if (!MultiplyWithoutOverflow(minBatch, minRoiCount, minLeadingDim)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rois minimum shape",
+                                              Ops::Base::ToString(roisMin).c_str(),
+                                              "the product of dimensions 0 and 2 must fit in int64");
+        return GRAPH_FAILED;
+    }
+
+    maxLeadingDim = UNKNOWN_DIM;
+    if (maxBatch == 0 || maxRoiCount == 0) {
+        maxLeadingDim = 0;
+    } else if (maxBatch != UNKNOWN_DIM && maxRoiCount != UNKNOWN_DIM &&
+               !MultiplyWithoutOverflow(maxBatch, maxRoiCount, maxLeadingDim)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rois maximum shape",
+                                              Ops::Base::ToString(roisMax).c_str(),
+                                              "the product of dimensions 0 and 2 must fit in int64");
+        return GRAPH_FAILED;
+    }
+    return GRAPH_SUCCESS;
+}
+
+static void SetUnknownRankOutputRange(gert::Range<gert::Shape>* yRange)
+{
+    gert::Shape* yMin = yRange->GetMin();
+    gert::Shape* yMax = yRange->GetMax();
+    yMin->SetDimNum(OUTPUT_RANK);
+    yMax->SetDimNum(OUTPUT_RANK);
+    for (size_t i = 0; i < OUTPUT_RANK; ++i) {
+        yMin->SetDim(i, 1);
+        yMax->SetDim(i, UNKNOWN_DIM);
+    }
+}
+
+static ge::graphStatus InferShapeRangePSROIPoolingV2(gert::InferShapeRangeContext* context)
+{
+    if (context == nullptr) {
+        OP_LOGE("PSROIPoolingV2", "InferShapeRangeContext must be non-null");
+        return GRAPH_FAILED;
+    }
+    const gert::Range<gert::Shape>* xRange = context->GetInputShapeRange(X_INDEX);
+    const gert::Range<gert::Shape>* roisRange = context->GetInputShapeRange(ROIS_INDEX);
+    gert::Range<gert::Shape>* yRange = context->GetOutputShapeRange(Y_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xRange);
+    OP_CHECK_NULL_WITH_CONTEXT(context, roisRange);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yRange);
+    const gert::Shape* xMin = xRange->GetMin();
+    const gert::Shape* xMax = xRange->GetMax();
+    const gert::Shape* roisMin = roisRange->GetMin();
+    const gert::Shape* roisMax = roisRange->GetMax();
+    OP_CHECK_NULL_WITH_CONTEXT(context, xMin);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xMax);
+    OP_CHECK_NULL_WITH_CONTEXT(context, roisMin);
+    OP_CHECK_NULL_WITH_CONTEXT(context, roisMax);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yRange->GetMin());
+    OP_CHECK_NULL_WITH_CONTEXT(context, yRange->GetMax());
+
+    InferAttrs attrs{};
+    if (GetAndValidateAttrs(context, attrs) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    if (Ops::Base::IsUnknownRank(*roisMin) || Ops::Base::IsUnknownRank(*roisMax)) {
+        SetUnknownRankOutputRange(yRange);
+        return GRAPH_SUCCESS;
+    }
+
+    bool xUnknownRank = false;
+    if (ValidateRangeRanks(context, *xMin, *xMax, *roisMin, *roisMax, xUnknownRank) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+    int64_t minBatch = 0;
+    int64_t maxBatch = UNKNOWN_DIM;
+    int64_t minRoiCount = 0;
+    int64_t maxRoiCount = UNKNOWN_DIM;
+    if (ValidateRoisRange(context, *roisMin, *roisMax, minBatch, maxBatch, minRoiCount, maxRoiCount) != GRAPH_SUCCESS ||
+        (!xUnknownRank && ValidateXRange(context, *xMin, *xMax, attrs, minBatch, maxBatch) != GRAPH_SUCCESS)) {
+        return GRAPH_FAILED;
+    }
+    int64_t minLeadingDim = 0;
+    int64_t maxLeadingDim = UNKNOWN_DIM;
+    if (ComputeLeadingDimRange(context, *roisMin, *roisMax, minBatch, maxBatch, minRoiCount, maxRoiCount, minLeadingDim,
+                               maxLeadingDim) != GRAPH_SUCCESS) {
+        return GRAPH_FAILED;
+    }
+
+    SetOutputShapeRange(minLeadingDim, maxLeadingDim, attrs, yRange);
+    return GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferShapePSROIPoolingV2(gert::InferShapeContext* context)
 {
     const gert::Shape* xShape = context->GetInputShape(X_INDEX);
@@ -221,6 +436,6 @@ static ge::graphStatus InferShapePSROIPoolingV2(gert::InferShapeContext* context
 
 } // namespace
 
-IMPL_OP_INFERSHAPE(PSROIPoolingV2).InferShape(InferShapePSROIPoolingV2);
+IMPL_OP_INFERSHAPE(PSROIPoolingV2).InferShape(InferShapePSROIPoolingV2).InferShapeRange(InferShapeRangePSROIPoolingV2);
 
 } // namespace ops

@@ -44,7 +44,7 @@ static constexpr uint32_t OFF_DIV_R = 9;
 static constexpr uint64_t MIN_REUSE_OUTPUT_DIM = 16;
 static constexpr uint64_t MIN_REUSE_TASKS_PER_CORE = 384;
 static constexpr float MAX_FINITE_FLOAT = 3.402823466e+38F;
-static constexpr float FP16_PREFIX_FALLBACK_ABS = 0.015625F;
+static constexpr float INT64_EXCLUSIVE_UPPER_BOUND = 0x1p63F;
 
 enum class PrefixValueClass : uint32_t {
     FINITE = 0,
@@ -133,10 +133,14 @@ __simt_callee__ inline bool LoadAndTransformRoi(IdxT batch, IdxT roi, IdxT batch
         return false;
     }
     const float batchRounded = rintf(batchRaw);
-    if (batchRounded < 0.0f || batchRounded >= static_cast<float>(batchSize)) {
+    if (batchRounded < 0.0f || batchRounded >= INT64_EXCLUSIVE_UPPER_BOUND) {
         return false;
     }
-    batchId = static_cast<IdxT>(batchRounded);
+    const uint64_t roundedBatch = static_cast<uint64_t>(batchRounded);
+    if (roundedBatch >= static_cast<uint64_t>(batchSize)) {
+        return false;
+    }
+    batchId = static_cast<IdxT>(roundedBatch);
     startW = rintf(x1Raw) * spatialScale;
     startH = rintf(y1Raw) * spatialScale;
     const float endW = (rintf(x2Raw) + 1.0f) * spatialScale;
@@ -187,17 +191,6 @@ __simt_callee__ inline PrefixValueClass AddPrefixClass(PrefixValueClass lhs, Pre
     return PrefixValueClass::NAN_VALUE;
 }
 
-__simt_callee__ inline PrefixValueClass NegatePrefixClass(PrefixValueClass valueClass)
-{
-    if (valueClass == PrefixValueClass::POSITIVE_INF) {
-        return PrefixValueClass::NEGATIVE_INF;
-    }
-    if (valueClass == PrefixValueClass::NEGATIVE_INF) {
-        return PrefixValueClass::POSITIVE_INF;
-    }
-    return valueClass;
-}
-
 __simt_callee__ inline float PrefixClassToFloat(PrefixValueClass valueClass)
 {
     if (valueClass == PrefixValueClass::POSITIVE_INF) {
@@ -210,64 +203,17 @@ __simt_callee__ inline float PrefixClassToFloat(PrefixValueClass valueClass)
 }
 
 template <typename XType, typename IdxT>
-__simt_callee__ inline float ReduceNonFinitePrefix(IdxT inputBase, IdxT hStart, IdxT hEnd, IdxT wStart, IdxT wEnd,
-                                                   IdxT width, __gm__ XType* x)
-{
-    PrefixValueClass prefixWe = PrefixValueClass::FINITE;
-    PrefixValueClass prefixWs = PrefixValueClass::FINITE;
-    PrefixValueClass prefixHsWe = PrefixValueClass::FINITE;
-    PrefixValueClass prefixHsWs = PrefixValueClass::FINITE;
-    for (IdxT h = 0; h < hEnd; ++h) {
-        if (h == hStart) {
-            prefixHsWe = prefixWe;
-            prefixHsWs = prefixWs;
-        }
-        PrefixValueClass rowWe = PrefixValueClass::FINITE;
-        PrefixValueClass rowWs = PrefixValueClass::FINITE;
-        const IdxT rowBase = inputBase + h * width;
-        for (IdxT w = 0; w < wEnd; ++w) {
-            if (w == wStart) {
-                rowWs = rowWe;
-            }
-            rowWe = AddPrefixClass(rowWe, ClassifyPrefixValue(ToFloat(x[rowBase + w])));
-        }
-        prefixWe = AddPrefixClass(prefixWe, rowWe);
-        prefixWs = AddPrefixClass(prefixWs, rowWs);
-    }
-    PrefixValueClass result = AddPrefixClass(prefixWe, NegatePrefixClass(prefixHsWe));
-    result = AddPrefixClass(result, NegatePrefixClass(prefixWs));
-    result = AddPrefixClass(result, prefixHsWs);
-    return PrefixClassToFloat(result);
-}
-
-template <typename XType, typename IdxT>
-__simt_callee__ inline float ReduceFinitePrefix(IdxT inputBase, IdxT hStart, IdxT hEnd, IdxT wStart, IdxT wEnd,
+__simt_callee__ inline float ReduceNonFiniteBin(IdxT inputBase, IdxT hStart, IdxT hEnd, IdxT wStart, IdxT wEnd,
                                                 IdxT width, __gm__ XType* x)
 {
-    float prefixWe = 0.0F;
-    float prefixWs = 0.0F;
-    float prefixHsWe = 0.0F;
-    float prefixHsWs = 0.0F;
-    for (IdxT h = 0; h < hEnd; ++h) {
-        if (h == hStart) {
-            prefixHsWe = prefixWe;
-            prefixHsWs = prefixWs;
-        }
-        float rowWe = 0.0F;
-        float rowWs = 0.0F;
+    PrefixValueClass result = PrefixValueClass::FINITE;
+    for (IdxT h = hStart; h < hEnd; ++h) {
         const IdxT rowBase = inputBase + h * width;
-        for (IdxT w = 0; w < wEnd; ++w) {
-            if (w == wStart) {
-                rowWs = rowWe;
-            }
-            rowWe += ToFloat(x[rowBase + w]);
+        for (IdxT w = wStart; w < wEnd; ++w) {
+            result = AddPrefixClass(result, ClassifyPrefixValue(ToFloat(x[rowBase + w])));
         }
-        prefixWe += rowWe;
-        prefixWs += rowWs;
     }
-    const float regionSum = prefixWe - prefixHsWe - prefixWs + prefixHsWs;
-    const IdxT area = (hEnd - hStart) * (wEnd - wStart);
-    return regionSum / static_cast<float>(area);
+    return PrefixClassToFloat(result);
 }
 
 template <typename XType, typename IdxT>
@@ -286,7 +232,7 @@ __simt_callee__ inline float ReduceFiniteBin(IdxT inputBase, IdxT hStart, IdxT h
             const float value = ToFloat(x[rowBase + w]);
             if (!isfinite(value)) {
                 hasNonFinite = true;
-                // ReduceBin discards this placeholder and classifies the complete bin via ReduceNonFinitePrefix.
+                // ReduceBin discards this placeholder and classifies the complete target bin separately.
                 return 0.0F;
             }
             if (!scaled && (value >= safeTermMagnitude || value <= -safeTermMagnitude)) {
@@ -318,12 +264,7 @@ __simt_callee__ inline float ReduceBin(IdxT batchId, IdxT outC, IdxT ph, IdxT pw
     bool hasNonFinite = false;
     const float directMean = ReduceFiniteBin(inputBase, hStart, hEnd, wStart, wEnd, width, x, hasNonFinite);
     if (hasNonFinite) {
-        return ReduceNonFinitePrefix(inputBase, hStart, hEnd, wStart, wEnd, width, x);
-    }
-    if constexpr (std::is_same_v<XType, half>) {
-        if (fabsf(directMean) < FP16_PREFIX_FALLBACK_ABS) {
-            return ReduceFinitePrefix(inputBase, hStart, hEnd, wStart, wEnd, width, x);
-        }
+        return ReduceNonFiniteBin(inputBase, hStart, hEnd, wStart, wEnd, width, x);
     }
     return directMean;
 }

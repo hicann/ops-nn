@@ -28,11 +28,14 @@ namespace ge {
  * Two inputs, including:
  * @li x: A 4D Tensor of type float16 or float32 with shape [N, C, H, W].
  * @li rois: A 3D Tensor of type float16 or float32 with shape [N, 5, R].
+ * A RoI with non-finite or negative coordinates, or with a rounded batch ID outside [0, N-1], produces an all-zero
+ * output for that RoI without affecting other RoIs.
  * @par Outputs:
  * @li y: A Tensor of type float16 or float32 with shape
  * [N * R, output_dim, group_size, group_size].
  * @par Attributes:
- * @li spatial_scale: A required float specifying the scale from input coordinates to ROI coordinates.
+ * @li spatial_scale: A required float specifying the scale from ROI coordinates in the original image to input
+ * feature-map coordinates.
  * @li output_dim: A required int specifying the number of output channels.
  * @li group_size: A required int specifying the spatial group size.
  */

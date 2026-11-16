@@ -18,6 +18,8 @@
 #include "any_value.h"
 #include "infershape_case_executor.h"
 #include "infer_shape_context_faker.h"
+#include "infer_shaperange_context_faker.h"
+#include "op_impl_registry.h"
 
 namespace {
 
@@ -32,6 +34,16 @@ gert::StorageShape MakeStorageShape(const std::vector<int64_t>& dims)
     for (size_t i = 0; i < dims.size(); ++i) {
         shape.MutableOriginShape().SetDim(i, dims[i]);
         shape.MutableStorageShape().SetDim(i, dims[i]);
+    }
+    return shape;
+}
+
+gert::Shape MakeShape(const std::vector<int64_t>& dims)
+{
+    gert::Shape shape;
+    shape.SetDimNum(dims.size());
+    for (size_t i = 0; i < dims.size(); ++i) {
+        shape.SetDim(i, dims[i]);
     }
     return shape;
 }
@@ -64,6 +76,66 @@ void ExpectShape(gert::InfershapeContextPara para, const std::vector<int64_t>& e
 
 void ExpectFailure(gert::InfershapeContextPara para) { ExecuteTestCase(para, ge::GRAPH_FAILED); }
 
+gert::KernelRunContextHolder MakeRangeContext(const std::vector<int64_t>& roisMinDims,
+                                              const std::vector<int64_t>& roisMaxDims,
+                                              const std::vector<int64_t>& xMinDims = {},
+                                              const std::vector<int64_t>& xMaxDims = {})
+{
+    const std::vector<int64_t> defaultXMin = roisMinDims.size() == 3 ? std::vector<int64_t>{roisMinDims[0], 18, 1, 1} :
+                                                                       std::vector<int64_t>{-2};
+    const std::vector<int64_t> defaultXMax = roisMaxDims.size() == 3 ? std::vector<int64_t>{roisMaxDims[0], 18, 1, 1} :
+                                                                       std::vector<int64_t>{-2};
+    gert::Shape xMin = MakeShape(xMinDims.empty() ? defaultXMin : xMinDims);
+    gert::Shape xMax = MakeShape(xMaxDims.empty() ? defaultXMax : xMaxDims);
+    gert::Shape roisMin = MakeShape(roisMinDims);
+    gert::Shape roisMax = MakeShape(roisMaxDims);
+    gert::Range<gert::Shape> xRange(&xMin, &xMax);
+    gert::Range<gert::Shape> roisRange(&roisMin, &roisMax);
+    gert::Shape yMin;
+    gert::Shape yMax;
+    gert::Range<gert::Shape> yRange(&yMin, &yMax);
+    return gert::InferShapeRangeContextFaker()
+        .SetOpType("PSROIPoolingV2")
+        .NodeIoNum(2, 1)
+        .IrInstanceNum({1, 1})
+        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .InputShapeRanges({&xRange, &roisRange})
+        .OutputShapeRanges({&yRange})
+        .NodeAttrs({{"spatial_scale", Ops::NN::AnyValue::CreateFrom<float>(0.25F)},
+                    {"output_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                    {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}})
+        .Build();
+}
+
+void ExpectRangeShape(const gert::Shape* actual, const std::vector<int64_t>& expected)
+{
+    ASSERT_NE(actual, nullptr);
+    ASSERT_EQ(actual->GetDimNum(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i) {
+        EXPECT_EQ(actual->GetDim(i), expected[i]);
+    }
+}
+
+void ExpectShapeRange(const std::vector<int64_t>& roisMin, const std::vector<int64_t>& roisMax,
+                      const ge::graphStatus expectedStatus, const std::vector<int64_t>& expectedMin = {},
+                      const std::vector<int64_t>& expectedMax = {}, const std::vector<int64_t>& xMin = {},
+                      const std::vector<int64_t>& xMax = {})
+{
+    auto holder = MakeRangeContext(roisMin, roisMax, xMin, xMax);
+    auto* context = holder.GetContext<gert::InferShapeRangeContext>();
+    ASSERT_NE(context, nullptr);
+    const auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("PSROIPoolingV2");
+    ASSERT_NE(impl, nullptr);
+    ASSERT_NE(impl->infer_shape_range, nullptr);
+    ASSERT_EQ(impl->infer_shape_range(context), expectedStatus);
+    if (expectedStatus == ge::GRAPH_SUCCESS) {
+        ExpectRangeShape(context->GetOutputShapeRange(0)->GetMin(), expectedMin);
+        ExpectRangeShape(context->GetOutputShapeRange(0)->GetMax(), expectedMax);
+    }
+}
+
 class PSROIPoolingV2Infershape : public testing::Test {};
 
 TEST_F(PSROIPoolingV2Infershape, StaticFloat32) { ExpectShape(MakeContext({2, 18, 8, 8}, {2, 5, 4}), {8, 2, 3, 3}); }
@@ -82,11 +154,76 @@ TEST_F(PSROIPoolingV2Infershape, UnknownDimensions)
     ExpectShape(MakeContext({-1, 18, -1, -1}, {-1, 5, -1}), {-1, 2, 3, 3});
 }
 
-TEST_F(PSROIPoolingV2Infershape, UnknownXRankUsesKnownRois) { ExpectShape(MakeContext({-2}, {2, 5, 4}), {8, 2, 3, 3}); }
-
-TEST_F(PSROIPoolingV2Infershape, UnknownRoisRankProducesUnknownLeadingDim)
+TEST_F(PSROIPoolingV2Infershape, DynamicRoiCountRange)
 {
-    ExpectShape(MakeContext({2, 18, 8, 8}, {-2}), {-1, 2, 3, 3});
+    ExpectShapeRange({1, 5, 1}, {1, 5, -1}, ge::GRAPH_SUCCESS, {1, 2, 3, 3}, {-1, 2, 3, 3});
+}
+
+TEST_F(PSROIPoolingV2Infershape, UnknownDimensionLowerBounds)
+{
+    ExpectShapeRange({-1, 5, -1}, {-1, 5, -1}, ge::GRAPH_SUCCESS, {0, 2, 3, 3}, {-1, 2, 3, 3}, {-1, 18, -1, -1},
+                     {-1, 18, -1, -1});
+}
+
+TEST_F(PSROIPoolingV2Infershape, UnknownXBatchDoesNotConstrainRoisRange)
+{
+    ExpectShapeRange({2, 5, 1}, {4, 5, 3}, ge::GRAPH_SUCCESS, {2, 2, 3, 3}, {12, 2, 3, 3}, {-1, 18, 1, 1},
+                     {-1, 18, 1, 1});
+}
+
+TEST_F(PSROIPoolingV2Infershape, BoundedBatchAndRoiRange)
+{
+    ExpectShapeRange({1, 5, 2}, {4, 5, 8}, ge::GRAPH_SUCCESS, {2, 2, 3, 3}, {32, 2, 3, 3}, {1, 18, 1, 1},
+                     {4, 18, 1, 1});
+}
+
+TEST_F(PSROIPoolingV2Infershape, BatchRangeIntersectionTightensOutputRange)
+{
+    ExpectShapeRange({1, 5, 2}, {4, 5, 8}, ge::GRAPH_SUCCESS, {4, 2, 3, 3}, {24, 2, 3, 3}, {2, 18, 1, 1},
+                     {3, 18, 1, 1});
+}
+
+TEST_F(PSROIPoolingV2Infershape, RejectsDisjointBatchRanges)
+{
+    ExpectShapeRange({3, 5, 1}, {4, 5, 2}, ge::GRAPH_FAILED, {}, {}, {1, 18, 1, 1}, {2, 18, 1, 1});
+}
+
+TEST_F(PSROIPoolingV2Infershape, ZeroBatchBoundsUnboundedRoiCount)
+{
+    ExpectShapeRange({0, 5, 0}, {0, 5, -1}, ge::GRAPH_SUCCESS, {0, 2, 3, 3}, {0, 2, 3, 3});
+}
+
+TEST_F(PSROIPoolingV2Infershape, FiniteRangeSupportsInt64Boundary)
+{
+    const int64_t max = std::numeric_limits<int64_t>::max();
+    ExpectShapeRange({1, 5, 1}, {max, 5, 1}, ge::GRAPH_SUCCESS, {1, 2, 3, 3}, {max, 2, 3, 3});
+}
+
+TEST_F(PSROIPoolingV2Infershape, RejectsRangeProductOverflow)
+{
+    ExpectShapeRange({1, 5, 1}, {std::numeric_limits<int64_t>::max(), 5, 2}, ge::GRAPH_FAILED);
+    const int64_t max = std::numeric_limits<int64_t>::max();
+    ExpectShapeRange({max, 5, 2}, {max, 5, 2}, ge::GRAPH_FAILED, {}, {}, {max, 18, 1, 1}, {max, 18, 1, 1});
+}
+
+TEST_F(PSROIPoolingV2Infershape, RejectsInvalidRoiRange)
+{
+    ExpectShapeRange({1, 5, 3}, {1, 5, 2}, ge::GRAPH_FAILED);
+    ExpectShapeRange({1, 5}, {1, 5}, ge::GRAPH_FAILED);
+    ExpectShapeRange({1, 6, 1}, {1, -1, 1}, ge::GRAPH_FAILED);
+    ExpectShapeRange({1, 1, 1}, {1, 4, 1}, ge::GRAPH_FAILED);
+}
+
+TEST_F(PSROIPoolingV2Infershape, RejectsInvalidKnownXDimensions)
+{
+    ExpectShapeRange({1, 5, 1}, {1, 5, 1}, ge::GRAPH_FAILED, {}, {}, {1, 17, 8, 8}, {1, 17, 8, 8});
+    ExpectShapeRange({1, 5, 1}, {1, 5, 1}, ge::GRAPH_FAILED, {}, {}, {1, 18, 0, 8}, {1, 18, 0, 8});
+    ExpectShapeRange({1, 5, 1}, {1, 5, 1}, ge::GRAPH_FAILED, {}, {}, {1, 18, 8, 0}, {1, 18, 8, 0});
+}
+
+TEST_F(PSROIPoolingV2Infershape, UnknownRankRangePreservesA2LegacyBounds)
+{
+    ExpectShapeRange({-2}, {-2}, ge::GRAPH_SUCCESS, {1, 1, 1, 1}, {-1, -1, -1, -1});
 }
 
 TEST_F(PSROIPoolingV2Infershape, RejectsInvalidInputRanks)
