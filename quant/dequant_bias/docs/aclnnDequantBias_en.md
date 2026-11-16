@@ -98,7 +98,7 @@ aclnnStatus aclnnDequantBias(
       <td>INT32</td>
       <td>ND</td>
       <td>2</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>weightScale (aclTensor*)</td>
@@ -108,7 +108,7 @@ aclnnStatus aclnnDequantBias(
       <td>FLOAT, BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
      <tr>
       <td>activateScaleOptional (aclTensor*)</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnDequantBias(
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>biasOptional (aclTensor*)</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnDequantBias(
       <td>FLOAT, BFLOAT16, FLOAT16, INT32</td>
       <td>ND</td>
       <td>1</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
       <tr>
       <td>outputDtype (int64_t)</td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnDequantBias(
       <td>FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>2</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
