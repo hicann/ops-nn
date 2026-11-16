@@ -125,7 +125,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT};
     OP_CHECK_IF(supportedDtypes.count(*dataType) == 0,
-                OP_LOGE_WITH_INVALID_INPUT_DTYPE(context->GetNodeName(), "x", "unsupported", "DT_FLOAT16, DT_FLOAT"),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", "unsupported", "DT_FLOAT16, DT_FLOAT"),
                 return ge::GRAPH_FAILED);
 
     auto xFormat = inputDesc->GetFormat().GetStorageFormat();

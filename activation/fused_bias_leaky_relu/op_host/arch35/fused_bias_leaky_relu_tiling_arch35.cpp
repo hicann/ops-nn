@@ -105,16 +105,16 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDescX);
     dataType = inputDescX->GetDataType();
     OP_CHECK_IF(supportedDtype.count(dataType) == 0,
-                OP_LOGE_WITH_INVALID_INPUT_DTYPE(context->GetNodeName(), "x", Ops::Base::ToString(dataType).c_str(),
-                                                 "DT_FLOAT16, DT_FLOAT"),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", Ops::Base::ToString(dataType).c_str(),
+                                          "DT_FLOAT16, DT_FLOAT"),
                 return ge::GRAPH_FAILED);
 
     auto inputDescBias = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDescBias);
     auto biasDtype = inputDescBias->GetDataType();
     OP_CHECK_IF(supportedDtype.count(biasDtype) == 0,
-                OP_LOGE_WITH_INVALID_INPUT_DTYPE(context->GetNodeName(), "bias", Ops::Base::ToString(biasDtype).c_str(),
-                                                 "DT_FLOAT16, DT_FLOAT"),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "bias", Ops::Base::ToString(biasDtype).c_str(),
+                                          "DT_FLOAT16, DT_FLOAT"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(biasDtype != dataType,
                 OP_LOGE(context->GetNodeName(), "bias dtype %s must be same as x dtype %s",
