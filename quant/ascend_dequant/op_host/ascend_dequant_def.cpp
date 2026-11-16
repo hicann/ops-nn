@@ -45,6 +45,7 @@ public:
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "ascend_dequant_apt");
         this->AICore().AddConfig("ascend950", config_950);
+        this->AICore().AddConfig("ascend350", config_950);
         this->AICore().AddConfig("ascend960dt", config_950);
     }
 };

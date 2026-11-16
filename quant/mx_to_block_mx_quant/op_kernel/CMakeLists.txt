@@ -10,5 +10,5 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/mx_to_block_mx_quant.cpp
-    COMPUTE_UNITS ascend950 ascend960dt
+    COMPUTE_UNITS ascend950 ascend960dt ascend350
 )
