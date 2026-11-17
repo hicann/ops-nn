@@ -1,0 +1,41 @@
+{
+    "op_type": "ChunkLoss",
+    "op_list": [
+        {
+            "bin_filename": "ChunkLoss_fp16",
+            "inputs": [
+                {"name": "hidden", "index": 0, "dtype": "float16", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight", "index": 1, "dtype": "float16", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "labels", "index": 2, "dtype": "int64", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "loss", "index": 0, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "max", "index": 1, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "sum", "index": 2, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "dH", "index": 3, "dtype": "float16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [
+                {"name": "alpha", "dtype": "float", "value": 1.0},
+                {"name": "ignore_index", "dtype": "int", "value": -100}
+            ]
+        },
+        {
+            "bin_filename": "ChunkLoss_bf16",
+            "inputs": [
+                {"name": "hidden", "index": 0, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight", "index": 1, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "labels", "index": 2, "dtype": "int64", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "loss", "index": 0, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "max", "index": 1, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "sum", "index": 2, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "dH", "index": 3, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [
+                {"name": "alpha", "dtype": "float", "value": 1.0},
+                {"name": "ignore_index", "dtype": "int", "value": -100}
+            ]
+        }
+    ]
+}
