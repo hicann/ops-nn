@@ -55,6 +55,8 @@ TILING_DATA_FIELD_DEF(uint64_t, iterTailCore);     // 小核的循环数
 TILING_DATA_FIELD_DEF(uint64_t, lineTailIter);     // 小核每次循环的行数
 TILING_DATA_FIELD_DEF(uint64_t, lineLastTailIter); // 小核尾核循环的行数
 
+TILING_DATA_FIELD_DEF(uint64_t, softmaxBuffSize); // softmax高阶api复用空间大小（字节），host按平台下发
+
 TILING_DATA_FIELD_DEF_STRUCT(SoftMaxTiling, softmaxTilingData); // softmax高阶api所需tiling
 
 END_TILING_DATA_DEF;

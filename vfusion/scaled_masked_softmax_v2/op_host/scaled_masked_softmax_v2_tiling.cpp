@@ -241,16 +241,33 @@ bool ScaledMaskedSoftmaxV2Tiling::SetUbSplitInfo()
     uint64_t padedWidth = tiling.get_padLineNum();
     uint64_t maskPaddedWidth = tiling.get_alignedMaskWidth();
     uint64_t maxByteLine = padedWidth * XY_PARAMS * xDtypeSize + padedWidth * FP32_SIZE + maskPaddedWidth * BOOL_SIZE;
-    // 高阶api使用tmpBuf复用
-    uint64_t softmaxBuffSize = SOFTMAX_BUF_SIZE;
-    if (IsRegbaseSocVersion(context)) {
-        softmaxBuffSize = SOFTMAX_BUF_SIZE_D;
-    }
-    uint64_t availableLinePerIter = (availableUbSize - softmaxBuffSize) / maxByteLine;
 
     uint64_t coreNum = tiling.get_coreNum();
     uint64_t totalLine = batch * channel * height;
-    if (coreNum == 0 || availableLinePerIter == 0) {
+    if (coreNum == 0) {
+        return false;
+    }
+
+    uint64_t availableLinePerIter = 0;
+    if (IsRegbaseSocVersion(context)) {
+        auto shapeOf = [&padedWidth](uint64_t lineNum) {
+            return ge::Shape({static_cast<int64_t>(lineNum), static_cast<int64_t>(padedWidth)});
+        };
+        uint64_t line = static_cast<uint64_t>(availableUbSize) / (maxByteLine + padedWidth * FP32_SIZE);
+        while (line > 1 && line * maxByteLine + AscendC::GetSoftMaxMaxTmpSize(shapeOf(line), FP32_SIZE, false) >
+                               static_cast<uint64_t>(availableUbSize)) {
+            line--;
+        }
+        if (line * maxByteLine + AscendC::GetSoftMaxMaxTmpSize(shapeOf(line), FP32_SIZE, false) >
+            static_cast<uint64_t>(availableUbSize)) {
+            return false;
+        }
+        availableLinePerIter = line;
+    } else {
+        // 910B维持原来
+        availableLinePerIter = (availableUbSize - SOFTMAX_BUF_SIZE) / maxByteLine;
+    }
+    if (availableLinePerIter == 0) {
         return false;
     }
 
@@ -284,8 +301,14 @@ void ScaledMaskedSoftmaxV2Tiling::SetSoftmaxTiling()
     auto shape = ge::Shape(
         {static_cast<int64_t>(tiling.get_lineHeadIter()), static_cast<int64_t>(tiling.get_padLineNum())});
     auto size = AscendC::GetSoftMaxMaxTmpSize(shape, FP32_SIZE, false);
-    if (size > SOFTMAX_BUF_SIZE) {
-        size = SOFTMAX_BUF_SIZE;
+    if (!IsRegbaseSocVersion(context)) {
+        if (size > SOFTMAX_BUF_SIZE) {
+            size = SOFTMAX_BUF_SIZE;
+        }
+        uint64_t bufElems = tiling.get_padLineNum() * tiling.get_lineHeadIter();
+        tiling.set_softmaxBuffSize(bufElems > SOFTMAX_BUF_SIZE ? SOFTMAX_BUF_SIZE_D : SOFTMAX_BUF_SIZE);
+    } else {
+        tiling.set_softmaxBuffSize(size);
     }
     AscendC::SoftMaxTilingFunc(shape, FP32_SIZE, size, tiling.softmaxTilingData);
 }
@@ -370,6 +393,7 @@ void ScaledMaskedSoftmaxV2Tiling::TilingDataPrint()
     OP_LOGD(context, ">>> iterTailCore:                    %lu", tiling.get_iterTailCore());
     OP_LOGD(context, ">>> lineTailIter:                    %lu", tiling.get_lineTailIter());
     OP_LOGD(context, ">>> lineLastTailIter:                %lu", tiling.get_lineLastTailIter());
+    OP_LOGD(context, ">>> softmaxBuffSize:                 %lu", tiling.get_softmaxBuffSize());
     OP_LOGD(context, ">>>>>>>>>>>>>>> Print ScaledMaskedSoftmaxV2 tiling data end <<<<<<<<<<<<<<<<");
 }
 

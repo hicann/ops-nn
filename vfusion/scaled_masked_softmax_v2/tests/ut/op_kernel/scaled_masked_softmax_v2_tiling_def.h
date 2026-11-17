@@ -51,6 +51,8 @@ struct ScaledMaskedSoftmaxV2TilingData {
     uint64_t lineTailIter;
     uint64_t lineLastTailIter;
 
+    uint64_t softmaxBuffSize;
+
     SoftMaxTiling softmaxTilingData;
 };
 
@@ -92,5 +94,6 @@ struct ScaledMaskedSoftmaxV2TilingData {
     (tilingData).iterTailCore = tilingDataPointer->iterTailCore;                         \
     (tilingData).lineTailIter = tilingDataPointer->lineTailIter;                         \
     (tilingData).lineLastTailIter = tilingDataPointer->lineLastTailIter;                 \
+    (tilingData).softmaxBuffSize = tilingDataPointer->softmaxBuffSize;                   \
     (tilingData).softmaxTilingData = tilingDataPointer->softmaxTilingData;
 #endif

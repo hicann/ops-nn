@@ -78,11 +78,7 @@ public:
         pipe.InitBuffer(outQueueY, 1, bufSize * sizeof(T));
 
         pipe.InitBuffer(bufX, bufSize * sizeof(float));
-        uint64_t tmpBufSize = 32 * 1024; // 高阶api复用空间大小 32K
-        if (bufSize > tmpBufSize) {
-            tmpBufSize = 64 * 1024; // 高阶api复用空间大小 64 * 1024
-        }
-        pipe.InitBuffer(bufShare, tmpBufSize);
+        pipe.InitBuffer(bufShare, tilingData.softmaxBuffSize);
 
         gmMask.SetGlobalBuffer((__gm__ bool*)mask);
 

@@ -97,6 +97,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align)
     tilingDatafromBin->lineTailIter = 65;
     tilingDatafromBin->lineLastTailIter = 21;
 
+    tilingDatafromBin->softmaxBuffSize = 32 * 1024;
     tilingDatafromBin->softmaxTilingData.srcM = 65;
     tilingDatafromBin->softmaxTilingData.srcK = 128;
     tilingDatafromBin->softmaxTilingData.srcSize = 8320;
@@ -185,6 +186,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastC)
     tilingDatafromBin->lineTailIter = 65;
     tilingDatafromBin->lineLastTailIter = 21;
 
+    tilingDatafromBin->softmaxBuffSize = 32 * 1024;
     tilingDatafromBin->softmaxTilingData.srcM = 65;
     tilingDatafromBin->softmaxTilingData.srcK = 128;
     tilingDatafromBin->softmaxTilingData.srcSize = 8320;
@@ -273,6 +275,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastN)
     tilingDatafromBin->lineTailIter = 65;
     tilingDatafromBin->lineLastTailIter = 21;
 
+    tilingDatafromBin->softmaxBuffSize = 32 * 1024;
     tilingDatafromBin->softmaxTilingData.srcM = 65;
     tilingDatafromBin->softmaxTilingData.srcK = 128;
     tilingDatafromBin->softmaxTilingData.srcSize = 8320;
@@ -361,6 +364,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastNC)
     tilingDatafromBin->lineTailIter = 65;
     tilingDatafromBin->lineLastTailIter = 10;
 
+    tilingDatafromBin->softmaxBuffSize = 32 * 1024;
     tilingDatafromBin->softmaxTilingData.srcM = 65;
     tilingDatafromBin->softmaxTilingData.srcK = 128;
     tilingDatafromBin->softmaxTilingData.srcSize = 8320;
@@ -449,6 +453,7 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_float_align)
     tilingDatafromBin->lineTailIter = 24;
     tilingDatafromBin->lineLastTailIter = 21;
 
+    tilingDatafromBin->softmaxBuffSize = 32 * 1024;
     tilingDatafromBin->softmaxTilingData.srcM = 24;
     tilingDatafromBin->softmaxTilingData.srcK = 512;
     tilingDatafromBin->softmaxTilingData.srcSize = 12288;
@@ -462,6 +467,286 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_float_align)
     tilingDatafromBin->softmaxTilingData.reduceK = 8;
     tilingDatafromBin->softmaxTilingData.reduceSize = 64;
     tilingDatafromBin->softmaxTilingData.rangeM = 3;
+    tilingDatafromBin->softmaxTilingData.tailM = 0;
+    tilingDatafromBin->softmaxTilingData.tailSplitSize = 0;
+    tilingDatafromBin->softmaxTilingData.tailReduceSize = 0;
+
+    ICPU_SET_TILING_KEY(0);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(scaled_masked_softmax_v2, blockDim, x, mask, y, workspace, (uint8_t*)(tilingDatafromBin));
+    AscendC::GmFree(x);
+    AscendC::GmFree(mask);
+    AscendC::GmFree(y);
+
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+// ============================================================================
+// softmaxBuffSize = 64 * 1024 覆盖用例（对应 Regbase 芯片 ascend950/960dt/960pr）
+// 真实 Regbase tiling（UB=253952）下 fp32 width∈[433,440]、lineHeadIter=32 时
+// softmaxBuffSize = GetSoftMaxMaxTmpSize({32, 440}, fp32) = 32*(440+72)*4 = 65536。
+// 受 910B1 CPU 模拟 UB=196608 限制（lineHeadIter=32 需 249088B），此处缩微为
+// lineHeadIter=16，softmaxBuffSize 按 host 下发 64KB 构造；softmaxTilingData
+// 与 SoftMaxTilingFunc({16, 440}, fp32, 64*1024) 输出一致：
+//   baseM=min(16384/512, 16)=16, srcM=16, srcK=440, splitM=16, rangeM=1, tailM=0
+// ============================================================================
+
+TEST_F(scaled_masked_softmax_v2_test, test_case_float_align_softmaxbuff64k)
+{
+    uint32_t N = 1;
+    uint32_t C = 16;
+    uint32_t H = 440;
+    uint32_t W = 440;
+
+    uint32_t maskN = 1;
+    uint32_t maskC = 16;
+
+    size_t x_size = N * C * H * W * sizeof(float);
+    size_t mask_size = maskN * maskC * H * W * sizeof(bool);
+    size_t y_size = N * C * H * W * sizeof(float);
+
+    size_t tiling_data_size = sizeof(ScaledMaskedSoftmaxV2TilingData);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* mask = (uint8_t*)AscendC::GmAlloc(mask_size);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(y_size);
+
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 48;
+
+    kernel_ut::SetupTestEnvironment("vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+                                    "scaled_masked_softmax_v2_data");
+    kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"1", "16", "440", "440", "1", "16", "float32"});
+
+    string path = kernel_ut::GetTestWorkDir();
+    ReadFile(path + "/scaled_masked_softmax_v2_data/input_x.bin", x_size, x, x_size);
+    ReadFile(path + "/scaled_masked_softmax_v2_data/input_mask.bin", mask_size, mask, mask_size);
+
+    ScaledMaskedSoftmaxV2TilingData* tilingDatafromBin = reinterpret_cast<ScaledMaskedSoftmaxV2TilingData*>(tiling);
+    tilingDatafromBin->coreNum = blockDim;
+    tilingDatafromBin->batch = N;
+    tilingDatafromBin->channel = C;
+    tilingDatafromBin->height = H;
+    tilingDatafromBin->width = W;
+    tilingDatafromBin->maskBatch = maskN;
+    tilingDatafromBin->maskChannel = maskC;
+    tilingDatafromBin->maskHeight = H;
+    tilingDatafromBin->maskWidth = W;
+    tilingDatafromBin->scale = 1.0;
+    tilingDatafromBin->maskMode = 0;
+    tilingDatafromBin->paddingNum = 0;
+    tilingDatafromBin->padLineNum = 440;
+    tilingDatafromBin->alignedMaskPadding = 16;
+    tilingDatafromBin->alignedMaskWidth = 456;
+    tilingDatafromBin->nStep = 1;
+    tilingDatafromBin->cStep = 1;
+    // totalLine = 16*440 = 7040, 48 核: lineTailCore=146, headCoreNum=32, lineHeadCore=147
+    tilingDatafromBin->headCoreNum = 32;
+    tilingDatafromBin->lineHeadCore = 147;
+    tilingDatafromBin->iterHeadCore = 10;
+    tilingDatafromBin->lineHeadIter = 16;
+    tilingDatafromBin->lineLastHeadIter = 3;
+    tilingDatafromBin->lineTailCore = 146;
+    tilingDatafromBin->iterTailCore = 10;
+    tilingDatafromBin->lineTailIter = 16;
+    tilingDatafromBin->lineLastTailIter = 2;
+
+    tilingDatafromBin->softmaxBuffSize = 64 * 1024;
+    tilingDatafromBin->softmaxTilingData.srcM = 16;
+    tilingDatafromBin->softmaxTilingData.srcK = 440;
+    tilingDatafromBin->softmaxTilingData.srcSize = 7040;
+    tilingDatafromBin->softmaxTilingData.outMaxM = 16;
+    tilingDatafromBin->softmaxTilingData.outMaxK = 8;
+    tilingDatafromBin->softmaxTilingData.outMaxSize = 128;
+    tilingDatafromBin->softmaxTilingData.splitM = 16;
+    tilingDatafromBin->softmaxTilingData.splitK = 440;
+    tilingDatafromBin->softmaxTilingData.splitSize = 7040;
+    tilingDatafromBin->softmaxTilingData.reduceM = 16;
+    tilingDatafromBin->softmaxTilingData.reduceK = 8;
+    tilingDatafromBin->softmaxTilingData.reduceSize = 128;
+    tilingDatafromBin->softmaxTilingData.rangeM = 1;
+    tilingDatafromBin->softmaxTilingData.tailM = 0;
+    tilingDatafromBin->softmaxTilingData.tailSplitSize = 0;
+    tilingDatafromBin->softmaxTilingData.tailReduceSize = 0;
+
+    ICPU_SET_TILING_KEY(0);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(scaled_masked_softmax_v2, blockDim, x, mask, y, workspace, (uint8_t*)(tilingDatafromBin));
+    AscendC::GmFree(x);
+    AscendC::GmFree(mask);
+    AscendC::GmFree(y);
+
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(scaled_masked_softmax_v2_test, test_case_float_align_softmaxbuff64k_broadcastNC)
+{
+    uint32_t N = 2;
+    uint32_t C = 16;
+    uint32_t H = 440;
+    uint32_t W = 440;
+
+    uint32_t maskN = 1;
+    uint32_t maskC = 1;
+
+    size_t x_size = N * C * H * W * sizeof(float);
+    size_t mask_size = maskN * maskC * H * W * sizeof(bool);
+    size_t y_size = N * C * H * W * sizeof(float);
+
+    size_t tiling_data_size = sizeof(ScaledMaskedSoftmaxV2TilingData);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* mask = (uint8_t*)AscendC::GmAlloc(mask_size);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(y_size);
+
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 48;
+
+    kernel_ut::SetupTestEnvironment("vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+                                    "scaled_masked_softmax_v2_data");
+    kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"2", "16", "440", "440", "1", "1", "float32"});
+
+    string path = kernel_ut::GetTestWorkDir();
+    ReadFile(path + "/scaled_masked_softmax_v2_data/input_x.bin", x_size, x, x_size);
+    ReadFile(path + "/scaled_masked_softmax_v2_data/input_mask.bin", mask_size, mask, mask_size);
+
+    ScaledMaskedSoftmaxV2TilingData* tilingDatafromBin = reinterpret_cast<ScaledMaskedSoftmaxV2TilingData*>(tiling);
+    tilingDatafromBin->coreNum = blockDim;
+    tilingDatafromBin->batch = N;
+    tilingDatafromBin->channel = C;
+    tilingDatafromBin->height = H;
+    tilingDatafromBin->width = W;
+    tilingDatafromBin->maskBatch = maskN;
+    tilingDatafromBin->maskChannel = maskC;
+    tilingDatafromBin->maskHeight = H;
+    tilingDatafromBin->maskWidth = W;
+    tilingDatafromBin->scale = 1.0;
+    tilingDatafromBin->maskMode = 3;
+    tilingDatafromBin->paddingNum = 0;
+    tilingDatafromBin->padLineNum = 440;
+    tilingDatafromBin->alignedMaskPadding = 16;
+    tilingDatafromBin->alignedMaskWidth = 456;
+    tilingDatafromBin->nStep = 0;
+    tilingDatafromBin->cStep = 0;
+    // totalLine = 2*16*440 = 14080, 48 核: lineTailCore=293, headCoreNum=16, lineHeadCore=294
+    tilingDatafromBin->headCoreNum = 16;
+    tilingDatafromBin->lineHeadCore = 294;
+    tilingDatafromBin->iterHeadCore = 19;
+    tilingDatafromBin->lineHeadIter = 16;
+    tilingDatafromBin->lineLastHeadIter = 6;
+    tilingDatafromBin->lineTailCore = 293;
+    tilingDatafromBin->iterTailCore = 19;
+    tilingDatafromBin->lineTailIter = 16;
+    tilingDatafromBin->lineLastTailIter = 5;
+
+    tilingDatafromBin->softmaxBuffSize = 64 * 1024;
+    tilingDatafromBin->softmaxTilingData.srcM = 16;
+    tilingDatafromBin->softmaxTilingData.srcK = 440;
+    tilingDatafromBin->softmaxTilingData.srcSize = 7040;
+    tilingDatafromBin->softmaxTilingData.outMaxM = 16;
+    tilingDatafromBin->softmaxTilingData.outMaxK = 8;
+    tilingDatafromBin->softmaxTilingData.outMaxSize = 128;
+    tilingDatafromBin->softmaxTilingData.splitM = 16;
+    tilingDatafromBin->softmaxTilingData.splitK = 440;
+    tilingDatafromBin->softmaxTilingData.splitSize = 7040;
+    tilingDatafromBin->softmaxTilingData.reduceM = 16;
+    tilingDatafromBin->softmaxTilingData.reduceK = 8;
+    tilingDatafromBin->softmaxTilingData.reduceSize = 128;
+    tilingDatafromBin->softmaxTilingData.rangeM = 1;
+    tilingDatafromBin->softmaxTilingData.tailM = 0;
+    tilingDatafromBin->softmaxTilingData.tailSplitSize = 0;
+    tilingDatafromBin->softmaxTilingData.tailReduceSize = 0;
+
+    ICPU_SET_TILING_KEY(0);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(scaled_masked_softmax_v2, blockDim, x, mask, y, workspace, (uint8_t*)(tilingDatafromBin));
+    AscendC::GmFree(x);
+    AscendC::GmFree(mask);
+    AscendC::GmFree(y);
+
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(scaled_masked_softmax_v2_test, test_case_float_unalign_softmaxbuff64k)
+{
+    uint32_t N = 1;
+    uint32_t C = 8;
+    uint32_t H = 433;
+    uint32_t W = 433;
+
+    uint32_t maskN = 1;
+    uint32_t maskC = 8;
+
+    size_t x_size = N * C * H * W * sizeof(float);
+    size_t mask_size = maskN * maskC * H * W * sizeof(bool);
+    size_t y_size = N * C * H * W * sizeof(float);
+
+    size_t tiling_data_size = sizeof(ScaledMaskedSoftmaxV2TilingData);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(x_size);
+    uint8_t* mask = (uint8_t*)AscendC::GmAlloc(mask_size);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(y_size);
+
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(4096 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+    uint32_t blockDim = 48;
+
+    kernel_ut::SetupTestEnvironment("vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+                                    "scaled_masked_softmax_v2_data");
+    kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"1", "8", "433", "433", "1", "8", "float32"});
+
+    string path = kernel_ut::GetTestWorkDir();
+    ReadFile(path + "/scaled_masked_softmax_v2_data/input_x.bin", x_size, x, x_size);
+    ReadFile(path + "/scaled_masked_softmax_v2_data/input_mask.bin", mask_size, mask, mask_size);
+
+    ScaledMaskedSoftmaxV2TilingData* tilingDatafromBin = reinterpret_cast<ScaledMaskedSoftmaxV2TilingData*>(tiling);
+    tilingDatafromBin->coreNum = blockDim;
+    tilingDatafromBin->batch = N;
+    tilingDatafromBin->channel = C;
+    tilingDatafromBin->height = H;
+    tilingDatafromBin->width = W;
+    tilingDatafromBin->maskBatch = maskN;
+    tilingDatafromBin->maskChannel = maskC;
+    tilingDatafromBin->maskHeight = H;
+    tilingDatafromBin->maskWidth = W;
+    tilingDatafromBin->scale = 0.5;
+    tilingDatafromBin->maskMode = 0;
+    tilingDatafromBin->paddingNum = 7;
+    tilingDatafromBin->padLineNum = 440;
+    tilingDatafromBin->alignedMaskPadding = 15;
+    tilingDatafromBin->alignedMaskWidth = 448;
+    tilingDatafromBin->nStep = 1;
+    tilingDatafromBin->cStep = 1;
+    // totalLine = 8*433 = 3464, 48 核: lineTailCore=72, headCoreNum=8, lineHeadCore=73
+    tilingDatafromBin->headCoreNum = 8;
+    tilingDatafromBin->lineHeadCore = 73;
+    tilingDatafromBin->iterHeadCore = 5;
+    tilingDatafromBin->lineHeadIter = 16;
+    tilingDatafromBin->lineLastHeadIter = 9;
+    tilingDatafromBin->lineTailCore = 72;
+    tilingDatafromBin->iterTailCore = 5;
+    tilingDatafromBin->lineTailIter = 16;
+    tilingDatafromBin->lineLastTailIter = 8;
+
+    tilingDatafromBin->softmaxBuffSize = 64 * 1024;
+    tilingDatafromBin->softmaxTilingData.srcM = 16;
+    tilingDatafromBin->softmaxTilingData.srcK = 440;
+    tilingDatafromBin->softmaxTilingData.srcSize = 7040;
+    tilingDatafromBin->softmaxTilingData.outMaxM = 16;
+    tilingDatafromBin->softmaxTilingData.outMaxK = 8;
+    tilingDatafromBin->softmaxTilingData.outMaxSize = 128;
+    tilingDatafromBin->softmaxTilingData.splitM = 16;
+    tilingDatafromBin->softmaxTilingData.splitK = 440;
+    tilingDatafromBin->softmaxTilingData.splitSize = 7040;
+    tilingDatafromBin->softmaxTilingData.reduceM = 16;
+    tilingDatafromBin->softmaxTilingData.reduceK = 8;
+    tilingDatafromBin->softmaxTilingData.reduceSize = 128;
+    tilingDatafromBin->softmaxTilingData.rangeM = 1;
     tilingDatafromBin->softmaxTilingData.tailM = 0;
     tilingDatafromBin->softmaxTilingData.tailSplitSize = 0;
     tilingDatafromBin->softmaxTilingData.tailReduceSize = 0;
