@@ -52,6 +52,7 @@ const static uint32_t FOUR_BUFFER = 4;
 const static int64_t EXTRA_BYTE_FOR_COUNT = 64;
 const static uint32_t MIN_CACHE_LINE_SIZE = 256;
 const static uint32_t MAX_CACHE_LINE_LIMIT = 512;
+const static uint32_t MAX_CACHE_LINE_BYTES = 8192; // 单次列搬运字节数上限，实际值在 UB 约束下自适应选取
 
 static uint64_t ComputeTilingKey(const std::vector<uint32_t>& args)
 {
@@ -282,23 +283,59 @@ void EmbeddingDenseGradV2ForRegBase::FinalizeProcessOpTiling()
                         (static_cast<uint32_t>(elewiseLoopNum) - 1U) * elewiseNormalCount_;
 }
 
+uint32_t EmbeddingDenseGradV2ForRegBase::ChooseElewiseFactor(int64_t resBufSize)
+{
+    const uint32_t ubBlockSize = static_cast<uint32_t>(Ops::Base::GetUbBlockSize(context_));
+    const uint32_t alignElems = ubBlockSize / gradDtypeSize_;
+    const int64_t elewiseTotalBytes = elewiseAxis_ * static_cast<int64_t>(gradDtypeSize_);
+    const int64_t chunkUpper = elewiseTotalBytes > static_cast<int64_t>(MAX_CACHE_LINE_BYTES) ?
+                                   static_cast<int64_t>(MAX_CACHE_LINE_BYTES) :
+                                   elewiseTotalBytes;
+
+    // 从大到小试探单次列搬运字节数：取 UB 仍能容纳、且每块能保留超过 SCATTER_FACTOR_LIMIT 行的最大值。
+    // 行内地址连续，放大单次搬运可显著减少 CopyGrad 的 MTE2 指令数。
+    uint32_t chosenFactor = 0;
+    for (int64_t chunkBytes = chunkUpper; chunkBytes >= static_cast<int64_t>(MAX_CACHE_LINE_LIMIT);
+         chunkBytes = chunkBytes >> 1) {
+        uint32_t factor = static_cast<uint32_t>(chunkBytes / gradDtypeSize_);
+        if (factor == 0) {
+            continue;
+        }
+        factor = Ops::Base::CeilAlign(factor, alignElems);
+        if (factor > static_cast<uint32_t>(elewiseAxis_)) {
+            continue;
+        }
+        uint32_t aligned = factor;
+        uint32_t savedScatterFactor = scatterFactor_;
+        bool isMeetUbSize = DoUBTilingSingle(static_cast<int64_t>(ubSize_), aligned, resBufSize);
+        scatterFactor_ = savedScatterFactor;
+        if (isMeetUbSize) {
+            chosenFactor = factor;
+            break;
+        }
+    }
+
+    // 回退到原最小搬运粒度，保证大 elewise / 小 UB 场景仍可得到合法 tiling。
+    if (chosenFactor == 0) {
+        chosenFactor = elewiseTotalBytes > static_cast<int64_t>(MAX_CACHE_LINE_LIMIT) ?
+                           MAX_CACHE_LINE_LIMIT / gradDtypeSize_ :
+                           static_cast<uint32_t>(elewiseAxis_);
+    }
+    elewiseFactor_ = chosenFactor;
+    return Ops::Base::CeilAlign(elewiseFactor_, alignElems);
+}
+
 // 3、计算数据切分TilingData
 ge::graphStatus EmbeddingDenseGradV2ForRegBase::DoOpTiling()
 {
     OP_LOGD(opName_, "EmbeddingDenseGradV2ForRegBase DoOpTiling.");
-    elewiseFactor_ = static_cast<uint32_t>(elewiseAxis_);
-    if (elewiseAxis_ * static_cast<int64_t>(gradDtypeSize_) > static_cast<int64_t>(MAX_CACHE_LINE_LIMIT)) {
-        elewiseFactor_ = MAX_CACHE_LINE_LIMIT / gradDtypeSize_;
-    }
-
-    uint32_t elewiseAligned = Ops::Base::CeilAlign(
-        elewiseFactor_,
-        static_cast<uint32_t>(Ops::Base::GetUbBlockSize(context_) / gradDtypeSize_)); // ub内列方向基本块大小
-    int64_t avaliableUbSize = static_cast<int64_t>(ubSize_);
-    int64_t scatterDimLoopNum = 0;
-
     int64_t elewiseTotalSize = elewiseAxis_ * static_cast<int64_t>(sizeof(float));
     int64_t resBufSize = elewiseTotalSize > MAX_ELEWISE_AXIS_LIMIT ? MAX_ELEWISE_AXIS_LIMIT : elewiseTotalSize;
+
+    uint32_t elewiseAligned = ChooseElewiseFactor(resBufSize);
+
+    int64_t avaliableUbSize = static_cast<int64_t>(ubSize_);
+    int64_t scatterDimLoopNum = 0;
 
     do {
         if (!DoUBTilingSingle(avaliableUbSize, elewiseAligned, resBufSize)) {

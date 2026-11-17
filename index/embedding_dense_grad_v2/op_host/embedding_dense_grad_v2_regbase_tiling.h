@@ -75,6 +75,7 @@ private:
 
     ge::graphStatus VerifyIndicesAndPosIdx();
     bool DoUBTilingSingle(int64_t avaliableUbSize, uint32_t elewiseAligned, int64_t resBufSize);
+    uint32_t ChooseElewiseFactor(int64_t resBufSize);
     void FinalizeProcessOpTiling();
     void SetTilingData(int64_t scatterDimLoopNum, int64_t elewiseDimLoopNum, int64_t elewiseDimOuterLoopNum,
                        int64_t normalBlockLoopNum, int64_t tailBlockLoopNum);
