@@ -53,7 +53,6 @@ constexpr uint8_t DYNAMIC_KEY_VAL = 6;
 
 const std::string QUANT_MODE_STATIC = "static";
 const std::string QUANT_MODE_DYNAMIC = "dynamic";
-const std::string QUANT_MODE_DYNAMIC_MSD = "dynamic_msd";
 
 template <typename T>
 inline auto AlignUp(T num, T div) -> decltype(num)
@@ -148,9 +147,9 @@ inline ge::graphStatus CheckAttrs(const gert::TilingContext* context, SwiGluQuan
     const gert::RuntimeAttrs* attrs = context->GetAttrs();
     if (attrs != nullptr) {
         std::string quantMode = attrs->GetAttrPointer<char>(1);
-        if (quantMode != QUANT_MODE_STATIC && quantMode != QUANT_MODE_DYNAMIC && quantMode != QUANT_MODE_DYNAMIC_MSD) {
+        if (quantMode != QUANT_MODE_STATIC && quantMode != QUANT_MODE_DYNAMIC) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "quant_mode", quantMode,
-                                                  "quantMode must be equal to static; dynamic; dynamic_msd.");
+                                                  "quantMode must be equal to static or dynamic.");
             return ge::GRAPH_FAILED;
         }
         compileInfo.curQuantMode = quantMode;

@@ -230,11 +230,13 @@ aclnnStatus aclnnSwiGluQuant(
       <td>传入的x或yOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>输入或输出的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
+      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="2">561002</td>
       <td>输入或输出的参数维度不在支持的范围内。</td>
     </tr>
       <tr>
