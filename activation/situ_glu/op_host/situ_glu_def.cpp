@@ -32,12 +32,7 @@ public:
             .Format(xFormat)
             .UnknownShapeFormat(xUnknownFormat)
             .AutoContiguous();
-        this->Output("y")
-            .ParamType(REQUIRED)
-            .DataType(xDtype)
-            .Format(xFormat)
-            .UnknownShapeFormat(xUnknownFormat)
-            .AutoContiguous();
+        this->Output("y").ParamType(REQUIRED).DataType(xDtype).Format(xFormat).UnknownShapeFormat(xUnknownFormat);
         this->Attr("dim").AttrType(OPTIONAL).Int(-1);
         this->Attr("beta").AttrType(OPTIONAL).Float(DEFAULT_BETA);
         this->Attr("linear_beta").AttrType(OPTIONAL).Float(DEFAULT_LINEAR_BETA);

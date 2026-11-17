@@ -135,7 +135,7 @@ aclnnStatus aclnnSituGlu(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入x。</td>
-      <td><ul><li>支持空Tensor（此时out必须为对应空Tensor）。</li><li>shape必须在入参dim对应的维度上为偶数。</li></ul></td>
+      <td><ul><li>支持空Tensor（输出为对应空Tensor）。</li><li>shape必须在入参dim对应的维度上为偶数。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-25</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnSituGlu(
       <td>beta（double）</td>
       <td>输入</td>
       <td>公式中的输入beta，SiTU门控部分的缩放系数。</td>
-      <td>有效域为非0的有限值且能被float32表示（接口入参为double，算子内以float32参与计算），否则返回161002。</td>
+      <td>建议为非零值。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -165,7 +165,7 @@ aclnnStatus aclnnSituGlu(
       <td>linearBeta（double）</td>
       <td>输入</td>
       <td>公式中的输入linearBeta，up路径线性tanh的缩放系数。小于等于0时up路径不进行变换。</td>
-      <td>有效域为有限值且能被float32表示（接口入参为double，算子内以float32参与计算）；即取0或绝对值不小于float32最小规格化数。非有限值返回161002。</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -185,11 +185,11 @@ aclnnStatus aclnnSituGlu(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的输出y。</td>
-      <td><ul><li>支持空Tensor（x为空Tensor时out必须同为对应空Tensor）。</li><li>shape在入参dim对应的维度上为x的一半，其他维度与x一致。</li><li>数据类型与x一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape在入参dim对应的维度上为x的一半，其他维度与x一致。</li><li>数据类型与x一致。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-25</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -235,33 +235,23 @@ aclnnStatus aclnnSituGlu(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>x、out、workspaceSize、executor存在空指针。</td>
+      <td>x、out存在空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>out的数据类型与x不一致。</td>
     </tr>
     <tr>
-      <td>dim不在指定的取值范围内。</td>
+      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="2">561002</td>
+      <td>dim不在指定的取值范围内或x在dim对应维度上不能被2整除。</td>
     </tr>
     <tr>
-      <td>x在dim对应维度上的大小不能被2整除。</td>
-    </tr>
-    <tr>
-      <td>out的维度数与x不一致，或out在dim对应维度上的大小不等于x在dim对应维度上大小的一半，或out在其余维度上的大小与x不一致。</td>
-    </tr>
-    <tr>
-      <td>x的维度等于0。</td>
-    </tr>
-    <tr>
-      <td>beta为0或非有限值，或linearBeta为非有限值。</td>
-    </tr>
-    <tr>
-      <td>x为空Tensor而out不是空Tensor。</td>
+      <td>out的维度数与x不一致，或out在dim对应维度上的大小不等于x的一半。</td>
     </tr>
   </tbody></table>
 

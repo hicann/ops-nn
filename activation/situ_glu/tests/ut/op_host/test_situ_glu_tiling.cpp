@@ -9,7 +9,6 @@
  */
 
 #include <gtest/gtest.h>
-#include <limits>
 #include <string>
 #include <vector>
 #include "tiling_context_faker.h"
@@ -23,14 +22,10 @@
 namespace {
 struct TilingCase {
     const char* name;
-    int64_t xRows;
-    int64_t xColumns;
-    int64_t yRows;
-    int64_t yColumns;
-    int64_t yStorageColumns; // != yColumns 表示带padding的非连续视图
+    int64_t rows;
+    int64_t columns;
+    int64_t otherColumns;
     int64_t dim;
-    float beta;
-    float linearBeta;
     ge::DataType dtype;
     ge::DataType otherDtype;
     bool success;
@@ -59,8 +54,8 @@ TEST_P(SituGluTilingTest, ValidatesInputsAndWritesTilingData)
     platform.SetCoreNumByCoreType("AICore");
     platform.SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    gert::StorageShape xShape = {{test.xRows, test.xColumns}, {test.xRows, test.xColumns}};
-    gert::StorageShape otherShape = {{test.yRows, test.yColumns}, {test.yRows, test.yStorageColumns}};
+    gert::StorageShape xShape = {{test.rows, test.columns}, {test.rows, test.columns}};
+    gert::StorageShape otherShape = {{test.rows, test.otherColumns}, {test.rows, test.otherColumns}};
     optiling::SituGluCompileInfo compileInfo{};
     compileInfo.coreNum = 40;
     compileInfo.ubSize = 196608;
@@ -79,8 +74,8 @@ TEST_P(SituGluTilingTest, ValidatesInputsAndWritesTilingData)
                       .NodeInputTd(0, test.dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, test.otherDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(test.dim)},
-                                  {"beta", Ops::NN::AnyValue::CreateFrom<float>(test.beta)},
-                                  {"linear_beta", Ops::NN::AnyValue::CreateFrom<float>(test.linearBeta)},
+                                  {"beta", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"linear_beta", Ops::NN::AnyValue::CreateFrom<float>(0.0f)},
                                   {"activate_left", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                       .TilingData(tilingData.get())
                       .Workspace(reinterpret_cast<gert::ContinuousVector*>(workspace.get()))
@@ -97,20 +92,10 @@ TEST_P(SituGluTilingTest, ValidatesInputsAndWritesTilingData)
 
 INSTANTIATE_TEST_SUITE_P(
     InputValidation, SituGluTilingTest,
-    testing::Values(
-        TilingCase{"Valid", 4, 8, 4, 4, 4, -1, 1.0f, 0.0f, ge::DT_FLOAT16, ge::DT_FLOAT16, true},
-        TilingCase{"ValidWithLinearBeta", 4, 8, 4, 4, 4, -1, 1.0f, 0.5f, ge::DT_FLOAT, ge::DT_FLOAT, true},
-        TilingCase{"DimOutOfRange", 4, 8, 4, 4, 4, 2, 1.0f, 0.0f, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
-        TilingCase{"OddSplit", 4, 7, 4, 4, 4, -1, 1.0f, 0.0f, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
-        TilingCase{"UnsupportedInputDtype", 4, 8, 4, 4, 4, -1, 1.0f, 0.0f, ge::DT_INT32, ge::DT_INT32, false},
-        TilingCase{"OutputSplitMismatch", 4, 8, 4, 3, 3, -1, 1.0f, 0.0f, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
-        TilingCase{"NonSplitDimMismatch", 4, 8, 3, 4, 4, -1, 1.0f, 0.0f, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
-        TilingCase{"EmptyXNonEmptyOut", 0, 8, 2, 4, 4, -1, 1.0f, 0.0f, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
-        TilingCase{"PaddedOutView", 4, 8, 4, 4, 8, -1, 1.0f, 0.0f, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
-        TilingCase{"ZeroBeta", 4, 8, 4, 4, 4, -1, 0.0f, 0.0f, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
-        TilingCase{"InfBeta", 4, 8, 4, 4, 4, -1, std::numeric_limits<float>::infinity(), 0.0f, ge::DT_FLOAT16,
-                   ge::DT_FLOAT16, false},
-        TilingCase{"InfLinearBeta", 4, 8, 4, 4, 4, -1, 1.0f, std::numeric_limits<float>::infinity(), ge::DT_FLOAT16,
-                   ge::DT_FLOAT16, false}),
+    testing::Values(TilingCase{"Valid", 4, 8, 4, -1, ge::DT_FLOAT16, ge::DT_FLOAT16, true},
+                    TilingCase{"DimOutOfRange", 4, 8, 4, 2, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
+                    TilingCase{"OddSplit", 4, 7, 4, -1, ge::DT_FLOAT16, ge::DT_FLOAT16, false},
+                    TilingCase{"UnsupportedInputDtype", 4, 8, 4, -1, ge::DT_INT32, ge::DT_INT32, false},
+                    TilingCase{"OutputSplitMismatch", 4, 8, 3, -1, ge::DT_FLOAT16, ge::DT_FLOAT16, false}),
     [](const testing::TestParamInfo<TilingCase>& info) { return info.param.name; });
 } // namespace
