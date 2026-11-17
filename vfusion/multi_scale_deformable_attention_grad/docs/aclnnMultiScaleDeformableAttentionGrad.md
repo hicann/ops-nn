@@ -185,7 +185,7 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
     <tr>
       <td>attnWeight</td>
       <td>输入</td>
-      <td>采样点权重tensor。对应公式中的`​attnWeight`。</td>
+      <td>采样点权重tensor。对应公式中的`attnWeight`。</td>
       <td>shape为(bs, num_queries, num_heads, num_levels, num_points)。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
