@@ -7,6 +7,12 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+// With the CANN environment sourced, build from this directory:
+// g++ -std=c++17 test_aclnn_batch_norm_backward.cpp -o test_aclnn_batch_norm_backward \
+//     -I$ASCEND_HOME_PATH/include -L$ASCEND_HOME_PATH/lib64 -lopapi -lascendcl -lnnopbase
+// Run on device 0: ./test_aclnn_batch_norm_backward
+
+#include <cmath>
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -31,6 +37,27 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
         shapeSize *= i;
     }
     return shapeSize;
+}
+
+bool CheckOutput(void* deviceAddr, const std::vector<float>& expected, const char* name)
+{
+    std::vector<float> actual(expected.size());
+    const size_t bytes = actual.size() * sizeof(float);
+    const auto ret = aclrtMemcpy(actual.data(), bytes, deviceAddr, bytes, ACL_MEMCPY_DEVICE_TO_HOST);
+    if (ret != ACL_SUCCESS) {
+        LOG_PRINT("Copy %s failed. ERROR: %d\n", name, ret);
+        return false;
+    }
+    constexpr float tolerance = 1e-4f;
+    for (size_t i = 0; i < expected.size(); ++i) {
+        if (!std::isfinite(actual[i]) ||
+            std::abs(actual[i] - expected[i]) > tolerance * (1.0f + std::abs(expected[i]))) {
+            LOG_PRINT("%s[%zu]: expected %f, got %f\n", name, i, expected[i], actual[i]);
+            return false;
+        }
+    }
+    LOG_PRINT("PASS %s\n", name);
+    return true;
 }
 
 int Init(int32_t deviceId, aclrtStream* stream)
@@ -99,7 +126,6 @@ int main()
     void* rVarDeviceAddr = nullptr;
     void* sMeanDeviceAddr = nullptr;
     void* sVarDeviceAddr = nullptr;
-    void* outMaskDeviceAddr = nullptr;
     void* gradInDeviceAddr = nullptr;
     void* gradWeightDeviceAddr = nullptr;
     void* gradBiasDeviceAddr = nullptr;
@@ -186,15 +212,12 @@ int main()
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-    // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
-    auto size = GetShapeSize(gradInShape);
-    std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), gradInDeviceAddr,
-                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-    for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
-    }
+    // 5. Check all three outputs against the supplied mean=0 and invstd=1.
+    // Per channel: dbias=sum(dy), dweight=sum(dy*x), dx=dy-(dbias+x*dweight)/4.
+    const bool dxOk = CheckOutput(gradInDeviceAddr, {-1.5f, -4.0f, -6.5f, -9.0f, -127.5f, -158.0f, -188.5f, -219.0f},
+                                  "dx");
+    const bool weightOk = CheckOutput(gradWeightDeviceAddr, {14.0f, 126.0f}, "dweight");
+    const bool biasOk = CheckOutput(gradBiasDeviceAddr, {6.0f, 22.0f}, "dbias");
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
     aclDestroyTensor(gradOut);
@@ -226,5 +249,5 @@ int main()
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
-    return 0;
+    return dxOk && weightOk && biasOk ? 0 : 1;
 }
