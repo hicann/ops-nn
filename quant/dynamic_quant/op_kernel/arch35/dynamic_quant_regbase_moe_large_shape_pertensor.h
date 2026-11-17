@@ -488,8 +488,8 @@ template <typename T, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantMoeLargeShapePertensor<T, yDtype, hasSmooth, isSymmetrical>::CopyInByEle(
     int64_t offset, uint32_t loopIndex, uint32_t elementNum, uint8_t rightPad)
 {
-    DataCopyParams copyParams{1, (uint16_t)(elementNum * sizeof(T)), 0, 0};
-    DataCopyPadParams padParams{true, 0, rightPad, 0};
+    DataCopyExtParams copyParams{1, static_cast<uint32_t>(elementNum * sizeof(T)), 0, 0, 0};
+    DataCopyPadExtParams<T> padParams{true, 0, rightPad, 0};
     LocalTensor<T> inLocal = inQueue.AllocTensor<T>();
     DataCopyPad(inLocal, inGm[offset], copyParams, padParams);
     inQueue.EnQue(inLocal);
@@ -499,8 +499,8 @@ template <typename T, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantMoeLargeShapePertensor<T, yDtype, hasSmooth, isSymmetrical>::CopyInSmoothByEle(
     uint32_t smoothBaseOffset, uint32_t loopIndex, uint32_t elementNum, uint8_t rightPad)
 {
-    DataCopyParams copyParams{1, (uint16_t)(elementNum * sizeof(T)), 0, 0};
-    DataCopyPadParams padParams{true, 0, rightPad, 0};
+    DataCopyExtParams copyParams{1, static_cast<uint32_t>(elementNum * sizeof(T)), 0, 0, 0};
+    DataCopyPadExtParams<T> padParams{true, 0, rightPad, 0};
     LocalTensor<T> smoothLocal = smoothQueue.AllocTensor<T>();
     DataCopyPad(smoothLocal, smoothGm[smoothBaseOffset + loopIndex * tilingData_.innerLoopEle], copyParams, padParams);
     smoothQueue.EnQue(smoothLocal);

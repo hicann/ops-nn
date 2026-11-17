@@ -361,8 +361,8 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
                                                                                                   uint32_t elementNum,
                                                                                                   uint8_t rightPadding)
 {
-    DataCopyParams copyParams{1, (uint16_t)(elementNum * sizeof(T)), 0, 0};
-    DataCopyPadParams padParams{true, 0, rightPadding, 0};
+    DataCopyExtParams copyParams{1, static_cast<uint32_t>(elementNum * sizeof(T)), 0, 0, 0};
+    DataCopyPadExtParams<T> padParams{true, 0, rightPadding, 0};
 
     LocalTensor<T> inLocal = inQueue.AllocTensor<T>();
     DataCopyPad(inLocal, inGm[offset], copyParams, padParams);
