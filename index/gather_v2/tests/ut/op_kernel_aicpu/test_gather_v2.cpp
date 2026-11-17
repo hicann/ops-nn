@@ -10,6 +10,7 @@
 
 #include <complex>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <vector>
@@ -41,8 +42,9 @@ class TEST_GATHER_V2_UT : public testing::Test {};
         .Attr("batch_dims", batch_dims)
 
 template <typename T, typename Index, typename AxisType>
-void RunGatherV2Kernel(const vector<vector<int64_t>>& shapes, const vector<DataType>& data_types, const T* input_x,
-                       const Index* input_indices, const AxisType* input_axis, T* expect_output, int64_t batch_dims = 0)
+uint32_t RunGatherV2Kernel(const vector<vector<int64_t>>& shapes, const vector<DataType>& data_types, const T* input_x,
+                           const Index* input_indices, const AxisType* input_axis, T* expect_output,
+                           int64_t batch_dims = 0, uint32_t expect_status = KERNEL_STATUS_OK)
 {
     auto calc_size = [](const vector<int64_t>& shape) -> uint64_t {
         return shape.empty() ? 0 : accumulate(shape.begin(), shape.end(), 1LL, multiplies<int64_t>());
@@ -70,8 +72,11 @@ void RunGatherV2Kernel(const vector<vector<int64_t>>& shapes, const vector<DataT
     vector<void*> datas = {static_cast<void*>(x_data.get()), static_cast<void*>(indices_data.get()),
                            static_cast<void*>(axis_data.get()), static_cast<void*>(output_data.get())};
     CREATE_NODEDEF(shapes, data_types, datas, batch_dims);
-    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);
-    EXPECT_TRUE(CompareResult(output_data.get(), expect_output, output_size));
+    RUN_KERNEL(node_def, HOST, expect_status);
+    if (ret == KERNEL_STATUS_OK) {
+        EXPECT_TRUE(CompareResult(output_data.get(), expect_output, output_size));
+    }
+    return ret;
 }
 
 TEST_F(TEST_GATHER_V2_UT, DATA_TYPE_DT_COMPLEX128_INT64_SUCC)
@@ -108,6 +113,19 @@ TEST_F(TEST_GATHER_V2_UT, DATA_TYPE_DT_INT32_NEGATIVE_INDEX_SUCC)
     RunGatherV2Kernel(shapes, data_types, input_x, input_indices, input_axis, expect_output);
 }
 
+TEST_F(TEST_GATHER_V2_UT, DATA_TYPE_DT_COMPLEX64_NEGATIVE_INDEX_BOUNDARY_SUCC)
+{
+    vector<DataType> data_types = {DT_COMPLEX64, DT_INT64, DT_INT64, DT_COMPLEX64};
+    vector<vector<int64_t>> shapes = {{10}, {3}, {1}, {3}};
+    complex<float> input_x[10] = {{0, 10}, {1, 11}, {2, 12}, {3, 13}, {4, 14},
+                                  {5, 15}, {6, 16}, {7, 17}, {8, 18}, {9, 19}};
+    int64_t input_indices[3] = {-10, -1, 9};
+    int64_t input_axis[1] = {0};
+    complex<float> expect_output[3] = {{0, 10}, {9, 19}, {9, 19}};
+    EXPECT_EQ(RunGatherV2Kernel(shapes, data_types, input_x, input_indices, input_axis, expect_output),
+              KERNEL_STATUS_OK);
+}
+
 TEST_F(TEST_GATHER_V2_UT, FAILED_INDICES_TYPE)
 {
     vector<DataType> data_types = {DT_DOUBLE, DT_DOUBLE, DT_INT64, DT_DOUBLE};
@@ -134,4 +152,43 @@ TEST_F(TEST_GATHER_V2_UT, FAILED_OUT_OF_BOUND_INDEX)
                            static_cast<void*>(input_axis), static_cast<void*>(output)};
     CREATE_NODEDEF(shapes, data_types, datas, 0);
     RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
+}
+
+TEST_F(TEST_GATHER_V2_UT, FAILED_NEGATIVE_INDEX_OUT_OF_BOUND_DOUBLE)
+{
+    vector<DataType> data_types = {DT_DOUBLE, DT_INT64, DT_INT64, DT_DOUBLE};
+    vector<vector<int64_t>> shapes = {{10}, {1}, {1}, {1}};
+    double input_x[10] = {0};
+    int64_t input_indices[1] = {-11};
+    int64_t input_axis[1] = {0};
+    double output[1] = {0};
+    EXPECT_EQ(RunGatherV2Kernel(shapes, data_types, input_x, input_indices, input_axis, output, 0,
+                                KERNEL_STATUS_PARAM_INVALID),
+              KERNEL_STATUS_PARAM_INVALID);
+}
+
+TEST_F(TEST_GATHER_V2_UT, FAILED_NEGATIVE_INDEX_OUT_OF_BOUND_COMPLEX64)
+{
+    vector<DataType> data_types = {DT_COMPLEX64, DT_INT64, DT_INT64, DT_COMPLEX64};
+    vector<vector<int64_t>> shapes = {{10}, {1}, {1}, {1}};
+    complex<float> input_x[10] = {{0, 0}};
+    int64_t input_indices[1] = {-100};
+    int64_t input_axis[1] = {0};
+    complex<float> output[1] = {{0, 0}};
+    EXPECT_EQ(RunGatherV2Kernel(shapes, data_types, input_x, input_indices, input_axis, output, 0,
+                                KERNEL_STATUS_PARAM_INVALID),
+              KERNEL_STATUS_PARAM_INVALID);
+}
+
+TEST_F(TEST_GATHER_V2_UT, FAILED_NEGATIVE_INDEX_OUT_OF_BOUND_COMPLEX128)
+{
+    vector<DataType> data_types = {DT_COMPLEX128, DT_INT64, DT_INT64, DT_COMPLEX128};
+    vector<vector<int64_t>> shapes = {{10}, {1}, {1}, {1}};
+    complex<double> input_x[10] = {{0, 0}};
+    int64_t input_indices[1] = {numeric_limits<int64_t>::min()};
+    int64_t input_axis[1] = {0};
+    complex<double> output[1] = {{0, 0}};
+    EXPECT_EQ(RunGatherV2Kernel(shapes, data_types, input_x, input_indices, input_axis, output, 0,
+                                KERNEL_STATUS_PARAM_INVALID),
+              KERNEL_STATUS_PARAM_INVALID);
 }

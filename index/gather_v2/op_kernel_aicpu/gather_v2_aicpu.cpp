@@ -93,12 +93,11 @@ uint32_t CopyGatherV2Data(const CpuKernelContext& ctx, const GatherV2ComputeInfo
         for (int64_t i = 0; i < info.outer_size; ++i) {
             for (int64_t j = 0; j < info.batch_indices; ++j) {
                 int64_t indices_idx = batch * info.batch_indices + j;
-                int64_t indices_value = indices_data[indices_idx] < 0 ?
-                                            indices_data[indices_idx] + info.gather_dim_size :
-                                            indices_data[indices_idx];
-                KERNEL_CHECK_FALSE(indices_value < info.gather_dim_size, KERNEL_STATUS_PARAM_INVALID,
-                                   "Indices[%ld] = %ld is not in [0, %ld)", indices_idx,
-                                   static_cast<int64_t>(indices_data[indices_idx]), info.gather_dim_size);
+                const int64_t raw_index = static_cast<int64_t>(indices_data[indices_idx]);
+                KERNEL_CHECK_FALSE(raw_index >= -info.gather_dim_size && raw_index < info.gather_dim_size,
+                                   KERNEL_STATUS_PARAM_INVALID, "Indices[%ld] = %ld is not in [-%ld, %ld)", indices_idx,
+                                   raw_index, info.gather_dim_size, info.gather_dim_size);
+                const int64_t indices_value = raw_index < 0 ? raw_index + info.gather_dim_size : raw_index;
                 auto params_idx = (i * info.gather_dim_size + indices_value +
                                    batch * info.outer_size * info.gather_dim_size) *
                                   info.inner_size;
