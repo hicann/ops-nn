@@ -24,11 +24,11 @@ extern "C" {
  * 算子功能：对输入Tensor逐元素实现LogSigmoid运算
  *
  * @param [in] self: npu
- * device侧的aclTensor，数据类型支持FLOAT、FLOAT16。支持非连续的Tensor，数据格式支持ND，
- * 且shape需要与out一致，和out的数据类型满足数据类型推导规则。
+ * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16（Atlas训练系列产品仅支持FLOAT、FLOAT16）。支持非连续的Tensor，数据格式支持ND，
+ * 且shape需要与out一致，和out的数据类型一致。
  * @param [in] out: npu
- * device侧的aclTensor，数据类型支持FLOAT、FLOAT16。支持非连续的Tensor，数据格式支持ND，
- * 且shape需要与self一致，和self的数据类型满足数据类型推导规则。
+ * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16（Atlas训练系列产品仅支持FLOAT、FLOAT16）。支持非连续的Tensor，数据格式支持ND，
+ * 且shape需要与self一致，和self的数据类型一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
