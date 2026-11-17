@@ -211,6 +211,19 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
                     "The dtypes of y and dst_type must be the same"),
                 return ge::GRAPH_FAILED);
 
+    auto* attrScaleAlg = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrScaleAlg);
+    tilingParam.scaleAlg = *attrScaleAlg;
+    if (tilingParam.scaleAlg == 3) {
+        auto isNdTensor = [](const auto* desc) {
+            return desc != nullptr && desc->GetStorageFormat() == ge::FORMAT_ND &&
+                   desc->GetOriginFormat() == ge::FORMAT_ND;
+        };
+        OP_CHECK_IF(!isNdTensor(context->GetInputDesc(0)) || !isNdTensor(context->GetOutputDesc(0)) ||
+                        !isNdTensor(context->GetOutputDesc(1)),
+                    OP_LOGE(context->GetNodeName(), "NVFP4 requires ND storage format"), return ge::GRAPH_FAILED);
+    }
+
     auto* attrBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSize);
     tilingParam.blockSize = *attrBlockSize;
@@ -219,11 +232,12 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
                                                       std::to_string(tilingParam.blockSize),
                                                       "The value of block_size must be within the range (0, 1024]"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(tilingParam.blockSize % ATTR_BLOCK_SIZE != 0,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size",
-                                                      std::to_string(tilingParam.blockSize),
-                                                      "The value of block_size must be a multiple of 32"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (tilingParam.scaleAlg == 3 ? tilingParam.blockSize != 16 : tilingParam.blockSize % ATTR_BLOCK_SIZE != 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size",
+                                              std::to_string(tilingParam.blockSize),
+                                              "The value of block_size must be a multiple of 32"),
+        return ge::GRAPH_FAILED);
 
     auto inputXPtr = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
@@ -234,13 +248,10 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
                     "If the dtype of input x is FLOAT, parameter block_size must be 32"),
                 return ge::GRAPH_FAILED);
 
-    auto* attrScaleAlg = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrScaleAlg);
-    tilingParam.scaleAlg = *attrScaleAlg;
     OP_CHECK_IF(
-        tilingParam.scaleAlg < 0 || tilingParam.scaleAlg > 2,
+        tilingParam.scaleAlg < 0 || tilingParam.scaleAlg > 3,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg),
-                                              "The value of scale_alg must be [0, 1, 2]"),
+                                              "The value of scale_alg must be [0, 1, 2, 3]"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(tilingParam.scaleAlg == 1 && yDtype == ge::DT_FLOAT4_E2M1,
@@ -269,6 +280,10 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     OP_CHECK_NULL_WITH_CONTEXT(context, attrDstTypeMax);
     tilingParam.dstTypeMax = static_cast<float>(*attrDstTypeMax);
 
+    OP_CHECK_IF(tilingParam.scaleAlg == 3 &&
+                    (xDtype == ge::DT_FLOAT || yDtype != ge::DT_FLOAT4_E2M1 || tilingParam.dstTypeMax != 0.0f),
+                OP_LOGE(context->GetNodeName(), "NVFP4 requires FP16/BF16, E2M1 and dst_type_max=0"),
+                return ge::GRAPH_FAILED);
     if (!Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, 0.0f)) {
         tilingParam.invDstTypeMax = 1.0 / tilingParam.dstTypeMax;
     } else {
@@ -288,13 +303,14 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
         tilingParam.maxLowBound = static_cast<float>(*attrMaxLowBound);
     }
 
-    OP_CHECK_IF(tilingParam.scaleAlg != 1 && !Ops::Base::IsFloatEqual(tilingParam.maxLowBound, 0.0f),
+    OP_CHECK_IF(tilingParam.scaleAlg != 1 && tilingParam.scaleAlg != 3 &&
+                    !Ops::Base::IsFloatEqual(tilingParam.maxLowBound, 0.0f),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "max_low_bound",
                                                       std::to_string(tilingParam.maxLowBound),
                                                       "max_low_bound must be 0 when scale_alg != 1"),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(tilingParam.maxLowBound < 0,
+    OP_CHECK_IF(tilingParam.maxLowBound < 0 || (tilingParam.scaleAlg == 3 && !std::isfinite(tilingParam.maxLowBound)),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "max_low_bound",
                                                       std::to_string(tilingParam.maxLowBound),
                                                       "max_low_bound must be non-negative"),
@@ -324,7 +340,11 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     auto outputMxScalePtr = context->GetOutputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputMxScalePtr);
     auto scaleDtype = outputMxScalePtr->GetDataType();
-    OP_CHECK_IF(OUTPUT_SUPPORT_DTYPE_SET.count(scaleDtype) == 0,
+    const auto* attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const auto* alg = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
+    OP_CHECK_NULL_WITH_CONTEXT(context, alg);
+    OP_CHECK_IF(scaleDtype != (*alg == 3 ? ge::DT_FLOAT8_E4M3FN : ge::DT_FLOAT8_E8M0),
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "mxscale",
                                           ge::TypeUtils::DataTypeToSerialString(scaleDtype), "[DT_FLOAT8_E8M0]"),
                 return ge::GRAPH_FAILED);
@@ -363,6 +383,9 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
                     return ge::GRAPH_FAILED);
     }
 
+    OP_CHECK_IF(tilingParam.scaleAlg == 3 && tilingParam.axis != -1 &&
+                    tilingParam.axis != static_cast<int64_t>(xShape.GetDimNum() - 1),
+                OP_LOGE(context->GetNodeName(), "NVFP4 supports the tail axis only"), return ge::GRAPH_FAILED);
     auto yShapePtr = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
@@ -662,9 +685,17 @@ static bool IsOptForNotLastQuantAxis(const gert::TilingContext* context, const D
     return true;
 }
 
-static bool IsTailAxisAndBlockSize32(DynamicMxQuantTilingParam& tilingParam)
+static bool IsTailAxisQuantTemplate(DynamicMxQuantTilingParam& tilingParam)
 {
-    if (tilingParam.isTailAxis && tilingParam.isBlockSize32) {
+    if (!tilingParam.isTailAxis) {
+        return false;
+    }
+    if (tilingParam.scaleAlg == 3) {
+        // NVFP4 固定 block16，复位以抵消 BaseCalc 中按 dimSize 的收缩
+        tilingParam.blockSize = 16;
+        return true;
+    }
+    if (tilingParam.isBlockSize32) {
         tilingParam.blockSize = ATTR_BLOCK_SIZE;
         return true;
     }
@@ -712,11 +743,11 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     OP_CHECK_IF(BaseCalc(context, tilingParam) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "The base calculation failed."), return ge::GRAPH_FAILED);
 
-    // 尾轴+block32 场景优先判断，避免被 IsOptForNotLastQuantAxis 误拦截
+    // 尾轴模板（block32 或 NVFP4 block16）优先判断，避免被 IsOptForNotLastQuantAxis 误拦截
     // （IsOptForNotLastQuantAxis 不检查 isTailAxis，会导致尾轴 case 路由到 optimize 路径，
     //  产生 isTailAxisQuant=TAIL_AXIS + optiMode=SMALL_TAIL_AXIS_OPTI 的无效 tilingKey）
-    bool IsTailAnd32 = IsTailAxisAndBlockSize32(tilingParam);
-    if (IsTailAnd32) {
+    bool enterTailTemplate = IsTailAxisQuantTemplate(tilingParam);
+    if (enterTailTemplate) {
         DynamicMxQuantTailAxisTiling tailAxisTiling(context, tilingParam);
         return tailAxisTiling.DoTiling();
     }

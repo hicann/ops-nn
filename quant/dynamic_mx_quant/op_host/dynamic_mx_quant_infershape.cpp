@@ -42,6 +42,7 @@ constexpr int64_t UNKNOWN_DIM_VALUE_ = -1;
 constexpr size_t INDEX_ATTR_AXIS = 0;
 constexpr size_t INDEX_ATTR_DST_TYPE = 2;
 constexpr size_t INDEX_ATTR_BLOCK_SIZE = 3;
+constexpr size_t INDEX_ATTR_SCALE_ALG = 4;
 constexpr int64_t ALIGN_NUM = 2;
 constexpr size_t MAX_DIM_NUM = 7;
 static const std::initializer_list<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2,
@@ -82,6 +83,15 @@ graphStatus InferShapeForDynamicMxQuant(gert::InferShapeContext* context)
     const int32_t* blockSize = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_BLOCK_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, blockSize);
 
+    OP_CHECK_IF(dim >= xShape->GetDimNum() || *blockSize <= 0,
+                OP_LOGE(context->GetNodeName(), "Invalid axis or blocksize"), return ge::GRAPH_FAILED);
+    const auto* scaleAlg = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
+    if (scaleAlg != nullptr && *scaleAlg == 3) {
+        OP_CHECK_IF(dim + 1 != xShape->GetDimNum() || *blockSize != 16 ||
+                        (xShape->GetDim(dim) >= 0 && xShape->GetDim(dim) % 2 != 0),
+                    OP_LOGE(context->GetNodeName(), "NVFP4 requires tail axis, block16 and even K"),
+                    return ge::GRAPH_FAILED);
+    }
     int64_t dimSize = 0;
     if (xShape->GetDim(dim) == UNKNOWN_DIM_VALUE_) {
         dimSize = UNKNOWN_DIM_VALUE_;
@@ -114,7 +124,12 @@ ge::graphStatus InferDataTypeForDynamicMxQuant(gert::InferDataTypeContext* conte
                                   "DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2"),
         return ge::GRAPH_FAILED);
     context->SetOutputDataType(0, outDtype);
-    context->SetOutputDataType(1, ge::DT_FLOAT8_E8M0);
+    const auto* scaleAlg = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
+    const bool nvfp4 = scaleAlg != nullptr && *scaleAlg == 3;
+    OP_CHECK_IF(nvfp4 && (outDtype != ge::DT_FLOAT4_E2M1 || (context->GetInputDataType(0) != ge::DT_FLOAT16 &&
+                                                             context->GetInputDataType(0) != ge::DT_BF16)),
+                OP_LOGE(context->GetNodeName(), "NVFP4 requires FP16/BF16 to E2M1"), return ge::GRAPH_FAILED);
+    context->SetOutputDataType(1, nvfp4 ? ge::DT_FLOAT8_E4M3FN : ge::DT_FLOAT8_E8M0);
     OP_LOGD(context->GetNodeName(), "End to do InferDataTypeForDynamicMxQuant");
     return ge::GRAPH_SUCCESS;
 }

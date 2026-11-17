@@ -71,11 +71,12 @@ support when scale_alg=1. Must be non-negative.
 * @par Third-party framework compatibility
 * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
 */
+// V3 scale_alg=3: block16 tail axis, FP16/BF16 -> E2M1 + E4M3FN scale.
 REG_OP(DynamicMxQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OUTPUT(y, TensorType({DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT6_E3M2, DT_FLOAT6_E2M3, DT_FLOAT8_E4M3FN,
                            DT_FLOAT8_E5M2}))
-    .OUTPUT(mxscale, TensorType({DT_FLOAT8_E8M0}))
+    .OUTPUT(mxscale, TensorType({DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN}))
     .ATTR(axis, Int, -1)
     .ATTR(round_mode, String, "rint")
     .ATTR(dst_type, Int, DT_FLOAT4_E2M1)

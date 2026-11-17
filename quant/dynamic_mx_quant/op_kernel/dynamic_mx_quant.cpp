@@ -23,6 +23,7 @@
 #include "arch35/dynamic_mx_quant_not_tail_axis_optimize_high_perf_large_tail.h"
 #include "arch35/dynamic_mx_quant_not_tail_axis_optimize_high_perf_small_tail.h"
 #include "arch35/dynamic_mx_quant_struct.h"
+#include "arch35/dynamic_mx_quant_tail_axis_nvfp4.h"
 
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
@@ -88,7 +89,13 @@ template <typename TX, typename TY, uint64_t scaleAlg>
 __aicore__ inline void RunTailAxisBlock32Path(GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR tiling)
 {
     GET_TILING_DATA_WITH_STRUCT(DynamicMxQuantTailAxisTilingData, tilingData, tiling);
-    if constexpr (IsFp8Type<TY>()) {
+    if constexpr (scaleAlg == TPL_SCALE_ALG_NVFP4) {
+        if constexpr ((IsSame<TX, half>::value || IsSame<TX, bfloat16_t>::value) && IsSame<TY, fp4x2_e2m1_t>::value) {
+            DynamicMxQuant::DynamicMxQuantTailAxisNvfp4<TX, TY> op;
+            op.Init(x, y, mxScale, &tilingData);
+            op.Process();
+        }
+    } else if constexpr (IsFp8Type<TY>()) {
         DynamicMxQuant::DynamicMxQuantTailAxisFP8<TX, TY, scaleAlg> op;
         op.Init(x, y, mxScale, &tilingData);
         op.Process();

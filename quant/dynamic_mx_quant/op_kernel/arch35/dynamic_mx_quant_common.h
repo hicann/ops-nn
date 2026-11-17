@@ -39,6 +39,7 @@ constexpr int64_t DIM2 = 2;
 constexpr int64_t DIGIT_ZERO = 0;
 constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
+constexpr int64_t DIGIT_FOUR = 4;
 constexpr int64_t DIGIT_FP4_SCALE_FACTOR = 4;
 constexpr int64_t DIGIT_EIGHT = 8;
 constexpr int64_t DIGIT_SIXTY_THREE = 63;
@@ -50,6 +51,7 @@ constexpr int64_t MODE_ONE = 1;
 constexpr int64_t MODE_TWO = 2;
 constexpr int64_t MODE_THREE = 3;
 
+constexpr uint32_t VF_LEN_8 = platform::GetVRegSize() / sizeof(uint8_t);
 constexpr uint32_t VF_LEN_16 = platform::GetVRegSize() / sizeof(uint16_t);
 constexpr uint32_t VF_LEN_16_DOUBLE = VF_LEN_16 * 2;
 constexpr uint32_t VF_LEN_32 = platform::GetVRegSize() / sizeof(uint32_t);

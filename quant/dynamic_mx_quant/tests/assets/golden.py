@@ -154,11 +154,15 @@ def _mx_calculate_share_exp(fp_array, scale_axis, mx_ele_dtype):
     return res
 
 
-def _mx_calculate_share_exp_nv(fp_array, scale_axis, mx_ele_dtype):
-    max_norm = _get_dtype_range(mx_ele_dtype)[1]
+def _mx_calculate_share_exp_nv(
+    fp_array, scale_axis, mx_ele_dtype, max_low_bound=0.0, dst_type_max=0.0
+):
+    max_norm = dst_type_max or _get_dtype_range(mx_ele_dtype)[1]
     fp_abs_max = np.max(np.abs(fp_array), axis=scale_axis, keepdims=True).astype(
         np.float32
     )
+    zero_blocks = fp_abs_max == 0
+    fp_abs_max = np.maximum(fp_abs_max, np.float32(max_low_bound))
     s_fp32 = fp_abs_max / max_norm
     binary_ints = np.array(s_fp32.view(np.uint32))
     exponent_mask = np.uint32(0x7F800000)
@@ -172,7 +176,8 @@ def _mx_calculate_share_exp_nv(fp_array, scale_axis, mx_ele_dtype):
         (condition_1 | condition_2), exponents_int16 + 1, exponents_int16
     )
     res = (exponents_int16 - 127).astype(np.float32)
-    res[fp_abs_max == 0] = -float("inf")
+    # max_low_bound must not turn an originally all-zero block into a nonzero scale.
+    res[zero_blocks] = -float("inf")
     return res
 
 
@@ -276,6 +281,8 @@ def _mx_quantize(
     block_size=32,
     round_mode="rint",
     scale_alg=0,
+    dst_type_max=0.0,
+    max_low_bound=0.0,
 ):
     if not isinstance(fp_array, np.ndarray):
         raise RuntimeError(
@@ -297,13 +304,19 @@ def _mx_quantize(
     fp_array, orig_shape, padded_shape = _mx_reshape_to_blocks(
         fp_array, axis, block_size
     )
-    if scale_alg == 0 or (mx_ele_dtype in ("float4_e2m1", "float4_e1m2")):
+    if scale_alg == 0 or (
+        scale_alg != 2 and mx_ele_dtype in ("float4_e2m1", "float4_e1m2")
+    ):
         share_exp = _mx_calculate_share_exp(
             fp_array, scale_axis=axis + 1, mx_ele_dtype=mx_ele_dtype
         )
     else:
         share_exp = _mx_calculate_share_exp_nv(
-            fp_array, scale_axis=axis + 1, mx_ele_dtype=mx_ele_dtype
+            fp_array,
+            scale_axis=axis + 1,
+            mx_ele_dtype=mx_ele_dtype,
+            max_low_bound=max_low_bound if scale_alg == 1 else 0.0,
+            dst_type_max=dst_type_max if scale_alg == 2 else 0.0,
         )
     scale_emax = 2 ** (8 - 1) - 1  # 8 for E8M0
     share_exp[share_exp > scale_emax] = float("NaN")
@@ -505,6 +518,138 @@ def _dynamic_quant_hifp4(x):
     return output_data
 
 
+# Frozen FP32 reciprocal-of-six coefficient; multiply after maxLowBound.
+_NVFP4_INV_SIX = np.float32(float.fromhex("0x1.555556p-3"))
+
+_NVFP4_FP4 = np.array([0, 0.5, 1, 1.5, 2, 3, 4, 6], dtype=np.float32)
+_NVFP4_FP8 = np.array(
+    [
+        i * 2.0**-9 if i < 8 else (1 + (i & 7) / 8) * 2.0 ** ((i >> 3) - 7)
+        for i in range(127)
+    ],
+    dtype=np.float32,
+)
+
+
+def _nvfp4_encode_nearest(values, table, mode="rint"):
+    """Vectorized enumerated nearest value, ties even/away, or signed floor."""
+    values = np.asarray(values, dtype=np.float32)
+    # Clamp finite magnitudes before selecting adjacent representable values.
+    magnitude = np.minimum(np.abs(values), table[-1])
+    hi = np.minimum(np.searchsorted(table, magnitude, side="left"), len(table) - 1)
+    lo = np.maximum(hi - 1, 0)
+    # FP64 distances avoid loss of tiny source differences; arithmetic is FP32.
+    dl = magnitude.astype(np.float64) - table[lo]
+    dh = table[hi].astype(np.float64) - magnitude
+    if mode == "floor":
+        below = np.maximum(np.searchsorted(table, magnitude, side="right") - 1, 0)
+        below = np.minimum(below, len(table) - 1)
+        codes = np.where(np.signbit(values), hi, below)
+    else:
+        tie_hi = True if mode == "round" else (hi % 2 == 0)
+        codes = np.where((dh < dl) | ((dh == dl) & tie_hi), hi, lo)
+    codes = np.where(np.isinf(magnitude), len(table) - 1, codes).astype(np.uint8)
+    sign_bit = 8 if len(table) == 8 else 128
+    codes |= np.where(np.signbit(values), sign_bit, 0).astype(np.uint8)
+    return np.where(np.isnan(values), 7 if len(table) == 8 else 127, codes).astype(
+        np.uint8
+    )
+
+
+def _nvfp4_reference(
+    x,
+    *,
+    axis=-1,
+    blocksize=16,
+    round_mode="rint",
+    max_low_bound=0.0,
+    promoted_source=False,
+):
+    """Return packed y, raw E4M3 scale, and exact-result mask, all flat.
+
+    promoted_source=True attests that float32 values are an exact widening of
+    an already-rounded FP16/BF16 tensor. It does not enable native FP32 inputs.
+    """
+    x = np.asarray(x)
+    if x.dtype.name not in ("float16", "bfloat16") and not (
+        promoted_source and x.dtype.name == "float32"
+    ):
+        raise ValueError("NVFP4 source must be FP16 or BF16")
+    if not 1 <= x.ndim <= 7 or axis not in (-1, x.ndim - 1):
+        raise ValueError("NVFP4 requires rank 1..7 and the tail axis")
+    if blocksize != 16 or x.shape[-1] % 2:
+        raise ValueError("NVFP4 requires block16 and even K")
+    mode = "rint" if round_mode is None else round_mode
+    if mode not in ("rint", "round", "floor"):
+        raise ValueError("Unsupported rounding mode")
+    # Host validates the FP32 attribute, not just its Python float carrier.
+    with np.errstate(over="ignore", invalid="ignore"):
+        max_low_bound = np.float32(max_low_bound)
+    if not np.isfinite(max_low_bound) or max_low_bound < 0:
+        raise ValueError("Invalid maxLowBound after FP32 conversion")
+    k = x.shape[-1]
+    rows = int(np.prod(x.shape[:-1]))
+    blocks = (k + 15) // 16
+    scales = np.zeros((rows, (blocks + 1) // 2 * 2), np.uint8)
+    if x.size == 0:
+        return np.empty(0, np.uint8), scales.ravel(), np.empty(0, np.uint8)
+    # Native sources: abs/max in FP16/BF16, then widen amax to FP32.
+    # Trusted Promote sources already contain exactly those source values;
+    # abs/max selects the same value after widening, with the NaN rules below.
+    # Never round promoted FP16 values to BF16.
+    source = x.reshape(rows, k)
+    source_padded = np.full((rows, blocks * 16), np.nan, dtype=x.dtype)
+    source_padded[:, :k] = source
+    source_part = source_padded.reshape(rows, blocks, 16)
+    all_nan = np.all(np.isnan(source_part), axis=-1)
+    source_zero = np.array(0, dtype=x.dtype)
+    amax_source = np.max(
+        np.where(np.isnan(source_part), source_zero, np.abs(source_part)), axis=-1
+    )
+    amax = amax_source.astype(np.float32)
+
+    values = source.astype(np.float32)
+    padded = np.full((rows, blocks * 16), np.nan, np.float32)
+    padded[:, :k] = values
+    part = padded.reshape(rows, blocks, 16)
+    with np.errstate(all="ignore"):
+        scale32 = np.multiply(
+            np.maximum(amax, np.float32(max_low_bound)),
+            _NVFP4_INV_SIX,
+            dtype=np.float32,
+        )
+        scale32 = np.minimum(scale32, np.float32(448))
+        scale_codes = _nvfp4_encode_nearest(scale32, _NVFP4_FP8)
+        scale_codes = np.where(amax == 0, 0, scale_codes).astype(np.uint8)
+        scale_codes[all_nan] = 127
+        back = _NVFP4_FP8[np.minimum(scale_codes, 126)]
+        inv = np.divide(np.float32(1), back, dtype=np.float32)
+        inv[amax == 0] = np.float32(0)
+        product = np.multiply(part, inv[..., None], dtype=np.float32)
+        codes = _nvfp4_encode_nearest(product, _NVFP4_FP4, mode).reshape(
+            rows, blocks * 16
+        )[:, :k]
+    exact = ((~np.isfinite(product)) | (product == 0)).reshape(rows, blocks * 16)[:, :k]
+    scales[:, :blocks] = scale_codes
+    packed = codes[:, ::2] | (codes[:, 1::2] << 4)
+    return packed.ravel(), scales.ravel(), exact.astype(np.uint8).ravel()
+
+
+def _nvfp4_ttk_outputs(x, **params):
+    """TTK expects logical dtype arrays; the local ACLNN runner uses raw bytes."""
+    from en_dtypes import float4_e2m1
+    from ml_dtypes import float8_e4m3fn
+
+    packed, scales, _ = _nvfp4_reference(x, **params)
+    codes = np.stack((packed & 15, packed >> 4), axis=-1).ravel()
+    values = _NVFP4_FP4[codes & 7] * np.where(codes & 8, np.float32(-1), np.float32(1))
+    blocks = (x.shape[-1] + 15) // 16
+    scale_shape = (*x.shape[:-1], (blocks + 1) // 2, 2)
+    return values.astype(float4_e2m1).reshape(x.shape), scales.view(
+        float8_e4m3fn
+    ).reshape(scale_shape)
+
+
 def dynamic_mx_quant_golden(
     x,
     *,
@@ -529,6 +674,48 @@ def dynamic_mx_quant_golden(
     Returns:
         Output tensor
     """
+    if scale_alg == 3:
+        if dst_type != 40 or dst_type_max != 0.0:
+            raise ValueError("NVFP4 requires dst_type=40 and dst_type_max=0")
+
+        # Promote widens already-rounded source values exactly. Current TTK
+        # also replaces input_dtypes, so do not guess BF16 from float32.
+        promoted_source = False
+        if x.dtype.name == "float32":
+            if kwargs.get("golden_mode") == "Promote":
+                promoted_source = True
+            else:
+                from ml_dtypes import bfloat16
+
+                input_dtypes = kwargs.get("input_dtypes")
+                if isinstance(input_dtypes, (tuple, list)):
+                    source_dtype = input_dtypes[0] if input_dtypes else None
+                else:
+                    source_dtype = input_dtypes
+                source_dtype = (
+                    str(source_dtype).lower() if source_dtype is not None else ""
+                )
+                if source_dtype in ("bfloat16", "bf16"):
+                    x = x.astype(bfloat16)
+                elif source_dtype in ("float16", "fp16"):
+                    x = x.astype(np.float16)
+                else:
+                    raise ValueError(
+                        "NVFP4 float32 carrier needs FP16/BF16 source metadata "
+                        "or trusted TTK golden_mode=Promote"
+                    )
+
+        params = dict(
+            axis=axis,
+            blocksize=blocksize,
+            round_mode=round_mode,
+            max_low_bound=max_low_bound,
+            promoted_source=promoted_source,
+        )
+        if kwargs.get("raw_output", False):
+            return _nvfp4_reference(x, **params)
+        return _nvfp4_ttk_outputs(x, **params)
+
     output0 = kwargs["output_dtypes"][0]
     output1 = kwargs["output_dtypes"][1]
     block_size = blocksize
@@ -543,5 +730,7 @@ def dynamic_mx_quant_golden(
             block_size=block_size,
             round_mode=round_mode,
             scale_alg=scale_alg,
+            dst_type_max=dst_type_max,
+            max_low_bound=max_low_bound,
         )
         return ret[1], ret[0]

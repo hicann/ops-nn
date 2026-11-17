@@ -25,6 +25,8 @@
 #define TPL_NOT_TAIL_AXIS_QUANT_SMALL_OPTI 10
 #define TPL_NOT_TAIL_AXIS_QUANT_LARGE_OPTI 20
 
+#define TPL_SCALE_ALG_NVFP4 4 // distinct from legacy ALG2_OTHERS (3)
+
 #define TPL_NOT_CARE_SCALE_ALG 10
 #define TPL_SCALE_ALG_0 0
 #define TPL_SCALE_ALG_1 1
@@ -59,7 +61,8 @@
  *               NOT_TAIL_AXIS_QUANT_NORMAL(2)→2,  NOT_TAIL_AXIS_QUANT_OPTI(3)→3,
  *               NOT_TAIL_AXIS_QUANT_SMALL_OPTI(10)→4,  NOT_TAIL_AXIS_QUANT_LARGE_OPTI(20)→5
  *   scaleAlg:   NOT_CARE_SCALE_ALG(10)→0,  SCALE_ALG_0(0)→1,
- *               SCALE_ALG_1(1)→2,  SCALE_ALG_2_SPEC(2)→3,  SCALE_ALG_2_OTHERS(3)→4
+ *               SCALE_ALG_1(1)→2,  SCALE_ALG_2_SPEC(2)→3,  SCALE_ALG_2_OTHERS(3)→4,
+ *               SCALE_ALG_NVFP4(4)→5
  *   roundMode:  NOT_CARE_ROUND_MODE(10)→0,  RINT(4)→1,
  *               ROUND(0)→2,  FLOOR(1)→3
  *   isOddScale: NOT_CARE_SCALE(10)→0,  ODD_SCALE(1)→1,  EVEN_SCALE(2)→2
@@ -68,14 +71,14 @@
  * Tiling Path Dispatch
  * ============================================================
  *
- *   1) isTailAxis && blockSize==32 → CalcTilingKeyForTail (Group 1)
+ *   1) isTailAxis && (blockSize==32 || scaleAlg==3) → CalcTilingKeyForTail (Group 1)
  *   2) IsOptForNotLastQuantAxis rejects isTailAxis early →
  *      only non-tail axis enters optimize/main tiling
  *   3) isOptimizable (non-tail)    → optimize tiling     (Group 3)
  *   4) fallback (non-tail)         → main CalcTilingKey   (Group 2 or 4)
  *
  * ============================================================
- * Group 1 — 尾轴 + blockSize=32  (3 keys)
+ * Group 1 — 尾轴模板（block32 或 NVFP4 block16）  (4 keys)
  * ============================================================
  *   From: CalcTilingKeyForTail in tail_axis_tiling
  *   Params: optiMode=TAIL_AXIS_QUANT_OPTI(idx=1), scaleAlg varies,
@@ -86,6 +89,7 @@
  *   33         0x21    0               1 (SCALE_ALG_0)
  *   65         0x41    1               2 (SCALE_ALG_1)
  *   97         0x61    2               3 (SCALE_ALG_2_SPEC_DST_MAX_VALUE)
+ *   161        0xa1    3 (NVFP4)       5 (SCALE_ALG_NVFP4)
  *
  * ============================================================
  * Group 2 — 尾轴 + blockSize!=32  (2 keys)
@@ -137,7 +141,7 @@
  *   4099       0x1003    3 (NOT_TAIL_OPTI)    1 (ODD_SCALE)
  *
  * ============================================================
- * Total valid tiling keys: 3 + 2 + 24 + 2 = 31
+ * Total valid tiling keys: 4 + 2 + 24 + 2 = 32
  * ============================================================
  */
 namespace DynamicMxQuant {
@@ -147,15 +151,15 @@ ASCENDC_TPL_ARGS_DECL(
                           TPL_NOT_TAIL_AXIS_QUANT_NORMAL, TPL_NOT_TAIL_AXIS_QUANT_OPTI,
                           TPL_NOT_TAIL_AXIS_QUANT_SMALL_OPTI, TPL_NOT_TAIL_AXIS_QUANT_LARGE_OPTI),
     ASCENDC_TPL_UINT_DECL(scaleAlg, 3, ASCENDC_TPL_UI_LIST, TPL_NOT_CARE_SCALE_ALG, TPL_SCALE_ALG_0, TPL_SCALE_ALG_1,
-                          TPL_SCALE_ALG_2_SPEC_DST_MAX_VALUE, TPL_SCALE_ALG_2_OTHERS),
+                          TPL_SCALE_ALG_2_SPEC_DST_MAX_VALUE, TPL_SCALE_ALG_2_OTHERS, TPL_SCALE_ALG_NVFP4),
     ASCENDC_TPL_UINT_DECL(roundMode, 4, ASCENDC_TPL_UI_LIST, TPL_NOT_CARE_ROUND_MODE, TPL_RINT, TPL_ROUND, TPL_FLOOR),
     ASCENDC_TPL_UINT_DECL(isOddScale, 2, ASCENDC_TPL_UI_LIST, TPL_NOT_CARE_SCALE, TPL_ODD_SCALE, TPL_EVEN_SCALE));
 
 ASCENDC_TPL_SEL(
-    // 尾轴量化，blocksize=32量化
+    // 尾轴量化，blocksize=32量化或 NVFP4（blocksize=16）量化
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(optiMode, ASCENDC_TPL_UI_LIST, TPL_TAIL_AXIS_QUANT_OPTI),
                          ASCENDC_TPL_UINT_SEL(scaleAlg, ASCENDC_TPL_UI_LIST, TPL_SCALE_ALG_0, TPL_SCALE_ALG_1,
-                                              TPL_SCALE_ALG_2_SPEC_DST_MAX_VALUE),
+                                              TPL_SCALE_ALG_2_SPEC_DST_MAX_VALUE, TPL_SCALE_ALG_NVFP4),
                          ASCENDC_TPL_UINT_SEL(roundMode, ASCENDC_TPL_UI_LIST, TPL_NOT_CARE_ROUND_MODE),
                          ASCENDC_TPL_UINT_SEL(isOddScale, ASCENDC_TPL_UI_LIST, TPL_NOT_CARE_SCALE),
                          ASCENDC_TPL_TILING_STRUCT_SEL(DynamicMxQuantTailAxisTilingData)),

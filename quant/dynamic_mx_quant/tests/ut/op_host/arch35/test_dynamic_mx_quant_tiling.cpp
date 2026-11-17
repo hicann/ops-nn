@@ -11,6 +11,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <limits>
 #include <gtest/gtest.h>
 #include "log/log.h"
 #include "kernel_run_context_facker.h"
@@ -57,7 +58,9 @@ static string to_string(void* buf, size_t size)
 
 static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape,
                             gert::StorageShape scaleShape, int64_t axis, int64_t blockSize, string expectTilingData,
-                            ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            ge::graphStatus status = ge::GRAPH_SUCCESS, int64_t scaleAlg = 0,
+                            const string& roundMode = "rint", float maxLowBound = 0.0f, float dstTypeMax = 0.0f,
+                            ge::Format inputFormat = ge::FORMAT_ND)
 {
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -113,16 +116,17 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
                       .OutputShapes({&shape, &scaleShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, inDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(0, inDtype, inputFormat, inputFormat)
                       .NodeOutputTd(0, outDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, scaleAlg == 3 ? ge::DT_FLOAT8_E4M3FN : ge::DT_FLOAT8_E8M0, ge::FORMAT_ND,
+                                    ge::FORMAT_ND)
                       .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom(axis)},
-                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>(roundMode)},
                                   {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(outDtype)},
                                   {"blocksize", Ops::NN::AnyValue::CreateFrom(blockSize)},
-                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                  {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(0.0)},
-                                  {"max_low_bound", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
+                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(scaleAlg)},
+                                  {"dst_type_max", Ops::NN::AnyValue::CreateFrom<float>(dstTypeMax)},
+                                  {"max_low_bound", Ops::NN::AnyValue::CreateFrom<float>(maxLowBound)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
@@ -135,7 +139,7 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     // workspaces nullptr return failed
-    EXPECT_EQ(tiling_func(tiling_context), status);
+    ASSERT_EQ(tiling_func(tiling_context), status);
     if (status == ge::GRAPH_FAILED) {
         return;
     }
@@ -144,8 +148,102 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
     auto block_dim = tiling_context->GetBlockDim();
 
     auto raw_tiling_data = tiling_context->GetRawTilingData();
+    if (scaleAlg == 3) {
+        ASSERT_EQ(raw_tiling_data->GetDataSize(), sizeof(DynamicMxQuantTailAxisTilingData));
+        const auto* data = reinterpret_cast<const DynamicMxQuantTailAxisTilingData*>(raw_tiling_data->GetData());
+        EXPECT_EQ(tiling_key, 161);
+        EXPECT_EQ(data->tilingKey, tiling_key);
+        EXPECT_EQ(data->blockSize, 16);
+        EXPECT_EQ(data->colNum, shape.GetStorageShape().GetDim(shape.GetStorageShape().GetDimNum() - 1));
+        EXPECT_EQ(data->roundMode, roundMode == "rint" ? 4 : (roundMode == "round" ? 0 : 1));
+        EXPECT_FLOAT_EQ(data->maxLowBound, maxLowBound);
+        EXPECT_EQ(block_dim, data->usedCoreNum);
+        EXPECT_EQ(data->usedCoreNum, data->rowTileNum * data->colTileNum);
+        EXPECT_GT(data->usedCoreNum, 0);
+        EXPECT_LE(data->usedCoreNum, data->totalCoreNum);
+        EXPECT_GT(data->maxUbBlockNum, 0);
+        EXPECT_EQ((data->rowTileNum - 1) * data->rowNormalBlockNum + data->rowTailLen, data->rowNum);
+        EXPECT_EQ((data->colTileNum - 1) * data->colNormalBlockNum * 256 + data->colTailLen, data->colNum);
+        return;
+    }
     auto tiling_data_result = to_string<int64_t>(raw_tiling_data->GetData(), raw_tiling_data->GetDataSize());
     EXPECT_EQ(tiling_data_result, expectTilingData);
+}
+
+static void ExecuteNVFP4Test(int64_t rows, int64_t cols, ge::DataType dtype = ge::DT_FLOAT16,
+                             const string& roundMode = "rint", float maxLowBound = 0.0f,
+                             ge::graphStatus status = ge::GRAPH_SUCCESS, int64_t axis = -1, int64_t blockSize = 16,
+                             ge::DataType outDtype = ge::DT_FLOAT4_E2M1, float dstTypeMax = 0.0f,
+                             ge::Format inputFormat = ge::FORMAT_ND)
+{
+    gert::StorageShape shape = {{rows, cols}, {rows, cols}};
+    gert::StorageShape scaleShape = {{rows, (cols + 31) / 32, 2}, {rows, (cols + 31) / 32, 2}};
+    ExecuteTestCase(dtype, outDtype, shape, scaleShape, axis, blockSize, "", status, 3, roundMode, maxLowBound,
+                    dstTypeMax, inputFormat);
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_aligned_and_unaligned_tails)
+{
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_BF16}) {
+        for (int64_t cols : {2, 16, 18, 30, 32, 34, 48, 64, 66, 512, 528, 65536, 65538}) {
+            SCOPED_TRACE(cols);
+            ExecuteNVFP4Test(23, cols, dtype);
+        }
+    }
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_single_long_row) { ExecuteNVFP4Test(1, 1048578); }
+
+TEST_F(DynamicMxQuantTiling, NVFP4_rounding_and_lower_bound)
+{
+    for (const string mode : {"rint", "round", "floor"}) {
+        ExecuteNVFP4Test(129, 48, ge::DT_BF16, mode, 6.0f);
+    }
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_non_tail_axis)
+{
+    ExecuteNVFP4Test(32, 64, ge::DT_FLOAT16, "rint", 0, ge::GRAPH_FAILED, 0);
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_odd_tail)
+{
+    ExecuteNVFP4Test(32, 17, ge::DT_FLOAT16, "rint", 0, ge::GRAPH_FAILED);
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_block32)
+{
+    ExecuteNVFP4Test(32, 64, ge::DT_FLOAT16, "rint", 0, ge::GRAPH_FAILED, -1, 32);
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_fp32) { ExecuteNVFP4Test(32, 64, ge::DT_FLOAT, "rint", 0, ge::GRAPH_FAILED); }
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_other_destination_type)
+{
+    ExecuteNVFP4Test(32, 64, ge::DT_FLOAT16, "rint", 0, ge::GRAPH_FAILED, -1, 16, ge::DT_FLOAT4_E1M2);
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_destination_maximum)
+{
+    ExecuteNVFP4Test(32, 64, ge::DT_FLOAT16, "rint", 0, ge::GRAPH_FAILED, -1, 16, ge::DT_FLOAT4_E2M1, 6.0f);
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_invalid_lower_bound)
+{
+    for (float bound : {-1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()}) {
+        ExecuteNVFP4Test(32, 64, ge::DT_FLOAT16, "rint", bound, ge::GRAPH_FAILED);
+    }
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_non_nd_input)
+{
+    ExecuteNVFP4Test(32, 64, ge::DT_FLOAT16, "rint", 0, ge::GRAPH_FAILED, -1, 16, ge::DT_FLOAT4_E2M1, 0.0f,
+                     ge::FORMAT_NCL);
+}
+
+TEST_F(DynamicMxQuantTiling, NVFP4_reject_unsupported_rounding)
+{
+    ExecuteNVFP4Test(32, 64, ge::DT_FLOAT16, "ceil", 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_bfloat16_fp4e2m1_tail_axis)
