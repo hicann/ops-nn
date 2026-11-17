@@ -32,14 +32,13 @@ static const std::initializer_list<DataType> EMPTY_LIST = {};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    switch (socVersion) {
-        case SocVersion::ASCEND910B:
-        case SocVersion::ASCEND910_93:
-        case SocVersion::ASCEND950:
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (npuArch) {
+        case NpuArch::DAV_2201: // Ascend910B / Ascend910_93
+        case NpuArch::DAV_3510: // Ascend950
             return TENSOR_DTYPE_SUPPORT_LIST;
-        case SocVersion::KIRINX90:
-        case SocVersion::KIRIN9030:
+        case NpuArch::DAV_3003: // KirinX90
+        case NpuArch::DAV_3113: // Kirin9030
             return KIRIN_TENSOR_DTYPE_SUPPORT_LIST;
         default:
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "ForeachZeroInplace is not supported on the current platform.");

@@ -196,4 +196,48 @@ INSTANTIATE_TEST_SUITE_P(A2AndA3AndA5, L2ForeachZeroInplaceTest,
                          testing::Values(op::SocVersion::ASCEND910B, op::SocVersion::ASCEND910_93,
                                          op::SocVersion::ASCEND950));
 
+class L2ForeachZeroInplaceArchTest : public testing::TestWithParam<NpuArch> {
+protected:
+    void SetUp() override { archManager_ = std::make_unique<op::NpuArchManager>(GetParam()); }
+
+    void ExpectWorkspaceStatus(const TensorListDesc& x, aclnnStatus expected)
+    {
+        auto ut = OP_API_UT(aclnnForeachZeroInplace, INPUT(x), OUTPUT());
+        uint64_t workspaceSize = 1;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), expected);
+    }
+
+private:
+    std::unique_ptr<op::NpuArchManager> archManager_;
+};
+
+TEST_P(L2ForeachZeroInplaceArchTest, arch_dtypes_follow_soc_mapping)
+{
+    for (auto dtype : {ACL_FLOAT, ACL_FLOAT16, ACL_INT16, ACL_INT32}) {
+        SCOPED_TRACE(static_cast<int>(dtype));
+        auto x = TensorDesc({2, 3}, dtype, ACL_FORMAT_ND);
+        ExpectWorkspaceStatus(TensorListDesc({x}), ACLNN_SUCCESS);
+    }
+    auto bf16 = TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND);
+    bool kirinArch = GetParam() == NpuArch::DAV_3003 || GetParam() == NpuArch::DAV_3113;
+    ExpectWorkspaceStatus(TensorListDesc({bf16}), kirinArch ? ACLNN_ERR_PARAM_INVALID : ACLNN_SUCCESS);
+}
+
+// NpuArch 与 SocVersion 的对应关系（真源：CANN platform_config/*.ini 的 NpuArch 字段）：
+// DAV_2201 -> Ascend910B/Ascend910_93, DAV_3510 -> Ascend950, DAV_3003 -> KirinX90, DAV_3113 -> Kirin9030。
+INSTANTIATE_TEST_SUITE_P(SocArchMapping, L2ForeachZeroInplaceArchTest,
+                         testing::Values(NpuArch::DAV_2201, NpuArch::DAV_3510, NpuArch::DAV_3003, NpuArch::DAV_3113));
+
+TEST(L2ForeachZeroInplaceArchTest, unsupported_arch_is_rejected)
+{
+    for (auto arch : {NpuArch::DAV_1001, NpuArch::DAV_2002, NpuArch::DAV_3002, NpuArch::DAV_3102}) {
+        SCOPED_TRACE(static_cast<uint32_t>(arch));
+        op::NpuArchManager archManager(arch);
+        auto x = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+        auto ut = OP_API_UT(aclnnForeachZeroInplace, INPUT(TensorListDesc({x})), OUTPUT());
+        uint64_t workspaceSize = 1;
+        EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+    }
+}
+
 } // namespace
