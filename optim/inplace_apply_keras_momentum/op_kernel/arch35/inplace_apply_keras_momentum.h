@@ -209,19 +209,22 @@ private:
                                        LocalTensor<float>& grad, LocalTensor<float>& varOut,
                                        LocalTensor<float>& accumOut)
     {
-        // accum_new = accum * momentum - grad * lr = Fma(accum, mom, -grad*lr)
-        Muls(grad, grad, -lrValue_, n);            // grad(temp) = -(grad * lr)
-        Fma(accumOut, accum, momTensor_, grad, n); // accumOut = accum * mom + (-grad*lr)
+        // 与 F16 路径一致的 TF 分步舍入顺序（Mul -> Mul -> Add）
+        Muls(grad, grad, -lrValue_, n);           // grad = -(grad * lr)
+        Muls(accumOut, accum, momentumValue_, n); // accumOut = round(accum * momentum)
+        Add(accumOut, accumOut, grad, n);         // accumOut = accum*momentum - grad*lr
 
         if (useNesterov_ == 0) {
             // var_new = var + accum_new
             Add(varOut, var, accumOut, n);
         } else {
-            // var_new = (var + mom*accum_new) - grad*lr
-            auto savedGrad = nesterovBuf_.Get<float>();
-            Muls(savedGrad, grad, -1.0f, n);           // savedGrad = grad*lr
-            Fma(varOut, accumOut, momTensor_, var, n); // varOut = accum_new * mom + var
-            Sub(varOut, varOut, savedGrad, n);         // varOut = (var + mom*accum_new) - grad*lr
+            // TF 分组顺序：var + (mom*accum_new - grad*lr)
+            // 先在 TBuf 中算出动量增量，再与 var 相加，避免把 var 融进
+            // 乘加后被大幅值吞掉（抵消场景）。
+            auto increment = nesterovBuf_.Get<float>();
+            Muls(increment, accumOut, momentumValue_, n); // round(accum_new * momentum)
+            Add(increment, increment, grad, n);           // increment - grad*lr (grad = -grad*lr)
+            Add(varOut, var, increment, n);               // varOut = var + increment
         }
     }
 

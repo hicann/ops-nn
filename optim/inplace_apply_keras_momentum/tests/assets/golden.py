@@ -47,31 +47,131 @@ Golden 公式（Keras Momentum 语义，由 TF op 内部实现）:
 """
 
 import numpy as np
-import tensorflow as tf
 
 __golden__ = {
     "kernel": {"inplace_apply_keras_momentum": "inplace_apply_keras_momentum_golden"}
 }
 
-# 本 Golden 内部已按 FP32 计算并显式回 cast 到原 dtype；若使用会触发 TTK
-# Promote 的判据（mixed/mix_tolerance），TTK 会在调用前把 FP16/BF16 输入和
-# 输出 dtype 都升为 FP32，导致本文件按输入 dtype 判断饱和/回 cast 的分支失效。
-# 因此这里声明不触发 Promote 的统计相对误差判据，保留原始 dtype 语义。
+# 浮点算子按对齐要求使用 cross_check（三方交叉校验）；tf 为声明竞品，
+# torch 作为 GPU 端无 TF 时的可用兜底。cross_check 会触发 TTK Promote，
+# 此时 golden 输入/输出统一升为 FP32 计算。
 __spec__ = {"inplace_apply_keras_momentum": "InplaceApplyKerasMomentumTestSpec"}
 
 
 class InplaceApplyKerasMomentumTestSpec:
     """InplaceApplyKerasMomentum 的 Kernel 精度判据声明。"""
 
+    class ThirdPartyImpl:
+        """三方标杆：tf.raw_ops.ResourceApplyKerasMomentum（原生 dtype 口径）。"""
+
+        def __init__(self, *, use_nesterov=False, use_locking=False, **kwargs):
+            del kwargs
+            self.use_nesterov = bool(use_nesterov)
+            self.use_locking = bool(use_locking)
+
+        def __call__(self, var, accum, lr, grad, momentum, **kwargs):
+            del kwargs
+            import tensorflow as tf
+
+            def to_tf(value):
+                if isinstance(value, tf.Tensor):
+                    return value
+                arr = np.asarray(value)
+                if arr.dtype.kind == "V" and arr.dtype.itemsize == 2:
+                    return tf.constant(_to_bridge_numpy(arr), dtype=tf.float32)
+                return tf.convert_to_tensor(arr)
+
+            var_t = to_tf(var)
+            dtype = var_t.dtype
+            var_v = tf.Variable(var_t)
+            accum_v = tf.Variable(tf.cast(to_tf(accum), dtype))
+            lr_t = tf.reshape(tf.cast(to_tf(np.asarray(lr).reshape(())), dtype), ())
+            grad_t = tf.cast(to_tf(grad), dtype)
+            mom_t = tf.reshape(
+                tf.cast(to_tf(np.asarray(momentum).reshape(())), dtype), ()
+            )
+            tf.raw_ops.ResourceApplyKerasMomentum(
+                var=var_v.handle,
+                accum=accum_v.handle,
+                lr=lr_t,
+                grad=grad_t,
+                momentum=mom_t,
+                use_locking=self.use_locking,
+                use_nesterov=self.use_nesterov,
+            )
+            return [var_v.read_value(), accum_v.read_value()]
+
+    class TorchThirdPartyImpl:
+        """torch 三方兜底（GPU 端仅 torch 可用时）：FP32 中间精度 + FMA 口径。"""
+
+        def __init__(self, *, use_nesterov=False, use_locking=False, **kwargs):
+            del kwargs
+            self.use_nesterov = bool(use_nesterov)
+            self.use_locking = bool(use_locking)
+
+        def __call__(self, var, accum, lr, grad, momentum, **kwargs):
+            del kwargs
+            import torch
+
+            def as_tensor(value):
+                if isinstance(value, torch.Tensor):
+                    return value
+                arr = np.asarray(value)
+                if arr.dtype.kind == "V" and arr.dtype.itemsize == 2:
+                    return torch.from_numpy(_to_bridge_numpy(arr))
+                try:
+                    return torch.as_tensor(arr)
+                except (TypeError, RuntimeError):
+                    return torch.from_numpy(_to_bridge_numpy(arr))
+
+            var_t = as_tensor(var)
+            out_dtype = var_t.dtype
+            compute_dtype = torch.float32
+            var_c = var_t.to(compute_dtype)
+            accum_c = as_tensor(accum).to(compute_dtype)
+            grad_c = as_tensor(grad).to(compute_dtype)
+            lr_c = as_tensor(lr).reshape(-1)[0].to(compute_dtype)
+            mom_c = as_tensor(momentum).reshape(-1)[0].to(compute_dtype)
+
+            # grad_lr = round(grad * lr)；accum_new / Nesterov 增量按 GPU 常见
+            # FMA 口径（乘积与加减法单次舍入）求值。
+            grad_lr = (grad_c * lr_c).to(compute_dtype)
+            accum_new = (
+                accum_c.to(torch.float64) * mom_c.to(torch.float64)
+                - grad_lr.to(torch.float64)
+            ).to(compute_dtype)
+            if self.use_nesterov:
+                # TensorFlow 口径：var + (accum_new * momentum - grad * lr)
+                increment = (
+                    accum_new.to(torch.float64) * mom_c.to(torch.float64)
+                    - grad_lr.to(torch.float64)
+                ).to(compute_dtype)
+                var_new = var_c + increment
+            else:
+                var_new = var_c + accum_new
+
+            var_new = var_new.to(out_dtype)
+            accum_new = accum_new.to(out_dtype)
+            if out_dtype == torch.float16:
+                # 与 kernel/golden 的 FP16 饱和语义对齐，避免竞品溢出为 Inf
+                fp16_max = 65504.0
+                var_new = torch.clamp(var_new, -fp16_max, fp16_max)
+                accum_new = torch.clamp(accum_new, -fp16_max, fp16_max)
+            return [var_new, accum_new]
+
+    third_party = {"tf": ThirdPartyImpl, "torch": TorchThirdPartyImpl}
+
     tolerance = {
-        "float16": {"standard": "stat_rel_err"},
-        "bfloat16": {"standard": "stat_rel_err"},
-        "float32": {"standard": "stat_rel_err"},
+        "float16": {"standard": "cross_check", "level": "L1"},
+        "bfloat16": {"standard": "cross_check", "level": "L1"},
+        "float32": {"standard": "cross_check", "level": "L1"},
     }
 
 
 def _resolve_tf_dtype(np_arr):
     """从 numpy 数组推断 TF dtype，处理 BF16-as-void。"""
+    import tensorflow as tf
+
     arr = np.asarray(np_arr)
     dt_str = str(arr.dtype)
     if "bfloat16" in dt_str:
@@ -117,6 +217,8 @@ def inplace_apply_keras_momentum_golden(
     返回:
         (var_out, accum_out): 两个 numpy array，与输入 var/accum 同 shape 同 dtype
     """
+    import tensorflow as tf
+
     tf_dtype = _resolve_tf_dtype(var)
 
     # ttk 传入的 lr/momentum 可能是 shape=[1] 的数组，TF 要求严格标量
