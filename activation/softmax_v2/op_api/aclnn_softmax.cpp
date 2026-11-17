@@ -117,6 +117,7 @@ static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, aclTensor* ou
 aclnnStatus aclnnSoftmaxGetWorkspaceSize(const aclTensor* self, int64_t dim, aclTensor* out, uint64_t* workspaceSize,
                                          aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnSoftmax, DFX_IN(self, dim), DFX_OUT(out));
 
     // 固定写法，参数检查

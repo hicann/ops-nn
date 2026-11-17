@@ -256,6 +256,7 @@ aclnnStatus aclnnSyncBatchNormGatherStatsGetWorkspaceSize(const aclTensor* total
                                                           aclTensor* batchMean, aclTensor* batchInvstd,
                                                           uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnSyncBatchNormGatherStats,
                    DFX_IN(totalSum, totalSquareSum, sampleCount, mean, variance, momentum, eps),
                    DFX_OUT(batchMean, batchInvstd));

@@ -338,6 +338,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     const aclBoolArray* outputMask, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out,
     aclTensor* scale2Out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     OP_LOGD("Enter aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize.");
     L2_DFX_PHASE_1(aclnnAddRmsNormDynamicQuantV2,
                    DFX_IN(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, betaOptional, epsilon, outputMask),

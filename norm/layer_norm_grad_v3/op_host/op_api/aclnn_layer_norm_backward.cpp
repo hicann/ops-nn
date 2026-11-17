@@ -297,6 +297,7 @@ aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
                                                    aclTensor* gradBiasOut, uint64_t* workspaceSize,
                                                    aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnLayerNormBackward,
                    DFX_IN(gradOut, input, normalizedShape, mean, rstd, weightOptional, biasOptional, outputMask),
                    DFX_OUT(gradInputOut, gradWeightOut, gradBiasOut));

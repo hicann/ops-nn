@@ -380,6 +380,7 @@ aclnnStatus aclnnAddLayerNormQuantGetWorkspaceSize(
     bool additionalOutput, bool divMode, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut, aclTensor* outScales1Out,
     aclTensor* outScales2Out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     OP_LOGD("Enter aclnnAddLayerNormQuantGetWorkspaceSize");
 
     L2_DFX_PHASE_1(aclnnAddLayerNormQuant,

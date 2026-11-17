@@ -369,6 +369,7 @@ aclnnStatus aclnnLayerNormWithImplModeGetWorkspaceSize(const aclTensor* input, c
                                                        aclTensor* rstdOutOptional, int32_t implMode,
                                                        uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnLayerNormWithImplMode,
                    DFX_IN(input, normalizedShape, weightOptional, biasOptional, eps, implMode),
                    DFX_OUT(out, meanOutOptional, rstdOutOptional));
@@ -521,6 +522,7 @@ aclnnStatus aclnnLayerNormGetWorkspaceSize(const aclTensor* input, const aclIntA
                                            aclTensor* out, aclTensor* meanOutOptional, aclTensor* rstdOutOptional,
                                            uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     int32_t implMode = HIGH_PRECISION;
     return aclnnLayerNormWithImplModeGetWorkspaceSize(input, normalizedShape, weightOptional, biasOptional, eps, out,
                                                       meanOutOptional, rstdOutOptional, implMode, workspaceSize,

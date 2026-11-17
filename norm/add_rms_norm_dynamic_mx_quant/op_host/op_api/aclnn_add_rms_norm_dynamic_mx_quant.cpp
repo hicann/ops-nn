@@ -158,6 +158,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize(const aclTensor* x1, c
                                                           aclTensor* mxscaleOut, aclTensor* rstdOut,
                                                           uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     OP_LOGD("Enter aclnnAddRmsNormDynamicMxQuantGetWorkspaceSize.");
     L2_DFX_PHASE_1(aclnnAddRmsNormDynamicMxQuant,
                    DFX_IN(x1, x2, gamma, beta, epsilon, scaleAlg, roundMode, dstType, outputRstd),
@@ -184,6 +185,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuantV2GetWorkspaceSize(const aclTensor* x1,
                                                             aclTensor* mxscaleOut, aclTensor* rstdOut,
                                                             uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     OP_LOGD("Enter aclnnAddRmsNormDynamicMxQuantV2GetWorkspaceSize.");
     L2_DFX_PHASE_1(aclnnAddRmsNormDynamicMxQuantV2,
                    DFX_IN(x1, x2, gamma, beta, x3Optional, epsilon, scaleAlg, roundMode, dstType, outputRstd),

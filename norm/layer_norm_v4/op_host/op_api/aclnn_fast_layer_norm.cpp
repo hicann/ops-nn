@@ -388,6 +388,7 @@ aclnnStatus aclnnFastLayerNormGetWorkspaceSize(const aclTensor* input, const acl
                                                aclTensor* rstdOutOptional, uint64_t* workspaceSize,
                                                aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnFastLayerNorm, DFX_IN(input, normalizedShape, weightOptional, biasOptional, eps),
                    DFX_OUT(out, meanOutOptional, rstdOutOptional));
 

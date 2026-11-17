@@ -888,6 +888,7 @@ aclnnStatus aclnnBatchNormBackwardGetWorkspaceSize(const aclTensor* gradOut, con
                                                    aclTensor* gradWeight, aclTensor* gradBias, uint64_t* workspaceSize,
                                                    aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(
         aclnnBatchNormBackward,
         DFX_IN(gradOut, input, weight, runningMean, runningVar, saveMean, saveInvstd, training, eps, outputMask),

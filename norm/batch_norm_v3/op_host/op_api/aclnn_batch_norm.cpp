@@ -298,6 +298,7 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(const aclTensor* input, const aclTens
                                            double momentum, double eps, aclTensor* output, aclTensor* saveMean,
                                            aclTensor* saveInvstd, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnBatchNorm, DFX_IN(input, weight, bias, runningMean, runningVar, training, momentum, eps),
                    DFX_OUT(output, saveMean, saveInvstd));
     // 固定写法，创建OpExecutor

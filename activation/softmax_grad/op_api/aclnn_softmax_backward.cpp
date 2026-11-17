@@ -117,6 +117,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* out
 aclnnStatus aclnnSoftmaxBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* output, int64_t dim,
                                                  aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnSoftmaxBackward, DFX_IN(gradOutput, output, dim), DFX_OUT(out));
 
     // 固定写法，参数检查
