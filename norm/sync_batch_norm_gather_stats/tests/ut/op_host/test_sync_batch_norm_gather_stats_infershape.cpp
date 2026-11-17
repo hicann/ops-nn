@@ -114,6 +114,374 @@ TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infersha
     EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
 }
 
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_5_dynamic_n)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({-1, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({-1}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_6_dynamic_n_reversed)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({-1, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT16));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_7_dynamic_c)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_BF16));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_BF16));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({-1}, ge::DT_BF16));
+    op.UpdateInputDesc("variance", create_desc({-1}, ge::DT_BF16));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_8_unknown_rank)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({-2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({-2}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {-1};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_9_invalid_n)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({3, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_10_invalid_c)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({32}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({32}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_11_unknown_rank_count)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({-2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_12_unknown_rank_variance)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("variance", create_desc({-2}, ge::DT_FLOAT16));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest,
+       SyncBatchNormGatherStats_infershape_case_13_unknown_rank_count_invalid_sum_rank)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64, 1}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({-2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest,
+       SyncBatchNormGatherStats_infershape_case_14_unknown_rank_count_invalid_mean_rank)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({-2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_15_unknown_rank_mean)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_16_unknown_rank_mean_invalid_n)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({3, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_17_unknown_rank_count_invalid_n)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({3, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({-2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_18_unknown_rank_mean_invalid_c)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({32}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_19_unknown_rank_sum)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest,
+       SyncBatchNormGatherStats_infershape_case_20_unknown_rank_sum_invalid_count_n)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({3}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_21_invalid_square_c)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 32}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest,
+       SyncBatchNormGatherStats_infershape_case_22_unknown_rank_sum_invalid_mean_c)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({32}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest,
+       SyncBatchNormGatherStats_infershape_case_23_unknown_rank_mean_and_variance)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({-2}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest,
+       SyncBatchNormGatherStats_infershape_case_24_unknown_rank_sum_invalid_variance_c)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, 64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({32}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest,
+       SyncBatchNormGatherStats_infershape_case_25_unknown_rank_sum_and_square_invalid_mean_variance)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({32}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_26_unknown_dim_c_from_mean)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, -1}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, -1}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({64}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest,
+       SyncBatchNormGatherStats_infershape_case_27_unknown_dim_c_unknown_everywhere)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({2, -1}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({2, -1}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({-1}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({-1}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {-1};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
+TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_infershape_case_28_unknown_rank_c_from_variance)
+{
+    ge::op::SyncBatchNormGatherStats op;
+    op.UpdateInputDesc("total_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("total_square_sum", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("sample_count", create_desc({-2}, ge::DT_INT32));
+    op.UpdateInputDesc("mean", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({64}, ge::DT_FLOAT));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expected_shape = {64};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected_shape);
+    EXPECT_EQ(op.GetOutputDesc(3).GetShape().GetDims(), expected_shape);
+}
+
 TEST_F(SyncBatchNormGatherStatsInferShapeTest, SyncBatchNormGatherStats_InferDtype_case_0)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SyncBatchNormGatherStats"), nullptr);

@@ -15,6 +15,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "op_api/runtime2_util_nn.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 namespace ops {
@@ -31,6 +32,32 @@ static constexpr size_t DIM_LEN = 1;
 static constexpr size_t SYNC_DIM_LEN = 2;
 static constexpr size_t N_IDX = 0;
 static constexpr size_t C_IDX = 1;
+
+static bool IsUnknownDim(int64_t dim) { return dim == ge::UNKNOWN_DIM; }
+
+static bool DimsEqualOrUnknown(int64_t lhs, int64_t rhs)
+{
+    return lhs == rhs || IsUnknownDim(lhs) || IsUnknownDim(rhs);
+}
+
+static bool DimsMismatch(const gert::Shape* lhs, size_t lhs_idx, const gert::Shape* rhs, size_t rhs_idx)
+{
+    if (Ops::Base::IsUnknownRank(*lhs) || Ops::Base::IsUnknownRank(*rhs)) {
+        return false;
+    }
+    if (lhs_idx >= lhs->GetDimNum() || rhs_idx >= rhs->GetDimNum()) {
+        return false;
+    }
+    return !DimsEqualOrUnknown(lhs->GetDim(lhs_idx), rhs->GetDim(rhs_idx));
+}
+
+static int64_t KnownDimOf(const gert::Shape* shape, size_t idx)
+{
+    if (Ops::Base::IsUnknownRank(*shape) || idx >= shape->GetDimNum()) {
+        return ge::UNKNOWN_DIM;
+    }
+    return shape->GetDim(idx);
+}
 
 static ge::graphStatus SyncBatchNormGatherStatsInferShape(gert::InferShapeContext* context)
 {
@@ -65,35 +92,50 @@ static ge::graphStatus SyncBatchNormGatherStatsInferShape(gert::InferShapeContex
     const size_t rn_mean_size = rn_mean_shape->GetDimNum();
     const size_t rn_var_size = rn_var_shape->GetDimNum();
 
-    OP_CHECK_IF(sum_size != SYNC_DIM_LEN || square_sum_size != SYNC_DIM_LEN,
+    OP_CHECK_IF((!Ops::Base::IsUnknownRank(*sum_shape) && sum_size != SYNC_DIM_LEN) ||
+                    (!Ops::Base::IsUnknownRank(*square_sum_shape) && square_sum_size != SYNC_DIM_LEN),
                 OP_LOGE(context->GetNodeName(), "sum_size and square_sum_size should be equal to 2."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(count_size != DIM_LEN || rn_mean_size != DIM_LEN || rn_var_size != DIM_LEN,
+    OP_CHECK_IF((!Ops::Base::IsUnknownRank(*count_shape) && count_size != DIM_LEN) ||
+                    (!Ops::Base::IsUnknownRank(*rn_mean_shape) && rn_mean_size != DIM_LEN) ||
+                    (!Ops::Base::IsUnknownRank(*rn_var_shape) && rn_var_size != DIM_LEN),
                 OP_LOGE(context->GetNodeName(), "count_size, rn_mean_size and rn_var_size should be equal to 1."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF((sum_shape->GetDim(N_IDX) != square_sum_shape->GetDim(N_IDX)) ||
-                    (count_shape->GetDim(N_IDX) != sum_shape->GetDim(N_IDX)),
+    OP_CHECK_IF(DimsMismatch(sum_shape, N_IDX, square_sum_shape, N_IDX) ||
+                    DimsMismatch(count_shape, N_IDX, sum_shape, N_IDX) ||
+                    DimsMismatch(count_shape, N_IDX, square_sum_shape, N_IDX),
                 OP_LOGE(context->GetNodeName(), "N must be same."), return GRAPH_FAILED);
 
-    OP_CHECK_IF((sum_shape->GetDim(C_IDX) != square_sum_shape->GetDim(C_IDX)) ||
-                    (rn_mean_shape->GetDim(N_IDX) != sum_shape->GetDim(C_IDX)) ||
-                    (rn_var_shape->GetDim(N_IDX) != sum_shape->GetDim(C_IDX)),
+    OP_CHECK_IF(DimsMismatch(sum_shape, C_IDX, square_sum_shape, C_IDX) ||
+                    DimsMismatch(rn_mean_shape, N_IDX, sum_shape, C_IDX) ||
+                    DimsMismatch(rn_mean_shape, N_IDX, square_sum_shape, C_IDX) ||
+                    DimsMismatch(rn_var_shape, N_IDX, sum_shape, C_IDX) ||
+                    DimsMismatch(rn_var_shape, N_IDX, square_sum_shape, C_IDX) ||
+                    DimsMismatch(rn_mean_shape, N_IDX, rn_var_shape, N_IDX),
                 OP_LOGE(context->GetNodeName(), "C must be same."), return GRAPH_FAILED);
 
-    bt_mean_shape->SetDimNum(rn_mean_shape->GetDimNum());
-    bt_std_shape->SetDimNum(rn_mean_shape->GetDimNum());
-    up_mean_shape->SetDimNum(rn_mean_shape->GetDimNum());
-    up_var_shape->SetDimNum(rn_mean_shape->GetDimNum());
-
-    // get output shapes
-    for (size_t i = 0; i < rn_mean_shape->GetDimNum(); ++i) {
-        bt_mean_shape->SetDim(i, rn_mean_shape->GetDim(i));
-        bt_std_shape->SetDim(i, rn_mean_shape->GetDim(i));
-        up_mean_shape->SetDim(i, rn_mean_shape->GetDim(i));
-        up_var_shape->SetDim(i, rn_mean_shape->GetDim(i));
+    int64_t channel = KnownDimOf(sum_shape, C_IDX);
+    if (IsUnknownDim(channel)) {
+        channel = KnownDimOf(square_sum_shape, C_IDX);
     }
+    if (IsUnknownDim(channel)) {
+        channel = KnownDimOf(rn_mean_shape, N_IDX);
+    }
+    if (IsUnknownDim(channel)) {
+        channel = KnownDimOf(rn_var_shape, N_IDX);
+    }
+
+    // outputs are 1-D with length equal to the channel axis of the statistics
+    bt_mean_shape->SetDimNum(DIM_LEN);
+    bt_std_shape->SetDimNum(DIM_LEN);
+    up_mean_shape->SetDimNum(DIM_LEN);
+    up_var_shape->SetDimNum(DIM_LEN);
+    bt_mean_shape->SetDim(0, channel);
+    bt_std_shape->SetDim(0, channel);
+    up_mean_shape->SetDim(0, channel);
+    up_var_shape->SetDim(0, channel);
 
     OP_LOGD(context->GetNodeName(), "End to do SyncBatchNormGatherStatsInferShape");
     return ge::GRAPH_SUCCESS;
