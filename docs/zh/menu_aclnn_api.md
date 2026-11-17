@@ -69,6 +69,7 @@
 - [aclnnBucketize](../../index/bucketize_v2/docs/aclnnBucketize.md)
 - [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md)
 - [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md)
+- [aclnnChunkLossBackward](../../loss/chunk_loss_grad/docs/aclnnChunkLossBackward.md)
 - [aclnnClaGateQuant](../../activation/cla_gate_quant/docs/aclnnClaGateQuant.md)
 - [aclnnClaGateBackward](../../activation/cla_gate_backward/docs/aclnnClaGateBackward.md)
 - [aclnnClippedSwiglu](../../activation/clipped_swiglu/docs/aclnnClippedSwiglu.md)
