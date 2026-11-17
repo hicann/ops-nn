@@ -155,7 +155,7 @@ aclnnStatus aclnnLayerNormQuant(
     <tr>
       <td>zeroPointsOptional（aclTensor*）</td>
       <td>输入</td>
-      <td>可选输入。表示被融合的量化计算中的zeroPointsOptional输入。仅在quantMode为0时有效，对应公式中的`zeroPointsOptional`。</td>
+      <td>表示被融合的量化计算中的zeroPointsOptional输入。在当前支持的静态量化模式（quantMode为0）下为必选输入，调用时需传入非空指针。对应公式中的`zeroPointsOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与`scale`保持一致。</li></ul></td>
       <td>INT8</td>
       <td>ND</td>
