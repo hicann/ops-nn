@@ -135,7 +135,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>inputScale（aclScalar*）</td>
       <td>输入</td>
       <td>表示模型输入数据的缩放系数，对应公式中的`inputScale`。</td>
-      <td>-</td>
+      <td>支持0和负值，按上述反量化公式计算。</td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>-</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>outputScale（aclScalar*）</td>
       <td>输入</td>
       <td>表示模型输出数据的缩放系数，对应公式中的`outputScale`。</td>
-      <td>-</td>
+      <td>量化时作为除数，计算公式要求其不为0。支持负值。</td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>-</td>
@@ -195,7 +195,7 @@ aclnnStatus aclnnQuantizedBatchNorm(
       <td>epsilon（float）</td>
       <td>输入</td>
       <td>表示添加到方差中的值，以避免出现除以零的情况。对应公式中的`epsilon`。</td>
-      <td>-</td>
+      <td>计算公式要求每个通道的var + epsilon &gt; 0。满足该条件时，epsilon可以为0或负数。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -312,6 +312,8 @@ aclnnStatus aclnnQuantizedBatchNorm(
 
 - 确定性计算：
   - aclnnQuantizedBatchNorm默认确定性实现。
+
+- outputScale为0或var + epsilon <= 0时，公式涉及除零或实数定义域问题。当前接口仍可能返回成功，数值结果需结合上述公式条件判断。
 
 ## 调用示例
 
