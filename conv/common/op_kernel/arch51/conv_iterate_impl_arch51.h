@@ -128,11 +128,11 @@ __aicore__ inline void Iterate<Intf, ImplType>::InitIterParam(Intf* self, Iterat
     // init co params
     iterParam.nBL1Tail = singleCoreCo % self->ctx.convTilingData->nBL1;
     iterParam.nBL1Tail = iterParam.nBL1Tail == 0 ? self->ctx.convTilingData->nBL1 : iterParam.nBL1Tail;
+    iterParam.nL0Tail = iterParam.nBL1Tail % self->ctx.convTilingData->nL0;
+    iterParam.nL0Tail = iterParam.nL0Tail == 0 ? self->ctx.convTilingData->nL0 : iterParam.nL0Tail;
     if constexpr (Intf::WEIGHT_NZ_FLAG) {
         iterParam.nBL1Tail = AlignB(iterParam.nBL1Tail, BLOCK_L0_N);
     }
-    iterParam.nL0Tail = iterParam.nBL1Tail % self->ctx.convTilingData->nL0;
-    iterParam.nL0Tail = iterParam.nL0Tail == 0 ? self->ctx.convTilingData->nL0 : iterParam.nL0Tail;
     if constexpr (!Intf::hasNL1IterFlag) {
         iterParam.maxNBL1Iter = 0;
         iterParam.ddr2l1LoopN = 1;
