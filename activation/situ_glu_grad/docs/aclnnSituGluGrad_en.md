@@ -211,7 +211,7 @@ aclnnStatus aclnnSituGluGrad(
       <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -257,7 +257,7 @@ aclnnStatus aclnnSituGluGrad(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>gradY, x, out, workspaceSize, or executor is a null pointer.</td>
+      <td>gradY, x, or out is a null pointer.</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
@@ -274,7 +274,7 @@ aclnnStatus aclnnSituGluGrad(
       <td>The number of dimensions of gradY is inconsistent with that of x, or the size of gradY along the dimension specified by dim is not half of that of x.</td>
     </tr>
     <tr>
-      <td>The data type of gradY does not match that of x, or the shape of out is inconsistent with that of x.</td>
+      <td>The data type of gradY does not match that of x.</td>
     </tr>
   </tbody></table>
 
