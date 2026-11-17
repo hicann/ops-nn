@@ -17,7 +17,12 @@
 #ifndef KTH_VALUE_MERGE_MORE_CORE_BASE_H
 #define KTH_VALUE_MERGE_MORE_CORE_BASE_H
 
+#include <cmath>
+#include <cstdint>
+#include <type_traits>
+
 #include "kernel_operator.h"
+#include "op_kernel/math_util.h"
 #include "op_kernel/platform_util.h"
 #include "kth_value_merge_sort_constants.h"
 #include "kth_value_ping_pong_merge_sort.h"
@@ -86,7 +91,7 @@ public:
     uint32_t outputLastDimValue_ = 0;
     uint32_t frontCoreNum_ = 0;
     uint32_t rowGroupIdx_ = 0;
-    uint32_t rowIdx_ = 0;
+    int64_t rowIdx_ = 0;
     uint32_t rowCoreIdx_ = 0;
     uint32_t rowsPerRound_ = 0;
     uint32_t sortLoopTimes_ = 1;
@@ -121,11 +126,14 @@ public:
         if (this->frontCoreNum_ == 0U || this->rowsPerRound_ == 0U || this->sortLoopTimes_ == 0U) {
             return;
         }
+        // Tail-round padding can exceed uint32 even when the real row count fits.
+        int64_t rowIdx = this->rowGroupIdx_;
+        const int64_t rowStride = this->rowsPerRound_;
         for (uint32_t loopIdx = 0; loopIdx < this->sortLoopTimes_; loopIdx++) {
-            this->rowIdx_ = loopIdx * this->rowsPerRound_ + this->rowGroupIdx_;
+            this->rowIdx_ = rowIdx;
             // In multi-round mode, the last round may have fewer rows than rowsPerRound_.
             // Cores assigned to out-of-range rows skip real work but still join SyncAll to avoid deadlock.
-            bool rowActive = static_cast<int64_t>(this->rowIdx_) < this->batchNum_;
+            bool rowActive = this->rowIdx_ < this->batchNum_;
             if (rowActive) {
                 static_cast<Derived*>(this)->PrepareRowWorkspace();
                 static_cast<Derived*>(this)->InitSortBuffers();
@@ -169,6 +177,7 @@ public:
                            this->syncMergeSortMode_ ? 1U : 0U);
             MergeAcrossCores(rowActive);
             this->pipe_->Reset();
+            rowIdx += rowStride;
         }
     }
 

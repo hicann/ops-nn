@@ -22,11 +22,7 @@ __golden__ = {"kernel": {"median": "median_golden"}}
 __input__ = {"kernel": {"median": "median_input"}}
 
 _KERNEL_TOLERANCE = {
-    dtype: {
-        "standard": "stat_rel_err"
-        if dtype in ("float16", "float32", "bfloat16")
-        else "binary_equal"
-    }
+    dtype: {"standard": "binary_equal"}
     for dtype in (
         "float16",
         "float32",

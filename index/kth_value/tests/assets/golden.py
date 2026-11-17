@@ -22,11 +22,7 @@ __golden__ = {"kernel": {"kth_value": "kth_value_golden"}}
 __input__ = {"kernel": {"kth_value": "kth_value_input"}}
 
 _KERNEL_TOLERANCE = {
-    dtype: {
-        "standard": "stat_rel_err"
-        if dtype in ("float16", "float32", "bfloat16")
-        else "binary_equal"
-    }
+    dtype: {"standard": "binary_equal"}
     for dtype in (
         "float16",
         "float32",

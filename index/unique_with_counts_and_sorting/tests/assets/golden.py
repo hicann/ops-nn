@@ -214,11 +214,21 @@ class UniqueKernelSpec:
 
     @staticmethod
     def customize_inputs(x, **kwargs):
-        if kwargs.get("testcase_name") != "unique_values_signed_zero_radix_f32":
+        if not str(kwargs.get("testcase_name", "")).startswith(
+            "unique_values_signed_zero_radix_"
+        ):
             return [x]
-        # Deterministically exercise radix ordering and UC's signed-zero
-        # equivalence. Keep the first zero negative to check its representative.
-        pattern = np.array([-0.0, +0.0, -2.0, 1.0, 1.0], dtype=np.float32)
+        # Keep the mixed-zero multi-core regression. The half-precision
+        # one-core cases use only negative zeros so the expected sign does not
+        # depend on the order of equal keys chosen by Sort.
+        second_zero = (
+            +0.0
+            if kwargs.get("testcase_name") == "unique_values_signed_zero_radix_f32"
+            else -0.0
+        )
+        pattern = np.array(
+            [-0.0, second_zero, -2.0, 1.0, 1.0], dtype=np.asarray(x).dtype
+        )
         return [np.resize(pattern, np.asarray(x).shape)]
 
     @staticmethod
@@ -285,7 +295,9 @@ class UniqueKernelSpec:
                 starts[0] = True
                 starts[1:] = np.not_equal(ordered[1:], ordered[:-1])
                 values = ordered[starts]
-            if kwargs.get("testcase_name") == "unique_values_signed_zero_radix_f32":
+            if str(kwargs.get("testcase_name", "")).startswith(
+                "unique_values_signed_zero_radix_"
+            ):
                 # The radix path restores the sign of the first zero in input
                 # order; CPU torch.unique may choose the other equal zero.
                 zero = flat[np.flatnonzero(flat == 0)[0]]

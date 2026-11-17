@@ -9,19 +9,60 @@
  */
 
 #include "unique_with_counts_and_sorting.h"
-#include "../../unique/op_api/unique_common.h"
+
+#include <cstdint>
+#include <initializer_list>
+#include <limits>
 #include "op_api/aclnn_util.h"
 #include "opdev/tensor_view_utils.h"
-#include "opdev/platform.h"
+#include "opdev/data_type_utils.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/make_op_executor.h"
-#include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
-#include "opdev/shape_utils.h"
 
 using namespace op;
+namespace {
+static const std::initializer_list<op::DataType> VALUES_ONLY_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT64,  op::DataType::DT_INT32,   op::DataType::DT_INT16,  op::DataType::DT_INT8,
+    op::DataType::DT_UINT64, op::DataType::DT_UINT32,  op::DataType::DT_UINT16, op::DataType::DT_UINT8,
+    op::DataType::DT_BF16,   op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
+
+// Input/output prerequisites for the Regbase values-only fast path. Callers must separately reject
+// returnInverse/returnCounts. False selects the existing fallback, not an ACLNN parameter error.
+bool CanUseValuesOnlyAicore(const aclTensor* self, const aclTensor* valueOut)
+{
+    if (!Ops::NN::AclnnUtil::IsRegbase() || self == nullptr || valueOut == nullptr) {
+        return false;
+    }
+    const auto dtype = self->GetDataType();
+    const bool supported = CheckType(dtype, VALUES_ONLY_DTYPE_SUPPORT_LIST);
+    const int64_t elements = self->GetViewShape().GetShapeSize();
+    // Tiling selects 32/64-bit radix counters from N; input dtype does not determine counter width.
+    // Contiguous, zero-offset storage is required: input spans exactly N elements; output needs capacity
+    // for N elements (not just the final unique count), since it is borrowed during sorting.
+    if (!supported || valueOut->GetDataType() != dtype || elements <= 0 || !op::IsContiguous(self) ||
+        !op::IsContiguous(valueOut) || self->GetViewOffset() != 0 || valueOut->GetViewOffset() != 0 ||
+        self->GetStorageShape().GetShapeSize() != elements || valueOut->GetStorageShape().GetShapeSize() < elements) {
+        return false;
+    }
+    auto input = reinterpret_cast<uintptr_t>(self->GetData());
+    auto output = reinterpret_cast<uintptr_t>(valueOut->GetData());
+    const auto elementBytes = op::TypeSize(dtype);
+    if (elementBytes <= 0 ||
+        static_cast<uint64_t>(elements) > std::numeric_limits<uint64_t>::max() / static_cast<uint64_t>(elementBytes)) {
+        return false;
+    }
+    const uint64_t bytes = static_cast<uint64_t>(elements) * elementBytes;
+    // Known addresses must not overlap over the full N-element range. An unresolved address is allowed
+    // for executor-owned intermediates: callers allocate distinct tensors and rely on the executor to
+    // keep simultaneously live input/output storage separate until execution.
+    return input == 0 || output == 0 || (input <= output ? output - input >= bytes : input - output >= bytes);
+}
+
+} // namespace
+
 namespace l0op {
 OP_TYPE_REGISTER(UniqueWithCountsAndSorting);
 
@@ -52,7 +93,7 @@ aclnnStatus UniqueWithCountsAndSorting(const aclTensor* self, bool sorted, bool 
                                        aclOpExecutor* executor)
 {
     L0_DFX(UniqueWithCountsAndSorting, self, sorted, returnInverse, returnCounts, valueOut, inverseOut, countsOut);
-    if (!returnInverse && !returnCounts && UniqueCommon::CanUseUniqueWithCountsAndSortingAicore(self, valueOut)) {
+    if (!returnInverse && !returnCounts && CanUseValuesOnlyAicore(self, valueOut)) {
         return LaunchValuesOnly(self, sorted, valueOut, executor);
     }
     OP_LOGW("Using UniqueWithCountsAndSorting with count out");
@@ -68,7 +109,7 @@ aclnnStatus UniqueWithCountsAndSorting(const aclTensor* self, bool sorted, bool 
                                        aclTensor* inverseOut, aclOpExecutor* executor)
 {
     L0_DFX(UniqueWithCountsAndSorting, self, sorted, returnInverse, valueOut, inverseOut);
-    if (!returnInverse && UniqueCommon::CanUseUniqueWithCountsAndSortingAicore(self, valueOut)) {
+    if (!returnInverse && CanUseValuesOnlyAicore(self, valueOut)) {
         return LaunchValuesOnly(self, sorted, valueOut, executor);
     }
     OP_LOGW("Using UniqueWithCountsAndSorting without count out");
