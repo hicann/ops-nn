@@ -2968,6 +2968,11 @@ bool MatmulV3BaseTiling::IsSupportSingleCoreSplitKAL1FullLoad() const
         OP_LOGI(args_.opName, "Input only supports fp16/bf16, skip ScSplitK+AL1FullLoad template");
         return false;
     }
+    // Check bias dtype
+    if (args_.hasBias && args_.biasType != args_.aType) {
+        OP_LOGI(args_.opName, "Bias dtype differs from x1, skip ScSplitK+AL1FullLoad template");
+        return false;
+    }
 
     bool isNKAligned = (args_.kValue % BLOCK == 0 && args_.nValue % BLOCK == 0);
     if (!isNKAligned) {
