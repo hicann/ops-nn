@@ -98,6 +98,7 @@ static ge::graphStatus InferShape4Where(gert::InferShapeContext* context)
                                                          "the rank of input x must be at most 8"),
                 return ge::GRAPH_FAILED);
 
+    outShape->SetDimNum(2U);
     if (Ops::Base::IsUnknownRank(*inShape)) {
         OP_LOGW("InferShape4Where", "the input shape is [-2], set output shape is [-1, -1]!");
         // input shape: unknown rank

@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <initializer_list>
 #include <string>
+#include "base/err_msg.h"
 #include "experiment/metadef/common/util/error_manager/error_manager.h"
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_range_context.h"
@@ -25,8 +26,19 @@ int GetReportCount() __attribute__((weak));
 
 class WhereUT : public testing::Test {
 protected:
+    // EZ0012 由 third_party/opbase 的格式注册对象提供；单算子 UT 构建时该对象可能因静态库
+    // 未被引用而未链入，导致宏上报被静默丢弃（同 gru_grad !13929 的场景），此处显式注册兜底。
+    static constexpr const char kEz0012ErrorMessage[] = R"json({"error_info_list":[
+        {"errClass":"Operator Errors","errTitle":"Invalid_Argument_Tensor_Shape",
+         "ErrCode":"EZ0012",
+         "ErrMessage":"The dim num of %s in %s is %s. Reason: %s.",
+         "Arglist":"param_name, op_name, incorrect_dim, reason",
+         "suggestion":{"Possible Cause":"N/A","Solution":"Check whether the dim num of the tensor meets the requirement."}}
+    ]})json";
+
     static void ResetErrorReports()
     {
+        (void)error_message::RegisterFormatErrorMessage(kEz0012ErrorMessage, sizeof(kEz0012ErrorMessage) - 1);
         (void)ErrorManager::GetInstance().GetRawErrorMessages();
         if (error_message::ResetCapture != nullptr) {
             error_message::ResetCapture();
