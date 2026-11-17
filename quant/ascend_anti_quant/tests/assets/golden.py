@@ -73,9 +73,18 @@ class AscendAntiQuantTestSpec:
         规则：
         - 以 kwargs['input_dtypes'] 声明的 dtype 为准；
         - 数组自身 dtype 可识别时，必须与声明一致，否则直接报错；
-        - 裸 void/uint8 才允许按声明 dtype 解位模式；无声明时拒绝猜测。
+        - 裸 void/uint8 才允许按声明 dtype 解位模式；无声明时拒绝猜测；
+        - Promote 模式（数组已升档为 float16/32/64）视为已解码数值，直接转换。
         """
         arr = np.asarray(x)
+        # Promote 模式（cross_check / mixed 自动开启）会把量化输入升档为
+        # float32/float64 并同步改写 input_dtypes；此时数组已是解码后的数值，
+        # 不能再按量化位型解释，直接转 float64 即可。
+        try:
+            if np.issubdtype(arr.dtype, np.floating):
+                return arr.astype(np.float64)
+        except TypeError:
+            pass
         declared = AscendAntiQuantTestSpec._canonical_dtype(
             AscendAntiQuantTestSpec._dtype_hint(dtype_hint)
         )

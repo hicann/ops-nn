@@ -38,13 +38,12 @@ class AscendAntiQuant : public OpDef {
 public:
     explicit AscendAntiQuant(const char* name) : OpDef(name)
     {
-        OpAICoreConfig config;
-        config.Input("x")
+        this->Input("x")
             .ParamType(REQUIRED)
             .DataType(INPUT_X_DTYPE)
             .Format(FORMAT_ND_LIST)
             .UnknownShapeFormat(FORMAT_ND_LIST);
-        config.Output("y")
+        this->Output("y")
             .ParamType(REQUIRED)
             .DataType(OUTPUT_Y_DTYPE)
             .Format(FORMAT_ND_LIST)
@@ -54,6 +53,7 @@ public:
         this->Attr("dtype").AttrType(OPTIONAL).Int(ge::DT_FLOAT);
         this->Attr("sqrt_mode").AttrType(OPTIONAL).Bool(false);
 
+        OpAICoreConfig config;
         config.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
