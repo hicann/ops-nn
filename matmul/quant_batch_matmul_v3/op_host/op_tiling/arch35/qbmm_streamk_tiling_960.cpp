@@ -24,6 +24,7 @@
 #include "quant_batch_matmul_v3_checker_arch_9201.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 #include "base_block_calculator.h"
+#include "../quant_batch_matmul_v3_compile_info.h"
 #include "l1_tiling_data_calculator.h"
 #include "tiling_cost_evaluator.h"
 
@@ -165,7 +166,7 @@ ge::graphStatus QBMMV3StreamKTiling960::DoOpTiling()
 
 bool QBMMV3StreamKTiling960::CalcBasicBlockV2()
 {
-    BaseBlockCalculator baseBlockSk(inputParams_, compileInfo_, 1UL, context_->GetPlatformInfo());
+    BaseBlockCalculator baseBlockSk(inputParams_, compileInfo_, 1UL);
     bool isValid = baseBlockSk.Compute(BaseBlockMode::STREAMK);
     if (!isValid) {
         return false;
@@ -197,7 +198,7 @@ bool QBMMV3StreamKTiling960::IsProfilingBetter()
         return false;
     }
 
-    BaseBlockCalculator baseBlockDatabalance(inputParams_, compileInfo_, 1UL, context_->GetPlatformInfo());
+    BaseBlockCalculator baseBlockDatabalance(inputParams_, compileInfo_, 1UL);
     bool isLoadBalanceValid = baseBlockDatabalance.Compute(BaseBlockMode::LOAD_BALANCE);
     if (!isLoadBalanceValid) {
         return true;

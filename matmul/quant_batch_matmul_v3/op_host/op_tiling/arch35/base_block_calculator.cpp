@@ -86,11 +86,10 @@ uint64_t GetStreamKSingleCoreKAlignSize(ge::DataType inputDtype)
 
 BaseBlockCalculator::BaseBlockCalculator(const QuantBatchMatmulInfo& inputParams,
                                          const QuantBatchMatmulV3CompileInfo& compileInfo, uint64_t batchCoreCnt,
-                                         fe::PlatFormInfos* platformInfo, bool enableMixUbCheck)
+                                         bool enableMixUbCheck)
     : inputParams_(inputParams),
       compileInfo_(compileInfo),
       batchCoreCnt_(batchCoreCnt),
-      platformInfo_(platformInfo),
       enableMixUbCheck_(enableMixUbCheck)
 {}
 

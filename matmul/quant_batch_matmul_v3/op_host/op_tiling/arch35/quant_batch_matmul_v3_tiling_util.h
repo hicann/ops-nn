@@ -272,7 +272,14 @@ inline bool IsHif4BasicApiCapable(const QuantBatchMatmulInfo& inputParams)
     return inputParams.isHif4PerGroup && inputParams.bFormat == ge::FORMAT_ND;
 }
 
+constexpr uint64_t GHZ_TO_MHZ = 1000UL;
+
 bool IsMxL0CPingpong(const QuantBatchMatmulInfo& inputParams);
+
+// 从平台信息解析 SoC 规格（带宽/频率/核数）并写入 outInfo；platformInfo 为空或字段缺失时
+// 由 outInfo 保持零值，调用方按需校验。TilingParse 与 InitCompileInfo 用它填充 compileInfo.socSpec，
+// 使 SoC 规格随 compileInfo 缓存传递，消费方无需再透传 platformInfo。
+void FillSocSpecifyParamsFromPlatform(fe::PlatFormInfos* platformInfo, SocSpecifyParams& outInfo);
 
 inline bool IsPerblockBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {

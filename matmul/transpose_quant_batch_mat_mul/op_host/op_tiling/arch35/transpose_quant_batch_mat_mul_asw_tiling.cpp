@@ -214,13 +214,15 @@ bool TransposeQuantBatchMatMulAswTiling::BuildQbmmCompileInfo(QuantBatchMatmulV3
     qbmmCompileInfo.aivNum = ascendcPlatform.GetCoreNumAiv();
     qbmmCompileInfo.npuArch = compileInfo_.npuArch;
     qbmmCompileInfo.socVersion = compileInfo_.socVersion;
+    // 手工构造的 compileInfo 不经过 TilingParse，需在此填充 SoC 规格缓存，供负载均衡基块搜索使用。
+    FillSocSpecifyParamsFromPlatform(platformInfo, qbmmCompileInfo.socSpec);
     return true;
 }
 
 void TransposeQuantBatchMatMulAswTiling::ApplyQbmmLoadBalanceBaseBlock(
     const QuantBatchMatmulInfo& qbmmParams, const QuantBatchMatmulV3CompileInfo& qbmmCompileInfo)
 {
-    BaseBlockCalculator calculator(qbmmParams, qbmmCompileInfo, batchInfo_->batchC, context_->GetPlatformInfo());
+    BaseBlockCalculator calculator(qbmmParams, qbmmCompileInfo, batchInfo_->batchC);
     if (!calculator.Compute(BaseBlockMode::LOAD_BALANCE)) {
         OP_LOGD(args_.opName, "qbmm load balance base block search failed, keep default base block.");
         return;

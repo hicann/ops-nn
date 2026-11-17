@@ -17,11 +17,14 @@
 
 #include <cstdint>
 #include <string>
-#include "base_block_calculator.h"
+#include "../quant_batch_matmul_v3_compile_info.h"
 #include "platform/platform_infos_def.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 
 namespace optiling {
+
+struct QuantBatchMatmulInfo;
+
 struct AicTimeCost {
     double mmadTotalTime;
     double mmadLastRoundMaxtime;

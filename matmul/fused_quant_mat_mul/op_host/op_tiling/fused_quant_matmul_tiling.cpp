@@ -27,6 +27,7 @@
 #include "./arch35/fused_quant_matmul_swiglu_tiling.h"
 #include "fused_quant_matmul_unary_tiling.h"
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/platform_util.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 
 using AscendC::BLOCK_CUBE;
@@ -77,6 +78,7 @@ ge::graphStatus TilingParseForFusedQuantMatMul(gert::TilingParseContext* context
     compileInfoPtr->supportMmadS8S4 = (platformRes.find("s8s4") != std::string::npos);
     compileInfoPtr->npuArch = compileInfoPtr->supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch();
     platformInfoPtr->GetPlatformRes("version", "SoC_version", compileInfoPtr->socVersionStr);
+    FillSocSpecifyParamsFromPlatform(platformInfoPtr, compileInfoPtr->socSpec);
     TilingPrepareForOpCache(context);
     return ge::GRAPH_SUCCESS;
 }

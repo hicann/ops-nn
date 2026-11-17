@@ -105,8 +105,7 @@ bool AdaptiveSlidingWindowMixTiling::CalcBasicBlock()
     BaseBlockMode mode = (compileInfo_.npuArch == Ops::Base::DAV_9201 || compileInfo_.npuArch == Ops::Base::DAV_9202) ?
                              BaseBlockMode::LOAD_BALANCE :
                              BaseBlockMode::DEFAULT;
-    // LOAD_BALANCE 搜索按 Mix 的 UB 布局（FP32 累加/scale/bias/ping-pong 输出）约束基块。
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), context_->GetPlatformInfo(), true);
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), true);
     if (!calculator.Compute(mode)) {
         return false;
     }

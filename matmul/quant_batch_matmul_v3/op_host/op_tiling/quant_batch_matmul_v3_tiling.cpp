@@ -19,6 +19,7 @@
 #include <numeric>
 
 #include "arch35/quant_batch_matmul_v3_tiling_strategy.h"
+#include "arch35/quant_batch_matmul_v3_tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "graph/utils/type_utils.h"
@@ -1602,6 +1603,7 @@ static ge::graphStatus TilingParseForQuantBatchMatmulV3(gert::TilingParseContext
     compileInfoPtr->supportMmadS8S4 = (platformRes.find("s8s4") != std::string::npos);
     compileInfoPtr->npuArch = compileInfoPtr->supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch();
     platformInfoPtr->GetPlatformRes("version", "SoC_version", compileInfoPtr->socVersionStr);
+    FillSocSpecifyParamsFromPlatform(platformInfoPtr, compileInfoPtr->socSpec);
     TilingPrepareForOpCache(context);
 
     return ge::GRAPH_SUCCESS;

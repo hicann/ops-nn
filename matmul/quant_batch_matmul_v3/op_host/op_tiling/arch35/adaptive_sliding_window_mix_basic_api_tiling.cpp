@@ -268,7 +268,9 @@ void AdaptiveSlidingWindowMixBasicAPITiling::OptimizeBaseBlock()
 
 bool AdaptiveSlidingWindowMixBasicAPITiling::CalcBasicBlock()
 {
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), context_->GetPlatformInfo(), true);
+    // LOAD_BALANCE 搜索按 Mix 的 UB 布局（FP32 累加/scale/bias/ping-pong 输出）约束基块；
+    // socSpec 随 compileInfo 缓存传递，构造不再透传 platformInfo。
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), true);
     BaseBlockMode mode = (compileInfo_.npuArch == NpuArch::DAV_9201) ? BaseBlockMode::LOAD_BALANCE :
                                                                        BaseBlockMode::DEFAULT;
     if (!calculator.Compute(mode)) {

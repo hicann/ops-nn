@@ -366,7 +366,9 @@ const void* AdaptiveSlidingWindowWeightQuantMxCubeTiling::GetTilingData() const 
 
 bool AdaptiveSlidingWindowWeightQuantMxCubeTiling::CalcBasicBlock()
 {
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), context_->GetPlatformInfo());
+    // socSpec 随 compileInfo 缓存传递（SetPlatformInfoForTiling 兜底填充），构造不再透传
+    // platformInfo；本模板 UB 布局与 Mix 不同，enableMixUbCheck 保持默认 false。
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
     if (!calculator.Compute(BaseBlockMode::LOAD_BALANCE)) {
         return false;
     }

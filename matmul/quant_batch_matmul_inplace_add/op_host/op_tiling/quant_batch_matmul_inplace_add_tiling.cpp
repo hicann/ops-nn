@@ -24,6 +24,7 @@
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/platform_util.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_tiling_base.h"
+#include "../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
 
 using Ops::NN::Optiling::TilingRegistryArch;
 
@@ -93,6 +94,7 @@ static ge::graphStatus TilingPrepareForQuantBatchMatmulInplaceAdd(gert::TilingPa
     compileInfoPtr->supportMmadS8S4 = false;
     compileInfoPtr->npuArch = ascendcPlatform.GetCurNpuArch();
     platformInfoPtr->GetPlatformRes("version", "SoC_version", compileInfoPtr->socVersionStr);
+    FillSocSpecifyParamsFromPlatform(platformInfoPtr, compileInfoPtr->socSpec);
 
     return ge::GRAPH_SUCCESS;
 }

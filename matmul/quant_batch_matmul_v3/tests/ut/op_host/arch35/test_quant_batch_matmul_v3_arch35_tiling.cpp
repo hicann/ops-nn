@@ -23,6 +23,9 @@
 #include "../../../../op_host/mx_scale_nz_shape.h"
 #include "../../../../op_host/op_tiling/quant_batch_matmul_v3_tiling_cache_key.h"
 #include "tiling_context_faker.h"
+// master 的 OnlyNewMixRoutesUseCommonBaseBlockForLongK 用例直接构造 fe::PlatFormInfos；
+// SocSpec 下沉后 base_block_calculator.h 不再传递包含该头，UT 自行补齐。
+#include "platform/platform_infos_def.h"
 
 static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParamsDav3510 = GetParams("Dav3510");
 

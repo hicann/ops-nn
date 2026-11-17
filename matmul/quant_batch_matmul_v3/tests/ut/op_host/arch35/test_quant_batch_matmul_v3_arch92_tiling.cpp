@@ -30,6 +30,7 @@
 #include "../../../../op_host/op_tiling/arch35/tiling_cost_evaluator.h"
 #include "../../../../op_host/op_tiling/arch35/l1_tiling_data_calculator.h"
 #include "../../../../op_host/op_tiling/arch35/adaptive_sliding_window_perblock_basic_api_tiling.h"
+#include "../../../../op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
 #undef protected
 #undef private
 
@@ -103,7 +104,8 @@ TEST_F(QuantBatchMatmulV3LoadBalance, MissingPlatformDoesNotOverwriteSpecs)
 TEST_F(QuantBatchMatmulV3LoadBalance, ReadsBandwidthAndComputePowerInExpectedUnits)
 {
     SetSpecs("24", "40", "120", "2000");
-    BaseBlockCalculator calculator(params, info, 1, &platform);
+    FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+    BaseBlockCalculator calculator(params, info, 1);
     SocSpecifyParams specs;
     ASSERT_TRUE(calculator.GetSocSpecAdjustBalanceInfo(specs));
     EXPECT_DOUBLE_EQ(specs.freq, 2.0);
@@ -118,7 +120,8 @@ TEST_F(QuantBatchMatmulV3LoadBalance, InvalidPlatformValuesUsePositiveDefaults)
     for (const std::string value : {"", "0", "-1", "12MHz", "bad", "999999999999999999999999"}) {
         SCOPED_TRACE(value);
         SetSpecs(value, value, value, value);
-        BaseBlockCalculator calculator(params, info, 1, &platform);
+        FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+        BaseBlockCalculator calculator(params, info, 1);
         SocSpecifyParams specs;
         ASSERT_TRUE(calculator.GetSocSpecAdjustBalanceInfo(specs));
         EXPECT_DOUBLE_EQ(specs.freq, 1.65);
@@ -143,7 +146,8 @@ TEST_F(QuantBatchMatmulV3LoadBalance, Only9202FourBitGroupsDoubleMmadN)
             params.isHif4PerGroup = mode == 2;
             params.aDtype = params.bDtype = inputDtypes[mode];
             params.perTokenScaleDtype = params.scaleDtype = scaleDtypes[mode];
-            BaseBlockCalculator calculator(params, info, 1, &platform);
+            FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+            BaseBlockCalculator calculator(params, info, 1);
             SocSpecifyParams specs;
             ASSERT_TRUE(calculator.GetSocSpecAdjustBalanceInfo(specs));
             const bool doubled = arch == NpuArch::DAV_9202 && mode != 0;
@@ -187,7 +191,8 @@ TEST_F(QuantBatchMatmulV3LoadBalance, PertokenWithoutSmallShapeExpansion)
 TEST_F(QuantBatchMatmulV3LoadBalance, ManyRoundsKeepPlainTile)
 {
     params.mSize = params.nSize = 8192;
-    BaseBlockCalculator calculator(params, info, 1, &platform);
+    FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+    BaseBlockCalculator calculator(params, info, 1);
     const auto plain = calculator.ComputeBaseBlockPlain();
     ASSERT_TRUE(calculator.Compute(BaseBlockMode::LOAD_BALANCE));
     EXPECT_EQ(calculator.GetOutput().baseM, plain.baseM);
@@ -197,7 +202,8 @@ TEST_F(QuantBatchMatmulV3LoadBalance, ManyRoundsKeepPlainTile)
 
 TEST_F(QuantBatchMatmulV3LoadBalance, RejectsUnsupportedArchitectureAndEmptySearchBounds)
 {
-    BaseBlockCalculator calculator(params, info, 1, &platform);
+    FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+    BaseBlockCalculator calculator(params, info, 1);
     info.npuArch = NpuArch::DAV_3510;
     EXPECT_FALSE(calculator.Compute(BaseBlockMode::LOAD_BALANCE));
     info.npuArch = NpuArch::DAV_9201;
@@ -219,7 +225,8 @@ TEST_F(QuantBatchMatmulV3LoadBalance, SearchPreservesAlignmentAndL0CForBothArchi
                 info.npuArch = arch;
                 params.transA = transA;
                 params.transB = transB;
-                BaseBlockCalculator calculator(params, info, 1, &platform);
+                FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+                BaseBlockCalculator calculator(params, info, 1);
                 ASSERT_TRUE(calculator.Compute(BaseBlockMode::LOAD_BALANCE));
                 const auto& tile = calculator.GetOutput();
                 EXPECT_GT(tile.baseM, 0);
@@ -539,7 +546,8 @@ class QuantBatchMatmulV3CostEvaluator : public QuantBatchMatmulV3LoadBalance {};
 
 TEST_F(QuantBatchMatmulV3CostEvaluator, BandwidthScalesWithCoresAndPenalizesOuterKMisalignment)
 {
-    BaseBlockCalculator calculator(params, info, 1, &platform);
+    FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+    BaseBlockCalculator calculator(params, info, 1);
     SocSpecifyParams specs;
     ASSERT_TRUE(calculator.GetSocSpecAdjustBalanceInfo(specs));
     TilingCostEvaluator evaluator(specs);
@@ -558,7 +566,8 @@ TEST_F(QuantBatchMatmulV3CostEvaluator, BandwidthScalesWithCoresAndPenalizesOute
 
 TEST_F(QuantBatchMatmulV3CostEvaluator, Hif4ScaleTrafficIncreasesCostWithoutChangingMmadWork)
 {
-    BaseBlockCalculator calculator(params, info, 1, &platform);
+    FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+    BaseBlockCalculator calculator(params, info, 1);
     SocSpecifyParams specs;
     ASSERT_TRUE(calculator.GetSocSpecAdjustBalanceInfo(specs));
     TilingCostEvaluator evaluator(specs);
@@ -600,7 +609,8 @@ TEST_F(QuantBatchMatmulV3CostEvaluator, Hif4ScaleTrafficIncreasesCostWithoutChan
 
 TEST_F(QuantBatchMatmulV3CostEvaluator, StreamKSeparatesDataParallelWorkAndReductionCost)
 {
-    BaseBlockCalculator calculator(params, info, 1, &platform);
+    FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+    BaseBlockCalculator calculator(params, info, 1);
     SocSpecifyParams specs;
     ASSERT_TRUE(calculator.GetSocSpecAdjustBalanceInfo(specs));
     TilingCostEvaluator evaluator(specs);

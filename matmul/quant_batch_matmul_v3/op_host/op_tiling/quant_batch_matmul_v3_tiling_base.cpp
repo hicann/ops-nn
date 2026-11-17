@@ -962,6 +962,7 @@ void QuantBatchMatmulV3TilingBase::InitCompileInfo()
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfo_.l0cSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_A, compileInfo_.l0aSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, compileInfo_.l0bSize);
+    FillSocSpecifyParamsFromPlatform(platformInfoPtr, compileInfo_.socSpec);
 
     std::string platformRes;
     platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_fix_pipe_l0c2out", platformRes);
@@ -985,6 +986,11 @@ bool QuantBatchMatmulV3TilingBase::SetPlatformInfoForTiling()
             CUBE_INNER_ERR_REPORT(inputParams_.opName, "quant_batch_matmul_v3_tiling GetCompileInfo is null"),
             return false);
         compileInfo_ = *mmCompileInfo;
+        // 复用 v3 tiling 类但使用自定义 TilingParse 的算子（inplace_add/fused_quant_mat_mul 等）不填
+        // socSpec，在此统一兜底填充，免除逐算子适配；TilingParse/InitCompileInfo 已填则跳过。
+        if (compileInfo_.socSpec.freq <= 0.0) {
+            FillSocSpecifyParamsFromPlatform(context_->GetPlatformInfo(), compileInfo_.socSpec);
+        }
     }
     OP_LOGE_IF(compileInfo_.aicNum <= 0, false, inputParams_.opName, "coreNum <= 0");
     auto platformInfoPtr = context_->GetPlatformInfo();

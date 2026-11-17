@@ -17,13 +17,12 @@
 #include <cstdint>
 
 #include "graph/types.h"
-#include "platform/platform_infos_def.h"
-#include "quant_batch_matmul_v3_tiling_util.h"
 
 namespace optiling {
 
 struct QuantBatchMatmulInfo;
 struct QuantBatchMatmulV3CompileInfo;
+struct SocSpecifyParams;
 
 struct BaseBlockRes {
     uint64_t baseM = 0UL;
@@ -39,28 +38,6 @@ struct BaseBlockRes {
 
 enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4, STREAMK, CUBE_BASIC, LOAD_BALANCE };
 
-constexpr uint64_t GHZ_TO_MHZ = 1000UL;
-
-// DAV_9201/DAV_9202 负载均衡基块搜索所需的SoC规格参数（缺失项用默认值）
-struct SocSpecifyParams {
-    double hbmBw = 0;                  // HBM带宽 TB/s
-    double l2Bw = 0;                   // L2带宽  TB/s
-    double freq = 0;                   // GHz
-    double singleCoreComputePower = 0; // 单核算力
-    double l0Bw = 256;                 // B/c
-    double l0BwB4KoutterAxis = 128;    // B/c
-    double l0mxBw = 64;                // B/c
-    uint64_t mmadFracM = 16;           // 元素数
-    uint64_t mmadFracN = 16;           // 元素数
-    uint64_t mmadFracK = 32;           // 32B
-    void CalSingleCoreComputePower(ge::DataType aDtype)
-    {
-        // Keep mmadFracK in bytes for cost estimation; compute power uses logical K elements.
-        const uint64_t logicalMmadK = GetShapeWithDataType(mmadFracK, aDtype);
-        singleCoreComputePower = mmadFracM * mmadFracN * logicalMmadK * freq / 1024; // 1024: KB to B
-    }
-};
-
 uint64_t GetStreamKSingleCoreKAlignSize(ge::DataType inputDtype);
 
 class BaseBlockCalculator {
@@ -69,13 +46,13 @@ public:
     // FP32 累加/scale/bias/ping-pong 输出布局估算）。仅 Mix 模板传 true；其他模板（CubeBasic/MX/StreamK 等）
     // UB 布局不同，须传 false，以免错误排除候选块。该开关同时门控初始基块检查与候选过滤。
     BaseBlockCalculator(const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo,
-                        uint64_t batchCoreCnt = 1UL, fe::PlatFormInfos* platformInfo = nullptr,
-                        bool enableMixUbCheck = false);
+                        uint64_t batchCoreCnt = 1UL, bool enableMixUbCheck = false);
     virtual ~BaseBlockCalculator() = default;
 
     bool Compute(BaseBlockMode mode);
     const BaseBlockRes& GetOutput() const;
-    // 读取平台规格（带宽/频率/核数），用于 DAV_9201/9202 负载均衡基块搜索；查询失败返回 false。
+    // 读取 compileInfo 缓存的 SoC 规格（带宽/频率/核数，叠加 9202 hif4/mxfp4 修正），用于
+    // DAV_9201/9202 负载均衡基块搜索；socSpec 未被填充时返回 false。
     bool GetSocSpecAdjustBalanceInfo(SocSpecifyParams& outInfo) const;
 
 protected:
@@ -84,7 +61,6 @@ protected:
     const QuantBatchMatmulInfo& inputParams_;
     const QuantBatchMatmulV3CompileInfo& compileInfo_;
     uint64_t batchCoreCnt_ = 1UL;
-    fe::PlatFormInfos* platformInfo_ = nullptr;
     bool enableMixUbCheck_ = false;
     BaseBlockRes baseBlockRes_;
 

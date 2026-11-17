@@ -171,7 +171,7 @@ bool AdaptiveSlidingWindowCubeBasicAPITiling::CalcBasicBlock()
     BaseBlockMode mode = (compileInfo_.npuArch == Ops::Base::DAV_9201 || compileInfo_.npuArch == Ops::Base::DAV_9202) ?
                              BaseBlockMode::LOAD_BALANCE :
                              BaseBlockMode::CUBE_BASIC;
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), context_->GetPlatformInfo());
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
     if (!calculator.Compute(mode)) {
         return false;
     }

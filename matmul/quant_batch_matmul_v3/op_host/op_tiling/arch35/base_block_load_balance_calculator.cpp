@@ -34,45 +34,12 @@ constexpr uint64_t LB_AFULLLOAD_SINGLE_CORE_A_SCALER = 2UL;
 constexpr uint64_t BASEK_LIMIT = 4095UL;
 // Fallback baseK candidates ordered from large to small.
 const std::vector<uint64_t> LB_BASE_K_CANDIDATE = {256UL, 128UL, 64UL, 32UL};
-// Platform spec defaults when the platform info does not provide the entries (v120/950-like values).
-constexpr uint64_t LB_DEFAULT_FREQ_MHZ = 1650UL;
-constexpr uint64_t LB_DEFAULT_DDR_RATE = 31UL;
-constexpr uint64_t LB_DEFAULT_L2_RATE = 100UL;
-constexpr uint64_t LB_DEFAULT_CORE_CNT = 32UL;
-constexpr uint64_t LB_KB_SIZE = 1024UL;
 // 9202(960PR) doubles the mmad N-direction fragmentation for hif4/mxfp4 inputs
 constexpr uint64_t LB_COMPUTE_POWER_DOUBLE = 2UL;
 constexpr uint64_t FP32_OUTPUT_TIMES = 4;
 constexpr uint64_t FP16_OUTPUT_TIMES = 2;
 constexpr uint64_t PING_PONG_TIMES = 2;
 constexpr uint64_t UB_ALIGN_SIZE = 32;
-
-// 平台规格字符串转数值，非法/负值/未完全解析时回退默认值
-int64_t LbStrToIntWithDefault(const std::string& str, int64_t defaultValue)
-{
-    if (str.empty()) {
-        return defaultValue;
-    }
-    try {
-        size_t pos = 0;
-        long long parsed = std::stoll(str, &pos, 10); // 10: 十进制
-        if (pos != str.size() || parsed < 0) {
-            return defaultValue;
-        }
-        return static_cast<int64_t>(parsed);
-    } catch (const std::exception&) {
-        return defaultValue;
-    }
-}
-
-// 平台规格字符串转正数值：在 LbStrToIntWithDefault 基础上，解析结果为 0 同样视为非法并回退默认值。
-// 平台信息返回 cube_freq/ai_core_cnt/ddr_rate/l2_rate 为 0 时，hbmBw/computePower 会变为 0，
-// cubeBoundEdge 计算将产生 Inf/NaN 使基本块搜索结果不可预测，因此 0 值必须回退默认规格。
-int64_t LbStrToPositiveIntWithDefault(const std::string& str, int64_t defaultValue)
-{
-    int64_t parsed = LbStrToIntWithDefault(str, defaultValue);
-    return parsed > 0 ? parsed : defaultValue;
-}
 } // namespace
 
 namespace optiling {
@@ -256,28 +223,12 @@ void BaseBlockCalculator::GetBaseK(BaseBlockRes& baseBlockTemp)
 
 bool BaseBlockCalculator::GetSocSpecAdjustBalanceInfo(SocSpecifyParams& outInfo) const
 {
-    if (platformInfo_ == nullptr) {
+    // socSpec 未被 TilingParse/InitCompileInfo 填充时保守返回 false，等价旧版拿不到 platformInfo 的行为。
+    if (compileInfo_.socSpec.freq <= 0.0 || compileInfo_.socSpec.hbmBw <= 0.0 || compileInfo_.socSpec.l2Bw <= 0.0) {
         return false;
     }
-    std::string coreCntStr = std::to_string(LB_DEFAULT_CORE_CNT);
-    std::string ddrRateStr = std::to_string(LB_DEFAULT_DDR_RATE);
-    std::string l2RateStr = std::to_string(LB_DEFAULT_L2_RATE);
-    std::string freqStr = std::to_string(LB_DEFAULT_FREQ_MHZ);
-
-    (void)platformInfo_->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
-    (void)platformInfo_->GetPlatformRes("AICoreMemoryRates", "ddr_rate", ddrRateStr);
-    (void)platformInfo_->GetPlatformRes("AICoreMemoryRates", "l2_rate", l2RateStr);
-    (void)platformInfo_->GetPlatformRes("AICoreSpec", "cube_freq", freqStr);
-
-    outInfo.freq = static_cast<double>(LbStrToPositiveIntWithDefault(freqStr, LB_DEFAULT_FREQ_MHZ)) /
-                   static_cast<double>(GHZ_TO_MHZ);
-    // 解析结果（含字符串 "0"）为 0 时统一回退默认规格，保证 hbmBw/l2Bw/computePower 恒大于 0
-    int64_t coreCnt = LbStrToPositiveIntWithDefault(coreCntStr, LB_DEFAULT_CORE_CNT);
-    int64_t ddrRate = LbStrToPositiveIntWithDefault(ddrRateStr, LB_DEFAULT_DDR_RATE);
-    int64_t l2Rate = LbStrToPositiveIntWithDefault(l2RateStr, LB_DEFAULT_L2_RATE);
-    outInfo.hbmBw = outInfo.freq * static_cast<double>(coreCnt) * static_cast<double>(ddrRate) / LB_KB_SIZE;
-    outInfo.l2Bw = outInfo.freq * static_cast<double>(coreCnt) * static_cast<double>(l2Rate) / LB_KB_SIZE;
-
+    outInfo = compileInfo_.socSpec;
+    // ops-nn 无 isHif4PerGroup 标志，hif4 逐组量化以 scaleDtype == DT_HIFLOAT4_SCALE 等价识别。
     if (compileInfo_.npuArch == NpuArch::DAV_9202 &&
         (inputParams_.isHif4PerGroup || (inputParams_.isMxPerGroup && inputParams_.aDtype == ge::DT_FLOAT4_E2M1))) {
         outInfo.mmadFracN *= LB_COMPUTE_POWER_DOUBLE;

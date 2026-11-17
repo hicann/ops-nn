@@ -13,6 +13,8 @@
 #include "../../../../op_host/op_tiling/arch35/base_block_calculator.h"
 #include "../../../../op_host/op_tiling/arch35/l1_tiling_data_calculator.h"
 #include "../../../../op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
+// SocSpec 下沉后 base_block_calculator.h 不再包含 platform 头，UT 自行补齐。
+#include "platform/platform_infos_def.h"
 
 namespace {
 using namespace optiling;
@@ -74,10 +76,11 @@ TEST(QuantBatchMatmulMxA8W4Calculators, ScaleCountsUseEachOperandType)
 TEST(QuantBatchMatmulMxA8W4Calculators, MxA8W4Hif4DoesNotDouble9202ComputePower)
 {
     auto input = MakeMxA8W4Input(true, 128);
-    const auto info = MakePlatform(NpuArch::DAV_9202);
+    auto info = MakePlatform(NpuArch::DAV_9202);
     fe::PlatFormInfos platform;
     platform.Init();
-    BaseBlockCalculator mxA8W4(input, info, 1, &platform);
+    FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
+    BaseBlockCalculator mxA8W4(input, info, 1);
     SocSpecifyParams mxA8W4Spec;
     ASSERT_TRUE(mxA8W4.GetSocSpecAdjustBalanceInfo(mxA8W4Spec));
     EXPECT_EQ(mxA8W4Spec.mmadFracN, 16UL);
@@ -87,7 +90,7 @@ TEST(QuantBatchMatmulMxA8W4Calculators, MxA8W4Hif4DoesNotDouble9202ComputePower)
     input.perTokenScaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
     input.isMxA8W4 = false;
     input.isHif4PerGroup = true;
-    BaseBlockCalculator sameType(input, info, 1, &platform);
+    BaseBlockCalculator sameType(input, info, 1);
     SocSpecifyParams sameTypeSpec;
     ASSERT_TRUE(sameType.GetSocSpecAdjustBalanceInfo(sameTypeSpec));
     EXPECT_EQ(sameTypeSpec.mmadFracN, 32UL);
@@ -98,13 +101,14 @@ TEST(QuantBatchMatmulMxA8W4Calculators, MxA8W4Hif4DoesNotDouble9202ComputePower)
 TEST(QuantBatchMatmulMxA8W4Calculators, BaseKStays64AlignedAndFitsUnsplitL0)
 {
     for (auto arch : {NpuArch::DAV_9201, NpuArch::DAV_9202}) {
-        const auto info = MakePlatform(arch);
+        auto info = MakePlatform(arch);
         fe::PlatFormInfos platform;
         platform.Init();
+        FillSocSpecifyParamsFromPlatform(&platform, info.socSpec);
         for (bool hif4 : {false, true}) {
             for (uint64_t k : {8UL, 64UL, 96UL, 192UL, 4096UL}) {
                 auto input = MakeMxA8W4Input(hif4, k);
-                BaseBlockCalculator calc(input, info, 1, &platform);
+                BaseBlockCalculator calc(input, info, 1);
                 ASSERT_TRUE(calc.Compute(BaseBlockMode::LOAD_BALANCE));
                 const auto& block = calc.GetOutput();
                 EXPECT_GT(block.baseK, 0UL);

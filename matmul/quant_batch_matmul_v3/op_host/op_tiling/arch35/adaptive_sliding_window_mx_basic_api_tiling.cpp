@@ -201,10 +201,7 @@ bool AdaptiveSlidingWindowMXBasicAPITiling::CheckShape(const std::vector<gert::S
 bool AdaptiveSlidingWindowMXBasicAPITiling::CalcBasicBlock()
 {
     const MxTilingCapabilities& capabilities = GetMxTilingCapabilities(compileInfo_.npuArch);
-    fe::PlatFormInfos* platformInfo = capabilities.baseBlockMode == BaseBlockMode::LOAD_BALANCE ?
-                                          context_->GetPlatformInfo() :
-                                          nullptr;
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt(), platformInfo);
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
     if (!calculator.Compute(capabilities.baseBlockMode)) {
         return false;
     }

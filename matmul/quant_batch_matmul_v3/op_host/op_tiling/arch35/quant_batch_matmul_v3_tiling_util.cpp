@@ -16,6 +16,7 @@
 
 #include <new>
 #include "error_util.h"
+#include "platform/platform_infos_def.h"
 #include "quant_batch_matmul_v3_checker.h"
 #include "quant_batch_matmul_v3_checker_for_mmads8s4.h"
 #include "quant_batch_matmul_v3_checker_arch_9201.h"
@@ -103,7 +104,65 @@ bool IsMxCubeBound(const QuantBatchMatmulInfo& inputParams)
     return computeCost > transferCost;
 }
 
+// 平台规格默认值（平台信息缺失时回退）：v120/950 相近量级。
+constexpr uint64_t LB_DEFAULT_FREQ_MHZ = 1650UL;
+constexpr uint64_t LB_DEFAULT_DDR_RATE = 31UL;
+constexpr uint64_t LB_DEFAULT_L2_RATE = 100UL;
+constexpr uint64_t LB_DEFAULT_CORE_CNT = 32UL;
+constexpr uint64_t LB_KB_SIZE = 1024UL;
+
+// 平台规格字符串转数值，非法/负值/未完全解析时回退默认值。
+int64_t LbStrToIntWithDefault(const std::string& str, int64_t defaultValue)
+{
+    if (str.empty()) {
+        return defaultValue;
+    }
+    try {
+        size_t pos = 0;
+        long long parsed = std::stoll(str, &pos, 10); // 10: 十进制
+        if (pos != str.size() || parsed < 0) {
+            return defaultValue;
+        }
+        return static_cast<int64_t>(parsed);
+    } catch (const std::exception&) {
+        return defaultValue;
+    }
+}
+
+// 平台规格字符串转正数值：在 LbStrToIntWithDefault 基础上，解析结果为 0 同样视为非法并回退默认值，
+// 保证解析出的 hbmBw/l2Bw 恒大于 0。
+int64_t LbStrToPositiveIntWithDefault(const std::string& str, int64_t defaultValue)
+{
+    int64_t parsed = LbStrToIntWithDefault(str, defaultValue);
+    return parsed > 0 ? parsed : defaultValue;
+}
+
 } // namespace
+
+void FillSocSpecifyParamsFromPlatform(fe::PlatFormInfos* platformInfo, SocSpecifyParams& outInfo)
+{
+    if (platformInfo == nullptr) {
+        return;
+    }
+    std::string coreCntStr = std::to_string(LB_DEFAULT_CORE_CNT);
+    std::string ddrRateStr = std::to_string(LB_DEFAULT_DDR_RATE);
+    std::string l2RateStr = std::to_string(LB_DEFAULT_L2_RATE);
+    std::string freqStr = std::to_string(LB_DEFAULT_FREQ_MHZ);
+
+    (void)platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
+    (void)platformInfo->GetPlatformRes("AICoreMemoryRates", "ddr_rate", ddrRateStr);
+    (void)platformInfo->GetPlatformRes("AICoreMemoryRates", "l2_rate", l2RateStr);
+    (void)platformInfo->GetPlatformRes("AICoreSpec", "cube_freq", freqStr);
+
+    outInfo.freq = static_cast<double>(LbStrToPositiveIntWithDefault(freqStr, LB_DEFAULT_FREQ_MHZ)) /
+                   static_cast<double>(GHZ_TO_MHZ);
+    // 解析结果（含字符串 "0"）为 0 时统一回退默认规格，保证 hbmBw/l2Bw 恒大于 0。
+    int64_t coreCnt = LbStrToPositiveIntWithDefault(coreCntStr, LB_DEFAULT_CORE_CNT);
+    int64_t ddrRate = LbStrToPositiveIntWithDefault(ddrRateStr, LB_DEFAULT_DDR_RATE);
+    int64_t l2Rate = LbStrToPositiveIntWithDefault(l2RateStr, LB_DEFAULT_L2_RATE);
+    outInfo.hbmBw = outInfo.freq * static_cast<double>(coreCnt) * static_cast<double>(ddrRate) / LB_KB_SIZE;
+    outInfo.l2Bw = outInfo.freq * static_cast<double>(coreCnt) * static_cast<double>(l2Rate) / LB_KB_SIZE;
+}
 
 bool IsMxL0CPingpong(const QuantBatchMatmulInfo& inputParams)
 {
