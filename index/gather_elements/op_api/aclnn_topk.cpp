@@ -11,6 +11,7 @@
 #include "aclnn_topk.h"
 #include "level0/topk.h"
 #include "level0/sort.h"
+#include "level0/sort_with_index.h"
 #include "level0/arange.h"
 #include "level0/concat.h"
 #include "level0/tensor_move.h"
@@ -700,6 +701,30 @@ static std::tuple<const aclTensor*, const aclTensor*> TopkWithPolicyCheck(const 
     return l0op::Topk(self, k, dim, largest, sorted, indicesDType, executor);
 }
 
+static std::tuple<const aclTensor*, const aclTensor*> SortRadixTopKOutput(const aclTensor* values,
+                                                                          const aclTensor* indices, int64_t dim,
+                                                                          bool largest, op::DataType indicesDType,
+                                                                          aclOpExecutor* executor)
+{
+    // 旧版 math 可能只提供 A5 接口，需同时确认 A2/A3 实现可用。
+    const auto sortWithIndex = &l0op::SortWithIndex;
+    const auto isSupported = &l0op::IsSortWithIndexA2A3Supported;
+    if (sortWithIndex != nullptr && isSupported != nullptr && isSupported()) {
+        auto fused = sortWithIndex(values, indices, -1, largest, true, executor);
+        if (std::get<0>(fused) != nullptr && std::get<1>(fused) != nullptr) {
+            return fused;
+        }
+    }
+
+    OP_LOGD("SortWithIndex unavailable or failed, fallback to Sort and GatherElementsV2.");
+    auto sortOut = l0op::Sort(values, -1, largest, true, indicesDType, executor);
+    if (std::get<0>(sortOut) == nullptr || std::get<1>(sortOut) == nullptr) {
+        return std::make_tuple(nullptr, nullptr);
+    }
+    auto sortedIndices = l0op::GatherElementsV2(indices, std::get<1>(sortOut), dim, executor);
+    return std::make_tuple(std::get<0>(sortOut), sortedIndices);
+}
+
 aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, int64_t dim, bool largest, bool sorted,
                                             int64_t sortPolicy, aclTensor* valuesOut, aclTensor* indicesOut,
                                             uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -823,10 +848,10 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
                 OP_LOGD("radix topk int64 indices passthrough, positiveDim not equal lastDim.");
                 indicesTopkOut = indicesCast;
             } else {
-                auto sortOut = l0op::Sort(valuesTopkOut, -1, largest, true, indicesDType, uniqueExecutor.get());
+                auto sortOut = SortRadixTopKOutput(valuesTopkOut, indicesCast, lastDim, largest, indicesDType,
+                                                   uniqueExecutor.get());
                 valuesTopkOut = std::get<0>(sortOut);
-                aclTensor* indicesSort = std::get<1>(sortOut);
-                indicesTopkOut = l0op::GatherElementsV2(indicesCast, indicesSort, lastDim, uniqueExecutor.get());
+                indicesTopkOut = std::get<1>(sortOut);
             }
             topkOut = std::tie(valuesTopkOut, indicesTopkOut);
         } else {
@@ -881,11 +906,10 @@ aclnnStatus aclnnTopkGetWorkspaceSizeCommon(const aclTensor* self, int64_t k, in
                     // IsRadixTopKSupported 已拦截sorted为true的情况
                     indicesTopkOut = indicesCast;
                 } else {
-                    auto sortOut = l0op::Sort(valuesTopkOut, -1, largest, true, indicesDType, uniqueExecutor.get());
+                    auto sortOut = SortRadixTopKOutput(valuesTopkOut, indicesCast, positiveDim, largest, indicesDType,
+                                                       uniqueExecutor.get());
                     valuesTopkOut = std::get<0>(sortOut);
-                    aclTensor* indicesSort = std::get<1>(sortOut);
-                    indicesTopkOut = l0op::GatherElementsV2(indicesCast, indicesSort, positiveDim,
-                                                            uniqueExecutor.get());
+                    indicesTopkOut = std::get<1>(sortOut);
                 }
                 topkOut = std::tie(valuesTopkOut, indicesTopkOut);
             } else {

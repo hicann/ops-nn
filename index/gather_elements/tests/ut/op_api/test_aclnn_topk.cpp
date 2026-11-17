@@ -16,6 +16,8 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "opdev/platform.h"
+#include "level0/sort_with_index.h"
 
 using namespace std;
 
@@ -445,3 +447,78 @@ TEST_F(l2_topk_test, ascend950PR_9589_l2_topk_k_more_than_2k)
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     // EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
+
+namespace {
+thread_local int sortWithIndexNullOutputs = 0;
+thread_local int sortWithIndexCalls = 0;
+thread_local bool sortWithIndexSupported = true;
+} // namespace
+
+namespace l0op {
+bool IsSortWithIndexA2A3Supported() { return sortWithIndexSupported; }
+
+// LLT 只控制跨仓接口的返回张量，覆盖融合可用和独立升级时输出为空的情况。
+const std::tuple<aclTensor*, aclTensor*> SortWithIndex(const aclTensor* self, const aclTensor* index, int64_t axis,
+                                                       bool /*descending*/, bool stable, aclOpExecutor* executor)
+{
+    ++sortWithIndexCalls;
+    EXPECT_EQ(axis, -1);
+    EXPECT_TRUE(stable);
+    EXPECT_EQ(index->GetDataType(), op::DataType::DT_INT32);
+    auto values = (sortWithIndexNullOutputs & 1) != 0 ?
+                      nullptr :
+                      executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetViewFormat());
+    auto indices = (sortWithIndexNullOutputs & 2) != 0 ?
+                       nullptr :
+                       executor->AllocTensor(index->GetViewShape(), index->GetDataType(), index->GetViewFormat());
+    return std::make_tuple(values, indices);
+}
+} // namespace l0op
+
+class l2_topk_radix_sort_with_index_test
+    : public l2_topk_test,
+      public testing::WithParamInterface<tuple<op::SocVersion, aclDataType, bool, bool, int>> {
+protected:
+    void SetUp() override
+    {
+        sortWithIndexNullOutputs = 0;
+        sortWithIndexCalls = 0;
+        sortWithIndexSupported = true;
+    }
+
+    void TearDown() override
+    {
+        sortWithIndexNullOutputs = 0;
+        sortWithIndexCalls = 0;
+        sortWithIndexSupported = true;
+    }
+};
+
+// 覆盖 A2/A3、FP16/BF16、末轴/非末轴以及最大/最小值的融合排序接入。
+TEST_P(l2_topk_radix_sort_with_index_test, get_workspace_size)
+{
+    const auto [soc, dtype, nonLastDim, largest, nullOutputs] = GetParam();
+    op::SocVersionManager versionManager(soc);
+    sortWithIndexNullOutputs = nullOutputs;
+    sortWithIndexSupported = nullOutputs >= 0;
+    constexpr int64_t sortLength = 12000000;
+    constexpr int64_t k = 4096;
+    constexpr int64_t rows = 2;
+    const vector<int64_t> inputShape = nonLastDim ? vector<int64_t>{sortLength, rows} :
+                                                    vector<int64_t>{rows, sortLength};
+    const vector<int64_t> outputShape = nonLastDim ? vector<int64_t>{k, rows} : vector<int64_t>{rows, k};
+    auto selfDesc = TensorDesc(inputShape, dtype, ACL_FORMAT_ND);
+    auto valDesc = TensorDesc(outputShape, dtype, ACL_FORMAT_ND);
+    auto indDesc = TensorDesc(outputShape, ACL_INT64, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnTopk, INPUT(selfDesc, k, nonLastDim ? 0 : -1, largest, true), OUTPUT(valDesc, indDesc));
+
+    // 仅构建 Host 执行计划，不分配大输入数据，也不启动 NPU kernel。
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+    EXPECT_EQ(sortWithIndexCalls, sortWithIndexSupported ? 1 : 0);
+}
+
+INSTANTIATE_TEST_SUITE_P(radix_sort_with_index, l2_topk_radix_sort_with_index_test,
+                         testing::Combine(testing::Values(op::SocVersion::ASCEND910B, op::SocVersion::ASCEND910_93),
+                                          testing::Values(ACL_FLOAT16, ACL_BF16), testing::Bool(), testing::Bool(),
+                                          testing::Values(-1, 0, 1, 2, 3)));
