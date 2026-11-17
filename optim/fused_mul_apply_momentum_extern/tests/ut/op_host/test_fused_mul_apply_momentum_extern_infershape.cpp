@@ -64,6 +64,25 @@ static std::vector<gert::InfershapeContextPara::TensorDescription> MakeInputsWit
     };
 }
 
+static std::vector<gert::InfershapeContextPara::TensorDescription> MakeInputsWithThreeScalarShapes(
+    const std::initializer_list<int64_t>& tensorShape, const std::initializer_list<int64_t>& lrShape,
+    const std::initializer_list<int64_t>& momentumShape, const std::initializer_list<int64_t>& x2Shape)
+{
+    gert::StorageShape ts = {tensorShape, tensorShape};
+    gert::StorageShape lr = {lrShape, lrShape};
+    gert::StorageShape mom = {momentumShape, momentumShape};
+    gert::StorageShape x2 = {x2Shape, x2Shape};
+    return {
+        {ts, ge::DT_FLOAT, ge::FORMAT_ND},   // var
+        {ts, ge::DT_FLOAT, ge::FORMAT_ND},   // accum
+        {lr, ge::DT_FLOAT, ge::FORMAT_ND},   // lr
+        {ts, ge::DT_FLOAT, ge::FORMAT_ND},   // x1
+        {mom, ge::DT_FLOAT, ge::FORMAT_ND},  // momentum
+        {x2, ge::DT_FLOAT, ge::FORMAT_ND},   // x2
+        {ts, ge::DT_FLOAT16, ge::FORMAT_ND}, // var_copy
+    };
+}
+
 // 三输出（shape 待推导，dtype: FP32 / FP16 / FP32）
 static std::vector<gert::InfershapeContextPara::TensorDescription> MakeOutputs()
 {
@@ -91,26 +110,53 @@ TEST_F(FusedMulApplyMomentumExternInfershape, infershape_1d_64)
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
-// —— 标量为动态维(-1) → GRAPH_FAILED（kernel 仅读首元素，动态维解析为多元素会静默忽略） ——
-TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_dynamic_dim_failed)
+// —— 标量为动态维(-1)：kernel 只读首元素，放行；输出仍由主 tensor 决定 ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_dynamic_dim)
 {
     gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputsWithScalarShape({64}, {-1}),
                                      MakeOutputs());
-    ExecuteTestCase(para, ge::GRAPH_FAILED, {});
+    std::vector<std::vector<int64_t>> expect = {{64}, {64}, {64}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
-// —— 标量为未知 rank(-2) → GRAPH_FAILED ——
-TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_unknown_rank_failed)
+// —— 标量为未知 rank(-2)：放行 ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_unknown_rank)
 {
     gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputsWithScalarShape({64}, {-2}),
                                      MakeOutputs());
-    ExecuteTestCase(para, ge::GRAPH_FAILED, {});
+    std::vector<std::vector<int64_t>> expect = {{64}, {64}, {64}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
 }
 
-// —— 标量为多元素(如 [4]) → GRAPH_FAILED ——
-TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_multi_element_failed)
+// —— 标量为多元素(如 [4])：放行，kernel 只读首元素 ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_multi_element)
 {
     gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputsWithScalarShape({64}, {4}),
                                      MakeOutputs());
+    std::vector<std::vector<int64_t>> expect = {{64}, {64}, {64}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
+}
+
+// —— 标量为 0D：放行 ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_zero_dim)
+{
+    gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputsWithScalarShape({64}, {}), MakeOutputs());
+    std::vector<std::vector<int64_t>> expect = {{64}, {64}, {64}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expect);
+}
+
+// —— 空 scalar([0])：拒绝，避免 kernel 读取首元素越界 ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_empty_failed)
+{
+    gert::InfershapeContextPara para("FusedMulApplyMomentumExtern", MakeInputsWithScalarShape({64}, {0}),
+                                     MakeOutputs());
+    ExecuteTestCase(para, ge::GRAPH_FAILED, {});
+}
+
+// —— lr/momentum/x2 shape 不一致：拒绝 ——
+TEST_F(FusedMulApplyMomentumExternInfershape, infershape_scalar_shape_mismatch_failed)
+{
+    gert::InfershapeContextPara para("FusedMulApplyMomentumExtern",
+                                     MakeInputsWithThreeScalarShapes({64}, {1}, {2}, {1}), MakeOutputs());
     ExecuteTestCase(para, ge::GRAPH_FAILED, {});
 }

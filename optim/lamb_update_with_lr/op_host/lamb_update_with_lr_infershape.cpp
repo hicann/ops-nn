@@ -21,37 +21,27 @@
 using namespace Ops::Base;
 using namespace ge;
 namespace ops {
-// A2 语义: 本族算子的所有输入都是可广播的 ND Tensor(见 canndev
-// ops/built-in/tbe/impl/lamb_*.py, 每一步 mul/sub/div 都先 shape_util.broadcast_shapes
-// 再 tbe.broadcast), 输出形状为全部输入广播的结果。A2 的 op_proto 只声明了其中两个输入,
-// 属声明宽松, 不作为支持面依据。
-constexpr size_t IN_NUM = 9;
+// 输出 shape 只由 input_greater1(in0) 与 input_sub(in5) 的广播结果决定；
+// 其余 7 个输入分别按 in0/in5 的 placeholder shape 使用，不参与额外广播。
+constexpr size_t INPUT_GREATER1_IDX = 0;
+constexpr size_t INPUT_SUB_IDX = 5;
 constexpr size_t OUT_NUM = 1;
 
 static ge::graphStatus InferShape4LambUpdateWithLr(gert::InferShapeContext* context)
 {
-    std::vector<const gert::Shape*> inShapes;
-    inShapes.reserve(IN_NUM);
-    for (size_t i = 0; i < IN_NUM; i++) {
-        auto in = context->GetInputShape(i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, in);
-        inShapes.push_back(in);
-    }
+    const gert::Shape* greater1Shape = context->GetInputShape(INPUT_GREATER1_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, greater1Shape);
+    const gert::Shape* subShape = context->GetInputShape(INPUT_SUB_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, subShape);
+
     gert::Shape bcShape;
     // 逐对折叠广播: 只用两参数重载。vector 重载虽在 op_common/op_host/infershape_broadcast_util.h
     // 以 Ops::Base 声明, 但 libops_base.so 只导出两参数版, vector 版的实现在 libop_common.so 的
     // 小写 ops 命名空间下 —— 声明与实现命名空间不一致, 用它会编译期通过、加载期
     // undefined symbol 而装不上包。
-    bcShape = *inShapes[0];
-    for (size_t i = 1; i < inShapes.size(); i++) {
-        gert::Shape tmp;
-        OP_CHECK_IF(!BroadcastShape(&bcShape, inShapes[i], &tmp),
-                    OP_LOGE(context->GetNodeName(), "input shapes cannot broadcast together"), return ge::GRAPH_FAILED);
-        bcShape = tmp;
-    }
-    // 标量归一: 全标量输入 broadcast 得 0 维空 shape (), 与 A2 的 shape_util.scalar2tensor_one
-    // 对齐, 归一为 (1,)。否则动态 shape 编译期 DFX 生成会对空 shape 做 reduce 连乘(无初值)而报
-    // TypeError 编译失败。
+    OP_CHECK_IF(!BroadcastShape(greater1Shape, subShape, &bcShape),
+                OP_LOGE(context->GetNodeName(), "input_greater1 and input_sub shapes cannot broadcast together"),
+                return ge::GRAPH_FAILED);
     if (bcShape.GetDimNum() == 0) {
         bcShape.SetDimNum(1);
         bcShape.SetDim(0, 1);

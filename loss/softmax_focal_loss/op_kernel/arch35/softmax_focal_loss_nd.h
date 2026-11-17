@@ -12,7 +12,7 @@
  * \file softmax_focal_loss_nd.h
  * \brief softmax_focal_loss regbase kernel
  *
- * 计算语义(对齐 A2 tbe.dsl softmax_focal_loss_compute):
+ * 计算语义:
  *   ce[b][j] = -log(pred) * target * weight
  *   CE[b]    = sum_j ce[b][j]
  *   fw[b][j] = alpha * exp(gamma * log(1 - pred)) * target

@@ -85,6 +85,66 @@ TEST_F(LambUpdateWithLrProtoTest, lamb_update_with_lr_case_fp16_4d)
     ASSERT_EQ(Ops::Base::ToString(*od0), Ops::Base::ToString(expShape));
 }
 
+TEST_F(LambUpdateWithLrProtoTest, lamb_update_with_lr_case_primary_broadcast_only)
+{
+    // 输出只由 in0([2,1]) 与 in5([1,3]) 广播决定；in1([4,5]) 不参与广播。
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LambUpdateWithLr")->infer_shape;
+    gert::Shape in0Shape = {2, 1};
+    gert::Shape in1Shape = {4, 5};
+    gert::Shape scalarShape = {1};
+    gert::Shape in5Shape = {1, 3};
+    gert::Shape outShape = {};
+    gert::Shape expShape = {2, 3};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(9, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&in0Shape, &in1Shape, &scalarShape, &scalarShape, &scalarShape, &in5Shape,
+                                    &scalarShape, &scalarShape, &scalarShape})
+                      .OutputShapes({&outShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(7, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(8, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto od0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*od0), Ops::Base::ToString(expShape));
+}
+
+TEST_F(LambUpdateWithLrProtoTest, lamb_update_with_lr_case_all_scalar)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("LambUpdateWithLr")->infer_shape;
+    gert::Shape scalarShape = {};
+    gert::Shape outShape = {};
+    gert::Shape expShape = {1};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(9, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&scalarShape, &scalarShape, &scalarShape, &scalarShape, &scalarShape, &scalarShape,
+                                    &scalarShape, &scalarShape, &scalarShape})
+                      .OutputShapes({&outShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(7, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(8, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto od0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Ops::Base::ToString(*od0), Ops::Base::ToString(expShape));
+}
+
 TEST_F(LambUpdateWithLrProtoTest, lambupdatewithlr_infer_datatype)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("LambUpdateWithLr"), nullptr);

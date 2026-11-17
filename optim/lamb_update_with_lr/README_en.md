@@ -48,70 +48,70 @@ English | [简体中文](./README.md)
     <tr>
       <td>input_greater1</td>
       <td>Input</td>
-      <td>Supports empty tensors. input_greater1 in the formula (weight norm); the shape supports 0-8 dimensions and must satisfy the broadcast rules with other inputs.</td>
+      <td>Supports empty tensors. input_greater1 in the formula (weight norm); the shape supports 0-8 dimensions and together with input_sub determines the output shape.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_greater_realdiv</td>
       <td>Input</td>
-      <td>Supports empty tensors. input_greater_realdiv in the formula (numerator of the trust ratio); the shape supports 0-8 dimensions and must satisfy the broadcast rules with other inputs.</td>
+      <td>Supports empty tensors. input_greater_realdiv in the formula (numerator of the trust ratio); the shape supports 0-8 dimensions. In the fused scenario it is used with the shape of input_greater1 and does not participate in output shape broadcast.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_realdiv</td>
       <td>Input</td>
-      <td>Supports empty tensors. input_realdiv in the formula (denominator of the trust ratio); the shape supports 0-8 dimensions and must satisfy the broadcast rules with other inputs.</td>
+      <td>Supports empty tensors. input_realdiv in the formula (denominator of the trust ratio); the shape supports 0-8 dimensions. In the fused scenario it is used with the shape of input_greater1 and does not participate in output shape broadcast.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_mul0</td>
       <td>Input</td>
-      <td>Supports empty tensors. input_mul0 in the formula (learning rate); the shape supports 0-8 dimensions and must satisfy the broadcast rules with other inputs.</td>
+      <td>Supports empty tensors. input_mul0 in the formula (learning rate); the shape supports 0-8 dimensions. In the fused scenario it is used with the shape of input_greater1 and does not participate in output shape broadcast.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_mul1</td>
       <td>Input</td>
-      <td>Supports empty tensors. input_mul1 in the formula (update), the main tensor; the shape must satisfy the broadcast relationship with other inputs, and the broadcast result of all inputs determines the shape of output y.</td>
+      <td>Supports empty tensors. input_mul1 in the formula (update); it is used with the shape of input_sub and does not participate in output shape broadcast.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>input_sub</td>
       <td>Input</td>
-      <td>Supports empty tensors. input_sub in the formula (parameters), the main tensor; the shape must satisfy the broadcast relationship with other inputs, and the broadcast result of all inputs determines the shape of output y.</td>
+      <td>Supports empty tensors. input_sub in the formula (parameters); its broadcast result with input_greater1 determines the shape of output y.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>greater_y</td>
       <td>Input</td>
-      <td>Supports empty tensors. greater_y in the formula (threshold); the shape supports 0-8 dimensions and must satisfy the broadcast rules with other inputs.</td>
+      <td>Supports empty tensors. greater_y in the formula (threshold); the shape supports 0-8 dimensions. In the fused scenario it is used with the shape of input_greater1 and does not participate in output shape broadcast.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>select_e</td>
       <td>Input</td>
-      <td>Supports empty tensors. select_e in the formula (fallback value); the shape supports 0-8 dimensions and must satisfy the broadcast rules with other inputs.</td>
+      <td>Supports empty tensors. select_e in the formula (fallback value); the shape supports 0-8 dimensions. In the fused scenario it is used with the shape of input_greater1 and does not participate in output shape broadcast.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>minimum_y</td>
       <td>Input</td>
-      <td>Supports empty tensors. minimum_y in the formula (clipping upper bound); the shape supports 0-8 dimensions and must satisfy the broadcast rules with other inputs.</td>
+      <td>Supports empty tensors. minimum_y in the formula (clipping upper bound); the shape supports 0-8 dimensions. In the fused scenario it is used with the shape of input_greater1 and does not participate in output shape broadcast.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Supports empty tensors. y in the formula (updated parameters); the shape is the broadcast result of all inputs.</td>
+      <td>Supports empty tensors. y in the formula (updated parameters); the shape is the broadcast result of input_greater1 and input_sub.</td>
       <td>FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
@@ -119,8 +119,8 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The shapes of all inputs must pairwise satisfy the broadcast rules, and the output shape is the broadcast result of all inputs.
-- The numbers of dimensions of all inputs and outputs are 0~8. When all inputs are 0-dimensional, the output shape is (1,).
+- The output shape is determined only by the broadcast result of input_greater1 and input_sub; other inputs are used with the shape of the corresponding main input as required by the fused graph, and do not participate in output shape broadcast.
+- The numbers of dimensions of all inputs and outputs are 0~8. When input_greater1 and input_sub are both 0-dimensional, the output shape is (1,).
 - The data types of all inputs must be the same, either all FLOAT16 or all FLOAT.
 
 ## Invocation Description

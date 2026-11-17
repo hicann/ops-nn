@@ -20,7 +20,7 @@ class SoftmaxFocalLoss : public OpDef {
 public:
     explicit SoftmaxFocalLoss(const char* name) : OpDef(name)
     {
-        // pred 与 weight 的 dtype 相互独立, 对齐 A2 声明的四种组合
+        // pred 与 weight 的 dtype 相互独立, 声明四种组合
         this->Input("pred")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT})

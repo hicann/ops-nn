@@ -205,6 +205,14 @@ static bool RunTiling(const std::initializer_list<int64_t>& shape, bool useNeste
     return ExecuteTiling(para, info);
 }
 
+static bool RunTilingWithScalarShape(const std::initializer_list<int64_t>& shape,
+                                     const std::initializer_list<int64_t>& scalarShape, TilingInfo& info)
+{
+    TilingContextPara para(OP_NAME, MakeInputsWithScalarShape(shape, scalarShape), MakeOutputs(shape),
+                           MakeAttrs(false, false), &compileInfo, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, TILING_DATA_MAX);
+    return ExecuteTiling(para, info);
+}
+
 static void ExpectTilingEq(const FusedMulApplyMomentumExternTilingData& got,
                            const FusedMulApplyMomentumExternTilingData& exp)
 {
@@ -386,26 +394,46 @@ TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_shape_mismatch_failed)
     ExecuteTestCase(para, ge::GRAPH_FAILED, 0UL, EMPTY_EXPECT_TILING_DATA, {});
 }
 
-// —— 标量为动态维(-1) → GRAPH_FAILED（kernel 仅读首元素，动态维解析为多元素会静默忽略） ——
-TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_dynamic_dim_failed)
+// —— 标量为动态维(-1)：kernel 只读首元素，tiling 放行 ——
+TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_dynamic_dim)
 {
-    TilingContextPara para(OP_NAME, MakeInputsWithScalarShape({8}, {-1}), MakeOutputs({8}), MakeAttrs(false, false),
-                           &compileInfo, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, TILING_DATA_MAX);
-    ExecuteTestCase(para, ge::GRAPH_FAILED, 0UL, EMPTY_EXPECT_TILING_DATA, {});
+    TilingInfo info;
+    ASSERT_TRUE(RunTilingWithScalarShape({8}, {-1}, info));
+    const auto* got = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(info.tilingData.get());
+    ExpectTilingEq(*got, ExpectTiling(8, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
 }
 
-// —— 标量为未知 rank(-2) → GRAPH_FAILED ——
-TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_unknown_rank_failed)
+// —— 标量为未知 rank(-2)：tiling 放行 ——
+TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_unknown_rank)
 {
-    TilingContextPara para(OP_NAME, MakeInputsWithScalarShape({8}, {-2}), MakeOutputs({8}), MakeAttrs(false, false),
-                           &compileInfo, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, TILING_DATA_MAX);
-    ExecuteTestCase(para, ge::GRAPH_FAILED, 0UL, EMPTY_EXPECT_TILING_DATA, {});
+    TilingInfo info;
+    ASSERT_TRUE(RunTilingWithScalarShape({8}, {-2}, info));
+    const auto* got = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(info.tilingData.get());
+    ExpectTilingEq(*got, ExpectTiling(8, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
 }
 
-// —— 标量为多元素(如 [4]) → GRAPH_FAILED ——
-TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_multi_element_failed)
+// —— 标量为多元素(如 [4])：tiling 放行，kernel 只读首元素 ——
+TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_multi_element)
 {
-    TilingContextPara para(OP_NAME, MakeInputsWithScalarShape({8}, {4}), MakeOutputs({8}), MakeAttrs(false, false),
+    TilingInfo info;
+    ASSERT_TRUE(RunTilingWithScalarShape({8}, {4}, info));
+    const auto* got = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(info.tilingData.get());
+    ExpectTilingEq(*got, ExpectTiling(8, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
+}
+
+// —— 标量为 0D：tiling 放行 ——
+TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_zero_dim)
+{
+    TilingInfo info;
+    ASSERT_TRUE(RunTilingWithScalarShape({8}, {}, info));
+    const auto* got = reinterpret_cast<const FusedMulApplyMomentumExternTilingData*>(info.tilingData.get());
+    ExpectTilingEq(*got, ExpectTiling(8, DEFAULT_UB_SIZE, DEFAULT_CORE_NUM));
+}
+
+// —— 空 scalar([0])：拒绝，避免 kernel 读取首元素越界 ——
+TEST_F(FusedMulApplyMomentumExternTilingTest, tiling_scalar_empty_failed)
+{
+    TilingContextPara para(OP_NAME, MakeInputsWithScalarShape({8}, {0}), MakeOutputs({8}), MakeAttrs(false, false),
                            &compileInfo, DEFAULT_CORE_NUM, DEFAULT_UB_SIZE, TILING_DATA_MAX);
     ExecuteTestCase(para, ge::GRAPH_FAILED, 0UL, EMPTY_EXPECT_TILING_DATA, {});
 }

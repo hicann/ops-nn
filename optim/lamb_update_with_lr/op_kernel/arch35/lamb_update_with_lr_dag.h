@@ -45,9 +45,9 @@ constexpr int SELECT_MODE_T_T = 2;
 //      clip = max(min(ratio, minimum_y), greater_y); y = param - clip*lr*update. Compute in U (=float).
 template <typename T, typename U>
 struct LambUpdateWithLrCompute {
-    // 全部输入统一走 Vec::CopyInBrc: 这些"系数"输入在 A2 的声明就是可广播的 ND Tensor
+    // 全部输入统一走 Vec::CopyInBrc: 这些"系数"输入声明为可广播的 ND Tensor
     // (IR 注释为 "A ND Tensor"、op_info shape 为 all、infershape 走 Broadcast、impl 全程
-    // broadcast_shapes), 故按支持范围对齐 A2 补齐广播语义; 融合场景传 (1,) 时行为不变。
+    // broadcast_shapes), 故补齐广播语义; 融合场景传 (1,) 时行为不变。
     using InG1 = Bind<Vec::CopyInBrc<T>, Placeholder::In0<T>>;
     using InGRd = Bind<Vec::CopyInBrc<T>, Placeholder::In1<T>>;
     using InRd = Bind<Vec::CopyInBrc<T>, Placeholder::In2<T>>;

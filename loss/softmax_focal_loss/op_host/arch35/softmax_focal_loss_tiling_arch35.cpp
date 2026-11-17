@@ -58,8 +58,8 @@ constexpr uint64_t SIMD_SIMT_DCACHE_SIZE = static_cast<uint64_t>(32 * 1024);
 constexpr int32_t TILING_ITER = 2;
 
 // 本算子不做跨样本归约: 输出 shape 恒等于 pred(infershape 钉死), 一行内所有元素同值 = Σce × Σfw,
-// 装不下 mean/sum 需要的标量。A2(canndev softmax_focal_loss.py:211) 同样只放行 "none", 其余取值报错。
-// 这里做同样的闸, 避免"接受了一个自己不实现的取值"后静默按 none 返回。大小写不敏感(A2 侧同为宽松比较)。
+// 装不下 mean/sum 需要的标量。当前只放行 "none", 其余取值报错。
+// 这里做同样的闸, 避免"接受了一个自己不实现的取值"后静默按 none 返回。大小写不敏感。
 ge::graphStatus CheckReduction(gert::TilingContext* context, const char* reduction)
 {
     std::string red(reduction);
@@ -286,7 +286,7 @@ ge::graphStatus SoftmaxFocalLossTiling::DoTiling()
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "pred", std::to_string(dimNum), "> 0"),
                 return ge::GRAPH_FAILED);
     // 任一维长度为 0 时输入退化为空张量, 类别维语义随之失效(对 0 个类别做归约无定义)。
-    // 对齐 A2: 前向 softmax_focal_loss.py 把动态 shape 的取值范围声明为 [(1, None), (1, None)]
+    // 前向 softmax_focal_loss.py 把动态 shape 的取值范围声明为 [(1, None), (1, None)]
     // (每维下界为 1、不含 0), 反向 tiling 更是逐维查 0 直接报错。
     for (size_t i = 0; i < dimNum; ++i) {
         OP_CHECK_IF((storageShape.GetDim(i) == 0),

@@ -13,7 +13,7 @@
  */
 #include "log/log.h"
 #include <algorithm>
-#include "platform/platform_info.h"
+#include <cctype>
 #include <string>
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
@@ -46,33 +46,19 @@ static graphStatus InferShape4SoftmaxFocalLoss(gert::InferShapeContext* context)
             return ge::GRAPH_FAILED);
     }
 
-    // 输出形状由 reduction 决定: "none" 时 y 与 pred 同形; "mean"/"sum" 为标量。
-    // 当前只支持 "none", 其余取值显式报错, 不静默按 "none" 推导。
-    // 本文件对所有 soc 生效, 故按 soc 门控: 仅 Ascend950 读 reduction 并拒收未支持取值,
-    // 其余 soc 保持原行为(y 与 pred 同形、不读该属性)。
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optionalInfo;
-    const bool isAscend950 = (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(
-                                  platformInfo, optionalInfo) == ge::GRAPH_SUCCESS) &&
-                             (platformInfo.str_info.short_soc_version == "Ascend950" ||
-                              platformInfo.str_info.short_soc_version == "Ascend350");
-    if (isAscend950) {
-        const auto* attrs = context->GetAttrs();
-        OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-        const char* reduction = (attrs->GetAttrNum() > ATTR_REDUCTION_IDX) ?
-                                    attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX) :
-                                    nullptr;
-        // 属性缺省时框架按原型物化为 "mean"; 取不到指针时按**声明默认值**处理, 不得回落成 "none"
-        std::string red = (reduction == nullptr) ? std::string("mean") : std::string(reduction);
-        std::transform(red.begin(), red.end(), red.begin(),
-                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        OP_CHECK_IF(red != "none",
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                        context->GetNodeName(), "reduction", red.c_str(),
-                        "only \"none\" is supported currently; mean/sum would reduce y to a scalar"),
-                    return ge::GRAPH_FAILED);
+    const auto* attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const char* reduction = (attrs->GetAttrNum() > ATTR_REDUCTION_IDX) ?
+                                attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX) :
+                                nullptr;
+    std::string red = (reduction == nullptr) ? std::string("mean") : std::string(reduction);
+    std::transform(red.begin(), red.end(), red.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (red == "none") {
+        *yShape = *predShape;
+    } else {
+        yShape->SetDimNum(0);
     }
-    *yShape = *predShape;
     OP_LOGD(context, "InferShape4SoftmaxFocalLoss End.");
     return ge::GRAPH_SUCCESS;
 }

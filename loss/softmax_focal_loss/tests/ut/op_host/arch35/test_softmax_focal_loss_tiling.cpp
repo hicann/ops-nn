@@ -221,7 +221,7 @@ TEST_F(SoftmaxFocalLossTiling, test_tiling_empty_tensor)
 {
     uint64_t tilingKey = 0;
     uint32_t blockDim = 0;
-    // 空张量按 A2 拒收: 类别维语义失效, 不静默返回空结果
+    // 空张量拒收: 类别维语义失效, 不静默返回空结果
     EXPECT_EQ(DoSoftmaxFocalLossTilingCase({0, 64}, ge::DT_FLOAT, ge::DT_FLOAT, true, 2.0f, 0.25f, "none", tilingKey,
                                            blockDim),
               ge::GRAPH_FAILED);
@@ -257,7 +257,7 @@ TEST_F(SoftmaxFocalLossTiling, test_tiling_weight_shape_mismatch)
               ge::GRAPH_FAILED);
 }
 
-// reduction 仅支持 "none"(与 A2 一致): 输出 shape 恒等于 pred, 装不下 mean/sum 的标量结果,
+// reduction 仅支持 "none": 输出 shape 恒等于 pred, 装不下 mean/sum 的标量结果,
 // 传入其他取值必须报错而不是静默按 none 计算; 大小写不敏感
 TEST_F(SoftmaxFocalLossTiling, test_tiling_reduction_only_none)
 {
@@ -280,7 +280,7 @@ TEST_F(SoftmaxFocalLossTiling, test_tiling_reduction_only_none)
               ge::GRAPH_FAILED);
 }
 
-// 属性顺序必须与 A2 的 REG_OP 一致(前向是 gamma 在前、alpha 在后, 与反向相反)。用非对称取值断言 tilingData。
+// 属性顺序必须与算子定义一致(前向是 gamma 在前、alpha 在后, 与反向相反)。用非对称取值断言 tilingData。
 TEST_F(SoftmaxFocalLossTiling, test_tiling_attr_order_gamma_before_alpha)
 {
     uint64_t tilingKey = 0;

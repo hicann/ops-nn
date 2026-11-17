@@ -14,6 +14,7 @@
  */
 
 #include "lamb_update_with_lr_tiling_arch35.h"
+#include <vector>
 #include <graph/utils/type_utils.h>
 #include "../../op_kernel/arch35/lamb_update_with_lr_dag.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
@@ -31,6 +32,44 @@ namespace optiling {
 constexpr static uint64_t LAMB_UPDATE_WITH_LR_TILING_PRIORITY = 0;
 constexpr static int32_t INPUT_NUM = 9;
 constexpr static int32_t OUTPUT_NUM = 1;
+
+// 输出只由 input_greater1(0) 与 input_sub(5) 广播决定。
+// 其余输入在 TBE 中分别按 in0/in5 的 placeholder shape 使用，因此这里把
+// 1/2/3/6/7/8 强制成 in0 shape、4 强制成 in5 shape，避免 BroadcastBaseTiling
+// 把它们的真实 shape 也纳入广播。
+static gert::Shape NormalizeScalarShape(const gert::Shape& shape)
+{
+    if (shape.GetDimNum() == 0) {
+        gert::Shape normalized;
+        normalized.SetDimNum(1);
+        normalized.SetDim(0, 1);
+        return normalized;
+    }
+    return shape;
+}
+
+static std::vector<gert::Shape> BuildCanndevBrcInputShapes(gert::TilingContext* context)
+{
+    std::vector<gert::Shape> inputShapes;
+    inputShapes.reserve(INPUT_NUM);
+    auto in0 = context->GetInputShape(0);
+    auto in5 = context->GetInputShape(5);
+    if (in0 == nullptr || in5 == nullptr) {
+        return inputShapes;
+    }
+    gert::Shape primary0 = NormalizeScalarShape(in0->GetStorageShape());
+    gert::Shape primary5 = NormalizeScalarShape(in5->GetStorageShape());
+    for (int32_t i = 0; i < INPUT_NUM; ++i) {
+        if (i == 0) {
+            inputShapes.push_back(primary0);
+        } else if (i == 4 || i == 5) {
+            inputShapes.push_back(primary5);
+        } else {
+            inputShapes.push_back(primary0);
+        }
+    }
+    return inputShapes;
+}
 
 static ge::graphStatus TilingPrepareForLambUpdateWithLr(gert::TilingParseContext* context)
 {
@@ -120,9 +159,14 @@ ge::graphStatus LambUpdateWithLrTiling::DoOpTiling()
     auto input0Desc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
     ge::DataType input0DType = input0Desc->GetDataType();
+    auto inputShapes = BuildCanndevBrcInputShapes(context_);
+    OP_CHECK_IF(inputShapes.empty(), OP_LOGE(context_->GetNodeName(), "failed to build broadcast input shapes"),
+                return ge::GRAPH_FAILED);
     if (input0DType == ge::DT_FLOAT16) {
         BroadcastBaseTiling<LambUpdateWithLrOp::LambUpdateWithLrCompute<half, float>::OpDag> brcBaseTiling(
             context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
+        OP_CHECK_IF(brcBaseTiling.SetOpInputStorageShapes(inputShapes) == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "set broadcast input shapes failed"), return ge::GRAPH_FAILED);
         OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
                     OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
                     return ge::GRAPH_FAILED);
@@ -130,6 +174,8 @@ ge::graphStatus LambUpdateWithLrTiling::DoOpTiling()
     } else if (input0DType == ge::DT_FLOAT) {
         BroadcastBaseTiling<LambUpdateWithLrOp::LambUpdateWithLrCompute<float, float>::OpDag> brcBaseTiling(
             context_, static_cast<uint32_t>(BROADCAST_KERNEL_TYPE::KERNEL_TYPE_NDDMA));
+        OP_CHECK_IF(brcBaseTiling.SetOpInputStorageShapes(inputShapes) == ge::GRAPH_FAILED,
+                    OP_LOGE(context_->GetNodeName(), "set broadcast input shapes failed"), return ge::GRAPH_FAILED);
         OP_CHECK_IF(brcBaseTiling.DoTiling() == ge::GRAPH_FAILED,
                     OP_LOGE(context_->GetNodeName(), "Do tiling failed. Please check the detailed log."),
                     return ge::GRAPH_FAILED);

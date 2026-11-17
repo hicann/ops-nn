@@ -70,20 +70,35 @@ def _fp32_div(a, b):
     return torch.div(a, b)
 
 
+def _norm_shape(shape):
+    s = tuple(shape)
+    return s if s else (1,)
+
+
+def _view_as_kernel(x, shape):
+    n = int(np.prod(shape, dtype=np.int64))
+    if x.numel() == n:
+        return x.reshape(shape)
+    if x.numel() > n:
+        return x.reshape(-1)[:n].reshape(shape)
+    raise ValueError(
+        f"input has {x.numel()} elements, but kernel reads {n} with shape {shape}"
+    )
+
+
 def _decl_shape(*xs):
-    """算子声明的输出形状: 全部输入的广播结果(0 维标量按 (1,) 参与)。"""
-    shapes = [tuple(getattr(x, "shape", ())) or (1,) for x in xs]
+    """算子声明的输出形状: input_greater1 与 input_sub 的广播结果(0 维按 (1,))。"""
+    shapes = [_norm_shape(getattr(x, "shape", ())) for x in xs]
     return np.broadcast_shapes(*shapes)
 
 
 def _to_decl(outs, shape):
     """把各输出广播到算子声明的输出形状。
 
-    infershape 规定每个输出都取**全体输入**的广播结果; 而逐输出的自然形状可能更小
-    —— 某个输出的参与输入整组退化成标量时就会这样。值完全相同(同一个数铺开), 但形状
-    必须对齐声明: TTK 在 kernel 通路按 golden 的形状分配输出显存(output_generation.py
-    的 alloc_shape = golden_shape), golden 少铺一层, 内核就会按满格写进只有 1 个元素
-    的 buffer, 大规模下直接 VEC_ERROR。
+    输出形状由 input_greater1 与 input_sub 的广播结果决定; 逐输出的自然形状可能更小。
+    值完全相同(同一个数铺开), 但形状必须对齐声明: TTK 在 kernel 通路按 golden 的形状
+    分配输出显存(output_generation.py 的 alloc_shape = golden_shape), golden 少铺一层,
+    内核就会按满格写进只有 1 个元素的 buffer, 大规模下直接 VEC_ERROR。
     """
     return [np.broadcast_to(o, shape).copy() for o in outs]
 
@@ -114,16 +129,21 @@ def lamb_update_with_lr_golden(
     shortfall as a pass.
     """
     dt = input_mul1.dtype
-    g1, grd, rd, lr, gy, se, miny = _scalars(
-        input_greater1,
-        input_greater_realdiv,
-        input_realdiv,
-        input_mul0,
-        greater_y,
-        select_e,
-        minimum_y,
+    s0 = _norm_shape(getattr(input_greater1, "shape", ()))
+    s5 = _norm_shape(getattr(input_sub, "shape", ()))
+    g1, grd, rd, lr, gy, se, miny = (
+        _view_as_kernel(x, s0)
+        for x in _scalars(
+            input_greater1,
+            input_greater_realdiv,
+            input_realdiv,
+            input_mul0,
+            greater_y,
+            select_e,
+            minimum_y,
+        )
     )
-    upd, param = _t(input_mul1), _t(input_sub)
+    upd, param = _view_as_kernel(_t(input_mul1), s5), _view_as_kernel(_t(input_sub), s5)
     # 对应内核 Vec::DivFtzFalse<float> (DivAlgo::PRECISION_0ULP_FTZ_FALSE): IEEE-754 除法,
     # 非规格化操作数不冲刷(与竞品 torch @ CPU/A100 一致)。
     # x/0 -> +-inf, 0/0 -> nan (never raises); clipped downstream by min/max like the kernel.
@@ -137,17 +157,7 @@ def lamb_update_with_lr_golden(
     # greater_y / minimum_y 为 NaN 时内核整片输出 NaN，用内置版本会给出有限值而全盘对不上。
     # 不能 .item(): 会把逐元素的 clip 塌成一个标量
     clip = torch.maximum(torch.minimum(select1, miny), gy)
-    _shape = _decl_shape(
-        input_greater1,
-        input_greater_realdiv,
-        input_realdiv,
-        input_mul0,
-        input_mul1,
-        input_sub,
-        greater_y,
-        select_e,
-        minimum_y,
-    )
+    _shape = _decl_shape(input_greater1, input_sub)
     return _to_decl([(param - clip * lr * upd).numpy().astype(dt)], _shape)
 
 
@@ -220,8 +230,10 @@ class _LambUpdateWithLrCompose:
         minimum_y,
         **kwargs,
     ):
+        s0 = _norm_shape(getattr(input_greater1, "shape", ()))
+        s5 = _norm_shape(getattr(input_sub, "shape", ()))
         g1, grd, rd, lr, gy, se, miny = (
-            _tp_s(x)
+            _view_as_kernel(_tp_s(x), s0)
             for x in (
                 input_greater1,
                 input_greater_realdiv,
@@ -232,23 +244,14 @@ class _LambUpdateWithLrCompose:
                 minimum_y,
             )
         )
-        upd, param = _tp_t(input_mul1), _tp_t(input_sub)
+        upd = _view_as_kernel(_tp_t(input_mul1), s5)
+        param = _view_as_kernel(_tp_t(input_sub), s5)
         realdiv0 = torch.div(grd, rd)
         # 逐元素选择: 三方腿同样不能整张量只判一次
         select0 = torch.where(g1 > gy, realdiv0, se)
         select1 = torch.where(grd > gy, select0, se)
         clip = torch.maximum(torch.minimum(select1, miny), gy)
-        _shape = _decl_shape(
-            input_greater1,
-            input_greater_realdiv,
-            input_realdiv,
-            input_mul0,
-            input_mul1,
-            input_sub,
-            greater_y,
-            select_e,
-            minimum_y,
-        )
+        _shape = _decl_shape(input_greater1, input_sub)
         return _tp_to_decl([param - (clip * lr) * upd], _shape)
 
 

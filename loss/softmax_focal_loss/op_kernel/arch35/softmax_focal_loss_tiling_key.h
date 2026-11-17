@@ -20,7 +20,7 @@
 // hasWeight:    0 = weight 缺省(按全 1 语义), 1 = weight 传入
 // weightIsHalf: 0 = weight 为 float32, 1 = weight 为 float16
 //
-// weight 的 dtype 独立于 pred(A2 ini 声明四种组合), 但二进制匹配用的 simplifiedKey
+// weight 的 dtype 独立于 pred(声明四种组合), 但二进制匹配用的 simplifiedKey
 // 会把 optional 输入的 dtype 槽填成 pred 的 dtype, 四条 binary 会塌成两组键而选错 .o。
 // 故不依赖 binary 匹配区分 weight dtype, 改由 host tiling 按实际 dtype 下发本模板参数。
 #define SOFTMAX_FOCAL_LOSS_TPL_KEY_DECL()                                                 \

@@ -12,8 +12,8 @@
  * \file test_softmax_focal_loss_infershape.cpp
  * \brief infershape 的 reduction 语义 UT。
  *
- * 当前只支持 reduction="none", 故 infershape 在 Ascend950 上对 mean/sum 显式拒收。
- * 该判定按 soc 门控 —— 非 Ascend950 保持原行为(不读属性、y 与 pred 同形), 本文件两侧都测。
+ * infershape: none -> pred shape, mean/sum -> 0 维标量。
+ * 实际执行仍只支持 none, 由 tiling 的 CheckReduction 拦截, 不进入 kernel。
  */
 #include <gtest/gtest.h>
 #include <iostream>
@@ -36,8 +36,14 @@ gert::OpImplRegisterV2::InferShapeKernelFunc GetSflInferShape()
     return impl == nullptr ? nullptr : impl->infer_shape;
 }
 
+struct SflOutShape {
+    size_t dimNum = 0;
+    int64_t dim0 = 0;
+    int64_t dim1 = 0;
+};
+
 // 按 reduction 取值跑一次 infershape; 返回 GRAPH_SUCCESS/GRAPH_FAILED
-ge::graphStatus RunInfer(const char* reduction, int64_t* outDim0 = nullptr, int64_t* outDim1 = nullptr)
+ge::graphStatus RunInfer(const char* reduction, SflOutShape* outShape = nullptr)
 {
     auto func = GetSflInferShape();
     if (func == nullptr) {
@@ -64,15 +70,19 @@ ge::graphStatus RunInfer(const char* reduction, int64_t* outDim0 = nullptr, int6
                       .Build();
     auto context = holder.GetContext<gert::InferShapeContext>();
     auto ret = func(context);
-    if (ret == ge::GRAPH_SUCCESS && outDim0 != nullptr && outDim1 != nullptr) {
-        *outDim0 = context->GetOutputShape(0)->GetDim(0);
-        *outDim1 = context->GetOutputShape(0)->GetDim(1);
+    if (ret == ge::GRAPH_SUCCESS && outShape != nullptr) {
+        const gert::Shape* shape = context->GetOutputShape(0);
+        outShape->dimNum = shape->GetDimNum();
+        if (outShape->dimNum >= 2) {
+            outShape->dim0 = shape->GetDim(0);
+            outShape->dim1 = shape->GetDim(1);
+        }
     }
     return ret;
 }
 } // namespace
 
-// Ascend950: 读 reduction, "none" 通过且 y 与 pred 同形, mean/sum 显式拒收。
+// Ascend950: "none" 输出 pred shape, mean/sum 输出 0 维标量。
 class SoftmaxFocalLossInferShapeA5 : public testing::Test {
 protected:
     void SetUp() override
@@ -89,30 +99,36 @@ protected:
 
 TEST_F(SoftmaxFocalLossInferShapeA5, reduction_none_pass_and_keep_pred_shape)
 {
-    int64_t d0 = 0;
-    int64_t d1 = 0;
-    ASSERT_EQ(RunInfer("none", &d0, &d1), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(d0, N_DIM);
-    EXPECT_EQ(d1, C_DIM);
+    SflOutShape outShape;
+    ASSERT_EQ(RunInfer("none", &outShape), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(outShape.dimNum, 2u);
+    EXPECT_EQ(outShape.dim0, N_DIM);
+    EXPECT_EQ(outShape.dim1, C_DIM);
 }
 
-TEST_F(SoftmaxFocalLossInferShapeA5, reduction_mean_rejected_not_implemented)
+TEST_F(SoftmaxFocalLossInferShapeA5, reduction_mean_produces_scalar_shape)
 {
-    EXPECT_EQ(RunInfer("mean"), ge::GRAPH_FAILED);
+    SflOutShape outShape;
+    ASSERT_EQ(RunInfer("mean", &outShape), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(outShape.dimNum, 0u);
 }
 
-TEST_F(SoftmaxFocalLossInferShapeA5, reduction_sum_rejected_not_implemented)
+TEST_F(SoftmaxFocalLossInferShapeA5, reduction_sum_produces_scalar_shape)
 {
-    EXPECT_EQ(RunInfer("sum"), ge::GRAPH_FAILED);
+    SflOutShape outShape;
+    ASSERT_EQ(RunInfer("sum", &outShape), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(outShape.dimNum, 0u);
 }
 
-// 大小写不敏感: "MEAN" 同样应拒(与 tiling 的 CheckReduction 口径一致)
-TEST_F(SoftmaxFocalLossInferShapeA5, reduction_uppercase_mean_rejected)
+// 大小写不敏感: "MEAN" 与 "mean" 同语义
+TEST_F(SoftmaxFocalLossInferShapeA5, reduction_uppercase_mean_produces_scalar_shape)
 {
-    EXPECT_EQ(RunInfer("MEAN"), ge::GRAPH_FAILED);
+    SflOutShape outShape;
+    ASSERT_EQ(RunInfer("MEAN", &outShape), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(outShape.dimNum, 0u);
 }
 
-// 其它 soc: 保持原行为, 不读属性, mean 也按同形推导通过。
+// 其它 soc: 与 Ascend950 保持同一 infershape 契约。
 class SoftmaxFocalLossInferShapeNonA5 : public testing::Test {
 protected:
     void SetUp() override
@@ -127,11 +143,9 @@ protected:
     }
 };
 
-TEST_F(SoftmaxFocalLossInferShapeNonA5, reduction_mean_keeps_legacy_behavior)
+TEST_F(SoftmaxFocalLossInferShapeNonA5, reduction_mean_produces_scalar_shape)
 {
-    int64_t d0 = 0;
-    int64_t d1 = 0;
-    ASSERT_EQ(RunInfer("mean", &d0, &d1), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(d0, N_DIM);
-    EXPECT_EQ(d1, C_DIM);
+    SflOutShape outShape;
+    ASSERT_EQ(RunInfer("mean", &outShape), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(outShape.dimNum, 0u);
 }
