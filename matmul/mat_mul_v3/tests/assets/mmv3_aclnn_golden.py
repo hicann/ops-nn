@@ -113,6 +113,58 @@ class AclnnMmTestSpec(AclnnMatmulTestSpec):
     """aclnnMm shares the plain mm semantics."""
 
 
+def _is_950_soc(kwargs):
+    """DAV_3510(Ascend950 系列)平台判定，与 baddbmm 侧 _is_950 同源。"""
+    return str(kwargs.get("short_soc_version") or "").startswith("Ascend950")
+
+
+def _fmm_add_supported(
+    self_np, mat1_np, mat2_np, out, alpha, beta, cubeMathType, kwargs
+):
+    """镜像 aclnn_addmm.cpp CheckFmmAddSupport（950 fmm(add) 单kernel路由门禁）：
+    α=β=1(eps 容差) + mat1/mat2/self 均为完整 2D 且 self 严格 (M,N)(不支持
+    (n,)/(1,n) 广播) + K>0 + 四方同 dtype ∈ {fp16,bf16,fp32} + fp32 输入仅
+    cmt=3(USE_HF32) + storage format ND。核配 IsAivNumDoubleOfAicNum(标准 950
+    MIX_AIC_1_2)按满足处理。
+    命中后 NPU 走 AddmmFmmGraph -> fmm(fusedOpType="add", x3=self, bias=null)
+    单kernel(高性能模式): round_out(round_out(mm_acc) + self)，mm 的 acc 累加值
+    先舍回 C 域再融合，不携带 alpha/beta(门禁 eps 内偏离 1 的缩放被设备丢弃，
+    golden 同步不缩放——baddbmm review#1 同款结论)。"""
+    if not _is_950_soc(kwargs):
+        return False
+    if abs(float(alpha) - 1.0) > _FP32_EPS or abs(float(beta) - 1.0) > _FP32_EPS:
+        return False
+    if mat1_np.ndim != 2 or mat2_np.ndim != 2 or self_np.ndim != 2:
+        return False
+    m_dim, n_dim = mat1_np.shape[0], mat2_np.shape[1]
+    if tuple(self_np.shape) != (m_dim, n_dim):
+        return False
+    if mat1_np.shape[1] == 0 or mat2_np.shape[0] == 0:
+        return False
+    dtype_str = _util.dtype_to_str(mat1_np.dtype)
+    if dtype_str not in ("float16", "bfloat16", "float32"):
+        return False
+    if (
+        _util.dtype_to_str(mat2_np.dtype) != dtype_str
+        or _util.dtype_to_str(self_np.dtype) != dtype_str
+    ):
+        return False
+    out_dtype_str = (
+        _util.dtype_to_str(out.dtype)
+        if out is not None
+        else _util.dtype_to_str(self_np.dtype)
+    )
+    if out_dtype_str != dtype_str:
+        return False
+    cube_math_type = 0 if cubeMathType is None else int(cubeMathType)
+    if dtype_str == "float32" and cube_math_type != _CUBE_MATH_USE_HF32:
+        return False
+    fmts = kwargs.get("tensor_formats") or ()
+    if any(f not in (None, "", "ND") for f in list(fmts)[:3]):
+        return False
+    return True
+
+
 class AclnnAddmmTestSpec:
     compare = _util.isclose_compare
 
@@ -183,6 +235,28 @@ class AclnnAddmmTestSpec:
                 else bias_term
             )
 
+        # 950 fmm(add) 单kernel路由：高性能模式(innerPrecise=HIGH_PERFORMANCE,
+        # cmt=0 时) mm 的 acc 累加值先舍回 C 域(round 到 out dtype)再融合 self
+        # ——对齐 956bae3c1 所述"fmm 高性能路径(acc 舍回 C 域融合)"与本次实测
+        # (bf16 缺失该 round: mismatch 27.3% -> 精度 74%失败)。不携带 alpha/beta
+        # (门禁已限 α=β=1 eps 内, 缩放被设备丢弃)。
+        if _fmm_add_supported(
+            self_np, mat1_np, mat2_np, out, alpha, beta, cubeMathType, kwargs
+        ):
+            matmul_result = _kernel_bmm(
+                mat1_np,
+                mat2_np,
+                cubeMathType=cubeMathType,
+                out_dtype=out_dtype,
+                **kwargs,
+            )
+            add_result = matmul_result.astype(np.float32) + self_np.astype(np.float32)
+            return (
+                _util.cast_output_dtype(add_result, out_dtype)
+                if out_dtype
+                else add_result
+            )
+
         matmul_result = _kernel_bmm(
             mat1_np, mat2_np, cubeMathType=cubeMathType, out_dtype=None, **kwargs
         )
@@ -224,7 +298,11 @@ class AclnnAddmmTestSpec:
             )
 
         # generic vector path: mm rounded once, then one fused Axpy/Add
-        # rounding at the promoted dtype
+        # 对齐 baddbmm d7d063bfd 实证结论: l0op::Axpy/Add 是融合算子(fp32 域
+        # x + α·y 单 pass 单次 round), 不塌回低精度域再逐元素双 round
+        # (旧版 combined_fp32.astype(matmul_out_dtype) 在 bf16 case 与 NPU 相差
+        # 1 ULP 系统性偏差 —— fp16(ULP 0.049%) 侥幸被 rtol 0.001 掩盖, bf16
+        # (ULP 0.39%) 超差失败)
         matmul_out = matmul_result.astype(matmul_out_dtype)
         bias_term = self_np
         if abs(beta - 1.0) > _FP32_EPS:
@@ -234,15 +312,11 @@ class AclnnAddmmTestSpec:
         combined_fp32 = matmul_out.astype(np.float32) * np.float32(
             alpha
         ) + bias_term.astype(np.float32)
-        if (
-            bias_term.dtype == np.float32
-            or matmul_out.dtype == np.float32
-            or bias_term.dtype != matmul_out.dtype
-        ):
-            combined = combined_fp32
-        else:
-            combined = combined_fp32.astype(matmul_out.dtype)
-        return _util.cast_output_dtype(combined, out_dtype) if out_dtype else combined
+        return (
+            _util.cast_output_dtype(combined_fp32, out_dtype)
+            if out_dtype
+            else combined_fp32
+        )
 
 
 class AclnnAddmmWeightNzTestSpec(AclnnAddmmTestSpec):
