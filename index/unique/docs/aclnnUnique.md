@@ -108,7 +108,7 @@ aclnnStatus aclnnUnique(
       <td>valueOut</td>
       <td>输出</td>
       <td>第一个输出张量，输入张量中的唯一元素。</td>
-      <td></td>
+      <td>数据类型与 self 一致。</td>
       <td>BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16</td>
       <td></td>
       <td></td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnUnique(
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>self 或 valueOut 的数据类型不在支持的范围之内。</td>
+      <td>self 的数据类型不在支持的范围之内，或 valueOut 的数据类型与 self 不一致。</td>
     </tr>
     <tr>
       <td>self 为非连续张量。</td>

@@ -85,7 +85,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
         <td>source</td>
         <td>输入</td>
         <td>输入Tensor。</td>
-        <td>元素数量需要大于等于mask中元素为true的数量。</td>
+        <td>source元素数量需要由调用方保证大于等于mask广播到selfRef的shape后值为true的元素数量，接口不校验该约束；不满足时不保证计算结果的正确性，也不保证返回错误码。</td>
         <td>与selfRef相同</td>
         <td>ND</td>
         <td>-</td>

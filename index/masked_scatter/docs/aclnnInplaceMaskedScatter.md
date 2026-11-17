@@ -78,7 +78,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
         <td>-</td>
         <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、BOOL、BFLOAT16</td>
         <td>ND</td>
-        <td>-</td>
+        <td>0-8</td>
         <td>√</td>
       </tr>
       <tr>
@@ -88,17 +88,17 @@ aclnnStatus aclnnInplaceMaskedScatter(
         <td>shape不能大于selfRef，且需要和selfRef满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</td>
         <td>BOOL、UINT8</td>
         <td>ND</td>
-        <td>-</td>
+        <td>0-8</td>
         <td>-</td>
       </tr>
       <tr>
         <td>source</td>
         <td>输入</td>
         <td>输入Tensor。</td>
-        <td>元素数量需要大于等于mask中元素为true的数量。</td>
+        <td>source元素数量需要由调用方保证大于等于mask广播到selfRef的shape后值为true的元素数量，接口不校验该约束；不满足时不保证计算结果的正确性，也不保证返回错误码。</td>
         <td>与selfRef相同</td>
         <td>ND</td>
-        <td>-</td>
+        <td>0-8</td>
         <td>-</td>
       </tr>
       <tr>
@@ -146,8 +146,8 @@ aclnnStatus aclnnInplaceMaskedScatter(
       <td>传入的selfRef、mask、source是空指针。</td>
       </tr>
       <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>selfRef和mask的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -158,6 +158,9 @@ aclnnStatus aclnnInplaceMaskedScatter(
       </tr>
       <tr>
       <td>source的数据类型和selfRef的数据类型不同。</td>
+      </tr>
+      <tr>
+      <td>selfRef、mask或source的维度超过8维。</td>
       </tr>
     </tbody>
     </table>

@@ -36,9 +36,11 @@ using namespace op;
 extern "C" {
 #endif
 
-static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inverseOut, const aclTensor* countsOut)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* valueOut, const aclTensor* inverseOut,
+                            const aclTensor* countsOut)
 {
     CHECK_RET(UniqueCommon::CheckSelfDtypeValid(self), false);
+    OP_CHECK_DTYPE_NOT_SAME(self, valueOut, return false);
 
     // 检查inverseOut数据类型
     OP_CHECK_DTYPE_NOT_MATCH(inverseOut, op::DataType::DT_INT64, return false);
@@ -74,7 +76,7 @@ static aclnnStatus CheckParams(const aclTensor* self, bool returnInverse, bool r
     CHECK_RET(CheckNotNull4Tensor(self, valueOut, inverseOut, countsOut), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查数据类型
-    CHECK_RET(CheckDtypeValid(self, inverseOut, countsOut), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(self, valueOut, inverseOut, countsOut), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查数据Shape
     CHECK_RET(CheckShapeValid(self, returnInverse, returnCounts, valueOut, inverseOut, countsOut),

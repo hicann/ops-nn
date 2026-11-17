@@ -156,16 +156,16 @@ aclnnStatus aclnnUniqueDim(
       <td>示例中的 dim。</td>
       <td>指定做去重操作的维度，数据类型支持 INT64，取值范围为[-self.dim(), self.dim())。</td>
       <td>INT64</td>
-      <td>ND</td>
-      <td></td>
-      <td>√</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>valueOut</td>
       <td>输出</td>
       <td>示例中的 valueOut，表示去重结果。</td>
       <td>数据类型与 self 一致。</td>
-      <td>-</td>
+      <td>BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

@@ -87,7 +87,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
         <td>source</td>
         <td>Input</td>
         <td>Input tensor.</td>
-        <td>The number of elements must be greater than or equal to the number of elements that are true in mask.</td>
+        <td>The caller must ensure that the number of elements in source is greater than or equal to the number of true elements after mask is broadcast to the shape of selfRef. The API does not validate this constraint. If the constraint is not met, neither the correctness of the result nor the return of an error code is guaranteed.</td>
         <td>Same as selfRef</td>
         <td>ND</td>
         <td>-</td>

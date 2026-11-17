@@ -220,3 +220,70 @@ TEST_F(l2_unique2_test, case_020_SHAPE_UNCONSISTENT)
 
 // dim长度必须小于8
 TEST_F(l2_unique2_test, case_021_DIM_OVERSIZE) { test_run_invalid(ACL_FLOAT, ACL_FORMAT_ND, 10); }
+
+// valueOut must have the same dtype as self, including for empty inputs.
+TEST_F(l2_unique2_test, value_out_complex64)
+{
+    auto self = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
+    auto value = TensorDesc({4}, ACL_COMPLEX64, ACL_FORMAT_ND);
+    auto inverse = TensorDesc({4}, ACL_INT64, ACL_FORMAT_ND);
+    auto counts = TensorDesc({4}, ACL_INT64, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnUnique2, INPUT(self, false, false, false), OUTPUT(value, inverse, counts));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_unique2_test, value_out_complex64_empty)
+{
+    auto self = TensorDesc({0}, ACL_INT32, ACL_FORMAT_ND);
+    auto value = TensorDesc({0}, ACL_COMPLEX64, ACL_FORMAT_ND);
+    auto inverse = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto counts = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnUnique2, INPUT(self, false, false, false), OUTPUT(value, inverse, counts));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_unique2_test, value_out_complex128)
+{
+    auto self = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
+    auto value = TensorDesc({4}, ACL_COMPLEX128, ACL_FORMAT_ND);
+    auto inverse = TensorDesc({4}, ACL_INT64, ACL_FORMAT_ND);
+    auto counts = TensorDesc({4}, ACL_INT64, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnUnique2, INPUT(self, false, false, false), OUTPUT(value, inverse, counts));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_unique2_test, value_out_complex128_empty)
+{
+    auto self = TensorDesc({0}, ACL_INT32, ACL_FORMAT_ND);
+    auto value = TensorDesc({0}, ACL_COMPLEX128, ACL_FORMAT_ND);
+    auto inverse = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto counts = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnUnique2, INPUT(self, false, false, false), OUTPUT(value, inverse, counts));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_unique2_test, value_out_mismatched_float)
+{
+    auto self = TensorDesc({4}, ACL_INT32, ACL_FORMAT_ND);
+    auto value = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inverse = TensorDesc({4}, ACL_INT64, ACL_FORMAT_ND);
+    auto counts = TensorDesc({4}, ACL_INT64, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnUnique2, INPUT(self, false, false, false), OUTPUT(value, inverse, counts));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_unique2_test, value_out_mismatched_float_empty)
+{
+    auto self = TensorDesc({0}, ACL_INT32, ACL_FORMAT_ND);
+    auto value = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto inverse = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto counts = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnUnique2, INPUT(self, false, false, false), OUTPUT(value, inverse, counts));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}

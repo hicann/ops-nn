@@ -120,7 +120,7 @@ aclnnStatus aclnnUnique2(
       <td>valueOut</td>
       <td>输出</td>
       <td>第一个输出张量，保存输入张量中的唯一元素，shape 仅支持 1 维度，元素个数小于等于 self。</td>
-      <td>-</td>
+      <td>数据类型与 self 一致。</td>
       <td>BOOL、FLOAT、FLOAT16、DOUBLE、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16</td>
       <td>-</td>
       <td>-</td>
@@ -191,12 +191,9 @@ aclnnStatus aclnnUnique2(
         <td>传入的 self 或 valueOut 或 inverseOut 或 countsOut 是空指针时。</td>
       </tr>
       <tr>
-        <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="4">161002</td>
-        <td>self 或 valueOut 的数据类型不在支持的范围之内。</td>
-      </tr>
-      <tr>
-        <td>self 为非连续张量。</td>
+        <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="3">161002</td>
+        <td>self 的数据类型不在支持的范围之内，或 valueOut 的数据类型与 self 不一致。</td>
       </tr>
       <tr>
         <td>returnInverse 为 True，且 inverseOut 与 self shape 不一致。</td>

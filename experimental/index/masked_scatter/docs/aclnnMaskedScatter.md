@@ -43,7 +43,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
 | 参数名 | 输入/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度(shape) | 非连续Tensor |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | `selfRef` | 输入 | 输入/输出 Tensor。 | 支持非连续 Tensor。 | `FLOAT`、`FLOAT16`、`DOUBLE`、`INT8`、`INT16`、`INT32`、`INT64`、`UINT8`、`BOOL`、`BFLOAT16` | `ND` | `0-8` 维 | √ |
-| `mask` | 输入 | 掩码 Tensor。 | shape 维度不能大于 `selfRef`，且需与 `selfRef` 满足 [broadcast 关系](../../../../docs/zh/context/broadcast_relationship.md)。 | `BOOL`、`UINT8` | `ND` | `0-8` 维 | - |
+| `mask` | 输入 | 掩码 Tensor。 | shape 维度不能大于 `selfRef`，且需与 `selfRef` 满足 [broadcast 关系](../../../../docs/zh/context/broadcast_relationship.md)。 | `BOOL` | `ND` | `0-8` 维 | - |
 | `source` | 输入 | 更新 Tensor。 | 数据类型需与 `selfRef` 相同，元素数量需大于等于 `mask` 中值为 `true` 的元素个数。 | 与 `selfRef` 相同 | `ND` | `0-8` 维 | - |
 | `workspaceSize` | 输出 | 返回需要在 Device 侧申请的 workspace 大小。 | - | - | - | - | - |
 | `executor` | 输出 | 返回算子执行器。 | 包含算子计算流程。 | - | - | - | - |
