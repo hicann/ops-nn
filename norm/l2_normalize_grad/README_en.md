@@ -15,7 +15,7 @@ English | [简体中文](./README.md)
 
 ## Function
 
-- Operator function: Backward operator of the forward L2Normalize ($y = x/max(sqrt(sum(x^2, dim)), eps)$). The three inputs are `x` (forward input), `y` (forward output, that is, the normalized x), and `dy` (upstream gradient), and the single output is `dx` (gradient with respect to x).
+- Operator function: Backward operator of the forward L2Normalize ($y = x/sqrt(max(sum(x^2, dim), eps))$). The three inputs are `x` (forward input), `y` (forward output, that is, the normalized x), and `dy` (upstream gradient), and the single output is `dx` (gradient with respect to x).
 
 - Formula (reduction is performed along the reduction axis set specified by the attribute `dim`, and keepdims broadcasts back to the full shape):
 
@@ -30,6 +30,8 @@ English | [简体中文](./README.md)
   $$
   dx = \frac{dy - y \cdot s}{n}
   $$
+
+  In forward L2Normalize, `eps` is the lower bound of the sum of squares. In the backward expression above, it is the lower bound of the L2 norm. When `eps` clamping is active, the expression above can differ from the derivative of the forward formula.
 
 ## Parameters
 
