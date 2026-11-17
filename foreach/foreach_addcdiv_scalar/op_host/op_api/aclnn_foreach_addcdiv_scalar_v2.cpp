@@ -61,11 +61,12 @@ static inline bool ForeachAddcdivScalarV2CheckFormat(const aclTensorList* addcdi
                                                      const aclTensorList* x3, const aclTensorList* out)
 {
     for (uint64_t i = 0; i < addcdivScalarSelf->Size(); i++) {
+        // x1/x2/x3/out格式不能是私有格式（ND/NCL/NCHW等通用格式均放行，与同族foreach算子口径一致）
         const aclTensor* tensors[4] = {(*addcdivScalarSelf)[i], (*x2)[i], (*x3)[i], (*out)[i]};
         const char* names[4] = {"x1", "x2", "x3", "out"};
         for (uint32_t j = 0; j < 4; ++j) {
-            if (tensors[j]->GetStorageFormat() != Format::FORMAT_ND) {
-                const std::string reason = "The format of x1/x2/x3/out must be ND.";
+            if (IsPrivateFormat(tensors[j]->GetStorageFormat())) {
+                const std::string reason = "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.";
                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
                 REPORT_PREDEFINED_ERR_MSG(
                     "EZ0035", (std::vector<const char*>{"param_name", "op_name", "incorrect_format", "reason"}),

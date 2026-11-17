@@ -116,7 +116,19 @@ static inline bool CheckDtypeValid(const aclTensorList* minimumScalarSelf, const
     return true;
 }
 
-static inline bool CheckShape(const aclTensorList* minimumScalarSelf, const aclTensorList* out)
+static inline bool CheckScalarShape(const aclTensor* scalar)
+{
+    // scalar 维度不超过8维，且只含一个元素（与 arch35 tiling 契约对齐）
+    OP_CHECK_MAX_DIM(scalar, MAX_SUPPORT_DIMS_NUMS, return false);
+    if (scalar->GetViewShape().GetShapeSize() != 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The scalar tensor must contain exactly one element, but got %ld.",
+                scalar->GetViewShape().GetShapeSize());
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckShape(const aclTensorList* minimumScalarSelf, const aclTensor* scalar, const aclTensorList* out)
 {
     // tensor 维度检查
     for (uint64_t k = 0; k < minimumScalarSelf->Size(); k++) {
@@ -126,6 +138,11 @@ static inline bool CheckShape(const aclTensorList* minimumScalarSelf, const aclT
     // self和out的shape必须一致
     for (uint64_t k = 0; k < minimumScalarSelf->Size(); k++) {
         OP_CHECK_SHAPE_NOT_EQUAL((*minimumScalarSelf)[k], (*out)[k], return false);
+    }
+
+    // scalar维度与元素个数检查
+    if (!CheckScalarShape(scalar)) {
+        return false;
     }
     return true;
 }
@@ -147,7 +164,7 @@ static inline aclnnStatus CheckParams(const aclTensorList* minimumScalarSelf, co
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(minimumScalarSelf, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
-    CHECK_RET(CheckShape(minimumScalarSelf, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(minimumScalarSelf, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查Format是否满足约束
     CHECK_RET(CheckFormat(minimumScalarSelf, out), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;

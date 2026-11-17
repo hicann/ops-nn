@@ -48,7 +48,7 @@ TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_f
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
-// V1 公共非ND格式（NCHW）：文档口径仅 ND，应拒绝（守护 V1 契约，防止格式校验回归）
+// V1 公共非ND格式（NCHW）：与同族foreach算子一致，非私有格式放行（issue #84）
 TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_nchw_format)
 {
     vector<vector<int64_t>> selfDims = {{2, 2}};
@@ -66,10 +66,52 @@ TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_n
     auto ut = OP_API_UT(aclnnForeachAddcdivScalar, INPUT(xList, x2List, x3List, scalar), OUTPUT(outList));
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+// V1 3维张量NCL格式（torch_npu对3维张量的默认推荐格式47）：应放行（issue #84 torchair回归）
+TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_ncl_format)
+{
+    vector<vector<int64_t>> selfDims = {{2, 3, 4}};
+    vector<int64_t> scalarDims = {1};
+    auto x = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_NCL).ValueRange(-1.0, 1.0);
+    auto x2 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_NCL).ValueRange(-1.0, 1.0);
+    auto x3 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_NCL).ValueRange(0.1, 1.0);
+    auto scalar = TensorDesc(scalarDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1.0, 2.0);
+    auto out = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_NCL).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto x3List = TensorListDesc({x3});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcdivScalar, INPUT(xList, x2List, x3List, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+// V1 私有格式（NC1HWC0）：应拒绝
+TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_private_format)
+{
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    vector<int64_t> scalarDims = {1};
+    auto x = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_NC1HWC0).ValueRange(-1.0, 1.0);
+    auto x2 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1.0, 1.0);
+    auto x3 = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0.1, 1.0);
+    auto scalar = TensorDesc(scalarDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1.0, 2.0);
+    auto out = TensorDesc(selfDims[0], ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto x3List = TensorListDesc({x3});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcdivScalar, INPUT(xList, x2List, x3List, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-// V1 scalar 非ND格式：应拒绝
+// V1 scalar 非ND格式：与同族一致，非私有格式放行（issue #84）
 TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_scalar_nchw_format)
 {
     vector<vector<int64_t>> selfDims = {{2, 2}};
@@ -87,7 +129,7 @@ TEST_F(l2_foreach_addcdiv_scalar_test, ascend910B2_foreach_addcdiv_scalar_test_s
     auto ut = OP_API_UT(aclnnForeachAddcdivScalar, INPUT(xList, x2List, x3List, scalar), OUTPUT(outList));
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
 // 增量覆盖：x1 与 x2 的 tensor 个数不一致 -> 161002（命中 x2Mismatch 分支）

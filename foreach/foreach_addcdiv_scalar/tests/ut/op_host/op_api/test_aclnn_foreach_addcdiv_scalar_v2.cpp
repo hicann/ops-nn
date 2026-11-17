@@ -233,7 +233,7 @@ TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910B2_foreach_addcdiv_scalar_v2_
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
-// 公共非ND格式（NCHW）：文档声明仅ND，应拒绝
+// V2 公共非ND格式（NCHW）：与同族foreach算子一致，非私有格式放行（issue #84）
 TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910B2_foreach_addcdiv_scalar_v2_test_nchw_format)
 {
     vector<int64_t> dims = {2, 2};
@@ -250,7 +250,27 @@ TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910B2_foreach_addcdiv_scalar_v2_
     auto ut = OP_API_UT(aclnnForeachAddcdivScalarV2, INPUT(xList, x2List, x3List, scalar_desc), OUTPUT(outList));
     uint64_t workspaceSize = 0;
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+// V2 3维张量NCL格式（torch_npu对3维张量的默认推荐格式47）：应放行（issue #84 torchair回归）
+TEST_F(l2_foreach_addcdiv_scalar_v2_test, ascend910B2_foreach_addcdiv_scalar_v2_test_ncl_format)
+{
+    vector<int64_t> dims = {2, 3, 4};
+    auto scalar_desc = ScalarDesc(1.0);
+    auto x = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_NCL).ValueRange(-1, 1);
+    auto x2 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_NCL).ValueRange(-1, 1);
+    auto x3 = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_NCL).ValueRange(0.1, 1.0);
+    auto out = TensorDesc(dims, ACL_FLOAT, ACL_FORMAT_NCL).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto x3List = TensorListDesc({x3});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachAddcdivScalarV2, INPUT(xList, x2List, x3List, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
 // self and x2 diffrent shape

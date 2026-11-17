@@ -16,13 +16,49 @@
  */
 
 #include "../../../foreach_utils/op_host/foreach_tiling_class.h"
+#include "log/log.h"
 
 namespace optiling {
+
+// y size 必须与 x size 一致：内核按 x 元素数写出，out 更小会越界写（issue #66，对齐 arch35 契约）
+static ge::graphStatus CheckOutputSizeEqualsInput(gert::TilingContext* context)
+{
+    auto computeNodeInfoPtr = context->GetComputeNodeInfo();
+    if (computeNodeInfoPtr == nullptr) {
+        OP_LOGE(context, "compute node info is null.");
+        return ge::GRAPH_FAILED;
+    }
+    auto idxInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(0);
+    if (idxInstanceInfoPtr == nullptr) {
+        OP_LOGE(context, "input instance info is null.");
+        return ge::GRAPH_FAILED;
+    }
+    uint64_t tensorNum = idxInstanceInfoPtr->GetInstanceNum();
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        auto xShapePtr = context->GetDynamicInputShape(0, i);
+        auto yShapePtr = context->GetOutputShape(i);
+        if (xShapePtr == nullptr || yShapePtr == nullptr) {
+            OP_LOGE(context, "get shape of x[%lu] or y[%lu] failed.", i, i);
+            return ge::GRAPH_FAILED;
+        }
+        int64_t xSize = xShapePtr->GetStorageShape().GetShapeSize();
+        int64_t ySize = yShapePtr->GetStorageShape().GetShapeSize();
+        if (xSize != ySize) {
+            OP_LOGE(context, "The shape size of y[%lu] must be the same as that of x[%lu], but got %ld and %ld.", i, i,
+                    ySize, xSize);
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
 
 static ge::graphStatus Tiling4ForeachSubScalarListTiling(gert::TilingContext* context)
 {
     ForeachCommonTiling tilingObject(context);
     if (tilingObject.Init(FOREACH_SUB_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckOutputSizeEqualsInput(context) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return tilingObject.RunBigKernelTiling();

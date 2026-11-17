@@ -43,3 +43,39 @@ TEST_F(l2_foreach_minimum_scalar_test, ascend910B2_foreach_minimum_scalar_test_n
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
+
+// scalar 维度超过8维：应拒绝（issue #65）
+TEST_F(l2_foreach_minimum_scalar_test, ascend910B2_foreach_minimum_scalar_test_scalar_rank9)
+{
+    vector<int64_t> selfDims = {2, 4};
+    vector<int64_t> scalarDims = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+    auto scalar = TensorDesc(scalarDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    vector<int64_t> outDims = {2, 4};
+    auto x = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachMinimumScalar, INPUT(xList, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// scalar 元素个数不为1：应拒绝（issue #65）
+TEST_F(l2_foreach_minimum_scalar_test, ascend910B2_foreach_minimum_scalar_test_scalar_numel2)
+{
+    vector<int64_t> selfDims = {2, 4};
+    vector<int64_t> scalarDims = {2};
+    auto scalar = TensorDesc(scalarDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    vector<int64_t> outDims = {2, 4};
+    auto x = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachMinimumScalar, INPUT(xList, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}

@@ -20,4 +20,5 @@ add_kernel_sources(
     KERNEL_SRC arch35/foreach_div_list.cpp
     COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
+    OPTIONS "--cce-use-fast-math=false"
 )
