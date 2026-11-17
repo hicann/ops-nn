@@ -98,8 +98,8 @@ aclnnStatus aclnnDequantSituQuantGetWorkspaceSize(
     const aclTensor* quantScaleOptional,
     const aclTensor* quantOffsetOptional,
     const aclTensor* groupIndexOptional,
-    float             beta,
-    float             linearBeta,
+    double            beta,
+    double            linearBeta,
     bool              activateLeft,
     char*             quantTypeOptional,
     const aclTensor*  yOut,
@@ -196,7 +196,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>quantOffsetOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Quantized offset.</td>
-      <td><ul><li>Does not support null tensor.</li><li>Required when `quantTypeOptional` is static, with the same shape as `quantScaleOptional`.</li><li>Optional when `quantTypeOptional` is dynamic.</li></ul></td>
+      <td><ul><li>Does not support null tensor.</li><li>Optional when `quantTypeOptional` is static (treated as 0 if absent), with the same shape as `quantScaleOptional`.</li><li>Not used when `quantTypeOptional` is dynamic; must be empty.</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -213,7 +213,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>x</td>
     </tr>
     <tr>
-      <td>beta (float)</td>
+      <td>beta (double)</td>
       <td>Input</td>
       <td>Beta parameter for Situ activation.</td>
       <td>Cannot be 0. Defaults to 4.0.</td>
@@ -223,7 +223,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>linearBeta (float)</td>
+      <td>linearBeta (double)</td>
       <td>Input</td>
       <td>The linear_beta parameter of the Situ activation.</td>
       <td>Not enabled when the value is ≤ 0. The default value is 25.0.</td>
@@ -409,6 +409,8 @@ The first-phase API performs input parameter validation and returns an error in 
 - INT32: `weightScaleOptional` and `activationScaleOptional` are required, while `quantScaleOptional` and `quantOffsetOptional` are forbidden.
 - BF16/FLOAT16: None of the optional inputs is used (pre-dequantization mode).
 - When `quantTypeOptional` is static, `quantScaleOptional` is required.
+- When `quantTypeOptional` is static, `quantOffsetOptional` is optional and treated as 0 when absent; when
+  `quantTypeOptional` is dynamic, `quantOffsetOptional` must be empty (not used).
 - When `quantTypeOptional` is dynamic, `quantScaleOptional` is optional (used as smoothScale).
 
 ## Example
@@ -515,8 +517,8 @@ int main()
     ret = CreateAclTensor(yScaleHostData, yScaleShape, &yScaleDeviceAddr, aclDataType::ACL_FLOAT, &yScale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    float beta = 4.0;
-    float linearBeta = 25.0;
+    double beta = 4.0;
+    double linearBeta = 25.0;
     bool activateLeft = true;
 
     // 3. Call the CANN operator library API. Replace it with the specific API name.

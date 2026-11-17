@@ -96,8 +96,8 @@ aclnnStatus aclnnDequantSituQuantGetWorkspaceSize(
     const aclTensor* quantScaleOptional,
     const aclTensor* quantOffsetOptional,
     const aclTensor* groupIndexOptional,
-    float             beta,
-    float             linearBeta,
+    double            beta,
+    double            linearBeta,
     bool              activateLeft,
     char*             quantTypeOptional,
     const aclTensor*  yOut,
@@ -194,7 +194,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>quantOffsetOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的offset。</td>
-      <td><ul><li>不支持空Tensor。</li><li>当`quantTypeOptional`为static时必选，shape同`quantScaleOptional`。</li><li>当`quantTypeOptional`为dynamic时可选。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>当`quantTypeOptional`为static时可选（缺省按0处理），shape同`quantScaleOptional`。</li><li>当`quantTypeOptional`为dynamic时不使用，须为空。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -211,7 +211,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>x</td>
     </tr>
     <tr>
-      <td>beta（float）</td>
+      <td>beta（double）</td>
       <td>输入</td>
       <td>Situ激活的beta参数。</td>
       <td>不能为0。默认4.0。</td>
@@ -221,7 +221,7 @@ aclnnStatus aclnnDequantSituQuant(
       <td>-</td>
     </tr>
     <tr>
-      <td>linearBeta（float）</td>
+      <td>linearBeta（double）</td>
       <td>输入</td>
       <td>Situ激活的linear_beta参数。</td>
       <td>当值≤0时不启用。默认25.0。</td>
@@ -408,6 +408,8 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 - BF16/FLOAT16：除`groupIndexOptional`外其余可选输入均不使用（预反量化模式）；`groupIndexOptional`可选，
   为各专家连续排布的行计数（INT64段长），计数总和不超过x行数，超出计数总和的尾行不参与计算、输出保持0。
 - 当`quantTypeOptional`为static时，`quantScaleOptional`必须提供。
+- 当`quantTypeOptional`为static时，`quantOffsetOptional`可选，缺省按0处理；当`quantTypeOptional`为dynamic时，
+  `quantOffsetOptional`须为空（不使用）。
 - 当`quantTypeOptional`为dynamic时，`quantScaleOptional`可选（作为smoothScale使用）。
 
 ## 调用示例
@@ -514,8 +516,8 @@ int main()
     ret = CreateAclTensor(yScaleHostData, yScaleShape, &yScaleDeviceAddr, aclDataType::ACL_FLOAT, &yScale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    float beta = 4.0;
-    float linearBeta = 25.0;
+    double beta = 4.0;
+    double linearBeta = 25.0;
     bool activateLeft = true;
 
     // 3. 调用CANN算子库API，需要修改为具体的API名称
