@@ -156,6 +156,12 @@ ge::graphStatus ArgMaxGradTiling::CheckShape()
     auto updatesShapePtr = context_->GetInputShape(INPUT_UPDATES_IDX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, updatesShapePtr);
 
+    // Scalar var may have storage shape [1]; validate its original rank as well.
+    const auto& varOriginShape = varShapePtr->GetOriginShape();
+    OP_CHECK_IF(varOriginShape.GetDimNum() == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "var", "0",
+                                                         "the rank of origin_shape must be >= 1"),
+                return ge::GRAPH_FAILED);
     const auto& varShape = varShapePtr->GetStorageShape();
     // A2 check_param 的 var.shape == assist.shape 这条不再适用: assist 由内核按 dimension 自生成,
     // 与 var 同形是构造保证。indices.shape == updates.shape 仍需校验。
