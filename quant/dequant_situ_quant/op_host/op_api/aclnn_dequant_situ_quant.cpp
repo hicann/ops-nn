@@ -82,7 +82,7 @@ static bool CheckNotNull(const aclTensor* x, const aclTensor* yOut, const aclTen
 }
 
 // 2. 检查条件必选输入是否为空指针：INT8/INT32必选weightScaleOptional，INT32必选activationScaleOptional，
-// static量化必选quantScaleOptional
+// INT8+static量化必选quantScaleOptional
 static bool CheckConditionalInputNotNull(const aclTensor* x, const aclTensor* weightScaleOptional,
                                          const aclTensor* activationScaleOptional, const aclTensor* quantScaleOptional,
                                          QuantType quantType)
@@ -94,7 +94,7 @@ static bool CheckConditionalInputNotNull(const aclTensor* x, const aclTensor* we
     if (xDtype == op::DataType::DT_INT32) {
         OP_CHECK_NULL(activationScaleOptional, return false);
     }
-    if (quantType == QuantType::STATIC) {
+    if (quantType == QuantType::STATIC && xDtype == op::DataType::DT_INT8) {
         OP_CHECK_NULL(quantScaleOptional, return false);
     }
     return true;
@@ -248,8 +248,8 @@ static bool CheckXShape(const aclTensor* x)
     return true;
 }
 
-// 9. 检查输出shape的维度与x匹配
-static bool CheckOutShape(const aclTensor* x, const aclTensor* yOut, const aclTensor* yScaleOut)
+// 9. 检查输出shape的维度与x匹配（含未知维(-1)时无法精确推导，仅校验rank）
+static bool CheckOutShapeRank(const aclTensor* x, const aclTensor* yOut, const aclTensor* yScaleOut)
 {
     const size_t xDimNum = x->GetViewShape().GetDimNum();
     const size_t expectedYDimNum = (x->GetDataType() == op::DataType::DT_INT8) ? xDimNum : DIM_NUM_NOT_INT8;
@@ -268,6 +268,284 @@ static bool CheckOutShape(const aclTensor* x, const aclTensor* yOut, const aclTe
         return false;
     }
     return true;
+}
+
+// 10. 检查可选输入是否应缺省（当前数据类型/量化模式下不使用）
+static bool IsTensorAbsent(const aclTensor* tensor, const char* paramName, const char* reason)
+{
+    if (tensor == nullptr) {
+        return true;
+    }
+    ReportInvalidValue(paramName, "not null", reason);
+    return false;
+}
+
+// 11. 检查tensor的shape size是否为指定取值之一
+static bool CheckShapeSizeOneOf(const aclTensor* tensor, const char* paramName, int64_t firstSize, int64_t secondSize,
+                                const char* expectedRule)
+{
+    const int64_t size = tensor->GetViewShape().GetShapeSize();
+    if (size == firstSize || size == secondSize) {
+        return true;
+    }
+    const std::string reason = (std::string(paramName) + " shape size must be " + expectedRule + ", but got " +
+                                std::to_string(size) + ".");
+    ReportInvalidShape(paramName, op::ToString(tensor->GetViewShape()).GetString(), reason);
+    return false;
+}
+
+// 12. 检查tensor的shape是否与期望shape一致
+static bool CheckShapeExpected(const aclTensor* tensor, const char* paramName, const op::Shape& expectedShape,
+                               const char* expectedRule)
+{
+    if (tensor->GetViewShape() == expectedShape) {
+        return true;
+    }
+    const std::string reason = (std::string(paramName) + " shape must be " + expectedRule + ", but got " +
+                                std::string(op::ToString(tensor->GetViewShape()).GetString()) + ".");
+    ReportInvalidShape(paramName, op::ToString(tensor->GetViewShape()).GetString(), reason);
+    return false;
+}
+
+// 13. 检查1维非空tensor（groupIndexOptional）
+static bool CheckNonEmptyOneDim(const aclTensor* tensor, const char* paramName)
+{
+    const op::Shape& shape = tensor->GetViewShape();
+    if (shape.GetDimNum() == 1 && shape.GetDim(0) > 0) {
+        return true;
+    }
+    const std::string reason = (std::string(paramName) + " must be a non-empty 1-D tensor, but got " +
+                                std::string(op::ToString(shape).GetString()) + ".");
+    ReportInvalidShape(paramName, op::ToString(shape).GetString(), reason);
+    return false;
+}
+
+// 14. 检查INT32路径weightScaleOptional/biasOptional的shape：无group_index时为[2H]/[1]/[1,2H]，
+// 有group_index时为[expertNum, 2H]
+static bool CheckMoeScaleShape(const aclTensor* tensor, const char* paramName, int64_t expertNum, int64_t inDimy,
+                               bool hasGroupIndex)
+{
+    const op::Shape& shape = tensor->GetViewShape();
+    const size_t dimNum = shape.GetDimNum();
+    bool valid = false;
+    if (hasGroupIndex) {
+        valid = (dimNum == static_cast<size_t>(NUM_TWO) && shape.GetDim(0) == expertNum && shape.GetDim(1) == inDimy);
+    } else {
+        valid = (dimNum == 1 && (shape.GetDim(0) == inDimy || shape.GetDim(0) == 1)) ||
+                (dimNum == static_cast<size_t>(NUM_TWO) && shape.GetDim(0) == 1 && shape.GetDim(1) == inDimy);
+    }
+    if (valid) {
+        return true;
+    }
+    const std::string reason = (std::string(paramName) + " shape is invalid, expertNum=" + std::to_string(expertNum) +
+                                ", inputWidth=" + std::to_string(inDimy) + ".");
+    ReportInvalidShape(paramName, op::ToString(shape).GetString(), reason);
+    return false;
+}
+
+// 15. 检查INT32路径activationScaleOptional的shape：(1,)或每行一个值
+static bool CheckInt32ActivationScaleShape(const aclTensor* tensor, int64_t rows)
+{
+    const op::Shape& shape = tensor->GetViewShape();
+    const bool rankValid = (shape.GetDimNum() == 1) ||
+                           (shape.GetDimNum() == static_cast<size_t>(NUM_TWO) && shape.GetDim(1) == 1);
+    const bool sizeValid = (shape.GetShapeSize() == rows) || (shape.GetShapeSize() == 1);
+    if (rankValid && sizeValid) {
+        return true;
+    }
+    const std::string reason = (std::string("activationScaleOptional shape must be (1,) or contain one FP32 value "
+                                            "per row, but got ") +
+                                std::string(op::ToString(shape).GetString()) + ".");
+    ReportInvalidShape("activationScaleOptional", op::ToString(shape).GetString(), reason);
+    return false;
+}
+
+// 16. INT8路径的shape约束（与tiling侧入参校验保持一致）
+static bool CheckInt8ShapeConstraints(const aclTensor* x, const aclTensor* weightScaleOptional,
+                                      const aclTensor* activationScaleOptional, const aclTensor* biasOptional,
+                                      const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional,
+                                      const aclTensor* groupIndexOptional, QuantType quantType, const aclTensor* yOut,
+                                      const aclTensor* yScaleOut)
+{
+    const op::Shape& xShape = x->GetViewShape();
+    const size_t dimNum = xShape.GetDimNum();
+    const int64_t inDimy = xShape.GetDim(dimNum - 1);
+    const int64_t outDimy = inDimy / NUM_TWO;
+
+    if (!CheckShapeSizeOneOf(weightScaleOptional, "weightScaleOptional", inDimy, 1, "(2H,) or (1,)")) {
+        return false;
+    }
+    if (!IsTensorAbsent(activationScaleOptional, "activationScaleOptional",
+                        "activationScaleOptional is not used when the data type of x is INT8.")) {
+        return false;
+    }
+    if (biasOptional != nullptr && !CheckShapeSizeOneOf(biasOptional, "biasOptional", inDimy, 1, "(2H,) or (1,)")) {
+        return false;
+    }
+    if (quantScaleOptional != nullptr &&
+        !CheckShapeSizeOneOf(quantScaleOptional, "quantScaleOptional", outDimy, 1, "(H,) or (1,)")) {
+        return false;
+    }
+    if (quantType == QuantType::STATIC) {
+        if (quantOffsetOptional != nullptr &&
+            !CheckShapeSizeOneOf(quantOffsetOptional, "quantOffsetOptional", outDimy, 1, "(H,) or (1,)")) {
+            return false;
+        }
+    } else if (!IsTensorAbsent(quantOffsetOptional, "quantOffsetOptional",
+                               "quantOffsetOptional is only supported when quantTypeOptional is static.")) {
+        return false;
+    }
+    if (!IsTensorAbsent(groupIndexOptional, "groupIndexOptional",
+                        "groupIndexOptional is not used when the data type of x is INT8.")) {
+        return false;
+    }
+
+    op::Shape expectedYShape;
+    op::Shape expectedYScaleShape;
+    for (size_t i = 0; i + 1 < dimNum; i++) {
+        expectedYShape.AppendDim(xShape.GetDim(i));
+        expectedYScaleShape.AppendDim(xShape.GetDim(i));
+    }
+    expectedYShape.AppendDim(outDimy);
+    if (!CheckShapeExpected(yOut, "yOut", expectedYShape, "x.shape[:-1] + [H] (H = x.shape[-1] / 2)")) {
+        return false;
+    }
+    return CheckShapeExpected(yScaleOut, "yScaleOut", expectedYScaleShape, "x.shape[:-1]");
+}
+
+// 17. INT32路径的shape约束（与tiling侧入参校验保持一致）
+static bool CheckInt32ShapeConstraints(const aclTensor* x, const aclTensor* weightScaleOptional,
+                                       const aclTensor* activationScaleOptional, const aclTensor* biasOptional,
+                                       const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional,
+                                       const aclTensor* groupIndexOptional, QuantType quantType, const aclTensor* yOut,
+                                       const aclTensor* yScaleOut)
+{
+    const op::Shape& xShape = x->GetViewShape();
+    const int64_t rows = xShape.GetDim(0);
+    const int64_t inDimy = xShape.GetDim(1);
+    const int64_t outDimy = inDimy / NUM_TWO;
+
+    if (quantType != QuantType::DYNAMIC) {
+        ReportInvalidValue("quantTypeOptional", "static",
+                           "quantTypeOptional must be dynamic when the data type of x is INT32.");
+        return false;
+    }
+    if (!IsTensorAbsent(quantScaleOptional, "quantScaleOptional",
+                        "quantScaleOptional is not used when the data type of x is INT32.")) {
+        return false;
+    }
+    if (!IsTensorAbsent(quantOffsetOptional, "quantOffsetOptional",
+                        "quantOffsetOptional is not used when the data type of x is INT32.")) {
+        return false;
+    }
+    const bool hasGroupIndex = (groupIndexOptional != nullptr);
+    int64_t expertNum = 1;
+    if (hasGroupIndex) {
+        if (!CheckNonEmptyOneDim(groupIndexOptional, "groupIndexOptional")) {
+            return false;
+        }
+        expertNum = groupIndexOptional->GetViewShape().GetDim(0);
+    }
+    if (!CheckMoeScaleShape(weightScaleOptional, "weightScaleOptional", expertNum, inDimy, hasGroupIndex)) {
+        return false;
+    }
+    if (!CheckInt32ActivationScaleShape(activationScaleOptional, rows)) {
+        return false;
+    }
+    if (biasOptional != nullptr &&
+        !CheckMoeScaleShape(biasOptional, "biasOptional", expertNum, inDimy, hasGroupIndex)) {
+        return false;
+    }
+
+    op::Shape expectedYShape;
+    expectedYShape.AppendDim(rows);
+    expectedYShape.AppendDim(outDimy);
+    if (!CheckShapeExpected(yOut, "yOut", expectedYShape, "[rows, input_width / 2]")) {
+        return false;
+    }
+    op::Shape expectedYScaleShape;
+    expectedYScaleShape.AppendDim(rows);
+    return CheckShapeExpected(yScaleOut, "yScaleOut", expectedYScaleShape, "[rows]");
+}
+
+// 18. BFLOAT16/FLOAT16（预反量化）路径的shape约束（与tiling侧入参校验保持一致）
+static bool CheckPreDequantShapeConstraints(const aclTensor* x, const aclTensor* weightScaleOptional,
+                                            const aclTensor* activationScaleOptional, const aclTensor* biasOptional,
+                                            const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional,
+                                            const aclTensor* groupIndexOptional, QuantType quantType,
+                                            const aclTensor* yOut, const aclTensor* yScaleOut)
+{
+    const op::Shape& xShape = x->GetViewShape();
+    const int64_t rows = xShape.GetDim(0);
+    const int64_t inDimy = xShape.GetDim(1);
+    const int64_t outDimy = inDimy / NUM_TWO;
+
+    if (quantType != QuantType::DYNAMIC) {
+        ReportInvalidValue("quantTypeOptional", "static",
+                           "quantTypeOptional must be dynamic when the data type of x is BFLOAT16/FLOAT16.");
+        return false;
+    }
+    if (!IsTensorAbsent(weightScaleOptional, "weightScaleOptional",
+                        "weightScaleOptional is not used when the data type of x is BFLOAT16/FLOAT16.")) {
+        return false;
+    }
+    if (!IsTensorAbsent(activationScaleOptional, "activationScaleOptional",
+                        "activationScaleOptional is not used when the data type of x is BFLOAT16/FLOAT16.")) {
+        return false;
+    }
+    if (!IsTensorAbsent(biasOptional, "biasOptional",
+                        "biasOptional is not used when the data type of x is BFLOAT16/FLOAT16.")) {
+        return false;
+    }
+    if (!IsTensorAbsent(quantScaleOptional, "quantScaleOptional",
+                        "quantScaleOptional is not used when the data type of x is BFLOAT16/FLOAT16.")) {
+        return false;
+    }
+    if (!IsTensorAbsent(quantOffsetOptional, "quantOffsetOptional",
+                        "quantOffsetOptional is not used when the data type of x is BFLOAT16/FLOAT16.")) {
+        return false;
+    }
+    if (groupIndexOptional != nullptr && !CheckNonEmptyOneDim(groupIndexOptional, "groupIndexOptional")) {
+        return false;
+    }
+
+    op::Shape expectedYShape;
+    expectedYShape.AppendDim(rows);
+    expectedYShape.AppendDim(outDimy);
+    if (!CheckShapeExpected(yOut, "yOut", expectedYShape, "[rows, input_width / 2]")) {
+        return false;
+    }
+    op::Shape expectedYScaleShape;
+    expectedYScaleShape.AppendDim(rows);
+    return CheckShapeExpected(yScaleOut, "yScaleOut", expectedYScaleShape, "[rows]");
+}
+
+// 19. 检查输入/输出shape约束（含输入之间的shape关系），与tiling侧入参校验口径一致：
+// 第一段接口即可判定的约束在此返回161002，避免落到tiling返回561002
+static bool CheckShapeConstraints(const aclTensor* x, const aclTensor* weightScaleOptional,
+                                  const aclTensor* activationScaleOptional, const aclTensor* biasOptional,
+                                  const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional,
+                                  const aclTensor* groupIndexOptional, QuantType quantType, const aclTensor* yOut,
+                                  const aclTensor* yScaleOut)
+{
+    const op::Shape& xShape = x->GetViewShape();
+    // 含未知维(-1)的动态shape无法在host侧精确推导，仅校验输出rank，交由执行阶段校验
+    if (HasUnknownDim(xShape) || HasUnknownDim(yOut->GetViewShape()) || HasUnknownDim(yScaleOut->GetViewShape())) {
+        return CheckOutShapeRank(x, yOut, yScaleOut);
+    }
+    if (x->GetDataType() == op::DataType::DT_INT8) {
+        return CheckInt8ShapeConstraints(x, weightScaleOptional, activationScaleOptional, biasOptional,
+                                         quantScaleOptional, quantOffsetOptional, groupIndexOptional, quantType, yOut,
+                                         yScaleOut);
+    }
+    if (x->GetDataType() == op::DataType::DT_INT32) {
+        return CheckInt32ShapeConstraints(x, weightScaleOptional, activationScaleOptional, biasOptional,
+                                          quantScaleOptional, quantOffsetOptional, groupIndexOptional, quantType, yOut,
+                                          yScaleOut);
+    }
+    return CheckPreDequantShapeConstraints(x, weightScaleOptional, activationScaleOptional, biasOptional,
+                                           quantScaleOptional, quantOffsetOptional, groupIndexOptional, quantType, yOut,
+                                           yScaleOut);
 }
 
 static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* weightScaleOptional,
@@ -302,9 +580,11 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* weightScaleO
     // 7. 检查format是否符合要求
     CHECK_RET(CheckFormat(x, yOut, yScaleOut), ACLNN_ERR_PARAM_INVALID);
 
-    // 8. 检查x和输出的shape维度是否符合约束
+    // 8. 检查shape约束（含x维度、输入之间的shape关系及输出shape）
     CHECK_RET(CheckXShape(x), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckOutShape(x, yOut, yScaleOut), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeConstraints(x, weightScaleOptional, activationScaleOptional, biasOptional, quantScaleOptional,
+                                    quantOffsetOptional, groupIndexOptional, quantType, yOut, yScaleOut),
+              ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 } // namespace

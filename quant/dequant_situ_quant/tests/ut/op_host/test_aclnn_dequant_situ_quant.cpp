@@ -487,7 +487,7 @@ TEST_F(l2_dequant_situ_quant_test, valid_int8_static_without_quant_offset)
 TEST_F(l2_dequant_situ_quant_test, valid_int32_dynamic_params)
 {
     auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({2, 64}, ACL_FLOAT, ACL_FORMAT_ND);
     auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto group_index_desc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
     auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
@@ -506,6 +506,593 @@ TEST_F(l2_dequant_situ_quant_test, valid_int32_dynamic_params)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     EXPECT_NE(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 合法入参（BFLOAT16 dynamic，预反量化模式）：应通过第一段入参校验
+TEST_F(l2_dequant_situ_quant_test, valid_bf16_dynamic_params)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    const float beta = 4.0f;
+    const float linear_beta = 25.0f;
+    const bool activate_left = true;
+    char* quant_type = const_cast<char*>("dynamic");
+
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, beta, linear_beta, activate_left, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_NE(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_NE(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 合法入参（INT32 dynamic，无groupIndex，weightScale为[1, 2H]）：应通过第一段入参校验
+TEST_F(l2_dequant_situ_quant_test, valid_int32_without_group_index)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weight_scale_desc = TensorDesc({1, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    const float beta = 4.0f;
+    const float linear_beta = 25.0f;
+    const bool activate_left = true;
+    char* quant_type = const_cast<char*>("dynamic");
+
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, beta, linear_beta, activate_left, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_NE(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_NE(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// ===== 第一段接口shape/组合约束（与tiling口径一致，返回161002） =====
+// INT8：weightScaleOptional shape不是(2H,)或(1,)
+TEST_F(l2_dequant_situ_quant_test, int8_weight_scale_shape_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT8：activationScaleOptional 不使用，传入即报错
+TEST_F(l2_dequant_situ_quant_test, int8_activation_scale_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT8：biasOptional shape不是(2H,)或(1,)
+TEST_F(l2_dequant_situ_quant_test, int8_bias_shape_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto bias_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, bias_desc, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT8：quantScaleOptional shape不是(H,)或(1,)
+TEST_F(l2_dequant_situ_quant_test, int8_quant_scale_shape_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT8 static：quantOffsetOptional shape不是(H,)或(1,)
+TEST_F(l2_dequant_situ_quant_test, int8_static_quant_offset_shape_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_offset_desc = TensorDesc({7}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              quant_offset_desc, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT8 dynamic：quantOffsetOptional 不支持，传入即报错
+TEST_F(l2_dequant_situ_quant_test, int8_dynamic_quant_offset_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_offset_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr,
+                              quant_offset_desc, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT8：groupIndexOptional 不使用，传入即报错
+TEST_F(l2_dequant_situ_quant_test, int8_group_index_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto group_index_desc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, group_index_desc, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT8：yOut末维不是x末维的一半
+TEST_F(l2_dequant_situ_quant_test, int8_yout_last_dim_mismatch)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 33}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT8：yScaleOut shape与x.shape[:-1]不一致
+TEST_F(l2_dequant_situ_quant_test, int8_yscale_shape_mismatch)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：quantTypeOptional必须为dynamic
+TEST_F(l2_dequant_situ_quant_test, int32_quant_type_static_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：quantScaleOptional 不使用，传入即报错
+TEST_F(l2_dequant_situ_quant_test, int32_quant_scale_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：quantOffsetOptional 不使用，传入即报错
+TEST_F(l2_dequant_situ_quant_test, int32_quant_offset_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_offset_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              quant_offset_desc, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：groupIndexOptional shape为空
+TEST_F(l2_dequant_situ_quant_test, int32_group_index_empty)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto group_index_desc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, group_index_desc, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：weightScaleOptional shape非法
+TEST_F(l2_dequant_situ_quant_test, int32_weight_scale_shape_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：带groupIndex时weightScaleOptional必须为[expertNum, 2H]
+TEST_F(l2_dequant_situ_quant_test, int32_weight_scale_with_group_index_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto group_index_desc = TensorDesc({2}, ACL_INT64, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, group_index_desc, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：activationScaleOptional shape非法
+TEST_F(l2_dequant_situ_quant_test, int32_activation_scale_shape_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：biasOptional shape非法
+TEST_F(l2_dequant_situ_quant_test, int32_bias_shape_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto bias_desc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, activation_scale_desc, bias_desc, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：yOut shape不是[rows, H]
+TEST_F(l2_dequant_situ_quant_test, int32_yout_shape_mismatch)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 33}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// INT32：yScaleOut shape不是[rows]
+TEST_F(l2_dequant_situ_quant_test, int32_yscale_shape_mismatch)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_INT32, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, weight_scale_desc, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：weightScaleOptional 不使用
+TEST_F(l2_dequant_situ_quant_test, bf16_weight_scale_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：activationScaleOptional 不使用
+TEST_F(l2_dequant_situ_quant_test, bf16_activation_scale_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto activation_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, (aclTensor*)nullptr, activation_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：biasOptional 不使用
+TEST_F(l2_dequant_situ_quant_test, bf16_bias_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto bias_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, bias_desc, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：quantScaleOptional 不使用
+TEST_F(l2_dequant_situ_quant_test, bf16_quant_scale_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：quantOffsetOptional 不使用
+TEST_F(l2_dequant_situ_quant_test, bf16_quant_offset_present)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto quant_offset_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              quant_offset_desc, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：quantTypeOptional必须为dynamic
+TEST_F(l2_dequant_situ_quant_test, bf16_quant_type_static_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：groupIndexOptional必须为1维非空
+TEST_F(l2_dequant_situ_quant_test, bf16_group_index_invalid)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto group_index_desc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, group_index_desc, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：yOut shape不是[rows, H]
+TEST_F(l2_dequant_situ_quant_test, bf16_yout_shape_mismatch)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 33}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// BFLOAT16：yScaleOut shape不是[rows]
+TEST_F(l2_dequant_situ_quant_test, bf16_yscale_shape_mismatch)
+{
+    auto x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("dynamic");
+    auto ut = OP_API_UT(
+        aclnnDequantSituQuant,
+        INPUT(x_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// 含未知维(-1)：x/yOut/yScaleOut rank合法时应通过第一段入参校验（shape关系交由执行阶段）
+TEST_F(l2_dequant_situ_quant_test, unknown_dim_rank_ok)
+{
+    auto x_desc = TensorDesc({-1, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_NE(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+    EXPECT_NE(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 含未知维(-1)：yOut rank不合法时返回161002
+TEST_F(l2_dequant_situ_quant_test, unknown_dim_yout_rank_invalid)
+{
+    auto x_desc = TensorDesc({-1, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// 含未知维(-1)：yScaleOut rank不合法时返回161002
+TEST_F(l2_dequant_situ_quant_test, unknown_dim_yscale_rank_invalid)
+{
+    auto x_desc = TensorDesc({-1, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto weight_scale_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto quant_scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto y_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    auto y_scale_desc = TensorDesc({16, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* quant_type = const_cast<char*>("static");
+    auto ut = OP_API_UT(aclnnDequantSituQuant,
+                        INPUT(x_desc, weight_scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, quant_scale_desc,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, 4.0f, 25.0f, true, quant_type),
+                        OUTPUT(y_desc, y_scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
 // 161002: x数据类型不在支持范围内
