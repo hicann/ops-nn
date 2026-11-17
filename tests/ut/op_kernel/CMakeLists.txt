@@ -87,6 +87,13 @@ if(UT_TEST_ALL OR OP_KERNEL_UT)
         endif()
     endforeach ()
 
-    add_custom_target(${OP_KERNEL_UT_EXE} DEPENDS ${AllSocVersion_OP_KERNEL_UT_EXE})
+    if(fastOpTestSocVersions)
+        add_custom_target(${OP_KERNEL_UT_EXE} DEPENDS ${AllSocVersion_OP_KERNEL_UT_EXE})
+    else()
+        # 所有算子的注册 soc 均不匹配当前编译 soc，用例执行面为空，输出说明避免“零执行”被误判为“测试通过”
+        add_custom_target(${OP_KERNEL_UT_EXE}
+            COMMAND ${CMAKE_COMMAND} -E echo WARNING: no kernel ut case registered for soc ${ASCEND_COMPUTE_UNIT}, no test will run, please check AddOpTestCase soc registration under tests/ut/op_kernel of each op or rebuild with a supported --soc
+        )
+    endif()
 
 endif()

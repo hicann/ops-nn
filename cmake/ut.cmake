@@ -630,6 +630,22 @@ function(AddOpTestCase)
         add_custom_target(pre_op_kernel_ut)
     endif()
 
+    # 注册 soc 与当前编译 soc 无交集时明确告警，避免 kernel UT 用例静默跳过、零执行
+    set(_anySocMatch FALSE)
+    foreach(oriSocVersion ${supportedSocVersion})
+        string(TOLOWER ${oriSocVersion} _lowerSocVersion)
+        foreach(compute_unit ${ASCEND_COMPUTE_UNIT})
+            map_compute_unit(${compute_unit} compute_unit_long)
+            if (${compute_unit_long} STREQUAL ${_lowerSocVersion} OR ${compute_unit} STREQUAL ${_lowerSocVersion})
+                set(_anySocMatch TRUE)
+            endif()
+        endforeach()
+    endforeach()
+    if(NOT _anySocMatch)
+        message(WARNING "AddOpTestCase: op '${opName}' kernel UT registered socs (${supportedSocVersion}) do not cover current build soc (${ASCEND_COMPUTE_UNIT}), no kernel ut case will run for this op, please check AddOpTestCase soc registration in its tests/ut/op_kernel/CMakeLists.txt")
+        return()
+    endif()
+
     foreach(oriSocVersion ${supportedSocVersion})
         ## standardize socVersion
         string(REPLACE "ascend" "Ascend" socVersion "${oriSocVersion}")
