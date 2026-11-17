@@ -89,6 +89,8 @@ TILING_DATA_FIELD_DEF_STRUCT(ScatterNdUpdateScatterTiling, scatterTiling)
 TILING_DATA_FIELD_DEF_STRUCT(ScatterNdUpdateLinearIndexTiling, linearIndexTiling)
 TILING_DATA_FIELD_DEF_STRUCT(ScatterNdUpdateHpTiling, hpTiling)
 TILING_DATA_FIELD_DEF_STRUCT(ScatterNdUpdateViewTiling, viewTiling)
+// 标记可一次搬入tiling并在核内直接查询最后位置的小索引场景。
+TILING_DATA_FIELD_DEF(uint64_t, localIndexMode)
 END_TILING_DATA_DEF
 
 REGISTER_TILING_DATA_CLASS(ScatterNdUpdate, ScatterNdUpdateArch22TilingData)
@@ -128,6 +130,7 @@ private:
     uint64_t ubSize_ = 0;
     bool isLinearIndex_ = false;
     bool isSort_ = false;
+    bool balanced_ = false;
     uint64_t sortWorkspace_ = 0;
     uint64_t dataTypeSize_ = 0;
     bool isInt64Indices_ = false;

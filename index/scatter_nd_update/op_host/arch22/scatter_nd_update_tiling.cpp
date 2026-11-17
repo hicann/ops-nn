@@ -56,6 +56,8 @@ constexpr uint64_t LINEAR_INDEX_COEFF_OFFSET = 3;
 constexpr uint64_t DTYPE_SIZE_BF16 = 2;
 constexpr uint64_t DTYPE_SIZE_FP16 = 2;
 constexpr uint64_t DTYPE_SIZE_BOOL = 1;
+constexpr uint64_t BALANCED_TILING_KEY = 40;
+constexpr uint64_t BALANCED_TAIL_MIN_LENGTH = 128;
 
 inline void ScatterNdUpdateArch22Tiling::SetTilingKeyMode()
 {
@@ -75,6 +77,9 @@ inline void ScatterNdUpdateArch22Tiling::SetTilingKeyMode()
         sortFlag = isSort_ ? 1 : 0;
     }
     tilingKey_ = indexType * TILING_KEY_BASE + sortFlag;
+    if (balanced_) {
+        tilingKey_ = BALANCED_TILING_KEY;
+    }
 
     tilingContext_->SetTilingKey(tilingKey_);
 }
@@ -102,6 +107,10 @@ inline void ScatterNdUpdateArch22Tiling::Tiling4LinearIndex(uint64_t indexRow, u
         coeff = INT64_TO_INT_SIZE_RATIO * indexDim + LINEAR_INDEX_COEFF_OFFSET;
     } else {
         coeff = indexDim + LINEAR_INDEX_COEFF_OFFSET;
+    }
+    if (isSort_) {
+        // key、二倍排序结果、pos及三倍排序临时区同时占用UB。
+        coeff = std::max(coeff, uint64_t{7});
     }
     uint64_t maxBlockLength = ubSize_ / coeff / sizeof(int);
     blockLength_ = (maxBlockLength / ALIGNED_SIZE) * ALIGNED_SIZE;
@@ -362,6 +371,12 @@ ge::graphStatus ScatterNdUpdateArch22Tiling::SetKernelTiling()
     tilingData_.hpTiling.set_hpScatterTileTail(hpScatterTileTail_);
     tilingData_.hpTiling.set_hpRowBytesAligned(hpRowBytesAligned_);
     tilingData_.hpTiling.set_hpRowsPerBatch(hpRowsPerBatch_);
+    uint64_t rows = tailRow_ * coreNum_ + frontNum_;
+    // 局部查询复用4KB索引缓冲，最多容纳256条索引及匹配位图。
+    // 同时限制目标行数，避免对过大的目标范围逐行查询。
+    bool localIndexMode = balanced_ && indexDim_ == 1 && blockNum_ == 0 && blockRemainLength_ >= 32 &&
+                          blockRemainLength_ <= 256 && rows > 0 && rows <= 256;
+    tilingData_.set_localIndexMode(localIndexMode);
     tilingData_.SaveToBuffer(tilingContext_->GetRawTilingData()->GetData(),
                              tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
@@ -525,6 +540,19 @@ ge::graphStatus ScatterNdUpdateArch22Tiling::Init()
     coreNum_ = coreNum_ == 0 ? 1 : coreNum_;
     ubSize_ = compileInfo->ubSize;
     GetDtypeSize();
+    auto dtype = tilingContext_->GetInputDesc(0)->GetDataType();
+    bool supportedType = dtype == ge::DT_FLOAT || dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16 ||
+                         dtype == ge::DT_INT32;
+    uint64_t availableCores = compileInfo->vectorCoreNum;
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext_->GetPlatformInfo());
+    bool supportedPlatform = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2201;
+    balanced_ = supportedPlatform && scatterLength_ >= BALANCED_TAIL_MIN_LENGTH && isSort_ && supportedType &&
+                availableCores > 0 && info.indexRow > 0 && info.indexRow <= MAX_LENGTH_INT32;
+    if (balanced_) {
+        // 启动核数不受目标行数限制，但少量索引不强行启动全核。
+        // 更新分工由Device按去重后的有效行数决定，热点行仍可由多个核分担。
+        coreNum_ = std::min(availableCores, info.indexRow);
+    }
     SetTilingKeyMode();
     tilingContext_->SetScheduleMode(1);
     Tiling4LinearIndex(info.indexRow, indexDim_);

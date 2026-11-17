@@ -13,6 +13,9 @@
  * \brief scatter_nd_update arch22 kernel entry
  */
 #include "./arch22/scatter_nd_update.h"
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+#include "./arch22/scatter_nd_update_balanced.h"
+#endif
 #include "./arch22/scatter_nd_update_linear_index.h"
 #include "./arch22/scatter_nd_update_no_sort.h"
 #include "./arch22/scatter_nd_update_large_index.h"
@@ -81,6 +84,17 @@ __aicore__ inline void RunHp(GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
 extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
                                                         GM_ADDR workspace, GM_ADDR tiling)
 {
+    // 仅A2/A3注册新路径，其他平台保留原有任务类型推导和算子分支。
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+#if defined(HIGH_PERFORMANCE) && HIGH_PERFORMANCE == 1
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+#else
+    // 原常规路径包含SyncAll，大索引路径不需要核间屏障。
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+    KERNEL_TASK_TYPE(30, KERNEL_TYPE_AIV_ONLY);
+#endif
+    KERNEL_TASK_TYPE(40, KERNEL_TYPE_MIX_AIV_1_0);
+#endif
     if (workspace == nullptr) {
         return;
     }
@@ -88,6 +102,48 @@ extern "C" __global__ __aicore__ void scatter_nd_update(GM_ADDR var, GM_ADDR ind
     if (user == nullptr) {
         return;
     }
+#if defined(DTYPE_VAR) && defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201)
+    if (TILING_KEY_IS(40)) {
+        ScatterNdUpdateArch22TilingData localTiling;
+        AscendC::TPipe localPipe;
+        LoadLocalTiling<DTYPE_VAR>(tiling, localTiling, localPipe);
+        if (localTiling.localIndexMode != 0) {
+            if (localTiling.viewTiling.isViewStride0 != 0) {
+                ScatterNdUpdateBalancedKernel<DTYPE_VAR, true>::ProcessLocal(indices, updates, varRef, localTiling,
+                                                                             localPipe);
+            } else {
+                ScatterNdUpdateBalancedKernel<DTYPE_VAR, false>::ProcessLocal(indices, updates, varRef, localTiling,
+                                                                              localPipe);
+            }
+            return;
+        }
+        localPipe.Destroy();
+        AscendC::TPipe tpipe;
+        bool isView = localTiling.viewTiling.isViewStride0 != 0;
+        if (UseLocalIndices(localTiling)) {
+            if (isView) {
+                ScatterNdUpdateBalancedKernel<DTYPE_VAR, true> op(updates, varRef, workspace, localTiling, tpipe,
+                                                                  indices);
+                op.Process();
+            } else {
+                ScatterNdUpdateBalancedKernel<DTYPE_VAR, false> op(updates, varRef, workspace, localTiling, tpipe,
+                                                                   indices);
+                op.Process();
+            }
+            return;
+        }
+        if (localTiling.linearIndexTiling.isInt64Indices != 0) {
+            LinearIndexKernel<true, int64_t, true> op(indices, workspace, localTiling, tpipe);
+            op.Process();
+        } else {
+            LinearIndexKernel<true, int, true> op(indices, workspace, localTiling, tpipe);
+            op.Process();
+        }
+        RunScatterAfterSync<DTYPE_VAR, ScatterNdUpdateBalancedKernel>(updates, varRef, workspace, localTiling, tpipe,
+                                                                      isView);
+        return;
+    }
+#endif
     GET_TILING_DATA(tilingData, tiling);
     AscendC::TPipe tpipe;
 #if (defined(DTYPE_VAR))

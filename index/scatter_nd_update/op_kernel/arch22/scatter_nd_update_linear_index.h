@@ -19,7 +19,7 @@
 
 namespace ScatterNdUpdate {
 
-template <bool isSort, typename IndicesT = int>
+template <bool isSort, typename IndicesT = int, bool balanced = false>
 class LinearIndexKernel {
 public:
     __aicore__ inline LinearIndexKernel() = delete;
@@ -214,14 +214,19 @@ public:
 
         Cast(indicesLocalFp32, indicesLocal, RoundMode::CAST_ROUND, computeRowAligned);
         if (repeatRemain != 0) {
-            // 对齐处理：不足32的部分设为-1
-            Duplicate<int>(rangeLocal, -1, (uint32_t)ALIGNED_BLOCK_NUM);
+            // 升序路径使用大于所有合法key的填充值，取负排序后仍位于有效记录之后。
+            Duplicate<int>(rangeLocal, balanced ? 16777215 : -1, (uint32_t)ALIGNED_BLOCK_NUM);
             PipeBarrier<PIPE_V>();
             Cast(rangeLocal, indicesLocalFp32[ALIGNED_BLOCK_NUM * repeatId], RoundMode::CAST_ROUND,
                  (uint32_t)repeatRemain);
             PipeBarrier<PIPE_V>();
             Cast(indicesLocalFp32[ALIGNED_BLOCK_NUM * repeatId], rangeLocal, RoundMode::CAST_ROUND,
                  (uint32_t)ALIGNED_BLOCK_NUM);
+            PipeBarrier<PIPE_V>();
+        }
+        if constexpr (balanced) {
+            // 原语按降序排列，取负后得到key升序；同key的获胜pos由更新阶段显式选择。
+            Muls(indicesLocalFp32, indicesLocalFp32, -1.0f, computeRowAligned);
             PipeBarrier<PIPE_V>();
         }
         Duplicate<int>(posIdxLocal, -1, computeRowAligned);
@@ -233,6 +238,10 @@ public:
         PipeBarrier<PIPE_V>();
         Extract(indicesLocalFp32, posIdxULocal, resLocal, repeatTimes);
         PipeBarrier<PIPE_V>();
+        if constexpr (balanced) {
+            Muls(indicesLocalFp32, indicesLocalFp32, -1.0f, computeRowAligned);
+            PipeBarrier<PIPE_V>();
+        }
         Cast(indicesLocal, indicesLocalFp32, RoundMode::CAST_ROUND, computeRowAligned);
         PipeBarrier<PIPE_V>();
         Adds(posIdxLocal, posIdxLocal, addValue, computeRow);
@@ -244,6 +253,30 @@ public:
     {
         uint64_t outOffset = process * blockLength_;
         uint64_t copyRow = isTail ? blockRemainLength_ : blockLength_;
+        if constexpr (balanced) {
+            if (copyRow <= 128) {
+                PipeVToS();
+                uint64_t valid = 0;
+                for (uint64_t read = 0; read < copyRow;) {
+                    int key = indicesLocal.GetValue(read);
+                    int position = posIdxLocal.GetValue(read++);
+                    while (read < copyRow && indicesLocal.GetValue(read) == key) {
+                        int candidate = posIdxLocal.GetValue(read++);
+                        position = candidate > position ? candidate : position;
+                    }
+                    // 前向压缩不覆盖未读取记录，同一目标只发布最后一条输入的位置。
+                    indicesLocal.SetValue(valid, key);
+                    posIdxLocal.SetValue(valid++, position);
+                }
+                // 原位置始终非负；有重复时用末尾空闲位置编码有效行数，不增加workspace。
+                if (valid < copyRow) {
+                    posIdxLocal.SetValue(copyRow - 1, -static_cast<int>(valid) - 1);
+                }
+                event_t event = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+                SetFlag<HardEvent::S_MTE3>(event);
+                WaitFlag<HardEvent::S_MTE3>(event);
+            }
+        }
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(copyRow * sizeof(int)), 0, 0, 0};
         DataCopyPad(sortedIndicesGm_[outOffset], indicesLocal, copyParams);
         if constexpr (isSort) {
