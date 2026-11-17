@@ -13,6 +13,7 @@
  * \brief
  */
 #include "situ_glu_tiling.h"
+#include <cmath>
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
@@ -33,6 +34,7 @@ constexpr int64_t SWI_FACTOR = 2;
 constexpr int64_t BLOCK_ELEM = BLOCK_SIZE / sizeof(float); // 8 floats per 32B block
 constexpr int64_t UB_RESERVE = 1024;
 constexpr int64_t FLOATS_PER_PAIR = 7; // xQueue(DB2*2=4) + yQueue(1) + tmpBuf1(1) + tmpBuf2(1)
+// Compares产生的比较掩码为1 bit/元素，此处按1 byte/pair保守预留，保证maskBuf一定放得下
 
 constexpr float BETA_DEFAULT = 1.0f;
 constexpr float LINEAR_BETA_DEFAULT = 0.0f;
@@ -175,6 +177,21 @@ ge::graphStatus SituGluTiling::CheckAndGetXAndAttrs()
     auto* attrActivateLeft = attrs->GetAttrPointer<bool>(ACTIVATE_LEFT_INDEX);
     bool activateLeft = attrActivateLeft == nullptr ? ACTIVATE_LEFT_DEFAULT : *attrActivateLeft;
     activateLeft_ = activateLeft ? 1 : 0;
+    // aclnn接口以double下发beta/linearBeta，算子内以float32参与计算，此处校验float32可计算域：
+    // beta为0（含double下溢为0）或非有限值时公式无意义/内核产生NaN，直接拒绝；
+    // linearBeta小于等于0表示up路径不做变换，仅拒绝非有限值。
+    OP_CHECK_IF((!std::isfinite(beta_) || beta_ == 0.0f),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "beta", std::to_string(beta_),
+                    "beta must be a finite non-zero value representable by float32 (the interface takes double, the "
+                    "operator computes in float32), otherwise the result is invalid"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((!std::isfinite(linearBeta_)),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "linear_beta", std::to_string(linearBeta_),
+                    "linear_beta must be a finite value representable by float32 (the interface takes double, the "
+                    "operator computes in float32), otherwise the result is invalid"),
+                return ge::GRAPH_FAILED);
     // 获取x shape
     auto shapeX = context_->GetInputShape(X_INDEX);
     OP_CHECK_IF(
@@ -268,6 +285,28 @@ ge::graphStatus SituGluTiling::CheckY() const
             ("y[dim] should be equal to x[dim] divided by 2, but get " + std::to_string(inputShapeY.GetDim(cutDim_)) +
              ", expected " + std::to_string(cutDimSize_ / SWI_FACTOR) + ".")),
         return ge::GRAPH_FAILED);
+    // 除dim外的维度必须与x逐维一致（同时也保证x为空Tensor时out必须为空Tensor，
+    // 避免内核按x的合轴几何越界写/部分写/空输入静默成功）
+    const gert::StorageShape* xShapePtr = context_->GetInputShape(X_INDEX);
+    OP_CHECK_IF(
+        xShapePtr == nullptr,
+        OP_LOGE_WITH_INVALID_INPUT(
+            ((context_) == nullptr || (context_)->GetNodeName() == nullptr ? "situ_glu" : (context_)->GetNodeName()),
+            "x"),
+        return ge::GRAPH_FAILED);
+    const gert::Shape& inputShapeX = xShapePtr->GetStorageShape();
+    for (int64_t i = 0; i < yDims; ++i) {
+        if (i == cutDim_) {
+            continue;
+        }
+        OP_CHECK_IF(
+            inputShapeY.GetDim(i) != inputShapeX.GetDim(i),
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                context_->GetNodeName(), "y", std::to_string(inputShapeY.GetDim(i)),
+                ("y[" + std::to_string(i) + "] should be equal to x[" + std::to_string(i) + "], expected " +
+                 std::to_string(inputShapeX.GetDim(i)) + ", but get " + std::to_string(inputShapeY.GetDim(i)) + ".")),
+            return ge::GRAPH_FAILED);
+    }
     OP_CHECK_IF((yDtype != xDtype_),
                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x,y",
                                                        std::to_string(static_cast<int>(xDtype_)) + "," +
