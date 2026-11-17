@@ -204,6 +204,8 @@ __aicore__ inline void LoadBL1BaseModule(Intf* self)
         CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(self->ctx.pingPongFlag * VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
         self->ctx.pingPongFlag ^= 1;
         self->ctx.loadUB2L1Iter++;
+    } else if constexpr (Intf::weight5HDFlag) {
+        self->ctx.weight5HDProcessTools.BL1SyncLoad(self, self->ctx.kBL1Iter, self->ctx.nBL1Iter);
     } else if constexpr (Intf::weightUbTrans) {
         self->ctx.bl1 = self->ctx.bL1Tensor[self->ctx.pingPongFlag * self->ctx.bL1SpaceSize];
         CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(self->ctx.pingPongFlag * VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
@@ -238,6 +240,11 @@ __aicore__ inline void LoadBL1BaseModule(Intf* self)
 template <class Intf>
 __aicore__ inline void LoadBL1BaseModule(Intf* self, TempIters& tempIters)
 {
+    if constexpr (Intf::weight5HDFlag) {
+        self->ctx.weight5HDProcessTools.BL1SyncLoad(self, tempIters.kBL1Iter, tempIters.nBL1Iter);
+        self->ctx.loadBL1Flag = false;
+        return;
+    }
     self->ctx.bl1 = self->ctx.queueBL1.template AllocTensor<typename Intf::WeightT>();
     if constexpr (!Intf::c04NDFlag) {
         self->ctx.loadBL1Ins.LoadBL1(tempIters.kBL1Iter, tempIters.nBL1Iter);

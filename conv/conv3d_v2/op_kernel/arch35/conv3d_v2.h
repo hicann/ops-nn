@@ -26,7 +26,7 @@ using namespace conv3d;
 #define mDim hoDim
 
 template <int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
-          int8_t GroupType, int8_t BigKernel>
+          int8_t GroupType, int8_t BigKernel, int8_t WeightUbTrans = 0>
 struct Conv3DV2Param : public Conv3dParam {
     __aicore__ inline Conv3DV2Param() {}
     constexpr static int8_t fmapTiling = FmapTiling;
@@ -36,6 +36,7 @@ struct Conv3DV2Param : public Conv3dParam {
     constexpr static int8_t outputOrder = OutputOrder;
     constexpr static int8_t groupType = GroupType;
     constexpr static int8_t bigKernel = BigKernel;
+    constexpr static int8_t weightUbTrans = WeightUbTrans;
     constexpr static int8_t isExtendConv2d = false;
     using Output1Dtype = half;
 };
@@ -47,16 +48,16 @@ public:
 
     __aicore__ inline void RunConv3dV2Kernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                              const Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& convTilingData,
-                                             const ExtendParams* extendParams = nullptr);
+                                             const ExtendParams* extendParams = nullptr, GM_ADDR workspace = nullptr);
 
 protected:
-    __aicore__ inline bool Conv3dV2KernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+    __aicore__ inline bool Conv3dV2KernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
                                               const ExtendParams* extendParams,
                                               const Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData);
 
     __aicore__ inline bool InitSingleCoreData(uint32_t blockPerNDim, uint32_t blockPerHoDim, uint32_t blockPerMDim);
 
-    __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+    __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
                                       const ExtendParams* extendParams);
 
     __aicore__ inline void Conv3dV2KernelImpl();
@@ -69,6 +70,14 @@ public:
     using BIAS_T = typename BIAS_TYPE::T;
     using SCALE_T = typename SCALE_TYPE::T;
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    constexpr static bool IS_WEIGHT_5HD = CONV_CFG::weightUbTrans == static_cast<int8_t>(ConvWeightUbTrans::OPEN) &&
+                                          !IsSameType<WEIGHT_T, fp8_e4m3fn_t>::value;
+#else
+    constexpr static bool IS_WEIGHT_5HD = false;
+#endif
+    constexpr static uint8_t k0 = SINGLE_BLOCK_SIZE / sizeof(WEIGHT_T);
+
     // Conv3D API
     Conv3d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG> conv;
     ConvCommon<Conv3dV2Base, Ops::NN::Conv3dV2::Conv3DV2TilingDataV2> convCommon;
@@ -78,6 +87,8 @@ public:
     // Input and output tensor declare
     GlobalTensor<FMAP_T> fmapGm;
     GlobalTensor<WEIGHT_T> filterGm;
+    GlobalTensor<WEIGHT_T> weight5HDGm;
+
     GlobalTensor<OUTPUT_T> outputGm;
     GlobalTensor<BIAS_T> biasGm;
     GlobalTensor<SCALE_T> scaleGm;
@@ -121,9 +132,18 @@ template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE
 __aicore__ inline void
 Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::RunConv3dV2Kernel(
     GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& convTilingData,
-    const ExtendParams* extendParams)
+    const ExtendParams* extendParams, GM_ADDR workspace)
 {
-    if (Conv3dV2KernelInit(x, filter, bias, y, extendParams, convTilingData)) {
+    if constexpr (IS_WEIGHT_5HD) {
+        if ASCEND_IS_AIC {
+            const uint64_t numBlocks = static_cast<uint64_t>(convTilingData.batchDim) * convTilingData.doDim *
+                                       convTilingData.hoDim * convTilingData.nDim * convTilingData.groupDim;
+            if (numBlocks > 0 && static_cast<uint64_t>(GetBlockIdx()) >= numBlocks) {
+                return;
+            }
+        }
+    }
+    if (Conv3dV2KernelInit(x, filter, bias, y, workspace, extendParams, convTilingData)) {
         Conv3dV2KernelImpl();
     }
 }
@@ -131,7 +151,7 @@ Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CF
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 __aicore__ inline bool
 Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::Conv3dV2KernelInit(
-    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams,
+    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, const ExtendParams* extendParams,
     const Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData)
 {
     hasScale = (extendParams != nullptr);
@@ -162,7 +182,7 @@ Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CF
         }
     }
 
-    InitBuffer(x, filter, bias, y, extendParams);
+    InitBuffer(x, filter, bias, y, workspace, extendParams);
 
     return true;
 }
@@ -213,7 +233,7 @@ __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::InitBuffer(
-    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
+    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, const ExtendParams* extendParams)
 {
     int64_t diIdxStart = doIdxStart * convTilingData->strideD - convTilingData->padHead;
     diIdxStart = convCommon.Max(diIdxStart, 0);
@@ -235,7 +255,7 @@ __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
             convCommon.CalcStartAddrHWodeHWC(convTilingData->din, convTilingData->dout, doIdxStart, diIdxStart);
         }
     }
-    convCommon.InitBufferCommon(x, filter, bias, y, extendParams);
+    convCommon.InitBufferCommon(x, filter, bias, y, extendParams, workspace);
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
@@ -257,6 +277,9 @@ Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CF
     }
 
     conv.SetWeight(filterGm);
+    if constexpr (IS_WEIGHT_5HD) {
+        conv.SetWeight5HD(weight5HDGm);
+    }
     if (convTilingData->hasBias) {
         conv.SetBias(biasGm);
     }

@@ -26,8 +26,8 @@ namespace full_mn {
 
 template <typename Scheduler, typename Processor, typename BlockCtx, typename TilingData>
 struct Conv2dFullMNKernel {
-    __aicore__ inline void operator()(const TilingData& tiling, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
-                                      GM_ADDR y) const
+    __aicore__ inline void operator()(const TilingData& tiling, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+                                      GM_ADDR workspace) const
     {
         if (!isActive(tiling))
             return;
@@ -36,7 +36,7 @@ struct Conv2dFullMNKernel {
         if (bc.actualCo == 0 || bc.actualM == 0)
             return;
         Processor processor;
-        processor(bc, tiling, x, filter, bias, y);
+        processor(bc, tiling, x, filter, bias, y, workspace);
     }
 
     __aicore__ inline bool isActive(const TilingData& tiling) const
@@ -51,14 +51,19 @@ template <typename FmapT, typename WeightT, typename OutputT, typename BiasT, ty
 struct Conv2dFullMNKernelPipeline {
     using BlockCtxT = BlockCtx<FmapT, WeightT, OutputT, BiasT>;
 
-    __aicore__ inline void operator()(const TilingData& tiling, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
-                                      GM_ADDR y) const
+    __aicore__ inline void operator()(const TilingData& tiling, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+                                      GM_ADDR workspace) const
     {
-        Conv2dFullMNKernel<BlockScheduler<BlockCtxT, TilingData>,
-                           BatchProcessor<BlockCtxT, TilingData, FullMNKernelProcessor<BlockCtxT, TilingData>>,
-                           BlockCtxT, TilingData>
-            kernel;
-        kernel(tiling, x, filter, bias, y);
+        if ASCEND_IS_AIC_CONV {
+            Conv2dFullMNKernel<BlockScheduler<BlockCtxT, TilingData>,
+                               BatchProcessor<BlockCtxT, TilingData, FullMNKernelProcessor<BlockCtxT, TilingData>>,
+                               BlockCtxT, TilingData>
+                kernel;
+            kernel(tiling, x, filter, bias, y, workspace);
+        }
+        if ASCEND_IS_AIV_CONV {
+            Conv2dFunc::RunWeight5HDVec<DTYPE_FILTER>(tiling, filter, workspace);
+        }
     }
 };
 

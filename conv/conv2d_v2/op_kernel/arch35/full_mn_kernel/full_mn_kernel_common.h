@@ -46,6 +46,9 @@ constexpr uint32_t L0C_ELEMS = FULL_MN_L0C_SIZE / sizeof(float); // 65536
 constexpr event_t EVT_AL1_BASE = static_cast<event_t>(0);
 // BL1 segment ping-pong: event 2/3 (Buf[0]/Buf[1] preload done)
 constexpr event_t EVT_BL1_BASE = static_cast<event_t>(2);
+// batch 边界屏障：MTE1 段内全部 L1 读（loadAl0_/loadBl0_）完成后，下一 batch 的 MTE2 写
+// （loadAl1Seg_/loadBl1Seg5HD_ 覆写同一 al1/bl1 缓冲）才允许执行——防跨 batch L1 读写竞争
+constexpr event_t EVT_BATCH_BARRIER = static_cast<event_t>(4);
 
 const uint32_t CONST_VALUE_4 = 4;
 } // namespace full_mn

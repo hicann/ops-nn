@@ -91,11 +91,6 @@ constexpr ConvFormat outputFormat = ConvFormat::NHWC;
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
 constexpr ConvFormat outputFormat = ConvFormat::NCHW;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NHWC && \
-    defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW
-constexpr ConvFormat fmapFormat = ConvFormat::NCHW;
-constexpr ConvFormat weightFormat = ConvFormat::NHWC;
-constexpr ConvFormat outputFormat = ConvFormat::NCHW;
 #endif
 constexpr ConvFormat biasFormat = ConvFormat::ND;
 constexpr ConvFormat scaleFormat = ConvFormat::ND;
@@ -116,9 +111,9 @@ constexpr ConvFormat scaleFormat = ConvFormat::ND;
                              L1PingPong == CONV_L1_PINGPONG_ALL_OPEN && L0PingPong == CONV_L0_PINGPONG_ALL_OPEN &&     \
                              OutputOrder == CONV_OUTPUT_ORDER_M_MODE && GroupType == CONV_GROUP_TYPE_NORMAL_CONV &&    \
                              EnableSmallChannel == CONV_ENABLE_SMALL_CHANNEL_CLOSE &&                                  \
-                             WeightUbTrans == CONV_WEIGHT_UB_TRANS_CLOSE && FmapCopyMode == CONV_FMAP_LOAD3D_MODE &&   \
+                             WeightUbTrans == CONV_WEIGHT_UB_TRANS_OPEN && FmapCopyMode == CONV_FMAP_LOAD3D_MODE &&    \
                              InnerBatch == CONV_INNER_BATCH_SINGLE && fmapFormat == ConvFormat::NCHW &&                \
-                             outputFormat == ConvFormat::NCHW && weightFormat == ConvFormat::NHWC) {                   \
+                             outputFormat == ConvFormat::NCHW && weightFormat == ConvFormat::NCHW) {                   \
             REGISTER_TILING_FOR_TILINGKEY("FmapTiling == CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0 && "                 \
                                           "WeightTiling == CONV_WEIGHT_TILING_ONLY_N_FULLLOAD_BL1_BL0 && "             \
                                           "L1PingPong == CONV_L1_PINGPONG_ALL_OPEN &&"                                 \
@@ -126,17 +121,15 @@ constexpr ConvFormat scaleFormat = ConvFormat::ND;
                                           "OutputOrder == CONV_OUTPUT_ORDER_M_MODE &&"                                 \
                                           "GroupType == CONV_GROUP_TYPE_NORMAL_CONV &&"                                \
                                           "EnableSmallChannel == CONV_ENABLE_SMALL_CHANNEL_CLOSE &&"                   \
-                                          "WeightUbTrans == CONV_WEIGHT_UB_TRANS_CLOSE &&"                             \
+                                          "WeightUbTrans == CONV_WEIGHT_UB_TRANS_OPEN &&"                              \
                                           "FmapCopyMode == CONV_FMAP_LOAD3D_MODE &&"                                   \
                                           "InnerBatch == CONV_INNER_BATCH_SINGLE",                                     \
                                           Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling);                          \
             GET_TILING_DATA_WITH_STRUCT(Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling, tilingData, tiling);        \
-            if ASCEND_IS_AIC_CONV {                                                                                    \
-                full_mn::Conv2dFullMNKernelPipeline<DTYPE_X, DTYPE_FILTER, DTYPE_Y, biasType::T,                       \
-                                                    Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling>                 \
-                    pipeline;                                                                                          \
-                pipeline(tilingData, x, filter, bias, y);                                                              \
-            }                                                                                                          \
+            full_mn::Conv2dFullMNKernelPipeline<DTYPE_X, DTYPE_FILTER, DTYPE_Y, biasType::T,                           \
+                                                Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling>                     \
+                pipeline;                                                                                              \
+            pipeline(tilingData, x, filter, bias, y, user);                                                            \
             return;                                                                                                    \
         }                                                                                                              \
     } while (0)
@@ -150,6 +143,12 @@ template <int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0Pi
 __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y,
                                     GM_ADDR workspace, GM_ADDR tiling)
 {
+    if (workspace == nullptr) {
+        return;
+    }
+
+    SetSysWorkspace(workspace);
+    GM_ADDR user = GetUserWorkspace(workspace);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) && !defined(KERNELUT)
     REGISTER_TILING_DEFAULT(Ops::NN::Conv2dV2::Conv2DTilingData);
 #endif
@@ -217,7 +216,7 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
                                      EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, BatchOne, NoPad,
                                      SmallWeight, IsExtendConv2D::FALSE, half, 0, ConvToL1>>
                 baseConv2d;
-            baseConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
+            baseConv2d.RunConv2dKernel(x, filter, bias, y, tilingData, nullptr, user);
         } else if constexpr (GroupType == CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV) {
             DepthwiseConv2dSimplifiedKernel<
                 Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, GroupType,

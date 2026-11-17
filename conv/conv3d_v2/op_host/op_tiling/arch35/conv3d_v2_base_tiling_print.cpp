@@ -63,7 +63,8 @@ void Conv3dBaseTilingV2::PrintLibApiTilingData()
        << ", enlarge: " << tilingData_.enlarge << ", singleCoreGroups: " << tilingData_.singleCoreGroups
        << ", singleCoreGroupOpt: " << tilingData_.singleCoreGroupOpt
        << ", hf32Enable: " << static_cast<uint32_t>(tilingData_.hf32Enable)
-       << ", hf32TransMode: " << static_cast<uint32_t>(tilingData_.hf32TransMode);
+       << ", hf32TransMode: " << static_cast<uint32_t>(tilingData_.hf32TransMode)
+       << ", bUbKStep: " << tilingData_.bUbKStep << ", bUbNStep: " << tilingData_.bUbNStep;
     OP_LOGD(paramInfo_.nodeType.c_str(), "%s", ss.str().c_str());
 
     stringstream ssPartTwo;

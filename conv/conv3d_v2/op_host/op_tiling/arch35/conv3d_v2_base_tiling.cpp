@@ -355,7 +355,26 @@ ge::graphStatus Conv3dBaseTilingV2::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
-    workspaces[0] = MIN_WORKSPACE_SIZE;
+    // 系统 workspace 大小从接口获取（等价于 MIN_WORKSPACE_SIZE，GetUserWorkspace 会在 kernel 侧偏移掉这块）
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    workspaces[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
+    if ((opInfo_->npuArch == NpuArch::DAV_9201 || opInfo_->npuArch == NpuArch::DAV_9202) &&
+        tilingKeyPara_.weightUbTrans == WEIGHT_UB_TRANS_OPEN) {
+        const gert::StorageShape* weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
+        if (weightShapePtr != nullptr) {
+            gert::Shape weightShape = GetWeightShape(weightShapePtr);
+            if (weightShape.GetDimNum() == 5U && weightShape.GetDim(0) > 0 && weightShape.GetDim(1) > 0 &&
+                weightShape.GetDim(2) > 0 && weightShape.GetDim(3) > 0 && weightShape.GetDim(4) > 0) {
+                auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
+                size_t cinAlign = static_cast<size_t>(
+                    ConvAlignB(static_cast<uint32_t>(weightShape.GetDim(1)), static_cast<uint32_t>(k0)));
+                size_t weight5HDSize = static_cast<size_t>(weightShape.GetDim(0)) * cinAlign * weightShape.GetDim(2) *
+                                       weightShape.GetDim(3) * weightShape.GetDim(4) *
+                                       dtypeSizeTab.at(descInfo_.weightDtype);
+                workspaces[0] += weight5HDSize;
+            }
+        }
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -375,7 +394,9 @@ ge::graphStatus Conv3dBaseTilingV2::PostTiling()
         return ge::GRAPH_FAILED;
     }
     context_->GetRawTilingData()->SetDataSize(sizeof(tilingData_));
-    if (flagInfo_.mSplitModeFlag) {
+    if (tilingKeyPara_.weightUbTrans == WEIGHT_UB_TRANS_OPEN) {
+        context_->SetBlockDim(opInfo_->aicoreNum);
+    } else if (flagInfo_.mSplitModeFlag) {
         context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.doDim * numBlocksRes.mDim * numBlocksRes.nDim *
                               numBlocksRes.groupDim);
     } else {

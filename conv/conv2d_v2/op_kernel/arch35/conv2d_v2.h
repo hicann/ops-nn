@@ -60,17 +60,17 @@ public:
 
     __aicore__ inline void RunConv2dKernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                            const Conv2DTilingData& convTilingData,
-                                           const ExtendParams* extendParams = nullptr);
+                                           const ExtendParams* extendParams = nullptr, GM_ADDR workspace = nullptr);
 
 protected:
     // Conv2d op kernel init intf
-    __aicore__ inline bool Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+    __aicore__ inline bool Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
                                             const ExtendParams* extendParams, const Conv2DTilingData& tilingData);
 
     __aicore__ inline bool InitSingleCoreData(const uint32_t& blockPerNDim, uint32_t blockPerMDim,
                                               uint32_t blockPerHoDim, uint32_t blockPerWoDim);
 
-    __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+    __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace,
                                       const ExtendParams* extendParams);
 
     // Conv2d op kernel impl intf
@@ -106,6 +106,7 @@ public:
     // Input and output tensor declare
     GlobalTensor<FMAP_T> fmapGm;
     GlobalTensor<WEIGHT_T> filterGm;
+    GlobalTensor<WEIGHT_T> weight5HDGm;
     GlobalTensor<OUTPUT_T> outputGm;
     GlobalTensor<OUTPUT1_T> output1Gm; // extend conv2d dual output
     GlobalTensor<BIAS_T> biasGm;
@@ -146,6 +147,7 @@ public:
     GM_ADDR filterAddr = nullptr;
     GM_ADDR biasAddr = nullptr;
     GM_ADDR yAddr = nullptr;
+    GM_ADDR workspaceAddr = nullptr;
     const ExtendParams* extendParamsAddr = nullptr;
 
     constexpr static uint32_t din = 1;
@@ -176,7 +178,12 @@ public:
                                                     static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
                                                 CONV_CFG::l1PingPong == static_cast<int8_t>(ConvL1PingPong::ALL_OPEN);
 #endif
-
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+    constexpr static bool IS_WEIGHT_5HD = CONV_CFG::weightUbTrans == static_cast<int8_t>(ConvWeightUbTrans::OPEN) &&
+                                          !IsSameType<WEIGHT_T, fp8_e4m3fn_t>::value;
+#else
+    constexpr static bool IS_WEIGHT_5HD = false;
+#endif
     constexpr static uint8_t k0 = SINGLE_BLOCK_SIZE / sizeof(WEIGHT_T);
 };
 
@@ -184,9 +191,9 @@ template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE
 __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE,
                                   CONV_CFG>::RunConv2dKernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                                              const Conv2DTilingData& convTilingData,
-                                                             const ExtendParams* extendParams)
+                                                             const ExtendParams* extendParams, GM_ADDR workspace)
 {
-    if (!Conv2dKernelInit(x, filter, bias, y, extendParams, convTilingData)) {
+    if (!Conv2dKernelInit(x, filter, bias, y, workspace, extendParams, convTilingData)) {
         return;
     }
     if constexpr (isASWTEligible) {
@@ -201,7 +208,7 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE,
                                   CONV_CFG>::Conv2dKernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
-                                                              const ExtendParams* extendParams,
+                                                              GM_ADDR workspace, const ExtendParams* extendParams,
                                                               const Conv2DTilingData& tilingData)
 {
     hasScale = (extendParams != nullptr);
@@ -216,6 +223,7 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
             filterAddr = filter;
             biasAddr = bias;
             yAddr = y;
+            workspaceAddr = workspace;
             extendParamsAddr = extendParams;
             return true;
         }
@@ -243,7 +251,7 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
         }
     }
 
-    InitBuffer(x, filter, bias, y, extendParams);
+    InitBuffer(x, filter, bias, y, workspace, extendParams);
 
     return true;
 }
@@ -296,7 +304,7 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::InitBuffer(
-    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
+    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, GM_ADDR workspace, const ExtendParams* extendParams)
 {
     if constexpr (A_FORMAT == ConvFormat::NCHW) {
         if constexpr (isMMode) {
@@ -312,7 +320,7 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
         }
     }
 
-    convCommon.InitBufferCommon(x, filter, bias, y, extendParams);
+    convCommon.InitBufferCommon(x, filter, bias, y, extendParams, workspace);
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
@@ -334,6 +342,9 @@ Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>
     }
 
     conv.SetWeight(filterGm);
+    if constexpr (IS_WEIGHT_5HD) {
+        conv.SetWeight5HD(weight5HDGm);
+    }
     if (convTilingData->hasBias) {
         conv.SetBias(biasGm);
     }
@@ -407,7 +418,7 @@ __aicore__ inline void
 Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::IterateSingleTile()
 {
     conv.SetSingleOutputShape(singleCoreN, singleCoreM, singleCoreBatch);
-    InitBuffer(xAddr, filterAddr, biasAddr, yAddr, extendParamsAddr);
+    InitBuffer(xAddr, filterAddr, biasAddr, yAddr, workspaceAddr, extendParamsAddr);
     conv.SetFmapStartPosition(mIdxStart);
     conv.SetWeight(filterGm);
     if (convTilingData->hasBias) {

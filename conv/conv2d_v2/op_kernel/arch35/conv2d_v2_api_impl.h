@@ -37,6 +37,7 @@ public:
     CONV_REG_IMPL(Config, Conv2dFunc, Init);
     CONV_REG_IMPL(Config, ConvFunc, SetFmap);
     CONV_REG_IMPL(Config, ConvFunc, SetWeight);
+    CONV_REG_IMPL(Config, ConvFunc, SetWeight5HD);
     CONV_REG_IMPL(Config, ConvFunc, SetBias);
     CONV_REG_IMPL(Config, ConvFunc, SetScale);
     CONV_REG_IMPL(Config, ConvFunc, SetFixpipeParams);
@@ -127,6 +128,10 @@ public:
         TBuf<TPosition::A1> aL1TBuf;
         TBuf<TPosition::VECIN> ubBuf;
         LocalTensor<typename Intf::FmapT> img2ColTensor;
+#endif
+
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
+        Conv2dFunc::Weight5HDProcessTools<Intf> weight5HDProcessTools;
 #endif
 
         uint16_t aL1LoadTimes = 0;

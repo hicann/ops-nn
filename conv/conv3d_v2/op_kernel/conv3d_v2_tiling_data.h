@@ -217,6 +217,8 @@ struct Conv3DV2TilingDataV2 {
     uint32_t kBL1 = 0;
     uint32_t kBL1Tail = 0;
     uint32_t nBL1 = 0;
+    uint32_t bUbKStep = 0;
+    uint32_t bUbNStep = 0;
     uint32_t mAL1 = 0;
     uint32_t woL1 = 0;
     uint32_t hoL0 = 0;

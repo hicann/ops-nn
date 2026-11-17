@@ -327,6 +327,44 @@ public:
         }
     }
 
+    __aicore__ inline void LoadBL1From5HD(uint64_t kBL1Iter, uint64_t nBL1Iter)
+    {
+        const uint64_t k0 = Intf::k0;
+        const uint64_t hw = self_->ctx.convTilingData->kernelHxkernelW;
+        const uint64_t c1 = CeilDiv(static_cast<uint64_t>(self_->ctx.convTilingData->orgCi), k0);
+        const uint64_t totalK = c1 * hw * k0;
+        uint64_t bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->kBL1;
+        if constexpr (Intf::hasNL1IterFlag) {
+            bL1GmOffset += nBL1Iter * self_->ctx.convTilingData->nBL1 * totalK;
+            self_->ctx.currentNBL1 = nBL1Iter == self_->ctx.maxNBL1Iter ? self_->ctx.nBL1Tail :
+                                                                          self_->ctx.convTilingData->nBL1;
+        }
+
+        const uint64_t totalKAlign = AlignB(static_cast<uint64_t>(self_->ctx.singleCoreCi), k0) * hw;
+        const uint64_t alignTail = totalKAlign % self_->ctx.convTilingData->kBL1;
+        const uint64_t kBL1TailAligned = alignTail == 0 ? self_->ctx.convTilingData->kBL1 : alignTail;
+
+        Nd2NzParams nd2nzParams;
+        nd2nzParams.dValue = kBL1Iter == self_->ctx.maxKBL1Iter ? kBL1TailAligned : self_->ctx.convTilingData->kBL1;
+        nd2nzParams.dstNzC0Stride = self_->ctx.convTilingData->nBL1;
+        if (totalK <= ND2NZ_SRC_DVALUE_MAX) {
+            nd2nzParams.ndNum = 1;
+            nd2nzParams.nValue = self_->ctx.currentNBL1;
+            nd2nzParams.srcNdMatrixStride = 0;
+            nd2nzParams.srcDValue = totalK;
+            nd2nzParams.dstNzNStride = 1;
+            nd2nzParams.dstNzMatrixStride = 0;
+        } else {
+            nd2nzParams.ndNum = self_->ctx.currentNBL1;
+            nd2nzParams.srcNdMatrixStride = totalK;
+            nd2nzParams.dstNzMatrixStride = k0;
+            nd2nzParams.nValue = 1;
+            nd2nzParams.srcDValue = nd2nzParams.dValue;
+            nd2nzParams.dstNzNStride = 1;
+        }
+        DataCopy<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.weight5HDGM[bL1GmOffset], nd2nzParams);
+    }
+
 private:
     __aicore__ inline void LoadBL1Data(uint64_t kBL1Iter, uint64_t nBL1Iter)
     {

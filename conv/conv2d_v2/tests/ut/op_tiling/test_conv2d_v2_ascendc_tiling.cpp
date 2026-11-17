@@ -8406,9 +8406,9 @@ INSTANTIATE_TEST_CASE_P(
                                    "9201",
                                    "",
                                    "aswt"},
-                      // FullMN (DAV_9201): NCHW fmap/out with NHWC filter, K partially loaded.
+                      // FullMN (DAV_9201): NCHW fmap/weight/out with UB 5HD trans, K partially loaded.
                       Conv2DParams{{1, 4096, 16, 16},
-                                   {16, 3, 3, 4096},
+                                   {128, 3, 3},
                                    {1, 1, 1, 1},
                                    {1, 1},
                                    {1, 1},
@@ -8421,10 +8421,10 @@ INSTANTIATE_TEST_CASE_P(
                                    false,
                                    "NCHW",
                                    "9201",
-                                   "NHWC",
+                                   "NCHW",
                                    "fullmn"},
                       Conv2DParams{{1, 2048, 32, 32},
-                                   {16, 3, 3, 2048},
+                                   {128, 3, 3},
                                    {1, 1, 1, 1},
                                    {1, 1},
                                    {1, 1},
@@ -8437,7 +8437,7 @@ INSTANTIATE_TEST_CASE_P(
                                    false,
                                    "NCHW",
                                    "9201",
-                                   "NHWC",
+                                   "NCHW",
                                    "fullmn"},
                       // OptGroup vselr (DAV_9201): 3x3 kernel, small opt-group channels -> vselr enabled.
                       Conv2DParams{{1, 512, 16, 16},

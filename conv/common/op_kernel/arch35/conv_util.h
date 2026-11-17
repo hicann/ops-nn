@@ -199,6 +199,8 @@ const static uint64_t NINTH_BIT_MASK = 0x100;
 // Dn2NzParam's max nValue
 const static uint16_t N_VALUE_MAX = 65535;
 
+constexpr uint64_t ND2NZ_SRC_DVALUE_MAX = 65535;
+
 const static uint64_t DEQ_SCALAR_ONE = 1065353216;
 static constexpr IsResetLoad3dConfig CONV_LOAD3DV2_DEFAULT_CONFIG = {false, false};
 

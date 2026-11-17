@@ -92,7 +92,7 @@ public:
                                                          const uint64_t doIdxStart, const int64_t diIdxStart);
 
     __aicore__ __forceinline__ void InitBufferCommon(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
-                                                     const ExtendParams* extendParams);
+                                                     const ExtendParams* extendParams, GM_ADDR workspace = nullptr);
 
     __aicore__ __forceinline__ void InitFixpipeBuffer(const ExtendParams* extendParams);
 
@@ -111,6 +111,7 @@ protected:
     bool hasScale = true;
     uint64_t fmStartAddr = 0;
     uint64_t weightStartAddr = 0;
+    uint64_t weight5HDStartAddr = 0;
     uint64_t biasStartAddr = 0;
     uint64_t scaleStartAddr = 0;
     uint64_t reluWeightStartAddr = 0;
@@ -266,6 +267,10 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrMMod
     } else {
         weightStartAddr = convOps->nIdxStart * convTilingData->cin * kd * convTilingData->kh * convTilingData->kw;
     }
+    if constexpr (CONV::IS_WEIGHT_5HD) {
+        weight5HDStartAddr = convOps->nIdxStart * kd * AlignB(convTilingData->cin, convOps->k0) * convTilingData->kh *
+                             convTilingData->kw;
+    }
     CalcOutputStartAddr(dout, doIdxStart);
 
     if constexpr (CONV::IS_EXTEND_CONV2D) {
@@ -325,6 +330,10 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::CalcStartAddrHWod
         weightStartAddr = convOps->nIdxStart;
     } else {
         weightStartAddr = convOps->nIdxStart * convTilingData->cin * kd * convTilingData->kh * convTilingData->kw;
+    }
+    if constexpr (CONV::IS_WEIGHT_5HD) {
+        weight5HDStartAddr = convOps->nIdxStart * kd * AlignB(convTilingData->cin, convOps->k0) * convTilingData->kh *
+                             convTilingData->kw;
     }
     CalcOutputStartAddr(dout, doIdxStart);
 
@@ -479,7 +488,8 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::InitFixpipeBuffer
 template <class CONV, class CONV_TILING>
 __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::InitBufferCommon(GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                                                 GM_ADDR y,
-                                                                                const ExtendParams* extendParams)
+                                                                                const ExtendParams* extendParams,
+                                                                                GM_ADDR workspace)
 {
     convOps->fmapGm.SetGlobalBuffer(
         reinterpret_cast<__gm__ typename CONV::FMAP_T*>(x + fmStartAddr * sizeof(typename CONV::FMAP_T)));
@@ -487,6 +497,16 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::InitBufferCommon(
         reinterpret_cast<__gm__ typename CONV::WEIGHT_T*>(filter + weightStartAddr * sizeof(typename CONV::WEIGHT_T)));
     convOps->outputGm.SetGlobalBuffer(
         reinterpret_cast<__gm__ typename CONV::OUTPUT_T*>(y + outputStartAddr * sizeof(typename CONV::OUTPUT_T)));
+    if constexpr (CONV::IS_WEIGHT_5HD) {
+        if ASCEND_IS_AIC_CONV {
+            convOps->weight5HDGm.SetGlobalBuffer(reinterpret_cast<__gm__ typename CONV::WEIGHT_T*>(
+                workspace + weight5HDStartAddr * sizeof(typename CONV::WEIGHT_T)));
+        }
+        if ASCEND_IS_AIV_CONV {
+            convOps->weight5HDGm.SetGlobalBuffer(reinterpret_cast<__gm__ typename CONV::WEIGHT_T*>(workspace));
+        }
+        convOps->filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ typename CONV::WEIGHT_T*>(filter));
+    }
     if constexpr (CONV::IS_EXTEND_CONV2D) {
         if (convTilingData->dualOutput) {
             convOps->output1Gm.SetGlobalBuffer(reinterpret_cast<__gm__ typename CONV::OUTPUT1_T*>(

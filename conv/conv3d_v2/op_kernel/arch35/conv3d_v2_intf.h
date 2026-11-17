@@ -85,7 +85,14 @@ struct Conv3dIntf {
                                          AscendC::IsSameType<FmapT, fp8_e4m3fn_t>::value;
     constexpr static bool c04Flag = false;
     constexpr static bool c04NDFlag = false;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     constexpr static bool weightUbTrans = false;
+    constexpr static bool weight5HDFlag = ConvParam::weightUbTrans == static_cast<int8_t>(ConvWeightUbTrans::OPEN) &&
+                                          formatWeight == ConvFormat::NCDHW;
+#else
+    constexpr static bool weightUbTrans = false;
+    constexpr static bool weight5HDFlag = false;
+#endif
     constexpr static bool isDmaFlag = false;
     constexpr static bool isInnerBatchFlag = false;
     constexpr static bool groupOptFlag = ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV);
@@ -211,6 +218,16 @@ public:
         using local = typename Ext::SetWeightStartPosition;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, coStartPos, ciStartPos)) {
             local::call(this, coStartPos, ciStartPos);
+        }
+    }
+
+    __aicore__ inline void SetWeight5HD(const GlobalTensor<WeightT>& weight5HD)
+    {
+        if constexpr (weight5HDFlag) {
+            using local = typename Ext::SetWeight5HD;
+            if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, weight5HD)) {
+                local::call(this, weight5HD);
+            }
         }
     }
 

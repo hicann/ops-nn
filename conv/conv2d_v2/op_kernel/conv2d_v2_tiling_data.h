@@ -59,6 +59,8 @@ struct Conv2DMNFullLoadKPartialTiling {
     uint8_t hf32TransMode = 0;
     uint8_t hasBias = 0;
     int8_t offsetx = 0;
+    uint32_t bUbNStep = 0;
+    uint32_t bUbKStep = 0;
 };
 
 #pragma pack(pop)

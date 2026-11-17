@@ -71,6 +71,7 @@ struct ConvType {
 };
 
 struct PlatformInfo {
+    uint32_t aicoreNum = 0;
     uint32_t abL1mte2BandWidthCof = 0;
     uint64_t l1Size = 0;
     uint64_t l0CSize = 0;
@@ -108,6 +109,9 @@ struct ConvWeightUbTransParams {
     uint64_t k0 = 0;
     uint64_t n0 = 0;
     ConvDtype weightDtype = ConvDtype::UNDEFINED;
+
+    uint64_t orgCo = 0;
+    uint64_t orgCi = 0;
 
     uint32_t bUbNStep = 0;
     uint32_t bUbKStep = 0;
@@ -234,6 +238,13 @@ constexpr uint64_t LOAD3DV2_HIN_WIN_LIMIT_VALUE = 32767;
 constexpr uint64_t MAX_OUT_TYPE_SIZE = 4;
 constexpr uint64_t TOTAL_SCALE_BIAS_16_TYPE_SIZE = 10;
 constexpr uint64_t TOTAL_SCALE_BIAS_32_TYPE_SIZE = 8;
+
+constexpr uint64_t WEIGHT_5HD_K_ALIGNED = 16;
+constexpr uint64_t WEIGHT_5HD_USE_BUF_NUM = 2;
+constexpr uint64_t WEIGHT_5HD_C_LIMIT = 64;
+constexpr uint64_t WEIGHT_5HD_K_LIMIT = 65536;
+constexpr uint64_t WEIGHT_5HD_TRANS_RPT_TIMES_LIMIT = 255;
+
 struct AscendApiCubeTypeMap {
 public:
     struct {

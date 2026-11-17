@@ -245,7 +245,13 @@ void Conv2dBaseTiling::SetUbTiling(shared_ptr<tuningtiling::Conv2DV2TunnerTiling
                                                        convOpsConstParams_.k0,
                                                        convOpsConstParams_.n0,
                                                        dtypeMap.at(descInfo_.weightDtype)};
-        conv2dApiTiling_.GetWeightUBTiling(params);
+        if (opInfo_->npuArch == NpuArch::DAV_9201 || opInfo_->npuArch == NpuArch::DAV_9202) {
+            params.orgCo = static_cast<uint64_t>(convRepoTiling->orgCo);
+            params.orgCi = static_cast<uint64_t>(convRepoTiling->orgCi);
+            conv2dApiTiling_.GetWeight5HDTiling(params);
+        } else {
+            conv2dApiTiling_.GetWeightUBTiling(params);
+        }
         tilingData_.set_bUbNStep(params.bUbNStep);
         tilingData_.set_bUbKStep(params.bUbKStep);
     } else {

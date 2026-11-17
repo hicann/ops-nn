@@ -227,16 +227,6 @@ ge::graphStatus Conv2dBaseTiling::CheckGroupsLegal()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, groupsPtr);
     oriShapeAttrInfo_.oriGroups = *groupsPtr;
 
-    // weight format groups != 1 case not supported yet
-    if (oriShapeAttrInfo_.oriGroups != 1 && descInfo_.weightFormat == ge::FORMAT_NHWC &&
-        (apiInputPlatformInfo.npuArch == NpuArch::DAV_9201 || apiInputPlatformInfo.npuArch == NpuArch::DAV_9202)) {
-        std::string reasonMsg = "If the format of input filter is " + Ops::Base::ToString(descInfo_.weightFormat) +
-                                ", parameter groups must be 1";
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "groups",
-                                              std::to_string(oriShapeAttrInfo_.oriGroups).c_str(), reasonMsg.c_str());
-        return ge::GRAPH_FAILED;
-    }
-
     if (oriShapeAttrInfo_.oriGroups < 1 || static_cast<uint64_t>(oriShapeAttrInfo_.oriGroups) > MAX_GROUP_SHAPE) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             context_->GetNodeType(), "groups", std::to_string(oriShapeAttrInfo_.oriGroups).c_str(),

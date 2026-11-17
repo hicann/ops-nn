@@ -59,6 +59,7 @@ ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
 
 void Conv2dBaseTiling::SetApiInputPlatformInfo()
 {
+    apiInputPlatformInfo.aicoreNum = opInfo_->aicoreNum;
     apiInputPlatformInfo.npuArch = opInfo_->npuArch;
     apiInputPlatformInfo.isCubeVectorFuse = opInfo_->isCubeVectorFuse;
     apiInputPlatformInfo.l1Size = opInfo_->l1Size;
@@ -647,15 +648,14 @@ ge::graphStatus Conv2dBaseTiling::SetStrideWriteParams()
 bool Conv2dBaseTiling::IsMNFullLoadKPartia()
 {
     return (opInfo_->npuArch == NpuArch::DAV_9201 || opInfo_->npuArch == NpuArch::DAV_9202) &&
-           descInfo_.fMapFormat == ge::Format::FORMAT_NCHW && descInfo_.weightFormat == ge::Format::FORMAT_NHWC &&
+           descInfo_.fMapFormat == ge::Format::FORMAT_NCHW && descInfo_.weightFormat == ge::Format::FORMAT_NCHW &&
            descInfo_.outFormat == ge::Format::FORMAT_NCHW && tilingKeyPara_.fmpTiling == ONLY_M_FULLLOAD_AL1_AL0 &&
            tilingKeyPara_.weightTiling == ONLY_N_FULLLOAD_BL1_BL0 && tilingKeyPara_.l1PingPong == L1_PB_ALL_OPEN &&
            tilingKeyPara_.l0PingPong == L0_PB_ALL_OPEN && flagInfo_.mSplitModeFlag && // OutputOrder
            tilingData_.get_iterateMNOrder() == static_cast<uint64_t>(IterateMNOrder::ITER_M_FST) &&
-           tilingKeyPara_.groupType == static_cast<uint64_t>(ConvGroupType::NORMAL_CONV) &&
-           !flagInfo_.enableC04Flag && // enableSmallChannel
-           tilingKeyPara_.weightUbTrans == WEIGHT_UB_TRANS_CLOSE && tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE &&
-           tilingKeyPara_.innerBatch == CONV_INNER_BATCH_SINGLE && !flagInfo_.disContinuousFlag && !flagInfo_.isASWT;
+           tilingKeyPara_.weightUbTrans == WEIGHT_UB_TRANS_OPEN && tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE &&
+           tilingKeyPara_.innerBatch == CONV_INNER_BATCH_SINGLE && !flagInfo_.disContinuousFlag &&
+           tilingKeyPara_.smallWeight == CONV_NOT_SMALL_WEIGHT && !flagInfo_.isASWT;
 }
 
 void Conv2dBaseTiling::FillMNFullLoadKPartialTiling(Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling& tiling)
@@ -696,6 +696,9 @@ void Conv2dBaseTiling::FillMNFullLoadKPartialTiling(Ops::NN::Conv2dV2::Conv2DMNF
     tiling.hf32TransMode = tilingData_.get_hf32TransMode();
     tiling.hasBias = tilingData_.get_hasBias();
     tiling.offsetx = tilingData_.get_offsetx();
+    // weight 5HD（WeightUbTrans=OPEN 时非 0；NHWC 直读场景为 0，kernel 侧不使用）
+    tiling.bUbNStep = tilingData_.get_bUbNStep();
+    tiling.bUbKStep = tilingData_.get_bUbKStep();
 }
 
 ge::graphStatus Conv2dBaseTiling::PostTiling()
@@ -738,6 +741,10 @@ ge::graphStatus Conv2dBaseTiling::PostTiling()
             uint64_t batchBlocks = ConvCeilDiv(shapeInfo_.batch, tilingData_.get_innerBatch());
             context_->SetBlockDim(std::min<uint64_t>(batchBlocks * mBlocks * nBlocks, opInfo_->aicoreNum));
         }
+    } else if ((opInfo_->npuArch == NpuArch::DAV_9201 || opInfo_->npuArch == NpuArch::DAV_9202) &&
+               tilingKeyPara_.weightUbTrans == WEIGHT_UB_TRANS_OPEN) {
+        context_->SetBlockDim(opInfo_->aicoreNum);
+        context_->SetScheduleMode(1U);
     } else if (flagInfo_.mSplitModeFlag) {
         context_->SetBlockDim(numBlocksRes.batchDim * numBlocksRes.mDim * numBlocksRes.nDim * numBlocksRes.groupDim);
     } else {
@@ -812,7 +819,20 @@ ge::graphStatus Conv2dBaseTiling::GetWorkspaceSize()
         workspaces[0] = 0;
         OP_LOGD(paramInfo_.nodeType.c_str(), "AscendC: Fuse workspace size is 0.");
     } else {
-        workspaces[0] = MIN_WORKSPACE_SIZE;
+        fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
+        workspaces[0] = platform_ascendc::PlatformAscendC(platformInfoPtr).GetLibApiWorkSpaceSize();
+    }
+    if ((opInfo_->npuArch == NpuArch::DAV_9201 || opInfo_->npuArch == NpuArch::DAV_9202) &&
+        tilingKeyPara_.weightUbTrans == WEIGHT_UB_TRANS_OPEN) {
+        auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
+        if (weightShapePtr != nullptr) {
+            auto weightShape = GetWeightShape(weightShapePtr);
+            auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
+            workspaces[0] += weightShape.GetDim(FORMAT_NCHW_N_INDEX) *
+                             ConvAlignB(weightShape.GetDim(FORMAT_NCHW_C_INDEX), k0) *
+                             weightShape.GetDim(FORMAT_NCHW_H_INDEX) * weightShape.GetDim(FORMAT_NCHW_W_INDEX) *
+                             dtypeSizeTab.at(descInfo_.weightDtype);
+        }
     }
 
     return ge::GRAPH_SUCCESS;

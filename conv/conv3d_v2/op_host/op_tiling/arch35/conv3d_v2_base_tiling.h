@@ -62,6 +62,7 @@ protected:
     bool TranslateRepoTiling(tuningtiling::TuningTilingDefPtr& tuningTiling);
     void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
+    void SetWeight5HDUbTiling(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     void GetTilingInputArgs(std::shared_ptr<void>& inputArgs, size_t& size);
     bool TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     uint32_t CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);

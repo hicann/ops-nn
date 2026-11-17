@@ -171,7 +171,8 @@ void Conv2dBaseTiling::ASWTDecision()
         flagInfo_.extendConvFlag || flagInfo_.enableC04Flag || !flagInfo_.mSplitModeFlag || attrInfo_.groups != 1 ||
         (tilingData_.get_innerBatch() > 1) || tilingData_.get_hoL1() != tilingData_.get_hoL0() ||
         tilingData_.get_nBL1() != tilingData_.get_nL0() || outputTileNum <= opInfo_->aicoreNum ||
-        usedCoreNum >= opInfo_->aicoreNum || featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG) {
+        usedCoreNum >= opInfo_->aicoreNum || featureFlagInfo_ == ConvAscendcFeatureFlag::IS_DMA_FLAG ||
+        (tilingData_.get_bUbKStep() > 0 && tilingData_.get_bUbNStep() > 0)) {
         return;
     }
 

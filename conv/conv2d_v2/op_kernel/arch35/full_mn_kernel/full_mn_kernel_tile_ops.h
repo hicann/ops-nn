@@ -54,34 +54,42 @@ struct LoadAL1SegTool {
     }
 };
 
-// ---- 2. LoadBL1SegTool: weight K-segment NHWC → L1 NZ (Nd2Nz) ----
 template <typename BlockCtx, typename TilingData>
-struct LoadBL1SegTool {
+struct LoadBL1Seg5HDTool {
     using WeightT = typename BlockCtx::WeightType;
 
     __aicore__ inline void operator()(const BlockCtx& bc, const TilingData& tiling,
-                                      const GlobalTensor<WeightT>& filterGm, uint32_t kBL1Iter,
+                                      const GlobalTensor<WeightT>& weight5HDGm, uint32_t kBL1Iter,
                                       LocalTensor<WeightT>& bl1) const
     {
-        uint32_t cinAligned = static_cast<uint32_t>(AlignB(tiling.cin, BlockCtx::GK0));
-        uint32_t kTotal = cinAligned * tiling.kh * tiling.kw;
-        uint32_t maxKBL1Iter = static_cast<uint32_t>(CeilDiv(kTotal, tiling.kBL1) - 1);
-        bool isTail = (kBL1Iter == maxKBL1Iter);
-        uint32_t dValue = isTail ? tiling.cinBTailInCore : tiling.cinBInCore;
-        uint32_t kernelHxkernelW = tiling.kh * tiling.kw;
+        constexpr uint32_t k0 = BlockCtx::GK0;
+        uint64_t hw = static_cast<uint64_t>(tiling.kh * tiling.kw);
+        uint64_t c1Total = CeilDiv(static_cast<uint64_t>(tiling.cin), static_cast<uint64_t>(k0));
+        uint64_t totalK = c1Total * hw * k0;
+        uint64_t gmOffset = bc.nIdxStart * totalK + kBL1Iter * tiling.kBL1;
+        uint64_t c1PerChunk = static_cast<uint64_t>(tiling.kBL1) / (hw * k0);
+        uint64_t c1Base = kBL1Iter * c1PerChunk;
+        uint64_t c1Cnt = c1PerChunk < (c1Total - c1Base) ? c1PerChunk : (c1Total - c1Base);
 
-        Nd2NzParams instriParams;
-        instriParams.ndNum = kernelHxkernelW;
-        instriParams.nValue = bc.actualCo;
-        instriParams.dValue = dValue;
-        instriParams.srcNdMatrixStride = tiling.cin;
-        instriParams.srcDValue = kernelHxkernelW * tiling.cin;
-        instriParams.dstNzC0Stride = kernelHxkernelW * tiling.nBL1;
-        instriParams.dstNzNStride = 1;
-        instriParams.dstNzMatrixStride = tiling.nBL1 * BlockCtx::GK0;
-
-        uint64_t gmOffset = kBL1Iter * tiling.cinBInCore;
-        DataCopy<WeightT>(bl1, filterGm[gmOffset], instriParams);
+        Nd2NzParams nd2nzParams;
+        nd2nzParams.dValue = c1Cnt * hw * k0;
+        nd2nzParams.dstNzC0Stride = tiling.nBL1;
+        if (totalK <= ND2NZ_SRC_DVALUE_MAX) {
+            nd2nzParams.ndNum = 1;
+            nd2nzParams.nValue = bc.actualCo;
+            nd2nzParams.srcNdMatrixStride = 0;
+            nd2nzParams.srcDValue = totalK;
+            nd2nzParams.dstNzNStride = 1;
+            nd2nzParams.dstNzMatrixStride = 0;
+        } else {
+            nd2nzParams.ndNum = bc.actualCo;
+            nd2nzParams.srcNdMatrixStride = totalK;
+            nd2nzParams.dstNzMatrixStride = k0;
+            nd2nzParams.nValue = 1;
+            nd2nzParams.srcDValue = nd2nzParams.dValue;
+            nd2nzParams.dstNzNStride = 1;
+        }
+        DataCopy<WeightT>(bl1, weight5HDGm[gmOffset], nd2nzParams);
     }
 };
 

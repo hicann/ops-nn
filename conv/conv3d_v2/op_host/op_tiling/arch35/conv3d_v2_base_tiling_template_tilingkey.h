@@ -33,9 +33,9 @@ public:
           descInfo_(descInfo),
           shapeInfo_(shapeInfo),
           numBlocksRes_(numBlocksRes),
-          convOpsConstParams_(convOpsConstParams){};
+          convOpsConstParams_(convOpsConstParams) {};
 
-    ~Conv3dV2BaseTilingKey(){};
+    ~Conv3dV2BaseTilingKey() {};
 
     void GetTemplateTilingKey(ConvTilingKeyPara& tilingKeyPara);
 
@@ -47,6 +47,7 @@ private:
     uint64_t GetL1PingPongVal();
     uint64_t GetL0PingPongVal();
     uint64_t GetOutputOrderVal();
+    uint64_t GetWeightUbTransVal();
     void ReSetTilingKeyPara(ConvTilingKeyPara& tilingKeyPara);
 
 private:

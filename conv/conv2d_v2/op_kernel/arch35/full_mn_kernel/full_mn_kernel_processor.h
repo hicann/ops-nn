@@ -19,13 +19,14 @@
 #include "full_mn_kernel_common.h"
 #include "full_mn_kernel_block_ctx.h"
 #include "full_mn_kernel_tile_ops.h"
+#include "../conv2d_v2_weight_5hd_impl.h"
 
 namespace full_mn {
 
 template <typename BlockCtx, typename TilingData, typename OneProc>
 struct BatchProcessor {
     __aicore__ inline void operator()(BlockCtx& bc, const TilingData& tiling, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
-                                      GM_ADDR y) const
+                                      GM_ADDR y, GM_ADDR workspace) const
     {
         SetHF32Mode(tiling.hf32Enable);
         SetHF32TransMode(tiling.hf32TransMode);
@@ -37,7 +38,7 @@ struct BatchProcessor {
         OneProc oneProc_;
         for (uint32_t i = 0; i < batchLoop; i++) {
             bc.batchIdx = baseBatchIdx + i;
-            oneProc_(bc, tiling, x, filter, bias, y);
+            oneProc_(bc, tiling, x, filter, bias, y, workspace);
         }
     }
 };
@@ -51,7 +52,7 @@ struct FullMNKernelProcessor {
     using L0cT = typename BlockCtx::L0cType;
 
     LoadAL1SegTool<BlockCtx, TilingData> loadAl1Seg_;
-    LoadBL1SegTool<BlockCtx, TilingData> loadBl1Seg_;
+    LoadBL1Seg5HDTool<BlockCtx, TilingData> loadBl1Seg5HD_;
     LoadBiasL1Tool<BlockCtx, TilingData> loadBiasL1_;
     LoadBiasToBTTool<BlockCtx, TilingData> loadBiasToBt_;
     SetupLoad3DTool<BlockCtx, TilingData> setupLoad3d_;
@@ -60,8 +61,10 @@ struct FullMNKernelProcessor {
     MmadTool<BlockCtx> mmad_;
     CopyOutTool<BlockCtx, TilingData> copyOut_;
 
+    mutable uint32_t loadedChunkCnt_ = 0;
+
     __aicore__ inline void operator()(const BlockCtx& bc, const TilingData& tiling, GM_ADDR x, GM_ADDR filter,
-                                      GM_ADDR bias, GM_ADDR y) const
+                                      GM_ADDR bias, GM_ADDR y, GM_ADDR workspace) const
     {
         uint32_t orgWo = static_cast<uint32_t>(tiling.wout);
         uint32_t hoStart = bc.mIdxStart / orgWo;
@@ -95,8 +98,9 @@ struct FullMNKernelProcessor {
         fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff +
                                static_cast<uint64_t>(hiLoadStart) * tiling.win);
         GlobalTensor<WeightT> filterGm;
-        filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ WeightT*>(filter) +
-                                 static_cast<uint64_t>(bc.nIdxStart) * tiling.kh * tiling.kw * tiling.cin);
+        GlobalTensor<WeightT> weight5HDGm;
+        filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ WeightT*>(filter));
+        weight5HDGm.SetGlobalBuffer(reinterpret_cast<__gm__ WeightT*>(workspace));
 
         uint64_t hwOut = static_cast<uint64_t>(tiling.hout) * tiling.wout;
         uint64_t batchOutOff = static_cast<uint64_t>(bc.batchIdx) * tiling.cout * hwOut;
@@ -124,8 +128,23 @@ struct FullMNKernelProcessor {
         LocalTensor<WeightT> bl1Buf0(TPosition::B1, bl1Offset, bl1ElemCount);
         LocalTensor<WeightT> bl1Buf1(TPosition::B1, bl1Offset + bl1BufBytes, bl1ElemCount);
 
+        // batch 边界屏障：上一 batch 的 MTE1 段内 L1 读（loadAl0_/loadBl0_）全部完成后，
+        // 本 batch 的 MTE2 写（覆写同一 al1/bl1 缓冲）才允许执行——防跨 batch L1 读写竞争。
+        // 首 batch 由该 Set 立即放行（MTE1 队列为空）；每 batch 末尾配套 Set 维持配对。
+        SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BARRIER);
+        WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BARRIER);
+
         loadAl1Seg_(bc, tiling, curHiLoad, hiLoadStart, fmapGm, 0, al1Buf0);
-        loadBl1Seg_(bc, tiling, filterGm, 0, bl1Buf0);
+        const uint32_t kBL1Segs0 = Bl1SegCount(tiling);
+        const bool isFstVisit = loadedChunkCnt_ == 0U;
+        if (isFstVisit) {
+            CrossCoreWaitFlag<Conv2dFunc::WEIGHT_5HD_SYNC_MODE_2, PIPE_MTE2>(Conv2dFunc::WEIGHT_5HD_SYNC_ID_BASE);
+            loadedChunkCnt_ = 1U;
+        }
+        loadBl1Seg5HD_(bc, tiling, weight5HDGm, 0, bl1Buf0);
+        if (isFstVisit && kBL1Segs0 > Conv2dFunc::WEIGHT_5HD_EVENT_ID_NUM) {
+            CrossCoreSetFlag<Conv2dFunc::WEIGHT_5HD_SYNC_MODE_2, PIPE_MTE2>(Conv2dFunc::WEIGHT_5HD_SYNC_ID_BASE);
+        }
 
         uint32_t biasL1Offset = AlignB(bl1Offset + DOUBLE_BUFFER_NUM * bl1BufBytes, ADDR_ALIGN_SIZE);
         if (tiling.hasBias) {
@@ -158,22 +177,30 @@ struct FullMNKernelProcessor {
         uint32_t cinAligned = static_cast<uint32_t>(AlignB(tiling.singleCoreCi, BlockCtx::GK0));
         uint32_t kTotal = cinAligned * tiling.kh * tiling.kw;
         uint32_t currentML0Align = static_cast<uint32_t>(AlignB(bc.actualM, M0));
-        KLoop(bc, tiling, kTotal, currentML0Align, curHiLoad, hiLoadStart, fmapGm, filterGm, outputGm, cl0, al1Buf0,
-              al1Buf1, bl1Buf0, bl1Buf1, al0Buf0, al0Buf1, bl0Buf0, bl0Buf1, load3dXtBase, load3dXmTmp);
+        KLoop(bc, tiling, kTotal, currentML0Align, curHiLoad, hiLoadStart, fmapGm, filterGm, weight5HDGm, outputGm, cl0,
+              al1Buf0, al1Buf1, bl1Buf0, bl1Buf1, al0Buf0, al0Buf1, bl0Buf0, bl0Buf1, load3dXtBase, load3dXmTmp);
 
         // ===== Stage 5: Fixpipe + CopyOut =====
         copyOut_(bc, tiling, outputGm, cl0);
     }
 
 private:
+    static __aicore__ inline uint32_t Bl1SegCount(const TilingData& tiling)
+    {
+        uint32_t cinAligned = static_cast<uint32_t>(AlignB(tiling.singleCoreCi, BlockCtx::GK0));
+        return static_cast<uint32_t>(
+            CeilDiv(static_cast<uint64_t>(cinAligned) * tiling.kh * tiling.kw, static_cast<uint64_t>(tiling.kBL1)));
+    }
+
     __aicore__ inline void KLoop(const BlockCtx& bc, const TilingData& tiling, uint32_t kTotal,
                                  uint32_t currentML0Align, uint32_t curHiLoad, uint32_t hiLoadStart,
                                  const GlobalTensor<FmapT>& fmapGm, const GlobalTensor<WeightT>& filterGm,
-                                 GlobalTensor<OutputT>& outputGm, LocalTensor<L0cT>& cl0, LocalTensor<FmapT>& al1Buf0,
-                                 LocalTensor<FmapT>& al1Buf1, LocalTensor<WeightT>& bl1Buf0,
-                                 LocalTensor<WeightT>& bl1Buf1, LocalTensor<FmapT>& al0Buf0,
-                                 LocalTensor<FmapT>& al0Buf1, LocalTensor<WeightT>& bl0Buf0,
-                                 LocalTensor<WeightT>& bl0Buf1, uint64_t load3dXtBase, uint64_t load3dXmTmp) const
+                                 const GlobalTensor<WeightT>& weight5HDGm, GlobalTensor<OutputT>& outputGm,
+                                 LocalTensor<L0cT>& cl0, LocalTensor<FmapT>& al1Buf0, LocalTensor<FmapT>& al1Buf1,
+                                 LocalTensor<WeightT>& bl1Buf0, LocalTensor<WeightT>& bl1Buf1,
+                                 LocalTensor<FmapT>& al0Buf0, LocalTensor<FmapT>& al0Buf1,
+                                 LocalTensor<WeightT>& bl0Buf0, LocalTensor<WeightT>& bl0Buf1, uint64_t load3dXtBase,
+                                 uint64_t load3dXmTmp) const
     {
         uint32_t kL0 = tiling.kL0;
         uint32_t ddr2l0LoopK = static_cast<uint32_t>(CeilDiv(kTotal, kL0));      // k方向L0迭代总数
@@ -219,7 +246,17 @@ private:
                 LocalTensor<WeightT>& bl1Next = (bl1PingPongFlag == 0) ? bl1Buf1 : bl1Buf0;
                 SetFlag<HardEvent::MTE1_MTE2>(static_cast<event_t>(EVT_BL1_BASE + (bl1PingPongFlag ^ 1)));
                 WaitFlag<HardEvent::MTE1_MTE2>(static_cast<event_t>(EVT_BL1_BASE + (bl1PingPongFlag ^ 1)));
-                loadBl1Seg_(bc, tiling, filterGm, kBL1Iter, bl1Next);
+                const bool isFstVisit = kBL1Iter >= loadedChunkCnt_;
+                if (isFstVisit) {
+                    CrossCoreWaitFlag<Conv2dFunc::WEIGHT_5HD_SYNC_MODE_2, PIPE_MTE2>(
+                        Conv2dFunc::WEIGHT_5HD_SYNC_ID_BASE + (kBL1Iter & 1));
+                    loadedChunkCnt_++;
+                }
+                loadBl1Seg5HD_(bc, tiling, weight5HDGm, kBL1Iter, bl1Next);
+                if (isFstVisit && kBL1Iter + Conv2dFunc::WEIGHT_5HD_EVENT_ID_NUM < kBL1Segs) {
+                    CrossCoreSetFlag<Conv2dFunc::WEIGHT_5HD_SYNC_MODE_2, PIPE_MTE2>(
+                        Conv2dFunc::WEIGHT_5HD_SYNC_ID_BASE + (kBL1Iter & 1));
+                }
                 SetFlag<HardEvent::MTE2_MTE1>(static_cast<event_t>(EVT_BL1_BASE + (bl1PingPongFlag ^ 1)));
             }
 

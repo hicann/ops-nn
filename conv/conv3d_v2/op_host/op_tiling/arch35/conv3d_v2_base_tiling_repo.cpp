@@ -105,6 +105,8 @@ bool Conv3dBaseTilingV2::TranslateRepoTiling(tuningtiling::TuningTilingDefPtr& t
         return false;
     }
 
+    SetWeight5HDUbTiling(convRepoTiling);
+
     return true;
 }
 
@@ -181,6 +183,22 @@ void Conv3dBaseTilingV2::TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2
     tilingData_.cinOpt = optGroupInfo_.cinOpt;
     tilingData_.coutOpt = optGroupInfo_.coutOpt;
     tilingData_.groupOpt = optGroupInfo_.groupOpt;
+}
+
+void Conv3dBaseTilingV2::SetWeight5HDUbTiling(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)
+{
+    uint64_t kernelHxkernelW = convRepoTiling->kernelH * convRepoTiling->kernelW;
+    bool is5HD = conv_tiling::IsWeight5HDMode3D(apiInputPlatformInfo_.npuArch, convRepoTiling->groups,
+                                                formatMap[descInfo_.weightFormat], formatMap[descInfo_.outFormat],
+                                                dtypeMap[descInfo_.weightDtype], kernelHxkernelW, convRepoTiling->orgCi,
+                                                convRepoTiling->orgCo, apiInputPlatformInfo_.ubSize);
+    if (!is5HD) {
+        return;
+    }
+    conv_tiling::CalcWeight5HDUbTiling(kernelHxkernelW, convRepoTiling->orgCi, convRepoTiling->orgCo,
+                                       convOpsConstParams_.k0, convRepoTiling->kBL1, dtypeMap[descInfo_.weightDtype],
+                                       apiInputPlatformInfo_.ubSize, apiInputPlatformInfo_.aicoreNum,
+                                       tilingData_.bUbKStep, tilingData_.bUbNStep);
 }
 
 uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)

@@ -399,32 +399,6 @@ void GetUbSize()
     g_ubSize = ubSize - RESERVED_SIZE_8K;
 }
 
-bool CheckC04UbSize(struct ConvolutionOpInfo& opInfo, int64_t cin, int64_t orgKh, int64_t orgKw)
-{
-    if (cin > SMALL_CHANNEL) {
-        return false;
-    }
-    GetUbSize();
-    if (g_ubSize <= VGATHER_REGISTER_SIZE) {
-        OP_LOGD("ubSize %lu is not greater than vgather register size, skip C04 path.", g_ubSize);
-        return false;
-    }
-    auto it = SplitWInfo::gDataTypeSizeTab.find(opInfo.weightDtype);
-    if (it == SplitWInfo::gDataTypeSizeTab.end()) {
-        return false;
-    }
-    uint32_t weightDSize = it->second;
-    uint32_t k0 = SplitWInfo::BLK_LEN / weightDSize;
-    uint32_t n0 = SplitWInfo::BLK_N;
-
-    uint64_t loadk = orgKh * orgKw * SMALL_CHANNEL;
-    uint64_t fullLoadK = ((loadk + k0 - 1) / k0) * k0;
-
-    uint64_t nMaxStep = ((g_ubSize - VGATHER_REGISTER_SIZE) / fullLoadK / C04_VEC_USE_BUFF_NUM / weightDSize / n0) * n0;
-
-    return nMaxStep != 0;
-}
-
 void GetL1Size()
 {
     if (g_l1Size != 0) {

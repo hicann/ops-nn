@@ -2320,34 +2320,16 @@ TEST_F(TestConv2dTiling, test_CheckL0DoubleBuffer)
     algo.CheckL0DoubleBuffer();
 }
 
-TEST_F(TestConv2dTiling, test_conv2d_check_format_soc_960DT)
-{
-    Conv2dTiling testTiling(SetPlatFormInfo_960DT());
-    testTiling.descInfo.weightType.format = ConvFormat::NHWC;
-    testTiling.descInfo.fMapType.format = ConvFormat::NCHW;
-    auto ret = testTiling.CheckFormat();
-    EXPECT_EQ(ret, true);
-
-    testTiling.descInfo.weightType.format = ConvFormat::NHWC;
-    testTiling.descInfo.fMapType.format = ConvFormat::NHWC;
-    ret = testTiling.CheckFormat();
-    EXPECT_EQ(ret, false);
-}
-
 TEST_F(TestConv2dTiling, test_conv2d_GetBandWidthCof_soc_960DT)
 {
     PlatformInfo platformInfo = SetPlatFormInfo_960DT();
     Conv2dTiling testTiling(platformInfo);
-    testTiling.descInfo.weightType.format = ConvFormat::NHWC;
+    testTiling.descInfo.weightType.format = ConvFormat::NCHW;
     auto res = testTiling.GetBandWidthCof();
     EXPECT_EQ(res, 1);
-
-    testTiling.descInfo.weightType.format = ConvFormat::NCHW;
-    res = testTiling.GetBandWidthCof();
-    EXPECT_EQ(res, 4);
 }
 
-TEST_F(TestConv2dTiling, test_conv2d_hwmode_weight_nhwc_soc_960DT)
+TEST_F(TestConv2dTiling, test_conv2d_hwmode_weight_nchw_soc_960DT)
 {
     uint64_t orgCi = 16;
     uint64_t orgHi = 1;
@@ -2364,7 +2346,7 @@ TEST_F(TestConv2dTiling, test_conv2d_hwmode_weight_nhwc_soc_960DT)
     testTiling.SetSingleWeightShape(orgCi, orgKh, orgKw);
     testTiling.SetSingleOutputShape(orgCo, orgHo, orgWo, 1);
     testTiling.SetOutputOrder(0);
-    testTiling.SetWeightType(TPosition::GM, ConvFormat::NHWC, ConvDtype::FLOAT16);
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);
     testTiling.SetFmapType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);
     testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCHW, ConvDtype::FLOAT16);
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
@@ -2375,11 +2357,11 @@ TEST_F(TestConv2dTiling, test_conv2d_hwmode_weight_nhwc_soc_960DT)
     EXPECT_EQ(ret, 0);
 }
 
-TEST_F(TestConv2dTiling, test_conv2d_mmode_weight_nhwc_soc_960DT)
+TEST_F(TestConv2dTiling, test_conv2d_mmode_weight_nchw_soc_960DT)
 {
     uint64_t orgCi = 16;
-    uint64_t orgHi = 1;
-    uint64_t orgWi = 1;
+    uint64_t orgHi = 2;
+    uint64_t orgWi = 2;
     uint64_t orgCo = 16;
     uint64_t orgKh = 1;
     uint64_t orgKw = 1;
@@ -2392,7 +2374,7 @@ TEST_F(TestConv2dTiling, test_conv2d_mmode_weight_nhwc_soc_960DT)
     testTiling.SetSingleWeightShape(orgCi, orgKh, orgKw);
     testTiling.SetSingleOutputShape(orgCo, orgHo * orgWo, 1);
     testTiling.SetOutputOrder(1);
-    testTiling.SetWeightType(TPosition::GM, ConvFormat::NHWC, ConvDtype::FLOAT16);
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);
     testTiling.SetFmapType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);
     testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCHW, ConvDtype::FLOAT16);
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
@@ -2403,7 +2385,7 @@ TEST_F(TestConv2dTiling, test_conv2d_mmode_weight_nhwc_soc_960DT)
     EXPECT_EQ(ret, 0);
 }
 
-TEST_F(TestConv2dTiling, test_algo_BB_GetTiling_weight_nhwc_960DT)
+TEST_F(TestConv2dTiling, test_algo_BB_GetTiling_weight_nchw_960DT)
 {
     Conv2dTiling testTiling(SetPlatFormInfo_960DT());
     testTiling.SetWeightType(TPosition::GM, ConvFormat::NCHW, ConvDtype::FLOAT16);

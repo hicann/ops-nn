@@ -24,11 +24,7 @@ static const std::map<std::string, std::vector<ge::DataType>> conv3dv2FmapDataTy
     {"ascend950",
      {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT,
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
-      ge::DT_FLOAT16, ge::DT_BF16}},
-    {"ascend960dt",
-     {ge::DT_BF16,     ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_HIFLOAT8, ge::DT_BF16,     ge::DT_FLOAT16, ge::DT_FLOAT,
-      ge::DT_HIFLOAT8, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_HIFLOAT8, ge::DT_INT8,    ge::DT_INT8,
-      ge::DT_INT8,     ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8}}};
+      ge::DT_FLOAT16, ge::DT_BF16}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv3dv2WeightDataType = {
     {"ascend910b",
      {ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_INT8,
@@ -36,11 +32,7 @@ static const std::map<std::string, std::vector<ge::DataType>> conv3dv2WeightData
     {"ascend950",
      {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT,
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
-      ge::DT_FLOAT16, ge::DT_BF16}},
-    {"ascend960dt",
-     {ge::DT_BF16,     ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_HIFLOAT8, ge::DT_BF16,     ge::DT_FLOAT16, ge::DT_FLOAT,
-      ge::DT_HIFLOAT8, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_HIFLOAT8, ge::DT_INT8,    ge::DT_INT8,
-      ge::DT_INT8,     ge::DT_INT8,    ge::DT_INT8,    ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8}}};
+      ge::DT_FLOAT16, ge::DT_BF16}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv3dv2BiasDataType = {
     {"ascend910b",
      {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16,
@@ -48,11 +40,7 @@ static const std::map<std::string, std::vector<ge::DataType>> conv3dv2BiasDataTy
     {"ascend950",
      {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT,
-      ge::DT_FLOAT16, ge::DT_BF16}},
-    {"ascend960dt",
-     {ge::DT_BF16,  ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_FLOAT, ge::DT_BF16,  ge::DT_FLOAT16, ge::DT_FLOAT,
-      ge::DT_FLOAT, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT,
-      ge::DT_BF16,  ge::DT_FLOAT,   ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,  ge::DT_FLOAT}}};
+      ge::DT_FLOAT16, ge::DT_BF16}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv3dv2ScaleAndOffsetDataType = {
     {"ascend910b",
      {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
@@ -60,10 +48,7 @@ static const std::map<std::string, std::vector<ge::DataType>> conv3dv2ScaleAndOf
     {"ascend950",
      {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
       ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-      ge::DT_FLOAT}},
-    {"ascend960dt", {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                     ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}}};
+      ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv3dv2OffsetWDataType = {
     {"ascend910b",
      {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
@@ -71,10 +56,7 @@ static const std::map<std::string, std::vector<ge::DataType>> conv3dv2OffsetWDat
     {"ascend950",
      {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
       ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
-      ge::DT_INT8}},
-    {"ascend960dt", {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
-                     ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8,
-                     ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}};
+      ge::DT_INT8}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv3dv2OutputDataType = {
     {"ascend910b",
      {ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16,
@@ -82,11 +64,7 @@ static const std::map<std::string, std::vector<ge::DataType>> conv3dv2OutputData
     {"ascend950",
      {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT,
       ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_BF16,
-      ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16}},
-    {"ascend960dt",
-     {ge::DT_BF16,     ge::DT_FLOAT16, ge::DT_FLOAT,   ge::DT_HIFLOAT8, ge::DT_BF16,     ge::DT_FLOAT16, ge::DT_FLOAT,
-      ge::DT_HIFLOAT8, ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT,    ge::DT_HIFLOAT8, ge::DT_FLOAT16, ge::DT_FLOAT16,
-      ge::DT_BF16,     ge::DT_BF16,    ge::DT_FLOAT16, ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_BF16}}};
+      ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16}}};
 static const std::map<std::string, std::vector<ge::Format>> conv3dv2FmapFormat = {
     {"ascend910b",
      {ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
@@ -94,11 +72,7 @@ static const std::map<std::string, std::vector<ge::Format>> conv3dv2FmapFormat =
     {"ascend950",
      {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
       ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-      ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW}},
-    {"ascend960dt", {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW}}};
+      ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW}}};
 static const std::map<std::string, std::vector<ge::Format>> conv3dv2WeightFormat = {
     {"ascend910b",
      {ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
@@ -107,13 +81,7 @@ static const std::map<std::string, std::vector<ge::Format>> conv3dv2WeightFormat
     {"ascend950",
      {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN,
       ge::FORMAT_DHWCN, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_FRACTAL_Z_3D,
-      ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN}},
-    {"ascend960dt",
-     {ge::FORMAT_NCDHW,        ge::FORMAT_NCDHW,        ge::FORMAT_NCDHW,        ge::FORMAT_NCDHW,
-      ge::FORMAT_NDHWC,        ge::FORMAT_NDHWC,        ge::FORMAT_NDHWC,        ge::FORMAT_NDHWC,
-      ge::FORMAT_DHWCN,        ge::FORMAT_DHWCN,        ge::FORMAT_DHWCN,        ge::FORMAT_DHWCN,
-      ge::FORMAT_NCDHW,        ge::FORMAT_NCDHW,        ge::FORMAT_NCDHW,        ge::FORMAT_NCDHW,
-      ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D}}};
+      ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_FRACTAL_Z_3D, ge::FORMAT_DHWCN, ge::FORMAT_DHWCN}}};
 static const std::map<std::string, std::vector<ge::Format>> conv3dv2BiasFormat = {
     {"ascend910b",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
@@ -121,11 +89,7 @@ static const std::map<std::string, std::vector<ge::Format>> conv3dv2BiasFormat =
     {"ascend950",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}},
-    {"ascend960dt",
-     {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
 static const std::map<std::string, std::vector<ge::Format>> conv3dv2ScaleAndOffsetFormat = {
     {"ascend910b",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
@@ -133,11 +97,7 @@ static const std::map<std::string, std::vector<ge::Format>> conv3dv2ScaleAndOffs
     {"ascend950",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}},
-    {"ascend960dt",
-     {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
 static const std::map<std::string, std::vector<ge::Format>> conv3dv2OffsetWFormat = {
     {"ascend910b",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
@@ -145,11 +105,7 @@ static const std::map<std::string, std::vector<ge::Format>> conv3dv2OffsetWForma
     {"ascend950",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
       ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}},
-    {"ascend960dt",
-     {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
+      ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
 static const std::map<std::string, std::vector<ge::Format>> conv3dv2OutputFormat = {
     {"ascend910b",
      {ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NDC1HWC0, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
@@ -157,11 +113,7 @@ static const std::map<std::string, std::vector<ge::Format>> conv3dv2OutputFormat
     {"ascend950",
      {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
       ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
-      ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW}},
-    {"ascend960dt", {ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW,
-                     ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC,
-                     ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC}}};
+      ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW}}};
 
 class Conv3DV2 : public OpDef {
 public:
@@ -240,8 +192,8 @@ public:
 
         SetAscendConfig(aicoreConfig95, "ascend950");
         this->AICore().AddConfig("ascend350", aicoreConfig95);
-        SetAscendConfig(aicoreConfig95, "ascend960dt");
-        SetAscendConfig(aicoreConfig95, "ascend960dt", "ascend960pr");
+        SetAscendConfig(aicoreConfig95, "ascend950", "ascend960dt");
+        SetAscendConfig(aicoreConfig95, "ascend950", "ascend960pr");
     }
 
 private:

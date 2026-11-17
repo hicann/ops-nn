@@ -205,6 +205,7 @@ public:
         // GM Tensor
         GlobalTensor<typename ConvDataType::FmapT> agm;
         GlobalTensor<typename ConvDataType::WeightT> bgm;
+        GlobalTensor<typename ConvDataType::WeightT> weight5HDGM;
         GlobalTensor<typename ConvDataType::BiasT> biasgm;
         GlobalTensor<typename ConvDataType::ScaleT> scalegm;
         GlobalTensor<typename ConvDataType::ScaleT> scale1gm;

@@ -151,6 +151,14 @@ uint64_t Conv3dV2BaseTilingKey::GetOutputOrderVal()
     return 0;
 }
 
+uint64_t Conv3dV2BaseTilingKey::GetWeightUbTransVal()
+{
+    if (tilingData_.bUbNStep > 0 && tilingData_.bUbKStep > 0) {
+        return WEIGHT_UB_TRANS_OPEN;
+    }
+    return WEIGHT_UB_TRANS_CLOSE;
+}
+
 void Conv3dV2BaseTilingKey::ReSetTilingKeyPara(ConvTilingKeyPara& tilingKeyPara)
 {
     if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
@@ -178,6 +186,7 @@ void Conv3dV2BaseTilingKey::GetTemplateTilingKey(ConvTilingKeyPara& tilingKeyPar
     tilingKeyPara.outputOrder = GetOutputOrderVal();
     tilingKeyPara.groupType = static_cast<uint64_t>(flagInfo_.convGroupType);
     tilingKeyPara.bigKernel = static_cast<uint64_t>(flagInfo_.isKernelSplit);
+    tilingKeyPara.weightUbTrans = GetWeightUbTransVal();
     ReSetTilingKeyPara(tilingKeyPara);
 }
 } // namespace conv_ops_tiling

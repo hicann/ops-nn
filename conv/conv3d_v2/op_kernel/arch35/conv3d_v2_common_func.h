@@ -21,6 +21,7 @@
 #include "../../common/arch35/conv_instr.h"
 #include "conv3d_v2_config.h"
 #include "conv3d_v2_dequant_impl.h"
+#include "conv3d_v2_weight_5hd_impl.h"
 #include "conv3d_v2_util.h"
 #include "conv3d_v2_instr.h"
 #include "../conv3d_v2_tiling_data.h"
@@ -113,6 +114,10 @@ struct Init {
             InitHf32Mode<Intf>(self);
             InitSubApiParams<Intf>(self);
 
+            if constexpr (Intf::weight5HDFlag) {
+                self->ctx.weight5HDProcessTools.Weight5HDInitKValue(self);
+            }
+
             if constexpr (Intf::groupOptFlag) {
                 self->ctx.ciPerGroup = self->ctx.convTilingData->orgCi / self->ctx.convTilingData->groups;
                 self->ctx.singleGroupOpt = self->ctx.convTilingData->singleCoreGroupOpt;
@@ -124,6 +129,8 @@ struct Init {
                 OptGroupVecInit<Intf>(self);
             } else if constexpr (Intf::isDeQuantFlag) {
                 DeQuantVecInit<Intf>(self);
+            } else if constexpr (Intf::weight5HDFlag) {
+                self->ctx.weight5HDProcessTools.Weight5HDVecInit(self);
             }
         }
     }

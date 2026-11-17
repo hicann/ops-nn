@@ -23,6 +23,7 @@
 #include "conv2d_v2_config.h"
 #include "conv2d_v2_dma_impl.h"
 #include "conv2d_v2_util.h"
+#include "conv2d_v2_weight_5hd_impl.h"
 #include "conv2d_v2_weight_ub_trans_impl.h"
 #include "conv2d_v2_instr.h"
 
@@ -157,6 +158,8 @@ struct Init {
                 self->ctx.singleGroupOpt = self->ctx.convTilingData->singleCoreGroupOpt;
             } else if constexpr (Intf::c04NDFlag) {
                 self->ctx.c04ProcessTools.C04InitIterValue(self);
+            } else if constexpr (Intf::weight5HDFlag) {
+                self->ctx.weight5HDProcessTools.Weight5HDAicInit(self);
             } else if constexpr (Intf::weightUbTrans) {
                 self->ctx.weightUbProcessTools.WeightUbTransCalcBL1LoadTimes(self);
             } else if constexpr (Intf::isDmaFlag) {
@@ -169,6 +172,8 @@ struct Init {
                 OptGroupVecInit<Intf>(self);
             } else if constexpr (Intf::c04NDFlag) {
                 self->ctx.c04ProcessTools.C04VecInit(self);
+            } else if constexpr (Intf::weight5HDFlag) {
+                self->ctx.weight5HDProcessTools.Weight5HDVecInit(self);
             } else if constexpr (Intf::weightUbTrans) {
                 self->ctx.weightUbProcessTools.WeightUbTransVecInit(self);
             } else if constexpr (Intf::isDmaFlag) {

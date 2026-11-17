@@ -42,6 +42,7 @@ public:
     CONV_REG_IMPL(Config, Conv3dFunc, Init);
     CONV_REG_IMPL(Config, ConvFunc, SetFmap);
     CONV_REG_IMPL(Config, ConvFunc, SetWeight);
+    CONV_REG_IMPL(Config, ConvFunc, SetWeight5HD);
     CONV_REG_IMPL(Config, ConvFunc, SetBias);
     CONV_REG_IMPL(Config, ConvFunc, SetScale);
     CONV_REG_IMPL(Config, Conv3dFunc, SetSingleOutputShape);
@@ -143,6 +144,11 @@ public:
         uint32_t currentNUb = 0;
         uint32_t fixpTimes = 0;
         uint32_t fixpTimesTotal = 0;
+
+        Conv3dFunc::Weight5HDProcessTools<Intf> weight5HDProcessTools;
+        uint64_t weight5hdChunkNum = 0;  // R：K 方向 kBL1 切分次数
+        uint64_t weight5hdLoadCount = 0; // AIC 装载计数
+        // in 半区/out 半区复用共享 ctx 的 ndUbBuf(VECIN)/nzUbBuf(VECOUT)（conv_config.h），不新增字段
     };
 
     struct ImplDataType {

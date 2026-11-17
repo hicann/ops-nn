@@ -37,6 +37,58 @@ using optiling::conv_ops_tiling::ConvCeilDiv;
 namespace conv_tiling {
 namespace {
 constexpr int64_t RET_FAIL = -1;
+
+constexpr uint64_t WEIGHT_5HD_TRANS_CHN = 16;
+constexpr uint64_t WEIGHT_5HD_DB_BYTES = 32;
+constexpr uint64_t WEIGHT_5HD_REPEAT_TIMES_MAX = 255;
+constexpr uint64_t WEIGHT_5HD_MIN_HW = 2;
+constexpr uint64_t WEIGHT_5HD_MIN_CHANNEL = 64;
+} // namespace
+
+bool IsWeight5HDMode3D(NpuArch npuArch, uint64_t groups, ConvFormat weightFormat, ConvFormat outputFormat,
+                       ConvDtype weightDtype, uint64_t kernelHxkernelW, uint64_t orgCi, uint64_t orgCo, uint64_t ubSize)
+{
+    const uint64_t dtypeSize = DTYPE_SIZE_TAB.at(weightDtype);
+    const uint64_t k0 = static_cast<uint64_t>(CUBE_MKN_MAP.GetMKN(weightDtype, optiling::conv_ops_tiling::MKN_K_IDX));
+    const uint64_t c0 = k0 > WEIGHT_5HD_TRANS_CHN ? k0 : WEIGHT_5HD_TRANS_CHN;
+    const uint64_t alignHwByte = AlignB(kernelHxkernelW, k0) * dtypeSize;
+    return (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) && groups == 1 &&
+           weightFormat == ConvFormat::NCDHW && outputFormat == ConvFormat::NCDHW &&
+           weightDtype != ConvDtype::FLOAT8_E4M3FN && kernelHxkernelW >= WEIGHT_5HD_MIN_HW &&
+           orgCo > WEIGHT_5HD_MIN_CHANNEL && orgCi > WEIGHT_5HD_MIN_CHANNEL &&
+           c0 * alignHwByte <= ubSize / DOUBLE_BUFFER_NUM &&
+           alignHwByte / WEIGHT_5HD_DB_BYTES <= WEIGHT_5HD_REPEAT_TIMES_MAX;
+}
+
+void CalcWeight5HDUbTiling(uint64_t kernelHxkernelW, uint64_t orgCi, uint64_t orgCo, uint64_t k0, uint64_t kBL1,
+                           ConvDtype weightDtype, uint64_t ubSize, uint64_t aicoreNum, uint32_t& bUbKStep,
+                           uint32_t& bUbNStep)
+{
+    uint64_t alignHwByte = AlignB(kernelHxkernelW, k0) * DTYPE_SIZE_TAB.at(weightDtype);
+    uint64_t halfUb = ubSize / DOUBLE_BUFFER_NUM;
+
+    const uint64_t transdata5hdAlign = k0 > WEIGHT_5HD_TRANS_CHN ? k0 : WEIGHT_5HD_TRANS_CHN;
+    uint64_t cinSplit = AlignB(orgCi, transdata5hdAlign);
+    uint64_t kdSplit = kBL1 / (AlignB(orgCi, k0) * kernelHxkernelW);
+    if (kdSplit == 0) {
+        kdSplit = 1;
+    }
+    while (cinSplit > transdata5hdAlign &&
+           (cinSplit * kdSplit * alignHwByte > halfUb ||
+            cinSplit * kdSplit * kernelHxkernelW > AlignB(kBL1, WEIGHT_5HD_TRANS_CHN))) {
+        if (kdSplit > 1) {
+            kdSplit--;
+        } else {
+            cinSplit -= transdata5hdAlign;
+        }
+    }
+
+    uint64_t nStep = std::max(static_cast<uint64_t>(1), CeilDiv(orgCo, aicoreNum));
+    while (nStep > 1 && nStep * (cinSplit * kdSplit * alignHwByte) > halfUb) {
+        nStep--;
+    }
+    bUbKStep = static_cast<uint32_t>(cinSplit * kdSplit);
+    bUbNStep = static_cast<uint32_t>(nStep);
 }
 
 void Conv3dTiling::InitFlag()
@@ -330,6 +382,18 @@ void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling
     tiling.hf32Enable = static_cast<uint8_t>(this->hf32Enable);
     tiling.hf32TransMode = static_cast<uint8_t>(this->hf32TransMode);
     tiling.outputOrder = static_cast<uint8_t>(this->outputOrder);
+
+    const uint64_t kernelHxkernelW = static_cast<uint64_t>(shapeInfo.orgkH) * shapeInfo.orgkW;
+    const bool isWeight5HD = conv_tiling::IsWeight5HDMode3D(
+        platformInfo.npuArch, static_cast<uint64_t>(attrInfo.groups), descInfo.weightType.format,
+        descInfo.outputType.format, descInfo.weightType.dtype, kernelHxkernelW, shapeInfo.orgCi, shapeInfo.orgCo,
+        platformInfo.ubSize);
+    if (isWeight5HD) {
+        conv_tiling::CalcWeight5HDUbTiling(kernelHxkernelW, shapeInfo.orgCi, shapeInfo.orgCo, cubeInfo.k0,
+                                           l1TilingInfo.kBL1, descInfo.weightType.dtype, platformInfo.ubSize,
+                                           platformInfo.aicoreNum, tiling.bUbKStep, tiling.bUbNStep);
+    }
+
     SetScalarParams(tiling);
 }
 

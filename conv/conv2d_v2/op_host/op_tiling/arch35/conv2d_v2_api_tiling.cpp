@@ -184,6 +184,29 @@ void Conv2dTiling::GetWeightUBTiling(ConvWeightUbTransParams& params)
     params.bUbKStep = static_cast<uint32_t>(ci1UbRange[ci1UbIndex] * kernelHxkernelW * params.k0);
 }
 
+void Conv2dTiling::GetWeight5HDTiling(ConvWeightUbTransParams& params)
+{
+    uint64_t weight5HDK0 = params.k0 < WEIGHT_5HD_K_ALIGNED ? WEIGHT_5HD_K_ALIGNED : params.k0;
+    uint64_t kernelHxkernelW = params.orgkH * params.orgkW;
+    uint64_t alignedHW = AlignB(kernelHxkernelW, params.k0);
+    uint64_t kStep = std::min(params.curKBL1 / kernelHxkernelW, params.orgCi);
+    kStep = AlignB(kStep, weight5HDK0);
+    uint64_t needUbSize = kStep * alignedHW * DTYPE_SIZE_TAB.at(params.weightDtype);
+    while (needUbSize > platformInfo.ubSize / WEIGHT_5HD_USE_BUF_NUM && kStep > weight5HDK0) {
+        needUbSize -= weight5HDK0 * alignedHW * DTYPE_SIZE_TAB.at(params.weightDtype);
+        kStep -= weight5HDK0;
+    }
+    if (needUbSize > platformInfo.ubSize / WEIGHT_5HD_USE_BUF_NUM) {
+        return;
+    }
+    uint64_t nStep = std::max(static_cast<uint64_t>(1), CeilDiv(params.orgCo, platformInfo.aicoreNum));
+    while (nStep > 1 && nStep * needUbSize > platformInfo.ubSize / WEIGHT_5HD_USE_BUF_NUM) {
+        nStep--;
+    }
+    params.bUbNStep = static_cast<uint32_t>(nStep);
+    params.bUbKStep = static_cast<uint32_t>(kStep);
+}
+
 uint64_t Conv2dTiling::CalcDmaUBSize(ConvDmaParams& params, uint64_t khUb, uint64_t kwUb) const
 {
     uint64_t fmapDtypeSize = DTYPE_SIZE_TAB.at(params.fmapDtype);
@@ -301,6 +324,32 @@ void Conv2dTiling::SetUbTiling(optiling::Conv2DTilingData& tiling)
     }
 
     uint64_t kernelHxkernelW = shapeInfo.orgkH * shapeInfo.orgkW;
+    if (platformInfo.npuArch == NpuArch::DAV_9201 || platformInfo.npuArch == NpuArch::DAV_9202) {
+        bool isWeight5HD = attrInfo.groups == 1 && descInfo.weightType.format == ConvFormat::NCHW &&
+                           kernelHxkernelW > 1 && shapeInfo.orgCi > WEIGHT_5HD_C_LIMIT &&
+                           shapeInfo.orgCo > WEIGHT_5HD_C_LIMIT && kernelHxkernelW * cubeInfo.k0 < WEIGHT_5HD_K_LIMIT &&
+                           descInfo.weightType.dtype != ConvDtype::FLOAT8_E4M3FN && !hasScale &&
+                           AlignB(kernelHxkernelW, cubeInfo.k0) * DTYPE_SIZE_TAB.at(descInfo.weightType.dtype) /
+                                   C0_SIZE <=
+                               WEIGHT_5HD_TRANS_RPT_TIMES_LIMIT;
+        if (!isWeight5HD) {
+            return;
+        }
+        ConvWeightUbTransParams params = {l1TilingInfo.nBL1,
+                                          l1TilingInfo.kBL1,
+                                          static_cast<uint64_t>(shapeInfo.orgkH),
+                                          static_cast<uint64_t>(shapeInfo.orgkW),
+                                          cubeInfo.k0,
+                                          cubeInfo.n0,
+                                          descInfo.weightType.dtype,
+                                          static_cast<uint64_t>(shapeInfo.orgCo),
+                                          static_cast<uint64_t>(shapeInfo.orgCi)};
+        GetWeight5HDTiling(params);
+        tiling.set_bUbNStep(params.bUbNStep);
+        tiling.set_bUbKStep(params.bUbKStep);
+        return;
+    }
+
     uint64_t weightKSize = AlignB(shapeInfo.orgCi, cubeInfo.k0) * kernelHxkernelW;
     bool weightUbSizeLimit = kernelHxkernelW * cubeInfo.k0 * cubeInfo.n0 * platformInfo.aivPerAic *
                                  DTYPE_SIZE_TAB.at(descInfo.weightType.dtype) <=
@@ -868,9 +917,7 @@ bool Conv2dTiling::CheckFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv2dSupportFormatSet;
     if (platformInfo.npuArch == NpuArch::DAV_9201 || platformInfo.npuArch == NpuArch::DAV_9202) {
-        conv2dSupportFormatSet = {{ConvFormat::NCHW, ConvFormat::NCHW},
-                                  {ConvFormat::NCHW, ConvFormat::NHWC},
-                                  {ConvFormat::NHWC, ConvFormat::HWCN}};
+        conv2dSupportFormatSet = {{ConvFormat::NCHW, ConvFormat::NCHW}, {ConvFormat::NHWC, ConvFormat::HWCN}};
     } else {
         conv2dSupportFormatSet = {
             {ConvFormat::NCHW, ConvFormat::NCHW},      {ConvFormat::NHWC, ConvFormat::HWCN},

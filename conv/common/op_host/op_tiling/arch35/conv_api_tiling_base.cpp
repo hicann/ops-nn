@@ -35,6 +35,7 @@ ConvTilingBase::ConvTilingBase(const PlatformInfo& platform)
     platformInfo.btSize = platform.btSize;
     platformInfo.fbSize = platform.fbSize;
     platformInfo.aivPerAic = platform.aivPerAic;
+    platformInfo.aicoreNum = platform.aicoreNum;
 }
 
 void ConvTilingBase::SetNodeType(string inType) { nodeType = inType; }
@@ -83,12 +84,8 @@ uint32_t ConvTilingBase::GetBandWidthCof() const
         return 1;
     }
 
-    auto npuArch = platformInfo.npuArch;
-    if (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
-        if (descInfo.weightType.format == ConvFormat::NHWC || descInfo.weightType.format == ConvFormat::NDHWC) {
-            return 1;
-        }
-        return BAND_WIDTH_COEFF;
+    if (platformInfo.npuArch == NpuArch::DAV_9201 || platformInfo.npuArch == NpuArch::DAV_9202) {
+        return 1;
     }
 
     if (descInfo.fMapType.format == ConvFormat::NCHW || descInfo.fMapType.format == ConvFormat::NCDHW) {

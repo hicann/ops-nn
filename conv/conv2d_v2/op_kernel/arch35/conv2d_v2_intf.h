@@ -124,8 +124,6 @@ struct Conv2dIntf {
                                       ConvParam::enableSmallChannel ==
                                           static_cast<int8_t>(ConvEnableSmallChannel::OPEN);
 
-    constexpr static bool weightUbTrans = ConvParam::weightUbTrans == static_cast<int8_t>(ConvWeightUbTrans::OPEN);
-
     constexpr static bool isDmaFlag = ConvParam::fmapCopyMode == static_cast<int8_t>(ConvFmapCopyMode::DMA);
 
     constexpr static bool isInnerBatchFlag = ConvParam::innerBatch != static_cast<int8_t>(ConvInnerBatch::SINGLE_BATCH);
@@ -143,8 +141,13 @@ struct Conv2dIntf {
         ConvParam::enableSmallChannel == static_cast<int8_t>(ConvEnableSmallChannel::OPEN) ||
         ConvParam::weightUbTrans == static_cast<int8_t>(ConvWeightUbTrans::OPEN) ||
         ConvParam::fmapCopyMode == static_cast<int8_t>(ConvFmapCopyMode::DMA));
+    constexpr static bool weightUbTrans = false;
+    constexpr static bool weight5HDFlag = ConvParam::weightUbTrans == static_cast<int8_t>(ConvWeightUbTrans::OPEN) &&
+                                          !AscendC::IsSameType<WeightT, fp8_e4m3fn_t>::value;
 #else
     constexpr static bool preAllocateFlag = false;
+    constexpr static bool weightUbTrans = ConvParam::weightUbTrans == static_cast<int8_t>(ConvWeightUbTrans::OPEN);
+    constexpr static bool weight5HDFlag = false;
 #endif
     constexpr static bool isDeQuantFlag = false;
 
@@ -191,6 +194,16 @@ public:
         using local = typename Ext::SetWeight;
         if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, weight)) {
             local::call(this, weight);
+        }
+    }
+
+    __aicore__ inline void SetWeight5HD(const GlobalTensor<WeightT>& weight5HD)
+    {
+        if constexpr (weight5HDFlag) {
+            using local = typename Ext::SetWeight5HD;
+            if constexpr (CONV_CHECK_FUN(local, ConvFunc, this, weight5HD)) {
+                local::call(this, weight5HD);
+            }
         }
     }
 

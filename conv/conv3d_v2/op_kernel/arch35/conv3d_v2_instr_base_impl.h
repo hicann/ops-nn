@@ -19,6 +19,7 @@
 #include "conv3d_v2_config.h"
 #include "conv3d_v2_util.h"
 #include "../../common/arch35/conv_instr_fz_impl.h"
+#include "../conv3d_v2_tiling_data.h"
 
 namespace Conv3dFunc {
 using namespace AscendC;
@@ -253,6 +254,50 @@ public:
         } else {
             LoadBigKernelToBL1Dn2nz(currentNBL1, dkIter, bL1Pos, bL1Offset);
         }
+    }
+
+    __aicore__ inline void LoadBL1From5HD(uint64_t kBL1Iter, uint64_t nBL1Iter)
+    {
+        const Ops::NN::Conv3dV2::Conv3DV2TilingDataV2* td = self_->ctx.convTilingData;
+        const uint64_t hw = td->kernelHxkernelW;
+        const uint64_t kd = td->kernelD;
+        const uint64_t k0 = Intf::k0;
+        const uint64_t c1Total = CeilDiv(static_cast<uint64_t>(td->cin), k0);
+        const uint64_t totalK = c1Total * kd * hw * k0;
+
+        uint64_t curNBL1;
+        if constexpr (Intf::hasNL1IterFlag) {
+            curNBL1 = (nBL1Iter == self_->ctx.maxNBL1Iter) ? self_->ctx.nBL1Tail : td->nBL1;
+        } else {
+            curNBL1 = self_->ctx.nBL1Tail;
+        }
+        const uint64_t alignTail = (c1Total * kd * hw * k0) % static_cast<uint64_t>(td->kBL1);
+        const uint64_t kBL1TailAligned = (alignTail == 0) ? static_cast<uint64_t>(td->kBL1) : alignTail;
+        const uint64_t curKBL1 = (kBL1Iter == self_->ctx.maxKBL1Iter) ? kBL1TailAligned :
+                                                                        static_cast<uint64_t>(td->kBL1);
+
+        const uint64_t nBase = nBL1Iter * td->nBL1 * totalK + kBL1Iter * td->kBL1;
+
+        Nd2NzParams nd2nzParams;
+        nd2nzParams.dValue = curKBL1;
+        nd2nzParams.dstNzC0Stride = td->nBL1;
+        if (totalK <= ND2NZ_SRC_DVALUE_MAX) {
+            nd2nzParams.ndNum = 1;
+            nd2nzParams.nValue = curNBL1;
+            nd2nzParams.srcNdMatrixStride = 0;
+            nd2nzParams.srcDValue = totalK;
+            nd2nzParams.dstNzNStride = 1;
+            nd2nzParams.dstNzMatrixStride = 0;
+        } else {
+            // totalK 超 srcDValue 16 位上限：n 行距转移到 srcNdMatrixStride（B=n、N=1），dst 与常规形态一致
+            nd2nzParams.ndNum = curNBL1;
+            nd2nzParams.srcNdMatrixStride = totalK;
+            nd2nzParams.dstNzMatrixStride = k0;
+            nd2nzParams.nValue = 1;
+            nd2nzParams.srcDValue = curKBL1;
+            nd2nzParams.dstNzNStride = 1;
+        }
+        DataCopy<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.weight5HDGM[nBase], nd2nzParams);
     }
 
 private:

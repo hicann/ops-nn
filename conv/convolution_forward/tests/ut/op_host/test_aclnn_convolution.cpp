@@ -5230,3 +5230,40 @@ TEST_F(convolution_test, owner_missing_input_single_formal_report)
     EXPECT_EQ(fields, expected);
     EXPECT_TRUE(error_message::GetErrMgrRawErrorMessages().empty());
 }
+
+TEST_F(convolution_test, ascend960dt_test_conv2D_weight5HD)
+{
+    vector<aclDataType> ValidList = {ACL_FLOAT, ACL_FLOAT16, ACL_BF16};
+    int length = ValidList.size();
+    const int64_t groups = 1;
+    bool transposed = false;
+    vector<int64_t> inp_dims = {1, 128, 155, 155};
+    vector<int64_t> weight_dims = {256, 128 / groups, 3, 3};
+    vector<int64_t> bias_dims = {256};
+    vector<int64_t> output_dims = {1, 256, 153, 153};
+    vector<int64_t> strides_dims = {1, 1};
+    vector<int64_t> padding_dims = {0, 0};
+    vector<int64_t> dilation_dims = {1, 1};
+    vector<int64_t> output_padding_dims = {0, 0};
+
+    for (int i = 0; i < length; i++) {
+        auto inp_desc = TensorDesc(inp_dims, ValidList[i], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto weight_desc = TensorDesc(weight_dims, ValidList[i], ACL_FORMAT_NCHW).ValueRange(0, 2);
+        auto bias_desc = nullptr;
+        auto strides_desc = IntArrayDesc(strides_dims);
+        auto padding_desc = IntArrayDesc(padding_dims);
+        auto dilation_desc = IntArrayDesc(dilation_dims);
+        auto output_padding_desc = IntArrayDesc(output_padding_dims);
+        auto output_desc = TensorDesc(output_dims, ValidList[i], ACL_FORMAT_NCHW).Precision(0.01, 0.01);
+
+        auto ut = OP_API_UT(aclnnConvolution, // host api第二段接口名称
+                            INPUT(inp_desc, weight_desc, bias_desc, strides_desc, padding_desc, dilation_desc,
+                                  transposed, output_padding_desc, groups), // host api输入
+                            OUTPUT(output_desc), cubeMathType);
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size); // check op graph
+        EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+        // ut.TestPrecision();
+    }
+}

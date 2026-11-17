@@ -32,6 +32,7 @@ using namespace conv;
 
 CONV_DECLARE_REG_IMPL(SetFmap);
 CONV_DECLARE_REG_IMPL(SetWeight);
+CONV_DECLARE_REG_IMPL(SetWeight5HD);
 CONV_DECLARE_REG_IMPL(SetBias);
 CONV_DECLARE_REG_IMPL(SetScale);
 CONV_DECLARE_REG_IMPL(SetFixpipeParams);
@@ -60,6 +61,17 @@ struct SetWeight {
     {
         self->ctx.bgm.SetGlobalBuffer(weight.GetPhyAddr(0), weight.GetSize());
         self->ctx.isFirstIterate = true;
+    }
+};
+
+template <class Intf, uint32_t ImplType>
+struct SetWeight5HD {
+    static __aicore__ inline void call(Intf* self, const GlobalTensor<typename Intf::WeightT>& weight5HD)
+    {
+        self->ctx.weight5HDGM.SetGlobalBuffer(weight5HD.GetPhyAddr(0), weight5HD.GetSize());
+        if ASCEND_IS_AIV_CONV {
+            self->ctx.weight5HDProcessTools.BindGm(self->ctx.bgm, self->ctx.weight5HDGM);
+        }
     }
 };
 

@@ -79,6 +79,8 @@ __aicore__ bool Iterate<Intf, ImplType>::call(Intf* self, bool enPartialSum, boo
             return OptGroupVecImpl<Intf>(self);
         } else if constexpr (Intf::c04NDFlag) {
             return self->ctx.c04ProcessTools.C04VecImpl(self);
+        } else if constexpr (Intf::weight5HDFlag) {
+            return self->ctx.weight5HDProcessTools.Weight5HDVecImpl(self);
         } else if constexpr (Intf::weightUbTrans) {
             return self->ctx.weightUbProcessTools.WeightUbTransVecImpl(self);
         } else if constexpr (Intf::isDmaFlag) {

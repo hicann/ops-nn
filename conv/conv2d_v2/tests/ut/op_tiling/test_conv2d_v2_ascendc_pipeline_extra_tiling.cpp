@@ -772,13 +772,13 @@ void InitPostTilingSut(optiling::conv_ops_tiling::Conv2dBaseTiling& sut,
 
 void SetMNFullLoadKeyParams(optiling::conv_ops_tiling::Conv2dBaseTiling& sut)
 {
-    sut.descInfo_.weightFormat = ge::FORMAT_NHWC;
+    sut.descInfo_.weightFormat = ge::FORMAT_NCHW;
     sut.tilingKeyPara_.fmpTiling = optiling::conv_ops_tiling::ONLY_M_FULLLOAD_AL1_AL0;
     sut.tilingKeyPara_.weightTiling = optiling::conv_ops_tiling::ONLY_N_FULLLOAD_BL1_BL0;
     sut.tilingKeyPara_.l1PingPong = optiling::conv_ops_tiling::L1_PB_ALL_OPEN;
     sut.tilingKeyPara_.l0PingPong = optiling::conv_ops_tiling::L0_PB_ALL_OPEN;
     sut.tilingKeyPara_.groupType = static_cast<uint64_t>(optiling::conv_ops_tiling::ConvGroupType::NORMAL_CONV);
-    sut.tilingKeyPara_.weightUbTrans = optiling::conv_ops_tiling::WEIGHT_UB_TRANS_CLOSE;
+    sut.tilingKeyPara_.weightUbTrans = optiling::conv_ops_tiling::WEIGHT_UB_TRANS_OPEN;
     sut.tilingKeyPara_.fmapCppyMode = optiling::conv_ops_tiling::FMAP_LOAD3D_MODE;
     sut.tilingKeyPara_.innerBatch = optiling::conv_ops_tiling::CONV_INNER_BATCH_SINGLE;
     sut.flagInfo_.mSplitModeFlag = true;
@@ -786,6 +786,9 @@ void SetMNFullLoadKeyParams(optiling::conv_ops_tiling::Conv2dBaseTiling& sut)
     sut.flagInfo_.disContinuousFlag = false;
     sut.flagInfo_.isASWT = false;
     sut.tilingData_.set_iterateMNOrder(static_cast<uint64_t>(optiling::conv_ops_tiling::IterateMNOrder::ITER_M_FST));
+    // 5HD 路径参数：验证 FillMNFullLoadKPartialTiling 对 bUbNStep/bUbKStep 的透传
+    sut.tilingData_.set_bUbNStep(5);
+    sut.tilingData_.set_bUbKStep(64);
 }
 } // namespace
 
@@ -821,6 +824,11 @@ TEST_F(Conv2dTilingKeyExtra, post_tiling_fullmn_success)
     SetMNFullLoadKeyParams(sut);
     EXPECT_EQ(sut.PostTiling(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(ctx->GetRawTilingData()->GetDataSize(), sizeof(Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling));
+    // 5HD 路径参数透传：bUbNStep/bUbKStep 应从 tilingData_ 进入 Conv2DMNFullLoadKPartialTiling
+    const auto* mnTilingData = reinterpret_cast<const Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling*>(
+        ctx->GetRawTilingData()->GetData());
+    EXPECT_EQ(mnTilingData->bUbNStep, 5U);
+    EXPECT_EQ(mnTilingData->bUbKStep, 64U);
 }
 
 TEST_F(Conv2dTilingKeyExtra, post_tiling_aswt_5102_block_dim)

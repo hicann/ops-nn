@@ -78,6 +78,7 @@ public:
     bool GetIsTilingKh() const { return isTilingKh; }
     void SetIsWeightBypassL1(bool flag) { isWeightBypassL1 = flag; }
     void SetIsTilingKh(bool flag) { isTilingKh = flag; }
+    void GetWeight5HDTiling(ConvWeightUbTransParams& params);
 
 private:
     std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;

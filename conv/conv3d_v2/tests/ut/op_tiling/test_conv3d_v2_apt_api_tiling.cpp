@@ -101,6 +101,7 @@ PlatformInfo SetPlatFormInfo_960DT()
     platformInfo.ubSize = MEM_SIZE_256K;
     platformInfo.btSize = MEM_SIZE_4K;
     platformInfo.fbSize = MEM_SIZE_4K;
+    platformInfo.aicoreNum = 32;
     return platformInfo;
 }
 
@@ -446,6 +447,161 @@ TEST_F(TestConv3dV2Tiling, Demo_api_tiling)
         convApiTiling.GetTilingData(tilingInfo.attrInfo, tilingInfo.descInfo, tilingInfo.flagInfo, tilingInfo.shapeInfo,
                                     tilingInfo.convOpsConstParams, tilingInfo.numBlocksRes, tilingData),
         0);
+}
+
+static optiling::conv_ops_tiling::ConvAscendcTilingInfo MakeWeight5HDTilingInfo()
+{
+    optiling::conv_ops_tiling::ConvAscendcTilingInfo tilingInfo{};
+    tilingInfo.shapeInfo.batch = 1;
+    tilingInfo.shapeInfo.ci = 128;
+    tilingInfo.shapeInfo.di = 4;
+    tilingInfo.shapeInfo.hi = 4;
+    tilingInfo.shapeInfo.wi = 4;
+    tilingInfo.shapeInfo.kd = 3;
+    tilingInfo.shapeInfo.kh = 3;
+    tilingInfo.shapeInfo.kw = 3;
+    tilingInfo.shapeInfo.co = 128;
+    tilingInfo.shapeInfo.dout = 1;
+    tilingInfo.shapeInfo.ho = 1;
+    tilingInfo.shapeInfo.wo = 1;
+    tilingInfo.descInfo.weightDtype = ge::DataType::DT_FLOAT16;
+    tilingInfo.descInfo.fMapDtype = ge::DataType::DT_FLOAT16;
+    tilingInfo.descInfo.outDtype = ge::DataType::DT_FLOAT16;
+    tilingInfo.descInfo.weightFormat = ge::FORMAT_NCDHW;
+    tilingInfo.descInfo.fMapFormat = ge::FORMAT_NCDHW;
+    tilingInfo.descInfo.outFormat = ge::FORMAT_NCDHW;
+    tilingInfo.flagInfo.hasBias = false;
+    tilingInfo.flagInfo.quantFlag = false;
+    tilingInfo.flagInfo.extendConvFlag = false;
+    tilingInfo.flagInfo.enableC04Flag = false;
+    tilingInfo.flagInfo.mSplitModeFlag = false;
+    tilingInfo.flagInfo.convGroupType = optiling::conv_ops_tiling::ConvGroupType::NORMAL_CONV;
+    tilingInfo.flagInfo.mBasicBlockFlag = false;
+    tilingInfo.flagInfo.useTilingRepo = false;
+    tilingInfo.flagInfo.useTilingCache = false;
+    tilingInfo.attrInfo.dilationD = 1;
+    tilingInfo.attrInfo.dilationH = 1;
+    tilingInfo.attrInfo.dilationW = 1;
+    tilingInfo.attrInfo.strideD = 1;
+    tilingInfo.attrInfo.strideH = 1;
+    tilingInfo.attrInfo.strideW = 1;
+    tilingInfo.attrInfo.padHead = 0;
+    tilingInfo.attrInfo.padTail = 0;
+    tilingInfo.attrInfo.padTop = 0;
+    tilingInfo.attrInfo.padBottom = 0;
+    tilingInfo.attrInfo.padLeft = 0;
+    tilingInfo.attrInfo.padRight = 0;
+    tilingInfo.attrInfo.hf32Mode = 0;
+    tilingInfo.attrInfo.offsetx = 0;
+    tilingInfo.attrInfo.groups = 1;
+    tilingInfo.attrInfo.roundMode = 0;
+    tilingInfo.attrInfo.dualOutput = 0;
+    tilingInfo.nodeInfo.nodeType = "conv3d_v2";
+    tilingInfo.numBlocksRes.batchDim = 1;
+    tilingInfo.numBlocksRes.mDim = 1;
+    tilingInfo.numBlocksRes.nDim = 1;
+    tilingInfo.numBlocksRes.doDim = 1;
+    tilingInfo.numBlocksRes.hoDim = 1;
+    tilingInfo.numBlocksRes.woDim = 1;
+    tilingInfo.numBlocksRes.groupDim = 1;
+
+    Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tilingData;
+    tilingData.batch = 1;
+    tilingData.cin = 128;
+    tilingData.din = 4;
+    tilingData.hin = 4;
+    tilingData.win = 4;
+    tilingData.cout = 128;
+    tilingData.kd = 3;
+    tilingData.kh = 3;
+    tilingData.kw = 3;
+    tilingData.dout = 1;
+    tilingData.hout = 1;
+    tilingData.wout = 1;
+    tilingData.batchDim = 1;
+    tilingData.doDim = 1;
+    tilingData.mDim = 0;
+    tilingData.wDim = 0;
+    tilingData.nDim = 1;
+    tilingData.groupDim = 1;
+    tilingData.hoDim = 1;
+    tilingData.strideH = 1;
+    tilingData.strideW = 1;
+    tilingData.strideD = 1;
+    tilingData.dilationH = 1;
+    tilingData.dilationW = 1;
+    tilingData.dilationD = 1;
+    tilingData.groups = 1;
+
+    tilingInfo.convOpsConstParams.m0 = CUBE_M0;
+    tilingInfo.convOpsConstParams.k0 = CUBE_K0_16;
+    tilingInfo.convOpsConstParams.n0 = CUBE_N0;
+    tilingInfo.convOpsConstParams.ci1 = optiling::conv_ops_tiling::ConvCeilDiv(tilingInfo.shapeInfo.ci,
+                                                                               tilingInfo.convOpsConstParams.k0);
+    tilingInfo.convOpsConstParams.co1 = optiling::conv_ops_tiling::ConvCeilDiv(tilingInfo.shapeInfo.co,
+                                                                               tilingInfo.convOpsConstParams.n0);
+    return tilingInfo;
+}
+
+static Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 MakeWeight5HDTilingData()
+{
+    Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tilingData;
+    tilingData.batch = 1;
+    tilingData.cin = 128;
+    tilingData.din = 4;
+    tilingData.hin = 4;
+    tilingData.win = 4;
+    tilingData.cout = 128;
+    tilingData.kd = 3;
+    tilingData.kh = 3;
+    tilingData.kw = 3;
+    tilingData.dout = 1;
+    tilingData.hout = 1;
+    tilingData.wout = 1;
+    tilingData.batchDim = 1;
+    tilingData.doDim = 1;
+    tilingData.mDim = 0;
+    tilingData.wDim = 0;
+    tilingData.nDim = 1;
+    tilingData.groupDim = 1;
+    tilingData.hoDim = 1;
+    tilingData.strideH = 1;
+    tilingData.strideW = 1;
+    tilingData.strideD = 1;
+    tilingData.dilationH = 1;
+    tilingData.dilationW = 1;
+    tilingData.dilationD = 1;
+    tilingData.groups = 1;
+    return tilingData;
+}
+
+TEST_F(TestConv3dV2Tiling, api_tiling_weight5hd)
+{
+    auto tilingInfo = MakeWeight5HDTilingInfo();
+    auto tilingData = MakeWeight5HDTilingData();
+    conv_tiling::Conv3dTiling convApiTiling(SetPlatFormInfo_960DT());
+
+    EXPECT_EQ(
+        convApiTiling.GetTilingData(tilingInfo.attrInfo, tilingInfo.descInfo, tilingInfo.flagInfo, tilingInfo.shapeInfo,
+                                    tilingInfo.convOpsConstParams, tilingInfo.numBlocksRes, tilingData),
+        0);
+    EXPECT_GT(tilingData.bUbKStep, 0U);
+    EXPECT_GT(tilingData.bUbNStep, 0U);
+    EXPECT_LE(tilingData.bUbNStep, 4U);
+}
+
+TEST_F(TestConv3dV2Tiling, api_tiling_weight5hd_off_3510)
+{
+    auto tilingInfo = MakeWeight5HDTilingInfo();
+    auto tilingData = MakeWeight5HDTilingData();
+    conv_tiling::Conv3dTiling convApiTiling(SetPlatFormInfo());
+
+    EXPECT_EQ(
+        convApiTiling.GetTilingData(tilingInfo.attrInfo, tilingInfo.descInfo, tilingInfo.flagInfo, tilingInfo.shapeInfo,
+                                    tilingInfo.convOpsConstParams, tilingInfo.numBlocksRes, tilingData),
+        0);
+    EXPECT_EQ(tilingData.bUbKStep, 0U);
+    EXPECT_EQ(tilingData.bUbNStep, 0U);
 }
 
 TEST_F(TestConv3dV2Tiling, L0Range_cout_prime)
