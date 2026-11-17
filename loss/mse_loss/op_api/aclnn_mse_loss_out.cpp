@@ -110,6 +110,10 @@ static aclnnStatus FillOutForEmptyInput(aclTensor* out, float val, aclOpExecutor
         return ACLNN_SUCCESS;
     }
     auto outShape = op::ToShapeVector(out->GetViewShape());
+    // 1维空输入导致out为0维标量时，outShape为空，无法通过Fill推导输出shape，改用标量填充写法
+    if (outShape.empty()) {
+        return CheckFillScalarLoss(out, val, executor);
+    }
     auto dims = executor->ConvertToTensor(outShape.data(), outShape.size(), op::DataType::DT_INT64);
     CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto shapeArray = executor->AllocIntArray(outShape.data(), outShape.size());

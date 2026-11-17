@@ -413,6 +413,44 @@ TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_21_aclnnMseLossOut_output_error_sha
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
+TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_22_float_nd_empty_input_mean_scalar_out)
+{
+    auto selfDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t reduction = 1;
+
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMseLossOut, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
+TEST_F(l2_mse_loss_out_test, aclnnMseLossOut_23_float_nd_empty_input_sum_scalar_out)
+{
+    auto selfDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto targetDesc = TensorDesc({0}, ACL_FLOAT, ACL_FORMAT_ND);
+    int64_t reduction = 2;
+
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMseLossOut, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
 TEST_F(l2_mse_loss_out_test, ascend910B2_aclnnMseLossOut_bf16_float_nhwc_mean)
 {
     auto selfDesc = TensorDesc({2, 2}, ACL_BF16, ACL_FORMAT_NDHWC).ValueRange(-1, 1);
