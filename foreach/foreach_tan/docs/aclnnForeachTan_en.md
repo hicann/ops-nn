@@ -41,15 +41,15 @@
 
 Each operator uses a [two-phase API](../../../docs/en/context/two_phase_api.md). Call the "aclnnForeachTanGetWorkspaceSize" API first to obtain the workspace size required for computation and the executor that contains the operator computation process, and then call the "aclnnForeachTan" API to perform computation.
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachTanGetWorkspaceSize(
   const aclTensorList      *x,
-  const aclTensorList      *out,
+  aclTensorList            *out,
   uint64_t                 *workspaceSize,
   aclOpExecutor           **executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachTan(
   void           *workspace,
   uint64_t        workspaceSize,
@@ -88,20 +88,20 @@ aclnnStatus aclnnForeachTan(
       <td>Input</td>
       <td>Indicates the list of input tensors for the tangent operation, corresponding to `x` in the formula.</td>
       <td><ul><li>Empty tensors are supported.</li><li>The data types of all tensors in this parameter must be the same.</li></ul></td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Indicates the list of output tensors for the tangent operation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape size is greater than or equal to that of `x`.</li></ul></td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape size is equal to that of `x`.</li></ul></td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
-      <td>×</td>
+      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnForeachTan(
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Value</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -151,22 +151,22 @@ aclnnStatus aclnnForeachTan(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
-      <td>The data type of x or out is not supported.</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
+      <td>The tensor list x or out contains a null tensor pointer.</td>
     </tr>
     <tr>
-      <td>The data types of x and out are inconsistent.</td></tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>The shapes of x and out do not meet the constraints.</td>
-    </tr>
+      <td>The data type of x or out is not supported.</td></tr>
     <tr>
       <td>The data types of tensors in x or out are inconsistent.</td></tr>
     <tr>
-      <td>The dimension of a tensor in x or out exceeds 8.</td>
-    </tr>
+      <td>The data types of x and out are inconsistent.</td></tr>
+    <tr>
+      <td>The number of tensors in x and out is different.</td></tr>
+    <tr>
+      <td>x or out contains more than 256 tensors.</td></tr>
+    <tr>
+      <td>The shapes of x and out do not meet the constraints.</td></tr>
   </tbody></table>
 
 ## aclnnForeachTan
@@ -214,7 +214,9 @@ aclnnStatus aclnnForeachTan(
 
 ## Constraints
 
-- When the input value range is within [-65504, 65504], the functional precision requirement is met. Precision cannot be guaranteed beyond this range.
+- The number of tensors in x and out must be the same, and the shapes of tensors at corresponding positions must be exactly equal.
+- The number of tensors in x or out must not exceed 256.
+- <term>Atlas A3 products</term> and <term>Atlas A2 products</term>: When the input value range is within [-65504, 65504], the functional precision requirement is met. Precision cannot be guaranteed beyond this range.
 - Deterministic computation:
   - aclnnForeachTan defaults to a deterministic implementation.
 

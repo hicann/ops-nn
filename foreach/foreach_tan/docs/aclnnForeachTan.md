@@ -39,15 +39,15 @@
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnForeachTanGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachTan”接口执行计算。
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachTanGetWorkspaceSize(
   const aclTensorList      *x,
-  const aclTensorList      *out,
+  aclTensorList            *out,
   uint64_t                 *workspaceSize,
   aclOpExecutor           **executor)
 ```
 
-```Cpp
+```cpp
 aclnnStatus aclnnForeachTan(
   void           *workspace,
   uint64_t        workspaceSize,
@@ -86,19 +86,19 @@ aclnnStatus aclnnForeachTan(
       <td>输入</td>
       <td>表示进行正切函数运算的输入张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行正切函数运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size等于入参`x`的shape size。</li></ul></td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>-</td>
       <td>√</td>
     </tr>
     <tr>
@@ -149,22 +149,22 @@ aclnnStatus aclnnForeachTan(
       <td>传入的x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
-      <td>x或out的数据类型不在支持的范围之内。</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
+      <td>x或out的Tensor列表中存在空指针的Tensor。</td>
     </tr>
     <tr>
-      <td>x和out的数据类型不一致。</td></tr>
-    <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
-      <td>x与out的shape不满足约束。</td>
-    </tr>
+      <td>x或out的数据类型不在支持的范围之内。</td></tr>
     <tr>
       <td>x或out中的Tensor的数据类型不一致。</td></tr>
     <tr>
-      <td>x或out中的Tensor维度超过8维。</td>
-    </tr>
+      <td>x和out的数据类型不一致。</td></tr>
+    <tr>
+      <td>x与out的Tensor数量不一致。</td></tr>
+    <tr>
+      <td>x或out中Tensor数量超过256。</td></tr>
+    <tr>
+      <td>x与out的shape不满足约束。</td></tr>
   </tbody></table>
 
 ## aclnnForeachTan
@@ -212,7 +212,9 @@ aclnnStatus aclnnForeachTan(
 
 ## 约束说明
 
-- 输入值域在[-65504, 65504]范围满足功能精度要求，超过数值范围无法保证精度。
+- x与out的Tensor数量一致，且对应位置Tensor的shape完全相等。
+- x或out中Tensor数量不能超过256。
+- <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：输入值域在[-65504, 65504]范围满足功能精度要求，超过数值范围无法保证精度。
 - 确定性计算：
   - aclnnForeachTan默认确定性实现。
 

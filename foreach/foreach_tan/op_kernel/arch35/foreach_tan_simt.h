@@ -36,9 +36,8 @@ template <typename T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachTanSimt(__gm__ T* xPtr, __gm__ T* yPtr,
                                                                              int64_t elemCount)
 {
-    for (uint64_t idx = static_cast<uint64_t>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
-         idx < static_cast<uint64_t>(elemCount);
-         idx += static_cast<uint64_t>(Simt::GetThreadNum() * Simt::GetBlockNum())) {
+    for (uint64_t idx = static_cast<uint64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+         idx < static_cast<uint64_t>(elemCount); idx += static_cast<uint64_t>(gridDim.x) * blockDim.x) {
         T val = xPtr[idx];
         yPtr[idx] = tanf(val);
     }
@@ -48,9 +47,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachTanSimt(__g
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachTanHalfSimt(__gm__ half* xPtr, __gm__ half* yPtr,
                                                                                  int64_t elemCount)
 {
-    for (uint64_t idx = static_cast<uint64_t>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
-         idx < static_cast<uint64_t>(elemCount);
-         idx += static_cast<uint64_t>(Simt::GetThreadNum() * Simt::GetBlockNum())) {
+    for (uint64_t idx = static_cast<uint64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+         idx < static_cast<uint64_t>(elemCount); idx += static_cast<uint64_t>(gridDim.x) * blockDim.x) {
         half val = xPtr[idx];
         float val_f32 = __half2float(val);
         float result_f32 = tanf(val_f32);
@@ -63,9 +61,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachTanBf16Simt
                                                                                  __gm__ bfloat16_t* yPtr,
                                                                                  int64_t elemCount)
 {
-    for (uint64_t idx = static_cast<uint64_t>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
-         idx < static_cast<uint64_t>(elemCount);
-         idx += static_cast<uint64_t>(Simt::GetThreadNum() * Simt::GetBlockNum())) {
+    for (uint64_t idx = static_cast<uint64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+         idx < static_cast<uint64_t>(elemCount); idx += static_cast<uint64_t>(gridDim.x) * blockDim.x) {
         bfloat16_t val = xPtr[idx];
         float val_f32 = __bfloat162float(val);
         float result_f32 = tanf(val_f32);
@@ -73,7 +70,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachTanBf16Simt
     }
 }
 
-// Process 入口函数：逐 Tensor 调用 VF_CALL
+// Process 入口函数：逐 Tensor 调用 asc_vf_call
 template <typename T>
 __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachTanTilingData* tilingData)
 {
@@ -94,11 +91,11 @@ __aicore__ inline void Process(GM_ADDR x, GM_ADDR y, const ForeachTanTilingData*
         // half: OpForeachTanHalfSimt
         // bfloat16_t: OpForeachTanBf16Simt
         if constexpr (std::is_same_v<T, float>) {
-            Simt::VF_CALL<OpForeachTanSimt<float>>(Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
+            asc_vf_call<OpForeachTanSimt<float>>(dim3{THREAD_NUM}, xPtr, yPtr, count);
         } else if constexpr (std::is_same_v<T, half>) {
-            Simt::VF_CALL<OpForeachTanHalfSimt>(Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
+            asc_vf_call<OpForeachTanHalfSimt>(dim3{THREAD_NUM}, xPtr, yPtr, count);
         } else if constexpr (std::is_same_v<T, bfloat16_t>) {
-            Simt::VF_CALL<OpForeachTanBf16Simt>(Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
+            asc_vf_call<OpForeachTanBf16Simt>(dim3{THREAD_NUM}, xPtr, yPtr, count);
         }
     }
 }

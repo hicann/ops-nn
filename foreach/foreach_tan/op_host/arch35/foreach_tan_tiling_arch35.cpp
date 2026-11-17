@@ -45,6 +45,108 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
+static bool CheckElemCountValid(gert::TilingContext* context, int64_t elemCount, int32_t index)
+{
+    OP_CHECK_IF(elemCount < 0, OP_LOGE(context, "Invalid element count %ld of tensor %d", elemCount, index),
+                return false);
+    return true;
+}
+
+static bool CheckForeachTanListInfo(gert::TilingContext* context, int32_t& tensorNum, ge::DataType& xDtype,
+                                    int64_t& maxTensorElements)
+{
+    auto computeNodeInfo = context->GetComputeNodeInfo();
+    OP_CHECK_IF(computeNodeInfo == nullptr, OP_LOGE(context, "%s is nullptr!", "computeNodeInfo"), return false);
+    auto xInstanceInfo = computeNodeInfo->GetInputInstanceInfo(0);
+    OP_CHECK_IF(xInstanceInfo == nullptr, OP_LOGE(context, "%s is nullptr!", "xInstanceInfo"), return false);
+    tensorNum = static_cast<int32_t>(xInstanceInfo->GetInstanceNum());
+
+    OP_CHECK_IF(tensorNum < 0 || tensorNum > MAX_TENSOR_COUNT,
+                OP_LOGE(context, "tensorNum %d must be in [0, 256]", tensorNum), return false);
+
+    auto yInstanceInfo = computeNodeInfo->GetOutputInstanceInfo(0);
+    OP_CHECK_IF(yInstanceInfo == nullptr, OP_LOGE(context, "%s is nullptr!", "yInstanceInfo"), return false);
+    int32_t yTensorNum = static_cast<int32_t>(yInstanceInfo->GetInstanceNum());
+    OP_CHECK_IF(
+        yTensorNum != tensorNum,
+        OP_LOGE(context, "The tensor num %d of the y list must be the same as x tensor num %d", yTensorNum, tensorNum),
+        return false);
+
+    xDtype = ge::DT_FLOAT;
+    if (tensorNum > 0) {
+        auto xDesc = context->GetDynamicInputDesc(0, 0);
+        OP_CHECK_IF(xDesc == nullptr, OP_LOGE(context, "%s is nullptr!", "xDesc"), return false);
+        xDtype = xDesc->GetDataType();
+    }
+
+    maxTensorElements = 0;
+    for (int32_t i = 0; i < tensorNum; i++) {
+        auto descPtr = context->GetDynamicInputDesc(0, i);
+        OP_CHECK_IF(descPtr == nullptr, OP_LOGE(context, "%s is nullptr!", "descPtr"), return false);
+        OP_CHECK_IF(descPtr->GetDataType() != xDtype,
+                    OP_LOGE(context, "All tensors in the x list must have the same dtype, mismatch at index %d", i),
+                    return false);
+        auto shapePtr = context->GetDynamicInputShape(0, i);
+        OP_CHECK_IF(shapePtr == nullptr, OP_LOGE(context, "%s is nullptr!", "shapePtr"), return false);
+        auto shape = shapePtr->GetStorageShape();
+        int64_t elemCount = shape.GetShapeSize();
+        if (!CheckElemCountValid(context, elemCount, i)) {
+            return false;
+        }
+        auto yDescPtr = context->GetOutputDesc(i);
+        OP_CHECK_IF(yDescPtr == nullptr, OP_LOGE(context, "%s is nullptr!", "yDescPtr"), return false);
+        OP_CHECK_IF(
+            yDescPtr->GetDataType() != xDtype,
+            OP_LOGE(context, "All tensors in the y list must have the same dtype as x, mismatch at index %d", i),
+            return false);
+        auto yShapePtr = context->GetOutputShape(i);
+        OP_CHECK_IF(yShapePtr == nullptr, OP_LOGE(context, "%s is nullptr!", "yShapePtr"), return false);
+        OP_CHECK_IF(yShapePtr->GetStorageShape().GetShapeSize() != elemCount,
+                    OP_LOGE(context,
+                            "The shape size of the %dth tensor in y must be equal to that of x, but got %ld "
+                            "and %ld",
+                            i, yShapePtr->GetStorageShape().GetShapeSize(), elemCount),
+                    return false);
+        maxTensorElements = std::max(maxTensorElements, elemCount);
+    }
+    return true;
+}
+
+static bool InitForeachTanTilingData(gert::TilingContext* context, ForeachTanTilingData* tiling, int32_t tensorNum,
+                                     int32_t needCoreNum)
+{
+    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachTanTilingData), 0, sizeof(ForeachTanTilingData)) != EOK,
+                OP_LOGE(context, "memset_s tiling data failed"), return false);
+    tiling->tensorNum = tensorNum;
+    tiling->needCoreNum = needCoreNum;
+    for (int32_t i = 0; i < tensorNum; i++) {
+        auto shapePtr = context->GetDynamicInputShape(0, i);
+        OP_CHECK_IF(shapePtr == nullptr, OP_LOGE(context, "%s is nullptr!", "shapePtr"), return false);
+        auto shape = shapePtr->GetStorageShape();
+        int64_t elemCount = shape.GetShapeSize();
+        if (!CheckElemCountValid(context, elemCount, i)) {
+            return false;
+        }
+        tiling->tensorElements[i] = elemCount;
+    }
+    return true;
+}
+
+static bool GetForeachTanTilingKey(gert::TilingContext* context, ge::DataType xDtype, uint64_t& tilingKey)
+{
+    if (xDtype == ge::DT_FLOAT) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_TAN_SCH_MODE_FLOAT);
+    } else if (xDtype == ge::DT_FLOAT16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_TAN_SCH_MODE_FLOAT16);
+    } else if (xDtype == ge::DT_BF16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_TAN_SCH_MODE_BF16);
+    } else {
+        OP_LOGE(context, "Unsupported x dtype");
+        return false;
+    }
+    return true;
+}
+
 static ge::graphStatus ForeachTanTilingFunc(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "ForeachTanTilingFunc begin.");
@@ -55,70 +157,36 @@ static ge::graphStatus ForeachTanTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, maxCoreNum) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
 
-    // 2. Get TensorList info
-    auto computeNodeInfo = context->GetComputeNodeInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, computeNodeInfo);
-    auto xInstanceInfo = computeNodeInfo->GetInputInstanceInfo(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xInstanceInfo);
-    int32_t tensorNum = static_cast<int32_t>(xInstanceInfo->GetInstanceNum());
-
-    OP_CHECK_IF(tensorNum < 0 || tensorNum > MAX_TENSOR_COUNT,
-                OP_LOGE(context, "tensorNum %d must be in [0, 256]", tensorNum), return ge::GRAPH_FAILED);
-
-    // 3. Get x dtype and compute max element count across all tensors
+    // 2. Validate tensor list info (instance count / dtype consistency / shape size) and compute max elements
+    int32_t tensorNum = 0;
     ge::DataType xDtype = ge::DT_FLOAT;
-    if (tensorNum > 0) {
-        auto xDesc = context->GetDynamicInputDesc(0, 0);
-        OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
-        xDtype = xDesc->GetDataType();
-    }
-
     int64_t maxTensorElements = 0;
-    for (int32_t i = 0; i < tensorNum; i++) {
-        auto shapePtr = context->GetDynamicInputShape(0, i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
-        auto shape = shapePtr->GetStorageShape();
-        int64_t elemCount = shape.GetShapeSize();
-        maxTensorElements = std::max(maxTensorElements, elemCount);
+    if (!CheckForeachTanListInfo(context, tensorNum, xDtype, maxTensorElements)) {
+        return ge::GRAPH_FAILED;
     }
 
-    // 4. Calculate core count based on max tensor
+    // 3. Calculate core count based on max tensor
     int64_t perCoreElements = std::max(MIN_PER_CORE_ELEMENTS, Ops::Base::CeilDiv(maxTensorElements, maxCoreNum));
     perCoreElements = Ops::Base::CeilAlign(perCoreElements, ALIGN_SIZE);
     int32_t needCoreNum = static_cast<int32_t>(
         std::min(maxCoreNum, Ops::Base::CeilDiv(maxTensorElements, perCoreElements)));
     needCoreNum = std::max(1, needCoreNum);
 
-    // 5. Set tiling data
+    // 4. Set tiling data
     ForeachTanTilingData* tiling = context->GetTilingData<ForeachTanTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(memset_s(tiling, sizeof(ForeachTanTilingData), 0, sizeof(ForeachTanTilingData)) != EOK,
-                OP_LOGE(context, "memset_s tiling data failed"), return ge::GRAPH_FAILED);
-
-    tiling->tensorNum = tensorNum;
-    tiling->needCoreNum = needCoreNum;
-    for (int32_t i = 0; i < tensorNum; i++) {
-        auto shapePtr = context->GetDynamicInputShape(0, i);
-        OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
-        auto shape = shapePtr->GetStorageShape();
-        tiling->tensorElements[i] = shape.GetShapeSize();
+    if (!InitForeachTanTilingData(context, tiling, tensorNum, needCoreNum)) {
+        return ge::GRAPH_FAILED;
     }
 
-    // 6. Set tiling key based on x dtype
+    // 5. Set tiling key based on x dtype
     uint64_t tilingKey = 0;
-    if (xDtype == ge::DT_FLOAT) {
-        tilingKey = GET_TPL_TILING_KEY(FOREACH_TAN_SCH_MODE_FLOAT);
-    } else if (xDtype == ge::DT_FLOAT16) {
-        tilingKey = GET_TPL_TILING_KEY(FOREACH_TAN_SCH_MODE_FLOAT16);
-    } else if (xDtype == ge::DT_BF16) {
-        tilingKey = GET_TPL_TILING_KEY(FOREACH_TAN_SCH_MODE_BF16);
-    } else {
-        OP_LOGE(context, "Unsupported x dtype");
+    if (!GetForeachTanTilingKey(context, xDtype, tilingKey)) {
         return ge::GRAPH_FAILED;
     }
     context->SetTilingKey(tilingKey);
 
-    // 7. Set workspace and block dim
+    // 6. Set workspace and block dim
     size_t* wsSizes = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, wsSizes);
     wsSizes[0] = static_cast<size_t>(ASCENDC_TOOLS_WORKSPACE);

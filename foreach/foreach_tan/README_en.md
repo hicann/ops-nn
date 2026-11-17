@@ -50,24 +50,25 @@ English | [简体中文](./README.md)
     <tr>
       <td>x</td>
       <td>Input</td>
-      <td>Input tensor list for the tangent function operation, corresponding to `x` in the formula. The data types of all tensors in this parameter are the same.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Input tensor list for the tangent function operation, corresponding to `x` in the formula. The data types of all tensors in this parameter are the same. Non-contiguous input tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Output tensor list for the tangent function operation, corresponding to `y` in the formula. The data types of all tensors in this parameter are the same. The data type and data format are the same as those of input parameter `x`, and the shape size is greater than or equal to the shape size of input parameter `x`.</td>
-      <td>FLOAT32, FLOAT16, BFLOAT16</td>
+      <td>Output tensor list for the tangent function operation, corresponding to `y` in the formula. The data types of all tensors in this parameter are the same. The data type and data format are the same as those of input parameter `x`, and the shape is the same as that of the corresponding tensor in `x`. Non-contiguous output tensors are automatically converted to contiguous tensors by the framework before computation.</td>
+      <td>FLOAT, FLOAT16, BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-- <term>Kirin X90 processor series products</term>, <term>Kirin 9030 processor series products</term>: BFLOAT16 is not supported.
+- <term>Kirin X90 processor series products</term> and <term>Kirin 9030 processor series products</term>: BFLOAT16 is not supported.
 
 ## Constraints
 
-- Non-contiguous tensors are not supported for the output.
+- The number of tensors in x and y must be the same, and the shapes of the tensors at corresponding positions must be exactly the same.
+- The number of tensors in x or y must not exceed 256.
 
 ## Invocation Description
 

@@ -48,15 +48,15 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示进行正切函数运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示进行正切函数运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。非连续Tensor输入由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行正切函数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示进行正切函数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape与入参`x`中对应位置的Tensor的shape一致。非连续Tensor输出由框架自动转换为连续Tensor后执行。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -65,7 +65,8 @@
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+- x与y的Tensor数量一致，且对应位置Tensor的shape完全相等。
+- x或y中Tensor数量不能超过256。
 
 ## 调用说明
 
