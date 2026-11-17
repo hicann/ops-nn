@@ -332,13 +332,15 @@ function(gen_cust_proto_symbol)
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
     ge_compiler
     INTERFACE
-    # opbase 的 executor 等源码引用 aclsysGetVersionNum（由 ACL 运行时提供）。
-    # 自定义算子包的 op_proto 库需要把 acl_rt 传递到最终 .so 的链接行，
+    # opbase 的 executor 等源码引用 aclsysGetVersionNum（由 ACL 运行时提供），
+    # 自定义算子包的 op_proto 库需要把 acl_rt 以裸项传递到最终 .so 的链接行，
     # 否则 libcust_opsproto_rt2.0.so 的 NEEDED 不含符号提供库，
     # 安装时共享库校验（dlopen RTLD_NOW）会因 undefined symbol 中止。
-    -Wl,--no-as-needed
+    # acl_rt 禁止带 -Wl,--no-as-needed/-Wl,--as-needed 包裹：
+    # 打包器在 es_math/es_nn/eager_style/c_sec 尾部自有 no-as-needed 包裹区，
+    # 中插 -Wl,--as-needed 会提前闭合该区把 es 库剔出 DT_NEEDED，
+    # 引发样例执行时 GE 图编译崩溃。
     acl_rt
-    -Wl,--as-needed
     )
 
   if(NOT ENABLE_OP_KERNEL)
