@@ -84,7 +84,7 @@ aclnnStatus aclnnFlip(
         <td>输入</td>
         <td>-</td>
         <td>-</td>
-        <td>FLOAT16、FLOAT、INT32、INT16、INT64、BOOL、INT8、UINT8、FLOAT64、COMPLEX64、COMPLEX128、BFLOAT16</td>
+        <td>FLOAT16、FLOAT、INT32、UINT32、INT16、UINT16、INT64、UINT64、BOOL、INT8、UINT8、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16</td>
         <td>ND</td>
         <td>1-8</td>
         <td>√</td>
@@ -134,6 +134,9 @@ aclnnStatus aclnnFlip(
     <!-- npu="910,310p" id7 -->
     - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：不支持BFLOAT16数据类型。
     <!-- end id7 -->
+    <!-- npu="A3,910b" id8 -->
+    - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：不支持UINT16、UINT32、UINT64数据类型。
+    <!-- end id8 -->
 
 * **返回值**
 

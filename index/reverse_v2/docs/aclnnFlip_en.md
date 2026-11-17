@@ -86,7 +86,7 @@ aclnnStatus aclnnFlip(
         <td>Input</td>
         <td>-</td>
         <td>-</td>
-        <td>FLOAT16, FLOAT, INT32, INT16, INT64, BOOL, INT8, UINT8, FLOAT64, COMPLEX64, COMPLEX128, BFLOAT16</td>
+        <td>FLOAT16, FLOAT, INT32, UINT32, INT16, UINT16, INT64, UINT64, BOOL, INT8, UINT8, DOUBLE, COMPLEX64, COMPLEX128, BFLOAT16</td>
         <td>ND</td>
         <td>1-8</td>
         <td>√</td>
@@ -136,6 +136,9 @@ aclnnStatus aclnnFlip(
     <!-- npu="910,310p" id7 -->
     - <term>Atlas training products</term> and <term>Atlas inference products</term>: The BFLOAT16 data type is not supported.
     <!-- end id7 -->
+    <!-- npu="A3,910b" id8 -->
+    - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: The UINT16, UINT32, and UINT64 data types are not supported.
+    <!-- end id8 -->
 
 * **Return Value**
 
