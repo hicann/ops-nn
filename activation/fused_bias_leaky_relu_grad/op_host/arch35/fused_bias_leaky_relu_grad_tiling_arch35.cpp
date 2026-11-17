@@ -431,12 +431,12 @@ static ge::graphStatus TilingFuncFusedBiasLeakyReluGrad(gert::TilingContext* con
 
     constexpr float kAttrValueLimit = 1.0e38f;
     OP_CHECK_IF(std::isnan(negativeSlope) || std::isinf(negativeSlope) || std::fabs(negativeSlope) > kAttrValueLimit,
-                OP_LOGE_WITH_INVALID_ATTR(context->GetNodeName(), "negative_slope",
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "negative_slope",
                                           std::to_string(negativeSlope).c_str(), "[-1e38, 1e38]"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         std::isnan(scale) || std::isinf(scale) || std::fabs(scale) > kAttrValueLimit,
-        OP_LOGE_WITH_INVALID_ATTR(context->GetNodeName(), "scale", std::to_string(scale).c_str(), "[-1e38, 1e38]"),
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "scale", std::to_string(scale).c_str(), "[-1e38, 1e38]"),
         return ge::GRAPH_FAILED);
 
     std::vector<int64_t> maximum_bro_shape;
