@@ -31,6 +31,8 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/batch_norm_v3/op_host/batch_norm_v3_tiling_infer_last_channel_arch35.cpp
                 - ops/ops-nn/norm/batch_norm_v3/op_host/batch_norm_v3_tiling_ra_welford_arch35.cpp
                 - ops/ops-nn/norm/batch_norm_v3/op_host/batch_norm_v3_tiling_welford_arch35.cpp
+                - ops/ops-nn/norm/batch_norm_v3/op_host/batch_norm_v3_tiling_rar_block_split_r_arch35.cpp
+                - ops/ops-nn/norm/batch_norm_v3/op_host/config/ascend950/
                 - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_apt.cpp
                 - ops/ops-nn/norm/batch_norm_v3/op_kernel/arch35/
                 - ops/ops-nn/norm/batch_norm_v3/docs/
@@ -44,12 +46,20 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/batch_norm_grad_v3/op_host/batch_norm_grad_v3_tiling_infer_base.h
                 - ops/ops-nn/norm/batch_norm_grad_v3/op_host/batch_norm_grad_v3_tiling_ra_split_r.h
                 - ops/ops-nn/norm/batch_norm_grad_v3/op_host/batch_norm_grad_v3_tiling.h
+                - ops/ops-nn/norm/batch_norm_grad_v3/op_host/config/ascend950/
                 - ops/ops-nn/norm/batch_norm_grad_v3/op_kernel/batch_norm_grad_v3_apt.cpp
                 - ops/ops-nn/norm/batch_norm_grad_v3/op_kernel/arch35/
+                - ops/ops-nn/norm/batch_norm_grad_v3/docs/
+                - ops/ops-nn/norm/batch_norm_grad_v3/README.md
+                - ops/ops-nn/norm/batch_norm/op_host/arch35/
+                - ops/ops-nn/norm/batch_norm/op_host/config/ascend950/
+                - ops/ops-nn/norm/batch_norm/op_kernel/batch_norm_apt.cpp
+                - ops/ops-nn/norm/batch_norm/op_kernel/arch35/
                 - ops/ops-nn/norm/group_norm_grad/op_host/group_norm_grad_tiling_arch35.h
                 - ops/ops-nn/norm/group_norm_grad/op_host/group_norm_grad_tiling_arch35.cpp
                 - ops/ops-nn/norm/group_norm_grad/op_host/group_norm_grad_empty_tiling_arch35.h
                 - ops/ops-nn/norm/group_norm_grad/op_host/group_norm_grad_empty_tiling_arch35.cpp
+                - ops/ops-nn/norm/group_norm_grad/op_host/config/ascend950/
                 - ops/ops-nn/norm/group_norm_grad/op_kernel/arch35/
                 - ops/ops-nn/norm/group_norm_grad/op_kernel/group_norm_grad_apt.cpp
                 - ops/ops-nn/norm/group_norm_v2/op_host/arch35/group_norm_v2_tiling_arch35.cpp
@@ -82,14 +92,11 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/add_layer_norm/op_host/config/ascend950/
                 - ops/ops-nn/norm/add_layer_norm/op_kernel/arch35/
                 - ops/ops-nn/norm/add_layer_norm/op_kernel/CMakeLists.txt
-                - ops/ops-nn/norm/add_layer_norm/op_kernel/add_layer_norm_apt.cpp
                 - ops/ops-nn/norm/rms_norm/op_kernel/arch35/
                 - ops/ops-nn/norm/rms_norm_grad/op_host/rms_norm_grad_regbase_tiling.cpp
                 - ops/ops-nn/norm/rms_norm_grad/op_kernel/arch35/
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/rms_norm_dynamic_mx_quant_infershape.cpp
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/config/ascend950/rms_norm_dynamic_mx_quant_binary.json
-                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/config/ascend950/rms_norm_dynamic_mx_quant_simplified_key.ini
-                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/arch35/rms_norm_dynamic_mx_quant_tiling_arch35.h
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/arch35/rms_norm_dynamic_mx_quant_full_load_tiling.cpp
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/arch35/rms_norm_dynamic_mx_quant_base_tiling.cpp
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_host/rms_norm_dynamic_mx_quant_def.cpp
@@ -101,14 +108,13 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_graph/CMakeLists.txt
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/CMakeLists.txt
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/CMakeLists.txt
-                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/op_host/arch35/test_rms_norm_dynamic_mx_quant_tiling_arch35.cpp
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/op_host/test_rms_norm_dynamic_mx_quant_infershape.cpp
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/CMakeLists.txt
                 - ops/ops-nn/norm/add_rms_norm_quant/op_host/add_rms_norm_quant_tiling_arch35.cpp
                 - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/arch35/
                 - ops/ops-nn/norm/add_rms_norm_cast/op_host/add_rms_norm_cast_tiling_arch35.cpp
                 - ops/ops-nn/norm/add_rms_norm_cast/op_kernel/arch35/
-                - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/add_rms_norm_dynamic_quant_tiling_arch35.cpp
+                - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/arch35/
                 - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_kernel/arch35/
                 - ops/ops-nn/norm/add_layer_norm_quant/op_host/add_layer_norm_quant_tiling_arch35.cpp
                 - ops/ops-nn/norm/add_layer_norm_quant/op_host/config/ascend950/
@@ -122,6 +128,7 @@ HPTG1@ops-nn:
                 - ops/ops-nn/index/broadcast_gradient_args/docs/
                 - ops/ops-nn/norm/rms_norm_hi_f4_quant/
                 - ops/ops-nn/norm/add_rms_norm_hi_f4_quant/
+                - ops/ops-nn/norm/rms_norm_grad_quant/
             opensource_style: null
             kernel_style: null
         unrelease:
@@ -132,6 +139,8 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/rms_norm_hi_f4_quant/examples/
                 - ops/ops-nn/norm/add_rms_norm_hi_f4_quant/tests/
                 - ops/ops-nn/norm/add_rms_norm_hi_f4_quant/examples/
+                - ops/ops-nn/norm/rms_norm_grad_quant/tests/
+                - ops/ops-nn/norm/rms_norm_grad_quant/examples/
             non_delivery: null
             open_source: null
 
@@ -1426,9 +1435,7 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_graph/add_rms_norm_dynamic_quant_proto.h
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/add_rms_norm_dynamic_quant_def.cpp
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/add_rms_norm_dynamic_quant_infershape.cpp
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/add_rms_norm_dynamic_quant_tiling.cpp
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/add_rms_norm_dynamic_quant_tiling.h
-        - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/add_rms_norm_dynamic_quant_tiling_empty.cpp
+        - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/arch22/
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/op_api/aclnn_add_rms_norm_dynamic_quant.cpp
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/op_api/aclnn_add_rms_norm_dynamic_quant.h
         - ops/ops-nn/norm/add_rms_norm_dynamic_quant/op_host/op_api/aclnn_add_rms_norm_dynamic_quant_v2.cpp
@@ -1453,7 +1460,6 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/add_rms_norm_quant_tiling.h
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/op_api/aclnn_add_rms_norm_quant.cpp
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/op_api/aclnn_add_rms_norm_quant.h
-        - ops/ops-nn/norm/add_rms_norm_quant/op_host/op_api/aclnn_add_rms_norm_quant_v2.h
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/op_api/add_rms_norm_quant.cpp
         - ops/ops-nn/norm/add_rms_norm_quant/op_host/op_api/add_rms_norm_quant.h
         - ops/ops-nn/norm/add_rms_norm_quant/op_kernel/add_rms_norm_quant.cpp
@@ -1480,7 +1486,7 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/batch_norm_grad_v3/op_host/op_api/aclnn_fast_batch_norm_backward.cpp
         - ops/ops-nn/norm/batch_norm_grad_v3/op_host/op_api/aclnn_fast_batch_norm_backward.h
         - ops/ops-nn/norm/batch_norm_grad_v3/op_host/op_api/batch_norm_backward.cpp
-        - ops/ops-nn/norm/batch_norm_grad_v3/op_host/op_api/batch_norm_backward.h
+        - ops/ops-nn/norm/common/op_api/batch_norm_backward.h
         - ops/ops-nn/norm/batch_norm_grad_v3/op_kernel/batch_norm_grad_v3.cpp
         - ops/ops-nn/norm/batch_norm_grad_v3/op_kernel/batch_norm_grad_v3_base_common.h
         - ops/ops-nn/norm/batch_norm_grad_v3/op_kernel/batch_norm_grad_v3_fullLoad_common.h
@@ -1510,8 +1516,8 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_welford.h
         - ops/ops-nn/norm/batch_norm/README.md
         - ops/ops-nn/norm/batch_norm/op_graph/batch_norm_proto.h
-        - ops/ops-nn/norm/batch_norm/op_host/
-        - ops/ops-nn/norm/batch_norm/op_kernel/
+        - ops/ops-nn/norm/batch_norm/op_host/batch_norm_def.cpp
+        - ops/ops-nn/norm/batch_norm/op_host/batch_norm_infershape.cpp
         - ops/ops-nn/norm/batch_norm/CMakeLists.txt
         - ops/ops-nn/norm/bn_training_reduce/
         - ops/ops-nn/norm/deep_norm/
@@ -1601,9 +1607,9 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/lp_norm_v2/op_api/aclnn_norm.cpp
         - ops/ops-nn/norm/lp_norm_v2/op_api/aclnn_norm.h
         - ops/ops-nn/norm/lp_norm_v2/op_api/lp_norm_reduce_v2.cpp
-        - ops/ops-nn/norm/lp_norm_v2/op_api/lp_norm_reduce_v2.h
+        - ops/ops-nn/norm/common/op_api/lp_norm_reduce_v2.h
         - ops/ops-nn/norm/lp_norm_v2/op_api/lp_norm_update_v2.cpp
-        - ops/ops-nn/norm/lp_norm_v2/op_api/lp_norm_update_v2.h
+        - ops/ops-nn/norm/common/op_api/lp_norm_update_v2.h
         - ops/ops-nn/norm/lp_norm_v2/op_api/lp_norm_v2.cpp
         - ops/ops-nn/norm/lp_norm_v2/op_api/lp_norm_v2.h
         - ops/ops-nn/norm/lp_norm_v2/op_graph/lp_norm_v2_proto.h
@@ -1645,7 +1651,6 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/rms_norm_grad/op_kernel/rms_norm_grad_split_n_high_precision.h
         - ops/ops-nn/norm/rms_norm_grad/op_kernel/rms_norm_grad_whole_reduce_d.h
         - ops/ops-nn/norm/rms_norm_grad/op_kernel/rms_norm_grad_whole_reduce_n.h
-        - ops/ops-nn/norm/rms_norm_grad_quant/
         - ops/ops-nn/norm/rms_norm_quant/
         - ops/ops-nn/norm/sync_batch_norm_backward_elemt/
         - ops/ops-nn/norm/sync_batch_norm_backward_reduce/
