@@ -49,28 +49,28 @@
   <tr>
     <td>x</td>
     <td>输入</td>
-    <td>公式中的输入x，ND张量，rank限制见约束说明。</td>
+    <td>公式中的输入x，ND张量，支持0元素空tensor。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>alpha1</td>
     <td>属性</td>
-    <td><ul><li>负区指数曲线的缩放系数，对应公式中的alpha1。</li><li>默认值为1.0。</li></ul></td>
+    <td><ul><li>负区指数曲线的缩放系数，对应公式中的alpha1。</li><li>取值范围为任意FLOAT值。</li><li>默认值为1.0。</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>alpha2</td>
     <td>属性</td>
-    <td><ul><li>负区指数曲线的斜率系数，对应公式中的alpha2，必须大于0。</li><li>默认值为1.0。</li></ul></td>
+    <td><ul><li>负区指数曲线的斜率系数，对应公式中的alpha2，取值限制见约束说明。</li><li>默认值为1.0。</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>alpha3</td>
     <td>属性</td>
-    <td><ul><li>正区线性缩放系数，对应公式中的alpha3。</li><li>默认值为1.0。</li></ul></td>
+    <td><ul><li>正区线性缩放系数，对应公式中的alpha3。</li><li>取值范围为任意FLOAT值。</li><li>默认值为1.0。</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
@@ -86,9 +86,7 @@
 ## 约束说明
 
 - 输入tensor支持的数据类型为FLOAT16和FLOAT，输出与输入数据类型一致。
-- 输入tensor的格式必须为ND。
-- alpha2属性必须大于0，否则可能导致除零或数值不稳定。
-- 输入支持0元素空tensor。Ascend 950（Arch35）上，输入rank需不超过8；rank大于8时Host tiling校验失败。
+- alpha2属性必须大于0；alpha2为0、负值或NaN时校验失败。
 
 ## 调用说明
 

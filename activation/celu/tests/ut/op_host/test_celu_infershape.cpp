@@ -14,9 +14,13 @@
  */
 
 #include <iostream>
+#include <string>
+#include <vector>
 #include <gtest/gtest.h>
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
+#include "base/context_builder/op_infer_shape_context_builder.h"
+#include "graph/operator_factory.h"
 #include "../../../op_graph/celu_proto.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
@@ -136,4 +140,51 @@ TEST_F(CeluProtoTest, celu_infershape_empty_test)
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+// 必选输入 shape 不可达（IONum(1,1) 但未提供 InputTensors，输入链空位），
+// 推断须早期拒绝并上报正式首报码 EZ0004。
+TEST_F(CeluProtoTest, celu_infershape_input_shape_unreachable_test)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Celu")->infer_shape;
+
+    gert::OpInferShapeContextBuilder builder;
+    builder.OpType("Celu").OpName("celu_infershape_input_unreachable");
+    builder.IONum(1, 1);
+    builder.OutputTensorDesc(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND);
+    auto holder = builder.Build();
+    auto* context = holder.GetContext();
+    ASSERT_NE(context, nullptr);
+    ASSERT_EQ(context->GetInputShape(0), nullptr);
+
+    ASSERT_EQ(inferShapeFunc(context), ge::GRAPH_FAILED);
+}
+
+// InferShape 框架输出对象不可达（IOInstanceNum 输出实例 0，输出链空位），
+// 推断须拒绝并上报正式首报码 EZ1014。
+TEST_F(CeluProtoTest, celu_infershape_output_shape_unreachable_test)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Celu")->infer_shape;
+
+    gert::Tensor inputTensor;
+    gert::OpInferShapeContextBuilder builder;
+    builder.OpType("Celu").OpName("celu_infershape_output_unreachable");
+    builder.IOInstanceNum(std::vector<uint32_t>{1}, std::vector<uint32_t>{0});
+    builder.InputTensors({&inputTensor});
+    builder.OutputTensorDesc(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND);
+    auto holder = builder.Build();
+    auto* context = holder.GetContext();
+    ASSERT_NE(context, nullptr);
+    ASSERT_EQ(context->GetOutputShape(0), nullptr);
+
+    ASSERT_EQ(inferShapeFunc(context), ge::GRAPH_FAILED);
+}
+
+// proto 注册面可经 OperatorFactory 构造（覆盖 celu_proto.h 的 REG_OP 注册链：
+// INPUT/OUTPUT/ATTR 定义与 creator 首次实例化）。
+TEST_F(CeluProtoTest, celu_proto_factory_create_test)
+{
+    ASSERT_TRUE(ge::OperatorFactory::IsExistOp("Celu"));
+    ge::Operator celuOp = ge::OperatorFactory::CreateOperator("celu_ut_factory", "Celu");
+    ASSERT_FALSE(celuOp.IsEmpty());
 }

@@ -24,6 +24,21 @@ using namespace AscendC;
 
 // 计算恒在 float32 中进行（fp16 输入先升 fp32），故 exp 溢出保护上界统一用 fp32 的 87.0。
 constexpr float EXP_UPPER_BOUND_F = 87.0f;
+// 负支除法 subnormal FTZ 防御：Divs 对 subnormal 操作数执行 FTZ（subnormal 被除数被
+// flush 为 ±0、subnormal 除数被 flush 为 0，双 subnormal 则 0/0 产生 NaN）。fp32 subnormal 域
+// [2^-149, 2^-126) 恰跨 23 个二进制位阶，乘 2^23 后必落 normal 域且尾数不变（2 的幂
+// 缩放精确）。alpha2 为标量，按其量级三分支选择 z = x / alpha2 的等价计算路径，
+// normal 域热路径零新增向量指令（倒数乘与直除同为单条向量指令）。
+constexpr float SUBNORMAL_UP_SCALE = 8388608.0f;               // 2^23
+constexpr float FP32_MIN_NORMAL = 1.1754943508222875e-38f;     // 2^-126
+constexpr float FP32_MAX_RECIP_NORMAL = 8.507059173023462e37f; // 2^126（倒数保持 normal 的上界）
+
+// z = x / alpha2 的计算模式（Init 内按 alpha2 量级一次性分类）。
+enum class NegDivMode : uint8_t {
+    NEG_DIV_RECIP,  // z = Muls(x, 1/alpha2)：Muls 不 flush subnormal 输入，subnormal x 得正确商
+    NEG_DIV_SCALED, // z = Divs(Muls(x, 2^23), alpha2*2^23)：双边归一，商值数学等价
+    NEG_DIV_DIRECT, // z = Divs(x, alpha2)：双方 normal 直除保持
+};
 
 template <typename T>
 class Celu {
@@ -55,6 +70,9 @@ private:
     float alpha1_ = 0.0f;
     float alpha2_ = 0.0f;
     float alpha3_ = 0.0f;
+    NegDivMode negDivMode_ = NegDivMode::NEG_DIV_DIRECT;
+    float invAlpha2_ = 0.0f;    // NEG_DIV_RECIP 模式的 normal 倒数
+    float alpha2Scaled_ = 0.0f; // NEG_DIV_SCALED 模式的归一除数
 };
 
 template <typename T>
@@ -79,6 +97,24 @@ __aicore__ inline void Celu<T>::Init(GM_ADDR x, GM_ADDR y, const CeluTilingData*
     alpha2_ = tilingData->alpha2;
     alpha3_ = tilingData->alpha3;
 
+    // 按 alpha2 量级分类负支除法路径（标量分支，块内无分歧）。
+    if (alpha2_ < FP32_MIN_NORMAL) {
+        // alpha2 subnormal：双边 ×2^23 归一 —— 被除数/除数均入 normal 域，商值数学等价
+        // （2 的幂缩放精确，仅除法一次舍入）；x 溢出至 ±inf 的 lane 真值 |z| 必深
+        // 度饱和，与 ±87 夹结论一致，无双 subnormal 0/0 NaN 路径。
+        negDivMode_ = NegDivMode::NEG_DIV_SCALED;
+        alpha2Scaled_ = alpha2_ * SUBNORMAL_UP_SCALE;
+    } else if (alpha2_ > FP32_MAX_RECIP_NORMAL) {
+        // 1/alpha2 将 subnormal（alpha2 > 2^126）：保持直除（双方 normal）；x subnormal 时
+        // 真值 z 深度 subnormal，输出落于 small_value 豁免域，直除 flush 误差在容差内。
+        negDivMode_ = NegDivMode::NEG_DIV_DIRECT;
+    } else {
+        // 倒数可 normal 表示：倒数乘 —— Muls 不 flush subnormal 输入（正支 subnormal 输出正确
+        // 反证），subnormal x × normal 倒数得正确商；两轮舍入误差 ≤ 2ulp。
+        negDivMode_ = NegDivMode::NEG_DIV_RECIP;
+        invAlpha2_ = 1.0f / alpha2_;
+    }
+
     inputGM.SetGlobalBuffer((__gm__ T*)x + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
     outputGM.SetGlobalBuffer((__gm__ T*)y + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
@@ -86,15 +122,16 @@ __aicore__ inline void Celu<T>::Init(GM_ADDR x, GM_ADDR y, const CeluTilingData*
     pipe.InitBuffer(inputQueue, 1, ubLength_ * sizeof(T));
     pipe.InitBuffer(outputQueue, 1, ubLength_ * sizeof(T));
 
-    // float 计算缓冲：xf / negResult / outF / zerosBuf 各 alignedCountF_ 个 float + mask。
+    // float 计算缓冲：xf / negResult / outF / zeros / zBuf 各 alignedCountF_ 个 float + mask。
     // Compare 要求 count 按 256B 对齐（float 下 64 元素/单元）；xf 兼作比较源需零填充尾区，
     // 故按 alignedCountF_ 分配并零填充，避免 fp16 小 shape 对齐读越界。
-    uint32_t elemPer256B = 256 / sizeof(float);  // = 64
+    uint32_t elemPer256B = 256 / sizeof(float); // = 64
     alignedCountF_ = ((static_cast<uint32_t>(ubLength_) * sizeof(float) + 255) / 256) * elemPer256B;
     int64_t maskAlignedSize = ((alignedCountF_ + 7) / 8 + 31) / 32 * 32;
     int64_t maskAreaInFloat = (maskAlignedSize + sizeof(float) - 1) / sizeof(float);
-    // calcBuf 布局(单位 float): [0,aC) xf | [aC,2aC) negResult | [2aC,3aC) outF | [3aC,4aC) zeros | mask
-    pipe.InitBuffer(calcBuf, (4 * alignedCountF_ + maskAreaInFloat) * sizeof(float));
+    // calcBuf 布局(单位 float): [0,aC) xf | [aC,2aC) negResult | [2aC,3aC) outF | [3aC,4aC) zeros
+    //                        | [4aC,5aC) zBuf | mask
+    pipe.InitBuffer(calcBuf, (5 * alignedCountF_ + maskAreaInFloat) * sizeof(float));
 }
 
 template <typename T>
@@ -134,7 +171,8 @@ __aicore__ inline void Celu<T>::Compute(int64_t currentNum)
     AscendC::LocalTensor<float> negResult = fullBuf[alignedCountF_];
     AscendC::LocalTensor<float> outF = fullBuf[2 * alignedCountF_];
     AscendC::LocalTensor<float> zerosBuf = fullBuf[3 * alignedCountF_];
-    AscendC::LocalTensor<uint8_t> maskBuf = fullBuf[4 * alignedCountF_].template ReinterpretCast<uint8_t>();
+    AscendC::LocalTensor<float> zBuf = fullBuf[4 * alignedCountF_];
+    AscendC::LocalTensor<uint8_t> maskBuf = fullBuf[5 * alignedCountF_].template ReinterpretCast<uint8_t>();
 
     uint32_t alignedCount = ((static_cast<uint32_t>(currentNum) * sizeof(float) + 255) / 256) * (256 / sizeof(float));
 
@@ -148,12 +186,38 @@ __aicore__ inline void Celu<T>::Compute(int64_t currentNum)
     }
     AscendC::PipeBarrier<PIPE_V>();
 
-    // 2) 负区: y = alpha1 * (exp(min(x/alpha2, 87)) - 1)，全程 fp32。
-    AscendC::Divs(negResult, xf, alpha2_, static_cast<uint32_t>(currentNum));
-    AscendC::Mins(negResult, negResult, EXP_UPPER_BOUND_F, static_cast<uint32_t>(currentNum));
+    // 2) 负区: y = alpha1 * expm1(z)，z = x / alpha2，全程 fp32，expm1 按 Kahan 补偿：
+    //    u = exp(z); s = u - 1（Sterbenz 精确）；w = ln(u)；expm1(z) = z * s / w。
+    //    z 近零时 exp 的舍入误差在 s 与 w 中同源出现，比值一阶抵消，避免
+    //    exp(z)-1 直接相减在近零区的灾难性抵消（exp 舍入至 1 附近后有效位丢失）。
+    //    s == 0（u 舍入到 1.0，|z| < ~3e-8）时 0/0 非数，Select 兜底取精确值 expm1(z)≈z；
+    //    z 对称夹到 [-87, 87]：上界防 exp 溢出，下界防 z = -inf 时 ln(0) = -inf 经
+    //    z*s/w 产生 NaN（z <= -87 时 expm1 饱和到 -1，夹取误差 e^-87 舍入后为 0，数值无损）。
+    AscendC::Duplicate(zerosBuf, 0.0f, alignedCount);
+    // z = x / alpha2 按 alpha2 量级三分支（Divs 对 subnormal 操作数 FTZ 的等价
+    // 变换，见 Init 内分类说明）。
+    if (negDivMode_ == NegDivMode::NEG_DIV_RECIP) {
+        AscendC::Muls(zBuf, xf, invAlpha2_, static_cast<uint32_t>(currentNum));
+    } else if (negDivMode_ == NegDivMode::NEG_DIV_SCALED) {
+        AscendC::Muls(zBuf, xf, SUBNORMAL_UP_SCALE, static_cast<uint32_t>(currentNum));
+        AscendC::Divs(zBuf, zBuf, alpha2Scaled_, static_cast<uint32_t>(currentNum));
+    } else {
+        AscendC::Divs(zBuf, xf, alpha2_, static_cast<uint32_t>(currentNum));
+    }
+    AscendC::Mins(zBuf, zBuf, EXP_UPPER_BOUND_F, static_cast<uint32_t>(currentNum));
+    AscendC::Maxs(zBuf, zBuf, -EXP_UPPER_BOUND_F, static_cast<uint32_t>(currentNum));
     AscendC::PipeBarrier<PIPE_V>();
-    AscendC::Exp(negResult, negResult, static_cast<uint32_t>(currentNum));
-    AscendC::Adds(negResult, negResult, -1.0f, static_cast<uint32_t>(currentNum));
+    AscendC::Exp(outF, zBuf, static_cast<uint32_t>(currentNum));         // u = exp(z)（outF 暂作 scratch）
+    AscendC::Ln(negResult, outF, static_cast<uint32_t>(currentNum));     // w = ln(u)
+    AscendC::Adds(outF, outF, -1.0f, static_cast<uint32_t>(currentNum)); // s = u - 1
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Compare(maskBuf, outF, zerosBuf, AscendC::CMPMODE::EQ, alignedCount); // s == 0 位
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Div(outF, outF, negResult, static_cast<uint32_t>(currentNum)); // s / w
+    AscendC::Mul(negResult, zBuf, outF, static_cast<uint32_t>(currentNum)); // r = z * (s / w)
+    AscendC::PipeBarrier<PIPE_V>();
+    AscendC::Select(negResult, maskBuf, zBuf, negResult, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                    static_cast<uint32_t>(currentNum)); // s == 0 → expm1(z) ≈ z
     AscendC::Muls(negResult, negResult, alpha1_, static_cast<uint32_t>(currentNum));
     AscendC::PipeBarrier<PIPE_V>();
 
@@ -161,13 +225,11 @@ __aicore__ inline void Celu<T>::Compute(int64_t currentNum)
     AscendC::Muls(outF, xf, alpha3_, static_cast<uint32_t>(currentNum));
     AscendC::PipeBarrier<PIPE_V>();
 
-    // 4) mask = (x >= 0)，按 fp32 对齐；xf 尾区已零填充可直接作比较源。
-    AscendC::Duplicate(zerosBuf, 0.0f, alignedCount);
-    AscendC::PipeBarrier<PIPE_V>();
+    // 4) mask = (x >= 0)，按 fp32 对齐；xf 尾区已零填充可直接作比较源（mask 复用 s==0 位空间）。
     AscendC::Compare(maskBuf, xf, zerosBuf, AscendC::CMPMODE::GE, alignedCount);
     AscendC::PipeBarrier<PIPE_V>();
-    AscendC::Select(outF, maskBuf, outF, negResult,
-        AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, static_cast<uint32_t>(currentNum));
+    AscendC::Select(outF, maskBuf, outF, negResult, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                    static_cast<uint32_t>(currentNum));
     AscendC::PipeBarrier<PIPE_V>();
 
     // 5) 写回：fp16 Cast 降回 half（CAST_ROUND）；fp32 Adds 0 拷贝。

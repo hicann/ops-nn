@@ -122,8 +122,11 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
     if (fp == nullptr) {
         return FAILED;
     }
-    fwrite(inputData, sizeof(uint8_t), data_size, fp);
+    size_t written = fwrite(inputData, sizeof(uint8_t), data_size, fp);
     fclose(fp);
+    if (written != data_size) {
+        return FAILED;
+    }
     return SUCCESS;
 }
 
@@ -190,11 +193,19 @@ int main(int argc, char* argv[])
     std::map<AscendString, AscendString> graph_options = {};
     uint32_t graph_id = 0;
     ret = session->AddGraph(graph_id, graph, graph_options);
-
+    if (ret != SUCCESS) {
+        printf("%s - ERROR - [XIR]: Session add ir compute graph to ir session failed\n", GetTime().c_str());
+        delete session;
+        GEFinalize();
+        return FAILED;
+    }
     printf("%s - INFO - [XIR]: Session add ir compute graph to ir session success\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: dump graph to txt\n", GetTime().c_str());
     std::string file_path = "./dump";
-    aclgrphDumpGraph(graph, file_path.c_str(), file_path.length());
+    ret = aclgrphDumpGraph(graph, file_path.c_str(), file_path.length());
+    if (ret != SUCCESS) {
+        printf("%s - WARNING - [XIR]: Dump graph to txt failed, ret = %d\n", GetTime().c_str(), ret);
+    }
     printf("%s - INFO - [XIR]: Start to run ir compute graph\n", GetTime().c_str());
     std::vector<ge::Tensor> output;
     ret = session->RunGraph(graph_id, input, output);
@@ -214,7 +225,12 @@ int main(int argc, char* argv[])
         int64_t input_shape = input[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th input, input shape size =" << input_shape << std::endl;
         uint32_t data_size = input_shape * GetDataTypeSize(input[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)input_file.c_str(), data_size, input_data_i);
+        if (WriteDataToFile(input_file, data_size, input_data_i) != SUCCESS) {
+            printf("%s - ERROR - [XIR]: Write input %d data to file failed\n", GetTime().c_str(), i);
+            delete session;
+            GEFinalize();
+            return FAILED;
+        }
     }
 
     int output_num = output.size();
@@ -225,7 +241,12 @@ int main(int argc, char* argv[])
         int64_t output_shape = output[i].GetTensorDesc().GetShape().GetShapeSize();
         std::cout << "this is " << i << "th output, output shape size =" << output_shape << std::endl;
         uint32_t data_size = output_shape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
-        WriteDataToFile((const char*)output_file.c_str(), data_size, output_data_i);
+        if (WriteDataToFile(output_file, data_size, output_data_i) != SUCCESS) {
+            printf("%s - ERROR - [XIR]: Write output %d data to file failed\n", GetTime().c_str(), i);
+            delete session;
+            GEFinalize();
+            return FAILED;
+        }
         float* resultData = (float*)output_data_i;
         for (int64_t j = 0; j < output_shape; j++) {
             LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);

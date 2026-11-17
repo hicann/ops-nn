@@ -51,28 +51,28 @@ English | [简体中文](./README.md)
   <tr>
     <td>x</td>
     <td>Input</td>
-    <td>Input x in the formula, an ND tensor. For the rank restrictions, see Constraints.</td>
+    <td>Input x in the formula, an ND tensor. Supports 0-element empty tensors.</td>
     <td>FLOAT16, FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>alpha1</td>
     <td>Attribute</td>
-    <td><ul><li>Scale coefficient of the exponential curve in the negative region, corresponding to alpha1 in the formula.</li><li>The default value is 1.0.</li></ul></td>
+    <td><ul><li>Scale coefficient of the exponential curve in the negative region, corresponding to alpha1 in the formula.</li><li>The value range is any FLOAT value.</li><li>The default value is 1.0.</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>alpha2</td>
     <td>Attribute</td>
-    <td><ul><li>Slope coefficient of the exponential curve in the negative region, corresponding to alpha2 in the formula, and it must be greater than 0.</li><li>The default value is 1.0.</li></ul></td>
+    <td><ul><li>Slope coefficient of the exponential curve in the negative region, corresponding to alpha2 in the formula. For value restrictions, see Constraints.</li><li>The default value is 1.0.</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>alpha3</td>
     <td>Attribute</td>
-    <td><ul><li>Linear scaling coefficient in the positive region, corresponding to alpha3 in the formula.</li><li>The default value is 1.0.</li></ul></td>
+    <td><ul><li>Linear scaling coefficient in the positive region, corresponding to alpha3 in the formula.</li><li>The value range is any FLOAT value.</li><li>The default value is 1.0.</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
@@ -88,9 +88,7 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The supported data types of the input tensor are FLOAT16 and FLOAT, and the output has the same data type as the input.
-- The format of the input tensor must be ND.
-- The alpha2 attribute must be greater than 0; otherwise, division by zero or numerical instability may occur.
-- The input supports 0-element empty tensors. On Ascend 950 (Arch35), the input rank must not exceed 8; when the rank is greater than 8, host tiling validation fails.
+- The alpha2 attribute must be greater than 0; validation fails when alpha2 is 0, negative, or NaN.
 
 ## Invocation Description
 

@@ -24,15 +24,26 @@ using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
 using Ops::Base::FloorDiv;
 using Ops::Base::GetUbBlockSize;
+using Ops::Base::ToString;
+
+// 合法输入下 Tiling 失败的正式首报（EZ1008，Arglist=opName/reason）。
+static ge::graphStatus ReportTilingFailure(const char* opName, const std::string& reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {opName, reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "%s", reason.c_str());
+    return ge::GRAPH_FAILED;
+}
 
 constexpr size_t WS_SYS_SIZE = 0U;
 // 内核实际 UB 每元素占用（字节）：
 //   - inputQueue + outputQueue：各 1 份，按输入 dtype（typeSize）
-//   - 计算缓冲 xf/negResult/outF/zerosBuf：各 1 份，恒为 fp32（sizeof(float)）
+//   - 计算缓冲 xf/negResult/outF/zerosBuf/zBuf：各 1 份，恒为 fp32（sizeof(float)）
 //   - 比较 mask + calcBuf 的 256B 对齐余量：保守预留 1 份 fp32
 // 计算缓冲恒为 fp32，故不能用 BUFFER_NUM*typeSize 估算（fp16 会低估 1 倍导致 UB 溢出→VEC_ERROR）。
 constexpr int64_t IO_BUFFER_NUM = 2;        // inputQueue + outputQueue（输入 dtype）
-constexpr int64_t CALC_FP32_BUFFER_NUM = 4; // xf / negResult / outF / zerosBuf（fp32）
+constexpr int64_t CALC_FP32_BUFFER_NUM = 5; // xf / negResult / outF / zerosBuf / zBuf（fp32）
 constexpr int64_t CALC_FP32_RESERVE = 1;    // mask + 对齐余量（fp32 单位，保守）
 
 static const gert::Shape g_vec_1_shape = {1};
@@ -62,24 +73,34 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
-    OP_CHECK_IF(inputShapeX.GetDimNum() > 8,
-                OP_LOGE(context, "Celu: input dimensions %zu exceeds platform limit 8", inputShapeX.GetDimNum()),
-                return ge::GRAPH_FAILED);
     auto outY = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outY);
     auto outShapeY = EnsureNotScalar(outY->GetStorageShape());
 
+    // shape 失配上报正式首报码 EZ0010（多参数关系族）。
     OP_CHECK_IF(inputShapeX.GetShapeSize() != outShapeY.GetShapeSize(),
-                OP_LOGE(context, "Celu: input and output shape size mismatch"), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x and y",
+                                                       (ToString(inputShapeX) + " and " + ToString(outShapeY)).c_str(),
+                                                       "input and output shape size mismatch"),
+                return ge::GRAPH_FAILED);
 
     totalNum = inputShapeX.GetShapeSize();
+    // GetShapeSize() 在维度乘积溢出 int64 时返回负的溢出哨兵（kInvalidDimValue=INT64_MIN）。
+    // 负值会绕过下方 totalNum==0 的空 Tensor 短路并进入切分算术，经 CeilDiv
+    // 分块后由 SetBlockDim 截断回绕（int64→uint32）或全核空转，必须在此显式拒绝。
+    // totalNum 拒绝上报正式首报码 EZ0015（参数错误族）。
+    OP_CHECK_IF(totalNum < 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "x", std::to_string(totalNum).c_str(),
+                                                          "negative dim or shape size overflow"),
+                return ge::GRAPH_FAILED);
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT};
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
     if (supportedDtype.count(dataType) == 0) {
-        OP_LOGE(context, "unsupported dtype: %d", static_cast<int>(dataType));
+        // dtype 拒绝上报正式首报码 EZ0019（参数错误族）。
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ToString(dataType).c_str(), "float16 or float32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -102,7 +123,10 @@ static ge::graphStatus GetScalarParams(gert::TilingContext* context, float& alph
     alpha2 = *pA2;
     alpha3 = *pA3;
 
-    OP_CHECK_IF(!(alpha2 > 0.0f), OP_LOGE(context, "Celu: alpha2 must be positive and not NaN, got %f", alpha2),
+    // alpha2 拒绝上报正式首报码 EZ0026（attr 值域族）。
+    OP_CHECK_IF(!(alpha2 > 0.0f),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "alpha2", std::to_string(alpha2).c_str(),
+                                                      "alpha2 must be positive and not NaN"),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -166,10 +190,11 @@ static ge::graphStatus CeluTilingFunc(gert::TilingContext* context)
                            (CALC_FP32_BUFFER_NUM + CALC_FP32_RESERVE) * static_cast<int64_t>(sizeof(float));
     tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize), bytesPerElem), ubBlockSize);
     if (tiling->ubFactor <= 0) {
-        OP_LOGE(context, "Celu: invalid ubFactor=%lld, ubSize=%u, typeSize=%lld, ubBlockSize=%lld",
-                static_cast<long long>(tiling->ubFactor), ubSize, static_cast<long long>(typeSize),
-                static_cast<long long>(ubBlockSize));
-        return ge::GRAPH_FAILED;
+        // 合法输入下 Tiling 失败上报正式首报码 EZ1008（Execution_Error 族）。
+        return ReportTilingFailure(context->GetNodeName(), "invalid ubFactor=" + std::to_string(tiling->ubFactor) +
+                                                               ", ubSize=" + std::to_string(ubSize) +
+                                                               ", typeSize=" + std::to_string(typeSize) +
+                                                               ", ubBlockSize=" + std::to_string(ubBlockSize));
     }
 
     tiling->alpha1 = alpha1;
