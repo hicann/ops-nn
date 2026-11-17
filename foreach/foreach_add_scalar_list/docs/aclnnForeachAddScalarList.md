@@ -98,8 +98,8 @@ aclnnStatus aclnnForeachAddScalarList(
       <td>scalars（aclScalarList*）</td>
       <td>输入</td>
       <td>表示加法运算的输入标量。对应公式中的`scalars`。</td>
-      <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型存在一定的对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型仅支持FLOAT32。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></li></ul></td>
-      <td>FLOAT32、INT64</td>
+      <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型存在一定的对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型支持FLOAT32（aclnn接口额外支持DOUBLE，内部转换为FLOAT32后参与计算）。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></li></ul></td>
+      <td>FLOAT32、DOUBLE、INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnForeachAddScalarList(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -162,12 +162,17 @@ aclnnStatus aclnnForeachAddScalarList(
       <td>传入的x、scalars、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>x、scalars、out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>out的Tensor个数小于入参`x`的Tensor个数。</td>
+    </tr>    <tr>
+      <td>scalars的元素个数与`x`中Tensor的个数不一致。</td>
     </tr>
     <tr>
       <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
@@ -243,6 +248,7 @@ aclnnStatus aclnnForeachAddScalarList(
 
 ## 约束说明
 
+- `out`的Tensor个数大于等于入参`x`的Tensor个数，多出的Tensor不会被写入计算结果。
 - 确定性计算：
   - aclnnForeachAddScalarList默认确定性实现。
 - 不同产品中out与x的tensorList长度约束关系如下:

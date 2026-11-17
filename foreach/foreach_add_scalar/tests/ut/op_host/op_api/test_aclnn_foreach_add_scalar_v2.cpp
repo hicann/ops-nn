@@ -223,3 +223,18 @@ TEST_F(l2_foreach_add_scalar_v2_test, ascend910B2_foreach_add_scalar_v2_test_lis
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
+
+// out 列表比 x 长：out 的 Tensor 个数允许大于等于 x，多出的 out 块不写入
+TEST_F(l2_foreach_add_scalar_v2_test, ascend910B2_foreach_add_scalar_v2_test_list_length_out_longer)
+{
+    auto scalar_desc = ScalarDesc(1.0);
+    auto x = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out, out});
+
+    auto ut = OP_API_UT(aclnnForeachAddScalarV2, INPUT(xList, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
