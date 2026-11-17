@@ -1203,11 +1203,6 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensorList* hc, con
     bool hasSeqlength = batchSizes != nullptr;
     size_t inputDimsNum = hasSeqlength ? DIM_TWO : DIM_THREE;
     OP_CHECK_WRONG_DIMENSION(input, inputDimsNum, return false);
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
-        input->GetViewShape().GetDim(batchFirst ? DIM_ONE : SEQUENCE_DIM) <= 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "time_step must be positive on ascend950.");
-        return false;
-    }
     if ((*i)[0]->GetViewShape().GetDimNum() != DIM_THREE) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "i[0] must have rank 3.");
         return false;
@@ -1224,6 +1219,10 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensorList* hc, con
     int64_t timeStep = hasSeqlength ? batchSizes->GetViewShape()[SEQUENCE_DIM] :
                        batchFirst   ? inputShape[BATCH_DIM] :
                                       inputShape[SEQUENCE_DIM];
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 && timeStep <= 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "time_step must be positive on ascend950.");
+        return false;
+    }
     int64_t bid = bidirectional ? BI_DIRECTION : SINGLE_DIRECTION;
 
     const std::vector<int64_t> biasDim = {GATE_COUNT * hiddenSize};
@@ -1263,6 +1262,10 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* hc, 
     // 2. 列表长度是取值约束，不能作为空指针错误返回。
     if (hc->Size() != HC_TENSOR_COUNT) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "hx list length should be %d, actual %lu.", HC_TENSOR_COUNT, hc->Size());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (numLayers <= 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "numLayers should be positive, actual %ld.", numLayers);
         return ACLNN_ERR_PARAM_INVALID;
     }
     const uint64_t gateLength = bidirectional ? numLayers * BI_DIRECTION : numLayers;
@@ -1723,11 +1726,14 @@ aclnnStatus PrepareLSTMBackwardNoneInputs(const aclTensor* input, const aclTenso
     if (dy == nullptr) {
         auto dyShape = input->GetViewShape();
         auto dyType = input->GetDataType();
-        dyShape[HIDDEN_DIM_INDEX] = bidirectional ? dhShape[HIDDEN_DIM_INDEX] * BI_DIRECTION :
-                                                    dhShape[HIDDEN_DIM_INDEX];
+        const size_t dyFeatureDim = dyShape.GetDimNum() - 1;
+        dyShape[dyFeatureDim] = bidirectional ? dhShape[HIDDEN_DIM_INDEX] * BI_DIRECTION : dhShape[HIDDEN_DIM_INDEX];
         const aclTensor* dyAlloc = executor->AllocTensor(dyShape, dyType, Format::FORMAT_ND);
         CHECK_RET(dyAlloc != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-        FVector<int64_t> dyReshapeVec{dyShape[0], dyShape[1], dyShape[2]};
+        FVector<int64_t> dyReshapeVec;
+        for (size_t idx = 0; idx <= dyFeatureDim; ++idx) {
+            dyReshapeVec.emplace_back(dyShape[idx]);
+        }
         dyOut = ResetAndReshapeTensor(dyAlloc, dyReshapeVec, executor);
         CHECK_RET(dyOut != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     }
@@ -1756,39 +1762,18 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
-        if (batchSizesOptional != nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizesOptional must be null on ascend950.");
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-        if (bidirectional) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bidirectional must be false on ascend950.");
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-        if (numLayers <= 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "numLayers must be positive.");
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-        if (!IsDropoutZero(dropout)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dropout must be zero on ascend950.");
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-        if (!train) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "train must be true on ascend950.");
-            return ACLNN_ERR_PARAM_INVALID;
-        }
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 && train && numLayers > 1 &&
+        !IsDropoutZero(dropout)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "dropout must be zero on ascend950 when train is true and numLayers is greater than 1.");
+        return ACLNN_ERR_PARAM_INVALID;
     }
     auto ret = CheckParams(input, hx, params, dy, dh, dc, i, g, f, o, h, c, tanhc, dxOut, dhPrevOut, dcPrevOut,
                            dparamsOut, hasBias, numLayers, bidirectional, batchFirst, batchSizesOptional);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) {
-        // Do not fall through to legacy packed/dropout/empty success paths:
-        // those do not implement this candidate's forward/backward contract.
-        const int64_t hiddenSize = (*hx)[0]->GetViewShape().GetDim(2);
-        OP_CHECK(input->GetViewShape().GetDim(2) >= 0 && hiddenSize >= 0,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "ascend950 LSTM backward requires nonnegative input_size and hidden_size."),
-                 return ACLNN_ERR_PARAM_INVALID);
+        const auto stateShape = (*hx)[0]->GetViewShape();
+        const int64_t hiddenSize = stateShape.GetDim(HIDDEN_DIM);
         if (hiddenSize == 0) {
             // With no hidden features every H-dependent gradient is empty. The
             // only non-empty public result can be dx, and dy/dh/dc contribute
@@ -1798,7 +1783,7 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
             uniqueExecutor.ReleaseTo(executor);
             return ACLNN_SUCCESS;
         }
-        if (input->GetViewShape().GetDim(batchFirst ? 0 : 1) == 0) {
+        if (stateShape.GetDim(BATCH_DIM) == 0) {
             // State/input gradients are empty, but parameter gradients are not.
             for (uint64_t index = 0; index < dparamsOut->Size(); ++index) {
                 CHECK_RET(FillPublicOutputWithZero((*dparamsOut)[index], uniqueExecutor.get()) == ACLNN_SUCCESS,
@@ -1815,8 +1800,9 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
     ret = PrepareLSTMBackwardNoneInputs(input, hx, dh, dc, dy, bidirectional, uniqueExecutor.get(), dhInput, dcInput,
                                         dyInput);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    const auto inputViewShape = input->GetViewShape();
     const bool recurrentOnly = GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
-                               input->GetViewShape().GetDim(2) == 0;
+                               inputViewShape.GetDim(inputViewShape.GetDimNum() - 1) == 0;
     if (!recurrentOnly && !EmptyCheck(input, hx, params, dyInput, dhInput, dcInput, i, g, f, o, h, c, tanhc)) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);

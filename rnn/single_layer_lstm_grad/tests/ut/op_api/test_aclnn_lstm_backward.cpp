@@ -121,6 +121,180 @@ TEST_P(LstmBackward950ZeroHidden, returns_zero_dx_without_grad_kernel)
 INSTANTIATE_TEST_SUITE_P(PublicContract, LstmBackward950ZeroHidden,
                          testing::Combine(testing::Values(ACL_FLOAT, ACL_FLOAT16, ACL_BF16), testing::Bool()));
 
+namespace {
+constexpr int64_t GATE_COUNT_UT = 4;
+
+// One valid non-packed planning call. Each case below perturbs a single field.
+struct Plan950 {
+    int64_t timeStep = 3;
+    int64_t batch = 2;
+    int64_t inputSize = 8;
+    int64_t hiddenSize = 8;
+    int64_t numLayers = 1;
+    bool bidirectional = false;
+    bool batchFirst = false;
+    bool train = true;
+    double dropout = 0.0;
+};
+
+// TensorListDesc asserts on an empty list, so a nonpositive numLayers still describes one
+// layer: the attribute under test is numLayers, not the list it would imply.
+int64_t DescribedLayers(const Plan950& p) { return p.numLayers > 0 ? p.numLayers : 1; }
+
+vector<TensorDesc> ParamDescs(const Plan950& p, int64_t dir)
+{
+    const int64_t gates = GATE_COUNT_UT * p.hiddenSize;
+    auto bias = TensorDesc({gates}, ACL_FLOAT, ACL_FORMAT_ND);
+    vector<TensorDesc> descs;
+    for (int64_t layer = 0; layer < DescribedLayers(p); ++layer) {
+        const int64_t fanIn = layer == 0 ? p.inputSize : p.hiddenSize * dir;
+        for (int64_t slot = 0; slot < dir; ++slot) {
+            descs.emplace_back(TensorDesc({gates, fanIn}, ACL_FLOAT, ACL_FORMAT_ND));
+            descs.emplace_back(TensorDesc({gates, p.hiddenSize}, ACL_FLOAT, ACL_FORMAT_ND));
+            descs.emplace_back(bias);
+            descs.emplace_back(bias);
+        }
+    }
+    return descs;
+}
+
+aclnnStatus RunPlan950(const Plan950& p, size_t& gradCalls)
+{
+    const int64_t dir = p.bidirectional ? 2 : 1;
+    const int64_t outSize = p.hiddenSize * dir;
+    const vector<int64_t> xShape = p.batchFirst ? vector<int64_t>{p.batch, p.timeStep, p.inputSize} :
+                                                  vector<int64_t>{p.timeStep, p.batch, p.inputSize};
+    const vector<int64_t> yShape = p.batchFirst ? vector<int64_t>{p.batch, p.timeStep, outSize} :
+                                                  vector<int64_t>{p.timeStep, p.batch, outSize};
+    auto x = TensorDesc(xShape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto state = TensorDesc({DescribedLayers(p) * dir, p.batch, p.hiddenSize}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto hx = TensorListDesc({state, state});
+    auto params = TensorListDesc(ParamDescs(p, dir));
+    auto dy = TensorDesc(yShape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto gate = TensorDesc({p.timeStep, p.batch, p.hiddenSize}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto gates = TensorListDesc(static_cast<int>(DescribedLayers(p) * dir), gate);
+    auto mask = BoolArrayDesc({true, true, true, true});
+    auto ut = OP_API_UT(LstmBackwardPlan,
+                        INPUT(x, hx, params, dy, state, state, gates, gates, gates, gates, gates, gates, gates, nullptr,
+                              true, p.numLayers, p.dropout, p.train, p.bidirectional, p.batchFirst, mask),
+                        OUTPUT(x, state, state, params));
+    uint64_t workspaceSize = 0;
+    lstm_test::GradPlanSpy spy;
+    const aclnnStatus ret = ut.TestGetWorkspaceSize(&workspaceSize);
+    gradCalls = spy.calls;
+    return ret;
+}
+} // namespace
+
+// numLayers 校验与 SoC 无关: 它必须在按 numLayers 推导列表长度之前拒绝。
+TEST(LstmBackwardValidation, rejects_nonpositive_num_layers)
+{
+    Plan950 plan;
+    plan.numLayers = 0;
+    size_t gradCalls = 1;
+    EXPECT_EQ(RunPlan950(plan, gradCalls), ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(gradCalls, 0U);
+}
+
+TEST(LstmBackward950Gates, rejects_nonpositive_num_layers)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    Plan950 plan;
+    plan.numLayers = 0;
+    size_t gradCalls = 1;
+    EXPECT_EQ(RunPlan950(plan, gradCalls), ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(gradCalls, 0U);
+}
+
+// dropout 只在它真正生效时被拒: train && numLayers > 1。
+TEST(LstmBackward950Gates, rejects_effective_dropout)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    Plan950 plan;
+    plan.numLayers = 2;
+    plan.dropout = 0.5;
+    size_t gradCalls = 1;
+    EXPECT_EQ(RunPlan950(plan, gradCalls), ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(gradCalls, 0U);
+}
+
+TEST(LstmBackward950Gates, accepts_dropout_when_not_training)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    Plan950 plan;
+    plan.numLayers = 2;
+    plan.dropout = 0.5;
+    plan.train = false;
+    size_t gradCalls = 0;
+    EXPECT_EQ(RunPlan950(plan, gradCalls), ACL_SUCCESS);
+    EXPECT_GT(gradCalls, 0U);
+}
+
+TEST(LstmBackward950Gates, accepts_dropout_for_single_layer)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    Plan950 plan;
+    plan.dropout = 0.5;
+    size_t gradCalls = 0;
+    EXPECT_EQ(RunPlan950(plan, gradCalls), ACL_SUCCESS);
+    EXPECT_EQ(gradCalls, 1U);
+}
+
+TEST(LstmBackward950Gates, accepts_bidirectional)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    Plan950 plan;
+    plan.bidirectional = true;
+    size_t gradCalls = 0;
+    EXPECT_EQ(RunPlan950(plan, gradCalls), ACL_SUCCESS);
+    EXPECT_GT(gradCalls, 0U);
+}
+
+TEST(LstmBackward950Gates, rejects_nonpositive_time_step)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    Plan950 plan;
+    plan.timeStep = 0;
+    size_t gradCalls = 1;
+    EXPECT_EQ(RunPlan950(plan, gradCalls), ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(gradCalls, 0U);
+}
+
+// batch == 0: 状态与输入梯度为空, 但参数梯度不是, 必须写零而不是提前返回。
+TEST(LstmBackward950Gates, fills_zero_parameter_grads_for_empty_batch)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    Plan950 plan;
+    plan.batch = 0;
+    size_t gradCalls = 1;
+    EXPECT_EQ(RunPlan950(plan, gradCalls), ACL_SUCCESS);
+    EXPECT_EQ(gradCalls, 0U);
+}
+
+// dy == nullptr 时按 input 的秩取特征维, 不写死三维。
+TEST(LstmBackward950Gates, builds_default_dy_from_input_rank)
+{
+    SocVersionManager soc(SocVersion::ASCEND950);
+    constexpr int64_t timeStep = 3;
+    constexpr int64_t batch = 2;
+    constexpr int64_t size = 8;
+    auto x = TensorDesc({timeStep, batch, size}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto state = TensorDesc({1, batch, size}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto hx = TensorListDesc({state, state});
+    auto params = TensorListDesc(ParamDescs(Plan950{}, 1));
+    auto gate = TensorDesc({timeStep, batch, size}, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto gates = TensorListDesc({gate});
+    auto mask = BoolArrayDesc({true, true, true, true});
+    auto ut = OP_API_UT(LstmBackwardPlan,
+                        INPUT(x, hx, params, nullptr, state, state, gates, gates, gates, gates, gates, gates, gates,
+                              nullptr, true, 1, 0.0, true, false, false, mask),
+                        OUTPUT(x, state, state, params));
+    uint64_t workspaceSize = 0;
+    lstm_test::GradPlanSpy spy;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
+    EXPECT_EQ(spy.calls, 1U);
+}
+
 // 正常input场景
 TEST_F(l2_lstm_backward_test, ascend910B2_normal_float)
 {

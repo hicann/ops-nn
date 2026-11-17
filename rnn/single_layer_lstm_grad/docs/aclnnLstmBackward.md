@@ -485,7 +485,7 @@ aclnnStatus aclnnLstmBackward(
       <td>dropout</td>
       <td>输入</td>
       <td>表示随机掩码的概率。</td>
-      <td>950系列必须为0.0，不支持dropout反向。</td>
+      <td>950系列在train=True且numLayers&gt;1时必须为0.0，不支持dropout反向；其余情形该参数不参与计算。</td>
       <td>DOUBLE</td>
       <td>-</td>
       <td>-</td>
@@ -495,7 +495,7 @@ aclnnStatus aclnnLstmBackward(
       <td>train</td>
       <td>输入</td>
       <td>表示是否是训练场景。</td>
-      <td>950系列必须为True；保存状态须来自对应train=True正向。</td>
+      <td>保存状态须来自对应正向调用。</td>
       <td>BOOL</td>
       <td>-</td>
       <td>-</td>
@@ -505,7 +505,7 @@ aclnnStatus aclnnLstmBackward(
       <td>bidirectional</td>
       <td>输入</td>
       <td>表示是否是双向。</td>
-      <td>950系列仅支持False。</td>
+      <td>-</td>
       <td>BOOL</td>
       <td>-</td>
       <td>-</td>
@@ -630,7 +630,7 @@ aclnnStatus aclnnLstmBackward(
       <td>numLayers不满足>0。</td>
     </tr>
     <tr>
-      <td>950系列上batchSizesOptional非空、bidirectional=True、dropout非0、train=False或time_step非正。</td>
+      <td>950系列上train=True且numLayers&gt;1时dropout非0，或time_step非正。</td>
     </tr>
   </tbody>
   </table>
@@ -689,11 +689,11 @@ aclnnStatus aclnnLstmBackward(
 
 <!-- npu="950" id7 -->
 - <term>Ascend 950PR&950DT系列产品</term>：
-  - batchSizesOptional=nullptr时使用非packed输入。支持多层、可选bias和两种batchFirst布局；要求train=True、bidirectional=False、dropout=0、batchSizesOptional=nullptr。
+  - batchSizesOptional=nullptr时使用非packed输入。支持多层、双向、可选bias和两种batchFirst布局。
   - time_step必须大于0；input_size、hidden_size和batch_size允许为0。input_size=0时仍计算循环状态、bias和循环权重梯度。
   - hidden_size=0时状态和参数梯度为空，非空dxOut写零，不启动SingleLayerLstmGrad。batch_size=0时输入/状态梯度为空，但非空参数梯度写零。
   - 七类保存状态须来自对应正向调用，dtype与input一致。梯度输出使用相同dtype。
-  - 支持FLOAT32、FLOAT16、BFLOAT16；batchSizesOptional非空时会返回ACLNN_ERR_PARAM_INVALID。
+  - 支持FLOAT32、FLOAT16、BFLOAT16。batchSizesOptional非空时使用packed输入，当前仅FLOAT32可用；FLOAT16、BFLOAT16与packed的组合不支持。
 <!-- end id7 -->
 
 <!-- npu="A3,910b" id8 -->
