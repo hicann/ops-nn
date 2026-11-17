@@ -16,7 +16,10 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
+using namespace op;
 using namespace std;
 
 class l2_flat_quant_v3_test : public testing::Test {
@@ -65,6 +68,174 @@ TEST_F(l2_flat_quant_v3_test, ascend910B2_success)
                ACL_INT4, ACL_FLOAT, 1.0, 0.0, -1, ACLNN_SUCCESS);
     CommonTest({16, 64, 64}, {64, 64}, {64, 64}, {1}, {16, 64, 8}, {16}, ACL_BF16, ACL_BF16, ACL_BF16, ACL_INT64,
                ACL_INT32, ACL_FLOAT, 1.0, 0.0, -1, ACLNN_SUCCESS);
+}
+
+// ==================== ascend960dt/960pr (DAV_9201/DAV_9202, v121) 平台用例 ====================
+// MXFP4与HIF4输出仅在REGBASE架构支持; HIF4仅v121(9201/9202)支持; group_list在david系列必须为空。
+
+TEST_F(l2_flat_quant_v3_test, ascend960dt_mxfp4_fp16_success)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
+    auto x = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960dt_mxfp4_bf16_empty_p2_success)
+{
+    // MXFP4允许kroneckerP2为空shape [0,0], 仅做左矩阵乘法
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
+    auto x = TensorDesc({16, 64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({0, 0}, ACL_BF16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960dt_hif4_fp16_success)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
+    auto x = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_HIFLOAT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 1}, ACL_HIFLOAT4_SCALE, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960pr_hif4_bf16_success)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_9202);
+    auto x = TensorDesc({16, 64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_HIFLOAT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 1}, ACL_HIFLOAT4_SCALE, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960pr_int4_bf16_success)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_9202);
+    auto x = TensorDesc({16, 64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 64, 64}, ACL_INT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend910b_hif4_rejected)
+{
+    // HIF4仅v121(9201/9202)支持, DAV_2201上校验失败
+    op::NpuArchManager archManager(Ops::Base::DAV_2201);
+    auto x = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_HIFLOAT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 1}, ACL_HIFLOAT4_SCALE, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend950_hif4_rejected)
+{
+    // HIF4仅v121(9201/9202)支持, DAV_3510上校验失败
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    auto x = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_HIFLOAT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 1}, ACL_HIFLOAT4_SCALE, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960dt_hif4_scale_dtype_mismatch_fail)
+{
+    // HIF4输出要求quantScale为HIFLOAT4_SCALE, 传入E8M0校验失败
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
+    auto x = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_HIFLOAT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 1}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960dt_hif4_scale_lastdim_mismatch_fail)
+{
+    // HIF4的quantScale最后一维必须为1, 传入mxfp4的2校验失败
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
+    auto x = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_HIFLOAT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 2}, ACL_HIFLOAT4_SCALE, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960dt_mxfp4_scale_dtype_mismatch_fail)
+{
+    // MXFP4输出要求quantScale为FLOAT8_E8M0, 传入HIFLOAT4_SCALE校验失败
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
+    auto x = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 4096}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 2}, ACL_HIFLOAT4_SCALE, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960dt_hif4_out_dim_fail)
+{
+    // HIF4输出要求out为2D [K, M*N], 传入3D校验失败
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
+    auto x = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 64, 64}, ACL_HIFLOAT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16, 64, 1}, ACL_HIFLOAT4_SCALE, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, (aclTensor*)nullptr, 1.0, 0.0, 0), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_flat_quant_v3_test, ascend960dt_group_list_rejected)
+{
+    // david系列(950/960)不支持group_list输入, 传入非空groupList校验失败
+    op::NpuArchManager archManager(Ops::Base::DAV_9201);
+    auto x = TensorDesc({16, 64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto p1 = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto p2 = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    auto groupList = TensorDesc({1}, ACL_INT64, ACL_FORMAT_ND);
+    auto out = TensorDesc({16, 64, 64}, ACL_INT4, ACL_FORMAT_ND);
+    auto quantScale = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    uint64_t workspace_size = 0;
+    auto ut = OP_API_UT(aclnnFlatQuantV3, INPUT(x, p1, p2, groupList, 1.0, 0.0, 1), OUTPUT(out, quantScale));
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
 
 TEST_F(l2_flat_quant_v3_test, ascend910B2_param_nullptr)
