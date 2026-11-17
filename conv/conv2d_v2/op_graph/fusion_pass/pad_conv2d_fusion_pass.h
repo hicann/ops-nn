@@ -46,7 +46,10 @@ const ge::AscendString NOTSET = "NOTSET";
 const std::string FUSION_NAME = "PadConv2dFusionPass";
 
 // Only DAV_3510 needs a dedicated branch, unlisted socs keep the original behavior as DAV_RESV.
-const std::map<std::string, NpuArch> SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"Ascend350", NpuArch::DAV_3510}};
+const std::map<std::string, NpuArch> SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
+                                                 {"Ascend350", NpuArch::DAV_3510},
+                                                 {"Ascend960DT", NpuArch::DAV_9201},
+                                                 {"Ascend960PR", NpuArch::DAV_9202}};
 
 constexpr int32_t PADDINGS_INPUT_INDEX = 1;
 constexpr int32_t CONSTANT_VALUES_INPUT_INDEX = 2;

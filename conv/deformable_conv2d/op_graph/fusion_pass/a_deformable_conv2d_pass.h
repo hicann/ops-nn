@@ -27,7 +27,10 @@ namespace Conv {
 namespace DfmConv2dFusion {
 const std::string FUSION_NAME = "ADeformableConv2dPass";
 
-const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"Ascend350", NpuArch::DAV_3510}};
+const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
+                                                    {"Ascend350", NpuArch::DAV_3510},
+                                                    {"Ascend960DT", NpuArch::DAV_9201},
+                                                    {"Ascend960PR", NpuArch::DAV_9202}};
 
 const ge::AscendString DFM_CONV2D = "DeformableConv2D";
 const ge::AscendString DFM_GROUPS = "deformable_groups";
