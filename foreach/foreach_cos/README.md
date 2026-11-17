@@ -72,4 +72,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_cos](examples/test_aclnn_foreach_cos.cpp) | 通过[aclnnForeachCos](docs/aclnnForeachCos.md)接口方式调用ForeachCos算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_cos_proto.h)构图方式调用ForeachCos算子。         |
+| 图模式 | [test_geir_foreach_cos](examples/test_geir_foreach_cos.cpp) | 通过[算子IR](op_graph/foreach_cos_proto.h)构图方式调用ForeachCos算子。         |

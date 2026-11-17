@@ -74,4 +74,4 @@ English | [简体中文](./README.md)
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn invocation  | [test_aclnn_foreach_cos](examples/test_aclnn_foreach_cos.cpp) | Invokes the ForeachCos operator through the [aclnnForeachCos](docs/aclnnForeachCos_en.md) interface. |
-| Graph-mode invocation | -  | Invokes the ForeachCos operator through graph construction with the [operator IR](op_graph/foreach_cos_proto.h).         |
+| Graph-mode invocation | [test_geir_foreach_cos](examples/test_geir_foreach_cos.cpp) | Invokes the ForeachCos operator through graph construction with the [operator IR](op_graph/foreach_cos_proto.h).         |

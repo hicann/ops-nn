@@ -75,4 +75,4 @@ English | [简体中文](./README.md)
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn interface  | [test_aclnn_foreach_sinh](examples/test_aclnn_foreach_sinh.cpp) | Invokes the ForeachSinh operator through the [aclnnForeachSinh](docs/aclnnForeachSinh_en.md) interface. |
-| Graph-mode invocation | -  | Invokes the ForeachSinh operator through the operator IR-based [graph construction](op_graph/foreach_sinh_proto.h) method.         |
+| Graph-mode invocation | [test_geir_foreach_sinh](examples/test_geir_foreach_sinh.cpp) | Invokes the ForeachSinh operator through the operator IR-based [graph construction](op_graph/foreach_sinh_proto.h) method.         |

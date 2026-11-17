@@ -82,4 +82,4 @@ English | [简体中文](./README.md)
 | Invocation method   | Sample code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn API  | [test_aclnn_foreach_pow_scalar_and_tensor](examples/test_aclnn_foreach_pow_scalar_and_tensor.cpp) | Calls the ForeachPowScalarAndTensor operator through the [aclnnForeachPowScalarAndTensor](docs/aclnnForeachPowScalarAndTensor_en.md) interface. |
-| GE graph mode | -  | Calls the ForeachPowScalarAndTensor operator by constructing a graph through the [operator IR](op_graph/foreach_pow_scalar_and_tensor_proto.h).         |
+| GE graph mode | [test_geir_foreach_pow_scalar_and_tensor](examples/test_geir_foreach_pow_scalar_and_tensor.cpp) | Calls the ForeachPowScalarAndTensor operator by constructing a graph through the [operator IR](op_graph/foreach_pow_scalar_and_tensor_proto.h).         |
