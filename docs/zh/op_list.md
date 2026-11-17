@@ -649,6 +649,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/situ_glu_group/README.md">situ_glu_group</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>SiTU门控线性单元激活函数，对输入张量沿指定维度切分为门控与上路径两半，按SiTU公式计算输出，支持可选的逐行权重weight与分组索引group_index。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/softmax_cross_entropy_with_logits/README.md">softmax_cross_entropy_with_logits</a></td>
     <td>✓</td>
     <td>✓</td>

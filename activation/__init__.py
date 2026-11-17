@@ -57,6 +57,8 @@ _load_op_module("situ_glu")
 
 _load_op_module("situ_glu_grad")
 
+_load_op_module("situ_glu_group")
+
 _load_op_module("swiglu_group")
 
 _load_op_module("swiglu_group_grad", "swiglu_group_backward")
@@ -70,6 +72,7 @@ __all__ = [
     for name in (
         "situ_glu",
         "situ_glu_grad",
+        "situ_glu_group",
         "swiglu_group",
         "swiglu_group_grad",
         "swiglu_group_backward",

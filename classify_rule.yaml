@@ -628,6 +628,7 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/silu_grad/op_api/
         - ops/ops-nn/activation/situ_glu/
         - ops/ops-nn/activation/situ_glu_grad/
+        - ops/ops-nn/activation/situ_glu_group/
         - ops/ops-nn/activation/softmax_cross_entropy_with_logits/op_api/
         - ops/ops-nn/activation/softmax_grad/op_api/
         - ops/ops-nn/activation/softmax_v2/op_api/
@@ -728,6 +729,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/situ_glu_grad/tests/
         - ops/ops-nn/activation/situ_glu_grad/examples/
         - ops/ops-nn/activation/softmax_cross_entropy_with_logits/tests/
+        - ops/ops-nn/activation/situ_glu_group/tests/
+        - ops/ops-nn/activation/situ_glu_group/examples/
         - ops/ops-nn/activation/softmax_cross_entropy_with_logits/examples/
         - ops/ops-nn/activation/softmax_grad/tests/
         - ops/ops-nn/activation/softmax_grad/examples/

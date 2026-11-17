@@ -5,6 +5,7 @@
 - [add_rms_norm_dynamic_quant](../../norm/add_rms_norm_dynamic_mx_quant/docs/torchapi_add_rms_norm_dynamic_quant.md)
 - [situ_glu](../../activation/situ_glu/docs/torchapi_situ_glu.md)
 - [situ_glu_grad](../../activation/situ_glu_grad/docs/torchapi_situ_glu_grad.md)
+- [situ_glu_group](../../activation/situ_glu_group/docs/torchapi_situ_glu_group.md)
 - [swiglu_group](../../activation/swiglu_group/docs/torchapi_swiglu_group.md)
 - [cla_gate_quant](../../activation/cla_gate_quant/docs/torchapi_cla_gate_quant.md)
 - [cla_gate_backward](../../activation/cla_gate_backward/docs/torchapi_cla_gate_backward.md)

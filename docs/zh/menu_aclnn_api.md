@@ -397,6 +397,7 @@
 - [aclnnSiluBackward](../../activation/silu_grad/docs/aclnnSiluBackward.md)
 - [aclnnSituGlu](../../activation/situ_glu/docs/aclnnSituGlu.md)
 - [aclnnSituGluGrad](../../activation/situ_glu_grad/docs/aclnnSituGluGrad.md)
+- [aclnnSituGluGroup](../../activation/situ_glu_group/docs/aclnnSituGluGroup.md)
 - [aclnnSleep](../../control/sleep/docs/aclnnSleep.md)
 - [aclnnSmoothL1Loss](../../loss/smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md)
 - [aclnnSmoothL1LossBackward](../../loss/smooth_l1_loss_grad_v2/docs/aclnnSmoothL1LossBackward.md)
