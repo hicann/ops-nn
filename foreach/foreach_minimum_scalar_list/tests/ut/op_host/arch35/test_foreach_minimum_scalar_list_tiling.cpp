@@ -28,6 +28,8 @@
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
 #include "op_host/tiling_base.h"
+#include "tiling_context_faker.h"
+#include "tiling_case_executor.h"
 #include "../../../../op_kernel/arch35/foreach_minimum_scalar_list_tiling_data.h"
 
 using namespace ut_util;
@@ -368,4 +370,161 @@ TEST_F(ForeachMinimumScalarListTilingTest, test_tiling_bf16_001)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, TILING_KEY_BF16);
+}
+
+// arch35 tiling入参契约校验(对称补齐自arch22 ForeachCommonTiling四Check)的UT触达:
+// 逐类拒绝路径+合法路径, 经tests/ut/common的TilingContextPara+ExecuteTestCase构造上下文
+// (逐实例dtype可控, coreNum/ubSize经参数注入, 平台信息由BUILD_SOC_VERSION=ascend950构建)。
+class ForeachMinimumScalarListTilingContractTest : public testing::Test {
+protected:
+    static void SetUpTestCase() { std::cout << "ForeachMinimumScalarListTilingContractTest SetUp" << std::endl; }
+
+    static void TearDownTestCase() { std::cout << "ForeachMinimumScalarListTilingContractTest TearDown" << std::endl; }
+};
+
+static gert::TilingContextPara::TensorDescription MakeTensorDesc(const std::initializer_list<int64_t>& dims,
+                                                                 ge::DataType dtype)
+{
+    gert::StorageShape shape(dims, dims);
+    return gert::TilingContextPara::TensorDescription(shape, dtype, ge::FORMAT_ND);
+}
+
+// compileInfo占位: base builder对nullptr CompileInfo产出的ContextHolder为空(GetContext返回nullptr),
+// 须传非空指针; 本算子tiling不读compile info, 空struct即可
+struct ForeachMinimumScalarListContractCompileInfo {};
+static ForeachMinimumScalarListContractCompileInfo g_contractCompileInfo;
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_two_tensors_success)
+{
+    // 合法路径: x列表2实例(循环i=1触达)+scalars数量==tensorCount
+    gert::TilingContextPara para(
+        "ForeachMinimumScalarList",
+        {MakeTensorDesc({4, 4}, ge::DT_FLOAT), MakeTensorDesc({8, 8}, ge::DT_FLOAT), MakeTensorDesc({2}, ge::DT_FLOAT)},
+        {MakeTensorDesc({4, 4}, ge::DT_FLOAT), MakeTensorDesc({8, 8}, ge::DT_FLOAT)}, {/* attrs */}, {2, 1}, {2},
+        &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, TILING_KEY_FLOAT, EMPTY_EXPECT_TILING_DATA, {0});
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_rank8_boundary_success)
+{
+    // 合法路径: x/scalars均rank 8(ND格式多维Tensor常规合法形态)
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({1, 1, 1, 1, 1, 1, 1, 1}, ge::DT_FLOAT),
+                                  MakeTensorDesc({1, 1, 1, 1, 1, 1, 1, 1}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({1, 1, 1, 1, 1, 1, 1, 1}, ge::DT_FLOAT)}, {/* attrs */},
+                                 &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, TILING_KEY_FLOAT, EMPTY_EXPECT_TILING_DATA, {0});
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_empty_tensor_success)
+{
+    // 合法路径: totalElements==0时needCoreNum=1/SetBlockDim(1)分支
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({0}, ge::DT_FLOAT), MakeTensorDesc({1}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({0}, ge::DT_FLOAT)}, {/* attrs */}, &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, TILING_KEY_FLOAT, EMPTY_EXPECT_TILING_DATA, {0});
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_y_larger_shape_success)
+{
+    // 合法路径: shape不同但y容量==x元素数(容量校验第二子条件假侧)
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({2, 2}, ge::DT_FLOAT), MakeTensorDesc({1}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({2, 2, 1}, ge::DT_FLOAT)}, {/* attrs */}, &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, TILING_KEY_FLOAT, EMPTY_EXPECT_TILING_DATA, {0});
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_tensor_num_boundary_success)
+{
+    // 合法路径: tensorNum 256 == MAX_TENSOR_NUM放行(tensorElements满容量写边界)
+    std::vector<gert::TilingContextPara::TensorDescription> inputs;
+    std::vector<gert::TilingContextPara::TensorDescription> outputs;
+    for (int32_t i = 0; i < 256; i++) {
+        inputs.push_back(MakeTensorDesc({4, 4}, ge::DT_FLOAT));
+        outputs.push_back(MakeTensorDesc({4, 4}, ge::DT_FLOAT));
+    }
+    inputs.push_back(MakeTensorDesc({256}, ge::DT_FLOAT));
+    gert::TilingContextPara para("ForeachMinimumScalarList", inputs, outputs, {/* attrs */}, {256, 1}, {256},
+                                 &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, TILING_KEY_FLOAT, EMPTY_EXPECT_TILING_DATA, {0});
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_tensor_num_exceeded_rejected)
+{
+    // 拒绝路径: tensorNum 257 > MAX_TENSOR_NUM(256)
+    std::vector<gert::TilingContextPara::TensorDescription> inputs;
+    std::vector<gert::TilingContextPara::TensorDescription> outputs;
+    for (int32_t i = 0; i < 257; i++) {
+        inputs.push_back(MakeTensorDesc({4, 4}, ge::DT_FLOAT));
+        outputs.push_back(MakeTensorDesc({4, 4}, ge::DT_FLOAT));
+    }
+    inputs.push_back(MakeTensorDesc({257}, ge::DT_FLOAT));
+    gert::TilingContextPara para("ForeachMinimumScalarList", inputs, outputs, {/* attrs */}, {257, 1}, {257},
+                                 &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_scalars_count_mismatch_rejected)
+{
+    // 拒绝路径: scalars元素数(2) != x列表tensorCount(1)
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({4, 4}, ge::DT_FLOAT), MakeTensorDesc({2}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({4, 4}, ge::DT_FLOAT)}, {/* attrs */}, &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_x_dtype_inconsistent_rejected)
+{
+    // 拒绝路径: x列表内第1实例dtype(FLOAT16)与第0实例(FLOAT)不一致
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({4, 4}, ge::DT_FLOAT), MakeTensorDesc({4, 4}, ge::DT_FLOAT16),
+                                  MakeTensorDesc({2}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({4, 4}, ge::DT_FLOAT), MakeTensorDesc({4, 4}, ge::DT_FLOAT)},
+                                 {/* attrs */}, {2, 1}, {2}, &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_y_dtype_mismatch_rejected)
+{
+    // 拒绝路径: y dtype(INT32) != x dtype(FLOAT)
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({4, 4}, ge::DT_FLOAT), MakeTensorDesc({1}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({4, 4}, ge::DT_INT32)}, {/* attrs */}, &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_y_capacity_insufficient_rejected)
+{
+    // 拒绝路径: shape不同且y容量(16) < x元素数(64)
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({8, 8}, ge::DT_FLOAT), MakeTensorDesc({1}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({4, 4}, ge::DT_FLOAT)}, {/* attrs */}, &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_unsupported_dtype_rejected)
+{
+    // 拒绝路径: x/y均INT64, 契约校验全过后tilingKey不支持dtype
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({4, 4}, ge::DT_INT64), MakeTensorDesc({1}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({4, 4}, ge::DT_INT64)}, {/* attrs */}, &g_contractCompileInfo);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_core_num_zero_rejected)
+{
+    // 平台防御: coreNum=0
+    gert::TilingContextPara para(
+        "ForeachMinimumScalarList", {MakeTensorDesc({4, 4}, ge::DT_FLOAT), MakeTensorDesc({1}, ge::DT_FLOAT)},
+        {MakeTensorDesc({4, 4}, ge::DT_FLOAT)}, {/* attrs */}, &g_contractCompileInfo, 0, 262144);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachMinimumScalarListTilingContractTest, tiling_contract_ub_size_zero_rejected)
+{
+    // 平台防御: ubSize=0
+    gert::TilingContextPara para("ForeachMinimumScalarList",
+                                 {MakeTensorDesc({4, 4}, ge::DT_FLOAT), MakeTensorDesc({1}, ge::DT_FLOAT)},
+                                 {MakeTensorDesc({4, 4}, ge::DT_FLOAT)}, {/* attrs */}, &g_contractCompileInfo, 64, 0);
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
 }

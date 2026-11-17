@@ -77,6 +77,79 @@ TEST_F(ForeachMinimumScalarListTest, infer_shape_known_success)
     EXPECT_EQ(Ops::Base::ToString(*output_shape_2), "[3]");
 }
 
+TEST_F(ForeachMinimumScalarListTest, infer_shape_instance_num_mismatch_rejected)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachMinimumScalarList")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    // x列表3实例, y输出仅2实例: 共享InferShape4ForeachCommon的列表大小不一致(EZ0038)拒绝路径
+    gert::StorageShape x_shape_0 = {{1}, {}};
+    gert::StorageShape x_shape_1 = {{2}, {}};
+    gert::StorageShape x_shape_2 = {{3}, {}};
+    gert::StorageShape x_shape_3 = {{}, {}};
+    gert::StorageShape x_shape_4 = {{}, {}};
+    gert::StorageShape x_shape_5 = {{}, {}};
+    gert::StorageShape y_shape_0 = {{}, {}};
+    gert::StorageShape y_shape_1 = {{}, {}};
+
+    std::vector<void*> input_shape_ref(6);
+    input_shape_ref[0] = &x_shape_0;
+    input_shape_ref[1] = &x_shape_1;
+    input_shape_ref[2] = &x_shape_2;
+    input_shape_ref[3] = &x_shape_3;
+    input_shape_ref[4] = &x_shape_4;
+    input_shape_ref[5] = &x_shape_5;
+
+    std::vector<void*> output_shape_ref(2);
+    output_shape_ref[0] = &y_shape_0;
+    output_shape_ref[1] = &y_shape_1;
+
+    auto holder = gert::InferShapeContextFaker()
+                      .IrInstanceNum({3, 3}, {2})
+                      .InputShapes(input_shape_ref)
+                      .OutputShapes(output_shape_ref)
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_FAILED);
+}
+
+TEST_F(ForeachMinimumScalarListTest, infer_dtype_instance_num_mismatch_rejected)
+{
+    auto
+        infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachMinimumScalarList")->infer_datatype;
+    ASSERT_NE(infer_datatype_func, nullptr);
+
+    // x列表3实例, y输出仅2实例: 共享InferDataType4ForeachCommon的列表大小不一致拒绝路径
+    ge::DataType x_dtype_0 = ge::DT_FLOAT16;
+    ge::DataType x_dtype_1 = ge::DT_FLOAT16;
+    ge::DataType x_dtype_2 = ge::DT_FLOAT16;
+    ge::DataType x_dtype_3 = ge::DT_FLOAT16;
+    ge::DataType x_dtype_4 = ge::DT_FLOAT16;
+    ge::DataType x_dtype_5 = ge::DT_FLOAT16;
+
+    std::vector<void*> input_dtype_ref(6);
+    input_dtype_ref[0] = &x_dtype_0;
+    input_dtype_ref[1] = &x_dtype_1;
+    input_dtype_ref[2] = &x_dtype_2;
+    input_dtype_ref[3] = &x_dtype_3;
+    input_dtype_ref[4] = &x_dtype_4;
+    input_dtype_ref[5] = &x_dtype_5;
+
+    std::vector<void*> output_dtype_ref(2);
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .IrInstanceNum({3, 3}, {2})
+                      .InputDataTypes(input_dtype_ref)
+                      .OutputDataTypes(output_dtype_ref)
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    EXPECT_EQ(infer_datatype_func(context), ge::GRAPH_FAILED);
+}
+
 TEST_F(ForeachMinimumScalarListTest, infer_dtype_test_1)
 {
     auto

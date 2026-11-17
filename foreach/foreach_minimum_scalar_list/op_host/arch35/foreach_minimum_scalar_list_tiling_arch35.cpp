@@ -20,6 +20,7 @@
 #include "util/platform_util.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "graph/utils/type_utils.h"
 #include "../../op_kernel/arch35/foreach_minimum_scalar_list_tiling_data.h"
 #include "../../op_kernel/arch35/foreach_minimum_scalar_list_tiling_key.h"
 
@@ -27,6 +28,7 @@ namespace optiling {
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int32_t INPUT_IDX_0 = 0;
+constexpr int32_t INPUT_IDX_1 = 1;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr int64_t MIN_PER_CORE = 1024;
 constexpr int32_t MAX_TENSOR_NUM = 256;
@@ -76,13 +78,58 @@ static ge::graphStatus ForeachMinimumScalarListTilingFunc(gert::TilingContext* c
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     int64_t totalElements = 0;
 
+    // Check the scalars shape: element num equal to the tensor num of x
+    auto scalarsShape = context->GetRequiredInputShape(INPUT_IDX_1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, scalarsShape);
+    OP_CHECK_IF(scalarsShape->GetStorageShape().GetShapeSize() != static_cast<int64_t>(tensorNum),
+                OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "scalars",
+                                              std::to_string(scalarsShape->GetStorageShape().GetShapeSize()).c_str(),
+                                              std::to_string(static_cast<int64_t>(tensorNum)).c_str()),
+                return ge::GRAPH_FAILED);
+
     for (uint64_t i = 0; i < tensorNum; i++) {
+        auto curDesc = context->GetDynamicInputDesc(INPUT_IDX_0, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, curDesc);
+        // Check the dtype of each tensor in x is the same as the first one
+        OP_CHECK_IF(
+            curDesc->GetDataType() != dataType,
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(curDesc->GetDataType()).c_str(),
+                ("The dtypes of all tensors in the tensor list must be the same. Currently, the dtype of "
+                 "the " +
+                 std::to_string(i) + "th tensor is inconsistent with that (" +
+                 ge::TypeUtils::DataTypeToSerialString(dataType) + ") of other tensors")
+                    .c_str()),
+            return ge::GRAPH_FAILED);
         auto shapePtr = context->GetDynamicInputShape(INPUT_IDX_0, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
         auto storageShape = shapePtr->GetStorageShape();
         int64_t numel = storageShape.GetShapeSize();
         tiling->tensorElements[i] = numel;
         totalElements += numel;
+        auto outputDesc = context->GetOutputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+        // Check the dtype of y is the same as x
+        OP_CHECK_IF(
+            outputDesc->GetDataType() != dataType,
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(outputDesc->GetDataType()).c_str(),
+                "The dtype of y must be the same as x"),
+            return ge::GRAPH_FAILED);
+        auto outputShape = context->GetOutputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+        // Check the shape size of y is greater than or equal to that of x
+        OP_CHECK_IF(
+            storageShape != outputShape->GetStorageShape() && numel > outputShape->GetStorageShape().GetShapeSize(),
+            OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                context->GetNodeName(), "x and y",
+                (std::to_string(numel) + " and " + std::to_string(outputShape->GetStorageShape().GetShapeSize()))
+                    .c_str(),
+                ("The shape size of " + std::to_string(i) +
+                 "th tensor in tensor list y should be greater than or equal to that of the tensor "
+                 "in the same position of the another tensor list x")
+                    .c_str()),
+            return ge::GRAPH_FAILED);
     }
     tiling->totalElements = totalElements;
 

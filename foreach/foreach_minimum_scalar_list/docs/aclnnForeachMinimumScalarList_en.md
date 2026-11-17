@@ -93,7 +93,7 @@ aclnnStatus aclnnForeachMinimumScalarList(
       <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td><ul><li>Atlas A3 and Atlas A2 products: 0-8; no limit on other products.</li></ul></td>
       <td>√</td>
     </tr>
     <tr>
@@ -110,10 +110,10 @@ aclnnStatus aclnnForeachMinimumScalarList(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list of the minimum operation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input `x`, and the shape size is greater than or equal to the shape size of input `x`.</li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input `x`, and the shape size (number of elements) is greater than or equal to the shape size (number of elements) of input `x`.</li></ul></td>
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td><ul><li>Atlas A3 and Atlas A2 products: 0-8; no limit on other products.</li></ul></td>
       <td>×</td>
     </tr>
     <tr>
@@ -152,7 +152,7 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
   </colgroup>
   <thead>
     <tr>
-      <th>Error Code</th>
+      <th>Return Code</th>
       <th>Error Code</th>
       <th>Description</th>
     </tr>
@@ -172,15 +172,21 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
       <td>The data types of x and out are inconsistent.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="5">561002</td>
       <td>The shapes of x and out do not meet the constraint.</td>
     </tr>
     <tr>
       <td>The data types of the tensors in x or out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The dimensions of the tensors in x or out exceed 8.</td>
+      <td>For Atlas A3 and Atlas A2 products: The dimensions of the tensors in x exceed 8.</td>
+    </tr>
+    <tr>
+      <td>The number of elements in scalars is not equal to the number of tensors in x.</td>
+    </tr>
+    <tr>
+      <td>The number of tensors in x exceeds 256.</td>
     </tr>
   </tbody></table>
 
@@ -229,6 +235,7 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 
 ## Constraints
 
+- The input tensor list `x` contains at most 256 tensors.
 - Deterministic computation:
   - aclnnForeachMinimumScalarList defaults to a deterministic implementation.
 
@@ -305,56 +312,56 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. Construct the input and output as required by the API.
-  std::vector<int64_t> selfShape1 = {2, 3};
-  std::vector<int64_t> selfShape2 = {1, 3};
+  std::vector<int64_t> xShape1 = {2, 3};
+  std::vector<int64_t> xShape2 = {1, 3};
   std::vector<int64_t> outShape1 = {2, 3};
   std::vector<int64_t> outShape2 = {1, 3};
-  void* input1DeviceAddr = nullptr;
-  void* input2DeviceAddr = nullptr;
+  void* x1DeviceAddr = nullptr;
+  void* x2DeviceAddr = nullptr;
   void* out1DeviceAddr = nullptr;
   void* out2DeviceAddr = nullptr;
-  aclTensor* input1 = nullptr;
-  aclTensor* input2 = nullptr;
-  aclScalar* alpha1 = nullptr;
-  aclScalar* alpha2 = nullptr;
+  aclTensor* x1 = nullptr;
+  aclTensor* x2 = nullptr;
+  aclScalar* scalar1 = nullptr;
+  aclScalar* scalar2 = nullptr;
   aclTensor* out1 = nullptr;
   aclTensor* out2 = nullptr;
-  std::vector<float> input1HostData = {1, 2, 3, 4, 5, 6};
-  std::vector<float> input2HostData = {7, 8, 9};
+  std::vector<float> x1HostData = {1, 2, 3, 4, 5, 6};
+  std::vector<float> x2HostData = {7, 8, 9};
   std::vector<float> out1HostData(6, 0);
   std::vector<float> out2HostData(3, 0);
-  float alpha1Value = 4.2f;
-  float alpha2Value = 8.2f;
-  // Create the input1 aclTensor.
-  ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
+  float scalar1Value = 4.2f;
+  float scalar2Value = 8.2f;
+  // Create the x1 aclTensor.
+  ret = CreateAclTensor(x1HostData, xShape1, &x1DeviceAddr, aclDataType::ACL_FLOAT, &x1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create the input2 aclTensor.
-  ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_FLOAT, &input2);
+  // Create the x2 aclTensor.
+  ret = CreateAclTensor(x2HostData, xShape2, &x2DeviceAddr, aclDataType::ACL_FLOAT, &x2);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // Create the alpha1 aclScalar.
-  alpha1 = aclCreateScalar(&alpha1Value, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha1 != nullptr, return ret);
-  // Create alpha2 aclScalar.
-  alpha2 = aclCreateScalar(&alpha2Value, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha2 != nullptr, return ret);
+  // Create the scalar1 aclScalar.
+  scalar1 = aclCreateScalar(&scalar1Value, aclDataType::ACL_FLOAT);
+  CHECK_RET(scalar1 != nullptr, return ACL_ERROR_INTERNAL_ERROR);
+  // Create the scalar2 aclScalar.
+  scalar2 = aclCreateScalar(&scalar2Value, aclDataType::ACL_FLOAT);
+  CHECK_RET(scalar2 != nullptr, return ACL_ERROR_INTERNAL_ERROR);
   // Create out1 aclTensor.
   ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // Create out2 aclTensor.
   ret = CreateAclTensor(out2HostData, outShape2, &out2DeviceAddr, aclDataType::ACL_FLOAT, &out2);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  std::vector<aclTensor*> tempInput{input1, input2};
-  aclTensorList* tensorListInput = aclCreateTensorList(tempInput.data(), tempInput.size());
+  std::vector<aclTensor*> tempX{x1, x2};
+  aclTensorList* tensorListX = aclCreateTensorList(tempX.data(), tempX.size());
   std::vector<aclTensor*> tempOutput{out1, out2};
   aclTensorList* tensorListOutput = aclCreateTensorList(tempOutput.data(), tempOutput.size());
-  std::vector<aclScalar*> tempscalar{alpha1, alpha2};
+  std::vector<aclScalar*> tempscalar{scalar1, scalar2};
   aclScalarList* scalarlist = aclCreateScalarList(tempscalar.data(), tempscalar.size());
 
   // 3. Call the CANN operator library API, and change it to the specific API name.
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   // Call the first-phase API of aclnnForeachMinimumScalarList.
-  ret = aclnnForeachMinimumScalarListGetWorkspaceSize(tensorListInput, scalarlist, tensorListOutput, &workspaceSize, &executor);
+  ret = aclnnForeachMinimumScalarListGetWorkspaceSize(tensorListX, scalarlist, tensorListOutput, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMinimumScalarListGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // Allocate device memory based on the workspaceSize calculated by the first-phase API.
   void* workspaceAddr = nullptr;
@@ -390,13 +397,13 @@ int main() {
   }
 
   // 6. Release aclTensor and aclScalar, which needs to be modified according to the specific API definition.
-  aclDestroyTensorList(tensorListInput);
+  aclDestroyTensorList(tensorListX);
   aclDestroyTensorList(tensorListOutput);
   aclDestroyScalarList(scalarlist);
 
   // 7. Release device resources. Modify it according to the specific API definition.
-  aclrtFree(input1DeviceAddr);
-  aclrtFree(input2DeviceAddr);
+  aclrtFree(x1DeviceAddr);
+  aclrtFree(x2DeviceAddr);
   aclrtFree(out1DeviceAddr);
   aclrtFree(out2DeviceAddr);
   if (workspaceSize > 0) {

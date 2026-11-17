@@ -80,56 +80,56 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> selfShape1 = {2, 3};
-    std::vector<int64_t> selfShape2 = {1, 3};
+    std::vector<int64_t> xShape1 = {2, 3};
+    std::vector<int64_t> xShape2 = {1, 3};
     std::vector<int64_t> outShape1 = {2, 3};
     std::vector<int64_t> outShape2 = {1, 3};
-    void* input1DeviceAddr = nullptr;
-    void* input2DeviceAddr = nullptr;
+    void* x1DeviceAddr = nullptr;
+    void* x2DeviceAddr = nullptr;
     void* out1DeviceAddr = nullptr;
     void* out2DeviceAddr = nullptr;
-    aclTensor* input1 = nullptr;
-    aclTensor* input2 = nullptr;
-    aclScalar* alpha1 = nullptr;
-    aclScalar* alpha2 = nullptr;
+    aclTensor* x1 = nullptr;
+    aclTensor* x2 = nullptr;
+    aclScalar* scalar1 = nullptr;
+    aclScalar* scalar2 = nullptr;
     aclTensor* out1 = nullptr;
     aclTensor* out2 = nullptr;
-    std::vector<float> input1HostData = {1, 2, 3, 4, 5, 6};
-    std::vector<float> input2HostData = {7, 8, 9};
+    std::vector<float> x1HostData = {1, 2, 3, 4, 5, 6};
+    std::vector<float> x2HostData = {7, 8, 9};
     std::vector<float> out1HostData(6, 0);
     std::vector<float> out2HostData(3, 0);
-    float alpha1Value = 4.2f;
-    float alpha2Value = 8.2f;
-    // 创建input1 aclTensor
-    ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
+    float scalar1Value = 4.2f;
+    float scalar2Value = 8.2f;
+    // 创建x1 aclTensor
+    ret = CreateAclTensor(x1HostData, xShape1, &x1DeviceAddr, aclDataType::ACL_FLOAT, &x1);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建input2 aclTensor
-    ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_FLOAT, &input2);
+    // 创建x2 aclTensor
+    ret = CreateAclTensor(x2HostData, xShape2, &x2DeviceAddr, aclDataType::ACL_FLOAT, &x2);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建alpha1 aclScalar
-    alpha1 = aclCreateScalar(&alpha1Value, aclDataType::ACL_FLOAT);
-    CHECK_RET(alpha1 != nullptr, return ret);
-    // 创建alpha2 aclScalar
-    alpha2 = aclCreateScalar(&alpha2Value, aclDataType::ACL_FLOAT);
-    CHECK_RET(alpha2 != nullptr, return ret);
+    // 创建scalar1 aclScalar
+    scalar1 = aclCreateScalar(&scalar1Value, aclDataType::ACL_FLOAT);
+    CHECK_RET(scalar1 != nullptr, return ACL_ERROR_INTERNAL_ERROR);
+    // 创建scalar2 aclScalar
+    scalar2 = aclCreateScalar(&scalar2Value, aclDataType::ACL_FLOAT);
+    CHECK_RET(scalar2 != nullptr, return ACL_ERROR_INTERNAL_ERROR);
     // 创建out1 aclTensor
     ret = CreateAclTensor(out1HostData, outShape1, &out1DeviceAddr, aclDataType::ACL_FLOAT, &out1);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建out2 aclTensor
     ret = CreateAclTensor(out2HostData, outShape2, &out2DeviceAddr, aclDataType::ACL_FLOAT, &out2);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    std::vector<aclTensor*> tempInput{input1, input2};
-    aclTensorList* tensorListInput = aclCreateTensorList(tempInput.data(), tempInput.size());
+    std::vector<aclTensor*> tempX{x1, x2};
+    aclTensorList* tensorListX = aclCreateTensorList(tempX.data(), tempX.size());
     std::vector<aclTensor*> tempOutput{out1, out2};
     aclTensorList* tensorListOutput = aclCreateTensorList(tempOutput.data(), tempOutput.size());
-    std::vector<aclScalar*> tempscalar{alpha1, alpha2};
+    std::vector<aclScalar*> tempscalar{scalar1, scalar2};
     aclScalarList* scalarlist = aclCreateScalarList(tempscalar.data(), tempscalar.size());
 
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnForeachMinimumScalarList第一段接口
-    ret = aclnnForeachMinimumScalarListGetWorkspaceSize(tensorListInput, scalarlist, tensorListOutput, &workspaceSize,
+    ret = aclnnForeachMinimumScalarListGetWorkspaceSize(tensorListX, scalarlist, tensorListOutput, &workspaceSize,
                                                         &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnForeachMinimumScalarListGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
@@ -167,13 +167,13 @@ int main()
     }
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-    aclDestroyTensorList(tensorListInput);
+    aclDestroyTensorList(tensorListX);
     aclDestroyTensorList(tensorListOutput);
     aclDestroyScalarList(scalarlist);
 
     // 7. 释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(input1DeviceAddr);
-    aclrtFree(input2DeviceAddr);
+    aclrtFree(x1DeviceAddr);
+    aclrtFree(x2DeviceAddr);
     aclrtFree(out1DeviceAddr);
     aclrtFree(out2DeviceAddr);
     if (workspaceSize > 0) {

@@ -52,22 +52,22 @@ English | [简体中文](./README.md)
     <tr>
       <td>x</td>
       <td>Input</td>
-      <td>Indicates the input tensor list of the minimum value operation, corresponding to `x` in the formula. The data types of all tensors in this parameter are consistent.</td>
-      <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
+      <td>Indicates the input tensor list of the minimum value operation, corresponding to `x` in the formula. The data types of all tensors in this parameter are consistent. Non-contiguous tensor inputs are automatically converted to contiguous tensors by the framework before execution.</td>
+      <td>FLOAT, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scalars</td>
       <td>Input</td>
-      <td>Indicates the input scalar list of the minimum value operation, corresponding to `scalars` in the formula. The number of its elements is equal to the number of tensors in `x`. Its data type has a certain correspondence with the data type of the input parameter: when the data type of input parameter `x` is FLOAT32, FLOAT16, or BFLOAT16, the data type of `scalars` supports FLOAT32; when the data type of input parameter `x` is INT32, the data type of `scalars` supports only INT64.</td>
-      <td>FLOAT32, INT64</td>
+      <td>Indicates the input scalar list of the minimum value operation, corresponding to `scalars` in the formula. The number of its elements is equal to the number of tensors in `x`. Its data type has a certain correspondence with the data type of the input parameter: when the data type of input parameter `x` is FLOAT, FLOAT16, or BFLOAT16, the data type of `scalars` supports FLOAT; when the data type of input parameter `x` is INT32, the data type of `scalars` supports only INT64.</td>
+      <td>FLOAT, INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Indicates the output tensor list of the minimum value operation, corresponding to `y` in the formula. Its data type and data format are consistent with the data type and data format of input parameter `x`, and its shape size is greater than or equal to the shape size of input parameter `x`. The data types of all tensors in this parameter are consistent.</td>
-      <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
+      <td>Indicates the output tensor list of the minimum value operation, corresponding to `y` in the formula. Its data type and data format are consistent with the data type and data format of input parameter `x`, and its shape size (number of elements) is greater than or equal to the shape size (number of elements) of input parameter `x`. The data types of all tensors in this parameter are consistent. The output does not support non-contiguous tensors.</td>
+      <td>FLOAT, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
@@ -77,6 +77,7 @@ English | [简体中文](./README.md)
 ## Constraints
 
 - The output does not support non-contiguous tensors.
+- The input tensor list `x` contains at most 256 tensors.
 
 ## Invocation Description
 
