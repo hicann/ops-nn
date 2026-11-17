@@ -15,7 +15,7 @@
 - <term>Atlas 200I/500 A2推理产品</term>：支持
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas推理系列产品</term>：不支持
+- <term>Atlas推理系列产品</term>：支持
 <!-- end id5 -->
 <!-- npu="910" id6 -->
 - <term>Atlas训练系列产品</term>：支持
@@ -219,8 +219,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </tbody>
   </table>
 
-  <!-- npu="910,310b" id7 -->
-  - <term>Atlas训练系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
+  <!-- npu="910,310p,310b" id7 -->
+  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
   <!-- end id7 -->
 
 - **返回值**
@@ -457,8 +457,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </tbody>
   </table>
 
-  <!-- npu="910,310b" id8 -->
-  - <term>Atlas训练系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
+  <!-- npu="910,310p,310b" id8 -->
+  - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>、<term>Atlas 200I/500 A2推理产品</term>：参数`input`、`weightOptional`、`biasOptional`、`out`、`meanOutOptional`、`rstdOutOptional`的数据类型不支持BFLOAT16。
   <!-- end id8 -->
 
 - **返回值**

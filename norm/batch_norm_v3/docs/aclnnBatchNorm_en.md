@@ -123,7 +123,7 @@ aclnnStatus aclnnBatchNorm(
       <td>runningMean (aclTensor*)</td>
       <td>Input</td>
       <td>Indicates the mean used during inference, corresponding to `E(x)` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>Optional parameter.</li><li>The shape length equals the length of the channel axis in input parameter `input`.</li></ul></td>
+      <td><ul><li>Empty tensors are not supported.</li><li>Optional parameter.</li><li>The shape length equals the length of the channel axis in input parameter `input`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnBatchNorm(
       <td>runningVar (aclTensor*)</td>
       <td>Input</td>
       <td>Indicates the variance used during inference, corresponding to `Var(x)` in the formula.</td>
-      <td><ul><li>Supports empty Tensor.</li><li>Optional parameter. The value is a non-negative number.</li><li>The shape length is equal to the length of the channel axis in the input parameter `input`.</li></ul></td>
+      <td><ul><li>Empty tensors are not supported.</li><li>Optional parameter. The value is a non-negative number.</li><li>The shape length is equal to the length of the channel axis in the input parameter `input`.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1</td>

@@ -121,7 +121,7 @@ aclnnStatus aclnnBatchNorm(
       <td>runningMean（aclTensor*）</td>
       <td>输入/输出</td>
       <td>训练场景：训练期间动量更新前后的均值；推理场景：推理期间使用的均值，对应公式中的`E(x)`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>可选参数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnBatchNorm(
       <td>runningVar（aclTensor*）</td>
       <td>输入/输出</td>
       <td>训练场景：训练期间动量更新前后的方差；推理场景：推理期间使用的方差，对应公式中的`Var(x)`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，数值为非负数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>可选参数，数值为非负数。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>

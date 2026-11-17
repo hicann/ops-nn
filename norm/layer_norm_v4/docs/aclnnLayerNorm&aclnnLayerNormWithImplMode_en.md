@@ -17,7 +17,7 @@
 - <term>Atlas 200I/500 A2 inference products</term>: Supported
 <!-- end id4 -->
 <!-- npu="310p" id5 -->
-- <term>Atlas inference products</term>: Not supported
+- <term>Atlas inference products</term>: Supported
 <!-- end id5 -->
 <!-- npu="910" id6 -->
 - <term>Atlas training products</term>: Supported
@@ -221,8 +221,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </tbody>
   </table>
 
-  <!-- npu="910,310b" id7 -->
-  - <term>Atlas training products</term>, <term>Atlas 200I/500 A2 inference products</term>: The data type of the parameters input, weightOptional, biasOptional, out, meanOutOptional, and rstdOutOptional does not support BFLOAT16.
+  <!-- npu="910,310p,310b" id7 -->
+  - <term>Atlas training products</term>, <term>Atlas inference products</term>, <term>Atlas 200I/500 A2 inference products</term>: The data type of the parameters input, weightOptional, biasOptional, out, meanOutOptional, and rstdOutOptional does not support BFLOAT16.
   <!-- end id7 -->
 
 - **Return Value**
@@ -459,8 +459,8 @@ aclnnStatus aclnnLayerNormWithImplMode(
   </tbody>
   </table>
 
-  <!-- npu="910,310b" id8 -->
-  - <term>Atlas training products</term>, <term>Atlas 200I/500 A2 inference products</term>: The data type of the parameters input, weightOptional, biasOptional, out, meanOutOptional, and rstdOutOptional does not support BFLOAT16.
+  <!-- npu="910,310p,310b" id8 -->
+  - <term>Atlas training products</term>, <term>Atlas inference products</term>, <term>Atlas 200I/500 A2 inference products</term>: The data type of the parameters input, weightOptional, biasOptional, out, meanOutOptional, and rstdOutOptional does not support BFLOAT16.
   <!-- end id8 -->
 
 - **Return Value**
