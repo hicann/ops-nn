@@ -71,7 +71,9 @@ constexpr int64_t RADIX_TOP_K_S_THRESHOLD_1 = 12000000;
 constexpr int64_t RADIX_TOP_K_S_K_RATIO_1 = 100;
 constexpr int64_t RADIX_TOP_K_S_THRESHOLD_2 = 100000000;
 constexpr int64_t RADIX_TOP_K_S_K_RATIO_2 = 50;
-constexpr int64_t RADIX_TOP_K_MIN_K = 1000;
+constexpr int64_t RADIX_TOP_K_MIN_K = 8;
+
+// RadixTopK k 下限：k >= 8 才路由 RadixTopK，k < 8 由两段 TopK 分支拦截（与 ops-math 侧一致）。
 static const int64_t NON_TRANSPOSE_DIM_MAX = 8;
 const int64_t TOPK_NON_TRANSPOSE_AXIS_THRESHOLD = 2048;
 constexpr int64_t SMALL_ROW_LARGE_OUTER_THRESHOLD = 1024;
@@ -577,7 +579,7 @@ static bool IsDataTypeDouble(op::DataType xDataType)
 //   1. SoC 版本为 ASCEND910B 或 ASCEND910_93（仅这些芯片支持 Radix TopK）
 //   2. 输入数据类型为 FP16 或 BF16（Radix TopK 仅支持这两种低精度类型）
 //   3. 最后一维长度 sortLen 与 k 的比例满足阈值要求（见下方 shapeCheck 分支）
-//   4. k > 1000（Radix TopK 仅在大 k 场景下相比排序方案有收益）
+//   4. k >= RADIX_TOP_K_MIN_K（=8）
 // 例外：sortLen > int32 上限时走 RadixTopK int64 模板，此时 k 只要求 > 0，
 //       与 ops-math math/topk/op_api/topk.cpp 的同名门控保持一致。
 static bool IsRadixTopKSupported(const aclTensor* self, int64_t k, bool sorted, op::DataType indicesDType)
@@ -604,7 +606,7 @@ static bool IsRadixTopKSupported(const aclTensor* self, int64_t k, bool sorted, 
     } else if (sortLen >= RADIX_TOP_K_S_THRESHOLD_1) {
         shapeCheck = sortLen > RADIX_TOP_K_S_K_RATIO_1 * k;
     }
-    return socCheck && dtypeCheck && shapeCheck && k > RADIX_TOP_K_MIN_K;
+    return socCheck && dtypeCheck && shapeCheck && k >= RADIX_TOP_K_MIN_K;
 }
 
 static const aclTensor* GetTensorWithValueZero(aclTensor* out, aclOpExecutor* executor)
