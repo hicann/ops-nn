@@ -765,11 +765,6 @@ function(gen_ops_info_and_python)
       else()
         message(STATUS "[WARNING] There is no operator support for ${compute_unit}.")
       endif()
-      set(LOCK_CLEANUP_CMD "rm -f '${CMAKE_BINARY_DIR}/binary/${compute_unit}/bin/.*.cleaned.lock'")
-      add_custom_command(TARGET binary
-        POST_BUILD
-        COMMAND sh -c "${LOCK_CLEANUP_CMD}"
-        COMMENT "Executing cleanup: ${LOCK_CLEANUP_CMD}")
     endforeach()
   endif()
 endfunction()

@@ -345,7 +345,8 @@ main() {
           fi
         fi
         if [[ "$cmd" == *"dump_cce"* ]]; then
-          cmd="${cmd} --debug_dir=${output_path}/kernel_metas/${op_type}_${i}"
+          mkdir -p "${output_path}/kernel_metas/${op_type}_${impl_mode}_${i}"
+          cmd="${cmd} --debug_dir=${output_path}/kernel_metas/${op_type}_${impl_mode}_${i}"
         fi
         if [[ -n "$kernel_template_input" ]]; then
           echo "kernel_template_input is: ${kernel_template_input}"
