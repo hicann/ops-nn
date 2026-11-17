@@ -294,6 +294,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>
        <ul><li>支持空Tensor。</li>
        <li>数据类型与input保持一致。</li>
+       <li>shape必须与input一致；当input为空Tensor时，gradInput也必须使用相同的空shape。</li>
        <li>数据格式需要与input、gradOutput一致。</li></ul>
       </td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>

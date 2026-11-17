@@ -1195,6 +1195,7 @@ bool ConvolutionBackwardChecker::CheckEmptyTensor()
                      (std::to_string(inputShape[0]) + "," + std::to_string(inputShape[1]).c_str()),
                      "inputShape[0] or inputShape[1] should be 0"),
                  return false);
+        OP_CHECK_SHAPE_NOT_EQUAL(inputTensor_.input, outputTensor_.gradInput, return false);
     }
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
