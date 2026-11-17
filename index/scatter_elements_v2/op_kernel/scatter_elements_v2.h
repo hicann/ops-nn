@@ -570,10 +570,10 @@ private:
             return static_cast<DataType>(inputValue * updateValue);
         }
         if (mode == ScatterElementsV2NS::SCATTER_MODE_MIN) {
-            return inputValue < updateValue ? inputValue : updateValue;
+            return inputValue != inputValue || inputValue <= updateValue ? inputValue : updateValue;
         }
         if (mode == ScatterElementsV2NS::SCATTER_MODE_MAX) {
-            return inputValue > updateValue ? inputValue : updateValue;
+            return inputValue != inputValue || inputValue >= updateValue ? inputValue : updateValue;
         }
         return updateValue;
     }

@@ -22,6 +22,7 @@
 #include "scatter_elements_v2_tiling.h"
 #include "../../common/scatter_elements_v2_low_memory_policy.h"
 #include <vector>
+#include "../../common/scatter_elements_v2_amax_policy.h"
 
 using namespace std;
 using Ops::NN::Optiling::TilingRegistry;
@@ -1118,6 +1119,80 @@ ge::graphStatus ScatterElementsV2Tiling::RunCacheOpTiling()
     return SetCacheOpTiling();
 }
 
+static bool IsRowMax(const gert::TilingContext* context)
+{
+    const auto* attrs = context->GetAttrs();
+    const auto* self = context->GetInputShape(0);
+    const auto* index = context->GetInputShape(1);
+    const auto* src = context->GetInputShape(2);
+    const auto* desc = context->GetInputDesc(0);
+    const auto* indexDesc = context->GetInputDesc(1);
+    if (attrs == nullptr || self == nullptr || index == nullptr || src == nullptr || desc == nullptr ||
+        indexDesc == nullptr || indexDesc->GetDataType() != ge::DT_INT64) {
+        return false;
+    }
+    const auto* dim = attrs->GetAttrPointer<int64_t>(0);
+    const auto* reduce = attrs->GetAttrPointer<char>(1);
+    const auto& x = self->GetStorageShape();
+    const auto& i = index->GetStorageShape();
+    const auto& u = src->GetStorageShape();
+    const auto dtype = desc->GetDataType();
+    return dim != nullptr && (*dim == 0 || *dim == -2) && reduce != nullptr && strcmp(reduce, "max") == 0 &&
+           (dtype == ge::DT_FLOAT || dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16) && x.GetDimNum() == 2 &&
+           u.GetDimNum() == 2 && (i.GetDimNum() == 1 || i.GetDimNum() == 2) && x.GetDim(0) > 0 && x.GetDim(1) > 0 &&
+           u.GetDim(0) > 0 && u.GetDim(1) == x.GetDim(1) && i.GetDim(0) == u.GetDim(0) &&
+           (i.GetDimNum() == 1 || i.GetDim(1) == x.GetDim(1));
+}
+
+static ge::graphStatus TilingRowMax(gert::TilingContext* context, const ScatterElementsV2CompileInfo* info)
+{
+    const auto& x = context->GetInputShape(0)->GetStorageShape();
+    const auto& i = context->GetInputShape(1)->GetStorageShape();
+    const auto& u = context->GetInputShape(2)->GetStorageShape();
+    const auto dtype = context->GetInputDesc(0)->GetDataType();
+    const uint64_t bytes = dtype == ge::DT_FLOAT ? 4 : 2;
+    const auto plan = ScatterElementsV2Amax::Select(x.GetDim(0), u.GetDim(0), x.GetDim(1), bytes, i.GetDimNum() == 1,
+                                                    info->totalCoreNum, info->ubSizePlatForm);
+    if (!plan.valid) {
+        const bool exceedsLimit = static_cast<uint64_t>(x.GetDim(0)) >
+                                      UINT32_MAX / static_cast<uint64_t>(x.GetDim(1)) ||
+                                  static_cast<uint64_t>(u.GetDim(0)) > UINT32_MAX / static_cast<uint64_t>(x.GetDim(1));
+        const auto reason = std::string(exceedsLimit ?
+                                            "max dimensions and element counts must be at most 4294967295" :
+                                            (info->totalCoreNum == 0 ? "max requires a positive core count" :
+                                                                       "max buffers exceed the available UB")) +
+                            "; N=" + std::to_string(x.GetDim(0)) + ", E=" + std::to_string(u.GetDim(0)) +
+                            ", C=" + std::to_string(x.GetDim(1)) + ", cores=" + std::to_string(info->totalCoreNum) +
+                            ", UB=" + std::to_string(info->ubSizePlatForm);
+        ReportScatterElementsV2TilingError(context->GetNodeName(), reason.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (context->GetRawTilingData() == nullptr) {
+        ReportScatterElementsV2TilingError(context->GetNodeName(), "max tiling data is null");
+        return ge::GRAPH_FAILED;
+    }
+    ScatterElementsV2TilingData data;
+    data.set_amaxInputRows(u.GetDim(0));
+    data.set_amaxOutputRows(x.GetDim(0));
+    data.set_amaxColumns(x.GetDim(1));
+    data.set_amaxChunkLength(plan.chunk);
+    data.set_amaxTileLength(plan.tile);
+    data.set_amaxCompactRows(i.GetDimNum() == 1 ? 1 : 0);
+    const auto* includeSelf = context->GetAttrs()->GetAttrPointer<bool>(2);
+    data.set_includeSelf(includeSelf == nullptr || *includeSelf ? 1 : 0);
+    data.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    context->GetRawTilingData()->SetDataSize(data.GetDataSize());
+    context->SetBlockDim(plan.cores);
+    // Keys distinguish the three compute layouts and floating-point dtypes.
+    const uint64_t type = dtype == ge::DT_FLOAT ? 100 : (dtype == ge::DT_FLOAT16 ? 200 : 300);
+    const bool atomic = plan.algorithm == ScatterElementsV2Amax::Algorithm::InputPartition;
+    context->SetTilingKey((atomic ? 2000 : (plan.layout == ScatterElementsV2Amax::Layout::Rows ? 3000 : 1000)) + type);
+    auto workspace = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, workspace);
+    workspace[0] = info->workspaceSize + (atomic ? x.GetShapeSize() * (bytes + 2 * sizeof(int32_t)) : 0);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
 {
     if (context == nullptr) {
@@ -1136,6 +1211,9 @@ ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto socVersion = ascendcPlatform.GetSocVersion();
+    if (ScatterElementsV2LowMemory::IsSupportedSoc(socVersion) && IsRowMax(context)) {
+        return TilingRowMax(context, compile_info);
+    }
     if (socVersion == platform_ascendc::SocVersion::ASCEND310P) {
         ScatterElementsV2Tiling310P tilingObject(context);
         return tilingObject.Init();

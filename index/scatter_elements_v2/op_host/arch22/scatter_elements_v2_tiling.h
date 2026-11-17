@@ -68,6 +68,12 @@ TILING_DATA_FIELD_DEF(uint64_t, updatesDim0);
 TILING_DATA_FIELD_DEF(uint64_t, updatesDim1);
 TILING_DATA_FIELD_DEF(uint64_t, batchSize);
 TILING_DATA_FIELD_DEF(uint64_t, realDim);
+TILING_DATA_FIELD_DEF(uint32_t, amaxInputRows);
+TILING_DATA_FIELD_DEF(uint32_t, amaxOutputRows);
+TILING_DATA_FIELD_DEF(uint32_t, amaxColumns);
+TILING_DATA_FIELD_DEF(uint32_t, amaxChunkLength);
+TILING_DATA_FIELD_DEF(uint32_t, amaxTileLength);
+TILING_DATA_FIELD_DEF(uint32_t, amaxCompactRows);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(ScatterElementsV2, ScatterElementsV2TilingData)

@@ -41,6 +41,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/tensor_view_utils.h"
+#include <limits>
 #include "log/log.h"
 #include "op_api/aclnn_util.h"
 #include "runtime/context.h"
@@ -574,6 +575,116 @@ static bool IsMeetScatterAddShape(const op::Shape& selfShape, const op::Shape& i
     return true;
 }
 
+static aclTensor* ScatterReduceRowIndex(const aclTensor* index, aclOpExecutor* executor)
+{
+    op::Shape shape;
+    shape.SetDimNum(1);
+    shape[0] = index->GetViewShape()[0];
+    op::Strides strides = {index->GetViewStrides()[0]};
+    auto view = executor->CreateView(index, shape, index->GetStorageShape(), strides, 0);
+    CHECK_RET(view != nullptr, nullptr);
+    view->SetViewOffset(index->GetViewOffset());
+    return view;
+}
+
+static aclnnStatus ExecScatterReduceMax(const aclTensor* self, const aclTensor* index, const aclTensor* src,
+                                        aclTensor* out, bool includeSelf, aclOpExecutor* executor)
+{
+    const bool vector = self->GetViewShape().GetDimNum() == 1;
+    const bool broadcast = !vector && index->GetViewStrides()[1] == 0;
+    const aclTensor* indices = broadcast ? ScatterReduceRowIndex(index, executor) : index;
+    CHECK_RET(indices != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    indices = l0op::Contiguous(indices, executor);
+    CHECK_RET(indices != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto copy = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
+    CHECK_RET(copy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* input = l0op::TensorMove(self, copy, executor);
+    CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* updates = src;
+    if (vector) {
+        input = l0op::UnsqueezeNd(input, 1, executor);
+        updates = l0op::UnsqueezeNd(updates, 1, executor);
+        CHECK_RET(input != nullptr && updates != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    auto result = l0op::ScatterElementsNoTranspose(input, indices, updates, 0, REDUCTION_MAX, executor, includeSelf);
+    CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (vector) {
+        result = l0op::SqueezeNd(result, 1, executor);
+        CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    CHECK_RET(l0op::ViewCopy(result, out, executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CheckScatterReduceMaxSize(const aclTensor* tensor, const char* name)
+{
+    constexpr uint64_t maxElements = std::numeric_limits<uint32_t>::max();
+    const auto& shape = tensor->GetViewShape();
+    const uint64_t rows = shape[0];
+    const uint64_t columns = shape.GetDimNum() == 1 ? 1 : shape[1];
+    if (rows > maxElements || columns > maxElements) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON("ScatterReduce", name, op::ToString(shape).GetString(),
+                                               "max dimensions must be at most 4294967295");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (columns != 0 && rows > maxElements / columns) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ScatterReduce", (std::string(name) + " element count").c_str(),
+                                              std::to_string(rows * columns).c_str(),
+                                              "max element count must be at most 4294967295");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CheckScatterReduceMaxParams(const aclTensor* self, const aclTensor* index, const aclTensor* src,
+                                               const aclTensor* out, int64_t dim)
+{
+    const auto rank = self->GetViewShape().GetDimNum();
+    const auto dtype = self->GetDataType();
+    if (dtype != op::DataType::DT_FLOAT && dtype != op::DataType::DT_FLOAT16 && dtype != op::DataType::DT_BF16) {
+        OP_LOGE_FOR_INVALID_DTYPE("ScatterReduce", "self", op::ToString(dtype).GetString(), "FLOAT32/FLOAT16/BFLOAT16");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (rank != 1 && rank != 2) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ScatterReduce", "self rank", std::to_string(rank).c_str(),
+                                              "max supports rank 1 or 2");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (dim != 0 && dim != -static_cast<int64_t>(rank)) {
+        const auto reason = "max requires dim=0 or " + std::to_string(-static_cast<int64_t>(rank)) + " for rank " +
+                            std::to_string(rank);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ScatterReduce", "dim", std::to_string(dim).c_str(), reason.c_str());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (index->GetDataType() != op::DataType::DT_INT64) {
+        OP_LOGE_FOR_INVALID_DTYPE("ScatterReduce", "index", op::ToString(index->GetDataType()).GetString(), "INT64");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (index->GetViewShape() != src->GetViewShape() || index->GetViewShape().GetDimNum() != rank ||
+        (rank == 2 && self->GetViewShape()[1] != src->GetViewShape()[1])) {
+        const auto shapes = std::string(op::ToString(self->GetViewShape()).GetString()) + ", " +
+                            op::ToString(index->GetViewShape()).GetString() + ", " +
+                            op::ToString(src->GetViewShape()).GetString();
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            "ScatterReduce", "self, index, src", shapes.c_str(),
+            "max requires equal ranks, matching index/src shapes and matching self/src columns");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (self->GetViewShape() != out->GetViewShape()) {
+        const auto shapes = std::string(op::ToString(self->GetViewShape()).GetString()) + ", " +
+                            op::ToString(out->GetViewShape()).GetString();
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON("ScatterReduce", "self, out", shapes.c_str(),
+                                               "max requires matching self/out shapes");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (!index->IsEmpty()) {
+        const auto status = CheckScatterReduceMaxSize(self, "self");
+        CHECK_RET(status == ACLNN_SUCCESS, status);
+        return CheckScatterReduceMaxSize(src, "src");
+    }
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src,
                                    int64_t reduce, aclTensor* out, aclOpExecutor* executor, bool includeSelf = true)
 {
@@ -602,6 +713,10 @@ static aclnnStatus ExecScatterBase(const aclTensor* self, int64_t dim, const acl
         OP_CHECK(viewCopyResult != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "viewCopy self failed!"),
                  return ACLNN_ERR_INNER_NULLPTR);
         return ACLNN_SUCCESS;
+    }
+
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 && reduce == REDUCE_MAX) {
+        return ExecScatterReduceMax(selfContiguous, index, srcContiguous, out, includeSelf, executor);
     }
 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
@@ -847,7 +962,9 @@ static aclnnStatus ExecScatterGetWorkspaceSize(const aclTensor* self, int64_t di
     OP_CHECK(uniqueExecutor.get() != nullptr,
              OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!"),
              return ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    bool supportNoTranspose = includeSelf && l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
+    bool supportNoTranspose = !(GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 &&
+                                reduce == REDUCE_MAX) &&
+                              includeSelf && l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
     aclnnStatus ret;
     if (supportNoTranspose) {
         ret = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get(), includeSelf);
@@ -1056,16 +1173,23 @@ aclnnStatus aclnnScatterReduceGetWorkspaceSize(const aclTensor* self, int64_t di
 
     L2_DFX_PHASE_1(aclnnScatterReduce, DFX_IN(self, dim, index, src, reduce, includeSelf), DFX_OUT(out));
 
-    // On 910B/910_93, only FP32 sum is supported. ExecScatterBase checks the
-    // AI Core shape constraints before dispatching include_self=false.
+    // A2/A3 support FP32 sum and first-axis FP32/FP16/BF16 max.
+    // Each path validates its AI Core shape constraints before dispatch.
     // 310P (NpuArch::DAV_2002) is not affected.
+    if (reduce == REDUCE_MAX && GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+        auto status = CheckParams(self, index, src, out);
+        CHECK_RET(status == ACLNN_SUCCESS, status);
+        status = CheckScatterReduceMaxParams(self, index, src, out, dim);
+        CHECK_RET(status == ACLNN_SUCCESS, status);
+    }
     if (self != nullptr) {
         auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
         if (curArch == NpuArch::DAV_2201) {
             const std::string& reduction = GetReduceStr(reduce);
-            if (!(self->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD)) {
+            if (!(self->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD) &&
+                reduce != REDUCE_MAX) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                        "scatter_reduce only supports dtype=float32, reduce=sum. "
+                        "scatter_reduce supports FP32 sum and first-axis FP32/FP16/BF16 max with INT64 index. "
                         "Got dtype=%s, reduce=%s, include_self=%d.",
                         op::ToString(self->GetDataType()).GetString(), reduction.c_str(), includeSelf ? 1 : 0);
                 return ACLNN_ERR_PARAM_INVALID;
@@ -1135,16 +1259,23 @@ aclnnStatus aclnnInplaceScatterReduceGetWorkspaceSize(aclTensor* selfRef, int64_
 
     L2_DFX_PHASE_1(aclnnInplaceScatterReduce, DFX_IN(selfRef, dim, index, src, reduce, includeSelf), DFX_OUT(selfRef));
 
-    // On 910B/910_93, only FP32 sum is supported. ExecScatterBase checks the
-    // AI Core shape constraints before dispatching include_self=false.
+    // A2/A3 support FP32 sum and first-axis FP32/FP16/BF16 max.
+    // Each path validates its AI Core shape constraints before dispatch.
     // 310P (NpuArch::DAV_2002) is not affected.
+    if (reduce == REDUCE_MAX && GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+        auto status = CheckParams(selfRef, index, src, selfRef);
+        CHECK_RET(status == ACLNN_SUCCESS, status);
+        status = CheckScatterReduceMaxParams(selfRef, index, src, selfRef, dim);
+        CHECK_RET(status == ACLNN_SUCCESS, status);
+    }
     if (selfRef != nullptr) {
         auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
         if (curArch == NpuArch::DAV_2201) {
             const std::string& reduction = GetReduceStr(reduce);
-            if (!(selfRef->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD)) {
+            if (!(selfRef->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD) &&
+                reduce != REDUCE_MAX) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                        "scatter_reduce only supports dtype=float32, reduce=sum. "
+                        "scatter_reduce supports FP32 sum and first-axis FP32/FP16/BF16 max with INT64 index. "
                         "Got dtype=%s, reduce=%s, include_self=%d.",
                         op::ToString(selfRef->GetDataType()).GetString(), reduction.c_str(), includeSelf ? 1 : 0);
                 return ACLNN_ERR_PARAM_INVALID;

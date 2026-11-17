@@ -16,6 +16,7 @@
 #include "scatter_elements_v2_310p.h"
 #else
 #include "scatter_elements_v2.h"
+#include "scatter_elements_v2_amax.h"
 #include "scatter_elements_v2_low_memory/exec_transpose_and_scatter_elements.h"
 
 __aicore__ inline bool IsCacheOpTiling(const ScatterElementsV2TilingData* tiling_data)
@@ -97,6 +98,52 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(GM_ADDR var, GM_ADDR i
     }
 #endif
 #else
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
+    if (TILING_KEY_IS(1100)) {
+        KERNEL_TASK_TYPE(1100, KERNEL_TYPE_AIV_ONLY);
+        ScatterElementsV2Amax::Run<float, 0>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
+    if (TILING_KEY_IS(1200)) {
+        KERNEL_TASK_TYPE(1200, KERNEL_TYPE_AIV_ONLY);
+        ScatterElementsV2Amax::Run<half, 0>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
+    if (TILING_KEY_IS(1300)) {
+        KERNEL_TASK_TYPE(1300, KERNEL_TYPE_AIV_ONLY);
+        ScatterElementsV2Amax::Run<bfloat16_t, 0>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
+    if (TILING_KEY_IS(2100)) {
+        KERNEL_TASK_TYPE(2100, KERNEL_TYPE_MIX_AIV_1_0);
+        ScatterElementsV2Amax::Run<float, 2>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
+    if (TILING_KEY_IS(2200)) {
+        KERNEL_TASK_TYPE(2200, KERNEL_TYPE_MIX_AIV_1_0);
+        ScatterElementsV2Amax::Run<half, 2>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
+    if (TILING_KEY_IS(2300)) {
+        KERNEL_TASK_TYPE(2300, KERNEL_TYPE_MIX_AIV_1_0);
+        ScatterElementsV2Amax::Run<bfloat16_t, 2>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
+    if (TILING_KEY_IS(3100)) {
+        KERNEL_TASK_TYPE(3100, KERNEL_TYPE_AIV_ONLY);
+        ScatterElementsV2Amax::Run<float, 1>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
+    if (TILING_KEY_IS(3200)) {
+        KERNEL_TASK_TYPE(3200, KERNEL_TYPE_AIV_ONLY);
+        ScatterElementsV2Amax::Run<half, 1>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
+    if (TILING_KEY_IS(3300)) {
+        KERNEL_TASK_TYPE(3300, KERNEL_TYPE_AIV_ONLY);
+        ScatterElementsV2Amax::Run<bfloat16_t, 1>(var, indices, updates, workspace, tilingDevice);
+        return;
+    }
     if (TILING_KEY_IS(110)) {
         CALL_OP_IMPL(float, int);
     } else if (TILING_KEY_IS(120)) {

@@ -12,9 +12,12 @@
  * \brief
  */
 #include <array>
+#include <cmath>
+#include <limits>
 #include <vector>
 #include "gtest/gtest.h"
 #include "../../../op_host/arch22/scatter_elements_v2_tiling.h"
+#include "../../../common/scatter_elements_v2_amax_policy.h"
 
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
@@ -99,7 +102,7 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
 }
 
 template <typename Index>
-static void RunSumIncludeSelfCase(bool includeSelf, bool splitIndices)
+static void RunSumIncludeSelfCase(bool includeSelf, bool splitIndices, uint64_t mode = 2)
 {
     constexpr uint32_t rows = 2;
     constexpr uint32_t columns = 16;
@@ -108,6 +111,7 @@ static void RunSumIncludeSelfCase(bool includeSelf, bool splitIndices)
     vector<Index> indices(rows * updatesPerRow);
     vector<float> updates(rows * updatesPerRow);
     vector<float> expected(rows * columns);
+    vector<bool> seen(rows * columns, includeSelf);
     for (uint32_t row = 0; row < rows; ++row) {
         for (uint32_t column = 0; column < columns; ++column) {
             initial[row * columns + column] = 100.0f + row * columns + column;
@@ -122,7 +126,24 @@ static void RunSumIncludeSelfCase(bool includeSelf, bool splitIndices)
             uint32_t column = update % 3 == 0 ? 0 : (update % 3 == 1 ? 9 : 15);
             indices[row * updatesPerRow + update] = static_cast<Index>(column);
             updates[row * updatesPerRow + update] = static_cast<float>(update + row + 1);
-            expected[row * columns + column] += updates[row * updatesPerRow + update];
+            const auto target = row * columns + column;
+            if (mode == 4 || mode == 5) {
+                auto& value = updates[row * updatesPerRow + update];
+                if (update == 0 || update == 10) {
+                    value = numeric_limits<float>::quiet_NaN();
+                }
+                if (!seen[target]) {
+                    expected[target] = value;
+                    seen[target] = true;
+                } else if (std::isnan(expected[target]) || std::isnan(value)) {
+                    expected[target] = numeric_limits<float>::quiet_NaN();
+                } else {
+                    expected[target] = mode == 4 ? std::min(expected[target], value) :
+                                                   std::max(expected[target], value);
+                }
+            } else {
+                expected[target] += updates[row * updatesPerRow + update];
+            }
         }
     }
 
@@ -161,7 +182,7 @@ static void RunSumIncludeSelfCase(bool includeSelf, bool splitIndices)
     tiling->lastOneTime = 1;
     tiling->modeFlag = splitIndices ? 0 : 1;
     tiling->includeSelf = includeSelf ? 1 : 0;
-    tiling->mode = 2; // ADD
+    tiling->mode = mode;
 
     ICPU_SET_TILING_KEY(sizeof(Index) == sizeof(int64_t) ? 120 : 110);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
@@ -169,7 +190,11 @@ static void RunSumIncludeSelfCase(bool includeSelf, bool splitIndices)
                 reinterpret_cast<uint8_t*>(indicesGm), reinterpret_cast<uint8_t*>(updatesGm),
                 reinterpret_cast<uint8_t*>(inputGm), nullptr, tilingGm);
     for (size_t index = 0; index < expected.size(); ++index) {
-        EXPECT_FLOAT_EQ(inputGm[index], expected[index]) << "output index=" << index;
+        if (std::isnan(expected[index])) {
+            EXPECT_TRUE(std::isnan(inputGm[index])) << "output index=" << index;
+        } else {
+            EXPECT_FLOAT_EQ(inputGm[index], expected[index]) << "output index=" << index;
+        }
     }
     AscendC::GmFree(inputGm);
     AscendC::GmFree(indicesGm);
@@ -193,4 +218,122 @@ TEST_F(scatter_elements_v2_test, sum_include_self_true_regression)
 {
     RunSumIncludeSelfCase<int32_t>(true, false);
     RunSumIncludeSelfCase<int64_t>(true, true);
+}
+
+TEST_F(scatter_elements_v2_test, max_layouts_repeatability)
+{
+    for (uint64_t key : {1100U, 2100U, 3100U}) {
+        SCOPED_TRACE(key);
+        const bool atomic = key == 2100;
+        const uint32_t n = atomic ? 7 : 3;
+        const uint32_t c = atomic ? 32 : 33;
+        const uint32_t e = atomic ? 131 : 3;
+        const auto plan = ScatterElementsV2Amax::Select(n, e, c, sizeof(float), key == 3100, 4, 196608);
+        if (atomic) {
+            ASSERT_TRUE(plan.valid);
+            ASSERT_EQ(plan.algorithm, ScatterElementsV2Amax::Algorithm::InputPartition);
+            ASSERT_GT(plan.cores, 1U);
+        }
+        for (bool includeSelf : {false, true}) {
+            SCOPED_TRACE(includeSelf);
+            vector<float> initial(n * c, 9.0f), source(e * c, 2.0f);
+            vector<int64_t> index(key == 3100 ? e : e * c, 0);
+            for (uint32_t row = 0; row < e; ++row) {
+                for (uint32_t col = 0; col < c; ++col) {
+                    source[row * c + col] = row + col;
+                }
+                source[row * c + 2] = -numeric_limits<float>::infinity();
+                source[row * c + 3] = row == 0 ? -0.0f : 0.0f;
+                source[row * c + 4] = row == 0 ? 0.0f : -0.0f;
+            }
+            source[0] = numeric_limits<float>::quiet_NaN();
+            source[(e - 1) * c] = numeric_limits<float>::quiet_NaN();
+            source[(e / 2) * c + 1] = numeric_limits<float>::infinity();
+            initial[3] = 0.0f;
+            initial[4] = -0.0f;
+            initial[5] = numeric_limits<float>::quiet_NaN();
+            initial[c] = -0.0f;
+            initial[c + 1] = numeric_limits<float>::quiet_NaN();
+            initial[c + 2] = numeric_limits<float>::infinity();
+            initial[c + 3] = -numeric_limits<float>::infinity();
+            auto expected = initial;
+            expected[0] = numeric_limits<float>::quiet_NaN();
+            expected[1] = numeric_limits<float>::infinity();
+            expected[2] = includeSelf ? initial[2] : -numeric_limits<float>::infinity();
+            expected[3] = includeSelf ? initial[3] : -0.0f;
+            expected[4] = includeSelf ? initial[4] : 0.0f;
+            expected[5] = includeSelf ? initial[5] : static_cast<float>(e - 1 + 5);
+            for (uint32_t col = 6; col < c; ++col) {
+                const float updated = static_cast<float>(e - 1 + col);
+                expected[col] = includeSelf ? std::max(initial[col], updated) : updated;
+            }
+            auto* var = static_cast<float*>(AscendC::GmAlloc(initial.size() * sizeof(float)));
+            auto* idx = static_cast<int64_t*>(AscendC::GmAlloc(index.size() * sizeof(int64_t)));
+            auto* src = static_cast<float*>(AscendC::GmAlloc(source.size() * sizeof(float)));
+            auto* td = static_cast<ScatterElementsV2TilingData*>(AscendC::GmAlloc(sizeof(ScatterElementsV2TilingData)));
+            const size_t workspaceBytes = n * c * (sizeof(float) + 2 * sizeof(int32_t));
+            auto* workspace = atomic ? static_cast<uint8_t*>(AscendC::GmAlloc(workspaceBytes)) : nullptr;
+            ASSERT_NE(var, nullptr);
+            ASSERT_NE(idx, nullptr);
+            ASSERT_NE(src, nullptr);
+            ASSERT_NE(td, nullptr);
+            if (atomic) {
+                ASSERT_NE(workspace, nullptr);
+            }
+            memcpy(idx, index.data(), index.size() * sizeof(int64_t));
+            memcpy(src, source.data(), source.size() * sizeof(float));
+            memset(td, 0, sizeof(*td));
+            td->includeSelf = includeSelf;
+            td->amaxInputRows = e;
+            td->amaxOutputRows = n;
+            td->amaxColumns = c;
+            td->amaxChunkLength = atomic ? plan.chunk : (key == 3100 ? n : 104);
+            td->amaxTileLength = atomic ? plan.tile : (key == 3100 ? 1024 : 2048);
+            td->amaxCompactRows = key == 3100;
+            vector<float> first(initial.size());
+            for (int repeat = 0; repeat < 3; ++repeat) {
+                SCOPED_TRACE(repeat);
+                memcpy(var, initial.data(), initial.size() * sizeof(float));
+                if (atomic) {
+                    memset(workspace, 0, workspaceBytes);
+                }
+                ICPU_SET_TILING_KEY(key);
+                AscendC::SetKernelMode(KernelMode::AIV_MODE);
+                ICPU_RUN_KF(scatter_elements_v2, atomic ? plan.cores : 1, reinterpret_cast<uint8_t*>(var),
+                            reinterpret_cast<uint8_t*>(idx), reinterpret_cast<uint8_t*>(src),
+                            reinterpret_cast<uint8_t*>(var), workspace, reinterpret_cast<uint8_t*>(td));
+                for (size_t element = 0; element < expected.size(); ++element) {
+                    uint32_t expectedBits = 0;
+                    uint32_t actualBits = 0;
+                    memcpy(&expectedBits, &expected[element], sizeof(expectedBits));
+                    memcpy(&actualBits, &var[element], sizeof(actualBits));
+                    EXPECT_EQ(actualBits, expectedBits) << "output index=" << element;
+                }
+                if (repeat == 0) {
+                    memcpy(first.data(), var, first.size() * sizeof(float));
+                } else {
+                    EXPECT_EQ(memcmp(first.data(), var, first.size() * sizeof(float)), 0);
+                }
+            }
+            AscendC::GmFree(var);
+            AscendC::GmFree(idx);
+            AscendC::GmFree(src);
+            AscendC::GmFree(td);
+            if (atomic) {
+                AscendC::GmFree(workspace);
+            }
+        }
+    }
+}
+
+TEST_F(scatter_elements_v2_test, legacy_max_min_nan)
+{
+    for (uint64_t mode : {4U, 5U}) {
+        for (bool includeSelf : {false, true}) {
+            for (bool split : {false, true}) {
+                RunSumIncludeSelfCase<int32_t>(includeSelf, split, mode);
+                RunSumIncludeSelfCase<int64_t>(includeSelf, split, mode);
+            }
+        }
+    }
 }

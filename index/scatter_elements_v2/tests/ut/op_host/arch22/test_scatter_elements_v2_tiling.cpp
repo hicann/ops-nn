@@ -14,6 +14,7 @@
  */
 
 #include <iostream>
+#include "../../../../common/scatter_elements_v2_amax_policy.h"
 #include <vector>
 #include <thread>
 #include <nlohmann/json.hpp>
@@ -74,11 +75,12 @@ struct Arch22TilingResult {
     uint32_t blockDim = 0;
 };
 
-static Arch22TilingResult ExecuteArch22DeterministicCase(ge::DataType inputDtype, ge::DataType indicesDtype,
-                                                         ge::DataType updatesDtype, gert::StorageShape& inputShape,
-                                                         gert::StorageShape& indicesShape,
-                                                         gert::StorageShape& updatesShape, int64_t axis,
-                                                         const std::string& reduction, int32_t deterministic)
+enum class Arch22Workspace { Ready, Missing, Empty };
+
+static Arch22TilingResult ExecuteArch22DeterministicCase(
+    ge::DataType inputDtype, ge::DataType indicesDtype, ge::DataType updatesDtype, gert::StorageShape& inputShape,
+    gert::StorageShape& indicesShape, gert::StorageShape& updatesShape, int64_t axis, const std::string& reduction,
+    int32_t deterministic, Arch22Workspace workspaceState = Arch22Workspace::Ready, bool includeSelf = true)
 {
     std::string op_type("ScatterElementsV2");
     EXPECT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -121,7 +123,8 @@ static Arch22TilingResult ExecuteArch22DeterministicCase(ge::DataType inputDtype
 
     auto param = gert::TilingData::CreateCap(4096);
     EXPECT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(workspaceState == Arch22Workspace::Empty ? 0 :
+                                                                                                                  4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
     auto outputShape = inputShape;
 
@@ -133,14 +136,15 @@ static Arch22TilingResult ExecuteArch22DeterministicCase(ge::DataType inputDtype
                       .CompileInfo(&compile_info)
                       .DeterministicInfo(reinterpret_cast<int32_t*>(deterministic))
                       .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(axis)},
-                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)}})
+                                  {"reduction", Ops::NN::AnyValue::CreateFrom<std::string>(reduction)},
+                                  {"include_self", Ops::NN::AnyValue::CreateFrom<bool>(includeSelf)}})
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, indicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, updatesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, inputDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .TilingData(param.get())
-                      .Workspace(ws_size)
+                      .Workspace(workspaceState == Arch22Workspace::Missing ? nullptr : ws_size)
                       .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
@@ -956,4 +960,92 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_other_error)
 
     // workspaces nullptr return failed
     EXPECT_NE(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ScatterElementsV2Tiling, MaxResourcePlan)
+{
+    for (uint64_t bytes : {2U, 4U}) {
+        for (uint64_t n : {3U, 63U, 64U, 1888U, 65536U}) {
+            for (uint64_t c : {1U, 8U, 33U, 64U, 256U, 4097U}) {
+                for (bool compact : {false, true}) {
+                    const auto plan = ScatterElementsV2Amax::Select(n, 4096, c, bytes, compact, 40, 196608);
+                    ASSERT_TRUE(plan.valid);
+                    EXPECT_LE(plan.ubBytes + ScatterElementsV2Amax::kRuntimeUbBytes, 196608U);
+                    EXPECT_GT(plan.chunk, 0U);
+                    EXPECT_GT(plan.cores, 0U);
+                    EXPECT_LE(plan.cores, 40U);
+                    if (plan.layout == ScatterElementsV2Amax::Layout::Rows) {
+                        EXPECT_TRUE(compact);
+                    }
+                }
+            }
+        }
+    }
+    EXPECT_FALSE(ScatterElementsV2Amax::Select(3, 7, 8, 4, true, 0, 196608).valid);
+    EXPECT_FALSE(ScatterElementsV2Amax::Select(3, 7, 8, 4, true, 40, 8192).valid);
+}
+
+TEST_F(ScatterElementsV2Tiling, MaxLayoutsDeterministic)
+{
+    struct MaxCase {
+        int64_t n, e, c;
+        bool compact;
+        uint64_t key;
+    };
+    for (auto dtype : {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}) {
+        for (const auto& shape : {MaxCase{1888, 4864, 256, true, 3100}, MaxCase{7, 4097, 32, false, 2100},
+                                  MaxCase{7, 131, 32, false, 2100}, MaxCase{3, 67, 33, false, 1100}}) {
+            gert::StorageShape input({shape.n, shape.c}, {shape.n, shape.c});
+            gert::StorageShape index = shape.compact ? gert::StorageShape({shape.e}, {shape.e}) :
+                                                       gert::StorageShape({shape.e, shape.c}, {shape.e, shape.c});
+            gert::StorageShape updates({shape.e, shape.c}, {shape.e, shape.c});
+            for (bool includeSelf : {false, true}) {
+                SCOPED_TRACE(includeSelf);
+                const auto normal = ExecuteArch22DeterministicCase(dtype, ge::DT_INT64, dtype, input, index, updates, 0,
+                                                                   "max", 0, Arch22Workspace::Ready, includeSelf);
+                const auto deterministic = ExecuteArch22DeterministicCase(dtype, ge::DT_INT64, dtype, input, index,
+                                                                          updates, 0, "max", 1, Arch22Workspace::Ready,
+                                                                          includeSelf);
+                EXPECT_EQ(normal.status, ge::GRAPH_SUCCESS);
+                EXPECT_EQ(deterministic.status, ge::GRAPH_SUCCESS);
+                const uint64_t key = shape.key + (dtype == ge::DT_FLOAT ? 0 : (dtype == ge::DT_FLOAT16 ? 100 : 200));
+                EXPECT_EQ(normal.tilingKey, key);
+                EXPECT_EQ(deterministic.tilingKey, key);
+                EXPECT_EQ(normal.blockDim, deterministic.blockDim);
+                if (shape.key == 2100) {
+                    EXPECT_GT(deterministic.blockDim, 1U);
+                }
+            }
+        }
+    }
+}
+
+TEST_F(ScatterElementsV2Tiling, MaxElementCountLimit)
+{
+    for (uint64_t bytes : {2U, 4U}) {
+        EXPECT_TRUE(ScatterElementsV2Amax::Select(65535, 1, 65537, bytes, false, 48, 196608).valid);
+        EXPECT_FALSE(ScatterElementsV2Amax::Select(65536, 1, 65536, bytes, false, 48, 196608).valid);
+        EXPECT_FALSE(ScatterElementsV2Amax::Select(1, 65536, 65536, bytes, false, 48, 196608).valid);
+        EXPECT_FALSE(ScatterElementsV2Amax::Select(1ULL << 32, 1, 1, bytes, false, 48, 196608).valid);
+    }
+    gert::StorageShape input({65536, 65536}, {65536, 65536});
+    gert::StorageShape index({1, 65536}, {1, 65536});
+    gert::StorageShape updates({1, 65536}, {1, 65536});
+    const auto r = ExecuteArch22DeterministicCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input, index, updates, 0,
+                                                  "max", 0);
+    EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+}
+
+TEST_F(ScatterElementsV2Tiling, MaxWorkspaceUnavailable)
+{
+    gert::StorageShape input({7, 32}, {7, 32});
+    gert::StorageShape index({67, 32}, {67, 32});
+    gert::StorageShape updates({67, 32}, {67, 32});
+    for (auto dtype : {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}) {
+        for (auto state : {Arch22Workspace::Missing, Arch22Workspace::Empty}) {
+            const auto r = ExecuteArch22DeterministicCase(dtype, ge::DT_INT64, dtype, input, index, updates, 0, "max",
+                                                          0, state);
+            EXPECT_EQ(r.status, ge::GRAPH_FAILED);
+        }
+    }
 }

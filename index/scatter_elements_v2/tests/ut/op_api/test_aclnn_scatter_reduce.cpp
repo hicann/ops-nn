@@ -9,6 +9,7 @@
  */
 
 #include <vector>
+#include <memory>
 #include "gtest/gtest.h"
 #include <dlfcn.h>
 
@@ -212,7 +213,8 @@ TEST_F(l2_scatter_reduce_test, arch22_rejects_other_reductions_and_dtypes)
     op::NpuArchManager platform(NpuArch::DAV_2201);
     for (auto dtype : {ACL_FLOAT, ACL_FLOAT16, ACL_BF16, ACL_INT32}) {
         for (int64_t reduction : {kReduceNone, kReduceAdd, kReduceMul, kReduceMax, kReduceMin, kReduceMean}) {
-            if (dtype == ACL_FLOAT && reduction == kReduceAdd) {
+            if ((dtype == ACL_FLOAT && reduction == kReduceAdd) ||
+                ((dtype == ACL_FLOAT || dtype == ACL_FLOAT16 || dtype == ACL_BF16) && reduction == kReduceMax)) {
                 continue;
             }
             for (bool includeSelf : {false, true}) {
@@ -357,5 +359,126 @@ TEST_F(l2_scatter_reduce_test, ascend960_add_mul_include_self)
                 EXPECT_EQ(inplaceUt.TestGetWorkspaceSize(&workspaceSize), expected);
             }
         }
+    }
+}
+
+TEST_F(l2_scatter_reduce_test, arch22_max_include_self)
+{
+    op::SocVersionManager soc(op::SocVersion::ASCEND910B);
+    op::NpuArchManager platform(NpuArch::DAV_2201);
+    for (auto dtype : {ACL_FLOAT, ACL_FLOAT16, ACL_BF16}) {
+        for (const auto& shape : {vector<int64_t>{7}, vector<int64_t>{7, 33}}) {
+            for (bool includeSelf : {false, true}) {
+                auto self = TensorDesc(shape, dtype, ACL_FORMAT_ND);
+                auto index = TensorDesc(shape, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 6);
+                auto src = TensorDesc(shape, dtype, ACL_FORMAT_ND);
+                auto out = TensorDesc(shape, dtype, ACL_FORMAT_ND);
+                uint64_t ws = 0;
+                auto ut = OP_API_UT(aclnnScatterReduce, INPUT(self, int64_t{0}, index, src, kReduceMax, includeSelf),
+                                    OUTPUT(out));
+                EXPECT_EQ(ut.TestGetWorkspaceSize(&ws), ACLNN_SUCCESS);
+                auto ip = OP_API_UT(
+                    aclnnInplaceScatterReduce,
+                    INPUT(self, -static_cast<int64_t>(shape.size()), index, src, kReduceMax, includeSelf), OUTPUT());
+                EXPECT_EQ(ip.TestGetWorkspaceSize(&ws), ACLNN_SUCCESS);
+            }
+        }
+    }
+}
+
+TEST_F(l2_scatter_reduce_test, arch22_max_shape_limits)
+{
+    op::SocVersionManager soc(op::SocVersion::ASCEND910B);
+    op::NpuArchManager platform(NpuArch::DAV_2201);
+    auto self = TensorDesc({7, 33}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto src = TensorDesc({7, 33}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto index = TensorDesc({7, 33}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 6);
+    auto out = TensorDesc({7, 33}, ACL_FLOAT, ACL_FORMAT_ND);
+    uint64_t ws = 0;
+    auto reject = [&](TensorDesc input, TensorDesc indices, TensorDesc updates, TensorDesc output, int64_t dim,
+                      std::initializer_list<const char*> expected) {
+        for (bool includeSelf : {false, true}) {
+            auto ut = OP_API_UT(aclnnScatterReduce, INPUT(input, dim, indices, updates, kReduceMax, includeSelf),
+                                OUTPUT(output));
+            EXPECT_EQ(ut.TestGetWorkspaceSize(&ws), ACLNN_ERR_PARAM_INVALID);
+            CheckErrorMessage(expected);
+            auto ip = OP_API_UT(aclnnInplaceScatterReduce, INPUT(input, dim, indices, updates, kReduceMax, includeSelf),
+                                OUTPUT());
+            EXPECT_EQ(ip.TestGetWorkspaceSize(&ws), ACLNN_ERR_PARAM_INVALID);
+            CheckErrorMessage(expected);
+        }
+    };
+    reject(self, index, src, out, 1, {"dim", "1", "dim=0 or -2", "rank 2"});
+    auto i32 = TensorDesc({7, 33}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 6);
+    reject(self, i32, src, out, 0, {"index", "INT32", "INT64"});
+    auto rank3 = TensorDesc({2, 7, 33}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto index3 = TensorDesc({2, 7, 33}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 1);
+    reject(rank3, index3, rank3, rank3, 0, {"self rank", "3", "rank 1 or 2"});
+    auto shortSrc = TensorDesc({6, 33}, ACL_FLOAT, ACL_FORMAT_ND);
+    reject(self, index, shortSrc, out, 0, {"self, index, src", "7, 33", "6, 33", "matching index/src shapes"});
+    auto narrow = TensorDesc({7, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto narrowIndex = TensorDesc({7, 32}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 6);
+    reject(self, narrowIndex, narrow, out, 0, {"self, index, src", "7, 33", "7, 32", "matching self/src columns"});
+    auto emptyIndex = TensorDesc({0, 33}, ACL_INT64, ACL_FORMAT_ND);
+    auto emptySrc = TensorDesc({0, 33}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto empty = OP_API_UT(aclnnScatterReduce, INPUT(self, int64_t{0}, emptyIndex, emptySrc, kReduceMax, false),
+                           OUTPUT(out));
+    EXPECT_EQ(empty.TestGetWorkspaceSize(&ws), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_scatter_reduce_test, arch22_max_element_count_limits)
+{
+    op::SocVersionManager soc(op::SocVersion::ASCEND910B);
+    op::NpuArchManager platform(NpuArch::DAV_2201);
+    auto tensor = [](const vector<int64_t>& shape, aclDataType dtype) {
+        const vector<int64_t> strides = {shape[1], 1};
+        return std::unique_ptr<aclTensor, decltype(&aclDestroyTensor)>(
+            aclCreateTensor(shape.data(), shape.size(), dtype, strides.data(), 0, ACL_FORMAT_ND, shape.data(),
+                            shape.size(), nullptr),
+            aclDestroyTensor);
+    };
+    for (auto dtype : {ACL_FLOAT, ACL_FLOAT16, ACL_BF16}) {
+        for (bool selfLimit : {false, true}) {
+            for (int64_t rows : {65536LL, 4294967296LL}) {
+                const int64_t columns = rows == 65536 ? 65536 : 1;
+                const vector<int64_t> large = {rows, columns}, small = {1, columns};
+                auto self = tensor(selfLimit ? large : small, dtype);
+                auto src = tensor(selfLimit ? small : large, dtype);
+                auto index = tensor(selfLimit ? small : large, ACL_INT64);
+                ASSERT_NE(self.get(), nullptr);
+                ASSERT_NE(src.get(), nullptr);
+                ASSERT_NE(index.get(), nullptr);
+                for (bool includeSelf : {false, true}) {
+                    uint64_t ws = 0;
+                    aclOpExecutor* executor = nullptr;
+                    EXPECT_EQ(aclnnScatterReduceGetWorkspaceSize(self.get(), 0, index.get(), src.get(), kReduceMax,
+                                                                 includeSelf, self.get(), &ws, &executor),
+                              ACLNN_ERR_PARAM_INVALID);
+                    EXPECT_EQ(executor, nullptr);
+                    CheckErrorMessage({selfLimit ? "self" : "src", "4294967296", "4294967295"});
+                    EXPECT_EQ(aclnnInplaceScatterReduceGetWorkspaceSize(self.get(), 0, index.get(), src.get(),
+                                                                        kReduceMax, includeSelf, &ws, &executor),
+                              ACLNN_ERR_PARAM_INVALID);
+                    EXPECT_EQ(executor, nullptr);
+                    CheckErrorMessage({selfLimit ? "self" : "src", "4294967296", "4294967295"});
+                }
+            }
+        }
+    }
+    auto largeSelf = tensor({65536, 65536}, ACL_FLOAT);
+    auto emptySrc = tensor({0, 65536}, ACL_FLOAT);
+    auto emptyIndex = tensor({0, 65536}, ACL_INT64);
+    for (bool includeSelf : {false, true}) {
+        uint64_t ws = 0;
+        aclOpExecutor* executor = nullptr;
+        EXPECT_EQ(aclnnScatterReduceGetWorkspaceSize(largeSelf.get(), 0, emptyIndex.get(), emptySrc.get(), kReduceMax,
+                                                     includeSelf, largeSelf.get(), &ws, &executor),
+                  ACLNN_SUCCESS);
+        delete executor;
+        executor = nullptr;
+        EXPECT_EQ(aclnnInplaceScatterReduceGetWorkspaceSize(largeSelf.get(), 0, emptyIndex.get(), emptySrc.get(),
+                                                            kReduceMax, includeSelf, &ws, &executor),
+                  ACLNN_SUCCESS);
+        delete executor;
     }
 }

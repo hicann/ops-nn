@@ -187,7 +187,7 @@ aclnnStatus aclnnInplaceScatterReduce(
         <td>includeSelf（bool）</td>
         <td>输入</td>
         <td>规约计算时是否将self中的原始值参与计算。</td>
-        <td>true表示self参与规约；false表示命中位置仅累加src，未命中位置保留self；空index保留self。</td>
+        <td>true表示self参与规约；false表示命中位置仅规约src，未命中位置保留self；空index保留self。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -398,7 +398,7 @@ aclnnStatus aclnnInplaceScatterReduce(
         <td>includeSelf（bool）</td>
         <td>输入</td>
         <td>规约计算时是否将selfRef中的原始值参与计算。</td>
-        <td>true表示self参与规约；false表示命中位置仅累加src，未命中位置保留self；空index保留self。</td>
+        <td>true表示self参与规约；false表示命中位置仅规约src，未命中位置保留self；空index保留self。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -528,10 +528,15 @@ aclnnStatus aclnnInplaceScatterReduce(
 <!-- npu="A3,910b" id8 -->
 - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>：
   - 默认确定性实现。
-  - `reduce` 仅支持1（add）。
+  - `reduce` 仅支持1（add）和3（max）。
   - `reduce=1(add)`：
     - `self/src/out` 的数据类型仅支持 `FLOAT32`。
     - `includeSelf=false` 且输入非空时，将 `dim` 归一化为非负轴 `d`：`d=0` 时，除首轴和末轴外，`self/index/src` 的各维大小分别相同；`d>0` 时，除第 0 轴和第 `d` 轴外，各维大小分别相同。
+  - `reduce=3(max)`：
+    - `self/src/out` 的数据类型支持 `FLOAT32`、`FLOAT16` 和 `BFLOAT16`。
+    - 支持一维向量和二维矩阵。一维时 `dim` 为 0 或 -1；二维时 `dim` 为 0 或 -2。`index` 使用 `INT64` 类型，形状与 `src` 相同；二维时 `src` 与 `self` 的列数相同。
+    - `index` 非空时，`self/src` 的各维大小及各自元素总数均不超过 4294967295。
+    - 参与比较的值中出现 NaN，结果为 NaN；正负无穷按大小正常比较；+0 与 -0 相等时，保留先参与比较的零值符号。
 <!-- end id8 -->
 
 ## 调用示例

@@ -189,7 +189,7 @@ aclnnStatus aclnnInplaceScatterReduce(
         <td>includeSelf (bool)</td>
         <td>Input</td>
         <td>Whether the original values in self participate in the reduction computation.</td>
-        <td>true includes self in the reduction; false sums src at updated positions and preserves self elsewhere. Empty index preserves self.</td>
+        <td>true includes self in the reduction; false reduces src at updated positions and preserves self elsewhere. Empty index preserves self.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -400,7 +400,7 @@ aclnnStatus aclnnInplaceScatterReduce(
         <td>includeSelf (bool)</td>
         <td>Input</td>
         <td>Whether the original values in selfRef participate in the reduction computation.</td>
-        <td>true includes self in the reduction; false sums src at updated positions and preserves self elsewhere. Empty index preserves self.</td>
+        <td>true includes self in the reduction; false reduces src at updated positions and preserves self elsewhere. Empty index preserves self.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -530,10 +530,15 @@ aclnnStatus aclnnInplaceScatterReduce(
 <!-- npu="A3,910b" id8 -->
 - <term>Atlas A3 products</term> and <term>Atlas A2 products</term>:
   - The implementation is deterministic by default.
-  - `reduce` supports only 1 (add).
+  - `reduce` supports only 1 (add) and 3 (max).
   - `reduce=1(add)`:
     - The data type of `self/src/out` must be `FLOAT32`.
     - For nonempty inputs with `includeSelf=false`, normalize `dim` to a nonnegative axis `d`. If `d=0`, `self/index/src` sizes must match on every axis except the first and last axes. If `d>0`, their sizes must match on every axis except axis 0 and axis `d`.
+  - `reduce=3(max)`:
+    - The supported data types of `self/src/out` are `FLOAT32`, `FLOAT16`, and `BFLOAT16`.
+    - Supports one-dimensional vectors and two-dimensional matrices. For one-dimensional inputs, `dim` is 0 or -1; for two-dimensional inputs, `dim` is 0 or -2. `index` uses the `INT64` data type and has the same shape as `src`. For two-dimensional inputs, `src` and `self` have the same number of columns.
+    - For nonempty `index`, each `self/src` dimension and the element count of each tensor must be at most 4294967295.
+    - If any value being compared is NaN, the result is NaN. Positive and negative infinity are compared according to their values. When +0 and -0 compare equal, the sign of the first zero being compared is retained.
 <!-- end id8 -->
 
 ## Example

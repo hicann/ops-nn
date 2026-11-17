@@ -119,7 +119,7 @@ int RunReduceCase(const ReduceCase& reduceCase, aclrtStream stream)
 {
     const std::vector<int64_t> selfShape = {4, 4};
     const std::vector<int64_t> indexShape = {3, 4};
-    const std::vector<int64_t> srcShape = {4, 4};
+    const std::vector<int64_t> srcShape = reduceCase.reduce == kReduceMax ? indexShape : selfShape;
     const std::vector<int64_t> outShape = {4, 4};
     const int64_t dim = 0;
 
@@ -217,8 +217,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     const std::vector<int64_t> indexHostData = {0, 1, 2, 1, 0, 1, 2, 0, 2, 2, 1, 0};
-    // FP32 sum supports both include_self values on Atlas A2/A3.
-    // Other reductions (none/max/min/mean/mul) are intercepted at the API level.
+    // Sum and max expose both include_self values on Atlas A2/A3.
     const std::vector<ReduceCase> cases = {
         {"scatter_reduce_add",
          kReduceAdd,
@@ -234,6 +233,20 @@ int main()
          indexHostData,
          {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
          {4, 3, 3, 18, 3, 6, 10, 3, 8, 9, 8, 3, 3, 3, 3, 3}},
+        {"scatter_reduce_max",
+         kReduceMax,
+         true,
+         std::vector<float>(16, 3),
+         indexHostData,
+         {0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2},
+         std::vector<float>(16, 3)},
+        {"scatter_reduce_max_without_self",
+         kReduceMax,
+         false,
+         std::vector<float>(16, 3),
+         indexHostData,
+         {0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2},
+         {1, 3, 3, 2, 3, 2, 1, 0, 2, 0, 2, 3, 3, 3, 3, 3}},
     };
 
     for (const auto& reduceCase : cases) {
