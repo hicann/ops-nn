@@ -282,7 +282,7 @@ bool ReadMatmulDescriptors(FusionMatch& match)
     }
     match.isWeightOnly = x1Type != DT_INT8;
     if (match.isWeightOnly) {
-        return match.x1Desc.GetFormat() == FORMAT_ND && match.x2Desc.GetFormat() == FORMAT_ND;
+        return IsSupportedDataFormat(match.x1Desc.GetFormat()) && IsSupportedDataFormat(match.x2Desc.GetFormat());
     }
     return IsSupportedDataFormat(match.x1Desc.GetFormat()) &&
            (IsSupportedDataFormat(match.x2Desc.GetFormat()) || match.x2Desc.GetFormat() == FORMAT_FRACTAL_NZ);

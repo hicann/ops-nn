@@ -80,7 +80,7 @@
 | ---- | ---- |
 | 矩阵乘节点的输入 | 数据类型符合[融合模式](#融合模式)中的输入识别范围；仅包含两个数据输入及可选的`bias`，不处理带其他输入的矩阵乘节点 |
 | INT8×INT8输入的数据格式 | 第一个输入为ND、NCHW、NHWC、HWCN、CHWN、NDHWC、NCDHW、DHWCN或DHWNC；第二个输入支持这些格式及FRACTAL_NZ |
-| 仅权重量化输入的数据格式 | 两个数据输入均为ND |
+| 仅权重量化输入的数据格式 | 两个数据输入均为ND、NCHW、NHWC、HWCN、CHWN、NDHWC、NCDHW、DHWCN或DHWNC |
 | `AscendDequant`两节点融合的输出 | 融合后固定为FLOAT16；即使融合前`AscendDequant`输出为FLOAT32，融合后也不会保留该输出类型 |
 | `AscendRequant`的输出 | 按该算子的输入输出规格，输出类型为INT8 |
 | 三节点融合 | `AscendQuant`输出为INT8；`deq_scale`使用UINT64编码张量；编译期能够取得该常量值和`AscendQuant.scale`、`AscendQuant.offset`属性值；生成的缩放参数须符合所用平台对`scale`或`antiquant_scale`的格式要求 |
