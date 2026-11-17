@@ -48,6 +48,30 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
     op::DataType::DT_DOUBLE,     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_COMPLEX64,
     op::DataType::DT_COMPLEX128, op::DataType::DT_BOOL,  op::DataType::DT_BF16};
 
+// idx/count输出支持的数据类型列表
+static const std::initializer_list<op::DataType> IDX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                           op::DataType::DT_INT64};
+
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* valueOut, const aclTensor* inverseOut,
+                            const aclTensor* countsOut, const std::initializer_list<op::DataType>& dtypeSupportList)
+{
+    // 检查self的数据类型是否在算子支持列表内
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
+
+    // 检查inverseOut数据类型（idx/count输出仅支持INT32、INT64）
+    OP_CHECK_DTYPE_NOT_SUPPORT(inverseOut, IDX_DTYPE_SUPPORT_LIST, return false);
+
+    // 检查countsOut数据类型（idx/count输出仅支持INT32、INT64）
+    OP_CHECK_DTYPE_NOT_SUPPORT(countsOut, IDX_DTYPE_SUPPORT_LIST, return false);
+
+    // 检查self与valueOut数据类型一致
+    OP_CHECK_DTYPE_NOT_MATCH(valueOut, self->GetDataType(), return false);
+
+    // 检查inverseOut与countsOut数据类型一致
+    OP_CHECK_DTYPE_NOT_MATCH(inverseOut, countsOut->GetDataType(), return false);
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* self, aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
                                int64_t dim)
 {
@@ -57,8 +81,7 @@ static aclnnStatus CheckParams(const aclTensor* self, aclTensor* valueOut, aclTe
     // 2. 检查数据类型
     const std::initializer_list<op::DataType> dtypeSupportList = GetDtypeSupportListV2(ASCEND910B_DTYPE_SUPPORT_LIST,
                                                                                        ASCEND910_DTYPE_SUPPORT_LIST);
-    CHECK_RET(CheckDtypeValid1In1OutMatch(self, valueOut, inverseOut, countsOut, dtypeSupportList),
-              ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(self, valueOut, inverseOut, countsOut, dtypeSupportList), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查数据Shape
     CHECK_RET(CheckShapeNotlimitDim1In1Out(self), ACLNN_ERR_PARAM_INVALID);

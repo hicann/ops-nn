@@ -94,12 +94,9 @@ aclnnStatus UniqueConsecutive(const aclTensor* self, bool returnInverse, bool re
     L0_DFX(UniqueConsecutive, self, returnInverse, returnCounts, dim, valueOut, inverseOut, countsOut);
 
     if (CheckSupport4Aicore(self, returnInverse, dim, valueOut, inverseOut, countsOut)) {
-        op::DataType outIdxType = op::DataType::DT_INT64;
-        if (returnInverse) {
-            outIdxType = inverseOut->GetDataType();
-        } else if (returnCounts) {
-            outIdxType = countsOut->GetDataType();
-        }
+        // inverseOut与countsOut数据类型须一致且仅支持INT32/INT64（CheckTensorDtype4Aicore已校验），
+        // out_idx属性按实际出参数据类型下发，避免return标记均为false的哑元场景下属性与输出描述符不一致
+        op::DataType outIdxType = countsOut->GetDataType();
         return UniqueConsecutiveAiCore(self, returnInverse, returnCounts, dim, valueOut, inverseOut, countsOut,
                                        outIdxType, executor);
     }

@@ -130,6 +130,14 @@ bool UniqueConsecutiveTilingHelper::GetShapeInfo()
     this->totalSize_ = context_->GetInputShape(0)->GetStorageShape().GetShapeSize();
     this->isInt64_ = (this->totalSize_ > INT32_MAX) ? true : false;
 
+    // 输入元素总数超过INT32可表示范围且idx/count输出为INT32时，计数/下标值无法用INT32完整表示，返回失败
+    OP_CHECK_IF((this->totalSize_ > INT32_MAX) && (this->outIdxDtype_ == ge::DataType::DT_INT32),
+                OP_LOGE(context_->GetNodeName(),
+                        "Input total size %ld exceeds INT32_MAX and out_idx is INT32, count/idx values cannot be "
+                        "represented by INT32, please use INT64 idx/count output.",
+                        this->totalSize_),
+                return false);
+
     OP_LOGI("GetShapeInfo", "dataTypeX=%d, dtSizeX=%ld, totalSize=%ld", static_cast<int32_t>(this->dataTypeX_),
             this->dtSizeX_, this->totalSize_);
     return true;

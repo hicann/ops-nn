@@ -303,3 +303,63 @@ TEST_F(l2_unique_consecutive_test, case_026_UNCONTIGUOUS_DUMMY_INVERSE_OUT)
     aclRet = contigUt.TestGetWorkspaceSize(&contigWorkspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// 测试inverseOut/countsOut为INT32时数据类型校验通过（idx/count输出支持INT32、INT64）
+TEST_F(l2_unique_consecutive_test, case_027_DTYPE_INT32_INVERSE_OUT_AND_COUNTS_OUT)
+{
+    vector<float> raw_value = {0, 1, 2, 2, 3, 1, 1, 1, 4, 4};
+    auto self = TensorDesc({10}, ACL_FLOAT, ACL_FORMAT_ND).Value(raw_value);
+    auto output = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto indices = TensorDesc({10}, ACL_INT32, ACL_FORMAT_ND);
+    auto counts = TensorDesc({10}, ACL_INT32, ACL_FORMAT_ND);
+
+    bool return_inverse = true;
+    bool return_counts = true;
+
+    auto ut = OP_API_UT(aclnnUniqueConsecutive, INPUT(self, return_inverse, return_counts, NoneN),
+                        OUTPUT(output, indices, counts));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 测试inverseOut(INT32)与countsOut(INT64)数据类型不一致
+TEST_F(l2_unique_consecutive_test, case_028_DTYPE_UNCONSISTENT_INT32_AND_INT64_OUT)
+{
+    vector<float> raw_value = {0, 1, 2, 2, 3, 1, 1, 1, 4, 4};
+    auto self = TensorDesc({10}, ACL_FLOAT, ACL_FORMAT_ND).Value(raw_value);
+    auto output = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto indices = TensorDesc({10}, ACL_INT32, ACL_FORMAT_ND);
+    auto counts = TensorDesc({10}, ACL_INT64, ACL_FORMAT_ND); // 与inverseOut数据类型不一致
+
+    bool return_inverse = true;
+    bool return_counts = true;
+
+    auto ut = OP_API_UT(aclnnUniqueConsecutive, INPUT(self, return_inverse, return_counts, NoneN),
+                        OUTPUT(output, indices, counts));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 测试returnInverse/returnCounts均为false时，INT32哑元输出数据类型校验通过（idx/count输出支持INT32、INT64）
+TEST_F(l2_unique_consecutive_test, case_029_DTYPE_INT32_DUMMY_WHEN_BOTH_FALSE)
+{
+    vector<float> raw_value = {0, 1, 2, 2, 3, 1, 1, 1, 4, 4};
+    auto self = TensorDesc({10}, ACL_FLOAT, ACL_FORMAT_ND).Value(raw_value);
+    auto output = TensorDesc({10}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+    auto indices = TensorDesc({10}, ACL_INT32, ACL_FORMAT_ND);
+    auto counts = TensorDesc({10}, ACL_INT32, ACL_FORMAT_ND);
+
+    bool return_inverse = false;
+    bool return_counts = false;
+
+    auto ut = OP_API_UT(aclnnUniqueConsecutive, INPUT(self, return_inverse, return_counts, NoneN),
+                        OUTPUT(output, indices, counts));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
