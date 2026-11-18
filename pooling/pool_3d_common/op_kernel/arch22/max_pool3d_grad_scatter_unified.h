@@ -70,7 +70,12 @@ public:
             uint64_t ncOffset = this->block_.baseNcOffset * this->params_.diHiWiLen;
             for (uint64_t dhwIdx = 0; dhwIdx < basedhwLen; dhwIdx++) {
                 uint64_t ubOffset = ncIdx * basedhwLen + dhwIdx;
-                uint64_t outOffset = ncOffset + (uint64_t)argmaxUb.GetValue(ubOffset);
+                TArgmax argmaxVal = argmaxUb.GetValue(ubOffset);
+                // 越界 indices 跳过写回，避免 Scatter 路径非法写显存
+                if (argmaxVal < 0 || static_cast<uint64_t>(argmaxVal) >= this->params_.diHiWiLen) {
+                    continue;
+                }
+                uint64_t outOffset = ncOffset + static_cast<uint64_t>(argmaxVal);
                 TGrad gradValue = gradUb.GetValue(ubOffset);
                 yUb.SetValue(0, gradValue);
 

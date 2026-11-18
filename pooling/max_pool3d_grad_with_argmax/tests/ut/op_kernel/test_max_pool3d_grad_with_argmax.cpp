@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string>
 #include <cstdint>
+#include <cstring>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "max_pool3d_grad_with_argmax_tiling_def.h"
@@ -693,4 +694,129 @@ TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_scatter_overla
     uint64_t tilingKey = 102;
     TestMaxPool3dGradWithArgmaxKernelScatterOverlap<float>(xShape, gradShape, ksize, strides, pads, dilation,
                                                            workspaceSize, blockDim, tilingKey);
+}
+
+// 边界 indices：-1 / D*H*W / D*H*W-1，覆盖直接 Scatter 与 overlap Scatter。
+// 断言越界不写回（含不污染下一通道），合法末下标正常写回。
+void TestMaxPool3dGradWithArgmaxScatterBoundary(uint64_t tilingKey)
+{
+    // nc=2, D*H*W=4；每通道 3 个输出点，固定构造 -1、4、3
+    const uint64_t ncDim = 2;
+    const uint64_t diDim = 1;
+    const uint64_t hiDim = 2;
+    const uint64_t wiDim = 2;
+    const uint64_t doDim = 1;
+    const uint64_t hoDim = 1;
+    const uint64_t woDim = 3;
+    const uint64_t diHiWiLen = diDim * hiDim * wiDim;
+    const uint64_t outDhw = doDim * hoDim * woDim;
+    const uint64_t blockDim = 1;
+
+    size_t xByteSize = ncDim * diHiWiLen * sizeof(float);
+    size_t gradByteSize = ncDim * outDhw * sizeof(float);
+    size_t argmaxByteSize = ncDim * outDhw * sizeof(int32_t);
+    size_t dxByteSize = ncDim * diHiWiLen * sizeof(float);
+    size_t workspaceSize = dxByteSize + 16 * 1024;
+    size_t tilingDataSize = sizeof(MaxPool3DGradWithArgmaxTilingData);
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradByteSize);
+    uint8_t* argmax = (uint8_t*)AscendC::GmAlloc(argmaxByteSize);
+    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dxByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+
+    memset(x, 0, xByteSize);
+    memset(dy, 0, dxByteSize);
+    memset(workspace, 0, workspaceSize);
+
+    float* gradPtr = reinterpret_cast<float*>(grad);
+    int32_t* argmaxPtr = reinterpret_cast<int32_t*>(argmax);
+    // 通道 0：-1（跳过）、diHiWiLen（跳过，误用 > 会写穿到下一通道）、diHiWiLen-1（写回）
+    argmaxPtr[0] = -1;
+    argmaxPtr[1] = static_cast<int32_t>(diHiWiLen);
+    argmaxPtr[2] = static_cast<int32_t>(diHiWiLen - 1);
+    gradPtr[0] = 1.5f;
+    gradPtr[1] = 2.5f;
+    gradPtr[2] = 3.5f;
+    // 通道 1：全部越界，梯度非零；若被错误写回可被下一通道断言发现
+    argmaxPtr[3] = -1;
+    argmaxPtr[4] = static_cast<int32_t>(diHiWiLen);
+    argmaxPtr[5] = -2;
+    gradPtr[3] = 4.5f;
+    gradPtr[4] = 5.5f;
+    gradPtr[5] = 6.5f;
+
+    MaxPool3DGradWithArgmaxTilingData* tilingDatafromBin = reinterpret_cast<MaxPool3DGradWithArgmaxTilingData*>(tiling);
+    memset(tilingDatafromBin, 0, tilingDataSize);
+    tilingDatafromBin->ncDim = ncDim;
+    tilingDatafromBin->diDim = diDim;
+    tilingDatafromBin->hiDim = hiDim;
+    tilingDatafromBin->wiDim = wiDim;
+    tilingDatafromBin->doDim = doDim;
+    tilingDatafromBin->hoDim = hoDim;
+    tilingDatafromBin->woDim = woDim;
+    tilingDatafromBin->kd = 1;
+    tilingDatafromBin->kh = 2;
+    tilingDatafromBin->kw = 2;
+    tilingDatafromBin->sd = 1;
+    tilingDatafromBin->sh = 2;
+    tilingDatafromBin->sw = 2;
+    tilingDatafromBin->padDTop = 0;
+    tilingDatafromBin->padHTop = 0;
+    tilingDatafromBin->padWTop = 0;
+    tilingDatafromBin->padDBottom = 0;
+    tilingDatafromBin->padHBottom = 0;
+    tilingDatafromBin->padWBottom = 0;
+    tilingDatafromBin->baseNc = ncDim;
+    tilingDatafromBin->baseDo = doDim;
+    tilingDatafromBin->baseHo = hoDim;
+    tilingDatafromBin->baseWo = woDim;
+    tilingDatafromBin->ncTail = ncDim;
+    tilingDatafromBin->doTail = doDim;
+    tilingDatafromBin->hoTail = hoDim;
+    tilingDatafromBin->woTail = woDim;
+    tilingDatafromBin->ncCnt = 1;
+    tilingDatafromBin->doCnt = 1;
+    tilingDatafromBin->hoCnt = 1;
+    tilingDatafromBin->woCnt = 1;
+    tilingDatafromBin->totalCnt = 1;
+    tilingDatafromBin->usedCoreNum = blockDim;
+    tilingDatafromBin->totalUBSize = 196352;
+    tilingDatafromBin->ncRound = 1;
+    tilingDatafromBin->ncRoundTail = 1;
+    tilingDatafromBin->preCoreNum = 0;
+    tilingDatafromBin->totalRound = 1;
+
+    ICPU_SET_TILING_KEY(tilingKey);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(max_pool3d_grad_with_argmax, blockDim, x, grad, argmax, dy, workspace, (uint8_t*)(tilingDatafromBin));
+
+    float* yOut = reinterpret_cast<float*>(dy);
+    // 通道 0：仅末下标 diHiWiLen-1 写回 3.5；-1 与 diHiWiLen 不贡献
+    EXPECT_FLOAT_EQ(yOut[0], 0.0f);
+    EXPECT_FLOAT_EQ(yOut[1], 0.0f);
+    EXPECT_FLOAT_EQ(yOut[2], 0.0f);
+    EXPECT_FLOAT_EQ(yOut[3], 3.5f);
+    // 通道 1：保持 0；尤其 yOut[diHiWiLen] 不能被通道 0 的越界下标写穿
+    for (uint64_t i = diHiWiLen; i < ncDim * diHiWiLen; ++i) {
+        EXPECT_FLOAT_EQ(yOut[i], 0.0f) << "unexpected write at y index " << i;
+    }
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(grad);
+    AscendC::GmFree(argmax);
+    AscendC::GmFree(dy);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_scatter_boundary_indices)
+{
+    TestMaxPool3dGradWithArgmaxScatterBoundary(2);
+}
+
+TEST_F(MaxPool3dGradWithArgmaxKernel, max_pool3d_grad_with_argmax_scatter_overlap_boundary_indices)
+{
+    TestMaxPool3dGradWithArgmaxScatterBoundary(102);
 }
