@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC group_norm_apt.cpp
-    COMPUTE_UNITS ascend950 ascend960dt
+    COMPUTE_UNITS ascend950 dav_9201
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

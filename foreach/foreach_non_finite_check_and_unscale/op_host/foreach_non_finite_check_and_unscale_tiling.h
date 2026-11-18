@@ -15,6 +15,7 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_FOREACH_NON_FINITE_CHECK_AND_UNSCALE_H_
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_FOREACH_NON_FINITE_CHECK_AND_UNSCALE_H_
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <vector>
 #include "register/op_def_registry.h"
 #include "register/tilingdata_base.h"
@@ -60,7 +61,7 @@ REGISTER_TILING_DATA_CLASS(ForeachNonFiniteCheckAndUnscale_100, ForeachNonFinite
 
 class ForeachNonFiniteCheckAndUnscaleBaseClass : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit ForeachNonFiniteCheckAndUnscaleBaseClass(gert::TilingContext* context) : TilingBaseClass(context){};
+    explicit ForeachNonFiniteCheckAndUnscaleBaseClass(gert::TilingContext* context) : TilingBaseClass(context) {};
     ~ForeachNonFiniteCheckAndUnscaleBaseClass() override = default;
     void Reset(gert::TilingContext* context) override { TilingBaseClass::Reset(context); }
 
@@ -69,7 +70,7 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus DoLibApiTiling() override;
     ge::graphStatus PostTiling() override;
-    NpuArch npuArch = NpuArch::DAV_2201;
+    NpuArch npuArch = Ops::Base::DAV_2201;
 };
 } // namespace optiling
 

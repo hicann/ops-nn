@@ -12,6 +12,7 @@
  * \file group_norm_silu_tiling.cpp
  * \brief
  */
+#include "op_common/op_host/util/op_const_def.h"
 #include "group_norm_silu_tiling.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
@@ -288,7 +289,7 @@ static ge::graphStatus TilingPrepare4GroupNormSilu(gert::TilingParseContext* con
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_LOGD(context, "Get core num for ai_core:%d", compileInfo->totalCoreNum);
-    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002) {
+    if (ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_2002) {
         compileInfo->is310P = 1;
         compileInfo->totalCoreNum = compileInfo->totalCoreNum + ascendcPlatform.GetCoreNumVector();
     }

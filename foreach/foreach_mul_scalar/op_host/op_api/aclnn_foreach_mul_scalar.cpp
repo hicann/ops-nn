@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <vector>
 #include "aclnn_foreach_mul_scalar.h"
 #include "foreach_mul_scalar_v2.h"
@@ -61,7 +62,7 @@ static inline bool CheckFormat(const aclTensorList* mulScalarSelf, const aclTens
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return MUL_SCALAR_TENSOR_DTYPE_SUPPORT_LIST;
     } else {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for arch %u is not implemented",

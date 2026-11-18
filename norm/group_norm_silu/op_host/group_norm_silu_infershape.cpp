@@ -12,6 +12,7 @@
  * \file group_norm_silu_infershape.cpp
  * \brief
  */
+#include "op_common/op_host/util/op_const_def.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
@@ -159,8 +160,8 @@ static graphStatus GroupNormSiluInferDtype(gert::InferDataTypeContext* context)
     OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
     const int32_t npuArch = platform_info.soc_info.arch_type;
     const std::set<int32_t> supportNpuArchList = {
-        static_cast<int32_t>(NpuArch::DAV_3510), static_cast<int32_t>(NpuArch::DAV_5102),
-        static_cast<int32_t>(NpuArch::DAV_9201), static_cast<int32_t>(NpuArch::DAV_9202)};
+        static_cast<int32_t>(Ops::Base::DAV_3510), static_cast<int32_t>(Ops::Base::DAV_5102),
+        static_cast<int32_t>(Ops::Base::DAV_9201), static_cast<int32_t>(Ops::Base::DAV_9202)};
     if (supportNpuArchList.count(npuArch) != 0) {
         auto gammaDtype = context->GetOptionalInputDataType(GROUPNORMSILU_IDX_OUT_MEAN);
         auto betaDtype = context->GetOptionalInputDataType(GROUPNORMSILU_IDX_OUT_VAR);

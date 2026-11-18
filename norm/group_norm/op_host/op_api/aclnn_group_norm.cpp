@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "norm/group_norm_silu/op_host/op_api/group_norm_silu.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/ones_like.h"
@@ -59,7 +60,7 @@ static const int64_t TWO_DIM = 2;
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
+    if (npuArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
         return DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16;
     } else {
         return DTYPE_DTYPE_SUPPORT_LIST;
@@ -247,7 +248,8 @@ static std::tuple<aclTensor*, aclTensor*, aclTensor*> GroupNormOutCastProcess(co
     aclTensor* yCast = const_cast<aclTensor*>(y);
     aclTensor* meanCast = const_cast<aclTensor*>(mean);
     aclTensor* varianceCast = const_cast<aclTensor*>(variance);
-    if (x->GetDataType() == op::DataType::DT_FLOAT16 && GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_1001) {
+    if (x->GetDataType() == op::DataType::DT_FLOAT16 &&
+        GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_1001) {
         yCast = const_cast<aclTensor*>(l0op::Cast(y, op::DataType::DT_FLOAT16, executor));
         meanCast = const_cast<aclTensor*>(l0op::Cast(mean, op::DataType::DT_FLOAT16, executor));
         varianceCast = const_cast<aclTensor*>(l0op::Cast(variance, op::DataType::DT_FLOAT16, executor));
@@ -327,7 +329,7 @@ static aclnnStatus ComputeGroupNormResult(const aclTensor* self, const aclTensor
         const aclTensor* xCast = selfContiguous;
         const aclTensor* gammaCast = gammaContiguous;
         const aclTensor* betaCast = betaContiguous;
-        if (selfContiguous->GetDataType() == op::DataType::DT_FLOAT16 && npuArch == NpuArch::DAV_1001) {
+        if (selfContiguous->GetDataType() == op::DataType::DT_FLOAT16 && npuArch == Ops::Base::DAV_1001) {
             xCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
             CHECK_RET(xCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
             gammaCast = l0op::Cast(gammaContiguous, op::DataType::DT_FLOAT, executor);
@@ -385,7 +387,7 @@ aclnnStatus aclnnGroupNormGetWorkspaceSize(const aclTensor* self, const aclTenso
     }
 
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    bool isNormSocLists = (npuArch == NpuArch::DAV_2201 || npuArch == NpuArch::DAV_2002 ||
+    bool isNormSocLists = (npuArch == Ops::Base::DAV_2201 || npuArch == Ops::Base::DAV_2002 ||
                            Ops::NN::AclnnUtil::IsRegbase(npuArch));
     const aclTensor* y = nullptr;
     const aclTensor* mean = nullptr;

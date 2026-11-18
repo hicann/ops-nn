@@ -12,6 +12,7 @@
  * \file swi_glu_tiling.cc
  * \brief
  */
+#include "op_common/op_host/util/op_const_def.h"
 #include "swi_glu_tiling.h"
 #include "error_util.h"
 #include "op_host/tiling_util.h"
@@ -364,7 +365,7 @@ inline bool GluSingleTilingCalculator::isValidTailCol(uint32_t baseRowlen_, uint
 
 inline bool GluSingleTilingCalculator::isSupportSocV(uint32_t dtype, NpuArch npuArch) const
 {
-    if ((npuArch == NpuArch::DAV_2002) && (dtype == ge::DT_BF16)) {
+    if ((npuArch == Ops::Base::DAV_2002) && (dtype == ge::DT_BF16)) {
         return false; // 310p dont support BF16
     } else {
         return true;
@@ -446,7 +447,7 @@ bool GluSingleTilingCalculator::CalcTiling(uint32_t totalCore, uint64_t ubSize, 
     tilingData->set_is32BAligned(tilingData->get_colLen() % ubMinBlockLen == 0);
     // 310p not support Non-64B
     uint32_t blockSizeOf64B = BLOCK_SIZE_OF_64B / inputDTypeLen;
-    if (((npuArch == NpuArch::DAV_2002)) && (tilingData->get_colLen() % blockSizeOf64B != 0)) {
+    if (((npuArch == Ops::Base::DAV_2002)) && (tilingData->get_colLen() % blockSizeOf64B != 0)) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
             opName_, "x", std::to_string(tilingData->get_colLen()),
             std::string("On ASCEND310P the last split dimension must be 64-byte aligned: required element multiple=") +

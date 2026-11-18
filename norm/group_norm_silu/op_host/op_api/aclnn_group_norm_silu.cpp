@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "group_norm_silu.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/ones_like.h"
@@ -66,7 +67,7 @@ static bool CheckNotNull(const aclTensor* self, const aclTensor* out, const aclT
 
 static const std::initializer_list<DataType>& GetDtypeSupportList(const NpuArch& npuArch)
 {
-    if (npuArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
+    if (npuArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND310P_DTYPE_DTYPE_SUPPORT_LIST;

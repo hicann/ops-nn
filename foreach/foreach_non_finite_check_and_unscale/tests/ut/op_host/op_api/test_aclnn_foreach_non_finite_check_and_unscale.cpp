@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <memory>
 #include <vector>
 #include "gtest/gtest.h"
@@ -283,11 +284,12 @@ TEST_P(L2ForeachNonFiniteCheckAndUnscaleRegbaseTest, supported_and_unsupported_d
 }
 
 INSTANTIATE_TEST_SUITE_P(RegbaseArchitectures, L2ForeachNonFiniteCheckAndUnscaleRegbaseTest,
-                         testing::Values(NpuArch::DAV_3510, NpuArch::DAV_5102, NpuArch::DAV_9201, NpuArch::DAV_9202));
+                         testing::Values(Ops::Base::DAV_3510, Ops::Base::DAV_5102, Ops::Base::DAV_9201,
+                                         Ops::Base::DAV_9202));
 
 TEST(L2ForeachNonFiniteCheckAndUnscalePlatformTest, ascend350)
 {
-    op::NpuArchManager npuArch(NpuArch::DAV_3510);
+    op::NpuArchManager npuArch(Ops::Base::DAV_3510);
     op::SocVersionManager socVersion(op::SocVersion::ASCEND350);
     auto scaledGrads = TensorListDesc({TensorDesc({2, 3}, ACL_BF16, ACL_FORMAT_ND)});
     auto foundInf = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);

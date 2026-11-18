@@ -18,6 +18,7 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_FOREACH_COMMON_FUNC_H_
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_FOREACH_COMMON_FUNC_H_
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "foreach_tiling_class.h"
 #include <string>
 #include <vector>
@@ -129,8 +130,8 @@ ge::graphStatus ForeachBaseClass::GetPlatformInfo()
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
-        isAscend960 = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
-                       ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202);
+        isAscend960 = (ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9201 ||
+                       ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9202);
     } else {
         auto compileInfoPtr = context_->GetCompileInfo<ForeachSoloCompileInfo>();
         if (compileInfoPtr == nullptr) {

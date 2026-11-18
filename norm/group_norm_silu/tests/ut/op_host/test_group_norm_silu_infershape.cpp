@@ -16,6 +16,7 @@
  *
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h> // NOLINT
 #include <iostream>
 #include "infershape_test_util.h"                    // NOLINT
@@ -54,7 +55,7 @@ TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_test)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.soc_info.arch_type = static_cast<int32_t>(NpuArch::DAV_3510);
+    platformInfo.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_3510);
     platformInfo.str_info.short_soc_version = "Ascend950";
     optiCompilationInfo.soc_version = "Ascend950PR_9589";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
@@ -88,7 +89,7 @@ TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_david_test1)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.soc_info.arch_type = static_cast<int32_t>(NpuArch::DAV_3510);
+    platformInfo.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_3510);
     platformInfo.str_info.short_soc_version = "Ascend950";
     optiCompilationInfo.soc_version = "Ascend950PR_9589";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
@@ -116,7 +117,7 @@ TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_david_test2)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.soc_info.arch_type = static_cast<int32_t>(NpuArch::DAV_3510);
+    platformInfo.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_3510);
     platformInfo.str_info.short_soc_version = "Ascend950";
     optiCompilationInfo.soc_version = "Ascend950PR_9589";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
@@ -144,7 +145,7 @@ TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_david_test3)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.soc_info.arch_type = static_cast<int32_t>(NpuArch::DAV_3510);
+    platformInfo.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_3510);
     platformInfo.str_info.short_soc_version = "Ascend950";
     optiCompilationInfo.soc_version = "Ascend950PR_9589";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950PR_9589"] = platformInfo;
@@ -172,7 +173,7 @@ TEST_F(GroupNormSiluProto, group_norm_silu_inferdtype_960dt_test)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.soc_info.arch_type = static_cast<int32_t>(NpuArch::DAV_9201);
+    platformInfo.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_9201);
     platformInfo.str_info.short_soc_version = "Ascend960DT";
     optiCompilationInfo.soc_version = "Ascend960DT_9599";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend960DT_9599"] = platformInfo;

@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "aclnn_foreach_add_scalar_v2.h"
 #include <iostream>
 #include "foreach_add_scalar_v2.h"
@@ -92,7 +93,7 @@ static const std::initializer_list<DataType>& ForeachAddScalarV2GetDtypeSupportL
 {
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         return FOREACH_ADD_SCALAR_V2_TENSOR_DTYPE_SUPPORT_LIST_950;
-    } else if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    } else if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201) {
         return FOREACH_ADD_SCALAR_V2_TENSOR_DTYPE_SUPPORT_LIST_910B;
     } else {
         const std::string reason = (("support for " +

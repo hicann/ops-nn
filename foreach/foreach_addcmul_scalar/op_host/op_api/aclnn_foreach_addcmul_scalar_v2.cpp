@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "aclnn_foreach_addcmul_scalar_v2.h"
 #include "foreach_addcmul_scalar_v2.h"
 #include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
@@ -99,7 +100,7 @@ static inline bool ForeachAddcMulScalarV2CheckFormat(const aclTensorList* addcmu
 
 static const std::initializer_list<DataType>& ForeachAddcMulScalarV2GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return FOREACH_ADDCMUL_SCALAR_V2_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         const std::string reason = (("support for " +
