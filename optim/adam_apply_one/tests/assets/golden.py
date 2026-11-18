@@ -107,9 +107,9 @@ __golden__ = {"kernel": {"adam_apply_one": "adam_apply_one_golden"}}
 # absolute_precision are injected separately (legacy namespace) and are left
 # untouched — no tolerance is relaxed here.
 _TOLERANCE = {
-    "float32": {"standard": "stat_rel_err"},
-    "float16": {"standard": "stat_rel_err"},
-    "bfloat16": {"standard": "stat_rel_err"},
+    "float32": {"standard": "mix_tolerance"},
+    "float16": {"standard": "mix_tolerance"},
+    "bfloat16": {"standard": "mix_tolerance"},
 }
 
 
