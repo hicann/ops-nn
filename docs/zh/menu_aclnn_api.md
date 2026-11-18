@@ -34,6 +34,7 @@
 - [aclnnAdvanceStepV2](../../optim/advance_step/docs/aclnnAdvanceStepV2.md)
 - [aclnnAntiMxQuant](../../quant/anti_mx_quant/docs/aclnnAntiMxQuant.md)
 - [aclnnApplyAdam](../../optim/apply_adam/docs/aclnnApplyAdam.md)
+- [aclnnApplyAdamV2](../../optim/apply_adam_v2/docs/aclnnApplyAdamV2.md)
 - [aclnnApplyAdamW](../../optim/apply_adam_w/docs/aclnnApplyAdamW.md)
 - [aclnnApplyAdamWQuant](../../optim/apply_adam_w_quant/docs/aclnnApplyAdamWQuant.md)
 - [aclnnApplyAdamWV2](../../optim/apply_adam_w_v2/docs/aclnnApplyAdamWV2.md)
