@@ -730,8 +730,11 @@ static aclnnStatus PrepareRegbaseGradCasts(const aclTensor* gradOut, const aclTe
     runningVarContiguous = l0op::Contiguous(runningVar, executor);
     CHECK_RET(runningVarContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    // FillScalar materializes a missing running statistic as FP32. Normalize the pair before
+    // binary selection; explicit non-null dtype mismatches were rejected by CheckParams.
+    const bool normalizeRunningStats = runningMeanContiguous->GetDataType() != runningVarContiguous->GetDataType();
     if (gradOutContiguous->GetDataType() == op::DataType::DT_FLOAT ||
-        weightContiguous->GetDataType() == op::DataType::DT_FLOAT) {
+        weightContiguous->GetDataType() == op::DataType::DT_FLOAT || normalizeRunningStats) {
         runningMeanContiguous = l0op::Cast(runningMeanContiguous, op::DataType::DT_FLOAT, executor);
         CHECK_RET(runningMeanContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         runningVarContiguous = l0op::Cast(runningVarContiguous, op::DataType::DT_FLOAT, executor);
