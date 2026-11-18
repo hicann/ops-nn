@@ -294,6 +294,11 @@ def _fill_stable_uniform(target, data_range, seed):
     if bounds is None:
         return
     low, high = bounds
+    if not (np.isfinite(low) and np.isfinite(high)):
+        if low == high or (np.isnan(low) and np.isnan(high)):
+            _fill_constant(low, target)
+        # Keep TTK-generated inputs for other non-finite ranges.
+        return
     shape = tuple(target.shape)
     rng = np.random.default_rng(seed)
     values = rng.uniform(low, high, size=shape).astype(np.float32)
