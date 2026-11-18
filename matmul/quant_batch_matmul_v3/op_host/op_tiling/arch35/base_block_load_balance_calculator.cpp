@@ -179,8 +179,13 @@ void BaseBlockCalculator::GetBaseK(BaseBlockRes& baseBlockTemp)
         compileInfo_.l0cSize == LB_SPLITMN_LOC_SIZE) {
         // l0c为512KB且baseMN较大时，按L0A切半后的最大边重算baseK上限。
         constexpr uint64_t maxSplitNmNum = 2UL;
-        uint64_t maxSplitedBase = ops::CeilDiv(ops::CeilDiv(baseMax, qmmv3_tiling_const::CUBE_BLOCK), maxSplitNmNum) *
-                                  qmmv3_tiling_const::CUBE_BLOCK;
+        uint64_t splitAlign = qmmv3_tiling_const::CUBE_BLOCK;
+        if (compileInfo_.npuArch == NpuArch::DAV_9202 && (inputParams_.isMxPerGroup || inputParams_.isHif4PerGroup)) {
+            splitAlign = baseBlockTemp.baseM > baseBlockTemp.baseN ?
+                             GetBaseMAlignSize() :
+                             GetBaseNAlignSize(qmmv3_tiling_const::L1_ALIGN_SIZE);
+        }
+        uint64_t maxSplitedBase = ops::CeilAlign(ops::CeilDiv(baseMax, maxSplitNmNum), splitAlign);
         maxBaseK = GetShapeWithDataType(
             compileInfo_.l0aSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM / std::max(maxSplitedBase, baseMin),
             inputParams_.aDtype);

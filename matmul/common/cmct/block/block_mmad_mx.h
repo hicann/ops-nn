@@ -1051,7 +1051,8 @@ public:
         if (nonTransposed) {
             result.offsetABL1 = mnLoopId * C0_SIZE * baseMN0;
         } else {
-            result.offsetABL1 = mnLoopId * baseMN0 * (kL1Iter != kL1Iter_ - 1 ? kL1_ : (k_ - kL1_ * (kL1Iter)));
+            const uint64_t curKL1 = kL1Iter != kL1Iter_ - 1 ? kL1_ : k_ - kL1_ * kL1Iter;
+            result.offsetABL1 = mnLoopId * baseMN0 * Cmct::Gemm::CeilAlign(curKL1, MXFP_DIVISOR_SIZE);
         }
         result.offsetScaleABL1 = BLOCK_CUBE * scaleKl1 * (mnLoopId * baseMN0 / BLOCK_CUBE);
 
@@ -1303,22 +1304,20 @@ public:
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9202)
         uint64_t baseMN0 = 0;
         uint64_t baseMN1 = 0;
+        const bool isSplitM = tileL1L0Param.curM > tileL1L0Param.curN;
+        const uint64_t curMN = isSplitM ? tileL1L0Param.curM : tileL1L0Param.curN;
+        const uint64_t splitAlign = (isSplitM ? transA : !transB) ? C0_SIZE : AscendC::BLOCK_CUBE;
 
         // 潜在条件，MTE1_a/b块超0.5L0a/b 需要进一步拆分，已开启db.
         // MTE1 split 依赖 L0C 512KB（DAV_9202）下两个 half 的 L0C 乒乓，只在 DAV_9202 使能；
         // 其它架构（含 DAV_9201/DAV_3510）保持 DEFAULT，避免走到未验证的拆分路径。
-        // curM/curN 不足2个BLOCK_CUBE时保护为不拆分（避免baseMN0为0；当前host约束下不可达）
-        if (tileL1L0Param.curM >= AscendC::BLOCK_CUBE * SPLIT_NUM_MAX && tileL1L0Param.curM > tileL1L0Param.curN &&
-            (((tileL1L0Param.curM * baseK_) >> ELEMENT_SIZE_RATIO) > SPLIT_THRESHOLD_MIN)) {
-            splitMode = MTE1SplitMode::SPLIT_M;
-            baseMN0 = (tileL1L0Param.curM / AscendC::BLOCK_CUBE / SPLIT_NUM_MAX) * AscendC::BLOCK_CUBE;
-            baseMN1 = tileL1L0Param.curM - baseMN0;
-        } else if (tileL1L0Param.curN >= AscendC::BLOCK_CUBE * SPLIT_NUM_MAX &&
-                   tileL1L0Param.curM <= tileL1L0Param.curN &&
-                   (((tileL1L0Param.curN * baseK_) >> ELEMENT_SIZE_RATIO) > SPLIT_THRESHOLD_MIN)) {
-            splitMode = MTE1SplitMode::SPLIT_N;
-            baseMN0 = (tileL1L0Param.curN / AscendC::BLOCK_CUBE / SPLIT_NUM_MAX) * AscendC::BLOCK_CUBE;
-            baseMN1 = tileL1L0Param.curN - baseMN0;
+        // 切点向上对齐，curMN > splitAlign 即可保证两片非空，不要求有两个完整的对齐块。
+        if (curMN > splitAlign &&
+            ((Cmct::Gemm::CeilAlign(curMN, splitAlign) * baseK_) >> ELEMENT_SIZE_RATIO) > SPLIT_THRESHOLD_MIN) {
+            splitMode = isSplitM ? MTE1SplitMode::SPLIT_M : MTE1SplitMode::SPLIT_N;
+            baseMN0 = Cmct::Gemm::CeilAlign(Cmct::Gemm::CeilDiv(curMN, static_cast<uint64_t>(SPLIT_NUM_MAX)),
+                                            splitAlign);
+            baseMN1 = curMN - baseMN0;
         }
 #endif
 
