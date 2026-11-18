@@ -73,9 +73,9 @@ def _compute(var, indices, updates, dimension):
 
 
 class _ArgMaxGradCompose:
-    """三方标杆(A100 上执行): 用 torch 的融合散射接口 Tensor.scatter。
+    """三方参考: 用 Tensor.scatter 表达合法索引更新。
 
-    形态与真实使用一致 —— 单个融合算子, 不用 "eq + where" 的分解表达式。
+    越界索引使用安全位置并写回 var 原值，保持「不命中、不更新」的算子语义。
     参数名与 def.cpp 逐字一致(var / indices / updates)。
     """
 
@@ -83,12 +83,18 @@ class _ArgMaxGradCompose:
         self.dimension = int(dimension)
 
     def __call__(self, var, indices, updates, **_):
+        if var.numel() == 0:
+            return [var.clone()]
         dim = self.dimension if self.dimension >= 0 else self.dimension + var.dim()
         keep_shape = list(var.shape)
         keep_shape[dim] = 1
         idx = indices.reshape(keep_shape).to(torch.int64)
         upd = updates.reshape(keep_shape).to(var.dtype)
-        return [var.scatter(dim, idx, upd)]
+        valid = (idx >= 0) & (idx < var.shape[dim])
+        # Invalid indices write the original value back to a safe slot.
+        safe_idx = torch.where(valid, idx, torch.zeros_like(idx))
+        safe_src = torch.where(valid, upd, var.gather(dim, safe_idx))
+        return [var.scatter(dim, safe_idx, safe_src)]
 
 
 class ArgMaxGradKernelSpec:
