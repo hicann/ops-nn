@@ -10,30 +10,22 @@
 
 /*!
  * \file foreach_log.cpp
- * \brief kernel entry for foreach_log (arch35 / Ascend950)
+ * \brief Flat RegBase kernel entry for ForeachLog (arch35 / Ascend950).
  */
 
-#include "foreach_log_simt.h"
+#include "foreach_log_regbase.h"
 
-enum class ForeachLogTilingKey : uint32_t {
-    TILING_KEY_FLOAT = 0,
-    TILING_KEY_FLOAT16 = 1,
-    TILING_KEY_BF16 = 2,
-};
+using namespace ForeachLog;
 
-template <uint32_t schMode>
-__global__ __aicore__ void foreach_log(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void foreach_log(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ForeachLogTilingData);
-    GET_TILING_DATA_WITH_STRUCT(ForeachLogTilingData, tilingData, tiling);
+    GET_TILING_DATA_WITH_STRUCT(ForeachLogTilingData, tilingDataIn, tiling);
+    (void)workspace;
 
-    const ForeachLogTilingData* tilingGm = &tilingData;
-
-    if constexpr (schMode == static_cast<uint32_t>(ForeachLogTilingKey::TILING_KEY_FLOAT)) {
-        NsForeachLog::Process<float>(x, y, tilingGm);
-    } else if constexpr (schMode == static_cast<uint32_t>(ForeachLogTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachLog::Process<half>(x, y, tilingGm);
-    } else if constexpr (schMode == static_cast<uint32_t>(ForeachLogTilingKey::TILING_KEY_BF16)) {
-        NsForeachLog::Process<bfloat16_t>(x, y, tilingGm);
-    }
+    TPipe pipe;
+    ForeachLogRegbase<DTYPE_X, ForeachLogTilingData> op;
+    op.Init(&tilingDataIn, &pipe);
+    op.Process(x, y);
+    pipe.Destroy();
 }

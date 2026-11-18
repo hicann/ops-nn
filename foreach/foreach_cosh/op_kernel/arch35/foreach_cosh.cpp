@@ -27,13 +27,11 @@ __global__ __aicore__ void foreach_cosh(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
     REGISTER_TILING_DEFAULT(ForeachCoshTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachCoshTilingData, tilingData, tiling);
 
-    const ForeachCoshTilingData* tilingGm = &tilingData;
-
     if constexpr (schMode == static_cast<uint32_t>(ForeachCoshTilingKey::TILING_KEY_FLOAT)) {
-        NsForeachCosh::Process<float>(x, y, tilingGm);
+        NsForeachCosh::Process<float>(x, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachCoshTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachCosh::Process<half>(x, y, tilingGm);
+        NsForeachCosh::Process<half>(x, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachCoshTilingKey::TILING_KEY_BF16)) {
-        NsForeachCosh::Process<bfloat16_t>(x, y, tilingGm);
+        NsForeachCosh::Process<bfloat16_t>(x, y, tiling, &tilingData);
     }
 }

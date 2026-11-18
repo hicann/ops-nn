@@ -15,6 +15,7 @@
  * \brief arch35 (Ascend950) tiling UT for foreach_minimum_list
  */
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -104,8 +105,8 @@ TEST_F(ForeachMinimumListTilingTest, test_tiling_float32_001)
 
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(2, 1)
@@ -185,8 +186,8 @@ TEST_F(ForeachMinimumListTilingTest, test_tiling_float16_001)
 
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(2, 1)
@@ -266,8 +267,8 @@ TEST_F(ForeachMinimumListTilingTest, test_tiling_int32_001)
 
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(2, 1)
@@ -347,8 +348,8 @@ TEST_F(ForeachMinimumListTilingTest, test_tiling_bf16_001)
 
     auto param = gert::TilingData::CreateCap(4096);
     ASSERT_NE(param, nullptr);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
 
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(2, 1)
@@ -368,4 +369,162 @@ TEST_F(ForeachMinimumListTilingTest, test_tiling_bf16_001)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, TILING_KEY_BF16);
+}
+
+static void DoListTilingCase(const std::vector<int64_t>& tensorNumels, ge::DataType dataType, int32_t expectKey,
+                             int64_t expectPerCoreElements, int64_t expectNeedCoreNum, int64_t expectLastCoreElements)
+{
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    string compile_info_string = R"({
+                                    "hardware_info": {
+                                        "BT_SIZE": 0,
+                                        "load3d_constraints": "1",
+                                        "Intrinsic_fix_pipe_l0c2out": false,
+                                        "Intrinsic_data_move_l12ub": true,
+                                        "Intrinsic_data_move_l0c2ub": true,
+                                        "Intrinsic_data_move_out2l1_nd2nz": false,
+                                        "UB_SIZE": 262144,
+                                        "L2_SIZE": 33554432,
+                                        "L1_SIZE": 524288,
+                                        "L0A_SIZE": 65536,
+                                        "L0B_SIZE": 65536,
+                                        "L0C_SIZE": 131072,
+                                        "CORE_NUM": 64
+                                    }
+                                })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+
+    struct ForeachMinimumListCompileInfo {
+    } compile_info;
+
+    std::string op_type("ForeachMinimumList");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    const uint32_t tensorNum = static_cast<uint32_t>(tensorNumels.size());
+    std::vector<gert::StorageShape> inputShapes(tensorNum * 2);
+    std::vector<gert::StorageShape> outputShapes(tensorNum);
+    int64_t totalElements = 0;
+    for (uint32_t i = 0; i < tensorNum; i++) {
+        inputShapes[i] = {{tensorNumels[i]}, {tensorNumels[i]}};
+        inputShapes[tensorNum + i] = {{tensorNumels[i]}, {tensorNumels[i]}};
+        outputShapes[i] = {{tensorNumels[i]}, {tensorNumels[i]}};
+        totalElements += tensorNumels[i];
+    }
+    std::vector<void*> inputShapeRefs;
+    std::vector<gert::StorageShape*> outputShapeRefs;
+    for (auto& shape : inputShapes) {
+        inputShapeRefs.push_back(&shape);
+    }
+    for (auto& shape : outputShapes) {
+        outputShapeRefs.push_back(&shape);
+    }
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
+
+    auto holder = gert::TilingContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({tensorNum, tensorNum}, {tensorNum})
+                      .InputShapes(inputShapeRefs)
+                      .OutputShapes(outputShapeRefs)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_context->GetTilingKey(), static_cast<uint64_t>(expectKey));
+    auto rawTilingData = tiling_context->GetRawTilingData();
+    ASSERT_NE(rawTilingData, nullptr);
+    ASSERT_GE(rawTilingData->GetDataSize(), sizeof(ForeachMinimumListTilingData));
+    const auto* tilingData = reinterpret_cast<const ForeachMinimumListTilingData*>(rawTilingData->GetData());
+    EXPECT_EQ(tilingData->tensorNum, static_cast<int32_t>(tensorNum));
+    EXPECT_EQ(tilingData->totalElements, totalElements);
+    EXPECT_EQ(tilingData->perCoreElements, expectPerCoreElements);
+    EXPECT_EQ(tilingData->needCoreNum, expectNeedCoreNum);
+    EXPECT_EQ(tilingData->lastCoreElements, expectLastCoreElements);
+}
+
+namespace {
+// mock 平台核数：须与上方 compile_info_string 中的 "CORE_NUM" 保持一致；
+// 期望值统一按该核数推导，避免期望值硬编码与 mock 核数隐式耦合。
+constexpr int64_t MOCK_CORE_NUM = 64;
+
+inline int64_t CeilDivExpect(int64_t a, int64_t b) { return (a + b - 1) / b; }
+
+// 与 host tiling 切分公式一致：min(65536, CeilDiv(total, coreNum))，仅 >= 32 时做 32 对齐
+void ExpectListTiling(int64_t totalElements, int64_t* perCoreElements, int64_t* needCoreNum, int64_t* lastCoreElements)
+{
+    int64_t perCore = std::min(static_cast<int64_t>(65536), CeilDivExpect(totalElements, MOCK_CORE_NUM));
+    if (perCore >= 32) {
+        perCore = CeilDivExpect(perCore, 32) * 32;
+    }
+    int64_t needCore = CeilDivExpect(totalElements, perCore);
+    *perCoreElements = perCore;
+    *needCoreNum = needCore;
+    *lastCoreElements = totalElements - perCore * (needCore - 1);
+}
+} // namespace
+
+// 小数据量（totalElements < coreNum * 32）不再做 32 对齐：19 个单元素张量
+// 由 19 核各处理 1 个元素，避免对齐后单核串行发起 19 次 VF_CALL
+TEST_F(ForeachMinimumListTilingTest, small_scalar_list_uses_multi_core)
+{
+    int64_t expectPerCore = 0;
+    int64_t expectNeedCore = 0;
+    int64_t expectLast = 0;
+    ExpectListTiling(19, &expectPerCore, &expectNeedCore, &expectLast);
+    DoListTilingCase(std::vector<int64_t>(19, 1), ge::DT_FLOAT, TILING_KEY_FLOAT, expectPerCore, expectNeedCore,
+                     expectLast);
+}
+
+// 中等数据量（totalElements < coreNum * 32）保持未对齐每核元素数，核数贴近 coreNum
+TEST_F(ForeachMinimumListTilingTest, medium_shape_keeps_unaligned_core_count)
+{
+    int64_t expectPerCore = 0;
+    int64_t expectNeedCore = 0;
+    int64_t expectLast = 0;
+    ExpectListTiling(1000, &expectPerCore, &expectNeedCore, &expectLast);
+    DoListTilingCase({250, 250, 250, 250}, ge::DT_FLOAT, TILING_KEY_FLOAT, expectPerCore, expectNeedCore, expectLast);
+}
+
+// 大数据量（perCoreElements >= 32）维持 32 对齐与原分核行为不变
+TEST_F(ForeachMinimumListTilingTest, large_shape_keeps_32_alignment)
+{
+    int64_t expectPerCore = 0;
+    int64_t expectNeedCore = 0;
+    int64_t expectLast = 0;
+    ExpectListTiling(4096, &expectPerCore, &expectNeedCore, &expectLast);
+    DoListTilingCase({4096}, ge::DT_FLOAT, TILING_KEY_FLOAT, expectPerCore, expectNeedCore, expectLast);
 }

@@ -13,6 +13,7 @@
  * \brief tiling implementation for foreach_cosh
  */
 
+#include <limits>
 #include "log/log.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
@@ -28,8 +29,7 @@ using namespace Ops::NN::OpTiling;
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int32_t INPUT_IDX_0 = 0;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
-constexpr int64_t MIN_PER_CORE = 1024;
-constexpr int32_t MAX_TENSOR_NUM = 256;
+constexpr int64_t ALIGN_SIZE = 32;
 constexpr int32_t MAX_SUPPORT_RANK = 8;
 
 struct ForeachCoshCompileInfo {};
@@ -69,8 +69,11 @@ static ge::graphStatus ForeachCoshTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(memset_s(tiling, sizeof(ForeachCoshTilingData), 0, sizeof(ForeachCoshTilingData)) != EOK,
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(tensorNum > MAX_TENSOR_NUM,
-                OP_LOGE(context, "tensorNum[%lu] should be less than or equal to %u", tensorNum, MAX_TENSOR_NUM),
+    // Reject oversized lists against the tiling-data capacity constant so the bound and
+    // the prefix-array size cannot drift apart if one of them changes.
+    OP_CHECK_IF(tensorNum > static_cast<uint64_t>(FOREACH_COSH_MAX_TENSOR_NUM),
+                OP_LOGE(context, "tensorNum[%lu] should be less than or equal to %u", tensorNum,
+                        static_cast<uint32_t>(FOREACH_COSH_MAX_TENSOR_NUM)),
                 return ge::GRAPH_FAILED);
 
     // 4. Determine dtype from element 0. An empty TensorList has no element 0 and is
@@ -85,7 +88,8 @@ static ge::graphStatus ForeachCoshTilingFunc(gert::TilingContext* context)
     tiling->tensorCount = static_cast<int32_t>(tensorNum);
     int64_t totalElements = 0;
 
-    // 5. Validate a single dtype across the list and accumulate element counts.
+    // 5. Validate a single dtype across the list and accumulate prefix starts so the
+    //    kernel can map any flattened index back to its tensor with a binary search.
     for (uint64_t i = 0; i < tensorNum; i++) {
         // The tiling key and SIMT kernel interpret the whole list with element 0's type.
         if (i > 0) {
@@ -106,18 +110,41 @@ static ge::graphStatus ForeachCoshTilingFunc(gert::TilingContext* context)
                             storageShape.GetDimNum(), i, MAX_SUPPORT_RANK),
                     return ge::GRAPH_FAILED);
         int64_t numel = storageShape.GetShapeSize();
-        tiling->tensorElements[i] = numel;
+        OP_CHECK_IF(numel < 0 || totalElements > std::numeric_limits<int64_t>::max() - numel,
+                    OP_LOGE(context, "invalid shape size[%ld] for tensor %lu of foreach_cosh", numel, i),
+                    return ge::GRAPH_FAILED);
+        tiling->tensorStarts[i] = totalElements;
         totalElements += numel;
     }
+    tiling->tensorStarts[tensorNum] = totalElements;
     tiling->totalElements = totalElements;
 
-    // 6. Calculate core split (an empty list yields a single no-op core).
+    // 6. Calculate core split over the flattened element range. The kernel gives each
+    //    core a contiguous chunk, so an empty list is a single no-op core.
     if (totalElements == 0) {
         tiling->needCoreNum = 1;
+        tiling->perCoreElements = 0;
+        tiling->lastCoreElements = 0;
         context->SetBlockDim(1);
     } else {
-        int64_t needCoreNum = std::min(coreNum, Ops::Base::CeilDiv(totalElements, MIN_PER_CORE));
+        int64_t perCoreElements = Ops::Base::CeilDiv(totalElements, coreNum);
+        // Align only when the chunk is large enough: for small tensor lists (e.g. tens of
+        // 0-dim scalars) rounding up to 32 would squash needCoreNum to 1 and serialise the
+        // per-tensor VF launches on a single core (measured ~0.7us per tensor). Small lists
+        // keep the unaligned chunk so needCoreNum stays close to min(coreNum, totalElements).
+        if (perCoreElements >= ALIGN_SIZE) {
+            perCoreElements = Ops::Base::CeilAlign(perCoreElements, ALIGN_SIZE);
+        }
+        OP_CHECK_IF(perCoreElements <= 0, OP_LOGE(context, "perCoreElements[%ld] should be positive", perCoreElements),
+                    return ge::GRAPH_FAILED);
+        int64_t needCoreNum = Ops::Base::CeilDiv(totalElements, perCoreElements);
+        OP_CHECK_IF(
+            needCoreNum > std::numeric_limits<int32_t>::max(),
+            OP_LOGE(context, "needCoreNum[%ld] exceeds the INT32_MAX limit of foreach_cosh tiling data", needCoreNum),
+            return ge::GRAPH_FAILED);
+        tiling->perCoreElements = perCoreElements;
         tiling->needCoreNum = static_cast<int32_t>(needCoreNum);
+        tiling->lastCoreElements = totalElements - perCoreElements * (needCoreNum - 1);
         context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
     }
 

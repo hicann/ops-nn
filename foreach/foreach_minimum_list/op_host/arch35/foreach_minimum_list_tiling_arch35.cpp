@@ -112,7 +112,12 @@ static ge::graphStatus ForeachMinimumListTilingFunc(gert::TilingContext* context
         context->SetBlockDim(1);
     } else {
         tiling->perCoreElements = std::min(static_cast<int64_t>(65536), Ops::Base::CeilDiv(totalElements, coreNum));
-        tiling->perCoreElements = Ops::Base::CeilAlign(tiling->perCoreElements, ALIGN_SIZE);
+        // 小数据量（totalElements < coreNum * 32）时保持未对齐的每核元素数，使 needCoreNum
+        // 贴近 min(coreNum, totalElements)，避免对齐把核数压到 1 后单核按张量串行发起
+        // VF_CALL；大数据量时维持 32 对齐（warp 友好），行为不变。
+        if (tiling->perCoreElements >= ALIGN_SIZE) {
+            tiling->perCoreElements = Ops::Base::CeilAlign(tiling->perCoreElements, ALIGN_SIZE);
+        }
         int64_t needCoreNum = Ops::Base::CeilDiv(totalElements, tiling->perCoreElements);
         OP_CHECK_IF(needCoreNum > std::numeric_limits<int32_t>::max(),
                     OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
