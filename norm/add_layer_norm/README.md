@@ -151,7 +151,7 @@
 
 ## 约束说明
 
-- 是否支持空tensor：不支持空进空出。
+- 是否支持空Tensor：<term>Ascend 950PR&950DT系列产品</term>支持空Tensor。
 - 是否支持非连续tensor：输入支持非连续Tensor，输出不支持非连续Tensor。
 
 ## 调用说明

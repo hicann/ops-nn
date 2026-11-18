@@ -87,11 +87,12 @@ def aclnn_layer_norm_golden(
     outputs = _layer_norm_golden_impl(
         input, normalizedShape, weightOptional, biasOptional, eps
     )
-    return [
-        outputs[0].to(out.dtype),
-        outputs[1].to(meanOutOptional.dtype) if meanOutOptional is not None else None,
-        outputs[2].to(rstdOutOptional.dtype) if rstdOutOptional is not None else None,
-    ]
+    res = [outputs[0].to(out.dtype)]
+    if meanOutOptional is not None:
+        res.append(outputs[1].to(meanOutOptional.dtype))
+    if rstdOutOptional is not None:
+        res.append(outputs[2].to(rstdOutOptional.dtype))
+    return res
 
 
 def torch_native_layer_norm_golden(
@@ -146,11 +147,12 @@ class AclnnLayerNormTorchThirdParty:
         y, mean, rstd = torch.ops.aten.native_layer_norm(
             input, normalizedShape, weightOptional, biasOptional, float(eps)
         )
-        return [
-            y.to(out.dtype),
-            mean.to(meanOutOptional.dtype) if meanOutOptional is not None else None,
-            rstd.to(rstdOutOptional.dtype) if rstdOutOptional is not None else None,
-        ]
+        res = [y.to(out.dtype)]
+        if meanOutOptional is not None:
+            res.append(mean.to(meanOutOptional.dtype))
+        if rstdOutOptional is not None:
+            res.append(rstd.to(rstdOutOptional.dtype))
+        return res
 
 
 class LayerNormV4TestSpec:

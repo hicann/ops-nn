@@ -13,6 +13,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "layer_norm_v4_regbase_common.h"
 
 namespace LayerNormV4 {
 using namespace AscendC;
@@ -31,7 +32,7 @@ public:
         rowsPerTile_ = td_->rowsPerTile;
         meanGm_.SetGlobalBuffer((__gm__ float*)mean + begin, rows_);
         rstdGm_.SetGlobalBuffer((__gm__ float*)rstd + begin, rows_);
-        pipe_.InitBuffer(outQueue_, 1, 2 * rowsPerTile_ * sizeof(float));
+        pipe_.InitBuffer(outQueue_, 1, NUM_TWO * rowsPerTile_ * sizeof(float));
     }
 
     __aicore__ inline void Process()

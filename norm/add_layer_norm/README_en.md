@@ -153,7 +153,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- Empty tensor support: empty input and empty output are not supported.
+- Empty tensor support: <term>Ascend 950PR&950DT products</term> support empty tensors.
 - Non-contiguous tensor support: inputs support non-contiguous tensors, and outputs do not support non-contiguous tensors.
 
 ## Invocation Description

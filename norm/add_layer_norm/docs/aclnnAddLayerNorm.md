@@ -99,7 +99,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`x1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>不支持输入的某一维的值为0。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -179,7 +179,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>meanOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出LayerNorm计算过程中（x1 + x2 + biasOptional）的结果的均值。对应公式中的`E(x)`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li><li>当输入`x1`为空tensor时，`meanOut`也必须为空tensor。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -189,7 +189,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出LayerNorm计算过程中`rstd`的结果。对应公式中的`rstd`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li><li>当输入`x1`为空tensor时，`rstdOut`也必须为空tensor。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与`x1`满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去gamma的维度，表示不需要norm的维度）。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -278,7 +278,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>x1的维数小于gamma。</td>
     </tr>
     <tr>
-      <td>（x1、gamma、meanOut）的任意一个维度等于0。</td>
+      <td>tiling阶段遇到当前产品不支持的空Tensor场景。</td>
     </tr>
     <tr>
       <td>（x1、x2、yOut、xOut）的shape不是完全相同的shape。</td>
@@ -338,6 +338,8 @@ aclnnStatus aclnnAddLayerNorm(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
+
+- 空Tensor支持：支持空进空出；<term>Ascend 950PR&950DT系列产品</term>支持空入非空出。
 
 - **功能维度**
   - 数据类型支持
