@@ -30,7 +30,9 @@ static ge::graphStatus InferShapeForIndexToAddr(gert::InferShapeContext* context
     const auto blockSize = attrs->GetAttrPointer<gert::ContinuousVector>(kAttrBlockSizeIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context, blockSize);
     OP_CHECK_IF(blockSize->GetSize() != kBlockSizeDimNum,
-                OP_LOGE(context->GetNodeName(), "Attr block_size size[%zu] must be 2.", blockSize->GetSize()),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size",
+                                                      std::to_string(blockSize->GetSize()).c_str(),
+                                                      "block_size must contain 2 elements"),
                 return ge::GRAPH_FAILED);
 
     auto outShape = context->GetOutputShape(0);
