@@ -61,7 +61,7 @@ __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetScaleFormat(int
 }
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
+          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode,
           uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scale0Type = uint64_t,
           int scale0Format = FORMAT_MAX, typename y1Type = yType, typename scale1Type = scale0Type,
           int scale1Format = scale0Format>
@@ -80,7 +80,7 @@ protected:
     using biasDxType = Convolution3DBackprop::ConvType<TPosition::GM, biasCubeFormat, biasType>;
     using scale0DxType = Convolution3DBackprop::ConvType<TPosition::GM, GetScaleFormat(scale0Format), scale0Type>;
     using scale1DxType = Convolution3DBackprop::ConvType<TPosition::GM, GetScaleFormat(scale1Format), scale1Type>;
-    static constexpr Conv3dConfig conv3dConfig = {b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag};
+    static constexpr Conv3dConfig conv3dConfig = {b2Condition, kernelSplitMode, b1Condition, enableC04Flag};
     Convolution3DBackprop::Conv3DBackpropInput<filterDxType, inputSizeDxType, dedyDxType, yDxType, biasDxType,
                                                scale0DxType, conv3dConfig, y1DxType, scale1DxType>
         dedx_;
@@ -174,13 +174,13 @@ protected:
                 const uint64_t coutFractalZG = AlignUp(tiling->coutG, tiling->c0);
                 groupStrideB_ = coutFractalZG * tiling->hk * tiling->wk * cinFractalZG;
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
-                if constexpr (groupMode == TPL_GROUP_MODE_ENLARGE) {
+                if (tiling->enlarge > 1) {
                     groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->cinG / tiling->enlarge * cinStrideB_;
                 } else {
                     groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->cinG * cinStrideB_;
                 }
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NDHWC) {
-                if constexpr (groupMode == TPL_GROUP_MODE_ENLARGE) {
+                if (tiling->enlarge > 1) {
                     groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->dk * tiling->hk * tiling->wk *
                                     tiling->cinG / tiling->enlarge;
                 } else {
@@ -220,7 +220,7 @@ protected:
 
     __aicore__ inline void CalcBlockOffsetB()
     {
-        if (Convolution3DBackpropFunc::EnableVecGroupEnlarge(groupMode, tiling_)) {
+        if (Convolution3DBackpropFunc::EnableVecGroupEnlarge(tiling_)) {
             offsetB_ = 0;
         } else {
             // A16W8 fractal_z 保留 N 方向核内偏移。

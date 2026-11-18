@@ -99,19 +99,16 @@ protected:
 };
 
 constexpr size_t TILING_DATA_START_OFFSET = 0U;
-constexpr size_t PARALLEL_DIM_FIELD_COUNT = 6U;
 constexpr size_t CORE_NUM_FIELD_COUNT = 1U;
 constexpr size_t BASE_FLAG_FIELD_COUNT = 16U;
-constexpr size_t SHAPE_FIELD_COUNT = 29U;
-constexpr size_t BACKPROP_PAD_FIELD_COUNT = 5U;
-constexpr size_t BASE_TILING_FIELD_COUNT = 13U;
-constexpr size_t UINT32_ALIGNMENT_FIELD_COUNT = 1U;
-constexpr size_t SPLIT_K_VALUE_FIELD_COUNT = 6U;
+constexpr size_t SHAPE_FIELD_COUNT = 24U;
+constexpr size_t BACKPROP_PAD_FIELD_COUNT = 4U;
+constexpr size_t BASE_TILING_FIELD_COUNT = 12U;
+constexpr size_t SPLIT_K_VALUE_FIELD_COUNT = 5U;
 constexpr size_t SPLIT_K_FLAG_FIELD_COUNT = 2U;
 constexpr size_t OFFSET_X_FIELD_COUNT = 1U;
 constexpr size_t UINT8_ALIGNMENT_FIELD_COUNT = 1U;
-constexpr size_t KERNEL_SPLIT_FIELD_COUNT = 6U;
-constexpr size_t KERNEL_SHAPE_FIELD_COUNT = 2U;
+constexpr size_t KERNEL_SPLIT_FIELD_COUNT = 2U;
 constexpr size_t FIXED_SHIFT_FIELD_COUNT = 1U;
 
 template <typename T>
@@ -137,8 +134,6 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     string result;
     size_t offset = TILING_DATA_START_OFFSET;
 
-    // 核间并行维度
-    AppendTilingFields<uint32_t>(data, offset, PARALLEL_DIM_FIELD_COUNT, result);
     // 核数
     AppendTilingFields<uint64_t>(data, offset, CORE_NUM_FIELD_COUNT, result);
     // 基础标志和切分参数
@@ -149,7 +144,6 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     AppendTilingFields<int32_t>(data, offset, BACKPROP_PAD_FIELD_COUNT, result);
     // 基础 tiling 参数
     AppendTilingFields<uint32_t>(data, offset, BASE_TILING_FIELD_COUNT, result);
-    offset += UINT32_ALIGNMENT_FIELD_COUNT * sizeof(uint32_t);
     // SplitK 计算参数
     AppendTilingFields<uint64_t>(data, offset, SPLIT_K_VALUE_FIELD_COUNT, result);
     // SplitK 标志
@@ -159,9 +153,6 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     offset += UINT8_ALIGNMENT_FIELD_COUNT * sizeof(uint8_t);
     // Kernel Split 参数
     AppendTilingFields<uint32_t>(data, offset, KERNEL_SPLIT_FIELD_COUNT, result);
-    offset += UINT32_ALIGNMENT_FIELD_COUNT * sizeof(uint32_t);
-    // 卷积核形状参数
-    AppendTilingFields<uint64_t>(data, offset, KERNEL_SHAPE_FIELD_COUNT, result);
     // 定点偏移参数
     AppendTilingFields<uint8_t>(data, offset, FIXED_SHIFT_FIELD_COUNT, result);
 
@@ -356,8 +347,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      150994946,
-     "1 1 1 1 1 1 8 2 2 1 2 1 1 32 5 5 1 0 0 1 0 0 2 4 256 512 256 512 16 8 16 16 1 20 16 1 40 32 1 2 2 1 1 1 2 2 0 0 "
-     "0 0 0 0 0 1 1 1 1 1 1 1 1 512 256 1 256 128 256 1 1 1 1 256 0 0 0 0 0 0 0 0 0 2 2 39 31 4 4 13 ",
+     "",
      {},
      true},
 
@@ -397,8 +387,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      150994946,
-     "1 1 1 1 1 1 8 2 2 1 2 1 1 32 5 5 1 0 0 1 0 0 2 1 128 256 128 256 8 8 8 8 1 88 80 1 176 160 1 2 2 1 1 1 2 2 0 0 0 "
-     "0 0 0 0 1 1 1 1 1 1 1 1 256 128 1 512 64 128 1 1 1 1 512 0 0 0 0 0 0 0 0 0 2 2 175 159 4 4 13 "},
+     ""},
 
     {"net_ndhwc_fp16_2_fp16_stride_2",
      "SOC_L1_1024",
@@ -436,8 +425,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777474,
-     "1 1 1 1 1 1 8 1 1 2 2 2 1 16 4 4 1 0 0 1 0 0 2 1 64 64 64 64 4 4 4 4 1 176 160 1 352 320 1 2 2 1 1 1 2 2 0 0 0 0 "
-     "0 0 0 1 1 1 1 1 1 1 1 64 64 1 480 64 64 1 1 1 1 480 0 0 0 0 0 0 0 0 0 2 2 351 319 4 4 42 "},
+     ""},
 
     {"net_ndhwc_fp16_2_fp16_stride_2_pad_1",
      "SOC_L1_1024",
@@ -475,8 +463,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      6,
      16777218,
-     "1 1 1 1 1 1 6 1 1 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 192 256 192 256 16 12 16 12 1 18 7 1 36 14 1 4 4 1 1 1 2 2 0 0 "
-     "1 1 1 1 0 2 2 2 2 1 1 1 1 256 64 1 256 128 64 16 16 1 1 252 0 0 0 0 0 0 0 0 0 4 4 35 13 16 16 42 "},
+     ""},
 
     {"net_ndhwc_fp16_2_fp16_stride_2_no_scale",
      "SOC_L1_1024",
@@ -514,8 +501,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      150994946,
-     "1 1 1 1 1 1 8 2 2 1 2 1 1 16 4 4 1 0 0 1 0 0 0 1 1 256 1 256 16 1 16 1 1 36 64 1 72 128 1 2 2 1 1 1 2 2 0 0 0 0 "
-     "0 0 0 1 1 1 1 1 1 1 1 256 16 1 576 16 16 1 1 1 1 576 0 0 0 0 0 0 0 0 0 2 2 71 127 4 4 42 "},
+     ""},
 
     {"net_ndhwc_int8_2_fp16_stride_4",
      "SOC_L1_1024",
@@ -553,8 +539,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      150994946,
-     "1 1 1 1 1 1 8 2 2 1 2 1 1 32 5 5 1 0 0 1 0 0 2 12 64 512 64 512 16 4 16 4 1 4 8 1 16 32 1 4 4 1 1 1 4 4 0 0 0 0 "
-     "0 0 0 3 3 3 3 1 1 1 1 512 64 1 256 128 64 1 1 1 1 256 0 0 0 0 0 0 0 0 0 4 4 13 29 16 16 13 "},
+     ""},
 
     {"net_ndhwc_fp16_2_fp16_group_4",
      "SOC_L1_1024",
@@ -592,8 +577,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777218,
-     "1 1 1 1 1 1 8 1 1 2 2 1 1 16 4 4 1 0 0 1 0 1 0 1 128 64 32 16 4 8 1 2 1 32 60 1 64 120 1 2 2 4 4 1 2 2 0 0 0 0 0 "
-     "0 0 1 1 1 1 1 1 1 1 16 32 1 960 32 32 2 2 1 1 960 0 0 0 0 0 0 0 0 0 2 2 63 119 4 4 42 "},
+     ""},
 
     {"net_ndhwc_a16w8_2_fp16_stride_2",
      "SOC_L1_1024",
@@ -631,8 +615,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777218,
-     "1 1 1 1 1 1 8 1 1 1 2 1 1 32 4 5 1 0 0 1 0 1 2 1 64 64 64 64 2 4 2 4 1 176 160 1 352 320 1 2 2 1 1 1 2 2 0 0 0 0 "
-     "0 0 0 1 1 1 1 1 1 1 1 64 64 1 1024 32 64 8 8 1 1 14080 0 0 0 0 0 0 0 0 0 2 2 351 319 4 4 13 "},
+     ""},
 
     {"net_ndhwc_a16w8_2_fp16_stride_2_no_scale",
      "SOC_L1_1024",
@@ -670,8 +653,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      150994946,
-     "1 1 1 1 1 1 8 2 2 1 2 1 1 32 4 5 1 0 0 1 0 0 0 1 1 256 1 256 8 1 8 1 1 36 64 1 72 128 1 2 2 1 1 1 2 2 0 0 0 0 0 "
-     "0 0 1 1 1 1 1 1 1 1 256 16 1 512 32 16 1 1 1 1 512 0 0 0 0 0 0 0 0 0 2 2 71 127 4 4 13 "},
+     ""},
 
     {"net_ndhwc_a16w8_2_fp16_pertensor_quant_mode",
      "SOC_L1_1024",
@@ -709,8 +691,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777218,
-     "1 1 1 1 1 1 8 1 1 1 2 1 1 32 4 5 1 0 0 1 0 1 1 1 64 64 64 64 2 4 2 4 1 176 160 1 352 320 1 2 2 1 1 1 2 2 0 0 0 0 "
-     "0 0 0 1 1 1 1 1 1 1 1 64 64 1 1024 32 64 8 8 1 1 14080 0 0 0 0 0 0 0 0 0 2 2 351 319 4 4 13 "},
+     ""},
 
     {"net_ndhwc_a16w8_2_fp16_enable_relu",
      "SOC_L1_1024",
@@ -748,8 +729,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777218,
-     "1 1 1 1 1 1 8 1 1 1 2 1 1 32 4 5 1 0 0 1 0 1 1 1 64 64 64 64 2 4 2 4 1 176 160 1 352 320 1 2 2 1 1 1 2 2 0 0 0 0 "
-     "0 0 0 1 1 1 1 1 1 1 1 64 64 1 1024 32 64 8 8 1 1 14080 1 0 0 0 0 0 0 0 0 2 2 351 319 4 4 13 "},
+     ""},
 
     {"net_ndhwc_a16w16_large_input",
      "SOC_L1_1024",
@@ -787,8 +767,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777474,
-     "1 1 1 1 1 1 8 1 1 2 2 2 1 16 4 4 1 0 0 1 0 0 2 1 64 128 64 128 8 4 8 4 1 288 112 1 576 224 1 2 2 1 1 1 2 2 0 0 0 "
-     "0 0 0 0 1 1 1 1 1 1 1 1 128 64 1 448 64 64 1 1 1 1 448 0 0 0 0 0 0 0 0 0 2 2 575 223 4 4 42 "},
+     ""},
 
     {"net_ndhwc_a16w8_large_input",
      "SOC_L1_1024",
@@ -826,8 +805,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777218,
-     "1 1 1 1 1 1 8 1 1 1 2 1 1 32 4 5 1 0 0 1 0 1 2 1 64 128 64 128 4 4 4 4 1 288 112 1 576 224 1 2 2 1 1 1 2 2 0 0 0 "
-     "0 0 0 0 1 1 1 1 1 1 1 1 128 64 1 1024 32 64 16 16 1 1 16128 0 0 0 0 0 0 0 0 0 2 2 575 223 4 4 13 "},
+     ""},
 
     {"net_ndhwc_a16w16_large_input_stride_4",
      "SOC_L1_1024",
@@ -865,8 +843,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777730,
-     "1 1 1 1 1 1 8 1 1 1 2 2 1 16 4 4 1 0 0 1 0 0 2 1 64 128 64 128 8 4 8 4 1 112 56 1 448 224 1 4 4 1 1 1 4 4 0 0 0 "
-     "0 0 0 0 3 3 3 3 1 1 1 1 128 64 1 512 64 64 4 4 1 1 512 0 0 0 0 0 0 0 0 0 4 4 445 221 16 16 42 "},
+     ""},
 
     {"net_ndhwc_a16w8_large_input_stride_4",
      "SOC_L1_1024",
@@ -904,8 +881,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      16777218,
-     "1 1 1 1 1 1 8 1 1 1 2 1 1 32 4 5 1 0 0 1 0 1 2 1 64 128 64 128 4 4 4 4 1 112 56 1 448 224 1 4 4 1 1 1 4 4 0 0 0 "
-     "0 0 0 0 3 3 3 3 1 1 1 1 128 64 1 1024 32 64 32 64 1 1 12544 0 0 0 0 0 0 0 0 0 4 4 445 221 16 16 13 "},
+     ""},
 
     {"net_ndhwc_a16w16_multi_batch",
      "SOC_L1_1024",
@@ -943,8 +919,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      150994946,
-     "1 1 1 1 1 1 8 2 2 1 2 1 1 16 4 4 1 0 0 1 0 0 2 4 64 256 64 256 16 4 16 4 1 40 32 1 80 64 1 2 2 1 1 1 2 2 0 0 0 0 "
-     "0 0 0 1 1 1 1 1 1 1 1 256 64 1 768 16 64 1 1 1 1 768 0 0 0 0 0 0 0 0 0 2 2 79 63 4 4 42 ",
+     "",
      {},
      false,
      true},
@@ -985,8 +960,7 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      true,
      8,
      150994946,
-     "1 1 1 1 1 1 8 2 2 1 2 1 1 32 4 5 1 0 0 1 0 0 2 4 64 256 64 256 8 4 8 4 1 40 32 1 80 64 1 2 2 1 1 1 2 2 0 0 0 0 0 "
-     "0 0 1 1 1 1 1 1 1 1 256 64 1 512 32 64 1 1 1 1 512 0 0 0 0 0 0 0 0 0 2 2 79 63 4 4 13 "},
+     ""},
 
     {"dual_output_scale1_only_vector_quant",
      "SOC_L1_1024",
@@ -1022,9 +996,10 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      0,
      true,
      true,
-     0,
-     0,
-     "",
+     8,
+     262146,
+     "8 2 2 1 2 1 1 32 4 5 1 0 0 1 0 0 0 1 64 64 64 64 2 2 1 176 160 1 352 320 1 2 2 1 1 1 2 2 0 0 0 1 1 1 1 1 1 1 64 "
+     "64 1 512 32 64 1 1 1 1 512 0 0 0 0 0 0 0 0 13 ",
      "",
      true,
      false,
@@ -1067,9 +1042,10 @@ ExtendConvTransposeV2TilingTestParam cases_params_fuse[] = {
      0,
      true,
      true,
-     0,
-     0,
-     "",
+     8,
+     262146,
+     "8 2 2 1 2 1 1 32 4 5 1 0 0 1 0 0 2 1 64 64 64 64 2 2 1 176 160 1 352 320 1 2 2 1 1 1 2 2 0 0 0 1 1 1 1 1 1 1 64 "
+     "64 1 512 32 64 1 1 1 1 512 0 0 0 0 0 0 0 0 13 ",
      "",
      true,
      false,

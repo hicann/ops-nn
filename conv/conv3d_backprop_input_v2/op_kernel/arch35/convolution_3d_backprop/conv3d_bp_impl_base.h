@@ -108,6 +108,10 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, baseUseN_);
         DEFINE_STUCT_FIELD(uint32_t, baseUseK_);
         DEFINE_STUCT_FIELD(uint64_t, hkWk_);
+        DEFINE_STUCT_FIELD(uint32_t, khDilation_);
+        DEFINE_STUCT_FIELD(uint32_t, kwDilation_);
+        DEFINE_STUCT_FIELD(uint32_t, woExpand_);
+        DEFINE_STUCT_FIELD(uint32_t, cin1G_);
         DEFINE_STUCT_FIELD(uint64_t, singleShapeHWk_);
         DEFINE_STUCT_FIELD(uint64_t, singleShapeM_);
         DEFINE_STUCT_FIELD(uint32_t, singleShapeCin_);

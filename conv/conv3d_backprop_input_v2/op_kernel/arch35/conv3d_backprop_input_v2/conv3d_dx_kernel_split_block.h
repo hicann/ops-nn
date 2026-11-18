@@ -20,14 +20,14 @@
 
 namespace AscendC {
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
+          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode,
           uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scale0Type = uint64_t,
           int scale0Format = FORMAT_MAX, typename y1Type = yType, typename scale1Type = scale0Type,
           int scale1Format = scale0Format>
 class Conv3dDxKsBlock
     : public Conv3dDxOswBlock<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-                              b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scale0Type,
-                              scale0Format, y1Type, scale1Type, scale1Format> {
+                              b2Condition, kernelSplitMode, b1Condition, enableC04Flag, scale0Type, scale0Format,
+                              y1Type, scale1Type, scale1Format> {
 public:
     __aicore__ inline Conv3dDxKsBlock(){};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,

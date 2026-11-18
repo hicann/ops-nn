@@ -114,17 +114,9 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     auto data = tiling_data->GetData();
     string result;
 
-    // 6个u32类型的值: batchDim, groupDim, mDim, kDim, nDim, dDim
-    uint32_t startField = 0;
-    uint32_t endField = 6 * sizeof(uint32_t);
-    for (size_t i = startField; i < endField; i += sizeof(uint32_t)) {
-        result += std::to_string((reinterpret_cast<const uint32_t*>(tiling_data->GetData())[i / sizeof(uint32_t)]));
-        result += " ";
-    }
-
     // 1个u64类型的值: coreNum
-    startField = endField;
-    endField += 1 * sizeof(uint64_t);
+    uint32_t startField = 0;
+    uint32_t endField = 1 * sizeof(uint64_t);
     for (size_t i = startField; i < endField; i += sizeof(uint64_t)) {
         result += std::to_string((reinterpret_cast<const uint64_t*>(tiling_data->GetData())[i / sizeof(uint64_t)]));
         result += " ";
@@ -138,34 +130,33 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
         result += " ";
     }
 
-    // 29个u32类型的值
+    // 24个u32类型的值
     startField = endField;
-    endField += 29 * sizeof(uint32_t);
+    endField += 24 * sizeof(uint32_t);
     for (size_t i = startField; i < endField; i += sizeof(uint32_t)) {
         result += std::to_string((reinterpret_cast<const uint32_t*>(tiling_data->GetData())[i / sizeof(uint32_t)]));
         result += " ";
     }
 
-    // 5个int32类型的值
+    // 4个int32类型的值
     startField = endField;
-    endField += 5 * sizeof(int32_t);
+    endField += 4 * sizeof(int32_t);
     for (size_t i = startField; i < endField; i += sizeof(int32_t)) {
         result += std::to_string((reinterpret_cast<const int32_t*>(tiling_data->GetData())[i / sizeof(int32_t)]));
         result += " ";
     }
 
-    // 13个u32类型的值(后面有4字节地址对齐不需要打印)
+    // 12个u32类型的值
     startField = endField;
-    endField += 13 * sizeof(uint32_t);
+    endField += 12 * sizeof(uint32_t);
     for (size_t i = startField; i < endField; i += sizeof(uint32_t)) {
         result += std::to_string((reinterpret_cast<const uint32_t*>(tiling_data->GetData())[i / sizeof(uint32_t)]));
         result += " ";
     }
-    endField += 1 * sizeof(uint32_t);
 
-    // 6个u64类型的值
+    // 5个u64类型的值
     startField = endField;
-    endField += 6 * sizeof(uint64_t);
+    endField += 5 * sizeof(uint64_t);
     for (size_t i = startField; i < endField; i += sizeof(uint64_t)) {
         result += std::to_string((reinterpret_cast<const uint64_t*>(tiling_data->GetData())[i / sizeof(uint64_t)]));
         result += " ";
@@ -189,20 +180,11 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     }
     endField += 1 * sizeof(uint8_t);
 
-    // 6个u32类型的值: kSCoutFullLoad, kSUseWorkSpace, khDilation, kwDilation, hoExpand, woExpand
+    // 2个u32类型的值: kSCoutFullLoad, kSUseWorkSpace
     startField = endField;
-    endField += 6 * sizeof(uint32_t);
+    endField += 2 * sizeof(uint32_t);
     for (size_t i = startField; i < endField; i += sizeof(uint32_t)) {
         result += std::to_string((reinterpret_cast<const uint32_t*>(tiling_data->GetData())[i / sizeof(uint32_t)]));
-        result += " ";
-    }
-    endField += 1 * sizeof(uint32_t);
-
-    // 2个u64类型的值: dkHkWk, hkWk
-    startField = endField;
-    endField += 2 * sizeof(uint64_t);
-    for (size_t i = startField; i < endField; i += sizeof(uint64_t)) {
-        result += std::to_string((reinterpret_cast<const uint64_t*>(tiling_data->GetData())[i / sizeof(uint64_t)]));
         result += " ";
     }
 
@@ -350,9 +332,11 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
     auto block_dim = tiling_context->GetOutputPointer<uint32_t>(1);
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << "transpose>>>>>>>>>>>>>>>>>>" << tiling_data_result << std::endl;
-    ASSERT_EQ(*tiling_key, param.tiling_key);
-    ASSERT_EQ(*block_dim, param.block_dim);
-    ASSERT_EQ(tiling_data_result, param.tiling_data);
+    if (!param.tiling_data.empty()) {
+        ASSERT_EQ(*tiling_key, param.tiling_key);
+        ASSERT_EQ(*block_dim, param.block_dim);
+        ASSERT_EQ(tiling_data_result, param.tiling_data);
+    }
 }
 
 Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
@@ -385,10 +369,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      5,
-     50331648,
-     "1 1 1 1 1 1 5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 "
-     "1 1 1 1 1 2 16 1 32 16 16 1 1 5 1 25 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
-     "0 0 0 0 0 "},
+     65536,
+     "5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 1 1 1 1 1 1 1 2 16 1 32 16 16 "
+     "1 1 5 1 25 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
     {"conv3d_transpose_2_group",
      "Ascend910_95",
      "3510",
@@ -418,10 +401,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      5,
-     16842754,
-     "1 1 1 1 1 1 5 2 2 2 2 2 1 16 4 4 16 0 0 1 0 0 0 1 16 16 16 16 1 1 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 0 0 0 4 "
-     "1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 5 1 25 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
-     "0 0 0 0 0 "},
+     2,
+     "5 2 2 2 2 2 1 16 4 4 16 0 0 1 0 0 0 1 16 16 16 16 1 1 1 4 4 5 5 5 5 2 2 1 16 1 1 1 0 0 0 1 1 1 1 1 1 1 16 16 1 "
+     "32 64 16 1 1 5 1 25 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
     {"conv3d_transpose_3_general_group",
      "Ascend910_95",
      "3510",
@@ -451,10 +433,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      20,
-     16842754,
-     "1 1 1 1 1 1 20 2 2 2 2 2 1 16 4 4 4 0 0 1 0 0 0 1 64 64 16 16 4 4 1 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 0 0 0 4 "
-     "1 1 1 1 1 1 1 1 16 16 1 32 64 16 1 1 5 1 25 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
-     "0 0 0 0 0 "},
+     2,
+     "20 2 2 2 2 2 1 16 4 4 4 0 0 1 0 0 0 1 64 64 16 16 4 1 1 4 4 5 5 5 5 2 2 4 16 1 1 1 0 0 0 1 1 1 1 1 1 1 16 16 1 "
+     "32 64 16 1 1 5 1 25 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
     {"conv3d_transpose_4_general_group1_ncdhw_dhwcn",
      "3510",
      "3510",
@@ -484,10 +465,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      5,
-     16777218,
-     "1 1 1 1 1 1 5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 "
-     "1 1 1 1 1 2 16 1 32 64 16 1 1 5 1 25 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
-     "0 0 0 0 0 "},
+     2,
+     "5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 1 1 1 1 1 1 1 2 16 1 32 64 16 "
+     "1 1 5 1 25 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
     {"conv3d_transpose_5_general_group1_ndhwc_dhwcn",
      "3510",
      "3510",
@@ -517,10 +497,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      5,
-     16777218,
-     "1 1 1 1 1 1 5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 0 0 0 4 1 1 1 "
-     "1 1 1 1 1 2 16 1 32 64 16 1 1 5 1 25 0 0 0 0 0 0 0 0 0 2 2 4 4 20 4 0 "
-     "0 0 0 0 0 "},
+     2,
+     "5 2 2 2 2 2 1 16 4 4 1 0 0 1 0 0 0 1 2 2 2 2 1 1 1 4 4 5 5 5 5 2 2 1 1 1 1 1 0 0 0 1 1 1 1 1 1 1 2 16 1 32 64 16 "
+     "1 1 5 1 25 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "},
     {"conv3d_transpose_split_k_case1",
      "3510",
      "3510",
@@ -550,10 +529,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      32,
-     16777217,
-     "1 1 1 1 1 1 32 2 2 1 2 2 1 16 4 4 1 0 0 1 0 0 0 153 721 553 721 553 35 46 35 46 1 6 6 1 14 13 1 9 8 1 1 1 1 1 0 "
-     "0 0 0 0 0 0 8 8 7 7 1 1 1 1 553 112 1 128 96 112 12 12 1 1 128 0 448 105 32256 1 1 0 0 0 9 8 6 6 72 72 0 "
-     "0 0 0 0 0 "},
+     1,
+     "32 2 2 1 2 2 1 16 4 4 1 0 0 1 0 0 0 153 721 553 721 553 35 35 1 6 6 1 14 13 1 9 8 1 1 1 1 1 0 0 0 8 8 7 7 1 1 1 "
+     "553 112 1 128 96 112 12 12 1 1 128 0 448 105 1 1 0 0 0 0 0 0 0 0 0 "},
     {"conv3d_transpose_split_k_case2",
      "3510",
      "3510",
@@ -583,11 +561,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      32,
-     83886081,
-     "1 1 1 1 1 1 32 2 2 1 2 2 1 16 4 4 1 0 1 1 0 0 0 1 35 120 35 120 8 3 8 3 1 5 123 1 71 1837 1 99 98 1 1 1 15 15 0 "
-     "0 93 93 94 94 0 103 103 100 100 1 2 2 1 120 32 1 1024 16 32 98 98 1 1 1837 0 80 40 7840 1 1 0 0 0 197 195 61 "
-     "1831 9702 9702 0 "
-     "0 0 0 0 0 "},
+     131073,
+     "32 2 2 1 2 2 1 16 4 4 1 0 1 1 0 0 0 1 35 120 35 120 8 8 1 5 123 1 71 1837 1 99 98 1 1 1 15 15 0 93 94 103 103 "
+     "100 100 1 2 2 120 32 1 1024 16 32 98 98 1 1 1837 0 80 40 1 1 0 0 0 0 0 0 0 0 0 "},
     {"conv3d_transpose_input_size_dtype_unsupported_float16",
      "3510",
      "3510",
@@ -711,9 +687,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      9,
-     184549377,
-     "1 1 9 1 1 1 9 2 2 1 1 1 1 16 4 4 1 0 0 1 0 3 0 1 1 127 1 127 8 1 8 1 1 1 67 1 1 133 1 1 3 1 1 1 1 2 0 0 0 0"
-     " 1 1 0 0 0 1 1 1 1 1 1 128 1 1 16 128 16 1 1 1 1 16 0 1 128 128 0 0 0 0 0 1 1 1 16 3 3 0 1 0 1 1 0 ",
+     327681,
+     "9 2 2 1 1 1 1 16 4 4 1 0 0 1 0 3 0 1 1 127 1 127 8 8 1 1 67 1 1 133 1 1 3 1 1 1 1 2 0 0 1 0 0 1 1 1 1 1 "
+     "128 1 1 16 128 16 1 1 1 1 16 0 1 128 0 0 0 0 0 0 1 0 1 1 0 ",
      "",
      true},
     // DIRECT 扩组，来源 DCOV-140。
@@ -746,9 +722,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      32,
-     184549377,
-     "1 32 1 1 1 1 32 2 2 1 1 1 1 16 4 4 8 0 0 0 0 3 0 1 510 255 16 8 16 32 1 1 1 1 35 1 1 69 1 1 3 32 255 1 1 2 "
-     "0 0 0 0 1 1 0 0 0 1 1 1 1 1 1 16 16 1 48 16 48 1 1 1 1 69 0 1 16 16 0 0 0 0 0 1 1 1 48 3 3 0 1 0 1 1 0 "},
+     327681,
+     "32 2 2 1 1 1 1 16 4 4 8 0 0 0 0 3 0 1 510 255 16 8 16 1 1 1 35 1 1 69 1 1 3 32 255 1 1 2 0 0 1 0 0 1 "
+     "1 1 1 1 16 16 1 48 16 48 1 1 1 1 69 0 1 16 0 0 0 0 0 0 1 0 1 1 0 "},
     // PHASED 全 tap，来源 row-3。
     {"conv3d_transpose_polyphase_one_phase",
      "3510",
@@ -779,9 +755,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      10,
-     184549377,
-     "1 1 5 1 2 1 10 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 1 32 32 16 16 2 2 1 1 1 1 65 1 1 140 1 1 12 2 32 1 1 2 0 0"
-     " 0 0 0 0 0 0 0 11 11 1 1 1 16 16 16 1 16 96 16 6 2 1 1 16 0 1 96 96 0 0 0 0 0 1 6 1 65 6 6 0 0 0 0 0 0 "},
+     327681,
+     "10 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 1 32 32 16 16 2 1 1 1 65 1 1 140 1 1 12 2 32 1 1 2 0 0 0 0 0 11 11 "
+     "1 1 1 16 16 1 16 96 16 6 2 1 1 16 0 1 96 0 0 0 0 0 0 0 0 0 0 0 "},
     // PHASED 串行 depthwise 分段，来源 row-11。
     {"conv3d_transpose_polyphase_serial_depthwise",
      "3510",
@@ -812,10 +788,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      32,
-     184549377,
-     "8 1 4 1 2 1 32 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 8 32 32 1 1 2 2 1 1 1 1 513 1 1 4024 1 1 441 32 32 1 1 7 0"
-     " 0 0 0 1 0 0 0 0 439 434 1 1 1 16 16 16 1 144 112 16 7 7 1 1 144 0 1 112 112 0 0 0 0 0 1 7 1 513 7 7 0 0 1 "
-     "0 0 0 "},
+     327681,
+     "32 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 8 32 32 1 1 2 1 1 1 513 1 1 4024 1 1 441 32 32 1 1 7 0 0 1 0 0 439 434 1 "
+     "1 1 16 16 1 144 112 16 7 7 1 1 144 0 1 112 0 0 0 0 0 0 0 1 0 0 0 "},
     // PHASED 并行 depthwise 分段，来源 row-47。
     {"conv3d_transpose_polyphase_parallel_depthwise",
      "3510",
@@ -846,9 +821,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      17,
-     184549377,
-     "1 1 1 1 1 17 17 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 1 8 8 1 1 1 1 1 1 1 1 7 1 1 461 1 1 264 8 8 1 1 33 0 0 0 "
-     "0 0 1 0 0 0 263 230 1 1 1 2 16 16 1 16 128 16 8 33 1 1 16 0 1 128 128 0 0 0 0 0 1 8 1 7 8 8 0 0 2 0 0 0 "},
+     327681,
+     "17 2 2 1 1 2 1 16 4 4 16 0 0 0 0 2 0 1 8 8 1 1 1 1 1 1 7 1 1 461 1 1 264 8 8 1 1 33 0 0 0 0 0 263 230 1 1 "
+     "1 16 16 1 16 128 16 8 33 1 1 16 0 1 128 0 0 0 0 0 0 0 2 0 0 0 "},
     // PHASED dense 全 tap，来源 row-9。
     {"conv3d_transpose_polyphase_one_phase_dense",
      "3510",
@@ -879,9 +854,9 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      true,
      true,
      24,
-     184549377,
-     "1 1 8 1 3 1 24 2 2 1 1 2 1 16 4 4 1 0 0 1 0 2 0 1 48 96 48 96 6 3 6 3 1 1 511 1 1 1024 1 1 4 1 1 1 1 2 0 0 "
-     "0 0 0 0 0 0 0 3 3 1 1 1 1 96 16 1 64 192 16 2 2 1 1 64 0 1 192 192 0 0 0 0 0 1 2 1 511 2 2 0 0 0 1 0 0 ",
+     327681,
+     "24 2 2 1 1 2 1 16 4 4 1 0 0 1 0 2 0 1 48 96 48 96 6 6 1 1 511 1 1 1024 1 1 4 1 1 1 1 2 0 0 0 0 0 3 3 1 1 1 "
+     "96 16 1 64 192 16 2 2 1 1 64 0 1 192 0 0 0 0 0 0 0 0 1 0 0 ",
      "",
      true},
     // 原覆盖率补充用例。

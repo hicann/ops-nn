@@ -46,7 +46,6 @@ constexpr uint32_t TOTAL_CNT_LOWER_RATIO = 10;
 constexpr uint32_t TOTAL_CNT_UPPER_RATIO = 45;
 
 constexpr uint32_t B2_TRANSPOSE_AND_REVERSE = 1;
-constexpr uint32_t B2_TRANSPOSE_ONLY = 3;
 constexpr uint32_t B2_REVERSE_ONLY = 2;
 constexpr uint32_t B2_NO_TRANSPOSE_NO_REVERSE = 0;
 

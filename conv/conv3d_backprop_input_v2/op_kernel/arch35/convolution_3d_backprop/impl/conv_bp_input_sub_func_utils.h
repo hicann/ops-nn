@@ -176,15 +176,15 @@ __aicore__ inline LocalTensor<typename Intf::SrcBT> GetB1Tbuf(Intf* self, const 
 }
 
 // ENLARGE 且非 fractal_z 直搬时需 AIV 组内转置。
-__aicore__ inline bool EnableVecGroupEnlarge(const uint8_t groupMode, const Conv3DBackpropInputArch35TilingData* tiling)
+__aicore__ inline bool EnableVecGroupEnlarge(const Conv3DBackpropInputArch35TilingData* tiling)
 {
-    return groupMode == TPL_GROUP_MODE_ENLARGE && tiling->loadB1FractalZ == 0;
+    return tiling->enlarge > 1 && tiling->loadB1FractalZ == 0;
 }
 
 template <class Intf>
 __aicore__ inline bool EnableVecGroupEnlarge(Intf* self)
 {
-    return EnableVecGroupEnlarge(Intf::conv3dConfig.groupMode, self->ctx.tiling_);
+    return EnableVecGroupEnlarge(self->ctx.tiling_);
 }
 
 } // namespace Convolution3DBackpropFunc

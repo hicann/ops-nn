@@ -209,12 +209,6 @@ void Conv3DDXV2InnerProductTiling::Reset()
                              context_->GetRawTilingData()->GetCapacity()) != EOK,
                     CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return);
     auto& dxt = tilingData_;
-    dxt.set_batchDim(1);
-    dxt.set_groupDim(1);
-    dxt.set_mDim(1);
-    dxt.set_kDim(1);
-    dxt.set_nDim(1);
-    dxt.set_dDim(1);
     dxt.set_coreNum(1);
     dxt.set_al0Pbuffer(1);
     dxt.set_bl0Pbuffer(1);
@@ -239,9 +233,7 @@ void Conv3DDXV2InnerProductTiling::Reset()
     dxt.set_cinG(1);
     dxt.set_coutG(1);
     dxt.set_cout1(1);
-    dxt.set_cin1(1);
     dxt.set_cout1G(1);
-    dxt.set_cin1G(1);
     dxt.set_dout(1);
     dxt.set_ho(1);
     dxt.set_wo(1);
@@ -257,12 +249,8 @@ void Conv3DDXV2InnerProductTiling::Reset()
     dxt.set_strideH(1);
     dxt.set_strideW(1);
     dxt.set_padFront(1);
-    dxt.set_padBack(1);
     dxt.set_padUp(1);
-    dxt.set_padDown(1);
     dxt.set_padLeft(1);
-    dxt.set_padRight(1);
-    dxt.set_backpropPadTail(1);
     dxt.set_backpropPadUp(1);
     dxt.set_backpropPadDown(1);
     dxt.set_backpropPadLeft(1);
@@ -270,7 +258,6 @@ void Conv3DDXV2InnerProductTiling::Reset()
     dxt.set_dilationD(1);
     dxt.set_dilationH(1);
     dxt.set_dilationW(1);
-    dxt.set_singleCoreGroup(1);
     dxt.set_singleCoreCout(1);
     dxt.set_singleCoreCin(1);
     dxt.set_singleCoreDin(1);
@@ -1339,7 +1326,8 @@ uint32_t Conv3DDXV2InnerProductTiling::GetLoadB2ConditionByFormatAndKernel(const
     uint64_t kernelDHW = static_cast<uint64_t>(runInfo_.kernel_d) * kernelHW;
     if (kernelDHW == ONE_U64 && tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK &&
         groupConvMode_ == TILING_GROUP_MODE_ORIGIN) {
-        return B2_TRANSPOSE_ONLY; // kernel为1, 不需要逆序，DHWCN除外
+        // kernel为1时逆序为恒等操作，复用 TRANSPOSE_AND_REVERSE 模板；kernel 侧按 dkHkWk==1 走专用搬运
+        return B2_TRANSPOSE_AND_REVERSE;
     }
 
     if (runInfo_.filterFormat == ge::FORMAT_NDHWC && l0Params.baseN >= kernelHW) {
@@ -1397,7 +1385,6 @@ void Conv3DDXV2InnerProductTiling::SetCommonTilingData(const CoreTilingParams& c
     optiling::Conv3DBackpropInputArch35TilingData& dxt = tilingData_;
     // singleCore
     dxt.set_singleCoreBatch(1);
-    dxt.set_singleCoreGroup(1);
     dxt.set_singleCoreDin(coreParams.singleCoreDin);
 
     dxt.set_singleCoreM(coreParams.singleCoreM);
@@ -1443,7 +1430,6 @@ void Conv3DDXV2InnerProductTiling::SetTilingData(const CoreTilingParams& corePar
     tilingData_.set_enableSplitK(tilingRunInfo_.enableSplitK);
     tilingData_.set_kSegment(tilingRunInfo_.kSegment);
     tilingData_.set_kSegmentTail(tilingRunInfo_.kSegmentTail);
-    tilingData_.set_kValueSegment(tilingRunInfo_.kValueSegment);
     tilingData_.set_useUbAccumForSplitK(tilingRunInfo_.useUbAccumForSplitK);
 
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
@@ -1611,11 +1597,8 @@ void Conv3DDXV2InnerProductTiling::TranslateRunInfoData()
     dxt.set_strideH(runInfo_.stride_h);
     dxt.set_strideW(runInfo_.stride_w);
     dxt.set_padFront(runInfo_.pad_h);
-    dxt.set_padBack(runInfo_.pad_t);
     dxt.set_padUp(runInfo_.pad_u);
-    dxt.set_padDown(runInfo_.pad_d);
     dxt.set_padLeft(runInfo_.pad_l);
-    dxt.set_padRight(runInfo_.pad_r);
     dxt.set_dilationD(runInfo_.dilation_d);
     dxt.set_dilationH(runInfo_.dilation_h);
     dxt.set_dilationW(runInfo_.dilation_w);
@@ -1642,15 +1625,11 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(
     dxt.set_cinG(tunerTiling->cinG);
     dxt.set_coutG(tunerTiling->coutG);
     dxt.set_cout1(tunerTiling->cout1);
-    dxt.set_cin1(tunerTiling->cin1);
     dxt.set_cout1G(tunerTiling->cout1G);
-    dxt.set_cin1G(tunerTiling->cin1G);
-    dxt.set_backpropPadTail(tunerTiling->backpropPadTail);
     dxt.set_backpropPadUp(tunerTiling->backpropPadUp);
     dxt.set_backpropPadDown(tunerTiling->backpropPadDown);
     dxt.set_backpropPadLeft(tunerTiling->backpropPadLeft);
     dxt.set_backpropPadRight(tunerTiling->backpropPadRight);
-    dxt.set_singleCoreGroup(tunerTiling->singleCoreGroup);
     dxt.set_singleCoreCout(tunerTiling->singleCoreCout);
     dxt.set_singleCoreCin(tunerTiling->singleCoreCin);
     dxt.set_singleCoreDin(tunerTiling->singleCoreDin);
@@ -1664,7 +1643,6 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(
     dxt.set_singleCoreM(tunerTiling->singleCoreM);
     dxt.set_kSegment(tunerTiling->kSegment);
     dxt.set_kSegmentTail(tunerTiling->kSegmentTail);
-    dxt.set_kValueSegment(tunerTiling->kValueSegment);
     dxt.set_enableSplitK(tunerTiling->enableSplitK);
     dxt.set_useUbAccumForSplitK(tunerTiling->useUbAccumForSplitK);
     tilingData_.set_coreNum(tunerTiling->coreNum);
@@ -1805,7 +1783,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
 uint64_t Conv3DDXV2InnerProductTiling::GetTilingKey() const
 {
     const uint8_t keyLoadB1 = loadB1Condition_ == ENABLE_LOCAL_W ? TPL_GM_TO_L1 : loadB1Condition_;
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, 0, groupConvMode_, true, keyLoadB1);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, 0, keyLoadB1);
     OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_ is: [%u, %u, %u]",
             loadB2Condition_, loadB1Condition_, kernelSplitMode_);
     return tilingKey;
@@ -3113,11 +3091,8 @@ void Conv3DDXV2InnerProductTiling::SetRunInfoTiling(optiling::Conv3DBackpropInpu
     dxt.set_strideW(runInfo_.stride_w);
     dxt.set_strideD(runInfo_.stride_d);
     dxt.set_padFront(runInfo_.pad_h);
-    dxt.set_padBack(runInfo_.pad_t);
     dxt.set_padUp(runInfo_.pad_u);
-    dxt.set_padDown(runInfo_.pad_d);
     dxt.set_padLeft(runInfo_.pad_l);
-    dxt.set_padRight(runInfo_.pad_r);
     SetBackpropPadInfo(dxt);
 
     dxt.set_dilationH(runInfo_.dilation_h);
@@ -3142,9 +3117,7 @@ void Conv3DDXV2InnerProductTiling::SetRunBaseShapeInfoTiling(optiling::Conv3DBac
     dxt.set_cout(runInfo_.dedy_cout);
     dxt.set_cinG(runInfo_.dedx_cin_g);
     dxt.set_coutG(runInfo_.dedy_cout_g);
-    dxt.set_cin1(runInfo_.dedx_cin1);
     dxt.set_cout1(runInfo_.dedy_cout1);
-    dxt.set_cin1G(runInfo_.dedx_cin1_g);
     dxt.set_cout1G(runInfo_.dedy_cout1_g);
     dxt.set_c0(blockSize_);
 
@@ -3173,12 +3146,6 @@ void Conv3DDXV2InnerProductTiling::SetRunBaseShapeInfoTiling(optiling::Conv3DBac
     dxt.set_hk(runInfo_.kernel_h);
     dxt.set_wk(runInfo_.kernel_w);
     dxt.set_dk(runInfo_.kernel_d);
-    dxt.set_khDilation((runInfo_.kernel_h - 1) * runInfo_.dilation_h + 1);
-    dxt.set_kwDilation((runInfo_.kernel_w - 1) * runInfo_.dilation_w + 1);
-    dxt.set_hoExpand((runInfo_.dedy_h - 1) * runInfo_.stride_h + 1);
-    dxt.set_woExpand((runInfo_.dedy_w - 1) * runInfo_.stride_w + 1);
-    dxt.set_dkHkWk(static_cast<uint64_t>(runInfo_.kernel_d) * runInfo_.kernel_h * runInfo_.kernel_w);
-    dxt.set_hkWk(static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w);
 }
 
 bool Conv3DDXV2InnerProductTiling::IsSocVersion950() const
@@ -3196,11 +3163,6 @@ void Conv3DDXV2InnerProductTiling::SetBackpropPadInfo(optiling::Conv3DBackpropIn
 {
     int64_t bpPadTail = runInfo_.dedx_d - (static_cast<int64_t>(runInfo_.dedy_d - 1) * runInfo_.stride_d + 1) +
                         (runInfo_.kernel_d - 1) * runInfo_.dilation_d - runInfo_.backprop_pad_h;
-    if (bpPadTail < PAD_DIM_LOW || bpPadTail > PAD_DIM_UP) {
-        dxt.set_backpropPadTail(runInfo_.backprop_pad_t);
-    } else {
-        dxt.set_backpropPadTail(static_cast<uint32_t>(bpPadTail));
-    }
     OP_LOGD(opName_, "backprop tail pad: %ld, origin backprop_pad_t: %d", bpPadTail, runInfo_.backprop_pad_t);
 
     dxt.set_backpropPadUp(runInfo_.backprop_pad_u);
@@ -3266,8 +3228,7 @@ void Conv3DDXV2InnerProductTiling::PrintOpAttrs(const std::string& opName,
 {
     auto stridesShape = GetAttrVector(context_, strideIndex, kConv3DbpDim, "strides");
     // pads打印需要修改，可能从padding获取
-    std::vector<int64_t> padsShape{tiling.get_padFront(), tiling.get_padBack(), tiling.get_padUp(),
-                                   tiling.get_padDown(),  tiling.get_padLeft(), tiling.get_padRight()};
+    std::vector<int64_t> padsShape{tiling.get_padFront(), tiling.get_padUp(), tiling.get_padLeft()};
     auto dilationsShape = GetAttrVector(context_, dilationIndex, kConv3DbpDim, "dilations");
     auto attrs = context_->GetAttrs();
     const auto groups = attrs->GetAttrPointer<int64_t>(groupIndex);
@@ -3323,24 +3284,21 @@ void Conv3DDXV2InnerProductTiling::PrintTilingData()
        << " hf32Flag: " << static_cast<uint32_t>(tiling.get_hf32Flag())
        << " initOutputFlag: " << static_cast<uint32_t>(tiling.get_initOutputFlag())
        << " isBiasFullLoad: " << static_cast<uint32_t>(tiling.get_isBiasFullLoad()) << " cinG: " << tiling.get_cinG()
-       << " coutG: " << tiling.get_coutG() << " cout1: " << tiling.get_cout1() << " cin1: " << tiling.get_cin1()
-       << " cout1G: " << tiling.get_cout1G() << " cin1G: " << tiling.get_cin1G() << " group: " << tiling.get_group()
-       << " oriGroup: " << tiling.get_oriGroup() << " backpropPadTail: " << tiling.get_backpropPadTail()
+       << " coutG: " << tiling.get_coutG() << " cout1: " << tiling.get_cout1() << " cout1G: " << tiling.get_cout1G()
+       << " group: " << tiling.get_group() << " oriGroup: " << tiling.get_oriGroup()
        << " backpropPadUp: " << tiling.get_backpropPadUp() << " backpropPadDown: " << tiling.get_backpropPadDown()
        << " backpropPadLeft: " << tiling.get_backpropPadLeft() << " backpropPadRight: " << tiling.get_backpropPadRight()
-       << " singleCoreGroup: " << tiling.get_singleCoreGroup() << " singleCoreCout: " << tiling.get_singleCoreCout()
-       << " singleCoreCin: " << tiling.get_singleCoreCin() << " singleCoreDin: " << tiling.get_singleCoreDin()
-       << " baseM: " << tiling.get_baseM() << " baseK: " << tiling.get_baseK() << " baseN: " << tiling.get_baseN()
-       << " stepKa: " << tiling.get_stepKa() << " stepKb: " << tiling.get_stepKb()
-       << " singleIterateDk: " << tiling.get_singleIterateDk() << " singleCoreBatch: " << tiling.get_singleCoreBatch()
-       << " singleCoreM: " << tiling.get_singleCoreM()
+       << " singleCoreCout: " << tiling.get_singleCoreCout() << " singleCoreCin: " << tiling.get_singleCoreCin()
+       << " singleCoreDin: " << tiling.get_singleCoreDin() << " baseM: " << tiling.get_baseM()
+       << " baseK: " << tiling.get_baseK() << " baseN: " << tiling.get_baseN() << " stepKa: " << tiling.get_stepKa()
+       << " stepKb: " << tiling.get_stepKb() << " singleIterateDk: " << tiling.get_singleIterateDk()
+       << " singleCoreBatch: " << tiling.get_singleCoreBatch() << " singleCoreM: " << tiling.get_singleCoreM()
        << " enableVecTrans: " << static_cast<uint32_t>(tiling.get_enableVecTrans())
        << " kSCoutFullLoad: " << tiling.get_kSCoutFullLoad() << " kSUseWorkSpace: " << tiling.get_kSUseWorkSpace()
        << " enableFullLoad: " << static_cast<uint32_t>(tiling.get_enableFullLoad())
        << " enableSplitK: " << static_cast<uint32_t>(tiling.get_enableSplitK())
        << " useUbAccumForSplitK: " << static_cast<uint32_t>(tiling.get_useUbAccumForSplitK())
-       << " kSegment: " << tiling.get_kSegment() << " kSegmentTail: " << tiling.get_kSegmentTail()
-       << " kValueSegment: " << tiling.get_kValueSegment();
+       << " kSegment: " << tiling.get_kSegment() << " kSegmentTail: " << tiling.get_kSegmentTail();
     OP_LOGD(opName_, "api tiling: %s", ss.str().c_str());
     PrintInputsAttrs(tiling);
 }

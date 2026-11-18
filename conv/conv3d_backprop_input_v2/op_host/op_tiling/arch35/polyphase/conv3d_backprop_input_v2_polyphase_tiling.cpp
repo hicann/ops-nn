@@ -148,7 +148,6 @@ void SetEnlargedGroup(const Conv3dBpInputV2RunInfo& runInfo, const Plan& plan,
         data.set_group(Ops::Base::CeilDiv<uint64_t>(runInfo.groups, plan.enlarge));
         data.set_cinG(co);
         data.set_coutG(ci);
-        data.set_cin1G(Ops::Base::CeilDiv<uint64_t>(co, BASIC_BLOCK_SIZE_16));
         data.set_cout1G(Ops::Base::CeilDiv<uint64_t>(ci, BASIC_BLOCK_SIZE_16));
     }
 }
@@ -161,10 +160,9 @@ void SetCoreTiling(const Conv3dBpInputV2RunInfo& runInfo, bool bias, const Plan&
     if (directDense) {
         SetEnlargedGroup(runInfo, plan, data);
     }
-    data.set_batchDim(runInfo.batch_n);
+    data.set_batch(runInfo.batch_n);
     data.set_groupDim(directDense ? Ops::Base::CeilDiv<uint64_t>(runInfo.groups, plan.enlarge) : 1U);
     data.set_mDim(plan.mDim);
-    data.set_kDim(1U);
     data.set_nDim(plan.nDim);
     data.set_dDim(plan.phaseGroups);
     data.set_coreNum(plan.coreNum);
@@ -217,12 +215,6 @@ void SetComputeTiling(const Conv3dBpInputV2RunInfo& runInfo, const Plan& plan,
     data.set_offsetX(0);
     data.set_kSCoutFullLoad(0U);
     data.set_kSUseWorkSpace(0U);
-    data.set_khDilation(1U);
-    data.set_kwDilation(directDense ? runInfo.dilation_w : q);
-    data.set_hoExpand(1U);
-    data.set_woExpand(directDense ? plan.baseM : runInfo.dedy_w);
-    data.set_dkHkWk(directDense ? runInfo.kernel_w : q);
-    data.set_hkWk(directDense ? runInfo.kernel_w : q);
     data.set_fixedShiftVal(0U);
     data.set_dualOutput(0U);
     data.set_enRelu1(0U);
@@ -375,7 +367,6 @@ bool Conv3DBackpropInputV2PolyphaseTiling::BuildPlan()
     SetPolyphaseData(runInfo_, plan, tilingData_);
     loadB2Condition_ = TPL_TRANSPOSE_AND_REVERSE;
     kernelSplitMode_ = TPL_NO_SPLIT_KERNEL;
-    groupConvMode_ = TPL_GROUP_MODE_ORIGIN;
     loadB1Condition_ = TPL_POLYPHASE;
     return true;
 }
@@ -432,7 +423,7 @@ bool Conv3DBackpropInputV2PolyphaseTiling::IsDirectDenseCapable()
     constexpr uint64_t minKernelSpanWork = 12288U; // 经验 kernel 位置工作量阈值。
     const uint64_t ci = static_cast<uint64_t>(runInfo_.dedy_cout / runInfo_.groups);
     const uint64_t co = static_cast<uint64_t>(runInfo_.dedx_cin / runInfo_.groups);
-    const uint64_t tasks = uint64_t{data.get_batchDim()} * data.get_groupDim() * data.get_mDim() * data.get_nDim();
+    const uint64_t tasks = uint64_t{data.get_batch()} * data.get_groupDim() * data.get_mDim() * data.get_nDim();
     const uint64_t cores = data.get_coreNum();
     const uint64_t channels = std::max(ci, co);
     const uint64_t first = pad >= kernel ? (pad - kernel + stride) / stride : 0U;
@@ -460,7 +451,7 @@ ge::graphStatus Conv3DBackpropInputV2PolyphaseTiling::DoLibApiTiling()
 
 uint64_t Conv3DBackpropInputV2PolyphaseTiling::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(loadB2Condition_, kernelSplitMode_, groupConvMode_, true, loadB1Condition_);
+    return GET_TPL_TILING_KEY(loadB2Condition_, kernelSplitMode_, loadB1Condition_);
 }
 
 Conv3DBackpropInputV2PolyphaseTiling::Conv3DBackpropInputV2PolyphaseTiling(gert::TilingContext* context,

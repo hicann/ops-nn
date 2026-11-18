@@ -85,15 +85,11 @@ TUNING_TILING_DATA_FIELD_DEF(uint8_t, enableFullLoad);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, cinG);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, coutG);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, cout1);
-TUNING_TILING_DATA_FIELD_DEF(uint32_t, cin1);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, cout1G);
-TUNING_TILING_DATA_FIELD_DEF(uint32_t, cin1G);
-TUNING_TILING_DATA_FIELD_DEF(int32_t, backpropPadTail);
 TUNING_TILING_DATA_FIELD_DEF(int32_t, backpropPadUp);
 TUNING_TILING_DATA_FIELD_DEF(int32_t, backpropPadDown);
 TUNING_TILING_DATA_FIELD_DEF(int32_t, backpropPadLeft);
 TUNING_TILING_DATA_FIELD_DEF(int32_t, backpropPadRight);
-TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreGroup);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreCout);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreCin);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreDin);
@@ -119,7 +115,6 @@ TUNING_TILING_DATA_FIELD_DEF(uint8_t, tilingHkWkMode);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, usrSpaceSize);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, kSegment);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, kSegmentTail);
-TUNING_TILING_DATA_FIELD_DEF(uint64_t, kValueSegment);
 TUNING_TILING_DATA_FIELD_DEF(bool, enableSplitK);
 TUNING_TILING_DATA_FIELD_DEF(bool, useUbAccumForSplitK);
 // 预留字段，1-4存放4个uint64_t类型的参数，5-6存放4个uint32_t类型的参数,
@@ -144,11 +139,9 @@ DECLARE_SCHEMA(
     FIELD(Conv3DBackpropInputTunerTiling, isBiasFullLoad), FIELD(Conv3DBackpropInputTunerTiling, enableVecTrans),
     FIELD(Conv3DBackpropInputTunerTiling, enableFullLoad), FIELD(Conv3DBackpropInputTunerTiling, cinG),
     FIELD(Conv3DBackpropInputTunerTiling, coutG), FIELD(Conv3DBackpropInputTunerTiling, cout1),
-    FIELD(Conv3DBackpropInputTunerTiling, cin1), FIELD(Conv3DBackpropInputTunerTiling, cout1G),
-    FIELD(Conv3DBackpropInputTunerTiling, cin1G), FIELD(Conv3DBackpropInputTunerTiling, backpropPadTail),
-    FIELD(Conv3DBackpropInputTunerTiling, backpropPadUp), FIELD(Conv3DBackpropInputTunerTiling, backpropPadDown),
-    FIELD(Conv3DBackpropInputTunerTiling, backpropPadLeft), FIELD(Conv3DBackpropInputTunerTiling, backpropPadRight),
-    FIELD(Conv3DBackpropInputTunerTiling, singleCoreGroup), FIELD(Conv3DBackpropInputTunerTiling, singleCoreCout),
+    FIELD(Conv3DBackpropInputTunerTiling, cout1G), FIELD(Conv3DBackpropInputTunerTiling, backpropPadUp),
+    FIELD(Conv3DBackpropInputTunerTiling, backpropPadDown), FIELD(Conv3DBackpropInputTunerTiling, backpropPadLeft),
+    FIELD(Conv3DBackpropInputTunerTiling, backpropPadRight), FIELD(Conv3DBackpropInputTunerTiling, singleCoreCout),
     FIELD(Conv3DBackpropInputTunerTiling, singleCoreCin), FIELD(Conv3DBackpropInputTunerTiling, singleCoreDin),
     FIELD(Conv3DBackpropInputTunerTiling, baseM), FIELD(Conv3DBackpropInputTunerTiling, baseK),
     FIELD(Conv3DBackpropInputTunerTiling, baseN), FIELD(Conv3DBackpropInputTunerTiling, stepKa),
@@ -161,11 +154,11 @@ DECLARE_SCHEMA(
     FIELD(Conv3DBackpropInputTunerTiling, enableVecTransFlag),
     FIELD(Conv3DBackpropInputTunerTiling, enableSplitKernelFlag), FIELD(Conv3DBackpropInputTunerTiling, tilingHkWkMode),
     FIELD(Conv3DBackpropInputTunerTiling, usrSpaceSize), FIELD(Conv3DBackpropInputTunerTiling, kSegment),
-    FIELD(Conv3DBackpropInputTunerTiling, kSegmentTail), FIELD(Conv3DBackpropInputTunerTiling, kValueSegment),
-    FIELD(Conv3DBackpropInputTunerTiling, enableSplitK), FIELD(Conv3DBackpropInputTunerTiling, useUbAccumForSplitK),
-    FIELD(Conv3DBackpropInputTunerTiling, reservedParam1), FIELD(Conv3DBackpropInputTunerTiling, reservedParam2),
-    FIELD(Conv3DBackpropInputTunerTiling, reservedParam3), FIELD(Conv3DBackpropInputTunerTiling, reservedParam4),
-    FIELD(Conv3DBackpropInputTunerTiling, reservedParam5), FIELD(Conv3DBackpropInputTunerTiling, reservedParam6),
-    FIELD(Conv3DBackpropInputTunerTiling, reservedParam7), FIELD(Conv3DBackpropInputTunerTiling, reservedParam8));
+    FIELD(Conv3DBackpropInputTunerTiling, kSegmentTail), FIELD(Conv3DBackpropInputTunerTiling, enableSplitK),
+    FIELD(Conv3DBackpropInputTunerTiling, useUbAccumForSplitK), FIELD(Conv3DBackpropInputTunerTiling, reservedParam1),
+    FIELD(Conv3DBackpropInputTunerTiling, reservedParam2), FIELD(Conv3DBackpropInputTunerTiling, reservedParam3),
+    FIELD(Conv3DBackpropInputTunerTiling, reservedParam4), FIELD(Conv3DBackpropInputTunerTiling, reservedParam5),
+    FIELD(Conv3DBackpropInputTunerTiling, reservedParam6), FIELD(Conv3DBackpropInputTunerTiling, reservedParam7),
+    FIELD(Conv3DBackpropInputTunerTiling, reservedParam8));
 } // namespace tuningtiling
 #endif

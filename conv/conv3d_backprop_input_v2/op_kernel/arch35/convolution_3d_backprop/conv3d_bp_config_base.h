@@ -95,7 +95,6 @@ struct ConvType {
 struct Conv3dConfig {
     uint8_t loadB2Condition = TPL_TRANSPOSE_AND_REVERSE;
     uint8_t kernelSplitMode = TPL_NO_SPLIT_KERNEL;
-    uint8_t groupMode = TPL_GROUP_MODE_ORIGIN;
     uint8_t loadB1Condition = TPL_GM_TO_L1;
     bool enableC04Flag = false;
 };
@@ -106,7 +105,6 @@ __aicore__ constexpr Conv3dConfig GetDefaultConfig()
     return {
         .loadB2Condition = TPL_TRANSPOSE_AND_REVERSE,
         .kernelSplitMode = TPL_NO_SPLIT_KERNEL,
-        .groupMode = TPL_GROUP_MODE_ORIGIN,
         .loadB1Condition = TPL_GM_TO_L1,
         .enableC04Flag = false,
     };

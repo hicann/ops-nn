@@ -19,12 +19,6 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(Conv3DBackpropInputArch35TilingData)
-TILING_DATA_FIELD_DEF(uint32_t, batchDim);
-TILING_DATA_FIELD_DEF(uint32_t, groupDim);
-TILING_DATA_FIELD_DEF(uint32_t, mDim);
-TILING_DATA_FIELD_DEF(uint32_t, kDim);
-TILING_DATA_FIELD_DEF(uint32_t, nDim);
-TILING_DATA_FIELD_DEF(uint32_t, dDim);
 TILING_DATA_FIELD_DEF(uint64_t, coreNum);
 TILING_DATA_FIELD_DEF(uint8_t, al0Pbuffer);
 TILING_DATA_FIELD_DEF(uint8_t, bl0Pbuffer);
@@ -48,9 +42,7 @@ TILING_DATA_FIELD_DEF(uint32_t, cout);
 TILING_DATA_FIELD_DEF(uint32_t, cinG);
 TILING_DATA_FIELD_DEF(uint32_t, coutG);
 TILING_DATA_FIELD_DEF(uint32_t, cout1);
-TILING_DATA_FIELD_DEF(uint32_t, cin1);
 TILING_DATA_FIELD_DEF(uint32_t, cout1G);
-TILING_DATA_FIELD_DEF(uint32_t, cin1G);
 TILING_DATA_FIELD_DEF(uint32_t, dout);
 TILING_DATA_FIELD_DEF(uint32_t, ho);
 TILING_DATA_FIELD_DEF(uint32_t, wo);
@@ -66,12 +58,8 @@ TILING_DATA_FIELD_DEF(uint32_t, strideD);
 TILING_DATA_FIELD_DEF(uint32_t, strideH);
 TILING_DATA_FIELD_DEF(uint32_t, strideW);
 TILING_DATA_FIELD_DEF(uint32_t, padFront);
-TILING_DATA_FIELD_DEF(uint32_t, padBack);
 TILING_DATA_FIELD_DEF(uint32_t, padUp);
-TILING_DATA_FIELD_DEF(uint32_t, padDown);
 TILING_DATA_FIELD_DEF(uint32_t, padLeft);
-TILING_DATA_FIELD_DEF(uint32_t, padRight);
-TILING_DATA_FIELD_DEF(int32_t, backpropPadTail);
 TILING_DATA_FIELD_DEF(int32_t, backpropPadUp);
 TILING_DATA_FIELD_DEF(int32_t, backpropPadDown);
 TILING_DATA_FIELD_DEF(int32_t, backpropPadLeft);
@@ -79,7 +67,6 @@ TILING_DATA_FIELD_DEF(int32_t, backpropPadRight);
 TILING_DATA_FIELD_DEF(uint32_t, dilationD);
 TILING_DATA_FIELD_DEF(uint32_t, dilationH);
 TILING_DATA_FIELD_DEF(uint32_t, dilationW);
-TILING_DATA_FIELD_DEF(uint32_t, singleCoreGroup);
 TILING_DATA_FIELD_DEF(uint32_t, singleCoreCout);
 TILING_DATA_FIELD_DEF(uint32_t, singleCoreCin);
 TILING_DATA_FIELD_DEF(uint32_t, singleCoreDin);
@@ -94,18 +81,11 @@ TILING_DATA_FIELD_DEF(uint64_t, singleCoreM);
 TILING_DATA_FIELD_DEF(uint64_t, enRelu0);
 TILING_DATA_FIELD_DEF(uint64_t, kSegment);
 TILING_DATA_FIELD_DEF(uint64_t, kSegmentTail);
-TILING_DATA_FIELD_DEF(uint64_t, kValueSegment);
 TILING_DATA_FIELD_DEF(bool, enableSplitK);
 TILING_DATA_FIELD_DEF(bool, useUbAccumForSplitK);
 TILING_DATA_FIELD_DEF(int8_t, offsetX);
 TILING_DATA_FIELD_DEF(uint32_t, kSCoutFullLoad);
 TILING_DATA_FIELD_DEF(uint32_t, kSUseWorkSpace);
-TILING_DATA_FIELD_DEF(uint32_t, khDilation);
-TILING_DATA_FIELD_DEF(uint32_t, kwDilation);
-TILING_DATA_FIELD_DEF(uint32_t, hoExpand);
-TILING_DATA_FIELD_DEF(uint32_t, woExpand);
-TILING_DATA_FIELD_DEF(uint64_t, dkHkWk);
-TILING_DATA_FIELD_DEF(uint64_t, hkWk);
 TILING_DATA_FIELD_DEF(uint8_t, fixedShiftVal);
 TILING_DATA_FIELD_DEF(uint8_t, dualOutput);
 TILING_DATA_FIELD_DEF(uint8_t, enRelu1);
@@ -119,6 +99,14 @@ TILING_DATA_FIELD_DEF(uint8_t, polyphaseStrategy);
 TILING_DATA_FIELD_DEF(uint8_t, polyphaseDense);
 TILING_DATA_FIELD_DEF(uint8_t, polyphaseDualAiv);
 TILING_DATA_FIELD_DEF(uint8_t, polyphaseBulkFilter);
+// Polyphase(DirectDense/Phased) 维度与分核字段，kernel 按 tiling_->mDim 等读取。
+// 简化去重时被删除；置于结构尾部以免扰动 inner-product UT golden 的序列化前缀。
+TILING_DATA_FIELD_DEF(uint32_t, mDim);
+TILING_DATA_FIELD_DEF(uint32_t, nDim);
+TILING_DATA_FIELD_DEF(uint32_t, dDim);
+TILING_DATA_FIELD_DEF(uint32_t, groupDim);
+TILING_DATA_FIELD_DEF(uint32_t, singleCoreGroup);
+TILING_DATA_FIELD_DEF(uint64_t, kValueSegment);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(Conv3DBackpropInputV2, Conv3DBackpropInputArch35TilingData);

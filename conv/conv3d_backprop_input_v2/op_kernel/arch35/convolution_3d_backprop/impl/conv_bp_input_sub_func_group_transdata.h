@@ -32,8 +32,8 @@ static __aicore__ inline void InitUbZero4Group(Intf* self)
     // Set ndVecBuf to zero.
     // size is cout1G * hk * wk * cinG * BLOCK_CUBE * c0
     self->ctx.ndVecTensor_ = self->ctx.ndVecBuf_.template Get<typename Intf::SrcBT>();
-    uint32_t groupHalfUbSize = self->ctx.tiling_->cout1G * self->ctx.tiling_->hkWk * self->ctx.tiling_->cin1G *
-                                   BLOCK_CUBE * sizeof(typename Intf::SrcBT)
+    uint32_t groupHalfUbSize = self->ctx.tiling_->cout1G * self->ctx.hkWk_ * self->ctx.cin1G_ * BLOCK_CUBE *
+                                   sizeof(typename Intf::SrcBT)
                                << self->ctx.tiling_->c0BitsB;
     Duplicate<typename Intf::SrcBT>(self->ctx.ndVecTensor_, 0, groupHalfUbSize / sizeof(typename Intf::SrcBT));
 }
@@ -49,24 +49,23 @@ static __aicore__ inline void LoadUbDiag4GroupNCDHW(Intf* self, uint64_t srcGmOf
         uint32_t cinPerGroup = self->ctx.tiling_->cinG / self->ctx.tiling_->enlarge;
         uint32_t coutPerGroup = self->ctx.tiling_->coutG / self->ctx.tiling_->enlarge;
         // 因为扩维，所以是cinG
-        uint64_t dstCoutGStride = (self->ctx.curEnlargeCin1_ * self->ctx.tiling_->hkWk) << SHIFT_BIT_4;
+        uint64_t dstCoutGStride = (self->ctx.curEnlargeCin1_ * self->ctx.hkWk_) << SHIFT_BIT_4;
         // 因为对角化，所以dstEnlargeStride加上了cinPerGroup * hk * wk
-        uint64_t dstEnlargeStride = coutPerGroup * dstCoutGStride + cinPerGroup * self->ctx.tiling_->hkWk;
+        uint64_t dstEnlargeStride = coutPerGroup * dstCoutGStride + cinPerGroup * self->ctx.hkWk_;
         // NDDMA Loop0 params
-        self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_0] = self->ctx.tiling_->hkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_0] = self->ctx.hkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_0] = 1;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_0] = 1;
         // NDDMA Loop1 params
         self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_1] = cinPerGroup;
-        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_1] = self->ctx.tiling_->dkHkWk;
-        self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_1] = self->ctx.tiling_->hkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_1] = self->ctx.dkHkWk_;
+        self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_1] = self->ctx.hkWk_;
         // NDDMA Loop2 params
         self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_2] = coutPerGroup;
-        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_2] = cinPerGroup * self->ctx.tiling_->dkHkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_2] = cinPerGroup * self->ctx.dkHkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_2] = dstCoutGStride;
         // NDDMA Loop3 params
-        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_3] = coutPerGroup * cinPerGroup *
-                                                                     self->ctx.tiling_->dkHkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_3] = coutPerGroup * cinPerGroup * self->ctx.dkHkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_3] = dstEnlargeStride;
     }
     self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_3] = self->ctx.curEnlarge;
@@ -85,24 +84,23 @@ static __aicore__ inline void LoadUbDiag4GroupNCDHWVselr(Intf* self, uint64_t sr
         // dstCinGStride: stride between cin groups in UB (in elements)
         // = curEnlargeCout1_ * c0 * hkWk (reversed: cout is innermost after hkWk)
         uint64_t dstCinGStride = (DivCeilC0<Intf>(self, self->ctx.singleShapeCout_) << self->ctx.tiling_->c0BitsB) *
-                                 self->ctx.tiling_->hkWk;
+                                 self->ctx.hkWk_;
         // dstEnlargeStride: diagonal stride for enlarge dimension
-        uint64_t dstEnlargeStride = cinPerGroup * dstCinGStride + coutPerGroup * self->ctx.tiling_->hkWk;
+        uint64_t dstEnlargeStride = cinPerGroup * dstCinGStride + coutPerGroup * self->ctx.hkWk_;
         // NDDMA Loop0 params: hkWk contiguous
-        self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_0] = self->ctx.tiling_->hkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_0] = self->ctx.hkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_0] = 1;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_0] = 1;
         // NDDMA Loop1 params: coutPerGroup (reversed from baseline cinPerGroup)
         self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_1] = coutPerGroup;
-        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_1] = cinPerGroup * self->ctx.tiling_->dkHkWk;
-        self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_1] = self->ctx.tiling_->hkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_1] = cinPerGroup * self->ctx.dkHkWk_;
+        self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_1] = self->ctx.hkWk_;
         // NDDMA Loop2 params: cinPerGroup (reversed from baseline coutPerGroup)
         self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_2] = cinPerGroup;
-        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_2] = self->ctx.tiling_->dkHkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_2] = self->ctx.dkHkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_2] = dstCinGStride;
         // NDDMA Loop3 params
-        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_3] = coutPerGroup * cinPerGroup *
-                                                                     self->ctx.tiling_->dkHkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_3] = coutPerGroup * cinPerGroup * self->ctx.dkHkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_3] = dstEnlargeStride;
     }
     self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_3] = self->ctx.curEnlarge;
@@ -116,24 +114,23 @@ static __aicore__ inline void LoadUbDiag4GroupNDHWC(Intf* self, uint64_t srcGmOf
     if (unlikely(self->ctx.groupIterIdx_ == GetSubBlockIdx())) {
         uint32_t cinPerGroup = self->ctx.tiling_->cinG / self->ctx.tiling_->enlarge;
         uint32_t coutPerGroup = self->ctx.tiling_->coutG / self->ctx.tiling_->enlarge;
-        uint64_t dstCoutGStride = (self->ctx.curEnlargeCin1_ * self->ctx.tiling_->hkWk) << SHIFT_BIT_4;
+        uint64_t dstCoutGStride = (self->ctx.curEnlargeCin1_ * self->ctx.hkWk_) << SHIFT_BIT_4;
         // NDDMA Loop0 params
         self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_0] = cinPerGroup;
         self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_0] = 1;
-        self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_0] = self->ctx.tiling_->hkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_0] = self->ctx.hkWk_;
         // NDDMA Loop1 params
-        self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_1] = self->ctx.tiling_->hkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_1] = self->ctx.hkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_1] = cinPerGroup;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_1] = 1;
         // NDDMA Loop2 params
         self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_2] = coutPerGroup;
-        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_2] = cinPerGroup * self->ctx.tiling_->dkHkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_2] = cinPerGroup * self->ctx.dkHkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_2] = dstCoutGStride;
         // NDDMA Loop3 params
-        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_3] = coutPerGroup * cinPerGroup *
-                                                                     self->ctx.tiling_->dkHkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_3] = coutPerGroup * cinPerGroup * self->ctx.dkHkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_3] = coutPerGroup * dstCoutGStride +
-                                                                     cinPerGroup * self->ctx.tiling_->hkWk;
+                                                                     cinPerGroup * self->ctx.hkWk_;
     }
     self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_3] = self->ctx.curEnlarge;
     DataCopy<typename Intf::SrcBT, GROUP_NDDMA_DIM_NUM, nddmaConfig>(
@@ -146,7 +143,7 @@ static __aicore__ inline void LoadUbDiag4GroupDHWCN(Intf* self, uint64_t srcGmOf
     if (unlikely(self->ctx.groupIterIdx_ == GetSubBlockIdx())) {
         uint32_t cinPerGroup = self->ctx.tiling_->cinG / self->ctx.tiling_->enlarge;
         uint32_t coutPerGroup = self->ctx.tiling_->coutG / self->ctx.tiling_->enlarge;
-        uint64_t dstCoutGStride = (self->ctx.curEnlargeCin1_ * self->ctx.tiling_->hkWk) << SHIFT_BIT_4;
+        uint64_t dstCoutGStride = (self->ctx.curEnlargeCin1_ * self->ctx.hkWk_) << SHIFT_BIT_4;
         // NDDMA Loop0 params
         self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_0] = coutPerGroup;
         self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_0] = 1;
@@ -154,15 +151,15 @@ static __aicore__ inline void LoadUbDiag4GroupDHWCN(Intf* self, uint64_t srcGmOf
         // NDDMA Loop1 params
         self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_1] = cinPerGroup;
         self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_1] = self->ctx.tiling_->cout;
-        self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_1] = self->ctx.tiling_->hkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_1] = self->ctx.hkWk_;
         // NDDMA Loop2 params
-        self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_2] = self->ctx.tiling_->hkWk;
+        self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_2] = self->ctx.hkWk_;
         self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_2] = cinPerGroup * self->ctx.tiling_->cout;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_2] = 1;
         // NDDMA Loop3 params
         self->ctx.groupCopyParams_.loopInfo.loopSrcStride[INDEX_3] = coutPerGroup;
         self->ctx.groupCopyParams_.loopInfo.loopDstStride[INDEX_3] = coutPerGroup * dstCoutGStride +
-                                                                     cinPerGroup * self->ctx.tiling_->hkWk;
+                                                                     cinPerGroup * self->ctx.hkWk_;
     }
     self->ctx.groupCopyParams_.loopInfo.loopSize[INDEX_3] = self->ctx.curEnlarge;
     DataCopy<typename Intf::SrcBT, GROUP_NDDMA_DIM_NUM, nddmaConfig>(
@@ -177,7 +174,7 @@ static __aicore__ inline uint8_t CalcC0PerReg4Vselr(Intf* self)
 {
     constexpr uint32_t idxRegCap = AscendC::VECTOR_REG_WIDTH / sizeof(typename Intf::IndexT);
     uint32_t c0PerReg = self->ctx.tiling_->c0;
-    while (c0PerReg > 1 && c0PerReg * (self->ctx.tiling_->hkWk + 1) > idxRegCap) {
+    while (c0PerReg > 1 && c0PerReg * (self->ctx.hkWk_ + 1) > idxRegCap) {
         c0PerReg >>= 1;
     }
     return static_cast<uint8_t>(c0PerReg);
@@ -197,7 +194,7 @@ static __aicore__ inline void SetIdx4Dn2NzWithVselr(Intf* self, uint8_t c0PerReg
     for (uint8_t idx = 0; idx < c0PerReg; ++idx) {
         idxVselrTensor.SetValue(idx, idxVselr);
         idxVscatterTensor.SetValue(idx, idxVscatter);
-        idxVselr += self->ctx.tiling_->hkWk;
+        idxVselr += self->ctx.hkWk_;
         idxVscatter += 1;
     }
 
@@ -207,7 +204,7 @@ static __aicore__ inline void SetIdx4Dn2NzWithVselr(Intf* self, uint8_t c0PerReg
 
     auto idxVselrAddr = (__ubuf__ typename Intf::IndexT*)idxVselrTensor.GetPhyAddr();
     auto idxVscatterAddr = (__ubuf__ typename Intf::IndexT*)idxVscatterTensor.GetPhyAddr();
-    uint16_t repeatTimes = static_cast<uint16_t>(self->ctx.tiling_->hkWk);
+    uint16_t repeatTimes = static_cast<uint16_t>(self->ctx.hkWk_);
     uint16_t numPerRepeat = c0PerReg;
     uint16_t dstOffset = c0PerReg;
     uint32_t mask = c0PerReg;
@@ -240,14 +237,14 @@ static __aicore__ inline void Dn2Nz4GroupWithVselr(Intf* self)
     auto vselrIndexAddr = (__ubuf__ typename Intf::IndexT*)idxVselrTensor.GetPhyAddr();
     auto vscatterIndexAddr = (__ubuf__ typename Intf::IndexT*)idxVscatterTensor.GetPhyAddr();
 
-    uint32_t mask = c0PerReg * self->ctx.tiling_->hkWk;
+    uint32_t mask = c0PerReg * self->ctx.hkWk_;
     uint16_t nLoopTimes = self->ctx.curEnlargeCin1_ << SHIFT_BIT_4;
     uint16_t co1LoopTimes = static_cast<uint16_t>(DivCeilC0<Intf>(self, self->ctx.singleShapeCout_));
     uint32_t dstNStride = self->ctx.tiling_->c0;
-    uint32_t srcCo0Stride = c0PerReg * self->ctx.tiling_->hkWk;
+    uint32_t srcCo0Stride = c0PerReg * self->ctx.hkWk_;
     uint32_t dstCo0Stride = c0PerReg;
     uint32_t scatterOffset = self->ctx.vselrScatterPadElems_;
-    uint32_t dstCo1Stride = self->ctx.tiling_->hkWk * ((nLoopTimes << self->ctx.tiling_->c0BitsB) + scatterOffset) -
+    uint32_t dstCo1Stride = self->ctx.hkWk_ * ((nLoopTimes << self->ctx.tiling_->c0BitsB) + scatterOffset) -
                             self->ctx.tiling_->c0;
     GatherScatterDn2Nz4Group<typename Intf::SrcT, typename Intf::IndexT>(
         vselrIndexAddr, vscatterIndexAddr, srcAddr, dstAddr, nLoopTimes, co1LoopTimes, passCnt, mask, dstNStride,
@@ -269,8 +266,7 @@ static __aicore__ inline void SetGatherIdxDn2Nz(Intf* self)
     // cinG * hk * wk * [0, 1, ..., c0 - 1]
     for (uint8_t idx = 0; idx < self->ctx.tiling_->c0; ++idx) {
         self->ctx.idxVecTensor_.SetValue(idx, idxVal);
-        idxVal += static_cast<typename Intf::IndexT>((self->ctx.curEnlargeCin1_ * self->ctx.tiling_->hkWk)
-                                                     << SHIFT_BIT_4);
+        idxVal += static_cast<typename Intf::IndexT>((self->ctx.curEnlargeCin1_ * self->ctx.hkWk_) << SHIFT_BIT_4);
     }
 
     event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::S_V));
@@ -283,7 +279,7 @@ static __aicore__ inline void SetGatherIdxDn2Nz(Intf* self)
     uint16_t numPerRepeat = self->ctx.tiling_->c0;
     uint16_t dstOffset = self->ctx.tiling_->c0;
     uint32_t mask = self->ctx.tiling_->c0;
-    auto cinStride = static_cast<typename Intf::IndexT>(self->ctx.tiling_->hkWk);
+    auto cinStride = static_cast<typename Intf::IndexT>(self->ctx.hkWk_);
 
     ExpandGatherIdxByStride<typename Intf::IndexT>(idxAddr, repeatTimes, numPerRepeat, dstOffset, mask, cinStride);
 }
@@ -301,10 +297,9 @@ static __aicore__ inline void Dn2Nz4Group(Intf* self)
 
     uint32_t C0PerReg = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::IndexT) << self->ctx.tiling_->c0BitsB);
     uint16_t C0LoopTimes = BLOCK_CUBE / C0PerReg;
-    uint32_t srcCout1GStride = (BLOCK_CUBE * self->ctx.curEnlargeCin1_ * self->ctx.tiling_->hkWk)
-                               << self->ctx.tiling_->c0BitsB;
-    uint32_t srcCin1GStride = C0PerReg * self->ctx.tiling_->hkWk;
-    uint32_t dstCout1GStride = (self->ctx.tiling_->hkWk * self->ctx.curEnlargeCin1_ << self->ctx.tiling_->c0BitsB)
+    uint32_t srcCout1GStride = (BLOCK_CUBE * self->ctx.curEnlargeCin1_ * self->ctx.hkWk_) << self->ctx.tiling_->c0BitsB;
+    uint32_t srcCin1GStride = C0PerReg * self->ctx.hkWk_;
+    uint32_t dstCout1GStride = (self->ctx.hkWk_ * self->ctx.curEnlargeCin1_ << self->ctx.tiling_->c0BitsB)
                                << SHIFT_BIT_4;
     uint32_t dstKStride = (self->ctx.curEnlargeCin1_ << self->ctx.tiling_->c0BitsB) << SHIFT_BIT_4;
     uint32_t dstCin1GStride = C0PerReg << self->ctx.tiling_->c0BitsB;
@@ -318,7 +313,7 @@ static __aicore__ inline void Dn2Nz4Group(Intf* self)
     // ub size is 253952, half is 126976, bfloat16 data num max is 63488, which is smaller than uint16_max.
     // that is cout1G * hk * wk * cinG * BLOCK_CUBE * c0 < 63488
     uint16_t cout1G = static_cast<uint16_t>(DivCeilC0<Intf>(self, self->ctx.singleShapeCout_));
-    uint16_t hkWk = static_cast<uint16_t>(self->ctx.tiling_->hkWk);
+    uint16_t hkWk = static_cast<uint16_t>(self->ctx.hkWk_);
     uint16_t cin1G = static_cast<uint16_t>(self->ctx.curEnlargeCin1_);
     uint16_t cin1GIterMax = cin1G * C0LoopTimes;
 
@@ -334,7 +329,7 @@ static __aicore__ inline void CopyUb2L14Group(Intf* self, uint32_t curCout1Size,
     // from [coutG1, hk, wk, cinG1, cin0, cout0] extract [curCout1Size, hk, wk, curCin1Cin0Size, cout0],
     // copy data from ub to L1
     DataCopyParams copyParams;
-    copyParams.blockCount = curCout1Size * self->ctx.tiling_->hkWk;
+    copyParams.blockCount = curCout1Size * self->ctx.hkWk_;
     copyParams.blockLen = curCin1Cin0Size;
     copyParams.srcStride = (self->ctx.curEnlargeCin1_ << SHIFT_BIT_4) - curCin1Cin0Size;
     copyParams.dstStride = 0;
@@ -348,7 +343,7 @@ static __aicore__ inline void CopyUb2L14GroupVselr(Intf* self, uint32_t curCout1
                                                    uint32_t srcUbOffset, LocalTensor<typename Intf::SrcBT>& useB1Buf)
 {
     DataCopyParams copyParams;
-    copyParams.blockCount = curCout1Size * self->ctx.tiling_->hkWk;
+    copyParams.blockCount = curCout1Size * self->ctx.hkWk_;
     copyParams.blockLen = curCin1Cin0Size;
     uint32_t scatterOffset = self->ctx.vselrScatterPadElems_ * sizeof(typename Intf::SrcT) / 32; // in unit of 32B
     copyParams.srcStride = (self->ctx.curEnlargeCin1_ << SHIFT_BIT_4) - curCin1Cin0Size + scatterOffset;
@@ -380,12 +375,12 @@ static __aicore__ inline bool UseVselr4GroupTransdata(Intf* self)
     if constexpr (VselrStaticOk<Intf>) {
         uint64_t cout1Cnt = DivCeilC0<Intf>(self, self->ctx.singleShapeCout_);
         uint64_t rowElems = (self->ctx.curEnlargeCin1_ << SHIFT_BIT_4) << self->ctx.tiling_->c0BitsB;
-        uint64_t nzNeedBytes = cout1Cnt * static_cast<uint64_t>(self->ctx.tiling_->hkWk) * rowElems *
+        uint64_t nzNeedBytes = cout1Cnt * static_cast<uint64_t>(self->ctx.hkWk_) * rowElems *
                                sizeof(typename Intf::SrcT);
         uint64_t usefulLanes = self->ctx.curEnlarge * (self->ctx.tiling_->cin / self->ctx.tiling_->oriGroup) *
                                self->ctx.singleShapeCout_;
         uint64_t totalLanes = (self->ctx.curEnlargeCin1_ << SHIFT_BIT_4) * (cout1Cnt << SHIFT_BIT_4);
-        useVselr = (self->ctx.tiling_->hkWk > 4 && self->ctx.tiling_->hkWk < 16) &&
+        useVselr = (self->ctx.hkWk_ > 4 && self->ctx.hkWk_ < 16) &&
                    ((self->ctx.tiling_->cin / self->ctx.tiling_->oriGroup) > 1) &&
                    (nzNeedBytes <= self->ctx.groupNzUbBytes_) && (usefulLanes * 20 >= totalLanes * 13);
     }
@@ -475,12 +470,12 @@ __aicore__ inline void GroupTransdataWeight(Intf* self, uint32_t kIdx, uint32_t 
 
     uint64_t srcGmOffset = 0;
     if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
-        srcGmOffset = static_cast<uint64_t>(curDkIdx) * self->ctx.tiling_->hkWk;
+        srcGmOffset = static_cast<uint64_t>(curDkIdx) * self->ctx.hkWk_;
     } else if (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NDHWC) {
-        srcGmOffset = static_cast<uint64_t>(curDkIdx) * self->ctx.tiling_->hkWk * self->ctx.tiling_->cinG /
+        srcGmOffset = static_cast<uint64_t>(curDkIdx) * self->ctx.hkWk_ * self->ctx.tiling_->cinG /
                       self->ctx.tiling_->enlarge;
     } else { // DHWCN
-        srcGmOffset = static_cast<uint64_t>(curDkIdx) * self->ctx.tiling_->hkWk * self->ctx.tiling_->cinG /
+        srcGmOffset = static_cast<uint64_t>(curDkIdx) * self->ctx.hkWk_ * self->ctx.tiling_->cinG /
                       self->ctx.tiling_->enlarge * self->ctx.tiling_->cout;
     }
     // L1 read offset at the tile's (cout1, cin1) position in the NZ staging; only the cout1
@@ -496,15 +491,14 @@ __aicore__ inline void GroupTransdataWeight(Intf* self, uint32_t kIdx, uint32_t 
             if (UseVselr4GroupTransdata<Intf>(self)) {
                 uint64_t rowElems = ((self->ctx.curEnlargeCin1_ << SHIFT_BIT_4) << self->ctx.tiling_->c0BitsB) +
                                     self->ctx.vselrScatterPadElems_;
-                srcUbOffset += static_cast<uint32_t>(static_cast<uint64_t>(curCout1Idx) * self->ctx.tiling_->hkWk *
-                                                     rowElems);
+                srcUbOffset += static_cast<uint32_t>(static_cast<uint64_t>(curCout1Idx) * self->ctx.hkWk_ * rowElems);
                 GroupTransdataWeightCore<Intf, true>(self, curCinSize, curCoutSize, srcGmOffset, srcUbOffset,
                                                      useB1Tbuf);
                 return;
             }
         }
         srcUbOffset += static_cast<uint32_t>(
-            (static_cast<uint64_t>(curCout1Idx) * self->ctx.tiling_->hkWk * self->ctx.curEnlargeCin1_)
+            (static_cast<uint64_t>(curCout1Idx) * self->ctx.hkWk_ * self->ctx.curEnlargeCin1_)
             << self->ctx.tiling_->c0BitsB << SHIFT_BIT_4);
         GroupTransdataWeightCore<Intf, false>(self, curCinSize, curCoutSize, srcGmOffset, srcUbOffset, useB1Tbuf);
     }

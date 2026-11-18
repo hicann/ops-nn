@@ -30,15 +30,14 @@
 using namespace AscendC;
 
 #if __CCE_AICORE__ == 310 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202))
-template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBaseBlockTiling,
-          uint8_t loadB1Condition>
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t loadB1Condition>
 __global__ __aicore__ void conv3d_backprop_input_v2(GM_ADDR input_size, GM_ADDR filter, GM_ADDR out_backprop, GM_ADDR y,
                                                     GM_ADDR workSpace, GM_ADDR tiling)
 {
 #if defined(__NPU_ARCH__) && \
     (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-    conv3d_backprop_input_v2_arch35<loadB2Condition, kernelSplitMode, groupConvMode, isBaseBlockTiling,
-                                    loadB1Condition>(input_size, filter, out_backprop, y, workSpace, tiling);
+    conv3d_backprop_input_v2_arch35<loadB2Condition, kernelSplitMode, loadB1Condition>(input_size, filter, out_backprop,
+                                                                                       y, workSpace, tiling);
     return;
 #endif
 }

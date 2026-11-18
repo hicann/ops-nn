@@ -51,7 +51,7 @@ __aicore__ inline uint32_t CalFmapHForKernelSplitInner(Intf* self, uint32_t mL1S
         hiCal = fMapHNum;
     }
     // 使用预计算的膨胀参数或根据hk动态计算
-    uint32_t khDilation = (hk == self->ctx.tiling_->hk) ? self->ctx.tiling_->khDilation :
+    uint32_t khDilation = (hk == self->ctx.tiling_->hk) ? self->ctx.khDilation_ :
                                                           (hk - 1) * self->ctx.tiling_->dilationH + 1;
     return (hiCal - 1) + khDilation;
 }

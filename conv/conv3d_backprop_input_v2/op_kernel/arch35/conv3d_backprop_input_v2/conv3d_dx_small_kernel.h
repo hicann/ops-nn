@@ -38,7 +38,7 @@ constexpr uint8_t LOAD3D_PAD_DOWN_VALUE = 255;
 constexpr uint32_t SMALL_KERNEL_BIAS_L1_ALIGN_BYTES = 64;
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
+          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode,
           uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scale0Type = uint64_t,
           int scale0Format = FORMAT_MAX, typename y1Type = yType, typename scale1Type = scale0Type,
           int scale1Format = scale0Format>

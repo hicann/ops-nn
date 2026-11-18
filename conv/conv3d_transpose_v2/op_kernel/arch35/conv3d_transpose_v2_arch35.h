@@ -38,8 +38,7 @@ using namespace AscendC;
         op.Process();                                    \
     } while (0)
 
-template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
-          uint8_t loadB1Condition>
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t loadB1Condition>
 __global__ __aicore__ void conv3d_transpose_v2_arch35(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                       GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
@@ -52,7 +51,7 @@ __global__ __aicore__ void conv3d_transpose_v2_arch35(GM_ADDR input_size, GM_ADD
 #endif
 
     if constexpr (loadB2Condition == TPL_TRANSPOSE_AND_REVERSE && kernelSplitMode == TPL_NO_SPLIT_KERNEL &&
-                  groupConvMode == TPL_GROUP_MODE_ORIGIN && isBasicBlockTiling && loadB1Condition == TPL_POLYPHASE) {
+                  loadB1Condition == TPL_POLYPHASE) {
         if constexpr (IsSameType<DTYPE_Y, half>::value || IsSameType<DTYPE_Y, bfloat16_t>::value) {
             Conv3dPolyphase<DTYPE_Y> op;
             op.Init(filter, x, y, tilingData, bias);
@@ -87,26 +86,24 @@ __global__ __aicore__ void conv3d_transpose_v2_arch35(GM_ADDR input_size, GM_ADD
         }
     }
 
-    if constexpr (kernelSplitMode == TPL_NO_SPLIT_KERNEL && groupConvMode == TPL_GROUP_MODE_ORIGIN &&
-                  isBasicBlockTiling == true && loadB1Condition == TPL_SMALL_KERNEL) {
+    if constexpr (kernelSplitMode == TPL_NO_SPLIT_KERNEL && loadB1Condition == TPL_SMALL_KERNEL) {
         CONV3D_DX_TRANSPOSE_RUN_OP(
             Conv3dDxSmallKernel<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS,
-                                FORMAT_BIAS, loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition>);
+                                FORMAT_BIAS, loadB2Condition, kernelSplitMode, loadB1Condition>);
         return;
     }
 
     if constexpr (kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
-        CONV3D_DX_TRANSPOSE_RUN_OP(
-            Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                            loadB2Condition, kernelSplitMode, groupConvMode>);
-    } else if constexpr ((isBasicBlockTiling == true) && (loadB1Condition == TPL_VEC_TO_L1_C04)) {
+        CONV3D_DX_TRANSPOSE_RUN_OP(Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y,
+                                                   DTYPE_BIAS, FORMAT_BIAS, loadB2Condition, kernelSplitMode>);
+    } else if constexpr (loadB1Condition == TPL_VEC_TO_L1_C04) {
         CONV3D_DX_TRANSPOSE_RUN_OP(
             Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                             loadB2Condition, kernelSplitMode, groupConvMode, TPL_GM_TO_L1, true>);
+                             loadB2Condition, kernelSplitMode, TPL_GM_TO_L1, true>);
     } else {
         CONV3D_DX_TRANSPOSE_RUN_OP(
             Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                             loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition>);
+                             loadB2Condition, kernelSplitMode, loadB1Condition>);
     }
 }
 #endif // CONV3D_TRANSPOSE_V2_ARCH_35_H

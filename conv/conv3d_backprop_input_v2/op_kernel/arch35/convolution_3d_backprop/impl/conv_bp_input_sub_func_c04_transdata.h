@@ -30,12 +30,12 @@ static __aicore__ inline void InitUbZero4C04(Intf* self, uint32_t b1CinSize)
 {
     self->ctx.ndVecTensor_ = self->ctx.ndVecBuf_.template Get<typename Intf::SrcBT>();
     uint32_t ubCinSize = (b1CinSize < self->ctx.vecBlockN_) ? b1CinSize : self->ctx.vecBlockN_;
-    uint64_t ubPixCount = static_cast<uint64_t>(ubCinSize) * self->ctx.tiling_->dkHkWk;
+    uint64_t ubPixCount = static_cast<uint64_t>(ubCinSize) * self->ctx.dkHkWk_;
     uint64_t ubOffset = DivDtypeByte<typename Intf::SrcBT>(AscendC::ONE_BLOCK_SIZE);
-    ubOffset += (self->ctx.tiling_->cout * self->ctx.vecBlockN_ * self->ctx.tiling_->dkHkWk);
+    ubOffset += (self->ctx.tiling_->cout * self->ctx.vecBlockN_ * self->ctx.dkHkWk_);
     for (uint8_t i = self->ctx.tiling_->cout; i < C04_COUT_SIZE; i++) {
         Duplicate<typename Intf::SrcBT>(self->ctx.ndVecTensor_[ubOffset], 0, ubPixCount);
-        ubOffset += (self->ctx.vecBlockN_ * self->ctx.tiling_->dkHkWk);
+        ubOffset += (self->ctx.vecBlockN_ * self->ctx.dkHkWk_);
     }
 }
 
@@ -51,9 +51,9 @@ static __aicore__ inline void LoadUb4C04(Intf* self, uint32_t cinBlockSize, uint
     loopParams.loop1DstStride = 0;
     SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
 
-    // The size of 'self->ctx.tiling_->dkHkWk * sizeof(typename Intf::SrcBT)' is not larger than the size of UB.
+    // The size of 'self->ctx.dkHkWk_ * sizeof(typename Intf::SrcBT)' is not larger than the size of UB.
     // It will be checked in CheckC04Enable(), in range of uint32_t.
-    uint32_t cinDataLen = static_cast<uint32_t>(self->ctx.tiling_->dkHkWk) * sizeof(typename Intf::SrcBT);
+    uint32_t cinDataLen = static_cast<uint32_t>(self->ctx.dkHkWk_) * sizeof(typename Intf::SrcBT);
     uint32_t oriBlockLen = cinBlockSize * cinDataLen;
     uint32_t alignedBlockLen = AlignUp(oriBlockLen, AscendC::ONE_BLOCK_SIZE);
     uint8_t rightPadding = DivDtypeByte<typename Intf::SrcBT>(alignedBlockLen - oriBlockLen);
@@ -81,7 +81,7 @@ static __aicore__ inline void SetGatherIdx4C04(Intf* self)
         for (uint8_t coutIdx = 0; coutIdx < C04_COUT_SIZE; ++coutIdx) {
             self->ctx.idxVecTensor_.SetValue(idx, idxVal);
             ++idx;
-            idxVal += (self->ctx.vecBlockN_ * self->ctx.tiling_->dkHkWk);
+            idxVal += (self->ctx.vecBlockN_ * self->ctx.dkHkWk_);
         }
     }
 
@@ -96,7 +96,7 @@ static __aicore__ inline void SetGatherIdx4C04(Intf* self)
     uint32_t mask = self->ctx.tiling_->c0;
     uint16_t numPerRepeat = self->ctx.tiling_->c0;
     uint16_t dstOffset = self->ctx.tiling_->c0;
-    auto cinStride = static_cast<typename Intf::IndexT>(self->ctx.tiling_->dkHkWk);
+    auto cinStride = static_cast<typename Intf::IndexT>(self->ctx.dkHkWk_);
 
     ExpandGatherIdxByStride<typename Intf::IndexT>(idxAddr, repeatTimes, numPerRepeat, dstOffset, mask, cinStride);
 }
@@ -107,7 +107,7 @@ static __aicore__ inline void SetGatherTailMask4C04(Intf* self)
     self->ctx.maskVecTensor_ = self->ctx.maskVecBuf_.template Get<uint32_t>();
     uint32_t maskVal = 0xffffffff;
     uint32_t kernelNumInC0 = self->ctx.tiling_->c0 >> C04_SHIFT_SIZE;
-    uint32_t tmpVal = self->ctx.tiling_->hkWk % kernelNumInC0;
+    uint32_t tmpVal = self->ctx.hkWk_ % kernelNumInC0;
     if constexpr (std::is_same<typename Intf::SrcBT, float>::value) {
         if (tmpVal == 1) { // 最后一个分形，VGather只需要从UB中取hkwk_rev中的最后1个点
             maskVal = 0xffff;
@@ -153,10 +153,10 @@ static __aicore__ inline void Dn2Nz4C04(Intf* self, uint32_t cinBlockSize, uint3
     uint32_t C0PerReg = DivDtypeByte<typename Intf::IndexT>(AscendC::VECTOR_REG_WIDTH) >> self->ctx.tiling_->c0BitsB;
     uint16_t C0LoopTimes = BLOCK_CUBE / C0PerReg;
     uint32_t kernelNumInC0 = self->ctx.tiling_->c0 >> C04_SHIFT_SIZE;
-    uint16_t k1 = static_cast<uint16_t>(DivCeil(self->ctx.tiling_->hkWk, kernelNumInC0));
+    uint16_t k1 = static_cast<uint16_t>(DivCeil(self->ctx.hkWk_, kernelNumInC0));
     uint16_t n1 = static_cast<uint16_t>(DivCeil16(cinBlockSize));
     uint16_t n1IterMax = n1 * C0LoopTimes;
-    uint32_t srcN1Stride = C0PerReg * self->ctx.tiling_->dkHkWk;
+    uint32_t srcN1Stride = C0PerReg * self->ctx.dkHkWk_;
     uint32_t srcK1Stride = kernelNumInC0;
     uint32_t dstN1Stride = C0PerReg << self->ctx.tiling_->c0BitsB;
     uint32_t dstK1Stride = AlignUp16(cinBlockSize) << self->ctx.tiling_->c0BitsB;
@@ -165,8 +165,8 @@ static __aicore__ inline void Dn2Nz4C04(Intf* self, uint32_t cinBlockSize, uint3
 
     auto idxAddr = (__ubuf__ typename Intf::IndexT*)self->ctx.idxVecTensor_.GetPhyAddr();
     auto srcAddr = (__ubuf__ typename Intf::SrcBT*)self->ctx.ndVecTensor_.GetPhyAddr();
-    srcAddr += (DivDtypeByte<typename Intf::SrcBT>(AscendC::ONE_BLOCK_SIZE) + curDkIdx * self->ctx.tiling_->hkWk);
-    srcAddr -= ((k1 * kernelNumInC0) - self->ctx.tiling_->hkWk);
+    srcAddr += (DivDtypeByte<typename Intf::SrcBT>(AscendC::ONE_BLOCK_SIZE) + curDkIdx * self->ctx.hkWk_);
+    srcAddr -= ((k1 * kernelNumInC0) - self->ctx.hkWk_);
     auto dstAddr = (__ubuf__ typename Intf::SrcBT*)self->ctx.nzVecTensor_.GetPhyAddr();
     auto maskAddr = (__ubuf__ uint32_t*)self->ctx.maskVecTensor_.GetPhyAddr();
 
@@ -182,7 +182,7 @@ static __aicore__ inline void CopyUb2L14C04(Intf* self, uint32_t cinBlockSize, u
         DataCopyParams copyParams;
         copyParams.blockCount = 1;
         copyParams.blockLen = (AlignUp16(cinBlockSize) *
-                               AlignUp(self->ctx.tiling_->hkWk * C04_COUT_SIZE, self->ctx.tiling_->c0) *
+                               AlignUp(self->ctx.hkWk_ * C04_COUT_SIZE, self->ctx.tiling_->c0) *
                                sizeof(typename Intf::SrcBT)) >>
                               ONE_BLK_SHIFT_SIZE;
         copyParams.srcStride = 0;
@@ -191,7 +191,7 @@ static __aicore__ inline void CopyUb2L14C04(Intf* self, uint32_t cinBlockSize, u
     } else {
         DataCopyParams copyParams;
         uint32_t kernelNumInC0 = self->ctx.tiling_->c0 >> C04_SHIFT_SIZE;
-        copyParams.blockCount = DivCeil(self->ctx.tiling_->hkWk, kernelNumInC0);
+        copyParams.blockCount = DivCeil(self->ctx.hkWk_, kernelNumInC0);
         copyParams.blockLen = AlignUp16(cinBlockSize);
         copyParams.srcStride = 0;
         copyParams.dstStride = AlignUp16(b1CinSize) - AlignUp16(cinBlockSize);
@@ -214,7 +214,7 @@ static __aicore__ inline void C04TransdataWeightCore(Intf* self, uint32_t b1CinS
         WaitFlag<HardEvent::V_MTE2>(eventId);
         // DataCopy (MTE2)
         LoadUb4C04<Intf>(self, cinBlockSize, srcGmOffset);
-        srcGmOffset += (static_cast<uint64_t>(cinBlockSize) * self->ctx.tiling_->dkHkWk);
+        srcGmOffset += (static_cast<uint64_t>(cinBlockSize) * self->ctx.dkHkWk_);
 
         // VGather wait DataCopy
         eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::MTE2_V));
@@ -250,7 +250,7 @@ __aicore__ inline void C04TransdataWeight(Intf* self, const uint32_t kIdx, uint3
 #endif
         uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
         uint32_t b1CinSize = CalcCurCinSizeB1(self, curCinIdx);
-        uint64_t srcGmOffset = static_cast<uint64_t>(curCinIdx) * self->ctx.tiling_->dkHkWk;
+        uint64_t srcGmOffset = static_cast<uint64_t>(curCinIdx) * self->ctx.dkHkWk_;
 
         // 调用指令不支持hif8，暂时隔离开，否则编译不通过
         if constexpr (!std::is_same<typename Intf::SrcBT, hifloat8_t>::value &&

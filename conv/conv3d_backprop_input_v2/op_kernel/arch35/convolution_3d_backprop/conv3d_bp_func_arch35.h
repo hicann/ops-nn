@@ -204,8 +204,8 @@ __aicore__ inline void InitC04Params(Intf* self)
             }
 #endif
             uint32_t c04UbPixNum = DivDtypeByte<typename Intf::SrcBT>(c04UbBufSize);
-            uint32_t tmpVal1 = self->ctx.tiling_->dkHkWk << C04_SHIFT_SIZE;
-            uint32_t tmpVal2 = AlignUp((self->ctx.tiling_->hkWk << C04_SHIFT_SIZE), self->ctx.tiling_->c0);
+            uint32_t tmpVal1 = self->ctx.dkHkWk_ << C04_SHIFT_SIZE;
+            uint32_t tmpVal2 = AlignUp((self->ctx.hkWk_ << C04_SHIFT_SIZE), self->ctx.tiling_->c0);
             uint32_t tmpVal3 = tmpVal1 > tmpVal2 ? tmpVal1 : tmpVal2;
             self->ctx.vecBlockN_ = ((c04UbPixNum / tmpVal3) >> 4)
                                    << 4; // >> 4 等价于除BLOCK_CUBE，<< 4 等价于乘BLOCK_CUBE
@@ -231,7 +231,7 @@ __aicore__ inline void InitParamsPart3(Intf* self)
     if (EnableVecGroupEnlarge(self)) {
         self->ctx.groupIterIdx_ = 0;
     }
-    if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+    if (self->ctx.tiling_->enlarge > 1) {
         self->ctx.curEnlarge = 0;
     }
 }
@@ -302,13 +302,19 @@ template <class Intf>
 __aicore__ inline void InitSingleShapeParams(Intf* self)
 {
     // 初始化为0，避免decache功能开启后全局变量不会初始化为0，出现随机值导致未知问题
+    self->ctx.hkWk_ = static_cast<uint64_t>(self->ctx.tiling_->hk) * self->ctx.tiling_->wk;
+    self->ctx.dkHkWk_ = static_cast<uint64_t>(self->ctx.tiling_->dk) * self->ctx.hkWk_;
+    self->ctx.khDilation_ = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
+    self->ctx.kwDilation_ = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
+    self->ctx.woExpand_ = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1;
+    self->ctx.cin1G_ = (self->ctx.tiling_->cinG + 15) >> 4;
     self->ctx.singleShapeDin_ = 0;
     self->ctx.singleShapeM_ = 0;
     self->ctx.singleShapeCin_ = 0;
     self->ctx.singleShapeCout_ = 0;
     self->ctx.groupNzUbBytes_ = 0;
     self->ctx.vselrScatterPadElems_ = 0;
-    self->ctx.singleShapeHWk_ = self->ctx.tiling_->hkWk;
+    self->ctx.singleShapeHWk_ = self->ctx.hkWk_;
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK) {
         self->ctx.singleShapeHWk_ = self->ctx.tiling_->wk;
     } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
@@ -343,7 +349,7 @@ __aicore__ inline void InitParams(Intf* self)
     InitFullLoadFlag<Intf>(self);
     InitC04Params<Intf>(self);
 #endif
-    self->ctx.hoExpand_ = self->ctx.tiling_->hoExpand;
+    self->ctx.hoExpand_ = (self->ctx.tiling_->ho - 1) * self->ctx.tiling_->strideH + 1;
     if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
         self->ctx.hoExpand_ = self->ctx.tiling_->ho;
     }
@@ -390,7 +396,7 @@ __aicore__ inline void CalcMatrixByteSize(Intf* self, uint32_t& aMatrixByteSize,
                               DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
                               sizeof(typename Intf::SrcAT);
         } else if (unlikely(UseLocalWWindow<Intf>(self))) {
-            uint32_t localL1W = self->ctx.tiling_->baseM + self->ctx.tiling_->kwDilation - 1;
+            uint32_t localL1W = self->ctx.tiling_->baseM + self->ctx.kwDilation_ - 1;
             aMatrixByteSize = localL1W * DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
                               sizeof(typename Intf::SrcAT);
         } else {
@@ -738,7 +744,7 @@ static __aicore__ inline void UpdateLocalWLoadInfo(Intf* self, uint64_t globalMS
     const int64_t expandedW = (wo - 1) * strideW + 1;
     const int64_t needStart = static_cast<int64_t>(globalMStart) - self->ctx.tiling_->backpropPadLeft;
     const int64_t needEnd = static_cast<int64_t>(globalMStart) + self->ctx.baseUseM_ -
-                            self->ctx.tiling_->backpropPadLeft + self->ctx.tiling_->kwDilation - 1;
+                            self->ctx.tiling_->backpropPadLeft + self->ctx.kwDilation_ - 1;
     const int64_t clippedStart = needStart > 0 ? needStart : 0;
     const int64_t clippedEnd = needEnd < expandedW ? needEnd : expandedW;
     int64_t firstWo = (clippedStart + strideW - 1) / strideW;
@@ -1096,7 +1102,7 @@ struct SetSingleShape {
             }
         }
 
-        if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+        if (self->ctx.tiling_->enlarge > 1) {
             self->ctx.curEnlarge = self->ctx.singleShapeCout_ / (self->ctx.tiling_->cout / self->ctx.tiling_->oriGroup);
             self->ctx.curEnlargeCin1_ = DivCeil16(self->ctx.curEnlarge *
                                                   (self->ctx.tiling_->cin / self->ctx.tiling_->oriGroup));

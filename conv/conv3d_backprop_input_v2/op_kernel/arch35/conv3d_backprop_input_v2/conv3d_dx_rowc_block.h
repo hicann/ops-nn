@@ -27,14 +27,13 @@ static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
 constexpr int BLOCK_CUBE_ALIGN_BITS = 4;
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
+          typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode,
           uint8_t b1Condition = TPL_GM_TO_L1, bool enableC04Flag = false, typename scale0Type = uint64_t,
           int scale0Format = FORMAT_MAX, typename y1Type = yType, typename scale1Type = scale0Type,
           int scale1Format = scale0Format>
-class Conv3dDxOswBlock
-    : public Conv3dDxBase<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-                          b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scale0Type, scale0Format,
-                          y1Type, scale1Type, scale1Format> {
+class Conv3dDxOswBlock : public Conv3dDxBase<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType,
+                                             biasFormat, b2Condition, kernelSplitMode, b1Condition, enableC04Flag,
+                                             scale0Type, scale0Format, y1Type, scale1Type, scale1Format> {
 public:
     __aicore__ inline Conv3dDxOswBlock(){};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
@@ -43,7 +42,7 @@ public:
     {
         InitTilingData(tilingData);
 
-        if (!enableC04Flag && !Convolution3DBackpropFunc::EnableVecGroupEnlarge(groupMode, this->tiling_) &&
+        if (!enableC04Flag && !Convolution3DBackpropFunc::EnableVecGroupEnlarge(this->tiling_) &&
             !this->useUbAccumForSplitK_) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
@@ -102,7 +101,7 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (!enableC04Flag && !Convolution3DBackpropFunc::EnableVecGroupEnlarge(groupMode, this->tiling_) &&
+        if (!enableC04Flag && !Convolution3DBackpropFunc::EnableVecGroupEnlarge(this->tiling_) &&
             !this->useUbAccumForSplitK_) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
@@ -110,11 +109,6 @@ public:
         }
 
         if (this->useUbAccumForSplitK_ && GetSubBlockIdx() != 0) {
-            return;
-        }
-
-        if (GetAicBlockIdx() >= this->usedCoreNum_) {
-            ProcessForUnUsedCore();
             return;
         }
 
@@ -197,12 +191,7 @@ protected:
         this->totalCnt_ = static_cast<uint64_t>(tiling->batch) * static_cast<uint64_t>(tiling->group) * this->dinCnt_ *
                           this->mCnt_ * this->nCnt_;
 
-        uint64_t blockNum = GetBlockNum();
-        if (this->totalCnt_ < blockNum) {
-            this->usedCoreNum_ = this->totalCnt_;
-        } else {
-            this->usedCoreNum_ = blockNum;
-        }
+        this->usedCoreNum_ = tiling->coreNum;
 
         this->calRound_ = this->totalCnt_ / this->usedCoreNum_;
         this->tailCnt_ = this->totalCnt_ - this->calRound_ * this->usedCoreNum_;

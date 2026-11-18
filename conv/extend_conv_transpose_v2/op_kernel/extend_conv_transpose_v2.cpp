@@ -32,8 +32,7 @@
 
 using namespace AscendC;
 
-template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
-          uint8_t loadB1Condition>
+template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t loadB1Condition>
 __global__ __aicore__ void extend_conv_transpose_v2(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                     GM_ADDR scale0, GM_ADDR scale1, GM_ADDR y0, GM_ADDR y1,
                                                     GM_ADDR workSpace, GM_ADDR tiling)
@@ -61,11 +60,10 @@ __global__ __aicore__ void extend_conv_transpose_v2(GM_ADDR input_size, GM_ADDR 
         opVecTranspose.Destroy();
     }
 
-    if constexpr (kernelSplitMode == TPL_NO_SPLIT_KERNEL && groupConvMode == TPL_GROUP_MODE_ORIGIN &&
-                  isBasicBlockTiling == true && loadB1Condition == TPL_SMALL_KERNEL) {
+    if constexpr (kernelSplitMode == TPL_NO_SPLIT_KERNEL && loadB1Condition == TPL_SMALL_KERNEL) {
         Conv3dDxSmallKernel<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                            loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition, false, DTYPE_SCALE0,
-                            FORMAT_SCALE0, DTYPE_Y1, DTYPE_SCALE1, FORMAT_SCALE1>
+                            loadB2Condition, kernelSplitMode, loadB1Condition, false, DTYPE_SCALE0, FORMAT_SCALE0,
+                            DTYPE_Y1, DTYPE_SCALE1, FORMAT_SCALE1>
             op;
         op.Init(filter, x, y0, workSpace, tilingData, bias, scale0, y1, scale1);
         op.Process();
@@ -74,22 +72,22 @@ __global__ __aicore__ void extend_conv_transpose_v2(GM_ADDR input_size, GM_ADDR 
 
     if constexpr (kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
         Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                        loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition, false, DTYPE_SCALE0,
-                        FORMAT_SCALE0, DTYPE_Y1, DTYPE_SCALE1, FORMAT_SCALE1>
+                        loadB2Condition, kernelSplitMode, loadB1Condition, false, DTYPE_SCALE0, FORMAT_SCALE0, DTYPE_Y1,
+                        DTYPE_SCALE1, FORMAT_SCALE1>
             op;
         op.Init(filter, x, y0, workSpace, tilingData, bias, scale0, y1, scale1);
         op.Process();
-    } else if constexpr ((isBasicBlockTiling == true) && (loadB1Condition == TPL_VEC_TO_L1_C04)) {
+    } else if constexpr (loadB1Condition == TPL_VEC_TO_L1_C04) {
         Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                         loadB2Condition, kernelSplitMode, groupConvMode, TPL_GM_TO_L1, true, DTYPE_SCALE0,
-                         FORMAT_SCALE0, DTYPE_Y1, DTYPE_SCALE1, FORMAT_SCALE1>
+                         loadB2Condition, kernelSplitMode, TPL_GM_TO_L1, true, DTYPE_SCALE0, FORMAT_SCALE0, DTYPE_Y1,
+                         DTYPE_SCALE1, FORMAT_SCALE1>
             op;
         op.Init(filter, x, y0, workSpace, tilingData, bias, scale0, y1, scale1);
         op.Process();
     } else {
         Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                         loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition, false, DTYPE_SCALE0,
-                         FORMAT_SCALE0, DTYPE_Y1, DTYPE_SCALE1, FORMAT_SCALE1>
+                         loadB2Condition, kernelSplitMode, loadB1Condition, false, DTYPE_SCALE0, FORMAT_SCALE0,
+                         DTYPE_Y1, DTYPE_SCALE1, FORMAT_SCALE1>
             op;
         op.Init(filter, x, y0, workSpace, tilingData, bias, scale0, y1, scale1);
         op.Process();

@@ -69,10 +69,8 @@ void Conv3DDXV2InnerProductTilingArch51::Reset()
                              context_->GetRawTilingData()->GetCapacity()) != EOK,
                     CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return);
     auto& dxt = tilingData_;
-    dxt.set_batchDim(1);
     dxt.set_groupDim(1);
     dxt.set_mDim(1);
-    dxt.set_kDim(1);
     dxt.set_nDim(1);
     dxt.set_dDim(1);
     dxt.set_coreNum(1);
@@ -100,9 +98,7 @@ void Conv3DDXV2InnerProductTilingArch51::Reset()
     dxt.set_cinG(1);
     dxt.set_coutG(1);
     dxt.set_cout1(1);
-    dxt.set_cin1(1);
     dxt.set_cout1G(1);
-    dxt.set_cin1G(1);
     dxt.set_dout(1);
     dxt.set_ho(1);
     dxt.set_wo(1);
@@ -118,12 +114,8 @@ void Conv3DDXV2InnerProductTilingArch51::Reset()
     dxt.set_strideH(1);
     dxt.set_strideW(1);
     dxt.set_padFront(1);
-    dxt.set_padBack(1);
     dxt.set_padUp(1);
-    dxt.set_padDown(1);
     dxt.set_padLeft(1);
-    dxt.set_padRight(1);
-    dxt.set_backpropPadTail(1);
     dxt.set_backpropPadUp(1);
     dxt.set_backpropPadDown(1);
     dxt.set_backpropPadLeft(1);
@@ -994,9 +986,7 @@ void Conv3DDXV2InnerProductTilingArch51::SetRunBaseShapeInfoTiling(optiling::Con
     dxt.set_cout(runInfo_.dedy_cout);
     dxt.set_cinG(runInfo_.dedx_cin_g);
     dxt.set_coutG(runInfo_.dedy_cout_g);
-    dxt.set_cin1(runInfo_.dedx_cin1);
     dxt.set_cout1(runInfo_.dedy_cout1);
-    dxt.set_cin1G(runInfo_.dedx_cin1_g);
     dxt.set_cout1G(runInfo_.dedy_cout1_g);
     dxt.set_c0(blockSize_);
 
@@ -1025,21 +1015,12 @@ void Conv3DDXV2InnerProductTilingArch51::SetRunBaseShapeInfoTiling(optiling::Con
     dxt.set_hk(runInfo_.kernel_h);
     dxt.set_wk(runInfo_.kernel_w);
     dxt.set_dk(runInfo_.kernel_d);
-    dxt.set_khDilation((runInfo_.kernel_h - 1) * runInfo_.dilation_h + 1);
-    dxt.set_hoExpand((runInfo_.dedy_h - 1) * runInfo_.stride_h + 1);
-    dxt.set_dkHkWk(static_cast<uint64_t>(runInfo_.kernel_d) * runInfo_.kernel_h * runInfo_.kernel_w);
-    dxt.set_hkWk(static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w);
 }
 
 void Conv3DDXV2InnerProductTilingArch51::SetBackpropPadInfo(optiling::Conv3DBackpropInputArch35TilingData& dxt)
 {
     int64_t bpPadTail = runInfo_.dedx_d - (static_cast<int64_t>(runInfo_.dedy_d - 1) * runInfo_.stride_d + 1) +
                         (runInfo_.kernel_d - 1) * runInfo_.dilation_d - runInfo_.backprop_pad_h;
-    if (bpPadTail < PAD_DIM_LOW || bpPadTail > PAD_DIM_UP) {
-        dxt.set_backpropPadTail(runInfo_.backprop_pad_t);
-    } else {
-        dxt.set_backpropPadTail(static_cast<uint32_t>(bpPadTail));
-    }
     OP_LOGD(opName_, "backprop tail pad: %ld, origin backprop_pad_t: %d", bpPadTail, runInfo_.backprop_pad_t);
 
     dxt.set_backpropPadUp(runInfo_.backprop_pad_u);
@@ -1098,8 +1079,7 @@ void Conv3DDXV2InnerProductTilingArch51::PrintOpAttrs(const std::string& opName,
 {
     auto stridesShape = GetAttrVector(context_, strideIndex, kConv3DbpDim, "strides");
     // pads打印需要修改，可能从padding获取
-    std::vector<int64_t> padsShape{tiling.get_padFront(), tiling.get_padBack(), tiling.get_padUp(),
-                                   tiling.get_padDown(),  tiling.get_padLeft(), tiling.get_padRight()};
+    std::vector<int64_t> padsShape{tiling.get_padFront(), tiling.get_padUp(), tiling.get_padLeft()};
     auto dilationsShape = GetAttrVector(context_, dilationIndex, kConv3DbpDim, "dilations");
     auto attrs = context_->GetAttrs();
     const auto groups = attrs->GetAttrPointer<int64_t>(groupIndex);
@@ -1135,9 +1115,8 @@ void Conv3DDXV2InnerProductTilingArch51::PrintTilingData()
        << " hf32Flag: " << static_cast<uint32_t>(tiling.get_hf32Flag())
        << " initOutputFlag: " << static_cast<uint32_t>(tiling.get_initOutputFlag())
        << " isBiasFullLoad: " << static_cast<uint32_t>(tiling.get_isBiasFullLoad()) << " cinG: " << tiling.get_cinG()
-       << " coutG: " << tiling.get_coutG() << " cout1: " << tiling.get_cout1() << " cin1: " << tiling.get_cin1()
-       << " cout1G: " << tiling.get_cout1G() << " cin1G: " << tiling.get_cin1G() << " group: " << tiling.get_group()
-       << " oriGroup: " << tiling.get_oriGroup() << " backpropPadTail: " << tiling.get_backpropPadTail()
+       << " coutG: " << tiling.get_coutG() << " cout1: " << tiling.get_cout1() << " cout1G: " << tiling.get_cout1G()
+       << " group: " << tiling.get_group() << " oriGroup: " << tiling.get_oriGroup()
        << " backpropPadUp: " << tiling.get_backpropPadUp() << " backpropPadDown: " << tiling.get_backpropPadDown()
        << " backpropPadLeft: " << tiling.get_backpropPadLeft() << " backpropPadRight: " << tiling.get_backpropPadRight()
        << " singleCoreGroup: " << tiling.get_singleCoreGroup() << " singleCoreCout: " << tiling.get_singleCoreCout()

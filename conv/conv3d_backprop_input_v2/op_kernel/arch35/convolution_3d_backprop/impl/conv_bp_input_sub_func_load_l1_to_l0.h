@@ -154,7 +154,7 @@ template <class Intf>
 static __aicore__ inline void UpdateLoadToB2ParamsKForKernelSplit(Intf* self, uint32_t kPos)
 {
     uint32_t kRepeat = self->ctx.tiling_->baseK / self->ctx.splitHkWkC0List_[self->ctx.splitIndex_]; // cout1
-    self->ctx.startAddrOffset_ = self->ctx.tiling_->hkWk * kPos * kRepeat; // 跳过多少个cout
+    self->ctx.startAddrOffset_ = self->ctx.hkWk_ * kPos * kRepeat;             // 跳过多少个cout
     self->ctx.load2dv2_.kStep = self->ctx.splitWkList_[self->ctx.splitIndex_]; // 当前kernel拆分场景只可以为1或者2
     self->ctx.load2dv2_.mStartPosition = ((self->ctx.splitHkList_[self->ctx.splitIndex_] - 1) *
                                               self->ctx.tiling_->strideH * self->ctx.tiling_->wk +
@@ -219,7 +219,7 @@ static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(Intf* self,
     if (self->ctx.tiling_->strideH == self->ctx.tiling_->hk) {
         uint32_t kRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0BitsB;
         for (uint32_t i = 0; i < kRepeat; i++) {
-            self->ctx.load2dv2_.kStartPosition = self->ctx.startAddrOffset_ + i * self->ctx.tiling_->hkWk;
+            self->ctx.load2dv2_.kStartPosition = self->ctx.startAddrOffset_ + i * self->ctx.hkWk_;
             LoadData(l0b[dstB2Offset], l1B1Matrix[srcB1Offset], self->ctx.load2dv2_);
             dstB2Offset += self->ctx.dstB2Stride_;
         }
@@ -234,8 +234,7 @@ static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(Intf* self,
         for (uint32_t i = 0; i < curKRepeat; i++) {
             self->ctx.load2dv2_.mStartPosition = firstMStartPosition;
             self->ctx.load2dv2_.kStartPosition = 0;
-            srcB1Offset = (self->ctx.startAddrOffset_ + i * self->ctx.tiling_->hkWk) * self->ctx.blockBaseN_ *
-                          blockSize;
+            srcB1Offset = (self->ctx.startAddrOffset_ + i * self->ctx.hkWk_) * self->ctx.blockBaseN_ * blockSize;
             for (uint32_t j = 0; j < self->ctx.splitHkList_[self->ctx.splitIndex_]; j++) {
                 self->ctx.load2dv2_.mStartPosition -= j * curMPos;
                 dstB2Offset = j * dstStride + i * self->ctx.dstB2Stride_;
@@ -257,7 +256,7 @@ static __aicore__ inline void LoadToB2ReverseOnly(Intf* self, const LocalTensor<
             LoadToB2ReverseOnlyCommon(self, l1B1Matrix, blockSize, srcB1Offset, dstB2Offset, kPos, l0b);
         }
     } else {
-        if (self->ctx.tiling_->dkHkWk == 1) {
+        if (self->ctx.dkHkWk_ == 1) {
             // dkhkwk == 1, 此时已提前做好transpose,且不需要逆序，直接读取数据
             LoadToB2NoTransposeNoReverse(self, l1B1Matrix, srcB1Offset, kPos, l0b);
         } else {
@@ -273,16 +272,7 @@ static __aicore__ inline void LoadToB2(Intf* self, const LocalTensor<typename In
     uint32_t blockSize = self->ctx.tiling_->c0 << 4;
     uint32_t srcB1Offset = 0;
     uint32_t dstB2Offset = 0;
-    if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_TRANSPOSE_ONLY) {
-        uint32_t kBlockC0Num = kPos * self->ctx.tiling_->baseK >> self->ctx.tiling_->c0BitsB; // 转置逆序
-        uint32_t curKRepeat = self->ctx.baseUseK_ >> self->ctx.tiling_->c0BitsB;
-        for (uint32_t i = 0; i < curKRepeat; i++) {
-            uint32_t idxC1out = kBlockC0Num + i;
-            dstB2Offset = i * self->ctx.blockBaseN_ * blockSize;
-            srcB1Offset = self->ctx.baseB1Offset_ + idxC1out * blockSize;
-            LoadData(l0b[dstB2Offset], l1B1Matrix[srcB1Offset], self->ctx.load2dv2_);
-        }
-    } else if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_REVERSE_ONLY) {
+    if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_REVERSE_ONLY) {
         LoadToB2ReverseOnly<Intf, ksCoutFullLoad>(self, l1B1Matrix, blockSize, srcB1Offset, dstB2Offset, kPos, l0b);
     } else if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_NO_TRANSPOSE_NO_REVERSE) {
         LoadToB2NoTransposeNoReverse(self, l1B1Matrix, srcB1Offset, kPos, l0b);

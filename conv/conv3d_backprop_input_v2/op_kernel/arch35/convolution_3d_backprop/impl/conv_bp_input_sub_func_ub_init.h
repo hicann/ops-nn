@@ -62,15 +62,15 @@ __aicore__ inline void InitUbByteSize(Intf* self)
             // fallback in UseVselr4GroupTransdata. Non-16-bit types: vgather only.
             if constexpr (std::is_same<typename Intf::SrcT, bfloat16_t>::value ||
                           std::is_same<typename Intf::SrcT, half>::value) {
-                uint32_t winElems = self->ctx.tiling_->cout1G * static_cast<uint32_t>(self->ctx.tiling_->hkWk) *
-                                    self->ctx.tiling_->cin1G * BLOCK_CUBE * self->ctx.tiling_->c0;
+                uint32_t winElems = self->ctx.tiling_->cout1G * static_cast<uint32_t>(self->ctx.hkWk_) *
+                                    self->ctx.cin1G_ * BLOCK_CUBE * self->ctx.tiling_->c0;
                 uint32_t winBytes = winElems * sizeof(typename Intf::SrcT);
                 constexpr bool vselrFormatOk = Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NCDHW;
-                bool padNz = vselrFormatOk && (self->ctx.tiling_->hkWk > 4) && (self->ctx.tiling_->hkWk < 16) &&
+                bool padNz = vselrFormatOk && (self->ctx.hkWk_ > 4) && (self->ctx.hkWk_ < 16) &&
                              ((self->ctx.tiling_->cin / self->ctx.tiling_->oriGroup) > 1);
                 uint32_t padBytes = 0;
                 if (padNz) {
-                    padBytes = self->ctx.tiling_->cout1G * static_cast<uint32_t>(self->ctx.tiling_->hkWk) *
+                    padBytes = self->ctx.tiling_->cout1G * static_cast<uint32_t>(self->ctx.hkWk_) *
                                VSELR_SCATTER_PAD_ELEMS * sizeof(typename Intf::SrcT);
                 }
                 uint32_t ndBytes = winBytes < GROUP_UB_BUF_SIZE ? winBytes : GROUP_UB_BUF_SIZE;
