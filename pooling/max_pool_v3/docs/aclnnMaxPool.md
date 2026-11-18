@@ -205,7 +205,7 @@ aclnnStatus aclnnMaxPool(
 
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：参数self、out的数据类型不支持BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：参数self、out的数据类型不支持BFLOAT16、INT32、INT64、UINT8、INT16、INT8、UINT16。4维入参需使用NCHW描述符，暂不支持4维ND格式。
 
   <!-- end id8 -->
 

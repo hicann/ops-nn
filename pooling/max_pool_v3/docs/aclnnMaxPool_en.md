@@ -207,7 +207,7 @@ aclnnStatus aclnnMaxPool(
 
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: The data types BFLOAT16, INT32, INT64, UINT8, INT16, INT8, and UINT16 are not supported for the self and out parameters.
+  - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: The data types BFLOAT16, INT32, INT64, UINT8, INT16, INT8, and UINT16 are not supported for the self and out parameters. For 4D inputs, the NCHW descriptor must be used; the 4D ND format is not supported.
 
   <!-- end id8 -->
 
