@@ -15,6 +15,8 @@
 
 ## 🔥Latest News
 
+- [2026/08] 新增torch_extension框架，通过JIT编译桥接PyTorch接口与ACLNN算子库，支持单算子独立编译与打包（[!5910](https://gitcode.com/cann/ops-nn/pull/5910)）。
+- [2026/08] 新支持算子[SituGlu](activation/situ_glu/)、[SituGluGrad](activation/situ_glu_grad/)与[SituMxQuant](quant/situ_mx_quant/)。
 - [2026/05] 优化kernel编译配置项，减少simplified_key和ascendc_config配置文件（[!3330](https://gitcode.com/cann/ops-nn/pull/3330)）。
 - [2026/05] 引入ops-tensor，基于分层结构优化Cube类算子，减少偏移量计算和简化指令参数（[!5036](https://gitcode.com/cann/ops-nn/pull/5036)）。
 - [2026/05] 发布生态算子的精度验收标准（[!4572](https://gitcode.com/cann/ops-nn/pull/4572)）。
