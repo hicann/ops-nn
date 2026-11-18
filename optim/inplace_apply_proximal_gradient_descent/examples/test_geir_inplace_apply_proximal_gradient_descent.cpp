@@ -147,7 +147,7 @@ bool RunCase()
     op.set_attr_use_locking(false);
     ge::TensorDesc outputDesc(ge::Shape(vectorShape), ge::FORMAT_ND, ge::DT_FLOAT);
     outputDesc.SetRealDimCnt(static_cast<int32_t>(vectorShape.size()));
-    op.update_output_desc_var_out(outputDesc);
+    op.update_output_desc_var(outputDesc);
 
     std::vector<ge::Operator> inputs = {varOp, alphaOp, l1Op, l2Op, deltaOp};
     std::vector<ge::Operator> outputs = {op};
