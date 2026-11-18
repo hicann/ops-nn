@@ -9,6 +9,8 @@
  */
 
 #include <array>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -18,6 +20,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "opdev/platform.h"
 
 using namespace std;
 
@@ -557,3 +560,143 @@ TEST_F(l2_rms_norm_grad_quant_test, case_nullptr_dgamma_out_022)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
+
+namespace {
+enum TensorIndex : size_t { DY, X, RSTD, GAMMA, SCALES, OFFSET, DX, DGAMMA, TENSOR_COUNT };
+constexpr std::array<const char*, TENSOR_COUNT> TENSOR_NAMES = {"dy",     "x",      "rstd", "gamma",
+                                                                "scales", "offset", "dx",   "dgamma"};
+
+struct DtypeCase {
+    std::string name;
+    std::array<aclDataType, TENSOR_COUNT> dtypes = {ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT, ACL_FLOAT,
+                                                    ACL_FLOAT,   ACL_INT32,   ACL_INT8,  ACL_FLOAT};
+    int64_t rows = 2;
+    int64_t cols = 64;
+    bool hasOffset = true;
+    aclnnStatus expected = ACLNN_ERR_PARAM_INVALID;
+    int nullIndex = -1;
+    op::SocVersion soc = op::SocVersion::ASCEND950;
+};
+
+std::vector<DtypeCase> MakeDtypeCases()
+{
+    std::vector<DtypeCase> cases;
+    for (size_t i = 0; i < TENSOR_COUNT; ++i) {
+        DtypeCase param{"unsupported_" + std::string(TENSOR_NAMES[i])};
+        param.dtypes[i] = ACL_UINT8;
+        cases.push_back(param);
+    }
+    for (auto index : {X, GAMMA, SCALES}) {
+        DtypeCase param{"mismatched_" + std::string(TENSOR_NAMES[index])};
+        param.dtypes[index] = ACL_BF16;
+        cases.push_back(param);
+    }
+    for (auto index : {GAMMA, SCALES}) {
+        DtypeCase param{"fp32_dy_mismatched_" + std::string(TENSOR_NAMES[index])};
+        param.dtypes[DY] = param.dtypes[X] = ACL_FLOAT;
+        param.dtypes[index] = ACL_FLOAT16;
+        cases.push_back(param);
+    }
+    DtypeCase issue{"issue_8105_uint8_dy_and_x"};
+    issue.dtypes[DY] = issue.dtypes[X] = ACL_UINT8;
+    issue.dtypes[GAMMA] = ACL_FLOAT16;
+    issue.hasOffset = false;
+    cases.push_back(issue);
+
+    // Nine input combinations from the op definition, each with both output types and offset forms.
+    struct InputDtypes {
+        const char* name;
+        aclDataType dy;
+        aclDataType gamma;
+        aclDataType scales;
+    };
+    const std::array<InputDtypes, 9> inputs = {{{"fp16_fp32_fp32", ACL_FLOAT16, ACL_FLOAT, ACL_FLOAT},
+                                                {"fp16_fp32_fp16", ACL_FLOAT16, ACL_FLOAT, ACL_FLOAT16},
+                                                {"bf16_fp32_fp32", ACL_BF16, ACL_FLOAT, ACL_FLOAT},
+                                                {"bf16_fp32_bf16", ACL_BF16, ACL_FLOAT, ACL_BF16},
+                                                {"fp16_fp16_fp32", ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT},
+                                                {"fp32_fp32_fp32", ACL_FLOAT, ACL_FLOAT, ACL_FLOAT},
+                                                {"bf16_bf16_fp32", ACL_BF16, ACL_BF16, ACL_FLOAT},
+                                                {"fp16_fp16_fp16", ACL_FLOAT16, ACL_FLOAT16, ACL_FLOAT16},
+                                                {"bf16_bf16_bf16", ACL_BF16, ACL_BF16, ACL_BF16}}};
+    for (const auto& input : inputs) {
+        for (auto dx : {ACL_INT8, ACL_HIFLOAT8}) {
+            for (bool hasOffset : {false, true}) {
+                DtypeCase param{"valid_" + std::string(input.name) + (dx == ACL_INT8 ? "_int8" : "_hifloat8") +
+                                (hasOffset ? "_offset" : "_no_offset")};
+                param.dtypes = {input.dy, input.dy, ACL_FLOAT, input.gamma, input.scales, ACL_INT32, dx, ACL_FLOAT};
+                param.hasOffset = hasOffset;
+                param.expected = ACL_SUCCESS;
+                cases.push_back(param);
+            }
+        }
+    }
+
+    for (bool emptyGamma : {false, true}) {
+        DtypeCase empty{emptyGamma ? "empty_gamma" : "empty_batch"};
+        empty.rows = emptyGamma ? 2 : 0;
+        empty.cols = emptyGamma ? 0 : 64;
+        empty.expected = ACL_SUCCESS;
+        cases.push_back(empty);
+        for (auto index : {DY, GAMMA, DX}) {
+            auto invalid = empty;
+            invalid.name += "_unsupported_" + std::string(TENSOR_NAMES[index]);
+            invalid.dtypes[index] = ACL_UINT8;
+            invalid.expected = ACLNN_ERR_PARAM_INVALID;
+            cases.push_back(invalid);
+        }
+    }
+    for (auto index : {DY, X, RSTD, GAMMA, SCALES, DX, DGAMMA}) {
+        DtypeCase param{"nullptr_before_dtype_" + std::string(TENSOR_NAMES[index])};
+        param.dtypes[DY] = param.dtypes[X] = ACL_UINT8;
+        param.nullIndex = static_cast<int>(index);
+        param.expected = ACLNN_ERR_PARAM_NULLPTR;
+        cases.push_back(param);
+    }
+    DtypeCase legacy{"ascend910b_empty_gamma_keeps_dtype_behavior"};
+    legacy.cols = 0;
+    legacy.dtypes.fill(ACL_UINT8);
+    legacy.soc = op::SocVersion::ASCEND910B;
+    legacy.expected = ACL_SUCCESS;
+    cases.push_back(legacy);
+    return cases;
+}
+
+class RmsNormGradQuantDtypeTest : public testing::TestWithParam<DtypeCase> {};
+
+TEST_P(RmsNormGradQuantDtypeTest, GetWorkspaceSize)
+{
+    const auto& param = GetParam();
+    op::SocVersionManager platform(param.soc);
+    const std::array<std::vector<int64_t>, TENSOR_COUNT> shapes = {{{param.rows, param.cols},
+                                                                    {param.rows, param.cols},
+                                                                    {param.rows},
+                                                                    {param.cols},
+                                                                    {1},
+                                                                    {1},
+                                                                    {param.rows, param.cols},
+                                                                    {param.cols}}};
+    std::vector<std::unique_ptr<aclTensor, void (*)(aclTensor*)>> tensors;
+    std::array<aclTensor*, TENSOR_COUNT> args = {};
+    for (size_t i = 0; i < TENSOR_COUNT; ++i) {
+        tensors.push_back(TensorDesc(shapes[i], param.dtypes[i], ACL_FORMAT_ND).ToAclType());
+        args[i] = static_cast<int>(i) == param.nullIndex ? nullptr : tensors.back().get();
+    }
+    if (!param.hasOffset) {
+        args[OFFSET] = nullptr;
+    }
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    auto status = aclnnRmsNormGradQuantGetWorkspaceSize(args[DY], args[X], args[RSTD], args[GAMMA], args[SCALES],
+                                                        args[OFFSET], "static", true, args[DX], args[DGAMMA],
+                                                        &workspaceSize, &executor);
+    std::unique_ptr<aclOpExecutor> executorOwner(executor);
+    EXPECT_EQ(status, param.expected);
+    if (param.expected == ACL_SUCCESS && param.cols == 0) {
+        EXPECT_EQ(workspaceSize, 0U);
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(DtypeValidation, RmsNormGradQuantDtypeTest, testing::ValuesIn(MakeDtypeCases()),
+                         [](const testing::TestParamInfo<DtypeCase>& info) { return info.param.name; });
+} // namespace

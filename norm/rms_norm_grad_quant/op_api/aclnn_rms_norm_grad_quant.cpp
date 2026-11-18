@@ -8,7 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <initializer_list>
+
 #include "aclnn/aclnn_base.h"
+#include "aclnn_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -65,6 +68,35 @@ static bool CheckNotNull(const aclTensor* dy, const aclTensor* x, const aclTenso
     return true;
 }
 
+static bool CheckTensorDtype(const aclTensor* tensor, const char* paramName,
+                             const std::initializer_list<op::DataType>& supportedTypes)
+{
+    const auto dtype = tensor->GetDataType();
+    for (const auto supportedType : supportedTypes) {
+        if (dtype == supportedType) {
+            return true;
+        }
+    }
+    OP_LOGE_FOR_INVALID_DTYPE("aclnnRmsNormGradQuant", paramName, op::ToString(dtype).GetString(),
+                              op::ToString(supportedTypes).GetString());
+    return false;
+}
+
+static bool CheckDtypeValid(const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
+                            const aclTensor* scalesX, const aclTensor* offsetXOptional, const aclTensor* dxOut,
+                            const aclTensor* dgammaOut)
+{
+    const auto dyDtype = dy->GetDataType();
+    return CheckTensorDtype(dy, "dy", {op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT}) &&
+           CheckTensorDtype(x, "x", {dyDtype}) && CheckTensorDtype(rstd, "rstd", {op::DataType::DT_FLOAT}) &&
+           CheckTensorDtype(gamma, "gamma", {op::DataType::DT_FLOAT, dyDtype}) &&
+           CheckTensorDtype(scalesX, "scalesX", {op::DataType::DT_FLOAT, dyDtype}) &&
+           (offsetXOptional == nullptr ||
+            CheckTensorDtype(offsetXOptional, "offsetXOptional", {op::DataType::DT_INT32})) &&
+           CheckTensorDtype(dxOut, "dxOut", {op::DataType::DT_INT8, op::DataType::DT_HIFLOAT8}) &&
+           CheckTensorDtype(dgammaOut, "dgammaOut", {op::DataType::DT_FLOAT});
+}
+
 } // namespace RmsNormGradQuantACLNN
 
 static const aclTensor* GetTensorContiguous(const aclTensor* opt, aclOpExecutor* executor)
@@ -91,6 +123,12 @@ aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(const aclTensor* dy, const acl
 
     CHECK_RET(RmsNormGradQuantACLNN::CheckNotNull(dy, x, rstd, gamma, scalesX, dxOut, dgammaOut),
               ACLNN_ERR_PARAM_NULLPTR);
+
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        CHECK_RET(
+            RmsNormGradQuantACLNN::CheckDtypeValid(dy, x, rstd, gamma, scalesX, offsetXOptional, dxOut, dgammaOut),
+            ACLNN_ERR_PARAM_INVALID);
+    }
 
     // a = 0, r != 0 时下放到算子进行计算，其他情况aclnn直接处理
     auto gammaShape = gamma->GetViewShape();
