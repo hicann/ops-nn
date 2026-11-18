@@ -5,8 +5,8 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR&950DT系列产品</term>                             |    √     |
-| <term>Atlas A3系列产品</term>    |    ×     |
-| <term>Atlas A2系列产品</term> |    ×     |
+| <term>Atlas A3系列产品</term>    |    √     |
+| <term>Atlas A2系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
 | <term>Atlas推理系列产品</term>                             |    ×     |
 | <term>Atlas训练系列产品</term>                              |    ×     |
@@ -132,8 +132,9 @@
 - GELU（gelu_erf、gelu_tanh）和 Sigmoid（sigmoid）的计算顺序为先计算矩阵乘并加 bias，再逐元素执行激活；未传入 bias 时不加偏置。
 - 当fusedOpType取值为"sigmoid"时，仅支持Ascend 950PR&950DT系列产品，x1、x2和y必须为二维，数据类型必须同为FLOAT16或同为BFLOAT16；x1的shape为(M, K)，x2的shape为(K, N)，y的shape为(M, N)，M、N和K均必须大于0，x3必须传入空指针。
 - 当fusedOpType取值为"sigmoid"时，alpha和beta只能取1或不设置，不支持空Tensor。
+- <term>Atlas A2系列产品</term>和<term>Atlas A3系列产品</term>仅支持fusedOpType为"relu"的ND场景，数据类型为FLOAT16、BFLOAT16、FLOAT32（KEEP_DTYPE真FP32或开启HF32）。计算为y = relu(x1 @ x2 + bias)，ReLU由FixPipe随路完成。二维走MatMulV3，三维及以上走BatchMatMulV3。默认支持确定性计算。其他fusedOpType仍仅支持<term>Ascend 950PR&950DT系列产品</term>。
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32、BFLOAT16、FLOAT16（<term>Ascend 950PR&950DT系列产品</term>上FLOAT32仅支持开启HFLOAT32；<term>Atlas A2系列产品</term>和<term>Atlas A3系列产品</term>的relu支持KEEP_DTYPE FP32与HF32）；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（仅支持开启HFLOAT32场景）、BFLOAT16、FLOAT16。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
 - alpha或beta为非默认值时，仅支持Ascend 950PR&950DT系列产品上的三维非转置add场景，不支持bias和batch轴广播，x1、x2、x3和y必须为相同的FLOAT16、BFLOAT16或FLOAT32数据类型（FLOAT32时仅支持开启HF32，以HF32模式计算）。
 

@@ -8,10 +8,10 @@
 - <term>Ascend 950PR&950DT products</term>: Supported
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 products</term>: Not supported
+- <term>Atlas A3 products</term>: Supports the ND scenario where fusedOpType is relu (FLOAT16, BFLOAT16, and FLOAT32; FLOAT32 supports KEEP_DTYPE and HF32)
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 products</term>: Not supported
+- <term>Atlas A2 products</term>: Supports the ND scenario where fusedOpType is relu (FLOAT16, BFLOAT16, and FLOAT32; FLOAT32 supports KEEP_DTYPE and HF32)
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 inference products</term>: Not supported
@@ -325,12 +325,19 @@ aclnnStatus aclnnFusedMatmul(
 
 - GELU (gelu_erf, gelu_tanh) supports an optional bias. The computation order is to first compute matmul and add bias, then perform GELU. The data type of bias must be the same as that of the matrix input or be FLOAT32, and its shape must be (N,) or (1, N). When bias is passed in, the K axis of matmul must be greater than 0.
 
+- On <term>Atlas A2 products</term> and <term>Atlas A3 products</term>, only fusedOpType "relu" is supported. Inputs and outputs are ND, and the data type of x1, x2, and y is FLOAT16, BFLOAT16, or FLOAT32. FLOAT32 supports cubeMathType=KEEP_DTYPE (true FP32) and cubeMathType=3 (HF32). The formula is y = relu(x1 @ x2 + bias). Rank 2 uses MatMulV3. Ranks 3 to 6 with matching batch dimensions use BatchMatMulV3. The relu case that shares x2 and merges the batch axis on <term>Ascend 950PR&950DT products</term> is not supported.
+
 - Deterministic computation:
 
   <!-- npu="950" id8 -->
   - <term>Ascend 950PR&950DT products</term>: aclnnFusedMatmul defaults to a deterministic implementation.
-
   <!-- end id8 -->
+  <!-- npu="A3" id9 -->
+  - <term>Atlas A3 products</term>: When fusedOpType is relu, the implementation is deterministic by default.
+  <!-- end id9 -->
+  <!-- npu="910b" id10 -->
+  - <term>Atlas A2 products</term>: When fusedOpType is relu, the implementation is deterministic by default.
+  <!-- end id10 -->
 
 - When fusedOpType is "gelu_erf" or "gelu_tanh", the data types of x1 and x2 must be BFLOAT16 or FLOAT16, and only 2D x1, x2, and y are supported. When fusedOpType is "" or "relu", the data types of x1 and x2 must be FLOAT32 (only cubeMathType 3 is supported), BFLOAT16, or FLOAT16. When fusedOpType is "16cast32", the data types of x1 and x2 must be BFLOAT16 or FLOAT16, and 2D x1, x2, and y, or 3D tensors with a batch axis of 1, are supported. When fusedOpType is "add" or "mul", the data types of x1, x2, and x3 must be FLOAT32 (only cubeMathType 3 is supported), BFLOAT16, or FLOAT16.
 - When fusedOpType is "", "relu", "add", or "mul", in multi-dimensional use cases where broadcast is not applicable, the batch dimensions must remain consistent.

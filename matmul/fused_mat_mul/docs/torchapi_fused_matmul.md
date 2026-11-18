@@ -6,10 +6,10 @@
 - <term>Ascend 950PR&950DT系列产品</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3系列产品</term>：不支持
+- <term>Atlas A3系列产品</term>：支持fused_op_type为relu的ND场景（float16、bfloat16、float32；float32支持KEEP_DTYPE与HF32）
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2系列产品</term>：不支持
+- <term>Atlas A2系列产品</term>：支持fused_op_type为relu的ND场景（float16、bfloat16、float32；float32支持KEEP_DTYPE与HF32）
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2推理产品</term>：不支持
@@ -87,6 +87,7 @@ cann_ops_nn.fused_matmul(
 - 所有支持 bias 的融合模式均要求 bias 的 shape 为 (N,) 或 (1, N)，其中 N 为 x2 逻辑 shape 的最后一维。bias 的数据类型必须与矩阵输入一致或为 FLOAT32；传入 bias 时，矩阵乘的 K 轴必须大于 0。
 - GELU（gelu_erf、gelu_tanh）和 Sigmoid（sigmoid）的计算顺序为先计算矩阵乘并加 bias，再逐元素执行激活；未传入 bias 时不加偏置。
 - 当fused_op_type="sigmoid"时，仅支持Ascend 950PR&950DT系列产品，x、x2和输出必须为二维，数据类型必须同为torch.float16或同为torch.bfloat16；x的shape为(M, K)，x2的shape为(K, N)，输出的shape为(M, N)，M、N和K均必须大于0，x3必须为None，alpha和beta只能为None或1。
+- <term>Atlas A2系列产品</term>和<term>Atlas A3系列产品</term>仅支持fused_op_type为"relu"的ND输入。数据类型为float16、bfloat16或float32。float32默认KEEP_DTYPE为真FP32；开启torch.npu.matmul.allow_hf32时走HF32。计算公式为y = relu(x @ x2 + bias)。
 
 - 该接口当前支持单算子模式调用。
 - x、x2、bias和x3必须是NPU Tensor，可选Tensor可以传入None。

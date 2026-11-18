@@ -79,10 +79,7 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     OP_CHECK_IF(*inner_precise != INNER_PRECISE_HIGH_PRECISION && *inner_precise != INNER_PRECISE_HIGH_PERFORMANCE,
                 CUBE_INNER_ERR_REPORT(op_name, "inner_precise only supports 0 or 1"), return ge::GRAPH_FAILED);
 
-    ge::DataType dtype = tensor_x1->GetDataType();
-    OP_CHECK_IF(dtype == ge::DT_FLOAT && !(*enable_hf32),
-                CUBE_INNER_ERR_REPORT(op_name, "fusedmatmul is only supported bf16/fp16/hf32, do not support fp32."),
-                return ge::GRAPH_FAILED);
+    // FLOAT storage is legal. A5 aclnn still rejects KEEP_DTYPE FP32; A2/A3 allow it via MatMulV3.
     // OpType合法性校验
     OP_CHECK_IF(!IsInSupportedOpTypes(fused_op_type, kAllSupportedOpTypes),
                 CUBE_INNER_ERR_REPORT(op_name,

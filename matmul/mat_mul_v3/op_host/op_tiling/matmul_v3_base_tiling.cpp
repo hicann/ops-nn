@@ -267,7 +267,13 @@ ge::graphStatus MatmulV3BaseTiling::CheckArgs()
         args_.hasBias = true;
     }
 
-    if (attrs->GetAttrNum() >= OP_IMPL_MODE_ATTR_NUM) {
+    // FusedMatMul attrs are transpose_x1, transpose_x2, enable_hf32, fused_op_type, ...
+    // enable_hf32 is bool at index 2. Do not parse it as MatMulV3 opImplMode.
+    const bool isFusedMatMul = std::string(context_->GetNodeType()) == "FusedMatMul";
+    if (isFusedMatMul) {
+        constexpr size_t kFusedEnableHf32Idx = 2;
+        OP_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(kFusedEnableHf32Idx));
+    } else if (attrs->GetAttrNum() >= OP_IMPL_MODE_ATTR_NUM) {
         OP_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int64_t>(OP_IMPL_MODE_ATTR_INDEX - 1));
         OP_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(OP_IMPL_MODE_ATTR_INDEX));
     }
@@ -293,6 +299,11 @@ static inline void GetDtype(const gert::TilingContext& context, MatmulV3Args& ar
         if (context.GetAttrs()->GetAttrNum() >= OP_IMPL_MODE_ATTR_NUM) {
             args.isHf32 = *context.GetAttrs()->GetAttrPointer<int64_t>(OP_IMPL_MODE_ATTR_INDEX) == 0x40;
             args.isForceGrpAccForFp32 = *context.GetAttrs()->GetAttrPointer<int64_t>(OP_IMPL_MODE_ATTR_INDEX) == 0x4;
+        }
+    } else if (strcmp(context.GetNodeType(), "FusedMatMul") == 0) {
+        constexpr size_t kFusedEnableHf32Idx = 2;
+        if (context.GetAttrs()->GetAttrNum() > kFusedEnableHf32Idx) {
+            args.isHf32 = *context.GetAttrs()->GetAttrPointer<bool>(kFusedEnableHf32Idx);
         }
     } else {
         if (context.GetAttrs()->GetAttrNum() >= HF32_ATTR_NUM) {
@@ -333,8 +344,9 @@ static ge::graphStatus OpSpecificCheck(const gert::TilingContext& context, const
 {
     const bool isMatMulV3 = (strcmp(context.GetNodeType(), "MatMulV3") == 0);
     const bool isBatchMatMulV3 = (strcmp(context.GetNodeType(), "BatchMatMulV3") == 0);
-    if (!isBatchMatMulV3 && !isMatMulV3) {
-        // apply no additional checks for ops other than MMV3, BMMV3, for now
+    const bool isFusedMatMul = (strcmp(context.GetNodeType(), "FusedMatMul") == 0);
+    if (!isBatchMatMulV3 && !isMatMulV3 && !isFusedMatMul) {
+        // apply no additional checks for ops other than MMV3, BMMV3, FusedMatMul, for now
         return ge::GRAPH_SUCCESS;
     }
 
@@ -346,6 +358,14 @@ static ge::graphStatus OpSpecificCheck(const gert::TilingContext& context, const
             OP_LOGE(args.opName, "invalid input dim num");
             return ge::GRAPH_FAILED;
         }
+    }
+
+    if (isFusedMatMul) {
+        if (args.aFormat != ge::FORMAT_ND || args.bFormat != ge::FORMAT_ND || args.outFormat != ge::FORMAT_ND) {
+            OP_LOGE(args.opName, "FusedMatMul relu only supports ND format");
+            return ge::GRAPH_FAILED;
+        }
+        // A2/A3 cube supports KEEP_DTYPE FP32; HF32 remains a separate math mode.
     }
 
     // check bias
@@ -363,8 +383,8 @@ static ge::graphStatus OpSpecificCheck(const gert::TilingContext& context, const
     if (args.hasBias) {
         dtype.push_back(args.biasType);
     }
-    auto isValidDtype = [&args](const std::vector<ge::DataType>& dtypeList) -> ge::graphStatus {
-        const std::vector<std::vector<ge::DataType>> dtypeSuportList = {
+    auto isValidDtype = [&args, isFusedMatMul](const std::vector<ge::DataType>& dtypeList) -> ge::graphStatus {
+        std::vector<std::vector<ge::DataType>> dtypeSuportList = {
             // x1,              x2,             y,              bias
             {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
             {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT},
@@ -372,6 +392,9 @@ static ge::graphStatus OpSpecificCheck(const gert::TilingContext& context, const
             {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT},
             {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16},
             {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16}};
+        if (isFusedMatMul) {
+            dtypeSuportList.push_back({ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16});
+        }
         for (auto& supported : dtypeSuportList) {
             if (std::equal(dtypeList.begin(), dtypeList.end(), supported.begin())) {
                 return ge::GRAPH_SUCCESS;
@@ -958,6 +981,10 @@ void MatmulV3BaseTiling::SetRunInfo()
 
 bool MatmulV3BaseTiling::GetTilingFromRepo()
 {
+    // MatMulV3 tuning bank may select split-K. ReLU must run on the final FixPipe, so skip the bank.
+    if (context_->GetNodeType() != nullptr && strcmp(context_->GetNodeType(), "FusedMatMul") == 0) {
+        return false;
+    }
     OP_LOGI(args_.opName, "start get tiling from repo.");
     std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
     std::shared_ptr<void> inputArgs = nullptr;
@@ -3005,6 +3032,10 @@ bool MatmulV3BaseTiling::IsSupportSingleCoreSplitKAL1FullLoad() const
 
 bool MatmulV3BaseTiling::DoSingleCoreSplitKAL1FullLoadTiling()
 {
+    // Split-K writes partial sums before the final cast. FixPipe ReLU on that path is incorrect.
+    if (context_->GetNodeType() != nullptr && strcmp(context_->GetNodeType(), "FusedMatMul") == 0) {
+        return false;
+    }
     OP_LOGI(args_.opName, "Start DoSingleCoreSplitKAL1FullLoadTiling");
 
     if (!IsSupportSingleCoreSplitKAL1FullLoad()) {

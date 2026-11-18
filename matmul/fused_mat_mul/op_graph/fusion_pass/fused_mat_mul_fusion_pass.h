@@ -11,7 +11,8 @@
 /*!
  * \file fused_mat_mul_fusion_pass.h
  * \brief fused mat mul fusion pass (single pass, platform dispatch inside, aligned with canndev):
- *        - DAV_3510 (Ascend950): MatMulV3/BatchMatMulV3 (+bias) + Relu -> FusedMatMul directly.
+ *        - DAV_3510 (Ascend950) and A2/A3 (DAV_2201, Ascend910B / Ascend910_93):
+ *          MatMulV3/BatchMatMulV3 (+bias) + Relu -> FusedMatMul directly.
  *        - s8s4 mmad platform: the post op chain (Relu / AscendQuant / Relu+AscendQuant) is folded
  *          into a PostCube (open-sourced FixPipe) node first, then {matmul + PostCube} is replaced
  *          by a single FusedMatMul node.

@@ -116,6 +116,16 @@ const static std::vector<CASE_TUPLE> testcase_fusedmatmul_runtime = {
                true,
                "relu",
                RES_TUPLE{{3, 3}, {}, ge::DT_FLOAT, true}},
+    // fp32 KEEP_DTYPE +bias relu (A2/A3)
+    CASE_TUPLE{OP_TUPLE{{2, 3}, ge::DT_FLOAT, {}},
+               OP_TUPLE{{2, 3}, ge::DT_FLOAT, {}},
+               OP_TUPLE{{3}, ge::DT_FLOAT, {}},
+               {},
+               true,
+               false,
+               false,
+               "relu",
+               RES_TUPLE{{3, 3}, {}, ge::DT_FLOAT, true}},
     // not builtin scene for compatibility
     CASE_TUPLE{OP_TUPLE{{288, 320}, ge::DT_BF16, {}},
                OP_TUPLE{{320, 16}, ge::DT_BF16, {}},

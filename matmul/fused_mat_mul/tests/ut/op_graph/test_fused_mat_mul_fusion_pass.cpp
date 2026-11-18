@@ -349,15 +349,27 @@ void SetDav3510Platform()
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 }
 
-void SetNonDav3510Platform()
+void SetA2A3DirectPlatform()
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
-    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.soc_info.ai_core_cnt = 20;
     platformInfo.soc_info.arch_type = 2201;
     platformInfo.str_info.short_soc_version = "Ascend910_93";
     optiCompilationInfo.soc_version = "Ascend910_93";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+}
+
+void SetNonDav3510Platform()
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 8;
+    platformInfo.soc_info.arch_type = 2002;
+    platformInfo.str_info.short_soc_version = "Ascend310P";
+    optiCompilationInfo.soc_version = "Ascend310P3";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend310P3"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 }
 
@@ -599,9 +611,25 @@ TEST_F(FusedMatMulFusionPassTest, matmulWithBiasDimMismatchNotFused)
     EXPECT_EQ(CountNodesByType(graph, kOpTypeFusedMatMul), 0);
 }
 
-// unsupported platform (neither DAV_3510 nor s8s4 mmad) does not fuse. The pass dispatches by
-// the short_soc_version against the 3510-series soc list, so the non-3510 platform is fully
-// simulatable in the UT.
+// A2/A3 (DAV_2201, no s8s4 mmad) fuses MatMul+Relu on the direct FixPipe path.
+TEST_F(FusedMatMulFusionPassTest, matmulFp16ReluA2A3DirectFusionSuccess)
+{
+    SetA2A3DirectPlatform();
+    MatmulReluGraphParam param;
+    param.dtype = DT_FLOAT16;
+    std::shared_ptr<Graph> graph = BuildMatmulReluGraph(param);
+
+    Status status = RunFusedMatMulFusionPass(graph);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeFusedMatMul), 1);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeMatMulV3), 0);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeRelu), 0);
+    GNodePtr fusedMatMul = FindNodeByType(graph, kOpTypeFusedMatMul);
+    ASSERT_NE(fusedMatMul, nullptr);
+    EXPECT_EQ(GetFusedOpTypeAttr(fusedMatMul), kFusedOpTypeRelu);
+}
+
+// unsupported platform (neither DAV_3510, A2/A3, nor s8s4 mmad) does not fuse.
 TEST_F(FusedMatMulFusionPassTest, unsupportedPlatformNotFused)
 {
     SetNonDav3510Platform();
@@ -1253,8 +1281,8 @@ TEST_F(FusedMatMulPostCubePathTest, postcubeUncacheAttrTransfer)
     EXPECT_EQ(enableUncache, 1);
 }
 
-// platform without s8s4 mmad does not fuse.
-TEST_F(FusedMatMulPostCubePathTest, postcubeNoS8s4MmadNotFused)
+// 910B without s8s4 mmad is A2: MatMul+Relu goes through the direct FixPipe path.
+TEST_F(FusedMatMulPostCubePathTest, postcubeNoS8s4MmadFallsBackToA2DirectRelu)
 {
     SetNonS8s4Platform();
     MatmulPostCubeParam param;
@@ -1262,8 +1290,10 @@ TEST_F(FusedMatMulPostCubePathTest, postcubeNoS8s4MmadNotFused)
     std::shared_ptr<Graph> graph = BuildMatmulPostOpGraph(param);
 
     Status status = RunPostCubePass(graph);
-    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
-    EXPECT_EQ(CountNodesByType(graph, kOpTypeFusedMatMul), 0);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeFusedMatMul), 1);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeMatMulV3), 0);
+    EXPECT_EQ(CountNodesByType(graph, kOpTypeRelu), 0);
 }
 
 // bf16 is not supported on the s8s4 path (fp16 only).

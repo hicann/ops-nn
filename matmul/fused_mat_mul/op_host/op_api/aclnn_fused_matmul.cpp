@@ -98,6 +98,11 @@ bool CheckFusedOpType(const char* fusedOpType)
                 "fusedOpType must be in the type of ''/16cast32/add/mul/gelu_erf/gelu_tanh/relu/sigmoid");
         return false;
     }
+    // A2/A3 reuse this interface for MatMulV3/BatchMatMulV3 + FixPipe ReLU only.
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 && std::strcmp(fusedOpType, "relu") != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Atlas A2/A3 FusedMatmul only supports fusedOpType relu.");
+        return false;
+    }
     return true;
 }
 
@@ -126,7 +131,9 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     bool selfFloat = self->GetDataType() == DataType::DT_FLOAT;
     bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
     auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
-    if (cubeMathType != USE_HF32 && promoteType == DataType::DT_FLOAT) {
+    // A5 keeps the HF32-only float32 policy. Only A2/A3 (DAV_2201) allows KEEP_DTYPE FP32.
+    if (cubeMathType != USE_HF32 && promoteType == DataType::DT_FLOAT &&
+        GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fusedmatmul only supports bf16/fp16/hf32, does not support fp32.");
         return false;
     }

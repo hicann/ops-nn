@@ -16,6 +16,7 @@
 #include <vector>
 #include "base/err_msg.h"
 #include "batch_mat_mul_v3_base_tiling.h"
+#include <cstring>
 #include "batch_mat_mul_v3/op_kernel/batch_mat_mul_v3_tiling_key.h"
 #include "util/math_util.h"
 #include "log/log.h"
@@ -784,6 +785,10 @@ void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTilingImpl()
 
 void BatchMatmulV3BaseTiling::DoMultiBatchL1FullLoadTiling()
 {
+    // This template hardcodes MatmulConfig and cannot enable FixPipe ReLU.
+    if (context_->GetNodeType() != nullptr && strcmp(context_->GetNodeType(), "FusedMatMul") == 0) {
+        return;
+    }
     bool isEqualBatch = batchInfo_.IsEqualBatch(); // 广播
     if (!isEqualBatch || args_.hasBias) {          // 暂时不支持bias
         return;
@@ -1307,6 +1312,10 @@ bool BatchMatmulV3BaseTiling::CheckVectorBatchBroadcast()
 
 bool BatchMatmulV3BaseTiling::CheckVectorComputationCondition()
 {
+    // Vector batch matmul has no FixPipe. ReLU fusion stays on the cube path.
+    if (context_->GetNodeType() != nullptr && strcmp(context_->GetNodeType(), "FusedMatMul") == 0) {
+        return false;
+    }
     if (!CheckVectorNpuArch()) {
         return false;
     }

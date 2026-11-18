@@ -105,7 +105,7 @@ protected:
     GM_ADDR biasGM_;
     GM_ADDR offsetWGM_;
     GM_ADDR workspaceGM_;
-    MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MatmulBaseBlock, MM_CFG_NO_PRELOAD> mm_;
+    MatmulBaseUnAlignedKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MatmulBaseBlock, MM_CFG> mm_;
     using A_T = typename A_TYPE::T;
     using B_T = typename B_TYPE::T;
     using C_T = typename C_TYPE::T;

@@ -7,8 +7,8 @@ English | [简体中文](./README.md)
 | Product                                                         | Support |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR&950DT products</term>                             |    √     |
-| <term>Atlas A3 products</term>    |    ×     |
-| <term>Atlas A2 products</term> |    ×     |
+| <term>Atlas A3 products</term>    |    √     |
+| <term>Atlas A2 products</term> |    √     |
 | <term>Atlas 200I/500 A2 inference products</term>                      |    ×     |
 | <term>Atlas inference products</term>                             |    ×     |
 | <term>Atlas training products</term>                              |    ×     |
@@ -134,8 +134,9 @@ English | [简体中文](./README.md)
 - For GELU (gelu_erf, gelu_tanh) and Sigmoid (sigmoid), the computation order is to first compute the matrix multiplication and add bias, and then perform the activation element-wise; when bias is not passed, no bias is added.
 - When fusedOpType is "sigmoid", only the Ascend 950PR&950DT products are supported; x1, x2, and y must be two-dimensional, and their data types must be all FLOAT16 or all BFLOAT16. The shape of x1 is (M, K), the shape of x2 is (K, N), and the shape of y is (M, N); M, N, and K must all be greater than 0, and x3 must be passed as a null pointer.
 - When fusedOpType is "sigmoid", alpha and beta can only be 1 or left unset, and empty tensors are not supported.
+- On <term>Atlas A2 products</term> and <term>Atlas A3 products</term>, only fusedOpType "relu" in ND format is supported. The data types are FLOAT16, BFLOAT16, and FLOAT32 (KEEP_DTYPE true FP32, or HF32). The computation is y = relu(x1 @ x2 + bias), and ReLU is done on FixPipe. Two-dimensional inputs use MatMulV3, and rank 3 or higher uses BatchMatMulV3. Deterministic computation is supported by default. Other fusedOpType values are still supported only on <term>Ascend 950PR&950DT products</term>.
 
-- When fusedOpType is "gelu_erf" or "gelu_tanh", the data types of x1 and x2 must be BFLOAT16 or FLOAT16; when fusedOpType is "" or "relu", the data types of x1 and x2 must be FLOAT32 (only the scenario with HFLOAT32 enabled is supported), BFLOAT16, or FLOAT16; when fusedOpType is "16cast32", the data types of x1 and x2 must be BFLOAT16 or FLOAT16; when fusedOpType is "add" or "mul", the data types of x1, x2, and x3 must be FLOAT32 (only the scenario with HFLOAT32 enabled is supported), BFLOAT16, or FLOAT16.
+- When fusedOpType is "gelu_erf" or "gelu_tanh", the data types of x1 and x2 must be BFLOAT16 or FLOAT16; when fusedOpType is "" or "relu", the data types of x1 and x2 must be FLOAT32, BFLOAT16, or FLOAT16 (on <term>Ascend 950PR&950DT products</term>, FLOAT32 supports only HFLOAT32; relu on <term>Atlas A2 products</term> and <term>Atlas A3 products</term> supports KEEP_DTYPE FP32 and HF32); when fusedOpType is "16cast32", the data types of x1 and x2 must be BFLOAT16 or FLOAT16; when fusedOpType is "add" or "mul", the data types of x1, x2, and x3 must be FLOAT32 (only the scenario with HFLOAT32 enabled is supported), BFLOAT16, or FLOAT16.
 - When fusedOpType is "16cast32", the data type of the output y must be FLOAT32.
 - When alpha or beta is a non-default value, only the three-dimensional non-transposed add scenario on the Ascend 950PR&950DT products is supported; bias and broadcast along the batch axis are not supported, and x1, x2, x3, and y must have the same FLOAT16, BFLOAT16 or FLOAT32 data type (FLOAT32 requires HF32 and runs in HF32 mode).
 

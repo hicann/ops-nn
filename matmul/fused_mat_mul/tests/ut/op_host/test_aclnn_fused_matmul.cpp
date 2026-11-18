@@ -31,6 +31,7 @@ protected:
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_middle_shape_fp16)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc c_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -135,6 +136,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_scale_add_fp32_keep_dtype_invalid)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_hf32_bias)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({128, 512}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc bias_desc = TensorDesc({512}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -163,6 +165,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_hf32_relu)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_f32_relu)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({128, 512}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({512, 512}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc bias_desc = TensorDesc({512}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -234,6 +237,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_bmm_k_zero_mul_bias_failed_before_split
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_bmm_k_zero_add_without_bias_success)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({3, 8, 0}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({3, 0, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x3_desc = TensorDesc({3, 8, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -260,6 +264,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_middle_shape_fp16_failed_1)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_not_support_bias)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc bias_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -335,6 +340,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_batch_y_broadcast_failed)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_batch_add_x3_batch_broadcast_success)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({4, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({4, 32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc c_desc = TensorDesc({1, 16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -349,6 +355,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_batch_add_x3_batch_broadcast_success)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_batch_mul_x3_matrix_broadcast_success)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({4, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({4, 32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc c_desc = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -418,6 +425,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_gelu_batch_shape_failed)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_gelu_erf_fp16_success)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -432,6 +440,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_gelu_erf_fp16_success)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_gelu_tanh_fp16_success)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({4, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -446,6 +455,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_gelu_tanh_fp16_success)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_gelu_erf_bias_fp16_success)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc bias_desc = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
@@ -461,6 +471,7 @@ TEST_F(l2_fusedmatmul_test, dav3510_test_gelu_erf_bias_fp16_success)
 
 TEST_F(l2_fusedmatmul_test, dav3510_test_gelu_tanh_bias_bf16_fp32_success)
 {
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc x2_desc = TensorDesc({32, 64}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc bias_desc = TensorDesc({64}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -670,6 +681,59 @@ TEST_F(l2_fusedmatmul_test, ascend910b_test_relu_3d_2d_failed)
     TensorDesc x2_desc = TensorDesc({448, 896}, ACL_FLOAT16, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({50, 1, 896}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "relu", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend910b_test_relu_2d_fp16_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({64, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "relu", 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend910b_test_relu_2d_fp32_keep_dtype_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({32, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({64, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({32, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "relu", op::KEEP_DTYPE),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend910b_test_relu_bmm_fp32_keep_dtype_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({50, 8, 448}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({50, 448, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({896}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({50, 8, 896}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, bias_desc, (aclTensor*)nullptr, "relu", op::KEEP_DTYPE),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend910b_test_gelu_not_support)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x1_desc = TensorDesc({32, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({64, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnFusedMatmul,
+                        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, (aclTensor*)nullptr, "gelu_tanh", 0),
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);

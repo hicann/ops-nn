@@ -13,7 +13,8 @@
  * \brief the pass will effect if the graph pattern is as follows (single pass with the platform
  *        dispatch inside, aligned with the canndev FusedMatMulFusionPass):
  *
- * [DAV_3510 direct path] (x1/x2/out/bias: fp16, bf16 or fp32-with-hf32)
+ * [direct path] DAV_3510 and A2/A3 (x1/x2/out/bias: fp16, bf16 or fp32;
+ *   fp32 on DAV_3510 still requires hf32, A2/A3 also accepts KEEP_DTYPE)
  *   x1   x2   bias(optional)                     x1   x2   bias(optional)
  *    +    +        +                              +    +        +
  *    |    |        |                              |    |        |
@@ -45,6 +46,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <string>
 #include <vector>
@@ -59,9 +61,11 @@
 #include "es_nn_ops.h"
 #include "ge/es_graph_builder.h"
 #include "ge/fusion/subgraph_boundary.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "platform/platform_info.h"
 #include "platform/soc_spec.h"
 #include "version/ge-compiler_version.h"
+#include "acl/acl_platform.h"
 #include "acl/acl_rt.h"
 
 // The preprocessor form of kTargetGeCompilerVersion (a #if guard cannot use a constexpr): the
@@ -241,23 +245,34 @@ void InheritMatmulInputDescs(GNode& fusedMatMulNode, const GNode& matmulNode)
     }
 }
 
-bool IsMatmulType(const AscendString& nodeType)
+bool IsMatmulV3Type(const AscendString& nodeType)
 {
     return nodeType == kOpTypeMatMulV3 || nodeType == kOpTypeBatchMatMulV3;
 }
 
-bool IsBatchMatMulV3Type(const GNode& node)
+// A2's open-source MatMulToMatmulV3 pass bails out when l12bt has no bf16 (910B/910_93),
+// so the graph still holds MatMul/MatMulV2 when this pass runs. Match those as well.
+bool IsDirectPathMatmulType(const AscendString& nodeType)
+{
+    return IsMatmulV3Type(nodeType) || nodeType == kOpTypeMatMul || nodeType == kOpTypeMatMulV2 ||
+           nodeType == kOpTypeBatchMatMul || nodeType == kOpTypeBatchMatMulV2;
+}
+
+bool IsBatchMatmulType(const GNode& node)
 {
     AscendString nodeType;
-    return node.GetType(nodeType) == GRAPH_SUCCESS && nodeType == kOpTypeBatchMatMulV3;
+    if (node.GetType(nodeType) != GRAPH_SUCCESS) {
+        return false;
+    }
+    return nodeType == kOpTypeBatchMatMulV3 || nodeType == kOpTypeBatchMatMul || nodeType == kOpTypeBatchMatMulV2;
 }
 
 // A failed GetAttr means the attr is absent and the IR default (false) applies: the ES builder
 // skips setting attrs equal to the IR default value, same as canndev.
 void GetTransposeAttrs(const GNode& matmulNode, bool& transX1, bool& transX2)
 {
-    const char* transStrX1 = IsBatchMatMulV3Type(matmulNode) ? kAttrAdjX1 : kAttrTransposeX1;
-    const char* transStrX2 = IsBatchMatMulV3Type(matmulNode) ? kAttrAdjX2 : kAttrTransposeX2;
+    const char* transStrX1 = IsBatchMatmulType(matmulNode) ? kAttrAdjX1 : kAttrTransposeX1;
+    const char* transStrX2 = IsBatchMatmulType(matmulNode) ? kAttrAdjX2 : kAttrTransposeX2;
     if (matmulNode.GetAttr(transStrX1, transX1) != SUCCESS) {
         transX1 = false;
     }
@@ -267,7 +282,7 @@ void GetTransposeAttrs(const GNode& matmulNode, bool& transX1, bool& transX2)
 }
 
 // Collect the matmul nodes first: the graph is modified during the fusion loop.
-std::vector<GNode> GetMatmulNodes(const GraphPtr& graph)
+std::vector<GNode> GetMatmulNodes(const GraphPtr& graph, bool directPath)
 {
     std::vector<GNode> matmulNodes;
     for (auto& node : graph->GetDirectNode()) {
@@ -275,7 +290,8 @@ std::vector<GNode> GetMatmulNodes(const GraphPtr& graph)
         if (node.GetType(nodeType) != GRAPH_SUCCESS) {
             continue;
         }
-        if (IsMatmulType(nodeType)) {
+        const bool matched = directPath ? IsDirectPathMatmulType(nodeType) : IsMatmulV3Type(nodeType);
+        if (matched) {
             matmulNodes.emplace_back(node);
         }
     }
@@ -335,17 +351,35 @@ bool CheckBiasLastDimMatch(const GNode& matmulNode, const Shape& biasShape)
     return true;
 }
 
-// FP32 FusedMatMul only supports the HF32 computation mode.
+// ge.exec.allow_hf32 is two chars, conv then matmul (torchair writes "01" / "11").
+bool AllowMatmulHf32FromOption(CustomPassContext* passContext)
+{
+    if (passContext == nullptr) {
+        return false;
+    }
+    AscendString optionValue;
+    if (passContext->GetOptionValue("ge.exec.allow_hf32", optionValue) != SUCCESS ||
+        optionValue.GetString() == nullptr) {
+        return false;
+    }
+    const char* value = optionValue.GetString();
+    return value[0] != '\0' && value[1] == '1';
+}
+
 // MatMulV3 exposes opImplMode, while BatchMatMulV3 exposes enable_hf32 (aligned with canndev master).
-bool GetEnableHf32FromMatmul(const GNode& matmulNode)
+// DAV_3510 FP32 fused relu requires HF32. A2/A3 FusedMatMul also supports KEEP_DTYPE.
+// Torch graph MatMul carries neither attr; the session option is the HF32 signal there.
+bool GetEnableHf32FromMatmul(const GNode& matmulNode, CustomPassContext* passContext)
 {
     int64_t opImplMode = 0;
     if (matmulNode.GetAttr(kAttrOpImplMode, opImplMode) == SUCCESS) {
         return (static_cast<uint64_t>(opImplMode) & kHf32Flag) != 0UL;
     }
     bool enableHf32 = false;
-    (void)matmulNode.GetAttr(kAttrEnableHf32, enableHf32);
-    return enableHf32;
+    if (matmulNode.GetAttr(kAttrEnableHf32, enableHf32) == SUCCESS) {
+        return enableHf32;
+    }
+    return AllowMatmulHf32FromOption(passContext);
 }
 
 // Dtype check shared by both paths (canndev CheckMatmulDtype): scan the platform support table
@@ -380,8 +414,9 @@ bool CheckMatmulDtype(const GNode& matmulNode, bool hasBias, bool isDav3510)
     }
     FUSION_PASS_CHECK(!dtypeCheck, OPS_LOG_D(kPassName, "Matmul dtype is not supported, no fusion."), return false);
 
-    if (x1Desc.GetDataType() == DT_FLOAT) {
-        FUSION_PASS_CHECK(!GetEnableHf32FromMatmul(matmulNode),
+    // A5 keeps the HF32 gate. A2/A3 (not a 3510-series arch) may fuse FP32 KEEP_DTYPE.
+    if (x1Desc.GetDataType() == DT_FLOAT && IsNpuArch3510Series()) {
+        FUSION_PASS_CHECK(!GetEnableHf32FromMatmul(matmulNode, nullptr),
                           OPS_LOG_D(kPassName, "FP32 FusedMatMul only supports the HF32 computation mode."),
                           return false);
     }
@@ -431,6 +466,24 @@ bool CheckMatmulCommon(const GNode& matmulNode, bool isDav3510)
 }
 
 // ==================== platform checks (aligned with canndev CheckSocSupport) ====================
+
+// A2/A3 share the direct MatMul+Relu path with DAV_3510 (aligned with canndev CheckSocSupport).
+// Prefer the runtime arch. Fall back to short_soc when the arch query is unavailable at compile time.
+bool IsA2A3DirectPlatform()
+{
+    char buf[64] = {0};
+    if (aclplatformGetDeviceInfo(ACL_PLATFORM_NPU_ARCH, buf, sizeof(buf)) == ACL_SUCCESS &&
+        std::atoi(buf) == static_cast<int32_t>(Ops::Base::DAV_2201)) {
+        return true;
+    }
+    PlatformInfo platformInfo;
+    OptionalInfo optionalInfo;
+    if (PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
+        return false;
+    }
+    const std::string& shortSoc = platformInfo.str_info.short_soc_version;
+    return shortSoc.find("Ascend910B") != std::string::npos || shortSoc.find("Ascend910_93") != std::string::npos;
+}
 
 // s8s4 platform check: Intrinsic_mmad supports s8s4 (aligned with canndev CheckSocSupport).
 bool IsS8s4MmadPlatform()
@@ -514,7 +567,7 @@ bool CanReluMergeBatchAndMAxis(const Shape& x1Shape, const Shape& x2Shape, bool 
 // m axis can be merged. MatMulV3 has no batch dims and is not restricted (aligned with canndev).
 bool CheckMatmulShape3510(const GNode& matmulNode, bool transX1)
 {
-    if (!IsBatchMatMulV3Type(matmulNode)) {
+    if (!IsBatchMatmulType(matmulNode)) {
         return true;
     }
 
@@ -560,7 +613,9 @@ Status ReplaceDirectWithFusedMatMul(GNode& matmulNode, const GNodePtr& reluNode,
     TensorDesc matmulX1Desc;
     FUSION_PASS_CHECK(matmulNode.GetInputDesc(kX1InputIdx, matmulX1Desc) != SUCCESS,
                       OPS_LOG_E(kPassName, "Failed to get matmul x1 desc."), return FAILED);
-    const bool enableHf32 = (matmulX1Desc.GetDataType() == DT_FLOAT) ? GetEnableHf32FromMatmul(matmulNode) : false;
+    const bool enableHf32 = (matmulX1Desc.GetDataType() == DT_FLOAT) ?
+                                GetEnableHf32FromMatmul(matmulNode, &passContext) :
+                                false;
 
     const bool hasBias = matmulNode.GetInDataNodesAndPortIndexs(kBiasInputIdx).first != nullptr;
 
@@ -610,14 +665,14 @@ Status ReplaceDirectWithFusedMatMul(GNode& matmulNode, const GNodePtr& reluNode,
     GraphUniqPtr replaceGraph = replaceGraphBuilder.BuildAndReset({rY});
     FUSION_PASS_CHECK(ReplaceSubgraphWithReport(boundary, *replaceGraph, passContext) != SUCCESS,
                       OPS_LOG_E(kPassName, "SubgraphRewriter replace failed."), return FAILED);
-    OPS_LOG_I(kPassName, "FusedMatMul fusion success! matmul=%s, path=direct(3510).", NodeName(matmulNode).c_str());
+    OPS_LOG_I(kPassName, "FusedMatMul fusion success! matmul=%s, path=direct.", NodeName(matmulNode).c_str());
     return SUCCESS;
 }
 
 // [DAV_3510 direct path] The direct fusion loop (aligned with the canndev isDav3510 branch).
 Status RunDirectPath(GraphPtr& graph, CustomPassContext& passContext)
 {
-    std::vector<GNode> matmulNodes = GetMatmulNodes(graph);
+    std::vector<GNode> matmulNodes = GetMatmulNodes(graph, true);
     FUSION_PASS_CHECK(matmulNodes.empty(), OPS_LOG_D(kPassName, "No matmul node found, exit."),
                       return GRAPH_NOT_CHANGED);
 
@@ -1268,7 +1323,7 @@ void ResolvePostOpNodes(const GNode& matmulNode, GNodePtr& reluNode, GNodePtr& q
 // [s8s4 PostCube path] The postcube fusion loop (aligned with the canndev s8s4 branch).
 Status RunPostCubePath(GraphPtr& graph, CustomPassContext& passContext)
 {
-    std::vector<GNode> matmulNodes = GetMatmulNodes(graph);
+    std::vector<GNode> matmulNodes = GetMatmulNodes(graph, false);
     FUSION_PASS_CHECK(matmulNodes.empty(), OPS_LOG_D(kPassName, "No matmul node found, exit."),
                       return GRAPH_NOT_CHANGED);
 
@@ -1346,18 +1401,25 @@ Status FusedMatMulFusionPass::Run(GraphPtr& graph, CustomPassContext& passContex
     // (the Ascend950 ini has no arch_type at all, which blocked the real 950 device); the common
     // IsNpuArch3510Series matches short_soc_version against the 3510-series soc list instead.
     const bool is3510Dbg = IsNpuArch3510Series();
+    const bool isA2A3Dbg = IsA2A3DirectPlatform();
     const bool isS8s4Dbg = IsS8s4MmadPlatform();
-    OPS_LOG_D(kPassName, "Platform dispatch: isDav3510=%d, isS8s4Mmad=%d.", is3510Dbg ? 1 : 0, isS8s4Dbg ? 1 : 0);
+    OPS_LOG_D(kPassName, "Platform dispatch: isDav3510=%d, isA2A3=%d, isS8s4Mmad=%d.", is3510Dbg ? 1 : 0,
+              isA2A3Dbg ? 1 : 0, isS8s4Dbg ? 1 : 0);
+    // DAV_3510 always uses the direct MatMul+Relu path.
     if (is3510Dbg) {
         return RunDirectPath(graph, passContext);
     }
-
-    // s8s4 mmad: the post op chain is folded via the PostCube utils.
+    // 910B with s8s4 mmad keeps the PostCube/FixPipe chain (quant/relu). Check this
+    // before A2/A3: short_soc Ascend910B is also an A2 chip.
     if (isS8s4Dbg) {
         return RunPostCubePath(graph, passContext);
     }
+    // A2/A3 without s8s4 fold MatMul+Relu into FusedMatMul on FixPipe.
+    if (isA2A3Dbg) {
+        return RunDirectPath(graph, passContext);
+    }
 
-    OPS_LOG_D(kPassName, "Platform is neither DAV_3510 nor s8s4 mmad, skip fusion.");
+    OPS_LOG_D(kPassName, "Platform is neither DAV_3510, A2/A3, nor s8s4 mmad, skip fusion.");
     return GRAPH_NOT_CHANGED;
 }
 
