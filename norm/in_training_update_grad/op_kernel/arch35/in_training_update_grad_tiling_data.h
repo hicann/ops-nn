@@ -50,17 +50,20 @@ struct InTrainingUpdateGradFullLoadTilingData {
 };
 
 // Stream (TilingKey 200000): R*C0 exceeds UB; accumulate per D-slice in row chunks.
+// 结构体必须 <= 框架分配的最大 tiling 容量(register default 的 FullLoad 结构 + 8B tiling key = 48B):
+// 因此 dPerSplit / splitNum / perCoreTasks / c0Aligned 均由 kernel 从 numD/groupNum/usedCoreNum/numC0
+// 推导, 只下发 dSplits 与 dBatch 两个新增量。
 struct InTrainingUpdateGradStreamTilingData {
     uint32_t numC1;
     uint32_t numD;
     uint32_t numHW;    // H * W
     uint32_t numC0;    // 16
-    uint32_t reduceR;  // D * H * W
     uint32_t groupNum; // N * C1
     uint32_t usedCoreNum;
-    uint32_t perCoreGroups;
     uint32_t blockLenElem;   // H * W * C0
-    uint32_t streamTileRows; // rows (in H*W units) processed per chunk inside a D-slice
+    uint32_t streamTileRows; // rows that fit one dy/x UB chunk (>= numHW when the row path is used)
+    uint32_t dSplits;        // D 方向切分数（每个 group 由 dSplits 个核分摊）
+    uint32_t dBatch;         // 单条 strided DMA 聚合的 D 切片数（0 表示走逐 d 行块路径）
     float epsilon;
 };
 

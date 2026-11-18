@@ -430,11 +430,10 @@ bool InTrainingUpdateGradStreamTiling::IsCapable() { return reduceR_ > 0; }
 
 ge::graphStatus InTrainingUpdateGradStreamTiling::DoOpTiling()
 {
-    int64_t perCoreGroups = Ops::Base::CeilDiv(groupNum_, static_cast<int64_t>(aicoreParams_.blockDim));
-    if (perCoreGroups < 1) {
-        perCoreGroups = 1;
+    int64_t aivNum = static_cast<int64_t>(aicoreParams_.blockDim);
+    if (aivNum < 1) {
+        aivNum = 1;
     }
-    blockNum_ = Ops::Base::CeilDiv(groupNum_, perCoreGroups);
 
     int64_t elemSize = (dyDataType_ == ge::DT_FLOAT16) ? FP16_BYTE : FP32_BYTE;
     int64_t regPad = vectorLength_;
@@ -442,32 +441,87 @@ ge::graphStatus InTrainingUpdateGradStreamTiling::DoOpTiling()
     // scalar buffers must be accounted at their aligned length. dy/x chunks stay aligned (rows are
     // 32B-strided, regPad is a 32B multiple) and keep the register-pad reservation below.
     int64_t scalarBuf = CeilAlign32(numC0_ * FP32_BYTE + regPad);
-    int64_t overhead = 2 * scalarBuf +                 // variance + mean
-                       DOUBLE_BUFFER * scalarBuf * 2 + // res_gamma + res_beta (reloaded)
-                       scalarBuf +                     // rstd (full-register reload, padded)
-                       2 * scalarBuf +                 // Kahan cGamma + cBeta (reloaded, padded)
+    int64_t wspBuf = CeilAlign32(4 * CeilAlign32(numC0_ * FP32_BYTE) + regPad); // D-split partial 读入缓冲
+    int64_t overhead = 2 * scalarBuf +                                          // variance + mean
+                       DOUBLE_BUFFER * scalarBuf * 2 +                          // res_gamma + res_beta (reloaded)
+                       scalarBuf +                                              // rstd (full-register reload, padded)
+                       DOUBLE_BUFFER * scalarBuf * 2 + // Kahan cGamma + cBeta (VECOUT 双缓冲队列)
+                       wspBuf +                        // partial 读入队列(始终分配)
                        DOUBLE_BUFFER * regPad * 2;     // register pad reserved for dy + x
     int64_t avail = static_cast<int64_t>(aicoreParams_.ubSize) - overhead;
     // Padded row footprint: rows are stored at a 32B-aligned stride even when C0*elemSize is not.
     int64_t perRowBytes = CeilAlign32(numC0_ * elemSize);
-    int64_t streamTileRows = avail / (DOUBLE_BUFFER * perRowBytes * 2);
-    if (streamTileRows < 1) {
-        streamTileRows = 1;
+    int64_t rawTileRows = avail / (DOUBLE_BUFFER * perRowBytes * 2);
+    if (rawTileRows < 1) {
+        rawTileRows = 1;
     }
-    if (streamTileRows > numHW_) {
-        streamTileRows = numHW_;
+    // streamTileRows 直接下发 rawTileRows(不按 numHW 夹取): kernel 用它同时给 dy/x chunk 缓冲定尺寸,
+    // 而聚合路径一次要放 dBatch 个 D 切片 = dBatch*numHW 行, 可能远大于 numHW。行块路径里
+    // loops = ceil(numHW/streamTileRows), rawTileRows >= numHW 时 loops == 1, rows == numHW,
+    // 行为与"夹到 numHW"一致。
+    int64_t streamTileRows = rawTileRows;
+
+    // D 方向聚合 DMA: 一个 UB chunk 能放下整数个 D 切片时, 用一条 strided 描述符批量搬
+    // dBatch 个切片(full_load 的整组聚合写法), 把"逐 d 两次 32B DMA"的指令条数从 numD 降到
+    // numD/dBatch。C0*elemSize 非 32B 对齐时(c0Stride != C0)退回逐 d 行块路径。
+    int64_t c0Stride = CeilAlign32(numC0_ * elemSize) / elemSize;
+    int64_t dBatch = 0;
+    if (c0Stride == numC0_) {
+        dBatch = rawTileRows / numHW_; // numHW_ > 0 (reduceR_ > 0)
+        if (dBatch > static_cast<int64_t>(MAX_BLOCK_COUNT)) {
+            dBatch = MAX_BLOCK_COUNT; // DataCopyExtParams.blockCount is uint16
+        }
+        if (dBatch > numD_) {
+            dBatch = numD_;
+        }
+        if (dBatch < 1) {
+            dBatch = 0; // 单个切片都放不进 UB -> 行块路径
+        }
+        // 聚合 DMA 的 srcStride 是 uint32 字节数: (numC1-1)*blockLenElem*elemSize 必须放得下,
+        // 否则回绕成小值会让 DMA 按错误的片间隔取数(静默读错). 与 FullLoad IsCapable 同一契约:
+        // 溢出时退回逐 d 行块路径(该路径不使用 srcStride)。
+        if (dBatch > 0 && numC1_ > 1) {
+            const int64_t blockBytes = blockLenElem_ * elemSize;
+            if (blockBytes <= 0 || blockBytes > UINT32_LIMIT || (numC1_ - 1) > UINT32_LIMIT / blockBytes) {
+                dBatch = 0;
+            }
+        }
     }
+
+    // 并行: group 数不足核数时把 D 切成多份, 每份一个任务; dSplits == 1 时沿用 group 并行
+    // (此时 splitNum = groupNum, 每核 perCoreTasks 个 group, 与旧实现一致)。
+    int64_t dSplits = 1;
+    if (groupNum_ < aivNum) {
+        dSplits = aivNum / groupNum_;
+        if (dSplits > numD_) {
+            dSplits = numD_;
+        }
+        if (dSplits < 1) {
+            dSplits = 1;
+        }
+    }
+    int64_t splitNum = groupNum_ * dSplits;
+    int64_t perCoreTasks = Ops::Base::CeilDiv(splitNum, aivNum);
+    if (perCoreTasks < 1) {
+        perCoreTasks = 1;
+    }
+    blockNum_ = Ops::Base::CeilDiv(splitNum, perCoreTasks);
+
+    int64_t dPerSplit = Ops::Base::CeilDiv(numD_, dSplits);
+    // partial: 每任务 4 段(sum/comp x gamma/beta) x C0 floats
+    wsBytes_ = (dSplits > 1) ? static_cast<uint64_t>(splitNum) * 4 * numC0_ * FP32_BYTE : 0;
+    (void)dPerSplit; // kernel 侧按 ceil(numD/dSplits) 现算, 不下发(结构体容量受限)
 
     td_.numC1 = static_cast<uint32_t>(numC1_);
     td_.numD = static_cast<uint32_t>(numD_);
     td_.numHW = static_cast<uint32_t>(numHW_);
     td_.numC0 = static_cast<uint32_t>(numC0_);
-    td_.reduceR = static_cast<uint32_t>(reduceR_);
     td_.groupNum = static_cast<uint32_t>(groupNum_);
     td_.usedCoreNum = static_cast<uint32_t>(blockNum_);
-    td_.perCoreGroups = static_cast<uint32_t>(perCoreGroups);
     td_.blockLenElem = static_cast<uint32_t>(blockLenElem_);
     td_.streamTileRows = static_cast<uint32_t>(streamTileRows);
+    td_.dSplits = static_cast<uint32_t>(dSplits);
+    td_.dBatch = static_cast<uint32_t>(dBatch);
     td_.epsilon = epsilon_;
     return ge::GRAPH_SUCCESS;
 }
@@ -479,7 +533,7 @@ ge::graphStatus InTrainingUpdateGradStreamTiling::PostTiling()
     context_->SetBlockDim(blockNum_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = workspaceSize_;
+    currentWorkspace[0] = workspaceSize_ + static_cast<size_t>(wsBytes_);
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(sizeof(td_) > rawTilingData->GetCapacity(),
                 OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",

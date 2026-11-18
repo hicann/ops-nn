@@ -125,6 +125,7 @@ protected:
 
 private:
     int64_t blockNum_{1};
+    uint64_t wsBytes_{0}; // D-split partial workspace (bytes), 0 when dSplits == 1
     InTrainingUpdateGradStreamTilingData td_;
 };
 

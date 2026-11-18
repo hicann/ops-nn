@@ -283,5 +283,66 @@ __aicore__ inline void AccumulateGroupC0(__local_mem__ T* dyUb, __local_mem__ T*
         DataCopy(cBetaUb, cBeta, preg);
     }
 }
+
+// Kahan-combine one (sum, comp) partial pair into another resident (sum, comp) pair:
+//   acc += xComp; acc += xSum     (小量先加, 减少大数吃小数)
+// Used by the Stream D-split path: each core writes its (sum, comp) to workspace, and after
+// SyncAll the head core folds `dSplits` partials with the same compensated-summation rule as the
+// in-core loop, so splitting D does not degrade accuracy to a naive fp32 reduction.
+// initAcc == true starts from 0 (first partial); otherwise the resident acc/comp are re-read.
+// Both partial arrays must start at 32B-aligned UB addresses (register loads fetch 256B).
+__aicore__ inline void KahanAddPartialC0(__local_mem__ float* accSumUb, __local_mem__ float* accCompUb,
+                                         __local_mem__ float* xSumUb, __local_mem__ float* xCompUb, uint32_t c0,
+                                         bool initAcc)
+{
+    __VEC_SCOPE__
+    {
+        RegTensor<float> accSum;
+        RegTensor<float> accComp;
+        RegTensor<float> xSum;
+        RegTensor<float> xComp;
+        RegTensor<float> yReg;
+        RegTensor<float> tReg;
+        RegTensor<float> dReg;
+        RegTensor<float> zeroReg;
+        MaskReg finiteMask;
+        uint32_t sregC0 = c0;
+        MaskReg preg = UpdateMask<float>(sregC0);
+        Duplicate(zeroReg, 0.0f, preg);
+        DataCopy(xSum, xSumUb);
+        DataCopy(xComp, xCompUb);
+        if (initAcc) {
+            Duplicate(accSum, 0.0f, preg);
+            Duplicate(accComp, 0.0f, preg);
+        } else {
+            DataCopy(accSum, accSumUb);
+            DataCopy(accComp, accCompUb);
+        }
+        // 约定与 AccumulateGroupC0 一致(y = term - c): 一个 (sum, comp) 对代表的准确值是
+        // sum - comp, 因此折叠分片时要把 -xComp 作为小量加入, 而不是 +xComp。
+        // 补偿先入: 其量级通常小于部分和, 先加可避免被大数截断。
+        Muls(yReg, xComp, float(-1.0), preg); // y = -xComp
+        Sub(yReg, yReg, accComp, preg);       // y = -xComp - accComp
+        Add(tReg, accSum, yReg, preg);
+        Sub(dReg, tReg, accSum, preg);
+        Sub(accComp, dReg, yReg, preg);
+        Move(accSum, tReg, preg);
+        // 非有限补偿守卫(同 AccumulateGroupC0): inf/nan 输入时 (t-sum)-y 会产生 nan/±inf,
+        // ±inf 补偿会让下一轮变成 ∓inf、sum 变 nan; 用 (c-c)==0 判有限并清 0, 保持 sum 为 ±inf。
+        Sub(dReg, accComp, accComp, preg);
+        CompareScalar(finiteMask, dReg, RSTD_ZERO, preg);
+        Select(accComp, accComp, zeroReg, finiteMask);
+        Sub(yReg, xSum, accComp, preg); // y = xSum - accComp
+        Add(tReg, accSum, yReg, preg);
+        Sub(dReg, tReg, accSum, preg);
+        Sub(accComp, dReg, yReg, preg);
+        Move(accSum, tReg, preg);
+        Sub(dReg, accComp, accComp, preg);
+        CompareScalar(finiteMask, dReg, RSTD_ZERO, preg);
+        Select(accComp, accComp, zeroReg, finiteMask);
+        DataCopy(accSumUb, accSum, preg);
+        DataCopy(accCompUb, accComp, preg);
+    }
+}
 } // namespace InTrainingUpdateGrad
 #endif // IN_TRAINING_UPDATE_GRAD_COMMON_H_

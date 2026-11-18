@@ -42,7 +42,7 @@ extern "C" __global__ __aicore__ void in_training_update_grad(GM_ADDR dy, GM_ADD
     } else if (TILING_KEY_IS(IN_UG_TILING_KEY_STREAM)) {
         GET_TILING_DATA_WITH_STRUCT(InTrainingUpdateGradStreamTilingData, tilingData, tiling);
         InTrainingUpdateGradStream<DTYPE_DY> op(&tilingData);
-        op.Init(dy, x, variance, mean, res_gamma, res_beta);
+        op.Init(dy, x, variance, mean, res_gamma, res_beta, workspace);
         op.Process();
     } else if (TILING_KEY_IS(IN_UG_TILING_KEY_REDUCE_EMPTY)) {
         GET_TILING_DATA_WITH_STRUCT(InTrainingUpdateGradReduceEmptyTilingData, tilingData, tiling);
