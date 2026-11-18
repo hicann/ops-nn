@@ -386,7 +386,7 @@ uint64_t MatMulV3TilingHelper::SelectSplitKBase(const gert::TilingContext* conte
         return std::max(splitKBaseList[1], baseK);
     }
     // splitKBase 候选取值列表（升序）。阈值统一由 3*前一个base^2 推导。
-    static const int splitKBaseCount = (int)(sizeof(splitKBaseList) / sizeof(splitKBaseList[0]));
+    static const int splitKBaseCount = static_cast<int>(sizeof(splitKBaseList) / sizeof(splitKBaseList[0]));
     for (int i = 0; i < splitKBaseCount - 1; ++i) {
         uint64_t threshold = FP32_SPLIT_K_BASE_FACTOR * splitKBaseList[i] * splitKBaseList[i];
         if (kValue < threshold) {

@@ -57,7 +57,6 @@
 #include "cube_utils/cube_common.h"
 #include "cube_utils/cube_utils.h"
 #include "es_nn_ops.h"
-#include "ge/compliant_node_builder.h"
 #include "ge/es_graph_builder.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "platform/platform_info.h"
@@ -552,8 +551,7 @@ bool GetDirectReluNode(const GNode& matmulNode, GNodePtr& reluNode)
 }
 
 // [DAV_3510 direct path] Replace {matmul + Relu} with a single FusedMatMul node.
-Status ReplaceDirectWithFusedMatMul(GraphPtr& graph, GNode& matmulNode, const GNodePtr& reluNode,
-                                    CustomPassContext& passContext)
+Status ReplaceDirectWithFusedMatMul(GNode& matmulNode, const GNodePtr& reluNode, CustomPassContext& passContext)
 {
     bool transX1 = false;
     bool transX2 = false;
@@ -650,7 +648,7 @@ Status RunDirectPath(GraphPtr& graph, CustomPassContext& passContext)
             continue;
         }
 
-        Status replaceRes = ReplaceDirectWithFusedMatMul(graph, matmulNode, reluNode, passContext);
+        Status replaceRes = ReplaceDirectWithFusedMatMul(matmulNode, reluNode, passContext);
         if (replaceRes == FAILED) {
             OPS_LOG_E(kPassName, "Direct fusion failed.");
             return FAILED;

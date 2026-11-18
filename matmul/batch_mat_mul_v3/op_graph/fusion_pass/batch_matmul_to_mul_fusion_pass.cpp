@@ -185,6 +185,25 @@ bool IsBatchEqual(const std::vector<int64_t>& batchDimForX1, const std::vector<i
     return true;
 }
 
+uint64_t SaturatingMul(uint64_t lhs, uint64_t rhs)
+{
+    if (lhs == 0UL || rhs == 0UL) {
+        return 0UL;
+    }
+    if (lhs > UINT64_MAX / rhs) {
+        return UINT64_MAX;
+    }
+    return lhs * rhs;
+}
+
+uint64_t SaturatingAdd(uint64_t lhs, uint64_t rhs)
+{
+    if (lhs > UINT64_MAX - rhs) {
+        return UINT64_MAX;
+    }
+    return lhs + rhs;
+}
+
 bool CheckSocNeedBatchMatMulToMulDav3510(const PlatformInfo& platformInfo, const BatchMatMulToMulArgs& args,
                                          DataType x1Dtype, DataType x2Dtype, DataType outDtype,
                                          const std::vector<int64_t>& shapeX1, const std::vector<int64_t>& shapeX2)
@@ -206,11 +225,17 @@ bool CheckSocNeedBatchMatMulToMulDav3510(const PlatformInfo& platformInfo, const
     uint64_t alignNValue = ops::CeilAlign(args.n, kBlockSize);
     uint64_t dtypeSizeU = static_cast<uint64_t>(dtypeSize);
     uint64_t floatSize = static_cast<uint64_t>(kFloatSize);
-    bool lessThanL0a = alignMValue * alignKaValue * dtypeSizeU * kPingpong <= platformInfo.ai_core_spec.l0_a_size;
-    bool lessThanL0b = alignKbValue * alignNValue * dtypeSizeU * kPingpong <= platformInfo.ai_core_spec.l0_b_size;
-    bool lessThanL0c = alignMValue * alignNValue * floatSize * kPingpong <= platformInfo.ai_core_spec.l0_c_size;
-    bool lessThanL1 = (alignMValue * alignKaValue + alignKbValue * alignNValue) * dtypeSizeU * kPingpong <=
-                      platformInfo.ai_core_spec.l1_size;
+    uint64_t l0aBytes = SaturatingMul(SaturatingMul(SaturatingMul(alignMValue, alignKaValue), dtypeSizeU), kPingpong);
+    uint64_t l0bBytes = SaturatingMul(SaturatingMul(SaturatingMul(alignKbValue, alignNValue), dtypeSizeU), kPingpong);
+    uint64_t l0cBytes = SaturatingMul(SaturatingMul(SaturatingMul(alignMValue, alignNValue), floatSize), kPingpong);
+    uint64_t l1Bytes = SaturatingMul(
+        SaturatingMul(SaturatingAdd(SaturatingMul(alignMValue, alignKaValue), SaturatingMul(alignKbValue, alignNValue)),
+                      dtypeSizeU),
+        kPingpong);
+    bool lessThanL0a = l0aBytes <= platformInfo.ai_core_spec.l0_a_size;
+    bool lessThanL0b = l0bBytes <= platformInfo.ai_core_spec.l0_b_size;
+    bool lessThanL0c = l0cBytes <= platformInfo.ai_core_spec.l0_c_size;
+    bool lessThanL1 = l1Bytes <= platformInfo.ai_core_spec.l1_size;
     bool fitIterBatch = batchEqual && batchLargerThanAicnum && lessThanL0a && lessThanL0b && lessThanL0c && lessThanL1;
     uint64_t batchNum = GetBatchDimAll(shapeX1);
     bool fitBatchMatMulToMul = CheckShapeEqualToMul(platformInfo, args.m, args.n, batchNum, dtypeSize);

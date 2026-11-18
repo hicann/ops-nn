@@ -17,6 +17,7 @@
 
 #include "log/log.h"
 #include "error_util.h"
+#include "exe_graph/runtime/tiling_context.h"
 
 namespace optiling {
 namespace fused_matmul {

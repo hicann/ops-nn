@@ -220,7 +220,7 @@ ge::graphStatus TQBMMGetShape(const gert::TilingContext& context, MatMulV3Args& 
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3Args& args, bool isHIFP8, bool isHIFP4)
+ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3Args& args, bool isHIFP8)
 {
     auto scaleX1Desc = context.GetOptionalInputDesc(SCALE_X1_IDX);
     auto scaleX2Desc = context.GetOptionalInputDesc(SCALE_X2_IDX);
@@ -304,7 +304,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::GetArgs()
     if (IsValidFormat(args_, isMXFP8_, isHIFP8_) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    return IsValidDtype(*context_, args_, isHIFP8_, isHIFP4_);
+    return IsValidDtype(*context_, args_, isHIFP8_);
 }
 
 bool TransposeQuantBatchMatMulTiling::CheckMxScaleDim(const size_t scaleDimNum, const char* scaleName) const

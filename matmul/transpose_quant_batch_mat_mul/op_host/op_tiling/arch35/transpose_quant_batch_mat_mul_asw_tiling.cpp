@@ -343,7 +343,8 @@ void TransposeQuantBatchMatMulAswTiling::ApplyQbmmMxTailWindow(const QuantBatchM
         uint64_t secSplitValid = 1UL;
         uint64_t preSplitAlignValid = 1UL;
         uint64_t secSplitAlignValid = 1UL;
-        const auto canIncreaseTailSplit = [&](bool isPreSplit) -> bool {
+        const auto canIncreaseTailSplit = [&preSplit, &secSplit, isPreSplitM, preSplitMax, secSplitMax, tailWinBlockCnt,
+                                           aicNum](bool isPreSplit) -> bool {
             const uint64_t nextPreSplit = isPreSplit ? preSplit + 1UL : preSplit;
             const uint64_t nextSecSplit = isPreSplit ? secSplit : secSplit + 1UL;
             const uint64_t mTile = isPreSplitM ? nextPreSplit : nextSecSplit;
@@ -351,7 +352,8 @@ void TransposeQuantBatchMatMulAswTiling::ApplyQbmmMxTailWindow(const QuantBatchM
             return (isPreSplit ? preSplit : secSplit) < (isPreSplit ? preSplitMax : secSplitMax) &&
                    mTile * nTile * tailWinBlockCnt <= aicNum;
         };
-        const auto getTailSplitState = [&](bool isPreSplit, uint64_t split) -> uint64_t {
+        const auto getTailSplitState = [this, isPreSplitM, mTail, nTail, baseN, totalWinCnt, mTailSplitSize,
+                                        nTailSplitSize](bool isPreSplit, uint64_t split) -> uint64_t {
             const bool isMSplit = isPreSplit == isPreSplitM;
             const bool needWeightNzCheck = args_.bFormat == ge::FORMAT_FRACTAL_NZ && !isMSplit;
             if (needWeightNzCheck) {
