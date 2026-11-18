@@ -21,6 +21,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn_leaky_relu_backward.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -55,7 +56,7 @@ static inline bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* se
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
@@ -65,7 +66,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 static const std::initializer_list<DataType>& GetScalarSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_SCALAR_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_SCALAR_DTYPE_SUPPORT_LIST;

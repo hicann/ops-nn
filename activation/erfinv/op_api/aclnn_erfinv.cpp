@@ -16,6 +16,7 @@
 #include "opdev/make_op_executor.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -41,7 +42,7 @@ static const std::initializer_list<DataType> ASCEND910B_INPLACE_DTYPE_SUPPORT_LI
 static const std::initializer_list<DataType> GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     return ASCEND_DTYPE_SUPPORT_LIST;
@@ -50,7 +51,7 @@ static const std::initializer_list<DataType> GetDtypeSupportList()
 static const std::initializer_list<DataType> GetInplaceDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_INPLACE_DTYPE_SUPPORT_LIST;
     }
     return ASCEND_INPLACE_DTYPE_SUPPORT_LIST;

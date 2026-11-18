@@ -15,6 +15,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 namespace l0op {
@@ -30,7 +31,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT
 static bool IsAiCoreSupport(const aclTensor* self)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
     }
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);

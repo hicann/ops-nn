@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class GeGluV2 : public OpDef {
@@ -46,10 +47,9 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "ge_glu_v2_apt");
-        this->AICore().AddConfig("ascend950", config91095);
-        this->AICore().AddConfig("ascend350", config91095);
-        this->AICore().AddConfig("ascend960dt", config91095);
-        this->AICore().AddConfig("ascend960pr", config91095);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, config91095);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, config91095);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, config91095);
 
         OpAICoreConfig config310p;
         config310p.DynamicCompileStaticFlag(true)

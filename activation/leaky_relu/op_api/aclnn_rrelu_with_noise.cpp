@@ -36,6 +36,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -70,7 +71,7 @@ static const std::initializer_list<op::DataType> SCALAR_DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_DTYPE_SUPPORT_LIST;
@@ -158,7 +159,7 @@ static aclnnStatus GenerateUniformRandom(const aclTensor* selfReshapeOut, const 
                                          const aclTensor** computeOut, aclOpExecutor* executor)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201) {
+    if (curArch == Ops::Base::DAV_2201) {
         auto inputShape = op::ToShapeVector(selfReshapeOut->GetViewShape());
         auto inputShapeArray = executor->AllocIntArray(inputShape.data(), inputShape.size());
         CHECK_RET(inputShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);

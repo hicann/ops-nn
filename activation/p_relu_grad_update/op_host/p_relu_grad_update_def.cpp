@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class PReluGradUpdate : public OpDef {
@@ -59,9 +60,8 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opInterface.value", "prelu_grad_update")
             .ExtendCfgInfo("opFile.value", "p_relu_grad_update_apt");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-        this->AICore().AddConfig("ascend350", aicoreConfig);
-        this->AICore().AddConfig("ascend960dt", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicoreConfig);
     }
 };
 OP_ADD(PReluGradUpdate); // 添加算子信息库

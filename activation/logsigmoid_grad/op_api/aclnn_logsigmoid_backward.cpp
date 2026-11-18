@@ -32,6 +32,7 @@
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -57,7 +58,7 @@ static bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* self, con
 static inline const std::initializer_list<op::DataType>& GetInputDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return BF16_DTYPE_SUPPORT_LIST;
     } else {
         return DTYPE_SUPPORT_LIST;
@@ -67,7 +68,7 @@ static inline const std::initializer_list<op::DataType>& GetInputDtypeSupportLis
 static inline const std::initializer_list<op::DataType>& GetOutputDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return BF16_DTYPE_SUPPORT_LIST;
     } else {
         return DTYPE_SUPPORT_LIST;

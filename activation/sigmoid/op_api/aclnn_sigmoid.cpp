@@ -21,6 +21,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -43,7 +44,7 @@ static const std::initializer_list<DataType> ASCEND910_OUTPUT_DTYPE_SUPPORT_LIST
 static const std::initializer_list<DataType>& GetSelfRefDtypeList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return DTYPE_OUT_LIST;
     } else {
         return ASCEND910_OUTPUT_DTYPE_SUPPORT_LIST;
@@ -62,7 +63,7 @@ static bool CheckInplaceDtypeValid(const aclTensor* selfRef)
 inline static bool CheckSocVersionIsSupportBf16(void)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    return curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
+    return curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch);
 }
 
 inline static bool CheckNotNull(const aclTensor* self, const aclTensor* out)

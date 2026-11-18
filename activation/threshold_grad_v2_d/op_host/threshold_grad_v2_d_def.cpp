@@ -16,6 +16,7 @@
  *        属性 threshold(Float)。backprops = features>threshold ? gradients : 0
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class ThresholdGradV2D : public OpDef {
@@ -55,9 +56,8 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "threshold_grad_v2_d");
-        this->AICore().AddConfig("ascend950", aiCoreConfig);
-        this->AICore().AddConfig("ascend350", aiCoreConfig);
-        this->AICore().AddConfig("ascend960dt", aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aiCoreConfig);
     }
 };
 OP_ADD(ThresholdGradV2D);

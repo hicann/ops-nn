@@ -19,6 +19,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -32,7 +33,7 @@ static const std::initializer_list<DataType> NULL_SUPPORT_LIST = {};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (Ops::NN::AclnnUtil::IsRegbase() || GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    if (Ops::NN::AclnnUtil::IsRegbase() || GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201) {
         return DTYPE_SUPPORT_LIST_WITH_BF16;
     } else {
         return NULL_SUPPORT_LIST;

@@ -13,6 +13,7 @@
  * \brief
  */
 #include "ge_glu_v2_tiling.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
@@ -444,7 +445,7 @@ static ge::graphStatus TilingPrepare4GeGluV2(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_LOGD(context, "Tiling totalCoreNum: %d", compileInfo->totalCoreNum);
-    if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002) {
+    if (ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_2002) {
         compileInfo->totalCoreNum = compileInfo->totalCoreNum + ascendcPlatform.GetCoreNumVector();
     }
     OP_LOGD(context, "Tiling totalCoreNum: %d", compileInfo->totalCoreNum);
@@ -470,7 +471,7 @@ static ge::graphStatus TilingPrepare4GeGluV2(gert::TilingParseContext* context)
         return ge::GRAPH_FAILED;
     };
 
-    compileInfo->isAscend310P = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_2002;
+    compileInfo->isAscend310P = ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_2002;
     compileInfo->isRegbase = IsRegbaseSocVersion(context);
     OP_LOGD(context, "TilingPrepare4GeGluV2 exit. coreNum: %d ubSize: %lu", compileInfo->totalCoreNum,
             compileInfo->ubSizePlatForm);

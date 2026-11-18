@@ -15,6 +15,7 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_GE_GLU_GRAD_V2_TILING_H_
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_GE_GLU_GRAD_V2_TILING_H_
 #include "register/tilingdata_base.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "op_host/tiling_base.h"
 
@@ -38,7 +39,7 @@ REGISTER_TILING_DATA_CLASS(GeGluGradV2, GeGluGradV2TilingData)
 struct GeGluGradV2CompileInfo {
     int32_t totalCoreNum = 0;
     uint64_t ubSizePlatForm = 0;
-    NpuArch curSocVersion = NpuArch::DAV_2201;
+    NpuArch curSocVersion = Ops::Base::DAV_2201;
     bool isRegbase{false};
 };
 

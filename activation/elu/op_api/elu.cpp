@@ -19,6 +19,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -33,7 +34,7 @@ static const std::initializer_list<DataType> AICORE_DTYPE_SUPPORT_LIST_WITH_BF16
 // 根据芯片类型、dtype判断算子是否支持走aicore
 static inline bool IsAiCoreSupport(const aclTensor* self)
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST_WITH_BF16);
     }
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);

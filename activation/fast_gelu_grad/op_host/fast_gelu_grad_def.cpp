@@ -9,6 +9,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class FastGeluGrad : public OpDef {
@@ -37,10 +38,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "fast_gelu_grad_apt");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-        this->AICore().AddConfig("ascend350", aicoreConfig);
-        this->AICore().AddConfig("ascend960dt", aicoreConfig);
-        this->AICore().AddConfig("ascend960pr", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicoreConfig);
     }
 };
 

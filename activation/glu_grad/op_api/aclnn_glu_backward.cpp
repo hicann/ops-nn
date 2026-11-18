@@ -29,6 +29,7 @@
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -99,7 +100,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND950_DTYPE_SUPPORT_LIST;
-    } else if (curArch == NpuArch::DAV_2201) {
+    } else if (curArch == Ops::Base::DAV_2201) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;

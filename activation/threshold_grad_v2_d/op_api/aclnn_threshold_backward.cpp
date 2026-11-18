@@ -25,6 +25,7 @@
 #include "opdev/make_op_executor.h"
 #include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -55,7 +56,7 @@ static bool CheckPtrValid(const aclTensor* gradOutput, const aclTensor* self)
 static const std::initializer_list<DataType>& GetDtypeSupportList(float thresholdVal)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         if (Ops::NN::AclnnUtil::IsRegbase(curArch) && thresholdVal == 0.0f) {
             // relugrad 支持int64
             return REGBASE_DTYPE_DTYPE_SUPPORT_LIST;

@@ -13,6 +13,7 @@
  * \brief
  */
 #include <map>
+#include "op_common/op_host/util/op_const_def.h"
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
@@ -264,7 +265,7 @@ ge::graphStatus GeGluGradV2Tiling::Init()
     dimAttr = *ptrDim;
     const int64_t* ptrApproximate = attrs->GetAttrPointer<int64_t>(APPROXIMATE_ATTR_INDEX);
     // 310P donot support bfloat16 and erf mode
-    const bool is310p = ptrCompileInfo->curSocVersion == NpuArch::DAV_2002;
+    const bool is310p = ptrCompileInfo->curSocVersion == Ops::Base::DAV_2002;
     if (ptrApproximate == nullptr) {
         const std::string msgOpName = std::string(
             ((tilingContext) == nullptr || (tilingContext)->GetNodeName() == nullptr ? "ge_glu_grad_v2" :
@@ -320,7 +321,7 @@ ge::graphStatus GeGluGradV2Tiling::CheckParams()
                 return ge::GRAPH_FAILED);
 
     // 310P donot support bfloat16 and erf mode
-    const bool is310p = ptrCompileInfo->curSocVersion == NpuArch::DAV_2002;
+    const bool is310p = ptrCompileInfo->curSocVersion == Ops::Base::DAV_2002;
     OP_CHECK_IF(dyDtype == ge::DT_BF16 && is310p,
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "dy",
                                                       ge::TypeUtils::DataTypeToSerialString(dyDtype),
@@ -450,7 +451,7 @@ void GeGluGradV2Tiling::ProcessTilingCore()
     int64_t maxPerfCount = maxProcCount / repeatDataCount;
     // Pack/transpose has a fixed setup cost. On regbase, require at least two waves of
     // rows before paying that cost; tiny N is better served by the direct path.
-    bool usePerfPath = (ptrCompileInfo->curSocVersion == NpuArch::DAV_2201 || ptrCompileInfo->isRegbase) &&
+    bool usePerfPath = (ptrCompileInfo->curSocVersion == Ops::Base::DAV_2201 || ptrCompileInfo->isRegbase) &&
                        valueM <= maxPerfCount;
     if (ptrCompileInfo->isRegbase && valueN < static_cast<int64_t>(ptrCompileInfo->totalCoreNum) * NUM_TWO) {
         usePerfPath = false;

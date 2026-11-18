@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -40,7 +41,7 @@ static const std::initializer_list<DataType> DTYPE_DTYPE_SUPPORT_LIST = {DataTyp
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
         return DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16;
     } else {
         return DTYPE_DTYPE_SUPPORT_LIST;

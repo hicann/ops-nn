@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 static const std::vector<ge::DataType> erfinvDataType = {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT};
@@ -43,9 +44,8 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "erfinv_apt");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-        this->AICore().AddConfig("ascend350", aicoreConfig);
-        this->AICore().AddConfig("ascend960dt", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicoreConfig);
     }
 };
 

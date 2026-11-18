@@ -17,6 +17,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -25,7 +26,7 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_
 
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
-    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase();
+    return GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase();
 }
 
 static bool CheckNotNull(const aclTensor* self, const aclTensor* out)

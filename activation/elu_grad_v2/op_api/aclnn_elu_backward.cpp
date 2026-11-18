@@ -23,6 +23,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -58,7 +59,7 @@ static inline bool CheckDtypeValid(const aclTensor* gradOutput, const aclScalar*
     OP_CHECK_DTYPE_NOT_SAME(gradOutput, selfOrResult, return false);
 
     // 获取芯片类型
-    bool isSupportBf16 = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+    bool isSupportBf16 = (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201 ||
                           Ops::NN::AclnnUtil::IsRegbase());
     const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_CURRENT = isSupportBf16 ? DTYPE_SUPPORT_LIST_WITH_BF16 :
                                                                                        DTYPE_SUPPORT_LIST;
