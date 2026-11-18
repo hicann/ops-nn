@@ -69,6 +69,7 @@ static int32_t GenInt32Idx(vector<int64_t> shape, Tensor& t, TensorDesc& desc, i
 int CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Operator>& outputs, Graph& graph)
 {
     auto op1 = op::InplaceIndexFill("InplaceIndexFill1");
+    op1.set_attr_dim(0);
     vector<int64_t> xShape = {4, 5};
     vector<int64_t> idxShape = {3};
     vector<int64_t> valShape = {3, 5}; // value.shape与x.shape在dim轴外一致，dim轴为indices长度
@@ -80,7 +81,7 @@ int CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Ope
     Tensor tX;
     GenFloatOnes(xShape, tX, descX, 1.0f);
     dX.update_input_desc_x(descX);
-    dX.update_output_desc_x(descX);
+    dX.update_output_desc_y(descX);
     input.push_back(tX);
     graph.AddOp(dX);
     inputs.push_back(dX);
