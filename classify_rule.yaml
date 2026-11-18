@@ -1209,11 +1209,8 @@ matmul@ops-nn:
   src:
     release:
       style:
-        - ops/ops-nn/matmul/batch_mat_mul_v3/op_graph/
-        - ops/ops-nn/matmul/batch_mat_mul_v3/op_host/op_api/
         - ops/ops-nn/matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/batch_mat_mul_v3/op_kernel/arch35/
-        - ops/ops-nn/matmul/common/
         - ops/ops-nn/matmul/fused_mat_mul/
         - ops/ops-nn/matmul/matmul_emu_split_weight/op_api/
         - ops/ops-nn/matmul/matmul_emu_split_weight/op_graph/
@@ -1221,16 +1218,12 @@ matmul@ops-nn:
         - ops/ops-nn/matmul/matmul_emu_split_weight/op_kernel/arch35/
         - ops/ops-nn/matmul/gemm_v3/op_kernel/arch35/
         - ops/ops-nn/matmul/gemm_v3/op_host/op_tiling/arch35/
-        - ops/ops-nn/matmul/mat_mul_v3/op_graph/
-        - ops/ops-nn/matmul/mat_mul_v3/op_host/op_api/
         - ops/ops-nn/matmul/mat_mul_v3/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/mat_mul_v3/op_kernel/arch35/
-        - ops/ops-nn/matmul/transpose_batch_mat_mul/op_graph/
-        - ops/ops-nn/matmul/transpose_batch_mat_mul/op_api/
         - ops/ops-nn/matmul/transpose_batch_mat_mul/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/transpose_batch_mat_mul/op_kernel/arch35/
-        - ops/ops-nn/matmul/transpose_batch_mat_mul/torch_extension/
-        - ops/ops-nn/matmul/transpose_quant_batch_mat_mul/
+        - ops/ops-nn/matmul/transpose_quant_batch_mat_mul/op_host/op_tiling/arch35/
+        - ops/ops-nn/matmul/transpose_quant_batch_mat_mul/op_kernel/arch35/
         - ops/ops-nn/common/src/framework/matmul_onnx_plugin.cpp
       opensource_style: null
       kernel_style: null
