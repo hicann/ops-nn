@@ -239,7 +239,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
       <td>scale和zeroPoint的size大小不一致。</td>
     </tr>
     <tr>
-      <td>axis指定的维度不在合法范围[-self.dim(), self.dim()-1]内（self为0维标量时仅支持axis=0或axis=-1）。</td>
+      <td>self、out或mask的shape维度不在[1, 8]范围内，或axis指定的维度不在合法范围[-self.dim(), self.dim()-1]内。</td>
     </tr>
     <tr>
       <td>scale或zeroPoint的size与self在axis轴上的size大小不一致。</td>

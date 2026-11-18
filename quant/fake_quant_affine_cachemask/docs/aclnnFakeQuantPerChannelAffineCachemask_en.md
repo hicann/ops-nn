@@ -109,7 +109,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
        <td>-</td>
        <td>FLOAT16, FLOAT32</td>
        <td>ND</td>
-       <td>0-8</td>
+       <td>1-8</td>
        <td>√</td>
       </tr>
       <tr>
@@ -169,7 +169,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
        <td>shape must be consistent with `self`.</td>
        <td>FLOAT16, FLOAT32</td>
        <td>ND</td>
-       <td>0-8</td>
+       <td>1-8</td>
        <td>√</td>
       </tr>
       <tr>
@@ -179,7 +179,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
        <td>shape must be consistent with `self`.</td>
        <td>BOOL</td>
        <td>ND</td>
-       <td>0-8</td>
+       <td>1-8</td>
        <td>√</td>
       </tr>
       <tr>
@@ -241,7 +241,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
       <td>The sizes of scale and zeroPoint are inconsistent.</td>
     </tr>
     <tr>
-      <td>The dimension specified by axis is not within the valid range [-self.dim(), self.dim()-1] (when self is a 0-dim scalar, only axis=0 or axis=-1 is supported).</td>
+      <td>The shape dimensions of self, out, or mask are outside [1, 8], or the dimension specified by axis is outside the valid range [-self.dim(), self.dim()-1].</td>
     </tr>
     <tr>
       <td>The size of scale or zeroPoint is inconsistent with the size of self along axis.</td>
