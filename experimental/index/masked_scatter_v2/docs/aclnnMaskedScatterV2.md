@@ -44,4 +44,4 @@
 - `aclnnMaskedScatterV2GetWorkspaceSize(self, mask, updates, out, &workspaceSize, &executor)`
 - `aclnnMaskedScatterV2(workspace, workspaceSize, executor, stream)`
 
-参考 `examples/test_aclnn_masked_scatter_v2.cpp`。
+参考 [examples/test_aclnn_masked_scatter_v2.cpp](../examples/test_aclnn_masked_scatter_v2.cpp)。
