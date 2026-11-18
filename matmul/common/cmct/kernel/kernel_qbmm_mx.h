@@ -303,9 +303,16 @@ __aicore__ inline void QuantMmBatchMX<CMCT_QBMM_MX_KERNEL_FUN_TEM_PARAMS>::AddBa
         Get<QuantBatchMatmul::IDX_BIAS_OFFSET>(blockOffset_) += batchCOffset_ * params.problemShape.n;
     }
     // x1Scale/x2Scale batch offset. e8m0 is 1 byte and never packed, so no sizeShift here.
-    // Per-batch element count = M(or N) * ceil(K/64) * 2, matching the MX scale stride in GetQuantOffset.
-    // hif4 scale has no batch dim (3D only), so no batch offset is applied for hif4.
-    if constexpr (!BlockMmad::IS_HIF4) {
+    // MX per-batch element count = M(or N) * ceil(K/64) * 2, matching the MX scale stride in GetQuantOffset.
+    // HIF4 per-batch element count = M(or N) * ceil(K/64), since the scale last dim is 1.
+    if constexpr (BlockMmad::IS_HIF4) {
+        Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(
+            blockOffset_) += batchAOffset_ * params.problemShape.m *
+                             Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE));
+        Get<QuantBatchMatmul::IDX_X2SCALE_OFFSET>(
+            blockOffset_) += batchBOffset_ * params.problemShape.n *
+                             Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE));
+    } else {
         Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(
             blockOffset_) += batchAOffset_ * params.problemShape.m *
                              Cmct::Gemm::CeilDiv(params.problemShape.k, static_cast<int64_t>(MXFP_DIVISOR_SIZE)) *

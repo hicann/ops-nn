@@ -17,9 +17,7 @@
 
 #include <algorithm>
 
-#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "log/log.h"
-#include "error_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "base_block_calculator.h"
 #include "l1_tiling_data_calculator.h"
@@ -107,18 +105,7 @@ void AdaptiveSlidingWindowMXBasicAPITiling::ResetTilingData()
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
 {
     return IsTensorApiEnabled() && inputParams_.batchC == 1UL &&
-           (compileInfo_.npuArch == Ops::Base::DAV_3510 || compileInfo_.npuArch == Ops::Base::DAV_9201) &&
-           IsHif4BlazeCapable();
-}
-
-bool AdaptiveSlidingWindowMXBasicAPITiling::IsHif4BlazeCapable() const
-{
-    // 9202 上 hif4 内核只实现 CMCT(basic) 路径，不消费 WithoutBatchTilingData，禁止走 blaze/without-batch
-    if (inputParams_.isHif4PerGroup && compileInfo_.npuArch != Ops::Base::DAV_9201) {
-        return false;
-    }
-    // tensor-api crd2idx 对 hif4_scale 暂不支持奇数坐标，baseK 需为 64 的偶数倍
-    return !(inputParams_.isHif4PerGroup && basicTiling_.baseK % (qmmv3_tiling_const::MXFP_DIVISOR_SIZE * 2UL) != 0UL);
+           (compileInfo_.npuArch == Ops::Base::DAV_3510 || compileInfo_.npuArch == NpuArch::DAV_9201);
 }
 
 void AdaptiveSlidingWindowMXBasicAPITiling::AdjustScaleFactorForL0CPingpong(uint32_t& scaleFactor, uint32_t step,
@@ -148,10 +135,9 @@ const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
-    const bool supportsBlaze = npuArch == Ops::Base::DAV_3510 || npuArch == Ops::Base::DAV_9201;
-    return IsTensorApiEnabled() && supportsBlaze && IsHif4BlazeCapable() ?
-               static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
-               static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
+    const bool supportsBlaze = npuArch == Ops::Base::DAV_3510 || npuArch == NpuArch::DAV_9201;
+    return IsTensorApiEnabled() && supportsBlaze ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
+                                                   static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchMode() const

@@ -11,7 +11,6 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
-#include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <iostream>
@@ -19,17 +18,12 @@
 #include <string>
 #include <vector>
 
-#include "log/log.h"
-
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "exe_graph/runtime/tiling_parse_context.h"
 #include "kernel_run_context_facker.h"
 #include "platform/platform_infos_def.h"
 #include "register/op_impl_registry.h"
-#include "op_host/tiling_templates_registry.h"
 #include "test_cube_util.h"
-#include "ut_op_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_inplace_add_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_inplace_add_tiling_key.h"
 #include "../../../../common/op_host/math_util_nn.h"
@@ -74,6 +68,18 @@ struct QuantBatchMatmulInplaceAddTilingCsvLoadResult {
     vector<QuantBatchMatmulInplaceAddTilingTestParam> params;
     vector<string> errors;
 };
+
+static ge::DataType ParseInplaceAddDtype(const string& value)
+{
+    const string dtype = Trim(value);
+    if (dtype == "HIFLOAT4" || dtype == "DT_HIFLOAT4") {
+        return Ops::NN::DT_HIFLOAT4;
+    }
+    if (dtype == "HIFLOAT4_SCALE" || dtype == "DT_HIFLOAT4_SCALE") {
+        return Ops::NN::DT_HIFLOAT4_SCALE;
+    }
+    return ParseDtype(value);
+}
 
 static QuantBatchMatmulInplaceAddTilingCsvLoadResult LoadParams()
 {
@@ -125,13 +131,13 @@ static QuantBatchMatmulInplaceAddTilingCsvLoadResult LoadParams()
         param.groupSize = ParseInt64OrDefault(cols[idx++], 0);
         param.x1Format = ParseFormat(cols[idx++]);
         param.x2Format = ParseFormat(cols[idx++]);
-        param.x1Dtype = ParseDtype(cols[idx++]);
-        param.x2Dtype = ParseDtype(cols[idx++]);
+        param.x1Dtype = ParseInplaceAddDtype(cols[idx++]);
+        param.x2Dtype = ParseInplaceAddDtype(cols[idx++]);
         param.hasX1Scale = ParseBool(cols[idx++]);
-        param.x1ScaleDtype = ParseDtype(cols[idx++]);
+        param.x1ScaleDtype = ParseInplaceAddDtype(cols[idx++]);
         param.hasX2Scale = ParseBool(cols[idx++]);
-        param.x2ScaleDtype = ParseDtype(cols[idx++]);
-        param.yDtype = ParseDtype(cols[idx++]);
+        param.x2ScaleDtype = ParseInplaceAddDtype(cols[idx++]);
+        param.yDtype = ParseInplaceAddDtype(cols[idx++]);
         param.aicNum = static_cast<uint32_t>(ParseIntOrDefault(cols[idx++], 0));
         param.aivNum = static_cast<uint32_t>(ParseIntOrDefault(cols[idx++], 0));
         param.expectBlockDim = static_cast<uint32_t>(ParseIntOrDefault(cols[idx++], 0));
@@ -241,8 +247,13 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam& pa
     }
     yInputShape.MutableOriginShape() = gert::Shape({param.m, param.n});
     yInputShape.MutableStorageShape() = gert::Shape({param.m, param.n});
-    if (param.x1Dtype == ge::DT_HIFLOAT8 && param.x2Dtype == ge::DT_HIFLOAT8 && param.x1ScaleDtype == ge::DT_FLOAT &&
-        param.x2ScaleDtype == ge::DT_FLOAT) {
+    if (param.x1Dtype == Ops::NN::DT_HIFLOAT4 && param.x2Dtype == Ops::NN::DT_HIFLOAT4) {
+        x1ScaleShape.MutableOriginShape() = gert::Shape({k1, param.m, 1});
+        x1ScaleShape.MutableStorageShape() = gert::Shape({k1, param.m, 1});
+        x2ScaleShape.MutableOriginShape() = gert::Shape({k1, param.n, 1});
+        x2ScaleShape.MutableStorageShape() = gert::Shape({k1, param.n, 1});
+    } else if (param.x1Dtype == ge::DT_HIFLOAT8 && param.x2Dtype == ge::DT_HIFLOAT8 &&
+               param.x1ScaleDtype == ge::DT_FLOAT && param.x2ScaleDtype == ge::DT_FLOAT) {
         x1ScaleShape.MutableOriginShape() = gert::Shape({1});
         x1ScaleShape.MutableStorageShape() = gert::Shape({1});
         x2ScaleShape.MutableOriginShape() = gert::Shape({1});
@@ -312,7 +323,7 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam& pa
         {"Short_SoC_version", param.socVersion},
         {"SoC_version", param.socVersion},
     };
-    const map<string, string> soc2Arch = {{"Dav3510", "3510"}};
+    const map<string, string> soc2Arch = {{"Dav3510", "3510"}, {"Dav9201", "9201"}};
     auto soc2ArchIter = soc2Arch.find(param.socVersion);
     if (soc2ArchIter != soc2Arch.end()) {
         socVersionInfos.clear();

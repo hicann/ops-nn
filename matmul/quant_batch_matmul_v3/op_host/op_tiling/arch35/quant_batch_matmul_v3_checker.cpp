@@ -14,7 +14,6 @@
  */
 
 #include "common/inc/op_host/op_const_def_nn.h"
-#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
 #include "quant_batch_matmul_v3_checker.h"
@@ -1192,7 +1191,7 @@ bool QuantBatchMatmulV3Checker::CheckShape(const std::vector<gert::Shape*>& mand
          !CheckInputValidInMxPerGroupMode(scaleShape, pertokenShape, x1Shape, x2Shape, dimValueOfMKN))) {
         return false;
     }
-    if (!CheckExtraShapeValid(scaleShape, pertokenShape, dimValueOfMKN)) {
+    if (!CheckExtraShapeValid(scaleShape, pertokenShape, x1Shape, x2Shape, dimValueOfMKN)) {
         return false;
     }
     if (!ExtraInputCheck()) {
@@ -1232,8 +1231,11 @@ bool QuantBatchMatmulV3Checker::CheckHif4ScaleDtypeWithPertoken() const { return
 
 bool QuantBatchMatmulV3Checker::CheckExtraOutputDtype() const { return true; }
 
-bool QuantBatchMatmulV3Checker::CheckExtraShapeValid(const gert::Shape&, const gert::StorageShape*,
-                                                     const std::vector<int64_t>&) const
+bool QuantBatchMatmulV3Checker::CheckExtraShapeValid([[maybe_unused]] const gert::Shape& scaleShape,
+                                                     [[maybe_unused]] const gert::StorageShape* pertokenShape,
+                                                     [[maybe_unused]] const gert::Shape& x1Shape,
+                                                     [[maybe_unused]] const gert::Shape& x2Shape,
+                                                     [[maybe_unused]] const std::vector<int64_t>& dimValueOfMKN) const
 {
     return true;
 }

@@ -20,7 +20,6 @@
 #include "op_host/tiling_templates_registry.h"
 #include "error_util.h"
 #include "log/log.h"
-#include "op_cache_tiling.h"
 #include "quant_batch_matmul_v3_checker_arch_9201.h"
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 #include "base_block_calculator.h"
@@ -68,7 +67,7 @@ QBMMV3StreamKTiling960::QBMMV3StreamKTiling960(gert::TilingContext* context,
 bool QBMMV3StreamKTiling960::IsCapable()
 {
     // 量化场景分流：9201/9202 可走 SK 的量化场景一致（MX per-group + 非MX per-tensor + HIF4 per-group），均走 Blaze。
-    bool isQuantCapable = inputParams_.isMxPerGroup || IsPertensorStreamKInput();
+    bool isQuantCapable = inputParams_.isMxPerGroup || inputParams_.isHif4PerGroup || IsPertensorStreamKInput();
     if (compileInfo_.aicNum != compileInfo_.aivNum || !isQuantCapable || inputParams_.batchC > 1) {
         return false;
     }
@@ -356,6 +355,7 @@ ge::graphStatus QBMMV3StreamKTiling960::PostTiling()
         return ge::GRAPH_PARAM_INVALID;
     }
     context_->SetBlockDim(tilingData_.streamKTiling.usedCoreNum);
+    context_->SetScheduleMode(1); // StreamK kernel uses cross-core synchronization and requires batch mode.
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
     size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);

@@ -14,17 +14,20 @@
  */
 
 #include "common/inc/op_host/op_const_def_nn.h"
-#include "common/op_host/op_tiling/tiling_type_mm.h"
 #include "error_util.h"
 #include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 #include "quant_batch_matmul_v3_checker_arch_9201.h"
 
 namespace {
 constexpr uint64_t HIF4_GROUP_SIZE = 64UL;
 constexpr size_t SCALE_THREE_DIM = 3;
+constexpr size_t DIM_NUM_TWO = 2;
 } // namespace
 
 namespace optiling {
+
+using Ops::NN::FormatString;
 
 const std::vector<ge::DataType>& QuantBatchMatmulV3CheckerArch9201::GetLegalInputDtypes() const
 {
@@ -112,22 +115,26 @@ bool QuantBatchMatmulV3CheckerArch9201::CheckExtraOutputDtype() const
 
 bool QuantBatchMatmulV3CheckerArch9201::CheckExtraShapeValid(const gert::Shape& scaleShape,
                                                              const gert::StorageShape* pertokenShape,
+                                                             const gert::Shape& x1Shape, const gert::Shape& x2Shape,
                                                              const std::vector<int64_t>& dimValueOfMKN) const
 {
-    return CheckInputValidInHif4PerGroupMode(scaleShape, pertokenShape, dimValueOfMKN);
+    return CheckInputValidInHif4PerGroupMode(scaleShape, pertokenShape, x1Shape, x2Shape, dimValueOfMKN);
 }
 
 bool QuantBatchMatmulV3CheckerArch9201::Hif4PertokenScaleShapeCheck(const gert::StorageShape* pertokenShape) const
 {
     auto& pertoken = pertokenShape->GetStorageShape();
     auto pertokenShapeLen = pertoken.GetDimNum();
-    OP_TILING_CHECK(pertokenShapeLen != SCALE_THREE_DIM,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "In hif4 quantification, pertokenScale's dimension must be 3, but it is %zu.",
-                                          pertokenShapeLen),
+    OP_TILING_CHECK(pertokenShapeLen < SCALE_THREE_DIM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        inputParams_.opName, "pertokenScale", FormatString("%zuD", pertokenShapeLen).c_str(),
+                        FormatString("in hif4 quantification, the shape dim of pertokenScale must be at least %zuD",
+                                     SCALE_THREE_DIM)
+                            .c_str()),
                     return false);
-    auto mDimIdx = inputParams_.transA ? 1 : 0;
-    auto kDimIdx = inputParams_.transA ? 0 : 1;
+    size_t batchDimNum = pertokenShapeLen - SCALE_THREE_DIM;
+    auto mDimIdx = batchDimNum + (inputParams_.transA ? 1 : 0);
+    auto kDimIdx = batchDimNum + (inputParams_.transA ? 0 : 1);
     OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(pertokenShapeLen - 1)) != 1,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "In hif4 quantification, pertokenScale's last dimension \
 should be equal to 1, but actual is [%ld].",
@@ -146,7 +153,7 @@ should be equal to 1, but actual is [%ld].",
             static_cast<uint64_t>(pertoken.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, HIF4_GROUP_SIZE),
             CUBE_INNER_ERR_REPORT(
                 inputParams_.opName,
-                "In hif4 quantification, when x1's transposition is %s, pertokenScale's dimension %d shape \
+                "In hif4 quantification, when x1's transposition is %s, pertokenScale's dimension %zu shape \
 should be equal to x1 k dimension size[%lu] ceil div 64, but actual is [%ld].",
                 inputParams_.transA ? "true" : "false", kDimIdx, inputParams_.kSize, pertoken.GetDim(kDimIdx)),
             return false);
@@ -154,7 +161,7 @@ should be equal to x1 k dimension size[%lu] ceil div 64, but actual is [%ld].",
             static_cast<uint64_t>(pertoken.GetDim(mDimIdx)) != inputParams_.mSize,
             CUBE_INNER_ERR_REPORT(
                 inputParams_.opName,
-                "In hif4 quantification, when x1's transposition is %s, pertokenScale's dimension %d shape \
+                "In hif4 quantification, when x1's transposition is %s, pertokenScale's dimension %zu shape \
 should be equal to x1 m dimension size[%lu], but actual is [%ld].",
                 inputParams_.transA ? "true" : "false", mDimIdx, inputParams_.mSize, pertoken.GetDim(mDimIdx)),
             return false);
@@ -166,12 +173,15 @@ bool QuantBatchMatmulV3CheckerArch9201::Hif4ScaleShapeCheck(const gert::Shape& s
 {
     auto scaleShapeLen = scaleShape.GetDimNum();
     OP_TILING_CHECK(
-        scaleShapeLen != SCALE_THREE_DIM,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "In hif4 quantification, scale's dimension must be 3, but it is %zu.", scaleShapeLen),
+        scaleShapeLen < SCALE_THREE_DIM,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            inputParams_.opName, "scale", FormatString("%zuD", scaleShapeLen).c_str(),
+            FormatString("in hif4 quantification, the shape dim of scale must be at least %zuD", SCALE_THREE_DIM)
+                .c_str()),
         return false);
-    auto kDimIdx = inputParams_.transB ? 1 : 0;
-    auto nDimIdx = inputParams_.transB ? 0 : 1;
+    size_t batchDimNum = scaleShapeLen - SCALE_THREE_DIM;
+    auto kDimIdx = batchDimNum + (inputParams_.transB ? 1 : 0);
+    auto nDimIdx = batchDimNum + (inputParams_.transB ? 0 : 1);
     OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1)) != 1,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                           "In hif4 quantification, scale's dimension 2 shape should be equal to 1, but \
@@ -191,14 +201,14 @@ actual is [%ld].",
             static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, HIF4_GROUP_SIZE),
             CUBE_INNER_ERR_REPORT(
                 inputParams_.opName,
-                "In hif4 quantification, when x2's transposition is %s, scale's dimension %d shape should \
+                "In hif4 quantification, when x2's transposition is %s, scale's dimension %zu shape should \
 be equal to x2 k dimension size[%lu] ceil div 64, but actual is [%ld].",
                 inputParams_.transB ? "true" : "false", kDimIdx, inputParams_.kSize, scaleShape.GetDim(kDimIdx)),
             return false);
         OP_TILING_CHECK(
             static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) != inputParams_.nSize,
             CUBE_INNER_ERR_REPORT(
-                inputParams_.opName, "In hif4 quantification, when x2's transposition is %s, scale's dimension %d \
+                inputParams_.opName, "In hif4 quantification, when x2's transposition is %s, scale's dimension %zu \
 shape should be equal to x2 n dimension size[%lu], but actual is [%ld].",
                 inputParams_.transB ? "true" : "false", nDimIdx, inputParams_.nSize, scaleShape.GetDim(nDimIdx)),
             return false);
@@ -206,9 +216,51 @@ shape should be equal to x2 n dimension size[%lu], but actual is [%ld].",
     return true;
 }
 
+bool QuantBatchMatmulV3CheckerArch9201::CheckBatchValidInHif4PerGroupMode(const gert::Shape& scaleShape,
+                                                                          const gert::Shape& pertoken,
+                                                                          const gert::Shape& x1Shape,
+                                                                          const gert::Shape& x2Shape) const
+{
+    auto x1ShapeLen = x1Shape.GetDimNum();
+    auto x2ShapeLen = x2Shape.GetDimNum();
+    auto pertokenBatchLen = pertoken.GetDimNum() - SCALE_THREE_DIM;
+    auto scaleBatchLen = scaleShape.GetDimNum() - SCALE_THREE_DIM;
+    auto x1BatchLen = (x1ShapeLen > DIM_NUM_TWO) ? (x1ShapeLen - DIM_NUM_TWO) : 0;
+    auto x2BatchLen = (x2ShapeLen > DIM_NUM_TWO) ? (x2ShapeLen - DIM_NUM_TWO) : 0;
+    OP_TILING_CHECK(scaleBatchLen != x2BatchLen,
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "scaleBatchDimNum, x2BatchDimNum",
+                        FormatString("%zu, %zu", scaleBatchLen, x2BatchLen).c_str(),
+                        "in hif4 quantification, the batch dimension num of scale must be equal to that of x2"),
+                    return false);
+    OP_TILING_CHECK(pertokenBatchLen != x1BatchLen,
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "pertokenBatchDimNum, x1BatchDimNum",
+                        FormatString("%zu, %zu", pertokenBatchLen, x1BatchLen).c_str(),
+                        "in hif4 quantification, the batch dimension num of pertokenScale must be equal to that of x1"),
+                    return false);
+    for (size_t i = 0; i < x2BatchLen; ++i) {
+        OP_TILING_CHECK(scaleShape.GetDim(i) != x2Shape.GetDim(i),
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "dimIndex, x2Batch, scaleBatch",
+                            FormatString("%zu, %ld, %ld", i, x2Shape.GetDim(i), scaleShape.GetDim(i)).c_str(),
+                            "in hif4 quantification, the batch dimension of scale must be equal to that of x2"),
+                        return false);
+    }
+    for (size_t i = 0; i < x1BatchLen; ++i) {
+        OP_TILING_CHECK(pertoken.GetDim(i) != x1Shape.GetDim(i),
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "dimIndex, x1Batch, pertokenBatch",
+                            FormatString("%zu, %ld, %ld", i, x1Shape.GetDim(i), pertoken.GetDim(i)).c_str(),
+                            "in hif4 quantification, the batch dimension of pertokenScale must be equal to that of x1"),
+                        return false);
+    }
+    return true;
+}
+
 bool QuantBatchMatmulV3CheckerArch9201::CheckInputValidInHif4PerGroupMode(
-    const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
-    const std::vector<int64_t>& dimValueOfMKN) const
+    const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape, const gert::Shape& x1Shape,
+    const gert::Shape& x2Shape, const std::vector<int64_t>& dimValueOfMKN) const
 {
     if (!inputParams_.isHif4PerGroup) {
         return true;
@@ -232,6 +284,9 @@ groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32.",
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The perTokenScale shape check failed."), return false);
     OP_TILING_CHECK(!Hif4ScaleShapeCheck(scaleShape),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The scale shape check failed."), return false);
+    if (!CheckBatchValidInHif4PerGroupMode(scaleShape, pertokenShape->GetStorageShape(), x1Shape, x2Shape)) {
+        return false;
+    }
     // hif4 场景下 K 需大于 2（与 aclnn/torch 接口约束一致，K<=2 时无法判断是否转置）
     OP_TILING_CHECK(
         inputParams_.kSize <= 2UL,

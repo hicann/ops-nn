@@ -36,12 +36,16 @@ protected:
     bool CheckHif4ScaleDtypeWithPertoken() const override;
     bool CheckExtraOutputDtype() const override;
     bool CheckExtraShapeValid(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
+                              const gert::Shape& x1Shape, const gert::Shape& x2Shape,
                               const std::vector<int64_t>& dimValueOfMKN) const override;
 
 private:
     bool Hif4PertokenScaleShapeCheck(const gert::StorageShape* pertokenShape) const;
     bool Hif4ScaleShapeCheck(const gert::Shape& scaleShape) const;
+    bool CheckBatchValidInHif4PerGroupMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
+                                           const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
     bool CheckInputValidInHif4PerGroupMode(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
+                                           const gert::Shape& x1Shape, const gert::Shape& x2Shape,
                                            const std::vector<int64_t>& dimValueOfMKN) const;
 };
 } // namespace optiling

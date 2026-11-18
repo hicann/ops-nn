@@ -74,6 +74,9 @@ private:
     bool CheckHif4ScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckMxScaleMinDim(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckMxScaleBatchDimMatch(size_t x1ScaleDim, size_t x2ScaleDim) const;
+    bool CheckHif4ScaleMinDim(size_t x1ScaleDim, size_t x2ScaleDim) const;
+    bool CheckHif4ScaleMaxDim(size_t x1ScaleDim, size_t x2ScaleDim) const;
+    bool CheckHif4ScaleBatchDimMatch(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckNormalScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckGroupSize() const;
     bool CheckOutShape(bool twoDimMatmulCaseFlag, const std::vector<int64_t>& batchRecord) const;

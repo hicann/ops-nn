@@ -44,6 +44,7 @@ static const int64_t MIN_DIM_NUM_ND = 2;
 static const size_t MX_SCALE_DIM = 3;
 static const size_t MX_SCALE_MIN_DIM = 3;
 static const size_t HIFP4_SCALE_DIM = 3;
+static const size_t HIFP4_SCALE_MAX_DIM = 7;
 static const size_t PENULTIMATE_DIM = 2;
 static const size_t BATCH_TAILENDER_DIM = 3;
 static const size_t NZ_K1_INDEX = 3;
@@ -541,21 +542,27 @@ bool QuantMatmulChecker::CheckDimValueMicroScaling() const
 
 bool QuantMatmulChecker::CheckDimValueHif4() const
 {
-    auto x1ScaleMDim = transposeX1_ ? 1 : 0;
-    auto x1ScaleKDim = transposeX1_ ? 0 : 1;
-    auto x2ScaleNDim = transposeX2_ ? 0 : 1;
-    auto x2ScaleKDim = transposeX2_ ? 1 : 0;
-
-    bool x1ScaleShapeHasOne = x1Scale_->GetViewShape().GetDim(0) == 1 || x1Scale_->GetViewShape().GetDim(1) == 1;
-    bool x2ScaleShapeHasOne = x2Scale_->GetViewShape().GetDim(0) == 1 || x2Scale_->GetViewShape().GetDim(1) == 1;
-    if ((!x1ScaleShapeHasOne && x1Scale_->GetViewShape().GetDim(x1ScaleMDim) != x1MDim_) ||
-        (!x2ScaleShapeHasOne && x2Scale_->GetViewShape().GetDim(x2ScaleNDim) != x2NDim_)) {
+    size_t x1ScaleBatchDimNum = x1Scale_->GetViewShape().GetDimNum() - HIFP4_SCALE_DIM;
+    size_t x2ScaleBatchDimNum = x2Scale_->GetViewShape().GetDimNum() - HIFP4_SCALE_DIM;
+    auto x1ScaleMDimIndex = x1ScaleBatchDimNum + (transposeX1_ ? 1 : 0);
+    auto x1ScaleKDimIndex = x1ScaleBatchDimNum + (transposeX1_ ? 0 : 1);
+    auto x2ScaleNDimIndex = x2ScaleBatchDimNum + (transposeX2_ ? 0 : 1);
+    auto x2ScaleKDimIndex = x2ScaleBatchDimNum + (transposeX2_ ? 1 : 0);
+    auto x1ScaleMDim = x1Scale_->GetViewShape().GetDim(x1ScaleMDimIndex);
+    auto x1ScaleKDim = x1Scale_->GetViewShape().GetDim(x1ScaleKDimIndex);
+    auto x2ScaleNDim = x2Scale_->GetViewShape().GetDim(x2ScaleNDimIndex);
+    auto x2ScaleKDim = x2Scale_->GetViewShape().GetDim(x2ScaleKDimIndex);
+    bool x1ScaleHasOne = (x1ScaleMDim == 1 && x1ScaleKDim == x1MDim_) || (x1ScaleMDim == x1MDim_ && x1ScaleKDim == 1) ||
+                         (x1ScaleMDim == 1 && x1ScaleKDim == CeilDiv(x1KDim_, HIFP4_GROUP_SIZE)) ||
+                         (x1ScaleMDim == CeilDiv(x1KDim_, HIFP4_GROUP_SIZE) && x1ScaleKDim == 1);
+    bool x2ScaleHasOne = (x2ScaleNDim == 1 && x2ScaleKDim == x2NDim_) || (x2ScaleNDim == x2NDim_ && x2ScaleKDim == 1) ||
+                         (x2ScaleNDim == 1 && x2ScaleKDim == CeilDiv(x2KDim_, HIFP4_GROUP_SIZE)) ||
+                         (x2ScaleNDim == CeilDiv(x2KDim_, HIFP4_GROUP_SIZE) && x2ScaleKDim == 1);
+    if ((!x1ScaleHasOne && x1ScaleMDim != x1MDim_) || (!x2ScaleHasOne && x2ScaleNDim != x2NDim_)) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             apiName_,
             FormatString("x1 M, %s M, x2 N, %s N", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
-            FormatString("%ld, %ld, %ld, %ld", x1MDim_, x1Scale_->GetViewShape().GetDim(x1ScaleMDim), x2NDim_,
-                         x2Scale_->GetViewShape().GetDim(x2ScaleNDim))
-                .c_str(),
+            FormatString("%ld, %ld, %ld, %ld", x1MDim_, x1ScaleMDim, x2NDim_, x2ScaleNDim).c_str(),
             FormatString("when the quantization mode is hif4, the M dimension of x1 and %s must be equal, and the N "
                          "dimension of x2 and %s must be equal",
                          GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
@@ -563,10 +570,10 @@ bool QuantMatmulChecker::CheckDimValueHif4() const
         return false;
     }
 
-    if (!x1ScaleShapeHasOne && CeilDiv(x1KDim_, HIFP4_GROUP_SIZE) != x1Scale_->GetViewShape().GetDim(x1ScaleKDim)) {
+    if (!x1ScaleHasOne && CeilDiv(x1KDim_, HIFP4_GROUP_SIZE) != x1ScaleKDim) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             apiName_, FormatString("x1 K, %s K", GetX1ScaleName().c_str()).c_str(),
-            FormatString("%ld, %ld", x1KDim_, x1Scale_->GetViewShape().GetDim(x1ScaleKDim)).c_str(),
+            FormatString("%ld, %ld", x1KDim_, x1ScaleKDim).c_str(),
             FormatString("when the quantization mode is hif4, the K dimension of %s must be equal to the K dimension "
                          "of x1 ceildivided by 64",
                          GetX1ScaleName().c_str())
@@ -574,10 +581,10 @@ bool QuantMatmulChecker::CheckDimValueHif4() const
         return false;
     }
 
-    if (!x2ScaleShapeHasOne && CeilDiv(x2KDim_, HIFP4_GROUP_SIZE) != x2Scale_->GetViewShape().GetDim(x2ScaleKDim)) {
+    if (!x2ScaleHasOne && CeilDiv(x2KDim_, HIFP4_GROUP_SIZE) != x2ScaleKDim) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             apiName_, FormatString("x2 K, %s K", GetX2ScaleName().c_str()).c_str(),
-            FormatString("%ld, %ld", x2KDim_, x2Scale_->GetViewShape().GetDim(x2ScaleKDim)).c_str(),
+            FormatString("%ld, %ld", x2KDim_, x2ScaleKDim).c_str(),
             FormatString("when the quantization mode is hif4, the K dimension of %s must be equal to the K dimension "
                          "of x2 ceildivided by 64",
                          GetX2ScaleName().c_str())
@@ -1211,15 +1218,106 @@ bool QuantMatmulChecker::CheckMxScaleDimRange(size_t x1ScaleDim, size_t x2ScaleD
     return true;
 }
 
+bool QuantMatmulChecker::CheckHif4ScaleMinDim(size_t x1ScaleDim, size_t x2ScaleDim) const
+{
+    if (x1ScaleDim < HIFP4_SCALE_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            apiName_, GetX1ScaleName().c_str(), FormatString("%zuD", x1ScaleDim).c_str(),
+            FormatString("when the quantization mode is hif4, the shape dim of %s must be at least %zuD",
+                         GetX1ScaleName().c_str(), HIFP4_SCALE_DIM)
+                .c_str());
+        return false;
+    }
+    if (x2ScaleDim < HIFP4_SCALE_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            apiName_, GetX2ScaleName().c_str(), FormatString("%zuD", x2ScaleDim).c_str(),
+            FormatString("when the quantization mode is hif4, the shape dim of %s must be at least %zuD",
+                         GetX2ScaleName().c_str(), HIFP4_SCALE_DIM)
+                .c_str());
+        return false;
+    }
+    return true;
+}
+
+bool QuantMatmulChecker::CheckHif4ScaleMaxDim(size_t x1ScaleDim, size_t x2ScaleDim) const
+{
+    if (x1ScaleDim > HIFP4_SCALE_MAX_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            apiName_, GetX1ScaleName().c_str(), FormatString("%zuD", x1ScaleDim).c_str(),
+            FormatString("when the quantization mode is hif4, the shape dim of %s must be at most %zuD",
+                         GetX1ScaleName().c_str(), HIFP4_SCALE_MAX_DIM)
+                .c_str());
+        return false;
+    }
+    if (x2ScaleDim > HIFP4_SCALE_MAX_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            apiName_, GetX2ScaleName().c_str(), FormatString("%zuD", x2ScaleDim).c_str(),
+            FormatString("when the quantization mode is hif4, the shape dim of %s must be at most %zuD",
+                         GetX2ScaleName().c_str(), HIFP4_SCALE_MAX_DIM)
+                .c_str());
+        return false;
+    }
+    return true;
+}
+
+bool QuantMatmulChecker::CheckHif4ScaleBatchDimMatch(size_t x1ScaleDim, size_t x2ScaleDim) const
+{
+    // batch dim count alignment: scale removes hif4 fixed 3 dims, x removes last 2 dims
+    size_t x1DimNum = x1_->GetViewShape().GetDimNum();
+    size_t x2DimNum = x2_->GetViewShape().GetDimNum();
+    size_t x1BatchDimNum = x1ScaleDim - HIFP4_SCALE_DIM;
+    size_t x2BatchDimNum = x2ScaleDim - HIFP4_SCALE_DIM;
+    size_t x1InputBatchDimNum = (x1DimNum > MIN_DIM_NUM_ND) ? (x1DimNum - MIN_DIM_NUM_ND) : 0;
+    size_t x2InputBatchDimNum = (x2DimNum > MIN_DIM_NUM_ND) ? (x2DimNum - MIN_DIM_NUM_ND) : 0;
+    if (x1BatchDimNum != x1InputBatchDimNum) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_, "pertokenBatchDimNum, x1BatchDimNum",
+            FormatString("%zu, %zu", x1BatchDimNum, x1InputBatchDimNum).c_str(),
+            "when the quantization mode is hif4, the batch dimension num of x1Scale must be equal to that of x1");
+        return false;
+    }
+    if (x2BatchDimNum != x2InputBatchDimNum) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_, "scaleBatchDimNum, x2BatchDimNum",
+            FormatString("%zu, %zu", x2BatchDimNum, x2InputBatchDimNum).c_str(),
+            "when the quantization mode is hif4, the batch dimension num of x2Scale must be equal to that of x2");
+        return false;
+    }
+    // per-batch dim value match
+    const auto& x1Shape = x1_->GetViewShape();
+    const auto& x2Shape = x2_->GetViewShape();
+    const auto& x1ScaleShape = x1Scale_->GetViewShape();
+    const auto& x2ScaleShape = x2Scale_->GetViewShape();
+    for (size_t i = 0; i < x1BatchDimNum; ++i) {
+        if (x1ScaleShape.GetDim(i) != x1Shape.GetDim(i)) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                apiName_, "dimIndex, x1Batch, pertokenBatch",
+                FormatString("%zu, %ld, %ld", i, x1Shape.GetDim(i), x1ScaleShape.GetDim(i)).c_str(),
+                "when the quantization mode is hif4, the batch dimension of x1Scale must be equal to that of x1");
+            return false;
+        }
+    }
+    for (size_t i = 0; i < x2BatchDimNum; ++i) {
+        if (x2ScaleShape.GetDim(i) != x2Shape.GetDim(i)) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                apiName_, "dimIndex, x2Batch, scaleBatch",
+                FormatString("%zu, %ld, %ld", i, x2Shape.GetDim(i), x2ScaleShape.GetDim(i)).c_str(),
+                "when the quantization mode is hif4, the batch dimension of x2Scale must be equal to that of x2");
+            return false;
+        }
+    }
+    return true;
+}
+
 bool QuantMatmulChecker::CheckHif4ScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const
 {
-    if (x1ScaleDim != HIFP4_SCALE_DIM || x2ScaleDim != HIFP4_SCALE_DIM) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            apiName_, FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
-            FormatString("%zuD, %zuD", x1ScaleDim, x2ScaleDim).c_str(),
-            FormatString("when the quantization mode is hif4, the shape dims of %s and %s must be %zu",
-                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), HIFP4_SCALE_DIM)
-                .c_str());
+    if (!CheckHif4ScaleMinDim(x1ScaleDim, x2ScaleDim)) {
+        return false;
+    }
+    if (!CheckHif4ScaleMaxDim(x1ScaleDim, x2ScaleDim)) {
+        return false;
+    }
+    if (!CheckHif4ScaleBatchDimMatch(x1ScaleDim, x2ScaleDim)) {
         return false;
     }
     return true;

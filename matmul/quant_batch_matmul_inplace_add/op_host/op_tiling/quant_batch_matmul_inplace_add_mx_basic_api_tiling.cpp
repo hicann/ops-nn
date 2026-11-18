@@ -12,9 +12,6 @@
  * \file quant_batch_matmul_inplace_add_mx_basic_api_tiling.cpp
  * \brief
  */
-#include <string>
-#include <vector>
-#include "base/err_msg.h"
 #include <vector>
 #include "quant_batch_matmul_inplace_add_mx_basic_api_tiling.h"
 #include "op_host/tiling_templates_registry.h"
@@ -62,19 +59,6 @@ ge::graphStatus QuantBatchMatmulInplaceAddMXBasicAPITiling::DoLibApiTiling()
     auto ret = AdaptiveSlidingWindowMXBasicAPITiling::DoLibApiTiling();
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
-    }
-    // TE HIF4新方案合入并且适配后放开，如果未命中QBMMV3中BLAZE tiling
-    // 基类不会生成 withoutBatch 数据，直接报错避免下发全零 tiling。
-    if (inputParams_.isHif4PerGroup && basicTiling_.baseK % (qmmv3_tiling_const::MXFP_DIVISOR_SIZE * 2UL) != 0UL) {
-        {
-            const std::string _msg = "When the dtype of x1 and x2 is HIFLOAT4, baseK[" +
-                                     std::to_string(basicTiling_.baseK) + "] must be an even multiple of 64.";
-            OP_LOGE_WITHOUT_REPORT(inputParams_.opName, "%s", _msg.c_str());
-            const std::vector<const char*> _msgKey = {"message"};
-            const std::vector<const char*> _msgValue = {_msg.c_str()};
-            REPORT_PREDEFINED_ERR_MSG("EZ1001", _msgKey, _msgValue);
-        }
-        return ge::GRAPH_FAILED;
     }
     UpdateTilingData();
     return ge::GRAPH_SUCCESS;

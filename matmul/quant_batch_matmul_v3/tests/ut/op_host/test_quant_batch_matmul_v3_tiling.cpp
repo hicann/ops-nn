@@ -15,23 +15,18 @@
 #include <cstring>
 #include <exception>
 #include <mutex>
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include "log/log.h"
-#include "nlohmann/json.hpp"
 #include "op_common/op_host/util/op_const_def.h"
 
 #define protected public
 #define private public
-#include "op_host/tiling_templates_registry.h"
 #include "ut_op_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "exe_graph/runtime/tiling_parse_context.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "test_quant_batch_matmul_v3_tiling.h"
@@ -85,6 +80,18 @@ static void SetExpectedTilingFieldIfPresent(std::vector<int32_t>& tilingDataInt,
         return;
     }
     std::memcpy(reinterpret_cast<char*>(tilingDataInt.data()) + fieldOffset, &value, sizeof(T));
+}
+
+static gert::Shape MakeHif4ScaleShape(int64_t batchDimNum, int64_t batchValue, int64_t dim0, int64_t dim1)
+{
+    gert::Shape shape;
+    for (int64_t idx = 0; idx < batchDimNum; ++idx) {
+        shape.AppendDim(batchValue);
+    }
+    shape.AppendDim(dim0);
+    shape.AppendDim(dim1);
+    shape.AppendDim(1);
+    return shape;
 }
 
 static gert::Shape TransNd2Nz(const gert::Shape& inShape, int64_t c0 = 32)
@@ -375,6 +382,10 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
 
     if (yDim == 6) {
         outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, batchC, batchC, m, n});
+    } else if (yDim == 5) {
+        outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, batchC, m, n});
+    } else if (yDim == 4) {
+        outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, m, n});
     } else if (yDim == 3) {
         outputShape.MutableOriginShape() = gert::Shape({batchC, m, n});
     } else if (yDim == 2) {
@@ -386,6 +397,10 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
     if (transA) {
         if (x1Dim == 6) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, batchA, k, m});
+        } else if (x1Dim == 5) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, k, m});
+        } else if (x1Dim == 4) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, k, m});
         } else if (x1Dim == 3) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, k, m});
         } else if (x1Dim == 2) {
@@ -396,6 +411,10 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
     } else {
         if (x1Dim == 6) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, batchA, m, k});
+        } else if (x1Dim == 5) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, m, k});
+        } else if (x1Dim == 4) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, m, k});
         } else if (x1Dim == 3) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, m, k});
         } else if (x1Dim == 2) {
@@ -408,6 +427,10 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
     if (transB) {
         if (x2Dim == 6) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, batchB, n, k});
+        } else if (x2Dim == 5) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, n, k});
+        } else if (x2Dim == 4) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, n, k});
         } else if (x2Dim == 3) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, n, k});
         } else if (x2Dim == 2) {
@@ -418,6 +441,10 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
     } else {
         if (x2Dim == 6) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, batchB, k, n});
+        } else if (x2Dim == 5) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, k, n});
+        } else if (x2Dim == 4) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, k, n});
         } else if (x2Dim == 3) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, k, n});
         } else if (x2Dim == 2) {
@@ -491,8 +518,13 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
         scaleShape.MutableStorageShape() = gert::Shape({1});
     } else if (quantMode == 8) { // HIF4 groups: [M, ceil(K/64), 1] and [ceil(K/64), N, 1].
         const int64_t groups = ops::CeilDiv<int64_t>(k, 64);
-        pertokenShape.MutableStorageShape() = transA ? gert::Shape({groups, m, 1}) : gert::Shape({m, groups, 1});
-        scaleShape.MutableStorageShape() = transB ? gert::Shape({n, groups, 1}) : gert::Shape({groups, n, 1});
+        // Batch HIF4 keeps x1Dim - 2 / x2Dim - 2 leading batch dims before the logical scale axes.
+        const int64_t pertokenBatchDimNum = x1Dim > 2 ? x1Dim - 2 : 0;
+        const int64_t scaleBatchDimNum = x2Dim > 2 ? x2Dim - 2 : 0;
+        pertokenShape.MutableStorageShape() = MakeHif4ScaleShape(pertokenBatchDimNum, batchA, transA ? groups : m,
+                                                                 transA ? m : groups);
+        scaleShape.MutableStorageShape() = MakeHif4ScaleShape(scaleBatchDimNum, batchB, transB ? n : groups,
+                                                              transB ? groups : n);
     } else if (quantMode == 7) { // X2 per-group CSV cases use G=128.
         const int64_t groupCnt = ops::CeilDiv<int64_t>(k, 128);
         scaleShape.MutableStorageShape() = x2Dim == 3 ? gert::Shape({batchB, groupCnt, n}) : gert::Shape({groupCnt, n});
@@ -589,6 +621,10 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     gert::StorageShape outputShape;
     if (yDim == 6) {
         outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, batchC, batchC, m, n});
+    } else if (yDim == 5) {
+        outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, batchC, m, n});
+    } else if (yDim == 4) {
+        outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, m, n});
     } else if (yDim == 3) {
         outputShape.MutableOriginShape() = gert::Shape({batchC, m, n});
     } else if (yDim == 2) {
@@ -600,6 +636,10 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     if (transA) {
         if (x1Dim == 6) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, batchA, k, m});
+        } else if (x1Dim == 5) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, k, m});
+        } else if (x1Dim == 4) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, k, m});
         } else if (x1Dim == 3) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, k, m});
         } else if (x1Dim == 2) {
@@ -610,6 +650,10 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     } else {
         if (x1Dim == 6) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, batchA, m, k});
+        } else if (x1Dim == 5) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, batchA, m, k});
+        } else if (x1Dim == 4) {
+            x1Shape.MutableOriginShape() = gert::Shape({batchA, batchA, m, k});
         } else if (x1Dim == 3) {
             x1Shape.MutableOriginShape() = gert::Shape({batchA, m, k});
         } else if (x1Dim == 2) {
@@ -622,6 +666,10 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     if (transB) {
         if (x2Dim == 6) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, batchB, n, k});
+        } else if (x2Dim == 5) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, n, k});
+        } else if (x2Dim == 4) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, n, k});
         } else if (x2Dim == 3) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, n, k});
         } else if (x2Dim == 2) {
@@ -632,6 +680,10 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     } else {
         if (x2Dim == 6) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, batchB, k, n});
+        } else if (x2Dim == 5) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, batchB, k, n});
+        } else if (x2Dim == 4) {
+            x2Shape.MutableOriginShape() = gert::Shape({batchB, batchB, k, n});
         } else if (x2Dim == 3) {
             x2Shape.MutableOriginShape() = gert::Shape({batchB, k, n});
         } else if (x2Dim == 2) {
@@ -716,8 +768,13 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         scaleShape.MutableStorageShape() = gert::Shape({1});
     } else if (quantMode == 8) { // HIF4 groups: [M, ceil(K/64), 1] and [ceil(K/64), N, 1].
         const int64_t groups = ops::CeilDiv<int64_t>(k, 64);
-        pertokenShape.MutableStorageShape() = transA ? gert::Shape({groups, m, 1}) : gert::Shape({m, groups, 1});
-        scaleShape.MutableStorageShape() = transB ? gert::Shape({n, groups, 1}) : gert::Shape({groups, n, 1});
+        // Batch HIF4 keeps x1Dim - 2 / x2Dim - 2 leading batch dims before the logical scale axes.
+        const int64_t pertokenBatchDimNum = x1Dim > 2 ? x1Dim - 2 : 0;
+        const int64_t scaleBatchDimNum = x2Dim > 2 ? x2Dim - 2 : 0;
+        pertokenShape.MutableStorageShape() = MakeHif4ScaleShape(pertokenBatchDimNum, batchA, transA ? groups : m,
+                                                                 transA ? m : groups);
+        scaleShape.MutableStorageShape() = MakeHif4ScaleShape(scaleBatchDimNum, batchB, transB ? n : groups,
+                                                              transB ? groups : n);
     } else if (quantMode == 7) { // X2 per-group CSV cases use G=128.
         const int64_t groupCnt = ops::CeilDiv<int64_t>(k, 128);
         scaleShape.MutableStorageShape() = x2Dim == 3 ? gert::Shape({batchB, groupCnt, n}) : gert::Shape({groupCnt, n});

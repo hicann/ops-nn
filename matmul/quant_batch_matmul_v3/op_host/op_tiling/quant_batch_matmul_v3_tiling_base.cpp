@@ -800,14 +800,20 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeHif4GroupInfo(const gert::Shape& scale
     if (inputParams_.groupSizeK == 0UL) {
         inputParams_.groupSizeK = hif4GroupSize;
     }
-    if (pertokenShapeLen != hif4ScaleDimNum || scaleShapeLen != hif4ScaleDimNum) {
+    if (pertokenShapeLen < hif4ScaleDimNum || scaleShapeLen < hif4ScaleDimNum) {
         // scale 维度非法时由后续 checker 报错
         return true;
     }
+    const size_t pertokenBatchDimNum = pertokenShapeLen - hif4ScaleDimNum;
+    const size_t scaleBatchDimNum = scaleShapeLen - hif4ScaleDimNum;
+    const size_t pertokenMDimIdx = pertokenBatchDimNum + (inputParams_.transA ? 1 : 0);
+    const size_t pertokenKDimIdx = pertokenBatchDimNum + (inputParams_.transA ? 0 : 1);
+    const size_t scaleKDimIdx = scaleBatchDimNum + (inputParams_.transB ? 1 : 0);
+    const size_t scaleNDimIdx = scaleBatchDimNum + (inputParams_.transB ? 0 : 1);
     uint64_t expectedScaleK = ops::CeilDiv(inputParams_.kSize, hif4GroupSize);
     // 存在 1 维广播时 K 维校验交由 checker 判定，此处只校验非广播场景的 K 维覆盖 ceil(K / 64)
-    if (pertoken.GetDim(0) != 1 && pertoken.GetDim(1) != 1) {
-        uint64_t pertokenKSize = static_cast<uint64_t>(pertoken.GetDim(inputParams_.transA ? 0 : 1));
+    if (pertoken.GetDim(pertokenMDimIdx) != 1 && pertoken.GetDim(pertokenKDimIdx) != 1) {
+        uint64_t pertokenKSize = static_cast<uint64_t>(pertoken.GetDim(pertokenKDimIdx));
         OP_TILING_CHECK(
             pertokenKSize != expectedScaleK,
             CUBE_INNER_ERR_REPORT(inputParams_.opName,
@@ -816,8 +822,8 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeHif4GroupInfo(const gert::Shape& scale
                                   pertokenKSize, inputParams_.kSize, expectedScaleK),
             return false);
     }
-    if (scaleShape.GetDim(0) != 1 && scaleShape.GetDim(1) != 1) {
-        uint64_t scaleKSize = static_cast<uint64_t>(scaleShape.GetDim(inputParams_.transB ? 1 : 0));
+    if (scaleShape.GetDim(scaleKDimIdx) != 1 && scaleShape.GetDim(scaleNDimIdx) != 1) {
+        uint64_t scaleKSize = static_cast<uint64_t>(scaleShape.GetDim(scaleKDimIdx));
         OP_TILING_CHECK(
             scaleKSize != expectedScaleK,
             CUBE_INNER_ERR_REPORT(inputParams_.opName,

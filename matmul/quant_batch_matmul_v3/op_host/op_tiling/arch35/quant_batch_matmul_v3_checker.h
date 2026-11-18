@@ -83,6 +83,7 @@ protected:
     virtual bool CheckHif4ScaleDtypeWithPertoken() const;
     virtual bool CheckExtraOutputDtype() const;
     virtual bool CheckExtraShapeValid(const gert::Shape& scaleShape, const gert::StorageShape* pertokenShape,
+                                      const gert::Shape& x1Shape, const gert::Shape& x2Shape,
                                       const std::vector<int64_t>& dimValueOfMKN) const;
 };
 } // namespace optiling

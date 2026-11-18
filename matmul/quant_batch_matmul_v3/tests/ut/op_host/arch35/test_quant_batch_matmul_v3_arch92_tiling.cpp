@@ -14,7 +14,6 @@
  */
 
 #include <array>
-#include <cmath>
 #include <limits>
 #include <map>
 #include <memory>
@@ -25,10 +24,12 @@
 #define private public
 #define protected public
 #include "../test_quant_batch_matmul_v3_tiling.h"
+#include "../../../../op_kernel/arch35/quant_batch_matmul_v3_apt_tiling_key.h"
 #include "../../../../op_host/op_tiling/arch35/qbmm_streamk_tiling_960.h"
 #include "../../../../op_host/op_tiling/arch35/quant_batch_matmul_v3_checker_arch_9201.h"
 #include "../../../../op_host/op_tiling/arch35/tiling_cost_evaluator.h"
 #include "../../../../op_host/op_tiling/arch35/l1_tiling_data_calculator.h"
+#include "../../../../op_host/op_tiling/arch35/adaptive_sliding_window_mx_basic_api_tiling.h"
 #include "../../../../op_host/op_tiling/arch35/adaptive_sliding_window_perblock_basic_api_tiling.h"
 #include "../../../../op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
 #undef protected
@@ -712,9 +713,11 @@ TEST(QuantBatchMatmulV3Checker960, Hif4GroupValidationRejectsMissingScaleAndWron
     auto input = MakeHif4Info();
     const gert::Shape scale({3, 48, 1});
     const gert::StorageShape token({16, 3, 1}, {16, 3, 1});
+    const gert::Shape x1Shape({16, 130});
+    const gert::Shape x2Shape({130, 48});
     QuantBatchMatmulV3CheckerArch9201 valid(nullptr, input);
-    EXPECT_TRUE(valid.CheckInputValidInHif4PerGroupMode(scale, &token, {130, 16, 130, 48}));
-    EXPECT_FALSE(valid.CheckInputValidInHif4PerGroupMode(scale, nullptr, {130, 16, 130, 48}));
+    EXPECT_TRUE(valid.CheckInputValidInHif4PerGroupMode(scale, &token, x1Shape, x2Shape, {130, 16, 130, 48}));
+    EXPECT_FALSE(valid.CheckInputValidInHif4PerGroupMode(scale, nullptr, x1Shape, x2Shape, {130, 16, 130, 48}));
     for (int axis = 0; axis < 3; ++axis) {
         auto invalid = input;
         if (axis == 0) {
@@ -727,10 +730,150 @@ TEST(QuantBatchMatmulV3Checker960, Hif4GroupValidationRejectsMissingScaleAndWron
             invalid.groupSizeK = 32;
         }
         QuantBatchMatmulV3CheckerArch9201 checker(nullptr, invalid);
-        EXPECT_FALSE(checker.CheckInputValidInHif4PerGroupMode(scale, &token, {130, 16, 130, 48}));
+        EXPECT_FALSE(checker.CheckInputValidInHif4PerGroupMode(scale, &token, x1Shape, x2Shape, {130, 16, 130, 48}));
     }
-    EXPECT_FALSE(valid.CheckInputValidInHif4PerGroupMode(scale, &token, {129, 16, 130, 48}));
-    EXPECT_FALSE(valid.CheckInputValidInHif4PerGroupMode(scale, &token, {130, 16, 129, 48}));
+    EXPECT_FALSE(valid.CheckInputValidInHif4PerGroupMode(scale, &token, x1Shape, x2Shape, {129, 16, 130, 48}));
+    EXPECT_FALSE(valid.CheckInputValidInHif4PerGroupMode(scale, &token, x1Shape, x2Shape, {130, 16, 129, 48}));
+}
+
+gert::Shape MakeHif4BatchShape(const std::vector<int64_t>& batch, int64_t dim0, int64_t dim1)
+{
+    gert::Shape shape;
+    for (const auto dim : batch) {
+        shape.AppendDim(dim);
+    }
+    shape.AppendDim(dim0);
+    shape.AppendDim(dim1);
+    shape.AppendDim(1);
+    return shape;
+}
+
+gert::Shape MakeHif4InputShape(const std::vector<int64_t>& batch, int64_t dim0, int64_t dim1)
+{
+    gert::Shape shape;
+    for (const auto dim : batch) {
+        shape.AppendDim(dim);
+    }
+    shape.AppendDim(dim0);
+    shape.AppendDim(dim1);
+    return shape;
+}
+
+TEST(QuantBatchMatmulV3Checker960, Hif4ScaleShapesAcceptBatchDimsUpToSevenD)
+{
+    auto input = MakeHif4Info();
+    // Scale/pertoken ranks 4D~7D carry one to four leading batch dims.
+    const std::vector<std::vector<int64_t>> batchDims{{2}, {2, 3}, {2, 3, 4}, {2, 3, 4, 5}};
+    for (bool transpose : {false, true}) {
+        SCOPED_TRACE(transpose);
+        input.transA = input.transB = transpose;
+        QuantBatchMatmulV3CheckerArch9201 checker(nullptr, input);
+        for (const auto& batch : batchDims) {
+            gert::Shape scale = MakeHif4BatchShape(batch, transpose ? 48 : 3, transpose ? 3 : 48);
+            gert::Shape token = MakeHif4BatchShape(batch, transpose ? 3 : 16, transpose ? 16 : 3);
+            auto tokenStorage = MakeStorageShape(token);
+            EXPECT_TRUE(checker.Hif4ScaleShapeCheck(scale));
+            EXPECT_TRUE(checker.Hif4PertokenScaleShapeCheck(&tokenStorage));
+            gert::Shape x1Shape = MakeHif4InputShape(batch, transpose ? 130 : 16, transpose ? 16 : 130);
+            gert::Shape x2Shape = MakeHif4InputShape(batch, transpose ? 48 : 130, transpose ? 130 : 48);
+            EXPECT_TRUE(
+                checker.CheckInputValidInHif4PerGroupMode(scale, &tokenStorage, x1Shape, x2Shape, {130, 16, 130, 48}));
+        }
+    }
+}
+
+TEST(QuantBatchMatmulV3Checker960, Hif4BatchValidationRejectsMismatchedBatchDims)
+{
+    auto input = MakeHif4Info();
+    const gert::Shape scale({2, 3, 48, 1});
+    const gert::StorageShape token({2, 16, 3, 1}, {2, 16, 3, 1});
+    const gert::Shape x1Shape({2, 16, 130});
+    const gert::Shape x2Shape({2, 130, 48});
+    QuantBatchMatmulV3CheckerArch9201 checker(nullptr, input);
+    EXPECT_TRUE(checker.CheckInputValidInHif4PerGroupMode(scale, &token, x1Shape, x2Shape, {130, 16, 130, 48}));
+
+    const gert::StorageShape tokenExtraBatch({2, 2, 16, 3, 1}, {2, 2, 16, 3, 1});
+    EXPECT_FALSE(
+        checker.CheckInputValidInHif4PerGroupMode(scale, &tokenExtraBatch, x1Shape, x2Shape, {130, 16, 130, 48}));
+    const gert::StorageShape tokenWrongBatch({3, 16, 3, 1}, {3, 16, 3, 1});
+    EXPECT_FALSE(
+        checker.CheckInputValidInHif4PerGroupMode(scale, &tokenWrongBatch, x1Shape, x2Shape, {130, 16, 130, 48}));
+
+    const gert::Shape scaleExtraBatch({2, 2, 3, 48, 1});
+    EXPECT_FALSE(
+        checker.CheckInputValidInHif4PerGroupMode(scaleExtraBatch, &token, x1Shape, x2Shape, {130, 16, 130, 48}));
+    const gert::Shape scaleWrongBatch({3, 3, 48, 1});
+    EXPECT_FALSE(
+        checker.CheckInputValidInHif4PerGroupMode(scaleWrongBatch, &token, x1Shape, x2Shape, {130, 16, 130, 48}));
+}
+
+class TestableMxBasicApiTiling : public AdaptiveSlidingWindowMXBasicAPITiling {
+public:
+    TestableMxBasicApiTiling() : AdaptiveSlidingWindowMXBasicAPITiling(nullptr) {}
+    bool IsTensorApiEnabled() const override { return tensorApiEnabled; }
+    bool tensorApiEnabled = true;
+};
+
+TEST(QuantBatchMatmulV3Checker960, Hif4BatchUsesBlazeBatchTilingKeyOn9201)
+{
+    using namespace QuantBatchMatmulV3Arch35TilingKey;
+    for (bool transpose : {false, true}) {
+        SCOPED_TRACE(transpose);
+        const auto trans = static_cast<uint64_t>(transpose);
+        TestableMxBasicApiTiling tiling;
+        auto& input = tiling.inputParams_;
+        input.Reset();
+        input.opName = "QuantBatchMatmulV3Hif4BatchTiling";
+        input.aDtype = input.bDtype = Ops::NN::DT_HIFLOAT4;
+        input.scaleDtype = input.perTokenScaleDtype = Ops::NN::DT_HIFLOAT4_SCALE;
+        input.mSize = 268;
+        input.nSize = 3680;
+        input.kSize = 160;
+        input.batchA = input.batchB = input.batchC = 2;
+        input.batchA1 = input.batchB1 = input.batchC1 = 2;
+        input.groupSizeM = input.groupSizeN = 1;
+        input.groupSizeK = 64;
+        input.isHif4PerGroup = true;
+        input.transA = input.transB = transpose;
+        tiling.compileInfo_.npuArch = NpuArch::DAV_9201;
+        tiling.isAFullLoad_ = false;
+        // baseK=64 used to force the HIF4 CMCT fallback; the API level must no longer depend on it.
+        tiling.basicTiling_.baseK = static_cast<uint32_t>(qmmv3_tiling_const::MXFP_DIVISOR_SIZE);
+
+        EXPECT_FALSE(tiling.IsWithoutBatchTilingData());
+        EXPECT_EQ(tiling.GetBatchMode(), static_cast<uint64_t>(TPL_WITH_BATCH));
+        EXPECT_EQ(tiling.GetApiLevel(NpuArch::DAV_9201), static_cast<uint64_t>(TPL_API_LEVEL_BLAZE));
+        EXPECT_EQ(tiling.GetKernelType(), static_cast<uint64_t>(TPL_NO_VEC_EPILOGUE_WITH_MMAPI));
+        EXPECT_EQ(tiling.GetTilingKey(), GET_TPL_TILING_KEY(trans, trans, static_cast<uint64_t>(TPL_WITH_BATCH),
+                                                            static_cast<uint64_t>(TPL_NO_VEC_EPILOGUE_WITH_MMAPI),
+                                                            static_cast<uint64_t>(TPL_API_LEVEL_BLAZE)));
+
+        // 9202 keeps using the CMCT Basic path for the same batched HIF4 shape.
+        tiling.compileInfo_.npuArch = NpuArch::DAV_9202;
+        EXPECT_EQ(tiling.GetApiLevel(NpuArch::DAV_9202), static_cast<uint64_t>(TPL_API_LEVEL_BASIC));
+        EXPECT_EQ(tiling.GetTilingKey(), GET_TPL_TILING_KEY(trans, trans, static_cast<uint64_t>(TPL_WITH_BATCH),
+                                                            static_cast<uint64_t>(TPL_NO_VEC_EPILOGUE_WITH_MMAPI),
+                                                            static_cast<uint64_t>(TPL_API_LEVEL_BASIC)));
+
+        // TensorAPI unavailable on 9201 falls back to CMCT Basic with the same batch mode.
+        tiling.compileInfo_.npuArch = NpuArch::DAV_9201;
+        tiling.tensorApiEnabled = false;
+        EXPECT_FALSE(tiling.IsWithoutBatchTilingData());
+        EXPECT_EQ(tiling.GetApiLevel(NpuArch::DAV_9201), static_cast<uint64_t>(TPL_API_LEVEL_BASIC));
+        EXPECT_EQ(tiling.GetTilingKey(), GET_TPL_TILING_KEY(trans, trans, static_cast<uint64_t>(TPL_WITH_BATCH),
+                                                            static_cast<uint64_t>(TPL_NO_VEC_EPILOGUE_WITH_MMAPI),
+                                                            static_cast<uint64_t>(TPL_API_LEVEL_BASIC)));
+
+        // batchC == 1 still selects the WithoutBatch Blaze tiling data and key.
+        tiling.tensorApiEnabled = true;
+        input.batchA = input.batchB = input.batchC = 1;
+        input.batchA1 = input.batchB1 = input.batchC1 = 1;
+        EXPECT_TRUE(tiling.IsWithoutBatchTilingData());
+        EXPECT_EQ(tiling.GetBatchMode(), static_cast<uint64_t>(TPL_WITHOUT_BATCH));
+        EXPECT_EQ(tiling.GetTilingKey(), GET_TPL_TILING_KEY(trans, trans, static_cast<uint64_t>(TPL_WITHOUT_BATCH),
+                                                            static_cast<uint64_t>(TPL_NO_VEC_EPILOGUE_WITH_MMAPI),
+                                                            static_cast<uint64_t>(TPL_API_LEVEL_BLAZE)));
+    }
 }
 
 class QuantBatchMatmulV3StreamK960 : public testing::Test {
@@ -801,6 +944,26 @@ TEST_F(QuantBatchMatmulV3StreamK960, CapabilityRequiresMatchingCoresAndSingleBat
     EXPECT_FALSE(tiling->IsCapable());
 }
 
+TEST_F(QuantBatchMatmulV3StreamK960, CapabilityAcceptsHif4PerGroupWithoutBatch)
+{
+    auto& input = tiling->inputParams_;
+    // HIF4 per-group is the only enabled quant mode here, so IsCapable goes through the HIF4 branch.
+    input.isPerTensor = false;
+    input.isHif4PerGroup = true;
+    EXPECT_FALSE(tiling->IsPertensorStreamKInput());
+    EXPECT_EQ(tiling->compileInfo_.aicNum, tiling->compileInfo_.aivNum);
+    EXPECT_EQ(input.batchC, 1U);
+    EXPECT_EQ(tiling->IsCapable(), IsTensorapiCapable());
+    tiling->compileInfo_.aivNum = 64;
+    EXPECT_FALSE(tiling->IsCapable());
+    tiling->compileInfo_.aivNum = 32;
+    input.batchC = 2;
+    EXPECT_FALSE(tiling->IsCapable());
+    input.batchC = 1;
+    input.isHif4PerGroup = false;
+    EXPECT_FALSE(tiling->IsCapable());
+}
+
 TEST_F(QuantBatchMatmulV3StreamK960, FloatingBiasMustMatchScaleAndAccumulationDomain)
 {
     auto& input = tiling->inputParams_;
@@ -857,6 +1020,7 @@ TEST_F(QuantBatchMatmulV3StreamK960, WorkspaceAndSerializedDataMatchKernelContra
     ASSERT_EQ(tiling->PostTiling(), ge::GRAPH_SUCCESS);
     auto* context = holder.GetContext<gert::TilingContext>();
     EXPECT_EQ(context->GetBlockDim(), 24);
+    EXPECT_EQ(context->GetScheduleMode(), 1U);
     EXPECT_EQ(context->GetRawTilingData()->GetDataSize(), sizeof(tiling->tilingData_));
     EXPECT_EQ(context->GetWorkspaceSizes(1)[0], tiling->workspaceSize_);
     const auto* data = reinterpret_cast<const DequantBmm::QuantBatchMatmulV3StreamKBasicAPITilingData*>(

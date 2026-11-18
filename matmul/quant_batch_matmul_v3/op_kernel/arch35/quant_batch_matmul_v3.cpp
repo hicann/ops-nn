@@ -448,7 +448,8 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 
 #if QBMMV3_IS_HIF4_DTYPE_TPL && defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
     if constexpr (DequantBmm::IsHif4Type<DTYPE_X1, DTYPE_SCALE>()) {
-        // hif4: 9202 全部走 CMCT；9201 按 api level 分流 Blaze/CMCT
+        // hif4: 9201 ASW/StreamK 均走 Blaze（BASIC 仅兜底 tensorapi 不可用）；
+        //       9202 仅 StreamK 走 Blaze，其余 ASW 走 CMCT
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201) && IS_BLAZE
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
@@ -458,28 +459,25 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
             QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn,
                                                           Blaze::Gemm::A_FULL_LOAD_MODE);
+        } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
+                             TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
         }
 #endif
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201)
-        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
+        // 9202 ASW / 9201 tensorapi fallback
+        if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
+                      TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
             QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign, 0);
-        } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
+        } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH &&
+                             TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
             QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign,
                                            Cmct::Gemm::A_FULL_LOAD_MODE);
         }
-#else
-        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
-            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign, 0);
-        } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
-            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign,
-                                           Cmct::Gemm::A_FULL_LOAD_MODE);
-        }
-#endif
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202) && IS_BLAZE
+#if IS_BLAZE
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            // hif4 streamk, blaze(9201/9202)
+            // hif4 streamk: 9201/9202 均走 Blaze
             QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, asc::te::nd_ext_layout_ptn, 0);
         }
 #endif
