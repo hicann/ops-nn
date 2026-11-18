@@ -1,7 +1,5 @@
 # aclnnApplyAdamV2
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/optim/apply_adam_v2)
-
 ## 产品支持情况
 
 以下支持情况适用于本仓提供的`aclnnApplyAdamV2`接口。ApplyAdamV2算子的其他调用方式请参见[算子说明](../README.md)。
