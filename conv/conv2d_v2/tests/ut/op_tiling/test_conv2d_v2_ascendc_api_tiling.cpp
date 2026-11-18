@@ -540,8 +540,21 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcWeightCoeff_groupOpt)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.InferCubeInfo();
     testTiling.optGroupFlag = true;
+    testTiling.shapeInfo.orgkH = 3;
+    testTiling.shapeInfo.orgkW = 3;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
     ConvTilingAlgorithmBBmode algo(&testTiling, conv2DBasicBlockInfo);
+
+    // optGroup uses NDDMA, weight coeff is 1 and the kernel size policy is bypassed
+    algo.CalcWeightCoeff();
+    EXPECT_EQ(algo.weightCoeff, 1);
+
+    // optGroup with Nz format weight, direct load, weight coeff equal to 1
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::FRACTAL_Z, ConvDtype::FLOAT16);
+    algo.CalcWeightCoeff();
+    EXPECT_EQ(algo.weightCoeff, 1);
+
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::FRACTAL_Z_C04, ConvDtype::FLOAT16);
     algo.CalcWeightCoeff();
     EXPECT_EQ(algo.weightCoeff, 1);
 }
@@ -572,6 +585,19 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcWeightCoeff)
     testTiling.shapeInfo.orgkW = 4;
     algo.CalcWeightCoeff();
     EXPECT_EQ(algo.weightCoeff, 6);
+
+    // Nz format weight is loaded directly, weight coeff is 1 whatever the kernel size is
+    testTiling.shapeInfo.orgkH = 3;
+    testTiling.shapeInfo.orgkW = 3;
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::FRACTAL_Z, ConvDtype::FLOAT16);
+    algo.CalcWeightCoeff();
+    EXPECT_EQ(algo.weightCoeff, 1);
+
+    testTiling.shapeInfo.orgkH = 4;
+    testTiling.shapeInfo.orgkW = 4;
+    testTiling.SetWeightType(TPosition::GM, ConvFormat::FRACTAL_Z_C04, ConvDtype::FLOAT16);
+    algo.CalcWeightCoeff();
+    EXPECT_EQ(algo.weightCoeff, 1);
 }
 
 TEST_F(TestConv2dTiling, test_algo_BB_CalcL1LoadScore)

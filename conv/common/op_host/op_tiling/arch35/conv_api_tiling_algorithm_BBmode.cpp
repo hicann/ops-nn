@@ -182,6 +182,12 @@ void ConvTilingAlgorithmBBmode::CalcAvalibleL1Size()
 
 void ConvTilingAlgorithmBBmode::CalcWeightCoeff()
 {
+    if (tilingIns_->descInfo.weightType.format == ConvFormat::FRACTAL_Z ||
+        tilingIns_->descInfo.weightType.format == ConvFormat::FRACTAL_Z_C04) {
+        weightCoeff = FMAP_WEIGHT_BANDWIDTH_COEFF_1V1;
+        return;
+    }
+
     if (!tilingIns_->optGroupFlag) {
         if (tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW == KERNEL_1X1 ||
             tilingIns_->descInfo.weightType.format == ConvFormat::NHWC ||

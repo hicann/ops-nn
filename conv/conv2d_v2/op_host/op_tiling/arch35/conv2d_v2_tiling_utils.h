@@ -36,6 +36,10 @@ constexpr uint32_t FORMAT_NCHW_C_INDEX = 1;
 constexpr uint32_t FORMAT_NCHW_H_INDEX = 2;
 constexpr uint32_t FORMAT_NCHW_W_INDEX = 3;
 
+constexpr uint32_t FORMAT_NHWC_H_INDEX = 1;
+constexpr uint32_t FORMAT_NHWC_W_INDEX = 2;
+constexpr uint32_t FORMAT_NHWC_C_INDEX = 3;
+
 constexpr uint32_t FORMAT_NCHW_DIM = 4;
 constexpr uint32_t FORMAT_ND_DIM = 1;
 constexpr uint32_t CONV2D_DIM_SIZE_LIMIT = 4;
@@ -121,6 +125,8 @@ constexpr static uint8_t TAIL_REGION0 = 0;
 constexpr static uint8_t TAIL_REGION1 = 1;
 constexpr static uint8_t TAIL_REGION2 = 2;
 constexpr static uint8_t MAX_DEPTH_RECURSION = 100;
+constexpr static uint32_t ASWT_WINDOW_ALIGN_NUM = 2;
+constexpr static uint32_t ASWT_MIN_WINDOW_NUM = 2;
 
 struct tailRegion {
     uint64_t standardBatch = 0;

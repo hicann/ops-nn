@@ -388,7 +388,7 @@ ge::graphStatus Conv2dBaseTiling::ParseAndCheckInfo()
 void Conv2dBaseTiling::SetArch5162BufferSize() const
 {
     if (IsArch5162(opInfo_->npuArch)) {
-        opInfo_->l1Size = L1_SIZE;
+        opInfo_->l1Size = L1_SIZE_5162;
         opInfo_->l0aSize = L0A_VIRTUAL_SIZE_5162;
         opInfo_->l0cSize = L0C_SIZE;
     }
@@ -597,7 +597,7 @@ ge::graphStatus Conv2dBaseTiling::SetStrideWriteParams()
                 paramInfo_.nodeType.c_str(), outShape.size());
         return ge::GRAPH_SUCCESS;
     }
-    const uint32_t cIdx = (descInfo_.outFormat == ge::FORMAT_NHWC) ? CONV2D_DIM_SIZE_LIMIT - 1 : FORMAT_NCHW_C_INDEX;
+    const uint32_t cIdx = (descInfo_.outFormat == ge::FORMAT_NHWC) ? FORMAT_NHWC_C_INDEX : FORMAT_NCHW_C_INDEX;
 
     bool onlyCDiff = totalShape[cIdx] > outShape[cIdx];
     for (size_t d = 0; d < outShape.size(); d++) {
@@ -628,9 +628,9 @@ ge::graphStatus Conv2dBaseTiling::SetStrideWriteParams()
     }
 
     const uint64_t totalH = static_cast<uint64_t>(
-        totalShape[cIdx == FORMAT_NCHW_C_INDEX ? FORMAT_NCHW_H_INDEX : FORMAT_NCHW_C_INDEX]);
+        totalShape[cIdx == FORMAT_NHWC_C_INDEX ? FORMAT_NHWC_H_INDEX : FORMAT_NCHW_H_INDEX]);
     const uint64_t totalW = static_cast<uint64_t>(
-        totalShape[cIdx == FORMAT_NCHW_C_INDEX ? FORMAT_NCHW_W_INDEX : FORMAT_NCHW_H_INDEX]);
+        totalShape[cIdx == FORMAT_NHWC_C_INDEX ? FORMAT_NHWC_W_INDEX : FORMAT_NCHW_W_INDEX]);
     const uint64_t dstStride = (descInfo_.outFormat == ge::FORMAT_NHWC) ? totalShapeCout :
                                                                           totalH * totalW * totalShapeCout;
 
@@ -764,7 +764,7 @@ void Conv2dBaseTiling::CalcASWTStrategy()
     tilingData_.set_mWindows(0);
     flagInfo_.isASWT = false;
     // Keep L1 pingpong on the original schedule until ASWT supports preloading across tasks.
-    if (tilingData_.get_pBufferFlag() > 7) {
+    if ((tilingData_.get_pBufferFlag() & L1A_L1B_PB_FLAG_MASK) != 0) {
         return;
     }
     uint64_t usedCores = numBlocksRes.batchDim * numBlocksRes.mDim * numBlocksRes.nDim * numBlocksRes.groupDim;
@@ -797,10 +797,10 @@ void Conv2dBaseTiling::CalcASWTStrategy()
 
     // Round sqrt(core count) up to an even window, then limit it to the available logical M blocks.
     uint32_t mWindows = static_cast<uint32_t>(std::ceil(std::sqrt(static_cast<double>(opInfo_->aicoreNum))));
-    mWindows = (mWindows + 1) / 2 * 2;
+    mWindows = ConvAlignB(mWindows, ASWT_WINDOW_ALIGN_NUM);
     mWindows = static_cast<uint32_t>(std::min<uint64_t>(batchBlocks * mBlocks, mWindows));
     // A single-block window provides no ASWT L2 locality benefit.
-    if (mWindows <= 1) {
+    if (mWindows < ASWT_MIN_WINDOW_NUM) {
         return;
     }
     tilingData_.set_mWindows(mWindows);

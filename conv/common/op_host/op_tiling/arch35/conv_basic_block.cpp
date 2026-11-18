@@ -26,7 +26,6 @@ using optiling::conv_ops_tiling::ConvCalcCommFactor;
 using optiling::conv_ops_tiling::CUBE_MKN_MAP;
 using optiling::conv_ops_tiling::IsDAV920Arch;
 using optiling::conv_ops_tiling::L0C_SIZE;
-using optiling::conv_ops_tiling::L1_SIZE;
 using optiling::conv_ops_tiling::MKN_N_IDX;
 using optiling::conv_ops_tiling::SWEET_POINT_AI_FP16;
 using optiling::conv_ops_tiling::SWEET_POINT_AI_FP16_137;
@@ -220,10 +219,8 @@ bool ConvBasicBlock::SelectMModeAlgorithm()
     }
     uint64_t scaleSize = static_cast<uint64_t>(params_.fixpipeInfo.channelWiseCoeff * FP16_DTYPE_SIZE *
                                                params_.shapeInfo.co);
-    // todo fix L1_SIZE != params_.l1Size
-    int64_t availableL1Size = (IsDAV920Arch(params_.platformInfo.npuArch) ? static_cast<int64_t>(params_.l1Size) :
-                                                                            static_cast<int64_t>(L1_SIZE)) -
-                              static_cast<int64_t>(biasSize) - static_cast<int64_t>(scaleSize);
+    int64_t availableL1Size = static_cast<int64_t>(params_.l1Size) - static_cast<int64_t>(biasSize) -
+                              static_cast<int64_t>(scaleSize);
 
     int64_t mTile = 0, nTile = 0;
     if (availableL1Size <= 0 || !CmpFirstAdjustMnTile(availableL1Size, mTile, nTile, basicBlockM, basicBlockN)) {

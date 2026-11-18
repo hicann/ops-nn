@@ -524,7 +524,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
                     WaitFlag<HardEvent::MTE2_MTE1>(static_cast<event_t>(l1BufId));
 
                     LocalTensor<DTYPE> al1(TPosition::A1, l1BufId * al1HalfSize_ * sizeof(DTYPE), al1HalfSize_);
-                    uint32_t curNVal = (enlargeActual_ == t.enlarge) ? coutOpt : enlargeActual_;
+                    uint32_t curNVal = (enlargeActual_ == t.enlarge) ? coutOpt : enlargeActual_ * (t.cout / t.groups);
                     ComputeL0(al1, bl1, mGlobal, curMAL1, 0, curNVal, kTotal_);
                     SetFlag<HardEvent::MTE1_MTE2>(static_cast<event_t>(l1BufId));
                     if constexpr (AL1_PINGPONG) {
