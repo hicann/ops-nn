@@ -130,10 +130,11 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, ge::Dat
 
 TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_ascendc_bfloat16_not_tail)
 {
+    // 横竖自适应(mock UB 253952: B_eff=min(253952/52480,4)=4): dimNeg1=256 → W=256, G=4/2=2,
+    // splitBlockH=128; dimNeg2=128 精确 1 行带 → totalTask=1, 单核
     gert::StorageShape shape = {{128, 256}, {128, 256}};
     gert::StorageShape scaleShape = {{2, 256, 1}, {2, 256, 1}};
-    string expectTilingData = "64 2 1 1 128 256 128 192 128 128 1 2 1 0 2 0 0 0 2 4 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
-                              "0 0 0 ";
+    string expectTilingData = "64 1 1 1 128 256 256 128 128 256 1 1 1 0 1 0 0 0 1 4 2 0 0 0 ";
     int64_t axis = -2;
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
@@ -144,8 +145,7 @@ TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_ascendc_bfloat16_not_tail
 {
     gert::StorageShape shape = {{128, 256}, {128, 256}};
     gert::StorageShape scaleShape = {{2, 256, 1}, {2, 256, 1}};
-    string expectTilingData = "64 2 1 1 128 256 128 192 128 128 1 2 1 0 2 0 0 0 2 4 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
-                              "0 0 1 ";
+    string expectTilingData = "64 1 1 1 128 256 256 128 128 256 1 1 1 0 1 0 0 0 1 4 2 0 0 1 ";
     int64_t axis = -2;
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
@@ -163,12 +163,194 @@ TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_scale_alg_invalid)
                     expectTilingData, 2, ge::GRAPH_FAILED);
 }
 
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_narrow_g4)
+{
+    // 窄形竖切档: dimNeg1=128 → W=128, G=4, H=256; dimNeg2=128 < H → 单行带行尾 128
+    gert::StorageShape shape = {{128, 128}, {128, 128}};
+    gert::StorageShape scaleShape = {{2, 128, 1}, {2, 128, 1}};
+    string expectTilingData = "64 1 1 1 128 128 128 256 128 128 1 1 1 0 1 0 0 0 1 2 2 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_narrow_multitask)
+{
+    // 窄形多任务: 7168=256×28 精确整除 → 28 行带无尾, 28 任务 28 核
+    gert::StorageShape shape = {{7168, 128}, {7168, 128}};
+    gert::StorageShape scaleShape = {{112, 128, 1}, {112, 128, 1}};
+    string expectTilingData = "64 28 1 1 7168 128 128 256 256 128 28 1 1 0 28 0 0 0 28 2 112 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_ceil_192)
+{
+    // ceil 上取整档: dimNeg1=192 → W=256(stale 64 列), G=2, H=128 精确整除无行尾
+    gert::StorageShape shape = {{128, 192}, {128, 192}};
+    gert::StorageShape scaleShape = {{2, 192, 1}, {2, 192, 1}};
+    string expectTilingData = "64 1 1 1 128 192 256 128 128 192 1 1 1 0 1 0 1 0 1 3 2 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_ceil_320)
+{
+    // ceil 上取整档: dimNeg1=320 → W=384(stale 64 列), G=floor(4/3)=1(3/4 预算), H=64
+    gert::StorageShape shape = {{64, 320}, {64, 320}};
+    gert::StorageShape scaleShape = {{1, 320, 1}, {1, 320, 1}};
+    string expectTilingData = "64 1 1 1 64 320 384 64 64 320 1 1 1 0 1 1 1 0 1 5 1 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_ceil_448)
+{
+    // ceil 上取整档: dimNeg1=448 → W=512(stale 64 列), G=1, H=64, 单 tile 满突发
+    gert::StorageShape shape = {{64, 448}, {64, 448}};
+    gert::StorageShape scaleShape = {{1, 448, 1}, {1, 448, 1}};
+    string expectTilingData = "64 1 1 1 64 448 512 64 64 448 1 1 1 0 1 1 1 0 1 7 1 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_wide_multi_colblock)
+{
+    // 宽形多列块: dimNeg1=1024 → W=512, 2 列块精确整除, 2 任务 2 核
+    gert::StorageShape shape = {{64, 1024}, {64, 1024}};
+    gert::StorageShape scaleShape = {{1, 1024, 1}, {1, 1024, 1}};
+    string expectTilingData = "64 2 1 1 64 1024 512 64 64 512 1 2 1 0 2 1 0 0 2 16 1 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_wide_coltail)
+{
+    // 宽形列尾: 8256=16×512+64 → 17 列块, 尾块 dataLen=64; 17 任务 17 核
+    gert::StorageShape shape = {{64, 8256}, {64, 8256}};
+    gert::StorageShape scaleShape = {{1, 8256, 1}, {1, 8256, 1}};
+    string expectTilingData = "64 17 1 1 64 8256 512 64 64 64 1 17 1 0 17 1 1 0 17 129 1 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_rowtail_multichunk)
+{
+    // 行尾×多 chunk: dimNeg1=256 → W=256(chunkLoop=2), G=2, H=128; 320=2×128+64 → 3 行带尾 64
+    gert::StorageShape shape = {{320, 256}, {320, 256}};
+    gert::StorageShape scaleShape = {{5, 256, 1}, {5, 256, 1}};
+    string expectTilingData = "64 3 1 1 320 256 256 128 64 256 3 1 1 0 3 1 0 0 3 4 5 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_rowtail_g4)
+{
+    // 窄形行尾: W=128, G=4, H=256; dimNeg2=192 < H → 单行带行尾 192
+    gert::StorageShape shape = {{192, 128}, {192, 128}};
+    gert::StorageShape scaleShape = {{3, 128, 1}, {3, 128, 1}};
+    string expectTilingData = "64 1 1 1 192 128 128 256 192 128 1 1 1 0 1 1 0 0 1 2 3 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_rowtail_g4_multitask)
+{
+    // 窄形行尾多任务: 7232=28×256+64 → 29 行带尾 64, 29 任务 29 核
+    gert::StorageShape shape = {{7232, 128}, {7232, 128}};
+    gert::StorageShape scaleShape = {{113, 128, 1}, {113, 128, 1}};
+    string expectTilingData = "64 29 1 1 7232 128 128 256 64 128 29 1 1 0 29 1 0 0 29 2 113 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_min_shape)
+{
+    // 最小 shape: W=128, G=4, H=256; dimNeg2=64 单行带行尾 64(循环数按 H' 切)
+    gert::StorageShape shape = {{64, 64}, {64, 64}};
+    gert::StorageShape scaleShape = {{1, 64, 1}, {1, 64, 1}};
+    string expectTilingData = "64 1 1 1 64 64 128 256 64 64 1 1 1 0 1 1 1 0 1 1 1 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_not_tail_multibatch)
+{
+    // 多 batch: dim0=2; W=128, G=4, H=256; dimNeg2=192 单行带行尾 192 → totalTask=2
+    gert::StorageShape shape = {{2, 192, 128}, {2, 192, 128}};
+    gert::StorageShape scaleShape = {{2, 3, 128, 1}, {2, 3, 128, 1}};
+    string expectTilingData = "64 2 1 2 192 128 128 256 192 128 1 1 1 0 2 1 0 0 1 2 3 0 0 0 ";
+    int64_t axis = -2;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
 TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_ascendc_bfloat16_tail)
 {
     gert::StorageShape shape = {{128, 256}, {128, 256}};
     gert::StorageShape scaleShape = {{128, 4, 1}, {128, 4, 1}};
-    string expectTilingData = "64 16 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 32 32 32 408 51 4 4 26 2 2 2 1 1 204 16 "
-                              "16 0 ";
+    // CCE 移植后 -1 轴: tile=256(mock UB 253952 下 (253952-4096)/700=356, 256 对齐取 256),
+    // groups=512 -> tiles=2, usedCore=min(64,2)=2, 头尾核各 1 tile; 仅传 7 个字段, 其余恒 0
+    string expectTilingData = "64 2 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 512 256 0 ";
+    int64_t axis = -1;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_ascendc_bfloat16_tail_last_tile_partial)
+{
+    // 尾 tile 非整块: groups=258 -> tiles=2, 全局尾 tile 有效 2 group(由 kernel 派生, tiling 不体现)
+    gert::StorageShape shape = {{2, 8256}, {2, 8256}};
+    gert::StorageShape scaleShape = {{2, 129, 1}, {2, 129, 1}};
+    string expectTilingData = "64 2 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 258 256 0 ";
+    int64_t axis = -1;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_ascendc_bfloat16_tail_multi_core_uneven)
+{
+    // tile 数 > 核数的不均分: groups=16640 -> tiles=65, usedCore=64,
+    // 头部 1 核 2 tile(blockPerHeadCore=2), 其余 63 核 1 tile(blockPerTailCore=1)
+    gert::StorageShape shape = {{130, 8192}, {130, 8192}};
+    gert::StorageShape scaleShape = {{130, 128, 1}, {130, 128, 1}};
+    string expectTilingData = "64 64 0 0 0 0 0 0 0 0 0 0 2 1 1 0 0 0 0 0 0 16640 256 0 ";
+    int64_t axis = -1;
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,
+                    expectTilingData);
+}
+
+TEST_F(DynamicHiF4QuantTiling, DynamicHiF4Quant_tiling_ascendc_bfloat16_tail_single_group)
+{
+    // 最小 shape: groups=1 -> tiles=1, usedCore=1, 全局尾 tile 有效 1 group
+    gert::StorageShape shape = {{1, 64}, {1, 64}};
+    gert::StorageShape scaleShape = {{1, 1, 1}, {1, 1, 1}};
+    string expectTilingData = "64 1 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 1 256 0 ";
     int64_t axis = -1;
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_HIFLOAT4_SCALE, shape, shape, scaleShape, axis,

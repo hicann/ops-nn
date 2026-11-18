@@ -115,7 +115,7 @@ ge::graphStatus GroupedDynamicHiF4QuantTiling::CheckShape()
 
     OP_CHECK_IF(tilingParams_.rowSize % BLOCK_SIZE != 0,
                 OP_LOGE(context_->GetNodeName(),
-                        "The last axis must be a multiple of 64, the current last axis size is [%lld] please check.",
+                        "The last axis must be a multiple of 64, the current last axis size is [%ld] please check.",
                         tilingParams_.rowSize),
                 return ge::GRAPH_FAILED);
 
@@ -198,30 +198,29 @@ ge::graphStatus GroupedDynamicHiF4QuantTiling::GetPlatformInfo()
 
 void GroupedDynamicHiF4QuantTiling::SplitCore()
 {
+    // tile 几何：dim1 条带宽固定为寄存器 lane 宽（vfLen/2）
     tilingParams_.blockRowSize = static_cast<int64_t>(tilingParams_.vfLen / BYTE_OF_INPUT_x);
     tilingParams_.blockRowNum = Ops::Base::CeilDiv(tilingParams_.rowSize, tilingParams_.blockRowSize);
     tilingParams_.tailBlockRowSize = tilingParams_.rowSize -
                                      (tilingParams_.blockRowNum - 1) * tilingParams_.blockRowSize;
-    tilingParams_.totalTaskNum = tilingParams_.blockRowNum * tilingParams_.groupNum;
+    // dim0 行块大小：UB 能装下的 64 行 Block 数（保留大块 tile 吞吐）
     CalcMaxUbAvailable(BLOCK_SIZE, tilingParams_.blockRowSize);
-    tilingParams_.blockColSize = tilingParams_.ubMaxblockNum * BLOCK_SIZE;
-    if (tilingParams_.colSize / tilingParams_.groupNum >= BLOCK_SIZE &&
-        tilingParams_.totalTaskNum < tilingParams_.totalCoreNum) {
-        tilingParams_.usedCoreNum = tilingParams_.totalCoreNum;
-        tilingParams_.headGroupCoreNum = Ops::Base::CeilDiv(tilingParams_.totalCoreNum, tilingParams_.groupNum);
-        tilingParams_.tailGroupCoreNum = tilingParams_.totalCoreNum / tilingParams_.groupNum;
-        tilingParams_.headGroupNum = tilingParams_.totalCoreNum % tilingParams_.groupNum;
-        tilingParams_.headCoreNum = tilingParams_.headGroupNum * tilingParams_.headGroupCoreNum;
-        mode_ = 1;
-    } else {
-        tilingParams_.usedCoreNum = tilingParams_.totalCoreNum > tilingParams_.totalTaskNum ?
-                                        tilingParams_.totalTaskNum :
-                                        tilingParams_.totalCoreNum;
-        tilingParams_.headCoreLoopNum = Ops::Base::CeilDiv(tilingParams_.totalTaskNum, tilingParams_.totalCoreNum);
-        tilingParams_.tailCoreLoopNum = tilingParams_.totalTaskNum / tilingParams_.totalCoreNum;
-        tilingParams_.headCoreNum = tilingParams_.totalTaskNum % tilingParams_.totalCoreNum;
-        mode_ = 0;
+    int64_t ubColSize = tilingParams_.ubMaxblockNum * BLOCK_SIZE;
+    // 并行度封顶：估算 tile 数 ceil(colSize/B)*blockRowNum < totalCoreNum 时收缩行块，
+    // 取满足 tile 数 >= totalCoreNum 的最大 64 倍数块，避免 tile 数不足导致核饥饿
+    // （大 shape 天然满足，封顶不生效；ceil 超可加保证多组不均时下界估算同样成立）
+    int64_t parallelCap = tilingParams_.colSize * tilingParams_.blockRowNum / tilingParams_.totalCoreNum / BLOCK_SIZE *
+                          BLOCK_SIZE;
+    if (parallelCap > ubColSize) {
+        parallelCap = ubColSize;
     }
+    if (parallelCap < BLOCK_SIZE) {
+        parallelCap = BLOCK_SIZE;
+    }
+    tilingParams_.blockColSize = parallelCap;
+    // 切分下沉 kernel（GroupedSplitBase）：逐组动态配核 + 核窗口轮转 + 组内等大 tile 均分，
+    // host 侧仅需全核启动，不再做基于平均组大小的预估切核
+    tilingParams_.usedCoreNum = tilingParams_.totalCoreNum;
 }
 
 void GroupedDynamicHiF4QuantTiling::CalcMaxUbAvailable(const int64_t blockH, const int64_t blockW)
@@ -234,12 +233,10 @@ void GroupedDynamicHiF4QuantTiling::CalcMaxUbAvailable(const int64_t blockH, con
     int64_t maxPer4UbSize = blockH * blockW / NUM_FOUR * BYTE_OF_INPUT_x;
     int64_t maxPer8UbSize = blockH * blockW / NUM_EIGHT * BYTE_OF_INPUT_x;
     int64_t e1UbSize = blockW * BYTE_OF_INPUT_x;
-    int64_t e2UbSize = blockW * BYTE_OF_INPUT_x;
-    int64_t e3UbSize = blockW * BYTE_OF_INPUT_x * NUM_TWO;
-
-    tilingParams_.ubMaxblockNum = tilingParams_.ubSize /
-                                  (xUbSize + groupIndexUbSize + yUbSize + scaleUbSize + tmpScaleUbSize + maxPer4UbSize +
-                                   maxPer8UbSize + e1UbSize + e2UbSize + e3UbSize);
+    // eb/ec 掩码中间 buffer 已删除（掩码直接进寄存器位平面累加器，不再经 UB 往返），
+    // 每 64 行块净省 768B（HEAD 的 eb blockW*2B + ec blockW*4B）；
+    tilingParams_.ubMaxblockNum = tilingParams_.ubSize / (xUbSize + groupIndexUbSize + yUbSize + scaleUbSize +
+                                                          tmpScaleUbSize + maxPer4UbSize + maxPer8UbSize + e1UbSize);
 }
 
 ge::graphStatus GroupedDynamicHiF4QuantTiling::DoTiling()
@@ -278,7 +275,8 @@ ge::graphStatus GroupedDynamicHiF4QuantTiling::DoTiling()
 
 void GroupedDynamicHiF4QuantTiling::SetTilingKey()
 {
-    int64_t tilingKey = GET_TPL_TILING_KEY(mode_);
+    // 切分统一由 GroupedSplitBase 在 kernel 内完成，host 固定使用单一 tiling key
+    int64_t tilingKey = GET_TPL_TILING_KEY(TPL_MODE_0);
     tilingParams_.tilingKey = tilingKey;
     context_->SetTilingKey(tilingKey);
 }
@@ -295,15 +293,6 @@ ge::graphStatus GroupedDynamicHiF4QuantTiling::SetTilingData()
     tilingData_.tailBlockRowSize = tilingParams_.tailBlockRowSize;
     tilingData_.blockColSize = tilingParams_.blockColSize;
     tilingData_.blockRowNum = tilingParams_.blockRowNum;
-    tilingData_.blockColNum = tilingParams_.blockColNum;
-    tilingData_.ubMaxblockNum = tilingParams_.ubMaxblockNum;
-    tilingData_.totalTaskNum = tilingParams_.totalTaskNum;
-    tilingData_.headCoreLoopNum = tilingParams_.headCoreLoopNum;
-    tilingData_.tailCoreLoopNum = tilingParams_.tailCoreLoopNum;
-    tilingData_.headCoreNum = tilingParams_.headCoreNum;
-    tilingData_.headGroupCoreNum = tilingParams_.headGroupCoreNum;
-    tilingData_.tailGroupCoreNum = tilingParams_.tailGroupCoreNum;
-    tilingData_.headGroupNum = tilingParams_.headGroupNum;
     tilingData_.scaleAlg = tilingParams_.scaleAlg;
 
     uint64_t tilingDataSize = sizeof(tilingData_);
@@ -323,14 +312,10 @@ void GroupedDynamicHiF4QuantTiling::PrintTilingData()
 {
     OP_LOGD(context_->GetNodeName(),
             "TilingData tilingKey: %ld, totalCoreNum: %ld, usedCoreNum: %ld, groupNum: %ld, rowSize: %ld, colSize: "
-            "%ld, blockRowSize: %ld, tailBlockRowSize: %ld, blockColSize: %ld, blockRowNum: %ld, blockColNum: %ld, "
-            "ubMaxblockNum: %ld, totalTaskNum: %ld, headCoreLoopNum: %ld, tailCoreLoopNum: %ld, headCoreNum: %ld, "
-            "headGroupCoreNum: %ld, tailGroupCoreNum: %ld, headGroupNum: %ld, scaleAlg: %ld",
+            "%ld, blockRowSize: %ld, tailBlockRowSize: %ld, blockColSize: %ld, blockRowNum: %ld, scaleAlg: %ld",
             tilingData_.tilingKey, tilingData_.totalCoreNum, tilingData_.usedCoreNum, tilingData_.groupNum,
             tilingData_.rowSize, tilingData_.colSize, tilingData_.blockRowSize, tilingData_.tailBlockRowSize,
-            tilingData_.blockColSize, tilingData_.blockRowNum, tilingData_.blockColNum, tilingData_.ubMaxblockNum,
-            tilingData_.totalTaskNum, tilingData_.headCoreLoopNum, tilingData_.tailCoreLoopNum, tilingData_.headCoreNum,
-            tilingData_.headGroupCoreNum, tilingData_.tailGroupCoreNum, tilingData_.headGroupNum, tilingData_.scaleAlg);
+            tilingData_.blockColSize, tilingData_.blockRowNum, tilingData_.scaleAlg);
 }
 
 static ge::graphStatus TilingForGroupedDynamicHiF4Quant(gert::TilingContext* context)

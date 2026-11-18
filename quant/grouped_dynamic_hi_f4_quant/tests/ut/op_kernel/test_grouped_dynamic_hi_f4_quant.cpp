@@ -61,27 +61,19 @@ TEST_F(grouped_dynamic_hi_f4_quant_test, test_case_bf16_fp8_e5m2_scale_alg_0)
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     GroupedDynamicHiF4QuantTilingData* tilingDatafromBin = reinterpret_cast<GroupedDynamicHiF4QuantTilingData*>(tiling);
 
-    group_index[0] = 128;
+    group_index[0] = rowNum;
 
     tilingDatafromBin->tilingKey = 1;
     tilingDatafromBin->totalCoreNum = 64;
     tilingDatafromBin->usedCoreNum = 64;
     tilingDatafromBin->groupNum = 1;
-    tilingDatafromBin->rowSize = 128;
-    tilingDatafromBin->colSize = 32;
-    tilingDatafromBin->blockRowSize 128;
+    tilingDatafromBin->rowSize = colNum;
+    tilingDatafromBin->colSize = rowNum;
+    tilingDatafromBin->blockRowSize = 128;
     tilingDatafromBin->tailBlockRowSize = 128;
     tilingDatafromBin->blockColSize = 256;
-    tilingDatafromBin->blockRowNum = 1;
-    tilingDatafromBin->blockColNum = 0;
-    tilingDatafromBin->ubMaxblockNum = 4;
-    tilingDatafromBin->totalTaskNum = 1;
-    tilingDatafromBin->headCoreLoopNum = 0;
-    tilingDatafromBin->tailCoreLoopNum = 0;
-    tilingDatafromBin->headCoreNum = 0;
-    tilingDatafromBin->headGroupCoreNum = 64;
-    tilingDatafromBin->tailGroupCoreNum = 64;
-    tilingDatafromBin->headGroupNum = 0;
+    tilingDatafromBin->blockRowNum = colNum / 128;
+    tilingDatafromBin->scaleAlg = 0;
 
     ICPU_SET_TILING_KEY(1);
 
@@ -94,8 +86,8 @@ TEST_F(grouped_dynamic_hi_f4_quant_test, test_case_bf16_fp8_e5m2_scale_alg_0)
     AscendC::GmFree(x);
     AscendC::GmFree(group_index);
     AscendC::GmFree(y);
-    AscendC::GmFree(scale);
+    AscendC::GmFree(mxScale);
     AscendC::GmFree(workSpace);
-    AscendC::GmFree(tilingDatafromBin);
+    AscendC::GmFree(tiling);
     free(path_);
 }

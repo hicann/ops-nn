@@ -39,7 +39,6 @@ struct DynamicHiF4QuantTilingParam {
     int64_t blockSize{0};
     int64_t blockW{0};
     int64_t splitBlockH{0};
-    int64_t totalshape{0};
     int64_t dim0{1};
     int64_t dimNeg2{1};
     int64_t dimNeg1{1};
@@ -60,26 +59,9 @@ struct DynamicHiF4QuantTilingParam {
     int64_t scale1ColCountPerBatch{0};
     int64_t scale2RowCountPerBatch{0};
     int64_t workspaceSize{0};
-    int64_t ubLoopOfFormerBlock{0};
-    int64_t ubLoopOfTailBlock{0};
-    int64_t ubTailOfFormerBlock{0};
-    int64_t ubTailOfTailBlock{0};
-    int64_t ubFormer{0};
-    int64_t groupNum{0};
-    int64_t blockFormer{0};
-    int64_t blockTail{0};
-    int64_t ubFormerRegLoop{0};
-    int64_t ubTailOfFormerRegLoop{0};
-    int64_t ubTailOfTailRegLoop{0};
-    int64_t ubFormerScaleRegLoop{0};
-    int64_t ubTailOfFormerScaleRegLoop{0};
-    int64_t ubTailOfTailScaleRegLoop{0};
-    int64_t ubMaxPer8RegLoop{0};
-    int64_t ubTailOfMaxPer8RegLoop{0};
-    int64_t ubTailOfTailMaxPer8RegLoop{0};
-    int64_t ubFormerOutRegLoop{0};
-    int64_t ubTailOfOutRegLoop{0};
-    int64_t ubTailOfTailOutRegLoop{0};
+    int64_t ubFormer{0};   // -1 轴：单 tile 的 group 数
+    int64_t groupNum{0};   // -1 轴：全局总 group 数
+    int64_t totalTiles{0}; // -1 轴：全局总 tile 数
 };
 
 class DynamicHiF4QuantTiling {
@@ -101,7 +83,7 @@ private:
     void SetTilingDataNeg1();
     void SetTilingDataNeg2();
     void PrintTilingData();
-    void SplitCore(int64_t blockW, int64_t blockSize);
+    void SplitCore(int64_t blockSize);
 
 private:
     uint64_t quantAxis_ = 0;

@@ -29,15 +29,6 @@ struct GroupedDynamicHiF4QuantTilingData {
     int64_t tailBlockRowSize{0};
     int64_t blockColSize{0};
     int64_t blockRowNum{0};
-    int64_t blockColNum{0};
-    int64_t ubMaxblockNum{0};
-    int64_t totalTaskNum{0};
-    int64_t headCoreLoopNum{0};
-    int64_t tailCoreLoopNum{0};
-    int64_t headCoreNum{0};
-    int64_t headGroupCoreNum{0};
-    int64_t tailGroupCoreNum{0};
-    int64_t headGroupNum{0};
     int64_t scaleAlg{0}; // 缩放算法选择：0-默认(阈值为4/2)，1-阈值3.75/1.875
 };
 #endif // OPS_NN_DYNAMIC_HIF4_QUANT_TILINGDATA_H

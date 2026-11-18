@@ -133,23 +133,23 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, ge::Dat
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
-TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_bfloat16_mode_1)
+TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_bfloat16)
 {
     gert::StorageShape shape = {{265, 832}, {265, 832}};
     gert::StorageShape groupIdxShape = {{5}, {5}};
     gert::StorageShape scaleShape = {{9, 832, 1}, {9, 832, 1}};
-    string expectTilingData = "0 64 35 5 832 265 128 64 256 7 0 4 35 1 0 35 0 0 0 0 ";
+    string expectTilingData = "0 64 64 5 832 265 128 64 64 7 0 ";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_INT32, ge::DT_HIFLOAT4_SCALE, shape, groupIdxShape, shape,
                     scaleShape, expectTilingData);
 }
 
-TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_bfloat16_mode_1_scale_alg_1)
+TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_bfloat16_scale_alg_1)
 {
     gert::StorageShape shape = {{265, 832}, {265, 832}};
     gert::StorageShape groupIdxShape = {{5}, {5}};
     gert::StorageShape scaleShape = {{9, 832, 1}, {9, 832, 1}};
-    string expectTilingData = "0 64 35 5 832 265 128 64 256 7 0 4 35 1 0 35 0 0 0 1 ";
+    string expectTilingData = "0 64 64 5 832 265 128 64 64 7 1 ";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_INT32, ge::DT_HIFLOAT4_SCALE, shape, groupIdxShape, shape,
                     scaleShape, expectTilingData, 1);
@@ -166,34 +166,47 @@ TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_scale_alg_i
                     scaleShape, expectTilingData, 2, ge::GRAPH_FAILED);
 }
 
-TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_float16_mode_1)
+TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_float16)
 {
     gert::StorageShape shape = {{32, 128}, {32, 128}};
     gert::StorageShape groupIdxShape = {{1}, {1}};
     gert::StorageShape scaleShape = {{1, 128, 1}, {1, 128, 1}};
-    string expectTilingData = "0 64 1 1 128 32 128 128 256 1 0 4 1 1 0 1 0 0 0 0 ";
+    string expectTilingData = "0 64 64 1 128 32 128 128 64 1 0 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT4, ge::DT_INT32, ge::DT_HIFLOAT4_SCALE, shape, groupIdxShape, shape,
                     scaleShape, expectTilingData);
 }
 
-TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_bfloat16_mode_0)
+TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_float16_long_last_axis)
 {
     gert::StorageShape shape = {{32, 8192}, {32, 8192}};
     gert::StorageShape groupIdxShape = {{1}, {1}};
     gert::StorageShape scaleShape = {{1, 8192, 1}, {1, 8192, 1}};
-    string expectTilingData = "0 64 64 1 8192 32 128 128 256 64 0 4 64 1 1 0 0 0 0 0 ";
+    string expectTilingData = "0 64 64 1 8192 32 128 128 64 64 0 ";
 
-    ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT4, ge::DT_INT32, ge::DT_HIFLOAT4_SCALE, shape, groupIdxShape, shape,
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT4, ge::DT_INT32, ge::DT_HIFLOAT4_SCALE, shape, groupIdxShape, shape,
                     scaleShape, expectTilingData);
 }
 
-TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_ascendc_float16_fp8e5m2)
+TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_parallel_cap_small_shape)
 {
-    gert::StorageShape shape = {{32, 8192}, {32, 8192}};
+    // 小 shape：ceil(2368/128)*5 = 95 tile 可喂饱 64 核，blockColSize 收缩到 128（cap 生效）
+    gert::StorageShape shape = {{2368, 640}, {2368, 640}};
     gert::StorageShape groupIdxShape = {{1}, {1}};
-    gert::StorageShape scaleShape = {{1, 8192, 1}, {1, 8192, 1}};
-    string expectTilingData = "0 64 64 1 8192 32 128 128 256 64 0 4 64 1 1 0 0 0 0 0 ";
+    gert::StorageShape scaleShape = {{38, 640, 1}, {38, 640, 1}};
+    string expectTilingData = "0 64 64 1 640 2368 128 128 128 5 0 ";
+
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT4, ge::DT_INT32, ge::DT_HIFLOAT4_SCALE, shape, groupIdxShape, shape,
+                    scaleShape, expectTilingData);
+}
+
+TEST_F(GroupedDynamicHiF4QuantTiling, GroupedDynamicHiF4Quant_tiling_parallel_cap_large_shape)
+{
+    // 大 shape：tile 数充足，blockColSize 保持 UB 上限 256（cap 不生效）
+    gert::StorageShape shape = {{16384, 128}, {16384, 128}};
+    gert::StorageShape groupIdxShape = {{1}, {1}};
+    gert::StorageShape scaleShape = {{257, 128, 1}, {257, 128, 1}};
+    string expectTilingData = "0 64 64 1 128 16384 128 128 256 1 0 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_HIFLOAT4, ge::DT_INT32, ge::DT_HIFLOAT4_SCALE, shape, groupIdxShape, shape,
                     scaleShape, expectTilingData);

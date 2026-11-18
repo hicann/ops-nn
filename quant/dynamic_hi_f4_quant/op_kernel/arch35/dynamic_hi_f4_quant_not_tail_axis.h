@@ -10,7 +10,9 @@
 
 /*!
  * \file dynamic_hi_f4_quant_not_tail_axis.h
- * \brief
+ * \brief axis=-2 路径：tile = [splitBlockH 行 × blockW 列]，横竖自适应布局。
+ *        5 段 VF 计算（各段独立 __VEC_SCOPE__），外层为 128 列块(chunk)循环；
+ *        mp4/mp8/e8/tmpScale 按 [列块][行结构] 块主序，寻址由 AddrReg 携带。
  */
 #ifndef DYNAMIC_HIF4_QUANT_NOT_TAIL_AXIS_HIFLOAT4_H
 #define DYNAMIC_HIF4_QUANT_NOT_TAIL_AXIS_HIFLOAT4_H
@@ -23,7 +25,7 @@
 
 namespace DynamicHiF4Quant {
 using namespace AscendC;
-
+constexpr int64_t DB_BUFFER = 2;
 template <typename ST, typename DT, uint32_t useQueNum>
 class DynamicHiF4QuantNotTailAxis {
 public:
@@ -50,11 +52,8 @@ protected:
     __aicore__ inline void ComputeTmpScale(uint16_t regLoop, uint16_t innerLoopMaxper4, uint16_t innerLoopMaxper8,
                                            __ubuf__ uint16_t* maxPer4BufRead2Addr,
                                            __ubuf__ uint16_t* maxPer8BufRead2Addr, __ubuf__ uint16_t* e8BufRead1Addr,
-                                           __ubuf__ uint8_t* e1p8BufAddr, __ubuf__ uint8_t* e1p16BufAddr,
+                                           __ubuf__ uint16_t* scaleAddr1, __ubuf__ uint16_t* scaleAddr2,
                                            __ubuf__ uint16_t* tmpScaleAddr);
-    __aicore__ inline void ComputeScale(uint16_t regLoop, __ubuf__ uint8_t* e8BufRead2Addr,
-                                        __ubuf__ uint8_t* e1p8BufReadAddr, __ubuf__ uint8_t* e1p16BufReadAddr,
-                                        __ubuf__ uint8_t* scaleAddr1, __ubuf__ uint16_t* scaleAddr2);
     __aicore__ inline void ComputeOut(uint16_t innerLoopMaxper4, __ubuf__ ST* xAddr2,
                                       __ubuf__ uint16_t* tmpScaleReadAddr, __ubuf__ int32_t* yAddr);
 
@@ -69,8 +68,6 @@ protected:
     TQue<QuePosition::VECOUT, DB_BUFFER> outScaleBackQueue_;
 
     TBuf<TPosition::VECCALC> bufE8_;
-    TBuf<TPosition::VECCALC> buf1E8_;
-    TBuf<TPosition::VECCALC> buf1E16_;
     TBuf<TPosition::VECCALC> bufTmpScale_;
     TBuf<TPosition::VECCALC> bufMaxPer4_;
     TBuf<TPosition::VECCALC> bufMaxPer8_;
@@ -100,8 +97,6 @@ protected:
     int64_t scaleFrontBuffer_ = 0;
     int64_t scaleBackBuffer_ = 0;
     int64_t bufE8Buffer_ = 0;
-    int64_t buf1E8Buffer_ = 0;
-    int64_t buf1E16Buffer_ = 0;
     int64_t maxPer4Buffer_ = 0;
     int64_t maxPer8Buffer_ = 0;
     int64_t tmpScaleBuffer_ = 0;
@@ -110,8 +105,10 @@ protected:
     static constexpr uint16_t MAXPER8_REDUCE_LOOP = 7;
     static constexpr uint16_t E6M2_BLOCK_PER_GROUP = 8;
     static constexpr uint16_t MAXPER4_SUBGROUP_PER_MAXPER8 = 2;
-    constexpr static MicroAPI::CastTrait castTrait_ = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
-                                                       MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    constexpr static Reg::CastTrait castTrait_ = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
+                                                  Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+    constexpr static Reg::CastTrait castTraitReciprocalCast = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                               Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 };
 
 template <typename ST, typename DT, uint32_t useQueNum>
@@ -138,7 +135,7 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::CopyIn(in
     DataCopyPadExtParams<ST> padParams{true, 0, static_cast<uint8_t>(rightPadding), 0};
 
     LocalTensor<ST> xLocal = inQueueX_.template AllocTensor<ST>();
-    DataCopyPad(xLocal, xGm_[offset], copyInParams, padParams);
+    DataCopyPad(xLocal, xGm_[offset], copyInParams, padParams, true);
     inQueueX_.template EnQue(xLocal);
 }
 
@@ -197,8 +194,6 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeAl
     LocalTensor<uint16_t> scaleback = outScaleBackQueue_.template AllocTensor<uint16_t>();
 
     LocalTensor<uint16_t> e8buf = bufE8_.Get<uint16_t>();
-    LocalTensor<uint8_t> e1p8buf = buf1E8_.Get<uint8_t>();
-    LocalTensor<uint8_t> e1p16buf = buf1E16_.Get<uint8_t>();
     LocalTensor<uint16_t> tmpscale = bufTmpScale_.Get<uint16_t>();
     LocalTensor<uint16_t> maxper4 = bufMaxPer4_.Get<uint16_t>();
     LocalTensor<uint16_t> maxper8 = bufMaxPer8_.Get<uint16_t>();
@@ -206,21 +201,15 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeAl
     auto xAddr = (__ubuf__ ST*)x.GetPhyAddr();
     auto xAddr2 = (__ubuf__ ST*)x.GetPhyAddr();
     auto yAddr = (__ubuf__ int32_t*)y.GetPhyAddr();
-    auto scaleAddr1 = (__ubuf__ uint8_t*)scalefront.GetPhyAddr();
+    auto scaleAddr1 = (__ubuf__ uint16_t*)scalefront.GetPhyAddr();
     auto scaleAddr2 = (__ubuf__ uint16_t*)scaleback.GetPhyAddr();
 
     auto e8BufAddr = (__ubuf__ uint16_t*)e8buf.GetPhyAddr();
-    auto e8BufAddr2 = (__ubuf__ uint8_t*)e8buf.GetPhyAddr();
-    auto e1p8BufAddr = (__ubuf__ uint8_t*)e1p8buf.GetPhyAddr();
-    auto e1p16BufAddr = (__ubuf__ uint8_t*)e1p16buf.GetPhyAddr();
     auto tmpScaleAddr = (__ubuf__ uint16_t*)tmpscale.GetPhyAddr();
     auto maxPer4BufAddr = (__ubuf__ uint16_t*)maxper4.GetPhyAddr();
     auto maxPer8BufAddr = (__ubuf__ uint16_t*)maxper8.GetPhyAddr();
 
     auto e8BufRead1Addr = e8BufAddr;
-    auto e8BufRead2Addr = e8BufAddr2;
-    auto e1p8BufReadAddr = e1p8BufAddr;
-    auto e1p16BufReadAddr = e1p16BufAddr;
     auto tmpScaleReadAddr = tmpScaleAddr;
     auto maxPer4BufReadAddr = maxPer4BufAddr;
     auto maxPer4BufRead2Addr = maxPer4BufAddr;
@@ -232,9 +221,7 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeAl
     ComputeE6M2(static_cast<uint16_t>(regLoop), maxPer8BufReadAddr, e8BufAddr);
     ComputeTmpScale(static_cast<uint16_t>(regLoop), static_cast<uint16_t>(innerLoopMaxper4),
                     static_cast<uint16_t>(innerLoopMaxper8), maxPer4BufRead2Addr, maxPer8BufRead2Addr, e8BufRead1Addr,
-                    e1p8BufAddr, e1p16BufAddr, tmpScaleAddr);
-    ComputeScale(static_cast<uint16_t>(regLoop), e8BufRead2Addr, e1p8BufReadAddr, e1p16BufReadAddr, scaleAddr1,
-                 scaleAddr2);
+                    scaleAddr1, scaleAddr2, tmpScaleAddr);
     ComputeOut(static_cast<uint16_t>(innerLoopMaxper4), xAddr2, tmpScaleReadAddr, yAddr);
 
     outQueue_.template EnQue(y);
@@ -248,47 +235,50 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeMa
                                                                                       __ubuf__ ST* xAddr,
                                                                                       __ubuf__ uint16_t* maxPer4BufAddr)
 {
+    uint32_t ubRowLen = static_cast<uint32_t>(ubRowLen_);
+    uint16_t chunkLoop = static_cast<uint16_t>(ubRowLen / 128);
+    uint32_t xPostStep = 4 * ubRowLen;
+    uint32_t mp4ChunkStride = static_cast<uint32_t>(ubRowCount_ / 4 * 128);
+
+    __ubuf__ ST* xStream0 = xAddr + 0 * ubRowLen;
+    __ubuf__ ST* xStream1 = xAddr + 1 * ubRowLen;
+    __ubuf__ ST* xStream2 = xAddr + 2 * ubRowLen;
+    __ubuf__ ST* xStream3 = xAddr + 3 * ubRowLen;
+
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<ST> vregIn1;
-        MicroAPI::RegTensor<ST> vregIn2;
-        MicroAPI::RegTensor<ST> vregIn3;
-        MicroAPI::RegTensor<ST> vregIn4;
-        MicroAPI::RegTensor<bfloat16_t> vregOutbf16;
-        AscendC::MicroAPI::RegTensor<uint16_t> expMaskBF16;
-        AscendC::MicroAPI::Duplicate(expMaskBF16, 0x7fff);
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t>();
-        static constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Bf16 = {
-            AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-        for (uint16_t loopIdx = 0; loopIdx < innerLoopMaxper4; loopIdx++) {
-            MicroAPI::DataCopy<ST, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(vregIn1,
-                                                                                                           xAddr, 128);
-            MicroAPI::DataCopy<ST, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(vregIn2,
-                                                                                                           xAddr, 128);
-            MicroAPI::DataCopy<ST, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(vregIn3,
-                                                                                                           xAddr, 128);
-            MicroAPI::DataCopy<ST, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(vregIn4,
-                                                                                                           xAddr, 128);
-            AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vregIn1,
-                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vregIn1, expMaskBF16, maskAll);
-            AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vregIn2,
-                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vregIn2, expMaskBF16, maskAll);
-            AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vregIn3,
-                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vregIn3, expMaskBF16, maskAll);
-            AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vregIn4,
-                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)vregIn4, expMaskBF16, maskAll);
-            MicroAPI::Max(vregIn1, vregIn1, vregIn2, maskAll);
-            MicroAPI::Max(vregIn3, vregIn3, vregIn4, maskAll);
-            MicroAPI::Max(vregIn1, vregIn1, vregIn3, maskAll);
+        Reg::RegTensor<ST> vregIn1, vregIn2, vregIn3, vregIn4;
+        Reg::RegTensor<bfloat16_t> vregOutbf16;
+        Reg::RegTensor<uint16_t> expMaskBF16;
+        Reg::MaskReg maskAll = Reg::CreateMask<uint8_t>();
+        Reg::Duplicate(expMaskBF16, 0x7fff);
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        // 4 条 x 流各跨 4 行(基址 s*ubRowLen_)；XaReg = c*128 + loopIdx*4*ubRowLen_，
+        // Mp4aReg = c*mp4ChunkStride + loopIdx*128（与消费侧对齐）
+        Reg::AddrReg XaReg, Mp4aReg;
+        for (uint16_t c = 0; c < chunkLoop; c++) {
+            for (uint16_t loopIdx = 0; loopIdx < innerLoopMaxper4; loopIdx++) {
+                XaReg = Reg::CreateAddrReg<ST>(c, 128, loopIdx, xPostStep);
+                Mp4aReg = Reg::CreateAddrReg<ST>(c, mp4ChunkStride, loopIdx, 128);
+                Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregIn1, xStream0, XaReg);
+                Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregIn2, xStream1, XaReg);
+                Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregIn3, xStream2, XaReg);
+                Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregIn4, xStream3, XaReg);
+                Reg::And((Reg::RegTensor<uint16_t>&)vregIn1, (Reg::RegTensor<uint16_t>&)vregIn1, expMaskBF16, maskAll);
+                Reg::And((Reg::RegTensor<uint16_t>&)vregIn2, (Reg::RegTensor<uint16_t>&)vregIn2, expMaskBF16, maskAll);
+                Reg::And((Reg::RegTensor<uint16_t>&)vregIn3, (Reg::RegTensor<uint16_t>&)vregIn3, expMaskBF16, maskAll);
+                Reg::And((Reg::RegTensor<uint16_t>&)vregIn4, (Reg::RegTensor<uint16_t>&)vregIn4, expMaskBF16, maskAll);
+                Reg::Max(vregIn1, vregIn1, vregIn2, maskAll);
+                Reg::Max(vregIn3, vregIn3, vregIn4, maskAll);
+                Reg::Max(vregIn1, vregIn1, vregIn3, maskAll);
 
-            if constexpr (IsSameType<ST, half>::value) {
-                AscendC::MicroAPI::Cast<bfloat16_t, ST, castTraitHalf2Bf16>(vregOutbf16, vregIn1, maskAll);
-                AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    maxPer4BufAddr, (MicroAPI::RegTensor<uint16_t>&)vregOutbf16, 128, maskAll);
-            } else {
-                AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    maxPer4BufAddr, (MicroAPI::RegTensor<uint16_t>&)vregIn1, 128, maskAll);
+                if constexpr (IsSameType<ST, half>::value) {
+                    Reg::Cast<bfloat16_t, ST, castTraitHalf2Bf16>(vregOutbf16, vregIn1, maskAll);
+                    Reg::DataCopy<uint16_t>(maxPer4BufAddr, (Reg::RegTensor<uint16_t>&)vregOutbf16, Mp4aReg, maskAll);
+                } else {
+                    Reg::DataCopy<uint16_t>(maxPer4BufAddr, (Reg::RegTensor<uint16_t>&)vregIn1, Mp4aReg, maskAll);
+                }
             }
         }
     }
@@ -299,20 +289,31 @@ template <typename ST, typename DT, uint32_t useQueNum>
 __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeMaxPer8(
     uint16_t innerLoopMaxper8, __ubuf__ uint16_t* maxPer4BufReadAddr, __ubuf__ uint16_t* maxPer8BufAddr)
 {
+    uint16_t chunkLoop = static_cast<uint16_t>(ubRowLen_ / 128);
+    uint32_t mp4ChunkStride = static_cast<uint32_t>(ubRowCount_ / 4 * 128);
+    uint32_t mp8ChunkStride = static_cast<uint32_t>(ubRowCount_ / 8 * 128);
+    uint32_t mp4PostStep = 2 * 128; // 每次 loopIdx 顺移的 mp4 记录长度(两条流各一条)
+
+    __ubuf__ uint16_t* p4Stream0 = maxPer4BufReadAddr + 0 * 128;
+    __ubuf__ uint16_t* p4Stream1 = maxPer4BufReadAddr + 1 * 128;
+
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint16_t> vregIn1;
-        MicroAPI::RegTensor<uint16_t> vregIn2;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t>();
-        for (uint16_t loopIdx = 0; loopIdx < innerLoopMaxper8; loopIdx++) {
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                vregIn1, maxPer4BufReadAddr, 128);
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                vregIn2, maxPer4BufReadAddr, 128);
-            MicroAPI::Max<ST>((MicroAPI::RegTensor<ST>&)vregIn1, (MicroAPI::RegTensor<ST>&)vregIn1,
-                              (MicroAPI::RegTensor<ST>&)vregIn2, maskAll);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                maxPer8BufAddr, (MicroAPI::RegTensor<uint16_t>&)vregIn1, 128, maskAll);
+        Reg::RegTensor<uint16_t> vregIn1, vregIn2;
+        Reg::MaskReg maskAll = Reg::CreateMask<uint8_t>();
+        // P4aReg = c*mp4ChunkStride + loopIdx*2*128（两条 p4 流基址相差 128），
+        // Mp8aReg = c*mp8ChunkStride + loopIdx*128（与生产侧对齐）
+        Reg::AddrReg P4aReg, Mp8aReg;
+        for (uint16_t c = 0; c < chunkLoop; c++) {
+            for (uint16_t loopIdx = 0; loopIdx < innerLoopMaxper8; loopIdx++) {
+                P4aReg = Reg::CreateAddrReg<ST>(c, mp4ChunkStride, loopIdx, mp4PostStep);
+                Mp8aReg = Reg::CreateAddrReg<ST>(c, mp8ChunkStride, loopIdx, 128);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>(vregIn1, p4Stream0, P4aReg);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>(vregIn2, p4Stream1, P4aReg);
+                Reg::Max<ST>((Reg::RegTensor<ST>&)vregIn1, (Reg::RegTensor<ST>&)vregIn1, (Reg::RegTensor<ST>&)vregIn2,
+                             maskAll);
+                Reg::DataCopy<uint16_t>(maxPer8BufAddr, (Reg::RegTensor<uint16_t>&)vregIn1, Mp8aReg, maskAll);
+            }
         }
     }
     return;
@@ -322,35 +323,71 @@ template <typename ST, typename DT, uint32_t useQueNum>
 __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeE6M2(
     uint16_t regLoop, __ubuf__ uint16_t* maxPer8BufReadAddr, __ubuf__ uint16_t* e8BufAddr)
 {
+    uint16_t chunkLoop = static_cast<uint16_t>(ubRowLen_ / 128);
+    uint32_t mp8ChunkStride = static_cast<uint32_t>(ubRowCount_ / 8 * 128);
+    uint32_t e8ChunkStride = static_cast<uint32_t>(ubRowCount_ / 64 * 128);
+    uint32_t mp8PostStep = 8 * 128; // 每次 loopIdx(64 行组) 顺移的 mp8 记录长度
+
+    __ubuf__ uint16_t* p8Stream0 = maxPer8BufReadAddr + 0 * 128;
+    __ubuf__ uint16_t* p8Stream1 = maxPer8BufReadAddr + 1 * 128;
+    __ubuf__ uint16_t* p8Stream2 = maxPer8BufReadAddr + 2 * 128;
+    __ubuf__ uint16_t* p8Stream3 = maxPer8BufReadAddr + 3 * 128;
+    __ubuf__ uint16_t* p8Stream4 = maxPer8BufReadAddr + 4 * 128;
+    __ubuf__ uint16_t* p8Stream5 = maxPer8BufReadAddr + 5 * 128;
+    __ubuf__ uint16_t* p8Stream6 = maxPer8BufReadAddr + 6 * 128;
+    __ubuf__ uint16_t* p8Stream7 = maxPer8BufReadAddr + 7 * 128;
+
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<uint16_t> vregMaxper8;
-        MicroAPI::RegTensor<uint16_t> vregGround;
-        MicroAPI::RegTensor<uint16_t> vreg0E6m2;
-        MicroAPI::RegTensor<uint16_t> vregNumscale;
-        MicroAPI::Duplicate(vregNumscale, 0x3e12);
-
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t>();
-        static constexpr AscendC::MicroAPI::CastTrait castTraitE6M2 = {
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING,
-            AscendC::RoundMode::CAST_RINT};
-        for (uint16_t loopIdx = 0; loopIdx < regLoop; loopIdx++) {
-            // MicroAPI::Duplicate(vregGround, 0x0000);
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                (MicroAPI::RegTensor<uint16_t>&)vregGround, maxPer8BufReadAddr, 128);
-            for (uint16_t loop2Idx = 0; loop2Idx < MAXPER8_REDUCE_LOOP; loop2Idx++) {
-                MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                    (MicroAPI::RegTensor<uint16_t>&)vregMaxper8, maxPer8BufReadAddr, 128);
-                MicroAPI::Max<bfloat16_t>((MicroAPI::RegTensor<bfloat16_t>&)vregGround,
-                                          (MicroAPI::RegTensor<bfloat16_t>&)vregGround,
-                                          (MicroAPI::RegTensor<bfloat16_t>&)vregMaxper8, maskAll);
+        Reg::RegTensor<uint16_t> vregMaxper8, vregGround, vregE6m2, vregNumscale;
+        Reg::MaskReg maskAll = Reg::CreateMask<uint8_t>();
+        Reg::Duplicate(vregNumscale, 0x3e12); // 1/7 = 0x3e12
+        static constexpr Reg::CastTrait castTraitE6M2 = {Reg::RegLayout::ZERO, Reg::SatMode::SAT,
+                                                         Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        // P8aReg = c*mp8ChunkStride + loopIdx*8*128（8 条载入流基址各差 128），
+        // E8aReg = c*e8ChunkStride + loopIdx*128
+        Reg::AddrReg P8aReg, E8aReg;
+        for (uint16_t c = 0; c < chunkLoop; c++) {
+            for (uint16_t loopIdx = 0; loopIdx < regLoop; loopIdx++) {
+                P8aReg = Reg::CreateAddrReg<ST>(c, mp8ChunkStride, loopIdx, mp8PostStep);
+                E8aReg = Reg::CreateAddrReg<ST>(c, e8ChunkStride, loopIdx, 128);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregGround, p8Stream0,
+                                                                  P8aReg);
+                // 7 次 reduce 载入手工展开(8 条独立流)
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8, p8Stream1,
+                                                                  P8aReg);
+                Reg::Max<bfloat16_t>((Reg::RegTensor<bfloat16_t>&)vregGround, (Reg::RegTensor<bfloat16_t>&)vregGround,
+                                     (Reg::RegTensor<bfloat16_t>&)vregMaxper8, maskAll);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8, p8Stream2,
+                                                                  P8aReg);
+                Reg::Max<bfloat16_t>((Reg::RegTensor<bfloat16_t>&)vregGround, (Reg::RegTensor<bfloat16_t>&)vregGround,
+                                     (Reg::RegTensor<bfloat16_t>&)vregMaxper8, maskAll);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8, p8Stream3,
+                                                                  P8aReg);
+                Reg::Max<bfloat16_t>((Reg::RegTensor<bfloat16_t>&)vregGround, (Reg::RegTensor<bfloat16_t>&)vregGround,
+                                     (Reg::RegTensor<bfloat16_t>&)vregMaxper8, maskAll);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8, p8Stream4,
+                                                                  P8aReg);
+                Reg::Max<bfloat16_t>((Reg::RegTensor<bfloat16_t>&)vregGround, (Reg::RegTensor<bfloat16_t>&)vregGround,
+                                     (Reg::RegTensor<bfloat16_t>&)vregMaxper8, maskAll);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8, p8Stream5,
+                                                                  P8aReg);
+                Reg::Max<bfloat16_t>((Reg::RegTensor<bfloat16_t>&)vregGround, (Reg::RegTensor<bfloat16_t>&)vregGround,
+                                     (Reg::RegTensor<bfloat16_t>&)vregMaxper8, maskAll);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8, p8Stream6,
+                                                                  P8aReg);
+                Reg::Max<bfloat16_t>((Reg::RegTensor<bfloat16_t>&)vregGround, (Reg::RegTensor<bfloat16_t>&)vregGround,
+                                     (Reg::RegTensor<bfloat16_t>&)vregMaxper8, maskAll);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8, p8Stream7,
+                                                                  P8aReg);
+                Reg::Max<bfloat16_t>((Reg::RegTensor<bfloat16_t>&)vregGround, (Reg::RegTensor<bfloat16_t>&)vregGround,
+                                     (Reg::RegTensor<bfloat16_t>&)vregMaxper8, maskAll);
+                Reg::Mul((Reg::RegTensor<bfloat16_t>&)vregGround, (Reg::RegTensor<bfloat16_t>&)vregGround,
+                         (Reg::RegTensor<bfloat16_t>&)vregNumscale, maskAll);
+                Reg::Cast<fp8_e6m2_t, bfloat16_t, castTraitE6M2>((Reg::RegTensor<fp8_e6m2_t>&)vregE6m2,
+                                                                 (Reg::RegTensor<bfloat16_t>&)vregGround, maskAll);
+                Reg::DataCopy<uint16_t>(e8BufAddr, (Reg::RegTensor<uint16_t>&)vregE6m2, E8aReg, maskAll);
             }
-            MicroAPI::Mul((MicroAPI::RegTensor<bfloat16_t>&)vregGround, (MicroAPI::RegTensor<bfloat16_t>&)vregGround,
-                          (MicroAPI::RegTensor<bfloat16_t>&)vregNumscale, maskAll);
-            MicroAPI::Cast<fp8_e6m2_t, bfloat16_t, castTraitE6M2>(
-                (MicroAPI::RegTensor<fp8_e6m2_t>&)vreg0E6m2, (MicroAPI::RegTensor<bfloat16_t>&)vregGround, maskAll);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                e8BufAddr, (MicroAPI::RegTensor<uint16_t>&)vreg0E6m2, 128, maskAll);
         }
     }
     return;
@@ -359,257 +396,149 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeE6
 template <typename ST, typename DT, uint32_t useQueNum>
 __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeTmpScale(
     uint16_t regLoop, uint16_t innerLoopMaxper4, uint16_t innerLoopMaxper8, __ubuf__ uint16_t* maxPer4BufRead2Addr,
-    __ubuf__ uint16_t* maxPer8BufRead2Addr, __ubuf__ uint16_t* e8BufRead1Addr, __ubuf__ uint8_t* e1p8BufAddr,
-    __ubuf__ uint8_t* e1p16BufAddr, __ubuf__ uint16_t* tmpScaleAddr)
+    __ubuf__ uint16_t* maxPer8BufRead2Addr, __ubuf__ uint16_t* e8BufRead1Addr, __ubuf__ uint16_t* scaleAddr1,
+    __ubuf__ uint16_t* scaleAddr2, __ubuf__ uint16_t* tmpScaleAddr)
 {
     __VEC_SCOPE__
     {
-        static constexpr AscendC::MicroAPI::CastTrait castTraitReciprocalCast = {
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+        Reg::RegTensor<bfloat16_t> vregMaxper4_0, vregMaxper4_1, vregMaxper8_0, vregMaxper8_1, vregMaxper64;
+        Reg::RegTensor<bfloat16_t> vb16_EaRecBf16, vregNum1, vregNumhalf;
+        // Eb/Ec 位平面累加器；Ec 低/高 8 micro 各一条，块尾相加合并
+        Reg::RegTensor<uint16_t> vregEbAcc, vregEcLowAcc, vregEcHighAcc;
+        // 权值寄存器（全 lane 等值，ShiftLefts 逐轮推进）：Eb 左移 1 位，Ec 左移 2 位
+        Reg::RegTensor<uint16_t> vregEbW0, vregEbW1, vregEcW0, vregEcW1, vregMask00FF;
+        Reg::MaskReg vb1E8Comp, vb1E16Comp, maskAll = Reg::CreateMask<uint8_t>();
 
-        MicroAPI::RegTensor<bfloat16_t> vregMaxper4;
-        MicroAPI::RegTensor<bfloat16_t> vregMaxper8;
-        MicroAPI::RegTensor<bfloat16_t> vregMaxper64;
-        MicroAPI::RegTensor<bfloat16_t> vb16_Ea_rec_bf16;
-        MicroAPI::RegTensor<bfloat16_t> vregTmpScale;
+        Reg::Duplicate(vregNum1, 1.0F);
+        Reg::Duplicate(vregNumhalf, static_cast<bfloat16_t>(0.5F));
+        Reg::Duplicate(vregMask00FF, 0x00ff);
+        // 组偏移与块内偏移由 AddrReg 携带（在 loopIdx 层创建一次），与生产侧对齐；
+        // scale 前/后槽为 [组][ubRowLen_] 组主序：ScaleaReg = c*128 + loopIdx*ubRowLen
+        Reg::AddrReg E8aReg, Mp8aReg, Mp4aReg, ScaleaReg;
+        uint32_t ubRowLen = static_cast<uint32_t>(ubRowLen_);
+        uint16_t chunkLoop = static_cast<uint16_t>(ubRowLen / 128);
+        uint32_t mp8ChunkStride = static_cast<uint32_t>(ubRowCount_ / 8 * 128);
+        uint32_t mp4ChunkStride = static_cast<uint32_t>(ubRowCount_ / 4 * 128);
+        uint32_t e8ChunkStride = static_cast<uint32_t>(ubRowCount_ / 64 * 128);
+        uint32_t mp8PostStep = 8 * 128;  // 每次 loopIdx(64 行组) 顺移的 mp8 记录长度
+        uint32_t mp4PostStep = 16 * 128; // 每次 loopIdx(64 行组) 顺移的 mp4 记录长度
+        for (uint16_t c = 0; c < chunkLoop; c++) {
+            for (uint16_t loopIdx = 0; loopIdx < regLoop; loopIdx++) {
+                E8aReg = Reg::CreateAddrReg<ST>(c, e8ChunkStride, loopIdx, 128);
+                Mp8aReg = Reg::CreateAddrReg<ST>(c, mp8ChunkStride, loopIdx, mp8PostStep);
+                Mp4aReg = Reg::CreateAddrReg<ST>(c, mp4ChunkStride, loopIdx, mp4PostStep);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper64,
+                                                                  e8BufRead1Addr, E8aReg);
+                Reg::ReciprocalCast<bfloat16_t, fp8_e6m2_t, castTraitReciprocalCast>(
+                    vb16_EaRecBf16, (Reg::RegTensor<fp8_e6m2_t>&)vregMaxper64, maskAll);
+                Reg::Duplicate(vregEbAcc, 0x0000);
+                Reg::Duplicate(vregEcLowAcc, 0x0000);
+                Reg::Duplicate(vregEcHighAcc, 0x0000);
 
-        float number1 = 1.0;
-        MicroAPI::RegTensor<bfloat16_t> vregNum1;
-        MicroAPI::Duplicate(vregNum1, number1);
-        float numberhalf = 0.5;
-        MicroAPI::RegTensor<bfloat16_t> vregNumhalf;
-        MicroAPI::Duplicate(vregNumhalf, static_cast<bfloat16_t>(numberhalf));
+                // 8 个 sub-block 折叠为 4 轮，每轮处理 block i 与 block i+4：
+                // 流基址 i*128 / i*128+512（p8）、i*256 + {0,128,1024,1152}（p4/ts）；权值随轮次 ShiftLefts 推进
+                Reg::Duplicate(vregEbW0, 0x0001);
+                Reg::Duplicate(vregEbW1, 0x0010);
+                Reg::Duplicate(vregEcW0, 0x0001);
+                Reg::Duplicate(vregEcW1, 0x0002);
+                for (uint16_t i = 0; i < 4; i++) {
+                    __ubuf__ uint16_t* p8Stream0 = maxPer8BufRead2Addr + i * 128;
+                    __ubuf__ uint16_t* p8Stream1 = p8Stream0 + 4 * 128;
+                    __ubuf__ uint16_t* p4Stream0 = maxPer4BufRead2Addr + i * 256;
+                    __ubuf__ uint16_t* p4Stream1 = p4Stream0 + 1 * 128;
+                    __ubuf__ uint16_t* p4Stream2 = p4Stream0 + 4 * 256;
+                    __ubuf__ uint16_t* p4Stream3 = p4Stream0 + 4 * 256 + 1 * 128;
+                    __ubuf__ uint16_t* tsStream0 = tmpScaleAddr + i * 256;
+                    __ubuf__ uint16_t* tsStream1 = tsStream0 + 1 * 128;
+                    __ubuf__ uint16_t* tsStream2 = tsStream0 + 4 * 256;
+                    __ubuf__ uint16_t* tsStream3 = tsStream0 + 4 * 256 + 1 * 128;
+                    // block i(_0)：Eb 位 i，EcLow 位 2i/2i+1
+                    Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8_0,
+                                                                      p8Stream0, Mp8aReg);
+                    Reg::Mul(vregMaxper8_0, vregMaxper8_0, vb16_EaRecBf16, maskAll);
+                    Reg::CompareScalar<bfloat16_t, CMPMODE::GE>(vb1E8Comp, vregMaxper8_0, e8Thresh_, maskAll);
+                    Reg::Add<uint16_t, Reg::MaskMergeMode::MERGING>(vregEbAcc, vregEbAcc, vregEbW0, vb1E8Comp);
+                    Reg::Select(vregMaxper8_0, vregNumhalf, vregNum1, vb1E8Comp);
 
-        MicroAPI::MaskReg vb1E8Comp;
-        MicroAPI::MaskReg vb1E8CompTmp;
-        MicroAPI::MaskReg vb1E16Comp;
-        MicroAPI::MaskReg vb1E16CompTmp;
-        MicroAPI::UnalignReg ureg1;
+                    Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper4_0,
+                                                                      p4Stream0, Mp4aReg);
+                    Reg::Mul(vregMaxper4_0, vregMaxper4_0, vb16_EaRecBf16, maskAll);
+                    Reg::Mul(vregMaxper4_0, vregMaxper4_0, vregMaxper8_0, maskAll);
+                    Reg::CompareScalar<bfloat16_t, CMPMODE::GE>(vb1E16Comp, vregMaxper4_0, e16Thresh_, maskAll);
+                    Reg::Add<uint16_t, Reg::MaskMergeMode::MERGING>(vregEcLowAcc, vregEcLowAcc, vregEcW0, vb1E16Comp);
+                    Reg::Select(vregMaxper4_0, vregNumhalf, vregNum1, vb1E16Comp);
+                    Reg::Mul(vregMaxper4_0, vregMaxper4_0, vregMaxper8_0, maskAll);
+                    Reg::Mul(vregMaxper4_0, vregMaxper4_0, vb16_EaRecBf16, maskAll);
+                    Reg::DataCopy<uint16_t>(tsStream0, (Reg::RegTensor<uint16_t>&)vregMaxper4_0, Mp4aReg, maskAll);
 
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t>();
-        for (uint16_t loopIdx = 0; loopIdx < regLoop; loopIdx++) {
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                (MicroAPI::RegTensor<uint16_t>&)vregMaxper64, e8BufRead1Addr, 128);
-            MicroAPI::ReciprocalCast<bfloat16_t, fp8_e6m2_t, castTraitReciprocalCast>(
-                vb16_Ea_rec_bf16, (MicroAPI::RegTensor<fp8_e6m2_t>&)vregMaxper64, maskAll);
-            for (uint16_t loop2Idx = 0; loop2Idx < E6M2_BLOCK_PER_GROUP; loop2Idx++) {
-                MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                    (MicroAPI::RegTensor<uint16_t>&)vregMaxper8, maxPer8BufRead2Addr, 128);
-                MicroAPI::Mul(vregMaxper8, vregMaxper8, vb16_Ea_rec_bf16, maskAll);
-                MicroAPI::CompareScalar<bfloat16_t, CMPMODE::GE>(vb1E8Comp, vregMaxper8, e8Thresh_, maskAll);
-                MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                    e1p8BufAddr, vb1E8Comp, 32);
-                MicroAPI::Select(vregMaxper8, vregNumhalf, vregNum1, vb1E8Comp);
-                for (uint16_t loop3Idx = 0; loop3Idx < MAXPER4_SUBGROUP_PER_MAXPER8; loop3Idx++) {
-                    MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                       MicroAPI::LoadDist::DIST_NORM>((MicroAPI::RegTensor<uint16_t>&)vregMaxper4,
-                                                                      maxPer4BufRead2Addr, 128);
-                    MicroAPI::Mul(vregMaxper4, vregMaxper4, vb16_Ea_rec_bf16, maskAll);
-                    MicroAPI::Mul(vregMaxper4, vregMaxper4, vregMaxper8, maskAll);
-                    MicroAPI::CompareScalar<bfloat16_t, CMPMODE::GE>(vb1E16Comp, vregMaxper4, e16Thresh_, maskAll);
-                    MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                        e1p16BufAddr, vb1E16Comp, 32);
-                    MicroAPI::Select(vregMaxper4, vregNumhalf, vregNum1, vb1E16Comp);
-                    MicroAPI::Mul(vregMaxper4, vregMaxper4, vregMaxper8, maskAll);
-                    MicroAPI::Mul(vregTmpScale, vregMaxper4, vb16_Ea_rec_bf16, maskAll);
-                    AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                        tmpScaleAddr, (MicroAPI::RegTensor<uint16_t>&)vregTmpScale, 128, maskAll);
+                    Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper4_0,
+                                                                      p4Stream1, Mp4aReg);
+                    Reg::Mul(vregMaxper4_0, vregMaxper4_0, vb16_EaRecBf16, maskAll);
+                    Reg::Mul(vregMaxper4_0, vregMaxper4_0, vregMaxper8_0, maskAll);
+                    Reg::CompareScalar<bfloat16_t, CMPMODE::GE>(vb1E16Comp, vregMaxper4_0, e16Thresh_, maskAll);
+                    Reg::Add<uint16_t, Reg::MaskMergeMode::MERGING>(vregEcLowAcc, vregEcLowAcc, vregEcW1, vb1E16Comp);
+                    Reg::Select(vregMaxper4_0, vregNumhalf, vregNum1, vb1E16Comp);
+                    Reg::Mul(vregMaxper4_0, vregMaxper4_0, vregMaxper8_0, maskAll);
+                    Reg::Mul(vregMaxper4_0, vregMaxper4_0, vb16_EaRecBf16, maskAll);
+                    Reg::DataCopy<uint16_t>(tsStream1, (Reg::RegTensor<uint16_t>&)vregMaxper4_0, Mp4aReg, maskAll);
+
+                    // block i+4(_1)：Eb 位 i+4，EcHigh 位 2i/2i+1
+                    Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper8_1,
+                                                                      p8Stream1, Mp8aReg);
+                    Reg::Mul(vregMaxper8_1, vregMaxper8_1, vb16_EaRecBf16, maskAll);
+                    Reg::CompareScalar<bfloat16_t, CMPMODE::GE>(vb1E8Comp, vregMaxper8_1, e8Thresh_, maskAll);
+                    Reg::Add<uint16_t, Reg::MaskMergeMode::MERGING>(vregEbAcc, vregEbAcc, vregEbW1, vb1E8Comp);
+                    Reg::Select(vregMaxper8_1, vregNumhalf, vregNum1, vb1E8Comp);
+
+                    Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper4_1,
+                                                                      p4Stream2, Mp4aReg);
+                    Reg::Mul(vregMaxper4_1, vregMaxper4_1, vb16_EaRecBf16, maskAll);
+                    Reg::Mul(vregMaxper4_1, vregMaxper4_1, vregMaxper8_1, maskAll);
+                    Reg::CompareScalar<bfloat16_t, CMPMODE::GE>(vb1E16Comp, vregMaxper4_1, e16Thresh_, maskAll);
+                    Reg::Add<uint16_t, Reg::MaskMergeMode::MERGING>(vregEcHighAcc, vregEcHighAcc, vregEcW0, vb1E16Comp);
+                    Reg::Select(vregMaxper4_1, vregNumhalf, vregNum1, vb1E16Comp);
+                    Reg::Mul(vregMaxper4_1, vregMaxper4_1, vregMaxper8_1, maskAll);
+                    Reg::Mul(vregMaxper4_1, vregMaxper4_1, vb16_EaRecBf16, maskAll);
+                    Reg::DataCopy<uint16_t>(tsStream2, (Reg::RegTensor<uint16_t>&)vregMaxper4_1, Mp4aReg, maskAll);
+
+                    Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>((Reg::RegTensor<uint16_t>&)vregMaxper4_1,
+                                                                      p4Stream3, Mp4aReg);
+                    Reg::Mul(vregMaxper4_1, vregMaxper4_1, vb16_EaRecBf16, maskAll);
+                    Reg::Mul(vregMaxper4_1, vregMaxper4_1, vregMaxper8_1, maskAll);
+                    Reg::CompareScalar<bfloat16_t, CMPMODE::GE>(vb1E16Comp, vregMaxper4_1, e16Thresh_, maskAll);
+                    Reg::Add<uint16_t, Reg::MaskMergeMode::MERGING>(vregEcHighAcc, vregEcHighAcc, vregEcW1, vb1E16Comp);
+                    Reg::Select(vregMaxper4_1, vregNumhalf, vregNum1, vb1E16Comp);
+                    Reg::Mul(vregMaxper4_1, vregMaxper4_1, vregMaxper8_1, maskAll);
+                    Reg::Mul(vregMaxper4_1, vregMaxper4_1, vb16_EaRecBf16, maskAll);
+                    Reg::DataCopy<uint16_t>(tsStream3, (Reg::RegTensor<uint16_t>&)vregMaxper4_1, Mp4aReg, maskAll);
+
+                    // 权值左移推进：Eb +1 位，Ec +2 位
+                    Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)vregEbW0, (Reg::RegTensor<uint16_t>&)vregEbW0,
+                                    static_cast<int16_t>(1), maskAll);
+                    Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)vregEbW1, (Reg::RegTensor<uint16_t>&)vregEbW1,
+                                    static_cast<int16_t>(1), maskAll);
+                    Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)vregEcW0, (Reg::RegTensor<uint16_t>&)vregEcW0,
+                                    static_cast<int16_t>(2), maskAll);
+                    Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)vregEcW1, (Reg::RegTensor<uint16_t>&)vregEcW1,
+                                    static_cast<int16_t>(2), maskAll);
                 }
+
+                // 块尾拼装 [Ea,Eb]：EbAcc 左移 8 位 + Ea 低字节
+                Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)vregEbAcc, (Reg::RegTensor<uint16_t>&)vregEbAcc,
+                                static_cast<int16_t>(8), maskAll);
+                Reg::And((Reg::RegTensor<uint16_t>&)vregMaxper64, (Reg::RegTensor<uint16_t>&)vregMaxper64, vregMask00FF,
+                         maskAll);
+                Reg::Add((Reg::RegTensor<uint16_t>&)vregEbAcc, (Reg::RegTensor<uint16_t>&)vregEbAcc,
+                         (Reg::RegTensor<uint16_t>&)vregMaxper64, maskAll);
+                ScaleaReg = Reg::CreateAddrReg<ST>(c, 128, loopIdx, ubRowLen);
+                Reg::DataCopy<uint16_t>(scaleAddr1, (Reg::RegTensor<uint16_t>&)vregEbAcc, ScaleaReg, maskAll);
+                // Ec：高 8 micro <<8 与低 8 micro 相加（位不重叠）
+                Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)vregEcHighAcc, (Reg::RegTensor<uint16_t>&)vregEcHighAcc,
+                                static_cast<int16_t>(8), maskAll);
+                Reg::Add((Reg::RegTensor<uint16_t>&)vregEcLowAcc, (Reg::RegTensor<uint16_t>&)vregEcLowAcc,
+                         (Reg::RegTensor<uint16_t>&)vregEcHighAcc, maskAll);
+                Reg::DataCopy<uint16_t>(scaleAddr2, (Reg::RegTensor<uint16_t>&)vregEcLowAcc, ScaleaReg, maskAll);
             }
-        }
-    }
-    return;
-}
-
-template <typename ST, typename DT, uint32_t useQueNum>
-__aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeScale(
-    uint16_t regLoop, __ubuf__ uint8_t* e8BufRead2Addr, __ubuf__ uint8_t* e1p8BufReadAddr,
-    __ubuf__ uint8_t* e1p16BufReadAddr, __ubuf__ uint8_t* scaleAddr1, __ubuf__ uint16_t* scaleAddr2)
-{
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<uint8_t> vregBuild1;
-        MicroAPI::RegTensor<uint16_t> vregBuild2;
-        MicroAPI::RegTensor<uint8_t> vregGround1;
-        MicroAPI::RegTensor<uint16_t> vregGround2;
-        MicroAPI::RegTensor<uint8_t> vregE8;
-
-        MicroAPI::RegTensor<uint8_t> vreg8Flex1, vreg8Flex2, vreg8Flex3, vreg8Flex4, vreg8Flex5, vreg8Flex6, vreg8Flex7,
-            vreg8Flex8;
-        MicroAPI::RegTensor<uint16_t> vreg16Flex1, vreg16Flex2, vreg16Flex3, vreg16Flex4, vreg16Flex5, vreg16Flex6,
-            vreg16Flex7, vreg16Flex8, vreg16Flex9, vreg16Flex10, vreg16Flex11, vreg16Flex12, vreg16Flex13, vreg16Flex14,
-            vreg16Flex15, vreg16Flex16;
-        MicroAPI::Duplicate(vreg8Flex1, 0x01);
-        MicroAPI::Duplicate(vreg8Flex2, 0x02);
-        MicroAPI::Duplicate(vreg8Flex3, 0x04);
-        MicroAPI::Duplicate(vreg8Flex4, 0x08);
-        MicroAPI::Duplicate(vreg8Flex5, 0x10);
-        MicroAPI::Duplicate(vreg8Flex6, 0x20);
-        MicroAPI::Duplicate(vreg8Flex7, 0x40);
-        MicroAPI::Duplicate(vreg8Flex8, 0x80);
-        MicroAPI::Duplicate(vreg16Flex1, 0x0001);
-        MicroAPI::Duplicate(vreg16Flex2, 0x0002);
-        MicroAPI::Duplicate(vreg16Flex3, 0x0004);
-        MicroAPI::Duplicate(vreg16Flex4, 0x0008);
-        MicroAPI::Duplicate(vreg16Flex5, 0x0010);
-        MicroAPI::Duplicate(vreg16Flex6, 0x0020);
-        MicroAPI::Duplicate(vreg16Flex7, 0x0040);
-        MicroAPI::Duplicate(vreg16Flex8, 0x0080);
-        MicroAPI::Duplicate(vreg16Flex9, 0x0100);
-        MicroAPI::Duplicate(vreg16Flex10, 0x0200);
-        MicroAPI::Duplicate(vreg16Flex11, 0x0400);
-        MicroAPI::Duplicate(vreg16Flex12, 0x0800);
-        MicroAPI::Duplicate(vreg16Flex13, 0x1000);
-        MicroAPI::Duplicate(vreg16Flex14, 0x2000);
-        MicroAPI::Duplicate(vreg16Flex15, 0x4000);
-        MicroAPI::Duplicate(vreg16Flex16, 0x8000);
-
-        MicroAPI::Duplicate(vregGround1, 0x00);
-        MicroAPI::Duplicate(vregGround2, 0x0000);
-        MicroAPI::MaskReg maskof2e18;
-        MicroAPI::MaskReg maskof2e18Tmp;
-        MicroAPI::MaskReg maskof2e116;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t>();
-
-        for (uint16_t loopIdx = 0; loopIdx < (regLoop + 1) / 2; loopIdx++) {
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DS_B8>(
-                vregE8, e8BufRead2Addr, 512);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18, e1p8BufReadAddr + loopIdx * 512);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18Tmp,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 256);
-            MicroAPI::MaskDeInterleave<uint8_t>(maskof2e18, maskof2e18Tmp, maskof2e18, maskof2e18Tmp);
-            MicroAPI::Add(vregBuild1, vregGround1, vreg8Flex1, maskof2e18);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 32);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18Tmp,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 256 + 32);
-            MicroAPI::MaskDeInterleave<uint8_t>(maskof2e18, maskof2e18Tmp, maskof2e18, maskof2e18Tmp);
-            MicroAPI::Add<uint8_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild1, vregBuild1, vreg8Flex2, maskof2e18);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 64);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18Tmp,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 256 + 64);
-            MicroAPI::MaskDeInterleave<uint8_t>(maskof2e18, maskof2e18Tmp, maskof2e18, maskof2e18Tmp);
-            MicroAPI::Add<uint8_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild1, vregBuild1, vreg8Flex3, maskof2e18);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 96);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18Tmp,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 256 + 96);
-            MicroAPI::MaskDeInterleave<uint8_t>(maskof2e18, maskof2e18Tmp, maskof2e18, maskof2e18Tmp);
-            MicroAPI::Add<uint8_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild1, vregBuild1, vreg8Flex4, maskof2e18);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 128);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18Tmp,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 256 + 128);
-            MicroAPI::MaskDeInterleave<uint8_t>(maskof2e18, maskof2e18Tmp, maskof2e18, maskof2e18Tmp);
-            MicroAPI::Add<uint8_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild1, vregBuild1, vreg8Flex5, maskof2e18);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 160);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18Tmp,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 256 + 160);
-            MicroAPI::MaskDeInterleave<uint8_t>(maskof2e18, maskof2e18Tmp, maskof2e18, maskof2e18Tmp);
-            MicroAPI::Add<uint8_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild1, vregBuild1, vreg8Flex6, maskof2e18);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 192);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18Tmp,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 256 + 192);
-            MicroAPI::MaskDeInterleave<uint8_t>(maskof2e18, maskof2e18Tmp, maskof2e18, maskof2e18Tmp);
-            MicroAPI::Add<uint8_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild1, vregBuild1, vreg8Flex7, maskof2e18);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 224);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::MaskDist::DIST_NORM>(maskof2e18Tmp,
-                                                                       e1p8BufReadAddr + loopIdx * 512 + 256 + 224);
-            MicroAPI::MaskDeInterleave<uint8_t>(maskof2e18, maskof2e18Tmp, maskof2e18, maskof2e18Tmp);
-            MicroAPI::Add<uint8_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild1, vregBuild1, vreg8Flex8, maskof2e18);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(
-                scaleAddr1 + loopIdx * 512, (MicroAPI::RegTensor<uint8_t>&)vregE8,
-                (MicroAPI::RegTensor<uint8_t>&)vregBuild1, maskAll);
-        }
-
-        for (uint16_t loop3Idx = 0; loop3Idx < regLoop; loop3Idx++) {
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add(vregBuild2, vregGround2, vreg16Flex1, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex2, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex3, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex4, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex5, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex6, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex7, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex8, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex9, maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex10,
-                                                                      maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex11,
-                                                                      maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex12,
-                                                                      maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex13,
-                                                                      maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex14,
-                                                                      maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex15,
-                                                                      maskof2e116);
-
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::MaskDist::DIST_NORM>(
-                maskof2e116, e1p16BufReadAddr, 32);
-            MicroAPI::Add<uint16_t, MicroAPI::MaskMergeMode::MERGING>(vregBuild2, vregBuild2, vreg16Flex16,
-                                                                      maskof2e116);
-
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                scaleAddr2, (MicroAPI::RegTensor<uint16_t>&)vregBuild2, 128, maskAll);
         }
     }
     return;
@@ -621,37 +550,85 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::ComputeOu
                                                                                   __ubuf__ uint16_t* tmpScaleReadAddr,
                                                                                   __ubuf__ int32_t* yAddr)
 {
+    uint32_t ubRowLen = static_cast<uint32_t>(ubRowLen_);
+    uint16_t chunkLoop = static_cast<uint16_t>(ubRowLen / 128);
+    uint32_t tsChunkStride = static_cast<uint32_t>(ubRowCount_ / 4 * 128);
+    uint32_t yRowStep = ubRowLen / 8; // 每行 y 的 u32 数(fp4 两元素一字节)
+    uint32_t xPostStep = 4 * ubRowLen;
+    uint32_t yPostStep = 4 * yRowStep;
+
+    __ubuf__ ST* xStream0 = xAddr2 + 0 * ubRowLen;
+    __ubuf__ ST* xStream1 = xAddr2 + 1 * ubRowLen;
+    __ubuf__ ST* xStream2 = xAddr2 + 2 * ubRowLen;
+    __ubuf__ ST* xStream3 = xAddr2 + 3 * ubRowLen;
+    __ubuf__ uint16_t* tsStream = tmpScaleReadAddr;
+    __ubuf__ int32_t* yStream0 = yAddr + 0 * yRowStep;
+    __ubuf__ int32_t* yStream1 = yAddr + 1 * yRowStep;
+    __ubuf__ int32_t* yStream2 = yAddr + 2 * yRowStep;
+    __ubuf__ int32_t* yStream3 = yAddr + 3 * yRowStep;
+
     __VEC_SCOPE__
     {
-        MicroAPI::RegTensor<ST> vregOut;
-        MicroAPI::RegTensor<uint16_t> vregScaleTmp;
-        MicroAPI::RegTensor<fp4x2_e1m2_t> vbOut;
-        MicroAPI::RegTensor<bfloat16_t> vregOutbf16;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t>();
-        static constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Bf16 = {
-            AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-            MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
-        for (uint16_t loopIdx = 0; loopIdx < innerLoopMaxper4; loopIdx++) {
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                vregScaleTmp, tmpScaleReadAddr, 128);
-            for (uint16_t loop2Idx = 0; loop2Idx < 4; loop2Idx++) { // 4 elements per micro-block
+        Reg::RegTensor<ST> vregOut0, vregOut1, vregOut2, vregOut3;
+        Reg::RegTensor<bfloat16_t> vregOutbf16_0, vregOutbf16_1, vregOutbf16_2, vregOutbf16_3;
+        Reg::RegTensor<fp4x2_e1m2_t> vbOut0, vbOut1, vbOut2, vbOut3;
+        Reg::RegTensor<uint16_t> vregScaleTmp;
+        Reg::MaskReg maskAll = Reg::CreateMask<uint8_t>();
+        static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
+                                                              Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
+        // 4 条 x 流 / 4 条 y 流各跨 4 行；XaReg = c*128 + loopIdx*4*ubRowLen_，
+        // YaReg = c*16 + loopIdx*4*yRowStep，TsaReg = c*tsChunkStride + loopIdx*128
+        Reg::AddrReg XaReg, TsaReg, YaReg;
+        for (uint16_t c = 0; c < chunkLoop; c++) {
+            for (uint16_t loopIdx = 0; loopIdx < innerLoopMaxper4; loopIdx++) {
+                XaReg = Reg::CreateAddrReg<ST>(c, 128, loopIdx, xPostStep);
+                TsaReg = Reg::CreateAddrReg<ST>(c, tsChunkStride, loopIdx, 128);
+                YaReg = Reg::CreateAddrReg<int32_t>(c, 16, loopIdx, yPostStep);
+                Reg::DataCopy<uint16_t, Reg::LoadDist::DIST_NORM>(vregScaleTmp, tsStream, TsaReg);
+                // 先批量发 4 条载入，再各自 mul/cast/store
                 if constexpr (IsSameType<ST, half>::value) {
-                    MicroAPI::DataCopy<ST, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                        vregOut, xAddr2, 128);
-                    AscendC::MicroAPI::Cast<bfloat16_t, ST, castTraitHalf2Bf16>(
-                        (MicroAPI::RegTensor<bfloat16_t>&)vregOutbf16, vregOut, maskAll);
+                    Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregOut0, xStream0, XaReg);
+                    Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregOut1, xStream1, XaReg);
+                    Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregOut2, xStream2, XaReg);
+                    Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregOut3, xStream3, XaReg);
+                    Reg::Cast<bfloat16_t, ST, castTraitHalf2Bf16>((Reg::RegTensor<bfloat16_t>&)vregOutbf16_0, vregOut0,
+                                                                  maskAll);
+                    Reg::Cast<bfloat16_t, ST, castTraitHalf2Bf16>((Reg::RegTensor<bfloat16_t>&)vregOutbf16_1, vregOut1,
+                                                                  maskAll);
+                    Reg::Cast<bfloat16_t, ST, castTraitHalf2Bf16>((Reg::RegTensor<bfloat16_t>&)vregOutbf16_2, vregOut2,
+                                                                  maskAll);
+                    Reg::Cast<bfloat16_t, ST, castTraitHalf2Bf16>((Reg::RegTensor<bfloat16_t>&)vregOutbf16_3, vregOut3,
+                                                                  maskAll);
                 } else {
-                    MicroAPI::DataCopy<ST, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
-                        vregOutbf16, xAddr2, 128);
+                    Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregOutbf16_0, xStream0, XaReg);
+                    Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregOutbf16_1, xStream1, XaReg);
+                    Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregOutbf16_2, xStream2, XaReg);
+                    Reg::DataCopy<ST, Reg::LoadDist::DIST_NORM>(vregOutbf16_3, xStream3, XaReg);
                 }
-                MicroAPI::Mul((MicroAPI::RegTensor<bfloat16_t>&)vregOutbf16,
-                              (MicroAPI::RegTensor<bfloat16_t>&)vregOutbf16,
-                              (MicroAPI::RegTensor<bfloat16_t>&)vregScaleTmp, maskAll);
-                MicroAPI::Cast<fp4x2_e1m2_t, bfloat16_t, castTrait_>(
-                    vbOut, (MicroAPI::RegTensor<bfloat16_t>&)vregOutbf16, maskAll);
-                MicroAPI::DataCopy<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                   MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, (MicroAPI::RegTensor<int32_t>&)vbOut, 16,
-                                                                        maskAll);
+                Reg::Mul((Reg::RegTensor<bfloat16_t>&)vregOutbf16_0, (Reg::RegTensor<bfloat16_t>&)vregOutbf16_0,
+                         (Reg::RegTensor<bfloat16_t>&)vregScaleTmp, maskAll);
+                Reg::Mul((Reg::RegTensor<bfloat16_t>&)vregOutbf16_1, (Reg::RegTensor<bfloat16_t>&)vregOutbf16_1,
+                         (Reg::RegTensor<bfloat16_t>&)vregScaleTmp, maskAll);
+                Reg::Mul((Reg::RegTensor<bfloat16_t>&)vregOutbf16_2, (Reg::RegTensor<bfloat16_t>&)vregOutbf16_2,
+                         (Reg::RegTensor<bfloat16_t>&)vregScaleTmp, maskAll);
+                Reg::Mul((Reg::RegTensor<bfloat16_t>&)vregOutbf16_3, (Reg::RegTensor<bfloat16_t>&)vregOutbf16_3,
+                         (Reg::RegTensor<bfloat16_t>&)vregScaleTmp, maskAll);
+                Reg::Cast<fp4x2_e1m2_t, bfloat16_t, castTrait_>(vbOut0, (Reg::RegTensor<bfloat16_t>&)vregOutbf16_0,
+                                                                maskAll);
+                Reg::Cast<fp4x2_e1m2_t, bfloat16_t, castTrait_>(vbOut1, (Reg::RegTensor<bfloat16_t>&)vregOutbf16_1,
+                                                                maskAll);
+                Reg::Cast<fp4x2_e1m2_t, bfloat16_t, castTrait_>(vbOut2, (Reg::RegTensor<bfloat16_t>&)vregOutbf16_2,
+                                                                maskAll);
+                Reg::Cast<fp4x2_e1m2_t, bfloat16_t, castTrait_>(vbOut3, (Reg::RegTensor<bfloat16_t>&)vregOutbf16_3,
+                                                                maskAll);
+                Reg::DataCopy<int32_t, Reg::StoreDist::DIST_PACK4_B32>(yStream0, (Reg::RegTensor<int32_t>&)vbOut0,
+                                                                       YaReg, maskAll);
+                Reg::DataCopy<int32_t, Reg::StoreDist::DIST_PACK4_B32>(yStream1, (Reg::RegTensor<int32_t>&)vbOut1,
+                                                                       YaReg, maskAll);
+                Reg::DataCopy<int32_t, Reg::StoreDist::DIST_PACK4_B32>(yStream2, (Reg::RegTensor<int32_t>&)vbOut2,
+                                                                       YaReg, maskAll);
+                Reg::DataCopy<int32_t, Reg::StoreDist::DIST_PACK4_B32>(yStream3, (Reg::RegTensor<int32_t>&)vbOut3,
+                                                                       YaReg, maskAll);
             }
         }
     }
@@ -707,13 +684,12 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::Init(
     scaleGm_.SetGlobalBuffer((__gm__ uint16_t*)(scale));
 
     inBuffer_ = ubRowLen_ * ubRowCount_ * sizeof(ST);
-    outBuffer_ = ubRowLen_ * ubRowCount_ * sizeof(DT);
-    scaleFrontBuffer_ = ubRowLen_ * static_cast<int64_t>(((ubRowCount_ + 127) / 128) * 128) / blockSize_ *
-                        sizeof(uint16_t);
+    // y 为 fp4 装箱存储（两元素一字节），槽位按 0.5B/元素
+    outBuffer_ = ubRowLen_ * ubRowCount_ * sizeof(DT) / DIGIT_TWO;
+    // 横切: 每 tile 固定 1 个 64 行 scale 组, scale 前/后槽各 1 条 [ubRowLen_] u16 记录
+    scaleFrontBuffer_ = ubRowLen_ * ubRowCount_ / blockSize_ * sizeof(uint16_t);
     scaleBackBuffer_ = ubRowLen_ * ubRowCount_ / blockSize_ * sizeof(uint16_t);
     bufE8Buffer_ = ubRowLen_ * ubRowCount_ / blockSize_ * sizeof(ST);
-    buf1E8Buffer_ = ubRowLen_ * ubRowCount_ / blockSize_ * sizeof(ST);
-    buf1E16Buffer_ = ubRowLen_ * ubRowCount_ / blockSize_ * sizeof(ST) * 2;
     maxPer4Buffer_ = ubRowLen_ * ubRowCount_ / 4 * sizeof(ST);
     maxPer8Buffer_ = ubRowLen_ * ubRowCount_ / 8 * sizeof(ST);
     tmpScaleBuffer_ = ubRowLen_ * ubRowCount_ / 4 * sizeof(ST);
@@ -724,8 +700,6 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::Init(
     pipe_->InitBuffer(outScaleBackQueue_, useQueNum, scaleBackBuffer_);
 
     pipe_->InitBuffer(bufE8_, bufE8Buffer_);
-    pipe_->InitBuffer(buf1E8_, buf1E8Buffer_);
-    pipe_->InitBuffer(buf1E16_, buf1E16Buffer_);
     pipe_->InitBuffer(bufMaxPer4_, maxPer4Buffer_);
     pipe_->InitBuffer(bufMaxPer8_, maxPer8Buffer_);
     pipe_->InitBuffer(bufTmpScale_, tmpScaleBuffer_);
@@ -738,40 +712,47 @@ __aicore__ inline void DynamicHiF4QuantNotTailAxis<ST, DT, useQueNum>::Process()
         return;
     }
 
-    for (int64_t i = 0; i < loopPerCore_; i++) {
-        // 由本次ub计算的block块数推导列数
-        int64_t calcCol = ((blockOffset_ + i) % tilingData_->dimNeg1BlockNum == tilingData_->dimNeg1BlockNum - 1) ?
-                              ubRowLenTail_ :
-                              ubRowLen_;
-        // 本次ub计算的行数
-        int64_t calcRow = ((blockOffset_ + i) / tilingData_->dimNeg1BlockNum % tilingData_->dimNeg2SplitBlockNum) ==
-                                  (tilingData_->dimNeg2SplitBlockNum - 1) ?
-                              ubRowCountTail_ :
-                              ubRowCount_;
-        // 单batch偏移+单行偏移+单列偏移
-        int64_t xUbOffset = (blockOffset_ + i) / blockCountPerPage_ * tilingData_->dimNeg1 * tilingData_->dimNeg2 +
-                            (blockOffset_ + i) % blockCountPerPage_ / tilingData_->dimNeg1BlockNum * ubRowCount_ *
-                                tilingData_->dimNeg1 +
-                            (blockOffset_ + i) % blockCountPerPage_ % tilingData_->dimNeg1BlockNum * ubRowLen_;
-        // -2轴偏移
-        int64_t scale2Offset = (blockOffset_ + i) / blockCountPerPage_ * dimNeg2ScaleNum_ * tilingData_->dimNeg1 * 2 +
-                               (blockOffset_ + i) % blockCountPerPage_ / tilingData_->dimNeg1BlockNum *
-                                   tilingData_->splitBlockH / blockSize_ * tilingData_->dimNeg1 * 2 +
-                               (blockOffset_ + i) % blockCountPerPage_ % tilingData_->dimNeg1BlockNum * ubRowLen_;
+    // 任务游标一次性分解 + 步长/循环数预计算；游标按 列块 -> 行块 -> batch 进位
+    const int64_t colBlockNum = tilingData_->dimNeg1BlockNum;
+    const int64_t rowBlockNum = tilingData_->dimNeg2SplitBlockNum;
+    const int64_t lastColBlock = colBlockNum - 1;
+    const int64_t lastRowBlock = rowBlockNum - 1;
+    int64_t batchIdx = blockOffset_ / blockCountPerPage_;
+    int64_t withinBatch = blockOffset_ % blockCountPerPage_;
+    int64_t rowBlockIdx = withinBatch / colBlockNum;
+    int64_t colBlockIdx = withinBatch % colBlockNum;
+    const int64_t colStride = ubRowLen_; // x 与 scale 共用列步长
+    const int64_t rowStrideX = ubRowCount_ * tilingData_->dimNeg1;
+    const int64_t batchStrideX = tilingData_->dimNeg1 * tilingData_->dimNeg2;
+    const int64_t rowStrideScale = ubRowCount_ / blockSize_ * tilingData_->dimNeg1 * DIGIT_TWO;
+    const int64_t batchStrideScale = dimNeg2ScaleNum_ * tilingData_->dimNeg1 * DIGIT_TWO;
+    const int64_t maxPer4Loop = ubRowCount_ / 4;
+    const int64_t maxPer4LoopTail = ubRowCountTail_ / 4;
+    const int64_t maxPer8Loop = ubRowCount_ / 8;
+    const int64_t maxPer8LoopTail = ubRowCountTail_ / 8;
+    const int64_t regLoopFull = ubRowCount_ / blockSize_;
+    const int64_t regLoopTail = ubRowCountTail_ / blockSize_;
 
-        int64_t innerLoopMaxper4 = ((blockOffset_ + i) / tilingData_->dimNeg1BlockNum %
-                                    tilingData_->dimNeg2SplitBlockNum) == (tilingData_->dimNeg2SplitBlockNum - 1) ?
-                                       ubRowCountTail_ / 4 :
-                                       ubRowCount_ / 4;
-        int64_t innerLoopMaxper8 = ((blockOffset_ + i) / tilingData_->dimNeg1BlockNum %
-                                    tilingData_->dimNeg2SplitBlockNum) == (tilingData_->dimNeg2SplitBlockNum - 1) ?
-                                       ubRowCountTail_ / 8 :
-                                       ubRowCount_ / 8;
-        int64_t regLoop = ((blockOffset_ + i) / tilingData_->dimNeg1BlockNum % tilingData_->dimNeg2SplitBlockNum) ==
-                                  (tilingData_->dimNeg2SplitBlockNum - 1) ?
-                              ubRowCountTail_ / blockSize_ :
-                              ubRowCount_ / blockSize_;
+    for (int64_t i = 0; i < loopPerCore_; i++) {
+        // 列尾/行尾判定 + 偏移 = batchIdx*batchStride + rowBlockIdx*rowStride + colBlockIdx*colStride
+        const bool isTailRow = (rowBlockIdx == lastRowBlock);
+        int64_t calcCol = (colBlockIdx == lastColBlock) ? ubRowLenTail_ : ubRowLen_;
+        int64_t calcRow = isTailRow ? ubRowCountTail_ : ubRowCount_;
+        int64_t xUbOffset = batchIdx * batchStrideX + rowBlockIdx * rowStrideX + colBlockIdx * colStride;
+        int64_t scale2Offset = batchIdx * batchStrideScale + rowBlockIdx * rowStrideScale + colBlockIdx * colStride;
+        int64_t innerLoopMaxper4 = isTailRow ? maxPer4LoopTail : maxPer4Loop;
+        int64_t innerLoopMaxper8 = isTailRow ? maxPer8LoopTail : maxPer8Loop;
+        int64_t regLoop = isTailRow ? regLoopTail : regLoopFull;
         ProcessOneLoop(calcCol, calcRow, xUbOffset, scale2Offset, innerLoopMaxper4, innerLoopMaxper8, regLoop);
+
+        // 游标进位: 列满进行, 行满进 batch
+        if (++colBlockIdx == colBlockNum) {
+            colBlockIdx = 0;
+            if (++rowBlockIdx == rowBlockNum) {
+                rowBlockIdx = 0;
+                ++batchIdx;
+            }
+        }
     }
 }
 } // namespace DynamicHiF4Quant
