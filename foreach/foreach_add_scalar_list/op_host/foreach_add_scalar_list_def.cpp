@@ -14,6 +14,7 @@
  */
 
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class ForeachAddScalarList : public OpDef {
@@ -48,13 +49,11 @@ public:
 
         OpAICoreConfig regbaseCfg;
         regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
-        this->AICore().AddConfig("ascend950", regbaseCfg);
-        this->AICore().AddConfig("ascend960dt", regbaseCfg);
-        this->AICore().AddConfig("ascend960pr", regbaseCfg);
-        this->AICore().AddConfig("ascend350", regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, regbaseCfg);
 
-        this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend910b");
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_2201);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

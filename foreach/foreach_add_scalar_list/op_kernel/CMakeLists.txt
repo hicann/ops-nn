@@ -14,6 +14,6 @@ add_kernel_sources(
 )
 add_kernel_sources(
     KERNEL_SRC arch35/foreach_add_scalar_list.cpp
-    COMPUTE_UNITS ascend950 ascend960dt ascend960pr ascend350
+    COMPUTE_UNITS dav_3510 dav_9201 dav_9202
     AUTO_SYNC false
 )
