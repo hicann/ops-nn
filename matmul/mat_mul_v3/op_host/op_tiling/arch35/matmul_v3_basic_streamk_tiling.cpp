@@ -195,12 +195,12 @@ bool CheckStreamKSKPerfModelAdmission(const MatmulV3CompileInfo& compileInfo, co
 {
     MatMulV3TilingHelper::ResetBase(compileInfo, args, runInfo);
     MatMulV3TilingHelper::GetRebalanceBlock(compileInfo, args, runInfo, context);
-    if (runInfo.cubeBoundParam <= runInfo.cubeBoundEdge) {
+    uint64_t mCnt = MathUtil::CeilDivision(args.mValue, runInfo.baseM);
+    uint64_t nCnt = MathUtil::CeilDivision(args.nValue, runInfo.baseN);
+    if (runInfo.cubeBoundParam <= runInfo.cubeBoundEdge && mCnt * nCnt == compileInfo.aicNum) {
         OP_LOGD(args.opName, "Already CubeBound, no need streamK.");
         return false;
     }
-    uint64_t mCnt = MathUtil::CeilDivision(args.mValue, runInfo.baseM);
-    uint64_t nCnt = MathUtil::CeilDivision(args.nValue, runInfo.baseN);
     uint64_t singleCoreMaxRound = MathUtil::CeilDivision(mCnt * nCnt, compileInfo.aicNum);
     if (singleCoreMaxRound > 1) {
         OP_LOGD(args.opName, "SingleCore run multi round, no need streamK.");
