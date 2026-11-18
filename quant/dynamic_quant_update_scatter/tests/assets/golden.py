@@ -84,17 +84,6 @@ def _to_torch(x):
     return torch.as_tensor(arr.copy())
 
 
-def _to_numpy_for_golden(x):
-    if x is None:
-        return None
-    if torch.is_tensor(x):
-        # bfloat16 无 numpy 存储类（服务端以 raw int16 bits 传输）；转 fp32 再 numpy。
-        if x.dtype == torch.bfloat16:
-            return x.detach().cpu().to(torch.float32).numpy()
-        return x.detach().cpu().numpy()
-    return x
-
-
 def dynamic_quant_update_scatter_golden(
     var,
     var_scale,
@@ -171,20 +160,36 @@ class _DynamicQuantUpdateScatterCompose:
         self.axis = axis
 
     def __call__(self, var, var_scale, indices, updates, smooth_scales=None, **kwargs):
-        reduce = kwargs.pop("reduce", self.reduce)
         axis = kwargs.pop("axis", self.axis)
-        outputs = dynamic_quant_update_scatter_golden(
-            _to_numpy_for_golden(var),
-            _to_numpy_for_golden(var_scale),
-            _to_numpy_for_golden(indices),
-            _to_numpy_for_golden(updates),
-            _to_numpy_for_golden(smooth_scales),
-            reduce=reduce,
-            axis=axis,
-            **kwargs,
-        )
-        device = var.device if torch.is_tensor(var) else "cpu"
-        return [torch.as_tensor(out, device=device) for out in outputs]
+        axis_n = _norm_axis(axis, var.ndim)
+        values = updates.to(torch.float32)
+        if smooth_scales is not None:
+            values = values * smooth_scales.to(torch.float32).reshape(-1)
+
+        # Quantize all rows on the input device, using the same fp32 rounding
+        # and reciprocal chain as the CPU golden.
+        amax = values.abs().amax(dim=-1, keepdim=True)
+        multiplier = torch.where(amax == 0, torch.zeros_like(amax), QUANT_MAX / amax)
+        scales = torch.where(amax == 0, torch.zeros_like(amax), multiplier.reciprocal())
+        quantized = (values * multiplier).round().clamp(-127, 127).to(torch.int8)
+        output = var.clone()
+        output_scale = var_scale.clone()
+
+        # Only the small index tensor goes to the host. Ordered batch writes
+        # preserve last-write-wins semantics for duplicate/overlapping updates.
+        index_values = indices.detach().cpu().tolist()
+        for b in range(updates.shape[0]):
+            if indices.ndim == 2:
+                out_b, axis_start = index_values[b]
+            else:
+                out_b, axis_start = b, index_values[b]
+            target = [slice(None)] * var.ndim
+            target[0] = out_b
+            target[axis_n] = slice(axis_start, axis_start + updates.shape[axis_n])
+            output[tuple(target)] = quantized[b]
+            output_scale[tuple(target)] = scales[b]
+
+        return [output, output_scale]
 
 
 class DynamicQuantUpdateScatterKernelSpec:
