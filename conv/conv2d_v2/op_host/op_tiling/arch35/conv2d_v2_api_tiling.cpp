@@ -328,7 +328,8 @@ void Conv2dTiling::SetUbTiling(optiling::Conv2DTilingData& tiling)
         bool isWeight5HD = attrInfo.groups == 1 && descInfo.weightType.format == ConvFormat::NCHW &&
                            kernelHxkernelW > 1 && shapeInfo.orgCi > WEIGHT_5HD_C_LIMIT &&
                            shapeInfo.orgCo > WEIGHT_5HD_C_LIMIT && kernelHxkernelW * cubeInfo.k0 < WEIGHT_5HD_K_LIMIT &&
-                           descInfo.weightType.dtype != ConvDtype::FLOAT8_E4M3FN && !hasScale &&
+                           descInfo.weightType.dtype != ConvDtype::FLOAT8_E4M3FN && !hasScale && !extendConvFlag &&
+                           !quantConvFlag &&
                            AlignB(kernelHxkernelW, cubeInfo.k0) * DTYPE_SIZE_TAB.at(descInfo.weightType.dtype) /
                                    C0_SIZE <=
                                WEIGHT_5HD_TRANS_RPT_TIMES_LIMIT;
@@ -917,7 +918,9 @@ bool Conv2dTiling::CheckFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv2dSupportFormatSet;
     if (platformInfo.npuArch == NpuArch::DAV_9201 || platformInfo.npuArch == NpuArch::DAV_9202) {
-        conv2dSupportFormatSet = {{ConvFormat::NCHW, ConvFormat::NCHW}, {ConvFormat::NHWC, ConvFormat::HWCN}};
+        conv2dSupportFormatSet = {{ConvFormat::NCHW, ConvFormat::NCHW},
+                                  {ConvFormat::NCHW, ConvFormat::NHWC},
+                                  {ConvFormat::NHWC, ConvFormat::HWCN}};
     } else {
         conv2dSupportFormatSet = {
             {ConvFormat::NCHW, ConvFormat::NCHW},      {ConvFormat::NHWC, ConvFormat::HWCN},

@@ -378,6 +378,35 @@ __aicore__ inline void RunWeight5HDVec(const TilingData& tiling, GM_ADDR filter,
     tools.RunVec();
 }
 
+template <typename WeightT, typename TilingData>
+__aicore__ inline void RunWeight5HDVecExited(const TilingData& tiling, GM_ADDR filter, GM_ADDR workspace)
+{
+    TPipe pipe;
+    TBuf<TPosition::VECIN> ndUbBuf;
+    TBuf<TPosition::VECOUT> nzUbBuf;
+    GlobalTensor<WeightT> srcGm;
+    srcGm.SetGlobalBuffer(reinterpret_cast<__gm__ WeightT*>(filter));
+    GlobalTensor<WeightT> dstGm;
+    dstGm.SetGlobalBuffer(reinterpret_cast<__gm__ WeightT*>(workspace));
+
+    Weight5HDCfg<WeightT> cfg;
+    cfg.cin = tiling.cin;
+    cfg.coutTotal = tiling.orgCo;
+    cfg.hw = static_cast<uint64_t>(tiling.kernelHxkernelW);
+    cfg.kBL1 = tiling.kBL1;
+    cfg.singleCoreCi = tiling.singleCoreCi;
+    cfg.bUbNStep = tiling.bUbNStep;
+    cfg.bUbKStep = tiling.bUbKStep;
+    cfg.aivNum = static_cast<uint64_t>(GetBlockNum());
+    cfg.blockDim = static_cast<uint64_t>(tiling.batchDim * tiling.hoDim * tiling.woDim * tiling.nDim);
+    cfg.isRealCore = 0UL; // 无配对 AIC，禁用 mode-2 交互，仅保留转换与 barrier
+
+    Weight5HDVecTools<WeightT> tools;
+    tools.Init(cfg, pipe, ndUbBuf, nzUbBuf);
+    tools.BindGm(srcGm, dstGm);
+    tools.RunVec();
+}
+
 } // namespace Conv2dFunc
 
 #endif // CONV2D_V2_WEIGHT_5HD_IMPL_H

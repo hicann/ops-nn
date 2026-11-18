@@ -203,6 +203,11 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
         }
     }
     if (!Conv2dKernelInit(x, filter, bias, y, workspace, extendParams, convTilingData)) {
+        if constexpr (IS_WEIGHT_5HD) {
+            if ASCEND_IS_AIV {
+                Conv2dFunc::RunWeight5HDVecExited<WEIGHT_T>(convTilingData, filter, workspace);
+            }
+        }
         return;
     }
     if constexpr (isASWTEligible) {
