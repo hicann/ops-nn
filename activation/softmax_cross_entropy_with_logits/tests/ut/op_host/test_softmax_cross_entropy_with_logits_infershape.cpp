@@ -60,6 +60,99 @@ TEST_F(SoftmaxCrossEntropyWithLogitsTest, softmax_cross_entropy_with_logits_test
     ASSERT_EQ(Ops::Base::ToString(*backprop_desc), Ops::Base::ToString(expected_backprop_shape));
 }
 
+TEST_F(SoftmaxCrossEntropyWithLogitsTest, softmax_cross_entropy_with_logits_dynamic_dim_test)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SoftmaxCrossEntropyWithLogits"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("SoftmaxCrossEntropyWithLogits")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape features_shape = {{-1, 10}, {-1, 10}};
+    gert::StorageShape labels_shape = {{-1, -1}, {-1, -1}};
+
+    std::vector<gert::StorageShape> output_shapes(2);
+    std::vector<void*> output_shapes_ref(2);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1})
+                      .InputShapes({&features_shape, &labels_shape})
+                      .OutputShapes(output_shapes_ref)
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto loss_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_loss_shape = {-1};
+    ASSERT_EQ(Ops::Base::ToString(*loss_desc), Ops::Base::ToString(expected_loss_shape));
+    auto backprop_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expected_backprop_shape = {-1, 10};
+    ASSERT_EQ(Ops::Base::ToString(*backprop_desc), Ops::Base::ToString(expected_backprop_shape));
+}
+
+TEST_F(SoftmaxCrossEntropyWithLogitsTest, softmax_cross_entropy_with_logits_dynamic_dim_4d_test)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SoftmaxCrossEntropyWithLogits"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("SoftmaxCrossEntropyWithLogits")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape features_shape = {{-1, 2, 3, 5}, {-1, 2, 3, 5}};
+    gert::StorageShape labels_shape = {{-1, 1, 1, -1}, {-1, 1, 1, -1}};
+
+    std::vector<gert::StorageShape> output_shapes(2);
+    std::vector<void*> output_shapes_ref(2);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1})
+                      .InputShapes({&features_shape, &labels_shape})
+                      .OutputShapes(output_shapes_ref)
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto loss_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_loss_shape = {-1, 1, 3, 5};
+    ASSERT_EQ(Ops::Base::ToString(*loss_desc), Ops::Base::ToString(expected_loss_shape));
+    auto backprop_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expected_backprop_shape = {-1, 2, 3, 5};
+    ASSERT_EQ(Ops::Base::ToString(*backprop_desc), Ops::Base::ToString(expected_backprop_shape));
+}
+
+TEST_F(SoftmaxCrossEntropyWithLogitsTest, softmax_cross_entropy_with_logits_unknown_rank_regression_test)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SoftmaxCrossEntropyWithLogits"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("SoftmaxCrossEntropyWithLogits")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape features_shape = {{-2}, {-2}};
+    gert::StorageShape labels_shape = {{4, 1, 1, 2139}, {4, 1, 1, 2139}};
+
+    std::vector<gert::StorageShape> output_shapes(2);
+    std::vector<void*> output_shapes_ref(2);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 2)
+                      .IrInstanceNum({1})
+                      .InputShapes({&features_shape, &labels_shape})
+                      .OutputShapes(output_shapes_ref)
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto loss_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_loss_shape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*loss_desc), Ops::Base::ToString(expected_loss_shape));
+    auto backprop_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    gert::Shape expected_backprop_shape = {-2};
+    ASSERT_EQ(Ops::Base::ToString(*backprop_desc), Ops::Base::ToString(expected_backprop_shape));
+}
+
 TEST_F(SoftmaxCrossEntropyWithLogitsTest, softmax_cross_entropy_with_logits_test_2)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SoftmaxCrossEntropyWithLogits"), nullptr);

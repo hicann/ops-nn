@@ -70,6 +70,12 @@ static bool GetInputsDimsForScewl(const size_t& input_features_dim_num, const si
     return true;
 }
 
+static bool ScewlDimsBroadcastCompatible(const int64_t& features_dim, const int64_t& labels_dim)
+{
+    return features_dim == labels_dim || features_dim == 1 || labels_dim == 1 || features_dim == ge::UNKNOWN_DIM ||
+           labels_dim == ge::UNKNOWN_DIM;
+}
+
 static bool ScewlCheckInputsDims(const size_t& input_features_dim_num, const size_t& input_labels_dim_num,
                                  ScewlInputsDims& inputs_dims, gert::InferShapeContext* context)
 {
@@ -80,16 +86,14 @@ static bool ScewlCheckInputsDims(const size_t& input_features_dim_num, const siz
         OP_LOGI(context->GetNodeName(), "after complete, input_labels_dim is [%ld, %ld, %ld, %ld]",
                 inputs_dims.labels_dim_0, inputs_dims.labels_dim_1, inputs_dims.labels_dim_2, inputs_dims.labels_dim_3);
 
-        if (inputs_dims.features_dim_2 != inputs_dims.labels_dim_2 && inputs_dims.features_dim_2 != 1 &&
-            inputs_dims.labels_dim_2 != 1) {
+        if (!ScewlDimsBroadcastCompatible(inputs_dims.features_dim_2, inputs_dims.labels_dim_2)) {
             OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
                 context->GetNodeName(), "features,labels",
                 std::to_string(inputs_dims.features_dim_2) + "," + std::to_string(inputs_dims.labels_dim_2),
                 "Corresponding dimensions must match or one dimension must be 1 for broadcasting.");
             return false;
         }
-        if (inputs_dims.features_dim_3 != inputs_dims.labels_dim_3 && inputs_dims.features_dim_3 != 1 &&
-            inputs_dims.labels_dim_3 != 1) {
+        if (!ScewlDimsBroadcastCompatible(inputs_dims.features_dim_3, inputs_dims.labels_dim_3)) {
             OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
                 context->GetNodeName(), "features,labels",
                 std::to_string(inputs_dims.features_dim_3) + "," + std::to_string(inputs_dims.labels_dim_3),
@@ -103,16 +107,14 @@ static bool ScewlCheckInputsDims(const size_t& input_features_dim_num, const siz
                 inputs_dims.labels_dim_1);
     }
 
-    if (inputs_dims.features_dim_0 != inputs_dims.labels_dim_0 && inputs_dims.features_dim_0 != 1 &&
-        inputs_dims.labels_dim_0 != 1) {
+    if (!ScewlDimsBroadcastCompatible(inputs_dims.features_dim_0, inputs_dims.labels_dim_0)) {
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
             context->GetNodeName(), "features,labels",
             std::to_string(inputs_dims.features_dim_0) + "," + std::to_string(inputs_dims.labels_dim_0),
             "Corresponding dimensions must match or one dimension must be 1 for broadcasting.");
         return false;
     }
-    if (inputs_dims.features_dim_1 != inputs_dims.labels_dim_1 && inputs_dims.features_dim_1 != 1 &&
-        inputs_dims.labels_dim_1 != 1) {
+    if (!ScewlDimsBroadcastCompatible(inputs_dims.features_dim_1, inputs_dims.labels_dim_1)) {
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
             context->GetNodeName(), "features,labels",
             std::to_string(inputs_dims.features_dim_1) + "," + std::to_string(inputs_dims.labels_dim_1),
