@@ -126,6 +126,6 @@ None
 
 ## Invocation Description
 
-| Invocation method | Invocation sample                                                                   | Description                                                           |
+| Invocation method | Sample Code                                                                         | Description                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | Graph-mode invocation | [test_geir_layer_norm_v3](./examples/test_geir_layer_norm_v3.cpp)   | Invokes the LayerNormV3 operator through graph construction using [Ascend IR](./docs/ascendirLayerNormV3.md). |

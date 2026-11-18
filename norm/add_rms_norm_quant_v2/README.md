@@ -241,7 +241,7 @@
 
 上述数据类型组合适用于Kernel/GE图接口。aclnn API支持的输入类型及组合参见[aclnnAddRmsNormQuantV2接口文档](docs/aclnnAddRmsNormQuantV2.md#约束说明)。
 
-| 调用方式 | 调用样例 | 说明 |
+| 调用方式 | 样例代码 | 说明 |
 | --- | --- | --- |
 | aclnn API | [test_aclnn_add_rms_norm_quant_v2](examples/test_aclnn_add_rms_norm_quant_v2.cpp) | 通过[aclnnAddRmsNormQuantV2接口文档](docs/aclnnAddRmsNormQuantV2.md)中的两段式接口调用AddRmsNormQuantV2算子。 |
 | GE图模式 | - | 通过[AddRmsNormQuantV2算子IR](op_graph/add_rms_norm_quant_v2_proto.h)构图方式调用AddRmsNormQuantV2算子。 |

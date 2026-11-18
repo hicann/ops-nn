@@ -246,3 +246,4 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | - | 通过[aclnnAddLayerNormQuant](docs/aclnnAddLayerNormQuant.md)接口方式调用AddLayerNormQuant算子。 |
 | 图模式 | [test_geir_add_layer_norm_quant](examples/test_geir_add_layer_norm_quant.cpp)  | 通过[算子IR](op_graph/add_layer_norm_quant_proto.h)构图方式调用AddLayerNormQuant算子。         |
+| aclnn调用 | [test_aclnn_add_layer_norm_quant.cpp](./examples/test_aclnn_add_layer_norm_quant.cpp) | 通过[aclnnAddLayerNormQuant](./docs/aclnnAddLayerNormQuant.md)接口方式调用add_layer_norm_quant算子。 |

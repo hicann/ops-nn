@@ -248,3 +248,4 @@ None
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn invocation  | - | Invokes the AddLayerNormQuant operator through the [aclnnAddLayerNormQuant](docs/aclnnAddLayerNormQuant_en.md) interface. |
 | Graph-mode invocation | [test_geir_add_layer_norm_quant](examples/test_geir_add_layer_norm_quant.cpp)  | Invokes the AddLayerNormQuant operator through graph construction with the [operator IR](op_graph/add_layer_norm_quant_proto.h).         |
+| aclnn invocation | [test\_aclnn\_add\_layer\_norm\_quant](./examples/test_aclnn_add_layer_norm_quant.cpp) | Invokes the add_layer_norm_quant operator through the [aclnnAddLayerNormQuant](./docs/aclnnAddLayerNormQuant_en.md) APIs |

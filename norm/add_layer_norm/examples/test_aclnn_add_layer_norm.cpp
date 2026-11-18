@@ -76,7 +76,19 @@ int main()
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
-    aclrtStream stream;
+    aclrtStream stream = nullptr;
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    void* workspaceAddr = nullptr;
+    uint64_t workspaceSizebiasOptional = 0;
+    aclOpExecutor* executorbiasOptional = nullptr;
+    void* workspaceAddrbiasOptional = nullptr;
+    std::vector<float> resultDataY, resultDataMean, resultDataRstd, resultDataX;
+    int64_t outputYSize = 0, outputMeanSize = 0, outputRstdSize = 0, outputXSize = 0;
+    int64_t outputYSizebiasOptional = 0, outputMeanSizebiasOptional = 0;
+    int64_t outputRstdSizebiasOptional = 0, outputXSizebiasOptional = 0;
+    std::vector<float> resultDataYbiasOptional, resultDataMeanbiasOptional;
+    std::vector<float> resultDataRstdbiasOptional, resultDataXbiasOptional;
     auto ret = Init(deviceId, &stream);
     // check根据自己的需要处理
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
@@ -153,181 +165,178 @@ int main()
 
     // 创建self aclTensor
     ret = CreateAclTensor(x1HostData, x1Shape, &x1DeviceAddr, aclDataType::ACL_FLOAT, &x1);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(x2HostData, x2Shape, &x2DeviceAddr, aclDataType::ACL_FLOAT, &x2);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(betaHostData, betaShape, &betaDeviceAddr, aclDataType::ACL_FLOAT, &beta);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT, &gamma);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(biasOptionalHostData, biasOptionalShape, &biasOptionalDeviceAddr, aclDataType::ACL_FLOAT,
                           &biasOptional);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
 
     // 创建不带 biasOptional 的 aclTensor
     ret = CreateAclTensor(outputYHostData, outputYShape, &outputYDeviceAddr, aclDataType::ACL_FLOAT, &outputY);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(outputMeanHostData, outputMeanShape, &outputMeanDeviceAddr, aclDataType::ACL_FLOAT,
                           &outputMean);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(outputRstdHostData, outputRstdShape, &outputRstdDeviceAddr, aclDataType::ACL_FLOAT,
                           &outputRstd);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(outputXHostData, outputXShape, &outputXDeviceAddr, aclDataType::ACL_FLOAT, &outputX);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
 
     // 创建带 biasOptional 的 aclTensor
     ret = CreateAclTensor(outputYHostDatabiasOptional, outputYShape, &outputYDeviceAddrbiasOptional,
                           aclDataType::ACL_FLOAT, &outputYbiasOptional);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(outputMeanHostDatabiasOptional, outputMeanShape, &outputMeanDeviceAddrbiasOptional,
                           aclDataType::ACL_FLOAT, &outputMeanbiasOptional);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(outputRstdHostDatabiasOptional, outputRstdShape, &outputRstdDeviceAddrbiasOptional,
                           aclDataType::ACL_FLOAT, &outputRstdbiasOptional);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
     ret = CreateAclTensor(outputXHostDatabiasOptional, outputXShape, &outputXDeviceAddrbiasOptional,
                           aclDataType::ACL_FLOAT, &outputXbiasOptional);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    CHECK_RET(ret == ACL_SUCCESS, goto cleanup);
 
     // aclnnAddLayerNorm接口调用示例，包含带biasOptional和不带biasOptional的各一次
     // 3. 调用CANN算子库API，需要修改为具体的API名称
 
     // 3.1 不带biasOptional可选输入的示例
     // 调用aclnnAddLayerNorm第一段接口
-    uint64_t workspaceSize = 0;
-    aclOpExecutor* executor;
     LOG_PRINT("\nUse aclnnAddLayerNorm Non-biasOptional Port.");
     // biasOptional参数直接传入nullptr即可
     ret = aclnnAddLayerNormGetWorkspaceSize(x1, x2, gamma, beta, nullptr, eps, additionalOutput, outputY, outputMean,
                                             outputRstd, outputX, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNormGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNormGetWorkspaceSize failed. ERROR: %d\n", ret);
+              goto cleanup);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); goto cleanup);
     }
     // 调用aclnnAddLayerNorm第二段接口
     ret = aclnnAddLayerNorm(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNorm failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNorm failed. ERROR: %d\n", ret); goto cleanup);
 
     // 3.2 带biasOptional可选输入的示例
     // 调用aclnnAddLayerNorm第一段接口
-    uint64_t workspaceSizebiasOptional = 0;
-    aclOpExecutor* executorbiasOptional;
     LOG_PRINT("\nUse aclnnAddLayerNorm biasOptional Port.");
     // 正常传入biasOptional即可
     ret = aclnnAddLayerNormGetWorkspaceSize(x1, x2, gamma, beta, biasOptional, eps, additionalOutput,
                                             outputYbiasOptional, outputMeanbiasOptional, outputRstdbiasOptional,
                                             outputXbiasOptional, &workspaceSizebiasOptional, &executorbiasOptional);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNormGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNormGetWorkspaceSize failed. ERROR: %d\n", ret);
+              goto cleanup);
     // 根据第一段接口计算出的workspaceSize申请device内存
-    void* workspaceAddrbiasOptional = nullptr;
     if (workspaceSizebiasOptional > 0) {
         ret = aclrtMalloc(&workspaceAddrbiasOptional, workspaceSizebiasOptional, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); goto cleanup);
     }
     // 调用aclnnAddLayerNorm第二段接口
     ret = aclnnAddLayerNorm(workspaceAddrbiasOptional, workspaceSizebiasOptional, executorbiasOptional, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNorm failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNorm failed. ERROR: %d\n", ret); goto cleanup);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); goto cleanup);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
 
     // 5.1 拷贝出不带biasOptional的输出
-    auto outputYSize = GetShapeSize(outputYShape);
-    std::vector<float> resultDataY(outputYSize, 0);
+    outputYSize = GetShapeSize(outputYShape);
+    resultDataY.assign(outputYSize, 0);
     ret = aclrtMemcpy(resultDataY.data(), resultDataY.size() * sizeof(resultDataY[0]), outputYDeviceAddr,
                       outputYSize * sizeof(resultDataY[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto cleanup);
     LOG_PRINT("==== AddLayerNorm non-biasOptional: y output");
     for (int64_t i = 0; i < outputYSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataY[i]);
     }
 
-    auto outputMeanSize = GetShapeSize(outputMeanShape);
-    std::vector<float> resultDataMean(outputMeanSize, 0);
+    outputMeanSize = GetShapeSize(outputMeanShape);
+    resultDataMean.assign(outputMeanSize, 0);
     ret = aclrtMemcpy(resultDataMean.data(), resultDataMean.size() * sizeof(resultDataMean[0]), outputMeanDeviceAddr,
                       outputMeanSize * sizeof(resultDataMean[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto cleanup);
     LOG_PRINT("==== AddLayerNorm non-biasOptional: mean output");
     for (int64_t i = 0; i < outputMeanSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataMean[i]);
     }
 
-    auto outputRstdSize = GetShapeSize(outputRstdShape);
-    std::vector<float> resultDataRstd(outputRstdSize, 0);
+    outputRstdSize = GetShapeSize(outputRstdShape);
+    resultDataRstd.assign(outputRstdSize, 0);
     ret = aclrtMemcpy(resultDataRstd.data(), resultDataRstd.size() * sizeof(resultDataRstd[0]), outputRstdDeviceAddr,
                       outputRstdSize * sizeof(resultDataRstd[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto cleanup);
     LOG_PRINT("==== AddLayerNorm non-biasOptional: rstd output");
     for (int64_t i = 0; i < outputRstdSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataRstd[i]);
     }
 
-    auto outputXSize = GetShapeSize(outputXShape);
-    std::vector<float> resultDataX(outputXSize, 0);
+    outputXSize = GetShapeSize(outputXShape);
+    resultDataX.assign(outputXSize, 0);
     ret = aclrtMemcpy(resultDataX.data(), resultDataX.size() * sizeof(resultDataX[0]), outputXDeviceAddr,
                       outputXSize * sizeof(resultDataX[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto cleanup);
     LOG_PRINT("==== AddLayerNorm non-biasOptional: x output");
     for (int64_t i = 0; i < outputXSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataX[i]);
     }
 
     // 5.2 拷贝出带biasOptional的输出
-    auto outputYSizebiasOptional = GetShapeSize(outputYShape);
-    std::vector<float> resultDataYbiasOptional(outputYSizebiasOptional, 0);
+    outputYSizebiasOptional = GetShapeSize(outputYShape);
+    resultDataYbiasOptional.assign(outputYSizebiasOptional, 0);
     ret = aclrtMemcpy(resultDataYbiasOptional.data(),
                       resultDataYbiasOptional.size() * sizeof(resultDataYbiasOptional[0]),
                       outputYDeviceAddrbiasOptional, outputYSizebiasOptional * sizeof(resultDataYbiasOptional[0]),
                       ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto cleanup);
     LOG_PRINT("==== AddLayerNorm biasOptional: y output");
     for (int64_t i = 0; i < outputYSizebiasOptional; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataYbiasOptional[i]);
     }
 
-    auto outputMeanSizebiasOptional = GetShapeSize(outputMeanShape);
-    std::vector<float> resultDataMeanbiasOptional(outputMeanSizebiasOptional, 0);
+    outputMeanSizebiasOptional = GetShapeSize(outputMeanShape);
+    resultDataMeanbiasOptional.assign(outputMeanSizebiasOptional, 0);
     ret = aclrtMemcpy(resultDataMeanbiasOptional.data(),
                       resultDataMeanbiasOptional.size() * sizeof(resultDataMeanbiasOptional[0]),
                       outputMeanDeviceAddrbiasOptional,
                       outputMeanSizebiasOptional * sizeof(resultDataMeanbiasOptional[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto cleanup);
     LOG_PRINT("==== AddLayerNorm biasOptional: mean output");
     for (int64_t i = 0; i < outputMeanSizebiasOptional; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataMeanbiasOptional[i]);
     }
 
-    auto outputRstdSizebiasOptional = GetShapeSize(outputRstdShape);
-    std::vector<float> resultDataRstdbiasOptional(outputRstdSizebiasOptional, 0);
+    outputRstdSizebiasOptional = GetShapeSize(outputRstdShape);
+    resultDataRstdbiasOptional.assign(outputRstdSizebiasOptional, 0);
     ret = aclrtMemcpy(resultDataRstdbiasOptional.data(),
                       resultDataRstdbiasOptional.size() * sizeof(resultDataRstdbiasOptional[0]),
                       outputRstdDeviceAddrbiasOptional,
                       outputRstdSizebiasOptional * sizeof(resultDataRstdbiasOptional[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto cleanup);
     LOG_PRINT("==== AddLayerNorm biasOptional: rstd output");
     for (int64_t i = 0; i < outputRstdSizebiasOptional; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataRstdbiasOptional[i]);
     }
 
-    auto outputXSizebiasOptional = GetShapeSize(outputXShape);
-    std::vector<float> resultDataXbiasOptional(outputXSizebiasOptional, 0);
+    outputXSizebiasOptional = GetShapeSize(outputXShape);
+    resultDataXbiasOptional.assign(outputXSizebiasOptional, 0);
     ret = aclrtMemcpy(resultDataXbiasOptional.data(),
                       resultDataXbiasOptional.size() * sizeof(resultDataXbiasOptional[0]),
                       outputXDeviceAddrbiasOptional, outputXSizebiasOptional * sizeof(resultDataXbiasOptional[0]),
                       ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); goto cleanup);
     LOG_PRINT("==== AddLayerNorm biasOptional: x output");
     for (int64_t i = 0; i < outputXSizebiasOptional; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultDataXbiasOptional[i]);
     }
 
+cleanup:
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
     aclDestroyTensor(x1);
     aclDestroyTensor(x2);
@@ -362,16 +371,16 @@ int main()
     aclrtFree(outputRstdDeviceAddrbiasOptional);
     aclrtFree(outputXDeviceAddrbiasOptional);
 
-    if (workspaceSize > 0) {
+    if (workspaceAddr != nullptr) {
         aclrtFree(workspaceAddr);
     }
 
-    if (workspaceSizebiasOptional > 0) {
+    if (workspaceAddrbiasOptional != nullptr) {
         aclrtFree(workspaceAddrbiasOptional);
     }
 
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
-    return 0;
+    return ret;
 }

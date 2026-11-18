@@ -80,6 +80,6 @@ None
 
 ## Invocation Description
 
-| Invocation method | Invocation sample                                                                   | Description                                                           |
+| Invocation method | Sample Code                                                                         | Description                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn invocation | [test_aclnn_softmax_grad](./examples/test_aclnn_softmax_grad.cpp) | Calls the SoftmaxGrad operator through the [aclnnSoftmaxBackward](./docs/aclnnSoftmaxBackward_en.md) interface. |

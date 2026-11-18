@@ -105,10 +105,10 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建ord aclScalar
     ord = aclCreateScalar(&pValue, aclDataType::ACL_FLOAT);
-    CHECK_RET(ord != nullptr, return ret);
+    CHECK_RET(ord != nullptr, LOG_PRINT("aclCreate failed.\n"); return ACL_ERROR_FAILURE);
     // 创建dim aclIntArray
     dims = aclCreateIntArray(dimData.data(), 1);
-    CHECK_RET(dims != nullptr, return ret);
+    CHECK_RET(dims != nullptr, LOG_PRINT("aclCreate failed.\n"); return ACL_ERROR_FAILURE);
 
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;

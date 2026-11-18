@@ -78,6 +78,6 @@
 
 ## 调用说明
 
-| 调用方式 | 调用样例                                                                   | 说明                                                           |
+| 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_softmax_grad](./examples/test_aclnn_softmax_grad.cpp) | 通过[aclnnSoftmaxBackward](./docs/aclnnSoftmaxBackward.md)接口方式调用SoftmaxGrad算子。 |

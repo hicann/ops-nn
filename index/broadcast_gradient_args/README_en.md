@@ -110,7 +110,7 @@ English | [简体中文](./README.md)
 
 ## Invocation Description
 
-| Invocation method | Invocation sample                                                                   | Description                                                           |
+| Invocation method | Sample Code                                                                         | Description                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | Graph-mode invocation | [test_geir_broadcast_gradient_args](./examples/test_geir_broadcast_gradient_args.cpp)   | Calls the BroadcastGradientArgs operator by building a graph through [operator IR](./op_graph/broadcast_gradient_args_proto.h). |
 | aclnn invocation | [test_aclnn_broadcast_gradient_args](./examples/test_aclnn_broadcast_gradient_args.cpp)   | Calls the BroadcastGradientArgs operator through the [aclnnBroadcastGradientArgs](./docs/aclnnBroadcastGradientArgs_en.md) interface. |

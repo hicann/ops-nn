@@ -243,7 +243,7 @@ The following four output and quantization parameter combination restrictions ap
 
 The preceding data type combinations apply to the Kernel/GE graph API. For the input types and combinations supported by the aclnn API, see [aclnnAddRmsNormQuantV2 API Description](docs/aclnnAddRmsNormQuantV2_en.md#constraints).
 
-| Invocation method | Invocation sample | Description |
+| Invocation method | Sample Code       | Description |
 | --- | --- | --- |
 | aclnn API | [test_aclnn_add_rms_norm_quant_v2](examples/test_aclnn_add_rms_norm_quant_v2.cpp) | Invoke the AddRmsNormQuantV2 operator through the two-phase API in [aclnnAddRmsNormQuantV2 API Description](docs/aclnnAddRmsNormQuantV2_en.md). |
 | GE graph mode | - | Invoke the AddRmsNormQuantV2 operator through graph construction using the [AddRmsNormQuantV2 operator IR](op_graph/add_rms_norm_quant_v2_proto.h). |

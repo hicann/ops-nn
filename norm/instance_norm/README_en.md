@@ -105,6 +105,6 @@ None
 
 ## Invocation Description
 
-| Invocation method | Invocation sample                                                                   | Description                                                           |
+| Invocation method | Sample Code                                                                         | Description                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | Graph-mode invocation | [test_geir_instance_norm](./examples/test_geir_instance_norm.cpp) | Calls the InstanceNorm operator by building a graph with the [operator IR](op_graph/instance_norm_proto.h). |

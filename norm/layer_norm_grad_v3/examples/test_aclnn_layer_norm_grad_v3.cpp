@@ -123,7 +123,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建normalizedShape aclIntArray
     norm = aclCreateIntArray(normData.data(), 1);
-    CHECK_RET(norm != nullptr, return ret);
+    CHECK_RET(norm != nullptr, LOG_PRINT("aclCreate failed.\n"); return ACL_ERROR_FAILURE);
     // 创建mean aclTensor
     ret = CreateAclTensor(meanHostData, meanShape, &meanDeviceAddr, aclDataType::ACL_FLOAT, &mean);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
