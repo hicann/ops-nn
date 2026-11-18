@@ -989,6 +989,10 @@ void ScatterNdUpdateTiling::UpdateSimdSortDecision()
     if (isSimdNonDeterminstic_ == 1 && highDuplication && enoughBatchPerCore) {
         isSimdWithSort_ = 1;
     }
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    if (ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_5162) {
+        isSimdWithSort_ = 0;
+    }
 }
 
 ge::graphStatus ScatterNdUpdateTiling::DoOpTiling()
