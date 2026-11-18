@@ -5161,12 +5161,12 @@
   <tr>
     <td>quant</td>
     <td><a href="../../quant/ascend_dequant/README.md">ascend_dequant</a></td>
-    <td>✓</td>
-    <td>✓</td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✗</td>
     <td>AI Core</td>
-    <td>对INT32输入按UINT64反量化系数逐元素反量化，输出FLOAT16或FLOAT32结果，系数支持右对齐广播。</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>quant</td>
