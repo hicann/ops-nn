@@ -114,7 +114,7 @@ aclnnStatus aclnnForeachMinimumScalarList(
       <td>FLOAT32, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
       <td><ul><li>Atlas A3 and Atlas A2 products: 0-8; no limit on other products.</li></ul></td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -238,6 +238,10 @@ aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../
 - The input tensor list `x` contains at most 256 tensors.
 - Deterministic computation:
   - aclnnForeachMinimumScalarList defaults to a deterministic implementation.
+- Both input `x` and output `out` support up to 256 tensors.
+- The shape size of output `out` must be greater than or equal to the shape size of the corresponding tensor in `x`.
+- The length of the `scalars` scalar list must be equal to the length of the `x` tensor list, and the maximum number of elements is 256.
+- Input `x` and output `out` support non-contiguous tensors. Non-contiguous inputs are converted to contiguous tensors before computation, and non-contiguous outputs are written back through ViewCopy.
 
 ## Example
 

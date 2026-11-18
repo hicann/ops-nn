@@ -74,7 +74,8 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- Inputs and outputs support non-contiguous tensors.
+- <term>Ascend 950PR&950DT series products</term>: a single aclnn API or GE graph mode call supports 1 to 256 groups of tensors; if the number exceeds 256, call the API in batches.
 
 ## Invocation Description
 

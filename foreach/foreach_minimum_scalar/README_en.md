@@ -75,7 +75,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- Inputs and outputs support non-contiguous tensors.
 
 ## Invocation Description
 

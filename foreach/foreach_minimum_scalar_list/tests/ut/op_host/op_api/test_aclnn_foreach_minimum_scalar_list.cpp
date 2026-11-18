@@ -150,3 +150,34 @@ TEST(ForeachMinimumScalarList, ascend910B2_out_equal_numel_different_shape_allow
     RunGetWorkspaceSize(TensorListDesc({TensorDesc({2, 4})}), {ScalarDesc(2.0f)}, TensorListDesc({TensorDesc({8})}),
                         ACLNN_SUCCESS);
 }
+
+// workspaceSize 为空指针时应拒绝（161001）
+TEST(ForeachMinimumScalarList, ascend910B2_null_workspace_size)
+{
+    auto x = TensorListDesc({TensorDesc({2, 4})}).ToAclType();
+    auto out = TensorListDesc({TensorDesc({2, 4})}).ToAclType();
+    auto scalar = ScalarDesc(2.0f).ToAclType();
+    const aclScalar* values[] = {scalar.release()};
+    auto scalars = aclCreateScalarList(values, 1);
+    aclOpExecutor* executor = nullptr;
+    EXPECT_EQ(aclnnForeachMinimumScalarListGetWorkspaceSize(x.get(), scalars, out.get(), nullptr, &executor),
+              ACLNN_ERR_PARAM_NULLPTR);
+    if (executor != nullptr) {
+        aclDestroyAclOpExecutor(executor);
+    }
+    aclDestroyScalarList(scalars);
+}
+
+// executor 为空指针时应拒绝（161001）
+TEST(ForeachMinimumScalarList, ascend910B2_null_executor)
+{
+    auto x = TensorListDesc({TensorDesc({2, 4})}).ToAclType();
+    auto out = TensorListDesc({TensorDesc({2, 4})}).ToAclType();
+    auto scalar = ScalarDesc(2.0f).ToAclType();
+    const aclScalar* values[] = {scalar.release()};
+    auto scalars = aclCreateScalarList(values, 1);
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(aclnnForeachMinimumScalarListGetWorkspaceSize(x.get(), scalars, out.get(), &workspaceSize, nullptr),
+              ACLNN_ERR_PARAM_NULLPTR);
+    aclDestroyScalarList(scalars);
+}

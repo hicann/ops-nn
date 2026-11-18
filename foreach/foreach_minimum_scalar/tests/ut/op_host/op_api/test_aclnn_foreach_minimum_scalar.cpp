@@ -79,3 +79,18 @@ TEST_F(l2_foreach_minimum_scalar_test, ascend910B2_foreach_minimum_scalar_test_s
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
+
+// scalar 是带 offset 的 0-D view 时，aclnn 层应先归一化为连续 1 元素 tensor
+TEST_F(l2_foreach_minimum_scalar_test, ascend910B2_foreach_minimum_scalar_test_scalar_view_with_offset)
+{
+    auto scalar = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND, {}, 4, {9});
+    auto x = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachMinimumScalar, INPUT(xList, scalar), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}

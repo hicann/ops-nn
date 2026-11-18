@@ -229,6 +229,7 @@ aclnnStatus aclnnForeachMinimumList(
 
 - Deterministic computation:
   - aclnnForeachMinimumList defaults to a deterministic implementation.
+- Inputs `x1`, `x2` and output `out` support non-contiguous tensors. Non-contiguous inputs are converted to contiguous tensors before computation, and non-contiguous outputs are written back through ViewCopy.
 
 ## Example
 

@@ -240,6 +240,10 @@ aclnnStatus aclnnForeachMinimumScalarList(
 - 输入张量列表`x`中Tensor的数量不超过256。
 - 确定性计算：
   - aclnnForeachMinimumScalarList默认确定性实现。
+- 输入`x`、输出`out`支持包含的最大Tensor个数均为256。
+- 输出`out`的shape size需大于等于`x`中对应位置Tensor的shape size。
+- 输入`scalars`的ScalarList长度需要与`x`的TensorList长度相等，支持的最大元素个数为256。
+- 输入`x`、输出`out`支持非连续Tensor；非连续输入会先转换为连续Tensor参与计算，非连续输出通过连续结果回写。
 
 ## 调用示例
 

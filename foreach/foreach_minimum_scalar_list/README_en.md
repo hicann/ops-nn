@@ -66,7 +66,7 @@ English | [简体中文](./README.md)
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Indicates the output tensor list of the minimum value operation, corresponding to `y` in the formula. Its data type and data format are consistent with the data type and data format of input parameter `x`, and its shape size (number of elements) is greater than or equal to the shape size (number of elements) of input parameter `x`. The data types of all tensors in this parameter are consistent. The output does not support non-contiguous tensors.</td>
+      <td>Indicates the output tensor list of the minimum value operation, corresponding to `y` in the formula. Its data type and data format are consistent with the data type and data format of input parameter `x`, and its shape size (number of elements) is greater than or equal to the shape size (number of elements) of input parameter `x`. The data types of all tensors in this parameter are consistent.</td>
       <td>FLOAT, FLOAT16, INT32, BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -76,7 +76,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-- The output does not support non-contiguous tensors.
+- Inputs and outputs support non-contiguous tensors.
 - The input tensor list `x` contains at most 256 tensors.
 
 ## Invocation Description

@@ -228,6 +228,7 @@ aclnnStatus aclnnForeachMinimumList(
 <!-- end id7 -->
 - 确定性计算：
   - aclnnForeachMinimumList默认确定性实现。
+- 输入`x1`、`x2`、输出`out`支持非连续Tensor；非连续输入会先转换为连续Tensor参与计算，非连续输出通过连续结果回写。
 
 ## 调用示例
 

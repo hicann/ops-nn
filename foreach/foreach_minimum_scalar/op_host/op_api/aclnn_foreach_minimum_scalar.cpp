@@ -197,8 +197,17 @@ static aclnnStatus ExecForeachMinimumScalarGetWorkspaceSize(const aclTensorList*
     auto contiguousOut = ForeachMakeContiguousTensorList(out, minimumScalarExecutor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 复用V2桥接，scalar(aclTensor*)直接透传，输出到连续buffer
-    auto result = l0op::ForeachMinimumScalarV2(contiguousTensors, scalar, contiguousOut, minimumScalarExecutor.get());
+    // scalar 可能是带 offset 的 0-D view，需归一化为独立的 1 元素连续 tensor，
+    // 避免 tiling 按 storage shape 误判 scalar 元素个数
+    const aclTensor* contiguousScalar = scalar;
+    if (!(op::IsContiguous(scalar) && scalar->GetStorageShape() == scalar->GetViewShape())) {
+        contiguousScalar = l0op::Contiguous(scalar, minimumScalarExecutor.get());
+        CHECK_RET(contiguousScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    // 复用V2桥接，输出到连续buffer
+    auto result = l0op::ForeachMinimumScalarV2(contiguousTensors, contiguousScalar, contiguousOut,
+                                               minimumScalarExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
