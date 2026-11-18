@@ -10,6 +10,9 @@
 
 #include "aclnn_dequant_situ_quant.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
 #include <string>
 #include <vector>
 #include "aclnnInner_dequant_situ_quant.h"
@@ -35,7 +38,6 @@ constexpr size_t MIN_DIM_NUM_INT8 = 2;
 constexpr size_t MAX_DIM_NUM = 8;
 constexpr size_t DIM_NUM_NOT_INT8 = 2;
 constexpr int64_t NUM_TWO = 2;
-constexpr double BETA_ZERO = 0.0;
 const char* const ACLNN_OP_NAME = "aclnnDequantSituQuant";
 
 static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST = {
@@ -108,11 +110,8 @@ static bool CheckQuantType(char* quantTypeOptional, QuantType& quantType)
         return true;
     }
     std::string quantTypeStr{quantTypeOptional};
-    for (size_t i = 0; i < quantTypeStr.size(); i++) {
-        if (quantTypeStr[i] >= 'A' && quantTypeStr[i] <= 'Z') {
-            quantTypeStr[i] = static_cast<char>(quantTypeStr[i] - 'A' + 'a');
-        }
-    }
+    std::transform(quantTypeStr.begin(), quantTypeStr.end(), quantTypeStr.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
     if (quantTypeStr == "static") {
         quantType = QuantType::STATIC;
         return true;
@@ -145,10 +144,10 @@ static bool CheckEmptyTensor(const aclTensor* x, const aclTensor* yOut, const ac
     return true;
 }
 
-// 5. 检查beta是否为0
+// 5. 检查beta是否为0（beta 来自 float 属性，仅拒绝精确为0的取值；用 fpclassify 判断，避免浮点相等比较）
 static bool CheckBeta(double beta)
 {
-    if (beta == BETA_ZERO) {
+    if (std::fpclassify(beta) == FP_ZERO) {
         const std::string reason = "beta must not be 0.";
         ReportInvalidValue("beta", std::to_string(beta), reason);
         return false;
