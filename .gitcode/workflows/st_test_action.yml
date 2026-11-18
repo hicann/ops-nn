@@ -80,12 +80,16 @@ jobs:
           echo "Installing compiled package: ${{ env.run_package_name }}"
           chmod +x "${{ env.run_package_name }}"
           source /usr/local/Ascend/cann/bin/setenv.bash 2>/dev/null || true
-          if bash "${{ env.run_package_name }}" --help 2>&1 | grep -q -- '--full'; then
+          help_out=$(bash "${{ env.run_package_name }}" --help 2>&1 || true)
+          full_arg=""
+          force_arg=""
+          if grep -q -- '--full' <<<"${help_out}"; then
             full_arg="--full"
-          else
-            full_arg=""
           fi
-          echo 'y' | bash "${{ env.run_package_name }}" $full_arg --quiet
+          if grep -q -- '--force' <<<"${help_out}"; then
+            force_arg="--force"
+          fi
+          echo 'y' | bash "${{ env.run_package_name }}" $full_arg $force_arg --quiet
       -
         name: run_st_test
         identifier: st_test
@@ -123,4 +127,4 @@ jobs:
     if: "${{ default() }}"
     runs-on: ['self-hosted', 'npu=1','smoke=501']
     container:
-      image: swr.cn-north-4.myhuaweicloud.com/pre_smoke/ubuntu24.04_x86:pre_mindspore_A5_conda_v1.1001
+      image: swr.cn-north-4.myhuaweicloud.com/pre_smoke/${{ jobs.JOB_image.outputs.PreSmoke_A5 }}
