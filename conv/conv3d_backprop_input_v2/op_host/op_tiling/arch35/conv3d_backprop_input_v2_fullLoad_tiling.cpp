@@ -120,6 +120,12 @@ ge::graphStatus Conv3DDXV2FullLoadTiling::DoLibApiTiling()
             return ge::GRAPH_FAILED;
         }
     }
+
+    if (IsSocVersion960()) {
+        Conv3DDXV2InnerProductTiling::OptimizeL0CBufferMode(coreParams, l1Params, l0Params); // L0C双缓冲与baseM权衡
+        Conv3DDXV2InnerProductTiling::OptimizeL1BufferMode(coreParams, l1Params, l0Params); // 单迭代轴场景关闭A1双缓冲
+    }
+
     Conv3DDXV2InnerProductTiling::SetTilingCondition(coreParams, l1Params, l0Params);
     if (!Conv3DDXV2InnerProductTiling::CheckVectorCoreNum()) {
         CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");

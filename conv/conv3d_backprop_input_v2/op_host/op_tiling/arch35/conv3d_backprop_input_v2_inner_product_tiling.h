@@ -157,6 +157,10 @@ protected:
                                     const L0TilingParams& l0Params);
     virtual bool ShrinkBaseMN(L1TilingParams& l1Params, L0TilingParams& l0Params);
     virtual void UpdateL0CBufferMode(L0TilingParams& l0Params);
+    virtual void OptimizeL0CBufferMode(CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                                       L0TilingParams& l0Params);
+    virtual void OptimizeL1BufferMode(const CoreTilingParams& coreParams, L1TilingParams& l1Params,
+                                      const L0TilingParams& l0Params);
     void SetCommonTilingData(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
                              const L0TilingParams& l0Params);
     void AlignCout1(uint32_t& cout1A, uint32_t& cout1B, bool adaptFP32);

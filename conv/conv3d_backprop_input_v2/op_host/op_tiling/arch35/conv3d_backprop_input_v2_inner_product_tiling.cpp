@@ -1708,6 +1708,11 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
         }
     }
 
+    if (IsSocVersion960()) {
+        OptimizeL0CBufferMode(coreParams, l1Params, l0Params); // L0C双缓冲与baseM权衡
+        OptimizeL1BufferMode(coreParams, l1Params, l0Params);  // 单迭代轴场景关闭A1双缓冲
+    }
+
     SetTilingCondition(coreParams, l1Params, l0Params);
     if (!CheckVectorCoreNum()) {
         CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "check vector coreNum failed.");
@@ -1911,8 +1916,9 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
         }
         a1PixelNum = localL1W * coutNum;
     } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
-        a1PixelNum = BASIC_BLOCK_SIZE_256 *
-                     coutNum; // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256,切hk时，wi=1特殊场景
+        // 切hkwk时无需加载完整wo；按真实baseM校验L1仅960启用
+        a1PixelNum = IsSocVersion960() ? static_cast<uint64_t>(l0Params.baseM) * coutNum :
+                                         static_cast<uint64_t>(BASIC_BLOCK_SIZE_256) * coutNum;
     }
     uint64_t aL1Size = a1PixelNum * dtypeByteL0a_ * l1Params.al1Pbuffer;
 
@@ -2107,6 +2113,121 @@ void Conv3DDXV2InnerProductTiling::UpdateL0CBufferMode(L0TilingParams& l0Params)
         l0Params.cl0Pbuffer = DB_ON;
     } else {
         l0Params.cl0Pbuffer = DB_OFF;
+    }
+}
+
+void Conv3DDXV2InnerProductTiling::OptimizeL0CBufferMode(CoreTilingParams& coreParams, const L1TilingParams& l1Params,
+                                                         L0TilingParams& l0Params)
+{
+    // L0C双缓冲压缩baseM导致mIter过大时，关闭双缓冲换取更大baseM
+    constexpr uint64_t l0cDbToSingleMIterThreshold = 8UL;
+    if (l0Params.cl0Pbuffer != DB_ON || l0Params.baseM == 0U || l0Params.baseN == 0U || l0Params.baseK == 0U ||
+        coreParams.singleCoreM == 0U || tilingRunInfo_.m0 == 0U || tilingRunInfo_.n0 == 0U) {
+        return;
+    }
+    // 仅覆盖普通卷积（group=1、无splitK/kernelSplit）
+    // split/分组路径的分段与缓冲布局均按原baseM规划，事后改baseM/cl0PP会破坏内核布局假设
+    if (tilingRunInfo_.enableSplitK || tilingRunInfo_.enableSplitKernelFlag ||
+        kernelSplitMode_ != static_cast<uint8_t>(NO_SPLIT_KERNEL) || groupConvMode_ != TILING_GROUP_MODE_ORIGIN) {
+        return;
+    }
+    // fp32/hifloat32下C0搬运字节翻倍，关闭cl0双缓冲后fixpipe串行代价主导
+    size_t outputBackpropIndex = OUTPUT_BP_INDEX;
+    size_t filterIndex = FILTER_INDEX;
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose ||
+        opType_ == optiling::OpTypeV2::kExtendConvTransposeV2) {
+        outputBackpropIndex = FILTER_INDEX;
+        filterIndex = OUTPUT_BP_INDEX;
+    }
+    if (context_->GetInputDesc(outputBackpropIndex) == nullptr || context_->GetInputDesc(filterIndex) == nullptr ||
+        context_->GetOutputDesc(Y_INDEX) == nullptr) {
+        return;
+    }
+    const DtypeFlags dtypeFlags = ComputeDtypeFlags(context_->GetInputDesc(outputBackpropIndex)->GetDataType(),
+                                                    context_->GetInputDesc(filterIndex)->GetDataType(),
+                                                    context_->GetOutputDesc(Y_INDEX)->GetDataType());
+    if (!dtypeFlags.f16flag && !dtypeFlags.bf16flag && !dtypeFlags.hif8flag && !dtypeFlags.fp8e4m3flag) {
+        return;
+    }
+    const uint64_t mIter = Ops::Base::CeilDiv(static_cast<uint64_t>(coreParams.singleCoreM),
+                                              static_cast<uint64_t>(l0Params.baseM));
+    if (mIter < l0cDbToSingleMIterThreshold) {
+        return;
+    }
+
+    const uint64_t snappedSM = static_cast<uint64_t>(MAX_BASE_MN);
+    const uint64_t groupMUpper = Ops::Base::CeilAlign(tilingRunInfo_.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
+    // 与SetSingleCoreInfoCore的封顶保持一致：切hkwk（或切hk且wi=1）时baseM上限256，
+    // 超限会导致load3d pad超出指令域，且设备侧A1缓冲按baseM分配会引发L1越界
+    const bool isBaseMCappedMode = tilingRunInfo_.tilingHkWkMode == TILING_HK_WK ||
+                                   (tilingRunInfo_.tilingHkWkMode == TILING_HK && runInfo_.dedx_w == 1U);
+    // 对齐目标固定MAX_BASE_MN，仅当整组M不小于该值时允许，保持singleCoreM不超过mValue的既有不变量
+    const bool snapSM = !isBaseMCappedMode && snappedSM <= groupMUpper && coreParams.singleCoreM > snappedSM / 2UL &&
+                        coreParams.singleCoreM <= snappedSM * 2UL && coreParams.singleCoreM != snappedSM;
+    const uint64_t effSingleCoreM = snapSM ? snappedSM : static_cast<uint64_t>(coreParams.singleCoreM);
+
+    // 单缓冲下按L0C/L0A上限取最大baseM，对齐到m0/n0
+    const uint64_t l0cMaxNum = platformInfo_.l0_c_size / ge::GetSizeByDataType(ge::DT_FLOAT);
+    uint64_t newBaseM = l0cMaxNum / l0Params.baseN;
+    const uint64_t l0abMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByteL0a_;
+    newBaseM = std::min(newBaseM, l0abMaxNum / l0Params.baseK);
+    newBaseM = std::min(newBaseM, static_cast<uint64_t>(MAX_BASE_MN));
+    newBaseM = std::min(newBaseM,
+                        Ops::Base::CeilAlign(tilingRunInfo_.mValue, static_cast<uint64_t>(tilingRunInfo_.m0)));
+    newBaseM = std::min(newBaseM, effSingleCoreM);
+    newBaseM = Ops::Base::FloorAlign(newBaseM, static_cast<uint64_t>(tilingRunInfo_.m0));
+    newBaseM = Ops::Base::FloorAlign(newBaseM, static_cast<uint64_t>(tilingRunInfo_.n0));
+    if (isBaseMCappedMode) {
+        newBaseM = std::min(newBaseM, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));
+    }
+    if (newBaseM <= static_cast<uint64_t>(l0Params.baseM)) {
+        return;
+    }
+    const uint64_t newMIter = Ops::Base::CeilDiv(effSingleCoreM, newBaseM);
+    // mIter缩减不足1/3时（L1/L0A上限把newBaseM压回，如mIter 10->9），迭代收益无法覆盖C0双缓冲损失，保持原tiling
+    constexpr uint64_t l0cDbMIterRetainRatioNumer = 2UL;
+    constexpr uint64_t l0cDbMIterRetainRatioDenom = 3UL;
+    if (newMIter * l0cDbMIterRetainRatioDenom > mIter * l0cDbMIterRetainRatioNumer) {
+        return;
+    }
+    L0TilingParams trial = l0Params;
+    trial.cl0Pbuffer = DB_OFF;
+    trial.baseM = static_cast<uint32_t>(newBaseM);
+    if (!IsL1ParamsValid(l1Params, trial)) {
+        return;
+    }
+    OP_LOGI(opName_, "L0C buffer tradeoff: baseM %u->%u, cl0Pbuffer %u->%u, mIter %lu->%lu", l0Params.baseM,
+            trial.baseM, l0Params.cl0Pbuffer, trial.cl0Pbuffer, mIter, newMIter);
+    l0Params = trial;
+    if (snapSM) {
+        OP_LOGI(opName_, "Snap singleCoreM %lu->%lu for A1 load alignment",
+                static_cast<uint64_t>(coreParams.singleCoreM), snappedSM);
+        coreParams.singleCoreM = snappedSM;
+    }
+}
+
+void Conv3DDXV2InnerProductTiling::OptimizeL1BufferMode(const CoreTilingParams& coreParams, L1TilingParams& l1Params,
+                                                        const L0TilingParams& l0Params)
+{
+    // k/m/n迭代轴均为单次迭代时，A1双缓冲无法掩盖任何加载，关闭以减少L1占用
+    if (l1Params.al1Pbuffer != DB_ON || l0Params.baseM == 0U || l0Params.baseN == 0U || l0Params.baseK == 0U ||
+        l1Params.stepKa == 0U || coreParams.singleCoreM == 0U || coreParams.singleCoreCin == 0U) {
+        return;
+    }
+    // 同OptimizeL0CBufferMode：仅覆盖普通卷积，split/分组路径缓冲布局不受本模板干预
+    if (tilingRunInfo_.enableSplitK || tilingRunInfo_.enableSplitKernelFlag ||
+        kernelSplitMode_ != static_cast<uint8_t>(NO_SPLIT_KERNEL) || groupConvMode_ != TILING_GROUP_MODE_ORIGIN) {
+        return;
+    }
+    const uint64_t kIter = Ops::Base::CeilDiv(tilingRunInfo_.kValue,
+                                              static_cast<uint64_t>(l1Params.stepKa) * l0Params.baseK);
+    const uint64_t mIter = Ops::Base::CeilDiv(static_cast<uint64_t>(coreParams.singleCoreM),
+                                              static_cast<uint64_t>(l0Params.baseM));
+    const uint64_t nIter = Ops::Base::CeilDiv(static_cast<uint64_t>(coreParams.singleCoreCin),
+                                              static_cast<uint64_t>(l0Params.baseN));
+    if (kIter == 1UL && mIter == 1UL && nIter == 1UL) {
+        OP_LOGI(opName_, "Single k/m/n iter, disable al1 pingpong, kIter=1 mIter=1 nIter=1");
+        l1Params.al1Pbuffer = DB_OFF;
     }
 }
 
