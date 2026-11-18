@@ -220,7 +220,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
   <!-- npu="A3,910b" id8 -->
   - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
     - gradOutput and self support the FLOAT data type.
-    - Supported data formats are ND and NCHW. A 3D input indicates the CHW value.
+    - Supported data formats are ND and NCHW. A 3D input indicates the CHW value and only supports the ND format.
     - indices supports the INT32 data type. Only dilation (1, 1) is supported.
 
   <!-- end id8 -->

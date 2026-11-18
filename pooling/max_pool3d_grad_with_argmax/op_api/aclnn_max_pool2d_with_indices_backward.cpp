@@ -48,8 +48,7 @@ static const std::initializer_list<op::DataType> MASK_SELF_OUT_DTYPE_SUPPORT_910
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> MASK_INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT8};
-static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
-                                                                               op::DataType::DT_INT8};
+static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32};
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_REGBASE_LIST = {op::DataType::DT_INT32,
                                                                                        op::DataType::DT_INT64};
 
@@ -197,6 +196,24 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, cons
     if (indices->GetViewShape().GetDimNum() != DIMENTION_3 && indices->GetViewShape().GetDimNum() != DIMENTION_4) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D or 4D tensor expected for indices but got dim num:%zu",
                 indices->GetViewShape().GetDimNum());
+        return false;
+    }
+
+    // 3维输入仅支持ND，不支持NCHW/NHWC（避免框架按4维格式校验rank导致内部异常）
+    auto check3dOnlyNd = [](const aclTensor* tensor, const char* name) -> bool {
+        if (tensor->GetViewShape().GetDimNum() != DIMENTION_3) {
+            return true;
+        }
+        const auto format = tensor->GetStorageFormat();
+        if ((format == op::Format::FORMAT_NCHW) || (format == op::Format::FORMAT_NHWC)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "3D %s only support ND format, but got %s.", name,
+                    op::ToString(format).GetString());
+            return false;
+        }
+        return true;
+    };
+    if (!check3dOnlyNd(self, "self") || !check3dOnlyNd(gradOutput, "gradOutput") ||
+        !check3dOnlyNd(gradInput, "gradInput") || !check3dOnlyNd(indices, "indices")) {
         return false;
     }
 

@@ -218,7 +218,7 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
   <!-- npu="A3,910b" id8 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
     - gradOutput和self数据类型支持FLOAT。
-    - 数据格式支持ND和NCHW，输入3维时表示CHW取值。
+    - 数据格式支持ND和NCHW；输入3维时表示CHW取值，且仅支持ND格式。
     - indices数据类型支持INT32。仅支持dilation为（1，1）。
 
   <!-- end id8 -->
