@@ -89,7 +89,7 @@ aclnnStatus aclnnForeachSinh(
       <td>Input tensor list for the hyperbolic sine operation, corresponding to `x` in the formula.</td>
       <td><ul><li>Empty tensors are supported.</li><li>The number of tensors in the list is in [0, 256]; an empty list returns success without computation.</li><li>All tensors in this parameter must have the same data type.</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND</td>
+      <td>ND, NCHW, NHWC, HWCN, NDHWC, NCDHW, and other non-private formats</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -97,11 +97,11 @@ aclnnStatus aclnnForeachSinh(
       <td>out (aclTensorList*)</td>
       <td>Output</td>
       <td>Output tensor list for the hyperbolic sine operation, corresponding to `y` in the formula.</td>
-      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x`, and the shape size is greater than or equal to that of `x`.</li></ul></td>
+      <td><ul><li>Supports empty tensors.</li><li>All tensors in this parameter have the same data type.</li><li>The data type and data format are the same as those of input parameter `x`, and the view shape is the same as that of the corresponding tensor in `x` (non-contiguous output is supported).</li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND</td>
+      <td>ND, NCHW, NHWC, HWCN, NDHWC, NCDHW, and other non-private formats</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -151,14 +151,17 @@ aclnnStatus aclnnForeachSinh(
       <td>x or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="8">161002</td>
       <td>The data type of x or out is not supported.</td>
     </tr>
     <tr><td>The data types of x and out are inconsistent.</td></tr>
     <tr><td>The data types of the tensors in x or out are inconsistent.</td></tr>
     <tr><td>The dimensions of the tensors in x or out exceed 8.</td></tr>
-    <tr><td>The shapes of x and out do not meet the constraint.</td></tr>
+    <tr><td>The number of tensors in x and out are inconsistent.</td></tr>
+    <tr><td>The view shapes of the tensors at the corresponding positions in x and out are inconsistent.</td></tr>
+    <tr><td>There are null-pointer tensors in the x or out tensor list.</td></tr>
+    <tr><td>x or out uses a private data format.</td></tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>561002</td>
@@ -211,9 +214,12 @@ aclnnStatus aclnnForeachSinh(
 
 ## Constraints
 
-- The number of tensors in a single list of x or out must not exceed 256.
-- When the data type of input x is FLOAT32 or BFLOAT16 and |x| > asinh(dtype_max) ≈ 89.42, the output is ±inf.
-- When the data type of input x is FLOAT16 and |x| > ≈11.09, the output is ±inf.
+- The number of tensors in a single list of x or out must not exceed 256. An empty list (0 tensors) returns success without computation.
+- The tensor-list lengths of x and out must be the same, and the tensors at corresponding positions in x and out must have the same view shape.
+- Tensor-list members of x or out must not be null pointers.
+- Data format: ND, NCHW, NHWC, HWCN, NDHWC, NCDHW, and other non-private formats are supported; a private format is reported as error 161002.
+- When the data type of input x is FLOAT32 and |x| > asinh(dtype_max) ≈ 89.42, or BFLOAT16 and |x| > ≈ 89.41, the output is ±inf.
+- When the data type of input x is FLOAT16 and |x| > asinh(dtype_max) ≈ 11.78, the output is ±inf.
 - When input x is NaN, the output is NaN.
 - Deterministic computation:
   - aclnnForeachSinh defaults to a deterministic implementation.

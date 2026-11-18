@@ -49,10 +49,9 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclTensorList* 
 static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
 {
     for (uint64_t i = 0; i < self->Size(); i++) {
-        // 文档约束：仅支持 ND
-        if ((*self)[i]->GetStorageFormat() != op::Format::FORMAT_ND ||
-            (*out)[i]->GetStorageFormat() != op::Format::FORMAT_ND) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND.");
+        // self格式不能是私有格式
+        if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support non-private data format.");
             return false;
         }
     }

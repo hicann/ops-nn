@@ -14,9 +14,11 @@
 __spec__ = {
     "foreach_pow_scalar": "ForeachPowScalarKernelSpec",
     "aclnnForeachPowScalar": "AclnnForeachPowScalarSpec",
+    "aclnnForeachPowScalarV2": "AclnnForeachPowScalarSpec",
     "torch._foreach_pow": "TorchForeachPowScalarSpec",
 }
 
+import ml_dtypes
 import numpy as np
 import torch
 
@@ -38,6 +40,65 @@ def _to_scalar(v):
     if isinstance(v, torch.Tensor):
         return v.reshape(-1)[0].item()
     return v
+
+
+def _to_torch(t):
+    if isinstance(t, torch.Tensor):
+        return t, t.dtype
+    a = np.ascontiguousarray(t)
+    if a.dtype == ml_dtypes.bfloat16:
+        return torch.from_numpy(a.view(np.uint16)).view(torch.bfloat16), torch.bfloat16
+    tensor = torch.from_numpy(a)
+    return tensor, tensor.dtype
+
+
+def _from_torch(t, dtype):
+    if dtype == torch.bfloat16:
+        return t.view(torch.uint16).numpy().view(ml_dtypes.bfloat16)
+    return t.to(dtype).numpy()
+
+
+_INT_NP_DTYPES = {
+    torch.uint8: np.uint8,
+    torch.int8: np.int8,
+    torch.int16: np.int16,
+    torch.int32: np.int32,
+    torch.int64: np.int64,
+}
+_INT_DTYPES = tuple(_INT_NP_DTYPES)
+
+
+def _int_pow(t, exp_scalar):
+    """Integer powi per kernel PowiImpl: negative exponent -> 1/-1/0 by base, else wrapped fast power.
+
+    The arithmetic is performed in the input dtype so that wraparound matches the
+    input width (int32 for the current kernel, and the native dtype for others).
+    """
+    exponent = int(exp_scalar)
+    np_dtype = _INT_NP_DTYPES[t.dtype]
+    bases = t.to(torch.int64).cpu().numpy()
+    if exponent < 0:
+        res = np.where(
+            bases == 1,
+            1,
+            np.where(bases == -1, 1 if exponent % 2 == 0 else -1, 0),
+        ).astype(np_dtype)
+        return torch.from_numpy(res).to(t.dtype)
+    res = np.ones(bases.shape, dtype=np_dtype)
+    b = bases.astype(np_dtype)
+    e = exponent
+    while e > 0:
+        if e % 2 == 1:
+            res = res * b
+        b = b * b
+        e //= 2
+    return torch.from_numpy(res).to(t.dtype)
+
+
+def _pow(t, base):
+    if t.dtype in _INT_DTYPES:
+        return _int_pow(t, base)
+    return torch.pow(t, base)
 
 
 class _TorchForeachPowScalarImpl:
@@ -64,10 +125,15 @@ class ForeachPowScalarKernelSpec:
     """Kernel 路径 — list[np.ndarray] -> list[np.ndarray]。"""
 
     def golden(x, scalar, **kwargs):
-        x_list = [torch.from_numpy(np.ascontiguousarray(t)) for t in x]
-        s = _to_scalar(scalar)
-        result = torch._foreach_pow(x_list, s)
-        return [t.numpy() for t in result]
+        x_list, out_dtypes = [], []
+        for t in x:
+            tensor, dtype = _to_torch(t)
+            x_list.append(tensor)
+            out_dtypes.append(dtype)
+        base = _to_scalar(scalar)
+        return [
+            _from_torch(_pow(t, base), dtype) for t, dtype in zip(x_list, out_dtypes)
+        ]
 
     third_party = _THIRD_PARTY
     tolerance = _TOLERANCE
@@ -81,7 +147,7 @@ class AclnnForeachPowScalarSpec:
 
     def golden(x, scalar, out=None, **kwargs):
         s = _to_scalar(scalar)
-        result = torch._foreach_pow(x, s)
+        result = [_pow(t, s) for t in x]
         if out is not None:
             for o, r in zip(out, result):
                 o.copy_(r)

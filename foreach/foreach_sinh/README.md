@@ -50,14 +50,14 @@
       <td>输入</td>
       <td>表示进行双曲正弦函数运算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW等非私有格式</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行双曲正弦函数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</td>
+      <td>表示进行双曲正弦函数运算的输出张量列表，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型和数据格式与入参`x`的数据类型和数据格式一致，view shape与入参`x`对应位置的Tensor一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW等非私有格式</td>
     </tr>
   </tbody></table>
 
@@ -65,7 +65,7 @@
 
 ## 约束说明
 
-- 输出不支持非连续Tensor。
+- 输入、输出均支持非连续Tensor。
 - 输入、输出张量列表的长度不超过256。
 
 ## 调用说明

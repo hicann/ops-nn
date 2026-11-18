@@ -22,11 +22,28 @@ import torch
 from ttk.utilities.dtypes import numpy_to_torch_tensor, torch_to_numpy_tensor
 
 
+_LN2 = 0.6931471805599453
+
+
 def _sinh_high_precision(tensors):
-    # PyTorch CPU vectorized float32 sinh overflows at ~89.0 instead of the
-    # mathematically correct asinh(FLT_MAX)~=89.416. Use float64 as the
-    # reference and cast back so the overflow boundary matches the operator.
+    # torch CPU float32 sinh evaluates exp(x) first, which overflows at
+    # ln(FLT_MAX)~=88.72, i.e. before sinh itself overflows at
+    # asinh(FLT_MAX)~=89.416, and wrongly returns +-inf. Use float64 as the
+    # reference (no early overflow) and cast back so the boundary matches the operator.
     return [torch.sinh(t.to(torch.float64)).to(t.dtype) for t in tensors]
+
+
+def _sinh_overflow_safe(tensors):
+    # Same e^(|x|-ln2) form the operator uses: e^|x| would overflow ~0.7
+    # earlier than sinh, so subtracting ln2 from the exponent inside float32
+    # keeps the overflow boundary at asinh(FLT_MAX) instead of ln(FLT_MAX).
+    result = []
+    for t in tensors:
+        xf = t.to(torch.float32)
+        ax = xf.abs()
+        y = torch.exp(ax - _LN2) - torch.exp(-ax - _LN2)
+        result.append(torch.copysign(y, xf).to(t.dtype))
+    return result
 
 
 _TOLERANCE = {
@@ -37,7 +54,7 @@ _TOLERANCE = {
 
 
 def _remote_third_party(x, **kwargs):
-    return list(torch._foreach_sinh(x))
+    return _sinh_overflow_safe(x)
 
 
 class _TorchForeachSinhE2EImpl:
@@ -83,7 +100,7 @@ class TorchForeachSinhSpec:
     """E2E 路径 — list[torch.Tensor] -> list[torch.Tensor]。"""
 
     def golden(x, **kwargs):
-        return list(torch._foreach_sinh(x))
+        return _sinh_high_precision(x)
 
     third_party = _E2E_THIRD_PARTY
     tolerance = _TOLERANCE
