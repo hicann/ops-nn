@@ -62,6 +62,13 @@
 </thead>
 <tbody>
   <tr>
+    <td>gradOutput</td>
+    <td>输入</td>
+    <td>损失的上游梯度，对应公式中的q，shape为[1]；可为正、负或零，单独求当前损失的梯度时传入1。</td>
+    <td>FLOAT32</td>
+    <td>ND</td>
+  </tr>
+  <tr>
     <td>hidden</td>
     <td>输入</td>
     <td>隐藏状态，对应公式中的h，shape为[N,H]。</td>
@@ -83,13 +90,6 @@
     <td>ND</td>
   </tr>
   <tr>
-    <td>alpha</td>
-    <td>属性</td>
-    <td>全局归一化系数，等于正向损失归一化分母的倒数，对应公式中的α。</td>
-    <td>FLOAT32</td>
-    <td>-</td>
-  </tr>
-  <tr>
     <td>softmaxMax</td>
     <td>输入</td>
     <td>正向保存的逐token词表得分最大值，对应公式中的m，shape为[N]。</td>
@@ -104,11 +104,11 @@
     <td>ND</td>
   </tr>
   <tr>
-    <td>gradOutput</td>
-    <td>输入</td>
-    <td>损失的上游梯度，对应公式中的q，shape为[1]；可为正、负或零，单独求当前损失的梯度时传入1。</td>
+    <td>alpha</td>
+    <td>属性</td>
+    <td>全局归一化系数，对应公式中的α。</td>
     <td>FLOAT32</td>
-    <td>ND</td>
+    <td>-</td>
   </tr>
   <tr>
     <td>ignoreIndex</td>

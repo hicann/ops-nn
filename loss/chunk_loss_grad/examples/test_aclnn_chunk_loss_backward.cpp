@@ -121,8 +121,8 @@ int main()
     // 3. 查询workspace并创建执行器。
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    auto status = aclnnChunkLossBackwardGetWorkspaceSize(hidden, weight, labels, alpha, softmaxMax, softmaxSum,
-                                                         gradOutput, -100, output, &workspaceSize, &executor);
+    auto status = aclnnChunkLossBackwardGetWorkspaceSize(gradOutput, hidden, weight, labels, softmaxMax, softmaxSum,
+                                                         alpha, -100, output, &workspaceSize, &executor);
     CHECK_RET(status == ACL_SUCCESS, LOG_PRINT("GetWorkspaceSize failed: %d\n", status); return 1);
     void* workspace = nullptr;
     if (workspaceSize > 0) {

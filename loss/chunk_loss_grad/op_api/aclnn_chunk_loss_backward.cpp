@@ -90,16 +90,16 @@ aclnnStatus CheckParams(const Inputs& inputs, double alpha, aclTensor* gradWeigh
 }
 
 } // namespace
-extern "C" aclnnStatus aclnnChunkLossBackwardGetWorkspaceSize(const aclTensor* hidden, const aclTensor* weight,
-                                                              const aclTensor* labels, double alpha,
+extern "C" aclnnStatus aclnnChunkLossBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* hidden,
+                                                              const aclTensor* weight, const aclTensor* labels,
                                                               const aclTensor* softmaxMax, const aclTensor* softmaxSum,
-                                                              const aclTensor* gradOutput, int64_t ignoreIndex,
+                                                              double alpha, int64_t ignoreIndex,
                                                               aclTensor* gradWeightOut, uint64_t* workspaceSize,
                                                               aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     L2_DFX_PHASE_1(aclnnChunkLossBackward,
-                   DFX_IN(hidden, weight, labels, alpha, softmaxMax, softmaxSum, gradOutput, ignoreIndex),
+                   DFX_IN(gradOutput, hidden, weight, labels, softmaxMax, softmaxSum, alpha, ignoreIndex),
                    DFX_OUT(gradWeightOut));
     Inputs inputs{hidden, weight, labels, softmaxMax, softmaxSum, gradOutput};
     auto status = CheckParams(inputs, alpha, gradWeightOut);

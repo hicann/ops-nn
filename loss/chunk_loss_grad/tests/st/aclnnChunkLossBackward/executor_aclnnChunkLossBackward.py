@@ -21,9 +21,9 @@ from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
 
 SIGNATURE = (
     "aclnnStatus aclnnChunkLossBackwardGetWorkspaceSize("
-    "const aclTensor* hidden, const aclTensor* weight, const aclTensor* labels, "
-    "double alpha, const aclTensor* softmaxMax, const aclTensor* softmaxSum, "
-    "const aclTensor* gradOutput, int64_t ignoreIndex, aclTensor* gradWeightOut, "
+    "const aclTensor* gradOutput, const aclTensor* hidden, const aclTensor* weight, "
+    "const aclTensor* labels, const aclTensor* softmaxMax, const aclTensor* softmaxSum, "
+    "double alpha, int64_t ignoreIndex, aclTensor* gradWeightOut, "
     "uint64_t* workspaceSize, aclOpExecutor** executor)"
 )
 
@@ -150,7 +150,7 @@ class ChunkLossBackwardReference(BaseApi):
         self.options = (task_result.case_config.strategy or {}).get(
             "chunk_loss_grad", {}
         )
-        self.dtype_name = task_result.case_config.inputs[0].dtype
+        self.dtype_name = task_result.case_config.inputs[1].dtype
         self.input_dtype = (
             torch.bfloat16 if "bf" in str(self.dtype_name) else torch.float16
         )
@@ -174,7 +174,7 @@ class ChunkLossBackwardAclnn(AclnnBaseApi):
         self.options = (task_result.case_config.strategy or {}).get(
             "chunk_loss_grad", {}
         )
-        self.dtype_name = task_result.case_config.inputs[0].dtype
+        self.dtype_name = task_result.case_config.inputs[1].dtype
 
     @classmethod
     def get_cpp_func_signature_type(cls):
@@ -229,16 +229,16 @@ class ChunkLossBackwardAclnn(AclnnBaseApi):
             prepare_inputs(input_data, self.options, self.dtype_name) or []
         )
         arguments, outputs = super().init_by_input_data(input_data)
-        arguments[3] = ctypes.c_double(input_data.kwargs["alpha"])
+        arguments[6] = ctypes.c_double(input_data.kwargs["alpha"])
         arguments[7] = ctypes.c_int64(input_data.kwargs["ignoreIndex"])
         if self.options.get("input_view"):
             for index, name in (
-                (0, "hidden"),
-                (1, "weight"),
-                (2, "labels"),
+                (0, "gradOutput"),
+                (1, "hidden"),
+                (2, "weight"),
+                (3, "labels"),
                 (4, "softmaxMax"),
                 (5, "softmaxSum"),
-                (6, "gradOutput"),
             ):
                 arguments[index] = self.view_package(
                     input_data.kwargs[name], arguments[index]

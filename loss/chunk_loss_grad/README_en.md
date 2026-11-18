@@ -62,6 +62,13 @@
 </thead>
 <tbody>
   <tr>
+    <td>gradOutput</td>
+    <td>Input</td>
+    <td>Upstream loss gradient, corresponding to q in the formula, with shape [1]. The value can be positive, negative, or zero. Pass 1 when differentiating the current loss alone.</td>
+    <td>FLOAT32</td>
+    <td>ND</td>
+  </tr>
+  <tr>
     <td>hidden</td>
     <td>Input</td>
     <td>Hidden states, corresponding to h in the formula, with shape [N,H].</td>
@@ -83,13 +90,6 @@
     <td>ND</td>
   </tr>
   <tr>
-    <td>alpha</td>
-    <td>Attribute</td>
-    <td>Global normalization coefficient, equal to the reciprocal of the forward loss normalization denominator and corresponding to α in the formula.</td>
-    <td>FLOAT32</td>
-    <td>-</td>
-  </tr>
-  <tr>
     <td>softmaxMax</td>
     <td>Input</td>
     <td>Maximum vocabulary logits per token saved during the forward pass, corresponding to m in the formula, with shape [N].</td>
@@ -104,11 +104,11 @@
     <td>ND</td>
   </tr>
   <tr>
-    <td>gradOutput</td>
-    <td>Input</td>
-    <td>Upstream loss gradient, corresponding to q in the formula, with shape [1]. The value can be positive, negative, or zero. Pass 1 when differentiating the current loss alone.</td>
+    <td>alpha</td>
+    <td>Attribute</td>
+    <td>Global normalization coefficient, corresponding to α in the formula.</td>
     <td>FLOAT32</td>
-    <td>ND</td>
+    <td>-</td>
   </tr>
   <tr>
     <td>ignoreIndex</td>

@@ -84,13 +84,13 @@
 
 ```cpp
 aclnnStatus aclnnChunkLossBackwardGetWorkspaceSize(
+  const aclTensor *gradOutput,
   const aclTensor *hidden,
   const aclTensor *weight,
   const aclTensor *labels,
-  double           alpha,
   const aclTensor *softmaxMax,
   const aclTensor *softmaxSum,
-  const aclTensor *gradOutput,
+  double           alpha,
   int64_t          ignoreIndex,
   aclTensor       *gradWeightOut,
   uint64_t        *workspaceSize,
@@ -133,6 +133,22 @@ aclnnStatus aclnnChunkLossBackward(
     </tr>
   </thead>
   <tbody>
+    <tr>
+      <td>gradOutput（const aclTensor*）</td>
+      <td>输入</td>
+      <td>损失的上游梯度，对应公式中的q。</td>
+      <td>
+        <ul>
+          <li>不支持空Tensor。</li>
+          <li>须为一维单元素Tensor，不支持零维Tensor或按token广播。</li>
+          <li>元素须为有限值，可为正、负或零；单独求当前损失的梯度时传入1。</li>
+        </ul>
+      </td>
+      <td>FLOAT32</td>
+      <td>ND</td>
+      <td>[1]</td>
+      <td>√</td>
+    </tr>
     <tr>
       <td>hidden（const aclTensor*）</td>
       <td>输入</td>
@@ -179,21 +195,6 @@ aclnnStatus aclnnChunkLossBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>alpha（double）</td>
-      <td>输入</td>
-      <td>损失的归一化系数，对应公式中的α，等于正向损失归一化分母的倒数。</td>
-      <td>
-        <ul>
-          <li>Host侧标量，须为有限正数，且不超过FLOAT32最大有限值。</li>
-          <li>转换为FLOAT32后仍须大于0，计算时使用该转换值。</li>
-        </ul>
-      </td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
       <td>softmaxMax（const aclTensor*）</td>
       <td>输入</td>
       <td>正向保存的逐token词表得分最大值，对应公式中的m。</td>
@@ -224,20 +225,19 @@ aclnnStatus aclnnChunkLossBackward(
       <td>√</td>
     </tr>
     <tr>
-      <td>gradOutput（const aclTensor*）</td>
+      <td>alpha（double）</td>
       <td>输入</td>
-      <td>损失的上游梯度，对应公式中的q。</td>
+      <td>损失的归一化系数，对应公式中的α。</td>
       <td>
         <ul>
-          <li>不支持空Tensor。</li>
-          <li>须为一维单元素Tensor，不支持零维Tensor或按token广播。</li>
-          <li>元素须为有限值，可为正、负或零；单独求当前损失的梯度时传入1。</li>
+          <li>Host侧标量，须为有限正数，且不超过FLOAT32最大有限值。</li>
+          <li>转换为FLOAT32后仍须大于0，计算时使用该转换值。</li>
         </ul>
       </td>
-      <td>FLOAT32</td>
-      <td>ND</td>
-      <td>[1]</td>
-      <td>√</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
     </tr>
     <tr>
       <td>ignoreIndex（int64_t）</td>
@@ -456,8 +456,8 @@ int main()
     // 3. 查询workspace并创建执行器。
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    auto status = aclnnChunkLossBackwardGetWorkspaceSize(hidden, weight, labels, alpha,
-        softmaxMax, softmaxSum, gradOutput, -100, output, &workspaceSize, &executor);
+    auto status = aclnnChunkLossBackwardGetWorkspaceSize(gradOutput, hidden, weight, labels,
+        softmaxMax, softmaxSum, alpha, -100, output, &workspaceSize, &executor);
     CHECK_RET(status == ACL_SUCCESS, LOG_PRINT("GetWorkspaceSize failed: %d\n", status); return 1);
     void* workspace = nullptr;
     if (workspaceSize > 0) {
