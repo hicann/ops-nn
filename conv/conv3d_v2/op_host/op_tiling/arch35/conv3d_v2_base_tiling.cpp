@@ -51,6 +51,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
         tilingCache.SetSocVersion(opInfo_->npuArch, *opInfo_);
     }
     apiInputPlatformInfo_.aivPerAic = opInfo_->aivNum / opInfo_->aicoreNum;
+    apiInputPlatformInfo_.aicoreNum = opInfo_->aicoreNum;
     SetApiInputPlatformInfo();
     return ge::GRAPH_SUCCESS;
 }

@@ -102,7 +102,7 @@ public:
 
     __aicore__ inline void RunVec()
     {
-        const bool isRealCore = cfg_.isRealCore != 0U;
+        const bool isRealCore = cfg_.isRealCore != 0U && aivIdx_ < cfg_.blockDim;
         for (uint64_t c = 0; c < kb_; c++) {
             if (c >= WEIGHT_5HD_EVENT_ID_NUM && isRealCore) {
                 CrossCoreWaitFlag<WEIGHT_5HD_SYNC_MODE_2>(WEIGHT_5HD_SYNC_ID_BASE + (c & 1));
@@ -331,7 +331,7 @@ private:
         cfg.bUbKStep = self->ctx.convTilingData->bUbKStep;
         cfg.aivNum = static_cast<uint64_t>(GetBlockNum());
         cfg.blockDim = static_cast<uint64_t>(self->ctx.convTilingData->batchDim * self->ctx.convTilingData->hoDim *
-                                             self->ctx.convTilingData->nDim);
+                                             self->ctx.convTilingData->woDim * self->ctx.convTilingData->nDim);
         cfg.isRealCore = static_cast<uint64_t>(GetBlockIdx() < cfg.blockDim);
         cfg.kb_ = Weight5HDVecTools<typename Intf::WeightT>::CalcKB(cfg);
         return cfg;

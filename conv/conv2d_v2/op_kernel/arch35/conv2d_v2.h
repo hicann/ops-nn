@@ -193,6 +193,15 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
                                                              const Conv2DTilingData& convTilingData,
                                                              const ExtendParams* extendParams, GM_ADDR workspace)
 {
+    if constexpr (IS_WEIGHT_5HD) {
+        if ASCEND_IS_AIC {
+            const uint64_t numBlocks = static_cast<uint64_t>(convTilingData.batchDim) * convTilingData.hoDim *
+                                       convTilingData.woDim * convTilingData.nDim;
+            if (numBlocks > 0 && static_cast<uint64_t>(GetBlockIdx()) >= numBlocks) {
+                return;
+            }
+        }
+    }
     if (!Conv2dKernelInit(x, filter, bias, y, workspace, extendParams, convTilingData)) {
         return;
     }
