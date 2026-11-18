@@ -27,21 +27,38 @@
 
 - 计算公式：
 
-  $$
-  y = \frac{(x-E[x])}{\sqrt{Var(x)+ eps}} * weight + bias
-  $$
+  <!-- npu="950" id7 -->
+  - <term>Ascend 950PR&950DT系列产品</term>：
 
-  标准差与方差的关系如下:
+    $$
+    y = (x-E[x]) * invstd * weight + bias
+    $$
 
-  $$
-  \frac{1}{S} = \frac{1}{\sqrt{Var(x) + eps}}
-  $$
+    其中：
 
-  其中：
+    - E[x]表示x的均值。
+    - invstd表示x的标准差倒数，直接作为乘子参与计算（语义上对应 $\frac{1}{\sqrt{Var(x)+eps}}$）。
+    - eps为兼容保留参数，不参与计算（历史实现将eps参与方差反解，在eps为大值、NaN或±inf时存在数值风险）。
+  <!-- end id7 -->
+  <!-- npu="A3,910b,910" id8 -->
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas训练系列产品</term>：
 
-  - E[x]表示x的均值。
-  - Var(x)表示x的方差。
-  - S表示x的标准差。
+    $$
+    y = \frac{(x-E[x])}{\sqrt{Var(x)+ eps}} * weight + bias
+    $$
+
+    标准差与方差的关系如下:
+
+    $$
+    \frac{1}{S} = \frac{1}{\sqrt{Var(x) + eps}}
+    $$
+
+    其中：
+
+    - E[x]表示x的均值。
+    - Var(x)表示x的方差。
+    - S表示x的标准差。
+  <!-- end id8 -->
 
 ## 函数原型
 
@@ -98,9 +115,9 @@ aclnnStatus aclnnBatchNormElemt(
       <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行BatchNorm计算的输入，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW或NHWC），5维（对应的格式为NCDHW或NDHWC），6-8维（对应的格式为ND，其中第2维固定为channel轴）；NHWC/NDHWC的适用产品、通道位置与维度要求见约束说明。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>NC、NCL、NCHW、NCDHW、ND</td>
+      <td>NC、NCL、NCHW、NCDHW、ND、NHWC、NDHWC</td>
       <td>2-8</td>
       <td>√</td>
     </tr>
@@ -108,7 +125,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>weight（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入，表示进行BatchNorm计算的权重Tensor，对应公式中的`weight`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致（部分产品允许统计量为FLOAT16/BFLOAT16，内部统一按FLOAT32计算，见约束说明）。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -118,7 +135,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>bias（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入，表示进行BatchNorm计算的偏置Tensor，对应公式中的`bias`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致（部分产品允许统计量为FLOAT16/BFLOAT16，内部统一按FLOAT32计算，见约束说明）。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -128,7 +145,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据均值，对应公式中的`E[x]`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型与`input`的数据类型保持一致（部分产品允许统计量为FLOAT16/BFLOAT16，内部统一按FLOAT32计算，见约束说明）。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -137,8 +154,8 @@ aclnnStatus aclnnBatchNormElemt(
     <tr>
       <td>invstd（aclTensor*）</td>
       <td>输入</td>
-      <td>表示输入数据标准差倒数，对应公式中的`Var(x) + eps`开平方的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>支持元素值均大于0的场景。</li><li>数据类型与`input`的数据类型保持一致。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
+      <td>表示输入数据标准差倒数，参与计算（见计算公式）。</td>
+      <td><ul><li>支持空Tensor。</li><li>支持元素值均大于0的场景。</li><li>数据类型与`input`的数据类型保持一致（部分产品允许统计量为FLOAT16/BFLOAT16，内部统一按FLOAT32计算，见约束说明）。</li><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -158,9 +175,9 @@ aclnnStatus aclnnBatchNormElemt(
       <td>output（aclTensor*）</td>
       <td>输出</td>
       <td>表示最终的输出结果，对应公式中的`y`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型、shape与输入`input`的数据类型、shape保持一致。</li><li>shape与入参`input`的shape相同，支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW），5维（对应的格式为NCDHW），6-8维（对应的格式为ND，其中第2维固定为channel轴）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>数据类型、shape与输入`input`的数据类型、shape保持一致。</li><li>shape与入参`input`的shape相同，支持的shape和格式有：2维（对应的格式为NC），3维（对应的格式为NCL），4维（对应的格式为NCHW或NHWC），5维（对应的格式为NCDHW或NDHWC），6-8维（对应的格式为ND，其中第2维固定为channel轴）；NHWC/NDHWC的适用产品、通道位置与维度要求见约束说明。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>NC、NCL、NCHW、NCDHW、ND</td>
+      <td>NC、NCL、NCHW、NCDHW、ND、NHWC、NDHWC</td>
       <td>2-8</td>
       <td>√</td>
     </tr>
@@ -187,9 +204,9 @@ aclnnStatus aclnnBatchNormElemt(
   </tbody>
   </table>
 
-  <!-- npu="910" id7 -->
+  <!-- npu="910" id9 -->
   - <term>Atlas训练系列产品</term>：参数`input`、`weight`、`bias`、`mean`、`invstd`、`output`的数据类型不支持BFLOAT16。
-  <!-- end id7 -->
+  <!-- end id9 -->
 
 - **返回值**
 
@@ -239,7 +256,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>input和output的数据格式不一致。</td>
     </tr>
     <tr>
-      <td>当weight、bias不为空时，input、bias、weight、mean、invstd、output的数据类型不一致。</td>
+      <td>output与input的数据类型不一致；weight、bias、mean、invstd与input的数据类型不一致（部分产品上允许，见约束说明）。</td>
     </tr>
     <tr>
       <td>input和output的shape不一致。</td>
@@ -291,14 +308,35 @@ aclnnStatus aclnnBatchNormElemt(
 
 ## 约束说明
 
+- 数据格式与通道位置：
+
+  <!-- npu="950" id10 -->
+  - <term>Ascend 950PR&950DT系列产品</term>：5维输入支持NDHWC、4维输入支持NHWC，该两种存储格式的通道为末维；NDHWC仅接受5维、NHWC仅接受4维，其余维度组合（如6维NDHWC）在参数校验阶段拒绝。其余格式的通道为第2维。
+  <!-- end id10 -->
+  <!-- npu="A3,910b,910" id11 -->
+  - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas训练系列产品</term>：通道轴固定为第2维，与存储格式无关。
+  <!-- end id11 -->
+
+- eps与invstd取值：
+
+  <!-- npu="950" id12 -->
+  - <term>Ascend 950PR&950DT系列产品</term>：eps为兼容保留参数，不参与计算，任意取值不影响输出；invstd元素值可为0或负：0时输出为bias，负值按符号语义参与计算。
+  <!-- end id12 -->
+
+- 统计量数据类型：
+
+  <!-- npu="950" id13 -->
+  - <term>Ascend 950PR&950DT系列产品</term>：weight/bias/mean/invstd允许为与input不同的FLOAT16、BFLOAT16类型，内部统一按FLOAT32计算，不因此报错。
+  <!-- end id13 -->
+
 - 确定性计算：
 
-  <!-- npu="A3,910b,910" id8 -->
+  <!-- npu="A3,910b,910" id14 -->
   - <term>Atlas A3系列产品</term>、<term>Atlas A2系列产品</term>、<term>Atlas训练系列产品</term>：aclnnBatchNormElemt默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性。
-  <!-- end id8 -->
-  <!-- npu="950" id9 -->
+  <!-- end id14 -->
+  <!-- npu="950" id15 -->
   - <term>Ascend 950PR&950DT系列产品</term>：aclnnBatchNormElemt默认确定性实现。
-  <!-- end id9 -->
+  <!-- end id15 -->
 
 ## 调用示例
 

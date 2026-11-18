@@ -12,6 +12,7 @@
 #include "level0/div.h"
 #include "level0/sub.h"
 #include "level0/ones_like.h"
+#include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/contiguous.h"
@@ -39,6 +40,25 @@ static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = 
 
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+
+// 通道数：Regbase 上 NDHWC/NHWC 存储格式的通道为末维，其余为 dim1
+static int64_t GetElemtDimC(const aclTensor* input)
+{
+    auto viewShape = input->GetViewShape();
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        if (input->GetStorageFormat() == Format::FORMAT_NDHWC || input->GetStorageFormat() == Format::FORMAT_NHWC) {
+            return viewShape[viewShape.GetDimNum() - 1];
+        }
+    }
+    return viewShape[1];
+}
+
+// Regbase 上 NDHWC/NHWC 存储格式（通道在末维）
+static bool IsLastChannelFormat(const aclTensor* input)
+{
+    return Ops::NN::AclnnUtil::IsRegbase() &&
+           (input->GetStorageFormat() == Format::FORMAT_NDHWC || input->GetStorageFormat() == Format::FORMAT_NHWC);
+}
 
 static bool CheckNotNull(const aclTensor* input, aclTensor* mean, aclTensor* invstd, const aclTensor* out)
 {
@@ -91,6 +111,21 @@ static bool CheckFormat(const aclTensor* input, const aclTensor* out)
                                                  "format only support ND,NCHW,NCL,NCDHW");
         return false;
     }
+
+    // Regbase：NDHWC/NHWC 仅对应标准维度数（5 维/4 维），其余维度组合 kernel 无法处理
+    // （按文档约定 6-8 维输入为 ND 格式，通道在第 2 维），在参数校验阶段拒绝
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        const auto dimNum = input->GetViewShape().GetDimNum();
+        const auto storageFormat = input->GetStorageFormat();
+        if ((storageFormat == Format::FORMAT_NDHWC && dimNum != 5) ||
+            (storageFormat == Format::FORMAT_NHWC && dimNum != 4)) {
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+                "aclnnBatchNormElemt", "format",
+                (std::string(op::ToString(storageFormat).GetString()) + ", dim=" + std::to_string(dimNum)).c_str(),
+                "NDHWC only supports 5-dim input, NHWC only supports 4-dim input");
+            return false;
+        }
+    }
     return true;
 }
 
@@ -103,7 +138,7 @@ static bool CheckShape(const aclTensor* input, const aclTensor* weight, const ac
     OP_CHECK_MIN_DIM(out, BN_MIN_SUPPORT_DIMS_NUMS, return false);
 
     OP_CHECK_SHAPE_NOT_EQUAL(out, input, return false);
-    if (input->GetViewShape()[1] == 0) {
+    if (GetElemtDimC(input) == 0) {
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON("aclnnBatchNormElemt", "input",
                                                  "input channel size should not be zero");
         return false;
@@ -117,7 +152,7 @@ static bool CheckShape(const aclTensor* input, const aclTensor* weight, const ac
         return false;
     }
 
-    int64_t dimC = input->GetViewShape()[1];
+    int64_t dimC = GetElemtDimC(input);
     if ((weight != nullptr && weight->GetViewShape()[0] != dimC) ||
         (bias != nullptr && bias->GetViewShape()[0] != dimC) || mean->GetViewShape()[0] != dimC ||
         invstd->GetViewShape()[0] != dimC) {
@@ -139,6 +174,7 @@ static aclnnStatus CheckBatchNormElemtParams(const aclTensor* input, const aclTe
     return ACLNN_SUCCESS;
 }
 
+// 非 Regbase SoC 的原实现（master 逐字保留，行为不变），var = 1/invstd² − eps，eps 参与计算
 static aclnnStatus PrepareAndComputeBatchNorm(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
                                               const aclTensor* mean, const aclTensor* invstd, double eps,
                                               aclOpExecutor* executor, aclTensor*& bnOutput)
@@ -208,6 +244,80 @@ static aclnnStatus PrepareAndComputeBatchNorm(const aclTensor* input, const aclT
     return ACLNN_SUCCESS;
 }
 
+// 统计/参数统一转 fp32（{C} 规模，转换开销可忽略；同时规避 fp16 下 1/invstd² 的 subnormal 下溢）
+static const aclTensor* ToFp32Core(const aclTensor* t, aclOpExecutor* executor)
+{
+    auto contig = l0op::Contiguous(t, executor);
+    if (contig == nullptr) {
+        return nullptr;
+    }
+    if (contig->GetDataType() != op::DataType::DT_FLOAT) {
+        return l0op::Cast(contig, op::DataType::DT_FLOAT, executor);
+    }
+    return contig;
+}
+
+// Regbase 专用实现：invstd 折入 weight（w̃ = invstd·weight），variance 传常数 1，
+// 借用 BatchNorm 融合 kernel 一遍完成：y = (x−m)·1/sqrt(1+0)·w̃+b = (x−m)·(invstd·w)+b。
+// 1/sqrt(1) = 1 精确无舍入，避免 var = 1/invstd² 往返的额外舍入；
+// 负 invstd 符号在乘积内自然保留；invstd = 0 时 w̃ = 0，y = b；eps 不参与计算
+static aclnnStatus PrepareAndComputeBatchNormElemt(const aclTensor* input, const aclTensor* weight,
+                                                   const aclTensor* bias, const aclTensor* mean,
+                                                   const aclTensor* invstd, aclOpExecutor* executor,
+                                                   aclTensor*& bnOutput)
+{
+    auto inputContiguous = l0op::Contiguous(input, executor);
+    CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto inputShape = input->GetViewShape();
+    auto inputDims = inputShape.GetDimNum();
+
+    // BatchNorm kernel 仅接受 <=5 维，>5 维先压成 5D；NDHWC/NHWC 通道在末维，压 5D 会破坏通道位置，跳过
+    const size_t maxDims = 5;
+    if (inputDims > maxDims && !IsLastChannelFormat(input)) {
+        const int64_t shapes[5] = {inputShape[0], inputShape[1], inputShape[2], inputShape[3], -1};
+        aclIntArray* shapeArray = executor->AllocIntArray(shapes, 5);
+        inputContiguous = l0op::Reshape(inputContiguous, shapeArray, executor);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        inputContiguous = l0op::ReFormat(inputContiguous, Format::FORMAT_NCDHW);
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    const int64_t dimC = GetElemtDimC(input);
+
+    auto meanCore = ToFp32Core(mean, executor);
+    CHECK_RET(meanCore != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto invstdCore = ToFp32Core(invstd, executor);
+    CHECK_RET(invstdCore != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto biasCore = (bias != nullptr) ? ToFp32Core(bias, executor) : FillScalar(dimC, 0, executor);
+    CHECK_RET(biasCore != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // w̃ = invstd·weight，符号自然保留
+    const aclTensor* weightFolded = nullptr;
+    if (weight != nullptr) {
+        auto weightCore = ToFp32Core(weight, executor);
+        CHECK_RET(weightCore != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        weightFolded = l0op::Mul(invstdCore, weightCore, executor);
+        CHECK_RET(weightFolded != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        weightFolded = invstdCore; // weight 为空 → w=1 → w̃ = invstd
+    }
+    auto variance = FillScalar(dimC, 1, executor);
+    CHECK_RET(variance != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // BatchNorm wrapper 的 running mean/var 参数为非 const，构造视图传入（推理模式不更新）
+    auto meanNonConst = executor->CreateView(meanCore, meanCore->GetViewShape(), meanCore->GetViewOffset());
+    CHECK_RET(meanNonConst != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto varianceNonConst = executor->CreateView(variance, variance->GetViewShape(), variance->GetViewOffset());
+    CHECK_RET(varianceNonConst != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    bnOutput = nullptr;
+    auto bnResult = BatchNorm(inputContiguous, weightFolded, biasCore, meanNonConst, varianceNonConst, false, 0.0, 0.0,
+                              &bnOutput, nullptr, nullptr, executor);
+    CHECK_RET(bnResult == ACLNN_SUCCESS, bnResult);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
                                                 aclTensor* mean, aclTensor* invstd, double eps, aclTensor* output,
                                                 uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -226,15 +336,21 @@ aclnnStatus aclnnBatchNormElemtGetWorkspaceSize(const aclTensor* input, const ac
         return ACLNN_SUCCESS;
     }
 
+    aclTensor* bnOutput = nullptr;
+    // 语义修复仅对 Regbase 架构生效，其余 SoC 走原实现（master 逐字保留），行为不变
+    aclnnStatus prepRet;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        prepRet = PrepareAndComputeBatchNormElemt(input, weight, bias, mean, invstd, uniqueExecutor.get(), bnOutput);
+    } else {
+        prepRet = PrepareAndComputeBatchNorm(input, weight, bias, mean, invstd, eps, uniqueExecutor.get(), bnOutput);
+    }
+    CHECK_RET(prepRet == ACLNN_SUCCESS, prepRet);
+
     auto inputShape = input->GetViewShape();
     auto inputDims = inputShape.GetDimNum();
 
-    aclTensor* bnOutput = nullptr;
-    auto prepRet = PrepareAndComputeBatchNorm(input, weight, bias, mean, invstd, eps, uniqueExecutor.get(), bnOutput);
-    CHECK_RET(prepRet == ACLNN_SUCCESS, prepRet);
-
     const size_t maxDims = 5;
-    if (inputDims > maxDims) {
+    if (inputDims > maxDims && !IsLastChannelFormat(input)) {
         int64_t originShapes[inputDims];
         for (size_t i = 0; i < inputDims; ++i) {
             originShapes[i] = inputShape[i];
