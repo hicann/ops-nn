@@ -46,14 +46,14 @@
 | x | 输入 | <ul><li>一个5D张量，为特征图，相当于公式中的$x_{n, c_{in}, d \cdot s_D + r, i \cdot s_H + p, j \cdot s_W + q}$。</li><li>$N$相当于'x'的N维度。</li><li>$c_{in}$相当于'x'的C维度。</li><li>数据格式需要与'out_backprop'一致。</li></ul> | FLOAT16、FLOAT32、BFLOAT16 | NDHWC、NCDHW |
 | filter_size | 输入 | <ul><li>一个1D张量，用于表示卷积权重的形状，该卷积权重是一个5D张量。</li><li>张量中整数的顺序由卷积权重格式决定，这些整数表示卷积权重各维度的长度。</li></ul> | INT32、INT64 | - |
 | out_backprop | 输入 | <ul><li>一个5D张量，相当于公式中的$\frac{\partial L}{\partial y_{n, c_{out}, d, i, j}}$。</li><li>$c_{out}$相当于'out_backprop'中的C维度。</li><li>$H_{out}$、$W_{out}$、$D_{out}$相当于'out_backprop'中的H维度、W维度和D维度。</li><li>数据格式需要与'x'一致。</li></ul> | FLOAT16、FLOAT32、BFLOAT16 | NDHWC、NCDHW |
+| y | 输出 | <ul><li>相当于公式中的$\frac{\partial L}{\partial w_{c_{out}, c_{in}, r, p, q}}$。</li><li>其形状由'filter_size'给出。</li></ul>  |  FLOAT32  | NCDHW、NDHWC、DHWCN |
 | strides | 必填属性 | <ul><li>一个包含5个整数的元组或列表，指定滑动窗口在特征图每个维度上的步长。</li><li>轴顺序与特征图格式一致。</li><li>$s_H$与$s_W$、$s_D$相当于'strides'属性的H维度、W维度和D维度。</li></ul> | - | - |
 | pads | 必填属性 | <ul><li>一个包含6个整数的元组/列表，指定特征图在每个方向上的填充量。</li><li>仅沿D、H和W维度进行填充。</li><li>通过为各方向设置合适的填充值，即可实现“SAME”和“VALID”两种填充模式。</li></ul> | - | - |
 | dilations | 可选属性 | <ul><li>一个包含5个整数的元组/列表，表示输入各维度的膨胀（空洞）因子。</li><li>轴顺序与特征图格式一致。</li><li>默认值为 [1,1,1,1,1]。</li></ul> | -  | -  |
 | groups | 可选属性  |  <ul><li>整数，有效范围是[1,65535]，默认值为1。</li><li>表示从$c_{in}$到$c_{out}$的分组连接数。</li><li>目前要求$c_{in}$与$c_{out}$均能被'groups'整除。</li><li>当'groups'不为1时，不支持HIFLOAT8。</li></ul>  | INT | - |
 | data_format | 可选属性 | <ul><li>字符串，取值必须为["NDHWC","NCDHW"]之一，默认"NDHWC"。各字母含义：batch(N)、depth(D)、height(H)、width(W)、channels(C)。</li><li>用于指定'x'与'out_backprop'的数据排布格式。</li></ul> | STRING | - |
 | enable_hf32 | 可选属性 | <ul><li>布尔值，默认为false。用于控制是否开启HF32计算模式。</li><li>仅当输入数据类型为FLOAT32时生效。</li></ul> | BOOL | - |
-| output_padding | 可选属性 | <ul><li>一个包含5个整数的元组/列表，指定输出形状的附加大小。</li><li>仅对转置卷积场景生效，用于补充输出尺寸。</li><li>默认值为[0,0,0,0,0]。</li><li>仅<term>Ascend 950PR&950DT系列产品</term>支持非零值。</li></ul> | - | - |
-| y | 输出 | <ul><li>相当于公式中的$\frac{\partial L}{\partial w_{c_{out}, c_{in}, r, p, q}}$。</li><li>其形状由'filter_size'给出。</li></ul>  |  FLOAT32  | NCDHW、NDHWC、DHWCN |
+| output_padding | 可选属性 | <ul><li>一个包含5个整数的元组/列表，指定输出形状的附加大小。</li><li>仅对转置卷积场景生效，用于补充输出尺寸。</li><li>默认值为[0,0,0,0,0]。</li></ul> | - | - |
 
 ## 约束说明
 

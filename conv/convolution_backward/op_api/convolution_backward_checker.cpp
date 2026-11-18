@@ -1127,7 +1127,7 @@ bool ConvolutionBackwardChecker::CheckShapeTransposed()
     int64_t weightCo = inputTensor_.weight->GetViewShape().GetDim(0);
     OP_CHECK(weightCo > 0,
              OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, "weightCo", std::to_string(weightCo).c_str(),
-                                          "0"),
+                                          "greater than 0"),
              return false);
     OP_CHECK(weightCo == inputC,
              OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
