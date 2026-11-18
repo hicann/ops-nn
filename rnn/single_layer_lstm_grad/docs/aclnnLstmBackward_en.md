@@ -319,7 +319,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Initial hidden and cell states of each LSTM layer, corresponding to h(t-1) and c(t-1) at time 0.</td>
       <td><ul><li>The list length is 2, containing h_0 and c_0.</li><li>For multi-layer bidirectional mode, the data in each tensor is arranged along dimension 0 in forward-then-backward order first, and then layer by layer.</li><li>The data type is consistent with that of input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>The shape of each tensor in the list is [D * num_layers, batch_size, hidden_size].</td>
       <td>√</td>
     </tr>
@@ -352,7 +352,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Gradient of the hidden output of each layer in the LSTM forward pass at time step T, propagated from the next time step. Corresponds to δh_next.</td>
       <td><ul><li>For multi-layer bidirectional, data is laid out along dimension 0 in forward-then-backward order, then layer by layer.</li><li>The data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[numLayers * D, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -362,7 +362,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Gradient of the output cell of each LSTM layer at time step T, passed from the next time step. Corresponds to δc_next.</td>
       <td><ul><li>For multi-layer bidirectional mode, data is laid out along dimension 0 in forward-then-backward order, then layer by layer.</li><li>The data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[numLayers * D, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -372,7 +372,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Activation value of the input gate output by each layer in the LSTM forward pass. Corresponds to i in the formula.</td>
       <td><ul><li>List length is D * num_layers.</li><li>For multi-layer bidirectional, tensors are arranged in bidirectional-first then multi-layer order.</li><li>Data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[time_step, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -382,7 +382,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Activation value of the candidate cell state output by each layer in the LSTM forward pass. Corresponds to g in the formula.</td>
       <td><ul><li>List length is D * num_layers.</li><li>For multi-layer bidirectional, tensors are arranged in bidirectional-first then multi-layer order.</li><li>Data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[time_step, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -392,7 +392,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Activation value of the forget gate of each in forward pass of each LSTM layer. The f in the corresponding formula.</td>
       <td><ul><li>The list length is D * num_layers.</li><li>For multi-layer bidirectional cases, tensors are laid out bidirectionally first and then layer by layer.</li><li>The data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[time_step, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -402,7 +402,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Activation values of the output gate of each layer in the LSTM forward pass. Corresponding to o in the formula.</td>
       <td><ul><li>The list length is D * num_layers.</li><li>For multi-layer bidirectional, tensors are laid out in forward-then-backward order first, then by layer.</li><li>The data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[time_step, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -412,7 +412,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Layer hidden state of each layer in the LSTM forward pass. It corresponds to h in the formula.</td>
       <td><ul><li>The list length is D * num_layers.</li><li>In multi-layer bidirectional scenarios, tensors are arranged in forward-then-backward order first and then layer by layer.</li><li>The data type is consistent with that of input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[time_step, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -422,7 +422,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Final cell state of each layer in the LSTM forward pass. It corresponds to c in the formula.</td>
       <td><ul><li>The list length is D * num_layers.</li><li>For multi-layer bidirectional LSTMs, tensors are laid out in forward-then-backward order first, and then by layer.</li><li>The data type is consistent with that of input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[time_step, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -432,7 +432,7 @@ aclnnStatus aclnnLstmBackward(
       <td>The output obtained by passing the final cell state of each layer in the LSTM forward pass through the tanh activation function. Corresponds to tanh(c).</td>
       <td><ul><li>The list length is D * num_layers.</li><li>For multi-layer bidirectional LSTMs, tensors are laid out in forward-then-backward order first, and then by layer.</li><li>The data type is consistent with that of input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[time_step, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -532,7 +532,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Gradient of the initial hidden state of each LSTM layer, corresponding to δh_prev at t=0.</td>
       <td><ul><li>For multi-layer bidirectional, data along dimension 0 is laid out in forward-then-backward order first, then layer by layer.</li><li>The data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[D * num_layers, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -542,7 +542,7 @@ aclnnStatus aclnnLstmBackward(
       <td>Gradient of the initial cell on each LSTM layer, corresponding to δc_prev at t=0.</td>
       <td><ul><li>In multi-layer bidirectional mode, data along dimension 0 is laid out in forward-then-backward order and then layer by layer.</li><li>Data type is consistent with input.</li></ul></td>
       <td>FLOAT32, FLOAT16</td>
-      <td>ND</td>
+      <td>NCL</td>
       <td>[D * num_layers, batch_size, hidden_size]</td>
       <td>√</td>
     </tr>
@@ -659,6 +659,8 @@ aclnnStatus aclnnLstmBackward(
   aclnnStatus: return status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
 
 ## Constraints
+
+- NCL and ND in the parameter table denote the aclTensor descriptor format tags ACL_FORMAT_NCL and ACL_FORMAT_ND, respectively. Logical shapes are interpreted according to the parameter table and batchFirst. When batchSizesOptional is null, input, dy, and dxOut use NCL. When it is non-null, input, dy, dxOut, and batchSizesOptional use ND. On both paths, hx, dh/dc, the seven saved states, and dhPrevOut/dcPrevOut use NCL, while params/dparamsOut use ND.
 
 - Deterministic computation:
   - aclnnLstmBackward defaults to a deterministic implementation.

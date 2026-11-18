@@ -108,8 +108,64 @@ __aicore__ inline int64_t CeilDiv(int64_t a, int64_t b)
     return (a + b - 1) / b;
 }
 
+#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 3510
+__simd_vf__ inline void AccurateDxhMatmulVf(__ubuf__ const float* dgate, __ubuf__ const float* weight,
+                                            __ubuf__ float* sumHigh, __ubuf__ float* sumLow, uint16_t kCount,
+                                            uint16_t nCount, uint32_t firstChunk, uint32_t lastChunk)
+{
+    using namespace AscendC::Reg;
+    RegTensor<float> a;
+    RegTensor<float> b;
+    RegTensor<float> product;
+    RegTensor<float> productLow;
+    RegTensor<float> high;
+    RegTensor<float> low;
+    RegTensor<float> temp;
+    RegTensor<float> split;
+    RegTensor<float> error;
+    RegTensor<float> residual;
+    uint32_t remaining = nCount;
+    MaskReg mask = UpdateMask<float>(remaining);
+    if (firstChunk != 0) {
+        Duplicate(high, 0.0f);
+        Duplicate(low, 0.0f);
+    } else {
+        LoadAlign(high, sumHigh);
+        LoadAlign(low, sumLow);
+    }
+    for (uint16_t k = 0; k < kCount; ++k) {
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(a, const_cast<__ubuf__ float*>(dgate + k));
+        LoadAlign(b, const_cast<__ubuf__ float*>(weight + static_cast<uint32_t>(k) * 64));
+        Mul(product, a, b, mask);
+        Neg(productLow, product, mask);
+        MulAddDst(productLow, a, b, mask);
+
+        Add(temp, high, product, mask);
+        Sub(split, temp, high, mask);
+        Sub(error, temp, split, mask);
+        Sub(error, high, error, mask);
+        Sub(residual, product, split, mask);
+        Add(error, error, residual, mask);
+        Add(low, low, productLow, mask);
+        Add(low, low, error, mask);
+
+        Add(high, temp, low, mask);
+        Sub(split, high, temp, mask);
+        Sub(error, high, split, mask);
+        Sub(error, temp, error, mask);
+        Sub(residual, low, split, mask);
+        Add(low, error, residual, mask);
+    }
+    if (lastChunk != 0) {
+        Add(high, high, low, mask);
+    }
+    StoreAlign(sumHigh, high, mask);
+    StoreAlign(sumLow, low, mask);
+}
+#endif
+
 template <typename T, const MatmulConfig& MM_GATE_CFG, const MatmulConfig& MM_WEIGHT_CFG, bool DXH_HUGE = false,
-          bool XH_HUGE = false>
+          bool XH_HUGE = false, bool ARCH35_MIX_CORE = false>
 class RNNGrad {
 public:
     __aicore__ inline RNNGrad(){};
@@ -117,7 +173,7 @@ public:
     {
         if constexpr (!std::is_same<T, float>::value) {
             InitCastWFp32();
-            SyncAll();
+            CrossCoreSync();
         }
         for (int64_t tIdx = tiling.timeStep - 1; tIdx >= 0; tIdx--) {
             bool firstLoop = tIdx == tiling.timeStep - 1;
@@ -126,10 +182,26 @@ public:
             int64_t actTIdx = tiling.direction == DIRECTION_BACKWARD ? tiling.timeStep - tIdx - 1 : tIdx;
             InitVectorBuf();
             ProcessDgates(actTIdx, firstLoop, useInitCH); // Calcu dgates
-            SyncAll();
+            if constexpr (ARCH35_MIX_CORE) {
+                if (g_coreType == AscendC::AIV) {
+                    PipeBarrier<PIPE_ALL>();
+                    DataCacheCleanAndInvalid<float, CacheLine::ENTIRE_DATA_CACHE>(outputGm.dgateGm);
+                    PipeBarrier<PIPE_ALL>();
+                }
+            }
+            CrossCoreSync();
             ProcessDgateMM(actTIdx); // Dgate mm
-            SyncAll();
+            CrossCoreSync();
             InitSubDataBuf();
+            if constexpr (ARCH35_MIX_CORE) {
+                // AccurateDxhMatmul 的逐帧误差在长序列上经 BPTT 递归复利放大（T>=256 时 dx mare
+                // 恶化 2~4 倍），短序列则显著收敛 dw 边界用例（实测收益区 T<=15）。按 timeStep
+                // 分域启用：所有核读到同一 tiling.timeStep，同步参与保持一致。
+                if (tiling.timeStep <= 128) {
+                    ProcessAccurateDxhMatmul(actTIdx);
+                }
+                CrossCoreSync();
+            }
             if constexpr (DXH_HUGE) {
                 ProcessDxhSplitLarge(actTIdx, firstLoop, useInitCH);
             } else if (tiling.isSeqLength == SEQ_LENGTH_ENABLED) {
@@ -137,7 +209,7 @@ public:
             } else {
                 ProcessDxhSplit(actTIdx, useInitCH);
             } // Dxh split
-            SyncAll();
+            CrossCoreSync();
         }
 
         if constexpr (XH_HUGE) {
@@ -145,15 +217,23 @@ public:
         } else {
             ProcessConcatXh();
         } // Concat xh for dw mm
-        SyncAll();
+        CrossCoreSync();
         ProcessDWMM(); // Dw mm
         if (tiling.isBias) {
-            SyncAll();
+            CrossCoreSync();
             ProcessReduce(); // Reduce and ProcessDWMM can be parallelized, but additional memory is required.
         }
         if constexpr (!std::is_same<T, float>::value) {
-            SyncAll();
+            CrossCoreSync();
             CastDwBack();
+        }
+        if constexpr (ARCH35_MIX_CORE) {
+            if (g_coreType == AscendC::AIV) {
+                PipeBarrier<PIPE_ALL>();
+                DataCacheCleanAndInvalid<float, CacheLine::ENTIRE_DATA_CACHE>(outputGm.dgateGm);
+                PipeBarrier<PIPE_ALL>();
+            }
+            CrossCoreSync();
         }
     }
 
@@ -336,6 +416,15 @@ private:
     DataCopyPadExtParams<T> padInTParams = {false, 0, 0, 0};
 
 private:
+    __aicore__ inline void CrossCoreSync() const
+    {
+        if constexpr (ARCH35_MIX_CORE) {
+            SyncAll<true>();
+        } else {
+            SyncAll();
+        }
+    }
+
     __aicore__ inline void InitCastWFp32()
     {
         int64_t maxCalcNum = (tiling.ubSize - UB_RESERVED_SIZE) / (sizeof(T) + FLOAT_BYTES) / VECTOR_ALIGN_SIZE *
@@ -622,6 +711,66 @@ private:
             }
             dgateMM.IterateAll(outputGm.dxhGm[dgateOffsets.COffset], false);
         }
+    }
+
+    __aicore__ inline void ProcessAccurateDxhMatmul(int64_t tIdx)
+    {
+#if defined(__NPU_ARCH__) && __NPU_ARCH__ == 3510
+        if (g_coreType != AscendC::AIV) {
+            return;
+        }
+        constexpr int64_t outputGroup = 64;
+        constexpr int64_t bufferParts = 65;
+        int64_t ubFloatCount = (tiling.ubSize - UB_RESERVED_SIZE) / FLOAT_BYTES;
+        int64_t kChunk = (ubFloatCount - outputGroup * 2) / bufferParts / outputGroup * outputGroup;
+        int64_t kSize = tiling.hiddenSize * LSTM_GATE_SIZE;
+        int64_t outputWidth = tiling.inputSize + tiling.hiddenSize;
+        int64_t nGroups = CeilDiv(outputWidth, outputGroup);
+        int64_t taskCount = tiling.batch * nGroups;
+        LocalTensor<uint8_t> ub = subDataBuf.Get<uint8_t>();
+        LocalTensor<float> dgateUb = ub.ReinterpretCast<float>();
+        LocalTensor<float> weightUb = ub[kChunk * FLOAT_BYTES].ReinterpretCast<float>();
+        LocalTensor<float> sumHighUb = ub[kChunk * bufferParts * FLOAT_BYTES].ReinterpretCast<float>();
+        LocalTensor<float> sumLowUb = sumHighUb[outputGroup];
+        auto dgatePtr = reinterpret_cast<__ubuf__ float*>(dgateUb.GetPhyAddr());
+        auto weightPtr = reinterpret_cast<__ubuf__ float*>(weightUb.GetPhyAddr());
+        auto sumHighPtr = reinterpret_cast<__ubuf__ float*>(sumHighUb.GetPhyAddr());
+        auto sumLowPtr = reinterpret_cast<__ubuf__ float*>(sumLowUb.GetPhyAddr());
+
+        for (int64_t task = GetBlockIdx(); task < taskCount; task += aivCoreNum) {
+            int64_t batchIdx = task / nGroups;
+            int64_t nOffset = task % nGroups * outputGroup;
+            int64_t nCount = outputWidth - nOffset < outputGroup ? outputWidth - nOffset : outputGroup;
+            int64_t kLoops = CeilDiv(kSize, kChunk);
+            for (int64_t kLoop = 0; kLoop < kLoops; ++kLoop) {
+                int64_t kOffset = kLoop * kChunk;
+                int64_t curK = kSize - kOffset < kChunk ? kSize - kOffset : kChunk;
+                DataCopyExtParams dgateCopy{1, static_cast<uint32_t>(curK * FLOAT_BYTES), 0, 0, 0};
+                DataCopyPad(dgateUb, outputGm.dgateGm[tIdx * tiling.batch * kSize + batchIdx * kSize + kOffset],
+                            dgateCopy, padInFloatParams);
+                DataCopyExtParams weightCopy{
+                    static_cast<uint16_t>(curK), static_cast<uint32_t>(nCount * FLOAT_BYTES),
+                    static_cast<uint32_t>((outputWidth - nCount) * FLOAT_BYTES),
+                    static_cast<uint32_t>((outputGroup - CeilDiv(nCount, 8) * 8) * FLOAT_BYTES / BLOCK_BYTES), 0};
+                DataCopyPad(weightUb, outputGm.wFp32Gm[kOffset * outputWidth + nOffset], weightCopy, padInFloatParams);
+                MTE2ToVSync();
+                asc_vf_call<AccurateDxhMatmulVf>(dgatePtr, weightPtr, sumHighPtr, sumLowPtr,
+                                                 static_cast<uint16_t>(curK), static_cast<uint16_t>(nCount),
+                                                 static_cast<uint32_t>(kLoop == 0),
+                                                 static_cast<uint32_t>(kLoop == kLoops - 1));
+                if (kLoop != kLoops - 1) {
+                    VToMTE2Sync();
+                }
+            }
+            VToMTE3Sync();
+            DataCopyExtParams outputCopy{1, static_cast<uint32_t>(nCount * FLOAT_BYTES), 0, 0, 0};
+            DataCopyPad(outputGm.dxhGm[batchIdx * outputWidth + nOffset], sumHighUb, outputCopy);
+            MTE3ToMTE2Sync();
+        }
+        PipeBarrier<PIPE_ALL>();
+        DataCacheCleanAndInvalid<float, CacheLine::ENTIRE_DATA_CACHE>(outputGm.dxhGm);
+        PipeBarrier<PIPE_ALL>();
+#endif
     }
 
     __aicore__ inline void CopyOutputGate(GlobalTensor<float>& gm, LocalTensor<float>& ub, int64_t gateIdx,
@@ -1100,14 +1249,16 @@ private:
             int64_t copyInLoop = CeilDiv(mLines, MAX_COPY_LINES);
             int64_t offset = start * tiling.hiddenSize * LSTM_GATE_SIZE + reduceBlock_.offset;
             for (int64_t copyLoopIdx = 0; copyLoopIdx < copyInLoop; copyLoopIdx++) {
-                int64_t curLines = copyLoopIdx == copyInLoop - 1 ? mLines % MAX_COPY_LINES : MAX_COPY_LINES;
+                int64_t copiedLines = copyLoopIdx * MAX_COPY_LINES;
+                int64_t curLines = mLines - copiedLines < MAX_COPY_LINES ? mLines - copiedLines : MAX_COPY_LINES;
                 DataCopyExtParams dataCopyParams{
                     static_cast<uint16_t>(curLines), static_cast<uint32_t>(reduceBlock_.nReduceShape * FLOAT_BYTES),
                     static_cast<uint32_t>((tiling.hiddenSize * LSTM_GATE_SIZE - reduceBlock_.nReduceShape) *
                                           FLOAT_BYTES),
                     0u, 0u};
                 int64_t currentOffset = offset + copyLoopIdx * LSTM_GATE_SIZE * tiling.hiddenSize * MAX_COPY_LINES;
-                DataCopyPad(subDataTensor, mixGm[currentOffset], dataCopyParams, padInFloatParams);
+                DataCopyPad(subDataTensor[copiedLines * reduceBlock_.nReduceShapeAlign], mixGm[currentOffset],
+                            dataCopyParams, padInFloatParams);
             }
             MTE2ToVSync();
             BinarySum(subDataTensor, start - mRepeatIdx * reduceBlockSize, end - mRepeatIdx * reduceBlockSize);

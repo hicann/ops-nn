@@ -39,7 +39,6 @@ constexpr int64_t SMALL_M_BLOCK = 64;
 constexpr int64_t SMALL_MAX_CORES = 16;
 constexpr int64_t SMALL_UB_RESERVE = 16 * 1024; // TPipe meta + safety margin
 constexpr int64_t BIAS_COMPONENT_COUNT = 2;
-constexpr int64_t REPLAY_PLANES = 7; // i, j, f, o, tanh(c), c, h
 constexpr int64_t GATE_COUNT = 4;
 constexpr int64_t FP32_ELEMENT_BYTES = 4;
 constexpr int64_t NARROW_ELEMENT_BYTES = 2;
@@ -157,6 +156,12 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     if (dtype != ge::DT_FLOAT && dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16) {
         return ge::GRAPH_SUCCESS;
     }
+    // FP16 and FP32 recurrence and reductions use the Cube/wide implementation
+    // so the complete backward chain keeps FP32 accumulation until the public
+    // output boundary. BF16 retains the regbase-small numerical contract.
+    if (dtype == ge::DT_FLOAT16 || dtype == ge::DT_FLOAT) {
+        return ge::GRAPH_SUCCESS;
+    }
     const int64_t dtypeSize = (dtype == ge::DT_FLOAT) ? FP32_ELEMENT_BYTES : NARROW_ELEMENT_BYTES;
 
     const gert::Shape& xShape = xShapePtr->GetStorageShape();
@@ -257,7 +262,7 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     for (int64_t cc = SMALL_CHUNK_COLS; cc >= SMALL_MIN_CHUNK_COLS && tBlock == 0; cc /= BLOCK_SEARCH_DIVISOR) {
         for (int64_t gb = hidden; gb >= 1 && tBlock == 0; gb = (gb > 1) ? ((gb + 1) / BLOCK_SEARCH_DIVISOR) : 0) {
             for (int64_t bb = batch; bb >= 1 && tBlock == 0; bb = (bb > 1) ? ((bb + 1) / BLOCK_SEARCH_DIVISOR) : 0) {
-                for (int64_t tb = timeStep; tb >= 1; --tb) {
+                for (int64_t tb = (dtypeSize == FP32_ELEMENT_BYTES ? timeStep : 1); tb >= 1; --tb) {
                     const int64_t rows = tb * bb;
                     const int64_t mb = (rows < SMALL_M_BLOCK) ? rows : SMALL_M_BLOCK;
                     layout.Fill(tb, bb, hidden, cc, mb, dtypeSize, gb);
@@ -325,32 +330,28 @@ ge::graphStatus TilingSingleLayerLstmGrad4RegbaseSmall(gert::TilingContext* cont
     if (workspaces == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    /* dw and db accumulate in fp32 across time blocks, batch blocks and the cores that share a
-     * gate column, and are narrowed to the output width once at the end. At fp32 the outputs ARE
-     * the accumulators and no workspace is needed; otherwise the accumulator is
-     * 4H x (I + H) for dw plus 4H for db, in floats. */
+    // Narrow IO needs a batch-reduction matrix/bias and two private recurrent-state planes per core.
     const int64_t accFloats = (dtypeSize == static_cast<int64_t>(sizeof(float))) ?
                                   0 :
                                   LstmGradRegbase::LstmGradRegbaseSmallUbLayout::GATE_NUM * hidden *
                                       (inputSize + hidden + 1);
-    uint64_t replayFloats = 0;
+    uint64_t stateFloats = 0;
     if (dtypeSize != static_cast<int64_t>(sizeof(float))) {
-        // Each AIV owns a disjoint replay cache, reused across batch blocks.
-        replayFloats = REPLAY_PLANES;
-        for (int64_t extent : {usedCores, timeStep, bBlock, hidden}) {
-            if (replayFloats > std::numeric_limits<size_t>::max() / sizeof(float) / extent) {
-                OP_LOGE(context->GetNodeName(), "Forward replay workspace size overflow.");
+        stateFloats = 2;
+        for (int64_t extent : {usedCores, batch, hidden}) {
+            if (stateFloats > std::numeric_limits<size_t>::max() / sizeof(float) / extent) {
+                OP_LOGE(context->GetNodeName(), "Recurrent state workspace size overflow.");
                 return ge::GRAPH_FAILED;
             }
-            replayFloats *= extent;
+            stateFloats *= extent;
         }
     }
     const auto reservedBytes = ascendcPlatform.GetLibApiWorkSpaceSize();
     const uint64_t maxFloats = (std::numeric_limits<size_t>::max() - reservedBytes) / sizeof(float);
-    if (static_cast<uint64_t>(accFloats) > maxFloats || replayFloats > maxFloats - accFloats) {
+    if (static_cast<uint64_t>(accFloats) > maxFloats || stateFloats > maxFloats - accFloats) {
         return ge::GRAPH_FAILED;
     }
-    workspaces[0] = (static_cast<size_t>(accFloats) + replayFloats) * sizeof(float) + reservedBytes;
+    workspaces[0] = (static_cast<size_t>(accFloats) + stateFloats) * sizeof(float) + reservedBytes;
 
     OP_LOGI(context->GetNodeName(),
             "SingleLayerLstmGrad regbase small path: T=%ld B=%ld I=%ld H=%ld bias=%ld dir=%ld order=%ld cores=%ld "

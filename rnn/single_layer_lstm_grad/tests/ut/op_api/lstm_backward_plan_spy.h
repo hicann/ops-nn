@@ -42,4 +42,7 @@ decltype(aclnnLstmBackward) LstmBackwardPlan;
 }
 namespace l0op {
 decltype(SingleLayerLstmGrad) LstmBackwardPlanGrad;
+aclTensor* LstmBackwardPlanConcatD(const aclTensorList* inputs, int64_t dim, op::DataType outDtype,
+                                   aclOpExecutor* executor);
+aclTensor* LstmBackwardPlanConcatD(const aclTensorList* inputs, int64_t dim, aclOpExecutor* executor);
 } // namespace l0op

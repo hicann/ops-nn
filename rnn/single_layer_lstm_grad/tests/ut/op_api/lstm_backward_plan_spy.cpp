@@ -25,6 +25,45 @@ lstm_test::GradPlanSpy::GradPlanSpy()
 lstm_test::GradPlanSpy::~GradPlanSpy() { activeSpy = nullptr; }
 
 namespace l0op {
+namespace {
+aclTensor* ConcatShape(const aclTensorList* inputs, int64_t dim, op::DataType outDtype, aclOpExecutor* executor)
+{
+    if (inputs == nullptr || inputs->Size() == 0 || executor == nullptr) {
+        return nullptr;
+    }
+    auto shape = (*inputs)[0]->GetViewShape();
+    const int64_t rank = shape.GetDimNum();
+    const int64_t concatDim = dim < 0 ? dim + rank : dim;
+    if (concatDim < 0 || concatDim >= rank) {
+        return nullptr;
+    }
+    int64_t concatExtent = 0;
+    for (size_t i = 0; i < inputs->Size(); ++i) {
+        const auto* input = (*inputs)[i];
+        if (input == nullptr || input->GetViewShape().GetDimNum() != rank) {
+            return nullptr;
+        }
+        concatExtent += input->GetViewShape().GetDim(concatDim);
+    }
+    shape.SetDim(concatDim, concatExtent);
+    return executor->AllocTensor(shape, outDtype);
+}
+} // namespace
+
+aclTensor* LstmBackwardPlanConcatD(const aclTensorList* inputs, int64_t dim, op::DataType outDtype,
+                                   aclOpExecutor* executor)
+{
+    return ConcatShape(inputs, dim, outDtype, executor);
+}
+
+aclTensor* LstmBackwardPlanConcatD(const aclTensorList* inputs, int64_t dim, aclOpExecutor* executor)
+{
+    if (inputs == nullptr || inputs->Size() == 0) {
+        return nullptr;
+    }
+    return ConcatShape(inputs, dim, (*inputs)[0]->GetDataType(), executor);
+}
+
 const std::array<const aclTensor*, 5> LstmBackwardPlanGrad(
     const aclTensor* x, const aclTensor* w, const aclTensor* b, const aclTensor* y, const aclTensor* initH,
     const aclTensor* initC, const aclTensor* h, const aclTensor* c, const aclTensor* dy, const aclTensor* dh,

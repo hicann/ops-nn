@@ -20,6 +20,7 @@
 - A2系列：OpDef配置值为`ascend910b`，支持FP32/FP16，使用`op_kernel/single_layer_lstm_grad.cpp`。
 - A3系列：OpDef配置值为`ascend910_93`，支持FP32/FP16，使用`op_kernel/single_layer_lstm_grad.cpp`。
 - 950系列：OpDef配置值为`ascend950`，通过独立`OpAICoreConfig`注册FP32/FP16/BF16，使用`op_kernel/arch35/single_layer_lstm_grad.cpp`。所有浮点输入、保存状态和梯度输出使用同一声明类型。kernel内部将输入拓宽到FP32，并以FP32累加后收窄输出；跨算子缓存使用声明类型。
+- 950系列的OpDef启用动态rank和动态shape注册支持；运行时输入仍须满足算子定义的逻辑rank及shape关系。A2/A3配置未显式启用动态rank支持。
 - 950系列的regbase路径使用`DTYPE_W`。窄类型的大形状路径先在私有workspace中拓宽输入并重算，再调用FP32 matmul/反向路径，最后收窄输出。
 
 950系列的FP16/BF16反向在kernel内用`x/w/init_h/init_c/b`重算FP32门值与状态，再执行反向递推，减少低精度缓存舍入对梯度计算的影响。外部七类缓存及梯度仍为声明dtype；FP32重算结果仅在本次kernel内使用。小形状路径按AIV独立处理批次块；大形状路径使用私有workspace，并在时间步之间同步跨核生成的隐藏状态。

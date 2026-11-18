@@ -682,7 +682,9 @@ aclnnStatus aclnnLstmBackward(
 
 - 非packed输入指batchSizesOptional=nullptr，input为完整三维张量[time_step, batch_size, input_size]或[batch_size, time_step, input_size]，由batchFirst决定。每条序列均计算完整的time_step步；补零不会被自动识别为无效时间步。支持非连续张量。
 - FLOAT32、FLOAT16、BFLOAT16分别对应ACL_FLOAT、ACL_FLOAT16、ACL_BF16。BFLOAT16仅适用于950系列非packed输入路径。同一次调用的浮点输入、保存状态及输出必须与input使用相同dtype。batchSizesOptional使用INT64。
-- 参数表中的NCL、ND表示aclTensor描述符的格式标记，分别对应ACL_FORMAT_NCL、ACL_FORMAT_ND；逻辑shape按参数表及batchFirst解释。batchSizesOptional=nullptr时，input、dy、dxOut使用NCL；batchSizesOptional非空时，input、dy、dxOut及batchSizesOptional使用ND。两种路径的hx、dh/dc、七类保存状态、dhPrevOut/dcPrevOut均使用NCL，params/dparamsOut使用ND。
+- 参数表中的NCL、ND表示aclTensor描述符的格式标记，分别对应ACL_FORMAT_NCL、ACL_FORMAT_ND；逻辑shape按参数表及batchFirst解释。
+  batchSizesOptional=nullptr时，input、dy、dxOut使用NCL；batchSizesOptional非空时，input、dy、dxOut及batchSizesOptional使用ND。
+  两种路径的hx、dh/dc、七类保存状态、dhPrevOut/dcPrevOut均使用NCL，params/dparamsOut使用ND。
 
 - dy、dh、dc由调用方分别提供；非packed路径中传入nullptr表示对应上游梯度为零。
 - NaN/Inf的传播取决于输入及具体算术运算，输出可能包含NaN/Inf。

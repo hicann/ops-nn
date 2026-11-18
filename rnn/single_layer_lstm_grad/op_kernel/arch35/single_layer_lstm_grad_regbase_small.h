@@ -12,13 +12,13 @@
  * \file single_layer_lstm_grad_regbase_small.h
  * \brief arch35 LSTM grad kernel: AIV-only, zero cross-core sync.
  *
- * Math (identical to the legacy membase pipeline, fp32 internal):
+ * Math (fp32 internal, left-to-right gate products):
  *   dh_t   = dy_t + dh_next
  *   dc_t   = (1 - tanhct^2) * (o * dh_t) + dc_next
- *   do     = (o * dh_t) * tanhct * (1 - o)
+ *   do     = ((dh_t * tanhct) * o) * (1 - o)
  *   dj     = (dc_t * i) * (1 - j^2)
- *   di     = (1 - i) * j * (dc_t * i)
- *   df     = (1 - f) * f * dc_t * c_prev
+ *   di     = ((dc_t * j) * i) * (1 - i)
+ *   df     = ((dc_t * c_prev) * f) * (1 - f)
  *   dc_prev= dc_t * f
  *   dh_next(next step) = dgate_t @ w[:, I:I+H]
  *   dx     = dgate @ w[:, 0:I]
@@ -32,8 +32,8 @@
  * The host picks all four against this file's own layout formula, so the two sides cannot
  * disagree about where anything lives.
  *
- * All floating IO use T. Narrow saved states are recomputed in private FP32 workspace;
- * FP32 calls consume their supplied states. Every accumulator remains FP32.
+ * All floating IO use T. Backward consumes the supplied saved states for every dtype.
+ * Saved states are widened in UB; every accumulator remains FP32.
  * Output conversion happens after each output's reduction, not after each partial sum.
  *
  * Every UB row uses a 32B-aligned pitch (hAlignT / hAlignF elements) so all vector
@@ -46,7 +46,6 @@
 
 #include "kernel_operator.h"
 #include "single_layer_lstm_grad_regbase_tiling_data.h"
-#include "../../single_layer_lstm/arch35/single_layer_lstm_gate_math.h"
 
 namespace LstmGradRegbase {
 
@@ -64,12 +63,7 @@ constexpr int32_t OFFSET_I = 0;
 constexpr int32_t OFFSET_J = 1;
 constexpr int32_t OFFSET_F = 2;
 constexpr int32_t OFFSET_O = 3;
-constexpr int32_t PROJECTION_SOURCE_COUNT = 2; // input and recurrent projections
 constexpr int32_t REDUCTION_PAIR_SIZE = 2;
-constexpr int32_t REPLAY_TEMP_LAST_INDEX = 2;
-constexpr int32_t CELL_CACHE_PLANE = 5;
-constexpr int32_t HIDDEN_CACHE_PLANE = 6;
-constexpr int64_t REPLAY_PLANES = 7;
 constexpr int32_t DEFAULT_CHUNK_COLS = 64;
 constexpr int32_t DEFAULT_M_BLOCK = 64;
 constexpr int32_t PREVIOUS_TIME_STEP = -1;
@@ -88,6 +82,44 @@ constexpr Micro::CastTrait LSTM_CAST_DOWN_TRAIT = {
     Micro::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
+
+// Keep bfloat16 intermediates in FP32; narrow only at the public output boundary.
+// Matrix products still accumulate in FP32; float IO needs no conversion.
+template <typename T>
+__aicore__ inline void RoundToInput(Micro::RegTensor<float>& value, Micro::MaskReg& mask)
+{
+    if constexpr (!std::is_same<T, float>::value && !std::is_same<T, bfloat16_t>::value) {
+        Micro::RegTensor<T> narrow;
+        Micro::Cast<T, float, LSTM_CAST_DOWN_TRAIT>(narrow, value, mask);
+        Micro::Cast<float, T, LSTM_CAST_UP_TRAIT>(value, narrow, mask);
+    }
+}
+
+// A non-finite running sum has no finite rounding residual. Keep its IEEE
+// value in sum; do not let Inf-Inf in the correction poison later additions.
+__aicore__ inline void ClearNonFiniteCompensation(Micro::RegTensor<float>& comp, Micro::MaskReg& mask)
+{
+    Micro::RegTensor<float> zero, magnitude;
+    Micro::MaskReg finiteMask;
+    Micro::Duplicate(zero, 0.0f);
+    Micro::Abs(magnitude, comp, mask);
+    Micro::CompareScalar<float, AscendC::CMPMODE::LE>(finiteMask, magnitude, 3.4028234663852886e38f, mask);
+    Micro::Select(comp, comp, zero, finiteMask);
+}
+
+// Include the rounded product's residual in the compensated dot product.
+// If the product is non-finite, only its IEEE value participates in the sum.
+__aicore__ inline void CompensateProductRounding(Micro::RegTensor<float>& comp, Micro::RegTensor<float>& prod,
+                                                 Micro::RegTensor<float>& lhs, Micro::RegTensor<float>& rhs,
+                                                 Micro::MaskReg& mask)
+{
+    Micro::RegTensor<float> zero, residual;
+    Micro::Duplicate(zero, 0.0f);
+    Micro::Sub(residual, zero, prod, mask);
+    Micro::MulAddDst(residual, lhs, rhs, mask);
+    ClearNonFiniteCompensation(residual, mask);
+    Micro::Sub(comp, comp, residual, mask);
+}
 
 // dtype-generic UB load into fp32 lanes (32B-aligned offset; masked-off lanes zeroed)
 template <typename T>
@@ -140,7 +172,6 @@ public:
         inputSize_ = static_cast<int32_t>(tiling->inputSize);
         hidden_ = static_cast<int32_t>(tiling->hiddenSize);
         isBias_ = tiling->isBias != 0;
-        biasComponents_ = static_cast<int32_t>(tiling->biasComponents);
         backward_ = tiling->direction != 0;
         gateOrder_ = static_cast<int32_t>(tiling->gateOrder);
         usedCores_ = static_cast<int32_t>(tiling->usedCores);
@@ -176,7 +207,6 @@ public:
 
         xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
         wGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(w));
-        biasGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(bias));
         dyGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dy));
         dhGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dh));
         dcGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dc));
@@ -194,24 +224,19 @@ public:
         dxGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dx));
         dhPrevGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dhPrev));
         dcPrevGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dcPrev));
-        /* THE TIME AND BATCH SUMS FOR dw AND db ACCUMULATE AT fp32, NEVER AT THE OPERATOR'S WIDTH.
-         *
-         * Each block on either axis contributes a partial sum, and adding those at a narrow width
-         * rounds every one of them: measured at T=64 B=2 I=128 H=128 bfloat16, mare reached 11.4 on
-         * dw and 14.9 on db against a limit of 2.0, while the same shape at float32 passed. At
-         * float the accumulator IS the output and this aliases it, so nothing is copied and nothing
-         * is narrowed; at half and bfloat16 it is the caller's workspace, and each core
-         * narrows the columns it owns into dw once, after its last block. */
+        // Narrow IO uses FP32 batch-reduction buffers, then materializes each time step's
+        // parameter delta and accumulated parameter gradient at the public dtype.
         if constexpr (std::is_same<T, float>::value) {
             dwAccGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(dw));
             dbAccGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(db));
         } else {
             dwAccGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace));
             dbAccGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace) + static_cast<int64_t>(gates_) * cols_);
-            replayPlaneSize_ = static_cast<int64_t>(timeStep_) * bBlock_ * hidden_;
-            replayGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace) +
-                                      static_cast<int64_t>(gates_) * (cols_ + 1) +
-                                      blockIdx_ * REPLAY_PLANES * replayPlaneSize_);
+            const int64_t stateBase = static_cast<int64_t>(gates_) * (cols_ + 1) +
+                                      2 * blockIdx_ * static_cast<int64_t>(batch_) * hidden_;
+            recurrentHGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace) + stateBase);
+            recurrentCGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(workspace) + stateBase +
+                                          static_cast<int64_t>(batch_) * hidden_);
         }
     }
 
@@ -220,7 +245,11 @@ public:
         if (blockIdx_ >= usedCores_ || mAll_ <= 0 || hidden_ <= 0) {
             return;
         }
-        /* Two nested block walks: the batch outside, the sequence inside.
+        if constexpr (!std::is_same<T, float>::value) {
+            ProcessNarrowSteps();
+            return;
+        }
+        /* FP32 uses two nested block walks: batch outside, sequence inside.
          *
          * Nothing crosses a batch cut -- h_t[b] depends only on h_{t-1}[b] -- so a batch block seeds
          * its own dh / dc, runs the whole sequence, and writes its own rows of dx, dh_prev and
@@ -235,9 +264,6 @@ public:
         for (int32_t b0 = 0; b0 < batch_; b0 += bBlock_) {
             b0_ = b0;
             bCur_ = ((batch_ - b0) < bBlock_) ? (batch_ - b0) : bBlock_;
-            if constexpr (!std::is_same<T, float>::value) {
-                ReplayForward();
-            }
             StageBatchState();
             Prologue();
             parity_ = 0;
@@ -255,17 +281,6 @@ public:
             }
             if (blockIdx_ == usedCores_ - 1) {
                 WritePrevState();
-            }
-        }
-        /* THE ONE NARROWING, AFTER EVERY BLOCK ON BOTH AXES. Everything above accumulated at fp32;
-         * this is where dw and db reach the operator's own width. Compiled away at float, where the
-         * accumulators ARE the outputs. Each core narrows only the columns it owns, so there is
-         * nothing to synchronise. */
-        if constexpr (!std::is_same<T, float>::value) {
-            FinishColumns();
-            if (blockIdx_ == usedCores_ - 1) {
-                FinishTailColumns();
-                FinishDb();
             }
         }
     }
@@ -311,6 +326,58 @@ private:
             return static_cast<int64_t>(blkA0_) * batch_ + m0;
         }
         return static_cast<int64_t>(blkA0_ + m0 / bCur_) * batch_ + b0_ + (m0 % bCur_);
+    }
+
+    // Keep recurrent state semantics per time step, but accumulate parameter gradients
+    // in their FP32 workspace across the full sequence and narrow them once at the end.
+    // Each core carries its own recurrent state, so no cross-core fence is needed.
+    __aicore__ inline void ProcessNarrowSteps()
+    {
+        for (int32_t lt = timeStep_ - 1; lt >= 0; --lt) {
+            narrowAccumulate_ = lt != timeStep_ - 1;
+            for (int32_t b0 = 0; b0 < batch_; b0 += bBlock_) {
+                b0_ = b0;
+                bCur_ = ((batch_ - b0) < bBlock_) ? (batch_ - b0) : bBlock_;
+                StageBatchState();
+                if (!narrowAccumulate_) {
+                    Prologue();
+                } else {
+                    PipeSync<AscendC::HardEvent::MTE3_MTE2>();
+                    CopyInRows<float>(layout_.dhCurOff, recurrentHGm_, bCur_, hidden_, b0_);
+                    CopyInRows<float>(layout_.dcCurOff, recurrentCGm_, bCur_, hidden_, b0_);
+                    PipeSync<AscendC::HardEvent::MTE2_V>();
+                }
+                parity_ = 0;
+                blkLt0_ = lt;
+                blkSteps_ = 1;
+                blkRows_ = bCur_;
+                blkA0_ = BlockActBase();
+                StageBlock();
+                ProcessChain();
+                ProcessColumns();
+                if (blockIdx_ == usedCores_ - 1) {
+                    ProcessTail();
+                    if (lt == 0) {
+                        WritePrevState();
+                    }
+                }
+                PipeSync<AscendC::HardEvent::V_MTE3>();
+                const int64_t stateOff = static_cast<int64_t>(finalParity_) * bCur_ * haF_ * FP32_SIZE;
+                AscendC::DataCopyExtParams copy{static_cast<uint16_t>(bCur_),
+                                                static_cast<uint32_t>(hidden_ * FP32_SIZE), 0, 0, 0};
+                AscendC::DataCopyPad(recurrentHGm_[static_cast<int64_t>(b0_) * hidden_],
+                                     UbTensor<float>(layout_.dhCurOff + stateOff), copy);
+                AscendC::DataCopyPad(recurrentCGm_[static_cast<int64_t>(b0_) * hidden_],
+                                     UbTensor<float>(layout_.dcCurOff + stateOff), copy);
+                PipeSync<AscendC::HardEvent::MTE3_V>();
+            }
+        }
+        narrowAccumulate_ = false;
+        FinishColumns();
+        if (blockIdx_ == usedCores_ - 1) {
+            FinishTailColumns();
+            FinishDb();
+        }
     }
 
     /* `gmRow0` is a ROW index into a [rows, rowElems] GM matrix; the blocking is the only thing
@@ -404,129 +471,6 @@ private:
         AscendC::DataCopyPad(UbTensor<T>(layout_.wChunkOff), wGm_[static_cast<int64_t>(gRow0) * cols_ + col0], p, pad);
     }
 
-    // Compute one affine gate row tile using FP32 products/reductions. Only the
-    // input and weight storage are narrow; recurrent h never leaves FP32 here.
-    __aicore__ inline void ReplayDot(int32_t actT, int32_t b, int32_t slot, int64_t gateOff)
-    {
-        for (int32_t source = 0; source < PROJECTION_SOURCE_COUNT; ++source) {
-            const int32_t width = source == 0 ? inputSize_ : hidden_;
-            for (int32_t c0 = 0; c0 < width; c0 += chunkCols_) {
-                const int32_t cw = width - c0 < chunkCols_ ? width - c0 : chunkCols_;
-                int64_t inputOff = layout_.initHOff + (static_cast<int64_t>(b) * haF_ + c0) * sizeof(float);
-                if (source == 0) {
-                    CopyInRowsF32(layout_.xChunkOff, xGm_, 1, cw,
-                                  (static_cast<int64_t>(actT) * batch_ + b0_ + b) * inputSize_ + c0, cw);
-                    inputOff = layout_.xChunkOff;
-                }
-                for (int32_t g0 = 0; g0 < hidden_; g0 += gBlock_) {
-                    const int32_t gc = hidden_ - g0 < gBlock_ ? hidden_ - g0 : gBlock_;
-                    PipeSync<AscendC::HardEvent::V_MTE2>();
-                    StageWChunk((source == 0 ? 0 : inputSize_) + c0, cw, slot * hidden_ + g0, gc);
-                    PipeSync<AscendC::HardEvent::MTE2_V>();
-                    auto* weights = UbPtr<T>(layout_.wChunkOff);
-                    auto* input = UbPtr<float>(inputOff);
-                    auto* gate = UbPtr<float>(gateOff);
-                    const uint32_t weightPitch = AlignUpI64(cw * sizeof(T), UB_BLOCK_BYTES) / sizeof(T);
-                    const uint16_t rows = static_cast<uint16_t>(gc);
-                    const uint32_t columns = cw;
-                    const uint32_t gateStart = g0;
-                    __VEC_SCOPE__
-                    {
-                        Micro::MaskReg one = Micro::CreateMask<float, Micro::MaskPattern::VL1>();
-                        uint32_t count = columns;
-                        Micro::MaskReg mask = Micro::UpdateMask<float>(count);
-                        Micro::RegTensor<float> x, w, product, partial, sum;
-                        Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(x, input);
-                        for (uint16_t g = 0; g < rows; ++g) {
-                            LoadF32<T>(weights, w, mask, g * weightPitch);
-                            Micro::Mul(product, x, w, mask);
-                            Micro::ReduceSum(partial, product, mask);
-                            Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sum, gate + gateStart + g);
-                            Micro::Add(sum, sum, partial, one);
-                            Micro::DataCopy<float, Micro::StoreDist::DIST_FIRST_ELEMENT_B32>(gate + gateStart + g, sum,
-                                                                                             one);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    __aicore__ inline void ReplayForward()
-    {
-        AscendC::PipeBarrier<PIPE_ALL>();
-        CopyInRowsF32(layout_.initHOff, initHGm_, bCur_, hidden_, static_cast<int64_t>(b0_) * hidden_, hidden_);
-        CopyInRowsF32(layout_.initCOff, initCGm_, bCur_, hidden_, static_cast<int64_t>(b0_) * hidden_, hidden_);
-        const int64_t offsets[REPLAY_PLANES] = {layout_.igOff,   layout_.jgOff,    layout_.fgOff,   layout_.ogOff,
-                                                layout_.tanhOff, layout_.initCOff, layout_.initHOff};
-        const int32_t slots[LSTM_GATE_NUM] = {OFFSET_I, slotJ_, slotF_, OFFSET_O};
-        // Gate helpers clear comparison tails starting at n. Use the padded UB
-        // row width so that address is 32B aligned; only hidden_ lanes reach GM.
-        const uint32_t gateElements = haF_;
-        for (int32_t step = 0; step < timeStep_; ++step) {
-            const int32_t actT = backward_ ? timeStep_ - 1 - step : step;
-            for (int32_t b = 0; b < bCur_; ++b) {
-                for (int32_t gate = 0; gate < static_cast<int32_t>(LSTM_GATE_NUM); ++gate) {
-                    auto dst = UbTensor<float>(offsets[gate]);
-                    AscendC::Duplicate(dst, 0.0f, gateElements);
-                    // The two original biases are widened separately. Fused [4H]
-                    // bias callers remain supported without changing their ABI.
-                    for (int32_t part = 0; part < biasComponents_; ++part) {
-                        CopyInRowsF32(layout_.dbStageOff, biasGm_, 1, hidden_,
-                                      static_cast<int64_t>(part) * gates_ + slots[gate] * hidden_, hidden_);
-                        AscendC::Add(dst, dst, UbTensor<float>(layout_.dbStageOff), hidden_);
-                    }
-                    ReplayDot(actT, b, slots[gate], offsets[gate]);
-                }
-                const int64_t stateOff = static_cast<int64_t>(b) * haF_ * sizeof(float);
-                SingleLayerLstmVec::SingleLayerLstmGates(
-                    UbTensor<float>(layout_.igOff), UbTensor<float>(layout_.fgOff), UbTensor<float>(layout_.jgOff),
-                    UbTensor<float>(layout_.ogOff), UbTensor<float>(layout_.initCOff + stateOff),
-                    UbTensor<float>(layout_.initHOff + stateOff), UbTensor<float>(layout_.tanhOff),
-                    UbTensor<float>(layout_.replayScratchOff),
-                    UbTensor<float>(layout_.replayScratchOff + layout_.replayPitch),
-                    UbTensor<float>(layout_.replayScratchOff + REPLAY_TEMP_LAST_INDEX * layout_.replayPitch),
-                    UbTensor<uint8_t>(layout_.replayMaskOff), gateElements);
-                PipeSync<AscendC::HardEvent::V_MTE3>();
-                AscendC::DataCopyExtParams p{1, static_cast<uint32_t>(hidden_ * sizeof(float)), 0, 0, 0};
-                for (int32_t plane = 0; plane < REPLAY_PLANES; ++plane) {
-                    const int64_t src = offsets[plane] + (plane >= CELL_CACHE_PLANE ? stateOff : 0);
-                    const int64_t dst = plane * replayPlaneSize_ + (static_cast<int64_t>(actT) * bBlock_ + b) * hidden_;
-                    AscendC::DataCopyPad(replayGm_[dst], UbTensor<float>(src), p);
-                }
-                // A following batch row reuses gate UB; a following time step
-                // reads the updated recurrent state. Order both against DMA.
-                AscendC::PipeBarrier<PIPE_ALL>();
-            }
-        }
-    }
-
-    __aicore__ inline void StageReplayBlock()
-    {
-        AscendC::PipeBarrier<PIPE_ALL>();
-        CopyInBlockPlane(layout_.dyOff, dyGm_, hidden_, blkA0_);
-        const int64_t offsets[REPLAY_PLANES] = {layout_.igOff,   layout_.jgOff, layout_.fgOff, layout_.ogOff,
-                                                layout_.tanhOff, layout_.cOff,  layout_.hOff};
-        for (int32_t plane = 0; plane < REPLAY_PLANES; ++plane) {
-            for (int32_t t = 0; t < blkSteps_; ++t) {
-                CopyInRows(offsets[plane] + static_cast<int64_t>(t) * bCur_ * haF_ * sizeof(float), replayGm_, bCur_,
-                           hidden_, plane * replayPlaneSize_ / hidden_ + static_cast<int64_t>(blkA0_ + t) * bBlock_);
-            }
-        }
-        if (blkLt0_ == 0) {
-            CopyInRowsF32(layout_.initHOff, initHGm_, bCur_, hidden_, static_cast<int64_t>(b0_) * hidden_, hidden_);
-            CopyInRowsF32(layout_.initCOff, initCGm_, bCur_, hidden_, static_cast<int64_t>(b0_) * hidden_, hidden_);
-        } else {
-            const int32_t outsideT = backward_ ? blkA0_ + blkSteps_ : blkA0_ - 1;
-            const int64_t row = static_cast<int64_t>(outsideT) * bBlock_;
-            CopyInRows(layout_.initHOff, replayGm_, bCur_, hidden_,
-                       HIDDEN_CACHE_PLANE * replayPlaneSize_ / hidden_ + row);
-            CopyInRows(layout_.initCOff, replayGm_, bCur_, hidden_,
-                       CELL_CACHE_PLANE * replayPlaneSize_ / hidden_ + row);
-        }
-        PipeSync<AscendC::HardEvent::MTE2_V>();
-    }
-
     /* Staged per time block: the eight planes for this block's rows, plus the ONE state that sits
      * just outside it.
      *
@@ -536,10 +480,6 @@ private:
      * `useInit` arm and ProcessTail's `useInitH` arm already mean "reach outside". */
     __aicore__ inline void StageBlock()
     {
-        if constexpr (!std::is_same<T, float>::value) {
-            StageReplayBlock();
-            return;
-        }
         /* Wait for the previous block to stop reading these regions before overwriting them. Every
          * plane below is re-staged per block into the same UB address, and the previous block's last
          * reader is ProcessTail's dw[:, I:I+H] loop, which nothing else orders against this DMA.
@@ -693,31 +633,56 @@ private:
                          * 1.4x worse. Revisit only with a saturated case that fails here. */
                         // dh_t, dc_t
                         Micro::Add(dht, dyR, dhN, mH);
+                        RoundToInput<T>(dht, mH);
                         Micro::Mul(tmpC, oR, dht, mH);
+                        RoundToInput<T>(tmpC, mH);
                         Micro::Mul(t0, tanhR, tanhR, mH);
+                        RoundToInput<T>(t0, mH);
                         Micro::Sub(t0, one, t0, mH);
+                        RoundToInput<T>(t0, mH);
                         Micro::Mul(dcT, t0, tmpC, mH);
+                        RoundToInput<T>(dcT, mH);
                         Micro::Add(dcT, dcT, dcN, mH);
+                        RoundToInput<T>(dcT, mH);
                         // do
                         Micro::Sub(t0, one, oR, mH);
-                        Micro::Mul(dO, tmpC, tanhR, mH);
+                        RoundToInput<T>(t0, mH);
+                        Micro::Mul(dO, dht, tanhR, mH);
+                        RoundToInput<T>(dO, mH);
+                        Micro::Mul(dO, dO, oR, mH);
+                        RoundToInput<T>(dO, mH);
                         Micro::Mul(dO, dO, t0, mH);
+                        RoundToInput<T>(dO, mH);
                         // dj -- 1 - j*j, see the note at the tanh derivative above
                         Micro::Mul(tmpJ, dcT, iR, mH);
+                        RoundToInput<T>(tmpJ, mH);
                         Micro::Mul(t0, jR, jR, mH);
+                        RoundToInput<T>(t0, mH);
                         Micro::Sub(t0, one, t0, mH);
+                        RoundToInput<T>(t0, mH);
                         Micro::Mul(dJ, tmpJ, t0, mH);
+                        RoundToInput<T>(dJ, mH);
                         // di
                         Micro::Sub(t0, one, iR, mH);
-                        Micro::Mul(dI, t0, jR, mH);
-                        Micro::Mul(dI, dI, tmpJ, mH);
+                        RoundToInput<T>(t0, mH);
+                        Micro::Mul(dI, dcT, jR, mH);
+                        RoundToInput<T>(dI, mH);
+                        Micro::Mul(dI, dI, iR, mH);
+                        RoundToInput<T>(dI, mH);
+                        Micro::Mul(dI, dI, t0, mH);
+                        RoundToInput<T>(dI, mH);
                         // df
                         Micro::Sub(t0, one, fR, mH);
-                        Micro::Mul(dF, t0, fR, mH);
-                        Micro::Mul(dF, dF, dcT, mH);
-                        Micro::Mul(dF, dF, cPrevR, mH);
+                        RoundToInput<T>(t0, mH);
+                        Micro::Mul(dF, dcT, cPrevR, mH);
+                        RoundToInput<T>(dF, mH);
+                        Micro::Mul(dF, dF, fR, mH);
+                        RoundToInput<T>(dF, mH);
+                        Micro::Mul(dF, dF, t0, mH);
+                        RoundToInput<T>(dF, mH);
                         // dc_prev
                         Micro::Mul(dcOut, dcT, fR, mH);
+                        RoundToInput<T>(dcOut, mH);
                         // store dgate slots + recurrent dc
                         Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dgateU + go + sI, dI, mH);
                         Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dgateU + go + sJ, dJ, mH);
@@ -784,6 +749,8 @@ private:
                                     Micro::Add(nxt, sum, y, mW);
                                     Micro::Sub(comp, nxt, sum, mW);
                                     Micro::Sub(comp, comp, y, mW);
+                                    CompensateProductRounding(comp, prod, wRow, sc, mW);
+                                    ClearNonFiniteCompensation(comp, mW);
                                     LoadF32<T>(wChunkU, wRow, mW, static_cast<uint32_t>(k + 1) * cwAlign);
                                     Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc, dgateU + go + k + 1);
                                     Micro::Mul(prod, wRow, sc, mW);
@@ -791,6 +758,8 @@ private:
                                     Micro::Add(sum, nxt, y, mW);
                                     Micro::Sub(comp, sum, nxt, mW);
                                     Micro::Sub(comp, comp, y, mW);
+                                    CompensateProductRounding(comp, prod, wRow, sc, mW);
+                                    ClearNonFiniteCompensation(comp, mW);
                                 }
                                 /* The odd tail, and the compensation folded back in. `comp` holds
                                  * what the accumulator dropped; adding it back is the last chance
@@ -804,12 +773,31 @@ private:
                                     Micro::Add(nxt, sum, y, mW);
                                     Micro::Sub(comp, nxt, sum, mW);
                                     Micro::Sub(comp, comp, y, mW);
+                                    CompensateProductRounding(comp, prod, wRow, sc, mW);
+                                    ClearNonFiniteCompensation(comp, mW);
                                     Micro::Sub(sum, nxt, comp, mW);
                                     Micro::Duplicate(comp, 0.0f);
                                 }
                                 Micro::Sub(sum, sum, comp, mW);
                                 Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dhDst + bo, sum, mW);
                             }
+                        }
+                    }
+                }
+            }
+            if constexpr (!std::is_same<T, float>::value) {
+                __VEC_SCOPE__
+                {
+                    Micro::LocalMemBar<Micro::MemType::VEC_STORE, Micro::MemType::VEC_LOAD>();
+                    for (uint16_t row = 0; row < B; ++row) {
+                        uint32_t remaining = H;
+                        for (uint16_t ho = 0; ho < hSteps; ++ho) {
+                            Micro::MaskReg mask = Micro::UpdateMask<float>(remaining);
+                            Micro::RegTensor<float> value;
+                            const uint32_t off = static_cast<uint32_t>(row) * haF + ho * VL_F32;
+                            Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(value, dhDst + off);
+                            RoundToInput<T>(value, mask);
+                            Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dhDst + off, value, mask);
                         }
                     }
                 }
@@ -923,6 +911,8 @@ private:
                             Micro::Add(nxt, sum, y, mW);
                             Micro::Sub(comp, nxt, sum, mW);
                             Micro::Sub(comp, comp, y, mW);
+                            CompensateProductRounding(comp, prod, wRow, sc, mW);
+                            ClearNonFiniteCompensation(comp, mW);
                             LoadF32<T>(wChunkU, wRow, mW, static_cast<uint32_t>(k + 1) * wAlignU);
                             Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc, dgateU + gOff + k + 1);
                             Micro::Mul(prod, wRow, sc, mW);
@@ -930,6 +920,8 @@ private:
                             Micro::Add(sum, nxt, y, mW);
                             Micro::Sub(comp, sum, nxt, mW);
                             Micro::Sub(comp, comp, y, mW);
+                            CompensateProductRounding(comp, prod, wRow, sc, mW);
+                            ClearNonFiniteCompensation(comp, mW);
                         }
                         for (uint16_t u = 0; u < gTail; ++u) {
                             uint16_t k = static_cast<uint16_t>(gPairs * REDUCTION_PAIR_SIZE);
@@ -940,6 +932,8 @@ private:
                             Micro::Add(nxt, sum, y, mW);
                             Micro::Sub(comp, nxt, sum, mW);
                             Micro::Sub(comp, comp, y, mW);
+                            CompensateProductRounding(comp, prod, wRow, sc, mW);
+                            ClearNonFiniteCompensation(comp, mW);
                             Micro::Sub(sum, nxt, comp, mW);
                             Micro::Duplicate(comp, 0.0f);
                         }
@@ -958,48 +952,37 @@ private:
                     Micro::LocalMemBar<Micro::MemType::VEC_STORE, Micro::MemType::VEC_LOAD>();
                     uint32_t maskCntW = static_cast<uint32_t>(w);
                     Micro::MaskReg mW = Micro::UpdateMask<float>(maskCntW);
+                    const uint16_t blockBatch = static_cast<uint16_t>(bCur_);
+                    const uint16_t blockSteps = static_cast<uint16_t>(blkSteps_);
                     for (uint16_t k = 0; k < gLoop; ++k) {
-                        // compensated summation, in the form spelled out at dh_next's reduction
-                        Micro::RegTensor<float> sum, nxt, comp, xRow, sc, prod, y;
+                        Micro::RegTensor<float> sum, nxt, comp, zero, xRow, sc, prod, y;
                         Micro::Duplicate(sum, 0.0f);
                         Micro::Duplicate(comp, 0.0f);
-                        /* Every for inside a __VEC_SCOPE__ needs its own initialiser, so the
-                         * unrolled body and the tail are counted rather than sharing a cursor. */
-                        const uint16_t mPairs = static_cast<uint16_t>(mLoop / REDUCTION_PAIR_SIZE);
-                        const uint16_t mTail = static_cast<uint16_t>(mLoop - mPairs * REDUCTION_PAIR_SIZE);
-                        for (uint16_t q = 0; q < mPairs; ++q) {
-                            uint16_t mi = static_cast<uint16_t>(q * REDUCTION_PAIR_SIZE);
-                            uint32_t g0 = static_cast<uint32_t>(mi) * LSTM_GATE_NUM * haF + slotBase + k;
-                            LoadF32<float>(xChunkU, xRow, mW, static_cast<uint32_t>(mi) * xAlignU);
-                            Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc, dgateU + g0);
-                            Micro::Mul(prod, xRow, sc, mW);
-                            Micro::Sub(y, prod, comp, mW);
-                            Micro::Add(nxt, sum, y, mW);
-                            Micro::Sub(comp, nxt, sum, mW);
-                            Micro::Sub(comp, comp, y, mW);
-                            LoadF32<float>(xChunkU, xRow, mW, static_cast<uint32_t>(mi + 1) * xAlignU);
-                            Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(sc,
-                                                                                  dgateU + g0 + LSTM_GATE_NUM * haF);
-                            Micro::Mul(prod, xRow, sc, mW);
-                            Micro::Sub(y, prod, comp, mW);
-                            Micro::Add(sum, nxt, y, mW);
-                            Micro::Sub(comp, sum, nxt, mW);
-                            Micro::Sub(comp, comp, y, mW);
+                        Micro::Duplicate(zero, 0.0f);
+                        for (uint16_t order = 0; order < blockSteps; ++order) {
+                            const uint16_t localTime = backward_ ? order :
+                                                                   static_cast<uint16_t>(blockSteps - 1 - order);
+                            for (uint16_t b = 0; b < blockBatch; ++b) {
+                                const uint16_t mi = static_cast<uint16_t>(localTime * blockBatch + b);
+                                LoadF32<float>(xChunkU, xRow, mW, static_cast<uint32_t>(mi) * xAlignU);
+                                Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(
+                                    sc, dgateU + static_cast<uint32_t>(mi) * LSTM_GATE_NUM * haF + slotBase + k);
+                                Micro::Mul(prod, xRow, sc, mW);
+                                if constexpr (std::is_same<T, float>::value) {
+                                    Micro::Sub(y, prod, comp, mW);
+                                    Micro::Add(nxt, sum, y, mW);
+                                    Micro::Sub(comp, nxt, sum, mW);
+                                    Micro::Sub(comp, comp, y, mW);
+                                    ClearNonFiniteCompensation(comp, mW);
+                                } else {
+                                    Micro::Add(nxt, sum, prod, mW);
+                                }
+                                Micro::Add(sum, nxt, zero, mW);
+                            }
                         }
-                        for (uint16_t u = 0; u < mTail; ++u) {
-                            uint16_t mi = static_cast<uint16_t>(mPairs * REDUCTION_PAIR_SIZE);
-                            LoadF32<float>(xChunkU, xRow, mW, static_cast<uint32_t>(mi) * xAlignU);
-                            Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(
-                                sc, dgateU + static_cast<uint32_t>(mi) * LSTM_GATE_NUM * haF + slotBase + k);
-                            Micro::Mul(prod, xRow, sc, mW);
-                            Micro::Sub(y, prod, comp, mW);
-                            Micro::Add(nxt, sum, y, mW);
-                            Micro::Sub(comp, nxt, sum, mW);
-                            Micro::Sub(comp, comp, y, mW);
-                            Micro::Sub(sum, nxt, comp, mW);
-                            Micro::Duplicate(comp, 0.0f);
+                        if constexpr (std::is_same<T, float>::value) {
+                            Micro::Sub(sum, sum, comp, mW);
                         }
-                        Micro::Sub(sum, sum, comp, mW);
                         Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dwAccU + static_cast<uint32_t>(k) * CW, sum,
                                                                             mW);
                     }
@@ -1120,7 +1103,9 @@ private:
         p.blockLen = static_cast<uint32_t>(w * FP32_SIZE);
         p.srcStride = static_cast<uint32_t>((static_cast<int64_t>(chunkCols_) * FP32_SIZE - burst) / UB_BLOCK_BYTES);
         p.dstStride = static_cast<uint32_t>((cols_ - w) * FP32_SIZE);
-        if (b0_ != 0 || blkLt0_ != ((timeStep_ - 1) / tBlock_) * tBlock_) {
+        // FP32 also accumulates across time blocks within the first batch block.
+        if (b0_ != 0 || (std::is_same<T, float>::value && blkLt0_ + blkSteps_ < timeStep_) ||
+            (!std::is_same<T, float>::value && narrowAccumulate_)) {
             AscendC::SetAtomicAdd<float>();
         }
         AscendC::DataCopyPad(dwAccGm_[static_cast<int64_t>(gRow0) * cols_ + col0], UbTensor<float>(layout_.dwAccOff),
@@ -1167,8 +1152,6 @@ private:
                      * plain running total was measured at T=32 B=1 I=16 H=64 float32 to put
                      * dw[:, I:I+H]'s worst element at mare 2.3 against a limit of 2.0 while its mean
                      * ratio was 0.008 -- one cancellation-dominated element, not the aggregate. */
-                    const int32_t ltIn0 = backward_ ? 0 : 1;
-                    const int32_t ltInN = backward_ ? (blkSteps_ - 1) : blkSteps_;
                     const int32_t ltEdge = backward_ ? (blkSteps_ - 1) : 0;
                     const int32_t hShift = backward_ ? 1 : PREVIOUS_TIME_STEP;
                     const uint32_t rowStrideS = static_cast<uint32_t>(bCur_) * haF;
@@ -1180,51 +1163,30 @@ private:
                         Micro::MaskReg mW = Micro::UpdateMask<float>(maskCntW);
                         Micro::RegTensor<float> zero;
                         Micro::Duplicate(zero, 0.0f);
-                        const uint16_t ltCount = static_cast<uint16_t>((ltInN > ltIn0) ? (ltInN - ltIn0) : 0);
+                        const uint16_t blockSteps = static_cast<uint16_t>(blkSteps_);
                         for (uint16_t k = 0; k < gLoop; ++k) {
-                            /* Compensated summation, no unrolling: the compensation is what the
-                             * four interleaved partial sums used to approximate, an order of
-                             * magnitude better at no measurable device cost. The accumulator is
-                             * copied with an add of zero rather than the two-step role swap dh_next
-                             * and dw use -- those reduce over one axis and can pair their terms,
-                             * while this walks (timestep, batch row) pairs whose count is
-                             * B * ltCount plus one edge step, so a pairing would straddle the inner
-                             * loop. Adding +0.0 is exact for every finite value. */
-                            Micro::RegTensor<float> sum, nxt, comp, hRow, sc, prod, y;
+                            Micro::RegTensor<float> sum, nxt, hRow, sc, prod;
                             Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(sum,
                                                                                dwAccU + static_cast<uint32_t>(k) * CW);
-                            Micro::Duplicate(comp, 0.0f);
-                            for (uint16_t t = 0; t < ltCount; ++t) {
-                                int32_t lt = ltIn0 + static_cast<int32_t>(t);
+                            for (uint16_t order = 0; order < blockSteps; ++order) {
+                                const int32_t lt = backward_ ? static_cast<int32_t>(order) :
+                                                               blkSteps_ - 1 - static_cast<int32_t>(order);
                                 for (uint16_t b = 0; b < B; ++b) {
-                                    LoadF32<float>(hU, hRow, mW,
-                                                   static_cast<uint32_t>(lt + hShift) * rowStrideS +
-                                                       static_cast<uint32_t>(b) * haF + hcOff);
+                                    if (lt == ltEdge) {
+                                        LoadF32<float>(initHU, hRow, mW, static_cast<uint32_t>(b) * haF + hcOff);
+                                    } else {
+                                        LoadF32<float>(hU, hRow, mW,
+                                                       static_cast<uint32_t>(lt + hShift) * rowStrideS +
+                                                           static_cast<uint32_t>(b) * haF + hcOff);
+                                    }
                                     Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(
                                         sc, dgateU + static_cast<uint32_t>(lt) * gateStride +
                                                 static_cast<uint32_t>(b) * LSTM_GATE_NUM * haF + slotBase + k);
                                     Micro::Mul(prod, hRow, sc, mW);
-                                    Micro::Sub(y, prod, comp, mW);
-                                    Micro::Add(nxt, sum, y, mW);
-                                    Micro::Sub(comp, nxt, sum, mW);
-                                    Micro::Sub(comp, comp, y, mW);
+                                    Micro::Add(nxt, sum, prod, mW);
                                     Micro::Add(sum, nxt, zero, mW);
                                 }
                             }
-                            // the one step whose h_prev lies outside the block
-                            for (uint16_t b = 0; b < B; ++b) {
-                                LoadF32<float>(initHU, hRow, mW, static_cast<uint32_t>(b) * haF + hcOff);
-                                Micro::DataCopy<float, Micro::LoadDist::DIST_BRC_B32>(
-                                    sc, dgateU + static_cast<uint32_t>(ltEdge) * gateStride +
-                                            static_cast<uint32_t>(b) * LSTM_GATE_NUM * haF + slotBase + k);
-                                Micro::Mul(prod, hRow, sc, mW);
-                                Micro::Sub(y, prod, comp, mW);
-                                Micro::Add(nxt, sum, y, mW);
-                                Micro::Sub(comp, nxt, sum, mW);
-                                Micro::Sub(comp, comp, y, mW);
-                                Micro::Add(sum, nxt, zero, mW);
-                            }
-                            Micro::Sub(sum, sum, comp, mW);
                             Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dwAccU + static_cast<uint32_t>(k) * CW,
                                                                                 sum, mW);
                         }
@@ -1238,9 +1200,10 @@ private:
         if (isBias_) {
             __local_mem__ float* dbStage = UbPtr<float>(layout_.dbStageOff);
             __local_mem__ float* dbComp = UbPtr<float>(layout_.dbCompOff);
-            const bool firstBlock = b0_ == 0 && blkLt0_ == ((timeStep_ - 1) / tBlock_) * tBlock_;
-            const bool lastBlock = b0_ + bCur_ == batch_ && blkLt0_ == 0;
-            const uint16_t mLoop = static_cast<uint16_t>(blkRows_);
+            const bool firstBlock = b0_ == 0 && ((!std::is_same<T, float>::value && !narrowAccumulate_) ||
+                                                 (std::is_same<T, float>::value &&
+                                                  blkLt0_ == ((timeStep_ - 1) / tBlock_) * tBlock_));
+            const bool lastBlock = b0_ + bCur_ == batch_ && (!std::is_same<T, float>::value || blkLt0_ == 0);
             const uint16_t hSteps = static_cast<uint16_t>((hidden_ + VL_F32 - 1) / VL_F32);
             /* The previous block's db copy reads this same staging buffer, and these stores would
              * otherwise overtake it -- the write-after-read counterpart of the MTE3_V that
@@ -1266,34 +1229,34 @@ private:
                             Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(sum, dbStage + slotOff);
                             Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(comp, dbComp + slotOff);
                         }
-                        const uint16_t mPairs = static_cast<uint16_t>(mLoop / REDUCTION_PAIR_SIZE);
-                        const uint16_t mTail = static_cast<uint16_t>(mLoop - mPairs * REDUCTION_PAIR_SIZE);
-                        for (uint16_t q = 0; q < mPairs; ++q) {
-                            uint16_t m = static_cast<uint16_t>(q * REDUCTION_PAIR_SIZE);
-                            uint32_t o0 = static_cast<uint32_t>(m) * LSTM_GATE_NUM * haF + slotOff;
-                            Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(r, dgateU + o0);
-                            Micro::Sub(y, r, comp, mH);
-                            Micro::Add(nxt, sum, y, mH);
-                            Micro::Sub(comp, nxt, sum, mH);
-                            Micro::Sub(comp, comp, y, mH);
-                            Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(r, dgateU + o0 + LSTM_GATE_NUM * haF);
-                            Micro::Sub(y, r, comp, mH);
-                            Micro::Add(sum, nxt, y, mH);
-                            Micro::Sub(comp, sum, nxt, mH);
-                            Micro::Sub(comp, comp, y, mH);
+                        if constexpr (!std::is_same<T, float>::value) {
+                            Micro::Duplicate(comp, 0.0f);
                         }
-                        for (uint16_t u = 0; u < mTail; ++u) {
-                            uint16_t m = static_cast<uint16_t>(mPairs * REDUCTION_PAIR_SIZE);
-                            Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(
-                                r, dgateU + static_cast<uint32_t>(m) * LSTM_GATE_NUM * haF + slotOff);
-                            Micro::Sub(y, r, comp, mH);
-                            Micro::Add(nxt, sum, y, mH);
-                            Micro::Sub(comp, nxt, sum, mH);
-                            Micro::Sub(comp, comp, y, mH);
-                            Micro::Add(sum, nxt, zero, mH);
+                        const uint16_t blockSteps = static_cast<uint16_t>(blkSteps_);
+                        const uint16_t blockBatch = static_cast<uint16_t>(bCur_);
+                        for (uint16_t order = 0; order < blockSteps; ++order) {
+                            const uint16_t localTime = backward_ ? order :
+                                                                   static_cast<uint16_t>(blockSteps - 1 - order);
+                            for (uint16_t b = 0; b < blockBatch; ++b) {
+                                const uint16_t m = static_cast<uint16_t>(localTime * blockBatch + b);
+                                Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(
+                                    r, dgateU + static_cast<uint32_t>(m) * LSTM_GATE_NUM * haF + slotOff);
+                                if constexpr (std::is_same<T, float>::value) {
+                                    Micro::Sub(y, r, comp, mH);
+                                    Micro::Add(nxt, sum, y, mH);
+                                    Micro::Sub(comp, nxt, sum, mH);
+                                    Micro::Sub(comp, comp, y, mH);
+                                    ClearNonFiniteCompensation(comp, mH);
+                                } else {
+                                    Micro::Add(nxt, sum, r, mH);
+                                }
+                                Micro::Add(sum, nxt, zero, mH);
+                            }
                         }
                         if (lastBlock) {
-                            Micro::Sub(sum, sum, comp, mH);
+                            if constexpr (std::is_same<T, float>::value) {
+                                Micro::Sub(sum, sum, comp, mH);
+                            }
                         }
                         Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dbStage + slotOff, sum, mH);
                         Micro::DataCopy<float, Micro::StoreDist::DIST_NORM>(dbComp + slotOff, comp, mH);
@@ -1407,6 +1370,13 @@ private:
                         AscendC::DataCopyPadExtParams<float> pad{false, 0, 0, 0};
                         AscendC::DataCopyPad(UbTensor<float>(layout_.dwAccOff), dwAccGm_[gRow0 * cols_ + col0], p, pad);
                     }
+                    if (narrowAccumulate_) {
+                        AscendC::DataCopyExtParams prior{static_cast<uint16_t>(gCur),
+                                                         static_cast<uint32_t>(w * sizeof(T)),
+                                                         static_cast<uint32_t>((cols_ - w) * sizeof(T)), 0, 0};
+                        AscendC::DataCopyPadExtParams<T> pad{false, 0, 0, 0};
+                        AscendC::DataCopyPad(UbTensor<T>(layout_.wChunkOff), dwGm_[gRow0 * cols_ + col0], prior, pad);
+                    }
                     PipeSync<AscendC::HardEvent::MTE2_V>();
                     NarrowDwAcc(w, wAlign, gCur);
                     PipeSync<AscendC::HardEvent::V_MTE3>();
@@ -1437,6 +1407,12 @@ private:
             for (uint16_t g = 0; g < GLoop; ++g) {
                 Micro::RegTensor<float> r;
                 Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(r, dwAccU + static_cast<uint32_t>(g) * CW);
+                RoundToInput<T>(r, mW);
+                if (narrowAccumulate_) {
+                    Micro::RegTensor<float> previous;
+                    LoadF32<T>(UbPtr<T>(layout_.wChunkOff), previous, mW, static_cast<uint32_t>(g) * wAlignU);
+                    Micro::Add(r, r, previous, mW);
+                }
                 StoreF32<T>(outU, r, mW, static_cast<uint32_t>(g) * wAlignU);
             }
         }
@@ -1467,6 +1443,12 @@ private:
                 AscendC::DataCopyPadExtParams<float> pad{false, 0, 0, 0};
                 AscendC::DataCopyPad(UbTensor<float>(layout_.dbStageOff), dbAccGm_[0], p, pad);
             }
+            if (narrowAccumulate_) {
+                AscendC::DataCopyExtParams prior{static_cast<uint16_t>(LSTM_GATE_NUM),
+                                                 static_cast<uint32_t>(hidden_ * sizeof(T)), 0, 0, 0};
+                AscendC::DataCopyPadExtParams<T> pad{false, 0, 0, 0};
+                AscendC::DataCopyPad(UbTensor<T>(layout_.outStageOff), dbGm_[0], prior, pad);
+            }
             PipeSync<AscendC::HardEvent::MTE2_V>();
             __VEC_SCOPE__
             {
@@ -1479,6 +1461,12 @@ private:
                         Micro::RegTensor<float> r;
                         Micro::DataCopy<float, Micro::LoadDist::DIST_NORM>(
                             r, dbStage + static_cast<uint32_t>(slot) * haF + ho);
+                        RoundToInput<T>(r, mH);
+                        if (narrowAccumulate_) {
+                            Micro::RegTensor<float> previous;
+                            LoadF32<T>(outU, previous, mH, static_cast<uint32_t>(slot) * haT + ho);
+                            Micro::Add(r, r, previous, mH);
+                        }
                         StoreF32<T>(outU, r, mH, static_cast<uint32_t>(slot) * haT + ho);
                     }
                 }
@@ -1491,8 +1479,6 @@ private:
     }
 
 private:
-    int32_t biasComponents_{0};
-    int64_t replayPlaneSize_{0};
     int32_t timeStep_{0};
     int32_t batch_{0};
     int32_t inputSize_{0};
@@ -1534,15 +1520,15 @@ private:
     __local_mem__ uint8_t* ubBase_{nullptr};
 
     AscendC::GlobalTensor<T> wGm_, dhGm_, dcGm_;
-    AscendC::GlobalTensor<T> biasGm_;
-    AscendC::GlobalTensor<float> replayGm_;
     AscendC::GlobalTensor<T> xGm_, dyGm_;
     // Public states retain T; narrow recurrence replay does not read rounded histories.
     AscendC::GlobalTensor<T> initHGm_, initCGm_, hGm_, cGm_;
     AscendC::GlobalTensor<T> iGm_, jGm_, fGm_, oGm_, tanhGm_;
     AscendC::GlobalTensor<T> dwGm_, dbGm_, dhPrevGm_, dcPrevGm_;
     AscendC::GlobalTensor<T> dxGm_;
-    AscendC::GlobalTensor<float> dwAccGm_, dbAccGm_; // see the note where they are bound
+    AscendC::GlobalTensor<float> dwAccGm_, dbAccGm_;
+    AscendC::GlobalTensor<float> recurrentHGm_, recurrentCGm_;
+    bool narrowAccumulate_{false}; // see the note where they are bound
 };
 
 } // namespace LstmGradRegbase

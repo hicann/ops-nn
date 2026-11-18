@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <limits>
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
@@ -26,6 +27,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "../../../op_host/single_layer_lstm_grad_tiling.h"
 
 using namespace ut_util;
 using namespace std;
@@ -47,7 +49,10 @@ protected:
 };
 
 void TestSingleLayerLstmGradTiling(int64_t batch, int64_t timeStep, int64_t inputSize, int64_t hiddenSize,
-                                   ge::DataType dataType, uint64_t expectTilingKey)
+                                   ge::DataType dataType, uint64_t expectTilingKey,
+                                   const std::string& direction = "UNIDIRECTIONAL",
+                                   const std::string& gateOrder = "ijfo",
+                                   ge::graphStatus expectStatus = ge::GRAPH_SUCCESS)
 {
     // dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{timeStep, batch, inputSize}, {timeStep, batch, inputSize}};
@@ -112,8 +117,8 @@ void TestSingleLayerLstmGradTiling(int64_t batch, int64_t timeStep, int64_t inpu
                       .NodeOutputTd(2, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(3, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(4, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"direction", Ops::NN::AnyValue::CreateFrom<string>("UNIDIRECTIONAL")},
-                                  {"gate_order", Ops::NN::AnyValue::CreateFrom<string>("ijfo")}})
+                      .NodeAttrs({{"direction", Ops::NN::AnyValue::CreateFrom<string>(direction)},
+                                  {"gate_order", Ops::NN::AnyValue::CreateFrom<string>(gateOrder)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();
@@ -126,7 +131,11 @@ void TestSingleLayerLstmGradTiling(int64_t batch, int64_t timeStep, int64_t inpu
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     // workspaces nullptr return failed
-    EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
+    const ge::graphStatus status = tilingFunc(tilingContext);
+    EXPECT_EQ(status, expectStatus);
+    if (status != ge::GRAPH_SUCCESS) {
+        return;
+    }
 
     auto realTilingKey = tilingContext->GetTilingKey();
     ASSERT_EQ(realTilingKey, expectTilingKey);
@@ -236,8 +245,39 @@ TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_tilingkey_seq_0)
     TestSingleLayerLstmGradDataTiling(8, 40, 8, 16, ge::DT_FLOAT, 0);
 }
 
-// Ascend950 (regbase): small shapes go to the AIV-only zero-workspace path (key 20000);
-// seq_length or oversized hidden falls back to the legacy pipeline (key 0).
+TEST_F(SingleLayerLstmGradTiling, rejects_invalid_direction)
+{
+    TestSingleLayerLstmGradTiling(8, 40, 8, 16, ge::DT_FLOAT, 0, "BIDIRECTIONAL", "ijfo", ge::GRAPH_FAILED);
+}
+
+TEST_F(SingleLayerLstmGradTiling, rejects_invalid_gate_order)
+{
+    TestSingleLayerLstmGradTiling(8, 40, 8, 16, ge::DT_FLOAT, 0, "UNIDIRECTIONAL", "bad", ge::GRAPH_FAILED);
+}
+
+TEST_F(SingleLayerLstmGradTiling, rejects_overflowing_generic_workspace_shapes)
+{
+    optiling::SingleLayerLstmGradPlanRequest request;
+    request.timeStep = std::numeric_limits<int64_t>::max();
+    request.batch = 2;
+    request.inputSize = 1;
+    request.hiddenSize = 1;
+    request.elemBytes = 4;
+    request.aicCoreNum = 8;
+    request.ubSizePlatForm = 248 * 1024;
+    alignas(8) uint8_t data[4096]{};
+    optiling::SingleLayerLstmGradPlanResult result;
+    EXPECT_NE(optiling::PlanSingleLayerLstmGrad(request, data, sizeof(data), result), ge::GRAPH_SUCCESS);
+
+    request.timeStep = 1;
+    request.batch = 1;
+    request.inputSize = std::numeric_limits<int64_t>::max();
+    request.hiddenSize = std::numeric_limits<int64_t>::max();
+    EXPECT_NE(optiling::PlanSingleLayerLstmGrad(request, data, sizeof(data), result), ge::GRAPH_SUCCESS);
+}
+
+// Ascend950 (regbase): BF16 small shapes may use the AIV-only path (key 20000).
+// FP16/FP32, seq_length and oversized hidden use the Cube/wide pipeline (key 0).
 void TestSingleLayerLstmGradTilingRegbase(int64_t batch, int64_t timeStep, int64_t inputSize, int64_t hiddenSize,
                                           bool hasSeq, ge::DataType dataType, uint64_t expectTilingKey,
                                           bool checkWorkspace = false)
@@ -335,7 +375,10 @@ void TestSingleLayerLstmGradTilingRegbase(int64_t batch, int64_t timeStep, int64
         auto* wsData = reinterpret_cast<const size_t*>(wsSize->GetData());
         const int64_t privateBytes = static_cast<int64_t>(wsData[0]) - reserved;
         if (dataType == ge::DT_FLOAT) {
-            ASSERT_EQ(privateBytes, 0);
+            const int64_t dgateBytes = timeStep * batch * 4 * hiddenSize * static_cast<int64_t>(sizeof(float));
+            const int64_t xhBytes = timeStep * batch * (inputSize + hiddenSize) * static_cast<int64_t>(sizeof(float));
+            const int64_t dxhBytes = batch * (inputSize + hiddenSize) * static_cast<int64_t>(sizeof(float));
+            ASSERT_EQ(privateBytes, dgateBytes + xhBytes + dxhBytes);
         } else {
             const int64_t accumulatorBytes = 4 * hiddenSize * (inputSize + hiddenSize + 1) *
                                              static_cast<int64_t>(sizeof(float));
@@ -346,12 +389,17 @@ void TestSingleLayerLstmGradTilingRegbase(int64_t batch, int64_t timeStep, int64
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_small_fp32)
 {
-    TestSingleLayerLstmGradTilingRegbase(12, 3, 6, 6, false, ge::DT_FLOAT, 20000, true);
+    TestSingleLayerLstmGradTilingRegbase(12, 3, 6, 6, false, ge::DT_FLOAT, 0, true);
 }
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_small_fp16)
 {
-    TestSingleLayerLstmGradTilingRegbase(49, 2, 998, 10, false, ge::DT_FLOAT16, 20000, true);
+    TestSingleLayerLstmGradTilingRegbase(49, 2, 998, 10, false, ge::DT_FLOAT16, 0, true);
+}
+
+TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_small_bf16)
+{
+    TestSingleLayerLstmGradTilingRegbase(12, 3, 6, 6, false, ge::DT_BF16, 20000, true);
 }
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_seq_fallback)
@@ -359,13 +407,10 @@ TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_seq_fallback)
     TestSingleLayerLstmGradTilingRegbase(12, 3, 6, 6, true, ge::DT_FLOAT, 0);
 }
 
-/* hidden_size 128 USED TO FALL BACK and no longer does. The small path now cuts the time, batch
- * and gate axes, so one timestep of one batch row of one gate row is what has to fit, and at fp32
- * that is 15872 bytes against a budget of 237568. The refusal it still makes is at a hidden_size
- * large enough that even that configuration overflows, which for fp32 begins at 1969. */
+// FP32 always uses the Cube/wide path, including shapes that would fit in the small-path UB budget.
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_blocked_hidden)
 {
-    TestSingleLayerLstmGradTilingRegbase(8, 4, 32, 128, false, ge::DT_FLOAT, 20000);
+    TestSingleLayerLstmGradTilingRegbase(8, 4, 32, 128, false, ge::DT_FLOAT, 0);
 }
 
 TEST_F(SingleLayerLstmGradTiling, single_layer_lstm_grad_regbase_big_hidden_fallback)

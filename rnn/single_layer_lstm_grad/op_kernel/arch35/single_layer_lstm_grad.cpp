@@ -49,7 +49,7 @@ static_assert(LSTM_GRAD_REGBASE_SMALL_TASK_KEY == LSTM_GRAD_TILING_KEY_REGBASE_S
 
 #define GENERAL_OP_IMPL(templateClass, ...)                                                                        \
     do {                                                                                                           \
-        templateClass<__VA_ARGS__> op;                                                                             \
+        templateClass<__VA_ARGS__, true> op;                                                                       \
         REGIST_MATMUL_OBJ(&pipe, GetSysWorkSpacePtr(), op.dwMM, dwMMTiling, op.dgateMM, dgateMMTiling);            \
         op.Init(x, w, b, y, init_h, init_c, h, c, dy, dh, dc, i, j, f, o, tanhct, seq_length, dw, db, dx, dh_prev, \
                 dc_prev, &tiling_data, workspace, &pipe);                                                          \
@@ -98,7 +98,7 @@ extern "C" __global__ __aicore__ void single_layer_lstm_grad(GM_ADDR x, GM_ADDR 
         replay.Init(GetUserWorkspace(workspace), tilingData->timeStep, tilingData->batch, tilingData->inputSize,
                     tilingData->hiddenSize, tilingData->privateBiasComponents, tilingData->direction,
                     tilingData->gateOrder, &pipe);
-        replay.Prepare(x, w, b, init_h, init_c, dy, dh, dc);
+        replay.Prepare(x, w, b, init_h, init_c, dy, dh, dc, i, j, f, o, tanhct, c, h);
         x = replay.At(replay.layout.x);
         w = replay.At(replay.layout.w);
         b = replay.At(replay.layout.bias);

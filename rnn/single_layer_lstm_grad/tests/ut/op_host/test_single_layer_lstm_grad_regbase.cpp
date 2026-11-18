@@ -110,31 +110,35 @@ gert::TilingContextPara MakePara(ge::DataType dtype, int badIndex = -1, ge::Data
 }
 } // namespace
 
-TEST(SingleLayerLstmGradRegbase, fp32_workspace_includes_framework_prefix)
+TEST(SingleLayerLstmGradRegbase, fp16_and_fp32_decline_small_path)
 {
-    TilingInfo info;
-    ASSERT_TRUE(ExecuteTiling(MakePara(ge::DT_FLOAT), info));
-    EXPECT_EQ(info.tilingKey, 20000);
-    ASSERT_EQ(info.workspaceSizes.size(), 1U);
-    EXPECT_GT(info.workspaceSizes[0], 0);
+    for (auto dtype : {ge::DT_FLOAT16, ge::DT_FLOAT}) {
+        TilingInfo info;
+        EXPECT_FALSE(ExecuteTiling(MakePara(dtype), info));
+    }
 }
 
-class SingleLayerLstmGradRegbaseNarrow : public testing::TestWithParam<ge::DataType> {};
-TEST_P(SingleLayerLstmGradRegbaseNarrow, accepts_same_dtype_and_sizes_accumulator)
+class SingleLayerLstmGradRegbaseBf16 : public testing::TestWithParam<ge::DataType> {};
+TEST_P(SingleLayerLstmGradRegbaseBf16, accepts_same_dtype_and_sizes_accumulator)
 {
     TilingInfo fp32, narrow;
-    ASSERT_TRUE(ExecuteTiling(MakePara(ge::DT_FLOAT), fp32));
+    auto fp32Para = MakePara(ge::DT_FLOAT);
+    fp32Para.opName_ = "SingleLayerLstmGrad";
+    ASSERT_TRUE(ExecuteTiling(fp32Para, fp32));
     ASSERT_TRUE(ExecuteTiling(MakePara(GetParam()), narrow));
     EXPECT_EQ(narrow.tilingKey, 20000);
     EXPECT_GT(narrow.blockNum, 0U);
-    ASSERT_EQ(narrow.workspaceSizes.size(), 1U);
     ASSERT_EQ(fp32.workspaceSizes.size(), 1U);
+    ASSERT_EQ(narrow.workspaceSizes.size(), 1U);
     const auto* plan = reinterpret_cast<const LstmGradRegbaseSmallTilingData*>(narrow.tilingData.get());
-    const int64_t replayFloats = 7 * plan->usedCores * T * plan->bBlock * H;
-    EXPECT_EQ(narrow.workspaceSizes[0] - fp32.workspaceSizes[0], (4 * H * (I + H + 1) + replayFloats) * 4);
+    const int64_t genericWorkspace = (T * B * (4 * H + I + H) + B * (I + H)) * 4;
+    const int64_t frameworkWorkspace = fp32.workspaceSizes[0] - genericWorkspace;
+    const int64_t accumulatorFloats = 4 * H * (I + H + 1);
+    const int64_t stateFloats = 2 * plan->usedCores * B * H;
+    EXPECT_EQ(narrow.workspaceSizes[0] - frameworkWorkspace, (accumulatorFloats + stateFloats) * 4);
     EXPECT_EQ(plan->biasComponents, 1);
 }
-TEST_P(SingleLayerLstmGradRegbaseNarrow, preserves_two_bias_components_for_replay)
+TEST_P(SingleLayerLstmGradRegbaseBf16, preserves_two_bias_components_for_replay)
 {
     TilingInfo info;
     ASSERT_TRUE(ExecuteTiling(MakePara(GetParam(), -1, ge::DT_FLOAT, false, false, I, 2), info));
@@ -143,7 +147,7 @@ TEST_P(SingleLayerLstmGradRegbaseNarrow, preserves_two_bias_components_for_repla
     EXPECT_FALSE(ExecuteTiling(MakePara(GetParam(), -1, ge::DT_FLOAT, false, false, I, 3), info));
     EXPECT_FALSE(ExecuteTiling(MakePara(ge::DT_FLOAT, -1, ge::DT_FLOAT, false, false, I, 2), info));
 }
-TEST_P(SingleLayerLstmGradRegbaseNarrow, declines_each_mixed_internal_input)
+TEST_P(SingleLayerLstmGradRegbaseBf16, declines_each_mixed_internal_input)
 {
     for (int index : {0, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15}) {
         SCOPED_TRACE(index);
@@ -151,7 +155,7 @@ TEST_P(SingleLayerLstmGradRegbaseNarrow, declines_each_mixed_internal_input)
         EXPECT_FALSE(ExecuteTiling(MakePara(GetParam(), index, ge::DT_FLOAT), info));
     }
 }
-TEST_P(SingleLayerLstmGradRegbaseNarrow, declines_wrong_seed_width)
+TEST_P(SingleLayerLstmGradRegbaseBf16, declines_wrong_seed_width)
 {
     for (int index : {9, 10}) {
         SCOPED_TRACE(index);
@@ -159,17 +163,17 @@ TEST_P(SingleLayerLstmGradRegbaseNarrow, declines_wrong_seed_width)
         EXPECT_FALSE(ExecuteTiling(MakePara(GetParam(), index, ge::DT_FLOAT), info));
     }
 }
-TEST_P(SingleLayerLstmGradRegbaseNarrow, declines_sequence_length)
+TEST_P(SingleLayerLstmGradRegbaseBf16, declines_sequence_length)
 {
     TilingInfo info;
     EXPECT_FALSE(ExecuteTiling(MakePara(GetParam(), -1, ge::DT_FLOAT, true), info));
 }
-TEST_P(SingleLayerLstmGradRegbaseNarrow, declines_wrong_weight_shape)
+TEST_P(SingleLayerLstmGradRegbaseBf16, declines_wrong_weight_shape)
 {
     TilingInfo info;
     EXPECT_FALSE(ExecuteTiling(MakePara(GetParam(), -1, ge::DT_FLOAT, false, true), info));
 }
-INSTANTIATE_TEST_SUITE_P(MixedWidth, SingleLayerLstmGradRegbaseNarrow, testing::Values(ge::DT_FLOAT16, ge::DT_BF16));
+INSTANTIATE_TEST_SUITE_P(Bf16, SingleLayerLstmGradRegbaseBf16, testing::Values(ge::DT_BF16));
 
 TEST(SingleLayerLstmGradWide, private_regions_are_aligned_and_disjoint)
 {
@@ -233,51 +237,33 @@ TEST(SingleLayerLstmGradWide, large_narrow_plan_uses_private_fp32_workspace)
     }
 }
 
-TEST(SingleLayerLstmGradWide, framework_serialization_preserves_replay_bias_components)
+TEST(SingleLayerLstmGradWide, serialization_preserves_replay_bias_components)
 {
     constexpr int64_t hidden = 4096;
-    constexpr int64_t input = 1;
-    for (auto dtype : {ge::DT_FLOAT16, ge::DT_BF16}) {
-        for (int64_t parts : {1, 2}) {
-            SCOPED_TRACE(static_cast<int>(dtype));
-            SCOPED_TRACE(parts);
-            const TensorDesc state{{{1, 1, hidden}, {1, 1, hidden}}, dtype, ge::FORMAT_ND};
-            const TensorDesc x{{{1, 1, input}, {1, 1, input}}, dtype, ge::FORMAT_ND};
-            const TensorDesc weight{{{4 * hidden, input + hidden}, {4 * hidden, input + hidden}}, dtype, ge::FORMAT_ND};
-            const TensorDesc bias{{{4 * hidden}, {4 * hidden}}, dtype, ge::FORMAT_ND};
-            std::vector<TensorDesc> inputs = {x,
-                                              weight,
-                                              {{{parts * 4 * hidden}, {parts * 4 * hidden}}, dtype, ge::FORMAT_ND},
-                                              {{{}, {}}, dtype, ge::FORMAT_ND},
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              state,
-                                              {{{}, {}}, ge::DT_INT64, ge::FORMAT_ND}};
-            std::vector<TensorDesc> outputs = {weight, bias, x, state, state};
-            std::vector<OpAttr> attrs = {{"direction", Ops::NN::AnyValue::CreateFrom<std::string>("UNIDIRECTIONAL")},
-                                         {"gate_order", Ops::NN::AnyValue::CreateFrom<std::string>("ifjo")}};
-            gert::TilingContextPara para("SingleLayerLstmGrad", inputs, outputs, attrs, &compileInfo, 72, 248 * 1024,
-                                         4096);
-            TilingInfo info;
-            ASSERT_TRUE(ExecuteTiling(para, info));
-            ASSERT_NE(info.tilingKey, 20000);
-            optiling::SingleLayerLstmGradTilingData schema;
-            ASSERT_EQ(info.tilingDataSize, schema.GetDataSize());
-            // privateBiasComponents is the final int64 field of the serialized layout.
-            int64_t serializedParts = -1;
-            std::memcpy(&serializedParts, info.tilingData.get() + info.tilingDataSize - sizeof(int64_t),
-                        sizeof(serializedParts));
-            EXPECT_EQ(serializedParts, parts);
-        }
+    for (int64_t parts : {1, 2}) {
+        SCOPED_TRACE(parts);
+        optiling::SingleLayerLstmGradPlanRequest request;
+        request.timeStep = 1;
+        request.batch = 1;
+        request.inputSize = 1;
+        request.hiddenSize = hidden;
+        request.isBias = 1;
+        request.biasComponents = parts;
+        request.elemBytes = 2;
+        request.aicCoreNum = 36;
+        request.ubSizePlatForm = 248 * 1024;
+        request.sysWorkspaceSize = 4096;
+        request.isRegbase = true;
+        alignas(8) uint8_t data[4096]{};
+        optiling::SingleLayerLstmGradPlanResult result;
+        ASSERT_EQ(optiling::PlanSingleLayerLstmGrad(request, data, sizeof(data), result), ge::GRAPH_SUCCESS);
+        ASSERT_NE(result.tilingKey, 20000);
+        optiling::SingleLayerLstmGradTilingData schema;
+        ASSERT_EQ(result.tilingDataSize, schema.GetDataSize());
+        // privateBiasComponents is the final int64 field of the serialized layout.
+        int64_t serializedParts = -1;
+        std::memcpy(&serializedParts, data + result.tilingDataSize - sizeof(int64_t), sizeof(serializedParts));
+        EXPECT_EQ(serializedParts, parts);
     }
 }
 
@@ -295,5 +281,4 @@ TEST_P(SingleLayerLstmGradZeroFeatures, recurrent_only_plan)
     EXPECT_EQ(plan->usedCores, 1);
     EXPECT_EQ(plan->hiddenSize, H);
 }
-INSTANTIATE_TEST_SUITE_P(AllWidths, SingleLayerLstmGradZeroFeatures,
-                         testing::Values(ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16));
+INSTANTIATE_TEST_SUITE_P(Bf16, SingleLayerLstmGradZeroFeatures, testing::Values(ge::DT_BF16));

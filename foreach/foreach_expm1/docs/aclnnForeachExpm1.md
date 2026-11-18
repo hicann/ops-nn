@@ -215,7 +215,9 @@ aclnnStatus aclnnForeachExpm1(
 
 ## 约束说明
 
+<!-- npu="950" id7 -->
 - 在<term>Ascend 950PR&950DT系列产品</term>的当前实现中，受tiling数据容量限制，输入张量列表`x`最多包含256个Tensor；超过上限时tiling失败，算子不执行。
+<!-- end id7 -->
 - 确定性计算：
   - aclnnForeachExpm1默认确定性实现。
 

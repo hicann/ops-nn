@@ -53,7 +53,7 @@ struct Workspace {
     LSTM_WIDE_INLINE bool Fill(int64_t t, int64_t b, int64_t i, int64_t h, int64_t biasParts)
     {
         // Kernel dimensions are signed 32-bit; reject overflow before evaluating products.
-        if (t <= 0 || b <= 0 || i <= 0 || h <= 0 || biasParts < 0 || biasParts > MAX_BIAS_COMPONENTS ||
+        if (t <= 0 || b <= 0 || i < 0 || h <= 0 || biasParts < 0 || biasParts > MAX_BIAS_COMPONENTS ||
             static_cast<uint64_t>(t) > MAX_KERNEL_EXTENT || static_cast<uint64_t>(b) > MAX_KERNEL_EXTENT ||
             static_cast<uint64_t>(i) + h > MAX_KERNEL_EXTENT / FLOAT_BYTES ||
             static_cast<uint64_t>(h) > MAX_KERNEL_EXTENT / GATE_COUNT ||

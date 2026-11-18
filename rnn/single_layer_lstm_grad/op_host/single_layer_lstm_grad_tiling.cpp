@@ -394,10 +394,10 @@ bool SingleLayerLstmGradTiling::CheckXAndInitHShape()
     rnnParams_.inputSize = xShape.GetDim(SIZE_INDEX);
     rnnParams_.hiddenSize = initHShape.GetDim(SIZE_INDEX);
     OP_TILING_CHECK(
-        rnnParams_.inputSize <= 0 || rnnParams_.hiddenSize <= 0 || rnnParams_.timeStep <= 0 || rnnParams_.batch <= 0,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeName_, "x, init_h",
-                                               Shape2String(xShape) + ", " + Shape2String(initHShape),
-                                               "all dimensions of x and init_h must be positive"),
+        rnnParams_.inputSize < 0 || rnnParams_.hiddenSize <= 0 || rnnParams_.timeStep <= 0 || rnnParams_.batch <= 0,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            nodeName_, "x, init_h", Shape2String(xShape) + ", " + Shape2String(initHShape),
+            "time_step, batch, and hidden_size must be positive; input_size must be nonnegative"),
         return false);
     return true;
 }
@@ -711,6 +711,55 @@ ge::graphStatus SingleLayerLstmGradTiling::Init()
  * number the caller adds, and the framework path adds it in Init() just as it did before. */
 ge::graphStatus SingleLayerLstmGradTiling::ComputePlan()
 {
+    const auto checkedAdd = [](uint64_t lhs, uint64_t rhs, uint64_t& out) {
+        if (lhs > std::numeric_limits<uint64_t>::max() - rhs) {
+            return false;
+        }
+        out = lhs + rhs;
+        return true;
+    };
+    const auto checkedMul = [](uint64_t lhs, uint64_t rhs, uint64_t& out) {
+        if (lhs != 0 && rhs > std::numeric_limits<uint64_t>::max() / lhs) {
+            return false;
+        }
+        out = lhs * rhs;
+        return true;
+    };
+    if (rnnParams_.timeStep < 0 || rnnParams_.batch < 0 || rnnParams_.inputSize < 0 || rnnParams_.hiddenSize < 0) {
+        return ge::GRAPH_FAILED;
+    }
+
+    const uint64_t timeStep = static_cast<uint64_t>(rnnParams_.timeStep);
+    const uint64_t batch = static_cast<uint64_t>(rnnParams_.batch);
+    const uint64_t inputSize = static_cast<uint64_t>(rnnParams_.inputSize);
+    const uint64_t hiddenSize = static_cast<uint64_t>(rnnParams_.hiddenSize);
+    uint64_t hiddenAndInput = 0;
+    uint64_t timeBatch = 0;
+    uint64_t dgate = 0;
+    uint64_t xh = 0;
+    uint64_t dxh = 0;
+    uint64_t workspace = 0;
+    uint64_t weightElements = 0;
+    uint64_t stateElements = 0;
+    uint64_t workspaceFp32 = 0;
+    bool workspaceValid = checkedAdd(hiddenSize, inputSize, hiddenAndInput) && checkedMul(timeStep, batch, timeBatch) &&
+                          checkedMul(timeBatch, GATES_NUM, dgate) && checkedMul(dgate, hiddenSize, dgate) &&
+                          checkedMul(dgate, FP32_BYTES, dgate) && checkedMul(timeBatch, hiddenAndInput, xh) &&
+                          checkedMul(xh, FP32_BYTES, xh) && checkedMul(batch, hiddenAndInput, dxh) &&
+                          checkedMul(dxh, FP32_BYTES, dxh) && checkedAdd(dgate, xh, workspace) &&
+                          checkedAdd(workspace, dxh, workspace) && checkedMul(GATES_NUM, hiddenSize, weightElements) &&
+                          checkedMul(weightElements, hiddenAndInput, weightElements) &&
+                          checkedMul(weightElements, FP32_BYTES * WORKSPACE_FP32_MULTIPLIER, weightElements) &&
+                          checkedMul(batch, hiddenSize, stateElements) &&
+                          checkedMul(stateElements, FP32_BYTES * WORKSPACE_FP32_MULTIPLIER, stateElements) &&
+                          checkedAdd(weightElements, stateElements, workspaceFp32);
+    if (workspaceValid && inputDSize_ != FP32_BYTES) {
+        workspaceValid = checkedAdd(workspace, workspaceFp32, workspace);
+    }
+    if (!workspaceValid || workspace > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+        return ge::GRAPH_FAILED;
+    }
+
     auto ret = GetMMTilingDataSplit();
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
@@ -726,17 +775,7 @@ ge::graphStatus SingleLayerLstmGradTiling::ComputePlan()
     int64_t mmWeightKeyFlag = rnnParams_.timeStep * rnnParams_.batch > GM2L1_CHECK ? MM_WEIGHT_KEY_FACTOR : 0;
     tilingKey_ = tilingKey_ + mmGateKeyFlag + mmWeightKeyFlag;
 
-    // wFp32 + dwFp32 + dhPrevFp32 + dcPrevFp32
-    int64_t workspaceFp32 = GATES_NUM * rnnParams_.hiddenSize * (rnnParams_.hiddenSize + rnnParams_.inputSize) *
-                                FP32_BYTES * WORKSPACE_FP32_MULTIPLIER +
-                            rnnParams_.batch * rnnParams_.hiddenSize * FP32_BYTES * WORKSPACE_FP32_MULTIPLIER;
-
-    // dgate + xh + dxh
-    workspaceSize_ = rnnParams_.timeStep * rnnParams_.batch * GATES_NUM * rnnParams_.hiddenSize * FP32_BYTES +
-                     rnnParams_.timeStep * rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) *
-                         FP32_BYTES +
-                     rnnParams_.batch * (rnnParams_.hiddenSize + rnnParams_.inputSize) * FP32_BYTES;
-    workspaceSize_ = inputDSize_ == FP32_BYTES ? workspaceSize_ : workspaceSize_ + workspaceFp32;
+    workspaceSize_ = static_cast<int64_t>(workspace);
     return ge::GRAPH_SUCCESS;
 }
 

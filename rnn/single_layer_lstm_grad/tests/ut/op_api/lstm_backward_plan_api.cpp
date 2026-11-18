@@ -16,9 +16,11 @@ decltype(aclnnLstmBackwardGetWorkspaceSize) aclnnLstmBackwardGetWorkspaceSize as
 decltype(aclnnLstmBackward) aclnnLstmBackward asm("LstmBackwardPlan");
 }
 #define SingleLayerLstmGrad LstmBackwardPlanGrad
+#define ConcatD LstmBackwardPlanConcatD
 #define ResetAndReshapeTensor LstmBackwardPlanResetAndReshapeTensor
 #define PrepareLSTMBackwardNoneInputs LstmBackwardPlanPrepareNoneInputs
 #include "../../../op_api/aclnn_lstm_backward.cpp"
 #undef PrepareLSTMBackwardNoneInputs
 #undef ResetAndReshapeTensor
+#undef ConcatD
 #undef SingleLayerLstmGrad
