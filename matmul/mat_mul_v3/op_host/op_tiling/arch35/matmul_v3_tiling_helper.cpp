@@ -184,10 +184,7 @@ MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo& compileInfo, const 
         runInfo.splitM = true;
         return MatMulV3L0C2Out::ND_FIXPIPE_1_2;
     }
-    if (args.aType == ge::DT_FLOAT16 || args.aType == ge::DT_BF16) {
-        return MatMulV3L0C2Out::ND_FIXPIPE_1_1;
-    }
-    return MatMulV3L0C2Out::ON_THE_FLY;
+    return MatMulV3L0C2Out::ND_FIXPIPE_1_1;
 }
 
 // 全 dtype 统一走 ND_FIXPIPE_1_1
