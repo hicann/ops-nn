@@ -65,9 +65,10 @@ private:
 
 // bfloat16 path: cast to float32 first, compute Log10 out of place inside the float buffer
 // (second region, enabled by paramsCount = 2) and cast the result back into the output queue.
-class ForeachLog10Bf16OutOfPlace : public KernelForeachUnary<bfloat16_t, ForeachLog10Bf16OutOfPlace, 1, 2, true> {
+class ForeachLog10Bf16OutOfPlace
+    : public KernelForeachUnary<bfloat16_t, ForeachLog10Bf16OutOfPlace, 1, INPUT_PARAMETER_COUNT, true> {
 public:
-    using Base = KernelForeachUnary<bfloat16_t, ForeachLog10Bf16OutOfPlace, 1, 2, true>;
+    using Base = KernelForeachUnary<bfloat16_t, ForeachLog10Bf16OutOfPlace, 1, INPUT_PARAMETER_COUNT, true>;
 
     __aicore__ inline ForeachLog10Bf16OutOfPlace() : Base(*this){};
     using Base::Init;

@@ -14,7 +14,6 @@
 #include "../../../foreach_utils/op_host/foreach_contiguous_helper.h"
 #include "../../../foreach_utils/op_host/foreach_null_check_helper.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/op_api_def_nn.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 

@@ -26,6 +26,7 @@
 #include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
 #include "op_common/op_host/util/op_const_def.h"
+#include <cmath>
 
 using namespace op;
 #ifdef __cplusplus
@@ -57,7 +58,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList(float threshol
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-        if (Ops::NN::AclnnUtil::IsRegbase(curArch) && thresholdVal == 0.0f) {
+        if (Ops::NN::AclnnUtil::IsRegbase(curArch) && std::fpclassify(thresholdVal) == FP_ZERO) {
             // relugrad 支持int64
             return REGBASE_DTYPE_DTYPE_SUPPORT_LIST;
         } else {
@@ -149,7 +150,7 @@ aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(const aclTensor* gradOutput, 
 
     // threshold是host侧标量，判零须精确比较：容差判零会把|threshold|<=FLT_EPSILON的非零阈值静默当作0，
     // 丢弃threshold走ReluGrad分支，与资料公式 self(i) > threshold 不符（issue #8230）
-    if (thresholdVal == 0.0f) {
+    if (std::fpclassify(thresholdVal) == FP_ZERO) {
         opOut = l0op::ReluGrad(gradOutputContiguous, selfContiguous, uniqueExecutor.get());
     } else if (Ops::NN::AclnnUtil::IsRegbase()) {
         auto thresholdTensor = uniqueExecutor->ConvertToTensor(threshold, selfContiguous->GetDataType());

@@ -39,7 +39,7 @@ ACLNN_API aclnnStatus aclnnForeachSubListGetWorkspaceSize(const aclTensorList* x
  * @brief aclnnForeachSubList的第二段接口，用于执行计算。
  */
 ACLNN_API aclnnStatus aclnnForeachSubList(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                          aclrtStream stream);
+                                          const aclrtStream stream);
 
 #ifdef __cplusplus
 }

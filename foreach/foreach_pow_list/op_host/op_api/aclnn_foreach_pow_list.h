@@ -37,7 +37,7 @@ ACLNN_API aclnnStatus aclnnForeachPowListGetWorkspaceSize(const aclTensorList* x
  * @brief aclnnForeachPowList的第二段接口，用于执行计算。
  */
 ACLNN_API aclnnStatus aclnnForeachPowList(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
-                                          aclrtStream stream);
+                                          const aclrtStream stream);
 
 #ifdef __cplusplus
 }

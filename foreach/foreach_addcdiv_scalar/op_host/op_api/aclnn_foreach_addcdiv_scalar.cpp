@@ -38,6 +38,8 @@ static const std::initializer_list<DataType> SCALAR_FLOAT16_SUPPORT_LIST = {Data
 static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 
+constexpr uint32_t TENSOR_LIST_NUM = 4;
+
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
@@ -73,9 +75,9 @@ static inline bool CheckFormat(const aclTensorList* x1, const aclTensorList* x2,
         return false;
     }
     for (uint64_t i = 0; i < x1->Size(); i++) {
-        const aclTensor* tensors[4] = {(*x1)[i], (*x2)[i], (*x3)[i], (*out)[i]};
-        const char* names[4] = {"x1", "x2", "x3", "out"};
-        for (uint32_t j = 0; j < 4; ++j) {
+        const aclTensor* tensors[TENSOR_LIST_NUM] = {(*x1)[i], (*x2)[i], (*x3)[i], (*out)[i]};
+        const char* names[TENSOR_LIST_NUM] = {"x1", "x2", "x3", "out"};
+        for (uint32_t j = 0; j < TENSOR_LIST_NUM; ++j) {
             if (IsPrivateFormat(tensors[j]->GetStorageFormat())) {
                 const std::string reason = "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.";
                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());

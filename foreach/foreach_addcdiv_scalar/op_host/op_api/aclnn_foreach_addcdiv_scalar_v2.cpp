@@ -45,6 +45,8 @@ static const std::initializer_list<DataType> FOREACH_ADDCDIV_SCALAR_V2_FLOAT16_S
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
+constexpr uint32_t TENSOR_LIST_NUM = 4;
+
 static inline bool ForeachAddcdivScalarV2CheckNotNull(const aclTensorList* addcdivScalarSelf, const aclTensorList* x2,
                                                       const aclTensorList* x3, const aclScalar* scalar,
                                                       const aclTensorList* out)
@@ -62,9 +64,9 @@ static inline bool ForeachAddcdivScalarV2CheckFormat(const aclTensorList* addcdi
 {
     for (uint64_t i = 0; i < addcdivScalarSelf->Size(); i++) {
         // x1/x2/x3/out格式不能是私有格式（ND/NCL/NCHW等通用格式均放行，与同族foreach算子口径一致）
-        const aclTensor* tensors[4] = {(*addcdivScalarSelf)[i], (*x2)[i], (*x3)[i], (*out)[i]};
-        const char* names[4] = {"x1", "x2", "x3", "out"};
-        for (uint32_t j = 0; j < 4; ++j) {
+        const aclTensor* tensors[TENSOR_LIST_NUM] = {(*addcdivScalarSelf)[i], (*x2)[i], (*x3)[i], (*out)[i]};
+        const char* names[TENSOR_LIST_NUM] = {"x1", "x2", "x3", "out"};
+        for (uint32_t j = 0; j < TENSOR_LIST_NUM; ++j) {
             if (IsPrivateFormat(tensors[j]->GetStorageFormat())) {
                 const std::string reason = "Format only support ND, NCHW, NHWC, HWCN, NDHWC, NCDHW.";
                 OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
@@ -179,9 +181,9 @@ static inline bool ForeachAddcdivScalarV2CheckShape(const aclTensorList* addcdiv
         return false;
     }
     // 空Tensor检查：文档声明x1/x2/x3/out均不支持空Tensor，显式拒绝，避免依赖shape校验的副作用
-    const aclTensorList* tensorLists[4] = {addcdivScalarSelf, x2, x3, out};
-    const char* listNames[4] = {"x1", "x2", "x3", "out"};
-    for (uint32_t listIdx = 0; listIdx < 4; ++listIdx) {
+    const aclTensorList* tensorLists[TENSOR_LIST_NUM] = {addcdivScalarSelf, x2, x3, out};
+    const char* listNames[TENSOR_LIST_NUM] = {"x1", "x2", "x3", "out"};
+    for (uint32_t listIdx = 0; listIdx < TENSOR_LIST_NUM; ++listIdx) {
         for (uint64_t i = 0; i < tensorLists[listIdx]->Size(); i++) {
             if ((*tensorLists[listIdx])[i]->GetViewShape().GetShapeSize() == 0) {
                 const std::string reason = ("The " + std::to_string(i) + "th tensor in " +

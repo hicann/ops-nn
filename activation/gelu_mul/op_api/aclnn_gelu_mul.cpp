@@ -29,6 +29,8 @@ namespace {
 const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_BF16, DataType::DT_FLOAT16,
                                                             DataType::DT_FLOAT};
 
+constexpr int64_t HALF_SIZE = 2;
+
 // 声明的out shape需与推导值一致：rank相同、除末维外各维相同、末维为input末维的1/2。
 // 不一致时拒绝，避免kernel按input推导的元素数写入越界。
 bool CheckOutShapeValid(const aclTensor* input, const aclTensor* out)
@@ -44,7 +46,7 @@ bool CheckOutShapeValid(const aclTensor* input, const aclTensor* out)
             return false;
         }
     }
-    return inputDimNum == 0 || outShape.GetDim(inputDimNum - 1) == inputShape.GetDim(inputDimNum - 1) / 2;
+    return inputDimNum == 0 || outShape.GetDim(inputDimNum - 1) == inputShape.GetDim(inputDimNum - 1) / HALF_SIZE;
 }
 
 aclnnStatus CheckParams(const aclTensor* input, const aclTensor* out)
@@ -72,7 +74,7 @@ aclnnStatus CheckParams(const aclTensor* input, const aclTensor* out)
 } // namespace
 
 extern "C" {
-aclnnStatus aclnnGeluMulGetWorkspaceSize(const aclTensor* input, char* approximateOptional, const aclTensor* out,
+aclnnStatus aclnnGeluMulGetWorkspaceSize(const aclTensor* input, const char* approximateOptional, const aclTensor* out,
                                          uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // approximate为可选属性，空指针按默认值"none"处理，与生成接口行为一致

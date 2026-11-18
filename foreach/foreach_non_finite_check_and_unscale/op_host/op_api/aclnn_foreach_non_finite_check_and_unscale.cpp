@@ -62,8 +62,7 @@ static aclnnStatus CheckTensorShapeAndFormat(const aclTensor* tensor, const char
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus CheckParams(const aclTensorList* scaledGrads, const aclTensor* foundInf, const aclTensor* invScale,
-                               uint64_t* workspaceSize, aclOpExecutor** executor)
+static aclnnStatus CheckParams(const aclTensorList* scaledGrads, const aclTensor* foundInf, const aclTensor* invScale)
 {
     OP_CHECK_NULL(scaledGrads, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(foundInf, return ACLNN_ERR_PARAM_NULLPTR);
@@ -105,7 +104,7 @@ static aclnnStatus ExecForeachNonFiniteCheckAndUnscaleGetWorkspaceSize(const acl
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    auto ret = CheckParams(scaledGrads, foundInf, invScale, workspaceSize, executor);
+    auto ret = CheckParams(scaledGrads, foundInf, invScale);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto exec = uniqueExecutor.get();

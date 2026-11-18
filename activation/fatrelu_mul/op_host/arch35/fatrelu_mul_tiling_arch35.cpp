@@ -144,7 +144,7 @@ static int64_t FatreluMulDtypeBytes(const ge::DataType dt)
 // ---------------------------------------------------------------------------
 // FatreluMulRowModel — 行模型展开量（输入预处理）
 //
-// x (n1, ..., n_{r-1}, 2d) → (batchSize, 2*halfDim)；y → (batchSize, halfDim)
+// x 的前 r-1 维收缩为 batchSize，末维长度 2d 记作两个 halfDim；y 即（batchSize, halfDim）
 // ---------------------------------------------------------------------------
 struct FatreluMulRowModel {
     int64_t batchSize; // M = numel(x) / lastDim(x)（= y 行数；其余维乘积，含 batch=0 空 Tensor）
@@ -303,8 +303,7 @@ static int64_t FatreluMulComputeTileElems(int64_t ubSize, int64_t dtypeBytes)
 
 // ---------------------------------------------------------------------------
 // FatreluMulMultiCoreSplit(batchSize, halfDim, dtypeBytes, availableAivCores, mc)
-// 行域多核切分（对齐内置旧代际 kernel 口径：kernel 入口 blockIdx >=
-// needCoreNum 直接返回）：
+// 行域多核切分。对齐内置旧代际 kernel 口径：kernel 入口 blockIdx >= needCoreNum 时直接返回。
 //   1) 数据量约束核数：batchSize × 2d × sizeof(T) 总量按每核 4KB 均摊向上取整，
 //      钳到 batchSize（行粒度上限：每核 ≥ 1 整行，行不可跨核拆分）
 //   2) 实际核数：min(可用 AIV 核数, 数据量约束核数)，下限 1
@@ -363,7 +362,7 @@ static void FatreluMulFillAndLogTilingData(const gert::TilingContext* ctx, Fatre
 
 // ---------------------------------------------------------------------------
 // TilingFuncFatreluMul(context) — tiling 入口（CANN runtime 调用）
-// 步骤顺序：
+// 步骤顺序如下。
 //   平台量 → 异常值校验 → 行模型展开 → 空 Tensor 短路 → UB 切分 → 多核切分
 //   → 判界选 key → 填 TilingData → SetBlockDim / SetTilingKey / ws[0]=0
 // ---------------------------------------------------------------------------

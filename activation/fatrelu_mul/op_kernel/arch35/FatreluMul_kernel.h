@@ -53,15 +53,17 @@
 //                   allocation + threshold scalar GM direct read + sync event
 //                   IDs); no row-group pitch precompute;
 //         CopyIn : in-row flat segmentation — per segment two
-//                   blockCount=1 DataCopyPad (gate seg → B0, up seg → B1;
-//                   blockLen = segLen·S valid bytes, non-32B-align legal;
+//                   single-block DataCopyPad, gate seg to B0, up seg to B1;
+//                   blockLen takes segLen times S valid bytes and tolerates
+//                   32B misalignment;
 //                   the two half-zone segs are GM (d − segLen) elements
-//                   apart → no blockCount=2 batching);
+//                   apart, so no two-block batching;
 //         Compute: per-segment shared-chain call — fp32 direct
 //                   ComputeTile; fp16/bf16 Cast(CAST_NONE)↑ ×2 →
-//                   ComputeTile → Cast(CAST_RINT)↓; segLen runtime-derived
-//                   (full seg = TE / tail seg = d % TE, UpdateMask masks
-//                   the tail);
+//                   ComputeTile, then a CAST_RINT cast back down. segLen is
+//                   runtime-derived — a full segment covers TE, the tail
+//                   segment covers the remainder of d over TE, and UpdateMask
+//                   masks the tail;
 //         CopyOut: per-segment single DataCopyPad back to y
 //                   (blockLen = segLen·S valid bytes, dense single path);
 //         Process: row × segment double loop (rowStart/rowCount per

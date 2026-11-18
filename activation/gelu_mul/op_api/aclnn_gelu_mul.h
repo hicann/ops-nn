@@ -28,7 +28,7 @@ extern "C" {
  * @param executor Executor containing the computation and any required layout conversions.
  * @return aclnnStatus Status code.
  */
-ACLNN_API aclnnStatus aclnnGeluMulGetWorkspaceSize(const aclTensor* input, char* approximateOptional,
+ACLNN_API aclnnStatus aclnnGeluMulGetWorkspaceSize(const aclTensor* input, const char* approximateOptional,
                                                    const aclTensor* out, uint64_t* workspaceSize,
                                                    aclOpExecutor** executor);
 
