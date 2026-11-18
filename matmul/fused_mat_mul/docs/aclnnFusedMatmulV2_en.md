@@ -260,6 +260,13 @@ aclnnStatus aclnnFusedMatmulV2(
       - x1, x2, and x3 must have the same data type, all BFLOAT16 or all FLOAT16.
 
   <!-- end id7 -->
+  <!-- npu="A3,910b" id11 -->
+  - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
+    - cubeMathType=0 (KEEP_DTYPE): when the input data type is FLOAT32, computation uses true FP32;
+    - cubeMathType=1: when the input data type is FLOAT32, it is converted to HFLOAT32 for computation; no processing is performed for other input data types;
+    - cubeMathType=3: when the input data type is FLOAT32, it is converted to HFLOAT32 for computation. This option is not supported when the input is of other data types.
+
+  <!-- end id11 -->
 
 - **Return Value**
 
@@ -362,7 +369,9 @@ aclnnStatus aclnnFusedMatmulV2(
 
 - GELU (gelu_erf, gelu_tanh) supports an optional bias. The computation order is to compute the matrix multiplication and add bias first, and then perform GELU. The data type of bias must be the same as that of the matrix input or be FLOAT32, and the shape must be (N,) or (1, N); when bias is passed in, the K axis of the matrix multiplication must be greater than 0.
 
+<!-- npu="A3,910b" id12 -->
 - On <term>Atlas A2 products</term> and <term>Atlas A3 products</term>, only fusedOpType "relu" is supported. Inputs and outputs are ND, and the data type of x1, x2, and y is FLOAT16, BFLOAT16, or FLOAT32. FLOAT32 supports cubeMathType=KEEP_DTYPE (true FP32) and cubeMathType=3 (HF32). The formula is y = relu(x1 @ x2 + bias). Rank 2 uses MatMulV3. Ranks 3 to 6 with matching batch dimensions use BatchMatMulV3. Non-default alpha and beta are not supported.
+<!-- end id12 -->
 
 - Deterministic computation description:
 

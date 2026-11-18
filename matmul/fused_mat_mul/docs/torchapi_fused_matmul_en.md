@@ -8,10 +8,10 @@
 - <term>Ascend 950PR&950DT products</term>: Supported
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 products</term>: Supports the ND scenario where fused_op_type is relu (float16, bfloat16, and float32; float32 supports KEEP_DTYPE and HF32)
+- <term>Atlas A3 products</term>: Supported
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 products</term>: Supports the ND scenario where fused_op_type is relu (float16, bfloat16, and float32; float32 supports KEEP_DTYPE and HF32)
+- <term>Atlas A2 products</term>: Supported
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 inference products</term>: Not supported
@@ -86,7 +86,9 @@ cann_ops_nn.fused_matmul(
 ## Constraints
 
 - GELU (gelu_erf and gelu_tanh) supports an optional bias. The computation order is to first perform matrix multiplication, add the bias, and then apply GELU. The data type of bias must be the same as that of the matrix input or FLOAT32, and the shape must be (N,) or (1, N). When bias is passed in, the K axis of matrix multiplication must be greater than 0.
+<!-- npu="A3,910b" id7 -->
 - On <term>Atlas A2 products</term> and <term>Atlas A3 products</term>, only fused_op_type "relu" with ND inputs is supported. The data types are float16, bfloat16, and float32. float32 uses KEEP_DTYPE true FP32 by default, and uses HF32 when torch.npu.matmul.allow_hf32 is enabled. The formula is y = relu(x @ x2 + bias).
+<!-- end id7 -->
 
 - This API currently supports invocation in single-operator mode.
 - x, x2, bias, and x3 must be NPU tensors. None can be passed in for optional tensors.

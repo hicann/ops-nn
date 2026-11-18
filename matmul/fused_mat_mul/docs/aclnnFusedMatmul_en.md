@@ -8,10 +8,10 @@
 - <term>Ascend 950PR&950DT products</term>: Supported
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 products</term>: Supports the ND scenario where fusedOpType is relu (FLOAT16, BFLOAT16, and FLOAT32; FLOAT32 supports KEEP_DTYPE and HF32)
+- <term>Atlas A3 products</term>: Supported
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 products</term>: Supports the ND scenario where fusedOpType is relu (FLOAT16, BFLOAT16, and FLOAT32; FLOAT32 supports KEEP_DTYPE and HF32)
+- <term>Atlas A2 products</term>: Supported
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 inference products</term>: Not supported
@@ -229,6 +229,13 @@ aclnnStatus aclnnFusedMatmul(
       - x1, x2, and x3 must have exactly the same data type, and all three must be BFLOAT16 or all three must be FLOAT16.
 
   <!-- end id7 -->
+  <!-- npu="A3,910b" id11 -->
+  - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>:
+    - cubeMathType=0 (KEEP_DTYPE): when the input data type is FLOAT32, computation uses true FP32;
+    - cubeMathType=1: when the input data type is FLOAT32, it is converted to HFLOAT32 for computation; no processing is performed for other input data types;
+    - cubeMathType=3: when the input data type is FLOAT32, it is converted to HFLOAT32 for computation. This option is not supported when the input is of other data types.
+
+  <!-- end id11 -->
 
 - **Return Value**
 
@@ -325,7 +332,9 @@ aclnnStatus aclnnFusedMatmul(
 
 - GELU (gelu_erf, gelu_tanh) supports an optional bias. The computation order is to first compute matmul and add bias, then perform GELU. The data type of bias must be the same as that of the matrix input or be FLOAT32, and its shape must be (N,) or (1, N). When bias is passed in, the K axis of matmul must be greater than 0.
 
+<!-- npu="A3,910b" id12 -->
 - On <term>Atlas A2 products</term> and <term>Atlas A3 products</term>, only fusedOpType "relu" is supported. Inputs and outputs are ND, and the data type of x1, x2, and y is FLOAT16, BFLOAT16, or FLOAT32. FLOAT32 supports cubeMathType=KEEP_DTYPE (true FP32) and cubeMathType=3 (HF32). The formula is y = relu(x1 @ x2 + bias). Rank 2 uses MatMulV3. Ranks 3 to 6 with matching batch dimensions use BatchMatMulV3. The relu case that shares x2 and merges the batch axis on <term>Ascend 950PR&950DT products</term> is not supported.
+<!-- end id12 -->
 
 - Deterministic computation:
 

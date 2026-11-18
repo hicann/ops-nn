@@ -264,6 +264,13 @@ aclnnStatus aclnnFusedMatmulV2(
       - x1、x2、x3三者的数据类型完全一致，且同为BFLOAT16或同为FLOAT16。
 
   <!-- end id7 -->
+  <!-- npu="A3,910b" id11 -->
+  - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：
+    - cubeMathType=0（KEEP_DTYPE），当输入数据类型为FLOAT32时按真FP32计算；
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
+    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+
+  <!-- end id11 -->
 
 - **返回值**
 
@@ -377,7 +384,9 @@ aclnnStatus aclnnFusedMatmulV2(
 - GELU（gelu_erf、gelu_tanh）和 Sigmoid（sigmoid）的计算顺序为先计算矩阵乘并加 bias，再逐元素执行激活；未传入 bias 时不加偏置。
 - 当fusedOpType取值为"sigmoid"时，仅支持Ascend 950PR&950DT系列产品，x1、x2和y必须为二维，数据类型必须同为FLOAT16或同为BFLOAT16；x1的shape为(M, K)，x2的shape为(K, N)，y的shape为(M, N)，M、N和K均必须大于0，x3必须传入空指针。
 - 当fusedOpType取值为"sigmoid"时，alphaOptional和betaOptional只能传入空指针或值为1的FLOAT16、BFLOAT16、FLOAT32 Scalar。
+<!-- npu="A3,910b" id12 -->
 - <term>Atlas A2系列产品</term>和<term>Atlas A3系列产品</term>仅支持fusedOpType为"relu"。输入输出为ND，x1/x2/y的数据类型为FLOAT16、BFLOAT16或FLOAT32。FLOAT32支持cubeMathType=KEEP_DTYPE（真FP32）以及cubeMathType=3（HF32）。计算公式为y = relu(x1 @ x2 + bias)。二维走MatMulV3，三维到六维且batch维一致时走BatchMatMulV3。不支持alpha/beta非默认值。
+<!-- end id12 -->
 
 - 确定性说明：
 
