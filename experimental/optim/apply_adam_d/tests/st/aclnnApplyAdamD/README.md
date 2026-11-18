@@ -3,7 +3,7 @@
 > 本目录保留 ATK **`kernel` 后端**精度用例，覆盖已部署 `ApplyAdamD` 的 host tiling + AI Core kernel：
 > 经 `aclopCompileAndExecuteV2("ApplyAdamD", 10in/3out/2attr, ACL_ENGINE_SYS, ACL_COMPILE_SYS)`
 > 单算子动态执行在真机（ascend910b / dav-2201）launch 已部署的自定义内核，与 `cpu` 后端（手写 FP32 融合 Adam golden）对拍。
-> aclnn 两段式调用路径由 `examples/test_aclnn_apply_adam_d.cpp` 覆盖。
+> aclnn 两段式调用路径由 [examples/test_aclnn_apply_adam_d.cpp](../../../examples/test_aclnn_apply_adam_d.cpp) 覆盖。
 
 ## 文件
 
