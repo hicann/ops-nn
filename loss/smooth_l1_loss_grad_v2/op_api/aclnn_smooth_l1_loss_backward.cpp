@@ -170,7 +170,8 @@ static aclnnStatus CheckParams(const aclTensor* gradOut, const aclTensor* self, 
 static inline aclnnStatus CheckReformat(const aclTensor* input)
 {
     input = l0op::ReFormat(input, static_cast<op::Format>(ACL_FORMAT_ND));
-    OP_CHECK(input != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input tensor with TransData return nullptr."),
+    OP_CHECK(input != nullptr,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The input tensor with TransData return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }

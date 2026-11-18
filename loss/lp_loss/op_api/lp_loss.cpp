@@ -59,7 +59,7 @@ static aclTensor* LpLossAiCore(const aclTensor* self, const aclTensor* target, i
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(LpLoss, OP_INPUT(self, target), OP_OUTPUT(out),
                                            OP_ATTR(p, REDUCTION[reduction]));
     if (ret != ACL_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "LpLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "LpLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return nullptr;
     }
     return out;

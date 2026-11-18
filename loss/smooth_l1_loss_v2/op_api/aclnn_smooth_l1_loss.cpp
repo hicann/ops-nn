@@ -180,15 +180,16 @@ static const aclTensor* InputPreProcess(const aclTensor* input, int64_t reductio
                                         aclOpExecutor* executor)
 {
     auto inputCast = l0op::Cast(input, promoteType, executor);
-    OP_CHECK(inputCast != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The cast return nullptr."), return nullptr);
+    OP_CHECK(inputCast != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The cast return nullptr."),
+             return nullptr);
 
     if (CheckNeed5hdFormat(inputCast, reduction)) {
         inputCast = l0op::TransData(inputCast, Format::FORMAT_NC1HWC0, 1, executor);
-        OP_CHECK(inputCast != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The TransData return nullptr."),
+        OP_CHECK(inputCast != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The TransData return nullptr."),
                  return nullptr);
     } else if (inputCast->GetStorageFormat() != Format::FORMAT_ND) {
         inputCast = l0op::ReFormat(inputCast, Format::FORMAT_ND);
-        OP_CHECK(inputCast != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The ReFormat return nullptr."),
+        OP_CHECK(inputCast != nullptr, OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The ReFormat return nullptr."),
                  return nullptr);
     }
     return inputCast;
@@ -286,17 +287,19 @@ aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(const aclTensor* self, const aclTe
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     auto promoteType = op::PromoteType(self->GetDataType(), target->GetDataType());
     auto selfpost = InputPreProcess(selfContiguous, reduction, promoteType, uniqueExecutor.get());
-    OP_CHECK(selfpost != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The self with InputPreProcess return nullptr."),
+    OP_CHECK(selfpost != nullptr,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The self with InputPreProcess return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
 
     auto targetpost = InputPreProcess(targetContiguous, reduction, promoteType, uniqueExecutor.get());
-    OP_CHECK(targetpost != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The target with InputPreProcess return nullptr."),
+    OP_CHECK(targetpost != nullptr,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The target with InputPreProcess return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
 
     auto smoothL1LossResult = l0op::SmoothL1Loss(selfpost, targetpost, GetReductionStr(reduction), beta,
                                                  uniqueExecutor.get());
     OP_CHECK(smoothL1LossResult != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The reslut with SmoothL1Loss return nullptr."),
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The reslut with SmoothL1Loss return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
     const aclTensor* smoothL1LossResultWithTrans = nullptr;
     if ((smoothL1LossResult->GetStorageShape().GetDimNum() == NC1HWC0_DIM &&
@@ -308,18 +311,19 @@ aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(const aclTensor* self, const aclTe
         smoothL1LossResultWithTrans = l0op::ReFormat(smoothL1LossResult, result->GetStorageFormat());
     }
     OP_CHECK(smoothL1LossResultWithTrans != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The smoothL1LossResult with TransData return nullptr."),
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The smoothL1LossResult with TransData return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果转换成输出out的数据类型
     auto smoothL1LossResultCast = l0op::Cast(smoothL1LossResultWithTrans, result->GetDataType(), uniqueExecutor.get());
     OP_CHECK(smoothL1LossResultCast != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The smoothL1LossResult with cast return nullptr."),
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The smoothL1LossResult with cast return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
     auto viewCopyResult = l0op::ViewCopy(smoothL1LossResultCast, result, uniqueExecutor.get());
-    OP_CHECK(viewCopyResult != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The reslut with ViewCopy return nullptr."),
+    OP_CHECK(viewCopyResult != nullptr,
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "The reslut with ViewCopy return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，获取计算过程中需要使用的workspace大小

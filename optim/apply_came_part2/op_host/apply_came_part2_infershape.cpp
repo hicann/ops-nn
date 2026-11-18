@@ -37,12 +37,15 @@ static const size_t INDEX_OUT_SUM_SQUARE_U = 3;
 static const size_t MAX_DIM_NUM = 2;
 
 static ge::graphStatus CopyShapeInput2OutputWithIdxInApply(gert::InferShapeContext* context, int64_t input_idx,
-                                                           int64_t output_idx)
+                                                           int64_t output_idx, const char* inputName,
+                                                           const char* outputName)
 {
     auto in_shape = context->GetInputShape(input_idx);
-    OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
+    OP_CHECK_IF(in_shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), inputName),
+                return ge::GRAPH_FAILED);
     auto out_shape = context->GetOutputShape(output_idx);
-    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    OP_CHECK_IF(out_shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), outputName),
+                return ge::GRAPH_FAILED);
     *out_shape = *in_shape;
     return ge::GRAPH_SUCCESS;
 }
@@ -51,7 +54,8 @@ static ge::graphStatus Infershape4ApplyCamePart2(gert::InferShapeContext* contex
 {
     OP_LOGD(context, "Begin ApplyCamePart2Infershape.");
     const gert::Shape* gradShape = context->GetInputShape(INDEX_IN_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    OP_CHECK_IF(gradShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad"),
+                return ge::GRAPH_FAILED);
     // 动态 Rank（dims={-2}）场景：def 声明 DynamicRankSupportFlag(true) 且随附 [-2]
     // 动态示例；对齐同仓 apply_came_part3/sgd 约定，任一输入未知 rank 时输出全部置
     // unknown rank 并放行，避免把 {-2}（GetDimNum()==1）当作具体 rank-1 拒绝
@@ -60,7 +64,10 @@ static ge::graphStatus Infershape4ApplyCamePart2(gert::InferShapeContext* contex
         OP_LOGD(context, "ApplyCamePart2 input is unknown rank (-2), set outputs to unknown rank");
         for (size_t i = 0; i < 4; ++i) {
             auto* outputShape = context->GetOutputShape(i);
-            OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+            OP_CHECK_IF(
+                outputShape == nullptr,
+                OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), ("output[" + std::to_string(i) + "]").c_str()),
+                return ge::GRAPH_FAILED);
             Ops::Base::SetUnknownRank(*outputShape);
         }
         return ge::GRAPH_SUCCESS;
@@ -69,15 +76,27 @@ static ge::graphStatus Infershape4ApplyCamePart2(gert::InferShapeContext* contex
                 OP_LOGE_FOR_INVALID_SHAPEDIM("ApplyCamePart2", "grad", std::to_string(gradDimNum) + "D", "2D"),
                 return GRAPH_FAILED);
 
-    OP_CHECK_IF(CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_GRAD, INDEX_OUT_U) != GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "%s", "Infershape4ApplyCamePart2 failed!"), return GRAPH_FAILED);
-    OP_CHECK_IF(CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_R, INDEX_OUT_R) != GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "%s", "Infershape4ApplyCamePart2 failed!"), return GRAPH_FAILED);
-    OP_CHECK_IF(CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_C, INDEX_OUT_C) != GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "%s", "Infershape4ApplyCamePart2 failed!"), return GRAPH_FAILED);
+    OP_CHECK_IF(CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_GRAD, INDEX_OUT_U, "input grad", "output u") !=
+                    GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                       "copy grad shape to output u failed; propagate the lower-layer first error."),
+                return GRAPH_FAILED);
     OP_CHECK_IF(
-        CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_SUM_GRAD_RC, INDEX_OUT_SUM_SQUARE_U) != GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "%s", "Infershape4ApplyCamePart2 failed!"), return GRAPH_FAILED);
+        CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_R, INDEX_OUT_R, "input r", "output r") != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                               "copy r shape to output r failed; propagate the lower-layer first error."),
+        return GRAPH_FAILED);
+    OP_CHECK_IF(
+        CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_C, INDEX_OUT_C, "input c", "output c") != GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                               "copy c shape to output c failed; propagate the lower-layer first error."),
+        return GRAPH_FAILED);
+    OP_CHECK_IF(CopyShapeInput2OutputWithIdxInApply(context, INDEX_IN_SUM_GRAD_RC, INDEX_OUT_SUM_SQUARE_U,
+                                                    "input sum_grad_rc", "output sum_square_u") != GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                       "copy sum_grad_rc shape to output sum_square_u failed; propagate the "
+                                       "lower-layer first error."),
+                return GRAPH_FAILED);
 
     OP_LOGD(context, "End ApplyCamePart2Infershape.");
     return ge::GRAPH_SUCCESS;

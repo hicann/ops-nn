@@ -230,3 +230,88 @@ TEST(ApplyCamePart3InferShape, InfersAllOutputDataTypes)
     RunInferDataType(ge::DT_BF16);
     RunInferDataType(ge::DT_FLOAT);
 }
+
+// 负向：通过双参数 IrInstanceNum 将目标输入/输出的实例数置 0，
+// 使 GetInputShape/GetOutputShape 按下标越界规则返回空指针（mse_loss_grad_v2 同款做法）
+// 注意：目标位之后的实例数必须一并置 0，否则后续实例会前移占位导致错位
+static ge::graphStatus RunInferShapeWithNullInstance(const std::vector<uint32_t>& inputInstanceNum,
+                                                     const std::vector<uint32_t>& outputInstanceNum,
+                                                     gert::StorageShape* u, gert::StorageShape* m,
+                                                     gert::StorageShape* scalar, gert::StorageShape* globalShape)
+{
+    auto* impl = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart3");
+    if (impl == nullptr || impl->infer_shape == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    auto holder = gert::InferShapeContextFaker()
+                      .SetOpType("ApplyCamePart3")
+                      .IrInstanceNum(inputInstanceNum, outputInstanceNum)
+                      .InputShapes({u, m, scalar, scalar, scalar, scalar, globalShape})
+                      .Build();
+    return impl->infer_shape(holder.GetContext<gert::InferShapeContext>());
+}
+
+TEST(ApplyCamePart3InferShape, RejectsNullUInput)
+{
+    EXPECT_EQ(RunInferShapeWithNullInstance({0, 0, 0, 0, 0, 0, 0}, {1, 1, 1, 1}, nullptr, nullptr, nullptr, nullptr),
+              ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, RejectsNullMInput)
+{
+    gert::StorageShape u = {{65, 67}, {65, 67}};
+    gert::StorageShape scalar = {{1}, {1}};
+    gert::StorageShape globalShape = {{2}, {2}};
+    EXPECT_EQ(RunInferShapeWithNullInstance({1, 0, 0, 0, 0, 0, 0}, {1, 1, 1, 1}, &u, nullptr, &scalar, &globalShape),
+              ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, UnknownRankRejectsNullOutput)
+{
+    gert::StorageShape u = {{-2}, {-2}};
+    gert::StorageShape m = {{-2}, {-2}};
+    gert::StorageShape scalar = {{1}, {1}};
+    gert::StorageShape globalShape = {{2}, {2}};
+    EXPECT_EQ(RunInferShapeWithNullInstance({1, 1, 1, 1, 1, 1, 1}, {0, 0, 0, 0}, &u, &m, &scalar, &globalShape),
+              ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, RejectsNullOutputM)
+{
+    gert::StorageShape u = {{65, 67}, {65, 67}};
+    gert::StorageShape m = {{65, 67}, {65, 67}};
+    gert::StorageShape scalar = {{1}, {1}};
+    gert::StorageShape globalShape = {{2}, {2}};
+    EXPECT_EQ(RunInferShapeWithNullInstance({1, 1, 1, 1, 1, 1, 1}, {0, 0, 0, 0}, &u, &m, &scalar, &globalShape),
+              ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, RejectsNullOutputSumUR)
+{
+    gert::StorageShape u = {{65, 67}, {65, 67}};
+    gert::StorageShape m = {{65, 67}, {65, 67}};
+    gert::StorageShape scalar = {{1}, {1}};
+    gert::StorageShape globalShape = {{2}, {2}};
+    EXPECT_EQ(RunInferShapeWithNullInstance({1, 1, 1, 1, 1, 1, 1}, {1, 0, 0, 0}, &u, &m, &scalar, &globalShape),
+              ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, RejectsNullOutputSumUC)
+{
+    gert::StorageShape u = {{65, 67}, {65, 67}};
+    gert::StorageShape m = {{65, 67}, {65, 67}};
+    gert::StorageShape scalar = {{1}, {1}};
+    gert::StorageShape globalShape = {{2}, {2}};
+    EXPECT_EQ(RunInferShapeWithNullInstance({1, 1, 1, 1, 1, 1, 1}, {1, 1, 0, 0}, &u, &m, &scalar, &globalShape),
+              ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart3InferShape, RejectsNullOutputSumURC)
+{
+    gert::StorageShape u = {{65, 67}, {65, 67}};
+    gert::StorageShape m = {{65, 67}, {65, 67}};
+    gert::StorageShape scalar = {{1}, {1}};
+    gert::StorageShape globalShape = {{2}, {2}};
+    EXPECT_EQ(RunInferShapeWithNullInstance({1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 0}, &u, &m, &scalar, &globalShape),
+              ge::GRAPH_FAILED);
+}

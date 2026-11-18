@@ -49,9 +49,10 @@ const aclTensor* SoftMarginLossGrad(const aclTensor* gradOutput, const aclTensor
     auto out = executor->AllocTensor(broadcastShape, self->GetDataType());
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftMarginLossGrad, OP_INPUT(self, target, gradOutput), OP_OUTPUT(out),
                                            OP_ATTR(reduction));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftMarginLossGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-             return nullptr);
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "SoftMarginLossGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+        return nullptr);
     return out;
 }
 } // namespace l0op

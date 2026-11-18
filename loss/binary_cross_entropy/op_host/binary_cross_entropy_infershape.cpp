@@ -28,7 +28,8 @@ static ge::graphStatus InferShape4BinaryCrossEntropy(gert::InferShapeContext* co
         return Ops::Base::InferShape4Elewise(context);
     }
     auto out_shape = context->GetOutputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
+    OP_CHECK_IF(out_shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output out"),
+                return ge::GRAPH_FAILED);
     out_shape->SetDimNum(0);
 
     return ge::GRAPH_SUCCESS;

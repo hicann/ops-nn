@@ -40,9 +40,10 @@ const aclTensor* SoftMarginLoss(const aclTensor* self, const aclTensor* target, 
     }
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(SoftMarginLoss, OP_INPUT(self, target), OP_OUTPUT(lossOut),
                                            OP_ATTR(reduction));
-    OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "SoftMarginLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-             return nullptr);
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "SoftMarginLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+        return nullptr);
     return lossOut;
 }
 } // namespace l0op

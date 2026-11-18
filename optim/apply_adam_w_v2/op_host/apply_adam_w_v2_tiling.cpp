@@ -13,6 +13,8 @@
  * \brief
  */
 #include <cmath>
+#include <string>
+#include <vector>
 #include "register/op_impl_registry.h"
 #include "util/math_util.h"
 #include "log/log.h"
@@ -99,7 +101,8 @@ static inline bool IsDiffDtype(const std::vector<DataType>& dtypeLst)
 static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, ApplyAdamWV2TilingParam& tilingParam)
 {
     auto dtypePtr = context->GetInputDesc(INDEX_IN_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
+    OP_CHECK_IF(dtypePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input var"),
+                return ge::GRAPH_FAILED);
     auto dtype = dtypePtr->GetDataType();
     OP_CHECK_IF(IsInvalidType(dtype),
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "var",
@@ -108,7 +111,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     tilingParam.dtypeLst.push_back(dtype);
 
     dtypePtr = context->GetInputDesc(INDEX_IN_M);
-    OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
+    OP_CHECK_IF(dtypePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input m"),
+                return ge::GRAPH_FAILED);
     dtype = dtypePtr->GetDataType();
     OP_CHECK_IF(IsInvalidType(dtype),
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "m",
@@ -117,7 +121,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     tilingParam.dtypeLst.push_back(dtype);
 
     dtypePtr = context->GetInputDesc(INDEX_IN_V);
-    OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
+    OP_CHECK_IF(dtypePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input v"),
+                return ge::GRAPH_FAILED);
     dtype = dtypePtr->GetDataType();
     OP_CHECK_IF(IsInvalidType(dtype),
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "v",
@@ -126,7 +131,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     tilingParam.dtypeLst.push_back(dtype);
 
     dtypePtr = context->GetInputDesc(INDEX_IN_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
+    OP_CHECK_IF(dtypePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad"),
+                return ge::GRAPH_FAILED);
     dtype = dtypePtr->GetDataType();
     OP_CHECK_IF(IsInvalidType(dtype),
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad",
@@ -137,7 +143,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     tilingParam.isBfloat16 = dtype == ge::DT_BF16 ? 1 : 0;
 
     dtypePtr = context->GetInputDesc(INDEX_IN_STEP);
-    OP_CHECK_NULL_WITH_CONTEXT(context, dtypePtr);
+    OP_CHECK_IF(dtypePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input step"),
+                return ge::GRAPH_FAILED);
     dtype = dtypePtr->GetDataType();
     bool isInvalidType = dtype != ge::DT_FLOAT && dtype != ge::DT_INT64;
     OP_CHECK_IF(isInvalidType,
@@ -181,23 +188,28 @@ static bool IsSameShape(const gert::Shape shape1, const gert::Shape shape2)
 static ge::graphStatus CheckInputShape(const gert::TilingContext* context)
 {
     auto varShapePtr = context->GetInputShape(INDEX_IN_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varShapePtr);
+    OP_CHECK_IF(varShapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input var"),
+                return ge::GRAPH_FAILED);
     auto varShape = varShapePtr->GetStorageShape();
 
     auto mShapePtr = context->GetInputShape(INDEX_IN_M);
-    OP_CHECK_NULL_WITH_CONTEXT(context, mShapePtr);
+    OP_CHECK_IF(mShapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input m"),
+                return ge::GRAPH_FAILED);
     auto mShape = mShapePtr->GetStorageShape();
 
     auto vShapePtr = context->GetInputShape(INDEX_IN_V);
-    OP_CHECK_NULL_WITH_CONTEXT(context, vShapePtr);
+    OP_CHECK_IF(vShapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input v"),
+                return ge::GRAPH_FAILED);
     auto vShape = vShapePtr->GetStorageShape();
 
     auto gradShapePtr = context->GetInputShape(INDEX_IN_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShapePtr);
+    OP_CHECK_IF(gradShapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad"),
+                return ge::GRAPH_FAILED);
     auto gradShape = gradShapePtr->GetStorageShape();
 
     auto stepShapePtr = context->GetInputShape(INDEX_IN_STEP);
-    OP_CHECK_NULL_WITH_CONTEXT(context, stepShapePtr);
+    OP_CHECK_IF(stepShapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input step"),
+                return ge::GRAPH_FAILED);
     auto stepShape = Ops::NN::OpTiling::EnsureNotScalar(stepShapePtr->GetStorageShape());
 
     auto maxGradNormShape = context->GetOptionalInputShape(INDEX_IN_MAX_GRAD_NORM);
@@ -233,36 +245,41 @@ static ge::graphStatus GetTilingAttr(const gert::TilingContext* context, ApplyAd
 {
     // get attrs of lr, beta1, beta2, weight_decay, eps, amsgrad and maximize
     auto* attrs = context->GetAttrs();
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    OP_CHECK_IF(attrs == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "attrs"), return ge::GRAPH_FAILED);
 
     auto* attrLr = attrs->GetAttrPointer<float>(INDEX_ATTR_LR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrLr);
+    OP_CHECK_IF(attrLr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "lr"), return ge::GRAPH_FAILED);
     tilingParam.lr = static_cast<float>(*attrLr);
 
     auto* attrBeta1 = attrs->GetAttrPointer<float>(INDEX_ATTR_BETA1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrBeta1);
+    OP_CHECK_IF(attrBeta1 == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "beta1"),
+                return ge::GRAPH_FAILED);
     tilingParam.beta1 = static_cast<float>(*attrBeta1);
 
     auto* attrBeta2 = attrs->GetAttrPointer<float>(INDEX_ATTR_BETA2);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrBeta2);
+    OP_CHECK_IF(attrBeta2 == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "beta2"),
+                return ge::GRAPH_FAILED);
     tilingParam.beta2 = static_cast<float>(*attrBeta2);
 
     auto* attrWeightDecay = attrs->GetAttrPointer<float>(INDEX_ATTR_WEIGHT_DECAY);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrWeightDecay);
+    OP_CHECK_IF(attrWeightDecay == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "weight_decay"),
+                return ge::GRAPH_FAILED);
     tilingParam.weightDecay = static_cast<float>(*attrWeightDecay);
 
     auto* attrEps = attrs->GetAttrPointer<float>(INDEX_ATTR_EPS);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrEps);
+    OP_CHECK_IF(attrEps == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "eps"), return ge::GRAPH_FAILED);
     tilingParam.eps = static_cast<float>(*attrEps);
 
     auto* attrAmsgrad = attrs->GetAttrPointer<bool>(INDEX_ATTR_AMSGRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrAmsgrad);
+    OP_CHECK_IF(attrAmsgrad == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "amsgrad"),
+                return ge::GRAPH_FAILED);
     auto amsgrad = *attrAmsgrad;
     int64_t amsgradInt = amsgrad ? 1 : 0;
     tilingParam.amsgrad = amsgradInt;
 
     auto* attrMaximize = attrs->GetAttrPointer<bool>(INDEX_ATTR_MAXIMIZE);
-    OP_CHECK_NULL_WITH_CONTEXT(context, attrMaximize);
+    OP_CHECK_IF(attrMaximize == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "maximize"),
+                return ge::GRAPH_FAILED);
     auto maximize = *attrMaximize;
     int64_t maximizeInt = maximize ? 1 : 0;
     tilingParam.maximize = maximizeInt;
@@ -307,7 +324,8 @@ static inline void GetTilingKey(ApplyAdamWV2TilingParam& tilingParam)
 static ge::graphStatus DoTiling(const gert::TilingContext* context, ApplyAdamWV2TilingParam& tilingParam)
 {
     auto shapePtr = context->GetInputShape(INDEX_IN_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, shapePtr);
+    OP_CHECK_IF(shapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input var"),
+                return ge::GRAPH_FAILED);
     size_t totalDataNum = shapePtr->GetStorageShape().GetShapeSize();
     // 每个核单次可以处理的个数
     const size_t numPerLoop = 2432;
@@ -357,14 +375,16 @@ static void GetTilingData(ApplyAdamWV2TilingData& tilingData, const ApplyAdamWV2
 
 ge::graphStatus Tiling4ApplyAdamWV2(gert::TilingContext* context)
 {
-    if (context == nullptr) {
-        OP_LOGE("Tiling4ApplyAdamWV2", "Tiling context is null");
-        return ge::GRAPH_FAILED;
-    }
+    OP_CHECK_IF(context == nullptr,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ApplyAdamWV2", "context", "null", "tiling context is null."),
+                return ge::GRAPH_FAILED);
 
     OP_LOGD(context, "Tiling4ApplyAdamWV2 running begin");
     auto compileInfo = context->GetCompileInfo<ApplyAdamWV2CompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    OP_CHECK_IF(
+        compileInfo == nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "compileInfo", "null", "compileInfo is null."),
+        return ge::GRAPH_FAILED);
     if (compileInfo->isRegbase) {
         OP_LOGD(context, "Enter ApplyAdamWV2RegbaseTiling");
         ApplyAdamWV2RegbaseTiling tiling(context);
@@ -375,28 +395,42 @@ ge::graphStatus Tiling4ApplyAdamWV2(gert::TilingContext* context)
     tilingParam.totalCoreNum = compileInfo->totalCoreNum;
     tilingParam.ubSize = compileInfo->ubSize;
 
-    OP_CHECK_IF(GetTilingAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Tiling4ApplyAdamWV2 GetTilingAttr fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        GetTilingAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetTilingAttr failed; propagate the lower-layer first error."),
+        return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(CheckInputDtype(context, tilingParam) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "input dtype check failed."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                       "input dtype check failed; propagate the lower-layer first error."),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckInputShape(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "input shape check failed."),
+    OP_CHECK_IF(CheckInputShape(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                       "input shape check failed; propagate the lower-layer first error."),
                 return ge::GRAPH_FAILED);
 
     GetTilingKey(tilingParam);
 
-    OP_CHECK_IF(DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Tiling4ApplyAdamWV2 DoTiling fail."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "DoTiling failed; propagate the lower-layer first error."),
+        return ge::GRAPH_FAILED);
 
     ApplyAdamWV2TilingData tilingData;
     GetTilingData(tilingData, tilingParam);
     OP_CHECK_IF(ApplyAdamWV2SetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "ApplyAdamWV2SetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "tilingDataSize",
+                                                      std::to_string(tilingData.GetDataSize()).c_str(),
+                                                      "tilingDataSize exceeds the raw tiling buffer capacity."),
+                return ge::GRAPH_FAILED);
     context->SetBlockDim(tilingData.get_usedCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
     size_t* workspaces = context->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
+    OP_CHECK_IF(workspaces == nullptr,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "workspaces", "null",
+                                                      "workspace sizes buffer is null."),
+                return ge::GRAPH_FAILED);
     workspaces[0] = WORKSPACE_SIZE;
 
     PrintTilingData(tilingData);
@@ -408,20 +442,31 @@ static ge::graphStatus TilingPrepareForApplyAdamWV2(gert::TilingParseContext* co
     OP_LOGD(context, "TilingPrepareForApplyAdamWV2 enter.");
 
     auto compileInfo = context->GetCompiledInfo<ApplyAdamWV2CompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    OP_CHECK_IF(compileInfo == nullptr,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ApplyAdamWV2", "compileInfo", "null", "compiledInfo is null."),
+                return ge::GRAPH_FAILED);
     auto platformInfo = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    OP_CHECK_IF(platformInfo == nullptr,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ApplyAdamWV2", "platformInfo", "null", "platformInfo is null."),
+                return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     compileInfo->isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
-    OP_CHECK_IF((compileInfo->totalCoreNum <= 0),
-                OP_LOGE(context, "TilingPrepareForApplyAdamWV2 fail to get core num."), return ge::GRAPH_FAILED);
+    if (compileInfo->totalCoreNum <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ApplyAdamWV2", "totalCoreNum",
+                                              std::to_string(compileInfo->totalCoreNum).c_str(),
+                                              "totalCoreNum from platform info should be positive.");
+        return ge::GRAPH_FAILED;
+    }
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSize = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSize <= 0), OP_LOGE(context, "TilingPrepareForApplyAdamWV2 fail to get ub size."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->ubSize <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ApplyAdamWV2", "ubSize", std::to_string(compileInfo->ubSize).c_str(),
+                                              "ubSize from platform info should be positive.");
+        return ge::GRAPH_FAILED;
+    }
 
     OP_LOGD(context, "TilingPrepareForApplyAdamWV2 exit.");
     return ge::GRAPH_SUCCESS;

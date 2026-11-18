@@ -41,7 +41,8 @@ const aclTensor* BinaryCrossEntropyGrad(const aclTensor* gradOutput, const aclTe
                                                  OP_INPUT(self, target, gradOutput, weightOptional), OP_OUTPUT(out),
                                                  OP_ATTR_NAMES({"reduction"}), OP_ATTR(reduction));
     OP_CHECK(retAiCore == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "BinaryCrossEntropyGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR,
+                                    "BinaryCrossEntropyGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
              return nullptr);
     return out;
 }

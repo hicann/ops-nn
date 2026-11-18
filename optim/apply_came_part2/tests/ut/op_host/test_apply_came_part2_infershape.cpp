@@ -96,3 +96,131 @@ TEST_F(ApplyCamePart2InferShape, infershape_reject_grad_rank1)
 
     ASSERT_NE(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+
+// 负向：通过双参数 IrInstanceNum 将目标输入/输出的实例数置 0，
+// 使 GetInputShape/GetOutputShape 按下标越界规则返回空指针（mse_loss_grad_v2 同款做法）
+// 注意：目标位之后的实例数必须一并置 0，否则后续实例会前移占位导致错位
+static ge::graphStatus InferApplyCamePart2ShapeWithNullInput(
+    const std::vector<uint32_t>& inputInstanceNum, const std::vector<uint32_t>& outputInstanceNum,
+    gert::StorageShape* grad, gert::StorageShape* sumGradR, gert::StorageShape* sumGradC, gert::StorageShape* sumGradRC,
+    gert::StorageShape* r, gert::StorageShape* c, gert::StorageShape* scalar, gert::StorageShape* globalShapeDesc)
+{
+    auto infer = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart2")->infer_shape;
+    auto holder = gert::InferShapeContextFaker()
+                      .SetOpType("ApplyCamePart2")
+                      .IrInstanceNum(inputInstanceNum, outputInstanceNum)
+                      .InputShapes({grad, sumGradR, sumGradC, sumGradRC, r, c, scalar, scalar, globalShapeDesc})
+                      .Build();
+    return infer(holder.GetContext<gert::InferShapeContext>());
+}
+
+TEST_F(ApplyCamePart2InferShape, infershape_reject_null_grad_input)
+{
+    gert::StorageShape gradShape = {{4, 8}, {4, 8}};
+    EXPECT_EQ(InferApplyCamePart2ShapeWithNullInput({0, 0, 0, 0, 0, 0, 0, 0, 0}, {1, 1, 1, 1}, nullptr, nullptr,
+                                                    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCamePart2InferShape, infershape_reject_null_r_input)
+{
+    gert::StorageShape gradShape = {{4, 8}, {4, 8}};
+    gert::StorageShape sumGradRShape = {{4}, {4}};
+    gert::StorageShape sumGradCShape = {{8}, {8}};
+    gert::StorageShape sumGradRCShape = {{1}, {1}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape globalShapeDesc = {{2}, {2}};
+    EXPECT_EQ(
+        InferApplyCamePart2ShapeWithNullInput({1, 1, 1, 1, 0, 0, 0, 0, 0}, {1, 1, 1, 1}, &gradShape, &sumGradRShape,
+                                              &sumGradCShape, &sumGradRCShape, nullptr, nullptr, nullptr, nullptr),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCamePart2InferShape, infershape_reject_null_c_input)
+{
+    gert::StorageShape gradShape = {{4, 8}, {4, 8}};
+    gert::StorageShape sumGradRShape = {{4}, {4}};
+    gert::StorageShape sumGradCShape = {{8}, {8}};
+    gert::StorageShape sumGradRCShape = {{1}, {1}};
+    gert::StorageShape rShape = {{4}, {4}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape globalShapeDesc = {{2}, {2}};
+    EXPECT_EQ(
+        InferApplyCamePart2ShapeWithNullInput({1, 1, 1, 1, 1, 0, 0, 0, 0}, {1, 1, 1, 1}, &gradShape, &sumGradRShape,
+                                              &sumGradCShape, &sumGradRCShape, &rShape, nullptr, nullptr, nullptr),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCamePart2InferShape, infershape_reject_null_output_u)
+{
+    gert::StorageShape gradShape = {{4, 8}, {4, 8}};
+    gert::StorageShape sumGradRShape = {{4}, {4}};
+    gert::StorageShape sumGradCShape = {{8}, {8}};
+    gert::StorageShape sumGradRCShape = {{1}, {1}};
+    gert::StorageShape rShape = {{4}, {4}};
+    gert::StorageShape cShape = {{8}, {8}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape globalShapeDesc = {{2}, {2}};
+    EXPECT_EQ(InferApplyCamePart2ShapeWithNullInput({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 0, 0}, &gradShape,
+                                                    &sumGradRShape, &sumGradCShape, &sumGradRCShape, &rShape, &cShape,
+                                                    &scalarShape, &globalShapeDesc),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ApplyCamePart2InferShape, infershape_reject_null_output_sum_square_u)
+{
+    gert::StorageShape gradShape = {{4, 8}, {4, 8}};
+    gert::StorageShape sumGradRShape = {{4}, {4}};
+    gert::StorageShape sumGradCShape = {{8}, {8}};
+    gert::StorageShape sumGradRCShape = {{1}, {1}};
+    gert::StorageShape rShape = {{4}, {4}};
+    gert::StorageShape cShape = {{8}, {8}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape globalShapeDesc = {{2}, {2}};
+    EXPECT_EQ(InferApplyCamePart2ShapeWithNullInput({1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 0}, &gradShape,
+                                                    &sumGradRShape, &sumGradCShape, &sumGradRCShape, &rShape, &cShape,
+                                                    &scalarShape, &globalShapeDesc),
+              ge::GRAPH_FAILED);
+}
+
+// 动态 Rank（dims={-2}）场景：4 输出全部置 unknown rank
+TEST_F(ApplyCamePart2InferShape, infershape_unknown_rank_grad_sets_outputs_unknown_rank)
+{
+    gert::StorageShape gradShape = {{-2}, {-2}};
+    gert::StorageShape sumGradRShape = {{4}, {4}};
+    gert::StorageShape sumGradCShape = {{8}, {8}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape rShape = {{4}, {4}};
+    gert::StorageShape cShape = {{8}, {8}};
+    gert::StorageShape globalShapeDesc = {{2}, {2}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(9, 4)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&gradShape, &sumGradRShape, &sumGradCShape, &scalarShape, &rShape, &cShape,
+                                    &scalarShape, &scalarShape, &globalShapeDesc})
+                      .Build();
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart2")->infer_shape;
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    for (size_t i = 0; i < 4; ++i) {
+        const auto* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(i);
+        ASSERT_NE(output, nullptr);
+        EXPECT_EQ(output->GetDim(0), -2);
+    }
+}
+
+// 动态 Rank 场景下输出实例缺失须报错
+TEST_F(ApplyCamePart2InferShape, infershape_unknown_rank_grad_reject_null_output)
+{
+    gert::StorageShape gradShape = {{-2}, {-2}};
+    gert::StorageShape sumGradRShape = {{4}, {4}};
+    gert::StorageShape sumGradCShape = {{8}, {8}};
+    gert::StorageShape scalarShape = {{1}, {1}};
+    gert::StorageShape rShape = {{4}, {4}};
+    gert::StorageShape cShape = {{8}, {8}};
+    gert::StorageShape globalShapeDesc = {{2}, {2}};
+    EXPECT_EQ(InferApplyCamePart2ShapeWithNullInput({1, 1, 1, 1, 1, 1, 1, 1, 1}, {0, 0, 0, 0}, &gradShape,
+                                                    &sumGradRShape, &sumGradCShape, &scalarShape, &rShape, &cShape,
+                                                    &scalarShape, &globalShapeDesc),
+              ge::GRAPH_FAILED);
+}

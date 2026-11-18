@@ -57,6 +57,28 @@ TEST_F(binary_cross_entropy, binary_cross_entropy_infershape_diff_test)
     ASSERT_EQ(Ops::Base::ToString(*outputDesc), Ops::Base::ToString(expectedOutputShape));
 }
 
+// 负向：reduction != "none" 时输出实例数置 0，GetOutputShape(0) 返回空指针须报错
+TEST_F(binary_cross_entropy, binary_cross_entropy_infershape_mean_with_null_output_failed)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BinaryCrossEntropy")->infer_shape;
+    gert::StorageShape xShape = {{16, 8, 375}, {16, 8, 375}};
+    gert::StorageShape yShape = {{16, 8, 375}, {16, 8, 375}};
+    gert::StorageShape weightShape = {{16, 8, 375}, {16, 8, 375}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .IrInstanceNum({1, 1, 1}, {0})
+                      .InputShapes({&xShape, &yShape, &weightShape})
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<string>("mean")}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
+    ASSERT_EQ(context->GetOutputShape(0), nullptr);
+    EXPECT_EQ(inferShapeFunc(context), ge::GRAPH_FAILED);
+}
+
 TEST_F(binary_cross_entropy, binary_cross_entropy_infershape_diff_test_none)
 {
     fe::PlatformInfo platformInfo;

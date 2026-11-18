@@ -33,7 +33,8 @@ void ApplyAdamWV2(aclTensor* varRef, aclTensor* mRef, aclTensor* vRef, aclTensor
                                             OP_INPUT(varRef, mRef, vRef, grad, step, maxGradNormOptionalRef),
                                             OP_ATTR(lr, beta1, beta2, weightDecay, eps, amsgrad, maximize));
     if (retAicore != ACLNN_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ApplyAdamWV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        // 聚合失败：首错已由 Tiling/执行器创建路径正式上报，此处仅记录日志。
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "ApplyAdamWV2 ADD_TO_LAUNCHER_LIST_AICORE failed.");
     }
     return;
 }

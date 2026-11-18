@@ -31,7 +31,8 @@ const std::tuple<aclTensor*, aclTensor*> ChamferDistanceGrad(const aclTensor* xy
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(ChamferDistanceGrad, OP_INPUT(xyz1, xyz2, idx1, idx2, gradDist1, gradDist2),
                                            OP_OUTPUT(gradXyz1, gradXyz2));
     if (ret != ACL_SUCCESS) {
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ChamferDistanceGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR,
+                               "ChamferDistanceGradAiCore ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
     }
     return std::tie(gradXyz1, gradXyz2);

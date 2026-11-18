@@ -46,7 +46,8 @@ const aclTensor* MSELossV2(const aclTensor* self, const aclTensor* target, const
     }
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MSELossV2, OP_INPUT(self, target), OP_OUTPUT(lossOut), OP_ATTR(reduction));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MSELossV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "MSELossV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return lossOut;
 }
 
@@ -68,7 +69,8 @@ const aclTensor* MseLossV1(const aclTensor* self, const aclTensor* target, const
     }
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MseLoss, OP_INPUT(self, target), OP_OUTPUT(lossOut), OP_ATTR(reduction));
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MseLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return nullptr);
+             OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_INNER_NULLPTR, "MseLossAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+             return nullptr);
     return lossOut;
 }
 

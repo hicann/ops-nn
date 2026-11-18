@@ -110,15 +110,20 @@ static ge::graphStatus InferShape4ApplyCamePart3(gert::InferShapeContext* contex
 {
     const gert::Shape* uShape = context->GetInputShape(kUIndex);
     const gert::Shape* mInShape = context->GetInputShape(kMInIndex);
-    OP_CHECK_NULL_WITH_CONTEXT(context, uShape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, mInShape);
+    OP_CHECK_IF(uShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input u"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(mInShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input m"),
+                return ge::GRAPH_FAILED);
     if (CheckGlobalShape(context) != ge::GRAPH_SUCCESS || CheckScalarInputs(context) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (Ops::Base::IsUnknownRank(*uShape) || Ops::Base::IsUnknownRank(*mInShape)) {
         for (size_t i = 0; i < 4; ++i) {
             auto* outputShape = context->GetOutputShape(i);
-            OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+            OP_CHECK_IF(
+                outputShape == nullptr,
+                OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), ("output[" + std::to_string(i) + "]").c_str()),
+                return ge::GRAPH_FAILED);
             Ops::Base::SetUnknownRank(*outputShape);
         }
         return ge::GRAPH_SUCCESS;
@@ -131,10 +136,14 @@ static ge::graphStatus InferShape4ApplyCamePart3(gert::InferShapeContext* contex
     auto* sumUR = context->GetOutputShape(kSumURIndex);
     auto* sumUC = context->GetOutputShape(kSumUCIndex);
     auto* sumURC = context->GetOutputShape(kSumURCIndex);
-    OP_CHECK_NULL_WITH_CONTEXT(context, mOut);
-    OP_CHECK_NULL_WITH_CONTEXT(context, sumUR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, sumUC);
-    OP_CHECK_NULL_WITH_CONTEXT(context, sumURC);
+    OP_CHECK_IF(mOut == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output m"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sumUR == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output sum_u_r"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sumUC == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output sum_u_c"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sumURC == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output sum_u_rc"),
+                return ge::GRAPH_FAILED);
     *mOut = resolvedShape;
     sumUR->SetDimNum(1);
     sumUR->SetDim(0, resolvedShape.GetDim(0));

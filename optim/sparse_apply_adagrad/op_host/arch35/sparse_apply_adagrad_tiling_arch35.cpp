@@ -16,6 +16,8 @@
 #include "sparse_apply_adagrad_tiling_arch35.h"
 
 #include <algorithm>
+#include <string>
+#include <vector>
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "op_host/tiling_templates_registry.h"
@@ -77,13 +79,19 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, int64_t& ub
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
-    OP_CHECK_IF(coreNum <= 0, OP_LOGE(context, "coreNum must be positive, but got %ld", coreNum),
-                return ge::GRAPH_FAILED);
+    if (coreNum <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "coreNum", std::to_string(coreNum).c_str(),
+                                              "coreNum must be positive.");
+        return ge::GRAPH_FAILED;
+    }
     uint64_t ubSizeTemp = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizeTemp);
     ubSize = static_cast<int64_t>(ubSizeTemp);
-    OP_CHECK_IF(ubSize <= UB_RESERVED_BYTE + BLOCK_LENGTH,
-                OP_LOGE(context, "ubSize %ld is too small for sparse_apply_adagrad", ubSize), return ge::GRAPH_FAILED);
+    if (ubSize <= UB_RESERVED_BYTE + BLOCK_LENGTH) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ubSize", std::to_string(ubSize).c_str(),
+                                              "ubSize is too small for sparse_apply_adagrad.");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -108,15 +116,20 @@ static ge::graphStatus SetWorkspace(gert::TilingContext* context)
 static ge::graphStatus CheckDtype(gert::TilingContext* context)
 {
     auto varDesc = context->GetInputDesc(IDX_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
+    OP_CHECK_IF(varDesc == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input var"),
+                return ge::GRAPH_FAILED);
     auto accumDesc = context->GetInputDesc(IDX_ACCUM);
-    OP_CHECK_NULL_WITH_CONTEXT(context, accumDesc);
+    OP_CHECK_IF(accumDesc == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input accum"),
+                return ge::GRAPH_FAILED);
     auto lrDesc = context->GetInputDesc(IDX_LR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, lrDesc);
+    OP_CHECK_IF(lrDesc == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input lr"),
+                return ge::GRAPH_FAILED);
     auto gradDesc = context->GetInputDesc(IDX_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradDesc);
+    OP_CHECK_IF(gradDesc == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad"),
+                return ge::GRAPH_FAILED);
     auto indicesDesc = context->GetInputDesc(IDX_INDICES);
-    OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
+    OP_CHECK_IF(indicesDesc == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input indices"),
+                return ge::GRAPH_FAILED);
 
     auto varDtype = varDesc->GetDataType();
     auto accumDtype = accumDesc->GetDataType();
@@ -132,7 +145,11 @@ static ge::graphStatus CheckDtype(gert::TilingContext* context)
                                           ge::TypeUtils::DataTypeToSerialString(indicesDtype).c_str(), "INT32"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(varDtype != accumDtype || varDtype != lrDtype || varDtype != gradDtype,
-                OP_LOGE(context, "var, accum, lr and grad dtype must be the same float32 dtype"),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "accum, lr and grad",
+                                                       ge::TypeUtils::DataTypeToSerialString(accumDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(lrDtype) + ", " +
+                                                           ge::TypeUtils::DataTypeToSerialString(gradDtype),
+                                                       "accum, lr and grad must have the same dtype as var (float32)"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -140,15 +157,20 @@ static ge::graphStatus CheckDtype(gert::TilingContext* context)
 static ge::graphStatus CheckShape(gert::TilingContext* context, SparseApplyAdagradShapeInfo& shapeInfo)
 {
     auto varInput = context->GetInputShape(IDX_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varInput);
+    OP_CHECK_IF(varInput == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input var"),
+                return ge::GRAPH_FAILED);
     auto accumInput = context->GetInputShape(IDX_ACCUM);
-    OP_CHECK_NULL_WITH_CONTEXT(context, accumInput);
+    OP_CHECK_IF(accumInput == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input accum"),
+                return ge::GRAPH_FAILED);
     auto lrInput = context->GetInputShape(IDX_LR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, lrInput);
+    OP_CHECK_IF(lrInput == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input lr"),
+                return ge::GRAPH_FAILED);
     auto gradInput = context->GetInputShape(IDX_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradInput);
+    OP_CHECK_IF(gradInput == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad"),
+                return ge::GRAPH_FAILED);
     auto indicesInput = context->GetInputShape(IDX_INDICES);
-    OP_CHECK_NULL_WITH_CONTEXT(context, indicesInput);
+    OP_CHECK_IF(indicesInput == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input indices"),
+                return ge::GRAPH_FAILED);
 
     auto varShape = varInput->GetStorageShape();
     auto accumShape = accumInput->GetStorageShape();
@@ -157,32 +179,54 @@ static ge::graphStatus CheckShape(gert::TilingContext* context, SparseApplyAdagr
     auto indicesShape = indicesInput->GetStorageShape();
 
     OP_CHECK_IF(varShape.GetDimNum() == 0 || varShape.GetDimNum() > MAX_DIMS,
-                OP_LOGE(context, "var dim num %zu is invalid, should be in [1, 8]", varShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "var",
+                                                         std::to_string(varShape.GetDimNum()) + "D",
+                                                         "the dim num of var must be in [1, 8]"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(indicesShape.GetDimNum() != 1,
-                OP_LOGE(context, "indices must be 1D, but got %zu dims", indicesShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices",
+                                                         std::to_string(indicesShape.GetDimNum()) + "D",
+                                                         "indices must be a 1D tensor"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(accumShape.GetDimNum() != varShape.GetDimNum(),
-                OP_LOGE(context, "accum dim num %zu != var dim num %zu", accumShape.GetDimNum(), varShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "accum and var",
+                    std::to_string(accumShape.GetDimNum()) + "D and " + std::to_string(varShape.GetDimNum()) + "D",
+                    "accum must have the same dim num as var"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(gradShape.GetDimNum() != varShape.GetDimNum(),
-                OP_LOGE(context, "grad dim num %zu != var dim num %zu", gradShape.GetDimNum(), varShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "grad and var",
+                    std::to_string(gradShape.GetDimNum()) + "D and " + std::to_string(varShape.GetDimNum()) + "D",
+                    "grad must have the same dim num as var"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(lrShape.GetDimNum() != 0 && !(lrShape.GetDimNum() == 1 && lrShape.GetDim(0) == 1),
-                OP_LOGE(context, "lr must be a scalar (shape empty or [1]), but got %zu dims", lrShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "lr",
+                                                      "dim num = " + std::to_string(lrShape.GetDimNum()),
+                                                      "lr must be a scalar (shape empty or [1])"),
                 return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < varShape.GetDimNum(); ++i) {
-        OP_CHECK_IF(varShape.GetDim(i) <= 0, OP_LOGE(context, "var dim[%zu]=%ld is invalid", i, varShape.GetDim(i)),
-                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(
-            accumShape.GetDim(i) != varShape.GetDim(i),
-            OP_LOGE(context, "accum dim[%zu]=%ld != var dim[%zu]=%ld", i, accumShape.GetDim(i), i, varShape.GetDim(i)),
+            varShape.GetDim(i) <= 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), "var", "dim[" + std::to_string(i) + "] = " + std::to_string(varShape.GetDim(i)),
+                "each dim of var must be positive"),
             return ge::GRAPH_FAILED);
+        OP_CHECK_IF(accumShape.GetDim(i) != varShape.GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "accum and var",
+                        "accum dim[" + std::to_string(i) + "] = " + std::to_string(accumShape.GetDim(i)) +
+                            ", var dim[" + std::to_string(i) + "] = " + std::to_string(varShape.GetDim(i)),
+                        "accum must have the same shape as var"),
+                    return ge::GRAPH_FAILED);
         if (i > 0) {
             OP_CHECK_IF(gradShape.GetDim(i) != varShape.GetDim(i),
-                        OP_LOGE(context, "grad dim[%zu]=%ld != var dim[%zu]=%ld", i, gradShape.GetDim(i), i,
-                                varShape.GetDim(i)),
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            context->GetNodeName(), "grad and var",
+                            "grad dim[" + std::to_string(i) + "] = " + std::to_string(gradShape.GetDim(i)) +
+                                ", var dim[" + std::to_string(i) + "] = " + std::to_string(varShape.GetDim(i)),
+                            "grad must have the same shape as var (except dim 0)"),
                         return ge::GRAPH_FAILED);
         }
     }
@@ -190,11 +234,16 @@ static ge::graphStatus CheckShape(gert::TilingContext* context, SparseApplyAdagr
     shapeInfo.gradDim0 = gradShape.GetDim(0);
     shapeInfo.indicesDim0 = indicesShape.GetDim(0);
     OP_CHECK_IF(shapeInfo.gradDim0 <= 0 || shapeInfo.indicesDim0 <= 0,
-                OP_LOGE(context, "grad dim0 and indices length must be positive, but got %ld and %ld",
-                        shapeInfo.gradDim0, shapeInfo.indicesDim0),
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context->GetNodeName(), "grad and indices",
+                    std::to_string(shapeInfo.gradDim0) + " and " + std::to_string(shapeInfo.indicesDim0),
+                    "grad dim0 and indices length must be positive"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(shapeInfo.gradDim0 != shapeInfo.indicesDim0,
-                OP_LOGE(context, "grad first dim %ld != indices length %ld", shapeInfo.gradDim0, shapeInfo.indicesDim0),
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context->GetNodeName(), "grad and indices",
+                    std::to_string(shapeInfo.gradDim0) + " and " + std::to_string(shapeInfo.indicesDim0),
+                    "grad dim0 must be equal to the length of indices"),
                 return ge::GRAPH_FAILED);
 
     shapeInfo.firstDim = varShape.GetDim(0);
@@ -208,13 +257,19 @@ static ge::graphStatus CheckShape(gert::TilingContext* context, SparseApplyAdagr
 static ge::graphStatus BuildBaseTiling(gert::TilingContext* context, SparseApplyAdagradBaseTiling& base)
 {
     OP_CHECK_IF(GetPlatformInfo(context, base.ubSize, base.coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckDtype failed"),
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                       "GetPlatformInfo failed; propagate the lower-layer first error."),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        CheckDtype(context) != ge::GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "CheckDtype failed; propagate the lower-layer first error."),
+        return ge::GRAPH_FAILED);
 
     SparseApplyAdagradShapeInfo shapeInfo;
-    OP_CHECK_IF(CheckShape(context, shapeInfo) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckShape failed"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        CheckShape(context, shapeInfo) != ge::GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "CheckShape failed; propagate the lower-layer first error."),
+        return ge::GRAPH_FAILED);
 
     base.firstDim = shapeInfo.firstDim;
     base.rowSize = shapeInfo.rowSize;
@@ -225,7 +280,12 @@ static ge::graphStatus BuildBaseTiling(gert::TilingContext* context, SparseApply
 
     int64_t rowBytes = base.rowSize * FLOAT32_BYTES;
     base.blockFormer = AlignUp((rowBytes + base.coreNum - 1) / base.coreNum, REG_LENGTH);
-    OP_CHECK_IF(base.blockFormer <= 0, OP_LOGE(context, "blockFormer must be positive"), return ge::GRAPH_FAILED);
+    if (base.blockFormer <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "blockFormer",
+                                              std::to_string(base.blockFormer).c_str(),
+                                              "blockFormer must be positive.");
+        return ge::GRAPH_FAILED;
+    }
     base.blockNum = (rowBytes + base.blockFormer - 1) / base.blockFormer;
     base.blockTail = rowBytes - (base.blockNum - 1) * base.blockFormer;
     base.indicesDim0Align = AlignUp(base.indicesDim0, BLOCK_NUM);
@@ -240,7 +300,11 @@ static ge::graphStatus FillOptimizeTiling(gert::TilingContext* context, const Sp
     int64_t loopNumFormerBlock = loopNumTailBlock + 1;
     int64_t formerCoreNum = base.gradDim0 % base.coreNum;
     int64_t blockNum = loopNumTailBlock == 0 ? formerCoreNum : base.coreNum;
-    OP_CHECK_IF(blockNum <= 0, OP_LOGE(context, "optimize blockNum must be positive"), return ge::GRAPH_FAILED);
+    if (blockNum <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "blockNum", std::to_string(blockNum).c_str(),
+                                              "optimize blockNum must be positive.");
+        return ge::GRAPH_FAILED;
+    }
 
     int64_t loopNumFormerBlockAlign = (loopNumFormerBlock + BLOCK_NUM - 1) / BLOCK_NUM;
     if (loopNumFormerBlock > MAX_INDICES_BLOCK) {
@@ -248,7 +312,11 @@ static ge::graphStatus FillOptimizeTiling(gert::TilingContext* context, const Sp
     }
     int64_t availableUB = base.ubSize - UB_RESERVED_BYTE - loopNumFormerBlockAlign * FLOAT32_BYTES - BLOCK_LENGTH;
     int64_t ubFormer = (availableUB / 10) / REG_LENGTH * REG_LENGTH;
-    OP_CHECK_IF(ubFormer <= 0, OP_LOGE(context, "optimize ubFormer must be positive"), return ge::GRAPH_FAILED);
+    if (ubFormer <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ubFormer", std::to_string(ubFormer).c_str(),
+                                              "optimize ubFormer must be positive.");
+        return ge::GRAPH_FAILED;
+    }
 
     int64_t rowBytes = base.rowSize * FLOAT32_BYTES;
     int64_t ubLoop = 1;
@@ -284,7 +352,11 @@ static ge::graphStatus FillOptimizeTiling(gert::TilingContext* context, const Sp
 static ge::graphStatus FillOptimizeSplitRTiling(gert::TilingContext* context, const SparseApplyAdagradBaseTiling& base)
 {
     int64_t splitblockNum = base.coreNum / base.gradDim0;
-    OP_CHECK_IF(splitblockNum <= 0, OP_LOGE(context, "splitblockNum must be positive"), return ge::GRAPH_FAILED);
+    if (splitblockNum <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "splitblockNum",
+                                              std::to_string(splitblockNum).c_str(), "splitblockNum must be positive.");
+        return ge::GRAPH_FAILED;
+    }
     int64_t formerBlockDataNum = base.rowSize / splitblockNum;
     if (formerBlockDataNum < REG_FLOAT_NUM) {
         formerBlockDataNum = REG_FLOAT_NUM;
@@ -297,7 +369,11 @@ static ge::graphStatus FillOptimizeSplitRTiling(gert::TilingContext* context, co
 
     int64_t availableUB = base.ubSize - UB_RESERVED_BYTE - BLOCK_LENGTH;
     int64_t ubFormer = availableUB / CONST_FIVE / FLOAT32_BYTES / REG_FLOAT_NUM * REG_FLOAT_NUM;
-    OP_CHECK_IF(ubFormer <= 0, OP_LOGE(context, "split-r ubFormer must be positive"), return ge::GRAPH_FAILED);
+    if (ubFormer <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ubFormer", std::to_string(ubFormer).c_str(),
+                                              "split-r ubFormer must be positive.");
+        return ge::GRAPH_FAILED;
+    }
     int64_t formerBlockUbLoop = 1;
     int64_t formerBlocktailNum = formerBlockDataNum;
     int64_t tailBlockUbLoop = 1;
@@ -360,7 +436,11 @@ static ge::graphStatus FillBigTiling(gert::TilingContext* context, SparseApplyAd
     }
     int64_t availableUB = base.ubSize - UB_RESERVED_BYTE - base.indicesDim0Align * FLOAT32_BYTES - BLOCK_LENGTH;
     int64_t ubFormer = (availableUB / BLOCK_NUM) / REG_LENGTH * REG_LENGTH;
-    OP_CHECK_IF(ubFormer <= 0, OP_LOGE(context, "big ubFormer must be positive"), return ge::GRAPH_FAILED);
+    if (ubFormer <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ubFormer", std::to_string(ubFormer).c_str(),
+                                              "big ubFormer must be positive.");
+        return ge::GRAPH_FAILED;
+    }
     ubFormer = std::min(ubFormer, base.blockFormer);
     int64_t ubLoopOfFormerBlock = (base.blockFormer + ubFormer - 1) / ubFormer;
     int64_t ubLoopOfTailBlock = (base.blockTail + ubFormer - 1) / ubFormer;
@@ -400,10 +480,14 @@ static ge::graphStatus SparseApplyAdagradTilingFunc(gert::TilingContext* context
     OP_LOGD(context, "Enter TilingSparseApplyAdagrad");
 
     SparseApplyAdagradBaseTiling base;
-    OP_CHECK_IF(BuildBaseTiling(context, base) != ge::GRAPH_SUCCESS, OP_LOGE(context, "BuildBaseTiling failed"),
+    OP_CHECK_IF(BuildBaseTiling(context, base) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                       "BuildBaseTiling failed; propagate the lower-layer first error."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(SetWorkspace(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetWorkspace failed"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        SetWorkspace(context) != ge::GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "SetWorkspace failed; propagate the lower-layer first error."),
+        return ge::GRAPH_FAILED);
 
     if (IsOptimizeSplitRCapable(base)) {
         return FillOptimizeSplitRTiling(context, base);

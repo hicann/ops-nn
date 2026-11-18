@@ -37,20 +37,27 @@ static ge::graphStatus InferShapeSparseApplyAdagrad(gert::InferShapeContext* con
     OP_LOGD(context->GetNodeName(), "Enter InferShapeSparseApplyAdagrad");
 
     const gert::Shape* varShape = context->GetInputShape(IDX_VAR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+    OP_CHECK_IF(varShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input var"),
+                return ge::GRAPH_FAILED);
     const gert::Shape* accumShape = context->GetInputShape(IDX_ACCUM);
-    OP_CHECK_NULL_WITH_CONTEXT(context, accumShape);
+    OP_CHECK_IF(accumShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input accum"),
+                return ge::GRAPH_FAILED);
     const gert::Shape* lrShape = context->GetInputShape(IDX_LR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, lrShape);
+    OP_CHECK_IF(lrShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input lr"),
+                return ge::GRAPH_FAILED);
     const gert::Shape* gradShape = context->GetInputShape(IDX_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    OP_CHECK_IF(gradShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad"),
+                return ge::GRAPH_FAILED);
     const gert::Shape* indicesShape = context->GetInputShape(IDX_INDICES);
-    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+    OP_CHECK_IF(indicesShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input indices"),
+                return ge::GRAPH_FAILED);
 
     gert::Shape* varOutShape = context->GetOutputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varOutShape);
+    OP_CHECK_IF(varOutShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output var"),
+                return ge::GRAPH_FAILED);
     gert::Shape* accumOutShape = context->GetOutputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, accumOutShape);
+    OP_CHECK_IF(accumOutShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output accum"),
+                return ge::GRAPH_FAILED);
 
     if (IsUnknownRank(varShape) || IsUnknownRank(accumShape) || IsUnknownRank(lrShape) || IsUnknownRank(gradShape) ||
         IsUnknownRank(indicesShape)) {

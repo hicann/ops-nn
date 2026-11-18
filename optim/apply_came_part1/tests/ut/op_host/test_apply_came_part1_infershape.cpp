@@ -273,6 +273,55 @@ TEST(ApplyCamePart1InferShape, UnknownRankPropagatesToAllOutputs)
     }
 }
 
+// 负向：通过双参数 IrInstanceNum 将目标输入/输出的实例数置 0，
+// 使 GetInputShape/GetOutputShape 按下标越界规则返回空指针（mse_loss_grad_v2 同款做法）
+static ge::graphStatus InferApplyCamePart1ShapeWithNullInput(const std::vector<uint32_t>& inputInstanceNum,
+                                                             const std::vector<uint32_t>& outputInstanceNum,
+                                                             gert::StorageShape* grad, gert::StorageShape* eps)
+{
+    auto infer = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyCamePart1")->infer_shape;
+    auto holder = gert::InferShapeContextFaker()
+                      .SetOpType("ApplyCamePart1")
+                      .IrInstanceNum(inputInstanceNum, outputInstanceNum)
+                      .InputShapes({grad, eps})
+                      .Build();
+    return infer(holder.GetContext<gert::InferShapeContext>());
+}
+
+TEST(ApplyCamePart1InferShape, RejectsNullGradInput)
+{
+    gert::StorageShape grad = {{4, 8}, {4, 8}};
+    gert::StorageShape eps = {{1}, {1}};
+    EXPECT_EQ(InferApplyCamePart1ShapeWithNullInput({0, 0}, {1, 1, 1}, nullptr, nullptr), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart1InferShape, RejectsNullEpsInput)
+{
+    gert::StorageShape grad = {{4, 8}, {4, 8}};
+    EXPECT_EQ(InferApplyCamePart1ShapeWithNullInput({1, 0}, {1, 1, 1}, &grad, nullptr), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart1InferShape, RejectsNullOutputSumGradR)
+{
+    gert::StorageShape grad = {{4, 8}, {4, 8}};
+    gert::StorageShape eps = {{1}, {1}};
+    EXPECT_EQ(InferApplyCamePart1ShapeWithNullInput({1, 1}, {0, 0, 0}, &grad, &eps), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart1InferShape, RejectsNullOutputSumGradC)
+{
+    gert::StorageShape grad = {{4, 8}, {4, 8}};
+    gert::StorageShape eps = {{1}, {1}};
+    EXPECT_EQ(InferApplyCamePart1ShapeWithNullInput({1, 1}, {1, 0, 0}, &grad, &eps), ge::GRAPH_FAILED);
+}
+
+TEST(ApplyCamePart1InferShape, RejectsNullOutputSumGradRC)
+{
+    gert::StorageShape grad = {{4, 8}, {4, 8}};
+    gert::StorageShape eps = {{1}, {1}};
+    EXPECT_EQ(InferApplyCamePart1ShapeWithNullInput({1, 1}, {1, 1, 0}, &grad, &eps), ge::GRAPH_FAILED);
+}
+
 TEST(ApplyCamePart1InferShape, InfersFloatOutputsForAllGradTypes)
 {
     for (const auto inputType : {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT}) {

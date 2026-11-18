@@ -27,7 +27,8 @@ constexpr size_t kMinGradRank = 2;
 static ge::graphStatus CheckEpsShape(const gert::InferShapeContext* context)
 {
     const gert::Shape* epsShape = context->GetInputShape(kEpsIndex);
-    OP_CHECK_NULL_WITH_CONTEXT(context, epsShape);
+    OP_CHECK_IF(epsShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input eps"),
+                return ge::GRAPH_FAILED);
     if (Ops::Base::IsUnknownRank(*epsShape) || epsShape->GetDimNum() == 0) {
         return ge::GRAPH_SUCCESS;
     }
@@ -66,7 +67,8 @@ static ge::graphStatus CheckGradShape(const gert::InferShapeContext* context, co
 static ge::graphStatus InferShape4ApplyCamePart1(gert::InferShapeContext* context)
 {
     const gert::Shape* gradShape = context->GetInputShape(kGradIndex);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    OP_CHECK_IF(gradShape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad"),
+                return ge::GRAPH_FAILED);
     if (CheckEpsShape(context) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -83,9 +85,12 @@ static ge::graphStatus InferShape4ApplyCamePart1(gert::InferShapeContext* contex
     gert::Shape* sumGradR = context->GetOutputShape(kSumGradRIndex);
     gert::Shape* sumGradC = context->GetOutputShape(kSumGradCIndex);
     gert::Shape* sumGradRC = context->GetOutputShape(kSumGradRCIndex);
-    OP_CHECK_NULL_WITH_CONTEXT(context, sumGradR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, sumGradC);
-    OP_CHECK_NULL_WITH_CONTEXT(context, sumGradRC);
+    OP_CHECK_IF(sumGradR == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output sum_grad_r"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sumGradC == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output sum_grad_c"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(sumGradRC == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output sum_grad_rc"),
+                return ge::GRAPH_FAILED);
 
     const size_t gradRank = gradShape->GetDimNum();
     sumGradR->SetDimNum(gradRank - 1);

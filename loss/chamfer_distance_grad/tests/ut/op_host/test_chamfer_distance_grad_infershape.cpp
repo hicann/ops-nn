@@ -188,6 +188,314 @@ TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_unknown_rank)
     ASSERT_EQ(Ops::Base::ToString(*out1), Ops::Base::ToString(expectedOutputShape));
 }
 
+namespace {
+// 负向用例公共构造器：inputShapes/outputShapes 列表中首个 nullptr 表示该输入/输出实例缺失，
+// 其自身及之后的实例数全部置 0（防止后续实例前移错位），nullptr 之前的输入保持实例数 1；
+// 通过双参数 IrInstanceNum 使 GetInputShape/GetOutputShape 按下标越界规则返回空指针
+ge::graphStatus RunChamferDistanceGradInferShapeNeg(std::initializer_list<gert::Shape*> inputShapes,
+                                                    std::initializer_list<gert::Shape*> outputShapes)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ChamferDistanceGrad")->infer_shape;
+    std::vector<uint32_t> inputInstanceNum;
+    std::vector<gert::Shape*> inputPtrs;
+    for (auto* shape : inputShapes) {
+        if (shape == nullptr) {
+            break;
+        }
+        inputInstanceNum.push_back(1U);
+        inputPtrs.push_back(shape);
+    }
+    while (inputInstanceNum.size() < 6U) {
+        inputInstanceNum.push_back(0U);
+    }
+    std::vector<uint32_t> outputInstanceNum;
+    for (auto* shape : outputShapes) {
+        if (shape == nullptr) {
+            break;
+        }
+        outputInstanceNum.push_back(1U);
+    }
+    while (outputInstanceNum.size() < 2U) {
+        outputInstanceNum.push_back(0U);
+    }
+
+    gert::InferShapeContextFaker faker;
+    faker.SetOpType("ChamferDistanceGrad").IrInstanceNum(inputInstanceNum, outputInstanceNum);
+    faker.InputShapes(inputPtrs);
+    static const std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32,
+                                                          ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT};
+    for (size_t i = 0; i < inputPtrs.size(); ++i) {
+        faker.NodeInputTd(static_cast<int32_t>(i), inputDtypes[i], ge::FORMAT_ND, ge::FORMAT_ND);
+    }
+    auto holder = faker.Build();
+    return inferShapeFunc(holder.GetContext<gert::InferShapeContext>());
+}
+} // namespace
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_null_xyz1)
+{
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {nullptr, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_null_xyz2)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, nullptr, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_null_idx1)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, nullptr, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_null_idx2)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, nullptr, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_null_grad_dist1)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(
+        RunChamferDistanceGradInferShapeNeg({&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, nullptr, &gradDist2Shape},
+                                            {&gradXyz1Shape, &gradXyz2Shape}),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_null_grad_dist2)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(
+        RunChamferDistanceGradInferShapeNeg({&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, nullptr},
+                                            {&gradXyz1Shape, &gradXyz2Shape}),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_null_grad_xyz1)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {nullptr, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_null_grad_xyz2)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, nullptr}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_xyz_rank_invalid)
+{
+    gert::Shape xyz1Shape = {20, 15};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_pointwise_rank_invalid)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15, 1};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_coord_dim_invalid)
+{
+    gert::Shape xyz1Shape = {20, 15, 3};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 3};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_batch_dim_mismatch)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {21, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {21, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {21, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {21, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_point_dim_mismatch)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 16, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 16};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 16};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 16, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_idx1_incompatible)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 16};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_idx2_incompatible)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {21, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_grad_dist1_incompatible)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {21, 15};
+    gert::Shape gradDist2Shape = {20, 15};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
+TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_shape_grad_dist2_incompatible)
+{
+    gert::Shape xyz1Shape = {20, 15, 2};
+    gert::Shape xyz2Shape = {20, 15, 2};
+    gert::Shape idx1Shape = {20, 15};
+    gert::Shape idx2Shape = {20, 15};
+    gert::Shape gradDist1Shape = {20, 15};
+    gert::Shape gradDist2Shape = {20, 16};
+    gert::Shape gradXyz1Shape = {20, 15, 2};
+    gert::Shape gradXyz2Shape = {20, 15, 2};
+    ASSERT_EQ(RunChamferDistanceGradInferShapeNeg(
+                  {&xyz1Shape, &xyz2Shape, &idx1Shape, &idx2Shape, &gradDist1Shape, &gradDist2Shape},
+                  {&gradXyz1Shape, &gradXyz2Shape}),
+              ge::GRAPH_FAILED);
+}
+
 TEST_F(ChamferDistanceGradTest, chamfer_distance_grad_infer_dtype_fp32)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("ChamferDistanceGrad"), nullptr);

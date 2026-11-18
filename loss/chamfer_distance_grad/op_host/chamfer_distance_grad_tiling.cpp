@@ -21,11 +21,14 @@
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_util.h"
+#include <string>
+#include <vector>
 namespace {
 constexpr uint32_t WORKSPACE_16MBYTE_SIZE = 16 * 1024 * 1024;
 }
 
 namespace optiling {
+
 constexpr int64_t FP32_MODE = 1;
 constexpr int64_t FP16_MODE = 2;
 uint32_t BLOCK_BYTES = 32;
@@ -143,14 +146,22 @@ static ge::graphStatus TilingPrepareForChamferDistanceGrad(gert::TilingParseCont
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->totalCoreNum <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ChamferDistanceGrad", "totalCoreNum",
+                                              std::to_string(compileInfo->totalCoreNum).c_str(),
+                                              "totalCoreNum from platform info should be positive.");
+        return ge::GRAPH_FAILED;
+    }
 
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    if (compileInfo->ubSizePlatForm <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("ChamferDistanceGrad", "ubSizePlatForm",
+                                              std::to_string(compileInfo->ubSizePlatForm).c_str(),
+                                              "ubSizePlatForm from platform info should be positive.");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context, "TilingPrepareForChamferDistanceGrad end.");
     return ge::GRAPH_SUCCESS;
 }

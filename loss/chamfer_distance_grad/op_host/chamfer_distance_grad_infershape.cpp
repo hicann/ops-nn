@@ -14,6 +14,7 @@
  */
 
 #include <cstdint>
+#include <string>
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
@@ -80,18 +81,26 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
     const gert::Shape* gradDist1Shape = context->GetInputShape(INDEX_GRAD_DIST1);
     const gert::Shape* gradDist2Shape = context->GetInputShape(INDEX_GRAD_DIST2);
 
-    OP_CHECK_NULL_WITH_CONTEXT(context, xyz1Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xyz2Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, idx1Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, idx2Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradDist1Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradDist2Shape);
+    OP_CHECK_IF(xyz1Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input xyz1"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xyz2Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input xyz2"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(idx1Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input idx1"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(idx2Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input idx2"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradDist1Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad_dist1"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradDist2Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "input grad_dist2"),
+                return ge::GRAPH_FAILED);
 
     gert::Shape* gradXyz1Shape = context->GetOutputShape(INDEX_GRAD_XYZ1);
     gert::Shape* gradXyz2Shape = context->GetOutputShape(INDEX_GRAD_XYZ2);
 
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradXyz1Shape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradXyz2Shape);
+    OP_CHECK_IF(gradXyz1Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output grad_xyz1"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradXyz2Shape == nullptr, OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "output grad_xyz2"),
+                return ge::GRAPH_FAILED);
 
     /*
      * A2/A3 supported shape:
@@ -127,14 +136,19 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
     const int64_t gradDist2Rank = static_cast<int64_t>(gradDist2Shape->GetDimNum());
 
     if (xyz1Rank != XYZ_RANK || xyz2Rank != XYZ_RANK) {
-        OP_LOGE(context->GetNodeName(), "xyz1 and xyz2 must be rank-3 tensors, but got rank %ld and %ld.", xyz1Rank,
-                xyz2Rank);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "xyz1 and xyz2",
+                                                  std::to_string(xyz1Rank) + "D and " + std::to_string(xyz2Rank) + "D",
+                                                  "xyz1 and xyz2 must be rank-3 tensors");
         return ge::GRAPH_FAILED;
     }
 
     if (idx1Rank != POINTWISE_RANK || idx2Rank != POINTWISE_RANK || gradDist1Rank != POINTWISE_RANK ||
         gradDist2Rank != POINTWISE_RANK) {
-        OP_LOGE(context->GetNodeName(), "idx1, idx2, grad_dist1 and grad_dist2 must all be rank-2 tensors.");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "idx1, idx2, grad_dist1 and grad_dist2",
+                                                  std::to_string(idx1Rank) + "D, " + std::to_string(idx2Rank) + "D, " +
+                                                      std::to_string(gradDist1Rank) + "D and " +
+                                                      std::to_string(gradDist2Rank) + "D",
+                                                  "idx1, idx2, grad_dist1 and grad_dist2 must all be rank-2 tensors");
         return ge::GRAPH_FAILED;
     }
 
@@ -146,8 +160,10 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
      */
     if (!IsDimCompatible(xyz1Shape->GetDim(COORD_AXIS), COORD_DIM) ||
         !IsDimCompatible(xyz2Shape->GetDim(COORD_AXIS), COORD_DIM)) {
-        OP_LOGE(context->GetNodeName(), "The last dimensions of xyz1 and xyz2 must both be 2, but got %ld and %ld.",
-                xyz1Shape->GetDim(COORD_AXIS), xyz2Shape->GetDim(COORD_AXIS));
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "xyz1 and xyz2",
+                                               "xyz1 dim[2] = " + std::to_string(xyz1Shape->GetDim(COORD_AXIS)) +
+                                                   ", xyz2 dim[2] = " + std::to_string(xyz2Shape->GetDim(COORD_AXIS)),
+                                               "the last dimension of xyz1 and xyz2 must both be 2");
         return ge::GRAPH_FAILED;
     }
 
@@ -156,34 +172,60 @@ static ge::graphStatus InferShape4ChamferDistanceGrad(gert::InferShapeContext* c
      * xyz2 must have the same batch dimension and point dimension.
      */
     if (!IsDimCompatible(xyz1Shape->GetDim(BATCH_AXIS), xyz2Shape->GetDim(BATCH_AXIS))) {
-        OP_LOGE(context->GetNodeName(), "xyz1 and xyz2 must have the same batch dimension, but got %ld and %ld.",
-                xyz1Shape->GetDim(BATCH_AXIS), xyz2Shape->GetDim(BATCH_AXIS));
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "xyz1 and xyz2",
+                                               "xyz1 dim[0] = " + std::to_string(xyz1Shape->GetDim(BATCH_AXIS)) +
+                                                   ", xyz2 dim[0] = " + std::to_string(xyz2Shape->GetDim(BATCH_AXIS)),
+                                               "xyz1 and xyz2 must have the same batch dimension");
         return ge::GRAPH_FAILED;
     }
 
     if (!IsDimCompatible(xyz1Shape->GetDim(POINT_AXIS), xyz2Shape->GetDim(POINT_AXIS))) {
-        OP_LOGE(context->GetNodeName(), "xyz1 and xyz2 must have the same point dimension, but got %ld and %ld.",
-                xyz1Shape->GetDim(POINT_AXIS), xyz2Shape->GetDim(POINT_AXIS));
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "xyz1 and xyz2",
+                                               "xyz1 dim[1] = " + std::to_string(xyz1Shape->GetDim(POINT_AXIS)) +
+                                                   ", xyz2 dim[1] = " + std::to_string(xyz2Shape->GetDim(POINT_AXIS)),
+                                               "xyz1 and xyz2 must have the same point dimension");
         return ge::GRAPH_FAILED;
     }
 
     if (!IsPointwiseShapeCompatible(*xyz1Shape, *idx1Shape)) {
-        OP_LOGE(context->GetNodeName(), "idx1 shape must match the first two dimensions of xyz1.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "idx1 and xyz1",
+                                               "idx1 dim[0] = " + std::to_string(idx1Shape->GetDim(BATCH_AXIS)) +
+                                                   ", idx1 dim[1] = " + std::to_string(idx1Shape->GetDim(POINT_AXIS)) +
+                                                   ", xyz1 dim[0] = " + std::to_string(xyz1Shape->GetDim(BATCH_AXIS)) +
+                                                   ", xyz1 dim[1] = " + std::to_string(xyz1Shape->GetDim(POINT_AXIS)),
+                                               "idx1 shape must match the first two dimensions of xyz1");
         return ge::GRAPH_FAILED;
     }
 
     if (!IsPointwiseShapeCompatible(*xyz2Shape, *idx2Shape)) {
-        OP_LOGE(context->GetNodeName(), "idx2 shape must match the first two dimensions of xyz2.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "idx2 and xyz2",
+                                               "idx2 dim[0] = " + std::to_string(idx2Shape->GetDim(BATCH_AXIS)) +
+                                                   ", idx2 dim[1] = " + std::to_string(idx2Shape->GetDim(POINT_AXIS)) +
+                                                   ", xyz2 dim[0] = " + std::to_string(xyz2Shape->GetDim(BATCH_AXIS)) +
+                                                   ", xyz2 dim[1] = " + std::to_string(xyz2Shape->GetDim(POINT_AXIS)),
+                                               "idx2 shape must match the first two dimensions of xyz2");
         return ge::GRAPH_FAILED;
     }
 
     if (!IsPointwiseShapeCompatible(*xyz1Shape, *gradDist1Shape)) {
-        OP_LOGE(context->GetNodeName(), "grad_dist1 shape must match the first two dimensions of xyz1.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "grad_dist1 and xyz1",
+            "grad_dist1 dim[0] = " + std::to_string(gradDist1Shape->GetDim(BATCH_AXIS)) +
+                ", grad_dist1 dim[1] = " + std::to_string(gradDist1Shape->GetDim(POINT_AXIS)) +
+                ", xyz1 dim[0] = " + std::to_string(xyz1Shape->GetDim(BATCH_AXIS)) +
+                ", xyz1 dim[1] = " + std::to_string(xyz1Shape->GetDim(POINT_AXIS)),
+            "grad_dist1 shape must match the first two dimensions of xyz1");
         return ge::GRAPH_FAILED;
     }
 
     if (!IsPointwiseShapeCompatible(*xyz2Shape, *gradDist2Shape)) {
-        OP_LOGE(context->GetNodeName(), "grad_dist2 shape must match the first two dimensions of xyz2.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "grad_dist2 and xyz2",
+            "grad_dist2 dim[0] = " + std::to_string(gradDist2Shape->GetDim(BATCH_AXIS)) +
+                ", grad_dist2 dim[1] = " + std::to_string(gradDist2Shape->GetDim(POINT_AXIS)) +
+                ", xyz2 dim[0] = " + std::to_string(xyz2Shape->GetDim(BATCH_AXIS)) +
+                ", xyz2 dim[1] = " + std::to_string(xyz2Shape->GetDim(POINT_AXIS)),
+            "grad_dist2 shape must match the first two dimensions of xyz2");
         return ge::GRAPH_FAILED;
     }
 
