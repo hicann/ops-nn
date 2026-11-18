@@ -348,41 +348,48 @@ cann_ops_nn.transpose_quant_batch_mat_mul(
     ```python
     import torch
     import torch_npu
+    import torchair
     import cann_ops_nn
 
-    @torch.compile(backend="npu")
-    def func(x1_mxfp8, x2_mxfp8, s1_mxfp8, s2_mxfp8):
-        # MXFP8
-        y_mxfp8 = cann_ops_nn.transpose_quant_batch_mat_mul(
-            x1_mxfp8,
-            x2_mxfp8,
-            dtype=27,
-            x1_scale=s1_mxfp8,
-            x2_scale=s2_mxfp8,
-            group_sizes=[1, 1, 32],
-        )
-        # MXFP4（与MXFP8在同一个图里）
-        x1_mxfp4 = torch.randint(0, 256, (64, 16, 64), dtype=torch.uint8).npu()
-        x2_mxfp4 = torch.randint(0, 256, (16, 128, 128), dtype=torch.uint8).npu()
-        s1_mxfp4 = torch.ones(64, 16, 2, 2, dtype=torch.float8_e8m0fnu).npu()
-        s2_mxfp4 = torch.ones(16, 2, 256, 2, dtype=torch.float8_e8m0fnu).npu()
-        y_mxfp4 = cann_ops_nn.transpose_quant_batch_mat_mul(
-            x1_mxfp4,
-            x2_mxfp4,
-            dtype=27,
-            x1_scale=s1_mxfp4,
-            x2_scale=s2_mxfp4,
-            group_sizes=[1, 1, 32],
-            x1_dtype=torch_npu.float4_e2m1fn_x2,
-            x2_dtype=torch_npu.float4_e2m1fn_x2,
-        )
-        return y_mxfp8, y_mxfp4
+
+    class MixedMX(torch.nn.Module):
+        def forward(self, x1_mxfp8, x2_mxfp8, s1_mxfp8, s2_mxfp8,
+                    x1_mxfp4, x2_mxfp4, s1_mxfp4, s2_mxfp4):
+            y_mxfp8 = cann_ops_nn.transpose_quant_batch_mat_mul(
+                x1_mxfp8, x2_mxfp8, dtype=27,
+                x1_scale=s1_mxfp8, x2_scale=s2_mxfp8,
+                group_sizes=[1, 1, 32],
+            )
+            y_mxfp4 = cann_ops_nn.transpose_quant_batch_mat_mul(
+                x1_mxfp4, x2_mxfp4, dtype=27,
+                x1_scale=s1_mxfp4, x2_scale=s2_mxfp4,
+                group_sizes=[1, 1, 32],
+                x1_dtype=torch_npu.float4_e2m1fn_x2,
+                x2_dtype=torch_npu.float4_e2m1fn_x2,
+            )
+            return y_mxfp8, y_mxfp4
+
 
     M, B, K, N = 64, 16, 128, 256
+    # 两路输入及 scale 均在图外构造、转换并搬到 NPU。
     x1_mxfp8 = torch.randn(M, B, K).to(torch.float8_e4m3fn).npu()
     x2_mxfp8 = torch.randn(B, K, N).to(torch.float8_e4m3fn).npu()
     s1_mxfp8 = torch.ones(M, B, K // 64, 2, dtype=torch.float8_e8m0fnu).npu()
     s2_mxfp8 = torch.ones(B, K // 64, N, 2, dtype=torch.float8_e8m0fnu).npu()
-    y_mxfp8, y_mxfp4 = func(x1_mxfp8, x2_mxfp8, s1_mxfp8, s2_mxfp8)
+    # 两个 FP4 元素拼包存储，物理最后一维为逻辑长度的一半。
+    x1_mxfp4 = torch.randint(0, 256, (M, B, K // 2), dtype=torch.uint8).npu()
+    x2_mxfp4 = torch.randint(0, 256, (B, K, N // 2), dtype=torch.uint8).npu()
+    s1_mxfp4 = torch.ones(M, B, K // 64, 2, dtype=torch.float8_e8m0fnu).npu()
+    s2_mxfp4 = torch.ones(B, K // 64, N, 2, dtype=torch.float8_e8m0fnu).npu()
+    inputs = (x1_mxfp8, x2_mxfp8, s1_mxfp8, s2_mxfp8,
+              x1_mxfp4, x2_mxfp4, s1_mxfp4, s2_mxfp4)
+    model = torch.compile(
+        MixedMX().npu().eval(),
+        backend=torchair.get_npu_backend(),
+        fullgraph=True,
+        dynamic=False,
+    )
+    y_mxfp8, y_mxfp4 = model(*inputs)
+    torch.npu.synchronize()
     print(y_mxfp8.shape, y_mxfp8.dtype, y_mxfp4.shape, y_mxfp4.dtype)
     ```
