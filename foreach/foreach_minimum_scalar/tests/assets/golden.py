@@ -46,9 +46,9 @@ except ImportError:  # pragma: no cover
     _bf16 = None
 
 _TOLERANCE = {
-    "float16": {"standard": "mix_tolerance"},
-    "float32": {"standard": "mix_tolerance"},
-    "bfloat16": {"standard": "mix_tolerance"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
     "int8": {"standard": "binary_equal"},
     "int16": {"standard": "binary_equal"},
     "int32": {"standard": "binary_equal"},

@@ -28,6 +28,8 @@ foreach_addcdiv_scalar 两方 Golden（无 GPU 版）
 
 __spec__ = {
     "foreach_addcdiv_scalar": "ForeachAddcdivScalarKernelSpec",
+    # GEIR 通路的 op_name 使用 GE 算子名（ForeachAddcdivScalar），与 opInterface 名并存注册
+    "ForeachAddcdivScalar": "ForeachAddcdivScalarKernelSpec",
     "aclnnForeachAddcdivScalar": "AclnnForeachAddcdivScalarSpec",
     "aclnnForeachAddcdivScalarV2": "AclnnForeachAddcdivScalarSpec",
     "torch._foreach_addcdiv": "TorchForeachAddcdivScalarSpec",
