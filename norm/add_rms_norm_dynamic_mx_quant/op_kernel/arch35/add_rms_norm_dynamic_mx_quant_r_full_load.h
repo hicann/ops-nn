@@ -259,19 +259,7 @@ private:
                     AscendC::Reg::Mul(mul1Reg, x1Reg, rstd1Reg, regCurLoop);
                     AscendC::Reg::Mul(mul1UnrollReg, x2Reg, rstd2Reg, regCurLoop);
                     LoadTensorForDtypeTIn<T_GAMMA>(gammaInUb, gammaReg, regCurLoop, r * VL_F32);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                    if constexpr (hasBeta) {
-                        LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
-                        AscendC::Reg::Move(mul2UnrollReg, betaReg);
-                        AscendC::Reg::MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(betaReg, mul1Reg, gammaReg,
-                                                                                             regCurLoop);
-                        AscendC::Reg::MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(
-                            mul2UnrollReg, mul1UnrollReg, gammaReg, regCurLoop);
-                    } else {
-                        AscendC::Reg::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
-                        AscendC::Reg::Mul(mul2UnrollReg, mul1UnrollReg, gammaReg, regCurLoop);
-                    }
-#else
+                    // Round the gamma product before adding beta; quantization can amplify cancellation residuals.
                     AscendC::Reg::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
                     AscendC::Reg::Mul(mul2UnrollReg, mul1UnrollReg, gammaReg, regCurLoop);
                     if constexpr (hasBeta) {
@@ -279,13 +267,6 @@ private:
                         AscendC::Reg::Add(mul2Reg, mul2Reg, betaReg, regCurLoop);
                         AscendC::Reg::Add(mul2UnrollReg, mul2UnrollReg, betaReg, regCurLoop);
                     }
-#endif
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                    if constexpr (hasBeta) {
-                        StoreTensorForDtypeTOut<T_X>(yInUb, betaReg, regCurLoop, offset1);
-                        StoreTensorForDtypeTOut<T_X>(yInUb, mul2UnrollReg, regCurLoop, offset2);
-                    } else
-#endif
                     {
                         StoreTensorForDtypeTOut<T_X>(yInUb, mul2Reg, regCurLoop, offset1);
                         StoreTensorForDtypeTOut<T_X>(yInUb, mul2UnrollReg, regCurLoop, offset2);
@@ -301,24 +282,12 @@ private:
                     LoadTensorForDtypeTIn<float>(xFp32Tmp, x1Reg, regCurLoop, offset);
                     AscendC::Reg::Mul(mul1Reg, x1Reg, rstd1Reg, regCurLoop);
                     LoadTensorForDtypeTIn<T_GAMMA>(gammaInUb, gammaReg, regCurLoop, r * VL_F32);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                    if constexpr (hasBeta) {
-                        LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
-                        AscendC::Reg::MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(betaReg, mul1Reg, gammaReg,
-                                                                                             regCurLoop);
-                        StoreTensorForDtypeTOut<T_X>(yInUb, betaReg, regCurLoop, offset);
-                    } else {
-                        AscendC::Reg::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
-                        StoreTensorForDtypeTOut<T_X>(yInUb, mul2Reg, regCurLoop, offset);
-                    }
-#else
                     AscendC::Reg::Mul(mul2Reg, mul1Reg, gammaReg, regCurLoop);
                     if constexpr (hasBeta) {
                         LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaReg, regCurLoop, r * VL_F32);
                         AscendC::Reg::Add(mul2Reg, mul2Reg, betaReg, regCurLoop);
                     }
                     StoreTensorForDtypeTOut<T_X>(yInUb, mul2Reg, regCurLoop, offset);
-#endif
                 }
             }
         }

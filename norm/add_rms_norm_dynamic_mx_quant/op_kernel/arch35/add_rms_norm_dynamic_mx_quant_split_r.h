@@ -393,9 +393,6 @@ private:
         __VEC_SCOPE__
         {
             RegTensor<float> xRegFp32, gammaRegFp32, rstdReg, betaRegFp32;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-            RegTensor<float> yRegFp32;
-#endif
             MaskReg maskReg;
 
             AscendC::Reg::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdInUb + rowIdx);
@@ -406,24 +403,13 @@ private:
                 LoadTensorForDtypeTIn<float>(xFp32Tmp, xRegFp32, maskReg, offset);
                 LoadTensorForDtypeTIn<T_GAMMA>(gammaInUb, gammaRegFp32, maskReg, offset);
                 AscendC::Reg::Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                if constexpr (hasBeta) {
-                    LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaRegFp32, maskReg, offset);
-                    AscendC::Reg::MulAddDst<float, AscendC::Reg::MaskMergeMode::ZEROING>(betaRegFp32, xRegFp32,
-                                                                                         gammaRegFp32, maskReg);
-                    StoreTensorForDtypeTOut<T_X>(yInUb, betaRegFp32, maskReg, offset);
-                } else {
-                    AscendC::Reg::Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
-                    StoreTensorForDtypeTOut<T_X>(yInUb, xRegFp32, maskReg, offset);
-                }
-#else
+                // Round the gamma product before adding beta; quantization can amplify cancellation residuals.
                 AscendC::Reg::Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
                 if constexpr (hasBeta) {
                     LoadTensorForDtypeTIn<T_GAMMA>(betaInUb, betaRegFp32, maskReg, offset);
                     AscendC::Reg::Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
                 }
                 StoreTensorForDtypeTOut<T_X>(yInUb, xRegFp32, maskReg, offset);
-#endif
             }
         }
     }

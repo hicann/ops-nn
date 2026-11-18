@@ -214,12 +214,8 @@ __aicore__ inline void ComputeYAndAbsMaxVF(RegTensor<float>& xRegFp32, RegTensor
                                            uint16_t idx)
 {
     Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-    if constexpr (HAS_BETA && !Y3_MODE && !Y4_MODE) {
-        MulDstAdd<float, MaskMergeMode::ZEROING>(xRegFp32, gammaRegFp32, betaRegFp32, maskReg);
-    } else
-#endif
     {
+        // Round the gamma product before adding beta; quantization can amplify cancellation residuals.
         Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
         if constexpr (Y3_MODE) {
             StoreRegForDtype<float>(y3Addr, xRegFp32, maskReg, idx * V_LENGTH);

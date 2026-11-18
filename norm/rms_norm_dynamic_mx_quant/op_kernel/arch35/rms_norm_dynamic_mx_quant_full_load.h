@@ -274,9 +274,6 @@ public:
                 RegTensor<float> gammaReg;
                 RegTensor<float> betaReg;
                 RegTensor<float> yReg;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                RegTensor<float> xRstdReg;
-#endif
 
                 uint32_t sreg = nNum;
                 MaskReg pregMask = UpdateMask<float>(sreg);
@@ -285,27 +282,15 @@ public:
                     LoadAlign<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
                     uint32_t xElemOffset = i * xInputStride;
                     LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                    LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, 0);
-                    if constexpr (hasInputBeta) {
-                        LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, 0);
-                        Mul(xRstdReg, xReg, RstdReg, pregMask);
-                        Move(yReg, betaReg);
-                        MulAddDst<float, MaskMergeMode::ZEROING>(yReg, xRstdReg, gammaReg, pregMask);
-                    } else {
-                        Mul(yReg, xReg, RstdReg, pregMask);
-                        Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
-                    }
-#else
                     Mul(yReg, xReg, RstdReg, pregMask);
                     LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, 0);
                     // 有效数据后面补0到64对齐
+                    // Round the gamma product before adding beta; quantization can amplify cancellation residuals.
                     Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
                     if constexpr (hasInputBeta) {
                         LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, 0);
                         Add<float, MaskMergeMode::ZEROING>(yReg, yReg, betaReg, pregMask);
                     }
-#endif
 
                     StoreTensorForDtypeT(yLocalUbAddr, yReg, pregFull, xElemOffset);
                 }
@@ -319,9 +304,6 @@ public:
                 RegTensor<float> gammaReg;
                 RegTensor<float> betaReg;
                 RegTensor<float> yReg;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                RegTensor<float> xRstdReg;
-#endif
                 MaskReg pregMask;
                 AscendC::Reg::MaskReg pregFull = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
                 for (uint16_t i = 0; i < mloops; i++) {
@@ -332,18 +314,6 @@ public:
                         uint32_t gammaElemOffset = j * VL_FP32;
                         uint32_t xElemOffset = i * xInputStride + gammaElemOffset;
                         LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                        LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, gammaElemOffset);
-                        if constexpr (hasInputBeta) {
-                            LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, gammaElemOffset);
-                            Mul(xRstdReg, xReg, RstdReg, pregMask);
-                            Move(yReg, betaReg);
-                            MulAddDst<float, MaskMergeMode::ZEROING>(yReg, xRstdReg, gammaReg, pregMask);
-                        } else {
-                            Mul(yReg, xReg, RstdReg, pregMask);
-                            Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
-                        }
-#else
                         Mul(yReg, xReg, RstdReg, pregMask);
                         LoadTensorForDtypeT<T_GAMMA>(gammaLocalUbAddr, gammaReg, pregMask, gammaElemOffset);
                         // 有效数据后面补0到64对齐
@@ -352,7 +322,6 @@ public:
                             LoadTensorForDtypeT<T_GAMMA>(betaLocalUbAddr, betaReg, pregMask, gammaElemOffset);
                             Add<float, MaskMergeMode::ZEROING>(yReg, yReg, betaReg, pregMask);
                         }
-#endif
 
                         StoreTensorForDtypeT(yLocalUbAddr, yReg, pregFull, xElemOffset);
                     }

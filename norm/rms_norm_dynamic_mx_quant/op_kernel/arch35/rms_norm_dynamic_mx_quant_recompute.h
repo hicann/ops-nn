@@ -444,9 +444,6 @@ private:
             RegTensor<float> gammaReg;
             RegTensor<float> betaReg;
             RegTensor<float> yReg;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-            RegTensor<float> xRstdReg;
-#endif
             MaskReg pregMask;
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
 
@@ -456,26 +453,14 @@ private:
                 pregMask = UpdateMask<float>(sreg);
                 uint32_t off = j * VL_FP32;
                 LoadTensorForDtypeT(xAddr, xReg, pregMask, off);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-                LoadTensorForDtypeT(gammaAddr, gammaReg, pregMask, off);
-                if constexpr (hasInputBeta) {
-                    LoadTensorForDtypeT(betaAddr, betaReg, pregMask, off);
-                    Mul(xRstdReg, xReg, RstdReg, pregMask);
-                    Move(yReg, betaReg);
-                    MulAddDst<float, MaskMergeMode::ZEROING>(yReg, xRstdReg, gammaReg, pregMask);
-                } else {
-                    Mul(yReg, xReg, RstdReg, pregMask);
-                    Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
-                }
-#else
                 Mul(yReg, xReg, RstdReg, pregMask);
                 LoadTensorForDtypeT(gammaAddr, gammaReg, pregMask, off);
+                // Round the gamma product before adding beta; quantization can amplify cancellation residuals.
                 Mul<float, MaskMergeMode::ZEROING>(yReg, yReg, gammaReg, pregMask);
                 if constexpr (hasInputBeta) {
                     LoadTensorForDtypeT(betaAddr, betaReg, pregMask, off);
                     Add<float, MaskMergeMode::ZEROING>(yReg, yReg, betaReg, pregMask);
                 }
-#endif
                 StoreTensorForDtypeT(yAddr, yReg, pregFull, off);
             }
         }
