@@ -9,34 +9,14 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""TestSpec definitions for Selu raw op, ACLNN, Torch, and TensorFlow paths.
+"""Golden reference for the Selu operator.
 
-Selu: y = scale * (max(0, x) + min(0, alpha * (exp(x) - 1)))
-      alpha = 1.6732632423543772
-      scale = 1.0507009873554805
+Selu: y = scale * (max(0, x) + min(0, alpha * (exp(x) - 1))), with
+alpha = 1.6732632423543772 and scale = 1.0507009873554805.
 
-Registered names:
-  - "selu" / "Selu"            <- CSV op_name (Kernel / GEIR path, numpy input;
-                                  "selu" = legacy lowercase dialect,
-                                  "Selu" = ascendc-st-design generated dialect)
-  - "aclnnSelu"                <- CSV api_name (ACLNN path, torch input; first
-                                  tensor arg is named ``self``)
-  - "aclnnInplaceSelu"         <- CSV api_name (ACLNN inplace path; first tensor
-                                  arg is named ``selfRef``)
-  - "tf.nn.selu" / "tf.raw_ops.Selu" <- CSV api_name (TensorFlow path)
-
-Benchmark: every spec golden() funnels into the module-level
-``_benchmark_selu`` — one shared benchmark function owned by no spec. The
-benchmark is the single oracle pinned by the spec ``reference_oracle``:
-``torch.selu``. The carrier is normalized to torch (torch/tf/numpy input,
-bit-exact local recipes); float dtypes (f32/f16/bf16) call ``torch.selu``
-directly; int32/int8 — unsupported by ``torch.selu`` — evaluate the torch
-basic-op composition ``_selu_torch_composed``: computed in float32 then
-cast back to the integer dtype (int32 saturates on overflow, int8 wraps —
-device Cast semantics).
-
-Import rule: torch / ml_dtypes are imported lazily inside function bodies
-only.
+All golden() paths delegate to _benchmark_selu (oracle: torch.selu);
+int32/int8 inputs are computed in float32 and cast back per device Cast
+semantics (int32 saturates on overflow, int8 wraps).
 """
 
 __spec__ = {
@@ -46,79 +26,29 @@ __spec__ = {
     "aclnnInplaceSelu": "AclnnInplaceSeluTestSpec",
     "tf.nn.selu": "SeluTensorFlowSpec",
     "tf.raw_ops.Selu": "SeluTensorFlowSpec",
-    # torch.selu / torch.nn.functional.selu 不注册: torch 路径复合分解走 aclnnElu(aclnn built-in),不经本算子
+    # torch path not registered: F.selu dispatches to builtin Elu on NPU
 }
 
 ALPHA = 1.6732632423543772
 SCALE = 1.0507009873554805
 
-# Tolerance: floats use the cross_check standard (third-party comparison,
-# level L2) with no in-file numeric two-way tolerances; int32/int8 use
-# binary_equal. The ``--compare`` CLI flag belongs to the execution layer and
-# is intentionally not encoded here.
+# Shared full-dtype tolerance table, consumed per output dtype: TTK looks a
+# case's standard up by its output dtype, so keys beyond a lane's dtype face
+# are never consumed. cross_check for float dtypes, binary_equal for ints,
+# float64 isclose (cross_check is physically unreachable for f64).
 _TOLERANCE = {
     "float32": {"standard": "cross_check", "level": "L2"},
     "float16": {"standard": "cross_check", "level": "L2"},
     "bfloat16": {"standard": "cross_check", "level": "L2"},
+    "float64": {"standard": "isclose"},
     "int32": {"standard": "binary_equal"},
     "int8": {"standard": "binary_equal"},
 }
-_TOLERANCE_FLOAT = {k: _TOLERANCE[k] for k in ("float32", "float16", "bfloat16")}
-
-# third_party is declared per execution path: the framework-agnostic kernel/GEIR
-# entry lists all competitors; framework-bound specs list only their own path's
-# API (aclnn/torch -> torch, tf -> tf).
-_TP_ALL = {"torch": "torch.selu", "tf": "tf.raw_ops.Selu"}
-_TP_TORCH = {"torch": "torch.selu"}
-_TP_TF = {"tf": "tf.raw_ops.Selu"}
-
-
-def _np_to_torch(x):
-    """numpy ndarray -> torch tensor, bit-exact (bfloat16 via int16 bit view)."""
-    import torch
-
-    if x.dtype.name == "bfloat16":
-        return torch.from_numpy(x.view("int16")).view(torch.bfloat16)
-    return torch.from_numpy(x)
-
-
-def _torch_to_np(t):
-    """torch tensor -> numpy ndarray, bit-exact (bfloat16 via int16 bit view)."""
-    import torch
-
-    if t.dtype == torch.bfloat16:
-        import ml_dtypes
-
-        return t.view(torch.int16).numpy().view(ml_dtypes.bfloat16)
-    return t.numpy()
-
-
-def _tf_to_np(t):
-    """tf tensor -> numpy ndarray (bfloat16 viewed as ml_dtypes)."""
-    import numpy as np
-
-    x = np.asarray(t.numpy())
-    if x.dtype.name == "bfloat16":  # TF 2.6-era and ml_dtypes bf16 share storage
-        import ml_dtypes
-
-        x = x.view(ml_dtypes.bfloat16)
-    return x
-
-
-def _is_tf_tensor(x):
-    """Carrier probe via the type's module name — no tensorflow import
-    needed (the benchmark oracle is torch.selu; tf appears only as an
-    input carrier)."""
-    return type(x).__module__.split(".", 1)[0] == "tensorflow"
 
 
 def _selu_torch_composed(t):
-    """SELU (elementwise) via torch basic-op composition — the int32/int8
-    leg (``torch.selu`` does not support integer dtypes).
-
-    Integer inputs compute in float32 then convert back to the integer
-    dtype (device Cast semantics): int32 saturates on overflow, int8 wraps.
-    """
+    """SELU via basic torch ops for int32/int8 (torch.selu rejects ints):
+    compute in float32, cast back per device Cast (int32 saturates, int8 wraps)."""
     import torch
 
     xf = t.to(torch.float32)
@@ -131,13 +61,9 @@ def _selu_torch_composed(t):
 
 
 def _saturate_to_int32_range(y):
-    """int32 overflow conversion guard (device Cast saturates on overflow).
-
-    torch ``.to(int32)`` yields INT_MIN on out-of-range floats, while the
-    device saturates. Clamp runs in float64: float32 cannot represent
-    INT32_MAX (rounds up to 2147483648.0), which would push the bound past
-    the valid range.
-    """
+    """Clamp to the int32 range in float64: torch ``.to(int32)`` yields
+    INT_MIN on out-of-range floats while the device saturates, and float32
+    cannot represent INT32_MAX."""
     import torch
 
     info = torch.iinfo(torch.int32)
@@ -145,14 +71,9 @@ def _saturate_to_int32_range(y):
 
 
 def _benchmark_selu(x):
-    """Shared benchmark SELU — module-level, owned by no spec.
-
-    Benchmark = ``torch.selu`` (pinned by the spec reference_oracle).
-    Carrier normalization (torch/tf/numpy -> torch, bit-exact local recipes)
-    -> float dtypes call ``torch.selu`` directly; int32/int8 evaluate
-    ``_selu_torch_composed`` -> cast back to the input carrier (torch in ->
-    torch out; tf/numpy in -> numpy out).
-    """
+    """Shared SELU benchmark (oracle: torch.selu). Normalizes the input
+    carrier (torch/tf/numpy) to torch, computes, and casts back; bfloat16
+    crosses the numpy border as an int16 bit view (ml_dtypes storage)."""
     import numpy as np
     import torch
 
@@ -160,101 +81,135 @@ def _benchmark_selu(x):
     if is_torch:
         t = x.detach().cpu()
     else:
-        if _is_tf_tensor(x):
-            x = _tf_to_np(x)
-        t = _np_to_torch(np.asarray(x))
+        if type(x).__module__.split(".", 1)[0] == "tensorflow":  # tf, no import
+            if x.dtype.name == "bfloat16":  # tf.DType.as_numpy_dtype = bf16 bridge
+                x = np.asarray(x.numpy()).view(x.dtype.as_numpy_dtype)
+            else:
+                x = np.asarray(x.numpy())
+        x = np.asarray(x)
+        if x.dtype.name == "bfloat16":  # numpy bf16 rides torch as int16 bits
+            t = torch.from_numpy(x.view("int16")).view(torch.bfloat16)
+        else:
+            t = torch.from_numpy(x)
     if t.dtype in (torch.int8, torch.int32):
         # torch.selu does not support integer dtypes -> torch basic-op composition
         y = _selu_torch_composed(t)
     else:
         y = torch.selu(t)
-    return y if is_torch else _torch_to_np(y)
+    if is_torch:
+        return y
+    if y.dtype == torch.bfloat16:
+        import ml_dtypes
+
+        return y.view(torch.int16).numpy().view(ml_dtypes.bfloat16)
+    return y.numpy()
+
+
+def _pick_input(pred, *args, **kwargs):
+    """Locate the operator input: first positional pred match, else the first
+    present of the usual tensor kw names."""
+    x = next((arg for arg in args if pred(arg)), None)
+    if x is None:
+        for name in ("x", "self", "selfRef", "features", "input", "input_x"):
+            x = kwargs.get(name)
+            if x is not None:
+                break
+    if x is None:
+        raise ValueError("Missing Selu input: x/self/selfRef/features/input/input_x")
+    return x
 
 
 class _TorchSelu:
-    """torch.selu third-party wrapper (spec-mode class form): the ACLNN
-    ``self``-named input cannot be bound to the string API on the remote
-    server, so the torch leg dispatches through this class."""
+    """torch.selu wrapper (class form: the aclnn ``self`` input cannot bind
+    a string API); int legs bridge via float32 per device Cast semantics."""
 
     def __call__(instance, *args, **kwargs):
         import torch
 
-        x = next((arg for arg in args if isinstance(arg, torch.Tensor)), None)
-        if x is None:
-            for name in ("x", "self", "selfRef", "features", "input", "input_x"):
-                x = kwargs.get(name)
-                if x is not None:
-                    break
-        if x is None:
-            raise ValueError(
-                "Missing Selu input: x/self/selfRef/features/input/input_x"
-            )
+        x = _pick_input(lambda a: isinstance(a, torch.Tensor), *args, **kwargs)
+        if x.dtype in (torch.int8, torch.int32):
+            # torch.selu rejects ints -> bridge via float32, cast back per device Cast
+            y = torch.selu(x.to(torch.float32))
+            # device branch: non-CPU bare cast = device semantics (GPU verified)
+            if x.device.type != "cpu":
+                return [y.to(x.dtype)]
+            if x.dtype is torch.int32:
+                y = _saturate_to_int32_range(y)
+            return [y.to(x.dtype)]
         return [torch.selu(x)]
 
 
+class _TfSelu:
+    """tf.raw_ops.Selu wrapper (float dtypes only); int legs bridge via
+    float32 and cast back per device Cast."""
+
+    def __call__(instance, *args, **kwargs):
+        import tensorflow as tf
+
+        x = _pick_input(
+            lambda a: isinstance(a, (tf.Tensor, tf.Variable)), *args, **kwargs
+        )
+        if x.dtype in (tf.int8, tf.int32):
+            y = tf.raw_ops.Selu(features=tf.cast(x, tf.float32))
+            # device branch: non-CPU bare cast = device semantics (GPU verified)
+            if tf.DeviceSpec.from_string(x.device).device_type != "CPU":
+                return [tf.cast(y, x.dtype)]
+            if x.dtype is tf.int32:
+                y = tf.cast(y, tf.float64)
+                y = tf.clip_by_value(y, -2147483648.0, 2147483647.0)
+            else:
+                # int8: |selu(x)| <= 133.44 < 135; wrap two's complement (device Cast)
+                y = tf.cast(y, tf.int32)
+                y = (y + 128) % 256 - 128
+            return [tf.cast(y, x.dtype)]
+        return [tf.raw_ops.Selu(features=x)]
+
+
+# Per-path third_party: the framework-agnostic kernel/GEIR entry lists both
+# wrappers (they bridge int legs); the TF spec binds the tf wrapper class so
+# the bridged legs stay available to the tf entry.
+_TP_TORCH = {"torch": _TorchSelu}
+_TP_ALL = {**_TP_TORCH, "tf": _TfSelu}
+
+
+def _golden(x=None, out=None, **kwargs):
+    """Shared single-input golden; carriers normalize inside the benchmark.
+    Optional ``out``: cast to its dtype when given; out stays read-only.
+    ``x`` falls back to the usual kw names: TTK's raw_ops convention delivers
+    tf inputs by keyword (features=...), unlike the positional kernel/aclnn."""
+    if x is None:
+        x = _pick_input(lambda a: True, **kwargs)
+    y = _benchmark_selu(x)
+    return [y] if out is None else [y.to(out.dtype)]
+
+
 class SeluKernelTestSpec:
-    """Shared GEIR/Kernel spec registered by CSV ``op_name`` "selu"/"Selu"
-    (numpy input)."""
+    """Kernel/GEIR spec (CSV ``op_name`` "selu"/"Selu", numpy input)."""
 
-    def golden(x, **kwargs):
-        return [_benchmark_selu(x)]
-
+    golden = _golden
     third_party = _TP_ALL
     tolerance = _TOLERANCE
 
 
 class AclnnSeluTestSpec:
-    """ACLNN spec registered by CSV ``api_name`` (torch input).
+    """ACLNN spec (CSV ``api_name`` aclnnSelu, torch input, read-only ``out``)."""
 
-    The first tensor argument follows the ACLNN name ``self``; the golden
-    parameter is renamed ``selfT`` (positional fallback). The ``self``-named
-    input cannot be bound to a string third-party API on the remote server,
-    so the torch leg dispatches through the ``_TorchSelu`` wrapper class.
-    """
-
-    def golden(selfT, out=None, **kwargs):
-        result = _benchmark_selu(selfT)
-        if out is not None:
-            out.copy_(result)
-            return [out]
-        return [result]
-
-    third_party = {"torch": _TorchSelu}
+    golden = _golden
+    third_party = _TP_TORCH
     tolerance = _TOLERANCE
 
 
 class AclnnInplaceSeluTestSpec:
-    """ACLNN inplace spec registered by CSV ``api_name`` "aclnnInplaceSelu"
-    (torch input; first tensor arg named ``selfRef`` — bindable as a string)."""
+    """ACLNN inplace spec (CSV ``api_name`` aclnnInplaceSelu, torch input)."""
 
-    def golden(selfRef, **kwargs):
-        return [_benchmark_selu(selfRef)]
-
+    golden = _golden
     third_party = _TP_TORCH
     tolerance = _TOLERANCE
 
 
-class TorchSeluTestSpec:
-    """Torch Single/Graph spec (not registered in ``__spec__``; kept for spec
-    cross-validation — E2E dispatches F.selu to aclnnElu, not this operator)."""
-
-    def golden(input, inplace=False, **kwargs):
-        return [_benchmark_selu(input)]
-
-    third_party = _TP_TORCH
-    tolerance = _TOLERANCE_FLOAT
-
-
 class SeluTensorFlowSpec:
-    """TF raw-op spec registered by CSV ``api_name`` "tf.nn.selu" /
-    "tf.raw_ops.Selu".
+    """TF spec (CSV ``api_name`` "tf.nn.selu"/"tf.raw_ops.Selu", tf input)."""
 
-    golden evaluates the shared benchmark (see ``_benchmark_selu``);
-    the TF counterpart is referenced declaratively via third_party.
-    """
-
-    def golden(features, **kwargs):
-        return [_benchmark_selu(features)]
-
-    third_party = _TP_TF
+    golden = _golden
+    third_party = {"tf": _TfSelu}
     tolerance = _TOLERANCE
