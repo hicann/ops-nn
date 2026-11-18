@@ -159,11 +159,20 @@ static inline bool IsPerblock(const aclTensor* x1, const aclTensor* x2, const ac
             x2Scale->GetDataType() == op::DataType::DT_FLOAT);
 }
 
-static inline bool IsFormatNZ(const aclTensor* tensor)
+static inline bool IsWeightNzFormat(const aclTensor* tensor)
 {
     return ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ ||
            ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_4 ||
            ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32;
+}
+
+static inline bool IsScaleNzFormat(const aclTensor* tensor)
+{
+    if (tensor == nullptr) {
+        return false;
+    }
+    const auto primaryFormat = static_cast<op::Format>(ge::GetPrimaryFormat(tensor->GetStorageFormat()));
+    return primaryFormat == op::Format::FORMAT_FRACTAL_NZ || primaryFormat == op::Format::FORMAT_FRACTAL_NZ_C0_2;
 }
 
 static inline bool IsA8W8Perblock(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
@@ -1258,11 +1267,11 @@ aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(const aclTensor* x1, const aclTen
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510) {
         OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
         OP_CHECK(
-            x2Scale == nullptr || !IsFormatNZ(x2Scale),
+            x2Scale == nullptr || !IsScaleNzFormat(x2Scale),
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                     "ScaleNZ requires aclnnQuantMatmulWeightNz with NZ x2; aclnnQuantMatmulV5 does not support it."),
             return ACLNN_ERR_PARAM_INVALID);
-        OP_CHECK(!IsFormatNZ(x2), OP_LOGE_FOR_INVALID_FORMAT(kOpName, "x2", "FORMAT_FRACTAL_NZ", "FORMAT_ND"),
+        OP_CHECK(!IsWeightNzFormat(x2), OP_LOGE_FOR_INVALID_FORMAT(kOpName, "x2", "FORMAT_FRACTAL_NZ", "FORMAT_ND"),
                  return ACLNN_ERR_PARAM_INVALID);
     }
 

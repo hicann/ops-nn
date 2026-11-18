@@ -14,6 +14,7 @@
  */
 #include "common/inc/op_host/op_const_def_nn.h"
 #include "quant_matmul_checker.h"
+#include "quant_matmul_v4_common.h"
 #include "../op_host/mx_scale_nz_shape.h"
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
@@ -480,8 +481,7 @@ bool QuantMatmulChecker::CheckDimValueMicroScaling() const
     auto x1ScaleMDimIndex = x1ScaleBatchDimNum + (transposeX1_ ? 1 : 0);
     auto x1ScaleKDimIndex = x1ScaleBatchDimNum + (transposeX1_ ? 0 : 1);
     // ScaleNZ is packed from canonical [Kg, N, 2]; only ND scales follow B transpose.
-    const bool scaleTransposed = transposeX2_ &&
-                                 ge::GetPrimaryFormat(x2Scale_->GetStorageFormat()) != op::Format::FORMAT_FRACTAL_NZ;
+    const bool scaleTransposed = transposeX2_ && !quant_matmul_v4::IsScaleNzFormat(x2Scale_);
     auto x2ScaleNDimIndex = x2ScaleBatchDimNum + (scaleTransposed ? 0 : 1);
     auto x2ScaleKDimIndex = x2ScaleBatchDimNum + (scaleTransposed ? 1 : 0);
     auto x1ScaleMDim = x1Scale_->GetViewShape().GetDim(x1ScaleMDimIndex);
@@ -758,8 +758,7 @@ bool QuantMatmulChecker::InferGroupSizeN(const aclTensor* x2, const aclTensor* x
     auto scaleSizeN = 0L;
     if (IsMicroScaling(x1Scale, x2Scale)) {
         size_t batchDimNum = x2Scale->GetViewShape().GetDimNum() - MX_SCALE_DIM;
-        const bool scaleTransposed = transX2 &&
-                                     ge::GetPrimaryFormat(x2Scale->GetStorageFormat()) != op::Format::FORMAT_FRACTAL_NZ;
+        const bool scaleTransposed = transX2 && !quant_matmul_v4::IsScaleNzFormat(x2Scale);
         scaleSizeN = x2Scale->GetViewShape().GetDim(batchDimNum + (scaleTransposed ? 0 : 1));
         auto scaleSizeDim0 = x2Scale->GetViewShape().GetDim(batchDimNum);
         auto scaleSizeDim1 = x2Scale->GetViewShape().GetDim(batchDimNum + 1);
@@ -1602,17 +1601,19 @@ bool QuantMatmulChecker::CheckFormat() const
     if (x1Scale_ != nullptr) {
         CHECK_RET(x1Scale_->GetStorageFormat() == op::Format::FORMAT_ND, false);
     }
-    if (ge::GetPrimaryFormat(x2Scale_->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ) {
+    if (quant_matmul_v4::IsScaleNzFormat(x2Scale_)) {
         const bool fp8Inputs = x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
                                x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN;
+        const bool fp8Weight4Inputs = x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
+                                      x2_->GetDataType() == op::DataType::DT_FLOAT4_E2M1;
         const bool fp4Inputs = x1_->GetDataType() == op::DataType::DT_FLOAT4_E2M1 &&
                                x2_->GetDataType() == op::DataType::DT_FLOAT4_E2M1;
         if (ge::GetPrimaryFormat(x2_->GetStorageFormat()) != op::Format::FORMAT_FRACTAL_NZ) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s: ScaleNZ requires NZ x2 (WeightNZ).", apiName_);
             return false;
         }
-        CHECK_RET(npuArch_ == NpuArch::DAV_3510 && (fp8Inputs || fp4Inputs) && x1Scale_ != nullptr &&
-                      x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
+        CHECK_RET(npuArch_ == NpuArch::DAV_3510 && (fp8Inputs || fp8Weight4Inputs || fp4Inputs) &&
+                      x1Scale_ != nullptr && x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
                       x2Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0,
                   false);
         if (!QuantBatchMatmul::CheckMxScaleNzShape(x2Scale_->GetViewShape(), x2Scale_->GetStorageShape(), x2NDim_,

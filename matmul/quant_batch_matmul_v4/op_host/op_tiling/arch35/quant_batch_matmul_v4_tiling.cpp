@@ -56,6 +56,14 @@ inline bool IsFormatNZ(ge::Format format)
            format == ge::FORMAT_FRACTAL_NZ_C0_32;
 }
 
+inline bool IsScaleNzFormat(ge::Format format)
+{
+    return ge::GetPrimaryFormat(format) == ge::FORMAT_FRACTAL_NZ ||
+           ge::GetPrimaryFormat(format) == ge::FORMAT_FRACTAL_NZ_C0_2;
+}
+
+constexpr int64_t MX_SCALE_NZ_ALIGN = 16;
+
 static const char* QuantTypeToString(QuantType t)
 {
     switch (t) {
@@ -128,6 +136,7 @@ void QuantBatchMatmulV4TilingBase::Reset()
     inputParams_.hasBias = false;
     inputParams_.hasAntiQuantOffset = false;
     inputParams_.weightNz = false;
+    inputParams_.scaleBNz = false;
     inputParams_.groupSize = 0UL;
     inputParams_.libApiWorkSpaceSize = 0U;
     inputParams_.mSize = 0L;
@@ -160,13 +169,16 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetShapeAttrsInfo()
     OPS_LOG_D(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
     OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "invalid context"),
                     return ge::GRAPH_FAILED);
-    inputParams_.bFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(1)->GetStorageFormat()));
-    if (IsFormatNZ(inputParams_.bFormat)) {
-        inputParams_.bFormat = ge::FORMAT_FRACTAL_NZ;
-    }
-    inputParams_.weightNz = inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ;
-    OP_TILING_CHECK(!AnalyzeQuantType() || !AnalyzeAttrs() || !AnalyzeInputs() || !AnalyzeDtype(),
-                    OP_LOGE(inputParams_.opName, "Failed to analyze context info"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!AnalyzeX2Format(), OP_LOGE(inputParams_.opName, "Failed to analyze x2 format"),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!AnalyzeQuantType(), OP_LOGE(inputParams_.opName, "Failed to analyze quant type"),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!AnalyzeAttrs(), OP_LOGE(inputParams_.opName, "Failed to analyze attributes"),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!AnalyzeScaleBNzFormat(), OP_LOGE(inputParams_.opName, "Failed to analyze ScaleB NZ format"),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!AnalyzeInputs() || !AnalyzeDtype(), OP_LOGE(inputParams_.opName, "Failed to analyze context info"),
+                    return ge::GRAPH_FAILED);
     OP_TILING_CHECK(CheckInputParams() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "invalid input parameters"),
                     return ge::GRAPH_FAILED);
     auto transA_str = inputParams_.transA ? "true" : "false";
@@ -329,10 +341,10 @@ bool QuantBatchMatmulV4TilingBase::CheckCoreNum() const
 uint64_t QuantBatchMatmulV4TilingBase::GetTilingKey() const
 {
     uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
-    return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(inputParams_.antiQuantType),
-                              static_cast<uint64_t>(inputParams_.hasAntiQuantOffset),
-                              static_cast<uint64_t>(inputParams_.weightNz),
-                              static_cast<uint64_t>(KernelTemplateType::BASIS));
+    return GET_TPL_TILING_KEY(
+        trans, static_cast<uint64_t>(inputParams_.antiQuantType),
+        static_cast<uint64_t>(inputParams_.hasAntiQuantOffset), static_cast<uint64_t>(inputParams_.weightNz),
+        static_cast<uint64_t>(inputParams_.scaleBNz), static_cast<uint64_t>(KernelTemplateType::BASIS));
 }
 
 ge::graphStatus QuantBatchMatmulV4TilingBase::CheckInputParams() const
@@ -550,6 +562,36 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeGroupSize()
 
 bool QuantBatchMatmulV4TilingBase::AnalyzeAttrs() { return AnalyzeGroupSize() && AnalyzeTranspose(); }
 
+bool QuantBatchMatmulV4TilingBase::AnalyzeX2Format()
+{
+    auto x2Desc = context_->GetInputDesc(X2_INDEX);
+    OP_TILING_CHECK(x2Desc == nullptr, OP_LOGE(inputParams_.opName, "x2 descriptor is null"), return false);
+    inputParams_.bFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(x2Desc->GetStorageFormat()));
+    if (IsFormatNZ(inputParams_.bFormat)) {
+        inputParams_.bFormat = ge::FORMAT_FRACTAL_NZ;
+    }
+    inputParams_.weightNz = inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ;
+    return true;
+}
+
+bool QuantBatchMatmulV4TilingBase::AnalyzeScaleBNzFormat()
+{
+    auto x1ScaleDesc = context_->GetOptionalInputDesc(X1_SCALE_INDEX);
+    OP_TILING_CHECK(x1ScaleDesc != nullptr && IsScaleNzFormat(x1ScaleDesc->GetStorageFormat()),
+                    OP_LOGE(inputParams_.opName, "ScaleNZ is only supported for x2Scale"), return false);
+    if (inputParams_.antiQuantType != QuantType::MX) {
+        return true;
+    }
+
+    auto x2ScaleDesc = context_->GetOptionalInputDesc(X2_SCALE_INDEX);
+    inputParams_.scaleBNz = x2ScaleDesc != nullptr && IsScaleNzFormat(x2ScaleDesc->GetStorageFormat());
+    OP_TILING_CHECK(inputParams_.scaleBNz && !inputParams_.weightNz,
+                    OP_LOGE(inputParams_.opName, "ScaleB NZ requires FRACTAL_NZ weight, weightNz=%d",
+                            static_cast<int32_t>(inputParams_.weightNz)),
+                    return false);
+    return true;
+}
+
 bool QuantBatchMatmulV4TilingBase::AnalyzeX2InputDim(const gert::StorageShape* x2Shape)
 {
     auto x2ShapeDimSize = x2Shape->GetStorageShape().GetDimNum();
@@ -759,26 +801,42 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeX2ScalePerGroupShape(const gert::Stora
     return true;
 }
 
+// ScaleB ND storage is [N, Kg, tail]; ScaleB NZ storage is [ceil(N/16), Kg, 16, tail].
 bool QuantBatchMatmulV4TilingBase::AnalyzeX2ScaleMxPerGroupShape(const gert::StorageShape* x2ScaleShape)
 {
     auto x2ScaleShapeDimNum = static_cast<uint64_t>(x2ScaleShape->GetStorageShape().GetDimNum());
     auto x2ScaleStorageShape = x2ScaleShape->GetStorageShape();
+    int64_t expectedGroupDim = ops::CeilDiv<int64_t>(inputParams_.kSize, (GROUP_ALIGN_SIZE * VALID_MX_SCALE_LAST_DIM));
 
-    OP_TILING_CHECK(x2ScaleShapeDimNum != VALID_MX_X2_SCALE_DIM_NUM,
-                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x2Scale",
-                                                             std::to_string(x2ScaleShapeDimNum).c_str(),
-                                                             "The shape dim of x2Scale must be 3D"),
-                    return false);
-    const int64_t scaleKSize = ops::CeilDiv<int64_t>(inputParams_.kSize, GROUP_ALIGN_SIZE * VALID_MX_SCALE_LAST_DIM);
-    // x2ScaleStorageShape: (n, ceil(k / (GROUP_ALIGN_SIZE * VALID_MX_SCALE_LAST_DIM)), VALID_MX_SCALE_LAST_DIM)
-    OP_TILING_CHECK(x2ScaleStorageShape.GetDim(0) != static_cast<int64_t>(inputParams_.nSize) ||
-                        x2ScaleStorageShape.GetDim(1) != scaleKSize ||
-                        x2ScaleStorageShape.GetDim(2) != VALID_MX_SCALE_LAST_DIM,
-                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                        inputParams_.opName, "x2Scale", Ops::Base::ToString(x2ScaleStorageShape).c_str(),
-                        "The shape of x2Scale must be [" + std::to_string(static_cast<int64_t>(inputParams_.nSize)) +
-                            ", " + std::to_string(scaleKSize) + ", " + std::to_string(VALID_MX_SCALE_LAST_DIM) + "]"),
-                    return false);
+    if (inputParams_.scaleBNz) {
+        OP_TILING_CHECK(x2ScaleShapeDimNum != VALID_MX_X2_SCALE_NZ_DIM_NUM,
+                        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x2Scale",
+                                                                 std::to_string(x2ScaleShapeDimNum).c_str(),
+                                                                 "The storage shape dim of ScaleB NZ must be 4D"),
+                        return false);
+        OP_TILING_CHECK(x2ScaleStorageShape.GetDim(0) != ops::CeilDiv<int64_t>(inputParams_.nSize, MX_SCALE_NZ_ALIGN) ||
+                            x2ScaleStorageShape.GetDim(1) != expectedGroupDim ||
+                            x2ScaleStorageShape.GetDim(2) != MX_SCALE_NZ_ALIGN ||
+                            x2ScaleStorageShape.GetDim(3) != VALID_MX_SCALE_LAST_DIM,
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            inputParams_.opName, "x2Scale", Ops::Base::ToString(x2ScaleStorageShape).c_str(),
+                            "The storage shape of ScaleB NZ must be [ceil(N/16), Kg, 16, tail]"),
+                        return false);
+    } else {
+        OP_TILING_CHECK(x2ScaleShapeDimNum != VALID_MX_X2_SCALE_DIM_NUM,
+                        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x2Scale",
+                                                                 std::to_string(x2ScaleShapeDimNum).c_str(),
+                                                                 "The storage shape dim of ScaleB ND must be 3D"),
+                        return false);
+        OP_TILING_CHECK(x2ScaleStorageShape.GetDim(0) != static_cast<int64_t>(inputParams_.nSize) ||
+                            x2ScaleStorageShape.GetDim(1) != expectedGroupDim ||
+                            x2ScaleStorageShape.GetDim(2) != VALID_MX_SCALE_LAST_DIM,
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(inputParams_.opName, "x2Scale",
+                                                               Ops::Base::ToString(x2ScaleStorageShape).c_str(),
+                                                               "The storage shape of ScaleB ND must be [N, Kg, tail]"),
+                        return false);
+    }
+
     return true;
 }
 

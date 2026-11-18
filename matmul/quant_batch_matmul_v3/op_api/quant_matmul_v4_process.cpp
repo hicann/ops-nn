@@ -324,8 +324,7 @@ static aclnnStatus PostMatmulCalcProcess(const aclTensor* matmulRet, TupleTensor
 static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, aclOpExecutor* executor)
 {
     // Preserve private C0=2 storage; the common checker validates it before the L0 call.
-    if (mxScaleTensor != nullptr &&
-        ge::GetPrimaryFormat(mxScaleTensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ) {
+    if (IsScaleNzFormat(mxScaleTensor)) {
         return true;
     }
     if (mxScaleTensor == nullptr || mxScaleTensor->GetViewShape().GetDimNum() < MX_SCALE_MAX_DIM) {
@@ -390,7 +389,9 @@ static aclnnStatus PreMatmulCalcProcess(TupleTensor& mandatoryTensors, TupleOpti
         bool tempTransposeValue = false;
         CHECK_RET(CheckA8W4FloatQuantType(x1, x2, perTokenScale, scale), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(TensorContiguousProcess(perTokenScale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
-        CHECK_RET(TensorContiguousProcess(scale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
+        if (!IsScaleNzFormat(scale)) {
+            CHECK_RET(TensorContiguousProcess(scale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
+        }
         CHECK_RET(CheckInputAttrExistence(boolsTrans, mandatoryTensors, optionalTensors), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckDimRangeA8W4(mandatoryTensors, optionalTensors, out), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckScaleDimRangeA8W4(mandatoryTensors, optionalTensors), ACLNN_ERR_PARAM_INVALID);
@@ -562,11 +563,12 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryT
     bool& transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
     bool& transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
     CHECK_RET(CheckNotNull(mandatoryTensors, out), ACLNN_ERR_PARAM_NULLPTR);
-    const bool isScaleNz = ge::GetPrimaryFormat(scale->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ;
+    const bool isScaleNz = IsScaleNzFormat(scale);
     if (isScaleNz) {
         CHECK_RET(ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ,
                   ACLNN_ERR_PARAM_INVALID);
     }
+    CHECK_RET(!IsScaleNzFormat(pertokenScaleOptional), ACLNN_ERR_PARAM_INVALID);
     if (isScaleNz && pertokenScaleOptional != nullptr) {
         pertokenScaleOptional = CreateScaleDescriptorView(pertokenScaleOptional, executor);
         CHECK_RET(pertokenScaleOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -581,9 +583,10 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryT
         // the normalized matrix descriptors/transpose attributes, especially for packed FP4.
         const auto aType = x1->GetDataType();
         const auto bType = x2->GetDataType();
+        const bool mxA8W4 = aType == DataType::DT_FLOAT8_E4M3FN && bType == DataType::DT_FLOAT4_E2M1;
         const bool mxFp8 = aType == DataType::DT_FLOAT8_E4M3FN && bType == DataType::DT_FLOAT8_E4M3FN;
         const bool mxFp4 = aType == DataType::DT_FLOAT4_E2M1 && bType == DataType::DT_FLOAT4_E2M1;
-        CHECK_RET(op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && (mxFp8 || mxFp4) &&
+        CHECK_RET(op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && (mxA8W4 || mxFp8 || mxFp4) &&
                       IsMicroScaling(pertokenScaleOptional, scale),
                   ACLNN_ERR_PARAM_INVALID);
         // aclCreateTensor may initialize original shape from private storage dimensions.
@@ -591,6 +594,13 @@ aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryT
         auto scaleView = CreateScaleDescriptorView(scale, executor);
         CHECK_RET(scaleView != nullptr, ACLNN_ERR_INNER_NULLPTR);
         scaleView->SetOriginalShape(scaleView->GetViewShape());
+        // npu_weight_quant_preprocess emits the scale storage with the torch-visible
+        // FRACTAL_NZ_C0_2 label (private C0=2). Canonicalize it to FRACTAL_NZ so the
+        // WeightNZ dispatch sees the same label as the aclnnNpuFormatCast-converted
+        // ScaleNZ path; the underlying (N1, Kg, 16, 2) bytes are identical.
+        if (ge::GetPrimaryFormat(scaleView->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_2) {
+            scaleView->SetStorageFormat(op::Format::FORMAT_FRACTAL_NZ);
+        }
         scale = scaleView;
     }
     bool isA8W4F = isA8W4Float(x1, x2);

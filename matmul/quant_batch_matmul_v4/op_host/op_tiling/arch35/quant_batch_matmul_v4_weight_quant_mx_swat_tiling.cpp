@@ -26,6 +26,7 @@ namespace optiling {
 using namespace matmul_v4;
 
 namespace {
+constexpr bool ALLOW_WEIGHT_L2_BYPASS = true;
 constexpr uint64_t DB_SIZE = 2UL;
 constexpr uint64_t L1_FOUR_BUFFER = 4UL;
 constexpr const char* OP_TYPE = "QuantBatchMatmulV4";
@@ -114,16 +115,16 @@ ge::graphStatus QuantBatchMatmulV4WeightQuantMxSwatTiling::DoOpTiling()
                                                aicoreParams_.l0cSize};
     WeightQuantMxSwatShapeParam shape = {inputParams_.mSize, inputParams_.nSize, inputParams_.kSize};
     std::string reason;
-    WeightQuantMxSwatTilingSolver doubleBufferSolver(DB_SIZE);
+    WeightQuantMxSwatTilingSolver doubleBufferSolver(DB_SIZE, DB_SIZE);
     if (!doubleBufferSolver.Solve(platform, shape, inputParams_.groupSize, inputParams_.hasBias,
                                   inputParams_.hasX1Scale, inputParams_.hasX2Scale, inputParams_.weightNz,
-                                  inputParams_.cDtype, tilingData_, reason)) {
+                                  inputParams_.cDtype, ALLOW_WEIGHT_L2_BYPASS, tilingData_, reason)) {
         OP_LOGD(inputParams_.opName, "2-buffer SWAT tiling skipped: %s", reason.c_str());
         reason.clear();
-        WeightQuantMxSwatTilingSolver fourBufferSolver(L1_FOUR_BUFFER, true);
+        WeightQuantMxSwatTilingSolver fourBufferSolver(L1_FOUR_BUFFER, L1_FOUR_BUFFER, true);
         OP_CHECK_IF(!fourBufferSolver.Solve(platform, shape, inputParams_.groupSize, inputParams_.hasBias,
                                             inputParams_.hasX1Scale, inputParams_.hasX2Scale, inputParams_.weightNz,
-                                            inputParams_.cDtype, tilingData_, reason),
+                                            inputParams_.cDtype, ALLOW_WEIGHT_L2_BYPASS, tilingData_, reason),
                     OP_LOGE(inputParams_.opName, "Unable to get SWAT tiling for mnk[%lu, %lu, %lu]: %s",
                             inputParams_.mSize, inputParams_.nSize, inputParams_.kSize, reason.c_str()),
                     return ge::GRAPH_FAILED);
@@ -157,14 +158,17 @@ void QuantBatchMatmulV4WeightQuantMxSwatTiling::DumpSwatTilingDataToLog(bool deb
     std::stringstream ss;
     ss << "m/n/k: " << tilingData_.m << "/" << tilingData_.n << "/" << tilingData_.k
        << " baseM/baseN/baseK: " << tilingData_.baseM << "/" << tilingData_.baseN << "/" << tilingData_.baseK
-       << " tileShapeKL1: " << tilingData_.tileShapeKL1 << " tileShapeScaleKL1: " << tilingData_.tileShapeScaleKL1
-       << " usedCoreNum: " << tilingData_.usedCoreNum << " cubeNumBlocksM/N: " << tilingData_.cubeNumBlocksM << "/"
-       << tilingData_.cubeNumBlocksN << " mTailTile/nTailTile: " << tilingData_.mTailTile << "/"
-       << tilingData_.nTailTile << " mBaseTailSplitCnt/nBaseTailSplitCnt: " << tilingData_.mBaseTailSplitCnt << "/"
+       << " mL1/nL1/kL1: " << tilingData_.mL1 << "/" << tilingData_.nL1 << "/" << tilingData_.kL1
+       << " tileShapeScaleKL1: " << tilingData_.tileShapeScaleKL1 << " usedCoreNum: " << tilingData_.usedCoreNum
+       << " cubeNumBlocksM/N: " << tilingData_.cubeNumBlocksM << "/" << tilingData_.cubeNumBlocksN
+       << " mTailTile/nTailTile: " << tilingData_.mTailTile << "/" << tilingData_.nTailTile
+       << " mBaseTailSplitCnt/nBaseTailSplitCnt: " << tilingData_.mBaseTailSplitCnt << "/"
        << tilingData_.nBaseTailSplitCnt << " mTailMain/nTailMain: " << tilingData_.mTailMain << "/"
        << tilingData_.nTailMain << " nBubSize/kBubSize: " << tilingData_.nBubSize << "/" << tilingData_.kBubSize
        << " groupSize: " << tilingData_.groupSize << " weightNz: " << tilingData_.weightNz
-       << " hasBias: " << tilingData_.hasBias << " l1BufferNum: " << tilingData_.l1BufferNum;
+       << " hasBias: " << tilingData_.hasBias << " l1BufferNum: " << tilingData_.l1BufferNum
+       << " ubBufferNum: " << tilingData_.ubBufferNum << " scaleBufferNum: " << tilingData_.scaleBufferNum
+       << " disableWeightL2: " << tilingData_.disableWeightL2;
     if (debugLevel) {
         OPS_LOG_D(inputParams_.opName, "SWAT tiling data: %s", ss.str().c_str());
     } else {

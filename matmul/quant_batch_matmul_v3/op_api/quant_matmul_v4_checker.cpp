@@ -909,7 +909,13 @@ static inline bool CheckA8W4Format(const TupleTensor& mandatoryTensors, const Tu
     auto yOffset = std::get<INDEX_Y_OFFSET_IN_OPTIONAL_TUPLE>(optionalTensors);
     CHECK_RET(x1->GetStorageFormat() == op::Format::FORMAT_ND, false);
     CHECK_RET(x2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ, false);
-    CHECK_RET(x2Scale->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    if (IsScaleNzFormat(x2Scale)) {
+        CHECK_RET(IsMicroScaling(x1Scale, x2Scale) && x1->GetDataType() == DataType::DT_FLOAT8_E4M3FN &&
+                      x2->GetDataType() == DataType::DT_FLOAT4_E2M1,
+                  false);
+    } else {
+        CHECK_RET(x2Scale->GetStorageFormat() == op::Format::FORMAT_ND, false);
+    }
 
     if (x1Scale != nullptr) {
         CHECK_RET(x1Scale->GetStorageFormat() == op::Format::FORMAT_ND, false);
@@ -978,8 +984,16 @@ static inline bool CheckA8W4ScaleX2Shape(const TupleOptional& optionalTensors, c
         return true;
     }
     int64_t x2ScaleReshapeFactor = x2Scale->GetDataType() == Ops::NN::DT_HIFLOAT4_SCALE ? 1 : 2;
-    int64_t x2ScaleNDim = transposeX2 ? x2Scale->GetViewShape().GetDim(0) : x2Scale->GetViewShape().GetDim(1);
-    int64_t x2ScaleGroupDim = transposeX2 ? x2Scale->GetViewShape().GetDim(1) : x2Scale->GetViewShape().GetDim(0);
+    // ScaleNZ is always [Kg, N, tail]; ND scales follow the weight transpose.
+    int64_t x2ScaleNDim;
+    int64_t x2ScaleGroupDim;
+    if (IsScaleNzFormat(x2Scale)) {
+        x2ScaleNDim = x2Scale->GetViewShape().GetDim(1);
+        x2ScaleGroupDim = x2Scale->GetViewShape().GetDim(0);
+    } else {
+        x2ScaleNDim = transposeX2 ? x2Scale->GetViewShape().GetDim(0) : x2Scale->GetViewShape().GetDim(1);
+        x2ScaleGroupDim = transposeX2 ? x2Scale->GetViewShape().GetDim(1) : x2Scale->GetViewShape().GetDim(0);
+    }
     if (IsMicroScaling(x1Scale, x2Scale)) {
         // MX scale: (n, ceil(groupDimK / tail), tail), with tail 2 for E8M0 and 1 for HIFLOAT4_SCALE.
         if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != CeilDiv(groupDimK, x2ScaleReshapeFactor) ||

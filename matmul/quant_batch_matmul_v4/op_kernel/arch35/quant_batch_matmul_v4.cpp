@@ -98,7 +98,7 @@ using namespace QuantBatchMatmulV4;
                               DTYPE_LOC_LOCAL>(x1, x2, bias, x2_scale, x1_scale, y, userWS, &tilingData);       \
     } while (0)
 
-template <int TRANS, int QUANT_TYPE, int OPTION_ATTRS, int WEIGHTNZ, int KERNEL_TEMPLATE_TYPE>
+template <int TRANS, int QUANT_TYPE, int OPTION_ATTRS, int WEIGHTNZ, int SCALEBNZ, int KERNEL_TEMPLATE_TYPE>
 __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale,
                                                  GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
                                                  GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR x2_table, GM_ADDR y,
@@ -162,7 +162,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR
         QuantBatchMatmulV4::Arch35::InvokeWeightQuantPergroupBlaze<WEIGHTNZ>(
             x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, workspace, tiling);
     } else if constexpr (QUANT_TYPE == QBMMV4_MX) {
-        QuantBatchMatmulV4::Arch35::InvokeWeightQuantMxBlazeSwat<WEIGHTNZ>(
+        QuantBatchMatmulV4::Arch35::InvokeWeightQuantMxBlazeSwat<WEIGHTNZ, SCALEBNZ>(
             x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, x2_table, y, workspace, tiling);
     }
 #endif

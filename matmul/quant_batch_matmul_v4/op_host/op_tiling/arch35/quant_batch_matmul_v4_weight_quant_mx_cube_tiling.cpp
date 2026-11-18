@@ -353,7 +353,8 @@ bool AdaptiveSlidingWindowWeightQuantMxCubeTiling::IsCapable() { return true; }
 uint64_t AdaptiveSlidingWindowWeightQuantMxCubeTiling::GetTilingKey() const
 {
     const uint64_t kernelType = isAFullLoad_ ? QBMMV4_MX_BLAZE_A_FULL_LOAD : QBMMV4_MX_BLAZE;
-    return GET_TPL_TILING_KEY(QBMMV4_B_TRANS, QBMMV4_MX, QBMMV4_OPTION_ATTR_NONE, QBMMV4_IS_WEIGHT_NZ, kernelType);
+    return GET_TPL_TILING_KEY(QBMMV4_B_TRANS, QBMMV4_MX, QBMMV4_OPTION_ATTR_NONE, QBMMV4_IS_WEIGHT_NZ, QBMMV4_SCALE_ND,
+                              kernelType);
 }
 
 void AdaptiveSlidingWindowWeightQuantMxCubeTiling::ResetTilingData()

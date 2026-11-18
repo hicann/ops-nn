@@ -632,6 +632,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - T-CG量化模式下，k要求32对齐且大于等于64，n要求8对齐。
     - x1是FLOAT8_E4M3FN，x2是FLOAT32时，x2表示一个FLOAT32存储8个FLOAT4_E2M1的紧密排布的数据格式。
     - MX量化模式下，bias数据类型与out数据类型需要一致；T-CG量化模式下，x2Scale的数据类型和out的数据类型需要一致。
+    - MX量化模式下，x2Scale支持NZ格式。ScaleNZ的逻辑shape固定为(ceil(k / 64), n, 2)，存储shape为(ceil(n / 16), ceil(k / 64), 16, 2)，不随transposeX2改变。x2必须为NZ格式（WeightNZ），不支持ND格式的x2搭配ScaleNZ；ND格式的x2Scale仍沿用上表shape约束。MXA8W4场景推荐先调用[aclnnWeightQuantPreprocess](https://gitcode.com/cann/ops-math/blob/master/conversion/weight_quant_preprocess/docs/aclnnWeightQuantPreprocess.md)预处理weight和weightScale，其outWeightScale即为ScaleNZ格式，可直接作为本接口的x2Scale输入；也可通过[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)将ND格式的x2Scale转换为NZ格式，转换前须将数据按(ceil(k / 64), n, 2)排列并连续存储，即view shape与物理排布均为(ceil(k / 64), n, 2)；若数据按(n, ceil(k / 64), 2)排布，须先交换两轴并重排数据，不能仅修改shape。x1Scale保持ND格式。ScaleNZ采用与MX全量化一致的固定shape约束，详见<a href="#scalenz约束">ScaleNZ约束</a>。
 
 </details>
 <!-- end id12 -->

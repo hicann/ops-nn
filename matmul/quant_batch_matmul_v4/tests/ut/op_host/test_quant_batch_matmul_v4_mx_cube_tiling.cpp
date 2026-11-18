@@ -25,6 +25,8 @@
 
 namespace {
 using MxTilingData = DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData;
+constexpr uint64_t MX_CUBE_SCALE_ND_KEY = 4369UL;
+constexpr uint64_t MX_CUBE_SCALE_ND_A_FULL_LOAD_KEY = 5393UL;
 static_assert(sizeof(MxTilingData) == 64, "V4 MX uses the shared 64-byte compact ABI");
 static_assert(offsetof(MxTilingData, windowLen) == 56, "windowLen follows the original compact fields");
 static_assert(std::is_base_of<optiling::AdaptiveSlidingWindowTiling,
@@ -399,7 +401,8 @@ TEST(QuantBatchMatmulV4MxBlaze, BothArchitecturesSerializeMxA8W4ModesAndLogicalK
                         EXPECT_EQ(data.x2QuantMode, hif4 ? 64U : 8U);
                         EXPECT_EQ(data.isBias, bias);
                         EXPECT_EQ(data.windowLen, 8U);
-                        EXPECT_TRUE(context.Get()->GetTilingKey() == 2321UL || context.Get()->GetTilingKey() == 2833UL);
+                        EXPECT_TRUE(context.Get()->GetTilingKey() == MX_CUBE_SCALE_ND_KEY ||
+                                    context.Get()->GetTilingKey() == MX_CUBE_SCALE_ND_A_FULL_LOAD_KEY);
                         EXPECT_GT(context.Get()->GetBlockDim(), 0U);
                         EXPECT_LE(context.Get()->GetBlockDim(), 64U);
                     }
@@ -533,7 +536,8 @@ TEST(QuantBatchMatmulV4MxBlaze, RegistryPublishesMxKeysForBothWeightTypes)
                 MxContext context(param);
                 ASSERT_TRUE(context.IsValid());
                 ASSERT_EQ(impl->tiling(context.Get()), ge::GRAPH_SUCCESS);
-                EXPECT_EQ(context.Get()->GetTilingKey(), aFullLoad ? 2833UL : 2321UL);
+                EXPECT_EQ(context.Get()->GetTilingKey(),
+                          aFullLoad ? MX_CUBE_SCALE_ND_A_FULL_LOAD_KEY : MX_CUBE_SCALE_ND_KEY);
             }
         }
     }
@@ -568,7 +572,7 @@ TEST(QuantBatchMatmulV4MxBlaze, ReusedTemplatePublishesSecondContextsMxModeAndTa
     ASSERT_TRUE(first.IsValid());
     optiling::AdaptiveSlidingWindowWeightQuantMxCubeTiling tiling(first.Get());
     ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(first.Get()->GetTilingKey(), 2833UL);
+    ASSERT_EQ(first.Get()->GetTilingKey(), MX_CUBE_SCALE_ND_A_FULL_LOAD_KEY);
     MxTilingData data{};
     auto* raw = first.Get()->GetRawTilingData();
     ASSERT_EQ(raw->GetDataSize(), sizeof(data));
@@ -584,7 +588,7 @@ TEST(QuantBatchMatmulV4MxBlaze, ReusedTemplatePublishesSecondContextsMxModeAndTa
     ASSERT_TRUE(second.IsValid());
     tiling.Reset(second.Get());
     ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(second.Get()->GetTilingKey(), 2321UL);
+    EXPECT_EQ(second.Get()->GetTilingKey(), MX_CUBE_SCALE_ND_KEY);
     raw = second.Get()->GetRawTilingData();
     ASSERT_EQ(raw->GetDataSize(), sizeof(data));
     std::memcpy(&data, raw->GetData(), sizeof(data));
@@ -598,13 +602,13 @@ TEST(QuantBatchMatmulV4MxBlaze, ReusedTemplatePublishesSecondContextsMxModeAndTa
     EXPECT_EQ(data.nTailTile, 1U);
 }
 
-TEST(QuantBatchMatmulV4MxBlaze, KeysKeepV4FiveArgumentLayout)
+TEST(QuantBatchMatmulV4MxBlaze, KeysKeepV4SixArgumentLayout)
 {
     MxV4Probe tiling(nullptr);
     tiling.SetAFullLoad(false);
-    EXPECT_EQ(tiling.GetTilingKey(), 2321UL);
+    EXPECT_EQ(tiling.GetTilingKey(), MX_CUBE_SCALE_ND_KEY);
     tiling.SetAFullLoad(true);
-    EXPECT_EQ(tiling.GetTilingKey(), 2833UL);
+    EXPECT_EQ(tiling.GetTilingKey(), MX_CUBE_SCALE_ND_A_FULL_LOAD_KEY);
     EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
 }
 

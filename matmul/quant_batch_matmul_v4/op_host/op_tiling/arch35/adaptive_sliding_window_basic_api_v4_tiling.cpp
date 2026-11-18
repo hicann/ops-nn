@@ -351,7 +351,8 @@ uint64_t AdaptiveSlidingWindowBasicTilingV4::GetTilingKey() const
     uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
     KernelTemplateType kernelType = isAFullLoad_ ? KernelTemplateType::LUT_AL1FULL : KernelTemplateType::LUT_ASW;
     return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(QuantType::PER_TILE), static_cast<uint64_t>(false),
-                              static_cast<uint64_t>(false), static_cast<uint64_t>(kernelType));
+                              static_cast<uint64_t>(false), static_cast<uint64_t>(false),
+                              static_cast<uint64_t>(kernelType));
 }
 
 } // namespace optiling

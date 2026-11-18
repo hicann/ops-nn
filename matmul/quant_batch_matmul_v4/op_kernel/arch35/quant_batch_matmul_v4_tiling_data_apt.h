@@ -185,10 +185,14 @@ struct alignas(sizeof(uint64_t)) QuantBatchMatmulV4WeightQuantMxSwatTilingData {
     uint32_t n = 0;
     uint32_t k = 0;
 
+    // MMAD/L0 base block.
     uint32_t baseM = 0;
     uint32_t baseN = 0;
     uint32_t baseK = 0;
-    uint32_t tileShapeKL1 = 0;
+    // L1 staging block.
+    uint32_t mL1 = 0;
+    uint32_t nL1 = 0;
+    uint32_t kL1 = 0;
     uint32_t tileShapeScaleKL1 = 0;
 
     uint32_t usedCoreNum = 1;
@@ -211,7 +215,9 @@ struct alignas(sizeof(uint64_t)) QuantBatchMatmulV4WeightQuantMxSwatTilingData {
     uint32_t weightNz = 0;
     uint32_t yDtype = 0;
     uint32_t l1BufferNum = 0;
-    uint32_t reserved = 0;
+    uint32_t ubBufferNum = 0;
+    uint32_t scaleBufferNum = 0;
+    uint32_t disableWeightL2 = 0;
 };
 #pragma pack(pop)
 

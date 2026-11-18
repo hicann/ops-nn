@@ -24,7 +24,10 @@ namespace {
 constexpr uint64_t BLOCK_CUBE_SIZE = 16UL;
 constexpr uint64_t NUM_TWO = 2UL;
 constexpr uint64_t DB_SIZE = 2UL;
+constexpr uint64_t L1_TRIPLE_BUFFER = 3UL;
 constexpr uint64_t L1_FOUR_BUFFER = 4UL;
+constexpr uint64_t UB_MAX_BUFFER = 8UL;
+constexpr uint64_t DOUBLE_SCALE_BUFFER = 2UL;
 constexpr uint64_t STEPK_THRESHOLD = 4UL;
 constexpr uint64_t BASEM_BASEN_RATIO = 2UL;
 constexpr uint64_t BASEK_LIMIT = 4095UL;
@@ -52,20 +55,24 @@ static uint64_t FloorAlign(uint64_t value, uint64_t align) { return align == 0UL
 namespace optiling {
 using SwatTilingData = qbmmv4_tiling::QuantBatchMatmulV4WeightQuantMxSwatTilingData;
 
-WeightQuantMxSwatTilingSolver::WeightQuantMxSwatTilingSolver(uint64_t targetL1BufferNum, bool allowConservativeFallback)
-    : targetL1BufferNum_(targetL1BufferNum), allowConservativeFallback_(allowConservativeFallback)
+WeightQuantMxSwatTilingSolver::WeightQuantMxSwatTilingSolver(uint64_t targetL1BufferNum, uint64_t targetUbBufferNum,
+                                                             bool allowConservativeFallback)
+    : targetL1BufferNum_(targetL1BufferNum),
+      targetUbBufferNum_(targetUbBufferNum),
+      allowConservativeFallback_(allowConservativeFallback)
 {}
 
 bool WeightQuantMxSwatTilingSolver::Solve(const WeightQuantMxSwatPlatformParam& platform,
                                           const WeightQuantMxSwatShapeParam& shape, uint64_t groupSize, bool hasBias,
                                           bool hasX1Scale, bool hasX2Scale, bool weightNz, ge::DataType yDtype,
-                                          SwatTilingData& tilingData, std::string& reason)
+                                          bool allowWeightL2Bypass, SwatTilingData& tilingData, std::string& reason)
 {
     if (!Init(platform, shape, reason)) {
         return false;
     }
     hasBias_ = hasBias;
     weightNz_ = weightNz;
+    allowWeightL2Bypass_ = allowWeightL2Bypass;
     biasDataSize_ = GetBiasDataSize(yDtype);
     bool foundTiling = CalcBasicBlock(reason);
     if (foundTiling) {
@@ -86,6 +93,8 @@ bool WeightQuantMxSwatTilingSolver::CalcConservativeTiling(std::string& reason)
     runInfo_.baseM = BLOCK_CUBE_SIZE;
     runInfo_.baseN = BLOCK_CUBE_SIZE;
     runInfo_.baseK = std::min(shape_.k, K_ALIGN_SIZE_MX_L1);
+    runInfo_.l0BaseM = runInfo_.baseM;
+    runInfo_.l0BaseN = runInfo_.baseN;
     if (!IsL0Feasible(runInfo_.baseM, runInfo_.baseN, runInfo_.baseK)) {
         reason = "minimum SWAT base shape exceeds L0A/L0B/L0C capacity";
         return false;
@@ -108,8 +117,13 @@ bool WeightQuantMxSwatTilingSolver::CalcConservativeTiling(std::string& reason)
 bool WeightQuantMxSwatTilingSolver::Init(const WeightQuantMxSwatPlatformParam& platform,
                                          const WeightQuantMxSwatShapeParam& shape, std::string& reason)
 {
-    if (targetL1BufferNum_ != DB_SIZE && targetL1BufferNum_ != L1_FOUR_BUFFER) {
-        reason = "target L1 buffer count must be 2 or 4";
+    if (targetL1BufferNum_ != DB_SIZE && targetL1BufferNum_ != L1_TRIPLE_BUFFER &&
+        targetL1BufferNum_ != L1_FOUR_BUFFER) {
+        reason = "target L1 buffer count must be 2, 3, or 4";
+        return false;
+    }
+    if (targetUbBufferNum_ == 0UL || targetUbBufferNum_ > UB_MAX_BUFFER) {
+        reason = "target UB buffer count must be in [1, 8]";
         return false;
     }
     if (shape.m == 0UL || shape.n == 0UL || shape.k == 0UL) {
@@ -157,6 +171,8 @@ bool WeightQuantMxSwatTilingSolver::CalcBasicBlock(std::string& reason)
         reason = "baseM, baseN, and baseK must be non-zero";
         return false;
     }
+    runInfo_.l0BaseM = runInfo_.baseM;
+    runInfo_.l0BaseN = runInfo_.baseN;
     if (!IsL0Feasible(runInfo_.baseM, runInfo_.baseN, runInfo_.baseK)) {
         reason = "base shape exceeds L0A/L0B/L0C capacity";
         return false;
@@ -360,6 +376,8 @@ bool WeightQuantMxSwatTilingSolver::ValidateTilingResult() const
                              runInfo_.baseK % matmul_v4::K_ALIGN_SIZE_MX == 0UL && runInfo_.tileShapeKL1 > 0UL &&
                              runInfo_.tileShapeKL1 % runInfo_.baseK == 0UL && runInfo_.tileShapeScaleKL1 > 0UL &&
                              runInfo_.tileShapeScaleKL1 % runInfo_.tileShapeKL1 == 0UL;
+    hasValidTileShape = hasValidTileShape && runInfo_.l0BaseM > 0UL && runInfo_.l0BaseN > 0UL &&
+                        runInfo_.baseM % runInfo_.l0BaseM == 0UL && runInfo_.baseN % runInfo_.l0BaseN == 0UL;
     if (!hasValidTileShape) {
         return false;
     }
@@ -393,8 +411,16 @@ bool WeightQuantMxSwatTilingSolver::IsL1Feasible(uint64_t tileShapeKL1, uint64_t
     uint64_t scaleAL1Size = runInfo_.baseM * scaleKL1SizeAligned * DATA_SIZE_UINT8 / matmul_v4::MX_GROUP_SIZE;
     uint64_t scaleBL1Size = runInfo_.baseN * scaleKL1SizeAligned * DATA_SIZE_UINT8 / matmul_v4::MX_GROUP_SIZE;
     uint64_t biasL1Size = hasBias_ ? Align(runInfo_.baseN, BLOCK_CUBE_SIZE) * biasDataSize_ : 0UL;
+    uint64_t scalePairSize = scaleAL1Size + scaleBL1Size;
+    if (targetL1BufferNum_ == L1_TRIPLE_BUFFER) {
+        // Triple-buffer mode uses one sequential L1 region and two independent
+        // scale stages at the end of that region.
+        uint64_t totalL1Use = targetL1BufferNum_ * (aL1Size + bL1Size + biasL1Size) +
+                              DOUBLE_SCALE_BUFFER * scalePairSize;
+        return totalL1Use <= platform_.l1Size;
+    }
     uint64_t buffersPerHalf = targetL1BufferNum_ / NUM_TWO;
-    uint64_t halfL1Use = buffersPerHalf * (aL1Size + bL1Size + biasL1Size) + scaleAL1Size + scaleBL1Size;
+    uint64_t halfL1Use = buffersPerHalf * (aL1Size + bL1Size + biasL1Size) + scalePairSize;
     // Kernel buffer 1 starts at the fixed 256 KiB boundary, so the shorter physical half sets the limit.
     uint64_t halfL1Limit = std::min(L1_HALF_SIZE, platform_.l1Size - L1_HALF_SIZE);
     return halfL1Use <= halfL1Limit;
@@ -403,7 +429,7 @@ bool WeightQuantMxSwatTilingSolver::IsL1Feasible(uint64_t tileShapeKL1, uint64_t
 bool WeightQuantMxSwatTilingSolver::IsBubTilingValid(uint64_t nBubSize, uint64_t kBubSize) const
 {
     return nBubSize > 0UL && kBubSize > 0UL && kBubSize % matmul_v4::K_ALIGN_SIZE_MX == 0UL &&
-           GetBubSize(targetL1BufferNum_, nBubSize, kBubSize) <= platform_.ubSize;
+           GetBubSize(targetUbBufferNum_, nBubSize, kBubSize) <= platform_.ubSize;
 }
 
 void WeightQuantMxSwatTilingSolver::BuildTilingData(uint64_t groupSize, bool hasBias, bool hasX1Scale, bool hasX2Scale,
@@ -414,10 +440,12 @@ void WeightQuantMxSwatTilingSolver::BuildTilingData(uint64_t groupSize, bool has
     tilingData.m = static_cast<uint32_t>(shape_.m);
     tilingData.n = static_cast<uint32_t>(shape_.n);
     tilingData.k = static_cast<uint32_t>(shape_.k);
-    tilingData.baseM = static_cast<uint32_t>(runInfo_.baseM);
-    tilingData.baseN = static_cast<uint32_t>(runInfo_.baseN);
+    tilingData.baseM = static_cast<uint32_t>(runInfo_.l0BaseM);
+    tilingData.baseN = static_cast<uint32_t>(runInfo_.l0BaseN);
     tilingData.baseK = static_cast<uint32_t>(runInfo_.baseK);
-    tilingData.tileShapeKL1 = static_cast<uint32_t>(runInfo_.tileShapeKL1);
+    tilingData.mL1 = static_cast<uint32_t>(runInfo_.baseM);
+    tilingData.nL1 = static_cast<uint32_t>(runInfo_.baseN);
+    tilingData.kL1 = static_cast<uint32_t>(runInfo_.tileShapeKL1);
     tilingData.tileShapeScaleKL1 = static_cast<uint32_t>(runInfo_.tileShapeScaleKL1);
     tilingData.usedCoreNum = static_cast<uint32_t>(runInfo_.totalBlockCnt >= platform_.aicNum ?
                                                        platform_.aicNum :
@@ -440,6 +468,11 @@ void WeightQuantMxSwatTilingSolver::BuildTilingData(uint64_t groupSize, bool has
     tilingData.weightNz = static_cast<uint32_t>(weightNz);
     tilingData.yDtype = static_cast<uint32_t>(yDtype);
     tilingData.l1BufferNum = static_cast<uint32_t>(targetL1BufferNum_);
+    tilingData.ubBufferNum = static_cast<uint32_t>(targetUbBufferNum_);
+    tilingData.scaleBufferNum = DOUBLE_SCALE_BUFFER;
+    // One M tile covers the complete M, so this B tile is not reused by another M tile.
+    // The kernel checks each L1 tile's inner-axis alignment before applying the hint.
+    tilingData.disableWeightL2 = static_cast<uint32_t>(allowWeightL2Bypass_ && runInfo_.baseM >= shape_.m);
 }
 
 bool WeightQuantMxSwatTilingSolver::FindBubSize(uint64_t nBl1Size, uint64_t kBl1Size, uint64_t& nBubSize,
@@ -452,7 +485,7 @@ bool WeightQuantMxSwatTilingSolver::FindBubSize(uint64_t nBl1Size, uint64_t kBl1
     }
 
     kBubSize = kBl1Size;
-    if (targetL1BufferNum_ == L1_FOUR_BUFFER && nBl1Size > BLOCK_CUBE_SIZE) {
+    if (targetUbBufferNum_ >= L1_FOUR_BUFFER && nBl1Size > BLOCK_CUBE_SIZE) {
         nBubSize = Align(CeilDiv(nBl1Size, NUM_TWO), BLOCK_CUBE_SIZE);
     }
     return IsBubTilingValid(nBubSize, kBubSize);

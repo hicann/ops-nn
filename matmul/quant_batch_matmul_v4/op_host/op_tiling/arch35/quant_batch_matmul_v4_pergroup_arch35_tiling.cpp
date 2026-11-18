@@ -483,7 +483,7 @@ uint64_t QuantBatchMatmulV4PergroupArch35Tiling::GetTilingKey() const
     uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
     matmul_v4::KernelTemplateType kernelType = matmul_v4::KernelTemplateType::LUT_ASW;
     return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(matmul_v4::QuantType::INT4_ASYMMETRICAL),
-                              static_cast<uint64_t>(false), static_cast<uint64_t>(false),
+                              static_cast<uint64_t>(false), static_cast<uint64_t>(false), static_cast<uint64_t>(false),
                               static_cast<uint64_t>(kernelType));
 }
 

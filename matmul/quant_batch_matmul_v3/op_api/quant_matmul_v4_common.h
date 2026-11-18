@@ -222,6 +222,16 @@ static inline bool IsFormatNZ(const aclTensor* tensor)
             ge::GetPrimaryFormat(tensor->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ_C0_32);
 }
 
+static inline bool IsScaleNzFormat(const aclTensor* tensor)
+{
+    if (tensor == nullptr) {
+        return false;
+    }
+    const auto format = tensor->GetStorageFormat();
+    const auto primaryFormat = static_cast<op::Format>(ge::GetPrimaryFormat(format));
+    return primaryFormat == op::Format::FORMAT_FRACTAL_NZ || primaryFormat == op::Format::FORMAT_FRACTAL_NZ_C0_2;
+}
+
 namespace internal {
 
 bool CheckNotNull(TupleTensor mandatoryTensors, const aclTensor* out);

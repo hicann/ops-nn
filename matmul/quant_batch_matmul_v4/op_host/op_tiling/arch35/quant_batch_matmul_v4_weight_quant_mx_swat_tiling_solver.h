@@ -39,17 +39,21 @@ struct WeightQuantMxSwatShapeParam {
 
 class WeightQuantMxSwatTilingSolver {
 public:
-    explicit WeightQuantMxSwatTilingSolver(uint64_t targetL1BufferNum, bool allowConservativeFallback = false);
+    WeightQuantMxSwatTilingSolver(uint64_t targetL1BufferNum, uint64_t targetUbBufferNum,
+                                  bool allowConservativeFallback = false);
 
     bool Solve(const WeightQuantMxSwatPlatformParam& platform, const WeightQuantMxSwatShapeParam& shape,
                uint64_t groupSize, bool hasBias, bool hasX1Scale, bool hasX2Scale, bool weightNz, ge::DataType yDtype,
-               qbmmv4_tiling::QuantBatchMatmulV4WeightQuantMxSwatTilingData& tilingData, std::string& reason);
+               bool allowWeightL2Bypass, qbmmv4_tiling::QuantBatchMatmulV4WeightQuantMxSwatTilingData& tilingData,
+               std::string& reason);
 
 private:
     struct RunInfo {
         uint64_t baseM = 0UL;
         uint64_t baseN = 0UL;
         uint64_t baseK = 0UL;
+        uint64_t l0BaseM = 0UL;
+        uint64_t l0BaseN = 0UL;
         uint64_t tileShapeKL1 = 0UL;
         uint64_t tileShapeScaleKL1 = 0UL;
         uint64_t nBubSize = 0UL;
@@ -98,9 +102,11 @@ private:
     WeightQuantMxSwatPlatformParam platform_;
     RunInfo runInfo_;
     uint64_t targetL1BufferNum_ = 2UL;
+    uint64_t targetUbBufferNum_ = 2UL;
     bool allowConservativeFallback_ = false;
     bool hasBias_ = false;
     bool weightNz_ = false;
+    bool allowWeightL2Bypass_ = false;
     uint64_t biasDataSize_ = 0UL;
 };
 } // namespace optiling

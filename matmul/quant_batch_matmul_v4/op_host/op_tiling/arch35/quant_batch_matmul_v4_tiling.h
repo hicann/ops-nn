@@ -58,6 +58,7 @@ constexpr size_t VALID_X1_SCALE_DIM_NUM = 2UL;
 constexpr size_t VALID_X2_SCALE_DIM_NUM = 2UL;
 constexpr size_t VALID_MX_X1_SCALE_DIM_NUM = 3UL;
 constexpr size_t VALID_MX_X2_SCALE_DIM_NUM = 3UL;
+constexpr size_t VALID_MX_X2_SCALE_NZ_DIM_NUM = 4UL;
 constexpr size_t VALID_WEIGHT_NZ_DIM_NUM = 4UL;
 constexpr size_t VALID_BIAS_MIN_DIM = 1;
 constexpr size_t VALID_BIAS_MAX_DIM = 2;
@@ -121,6 +122,7 @@ struct QuantBatchMatmulInfo {
     bool supportL0c2Out;
     bool supportL12BtBf16;
     bool weightNz;
+    bool scaleBNz;
     uint32_t libApiWorkSpaceSize;
     uint64_t groupSize;
     uint64_t mSize;
@@ -190,6 +192,8 @@ private:
     bool AnalyzeX1scaleDtype(const gert::CompileTimeTensorDesc* x1ScaleDesc);
     bool AnalyzeX2scaleDtype(const gert::CompileTimeTensorDesc* x2ScaleDesc);
     bool AnalyzeYScaleOffsetShape(const gert::StorageShape* yScaleShape, const gert::StorageShape* yOffsetShape) const;
+    bool AnalyzeX2Format();
+    bool AnalyzeScaleBNzFormat();
     bool AnalyzeTranspose();
     bool AnalyzeGroupSize();
     bool AnalyzeAttrs();

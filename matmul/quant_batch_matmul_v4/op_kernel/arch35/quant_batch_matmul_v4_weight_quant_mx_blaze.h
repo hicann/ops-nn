@@ -27,7 +27,7 @@
 namespace QuantBatchMatmulV4 {
 namespace Arch35 {
 
-template <bool IS_WEIGHT_NZ>
+template <bool IS_WEIGHT_NZ, bool IS_SCALE_B_NZ>
 __aicore__ inline void RunWeightQuantMxBlazeSwat(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1Scale, GM_ADDR x2Scale, GM_ADDR y,
     const qbmmv4_tiling::QuantBatchMatmulV4WeightQuantMxSwatTilingData& tilingData)
@@ -43,7 +43,8 @@ __aicore__ inline void RunWeightQuantMxBlazeSwat(
     using LayoutB = AscendC::Std::conditional_t<IS_WEIGHT_NZ, asc::te::zn_layout_ptn, asc::te::dn_ext_layout_ptn>;
     using LayoutC = asc::te::nd_ext_layout_ptn;
     using LayoutScaleA = asc::te::scalea_nd_layout_ptn;
-    using LayoutScaleB = asc::te::scaleb_dn_layout_ptn;
+    using LayoutScaleB = AscendC::Std::conditional_t<IS_SCALE_B_NZ, asc::te::nn_layout_ptn,
+                                                     asc::te::scaleb_dn_layout_ptn>;
     using LayoutBias = LayoutC;
 
     using ProblemShape = asc::te::shape<int64_t, int64_t, int64_t>;
@@ -59,20 +60,19 @@ __aicore__ inline void RunWeightQuantMxBlazeSwat(
         asc::te::make_shape(static_cast<int64_t>(tilingData.m), static_cast<int64_t>(tilingData.n),
                             static_cast<int64_t>(tilingData.k)),
         {x1, x1Scale, x2Scale, y,
-         asc::te::make_shape(static_cast<int64_t>(tilingData.baseM), static_cast<int64_t>(tilingData.baseN),
-                             static_cast<int64_t>(tilingData.tileShapeKL1),
-                             static_cast<int64_t>(tilingData.tileShapeScaleKL1)),
+         asc::te::make_shape(static_cast<int64_t>(tilingData.mL1), static_cast<int64_t>(tilingData.nL1),
+                             static_cast<int64_t>(tilingData.kL1), static_cast<int64_t>(tilingData.tileShapeScaleKL1)),
          asc::te::make_shape(static_cast<int64_t>(tilingData.baseM), static_cast<int64_t>(tilingData.baseN),
                              static_cast<int64_t>(tilingData.baseK)),
          tilingData.l1BufferNum, tilingData.hasBias != 0U},
-        {x2, bias, tilingData.kBubSize, tilingData.nBubSize},
-        {tilingData.baseM, tilingData.baseN, tilingData.mTailTile, tilingData.nTailTile, tilingData.mBaseTailSplitCnt,
+        {x2, bias, tilingData.kBubSize, tilingData.nBubSize, tilingData.disableWeightL2 != 0U},
+        {tilingData.mL1, tilingData.nL1, tilingData.mTailTile, tilingData.nTailTile, tilingData.mBaseTailSplitCnt,
          tilingData.nBaseTailSplitCnt, tilingData.mTailMain, tilingData.nTailMain}};
     KernelImpl kernel;
     kernel(params);
 }
 
-template <bool IS_WEIGHT_NZ>
+template <bool IS_WEIGHT_NZ, bool IS_SCALE_B_NZ>
 __aicore__ inline void InvokeWeightQuantMxBlazeSwat(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, [[maybe_unused]] GM_ADDR y_scale,
     [[maybe_unused]] GM_ADDR x1_offset, [[maybe_unused]] GM_ADDR x2_offset, [[maybe_unused]] GM_ADDR y_offset,
@@ -80,7 +80,7 @@ __aicore__ inline void InvokeWeightQuantMxBlazeSwat(
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     GET_TILING_DATA_WITH_STRUCT(qbmmv4_tiling::QuantBatchMatmulV4WeightQuantMxSwatTilingData, tilingDataIn, tiling);
-    RunWeightQuantMxBlazeSwat<IS_WEIGHT_NZ>(x1, x2, bias, x1_scale, x2_scale, y, tilingDataIn);
+    RunWeightQuantMxBlazeSwat<IS_WEIGHT_NZ, IS_SCALE_B_NZ>(x1, x2, bias, x1_scale, x2_scale, y, tilingDataIn);
 }
 
 } // namespace Arch35
