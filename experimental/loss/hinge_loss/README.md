@@ -54,11 +54,12 @@ bash build.sh -u --experimental --opkernel --ops=hinge_loss --soc=ascend910b
 
 当前未提供独立的 ACLNN API UT；ACLNN 调用通过示例用例验证。
 
-构建、安装并执行 eager 示例：
+构建、安装并执行 eager 示例（在仓库根目录执行）：
 
 ```bash
-cd /home/ma-user/work/ops-nn
-source /usr/local/Ascend/cann-9.0.0/set_env.sh
+# 将 CANN_HOME 改为本机 set_env.sh 所在的目录。
+CANN_HOME=/usr/local/Ascend/cann-9.0.0
+source "$CANN_HOME/set_env.sh"
 
 # 构建 experimental 下的自定义算子包
 bash build.sh --pkg --ops=hinge_loss --soc=ascend910b -j16 --experimental

@@ -58,7 +58,9 @@ FLOAT 计算，再转换回输入 dtype。
 ## 本地编译运行 UT
 
 ```bash
-source /usr/local/Ascend/cann-9.0.0/set_env.sh
+# 将 CANN_HOME 改为本机 set_env.sh 所在的目录。
+CANN_HOME=/usr/local/Ascend/cann-9.0.0
+source "$CANN_HOME/set_env.sh"
 bash build.sh -u --ophost --ops=gaussian_nll_loss_grad --soc=ascend910b --experimental
 bash build.sh -u --opkernel --ops=gaussian_nll_loss_grad --soc=ascend910b --experimental
 ```
