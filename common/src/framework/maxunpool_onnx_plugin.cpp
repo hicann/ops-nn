@@ -95,13 +95,13 @@ static Status ParseOpToGraphMaxUnpool(const ge::Operator& op, Graph& graph)
 
     size_t k_size = kernel_shape_value.size();
     std::vector<int> pads_value;
-    if (op.GetAttr("pads", pads_value) != SUCCESS && pads_value.size() != (k_size * 2)) {
+    if (op.GetAttr("pads", pads_value) != SUCCESS || pads_value.size() != (k_size * 2)) {
         OP_LOGE(GetOpName(op).c_str(), "get pads from op failed");
         return FAILED;
     }
 
     std::vector<int> strides_value;
-    if (op.GetAttr("strides", strides_value) != SUCCESS && strides_value.size() != k_size) {
+    if (op.GetAttr("strides", strides_value) != SUCCESS || strides_value.size() != k_size) {
         OP_LOGE(GetOpName(op).c_str(), "get strides from op failed");
         return FAILED;
     }
