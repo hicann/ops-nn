@@ -281,3 +281,72 @@ TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_output_shape_mismatch_
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// issue#8186: xyz1/xyz2非空、idx/gradDist为空时，两个非空输出gradXyz1/gradXyz2需补写全0，
+// 接口应返回SUCCESS，不能静默跳过输出写入
+TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_empty_idx_fill_grad_outputs)
+{
+    const int64_t batch = 2;
+    const int64_t num = 4;
+    auto xyz1 = TensorDesc({batch, num, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto xyz2 = TensorDesc({batch, num, 2}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto idx1 = TensorDesc({batch, 0}, ACL_INT32, ACL_FORMAT_ND);
+    auto idx2 = TensorDesc({batch, 0}, ACL_INT32, ACL_FORMAT_ND);
+    auto grad_dist1 = TensorDesc({batch, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto grad_dist2 = TensorDesc({batch, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto grad_xyz1 = TensorDesc({batch, num, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto grad_xyz2 = TensorDesc({batch, num, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
+                        OUTPUT(grad_xyz1, grad_xyz2));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    // 冒烟断言：空tensor早退路径不报错且下发输出清零。
+    // Fill类算子workspace可能为0，不能以workspaceSize>0作为行为判据，stub环境无输出值校验能力。
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// issue#8186: 全空输入（xyz/idx/gradDist均为空tensor）时接口应返回SUCCESS，输出为空无需填充
+TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_all_empty_input_success)
+{
+    const int64_t batch = 2;
+    auto xyz1 = TensorDesc({batch, 0, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto xyz2 = TensorDesc({batch, 0, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto idx1 = TensorDesc({batch, 0}, ACL_INT32, ACL_FORMAT_ND);
+    auto idx2 = TensorDesc({batch, 0}, ACL_INT32, ACL_FORMAT_ND);
+    auto grad_dist1 = TensorDesc({batch, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto grad_dist2 = TensorDesc({batch, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto grad_xyz1 = TensorDesc({batch, 0, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto grad_xyz2 = TensorDesc({batch, 0, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
+                        OUTPUT(grad_xyz1, grad_xyz2));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(workspace_size, 0U);
+}
+
+// issue#8186: 空idx场景的fp16变体，非空输出需按fp16补写全0
+TEST_F(l2_chamfer_distance_backward_test, Ascend910B_case_empty_idx_fill_grad_outputs_half)
+{
+    const int64_t batch = 2;
+    const int64_t num = 4;
+    auto xyz1 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto xyz2 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 10);
+    auto idx1 = TensorDesc({batch, 0}, ACL_INT32, ACL_FORMAT_ND);
+    auto idx2 = TensorDesc({batch, 0}, ACL_INT32, ACL_FORMAT_ND);
+    auto grad_dist1 = TensorDesc({batch, 0}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto grad_dist2 = TensorDesc({batch, 0}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto grad_xyz1 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto grad_xyz2 = TensorDesc({batch, num, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnChamferDistanceBackward, INPUT(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2),
+                        OUTPUT(grad_xyz1, grad_xyz2));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

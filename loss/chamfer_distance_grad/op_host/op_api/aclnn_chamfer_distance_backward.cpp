@@ -15,6 +15,7 @@
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn/aclnn_base.h"
+#include "level0/fill.h"
 #include "level0/squeeze.h"
 #include "level0/unsqueeze.h"
 #include "opdev/common_types.h"
@@ -23,6 +24,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
+#include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 
 using namespace op;
@@ -160,6 +162,25 @@ static aclnnStatus CheckParams(const aclTensor* xyz1, const aclTensor* xyz2, con
     return ACLNN_SUCCESS;
 }
 
+// 空输入早退时非空输出需写入全0：空idx/gradDist表示无配对点、梯度贡献为0（issue#8186）
+static aclnnStatus FillOutWithZeros(const aclTensor* out, aclOpExecutor* executor)
+{
+    auto outShape = out->GetViewShape();
+    op::ShapeVector fillDims = op::ToShapeVector(outShape);
+    auto fillDimsArray = executor->AllocIntArray(fillDims.data(), outShape.GetDimNum());
+    CHECK_RET(fillDimsArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* fillDimTensor = executor->ConvertToTensor(fillDimsArray, op::DataType::DT_INT64);
+    CHECK_RET(fillDimTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclScalar* zeroScalar = executor->AllocScalar(0);
+    CHECK_RET(zeroScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* zeroTensor = executor->ConvertToTensor(zeroScalar, out->GetDataType());
+    CHECK_RET(zeroTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclTensor* zeroFillTensor = l0op::Fill(fillDimTensor, zeroTensor, fillDimsArray, executor);
+    CHECK_RET(zeroFillTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(l0op::ViewCopy(zeroFillTensor, out, executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(const aclTensor* xyz1, const aclTensor* xyz2,
                                                          const aclTensor* idx1, const aclTensor* idx2,
                                                          const aclTensor* gradDist1, const aclTensor* gradDist2,
@@ -180,8 +201,16 @@ aclnnStatus aclnnChamferDistanceBackwardGetWorkspaceSize(const aclTensor* xyz1, 
 
     if (xyz1->IsEmpty() || xyz2->IsEmpty() || idx1->IsEmpty() || idx2->IsEmpty() || gradDist1->IsEmpty() ||
         gradDist2->IsEmpty()) {
-        // 根据实际支持情况补充
-        *workspaceSize = 0;
+        // 空输入早退时非空输出需补写全0，避免调用方拿到SUCCESS后读到未初始化显存（issue#8186）
+        if (!gradXyz1->IsEmpty()) {
+            auto fillRet = FillOutWithZeros(gradXyz1, uniqueExecutor.get());
+            CHECK_RET(fillRet == ACLNN_SUCCESS, fillRet);
+        }
+        if (!gradXyz2->IsEmpty()) {
+            auto fillRet = FillOutWithZeros(gradXyz2, uniqueExecutor.get());
+            CHECK_RET(fillRet == ACLNN_SUCCESS, fillRet);
+        }
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }

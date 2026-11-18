@@ -301,6 +301,8 @@ aclnnStatus aclnnChamferDistanceBackward(
 
 ## Constraints
 
+- empty tensor behavior:
+  - When any of `xyz1`, `xyz2`, `idx1`, `idx2`, `gradDist1`, or `gradDist2` is an empty tensor, the API returns success. In this case there are no matched points and the gradient contribution is 0, so the non-empty outputs `gradXyz1` and `gradXyz2` are filled with all zeros.
 - deterministic computation:
   - aclnnChamferDistanceBackward defaults to a non-deterministic implementation. You can enable deterministic computation by calling aclrtCtxSetSysParamOpt.
 

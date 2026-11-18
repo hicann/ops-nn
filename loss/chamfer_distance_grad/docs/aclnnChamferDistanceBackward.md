@@ -300,6 +300,8 @@ aclnnStatus aclnnChamferDistanceBackward(
 
 ## 约束说明
 
+- 空tensor行为：
+  - `xyz1`、`xyz2`、`idx1`、`idx2`、`gradDist1`、`gradDist2`任一输入为空tensor时，接口返回成功，此时无配对点、梯度贡献为0，非空的`gradXyz1`、`gradXyz2`输出将被填充为全0。
 - 确定性计算：
   - aclnnChamferDistanceBackward默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性。
 
