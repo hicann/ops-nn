@@ -72,21 +72,15 @@
 
     1. 矩阵乘后x''的shape为[M,N1,N2]，在计算pergroup量化方式其中的mx_quantize时，需reshape为[M,N1*N2]，记为x2
 
-    2. 在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
+    2. 在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。emax为目标量化格式（FLOAT4_E2M1）最大正规数的指数位，取值为2（FLOAT4_E2M1的最大正规数为6.0，即1.5×2^2）。
+
+    3. 计算出sharedExp，即组内最大绝对值的指数减去emax
 
        $$
-       emax = max(e0,e1....e31)
+       sharedExp[M,N1*N2/32] = floor(log2(max(|e0|,|e1|,....,|e31|))) - emax
        $$
 
-    3. 计算出reduceMaxValue和sharedExp
-
-       $$
-       reduceMaxValue = log2(reduceMax(x2),groupSize=32)
-       $$
-
-       $$
-       sharedExp[M,N1*N2/32] = reduceMaxValue -emax
-       $$
+       该公式仅在dstTypeMax=0.0时成立；当dstTypeMax=6.0/7.0时，若尾数高位满足进位条件，需改用ceil，详见下方shared_exp的完整定义。
 
     4. 计算quantScale
 
@@ -106,6 +100,8 @@
       $$
       shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果} 尾数位的高比特前一/两位 \text{为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其他} \end{cases} \\
       $$
+
+      其中，emax为目标量化格式最大值的指数位，dstTypeMax=6.0/7.0时emax=2。
 
       $$
       P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\

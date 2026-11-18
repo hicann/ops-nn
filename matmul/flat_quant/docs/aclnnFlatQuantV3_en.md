@@ -72,21 +72,15 @@
   - When dstTypeMax = 0.0:
     1. After matrix multiplication, x'' has a shape of [M,N1,N2]. To calculate mx_quantize in the pergroup quantization mode, reshape it to [M,N1*N2], denoted as x2.
 
-    2. Group x2 along the second dimension by groupsize. Each group contains elements e0,e1...e31. Calculate emax.
+    2. Group x2 along the second dimension by groupsize. Each group contains elements e0,e1...e31. emax is the exponent of the largest normal number of the target quantization format (FLOAT4_E2M1), which is 2 (the largest normal number of FLOAT4_E2M1 is 6.0, i.e., 1.5×2^2).
+
+    3. Calculate sharedExp, that is, the exponent of the largest absolute value in the group minus emax:
 
        $$
-       emax = max(e0,e1....e31)
+       sharedExp[M,N1*N2/32] = floor(log2(max(|e0|,|e1|,....,|e31|))) - emax
        $$
 
-    3. Calculate reduceMaxValue and sharedExp.
-
-       $$
-       reduceMaxValue = log2(reduceMax(x2),groupSize=32)
-       $$
-
-       $$
-       sharedExp[M,N1*N2/32] = reduceMaxValue -emax
-       $$
+       The formula above applies only when dstTypeMax is 0.0. When dstTypeMax is 6.0/7.0, ceil should be used instead if the high bits of the mantissa satisfy the carry condition. See the complete shared_exp definition below.
 
     4. Calculate quantScale.
 
@@ -106,6 +100,8 @@
       $$
       shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{ if} the preceding one/two high bits of the mantissa \text{ are 1, and the mantissa is not all 0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{ otherwise} \end{cases} \\
       $$
+
+      where emax is the exponent of the maximum value of the target quantization format. When dstTypeMax is 6.0/7.0, emax is 2.
 
       $$
       P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\

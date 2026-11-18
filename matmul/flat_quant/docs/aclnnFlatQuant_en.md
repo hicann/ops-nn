@@ -61,20 +61,12 @@
 
   1. After matrix multiplication, x'' has the shape [M,N1,N2]. To compute mx_quantize in the pergroup quantization mode, reshape it to [M,N1*N2], denoted as x2
 
-  2. Divide the second dimension of x2 into groups by groupsize. Each group contains elements e0, e1...e31. Calculate emax
+  2. Divide the second dimension of x2 into groups by groupsize. Each group contains elements e0, e1...e31. emax is the exponent of the largest normal number of the target quantization format (FLOAT4_E2M1), which is 2 (the largest normal number of FLOAT4_E2M1 is 6.0, i.e., 1.5×2^2).
+
+  3. Calculate sharedExp, that is, the exponent of the largest absolute value in the group minus emax:
 
      $$
-     emax = max(e0,e1....e31)
-     $$
-
-  3. Calculate reduceMaxValue and sharedExp
-
-     $$
-     reduceMaxValue = log2(reduceMax(x2),groupSize=32)
-     $$
-
-     $$
-     sharedExp[M,N1*N2/32] = reduceMaxValue -emax
+     sharedExp[M,N1*N2/32] = floor(log2(max(|e0|,|e1|,....,|e31|))) - emax
      $$
 
   4. Calculate quantScale
