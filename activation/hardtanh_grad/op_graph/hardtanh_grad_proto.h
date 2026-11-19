@@ -19,10 +19,12 @@ namespace ge {
  *
  * @par Inputs:
  * Two inputs, including:
- * @li result: Support 1D ~ 8D. Minimum tensor of the linear region range,
- * datatype: bfloat16/float16/float32, format:ND/5HD.
- * @li grad: Maximum tensor of the linear region range,
- * datatype: bfloat16/float16/float32, format:ND/5HD. \n
+ * @li result: Forward input tensor (self in the formula), used to determine whether
+ * values are within the linear region range [min_val, max_val]. Support 1D ~ 8D,
+ * datatype: bfloat16/float16/float32, format:ND.
+ * @li grad: Gradient tensor from the previous backward step (grad_output in the formula),
+ * passed through inside the linear region range and set to 0 outside. Support 1D ~ 8D,
+ * datatype: bfloat16/float16/float32, format:ND. \n
 
  * @par Attributes:
  * Two attributes, including:
@@ -34,7 +36,7 @@ namespace ge {
  * y: Hardtanh_backward output tensor. Shape, datatype and format is the same as input result. \n
 
  * @attention Constraints:
- * This operator only supports datatype: bfloat16/float16/float32, format: ND/5HD. \n
+ * This operator only supports datatype: bfloat16/float16/float32, format: ND. \n
 
  * @par Third-party framework compatibility
  * Compatible with the PyTorch operator HardtanhGrad.
