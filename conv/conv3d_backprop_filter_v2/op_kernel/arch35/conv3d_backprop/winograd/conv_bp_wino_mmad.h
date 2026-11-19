@@ -45,6 +45,7 @@ public:
             SetFlag<HardEvent::MTE1_MTE2>(mte2mte1Flag_[0].dst2src);
             SetFlag<HardEvent::MTE1_MTE2>(mte2mte1Flag_[1].dst2src);
             SetHF32Mode(hf32Flag_);
+            SetHF32TransMode(0);
         }
     }
 
@@ -58,6 +59,7 @@ public:
                 WaitFlag<HardEvent::M_MTE1>(mte1madFlag_[i].dst2src);
             }
             SetHF32Mode(false);
+            SetHF32TransMode(0);
         }
     }
 

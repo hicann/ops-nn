@@ -1058,6 +1058,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
 
 uint64_t Conv3DDWV2BasicBlockTilingArch35::GetTilingKey() const
 {
+    // STREAM_K/MN_STREAM_K 模板已合并，key 统一编码为 TPL_STREAM_K；
     const uint64_t tilingKey = GET_TPL_TILING_KEY(blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW,
                                                   blockTiling_.groupEnlarge, 0, 0);
     OP_LOGD(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);

@@ -139,6 +139,7 @@ struct Init {
         InitTque<Intf>(self);
         if (self->ctx.tiling_->hf32Flag) {
             SetHF32Mode(true);
+            SetHF32TransMode(0);
         }
     }
 };
@@ -366,6 +367,7 @@ struct End {
 
         if (self->ctx.tiling_->hf32Flag) {
             SetHF32Mode(false);
+            SetHF32TransMode(0);
         }
     }
 };

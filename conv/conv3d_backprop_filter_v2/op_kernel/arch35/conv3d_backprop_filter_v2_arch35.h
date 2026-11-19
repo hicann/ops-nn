@@ -47,7 +47,7 @@ __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR f
     bool needUserWorkspace = false;
     if constexpr (winogradTilingFlag != TPL_WINOGRAD_DISABLE) {
         needUserWorkspace = true;
-    } else if constexpr (conv3DDWTemplateId == TPL_STREAM_K || conv3DDWTemplateId == TPL_MN_STREAM_K) {
+    } else if constexpr (conv3DDWTemplateId == TPL_STREAM_K) {
         needUserWorkspace = tilingData.dwTiling.streamkType != NO_STREAMK_CALC;
     }
     if (user1 == nullptr && needUserWorkspace) {
@@ -78,9 +78,6 @@ __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR f
     opInitOutput.Destroy();
 
     if constexpr (conv3DDWTemplateId == TPL_STREAM_K) {
-        CONV3D_DW_INPUT_RUN_OP(Conv3dDwBasicBlockStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP,
-                                                         DTYPE_Y, FORMAT_Y, isSplitKernelHW, groupEnlarge>);
-    } else if constexpr (conv3DDWTemplateId == TPL_MN_STREAM_K) {
         CONV3D_DW_INPUT_RUN_OP(Conv3dDwBasicBlockMNStreamK<DTYPE_X, FORMAT_X, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP,
                                                            DTYPE_Y, FORMAT_Y, isSplitKernelHW, groupEnlarge>);
     }

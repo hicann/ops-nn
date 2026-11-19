@@ -98,6 +98,7 @@ public:
         SetFlag<HardEvent::FIX_M>(1);
         // hf32 按 tiling 标志开关（End 关闭——残留开启污染同核后续 kernel）
         SetHF32Mode(tiling.hf32Flag);
+        SetHF32TransMode(0);
         for (uint8_t i = 0; i < bBufCnt_; ++i) {
             SetFlag<HardEvent::M_MTE1>(MTE1FlagFmap(i));
         }

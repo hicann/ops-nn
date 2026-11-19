@@ -58,7 +58,13 @@ public:
             // vector GetBlockIdx() 与 Cube不同，此处注意使用全局变量准确
             return;
         }
-        CalBasicBlock();
+        // calRound_==0：全量 streamK 场景（totalCnt < usedCoreNum，原 TPL_STREAM_K 模板行为），
+        // 主轮无基本块可算，直接进尾轮 K 切分+确定性累加，跳过空转主循环
+        if (calRound_ == 0) {
+            CalcStreamK(block_idx);
+        } else {
+            CalBasicBlock();
+        }
         this->dw_.End();
     }
 
@@ -433,24 +439,6 @@ protected:
         CrossCoreWaitFlag<SYNC_MODE0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL_DET_FLAG);
         CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE3>(SYNC_AIV_AIC_DET_FLAG);
 #endif
-    }
-};
-
-template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-          bool isSplitKernelHW, bool groupEnlarge>
-class Conv3dDwBasicBlockStreamK : public Conv3dDwBasicBlockMNStreamK<xType, xFormat, dedyType, dedyFormat, yType,
-                                                                     yFormat, isSplitKernelHW, groupEnlarge> {
-public:
-    __aicore__ inline Conv3dDwBasicBlockStreamK(){};
-
-    __aicore__ inline void Process()
-    {
-        if (block_idx >= this->coreNum_) {
-            this->dw_.End();
-            return;
-        }
-        this->CalcStreamK(block_idx);
-        this->dw_.End();
     }
 };
 } // namespace AscendC

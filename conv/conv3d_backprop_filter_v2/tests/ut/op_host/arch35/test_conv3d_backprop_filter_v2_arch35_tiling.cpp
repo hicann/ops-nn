@@ -26,6 +26,7 @@
 #include "register/op_impl_registry.h"
 #include "test_cube_util.h"
 #include "../../../../../common/op_host/op_tiling/conv_platform_util.h"
+#include "../../../../op_host/op_tiling/arch35/conv3d_backprop_filter_v2_stream_k_tiling.h"
 
 using namespace std;
 using namespace ge;
@@ -342,7 +343,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      32,
-     513,
+     512,
      "1 512 512 16 16 1 16 16 1 32 32 1 2 2 512 32 1 2 2 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 256 64 16 16 16 1 1 0 16384 "
      "4096 0 1 1 16 16 16 0 32 16 64 256 1 0 16 0 1 0 "},
 
@@ -404,7 +405,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      32,
-     1,
+     0,
      "16 256 256 256 256 20 32 32 22 34 34 3 3 3 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 1 2 2 256 64 144 16 16 16 7 7 0 "
      "8704 114688 0 1 1 256 32 32 1 32 256 144 1024 1 0 16 0 160 0 "},
 
@@ -466,7 +467,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      32,
-     1,
+     0,
      "1 256 256 256 256 6 66 66 8 128 128 4 4 4 1 1 2 2 2 3 3 3 3 3 3 1 1 1 16 2 2 1 2 2 256 64 256 16 16 16 6 6 0 "
      "32768 98304 0 1 1 256 66 66 0 32 256 256 4356 1 0 16 0 6 0 "},
 
@@ -623,7 +624,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      32,
-     1,
+     0,
      "1 256 512 256 512 1 16 16 1 16 16 1 3 3 1 1 1 1 1 0 0 1 1 1 1 1 1 1 16 2 2 1 2 2 256 64 144 16 16 16 4 4 0 4608 "
      "65536 0 1 1 256 16 16 0 32 256 144 256 1 0 16 0 1 0 "},
 
@@ -723,7 +724,8 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      "17 14 78 14 78 1 1 240 1 1 240 1 1 1 2 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 80 192 16 16 16 16 2 2 1 11520 "
      "30720 0 1 1 80 1 240 1 32 80 16 240 1 0 16 0 1 0 "},
 
-    // when batchdout=1 or howo=1,streamkType will set 0, and tilingKey must be 2
+    // when batchdout=1 or howo=1, streamkType will set 0; after streamK template merge,
+    // host uniformly emits TPL_STREAM_K (template id 0), no standalone MN_STREAM_K key
     {"3DDW_all_1",
      "3510",
      "3510",
@@ -751,7 +753,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      1,
-     1,
+     0,
      "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 16 16 16 16 1 1 0 256 256 0 1 1 16 1 "
      "1 0 32 16 16 1 1 0 16 0 1 0 "},
 
@@ -905,7 +907,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      1,
-     257,
+     256,
      "1 1 1 1 1 1 1 1 1 2147483646 1 1 1 1 1 1 1 2147483646 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 16 16 16 16 1 1 0 "
      "256 256 0 1 1 16 1 1 0 32 16 16 1 1 0 16 0 1 0 "},
 
@@ -936,7 +938,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      1,
-     257,
+     256,
      "1 1 1 1 1 1 1 1 1 1 2147483646 1 1 1 1 1 1 1 2147483646 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 16 16 16 16 1 1 0 "
      "256 256 0 1 1 16 1 1 0 32 16 16 1 1 0 16 0 1 0 "},
 
@@ -967,7 +969,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      1,
-     257,
+     256,
      "1 1 1 1 1 1 1 1 1 1 2147483646 1 1 1 1 1 1 1 2147483646 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 16 16 16 16 16 16 1 1 0 "
      "256 256 0 1 1 16 1 1 0 32 16 16 1 1 0 16 0 1 0 "},
 
@@ -1029,7 +1031,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      true,
      true,
      1,
-     257,
+     256,
      "1 3 3 3 3 1 1 3 1 54 142 1 1 40 1 1 1 61 57 0 0 0 0 25 26 1 1 2 16 2 2 2 2 2 16 16 224 16 16 16 1 1 0 336 512 0 "
      "1 1 16 1 16 0 32 16 640 3 1 0 16 0 1 0 "},
 
@@ -1429,6 +1431,96 @@ TEST_F(Conv3DBackpropFilterV2TilingRunTime3, tf_padding_same_recal_when_pads_neg
         "1 256 256 256 256 1 16 16 1 16 16 1 3 3 1 1 1 1 1 0 0 1 1 1 1 1 1 1 8 2 2 1 1 1 128 128 128 16 8 16 1 1 0 "
         "48 65536 0 1 1 128 8 512 1 32 128 128 128 1 0 16 0 1 0 "};
     TestOneParamCase(tfSameParam);
+}
+
+TEST(Conv3DBackpropFilterV2StreamKUnitTest, adjustStepKForL1FallbackWhenL1AlwaysInvalid)
+{
+    gert::StorageShape filter_sizes = {{1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}};
+    gert::StorageShape out_backprop_shape = {{1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}};
+    gert::StorageShape fmap_shape = {{1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}};
+    std::vector<gert::StorageShape> output_shapes(1, {{1, 1, 1, 1, 1}, {1, 1, 1, 1, 1}});
+    std::vector<void*> output_shapes_ref(1, &output_shapes[0]);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    Ops::NN::Conv::Conv3DBackpropV2CompileInfo compile_info;
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(COMPILE_INFO_STR_950.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(COMPILE_INFO_STR_950.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    map<string, string> soc_version_infos = {{"SoC_version", "3510"}, {"Short_SoC_version", "3510"}};
+    map<string, string> npuarchs = {{"SoC_version", "3510"}, {"Short_SoC_version", "3510"}, {"NpuArch", "3510"}};
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version",
+                                                                                            soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", npuarchs);
+
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+    auto tiling_data = gert::TilingData::CreateCap(2048);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("Conv3DBackpropFilterV2")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&fmap_shape, &filter_sizes, &out_backprop_shape})
+                      .OutputShapes(output_shapes_ref)
+                      .PlatformInfo(reinterpret_cast<void*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .DeterministicInfo(reinterpret_cast<int32_t*>(0))
+                      .CompileInfo(&compile_info)
+                      .Workspace(workspace)
+                      .TilingData(tiling_data.get())
+                      .Build();
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context, nullptr);
+
+    Ops::NN::Conv::Conv3DBackpropFilterV2StreamKTiling tiling(tiling_context);
+    tiling.platformInfo_.l1_size = 0;
+    tiling.dtypeByte_ = 2;
+    tiling.blockTiling_.streamkType = 2;
+    tiling.blockTiling_.coreStreamK = 8;
+    tiling.blockTiling_.coreBindDirection = 1;
+    tiling.blockTiling_.stepKa = 2;
+    tiling.blockTiling_.stepKb = 2;
+    tiling.blockTiling_.dbL1A = 1;
+    tiling.blockTiling_.dbL1B = 1;
+    tiling.blockTiling_.blockBaseM = 128;
+    tiling.blockTiling_.blockBaseN = 128;
+    tiling.blockTiling_.blockBaseK = 128;
+    tiling.blockTiling_.splitWo = 64;
+    tiling.blockTiling_.splitWi = 64;
+    tiling.runInfo_.wo = 64;
+    tiling.runInfo_.kh = 1;
+    tiling.runInfo_.kw = 1;
+    tiling.runInfo_.stride_h = 1;
+    tiling.runInfo_.stride_w = 1;
+    tiling.runInfo_.dilation_h = 1;
+    tiling.runInfo_.dilation_w = 1;
+
+    tiling.AdjustStepKForL1(2048, 64, 3, 4);
+
+    EXPECT_EQ(tiling.blockTiling_.streamkType, 0U);
+    EXPECT_EQ(tiling.blockTiling_.coreStreamK, 0U);
+    EXPECT_EQ(tiling.blockTiling_.coreBindDirection, 1U);
+    EXPECT_EQ(tiling.blockTiling_.singleCoreK, 2048U);
+    EXPECT_EQ(tiling.blockTiling_.blockBaseK, 64U);
+    EXPECT_EQ(tiling.blockTiling_.stepKa, 3U);
+    EXPECT_EQ(tiling.blockTiling_.stepKb, 4U);
 }
 
 INSTANTIATE_TEST_CASE_P(CONV3DDW950, Conv3DBackpropFilterV2TilingRunTime3, testing::ValuesIn(cases_params_950));

@@ -17,10 +17,13 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
+// 原两槽位（STREAM_K/MN_STREAM_K）合并由 host 统一编码为 STREAM_K，调度差异由运行期
+// tilingData.streamkType 区分，kernel 分派同一实现。MN_STREAM_K 为历史保留槽位：host 不产出、
 #define TPL_STREAM_K 1
 #define TPL_MN_STREAM_K 2
-// DLoad 模板（原 TPL_FMAP_RESIDENT 改名，槽位 3 值沿用——tiling key 二进制兼容，
-// host/kernel 两侧同步）
+
+// DLoad 模板（原 TPL_FMAP_RESIDENT 改名）。宏值不参与编码（取 LIST 位置索引），
+// host/kernel 两侧 LIST 顺序必须保持一致。
 #define TPL_DLOAD 3
 #define TPL_WINOGRAD_DISABLE 0
 #define TPL_WINOGRAD_SINGLE_SHAPE_TILE_1 1
@@ -38,7 +41,7 @@
 ASCENDC_TPL_ARGS_DECL(Conv3dBackPropFilterV2,
                       ASCENDC_TPL_UINT_DECL(conv3DDWTemplateId, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST, TPL_STREAM_K,
                                             TPL_MN_STREAM_K, TPL_DLOAD), // LIST模式, 穷举；尾部 append 保序，
-                      // 既有 STREAM_K(索引0)/MN_STREAM_K(索引1) 编码不变，既有 12 key 零变化
+                      // MN_STREAM_K(索引1) 为历史保留槽位：不产出 key、不编译实例，仅为 DLoad 索引占位
                       ASCENDC_TPL_BOOL_DECL(isSplitKernelHW, 0, 1), ASCENDC_TPL_BOOL_DECL(groupEnlarge, 0, 1),
                       ASCENDC_TPL_UINT_DECL(winogradTilingFlag, ASCENDC_TPL_8_BW, ASCENDC_TPL_UI_LIST,
                                             TPL_WINOGRAD_DISABLE, TPL_WINOGRAD_SINGLE_SHAPE_TILE_1,
@@ -54,37 +57,18 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST, TPL_WINOGRAD_DISABLE),
                          ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, 0)),
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_VALUE),
-                         ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
-                         ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0),
-                         ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST, TPL_WINOGRAD_DISABLE),
-                         ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, 0)),
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_VALUE),
                          ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
                          ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0),
                          ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST, TPL_WINOGRAD_DISABLE),
                          ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, 0)),
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_VALUE),
-                         ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
-                         ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0),
-                         ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST, TPL_WINOGRAD_DISABLE),
-                         ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, 0)),
+
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_VALUE),
                          ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
                          ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1),
                          ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST, TPL_WINOGRAD_DISABLE),
                          ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, 0)),
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_VALUE),
-                         ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
-                         ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1),
-                         ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST, TPL_WINOGRAD_DISABLE),
-                         ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, 0)),
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_VALUE),
                          ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_STREAM_K),
-                         ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1),
-                         ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST, TPL_WINOGRAD_DISABLE),
-                         ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, 0)),
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_VALUE),
-                         ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_MN_STREAM_K),
                          ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 1), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 1),
                          ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST, TPL_WINOGRAD_DISABLE),
                          ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, 0)),
@@ -113,7 +97,7 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(winogradTilingFlag, ASCENDC_TPL_UI_LIST,
                                               TPL_WINOGRAD_SINGLE_SHAPE_TILE_2),
                          ASCENDC_TPL_BOOL_SEL(winogradResidentFlag, TPL_WINOGRAD_RESIDENT_DY)),
-    // DLoad tiling key: 第 13 行（原 fmap_resident 槽位改名——DLoad 主线模板，priority=1 host 模板）
+    // DLoad tiling key（原 fmap_resident 槽位改名——DLoad 主线模板，priority=1 host 模板）
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_VALUE),
                          ASCENDC_TPL_UINT_SEL(conv3DDWTemplateId, ASCENDC_TPL_UI_LIST, TPL_DLOAD),
                          ASCENDC_TPL_BOOL_SEL(isSplitKernelHW, 0), ASCENDC_TPL_BOOL_SEL(groupEnlarge, 0),

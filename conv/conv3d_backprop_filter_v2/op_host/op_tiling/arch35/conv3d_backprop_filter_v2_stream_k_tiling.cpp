@@ -369,7 +369,7 @@ void Conv3DBackpropFilterV2StreamKTiling::AdjustStepKForL1(uint64_t originSingle
     if (!l1Valid) {
         blockTiling_.streamkType = NO_STREAMK_CALC;
         blockTiling_.coreStreamK = 0;
-        blockTiling_.coreBindDirection = MN_STREAM_K;
+        blockTiling_.coreBindDirection = STREAM_K;
         blockTiling_.singleCoreK = originSingleCoreK;
         blockTiling_.blockBaseK = originBlockBaseK;
         blockTiling_.stepKa = originStepKa;
@@ -388,7 +388,7 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
     uint64_t mCnt = Ops::Base::CeilDiv(mmInfo_.mValue, static_cast<uint64_t>(blockTiling_.singleCoreM));
     uint64_t nCnt = Ops::Base::CeilDiv(mmInfo_.nValue, static_cast<uint64_t>(blockTiling_.singleCoreN));
     uint64_t totalCnt = mCnt * nCnt * runInfo_.kd * runInfo_.real_g;
-    blockTiling_.coreBindDirection = totalCnt < platformInfo_.core_num ? STREAM_K : MN_STREAM_K;
+    blockTiling_.coreBindDirection = STREAM_K;
     blockTiling_.singleCoreBatchDout = static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
     blockTiling_.coreNum = platformInfo_.core_num;
     uint64_t streamkCnt = totalCnt % platformInfo_.core_num;
@@ -422,7 +422,6 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
 
     if (blockTiling_.streamkType == NO_STREAMK_CALC) {
         blockTiling_.coreStreamK = 0;
-        blockTiling_.coreBindDirection = MN_STREAM_K;
     }
 
     blockTiling_.usedCoreNum = CalcUsedCoreNum(totalCnt);
