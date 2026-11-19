@@ -20,6 +20,7 @@
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
 #include "../../foreach_utils/op_host/foreach_null_check_helper.h"
+#include <algorithm>
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
@@ -37,6 +38,32 @@ static const std::initializer_list<DataType> SCALAR_FLOAT_SUPPORT_LIST = {DataTy
 static const std::initializer_list<DataType> SCALAR_FLOAT16_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_DOUBLE};
 
 static const std::initializer_list<DataType> EMPTY_LIST = {};
+
+static std::string DtypesToString(const std::initializer_list<DataType>& dtypes)
+{
+    std::string result;
+    for (const auto& dtype : dtypes) {
+        if (!result.empty()) {
+            result += ", ";
+        }
+        result += op::ToString(dtype).GetString();
+    }
+    return result;
+}
+
+static std::string ShapeToString(const aclTensor* tensor)
+{
+    std::string result = "(";
+    const auto& shape = tensor->GetViewShape();
+    for (int64_t i = 0; i < shape.GetDimNum(); i++) {
+        if (i > 0) {
+            result += ",";
+        }
+        result += std::to_string(shape.GetDim(i));
+    }
+    result += ")";
+    return result;
+}
 
 static inline bool CheckNotNull(const aclTensorList* self, const aclTensor* scalar, const aclTensorList* out)
 {
@@ -96,28 +123,102 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensor* s
     }
 
     auto selfDtype = (*self)[0]->GetDataType();
-    OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
-
-    if (selfDtype == DataType::DT_BF16 || selfDtype == DataType::DT_FLOAT) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(scalar, SCALAR_FLOAT_SUPPORT_LIST, return false);
-    } else if (selfDtype == DataType::DT_FLOAT16) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(scalar, SCALAR_FLOAT16_SUPPORT_LIST, return false);
+    // dtype 不在支持列表：EZ0019 精确上报（原泛化宏统一报 EZ1001）
+    if (std::find(dtypeSupportList.begin(), dtypeSupportList.end(), selfDtype) == dtypeSupportList.end()) {
+        const std::string expected = DtypesToString(dtypeSupportList);
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "The dtype of x must be one of [%s], but got %s.",
+                               expected.c_str(), op::ToString(selfDtype).GetString());
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ0019", (std::vector<const char*>{"param_name", "op_name", "incorrect_dtype", "correct_dtype"}),
+            (std::vector<const char*>{"x", "aclnnForeachDivScalar", op::ToString(selfDtype).GetString(),
+                                      expected.c_str()}));
+        return false;
     }
 
+    if (selfDtype == DataType::DT_BF16 || selfDtype == DataType::DT_FLOAT) {
+        if (std::find(SCALAR_FLOAT_SUPPORT_LIST.begin(), SCALAR_FLOAT_SUPPORT_LIST.end(), scalar->GetDataType()) ==
+            SCALAR_FLOAT_SUPPORT_LIST.end()) {
+            const std::string expected = DtypesToString(SCALAR_FLOAT_SUPPORT_LIST);
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "The dtype of scalar must be one of [%s], but got %s.",
+                                   expected.c_str(), op::ToString(scalar->GetDataType()).GetString());
+            REPORT_PREDEFINED_ERR_MSG(
+                "EZ0019", (std::vector<const char*>{"param_name", "op_name", "incorrect_dtype", "correct_dtype"}),
+                (std::vector<const char*>{"scalar", "aclnnForeachDivScalar",
+                                          op::ToString(scalar->GetDataType()).GetString(), expected.c_str()}));
+            return false;
+        }
+    } else if (selfDtype == DataType::DT_FLOAT16) {
+        if (std::find(SCALAR_FLOAT16_SUPPORT_LIST.begin(), SCALAR_FLOAT16_SUPPORT_LIST.end(), scalar->GetDataType()) ==
+            SCALAR_FLOAT16_SUPPORT_LIST.end()) {
+            const std::string expected = DtypesToString(SCALAR_FLOAT16_SUPPORT_LIST);
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "The dtype of scalar must be one of [%s], but got %s.",
+                                   expected.c_str(), op::ToString(scalar->GetDataType()).GetString());
+            REPORT_PREDEFINED_ERR_MSG(
+                "EZ0019", (std::vector<const char*>{"param_name", "op_name", "incorrect_dtype", "correct_dtype"}),
+                (std::vector<const char*>{"scalar", "aclnnForeachDivScalar",
+                                          op::ToString(scalar->GetDataType()).GetString(), expected.c_str()}));
+            return false;
+        }
+    }
+
+    // dtype 关系不一致：EZ0021 精确上报
     for (uint64_t i = 0; i < out->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*out)[i], selfDtype, return false);
+        auto outDtype = (*out)[i]->GetDataType();
+        if (outDtype != selfDtype) {
+            const std::string reason = "The dtype of out[" + std::to_string(i) + "] must be the same as that of x.";
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+            REPORT_PREDEFINED_ERR_MSG(
+                "EZ0021", (std::vector<const char*>{"param_names", "op_name", "incorrect_dtypes", "reason"}),
+                (std::vector<const char*>{"out", "aclnnForeachDivScalar", op::ToString(outDtype).GetString(),
+                                          reason.c_str()}));
+            return false;
+        }
     }
 
     for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*self)[i], selfDtype, return false);
+        auto inDtype = (*self)[i]->GetDataType();
+        if (inDtype != selfDtype) {
+            const std::string reason = "The dtypes of all tensors in x must be the same, but x[" + std::to_string(i) +
+                                       "] is inconsistent with x[0].";
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+            REPORT_PREDEFINED_ERR_MSG(
+                "EZ0021", (std::vector<const char*>{"param_names", "op_name", "incorrect_dtypes", "reason"}),
+                (std::vector<const char*>{"x", "aclnnForeachDivScalar", op::ToString(inDtype).GetString(),
+                                          reason.c_str()}));
+            return false;
+        }
     }
     return true;
 }
 
 static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out)
 {
+    // rank 超限：EZ0012 精确上报（原泛化宏统一报 EZ1001）
     for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+        if ((*self)[i]->GetViewShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS) {
+            const std::string reason = "The rank of x[" + std::to_string(i) + "] must not exceed " +
+                                       std::to_string(MAX_SUPPORT_DIMS_NUMS) + ".";
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+            REPORT_PREDEFINED_ERR_MSG(
+                "EZ0012", (std::vector<const char*>{"param_name", "op_name", "incorrect_dim", "reason"}),
+                (std::vector<const char*>{"x", "aclnnForeachDivScalar",
+                                          std::to_string((*self)[i]->GetViewShape().GetDimNum()).c_str(),
+                                          reason.c_str()}));
+            return false;
+        }
+    }
+    for (uint64_t i = 0; i < out->Size(); i++) {
+        if ((*out)[i]->GetViewShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS) {
+            const std::string reason = "The rank of out[" + std::to_string(i) + "] must not exceed " +
+                                       std::to_string(MAX_SUPPORT_DIMS_NUMS) + ".";
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+            REPORT_PREDEFINED_ERR_MSG(
+                "EZ0012", (std::vector<const char*>{"param_name", "op_name", "incorrect_dim", "reason"}),
+                (std::vector<const char*>{"out", "aclnnForeachDivScalar",
+                                          std::to_string((*out)[i]->GetViewShape().GetDimNum()).c_str(),
+                                          reason.c_str()}));
+            return false;
+        }
     }
 
     if (self->Size() != out->Size()) {
@@ -131,8 +232,19 @@ static inline bool CheckShape(const aclTensorList* self, const aclTensorList* ou
         return false;
     }
 
+    // x[i] 与 out[i] shape 关系：EZ0010 精确上报
     for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*self)[i], (*out)[i], return false);
+        if ((*self)[i]->GetViewShape() != (*out)[i]->GetViewShape()) {
+            const std::string incorrect = "x[" + std::to_string(i) + "]=" + ShapeToString((*self)[i]) + ", out[" +
+                                          std::to_string(i) + "]=" + ShapeToString((*out)[i]);
+            const std::string reason = "The shape of out[" + std::to_string(i) + "] must be the same as that of x[" +
+                                       std::to_string(i) + "].";
+            OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "%s", reason.c_str());
+            REPORT_PREDEFINED_ERR_MSG(
+                "EZ0010", (std::vector<const char*>{"param_names", "op_name", "incorrect_shapes", "reason"}),
+                (std::vector<const char*>{"x, out", "aclnnForeachDivScalar", incorrect.c_str(), reason.c_str()}));
+            return false;
+        }
     }
     return true;
 }
@@ -145,6 +257,18 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclTensor
     // dereference in CheckDtypeValid/CheckShape/CheckFormat.
     CHECK_RET(CheckTensorListNotNull(self, "self"), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckTensorListNotNull(out, "out"), ACLNN_ERR_PARAM_INVALID);
+
+    // scalar 元素个数必须为 1：文档口径为 561002。原路径经 V2 桥接统一映射 561103，
+    // 丢失 tiling 阶段语义，故在 API 层前置校验并按文档返回码上报。
+    if (scalar->GetViewShape().GetShapeSize() != 1) {
+        const int64_t scalarSize = scalar->GetViewShape().GetShapeSize();
+        OP_LOGE_WITHOUT_REPORT(ACLNN_ERR_PARAM_INVALID, "The element count of scalar must be 1, but got %ld.",
+                               scalarSize);
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ0014", (std::vector<const char*>{"param_name", "op_name", "incorrect_size", "correct_size"}),
+            (std::vector<const char*>{"scalar", "aclnnForeachDivScalar", (std::to_string(scalarSize)).c_str(), "1"}));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     CHECK_RET(CheckDtypeValid(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);

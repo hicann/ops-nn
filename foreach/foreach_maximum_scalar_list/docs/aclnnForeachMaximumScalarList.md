@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachMaximumScalarList(
       <td>scalars（aclScalarList*）</td>
       <td>输入</td>
       <td>表示取最大值运算的输入标量列表，对应公式中的<code>scalars</code>。</td>
-      <td><ul><li>元素个数与<code>x</code>中Tensor的个数相等，且支持的最大长度为256个；仅约束元素个数，不限制 rank。</li><li>数据类型与入参<code>x</code>的数据类型具有一定对应关系：<ul><li>当入参<code>x</code>的数据类型为FLOAT32、FLOAT16、BFLOAT16时，<code>scalars</code>支持FLOAT32；aclnn接口额外支持DOUBLE（内部转换为FLOAT32后参与计算）。</li><li>当入参<code>x</code>的数据类型为INT32时，<code>scalars</code>支持INT64；aclnn接口额外支持INT32（内部转换为INT64后参与计算）。</li></ul></li></ul></td>
+      <td><ul><li>元素个数与<code>x</code>中Tensor的个数相等，且支持的最大长度为256个；仅约束元素个数，不限制 rank。</li><li>数据类型与入参<code>x</code>的数据类型具有一定对应关系：<ul><li>当入参<code>x</code>的数据类型为FLOAT32、FLOAT16、BFLOAT16时，<code>scalars</code>支持FLOAT32、DOUBLE（当数据类型为DOUBLE时，内部转换为FLOAT32后参与计算）。</li><li>当入参<code>x</code>的数据类型为INT32时，<code>scalars</code>支持INT64、INT32（当数据类型为INT32时，内部转换为INT64后参与计算）。</li></ul></li></ul></td>
       <td>FLOAT32、DOUBLE、INT32、INT64</td>
       <td>-</td>
       <td>-</td>

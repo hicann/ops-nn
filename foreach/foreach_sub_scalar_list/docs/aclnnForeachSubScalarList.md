@@ -98,7 +98,7 @@ aclnnStatus aclnnForeachSubScalarList(
       <td>scalars（aclScalarList*）</td>
       <td>输入</td>
       <td>表示减法运算的第二个输入标量列表，对应公式中的`scalars`。</td>
-      <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型支持FLOAT32（aclnn接口额外支持DOUBLE，内部转换为FLOAT32后参与计算）。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></li></ul></td>
+      <td><ul><li>元素个数与`x`中Tensor的个数相等。</li><li>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当入参`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，`scalars`的数据类型支持FLOAT32、DOUBLE（当数据类型为DOUBLE时，内部转换为FLOAT32后参与计算）。</li><li>当入参`x`的数据类型为INT32时，`scalars`的数据类型仅支持INT64。</li></ul></li></ul></td>
       <td>FLOAT32、DOUBLE、INT64</td>
       <td>-</td>
       <td>-</td>
@@ -163,17 +163,21 @@ aclnnStatus aclnnForeachSubScalarList(
       <td rowspan="4">161002</td>
       <td>x、scalars、out的数据类型不在支持的范围之内。</td>
     </tr>
-    <tr><td>out的Tensor个数小于入参`x`的Tensor个数。</td></tr>
-    <tr><td>scalars的元素个数与`x`中Tensor的个数不一致。</td></tr>
+    <tr><td>out的Tensor个数小于入参`x`的Tensor个数。</td>
+    </tr>
+    <tr><td>scalars的元素个数与`x`中Tensor的个数不一致。</td>
+    </tr>
     <tr>
-      <td>x和out的数据类型不一致。</td></tr>
+      <td>x和out的数据类型不一致。</td>
+    </tr>
     <tr>
       <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="3">561002</td>
       <td>x与out的shape不满足约束。</td>
     </tr>
     <tr>
-      <td>x或out中的Tensor的数据类型不一致。</td></tr>
+      <td>x或out中的Tensor的数据类型不一致。</td>
+    </tr>
     <tr>
       <td>x或out中的Tensor维度超过8维。</td>
     </tr>
