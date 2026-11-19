@@ -28,8 +28,7 @@ extern "C" __global__ __aicore__ void dynamic_quant_update_scatter_v2(GM_ADDR x,
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(DynamicQuantUpdateScatterV2RegbaseTilingData);
-    if (x == nullptr || indices == nullptr || var == nullptr || varScale == nullptr || varOffset == nullptr ||
-        tiling == nullptr) {
+    if (x == nullptr || indices == nullptr || var == nullptr || varScale == nullptr || varOffset == nullptr) {
         return;
     }
     GET_TILING_DATA_WITH_STRUCT(DynamicQuantUpdateScatterV2RegbaseTilingData, tilingData, tiling);
