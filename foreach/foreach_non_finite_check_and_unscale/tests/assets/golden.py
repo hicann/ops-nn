@@ -15,12 +15,17 @@ import numpy as np
 __golden__ = {
     "kernel": {
         "foreach_non_finite_check_and_unscale": "foreach_non_finite_check_and_unscale_golden"
-    }
+    },
+    "aclnn": {
+        "aclnnForeachNonFiniteCheckAndUnscale": "aclnn_foreach_non_finite_check_and_unscale_golden"
+    },
 }
 
 
-def foreach_non_finite_check_and_unscale_golden(scaled_grads, found_inf, inv_scale, **kwargs):
-    '''
+def foreach_non_finite_check_and_unscale_golden(
+    scaled_grads, found_inf, inv_scale, **kwargs
+):
+    """
     Golden function for foreach_non_finite_check_and_unscale.
     All the parameters (names and order) follow @foreach_non_finite_check_and_unscale_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -31,15 +36,15 @@ def foreach_non_finite_check_and_unscale_golden(scaled_grads, found_inf, inv_sca
 
     Returns:
         Tuple of output tensors
-    '''
+    """
     from ml_dtypes import bfloat16
 
     inv_scale_val = inv_scale[0] if isinstance(inv_scale, np.ndarray) else inv_scale
 
     input_dtype = scaled_grads[0].dtype
     input_dtype_str = str(input_dtype)
-    output_dtypes = kwargs.get('output_dtypes', [])
-    
+    output_dtypes = kwargs.get("output_dtypes", [])
+
     # Handle output_dtypes format (may be nested list)
     if output_dtypes:
         if isinstance(output_dtypes[0], (list, tuple)):
@@ -48,7 +53,7 @@ def foreach_non_finite_check_and_unscale_golden(scaled_grads, found_inf, inv_sca
             out_dtype_name = output_dtypes[0]
     else:
         out_dtype_name = None
-    
+
     if out_dtype_name == "bfloat16":
         out_type = bfloat16
     elif out_dtype_name and isinstance(out_dtype_name, str):
@@ -61,19 +66,73 @@ def foreach_non_finite_check_and_unscale_golden(scaled_grads, found_inf, inv_sca
 
     input_pts = []
     for inp in scaled_grads:
-        calc_inp = inp.astype(np.float32) if 'bfloat16' in input_dtype_str or 'float16' in input_dtype_str else inp
-        
+        calc_inp = (
+            inp.astype(np.float32)
+            if "bfloat16" in input_dtype_str or "float16" in input_dtype_str
+            else inp
+        )
+
         # Check for inf or nan
         if np.any(np.isinf(calc_inp)) or np.any(np.isnan(calc_inp)):
             has_inf_or_nan = True
-        
+
         inv_scale_res = calc_inp * inv_scale_val
         input_pts.append(inv_scale_res.astype(out_type))
 
     # Set found_inf flag if any gradient contains inf or nan
     if has_inf_or_nan:
         found_inf_copy[0] = 1.0
-    
+
     input_pts.append(found_inf_copy)
-    
+
     return tuple(input_pts)
+
+
+def aclnn_foreach_non_finite_check_and_unscale_golden(
+    scaled_grads, found_inf, inv_scale, **kwargs
+):
+    """
+    ACLNN golden for aclnnForeachNonFiniteCheckAndUnscale (torch or numpy inputs).
+
+    In-place operator: output = scaled_grads * inv_scale, and found_inf is set to 1
+    when any element of scaled_grads is inf/nan. Mirrors the semantics of
+    torch._amp_foreach_non_finite_check_and_unscale_ (always scales, then flags).
+    """
+    import torch
+
+    def _scalar(value):
+        if isinstance(value, torch.Tensor):
+            return value.reshape(-1)[0].item()
+        if isinstance(value, np.ndarray):
+            return value.reshape(-1)[0].item()
+        return value
+
+    inv_scale_val = _scalar(inv_scale)
+    has_inf_or_nan = False
+    outputs = []
+
+    for grad in scaled_grads:
+        if isinstance(grad, torch.Tensor):
+            calc = grad.to(torch.float32)
+            if not bool(torch.isfinite(calc).all()):
+                has_inf_or_nan = True
+            outputs.append((calc * inv_scale_val).to(grad.dtype))
+        else:
+            dtype = grad.dtype
+            calc = (
+                grad.astype(np.float32)
+                if str(dtype) in ("float16", "bfloat16")
+                else grad
+            )
+            if not bool(np.all(np.isfinite(calc))):
+                has_inf_or_nan = True
+            outputs.append((calc * inv_scale_val).astype(dtype))
+
+    found_inf_out = (
+        found_inf.clone() if isinstance(found_inf, torch.Tensor) else found_inf.copy()
+    )
+    if has_inf_or_nan:
+        found_inf_out.reshape(-1)[0] = 1.0
+    outputs.append(found_inf_out)
+
+    return tuple(outputs)

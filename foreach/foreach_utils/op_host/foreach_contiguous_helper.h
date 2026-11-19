@@ -44,6 +44,17 @@ inline const aclTensorList* ForeachMakeContiguousTensorList(const aclTensorList*
     return executor->AllocTensorList(vec.data(), vec.size());
 }
 
+inline const aclTensor* ForeachMakeContiguousTensor(const aclTensor* tensor, aclOpExecutor* executor)
+{
+    if (tensor == nullptr) {
+        return nullptr;
+    }
+    if (op::IsContiguous(tensor) && tensor->GetStorageShape() == tensor->GetViewShape()) {
+        return tensor;
+    }
+    return l0op::Contiguous(tensor, executor);
+}
+
 /*!
  * \brief 将连续计算结果 ViewCopy 回写到（可能非连续的）输出 list。
  *        仅当 ForeachMakeContiguousTensorList 对该 out 做了 Contiguous（即不满足

@@ -172,8 +172,10 @@ static aclnnStatus ExecForeachMulScalarGetWorkspaceSize(const aclTensorList* x, 
     auto contiguousOut = ForeachMakeContiguousTensorList(out, mulScalarExecutor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 复用V2桥接，scalar(aclTensor*)直接透传，输出到连续buffer
-    auto result = l0op::ForeachMulScalarV2(contiguousTensors, scalar, contiguousOut, mulScalarExecutor.get());
+    // 复用V2桥接，scalar可能非连续，先转连续（与V2将scalar物化为连续tensor一致），输出到连续buffer
+    auto contiguousScalar = ForeachMakeContiguousTensor(scalar, mulScalarExecutor.get());
+    CHECK_RET(contiguousScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto result = l0op::ForeachMulScalarV2(contiguousTensors, contiguousScalar, contiguousOut, mulScalarExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_PARAM_INVALID);
 
     // 将连续计算结果拷贝到输出out上，out可能是非连续的tensor（空/连续跳过）
