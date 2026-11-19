@@ -289,6 +289,7 @@ private:
     ge::graphStatus GetLargeHkWkTilingMode();
     ge::graphStatus CalcKSegment();
     uint32_t CalculateMaxBaseM(uint32_t baseN);
+    bool IsHugeMTinyNBaseMExpand() const;
     void AdjustBaseMWhenSmallN(uint32_t& baseM, uint32_t baseN, const L0TilingParams& l0Params,
                                const TilingRunInfo& tilingRunInfo);
     void AdjustBaseNWhenSmallM(uint32_t& baseN, uint32_t baseM, const L0TilingParams& l0Params,

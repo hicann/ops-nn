@@ -24,6 +24,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "op_host/tiling_key.h"
 #include "conv/common/op_host/op_tiling/conv_platform_util.h"
+#include "conv/common/op_host/op_tiling/conv_math_util.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h"
 
 using Ops::NN::Optiling::RecursiveSum;
@@ -967,6 +968,48 @@ void Conv3DDXV2KernelSplitTiling::SetSingleCoreInfo(CoreTilingParams& coreParams
         uint64_t mCnt = Ops::Base::CeilDiv(kernelSplitPara_.splitHiWi, static_cast<uint64_t>(l0Params.baseM));
         uint64_t nCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
         uint64_t totalCnt = batchDepth * groupCnt * mCnt * nCnt;
+        uint32_t splitWi = Ops::Base::CeilDiv(runInfo_.dedx_w, runInfo_.stride_w);
+
+        // KernelSplit(SPLIT_HW) 下 cube 侧总块数不足核数时, 核间并行度不足导致 cube 利用率≈块数/核数较低。
+        // 通过细分 M/N 基本块提升并行度: M方向按 splitWi 与 m0 的公倍数(LCM)缩小保证子窗输出重排完整,
+        // N方向按 n0 缩小。仅命中 totalCnt<coreNum 的用例, 分核充分的场景不进入, 不改变其它用例行为。
+        // 仅当cube侧是真正瓶颈(核间并行度不足)时才扩核。1x1 kernel无vector transpose必然安全;
+        // kernel>1且cout较大(如1280)时走vector/workspace路径,扩核收益被AIV掩盖且会扰动tiling, 不处理。
+        // 该策略基于独立(非耦合)arch35平台实测调参; 耦合(fuse)平台分核极小时下方已有独立的 baseM 回缩逻辑,
+        // 为避免两套策略叠加扰动tiling, 此处仅对非耦合平台生效, 其余芯片版本经实测后再放开。
+        if (!IsSocVersionFuse(context_) && kernelSplitMode_ == KERNEL_SPLIT_HW &&
+            totalCnt < static_cast<uint64_t>(coreNum_) && runInfo_.dedx_w > 0 && runInfo_.stride_w > 0 &&
+            (kernelSplitPara_.maxSplitKw == 1U || runInfo_.dedy_cout_g <= BASIC_BLOCK_SIZE_512)) {
+            const uint64_t targetMNCnt = Ops::Base::CeilDiv(static_cast<uint64_t>(coreNum_), batchDepth * groupCnt);
+            const uint32_t m0 = static_cast<uint32_t>(tilingRunInfo_.m0);
+            const uint32_t n0 = static_cast<uint32_t>(tilingRunInfo_.n0);
+            // M方向: 保证 baseM 同时是 splitWi 与 m0 的倍数, 以 LCM 为步进递减(仅当 baseM 有下调空间, 绝不增大 baseM)
+            const uint32_t stepM = static_cast<uint32_t>(
+                MathUtil::Lcm(static_cast<int32_t>(splitWi), static_cast<int32_t>(m0)));
+            if (l0Params.baseM > stepM) {
+                uint32_t alignedBaseM = static_cast<uint32_t>((l0Params.baseM / stepM) * stepM);
+                alignedBaseM = std::max(alignedBaseM, stepM);
+                l0Params.baseM = alignedBaseM;
+                mCnt = Ops::Base::CeilDiv(kernelSplitPara_.splitHiWi, static_cast<uint64_t>(l0Params.baseM));
+                totalCnt = batchDepth * groupCnt * mCnt * nCnt;
+                while (mCnt * nCnt < targetMNCnt && l0Params.baseM > stepM) {
+                    l0Params.baseM -= stepM;
+                    mCnt = Ops::Base::CeilDiv(kernelSplitPara_.splitHiWi, static_cast<uint64_t>(l0Params.baseM));
+                    totalCnt = batchDepth * groupCnt * mCnt * nCnt;
+                }
+            }
+            // N方向: 按 n0 步进缩小, 提高 nCnt
+            uint32_t alignedBaseN = static_cast<uint32_t>((l0Params.baseN / n0) * n0);
+            alignedBaseN = std::max(alignedBaseN, n0);
+            l0Params.baseN = alignedBaseN;
+            nCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
+            totalCnt = batchDepth * groupCnt * mCnt * nCnt;
+            while (mCnt * nCnt < targetMNCnt && l0Params.baseN > n0) {
+                l0Params.baseN -= n0;
+                nCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
+                totalCnt = batchDepth * groupCnt * mCnt * nCnt;
+            }
+        }
 
         if ((totalCnt <= static_cast<uint64_t>(coreNum_)) || nCnt % coreNum_ == 0U || coreNum_ % nCnt == 0U ||
             (kernelDHW == 1 && l0Params.baseN > BASIC_BLOCK_SIZE_256) ||
@@ -983,7 +1026,6 @@ void Conv3DDXV2KernelSplitTiling::SetSingleCoreInfo(CoreTilingParams& coreParams
             totalCnt = batchDepth * mCnt * nCnt;
         }
         coreParams.singleCoreM = l0Params.baseM;
-        uint32_t splitWi = Ops::Base::CeilDiv(runInfo_.dedx_w, runInfo_.stride_w);
         if (totalCnt <= static_cast<uint64_t>(coreNum_)) {
             // 未分满核：优先向下对齐 singleCoreM（按 splitWi）以切出更多核参与计算；
             // 若向下对齐后 totalCnt 超过 coreNum_（轮次由 1 增为 2），则改为在合法范围内向上对齐。

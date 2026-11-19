@@ -2032,7 +2032,33 @@ uint32_t Conv3DDXV2InnerProductTiling::CalculateMaxBaseM(uint32_t baseN)
     if (IsSocVersionFuse(context_) && tilingRunInfo_.enableSplitKernelFlag) {
         return Ops::Base::CeilDiv(USE_UB_SIZE, baseN);
     }
-    return baseN <= tilingRunInfo_.n0 ? BASIC_BLOCK_SIZE_512 : MAX_BASE_MN;
+    if (baseN <= tilingRunInfo_.n0) {
+        // 海量M + 小N(in) 标量长杆: 放宽 baseM 的 512 上限, 减少 M 块数以缓解标量开销
+        if (IsHugeMTinyNBaseMExpand()) {
+            return MAX_BASE_MN;
+        }
+        return BASIC_BLOCK_SIZE_512;
+    }
+    return MAX_BASE_MN;
+}
+
+bool Conv3DDXV2InnerProductTiling::IsHugeMTinyNBaseMExpand() const
+{
+    // 仅在纯 InnerProduct 主路径触发, 其余路径/形状返回 false, 保持原 512 行为。
+    // KernelSplit/SmallKernel 走独立 tiling 不经过此处; FullLoad/SmallShape 复用本路径,
+    // 显式排除以保持原 512 行为(纯 InnerProduct 下 enableFullLoadTiling 恒为 false)。
+    if (tilingRunInfo_.enableSplitKernelFlag || tilingRunInfo_.enableFullLoadTiling) {
+        return false;
+    }
+    // 小N: cin 对齐后仍只有单 n0 块 (决定 baseN == n0, 原 512 cap 的触发条件)
+    if (static_cast<uint64_t>(runInfo_.dedx_cin) > tilingRunInfo_.n0) {
+        return false;
+    }
+    // 海量M: 默认 baseM=512 时 M 块数远超核数, 标量长杆才会形成
+    const uint64_t hwi = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
+    const uint64_t hugeMThreshold = static_cast<uint64_t>(BASIC_BLOCK_SIZE_512) * HUGE_M_MIN_BLOCK_PER_CORE *
+                                    static_cast<uint64_t>(coreNum_);
+    return hwi >= hugeMThreshold;
 }
 
 void Conv3DDXV2InnerProductTiling::AdjustBaseMWhenSmallN(uint32_t& baseM, uint32_t baseN,
@@ -3151,9 +3177,52 @@ void Conv3DDXV2InnerProductTiling::SetSingleCoreInfoCore(CoreTilingParams& coreP
     uint64_t nCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
     uint64_t totalCnt = batchDepth * groupCnt * mCnt * nCnt * kSCnt;
 
+    // 内积模板跨核负载均衡增强（1x1 / 大通道 / 小空间场景）：
+    // 当基块N不细分(nCnt==1)或nCnt与核数coreNum不相容，导致 totalCnt 并非 coreNum 的
+    // 整数倍、末核间空转显著，按 n0 粒度细分 baseN/singleCoreCin，
+    // 使 totalCnt = batchDepth*groupCnt*mCnt*nCnt 更接近 coreNum 整数倍，减小尾块损耗。
+    // 仅限 mCnt==1（空间维单块可容纳）场景生效。
+    {
+        const uint64_t nValueU = static_cast<uint64_t>(tilingRunInfo_.nValue);
+        const uint64_t n0U = static_cast<uint64_t>(tilingRunInfo_.n0);
+        const uint64_t coreU = static_cast<uint64_t>(coreNum_);
+        if (mCnt == 1 && n0U > 0 && l0Params.baseN > n0U && nCnt > 0 && nCnt < coreU) {
+            const uint64_t waveEffNum = Ops::Base::CeilDiv(totalCnt, coreU) * coreU;
+            const uint64_t idleBlocksNow = waveEffNum > totalCnt ? waveEffNum - totalCnt : 0;
+            // 1x1/小kernel 用 5% 阈值，较大 kernel 用 10%(避免误伤标量/访存主导场景)
+            const uint64_t idleThreshold = (kernelDHW == 1) ? (waveEffNum / 20) : (waveEffNum / 10);
+            if (idleThreshold > 0 && idleBlocksNow >= idleThreshold) {
+                // 从当前块数往上枚举目标 nCnt(desiredNCnt), 对应候选 baseN(alignedBaseN) 按 n0 对齐后逐档下降,
+                // 直至找到核间空转足够小(利用率>=95%)的最小细分粒度。
+                for (uint64_t desiredNCnt = nCnt + 1; desiredNCnt * n0U <= nValueU; ++desiredNCnt) {
+                    uint64_t alignedBaseN = Ops::Base::CeilAlign(Ops::Base::CeilDiv(nValueU, desiredNCnt), n0U);
+                    if (alignedBaseN < n0U) {
+                        continue;
+                    }
+                    uint64_t actualNCnt = Ops::Base::CeilDiv(nValueU, alignedBaseN);
+                    uint64_t newTotalCnt = batchDepth * groupCnt * mCnt * actualNCnt * kSCnt;
+                    if (newTotalCnt == 0) {
+                        continue;
+                    }
+                    uint64_t newWaveEffNum = Ops::Base::CeilDiv(newTotalCnt, coreU) * coreU;
+                    uint64_t newIdleBlocks = newWaveEffNum > newTotalCnt ? newWaveEffNum - newTotalCnt : 0;
+                    // 均衡足够好(eff >= 95%)即采纳(与KB验证一致), 避免 baseN 缩得过小损害tile效率
+                    if (newIdleBlocks * 20 <= newWaveEffNum) {
+                        l0Params.baseN = alignedBaseN;
+                        nCnt = actualNCnt;
+                        totalCnt = newTotalCnt;
+                        OP_LOGD(context_->GetNodeName(),
+                                "InnerProduct N-balance refined: baseN=%u nCnt=%lu totalCnt=%lu", l0Params.baseN, nCnt,
+                                totalCnt);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     // 负载均衡微调场景一：分不满核或者分核时是核数因子，防止沿着N方向做顺序分核有AIC永远分到尾块
     // 负载均衡微调场景一：baseN大于最优基本块说明m很小，防止baseN膨胀后核间严重不均衡
-    // 举例1:N=192,baseN=128会有一半核分尾块; 举例2:M=128,N=512,baseN=1280会严重不均衡
     if ((totalCnt <= static_cast<uint64_t>(coreNum_)) || nCnt % coreNum_ == 0U || coreNum_ % nCnt == 0U ||
         (kernelDHW == 1 && l0Params.baseN > BASIC_BLOCK_SIZE_256) ||
         (kernelDHW > 1 && l0Params.baseN > BASIC_BLOCK_SIZE_128)) {
