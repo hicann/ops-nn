@@ -383,17 +383,5 @@ ge::graphStatus InferShapeForMaxPool3DGrad(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForMaxPool3DGrad(gert::InferDataTypeContext* context)
-{
-    if (context == nullptr) {
-        return ge::GRAPH_FAILED;
-    }
-
-    const ge::DataType xDtype = context->GetInputDataType(0);
-    context->SetOutputDataType(INDEX_OUT_MAX, xDtype);
-
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(MaxPool3DGrad).InferShape(InferShapeForMaxPool3DGrad).InferDataType(InferDataTypeForMaxPool3DGrad);
+IMPL_OP_INFERSHAPE(MaxPool3DGrad).InferShape(InferShapeForMaxPool3DGrad);
 } // namespace ops

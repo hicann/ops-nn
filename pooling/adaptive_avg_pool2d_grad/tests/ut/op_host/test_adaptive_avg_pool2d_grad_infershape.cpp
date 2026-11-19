@@ -225,28 +225,3 @@ TEST_F(AdaptiveAvgPool2dGradInferShapeTest, infershape_invalid_output_size_value
 {
     ExecuteInferShapeErrorTestCase({1, 4, 8, 8}, {1, 4, -1, 16}, ge::DT_FLOAT, ge::Format::FORMAT_NCHW);
 }
-
-// OP_LOGE_FOR_INVALID_DTYPE: grad dtype not float/float16/bf16 (line 73, InferDataType)
-TEST_F(AdaptiveAvgPool2dGradInferShapeTest, infershape_invalid_grad_dtype)
-{
-    auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AdaptiveAvgPool2dGrad")->infer_datatype;
-
-    ge::DataType inputDtype = ge::DT_INT32;
-    ge::DataType outputDtype = ge::DT_INT32;
-
-    auto context_holder = gert::InferDataTypeContextFaker()
-                              .NodeIoNum(2, 1)
-                              .IrInstanceNum({1, 1})
-                              .NodeInputTd(0, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                              .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                              .NodeOutputTd(0, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                              .InputDataTypes({&inputDtype, &inputDtype})
-                              .OutputDataTypes({&outputDtype})
-                              .NodeAttrs({{"output_size",
-                                           Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 4, 16, 16})}})
-                              .Build();
-
-    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_NE(context, nullptr);
-    EXPECT_EQ(inferDtypeFunc(context), ge::GRAPH_FAILED);
-}

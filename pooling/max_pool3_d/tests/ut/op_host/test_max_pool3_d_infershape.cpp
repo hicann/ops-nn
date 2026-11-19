@@ -405,49 +405,4 @@ TEST_F(MaxPool3DUT, InferShapeFailSAMEStridesZero)
     EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
-// ======================== InferDataType ========================
-
-TEST_F(MaxPool3DUT, InferDataTypeFP16)
-{
-    auto infer_dtype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPool3D")->infer_datatype;
-    ASSERT_NE(infer_dtype_func, nullptr);
-
-    ge::DataType input_dtype = ge::DT_FLOAT16;
-    ge::DataType output_dtype = ge::DT_UNDEFINED;
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(1, 1)
-                      .IrInstanceNum({1})
-                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .InputDataTypes({&input_dtype})
-                      .OutputDataTypes({&output_dtype})
-                      .Build();
-
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_EQ(infer_dtype_func(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT16);
-}
-
-TEST_F(MaxPool3DUT, InferDataTypeBF16)
-{
-    auto infer_dtype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPool3D")->infer_datatype;
-
-    ge::DataType input_dtype = ge::DT_BF16;
-    ge::DataType output_dtype = ge::DT_UNDEFINED;
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(1, 1)
-                      .IrInstanceNum({1})
-                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_RESERVED)
-                      .InputDataTypes({&input_dtype})
-                      .OutputDataTypes({&output_dtype})
-                      .Build();
-
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_EQ(infer_dtype_func(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_BF16);
-}
-
 } // namespace

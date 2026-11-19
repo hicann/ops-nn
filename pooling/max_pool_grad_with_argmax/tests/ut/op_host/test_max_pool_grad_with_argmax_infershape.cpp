@@ -70,37 +70,6 @@ TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_test_00)
     ASSERT_EQ(Shape2String(*output), "[4, 512, 16, 16]");
 }
 
-TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_inferdtype_test_01)
-{
-    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGradWithArgmax")->infer_datatype;
-
-    if (data_type_func != nullptr) {
-        ge::DataType input_ref = ge::DT_FLOAT;
-        ge::DataType input_ref1 = ge::DT_INT32;
-        ge::DataType output_ref = ge::DT_FLOAT;
-        auto context_holder = gert::InferDataTypeContextFaker()
-                                  .NodeIoNum(3, 1)
-                                  .IrInstanceNum({1, 1, 1})
-                                  .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(2, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .InputDataTypes({&input_ref, &input_ref, &input_ref1})
-                                  .OutputDataTypes({&output_ref})
-                                  .NodeAttrs(
-                                      {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                       {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                       {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                                       {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
-                                  .Build();
-        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-        ASSERT_NE(context, nullptr);
-        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
-    }
-}
-
 TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_test_02)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGradWithArgmax")->infer_shape;
@@ -159,35 +128,86 @@ TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_test_03)
     ASSERT_EQ(Shape2String(*output), "[4, 512, 16, 16]");
 }
 
-TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_inferdtype_test_04)
+void RunInferShapeCase(const ge::Format xFormat, const std::vector<int64_t>& ksize, const std::vector<int64_t>& strides,
+                       const std::string& padding, const std::string& dataFormat, const ge::graphStatus expectStatus)
 {
-    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGradWithArgmax")->infer_datatype;
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGradWithArgmax")->infer_shape;
 
-    if (data_type_func != nullptr) {
-        ge::DataType input_ref = ge::DT_FLOAT;
-        ge::DataType input_ref1 = ge::DT_INT32;
-        ge::DataType output_ref = ge::DT_FLOAT;
-        auto context_holder = gert::InferDataTypeContextFaker()
-                                  .NodeIoNum(3, 1)
-                                  .IrInstanceNum({1, 1, 1})
-                                  .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(2, ge::DT_INT32, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .InputDataTypes({&input_ref, &input_ref, &input_ref1})
-                                  .OutputDataTypes({&output_ref})
-                                  .NodeAttrs(
-                                      {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                       {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                       {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                                       {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NHWC")}})
-                                  .Build();
-        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-        ASSERT_NE(context, nullptr);
-        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
-    }
+    gert::StorageShape xShape = {{4, 512, 16, 16}, {}};
+    gert::StorageShape gradShape = {{4, 512, 8, 8}, {}};
+    gert::StorageShape yShape = {{}, {}};
+    gert::StorageShape indicesShape = {{4, 512, 8, 8}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, xFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, xFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_INT32, xFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                                  {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(padding)},
+                                  {"include_batch_in_index", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(dataFormat)}})
+                      .InputShapes({&xShape, &gradShape, &indicesShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), expectStatus);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_null_context)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGradWithArgmax")->infer_shape;
+    ASSERT_EQ(inferShapeFunc(nullptr), ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_invalid_x_format)
+{
+    RunInferShapeCase(ge::Format::FORMAT_NCDHW, {1, 2, 2, 1}, {1, 2, 2, 1}, "SAME", "NCHW", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_ksize_list_size_invalid)
+{
+    RunInferShapeCase(ge::Format::FORMAT_NCHW, {1, 2}, {1, 2, 2, 1}, "SAME", "NCHW", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_strides_list_size_invalid)
+{
+    RunInferShapeCase(ge::Format::FORMAT_NCHW, {1, 2, 2, 1}, {1, 2, 3}, "SAME", "NCHW", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_batch_dim_invalid)
+{
+    RunInferShapeCase(ge::Format::FORMAT_NCHW, {2, 2, 2, 1}, {1, 2, 2, 1}, "SAME", "NCHW", ge::GRAPH_FAILED);
+    RunInferShapeCase(ge::Format::FORMAT_NCHW, {1, 2, 2, 1}, {2, 2, 2, 1}, "SAME", "NCHW", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_padding_invalid)
+{
+    RunInferShapeCase(ge::Format::FORMAT_NCHW, {1, 2, 2, 1}, {1, 2, 2, 1}, "CAUSAL", "NCHW", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_nhwc_channel_dim_invalid)
+{
+    RunInferShapeCase(ge::Format::FORMAT_NHWC, {1, 2, 2, 2}, {1, 2, 2, 1}, "SAME", "NHWC", ge::GRAPH_FAILED);
+    RunInferShapeCase(ge::Format::FORMAT_NHWC, {1, 2, 2, 1}, {1, 2, 2, 2}, "SAME", "NHWC", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_nchw_success)
+{
+    RunInferShapeCase(ge::Format::FORMAT_NCHW, {1, 1, 2, 1}, {1, 1, 2, 1}, "VALID", "NCHW", ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_nchw_channel_dim_invalid)
+{
+    RunInferShapeCase(ge::Format::FORMAT_NCHW, {1, 2, 2, 1}, {1, 1, 2, 1}, "SAME", "NCHW", ge::GRAPH_FAILED);
+    RunInferShapeCase(ge::Format::FORMAT_NCHW, {1, 1, 2, 1}, {1, 2, 2, 1}, "SAME", "NCHW", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradWithArgmaxInfer, max_pool_grad_with_argmax_infershape_nd_format_success)
+{
+    RunInferShapeCase(ge::Format::FORMAT_ND, {1, 2, 2, 1}, {1, 2, 2, 1}, "SAME", "NHWC", ge::GRAPH_SUCCESS);
 }
 
 } // namespace

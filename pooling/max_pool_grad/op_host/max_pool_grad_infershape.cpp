@@ -160,16 +160,5 @@ ge::graphStatus InferShapeForMaxPoolGrad(gert::InferShapeContext* context)
     return HandleUnknownShape(context, x1Shape, x2Shape, gradShape, yShape);
 }
 
-static ge::graphStatus InferDataTypeForMaxPoolGrad(gert::InferDataTypeContext* context)
-{
-    if (context == nullptr) {
-        return GRAPH_FAILED;
-    }
-
-    const ge::DataType xDtype = context->GetInputDataType(X1_INDEX);
-    context->SetOutputDataType(Y_INDEX, xDtype);
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(MaxPoolGrad).InferShape(InferShapeForMaxPoolGrad).InferDataType(InferDataTypeForMaxPoolGrad);
+IMPL_OP_INFERSHAPE(MaxPoolGrad).InferShape(InferShapeForMaxPoolGrad);
 } // namespace ops

@@ -156,64 +156,6 @@ TEST_F(MaxPoolGradInfer, max_pool_grad_infershape_k3_valid)
     ASSERT_EQ(Shape2String(*output), "[1, 1, 8, 8]");
 }
 
-TEST_F(MaxPoolGradInfer, max_pool_grad_inferdatatype_fp32)
-{
-    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGrad")->infer_datatype;
-
-    if (data_type_func != nullptr) {
-        ge::DataType input_ref = ge::DT_FLOAT;
-        ge::DataType output_ref = ge::DT_FLOAT;
-        auto context_holder = gert::InferDataTypeContextFaker()
-                                  .NodeIoNum(3, 1)
-                                  .IrInstanceNum({1, 1, 1})
-                                  .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .InputDataTypes({&input_ref, &input_ref, &input_ref})
-                                  .OutputDataTypes({&output_ref})
-                                  .NodeAttrs(
-                                      {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                       {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                       {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
-                                  .Build();
-        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-        ASSERT_NE(context, nullptr);
-        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
-    }
-}
-
-TEST_F(MaxPoolGradInfer, max_pool_grad_inferdatatype_fp16)
-{
-    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGrad")->infer_datatype;
-
-    if (data_type_func != nullptr) {
-        ge::DataType input_ref = ge::DT_FLOAT16;
-        ge::DataType output_ref = ge::DT_FLOAT16;
-        auto context_holder = gert::InferDataTypeContextFaker()
-                                  .NodeIoNum(3, 1)
-                                  .IrInstanceNum({1, 1, 1})
-                                  .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
-                                  .InputDataTypes({&input_ref, &input_ref, &input_ref})
-                                  .OutputDataTypes({&output_ref})
-                                  .NodeAttrs(
-                                      {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                       {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
-                                       {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
-                                  .Build();
-        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-        ASSERT_NE(context, nullptr);
-        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
-    }
-}
-
 // ======================== Unknown Shape ========================
 TEST_F(MaxPoolGradInfer, max_pool_grad_infershape_unknown_shape)
 {

@@ -347,69 +347,6 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_invalid_padding)
 
 // ======================== InferDataType ========================
 
-TEST_F(MaxPool3DGradInfer, max_pool3d_grad_inferdatatype_fp16)
-{
-    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPool3DGrad")->infer_datatype;
-
-    if (data_type_func != nullptr) {
-        ge::DataType input_ref = ge::DT_FLOAT16;
-        ge::DataType output_ref = ge::DT_FLOAT16;
-        auto
-            context_holder = gert::InferDataTypeContextFaker()
-                                 .NodeIoNum(3, 1)
-                                 .IrInstanceNum({1, 1, 1})
-                                 .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                                 .NodeInputTd(1, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                                 .NodeInputTd(2, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                                 .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                                 .InputDataTypes({&input_ref, &input_ref, &input_ref})
-                                 .OutputDataTypes({&output_ref})
-                                 .NodeAttrs(
-                                     {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                                      {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                                      {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
-                                      {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                                      {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
-                                 .Build();
-        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-        ASSERT_NE(context, nullptr);
-        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
-    }
-}
-
-TEST_F(MaxPool3DGradInfer, max_pool3d_grad_inferdatatype_bf16)
-{
-    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPool3DGrad")->infer_datatype;
-
-    if (data_type_func != nullptr) {
-        ge::DataType input_ref = ge::DT_BF16;
-        ge::DataType output_ref = ge::DT_BF16;
-        auto context_holder = gert::InferDataTypeContextFaker()
-                                  .NodeIoNum(3, 1)
-                                  .IrInstanceNum({1, 1, 1})
-                                  .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(1, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                                  .NodeInputTd(2, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                                  .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
-                                  .InputDataTypes({&input_ref, &input_ref, &input_ref})
-                                  .OutputDataTypes({&output_ref})
-                                  .NodeAttrs(
-                                      {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                                       {"strides",
-                                        Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 2, 1})},
-                                       {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("SAME")},
-                                       {"pads",
-                                        Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0, 0, 0, 0})},
-                                       {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
-                                  .Build();
-        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
-        ASSERT_NE(context, nullptr);
-        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
-    }
-}
-
 // ======================== Non-Ascend950 Platform Tests ========================
 
 class MaxPool3DGradInferNon950 : public testing::Test {

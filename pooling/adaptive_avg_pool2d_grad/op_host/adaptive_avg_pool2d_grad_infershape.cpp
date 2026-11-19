@@ -82,23 +82,8 @@ static ge::graphStatus InferShape4AdaptiveAvgPool2dGrad(gert::InferShapeContext*
     for (size_t i = 0; i < output_size_len; ++i) {
         xGradShape->SetDim(i, output_size[i]);
     }
+    return GRAPH_SUCCESS;
+}
 
-    return GRAPH_SUCCESS;
-}
-static graphStatus InferDtype4AdaptiveAvgPool2dGrad(gert::InferDataTypeContext* context)
-{
-    auto gradDataType = context->GetInputDataType(Y_GRAD_INDEX);
-    // 校验数据类型合法性
-    if ((gradDataType != ge::DT_FLOAT) && (gradDataType != ge::DT_FLOAT16) && (gradDataType != ge::DT_BF16)) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "input_grad data type",
-                                  ge::TypeUtils::DataTypeToSerialString(gradDataType).c_str(),
-                                  "float, float16, bfloat16");
-        return ge::GRAPH_FAILED;
-    }
-    context->SetOutputDataType(OUTPUT_INDEX, gradDataType);
-    return GRAPH_SUCCESS;
-}
-IMPL_OP_INFERSHAPE(AdaptiveAvgPool2dGrad)
-    .InferShape(InferShape4AdaptiveAvgPool2dGrad)
-    .InferDataType(InferDtype4AdaptiveAvgPool2dGrad);
+IMPL_OP_INFERSHAPE(AdaptiveAvgPool2dGrad).InferShape(InferShape4AdaptiveAvgPool2dGrad);
 } // namespace ops

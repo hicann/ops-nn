@@ -73,20 +73,5 @@ static ge::graphStatus BNTrainingUpdateV3InferShape(gert::InferShapeContext* con
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus BNTrainingUpdateV3InferDataType(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "Begin to do BNTrainingUpdateV3InferDataType");
-    const ge::DataType xDataType = context->GetRequiredInputDataType(INPUT_X_INDEX);
-    const ge::DataType scaleDataType = context->GetRequiredInputDataType(INPUT_SCALE_INDEX);
-    context->SetOutputDataType(OUTPUT_Y_INDEX, xDataType); // y 同 x
-    context->SetOutputDataType(OUTPUT_BATCH_MEAN_INDEX, scaleDataType);
-    context->SetOutputDataType(OUTPUT_BATCH_VAR_INDEX, scaleDataType);
-    context->SetOutputDataType(OUTPUT_RESERVE_1_INDEX, scaleDataType);
-    context->SetOutputDataType(OUTPUT_RESERVE_2_INDEX, scaleDataType);
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(BNTrainingUpdateV3)
-    .InferShape(BNTrainingUpdateV3InferShape)
-    .InferDataType(BNTrainingUpdateV3InferDataType);
+IMPL_OP_INFERSHAPE(BNTrainingUpdateV3).InferShape(BNTrainingUpdateV3InferShape);
 } // namespace ops

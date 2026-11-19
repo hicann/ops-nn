@@ -64,14 +64,6 @@ static ge::graphStatus InferShape4ApplyKerasMomentum(gert::InferShapeContext* co
     return ge::GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataType4ApplyKerasMomentum(gert::InferDataTypeContext* context)
-{
-    context->SetOutputDataType(VAR_INDEX, context->GetInputDataType(VAR_INDEX));
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(ApplyKerasMomentum)
-    .InferShape(InferShape4ApplyKerasMomentum)
-    .InferDataType(InferDataType4ApplyKerasMomentum);
+IMPL_OP_INFERSHAPE(ApplyKerasMomentum).InferShape(InferShape4ApplyKerasMomentum);
 
 } // namespace ops

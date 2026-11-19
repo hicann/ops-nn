@@ -622,37 +622,3 @@ TEST_F(FakeQuantWithMinMaxVarsGradientProto, infershape_scalar_min_max)
     ASSERT_EQ(outMinDims.size(), 0u);
     ASSERT_EQ(outMaxDims.size(), 0u);
 }
-
-// ============================================================
-// InferDataType test
-// ============================================================
-
-// dtype_0: verify all outputs are DT_FLOAT
-TEST_F(FakeQuantWithMinMaxVarsGradientProto, inferdatatype_case_0)
-{
-    auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("FakeQuantWithMinMaxVarsGradient");
-    ASSERT_NE(opImpl, nullptr);
-    auto inferDataTypeFunc = opImpl->infer_datatype;
-    ASSERT_NE(inferDataTypeFunc, nullptr);
-
-    ge::DataType gradDtype = ge::DT_FLOAT;
-    ge::DataType xDtype = ge::DT_FLOAT;
-    ge::DataType minDtype = ge::DT_FLOAT;
-    ge::DataType maxDtype = ge::DT_FLOAT;
-    ge::DataType outYDtype = ge::DT_UNDEFINED;
-    ge::DataType outMinDtype = ge::DT_UNDEFINED;
-    ge::DataType outMaxDtype = ge::DT_UNDEFINED;
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(4, 3)
-                      .IrInstanceNum({1, 1, 1, 1})
-                      .InputDataTypes({&gradDtype, &xDtype, &minDtype, &maxDtype})
-                      .OutputDataTypes({&outYDtype, &outMinDtype, &outMaxDtype})
-                      .Build();
-
-    ASSERT_EQ(inferDataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
-
-    EXPECT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(0), ge::DT_FLOAT);
-    EXPECT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(1), ge::DT_FLOAT);
-    EXPECT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(2), ge::DT_FLOAT);
-}

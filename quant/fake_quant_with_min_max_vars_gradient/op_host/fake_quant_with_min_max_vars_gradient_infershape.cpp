@@ -92,16 +92,5 @@ static graphStatus InferShapeForFakeQuantWithMinMaxVarsGradient(gert::InferShape
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataTypeForFakeQuantWithMinMaxVarsGradient(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context, "Begin to do InferDataTypeForFakeQuantWithMinMaxVarsGradient");
-    context->SetOutputDataType(OUTPUT_IDX_Y, ge::DT_FLOAT);
-    context->SetOutputDataType(OUTPUT_IDX_MIN, ge::DT_FLOAT);
-    context->SetOutputDataType(OUTPUT_IDX_MAX, ge::DT_FLOAT);
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(FakeQuantWithMinMaxVarsGradient)
-    .InferShape(InferShapeForFakeQuantWithMinMaxVarsGradient)
-    .InferDataType(InferDataTypeForFakeQuantWithMinMaxVarsGradient);
+IMPL_OP_INFERSHAPE(FakeQuantWithMinMaxVarsGradient).InferShape(InferShapeForFakeQuantWithMinMaxVarsGradient);
 } // namespace ops

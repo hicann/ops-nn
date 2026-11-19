@@ -236,19 +236,5 @@ ge::graphStatus InferShape4AvgPoolGrad(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataType4AvgPoolGrad(gert::InferDataTypeContext* context)
-{
-    if (context == nullptr) {
-        return GRAPH_FAILED;
-    }
-
-    const ge::DataType xDtype = context->GetInputDataType(1);
-    context->SetOutputDataType(0, xDtype);
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(AvgPoolGrad)
-    .InputsDataDependency({0})
-    .InferShape(InferShape4AvgPoolGrad)
-    .InferDataType(InferDataType4AvgPoolGrad);
+IMPL_OP_INFERSHAPE(AvgPoolGrad).InputsDataDependency({0}).InferShape(InferShape4AvgPoolGrad);
 } // namespace ops

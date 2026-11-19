@@ -54,20 +54,5 @@ static ge::graphStatus InferShapeForEmbeddingDenseGrad(gert::InferShapeContext* 
     return GRAPH_SUCCESS;
 }
 
-static graphStatus InferDtypeForEmbeddingDenseGrad(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "Begin to do InferDtypeForEmbeddingDenseGrad rt2.0");
-
-    auto grad_dtype = context->GetInputDataType(EMBEDDING_DENSE_GRAD_IN_GRAD);
-
-    context->SetOutputDataType(EMBEDDING_DENSE_GRAD_OUT_Y, grad_dtype);
-
-    OP_LOGD(context->GetNodeName(), "End to do InferDtypeForEmbeddingDenseGrad");
-
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(EmbeddingDenseGrad)
-    .InferShape(InferShapeForEmbeddingDenseGrad)
-    .InferDataType(InferDtypeForEmbeddingDenseGrad);
+IMPL_OP_INFERSHAPE(EmbeddingDenseGrad).InferShape(InferShapeForEmbeddingDenseGrad);
 } // namespace ops
