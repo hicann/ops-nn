@@ -640,7 +640,7 @@ int AclnnDualLevelQuantMatmulWeightNz(int32_t deviceId, aclrtStream stream)
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         workspaceNpuFormatCastAddrPtr.reset(workspaceNpuFormatCastAddr);
     }
-    // 调用aclnnNpuFormatCastGetWorkspaceSize第二段接口
+    // 调用aclnnNpuFormatCast第二段接口
     ret = aclnnNpuFormatCast(workspaceNpuFormatCastAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCast failed. ERROR: %d\n", ret); return ret);
 
