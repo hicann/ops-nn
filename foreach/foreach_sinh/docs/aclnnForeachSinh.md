@@ -87,7 +87,7 @@ aclnnStatus aclnnForeachSinh(
       <td>表示进行双曲正弦函数运算的输入张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空tensor。</li><li>Tensor列表的Tensor数量取值范围为0~256，数量为0（空列表）时接口直接返回成功、不执行计算。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW等非私有格式</td>
+      <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -95,9 +95,9 @@ aclnnStatus aclnnForeachSinh(
       <td>out（aclTensorList*）</td>
       <td>输出</td>
       <td>表示进行双曲正弦函数运算的输出张量列表，对应公式中的`y`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，view shape与入参`x`对应位置的Tensor一致（支持非连续输出）。</li></ul></td>
+      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND、NCHW、NHWC、HWCN、NDHWC、NCDHW等非私有格式</td>
+      <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
@@ -213,9 +213,7 @@ aclnnStatus aclnnForeachSinh(
 ## 约束说明
 
 - x/out中单个Tensor列表的Tensor数量不能超过256，数量为0（空列表）时接口直接返回成功、不执行计算。
-- x与out的TensorList长度需一致，且x与out中对应位置的Tensor的view shape需一致。
 - x或out的Tensor列表成员不能为空指针。
-- 数据格式：支持ND、NCHW、NHWC、HWCN、NDHWC、NCDHW等非私有格式；私有格式返回161002。
 - 当输入x的数据类型为FLOAT32且|x|>asinh(dtype_max)≈89.42、BFLOAT16且|x|>≈89.41时，输出为±inf。
 - 当输入x的数据类型为FLOAT16且|x|>asinh(dtype_max)≈11.78时，输出为±inf。
 - 当输入x为NaN时，输出为NaN。

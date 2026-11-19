@@ -52,14 +52,14 @@ English | [简体中文](./README.md)
       <td>Input</td>
       <td>Represents the input tensor list for the hyperbolic sine computation, corresponding to `x` in the formula. All tensors in this parameter have the same data type.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND, NCHW, NHWC, HWCN, NDHWC, NCDHW, and other non-private formats</td>
+      <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>Output</td>
-      <td>Represents the output tensor list of the hyperbolic sine computation, corresponding to `y` in the formula. All tensors in this parameter have the same data type. The data type and data format are the same as the data type and data format of input parameter `x`, and the view shape is the same as that of the corresponding tensor in `x`.</td>
+      <td>Represents the output tensor list of the hyperbolic sine computation, corresponding to `y` in the formula. All tensors in this parameter have the same data type. The data type and data format are the same as the data type and data format of input parameter `x`, and the shape size is greater than or equal to the shape size of input parameter `x`.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND, NCHW, NHWC, HWCN, NDHWC, NCDHW, and other non-private formats</td>
+      <td>ND</td>
     </tr>
   </tbody></table>
 
