@@ -25,10 +25,13 @@ torch/tf 均无对应融合接口（无竞品），golden 用 torch 小算子拼
     y = int8(clip(rint(q), -128, 127))，NaN→0、±Inf→±127/-128（SAT=clip）。
 
 精度策略：
-  - int8 输出(y1/y2) 配 quant（±1 LSB，.5 边界舍入方向属实现自由度）；
+  - int8 输出(y1/y2) 配 binary_equal（整型输出逐位一致：量化链 Div/Sqrt 0ULP + CAST_RINT
+    取偶与 golden IEEE 口径对齐，不设 ±1 LSB 放宽）；
     浮点输出(x) 配 cross_check L0（小算子拼接算子统一 L0 档：mare≤10/mere≤2/rmse≤2）。
   - arch22(A2) 实现偏差（norm_out 先 CAST_RINT 到输入 dtype 再回 fp32、mean/var 走
-    Σ(x·1/W) 逐元素乘、A2 二进制仅 bf16 tilingKey 1000/1001）均 ≤1 LSB，由容差吸收。
+    Σ(x·1/W) 逐元素乘、A2 二进制仅 bf16 tilingKey 1000/1001）单项 ≤1 LSB，**当前实现中
+    仍存在、未修复**；本 golden 不再用容差吸收，arch22 上 int8 可能因此判红，需按实现
+    缺陷修复（arch35 已实测逐位一致）。
   - dtype：float16 / bfloat16 / float32（bf16 经 ml_dtypes 按位 view 桥接）。
 """
 
@@ -264,7 +267,7 @@ class DuaQuantizeAddLayerNormKernelSpec:
         "torch": _TorchCompetitor,
     }
     tolerance = {
-        "int8": {"standard": "quant"},
+        "int8": {"standard": "binary_equal"},
         "float16": {"standard": "cross_check", "level": "L0"},
         "bfloat16": {"standard": "cross_check", "level": "L0"},
         "float32": {"standard": "cross_check", "level": "L0"},
