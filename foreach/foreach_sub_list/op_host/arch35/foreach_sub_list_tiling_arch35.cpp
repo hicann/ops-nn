@@ -32,7 +32,7 @@ constexpr int32_t INPUT_IDX_X1 = 0;
 constexpr int32_t INPUT_IDX_X2 = 1;
 constexpr int32_t INPUT_IDX_ALPHA = 2;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
-constexpr int64_t MIN_PER_CORE = 1024;
+constexpr int64_t ALIGN_SIZE = 32;
 constexpr int32_t MAX_TENSOR_NUM = 256;
 constexpr uint32_t MAX_DIM_NUM = 8;
 
@@ -199,17 +199,35 @@ static ge::graphStatus ForeachSubListTilingFunc(gert::TilingContext* context)
         OP_CHECK_IF(numel < 0 || totalElements > std::numeric_limits<int64_t>::max() - numel,
                     OP_LOGE(context, "tensor element count is negative or totalElements overflows at tensor %lu", i),
                     return ge::GRAPH_FAILED);
-        tiling->tensorElements[i] = numel;
+        tiling->tensorStarts[i] = totalElements;
         totalElements += numel;
     }
+    tiling->tensorStarts[tensorNum] = totalElements;
     tiling->totalElements = totalElements;
 
+    // Core split without a perCoreElements cap: perCore = CeilDiv(total, coreNum) >= total/coreNum
+    // implies needCoreNum = CeilDiv(total, perCore) <= coreNum; aligning only raises perCore.
     if (totalElements == 0) {
         tiling->needCoreNum = 1;
+        tiling->perCoreElements = 0;
+        tiling->lastCoreElements = 0;
         context->SetBlockDim(1);
     } else {
-        int64_t needCoreNum = std::min(coreNum, Ops::Base::CeilDiv(totalElements, MIN_PER_CORE));
+        int64_t perCore = Ops::Base::CeilDiv(totalElements, coreNum);
+        // For small lists (perCore < 32) keep the unaligned per-core count so needCoreNum stays
+        // close to min(coreNum, totalElements); aligning here would collapse small lists to one
+        // core that issues VF_CALLs serially. Large segments keep 32-alignment (warp friendly).
+        if (perCore >= ALIGN_SIZE) {
+            perCore = Ops::Base::CeilAlign(perCore, ALIGN_SIZE);
+        }
+        OP_CHECK_IF(perCore <= 0, OP_LOGE(context, "perCoreElements[%ld] should be positive", perCore),
+                    return ge::GRAPH_FAILED);
+        int64_t needCoreNum = Ops::Base::CeilDiv(totalElements, perCore);
+        OP_CHECK_IF(needCoreNum > std::numeric_limits<int32_t>::max(),
+                    OP_LOGE(context, "needCoreNum[%ld] exceeds INT32_MAX", needCoreNum), return ge::GRAPH_FAILED);
         tiling->needCoreNum = static_cast<int32_t>(needCoreNum);
+        tiling->perCoreElements = perCore;
+        tiling->lastCoreElements = totalElements - perCore * (needCoreNum - 1);
         context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
     }
 

@@ -13,11 +13,20 @@
 #ifndef FOREACH_SUB_LIST_TILING_DATA_H
 #define FOREACH_SUB_LIST_TILING_DATA_H
 
+#include <cstdint>
+
+constexpr int32_t FOREACH_SUB_LIST_MAX_TENSOR_NUM = 256;
+
 struct ForeachSubListTilingData {
     int32_t needCoreNum = 0;
     int32_t tensorCount = 0;
     int64_t totalElements = 0;
-    int64_t tensorElements[256] = {0};
+    // Prefix table: tensorStarts[t] = offset of tensor t in the flattened element range,
+    // tensorStarts[tensorCount] = totalElements (sentinel). Empty tensors hold equal
+    // adjacent starts, skipped naturally by the "last start <= flatIdx" binary search.
+    int64_t tensorStarts[FOREACH_SUB_LIST_MAX_TENSOR_NUM + 1] = {0};
+    int64_t perCoreElements = 0; // flattened segment length claimed by each core (last core: lastCoreElements)
+    int64_t lastCoreElements = 0;
 };
 
 #endif // FOREACH_SUB_LIST_TILING_DATA_H

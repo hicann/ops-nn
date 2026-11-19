@@ -493,3 +493,141 @@ TEST_F(ForeachSubListTilingTest, test_tiling_rejects_insufficient_ub)
     gert::StorageShape shape = {{4, 4}, {4, 4}};
     EXPECT_EQ(RunValidationCase(shape, shape, ge::DT_FLOAT, 131072), ge::GRAPH_FAILED);
 }
+
+static constexpr int64_t MOCK_CORE_NUM = 64;
+static constexpr int64_t UT_ALIGN_SIZE = 32;
+
+static int64_t CeilDivExpect(int64_t a, int64_t b) { return (a + b - 1) / b; }
+
+// Runs tiling for a tensor list and asserts every tiling field against expectations derived
+// from formulas mirroring the host implementation (MOCK_CORE_NUM cores, conditional 32-align).
+static void DoListTilingCase(const std::vector<int64_t>& tensorNumels, uint64_t expectKey)
+{
+    int64_t totalElements = 0;
+    for (int64_t numel : tensorNumels) {
+        totalElements += numel;
+    }
+    int64_t expectPerCore = 0;
+    int64_t expectNeedCore = 1;
+    int64_t expectLast = 0;
+    if (totalElements > 0) {
+        int64_t perCore = CeilDivExpect(totalElements, MOCK_CORE_NUM);
+        if (perCore >= UT_ALIGN_SIZE) {
+            perCore = CeilDivExpect(perCore, UT_ALIGN_SIZE) * UT_ALIGN_SIZE;
+        }
+        expectPerCore = perCore;
+        expectNeedCore = CeilDivExpect(totalElements, perCore);
+        expectLast = totalElements - perCore * (expectNeedCore - 1);
+    }
+
+    std::map<std::string, std::string> socInfos;
+    std::map<std::string, std::string> aicoreSpec;
+    std::map<std::string, std::string> intrinsics;
+    std::string compileInfoString = R"({"hardware_info":{"UB_SIZE":262144,"CORE_NUM":64}})";
+    GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    struct ForeachSubListCompileInfo {
+    } compileInfo;
+
+    std::string opType("ForeachSubList");
+    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str());
+    ASSERT_NE(opImpl, nullptr);
+    if (opImpl == nullptr) {
+        return;
+    }
+
+    uint64_t tensorNum = tensorNumels.size();
+    gert::StorageShape scalarShape = {{1}, {1}};
+    std::vector<gert::StorageShape> tensorShapes;
+    for (int64_t numel : tensorNumels) {
+        tensorShapes.push_back({{numel}, {numel}});
+    }
+    std::vector<gert::StorageShape*> inputShapes;
+    std::vector<gert::StorageShape*> outputShapes;
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        inputShapes.push_back(&tensorShapes[i]);
+    }
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        inputShapes.push_back(&tensorShapes[i]);
+    }
+    inputShapes.push_back(&scalarShape);
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        outputShapes.push_back(&tensorShapes[i]);
+    }
+
+    auto param = gert::TilingData::CreateCap(4096);
+    ASSERT_NE(param, nullptr);
+    if (param == nullptr) {
+        return;
+    }
+    auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
+    gert::TilingContextFaker builder;
+    builder.NodeIoNum(3, tensorNum)
+        .IrInstanceNum({tensorNum, tensorNum, 1})
+        .InputShapes(inputShapes)
+        .OutputShapes(outputShapes)
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+        .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND);
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        builder.NodeOutputTd(static_cast<int32_t>(i), ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND);
+    }
+    auto holder = std::move(builder).TilingData(param.get()).Workspace(wsSize).Build();
+    gert::TilingContext* context = holder.GetContext<gert::TilingContext>();
+    context->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
+    context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
+    context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    std::map<std::string, std::string> socVersionInfos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    context->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
+
+    EXPECT_EQ(opImpl->tiling(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetTilingKey(), expectKey);
+
+    auto* tiling = context->GetTilingData<ForeachSubListTilingData>();
+    ASSERT_NE(tiling, nullptr);
+    if (tiling == nullptr) {
+        return;
+    }
+    EXPECT_EQ(tiling->tensorCount, static_cast<int32_t>(tensorNum));
+    EXPECT_EQ(tiling->totalElements, totalElements);
+    int64_t acc = 0;
+    for (uint64_t i = 0; i < tensorNum; i++) {
+        EXPECT_EQ(tiling->tensorStarts[i], acc);
+        acc += tensorNumels[i];
+    }
+    EXPECT_EQ(tiling->tensorStarts[tensorNum], totalElements);
+    EXPECT_EQ(tiling->needCoreNum, static_cast<int32_t>(expectNeedCore));
+    EXPECT_EQ(tiling->perCoreElements, expectPerCore);
+    EXPECT_EQ(tiling->lastCoreElements, expectLast);
+}
+
+// 19 one-element tensors: perCore = CeilDiv(19, 64) = 1 (< 32, stays unaligned) -> 19 cores.
+TEST_F(ForeachSubListTilingTest, test_tiling_small_scalars_use_all_cores)
+{
+    std::vector<int64_t> numels(19, 1);
+    DoListTilingCase(numels, 0);
+}
+
+// {250, 250, 250, 250}: perCore = 16 (< 32, unaligned) -> 63 cores, last core = 8 elements.
+TEST_F(ForeachSubListTilingTest, test_tiling_medium_list_non_aligned_split)
+{
+    DoListTilingCase({250, 250, 250, 250}, 0);
+}
+
+// Single 4096-element tensor: perCore = 64 (>= 32) keeps 32-alignment -> 64 cores x 64.
+TEST_F(ForeachSubListTilingTest, test_tiling_large_single_tensor_keeps_alignment) { DoListTilingCase({4096}, 0); }
+
+// {4, 0, 8}: empty tensor holds equal adjacent prefix starts; total = 12 -> 12 cores.
+TEST_F(ForeachSubListTilingTest, test_tiling_empty_tensors_prefix_table) { DoListTilingCase({4, 0, 8}, 0); }
+
+// L1_001 shape (128 one-element fp16 scalars, mocked to fp32/64 cores): perCore = 2 -> 64 cores.
+TEST_F(ForeachSubListTilingTest, test_tiling_l1_128_scalars)
+{
+    std::vector<int64_t> numels(128, 1);
+    DoListTilingCase(numels, 0);
+}

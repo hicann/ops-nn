@@ -34,21 +34,21 @@ __global__ __aicore__ void foreach_sub_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR alph
     REGISTER_TILING_DEFAULT(ForeachSubListTilingData);
     GET_TILING_DATA_WITH_STRUCT(ForeachSubListTilingData, tilingData, tiling);
 
-    const ForeachSubListTilingData* tilingGm = &tilingData;
-
+    // Pass both addresses: the local copy feeds the scalar-side core split, the GM address
+    // lets flat-segment VF threads read the prefix table (VF code cannot see the scalar stack).
     if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_FLOAT)) {
-        NsForeachSubList::Process<float, float>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<float, float>(x1, x2, alpha, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachSubList::Process<half, half>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<half, half>(x1, x2, alpha, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_INT32)) {
-        NsForeachSubList::Process<int32_t, int32_t>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<int32_t, int32_t>(x1, x2, alpha, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_BF16)) {
-        NsForeachSubList::Process<bfloat16_t, float>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<bfloat16_t, float>(x1, x2, alpha, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_INT16)) {
-        NsForeachSubList::Process<int16_t, int32_t>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<int16_t, int32_t>(x1, x2, alpha, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_INT8)) {
-        NsForeachSubList::Process<int8_t, int32_t>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<int8_t, int32_t>(x1, x2, alpha, y, tiling, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachSubListTilingKey::TILING_KEY_UINT8)) {
-        NsForeachSubList::Process<uint8_t, int32_t>(x1, x2, alpha, y, tilingGm);
+        NsForeachSubList::Process<uint8_t, int32_t>(x1, x2, alpha, y, tiling, &tilingData);
     }
 }

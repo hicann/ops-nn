@@ -29,7 +29,16 @@ constexpr int TENSOR_PTR_SHIFT = 3;
 
 using namespace AscendC;
 
-constexpr uint32_t THREAD_NUM = 1024;
+constexpr uint32_t THREAD_NUM = 512;
+
+// Memory-level parallelism for the large-segment path: issue 8 independent loads before
+// storing, keeping 8 loads in flight to cover GM latency.
+constexpr int64_t UNROLL_COUNT = 8;
+
+// Segments no larger than this use one flat VF_CALL whose threads resolve their own tensor
+// via the prefix table; per-element table lookup is negligible while the single launch
+// removes the serial launch chain of per-tensor VF_CALLs.
+constexpr int64_t FLAT_SEG_MAX = 4096;
 
 template <typename T>
 __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_t idx)
@@ -40,46 +49,166 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
     return reinterpret_cast<__gm__ T*>(*(tensorPtr + idx));
 }
 
-template <typename T, typename AlphaT>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void OpForeachSubListSimt(int32_t tensorId, int64_t count,
-                                                                                 GM_ADDR x1List, GM_ADDR x2List,
-                                                                                 GM_ADDR alpha, GM_ADDR yList)
+// Binary search on the GM prefix table: return the largest t with tensorStarts[t] <= flatIdx
+// ("last start" rule). Empty tensors hold equal starts, so they are never selected.
+__simt_callee__ inline int32_t LocateTensor(__gm__ const int64_t* starts, int32_t tensorCount, int64_t flatIdx)
 {
+    int32_t lo = 0;
+    int32_t hi = tensorCount - 1;
+    while (lo < hi) {
+        int32_t mid = lo + ((hi - lo + 1) >> 1); // round up so the "last" rule makes progress
+        if (starts[mid] <= flatIdx) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return lo;
+}
+
+// Same search on the scalar-side local tiling copy; split from LocateTensor only because of
+// the address-space qualifier on the table pointer.
+__aicore__ inline int32_t LocateTensorOnPrefix(const int64_t* starts, int32_t tensorCount, int64_t flatIdx)
+{
+    int32_t lo = 0;
+    int32_t hi = tensorCount - 1;
+    while (lo < hi) {
+        int32_t mid = lo + ((hi - lo + 1) >> 1);
+        if (starts[mid] <= flatIdx) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return lo;
+}
+
+// Flat small-segment path: one VF_CALL covers the whole core segment; each thread resolves
+// its own tensor through the prefix table, so launches drop from O(tensor count) to O(1)/core.
+template <typename T, typename AlphaT>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachSubListFlatSegSimt(int64_t coreStart,
+                                                                                      int64_t coreEnd, GM_ADDR x1List,
+                                                                                      GM_ADDR x2List, GM_ADDR alpha,
+                                                                                      GM_ADDR yList, GM_ADDR tilingAddr)
+{
+    __gm__ const ForeachSubListTilingData* tiling = reinterpret_cast<__gm__ const ForeachSubListTilingData*>(
+        tilingAddr);
+    __gm__ const int64_t* starts = tiling->tensorStarts;
     __gm__ AlphaT* alphaPtr = reinterpret_cast<__gm__ AlphaT*>(alpha);
     AlphaT alphaVal = alphaPtr[0];
-    __gm__ T* x1Data = SimtGetTensorAddr<T>(x1List, tensorId);
-    __gm__ T* x2Data = SimtGetTensorAddr<T>(x2List, tensorId);
-    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
-    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
-                                         AscendC::Simt::GetThreadIdx());
-    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
-    for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
+
+    int64_t tid = static_cast<int64_t>(AscendC::Simt::GetThreadIdx());
+    int64_t stride = static_cast<int64_t>(AscendC::Simt::GetThreadNum());
+    for (int64_t idx = coreStart + tid; idx < coreEnd; idx += stride) {
+        int32_t t = LocateTensor(starts, tiling->tensorCount, idx);
+        int64_t e = idx - starts[t];
+        // All threads issue the same dependent loads; the shared table entries hit DCache and
+        // are fetched from GM only once per VF_CALL.
+        __gm__ T* x1Data = SimtGetTensorAddr<T>(x1List, t);
+        __gm__ T* x2Data = SimtGetTensorAddr<T>(x2List, t);
+        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
         if constexpr (std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>) {
-            float x1Val = static_cast<float>(x1Data[idx]);
-            float x2Val = static_cast<float>(x2Data[idx]);
-            float alphaF = static_cast<float>(alphaVal);
-            float result = x1Val - alphaF * x2Val;
-            yData[idx] = static_cast<T>(result);
+            float result = static_cast<float>(x1Data[e]) - static_cast<float>(alphaVal) * static_cast<float>(x2Data[e]);
+            yData[e] = static_cast<T>(result);
         } else if constexpr (std::is_same_v<T, int16_t> || std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>) {
-            int32_t result = static_cast<int32_t>(x1Data[idx]) - alphaVal * static_cast<int32_t>(x2Data[idx]);
-            yData[idx] = static_cast<T>(result);
+            int32_t result = static_cast<int32_t>(x1Data[e]) - alphaVal * static_cast<int32_t>(x2Data[e]);
+            yData[e] = static_cast<T>(result);
         } else {
-            yData[idx] = x1Data[idx] - alphaVal * x2Data[idx];
+            yData[e] = x1Data[e] - alphaVal * x2Data[e];
         }
     }
 }
 
+// Large-segment path: strided unroll (idx + k*stride), NOT contiguous (tid*8+i). Each k step
+// makes 32 threads load 32 adjacent elements = one coalesced burst, with 8 bursts in flight;
+// a contiguous layout would spread adjacent threads 8 elements apart and break coalescing.
 template <typename T, typename AlphaT>
-__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y,
-                               const ForeachSubListTilingData* tilingGm)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachSubListTensorSegSimt(
+    int32_t tensorId, int64_t localStart, int64_t count, GM_ADDR x1List, GM_ADDR x2List, GM_ADDR alpha, GM_ADDR yList)
 {
-    for (int32_t tensorId = 0; tensorId < tilingGm->tensorCount; tensorId++) {
-        int64_t count = tilingGm->tensorElements[tensorId];
-        if (count <= 0) {
-            continue;
+    __gm__ T* x1Data = SimtGetTensorAddr<T>(x1List, tensorId);
+    __gm__ T* x2Data = SimtGetTensorAddr<T>(x2List, tensorId);
+    __gm__ T* yData = SimtGetTensorAddr<T>(yList, tensorId);
+    __gm__ AlphaT* alphaPtr = reinterpret_cast<__gm__ AlphaT*>(alpha);
+    const AlphaT alphaVal = alphaPtr[0];
+
+    const int64_t stride = static_cast<int64_t>(AscendC::Simt::GetThreadNum());
+    const int64_t end = localStart + count;
+    const int64_t unrollEnd = end - (UNROLL_COUNT - 1) * stride; // keeps all 8 loads in bounds
+    int64_t idx = localStart + static_cast<int64_t>(AscendC::Simt::GetThreadIdx());
+    for (; idx < unrollEnd; idx += UNROLL_COUNT * stride) { // main loop: 8 loads in flight
+        T x1v[UNROLL_COUNT];
+        T x2v[UNROLL_COUNT];
+#pragma unroll
+        for (int64_t k = 0; k < UNROLL_COUNT; k++) {
+            x1v[k] = x1Data[idx + k * stride];
+            x2v[k] = x2Data[idx + k * stride];
         }
-        AscendC::Simt::VF_CALL<OpForeachSubListSimt<T, AlphaT>>(AscendC::Simt::Dim3(THREAD_NUM), tensorId, count, x1,
-                                                                x2, alpha, y);
+#pragma unroll
+        for (int64_t k = 0; k < UNROLL_COUNT; k++) {
+            if constexpr (std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>) {
+                float r = static_cast<float>(x1v[k]) - static_cast<float>(alphaVal) * static_cast<float>(x2v[k]);
+                yData[idx + k * stride] = static_cast<T>(r);
+            } else if constexpr (std::is_same_v<T, int16_t> || std::is_same_v<T, int8_t> ||
+                                 std::is_same_v<T, uint8_t>) {
+                int32_t r = static_cast<int32_t>(x1v[k]) - alphaVal * static_cast<int32_t>(x2v[k]);
+                yData[idx + k * stride] = static_cast<T>(r);
+            } else {
+                yData[idx + k * stride] = x1v[k] - alphaVal * x2v[k];
+            }
+        }
+    }
+    for (; idx < end; idx += stride) { // tail: fewer than 8*stride elements
+        T x1Val = x1Data[idx];
+        T x2Val = x2Data[idx];
+        if constexpr (std::is_same_v<T, half> || std::is_same_v<T, bfloat16_t>) {
+            float r = static_cast<float>(x1Val) - static_cast<float>(alphaVal) * static_cast<float>(x2Val);
+            yData[idx] = static_cast<T>(r);
+        } else if constexpr (std::is_same_v<T, int16_t> || std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>) {
+            int32_t r = static_cast<int32_t>(x1Val) - alphaVal * static_cast<int32_t>(x2Val);
+            yData[idx] = static_cast<T>(r);
+        } else {
+            yData[idx] = x1Val - alphaVal * x2Val;
+        }
+    }
+}
+
+// Each core claims a contiguous range of the flattened element space; small segments take the
+// flat single-VF path, large segments iterate only the overlapping tensor slices.
+template <typename T, typename AlphaT>
+__aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR alpha, GM_ADDR y, GM_ADDR tilingAddr,
+                               const ForeachSubListTilingData* tiling)
+{
+    if (tiling->totalElements <= 0) {
+        return;
+    }
+    int32_t coreIdx = static_cast<int32_t>(AscendC::GetBlockIdx());
+    int64_t coreStart = static_cast<int64_t>(coreIdx) * tiling->perCoreElements;
+    int64_t coreEnd = (coreIdx == tiling->needCoreNum - 1) ? coreStart + tiling->lastCoreElements :
+                                                             coreStart + tiling->perCoreElements;
+    if (coreStart >= coreEnd) {
+        return;
+    }
+
+    if (coreEnd - coreStart <= FLAT_SEG_MAX) {
+        AscendC::Simt::VF_CALL<ForeachSubListFlatSegSimt<T, AlphaT>>(AscendC::Simt::Dim3(THREAD_NUM), coreStart,
+                                                                     coreEnd, x1, x2, alpha, y, tilingAddr);
+        return;
+    }
+
+    int32_t t = LocateTensorOnPrefix(tiling->tensorStarts, tiling->tensorCount, coreStart);
+    for (; t < tiling->tensorCount; t++) {
+        const int64_t tStart = tiling->tensorStarts[t];
+        if (tStart >= coreEnd) {
+            break; // past the core segment, stop early
+        }
+        const int64_t tEnd = tiling->tensorStarts[t + 1];
+        const int64_t oS = (coreStart > tStart) ? coreStart : tStart;
+        const int64_t oE = (coreEnd < tEnd) ? coreEnd : tEnd;
+        if (oS < oE) { // empty/non-overlapping slices skip naturally
+            AscendC::Simt::VF_CALL<ForeachSubListTensorSegSimt<T, AlphaT>>(AscendC::Simt::Dim3(THREAD_NUM), t,
+                                                                           oS - tStart, oE - oS, x1, x2, alpha, y);
+        }
     }
 }
 
