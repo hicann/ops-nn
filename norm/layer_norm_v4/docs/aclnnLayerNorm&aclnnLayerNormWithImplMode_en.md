@@ -142,7 +142,7 @@ aclnnStatus aclnnLayerNormWithImplMode(
       <td>weightOptional (aclTensor*)</td>
       <td>Input</td>
       <td>Optional input, which is the weight for the normalization calculation. It corresponds to `weightOptional` in the formula.</td>
-      <td><ul><li>Empty tensors are supported.</li><li>If `weightOptional` is not empty:<ul><li>The data type is the same as that of the input `input` or is FLOAT. If `biasOptional` exists, `weightOptional` and `biasOptional` have the same data type.</li><li>The shape is the same as that of `normalizedShape`, which is [R1,...,Rj].</li></ul></li><li>If `weightOptional` is empty, a tensor with the shape [R1,...,Rj] and all values 1 is constructed inside the interface.<ul><li>If `biasOptional` exists, `weightOptional` and `biasOptional` have the same data type.</li><li>If `biasOptional` does not exist, `weightOptional` has the same data type as the input `input`.</li></ul></li></ul></td>
+      <td><ul><li>Empty tensors are supported.</li><li>If `weightOptional` is not empty:<ul><li>The data type is the same as that of the input `input` or is FLOAT32. If `biasOptional` exists, `weightOptional` and `biasOptional` have the same data type.</li><li>The shape is the same as that of `normalizedShape`, which is [R1,...,Rj].</li></ul></li><li>If `weightOptional` is empty, a tensor with the shape [R1,...,Rj] and all values 1 is constructed inside the interface.<ul><li>If `biasOptional` exists, `weightOptional` and `biasOptional` have the same data type.</li><li>If `biasOptional` does not exist, `weightOptional` has the same data type as the input `input`.</li></ul></li></ul></td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
