@@ -77,7 +77,7 @@ NumPy-style broadcast is supported: gradients and features can have different sh
 - Inputs of 0 to 8 dimensions are supported.
 - Dynamic shapes are supported: the input shape can contain -1 unknown dimensions. During deduction, they are merged with the specific dimensions of the other input. When both inputs are -1, the output remains -1.
 - Unknown rank [-2] is supported: when either input has an unknown rank, the output shape is conservatively deduced as [-2].
-- The sigmoid computation uses positive and negative branches to prevent intermediate exponential overflow caused by large negative features, and no additional numerical lower bound is applied. NaN and Inf follow the IEEE floating-point operation rules. For example, Inf multiplied by the computation result 0 produces NaN.
+- The sigmoid is computed using the TensorFlow formula `1 / (1 + exp(-features))` for the input data type. Extreme input values follow the floating-point overflow and NaN/Inf propagation behavior of that data type.
 
 ## Invocation Description
 
