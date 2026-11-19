@@ -753,6 +753,9 @@ bool BatchNormGradV3RARFullLoadTilingBase::IsCapable()
     binaryAddQuotient = binaryAddQuotient == r1Dim * r0Dim ? binaryAddQuotient / TWO : binaryAddQuotient;
     int64_t quotientVcaddNum = binaryAddQuotient / vlFp32;
     binaryAddUbNeed = Ops::Base::CeilDiv(quotientVcaddNum * sizeof(float), blockSize) * blockSize;
+    // Kernel keeps one binary-add scratch region per pipeline buffer. Store the total here so both
+    // admission and formerUbDim deduct the same allocation as InitBuffer(binaryAddBuf_).
+    binaryAddUbNeed *= DOUBLE_BUFFER;
     // 开DB占用UB乘以 2
     if ((onceProcUbNeed + reservUbSizeForAlign) * DOUBLE_BUFFER + binaryAddUbNeed > static_cast<int64_t>(ubSize)) {
         OP_LOGD(context_->GetNodeName(),
