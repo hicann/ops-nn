@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -89,7 +90,7 @@ static inline bool CheckFormat(const aclTensorList* minimumScalarV2Self, const a
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto minimumScalarV2Arch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (Ops::NN::AclnnUtil::IsRegbase(minimumScalarV2Arch) || minimumScalarV2Arch == NpuArch::DAV_2201) {
+    if (Ops::NN::AclnnUtil::IsRegbase(minimumScalarV2Arch) || minimumScalarV2Arch == Ops::Base::DAV_2201) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         const std::string reason = (("support for " +

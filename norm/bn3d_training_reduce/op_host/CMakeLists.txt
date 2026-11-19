@@ -11,7 +11,7 @@
 # BN3DTrainingReduce 在 canndev 中已有 910/910B/910_93 的 TBE 实现。本仓只为
 # Ascend 950 提供 arch35 Tiling；必须在构建期隔离，不能让 950 的
 # IMPL_OP_OPTILING/CheckSupport 注册进入旧产品的 tiling so 并覆盖 built-in 路径。
-set(SUPPORT_COMPUTE_UNIT "ascend950")
+set(SUPPORT_COMPUTE_UNIT "dav_3510")
 set(SUPPORT_TILING_DIR "arch35")
 
 # 本算子不对外提供 aclnn 接口（图模式专用），故 ACLNNTYPE 取 aclnn_exclude。

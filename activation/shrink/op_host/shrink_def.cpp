@@ -17,6 +17,7 @@
  * @brief Shrink operator definition, declares inputs, outputs, attributes and operator configuration
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class Shrink : public OpDef {
@@ -49,9 +50,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "shrink");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-        // ascend350 与 ascend950 同为 dav_3510（arch35）架构，共享 arch35 tiling 与内核
-        this->AICore().AddConfig("ascend350", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 OP_ADD(Shrink);

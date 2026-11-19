@@ -9,7 +9,7 @@
 #/
 message(STATUS "=== Debug: start ops.norm.group_norm_silu_quant.op_host.CMakeLists.txt ")
 
-# A2(arch22) tiling 与 arch35(ascend950) regbase tiling 按 SoC 路由分开编译, 避免双 IMPL_OP_OPTILING 冲突。
-set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend950")
+# A2(arch22) tiling 与 arch35(dav_3510) regbase tiling 按 SoC 路由分开编译, 避免双 IMPL_OP_OPTILING 冲突。
+set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "dav_3510")
 set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE group_norm_silu_quant ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE)

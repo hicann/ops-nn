@@ -11,7 +11,7 @@
 message(STATUS "=== Debug: start ops.quant.fake_quant_with_min_max_vars_per_channel.op_host.CMakeLists.txt ")
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend950")
+set(SUPPORT_COMPUTE_UNIT "dav_3510")
 # 设置每种芯片类型对应的tiling文件目录
 set(SUPPORT_TILING_DIR "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}

@@ -16,10 +16,10 @@ add_kernel_sources(
     AUTO_SYNC false
 )
 
-# arch35: ascend950, ascend350
+# arch35: dav_3510
 add_kernel_sources(
     KERNEL_SRC arch35/foreach_addcdiv_scalar.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     OPTIONS "--cce-use-fast-math=false"
 )

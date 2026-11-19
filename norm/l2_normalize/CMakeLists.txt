@@ -11,14 +11,14 @@
 
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
-    COMPUTE_UNIT ascend950
+    COMPUTE_UNIT dav_3510
     TILING_DIR arch35
     DISABLE_IN_OPP TRUE
 )
 
 add_kernel_sources(
     KERNEL_SRC l2_normalize.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

@@ -11,6 +11,6 @@ add_kernel_sources(
 )
 add_kernel_sources(
     KERNEL_SRC arch35/hard_swish_grad_v2.cpp
-    COMPUTE_UNITS ascend950 mc62
+    COMPUTE_UNITS dav_3510 mc62
     AUTO_SYNC false
 )

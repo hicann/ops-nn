@@ -12,6 +12,6 @@
 # arch35
 add_kernel_sources(
     KERNEL_SRC arch35/add_row_ranges.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
 )

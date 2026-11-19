@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/foreach_log_inplace.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

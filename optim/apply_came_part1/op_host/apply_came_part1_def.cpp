@@ -9,6 +9,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class ApplyCamePart1 : public OpDef {
@@ -47,8 +48,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "apply_came_part1");
-        this->AICore().AddConfig("ascend950", regbaseConfig);
-        this->AICore().AddConfig("ascend350", regbaseConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, regbaseConfig);
     }
 };
 

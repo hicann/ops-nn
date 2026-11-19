@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/bn_training_reduce_grad.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

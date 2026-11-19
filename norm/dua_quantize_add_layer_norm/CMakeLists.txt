@@ -11,10 +11,10 @@
 message(STATUS "=== Debug: start ops.norm.dua_quantize_add_layer_norm.CMakeLists.txt ")
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend950" "ascend350")
+set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "dav_3510")
 # 设置每种芯片类型对应的 tiling 文件目录，与 SUPPORT_COMPUTE_UNIT 一一对应
 # （arch22 = 910 原有实现；arch35 = Ascend950 实现）
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35" "arch35")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch35")
 # DEPENDENCIES 必留：910 分支的 op_kernel/dua_quantize_add_layer_norm_single_row_kernel.h
 # 复用兄弟算子 op_kernel 下的 quantize_add_layer_norm_base.h（相对路径 ../quantize_add_layer_norm/）。
 # 单算子编译场景下只有声明了依赖，构建目录才会一并 stage 该算子的 kernel 源，否则报

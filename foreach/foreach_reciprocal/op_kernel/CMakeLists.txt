@@ -16,7 +16,7 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/foreach_reciprocal.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     OPTIONS "--cce-use-fast-math=false"
 )

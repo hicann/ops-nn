@@ -8,6 +8,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-# 仅 ascend950（arch35 tiling 目录）
+# 仅 dav_3510（arch35 tiling 目录）
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE bn_training_reduce_grad
-        ACLNNTYPE aclnn_exclude COMPUTE_UNIT ascend950 TILING_DIR arch35)
+        ACLNNTYPE aclnn_exclude COMPUTE_UNIT dav_3510 TILING_DIR arch35)

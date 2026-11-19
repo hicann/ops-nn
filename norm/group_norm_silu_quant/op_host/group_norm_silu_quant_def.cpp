@@ -9,6 +9,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class GroupNormSiluQuant : public OpDef {
@@ -67,7 +68,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "group_norm_silu_quant");
-        this->AICore().AddConfig("ascend950", config_regbase);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, config_regbase);
     }
 };
 

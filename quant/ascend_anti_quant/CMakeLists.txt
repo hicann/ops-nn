@@ -8,9 +8,9 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend950" "ascend350" "ascend960dt")
 # 设置每种芯片类型对应的tiling文件目录
-set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35")
+set(SUPPORT_COMPUTE_UNIT "dav_3510" "dav_9201")
+set(SUPPORT_TILING_DIR "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
                     OPTYPE ascend_anti_quant ACLNNTYPE aclnn_exclude
                     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}

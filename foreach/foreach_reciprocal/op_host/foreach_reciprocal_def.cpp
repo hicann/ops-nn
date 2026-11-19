@@ -16,6 +16,7 @@
  */
 
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class ForeachReciprocal : public OpDef {
@@ -44,8 +45,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "foreach_reciprocal");
-        this->AICore().AddConfig("ascend950", aicoreConfig950);
-        this->AICore().AddConfig("ascend350", aicoreConfig950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig950);
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");
 

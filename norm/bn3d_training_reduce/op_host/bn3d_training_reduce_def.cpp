@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "bn3d_training_reduce_check_support.h"
 
 namespace ops {
@@ -72,7 +73,7 @@ public:
             // bn3 + _d），与 Kernel 入口函数名对不上。显式覆盖为 canndev op_info 中登记的
             // opInterface.value=bn3d_training_reduce，与 op_kernel 入口保持一致。
             .ExtendCfgInfo("opInterface.value", "bn3d_training_reduce");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 

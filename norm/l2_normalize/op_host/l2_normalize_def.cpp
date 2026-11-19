@@ -22,6 +22,7 @@
 // =============================================================================
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -57,7 +58,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "l2_normalize");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 

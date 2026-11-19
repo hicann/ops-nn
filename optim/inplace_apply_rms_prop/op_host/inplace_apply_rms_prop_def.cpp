@@ -25,6 +25,7 @@
  * 适配 Ascend950 与 Ascend350 (arch35 / DAV_3510)。
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -56,8 +57,7 @@ void AddAicoreConfig(OpDef& op)
         .DynamicShapeSupportFlag(true)
         .NeedCheckSupportFlag(false)
         .PrecisionReduceFlag(true);
-    op.AICore().AddConfig("ascend950", config);
-    op.AICore().AddConfig("ascend350", config);
+    opbase::ArchConfigHelper::AddConfigByArch(op.AICore(), Ops::Base::DAV_3510, config);
 }
 } // namespace
 

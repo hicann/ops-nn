@@ -17,6 +17,6 @@ add_kernel_sources(
 # Ascend950（arch35）分支：入口位于 arch35/ 子目录，与 op_host/CMakeLists 的 TILING_DIR 一一对应
 add_kernel_sources(
     KERNEL_SRC arch35/dua_quantize_add_layer_norm.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
 )

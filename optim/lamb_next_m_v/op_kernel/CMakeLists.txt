@@ -11,7 +11,7 @@
 # 手写 regbase 内核自行下发 SetFlag/WaitFlag, 关闭自动插同步。
 add_kernel_sources(
     KERNEL_SRC lamb_next_m_v.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

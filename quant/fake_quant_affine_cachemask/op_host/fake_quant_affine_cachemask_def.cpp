@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class FakeQuantAffineCachemask : public OpDef {
@@ -117,8 +118,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "fake_quant_affine_cachemask_apt");
-        this->AICore().AddConfig("ascend950", aicore_config_950);
-        this->AICore().AddConfig("ascend350", aicore_config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config_950);
     }
 };
 

@@ -19,6 +19,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -73,7 +74,7 @@ static inline bool CheckFormat(const aclTensorList* minimumScalarSelf, const acl
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto minimumScalarArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (Ops::NN::AclnnUtil::IsRegbase(minimumScalarArch) || minimumScalarArch == NpuArch::DAV_2201) {
+    if (Ops::NN::AclnnUtil::IsRegbase(minimumScalarArch) || minimumScalarArch == Ops::Base::DAV_2201) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",

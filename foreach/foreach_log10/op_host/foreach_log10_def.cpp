@@ -14,6 +14,7 @@
  */
 
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class ForeachLog10 : public OpDef {
@@ -43,8 +44,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-        this->AICore().AddConfig("ascend350", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

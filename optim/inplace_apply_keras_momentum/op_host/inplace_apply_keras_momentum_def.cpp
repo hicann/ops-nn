@@ -20,6 +20,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class InplaceApplyKerasMomentum : public OpDef {
@@ -81,8 +82,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opInterface.value", "inplace_apply_keras_momentum")
             .ExtendCfgInfo("opFile.value", "inplace_apply_keras_momentum");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-        this->AICore().AddConfig("ascend350", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 OP_ADD(InplaceApplyKerasMomentum);

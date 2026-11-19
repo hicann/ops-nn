@@ -25,6 +25,7 @@
  * 适配 Ascend950 与 Ascend350（均使用 arch35 / DAV_3510 kernel 与 tiling）。
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class ApplyRMSProp : public OpDef {
@@ -102,10 +103,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-        // Ascend350 与 Ascend950 共享 arch35 kernel/tiling（见顶层 CMakeLists
-        // SUPPORT_TILING_DIR），对齐同仓 adam_apply_one 的多平台注册方式。
-        this->AICore().AddConfig("ascend350", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 OP_ADD(ApplyRMSProp);

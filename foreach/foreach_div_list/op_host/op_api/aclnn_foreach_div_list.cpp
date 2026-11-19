@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -46,7 +47,7 @@ static inline bool CheckNotNull(const aclTensorList* x1, const aclTensorList* x2
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curNpuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curNpuArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curNpuArch)) {
+    if (curNpuArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curNpuArch)) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return EMPTY_LIST;

@@ -27,6 +27,7 @@
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -85,7 +86,7 @@ static inline bool ForeachAddcdivScalarV2CheckFormat(const aclTensorList* addcdi
 static const std::initializer_list<DataType>& ForeachAddcdivScalarV2GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return FOREACH_ADDCDIV_SCALAR_V2_ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         const std::string reason = (("support for " +
