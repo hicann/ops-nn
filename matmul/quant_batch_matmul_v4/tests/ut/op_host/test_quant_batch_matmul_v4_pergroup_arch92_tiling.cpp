@@ -228,7 +228,7 @@ TEST(QuantBatchMatmulV4Arch92FlowTest, S8S4BasicSuccess)
     ASSERT_EQ(env.RunArch92Tiling(), ge::GRAPH_SUCCESS);
     auto* ctx = env.Ctx();
     EXPECT_EQ(ctx->GetTilingKey(), GET_TPL_TILING_KEY(QBMMV4_NOT_TRANS, QBMMV4_PER_GROUP, QBMMV4_OPTION_ATTR_NONE,
-                                                      QBMMV4_IS_WEIGHT_NZ, QBMMV4_BASIS));
+                                                      QBMMV4_IS_WEIGHT_NZ, QBMMV4_SCALE_ND, QBMMV4_BASIS));
     EXPECT_EQ(ctx->GetBlockDim(), 2U); // ceil(256/128) * ceil(128/128)
     EXPECT_EQ(ctx->GetWorkspaceSizes(1)[0], QBMMV4_ARCH92_WORKSPACE_SIZE);
     EXPECT_EQ(ctx->GetRawTilingData()->GetDataSize(),
@@ -267,7 +267,7 @@ TEST(QuantBatchMatmulV4Arch92FlowTest, S8S4VectorAntiquantSuccess)
     ASSERT_EQ(env.RunArch92Tiling(), ge::GRAPH_SUCCESS);
     auto* ctx = env.Ctx();
     EXPECT_EQ(ctx->GetTilingKey(), GET_TPL_TILING_KEY(QBMMV4_NOT_TRANS, QBMMV4_PER_GROUP, QBMMV4_OPTION_ATTR_NONE,
-                                                      QBMMV4_IS_WEIGHT_NZ, QBMMV4_ANTIQUANT_VECTOR));
+                                                      QBMMV4_IS_WEIGHT_NZ, QBMMV4_SCALE_ND, QBMMV4_ANTIQUANT_VECTOR));
     EXPECT_GT(ctx->GetBlockDim(), 0U);
     const auto* td = env.Td();
     EXPECT_EQ(td->matmulTiling.M, 256);
@@ -299,7 +299,7 @@ TEST(QuantBatchMatmulV4Arch92FlowTest, Fp8Fp4BasicSuccess)
     ASSERT_EQ(env.RunArch92Tiling(), ge::GRAPH_SUCCESS);
     auto* ctx = env.Ctx();
     EXPECT_EQ(ctx->GetTilingKey(), GET_TPL_TILING_KEY(QBMMV4_NOT_TRANS, QBMMV4_TCG, QBMMV4_OPTION_ATTR_NONE,
-                                                      QBMMV4_IS_WEIGHT_NZ, QBMMV4_BASIS));
+                                                      QBMMV4_IS_WEIGHT_NZ, QBMMV4_SCALE_ND, QBMMV4_BASIS));
     EXPECT_EQ(ctx->GetBlockDim(), 1U);
     const auto* td = env.Td();
     EXPECT_EQ(td->cubeBlockDimM, 1);
@@ -402,7 +402,7 @@ TEST(QuantBatchMatmulV4Arch92FlowTest, Fp8Fp4YScaleOneDimSuccess)
     Arch92UtEnv env(cfg);
     ASSERT_EQ(env.RunArch92Tiling(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(env.Ctx()->GetTilingKey(), GET_TPL_TILING_KEY(QBMMV4_NOT_TRANS, QBMMV4_TCG, QBMMV4_OPTION_ATTR_NONE,
-                                                            QBMMV4_IS_WEIGHT_NZ, QBMMV4_BASIS));
+                                                            QBMMV4_IS_WEIGHT_NZ, QBMMV4_SCALE_ND, QBMMV4_BASIS));
 }
 
 // MX(x1Scale E8M0)场景：AnalyzeContext 将 isFp8Fp4_ 置 false，IsCapable 走
@@ -589,7 +589,7 @@ TEST(QuantBatchMatmulV4Arch92IsCapableTest, AcceptS8S4)
     Arch92UtEnv env(Arch92UtCfg{});
     EXPECT_EQ(env.RunArch92Tiling(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(env.Ctx()->GetTilingKey(), GET_TPL_TILING_KEY(QBMMV4_NOT_TRANS, QBMMV4_PER_GROUP, QBMMV4_OPTION_ATTR_NONE,
-                                                            QBMMV4_IS_WEIGHT_NZ, QBMMV4_BASIS));
+                                                            QBMMV4_IS_WEIGHT_NZ, QBMMV4_SCALE_ND, QBMMV4_BASIS));
 }
 
 TEST(QuantBatchMatmulV4Arch92IsCapableTest, AcceptFp8Fp4)
@@ -597,7 +597,7 @@ TEST(QuantBatchMatmulV4Arch92IsCapableTest, AcceptFp8Fp4)
     Arch92UtEnv env(MakeFp8Fp4Cfg());
     EXPECT_EQ(env.RunArch92Tiling(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(env.Ctx()->GetTilingKey(), GET_TPL_TILING_KEY(QBMMV4_NOT_TRANS, QBMMV4_TCG, QBMMV4_OPTION_ATTR_NONE,
-                                                            QBMMV4_IS_WEIGHT_NZ, QBMMV4_BASIS));
+                                                            QBMMV4_IS_WEIGHT_NZ, QBMMV4_SCALE_ND, QBMMV4_BASIS));
 }
 
 // ---------------- GetShapeAttrsInfo 失败分支（分析失败直接返回 GRAPH_FAILED） ----------------
@@ -802,7 +802,7 @@ TEST(QuantBatchMatmulV4Arch92InternalTest, RouteToArch92ViaOpEntry)
     ASSERT_EQ(env.RunOpEntryTiling(), ge::GRAPH_SUCCESS);
     auto* ctx = env.Ctx();
     EXPECT_EQ(ctx->GetTilingKey(), GET_TPL_TILING_KEY(QBMMV4_NOT_TRANS, QBMMV4_PER_GROUP, QBMMV4_OPTION_ATTR_NONE,
-                                                      QBMMV4_IS_WEIGHT_NZ, QBMMV4_BASIS));
+                                                      QBMMV4_IS_WEIGHT_NZ, QBMMV4_SCALE_ND, QBMMV4_BASIS));
     EXPECT_EQ(ctx->GetBlockDim(), 2U);
     EXPECT_EQ(ctx->GetWorkspaceSizes(1)[0], QBMMV4_ARCH92_WORKSPACE_SIZE);
     EXPECT_EQ(env.Td()->matmulTiling.baseK, 128);

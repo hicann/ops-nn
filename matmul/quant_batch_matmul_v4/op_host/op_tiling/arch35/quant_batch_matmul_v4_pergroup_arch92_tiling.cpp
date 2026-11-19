@@ -621,7 +621,7 @@ uint64_t QuantBatchMatmulV4PerGroupTiling::GetTilingKey() const
     return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(inputParams_.antiQuantType),
                               static_cast<uint64_t>(inputParams_.hasAntiQuantOffset),
                               static_cast<uint64_t>(inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ),
-                              static_cast<uint64_t>(templateType));
+                              static_cast<uint64_t>(QBMMV4_SCALE_ND), static_cast<uint64_t>(templateType));
 }
 
 ge::graphStatus QuantBatchMatmulV4PerGroupTiling::GetWorkspaceSize()
