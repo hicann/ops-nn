@@ -31,7 +31,7 @@
 
 -  Basic computation flow
 
-```
+```text
 Step 0: GroupIndex processing (optional) → compute trunc
 Step 1: Input splitting (split x into x0 and x1)
 Step 2: Clamp processing (optional)
