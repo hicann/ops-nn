@@ -244,7 +244,7 @@ class InTrainingUpdateGradGammaBetaSpec:
 
     third_party = {"torch": _TorchReference}
     tolerance = {
-        "float32": {"standard": "stat_rel_err", "threshold": 1.0e-4},
+        "float32": {"standard": "cross_check", "level": "L1"},
     }
 
 

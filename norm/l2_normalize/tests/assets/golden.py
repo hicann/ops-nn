@@ -24,8 +24,7 @@
 - third_party：竞品 API torch.nn.functional.normalize 仅经本属性声明，由 TTK 框架在
   独立进程执行；golden 内不 import / 不调用该竞品 API。标杆保留输入 dtype，
   不复刻 NPU 的归约顺序或补偿算法。
-- tolerance：Reduction 计算类算子浮点输出 -> stat_rel_err（2.1 官方枚举，
-  以 $TTK/ttk/test_spec/validator.py 为准）。
+- tolerance：浮点输出默认采用cross_check，level为L1（三方精度检查）。
 
 注册名（与 TTK 消费方式对齐）：
     l2_normalize / L2Normalize -> Kernel / GEIR（CSV op_name；golden 收 numpy.ndarray，
@@ -121,6 +120,6 @@ class L2NormalizeTestSpec:
 
     third_party = {"torch": TorchL2NormalizeBenchmark}
     tolerance = {
-        "float16": {"standard": "stat_rel_err"},
-        "float32": {"standard": "stat_rel_err"},
+        "float16": {"standard": "cross_check", "level": "L1"},
+        "float32": {"standard": "cross_check", "level": "L1"},
     }

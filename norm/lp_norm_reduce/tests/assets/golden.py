@@ -169,7 +169,7 @@ class LpNormReduceTestSpec:
     third_party = {"torch": TorchLpNormReduce}
     customize_inputs = _customize_inputs
     tolerance = {
-        "float16": {"standard": "mix_tolerance"},
-        "bfloat16": {"standard": "mix_tolerance"},
-        "float32": {"standard": "mix_tolerance"},
+        "float16": {"standard": "cross_check", "level": "L1"},
+        "bfloat16": {"standard": "cross_check", "level": "L1"},
+        "float32": {"standard": "cross_check", "level": "L1"},
     }
