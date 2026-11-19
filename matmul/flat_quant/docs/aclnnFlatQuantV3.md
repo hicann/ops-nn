@@ -250,7 +250,7 @@ aclnnStatus aclnnFlatQuantV3(
       <td>-</td>
     </tr>
     <tr>
-      <td>groupListType（int64）</td>
+      <td>groupListType（int64_t）</td>
       <td>输入</td>
       <td>代表groupListOptional输入的分组方式。</td>
       <td><ul><li>当groupListOptional不为nullptr时支持取值0，1，2。当groupListOptional为nullptr时groupListType可以传任意值不影响计算结果。</li></ul></td>
