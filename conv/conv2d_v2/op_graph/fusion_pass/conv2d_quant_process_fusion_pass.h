@@ -58,6 +58,11 @@ enum class AIPPFirstConvType { NONE_TYPE, NEED_ADJUST_TYPE, NO_NEED_ADJUST_TYPE 
 
 class __attribute__((visibility("default"))) Conv2DQuantProcessFusionPass : public ConvFusionBasePass,
                                                                             public ops::BiasOptimizeQuantRollbackBase {
+public:
+    // 解析 compression_optimize_conf 配置文件的 first layer quantization 开关；
+    // G.FIL.02：路径先经 realpath 规范化并校验（相对路径/符号链接/目录穿越/文件存在）
+    static bool ParseFirstLayerQuantConfFile(const char* confPath);
+
 protected:
     void InitMember() override;
     bool CheckMatchStructure(const ge::GNode& matchNode) override;

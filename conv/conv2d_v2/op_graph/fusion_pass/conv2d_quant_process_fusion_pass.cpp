@@ -12,7 +12,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <fstream>
+#include <limits.h>
 #include <map>
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
@@ -109,17 +111,17 @@ bool Conv2DQuantProcessFusionPass::CheckMatchStructure(const ge::GNode& matchNod
 }
 
 // 老 SetPadNodeDataType：rollback 时 Pad 双向 desc 改 fp16
-ge::Status Conv2DQuantProcessFusionPass::SetPadNodeDataType(ge::GNode& padNodeRef)
+ge::Status Conv2DQuantProcessFusionPass::SetPadNodeDataType(ge::GNode& padNode)
 {
     ge::TensorDesc inDesc;
     ge::TensorDesc outDesc;
-    FUSION_PASS_CHECK(padNodeRef.GetInputDesc(0, inDesc) != ge::GRAPH_SUCCESS ||
-                          padNodeRef.GetOutputDesc(0, outDesc) != ge::GRAPH_SUCCESS,
-                      OP_LOGE(convDescInfo.nodeNameStr, "Get pad desc failed."), return ge::FAILED);
+    FUSION_PASS_CHECK(
+        padNode.GetInputDesc(0, inDesc) != ge::GRAPH_SUCCESS || padNode.GetOutputDesc(0, outDesc) != ge::GRAPH_SUCCESS,
+        OP_LOGE(convDescInfo.nodeNameStr, "Get pad desc failed."), return ge::FAILED);
     inDesc.SetDataType(ge::DT_FLOAT16);
     outDesc.SetDataType(ge::DT_FLOAT16);
-    FUSION_PASS_CHECK(padNodeRef.UpdateInputDesc(0, inDesc) != ge::GRAPH_SUCCESS ||
-                          padNodeRef.UpdateOutputDesc(0, outDesc) != ge::GRAPH_SUCCESS,
+    FUSION_PASS_CHECK(padNode.UpdateInputDesc(0, inDesc) != ge::GRAPH_SUCCESS ||
+                          padNode.UpdateOutputDesc(0, outDesc) != ge::GRAPH_SUCCESS,
                       OP_LOGE(convDescInfo.nodeNameStr, "Update pad desc to float16 failed."), return ge::FAILED);
     return ge::SUCCESS;
 }
@@ -246,10 +248,20 @@ bool Conv2DQuantProcessFusionPass::IsFirstLayerQuantEnabled(const ge::CustomPass
                 "Option [ge.compressionOptimizeConf] not set, first layer quantization disabled.");
         return false;
     }
-    std::ifstream confFile(confPath.GetString());
-    FUSION_PASS_CHECK(!confFile.is_open(),
-                      OP_LOGD(convDescInfo.nodeNameStr, "Open conf file [%s] failed.", confPath.GetString()),
-                      return false);
+    return ParseFirstLayerQuantConfFile(confPath.GetString());
+}
+
+// 规范化并校验路径：realpath 解析相对路径/符号链接/目录穿越，要求文件存在
+bool Conv2DQuantProcessFusionPass::ParseFirstLayerQuantConfFile(const char* confPath)
+{
+    constexpr char logTag[] = "Conv2DQuantProcessFusionPass";
+    char canonicalPath[PATH_MAX] = {0};
+    if (realpath(confPath, canonicalPath) == nullptr) {
+        OP_LOGD(logTag, "Resolve conf file [%s] failed, first layer quantization disabled.", confPath);
+        return false;
+    }
+    std::ifstream confFile(canonicalPath);
+    FUSION_PASS_CHECK(!confFile.is_open(), OP_LOGD(logTag, "Open conf file [%s] failed.", canonicalPath), return false);
     std::string line;
     while (std::getline(confFile, line)) {
         const size_t pos = line.find(':');

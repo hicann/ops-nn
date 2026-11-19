@@ -10,6 +10,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+#include <unistd.h>
+
 #include "../../../op_graph/fusion_pass/conv2d_quant_process_fusion_pass.h"
 #include "../../../../common/tests/ut/op_graph/test_conv_fusion_pass_framework.h"
 #include "ge/compliant_node_builder.h"
@@ -453,5 +456,60 @@ TEST_F(Conv2DQuantProcessFusionPassTest, RollbackHostOpScaleVerify)
     ge::float32_t hostScale = -1.0F;
     EXPECT_EQ(hostOp->GetAttr(ge::AscendString("scale"), hostScale), ge::GRAPH_SUCCESS);
     EXPECT_EQ(hostScale, 1.0F);
+}
+
+namespace {
+// 创建内容为 content 的临时配置文件，返回路径；失败返回空串
+std::string WriteTempConfFile(const std::string& content)
+{
+    char pathTmpl[] = "/tmp/conv2d_quant_conf_ut_XXXXXX";
+    const int fd = mkstemp(pathTmpl);
+    if (fd < 0) {
+        return std::string();
+    }
+    std::string path(pathTmpl);
+    if (write(fd, content.c_str(), content.size()) != static_cast<ssize_t>(content.size())) {
+        (void)close(fd);
+        (void)unlink(path.c_str());
+        return std::string();
+    }
+    (void)close(fd);
+    return path;
+}
+} // namespace
+
+// G.FIL.02 realpath 规范化与配置解析：不存在路径 → 规范化失败关闭；
+// 存在且开关 true → 开启；存在但开关非 true / 无冒号行 → 关闭
+TEST_F(Conv2DQuantProcessFusionPassTest, FirstLayerQuantConfFileParsing)
+{
+    const std::string notExist = "/nonexistent_dir_conv_ut/no_such_conf.json";
+    EXPECT_FALSE(Conv2DQuantProcessFusionPass::ParseFirstLayerQuantConfFile(notExist.c_str()));
+
+    const std::string confOn = WriteTempConfFile("other_key: 1\nenable_first_layer_quantization: true\n");
+    ASSERT_FALSE(confOn.empty());
+    EXPECT_TRUE(Conv2DQuantProcessFusionPass::ParseFirstLayerQuantConfFile(confOn.c_str()));
+    (void)unlink(confOn.c_str());
+
+    const std::string confOff = WriteTempConfFile("enable_first_layer_quantization: false\nno_colon_line\n");
+    ASSERT_FALSE(confOff.empty());
+    EXPECT_FALSE(Conv2DQuantProcessFusionPass::ParseFirstLayerQuantConfFile(confOff.c_str()));
+    (void)unlink(confOff.c_str());
+}
+
+// realpath 规范化语义：相对路径解析成功；末级符号链接指向开关文件视为开关文件
+TEST_F(Conv2DQuantProcessFusionPassTest, FirstLayerQuantConfFileNormalize)
+{
+    const std::string confOn = WriteTempConfFile("enable_first_layer_quantization: true\n");
+    ASSERT_FALSE(confOn.empty());
+
+    const std::string relative = confOn;
+    EXPECT_TRUE(Conv2DQuantProcessFusionPass::ParseFirstLayerQuantConfFile(relative.c_str()));
+
+    const std::string linkPath = confOn + "_link";
+    (void)unlink(linkPath.c_str());
+    ASSERT_EQ(symlink(confOn.c_str(), linkPath.c_str()), 0);
+    EXPECT_TRUE(Conv2DQuantProcessFusionPass::ParseFirstLayerQuantConfFile(linkPath.c_str()));
+    (void)unlink(linkPath.c_str());
+    (void)unlink(confOn.c_str());
 }
 } // namespace Ops

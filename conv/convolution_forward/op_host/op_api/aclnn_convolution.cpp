@@ -4844,9 +4844,8 @@ private:
         CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto transposedWeight = l0op::Transpose(weight, perm, executor);
         CHECK_RET(transposedWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const_cast<aclTensor*>(transposedWeight)->SetViewFormat(Format::FORMAT_DHWCN);
-        const_cast<aclTensor*>(transposedWeight)->SetStorageFormat(Format::FORMAT_DHWCN);
-        const_cast<aclTensor*>(transposedWeight)->SetOriginalFormat(Format::FORMAT_DHWCN);
+        transposedWeight = l0op::ReFormat(transposedWeight, Format::FORMAT_DHWCN);
+        CHECK_RET(transposedWeight != nullptr, ACLNN_ERR_INNER_NULLPTR);
         weight = transposedWeight;
         opInfo.weightFormat = Format::FORMAT_DHWCN;
         OP_LOGD("Conv3d weight transposed NCDHW->DHWCN for MTE2 throughput.");
