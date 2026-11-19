@@ -63,13 +63,19 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/group_norm_grad/op_kernel/arch35/
                 - ops/ops-nn/norm/group_norm_grad/op_kernel/group_norm_grad_apt.cpp
                 - ops/ops-nn/norm/group_norm_v2/op_host/arch35/group_norm_v2_tiling_arch35.cpp
+                - ops/ops-nn/norm/group_norm_v2/op_host/arch35/group_norm_v2_tiling_arch35.h
+                - ops/ops-nn/norm/group_norm_v2/op_host/config/ascend950/
+                - ops/ops-nn/norm/group_norm_v2/op_kernel/arch35/
+                - ops/ops-nn/norm/group_norm_v2/op_kernel/group_norm_v2_apt.cpp
+                - ops/ops-nn/norm/group_norm_v2/CMakeLists.txt
                 - ops/ops-nn/norm/layer_norm_v3/op_host/arch35/layer_norm_v3_tiling_arch35.cpp
                 - ops/ops-nn/norm/layer_norm_v3/op_host/arch35/layer_norm_v3_tiling_base.cpp
                 - ops/ops-nn/norm/layer_norm_v3/CMakeLists.txt
                 - ops/ops-nn/norm/lp_norm_v2/op_host/arch35/lp_norm_v2_tiling_arch35.cpp
                 - ops/ops-nn/norm/lp_norm_v2/op_host/arch35/lp_norm_v2_tiling_arch35.h
-                - ops/ops-nn/norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_dag.h
-                - ops/ops-nn/norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_tiling_struct.h
+                - ops/ops-nn/norm/lp_norm_v2/op_host/config/ascend950/
+                - ops/ops-nn/norm/lp_norm_v2/op_kernel/arch35/
+                - ops/ops-nn/norm/lp_norm_v2/op_kernel/lp_norm_v2_apt.cpp
                 - ops/ops-nn/norm/lp_norm_v2/CMakeLists.txt
                 - ops/ops-nn/norm/layer_norm_v4/op_host/config/ascend950/
                 - ops/ops-nn/norm/layer_norm_v4/op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp
@@ -129,6 +135,25 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/rms_norm_hi_f4_quant/
                 - ops/ops-nn/norm/add_rms_norm_hi_f4_quant/
                 - ops/ops-nn/norm/rms_norm_grad_quant/
+                - ops/ops-nn/activation/confusion_softmax_grad/op_host/arch35/
+                - ops/ops-nn/activation/confusion_softmax_grad/op_host/config/ascend950/
+                - ops/ops-nn/activation/confusion_softmax_grad/op_kernel/arch35/
+                - ops/ops-nn/activation/confusion_softmax_grad/op_kernel/confusion_softmax_grad_apt.cpp
+                - ops/ops-nn/activation/log_softmax_grad/op_host/arch35/
+                - ops/ops-nn/activation/log_softmax_grad/op_host/config/ascend950/
+                - ops/ops-nn/activation/log_softmax_grad/op_kernel/arch35/
+                - ops/ops-nn/activation/log_softmax_grad/op_kernel/log_softmax_grad_apt.cpp
+                - ops/ops-nn/activation/log_softmax_v2/op_host/arch35/
+                - ops/ops-nn/activation/log_softmax_v2/op_kernel/arch35/
+                - ops/ops-nn/activation/log_softmax_v2/op_kernel/log_softmax_v2_apt.cpp
+                - ops/ops-nn/activation/softmax_grad/op_host/arch35/
+                - ops/ops-nn/activation/softmax_grad/op_host/config/ascend950/
+                - ops/ops-nn/activation/softmax_grad/op_kernel/arch35/
+                - ops/ops-nn/activation/softmax_grad/op_kernel/softmax_grad_apt.cpp
+                - ops/ops-nn/activation/softmax_v2/op_host/arch35/
+                - ops/ops-nn/activation/softmax_v2/op_host/config/ascend950/
+                - ops/ops-nn/activation/softmax_v2/op_kernel/arch35/
+                - ops/ops-nn/activation/softmax_v2/op_kernel/softmax_v2_apt.cpp
             opensource_style: null
             kernel_style: null
         unrelease:
@@ -742,6 +767,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/softmax_grad/examples/
         - ops/ops-nn/activation/softmax_v2/tests/
         - ops/ops-nn/activation/softmax_v2/examples/
+        - ops/ops-nn/activation/confusion_softmax_grad/tests/
+        - ops/ops-nn/activation/confusion_softmax_grad/examples/
         - ops/ops-nn/activation/softplus_v2/tests/
         - ops/ops-nn/activation/softplus_v2/examples/
         - ops/ops-nn/activation/softplus_v2_grad/tests/
