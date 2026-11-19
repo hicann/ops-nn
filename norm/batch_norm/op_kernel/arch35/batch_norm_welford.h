@@ -132,22 +132,6 @@ public:
         pipe->InitBuffer(dichotomyAddBuf, vcaddNum * sizeof(float));
     }
 
-    __aicore__ inline uint32_t FindCofFactor(uint32_t n)
-    {
-        // 找到比n大的最邻近的二次幂数, n = 15，结果为16
-        if ((n & (n - 1)) != 0) {
-            uint32_t temp = n - 1;
-            temp |= temp >> 1;
-            temp |= temp >> 2;
-            temp |= temp >> 4;
-            temp |= temp >> 8;
-            temp |= temp >> 16;
-            return (temp + 1);
-        } else {
-            return n;
-        }
-    }
-
     __aicore__ inline void Process()
     {
         if (blockIdx >= this->realCoreNum) {

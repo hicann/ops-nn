@@ -110,7 +110,6 @@ ge::graphStatus BatchNormTilingBase::GetXYShapesAndCheckValid()
     auto xDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xFormat_ = xDesc->GetFormat().GetStorageFormat();
-
     if (xFormat_ != FORMAT_NCHW && xFormat_ != FORMAT_NHWC && xFormat_ != FORMAT_NCDHW && xFormat_ != FORMAT_NDHWC &&
         xFormat_ != FORMAT_ND) {
         std::string formatStr = Ops::Base::ToString(xFormat_);

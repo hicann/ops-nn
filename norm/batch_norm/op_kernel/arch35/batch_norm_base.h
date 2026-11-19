@@ -48,6 +48,11 @@ constexpr static int64_t NDDMA_THRESHOLD = 32;
 constexpr static int64_t NDDMA_SECOND_DIM = 1;
 constexpr static int64_t NDDMA_THIRD_DIM = 2;
 constexpr static int64_t NDDMA_DIM_NUM = 3;
+constexpr static uint32_t SHIFT_BITS_ONE = 1;
+constexpr static uint32_t SHIFT_BITS_TWO = 2;
+constexpr static uint32_t SHIFT_BITS_FOUR = 4;
+constexpr static uint32_t SHIFT_BITS_EIGHT = 8;
+constexpr static uint32_t SHIFT_BITS_SIXTEEN = 16;
 constexpr static AscendC::Reg::CastTrait castTraitB162B32 = {
     AscendC::Reg::RegLayout::ZERO,
     AscendC::Reg::SatMode::UNKNOWN,
@@ -61,6 +66,22 @@ constexpr static AscendC::Reg::CastTrait castTraitB322B16 = {
     AscendC::Reg::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
+
+// 找到比n大的最邻近的二次幂数, n = 15，结果为16
+__aicore__ inline uint32_t FindCofFactor(uint32_t n)
+{
+    if ((n & (n - 1)) != 0) {
+        uint32_t temp = n - 1;
+        temp |= temp >> SHIFT_BITS_ONE;
+        temp |= temp >> SHIFT_BITS_TWO;
+        temp |= temp >> SHIFT_BITS_FOUR;
+        temp |= temp >> SHIFT_BITS_EIGHT;
+        temp |= temp >> SHIFT_BITS_SIXTEEN;
+        return (temp + 1);
+    } else {
+        return n;
+    }
+}
 
 template <typename T>
 __aicore__ inline void LoadTensorForDtypeT(AscendC::Reg::RegTensor<float>& dst, __ubuf__ T* src,
