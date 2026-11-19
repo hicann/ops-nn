@@ -20,6 +20,7 @@
 #include "op_api/aclnn_util.h"
 #include "ascend_anti_quant_v2.h"
 #include "aclnn_ascend_anti_quant.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -61,10 +62,10 @@ static const std::initializer_list<DataType>& GetXDtypeSupportList()
     }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return X_DTYPE_SUPPORT_LIST_ASCEND910B;
         }
-        case NpuArch::DAV_2002: {
+        case Ops::Base::DAV_2002: {
             return X_DTYPE_SUPPORT_LIST_ASCEND310P;
         }
         default: {
@@ -81,10 +82,10 @@ static const std::initializer_list<DataType>& GetOutDtypeSupportList()
     }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return OUT_DTYPE_SUPPORT_LIST_ASCEND910B;
         }
-        case NpuArch::DAV_2002: {
+        case Ops::Base::DAV_2002: {
             return OUT_DTYPE_SUPPORT_LIST_ASCEND310P;
         }
         default: {
@@ -101,10 +102,10 @@ static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
     }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND910B;
         }
-        case NpuArch::DAV_2002: {
+        case Ops::Base::DAV_2002: {
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_ASCEND310P;
         }
         default: {
@@ -287,7 +288,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
     // x的数据维度不能超过8
     OP_CHECK_MAX_DIM(x, MAX_DIM_LEN, return false);
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202) {
+    if (npuArch != Ops::Base::DAV_3510 && npuArch != Ops::Base::DAV_9201 && npuArch != Ops::Base::DAV_9202) {
         if (scale->GetViewShape().GetDimNum() != 1) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale dim num must be 1. scale:%zu", scale->GetViewShape().GetDimNum());
             return false;

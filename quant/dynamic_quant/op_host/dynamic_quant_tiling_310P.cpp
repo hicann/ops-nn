@@ -12,6 +12,7 @@
  * \brief
  */
 #include "dynamic_quant_tiling_310P.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/math_util.h"
@@ -186,7 +187,7 @@ uint64_t DynamicQuantTiling310P::ComputeTilingKey(const gert::TilingContext* con
         tilingKey += DYNAMIC_QUANT_TILING_KEY_UNALIGN_MODE;
     }
     if (tiling.get_sizeH() > DYNAMIC_QUANT_FP16_LAST_DIM_LIMITATION_310P &&
-        (npuArch == NpuArch::DAV_1001 || npuArch == NpuArch::DAV_2002)) {
+        (npuArch == Ops::Base::DAV_1001 || npuArch == Ops::Base::DAV_2002)) {
         tilingKey += DYNAMIC_QUANT_TILING_KEY_LARGE;
     }
 

@@ -36,6 +36,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -91,11 +92,11 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListByNp
     }
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return INPUT_DTYPE_SUPPORT_LIST;
         }
-        case NpuArch::DAV_1001:
-        case NpuArch::DAV_2002: {
+        case Ops::Base::DAV_1001:
+        case Ops::Base::DAV_2002: {
             return INPUT_DTYPE_SUPPORT_LIST_FP16;
         }
         default: {
@@ -112,11 +113,11 @@ static inline const std::initializer_list<op::DataType>& GetOutputSupportListByN
     }
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return OUTPUT_DTYPE_SUPPORT_LIST;
         }
-        case NpuArch::DAV_1001:
-        case NpuArch::DAV_2002: {
+        case Ops::Base::DAV_1001:
+        case Ops::Base::DAV_2002: {
             return OUTPUT_DTYPE_SUPPORT_LIST_INT8;
         }
         default: {

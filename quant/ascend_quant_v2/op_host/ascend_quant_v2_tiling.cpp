@@ -14,6 +14,7 @@
  */
 
 #include "ascend_quant_v2_tiling.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "ascend_quant_v2_regbase_tiling.h"
 #include "op_host/tiling_util.h"
 
@@ -835,8 +836,8 @@ static ge::graphStatus TilingPrepare4AscendQuantV2(gert::TilingParseContext* con
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
 
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    compileInfo->isAscend910B = ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3003) ||
-                                 (npuArch == NpuArch::DAV_3113));
+    compileInfo->isAscend910B = ((npuArch == Ops::Base::DAV_2201) || (npuArch == Ops::Base::DAV_3003) ||
+                                 (npuArch == Ops::Base::DAV_3113));
 
     return ge::GRAPH_SUCCESS;
 }

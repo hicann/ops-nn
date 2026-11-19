@@ -8,10 +8,10 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-# ascend960dt 复用 arch35 kernel（RegBase / __NPU_ARCH__ == 3510 分支）
+# dav_9201 复用 arch35 kernel（RegBase / __NPU_ARCH__ == 3510 分支）
 add_kernel_sources(
     KERNEL_SRC grouped_dynamic_mx_quant_with_dual_axis.cpp
-    COMPUTE_UNITS ascend950 ascend960dt
+    COMPUTE_UNITS dav_3510 dav_9201
     SIMPLIFIED_KEY None
     AUTO_SYNC false
 )

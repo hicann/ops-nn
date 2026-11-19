@@ -12,6 +12,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class DynamicQuant : public OpDef {
@@ -101,10 +102,9 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "dynamic_quant_apt");
-        this->AICore().AddConfig("ascend950", config950);
-        this->AICore().AddConfig("ascend350", config950);
-        this->AICore().AddConfig("ascend960dt", config950);
-        this->AICore().AddConfig("ascend960pr", config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, config950);
 
         OpAICoreConfig config_310p_910;
         config_310p_910.Input("x")

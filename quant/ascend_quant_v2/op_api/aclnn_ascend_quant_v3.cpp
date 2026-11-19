@@ -20,6 +20,7 @@
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
 #include "aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -73,10 +74,10 @@ static const std::initializer_list<DataType>& GetInDtypeSupportList()
     }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return X_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
-        case NpuArch::DAV_2002:
+        case Ops::Base::DAV_2002:
             return X_DTYPE_SUPPORT_LIST;
         default: {
             const std::vector<const char*> ez3002Key = {"optype", "opskernel", "reason"};
@@ -94,7 +95,7 @@ static const std::initializer_list<DataType>& GetInDtypeSupportList()
 static const std::initializer_list<DataType>& GetOutDtypeSupportList()
 {
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_2002) {
+    if (npuArch == Ops::Base::DAV_2002) {
         return OUT_DTYPE_SUPPORT_LIST_INT8;
     } else if (Ops::NN::AclnnUtil::IsRegbase()) {
         return OUT_DTYPE_SUPPORT_LIST_INT_WITH_FP_QUANT;
@@ -110,10 +111,10 @@ static const std::initializer_list<DataType>& GetScaleOffsetDtypeSupportList()
     }
     NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (npuArch) {
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST_WITH_BF16;
         }
-        case NpuArch::DAV_2002:
+        case Ops::Base::DAV_2002:
             return SCALE_OFFSET_DTYPE_SUPPORT_LIST;
         default: {
             const std::vector<const char*> ez3002Key = {"optype", "opskernel", "reason"};
@@ -345,7 +346,7 @@ static bool CheckRoundMode(const char* roundMode, int32_t dstType)
 static bool CheckAxis(const aclTensor* x, int32_t axis)
 {
     int32_t xDimNum = static_cast<int32_t>(x->GetViewShape().GetDimNum());
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2002) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2002) {
         if (axis != -1 && axis != xDimNum - 1) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnAscendQuantV3", "axis", std::to_string(axis).c_str(),
                                                   "axis only supports the last dimension in 310P");

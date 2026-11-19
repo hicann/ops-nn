@@ -13,6 +13,7 @@
  * @brief QuantMax operator definition: inputs, outputs, attributes, and platform config
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 static const std::vector<ge::DataType> INPUT_X_DATA_TYPE = {ge::DT_FLOAT,   ge::DT_FLOAT,   ge::DT_FLOAT,
@@ -71,8 +72,8 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "quant_max_apt");
-        this->AICore().AddConfig("ascend950", aicoreConfig950);
-        this->AICore().AddConfig("ascend960dt", aicoreConfig950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicoreConfig950);
     }
 };
 OP_ADD(QuantMax);

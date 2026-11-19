@@ -12,6 +12,7 @@
  * \brief
  */
 #include "dynamic_quant_tiling.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "dynamic_quant_tiling_310P.h"
 #include "dynamic_quant_tiling_310P.h"
 #include "dynamic_quant_tiling_arch35.h"
@@ -763,17 +764,17 @@ static ge::graphStatus TilingForDynamicQuant(gert::TilingContext* context)
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     switch (ascendcPlatform.GetCurNpuArch()) {
-        case NpuArch::DAV_2201:
+        case Ops::Base::DAV_2201:
             static thread_local DynamicQuantTiling tiling;
             ret = tiling.RunFusionKernelTiling(context);
             return ret;
-        case NpuArch::DAV_3003:
-        case NpuArch::DAV_3113:
+        case Ops::Base::DAV_3003:
+        case Ops::Base::DAV_3113:
             static thread_local DynamicQuantRegbaseTiling tilingRegbase;
             ret = tilingRegbase.RunFusionKernelTiling(context);
             return ret;
-        case NpuArch::DAV_1001:
-        case NpuArch::DAV_2002:
+        case Ops::Base::DAV_1001:
+        case Ops::Base::DAV_2002:
             static thread_local DynamicQuantTiling310P tiling310P;
             ret = tiling310P.RunFusionKernelTiling(context);
             return ret;

@@ -28,6 +28,7 @@
 #include "op_api/aclnn_util.h"
 #include "quantize.h"
 #include "aclnn_quantize.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -65,32 +66,32 @@ const inline std::map<int64_t, std::initializer_list<op::DataType>>& GetSocSuppo
         op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2};
 
     static const std::map<NpuArch, std::map<int64_t, std::initializer_list<op::DataType>>> socSupportMap = {
-        {NpuArch::DAV_2002,
+        {Ops::Base::DAV_2002,
          {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST},
           {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
           {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST},
           {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-        {NpuArch::DAV_1001,
+        {Ops::Base::DAV_1001,
          {{INDEX_FOR_X, DTYPE_SUPPORT_FLOAT_16_LIST},
           {INDEX_FOR_SCALES, DTYPE_SUPPORT_FLOAT_16_LIST},
           {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_LIST},
           {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-        {NpuArch::DAV_2201,
+        {Ops::Base::DAV_2201,
          {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_BF16_LIST},
           {INDEX_FOR_OUT, DTYPE_SUPPORT_INT_LIST}}},
-        {NpuArch::DAV_3510,
+        {Ops::Base::DAV_3510,
          {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST},
           {INDEX_FOR_OUT, DTYPE_SUPPORT_A5_FOR_OUT_LIST}}},
-        {NpuArch::DAV_9201,
+        {Ops::Base::DAV_9201,
          {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST},
           {INDEX_FOR_OUT, DTYPE_SUPPORT_A5_FOR_OUT_LIST}}},
-        {NpuArch::DAV_9202,
+        {Ops::Base::DAV_9202,
          {{INDEX_FOR_X, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_SCALES, DTYPE_SUPPORT_ALLF_LIST},
           {INDEX_FOR_ZERO_POINTS, DTYPE_SUPPORT_INT_FLOAT_BF16_LIST},
