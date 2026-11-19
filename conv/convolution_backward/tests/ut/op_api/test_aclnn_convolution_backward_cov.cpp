@@ -857,4 +857,91 @@ TEST_F(convolution_backward_cov_test, cov_checker_empty_3d_groups_950)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// cover convolution_backward_checker.cpp CheckDataTypeValidForGradWeight:
+// 950 gradWeight dtype(fp32) != weight dtype(fp16) must return ACLNN_ERR_PARAM_INVALID
+// without host coredump (FormatString must not receive raw DataType enum for %s)
+TEST_F(convolution_backward_cov_test, cov_checker_grad_weight_dtype_mismatch_950)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    auto input_tensor_desc = TensorDesc({1, 4, 8, 8, 8}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto weight_tensor_desc = TensorDesc({8, 2, 3, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto grad_output_tensor_desc = TensorDesc({1, 8, 8, 8, 8}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+
+    auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{8});
+    auto stride_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    auto padding_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+    int groups = 2;
+    auto output_mask = BoolArrayDesc(vector<bool>{false, true, false});
+    auto gradInput = TensorDesc({1, 4, 8, 8, 8}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto gradWeight = TensorDesc({8, 2, 3, 3, 3}, ACL_FLOAT, ACL_FORMAT_NCDHW);
+    auto gradBias = TensorDesc({8}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    int8_t cubeMathType = 2;
+
+    auto ut = OP_API_UT(
+        aclnnConvolutionBackward,
+        INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+              padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+        OUTPUT(gradInput, gradWeight, gradBias));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// cover convolution_backward_checker.cpp CheckDtypeValidFor8bit else branch (gradBias == nullptr):
+// 950 dx path with output_mask=[1,0,0], gradWeight/gradBias passed as nullptr; the 8bit check is
+// reached before the gradOutput format check (5D tensor with NCHW format stops execution there).
+TEST_F(convolution_backward_cov_test, cov_checker_8bit_dx_null_gradbias_950)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    auto gradOutput = TensorDesc({1, 8, 8, 8, 8}, ACL_FLOAT16, ACL_FORMAT_NCHW).ToAclType();
+    auto input = TensorDesc({1, 4, 8, 8, 8}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ToAclType();
+    auto weight = TensorDesc({8, 2, 3, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ToAclType();
+    auto gradInput = TensorDesc({1, 4, 8, 8, 8}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ToAclType();
+    auto biasSizes = IntArrayDesc(vector<int64_t>{8}).ToAclType();
+    auto stride = IntArrayDesc(vector<int64_t>{1, 1, 1}).ToAclType();
+    auto padding = IntArrayDesc(vector<int64_t>{0, 0, 0}).ToAclType();
+    auto dilation = IntArrayDesc(vector<int64_t>{1, 1, 1}).ToAclType();
+    auto outputPadding = IntArrayDesc(vector<int64_t>{0, 0, 0}).ToAclType();
+    auto outputMask = BoolArrayDesc(vector<bool>{true, false, false}).ToAclType();
+
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    aclnnStatus aclRet = aclnnConvolutionBackwardGetWorkspaceSize(
+        gradOutput.get(), input.get(), weight.get(), biasSizes.get(), stride.get(), padding.get(), dilation.get(),
+        false, outputPadding.get(), 2, outputMask.get(), static_cast<int8_t>(2), gradInput.get(), nullptr, nullptr,
+        &workspaceSize, &executor);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// cover convolution_backward_checker.cpp CheckDtypeValidForBpFilter8bit else branch (gradBias == nullptr):
+// 950 dw path with output_mask=[0,1,0], gradInput/gradBias passed as nullptr; the 8bit check is
+// reached before the gradOutput format check (5D tensor with NCHW format stops execution there).
+TEST_F(convolution_backward_cov_test, cov_checker_8bit_dw_null_gradbias_950)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    auto gradOutput = TensorDesc({1, 8, 8, 8, 8}, ACL_FLOAT16, ACL_FORMAT_NCHW).ToAclType();
+    auto input = TensorDesc({1, 4, 8, 8, 8}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ToAclType();
+    auto weight = TensorDesc({8, 2, 3, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ToAclType();
+    auto gradWeight = TensorDesc({8, 2, 3, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCDHW).ToAclType();
+    auto biasSizes = IntArrayDesc(vector<int64_t>{8}).ToAclType();
+    auto stride = IntArrayDesc(vector<int64_t>{1, 1, 1}).ToAclType();
+    auto padding = IntArrayDesc(vector<int64_t>{0, 0, 0}).ToAclType();
+    auto dilation = IntArrayDesc(vector<int64_t>{1, 1, 1}).ToAclType();
+    auto outputPadding = IntArrayDesc(vector<int64_t>{0, 0, 0}).ToAclType();
+    auto outputMask = BoolArrayDesc(vector<bool>{false, true, false}).ToAclType();
+
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor = nullptr;
+    aclnnStatus aclRet = aclnnConvolutionBackwardGetWorkspaceSize(
+        gradOutput.get(), input.get(), weight.get(), biasSizes.get(), stride.get(), padding.get(), dilation.get(),
+        false, outputPadding.get(), 2, outputMask.get(), static_cast<int8_t>(2), nullptr, gradWeight.get(), nullptr,
+        &workspaceSize, &executor);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
 } // namespace

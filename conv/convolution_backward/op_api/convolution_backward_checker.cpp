@@ -301,7 +301,8 @@ bool ConvolutionBackwardChecker::CheckDataTypeValidForGradInput()
     OP_CHECK(outputTensor_.gradInput->GetDataType() == inputTensor_.input->GetDataType(),
              OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                  ACLNN_CONVOLUTION_BACKWARD_NAME, "gradInput, input",
-                 FormatString("%s,%s", outputTensor_.gradInput->GetDataType(), inputTensor_.input->GetDataType()),
+                 FormatString("%s,%s", op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
+                              op::ToString(inputTensor_.input->GetDataType()).GetString()),
                  "the dtypes of [gradInput, input] must be the same"),
              return false);
     return true;
@@ -320,7 +321,8 @@ bool ConvolutionBackwardChecker::CheckDataTypeValidForGradWeight()
     OP_CHECK(outputTensor_.gradWeight->GetDataType() == inputTensor_.weight->GetDataType(),
              OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                  ACLNN_CONVOLUTION_BACKWARD_NAME, "gradWeight, weight",
-                 FormatString("%s,%s", outputTensor_.gradWeight->GetDataType(), inputTensor_.weight->GetDataType()),
+                 FormatString("%s,%s", op::ToString(outputTensor_.gradWeight->GetDataType()).GetString(),
+                              op::ToString(inputTensor_.weight->GetDataType()).GetString()),
                  "the dtypes of [gradWeight, weight] must be the same"),
              return false);
     return true;
@@ -380,9 +382,11 @@ bool ConvolutionBackwardChecker::InterceptConvFor8bit()
             IsConv8bit(outputTensor_.gradWeight->GetDataType())) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradInput, gradWeight",
-                FormatString("%s,%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
-                             inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
-                             outputTensor_.gradInput->GetDataType(), outputTensor_.gradWeight->GetDataType()),
+                FormatString("%s,%s,%s,%s,%s", op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
+                             op::ToString(inputTensor_.input->GetDataType()).GetString(),
+                             op::ToString(inputTensor_.weight->GetDataType()).GetString(),
+                             op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
+                             op::ToString(outputTensor_.gradWeight->GetDataType()).GetString()),
                 "the dtypes of [gradBias, gradOutput] must not be the DT_HIFLOAT8 or DT_FLOAT8_E4M3FN");
             return false;
         }
@@ -415,24 +419,27 @@ bool ConvolutionBackwardChecker::CheckDtypeValidFor8bit(const DataType& dType)
         OP_CHECK(!is8bitFlag || all8bitFlag,
                  OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                      ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradInput, gradBias",
-                     FormatString("%s,%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
-                                  inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
-                                  outputTensor_.gradInput->GetDataType(), outputTensor_.gradBias->GetDataType()),
+                     FormatString("%s,%s,%s,%s,%s", op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
+                                  op::ToString(inputTensor_.input->GetDataType()).GetString(),
+                                  op::ToString(inputTensor_.weight->GetDataType()).GetString(),
+                                  op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
+                                  op::ToString(outputTensor_.gradBias->GetDataType()).GetString()),
                      FormatString("the dtypes of [gradOutput, input, weight, gradInput, gradBias] must be the %s,"
                                   "when any input or output data types is %s",
                                   op::ToString(dType).GetString(), op::ToString(dType).GetString())),
                  return false);
     } else {
-        OP_CHECK(
-            !is8bitFlag || all8bitFlag,
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradInput",
-                FormatString("%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(), inputTensor_.input->GetDataType(),
-                             inputTensor_.weight->GetDataType(), outputTensor_.gradInput->GetDataType()),
-                FormatString("the dtypes of [gradOutput, input, weight, gradInput] must be the %s,"
-                             "when any input or output data types is %s",
-                             op::ToString(dType).GetString(), op::ToString(dType).GetString())),
-            return false);
+        OP_CHECK(!is8bitFlag || all8bitFlag,
+                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                     ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradInput",
+                     FormatString("%s,%s,%s,%s", op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
+                                  op::ToString(inputTensor_.input->GetDataType()).GetString(),
+                                  op::ToString(inputTensor_.weight->GetDataType()).GetString(),
+                                  op::ToString(outputTensor_.gradInput->GetDataType()).GetString()),
+                     FormatString("the dtypes of [gradOutput, input, weight, gradInput] must be the %s,"
+                                  "when any input or output data types is %s",
+                                  op::ToString(dType).GetString(), op::ToString(dType).GetString())),
+                 return false);
     }
     return true;
 }
@@ -455,24 +462,27 @@ bool ConvolutionBackwardChecker::CheckDtypeValidForBpFilter8bit(const DataType& 
         OP_CHECK(!is8bitFlag || all8bitFlag,
                  OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                      ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradWeight, gradBias",
-                     FormatString("%s,%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
-                                  inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
-                                  outputTensor_.gradWeight->GetDataType(), outputTensor_.gradBias->GetDataType()),
+                     FormatString("%s,%s,%s,%s,%s", op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
+                                  op::ToString(inputTensor_.input->GetDataType()).GetString(),
+                                  op::ToString(inputTensor_.weight->GetDataType()).GetString(),
+                                  op::ToString(outputTensor_.gradWeight->GetDataType()).GetString(),
+                                  op::ToString(outputTensor_.gradBias->GetDataType()).GetString()),
                      FormatString("the dtypes of [gradOutput, input, weight, gradWeight, gradBias] must be the %s,"
                                   "when outputMask[1] = true, any input or gradBias data types is %s",
                                   op::ToString(dType).GetString(), op::ToString(dType).GetString())),
                  return false);
     } else {
-        OP_CHECK(
-            !is8bitFlag || all8bitFlag,
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradWeight",
-                FormatString("%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(), inputTensor_.input->GetDataType(),
-                             inputTensor_.weight->GetDataType(), outputTensor_.gradWeight->GetDataType()),
-                FormatString("the dtypes of [gradOutput, input, weight, gradWeight] must be the %s,"
-                             "when one of them dtype is %s",
-                             op::ToString(dType).GetString(), op::ToString(dType).GetString())),
-            return false);
+        OP_CHECK(!is8bitFlag || all8bitFlag,
+                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                     ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradWeight",
+                     FormatString("%s,%s,%s,%s", op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
+                                  op::ToString(inputTensor_.input->GetDataType()).GetString(),
+                                  op::ToString(inputTensor_.weight->GetDataType()).GetString(),
+                                  op::ToString(outputTensor_.gradWeight->GetDataType()).GetString()),
+                     FormatString("the dtypes of [gradOutput, input, weight, gradWeight] must be the %s,"
+                                  "when one of them dtype is %s",
+                                  op::ToString(dType).GetString(), op::ToString(dType).GetString())),
+                 return false);
     }
 
     bool isGradOutputFp8 = inputTensor_.gradOutput->GetDataType() == DataType::DT_FLOAT8_E4M3FN;
@@ -485,14 +495,19 @@ bool ConvolutionBackwardChecker::CheckDtypeValidForBpFilter8bit(const DataType& 
     }
 
     bool isFp8Flag = isGradOutputFp8 || isInputFp8 || isWeightFp8 || isGradWeightFp8 || isGradBiasFp8;
-    OP_CHECK(!isFp8Flag,
-             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                 ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradWeight, gradBias",
-                 FormatString("%s,%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
-                              inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
-                              outputTensor_.gradWeight->GetDataType(), outputTensor_.gradBias->GetDataType()),
-                 "the dtypes of [gradOutput, input, weight, gradWeight, gradBias] must not be DT_FLOAT8_E4M3FN"),
-             return false);
+    std::string gradBiasDtypeStr = outputTensor_.gradBias != nullptr ?
+                                       op::ToString(outputTensor_.gradBias->GetDataType()).GetString() :
+                                       "nullptr";
+    OP_CHECK(
+        !isFp8Flag,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input, weight, gradWeight, gradBias",
+            FormatString("%s,%s,%s,%s,%s", op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
+                         op::ToString(inputTensor_.input->GetDataType()).GetString(),
+                         op::ToString(inputTensor_.weight->GetDataType()).GetString(),
+                         op::ToString(outputTensor_.gradWeight->GetDataType()).GetString(), gradBiasDtypeStr.c_str()),
+            "the dtypes of [gradOutput, input, weight, gradWeight, gradBias] must not be DT_FLOAT8_E4M3FN"),
+        return false);
     return true;
 }
 
@@ -1129,11 +1144,12 @@ bool ConvolutionBackwardChecker::CheckShapeTransposed()
              OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, "weightCo", std::to_string(weightCo).c_str(),
                                           "greater than 0"),
              return false);
-    OP_CHECK(weightCo == inputC,
-             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                 ACLNN_CONVOLUTION_BACKWARD_NAME, "inputC, weightCo",
-                 (std::to_string(inputC) + "," + std::to_string(weightCo)).c_str(), "inputC"),
-             return false);
+    OP_CHECK(
+        weightCo == inputC,
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "inputC, weightCo",
+                                                  (std::to_string(inputC) + "," + std::to_string(weightCo)).c_str(),
+                                                  "the value of weightCo must be equal to inputC"),
+        return false);
     return true;
 }
 
