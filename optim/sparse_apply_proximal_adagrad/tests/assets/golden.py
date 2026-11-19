@@ -39,9 +39,8 @@ def sparse_apply_proximal_adagrad_input(
     M = indices.shape[0]
 
     accum = np.where(np.isfinite(accum) & (accum > 0), accum, accum.dtype.type(2.0))
-    var = np.where(np.isfinite(var), var, var.dtype.type(0.0))
-    grad = np.where(np.isfinite(grad), grad, grad.dtype.type(0.0))
-    lr = np.maximum(lr, lr.dtype.type(1e-6))
+    finite_lr = np.where(np.isfinite(lr), lr, lr.dtype.type(0))
+    lr = np.maximum(lr, np.where(finite_lr > 0, lr, lr.dtype.type(1e-6)))
     l1 = np.maximum(l1, l1.dtype.type(0.0))
     l2 = np.maximum(l2, l2.dtype.type(0.0))
 
@@ -49,7 +48,9 @@ def sparse_apply_proximal_adagrad_input(
         valid_mask = (indices >= 0) & (indices < N)
         valid_count = int(np.sum(valid_mask))
 
-        if valid_count > 0 and valid_count <= N:
+        if 0 < valid_count <= N and (
+            valid_count != indices.size or np.unique(indices).size != valid_count
+        ):
             unique_valid = np.random.choice(N, size=valid_count, replace=False).astype(
                 indices.dtype
             )
@@ -95,6 +96,30 @@ def sparse_apply_proximal_adagrad_golden(
 
     orig_dtype = var.dtype
 
+    # Check raw metadata before casts or index filtering can hide an invalid input.
+    data_inputs = (var, accum, lr, l1, l2, grad)
+    valid_empty_inner = (
+        all(isinstance(tensor, np.ndarray) for tensor in (*data_inputs, indices))
+        and (use_locking is None or isinstance(use_locking, bool))
+        and var.ndim > 1
+        and 0 in var.shape[1:]
+        and accum.shape == var.shape
+        and indices.ndim == 1
+        and indices.size > 0
+        and indices.dtype in (np.dtype("int32"), np.dtype("int64"))
+        and grad.shape == (indices.shape[0], *var.shape[1:])
+        and all(tensor.dtype == orig_dtype for tensor in data_inputs)
+        and (
+            orig_dtype.name in ("float16", "bfloat16", "float32")
+            or (kwargs.get("golden_mode") == "Promote" and orig_dtype == np.float64)
+        )
+        and all(scalar.shape in ((), (1,)) for scalar in (lr, l1, l2))
+        and lr.item() > 0
+        and l1.item() >= 0
+        and l2.item() >= 0
+        and np.unique(indices).size == indices.size
+    )
+
     is_fp16 = str(orig_dtype) == "float16" or (
         hasattr(orig_dtype, "name") and orig_dtype.name == "float16"
     )
@@ -139,6 +164,10 @@ def sparse_apply_proximal_adagrad_golden(
             out_var = out_var.astype(orig_dtype, copy=False)
             out_accum = out_accum.astype(orig_dtype, copy=False)
         return out_var, out_accum
+
+    # TensorFlow CPU rejects zero inner dimensions supported by this operator.
+    if valid_empty_inner:
+        return var.copy(), accum.copy()
 
     v_var = tf.Variable(var_c, name="var")
     v_accum = tf.Variable(accum_c, name="accum")

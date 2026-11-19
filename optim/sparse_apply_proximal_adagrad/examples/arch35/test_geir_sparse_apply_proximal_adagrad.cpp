@@ -315,7 +315,6 @@ int main(int argc, char* argv[])
 
     ge::AscendString error_msg = ge::GEGetErrorMsgV2();
     std::cout << "Error message: " << std::string(error_msg.GetString()) << std::endl;
-    printf("%s - INFO - [XIR]: Precision is ok\n", GetTime().c_str());
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());

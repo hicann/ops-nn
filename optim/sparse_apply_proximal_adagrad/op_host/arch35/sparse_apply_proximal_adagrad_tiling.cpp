@@ -122,6 +122,72 @@ static ge::graphStatus ValidateGradShape(const gert::TilingContext* context, con
     return ge::GRAPH_SUCCESS;
 }
 
+// Origin shapes express the logical contract; storage shapes still determine execution sizes.
+static bool HasKnownRank(const gert::Shape& shape) { return shape.GetDimNum() != 1 || shape.GetDim(0) != -2; }
+
+static bool LogicalShapesCompatible(const gert::Shape& lhs, const gert::Shape& rhs, size_t firstDim)
+{
+    if (!HasKnownRank(lhs) || !HasKnownRank(rhs)) {
+        return true;
+    }
+    if (lhs.GetDimNum() != rhs.GetDimNum()) {
+        return false;
+    }
+    for (size_t i = firstDim; i < lhs.GetDimNum(); ++i) {
+        if (lhs.GetDim(i) >= 0 && rhs.GetDim(i) >= 0 && lhs.GetDim(i) != rhs.GetDim(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static ge::graphStatus ValidateLogicalShapes(const gert::TilingContext* context)
+{
+    const auto& var = context->GetInputShape(kVarIdx)->GetOriginShape();
+    const auto& accum = context->GetInputShape(kAccumIdx)->GetOriginShape();
+    const auto& grad = context->GetInputShape(kGradIdx)->GetOriginShape();
+    const auto& indices = context->GetInputShape(kIndicesIdx)->GetOriginShape();
+    OP_CHECK_IF(var.IsScalar() || accum.IsScalar() || grad.IsScalar(),
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var, accum and grad origin rank", "0", ">=1"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(HasKnownRank(indices) && indices.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices origin rank",
+                                             std::to_string(indices.GetDimNum()).c_str(), "1"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!LogicalShapesCompatible(var, accum, 0),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "accum and var origin",
+                    (Ops::Base::ToString(accum) + " and " + Ops::Base::ToString(var)).c_str(),
+                    "state tensor logical shape must match var logical shape"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !LogicalShapesCompatible(var, grad, 1),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "grad and var origin",
+                                               (Ops::Base::ToString(grad) + " and " + Ops::Base::ToString(var)).c_str(),
+                                               "grad logical rank and trailing dimensions must match var"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        HasKnownRank(grad) && HasKnownRank(indices) && grad.GetDim(0) >= 0 && indices.GetDim(0) >= 0 &&
+            grad.GetDim(0) != indices.GetDim(0),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "grad origin dim[0]",
+                                     std::to_string(grad.GetDim(0)).c_str(), std::to_string(indices.GetDim(0)).c_str()),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateStorageFormats(const gert::TilingContext* context)
+{
+    const char* inputNames[] = {"var", "accum", "lr", "l1", "l2", "grad", "indices"};
+    for (int64_t idx = kVarIdx; idx <= kIndicesIdx; ++idx) {
+        auto format = context->GetInputDesc(idx)->GetStorageFormat();
+        OP_CHECK_IF(format != ge::FORMAT_ND,
+                    OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), inputNames[idx],
+                                               Ops::Base::ToString(format).c_str(), "ND"),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus ValidateDtypes(const gert::TilingContext* context)
 {
     auto indicesDesc = context->GetInputDesc(kIndicesIdx);
@@ -160,7 +226,7 @@ static ge::graphStatus ValidateScalarInputs(const gert::TilingContext* context)
         OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
         auto scalarStorage = scalarShape->GetStorageShape();
         OP_CHECK_IF(
-            !scalarStorage.IsScalar() && scalarStorage.GetShapeSize() != 1,
+            !scalarStorage.IsScalar() && (scalarStorage.GetDimNum() != 1 || scalarStorage.GetDim(0) != 1),
             OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "scalar input",
                                       std::to_string(scalarStorage.GetShapeSize()).c_str(), "1 (shape [] or [1])"),
             return ge::GRAPH_FAILED);
@@ -186,6 +252,11 @@ static ge::graphStatus ValidateInputs(const gert::TilingContext* context, int64_
     OP_CHECK_IF(ValidateDtypes(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateDtypes failed"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(ValidateScalarInputs(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateScalarInputs failed"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(ValidateLogicalShapes(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateLogicalShapes failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateStorageFormats(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateStorageFormats failed"),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

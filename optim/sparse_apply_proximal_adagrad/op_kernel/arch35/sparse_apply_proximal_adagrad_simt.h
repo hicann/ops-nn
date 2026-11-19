@@ -88,6 +88,20 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void SparseApplyProx
         float fAccum = detail::ToComputeFloat(accum[rowOffset]);
         float fGrad = detail::ToComputeFloat(grad[gradOffset]);
 
+        if constexpr (std::is_same_v<T, float>) {
+            constexpr uint32_t FP32_ABS_MASK = 0x7fffffffU;
+            constexpr uint32_t FP32_INF_BITS = 0x7f800000U;
+            const uint32_t updateBits = __float_as_uint(fGrad) | __float_as_uint(fL1) | __float_as_uint(fL2);
+            const uint32_t lrBits = __float_as_uint(fLr);
+            const uint32_t accumBits = __float_as_uint(fAccum);
+            const uint32_t varMagnitudeBits = __float_as_uint(fVar) & FP32_ABS_MASK;
+            // An exact zero update leaves both in-place buffers intact, including subnormal accum.
+            if ((updateBits & FP32_ABS_MASK) == 0U && lrBits > 0U && lrBits < FP32_INF_BITS && accumBits > 0U &&
+                accumBits < FP32_INF_BITS && varMagnitudeBits < FP32_INF_BITS) {
+                continue;
+            }
+        }
+
         float fNewAccum = fAccum + fGrad * fGrad;
         float fLr1 = fLr / sqrtf(fNewAccum);
         float fProxVar = fVar - fGrad * fLr1;
@@ -96,7 +110,8 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void SparseApplyProx
         float fNewVar;
         if (fL1 > 0.0f) {
             float fAbsProx = fabsf(fProxVar);
-            float fClamped = fmaxf(fAbsProx - fLr1 * fL1, 0.0f);
+            const float fThreshold = fAbsProx - fLr1 * fL1;
+            float fClamped = isnan(fThreshold) ? fThreshold : fmaxf(fThreshold, 0.0f);
             float fSign = (fProxVar > 0.0f) ? 1.0f : ((fProxVar < 0.0f) ? -1.0f : 0.0f);
             fNewVar = fSign * fClamped * fLr2;
         } else {

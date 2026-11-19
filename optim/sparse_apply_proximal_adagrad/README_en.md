@@ -19,13 +19,13 @@ English | [简体中文](./README.md)
 
 - **Formula**:
 
-For each index `i` in `indices`:
+For each position `j` in `indices`, use gradient row `grad[j]` to update row `i = indices[j]` in `var` and `accum`.
 
 $$
 \begin{aligned}
-\text{accum}_{\text{new}}[i] &= \text{accum}_{\text{old}}[i] + \text{grad}[i]^2 \\
+\text{accum}_{\text{new}}[i] &= \text{accum}_{\text{old}}[i] + \text{grad}[j]^2 \\
 \text{lr}_1 &= \frac{\text{lr}}{\sqrt{\text{accum}_{\text{new}}[i]}} \\
-\text{prox\_var} &= \text{var}_{\text{old}}[i] - \text{grad}[i] \times \text{lr}_1 \\
+\text{prox\_var} &= \text{var}_{\text{old}}[i] - \text{grad}[j] \times \text{lr}_1 \\
 \text{lr}_2 &= \frac{1}{1 + \text{l}_2 \times \text{lr}_1}
 \end{aligned}
 $$
@@ -142,6 +142,7 @@ $$
 - The dtypes of all data inputs (var/accum/lr/l1/l2/grad) must be exactly the same.
 - fp16/bf16 are computed internally in fp32 and cast back to the original type.
 - The initial value of accum must be greater than 0 (the denominator does not contain epsilon).
+- When all other input constraints hold and a trailing dimension of var/accum is 0, no update is performed; each output retains its corresponding input's shape and dtype.
 
 ## Invocation Description
 

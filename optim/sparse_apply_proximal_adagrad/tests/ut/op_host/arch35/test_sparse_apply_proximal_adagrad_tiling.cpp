@@ -17,7 +17,7 @@
  * Schema:
  *   Inputs  (7): var, accum, lr, l1, l2, grad, indices
  *     - var / accum: dtype in {FP32, FP16, BF16}, shape [N, D...]
- *     - lr / l1 / l2: scalar tensors (shape == {1})
+ *     - lr / l1 / l2: scalar tensors (shape == {} or {1})
  *     - grad: shape [M, D...]
  *     - indices: dtype in {INT32, INT64}, shape [M]
  *   Outputs (2): var, accum
@@ -33,6 +33,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <iostream>
 #include <map>
 #include <string>
@@ -93,7 +94,12 @@ struct SparseApplyProximalAdagradTilingArgs {
     ge::Format inputFormat;
 };
 
-static SparseApplyProximalAdagradTilingResult DoTilingCase(const SparseApplyProximalAdagradTilingArgs& args)
+static SparseApplyProximalAdagradTilingResult DoTilingCase(
+    const SparseApplyProximalAdagradTilingArgs& args,
+    std::array<gert::StorageShape, 3> scalarShapes = {gert::StorageShape{{1}, {1}}, gert::StorageShape{{1}, {1}},
+                                                      gert::StorageShape{{1}, {1}}},
+    const std::vector<gert::StorageShape>& tensors = {}, int formatSlot = -1, ge::Format originFormat = ge::FORMAT_ND,
+    ge::Format storageFormat = ge::FORMAT_ND)
 {
     SparseApplyProximalAdagradTilingResult result{ge::GRAPH_FAILED, 0, 0, 0, 0, 0};
 
@@ -120,33 +126,37 @@ static SparseApplyProximalAdagradTilingResult DoTilingCase(const SparseApplyProx
         return result;
     }
 
-    std::initializer_list<int64_t> scalarShape = {1};
     gert::StorageShape varStorage = {args.varShape, args.varShape};
     gert::StorageShape accumStorage = {args.varShape, args.varShape};
-    gert::StorageShape lrStorage = {scalarShape, scalarShape};
-    gert::StorageShape l1Storage = {scalarShape, scalarShape};
-    gert::StorageShape l2Storage = {scalarShape, scalarShape};
     gert::StorageShape gradStorage = {args.gradShape, args.gradShape};
     gert::StorageShape indicesStorage = {args.indicesShape, args.indicesShape};
 
+    if (!tensors.empty()) {
+        varStorage = tensors[0];
+        accumStorage = tensors[1];
+        gradStorage = tensors[2];
+        indicesStorage = tensors[3];
+    }
+    const auto origin = [&](int slot) { return slot == formatSlot ? originFormat : args.inputFormat; };
+    const auto storage = [&](int slot) { return slot == formatSlot ? storageFormat : args.inputFormat; };
     SparseApplyProximalAdagradUtCompileInfo compileInfo;
 
     auto holder = gert::TilingContextFaker()
                       .SetOpType(opType)
                       .NodeIoNum(7, 2)
                       .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .InputShapes({&varStorage, &accumStorage, &lrStorage, &l1Storage, &l2Storage, &gradStorage,
-                                    &indicesStorage})
+                      .InputShapes({&varStorage, &accumStorage, &scalarShapes[0], &scalarShapes[1], &scalarShapes[2],
+                                    &gradStorage, &indicesStorage})
                       .OutputShapes({&varStorage, &accumStorage})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
-                      .NodeInputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat)  // var
-                      .NodeInputTd(1, args.tensorDtype, args.inputFormat, args.inputFormat)  // accum
-                      .NodeInputTd(2, args.tensorDtype, args.inputFormat, args.inputFormat)  // lr
-                      .NodeInputTd(3, args.tensorDtype, args.inputFormat, args.inputFormat)  // l1
-                      .NodeInputTd(4, args.tensorDtype, args.inputFormat, args.inputFormat)  // l2
-                      .NodeInputTd(5, args.tensorDtype, args.inputFormat, args.inputFormat)  // grad
-                      .NodeInputTd(6, args.indicesDtype, args.inputFormat, args.inputFormat) // indices
+                      .NodeInputTd(0, args.tensorDtype, origin(0), storage(0))               // var
+                      .NodeInputTd(1, args.tensorDtype, origin(1), storage(1))               // accum
+                      .NodeInputTd(2, args.tensorDtype, origin(2), storage(2))               // lr
+                      .NodeInputTd(3, args.tensorDtype, origin(3), storage(3))               // l1
+                      .NodeInputTd(4, args.tensorDtype, origin(4), storage(4))               // l2
+                      .NodeInputTd(5, args.tensorDtype, origin(5), storage(5))               // grad
+                      .NodeInputTd(6, args.indicesDtype, origin(6), storage(6))              // indices
                       .NodeOutputTd(0, args.tensorDtype, args.inputFormat, args.inputFormat) // var
                       .NodeOutputTd(1, args.tensorDtype, args.inputFormat, args.inputFormat) // accum
                       .TilingData(param.get())
@@ -252,4 +262,109 @@ TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_large
     EXPECT_EQ(result.rowSize, 1024);
     EXPECT_EQ(result.varFirstDim, 4096);
     EXPECT_GT(result.needCoreNum, 1);
+}
+
+TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_scalar_input_shapes)
+{
+    const SparseApplyProximalAdagradTilingArgs args{/*var=*/{4, 8}, /*grad=*/{2, 8}, /*indices=*/{2},
+                                                    ge::DT_FLOAT,   ge::DT_INT32,    ge::FORMAT_ND};
+    const std::array<const char*, 3> scalarNames = {"lr", "l1", "l2"};
+    const gert::StorageShape singleton{{1}, {1}};
+    const struct {
+        const char* description;
+        gert::StorageShape shape;
+        ge::graphStatus expected;
+    } cases[] = {
+        {"rank zero", {{}, {}}, ge::GRAPH_SUCCESS},
+        {"rank one with length one", singleton, ge::GRAPH_SUCCESS},
+        {"rank one with length zero", {{0}, {0}}, ge::GRAPH_FAILED},
+        {"rank one with length two", {{2}, {2}}, ge::GRAPH_FAILED},
+        {"rank two with one element", {{1, 1}, {1, 1}}, ge::GRAPH_FAILED},
+        {"rank nine with one element", {{1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}}, ge::GRAPH_FAILED},
+        {"rank two origin with valid storage", {{1, 1}, {1}}, ge::GRAPH_SUCCESS},
+        {"valid origin with rank two storage", {{1}, {1, 1}}, ge::GRAPH_FAILED},
+    };
+    for (size_t slot = 0; slot < scalarNames.size(); ++slot) {
+        SCOPED_TRACE(scalarNames[slot]);
+        for (const auto& scenario : cases) {
+            SCOPED_TRACE(scenario.description);
+            std::array<gert::StorageShape, 3> scalarShapes = {singleton, singleton, singleton};
+            scalarShapes[slot] = scenario.shape;
+            EXPECT_EQ(DoTilingCase(args, scalarShapes).status, scenario.expected);
+        }
+    }
+}
+
+TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_logical_shapes)
+{
+    const SparseApplyProximalAdagradTilingArgs args{{1}, {1}, {1}, ge::DT_FLOAT, ge::DT_INT32, ge::FORMAT_ND};
+    const gert::StorageShape singleton{{1}, {1}};
+    const std::array<gert::StorageShape, 3> scalars = {singleton, singleton, singleton};
+    const std::array<const char*, 4> names = {"var", "accum", "grad", "indices"};
+    for (size_t slot = 0; slot < names.size(); ++slot) {
+        SCOPED_TRACE(names[slot]);
+        std::vector<gert::StorageShape> tensors(4, singleton);
+        tensors[slot] = gert::StorageShape{{}, {1}};
+        EXPECT_EQ(DoTilingCase(args, scalars, tensors).status, ge::GRAPH_FAILED);
+        for (int64_t unknown : {-1, -2}) {
+            tensors[slot] = gert::StorageShape{{unknown}, {1}};
+            const auto result = DoTilingCase(args, scalars, tensors);
+            EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+            EXPECT_EQ(result.varFirstDim, 1);
+            EXPECT_EQ(result.totalIndices, 1);
+            EXPECT_EQ(result.rowSize, 1);
+        }
+    }
+    const struct {
+        size_t slot;
+        gert::StorageShape shape;
+    } mismatches[] = {
+        {1, {{2}, {1}}},    {2, {{2}, {1}}},    {3, {{1, 1}, {1}}}, {0, {{1, 1}, {1}}},
+        {1, {{1, 1}, {1}}}, {2, {{1, 1}, {1}}}, {3, {{2}, {1}}},
+    };
+    for (const auto& scenario : mismatches) {
+        SCOPED_TRACE(scenario.slot);
+        std::vector<gert::StorageShape> tensors(4, singleton);
+        tensors[scenario.slot] = scenario.shape;
+        EXPECT_EQ(DoTilingCase(args, scalars, tensors).status, ge::GRAPH_FAILED);
+    }
+}
+
+TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_logical_trailing_dimensions)
+{
+    const SparseApplyProximalAdagradTilingArgs args{{4, 8}, {2, 8}, {2}, ge::DT_FLOAT, ge::DT_INT32, ge::FORMAT_ND};
+    const gert::StorageShape scalar{{}, {1}};
+    const std::array<gert::StorageShape, 3> scalars = {scalar, scalar, scalar};
+    std::vector<gert::StorageShape> tensors = {{{4, 8}, {4, 8}}, {{4, 8}, {4, 8}}, {{2, 8}, {2, 8}}, {{2}, {2}}};
+    EXPECT_EQ(DoTilingCase(args, scalars, tensors).status, ge::GRAPH_SUCCESS);
+    tensors[1] = gert::StorageShape{{4, 7}, {4, 8}};
+    EXPECT_EQ(DoTilingCase(args, scalars, tensors).status, ge::GRAPH_FAILED);
+    tensors[1] = gert::StorageShape{{4, -1}, {4, 8}};
+    EXPECT_EQ(DoTilingCase(args, scalars, tensors).status, ge::GRAPH_SUCCESS);
+    tensors[2] = gert::StorageShape{{2, 7}, {2, 8}};
+    EXPECT_EQ(DoTilingCase(args, scalars, tensors).status, ge::GRAPH_FAILED);
+    tensors[2] = gert::StorageShape{{-1, -1}, {2, 8}};
+    auto result = DoTilingCase(args, scalars, tensors);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.varFirstDim, 4);
+    EXPECT_EQ(result.totalIndices, 2);
+    EXPECT_EQ(result.rowSize, 8);
+    // Unknown logical dimensions do not weaken the existing storage checks.
+    tensors[2] = gert::StorageShape{{-1, -1}, {2, 7}};
+    EXPECT_EQ(DoTilingCase(args, scalars, tensors).status, ge::GRAPH_FAILED);
+}
+
+TEST_F(TestSparseApplyProximalAdagradTiling, sparse_apply_proximal_adagrad_storage_formats)
+{
+    const SparseApplyProximalAdagradTilingArgs args{{1}, {1}, {1}, ge::DT_FLOAT, ge::DT_INT32, ge::FORMAT_ND};
+    const gert::StorageShape scalar{{}, {1}};
+    const std::array<gert::StorageShape, 3> scalars = {scalar, scalar, scalar};
+    for (int slot = 0; slot < 7; ++slot) {
+        SCOPED_TRACE(slot);
+        EXPECT_EQ(DoTilingCase(args, scalars, {}, slot, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_FRACTAL_NZ).status,
+                  ge::GRAPH_FAILED);
+        EXPECT_EQ(DoTilingCase(args, scalars, {}, slot, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ).status, ge::GRAPH_FAILED);
+        EXPECT_EQ(DoTilingCase(args, scalars, {}, slot, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND).status,
+                  ge::GRAPH_SUCCESS);
+    }
 }

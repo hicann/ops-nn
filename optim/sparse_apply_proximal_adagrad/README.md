@@ -17,13 +17,13 @@
 
 - **计算公式**：
 
-对`indices`中每个索引`i`：
+对 `indices` 中的每个位置 `j`，使用梯度行 `grad[j]` 更新 `var` 和 `accum` 的目标行 `i`，其中 `i = indices[j]`。
 
 $$
 \begin{aligned}
-\text{accum}_{\text{new}}[i] &= \text{accum}_{\text{old}}[i] + \text{grad}[i]^2 \\
+\text{accum}_{\text{new}}[i] &= \text{accum}_{\text{old}}[i] + \text{grad}[j]^2 \\
 \text{lr}_1 &= \frac{\text{lr}}{\sqrt{\text{accum}_{\text{new}}[i]}} \\
-\text{prox\_var} &= \text{var}_{\text{old}}[i] - \text{grad}[i] \times \text{lr}_1 \\
+\text{prox\_var} &= \text{var}_{\text{old}}[i] - \text{grad}[j] \times \text{lr}_1 \\
 \text{lr}_2 &= \frac{1}{1 + \text{l}_2 \times \text{lr}_1}
 \end{aligned}
 $$
@@ -140,6 +140,7 @@ $$
 - 所有数据输入（var/accum/lr/l1/l2/grad）dtype必须完全一致。
 - fp16/bf16内部以fp32计算后cast回原类型。
 - accum初始值必须大于0（分母不含epsilon）。
+- 在满足其余输入约束时，若var/accum的尾维中含0，则不进行更新，两个输出分别保持对应输入的shape和dtype。
 
 ## 调用说明
 
