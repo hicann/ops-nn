@@ -14,8 +14,9 @@
 //     -I$ASCEND_HOME_PATH/include -L$ASCEND_HOME_PATH/lib64 \
 //     -I$ASCEND_HOME_PATH/opp/built-in/op_graph/inc \
 //     -lgraph -lgraph_base -lge_runner -lascendcl
-// Run on device 0: ./test_geir_batch_norm_grad_v3 [--infer]
-// Training checks all three outputs. Inference checks only the defined dx output.
+// Run on device 0: ./test_geir_batch_norm_grad_v3 [--infer | --empty-infer]
+// Training checks all three gradients. Nonempty inference checks dx.
+// Empty inference checks that GE infers all three output shapes as empty.
 
 #include <cmath>
 #include <cstring>
@@ -32,6 +33,7 @@
 namespace {
 constexpr float EPSILON = 1e-5f;
 constexpr float TOLERANCE = 1e-4f;
+const std::vector<int64_t> EMPTY_INPUT_SHAPE = {0, 3, 2, 2};
 
 bool CheckOutput(const ge::Tensor& output, const std::vector<float>& expected, const char* name)
 {
@@ -52,14 +54,29 @@ bool CheckOutput(const ge::Tensor& output, const std::vector<float>& expected, c
     return true;
 }
 
-bool BuildGraph(bool training, ge::Graph& graph, std::vector<ge::Tensor>& inputs)
+bool CheckEmptyOutput(const ge::Tensor& output, const std::vector<int64_t>& shape, const char* name)
+{
+    const auto desc = output.GetTensorDesc();
+    if (desc.GetDataType() != ge::DT_FLOAT || desc.GetShape().GetDims() != shape || output.GetSize() != 0) {
+        std::cerr << name << ": unexpected empty output shape, dtype, or size\n";
+        return false;
+    }
+    std::cout << "PASS empty " << name << '\n';
+    return true;
+}
+
+bool BuildGraph(bool training, bool emptyInference, ge::Graph& graph, std::vector<ge::Tensor>& inputs)
 {
     // Use the supplied mean=0, inverse standard deviation=1 to make the training
     // reference hand-checkable. These are inputs, not recomputed from x.
-    const std::vector<std::vector<float>> values = {
-        {0, 1, 2, 3, 4, 5, 6, 7}, {0, 1, 2, 3, 4, 5, 6, 7}, {1, 1}, {0, 0}, {1, 1}, {0, 0}, {1, 1}};
-    const std::vector<int64_t> xShape = {1, 2, 2, 2};
-    const std::vector<int64_t> channelShape = {2};
+    const auto xShape = emptyInference ? EMPTY_INPUT_SHAPE : std::vector<int64_t>{1, 2, 2, 2};
+    const std::vector<int64_t> channelShape = {xShape[1]};
+    const auto channels = static_cast<size_t>(xShape[1]);
+    const auto dataValues = emptyInference ? std::vector<float>{} : std::vector<float>{0, 1, 2, 3, 4, 5, 6, 7};
+    const std::vector<float> ones(channels, 1.0f);
+    const std::vector<float> zeros(channels, 0.0f);
+    const std::vector<std::vector<float>> values = {dataValues, dataValues, ones, zeros, ones, zeros, ones};
+    const float emptyData = 0.0f;
     const std::vector<const char*> names = {"dy",          "x",         "weight",   "running_mean",
                                             "running_var", "save_mean", "save_rstd"};
     ge::op::BatchNormGradV3 op("batch_norm_grad_v3");
@@ -78,12 +95,17 @@ bool BuildGraph(bool training, ge::Graph& graph, std::vector<ge::Tensor>& inputs
             return false;
         }
         op.SetInput(names[i], data);
-        inputs.emplace_back(desc, reinterpret_cast<const uint8_t*>(values[i].data()), values[i].size() * sizeof(float));
+        const auto* inputData = values[i].empty() ? &emptyData : values[i].data();
+        inputs.emplace_back(desc, reinterpret_cast<const uint8_t*>(inputData), values[i].size() * sizeof(float));
         dataOps.push_back(data);
     }
-    op.set_attr_is_training(training).set_attr_epsilon(EPSILON).set_attr_output_mask({true, training, training});
-    const ge::TensorDesc dxDesc(ge::Shape(xShape), ge::FORMAT_NCHW, ge::DT_FLOAT);
-    const ge::TensorDesc paramDesc(ge::Shape(channelShape), ge::FORMAT_ND, ge::DT_FLOAT);
+    const bool allOutputs = training || emptyInference;
+    op.set_attr_is_training(training).set_attr_epsilon(EPSILON).set_attr_output_mask({true, allOutputs, allOutputs});
+    // Let InferShape determine the output shapes for the empty graph.
+    const auto dxShape = emptyInference ? std::vector<int64_t>(xShape.size(), -1) : xShape;
+    const auto paramShape = emptyInference ? std::vector<int64_t>{-1} : channelShape;
+    const ge::TensorDesc dxDesc(ge::Shape(dxShape), ge::FORMAT_NCHW, ge::DT_FLOAT);
+    const ge::TensorDesc paramDesc(ge::Shape(paramShape), ge::FORMAT_ND, ge::DT_FLOAT);
     if (op.update_output_desc_dx(dxDesc) != ge::GRAPH_SUCCESS ||
         op.update_output_desc_dweight(paramDesc) != ge::GRAPH_SUCCESS ||
         op.update_output_desc_dbias(paramDesc) != ge::GRAPH_SUCCESS || graph.AddOp(op) != ge::GRAPH_SUCCESS) {
@@ -91,17 +113,16 @@ bool BuildGraph(bool training, ge::Graph& graph, std::vector<ge::Tensor>& inputs
         return false;
     }
     graph.SetInputs(dataOps);
-    // Only request dx in inference: the two auxiliary IR outputs are undefined.
     graph.SetOutputs(std::vector<std::pair<ge::Operator, std::vector<size_t>>>{
-        {op, training ? std::vector<size_t>{0, 1, 2} : std::vector<size_t>{0}}});
+        {op, allOutputs ? std::vector<size_t>{0, 1, 2} : std::vector<size_t>{0}}});
     return true;
 }
 
-bool RunExample(bool training)
+bool RunExample(bool training, bool emptyInference)
 {
     ge::Graph graph("batch_norm_grad_v3_example");
     std::vector<ge::Tensor> inputs;
-    if (!BuildGraph(training, graph, inputs)) {
+    if (!BuildGraph(training, emptyInference, graph, inputs)) {
         return false;
     }
     const std::map<ge::AscendString, ge::AscendString> options;
@@ -113,9 +134,16 @@ bool RunExample(bool training)
     }
     std::vector<ge::Tensor> outputs;
     status = session.RunGraph(0, inputs, outputs);
-    if (status != ge::SUCCESS || outputs.size() != (training ? 3U : 1U)) {
+    const size_t expectedOutputCount = (training || emptyInference) ? 3U : 1U;
+    if (status != ge::SUCCESS || outputs.size() != expectedOutputCount) {
         std::cerr << "RunGraph failed or returned an unexpected output count: " << status << '\n';
         return false;
+    }
+    if (emptyInference) {
+        const bool dxOk = CheckEmptyOutput(outputs[0], EMPTY_INPUT_SHAPE, "dx");
+        const bool weightOk = CheckEmptyOutput(outputs[1], {0}, "dweight");
+        const bool biasOk = CheckEmptyOutput(outputs[2], {0}, "dbias");
+        return dxOk && weightOk && biasOk;
     }
     // For each channel: dbias=sum(dy), dweight=sum(dy*x),
     // dx=dy-(dbias+x*dweight)/4 when weight=invstd=1 and save_mean=0.
@@ -138,11 +166,13 @@ bool RunExample(bool training)
 
 int main(int argc, char* argv[])
 {
-    if (argc > 2 || (argc == 2 && std::string(argv[1]) != "--infer")) {
-        std::cerr << "Usage: " << argv[0] << " [--infer]\n";
+    const std::string mode = argc > 1 ? argv[1] : "";
+    if (argc > 2 || (argc == 2 && mode != "--infer" && mode != "--empty-infer")) {
+        std::cerr << "Usage: " << argv[0] << " [--infer | --empty-infer]\n";
         return 1;
     }
     const bool training = argc == 1;
+    const bool emptyInference = mode == "--empty-infer";
     const std::map<ge::AscendString, ge::AscendString> options = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
     const auto status = ge::GEInitialize(options);
     if (status != ge::SUCCESS) {
@@ -150,11 +180,12 @@ int main(int argc, char* argv[])
         return 1;
     }
     // RunExample destroys the Session before GEFinalize, including failure paths.
-    const bool passed = RunExample(training);
+    const bool passed = RunExample(training, emptyInference);
     const auto finalizeStatus = ge::GEFinalize();
     if (!passed || finalizeStatus != ge::SUCCESS) {
         return 1;
     }
-    std::cout << "PASS BatchNormGradV3 GEIR " << (training ? "training" : "inference") << '\n';
+    const char* scenario = emptyInference ? "empty inference" : (training ? "training" : "inference");
+    std::cout << "PASS BatchNormGradV3 GEIR " << scenario << '\n';
     return 0;
 }
