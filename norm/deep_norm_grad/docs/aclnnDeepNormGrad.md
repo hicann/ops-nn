@@ -174,7 +174,7 @@ aclnnStatus aclnnDeepNormGrad(
       <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向输入x、gx之和的rstd，对应公式中的`rstd`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape与`mean`shape保持一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape与`mean`保持一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-8</td>
