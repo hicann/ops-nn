@@ -34,14 +34,14 @@
 
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
 | :--- | :--- | :--- | :--- | :--- |
-| x | 输入 | 公式中的输入张量x。 | FLOAT16、FLOAT、INT8、INT4、BFLOAT16、HIFLOAT8 | NCHW、NHWC |
-| filter | 输入 | 公式中的卷积权重张量filter。 | FLOAT16、FLOAT、INT8、INT4、BFLOAT16、HIFLOAT8 | NCHW、NHWC、HWCN |
-| bias | 可选输入 | 卷积偏置张量bias。 | FLOAT16、FLOAT、BFLOAT16、INT32 | ND |
-| offset_w | 可选输入 | 量化偏移张量offset_w。 | INT8 | ND |
-| y | 输出 | 公式中的输出张量y。 | FLOAT16、FLOAT、INT32、BFLOAT16、HIFLOAT8 | NCHW、NHWC |
-| strides | 属性 | 卷积扫描步长。长度为4的整数列表，n和in_channels维必须为1；format为"NHWC"时形状为[1, stride_h, stride_w, 1]，format为"NCHW"时形状为[1, 1, stride_h, stride_w]。 | INT32 | - |
-| pads | 属性 | 对输入的填充，包括pad_top, pad_bottom, pad_left, pad_right。 | INT32 | - |
-| dilations | 可选属性 | 卷积核中元素的间隔。长度为4的整数列表，n和in_channels维必须为1；format为"NHWC"时形状为[1, dilation_h, dilation_w, 1]，format为"NCHW"时形状为[1, 1, dilation_h, dilation_w]。默认为[1, 1, 1, 1]。 | INT32 | - |
+| x | 输入 | 公式中的输入张量x。 | FLOAT16、FLOAT、BFLOAT16、HIFLOAT8 | NCHW、NHWC |
+| filter | 输入 | 公式中的卷积权重张量filter。 | FLOAT16、FLOAT、BFLOAT16、HIFLOAT8 | NCHW、HWCN |
+| bias | 可选输入 | 卷积偏置张量bias。 | FLOAT16、FLOAT、BFLOAT16 | ND |
+| offset_w | 可选输入 | 量化偏移张量offset_w（不支持）。 | INT8 | ND |
+| y | 输出 | 公式中的输出张量y。 | FLOAT16、FLOAT、BFLOAT16、HIFLOAT8 | NCHW、NHWC |
+| strides | 属性 | 卷积扫描步长。长度为4的整数列表；format为"NHWC"时形状为[1, stride_h, stride_w, 1]，format为"NCHW"时形状为[1, 1, stride_h, stride_w]。 | INT32 | - |
+| pads | 属性 | 长度为4的整数列表，形状为[pad_top, pad_bottom, pad_left, pad_right]。 | INT32 | - |
+| dilations | 可选属性 | 卷积核中元素的间隔。长度为4的整数列表；format为"NHWC"时形状为[1, dilation_h, dilation_w, 1]，format为"NCHW"时形状为[1, 1, dilation_h, dilation_w]。默认为[1, 1, 1, 1]。 | INT32 | - |
 | data_format | 可选属性 | 输入数据格式，支持"NCHW"、"NHWC"。默认为"NHWC"。 | STRING | - |
 | offset_x | 可选属性 | 量化算法中的偏移offset_x。默认为0。支持范围[-128, 127]。 | INT32 | - |
 
@@ -49,25 +49,23 @@
 
 - Ascend 950PR&950DT：
 
-  - `x`、`filter`仅支持4D；`x`的format支持NCHW、NHWC，`filter`的format支持NCHW、NHWC、HWCN。
-  - `x`与`filter`的数据类型需一致，`INT16`输入（`x`为`INT16`、`filter`为`INT8`）的场景除外。
+  - `x`、`filter`仅支持4D；`x`的format支持NCHW、NHWC，`filter`的format支持NCHW、HWCN。
+  - `x`与`filter`的数据类型需一致。
   - `filter`的`kh`、`kw`不能为0。
   - 支持的数据类型和Format组合如下表：
 
-  | x | filter | bias | offset_w | y |
-  | :---: | :---: | :---: | :---: | :---: |
-  | FLOAT16 | FLOAT16 | FLOAT16 | INT8 | FLOAT16 |
-  | BFLOAT16 | BFLOAT16 | BFLOAT16 | INT8 | BFLOAT16 |
-  | FLOAT | FLOAT | FLOAT | INT8 | FLOAT |
-  | HIFLOAT8 | HIFLOAT8 | FLOAT | INT8 | HIFLOAT8 |
-  | INT8 | INT8 | INT32 | INT8 | INT32 |
-  | NCHW | NCHW | ND | ND | NCHW |
-  | NHWC | HWCN | ND | ND | NHWC |
+  | x | filter | bias | y |
+  | :---: | :---: | :---: | :---: |
+  | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 |
+  | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |
+  | FLOAT | FLOAT | FLOAT | FLOAT |
+  | HIFLOAT8 | HIFLOAT8 | FLOAT | HIFLOAT8 |
+  | NCHW | NCHW | ND | NCHW |
+  | NHWC | HWCN | ND | NHWC |
 
-  `HIFLOAT8`仅支持`NCHW`（`x`/`filter`/`y`为`NCHW`，`bias`/`offset_w`为`ND`）。其余数据类型同时支持上表两行Format。
+  `HIFLOAT8`仅支持`NCHW`（`x`/`filter`/`y`为`NCHW`，`bias`为`ND`）。其余数据类型同时支持上表两行Format。
 
-- `INT8`、`INT4`输入时输出数据类型为`INT32`，其余场景输出数据类型与输入一致。
-- `x`为动态shape时，`filter`需为静态shape；`x`为静态shape时，允许`filter`存在未定维（-1），相应输出维推导为-1。
+- `x`为动态shape时，`filter`需为静态shape；`x`为静态shape时，允许`filter`的shape存在某个维度为-1，相应输出维推导为-1。
 - 如果任何参数超出上述范围，算子的正确性无法保证。
 
 ## 调用说明
