@@ -17,8 +17,12 @@
  * 优势：从源头消除写冲突，减少无效的 mask 写入
  */
 
+#include <vector>
 #include "inplace_index_fill_tiling_simt_dense_indices.h"
 #include "log/log.h"
+#include "tiling/tiling_api.h"
+#include "util/math_util.h"
+#include "util/platform_util.h"
 #include "../../op_kernel/arch35/inplace_index_fill_tiling_key.h"
 #include "op_host/tiling_templates_registry.h"
 
@@ -40,6 +44,7 @@ constexpr int64_t INDICES_UB_FACTOR_MIN_THRESHOLD = 512;
 constexpr uint64_t DENSE_DCACHE_SIZE = 128 * 1024;
 // indices 队列缓冲数量
 constexpr uint64_t N_BUFFER = 2;
+constexpr int64_t REMAIN_INDICES_UB_FACTOR = 1024;
 
 // ============================================================================
 // IsCapable：判断是否适合使用 DenseIndices 模板
@@ -93,21 +98,64 @@ void InplaceIndexFillTilingSimtDenseIndices::DoIndicesTilingTask()
     int64_t indicesDtypeSize = inputData.indicesDtypeSize;
 
     // UB 可用空间（对齐到 32 字节）
-    int64_t maxUbAvailable = static_cast<int64_t>(availableUb / DENSE_UB_ALIGN_VALUE) * DENSE_UB_ALIGN_VALUE;
+    int64_t maxUbAvailable = Ops::Base::FloorAlign(static_cast<int64_t>(availableUb),
+                                                   static_cast<int64_t>(DENSE_UB_ALIGN_VALUE));
 
     // 计算 UB 中最多能放多少个 indices 元素
-    // 需要考虑：indicesQueue(双缓冲) + indicesBuff(sort输出) + uniqueIdBuff(去重ID)
-    // 简化估算：总共需要约 (N_BUFFER + 2) 倍的 indices 空间
     int64_t nBuffer = static_cast<int64_t>(N_BUFFER + 1);
     int64_t oneBlockNum = DENSE_UB_ALIGN_VALUE / indicesDtypeSize;
     int64_t maxUbIndicesNum = (maxUbAvailable / nBuffer / indicesDtypeSize / oneBlockNum) * oneBlockNum;
 
     int64_t indicesUbFactor = maxUbIndicesNum;
 
+    // 计算实际 UB 占用（indicesQueue + indicesBuff + uniqueIdBuff + Sort 排序 tmp），超出则逐步缩减
+    int64_t calcBufSize = CalcUsedBufSize(indicesUbFactor);
+    while (calcBufSize > maxUbAvailable) {
+        indicesUbFactor -= REMAIN_INDICES_UB_FACTOR;
+        if (indicesUbFactor <= 0) {
+            indicesUbFactor = INDICES_UB_FACTOR_MIN_THRESHOLD;
+            break;
+        }
+        calcBufSize = CalcUsedBufSize(indicesUbFactor);
+    }
+
     // 进一步优化：确保多核并行度
     indicesUbFactor = GetOptimalIndiceUBFactor(indicesUbFactor, inputData.indicesNum, inputData.dimSize);
 
     inputData.indicesUbFactor = indicesUbFactor;
+}
+
+uint32_t InplaceIndexFillTilingSimtDenseIndices::GetSortTmpSize(int64_t shapeSize)
+{
+    std::vector<int64_t> shapeVec = {shapeSize};
+    ge::Shape srcShape(shapeVec);
+    AscendC::SortConfig config;
+    config.type = AscendC::SortType::RADIX_SORT;
+    config.isDescend = false;
+    config.hasSrcIndex = false;
+    config.hasDstIndex = true;
+
+    uint32_t maxValue = 0;
+    uint32_t minValue = 0;
+    AscendC::GetSortMaxMinTmpSize(srcShape, inputData.indicesDtype, ge::DT_UINT32, false, config, maxValue, minValue);
+    OP_LOGI(context_->GetNodeName(), "InplaceIndexFill dense indices need sort tmp buffer %u byte", maxValue);
+    return maxValue;
+}
+
+int64_t InplaceIndexFillTilingSimtDenseIndices::CalcUsedBufSize(int64_t indicesUbFactor)
+{
+    int64_t indicesDtypeSize = inputData.indicesDtypeSize;
+    int64_t vfLen = static_cast<int64_t>(Ops::Base::GetVRegSize(context_)) / indicesDtypeSize;
+    int64_t indicesBuffSize = Ops::Base::CeilDiv(indicesUbFactor + 1, vfLen) * vfLen * indicesDtypeSize +
+                              DENSE_UB_ALIGN_VALUE;
+    int64_t sortNeedTmpSize = static_cast<int64_t>(GetSortTmpSize(indicesUbFactor));
+    int64_t calcBufSize = Ops::Base::CeilAlign(indicesUbFactor * indicesDtypeSize, DENSE_UB_ALIGN_VALUE) *
+                              static_cast<int64_t>(N_BUFFER) +                          // indicesQueue 占用
+                          Ops::Base::CeilAlign(indicesBuffSize, DENSE_UB_ALIGN_VALUE) + // indicesBuff 占用
+                          Ops::Base::CeilAlign(static_cast<int64_t>(indicesUbFactor * sizeof(int32_t)),
+                                               DENSE_UB_ALIGN_VALUE) +                 // uniqueIdBuff 占用
+                          Ops::Base::CeilAlign(sortNeedTmpSize, DENSE_UB_ALIGN_VALUE); // sort 排序 tmp 占用
+    return calcBufSize;
 }
 
 // ============================================================================

@@ -37,6 +37,8 @@ protected:
 private:
     void DoIndicesTilingTask();
     int64_t GetOptimalIndiceUBFactor(int64_t indicesUbFactor, int64_t indicesNum, int64_t n);
+    uint32_t GetSortTmpSize(int64_t shapeSize);
+    int64_t CalcUsedBufSize(int64_t indicesUbFactor);
 };
 
 } // namespace optiling
