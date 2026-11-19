@@ -57,6 +57,7 @@ struct QuantBatchMatmulInplaceAddCsvRow {
     int64_t x1ScaleOffset;
     vector<int64_t> x2ScaleStorageShape;
     int64_t x2ScaleOffset;
+    vector<int64_t> yInputStrides;
 };
 
 using QuantBatchMatmulInplaceAddTestParam = QuantBatchMatmulInplaceAddCsvRow;
@@ -132,6 +133,9 @@ static QuantBatchMatmulInplaceAddCsvLoadResult LoadCsvRows()
         row.x1ScaleOffset = ParseInt64OrDefault(cols[idx++], 0);
         row.x2ScaleStorageShape = ParseInt64Vec(cols[idx++]);
         row.x2ScaleOffset = ParseInt64OrDefault(cols[idx++], 0);
+        if (idx < cols.size()) {
+            row.yInputStrides = ParseInt64Vec(cols[idx]);
+        }
         result.rows.push_back(row);
     }
     if (result.rows.empty()) {
@@ -200,7 +204,9 @@ TEST_P(QuantBatchMatmulInplaceAddApiTest, dav3510_csv_test)
     TensorDesc x2ScaleDesc = TensorDesc(param.x2ScaleShape, param.x2ScaleType, param.x2ScaleFormat, {},
                                         param.x2ScaleOffset, param.x2ScaleStorageShape)
                                  .ValueRange(-1, 1);
-    TensorDesc yInputDesc = TensorDesc(param.yInputShape, param.yInputType, param.yInputFormat).ValueRange(-1, 1);
+    ASSERT_TRUE(param.yInputStrides.empty() || param.yInputStrides.size() == param.yInputShape.size());
+    TensorDesc yInputDesc = TensorDesc(param.yInputShape, param.yInputType, param.yInputFormat, param.yInputStrides)
+                                .ValueRange(-1, 1);
 
     auto ut = OP_API_UT(aclnnQuantBatchMatmulInplaceAdd,
                         INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, yInputDesc, param.transposeX1,

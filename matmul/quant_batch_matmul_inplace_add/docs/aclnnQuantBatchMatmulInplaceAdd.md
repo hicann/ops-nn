@@ -236,7 +236,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <tr>
         <td>ACLNN_ERR_PARAM_INVALID</td>
         <td>161002</td>
-        <td><ul><li>x1、x2、x1ScaleOptional、x2Scale、yRef的数据类型和数据格式不在支持的范围内，或groupSize的取值不在支持的范围内。</li><li>x1、x2、x1ScaleOptional、x2Scale、yRef的shape不满足校验条件。</li><li>x1、x2的K维度为0。</li><li>x1、x2数据类型为FLOAT4_E2M1时，M或N维度为奇数；或M、N、K均大于0时，M × K ≤ 2或N × K ≤ 2。</li><li>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1ScaleOptional，x2Scale的shape关系无法推断groupSize。</li></ul></td>
+        <td><ul><li>x1、x2、x1ScaleOptional、x2Scale、yRef的数据类型和数据格式不在支持的范围内，或groupSize的取值不在支持的范围内。</li><li>x1、x2、x1ScaleOptional、x2Scale、yRef的shape不满足校验条件。</li><li>yRef为非连续Tensor。</li><li>x1、x2的K维度为0。</li><li>x1、x2数据类型为FLOAT4_E2M1时，M或N维度为奇数；或M、N、K均大于0时，M × K ≤ 2或N × K ≤ 2。</li><li>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1ScaleOptional，x2Scale的shape关系无法推断groupSize。</li></ul></td>
       </tr>
       <tr>
         <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>

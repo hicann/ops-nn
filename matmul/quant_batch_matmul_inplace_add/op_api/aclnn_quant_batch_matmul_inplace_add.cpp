@@ -16,12 +16,14 @@
 #include "aclnn_quant_batch_matmul_inplace_add.h"
 #include "quant_batch_matmul_inplace_add_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/quant_matmul_util.h"
 #include <dlfcn.h>
 #include "securec.h"
 #include "opdev/common_types.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
+#include "opdev/tensor_view_utils.h"
 #include <string>
 #include <vector>
 #include "base/err_msg.h"
@@ -563,7 +565,7 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, acl
         swapedShape.SetDim(dimNum - kThirdLastDim, lastSecondDim); // kThirdLastDim: 倒数第3维
         mxScaleTensor = executor->CreateView(mxScaleTensor, swapedShape, mxScaleTensor->GetViewOffset());
     } else {
-        mxScaleTensor = l0op::Contiguous(mxScaleTensor, executor);
+        mxScaleTensor = Ops::NN::ContiguousMxScale(mxScaleTensor, executor);
     }
     CHECK_RET(mxScaleTensor != nullptr, false);
     return true;
@@ -871,9 +873,13 @@ static bool QBMMIAGetTransposeAttrValue(const aclTensor* tensor, bool transpose,
 static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
     QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params, aclOpExecutor* executor)
 {
-    // torch非连续转连续处理
     CHECK_RET(CheckRequiredTensorsNotNull(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(op::IsContiguous(params.yRef),
+             OP_LOGE_FOR_INVALID_STRIDE("aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "yRef",
+                                        op::ToString(params.yRef->GetViewStrides()).GetString(), "contiguous"),
+             return ACLNN_ERR_PARAM_INVALID);
+    // torch非连续转连续处理
     auto x2ScaleNd = SetTensorToNDFormat(params.x2Scale);
     CHECK_RET(x2ScaleNd != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto x1ScaleNd = SetTensorToNDFormat(params.x1ScaleOptional);

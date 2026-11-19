@@ -236,7 +236,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <tr>
         <td>ACLNN_ERR_PARAM_INVALID</td>
         <td>161002</td>
-        <td><ul><li>The data types or formats of x1, x2, x1ScaleOptional, x2Scale, or yRef, or the value of groupSize, are outside the supported ranges.</li><li>The shapes of x1, x2, x1ScaleOptional, x2Scale, or yRef fail validation.</li><li>The K dimension of x1 or x2 is 0.</li><li>When x1 and x2 are FLOAT4_E2M1, M or N is odd; or, when M, N, and K are all positive, M × K ≤ 2 or N × K ≤ 2.</li><li>groupSize fails validation, or groupSize is 0 and cannot be inferred from the shape relationships between x1/x2 and x1ScaleOptional/x2Scale.</li></ul></td>
+        <td><ul><li>The data types or formats of x1, x2, x1ScaleOptional, x2Scale, or yRef, or the value of groupSize, are outside the supported ranges.</li><li>The shapes of x1, x2, x1ScaleOptional, x2Scale, or yRef fail validation.</li><li>yRef is non-contiguous.</li><li>The K dimension of x1 or x2 is 0.</li><li>When x1 and x2 are FLOAT4_E2M1, M or N is odd; or, when M, N, and K are all positive, M × K ≤ 2 or N × K ≤ 2.</li><li>groupSize fails validation, or groupSize is 0 and cannot be inferred from the shape relationships between x1/x2 and x1ScaleOptional/x2Scale.</li></ul></td>
       </tr>
       <tr>
         <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>

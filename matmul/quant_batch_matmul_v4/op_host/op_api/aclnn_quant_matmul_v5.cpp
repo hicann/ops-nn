@@ -11,6 +11,7 @@
 #include <cmath>
 #include <dlfcn.h>
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/quant_matmul_util.h"
 #include "matmul/quant_batch_matmul_v3/op_api/quant_matmul_checker.h"
 #include "securec.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -977,7 +978,7 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, acl
         swapedShape.SetDim(dimNum - 3, lastSecondDim); // 3： 倒数第3维
         mxScaleTensor = executor->CreateView(mxScaleTensor, swapedShape, mxScaleTensor->GetViewOffset());
     } else {
-        mxScaleTensor = l0op::Contiguous(mxScaleTensor, executor);
+        mxScaleTensor = Ops::NN::ContiguousMxScale(mxScaleTensor, executor);
     }
     CHECK_RET(mxScaleTensor != nullptr, false);
     return true;

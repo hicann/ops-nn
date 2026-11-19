@@ -27,6 +27,7 @@
 #include "opdev/platform.h"
 #include "log/log.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/quant_matmul_util.h"
 #include "matmul/common/op_host/log_format_util.h"
 #include "quant_matmul_activation_quant.h"
 #include "quant_matmul_activation_quant_checker.h"
@@ -964,7 +965,7 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, boo
         mxScaleTensor = scaleView;
     }
     // Contiguous checks every stride, including the last scale-pair axis, before reusing storage.
-    mxScaleTensor = l0op::Contiguous(mxScaleTensor, executor);
+    mxScaleTensor = Ops::NN::ContiguousMxScale(mxScaleTensor, executor);
     return mxScaleTensor != nullptr;
 }
 
