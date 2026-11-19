@@ -185,5 +185,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_transpose_quant_batch_mat_mul（A2/A3 INT8 W8A8）](examples/test_aclnn_transpose_quant_batch_mat_mul.cpp)<br>[test_aclnn_transpose_quant_batch_mat_mul（Ascend 950 FP8）](examples/arch35/test_aclnn_transpose_quant_batch_mat_mul.cpp) | 通过<br>- [aclnnTransposeQuantBatchMatMul](docs/aclnnTransposeQuantBatchMatMul.md)<br>- [aclnnTransposeQuantBatchMatMulWeightNz](docs/aclnnTransposeQuantBatchMatMulWeightNz.md)<br>等方式调用TransposeQuantBatchMatMul算子。|
-| torch接口  | - | 通过[torchapi_transpose_quant_batch_mat_mul](docs/torchapi_transpose_quant_batch_mat_mul.md)接口调用TransposeQuantBatchMatMul算子，支持MX（MXFP8/MXFP4）、FP8（K-C）、HIFP8与INT8 W8A8量化模式。|
+| aclnn接口  | [test_aclnn_transpose_quant_batch_mat_mul](examples/arch22/test_aclnn_transpose_quant_batch_mat_mul.cpp)<br>[test_aclnn_quant_batch_mat_mul](examples/arch35/test_aclnn_transpose_quant_batch_mat_mul.cpp) | 通过<br>- [aclnnTransposeQuantBatchMatMul](docs/aclnnTransposeQuantBatchMatMul.md)<br>- [aclnnTransposeQuantBatchMatMulWeightNz](docs/aclnnTransposeQuantBatchMatMulWeightNz.md)<br>等方式调用TransposeQuantBatchMatMul算子。arch22 样例为 Atlas A2/A3 的 INT8 W8A8，arch35 样例为 Ascend 950 的 FP8。|
+| torch接口  | [torchapi_transpose_quant_batch_mat_mul](docs/torchapi_transpose_quant_batch_mat_mul.md) | 通过`cann_ops_nn.transpose_quant_batch_mat_mul`调用TransposeQuantBatchMatMul算子，支持MX（MXFP8/MXFP4）、FP8（K-C）、HIFP8与INT8 W8A8量化模式。|
