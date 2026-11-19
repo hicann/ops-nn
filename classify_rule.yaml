@@ -1516,7 +1516,6 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/gemma_rms_norm/op_graph/gemma_rms_norm_proto.h
         - ops/ops-nn/norm/gemma_rms_norm/op_host/gemma_rms_norm_def.cpp
         - ops/ops-nn/norm/gemma_rms_norm/op_kernel/gemma_rms_norm.cpp
-        - ops/ops-nn/norm/group_norm/
         - ops/ops-nn/norm/group_norm_grad/op_graph/group_norm_grad_proto.h
         - ops/ops-nn/norm/group_norm_grad/op_host/group_norm_grad_def.cpp
         - ops/ops-nn/norm/group_norm_grad/op_host/group_norm_grad_infershape.cpp
@@ -1652,20 +1651,6 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/group_norm_swish_grad/op_host/config/ascend950/group_norm_swish_grad_binary.json
         - ops/ops-nn/norm/group_norm_swish_grad/op_host/group_norm_swish_grad_def.cpp
         - ops/ops-nn/norm/group_norm_swish_grad/docs/aclnnGroupNormSwishGrad.md
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_base.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_hw1_b16.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_hw1_b32.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_large_b16.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_large_b32.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_norm_b16.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_norm_b32.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_small_b16.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_small_b32.h
-        - ops/ops-nn/norm/group_norm_swish/op_kernel/group_norm_swish_apt.cpp
-        - ops/ops-nn/norm/group_norm_swish/op_host/config/ascend950/
-        - ops/ops-nn/norm/group_norm_swish/op_host/group_norm_swish_def.cpp
-        - ops/ops-nn/norm/group_norm_swish/docs/aclnnGroupNormSwish.md
-        - ops/ops-nn/norm/group_norm_swish/README.md
         - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling.cpp
         - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling_310P.cpp
         - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling_310P.h
@@ -1717,14 +1702,33 @@ HPTG5@ops-nn:
         - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_group_quant_perf.h
         - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_mx_quant_perf.h
         - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_mxfp4_quant_perf.h
+        - ops/ops-nn/norm/group_norm/
         - ops/ops-nn/norm/group_norm_silu/op_host/group_norm_silu_def.cpp
         - ops/ops-nn/norm/group_norm_silu/op_host/group_norm_silu_infershape.cpp
         - ops/ops-nn/norm/group_norm_silu/op_host/group_norm_silu_tiling.cpp
         - ops/ops-nn/norm/group_norm_silu/op_host/group_norm_silu_tiling.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_base.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_hw1_b16.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_hw1_b32.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_large_b16.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_large_b32.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_norm_b16.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_norm_b32.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_small_b16.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/arch35/group_norm_swish_small_b32.h
+        - ops/ops-nn/norm/group_norm_swish/op_kernel/group_norm_swish_apt.cpp
+        - ops/ops-nn/norm/group_norm_swish/op_host/config/ascend950/
+        - ops/ops-nn/norm/group_norm_swish/op_host/group_norm_swish_def.cpp
+        - ops/ops-nn/norm/group_norm_swish/docs/aclnnGroupNormSwish.md
+        - ops/ops-nn/norm/group_norm_swish/README.md
       opensource_style: null
       kernel_style: null
     unrelease:
-      test_code: null
+      test_code:
+        - ops/ops-nn/norm/group_norm/tests/
+        - ops/ops-nn/norm/group_norm/examples/
+        - ops/ops-nn/norm/group_norm_swish/tests/
+        - ops/ops-nn/norm/group_norm_swish/examples/
       non_delivery: null
       open_source: null
 
