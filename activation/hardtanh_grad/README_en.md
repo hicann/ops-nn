@@ -53,14 +53,14 @@ English | [简体中文](./README.md)
     <tr>
       <td>result</td>
       <td>Input</td>
-      <td>Gradient output by the previous step in backpropagation, which is grad_output in the formula.</td>
+      <td>Forward input data, which is self in the formula. It is used to determine whether values are within the linear range [min_val, max_val].</td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>grad</td>
       <td>Input</td>
-      <td>Forward input data, which is self in the formula.</td>
+      <td>Gradient output by the previous step in backpropagation, which is grad_output in the formula. It is passed through inside the linear range and set to 0 outside.</td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
       <td>ND</td>
     </tr>
@@ -79,7 +79,7 @@ English | [简体中文](./README.md)
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>y</td>
       <td>Output</td>
       <td>Computed gradient, which is res in the formula.</td>
       <td>BFLOAT16, FLOAT16, FLOAT</td>
@@ -90,7 +90,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-result, grad, and out must have the same shape and data type.
+result, grad, and y must have the same shape and data type.
 
 ## Invocation Description
 

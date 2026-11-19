@@ -51,14 +51,14 @@
     <tr>
       <td>result</td>
       <td>输入</td>
-      <td>反向传播过程中上一步输出的梯度，公式中的grad_output。</td>
+      <td>正向的输入数据，公式中的self，用于判断是否在线性区间[min_val, max_val]内。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>grad</td>
       <td>输入</td>
-      <td>正向的输入数据，公式中的self。</td>
+      <td>反向传播过程中上一步输出的梯度，公式中的grad_output，线性区间内原样输出，区间外输出0。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -77,9 +77,9 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>y</td>
       <td>输出</td>
-      <td>计算得到梯度，公式中的res。</td>
+      <td>计算得到的梯度结果，公式中的res。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
@@ -88,7 +88,7 @@
 
 ## 约束说明
 
-result、grad和out的shape和数据类型需要一致。
+result、grad和y的shape和数据类型需要一致。
 
 ## 调用说明
 
