@@ -13,4 +13,5 @@ add_kernel_sources(
     KERNEL_SRC arch35/lamb_apply_optimizer_assign.cpp
     COMPUTE_UNITS ascend950 ascend350
     AUTO_SYNC false
+    OPTIONS "--cce-no-dcache-flush" "--cce-long-scbz=true" "-mllvm --cce-aicore-jump-expand=false"
 )
