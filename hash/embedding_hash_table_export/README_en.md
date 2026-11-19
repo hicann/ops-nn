@@ -109,7 +109,8 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-None
+- Each element of embedding_dims and bucket_sizes must be greater than 0.
+- Each element of table_sizes must be no less than the actual number of valid entries of the corresponding table.
 
 ## Invocation Description
 

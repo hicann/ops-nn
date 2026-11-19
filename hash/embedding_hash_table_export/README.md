@@ -107,7 +107,8 @@
 
 ## 约束说明
 
-无
+- embedding_dims、bucket_sizes 各元素值必须大于 0。
+- table_sizes 各元素值不得小于对应表的实际有效条目数。
 
 ## 调用说明
 

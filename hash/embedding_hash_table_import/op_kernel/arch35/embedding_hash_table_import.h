@@ -270,14 +270,18 @@ template <typename T>
 __aicore__ inline void EmbeddingHashTableImport<T>::Process()
 {
     for (int64_t idx = 0; idx < tablesCount_; idx++) {
+        embeddingDim_ = embeddingDimsGm_.GetValue(idx);
+        bucketSize_ = bucketSizesGm_.GetValue(idx);
+        if (embeddingDim_ <= 0 || bucketSize_ <= 0) {
+            // 非法表参数：跳过该表，防除零与负偏移越界写
+            continue;
+        }
+
         __gm__ int64_t* tableHandle = reinterpret_cast<__gm__ int64_t*>(
             reinterpret_cast<__gm__ uint8_t*>(tableHandlesGm_.GetValue(idx)));
         tableHandleGm_.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(tableHandle));
         __gm__ int64_t* table = reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(tableHandleGm_(0)));
         tableGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(table));
-
-        embeddingDim_ = embeddingDimsGm_.GetValue(idx);
-        bucketSize_ = bucketSizesGm_.GetValue(idx);
 
         // 单表中block大小
         blockSize_ = AlignUpByte8(VALUE_OFFSET * INT64_TYPE_BYTES + embeddingDim_ * bitWidth_);

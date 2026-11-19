@@ -133,9 +133,17 @@ ge::graphStatus EmbeddingHashTableApplyAdamWTiling::GetShapeAttrsInfo()
     const uint32_t* tableSize = attrs->GetAttrPointer<uint32_t>(ATTR_TABLE_SIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, tableSize);
     tableSize_ = static_cast<uint32_t>(*tableSize);
+    OP_CHECK_IF(
+        tableSize_ == 0,
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "table_size", std::to_string(tableSize_), "greater than 0"),
+        return ge::GRAPH_FAILED);
     const uint32_t* embeddingDim = attrs->GetAttrPointer<uint32_t>(ATTR_EMBEDDINGDIM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, embeddingDim);
     embeddingDim_ = static_cast<uint32_t>(*embeddingDim);
+    OP_CHECK_IF(embeddingDim_ == 0,
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "embedding_dim", std::to_string(embeddingDim_),
+                                          "greater than 0"),
+                return ge::GRAPH_FAILED);
     const bool* amsgrad = attrs->GetAttrPointer<bool>(2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, amsgrad);
     amsgrad_ = static_cast<uint32_t>(*amsgrad);

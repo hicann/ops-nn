@@ -149,4 +149,82 @@ TEST_F(EmbeddingHashTableImportProtoTest, embedding_hash_table_import_infer_dtyp
     EXPECT_EQ(dataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_FAILED);
 }
 
+// listShapes 按 keys、counters、filter_flags、values 顺序平铺展开
+static gert::KernelRunContextHolder BuildImportInferShapeHolder(const std::vector<uint32_t>& irInstanceNum,
+                                                                gert::Shape tableParamsShape,
+                                                                const std::vector<gert::Shape>& listShapes)
+{
+    std::vector<gert::Shape> inputShapes = {tableParamsShape, tableParamsShape, tableParamsShape};
+    inputShapes.insert(inputShapes.end(), listShapes.begin(), listShapes.end());
+
+    std::vector<ge::DataType> dtypes = {ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+    for (uint32_t k = 0; k < irInstanceNum[3]; k++) {
+        dtypes.push_back(ge::DT_INT64);
+    }
+    for (uint32_t k = 0; k < irInstanceNum[4]; k++) {
+        dtypes.push_back(ge::DT_UINT64);
+    }
+    for (uint32_t k = 0; k < irInstanceNum[5]; k++) {
+        dtypes.push_back(ge::DT_UINT8);
+    }
+    for (uint32_t k = 0; k < irInstanceNum[6]; k++) {
+        dtypes.push_back(ge::DT_FLOAT);
+    }
+
+    gert::InferShapeContextFaker faker;
+    faker.IrInstanceNum(irInstanceNum, {1});
+    std::vector<gert::Shape*> shapePtrs;
+    for (size_t i = 0; i < inputShapes.size(); i++) {
+        shapePtrs.push_back(&inputShapes[i]);
+        faker.NodeInputTd(static_cast<int32_t>(i), dtypes[i], ge::FORMAT_ND, ge::FORMAT_ND);
+    }
+    faker.InputShapes(shapePtrs);
+    return faker.Build();
+}
+
+TEST_F(EmbeddingHashTableImportProtoTest, embedding_hash_table_import_infer_shape_counters_shorter_than_keys)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingHashTableImport")->infer_shape;
+
+    auto holder = BuildImportInferShapeHolder({1, 1, 1, 1, 1, 1, 1}, {1}, {{4}, {2}, {4}, {8}});
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(EmbeddingHashTableImportProtoTest, embedding_hash_table_import_infer_shape_filter_flags_shorter_than_keys)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingHashTableImport")->infer_shape;
+
+    auto holder = BuildImportInferShapeHolder({1, 1, 1, 1, 1, 1, 1}, {1}, {{4}, {4}, {2}, {8}});
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(EmbeddingHashTableImportProtoTest, embedding_hash_table_import_infer_shape_list_num_not_equal_table_num)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingHashTableImport")->infer_shape;
+
+    auto holder = BuildImportInferShapeHolder({1, 1, 1, 1, 1, 1, 1}, {2}, {{2}, {2}, {2}, {4}});
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(EmbeddingHashTableImportProtoTest, embedding_hash_table_import_infer_shape_list_instance_num_mismatch)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingHashTableImport")->infer_shape;
+
+    auto holder = BuildImportInferShapeHolder({1, 1, 1, 2, 1, 1, 1}, {1}, {{2}, {2}, {2}, {2}, {4}});
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(EmbeddingHashTableImportProtoTest, embedding_hash_table_import_infer_shape_counters_longer_than_keys)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EmbeddingHashTableImport")->infer_shape;
+
+    auto holder = BuildImportInferShapeHolder({1, 1, 1, 1, 1, 1, 1}, {1}, {{3}, {5}, {3}, {6}});
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
 } // namespace

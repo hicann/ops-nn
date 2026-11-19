@@ -423,3 +423,91 @@ TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_Dispatch
         EXPECT_EQ(t.blockNum, 1) << "dim=" << dim;
     }
 }
+
+TEST_F(EmbeddingHashTableApplyAdamWTiling, EmbeddingHashTableApplyAdamW_Tiling_BucketSizeZero)
+{
+    gert::StorageShape table_handle_shape = {{1}, {1}};
+    gert::StorageShape keys_shape = {{2}, {2}};
+    gert::StorageShape m_shape = {{2, 32}, {2, 32}};
+    gert::StorageShape v_shape = {{2, 32}, {2, 32}};
+    gert::StorageShape beta1_power_shape = {{1}, {1}};
+    gert::StorageShape beta2_power_shape = {{1}, {1}};
+    gert::StorageShape lr_shape = {{1}, {1}};
+    gert::StorageShape weight_decay_shape = {{1}, {1}};
+    gert::StorageShape beta1_shape = {{1}, {1}};
+    gert::StorageShape beta2_shape = {{1}, {1}};
+    gert::StorageShape epsilon_shape = {{1}, {1}};
+    gert::StorageShape grad_shape = {{2, 32}, {2, 32}};
+    gert::StorageShape max_grad_norm_shape = {{2, 32}, {2, 32}};
+
+    string compile_info_string = R"({
+         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                           "Intrinsic_fix_pipe_l0c2out": false,
+                           "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l0c2ub": true,
+                           "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                           "CORE_NUM": 64}
+                            })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::EmbeddingHashTableApplyAdamWCompileInfo compile_info;
+
+    std::string op_type("EmbeddingHashTableApplyAdamW");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(13, 5)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&table_handle_shape, &keys_shape, &m_shape, &v_shape, &beta1_power_shape,
+                                    &beta2_power_shape, &lr_shape, &weight_decay_shape, &beta1_shape, &beta2_shape,
+                                    &epsilon_shape, &grad_shape, &max_grad_norm_shape})
+                      .OutputShapes({&m_shape, &v_shape, &beta1_power_shape, &beta2_power_shape, &max_grad_norm_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(7, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(8, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(9, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(10, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(11, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(12, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"embedding_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(32)},
+                                  {"bucket_size", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"amsgrad", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"maximize", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}

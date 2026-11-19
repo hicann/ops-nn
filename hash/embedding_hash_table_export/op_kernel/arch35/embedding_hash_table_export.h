@@ -71,7 +71,7 @@ public:
                                 GM_ADDR keys, GM_ADDR counters, GM_ADDR filterFlags, GM_ADDR values, GM_ADDR workspace,
                                 EmbeddingHashTableExportTilingData tilingData);
     __aicore__ inline void Process();
-    __aicore__ inline void SingleTableCompute(int64_t tableIndex);
+    __aicore__ inline bool SingleTableCompute(int64_t tableIndex);
 
 private:
     TPipe pipe_;
@@ -99,6 +99,7 @@ private:
 
     GlobalTensor<int64_t> tableHandleStructGm_;
     GlobalTensor<int64_t> tableHandlesGm_;
+    GlobalTensor<int64_t> tableSizesGm_;
     GlobalTensor<int64_t> embeddingDimsGm;
     GlobalTensor<int64_t> bucketSizesGm;
 
@@ -108,6 +109,7 @@ private:
     LocalTensor<int64_t> threadCountKeysToExportSumUB_;
 
     int64_t tableAddr_;
+    int64_t tableSize_;
     int64_t embeddingDims_;
     int64_t keyWidthByte_;
     int64_t bucketSize_;
@@ -123,7 +125,6 @@ private:
     GlobalTensor<T> outValueGm_;
 
     int64_t keyWidthByteD8_;
-    int64_t keyWidthByteDT_;
 };
 
 template <typename T>
@@ -143,6 +144,7 @@ __aicore__ inline void EmbeddingHashTableExport<T>::Init(GM_ADDR tableHandles, G
     filteredExportFlag_ = tilingData.filteredExportFlag;
 
     tableHandlesGm_.SetGlobalBuffer((__gm__ int64_t*)tableHandles);
+    tableSizesGm_.SetGlobalBuffer((__gm__ int64_t*)tableSizes);
     embeddingDimsGm.SetGlobalBuffer((__gm__ int64_t*)embeddingDims);
     bucketSizesGm.SetGlobalBuffer((__gm__ int64_t*)bucketSizes);
 
@@ -162,19 +164,26 @@ __aicore__ inline void EmbeddingHashTableExport<T>::Init(GM_ADDR tableHandles, G
 }
 
 template <typename T>
-__aicore__ inline void EmbeddingHashTableExport<T>::SingleTableCompute(int64_t tableIndex)
+// 返回 false 表示非法表参数（dims/bucket ≤ 0），Process 据此跳过整条导出链路，
+// 防负步长越界读写
+__aicore__ inline bool EmbeddingHashTableExport<T>::SingleTableCompute(int64_t tableIndex)
 {
     GM_ADDR tableHandleStruct = reinterpret_cast<__gm__ uint8_t*>(tableHandlesGm_.GetValue(tableIndex));
 
     tableHandleStructGm_.SetGlobalBuffer((__gm__ int64_t*)tableHandleStruct);
 
-    tableAddr_ = tableHandleStructGm_.GetValue(0);
+    tableSize_ = tableSizesGm_.GetValue(tableIndex);
     embeddingDims_ = embeddingDimsGm.GetValue(tableIndex);
+    bucketSize_ = bucketSizesGm.GetValue(tableIndex);
+
+    if (embeddingDims_ <= 0 || bucketSize_ <= 0) {
+        return false;
+    }
+
+    tableAddr_ = tableHandleStructGm_.GetValue(0);
     keyWidthByte_ = KEY_VALUE_OFFSET_OF_BYTE +
                     (sizeof(T) * embeddingDims_ + BYTE_COUNT_8 - 1) / BYTE_COUNT_8 * BYTE_COUNT_8;
     keyWidthByteD8_ = keyWidthByte_ / BYTE_COUNT_8;
-    keyWidthByteDT_ = keyWidthByte_ / sizeof(T);
-    bucketSize_ = bucketSizesGm.GetValue(tableIndex);
 
     int64_t singleCoreProcessNum = (bucketSize_ + maxCoreNum_ - 1) / maxCoreNum_;
     normalCoreProcessKeys_ = singleCoreProcessNum <= maxThreadNum_ ? maxThreadNum_ : singleCoreProcessNum;
@@ -190,6 +199,7 @@ __aicore__ inline void EmbeddingHashTableExport<T>::SingleTableCompute(int64_t t
     outCounterGm_.SetGlobalBuffer(countersList_.GetDataPtr<uint64_t>(tableIndex));
     outFilterFlagGm_.SetGlobalBuffer(filterFlagsList_.GetDataPtr<uint8_t>(tableIndex));
     outValueGm_.SetGlobalBuffer(valuesList_.GetDataPtr<T>(tableIndex));
+    return true;
 }
 
 template <typename T>
@@ -275,10 +285,10 @@ template <typename T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void ExportPerThread(
     int64_t blockIdx, int64_t usedCoreNum, int64_t usedThreadNum, int64_t normalThreadProcessKeys,
     int64_t tailThreadProcessKeys, int64_t tableAddr, int64_t keyWidthByte, int64_t normalCoreProcessKeys,
-    int64_t exportMode, int64_t keyWidthByteD8, int64_t keyWidthByteDT, int64_t embeddingDims,
-    __gm__ int64_t* coreSyncWorkspaceGm, __ubuf__ int64_t* threadCountKeysToExportUB, __gm__ int64_t* outKeyGm,
-    __gm__ uint64_t* outCounterGm, __gm__ uint8_t* outFilterFlagGm, __gm__ T* outValueGm,
-    __ubuf__ int64_t* threadCountReFreshExportFlagUB, __ubuf__ int64_t* threadCountKeysToExportSumUB)
+    int64_t exportMode, int64_t keyWidthByteD8, int64_t embeddingDims, int64_t tableSize,
+    __ubuf__ int64_t* threadCountKeysToExportUB, __gm__ int64_t* outKeyGm, __gm__ uint64_t* outCounterGm,
+    __gm__ uint8_t* outFilterFlagGm, __gm__ T* outValueGm, __ubuf__ int64_t* threadCountReFreshExportFlagUB,
+    __ubuf__ int64_t* threadCountKeysToExportSumUB)
 {
     if (blockIdx >= usedCoreNum) {
         return;
@@ -304,6 +314,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void Export
                                    KEY_FLAG_OFFSET_OF_BYTE];
         if ((flag & VALID_FLAG_MASK) && !(flag & EVICTED_FLAG_MASK) &&
             (exportMode != 1 || !(flag & EXPORT_FLAG_MASK))) {
+            // 越界即整条丢弃：不刷导出 flag，防 new 模式漏导出
+            if (offset + positionIndex >= tableSize) {
+                break;
+            }
             int64_t key = tableAddrI64[keyWidthByteD8 *
                                        (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i)];
             outKeyGm[offset + positionIndex] = key;
@@ -355,7 +369,11 @@ __aicore__ inline void EmbeddingHashTableExport<T>::Process()
     for (int64_t tableIndx = 0; tableIndx < tableNum_; tableIndx++) {
         Duplicate(threadCountKeysToExportUB_, int64_t(0), maxThreadNum_ * BUFFER_LENGTH);
         Duplicate(threadCountReFreshExportFlagUB_, int64_t(0), maxThreadNum_ * BUFFER_LENGTH);
-        SingleTableCompute(tableIndx);
+        if (!SingleTableCompute(tableIndx)) {
+            // 非法表参数：跳过导出。判定条件来自共享 GM 参数，所有核必然走同一
+            // 分支，栅栏序列保持一致，无需补栅栏
+            continue;
+        }
         asc_vf_call<CountPerThread<T>>(dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_,
                                        blockIdx_, usedCoreNum_, usedThreadNum_, normalThreadProcessKeys_,
                                        tailThreadProcessKeys_, tableAddr_, keyWidthByte_, normalCoreProcessKeys_,
@@ -373,7 +391,7 @@ __aicore__ inline void EmbeddingHashTableExport<T>::Process()
         asc_vf_call<ExportPerThread<T>>(
             dim3{static_cast<uint32_t>(maxThreadNum_)}, blockIdx_, usedCoreNum_, usedThreadNum_,
             normalThreadProcessKeys_, tailThreadProcessKeys_, tableAddr_, keyWidthByte_, normalCoreProcessKeys_,
-            exportMode_, keyWidthByteD8_, keyWidthByteDT_, embeddingDims_, coreSyncWorkspaceGm_.GetPhyAddr(0),
+            exportMode_, keyWidthByteD8_, embeddingDims_, tableSize_,
             (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr(), outKeyGm_.GetPhyAddr(0),
             outCounterGm_.GetPhyAddr(0), outFilterFlagGm_.GetPhyAddr(0), outValueGm_.GetPhyAddr(0),
             (__ubuf__ int64_t*)threadCountReFreshExportFlagUB_.GetPhyAddr(),

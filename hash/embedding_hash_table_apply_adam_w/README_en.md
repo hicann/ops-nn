@@ -193,7 +193,7 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-None
+- The attributes bucket_size and embedding_dim must be greater than 0.
 
 ## Invocation Description
 

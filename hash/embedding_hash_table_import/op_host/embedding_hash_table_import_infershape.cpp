@@ -61,27 +61,56 @@ ge::graphStatus Infershape4EmbeddingHashTableImport(gert::InferShapeContext* con
 
     // 获取动态输入值shape
     const auto keysInfo = context->GetIrInputInstanceInfo(KEYS_IDX);
-    for (uint32_t i = 0; i < keysInfo->GetInstanceNum(); i++) {
+    const auto countersInfo = context->GetIrInputInstanceInfo(COUNTERS_IDX);
+    const auto filterFlagsInfo = context->GetIrInputInstanceInfo(FILTER_FLAGS_IDX);
+    const auto valuesInfo = context->GetIrInputInstanceInfo(VALUES_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, keysInfo);
+    OP_CHECK_NULL_WITH_CONTEXT(context, countersInfo);
+    OP_CHECK_NULL_WITH_CONTEXT(context, filterFlagsInfo);
+    OP_CHECK_NULL_WITH_CONTEXT(context, valuesInfo);
+
+    // 列表 instanceNum 必须两两相等且等于表数；未知 shape 跳过表数比对
+    const uint32_t keysInstanceNum = keysInfo->GetInstanceNum();
+    OP_CHECK_IF(
+        countersInfo->GetInstanceNum() != keysInstanceNum || filterFlagsInfo->GetInstanceNum() != keysInstanceNum ||
+            valuesInfo->GetInstanceNum() != keysInstanceNum ||
+            (embeddingDimCount >= 0 && static_cast<int64_t>(keysInstanceNum) != embeddingDimCount),
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            context->GetNodeName(), "keys, counters, filter_flags, values",
+            (std::to_string(keysInstanceNum) + ", " + std::to_string(countersInfo->GetInstanceNum()) + ", " +
+             std::to_string(filterFlagsInfo->GetInstanceNum()) + ", " + std::to_string(valuesInfo->GetInstanceNum()))
+                .c_str(),
+            "The instance nums of keys, counters, filter_flags and values must be the same and equal to the "
+            "shape size of embedding_dims"),
+        return ge::GRAPH_FAILED);
+
+    for (uint32_t i = 0; i < keysInstanceNum; i++) {
         auto keysShape = context->GetDynamicInputShape(KEYS_IDX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, keysShape);
-    }
-
-    const auto countersInfo = context->GetIrInputInstanceInfo(COUNTERS_IDX);
-    for (uint32_t i = 0; i < countersInfo->GetInstanceNum(); i++) {
         auto countersShape = context->GetDynamicInputShape(COUNTERS_IDX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, countersShape);
-    }
-
-    const auto filterFlagsInfo = context->GetIrInputInstanceInfo(FILTER_FLAGS_IDX);
-    for (uint32_t i = 0; i < filterFlagsInfo->GetInstanceNum(); i++) {
         auto filterFlagsShape = context->GetDynamicInputShape(FILTER_FLAGS_IDX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, filterFlagsShape);
-    }
-
-    const auto valuesInfo = context->GetIrInputInstanceInfo(VALUES_IDX);
-    for (uint32_t i = 0; i < valuesInfo->GetInstanceNum(); i++) {
         auto valuesShape = context->GetDynamicInputShape(VALUES_IDX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, valuesShape);
+
+        int64_t keysNum = keysShape->GetShapeSize();
+        if (keysNum > 0) {
+            int64_t countersNum = countersShape->GetShapeSize();
+            OP_CHECK_IF(countersNum >= 0 && countersNum < keysNum,
+                        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                            context->GetNodeName(), "keys, counters",
+                            (std::to_string(keysNum) + " and " + std::to_string(countersNum)).c_str(),
+                            "The shape size of each counters tensor must be greater than or equal to keys"),
+                        return ge::GRAPH_FAILED);
+            int64_t filterFlagsNum = filterFlagsShape->GetShapeSize();
+            OP_CHECK_IF(filterFlagsNum >= 0 && filterFlagsNum < keysNum,
+                        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                            context->GetNodeName(), "keys, filter_flags",
+                            (std::to_string(keysNum) + " and " + std::to_string(filterFlagsNum)).c_str(),
+                            "The shape size of each filter_flags tensor must be greater than or equal to keys"),
+                        return ge::GRAPH_FAILED);
+        }
     }
 
     OP_LOGD(context->GetNodeName(), "End to do EmbeddingHashTableImportInfershape.");

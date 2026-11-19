@@ -71,6 +71,107 @@ void SetConstInput(size_t const_index, ge::DataType dtype, T* const_data, int64_
     const_tensors.push_back(std::move(pair));
 }
 
+static void RunImportTilingWithValues(int64_t valuesShapeSize, int64_t keysShapeSize, int64_t dim, const char* caseName,
+                                      ge::graphStatus expect)
+{
+    gert::StorageShape table_handles_shape = {{1}, {1}};
+    gert::StorageShape embedding_dims_shape = {{1}, {1}};
+    gert::StorageShape bucket_sizes_shape = {{1}, {1}};
+    gert::StorageShape keys_shape = {{keysShapeSize}, {keysShapeSize}};
+    gert::StorageShape counters_shape = {{keysShapeSize}, {keysShapeSize}};
+    gert::StorageShape filter_flags_shape = {{keysShapeSize}, {keysShapeSize}};
+    gert::StorageShape values_shape = {{valuesShapeSize}, {valuesShapeSize}};
+
+    string compile_info_string = R"({
+       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                         "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                         "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                         "CORE_NUM": 40}
+                         })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::EmbeddingHashTableImportCompileInfo compile_info;
+
+    std::string op_type("EmbeddingHashTableImport");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(7, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput(1, ge::DT_INT64, &dim, 1, const_tensors);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("EmbeddingHashTableImport")
+                      .NodeIoNum(7, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&table_handles_shape, &embedding_dims_shape, &bucket_sizes_shape, &keys_shape,
+                                    &counters_shape, &filter_flags_shape, &values_shape})
+                      .OutputShapes({&table_handles_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_UINT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_UINT8, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .ConstInput(const_tensors)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context, nullptr);
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    tiling_context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), expect) << caseName;
+}
+
+TEST_F(EmbeddingHashTableImportTiling, embedding_hash_table_import_tiling_values_shorter_rejected)
+{
+    RunImportTilingWithValues(24, 4, 8, "values shorter than keys*dim", ge::GRAPH_FAILED);
+}
+
+TEST_F(EmbeddingHashTableImportTiling, embedding_hash_table_import_tiling_values_dim_overflow_rejected)
+{
+    int64_t overflowDim = INT64_MAX / 4;
+    RunImportTilingWithValues(4, 5, overflowDim, "dim too large (product overflows int64)", ge::GRAPH_FAILED);
+}
+
+TEST_F(EmbeddingHashTableImportTiling, embedding_hash_table_import_tiling_values_aligned_pass)
+{
+    RunImportTilingWithValues(32, 4, 8, "values equals keys*dim", ge::GRAPH_SUCCESS);
+}
+
 TEST_F(EmbeddingHashTableImportTiling, embedding_hash_table_import_tiling_001)
 {
     // dlog_setlevel(0, 0, 0);

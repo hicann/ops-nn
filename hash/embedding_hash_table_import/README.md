@@ -86,7 +86,8 @@
 
 ## 约束说明
 
-无
+- embedding_dims、bucket_sizes 各元素值必须大于 0。
+- 四列表实例数相等且等于表数；counters、filter_flags 不短于 keys；values 元素数等于 keys 元素数 × embedding_dim。
 
 ## 调用说明
 

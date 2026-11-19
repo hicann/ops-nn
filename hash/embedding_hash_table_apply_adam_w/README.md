@@ -191,7 +191,7 @@
 
 ## 约束说明
 
-无
+- bucket_size、embedding_dim 属性必须大于 0。
 
 ## 调用说明
 

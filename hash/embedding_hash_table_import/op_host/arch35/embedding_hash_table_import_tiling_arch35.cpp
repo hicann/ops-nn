@@ -12,6 +12,8 @@
  * \file embedding_hash_table_import_tiling_arch35.cpp
  * \brief
  */
+#include <cstdint>
+
 #include "embedding_hash_table_import_tiling_arch35.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
@@ -152,7 +154,48 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfoOfTensorList()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus EmbeddingHashTableImportTiling::CheckInputData() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus EmbeddingHashTableImportTiling::CheckInputData()
+{
+    // embedding_dims 数据可见时校验 values == keys × dim；数据不可得时跳过
+    const gert::Tensor* embeddingDimsTensor = context_->GetRequiredInputTensor(IN_EMBEDDING_DIMS_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, embeddingDimsTensor);
+    const int64_t* dimsValue = embeddingDimsTensor->GetData<int64_t>();
+    if (dimsValue == nullptr) {
+        return ge::GRAPH_SUCCESS;
+    }
+    const int64_t dimsCount = embeddingDimsTensor->GetShapeSize();
+    OP_CHECK_IF(dimsCount < tablesCount_,
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context_->GetNodeName(), "embedding_dims", std::to_string(dimsCount).c_str(),
+                    "The shape size of embedding_dims must be no less than the shape size of bucket_sizes"),
+                return ge::GRAPH_FAILED);
+
+    for (int64_t i = 0; i < tablesCount_; i++) {
+        const int64_t dim = dimsValue[i];
+        if (dim <= 0) {
+            continue;
+        }
+        const gert::StorageShape* keysShape = context_->GetDynamicInputShape(IN_KEYS_IDX, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, keysShape);
+        const gert::StorageShape* valuesShape = context_->GetDynamicInputShape(IN_VALUES_IDX, i);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, valuesShape);
+        const int64_t keysNum = keysShape->GetStorageShape().GetShapeSize();
+        const int64_t valuesNum = valuesShape->GetStorageShape().GetShapeSize();
+        // 拒绝不可表示的乘积，防有符号溢出回绕骗过校验
+        OP_CHECK_IF(keysNum > 0 && dim > INT64_MAX / keysNum,
+                    OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "embedding_dims", std::to_string(dim),
+                                              "a value whose product with the keys shape size fits in int64"),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(keysNum > 0 && valuesNum >= 0 && valuesNum != keysNum * dim,
+                    OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                        context_->GetNodeName(), "keys, values",
+                        (std::to_string(keysNum) + " and " + std::to_string(valuesNum)).c_str(),
+                        "The shape size of each values tensor must be equal to keys shape size multiplied by "
+                        "the corresponding embedding_dims value"),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
 
 ge::graphStatus EmbeddingHashTableImportTiling::DoOpTiling()
 {
@@ -225,7 +268,7 @@ static ge::graphStatus TilingPrepare4EmbeddingHashTableImport(gert::TilingParseC
 }
 
 IMPL_OP_OPTILING(EmbeddingHashTableImport)
-    .InputsDataDependency({IN_BUCKET_SIZES_IDX})
+    .InputsDataDependency({IN_EMBEDDING_DIMS_IDX, IN_BUCKET_SIZES_IDX})
     .Tiling(Tiling4EmbeddingHashTableImport)
     .TilingParse<EmbeddingHashTableImportCompileInfo>(TilingPrepare4EmbeddingHashTableImport);
 } // namespace optiling

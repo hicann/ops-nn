@@ -88,7 +88,8 @@ English | [简体中文](./README.md)
 
 ## Constraints
 
-None
+- Each element of embedding_dims and bucket_sizes must be greater than 0.
+- The four lists must have equal instance numbers matching the table count; counters and filter_flags no shorter than keys; values must have exactly keys × embedding_dim elements.
 
 ## Invocation Description
 
