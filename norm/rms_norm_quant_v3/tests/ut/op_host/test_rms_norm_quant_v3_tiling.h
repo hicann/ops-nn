@@ -13,11 +13,12 @@
 
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_infos_def.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 
 struct RmsNormQuantV3CompileInfo {
-    NpuArch curSocVersion = NpuArch::DAV_3510;
+    NpuArch curSocVersion = Ops::Base::DAV_3510;
     int64_t totalCoreNum = 0;
     uint64_t maxUbSize = 0;
 };

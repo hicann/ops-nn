@@ -554,7 +554,7 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
     tiling.set_eps(eps);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    bool is310P = npuArch == NpuArch::DAV_2002 ? true : false;
+    bool is310P = npuArch == Ops::Base::DAV_2002 ? true : false;
     uint64_t maxUbSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, maxUbSize);
     auto maxCoreNum = ascendcPlatform.GetCoreNumAiv();
@@ -715,7 +715,7 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
     rawTilingData->SetDataSize(tiling.GetDataSize());
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     size_t sysWorkspaceSize = RESERVED_WORKSPACE_SIZE_910B;
-    if (npuArch == NpuArch::DAV_2002) {
+    if (npuArch == Ops::Base::DAV_2002) {
         sysWorkspaceSize = static_cast<size_t>(RESERVED_WORKSPACE_SIZE_310P);
     }
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
@@ -728,7 +728,7 @@ static ge::graphStatus TilingAddLayerNorm(gert::TilingContext* context)
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto curArch = ascendcPlatform.GetCurNpuArch();
-    bool isAscendRegbase = (IsRegbaseSocVersion(context) || curArch == NpuArch::DAV_5102) ? true : false;
+    bool isAscendRegbase = (IsRegbaseSocVersion(context) || curArch == Ops::Base::DAV_5102) ? true : false;
     if (isAscendRegbase) {
         OP_LOGD(context, "AddLayerNorm Regbase tiling start");
         AddLayerNormRegbaseTiling addLayerNormTiling(context);
@@ -748,7 +748,7 @@ static ge::graphStatus TilingPrepare4AddLayerNorm(gert::TilingParseContext* cont
     compileInfo->aivCoreNum_ = ascendcPlatform.GetCoreNumAiv();
     compileInfo->sysWorkspaceSize_ = ascendcPlatform.GetLibApiWorkSpaceSize();
     auto npuArch = ascendcPlatform.GetCurNpuArch();
-    compileInfo->isAscend950_ = (IsRegbaseSocVersion(context) || npuArch == NpuArch::DAV_5102) ? true : false;
+    compileInfo->isAscend950_ = (IsRegbaseSocVersion(context) || npuArch == Ops::Base::DAV_5102) ? true : false;
     uint64_t ubSizePlatform;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
     compileInfo->ubSize_ = ubSizePlatform;

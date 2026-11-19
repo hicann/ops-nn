@@ -12,6 +12,7 @@
  * \file group_norm_v2_def.cpp
  * \brief
  */
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -92,10 +93,9 @@ public:
             .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        this->AICore().AddConfig("ascend950", config950);
-        this->AICore().AddConfig("ascend350", config950);
-        this->AICore().AddConfig("ascend960dt", config950);
-        this->AICore().AddConfig("ascend960pr", config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, config950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, config950);
     }
 };
 

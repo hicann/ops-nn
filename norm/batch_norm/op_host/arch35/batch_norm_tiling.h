@@ -28,6 +28,7 @@
 #include "op_api/runtime2_util_nn.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 
@@ -315,7 +316,7 @@ protected:
     float epsilon_{0};
     float exponentialAvgFactor_{0};
     bool isTraining_{true};
-    NpuArch arch = NpuArch::DAV_3510;
+    NpuArch arch = Ops::Base::DAV_3510;
 
     ge::DataType xDtype_;
     ge::Format xFormat_;

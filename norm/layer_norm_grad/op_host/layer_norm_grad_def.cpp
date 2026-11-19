@@ -12,6 +12,7 @@
  * \file layer_norm_grad.cpp
  * \brief
  */
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -92,10 +93,9 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "layer_norm_grad_apt");
-        this->AICore().AddConfig("ascend950", regbaseCfg);
-        this->AICore().AddConfig("ascend350", regbaseCfg);
-        this->AICore().AddConfig("ascend960dt", regbaseCfg);
-        this->AICore().AddConfig("ascend960pr", regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, regbaseCfg);
     }
 };
 

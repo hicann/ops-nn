@@ -26,6 +26,7 @@
 #include "op_host/tiling_base.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace Ops::NN::Optiling;
 
@@ -446,7 +447,7 @@ protected:
     ge::DataType dataType;
     ge::DataType weightDataType;
     ge::Format format;
-    NpuArch arch = NpuArch::DAV_3510;
+    NpuArch arch = Ops::Base::DAV_3510;
 };
 } // namespace optiling
 #endif // BATCH_NORM_V3_TILING_H

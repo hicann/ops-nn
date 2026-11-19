@@ -13,7 +13,7 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/add_rms_norm_dynamic_quant_v2.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
+    COMPUTE_UNITS dav_3510 dav_9201 dav_9202
     AUTO_SYNC false
     OPTIONS "--cce-simd-vf-fusion=false" "--cce-no-dcache-flush"
 )

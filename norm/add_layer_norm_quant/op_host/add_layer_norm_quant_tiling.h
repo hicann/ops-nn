@@ -23,6 +23,7 @@
 #include "platform/platform_infos_def.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 static constexpr int X1_IDX = 0;
@@ -309,7 +310,7 @@ private:
     uint32_t tilingKey_{0};
     int64_t bufferNum_{2};
     uint64_t sysWorkspaceSize_{1};
-    NpuArch arch = NpuArch::DAV_3510;
+    NpuArch arch = Ops::Base::DAV_3510;
 
     bool scale1Exist_{false};
     bool scale2Exist_{false};

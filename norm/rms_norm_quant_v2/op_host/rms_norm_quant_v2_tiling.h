@@ -70,7 +70,7 @@ constexpr int64_t DST_TYPE_ATTR_INDEX = 2;
 constexpr int64_t OUTPUT_RSTD_ATTR_INDEX = 3;
 
 struct RmsNormQuantV2CompileInfo {
-    NpuArch curSocVersion = NpuArch::DAV_3510;
+    NpuArch curSocVersion = Ops::Base::DAV_3510;
     int64_t totalCoreNum = 0;
     uint64_t maxUbSize = 0;
 };

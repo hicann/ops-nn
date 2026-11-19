@@ -31,6 +31,7 @@
 
 #include "aclnn_add_rms_norm_quant_v2.h"
 #include "norm/add_rms_norm_quant/op_host/op_api/add_rms_norm_quant.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -426,7 +427,7 @@ static bool SimpleCheckNotNull(AddRmsNormQuantV2InputTensor& inputTensor, AddRms
     OP_CHECK_NULL(inputTensor.scales1, return false);
     OP_CHECK_NULL(outputTensor.y1Out, return false);
     OP_CHECK_NULL(outputTensor.y2Out, return false);
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510) {
         OP_CHECK_NULL(outputTensor.xOut, return false);
     }
     return true;

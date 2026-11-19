@@ -17,6 +17,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace std;
 
@@ -55,7 +56,7 @@ protected:
 
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_001)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({8, 64}, ACL_FLOAT, ACL_FORMAT_ND);
     auto gammaDesc = TensorDesc(
         {
@@ -90,7 +91,7 @@ TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_001)
 
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_002)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto gammaDesc = TensorDesc(
         {
@@ -125,7 +126,7 @@ TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_002)
 
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_003)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto gammaDesc = TensorDesc(
         {
@@ -160,7 +161,7 @@ TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_003)
 
 TEST_F(l2RmsNormQuantV2Test, ascend950PR_9589_case_004)
 {
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({8, 64}, ACL_BF16, ACL_FORMAT_ND);
     auto gammaDesc = TensorDesc(
         {

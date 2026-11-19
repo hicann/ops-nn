@@ -28,6 +28,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn_batch_norm.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -54,9 +55,9 @@ static const std::initializer_list<op::DataType>& GetSupportDtypeList(NpuArch np
     static const std::initializer_list<op::DataType> DTYPE_SUPPORT_310P_910_LIST = {op::DataType::DT_FLOAT,
                                                                                     op::DataType::DT_FLOAT16};
     static const std::map<NpuArch, std::initializer_list<op::DataType>> dataTypeSupportedMap = {
-        {NpuArch::DAV_2002, DTYPE_SUPPORT_310P_910_LIST}, {NpuArch::DAV_1001, DTYPE_SUPPORT_310P_910_LIST},
-        {NpuArch::DAV_2201, DTYPE_SUPPORT_910BCD_LIST},   {NpuArch::DAV_3510, DTYPE_SUPPORT_910BCD_LIST},
-        {NpuArch::DAV_9201, DTYPE_SUPPORT_910BCD_LIST},   {NpuArch::DAV_9202, DTYPE_SUPPORT_910BCD_LIST}};
+        {Ops::Base::DAV_2002, DTYPE_SUPPORT_310P_910_LIST}, {Ops::Base::DAV_1001, DTYPE_SUPPORT_310P_910_LIST},
+        {Ops::Base::DAV_2201, DTYPE_SUPPORT_910BCD_LIST},   {Ops::Base::DAV_3510, DTYPE_SUPPORT_910BCD_LIST},
+        {Ops::Base::DAV_9201, DTYPE_SUPPORT_910BCD_LIST},   {Ops::Base::DAV_9202, DTYPE_SUPPORT_910BCD_LIST}};
 
     auto found = dataTypeSupportedMap.find(npuArch);
     if (found == dataTypeSupportedMap.end()) {
@@ -81,7 +82,7 @@ static bool CheckNotNull(const aclTensor* input, const aclTensor* out, const acl
 static inline bool isBatchNormSupportNcdhw(void)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    return ((curArch == NpuArch::DAV_2201) || (curArch == NpuArch::DAV_2002));
+    return ((curArch == Ops::Base::DAV_2201) || (curArch == Ops::Base::DAV_2002));
 }
 
 static bool isBNV3Supported(const aclTensor* input)
@@ -90,7 +91,7 @@ static bool isBNV3Supported(const aclTensor* input)
     auto inputFormat = input->GetStorageFormat();
     const size_t inputDim = inputShape.GetDimNum();
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    bool isSocSupport = curArch == NpuArch::DAV_2201;
+    bool isSocSupport = curArch == Ops::Base::DAV_2201;
     bool isFormatSupport = ((inputFormat == Format::FORMAT_NCDHW) || (inputFormat == Format::FORMAT_NCHW));
     int64_t patternR1 = 1;
     int64_t patternA = 1;
