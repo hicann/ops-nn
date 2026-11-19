@@ -141,7 +141,7 @@
     pip3 install -r requirements.txt
     ```
 
-    - 执行UT用例时，安装`tests/requirements.txt`中的依赖。该文件已包含项目根目录`requirements.txt`中的依赖约束，无需重复执行上述命令。
+    - 执行UT用例时，`tensorflow==2.20.0`要求Python >= 3.9，请安装`tests/requirements.txt`中的依赖。该文件已包含项目根目录`requirements.txt`中的依赖约束，无需重复执行上述命令。
 
     ```bash
     pip3 install -r tests/requirements.txt

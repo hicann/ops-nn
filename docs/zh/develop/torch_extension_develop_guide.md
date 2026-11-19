@@ -13,7 +13,7 @@
 ## 环境要求
 
 - 请先参考[环境部署](../install/quick_install.md)完成基础环境搭建，注意以下基础库依赖的版本。
-- python >= 3.8.0
+- python >= 3.9.0（PyTorch 2.6.0的最低版本要求）
 - gcc >= 9.4.0
 - PyTorch >= 2.6.0
 - 对应版本的[TorchNPU](https://gitcode.com/Ascend/pytorch/releases)
