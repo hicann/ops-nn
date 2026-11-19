@@ -185,4 +185,5 @@ None.
 
 | Invocation method   | Sample Code           | Description                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn API  | [test_aclnn_fused_linear_online_max_sum.cpp](examples/arch22/test_aclnn_fused_linear_online_max_sum.cpp) | Invokes the FusedLinearOnlineMaxSum operator through the [aclnnFusedLinearOnlineMaxSum](docs/aclnnFusedLinearOnlineMaxSum_en.md) API. |
+| aclnn API  | [test_aclnn_fused_linear_online_max_sum.cpp](examples/test_aclnn_fused_linear_online_max_sum.cpp) | Invokes the FusedLinearOnlineMaxSum operator through the [aclnnFusedLinearOnlineMaxSum](docs/aclnnFusedLinearOnlineMaxSum_en.md) API. |
+| torch_npu API | [test_e2e_fused_linear_online_max_sum.py](examples/test_e2e_fused_linear_online_max_sum.py) | Invokes the FusedLinearOnlineMaxSum operator through the [torch_npu.npu_fused_linear_online_max_sum](https://gitcode.com/ascend/op-plugin/blob/master/docs/zh/custom_APIs/torch_npu/torch_npu-npu_fused_linear_online_max_sum.md) API. |

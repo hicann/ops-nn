@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- 接口功能：完成[aclnnThreshold](../../../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md)的反向。
+- 接口功能：完成[aclnnThreshold](../../../../activation/threshold_v2/docs/aclnnThreshold&aclnnInplaceThreshold.md)的反向。
 - 计算公式：
 
   $$
