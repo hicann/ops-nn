@@ -64,6 +64,8 @@ constexpr int64_t PAD_SIDE_MULTIPLIER = 2;
 constexpr int64_t PAD_DIM_SIMPLE = 2;
 constexpr int64_t REDUCE_SUM_THRESHOLD = 4000000;
 constexpr int64_t DW1X1_MM_COUT_ALIGN = 16;
+constexpr int64_t DW1X1_MM_STRIDE_MIN = 1;
+constexpr int64_t DW1X1_MM_STRIDE_MAX = 2;
 
 enum class Dw1x1TransToMmMode {
     NONE,    // 不满足1x1 dw转matmul条件
@@ -2379,16 +2381,60 @@ static aclnnStatus GenConvMmDwInputByMode(BatchMatmulInput& batchMmInput, Convol
     return ACLNN_SUCCESS;
 }
 
+// stride>1时dw 1x1 matmul需要input在stride采样点上的切片(无法零拷贝flatten，需物化一次):
+// input [N, Cin, Dout*sD, Hout*sH, Wout*sW] 零拷贝reshape为 [N, Cin, Dout, sD, Hout, sH, Wout, sW]，
+// 取每个stride维的phase-0得到连续的 [N, Cin, Dout, Hout, Wout]；stride全1时直接返回原input
+static const aclTensor* GetDw1x1StridedInput(const ConvolutionBackwardInputTensor& inputTensor,
+                                             const ConvolutionBackwardParams& params, aclOpExecutor* executor)
+{
+    auto input = inputTensor.input;
+    int64_t strideD = (*params.stride)[CONV3D_ATTR_D_IDX];
+    int64_t strideH = (*params.stride)[CONV3D_ATTR_H_IDX];
+    int64_t strideW = (*params.stride)[CONV3D_ATTR_W_IDX];
+    if (strideD == 1 && strideH == 1 && strideW == 1) {
+        return input;
+    }
+    op::Shape inputShape = input->GetViewShape();
+    op::Shape gradOutShape = inputTensor.gradOutput->GetViewShape();
+    int64_t batchDim = inputShape.GetDim(NCDHW_N_DIM);
+    int64_t cInDim = inputShape.GetDim(NCDHW_C_DIM);
+    int64_t dOutDim = gradOutShape.GetDim(NCDHW_D_DIM);
+    int64_t hOutDim = gradOutShape.GetDim(NCDHW_H_DIM);
+    int64_t wOutDim = gradOutShape.GetDim(NCDHW_W_DIM);
+    // 入口已保证 Dout*sD == Din，可零拷贝reshape为8D展开stride相位
+    FVector<int64_t> shape8dVec = {batchDim, cInDim, dOutDim, strideD, hOutDim, strideH, wOutDim, strideW};
+    aclIntArray* shape8dArr = executor->AllocIntArray(shape8dVec.data(), shape8dVec.size());
+    CHECK_RET(shape8dArr != nullptr, nullptr);
+    auto input8d = l0op::Reshape(input, shape8dArr, executor);
+    CHECK_RET(input8d != nullptr, nullptr);
+    FVector<int64_t> offsetsVec(shape8dVec.size(), 0);
+    FVector<int64_t> sizesVec = {batchDim, cInDim, dOutDim, 1, hOutDim, 1, wOutDim, 1};
+    auto offsetsArr = executor->AllocIntArray(offsetsVec.data(), offsetsVec.size());
+    CHECK_RET(offsetsArr != nullptr, nullptr);
+    auto sizesArr = executor->AllocIntArray(sizesVec.data(), sizesVec.size());
+    CHECK_RET(sizesArr != nullptr, nullptr);
+    auto inputSliced = l0op::Slice(input8d, offsetsArr, sizesArr, executor);
+    CHECK_RET(inputSliced != nullptr, nullptr);
+    // [N, Cin, Dout, 1, Hout, 1, Wout, 1] squeeze回 [N, Cin, Dout, Hout, Wout]
+    FVector<int64_t> shape5dVec = {batchDim, cInDim, dOutDim, hOutDim, wOutDim};
+    aclIntArray* shape5dArr = executor->AllocIntArray(shape5dVec.data(), shape5dVec.size());
+    CHECK_RET(shape5dArr != nullptr, nullptr);
+    return l0op::Reshape(inputSliced, shape5dArr, executor);
+}
+
 static aclnnStatus GenConvMmDwInputBy1x1Mode(BatchMatmulInput& batchMmInput,
-                                             ConvolutionBackwardInputTensor& inputTensor, aclOpExecutor* executor)
+                                             ConvolutionBackwardInputTensor& inputTensor,
+                                             const ConvolutionBackwardParams& params, aclOpExecutor* executor)
 {
     // 1x1x1 kernel + batch=1 场景下，dw 可转为 2D matmul：
     // gradOutput [N=1, Co, D, H, W] -> [1, Co, D*H*W]，作为左矩阵(不转置)
     // input       [N=1, Cin, D, H, W] -> [1, Cin, D*H*W]，作为右矩阵(转置)
+    // stride>1时input先物化为下采样切片 [1, Cin, Dout, Hout, Wout]，与gradOutput空间维对齐
     // matmul 输出 [1, Co, Cin]，对应 gradWeight [Co, Cin, 1, 1, 1]
     const vector<int64_t> dhwIdxUnionVec{dDimNCDHWIdx, hDimNCDHWIdx, wDimNCDHWIdx};
     auto gradOutput = inputTensor.gradOutput;
-    auto input = inputTensor.input;
+    auto input = GetDw1x1StridedInput(inputTensor, params, executor);
+    CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
     op::Shape gradOutputShape2d = op::Shape(
         {1, gradOutput->GetViewShape()[cDimNCDHWIdx], CalcCountByAxisVec(gradOutput->GetViewShape(), dhwIdxUnionVec)});
     auto gradOutput2d = ViewWithShape(gradOutput, gradOutputShape2d, executor);
@@ -2409,14 +2455,17 @@ static aclnnStatus GenConvMmDwInputBy1x1Mode(BatchMatmulInput& batchMmInput,
 }
 
 static aclnnStatus GenConvMmDwInputBy1x1BatchNMode(BatchMatmulInput& batchMmInput,
-                                                   ConvolutionBackwardInputTensor& inputTensor, aclOpExecutor* executor)
+                                                   ConvolutionBackwardInputTensor& inputTensor,
+                                                   const ConvolutionBackwardParams& params, aclOpExecutor* executor)
 {
     // 1x1x1 kernel + batch>1 场景下，dw 可转为 3D batch matmul：
     // gradOutput [N, Co, D, H, W] -> [N, Co, D*H*W]，作为左矩阵(不转置)
     // input       [N, Cin, D, H, W] -> [N, Cin, D*H*W]，作为右矩阵(转置)
+    // stride>1时input先物化为下采样切片 [N, Cin, Dout, Hout, Wout]，与gradOutput空间维对齐
     // matmul 输出 [N, Co, Cin] -> ReduceSum(0) -> [Co, Cin]，对应 gradWeight [Co, Cin, 1, 1, 1]
     auto gradOutput = inputTensor.gradOutput;
-    auto input = inputTensor.input;
+    auto input = GetDw1x1StridedInput(inputTensor, params, executor);
+    CHECK_RET(input != nullptr, ACLNN_ERR_INNER_NULLPTR);
     op::Shape gradOutputShape3d = op::Shape({gradOutput->GetViewShape()[0], gradOutput->GetViewShape()[1],
                                              CalcCountByAxisVec(gradOutput->GetViewShape(), {2, 3, 4})});
     auto gradOutput3d = ViewWithShape(gradOutput, gradOutputShape3d, executor);
@@ -2468,10 +2517,10 @@ static aclnnStatus CalculateConv3DBackwardDwByMmMode(ConvolutionBackwardInputTen
     aclnnStatus status;
     if (dw1x1Mode == Dw1x1TransToMmMode::BATCH_1) {
         OP_LOGD("Enter 1x1 dw batch1 matmul optimization path");
-        status = GenConvMmDwInputBy1x1Mode(batchMmInput, inputTensor, executor);
+        status = GenConvMmDwInputBy1x1Mode(batchMmInput, inputTensor, params, executor);
     } else if (dw1x1Mode == Dw1x1TransToMmMode::BATCH_N) {
         OP_LOGI("Enter 1x1 dw batchN matmul optimization path");
-        status = GenConvMmDwInputBy1x1BatchNMode(batchMmInput, inputTensor, executor);
+        status = GenConvMmDwInputBy1x1BatchNMode(batchMmInput, inputTensor, params, executor);
     } else {
         status = GenConvMmDwInputByMode(batchMmInput, inputTensor, executor);
     }
@@ -2786,10 +2835,23 @@ static bool CheckDw1x1TransToMmBase(const ConvolutionBackwardInputTensor& inputT
         OP_LOGD("Dw1x1TransToMm return NONE: groups is %d, only support groups=1", params.groups);
         return false;
     }
-    // stride=1
-    if ((*params.stride)[CONV3D_ATTR_D_IDX] != 1 || (*params.stride)[CONV3D_ATTR_H_IDX] != 1 ||
-        (*params.stride)[CONV3D_ATTR_W_IDX] != 1) {
-        OP_LOGD("Dw1x1TransToMm return NONE: stride is not 1");
+    // stride支持范围为[DW1X1_MM_STRIDE_MIN, DW1X1_MM_STRIDE_MAX]，超出回退dw计算路径；
+    // 并要求gradOut空间维*stride==input空间维(即input空间维可被stride整除)，
+    // 保证下采样切片可零拷贝view展开，奇数空间维回退dw计算路径
+    int64_t strideD = (*params.stride)[CONV3D_ATTR_D_IDX];
+    int64_t strideH = (*params.stride)[CONV3D_ATTR_H_IDX];
+    int64_t strideW = (*params.stride)[CONV3D_ATTR_W_IDX];
+    if (strideD < DW1X1_MM_STRIDE_MIN || strideD > DW1X1_MM_STRIDE_MAX || strideH < DW1X1_MM_STRIDE_MIN ||
+        strideH > DW1X1_MM_STRIDE_MAX || strideW < DW1X1_MM_STRIDE_MIN || strideW > DW1X1_MM_STRIDE_MAX) {
+        OP_LOGD("Dw1x1TransToMm return NONE: stride is not in [%ld, %ld]", DW1X1_MM_STRIDE_MIN, DW1X1_MM_STRIDE_MAX);
+        return false;
+    }
+    op::Shape gradOutShape = inputTensor.gradOutput->GetViewShape();
+    op::Shape inputShape = inputTensor.input->GetViewShape();
+    if (gradOutShape.GetDim(NCDHW_D_DIM) * strideD != inputShape.GetDim(NCDHW_D_DIM) ||
+        gradOutShape.GetDim(NCDHW_H_DIM) * strideH != inputShape.GetDim(NCDHW_H_DIM) ||
+        gradOutShape.GetDim(NCDHW_W_DIM) * strideW != inputShape.GetDim(NCDHW_W_DIM)) {
+        OP_LOGD("Dw1x1TransToMm return NONE: input spatial dims are not divisible by stride");
         return false;
     }
     // pad=0
@@ -2817,8 +2879,10 @@ static Dw1x1TransToMmMode GetDw1x1TransToMmMode(const ConvolutionBackwardInputTe
     if (!CheckDw1x1TransToMmBase(inputTensor, params)) {
         return Dw1x1TransToMmMode::NONE;
     }
-    // 是否是超大shape,超过l2cache进行拦截
-    if (IsGreaterL2CacheForDw1x1(inputTensor)) {
+    bool hasStridedDim = (*params.stride)[CONV3D_ATTR_D_IDX] > 1 || (*params.stride)[CONV3D_ATTR_H_IDX] > 1 ||
+                         (*params.stride)[CONV3D_ATTR_W_IDX] > 1;
+    // 是否是超大shape,超过l2cache进行拦截(仅stride=1路径)
+    if (!hasStridedDim && IsGreaterL2CacheForDw1x1(inputTensor)) {
         OP_LOGD("Dw1x1TransToMm return NONE: shape exceeds L2Cache limit");
         return Dw1x1TransToMmMode::NONE;
     }
@@ -2829,9 +2893,9 @@ static Dw1x1TransToMmMode GetDw1x1TransToMmMode(const ConvolutionBackwardInputTe
         OP_LOGD("Dw1x1TransToMm return BATCH_1: batch=1, 1x1 dw trans to matmul");
         return Dw1x1TransToMmMode::BATCH_1;
     }
-    // fp32输入时容易性能劣化，回退到dw计算路径(降精度/HF32模式除外)
-    if (CalcPromoteType(inputTensor) == DataType::DT_FLOAT && params.cubeMathType != ALLOW_FP32_DOWN_PRECISION &&
-        params.cubeMathType != USE_HF32) {
+    // fp32输入时容易性能劣化，回退到dw计算路径(降精度/HF32模式除外)(仅stride=1路径)
+    if (!hasStridedDim && CalcPromoteType(inputTensor) == DataType::DT_FLOAT &&
+        params.cubeMathType != ALLOW_FP32_DOWN_PRECISION && params.cubeMathType != USE_HF32) {
         OP_LOGD("Dw1x1TransToMm return NONE: not support fp32 input");
         return Dw1x1TransToMmMode::NONE;
     }
@@ -2960,7 +3024,7 @@ static aclnnStatus CalculateConv3DBackwardByMatmulImpl(ConvolutionBackwardInputT
             }
         }
     }
-    // dw: FM=KERNEL场景优先，1x1x1 kernel + batch=1/batch>1 + stride=1 + pad=0 + dilation=1 + groups=1场景兜底
+    // dw: FM=KERNEL场景优先，1x1x1 kernel + batch=1/batch>1 + stride=1/2 + pad=0 + dilation=1 + groups=1场景兜底
     if ((*params.outputMask)[1]) {
         if (dw1x1Mode != Dw1x1TransToMmMode::NONE ||
             conv2MmMode == Conv3DBp2MmMode::CONV3D_BP_MM_FEATURE_MAP_EQ_KERNEL) {
