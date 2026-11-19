@@ -298,15 +298,26 @@ std::vector<GNode> GetMatmulNodes(const GraphPtr& graph, bool directPath)
     return matmulNodes;
 }
 
-// Shared prologue of both fusion loops: no output consumer, or the optional input at index 3
-// (offset_w) present.
+// MatMul / BatchMatMul have no offset_w anchor. Probing index 3 on them makes GE log an error
+// for a missing anchor. MatMulV2/V3 and BatchMatMulV2/V3 declare that optional input.
+bool HasOffsetWInput(const GNode& matmulNode)
+{
+    AscendString nodeType;
+    if (matmulNode.GetType(nodeType) != GRAPH_SUCCESS) {
+        return false;
+    }
+    return nodeType == kOpTypeMatMulV2 || nodeType == kOpTypeMatMulV3 || nodeType == kOpTypeBatchMatMulV2 ||
+           nodeType == kOpTypeBatchMatMulV3;
+}
+
+// Shared prologue of both fusion loops: no output consumer, or offset_w present.
 bool IsMatmulSkippable(const GNode& matmulNode)
 {
     if (matmulNode.GetOutDataNodesAndPortIndexs(0).empty()) {
         OPS_LOG_D(kPassName, "Matmul out nodes is empty, don't need process.");
         return true;
     }
-    if (matmulNode.GetInDataNodesAndPortIndexs(kOffsetWInputIdx).first != nullptr) {
+    if (HasOffsetWInput(matmulNode) && matmulNode.GetInDataNodesAndPortIndexs(kOffsetWInputIdx).first != nullptr) {
         OPS_LOG_D(kPassName, "Matmul with offset_w is not supported, no fusion.");
         return true;
     }

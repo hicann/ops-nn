@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -17,38 +17,38 @@
 
 #if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)) || \
     __FIXED_POINT_ONLY_CUBE_TO_L0C__
-#include "../mat_mul_v3/mat_mul_v3_common.h"          // 共有,BLOCK_SIZE等定义
-#include "./arch35/fused_mat_mul_tilingkey.h"         // 共有,tilingKey模板参数
-#include "../mat_mul_v3/arch35/mat_mul_tiling_data.h" // 共有,tilingData定义
+#include "../mat_mul_v3/mat_mul_v3_common.h"
+#include "./arch35/fused_mat_mul_tilingkey.h"
+#include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
-#include "./arch35/fused_mat_mul_tiling_data.h"              // 3510独有,FusedMatMulTilingData的定义
-#include "cmct/kernel/kernel_matmul_mix.h"                   // 3510独有,KernelMatmulMix类
-#include "cmct/kernel/kernel_matmul.h"                       // 3510独有,KernelMatmul类
-#include "cmct/kernel/kernel_matmul_iterbatch.h"             // 没有用到,确认后可删除
-#include "cmct/kernel/kernel_matmul_mix_without_que.h"       // 没有用到,确认后可删除
-#include "../mat_mul_v3/arch35/mat_mul_streamk_basic_cmct.h" // 3510独有,低阶API实现,MM,streamK模板
-#include "../mat_mul_v3/arch35/mat_mul_mix_basic_cmct.h"     // 3510独有,低阶API实现,MM,MixWithoutQue模板
-#include "./arch35/fused_mat_mul_gelu_basic_cmct.h"          // 3510独有,低阶API实现,MM+GELU,MixWithoutQue模板
-#include "./arch35/fused_mat_mul_sigmoid_asw_basic.h"        // Blaze MM+Sigmoid Fixpipe template
-#include "../mat_mul_v3/arch35/mat_mul_fixpipe_opti_basic_cmct.h"      // 3510独有,低阶API实现,FixpipeOpti模板
-#include "../mat_mul_v3/arch35/mat_mul_input_k_eq_zero_clear_output.h" // 3510独有,K=0清零输出
-#include "./arch35/fused_mat_mul_input_k_eq_zero_copy_x3.h"            // 3510 K=0 add returns x3
-#include "./arch35/fused_mat_mul_with_scale_add_asw_basic.h"           // BMM scale/add epilogue
+#include "./arch35/fused_mat_mul_tiling_data.h"
+#include "cmct/kernel/kernel_matmul_mix.h"
+#include "cmct/kernel/kernel_matmul.h"
+#include "cmct/kernel/kernel_matmul_iterbatch.h"
+#include "cmct/kernel/kernel_matmul_mix_without_que.h"
+#include "../mat_mul_v3/arch35/mat_mul_streamk_basic_cmct.h"
+#include "../mat_mul_v3/arch35/mat_mul_mix_basic_cmct.h"
+#include "./arch35/fused_mat_mul_gelu_basic_cmct.h"
+#include "./arch35/fused_mat_mul_sigmoid_asw_basic.h"
+#include "../mat_mul_v3/arch35/mat_mul_fixpipe_opti_basic_cmct.h"
+#include "../mat_mul_v3/arch35/mat_mul_input_k_eq_zero_clear_output.h"
+#include "./arch35/fused_mat_mul_input_k_eq_zero_copy_x3.h"
+#include "./arch35/fused_mat_mul_with_scale_add_asw_basic.h"
 #include "../mat_mul_v3/arch35/mat_mul_pingpong_basic.h"
 #include "../mat_mul_v3/arch35/mat_mul_fixpipe.h"
 #include "../mat_mul_v3/arch35/mat_mul_streamk.h"
 #include "../mat_mul_v3/arch35/mat_mul_al1_full_load.h"
 #include "../mat_mul_v3/arch35/mat_mul_bl1_full_load.h"
-#include "arch35/fused_mat_mul_elemwise.h" // MM add/mul组装(独立文件, 对齐mat_mul_pingpong_basic.h模式)
+#include "arch35/fused_mat_mul_elemwise.h"
 #endif
 
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
-#include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_asw_kernel_advanced.h" // FIXED_POINT_ONLY_CUBE_TO_L0C 独有,高阶API实现,BMM,aswt模板
+#include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_asw_kernel_advanced.h"
 #endif
 
-#include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_iterbatch_basicapi_cmct.h" // 共有,低阶API实现,BMM,iterbatch模板
-#include "../mat_mul_v3/arch35/mat_mul_pingpong_basic_cmct.h" // 共有,低阶API实现,MM/BMM,aswt模板
+#include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_iterbatch_basicapi_cmct.h"
+#include "../mat_mul_v3/arch35/mat_mul_pingpong_basic_cmct.h"
 #include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_mergebatch_basicapi_cmct.h"
 
 using namespace Cmct;
@@ -552,7 +552,7 @@ __aicore__ inline void FusedMatMulTensorDispatch(const FusedMatMulKernelArgs& ar
 #endif
 template <int8_t API_LEVEL, int8_t TRANS_MODEL, int8_t BATCH_ITER_MODEL, int8_t MODEL, int8_t FULL_LOAD,
           int8_t L0C2OUT_MODEL, int8_t OPTYPE, int8_t INNER_PRECISE>
-__global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM,
+__aicore__ inline void FusedMatMulArch35(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM,
                                          GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     AscendC::InitSocState();
@@ -818,8 +818,8 @@ constexpr MatmulConfig MM_CFG_MULTI_BATCH_OUT_RELU = WithFixpipeRelu(MM_CFG_MULT
 
 template <int LOADMODE, int SPLITCOREMODE, int FIXOPTI, int MIXND2NZ, int SPECIALOPT, int FP32ADDMM, int IS_BATCH,
           int BMM_L1_FULL, int BMM_MULTI, int BMM_LOAD, int BMM_OUT, int BMM_MIX>
-__global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM,
-                                         GM_ADDR workspaceGM, GM_ADDR tilingGM)
+__aicore__ inline void FusedMatMulA2(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM,
+                                     GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     REGISTER_TILING_DEFAULT(MatmulTilingData);
     REGISTER_TILING_FOR_TILINGKEY("IS_BATCH == 1", BatchMatmulTilingData);
@@ -873,5 +873,28 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
                                 MM_CFG_MULTI_BATCH_OUT_RELU);
         }
     }
+}
+#endif
+
+#if (defined(__NPU_ARCH__) &&                                                                           \
+     (__NPU_ARCH__ == 2201 || __NPU_ARCH__ == 3510 || __NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)) || \
+    __FIXED_POINT_ONLY_CUBE_TO_L0C__
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__
+template <int LOADMODE, int SPLITCOREMODE, int FIXOPTI, int MIXND2NZ, int SPECIALOPT, int FP32ADDMM, int IS_BATCH,
+          int BMM_L1_FULL, int BMM_MULTI, int BMM_LOAD, int BMM_OUT, int BMM_MIX>
+#else
+template <int8_t API_LEVEL, int8_t TRANS_MODEL, int8_t BATCH_ITER_MODEL, int8_t MODEL, int8_t FULL_LOAD,
+          int8_t L0C2OUT_MODEL, int8_t OPTYPE, int8_t INNER_PRECISE>
+#endif
+__global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM,
+                                         GM_ADDR workspaceGM, GM_ADDR tilingGM)
+{
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2201) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__
+    FusedMatMulA2<LOADMODE, SPLITCOREMODE, FIXOPTI, MIXND2NZ, SPECIALOPT, FP32ADDMM, IS_BATCH, BMM_L1_FULL, BMM_MULTI,
+                  BMM_LOAD, BMM_OUT, BMM_MIX>(x1GM, x2GM, biasGM, x3GM, yGM, workspaceGM, tilingGM);
+#else
+    FusedMatMulArch35<API_LEVEL, TRANS_MODEL, BATCH_ITER_MODEL, MODEL, FULL_LOAD, L0C2OUT_MODEL, OPTYPE, INNER_PRECISE>(
+        x1GM, x2GM, biasGM, x3GM, yGM, workspaceGM, tilingGM);
+#endif
 }
 #endif
