@@ -29,7 +29,7 @@
 
 - Formula:
   - Scenario 1, when scaleAlg is 0:
-    - Group the input x along the axis dimension into groups of k = blocksize numbers, and dynamically quantize the k numbers in each group $\{\{V_i\}_{i=1}^{k}\}$ into $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = blocksize
+    - Group the input x along the axis dimension into groups of k = blocksize numbers, and dynamically quantize the k numbers in each group $\{V_i\}_{i=1}^{k}$ into $\{mxscale, \{P_i\}_{i=1}^{k}\}$, k = blocksize
 
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax \\

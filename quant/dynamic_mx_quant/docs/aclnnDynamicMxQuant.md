@@ -27,7 +27,7 @@
 
 - 计算公式：
   - 场景1，当scaleAlg为0时：
-    - 将输入x在axis维度上按k = blocksize个数分组，一组k个数$\{\{V_i\}_{i=1}^{k}\}$动态量化为$\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = blocksize
+    - 将输入x在axis维度上按k = blocksize个数分组，一组k个数$\{V_i\}_{i=1}^{k}$动态量化为$\{mxscale, \{P_i\}_{i=1}^{k}\}$, k = blocksize
 
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax \\
