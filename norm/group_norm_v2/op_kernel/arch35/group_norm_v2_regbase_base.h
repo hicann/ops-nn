@@ -163,7 +163,7 @@ __aicore__ inline void VFInnerWelfordParallelUpdateWithInit(__ubuf__ T* x1Local,
         for (uint16_t i = 0; i < loopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
             LoadInputData<T>(x1, x1Local, pregLoop, i * VL_FP32);
-            Duplicate(tmpMean, 0.0, pregLoop);
+            Duplicate(tmpMean, 0.0f, pregLoop);
             Sub(delta1, x1, tmpMean, pregLoop);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
             Axpy(tmpMean, delta1, scale, pregLoop);
@@ -173,7 +173,7 @@ __aicore__ inline void VFInnerWelfordParallelUpdateWithInit(__ubuf__ T* x1Local,
 #endif
             StoreAlign(tmpMeanLocal + i * VL_FP32, tmpMean, pregLoop);
 
-            Duplicate(tmpVar, 0.0, pregLoop);
+            Duplicate(tmpVar, 0.0f, pregLoop);
             Sub(delta3, x1, tmpMean, pregLoop);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 9201 || __NPU_ARCH__ == 9202)
             MulAddDst<float, MaskMergeMode::ZEROING>(tmpVar, delta1, delta3, pregLoop);

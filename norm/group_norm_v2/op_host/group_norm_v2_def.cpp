@@ -96,6 +96,7 @@ public:
         opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, config950);
         opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, config950);
         opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, config950);
+        this->AICore().AddConfig("ascend5162", config950);
     }
 };
 
