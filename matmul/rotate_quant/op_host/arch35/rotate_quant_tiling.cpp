@@ -19,6 +19,8 @@
 #include <limits>
 #include "error_util.h"
 #include "log/log.h"
+#include "graph/utils/type_utils.h"
+#include "matmul/common/op_host/log_format_util.h"
 #include "util/math_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
@@ -172,7 +174,9 @@ void RotateQuantAptTiling::InitCompileInfo()
     compileInfo_.npuArch = ascendcPlatform.GetCurNpuArch();
 
     if (compileInfo_.aicNum <= 0) {
-        OP_LOGE(context_->GetNodeName(), "aicNum <= 0");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "aicNum",
+                                              std::to_string(compileInfo_.aicNum).c_str(),
+                                              "the value of aicNum must be greater than 0");
         return;
     }
     OP_LOGI("RotateQuantApt", "parse compile info success aicNum:%lu, aivNum:%lu, npuArch:%d", compileInfo_.aicNum,
@@ -190,17 +194,45 @@ ge::graphStatus RotateQuantAptTiling::GetShapeAttrsInfo()
 
     inputParams_.opName = context_->GetNodeName();
     OP_LOGI(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid context."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        CheckContext() != ge::GRAPH_SUCCESS,
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(inputParams_.opName, "context", "the tiling context is invalid"),
+        return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(AnalyzeAttrs() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid attrs."),
+    OP_TILING_CHECK(AnalyzeAttrs() != ge::GRAPH_SUCCESS,
+                    OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(inputParams_.opName, "attrs", "the attrs are invalid"),
                     return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(AnalyzeDtype() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid dtypes."),
+    // 失败诊断取值防御: desc/shape指针先判空(为空输出"null"), 不依赖CheckContext前置判空的隐式耦合,
+    // 避免错误路径上再次解引用可能为空的context数据导致崩溃而非返回失败
+    auto dtypeOf = [this](bool isInput, uint32_t idx) -> std::string {
+        const auto* desc = isInput ? context_->GetInputDesc(idx) : context_->GetOutputDesc(idx);
+        return desc == nullptr ? std::string("null") : ge::TypeUtils::DataTypeToSerialString(desc->GetDataType());
+    };
+    auto shapeOf = [this](bool isInput, uint32_t idx) -> std::string {
+        const auto* shape = isInput ? context_->GetInputShape(idx) : context_->GetOutputShape(idx);
+        return shape == nullptr ? std::string("null") : Shape2String(shape->GetStorageShape());
+    };
+    OP_TILING_CHECK(
+        AnalyzeDtype() != ge::GRAPH_SUCCESS,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x, rotation, y, scale",
+            Ops::NN::FormatString("%s, %s, %s, %s", dtypeOf(true, X_INDEX).c_str(), dtypeOf(true, ROT_INDEX).c_str(),
+                                  dtypeOf(false, Y_INDEX).c_str(), dtypeOf(false, SCALE_INDEX).c_str())
+                .c_str(),
+            "the dtypes of x, rotation, y and scale are invalid"),
+        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(AnalyzeGroups() != ge::GRAPH_SUCCESS,
+                    OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(inputParams_.opName, "groups", "the groups are invalid"),
                     return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(AnalyzeGroups() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid groups."),
-                    return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(AnalyzeShapes() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid shapes."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        AnalyzeShapes() != ge::GRAPH_SUCCESS,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            inputParams_.opName, "x, rotation, y, scale",
+            Ops::NN::FormatString("%s, %s, %s, %s", shapeOf(true, X_INDEX).c_str(), shapeOf(true, ROT_INDEX).c_str(),
+                                  shapeOf(false, Y_INDEX).c_str(), shapeOf(false, SCALE_INDEX).c_str())
+                .c_str(),
+            "the shapes of x, rotation, y and scale are invalid"),
+        return ge::GRAPH_FAILED);
 
     OP_LOGD(inputParams_.opName, "Input params: MNK[%ld, %ld, %ld], nKRatio[%ld].", inputParams_.M, inputParams_.N,
             inputParams_.K, inputParams_.nKRatio);
@@ -246,20 +278,22 @@ ge::graphStatus RotateQuantAptTiling::ParseAttrValues()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<char>(ROUND_MODE_ATTR_INDEX));
     std::string roundModeStr = attrs->GetAttrPointer<char>(ROUND_MODE_ATTR_INDEX);
     RoundModeList roundMode = GetRoundMode(roundModeStr);
-    OP_CHECK_IF(
-        (roundMode == RoundModeList::MODE_UNDEFINED),
-        OP_LOGE(context_->GetNodeName(), "invalid round_mode:%s; round_mode should be one of {rint, floor, round}",
-                roundModeStr.c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((roundMode == RoundModeList::MODE_UNDEFINED),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundModeStr.c_str(),
+                                                      "the value of round_mode must be one of {rint, floor, round}"),
+                return ge::GRAPH_FAILED);
     inputParams_.roundMode = static_cast<int32_t>(roundMode);
 
     const int64_t* scaleAlgPtr = attrs->GetAttrPointer<int64_t>(SCALE_ALG_ATTR_INDEX);
     if (scaleAlgPtr != nullptr) {
         inputParams_.scaleAlg = static_cast<int32_t>(*scaleAlgPtr);
-        OP_TILING_CHECK(inputParams_.scaleAlg < MIN_SCALE_ALG || inputParams_.scaleAlg > MAX_SCALE_ALG,
-                        OP_LOGE(inputParams_.opName, "The scaleAlg[%d] should be in [%d, %d].", inputParams_.scaleAlg,
-                                MIN_SCALE_ALG, MAX_SCALE_ALG),
-                        return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(
+            inputParams_.scaleAlg < MIN_SCALE_ALG || inputParams_.scaleAlg > MAX_SCALE_ALG,
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams_.opName, "scaleAlg", std::to_string(inputParams_.scaleAlg).c_str(),
+                Ops::NN::FormatString("the value of scaleAlg must be in [%d, %d]", MIN_SCALE_ALG, MAX_SCALE_ALG)
+                    .c_str()),
+            return ge::GRAPH_FAILED);
     }
 
     tilingData_.invDstTypeMax = DST_TYPE_MAX_DEFAULT;
@@ -287,14 +321,18 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeAttrs()
     OP_TILING_CHECK(ParseAttrValues() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Failed to parse attrs."),
                     return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(inputParams_.trans == true, OP_LOGE(inputParams_.opName, "The trans only support false."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        inputParams_.trans == true,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "trans", "true", "the value of trans must be false"),
+        return ge::GRAPH_FAILED);
 
     const auto& xShapeForAxis = context_->GetInputShape(X_INDEX)->GetStorageShape();
     OP_TILING_CHECK(
         inputParams_.axis != DEFAULT_AXIS && inputParams_.axis != static_cast<int32_t>(xShapeForAxis.GetDimNum() - 1),
-        OP_LOGE(inputParams_.opName, "axis should be %d or %d, got %d.", DEFAULT_AXIS,
-                static_cast<int32_t>(xShapeForAxis.GetDimNum() - 1), inputParams_.axis),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "axis", std::to_string(inputParams_.axis).c_str(),
+                                              Ops::NN::FormatString("the value of axis must be %d or %d", DEFAULT_AXIS,
+                                                                    static_cast<int32_t>(xShapeForAxis.GetDimNum() - 1))
+                                                  .c_str()),
         return ge::GRAPH_FAILED);
 
     OP_LOGD(inputParams_.opName, "Attrs: yDtype=%d, axis=%d, roundMode=%d, scaleAlg=%d, dstTypeMax=%f, trans=%d",
@@ -313,17 +351,26 @@ ge::graphStatus RotateQuantAptTiling::CheckAlphaInput()
     if (alphaDesc == nullptr) {
         return ge::GRAPH_SUCCESS;
     }
+    // 非法方为y的输出dtype(hif4不支持alpha输入), 日志归因到y而非alpha本身
     OP_TILING_CHECK(inputParams_.yDtype == Ops::NN::DT_HIFLOAT4,
-                    OP_LOGE(inputParams_.opName, "alpha is only supported for mxfp4/mxfp8 output, not for hif4."),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "y", ge::TypeUtils::DataTypeToSerialString(inputParams_.yDtype).c_str(),
+                        "alpha is only supported for mxfp4/mxfp8 output, not for hif4"),
                     return ge::GRAPH_FAILED);
     auto alphaDtype = alphaDesc->GetDataType();
-    OP_TILING_CHECK(alphaDtype != ge::DT_BF16, OP_LOGE(inputParams_.opName, "alpha dtype should be bf16."),
+    OP_TILING_CHECK(alphaDtype != ge::DT_BF16,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(inputParams_.opName, "alpha",
+                                                          ge::TypeUtils::DataTypeToSerialString(alphaDtype).c_str(),
+                                                          "the dtype of alpha must be bf16"),
                     return ge::GRAPH_FAILED);
     auto alphaShape = context_->GetOptionalInputShape(ALPHA_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, alphaShape);
     auto alphaStorageShape = alphaShape->GetStorageShape();
-    OP_TILING_CHECK(alphaStorageShape.GetDimNum() != ALPHA_DIM_NUM || alphaStorageShape.GetDim(0) != ALPHA_DIM_SIZE,
-                    OP_LOGE(inputParams_.opName, "alpha shape should be (1,)."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        alphaStorageShape.GetDimNum() != ALPHA_DIM_NUM || alphaStorageShape.GetDim(0) != ALPHA_DIM_SIZE,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(inputParams_.opName, "alpha", Shape2String(alphaStorageShape).c_str(),
+                                              "the shape of alpha must be (1,)"),
+        return ge::GRAPH_FAILED);
     inputParams_.hasAlpha = true;
     OP_LOGD(inputParams_.opName, "hasAlpha detected");
     return ge::GRAPH_SUCCESS;
@@ -337,11 +384,20 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeDtype()
     auto scaleDtype = context_->GetOutputDesc(SCALE_INDEX)->GetDataType();
 
     OP_TILING_CHECK(inputParams_.dataType != ge::DT_FLOAT16 && inputParams_.dataType != ge::DT_BF16,
-                    OP_LOGE(inputParams_.opName, "x dtype should be fp16 or bf16 for dav3510."),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "x", ge::TypeUtils::DataTypeToSerialString(inputParams_.dataType).c_str(),
+                        "the dtype of x must be float16 or bfloat16"),
                     return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(inputParams_.dataType != rotDtype,
-                    OP_LOGE(inputParams_.opName, "x and rotation dtype should be same."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        inputParams_.dataType != rotDtype,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x, rotation",
+            Ops::NN::FormatString("%s, %s", ge::TypeUtils::DataTypeToSerialString(inputParams_.dataType).c_str(),
+                                  ge::TypeUtils::DataTypeToSerialString(rotDtype).c_str())
+                .c_str(),
+            "the dtypes of x and rotation must be the same"),
+        return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(yDtype != ge::DT_FLOAT4_E2M1 && yDtype != ge::DT_FLOAT8_E4M3FN && yDtype != ge::DT_FLOAT8_E5M2 &&
                         yDtype != Ops::NN::DT_HIFLOAT4,
