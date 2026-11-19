@@ -23,6 +23,7 @@
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
 #include "nonzero_arch.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -43,7 +44,7 @@ static const std::initializer_list<op::DataType> REGBASE_AICORE_DTYPE_SUPPORT_LI
 static bool IsAiCoreSupport(const aclTensor* self)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201) {
+    if (curArch == Ops::Base::DAV_2201) {
         if (self->GetViewShape().GetDimNum() == 0) {
             return false;
         }

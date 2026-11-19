@@ -24,6 +24,7 @@
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
 #include "base/err_msg.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -134,7 +135,7 @@ static bool IsLastAxisSupport(const aclTensor* self, const aclTensor* index, con
     bool if_same_dim_value_except_axis = IsSameDimValueExceptAxis(x_shape, index_shape, axis, dims);
     bool is_last_axis = (axis == static_cast<int64_t>(dims) - 1);
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    bool isSupportSoc = (npuArch == NpuArch::DAV_2201);
+    bool isSupportSoc = (npuArch == Ops::Base::DAV_2201);
     int64_t ubSize = isSupportSoc ? SMALL_UB_SIZE : UB_SIZE;
     int64_t available_ub_size = ubSize - RESERVED_UB_SIZE;
     int64_t all_data_size = 0;

@@ -19,6 +19,7 @@
 #include "util/math_util.h"
 #include "util/platform_util.h"
 #include "op_common/atvoss/reduce/reduce_tiling.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace optiling {
 static constexpr int64_t IN_X_IDX = 0;
@@ -58,8 +59,8 @@ ge::graphStatus GatherElementsSimtTiling::GetPlatformInfo()
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         ubSize_ = static_cast<int64_t>(ubSizePlatForm);
-        isDav920x_ = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
-                      ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202);
+        isDav920x_ = (ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9201 ||
+                      ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9202);
         OP_LOGD(opName_, "Get aivNum from ascendcPlatform is: %ld", coreNum_);
     }
     OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),

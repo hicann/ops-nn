@@ -23,6 +23,7 @@
 #include "unsorted_segment_sum_tiling_arch35.h"
 #include "unsorted_segment_sum_tiling.h"
 #include "log/log.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace AscendC;
 using namespace ge;
@@ -328,7 +329,8 @@ bool UnsortedSegmentSumBaseTiling::IsArch92Platform()
         return false;
     }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    return ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 || ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
+    return ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9201 ||
+           ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9202;
 }
 
 bool UnsortedSegmentSumBaseTiling::OutFlIsCapable() const

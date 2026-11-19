@@ -435,7 +435,7 @@ TEST_F(l2_topk_test, l2_topk_test_shape9)
 }
 
 // 正常路径，float32，dim为-1
-TEST_F(l2_topk_test, ascend950PR_9589_l2_topk_k_more_than_2k)
+TEST_F(l2_topk_test, DAV_3510_9589_l2_topk_k_more_than_2k)
 {
     auto selfDesc = TensorDesc({1, 5000}, ACL_FLOAT, ACL_FORMAT_ND);
     auto valDesc = TensorDesc({1, 2100}, ACL_FLOAT, ACL_FORMAT_ND);

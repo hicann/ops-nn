@@ -10,7 +10,7 @@
 
 /* !
  * \file unsorted_segment_sum_apt.cpp
- * \brief ascend960dt/ascend960pr kernel 入口(arch92)，模板化编译期分发，
+ * \brief DAV_9201/DAV_9202 kernel 入口(arch92)，模板化编译期分发，
  *        tiling 复用 op_host/arch35 目录，tiling key 编码见 unsorted_segment_sum_tiling_key.h
  */
 

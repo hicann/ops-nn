@@ -98,7 +98,7 @@ ge::graphStatus UnsortedSegmentSumSimdNonSortTiling::DoOpTiling()
     // ub split
     baseA_ = std::min(normBlockA_, maxBaseA);
 
-    // ascend960dt/ascend960pr 支持 ScatterDataCopy，baseS 计算需为 offsetBuf 预留空间
+    // DAV_9201/DAV_9202 支持 ScatterDataCopy，baseS 计算需为 offsetBuf 预留空间
     bool scatterSupported = IsArch92Platform();
     uint64_t baseS;
     if (scatterSupported) {

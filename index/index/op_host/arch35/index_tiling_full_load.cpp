@@ -21,6 +21,7 @@
 #include "../../op_kernel/arch35/index_tiling_key.h"
 #include "index_tiling.h"
 #include "index_tiling_full_load.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace Index;
 namespace optiling {
@@ -282,8 +283,8 @@ ge::graphStatus IndexFullLoadTiling::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-        isDv121_ = ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
-                   ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202;
+        isDv121_ = ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9201 ||
+                   ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9202;
     }
     return ge::GRAPH_SUCCESS;
 }

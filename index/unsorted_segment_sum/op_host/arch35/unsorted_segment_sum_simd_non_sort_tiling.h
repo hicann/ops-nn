@@ -43,7 +43,7 @@ private:
     uint64_t baseS_ = 1;
     uint64_t baseA_ = 1;
     uint64_t initUsedCore_ = 0;
-    uint64_t useScatterDMA_ = 0; // 仅 ascend960dt/ascend960pr 有效，标识 kernel 是否走 ScatterDataCopy 路径
+    uint64_t useScatterDMA_ = 0; // 仅 DAV_9201/DAV_9202 有效，标识 kernel 是否走 ScatterDataCopy 路径
 };
 } // namespace optiling
 #endif // UNSORTED_SEGMENT_SUM_SIMD_NON_SORT_TILING_H

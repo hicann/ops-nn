@@ -11,7 +11,7 @@
 # All supported chips share one entry; SIMD DMA is enabled only on DAV_9201.
 add_kernel_sources(
     KERNEL_SRC index_put_v2_apt.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
+    COMPUTE_UNITS DAV_3510 DAV_9201 DAV_9202
     SIMPLIFIED_KEY 0
     IMPL_MODE high_performance
     AUTO_SYNC false

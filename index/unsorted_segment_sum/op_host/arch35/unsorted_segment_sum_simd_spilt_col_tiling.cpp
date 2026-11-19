@@ -25,7 +25,7 @@ static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
 static constexpr uint64_t BASE_A_SIZE = 1024;
-static constexpr uint64_t RATIO_BY_SORT = 5; // ascend960dt/ascend960pr 上的行/列比例阈值
+static constexpr uint64_t RATIO_BY_SORT = 5; // DAV_9201/DAV_9202 上的行/列比例阈值
 
 bool UnsortedSegmentSumSimdSplitColTiling::IsCapable()
 {

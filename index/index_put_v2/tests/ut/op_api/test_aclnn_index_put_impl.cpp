@@ -593,7 +593,7 @@ TEST_F(l2_index_put_impl_test, l2_index_put_impl_test_int64_idx_int64)
 }
 
 // // 正常路径，int64，索引int64
-TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_001)
+TEST_F(l2_index_put_impl_test, DAV_3510_9589_case_001)
 {
     bool unsafe = false;
     bool accumulate = true;
@@ -619,7 +619,7 @@ TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_001)
 }
 
 // // 正常路径，int64，索引int64
-TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_003_accFalse)
+TEST_F(l2_index_put_impl_test, DAV_3510_9589_case_003_accFalse)
 {
     bool unsafe = false;
     bool accumulate = false;
@@ -645,7 +645,7 @@ TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_003_accFalse)
 }
 
 // // 正常路径，int64，索引int64
-TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_006_accFalse)
+TEST_F(l2_index_put_impl_test, DAV_3510_9589_case_006_accFalse)
 {
     bool unsafe = false;
     bool accumulate = false;
@@ -673,7 +673,7 @@ TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_006_accFalse)
 }
 
 // // 正常路径，int64，索引int64
-TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_007_accTrue)
+TEST_F(l2_index_put_impl_test, DAV_3510_9589_case_007_accTrue)
 {
     bool unsafe = false;
     bool accumulate = true;
@@ -701,7 +701,7 @@ TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_007_accTrue)
 }
 
 // // 正常路径，int64，索引int64, 部分索引
-TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_008_accTrue)
+TEST_F(l2_index_put_impl_test, DAV_3510_9589_case_008_accTrue)
 {
     bool unsafe = false;
     bool accumulate = true;

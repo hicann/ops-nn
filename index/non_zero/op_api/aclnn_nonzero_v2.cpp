@@ -29,6 +29,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def_nn.h"
 #include "nonzero_arch.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -60,7 +61,7 @@ static const std::initializer_list<op::DataType> REGBASE_AICORE_DTYPE_SUPPORT_LI
 static bool IsAiCoreSupport(const aclTensor* self)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201) {
+    if (curArch == Ops::Base::DAV_2201) {
         if (self->GetViewShape().GetDimNum() == 0) {
             return false;
         }
@@ -81,7 +82,7 @@ inline static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch) || NonZeroArch::IsArch92(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch) || NonZeroArch::IsArch92(curArch)) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND910_DTYPE_SUPPORT_LIST;
@@ -117,7 +118,7 @@ inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* ou
     // 4. 检查输入shape：A2/A3 输出索引受 int32 精度限制，输入单维度不能超过 INT32_MAX；A5 与
     // Ascend960（Arch92）已支持超大 shape，跳过该校验
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch != NpuArch::DAV_3510 && !NonZeroArch::IsArch92(curArch)) {
+    if (curArch != Ops::Base::DAV_3510 && !NonZeroArch::IsArch92(curArch)) {
         CHECK_RET(CheckDims(self), ACLNN_ERR_PARAM_INVALID);
     }
     return ACLNN_SUCCESS;
@@ -147,7 +148,7 @@ aclnnStatus aclnnNonzeroV2GetWorkspaceSize(const aclTensor* self, aclTensor* out
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if ((curArch == NpuArch::DAV_3510 || NonZeroArch::IsArch92(curArch)) && IsAiCoreSupport(self) &&
+    if ((curArch == Ops::Base::DAV_3510 || NonZeroArch::IsArch92(curArch)) && IsAiCoreSupport(self) &&
         !IsContiguous(out)) {
         auto outContiguous = l0op::Contiguous(out, uniqueExecutor.get());
         CHECK_RET(outContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);

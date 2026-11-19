@@ -10,7 +10,7 @@
 
 /*!
  * \file unsorted_segment_sum_tiling_key.h
- * \brief ascend960dt/ascend960pr kernel 侧模板参数声明。
+ * \brief DAV_9201/DAV_9202 kernel 侧模板参数声明。
  *        与 op_host/arch35 共用的 tiling key 编码(ASCENDC_TPL_ARGS_DECL)保持一致，
  *        本文件仅声明 arch92 kernel 支持的模板组合(无 deterministic small innerdim 模板)。
  */

@@ -31,6 +31,7 @@
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
 #include "index/index_check/op_api/index_check.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 /* AdvancedIndex operator's flow as:
  *      self          indexed_sizes     indexed_strides     indices_0                 indices_1   ...
@@ -118,7 +119,7 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensorList* indices,
 {
     bool bf16Invalid = false;
     auto bf16CurArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (bf16CurArch != NpuArch::DAV_2201 && !Ops::NN::AclnnUtil::IsRegbase(bf16CurArch)) {
+    if (bf16CurArch != Ops::Base::DAV_2201 && !Ops::NN::AclnnUtil::IsRegbase(bf16CurArch)) {
         bf16Invalid = (self->GetDataType() == op::DataType::DT_BF16);
     }
     if (bf16Invalid) {
@@ -240,7 +241,7 @@ static const inline std::initializer_list<DataType>& GetAicoreSupportDtypeList()
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return AICORE_DTYPE_SUPPORT_LIST_REGBASE;
-    } else if (curArch == NpuArch::DAV_2201) {
+    } else if (curArch == Ops::Base::DAV_2201) {
         return AICORE_DTYPE_SUPPORT_LIST_910B;
     }
     return AICORE_DTYPE_SUPPORT_LIST;
@@ -318,7 +319,7 @@ bool check_index_aicore(const aclTensor* self, const FVector<const aclTensor*, 8
         }
     }
 
-    bool dataSizeInvalid = ((curArch != NpuArch::DAV_2201 && (!isRegbase)) &&
+    bool dataSizeInvalid = ((curArch != Ops::Base::DAV_2201 && (!isRegbase)) &&
                             self->GetViewShape().GetDimNum() == indices.size() &&
                             indices[0]->GetViewShape().GetShapeSize() > DATA_LIMIT_MULTI_INDEX);
     if (dataSizeInvalid) {
@@ -549,7 +550,7 @@ aclnnStatus aclnnIndexGetWorkspaceSize(const aclTensor* self, const aclTensorLis
     }
 
     auto b4curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (b4curArch == NpuArch::DAV_2201) {
+    if (b4curArch == Ops::Base::DAV_2201) {
         int64_t indicesSize = static_cast<int64_t>(indices->Size());
         if (indicesSize <= static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
             FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;

@@ -31,7 +31,7 @@ static constexpr uint64_t DOUBLE = 2;
 static constexpr uint32_t SORT_STAT_PADDING = 64;
 static constexpr uint32_t OUTPUT_THRESHOLD = 12000;
 static constexpr uint32_t RATIO_THRESHOLD_DEFAULT = 256;
-static constexpr uint32_t RATIO_THRESHOLD_DV121 = 224; // ascend960dt/ascend960pr(DV121) 上的调优阈值
+static constexpr uint32_t RATIO_THRESHOLD_DV121 = 224; // DAV_9201/DAV_9202(DV121) 上的调优阈值
 
 static const std::set<ge::DataType> setAtomicNotSupport = {ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64};
 

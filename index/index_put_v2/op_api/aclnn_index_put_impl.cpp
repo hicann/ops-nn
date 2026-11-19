@@ -40,6 +40,7 @@
 #include "op_api/aclnn_util.h"
 #include "opdev/platform.h"
 #include "op_api/level2_base_nn.h"
+#include "op_common/op_host/util/op_const_def.h"
 #if __has_include("runtime/context.h")
 #include "runtime/context.h"
 #else
@@ -137,7 +138,7 @@ static bool CheckNotNull(const aclTensor* self, const aclTensorList* indices, co
 static bool CheckDtypeValid(const aclTensor* self, const aclTensorList* indices, const aclTensor* value)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_1001) {
+    if (curArch == Ops::Base::DAV_1001) {
         if (self->GetDataType() == op::DataType::DT_BF16) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self not implemented for DT_BF16, when NpuArch is DAV_1001.");
             return false;
@@ -269,8 +270,8 @@ static bool IsAiCPUSupport(const aclTensor* selfRef, const FVector<const aclTens
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     // 910B/910_93 为 DAV_2201；310B 为 DAV_3002
-    bool is910BSocVersion = (curArch == NpuArch::DAV_2201);
-    bool is310BSocVersion = (curArch == NpuArch::DAV_3002);
+    bool is910BSocVersion = (curArch == Ops::Base::DAV_2201);
+    bool is310BSocVersion = (curArch == Ops::Base::DAV_3002);
     bool isSupportAtomic = (is910BSocVersion || is310BSocVersion);
     if (IsAiCPUSupportCheckIndices(indices, value)) {
         return true;
@@ -1341,7 +1342,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor* selfRef, const aclTenso
         return ACLNN_SUCCESS;
     }
 
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201) {
         int64_t indicesSize = static_cast<int64_t>(indices->Size());
         if (indicesSize <= static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
             FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;

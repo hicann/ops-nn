@@ -23,6 +23,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -32,7 +33,7 @@ OP_TYPE_REGISTER(IndexPutWithSortV2);
 static bool IsArch92()
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202;
+    return npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202;
 }
 
 static bool CheckBasicTensorProperties(const aclTensor* self, const aclTensorList* indices, const aclTensor* value)

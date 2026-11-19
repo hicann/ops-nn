@@ -43,7 +43,7 @@ bool UnsortedSegmentSumDeterministicBigInnerDimTiling::IsCapable()
     if (context_->GetDeterministic() == 1 && dataShapeSize_ != 0 &&
         determinsiticSupportType.find(dataType_) != determinsiticSupportType.end() &&
         innerDim_ > BIG_INNERDIM_THRESHOLD) {
-        // ascend960dt/ascend960pr 上 output fullload 模板优先级高于本模板(与 960 kernel 行为保持一致)，
+        // DAV_9201/DAV_9202 上 output fullload 模板优先级高于本模板(与 960 kernel 行为保持一致)，
         // 输出可全量驻留 UB 时让位给 output fullload 模板
         if (IsArch92Platform() && OutFlIsCapable()) {
             return false;

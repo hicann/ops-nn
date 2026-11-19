@@ -17,13 +17,14 @@
 
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace NonZeroArch {
 // Ascend960 对应 NpuArch DAV_9201(960DT)/DAV_9202(960PR)。
 // SocVersion 枚举中 960 排在末尾，无法用 SocVersion 区间覆盖，只能按 NpuArch 显式判定。
-inline bool IsArch92(NpuArch npuArch) { return npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202; }
+inline bool IsArch92(NpuArch npuArch) { return npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202; }
 
-// Ascend960 与 RegBase 芯片(Ascend950/Ascend350)共用同一套 NonZero 实现。
+// DAV_9201/DAV_9202 与 RegBase 芯片(DAV_3510)共用同一套 NonZero 实现。
 inline bool IsRegbaseOrArch92(NpuArch npuArch) { return Ops::NN::AclnnUtil::IsRegbase(npuArch) || IsArch92(npuArch); }
 } // namespace NonZeroArch
 

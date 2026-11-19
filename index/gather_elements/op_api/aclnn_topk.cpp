@@ -40,6 +40,7 @@
 #include "opdev/platform.h"
 #include "level0/fill.h"
 #include "util/math_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 #include <cstdint>
 #include <cmath>
@@ -99,7 +100,7 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_BF16_AN
     op::DataType::DT_BF16,  op::DataType::DT_UINT64, op::DataType::DT_UINT16, op::DataType::DT_UINT32};
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201) {
         return DTYPE_SUPPORT_LIST_WITH_BF16;
     }
     if (Ops::NN::AclnnUtil::IsRegbase()) {
@@ -234,7 +235,7 @@ static const aclTensor* TopkAdaptGeCastTensor(const aclTensor* self, const aclTe
                                               op::DataType dataType, aclOpExecutor* executor)
 {
     NpuArch version = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (version == NpuArch::DAV_1001 && CheckCalcInAiCore(self, k) && self->GetDataType() == op::DataType::DT_FLOAT) {
+    if (version == Ops::Base::DAV_1001 && CheckCalcInAiCore(self, k) && self->GetDataType() == op::DataType::DT_FLOAT) {
         return l0op::Cast(value, dataType, executor);
     }
     return value;

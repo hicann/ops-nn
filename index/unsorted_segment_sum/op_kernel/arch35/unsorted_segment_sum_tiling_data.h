@@ -71,7 +71,7 @@ struct UnsortedSegmentSumSimdNonSortTilingData {
     uint64_t baseS;
     uint64_t baseA;
     uint64_t usedCoreNum;
-    uint64_t useScatterDMA; // 仅 ascend960dt/ascend960pr 有效：1 表示 kernel 走 ScatterDataCopy 路径
+    uint64_t useScatterDMA; // 仅 DAV_9201/DAV_9202 有效：1 表示 kernel 走 ScatterDataCopy 路径
 };
 
 struct UnsortedSegmentSumSimdSplitColTilingData {
@@ -113,7 +113,7 @@ struct UnsortedSegmentSumDeterministicBigInnerDimTilingData {
     uint64_t baseS;
     uint64_t baseA;
     uint32_t sortSharedBufSize;
-    uint64_t useScatterDMA; // 仅 ascend960dt/ascend960pr 有效：1 表示 kernel 走 ScatterDataCopy 路径
+    uint64_t useScatterDMA; // 仅 DAV_9201/DAV_9202 有效：1 表示 kernel 走 ScatterDataCopy 路径
 };
 
 struct UnsortedSegmentSumDetermSmallInnerDimTilingData {

@@ -24,6 +24,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "index_put_v2_simd_dma_tiling.h"
 #include "../../op_kernel/arch35/index_put_v2_tiling_key.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace AscendC;
 
@@ -40,8 +41,8 @@ bool IndexPutV2SimdDmaTiling::IsCapable()
 {
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr ||
-        (platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch() != NpuArch::DAV_9201 &&
-         platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch() != NpuArch::DAV_9202)) {
+        (platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch() != Ops::Base::DAV_9201 &&
+         platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch() != Ops::Base::DAV_9202)) {
         return false;
     }
     return IndexPutV2SimdTiling::IsCapable();

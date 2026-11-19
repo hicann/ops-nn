@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 #include <array>
 #include <vector>
+#include "op_common/op_host/util/op_const_def.h"
 
 #include "../../../op_api/aclnn_nonzero.h"
 
@@ -189,7 +190,7 @@ TEST_F(l2_nonzero_test, aclnnNonzero_16_input_shape_dim_exceed_int32)
     aclnnStatus aclRet = ut_self.TestGetWorkspaceSize(&workspace_size);
     // A5 与 Ascend960（Arch92）已支持超大 shape；其他平台（A2/A3）输入单维度超过 INT32_MAX 仍被 CheckDims 拦截
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_3510 || curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) {
+    if (curArch == Ops::Base::DAV_3510 || curArch == Ops::Base::DAV_9201 || curArch == Ops::Base::DAV_9202) {
         EXPECT_EQ(aclRet, ACL_SUCCESS);
     } else {
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -220,7 +221,7 @@ TEST_F(l2_nonzero_test, ascend910B2_aclnnNonzero_16_bf16)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_nonzero_test, Ascend950_aclnnNonzero_11_input_not_contiguous)
+TEST_F(l2_nonzero_test, DAV_3510_aclnnNonzero_11_input_not_contiguous)
 {
     auto selfDesc = TensorDesc({5, 4}, ACL_INT8, ACL_FORMAT_HWCN, {1, 5}, 0, {4, 5});
     auto outDesc = TensorDesc({20, 2}, ACL_INT64, ACL_FORMAT_HWCN).Precision(0.0001, 0.0001);

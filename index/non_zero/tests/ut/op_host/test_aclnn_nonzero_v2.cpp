@@ -10,6 +10,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 #include "../../../op_api/aclnn_nonzero_v2.h"
 
@@ -221,7 +222,7 @@ TEST_F(l2_nonzero_v2_test, case_0191_MAX_DIM)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     // A5 与 Ascend960（Arch92）已支持超大 shape；其他平台（A2/A3）输入单维度超过 INT32_MAX 仍被 CheckDims 拦截
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_3510 || curArch == NpuArch::DAV_9201 || curArch == NpuArch::DAV_9202) {
+    if (curArch == Ops::Base::DAV_3510 || curArch == Ops::Base::DAV_9201 || curArch == Ops::Base::DAV_9202) {
         EXPECT_EQ(aclRet, ACL_SUCCESS);
     } else {
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
@@ -242,7 +243,7 @@ TEST_F(l2_nonzero_v2_test, case_020_uncontiguous)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_nonzero_v2_test, Ascend950_case_001_FLOAT)
+TEST_F(l2_nonzero_v2_test, DAV_3510_case_001_FLOAT)
 {
     auto self_tensor_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 10);
     auto out_tensor_desc = TensorDesc({2, 3}, ACL_INT64, ACL_FORMAT_ND);
