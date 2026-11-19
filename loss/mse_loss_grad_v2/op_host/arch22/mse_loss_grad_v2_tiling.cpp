@@ -31,7 +31,7 @@ void GetTilingKey(const uint32_t dtypeKey, uint32_t& tilingKey) { tilingKey = dt
 static ge::graphStatus TilingFunc(gert::TilingContext* context)
 {
     MseLossGradTilingData tiling;
-    uint32_t totalLength = context->GetInputShape(0)->GetStorageShape().GetShapeSize();
+    uint64_t totalLength = static_cast<uint64_t>(context->GetInputShape(0)->GetStorageShape().GetShapeSize());
     tiling.set_totalLength(totalLength);
     auto dyDataType = context->GetInputDesc(0)->GetDataType();
     uint32_t dtypeKey = 0;
