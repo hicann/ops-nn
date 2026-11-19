@@ -92,7 +92,7 @@ aclnnStatus aclnnEinsum(
       <td>equation</td>
       <td>Input</td>
       <td>Represents the shorthand formula of the Einstein summation convention.</td>
-      <td>Currently, only "abcd,abced-&gt;abce" and "a,b-&gt;ab" are supported. Expression string on the host.</td>
+      <td>Letter names do not participate in matching: the equation is first normalized by the order in which letters first appear, and then compared with the registry. Currently, the registry contains "abcd,abced-&gt;abce" and "a,b-&gt;ab"; any other label arrangement returns 161002. Expression string on the host.</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -232,7 +232,7 @@ aclnnStatus aclnnEinsum(
 
 - Determinism description: aclnnEinsum defaults to a deterministic implementation.
 
-- Currently, the equation must match exactly to find the corresponding function.
+- The equation is matched by first normalizing letters in the order of first appearance and then comparing with the registry. Therefore `a,b->ab` is equivalent to `i,j->ij` and `x,y->xy`, while `a,b->ba` (different output label order) is not in the registry and returns 161002.
 
 ## Example
 

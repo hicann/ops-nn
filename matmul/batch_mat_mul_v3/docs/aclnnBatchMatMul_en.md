@@ -125,7 +125,10 @@ aclnnStatus aclnnBatchMatMul(
         <li>0: KEEP_DTYPE, keeps the input data type for computation.</li>
         <li>1: ALLOW_FP32_DOWN_PRECISION, supports converting the input data to a lower precision for computation.</li>
         <li>2: USE_FP16, supports converting the input to lower precision FLOAT16 for computation.</li>
-        <li>3: USE_HF32, supports converting the input to lower precision data type HFLOAT32 for computation.</li></ul>
+        <li>3: USE_HF32, supports converting the input to lower precision data type HFLOAT32 for computation.</li>
+        <li>4: USE_FP32_ADD, supports converting the input to FLOAT32 for accumulation.</li>
+        <li>-1: FP16FP32_KEEP_DTYPE, internal reserved value, not guaranteed for external use.</li></ul>
+        Any other value returns error code 161002.
       </td>
       <td>INT8</td>
       <td>-</td>
@@ -160,6 +163,10 @@ aclnnStatus aclnnBatchMatMul(
     - cubeMathType=2: When the input data type is FLOAT32, it will be converted to FLOAT16 for computation; when the input is of other data types, no processing is performed.
     - cubeMathType=3: When the input data type is FLOAT32, it will be converted to HFLOAT32 for computation; when the input is of other data types, no processing is performed.
   <!-- end id7 -->
+  <!-- npu="910b" id12 -->
+  - <term>Atlas A2 products</term>:
+    - cubeMathType=4 is routed to KEEP_DTYPE.
+  <!-- end id12 -->
   <!-- npu="910,310p" id8 -->
   - <term>Atlas training products</term> and <term>Atlas inference products</term>:
     - BFLOAT16 data type is not supported.
@@ -204,6 +211,9 @@ aclnnStatus aclnnBatchMatMul(
     </tr>
     <tr>
       <td>The last dimension of self is not equal to the penultimate dimension of mat2.</td>
+    </tr>
+    <tr>
+      <td>The batch dimensions of self and mat2 are not equal, and neither of them is 1.</td>
     </tr>
   </tbody>
   </table>

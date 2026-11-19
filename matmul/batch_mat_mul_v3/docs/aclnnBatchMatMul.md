@@ -123,7 +123,10 @@ aclnnStatus aclnnBatchMatMul(
         <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
         <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
         <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
-        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li></ul>
+        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
+        <li>4：USE_FP32_ADD，支持将输入转换为FLOAT32累加。</li>
+        <li>-1：FP16FP32_KEEP_DTYPE，内部保留值，对外不保证。</li></ul>
+        除上述取值外，其余取值返回错误码161002。
       </td>
       <td>INT8</td>
       <td>-</td>
@@ -158,6 +161,10 @@ aclnnStatus aclnnBatchMatMul(
     - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
   <!-- end id7 -->
+  <!-- npu="910b" id12 -->
+  - <term>Atlas A2系列产品</term>：
+    - cubeMathType=4，会路由为KEEP_DTYPE处理。
+  <!-- end id12 -->
   <!-- npu="910,310p" id8 -->
   - <term>Atlas训练系列产品</term>、<term>Atlas推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
@@ -202,6 +209,9 @@ aclnnStatus aclnnBatchMatMul(
     </tr>
     <tr>
       <td>self的最后一维和mat2的倒数第二维不相等。</td>
+    </tr>
+    <tr>
+      <td>self和mat2的batch维不相等，且两者均不为1。</td>
     </tr>
   </tbody>
   </table>
