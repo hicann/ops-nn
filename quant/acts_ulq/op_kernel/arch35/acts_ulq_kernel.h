@@ -268,6 +268,9 @@ public:
                 AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
                 AscendC::Cast<float, half>(buf_[B0].template Get<float>(), buf_[BC].template Get<half>(),
                                            AscendC::RoundMode::CAST_NONE, (uint32_t)count);
+                // WAR(BC): clamp_min Cast(V) 读完 BC 后，MTE2 才能用 clamp_max 覆写 BC
+                AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+                AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
             } else {
                 CopyInBrc(coord, IN_CLAMP_MIN, B0, a_i_seg);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
