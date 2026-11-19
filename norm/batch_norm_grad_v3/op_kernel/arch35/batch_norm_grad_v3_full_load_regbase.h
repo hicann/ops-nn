@@ -101,8 +101,8 @@ public:
         LocalTensor<float> binaryAddTensor = binaryAddBuf_.Get<float>();
         for (uint32_t i = 0; i < aDimLoopNum_; i++) {
             uint32_t a = i == aDimLoopNum_ - 1 ? aDimLoopTail_ : aDimPerLoop_;
-            uint64_t offset = i * aDimPerLoop_ * r0Dim_;
-            uint64_t meanOffset = i * aDimPerLoop_;
+            const int64_t meanOffset = static_cast<int64_t>(i) * aDimPerLoop_;
+            const int64_t offset = meanOffset * r0Dim_;
             uint32_t bufferIdx = i % BUFFER_NUM;
 
             LocalTensor<DY_TYPE> dy = dyInQue_.template AllocTensor<DY_TYPE>();
@@ -169,7 +169,7 @@ public:
         }
     }
 
-    __aicore__ inline void PrepareInDy(LocalTensor<DY_TYPE>& dy, uint64_t offset, uint64_t a)
+    __aicore__ inline void PrepareInDy(LocalTensor<DY_TYPE>& dy, int64_t offset, uint64_t a)
     {
         CopyInRAR(dy, dyGm_, 0, offset, a);
     }
@@ -527,7 +527,7 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOutDx(LocalTensor<DY_TYPE>& dx, uint64_t offset, uint32_t a)
+    __aicore__ inline void CopyOutDx(LocalTensor<DY_TYPE>& dx, int64_t offset, uint32_t a)
     {
         if ((outputMask_ & OUTPUT_MASK_DX) != OUTPUT_MASK_NONE) {
             CopyOutRAR(dx, dxGm_, offset, a);
@@ -535,7 +535,7 @@ public:
     }
 
     __aicore__ inline void CopyInRAR(LocalTensor<DY_TYPE>& localTensor, GlobalTensor<DY_TYPE>& globalTensor,
-                                     uint64_t localOffset, uint64_t globalOffset, uint64_t a)
+                                     uint64_t localOffset, int64_t globalOffset, uint64_t a)
     {
         // RAR -> AR，R轴通过Compact Mode补pad到block对齐。
         LoopModeParams loopParams;
@@ -555,15 +555,16 @@ public:
         DataCopyExtParams copyInParams;
         copyInParams.blockCount = r1Dim_;
         copyInParams.blockLen = r0Dim_ * sizeof(DY_TYPE);
-        copyInParams.srcStride = (aDim_ - 1) * r0Dim_ * sizeof(DY_TYPE);
+        copyInParams.srcStride = (static_cast<int64_t>(aDim_) - 1) * r0Dim_ * static_cast<int64_t>(sizeof(DY_TYPE));
         copyInParams.dstStride = 0;
-        DataCopyPad<DY_TYPE, PaddingMode::Compact>(localTensor[localOffset], globalTensor[globalOffset], copyInParams,
+        DataCopyPad<DY_TYPE, PaddingMode::Compact>(localTensor[localOffset],
+                                                   globalTensor[static_cast<uint64_t>(globalOffset)], copyInParams,
                                                    dataCopyPadExtParams);
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
     }
 
     __aicore__ inline void CopyOutRAR(LocalTensor<DY_TYPE>& localTensor, GlobalTensor<DY_TYPE>& globalTensor,
-                                      uint64_t offset, uint64_t a)
+                                      int64_t offset, uint64_t a)
     {
         // AR -> RAR
         LoopModeParams loopParams;
@@ -579,8 +580,9 @@ public:
         copyOutParams.blockCount = r1Dim_;
         copyOutParams.blockLen = r0Dim_ * sizeof(DY_TYPE);
         copyOutParams.srcStride = 0;
-        copyOutParams.dstStride = (aDim_ - 1) * r0Dim_ * sizeof(DY_TYPE);
-        DataCopyPad<DY_TYPE, PaddingMode::Compact>(globalTensor[offset], localTensor, copyOutParams);
+        copyOutParams.dstStride = (static_cast<int64_t>(aDim_) - 1) * r0Dim_ * static_cast<int64_t>(sizeof(DY_TYPE));
+        DataCopyPad<DY_TYPE, PaddingMode::Compact>(globalTensor[static_cast<uint64_t>(offset)], localTensor,
+                                                   copyOutParams);
         ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
     }
 
@@ -613,7 +615,7 @@ private:
     uint32_t aDimPerCore_;
     uint32_t aTailCoreNum_;
     uint32_t aDimTail_;
-    uint32_t gmOffset_;
+    int64_t gmOffset_;
     uint32_t aDimPerLoop_;
     uint32_t aDimLoopNum_;
     uint32_t aDimLoopTail_;

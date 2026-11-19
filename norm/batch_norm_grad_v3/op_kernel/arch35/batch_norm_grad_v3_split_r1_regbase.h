@@ -1105,7 +1105,7 @@ public:
         DataCopyExtParams copyInParams;
         copyInParams.blockCount = r1Factor;
         copyInParams.blockLen = r0Dim_ * sizeof(DY_TYPE);
-        copyInParams.srcStride = (aDim_ - 1) * r0Dim_ * sizeof(DY_TYPE);
+        copyInParams.srcStride = (static_cast<int64_t>(aDim_) - 1) * r0Dim_ * static_cast<int64_t>(sizeof(DY_TYPE));
         copyInParams.dstStride = 0;
         DataCopyPad<DY_TYPE, PaddingMode::Compact>(localTensor[localOffset], globalTensor[globalOffset], copyInParams,
                                                    dataCopyPadExtParams);
@@ -1119,7 +1119,7 @@ public:
         copyOutParams.blockCount = r1Factor;
         copyOutParams.blockLen = r0Dim_ * sizeof(DY_TYPE);
         copyOutParams.srcStride = 0;
-        copyOutParams.dstStride = (aDim_ - 1) * r0Dim_ * sizeof(DY_TYPE);
+        copyOutParams.dstStride = (static_cast<int64_t>(aDim_) - 1) * r0Dim_ * static_cast<int64_t>(sizeof(DY_TYPE));
         DataCopyPad<DY_TYPE, PaddingMode::Compact>(globalTensor[offset], localTensor, copyOutParams);
     }
 
@@ -1151,7 +1151,7 @@ private:
     uint32_t binaryAddLastNum_{0};
     uint32_t aTailCoreNum_{0};
     uint32_t aDimTail_{0};
-    uint32_t gmOffset_{0};
+    int64_t gmOffset_{0};
     uint32_t aDimLoopNum_{0};
     uint32_t dyBufSize_{0};
     uint32_t xBufSize_{0};
