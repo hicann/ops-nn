@@ -18,7 +18,7 @@
 #include "tikicpulib.h"
 
 #include "../fused_mat_mul_tiling_def.h"
-#include "arch35/fused_mat_mul.cpp"
+#include "fused_mat_mul.cpp"
 #include "data_utils.h"
 #include "string.h"
 #include <iostream>
