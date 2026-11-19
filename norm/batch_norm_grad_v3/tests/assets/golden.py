@@ -22,16 +22,17 @@ Only writable ACLNN output buffers are filled with the disabled-output sentinel.
 Kernel inference computes dx only: its two unspecified auxiliary outputs, and
 masked Kernel outputs, return None. TTK reports those slots as SUPPRESSED; they
 are not numerical comparisons. ACLNN inference computes all requested outputs.
-Torch/E2E targets the 950/960 torch_npu binding, including ACLNN's 0/1
+Torch/E2E targets the torch_npu ACLNN binding, including its 0/1
 default-fill policy. Disabled Torch outputs remain None. Raw CPU ATen does not
 accept every optional combination supported by that binding.
 
-Kernel Enable honors output_dtypes; Promote retains FP64. ACLNN and Torch truth
-outputs retain FP64 (ACLNN does not consistently forward golden_mode), avoiding
-loss of promoted precision or accidental half rounding of FP32 parameter grads.
-Comparisons must use the DUT's declared/actual output dtype. Third-party outputs
-use normal interface dtypes and stay on their input CPU/CUDA device. NPU native
-backward is deliberately not used as an oracle for itself.
+Kernel Enable honors output_dtypes; Promote retains FP64. ACLNN and Torch retain
+FP64 truth for Promote. ACLNN and Torch NPU training comparisons with
+half-precision inputs reflect the rounding of the device outputs, including
+parameter gradients written in the weight dtype before conversion to the API
+output dtype.
+Third-party outputs use normal interface dtypes and stay on their input CPU/CUDA
+device. NPU native backward is deliberately not used as an oracle for itself.
 """
 
 import numpy as np
@@ -326,6 +327,36 @@ def _check_truth_device(kwargs):
         )
 
 
+def _round_training_outputs(values, input, weight, training, output_mask, kwargs):
+    mode = str(kwargs.get("golden_mode", "Enable")).lower()
+    if not training or mode != "enable":
+        return values
+    backend = kwargs.get("backend")
+    # ACLNN supplies the SoC metadata in place of the backend name.
+    if backend is None:
+        backend = (
+            "npu" if kwargs.get("short_soc_version") not in (None, "", "cpu") else "cpu"
+        )
+    if backend != "npu":
+        return values
+
+    x = _as_tensor(input)
+    half_dtypes = (torch.float16, torch.bfloat16)
+    # ACLNN Promote supplies wider inputs even when it omits the mode keyword.
+    if x.dtype not in half_dtypes or x.numel() == 0:
+        return values
+    weight_dtype = _as_tensor(weight).dtype if weight is not None else None
+    param_dtype = weight_dtype if weight_dtype in half_dtypes else None
+    return tuple(
+        value.to(dtype).to(value.dtype)
+        if enabled and value is not None and dtype is not None
+        else value
+        for value, enabled, dtype in zip(
+            values, _mask(output_mask), (x.dtype, param_dtype, param_dtype)
+        )
+    )
+
+
 def _kernel_values(
     dy,
     x,
@@ -564,6 +595,9 @@ class AclnnBatchNormBackwardTestSpec:
             grad_bias,
             data_format=_format(kwargs, "aclnn"),
         )
+        values = _round_training_outputs(
+            values, input, weight, training, output_mask, kwargs
+        )
         return (
             tuple(_as_numpy(v) for v in values)
             if kwargs.get("use_numpy", False)
@@ -614,6 +648,9 @@ class TorchBatchNormBackwardTestSpec:
             train,
             eps,
             output_mask,
+        )
+        values = _round_training_outputs(
+            values, input, weight, train, output_mask, kwargs
         )
         return (
             tuple(_as_numpy(v) for v in values)
