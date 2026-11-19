@@ -164,6 +164,18 @@ static Status ParseParamsLpPool(const Message* op_src, ge::Operator& op_dest)
         OP_LOGE(op_dest.GetName().c_str(), "Only support 1D/2D/3D, but the length of kernel_shape is %ld", dims);
         return FAILED;
     }
+    if (!node_attr.pads.empty() && node_attr.pads.size() != static_cast<size_t>(dims) * 2) {
+        OP_LOGE(op_dest.GetName().c_str(),
+                "the size of pads must be 2 * kernel_shape dims(%ld), but %zu is obtained now.", dims,
+                node_attr.pads.size());
+        return FAILED;
+    }
+    if (!node_attr.strides.empty() && node_attr.strides.size() != static_cast<size_t>(dims)) {
+        OP_LOGE(op_dest.GetName().c_str(),
+                "the size of strides must be equal to kernel_shape dims(%ld), but %zu is obtained now.", dims,
+                node_attr.strides.size());
+        return FAILED;
+    }
 
     std::map<string, string> padding_mode = {
         {"NOTSET", "CALCULATED"}, {"SAME_UPPER", "SAME"}, {"SAME_LOWER", "SAME"}, {"VALID", "VALID"}};

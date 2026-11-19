@@ -139,6 +139,24 @@ static Status ParseParamsMaxPool(const Message* op_src, ge::Operator& op_dest)
         OP_LOGE("MaxPool", "Only support 2D/3D, but the length of kernel_shape is %ld", dims);
         return FAILED;
     }
+    if (!node_attr.pads.empty() && node_attr.pads.size() != static_cast<size_t>(dims) * 2) {
+        OP_LOGE(GetOpName(op_dest).c_str(),
+                "the size of pads must be 2 * kernel_shape dims(%ld), but %zu is obtained now.", dims,
+                node_attr.pads.size());
+        return FAILED;
+    }
+    if (!node_attr.strides.empty() && node_attr.strides.size() != static_cast<size_t>(dims)) {
+        OP_LOGE(GetOpName(op_dest).c_str(),
+                "the size of strides must be equal to kernel_shape dims(%ld), but %zu is obtained now.", dims,
+                node_attr.strides.size());
+        return FAILED;
+    }
+    if (!node_attr.dilations.empty() && node_attr.dilations.size() != static_cast<size_t>(dims)) {
+        OP_LOGE(GetOpName(op_dest).c_str(),
+                "the size of dilations must be equal to kernel_shape dims(%ld), but %zu is obtained now.", dims,
+                node_attr.dilations.size());
+        return FAILED;
+    }
 
     op_dest.SetAttr("name", node->name());
     op_dest.SetAttr("dims", dims);
