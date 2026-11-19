@@ -1127,6 +1127,86 @@ TEST_F(l2_baddbmm_test, dav3510_test_bmm_transpose_add2)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+// 非连续+转置(batch2 strides {8,32,1}, 即[k,b,n]存储->[b,k,n]视图): 不路由fmm, 走拼接路径
+TEST_F(l2_baddbmm_test, dav3510_fmm_gate_fallback_noncontiguous_permute_batch2)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    auto self = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({4, 32, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // [k,b,n]存储 -> [b,k,n]视图: 非连续+转置
+    auto batch2 = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND, {8, 32, 1}, 0, {32, 4, 8}).ValueRange(0, 2);
+    auto out = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 非连续+转置, batch1 侧(strides {32,1,128}, 即[k,b,m]存储->[b,m,k]视图): 不路由fmm, 走拼接路径
+TEST_F(l2_baddbmm_test, dav3510_fmm_gate_fallback_noncontiguous_permute_batch1)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    auto self = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // [k,b,m]存储 -> [b,m,k]视图: 非连续+转置
+    auto batch1 = TensorDesc({4, 32, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {32, 1, 128}, 0, {32, 4, 32}).ValueRange(0, 2);
+    auto batch2 = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// alpha/beta 非1缩放 + 非连续+转置: 不路由fmm scale_add, 走拼接路径
+TEST_F(l2_baddbmm_test, dav3510_scale_add_gate_fallback_noncontiguous_permute)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    auto self = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({4, 32, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // [k,b,n]存储 -> [b,k,n]视图: 非连续+转置
+    auto batch2 = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND, {8, 32, 1}, 0, {32, 4, 8}).ValueRange(0, 2);
+    auto out = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(3.0f);
+    auto alpha = ScalarDesc(2.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 标准末两维转置(batch2 strides {256,1,32}, 即[b,n,k]存储->[b,k,n]视图): 路由fmm
+TEST_F(l2_baddbmm_test, dav3510_fmm_standard_transpose_batch2)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    auto self = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({4, 32, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // [b,n,k]存储 -> [b,k,n]视图: 标准末两维转置
+    auto batch2 = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND, {256, 1, 32}, 0, {4, 8, 32}).ValueRange(0, 2);
+    auto out = TensorDesc({4, 32, 8}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnBaddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_baddbmm_test, baddbmm_16in32out_fp16_fp16_fp32_use_hf32)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);

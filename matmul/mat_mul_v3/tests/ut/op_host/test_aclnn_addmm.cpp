@@ -938,6 +938,47 @@ TEST_F(l2_addmm_test, addmm_dav3510_bf16_bf16_use_fp32_add_with_2d_self)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+// 非连续列切片(mat1 为(16,64)的列切片, strides {64,1}): 不路由fmm, 走默认拼接路径
+TEST_F(l2_addmm_test, addmm_dav3510_fmm_gate_fallback_noncontiguous_slice_mat1)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    auto self = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // (16,64)大tensor的列切片: 非连续
+    auto mat1 = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {64, 1}, 0, {16, 64}).ValueRange(0, 2);
+    auto mat2 = TensorDesc({32, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnAddmm, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 标准末两维转置(mat1 strides {1,16} 即[k,m]存储->[m,k]视图; mat2 strides {1,32} 即[n,k]存储->[k,n]视图): 路由fmm
+TEST_F(l2_addmm_test, addmm_dav3510_fmm_standard_transpose_mat1_mat2)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    auto self = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    // [k,m]存储 -> [m,k]视图: 标准末两维转置
+    auto mat1 = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 16}, 0, {32, 16}).ValueRange(0, 2);
+    // [n,k]存储 -> [k,n]视图: 标准末两维转置
+    auto mat2 = TensorDesc({32, 32}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 32}, 0, {32, 32}).ValueRange(0, 2);
+    auto out = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnAddmm, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_addmm_test, addmm_dav3510_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
     op::NpuArchManager archManager(Ops::Base::DAV_3510);

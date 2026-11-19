@@ -427,6 +427,11 @@ static bool CheckFmmBaddbmmSupport(const aclTensor* self, const aclTensor* batch
         self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         return false;
     }
+    // 输入布局: 仅接受连续或标准末两维转置(ContiguousAndCast 零拷贝), 其余非连续布局回退拼接路径
+    if ((!op::IsContiguous(batch1) && !Ops::NN::IsTransposeLastTwoDims(batch1)) ||
+        (!op::IsContiguous(batch2) && !Ops::NN::IsTransposeLastTwoDims(batch2))) {
+        return false;
+    }
     // K>0 (对齐 addmm 侧求稳决策)
     if (b1Shape.GetDim(FMM_BMM_COL_IDX) == 0) {
         return false;
@@ -505,6 +510,10 @@ static bool CheckScaleAddSupport(const aclTensor* self, const aclTensor* batch1,
     }
     // scale_add 不支持转置
     if (Ops::NN::IsTransposeLastTwoDims(batch1) || Ops::NN::IsTransposeLastTwoDims(batch2)) {
+        return false;
+    }
+    // 输入布局: 仅接受连续(转置已被上一条拦截), 非连续回退拼接路径
+    if (!op::IsContiguous(batch1) || !op::IsContiguous(batch2)) {
         return false;
     }
     // k>0

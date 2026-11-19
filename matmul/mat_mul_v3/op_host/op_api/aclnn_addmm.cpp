@@ -837,6 +837,11 @@ static bool CheckFmmAddSupport(const aclTensor* self, const aclTensor* mat1, con
         self->GetStorageFormat() != op::Format::FORMAT_ND) {
         return false;
     }
+    // 输入布局: 仅接受连续或标准末两维转置(ContiguousAndCast 零拷贝), 其余非连续布局回退默认拼接路径
+    if ((!op::IsContiguous(mat1) && !IsTransposeLastTwoDims(mat1)) ||
+        (!op::IsContiguous(mat2) && !IsTransposeLastTwoDims(mat2))) {
+        return false;
+    }
     return true;
 }
 
