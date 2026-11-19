@@ -382,7 +382,7 @@ int main() {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-  // 6. Release aclTensor and aclScalar. Modify it based on the definition of the specific API.
+  // 6. Release aclTensor. Modify it based on the definition of the specific API.
   aclDestroyTensor(self);
   aclDestroyTensor(indices);
   aclDestroyTensor(out);
