@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "aclnn_scatter_nd_update.h"
 #include "scatter_nd_update.h"
 #include "level0/broadcast_to.h"
@@ -63,10 +64,10 @@ static bool CheckNotNull(aclTensor* varRef, const aclTensor* indices, const aclT
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto socVersion = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (socVersion == NpuArch::DAV_9201 || socVersion == NpuArch::DAV_9202) {
+    if (socVersion == Ops::Base::DAV_9201 || socVersion == Ops::Base::DAV_9202) {
         return ASCEND960_DTYPE_DTYPE_SUPPORT_LIST;
     }
-    if (socVersion == NpuArch::DAV_3510) {
+    if (socVersion == Ops::Base::DAV_3510) {
         return ASCEND950_DTYPE_DTYPE_SUPPORT_LIST;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
@@ -389,7 +390,7 @@ aclnnStatus aclnnScatterNdUpdateGetWorkspaceSize(aclTensor* varRef, const aclTen
     bool dimCheck = (indicesDimNum > 0 && indexAxisNum <= MAX_INDICES_RANK);
 
     if (dimCheck) {
-        if (socVersion == NpuArch::DAV_3510 && IsSupportNonContiguous(varRef, indexAxisNum)) {
+        if (socVersion == Ops::Base::DAV_3510 && IsSupportNonContiguous(varRef, indexAxisNum)) {
             // arch35：非索引轴连续，索引轴非连续 → 通用 view 优化路径
             return ProcessNonContiguousCase(varRef, indices, updates, workspaceSize, executor, uniqueExecutor);
         }

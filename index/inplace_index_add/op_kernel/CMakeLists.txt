@@ -11,14 +11,14 @@
 # A5(arch35) 使用 arch35 目录下的 inplace_index_add_apt.cpp 作为 kernel 入口
 add_kernel_sources(
     KERNEL_SRC arch35/inplace_index_add.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )
 # A6(arch92) 使用 arch92 目录下的入口，额外引入 arch92 的 ScatterDMA 模板
 add_kernel_sources(
     KERNEL_SRC arch92/inplace_index_add.cpp
-    COMPUTE_UNITS ascend960dt ascend960pr
+    COMPUTE_UNITS dav_9201 dav_9202
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

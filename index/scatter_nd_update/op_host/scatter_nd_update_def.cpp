@@ -11,6 +11,7 @@
  * \file scatter_nd_update.cpp
  * \brief ScatterNdUpdate ophost
  */
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "register/op_def_registry.h"
 // opbuild 工具编译 def 时仅注入工具链 include（无仓根 -I），须用相对路径引用仓内公共头
 #include "../../../common/inc/op_host/op_const_def_nn.h"
@@ -85,8 +86,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "scatter_nd_update_apt");
-        this->AICore().AddConfig("ascend950", aicore_config);
-        this->AICore().AddConfig("ascend350", aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config);
         this->AICore().AddConfig("ascend5162", aicore_config);
 
         OpAICoreConfig aicoreConfigArch35Hif4;
@@ -163,8 +163,8 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "scatter_nd_update_apt");
-        this->AICore().AddConfig("ascend960dt", aicoreConfigArch35Hif4);
-        this->AICore().AddConfig("ascend960pr", aicoreConfigArch35Hif4);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicoreConfigArch35Hif4);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicoreConfigArch35Hif4);
 
         OpAICoreConfig aicoreConfigArch22;
         aicoreConfigArch22.Input("var")

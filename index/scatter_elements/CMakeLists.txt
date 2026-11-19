@@ -8,15 +8,15 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-# 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend950" "mc62" "ascend350" "ascend960dt" "ascend960pr")
+# DAV_3510及已有960平台按架构配置，其他平台保留原SoC项。
+set(SUPPORT_COMPUTE_UNIT "dav_3510" "mc62" "dav_9201" "dav_9202")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
-set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35" "arch35" "arch35")
+set(SUPPORT_TILING_DIR "arch35" "arch35" "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE scatter_elements ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE DEPENDENCIES scatter_elements_v2 scatter_update tf_scatter_add scatter_nd_add sort_lib HOSTCPU TRUE)
 
 add_kernel_sources(
     KERNEL_SRC scatter_elements_apt.cpp
-    COMPUTE_UNITS ascend960dt ascend960pr
+    COMPUTE_UNITS dav_9201 dav_9202
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

@@ -12,6 +12,7 @@
  * \file scatter_update.cpp
  * \brief scatter_update
  */
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "register/op_def_registry.h"
 #include "../../../common/inc/op_host/op_const_def_nn.h"
 
@@ -82,8 +83,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", aicore_config);
-        this->AICore().AddConfig("ascend350", aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config);
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.Input("var")
             .ParamType(REQUIRED)
@@ -114,8 +114,8 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend960dt", aiCoreConfig);
-        this->AICore().AddConfig("ascend960pr", aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aiCoreConfig);
     }
 };
 

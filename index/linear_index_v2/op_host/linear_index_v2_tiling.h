@@ -47,7 +47,7 @@ REGISTER_TILING_DATA_CLASS(LinearIndexV2, LinearIndexV2TilingData)
 struct LinearIndexV2CompileInfo {
     int32_t totalCoreNum = 0;
     uint64_t ubSizePlatForm = 0;
-    bool isAscend950 = false;
+    bool isRegbase = false;
 };
 } // namespace optiling
 

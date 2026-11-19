@@ -11,14 +11,14 @@
 # A5(arch35) 使用 arch35 目录下的 scatter_apt.cpp 作为 kernel 入口
 add_kernel_sources(
     KERNEL_SRC arch35/scatter_apt.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     IMPL_MODE high_performance,optional
 )
 # A6(arch92) 使用 arch92 目录下的入口，支持 128b dtype 提升与 SIMD scatter DMA 模板
 add_kernel_sources(
     KERNEL_SRC arch92/scatter_apt.cpp
-    COMPUTE_UNITS ascend960dt ascend960pr
+    COMPUTE_UNITS dav_9201 dav_9202
     AUTO_SYNC false
     IMPL_MODE high_performance,optional
 )

@@ -137,7 +137,7 @@ ge::graphStatus LinearIndexV2Tiling::Init()
     }
     // for ascend950, indices can be [0], which means support non-continuous indices
     uint64_t validIdx = 0;
-    if (compileInfo->isAscend950) {
+    if (compileInfo->isRegbase) {
         for (uint64_t i = 0; i < tensorId_; i++) {
             auto idxTensorShapePtr = tilingContext_->GetDynamicInputShape(0, i);
             OP_CHECK_IF(idxTensorShapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT(opName_, "indices_list"),
@@ -153,12 +153,12 @@ ge::graphStatus LinearIndexV2Tiling::Init()
     }
     // 1. 取出tensorList中第一个tensor的shape, aclnn中保证了第一个tensor是非空的(For ascend950, need find a valid
     // shape)
-    auto idxTensorShapePtr = compileInfo->isAscend950 ? tilingContext_->GetDynamicInputShape(0, validIdx) :
-                                                        tilingContext_->GetDynamicInputShape(0, 0);
+    auto idxTensorShapePtr = compileInfo->isRegbase ? tilingContext_->GetDynamicInputShape(0, validIdx) :
+                                                      tilingContext_->GetDynamicInputShape(0, 0);
     OP_CHECK_IF(idxTensorShapePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT("LinearIndexV2", "indices_list"),
                 return ge::GRAPH_FAILED);
-    auto idxTensorDtypePtr = compileInfo->isAscend950 ? tilingContext_->GetDynamicInputDesc(0, validIdx) :
-                                                        tilingContext_->GetDynamicInputDesc(0, 0);
+    auto idxTensorDtypePtr = compileInfo->isRegbase ? tilingContext_->GetDynamicInputDesc(0, validIdx) :
+                                                      tilingContext_->GetDynamicInputDesc(0, 0);
     OP_CHECK_IF(idxTensorDtypePtr == nullptr, OP_LOGE_WITH_INVALID_INPUT("LinearIndexV2", "indices_list"),
                 return ge::GRAPH_FAILED);
     auto idxDtype = idxTensorDtypePtr->GetDataType();
@@ -236,7 +236,7 @@ ge::graphStatus LinearIndexV2Tiling::RunKernelTiling()
     tilingContext_->SetTilingKey(tilingKey_);
     tilingContext_->SetBlockDim(usedCoreNum_);
     auto compileInfo = static_cast<const LinearIndexV2CompileInfo*>(tilingContext_->GetCompileInfo());
-    if (compileInfo->isAscend950) {
+    if (compileInfo->isRegbase) {
         tilingContext_->SetScheduleMode(1);
         tilingContext_->SetLocalMemorySize(compileInfo->ubSizePlatForm - DCACHE_SIZE - REGBASE_CCEC_CACHE_SIZE);
     }
@@ -288,7 +288,7 @@ ge::graphStatus TilingPrepareForLinearIndexV2(gert::TilingParseContext* context)
     OP_CHECK_IF(platformInfo == nullptr, ReportMissingTilingObject(__func__, "platformInfo"), return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    compileInfo->isAscend950 = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
+    compileInfo->isRegbase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = ubSizePlatForm;

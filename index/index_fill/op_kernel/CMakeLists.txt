@@ -19,7 +19,7 @@ add_kernel_sources(
 # A5(arch35) 使用 arch35 目录下的 index_fill.cpp 作为 kernel 入口
 add_kernel_sources(
     KERNEL_SRC arch35/index_fill.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     SIMPLIFIED_KEY 0
     IMPL_MODE high_performance
     AUTO_SYNC false
@@ -28,7 +28,7 @@ add_kernel_sources(
 # A6(arch92) 使用 arch92 目录下的入口，额外引入 arch92 的 SIMD_DMA 模板
 add_kernel_sources(
     KERNEL_SRC arch92/index_fill.cpp
-    COMPUTE_UNITS ascend960dt ascend960pr
+    COMPUTE_UNITS dav_9201 dav_9202
     SIMPLIFIED_KEY 0
     IMPL_MODE high_performance
     AUTO_SYNC false

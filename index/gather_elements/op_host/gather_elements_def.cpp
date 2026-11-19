@@ -12,8 +12,8 @@
  * \file gather_elements_def.cpp
  * \brief
  */
-#include "register/op_def_registry.h"
 #include "op_common/op_host/util/op_arch_helper.h"
+#include "register/op_def_registry.h"
 
 namespace ops {
 class GatherElements : public OpDef {

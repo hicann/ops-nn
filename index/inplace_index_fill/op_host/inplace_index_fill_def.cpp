@@ -13,6 +13,7 @@
  * \brief
  */
 #include <cstdint>
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "register/op_def_registry.h"
 namespace {
 // x支持10种数据类型，indices支持int32/int64两种，共10x2=20种合法组合
@@ -54,9 +55,8 @@ public:
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "inplace_index_fill_apt");
 
-        this->AICore().AddConfig("ascend950", aicore_config);
-        this->AICore().AddConfig("ascend350", aicore_config);
-        this->AICore().AddConfig("ascend960dt", aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicore_config);
     }
 };
 

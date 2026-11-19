@@ -14,7 +14,7 @@
 # support_out_of_bound_index 两套二进制在 ascend950/ascend350 上丢失（功能回退）。
 add_kernel_sources(
     KERNEL_SRC arch35/scatter_update.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     IMPL_MODE high_performance,high_precision,support_out_of_bound_index
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
@@ -22,7 +22,7 @@ add_kernel_sources(
 # A6(arch92) 使用 arch92 目录下的入口，额外引入 arch92 的 SIMD_SCATTER_DMA 模板
 add_kernel_sources(
     KERNEL_SRC arch92/scatter_update.cpp
-    COMPUTE_UNITS ascend960dt ascend960pr
+    COMPUTE_UNITS dav_9201 dav_9202
     IMPL_MODE high_performance,high_precision,support_out_of_bound_index
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"

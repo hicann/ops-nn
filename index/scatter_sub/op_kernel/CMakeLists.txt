@@ -14,7 +14,7 @@
 # 编译器自动插入的同步与 kernel 末尾全量 dcache flush
 add_kernel_sources(
     KERNEL_SRC arch35/scatter_sub.cpp
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     IMPL_MODE high_precision,support_out_of_bound_index,optional
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
@@ -22,7 +22,7 @@ add_kernel_sources(
 # A6(arch92) 使用 arch92 目录下的入口（复用 scatter_add 的 arch35 原子头与 arch92 scatter_dma 模板）
 add_kernel_sources(
     KERNEL_SRC arch92/scatter_sub.cpp
-    COMPUTE_UNITS ascend960dt
+    COMPUTE_UNITS dav_9201
     IMPL_MODE high_precision,support_out_of_bound_index,optional
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"

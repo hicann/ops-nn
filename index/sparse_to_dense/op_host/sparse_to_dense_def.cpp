@@ -12,6 +12,7 @@
  * \file sparse_to_dense_def.cpp
  * \brief
  */
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "register/op_def_registry.h"
 
 namespace ops {
@@ -57,10 +58,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", aicore_config);
-        this->AICore().AddConfig("ascend350", aicore_config);
-        this->AICore().AddConfig("ascend960dt", aicore_config);
-        this->AICore().AddConfig("ascend960pr", aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicore_config);
     }
 };
 

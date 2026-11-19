@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC avg_pool_v2_apt.cpp
-    COMPUTE_UNITS ascend950 ascend350 mc62 ascend960dt ascend960pr
+    COMPUTE_UNITS dav_3510 mc62 dav_9201 dav_9202
     SIMPLIFIED_KEY 0
     IMPL_MODE high_performance,high_precision
     AUTO_SYNC false

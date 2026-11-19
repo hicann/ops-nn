@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "scatter_elements_v2_asc_tiling.h"
 #include <vector>
 #include "register/op_def_registry.h"
@@ -173,8 +174,8 @@ ge::graphStatus ScatterElementsV2AscTiling::GetShapeAttrsInfo()
     if (!isScalarUpdates_ && reduction_ == REDUCTION_ADD && dtype_ == ge::DT_INT64 && dataShape.GetDimNum() == 1 &&
         dataAxis_ > 0 && allAxis_ > 0 && (allAxis_ - 1) / dataAxis_ >= INT64_LOCAL_ADD_REPEAT_RATIO) {
         auto* platformInfo = context_->GetPlatformInfo();
-        if (platformInfo != nullptr && platform_ascendc::PlatformAscendC(platformInfo).GetSocVersion() ==
-                                           platform_ascendc::SocVersion::ASCEND950) {
+        if (platformInfo != nullptr &&
+            platform_ascendc::PlatformAscendC(platformInfo).GetCurNpuArch() == Ops::Base::DAV_3510) {
             isDeterministic_ = 1;
         }
     }

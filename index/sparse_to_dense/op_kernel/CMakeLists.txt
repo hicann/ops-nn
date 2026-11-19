@@ -11,5 +11,5 @@
 # 使用 sparse_to_dense.cpp 作为 kernel 入口
 add_kernel_sources(
     KERNEL_SRC sparse_to_dense.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
+    COMPUTE_UNITS dav_3510 dav_9201 dav_9202
 )
