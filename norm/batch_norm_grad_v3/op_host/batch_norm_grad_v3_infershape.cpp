@@ -81,6 +81,15 @@ static ge::graphStatus BatchNormGradV3InferShape(gert::InferShapeContext* contex
     *dweightShape = *weightShape;
     *dbiasShape = *weightShape;
 
+    // 推理模式仅计算 dx；dy 明确为空时，将无数值语义的辅助输出也推为空，交由 GE 处理。
+    // 训练模式的参数梯度包含归约：归约轴为 0 不代表 [C] 输出为空，须保留 weight 的形状。
+    const auto* attrs = context->GetAttrs();
+    const bool* isTraining = attrs == nullptr ? nullptr : attrs->GetBool(0);
+    if (isTraining != nullptr && !*isTraining && dyShape->GetShapeSize() == 0) {
+        *dweightShape = {0};
+        *dbiasShape = {0};
+    }
+
     return GRAPH_SUCCESS;
 }
 

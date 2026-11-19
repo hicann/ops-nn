@@ -22,6 +22,96 @@ protected:
     static void TearDownTestCase() { std::cout << "BatchNormGradV3 TearDown" << std::endl; }
 };
 
+namespace {
+void CheckEmptyOutputShape(const std::vector<int64_t>& dyShape, int64_t channels, ge::Format format, int training,
+                           const std::vector<int64_t>& expectedParams, ge::DataType dtype = ge::DT_FLOAT)
+{
+    auto testOp = ge::op::BatchNormGradV3("BatchNormGradV3");
+    if (training >= 0) {
+        testOp.set_attr_is_training(training != 0);
+    }
+    const std::vector<int64_t> weightShape = {channels};
+    const std::vector<std::pair<int64_t, int64_t>> shapeRange;
+    TENSOR_INPUT_WITH_SHAPE(testOp, dy, dyShape, dtype, format, shapeRange);
+    TENSOR_INPUT_WITH_SHAPE(testOp, x, dyShape, dtype, format, shapeRange);
+    TENSOR_INPUT_WITH_SHAPE(testOp, weight, weightShape, dtype, ge::FORMAT_ND, shapeRange);
+    TENSOR_INPUT_WITH_SHAPE(testOp, running_mean, weightShape, dtype, ge::FORMAT_ND, shapeRange);
+    TENSOR_INPUT_WITH_SHAPE(testOp, running_var, weightShape, dtype, ge::FORMAT_ND, shapeRange);
+    TENSOR_INPUT_WITH_SHAPE(testOp, save_mean, weightShape, ge::DT_FLOAT, ge::FORMAT_ND, shapeRange);
+    TENSOR_INPUT_WITH_SHAPE(testOp, save_rstd, weightShape, ge::DT_FLOAT, ge::FORMAT_ND, shapeRange);
+    const Runtime2TestParam param{{"is_training"}, {}, {}};
+    ASSERT_EQ(InferShapeTest(testOp, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(testOp.GetOutputDesc(0).GetShape().GetDims(), dyShape);
+    EXPECT_EQ(testOp.GetOutputDesc(1).GetShape().GetDims(), expectedParams);
+    EXPECT_EQ(testOp.GetOutputDesc(2).GetShape().GetDims(), expectedParams);
+}
+
+const std::vector<std::pair<ge::Format, std::vector<int64_t>>> emptyTestLayouts = {{ge::FORMAT_NCHW, {2, 3, 4, 4}},
+                                                                                   {ge::FORMAT_NHWC, {2, 4, 4, 3}},
+                                                                                   {ge::FORMAT_NCDHW, {2, 3, 2, 4, 4}},
+                                                                                   {ge::FORMAT_NDHWC, {2, 2, 4, 4, 3}}};
+} // namespace
+
+TEST_F(BatchNormGradV3Test, EmptyInferenceMakesAllOutputsEmpty)
+{
+    for (const auto& layout : emptyTestLayouts) {
+        const size_t channelAxis = layout.first == ge::FORMAT_NHWC || layout.first == ge::FORMAT_NDHWC ?
+                                       layout.second.size() - 1 :
+                                       1;
+        for (size_t axis = 0; axis < layout.second.size(); ++axis) {
+            auto shape = layout.second;
+            shape[axis] = 0;
+            for (auto dtype : {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}) {
+                SCOPED_TRACE(testing::Message()
+                             << "format=" << layout.first << " empty_axis=" << axis << " dtype=" << dtype);
+                CheckEmptyOutputShape(shape, shape[channelAxis], layout.first, 0, {0}, dtype);
+            }
+        }
+    }
+}
+
+TEST_F(BatchNormGradV3Test, EmptyTrainingPreservesReductionOutputs)
+{
+    for (const auto& layout : emptyTestLayouts) {
+        const size_t channelAxis = layout.first == ge::FORMAT_NHWC || layout.first == ge::FORMAT_NDHWC ?
+                                       layout.second.size() - 1 :
+                                       1;
+        for (size_t axis = 0; axis < layout.second.size(); ++axis) {
+            auto shape = layout.second;
+            shape[axis] = 0;
+            // 归约轴为空时参数梯度仍为 [C]；只有 C 本身为 0 时参数梯度才为空。
+            // 同时验证未提供 is_training 时仍使用默认训练语义。
+            for (int training : {-1, 1}) {
+                SCOPED_TRACE(testing::Message()
+                             << "format=" << layout.first << " empty_axis=" << axis << " training=" << training);
+                CheckEmptyOutputShape(shape, shape[channelAxis], layout.first, training, {shape[channelAxis]});
+            }
+        }
+    }
+}
+
+TEST_F(BatchNormGradV3Test, NonemptyInferencePreservesParameterShapes)
+{
+    for (const auto& layout : emptyTestLayouts) {
+        CheckEmptyOutputShape(layout.second, 3, layout.first, 0, {3});
+    }
+}
+
+TEST_F(BatchNormGradV3Test, UnknownDimensionsDoNotImplyEmptyOutputs)
+{
+    CheckEmptyOutputShape({-1, 3, 4, 4}, 3, ge::FORMAT_NCHW, 0, {3});
+    CheckEmptyOutputShape({-1, -1, -1, -1}, -1, ge::FORMAT_NCHW, 0, {-1});
+    CheckEmptyOutputShape({-2}, 3, ge::FORMAT_NCHW, 0, {3});
+    CheckEmptyOutputShape({-1, 3, 0, 4}, 3, ge::FORMAT_NCHW, 0, {0});
+    CheckEmptyOutputShape({-1, 3, 0, 4}, 3, ge::FORMAT_NCHW, 1, {3});
+}
+
+TEST_F(BatchNormGradV3Test, EmptyShapeDoesNotRequireDimensionMultiplication)
+{
+    CheckEmptyOutputShape({0, 3, int64_t{1} << 62, 4}, 3, ge::FORMAT_NCHW, 0, {0});
+    CheckEmptyOutputShape({0, 3, int64_t{1} << 62, 4}, 3, ge::FORMAT_NCHW, 1, {3});
+}
+
 // REG_OP(Data).INPUT(x, TensorType::ALL()).OUTPUT().ATTR().OP_END_FACTORY_REG()
 
 TEST_F(BatchNormGradV3Test, batchnorm_infer_shape_nchw)
