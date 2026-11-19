@@ -621,9 +621,9 @@ int main()
     int64_t numLayers = 1;
     bool isbias = false;
     bool batchFirst = false;
-    bool bidirection = false;
+    bool bidirectional = false;
     bool isTraining = true;
-    int64_t d_scale = bidirection == true ? 2 : 1;
+    int64_t d_scale = bidirectional == true ? 2 : 1;
 
     std::vector<int64_t> inputShape = {time_step, batch_size, input_size};
     std::vector<int64_t> outputShape = {time_step, batch_size, d_scale * hidden_size};
@@ -733,7 +733,7 @@ int main()
 
     // 调用aclnnLSTM第一段接口
     ret = aclnnLSTMGetWorkspaceSize(
-        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirection, batchFirst, output, hy, cy,
+        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirectional, batchFirst, output, hy, cy,
         outIList, outJList, outFList, outOList, outHList, outCList, outTanhCList, &workspaceSize, &executor);
 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLSTMGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);

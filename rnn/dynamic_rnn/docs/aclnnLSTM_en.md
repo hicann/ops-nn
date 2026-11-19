@@ -145,11 +145,11 @@ aclnnStatus aclnnLSTM(
     <p>List length calculation formula: <strong>2 * D * B * num_layers</strong></p>
     <ul>
     <li>num_layers: Corresponds to parameter numLayers, indicating the number of LSTM layers;</li>
-    <li>D: D=2 when bidirection=True; otherwise, D=1;</li>
+    <li>D: D=2 when bidirectional=True; otherwise, D=1;</li>
     <li>B: B=2 when has_biases=True; otherwise, B=1.</li>
     </ul>
 
-    <p><strong>Special use case (bidirection=True and has_biases=True):</strong></p>
+    <p><strong>Special use case (bidirectional=True and has_biases=True):</strong></p>
     <p style="padding-left: 20px;">
       Parameter layout: [weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]
     </p>
@@ -611,9 +611,9 @@ int main()
     int64_t numLayers = 1;
     bool isbias = false;
     bool batchFirst = false;
-    bool bidirection = false;
+    bool bidirectional = false;
     bool isTraining = true;
-    int64_t d_scale = bidirection == true ? 2 : 1;
+    int64_t d_scale = bidirectional == true ? 2 : 1;
 
     std::vector<int64_t> inputShape = {time_step, batch_size, input_size};
     std::vector<int64_t> outputShape = {time_step, batch_size, d_scale * hidden_size};
@@ -723,7 +723,7 @@ int main()
 
     // Call the first-phase API of aclnnLSTM.
     ret = aclnnLSTMGetWorkspaceSize(
-        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirection, batchFirst, output, hy, cy,
+        input, params, nullptr, nullptr, isbias, numLayers, 0.0, isTraining, bidirectional, batchFirst, output, hy, cy,
         outIList, outJList, outFList, outOList, outHList, outCList, outTanhCList, &workspaceSize, &executor);
 
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLSTMGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
