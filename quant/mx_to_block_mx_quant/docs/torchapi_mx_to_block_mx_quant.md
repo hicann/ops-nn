@@ -94,7 +94,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
         <td>dst_type</td>
         <td>int</td>
         <td>可选</td>
-        <td>指定输出y的数据类型。当前仅支持输入范围为{291, 292}，分别对应输出y的数据类型为{291: FLOAT8_E5M2, 292: FLOAT8_E4M3FN}。</td>
+        <td>指定输出y的数据类型。当前仅支持输入范围为{291, 292}，分别对应输出y的数据类型为{291: FLOAT8_E5M2, 292: FLOAT8_E4M3FN}。默认为292（FLOAT8_E4M3FN），不传入时按默认值处理。也可传入对应的torch_npu扩展dtype对象，传入torch_npu.float8_e5m2等价于291，传入torch_npu.float8_e4m3fn等价于292。</td>
         <td>INT</td>
         <td>-</td>
     </tr>
@@ -102,7 +102,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
         <td>x_type</td>
         <td>int</td>
         <td>可选</td>
-        <td>表示输入x的真实数据类型。当前仅支持输入范围为{296, 297}，分别对应输入x的数据类型为{296: FLOAT4_E2M1, 297: FLOAT4_E1M2}。</td>
+        <td>表示输入x的真实数据类型。当前仅支持输入范围为{296, 297}，分别对应输入x的数据类型为{296: FLOAT4_E2M1, 297: FLOAT4_E1M2}。默认为296（FLOAT4_E2M1），不传入时按默认值处理。也可传入对应的torch_npu扩展dtype对象，传入torch_npu.float4_e2m1fn_x2等价于296，传入torch_npu.float4_e1m2fn_x2等价于297。</td>
         <td>INT</td>
         <td>-</td>
     </tr>
@@ -187,12 +187,16 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
 
 - 单算子模式调用（eager）
 
+    示例先构造bf16随机输入，通过npu_dynamic_mx_quant沿-1轴按32分组量化，得到uint8打包的FLOAT4_E2M1张量x及FLOAT8_E8M0缩放系数mxscale；再调用mx_to_block_mx_quant将其转换为FLOAT8_E5M2（dst_type=torch_npu.float8_e5m2，等价于枚举值291）分块量化格式，输出量化结果y以及-1轴、-2轴方向的量化尺度scale1、scale2。预期输出shape：x为[64, 32]，mxscale为[64, 1, 2]，y为[64, 64]，scale1为[64, 1, 2]，scale2为[1, 64, 2]；打印时mxscale/scale1/scale2以uint8视图展示便于核对。
+
     ```python
     import torch
     import torch_npu
     import cann_ops_nn
 
+    # 构造64×64 bf16随机输入并搬迁至NPU
     x_tmp = torch.randn((64, 64), dtype=torch.bfloat16).npu()
+    # 沿-1轴按block_size=32分组量化，得到FLOAT4_E2M1张量x与FLOAT8_E8M0缩放系数mxscale
     x, mxscale = torch_npu.npu_dynamic_mx_quant(
         x_tmp,
         axis=-1,
@@ -204,10 +208,14 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
     print("npu_dynamic_mx_quant:============")
     print(x)
 
+    # 转换为FLOAT8分块量化格式，输出y、scale1、scale2
+    # dst_type=torch_npu.float8_e5m2等价于枚举值291，对应输出FLOAT8_E5M2
+    # x_type=torch_npu.float4_e2m1fn_x2等价于枚举值296，对应输入FLOAT4_E2M1，与上一步量化输出类型一致
     y, scale1, scale2 = cann_ops_nn.mx_to_block_mx_quant(
-        x, mxscale, dst_type=torch_npu.float8_e5m2, x_type=torch_npu.float4_e1m2fn_x2
+        x, mxscale, dst_type=torch_npu.float8_e5m2, x_type=torch_npu.float4_e2m1fn_x2
     )
     print("npu_mx_to_block_mx_quant:============")
+    # 打印各张量shape与数据，mxscale/scale1/scale2为FLOAT8_E8M0，以uint8视图打印便于核对
     print("x:============", x.shape, x.cpu())
     print("mxscale:============", mxscale.shape, mxscale.cpu().view(torch.uint8))
     print("y:============", y.shape, y.cpu())
@@ -217,13 +225,13 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
 
 - 图模式（torchair）调用
 
+    示例将算子封装为NetModel，使用torchair的NPU后端进行torch.compile图模式编译；输入x为uint8打包的FLOAT4_E2M1随机张量、mxscale为FLOAT8_E8M0缩放系数，转换参数dst_type=torch_npu.float8_e4m3fn（等价于枚举值292，对应FLOAT8_E4M3FN）、x_type=torch_npu.float4_e2m1fn_x2（等价于枚举值296，对应FLOAT4_E2M1），输出y、scale1、scale2并打印shape与uint8视图便于核对。预期输出shape：x为[64, 32]，mxscale为[64, 1, 2]，y为[64, 64]，scale1为[64, 1, 2]，scale2为[1, 64, 2]。
+
     ```python
     import torch
     import torch_npu
     import torchair
     import cann_ops_nn
-
-    npu_backend = "npu"
 
 
     class NetModel(torch.nn.Module):
@@ -237,12 +245,15 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
             dst_type=torch_npu.float8_e4m3fn,
             x_type=torch_npu.float4_e2m1fn_x2,
         ):
+            # dst_type=torch_npu.float8_e4m3fn等价于枚举值292，对应FLOAT8_E4M3FN
+            # x_type=torch_npu.float4_e2m1fn_x2等价于枚举值296，对应FLOAT4_E2M1
             return cann_ops_nn.mx_to_block_mx_quant(
                 x, mxscale, dst_type=dst_type, x_type=x_type
             )
 
 
     def mx_to_block_mx_quant_test(x_dtype, dst_type, x_type):
+        # 构造uint8打包的FLOAT4随机输入x与FLOAT8_E8M0缩放系数mxscale，并搬迁至NPU
         x = torch.randn((64, 32), dtype=torch.float32).to(dtype=x_dtype)
         x = x.npu()
         mxscale = (
@@ -251,10 +262,13 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
             .npu()
         )
         model = NetModel()
+        # 获取torchair NPU图模式编译后端
         config = torchair.CompilerConfig()
         npu_backend = torchair.get_npu_backend(compiler_config=config)
         model = torch.compile(model, backend=npu_backend, dynamic=True, fullgraph=True)
+        # 图模式下执行mx_to_block_mx_quant，输出y、scale1、scale2
         y, scale1, scale2 = model(x, mxscale, dst_type=dst_type, x_type=x_type)
+        # 打印各张量shape与数据，mxscale/scale1/scale2以uint8视图打印便于核对
         print("x:============", x.shape, x.cpu())
         print("mxscale:============", mxscale.shape, mxscale.cpu().view(torch.uint8))
         print("y:============", y.shape, y.cpu())
@@ -263,6 +277,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
 
 
     if __name__ == "__main__":
+        # x以uint8打包；torch_npu.float8_e4m3fn等价于枚举值292；torch_npu.float4_e2m1fn_x2等价于枚举值296
         mx_to_block_mx_quant_test(
             torch.uint8, torch_npu.float8_e4m3fn, torch_npu.float4_e2m1fn_x2
         )

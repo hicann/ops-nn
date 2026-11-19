@@ -96,7 +96,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
         <td>dst_type</td>
         <td>int</td>
         <td>Optional</td>
-        <td>Specifies the data type of output y. Currently, only the input range {291, 292} is supported, corresponding to the data type of output y {291: FLOAT8_E5M2, 292: FLOAT8_E4M3FN}.</td>
+        <td>Specifies the data type of output y. Currently, only the input range {291, 292} is supported, corresponding to the data type of output y {291: FLOAT8_E5M2, 292: FLOAT8_E4M3FN}. Defaults to 292 (FLOAT8_E4M3FN). If not specified, the default value is used. Alternatively, the corresponding torch_npu extended dtype object can be passed: torch_npu.float8_e5m2 is equivalent to 291, and torch_npu.float8_e4m3fn is equivalent to 292.</td>
         <td>INT</td>
         <td>-</td>
     </tr>
@@ -104,7 +104,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
         <td>x_type</td>
         <td>int</td>
         <td>Optional</td>
-        <td>Indicates the actual data type of input x. Currently, only the input range {296, 297} is supported, corresponding to the data type of input x {296: FLOAT4_E2M1, 297: FLOAT4_E1M2}.</td>
+        <td>Indicates the actual data type of input x. Currently, only the input range {296, 297} is supported, corresponding to the data type of input x {296: FLOAT4_E2M1, 297: FLOAT4_E1M2}. Defaults to 296 (FLOAT4_E2M1). If not specified, the default value is used. Alternatively, the corresponding torch_npu extended dtype object can be passed: torch_npu.float4_e2m1fn_x2 is equivalent to 296, and torch_npu.float4_e1m2fn_x2 is equivalent to 297.</td>
         <td>INT</td>
         <td>-</td>
     </tr>
@@ -189,12 +189,17 @@ Defaults to a deterministic computation.
 
 - Call in single-operator mode (eager)
 
+    The example first constructs a random bf16 input, quantizes it along the -1 axis in groups of 32 via npu_dynamic_mx_quant to obtain the uint8-packed FLOAT4_E2M1 tensor x and the FLOAT8_E8M0 scale mxscale; then calls mx_to_block_mx_quant to convert them into the FLOAT8_E5M2 (dst_type=torch_npu.float8_e5m2, equivalent to the enum value 291) block quantization format, outputting the quantization result y and the quantization scales scale1 and scale2 along the -1 and -2 axes. Expected output shapes: x is [64, 32], mxscale is [64, 1, 2], y is [64, 64], scale1 is [64, 1, 2], scale2 is [1, 64, 2]; mxscale/scale1/scale2 are printed as uint8 views for easy verification.
+
     ```python
     import torch
     import torch_npu
     import cann_ops_nn
 
+    # Construct a 64x64 bf16 random input and move it to NPU
     x_tmp = torch.randn((64, 64), dtype=torch.bfloat16).npu()
+    # Quantize along the -1 axis in groups of block_size=32 to obtain
+    # the FLOAT4_E2M1 tensor x and the FLOAT8_E8M0 scale mxscale
     x, mxscale = torch_npu.npu_dynamic_mx_quant(
         x_tmp,
         axis=-1,
@@ -206,10 +211,18 @@ Defaults to a deterministic computation.
     print("npu_dynamic_mx_quant:============")
     print(x)
 
+    # Convert to the FLOAT8 block quantization format, outputting y, scale1, and scale2
+    # dst_type=torch_npu.float8_e5m2 is equivalent to the enum value 291,
+    # corresponding to output FLOAT8_E5M2
+    # x_type=torch_npu.float4_e2m1fn_x2 is equivalent to the enum value 296,
+    # corresponding to input FLOAT4_E2M1, consistent with the quantization
+    # output in the previous step
     y, scale1, scale2 = cann_ops_nn.mx_to_block_mx_quant(
-        x, mxscale, dst_type=torch_npu.float8_e5m2, x_type=torch_npu.float4_e1m2fn_x2
+        x, mxscale, dst_type=torch_npu.float8_e5m2, x_type=torch_npu.float4_e2m1fn_x2
     )
     print("npu_mx_to_block_mx_quant:============")
+    # Print the shape and data of each tensor. mxscale/scale1/scale2 are FLOAT8_E8M0
+    # and are printed as uint8 views for easy verification
     print("x:============", x.shape, x.cpu())
     print("mxscale:============", mxscale.shape, mxscale.cpu().view(torch.uint8))
     print("y:============", y.shape, y.cpu())
@@ -219,13 +232,13 @@ Defaults to a deterministic computation.
 
 - Call in graph mode (torchair)
 
+    The example wraps the operator in NetModel and compiles it in torchair graph mode via torch.compile with the NPU backend; the input x is a random uint8-packed FLOAT4_E2M1 tensor and mxscale is the FLOAT8_E8M0 scale, with conversion parameters dst_type=torch_npu.float8_e4m3fn (equivalent to the enum value 292, corresponding to FLOAT8_E4M3FN) and x_type=torch_npu.float4_e2m1fn_x2 (equivalent to the enum value 296, corresponding to FLOAT4_E2M1), outputting y, scale1, and scale2 and printing their shapes and uint8 views for easy verification. Expected output shapes: x is [64, 32], mxscale is [64, 1, 2], y is [64, 64], scale1 is [64, 1, 2], scale2 is [1, 64, 2].
+
     ```python
     import torch
     import torch_npu
     import torchair
     import cann_ops_nn
-
-    npu_backend = "npu"
 
 
     class NetModel(torch.nn.Module):
@@ -239,12 +252,18 @@ Defaults to a deterministic computation.
             dst_type=torch_npu.float8_e4m3fn,
             x_type=torch_npu.float4_e2m1fn_x2,
         ):
+            # dst_type=torch_npu.float8_e4m3fn is equivalent to the enum
+            # value 292, corresponding to FLOAT8_E4M3FN
+            # x_type=torch_npu.float4_e2m1fn_x2 is equivalent to the enum
+            # value 296, corresponding to FLOAT4_E2M1
             return cann_ops_nn.mx_to_block_mx_quant(
                 x, mxscale, dst_type=dst_type, x_type=x_type
             )
 
 
     def mx_to_block_mx_quant_test(x_dtype, dst_type, x_type):
+        # Construct the uint8-packed FLOAT4 random input x and the FLOAT8_E8M0
+        # scale mxscale, then move them to NPU
         x = torch.randn((64, 32), dtype=torch.float32).to(dtype=x_dtype)
         x = x.npu()
         mxscale = (
@@ -253,10 +272,14 @@ Defaults to a deterministic computation.
             .npu()
         )
         model = NetModel()
+        # Obtain the torchair NPU backend for graph-mode compilation
         config = torchair.CompilerConfig()
         npu_backend = torchair.get_npu_backend(compiler_config=config)
         model = torch.compile(model, backend=npu_backend, dynamic=True, fullgraph=True)
+        # Execute mx_to_block_mx_quant in graph mode, outputting y, scale1, and scale2
         y, scale1, scale2 = model(x, mxscale, dst_type=dst_type, x_type=x_type)
+        # Print the shape and data of each tensor. mxscale/scale1/scale2 are
+        # printed as uint8 views for easy verification
         print("x:============", x.shape, x.cpu())
         print("mxscale:============", mxscale.shape, mxscale.cpu().view(torch.uint8))
         print("y:============", y.shape, y.cpu())
@@ -265,6 +288,9 @@ Defaults to a deterministic computation.
 
 
     if __name__ == "__main__":
+        # x is packed as uint8; torch_npu.float8_e4m3fn is equivalent to the
+        # enum value 292; torch_npu.float4_e2m1fn_x2 is equivalent to the
+        # enum value 296
         mx_to_block_mx_quant_test(
             torch.uint8, torch_npu.float8_e4m3fn, torch_npu.float4_e2m1fn_x2
         )
