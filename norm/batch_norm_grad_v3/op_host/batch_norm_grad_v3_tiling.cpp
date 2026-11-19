@@ -880,7 +880,7 @@ bool BatchNormGradV3RARRecomputeTilingBase::IsCapable()
 
     // R0不可全载，核内切R0
     subTilingKey = BNG_V3_RAR_RECOMPUTE_SPLIT_R0;
-    if (Ops::Base::CeilDiv(r0Dim * sizeof(float) * TWO, blockSize) * blockSize <= binaryAddBufSize) {
+    if (static_cast<uint64_t>(r0Dim) <= (binaryAddBufSize / blockSize * blockSize) / sizeof(float) / TWO) {
         // R0可全载，核内切R1
         subTilingKey = BNG_V3_RAR_RECOMPUTE_SPLIT_R1;
     }
@@ -891,7 +891,8 @@ bool BatchNormGradV3RARRecomputeTilingBase::IsCapable()
 
 void BatchNormGradV3RARRecomputeTilingBase::DoRecomputeTilingSplitR1()
 {
-    if (Ops::Base::CeilDiv(r1Dim * r0Dim * sizeof(float), blockSize) * blockSize <= binaryAddBufSize) {
+    if (static_cast<uint64_t>(r1Dim) <=
+        (binaryAddBufSize / blockSize * blockSize) / sizeof(float) / static_cast<uint64_t>(r0Dim)) {
         ubRDimFactor = r1Dim * r0Dim;
         ubRDimFactorAlign = Ops::Base::CeilDiv(ubRDimFactor * sizeof(float), blockSize) * blockSize / sizeof(float);
         tilingData.set_ubRDimFactor(ubRDimFactor);

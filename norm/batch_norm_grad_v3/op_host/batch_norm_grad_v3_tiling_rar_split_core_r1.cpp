@@ -105,7 +105,10 @@ bool BatchNormGradV3RARSplitCoreR1::IsCapable()
     }
 
     // 剔除全载场景
-    if (r1Dim * r0Dim * R1_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR < static_cast<int64_t>(ubSize)) {
+    // For positive integers, R * factor < UB iff R <= (UB - 1) / factor.
+    // Divide before multiplying so a large reduction cannot wrap into the full-load range.
+    if (ubSize > 0 && static_cast<uint64_t>(r1Dim) <=
+                          (ubSize - 1) / R1_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR / static_cast<uint64_t>(r0Dim)) {
         OP_LOGD(context_->GetNodeName(),
                 "RAR split core template not support shape: (%ld, %ld, %ld), r0Dim * r1Dim < %ld", r1Dim, aDim, r0Dim,
                 ubSize / R1_SPLIT_CORE_TEMPLATE_ENABLE_FACTOR);
