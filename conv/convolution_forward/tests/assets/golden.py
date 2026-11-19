@@ -93,20 +93,24 @@ def due_fp16_overflow(data):
     return data
 
 
-def simulate_hf32_precision(data, short_soc_version=None):
-    """
-    Simulate HF32 (Half Float 32) precision.
-    Ascend910B (default): truncates lower 12 bits of float32 mantissa, keeping 20 bits with rounding.
-    Ascend910_95: truncates lower 13 bits of float32 mantissa, keeping 19 bits with rounding.
-    """
-    input_hf32 = data.view(np.int32)
-    if short_soc_version in ("Ascend910B",):
-        input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
-        input_hf32 = np.left_shift(input_hf32, 12)
-    else:
-        input_hf32 = np.right_shift(np.right_shift(input_hf32, 12) + 1, 1)
-        input_hf32 = np.left_shift(input_hf32, 13)
-    return input_hf32.view(np.float32)
+def simulate_hf32_precision(data):
+    """Simulate HF32: round fp32 mantissa to 10 bits (19 bits total), RNE (round-to-nearest-even)."""
+    bits = np.ascontiguousarray(data, dtype=np.float32).view(np.uint32)
+    shift = 13
+    mask = np.uint32((1 << shift) - 1)
+    half = np.uint32(1 << (shift - 1))
+    low = bits & mask
+    base = bits & np.uint32(~mask & 0xFFFFFFFF)
+    lsb = (bits >> np.uint32(shift)) & np.uint32(1)
+    round_up = (low > half) | ((low == half) & (lsb == np.uint32(1)))
+    rounded = base + round_up.astype(np.uint32) * np.uint32(1 << shift)
+    return rounded.view(np.float32)
+
+
+def normalize_promoted_dtype(dtype_str):
+    """TTK Promote会把float32无损升为float64, 导致golden误判非fp32场景而跳过HF32模拟.
+    该还原不影响数值(float32→float64无损), 仅恢复按声明dtype选择硬件数值语义的判定."""
+    return "float32" if dtype_str == "float64" else dtype_str
 
 
 def convert_output_dtype(out, output_dtype):
@@ -175,20 +179,33 @@ def convert_output_dtype(out, output_dtype):
 
 
 def decode_scale_tensor(scale_tensor):
+    """Decode int64/uint64 scale tensor to float32.
+
+    NPU fixpipe hardware (set_quant_pre) extracts bits[31:13] (19 bits:
+    1 sign + 8 exp + 10 mantissa) from the uint64 and interprets them as
+    fp32 for dequant multiply.
+    Golden must replicate: mask low 13 bits to zero, then view as fp32.
+    """
     if scale_tensor is None:
         return None
     if isinstance(scale_tensor, (int, float)):
         return np.array([float(scale_tensor)], dtype=np.float32)
 
+    def _decode_u64(arr):
+        u32 = arr.astype(np.uint32)
+        # NPU取bits[31:13]共19位作为fp32 → 掩码低13位
+        u32 = np.bitwise_and(u32, np.uint32(0xFFFFE000))
+        return u32.view(np.float32)
+
     if isinstance(scale_tensor, np.ndarray):
         if scale_tensor.dtype == np.int64 or scale_tensor.dtype == np.uint64:
-            return scale_tensor.astype(np.uint32).view(np.float32)
+            return _decode_u64(scale_tensor)
         return scale_tensor.astype(np.float32)
 
     if isinstance(scale_tensor, torch.Tensor):
         np_arr = scale_tensor.cpu().numpy()
         if np_arr.dtype == np.int64 or np_arr.dtype == np.uint64:
-            return np_arr.astype(np.uint32).view(np.float32)
+            return _decode_u64(np_arr)
         return np_arr.astype(np.float32)
 
     return np.array(scale_tensor, dtype=np.float32)
@@ -206,7 +223,6 @@ def _compute_conv_forward(
     transposed=False,
     outputPadding=0,
     cubeMathType=0,
-    short_soc_version=None,
     output_shape=None,
 ):
     stride = ensure_list(stride, conv_dim)
@@ -218,11 +234,13 @@ def _compute_conv_forward(
         if isinstance(input, torch.Tensor)
         else (str(input.dtype) if hasattr(input, "dtype") else "")
     )
+    input_dtype_str = normalize_promoted_dtype(input_dtype_str)
     weight_dtype_str = (
         str(weight.dtype).split(".")[-1]
         if isinstance(weight, torch.Tensor)
         else (str(weight.dtype) if hasattr(weight, "dtype") else "")
     )
+    weight_dtype_str = normalize_promoted_dtype(weight_dtype_str)
 
     need_upcast = False
     if "hifloat8" in input_dtype_str or "hifloat8" in weight_dtype_str:
@@ -230,6 +248,8 @@ def _compute_conv_forward(
     elif "float8" in input_dtype_str or "float8" in weight_dtype_str:
         need_upcast = True
     elif "bfloat16" in input_dtype_str:
+        need_upcast = True
+    else:
         need_upcast = True
 
     if need_upcast:
@@ -297,39 +317,39 @@ def _compute_conv_forward(
     else:
         padding = ensure_list(padding, conv_dim)
 
-    if input_dtype_str == "float32":
-        if cubeMathType in [1, 3]:
-            input_np = simulate_hf32_precision(
-                input.numpy().astype(np.float32), short_soc_version
-            )
-            weight_np = simulate_hf32_precision(
-                weight.numpy().astype(np.float32), short_soc_version
-            )
-            input = torch.from_numpy(input_np)
-            weight = torch.from_numpy(weight_np)
-            if bias is not None:
-                bias_np = simulate_hf32_precision(
-                    bias.numpy().astype(np.float32), short_soc_version
-                )
-                bias = torch.from_numpy(bias_np)
-        elif cubeMathType == 2:
-            input = input.to(torch.float16).to(torch.float32)
-            weight = weight.to(torch.float16).to(torch.float32)
-            if bias is not None:
-                bias = bias.to(torch.float16).to(torch.float32)
-
-    if input_dtype_str in ("bfloat16", "float16"):
-        if transposed or cubeMathType in [1, 3]:
-            input = input.to(torch.float64)
-            weight = weight.to(torch.float64)
-            if bias is not None:
-                bias = bias.to(torch.float64)
-    elif input_dtype_str == "float32":
-        if transposed or cubeMathType in [1, 3]:
-            input = input.to(torch.float64)
-            weight = weight.to(torch.float64)
-            if bias is not None:
-                bias = bias.to(torch.float64)
+    res_quant_dtype = None
+    if conv_dim in (1, 2, 3) and not transposed:
+        # 1) promote dtype(GetUpperFloatDataType): input/weight一致取该dtype, 不一致(或含fp32)为FP32;
+        # 2) cubeMathType==2(USE_FP16, CalcUseFp16PromoteType): 输入/权重/bias统一量化到FP16网格,
+        #    结果量化FP16(UpdateOutputDtype强制outputDtype=FP16)后cast到用户输出dtype;
+        # 3) cubeMathType in {1,3}(NeedCubeGoHF32): 输入/权重HF32化(bias不裁剪), 结果FP32;
+        # 4) cubeMathType==0(KEEP_DTYPE): 保持promote dtype, 不做HF32模拟;
+        # 5) bf16/fp16输入(UpdateOutputDtype): 结果先量化到promote dtype再cast到用户输出dtype
+        promote = input_dtype_str if input_dtype_str == weight_dtype_str else "float32"
+        if promote in ("float32", "bfloat16", "float16"):
+            if cubeMathType == 2:
+                input = input.to(torch.float16).to(torch.float32)
+                weight = weight.to(torch.float16).to(torch.float32)
+                if bias is not None and not isinstance(bias, (int, float)):
+                    bias = bias.to(torch.float16).to(torch.float32)
+                res_quant_dtype = torch.float16
+            else:
+                if promote == "float32" and cubeMathType in (1, 3):
+                    input = torch.from_numpy(
+                        simulate_hf32_precision(input.numpy().astype(np.float32))
+                    )
+                    weight = torch.from_numpy(
+                        simulate_hf32_precision(weight.numpy().astype(np.float32))
+                    )
+                if promote in ("bfloat16", "float16"):
+                    if bias is not None and not isinstance(bias, (int, float)):
+                        bias_quant = (
+                            torch.bfloat16 if promote == "bfloat16" else torch.float16
+                        )
+                        bias = bias.to(bias_quant).to(torch.float32)
+                    res_quant_dtype = (
+                        torch.bfloat16 if promote == "bfloat16" else torch.float16
+                    )
 
     if transposed:
         conv_bias = None if is_bias_split else bias
@@ -424,6 +444,11 @@ def _compute_conv_forward(
             bias_expanded = bias
         out = out + bias_expanded.to(out.dtype)
 
+    if res_quant_dtype is not None and isinstance(out, torch.Tensor):
+        # 底层二进制以upperDtype输出Conv结果, 再cast到用户输出dtype,
+        # golden需先量化到该中间dtype, 避免双重舍入差异
+        out = out.to(res_quant_dtype)
+
     if "hifloat8" in input_dtype_str or "hifloat8" in weight_dtype_str:
         out = torch.from_numpy(out.numpy().astype(_numpy_hifloat8()).astype(np.float32))
 
@@ -465,7 +490,6 @@ def aclnn_convolution_golden(
         else None
     )
     conv_dim = get_conv_dim(input_shape, weight_shape)
-    short_soc_version = kwargs.get("short_soc_version", None)
 
     output_tensor_indexes = kwargs.get("output_tensor_indexes", [3])
     output_tensor_index = (
@@ -490,7 +514,6 @@ def aclnn_convolution_golden(
         transposed,
         outputPadding,
         cubeMathType,
-        short_soc_version,
         output_shape,
     )
 
@@ -498,7 +521,8 @@ def aclnn_convolution_golden(
     output_dtype = kwargs.get("tensor_dtypes")[output_tensor_index]
 
     if output_dtype == "hifloat8":
-        out = out.numpy().astype(_numpy_hifloat8(), copy=False)
+        out_np = out.float().numpy() if isinstance(out, torch.Tensor) else out
+        out = out_np.astype(_numpy_hifloat8(), copy=False)
     elif output_dtype == "float8_e4m3fn":
         out = out.to(torch.float8_e4m3fn)
     else:
@@ -508,14 +532,7 @@ def aclnn_convolution_golden(
             "float32": torch.float32,
         }
         target_dtype = dtype_map.get(output_dtype, torch.float32)
-
-        if cubeMathType == 2:
-            if target_dtype in (torch.float32, torch.float16, torch.bfloat16):
-                out = out.to(torch.float16)
-            else:
-                out = out.to(target_dtype)
-        else:
-            out = out.to(target_dtype)
+        out = out.to(target_dtype)
 
     return out
 
@@ -533,7 +550,6 @@ def aclnn_conv_tbc_golden(
     Data types: FLOAT, FLOAT16, BFLOAT16, HIFLOAT8
     Formats: ND, NCL
     """
-    short_soc_version = kwargs.get("short_soc_version", None)
 
     if isinstance(self, np.ndarray):
         self = torch.from_numpy(self.astype(np.float32))
@@ -553,21 +569,15 @@ def aclnn_conv_tbc_golden(
     if self.dim() == 3:
         self = self.permute(1, 2, 0).contiguous()
 
-    input_dtype_str = str(self.dtype).split(".")[-1]
+    input_dtype_str = normalize_promoted_dtype(str(self.dtype).split(".")[-1])
     if input_dtype_str == "float32":
         if cubeMathType in [1, 3]:
-            self_np = simulate_hf32_precision(
-                self.numpy().astype(np.float32), short_soc_version
-            )
-            weight_np = simulate_hf32_precision(
-                weight.numpy().astype(np.float32), short_soc_version
-            )
+            self_np = simulate_hf32_precision(self.numpy().astype(np.float32))
+            weight_np = simulate_hf32_precision(weight.numpy().astype(np.float32))
             self = torch.from_numpy(self_np)
             weight = torch.from_numpy(weight_np)
             if bias is not None:
-                bias_np = simulate_hf32_precision(
-                    bias.numpy().astype(np.float32), short_soc_version
-                )
+                bias_np = simulate_hf32_precision(bias.numpy().astype(np.float32))
                 bias = torch.from_numpy(bias_np)
         elif cubeMathType == 2:
             self = self.to(torch.float16).to(torch.float32)
@@ -624,7 +634,6 @@ def aclnn_conv_depthwise2d_golden(
     Data types: FLOAT, FLOAT16, BFLOAT16, HIFLOAT8
     Formats: NCHW
     """
-    short_soc_version = kwargs.get("short_soc_version", None)
 
     def _np_to_torch(t):
         # hifloat8/bfloat16等扩展numpy dtype无法直接from_numpy, 先astype为float32
@@ -641,7 +650,7 @@ def aclnn_conv_depthwise2d_golden(
         input_dtype_str = str(self.dtype)
     else:
         input_dtype_str = ""
-    input_dtype_str = input_dtype_str.split(".")[-1]
+    input_dtype_str = normalize_promoted_dtype(input_dtype_str.split(".")[-1])
 
     self = _np_to_torch(self)
     weight = _np_to_torch(weight)
@@ -655,18 +664,12 @@ def aclnn_conv_depthwise2d_golden(
 
     if input_dtype_str == "float32":
         if cubeMathType in [1, 3]:
-            self_np = simulate_hf32_precision(
-                self.numpy().astype(np.float32), short_soc_version
-            )
-            weight_np = simulate_hf32_precision(
-                weight.numpy().astype(np.float32), short_soc_version
-            )
+            self_np = simulate_hf32_precision(self.numpy().astype(np.float32))
+            weight_np = simulate_hf32_precision(weight.numpy().astype(np.float32))
             self = torch.from_numpy(self_np)
             weight = torch.from_numpy(weight_np)
             if bias is not None:
-                bias_np = simulate_hf32_precision(
-                    bias.numpy().astype(np.float32), short_soc_version
-                )
+                bias_np = simulate_hf32_precision(bias.numpy().astype(np.float32))
                 bias = torch.from_numpy(bias_np)
         elif cubeMathType == 2:
             self = self.to(torch.float16).to(torch.float32)
@@ -839,11 +842,9 @@ def aclnn_quant_conv_golden(
         if isinstance(x, torch.Tensor)
         else (str(getattr(x, "dtype", "")))
     )
+    # aclnnQuantConvolution的offset输入当前为"暂不支持", 宿主侧L0调用未传递offset张量,
+    # 设备侧不参与计算; golden跟随API现状, 不应用offset
     offset_np = None
-    if offset is not None and not isinstance(offset, (int, float)):
-        offset_np = to_float32(offset)
-        if isinstance(offset_np, torch.Tensor):
-            offset_np = offset_np.numpy()
 
     bias_is_quantized = False
     if bias is not None and not isinstance(bias, (int, float)):
@@ -1153,8 +1154,6 @@ def aten_convolution_golden(
     if transposed:
         cubeMathType = 0
 
-    short_soc_version = kwargs.get("short_soc_version", None)
-
     orig_dtype = None
     if isinstance(input, torch.Tensor):
         orig_dtype = input.dtype
@@ -1171,7 +1170,6 @@ def aten_convolution_golden(
         transposed,
         output_padding,
         cubeMathType=cubeMathType,
-        short_soc_version=short_soc_version,
     )
 
     if (

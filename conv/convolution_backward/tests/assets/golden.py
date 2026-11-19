@@ -60,32 +60,18 @@ def ensure_list(param, num_dims):
     return [int(param)] * num_dims
 
 
-def simulate_hf32_precision(data, short_soc_version=None):
-    """
-    Simulate HF32 (Half Float 32) precision.
-    Ascend910B: truncates lower 12 bits, keeping 20 bits with rounding.
-    Ascend950 (A5): truncates lower 13 bits, keeping 19 bits with rounding.
-    """
-    if short_soc_version is None:
-        try:
-            import torch_npu
-
-            soc_name = torch_npu.npu.get_soc_version()
-            if soc_name in (260, 261):
-                short_soc_version = "Ascend950"
-            elif soc_name in (220, 221):
-                short_soc_version = "Ascend910B"
-        except Exception:
-            pass
-
-    input_hf32 = data.view(np.int32)
-    if short_soc_version in ("Ascend910B",):
-        input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
-        input_hf32 = np.left_shift(input_hf32, 12)
-    else:
-        input_hf32 = np.right_shift(np.right_shift(input_hf32, 12) + 1, 1)
-        input_hf32 = np.left_shift(input_hf32, 13)
-    return input_hf32.view(np.float32)
+def simulate_hf32_precision(data):
+    """Simulate HF32: round fp32 mantissa to 10 bits (19 bits total), RNE (round-to-nearest-even)."""
+    bits = np.ascontiguousarray(data, dtype=np.float32).view(np.uint32)
+    shift = 13
+    mask = np.uint32((1 << shift) - 1)
+    half = np.uint32(1 << (shift - 1))
+    low = bits & mask
+    base = bits & np.uint32(~mask & 0xFFFFFFFF)
+    lsb = (bits >> np.uint32(shift)) & np.uint32(1)
+    round_up = (low > half) | ((low == half) & (lsb == np.uint32(1)))
+    rounded = base + round_up.astype(np.uint32) * np.uint32(1 << shift)
+    return rounded.view(np.float32)
 
 
 def _compute_conv_backward(
@@ -102,7 +88,6 @@ def _compute_conv_backward(
     outputMask=[True, True, False],
     biasSizes=None,
     cubeMathType=0,
-    short_soc_version=None,
 ):
     stride = ensure_list(stride, conv_dim)
     orig_padding = (
@@ -149,14 +134,10 @@ def _compute_conv_backward(
 
     if input_dtype_str == "float32" and input is not None and weight is not None:
         if cubeMathType in [1, 3]:
-            input_np = simulate_hf32_precision(
-                input.numpy().astype(np.float32), short_soc_version
-            )
-            weight_np = simulate_hf32_precision(
-                weight.numpy().astype(np.float32), short_soc_version
-            )
+            input_np = simulate_hf32_precision(input.numpy().astype(np.float32))
+            weight_np = simulate_hf32_precision(weight.numpy().astype(np.float32))
             gradOutput_np = simulate_hf32_precision(
-                gradOutput.numpy().astype(np.float32), short_soc_version
+                gradOutput.numpy().astype(np.float32)
             )
             input = torch.from_numpy(input_np)
             weight = torch.from_numpy(weight_np)
@@ -378,7 +359,6 @@ def aclnn_convolution_backward_golden(
         else None
     )
     conv_dim = get_conv_dim(input_shape, weight_shape)
-    short_soc_version = kwargs.get("short_soc_version", None)
 
     grad_input, grad_weight, grad_bias = _compute_conv_backward(
         gradOutput,
@@ -394,7 +374,6 @@ def aclnn_convolution_backward_golden(
         outputMask,
         biasSizes,
         cubeMathType=cubeMathType,
-        short_soc_version=short_soc_version,
     )
 
     tensor_dtypes = kwargs.get("tensor_dtypes", None)
@@ -469,7 +448,6 @@ def aclnn_conv_tbc_backward_golden(
     TBC format: (T, B, C) where T is time/sequence, B is batch, C is channels.
     Equivalent to conv1d with input shape (B, C, T).
     """
-    short_soc_version = kwargs.get("short_soc_version", None)
 
     if isinstance(self, np.ndarray):
         self = torch.from_numpy(self)
@@ -488,15 +466,9 @@ def aclnn_conv_tbc_backward_golden(
     input_dtype_str = str(input.dtype).split(".")[-1]
     if input_dtype_str == "float32":
         if cubeMathType in [1, 3]:
-            self_np = simulate_hf32_precision(
-                self.numpy().astype(np.float32), short_soc_version
-            )
-            input_np = simulate_hf32_precision(
-                input.numpy().astype(np.float32), short_soc_version
-            )
-            weight_np = simulate_hf32_precision(
-                weight.numpy().astype(np.float32), short_soc_version
-            )
+            self_np = simulate_hf32_precision(self.numpy().astype(np.float32))
+            input_np = simulate_hf32_precision(input.numpy().astype(np.float32))
+            weight_np = simulate_hf32_precision(weight.numpy().astype(np.float32))
             self = torch.from_numpy(self_np)
             input = torch.from_numpy(input_np)
             weight = torch.from_numpy(weight_np)
@@ -586,8 +558,6 @@ def aten_convolution_backward_golden(
         if all_unit:
             cubeMathType = 0
 
-    short_soc_version = kwargs.get("short_soc_version", None)
-
     grad_input, grad_weight, grad_bias = _compute_conv_backward(
         grad_output,
         input,
@@ -602,7 +572,6 @@ def aten_convolution_backward_golden(
         output_mask,
         bias_sizes,
         cubeMathType=cubeMathType,
-        short_soc_version=short_soc_version,
     )
 
     return (grad_input, grad_weight, grad_bias)

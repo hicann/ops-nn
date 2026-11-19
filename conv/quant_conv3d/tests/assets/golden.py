@@ -36,27 +36,19 @@ NDHWC_FORMAT = "NDHWC"
 FP32_STR = "float32"
 
 
-def simulate_hf32_precision(data, short_soc_version=None):
-    """
-    Simulate HF32 (Half Float 32) precision.
-    Ascend910B: truncates lower 12 bits of float32 mantissa, keeping 20 bits with rounding.
-    Default: truncates lower 13 bits of float32 mantissa, keeping 19 bits with rounding.
-    """
-    if data.dtype == np.float32:
-        input_hf32 = data.view(np.int32)
-        if short_soc_version in ("Ascend910B",):
-            input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
-            input_hf32 = np.left_shift(input_hf32, 12)
-        else:
-            input_hf32 = np.right_shift(np.right_shift(input_hf32, 12) + 1, 1)
-            input_hf32 = np.left_shift(input_hf32, 13)
-        return input_hf32.view(np.float32)
+def simulate_hf32_precision(data):
+    """Simulate HF32: round fp32 mantissa to 10 bits (19 bits total), RNE (round-to-nearest-even)."""
+    bits = np.ascontiguousarray(data, dtype=np.float32).view(np.uint32)
+    shift = 13
+    mask = np.uint32((1 << shift) - 1)
+    half = np.uint32(1 << (shift - 1))
+    low = bits & mask
+    base = bits & np.uint32(~mask & 0xFFFFFFFF)
+    lsb = (bits >> np.uint32(shift)) & np.uint32(1)
+    round_up = (low > half) | ((low == half) & (lsb == np.uint32(1)))
+    rounded = base + round_up.astype(np.uint32) * np.uint32(1 << shift)
+    return rounded.view(np.float32)
     return data
-
-
-def is_ascend950(short_soc_version):
-    """Check if the target is Ascend 950PR/950DT"""
-    return short_soc_version in ("Ascend950", "Ascend350")
 
 
 def process_formats(x, filter, input_formats):
@@ -99,7 +91,7 @@ def process_output_format(out, output_format, input_format):
     return out
 
 
-def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version=None):
+def convert_output_dtype(out, output_dtype, enable_hf32=False):
     dtype_map = {
         "float16": np.float16,
         "float32": np.float32,
@@ -130,7 +122,7 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version
         out = out.astype(dtype_ref)
 
     if output_dtype == FP32_STR and enable_hf32:
-        out = simulate_hf32_precision(out, short_soc_version)
+        out = simulate_hf32_precision(out)
 
     return out
 
@@ -359,13 +351,12 @@ def quant_conv3d_golden(
     Kernel golden for quant_conv3d.
     All parameters follow @quant_conv3d_def.cpp without outputs.
     All input Tensors are numpy.ndarray.
-    kwargs may contain: short_soc_version, input_ori_shapes, output_ori_shapes,
+    kwargs may contain: input_ori_shapes, output_ori_shapes,
         input_formats, output_formats, input_ori_formats, output_ori_formats,
         output_dtypes.
     """
     import torch
 
-    short_soc_version = kwargs.get("short_soc_version", "")
     input_formats = kwargs.get("input_formats", [NCDHW_FORMAT, NCDHW_FORMAT])
     input_format = input_formats[0]
     x_dtype_str = x.dtype.name
@@ -448,15 +439,15 @@ def quant_conv3d_golden(
     )
 
     scale_np = scale if isinstance(scale, np.ndarray) else np.array(scale)
-    scale_tensor = torch.from_numpy(
-        scale_np.astype(np.uint32)
-        .view(np.float32)
-        .reshape(1, scale_np.shape[0], 1, 1, 1)
+    # NPU fixpipe取bits[31:13]共19位作为fp32做dequant
+    scale_f32 = np.bitwise_and(scale_np.astype(np.uint32), np.uint32(0xFFFFE000)).view(
+        np.float32
     )
+    scale_tensor = torch.from_numpy(scale_f32.reshape(1, scale_f32.shape[0], 1, 1, 1))
     out = torch.multiply(out, scale_tensor)
     out = out.numpy()
 
-    out = convert_output_dtype(out, output_dtype, short_soc_version=short_soc_version)
+    out = convert_output_dtype(out, output_dtype)
 
     out = process_output_format(out, output_format, input_format)
 

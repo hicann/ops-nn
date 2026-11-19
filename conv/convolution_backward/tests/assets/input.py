@@ -131,4 +131,5 @@ def aten_convolution_backward_input(
     Input function for torch.ops.aten.convolution_backward.
     Supports 1D, 2D, 3D convolution backward.
     """
-    return [grad_output, input, weight]
+    # e2e模式: 返回None, 让框架使用已生成的raw_inputs
+    return None

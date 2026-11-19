@@ -149,11 +149,17 @@ def aclnn_quant_conv2d_input(
         if isinstance(scale, torch.Tensor):
             if scale.dtype == torch.int64:
                 scale.copy_(scale_encoded)
+            elif scale.dtype == torch.uint64:
+                # uint64 scale同样按fp32位编码写入(bits), 不能值转换(值转换会把
+                # 0.01~1.0的浮点截断为0, scale退化为全0)
+                scale.copy_(scale_encoded.to(torch.uint64))
             else:
                 scale.copy_(torch.from_numpy(scale_float))
         elif isinstance(scale, np.ndarray):
             if scale.dtype == np.int64:
                 scale[:] = scale_encoded.numpy()
+            elif scale.dtype == np.uint64:
+                scale[:] = scale_encoded.numpy().astype(np.uint64)
             else:
                 scale[:] = scale_float
         else:
@@ -202,9 +208,15 @@ def torch_npu_quant_conv2d_input(
                 scale_float.view(np.uint32).astype(np.int64)
             )
             if isinstance(scale, torch.Tensor):
-                scale.copy_(scale_encoded)
+                if scale.dtype == torch.uint64:
+                    scale.copy_(scale_encoded.to(torch.uint64))
+                else:
+                    scale.copy_(scale_encoded)
             elif isinstance(scale, np.ndarray):
-                scale[:] = scale_encoded.numpy()
+                if scale.dtype == np.uint64:
+                    scale[:] = scale_encoded.numpy().astype(np.uint64)
+                else:
+                    scale[:] = scale_encoded.numpy()
             else:
                 scale = scale_encoded
 
@@ -235,7 +247,8 @@ def torch_npu_quant_conv2d_input(
     scale = _ensure_torch(scale)
     offset = _ensure_torch(offset)
 
-    return [x, weight, bias, scale, offset]
+    # e2e模式: scale已在上面原地修改(scale.copy_), 返回None让框架使用已修改的raw_inputs
+    return None
 
 
 def torch_conv1d_input(
@@ -259,7 +272,8 @@ def torch_conv1d_input(
             torch_npu.conv.allow_hf32 = True
         except (ImportError, AttributeError):
             pass
-    return [input, weight, bias]
+    # e2e模式: 原地修改(如scale.copy_), 返回None让框架使用已修改的raw_inputs
+    return None
 
 
 def torch_conv2d_input(
@@ -275,7 +289,7 @@ def torch_conv2d_input(
     """
     Input function for torch.conv2d / torch.nn.functional.conv2d.
     """
-    return [input, weight, bias]
+    return None
 
 
 def torch_conv3d_input(
@@ -291,7 +305,7 @@ def torch_conv3d_input(
     """
     Input function for torch.conv3d / torch.nn.functional.conv3d.
     """
-    return [input, weight, bias]
+    return None
 
 
 def aten_convolution_input(
@@ -335,4 +349,5 @@ def aten_convolution_input(
             return torch.from_numpy(np.ascontiguousarray(t.copy()))
         return t
 
-    return [_ensure_torch(input), _ensure_torch(weight), _ensure_torch(bias)]
+    # e2e模式: 返回None, 让框架使用已生成的raw_inputs
+    return None

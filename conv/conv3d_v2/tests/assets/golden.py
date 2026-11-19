@@ -107,21 +107,18 @@ def due_fp16_overflow(data):
     return data
 
 
-def simulate_hf32_precision(data, short_soc_version=None):
-    """
-    Simulate HF32 (Half Float 32) precision.
-    Ascend910B: truncates lower 12 bits of float32 mantissa, keeping 20 bits with rounding.
-    Default: truncates lower 13 bits of float32 mantissa, keeping 19 bits with rounding.
-    """
-    if data.dtype == np.dtype(np.float32):
-        input_hf32 = data.view(np.int32)
-        if short_soc_version in ("Ascend910B",):
-            input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
-            input_hf32 = np.left_shift(input_hf32, 12)
-        else:
-            input_hf32 = np.right_shift(np.right_shift(input_hf32, 12) + 1, 1)
-            input_hf32 = np.left_shift(input_hf32, 13)
-        return input_hf32.view(np.float32)
+def simulate_hf32_precision(data):
+    """Simulate HF32: round fp32 mantissa to 10 bits (19 bits total), RNE (round-to-nearest-even)."""
+    bits = np.ascontiguousarray(data, dtype=np.float32).view(np.uint32)
+    shift = 13
+    mask = np.uint32((1 << shift) - 1)
+    half = np.uint32(1 << (shift - 1))
+    low = bits & mask
+    base = bits & np.uint32(~mask & 0xFFFFFFFF)
+    lsb = (bits >> np.uint32(shift)) & np.uint32(1)
+    round_up = (low > half) | ((low == half) & (lsb == np.uint32(1)))
+    rounded = base + round_up.astype(np.uint32) * np.uint32(1 << shift)
+    return rounded.view(np.float32)
     return data
 
 
@@ -160,7 +157,7 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version
         out = out.astype(dtype_ref)
 
     if output_dtype == FP32_STR and enable_hf32:
-        out = simulate_hf32_precision(out, short_soc_version)
+        out = simulate_hf32_precision(out)
 
     return out
 
@@ -685,10 +682,8 @@ def conv3d_v2_golden(
 
     if enable_hf32 and x_dtype_str == FP32_STR:
         calc_dtype = np.float32
-        x_np = simulate_hf32_precision(x_np.astype(np.float32), short_soc_version)
-        filter_np = simulate_hf32_precision(
-            filter_np.astype(np.float32), short_soc_version
-        )
+        x_np = simulate_hf32_precision(x_np.astype(np.float32))
+        filter_np = simulate_hf32_precision(filter_np.astype(np.float32))
     else:
         calc_dtype = np.float64 if x_dtype_str == FP32_STR else np.float32
         x_np = x_np.astype(calc_dtype)

@@ -52,6 +52,15 @@ struct FullLoadProcessor {
     __aicore__ inline void operator()(const BlockCtx& blockCtx, const TilingData& tiling, GM_ADDR x, GM_ADDR filter,
                                       GM_ADDR bias, GM_ADDR y, const ExtendParams* ep) const
     {
+        if constexpr (AscendC::IsSameType<FmapT, float>::value) {
+            if (tiling.hf32Enable) {
+                SetHF32Mode(tiling.hf32Enable);
+                SetHF32TransMode(tiling.hf32TransMode);
+            } else {
+                SetHF32Mode(0);
+                SetHF32TransMode(0);
+            }
+        }
         uint32_t kL0MaxIter = static_cast<uint32_t>(CeilDiv(blockCtx.kTotalFmap, tiling.kL0));
 
         FmapRange blockWindow = scheme_.ResolveBlockWindow(blockCtx, tiling);

@@ -43,25 +43,22 @@ def due_fp16_overflow(data):
     return data
 
 
-def simulate_hf32_precision(data, short_soc_version=None):
-    """
-    Simulate HF32 (Half Float 32) precision.
-    Ascend910B: truncates lower 12 bits of float32 mantissa, keeping 20 bits with rounding.
-    Default: truncates lower 13 bits of float32 mantissa, keeping 19 bits with rounding.
-    """
-    if data.dtype == np.float32:
-        input_hf32 = data.view(np.int32)
-        if short_soc_version in ("Ascend910B",):
-            input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
-            input_hf32 = np.left_shift(input_hf32, 12)
-        else:
-            input_hf32 = np.right_shift(np.right_shift(input_hf32, 12) + 1, 1)
-            input_hf32 = np.left_shift(input_hf32, 13)
-        return input_hf32.view(np.float32)
+def simulate_hf32_precision(data):
+    """Simulate HF32: round fp32 mantissa to 10 bits (19 bits total), RNE (round-to-nearest-even)."""
+    bits = np.ascontiguousarray(data, dtype=np.float32).view(np.uint32)
+    shift = 13
+    mask = np.uint32((1 << shift) - 1)
+    half = np.uint32(1 << (shift - 1))
+    low = bits & mask
+    base = bits & np.uint32(~mask & 0xFFFFFFFF)
+    lsb = (bits >> np.uint32(shift)) & np.uint32(1)
+    round_up = (low > half) | ((low == half) & (lsb == np.uint32(1)))
+    rounded = base + round_up.astype(np.uint32) * np.uint32(1 << shift)
+    return rounded.view(np.float32)
     return data
 
 
-def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version=None):
+def convert_output_dtype(out, output_dtype, enable_hf32=False):
     """
     Convert output array to target dtype with overflow handling.
 
@@ -69,7 +66,6 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version
         out: Output numpy array
         output_dtype: Target dtype - can be str, torch.dtype, int (torch_npu dtype code)
         enable_hf32: Apply HF32 precision simulation for float32
-        short_soc_version: SOC version for HF32 precision
 
     Returns:
         numpy array with target dtype
@@ -122,18 +118,10 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version
     else:
         out = out.astype(dtype_ref)
 
-    if dtype_name == FP32_STR and enable_hf32:
-        out = simulate_hf32_precision(out, short_soc_version)
+    # 注意: HF32截断已在输入端完成(见extend_conv2d_golden中的enable_hf32处理),
+    # 此处不再对输出做HF32截断(输出是fp32累加结果, 不在HF32网格上)
 
     return out
-
-
-def is_ascend950_or_960(short_soc_version):
-    """Check if target SoC is Ascend 950PR/950DT or 960PR/960DT."""
-    return short_soc_version in (
-        "Ascend950",
-        "Ascend350",
-    ) or short_soc_version.startswith("Ascend960")
 
 
 def process_input_format(x, filter, input_formats):
@@ -312,18 +300,12 @@ def extend_conv2d_golden(
         enable_relu0, enable_relu1: Enable ReLU on outputs
         dual_output: Return two outputs
         dtype0, dtype1: Output dtype codes
-        **kwargs: Contains short_soc_version, input_formats, output_formats, etc.
+        **kwargs: Contains input_formats, output_formats, etc.
 
     Returns:
         (out0, out1) if dual_output=True, else (out, None)
     """
     import torch.nn.functional as F
-
-    short_soc_version = kwargs.get("short_soc_version", "")
-    if not is_ascend950_or_960(short_soc_version):
-        raise ValueError(
-            "extend_conv2d only supports Ascend 950PR/950DT and 960PR/960DT"
-        )
 
     input_formats = kwargs.get("input_formats", [NCHW_FORMAT, NCHW_FORMAT])
     x_dtype_str = x.dtype.name
@@ -334,17 +316,32 @@ def extend_conv2d_golden(
     x_np = x_np.astype(calc_dtype)
     filter_np = filter_np.astype(calc_dtype)
 
+    # HF32截断在输入端做(与NPU的SetHF32Mode一致: L0A/L0B中的FP32数据
+    # 在矩阵乘之前被舍入到HF32, 即只影响cube operand即fmap/weight;
+    # bias不走cube路径, 在fixpipe以FP32精度参与累加, 不截断)
+    if enable_hf32 and x_dtype_str == FP32_STR:
+        x_np = simulate_hf32_precision(x_np.astype(np.float32)).astype(calc_dtype)
+        filter_np = simulate_hf32_precision(filter_np.astype(np.float32)).astype(
+            calc_dtype
+        )
+
     bias_np = bias.astype(calc_dtype) if bias is not None else None
 
     scale0_np = None
     if scale0 is not None:
         scale0_arr = scale0 if isinstance(scale0, np.ndarray) else np.array(scale0)
-        scale0_np = scale0_arr.astype(np.uint32).view(np.float32)
+        # NPU fixpipe取bits[31:13]共19位作为fp32做dequant
+        # (set_quant_pre: "bits[31:13] is deq value of fp32")
+        scale0_np = np.bitwise_and(
+            scale0_arr.astype(np.uint32), np.uint32(0xFFFFE000)
+        ).view(np.float32)
 
     scale1_np = None
     if scale1 is not None:
         scale1_arr = scale1 if isinstance(scale1, np.ndarray) else np.array(scale1)
-        scale1_np = scale1_arr.astype(np.uint32).view(np.float32)
+        scale1_np = np.bitwise_and(
+            scale1_arr.astype(np.uint32), np.uint32(0xFFFFE000)
+        ).view(np.float32)
 
     if isinstance(strides, (list, tuple)):
         if len(strides) == 4:
@@ -423,12 +420,8 @@ def extend_conv2d_golden(
         output_formats = kwargs.get("output_formats", [NCHW_FORMAT, NCHW_FORMAT])
         input_format = input_formats[0]
 
-        out0 = convert_output_dtype(
-            out0, output_dtypes[0], short_soc_version=short_soc_version
-        )
-        out1 = convert_output_dtype(
-            out1, output_dtypes[1], short_soc_version=short_soc_version
-        )
+        out0 = convert_output_dtype(out0, output_dtypes[0])
+        out1 = convert_output_dtype(out1, output_dtypes[1])
 
         out0 = process_output_format(out0, output_formats[0], input_format)
         out1 = process_output_format(out1, output_formats[1], input_format)
@@ -450,9 +443,7 @@ def extend_conv2d_golden(
         output_formats = kwargs.get("output_formats", [NCHW_FORMAT])
         input_format = input_formats[0]
 
-        out = convert_output_dtype(
-            out, output_dtypes[0], short_soc_version=short_soc_version
-        )
+        out = convert_output_dtype(out, output_dtypes[0])
         out = process_output_format(out, output_formats[0], input_format)
 
         return out, None
