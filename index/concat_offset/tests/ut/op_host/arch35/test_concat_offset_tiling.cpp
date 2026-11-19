@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file test_concat_offset_tilling.cpp
+ * \file test_concat_offset_tiling.cpp
  * \brief
  */
 
@@ -143,19 +143,17 @@ TEST_F(ConcatOffsetTiling, concat_offset_simt_tiling_1)
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(4, 3)
-                      .IrInstanceNum({1, 3})
+                      .IrInstanceNum({1, 3}, {1, 1, 1})
                       .InputShapes({&concat_dim_shape, &x1_shape, &x2_shape, &x3_shape})
                       .OutputShapes({&y1_shape, &y2_shape, &y3_shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"N", ge::AnyValue::CreateFrom<int64_t>(3)}})
+                      .NodeAttrs({{"N", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}})
                       .ConstInput(const_tensors)
                       .TilingData(param.get())
                       .Workspace(ws_size)

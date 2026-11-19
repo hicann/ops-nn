@@ -13,6 +13,7 @@
  * \brief reverse_sequence_def
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -56,10 +57,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "reverse_sequence_apt");
-        this->AICore().AddConfig("ascend950", aicConfig);
-        this->AICore().AddConfig("ascend960dt", aicConfig);
-        this->AICore().AddConfig("ascend960pr", aicConfig);
-        this->AICore().AddConfig("ascend350", aicConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicConfig);
     }
 };
 

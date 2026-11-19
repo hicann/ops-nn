@@ -20,6 +20,7 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "error_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "../../op_kernel/arch35/reverse_sequence_struct.h"
 #include "../../op_kernel/arch35/reverse_sequence_tiling_key.h"
 
@@ -232,8 +233,8 @@ ge::graphStatus ReverseSequenceSimtTiling::GetPlatformInfo()
     auto platformInfoPtr = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    isDv121_ = (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9201 ||
-                ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_9202);
+    isDv121_ = (ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9201 ||
+                ascendcPlatform.GetCurNpuArch() == Ops::Base::DAV_9202);
     return GetReverseSequencePlatformInfo(context_, ubSize, coreNum);
 }
 
