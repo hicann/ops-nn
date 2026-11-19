@@ -88,11 +88,14 @@ template <class Intf>
 __aicore__ inline void InitSingleShapeParams(Intf* self)
 {
     // 初始化为0，避免decache功能开启后全局变量不会初始化为0，出现随机值导致未知问题
+    self->ctx.hkWk_ = static_cast<uint64_t>(self->ctx.tiling_->hk) * self->ctx.tiling_->wk;
+    self->ctx.dkHkWk_ = static_cast<uint64_t>(self->ctx.tiling_->dk) * self->ctx.hkWk_;
+    self->ctx.khDilation_ = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
     self->ctx.singleShapeDin_ = 0;
     self->ctx.singleShapeM_ = 0;
     self->ctx.singleShapeCin_ = 0;
     self->ctx.singleShapeCout_ = 0;
-    self->ctx.singleShapeHWk_ = self->ctx.tiling_->hkWk;
+    self->ctx.singleShapeHWk_ = self->ctx.hkWk_;
 }
 
 template <class Intf>
@@ -147,7 +150,7 @@ __aicore__ inline void InitParams(Intf* self)
     self->ctx.diHiWi_ = self->ctx.tiling_->di * self->ctx.hiWi_;
     self->ctx.realWoSize_ = self->ctx.tiling_->wo;
     InitFullLoadFlag<Intf>(self);
-    self->ctx.hoExpand_ = self->ctx.tiling_->hoExpand;
+    self->ctx.hoExpand_ = (self->ctx.tiling_->ho - 1) * self->ctx.tiling_->strideH + 1;
     self->ctx.l0PingPongFlag_ = 0;
     self->ctx.l0bPingPongAddr_ = DivDtypeByte<typename Intf::SrcBT>(TOTAL_L0B_SIZE >> 1);
     self->ctx.enableL0PingPong_ = (self->ctx.tiling_->al0Pbuffer - 1) & (self->ctx.tiling_->bl0Pbuffer - 1);

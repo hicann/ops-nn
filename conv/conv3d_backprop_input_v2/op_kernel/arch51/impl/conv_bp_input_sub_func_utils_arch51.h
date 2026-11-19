@@ -62,7 +62,7 @@ template <class Intf>
 static __aicore__ inline uint8_t CalcLoadB2Condition(const Intf* self)
 {
     uint32_t kernelHW = self->ctx.tiling_->hk * self->ctx.tiling_->wk;
-    if (self->ctx.tiling_->dkHkWk == 1) {
+    if (self->ctx.dkHkWk_ == 1) {
         return B2_TRANSPOSE_ONLY; // kernel 1×1×1，无需逆序
     }
     if (self->ctx.tiling_->baseN >= kernelHW) {

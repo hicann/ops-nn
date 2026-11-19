@@ -221,7 +221,7 @@ __aicore__ inline uint32_t CalFmapH(Intf* self, uint32_t mL1Size)
     } else {
         hiCal = self->ctx.tiling_->wi % mL1Size == 0 ? 1 : 2; // 不能整除要跨行搬运
     }
-    return (hiCal - 1) + self->ctx.tiling_->khDilation;
+    return (hiCal - 1) + self->ctx.khDilation_;
 }
 
 template <class Intf>

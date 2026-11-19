@@ -83,6 +83,8 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, baseUseM_);
         DEFINE_STUCT_FIELD(uint32_t, baseUseN_);
         DEFINE_STUCT_FIELD(uint32_t, baseUseK_);
+        DEFINE_STUCT_FIELD(uint64_t, hkWk_);
+        DEFINE_STUCT_FIELD(uint32_t, khDilation_);
         DEFINE_STUCT_FIELD(uint64_t, singleShapeHWk_);
         DEFINE_STUCT_FIELD(uint64_t, singleShapeM_);
         DEFINE_STUCT_FIELD(uint32_t, singleShapeCin_);
@@ -133,6 +135,7 @@ public:
         DEFINE_STUCT_FIELD(LoadData2DParamsV2, load2dv2_);
         DEFINE_STUCT_FIELD(uint64_t, curStepKa_);
         DEFINE_STUCT_FIELD(uint64_t, curStepKb_);
+        DEFINE_STUCT_FIELD(uint64_t, dkHkWk_);
         DEFINE_STUCT_FIELD(uint64_t, hiWi_);
         DEFINE_STUCT_FIELD(uint64_t, diHiWi_);
         DEFINE_STUCT_FIELD(uint64_t, hoWo_);

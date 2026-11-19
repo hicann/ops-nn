@@ -114,7 +114,7 @@ static __aicore__ inline void LoadToB2(Intf* self, const LocalTensor<typename In
             LoadData(l0b[dstB2Offset], l1B1Matrix[srcB1Offset], self->ctx.load2dv2_);
         }
     } else if (unlikely(cond == B2_REVERSE_ONLY)) {
-        if (self->ctx.tiling_->dkHkWk == 1) {
+        if (self->ctx.dkHkWk_ == 1) {
             LoadToB2NoTransposeNoReverse<Intf>(self, l1B1Matrix, srcB1Offset, kPos, l0b);
         } else {
             LoadToB2ReverseOnlyCommon<Intf>(self, l1B1Matrix, blockSize, srcB1Offset, dstB2Offset, kPos, l0b);
