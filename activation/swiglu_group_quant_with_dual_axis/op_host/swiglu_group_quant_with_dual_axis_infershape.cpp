@@ -98,14 +98,18 @@ ge::graphStatus InferShape4SwigluGroupQuantWithDualAxis(gert::InferShapeContext*
     }
 
     const int64_t rank = static_cast<int64_t>(xShape->GetDimNum());
-    OP_CHECK_IF(rank != 2, OP_LOGE(context->GetNodeName(), "input x dim num should be 2, got %ld.", rank),
+    OP_CHECK_IF(rank != 2,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(rank).c_str(),
+                                                         "The dimension count of x must be 2"),
                 return ge::GRAPH_FAILED);
 
     const gert::Shape* weightShape = context->GetOptionalInputShape(v2::WEIGHT);
     if (weightShape != nullptr) {
         const size_t weightRank = weightShape->GetDimNum();
         OP_CHECK_IF(weightRank < 1 || weightRank > 8,
-                    OP_LOGE(context->GetNodeName(), "input weight dim num should be in [1, 8], got %zu.", weightRank),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "weight",
+                                                             std::to_string(weightRank).c_str(),
+                                                             "The dimension count of weight must be in [1, 8]"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -117,43 +121,56 @@ ge::graphStatus InferShape4SwigluGroupQuantWithDualAxis(gert::InferShapeContext*
             unknownT = true;
             continue;
         }
-        OP_CHECK_IF(extent < 0,
-                    OP_LOGE(context->GetNodeName(), "input x dim[%ld] should be non-negative, got %ld.", i, extent),
-                    return ge::GRAPH_FAILED);
-        int64_t next = 0;
         OP_CHECK_IF(
-            !CheckedMul(t, extent, next),
-            OP_LOGE(context->GetNodeName(),
-                    "input x shape exceeds int64 range, got dim[%ld] %ld with accumulated product %ld.", i, extent, t),
+            extent < 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
+                                                  ("dim[" + std::to_string(i) + "]=" + std::to_string(extent)).c_str(),
+                                                  "The dims of x must be non-negative"),
             return ge::GRAPH_FAILED);
+        int64_t next = 0;
+        OP_CHECK_IF(!CheckedMul(t, extent, next),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
+                                                          ("dim[" + std::to_string(i) + "]=" + std::to_string(extent) +
+                                                           " with accumulated product " + std::to_string(t))
+                                                              .c_str(),
+                                                          "The product of x dims must fit int64"),
+                    return ge::GRAPH_FAILED);
         t = next;
     }
     const int64_t cut = xShape->GetDim(rank - 1);
-    OP_CHECK_IF(cut != v2::kUnknownDim && cut % v2::kScalePairElements != 0,
-                OP_LOGE(context->GetNodeName(), "input x last dim should be divisible by 64, got %ld.", cut),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        cut != v2::kUnknownDim && cut % v2::kScalePairElements != 0,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "x", std::to_string(cut).c_str(),
+            ("The last dimension of x must be a multiple of " + std::to_string(v2::kScalePairElements)).c_str()),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(cut != v2::kUnknownDim && cut <= 0,
-                OP_LOGE(context->GetNodeName(), "input x last dim should be greater than 0, got %ld.", cut),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", std::to_string(cut).c_str(),
+                                                      "The last dimension of x must be greater than 0"),
                 return ge::GRAPH_FAILED);
     const int64_t h = cut == v2::kUnknownDim ? v2::kUnknownDim : cut / 2;
-    OP_CHECK_IF(
-        h != v2::kUnknownDim && h < v2::kMxBlockSize,
-        OP_LOGE(context->GetNodeName(), "input x last dim should be greater than or equal to 64, got %ld.", cut),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(h != v2::kUnknownDim && h < v2::kMxBlockSize,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "x", std::to_string(cut).c_str(),
+                    ("The last dimension of x must be greater than or equal to " + std::to_string(v2::kMxBlockSize * 2))
+                        .c_str()),
+                return ge::GRAPH_FAILED);
 
     const gert::Shape* groupShape = context->GetOptionalInputShape(v2::GROUP_INDEX);
     int64_t groups = 1;
     const int64_t rows = unknownT ? v2::kUnknownDim : t;
     bool hasGroup = false;
     if (groupShape != nullptr) {
-        OP_CHECK_IF(
-            groupShape->GetDimNum() != 1,
-            OP_LOGE(context->GetNodeName(), "input group_index dim num should be 1, got %zu.", groupShape->GetDimNum()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(groupShape->GetDimNum() != 1,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "group_index",
+                                                             std::to_string(groupShape->GetDimNum()).c_str(),
+                                                             "The dimension count of group_index must be 1"),
+                    return ge::GRAPH_FAILED);
         groups = groupShape->GetDim(0);
         OP_CHECK_IF(
             groups == 0 || groups < v2::kUnknownDim,
-            OP_LOGE(context->GetNodeName(), "input group_index element num should be greater than 0, got %ld.", groups),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "group_index", std::to_string(groups).c_str(),
+                                                  "The element num of group_index must be greater than 0"),
             return ge::GRAPH_FAILED);
         hasGroup = true;
     }

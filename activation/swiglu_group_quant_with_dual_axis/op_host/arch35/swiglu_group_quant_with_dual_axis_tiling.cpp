@@ -201,34 +201,34 @@ ge::graphStatus SwigluGroupQuantWithDualAxisTiling::CheckWeightInfo()
     auto weightDesc = context_->GetOptionalInputDesc(INPUT_INDEX_WEIGHT);
     if (weightDesc != nullptr) {
         weightDtype_ = weightDesc->GetDataType();
-        OP_CHECK_IF(
-            (weightDtype_ != ge::DT_FLOAT16 && weightDtype_ != ge::DT_BF16 && weightDtype_ != ge::DT_FLOAT),
-            OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT16, BFLOAT16 or FLOAT32, got %s.",
-                    ge::TypeUtils::DataTypeToSerialString(weightDtype_).c_str()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF((weightDtype_ != ge::DT_FLOAT16 && weightDtype_ != ge::DT_BF16 && weightDtype_ != ge::DT_FLOAT),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "weight",
+                                                          ge::TypeUtils::DataTypeToSerialString(weightDtype_).c_str(),
+                                                          "The dtype of weight must be FLOAT16, BFLOAT16 or FLOAT32"),
+                    return ge::GRAPH_FAILED);
         auto weightShape = context_->GetOptionalInputShape(INPUT_INDEX_WEIGHT);
         OP_CHECK_NULL_WITH_CONTEXT(context_, weightShape);
         const auto weightStorageShape = weightShape->GetStorageShape();
         const size_t weightDimNum = weightStorageShape.GetDimNum();
         OP_CHECK_IF((weightDimNum < 1 || weightDimNum > MAX_DIM_NUM),
-                    OP_LOGE(context_->GetNodeName(), "input weight dim num should be in [1, %zu], got %zu.",
-                            MAX_DIM_NUM, weightDimNum),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "weight",
+                                                             std::to_string(weightDimNum).c_str(),
+                                                             "The dimension count of weight must be in [1, 8]"),
                     return ge::GRAPH_FAILED);
         int64_t weightElementNum = 1;
         for (size_t i = 0; i < weightDimNum; ++i) {
             const int64_t extent = weightStorageShape.GetDim(i);
             OP_CHECK_IF(!CheckedMul(weightElementNum, extent, weightElementNum),
-                        OP_LOGE(context_->GetNodeName(),
-                                "input weight dimensions must be positive and their product must fit int64, "
-                                "got dim[%zu] %ld.",
-                                i, extent),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                            context_->GetNodeName(), "weight",
+                            ("dim[" + std::to_string(i) + "]=" + std::to_string(extent)).c_str(),
+                            "Every dimension of weight must be positive and their product must fit int64"),
                         return ge::GRAPH_FAILED);
         }
         OP_CHECK_IF((weightElementNum != bs_),
-                    OP_LOGE(context_->GetNodeName(),
-                            "input weight element num should be equal to the product of input x dims except the last "
-                            "one, got %ld, expected %ld.",
-                            weightElementNum, bs_),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        context_->GetNodeName(), "weight", std::to_string(weightElementNum).c_str(),
+                        "The element num of weight must equal the product of input x dims except the last one"),
                     return ge::GRAPH_FAILED);
         hasWeight_ = true;
     }
@@ -240,21 +240,28 @@ ge::graphStatus SwigluGroupQuantWithDualAxisTiling::CheckGroupIndexInfo()
     auto groupIndexDesc = context_->GetOptionalInputDesc(INPUT_INDEX_GROUP_INDEX);
     if (groupIndexDesc != nullptr) {
         auto groupIndexDtype = groupIndexDesc->GetDataType();
-        OP_CHECK_IF((groupIndexDtype != ge::DT_INT64),
-                    OP_LOGE(context_->GetNodeName(), "input group_index dtype should be INT64, got %s.",
-                            ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str()),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (groupIndexDtype != ge::DT_INT64),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "group_index",
+                                                  ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str(),
+                                                  "The dtype of group_index must be INT64"),
+            return ge::GRAPH_FAILED);
         auto groupIndexShape = context_->GetOptionalInputShape(INPUT_INDEX_GROUP_INDEX);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, groupIndexShape);
+        if (groupIndexShape == nullptr) {
+            OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context_->GetNodeName(), "group_index", "must not be null");
+            return ge::GRAPH_FAILED;
+        }
         auto groupIndexStorageShape = groupIndexShape->GetStorageShape();
         OP_CHECK_IF((groupIndexStorageShape.GetDimNum() != 1),
-                    OP_LOGE(context_->GetNodeName(), "input group_index dim num should be 1, got %zu.",
-                            groupIndexStorageShape.GetDimNum()),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "group_index",
+                                                             std::to_string(groupIndexStorageShape.GetDimNum()).c_str(),
+                                                             "The dimension count of group_index must be 1"),
                     return ge::GRAPH_FAILED);
         g_ = groupIndexStorageShape.GetDim(0);
         OP_CHECK_IF(
             (g_ <= 0),
-            OP_LOGE(context_->GetNodeName(), "input group_index element num should be greater than 0, got %ld.", g_),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "group_index", std::to_string(g_).c_str(),
+                                                  "The element num of group_index must be greater than 0"),
             return ge::GRAPH_FAILED);
         hasGroupIndex_ = true;
     }
@@ -276,24 +283,28 @@ ge::graphStatus SwigluGroupQuantWithDualAxisTiling::CheckOutputInfo(ge::DataType
     OP_CHECK_NULL_WITH_CONTEXT(context_, scale2Desc);
     OP_CHECK_NULL_WITH_CONTEXT(context_, originDesc);
 
-    OP_CHECK_IF((y1Desc->GetDataType() != dstType_ || y2Desc->GetDataType() != dstType_),
-                OP_LOGE(context_->GetNodeName(),
-                        "output y1/y2 dtype should be same as dst_type %s, got y1 dtype %s, y2 dtype %s.",
-                        ge::TypeUtils::DataTypeToSerialString(dstType_).c_str(),
-                        ge::TypeUtils::DataTypeToSerialString(y1Desc->GetDataType()).c_str(),
-                        ge::TypeUtils::DataTypeToSerialString(y2Desc->GetDataType()).c_str()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (y1Desc->GetDataType() != dstType_ || y2Desc->GetDataType() != dstType_),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "y1 and y2",
+                                              ("y1 " + ge::TypeUtils::DataTypeToSerialString(y1Desc->GetDataType()) +
+                                               ", y2 " + ge::TypeUtils::DataTypeToSerialString(y2Desc->GetDataType()))
+                                                  .c_str(),
+                                              "The dtype of y1 and y2 must be the same as dst_type"),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF((scale1Desc->GetDataType() != expectedScale || scale2Desc->GetDataType() != expectedScale),
-                OP_LOGE(context_->GetNodeName(), "output mxscale1/mxscale2 dtype should be %s, got %s and %s.",
-                        ge::TypeUtils::DataTypeToSerialString(expectedScale).c_str(),
-                        ge::TypeUtils::DataTypeToSerialString(scale1Desc->GetDataType()).c_str(),
-                        ge::TypeUtils::DataTypeToSerialString(scale2Desc->GetDataType()).c_str()),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "mxscale1 and mxscale2",
+                    ("mxscale1 " + ge::TypeUtils::DataTypeToSerialString(scale1Desc->GetDataType()) + ", mxscale2 " +
+                     ge::TypeUtils::DataTypeToSerialString(scale2Desc->GetDataType()))
+                        .c_str(),
+                    "The dtype of mxscale1 and mxscale2 must be FLOAT8_E8M0"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF((originDesc->GetDataType() != xDtype),
-                OP_LOGE(context_->GetNodeName(), "output y_origin dtype should be same as input x %s, got %s.",
-                        ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
-                        ge::TypeUtils::DataTypeToSerialString(originDesc->GetDataType()).c_str()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (originDesc->GetDataType() != xDtype),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "y_origin",
+                                              ge::TypeUtils::DataTypeToSerialString(originDesc->GetDataType()).c_str(),
+                                              "The dtype of y_origin must be the same as input x"),
+        return ge::GRAPH_FAILED);
 
     const auto& y1 = context_->GetOutputShape(OUTPUT_INDEX_Y1)->GetStorageShape();
     const auto& y2 = context_->GetOutputShape(OUTPUT_INDEX_Y2)->GetStorageShape();
@@ -327,32 +338,41 @@ ge::graphStatus SwigluGroupQuantWithDualAxisTiling::CheckOutputInfo(ge::DataType
     }
 
     OP_CHECK_IF((!ShapeIs(y1, {bs_, splitD_})),
-                OP_LOGE(context_->GetNodeName(), "output y1 shape should be [%ld, %ld], got [%ld, %ld].", bs_, splitD_,
-                        y1.GetDimNum() > 0 ? y1.GetDim(0) : -1, y1.GetDimNum() > 1 ? y1.GetDim(1) : -1),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "y1", Ops::Base::ToString(y1).c_str(),
+                    ("The shape of y1 must be [" + std::to_string(bs_) + ", " + std::to_string(splitD_) + "]").c_str()),
                 return ge::GRAPH_FAILED);
     const int64_t scale1Rows = CeilDiv(splitD_, SCALE_PAIR_ELEMENTS);
-    OP_CHECK_IF((!ShapeIs(s1, {bs_, scale1Rows, MX_SCALE_PAIR})),
-                OP_LOGE(context_->GetNodeName(), "output mxscale1 shape should be [%ld, %ld, %ld], got %s.", bs_,
-                        scale1Rows, MX_SCALE_PAIR, Ops::Base::ToString(s1).c_str()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (!ShapeIs(s1, {bs_, scale1Rows, MX_SCALE_PAIR})),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "mxscale1", Ops::Base::ToString(s1).c_str(),
+                                              ("The shape of mxscale1 must be [" + std::to_string(bs_) + ", " +
+                                               std::to_string(scale1Rows) + ", " + std::to_string(MX_SCALE_PAIR) + "]")
+                                                  .c_str()),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF((!ShapeIs(y2, {bs_, splitD_})),
-                OP_LOGE(context_->GetNodeName(), "output y2 shape should be [%ld, %ld], got [%ld, %ld].", bs_, splitD_,
-                        y2.GetDimNum() > 0 ? y2.GetDim(0) : -1, y2.GetDimNum() > 1 ? y2.GetDim(1) : -1),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "y2", Ops::Base::ToString(y2).c_str(),
+                    ("The shape of y2 must be [" + std::to_string(bs_) + ", " + std::to_string(splitD_) + "]").c_str()),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(g_ > std::numeric_limits<int64_t>::max() - bs_ / SCALE_PAIR_ELEMENTS,
                 OP_LOGE(context_->GetNodeName(), "grouped mxscale2 row count exceeds int64 range."),
                 return ge::GRAPH_FAILED);
     const int64_t scale2Rows = bs_ / SCALE_PAIR_ELEMENTS + g_;
-    OP_CHECK_IF((!ShapeIs(s2, {scale2Rows, splitD_, MX_SCALE_PAIR})),
-                OP_LOGE(context_->GetNodeName(), "output mxscale2 shape should be [%ld, %ld, %ld], got %s.", scale2Rows,
-                        splitD_, MX_SCALE_PAIR, Ops::Base::ToString(s2).c_str()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (!ShapeIs(s2, {scale2Rows, splitD_, MX_SCALE_PAIR})),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "mxscale2", Ops::Base::ToString(s2).c_str(),
+                                              ("The shape of mxscale2 must be [" + std::to_string(scale2Rows) + ", " +
+                                               std::to_string(splitD_) + ", " + std::to_string(MX_SCALE_PAIR) + "]")
+                                                  .c_str()),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF((!ShapeIs(origin, outputOrigin_ != 0 ? std::initializer_list<int64_t>{bs_, splitD_} :
                                                        std::initializer_list<int64_t>{0})),
-                OP_LOGE(context_->GetNodeName(),
-                        "output y_origin shape should be [%ld, %ld] when output_origin is true and [0] otherwise, got "
-                        "%s.",
-                        bs_, splitD_, Ops::Base::ToString(origin).c_str()),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "y_origin", Ops::Base::ToString(origin).c_str(),
+                    ("The shape of y_origin must be [" + std::to_string(bs_) + ", " + std::to_string(splitD_) +
+                     "] when output_origin is true and [0] otherwise")
+                        .c_str()),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -366,50 +386,64 @@ ge::graphStatus SwigluGroupQuantWithDualAxisTiling::GetShapeAttrsInfoInner()
 
     xDtype_ = xDesc->GetDataType();
     OP_CHECK_IF((xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_BF16),
-                OP_LOGE(context_->GetNodeName(), "input x dtype only supports FLOAT16 or BFLOAT16, got %s.",
-                        ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                      ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+                                                      "The dtype of x must be FLOAT16 or BFLOAT16"),
                 return ge::GRAPH_FAILED);
 
     const auto& xStorageShape = shapeX->GetStorageShape();
     const int64_t xDimNum = static_cast<int64_t>(xStorageShape.GetDimNum());
     OP_CHECK_IF((xDimNum != static_cast<int64_t>(X_DIM_NUM)),
-                OP_LOGE(context_->GetNodeName(), "input x dim num should be %zu, got %ld.", X_DIM_NUM, xDimNum),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    context_->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+                    ("The dimension count of x must be " + std::to_string(X_DIM_NUM)).c_str()),
                 return ge::GRAPH_FAILED);
 
     bs_ = 1;
     for (int64_t i = 0; i + 1 < xDimNum; ++i) {
         const int64_t extent = xStorageShape.GetDim(i);
-        OP_CHECK_IF((extent < 0),
-                    OP_LOGE(context_->GetNodeName(), "input x dim[%ld] should be non-negative, got %ld.", i, extent),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (extent < 0),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                  ("dim[" + std::to_string(i) + "]=" + std::to_string(extent)).c_str(),
+                                                  "The dims of x must be non-negative"),
+            return ge::GRAPH_FAILED);
         int64_t next = 0;
         OP_CHECK_IF(!CheckedMul(bs_, extent, next),
-                    OP_LOGE(context_->GetNodeName(),
-                            "input x shape exceeds int64 range, got dim[%ld] %ld with accumulated product %ld.", i,
-                            extent, bs_),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                          ("dim[" + std::to_string(i) + "]=" + std::to_string(extent) +
+                                                           " with accumulated product " + std::to_string(bs_))
+                                                              .c_str(),
+                                                          "The product of x dims must fit int64"),
                     return ge::GRAPH_FAILED);
         bs_ = next;
     }
 
     batchRows_ = xStorageShape.GetDim(xDimNum - 2);
     d_ = xStorageShape.GetDim(xDimNum - 1);
-    OP_CHECK_IF((d_ <= 0), OP_LOGE(context_->GetNodeName(), "input x last dim should be greater than 0, got %ld.", d_),
+    OP_CHECK_IF((d_ <= 0),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", std::to_string(d_).c_str(),
+                                                      "The last dimension of x must be greater than 0"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF((d_ % SCALE_PAIR_ELEMENTS != 0),
-                OP_LOGE(context_->GetNodeName(), "input x last dim should be divisible by 64, got %ld.", d_),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "x", std::to_string(d_).c_str(),
+                    ("The last dimension of x must be a multiple of " + std::to_string(SCALE_PAIR_ELEMENTS)).c_str()),
                 return ge::GRAPH_FAILED);
     splitD_ = d_ / 2;
-    OP_CHECK_IF((splitD_ < H_LIMIT),
-                OP_LOGE(context_->GetNodeName(), "input x last dim should be greater than or equal to %ld, got %ld.",
-                        H_LIMIT * 2, d_),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (splitD_ < H_LIMIT),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "x", std::to_string(d_).c_str(),
+            ("The last dimension of x must be greater than or equal to " + std::to_string(H_LIMIT * 2)).c_str()),
+        return ge::GRAPH_FAILED);
 
     if (CheckWeightInfo() == ge::GRAPH_FAILED || CheckGroupIndexInfo() == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF((hasWeight_ && !hasGroupIndex_),
-                OP_LOGE(context_->GetNodeName(),
-                        "input group_index should be provided when weight is provided, got group_index absent."),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "group_index", "absent",
+                                                      "group_index must be provided when weight is provided"),
                 return ge::GRAPH_FAILED);
 
     if (GetAttr() == ge::GRAPH_FAILED) {

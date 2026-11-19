@@ -51,26 +51,34 @@ static graphStatus ValidateAttrs(gert::InferShapeContext* context)
 
     const char* roundMode = attrsPtr->GetAttrPointer<char>(INDEX_ATTR_ROUND_MODE);
     OP_CHECK_NULL_WITH_CONTEXT(context, roundMode);
-    OP_CHECK_IF(std::string(roundMode) != "rint", OP_LOGE(context, "round_mode should be rint, but got %s.", roundMode),
+    OP_CHECK_IF(std::string(roundMode) != "rint",
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "round_mode", roundMode,
+                                                      "The value of round_mode must be rint"),
                 return ge::GRAPH_FAILED);
     const int64_t* scaleAlg = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleAlg);
-    OP_CHECK_IF(*scaleAlg != 1, OP_LOGE(context, "scale_alg should be 1, but got %ld.", *scaleAlg),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        *scaleAlg != 1,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(*scaleAlg).c_str(),
+                                              "The value of scale_alg must be 1"),
+        return ge::GRAPH_FAILED);
 
     const int64_t* dstDtype = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_DST_DTYPE);
     OP_CHECK_NULL_WITH_CONTEXT(context, dstDtype);
     ge::DataType outDtype = static_cast<ge::DataType>(*dstDtype);
     OP_CHECK_IF(
         std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
-        OP_LOGE(context, "dst_dtype should be FLOAT8_E4M3FN or FLOAT8_E5M2, but got %s.",
-                ge::TypeUtils::DataTypeToSerialString(outDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "dst_dtype",
+                                              ge::TypeUtils::DataTypeToSerialString(outDtype).c_str(),
+                                              "dst_dtype must be FLOAT8_E4M3FN or FLOAT8_E5M2"),
         return ge::GRAPH_FAILED);
 
     const float* maxDtypeValue = attrsPtr->GetAttrPointer<float>(INDEX_ATTR_MAX_DTYPE_VALUE);
     OP_CHECK_NULL_WITH_CONTEXT(context, maxDtypeValue);
     OP_CHECK_IF(*maxDtypeValue != ZERO_FLOAT,
-                OP_LOGE(context, "max_dtype_value should be 0.0, but got %f.", *maxDtypeValue),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "max_dtype_value",
+                                                      std::to_string(*maxDtypeValue).c_str(),
+                                                      "The value of max_dtype_value must be 0.0"),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -129,9 +137,15 @@ graphStatus InferShapeForGroupedDynamicMxQuantWithDualAxis(gert::InferShapeConte
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeForGroupedDynamicMxQuantWithDualAxis");
     const gert::Shape* xShape = context->GetInputShape(INDEX_INPUT_X);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    if (xShape == nullptr) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "x", "must not be null");
+        return ge::GRAPH_FAILED;
+    }
     const gert::Shape* groupIndexShape = context->GetInputShape(INDEX_INPUT_GROUP_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, groupIndexShape);
+    if (groupIndexShape == nullptr) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "group_index", "must not be null");
+        return ge::GRAPH_FAILED;
+    }
 
     if (ValidateAttrs(context) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -142,21 +156,28 @@ graphStatus InferShapeForGroupedDynamicMxQuantWithDualAxis(gert::InferShapeConte
     }
 
     const int64_t xDimNum = xShape->GetDimNum();
-    OP_CHECK_IF(xDimNum != 2, OP_LOGE(context, "x rank should be 2, but got %ld.", xDimNum), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDimNum != 2,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+                                                         "The dimension count of x must be 2"),
+                return ge::GRAPH_FAILED);
     const int64_t groupDimNum = groupIndexShape->GetDimNum();
-    OP_CHECK_IF(groupDimNum != 1, OP_LOGE(context, "group_index rank should be 1, but got %ld.", groupDimNum),
+    OP_CHECK_IF(groupDimNum != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "group_index",
+                                                         std::to_string(groupDimNum).c_str(),
+                                                         "The dimension count of group_index must be 1"),
                 return ge::GRAPH_FAILED);
 
     const int64_t n = xShape->GetDim(1);
     const int64_t groupNum = groupIndexShape->GetDim(0);
     OP_CHECK_IF(groupNum == 0,
-                OP_LOGE(context, "group_index shape should not be empty, but got %s.",
-                        Ops::Base::ToString(*groupIndexShape).c_str()),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "group_index",
+                                                      Ops::Base::ToString(*groupIndexShape).c_str(),
+                                                      "The shape of group_index must not be empty"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !IsUnknownDim(n) && n % SCALE_AXIS_UNIT != 0,
-        OP_LOGE(context, "x.shape[1] should be 64 aligned, but got x shape %s.", Ops::Base::ToString(*xShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsUnknownDim(n) && n % SCALE_AXIS_UNIT != 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", Ops::Base::ToString(*xShape).c_str(),
+                                                      "The last dimension of x must be aligned to 64"),
+                return ge::GRAPH_FAILED);
 
     if (SetOutputShapes(context, xShape, groupIndexShape) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;

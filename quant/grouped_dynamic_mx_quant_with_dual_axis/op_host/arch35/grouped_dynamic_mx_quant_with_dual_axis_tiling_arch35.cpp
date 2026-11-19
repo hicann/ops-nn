@@ -124,20 +124,32 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context,
     const gert::Shape& xShape = xStorageShape->GetStorageShape();
     const gert::Shape& groupShape = groupStorageShape->GetStorageShape();
     int64_t xDimNum = xShape.GetDimNum();
-    OP_CHECK_IF(xDimNum != 2, OP_LOGE(context, "x dimension count should be 2, but got %ld.", xDimNum),
+    OP_CHECK_IF(xDimNum != 2,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+                                                      "The dimension count of x must be 2"),
                 return ge::GRAPH_FAILED);
     int64_t groupDimNum = groupShape.GetDimNum();
     OP_CHECK_IF(groupDimNum != 1,
-                OP_LOGE(context, "group_index dimension count should be 1, but got %ld.", groupDimNum),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "group_index",
+                                                      std::to_string(groupDimNum).c_str(),
+                                                      "The dimension count of group_index must be 1"),
                 return ge::GRAPH_FAILED);
     int64_t m = xShape.GetDim(0);
     int64_t n = xShape.GetDim(1);
     int64_t groupNum = groupShape.GetDim(0);
-    OP_CHECK_IF(n <= 0, OP_LOGE(context, "x shape last dimension should be positive, but got [M=%ld, N=%ld].", m, n),
+    OP_CHECK_IF(n <= 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
+                                                      ("[" + std::to_string(m) + "," + std::to_string(n) + "]").c_str(),
+                                                      "The last dimension of x must be positive"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(groupNum <= 0, OP_LOGE(context, "group_index length should be positive, but got %ld.", groupNum),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(n % SCALE_AXIS_UNIT != 0, OP_LOGE(context, "x.shape[1] should be 64 aligned, but got N=%ld.", n),
+    OP_CHECK_IF(
+        groupNum <= 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "group_index", std::to_string(groupNum).c_str(),
+                                              "The length of group_index must be positive"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(n % SCALE_AXIS_UNIT != 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", std::to_string(n).c_str(),
+                                                      "The last dimension of x must be aligned to 64"),
                 return ge::GRAPH_FAILED);
 
     tilingParam.m = xShape.GetDim(0);
@@ -153,15 +165,17 @@ static ge::graphStatus CheckDtype(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXDesc);
     auto xDtype = inputXDesc->GetDataType();
     OP_CHECK_IF(!IsSupportedInputDtype(xDtype),
-                OP_LOGE(context, "x dtype should be FLOAT16 or BFLOAT16, but got %s.",
-                        ge::TypeUtils::DataTypeToSerialString(xDtype).c_str()),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
+                                                      ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+                                                      "The dtype of x must be FLOAT16 or BFLOAT16"),
                 return ge::GRAPH_FAILED);
     auto groupIndexDesc = context->GetInputDesc(INDEX_INPUT_GROUP_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, groupIndexDesc);
     auto groupIndexDtype = groupIndexDesc->GetDataType();
     OP_CHECK_IF(groupIndexDtype != ge::DT_INT64,
-                OP_LOGE(context, "group_index dtype should be INT64, but got %s.",
-                        ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str()),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "group_index",
+                                                      ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str(),
+                                                      "The dtype of group_index must be INT64"),
                 return ge::GRAPH_FAILED);
 
     auto y1Desc = context->GetOutputDesc(INDEX_OUTPUT_Y1);
@@ -172,9 +186,11 @@ static ge::graphStatus CheckDtype(gert::TilingContext* context,
     auto y2Dtype = y2Desc->GetDataType();
     OP_CHECK_IF(
         !IsSupportedOutputDtype(y1Dtype) || y1Dtype != y2Dtype,
-        OP_LOGE(context, "y1 and y2 dtypes should match and be FLOAT8_E5M2 or FLOAT8_E4M3FN, but got y1=%s, y2=%s.",
-                ge::TypeUtils::DataTypeToSerialString(y1Dtype).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(y2Dtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "y1 and y2",
+                                               ("[" + ge::TypeUtils::DataTypeToSerialString(y1Dtype) + ", " +
+                                                ge::TypeUtils::DataTypeToSerialString(y2Dtype) + "]")
+                                                   .c_str(),
+                                               "y1 and y2 must have the same dtype of FLOAT8_E5M2 or FLOAT8_E4M3FN"),
         return ge::GRAPH_FAILED);
     auto scale1Desc = context->GetOutputDesc(INDEX_OUTPUT_SCALE1);
     OP_CHECK_NULL_WITH_CONTEXT(context, scale1Desc);
@@ -182,12 +198,13 @@ static ge::graphStatus CheckDtype(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, scale2Desc);
     auto scale1Dtype = scale1Desc->GetDataType();
     auto scale2Dtype = scale2Desc->GetDataType();
-    OP_CHECK_IF(
-        scale1Dtype != ge::DT_FLOAT8_E8M0 || scale2Dtype != ge::DT_FLOAT8_E8M0,
-        OP_LOGE(context, "y1_scale and y2_scale dtypes should both be FLOAT8_E8M0, but got y1_scale=%s, y2_scale=%s.",
-                ge::TypeUtils::DataTypeToSerialString(scale1Dtype).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(scale2Dtype).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(scale1Dtype != ge::DT_FLOAT8_E8M0 || scale2Dtype != ge::DT_FLOAT8_E8M0,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "y1_scale and y2_scale",
+                                                       ("[" + ge::TypeUtils::DataTypeToSerialString(scale1Dtype) +
+                                                        ", " + ge::TypeUtils::DataTypeToSerialString(scale2Dtype) + "]")
+                                                           .c_str(),
+                                                       "y1_scale and y2_scale must both be FLOAT8_E8M0"),
+                return ge::GRAPH_FAILED);
 
     tilingParam.inputDtype = static_cast<int64_t>(xDtype);
     return ge::GRAPH_SUCCESS;
@@ -200,21 +217,30 @@ static ge::graphStatus CheckAttrs(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
     const char* roundMode = attrsPtr->GetAttrPointer<char>(INDEX_ATTR_ROUND_MODE);
     OP_CHECK_NULL_WITH_CONTEXT(context, roundMode);
-    OP_CHECK_IF(std::string(roundMode) != "rint", OP_LOGE(context, "round_mode should be rint, but got %s.", roundMode),
+    OP_CHECK_IF(std::string(roundMode) != "rint",
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "round_mode", roundMode,
+                                                      "The value of round_mode must be rint"),
                 return ge::GRAPH_FAILED);
     const int64_t* scaleAlg = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleAlg);
-    OP_CHECK_IF(*scaleAlg != SCALE_ALG_CEIL_ALG, OP_LOGE(context, "scale_alg should be 1, but got %ld.", *scaleAlg),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        *scaleAlg != SCALE_ALG_CEIL_ALG,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(*scaleAlg).c_str(),
+                                              "The value of scale_alg must be 1"),
+        return ge::GRAPH_FAILED);
     const int64_t* dstDtype = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_DST_DTYPE);
     OP_CHECK_NULL_WITH_CONTEXT(context, dstDtype);
-    OP_CHECK_IF(*dstDtype != DTYPE_FLOAT8_E5M2 && *dstDtype != DTYPE_FLOAT8_E4M3FN,
-                OP_LOGE(context, "dst_dtype should be FLOAT8_E5M2(35) or FLOAT8_E4M3FN(36), but got %ld.", *dstDtype),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        *dstDtype != DTYPE_FLOAT8_E5M2 && *dstDtype != DTYPE_FLOAT8_E4M3FN,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "dst_dtype", std::to_string(*dstDtype).c_str(),
+                                              "dst_dtype must be FLOAT8_E5M2(35) or FLOAT8_E4M3FN(36)"),
+        return ge::GRAPH_FAILED);
     const float* maxDtypeValue = attrsPtr->GetAttrPointer<float>(INDEX_ATTR_MAX_DTYPE_VALUE);
     OP_CHECK_NULL_WITH_CONTEXT(context, maxDtypeValue);
     OP_CHECK_IF(*maxDtypeValue != MAX_DTYPE_VALUE_DEFAULT,
-                OP_LOGE(context, "max_dtype_value should be 0.0, but got %f.", *maxDtypeValue),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "max_dtype_value",
+                                                      std::to_string(*maxDtypeValue).c_str(),
+                                                      "The value of max_dtype_value must be 0.0"),
                 return ge::GRAPH_FAILED);
 
     auto y1Desc = context->GetOutputDesc(INDEX_OUTPUT_Y1);
@@ -224,12 +250,15 @@ static ge::graphStatus CheckAttrs(gert::TilingContext* context,
     ge::DataType y1Dtype = y1Desc->GetDataType();
     ge::DataType y2Dtype = y2Desc->GetDataType();
     ge::DataType expectedDtype = static_cast<ge::DataType>(*dstDtype);
-    OP_CHECK_IF(y1Dtype != expectedDtype || y2Dtype != expectedDtype,
-                OP_LOGE(context, "y1 and y2 dtypes should match dst_dtype, but got dst_dtype=%s, y1=%s, y2=%s.",
-                        ge::TypeUtils::DataTypeToSerialString(expectedDtype).c_str(),
-                        ge::TypeUtils::DataTypeToSerialString(y1Dtype).c_str(),
-                        ge::TypeUtils::DataTypeToSerialString(y2Dtype).c_str()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        y1Dtype != expectedDtype || y2Dtype != expectedDtype,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "y1 and y2",
+                                               ("[dst_dtype=" + ge::TypeUtils::DataTypeToSerialString(expectedDtype) +
+                                                ", y1=" + ge::TypeUtils::DataTypeToSerialString(y1Dtype) +
+                                                ", y2=" + ge::TypeUtils::DataTypeToSerialString(y2Dtype) + "]")
+                                                   .c_str(),
+                                               "y1 and y2 must have the same dtype as dst_dtype"),
+        return ge::GRAPH_FAILED);
     tilingParam.scaleAlg = *scaleAlg;
     tilingParam.dstDtype = *dstDtype;
     return ge::GRAPH_SUCCESS;
@@ -253,23 +282,36 @@ static ge::graphStatus CheckOutputShape(gert::TilingContext* context,
     const gert::Shape& scale2Shape = scale2StorageShape->GetStorageShape();
     OP_CHECK_IF(
         !IsSameShape2D(y1Shape, tilingParam.m, tilingParam.n) || !IsSameShape2D(y2Shape, tilingParam.m, tilingParam.n),
-        OP_LOGE(context, "y1 and y2 shapes should both be [M=%ld, N=%ld], but got y1=[%ld,%ld], y2=[%ld,%ld].",
-                tilingParam.m, tilingParam.n, y1Shape.GetDim(0), y1Shape.GetDim(1), y2Shape.GetDim(0),
-                y2Shape.GetDim(1)),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "y1 and y2",
+            ("y1=[" + std::to_string(y1Shape.GetDim(0)) + "," + std::to_string(y1Shape.GetDim(1)) + "], y2=[" +
+             std::to_string(y2Shape.GetDim(0)) + "," + std::to_string(y2Shape.GetDim(1)) + "]")
+                .c_str(),
+            ("y1 and y2 must both be [" + std::to_string(tilingParam.m) + "," + std::to_string(tilingParam.n) + "]")
+                .c_str()),
         return ge::GRAPH_FAILED);
 
     int64_t expectedScale1Dim1 = tilingParam.n / SCALE_AXIS_UNIT;
     OP_CHECK_IF(!IsSameShape3D(scale1Shape, tilingParam.m, expectedScale1Dim1, SCALE_PAIR),
-                OP_LOGE(context, "y1_scale shape should be [M=%ld, N/64=%ld, 2], but got [%ld,%ld,%ld].", tilingParam.m,
-                        expectedScale1Dim1, scale1Shape.GetDim(0), scale1Shape.GetDim(1), scale1Shape.GetDim(2)),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "y1_scale",
+                    ("[" + std::to_string(scale1Shape.GetDim(0)) + "," + std::to_string(scale1Shape.GetDim(1)) + "," +
+                     std::to_string(scale1Shape.GetDim(2)) + "]")
+                        .c_str(),
+                    ("y1_scale must be [M=" + std::to_string(tilingParam.m) +
+                     ", N/64=" + std::to_string(expectedScale1Dim1) + ", 2]")
+                        .c_str()),
                 return ge::GRAPH_FAILED);
 
     int64_t expectedScale2Dim0 = tilingParam.m / SCALE_AXIS_UNIT + tilingParam.groupNum;
-    OP_CHECK_IF(
-        !IsSameShape3D(scale2Shape, expectedScale2Dim0, tilingParam.n, SCALE_PAIR),
-        OP_LOGE(context, "y2_scale shape should be [floor(M/64)+groupNum=%ld, N=%ld, 2], but got [%ld,%ld,%ld].",
-                expectedScale2Dim0, tilingParam.n, scale2Shape.GetDim(0), scale2Shape.GetDim(1), scale2Shape.GetDim(2)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsSameShape3D(scale2Shape, expectedScale2Dim0, tilingParam.n, SCALE_PAIR),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "y2_scale",
+                    ("[" + std::to_string(scale2Shape.GetDim(0)) + "," + std::to_string(scale2Shape.GetDim(1)) + "," +
+                     std::to_string(scale2Shape.GetDim(2)) + "]")
+                        .c_str(),
+                    "y2_scale must be [floor(M/64)+groupNum, N, 2]"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -325,19 +367,28 @@ static ge::graphStatus Tiling4GroupedDynamicMxQuantWithDualAxis(gert::TilingCont
     GroupedDynamicMxQuantWithDualAxisTilingParam tilingParam;
     OP_CHECK_IF(GetPlatformInfo(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo failed."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckInputShape(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckInputShape failed."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckDtype(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckDtype failed."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckAttrs(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckAttrs failed."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckOutputShape(context, tilingParam) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "CheckOutputShape failed."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(ComputeTilingParam(tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ComputeTilingParam failed."),
+    if (CheckInputShape(context, tilingParam) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckDtype(context, tilingParam) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckAttrs(context, tilingParam) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckOutputShape(context, tilingParam) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    OP_CHECK_IF(ComputeTilingParam(tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "ComputeTilingParam failed"),
                 return ge::GRAPH_FAILED);
 
     int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context));
-    OP_CHECK_IF(ubBlockSize <= 0, OP_LOGE(context, "Failed to get UB block size, got %ld.", ubBlockSize),
+    OP_CHECK_IF(ubBlockSize <= 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ubBlockSize",
+                                                      std::to_string(ubBlockSize).c_str(),
+                                                      "The size of UB block must be greater than 0"),
                 return ge::GRAPH_FAILED);
     int64_t allNeedUb = CalculateBasicBlockUbSize(GetXTypeSize(static_cast<ge::DataType>(tilingParam.inputDtype)),
                                                   ubBlockSize);

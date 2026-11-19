@@ -167,8 +167,9 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::CheckDtype()
                     "y1_out dtype must be FLOAT8_E4M3FN, and y2_out dtype must be same as y1_out dtype"),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckOutputScaleDtype() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "CheckOutputScaleDtype failed"), return ge::GRAPH_FAILED);
+    if (CheckOutputScaleDtype() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     tilingParams_.yDtype = y1Dtype;
     return ge::GRAPH_SUCCESS;
 }
@@ -214,11 +215,12 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::CheckScaleShape(const g
 
     int64_t dimGradX = tilingParams_.dimN * DIGIT_TWO;
     int64_t batchDimCount = xDimNum - 2;
-    OP_CHECK_IF(CheckMxScale1Shape(mxScale1Shape, xShape, dimGradX, batchDimCount) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "CheckMxScale1Shape failed"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckMxScale2Shape(mxScale2Shape, xShape, dimGradX, batchDimCount, expectScaleDimNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "CheckMxScale2Shape failed"), return ge::GRAPH_FAILED);
+    if (CheckMxScale1Shape(mxScale1Shape, xShape, dimGradX, batchDimCount) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckMxScale2Shape(mxScale2Shape, xShape, dimGradX, batchDimCount, expectScaleDimNum) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -371,8 +373,9 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::CheckYShape(const gert:
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y1_out and y2_out", dimMsgScale.c_str(),
                                                "y1_out shape must be same as y2_out shape"),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckGroupIndexShape() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "CheckGroupIndexShape failed"), return ge::GRAPH_FAILED);
+    if (CheckGroupIndexShape() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -446,14 +449,17 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::CheckShape()
                                                        "x shape and y1_out shape must be identical."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckYShape(xShape, y1Shape, y2Shape) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "CheckYShape failed"), return ge::GRAPH_FAILED);
+    if (CheckYShape(xShape, y1Shape, y2Shape) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(CheckYGradShape(xShape, xDimNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "CheckYGradShape failed"), return ge::GRAPH_FAILED);
+    if (CheckYGradShape(xShape, xDimNum) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(CheckScaleShape(mxScale1Shape, mxScale2Shape, xShape) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "CheckScaleShape failed"), return ge::GRAPH_FAILED);
+    if (CheckScaleShape(mxScale1Shape, mxScale2Shape, xShape) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     tilingParams_.blockW = DIGIT_256 / DIGIT_TWO; // 128: A/B/yGrad half-width per tile
     tilingParams_.splitBlockH = SPLIT_BLOCK_H;
     return ge::GRAPH_SUCCESS;
@@ -467,14 +473,22 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::GetPlatformInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     tilingParams_.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((tilingParams_.totalCoreNum <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get core num."),
-                return ge::GRAPH_FAILED);
+    if (tilingParams_.totalCoreNum <= 0) {
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "%s", "Failed to get core num.");
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                                  (std::vector<const char*>{context_->GetNodeName(), "Failed to get core num."}));
+        return ge::GRAPH_FAILED;
+    }
 
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParams_.ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((tilingParams_.ubSize <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    if (tilingParams_.ubSize <= 0) {
+        OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "%s", "Failed to get ub size.");
+        REPORT_PREDEFINED_ERR_MSG("EZ1008", (std::vector<const char*>{"opName", "reason"}),
+                                  (std::vector<const char*>{context_->GetNodeName(), "Failed to get ub size."}));
+        return ge::GRAPH_FAILED;
+    }
 
     tilingParams_.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
 
@@ -590,8 +604,9 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::DoTiling()
     OP_CHECK_IF(GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "GetPlatformInfo failed."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckDtype failed."),
-                return ge::GRAPH_FAILED);
+    if (CheckDtype() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     const auto attrRet = GetAttr();
     OP_CHECK_IF(attrRet != ge::GRAPH_SUCCESS,
@@ -599,7 +614,9 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::DoTiling()
                                        "DoTiling: GetAttr failed, rc=%u; propagate the reported root cause.", attrRet),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "CheckShape failed."),
+    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(),
+                                       "DoTiling: CheckShape failed, propagate the reported root cause."),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(ComputeTilingParams() != ge::GRAPH_SUCCESS,
