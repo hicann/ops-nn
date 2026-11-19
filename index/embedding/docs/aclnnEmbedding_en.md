@@ -23,6 +23,8 @@
 - <term>Atlas training products</term>: Supported
 <!-- end id6 -->
 
+This section describes product support for the `aclnnEmbedding` API. For the Embedding kernel in this directory, see the [operator documentation](../README_en.md#applicable-products). The API selects Embedding or GatherV2 based on the product and inputs. On the Atlas products listed above, it uses GatherV2 and depends on the `ops-legacy` component in the matching CANN installation.
+
 ## Function
 
 - **Description:**
@@ -175,8 +177,8 @@ aclnnStatus aclnnEmbedding(
       <td>The weight, indices, or out passed in is a null pointer.</td>
       </tr>
       <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>The data types and data formats of weight, indices, and out are not within the supported range.</td>
       </tr>
       <tr>
@@ -184,9 +186,6 @@ aclnnStatus aclnnEmbedding(
       </tr>
       <tr>
       <td>The maximum dimension of inputs or outputs exceeds 8.</td>
-      </tr>
-      <tr>
-      <td>The operator reports an error when indices contains negative values. Random values are output when indices is out of bounds in the positive direction.</td>
       </tr>
     </tbody>
     </table>
@@ -235,6 +234,8 @@ aclnnStatus aclnnEmbedding(
 
 ## Constraints
 
+- Each element of `indices` must satisfy `0 <= indices[i] < weight.shape[0]`. The caller must ensure that all indices are valid before calling the API.
+- `aclnnEmbeddingGetWorkspaceSize` does not validate the element values of `indices`. Negative values or values greater than or equal to `weight.shape[0]` may produce incorrect results or cause device execution errors. Asynchronous execution errors may be reported during stream synchronization.
 - deterministic computation:
   - aclnnEmbedding defaults to a deterministic implementation.
 

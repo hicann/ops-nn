@@ -21,6 +21,8 @@
 - <term>Atlas训练系列产品</term>：支持
 <!-- end id6 -->
 
+本节描述`aclnnEmbedding`接口的产品支持范围，本目录[Embedding内核](../README.md#产品支持情况)的支持范围见算子说明。接口根据产品和输入选择Embedding或GatherV2；在上述Atlas产品上通过GatherV2实现，依赖配套CANN的`ops-legacy`组件。
+
 ## 功能说明
 
 - **接口说明：**
@@ -173,8 +175,8 @@ aclnnStatus aclnnEmbedding(
       <td>传入的weight、indices、或out是空指针。</td>
       </tr>
       <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>weight、indices和out的数据类型和数据格式不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -182,9 +184,6 @@ aclnnStatus aclnnEmbedding(
       </tr>
       <tr>
       <td>输入、输出的最大维度超过8。</td>
-      </tr>
-      <tr>
-      <td>当indices中有负值时算子报错，正向越界时输出随机值。</td>
       </tr>
     </tbody>
     </table>
@@ -233,6 +232,8 @@ aclnnStatus aclnnEmbedding(
 
 ## 约束说明
 
+- `indices`中的每个元素必须满足`0 <= indices[i] < weight.shape[0]`，调用方应在调用接口前保证索引合法。
+- `aclnnEmbeddingGetWorkspaceSize`不校验`indices`的元素取值。传入负值或大于等于`weight.shape[0]`的值时，输出结果不保证正确，并可能触发Device侧执行异常；异步执行异常可能在流同步时上报。
 - 确定性计算：
   - aclnnEmbedding默认确定性实现。
 
