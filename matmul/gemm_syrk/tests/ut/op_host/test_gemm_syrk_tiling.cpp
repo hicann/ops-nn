@@ -202,7 +202,7 @@ static const string kAscend950CompileInfo = R"({
     "cube_core_cnt": 32, "vector_core_cnt": 64}
 })";
 
-// Ascend950 with non-1:2 aic:aiv ratio (cube=32, vector=48): IsCapable fails.
+// Ascend950 with non-1:2 aic:aiv ratio (cube=32, vector=48): the MIX check fails.
 static const string kAscend950CompileInfoBadRatio = R"({
     "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown",
     "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false,

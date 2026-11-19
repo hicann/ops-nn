@@ -53,6 +53,7 @@ private:
     // Platform and shape/attr phases
     ge::graphStatus GetPlatformInfo();
     ge::graphStatus GetShapeAttrsInfo();
+    ge::graphStatus ValidateInputsNotNull();
     ge::graphStatus ExtractAttrs();
     ge::graphStatus ExtractShape();
     ge::graphStatus ValidateDtype() const;

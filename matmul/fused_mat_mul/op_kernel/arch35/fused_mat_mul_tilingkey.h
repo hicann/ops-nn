@@ -234,7 +234,6 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(L0C2OUT_MODEL, ASCENDC_TPL_UI_LIST, MAT_MUL_ON_THE_FLY),
                          ASCENDC_TPL_UINT_SEL(OPTYPE, ASCENDC_TPL_UI_LIST, F_OPTYPE_ADD, F_OPTYPE_MUL),
                          FUSED_MATMUL_ADD_MUL_INNER_PRECISE_SEL, ASCENDC_TPL_TILING_STRUCT_SEL(FusedMatMulTilingData)),
-#if defined(FUSED_MATMUL_SELECT_A16)
     // FusedMatmulV2 scale/add uses the Blaze Tensor API: scalar values are stored in the FusedMatMul tiling data.
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
                          ASCENDC_TPL_UINT_SEL(API_LEVEL, ASCENDC_TPL_UI_LIST, MAT_MUL_TENSOR_LEVEL),
@@ -246,7 +245,6 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(OPTYPE, ASCENDC_TPL_UI_LIST, F_OPTYPE_SCALE_ADD),
                          ASCENDC_TPL_UINT_SEL(INNER_PRECISE, ASCENDC_TPL_UI_LIST, F_INNER_PRECISE_HIGH_PERFORMANCE),
                          ASCENDC_TPL_TILING_STRUCT_SEL(FusedMatMulTilingData)),
-#endif
     // MM add/mul: Basic without full load is remapped to Fixpipe 1V2.
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),

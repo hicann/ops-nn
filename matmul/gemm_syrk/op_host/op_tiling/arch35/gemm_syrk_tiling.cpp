@@ -11,7 +11,10 @@
 #include "gemm_syrk_tiling.h"
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
+#include "base/err_msg.h"
 #include "gemm_syrk_tiling_key.h"
 #include "gemm_syrk_tiling_strategy.h"
 #include "error_util.h"
@@ -61,12 +64,17 @@ ge::graphStatus GemmSyrkTiling::GetPlatformInfo()
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto socVersion = ascendcPlatform.GetSocVersion();
-    OP_TILING_CHECK(
-        socVersion != platform_ascendc::SocVersion::ASCEND950,
-        CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                              "GemmSyrk only supports Ascend 950 / 350 (DAV_3510), current socVersion is %d",
-                              static_cast<int32_t>(socVersion)),
-        return ge::GRAPH_FAILED);
+    if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
+        const char* nodeName = context_->GetNodeName();
+        const std::string opName = (nodeName != nullptr) ? nodeName : SYRK_OP_NAME;
+        OP_LOGE_WITHOUT_REPORT(opName.c_str(),
+                               "GemmSyrk only supports Ascend 950 / 350 (DAV_3510), current socVersion is %d",
+                               static_cast<int32_t>(socVersion));
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1009", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{opName.c_str(), "only Ascend 950 / 350 (DAV_3510) is supported"}));
+        return ge::GRAPH_FAILED;
+    }
     // Feed the matmul compile info consumed by the basic tiling strategy.
     mmCompileInfo_ = {};
     mmCompileInfo_.aicNum = ascendcPlatform.GetCoreNumAic();
@@ -80,10 +88,34 @@ ge::graphStatus GemmSyrkTiling::GetPlatformInfo()
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, mmCompileInfo_.l2Size);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, mmCompileInfo_.ubSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::BT, mmCompileInfo_.btSize);
+    if (mmCompileInfo_.aivNum != mmCompileInfo_.aicNum * NUM_TWO) {
+        const char* nodeName = context_->GetNodeName();
+        const std::string opName = (nodeName != nullptr) ? nodeName : SYRK_OP_NAME;
+        OP_LOGE_WITHOUT_REPORT(opName.c_str(), "GemmSyrk requires aicNum:aivNum = 1:2 (MIX), aicNum=%lu, aivNum=%lu",
+                               mmCompileInfo_.aicNum, mmCompileInfo_.aivNum);
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1009", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{opName.c_str(), "the kernel requires the MIX aicNum:aivNum = 1:2 ratio"}));
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
 // ====== Extract phases ======
+
+ge::graphStatus GemmSyrkTiling::ValidateInputsNotNull()
+{
+    // GetInputDesc/GetInputShape/GetOutputDesc return nullptr when the index is
+    // invalid or the compute node info is missing; dereferencing them below
+    // would crash the tiling process.
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(INDEX_A));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(INDEX_C));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(INDEX_A));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(INDEX_C));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));
+    return ge::GRAPH_SUCCESS;
+}
 
 ge::graphStatus GemmSyrkTiling::ExtractAttrs()
 {
@@ -121,10 +153,10 @@ ge::graphStatus GemmSyrkTiling::ExtractShape()
     const size_t aDimNum = aShape.GetDimNum();
     const size_t cDimNum = cShape.GetDimNum();
     OP_TILING_CHECK(aDimNum < MIN_SHAPE_DIM || aDimNum > MAX_SHAPE_DIM || aDimNum != cDimNum,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "the shape dims of a and c must be the same and within the range [2, 6], "
-                                          "got a %zuD, c %zuD",
-                                          aDimNum, cDimNum),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "a, c",
+                        std::string("a=") + Ops::Base::ToString(aShape) + ", c=" + Ops::Base::ToString(cShape),
+                        "the rank of a and c must be identical and within [2, 6]"),
                     return ge::GRAPH_FAILED);
     // transpose_x = false: a is [..., m, k]; transpose_x = true: a is the
     // transposed [..., k, m] storage, so m is a's last dim and k its second
@@ -139,7 +171,20 @@ ge::graphStatus GemmSyrkTiling::ExtractShape()
     n_ = static_cast<uint64_t>(cShape[cDimNum - 1]);
     batch_ = 1UL;
     for (size_t i = 0; i + NUM_TWO < aDimNum; ++i) {
-        batch_ *= static_cast<uint64_t>(aShape[i]);
+        const int64_t batchDim = aShape.GetDim(i);
+        OP_TILING_CHECK(
+            batchDim < 0 || static_cast<uint64_t>(batchDim) > INT32_MAX_LIMIT,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "a", Ops::Base::ToString(aShape),
+                                                  "the batch axes of a must be non-negative and within [0, INT32_MAX]"),
+            return ge::GRAPH_FAILED);
+        const uint64_t dimValue = static_cast<uint64_t>(batchDim);
+        OP_TILING_CHECK(dimValue != 0UL && batch_ > INT32_MAX_LIMIT / dimValue,
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            context_->GetNodeName(), "a, c",
+                            std::string("a=") + Ops::Base::ToString(aShape) + ", c=" + Ops::Base::ToString(cShape),
+                            "the product of the batch axes must be within [0, INT32_MAX]"),
+                        return ge::GRAPH_FAILED);
+        batch_ *= dimValue;
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -150,32 +195,31 @@ ge::graphStatus GemmSyrkTiling::ValidateDtype() const
 {
     ge::DataType cType = context_->GetInputDesc(INDEX_C)->GetDataType();
     ge::DataType outType = context_->GetOutputDesc(0)->GetDataType();
-    OP_TILING_CHECK(
-        (aType_ != ge::DT_FLOAT16 && aType_ != ge::DT_BF16 && aType_ != ge::DT_FLOAT) || cType != aType_ ||
-            outType != aType_,
-        CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                              "a and c must use the same dtype, either FLOAT16, BF16 or FLOAT (HF32), got a=%d, "
-                              "c=%d, out=%d",
-                              static_cast<int32_t>(aType_), static_cast<int32_t>(cType), static_cast<int32_t>(outType)),
-        return ge::GRAPH_FAILED);
+    const std::string dtypeText = std::string("a=") + Ops::Base::ToString(aType_) +
+                                  ", c=" + Ops::Base::ToString(cType) + ", out=" + Ops::Base::ToString(outType);
+    OP_TILING_CHECK((aType_ != ge::DT_FLOAT16 && aType_ != ge::DT_BF16 && aType_ != ge::DT_FLOAT) || cType != aType_ ||
+                        outType != aType_,
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        context_->GetNodeName(), "a, c, out", dtypeText,
+                        "the dtypes of a, c and out must be identical and be FLOAT16, BF16 or FLOAT (HF32)"),
+                    return ge::GRAPH_FAILED);
     OP_TILING_CHECK(aType_ == ge::DT_FLOAT && (opImplMode_ & OP_IMPL_MODE_HF32) == 0,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "FLOAT32 input only supports HF32 cube mode; set op_impl_mode=0x40 "
-                                          "(enable_hi_float_32_execution), got 0x%llx",
-                                          static_cast<unsigned long long>(opImplMode_)),
+                    OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "op_impl_mode", std::to_string(opImplMode_),
+                                              "0x40 (HF32 enabled)"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus GemmSyrkTiling::ValidateFormat() const
 {
-    auto aFormat = ge::GetPrimaryFormat(context_->GetInputDesc(INDEX_A)->GetStorageFormat());
-    auto cFormat = ge::GetPrimaryFormat(context_->GetInputDesc(INDEX_C)->GetStorageFormat());
-    auto outFormat = ge::GetPrimaryFormat(context_->GetOutputDesc(0)->GetStorageFormat());
+    auto aFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(INDEX_A)->GetStorageFormat()));
+    auto cFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(INDEX_C)->GetStorageFormat()));
+    auto outFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetOutputDesc(0)->GetStorageFormat()));
+    const std::string formatText = std::string("a=") + Ops::Base::ToString(aFormat) +
+                                   ", c=" + Ops::Base::ToString(cFormat) + ", out=" + Ops::Base::ToString(outFormat);
     OP_TILING_CHECK(aFormat != ge::FORMAT_ND || cFormat != ge::FORMAT_ND || outFormat != ge::FORMAT_ND,
-                    CUBE_INNER_ERR_REPORT(
-                        context_->GetNodeName(), "a and c only support ND format, got a=%d, c=%d, out=%d",
-                        static_cast<int32_t>(aFormat), static_cast<int32_t>(cFormat), static_cast<int32_t>(outFormat)),
+                    OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeName(), "a, c, out", formatText,
+                                                            "only ND format is supported"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -188,37 +232,40 @@ ge::graphStatus GemmSyrkTiling::ValidateShape() const
     // c must be square and consistent with a: a is [..., m, k] (or the
     // transposed [..., k, m] with transpose_x), c is [..., m, m]. The batch
     // axis must match (in-place update does not support broadcast).
+    const std::string shapeText = std::string("a=") + Ops::Base::ToString(aShape) +
+                                  ", c=" + Ops::Base::ToString(cShape);
     OP_TILING_CHECK(static_cast<uint64_t>(cShape[aDimNum - NUM_TWO]) != m_ ||
                         static_cast<uint64_t>(cShape[aDimNum - 1]) != m_ || n_ != m_,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "a must be [..., m, k] (or [..., k, m] with transpose_x) and c must be the "
-                                          "square matrix [..., m, m], got m=%lu",
-                                          m_),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), "a, c", shapeText,
+                        "a must be [..., m, k] (or [..., k, m] with transpose_x) and c must be the square "
+                        "matrix [..., m, m]"),
                     return ge::GRAPH_FAILED);
     for (size_t i = 0; i + NUM_TWO < aDimNum; ++i) {
         OP_TILING_CHECK(aShape.GetDim(i) != cShape.GetDim(i),
-                        CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                              "the batch-axis of a and c must be the same, in-place update does not "
-                                              "support broadcast"),
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            context_->GetNodeName(), "a, c", shapeText,
+                            "the batch axes of a and c must be identical, in-place update does not support broadcast"),
                         return ge::GRAPH_FAILED);
     }
     auto isValidDimValue = [](uint64_t dim) -> bool { return dim <= INT32_MAX_LIMIT; };
     // The batch value is the flattened product of all leading axes (up to 4
     // axes with 6D inputs) and is narrowed into the uint32 GemmSyrkTilingData
     // field, so it needs its own upper bound next to the per-dim checks.
-    OP_TILING_CHECK(!isValidDimValue(m_) || !isValidDimValue(k_) || !isValidDimValue(n_) || !isValidDimValue(batch_),
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "m, k, n of a, c and the product of the batch axes must be within the "
-                                          "range [0, INT32_MAX], got m=%lu, k=%lu, n=%lu, batch=%lu",
-                                          m_, k_, n_, batch_),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        !isValidDimValue(m_) || !isValidDimValue(k_) || !isValidDimValue(n_) || !isValidDimValue(batch_),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "m, k, n, batch",
+                                               std::string("m=") + std::to_string(m_) + ", k=" + std::to_string(k_) +
+                                                   ", n=" + std::to_string(n_) + ", batch=" + std::to_string(batch_),
+                                               "must be within the range [0, INT32_MAX]"),
+        return ge::GRAPH_FAILED);
     // The Blaze syrk path accumulates over k; k == 0 never reaches this kernel
     // via aclnnGemmSyrk (routed to an elementwise beta * C scaling), and the
     // empty-tensor no-op path in DoTiling tolerates any k, so k == 0 is only
     // rejected when the kernel would actually run.
     OP_TILING_CHECK(k_ == 0UL && m_ > 0UL && batch_ > 0UL,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "the k-axis of a must be a positive number for the GemmSyrk kernel"),
+                    OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "k", std::to_string(k_),
+                                              "a positive number for the GemmSyrk kernel"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -228,10 +275,8 @@ ge::graphStatus GemmSyrkTiling::ValidateAttrs() const
     // fill_mode is declared as "full"/"up"/"low" in the prototype; only the
     // complete-symmetric-matrix "full" mode is implemented by this kernel.
     OP_TILING_CHECK(fillMode_ != FILL_MODE_FULL,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                                          "fill_mode only supports \"full\" currently, \"up\"/\"low\" are not "
-                                          "implemented, got %s",
-                                          fillMode_.c_str()),
+                    OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "fill_mode", fillMode_,
+                                              "\"full\" (the \"up\"/\"low\" modes are not implemented)"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -240,6 +285,9 @@ ge::graphStatus GemmSyrkTiling::ValidateAttrs() const
 
 ge::graphStatus GemmSyrkTiling::GetShapeAttrsInfo()
 {
+    if (ValidateInputsNotNull() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (ExtractAttrs() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -306,10 +354,16 @@ ge::graphStatus GemmSyrkTiling::RunBasicTilingByStrategy()
     MMRegisterCfg registerCfg{SYRK_OP_NAME, mmCompileInfo_.npuArch,
                               strategy::GetGemmSyrkPriorities(mmCompileInfo_.npuArch)};
     const ge::graphStatus ret = MMTilingRegistry::GetInstance().DoTilingImpl(context_, cfg, registerCfg);
-    OP_TILING_CHECK(ret != ge::GRAPH_SUCCESS,
-                    CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "the GemmSyrk basic tiling strategy failed, ret=%d",
-                                          static_cast<int32_t>(ret)),
-                    return ge::GRAPH_FAILED);
+    if (ret != ge::GRAPH_SUCCESS) {
+        const char* nodeName = context_->GetNodeName();
+        const std::string opName = (nodeName != nullptr) ? nodeName : SYRK_OP_NAME;
+        OP_LOGE_WITHOUT_REPORT(opName.c_str(), "the GemmSyrk basic tiling strategy failed, ret=%d",
+                               static_cast<int32_t>(ret));
+        REPORT_PREDEFINED_ERR_MSG(
+            "EZ1008", (std::vector<const char*>{"opName", "reason"}),
+            (std::vector<const char*>{opName.c_str(), "the GemmSyrk basic tiling strategy failed"}));
+        return ge::GRAPH_FAILED;
+    }
     const TilingResult& result = cfg.GetResult();
     OP_TILING_CHECK(result.tilingData == nullptr || result.tilingDataSize != sizeof(BatchMatMulV3BasicTilingData),
                     CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "unexpected basic tiling data size"),
@@ -342,9 +396,10 @@ ge::graphStatus GemmSyrkTiling::DoTiling()
     // tiling (IsCapable + the ASW basic computation + syrk clamps run
     // there), then persist the flat tiling data, tiling key and block dim.
     OP_TILING_CHECK(GetShapeAttrsInfo() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(context_->GetNodeName(), "GetShapeAttrsInfo failed"), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(GetPlatformInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_->GetNodeName(), "GetPlatformInfo failed"),
+                    OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "GetShapeAttrsInfo failed"),
                     return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(GetPlatformInfo() != ge::GRAPH_SUCCESS,
+                    OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
     // 空张量 no-op：m == 0 或 batch == 0 时输出无元素（与 aclnnGemmSyrk 的空张量
     // 路径一致），上三角槽位数为 0，kernel 各核在访问任何 GM 前直接返回。tiling
     // 数据退化为 m == n == 0 的安全几何 —— batch == 0 时调度器会把 batch 钳位到
@@ -366,7 +421,8 @@ ge::graphStatus GemmSyrkTiling::DoTiling()
     }
     BuildMatmulArgs();
     OP_TILING_CHECK(RunBasicTilingByStrategy() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(context_->GetNodeName(), "RunBasicTilingByStrategy failed"), return ge::GRAPH_FAILED);
+                    OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "RunBasicTilingByStrategy failed"),
+                    return ge::GRAPH_FAILED);
     SetTilingData(bmmTiling_);
     context_->SetTilingKey(GetTilingKey());
     return PostTiling();

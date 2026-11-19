@@ -23,6 +23,7 @@
 #include <torch/extension.h>
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -127,19 +128,41 @@ at::Tensor gemm_syrk(const at::Tensor& a, const at::Tensor& c, const c10::option
         aclrtUseStreamResInCurrentThread(aclStream);
     }
 
-    // 先创建并校验标量：FAILED 时在分配 aclTensor 之前报错，避免异常路径泄漏。
+    // 先创建并校验标量：任一创建失败时释放另一个已成功创建的标量再报错。
     OptionalScalar alphaResult = CreateOptionalFloatScalar(alpha);
     OptionalScalar betaResult = CreateOptionalFloatScalar(beta);
-    TORCH_CHECK(alphaResult.status != OptionalScalar::Status::FAILED,
-                "failed to create aclScalar for user-specified alpha=", alpha.value());
-    TORCH_CHECK(betaResult.status != OptionalScalar::Status::FAILED,
-                "failed to create aclScalar for user-specified beta=", beta.value());
-
-    aclTensor* aclA = CreateAclTensorND(a);
-    aclTensor* aclC = CreateAclTensorND(c);
+    if (alphaResult.status == OptionalScalar::Status::FAILED) {
+        if (betaResult.scalar != nullptr) {
+            Release(betaResult.scalar);
+        }
+        TORCH_CHECK(false, "failed to create aclScalar for user-specified alpha=", alpha.value());
+    }
+    if (betaResult.status == OptionalScalar::Status::FAILED) {
+        if (alphaResult.scalar != nullptr) {
+            Release(alphaResult.scalar);
+        }
+        TORCH_CHECK(false, "failed to create aclScalar for user-specified beta=", beta.value());
+    }
     // NOT_PROVIDED 时保持 nullptr，aclnnGemmSyrk 按默认 1.0 处理。
     aclScalar* alphaScalar = alphaResult.status == OptionalScalar::Status::OK ? alphaResult.scalar : nullptr;
     aclScalar* betaScalar = betaResult.status == OptionalScalar::Status::OK ? betaResult.scalar : nullptr;
+
+    aclTensor* aclA = CreateAclTensorND(a);
+    aclTensor* aclC = nullptr;
+    try {
+        aclC = CreateAclTensorND(c);
+    } catch (...) {
+        if (aclA != nullptr) {
+            Release(aclA);
+        }
+        if (alphaScalar != nullptr) {
+            Release(alphaScalar);
+        }
+        if (betaScalar != nullptr) {
+            Release(betaScalar);
+        }
+        throw;
+    }
     const char* fillModeCStr = fillMode.c_str();
 
     InitHugeMemThreadLocal initMemFunc = reinterpret_cast<InitHugeMemThreadLocal>(initMemAddr);
@@ -149,6 +172,35 @@ at::Tensor gemm_syrk(const at::Tensor& a, const at::Tensor& c, const c10::option
     }
     ApplyDeterministicConfig();
 
+    // 异常路径守卫：workspace 查询失败、at::empty 抛异常或 cmd.Run() 抛异常时
+    // 统一回收已创建的 acl 对象与 huge-mem 线程局部状态。aclCall 可能在 cmd.Run()
+    // 内任意时刻抛错，释放标记用 shared_ptr 持有，避免悬空引用。
+    auto aclObjectsReleased = std::make_shared<bool>(false);
+    auto releaseAclObjects = [aclA, aclC, alphaScalar, betaScalar, aclObjectsReleased]() {
+        if (*aclObjectsReleased) {
+            return;
+        }
+        if (aclA != nullptr) {
+            Release(aclA);
+        }
+        if (aclC != nullptr) {
+            Release(aclC);
+        }
+        if (alphaScalar != nullptr) {
+            Release(alphaScalar);
+        }
+        if (betaScalar != nullptr) {
+            Release(betaScalar);
+        }
+        *aclObjectsReleased = true;
+    };
+    auto cleanupResources = [releaseAclObjects, unInitMemFunc]() {
+        releaseAclObjects();
+        if (unInitMemFunc != nullptr) {
+            unInitMemFunc(nullptr, false);
+        }
+    };
+
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     using GetWorkspaceSizeFunc = int (*)(aclTensor*, aclTensor*, aclScalar*, aclScalar*, bool, const char*, int8_t,
@@ -157,35 +209,32 @@ at::Tensor gemm_syrk(const at::Tensor& a, const at::Tensor& c, const c10::option
     auto workspaceStatus = getWorkspaceSizeFunc(aclA, aclC, alphaScalar, betaScalar, transposeX, fillModeCStr,
                                                 static_cast<int8_t>(cubeMathType), &workspaceSize, &executor);
     if (workspaceStatus != 0) {
-        Release(aclA);
-        Release(aclC);
-        Release(alphaScalar);
-        Release(betaScalar);
-        if (unInitMemFunc != nullptr) {
-            unInitMemFunc(nullptr, false);
-        }
+        cleanupResources();
         TORCH_CHECK(false, "call aclnnGemmSyrkGetWorkspaceSize failed, detail:", aclGetRecentErrMsg());
     }
 
     void* workspaceAddr = nullptr;
     at::Tensor workspaceTensor;
     if (workspaceSize != 0) {
-        at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
-        workspaceTensor = at::empty({static_cast<int64_t>(workspaceSize)}, options.dtype(at::kByte));
-        workspaceAddr = const_cast<void*>(workspaceTensor.storage().data());
+        try {
+            at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
+            workspaceTensor = at::empty({static_cast<int64_t>(workspaceSize)}, options.dtype(at::kByte));
+            workspaceAddr = const_cast<void*>(workspaceTensor.storage().data());
+        } catch (...) {
+            cleanupResources();
+            throw;
+        }
     }
 
-    auto aclCall = [aclA, aclC, alphaScalar, betaScalar, workspaceAddr, workspaceSize, executor, aclStream]() -> int {
+    auto aclCall = [aclA, aclC, alphaScalar, betaScalar, workspaceAddr, workspaceSize, executor, aclStream,
+                    releaseAclObjects]() -> int {
         if (c10_npu::check_enqueue_need_use(aclStream)) {
             aclrtUseStreamResInCurrentThread(aclStream);
         }
         using OpApiFunc = int (*)(void*, uint64_t, aclOpExecutor*, const aclrtStream);
         auto opApiFunc = reinterpret_cast<OpApiFunc>(opApiAddr);
         auto apiRet = opApiFunc(workspaceAddr, workspaceSize, executor, aclStream);
-        Release(aclA);
-        Release(aclC);
-        Release(alphaScalar);
-        Release(betaScalar);
+        releaseAclObjects();
         ReleaseHugeMem releaseMemFunc = reinterpret_cast<ReleaseHugeMem>(releaseMemAddr);
         if (releaseMemFunc != nullptr) {
             releaseMemFunc(nullptr, false);
@@ -196,7 +245,12 @@ at::Tensor gemm_syrk(const at::Tensor& a, const at::Tensor& c, const c10::option
     at_npu::native::OpCommand cmd;
     cmd.Name("aclnnGemmSyrk");
     cmd.SetCustomHandler(aclCall);
-    cmd.Run();
+    try {
+        cmd.Run();
+    } catch (...) {
+        cleanupResources();
+        throw;
+    }
     if (unInitMemFunc != nullptr) {
         unInitMemFunc(nullptr, false);
     }

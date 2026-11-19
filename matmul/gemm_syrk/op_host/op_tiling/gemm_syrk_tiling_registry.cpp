@@ -27,17 +27,8 @@ namespace optiling {
 static ge::graphStatus GemmSyrkTilingFunc(gert::TilingContext* context)
 {
     OP_TILING_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("GemmSyrk", "context is null"), return ge::GRAPH_FAILED);
-    auto platformInfo = context->GetPlatformInfo();
-    OP_TILING_CHECK(platformInfo == nullptr, CUBE_INNER_ERR_REPORT("GemmSyrk", "platformInfo is null"),
-                    return ge::GRAPH_FAILED);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    if (socVersion != platform_ascendc::SocVersion::ASCEND950) {
-        CUBE_INNER_ERR_REPORT(context->GetNodeName(),
-                              "GemmSyrk only supports Ascend 950 / 350 (DAV_3510), current socVersion is %d",
-                              static_cast<int32_t>(socVersion));
-        return ge::GRAPH_FAILED;
-    }
+    // The platform fetch and the SoC check live in GemmSyrkTiling::GetPlatformInfo,
+    // so an unsupported SoC is reported once, at the layer owning the facts.
     return GemmSyrkTiling(context).DoTiling();
 }
 

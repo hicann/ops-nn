@@ -57,11 +57,16 @@ class E2eGemmSyrkTestSpec:
     ):
         a_t = a.float()
         c_t = c.float()
-        aat = alpha * _matmul_syrk(a_t, transpose_x)
-        if beta != 0:
-            out = aat + beta * c_t
+        if alpha == 0:
+            # aclnn degenerate path (k == 0 or alpha == 0): A @ A^T is the zero
+            # matrix, so A must not be read; out = beta * C (zeros when beta == 0).
+            out = beta * c_t if beta != 0 else torch.zeros_like(c_t)
         else:
-            # cuBLAS contract: beta == 0 -> C is not read, NaN/Inf in C must
-            # not propagate; out = alpha * (A @ A^T).
-            out = aat
+            aat = alpha * _matmul_syrk(a_t, transpose_x)
+            if beta != 0:
+                out = aat + beta * c_t
+            else:
+                # cuBLAS contract: beta == 0 -> C is not read, NaN/Inf in C must
+                # not propagate; out = alpha * (A @ A^T).
+                out = aat
         return [out.to(a.dtype)]

@@ -61,7 +61,7 @@ uint64_t SearchBestBlock(uint64_t mValue, uint64_t kValue, uint64_t batchCnt, ui
     uint64_t bestCost = UINT64_MAX;
     uint64_t bestBlock = BASIC_BLOCK_SIZE_16;
     bool haveOneRoundRes = false;
-    thread_local std::vector<uint64_t> fractBuf;
+    std::vector<uint64_t> fractBuf;
     for (uint64_t cand = BASIC_BLOCK_SIZE_16; cand <= hardCap; cand += BASIC_BLOCK_SIZE_16) {
         const uint64_t numBlocks = ops::CeilDiv(mValue, cand);
         const uint64_t slotsPerBatch = numBlocks * (numBlocks + 1UL) / NUM_TWO;
@@ -134,13 +134,9 @@ MM_REGISTER_TILING_TEMPLATE(GemmSyrk, GemmSyrkBaseTiling, DAV_3510, SYRK_BASE);
 
 bool GemmSyrkBaseTiling::IsCapable()
 {
-    if (compileInfo_.aicNum == 0UL || compileInfo_.aivNum != compileInfo_.aicNum * NUM_TWO) {
-        CUBE_INNER_ERR_REPORT(context_->GetNodeName(),
-                              "GemmSyrk requires aicNum:aivNum = 1:2 (MIX), aicNum=%lu, aivNum=%lu",
-                              compileInfo_.aicNum, compileInfo_.aivNum);
-        return false;
-    }
-    return true;
+    // Capability probe: report nothing here. The facade reports a single
+    // execution error when no registered strategy is capable.
+    return compileInfo_.aicNum != 0UL && compileInfo_.aivNum == compileInfo_.aicNum * NUM_TWO;
 }
 
 ge::graphStatus GemmSyrkBaseTiling::DoOpTiling()
