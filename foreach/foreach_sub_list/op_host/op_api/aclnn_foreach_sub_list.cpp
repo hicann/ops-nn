@@ -197,8 +197,19 @@ static aclnnStatus ExecForeachSubListGetWorkspaceSize(const aclTensorList* x1, c
     auto contiguousOut = ForeachMakeContiguousTensorList(out, subListExecutor.get());
     CHECK_RET(contiguousOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 复用V2桥接，alpha(aclTensor*)直接透传，输出到连续buffer
-    auto result = l0op::ForeachSubListV2(contiguousTensorsX1, contiguousTensorsX2, alpha, contiguousOut,
+    // alpha为1元素aclTensor透传给kernel。tiling层要求alpha的storage_shape恰为1个元素
+    // （foreach_sub_list_tiling_arch35.cpp校验storageShape.GetShapeSize()==1），若alpha为
+    // 共享storage的切片（storage_shape != view_shape，如带view offset的切片），透传会被
+    // tiling拒绝且报错深层不友好。故与x1/x2/out一致做Contiguous规整（对storage_shape !=
+    // view_shape的view生成独立规范tensor）。
+    const aclTensor* contiguousAlpha = alpha;
+    if (!(op::IsContiguous(alpha) && alpha->GetStorageShape() == alpha->GetViewShape())) {
+        contiguousAlpha = l0op::Contiguous(alpha, subListExecutor.get());
+        CHECK_RET(contiguousAlpha != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    // 复用V2桥接，alpha(aclTensor*)规整后透传，输出到连续buffer
+    auto result = l0op::ForeachSubListV2(contiguousTensorsX1, contiguousTensorsX2, contiguousAlpha, contiguousOut,
                                          subListExecutor.get());
     CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

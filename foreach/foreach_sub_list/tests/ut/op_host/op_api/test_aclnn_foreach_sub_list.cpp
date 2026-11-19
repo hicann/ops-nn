@@ -84,3 +84,39 @@ TEST_F(l2_foreach_sub_list_test, ascend910B2_foreach_sub_list_test_invalid_alpha
     uint64_t workspaceSize = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
 }
+
+// 看护（T13）：alpha 为共享 storage 的切片视图（view(1,) / storage(2,) / offset 1）。
+// tiling 按 alpha 的 storage shape 校验单元素，透传切片会被拒绝（T11 修复前 ACLNN_EXECUTE_FAILED），
+// aclnn 侧必须先规整为独立连续张量再下传。
+TEST_F(l2_foreach_sub_list_test, ascend910B2_foreach_sub_list_test_alpha_storage_slice)
+{
+    auto selfDims = vector<int64_t>{2, 4};
+    auto alpha = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND, {1}, 1, {2}).ValueRange(0, 2);
+    auto x1 = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND);
+    auto x1List = TensorListDesc({x1});
+    auto x2List = TensorListDesc({x2});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachSubList, INPUT(x1List, x2List, alpha), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
+}
+
+// 看护（T13）：alpha 切片视图与非连续输入/输出叠加，规整链与回写链同时生效且索引对齐。
+TEST_F(l2_foreach_sub_list_test, ascend910B2_foreach_sub_list_test_alpha_storage_slice_with_non_contiguous_io)
+{
+    auto selfDims = vector<int64_t>{2, 4};
+    auto alpha = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND, {1}, 1, {2}).ValueRange(0, 2);
+    auto x1 = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).ValueRange(-1, 1);
+    auto x2 = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2}).ValueRange(-1, 1);
+    auto out = TensorDesc(selfDims, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {4, 2});
+    auto x1List = TensorListDesc({x1});
+    auto x2List = TensorListDesc({x2});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachSubList, INPUT(x1List, x2List, alpha), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACL_SUCCESS);
+}

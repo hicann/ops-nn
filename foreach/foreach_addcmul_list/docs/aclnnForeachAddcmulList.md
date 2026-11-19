@@ -132,7 +132,7 @@ aclnnStatus aclnnForeachAddcmulList(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -182,8 +182,8 @@ aclnnStatus aclnnForeachAddcmulList(
       <td>传入的x1、x2、x3、scalars或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="11">161002</td>
       <td>x1、x2、x3、scalars和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -193,21 +193,33 @@ aclnnStatus aclnnForeachAddcmulList(
       <td>x1、x2、x3、out中存在空指针Tensor。</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="5">561002</td>
-      <td>x1、x2、x3、out的shape不满足约束。</td>
+      <td>x1、x2、x3、out中有空的TensorList（成员数为0）。</td>
+    </tr>
+    <tr>
+      <td>x1的TensorList成员数超过256。</td>
+    </tr>
+    <tr>
+      <td>x1、x2、x3的TensorList元素个数不一致，或out与x1的TensorList元素个数不相等。</td>
     </tr>
     <tr>
       <td>x1、x2、x3或out中的Tensor的元素数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x1、x2、x3或out中的Tensor维度超过8维。</td>
-    </tr>
-    <tr>
       <td>scalars的元素个数与x1的Tensor数量不一致。</td>
     </tr>
     <tr>
-      <td>scalars维度超过8维。</td>
+      <td>x1、x2、x3、out的Tensor格式为私有格式。</td>
+    </tr>
+    <tr>
+      <td>x2、x3或out的shape size与x1不相等。</td>
+    </tr>
+    <tr>
+      <td>x2、x3或out的元素数小于x1。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>通过入口参数校验后，在tiling阶段发现的x1、x2、x3、out的shape不满足约束。</td>
     </tr>
   </tbody></table>
 

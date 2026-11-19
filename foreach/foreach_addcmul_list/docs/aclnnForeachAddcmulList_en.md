@@ -134,7 +134,7 @@ aclnnStatus aclnnForeachAddcmulList(
       <td>FLOAT32, FLOAT16, BFLOAT16, INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize (uint64_t*)</td>
@@ -184,8 +184,8 @@ aclnnStatus aclnnForeachAddcmulList(
       <td>x1, x2, x3, scalars, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="11">161002</td>
       <td>The data type of x1, x2, x3, scalars, or out is out of the supported range.</td>
     </tr>
     <tr>
@@ -195,21 +195,33 @@ aclnnStatus aclnnForeachAddcmulList(
       <td>x1, x2, x3, or out contains a null tensor.</td>
     </tr>
     <tr>
-      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="5">561002</td>
-      <td>The shape of x1, x2, x3, or out does not meet the constraints.</td>
+      <td>Any TensorList of x1, x2, x3, or out is empty (zero tensors).</td>
+    </tr>
+    <tr>
+      <td>The TensorList of x1 contains more than 256 tensors.</td>
+    </tr>
+    <tr>
+      <td>The number of tensors in the TensorList of x1, x2, and x3 is inconsistent, or the number of tensors in the TensorList of out is not equal to that of x1.</td>
     </tr>
     <tr>
       <td>The element data types of tensors in x1, x2, x3, or out are inconsistent.</td>
     </tr>
     <tr>
-      <td>The dimensions of tensors in x1, x2, x3, or out exceed 8.</td>
-    </tr>
-    <tr>
       <td>The number of elements in scalars is inconsistent with the number of tensors in x1.</td>
     </tr>
     <tr>
-      <td>The dimensions of scalars exceed 8.</td>
+      <td>The tensor format of x1, x2, x3, or out is a private format.</td>
+    </tr>
+    <tr>
+      <td>The shape size of x2, x3, or out is not equal to that of x1.</td>
+    </tr>
+    <tr>
+      <td>The number of elements in x2, x3, or out is less than that in x1.</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>The shape of x1, x2, x3, or out does not meet the constraints detected in the tiling phase after entry parameter validation.</td>
     </tr>
   </tbody></table>
 
