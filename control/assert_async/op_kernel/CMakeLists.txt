@@ -10,5 +10,5 @@
 
 add_kernel_sources(
     KERNEL_SRC assert_async.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr
 )

@@ -12,7 +12,7 @@
 
 /*!
  * \file assert_async_kernel.h
- * \brief AssertAsync kernel body (Ascend 950 / arch35 AIV, single core).
+ * \brief AssertAsync kernel body (Ascend 950/350 arch35, Ascend 960DT/PR arch92, single core).
  *
  * Flow (single AI Core, block 0 only):
  * 1. DataCopyPad (GM -> UB) moves elemByteSize bytes of the single input element.
@@ -69,8 +69,9 @@ public:
         AscendC::LocalTensor<uint8_t> xLocal = inQue_.AllocTensor<uint8_t>();
         AscendC::DataCopyExtParams copyParams{static_cast<uint16_t>(1), width, 0, 0, 0};
         AscendC::DataCopyPadExtParams<uint8_t> padParams{false, 0, 0, 0};
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-        // Ascend 950 requires the variant carrying the PaddingMode template parameter.
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 9201) || (__NPU_ARCH__ == 9202))
+        // Ascend 950/350 (arch35) and Ascend 960DT/PR (arch92) require the variant carrying the
+        // PaddingMode template parameter.
         AscendC::DataCopyPad<uint8_t, AscendC::PaddingMode::Normal>(xLocal, xGm_, copyParams, padParams);
 #else
         AscendC::DataCopyPad(xLocal, xGm_, copyParams, padParams);

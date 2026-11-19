@@ -12,7 +12,7 @@
 
 /*!
  * \file assert_async_tiling_arch35.cpp
- * \brief AssertAsync host tiling (arch35 / Ascend 950).
+ * \brief AssertAsync host tiling (arch35, shared by Ascend 950/350/960DT/960PR).
  *
  * Validates input (numel == 1, dtype in the supported set: BOOL/INT8/INT16/INT32/INT64/UINT8/FLOAT16/
  * FLOAT/BF16/DOUBLE/COMPLEX64/COMPLEX128; other dtypes such as STRING / INT4, and the unsigned
@@ -166,14 +166,7 @@ static ge::graphStatus AssertAsyncTilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(ValidateInputs(context, dtypeId, elemByteSize, kind) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "AssertAsync: ValidateInputs failed"), return ge::GRAPH_FAILED);
 
-    // 2. platform check (ascend950 only)
-    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    OP_CHECK_IF(ascendcPlatform.GetSocVersion() != platform_ascendc::SocVersion::ASCEND950,
-                OP_LOGE(context, "AssertAsync: unsupported soc version"), return ge::GRAPH_FAILED);
-
-    // 3. fill tiling data
+    // 2. fill tiling data
     AssertAsyncTilingData* tiling = context->GetTilingData<AssertAsyncTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(AssertAsyncTilingData), 0, sizeof(AssertAsyncTilingData)) != EOK,
@@ -194,11 +187,11 @@ static ge::graphStatus AssertAsyncTilingFunc(gert::TilingContext* context)
                 return ge::GRAPH_FAILED);
     CopyAssertMsg(assertMsg, tiling->assertMsg, ASSERT_ASYNC_MAX_MSG_LEN);
 
-    // 4. system workspace only (no user workspace)
+    // 3. system workspace only (no user workspace)
     OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "AssertAsync: GetWorkspaceSize failed"), return ge::GRAPH_FAILED);
 
-    // 5. single core, single tiling key
+    // 4. single core, single tiling key
     context->SetBlockDim(1);
     context->SetTilingKey(GET_TPL_TILING_KEY(ASSERT_ASYNC_SCH_MODE_DEFAULT));
     return ge::GRAPH_SUCCESS;

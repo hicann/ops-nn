@@ -12,7 +12,7 @@
 
 /*!
  * \file assert_async_def.cpp
- * \brief AssertAsync operator definition (Ascend 950 / arch35 AIV)
+ * \brief AssertAsync operator definition (Ascend 950/350 arch35, Ascend 960DT/PR arch92)
  *
  * Control operator (torch._assert_async semantics): single input tensor with numel == 1, one optional
  * string attribute. No output tensor. The kernel prints the message and traps when the input is zero.
@@ -50,6 +50,9 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
+        this->AICore().AddConfig("ascend350", aicoreConfig);
+        this->AICore().AddConfig("ascend960dt", aicoreConfig);
+        this->AICore().AddConfig("ascend960pr", aicoreConfig);
     }
 };
 

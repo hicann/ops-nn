@@ -20,7 +20,6 @@
  *   AA-WB-01..12  GetDtypeMeta dtypeId / elemByteSize / kind for all 12 supported dtypes
  *                 (op_host/arch35/assert_async_tiling_arch35.cpp:44-125, each `case` arm)
  *   AA-WB-13..17  assert_msg length boundary — 0 / 1 / 254 accepted; 255 / 256 / 300 rejected by tiling
- *   AA-WB-18      platform guard: soc version != ASCEND950 must be rejected (…:168-169)
  *   AA-WB-19..22  numel == 1 shape forms ([1]/[1,1]/[1,1,1]/[1,1,1,1]) accepted; rank-0 accepted
  *   AA-WB-23      tiling key / BlockDim single-core guard for every supported dtype (…:191-192)
  *
@@ -62,10 +61,8 @@ struct TilingResult {
     AssertAsyncTilingData data;
 };
 
-// Parametrised tiling runner: lets the caller override the reported SoC version so the
-// platform-guard branch can be exercised.
 TilingResult RunTilingEx(ge::DataType dtype, gert::StorageShape* inputShape, const std::string& assertMsg,
-                         const std::string& socVersion = "Ascend950", bool withAttr = true)
+                         bool withAttr = true)
 {
     std::map<std::string, std::string> socInfos;
     std::map<std::string, std::string> aicoreSpec;
@@ -116,7 +113,7 @@ TilingResult RunTilingEx(ge::DataType dtype, gert::StorageShape* inputShape, con
     context->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
     std::map<std::string, std::string> socVersionInfos = {
-        {"SoC_version", socVersion}, {"Short_SoC_version", socVersion}, {"NpuArch", "3510"}};
+        {"SoC_version", "Ascend950"}, {"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
     context->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
 
     auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(kOpType);
@@ -233,15 +230,6 @@ TEST_F(AssertAsyncTilingWhitebox, AA_WB_17b_msg_300_rejected)
     EXPECT_NE(r.status, ge::GRAPH_SUCCESS);
 }
 
-// ---- AA-WB-18: platform guard — non-950 SoC must be rejected (tiling logical branch) ----
-
-TEST_F(AssertAsyncTilingWhitebox, AA_WB_18_soc_not_950_rejected)
-{
-    gert::StorageShape shape = {{1}, {1}};
-    TilingResult r = RunTilingEx(ge::DT_FLOAT, &shape, "x", "Ascend910B");
-    EXPECT_NE(r.status, ge::GRAPH_SUCCESS);
-}
-
 // ---- AA-WB-19..22: numel == 1 shape forms accepted; rank-0 accepted ----
 
 TEST_F(AssertAsyncTilingWhitebox, AA_WB_19_shape_1_1_accepted)
@@ -278,7 +266,7 @@ TEST_F(AssertAsyncTilingWhitebox, AA_WB_22_rank0_accepted)
 TEST_F(AssertAsyncTilingWhitebox, AA_WB_24_msg_attr_absent)
 {
     gert::StorageShape shape = {{1}, {1}};
-    TilingResult r = RunTilingEx(ge::DT_FLOAT, &shape, "", "Ascend950", /*withAttr=*/false);
+    TilingResult r = RunTilingEx(ge::DT_FLOAT, &shape, "", /*withAttr=*/false);
     // A rejected call would still be reported as a failure of the nullptr handling; the
     // OPTIONAL attr defaults to "" so the tiling must succeed with an empty message.
     EXPECT_EQ(r.status, ge::GRAPH_SUCCESS);

@@ -12,7 +12,7 @@
 
 /*!
  * \file assert_async.cpp
- * \brief AssertAsync kernel entry (Ascend 950 / arch35 AIV).
+ * \brief AssertAsync kernel entry (Ascend 950/350 arch35, Ascend 960DT/PR arch92).
  *
  * Signature: (input_condition, workspace, tiling). No output tensor; workspace is unused (BlockDim == 1,
  * no user workspace). The tiling GM pointer is read directly as `__gm__ const AssertAsyncTilingData*` so
