@@ -14,7 +14,7 @@
 Framework choice (TTK three-leg golden spec): the operator ships a TensorFlow
 frontend plugin (framework/wts_arq_tf_plugin.cpp maps OriginOpType "WtsARQ"),
 so the CPU golden is implemented with TensorFlow; numpy is used only for I/O
-conversion and the torch third_party stays the independent GPU-leg reference.
+conversion and the torch third_party supplies the independent reference.
 
 Delivery note: the operator is GE IR graph mode only. TensorFlow does NOT
 register a callable `tf.compat.v1.WtsARQ` interface, so no TF e2e route is
@@ -33,14 +33,10 @@ Semantics (README.md formula, kernel.h and DESIGN.md §3.5/§3.6):
     dequant:    y = q * scale
 
 Cast rule (float only, no integer outputs in @wts_arq_def.cpp):
-    - tolerance standard is mix_tolerance, i.e. two-leg comparison; TTK does
-      not Promote, so the golden reproduces the NPU kernel width itself:
-      LoadWiden fp16 -> fp32 for the whole computation, CAST_RINT (half to
-      even) narrow back to the dispatched input dtype at the exit.
-    - if a caller switches the judge to cross_check, TTK runs Promote and the
-      golden receives lifted arrays/output_dtypes; golden_mode==Promote is
-      therefore detected and the golden then does zero cast (no entry or exit
-      narrowing), letting TTK own the promotion.
+    - float16 and float32 use cross_check by default. In Promote mode, the
+      golden computes and returns its result in the dtype supplied by TTK.
+    - Outside Promote mode, the golden widens float16 inputs to float32
+      for computation and casts the result back to the input dtype.
 """
 
 import numpy as np
@@ -57,14 +53,10 @@ __spec__ = {
 
 SCALE_EPS = 1.1920929e-07
 
-# Precision standard: explicit ecosystem default. torch third_party below is the
-# independent reference for `--compare cross_check` (cross_check needs an
-# XPU/torch provider; without one the run reports GOLDEN_FAILURE, so cross_check
-# is not set as the default judge here). Keys must cover every dtype registered
-# in op_host/wts_arq_def.cpp: DT_FLOAT16, DT_FLOAT.
+# The Torch third_party registered below supplies the reference for cross_check.
 _TOL_KERNEL = {
-    "float32": {"standard": "mix_tolerance"},
-    "float16": {"standard": "mix_tolerance"},
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
 }
 
 
