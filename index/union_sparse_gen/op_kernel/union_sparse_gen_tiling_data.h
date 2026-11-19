@@ -81,6 +81,9 @@ struct UnionSparseGenTilingData {
     int64_t isInputIdxSorted = 1;
     int64_t residualBlockMode = 0;
     int64_t hasCuSqlenKv = 1;
+    int64_t fixedKvSeqlen = 0;
+    // Prefix-free Q storage stride; the final fixed slot is clipped to totalQ.
+    int64_t qSlotSize = 0;
 };
 
 #endif

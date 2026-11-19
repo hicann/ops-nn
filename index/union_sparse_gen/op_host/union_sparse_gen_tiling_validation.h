@@ -13,7 +13,6 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "union_sparse_gen_contract.h"
-#include "union_sparse_gen_geometry.h"
 #include "union_sparse_gen_dfx.h"
 
 namespace UnionSparseGenTilingValidation {
@@ -69,18 +68,15 @@ inline ge::graphStatus CheckInputGeometry(const gert::TilingContext* context, co
     const auto* kvShape = context->GetOptionalInputShape(Contract::kCuKvInput);
     const auto* usedQShape = context->GetOptionalInputShape(Contract::kUsedQInput);
     const auto* usedKvShape = context->GetOptionalInputShape(Contract::kUsedKvInput);
-    if ((qShape == nullptr && usedQShape == nullptr) || (kvShape == nullptr && usedKvShape == nullptr)) {
-        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "cuSqlenQ,seqUsedQ,cuSqlenKv,seqUsedKv",
-                                                 "fixed Q requires seqUsedQ; KV requires cuSqlenKv or seqUsedKv");
-        return ge::GRAPH_FAILED;
-    }
     const auto& sd = sparseShape->GetStorageShape();
     const auto& cd = countShape->GetStorageShape();
     if (!Contract::InputFits(sd.GetDim(Contract::kHeadAxis), sd.GetDim(Contract::kQueryAxis),
                              sd.GetDim(Contract::kSparseEntryAxis)) ||
         !Contract::LengthGeometry(
             sd.GetDim(Contract::kQueryAxis), qShape ? qShape->GetStorageShape().GetDim(Contract::kLengthAxis) : -1,
-            usedQShape ? usedQShape->GetStorageShape().GetDim(Contract::kLengthAxis) : -1, *maxQ, *maxKv, batch)) {
+            usedQShape ? usedQShape->GetStorageShape().GetDim(Contract::kLengthAxis) : -1,
+            kvShape ? kvShape->GetStorageShape().GetDim(Contract::kLengthAxis) : -1,
+            usedKvShape ? usedKvShape->GetStorageShape().GetDim(Contract::kLengthAxis) : -1, *maxQ, *maxKv, batch)) {
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "cuSqlenQ,seqUsedQ,T",
                                                  "invalid input bytes or prefix/fixed-slot batch geometry");
         return ge::GRAPH_FAILED;
@@ -98,20 +94,25 @@ inline ge::graphStatus CheckScalarGeometry(const gert::TilingContext* context, i
                                            int64_t maxLogicalBlocks)
 {
     const auto& sd = context->GetInputShape(Contract::kSparseIdxInput)->GetStorageShape();
-    if (blockX != Contract::kSupportedBlockX || blockY != Contract::kSupportedBlockY ||
+    if (blockX != Contract::kSupportedBlockX || !Contract::SupportsBlockY(blockY) ||
         unionSize != Contract::kSupportedUnionSize || !Contract::SupportsMask(maskType)) {
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "blockX,blockY,unionSize,maskType",
                                                  "actual=" + std::to_string(blockX) + "," + std::to_string(blockY) +
                                                      "," + std::to_string(unionSize) + "," + std::to_string(maskType) +
-                                                     "; expected 1,128,8,maskType=0/1");
+                                                     "; expected X=1,Y=4/8/16/128,W=8,maskType=0/1");
         return ge::GRAPH_FAILED;
     }
-    if ((batch == 0 && numGroups != 0) || numGroups < 0 || maxLogicalBlocks <= 0 ||
-        sd.GetDim(Contract::kSparseEntryAxis) <= 0) {
+    if (numGroups < 0 || maxLogicalBlocks <= 0 || sd.GetDim(Contract::kSparseEntryAxis) <= 0) {
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
             kOpName, "totalqUnionNum,maxLogicalBlocks,K",
             "actual=" + std::to_string(numGroups) + "," + std::to_string(maxLogicalBlocks) + "," +
                 std::to_string(sd.GetDim(Contract::kSparseEntryAxis)) + "; expected >=0,>0,>0");
+        return ge::GRAPH_FAILED;
+    }
+    if (context->GetOptionalInputShape(Contract::kCuKvInput) == nullptr &&
+        context->GetOptionalInputShape(Contract::kUsedKvInput) == nullptr &&
+        !Contract::FixedKvFits(*context->GetAttrs()->GetInt(Contract::kMaxKv), blockY)) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "maxKvSeqlen", "invalid fixed KV length");
         return ge::GRAPH_FAILED;
     }
     if (maxLogicalBlocks > std::numeric_limits<int32_t>::max()) {
@@ -132,8 +133,8 @@ inline ge::graphStatus CheckCapacity(const gert::TilingContext* context, int64_t
     const auto* sorted = contractAttrs->GetAttrPointer<bool>(Contract::kSorted);
     if (residual == nullptr || layout == nullptr || sorted == nullptr ||
         !Contract::SupportsSpec(blockX, blockY, unionSize, maskType, *layout, *sorted, *residual) ||
-        !Contract::Capacity(sd.GetDim(Contract::kSparseEntryAxis), unionSize, maxLogicalBlocks, *residual, capacity) ||
-        capacity > std::numeric_limits<int64_t>::max() / blockY ||
+        sd.GetDim(Contract::kSparseEntryAxis) > std::numeric_limits<int64_t>::max() / unionSize - *residual ||
+        capacity <= 0 || capacity > std::numeric_limits<int64_t>::max() / blockY ||
         !Contract::OutputFits(sd.GetDim(Contract::kHeadAxis), numGroups, capacity, blockY)) {
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
             kOpName, "length/layout/capacity contract",
@@ -142,7 +143,8 @@ inline ge::graphStatus CheckCapacity(const gert::TilingContext* context, int64_t
                 ", H=" + std::to_string(sd.GetDim(Contract::kHeadAxis)) + ", G=" + std::to_string(numGroups) +
                 ", K=" + std::to_string(sd.GetDim(Contract::kSparseEntryAxis)) + ", W=" + std::to_string(unionSize) +
                 ", Lmax=" + std::to_string(maxLogicalBlocks) + ", Y=" + std::to_string(blockY) +
-                "; expected Y=128, W=8, layout=4, sorted=true, residual=0, capacity=min(W*(K+residual),Lmax), "
+                "; expected Y=4/8/16/128, W=8, layout=4, sorted=true/false, residual=0/1, "
+                "capacity=unionSparseIdx.shape[2], "
                 "int64-safe bytes");
         return ge::GRAPH_FAILED;
     }
@@ -222,55 +224,31 @@ inline ge::graphStatus GetAttrInt(const gert::TilingContext* context, size_t ind
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus ResolveTilingGeometry(gert::TilingContext* context, int64_t width, int64_t blockY,
-                                             int64_t& numGroups, int64_t& maxLogicalBlocks)
+// Both GE and ACLNN provide concrete output descriptors. Attributes are shape
+// hints for GE only; output capacity is not a bound on valid logical block IDs.
+inline ge::graphStatus ResolveTilingGeometry(gert::TilingContext* context, int64_t blockY, int64_t& groups,
+                                             int64_t& logical, int64_t& capacity)
 {
-    if (numGroups != Contract::kUnspecifiedGeometry && maxLogicalBlocks != Contract::kUnspecifiedGeometry) {
-        return ge::GRAPH_SUCCESS;
-    }
-    const auto* attrs = context->GetAttrs();
-    if (CheckInputDescriptors(context) != ge::GRAPH_SUCCESS) {
+    const auto* output = context->GetOutputShape(Contract::kUnionIdxOutput);
+    OP_CHECK_NULL_WITH_CONTEXT(context, output);
+    const auto& shape = output->GetStorageShape();
+    if (shape.GetDimNum() != Contract::kUnionIdxRank) {
         return ge::GRAPH_FAILED;
     }
-    // Inference has already resolved the exact output shape. Only an
-    // unsaturated U identifies Lmax; saturated U still needs KV values.
-    const auto* countShape = context->GetOutputShape(Contract::kUnionCountOutput);
-    const auto* idxShape = context->GetOutputShape(Contract::kUnionIdxOutput);
-    OP_CHECK_NULL_WITH_CONTEXT(context, countShape);
-    OP_CHECK_NULL_WITH_CONTEXT(context, idxShape);
-    if (countShape->GetStorageShape().GetDimNum() != Contract::kUnionCountRank ||
-        idxShape->GetStorageShape().GetDimNum() != Contract::kUnionIdxRank) {
-        return ge::GRAPH_FAILED;
+    groups = shape.GetDim(Contract::kGroupAxis);
+    capacity = shape.GetDim(Contract::kUnionEntryAxis);
+    // For variable KV no host-side length bound is available. The kernel clips
+    // against each request's actual KV length; INT32 block IDs give a safe bound.
+    logical = std::numeric_limits<int32_t>::max();
+    if (context->GetOptionalInputShape(Contract::kCuKvInput) == nullptr &&
+        context->GetOptionalInputShape(Contract::kUsedKvInput) == nullptr) {
+        const auto* maxKv = context->GetAttrs()->GetInt(Contract::kMaxKv);
+        OP_CHECK_NULL_WITH_CONTEXT(context, maxKv);
+        if (!Contract::FixedKvFits(*maxKv, blockY)) {
+            return ge::GRAPH_FAILED;
+        }
+        logical = std::max<int64_t>(1, *maxKv / blockY + (*maxKv % blockY != 0));
     }
-    if (numGroups == Contract::kUnspecifiedGeometry) {
-        numGroups = countShape->GetStorageShape().GetDim(Contract::kGroupAxis);
-    }
-    const auto
-        topK = context->GetInputShape(Contract::kSparseIdxInput)->GetStorageShape().GetDim(Contract::kSparseEntryAxis);
-    const auto outputCapacity = idxShape->GetStorageShape().GetDim(Contract::kUnionEntryAxis);
-    if (maxLogicalBlocks == Contract::kUnspecifiedGeometry && topK > 0 &&
-        topK <= std::numeric_limits<int64_t>::max() / width && outputCapacity > 0 && outputCapacity < topK * width) {
-        maxLogicalBlocks = outputCapacity;
-    }
-    const auto* maxQ = attrs->GetInt(Contract::kMaxQ);
-    const auto* maxKv = attrs->GetInt(Contract::kMaxKv);
-    OP_CHECK_NULL_WITH_CONTEXT(context, maxQ);
-    OP_CHECK_NULL_WITH_CONTEXT(context, maxKv);
-    int64_t batch = 0;
-    if (CheckInputGeometry(context, maxQ, maxKv, batch) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    UnionSparseGenGeometry::Result result{numGroups, maxLogicalBlocks};
-    const auto
-        totalQ = context->GetInputShape(Contract::kSparseIdxInput)->GetStorageShape().GetDim(Contract::kQueryAxis);
-    if (!UnionSparseGenGeometry::Resolve(context, batch, totalQ, *maxQ, width, blockY, result) || result.groups < 0 ||
-        result.logical <= 0) {
-        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "geometry",
-                                                 "runtime length values or exact output shapes are unavailable");
-        return ge::GRAPH_FAILED;
-    }
-    numGroups = result.groups;
-    maxLogicalBlocks = result.logical;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -282,7 +260,7 @@ inline ge::graphStatus ReadTilingSpec(gert::TilingContext* context, TilingSpec& 
     const auto* blockShape = attrs->GetListInt(Contract::kBlockShape);
     OP_CHECK_NULL_WITH_CONTEXT(context, blockShape);
     if (!Contract::SupportsBlockShape(blockShape->GetData(), blockShape->GetSize())) {
-        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "blockShape", "expected two elements [1,128]");
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "blockShape", "expected [1,Y], Y=4/8/16/128");
         return ge::GRAPH_FAILED;
     }
     const int64_t* blockX = blockShape->GetData();
@@ -299,11 +277,8 @@ inline ge::graphStatus ReadTilingSpec(gert::TilingContext* context, TilingSpec& 
     int64_t& capacity = spec.capacity;
     int64_t numGroups = 0;
     int64_t maxLogicalBlocks = 0;
-    if (GetAttrInt(context, Contract::kNumGroups, "totalq_union_num", numGroups) != ge::GRAPH_SUCCESS ||
-        GetAttrInt(context, Contract::kMaxLogical, "max_logical_blocks", maxLogicalBlocks) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (ResolveTilingGeometry(context, *unionSize, *blockY, numGroups, maxLogicalBlocks) != ge::GRAPH_SUCCESS) {
+    if (CheckInputDescriptors(context) != ge::GRAPH_SUCCESS ||
+        ResolveTilingGeometry(context, *blockY, numGroups, maxLogicalBlocks, capacity) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (ValidateInputs(context, *blockX, *blockY, *unionSize, *maskType, capacity, numGroups, maxLogicalBlocks) !=

@@ -39,7 +39,9 @@ constexpr size_t kOutputRanks[kOutputCount] = {kUnionIdxRank, kUnionCountRank, k
 constexpr bool IsPrefixInput(size_t index) { return index == kCuQInput || index == kCuKvInput; }
 // Public specification and length element sizes, shared by all host entry points.
 constexpr size_t kBlockShapeDimensions = 2;
-constexpr int64_t kSupportedBlockX = 1, kSupportedBlockY = 128, kSupportedUnionSize = 8;
+constexpr int64_t kSupportedBlockX = 1, kSupportedUnionSize = 8;
+constexpr int64_t kSupportedBlockY = 128;
+constexpr int64_t kDefaultBlockY = kSupportedBlockY;
 constexpr int64_t kSparsePatternLayout = 4;
 constexpr int64_t kPrefixElementBytes = sizeof(int64_t), kUsedLengthElementBytes = sizeof(int32_t);
 enum class MaskType : int64_t { NonCausal = 0, Causal = 1 };
@@ -47,55 +49,74 @@ inline bool SupportsMask(int64_t type)
 {
     return type == static_cast<int64_t>(MaskType::NonCausal) || type == static_cast<int64_t>(MaskType::Causal);
 }
+inline bool SupportsBlockY(int64_t y) { return y == 4 || y == 8 || y == 16 || y == 128; }
+inline bool SupportsResidual(int64_t residual) { return residual == 0 || residual == 1; }
 inline bool SupportsBlockShape(const int64_t* data, size_t size)
 {
     return size == kBlockShapeDimensions && data != nullptr && data[kBlockXAxis] == kSupportedBlockX &&
-           data[kBlockYAxis] == kSupportedBlockY;
+           SupportsBlockY(data[kBlockYAxis]);
 }
-inline bool SupportsSpec(int64_t x, int64_t y, int64_t w, int64_t mask, int64_t layout, bool sorted, int64_t residual)
+inline bool SupportsSpec(int64_t x, int64_t y, int64_t w, int64_t mask, int64_t layout, bool /* sorted */,
+                         int64_t residual)
 {
-    return x == kSupportedBlockX && y == kSupportedBlockY && w == kSupportedUnionSize && SupportsMask(mask) &&
-           layout == kSparsePatternLayout && sorted && residual == kExplicitBlocks;
+    return x == kSupportedBlockX && SupportsBlockY(y) && w == kSupportedUnionSize && SupportsMask(mask) &&
+           layout == kSparsePatternLayout && SupportsResidual(residual);
 }
 inline bool Attributes(int64_t layout) { return layout == kSparsePatternLayout; }
 // A negative descriptor size denotes an absent optional input. Values stay on Device.
-inline bool BatchSize(int64_t totalQ, int64_t cuQSize, int64_t usedQSize, int64_t& batch)
+inline bool LengthGeometry(int64_t totalQ, int64_t cuQSize, int64_t usedQSize, int64_t cuKvSize, int64_t usedKvSize,
+                           int64_t maxQ, int64_t maxKv, int64_t& batch)
 {
-    if (totalQ < 0) {
+    const bool fixedQ = cuQSize < 0 && usedQSize < 0;
+    const bool fixedKv = cuKvSize < 0 && usedKvSize < 0;
+    if (totalQ < 0 || (fixedQ && maxQ < 0) || (fixedKv && maxKv < 0)) {
         return false;
     }
-    if (cuQSize >= 0) {
-        if (cuQSize < 1 || cuQSize > std::numeric_limits<int64_t>::max() / kPrefixElementBytes) {
+    batch = -1;
+    const int64_t sizes[] = {cuQSize, usedQSize, cuKvSize, usedKvSize};
+    for (size_t i = 0; i < 4; ++i) {
+        if (sizes[i] < 0) {
+            continue;
+        }
+        const bool prefix = i % 2 == 0;
+        const int64_t bytes = prefix ? kPrefixElementBytes : kUsedLengthElementBytes;
+        const int64_t candidate = sizes[i] - (prefix ? 1 : 0);
+        if (candidate < 0 || sizes[i] > std::numeric_limits<int64_t>::max() / bytes - 1 ||
+            (batch >= 0 && candidate != batch)) {
             return false;
         }
-        batch = cuQSize - 1;
+        batch = candidate;
+    }
+    if (fixedQ) {
+        // blockX=1: the final request may occupy less than a full maxQ slot.
+        if (maxQ == 0) {
+            batch = batch < 0 ? 0 : batch;
+            return totalQ == 0;
+        }
+        const int64_t fixedBatch = totalQ / maxQ + (totalQ % maxQ != 0);
+        if (batch >= 0 && batch != fixedBatch) {
+            return false;
+        }
+        batch = fixedBatch;
         return true;
     }
-    if (usedQSize < 0 || usedQSize > std::numeric_limits<int64_t>::max() / kUsedLengthElementBytes - 1) {
-        return false;
-    }
-    batch = usedQSize;
-    return batch == 0 ? totalQ == 0 : totalQ % batch == 0;
-}
-// Prefix presence selects variable storage; absent Q prefix requires a fixed slot capacity.
-// Effective lengths are device tensor values: callers guarantee the stated bounds;
-// the public CPU-metadata entry also checks those values without device readback.
-inline bool LengthGeometry(int64_t totalQ, int64_t cuQSize, int64_t usedQSize, int64_t maxQ, int64_t maxKv,
-                           int64_t& batch)
-{
-    if (maxQ < -1 || maxKv < -1 || !BatchSize(totalQ, cuQSize, usedQSize, batch)) {
-        return false;
+    if (batch == 0) {
+        return totalQ == 0;
     }
     if (cuQSize >= 0) {
         return true;
     }
-    return maxQ > 0 && maxQ <= std::numeric_limits<int32_t>::max() &&
-           (batch == 0 ? totalQ == 0 : totalQ / batch == maxQ);
+    return totalQ % batch == 0;
+}
+// maxKv is consumed only without either KV tensor. Block IDs must remain INT32.
+inline bool FixedKvFits(int64_t maxKv, int64_t blockY)
+{
+    return maxKv >= 0 && blockY > 0 && maxKv / blockY + (maxKv % blockY != 0) <= std::numeric_limits<int32_t>::max();
 }
 inline bool Capacity(int64_t k, int64_t width, int64_t logical, int64_t residual, int64_t& capacity)
 {
     if (k <= 0 || width != kSupportedUnionSize || logical <= 0 || logical > std::numeric_limits<int32_t>::max() ||
-        residual != kExplicitBlocks || k > std::numeric_limits<int64_t>::max() / width - residual) {
+        !SupportsResidual(residual) || k > std::numeric_limits<int64_t>::max() / width - residual) {
         return false;
     }
     capacity = std::min(width * (k + residual), logical);

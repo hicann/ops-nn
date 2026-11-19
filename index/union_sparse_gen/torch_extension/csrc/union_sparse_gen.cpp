@@ -20,7 +20,7 @@ namespace index {
 namespace {
 constexpr int64_t kBlockShapeDimensions = 2;
 constexpr int64_t kBlockXAxis = 0, kBlockYAxis = 1;
-constexpr int64_t kSupportedBlockX = 1, kSupportedBlockY = 128, kSupportedUnionSize = 8;
+constexpr int64_t kSupportedBlockX = 1, kSupportedUnionSize = 8;
 constexpr int64_t kSparseIdxRank = 3, kHeadAxis = 0, kSparseEntryAxis = 2;
 constexpr int64_t kNonCausalMask = 0, kCausalMask = 1, kSparsePatternLayout = 4, kExplicitBlocks = 0;
 constexpr int64_t kIndexBytes = sizeof(int32_t);
@@ -56,11 +56,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> union_sparse_gen_launch(
 {
     CheckInputTensors(sparseBlockIdx, sparseBlockCount, cuSqlenQ, cuSqlenKv, seqUsedQ, seqUsedKv);
     TORCH_CHECK(blockShape.size() == kBlockShapeDimensions && blockShape[kBlockXAxis] == kSupportedBlockX &&
-                    blockShape[kBlockYAxis] == kSupportedBlockY && unionSize == kSupportedUnionSize &&
-                    (maskType == kNonCausalMask || maskType == kCausalMask) &&
-                    layoutSparsePattern == kSparsePatternLayout && isInputIdxSorted &&
-                    residualBlockMode == kExplicitBlocks,
-                "supported spec: block_shape=[1,128]/W8/mask0/1/layout4/sorted=true/residual0");
+                    (blockShape[kBlockYAxis] == 4 || blockShape[kBlockYAxis] == 8 || blockShape[kBlockYAxis] == 16 ||
+                     blockShape[kBlockYAxis] == 128) &&
+                    unionSize == kSupportedUnionSize && (maskType == kNonCausalMask || maskType == kCausalMask) &&
+                    layoutSparsePattern == kSparsePatternLayout &&
+                    (residualBlockMode == kExplicitBlocks || residualBlockMode == 1),
+                "supported spec: block_shape=[1,Y],Y=4/8/16/128/W8/mask0/1/layout4/sorted=true/false/residual0/1");
     TORCH_CHECK(totalqUnionNum >= 0 && maxLogicalBlocks > 0 && maxLogicalBlocks <= std::numeric_limits<int32_t>::max(),
                 "totalq_union_num and max_logical_blocks must be explicitly provided: "
                 "G >= 0 and 1 <= Lmax <= INT32_MAX; -1 does not request automatic inference");

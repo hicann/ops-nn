@@ -56,10 +56,15 @@ public:
         for (int64_t i = 0; i < n; ++i) {
             const int64_t flat = first + i * step;
             head_ = flat / groups_;
+            outputBase_ = flat * capacity_;
             if (!Locate(flat % groups_)) {
+                rank_ = 0;
+                buffered_ = 0;
+                slot_ = 0;
+                BeginTile();
+                FinishGroupCount();
                 continue;
             }
-            outputBase_ = flat * capacity_;
             if constexpr (Extended) {
                 MergeMembership();
             } else {
@@ -105,6 +110,8 @@ private:
         hasKv_ = t.hasSeqUsedKv != 0;
         hasCuQ_ = cuQ != nullptr;
         hasCuKv_ = t.hasCuSqlenKv != 0;
+        fixedKv_ = t.fixedKvSeqlen;
+        qSlot_ = t.qSlotSize;
         residual_ = t.residualBlockMode != 0;
         window_ = t.simdInputWindow;
         tile_ = t.simdTileBlocks;
@@ -265,7 +272,7 @@ private:
     {
         auto* address = reinterpret_cast<__ubuf__ TableT*>(table.GetPhyAddr());
         for (int32_t row = 0; row < rows_; ++row) {
-            const int64_t visible = kvLen_ - qLen_ + q0_ + row + 1;
+            const int64_t visible = nonCausal_ ? kvLen_ : kvLen_ - qLen_ + q0_ + row + 1;
             const int64_t bound = residual_ ? (visible > 0 ? visible / by_ : 0) : logicalBlocks_;
             const uint32_t bit = 1U << uint32_t(row);
             const int64_t count = cnt_.GetValue(row);
@@ -466,10 +473,14 @@ private:
         while (request_ < batch_) {
             LoadMeta(request_);
             const int32_t r = request_ - metaStart_;
-            const int64_t qBase = hasCuQ_ ? prefix_.GetValue(r) : request_ * (totalQ_ / batch_);
-            qLen_ = hasQ_ ? meta_.GetValue(usedMetaOffset_ + r) : prefix_.GetValue(r + 1) - qBase;
-            kvLen_ = hasKv_ ? meta_.GetValue(usedKvOffset_ + r) :
-                              prefix_.GetValue(kvPrefixOffset_ + r + 1) - prefix_.GetValue(kvPrefixOffset_ + r);
+            const int64_t qBase = hasCuQ_ ? prefix_.GetValue(r) : request_ * qSlot_;
+            const int64_t remaining = totalQ_ - qBase;
+            qLen_ = hasQ_ ? meta_.GetValue(usedMetaOffset_ + r) :
+                            (hasCuQ_ ? prefix_.GetValue(r + 1) - qBase : (qSlot_ < remaining ? qSlot_ : remaining));
+            kvLen_ = hasKv_ ?
+                         meta_.GetValue(usedKvOffset_ + r) :
+                         (hasCuKv_ ? prefix_.GetValue(kvPrefixOffset_ + r + 1) - prefix_.GetValue(kvPrefixOffset_ + r) :
+                                     fixedKv_);
             const int64_t n = (qLen_ + Width() - 1) / Width();
             if (target < requestGroup_ + n) {
                 q0_ = (target - requestGroup_) * Width();
@@ -545,6 +556,11 @@ private:
     }
     __aicore__ inline void Flush(int32_t n, bool padding = false)
     {
+        if (n > capacity_ - rank_) {
+            // Capacity is caller-owned geometry; never overwrite another group.
+            Trap();
+            return;
+        }
         if (padding) {
             PreparePaddingTile(n);
         } else {
@@ -985,7 +1001,7 @@ private:
     LocalTensor<uint32_t> pairMask_, out_, broadcastOffsets_;
     int64_t batch_, totalQ_, topK_, groups_, capacity_, width_, by_, usedCore_, workPerCore_, workTail_;
     int64_t head_, qStart_, q0_, qLen_, kvLen_, logicalBlocks_, visibilityBase_, outputBase_, rank_;
-    int64_t metaStart_, request_, requestGroup_, algorithmBytes_;
+    int64_t metaStart_, request_, requestGroup_, algorithmBytes_, fixedKv_, qSlot_;
     int32_t rows_, window_, tile_, buffered_, slot_;
     int32_t kvPrefixOffset_, usedMetaOffset_, usedKvOffset_;
     bool hasQ_, hasKv_, hasCuQ_, hasCuKv_, residual_, pending_[Plan::kOutputSlots], paddingReady_[Plan::kOutputSlots],

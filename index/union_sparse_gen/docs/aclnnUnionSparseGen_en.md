@@ -25,7 +25,7 @@ English | [简体中文](./aclnnUnionSparseGen.md)
 
 ## Function
 
-Builds a sorted unique union of the explicit KV block selections from at most `unionSize` adjacent query rows in one request. It also returns the union count and a per-KV-token bit mask that preserves each query's selections. It does not compute attention or append unselected blocks.
+Builds a sorted unique union of the explicit KV block selections from at most `unionSize` adjacent query rows in one request. It also returns the union count and a per-KV-token bit mask that preserves each query's selections. It does not compute attention. residualBlockMode=1 inserts incomplete visible tails before union.
 
 Let `sparseBlockIdx` have shape `[H,T,K]`: H is the number of sparse heads, T is the number of stored Q rows, and K is the block capacity per row. B is the number of requests, $W=\text{unionSize}$, and $Y=\text{blockShape}[1]$. The effective Q/KV lengths of request b are $Q_b$ and $KV_b$, determined by the length-input precedence in Constraints.
 
@@ -49,8 +49,10 @@ $$
 S_i=\{\,d=\text{sparseBlockIdx}[h,r_i,k]\mid 0\le k<c_i,\ 0\le d<L_b\,\}
 $$
 
+Mode 0 retains legal explicit blocks. Mode 1 restores the per-query selection rule: retain explicit blocks fully within the visible range (d < floor(max(V,0)/Y)), add floor(V/Y) when V>0 and V%Y!=0, then merge and deduplicate. Added tails participate in unionSparseIdx, unionSparseCount and exactMask. V is KV-Q+localQuery+1 for maskType=1 and the effective KV length for maskType=0. Complete tails are not automatically added; existing tails are not counted twice. For Q=3, KV=5, Y=4 and empty lists, noncausal residual=1 returns [1], count=1 and mask [7,0,0,0]; causal residual=1 returns [0,1], count=2 and mask [1,1,1,0,4,0,0,0].
+
 $$
-D=\bigcup_{i=0}^{n-1}S_i,\qquad
+D=\bigcup_{i=0}^{n-1}\widehat S_i,\qquad
 (d_0,\ldots,d_{C-1})=\operatorname{sort}(D),\qquad C=|D|
 $$
 
@@ -58,8 +60,10 @@ Then $\text{unionSparseCount}[h,g]=C$ and $\text{unionSparseIdx}[h,g,r]=d_r$ for
 
 **3. Preserve each query's selections.** Bit i of an INT32 corresponds to query i within the group. Combine the bits of all queries selecting a block using bitwise OR; this is the block's membership:
 
+Let $\widehat S_i$ be the query selection after the residual rule above. The output union is $D=\bigcup_i\widehat S_i$; membership preserves each query's selections.
+
 $$
-\operatorname{membership}(d)=\bigvee_{i=0}^{n-1}\left(2^i[d\in S_i]\right)
+\operatorname{membership}(d)=\bigvee_{i=0}^{n-1}\left(2^i[d\in \widehat S_i]\right)
 $$
 
 Square brackets evaluate to 1 when the condition is true and 0 otherwise; $\bigvee$ denotes bitwise OR. Repeated selections do not add weight or alter another query's bit.
@@ -74,32 +78,27 @@ $$
 $$
 \text{exactMask}[h,g,Yr+t]
 =\bigvee_{i=0}^{n-1}
-\left(2^i[d_r\in S_i][0\le p<KV_b]C_m(i,p)\right),\qquad m=\text{maskType}
+\left(2^i[d_r\in \widehat S_i][0\le p<KV_b]C_m(i,p)\right),\qquad m=\text{maskType}
 $$
 
 `maskType=0` preserves query membership and the effective KV boundary; it does not fill the mask with ones. `maskType=1` additionally applies bottom-right causal alignment: query i can see the first $KV_b-Q_b+q_i+1$ KV tokens. A nonpositive boundary leaves no visible tokens.
 
-The mask mode does not change the union or count. A legal selected block stays in the output list even when all of its mask values are zero.
+Mode 0 retains legal explicit blocks even with zero causal masks. Mode 1 filters explicit blocks by visibility and adds partial tails, so maskType and residual can affect the union and count.
 
-**5. Derive output capacity and padding.** Capacity depends on effective lengths and input capacity, not the actual overlap between block lists:
+**5. Output shape and capacity.**
 
-$$
-L_{\max}=\max\bigl(\{1\}\cup\{L_b\mid 0\le b<B\}\bigr),\qquad
-U=\min(WK,L_{\max})
-$$
+Graph InferShape reads only host shape metadata and attributes, with no length-tensor data access or host/device synchronization. For input `[H,T,K]` (`[kvN,totalqBlockNum,maxKvBlockNum]`), outputs are `[H,G,U]`, `[H,G]`, and `[H,G,U*Y]`:
 
-| Output | Shape | Padding |
-|---|---|---|
-| unionSparseIdx | $[H,G,U]$ | Entries at or after C are -1. |
-| unionSparseCount | $[H,G]$ | Stores the actual union count C. |
-| exactMask | $[H,G,U\times Y]$ | The Y columns of unused blocks are zero, as are out-of-range tokens in the KV tail block. |
+- Positive `totalq_union_num` is used as G; otherwise G=(T+7*B)//8.
+- Positive `max_logical_blocks` is used as U; otherwise U=(K+residual)*union_size. Capacity is not clipped to the KV logical domain.
+- B comes from length-tensor shapes. Fixed Q uses ceil(T/ceil(maxQSeqlen/block_shape[0])). With supported blockX=1, the final fixed slot may contain fewer than maxQ rows. A zero maxQ requires T=0 and retains the empty-batch/present-KV-tensor batch rules.
+- The actual group count remains sum(ceil(effectiveQ/8)). Extra output groups contain idx=-1, count=0, mask=0. The caller must ensure G covers all actual groups; insufficient G is not guaranteed to raise an error and may leave valid groups unprocessed.
+- U must cover every group's actual union. When the kernel detects that an actual union exceeds U, it triggers a device error instead of silently truncating that union. The error may surface during execution or stream synchronization; rejection at `aclnnUnionSparseGenGetWorkspaceSize` is not guaranteed. This check does not validate G or guarantee errors for every form of insufficient output capacity.
+- The default U=(K+residual)*union_size reserves one additional tail candidate per query when residual=1; maskType=0 uses the same safe bound.
 
-For Q3/KV259 and three input lists `[0,2]`, `[0]`, `[1,2]`, the output list is `[0,1,2]`, the count is 3, and the block membership values are 3, 4, and 5. Block 2 covers KV positions 256 through 383; only its first three tokens are valid:
+Direct ACLNN calls use G/U from `unionSparseIdx.shape[1:3]`, ignoring the two scalar shape hints `totalqUnionNum/maxLogicalBlocks`, and require matching count/mask output shapes. U is storage capacity, not an upper bound on valid block IDs. Invalid block IDs (negative or outside the request's effective KV logical domain) are filtered out rather than reported as capacity errors.
 
-| Mask mode | First three columns of block 2 | Remaining 125 columns |
-|---|---|---|
-| 0 (noncausal) | `[5,5,5]` | All zero. |
-| 1 (bottom-right causal) | `[5,4,4]` | All zero. |
+The Torch adapter retains its existing formulas: G=sum(ceil(effectiveQ/8)), L=max(1,max(ceil(effectiveKV/Y))), and U=min(8*(K+residual),L). It passes G/L and allocates outputs with that U, which ACLNN respects. Its low-level and Meta entries still require explicit G/L and do not implement GE's automatic shape rule. The CPU golden retains exact effective outputs; graph tests pad those outputs to G/U and check that no valid blocks are discarded.
 
 ## Function Prototype
 
@@ -154,21 +153,21 @@ aclnnStatus aclnnUnionSparseGen(
 <tr><td>blockShape</td><td>Input</td><td>Q/KV block sizes, as a two-element aclIntArray.</td><td>See Constraints.</td><td>INT64</td><td>-</td><td>[2]</td><td>-</td></tr>
 <tr><td>unionSize</td><td>Input</td><td>Number of queries per group.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
 <tr><td>maskType</td><td>Input</td><td>0: noncausal; 1: bottom-right causal.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
-<tr><td>maxQSeqlen</td><td>Input</td><td>Effective Q upper bound or fixed Q slot width.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
-<tr><td>maxKvSeqlen</td><td>Input</td><td>Reserved maximum; does not supply effective KV lengths.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td>maxQSeqlen</td><td>Input</td><td>Fixed Q length when both Q length tensors are absent; otherwise ignored.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td>maxKvSeqlen</td><td>Input</td><td>Fixed KV length when both KV length tensors are absent; otherwise ignored.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
 <tr><td>layoutSparsePattern</td><td>Input</td><td>Sparse pattern layout.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
 <tr><td>isInputIdxSorted</td><td>Input</td><td>Promises sorted valid prefixes.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
-<tr><td>residualBlockMode</td><td>Input</td><td>Explicit selected-block mode.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
-<tr><td>totalqUnionNum</td><td>Input</td><td>Exact total query-group count G.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
-<tr><td>maxLogicalBlocks</td><td>Input</td><td>Exact maximum logical block count Lmax.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td>residualBlockMode</td><td>Input</td><td>Explicit-only mode (0) or incomplete visible-tail mode (1).</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td>totalqUnionNum</td><td>Input</td><td>Graph group-count hint; ignored by direct ACLNN.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+<tr><td>maxLogicalBlocks</td><td>Input</td><td>Graph capacity hint; ignored by direct ACLNN.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
 <tr><td>unionSparseIdx</td><td>Output</td><td>Sorted union indices, padded with -1.</td><td>See Constraints.</td><td>INT32</td><td>ND</td><td>[H,G,U]</td><td>√</td></tr>
 <tr><td>unionSparseCount</td><td>Output</td><td>Number of union blocks.</td><td>See Constraints.</td><td>INT32</td><td>ND</td><td>[H,G]</td><td>√</td></tr>
-<tr><td>exactMask</td><td>Output</td><td>Token-wise query membership bit mask, padded with 0.</td><td>See Constraints.</td><td>INT32</td><td>ND</td><td>[H,G,U×128]</td><td>√</td></tr>
+<tr><td>exactMask</td><td>Output</td><td>Token-wise query membership bit mask, padded with 0.</td><td>See Constraints.</td><td>INT32</td><td>ND</td><td>[H,G,U×Y]</td><td>√</td></tr>
 <tr><td>workspaceSize</td><td>Output</td><td>Required workspace bytes, returned through uint64_t*.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
 <tr><td>executor</td><td>Output</td><td>Execution plan returned through aclOpExecutor**.</td><td>See Constraints.</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
 </tbody></table>
 
-The four Optional tensor pointers may be nullptr according to the length combinations in Constraints. Output capacity U is derived from K, unionSize and maxLogicalBlocks.
+The four Optional tensor pointers may be nullptr according to the length combinations in Constraints. Direct ACLNN takes G/U from the output tensor shapes.
 
 ### Return Value
 
@@ -191,15 +190,24 @@ Returns ACLNN_SUCCESS on successful submission, otherwise an ACLNN error code.
 
 ## Constraints
 
-- Only blockShape=[1,128], unionSize=8, maskType=0/1, layoutSparsePattern=4, isInputIdxSorted=true and residualBlockMode=0 are supported. blockShape is non-null and contains exactly two values.
+- Only blockShape=[1,Y], Y∈{4,8,16,128}, unionSize=8, maskType=0/1, layoutSparsePattern=4, isInputIdxSorted=true/false and residualBlockMode=0/1 are supported. blockShape is non-null and contains exactly two values.
 - cu prefixes are INT64; all other input/output tensors are INT32 and reside on the same device. The data format is ND. K is positive; dimensions are nonnegative; all byte extents must fit INT64 without overflow.
 - Noncontiguous inputs are made contiguous before computation. Noncontiguous outputs with non-overlapping elements are supported: results are copied back according to the output shape, strides and storage offset. Callers must provide valid strides and sufficient underlying storage.
-- Each sparseBlockIdx row has a nondecreasing valid prefix bounded by sparseBlockCount in [0,K]. Duplicates are allowed. Block IDs are relative to each request's KV sequence. Negative and out-of-domain block IDs are ignored. No implicit block is added.
+- Each sparseBlockIdx row has a valid prefix bounded by sparseBlockCount in [0,K]. The prefix must be nondecreasing when isInputIdxSorted=true; false accepts unsorted input. Both allow duplicates. Block IDs are relative to each request's KV sequence. Negative and out-of-domain block IDs are ignored. Mode 0 retains legal explicit blocks. Mode 1 restores the per-query selection rule: retain explicit blocks fully within the visible range (d < floor(max(V,0)/Y)), add floor(V/Y) when V>0 and V%Y!=0, then merge and deduplicate. Added tails participate in unionSparseIdx, unionSparseCount and exactMask. V is KV-Q+localQuery+1 for maskType=1 and the effective KV length for maskType=0. Complete tails are not automatically added; existing tails are not counted twice.
 - With cuQ, its shape is [B+1], values start at zero and are nondecreasing, and its last value equals T. It supplies storage offsets and capacities. Effective Q prefers seqUsedQ, otherwise adjacent cuQ differences.
-- Without cuQ, seqUsedQ [B] and positive maxQSeqlen are required. maxQSeqlen must not exceed INT32_MAX, T=B×maxQSeqlen, and request b starts at b×maxQSeqlen. Effective Q must lie in [0,maxQSeqlen]. Fixed storage does not require equal effective lengths. For B=0, T=G=0.
-- KV is independent of cuQ presence. Effective KV prefers seqUsedKV [B], otherwise adjacent cuKV differences. cuKV, when present, is INT64 [B+1], starts at zero and is nondecreasing. Without cuKV, nonnegative seqUsedKV is required.
-- seqUsed values cannot exceed their corresponding prefix capacities. Both max attributes must be at least -1. Positive maxQSeqlen also bounds effective Q in prefix mode. maxKvSeqlen neither supplies nor limits effective KV. KV_b need not be greater than or equal to Q_b.
-- totalqUnionNum equals G, maxLogicalBlocks equals Lmax in [1,INT32_MAX], and all three preallocated outputs match the formulas above. Capacity cannot be silently truncated. Output G=0 is supported.
+
+Q and KV select length sources independently: seqUsed takes precedence over adjacent cu differences. If either tensor for a family is present, every int64 value of its max attribute is ignored. Only when both tensors are absent does max specify that family's fixed effective length, and max must be nonnegative.
+
+| cuX | seqUsedX | Effective length | maxX |
+|---|---|---|---|
+| Present | Present | seqUsedX[b], bounded by the cuX difference | Ignored |
+| Present | nullptr | cuX[b+1]−cuX[b] | Ignored |
+| nullptr | Present | seqUsedX[b] | Ignored |
+| nullptr | nullptr | maxX | Nonnegative fixed length |
+
+With cuQ, Q rows use prefix offsets. With only seqUsedQ, B is its length, T must be divisible by B, slot=T/B, request b starts at b×slot, and seqUsedQ[b] must not exceed slot. Without either Q tensor, slot=maxQ, B=ceil(T/slot), request b starts at b×slot, and effectiveQ=min(slot,T-b×slot); the final slot may be partial. KV with only seqUsedKV has no Q-slot bound. Every present length tensor must describe the same B: prefixes have [B+1] elements and used lengths have [B]. When all four tensors are absent, positive maxQ determines B=ceil(T/maxQ), counting a partial final slot as one batch; maxQ=0 requires T=0 and denotes an empty batch. Present KV length tensors may instead establish a nonempty B with maxQ=0 and T=0. B=0 requires T=0 and has no actual groups; explicitly allocated extra groups are empty. Fixed KV requires ceil(maxKV/Y)≤INT32_MAX. KV need not exceed Q. The default max=-1 is legal only when ignored.
+
+- Direct ACLNN ignores both scalar shape hints and uses matching preallocated output shapes with sufficient G/U capacity. G=0 outputs are supported.
 - Callers guarantee valid device length contents and agreement with G/Lmax; ACLNN does not read back device lengths. The public Python wrapper validates CPU length values before transfer.
 - aclnnUnionSparseGen defaults to a deterministic implementation. Only the lower eight query bits are used in this release. Out-of-range tail tokens and padding have zero masks.
 
@@ -315,7 +323,7 @@ int Run(int64_t blockY, bool fixedSlots)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     // Prefix mode and fixed-slot mode have the same effective Q=2 and KV=128.
-    // Without cuQ/cuKV, seqQ/seqKv supply effective lengths; maxQSeqlen=3 is the stored Q slot width.
+    // Without cuQ/cuKV, seqQ/seqKv supply effective lengths; the stored Q slot width is T/B and maxQSeqlen is ignored.
     auto ret = aclnnUnionSparseGenGetWorkspaceSize(
         sparse, count, fixedSlots ? nullptr : qLengths, fixedSlots ? nullptr : kvLengths, seqQ, seqKv, blockShape, 8,
         int64_t{1}, fixedSlots ? 3 : -1, -1, 4, true, 0, 1, 1, unionIdx, unionCount,

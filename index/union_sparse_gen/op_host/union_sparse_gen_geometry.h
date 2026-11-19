@@ -9,109 +9,38 @@
  */
 #ifndef UNION_SPARSE_GEN_GEOMETRY_H
 #define UNION_SPARSE_GEN_GEOMETRY_H
-
-#include "exe_graph/runtime/tensor.h"
-#include "union_sparse_gen_contract.h"
-#include "log/log.h"
+#include <cstdint>
+#include <limits>
 
 namespace UnionSparseGenGeometry {
-namespace Contract = UnionSparseGenContract;
-constexpr const char* kOpName = "UnionSparseGen";
 struct Result {
-    int64_t groups = Contract::kUnspecifiedGeometry;
-    int64_t logical = Contract::kUnspecifiedGeometry;
+    int64_t groups;
+    int64_t capacity;
 };
 
-inline bool Invalid(const char* reason)
+// Shape inference deliberately has no tensor/context argument: only host metadata
+// participates. Length values are consumed by the device kernel, never by inference.
+inline bool Resolve(int64_t totalQ, int64_t topK, int64_t batch, int64_t width, int64_t groups, int64_t capacity,
+                    Result& result, int64_t residual = 0)
 {
-    OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "automatic geometry", reason);
-    return false;
-}
-
-// Shape presence and value availability are different. Never dereference a
-// Device address on Host, or replace a present seqUsed with prefix lengths.
-inline bool Readable(const gert::Tensor* tensor, ge::DataType type, int64_t elements)
-{
-    if (tensor == nullptr || tensor->GetDataType() != type || elements < 0) {
+    const int64_t maximum = std::numeric_limits<int64_t>::max();
+    if (totalQ < 0 || topK <= 0 || batch < 0 || width != 8 || (residual != 0 && residual != 1)) {
         return false;
     }
-    const auto placement = tensor->GetPlacement();
-    const auto elementBytes = type == ge::DT_INT64 ? sizeof(int64_t) : sizeof(int32_t);
-    return (placement == gert::kOnHost || placement == gert::kFollowing) && tensor->GetAddr() != nullptr &&
-           static_cast<uint64_t>(elements) <= tensor->GetSize() / elementBytes;
-}
-
-template <typename Context>
-bool ResolveFamily(const Context* context, int64_t batch, int64_t totalQ, int64_t maxQ, int64_t divisor, bool query,
-                   int64_t& result)
-{
-    const auto prefixIndex = query ? Contract::kCuQInput : Contract::kCuKvInput;
-    const auto usedIndex = query ? Contract::kUsedQInput : Contract::kUsedKvInput;
-    const bool hasPrefix = context->GetOptionalInputShape(prefixIndex) != nullptr;
-    const bool hasUsed = context->GetOptionalInputShape(usedIndex) != nullptr;
-    if (!hasPrefix && !hasUsed) {
-        return Invalid("missing effective length source");
-    }
-    const auto* prefix = hasPrefix ? context->GetOptionalInputTensor(prefixIndex) : nullptr;
-    const auto* used = hasUsed ? context->GetOptionalInputTensor(usedIndex) : nullptr;
-    if ((hasPrefix && !Readable(prefix, ge::DT_INT64, batch + 1)) ||
-        (hasUsed && !Readable(used, ge::DT_INT32, batch))) {
-        result = Contract::kUnspecifiedGeometry;
-        return true; // InferShape may defer; runtime tiling must reject this.
-    }
-    const auto* offsets = hasPrefix ? prefix->template GetData<int64_t>() : nullptr;
-    const auto* lengths = hasUsed ? used->template GetData<int32_t>() : nullptr;
-    if (hasPrefix && (offsets[0] != 0 || (query && offsets[batch] != totalQ))) {
-        return Invalid("prefix must start at zero and Q prefix must cover stored rows");
-    }
-    int64_t accumulated = query ? 0 : 1;
-    for (int64_t b = 0; b < batch; ++b) {
-        if (hasPrefix && (offsets[b] < 0 || offsets[b + 1] < offsets[b])) {
-            return Invalid("prefix lengths must be nonnegative and nondecreasing");
+    if (groups <= 0) {
+        if (batch > (maximum - totalQ) / (width - 1)) {
+            return false;
         }
-        const int64_t storage = hasPrefix ? offsets[b + 1] - offsets[b] : (query ? maxQ : 0);
-        const int64_t effective = hasUsed ? lengths[b] : storage;
-        if (effective < 0 || ((hasPrefix || query) && effective > storage) || (query && maxQ > 0 && effective > maxQ)) {
-            return Invalid("effective lengths must fit their request storage and Q capacity");
-        }
-        const int64_t rounded = effective / divisor + (effective % divisor != 0);
-        if (query) {
-            if (rounded > std::numeric_limits<int64_t>::max() - accumulated) {
-                return Invalid("group sum overflows int64");
-            }
-            accumulated += rounded;
-        } else {
-            accumulated = std::max(accumulated, rounded);
-        }
+        groups = (totalQ + (width - 1) * batch) / width;
     }
-    if (!query && accumulated > std::numeric_limits<int32_t>::max()) {
-        return Invalid("logical block count exceeds INT32_MAX");
+    if (capacity <= 0) {
+        if (topK > maximum / width - residual) {
+            return false;
+        }
+        capacity = (topK + residual) * width;
     }
-    result = accumulated;
+    result = {groups, capacity};
     return true;
-}
-
-template <typename Context>
-bool Resolve(const Context* context, int64_t batch, int64_t totalQ, int64_t maxQ, int64_t width, int64_t blockY,
-             Result& result)
-{
-    if (result.groups < Contract::kUnspecifiedGeometry || result.logical < Contract::kUnspecifiedGeometry ||
-        result.logical == 0 || result.logical > std::numeric_limits<int32_t>::max() || batch < 0 || width <= 0 ||
-        blockY <= 0 || (batch == 0 && (totalQ != 0 || result.groups > 0))) {
-        return Invalid("expected G>=0 or -1, Lmax in [1,INT32_MAX] or -1, and valid batch geometry");
-    }
-    // Explicit geometry never accesses length tensors. No cross-call cache.
-    if (batch == 0) {
-        result.groups = 0;
-        result.logical = result.logical == Contract::kUnspecifiedGeometry ? 1 : result.logical;
-        return true;
-    }
-    if (result.groups == Contract::kUnspecifiedGeometry &&
-        !ResolveFamily(context, batch, totalQ, maxQ, width, true, result.groups)) {
-        return false;
-    }
-    return result.logical != Contract::kUnspecifiedGeometry ||
-           ResolveFamily(context, batch, totalQ, maxQ, blockY, false, result.logical);
 }
 } // namespace UnionSparseGenGeometry
 #endif

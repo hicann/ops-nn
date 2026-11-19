@@ -26,48 +26,53 @@ namespace ge {
  * valid prefix length of each row. Counts are clamped to [0,K].
  * @li cu_sqlen_q: Optional INT64 ND tensor of shape [B+1], specifying Q storage
  * prefixes. Starts at zero, is nondecreasing, and ends at T. B is the request count.
- * Without it, seq_used_q and positive max_q_seqlen are required, with T=B*max_q_seqlen.
+ * Without it, Q uses T/B equal-width slots. If seq_used_q is also absent, max_q_seqlen
+ * gives the slot width, with B=ceil(T/max_q_seqlen); the final slot uses its remaining Q rows.
  * @li cu_sqlen_kv: Optional INT64 ND tensor of shape [B+1], specifying nondecreasing
- * KV storage prefixes starting at zero. Without it, seq_used_kv is required.
- * Q and KV independently select their storage convention by prefix presence.
+ * KV storage prefixes starting at zero. Without it or seq_used_kv, max_kv_seqlen
+ * gives the fixed effective KV length. Q and KV select length sources independently.
  * @li seq_used_q: Optional INT32 ND tensor of shape [B]. Specifies nonnegative
  * effective Q lengths, taking precedence over Q prefix differences. Each effective
- * length must fit its storage interval. If absent, Q prefix differences are used.
+ * length must fit its storage interval. If absent, Q prefix differences or fixed maxQ are used.
  * @li seq_used_kv: Optional INT32 ND tensor of shape [B]. Specifies nonnegative
  * effective KV lengths, taking precedence over KV prefix differences. With KV
- * prefixes, each length must fit its storage interval. If absent, differences are used.
+ * prefixes, each length must fit its storage interval. If absent, differences or fixed maxKV are used.
  *
  * @par Attributes:
  * @li block_shape: Optional ListInt, default [1,128]. Q and KV block granularities;
- * only [1,128] is supported. Let Y=block_shape[1].
+ * supports [1,Y], Y in {4,8,16,128}.
  * @li union_size: Optional int64, default 8. Query rows per group; only 8 is supported.
  * @li mask_type: Optional int64, default 0. Supports 0 (noncausal) and 1 (bottom-right
  * aligned causal). Both preserve query membership and clip tokens to effective KV
  * length. Mode 1 additionally requires p<KV_b-Q_b+qLocal+1 for each query.
- * @li totalq_union_num: Optional int64, default -1. Exact group count
- * G=sum_b ceil(Q_b/union_size). Zero is valid for an empty task; -1 requests automatic
- * inference from effective lengths, whose values must be available to shape inference.
- * @li max_logical_blocks: Optional int64, default -1. Exact maximum logical block
- * count L=max(1,max_b ceil(KV_b/Y)); must be positive when supplied. The default -1
- * requests automatic inference from effective lengths. Output capacity U=min(union_size*K,L).
- * @li max_q_seqlen: Optional int64, default -1; must be at least -1. With Q prefixes,
- * a positive value bounds effective Q length. Without Q prefixes, a positive value
- * is required and defines the equal-width Q storage slots.
- * @li max_kv_seqlen: Optional int64, default -1; must be at least -1. Compatibility
- * attribute; does not replace or bound effective KV lengths.
+ * @li totalq_union_num: Optional int64, default -1. Positive values specify output G;
+ * nonpositive values infer G=floor((T+7*B)/8) from host shape metadata only.
+ * Fixed Q uses B=ceil(T/ceil(max_q_seqlen/block_shape[0])); valid storage must fit.
+ * @li max_logical_blocks: Optional int64, default -1. Positive values specify output
+ * capacity U; nonpositive values infer U=(K+residual)*union_size. This is not a block-ID bound.
+ * G/U must cover the union including residual tails. Extra groups
+ * are empty (idx=-1, count=0, mask=0); insufficient U raises a device error.
+ * Direct ACLNN takes G/U from the caller's output shapes and ignores these hints.
+ * @li max_q_seqlen: Optional int64, default -1. Ignored for every int64 value when
+ * either Q length tensor is present; otherwise a nonnegative fixed Q length.
+ * @li max_kv_seqlen: Optional int64, default -1. Ignored for every int64 value when
+ * either KV length tensor is present; otherwise a nonnegative fixed KV length,
+ * with ceil(max_kv_seqlen/Y)<=INT32_MAX.
  * @li layout_sparse_pattern: Optional int64, default 4. Only layout 4 ([H,T,K]) is supported.
  * @li is_input_idx_sorted: Optional bool, default true. Promises ascending valid
- * input prefixes; only true is supported. Duplicate valid IDs are merged.
- * @li residual_block_mode: Optional int64, default 0. Only explicit-list mode 0 is
- * supported; unselected blocks are not automatically inserted.
+ * input prefixes; false allows unsorted input. Duplicate valid IDs are merged.
+ * @li residual_block_mode: Optional int64, default 0, uses explicit blocks only.
+ * Mode 1 retains explicit blocks below floor(max(V,0)/Y) and inserts floor(V/Y)
+ * when V>0 and V%Y!=0 before union. V=KV-Q+qLocal+1 for mask_type=1 and KV
+ * for mask_type=0. Added tails affect IDs, counts and masks; complete tails are skipped.
  *
  * @par Outputs:
  * @li union_sparse_idx: INT32 ND tensor of shape [H,G,U]. Contains ascending unique
  * valid block IDs for each group, padded with -1. Invalid block IDs are excluded.
  * @li union_sparse_count: INT32 ND tensor of shape [H,G]. Actual union block counts.
  * @li exact_mask: INT32 ND tensor of shape [H,G,U*Y]. Bit i indicates that group-local
- * query i selected the block and can see this KV token. Padding and tokens outside
- * effective KV length are zero. Mask type does not change the block union or count.
+ * query i has explicit/residual membership and can see this KV token. Padding and tokens outside
+ * effective KV length are zero. Duplicate explicit/tail IDs are merged.
  *
  * @par Third-party framework compatibility
  * Custom Ascend operator for sparse attention metadata.

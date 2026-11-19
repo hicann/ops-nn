@@ -31,13 +31,7 @@ UnionSparseGenOutputs UnionSparseGen(const aclTensor* sparseBlockIdx, const aclT
 {
     const int64_t blockY = blockShape->GetData()[Contract::kBlockYAxis];
     status = ACLNN_SUCCESS;
-    int64_t capacity = 0;
-    if (!Contract::Capacity(sparseBlockIdx->GetViewShape().GetDim(Contract::kSparseEntryAxis), unionSize,
-                            maxLogicalBlocks, residualBlockMode, capacity)) {
-        status = ACLNN_ERR_PARAM_INVALID;
-        OP_LOGE(status, "Invalid UnionSparseGen output capacity geometry.");
-        return UnionSparseGenOutputs{nullptr, nullptr, nullptr};
-    }
+    const int64_t capacity = maxLogicalBlocks;
     L0_DFX(UnionSparseGen, sparseBlockIdx, sparseBlockCount, cuSqlenQ, cuSqlenKv, seqUsedQ, seqUsedKv, blockShape,
            unionSize, maskType, totalqUnionNum, maxLogicalBlocks, maxQSeqlen, maxKvSeqlen, layoutSparsePattern,
            isInputIdxSorted, residualBlockMode);

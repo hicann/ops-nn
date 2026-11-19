@@ -12,10 +12,10 @@ from torch.library import impl
 from cann_ops_nn.op_builder import OpBuilder, get_as_library
 
 
-_SUPPORTED_BLOCK_SHAPE = (1, 128)
+_SUPPORTED_BLOCK_Y = (4, 8, 16, 128)
 _SUPPORTED_UNION_SIZE = 8
 _SUPPORTED_LAYOUT = 4
-_EXPLICIT_BLOCK_MODE = 0
+_SUPPORTED_RESIDUAL_MODES = (0, 1)
 _SPARSE_IDX_RANK = 3
 _COUNT_RANK = 2
 _SPARSE_ENTRY_AXIS = 2
@@ -27,7 +27,7 @@ _INT64_MAX = torch.iinfo(torch.int64).max
 def _capacity(k, width, logical, residual):
     torch._check(
         width == _SUPPORTED_UNION_SIZE
-        and residual == _EXPLICIT_BLOCK_MODE
+        and residual in _SUPPORTED_RESIDUAL_MODES
         and 0 < k <= _INT64_MAX // width - residual
         and 0 < logical <= _INT32_MAX,
         lambda: "invalid width, residual mode, input capacity, or logical block bound",
@@ -85,20 +85,18 @@ class UnionSparseGenOpBuilder(OpBuilder):
             _check_geometry(totalq_union_num, max_logical_blocks)
             torch._check(
                 isinstance(block_shape, (list, tuple))
-                and tuple(block_shape) == _SUPPORTED_BLOCK_SHAPE
+                and len(block_shape) == 2
+                and block_shape[0] == 1
+                and block_shape[1] in _SUPPORTED_BLOCK_Y
                 and union_size == _SUPPORTED_UNION_SIZE
                 and mask_type in (0, 1)
-                and is_input_idx_sorted
-                and residual_block_mode == _EXPLICIT_BLOCK_MODE,
+                and isinstance(is_input_idx_sorted, bool)
+                and residual_block_mode in _SUPPORTED_RESIDUAL_MODES,
                 lambda: "unsupported block/mask_type attributes",
             )
             torch._check(
                 layout_sparse_pattern == _SUPPORTED_LAYOUT,
                 lambda: "unsupported layout",
-            )
-            torch._check(
-                cu_sqlen_kv is not None or seq_used_kv is not None,
-                lambda: "KV lengths required",
             )
             torch._check(
                 sparse_block_idx.dim() == _SPARSE_IDX_RANK,
@@ -115,50 +113,20 @@ class UnionSparseGenOpBuilder(OpBuilder):
                 and sparse_block_count.dtype == torch.int32,
                 lambda: "sparse tensors must be int32 [H,T,K] and [H,T], with H > 0",
             )
-            torch._check(
-                max_q_seqlen >= -1 and max_kv_seqlen >= -1,
-                lambda: "max sequence lengths must be -1 or nonnegative",
+            batch = _length_batch(
+                sparse_block_idx.shape[1],
+                cu_sqlen_q,
+                cu_sqlen_kv,
+                seq_used_q,
+                seq_used_kv,
+                max_q_seqlen,
+                max_kv_seqlen,
             )
-            if cu_sqlen_q is None:
+            if cu_sqlen_kv is None and seq_used_kv is None:
                 torch._check(
-                    0 < max_q_seqlen <= _INT32_MAX,
-                    lambda: "fixed Q requires positive max_q_seqlen",
+                    max_kv_seqlen <= _INT32_MAX * block_shape[1],
+                    lambda: "fixed KV logical block count exceeds INT32_MAX",
                 )
-                torch._check(
-                    seq_used_q is not None,
-                    lambda: "fixed Q slots require seq_used_q",
-                )
-                torch._check(
-                    seq_used_q.dim() == 1 and seq_used_q.dtype == torch.int32,
-                    lambda: "seq_used_q must be int32 [B]",
-                )
-                batch = seq_used_q.numel()
-                torch._check(
-                    sparse_block_idx.shape[1] == 0
-                    if batch == 0
-                    else sparse_block_idx.shape[1] == batch * max_q_seqlen,
-                    lambda: "fixed Q requires T=B*max_q_seqlen (T=0 when B=0)",
-                )
-            else:
-                torch._check(
-                    cu_sqlen_q.dim() == 1
-                    and cu_sqlen_q.numel() >= 1
-                    and cu_sqlen_q.dtype == torch.int64,
-                    lambda: "cu_sqlen_q must be int64 [B+1]",
-                )
-                batch = cu_sqlen_q.numel() - 1
-            for length, size, dtype in (
-                (cu_sqlen_kv, batch + 1, torch.int64),
-                (seq_used_q, batch, torch.int32),
-                (seq_used_kv, batch, torch.int32),
-            ):
-                if length is not None:
-                    torch._check(
-                        length.dim() == 1
-                        and length.numel() == size
-                        and length.dtype == dtype,
-                        lambda: "length tensors must have matching batch geometry and prefix/used dtype",
-                    )
             torch._check(
                 batch != 0 or totalq_union_num == 0, lambda: "B=0 requires G=0"
             )
@@ -222,13 +190,15 @@ def union_sparse_gen_launch(
     )
     torch._check(
         isinstance(block_shape, (list, tuple))
-        and tuple(block_shape) == _SUPPORTED_BLOCK_SHAPE
+        and len(block_shape) == 2
+        and block_shape[0] == 1
+        and block_shape[1] in _SUPPORTED_BLOCK_Y
         and union_size == _SUPPORTED_UNION_SIZE
         and mask_type in (0, 1)
         and layout_sparse_pattern == _SUPPORTED_LAYOUT
-        and is_input_idx_sorted
-        and residual_block_mode == _EXPLICIT_BLOCK_MODE,
-        lambda: "supported spec: block_shape=[1,128]/W8/mask0/1/layout4/sorted=true/residual0",
+        and isinstance(is_input_idx_sorted, bool)
+        and residual_block_mode in _SUPPORTED_RESIDUAL_MODES,
+        lambda: "supported spec: block_shape=[1,Y],Y=4/8/16/128/W8/mask0/1/layout4/sorted=true/false/residual0/1",
     )
     return union_sparse_gen_builder.load().union_sparse_gen_launch(
         sparse_block_idx,
@@ -273,57 +243,97 @@ def _cpu_lengths(name: str, tensor: torch.Tensor) -> list[int]:
     return values
 
 
+def _length_batch(
+    total_q, cu_q, cu_kv, used_q, used_kv, max_q, max_kv, strict_types=True
+):
+    fixed_q = cu_q is None and used_q is None
+    fixed_kv = cu_kv is None and used_kv is None
+    torch._check(
+        not fixed_q or max_q >= 0, lambda: "fixed Q requires max_q_seqlen >= 0"
+    )
+    torch._check(
+        not fixed_kv or max_kv >= 0, lambda: "fixed KV requires max_kv_seqlen >= 0"
+    )
+    batch = None
+    for value, prefix in (
+        (cu_q, True),
+        (used_q, False),
+        (cu_kv, True),
+        (used_kv, False),
+    ):
+        if value is None:
+            continue
+        size = value.numel() - int(prefix)
+        torch._check(
+            value.dim() == 1
+            and size >= 0
+            and (
+                not strict_types
+                or value.dtype == (torch.int64 if prefix else torch.int32)
+            ),
+            lambda: "length tensors require int64 [B+1] prefixes or int32 [B] used lengths",
+        )
+        if batch is not None:
+            torch._check(size == batch, lambda: "length tensors must agree on batch")
+        batch = size
+    if fixed_q:
+        if max_q == 0:
+            torch._check(total_q == 0, lambda: "zero fixed Q requires T=0")
+            return 0 if batch is None else batch
+        fixed_batch = total_q // max_q + int(total_q % max_q != 0)
+        torch._check(
+            batch is None or batch == fixed_batch,
+            lambda: "KV length tensors must match ceil(T/maxQ) fixed Q batches",
+        )
+        return fixed_batch
+    if batch == 0:
+        torch._check(total_q == 0, lambda: "B=0 requires T=0")
+    elif cu_q is None:
+        torch._check(total_q % batch == 0, lambda: "Q slots require T divisible by B")
+    return batch
+
+
 def _cpu_geometry_lengths(total_q, cu_q, cu_kv, used_q, used_kv, max_q=-1, max_kv=-1):
-    if max_q < -1 or max_kv < -1:
-        torch._check(False, lambda: "max sequence lengths must be -1 or nonnegative")
-    if cu_q is None:
-        if used_q is None:
-            torch._check(False, lambda: "fixed Q slots require seq_used_q")
-        if not 0 < max_q <= _INT32_MAX:
-            torch._check(False, lambda: "fixed Q slots require positive max_q_seqlen")
-        q_lens = _cpu_lengths("seq_used_q", used_q)
-        batch = len(q_lens)
-        if total_q != batch * max_q:
-            torch._check(False, lambda: "fixed Q storage must equal B * max_q_seqlen")
-        if any(n < 0 or n > max_q for n in q_lens):
-            torch._check(False, lambda: "seq_used_q must fit fixed Q capacity")
-        q_offsets = [b * max_q for b in range(batch + 1)]
-    else:
-        q_offsets = _cpu_lengths("cu_sqlen_q", cu_q)
-        if not q_offsets or q_offsets[0] != 0 or q_offsets[-1] != total_q:
-            torch._check(False, lambda: "cu_sqlen_q must start at 0 and cover T")
-        q_capacity = [b - a for a, b in zip(q_offsets, q_offsets[1:])]
-        if any(n < 0 for n in q_capacity):
-            torch._check(False, lambda: "Q prefix must be nondecreasing")
-        batch = len(q_capacity)
-        q_lens = q_capacity if used_q is None else _cpu_lengths("seq_used_q", used_q)
-        if len(q_lens) != batch or any(
-            n < 0 or n > c for n, c in zip(q_lens, q_capacity)
-        ):
-            torch._check(False, lambda: "seq_used_q must fit cu_sqlen_q storage")
-    if max_q > 0 and any(n > max_q for n in q_lens):
-        torch._check(False, lambda: "effective Q exceeds max_q_seqlen")
-    if cu_kv is None:
-        if used_kv is None:
-            torch._check(False, lambda: "seq_used_kv is required without cu_sqlen_kv")
-        kv_lens = _cpu_lengths("seq_used_kv", used_kv)
-        if len(kv_lens) != batch or any(n < 0 for n in kv_lens):
+    batch = _length_batch(
+        total_q, cu_q, cu_kv, used_q, used_kv, max_q, max_kv, strict_types=False
+    )
+    result = []
+    for prefix, used, maximum, query in (
+        (cu_q, used_q, max_q, True),
+        (cu_kv, used_kv, max_kv, False),
+    ):
+        if prefix is not None:
+            offsets = _cpu_lengths("cu_sqlen_q" if query else "cu_sqlen_kv", prefix)
             torch._check(
-                False, lambda: "seq_used_kv must match batch with nonnegative lengths"
+                offsets[0] == 0 and (not query or offsets[-1] == total_q),
+                lambda: "prefix must start at zero and Q prefix must cover T",
             )
-    else:
-        kv_offsets = _cpu_lengths("cu_sqlen_kv", cu_kv)
-        if len(kv_offsets) != batch + 1 or kv_offsets[0] != 0:
-            torch._check(False, lambda: "KV prefix must start at 0 and match Q batch")
-        capacity = [b - a for a, b in zip(kv_offsets, kv_offsets[1:])]
-        if any(n < 0 for n in capacity):
-            torch._check(False, lambda: "KV prefix must be nondecreasing")
-        kv_lens = capacity if used_kv is None else _cpu_lengths("seq_used_kv", used_kv)
-        if len(kv_lens) != batch or any(
-            n < 0 or n > c for n, c in zip(kv_lens, capacity)
-        ):
-            torch._check(False, lambda: "seq_used_kv must fit cu_sqlen_kv storage")
-    return q_lens, kv_lens, batch
+            capacity = [b - a for a, b in zip(offsets, offsets[1:])]
+            torch._check(
+                all(n >= 0 for n in capacity), lambda: "prefix must be nondecreasing"
+            )
+        elif query and used is None:
+            capacity = [min(max_q, total_q - b * max_q) for b in range(batch)]
+        else:
+            capacity = [total_q // batch if batch else 0] * batch if query else None
+        lengths = (
+            _cpu_lengths("seq_used_q" if query else "seq_used_kv", used)
+            if used is not None
+            else capacity
+            if prefix is not None or query
+            else [maximum] * batch
+        )
+        torch._check(
+            all(n >= 0 for n in lengths),
+            lambda: "effective lengths must be nonnegative",
+        )
+        if capacity is not None:
+            torch._check(
+                all(n <= c for n, c in zip(lengths, capacity)),
+                lambda: "effective lengths must fit request storage",
+            )
+        result.append(lengths)
+    return result[0], result[1], batch
 
 
 def union_sparse_gen(
@@ -373,12 +383,14 @@ def union_sparse_gen(
     # eager-call overhead for short kernels. Fake/host validation stays independent.
     torch._check(
         isinstance(block_shape, (list, tuple))
-        and tuple(block_shape) == _SUPPORTED_BLOCK_SHAPE
+        and len(block_shape) == 2
+        and block_shape[0] == 1
+        and block_shape[1] in _SUPPORTED_BLOCK_Y
         and union_size == _SUPPORTED_UNION_SIZE
         and mask_type in (0, 1)
-        and is_input_idx_sorted
+        and isinstance(is_input_idx_sorted, bool)
         and layout_sparse_pattern == _SUPPORTED_LAYOUT
-        and residual_block_mode == _EXPLICIT_BLOCK_MODE,
+        and residual_block_mode in _SUPPORTED_RESIDUAL_MODES,
         lambda: (
             f"unsupported attributes: block_shape={block_shape}, union_size={union_size}, "
             f"mask_type={mask_type}, layout_sparse_pattern={layout_sparse_pattern}, "
@@ -394,6 +406,11 @@ def union_sparse_gen(
         max_q_seqlen,
         max_kv_seqlen,
     )
+    if cu_sqlen_kv is None and seq_used_kv is None:
+        torch._check(
+            max_kv_seqlen <= _INT32_MAX * block_shape[1],
+            lambda: "fixed KV logical block count exceeds INT32_MAX",
+        )
     num_groups = sum((length + union_size - 1) // union_size for length in q_lens)
     max_logical_blocks = max(
         1,

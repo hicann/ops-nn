@@ -12,7 +12,8 @@ __simt_callee__ __aicore__ inline void LoadExtendedGroup(__ubuf__ UnionSparseGen
                                                          __gm__ int64_t* cuQ, __gm__ int64_t* cuKv,
                                                          __gm__ int32_t* usedQ, __gm__ int32_t* usedKv, int64_t work,
                                                          int64_t groups, int64_t batch, int64_t totalQ, int64_t topK,
-                                                         int64_t capacity, int64_t width, int64_t y, bool residual)
+                                                         int64_t capacity, int64_t width, int64_t y,
+                                                         int64_t fixedKvSeqlen, int64_t qSlotSize, bool residual)
 {
     const int32_t tid = threadIdx.x;
     auto* stateWords = reinterpret_cast<__ubuf__ uint32_t*>(s);
@@ -25,8 +26,10 @@ __simt_callee__ __aicore__ inline void LoadExtendedGroup(__ubuf__ UnionSparseGen
         s->outputBase = work * capacity;
         int64_t group = work % groups;
         for (int64_t b = 0; b < batch; ++b) {
-            const int64_t start = cuQ != nullptr ? cuQ[b] : b * (totalQ / batch);
-            const int64_t length = usedQ != nullptr ? usedQ[b] : int64_t(cuQ[b + 1]) - start;
+            const int64_t start = cuQ != nullptr ? cuQ[b] : b * qSlotSize;
+            const int64_t remaining = totalQ - start;
+            const int64_t capacityQ = qSlotSize < remaining ? qSlotSize : remaining;
+            const int64_t length = usedQ != nullptr ? usedQ[b] : (cuQ != nullptr ? cuQ[b + 1] - start : capacityQ);
             const int64_t n = (length + width - 1) / width;
             if (group >= n) {
                 group -= n;
@@ -35,7 +38,7 @@ __simt_callee__ __aicore__ inline void LoadExtendedGroup(__ubuf__ UnionSparseGen
             s->local = group * width;
             s->qStart = start + s->local;
             s->qLen = length;
-            s->kvLen = usedKv != nullptr ? usedKv[b] : int64_t(cuKv[b + 1]) - cuKv[b];
+            s->kvLen = usedKv != nullptr ? usedKv[b] : (cuKv != nullptr ? cuKv[b + 1] - cuKv[b] : fixedKvSeqlen);
             s->logical = (s->kvLen + y - 1) / y;
             s->rows = length - s->local < width ? length - s->local : width;
             for (int32_t r = 0; r < s->rows; ++r) {
@@ -71,8 +74,12 @@ template <typename OffsetT, bool Causal>
 __simt_callee__ __aicore__ inline void WriteExtendedPairs(__ubuf__ UnionSparseGenA5GroupState* s,
                                                           __ubuf__ uint32_t* ids, __ubuf__ uint32_t* bits,
                                                           __gm__ int32_t* idx, __gm__ int32_t* mask, OffsetT count,
-                                                          OffsetT rankOffset, OffsetT y)
+                                                          OffsetT rankOffset, OffsetT y, OffsetT capacity)
 {
+    if (count > capacity - rankOffset) {
+        __asc_simt_vf::__trap();
+        return;
+    }
     // Count is block-uniform. Keep a single completion barrier at the
     // common exit; empty groups do not read state or compact buffers.
     if (count != 0) {
@@ -122,14 +129,14 @@ __simt_callee__ __aicore__ inline bool WriteOnlyVirtualTails(__ubuf__ UnionSpars
                                                              __ubuf__ uint32_t* ids, __ubuf__ uint32_t* bits,
                                                              __gm__ int32_t* idx, __gm__ int32_t* count,
                                                              __gm__ int32_t* mask, OffsetT work, OffsetT y,
-                                                             bool residual)
+                                                             bool residual, OffsetT capacity)
 {
     if (s->inputCount != 0) {
         return false; // uniform CTA decision
     }
     if (threadIdx.x == 0 && residual) {
         for (int32_t r = 0; r < s->rows; ++r) {
-            const int64_t visible = s->kvLen - s->qLen + s->local + r + 1;
+            const int64_t visible = Causal ? s->kvLen - s->qLen + s->local + r + 1 : s->kvLen;
             if (visible <= 0 || visible % y == 0) {
                 continue;
             }
@@ -144,7 +151,7 @@ __simt_callee__ __aicore__ inline bool WriteOnlyVirtualTails(__ubuf__ UnionSpars
         }
     }
     asc_syncthreads();
-    WriteExtendedPairs<OffsetT, Causal>(s, ids, bits, idx, mask, OffsetT(s->rank), OffsetT(0), y);
+    WriteExtendedPairs<OffsetT, Causal>(s, ids, bits, idx, mask, OffsetT(s->rank), OffsetT(0), y, capacity);
     if (threadIdx.x == 0) {
         count[work] = int32_t(s->rank);
     }
@@ -152,13 +159,14 @@ __simt_callee__ __aicore__ inline bool WriteOnlyVirtualTails(__ubuf__ UnionSpars
     return true;
 }
 
+template <bool Causal>
 __simt_callee__ __aicore__ inline bool ExtendedBlockValid(__ubuf__ UnionSparseGenA5GroupState* s, int32_t row,
                                                           int32_t block, int32_t yShift, bool residual)
 {
     if (block < 0 || int64_t(block) >= s->logical) {
         return false;
     }
-    const int64_t visible = s->kvLen - s->qLen + s->local + row + 1;
+    const int64_t visible = Causal ? s->kvLen - s->qLen + s->local + row + 1 : s->kvLen;
     return !residual || (visible > 0 && int64_t(block) < (visible >> yShift));
 }
 
@@ -195,12 +203,13 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void PrepareRadixMem
     __gm__ int32_t* input, __gm__ int32_t* counts, __gm__ int64_t* cuQ, __gm__ int64_t* cuKv, __gm__ int32_t* usedQ,
     __gm__ int32_t* usedKv, __gm__ int32_t* idx, __gm__ int32_t* count, __gm__ int32_t* mask, __ubuf__ uint32_t* keys,
     __ubuf__ uint32_t* bits, __ubuf__ UnionSparseGenA5GroupState* s, OffsetT work, OffsetT groups, OffsetT batch,
-    OffsetT totalQ, OffsetT topK, OffsetT capacity, OffsetT width, OffsetT y, OffsetT allocated, bool residual)
+    OffsetT totalQ, OffsetT topK, OffsetT capacity, OffsetT width, OffsetT y, OffsetT allocated, OffsetT fixedKvSeqlen,
+    OffsetT qSlotSize, bool residual)
 {
     LoadExtendedGroup(s, counts, cuQ, cuKv, usedQ, usedKv, work, groups, batch, totalQ, topK, capacity, width, y,
-                      residual);
+                      fixedKvSeqlen, qSlotSize, residual);
     ClearExtendedOutput(s, idx, mask, capacity, y);
-    if (WriteOnlyVirtualTails<OffsetT, Causal>(s, keys, bits, idx, count, mask, work, y, residual)) {
+    if (WriteOnlyVirtualTails<OffsetT, Causal>(s, keys, bits, idx, count, mask, work, y, residual, capacity)) {
         return;
     }
     const int32_t tid = threadIdx.x;
@@ -210,12 +219,12 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void PrepareRadixMem
         const int64_t start = s->starts[row];
         for (int64_t col = tid; col < s->counts[row]; col += kThreadNum) {
             const int32_t block = input[(s->head * totalQ + s->qStart + row) * topK + col];
-            const bool valid = ExtendedBlockValid(s, row, block, yShift, residual);
+            const bool valid = ExtendedBlockValid<Causal>(s, row, block, yShift, residual);
             keys[start + col] = valid ? uint32_t(block) : Plan::kInvalidSortKey;
             bits[start + col] = valid ? 1U << uint32_t(row) : 0U;
         }
         if (residual && tid == 0) {
-            const int64_t visible = s->kvLen - s->qLen + s->local + row + 1;
+            const int64_t visible = Causal ? s->kvLen - s->qLen + s->local + row + 1 : s->kvLen;
             const bool tail = visible > 0 && (visible & (y - 1)) != 0;
             keys[start + s->counts[row]] = tail ? uint32_t(visible >> yShift) : Plan::kInvalidSortKey;
             bits[start + s->counts[row]] = tail ? 1U << uint32_t(row) : 0U;
@@ -235,7 +244,7 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void CompactRadixMem
     __gm__ int32_t* mask, OffsetT work, OffsetT capacity, OffsetT y)
 {
     const int32_t tid = threadIdx.x;
-    for (OffsetT i = tid; i < capacity; i += kThreadNum) {
+    for (OffsetT i = tid; i < s->recordCount; i += kThreadNum) {
         compactBits[i] = 0U;
     }
     asc_syncthreads();
@@ -261,7 +270,7 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void CompactRadixMem
         count[work] = int32_t(rankBase);
     }
     asc_syncthreads();
-    WriteExtendedPairs<OffsetT, Causal>(s, compactKeys, compactBits, idx, mask, rankBase, OffsetT(0), y);
+    WriteExtendedPairs<OffsetT, Causal>(s, compactKeys, compactBits, idx, mask, rankBase, OffsetT(0), y, capacity);
 }
 
 template <typename OffsetT>
@@ -277,7 +286,7 @@ __simt_callee__ __aicore__ inline void ClearPackedChunk(__ubuf__ uint32_t* table
     }
 }
 
-template <typename OffsetT>
+template <typename OffsetT, bool Causal>
 __simt_callee__ __aicore__ inline void AccumulatePackedChunk(__ubuf__ UnionSparseGenA5GroupState* s,
                                                              __gm__ int32_t* input, __ubuf__ uint32_t* table,
                                                              __ubuf__ uint32_t* presence, OffsetT base, OffsetT length,
@@ -289,7 +298,8 @@ __simt_callee__ __aicore__ inline void AccumulatePackedChunk(__ubuf__ UnionSpars
     for (int32_t row = 0; row < s->rows; ++row) {
         for (int64_t col = tid; col < s->counts[row]; col += kThreadNum) {
             const int32_t block = input[(s->head * totalQ + s->qStart + row) * topK + col];
-            if (!ExtendedBlockValid(s, row, block, yShift, residual) || block < base || block >= base + length) {
+            if (!ExtendedBlockValid<Causal>(s, row, block, yShift, residual) || block < base ||
+                block >= base + length) {
                 continue;
             }
             const OffsetT local = OffsetT(block) - base;
@@ -297,7 +307,7 @@ __simt_callee__ __aicore__ inline void AccumulatePackedChunk(__ubuf__ UnionSpars
             asc_atomic_or(presence + local / Plan::kBitsPerWord, 1U << uint32_t(local % Plan::kBitsPerWord));
         }
         if (residual && tid == 0) {
-            const int64_t visible = s->kvLen - s->qLen + s->local + row + 1;
+            const int64_t visible = Causal ? s->kvLen - s->qLen + s->local + row + 1 : s->kvLen;
             const int64_t block = visible >> yShift;
             if (visible > 0 && (visible & (y - 1)) != 0 && block >= base && block < base + length) {
                 const OffsetT local = OffsetT(block) - base;
@@ -343,7 +353,7 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void PackedMembershi
     __ubuf__ uint32_t* presence, __ubuf__ uint32_t* compactKeys, __ubuf__ uint32_t* compactBits,
     __ubuf__ UnionSparseGenA5GroupState* s, OffsetT startWork, OffsetT workCount, OffsetT groups, OffsetT batch,
     OffsetT totalQ, OffsetT topK, OffsetT capacity, OffsetT width, OffsetT y, OffsetT chunkCapacity,
-    OffsetT compactCapacity, bool residual)
+    OffsetT compactCapacity, OffsetT fixedKvSeqlen, OffsetT qSlotSize, bool residual)
 {
     // All supported block/group widths are powers of two. Keep per-entry
     // filtering and packed-table addressing free of runtime integer division.
@@ -358,9 +368,10 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void PackedMembershi
                                                kThreadNum);
     for (OffsetT work = startWork; work < startWork + workCount; ++work) {
         LoadExtendedGroup(s, counts, cuQ, cuKv, usedQ, usedKv, work, groups, batch, totalQ, topK, capacity, width, y,
-                          residual);
+                          fixedKvSeqlen, qSlotSize, residual);
         ClearExtendedOutput(s, idx, mask, capacity, y);
-        if (WriteOnlyVirtualTails<OffsetT, Causal>(s, compactKeys, compactBits, idx, count, mask, work, y, residual)) {
+        if (WriteOnlyVirtualTails<OffsetT, Causal>(s, compactKeys, compactBits, idx, count, mask, work, y, residual,
+                                                   capacity)) {
             continue;
         }
         OffsetT rankBase = 0;
@@ -370,8 +381,8 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void PackedMembershi
                           bitmapWords = (length + Plan::kBitsPerWord - 1) / Plan::kBitsPerWord;
             ClearPackedChunk(table, presence, tableWords, bitmapWords);
             asc_syncthreads();
-            AccumulatePackedChunk(s, input, table, presence, base, length, totalQ, topK, y, groupShift, packShift, pack,
-                                  yShift, residual);
+            AccumulatePackedChunk<OffsetT, Causal>(s, input, table, presence, base, length, totalQ, topK, y, groupShift,
+                                                   packShift, pack, yShift, residual);
             asc_syncthreads();
             for (OffsetT slab = 0; slab < bitmapWords; slab += slabWords) {
                 const OffsetT kept = CompactPackedSlab(s, table, presence, compactKeys, compactBits, base, slab,
@@ -379,7 +390,8 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void PackedMembershi
                                                        memberMask, retainAll);
                 asc_syncthreads();
                 if (!retainAll) {
-                    WriteExtendedPairs<OffsetT, Causal>(s, compactKeys, compactBits, idx, mask, kept, rankBase, y);
+                    WriteExtendedPairs<OffsetT, Causal>(s, compactKeys, compactBits, idx, mask, kept, rankBase, y,
+                                                        capacity);
                 }
                 // The barrier above protects prefix reads and compaction.
                 // Streaming writes have their own completion barrier in the writer.
@@ -393,7 +405,8 @@ __simt_vf__ __aicore__ __launch_bounds__(kThreadNum) inline void PackedMembershi
         }
         asc_syncthreads();
         if (retainAll) {
-            WriteExtendedPairs<OffsetT, Causal>(s, compactKeys, compactBits, idx, mask, rankBase, OffsetT(0), y);
+            WriteExtendedPairs<OffsetT, Causal>(s, compactKeys, compactBits, idx, mask, rankBase, OffsetT(0), y,
+                                                capacity);
         }
     }
 }

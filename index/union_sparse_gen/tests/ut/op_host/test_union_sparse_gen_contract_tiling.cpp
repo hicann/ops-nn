@@ -18,14 +18,14 @@ using namespace UnionSparseGenContract;
 TEST(UnionSparseGenContract, PrefixAndFixedBatchGeometry)
 {
     int64_t batch = -1;
-    EXPECT_TRUE(BatchSize(32, 3, -1, batch));
+    EXPECT_TRUE(LengthGeometry(32, 3, -1, -1, -1, -1, 5, batch));
     EXPECT_EQ(batch, 2);
-    EXPECT_TRUE(BatchSize(32, -1, 2, batch));
+    EXPECT_TRUE(LengthGeometry(32, -1, 2, -1, -1, -1, 5, batch));
     EXPECT_EQ(batch, 2);
-    EXPECT_TRUE(BatchSize(0, -1, 0, batch));
-    EXPECT_FALSE(BatchSize(32, -1, 0, batch));
-    EXPECT_FALSE(BatchSize(31, -1, 2, batch));
-    EXPECT_FALSE(BatchSize(32, -1, -1, batch));
+    EXPECT_TRUE(LengthGeometry(0, -1, 0, -1, -1, -1, 5, batch));
+    EXPECT_FALSE(LengthGeometry(32, -1, 0, -1, -1, -1, 5, batch));
+    EXPECT_FALSE(LengthGeometry(31, -1, 2, -1, -1, -1, 5, batch));
+    EXPECT_FALSE(LengthGeometry(32, -1, -1, -1, -1, -1, 5, batch));
     EXPECT_TRUE(SupportsMask(1));
     EXPECT_TRUE(SupportsMask(0));
     const int64_t shape[] = {1, 128};
@@ -35,8 +35,8 @@ TEST(UnionSparseGenContract, PrefixAndFixedBatchGeometry)
     EXPECT_FALSE(SupportsBlockShape(shape, 3));
     EXPECT_FALSE(SupportsMask(2));
     EXPECT_TRUE(SupportsSpec(1, 128, 8, 1, 4, true, 0));
-    EXPECT_FALSE(SupportsSpec(1, 8, 8, 1, 4, true, 0));
-    EXPECT_FALSE(SupportsSpec(1, 128, 8, 1, 4, false, 0));
+    EXPECT_TRUE(SupportsSpec(1, 8, 8, 1, 4, true, 0));
+    EXPECT_TRUE(SupportsSpec(1, 128, 8, 1, 4, false, 0));
     EXPECT_TRUE(Attributes(4));
     EXPECT_FALSE(Attributes(0));
 }
@@ -63,23 +63,23 @@ TEST(UnionSparseGenContract, MetadataBudgetIncludesOnlyConsumedWindows)
 TEST(UnionSparseGenContract, LengthModesAndMaxima)
 {
     int64_t batch = -1;
-    EXPECT_TRUE(LengthGeometry(32, 3, 2, -1, -1, batch));
+    EXPECT_TRUE(LengthGeometry(32, 3, 2, -1, 2, -1, -1, batch));
     EXPECT_EQ(batch, 2);
-    EXPECT_TRUE(LengthGeometry(32, -1, 2, 16, -1, batch));
-    EXPECT_FALSE(LengthGeometry(32, -1, 2, -1, -1, batch));
-    EXPECT_FALSE(LengthGeometry(32, -1, 2, 0, -1, batch));
-    EXPECT_FALSE(LengthGeometry(32, -1, 2, 8, -1, batch));
-    EXPECT_FALSE(LengthGeometry(32, 3, 2, -2, -1, batch));
-    EXPECT_FALSE(LengthGeometry(32, 3, 2, -1, -2, batch));
-    EXPECT_TRUE(LengthGeometry(0, -1, 0, 1, -1, batch));
+    EXPECT_TRUE(LengthGeometry(32, -1, 2, -1, 2, 16, -1, batch));
+    EXPECT_TRUE(LengthGeometry(32, -1, 2, -1, 2, -1, -1, batch));
+    EXPECT_TRUE(LengthGeometry(32, -1, 2, -1, 2, 0, -1, batch));
+    EXPECT_TRUE(LengthGeometry(32, -1, 2, -1, 2, 8, -1, batch));
+    EXPECT_TRUE(LengthGeometry(32, 3, 2, -1, 2, -2, -1, batch));
+    EXPECT_TRUE(LengthGeometry(32, 3, 2, -1, 2, -1, -2, batch));
+    EXPECT_TRUE(LengthGeometry(0, -1, 0, -1, 0, 1, -1, batch));
 }
 
-TEST(UnionSparseGenContract, DeliveryCapacityRejectsVirtualTail)
+TEST(UnionSparseGenContract, CapacityIncludesVirtualTail)
 {
     int64_t capacity = 0;
     ASSERT_TRUE(Capacity(16, 8, 1024, 0, capacity));
     EXPECT_EQ(capacity, 128);
-    EXPECT_FALSE(Capacity(16, 8, 1024, 1, capacity));
+    EXPECT_TRUE(Capacity(16, 8, 1024, 1, capacity));
     ASSERT_TRUE(Capacity(512, 8, 33, 0, capacity));
     EXPECT_EQ(capacity, 33);
 }

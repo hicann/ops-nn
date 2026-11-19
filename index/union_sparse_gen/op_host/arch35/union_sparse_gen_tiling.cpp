@@ -54,19 +54,16 @@ ge::graphStatus InitializeSemantic(gert::TilingContext* context, const TilingSpe
 {
     const auto* attrs = context->GetAttrs();
     const auto* sparseShape = context->GetInputShape(Contract::kSparseIdxInput);
-    const auto* qShape = context->GetOptionalInputShape(Contract::kCuQInput);
     const int64_t heads = sparseShape->GetStorageShape().GetDim(Contract::kHeadAxis);
     const int64_t totalQ = sparseShape->GetStorageShape().GetDim(Contract::kQueryAxis);
     const int64_t topK = sparseShape->GetStorageShape().GetDim(Contract::kSparseEntryAxis);
-    const int64_t batch = qShape ? qShape->GetStorageShape().GetDim(Contract::kLengthAxis) - 1 :
-                                   context->GetOptionalInputShape(Contract::kUsedQInput)
-                                       ->GetStorageShape()
-                                       .GetDim(Contract::kLengthAxis);
+    int64_t batch = 0;
+    if (UnionSparseGenTilingValidation::CheckInputGeometry(
+            context, attrs->GetInt(Contract::kMaxQ), attrs->GetInt(Contract::kMaxKv), batch) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     const int64_t totalWork = heads * spec.groups;
     const int64_t usedCore = std::max<int64_t>(1, std::min(coreNum, totalWork));
-    const bool useInt32 = ProductFitsInt32({heads, totalQ, topK}) &&
-                          ProductFitsInt32({heads, spec.groups, spec.capacity, spec.blockY}) &&
-                          ProductFitsInt32({spec.logicalBlocks, spec.blockY});
 
     payload = context->GetTilingData<UnionSparseGenA5TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, payload);
@@ -79,6 +76,15 @@ ge::graphStatus InitializeSemantic(gert::TilingContext* context, const TilingSpe
     const auto* residualAttr = attrs->GetAttrPointer<int64_t>(Contract::kResidual);
     OP_CHECK_NULL_WITH_CONTEXT(context, sortedAttr);
     OP_CHECK_NULL_WITH_CONTEXT(context, residualAttr);
+    // Sorted, non-residual kernels resolve variable KV lengths on the device.
+    // An unknown host-side logical domain must not disable their INT32 path.
+    const bool runtimeGeometry = *sortedAttr && *residualAttr == 0 &&
+                                 (context->GetOptionalInputDesc(Contract::kCuKvInput) != nullptr ||
+                                  context->GetOptionalInputDesc(Contract::kUsedKvInput) != nullptr);
+    const bool useInt32 = totalQ <= std::numeric_limits<int32_t>::max() - Plan::kMaxGroupWidth &&
+                          ProductFitsInt32({heads, totalQ}) && ProductFitsInt32({heads, totalQ, topK}) &&
+                          ProductFitsInt32({heads, spec.groups, spec.capacity, spec.blockY}) &&
+                          (runtimeGeometry || ProductFitsInt32({spec.logicalBlocks, spec.blockY}));
     tiling->isInputIdxSorted = *sortedAttr ? 1 : 0;
     tiling->residualBlockMode = *residualAttr;
     tiling->hasCuSqlenKv = context->GetOptionalInputDesc(Contract::kCuKvInput) != nullptr ? 1 : 0;
@@ -98,6 +104,11 @@ ge::graphStatus InitializeSemantic(gert::TilingContext* context, const TilingSpe
     tiling->useInt32 = useInt32 ? 1 : 0;
     tiling->hasSeqUsedQ = context->GetOptionalInputDesc(Contract::kUsedQInput) != nullptr ? 1 : 0;
     tiling->hasSeqUsedKv = context->GetOptionalInputDesc(Contract::kUsedKvInput) != nullptr ? 1 : 0;
+    if (context->GetOptionalInputDesc(Contract::kCuQInput) == nullptr) {
+        tiling->qSlotSize = tiling->hasSeqUsedQ ? (batch > 0 ? totalQ / batch : 0) :
+                                                  std::min(totalQ, *attrs->GetInt(Contract::kMaxQ));
+    }
+    tiling->fixedKvSeqlen = !tiling->hasCuSqlenKv && !tiling->hasSeqUsedKv ? *attrs->GetInt(Contract::kMaxKv) : 0;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -113,8 +124,9 @@ bool NeedsMembership(const UnionSparseGenA5TilingData* payload, int64_t coreNum,
     const int64_t totalWork = tiling->headCount * tiling->numGroups;
     const bool sorted = tiling->isInputIdxSorted != 0;
     // Underfilled launches with large mask rows cannot amortize the serial
-    // subgroup merge/writer. Use the existing block-cooperative table only
-    // when its complete logical domain and compaction buffers fit in UB.
+    // subgroup merge/writer. For variable KV, reserve a bounded table and let
+    // the device choose between a resident table and the sorted merge fallback.
+    const bool runtimeGeometry = tiling->hasCuSqlenKv || tiling->hasSeqUsedKv;
     const int64_t fullTableBlocks = (maxLogicalBlocks + Plan::kTableBlockAlignment - 1) / Plan::kTableBlockAlignment *
                                     Plan::kTableBlockAlignment;
     const int64_t fullCompact = (std::min<int64_t>(capacity, Plan::kThreadNum * Plan::kBitsPerWord) + Plan::kDmaWords -
@@ -125,7 +137,7 @@ bool NeedsMembership(const UnionSparseGenA5TilingData* payload, int64_t coreNum,
                                      int64_t(Plan::kCompilerReserveBytes);
     const bool cooperativeOrdered = sorted && residual == 0 && totalWork > 0 && totalWork < coreNum &&
                                     capacity * blockY >= Plan::kThreadNum * Plan::kThreadNum &&
-                                    uint64_t(cooperativeBytes) <= ubSize;
+                                    (runtimeGeometry || uint64_t(cooperativeBytes) <= ubSize);
     const bool useMembership = !sorted || residual != 0 || cooperativeOrdered;
 
     return useMembership;
@@ -210,7 +222,11 @@ ge::graphStatus ChooseAlgorithm(UnionSparseGenA5TilingData* payload, int64_t cor
         return ge::GRAPH_FAILED;
     }
     algorithm = UnionSparseGenA5Algorithm::PackedMembership;
-    TryRadixMemory(payload, available, algorithm);
+    const auto& semantic = payload->semantic;
+    if (!semantic.isInputIdxSorted || semantic.residualBlockMode != 0 ||
+        (!semantic.hasCuSqlenKv && !semantic.hasSeqUsedKv)) {
+        TryRadixMemory(payload, available, algorithm);
+    }
     return ge::GRAPH_SUCCESS;
 }
 

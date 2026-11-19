@@ -40,14 +40,14 @@ ge::graphStatus InitializeSemantic(gert::TilingContext* context, const TilingSpe
 {
     const auto* attrs = context->GetAttrs();
     const auto* sparseShape = context->GetInputShape(Contract::kSparseIdxInput);
-    const auto* qShape = context->GetOptionalInputShape(Contract::kCuQInput);
     const int64_t heads = sparseShape->GetStorageShape().GetDim(Contract::kHeadAxis);
     const int64_t totalQ = sparseShape->GetStorageShape().GetDim(Contract::kQueryAxis);
     const int64_t topK = sparseShape->GetStorageShape().GetDim(Contract::kSparseEntryAxis);
-    const int64_t batch = qShape ? qShape->GetStorageShape().GetDim(Contract::kLengthAxis) - 1 :
-                                   context->GetOptionalInputShape(Contract::kUsedQInput)
-                                       ->GetStorageShape()
-                                       .GetDim(Contract::kLengthAxis);
+    int64_t batch = 0;
+    if (UnionSparseGenTilingValidation::CheckInputGeometry(
+            context, attrs->GetInt(Contract::kMaxQ), attrs->GetInt(Contract::kMaxKv), batch) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     const int64_t totalWork = heads * spec.groups;
     const int64_t usedCore = std::max<int64_t>(1, std::min(coreNum, std::max<int64_t>(1, totalWork)));
     tiling = context->GetTilingData<UnionSparseGenTilingData>();
@@ -78,6 +78,11 @@ ge::graphStatus InitializeSemantic(gert::TilingContext* context, const TilingSpe
     tiling->useInt32 = 0;
     tiling->hasSeqUsedQ = context->GetOptionalInputDesc(Contract::kUsedQInput) != nullptr ? 1 : 0;
     tiling->hasSeqUsedKv = context->GetOptionalInputDesc(Contract::kUsedKvInput) != nullptr ? 1 : 0;
+    if (context->GetOptionalInputDesc(Contract::kCuQInput) == nullptr) {
+        tiling->qSlotSize = tiling->hasSeqUsedQ ? (batch > 0 ? totalQ / batch : 0) :
+                                                  std::min(totalQ, *attrs->GetInt(Contract::kMaxQ));
+    }
+    tiling->fixedKvSeqlen = !tiling->hasCuSqlenKv && !tiling->hasSeqUsedKv ? *attrs->GetInt(Contract::kMaxKv) : 0;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -127,7 +132,7 @@ SimdBuffers InitialBuffers(const gert::TilingContext* context, const UnionSparse
         } else if (blockY != Plan::kNarrowBlockY) {
             window = Plan::kVectorInputWindow;
         }
-        if (unionSize > Plan::kMinGroupWidth || blockY == Contract::kSupportedBlockY || topK <= Plan::kSmallKMax) {
+        if (unionSize > Plan::kMinGroupWidth || blockY == Contract::kDefaultBlockY || topK <= Plan::kSmallKMax) {
             outputBytes = std::max<uint64_t>(outputBytes, Plan::kLargeOutputBytes);
         }
     }

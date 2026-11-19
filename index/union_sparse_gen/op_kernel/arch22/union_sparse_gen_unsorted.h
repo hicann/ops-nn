@@ -51,7 +51,7 @@ __aicore__ inline void PackMembershipRows(LocalTensor<uint32_t> words, LocalTens
                                           bool resident)
 {
     for (int32_t row = 0; row < rows_; ++row) {
-        const int64_t visible = kvLen_ - qLen_ + q0_ + row + 1;
+        const int64_t visible = nonCausal_ ? kvLen_ : kvLen_ - qLen_ + q0_ + row + 1;
         const int64_t upper = residual_ ? (visible > 0 ? visible / by_ : 0) : logicalBlocks_;
         const int64_t count = cnt_.GetValue(row);
         const int32_t limit = int32_t(count < 0 ? 0 : (count > topK_ ? topK_ : count));

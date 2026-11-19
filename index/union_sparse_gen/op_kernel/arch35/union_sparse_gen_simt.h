@@ -10,6 +10,7 @@
 #ifndef UNION_SPARSE_GEN_SIMT_H
 #define UNION_SPARSE_GEN_SIMT_H
 
+#include "utils/debug/asc_assert.h"
 #include "kernel_operator.h"
 #include "simt_api/asc_simt.h"
 #include "union_sparse_gen_a5_tiling_data.h"
@@ -45,13 +46,14 @@ __simt_callee__ __aicore__ inline uint32_t BuildCausalQueryMask(int32_t block, i
     return rowMask & (Plan::kAllQueryBits << static_cast<uint32_t>(firstSlot));
 }
 
-template <typename OffsetT, int32_t ThreadNum, bool HasAnySeqUsed, int32_t GroupWidth, int32_t BlockY, bool Causal>
+template <typename OffsetT, int32_t ThreadNum, bool HasAnySeqUsed, int32_t GroupWidth, int32_t BlockY, bool Causal,
+          bool CheckCapacity>
 __simt_vf__ __aicore__ __launch_bounds__(ThreadNum) inline void UnionSparseGenWarpMergeCore(
     __gm__ int32_t* sparseBlockIdx, __gm__ int32_t* sparseBlockCount, __gm__ int64_t* cuSqlenQ,
     __gm__ int64_t* cuSqlenKv, __gm__ int32_t* seqUsedQ, __gm__ int32_t* seqUsedKv, __gm__ int32_t* unionIdx,
     __gm__ int32_t* unionCount, __gm__ int32_t* exactMask, OffsetT workStart, OffsetT workCount, OffsetT numGroups,
     OffsetT batchSize, OffsetT totalQ, OffsetT topK, OffsetT maxLogicalBlocks, OffsetT unionCapacity, OffsetT unionSize,
-    OffsetT /*blockY*/, bool hasSeqUsedQ, bool hasSeqUsedKv)
+    OffsetT /*blockY*/, OffsetT fixedKvSeqlen, OffsetT qSlotSize, bool hasSeqUsedQ, bool hasSeqUsedKv)
 {
     constexpr OffsetT blockY = BlockY;
     // Keep cursor/collective/writer control flow visible in one SIMT scope.
@@ -77,11 +79,12 @@ __simt_vf__ __aicore__ __launch_bounds__(ThreadNum) inline void UnionSparseGenWa
         OffsetT qStart = 0;
         OffsetT qLen = 0;
         OffsetT localGroup = 0;
+        bool found = false;
         for (OffsetT batch = 0; batch < batchSize; ++batch) {
-            qStart = cuSqlenQ != nullptr ? static_cast<OffsetT>(cuSqlenQ[batch]) : batch * (totalQ / batchSize);
+            qStart = cuSqlenQ != nullptr ? static_cast<OffsetT>(cuSqlenQ[batch]) : batch * qSlotSize;
             const OffsetT qCapacity = cuSqlenQ != nullptr ?
                                           static_cast<OffsetT>(cuSqlenQ[batch + 1] - cuSqlenQ[batch]) :
-                                          totalQ / batchSize;
+                                          (qSlotSize < totalQ - qStart ? qSlotSize : totalQ - qStart);
             if constexpr (HasAnySeqUsed) {
                 qLen = hasSeqUsedQ ? static_cast<OffsetT>(seqUsedQ[batch]) : qCapacity;
             } else {
@@ -91,20 +94,36 @@ __simt_vf__ __aicore__ __launch_bounds__(ThreadNum) inline void UnionSparseGenWa
             if (remaining < groups) {
                 request = batch;
                 localGroup = remaining;
+                found = true;
                 break;
             }
             remaining -= groups;
         }
 
+        if (!found) {
+            const OffsetT outputBase = workId * unionCapacity;
+            if (subgroupLane == 0) {
+                unionCount[workId] = 0;
+            }
+            for (OffsetT i = subgroupLane; i < unionCapacity; i += GroupWidth) {
+                unionIdx[outputBase + i] = -1;
+            }
+            for (OffsetT i = subgroupLane; i < unionCapacity * blockY; i += GroupWidth) {
+                exactMaskWords[outputBase * blockY + i] = 0;
+            }
+            continue;
+        }
         OffsetT kvLen = 0;
         if constexpr (HasAnySeqUsed) {
             if (hasSeqUsedKv) {
                 kvLen = static_cast<OffsetT>(seqUsedKv[request]);
             } else {
-                kvLen = static_cast<OffsetT>(cuSqlenKv[request + 1] - cuSqlenKv[request]);
+                kvLen = cuSqlenKv != nullptr ? static_cast<OffsetT>(cuSqlenKv[request + 1] - cuSqlenKv[request]) :
+                                               fixedKvSeqlen;
             }
         } else {
-            kvLen = static_cast<OffsetT>(cuSqlenKv[request + 1] - cuSqlenKv[request]);
+            kvLen = cuSqlenKv != nullptr ? static_cast<OffsetT>(cuSqlenKv[request + 1] - cuSqlenKv[request]) :
+                                           fixedKvSeqlen;
         }
         const OffsetT requestLogicalBlocks = (kvLen + blockY - 1) / blockY;
         const OffsetT effectiveLogicalBlocks = requestLogicalBlocks < maxLogicalBlocks ? requestLogicalBlocks :
@@ -168,6 +187,12 @@ __simt_vf__ __aicore__ __launch_bounds__(ThreadNum) inline void UnionSparseGenWa
             } else {
                 blockMask = (warpBallot >> static_cast<uint32_t>(subgroup * GroupWidth)) &
                             ((static_cast<uint32_t>(1) << static_cast<uint32_t>(GroupWidth)) - 1U);
+            }
+            if constexpr (CheckCapacity) {
+                if (rank >= unionCapacity) {
+                    __asc_simt_vf::__trap();
+                    return;
+                }
             }
             if (subgroupLane == 0) {
                 unionIdx[unionBase + rank] = block;
@@ -288,9 +313,12 @@ public:
         const int64_t extra = core < tiling_->workTail ? 1 : 0;
         const int64_t start = core * tiling_->workPerCore + (core < tiling_->workTail ? core : tiling_->workTail);
         const int64_t count = tiling_->workPerCore + extra;
+        ResolveRuntimeGeometry();
 
         if constexpr (Algorithm != UnionSparseGenA5Algorithm::WarpMerge) {
-            if (tiling_->useInt32) {
+            if (useSortedFallback_) {
+                LaunchWarpMergeWidth<Plan::kMinGroupWidth>(start, count);
+            } else if (useInt32_) {
                 LaunchMembership<int32_t>(start, count);
             } else {
                 LaunchMembership<int64_t>(start, count);
@@ -304,6 +332,48 @@ public:
     }
 
 private:
+    __aicore__ inline void ResolveRuntimeGeometry()
+    {
+        useInt32_ = tiling_->useInt32 != 0;
+        logicalBlocks_ = tiling_->maxLogicalBlocks;
+        if (!tiling_->isInputIdxSorted || tiling_->residualBlockMode != 0 ||
+            (cuSqlenKv_ == nullptr && seqUsedKv_ == nullptr)) {
+            return;
+        }
+        if (!useInt32_ && Algorithm != UnionSparseGenA5Algorithm::PackedMembership) {
+            return;
+        }
+        // Scalar GM reads execute on the NPU. No host length read, host/device
+        // synchronization, workspace or additional kernel launch is required.
+        int64_t maxKv = 0;
+        if (seqUsedKv_ != nullptr) {
+            GlobalTensor<int32_t> lengths;
+            lengths.SetGlobalBuffer(seqUsedKv_);
+            for (int64_t b = 0; b < tiling_->batchSize; ++b) {
+                const int64_t length = lengths.GetValue(b);
+                maxKv = length > maxKv ? length : maxKv;
+            }
+        } else {
+            GlobalTensor<int64_t> prefix;
+            prefix.SetGlobalBuffer(cuSqlenKv_);
+            int64_t previous = prefix.GetValue(0);
+            for (int64_t b = 0; b < tiling_->batchSize; ++b) {
+                const int64_t next = prefix.GetValue(b + 1);
+                const int64_t length = next - previous;
+                maxKv = length > maxKv ? length : maxKv;
+                previous = next;
+            }
+        }
+        constexpr int64_t kInt32Max = 0x7FFFFFFF;
+        const int64_t margin = tiling_->blockY + tiling_->unionSize;
+        useInt32_ = useInt32_ && maxKv <= kInt32Max - margin;
+        const int64_t logical = maxKv / tiling_->blockY + (maxKv % tiling_->blockY != 0);
+        logicalBlocks_ = logical < 1 ? 1 : (logical < kInt32Max ? logical : kInt32Max);
+        if constexpr (Algorithm == UnionSparseGenA5Algorithm::PackedMembership) {
+            useSortedFallback_ = logical > plan_->tableBlockCapacity;
+        }
+    }
+
     template <typename OffsetT>
     __aicore__ inline void LaunchMembership(int64_t start, int64_t count)
     {
@@ -333,7 +403,8 @@ private:
                 reinterpret_cast<__ubuf__ uint32_t*>(bits.GetPhyAddr()), state, OffsetT(work),
                 OffsetT(tiling_->numGroups), OffsetT(tiling_->batchSize), OffsetT(tiling_->totalQ),
                 OffsetT(tiling_->topK), OffsetT(tiling_->unionCapacity), OffsetT(tiling_->unionSize),
-                OffsetT(tiling_->blockY), OffsetT(n), tiling_->residualBlockMode != 0);
+                OffsetT(tiling_->blockY), OffsetT(n), OffsetT(tiling_->fixedKvSeqlen), OffsetT(tiling_->qSlotSize),
+                tiling_->residualBlockMode != 0);
             PipeBarrier<PIPE_ALL>();
             SetFlag<HardEvent::V_S>(EVENT_ID0);
             WaitFlag<HardEvent::V_S>(EVENT_ID0);
@@ -369,7 +440,8 @@ private:
             unionCount_, exactMask_, table, presence, keys, bits, state, OffsetT(start), OffsetT(count),
             OffsetT(tiling_->numGroups), OffsetT(tiling_->batchSize), OffsetT(tiling_->totalQ), OffsetT(tiling_->topK),
             OffsetT(tiling_->unionCapacity), OffsetT(tiling_->unionSize), OffsetT(tiling_->blockY),
-            OffsetT(plan_->tableBlockCapacity), OffsetT(plan_->compactCapacity), tiling_->residualBlockMode != 0);
+            OffsetT(plan_->tableBlockCapacity), OffsetT(plan_->compactCapacity), OffsetT(tiling_->fixedKvSeqlen),
+            OffsetT(tiling_->qSlotSize), tiling_->residualBlockMode != 0);
     }
     template <typename OffsetT, bool Causal>
     __aicore__ inline void LaunchMembershipMode(int64_t start, int64_t count)
@@ -388,7 +460,7 @@ private:
     {
         constexpr int32_t WarpThreadNum = kThreadNum;
         const bool hasAnySeqUsed = seqUsedQ_ != nullptr || seqUsedKv_ != nullptr;
-        if (tiling_->useInt32 != 0) {
+        if (useInt32_) {
             if (hasAnySeqUsed) {
                 LaunchWarpMergeTyped<int32_t, WarpThreadNum, true, GroupWidth>(start, count);
             } else {
@@ -427,14 +499,29 @@ private:
     template <typename OffsetT, int32_t ThreadNum, bool HasAnySeqUsed, int32_t GroupWidth, int32_t BlockY, bool Causal>
     __aicore__ inline void LaunchWarpMergeMode(int64_t start, int64_t count)
     {
-        asc_vf_call<UnionSparseGenWarpMergeCore<OffsetT, ThreadNum, HasAnySeqUsed, GroupWidth, BlockY, Causal>>(
+        // This path has no residual entries. An output holding every possible
+        // input entry needs no per-emitted-block overflow check. Smaller caller
+        // capacities retain the checked specialization; avoid multiplying topK.
+        if (tiling_->topK <= tiling_->unionCapacity / tiling_->unionSize) {
+            LaunchWarpMergeCapacity<OffsetT, ThreadNum, HasAnySeqUsed, GroupWidth, BlockY, Causal, false>(start, count);
+        } else {
+            LaunchWarpMergeCapacity<OffsetT, ThreadNum, HasAnySeqUsed, GroupWidth, BlockY, Causal, true>(start, count);
+        }
+    }
+    template <typename OffsetT, int32_t ThreadNum, bool HasAnySeqUsed, int32_t GroupWidth, int32_t BlockY, bool Causal,
+              bool CheckCapacity>
+    __aicore__ inline void LaunchWarpMergeCapacity(int64_t start, int64_t count)
+    {
+        asc_vf_call<
+            UnionSparseGenWarpMergeCore<OffsetT, ThreadNum, HasAnySeqUsed, GroupWidth, BlockY, Causal, CheckCapacity>>(
             dim3(ThreadNum), sparseIdx_, sparseCount_, cuSqlenQ_, cuSqlenKv_, seqUsedQ_, seqUsedKv_, unionIdx_,
             unionCount_, exactMask_, static_cast<OffsetT>(start), static_cast<OffsetT>(count),
             static_cast<OffsetT>(tiling_->numGroups), static_cast<OffsetT>(tiling_->batchSize),
             static_cast<OffsetT>(tiling_->totalQ), static_cast<OffsetT>(tiling_->topK),
-            static_cast<OffsetT>(tiling_->maxLogicalBlocks), static_cast<OffsetT>(tiling_->unionCapacity),
-            static_cast<OffsetT>(tiling_->unionSize), static_cast<OffsetT>(tiling_->blockY), seqUsedQ_ != nullptr,
-            seqUsedKv_ != nullptr);
+            static_cast<OffsetT>(logicalBlocks_), static_cast<OffsetT>(tiling_->unionCapacity),
+            static_cast<OffsetT>(tiling_->unionSize), static_cast<OffsetT>(tiling_->blockY),
+            static_cast<OffsetT>(tiling_->fixedKvSeqlen), static_cast<OffsetT>(tiling_->qSlotSize),
+            seqUsedQ_ != nullptr, seqUsedKv_ != nullptr);
     }
 
 private:
@@ -449,6 +536,9 @@ private:
     __gm__ int32_t* exactMask_ = nullptr;
     const UnionSparseGenA5TilingData* plan_ = nullptr;
     const UnionSparseGenTilingData* tiling_ = nullptr;
+    int64_t logicalBlocks_ = 0;
+    bool useInt32_ = false;
+    bool useSortedFallback_ = false;
     TPipe pipe_;
     TBuf<TPosition::VECCALC> extendedScratchBuffer_, extendedStateBuffer_;
 };
