@@ -8,7 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cstdint>
 #include <iostream>
+#include <string>
+#include <vector>
 #include <gtest/gtest.h>
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
@@ -18,6 +21,71 @@
 #include "log/log.h"
 #include "graph/types.h"
 #include "platform/platform_info.h"
+#include "base/err_mgr.h"
+
+namespace {
+// ErrorManager 上下文隔离方式与 rnn/gru_grad/tests/ut/op_host/test_gru_grad_tiling.cpp 一致：
+// 用独立 work_stream_id 记录，避免共享 Host UT 进程内的用例串扰。
+class ScopedErrorContext {
+public:
+    ScopedErrorContext() : savedContext_(error_message::GetErrMgrContext())
+    {
+        auto context = savedContext_;
+        context.work_stream_id = reinterpret_cast<std::uintptr_t>(this);
+        error_message::SetErrMgrContext(context);
+        (void)error_message::GetErrMgrRawErrorMessages();
+    }
+
+    ~ScopedErrorContext()
+    {
+        (void)error_message::GetErrMgrRawErrorMessages();
+        error_message::SetErrMgrContext(savedContext_);
+    }
+
+    ScopedErrorContext(const ScopedErrorContext&) = delete;
+    ScopedErrorContext& operator=(const ScopedErrorContext&) = delete;
+
+private:
+    error_message::ErrorManagerContext savedContext_;
+};
+
+struct CapturedError {
+    size_t count = 0;
+    std::string code;
+    std::vector<std::string> keys;
+    std::vector<std::string> values;
+};
+
+CapturedError CaptureError()
+{
+    CapturedError captured;
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    captured.count = errors.size();
+    if (errors.empty()) {
+        return captured;
+    }
+    const auto& error = errors.back();
+    captured.code = error.error_id == nullptr ? "" : error.error_id.get();
+    for (const auto& key : error.args_key) {
+        captured.keys.emplace_back(key == nullptr ? "" : key.get());
+    }
+    for (const auto& value : error.args_value) {
+        captured.values.emplace_back(value == nullptr ? "" : value.get());
+    }
+    return captured;
+}
+
+// 按 Arglist 的 key 取实际错误值；缺失时返回可读标记，便于断言失败时定位。
+std::string ErrorValue(const CapturedError& error, const std::string& key)
+{
+    for (size_t i = 0; i < error.keys.size() && i < error.values.size(); ++i) {
+        if (error.keys[i] == key) {
+            return error.values[i];
+        }
+    }
+    return "<missing:" + key + ">";
+}
+} // namespace
 
 class HardSigmoidGradProtoTest : public testing::Test {
 protected:
@@ -105,7 +173,15 @@ TEST_F(HardSigmoidGradProtoTest, infershape_shape_mismatch_rejected)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
 
+    ScopedErrorContext errorContext;
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    const auto error = CaptureError();
+    // I:99（8973）shape 不一致 → EZ0010
+    EXPECT_EQ(error.count, 1U);
+    EXPECT_EQ(error.code, "EZ0010");
+    EXPECT_EQ(ErrorValue(error, "param_names"), "grads, input_x");
+    EXPECT_EQ(ErrorValue(error, "incorrect_shapes"), "[2, 3], [3, 2]");
+    EXPECT_EQ(ErrorValue(error, "reason"), "the shapes of grads and input_x must be the same");
 }
 
 TEST_F(HardSigmoidGradProtoTest, infershape_rank_mismatch_rejected)
@@ -127,7 +203,15 @@ TEST_F(HardSigmoidGradProtoTest, infershape_rank_mismatch_rejected)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
 
+    ScopedErrorContext errorContext;
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    const auto error = CaptureError();
+    // I:89（8972）rank 不一致 → EZ0013
+    EXPECT_EQ(error.count, 1U);
+    EXPECT_EQ(error.code, "EZ0013");
+    EXPECT_EQ(ErrorValue(error, "param_names"), "grads, input_x");
+    EXPECT_EQ(ErrorValue(error, "incorrect_dims"), "1, 2");
+    EXPECT_EQ(ErrorValue(error, "reason"), "the ranks of grads and input_x must be the same");
 }
 
 TEST_F(HardSigmoidGradProtoTest, infershape_rank9_rejected)
@@ -149,7 +233,45 @@ TEST_F(HardSigmoidGradProtoTest, infershape_rank9_rejected)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
 
+    ScopedErrorContext errorContext;
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    const auto error = CaptureError();
+    // I:61（8970）grads rank 超限 → EZ0012
+    EXPECT_EQ(error.count, 1U);
+    EXPECT_EQ(error.code, "EZ0012");
+    EXPECT_EQ(ErrorValue(error, "param_name"), "grads");
+    EXPECT_EQ(ErrorValue(error, "incorrect_dim"), "9");
+    EXPECT_EQ(ErrorValue(error, "reason"), "the rank of grads must be within 0D-8D");
+}
+
+// I:67（8971）input_x rank 超限（grads 8D、input_x 9D，两侧均非 unknown-rank）→ EZ0012，参数名 input_x
+TEST_F(HardSigmoidGradProtoTest, infershape_rank9_input_x_rejected)
+{
+    SetUpPlatform();
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("HardSigmoidGrad")->infer_shape;
+
+    gert::Shape grad_shape = {1, 1, 1, 1, 1, 1, 1, 1};
+    gert::Shape self_shape = {1, 1, 1, 1, 1, 1, 1, 1, 1};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&grad_shape, &self_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ScopedErrorContext errorContext;
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+    const auto error = CaptureError();
+    EXPECT_EQ(error.count, 1U);
+    EXPECT_EQ(error.code, "EZ0012");
+    EXPECT_EQ(ErrorValue(error, "param_name"), "input_x");
+    EXPECT_EQ(ErrorValue(error, "incorrect_dim"), "9");
+    EXPECT_EQ(ErrorValue(error, "reason"), "the rank of input_x must be within 0D-8D");
 }
 
 TEST_F(HardSigmoidGradProtoTest, infershape_rank8_boundary_success)

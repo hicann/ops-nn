@@ -100,21 +100,28 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     // inputs like [2,3] vs [3,2] are rejected as the proto declaration requires
     // (y has the same type and shape as input_x).
     OP_CHECK_IF(gradShape.GetDimNum() != selfShape.GetDimNum(),
-                OP_LOGE(context, "HardSigmoidGrad: input rank mismatch: grad=%ld, self=%ld", gradShape.GetDimNum(),
-                        selfShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "grads, input_x",
+                    (std::to_string(gradShape.GetDimNum()) + ", " + std::to_string(selfShape.GetDimNum())).c_str(),
+                    "the ranks of grads and input_x must be the same"),
                 return ge::GRAPH_FAILED);
     for (int64_t dim = 0; dim < gradShape.GetDimNum(); ++dim) {
-        OP_CHECK_IF(gradShape.GetDim(dim) != selfShape.GetDim(dim),
-                    OP_LOGE(context, "HardSigmoidGrad: input shape mismatch at dim %ld: grad=%ld, self=%ld", dim,
-                            gradShape.GetDim(dim), selfShape.GetDim(dim)),
-                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            gradShape.GetDim(dim) != selfShape.GetDim(dim),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "grads, input_x",
+                (Ops::Base::ToString(gradShape) + ", " + Ops::Base::ToString(selfShape)).c_str(),
+                "the shapes of grads and input_x must be the same"),
+            return ge::GRAPH_FAILED);
     }
 
     // Explicit 0D-8D rank gate matching the proto declaration; the aclnn entry
     // already rejects via OP_CHECK_MAX_DIM, keep the kernel entry consistent.
     constexpr int64_t MAX_RANK = 8;
     OP_CHECK_IF(gradShape.GetDimNum() > MAX_RANK,
-                OP_LOGE(context, "HardSigmoidGrad: input rank exceeds 0D-8D limit: %ld", gradShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "grads",
+                    std::to_string(gradShape.GetDimNum()).c_str(), "the rank of grads must be within 0D-8D"),
                 return ge::GRAPH_FAILED);
 
     totalLength = gradShape.GetShapeSize();
@@ -122,7 +129,12 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     // an invalid (negative) shape size and must be rejected here instead of
     // flowing into blockFactor and silently skipping every core's compute.
     // totalLength == 0 stays legal and takes the empty-tensor fast path below.
-    OP_CHECK_IF(totalLength < 0, OP_LOGE(context, "HardSigmoidGrad: invalid total element count: %ld", totalLength),
+    OP_CHECK_IF(totalLength < 0,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "grads",
+                    std::to_string(totalLength).c_str(),
+                    "the shape size of grads must be non-negative; a negative value indicates a shape product "
+                    "overflow"),
                 return ge::GRAPH_FAILED);
 
     auto inputDesc = context->GetInputDesc(0);
@@ -135,8 +147,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto inputSelfDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputSelfDesc);
     OP_CHECK_IF(dataType != inputSelfDesc->GetDataType(),
-                OP_LOGE(context, "HardSigmoidGrad: input dtype mismatch: grad=%d, self=%d",
-                        static_cast<int32_t>(dataType), static_cast<int32_t>(inputSelfDesc->GetDataType())),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "grads, input_x",
+                    (Ops::Base::ToString(dataType) + ", " + Ops::Base::ToString(inputSelfDesc->GetDataType())).c_str(),
+                    "the dtypes of grads and input_x must be the same"),
                 return ge::GRAPH_FAILED);
 
     // Get alpha and beta from attrs (with defaults)
@@ -149,9 +163,15 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     // Muls/Adds/CompareScalar leading to undefined behavior; alpha == 0 stays
     // legal (the open interval degenerates to the full range and the result
     // path naturally yields grad * 0 == 0).
-    OP_CHECK_IF(!std::isfinite(alpha), OP_LOGE(context, "HardSigmoidGrad: alpha must be finite, got %f", alpha),
+    OP_CHECK_IF(!std::isfinite(alpha),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "alpha",
+                    std::to_string(alpha).c_str(), "alpha must be finite"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!std::isfinite(beta), OP_LOGE(context, "HardSigmoidGrad: beta must be finite, got %f", beta),
+    OP_CHECK_IF(!std::isfinite(beta),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "beta",
+                    std::to_string(beta).c_str(), "beta must be finite"),
                 return ge::GRAPH_FAILED);
 
     // FR-02 fix: derive the open interval (maskLo, maskHi) equivalent to
@@ -285,17 +305,23 @@ static ge::graphStatus HardSigmoidGradTilingFunc(gert::TilingContext* context)
     OP_LOGD(context->GetNodeName(), "Enter HardSigmoidGradTilingFunc");
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context, "GetPlatformInfo failed; the first error was reported inside the helper"),
+        return ge::GRAPH_FAILED);
 
     int64_t totalLength;
     ge::DataType dataType;
     float alpha, beta, maskLo, maskHi;
-    OP_CHECK_IF(GetShapeAttrsInfo(context, totalLength, dataType, alpha, beta, maskLo, maskHi) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        GetShapeAttrsInfo(context, totalLength, dataType, alpha, beta, maskLo, maskHi) != ge::GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context, "GetShapeAttrsInfo failed; the first error was reported inside the helper"),
+        return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
+        OP_LOGE_WITHOUT_REPORT(context, "GetWorkspaceSize failed; the first error was reported inside the helper"),
+        return ge::GRAPH_FAILED);
 
     if (totalLength == 0) {
         return SetEmptyTensorTiling(context, dataType);

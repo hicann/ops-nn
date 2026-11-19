@@ -58,11 +58,15 @@ static ge::graphStatus InferShape4HardSigmoidGrad(gert::InferShapeContext* conte
     // are deferred to runtime.
     constexpr int64_t MAX_RANK = 8;
     if (!gradUnknownRank && grad_shape->GetDimNum() > MAX_RANK) {
-        OP_LOGE(context->GetNodeName(), "[InferShape] rank exceeds 0D-8D limit: grads=%ld", grad_shape->GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "grads",
+            std::to_string(grad_shape->GetDimNum()).c_str(), "the rank of grads must be within 0D-8D");
         return ge::GRAPH_FAILED;
     }
     if (!selfUnknownRank && input_shape->GetDimNum() > MAX_RANK) {
-        OP_LOGE(context->GetNodeName(), "[InferShape] rank exceeds 0D-8D limit: input_x=%ld", input_shape->GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "input_x",
+            std::to_string(input_shape->GetDimNum()).c_str(), "the rank of input_x must be within 0D-8D");
         return ge::GRAPH_FAILED;
     }
     // Unknown rank on the declared output source (input_x) forces an unknown-rank
@@ -82,16 +86,20 @@ static ge::graphStatus InferShape4HardSigmoidGrad(gert::InferShapeContext* conte
         return ge::GRAPH_SUCCESS;
     }
     if (grad_shape->GetDimNum() != input_shape->GetDimNum()) {
-        OP_LOGE(context->GetNodeName(), "[InferShape] input rank mismatch: grads=%ld, input_x=%ld",
-                grad_shape->GetDimNum(), input_shape->GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "grads, input_x",
+            (std::to_string(grad_shape->GetDimNum()) + ", " + std::to_string(input_shape->GetDimNum())).c_str(),
+            "the ranks of grads and input_x must be the same");
         return ge::GRAPH_FAILED;
     }
     for (int64_t dim = 0; dim < input_shape->GetDimNum(); ++dim) {
         const int64_t gradDim = grad_shape->GetDim(dim);
         const int64_t selfDim = input_shape->GetDim(dim);
         if (gradDim >= 0 && selfDim >= 0 && gradDim != selfDim) {
-            OP_LOGE(context->GetNodeName(), "[InferShape] input shape mismatch at dim %ld: grads=%ld, input_x=%ld", dim,
-                    gradDim, selfDim);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                (context->GetNodeName() == nullptr ? "HardSigmoidGrad" : context->GetNodeName()), "grads, input_x",
+                (Ops::Base::ToString(*grad_shape) + ", " + Ops::Base::ToString(*input_shape)).c_str(),
+                "the shapes of grads and input_x must be the same");
             return ge::GRAPH_FAILED;
         }
     }
