@@ -90,6 +90,8 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "mse_loss_grad_v2");
         this->AICore().AddConfig("ascend950", config950);
+        // ascend960dt (A6, DAV_9201): 复用 ascend950 的 arch35 tiling 与内核配置
+        this->AICore().AddConfig("ascend960dt", config950);
     }
 };
 

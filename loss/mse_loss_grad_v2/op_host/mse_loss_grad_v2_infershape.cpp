@@ -30,15 +30,17 @@ constexpr uint32_t DIM_NUM_2 = 2;
 constexpr int64_t UNKNOWN_RANK_DIM_VALUE_ = -2;
 constexpr size_t ATTR_REDUCTION_IDX = 0;
 
-// ascend950(regbase) 才走 y = broadcast(dout, predict, label) 的推导与契约校验;
+// ascend950/ascend960dt(regbase) 才走 y = broadcast(dout, predict, label) 的推导与契约校验;
 // 其余 SoC 走下方非 arch35 SoC 的基线逻辑(输出 = predict shape), 二者 soc 隔离。
+// 960dt 的 short_soc_version 为 "Ascend960DT"(参照 max_pool_with_argmax_v3_fusion_pass.cpp 先例)。
 bool IsRegBaseSoc()
 {
     fe::PlatformInfo platform_info;
     fe::OptionalInfo optional_info;
     return (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) ==
             ge::GRAPH_SUCCESS) &&
-           platform_info.str_info.short_soc_version == "Ascend950";
+           (platform_info.str_info.short_soc_version == "Ascend950" ||
+            platform_info.str_info.short_soc_version == "Ascend960DT");
 }
 
 bool IsLegalReduction(const char* reduction)
@@ -170,7 +172,7 @@ static ge::graphStatus InferShapeForMseLossGradRegbase(gert::InferShapeContext* 
 
 static ge::graphStatus InferShapeForMseLossGrad(gert::InferShapeContext* context)
 {
-    // ascend950(regbase) 走 broadcast 分支; 非 arch35 SoC 走基线逻辑(下方逐字保留)。
+    // ascend950/ascend960dt(regbase) 走 broadcast 分支; 非 arch35 SoC 走基线逻辑(下方逐字保留)。
     if (IsRegBaseSoc()) {
         return InferShapeForMseLossGradRegbase(context);
     }

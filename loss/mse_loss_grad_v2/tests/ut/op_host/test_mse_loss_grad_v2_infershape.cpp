@@ -470,3 +470,82 @@ TEST_F(MseLossGradV2Regbase, mse_loss_grad_v2_regbase_null_output_shape_011)
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MseLossGradV2")->infer_shape;
     EXPECT_EQ(infer_shape_func(context), ge::GRAPH_FAILED);
 }
+
+// ascend960dt(A6) 分支专用套件：IsRegBaseSoc() 除 Ascend950 外还需匹配 Ascend960DT 的
+// short_soc_version，否则 960dt 在 GE 图模式下落入基线分支(输出 = predict shape)，
+// 广播用例输出形状推导错误。注入方式与 MseLossGradV2Regbase 一致。
+class MseLossGradV2Regbase960dt : public testing::Test {
+protected:
+    static void SetUpTestCase()
+    {
+        fe::PlatformInfo platformInfo;
+        fe::OptionalInfo optiCompilationInfo;
+        platformInfo.soc_info.ai_core_cnt = 64;
+        platformInfo.str_info.short_soc_version = "Ascend960DT";
+        optiCompilationInfo.soc_version = "Ascend960DT";
+        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend960DT"] = platformInfo;
+        fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+        std::cout << "MseLossGradV2Regbase960dt SetUp" << std::endl;
+    }
+
+    static void TearDownTestCase()
+    {
+        fe::PlatformInfoManager::Instance().platform_info_map_.erase("Ascend960DT");
+        fe::OptionalInfo emptyOptiCompilationInfo;
+        fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(emptyOptiCompilationInfo);
+        std::cout << "MseLossGradV2Regbase960dt TearDown" << std::endl;
+    }
+};
+
+// 场景12（960dt regbase 正向）：y.shape = broadcast(dout, predict, label)，
+// predict{1,4} x label{3,4} 广播为 {3,4}，再与 dout{3,4} 广播仍为 {3,4}
+TEST_F(MseLossGradV2Regbase960dt, mse_loss_grad_v2_regbase_960dt_broadcast_success_012)
+{
+    gert::StorageShape predictShape = {{1, 4}, {1, 4}};
+    gert::StorageShape labelShape = {{3, 4}, {3, 4}};
+    gert::StorageShape doutShape = {{3, 4}, {3, 4}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .SetOpType("MseLossGradV2")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1}, {1})
+                      .InputShapes({&predictShape, &labelShape, &doutShape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")}})
+                      .Build();
+
+    gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MseLossGradV2")->infer_shape;
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+    std::vector<int64_t> expectedyGradShape = {3, 4};
+    auto yGradShape = context->GetOutputShape(0);
+    EXPECT_EQ(ToVectorForMseLossGradV2(*yGradShape), expectedyGradShape);
+}
+
+// 负向场景13（960dt regbase）：reduction 取非法值，regbase 分支 IsLegalReduction 校验失败
+TEST_F(MseLossGradV2Regbase960dt, mse_loss_grad_v2_regbase_960dt_invalid_reduction_013)
+{
+    gert::StorageShape predictShape = {{32, 64}, {32, 64}};
+    gert::StorageShape labelShape = {{32, 64}, {32, 64}};
+    gert::StorageShape doutShape = {{32, 64}, {32, 64}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .SetOpType("MseLossGradV2")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1}, {1})
+                      .InputShapes({&predictShape, &labelShape, &doutShape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("invalid")}})
+                      .Build();
+
+    gert::InferShapeContext* context = holder.GetContext<gert::InferShapeContext>();
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MseLossGradV2")->infer_shape;
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_FAILED);
+}

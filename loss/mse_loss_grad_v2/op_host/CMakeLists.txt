@@ -9,6 +9,6 @@
 # ----------------------------------------------------------------------------
 
 # arch22 与 arch35 tiling 按 SoC 路由分开编译, 避免双 IMPL_OP_OPTILING 冲突。
-set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend310p" "ascend950")
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch35")
+set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend310p" "ascend950" "ascend960dt")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch35" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE mse_loss_grad_v2 ACLNNTYPE aclnn_inner COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE)

@@ -14,6 +14,6 @@ add_kernel_sources(
 )
 add_kernel_sources(
     KERNEL_SRC arch35/mse_loss_grad_v2.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend960dt
     AUTO_SYNC false
 )
