@@ -71,7 +71,7 @@ public:
     {}
 
     ~MaxPool3DGradNCDHWTilingHelper() override = default;
-    void DoBufferCalculate();
+    void DoBufferCalculate() override;
     int64_t isBigKernel = 0;
 
 protected:
@@ -104,7 +104,7 @@ public:
         : Pool3DGradNDHWCSmallKernelCommonTiling(input), inputData(input)
     {}
     ~MaxPool3DGradNDHWCTilingImpl() override = default;
-    void DoBufferCalculate();
+    void DoBufferCalculate() override;
     void SetTilingData(gert::TilingContext* context) override;
 
 protected:

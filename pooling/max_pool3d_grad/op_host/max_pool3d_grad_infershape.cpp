@@ -43,6 +43,13 @@ static constexpr size_t SHAPE_H_DIM = 3;
 static constexpr size_t SHAPE_W_DIM = 4;
 static constexpr size_t PADS_SIZE = 6;
 static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
+static constexpr int64_t PAD_HALF_DIVISOR = 2;
+static constexpr size_t PADS_D_BEGIN_INDEX = 0;
+static constexpr size_t PADS_D_END_INDEX = 1;
+static constexpr size_t PADS_H_BEGIN_INDEX = 2;
+static constexpr size_t PADS_H_END_INDEX = 3;
+static constexpr size_t PADS_W_BEGIN_INDEX = 4;
+static constexpr size_t PADS_W_END_INDEX = 5;
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
 {
@@ -267,12 +274,12 @@ ge::graphStatus CalculatePadsForMaxPool3DGrad(const gert::InferShapeContext* con
         const int64_t padD = std::max(int64_t{0}, (tailsD > 0 ? kernelD - tailsD : kernelD - strideD));
         const int64_t padH = std::max(int64_t{0}, (tailsH > 0 ? kernelH - tailsH : kernelH - strideH));
         const int64_t padW = std::max(int64_t{0}, (tailsW > 0 ? kernelW - tailsW : kernelW - strideW));
-        pads[0] = padD / 2;
-        pads[1] = padD / 2 + padD % 2;
-        pads[2] = padH / 2;
-        pads[3] = padH / 2 + padH % 2;
-        pads[4] = padW / 2;
-        pads[5] = padW / 2 + padW % 2;
+        pads[PADS_D_BEGIN_INDEX] = padD / PAD_HALF_DIVISOR;
+        pads[PADS_D_END_INDEX] = padD / PAD_HALF_DIVISOR + padD % PAD_HALF_DIVISOR;
+        pads[PADS_H_BEGIN_INDEX] = padH / PAD_HALF_DIVISOR;
+        pads[PADS_H_END_INDEX] = padH / PAD_HALF_DIVISOR + padH % PAD_HALF_DIVISOR;
+        pads[PADS_W_BEGIN_INDEX] = padW / PAD_HALF_DIVISOR;
+        pads[PADS_W_END_INDEX] = padW / PAD_HALF_DIVISOR + padW % PAD_HALF_DIVISOR;
     }
 
     OP_LOGD(context->GetNodeName(), "MaxPool3DGrad padding is %s, calculated pads is [%s]", paddingStr.c_str(),
