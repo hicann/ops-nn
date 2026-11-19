@@ -662,7 +662,7 @@ self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如�
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
 
-    // 调用aclnnNpuFormatCastGetWorkspaceSize第二段接口
+    // 调用aclnnNpuFormatCast第二段接口
     ret = aclnnNpuFormatCast(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCast failed. ERROR: %d\n", ret); return ret);
 
