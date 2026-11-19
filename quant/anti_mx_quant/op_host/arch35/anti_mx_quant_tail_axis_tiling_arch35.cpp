@@ -207,7 +207,7 @@ ge::graphStatus AntiMxQuantTailAxisTiling::DoTiling()
     tilingParam_.rowBlockLoopNum = Ops::Base::CeilDiv(tilingParam_.rowNum, SPLIT_M);
     tilingParam_.colBlockLoopNum = Ops::Base::CeilDiv(tilingParam_.colNum, SPLIT_N);
 
-    OP_CHECK_IF(AutoTiling() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "The auto tiling failed."),
+    OP_CHECK_IF(AutoTiling() != ge::GRAPH_SUCCESS, OP_LOGE_WITHOUT_REPORT(context_, "The auto tiling failed."),
                 return ge::GRAPH_FAILED);
 
     tilingParam_.rowNormalBlockNum = Ops::Base::CeilDiv(tilingParam_.rowBlockLoopNum, tilingParam_.rowTileNum);
@@ -229,8 +229,7 @@ ge::graphStatus AntiMxQuantTailAxisTiling::DoTiling()
     tilingData_ = context_->GetTilingData<AntiMxQuantTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
 
-    OP_CHECK_IF(SetTilingParams() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_, "AntiMxQuantTailAxisTiling set tiling data failed."), return ge::GRAPH_FAILED);
+    SetTilingParams();
 
     context_->SetBlockDim(tilingData_->usedCoreNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);

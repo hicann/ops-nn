@@ -13,6 +13,8 @@
  * \brief InferShape and InferDataType implementation for AntiMxQuant operator.
  */
 
+#include <algorithm>
+#include <string>
 #include "graph/utils/type_utils.h"
 #include "runtime/infer_shape_context.h"
 #include "register/op_impl_registry.h"
@@ -47,7 +49,9 @@ graphStatus InferShapeForAntiMxQuant(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
     OP_CHECK_IF(xShape->GetDimNum() < 1 || xShape->GetDimNum() > MAX_DIM_NUM,
-                OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [1, 7].", xShape->GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+                                                         std::to_string(xShape->GetDimNum()).c_str(),
+                                                         "The rank of x must be in range [1, 7]"),
                 return ge::GRAPH_FAILED);
 
     if (Ops::Base::IsUnknownRank(*xShape)) {
@@ -73,10 +77,8 @@ ge::graphStatus InferDataTypeForAntiMxQuant(gert::InferDataTypeContext* context)
     ge::DataType outDtype = static_cast<ge::DataType>(*dstDtype);
     OP_CHECK_IF(
         std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
-        OP_LOGE(
-            context->GetNodeName(),
-            "dst_type is illegal, only supports 1(FLOAT16), 27(BFLOAT16) or 0(FLOAT32), but got %d(%s), please check.",
-            *dstDtype, ge::TypeUtils::DataTypeToAscendString(outDtype).GetString()),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "dst_type", std::to_string(*dstDtype).c_str(),
+                                              "dst_type only supports 0(FLOAT32), 1(FLOAT16) or 27(BFLOAT16)"),
         return ge::GRAPH_FAILED);
     context->SetOutputDataType(0, outDtype);
     OP_LOGD(context->GetNodeName(), "End to do InferDataTypeForAntiMxQuant");

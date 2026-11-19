@@ -62,7 +62,8 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* mxscale, const 
     OP_CHECK_DTYPE_NOT_SUPPORT(y, Y_DTYPE_SUPPORT_LIST, return false);
 
     if (static_cast<int64_t>(y->GetDataType()) != dstType) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "out(y) data type must be the same as dstType.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON("aclnnAntiMxQuant", "y", op::ToString(y->GetDataType()).GetString(),
+                                              "The dtype of y must be the same as dstType " + std::to_string(dstType));
         return false;
     }
 
@@ -78,7 +79,9 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
     size_t xDimNum = static_cast<size_t>(xShape.GetDimNum());
     size_t yDimNum = static_cast<size_t>(yShape.GetDimNum());
     if (xDimNum != yDimNum) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dim num of x and y should be same. x:%zu, y:%zu.", xDimNum, yDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON("aclnnAntiMxQuant", "x, y",
+                                                  (std::to_string(xDimNum) + ", " + std::to_string(yDimNum)).c_str(),
+                                                  "dim num of x and y should be the same");
         return false;
     }
 
@@ -97,20 +100,23 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
     auto mxscaleShape = mxscale->GetViewShape();
     size_t mxscaleDimNum = static_cast<size_t>(mxscaleShape.GetDimNum());
     if (mxscaleDimNum < MIN_DIM_LEN_MXSCALE || mxscaleDimNum > MAX_DIM_LEN_MXSCALE) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mxscale dim num must be in [2, 8], but got %zu.", mxscaleDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnAntiMxQuant", "mxscale", std::to_string(mxscaleDimNum).c_str(),
+                                                 "mxscale dim num must be in [2, 8]");
         return false;
     }
 
     if (mxscaleDimNum != xDimNum + 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mxscale dim num must be x dim num + 1. mxscale:%zu, x:%zu.", mxscaleDimNum,
-                xDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            "aclnnAntiMxQuant", "mxscale, x", (std::to_string(mxscaleDimNum) + ", " + std::to_string(xDimNum)).c_str(),
+            "mxscale dim num must be x dim num + 1");
         return false;
     }
 
     // axis check
     int64_t axisChange = axis >= 0 ? axis : axis + static_cast<int64_t>(xDimNum);
     if (axisChange < 0 || axisChange >= static_cast<int64_t>(xDimNum)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "axis is out of range. axis:%ld, x dim num:%zu.", axis, xDimNum);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnAntiMxQuant", "axis", std::to_string(axis).c_str(),
+                                              "axis is out of range for x rank " + std::to_string(xDimNum));
         return false;
     }
 
@@ -138,7 +144,8 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
 static bool CheckAttrValid(int64_t dstType)
 {
     if (dstType != NUM_FLOAT32 && dstType != NUM_FLOAT16 && dstType != NUM_BFLOAT16) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType must be 0(FLOAT32), 1(FLOAT16) or 27(BF16), but got %ld.", dstType);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnAntiMxQuant", "dstType", std::to_string(dstType).c_str(),
+                                              "dstType only supports 0(FLOAT32), 1(FLOAT16) or 27(BFLOAT16)");
         return false;
     }
     return true;
@@ -150,11 +157,11 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* mxscale, int
     // 1. Check null ptr
     CHECK_RET(CheckNotNull(x, mxscale, y), ACLNN_ERR_PARAM_NULLPTR);
 
-    // 2. Check dtype
-    CHECK_RET(CheckDtypeValid(x, mxscale, y, dstType), ACLNN_ERR_PARAM_INVALID);
-
-    // 3. Check attr
+    // 2. Check attr
     CHECK_RET(CheckAttrValid(dstType), ACLNN_ERR_PARAM_INVALID);
+
+    // 3. Check dtype
+    CHECK_RET(CheckDtypeValid(x, mxscale, y, dstType), ACLNN_ERR_PARAM_INVALID);
 
     // 4. Check shape
     CHECK_RET(CheckShape(x, y, mxscale, axis), ACLNN_ERR_PARAM_INVALID);
@@ -185,7 +192,8 @@ aclnnStatus aclnnAntiMxQuantGetWorkspaceSize(const aclTensor* x, const aclTensor
     // input参数如果非连续，需要转连续
     if ((x->GetDataType() == op::DataType::DT_FLOAT4_E2M1 || x->GetDataType() == op::DataType::DT_FLOAT4_E1M2) &&
         !IsContiguous(x)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When the data type of x is float4, it must be contiguous");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnAntiMxQuant", "x", "non-contiguous",
+                                              "When the data type of x is float4, x must be contiguous");
         return ACLNN_ERR_PARAM_INVALID;
     }
 

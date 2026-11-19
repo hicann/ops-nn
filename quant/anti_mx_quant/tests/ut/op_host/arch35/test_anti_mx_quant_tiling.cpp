@@ -47,15 +47,17 @@ static string to_string(void* buf, size_t size)
 
 static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape,
                             gert::StorageShape scaleShape, int64_t axis, int64_t dstType, string expectTilingData,
-                            ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            ge::graphStatus status = ge::GRAPH_SUCCESS, gert::StorageShape* outShape = nullptr,
+                            uint32_t coreNum = 64, uint32_t ubSize = 253952)
 {
-    string compile_info_string = R"({
-         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
-                           "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
-                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                           "CORE_NUM": 64}
-                           })";
+    string compile_info_string = R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1", )"
+                                 R"("Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, )"
+                                 R"("Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, )"
+                                 R"("UB_SIZE": )" +
+                                 std::to_string(ubSize) +
+                                 R"(, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, )"
+                                 R"("L0C_SIZE": 131072, "CORE_NUM": )" +
+                                 std::to_string(coreNum) + "}}";
     map<string, string> soc_infos;
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
@@ -100,7 +102,7 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
                       .NodeIoNum(2, 1)
                       .IrInstanceNum({1})
                       .InputShapes({&shape, &scaleShape})
-                      .OutputShapes({&shape})
+                      .OutputShapes({outShape != nullptr ? outShape : &shape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, inDtype, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -220,4 +222,78 @@ TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_mxscale_shape)
 
     ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, axis, dstType, expectTilingData,
                     ge::GRAPH_FAILED);
+}
+
+// Error case 4: y dtype and dst_type mismatch
+TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_dst_type_mismatch)
+{
+    gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
+
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, -1, 0, "", ge::GRAPH_FAILED);
+}
+
+// Error case 5: x rank exceeds 7
+TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_x_rank)
+{
+    gert::StorageShape shape = {{1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1}};
+    gert::StorageShape scaleShape = {{1, 1, 1, 1, 1, 1, 1, 2, 2}, {1, 1, 1, 1, 1, 1, 1, 2, 2}};
+
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, -1, 1, "", ge::GRAPH_FAILED);
+}
+
+// Error case 6: FP4 last dimension is odd
+TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_fp4_last_dim_odd)
+{
+    gert::StorageShape shape = {{60, 14, 16, 127}, {60, 14, 16, 127}};
+    gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
+
+    ExecuteTestCase(ge::DT_FLOAT4_E2M1, ge::DT_FLOAT, shape, scaleShape, -1, 0, "", ge::GRAPH_FAILED);
+}
+
+// Error case 7: axis is not the tail axis
+TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_axis_not_tail)
+{
+    gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
+
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, 0, 1, "", ge::GRAPH_FAILED);
+}
+
+// Error case 8: y shape differs from x shape
+TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_y_shape_mismatch)
+{
+    gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    gert::StorageShape outShape = {{60, 14, 16, 64}, {60, 14, 16, 64}};
+    gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
+
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, -1, 1, "", ge::GRAPH_FAILED, &outShape);
+}
+
+// Error case 9: mxscale rank is out of range
+TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_mxscale_rank)
+{
+    gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    gert::StorageShape scaleShape = {{2}, {2}};
+
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, -1, 1, "", ge::GRAPH_FAILED);
+}
+
+// Error case 10: failed to get core num from platform
+TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_zero_core_num)
+{
+    gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
+
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, -1, 1, "", ge::GRAPH_FAILED, nullptr, 0,
+                    253952);
+}
+
+// Error case 11: failed to get ub size from platform
+TEST_F(AntiMxQuantTiling, AntiMxQuant_tiling_error_zero_ub_size)
+{
+    gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    gert::StorageShape scaleShape = {{60, 14, 16, 2, 2}, {60, 14, 16, 2, 2}};
+
+    ExecuteTestCase(ge::DT_FLOAT8_E5M2, ge::DT_FLOAT16, shape, scaleShape, -1, 1, "", ge::GRAPH_FAILED, nullptr, 64, 0);
 }

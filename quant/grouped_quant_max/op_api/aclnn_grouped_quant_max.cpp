@@ -190,8 +190,11 @@ static aclnnStatus CheckOutputParams(const aclTensor* x, const aclTensor* groupL
 
     // y shape 检查：必须与 x 一致
     if (!IsShapeEquals(y, x)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "y shape [%s] must be equal to x shape [%s].",
-                op::ToString(y->GetViewShape()).GetString(), op::ToString(x->GetViewShape()).GetString());
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(kOpName, "x, y",
+                                               (std::string(op::ToString(x->GetViewShape()).GetString()) + ", " +
+                                                op::ToString(y->GetViewShape()).GetString())
+                                                   .c_str(),
+                                               "y shape must be equal to x shape");
         return ACLNN_ERR_PARAM_INVALID;
     }
 

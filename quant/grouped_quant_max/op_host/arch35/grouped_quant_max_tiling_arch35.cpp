@@ -10,6 +10,8 @@
 
 #include "grouped_quant_max_tiling_arch35.h"
 #include <numeric>
+#include <string>
+#include <vector>
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
@@ -23,6 +25,17 @@ using namespace GroupedQuantMaxOp;
 using namespace gert;
 
 namespace optiling {
+namespace {
+ge::graphStatus ReportTilingFailure(const char* opName, const std::string& reason)
+{
+    const std::vector<const char*> keys = {"opName", "reason"};
+    const std::vector<const char*> values = {opName, reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1008", keys, values);
+    OP_LOGE_WITHOUT_REPORT(opName, "%s", reason.c_str());
+    return ge::GRAPH_FAILED;
+}
+} // namespace
+
 constexpr size_t INPUT_X_INDEX = 0;
 constexpr size_t INPUT_SCALE_INDEX = 1;
 constexpr size_t INPUT_GROUP_LIST_INDEX = 2;
@@ -42,14 +55,14 @@ constexpr int64_t SIZE_2MB = 2 * 1024 * 1024;
 ge::graphStatus GroupedQuantMaxRegbase::DoTiling()
 {
     OP_CHECK_IF((GetPlatform() != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "DoGroupedQuantMaxTiling GetPlatform Failed."),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "DoGroupedQuantMaxTiling GetPlatform Failed."),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF((GetOpParam() != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "DoGroupedQuantMaxTiling GetOpParam Failed."),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "DoGroupedQuantMaxTiling GetOpParam Failed."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF((CalcTiling() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalcTiling Failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CalcTiling() != ge::GRAPH_SUCCESS),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "CalcTiling Failed."), return ge::GRAPH_FAILED);
     CalcTilingKey();
     return WriteTilingData();
 }
@@ -62,13 +75,13 @@ ge::graphStatus GroupedQuantMaxRegbase::GetPlatform()
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
 
     uint32_t coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((static_cast<int32_t>(coreNum) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get core num."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((static_cast<int32_t>(coreNum) <= 0),
+                ReportTilingFailure(context_->GetNodeName(), "Failed to get core num."), return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF((static_cast<int64_t>(ubSize) <= 0), OP_LOGE(context_->GetNodeName(), "Failed to get ub size."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((static_cast<int64_t>(ubSize) <= 0),
+                ReportTilingFailure(context_->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
 
     coreNum_ = static_cast<int64_t>(coreNum);
     ubSize_ = ubSize;
@@ -300,14 +313,16 @@ ge::graphStatus GroupedQuantMaxRegbase::GetOpParam()
     }
 
     OP_CHECK_IF((CheckDtype() != ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "check input/output dtype failed."), return ge::GRAPH_FAILED);
-
-    OP_CHECK_IF((CheckAttrs() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "op attrs is invalid."),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "check input/output dtype failed."),
                 return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF((CheckAttrs() != ge::GRAPH_SUCCESS),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "op attrs is invalid."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF((CheckShape(xInputShape, scaleInputShape, groupListInputShape, yOutputShape, amaxOutputShape) !=
                  ge::GRAPH_SUCCESS),
-                OP_LOGE(context_->GetNodeName(), "input/output shape is invalid."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "input/output shape is invalid."),
+                return ge::GRAPH_FAILED);
 
     MergeInputShape(xInputShape);
 
@@ -332,7 +347,12 @@ ge::graphStatus GroupedQuantMaxRegbase::CalcUbFactor()
     int64_t zero = ((num_groups * BYTES_OF_TMP_AMAX_TYPE + ALIGN_BYTES - 1) / ALIGN_BYTES) * ALIGN_BYTES;
     int64_t tmpBuffer = scaleSize + groupListSize + maxSize + groupMaxSize + amaxSize + zero;
 
-    OP_CHECK_IF((tmpBuffer >= availableUb), OP_LOGE(context_->GetNodeName(), "UB allocation overflow."),
+    OP_CHECK_IF((tmpBuffer >= availableUb),
+                ReportTilingFailure(
+                    context_->GetNodeName(),
+                    "UB allocation overflow: num_groups=" + std::to_string(num_groups) +
+                        ", tmpBuffer=" + std::to_string(tmpBuffer) + ", availableUb=" + std::to_string(availableUb) +
+                        ", ubSize=" + std::to_string(ubSize_) + ", coreNum=" + std::to_string(coreNum_)),
                 return ge::GRAPH_FAILED);
 
     ubFactor_ = (availableUb - tmpBuffer) / (BUFF_NUM * (dtypeSizeX_ + dtypeSizeY_));
@@ -349,7 +369,10 @@ ge::graphStatus GroupedQuantMaxRegbase::CalcTiling()
 {
     int64_t shape = xInputShape_.GetDim(FIRST_DIM);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
-    OP_CHECK_IF((dtypeSize <= 0), OP_LOGE(context_->GetNodeName(), "dtypeSize is invalid: %ld", dtypeSize),
+    OP_CHECK_IF((dtypeSize <= 0),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
+                                                      ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+                                                      "The dtype size of x is illegal."),
                 return ge::GRAPH_FAILED);
     actualCoreNum_ = std::min(shape, coreNum_);
     blockFactor_ = CeilDiv(shape, actualCoreNum_);
@@ -360,8 +383,8 @@ ge::graphStatus GroupedQuantMaxRegbase::CalcTiling()
         blockTailFactor_ = blockFactor_ - 1;
     }
 
-    OP_CHECK_IF((CalcUbFactor() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "CalcUBFactor failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF((CalcUbFactor() != ge::GRAPH_SUCCESS),
+                OP_LOGE_WITHOUT_REPORT(context_->GetNodeName(), "CalcUBFactor failed."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -425,8 +448,9 @@ static ge::graphStatus TilingPrepareForGroupedQuantMax(gert::TilingParseContext*
     compileInfoPtr->vectorCoreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
     OP_CHECK_IF((compileInfoPtr->vectorCoreNum <= 0 || compileInfoPtr->ubSize <= 0),
-                OP_LOGE(context->GetNodeName(), "GroupedQuantMax GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
-                        compileInfoPtr->vectorCoreNum, compileInfoPtr->ubSize),
+                ReportTilingFailure(context->GetNodeName(), "Failed to get hardware info: vectorCoreNum=" +
+                                                                std::to_string(compileInfoPtr->vectorCoreNum) +
+                                                                ", ubSize=" + std::to_string(compileInfoPtr->ubSize)),
                 return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "GetCoreNum:%d, ubSize:%lu", compileInfoPtr->vectorCoreNum, compileInfoPtr->ubSize);
     return ge::GRAPH_SUCCESS;

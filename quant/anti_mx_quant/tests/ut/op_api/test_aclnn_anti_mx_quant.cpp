@@ -166,3 +166,93 @@ TEST_F(l2_anti_mx_quant_test, ascend950_anti_mx_quant_axis_out_of_range_fail)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_anti_mx_quant_test, ascend950_anti_mx_quant_xy_dim_num_mismatch_fail)
+{
+    TensorDesc x_desc = TensorDesc({1, 4}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc mxscale_desc = TensorDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({1, 4, 1}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -1;
+    int64_t dstType = static_cast<int64_t>(ACL_BF16);
+
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto ut = OP_API_UT(aclnnAntiMxQuant, INPUT(x_desc, mxscale_desc, axis, dstType), OUTPUT(y_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_anti_mx_quant_test, ascend950_anti_mx_quant_mxscale_rank_too_small_fail)
+{
+    TensorDesc x_desc = TensorDesc({1, 4}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc mxscale_desc = TensorDesc({2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({1, 4}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -1;
+    int64_t dstType = static_cast<int64_t>(ACL_BF16);
+
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto ut = OP_API_UT(aclnnAntiMxQuant, INPUT(x_desc, mxscale_desc, axis, dstType), OUTPUT(y_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_anti_mx_quant_test, ascend950_anti_mx_quant_mxscale_rank_not_x_rank_plus_one_fail)
+{
+    TensorDesc x_desc = TensorDesc({1, 4}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc mxscale_desc = TensorDesc({1, 1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({1, 4}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -1;
+    int64_t dstType = static_cast<int64_t>(ACL_BF16);
+
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto ut = OP_API_UT(aclnnAntiMxQuant, INPUT(x_desc, mxscale_desc, axis, dstType), OUTPUT(y_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_anti_mx_quant_test, ascend950_anti_mx_quant_invalid_dst_type_fail)
+{
+    TensorDesc x_desc = TensorDesc({1, 4}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc mxscale_desc = TensorDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({1, 4}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -1;
+    int64_t dstType = static_cast<int64_t>(ACL_FLOAT8_E5M2);
+
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto ut = OP_API_UT(aclnnAntiMxQuant, INPUT(x_desc, mxscale_desc, axis, dstType), OUTPUT(y_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_anti_mx_quant_test, ascend950_anti_mx_quant_fp4_non_contiguous_fail)
+{
+    TensorDesc x_desc = TensorDesc({1, 4}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND, {1, 2}, 0, {1, 8});
+    TensorDesc mxscale_desc = TensorDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({1, 4}, ACL_BF16, ACL_FORMAT_ND);
+    int64_t axis = -1;
+    int64_t dstType = static_cast<int64_t>(ACL_BF16);
+
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto ut = OP_API_UT(aclnnAntiMxQuant, INPUT(x_desc, mxscale_desc, axis, dstType), OUTPUT(y_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_anti_mx_quant_test, ascend950_anti_mx_quant_y_dtype_mismatch_dst_type_fail)
+{
+    TensorDesc x_desc = TensorDesc({1, 4}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc mxscale_desc = TensorDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({1, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int64_t axis = -1;
+    int64_t dstType = static_cast<int64_t>(ACL_BF16);
+
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto ut = OP_API_UT(aclnnAntiMxQuant, INPUT(x_desc, mxscale_desc, axis, dstType), OUTPUT(y_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
