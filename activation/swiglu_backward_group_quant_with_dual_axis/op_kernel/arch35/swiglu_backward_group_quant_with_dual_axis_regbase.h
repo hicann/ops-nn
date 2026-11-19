@@ -19,6 +19,7 @@
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
 #include "kernel_operator.h"
+#include "lib/reduce/reduce.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../../inc/platform.h"
 #include "../../inc/kernel_utils.h"
@@ -52,7 +53,6 @@ constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t DOUBLE_BLOCK_SIZE = 64;
 constexpr int64_t TILE_N = 128;
 constexpr int64_t UB_BLOCK_SIZE = platform::GetUbBlockSize();
-constexpr int64_t GRAD_WEIGHT_PARTIAL_STRIDE = UB_BLOCK_SIZE / sizeof(float);
 
 static constexpr Reg::CastTrait CAST_X_TO_FP32_ZERO = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
                                                        Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
@@ -97,19 +97,22 @@ private:
                                                  __ubuf__ xDtype* gateAddr, __ubuf__ xDtype* gradYAddr,
                                                  __ubuf__ xDtype* gradXAddr, uint32_t rowWidth,
                                                  __ubuf__ weightDtype* weightAddr);
-    __aicore__ inline void ProcessGradWeight();
-    __aicore__ inline void ProcessGradWeightQueuePipeline();
-    static __aicore__ inline void ComputeGradWeightProduct(__ubuf__ xDtype* gradYAddr, __ubuf__ xDtype* yOriginAddr,
-                                                           __ubuf__ float* productAddr, uint32_t count);
-    static __aicore__ inline void StoreGradWeight(__ubuf__ float* reducedAddr, __ubuf__ weightDtype* outputAddr);
-    template <HardEvent event>
-    static __aicore__ inline void Synchronize()
-    {
-        TEventID eventId = GetTPipePtr()->AllocEventID<event>();
-        SetFlag<event>(eventId);
-        WaitFlag<event>(eventId);
-        GetTPipePtr()->ReleaseEventID<event>(eventId);
-    }
+    __aicore__ inline void ProcessGradWeightReuseUb();
+    __aicore__ inline void ProcessGradWeightReinitUb();
+    __aicore__ inline void PrefetchGradWeightInput(TQue<QuePosition::VECIN, 1>& gradYQueue,
+                                                   TQue<QuePosition::VECIN, 1>& yOriginQueue, int64_t rowStart,
+                                                   int64_t chunk, int64_t batchRows);
+    __aicore__ inline void ComputeGradWeight(const LocalTensor<xDtype>& gradYLocal,
+                                             const LocalTensor<xDtype>& yOriginLocal, LocalTensor<float>& productLocal,
+                                             LocalTensor<weightDtype>& outputLocal, int64_t count, int64_t batchRows,
+                                             int64_t chunk, int64_t chunks);
+
+    static __simd_vf__ inline void ComputeGradWeightProduct(__ubuf__ xDtype* gradYAddr, __ubuf__ xDtype* yOriginAddr,
+                                                            __ubuf__ float* productAddr, uint32_t count);
+    static __simd_vf__ inline void StoreGradWeight(__ubuf__ float* reducedAddr, __ubuf__ weightDtype* outputAddr,
+                                                   uint32_t count);
+    static __simd_vf__ inline void AccumulateGradWeight(__ubuf__ float* reducedAddr, __ubuf__ float* accumulatorAddr,
+                                                        bool firstChunk);
     __aicore__ inline void PadZeroM(__ubuf__ xDtype* gradXAddr, uint32_t num);
     __aicore__ inline void ComputeScaleCuBLAS(uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr,
                                               __ubuf__ uint8_t* mxScaleA1Addr, __ubuf__ uint8_t* mxScaleA2Addr,
@@ -248,9 +251,12 @@ SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, h
     int64_t inBufferSize = inHalfSize_ * static_cast<int64_t>(sizeof(xDtype));
     int64_t gradXBufferSize = inHalfSize_ * DIGIT_TWO * static_cast<int64_t>(sizeof(xDtype));
     if constexpr (hasWeight) {
-        const int64_t gradWeightBufferSize = gradWeightTileH_ * sizeof(float) + VF_LEN_FP32 * sizeof(float) +
-                                             UB_BLOCK_SIZE;
-        gradXBufferSize = gradWeightBufferSize > gradXBufferSize ? gradWeightBufferSize : gradXBufferSize;
+        const int64_t partialCount = ops::CeilDiv(gradWeightTileH_, static_cast<int64_t>(VF_LEN_FP32 * VF_LEN_FP32)) *
+                                     VF_LEN_FP32;
+        const int64_t gradWeightBufferSize = (gradWeightTileH_ + partialCount) * sizeof(float) + UB_BLOCK_SIZE;
+        if (gradWeightTileH_ <= inHalfSize_) {
+            gradXBufferSize = gradWeightBufferSize > gradXBufferSize ? gradWeightBufferSize : gradXBufferSize;
+        }
     }
     // Four DIST_INTLV_B8 stores start at 0/128/256/384 and each may cover 512 bytes.
     int64_t mxScale2BufferSize = (ubRowLen_ * DIGIT_TWO) * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_THREE) +
@@ -424,7 +430,11 @@ __aicore__ inline void SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtyp
         }
     }
     if constexpr (hasWeight) {
-        ProcessGradWeight();
+        if (dimN_ == gradWeightTileH_ && gradWeightTileTokens_ <= inHalfSize_ / gradWeightTileH_) {
+            ProcessGradWeightReuseUb();
+        } else {
+            ProcessGradWeightReinitUb();
+        }
     }
 }
 
@@ -626,14 +636,13 @@ __aicore__ inline void SwigluBackwardGroupQuantWithDualAxisMxBase<
 
 template <typename xDtype, typename y1Dtype, typename weightDtype, uint64_t mode, bool hasGroupIndex, bool hasWeight,
           bool hasClampLimit>
-__aicore__ inline void
+__simd_vf__ inline void
 SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, hasGroupIndex, hasWeight,
                                            hasClampLimit>::ComputeGradWeightProduct(__ubuf__ xDtype* gradYAddr,
                                                                                     __ubuf__ xDtype* yOriginAddr,
                                                                                     __ubuf__ float* productAddr,
                                                                                     uint32_t count)
 {
-    __VEC_SCOPE__
     {
         Reg::RegTensor<xDtype> packed;
         Reg::RegTensor<float> gradY;
@@ -657,23 +666,101 @@ SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, h
 
 template <typename xDtype, typename y1Dtype, typename weightDtype, uint64_t mode, bool hasGroupIndex, bool hasWeight,
           bool hasClampLimit>
-__aicore__ inline void
+__simd_vf__ inline void
 SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, hasGroupIndex, hasWeight,
                                            hasClampLimit>::StoreGradWeight(__ubuf__ float* reducedAddr,
-                                                                           __ubuf__ weightDtype* outputAddr)
+                                                                           __ubuf__ weightDtype* outputAddr,
+                                                                           uint32_t count)
 {
-    __VEC_SCOPE__
     {
         Reg::RegTensor<float> sum;
+        uint32_t remaining = count;
+        const uint16_t repeats = static_cast<uint16_t>((count + VF_LEN_FP32 - 1) / VF_LEN_FP32);
+        for (uint16_t i = 0; i < repeats; ++i) {
+            Reg::MaskReg mask = Reg::UpdateMask<float>(remaining);
+            Reg::LoadAlign(sum, reducedAddr + i * VF_LEN_FP32);
+            if constexpr (IsSameType<weightDtype, float>::value) {
+                Reg::StoreAlign((__ubuf__ float*)outputAddr + i * VF_LEN_FP32, sum, mask);
+            } else {
+                Reg::RegTensor<weightDtype> output;
+                Reg::Cast<weightDtype, float, CAST_FP32_TO_FP16_BF16>(output, sum, mask);
+                Reg::DataCopy<weightDtype, Reg::StoreDist::DIST_PACK_B32>(outputAddr + i * VF_LEN_FP32, output, mask);
+            }
+        }
+    }
+}
+
+template <typename xDtype, typename y1Dtype, typename weightDtype, uint64_t mode, bool hasGroupIndex, bool hasWeight,
+          bool hasClampLimit>
+__simd_vf__ inline void
+SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, hasGroupIndex, hasWeight,
+                                           hasClampLimit>::AccumulateGradWeight(__ubuf__ float* reducedAddr,
+                                                                                __ubuf__ float* accumulatorAddr,
+                                                                                bool firstChunk)
+{
+    // Preserve the original left-to-right FP32 chunk accumulation, including -0 initialization.
+    {
+        Reg::RegTensor<float> reduced;
+        Reg::RegTensor<float> accumulator;
         uint32_t oneElement = 1;
         Reg::MaskReg oneMask = Reg::UpdateMask<float>(oneElement);
-        Reg::LoadAlign(sum, reducedAddr);
-        if constexpr (IsSameType<weightDtype, float>::value) {
-            Reg::StoreAlign((__ubuf__ float*)outputAddr, sum, oneMask);
+        Reg::LoadAlign(reduced, reducedAddr);
+        if (firstChunk) {
+            Reg::Duplicate(accumulator, -0.0f);
         } else {
-            Reg::RegTensor<weightDtype> output;
-            Reg::Cast<weightDtype, float, CAST_FP32_TO_FP16_BF16>(output, sum, oneMask);
-            Reg::DataCopy<weightDtype, Reg::StoreDist::DIST_PACK_B32>(outputAddr, output, oneMask);
+            Reg::LoadAlign(accumulator, accumulatorAddr);
+        }
+        Reg::Add(accumulator, accumulator, reduced, oneMask);
+        Reg::StoreAlign(accumulatorAddr, accumulator, oneMask);
+    }
+}
+
+template <typename xDtype, typename y1Dtype, typename weightDtype, uint64_t mode, bool hasGroupIndex, bool hasWeight,
+          bool hasClampLimit>
+__aicore__ inline void
+SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, hasGroupIndex, hasWeight,
+                                           hasClampLimit>::ComputeGradWeight(const LocalTensor<xDtype>& gradYLocal,
+                                                                             const LocalTensor<xDtype>& yOriginLocal,
+                                                                             LocalTensor<float>& productLocal,
+                                                                             LocalTensor<weightDtype>& outputLocal,
+                                                                             int64_t count, int64_t batchRows,
+                                                                             int64_t chunk, int64_t chunks)
+{
+    auto gradYAddr = (__ubuf__ xDtype*)gradYLocal.GetPhyAddr();
+    auto yOriginAddr = (__ubuf__ xDtype*)yOriginLocal.GetPhyAddr();
+    auto productAddr = (__ubuf__ float*)productLocal.GetPhyAddr();
+    auto outputAddr = (__ubuf__ weightDtype*)outputLocal.GetPhyAddr();
+    if (chunks == 1) {
+        const uint32_t reduceShape[] = {static_cast<uint32_t>(batchRows), static_cast<uint32_t>(count)};
+        asc_vf_call<ComputeGradWeightProduct>(gradYAddr, yOriginAddr, productAddr,
+                                              static_cast<uint32_t>(count * batchRows));
+        ReduceSum<float, Pattern::Reduce::AR, true>(outputLocal.template ReinterpretCast<float>(), productLocal,
+                                                    productLocal.template ReinterpretCast<uint8_t>(), reduceShape,
+                                                    true);
+        if constexpr (!IsSameType<weightDtype, float>::value) {
+            asc_vf_call<StoreGradWeight>((__ubuf__ float*)outputAddr, outputAddr, static_cast<uint32_t>(batchRows));
+        }
+        return;
+    }
+    LocalTensor<float> partialLocal = productLocal[gradWeightTileH_];
+    const int64_t partialCount = ops::CeilDiv(gradWeightTileH_, static_cast<int64_t>(VF_LEN_FP32 * VF_LEN_FP32)) *
+                                 VF_LEN_FP32;
+    LocalTensor<float> reducedLocal = partialLocal[partialCount];
+    const int64_t outputStride = UB_BLOCK_SIZE / sizeof(weightDtype);
+    const uint32_t reduceShape[] = {1, static_cast<uint32_t>(count)};
+    for (int64_t token = 0; token < batchRows; ++token) {
+        asc_vf_call<ComputeGradWeightProduct>(gradYAddr + token * gradWeightTileH_,
+                                              yOriginAddr + token * gradWeightTileH_, productAddr,
+                                              static_cast<uint32_t>(count));
+        ReduceSum<float, Pattern::Reduce::AR, true>(
+            reducedLocal, productLocal, partialLocal.template ReinterpretCast<uint8_t>(), reduceShape, true);
+        asc_vf_call<AccumulateGradWeight>((__ubuf__ float*)reducedLocal.GetPhyAddr(),
+                                          (__ubuf__ float*)(outputAddr + token * outputStride), chunk == 0);
+    }
+    if (chunk + 1 == chunks) {
+        for (int64_t token = 0; token < batchRows; ++token) {
+            asc_vf_call<StoreGradWeight>((__ubuf__ float*)(outputAddr + token * outputStride),
+                                         outputAddr + token * outputStride, 1);
         }
     }
 }
@@ -681,86 +768,153 @@ SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, h
 template <typename xDtype, typename y1Dtype, typename weightDtype, uint64_t mode, bool hasGroupIndex, bool hasWeight,
           bool hasClampLimit>
 __aicore__ inline void SwigluBackwardGroupQuantWithDualAxisMxBase<
-    xDtype, y1Dtype, weightDtype, mode, hasGroupIndex, hasWeight, hasClampLimit>::ProcessGradWeightQueuePipeline()
+    xDtype, y1Dtype, weightDtype, mode, hasGroupIndex, hasWeight,
+    hasClampLimit>::PrefetchGradWeightInput(TQue<QuePosition::VECIN, 1>& gradYQueue,
+                                            TQue<QuePosition::VECIN, 1>& yOriginQueue, int64_t rowStart, int64_t chunk,
+                                            int64_t batchRows)
 {
-    PipeBarrier<PIPE_ALL>();
-    LocalTensor<float> productLocal = gradXBuf_.template Get<float>();
-    LocalTensor<float> partialLocal = productLocal[gradWeightTileH_];
-    LocalTensor<float> reducedLocal = partialLocal[VF_LEN_FP32];
-    auto productAddr = (__ubuf__ float*)productLocal.GetPhyAddr();
-    const int64_t outputStride = UB_BLOCK_SIZE / sizeof(weightDtype);
+    const int64_t offset = chunk * gradWeightTileH_;
+    const int64_t count = (dimN_ - offset > gradWeightTileH_) ? gradWeightTileH_ : dimN_ - offset;
+    LocalTensor<xDtype> gradYLocal = gradYQueue.template AllocTensor<xDtype>();
+    LocalTensor<xDtype> yOriginLocal = yOriginQueue.template AllocTensor<xDtype>();
+    DataCopyExtParams cp = {static_cast<uint16_t>(batchRows), static_cast<uint32_t>(count * sizeof(xDtype)),
+                            static_cast<uint32_t>((dimN_ - count) * sizeof(xDtype)),
+                            static_cast<uint32_t>((gradWeightTileH_ - count) * sizeof(xDtype) / BLOCK_SIZE), 0};
+    DataCopyPadExtParams<xDtype> noPad = {false, 0, 0, 0};
+    const int64_t gmOffset = rowStart * dimN_ + offset;
+    DataCopyPad(gradYLocal, gradYGm_[gmOffset], cp, noPad);
+    DataCopyPad(yOriginLocal, yOriginGm_[gmOffset], cp, noPad);
+    gradYQueue.template EnQue(gradYLocal);
+    yOriginQueue.template EnQue(yOriginLocal);
+}
+
+template <typename xDtype, typename y1Dtype, typename weightDtype, uint64_t mode, bool hasGroupIndex, bool hasWeight,
+          bool hasClampLimit>
+__aicore__ inline void SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, hasGroupIndex,
+                                                                  hasWeight, hasClampLimit>::ProcessGradWeightReuseUb()
+{
+    LocalTensor<float> scratchLocal = gradXBuf_.template Get<float>();
     const int64_t totalRows = tilingData_->totalRows;
     const int64_t batchTokens = gradWeightTileTokens_;
-    const int64_t chunks = ops::CeilDiv(dimN_, gradWeightTileH_);
-    DataCopyPadExtParams<xDtype> noPad = {false, 0, 0, 0};
-
-    for (int64_t rowStart = blockIdx_ * batchTokens; rowStart < totalRows;
-         rowStart += tilingData_->usedCoreNum * batchTokens) {
-        const int64_t batchRows = (totalRows - rowStart > batchTokens) ? batchTokens : totalRows - rowStart;
-        LocalTensor<weightDtype> outputLocal = outQueue1_.template AllocTensor<weightDtype>();
-        auto outputAddr = (__ubuf__ weightDtype*)outputLocal.GetPhyAddr();
-        float gradWeight = -0.0f;
-
-        for (int64_t chunk = 0; chunk < chunks; ++chunk) {
-            const int64_t offset = chunk * gradWeightTileH_;
-            const int64_t count = (dimN_ - offset > gradWeightTileH_) ? gradWeightTileH_ : dimN_ - offset;
-            LocalTensor<xDtype> gradYLocal = inQueue_.template AllocTensor<xDtype>();
-            LocalTensor<xDtype> yOriginLocal = gradYQueue_.template AllocTensor<xDtype>();
-            DataCopyExtParams copyParams = {
-                static_cast<uint16_t>(batchRows), static_cast<uint32_t>(count * static_cast<int64_t>(sizeof(xDtype))),
-                static_cast<uint32_t>((dimN_ - count) * static_cast<int64_t>(sizeof(xDtype))),
-                static_cast<uint32_t>((gradWeightTileH_ - count) * static_cast<int64_t>(sizeof(xDtype)) / BLOCK_SIZE),
-                0};
-            const int64_t gmOffset = rowStart * dimN_ + offset;
-            DataCopyPad(gradYLocal, gradYGm_[gmOffset], copyParams, noPad);
-            DataCopyPad(yOriginLocal, yOriginGm_[gmOffset], copyParams, noPad);
-            inQueue_.template EnQue(gradYLocal);
-            gradYQueue_.template EnQue(yOriginLocal);
-
-            gradYLocal = inQueue_.template DeQue<xDtype>();
-            yOriginLocal = gradYQueue_.template DeQue<xDtype>();
-            auto gradYAddr = (__ubuf__ xDtype*)gradYLocal.GetPhyAddr();
-            auto yOriginAddr = (__ubuf__ xDtype*)yOriginLocal.GetPhyAddr();
-            for (int64_t token = 0; token < batchRows; ++token) {
-                ComputeGradWeightProduct(gradYAddr + token * gradWeightTileH_, yOriginAddr + token * gradWeightTileH_,
-                                         productAddr, static_cast<uint32_t>(count));
-                PipeBarrier<PIPE_V>();
-                ReduceSum<float>(reducedLocal, productLocal, partialLocal, static_cast<uint32_t>(count));
-                PipeBarrier<PIPE_V>();
-                if (chunks == 1) {
-                    StoreGradWeight((__ubuf__ float*)reducedLocal.GetPhyAddr(), outputAddr + token * outputStride);
-                } else {
-                    Synchronize<HardEvent::V_S>();
-                    gradWeight += reducedLocal.GetValue(0);
-                }
-            }
-            inQueue_.template FreeTensor(gradYLocal);
-            gradYQueue_.template FreeTensor(yOriginLocal);
+    const int64_t rowsPerCore = totalRows / tilingData_->usedCoreNum;
+    const int64_t extraRows = totalRows % tilingData_->usedCoreNum;
+    const int64_t firstRow = blockIdx_ * rowsPerCore + ((blockIdx_ < extraRows) ? blockIdx_ : extraRows);
+    const int64_t lastRow = firstRow + rowsPerCore + ((blockIdx_ < extraRows) ? 1 : 0);
+    if (firstRow >= lastRow) {
+        return;
+    }
+    const int64_t firstBatchRows = (lastRow - firstRow > batchTokens) ? batchTokens : lastRow - firstRow;
+    const int64_t outputBytes = (lastRow - firstRow) * sizeof(weightDtype) + batchTokens * sizeof(float);
+    const bool bufferResults = batchTokens * sizeof(weightDtype) % UB_BLOCK_SIZE == 0 &&
+                               outputBytes <= ubRowCount_ * UB_BLOCK_SIZE;
+    PrefetchGradWeightInput(inQueue_, gradYQueue_, firstRow, 0, firstBatchRows);
+    for (int64_t rowStart = firstRow; rowStart < lastRow; rowStart += batchTokens) {
+        const int64_t batchRows = (lastRow - rowStart > batchTokens) ? batchTokens : lastRow - rowStart;
+        LocalTensor<weightDtype> outputLocal;
+        if (bufferResults) {
+            outputLocal = mxScale1ReciprocalBuf_.template Get<weightDtype>()[rowStart - firstRow];
+        } else {
+            outputLocal = outQueue1_.template AllocTensor<weightDtype>();
         }
-
-        if (chunks > 1) {
-            reducedLocal.SetValue(0, gradWeight);
-            Synchronize<HardEvent::S_V>();
-            StoreGradWeight((__ubuf__ float*)reducedLocal.GetPhyAddr(), outputAddr);
+        LocalTensor<xDtype> gradYLocal = inQueue_.template DeQue<xDtype>();
+        LocalTensor<xDtype> yOriginLocal = gradYQueue_.template DeQue<xDtype>();
+        if (rowStart + batchTokens < lastRow) {
+            const int64_t nextRow = rowStart + batchTokens;
+            const int64_t nextRows = (lastRow - nextRow > batchTokens) ? batchTokens : lastRow - nextRow;
+            PrefetchGradWeightInput(inQueue_, gradYQueue_, nextRow, 0, nextRows);
         }
-        outQueue1_.template EnQue(outputLocal);
-
-        outputLocal = outQueue1_.template DeQue<weightDtype>();
-        DataCopyExtParams copyOut = {1, static_cast<uint32_t>(sizeof(weightDtype)), 0, 0, 0};
-        for (int64_t token = 0; token < batchRows; ++token) {
-            DataCopyPad(gradWeightGm_[rowStart + token], outputLocal[token * outputStride], copyOut);
+        ComputeGradWeight(gradYLocal, yOriginLocal, scratchLocal, outputLocal, dimN_, batchRows, 0, 1);
+        inQueue_.template FreeTensor(gradYLocal);
+        gradYQueue_.template FreeTensor(yOriginLocal);
+        if (!bufferResults) {
+            outQueue1_.template EnQue(outputLocal);
+            outputLocal = outQueue1_.template DeQue<weightDtype>();
+            DataCopyExtParams copyOut = {1, static_cast<uint32_t>(batchRows * sizeof(weightDtype)), 0, 0, 0};
+            DataCopyPad(gradWeightGm_[rowStart], outputLocal, copyOut);
+            outQueue1_.template FreeTensor(outputLocal);
         }
-        outQueue1_.template FreeTensor(outputLocal);
+    }
+    if (bufferResults) {
+        const event_t ready = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_MTE3));
+        SetFlag<HardEvent::V_MTE3>(ready);
+        WaitFlag<HardEvent::V_MTE3>(ready);
+        auto outputLocal = mxScale1ReciprocalBuf_.template Get<weightDtype>();
+        DataCopyExtParams copyOut = {1, static_cast<uint32_t>((lastRow - firstRow) * sizeof(weightDtype)), 0, 0, 0};
+        DataCopyPad(gradWeightGm_[firstRow], outputLocal, copyOut);
+        const event_t eventIdMTE3ToV = static_cast<event_t>(pipe_->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(eventIdMTE3ToV);
+        WaitFlag<HardEvent::MTE3_V>(eventIdMTE3ToV);
     }
 }
 
 template <typename xDtype, typename y1Dtype, typename weightDtype, uint64_t mode, bool hasGroupIndex, bool hasWeight,
           bool hasClampLimit>
 __aicore__ inline void SwigluBackwardGroupQuantWithDualAxisMxBase<xDtype, y1Dtype, weightDtype, mode, hasGroupIndex,
-                                                                  hasWeight, hasClampLimit>::ProcessGradWeight()
+                                                                  hasWeight, hasClampLimit>::ProcessGradWeightReinitUb()
 {
-    ProcessGradWeightQueuePipeline();
+    const event_t vectorDone = static_cast<event_t>(pipe_->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(vectorDone);
+    WaitFlag<HardEvent::V_S>(vectorDone);
+    const event_t copyOutDone = static_cast<event_t>(pipe_->FetchEventID(HardEvent::MTE3_S));
+    SetFlag<HardEvent::MTE3_S>(copyOutDone);
+    WaitFlag<HardEvent::MTE3_S>(copyOutDone);
+    const int64_t batchTokens = gradWeightTileTokens_;
+    const int64_t totalRows = tilingData_->totalRows;
+    const int64_t rowsPerCore = totalRows / tilingData_->usedCoreNum;
+    const int64_t extraRows = totalRows % tilingData_->usedCoreNum;
+    const int64_t firstRow = blockIdx_ * rowsPerCore + ((blockIdx_ < extraRows) ? blockIdx_ : extraRows);
+    const int64_t lastRow = firstRow + rowsPerCore + ((blockIdx_ < extraRows) ? 1 : 0);
+    if (firstRow >= lastRow) {
+        return;
+    }
+    // Reuse quantization UB only after all pending accesses have completed.
+    pipe_->Reset();
+    TQue<QuePosition::VECIN, 1> gradYQueue;
+    TQue<QuePosition::VECIN, 1> yOriginQueue;
+    TQue<QuePosition::VECOUT, 1> outputQueue;
+    TBuf<TPosition::VECCALC> scratchBuffer;
+    const int64_t chunks = ops::CeilDiv(dimN_, gradWeightTileH_);
+    const int64_t partialCount = ops::CeilDiv(gradWeightTileH_, static_cast<int64_t>(VF_LEN_FP32 * VF_LEN_FP32)) *
+                                 VF_LEN_FP32;
+    pipe_->InitBuffer(gradYQueue, DB_BUFFER, batchTokens * gradWeightTileH_ * sizeof(xDtype));
+    pipe_->InitBuffer(yOriginQueue, DB_BUFFER, batchTokens * gradWeightTileH_ * sizeof(xDtype));
+    pipe_->InitBuffer(outputQueue, DB_BUFFER, batchTokens * UB_BLOCK_SIZE);
+    const bool batchReduce = chunks == 1;
+    const int64_t productCount = batchReduce ? batchTokens * gradWeightTileH_ : gradWeightTileH_;
+    pipe_->InitBuffer(scratchBuffer,
+                      productCount * sizeof(float) + (batchReduce ? 0 : partialCount * sizeof(float) + UB_BLOCK_SIZE));
+    LocalTensor<float> scratch = scratchBuffer.template Get<float>();
+    const int64_t firstBatchRows = (lastRow - firstRow > batchTokens) ? batchTokens : lastRow - firstRow;
+    PrefetchGradWeightInput(gradYQueue, yOriginQueue, firstRow, 0, firstBatchRows);
+    for (int64_t row = firstRow; row < lastRow; row += batchTokens) {
+        const int64_t batchRows = (lastRow - row > batchTokens) ? batchTokens : lastRow - row;
+        LocalTensor<weightDtype> output = outputQueue.template AllocTensor<weightDtype>();
+        for (int64_t chunk = 0; chunk < chunks; ++chunk) {
+            LocalTensor<xDtype> gradYLocal = gradYQueue.template DeQue<xDtype>();
+            LocalTensor<xDtype> yOriginLocal = yOriginQueue.template DeQue<xDtype>();
+            if (chunk + 1 < chunks) {
+                PrefetchGradWeightInput(gradYQueue, yOriginQueue, row, chunk + 1, batchRows);
+            } else if (row + batchTokens < lastRow) {
+                const int64_t nextRows = (lastRow - row - batchTokens > batchTokens) ? batchTokens :
+                                                                                       lastRow - row - batchTokens;
+                PrefetchGradWeightInput(gradYQueue, yOriginQueue, row + batchTokens, 0, nextRows);
+            }
+            const int64_t count = (dimN_ - chunk * gradWeightTileH_ > gradWeightTileH_) ?
+                                      gradWeightTileH_ :
+                                      dimN_ - chunk * gradWeightTileH_;
+            ComputeGradWeight(gradYLocal, yOriginLocal, scratch, output, count, batchRows, chunk, chunks);
+            gradYQueue.template FreeTensor(gradYLocal);
+            yOriginQueue.template FreeTensor(yOriginLocal);
+        }
+        outputQueue.template EnQue(output);
+        output = outputQueue.template DeQue<weightDtype>();
+        DataCopyExtParams cp = {static_cast<uint16_t>(batchReduce ? 1 : batchRows),
+                                static_cast<uint32_t>((batchReduce ? batchRows : 1) * sizeof(weightDtype)), 0, 0, 0};
+        DataCopyPad(gradWeightGm_[row], output, cp);
+        outputQueue.template FreeTensor(output);
+    }
 }
+
 template <typename xDtype, typename y1Dtype, typename weightDtype, uint64_t mode, bool hasGroupIndex, bool hasWeight,
           bool hasClampLimit>
 __aicore__ inline void

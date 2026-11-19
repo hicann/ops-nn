@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <graph/utils/type_utils.h>
 #include "error_util.h"
@@ -46,13 +47,13 @@ constexpr int64_t FP8_E4M3FN = 36;
 constexpr int64_t FP8_E5M2 = 35;
 constexpr int64_t MX_BLOCK_SIZE = 32;
 constexpr int64_t SCALE_PAIR = 2;
+constexpr int64_t SWIGLU_PARTS = 2;
 constexpr int64_t TILE_M = 64;
 constexpr int64_t TILE_N = 128;
 constexpr int64_t DB = 2;
-constexpr int64_t GRAD_WEIGHT_MAX_TILE_H = 2048;
-constexpr int64_t GRAD_WEIGHT_MAX_TILE_TOKENS = TILE_M;
 constexpr int64_t VF_LEN_FP32 = 64;
 constexpr int64_t UB_BLOCK_SIZE = 32;
+constexpr int64_t GRAD_WEIGHT_PIPELINE_BATCHES = 5;
 
 bool IsXType(ge::DataType dtype) { return dtype == ge::DT_FLOAT16 || dtype == ge::DT_BF16; }
 
@@ -423,15 +424,40 @@ ge::graphStatus SwigluBackwardGroupQuantWithDualAxisMxTiling::ComputeTiling()
     const int64_t fixedUbBytes = inputQueueBytes + weightQueueBytes + quantOutputQueueBytes + scale1QueueBytes +
                                  scale2QueueBytes + scale1Bytes + scale2ReciprocalBytes;
     int64_t gradXScratchBytes = quantScratchBytes;
+    int64_t gradWeightPhaseUbBytes = 0;
     param_.gradWeightTileTokens = 1;
     if (param_.hasWeight != 0) {
         param_.gradWeightTileH = std::min(param_.dimN, halfTile);
-        param_.gradWeightTileTokens = std::min(GRAD_WEIGHT_MAX_TILE_TOKENS, halfTile / param_.gradWeightTileH);
-        const int64_t gradWeightScratchBytes = param_.gradWeightTileH * sizeof(float) + VF_LEN_FP32 * sizeof(float) +
-                                               UB_BLOCK_SIZE;
-        gradXScratchBytes = std::max(quantScratchBytes, gradWeightScratchBytes);
+        const int64_t fullRowTokenBytes = SWIGLU_PARTS * DB * param_.dimN * elementBytes + DB * UB_BLOCK_SIZE +
+                                          param_.dimN * sizeof(float);
+        if (fullRowTokenBytes <= param_.ubSize) {
+            param_.gradWeightTileH = param_.dimN;
+        }
+        const int64_t partialCount = Ops::Base::CeilDiv(param_.gradWeightTileH, VF_LEN_FP32 * VF_LEN_FP32) *
+                                     VF_LEN_FP32;
+        const bool batchReduce = param_.gradWeightTileH == param_.dimN;
+        const int64_t gradWeightScratchBytes = batchReduce ? 0 :
+                                                             (param_.gradWeightTileH + partialCount) * sizeof(float) +
+                                                                 UB_BLOCK_SIZE;
+        if (param_.gradWeightTileH <= halfTile) {
+            gradXScratchBytes = std::max<int64_t>(
+                quantScratchBytes, (param_.gradWeightTileH + partialCount) * sizeof(float) + UB_BLOCK_SIZE);
+        }
+        const int64_t bytesPerToken = SWIGLU_PARTS * DB * param_.gradWeightTileH * elementBytes + DB * UB_BLOCK_SIZE +
+                                      (batchReduce ? param_.gradWeightTileH * sizeof(float) : 0);
+        const int64_t availableTokens = (param_.ubSize - gradWeightScratchBytes) / bytesPerToken;
+        OP_CHECK_IF(
+            availableTokens < 1,
+            OP_LOGE(context_->GetNodeName(), "gradWeight tile exceeds UB: need at least %ld bytes, available=%ld bytes",
+                    gradWeightScratchBytes + bytesPerToken, param_.ubSize),
+            return ge::GRAPH_FAILED);
+        const int64_t tokensPerCore = std::max<int64_t>(1, Ops::Base::CeilDiv(param_.totalRows, param_.usedCoreNum));
+        const int64_t copyBlockLimit = std::numeric_limits<uint16_t>::max();
+        const int64_t pipelineTokens = Ops::Base::CeilDiv(tokensPerCore, GRAD_WEIGHT_PIPELINE_BATCHES);
+        param_.gradWeightTileTokens = std::min({availableTokens, tokensPerCore, copyBlockLimit, pipelineTokens});
+        gradWeightPhaseUbBytes = gradWeightScratchBytes + param_.gradWeightTileTokens * bytesPerToken;
     }
-    const int64_t needUb = fixedUbBytes + gradXScratchBytes;
+    const int64_t needUb = std::max(fixedUbBytes + gradXScratchBytes, gradWeightPhaseUbBytes);
     OP_CHECK_IF(needUb > param_.ubSize,
                 OP_LOGE(context_->GetNodeName(),
                         "MX base tile exceeds UB: actual need=%ld bytes, available=%ld bytes, expected need <= "

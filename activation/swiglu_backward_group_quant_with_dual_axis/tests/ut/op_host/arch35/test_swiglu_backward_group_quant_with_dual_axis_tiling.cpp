@@ -62,7 +62,34 @@ TEST_F(SwigluBackwardGroupQuantWithDualAxisTilingTest, GroupedBf16WithFp32Weight
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.data.numGroups, 3U);
     EXPECT_EQ(result.data.gradWeightTileH, 256U);
-    EXPECT_EQ(result.data.gradWeightTileTokens, 32U);
+    EXPECT_EQ(result.data.gradWeightTileTokens, 1U);
+    EXPECT_FLOAT_EQ(result.data.clampLimit, 7.0f);
+}
+
+TEST_F(SwigluBackwardGroupQuantWithDualAxisTilingTest, GroupedBf16WithFp32WeightBatchReduce)
+{
+    gert::StorageShape gradY = {{10240, 3072}, {10240, 3072}};
+    gert::StorageShape x = {{10240, 6144}, {10240, 6144}};
+    gert::StorageShape weight = {{10240, 1}, {10240, 1}};
+    gert::StorageShape yOrigin = {{10240, 3072}, {10240, 3072}};
+    gert::StorageShape groupIndex = {{3}, {3}};
+    gert::StorageShape y = {{10240, 6144}, {10240, 6144}};
+    gert::StorageShape scale1 = {{10240, 96, 2}, {10240, 96, 2}};
+    gert::StorageShape scale2 = {{163, 6144, 2}, {163, 6144, 2}};
+    gert::StorageShape gradWeight = {{10240, 1}, {10240, 1}};
+    SwigluTilingCase testCase{
+        {&gradY, &x, &weight, &yOrigin, &groupIndex},
+        {&y, &scale1, &y, &scale2, &gradWeight},
+        {1, 1, 1, 1, 1},
+        {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_INT64},
+        {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT}};
+    testCase.clampLimit = 7.0f;
+    testCase.bias = 1.0f;
+    auto result = Run(testCase);
+    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.data.numGroups, 3U);
+    EXPECT_EQ(result.data.gradWeightTileH, 3072U);
+    EXPECT_EQ(result.data.gradWeightTileTokens, 7U);
     EXPECT_FLOAT_EQ(result.data.clampLimit, 7.0f);
 }
 
