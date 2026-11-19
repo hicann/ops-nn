@@ -3520,4 +3520,108 @@ TEST_F(MatMulV3TilingRuntime, splitK_shift_nkm_targetShape)
     ASSERT_EQ(tiling_key, 65616);
 }
 
+// AL1 full load + single core split K. tiling key = LOADMODE(1) | SPLITCORE(2)<<4 | MIXND2NZ(1)<<16
+constexpr uint64_t kScSplitKAl1FullLoadTilingKey = 65569UL;
+
+static ge::graphStatus RunScSplitKAl1BiasTiling(ge::DataType xDtype, ge::DataType biasDtype, uint64_t& tilingKey)
+{
+    gert::StorageShape x1_shape = {{128, 20480}, {128, 20480}};
+    gert::StorageShape x2_shape = {{13312, 20480}, {13312, 20480}};
+    gert::StorageShape bias_shape = {{13312}, {13312}};
+    std::vector<gert::StorageShape> output_shapes(1, {{128, 13312}, {128, 13312}});
+    std::vector<void*> output_shapes_ref(1, &output_shapes[0]);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    string compile_info_string =
+        R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true,"offset_x":0,"opImplMode":0},
+      "binary_attrs":{"bias_flag":true, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":24, "vector_core_cnt": 48},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
+      "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM":24, "vector_core_cnt": 48, "socVersion": "Ascend910B" },
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
+    optiling::MatmulV3CompileInfo compile_info;
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+    aicore_spec["cube_freq"] = "1800";
+
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MatMulV3")->tiling_parse;
+    if (tiling_func == nullptr || tiling_parse_func == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    if (!kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init()) {
+        return ge::GRAPH_FAILED;
+    }
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("VectorCore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    if (tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    auto tiling_data = gert::TilingData::CreateCap(2048);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("MatMulV3")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, &bias_shape})
+                      .OutputShapes(output_shapes_ref)
+                      .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"opImplMode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ge::graphStatus status = tiling_func(tiling_context);
+    if (status == ge::GRAPH_SUCCESS) {
+        tilingKey = tiling_context->GetTilingKey();
+    }
+    return status;
+}
+
+// 形状落在 ScSplitK+AL1FullLoad 窗口。bias 与 x1 同类型应命中 65569；
+// aclnnAddmm 会把 bf16/fp16 bias cast 成 fp32，此时必须拦截，不能再选出 65569。
+// BF16 输入配 BF16 bias 且 BF16 输出不在 MatMulV3 支持表里，同类型对照用 FP16。
+TEST_F(MatMulV3TilingRuntime, sc_splitk_al1_fullload_bias_dtype_mismatch_skip)
+{
+    uint64_t sameDtypeKey = 0;
+    ASSERT_EQ(RunScSplitKAl1BiasTiling(DT_FLOAT16, DT_FLOAT16, sameDtypeKey), ge::GRAPH_SUCCESS);
+    cout << "===== sc_splitk_al1 same dtype key:" << sameDtypeKey << std::endl;
+    EXPECT_EQ(sameDtypeKey, kScSplitKAl1FullLoadTilingKey);
+
+    uint64_t bf16Fp32BiasKey = 0;
+    ASSERT_EQ(RunScSplitKAl1BiasTiling(DT_BF16, DT_FLOAT, bf16Fp32BiasKey), ge::GRAPH_SUCCESS);
+    cout << "===== sc_splitk_al1 bf16 x fp32 bias key:" << bf16Fp32BiasKey << std::endl;
+    EXPECT_NE(bf16Fp32BiasKey, kScSplitKAl1FullLoadTilingKey);
+
+    uint64_t fp16Fp32BiasKey = 0;
+    ASSERT_EQ(RunScSplitKAl1BiasTiling(DT_FLOAT16, DT_FLOAT, fp16Fp32BiasKey), ge::GRAPH_SUCCESS);
+    cout << "===== sc_splitk_al1 fp16 x fp32 bias key:" << fp16Fp32BiasKey << std::endl;
+    EXPECT_NE(fp16Fp32BiasKey, kScSplitKAl1FullLoadTilingKey);
+}
+
 } // namespace
