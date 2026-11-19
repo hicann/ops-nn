@@ -306,6 +306,36 @@ TEST_F(l2_einsum_test, case_abcd_abced_out_dim1_mismatch)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
+// output dim2 与 tensors[0] dim2 不符时，第一段应返回 161002（此前到 BMM tiling 才报 561103）
+TEST_F(l2_einsum_test, case_abcd_abced_out_dim2_mismatch)
+{
+    auto input1 = TensorDesc({1, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({1, 2, 3, 5, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "abcd,abced->abce";
+    auto out = TensorDesc({1, 2, 2, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// output dim3 与 tensors[1] dim3 不符时，第一段应返回 161002
+TEST_F(l2_einsum_test, case_abcd_abced_out_dim3_mismatch)
+{
+    auto input1 = TensorDesc({1, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({1, 2, 3, 5, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "abcd,abced->abce";
+    auto out = TensorDesc({1, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(l2_einsum_test, case_equation_nullptr)
 {
     auto input1 = TensorDesc({1, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);

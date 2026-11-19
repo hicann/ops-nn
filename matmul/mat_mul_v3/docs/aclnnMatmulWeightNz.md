@@ -155,6 +155,7 @@ aclnnStatus aclnnMatmulWeightNz(
   <!-- npu="A3,910b,310p" id7 -->
   - <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>、<term>Atlas推理系列产品</term>：
     - 调用此接口之前，必须使用aclnnTransMatmulWeight接口完成mat2的原始输入Format从ND到NZ格式的转换。
+    - 当mat2的数据类型为FLOAT32时，aclnnTransMatmulWeight不支持该数据类型的转换（第一段返回161002），需改用aclnnNpuFormatCast接口完成mat2从ND到NZ格式的转换。
     - cubeMathType=4，当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算，当输入为其他数据类型或k轴小于2048时不做处理。
   <!-- end id7 -->
   <!-- npu="950" id8 -->

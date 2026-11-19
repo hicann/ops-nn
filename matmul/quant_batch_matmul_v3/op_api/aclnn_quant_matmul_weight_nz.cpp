@@ -297,6 +297,18 @@ aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor* x1, const 
         return ACLNN_ERR_PARAM_INVALID;
     }
 
+    // A2 的 A8W8 WeightNz 在原始 ND 后两维任一为 1 时首段返回 161002；
+    // 其它架构仍由 CheckWeightNzParamsDAV3510 执行既有校验。
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 &&
+        x1->GetDataType() == op::DataType::DT_INT8 && x2->GetDataType() == op::DataType::DT_INT8 &&
+        (x2->GetViewShape().GetDim(viewDimNum - PENULTIMATE_DIM) == 1 ||
+         x2->GetViewShape().GetDim(viewDimNum - 1) == 1)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "When x2 uses the weightNz feature, the k dimension and n dimension of x2 can not be 1, now are %ld "
+                "and %ld.",
+                x2->GetViewShape().GetDim(viewDimNum - PENULTIMATE_DIM), x2->GetViewShape().GetDim(viewDimNum - 1));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     auto ret = quant_matmul_v4::internal::CheckWeightNzParamsDAV3510(x1, x2, x1Scale, x2Scale, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 

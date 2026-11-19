@@ -1761,16 +1761,15 @@ bool QuantMatmulChecker::CheckOnlyL0c2outPertoken() const
                 .c_str());
         return false;
     }
-    if (x2Offset_ != nullptr) {
-        if (x1_->GetDataType() == op::DataType::DT_INT8 && x2_->GetDataType() == op::DataType::DT_INT8 &&
-            x1Scale_->GetDataType() != op::DataType::DT_FLOAT && x2Scale_->GetDataType() != op::DataType::DT_FLOAT) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                apiName_, GetX2OffsetName().c_str(), "not null",
-                FormatString("when x1 and x2 are INT8 and the dtypes of %s and %s are outside FLOAT, %s must be null",
-                             GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), GetX2OffsetName().c_str())
-                    .c_str());
-            return false;
-        }
+    if (x2Offset_ != nullptr && !isA4W4_) {
+        // INT8 per-token 的非空 x2Offset 在 kernel 中不参与计算，首段显式拒绝；
+        // A4W4 per-group 非对称量化需要独立 x2Offset，保持原有合法通路。
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            apiName_, GetX2OffsetName().c_str(), "not null",
+            FormatString("in the per-token scenario, %s does not participate in the computation and must be null",
+                         GetX2OffsetName().c_str())
+                .c_str());
+        return false;
     }
     return true;
 }

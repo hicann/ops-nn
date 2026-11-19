@@ -157,6 +157,7 @@ aclnnStatus aclnnMatmulWeightNz(
   <!-- npu="A3,910b,310p" id7 -->
   - <term>Atlas A2 products</term>, <term>Atlas A3 products</term>, <term>Atlas inference products</term>:
     - Before calling this API, you must use the aclnnTransMatmulWeight API to convert the original input Format of mat2 from ND to NZ.
+    - When the data type of mat2 is FLOAT32, aclnnTransMatmulWeight does not support the conversion of this data type (the first API returns 161002). In this case, use the aclnnNpuFormatCast API to convert mat2 from ND to NZ.
     - cubeMathType=4: When the input data type is FLOAT32 and the k-axis is greater than 2048, group accumulation is used for computation. When the input is of other data types or the k-axis is less than 2048, no processing is performed.
   <!-- end id7 -->
   <!-- npu="950" id8 -->

@@ -203,6 +203,16 @@ TEST_F(l2_matmul_test, test_invalid_dtype)
     MatMulCommonTest(a2_desc, b2_desc, out2_desc, ACLNN_ERR_PARAM_INVALID);
 }
 
+// A2 上 BF16 与 FP16/FP32 混合输入此前返回成功但精度不可控，首段按参数非法拒绝
+TEST_F(l2_matmul_test, dav2201_test_mixed_bf16_dtype_invalid)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_2201);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(l2_matmul_test, test_null_ptr_input)
 {
     // 使用**Desc描述host api输入输出

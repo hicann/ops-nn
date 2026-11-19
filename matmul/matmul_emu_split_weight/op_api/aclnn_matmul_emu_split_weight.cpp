@@ -11,6 +11,7 @@
 #include "aclnn_matmul_emu_split_weight.h"
 #include "matmul_emu_split_weight.h"
 #include "aclnn_kernels/contiguous.h"
+#include "aclnn_kernels/transpose.h"
 #include <cmath>
 #include <climits>
 #include <cstring>
@@ -269,7 +270,23 @@ aclnnStatus aclnnMatmulEmuSplitWeightGetWorkspaceSize(const aclTensor* x, const 
     }
 
     auto contiguousWLow = wLow;
-    if (transposeW) {
+    auto transposeWLow = Ops::NN::IsTransposeLastTwoDims(wLow);
+    if (transposeWLow != transposeW) {
+        // kernel 的 layoutTagB 只有一个，由 wHigh 推导的 transposeW 决定 wHigh 与 wLow 的共同读取方式。
+        // wHigh 转置、wLow 连续时，将 wLow 转置物化为 [N,K]，与 wHigh 的传参约定一致；
+        // wHigh 连续、wLow 转置时，wLow 的逻辑视图已经是 [K,N]，直接连续化，不能再次转置。
+        if (transposeW) {
+            auto normalizedWLow = l0op::Contiguous(wLow, uniqueExecutor.get());
+            CHECK_RET(normalizedWLow != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            int64_t permData[] = {1, 0};
+            auto perm = uniqueExecutor->AllocIntArray(permData, 2);
+            CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            contiguousWLow = l0op::Transpose(normalizedWLow, perm, uniqueExecutor.get());
+        } else {
+            contiguousWLow = l0op::Contiguous(wLow, uniqueExecutor.get());
+        }
+        CHECK_RET(contiguousWLow != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else if (transposeW) {
         contiguousWLow = uniqueExecutor->CreateView(wLow, Ops::NN::SwapLastTwoDimValue(wLow->GetViewShape()),
                                                     wLow->GetViewOffset());
         CHECK_RET(contiguousWLow != nullptr, ACLNN_ERR_INNER_NULLPTR);

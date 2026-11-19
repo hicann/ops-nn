@@ -298,7 +298,9 @@ aclnnStatus aclnnGemmGetWorkspaceSize(const aclTensor* A, const aclTensor* B, co
         auto matmulOut = ExecMmOpWithTrans(A, B, transA, transB, cubeMathType, uniqueExecutor.get());
         CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto mulOut = matmulOut;
-        if (std::abs(alpha - 1.0f) >= std::numeric_limits<float>::epsilon()) {
+        // alpha 为 NaN 时 std::abs(NaN - 1.0f) >= eps 恒为 false，会跳过 Muls 把 NaN 当 1.0，
+        // 与 BLAS/torch 语义不符；显式放行让 NaN 参与计算
+        if (std::isnan(alpha) || std::abs(alpha - 1.0f) >= std::numeric_limits<float>::epsilon()) {
             mulOut = l0op::Muls(matmulOut, alpha, uniqueExecutor.get());
             CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
@@ -308,7 +310,8 @@ aclnnStatus aclnnGemmGetWorkspaceSize(const aclTensor* A, const aclTensor* B, co
         auto CContiguous = l0op::Contiguous(C, uniqueExecutor.get());
         CHECK_RET(CContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto mulOut = CContiguous;
-        if (std::abs(beta - 1.0f) >= std::numeric_limits<float>::epsilon()) {
+        // beta 为 NaN 时与 alpha 同理，显式放行让 NaN 参与计算
+        if (std::isnan(beta) || std::abs(beta - 1.0f) >= std::numeric_limits<float>::epsilon()) {
             mulOut = l0op::Muls(CContiguous, beta, uniqueExecutor.get());
             CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }

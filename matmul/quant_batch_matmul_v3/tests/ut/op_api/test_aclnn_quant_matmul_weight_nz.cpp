@@ -279,6 +279,13 @@ static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam& param)
                                 OUTPUT(outDesc));
             return ut.TestGetWorkspaceSize(&workspace_size);
         }
+        case 27U: { // per-token 场景非空 x2Offset 应被首段拒绝
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, groupScaleDesc,
+                                      nullptr, nullptr, param.transposeX1, param.transposeX2, param.groupSize),
+                                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
         case 93U: {
             auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
                                 INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, yOffsetDesc,

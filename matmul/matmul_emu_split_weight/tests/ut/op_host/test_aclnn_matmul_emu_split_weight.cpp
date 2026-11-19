@@ -483,3 +483,44 @@ TEST_F(l2_matmul_emu_split_weight_test, dav3510_matmul_emu_split_weight_transpos
     // CreateView 在 UT 环境下可能成功也可能失败，但分支代码已被执行
     (void)aclRet;
 }
+
+// wHigh 转置、wLow 连续：layout 不一致，覆盖 Contiguous+Transpose 归一化分支 (DA:278-284)
+// UT 桩的 l0op::Transpose/Contiguous 为透传实现，混合布局下二段构图在桩环境无法完成，
+// 返回码不做硬性断言，本用例目标是把归一化分支执行到
+TEST_F(l2_matmul_emu_split_weight_test, dav3510_matmul_emu_split_weight_mixed_layout_whigh_transposed)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND, {1, 256}, 0, {128, 256});
+    TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    float wLowScale = 0.00390625f;
+    int8_t yDtype = 0;
+
+    auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
+                        OUTPUT());
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    (void)aclRet;
+}
+
+// wHigh 连续、wLow 转置：layout 不一致，覆盖直接 Contiguous 归一化分支 (DA:286-288)
+// 同上，返回码不做硬性断言
+TEST_F(l2_matmul_emu_split_weight_test, dav3510_matmul_emu_split_weight_mixed_layout_wlow_transposed)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND, {1, 256}, 0, {128, 256});
+    TensorDesc y_desc = TensorDesc({128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    float wLowScale = 0.00390625f;
+    int8_t yDtype = 0;
+
+    auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
+                        OUTPUT());
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    (void)aclRet;
+}

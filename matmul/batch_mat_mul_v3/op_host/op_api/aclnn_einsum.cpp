@@ -104,6 +104,16 @@ aclnnStatus CheckABCDxABCED2ABCE(const aclTensorList* tensors, const aclTensor* 
                 outputShape.GetDim(DIM_ONE), tensor0Shape.GetDim(DIM_ONE));
         return ACLNN_ERR_PARAM_INVALID;
     }
+    if (outputShape.GetDim(DIM_TWO) != tensor0Shape.GetDim(DIM_TWO)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output shape dim2 [%ld] and tensor0 shape dim2 [%ld] should be same",
+                outputShape.GetDim(DIM_TWO), tensor0Shape.GetDim(DIM_TWO));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (outputShape.GetDim(DIM_THREE) != tensor1Shape.GetDim(DIM_THREE)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output shape dim3 [%ld] and tensor1 shape dim3 [%ld] should be same",
+                outputShape.GetDim(DIM_THREE), tensor1Shape.GetDim(DIM_THREE));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     for (size_t i = 0; i < tensor0Shape.GetDimNum(); i++) {
         if (tensor0Shape.GetDim(i) == DIM_ZERO) {

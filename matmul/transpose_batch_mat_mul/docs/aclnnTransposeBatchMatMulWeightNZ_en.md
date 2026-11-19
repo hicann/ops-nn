@@ -387,6 +387,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
   - In the ND format corresponding to the NZ format of x2, the second and third dimensions must be divisible by 16.
   - The StorageFormat of x2 must be NZ format.
   - x1 and x2 must have the same dtype.
+  - permX1 only supports input [1, 0, 2].
   - permX2 only supports input [0, 1, 2].
   - When scale is not empty, the product of B and N must be less than 65536, and only the type derivation with input FLOAT16 and output INT8 is supported.
 

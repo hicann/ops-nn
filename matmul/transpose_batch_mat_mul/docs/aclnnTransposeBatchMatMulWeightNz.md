@@ -394,6 +394,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
   - x2的NZ格式对应的ND格式中，第二维和第三维都必须被16整除。
   - x2的StorageFormat必须为NZ格式。
   - x1和x2的dtype必须相同。
+  - permX1仅支持输入[1, 0, 2]。
   - permX2仅支持输入[0, 1, 2]。
   - 当scale不为空时，B与N的乘积小于65536，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 

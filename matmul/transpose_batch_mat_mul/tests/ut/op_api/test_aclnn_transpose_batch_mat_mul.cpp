@@ -953,7 +953,7 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_bias_not_null)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_out_dtype_mismatch)
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_out_dtype_cast_bf16)
 {
     int64_t M = 32;
     int64_t K = 512;
@@ -981,7 +981,7 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_out_dtype_mism
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_unsupported_arch)
@@ -1364,7 +1364,7 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_scale)
                         OUTPUT(out_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_k_not_match)
@@ -1408,6 +1408,102 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_storage_dim_4)
     TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
                                     {Batch, N / N0, K / K0, K0})
                              .ValueRange(-1, 1);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// weightNZ 场景 permX1 仅支持 [1,0,2]，[0,1,2] 应在第一段被拒绝（此前到 tiling 才失败）
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_perm_x1_no_transpose)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    int64_t K0 = 16;
+    int64_t N0 = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
+                                    {Batch, N / N0, K / K0, K0, N0});
+    vector<int64_t> perm_x1 = {0, 1, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// weightNZ 场景 permX2 仅支持 [0,1,2]，[0,2,1] 应在第一段被拒绝（此前被放行且 out 全量未写）
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_perm_x2_transposed)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    int64_t K0 = 16;
+    int64_t N0 = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
+                                    {Batch, N / N0, K / K0, K0, N0});
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 2, 1};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// weightNZ 场景 x1 为 (M,B,K) 且 B*K 超过 65535 时，即使 scale 为空且 bsf=1 也应在第一段被拒绝
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_batch_k_over_limit)
+{
+    int64_t M = 8;
+    int64_t K = 32768;
+    int64_t N = 32;
+    int64_t Batch = 2;
+    int64_t K0 = 16;
+    int64_t N0 = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
+                                    {Batch, N / N0, K / K0, K0, N0});
     vector<int64_t> perm_x1 = {1, 0, 2};
     vector<int64_t> perm_x2 = {0, 1, 2};
     vector<int64_t> perm_y = {1, 0, 2};

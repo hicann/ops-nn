@@ -105,7 +105,7 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, con
                 op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
         return false;
     }
-    bool isWeightNz = (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ);
+    bool isWeightNz = (ge::GetPrimaryFormat(x2->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ);
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     // Handle weight NZ format specific checks
     if (isWeightNz && (npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series()) {
@@ -138,11 +138,9 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, con
                 .c_str());
         return false;
     }
-    if (isWeightNz && (npuArch == NpuArch::DAV_2201) && (x1->GetDataType() != out->GetDataType())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1's dtype [%s] and out's dtype [%s] are not equal in DAV_2201.",
-                op::ToString(x1->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
-        return false;
-    }
+    // DTYPE_SUPPORT_LIST_WEIGHTNZ 已覆盖 {fp16,bf16/int8 出} 等组合，且计算图末端由 l0op::Cast 转换到
+    // out dtype；此前 DAV_2201 上的 x1==out 硬校验与组合白名单自相矛盾，导致资料声明的
+    // bf16/int8 出参通路不可用，此处移除该冗余校验
     return true;
 }
 
@@ -217,19 +215,45 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
     if (!IsNpuArch3510Series()) {
         auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
         auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
+        auto isWeightNz = (ge::GetPrimaryFormat(x2->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ);
         if (N >= SUPPORTED_INNER_AXIS || batchNum >= SUPPORTED_INNER_AXIS) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch and N should be less than 65536.");
+            return false;
+        }
+        // weightNZ 场景 permX1=[0,1,2] 此前在 tiling 才被拒，首段按参数非法提前拒绝。
+        if (isWeightNz && !x1_need_transpose) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is FRACTAL_NZ, permX1 only supports [1, 0, 2].");
+            return false;
+        }
+        // weightNZ 下 permX2=[0,2,1] 会返回成功但 out 全量未写，首段按参数非法拒绝。
+        if (isWeightNz && x2_need_transpose) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is FRACTAL_NZ, permX2 only supports [0, 1, 2].");
             return false;
         }
         if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is not transposed([B,M,K]), K should be less than 65536.");
             return false;
         }
-        if (x1_need_transpose && (x1KDim >= SUPPORTED_INNER_AXIS || batchNum * x1KDim >= SUPPORTED_INNER_AXIS) &&
-            (scale != nullptr || batch_split_factor != 1)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or "
-                                             "batch_split_factor != 1 are not supported.");
-            return false;
+        if (x1_need_transpose) {
+            // 防 int64 溢出：batchNum 已保证小于 65536，仅需防 K 过大。
+            bool batchMulKOverflow = x1KDim > 0 && batchNum > INT64_MAX / x1KDim;
+            int64_t batchMulK = batchMulKOverflow ? INT64_MAX : batchNum * x1KDim;
+            if (x1KDim >= SUPPORTED_INNER_AXIS || batchMulK >= SUPPORTED_INNER_AXIS) {
+                if (scale != nullptr || batch_split_factor != 1) {
+                    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                            "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or "
+                            "batch_split_factor != 1 are not supported.");
+                    return false;
+                }
+                // WeightNz 在该场景返回成功但 out 全量未写；ND 通路保持原有放行行为。
+                if (isWeightNz) {
+                    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                            "When x1 is transposed([M,B,K]) and x2 is FRACTAL_NZ, Batch * K should be less than "
+                            "65536, now is [%ld].",
+                            batchMulK);
+                    return false;
+                }
+            }
         }
         if (x2_need_transpose && (scale != nullptr || batch_split_factor != 1 || !x1_need_transpose)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is transposed, input scale or batch_split_factor != 1 are not "

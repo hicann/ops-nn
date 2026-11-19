@@ -145,6 +145,24 @@ inline static bool CheckWeightNzDtypeValid(const aclTensor* self, const aclTenso
     return CheckWeightNzDtype(self, mat2);
 }
 
+// A2/A3（DAV_2201）不支持 BF16 与 FP16/FP32 的混合输入推导。
+static bool CheckMixedBf16Dtype(const aclTensor* self, const aclTensor* mat2)
+{
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
+        return true;
+    }
+    auto selfDtype = self->GetDataType();
+    auto mat2Dtype = mat2->GetDataType();
+    if ((selfDtype == op::DataType::DT_BF16) != (mat2Dtype == op::DataType::DT_BF16)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Deriving data types from inputs of BFLOAT16 and non-BFLOAT16 is unsupported, now self's dtype is "
+                "[%s], mat2's dtype is [%s]",
+                op::ToString(selfDtype).GetString(), op::ToString(mat2Dtype).GetString());
+        return false;
+    }
+    return true;
+}
+
 // 获取broadcast shape
 inline static op::Shape GetBroadcastShape(const aclTensor* tensor)
 {
@@ -228,15 +246,20 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
     return true;
 }
 
-static bool CheckFormat(const aclTensor* selfTensor, [[maybe_unused]] const aclTensor* mat2Tensor,
-                        const aclTensor* outTensor)
+static bool CheckFormat(const aclTensor* selfTensor, const aclTensor* mat2Tensor, const aclTensor* outTensor)
 {
     auto selfFormat = selfTensor->GetStorageFormat();
+    auto mat2Format = mat2Tensor->GetStorageFormat();
     auto outTensorFormat = outTensor->GetStorageFormat();
-    bool noSupportFormat = ((selfFormat == Format::FORMAT_FRACTAL_NZ) ||
+    // mat2 的 NZ 格式也在首段按参数非法拒绝。
+    bool noSupportFormat = ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (mat2Format == Format::FORMAT_FRACTAL_NZ) ||
                             (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
     if (noSupportFormat) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The 'self' or 'out' tensor currently does not support NZ format");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The 'self', 'mat2' or 'out' tensor currently does not support NZ format, now self is [%s], "
+                "mat2 is [%s], out is [%s].",
+                op::ToString(selfFormat).GetString(), op::ToString(mat2Format).GetString(),
+                op::ToString(outTensorFormat).GetString());
         return false;
     }
     return true;
@@ -319,6 +342,7 @@ inline static aclnnStatus CheckInputParams(const aclTensor* self, const aclTenso
     CHECK_RET(archRule->CheckInput(self, mat2, nullptr, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     CHECK_RET(CheckWeightNzDtype(self, mat2), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckMixedBf16Dtype(self, mat2), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查Shape是否支持
     CHECK_RET(CheckShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
@@ -431,6 +455,14 @@ aclnnStatus CheckWeightNzParam(const aclTensor* self, const aclTensor* mat2, con
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
+    // 用户可见的 cubeMathType 仅允许 0~4；内部 -1 不属于本 API 的合法枚举。
+    if (cubeMathType < KEEP_DTYPE || cubeMathType > USE_FP32_ADD) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The value of cubeMathType only support {0: KEEP_DTYPE, 1: ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, "
+                "3: USE_HF32, 4: USE_FP32_ADD}, but got %d",
+                cubeMathType);
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckWeightNzDtypeValid(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查Shape是否支持
