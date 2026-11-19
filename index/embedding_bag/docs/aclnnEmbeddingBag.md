@@ -75,7 +75,7 @@
     ```bash
     output的shape为includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
-    bagSize的shape为bagOffsets
+    bagSize的shape为(bagOffsets,)
     maxIndices的shape为(0,)
     ```
 
