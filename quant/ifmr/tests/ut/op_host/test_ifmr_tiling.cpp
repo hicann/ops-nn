@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -25,6 +26,7 @@
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
 #include "quant/ifmr/op_kernel/ifmr_tiling_data.h"
+#include "base/err_mgr.h"
 
 struct IFMRCompileInfo {
     int32_t dataNum;
@@ -46,8 +48,48 @@ struct IFMRAttrs {
     uint32_t quantBits;
 };
 
+static std::vector<std::string> GetIFMRCapturedEZCodes()
+{
+    std::vector<std::string> codes;
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    codes.reserve(errors.size());
+    for (const auto& error : errors) {
+        codes.emplace_back(error.error_id == nullptr ? std::string() : std::string(error.error_id.get()));
+    }
+    return codes;
+}
+
+static bool HasIFMREZCode(const std::string& code)
+{
+    const auto codes = GetIFMRCapturedEZCodes();
+    return std::find(codes.begin(), codes.end(), code) != codes.end();
+}
+
+static void InitIFMRErrMgr()
+{
+    (void)error_message::ErrMgrInit(error_message::ErrorMessageMode::INTERNAL_MODE);
+    (void)error_message::GetErrMgrErrorMessage();
+}
+
+static void CheckIFMRErrorCode(const std::string& code)
+{
+    EXPECT_TRUE(HasIFMREZCode(code));
+    EXPECT_FALSE(HasIFMREZCode("EZ9999"));
+}
+
+static void CheckIFMRSuccessWithoutInternalError()
+{
+    EXPECT_FALSE(HasIFMREZCode("EZ9999"));
+    EXPECT_FALSE(HasIFMREZCode("E89999"));
+    EXPECT_FALSE(HasIFMREZCode("EZ1008"));
+    EXPECT_FALSE(HasIFMREZCode("EZ1014"));
+}
+
 ge::graphStatus IFMRTestCase(vector<vector<int64_t>> input_shapes, vector<vector<int64_t>> output_shapes,
-                             IFMRAttrs attrs, ge::DataType dataType, IfmrTilingData& tilingParam)
+                             IFMRAttrs attrs, ge::DataType dataType, IfmrTilingData& tilingParam,
+                             ge::DataType dataMinDtype = ge::DT_FLOAT, ge::DataType dataMaxDtype = ge::DT_FLOAT,
+                             ge::DataType cumsumDtype = ge::DT_INT32, ge::DataType scaleDtype = ge::DT_FLOAT,
+                             ge::DataType offsetDtype = ge::DT_FLOAT, uint64_t platformUbSize = 196608)
 {
     std::string opType("IFMR");
     if (gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()) == nullptr) {
@@ -75,13 +117,16 @@ ge::graphStatus IFMRTestCase(vector<vector<int64_t>> input_shapes, vector<vector
     uint64_t L0c_SIZE = 262144;
     uint64_t aicoreNum = 32;
     string compile_info_string = R"({
-          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1", 
+          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                             "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
-                            "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, 
-                            "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288, 
-                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, 
+                            "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                            "UB_SIZE": )" +
+                                 std::to_string(platformUbSize) +
+                                 R"(, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144,
                             "CORE_NUM": 32}
                             })";
+
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
@@ -129,11 +174,11 @@ ge::graphStatus IFMRTestCase(vector<vector<int64_t>> input_shapes, vector<vector
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, dataType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dataMinDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, dataMaxDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, cumsumDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, scaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, offsetDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
                           {{"min_percentile", Ops::NN::AnyValue::CreateFrom<float>(attrs.minPercentile)},
                            {"max_percentile", Ops::NN::AnyValue::CreateFrom<float>(attrs.maxPercentile)},
@@ -175,8 +220,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_0)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
+    CheckIFMRSuccessWithoutInternalError();
 
     EXPECT_EQ(attrs.minPercentile, tilingdata.minPercentile);
     EXPECT_EQ(attrs.maxPercentile, tilingdata.maxPercentile);
@@ -202,7 +250,7 @@ TEST_F(IFMRTilingTest, run_IFMR_case_1)
 
     IfmrTilingData tilingdata;
 
-    auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
+    auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata, dataType, dataType);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 
     EXPECT_EQ(attrs.minPercentile, tilingdata.minPercentile);
@@ -229,7 +277,7 @@ TEST_F(IFMRTilingTest, run_IFMR_case_2)
 
     IfmrTilingData tilingdata;
 
-    auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
+    auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata, dataType, dataType);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 
     EXPECT_EQ(attrs.minPercentile, tilingdata.minPercentile);
@@ -283,8 +331,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_01)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0026");
 }
 
 TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_02)
@@ -302,8 +353,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_minpercentile_02)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0026");
 }
 
 TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_01)
@@ -321,8 +375,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_01)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0026");
 }
 
 TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_02)
@@ -340,8 +397,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_maxpercentile_02)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0026");
 }
 
 TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_01)
@@ -359,8 +419,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_01)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0026");
 }
 
 TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_02)
@@ -378,8 +441,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchRange_02)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0027");
 }
 
 TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchStep_01)
@@ -397,8 +463,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_searchStep_01)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0027");
 }
 
 TEST_F(IFMRTilingTest, run_IFMR_case_invalid_quantBits_01)
@@ -416,8 +485,11 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_quantBits_01)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0026");
 }
 
 TEST_F(IFMRTilingTest, run_IFMR_case_invalid_data_length)
@@ -435,6 +507,77 @@ TEST_F(IFMRTilingTest, run_IFMR_case_invalid_data_length)
 
     IfmrTilingData tilingdata;
 
+    InitIFMRErrMgr();
+
     auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
     EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0026");
+}
+
+TEST_F(IFMRTilingTest, run_IFMR_case_insufficient_platform_ub_size)
+{
+    vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
+    vector<vector<int64_t>> output_shapes = {{1}, {1}};
+    IFMRAttrs attrs;
+    attrs.minPercentile = 0.9;
+    attrs.maxPercentile = 0.9;
+    attrs.searchRange = {0.7, 1.3};
+    attrs.searchStep = 0.1;
+    attrs.withOffset = true;
+    attrs.quantBits = 8;
+    ge::DataType dataType = ge::DT_FLOAT;
+
+    IfmrTilingData tilingdata;
+
+    InitIFMRErrMgr();
+    auto status = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata, ge::DT_FLOAT, ge::DT_FLOAT,
+                               ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, 131072);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ1008");
+    EXPECT_FALSE(HasIFMREZCode("EZ0026"));
+}
+
+TEST_F(IFMRTilingTest, run_IFMR_case_inconsistent_input_dtype)
+{
+    vector<vector<int64_t>> input_shapes = {{1024}, {1}, {1}, {1024}};
+    vector<vector<int64_t>> output_shapes = {{1}, {1}};
+    IFMRAttrs attrs;
+    attrs.minPercentile = 0.9;
+    attrs.maxPercentile = 0.9;
+    attrs.searchRange = {0.7, 1.3};
+    attrs.searchStep = 0.1;
+    attrs.withOffset = false;
+    attrs.quantBits = 8;
+    ge::DataType dataType = ge::DT_FLOAT;
+
+    IfmrTilingData tilingdata;
+
+    InitIFMRErrMgr();
+
+    auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata, ge::DT_FLOAT, ge::DT_FLOAT16,
+                            ge::DT_INT32);
+    EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0021");
+}
+
+TEST_F(IFMRTilingTest, run_IFMR_case_invalid_min_max_shape)
+{
+    vector<vector<int64_t>> input_shapes = {{1024}, {2}, {1}, {1024}};
+    vector<vector<int64_t>> output_shapes = {{1}, {1}};
+    IFMRAttrs attrs;
+    attrs.minPercentile = 0.9;
+    attrs.maxPercentile = 0.9;
+    attrs.searchRange = {0.7, 1.3};
+    attrs.searchStep = 0.1;
+    attrs.withOffset = false;
+    attrs.quantBits = 8;
+    ge::DataType dataType = ge::DT_FLOAT;
+
+    IfmrTilingData tilingdata;
+
+    InitIFMRErrMgr();
+
+    auto ret = IFMRTestCase(input_shapes, output_shapes, attrs, dataType, tilingdata);
+    EXPECT_EQ(ret, ge::GRAPH_FAILED);
+    CheckIFMRErrorCode("EZ0009");
 }

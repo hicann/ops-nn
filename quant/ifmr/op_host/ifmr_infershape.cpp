@@ -14,6 +14,7 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "error_util.h"
 
 using namespace ge;
 
@@ -21,15 +22,31 @@ namespace ops {
 static constexpr size_t IDX_SCALE = 0;
 static constexpr size_t IDX_OFFSET = 1;
 
+// InferShape框架输出shape容器缺失属于框架契约失败，统一上报EZ1014，不再生成EZ9999内部码
+static void ReportIfmrInferShapeStageError(const char* opName, const std::string& reason)
+{
+    const std::vector<const char*> msgKey = {"opName", "reason"};
+    const std::vector<const char*> msgValue = {opName != nullptr ? opName : "IFMR", reason.c_str()};
+    REPORT_PREDEFINED_ERR_MSG("EZ1014", msgKey, msgValue);
+}
+
 static ge::graphStatus InferShapeIfmr(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeIfmr");
     auto outShape = context->GetOutputShape(IDX_SCALE);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
+    OP_CHECK_IF(outShape == nullptr,
+                ReportIfmrInferShapeStageError(
+                    context->GetNodeName(),
+                    "the output shape container of scale (output index 0) is missing in the infer-shape context"),
+                return ge::GRAPH_FAILED);
     outShape->SetDimNum(0);
     outShape->AppendDim(1);
     outShape = context->GetOutputShape(IDX_OFFSET);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
+    OP_CHECK_IF(outShape == nullptr,
+                ReportIfmrInferShapeStageError(
+                    context->GetNodeName(),
+                    "the output shape container of offset (output index 1) is missing in the infer-shape context"),
+                return ge::GRAPH_FAILED);
     outShape->SetDimNum(0);
     outShape->AppendDim(1);
     OP_LOGD(context->GetNodeName(), "End to do InferShapeIfmr");
