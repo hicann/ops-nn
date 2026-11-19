@@ -153,8 +153,8 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
         <td>gradOutput or self is a null pointer.</td>
       </tr>
       <tr>
-        <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="6">161002</td>
+        <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="5">161002</td>
         <td>The data type or data format of gradOutput or self is not supported.</td>
       </tr>
       <tr>

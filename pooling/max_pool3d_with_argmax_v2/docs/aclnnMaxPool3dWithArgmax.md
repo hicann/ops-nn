@@ -233,8 +233,8 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
       <td>传入的self、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="13">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="13">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>self的数据类型不在支持的范围内。</td>
     </tr>
     <tr>

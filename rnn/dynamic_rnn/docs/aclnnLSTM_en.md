@@ -417,8 +417,8 @@ aclnnStatus aclnnLSTM(
         <td>If a required input, output, or required attribute is passed in as a null pointer.</td>
       </tr>
       <tr>
-        <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="12">161002</td>
+        <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="4">161002</td>
         <td>If the passed-in parameter is aclTensor or aclTensorList and the data type is not within the supported range.</td>
       </tr>
       <tr>

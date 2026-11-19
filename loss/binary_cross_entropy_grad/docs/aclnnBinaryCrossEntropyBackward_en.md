@@ -214,8 +214,8 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>The passed gradOutput, self, target, and out are null pointers.</td>
       </tr>
       <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data types of gradOutput, self, target, and weightOptional are out of the supported range.</td>
       </tr>
       <tr>

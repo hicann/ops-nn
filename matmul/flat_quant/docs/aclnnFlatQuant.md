@@ -236,8 +236,8 @@ aclnnStatus aclnnFlatQuant(
       <td>传入参数中的必选输入（x、kroneckerP1、kroneckerP2）、必选输出（out、quantScale）是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="12">161002</td>
+      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="11">161002</td>
       <td>x、kroneckerP1、kroneckerP2、out、quantScale的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>

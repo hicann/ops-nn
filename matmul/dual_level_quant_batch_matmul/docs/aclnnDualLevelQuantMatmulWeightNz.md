@@ -306,8 +306,8 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNz(
         <td>传入的x1、x2、x1Level0Scale、x1Level1Scale、x2Level0Scale、x2Level1Scale或out是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="5">161002</td>
+        <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="4">161002</td>
         <td>x1、x2、x1Level0Scale、x1Level1Scale、x2Level0Scale、x2Level1Scale是空tensor。</td>
       </tr>
       <tr>

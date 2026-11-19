@@ -191,8 +191,8 @@ aclnnStatus aclnnIndexPutImpl(
       <td>The input selfRef, indices, or values is a null pointer.</td>
       </tr>
       <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data type of selfRef, values, or indices is not supported.</td>
       </tr>
       <tr>

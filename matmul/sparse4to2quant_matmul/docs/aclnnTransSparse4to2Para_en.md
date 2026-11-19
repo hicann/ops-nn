@@ -165,8 +165,8 @@ aclnnStatus aclnnTransSparse4to2Para(
       <td>The passed weight is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The shape, format, and data type of weight do not meet the requirements; the data does not meet the requirement that at least 2 of every 4 elements are zero.</td>
     </tr>
   </tbody></table>

@@ -363,8 +363,8 @@ The first-phase API performs input parameter validation and returns an error in 
     <td>If a passed-in parameter is of type aclTensor and its data type is not within the supported range.</td>
   </tr>
   <tr>
-    <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-    <td rowspan="3">561002</td>
+    <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+    <td>561002</td>
     <td>If a passed-in parameter is of type aclTensor and its shape does not match the preceding parameter description.</td>
   </tr>
 </tbody>

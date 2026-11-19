@@ -234,8 +234,8 @@ aclnnStatus aclnnMaxPool(
       <td>self or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="11">161002</td>
+      <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="10">161002</td>
       <td>The data type or data format of self is out of the supported range.</td>
     </tr>
     <tr>

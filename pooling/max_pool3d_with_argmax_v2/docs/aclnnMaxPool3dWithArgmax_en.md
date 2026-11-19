@@ -235,8 +235,8 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
       <td>The input self or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="13">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="13">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
       <td>The data type of self is not in the supported range.</td>
     </tr>
     <tr>

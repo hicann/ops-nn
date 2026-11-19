@@ -297,8 +297,8 @@ aclnnStatus aclnnDualLevelQuantMatmulWeightNz(
         <td>x1, x2, x1Level0Scale, x1Level1Scale, x2Level0Scale, x2Level1Scale, or out is a null pointer.</td>
       </tr>
       <tr>
-        <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="5">161002</td>
+        <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="4">161002</td>
         <td>x1, x2, x1Level0Scale, x1Level1Scale, x2Level0Scale, x2Level1Scale, level0GroupSize, or level1GroupSize is an empty tensor.</td>
       </tr>
       <tr>

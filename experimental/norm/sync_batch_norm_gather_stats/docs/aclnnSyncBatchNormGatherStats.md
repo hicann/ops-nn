@@ -228,8 +228,8 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>传入的totalSum，totalSquareSum，sampleCount，mean，variance，batchMean，batchInvstd是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>输入totalSum，totalSquareSum，sampleCount，mean，variance，batchMean，batchInvstd的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

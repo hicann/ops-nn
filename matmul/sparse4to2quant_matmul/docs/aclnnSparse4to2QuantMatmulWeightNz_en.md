@@ -191,8 +191,8 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
       <td>The required input x, sparseWeight, index, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>The data type, shape, format, or dtype of the input or output is out of the supported range.</td>
     </tr>
   </tbody></table>

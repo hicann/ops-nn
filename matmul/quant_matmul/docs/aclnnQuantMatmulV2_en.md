@@ -201,8 +201,8 @@ aclnnStatus aclnnQuantMatmulV2(
       <td>The passed-in x1, x2, deqScale, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data type or data format of x1, x2, bias, deqScale, or out is out of the supported range.</td>
     </tr>
     <tr>

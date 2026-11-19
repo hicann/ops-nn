@@ -339,8 +339,8 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>如果传入参数类型为aclTensor且其数据类型不在支持的范围之内。</td>
   </tr>
   <tr>
-    <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-    <td rowspan="3">561002</td>
+    <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+    <td>561002</td>
     <td>如果传入参数类型为aclTensor且其shape与上述参数说明不符。</td>
   </tr>
 </tbody>

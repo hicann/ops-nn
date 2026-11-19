@@ -281,8 +281,8 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td><ul><li>If a parameter of the aclTensor type is passed in and its data type is not within the supported range.</li><li>n or k in the shape of weight is not divisible by 16.</li></ul></td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
       <td>If a parameter of the aclTensor type is passed in and its shape is inconsistent with the preceding parameter descriptions.</td>
     </tr>
   </tbody>

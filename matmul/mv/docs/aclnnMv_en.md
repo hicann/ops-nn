@@ -196,8 +196,8 @@ aclnnStatus aclnnMv(
       <td>self, vec, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>The data types of self, vec, and out are not within the supported range.</td>
     </tr>
     <tr>

@@ -372,8 +372,8 @@ aclnnStatus aclnnConvolutionBackward(
    <tbody>
 
    <tr>
-     <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
-     <td rowspan="2">161001</td>
+     <td >ACLNN_ERR_PARAM_NULLPTR</td>
+     <td >161001</td>
      <td>传入的gradOutput、input、weight、biasSizes、stride、padding、dilation、outputPadding、outputMask、求解gradInput、求解gradWeight、求解gradBias时是空指针。</td>
    </tr>
    <tr>

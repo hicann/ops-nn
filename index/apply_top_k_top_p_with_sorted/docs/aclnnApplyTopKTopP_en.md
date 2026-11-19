@@ -200,8 +200,8 @@ aclnnStatus aclnnApplyTopKTopP(
       <td>The passed-in logits or out is a null pointer, or both p and k are null pointers.</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>The data type of logits, p, k, or out is not within the supported range.</td>
     </tr>
     <tr>

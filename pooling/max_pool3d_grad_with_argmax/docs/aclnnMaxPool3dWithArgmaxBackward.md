@@ -217,8 +217,8 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
       <td>传入的self、indices是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="12">161002</td>
+      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="11">161002</td>
       <td>gradOutput、self、indices、gradInput的数据类型不在支持的范围内。</td>
     </tr>
     <tr>

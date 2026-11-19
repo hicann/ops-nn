@@ -359,8 +359,8 @@ aclnnStatus aclnnConvolutionBackward(
    <tbody>
 
    <tr>
-     <td rowspan="2">ACLNN_ERR_PARAM_NULLPTR</td>
-     <td rowspan="2">161001</td>
+     <td>ACLNN_ERR_PARAM_NULLPTR</td>
+     <td>161001</td>
      <td>The passed-in gradOutput, input, weight, biasSizes, stride, padding, dilation, outputPadding, or outputMask is a null pointer, or the pointer for computing gradInput, gradWeight, or gradBias is a null pointer.</td>
    </tr>
    <tr>

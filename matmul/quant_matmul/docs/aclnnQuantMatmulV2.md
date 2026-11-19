@@ -199,8 +199,8 @@ aclnnStatus aclnnQuantMatmulV2(
       <td>传入的x1、x2、deqScale或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x1、x2、bias、deqScale或out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>

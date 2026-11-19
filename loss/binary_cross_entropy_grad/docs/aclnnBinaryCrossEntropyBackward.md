@@ -212,8 +212,8 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>传入的gradOutput、self、target、out为空指针。</td>
       </tr>
       <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>gradOutput、self、target、weightOptional的数据类型不在支持的范围内。</td>
       </tr>
       <tr>

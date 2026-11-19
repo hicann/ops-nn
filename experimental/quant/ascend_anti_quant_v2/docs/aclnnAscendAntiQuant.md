@@ -191,8 +191,8 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>传入的x、scale、y是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>x、scale、offset、y的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>

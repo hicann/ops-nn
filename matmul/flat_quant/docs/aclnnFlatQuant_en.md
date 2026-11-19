@@ -238,8 +238,8 @@ aclnnStatus aclnnFlatQuant(
       <td>Required input parameters (x, kroneckerP1, kroneckerP2) and required output parameters (out, quantScale) are null pointers.</td>
     </tr>
     <tr>
-      <td rowspan="12">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="12">161002</td>
+      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="11">161002</td>
       <td>The data type or data format of x, kroneckerP1, kroneckerP2, out, and quantScale is not within the supported range.</td>
     </tr>
     <tr>

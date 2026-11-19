@@ -182,8 +182,8 @@
         <td>传入的self、other、alpha或out是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="10">161002</td>
+        <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="5">161002</td>
         <td>self和other的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -347,8 +347,8 @@
         <td>传入的selfRef、other或alpha是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="10">161002</td>
+        <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="5">161002</td>
         <td>selfRef和other的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>

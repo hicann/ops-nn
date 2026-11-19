@@ -241,7 +241,7 @@
       <td>self和out的shape不一致。</td>
     </tr>
     <tr>
-      <td rowspan="2">self、index的shape不符合以下限制：<br>对于每一个维度d，如果d != dim,有index.size(d) <= self.size(d)的限制。 </td>
+      <td>self、index的shape不符合以下限制：<br>对于每一个维度d，如果d != dim,有index.size(d) <= self.size(d)的限制。 </td>
     </tr>
     <tr>
     </tr>

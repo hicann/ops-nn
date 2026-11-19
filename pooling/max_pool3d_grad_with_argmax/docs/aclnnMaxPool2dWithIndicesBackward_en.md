@@ -248,8 +248,8 @@ aclnnStatus aclnnMaxPool2dWithIndicesBackward(
       <td>The input self or indices is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="11">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="11">161002</td>
+      <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="10">161002</td>
       <td>The data type of gradOutput, self, indices, or gradInput is not in the supported range.</td>
     </tr>
     <tr>

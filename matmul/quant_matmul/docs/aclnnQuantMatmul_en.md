@@ -180,8 +180,8 @@ aclnnStatus aclnnQuantMatmul(
       <td>x1, x2, or out is a null pointer.</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="7">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>The data type/data format/dimension of x1, x2, bias, or out is not in the supported range.</td>
     </tr>
     <tr>

@@ -223,8 +223,8 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">logitsMax、sumExpLogits、predictedLogits、lossOut是空指针；vocabParallelLogitsOptional非空时softMaxOutOptional是空指针。</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="7">161002</td>
+      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="6">161002</td>
       <td class="tg-0pky">输入和输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

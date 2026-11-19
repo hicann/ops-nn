@@ -225,8 +225,8 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">logitsMax, sumExpLogits, predictedLogits, or lossOut is a null pointer; softMaxOutOptional is a null pointer while vocabParallelLogitsOptional is not null.</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="7">161002</td>
+      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="6">161002</td>
       <td class="tg-0pky">The data type of input and output is not within the supported range.</td>
     </tr>
     <tr>
