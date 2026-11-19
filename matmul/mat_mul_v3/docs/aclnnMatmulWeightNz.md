@@ -98,6 +98,7 @@ aclnnStatus aclnnMatmulWeightNz(
         mat2的Reduce维度需要与self的Reduce维度大小相等。<br>
         当B矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16，n0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。<br>
         当B矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16，k0为16。self shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1, mat2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。<br>
+        mat2的view strides只支持[N,1]（非转置）或[1,K]（转置），其余返回161002。<br>
         </td>
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
         <td>NZ</td>
@@ -201,6 +202,12 @@ aclnnStatus aclnnMatmulWeightNz(
     </tr>
     <tr>
       <td>推导出的数据类型无法转换为指定输出out的类型。</td>
+    </tr>
+    <tr>
+      <td>self和mat2的维度不是二维，或mat2的storage shape不是4维。</td>
+    </tr>
+    <tr>
+      <td>mat2的view strides只支持[N,1]（非转置）或[1,K]（转置），其余返回161002。</td>
     </tr>
   </tbody>
   </table>

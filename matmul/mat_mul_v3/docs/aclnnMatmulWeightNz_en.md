@@ -100,6 +100,7 @@ aclnnStatus aclnnMatmulWeightNz(
         The Reduce dimension of mat2 needs to be of the same size as the Reduce dimension of self.<br>
         When matrix B is not transposed, the dimension representation of the NZ format is (n1, k1, k0, n0), where k0 = 16 and n0 = 16. k in the self shape and k1 in the mat2 shape need to meet the following relationship: ceil(k, k0) = k1, and n1 in the mat2 shape and n of out need to meet the following relationship: ceil(n, n0) = n1.<br>
         When matrix B is transposed, the dimension representation of the NZ format is (k1, n1, n0, k0), where n0 = 16 and k0 = 16. k in the self shape and k1 in the mat2 shape need to meet the following relationship: ceil(k, k0) = k1, and n1 in the mat2 shape and n of out need to meet the following relationship: ceil(n, n0) = n1.<br>
+        The view strides of mat2 only support [N,1] (non-transposed) or [1,K] (transposed); any other value returns 161002.<br>
         </td>
         <td>BFLOAT16, FLOAT16, FLOAT32</td>
         <td>NZ</td>
@@ -203,6 +204,12 @@ aclnnStatus aclnnMatmulWeightNz(
     </tr>
     <tr>
       <td>The derived data type cannot be converted to the type of the specified output out.</td>
+    </tr>
+    <tr>
+      <td>self or mat2 is not two-dimensional, or the storage shape of mat2 is not four-dimensional.</td>
+    </tr>
+    <tr>
+      <td>The view strides of mat2 only support [N,1] (non-transposed) or [1,K] (transposed); any other value returns 161002.</td>
     </tr>
   </tbody>
   </table>
