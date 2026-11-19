@@ -13,11 +13,14 @@
  * \brief
  */
 
+#include <cstdint>
 #include <iostream>
+#include <string>
 #include <vector>
 #include <string_view>
 
 #include <gtest/gtest.h>
+#include "base/err_mgr.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"
@@ -52,11 +55,79 @@ static string to_string(void* buf, size_t size)
     return result;
 }
 
+namespace {
+// ErrorManager 上下文隔离方式与 rnn/gru_grad/tests/ut/op_host/test_gru_grad_tiling.cpp 一致：
+// 用独立 work_stream_id 记录，避免共享 Host UT 进程内的用例串扰；RAII 析构恢复原上下文。
+class ScopedErrorContext {
+public:
+    ScopedErrorContext() : savedContext_(error_message::GetErrMgrContext())
+    {
+        auto context = savedContext_;
+        context.work_stream_id = reinterpret_cast<std::uintptr_t>(this);
+        error_message::SetErrMgrContext(context);
+        (void)error_message::GetErrMgrRawErrorMessages();
+    }
+
+    ~ScopedErrorContext()
+    {
+        (void)error_message::GetErrMgrRawErrorMessages();
+        error_message::SetErrMgrContext(savedContext_);
+    }
+
+    ScopedErrorContext(const ScopedErrorContext&) = delete;
+    ScopedErrorContext& operator=(const ScopedErrorContext&) = delete;
+
+private:
+    error_message::ErrorManagerContext savedContext_;
+};
+
+struct CapturedError {
+    size_t count = 0;
+    std::string code;
+    std::vector<std::string> keys;
+    std::vector<std::string> values;
+};
+
+// GetErrMgrRawErrorMessages 读取即消费，必须先快照再断言
+CapturedError CaptureError()
+{
+    CapturedError captured;
+    const auto errors = error_message::GetErrMgrRawErrorMessages();
+    captured.count = errors.size();
+    if (errors.empty()) {
+        return captured;
+    }
+    const auto& error = errors.back();
+    captured.code = error.error_id == nullptr ? "" : error.error_id.get();
+    for (const auto& key : error.args_key) {
+        captured.keys.emplace_back(key == nullptr ? "" : key.get());
+    }
+    for (const auto& value : error.args_value) {
+        captured.values.emplace_back(value == nullptr ? "" : value.get());
+    }
+    return captured;
+}
+
+// 按 Arglist 的 key 取实际错误值；缺失时返回可读标记，便于断言失败时定位。
+std::string ErrorValue(const CapturedError& error, const std::string& key)
+{
+    for (size_t i = 0; i < error.keys.size() && i < error.values.size(); ++i) {
+        if (error.keys[i] == key) {
+            return error.values[i];
+        }
+    }
+    return "<missing:" + key + ">";
+}
+} // namespace
+
 static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::StorageShape shape,
                             gert::StorageShape listShape, gert::StorageShape scaleShape, float minScale,
                             string roundMode, int64_t rowBlockSize, int64_t colBlockSize, int64_t groupListType,
-                            float dstTypeMax, string expectTilingData, ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            float dstTypeMax, string expectTilingData, ge::graphStatus status = ge::GRAPH_SUCCESS,
+                            const char* expectedFirstErrorCode = nullptr, CapturedError* capturedError = nullptr)
 {
+    // 每个用例独立 ErrorManager 上下文，失败路径经 CaptureError 快照首错，避免跨用例串扰
+    ScopedErrorContext errorContext;
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -132,7 +203,6 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
                       .TilingData(param.get())
                       .Workspace(ws_size)
                       .Build();
-
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
@@ -140,9 +210,27 @@ static void ExecuteTestCase(ge::DataType inDtype, ge::DataType outDtype, gert::S
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
+    // 框架真实场景下 tiling fallible 输出槽位零初始化，UT faker 构建的 outputs[0]（tiling-key）为未清零内存；
+    // 此处经公开接口预置 0，使失败路径 GetTilingKey()==0 断言可判定"失败路径未设置 tilingKey"。
+    // 成功路径 SetTilingKey 会无条件覆写为真实 tilingKey，正向用例不受影响（对齐 grouped_dynamic_mx_quant 口径）。
+    ASSERT_EQ(tiling_context->SetTilingKey(0), ge::GRAPH_SUCCESS);
+
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), status);
     if (status == ge::GRAPH_FAILED) {
+        // 失败路径不得设置 tilingKey，对齐 grouped_dynamic_mx_quant / group_norm_silu_quant 整改口径
+        EXPECT_EQ(tiling_context->GetTilingKey(), 0);
+        // 一次故障一个 ErrorManager 首错；expectedFirstErrorCode 非空时断言内层正式码
+        const auto error = CaptureError();
+        EXPECT_EQ(error.count, 1U) << "a single failure must produce exactly one ErrorManager first error";
+        if (expectedFirstErrorCode != nullptr) {
+            EXPECT_EQ(error.code, expectedFirstErrorCode);
+        }
+        // 二次读取为空证明无重复上报
+        EXPECT_EQ(CaptureError().count, 0U) << "duplicate report detected";
+        if (capturedError != nullptr) {
+            *capturedError = error;
+        }
         return;
     }
     auto tiling_key = tiling_context->GetTilingKey();
@@ -560,6 +648,10 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_large_blo
 }
 
 // =============================================================================================================
+// scale shape 非法（scaleShape={1,2}，应为 [x.rows/row_block_size+groupListSize, ceil(x.cols/col_block_size)]）：
+// 内层 CheckShape 的 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON 已首报 EZ0010（param_names="x, scale"），
+// 外层 Tiling4 的 "The shape check failed." 改为 OP_LOGE_WITHOUT_REPORT 仅补日志；
+// 断言返回 GRAPH_FAILED、不设置 tilingKey、ErrorManager 仅一条且 error_id 为 EZ0010
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_fp8e5m2_fail_scale_shape)
 {
     ge::DataType inDtype = ge::DT_FLOAT16;
@@ -576,10 +668,15 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
+    CapturedError error;
     ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-                    group_list_type, dstTypeMax, expectTilingData, status);
+                    group_list_type, dstTypeMax, expectTilingData, status, "EZ0010", &error);
+    EXPECT_EQ(ErrorValue(error, "param_names"), "x, scale");
 }
 
+// row_block_size=32 非法（须为 1/128/256/512）：内层 GetAttr 的 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON
+// 已首报 EZ0026（param_name="row_block_size"），外层 "The attr get failed." 仅补日志；
+// 断言唯一首错为 EZ0026，返回 GRAPH_FAILED 且不设置 tilingKey
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_fp8e5m2_fail_row_block_size)
 {
     ge::DataType inDtype = ge::DT_FLOAT16;
@@ -596,10 +693,15 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
+    CapturedError error;
     ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-                    group_list_type, dstTypeMax, expectTilingData, status);
+                    group_list_type, dstTypeMax, expectTilingData, status, "EZ0026", &error);
+    EXPECT_EQ(ErrorValue(error, "param_name"), "row_block_size");
 }
 
+// col_block_size=32 非法（须为 64/128/192/256）：内层 GetAttr 的 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON
+// 已首报 EZ0026（param_name="col_block_size"），外层 "The attr get failed." 仅补日志；
+// 断言唯一首错为 EZ0026，返回 GRAPH_FAILED 且不设置 tilingKey
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_fp8e5m2_fail_col_block_size)
 {
     ge::DataType inDtype = ge::DT_FLOAT16;
@@ -616,10 +718,15 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
+    CapturedError error;
     ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-                    group_list_type, dstTypeMax, expectTilingData, status);
+                    group_list_type, dstTypeMax, expectTilingData, status, "EZ0026", &error);
+    EXPECT_EQ(ErrorValue(error, "param_name"), "col_block_size");
 }
 
+// round_mode="round" 与 dst_type=DT_FLOAT8_E5M2 不匹配（fp8 要求 rint）：内层 GetAttr 的
+// OP_LOGE_FOR_INVALID_VALUE_WITH_REASON 已首报 EZ0026（param_name="round_mode"），
+// 外层 "The attr get failed." 仅补日志；断言唯一首错为 EZ0026，返回 GRAPH_FAILED 且不设置 tilingKey
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float16_fp8e5m2_fail_round_mode)
 {
     ge::DataType inDtype = ge::DT_FLOAT16;
@@ -636,6 +743,34 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
     ge::graphStatus status = ge::GRAPH_FAILED;
     float dstTypeMax = 0.0;
 
+    CapturedError error;
     ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
-                    group_list_type, dstTypeMax, expectTilingData, status);
+                    group_list_type, dstTypeMax, expectTilingData, status, "EZ0026", &error);
+    EXPECT_EQ(ErrorValue(error, "param_name"), "round_mode");
+}
+
+// x 的 dtype 为 DT_FLOAT（float32，仅支持 DT_FLOAT16/DT_BF16）：内层 CheckDtype 的
+// OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON 已首报 EZ0020（param_name="x"），
+// 外层 "The dtype check failed." 改为 OP_LOGE_WITHOUT_REPORT 仅补日志；
+// 断言唯一首错为 EZ0020，返回 GRAPH_FAILED 且不设置 tilingKey
+TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_block_float32_fail_x_dtype)
+{
+    ge::DataType inDtype = ge::DT_FLOAT;
+    ge::DataType outDtype = ge::DT_FLOAT8_E5M2;
+    gert::StorageShape shape = {{128, 256}, {128, 256}};
+    gert::StorageShape listShape = {{1}, {1}};
+    gert::StorageShape scaleShape = {{2, 2}, {2, 2}};
+    float minScale = 0.0;
+    string roundMode = "rint";
+    int64_t rowBlockSize = 128;
+    int64_t colBlockSize = 128;
+    int64_t group_list_type = 0;
+    string expectTilingData = "";
+    ge::graphStatus status = ge::GRAPH_FAILED;
+    float dstTypeMax = 0.0;
+
+    CapturedError error;
+    ExecuteTestCase(inDtype, outDtype, shape, listShape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    group_list_type, dstTypeMax, expectTilingData, status, "EZ0020", &error);
+    EXPECT_EQ(ErrorValue(error, "param_name"), "x");
 }

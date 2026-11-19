@@ -486,14 +486,14 @@ ge::graphStatus Tiling4GroupedDynamicBlockQuant(gert::TilingContext* context)
     OP_LOGD(context, "Tiling4GroupedDynamicBlockQuant running begin.");
     GroupedDynamicBlockQuantTilingParam tilingParam;
 
-    OP_CHECK_IF(CheckDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "The dtype check failed."),
+    OP_CHECK_IF(CheckDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE_WITHOUT_REPORT(context, "The dtype check failed."),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(GetAttr(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "The attr get failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetAttr(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context, "The attr get failed."), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(CheckShape(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "The shape check failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context, "The shape check failed."), return ge::GRAPH_FAILED);
 
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
@@ -508,8 +508,8 @@ ge::graphStatus Tiling4GroupedDynamicBlockQuant(gert::TilingContext* context)
     OP_CHECK_IF((tilingParam.ubSize <= 0), OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
 
     GroupedDynamicBlockQuantTilingData tilingData;
-    OP_CHECK_IF(DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Dotiling failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(DoTiling(context, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context, "Dotiling failed."), return ge::GRAPH_FAILED);
     SetTilingData(tilingData, tilingParam);
 
     OP_CHECK_IF(GroupedDynamicBlockQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,

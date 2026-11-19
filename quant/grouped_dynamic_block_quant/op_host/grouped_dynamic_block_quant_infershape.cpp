@@ -98,10 +98,20 @@ ge::graphStatus InferShapeForGroupedDynamicBlockQuant(gert::InferShapeContext* c
 {
     OP_LOGD(context, "Begin to do InferShapeForGroupedDynamicBlockQuant");
     const gert::Shape* inputXShape = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputXShape);
+    if (inputXShape == nullptr) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "x",
+                                                 "x is a required input and cannot be omitted; the input shape of "
+                                                 "x must be provided");
+        return ge::GRAPH_FAILED;
+    }
 
     const gert::Shape* inputGroupListShape = context->GetInputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputGroupListShape);
+    if (inputGroupListShape == nullptr) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context->GetNodeName(), "group_list",
+                                                 "group_list is a required input and cannot be omitted; the input "
+                                                 "shape of group_list must be provided");
+        return ge::GRAPH_FAILED;
+    }
     if (inputGroupListShape->GetDimNum() != INPUT_DIM_ONE) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "group_list",
                                                  std::to_string(inputGroupListShape->GetDimNum()),
