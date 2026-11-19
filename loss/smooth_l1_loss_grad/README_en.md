@@ -15,36 +15,34 @@ English | [简体中文](./README.md)
 
 ## Function
 
-- Operator function: computes the backpropagation gradient of SmoothL1Loss. reduction='none', and only the element-wise gradient is output. The mean/sum reduction is handled by the forward SmoothL1Loss.
+- Operator function: Computes the backward propagation gradient of SmoothL1Loss. reduction='none', and only the element-wise gradient is output; mean/sum reduction is performed by the forward SmoothL1Loss.
 - Formula:
 
   $$
   gradient = clamp\left(\frac{predict - label}{sigma},\ -1,\ 1\right) \times dout
   $$
 
-  Here sigma is equivalent to the `beta` parameter of the PyTorch `smooth_l1_loss`, and it controls the smooth transition threshold between L1 and L2. When the difference `predict - label = 0`, `gradient = 0`.
+  where sigma is equivalent to the `beta` parameter of PyTorch `smooth_l1_loss`, controlling the smooth transition threshold between L1 and L2. When the difference `predict - label = 0` and `dout` is finite, `gradient = 0`.
 
 ## Parameters
 
 |Parameter name|Input/Output/Attribute|Description|Data type|Data format|
 |:-----|:-----------|:----|:---------|:------|
-|predict|Input|The predicted value, corresponding to predict in the formula.|FLOAT16, FLOAT, BFLOAT16|ND|
-|label|Input|The target value, corresponding to label in the formula. The data type is the same as predict.|FLOAT16, FLOAT, BFLOAT16|ND|
-|dout|Input|The upstream gradient, corresponding to dout in the formula. The data type is the same as predict.|FLOAT16, FLOAT, BFLOAT16|ND|
-|gradient|Output|The output gradient, corresponding to gradient in the formula. The data type is the same as predict.|FLOAT16, FLOAT, BFLOAT16|ND|
-|sigma|Attribute|The Smooth L1 smoothing threshold, corresponding to sigma in the formula, equivalent to the beta of PyTorch. The value must be greater than 0. The default value is 1.0.|FLOAT|-|
+|predict|Input|Prediction value, corresponding to predict in the formula.|FLOAT16, FLOAT, BFLOAT16|ND|
+|label|Input|Target value, corresponding to label in the formula. Its data type must be the same as that of predict.|FLOAT16, FLOAT, BFLOAT16|ND|
+|dout|Input|Upstream gradient, corresponding to dout in the formula. Its data type must be the same as that of predict.|FLOAT16, FLOAT, BFLOAT16|ND|
+|gradient|Output|Output gradient, corresponding to gradient in the formula. Its data type is the same as that of predict.|FLOAT16, FLOAT, BFLOAT16|ND|
+|sigma|Attribute|Smooth L1 transition threshold, corresponding to sigma in the formula, equivalent to the `beta` parameter of PyTorch. The value must be a finite positive number, and the default value is 1.0.|FLOAT|-|
 
 ## Constraints
 
-- Deterministic Computation: the operator is a pure element-wise operation and is deterministic by default.
-- The data types of predict, label, and dout must be consistent, and they must all be one of FLOAT16, FLOAT, and BFLOAT16. The data type of gradient is the same as predict.
-- The shapes of predict, label, dout, and gradient must be consistent (broadcast is currently not supported), and 0-8 dimensions are supported.
-- The value of sigma must be greater than 0 (default 1.0). The semantics of degrading to L1 Loss backward when sigma≤0 is not implemented.
-- Empty tensors are supported. In the Tiling stage, empty tensors short-circuit successfully, and the Kernel does not initiate GM reads or writes.
-- The ACLNN interface performs `AutoContiguous()` to make non-contiguous inputs contiguous. The GE graph path uses the ND format according to the registration constraints.
+- Deterministic computation: The operator is a pure element-wise operation and uses a deterministic implementation by default.
+- The data types of predict, label, and dout must be the same, and each must be one of FLOAT16, FLOAT, and BFLOAT16; the data type of gradient is the same as that of predict.
+- The shapes of predict, label, dout, and gradient must be the same (broadcast is not supported currently).
+- The value of sigma must be a finite positive number (1.0 by default). Degrading sigma≤0 to the L1 Loss backward semantics is not implemented.
 
 ## Invocation Description
 
 | Invocation method | Invocation sample | Description |
 | ---------------- | --------------------------- |-------------------------------------------------------------------------|
-| GE graph mode  | [test_geir_smooth_l1_loss_grad.cpp](examples/arch35/test_geir_smooth_l1_loss_grad.cpp)   | Invoke the SmoothL1LossGrad operator by constructing a graph through the [operator IR](op_graph/smooth_l1_loss_grad_proto.h). |
+| GE graph mode  | [test_geir_smooth_l1_loss_grad.cpp](examples/arch35/test_geir_smooth_l1_loss_grad.cpp)   | Calls the SmoothL1LossGrad operator by constructing a graph with the [operator IR](op_graph/smooth_l1_loss_grad_proto.h). |

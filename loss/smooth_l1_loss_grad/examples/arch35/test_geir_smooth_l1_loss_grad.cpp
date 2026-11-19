@@ -21,8 +21,8 @@
  * 算子语义：gradient = clamp((predict - label) / sigma, -1, 1) * dout（逐元素，reduction='none'）
  *   GEIR 通路：predict/label/dout 为输入 Tensor，sigma 为编译期 Float 属性（默认 1.0），gradient 为输出 Tensor。
  *
- * 编译：参见 CMakeLists.txt   运行：参见 run.sh
- *   ⚠ GE IR 执行触发 TBE 动态编译，需系统 Python 3.9（见 run.sh 环境设置）。
+ * 编译运行：在仓根执行 bash build.sh --run_example smooth_l1_loss_grad graph --soc=ascend950。
+ *   ⚠ 依赖已安装的 CANN 环境。
  */
 
 #include <iostream>

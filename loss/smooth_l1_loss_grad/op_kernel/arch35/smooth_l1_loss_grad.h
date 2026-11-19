@@ -21,14 +21,18 @@
  *   Step 1 Sub(diff, predict, label)        → diff = predict - label
  *   Step 2 Mins(c, diff, σ)                 → c = min(diff, σ)
  *   Step 3 Maxs(c, c, -σ)                   → c = max(c, -σ)  （c = clamp(diff, -σ, σ)）
- *   Step 4 Muls(s, c, 1/σ)                  → s = c × (1/σ) = clamp(diff/σ, -1, 1)
+ *   Step 4 Div(s, c, σ)                     → s = c / σ = clamp(diff/σ, -1, 1)
  *   Step 5 Mul(grad, s, dout)               → gradient = s × dout
- * 先钳位差值后归一化，规避除零。
+ * 先钳位差值后真除法归一化：σ>0 由 tiling 入口校验保证（无除零）；不预计算 1/σ——
+ *   σ 处于次正规极小域时倒数会上溢 +Inf（diff=0 元素 0×Inf=NaN），而除法结果
+ *   |c/σ| ≤ 1 由钳位构造保证，全域 (0, +∞) 内不产生 Inf/NaN。
  *
  * dtype 路径分派：
- *   - fp16/fp32 原 dtype 直算（T 标量 σ/-σ/1/σ，不升精度、无 FP32 中间 Buffer）
- *   - bf16 cast-compute（3 输入 Cast bf16→fp32 → 5 步链 float 标量 → Cast fp32→bf16 CAST_RINT，
- *     fp32 中间量在向量寄存器、不落 UB，因 DAV_3510 bisheng backend 拒绝 bf16 标量运算）
+ *   - fp16/bf16 cast-compute（3 输入 Cast 16bit→fp32 → 5 步链 fp32 标量 → Cast fp32→16bit
+ *     CAST_RINT，fp32 中间量在向量寄存器、不落 UB）。σ 标量全程 fp32 载体，不经 16 位
+ *     窄化：σ 超 16 位表示域（如 fp16 的 σ>65504 或次正规 σ）时钳位与缩放仍精确，
+ *     与 aten 对 16 位输入的 fp32 中间量（TensorIterator opmath）计算域一致。
+ *   - fp32 原 dtype 直算（fp32 标量 σ/-σ，无 FP32 中间 Buffer）
  *
  * Buffer 规划：3 输入（predict/label/dout，VECIN）+ 1 输出（gradient，VECOUT）
  *   double buffer，bufferNum=8（(3+1)×2），无 FP32 中间 Buffer，workspace=0。
@@ -48,34 +52,44 @@ namespace NsSmoothL1LossGrad {
 
 using namespace AscendC;
 
+// Div 精度模式：0 ulp 正确舍入 + 不 flush 次正规输入/输出（次正规 σ 除法的正确性依赖）。
+static constexpr AscendC::Reg::DivSpecificMode g_divMode = {AscendC::Reg::MaskMergeMode::ZEROING, false,
+                                                            AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
+
 // ============================================================================
-// RegBase VF 5 步链 —— fp16 / fp32 原 dtype 直算路径
-//   指针须在 __ubuf__；scalarValue（sigma / negSigma / recipSigma）类型与 T 一致。
+// RegBase VF 5 步链 —— fp32 直算路径
+//   指针须在 __ubuf__；标量（sigma / negSigma）类型与 T 一致。
 // ============================================================================
 template <typename T>
 __simd_vf__ inline void SmoothL1LossGradVF(__ubuf__ T* dstAddr, __ubuf__ T* predictAddr, __ubuf__ T* labelAddr,
-                                           __ubuf__ T* doutAddr, T sigmaVal, T negSigmaVal, T recipSigmaVal,
-                                           uint32_t count, uint32_t oneRepeatSize, uint16_t repeatTimes)
+                                           __ubuf__ T* doutAddr, T sigmaVal, T negSigmaVal, uint32_t count,
+                                           uint32_t oneRepeatSize, uint16_t repeatTimes)
 {
     AscendC::Reg::RegTensor<T> predictReg, labelReg, doutReg;
-    AscendC::Reg::RegTensor<T> diffReg, cReg, sReg, dstReg;
+    AscendC::Reg::RegTensor<T> diffReg, cReg, sReg, dstReg, sigmaReg;
     AscendC::Reg::MaskReg mask;
+    // σ 广播外提（T19 CODE_REVIEW O-2 落地）：sigmaVal 系 kernel 常量循环不变，广播移至循环外一次性
+    //   执行（pool_3d_common/arch35 ComputeAvg 同款 2 参无 mask vbr 全量形态——带 mask 的 3 参 vdup
+    //   外提在 VF 片段模型下 NPU 输出全零，实测已拒）。全量广播的 σ 落入 mask 外车道不影响结果：
+    //   Div 按 mask 求值（ZEROING 模式_inactive 车道写 0）+ StoreAlign 按 mask 存储，逐位等价；
+    //   每轮省 1 条 vdup 指令；Div 指令形态与 g_divMode 精度语义零触碰。
+    AscendC::Reg::Duplicate(sigmaReg, sigmaVal); // Step 4a: σ 广播至寄存器（循环外）
     for (uint16_t i = 0; i < repeatTimes; ++i) {
         mask = AscendC::Reg::UpdateMask<T>(count);
         AscendC::Reg::LoadAlign(predictReg, predictAddr + i * oneRepeatSize);
         AscendC::Reg::LoadAlign(labelReg, labelAddr + i * oneRepeatSize);
         AscendC::Reg::LoadAlign(doutReg, doutAddr + i * oneRepeatSize);
-        AscendC::Reg::Sub(diffReg, predictReg, labelReg, mask); // Step 1: diff = predict - label
-        AscendC::Reg::Mins(cReg, diffReg, sigmaVal, mask);      // Step 2: c = min(diff, σ)
-        AscendC::Reg::Maxs(cReg, cReg, negSigmaVal, mask);      // Step 3: c = max(c, -σ)
-        AscendC::Reg::Muls(sReg, cReg, recipSigmaVal, mask);    // Step 4: s = c × (1/σ)
-        AscendC::Reg::Mul(dstReg, sReg, doutReg, mask);         // Step 5: gradient = s × dout
+        AscendC::Reg::Sub(diffReg, predictReg, labelReg, mask);       // Step 1: diff = predict - label
+        AscendC::Reg::Mins(cReg, diffReg, sigmaVal, mask);            // Step 2: c = min(diff, σ)
+        AscendC::Reg::Maxs(cReg, cReg, negSigmaVal, mask);            // Step 3: c = max(c, -σ)
+        AscendC::Reg::Div<T, &g_divMode>(sReg, cReg, sigmaReg, mask); // Step 4: s = c / σ
+        AscendC::Reg::Mul(dstReg, sReg, doutReg, mask);               // Step 5: gradient = s × dout
         AscendC::Reg::StoreAlign(dstAddr + i * oneRepeatSize, dstReg, mask);
     }
 }
 
-// bf16 cast trait（与同仓 relu6_d / fused_mul_add_n_half.h 一致）：
-//   widen：bf16→fp32（无舍入）；narrow：fp32→bf16（CAST_RINT 就近舍入，输出边界处唯一一次降精度）。
+// 16 位 cast trait（half / bf16 共用，与同仓 relu6_d / fused_mul_add_n_half.h / sigmoid_focal_loss_grad 一致）：
+//   widen：16bit→fp32（无舍入）；narrow：fp32→16bit（CAST_RINT 就近舍入，输出边界处唯一一次降精度）。
 constexpr static AscendC::Reg::CastTrait g_castWiden = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
                                                         AscendC::Reg::MaskMergeMode::ZEROING,
                                                         AscendC::RoundMode::UNKNOWN};
@@ -84,36 +98,37 @@ constexpr static AscendC::Reg::CastTrait g_castNarrow = {AscendC::Reg::RegLayout
                                                          AscendC::RoundMode::CAST_RINT};
 
 // ============================================================================
-// RegBase VF 5 步链 —— bf16 cast-compute 路径（KEY_BF16)
-//   backend 不支持 bf16 标量 vmins/vmaxs/vmuls，升 fp32 直算。
+// RegBase VF 5 步链 —— 16 位 dtype cast-compute 路径（fp16 / bf16）
+//   输入升 fp32（widen）→ 5 步链（σ 标量 fp32 载体 + 真除法）→ 降回原 dtype（narrow）。
+//   σ 全程 fp32（attr Float 域），不经 16 位窄化。
 // ============================================================================
-__simd_vf__ inline void SmoothL1LossGradVFBf16(__ubuf__ bfloat16_t* dstAddr, __ubuf__ bfloat16_t* predictAddr,
-                                               __ubuf__ bfloat16_t* labelAddr, __ubuf__ bfloat16_t* doutAddr,
-                                               float sigmaVal, float negSigmaVal, float recipSigmaVal, uint32_t count,
-                                               uint32_t fp32Lane, uint16_t repeatTimes)
+template <typename T>
+__simd_vf__ inline void SmoothL1LossGradVFCast16(__ubuf__ T* dstAddr, __ubuf__ T* predictAddr, __ubuf__ T* labelAddr,
+                                                 __ubuf__ T* doutAddr, float sigmaVal, float negSigmaVal,
+                                                 uint32_t count, uint32_t fp32Lane, uint16_t repeatTimes)
 {
-    AscendC::Reg::RegTensor<bfloat16_t> predictRegB, labelRegB, doutRegB, dstRegB;
+    AscendC::Reg::RegTensor<T> predictRegB, labelRegB, doutRegB, dstRegB;
     AscendC::Reg::RegTensor<float> predictRegF, labelRegF, doutRegF;
-    AscendC::Reg::RegTensor<float> diffReg, cReg, sReg, gradReg;
+    AscendC::Reg::RegTensor<float> diffReg, cReg, sReg, gradReg, sigmaReg;
     AscendC::Reg::MaskReg mask;
+    // σ 广播外提（同 fp32 直算路径，pool_3d ComputeAvg 同款 2 参无 mask 形态）：
+    //   全量广播 σ 落入 mask 外车道不影响结果（Div/StoreAlign 均按 mask），每轮省 1 条 vdup。
+    AscendC::Reg::Duplicate(sigmaReg, sigmaVal);
     for (uint16_t i = 0; i < repeatTimes; ++i) {
         mask = AscendC::Reg::UpdateMask<float>(count);
-        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(predictRegB,
-                                                                                    predictAddr + i * fp32Lane);
-        AscendC::Reg::Cast<float, bfloat16_t, g_castWiden>(predictRegF, predictRegB, mask);
-        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(labelRegB,
-                                                                                    labelAddr + i * fp32Lane);
-        AscendC::Reg::Cast<float, bfloat16_t, g_castWiden>(labelRegF, labelRegB, mask);
-        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(doutRegB, doutAddr + i * fp32Lane);
-        AscendC::Reg::Cast<float, bfloat16_t, g_castWiden>(doutRegF, doutRegB, mask);
+        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(predictRegB, predictAddr + i * fp32Lane);
+        AscendC::Reg::Cast<float, T, g_castWiden>(predictRegF, predictRegB, mask);
+        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(labelRegB, labelAddr + i * fp32Lane);
+        AscendC::Reg::Cast<float, T, g_castWiden>(labelRegF, labelRegB, mask);
+        AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(doutRegB, doutAddr + i * fp32Lane);
+        AscendC::Reg::Cast<float, T, g_castWiden>(doutRegF, doutRegB, mask);
         AscendC::Reg::Sub(diffReg, predictRegF, labelRegF, mask);
         AscendC::Reg::Mins(cReg, diffReg, sigmaVal, mask);
         AscendC::Reg::Maxs(cReg, cReg, negSigmaVal, mask);
-        AscendC::Reg::Muls(sReg, cReg, recipSigmaVal, mask);
+        AscendC::Reg::Div<float, &g_divMode>(sReg, cReg, sigmaReg, mask);
         AscendC::Reg::Mul(gradReg, sReg, doutRegF, mask);
-        AscendC::Reg::Cast<bfloat16_t, float, g_castNarrow>(dstRegB, gradReg, mask);
-        AscendC::Reg::DataCopy<bfloat16_t, AscendC::Reg::StoreDist::DIST_PACK_B32>(dstAddr + i * fp32Lane, dstRegB,
-                                                                                   mask);
+        AscendC::Reg::Cast<T, float, g_castNarrow>(dstRegB, gradReg, mask);
+        AscendC::Reg::StoreAlign<T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dstAddr + i * fp32Lane, dstRegB, mask);
     }
 }
 
@@ -154,14 +169,10 @@ private:
     int64_t loopNum_ = 0;
     int64_t tailNum_ = 0;
 
-    // 直算路径标量（fp16/fp32）
-    T sigmaT_ = (T)0;
-    T negSigmaT_ = (T)0;
-    T recipSigmaT_ = (T)0;
-    // bf16 cast-compute 路径标量（float 载体，避免 backend bf16 标量拒绝）
+    // σ 标量载体：fp32 全程（与 attr Float 域一致）——16 位路径计算域即 fp32，
+    // 直算路径 T=float 同为 fp32，σ 不经任何窄化。
     float sigmaF_ = 1.0f;
     float negSigmaF_ = -1.0f;
-    float recipSigmaF_ = 1.0f;
 };
 
 // =============================================================================
@@ -174,21 +185,10 @@ __aicore__ inline void KernelSmoothL1LossGrad<T>::Init(GM_ADDR predict, GM_ADDR 
     blockNum_ = tilingData->blockNum;
     ubFormer_ = tilingData->ubFormer;
 
-    // 标量阈值：
-    //   - fp16/fp32 直算路径：sigmaT_ / negSigmaT_ / recipSigmaT_ = static_cast<T>(...)
-    //   - bf16 cast-compute 路径：用 fp32 载体 sigmaF_ / negSigmaF_ / recipSigmaF_，
-    //     避免 backend 不支持的 bf16 标量 cast。
+    // σ 标量载体：fp32 全程（attr Float 域）；16 位路径计算域即 fp32（widen 后），
+    // 直算路径 T=float 同为 fp32——两条路径统一读 fp32 标量，无 static_cast 窄化。
     sigmaF_ = tilingData->sigma;
     negSigmaF_ = tilingData->negSigma;
-    recipSigmaF_ = tilingData->recipSigma;
-    if constexpr (AscendC::IsSameType<T, bfloat16_t>::value) {
-        // bf16：不做 float→bf16 标量 cast（backend 不支持），仅用 fp32 载体。
-        sigmaT_ = (T)0;
-    } else {
-        sigmaT_ = static_cast<T>(tilingData->sigma);
-        negSigmaT_ = static_cast<T>(tilingData->negSigma);
-        recipSigmaT_ = static_cast<T>(tilingData->recipSigma);
-    }
 
     // 核守卫已移至 Kernel 入口（smooth_l1_loss_grad.cpp）：
     //   GetBlockIdx() >= blockNum 时直接 return，不进入 Init/Process。
@@ -277,8 +277,8 @@ __aicore__ inline void KernelSmoothL1LossGrad<T>::CopyIn(int64_t ubOffset, int64
 }
 
 // ---- Compute: RegBase VF 5 步链----
-//   fp16/fp32 直算路径（precision_reduce=false，原生精度直算）
-//   bf16 cast-compute 路径（升 fp32 → 5 步链 → 降回，backend 不支持 bf16 标量）
+//   fp16/bf16 cast-compute 路径（升 fp32 → 5 步链 → 降回 CAST_RINT，σ 标量 fp32 载体全程不窄化）
+//   fp32 直算路径（precision_reduce=false，原生精度直算）
 template <typename T>
 __aicore__ inline void KernelSmoothL1LossGrad<T>::Compute(int64_t len, AscendC::LocalTensor<T>& predictLocal,
                                                           AscendC::LocalTensor<T>& labelLocal,
@@ -289,19 +289,20 @@ __aicore__ inline void KernelSmoothL1LossGrad<T>::Compute(int64_t len, AscendC::
     labelLocal = labelQue_.template DeQue<T>();
     doutLocal = doutQue_.template DeQue<T>();
 
-    if constexpr (AscendC::IsSameType<T, bfloat16_t>::value) {
+    if constexpr (AscendC::IsSameType<T, bfloat16_t>::value || AscendC::IsSameType<T, half>::value) {
+        // 16 位 dtype：升 fp32 计算（σ 标量 fp32 载体，不经 16 位窄化）
         uint32_t fp32Lane = AscendC::GetVecLen() / sizeof(float);
         uint16_t repeatTimes = AscendC::CeilDivision(static_cast<uint32_t>(len), fp32Lane);
-        asc_vf_call<SmoothL1LossGradVFBf16>(
-            (__ubuf__ bfloat16_t*)gradientLocal.GetPhyAddr(), (__ubuf__ bfloat16_t*)predictLocal.GetPhyAddr(),
-            (__ubuf__ bfloat16_t*)labelLocal.GetPhyAddr(), (__ubuf__ bfloat16_t*)doutLocal.GetPhyAddr(), sigmaF_,
-            negSigmaF_, recipSigmaF_, static_cast<uint32_t>(len), fp32Lane, repeatTimes);
+        asc_vf_call<SmoothL1LossGradVFCast16<T>>(
+            (__ubuf__ T*)gradientLocal.GetPhyAddr(), (__ubuf__ T*)predictLocal.GetPhyAddr(),
+            (__ubuf__ T*)labelLocal.GetPhyAddr(), (__ubuf__ T*)doutLocal.GetPhyAddr(), sigmaF_, negSigmaF_,
+            static_cast<uint32_t>(len), fp32Lane, repeatTimes);
     } else {
         uint32_t oneRepeatSize = AscendC::GetVecLen() / sizeof(T);
         uint16_t repeatTimes = AscendC::CeilDivision(static_cast<uint32_t>(len), oneRepeatSize);
         asc_vf_call<SmoothL1LossGradVF<T>>((__ubuf__ T*)gradientLocal.GetPhyAddr(),
                                            (__ubuf__ T*)predictLocal.GetPhyAddr(), (__ubuf__ T*)labelLocal.GetPhyAddr(),
-                                           (__ubuf__ T*)doutLocal.GetPhyAddr(), sigmaT_, negSigmaT_, recipSigmaT_,
+                                           (__ubuf__ T*)doutLocal.GetPhyAddr(), sigmaF_, negSigmaF_,
                                            static_cast<uint32_t>(len), oneRepeatSize, repeatTimes);
     }
     gradientQue_.template EnQue<T>(gradientLocal);

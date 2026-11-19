@@ -16,7 +16,7 @@
  *
  * Tiling 流程：
  *   1. 获取平台信息（ubSize, coreNum；PlatformAscendC，禁止硬编码）
- *   2. 获取 shape / 属性信息（totalLength, dtype, sigma → negSigma=-sigma, recipSigma=1/sigma）
+ *   2. 获取 shape / 属性信息（totalLength, dtype, sigma → negSigma=-sigma；kernel 侧 Step 4 真除法，不预计算 1/σ）
  *   3. 空 Tensor 短路（totalLength=0 → blockNum=0，避免除零；SetBlockDim(1)）
  *   4. 多核切分（coreNum/blockFormer/blockNum 两步，512 对齐后反推 blockNum）
  *   5. UB 切分（byte 量纲 maxElemNum 无 ×8；alignFactor = 256/elemBytes；ubFormer 256B 对齐）
@@ -37,6 +37,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include <set>
 #include <cmath>
+#include <cstdint>
 #include "../../op_kernel/arch35/smooth_l1_loss_grad_tiling_data.h"
 
 namespace optiling {
@@ -52,7 +53,6 @@ constexpr int64_t ELEM_ALIGN_FACTOR = 512;               // 多核切分元素�
 constexpr int64_t ALIGN_256 = 256;                       // UB 对齐字节数（亦作 extraSize 预留）
 constexpr int64_t BUFFER_NUM = 8;                        // double buffer：(3 VECIN + 1 VECOUT) × 2
 constexpr float DEFAULT_SIGMA = 1.0f;                    // sigma 默认值
-constexpr size_t MAX_SUPPORTED_RANK = 8;                 // README 接口约束：支持 0-8 维
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -85,10 +85,6 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     // 输入 predict shape → 展平为 totalLength（rank=0 → 1，空 Tensor → 0）
     auto inputPredict = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputPredict);
-    OP_CHECK_IF(inputPredict->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
-                OP_LOGE(context, "SmoothL1LossGrad: predict rank %zu exceeds supported range [0, 8]",
-                        inputPredict->GetStorageShape().GetDimNum()),
-                return ge::GRAPH_FAILED);
     auto predictShape = EnsureNotScalar(inputPredict->GetStorageShape());
     *totalLength = predictShape.GetShapeSize();
 
@@ -96,12 +92,6 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    const auto predictFormat = inputDesc->GetFormat().GetStorageFormat();
-    OP_CHECK_IF(
-        predictFormat != ge::FORMAT_ND,
-        OP_LOGE(context, "SmoothL1LossGrad: input[0] format %d is unsupported; input name=predict, legal format=ND",
-                static_cast<int>(predictFormat)),
-        return ge::GRAPH_FAILED);
     *dataType = inputDesc->GetDataType();
     OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
                 OP_LOGE(context,
@@ -135,12 +125,6 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     // dtype 一致性校验
     auto labelDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, labelDesc);
-    const auto labelFormat = labelDesc->GetFormat().GetStorageFormat();
-    OP_CHECK_IF(
-        labelFormat != ge::FORMAT_ND,
-        OP_LOGE(context, "SmoothL1LossGrad: input[1] format %d is unsupported; input name=label, legal format=ND",
-                static_cast<int>(labelFormat)),
-        return ge::GRAPH_FAILED);
     const auto labelDtype = labelDesc->GetDataType();
     OP_CHECK_IF(supportedDtype.count(labelDtype) == 0,
                 OP_LOGE(context,
@@ -157,12 +141,6 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     auto doutDesc = context->GetInputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, doutDesc);
-    const auto doutFormat = doutDesc->GetFormat().GetStorageFormat();
-    OP_CHECK_IF(
-        doutFormat != ge::FORMAT_ND,
-        OP_LOGE(context, "SmoothL1LossGrad: input[2] format %d is unsupported; input name=dout, legal format=ND",
-                static_cast<int>(doutFormat)),
-        return ge::GRAPH_FAILED);
     const auto doutDtype = doutDesc->GetDataType();
     OP_CHECK_IF(supportedDtype.count(doutDtype) == 0,
                 OP_LOGE(context,
@@ -195,12 +173,6 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
                         "actual gradient dtype=%d, legal relation=gradient dtype must equal predict dtype",
                         static_cast<int>(*dataType), static_cast<int>(outputDtype)),
                 return ge::GRAPH_FAILED);
-    const auto outputFormat = outputDesc->GetFormat().GetStorageFormat();
-    OP_CHECK_IF(
-        outputFormat != ge::FORMAT_ND,
-        OP_LOGE(context, "SmoothL1LossGrad: output[0] format %d is unsupported; output name=gradient, legal format=ND",
-                static_cast<int>(outputFormat)),
-        return ge::GRAPH_FAILED);
 
     // 属性 sigma（Float，index 0，默认 1.0）
     const auto* attrs = context->GetAttrs();
@@ -277,13 +249,19 @@ static ge::graphStatus SmoothL1LossGradTilingFunc(gert::TilingContext* context)
     tiling->totalLength = totalLength;
     tiling->sigma = sigma;
     tiling->negSigma = -sigma;
-    tiling->recipSigma = 1.0f / sigma;
 
     // 3. 空 Tensor 短路（blockNum=0，kernel 守卫 return）
     if (totalLength == 0) {
         context->SetBlockDim(1);
         return ge::GRAPH_SUCCESS;
     }
+    // 负元素总数（负维直调构造可达）会使多核切分 coreNum 计算为 0，后续按 coreNum 除法未定义，显式拒绝
+    OP_CHECK_IF(totalLength < 0,
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: total element count %ld is negative; derived value=totalLength (predict "
+                        "shape size), legal relation=totalLength must be a non-negative int64",
+                        totalLength),
+                return ge::GRAPH_FAILED);
 
     // 4. 多核 + UB 切分
     OP_CHECK_IF(
@@ -291,6 +269,16 @@ static ge::graphStatus SmoothL1LossGradTilingFunc(gert::TilingContext* context)
         OP_LOGE(context, "SmoothL1LossGrad: UB size %lu is too small, must be greater than %ld", ubSize, ALIGN_256),
         return ge::GRAPH_FAILED);
     int64_t coreNum, blockFormer, blockNum, blockTail, ubFormer;
+    // totalLength 上界守卫：多核切分首步 totalLength * minDtypeBits（int64 乘法）不得有符号溢出
+    const int64_t minDtypeBits = static_cast<int64_t>(ge::GetSizeByDataType(dataType)) * 8;
+    const int64_t maxTotalLength = (INT64_MAX - MIN_TILING_BITS_SIZE_PER_CORE) / minDtypeBits;
+    OP_CHECK_IF(totalLength > maxTotalLength,
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: total element count %ld exceeds int64 tiling arithmetic limit %ld; "
+                        "derived value=totalLength (predict shape size), legal relation=totalLength * "
+                        "bits-per-element must fit in int64",
+                        totalLength, maxTotalLength),
+                return ge::GRAPH_FAILED);
     ComputeTilingParams(totalLength, dataType, ubSize, availableCoreNum, &coreNum, &blockFormer, &blockNum, &blockTail,
                         &ubFormer);
     OP_CHECK_IF(ubFormer <= 0,

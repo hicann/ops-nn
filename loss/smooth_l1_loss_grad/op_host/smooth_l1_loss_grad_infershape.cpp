@@ -31,16 +31,6 @@ namespace ops {
 
 static ge::graphStatus InferShape4SmoothL1LossGrad(gert::InferShapeContext* context)
 {
-    // Format 校验：仅支持 ND
-    const auto* predictTensor = context->GetInputTensor(0);
-    if (predictTensor != nullptr) {
-        auto format = predictTensor->GetStorageFormat();
-        OP_CHECK_IF(format != ge::FORMAT_ND,
-                    OP_LOGE(context, "SmoothL1LossGrad: unsupported format on input predict: %d, only ND is supported",
-                            static_cast<int>(format)),
-                    return ge::GRAPH_FAILED);
-    }
-
     const gert::Shape* predictShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, predictShape);
 

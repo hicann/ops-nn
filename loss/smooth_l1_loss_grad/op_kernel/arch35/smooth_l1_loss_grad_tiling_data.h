@@ -25,9 +25,8 @@
  *   blockNum      真正发起 GM 读写的工作核数 = ⌈totalLength/blockFormer⌉
  *   blockTail     尾核处理元素数 = totalLength - blockFormer*(blockNum-1)（int64 防 uint32 回绕）
  *   ubFormer      每个 UB 块基础元素数（对齐到 256B）
- *   sigma         平滑阈值 σ（Step 2 Mins 上截断，σ > 0）
+ *   sigma         平滑阈值 σ（Step 2 Mins 上截断，σ > 0；kernel 侧 Step 4 除法分母）
  *   negSigma      -σ（Step 3 Maxs 下截断，Host 预计算）
- *   recipSigma    1/σ（Step 4 Muls 缩放，Host 除法转乘法预计算）
  */
 
 #ifndef _SMOOTH_L1_LOSS_GRAD_TILING_DATA_H_
@@ -45,9 +44,8 @@ struct SmoothL1LossGradTilingData {
     int64_t ubFormer = 0; // 每个 UB 块基础元素数（256B 对齐）
 
     // === 标量参数（Host 预计算） ===
-    float sigma = 1.0f;      // 平滑阈值 σ（σ > 0）
-    float negSigma = -1.0f;  // -σ（Step 3 Maxs 下截断）
-    float recipSigma = 1.0f; // 1/σ（Step 4 Muls 缩放，除法转乘法）
+    float sigma = 1.0f;     // 平滑阈值 σ（σ > 0；Step 2 Mins 上截断 / Step 4 Div 分母）
+    float negSigma = -1.0f; // -σ（Step 3 Maxs 下截断）
 };
 
 #endif // _SMOOTH_L1_LOSS_GRAD_TILING_DATA_H_

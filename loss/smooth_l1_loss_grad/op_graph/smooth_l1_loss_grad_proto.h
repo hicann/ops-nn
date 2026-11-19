@@ -36,7 +36,7 @@ namespace ge {
  *  @li gradient: A Tensor. Same type and shape as input predict.
  *
  * @par Attributes:
- *  @li sigma: Float. Smooth L1 threshold (equivalent to PyTorch beta). Must be > 0. Default: 1.0.
+ *  @li sigma: Float. Smooth L1 threshold (equivalent to PyTorch beta). Must be a finite positive number. Default: 1.0.
  *
  * @par Third-party framework compatibility:
  * Compatible with PyTorch operator SmoothL1Loss backward (reduction='none', beta=sigma).
