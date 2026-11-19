@@ -107,7 +107,7 @@ aclnnStatus aclnnMatmul(
       <td>out</td>
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
-      <td>数据类型需要与self与mat2推导之后的数据类型满足推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要与self与mat2推导之后的数据类型满足推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。非空输入时，out的元素总数需与self和mat2推导出的结果一致，形状允许不同。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1~6</td>
@@ -280,7 +280,7 @@ aclnnStatus aclnnMatmul(
   <!-- end id12 -->
 
 <!-- npu="A3,910b" id13 -->
-- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。不支持两个输入分别为BFLOAT16和FLOAT32的数据类型推导。
+- <term>Atlas A2系列产品</term>、<term>Atlas A3系列产品</term>：支持两个输入分别为BFLOAT16和FLOAT16、BFLOAT16和FLOAT32的数据类型推导。
 <!-- end id13 -->
 - self和mat2都是1维时，cubeMathType不生效。
 

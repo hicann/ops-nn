@@ -109,7 +109,7 @@ aclnnStatus aclnnMatmul(
       <td>out</td>
       <td>Output</td>
       <td>Represents the output matrix of matrix multiplication, i.e., out in the formula.</td>
-      <td>The data type must satisfy the deduction rule with the data type derived from self and mat2 (see <a href="../../../docs/en/context/deduction_relationship.md">deduction relationship</a> and <a href="#constraints">Constraints</a>).</td>
+      <td>The data type must satisfy the deduction rule with the data type derived from self and mat2 (see <a href="../../../docs/en/context/deduction_relationship.md">deduction relationship</a> and <a href="#constraints">Constraints</a>). For non-empty inputs, the total number of elements in out must be consistent with the result deduced from self and mat2; the shape may differ.</td>
       <td>BFLOAT16, FLOAT16, FLOAT32</td>
       <td>ND</td>
       <td>1-6</td>
@@ -282,7 +282,7 @@ aclnnStatus aclnnMatmul(
   <!-- end id12 -->
 
 <!-- npu="A3,910b" id13 -->
-- <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: Data type deduction is not supported when the two inputs are BFLOAT16 and FLOAT16 respectively. Data type deduction is not supported when the two inputs are BFLOAT16 and FLOAT32 respectively.
+- <term>Atlas A2 products</term>, <term>Atlas A3 products</term>: Data type deduction is supported when the two inputs are BFLOAT16 and FLOAT16 respectively, and when the two inputs are BFLOAT16 and FLOAT32 respectively.
 <!-- end id13 -->
 - When both self and mat2 are 1-dimensional, cubeMathType does not take effect.
 
