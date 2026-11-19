@@ -29,19 +29,33 @@
 
 - 计算公式：
 
-  前向分解：`x`按hidden维均分得到gate(`g`)和up(`u`)；可选clamp产生`g̃ = min(c, g)`、`ũ = clip(u, −c, c)`；`SiLU(g̃) = g̃·σ(g̃)`；`y = SiLU(g̃)·ũ·w_t`。
+  前向分解：`x`按hidden维均分得到gate分支`g`和up分支`u`；可选clamp产生`g̃ = min(c, g)`、`ũ = clip(u, −c, c)`；`SiLU(g̃) = g̃·σ(g̃)`；前向输出`y = SiLU(g̃)·ũ·w_t`。
+
+  符号说明：
+
+  - `s = σ(g̃)`：`g̃`的sigmoid取值；
+  - `f = SiLU(g̃) = g̃·s`：`g̃`的SiLU取值；
+  - `c`：clamp门限，即`clamp_limit`。
+
+  为避免`∞·0`，SiLU导数采用如下数值改写形式：
 
   $$
   silu'(g̃) = s + f − f·s
   $$
 
+  对gate分支求偏导得`dg`：
+
   $$
   dg = grad\_output \cdot silu'(g̃) \cdot ũ \cdot w_t \cdot I(g < c) \cdot m_r
   $$
 
+  对up分支求偏导得`du`：
+
   $$
   du = grad\_output \cdot f \cdot w_t \cdot I(−c < u < c) \cdot m_r
   $$
+
+  `dg`与`du`沿最后一维拼接即为返回值`grad_x`；对`grad_output`与`y_origin`在hidden维求和得`grad_weight`（`y_origin`为含`w_t`的前向输出，与底层`aclnnSwigluGroupGrad`的定义一致）：
 
   $$
   grad\_weight = \Sigma(grad\_output \cdot y\_origin) \text{ along hidden dim}
@@ -103,15 +117,21 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
   import torch_npu
   import cann_ops_nn.ops
 
+  # 示例：单算子模式下按hidden维劈半的ClampedSwiGLU反向，输出grad_x与grad_weight
+  # grad_output：上游梯度，形状(8, 128)；x：前向输入，最后一维须为2*128=256（前128列为gate，后128列为up）
   grad_output = torch.randn(8, 128, dtype=torch.float16).npu()
   x = torch.randn(8, 256, dtype=torch.float16).npu()
+  # weight：MoE路由权重，形状(8, 1)，每行一个标量；y_origin：前向输出，须与grad_output同形状且已乘weight（此处随机数仅作示意）
   weight = torch.ones(8, 1, dtype=torch.float32).npu()
   y_origin = torch.randn(8, 128, dtype=torch.float16).npu()
+  # group_index：各分组token数，[8]表示单组且8行全部有效
   group_index = torch.tensor([8], dtype=torch.int64).npu()
 
+  # clamp_limit=7.0：启用clamp，门限c=7.0（取-1.0表示不截断）
   grad_x, grad_weight = torch.ops.cann_ops_nn.swiglu_group_backward(
       grad_output, x, weight=weight, y_origin=y_origin,
       group_index=group_index, clamp_limit=7.0)
+  # 预期输出：grad_x形状(8, 256)、dtype float16；grad_weight形状(8, 1)、dtype float32
   print(grad_x.shape, grad_x.dtype)
   print(grad_weight.shape, grad_weight.dtype)
   ```
@@ -124,14 +144,18 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
   import torchair
   import cann_ops_nn.ops
 
+  # 示例：TorchAir图模式下按hidden维劈半的ClampedSwiGLU反向，仅输出grad_x
   class Model(torch.nn.Module):
       def forward(self, grad_output, x):
+          # clamp_limit=-1.0：不启用clamp；不传weight/y_origin，故不返回grad_weight
           grad_x, _ = torch.ops.cann_ops_nn.swiglu_group_backward(
               grad_output, x, clamp_limit=-1.0)
           return grad_x
 
   model = torch.compile(Model().npu(), backend=torchair.get_npu_backend(), dynamic=False)
+  # grad_output：上游梯度，形状(8, 128)；x：前向输入，最后一维须为2*128=256
   grad_output = torch.randn(8, 128, dtype=torch.float16).npu()
   x = torch.randn(8, 256, dtype=torch.float16).npu()
+  # 预期输出：grad_x形状(8, 256)、dtype float16
   grad_x = model(grad_output, x)
   ```
