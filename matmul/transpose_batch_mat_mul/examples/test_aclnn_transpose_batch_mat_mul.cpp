@@ -11,6 +11,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <cmath>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_transpose_batch_mat_mul.h"
 
@@ -72,6 +73,26 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     return 0;
 }
 
+// 将FP16的uint16_t表示转换为float表示
+float Fp16ToFloat(uint16_t h)
+{
+    int s = (h >> 15) & 0x1;  // sign
+    int e = (h >> 10) & 0x1F; // exponent
+    int f = h & 0x3FF;        // fraction
+    if (e == 0) {
+        if (f == 0) {
+            return s ? -0.0f : 0.0f;
+        }
+        float sig = f / 1024.0f;
+        float result = sig * std::pow(2.0f, -14.0f);
+        return s ? -result : result;
+    } else if (e == 31) {
+        return f == 0 ? (s ? -INFINITY : INFINITY) : NAN;
+    }
+    float result = (1.0f + f / 1024.0f) * std::pow(2.0f, (float)(e - 15));
+    return s ? -result : result;
+}
+
 int main()
 {
     // 1. （固定写法）device/stream初始化，参考acl API手册
@@ -101,9 +122,9 @@ int main()
     aclTensor* x2 = nullptr;
     aclTensor* scale = nullptr;
     aclTensor* out = nullptr;
-    std::vector<float> x1HostData(GetShapeSize(x1Shape));
-    std::vector<float> x2HostData(GetShapeSize(x2Shape));
-    std::vector<float> outHostData(GetShapeSize(outShape));
+    std::vector<uint16_t> x1HostData(GetShapeSize(x1Shape), 0x3C00);
+    std::vector<uint16_t> x2HostData(GetShapeSize(x2Shape), 0x3C00);
+    std::vector<uint16_t> outHostData(GetShapeSize(outShape), 0);
     int8_t cubeMathType = 1;
     int8_t batchSplitFactor = 1;
 
@@ -155,13 +176,14 @@ int main()
 
     // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(outShape);
-    std::vector<float> resultData(size, 0);
+    std::vector<uint16_t> resultData(size, 0);
     ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                       size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     int64_t max_print_size = 8;
     for (int64_t i = 0; i < max_print_size; i++) {
-        LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
+        float fp16Float = Fp16ToFloat(resultData[i]);
+        LOG_PRINT("result[%ld] is: %f\n", i, fp16Float);
     }
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
