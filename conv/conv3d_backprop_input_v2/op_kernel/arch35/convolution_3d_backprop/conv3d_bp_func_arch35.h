@@ -579,7 +579,7 @@ __aicore__ inline void InitTqueBankSeparated(Intf* self, const bool hasBias, uin
         }
         if (b1DoubleBuf) {
             self->ctx.pipe_.InitBuffer(self->ctx.inQueL1B_, Std::make_tuple(l1B1PingOffset, bMatrixByteSize),
-                                       Std::make_tuple(l1PongOffset + aAligned, bMatrixByteSize));
+                                       Std::make_tuple(l1PongOffset + (a1DoubleBuf ? aAligned : 0), bMatrixByteSize));
         } else {
             self->ctx.pipe_.InitBuffer(self->ctx.inQueL1B_, Std::make_tuple(l1B1PingOffset, bMatrixByteSize));
         }
