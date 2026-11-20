@@ -117,3 +117,40 @@ TEST_F(BatchNormInfershapeTest, batch_norm_inferdtype_test_0)
     EXPECT_EQ(context->GetInputDataType(0), dfp16);
     EXPECT_EQ(context->GetInputDataType(1), dfp32);
 }
+
+// 空输入(C=0)时 rs3 应为空张量 {0}，恢复 GE 剪枝兜底
+TEST_F(BatchNormInfershapeTest, batch_norm_infershape_empty_input_rs3_zero)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchNorm"), nullptr);
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchNorm")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape inputXShape = {2, 0, 2, 2};
+    gert::Shape inputScaleShape = {0};
+    gert::Shape outputShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(5, 6)
+                      .IrInstanceNum({1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1})
+                      .InputShapes(
+                          {&inputXShape, &inputScaleShape, &inputScaleShape, &inputScaleShape, &inputScaleShape})
+                      .OutputShapes({&outputShape})
+                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output0 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    auto output1 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
+    auto output5 = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(5);
+    ASSERT_EQ(Ops::Base::ToString(*output0), "[2, 0, 2, 2]");
+    ASSERT_EQ(Ops::Base::ToString(*output1), "[0]");
+    ASSERT_EQ(Ops::Base::ToString(*output5), "[0]"); // empty input: rs3 = {0}
+}

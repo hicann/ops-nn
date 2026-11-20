@@ -54,7 +54,11 @@ static ge::graphStatus BatchNormInferShape(gert::InferShapeContext* context)
     *reserveSpace1Shape = *scaleShape;
     *reserveSpace2Shape = *scaleShape;
 
-    *reserveSpace3Shape = gert::Shape({1});
+    if (xShape->GetShapeSize() == 0) {
+        *reserveSpace3Shape = gert::Shape({0});
+    } else {
+        *reserveSpace3Shape = gert::Shape({1});
+    }
 
     return GRAPH_SUCCESS;
 }
