@@ -239,9 +239,6 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
 
 bool Conv2dBaseTiling::IsSmallKernelBlocked()
 {
-    if (opInfo_->npuArch == NpuArch::DAV_9201 || opInfo_->npuArch == NpuArch::DAV_9202) {
-        return true;
-    }
     if (flagInfo_.disContinuousFlag) {
         return true;
     }
