@@ -552,7 +552,16 @@ bool MatMulV3Tiling::ExtractNonContiguousDims(int64_t (&mkDims)[TWO_BATCH_DIM], 
     } else {
         if (ExtractNormalDims(selfStorageShape, selfShape, args_.aDtypeSize, args_.aFormat, mkDims, "a") !=
             ge::GRAPH_SUCCESS) {
-            OP_LOGE(args_.opName, "invalid input dim num for a");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                args_.opName, "a", Ops::Base::ToString(selfStorageShape).c_str(),
+                Ops::NN::FormatString(
+                    "For format %s, storage rank must be at least %zuD; "
+                    "actual storage rank=%zuD, origin rank=%zuD, origin shape=%s. "
+                    "FRACTAL_NZ storage must match the aligned origin shape",
+                    Ops::Base::ToString(args_.aFormat).c_str(),
+                    static_cast<size_t>(args_.aFormat == ge::FORMAT_ND ? TWO_BATCH_DIM : FOUR_BATCH_DIM),
+                    selfStorageShape.GetDimNum(), selfDimNum, Ops::Base::ToString(selfShape).c_str())
+                    .c_str());
             return false;
         }
     }
@@ -564,7 +573,16 @@ bool MatMulV3Tiling::ExtractNonContiguousDims(int64_t (&mkDims)[TWO_BATCH_DIM], 
     } else {
         if (ExtractNormalDims(mat2StorageShape, mat2Shape, args_.bDtypeSize, args_.bFormat, knDims, "b") !=
             ge::GRAPH_SUCCESS) {
-            OP_LOGE(args_.opName, "invalid input dim num for b");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                args_.opName, "b", Ops::Base::ToString(mat2StorageShape).c_str(),
+                Ops::NN::FormatString(
+                    "For format %s, storage rank must be at least %zuD; "
+                    "actual storage rank=%zuD, origin rank=%zuD, origin shape=%s. "
+                    "FRACTAL_NZ storage must match the aligned origin shape",
+                    Ops::Base::ToString(args_.bFormat).c_str(),
+                    static_cast<size_t>(args_.bFormat == ge::FORMAT_ND ? TWO_BATCH_DIM : FOUR_BATCH_DIM),
+                    mat2StorageShape.GetDimNum(), mat2DimNum, Ops::Base::ToString(mat2Shape).c_str())
+                    .c_str());
             return false;
         }
     }

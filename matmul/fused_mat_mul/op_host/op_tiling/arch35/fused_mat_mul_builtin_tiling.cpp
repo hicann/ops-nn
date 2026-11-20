@@ -154,8 +154,13 @@ ge::graphStatus FusedMatMulBuiltInTiling::DetectOptionalInputs()
     }
     opType_ = context_->GetAttrs()->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if (IsAddMulOpType(opType_) || IsQuantOpType(opType_) || opType_ == "scale_add") {
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOptionalInputDesc(INPUT_X3_IDX));
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOptionalInputShape(INPUT_X3_IDX));
+        if (context_->GetOptionalInputDesc(INPUT_X3_IDX) == nullptr ||
+            context_->GetOptionalInputShape(INPUT_X3_IDX) == nullptr) {
+            OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                args_.opName, "x3",
+                Ops::NN::FormatString("x3 must be provided when fused_op_type is %s", opType_.c_str()));
+            return ge::GRAPH_FAILED;
+        }
         args_.hasX3Input = true;
     }
     return ge::GRAPH_SUCCESS;
@@ -300,9 +305,15 @@ ge::graphStatus FusedMatMulBuiltInTiling::ValidateOpSpecific()
         const auto* x2Desc = context_->GetInputDesc(INPUT_X2_IDX);
         const auto* x3Desc = context_->GetOptionalInputDesc(INPUT_X3_IDX);
         const auto* yDesc = context_->GetOutputDesc(0);
-        if (compileInfo->aicNum == 0UL || args_.isATrans || args_.isBTrans) {
-            OP_LOGE(args_.opName,
-                    "FusedMatMul scale_add requires aicNum greater than 0 and does not support transpose");
+        if (compileInfo->aicNum == 0UL) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(args_.opName, "aicNum",
+                                                  Ops::NN::FormatString("%lu", compileInfo->aicNum),
+                                                  "FusedMatMul scale_add requires aicNum greater than 0");
+            return ge::GRAPH_FAILED;
+        }
+        if (args_.isATrans || args_.isBTrans) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(args_.opName, args_.isATrans ? "adj_x1" : "adj_x2", "true",
+                                                  "FusedMatMul scale_add does not support transpose");
             return ge::GRAPH_FAILED;
         }
         if (x1Desc->GetStorageFormat() != ge::FORMAT_ND || x2Desc->GetStorageFormat() != ge::FORMAT_ND ||

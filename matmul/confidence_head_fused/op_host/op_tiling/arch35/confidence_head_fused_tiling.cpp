@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <initializer_list>
 #include <limits>
+#include <string>
 #include "securec.h"
 #include "confidence_head_fused_tiling_key.h"
 #include "error_util.h"
@@ -23,6 +24,7 @@ constexpr size_t WEIGHT_INDEX = 1;
 constexpr size_t MARKOV_INDEX = 2;
 constexpr size_t TEMPERATURE_INDEX = 3;
 constexpr size_t BIAS_INDEX = 4;
+constexpr const char* INPUT_NAMES[] = {"hidden", "weight", "markov_emb", "temperature", "bias"};
 constexpr size_t CLAMP_LOW_ATTR = 0;
 constexpr size_t CLAMP_HIGH_ATTR = 1;
 constexpr size_t HIDDEN_RANK_WITHOUT_BATCH = 2;
@@ -95,13 +97,19 @@ ge::graphStatus ConfidenceHeadFusedTiling::CheckDtypeValid()
     auto inputDtype = context_->GetInputDesc(HIDDEN_INDEX)->GetDataType();
     OP_TILING_CHECK(inputDtype != ge::DT_FLOAT16 && inputDtype != ge::DT_BF16,
                     OP_LOGE(context_->GetNodeName(), "hidden must be FP16 or BF16."), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(context_->GetInputDesc(WEIGHT_INDEX)->GetDataType() != inputDtype,
-                    OP_LOGE(context_->GetNodeName(), "weight dtype must match hidden."), return ge::GRAPH_FAILED);
+    const auto weightDtype = context_->GetInputDesc(WEIGHT_INDEX)->GetDataType();
+    OP_TILING_CHECK(weightDtype != inputDtype,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), INPUT_NAMES[WEIGHT_INDEX],
+                                                          Ops::Base::ToString(weightDtype),
+                                                          "The dtype of weight must match hidden"),
+                    return ge::GRAPH_FAILED);
     for (size_t index : {MARKOV_INDEX, TEMPERATURE_INDEX, BIAS_INDEX}) {
         auto desc = context_->GetOptionalInputDesc(index);
         auto expectedDtype = index == MARKOV_INDEX ? inputDtype : ge::DT_FLOAT;
         OP_TILING_CHECK(desc != nullptr && desc->GetDataType() != expectedDtype,
-                        OP_LOGE(context_->GetNodeName(), "Input %zu has an invalid dtype.", index),
+                        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                            context_->GetNodeName(), INPUT_NAMES[index], Ops::Base::ToString(desc->GetDataType()),
+                            index == MARKOV_INDEX ? "The dtype must match hidden" : "The dtype must be FLOAT32"),
                         return ge::GRAPH_FAILED);
     }
     OP_TILING_CHECK(context_->GetOutputDesc(0)->GetDataType() != ge::DT_FLOAT,
@@ -114,7 +122,9 @@ ge::graphStatus ConfidenceHeadFusedTiling::CheckShapeValid()
     const auto& hidden = context_->GetInputShape(HIDDEN_INDEX)->GetOriginShape();
     size_t rank = hidden.GetDimNum();
     OP_TILING_CHECK(rank != HIDDEN_RANK_WITHOUT_BATCH && rank != HIDDEN_RANK_WITH_BATCH,
-                    OP_LOGE(context_->GetNodeName(), "hidden must have rank 2 or 3."), return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), INPUT_NAMES[HIDDEN_INDEX],
+                                                             std::to_string(rank), "hidden must have rank 2 or 3"),
+                    return ge::GRAPH_FAILED);
     for (size_t index = HIDDEN_INDEX; index <= BIAS_INDEX; ++index) {
         auto shape = index >= MARKOV_INDEX ? context_->GetOptionalInputShape(index) : context_->GetInputShape(index);
         if (shape == nullptr) {
@@ -124,34 +134,51 @@ ge::graphStatus ConfidenceHeadFusedTiling::CheckShapeValid()
         if (index != HIDDEN_INDEX) {
             size_t expectedRank = index == MARKOV_INDEX ? rank : 1;
             OP_TILING_CHECK(originShape.GetDimNum() != expectedRank,
-                            OP_LOGE(context_->GetNodeName(), "Input %zu has an invalid rank.", index),
+                            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                                context_->GetNodeName(), INPUT_NAMES[index], std::to_string(originShape.GetDimNum()),
+                                "The rank must be " + std::to_string(expectedRank)),
                             return ge::GRAPH_FAILED);
         }
         for (size_t i = 0; i < originShape.GetDimNum(); ++i) {
             auto dim = originShape.GetDim(i);
             OP_TILING_CHECK(dim < 0 || static_cast<uint64_t>(dim) > MAX_DIM,
-                            OP_LOGE(context_->GetNodeName(), "Input %zu dimensions must be in [0, UINT32_MAX].", index),
+                            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), INPUT_NAMES[index],
+                                                                  Ops::Base::ToString(originShape),
+                                                                  "Each dimension must be in [0, UINT32_MAX]"),
                             return ge::GRAPH_FAILED);
         }
     }
     const auto& out = context_->GetOutputShape(0)->GetOriginShape();
-    OP_TILING_CHECK(out.GetDimNum() != rank - 1,
-                    OP_LOGE(context_->GetNodeName(), "Output rank must equal hidden rank minus one."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        out.GetDimNum() != rank - 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "out", std::to_string(out.GetDimNum()),
+                                                 "The rank of out must equal the rank of hidden minus one"),
+        return ge::GRAPH_FAILED);
     auto temperature = context_->GetOptionalInputShape(TEMPERATURE_INDEX);
     OP_TILING_CHECK(temperature != nullptr && temperature->GetOriginShape().GetDim(0) != 1,
-                    OP_LOGE(context_->GetNodeName(), "temperature must have shape [1]."), return ge::GRAPH_FAILED);
-    auto bias = context_->GetOptionalInputShape(BIAS_INDEX);
-    OP_TILING_CHECK(bias != nullptr && bias->GetOriginShape().GetDim(0) != hidden.GetDim(rank - 2),
-                    OP_LOGE(context_->GetNodeName(), "bias must have shape [N], shared across batches."),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), INPUT_NAMES[TEMPERATURE_INDEX],
+                                                          Ops::Base::ToString(temperature->GetOriginShape()),
+                                                          "temperature must have shape [1]"),
                     return ge::GRAPH_FAILED);
+    auto bias = context_->GetOptionalInputShape(BIAS_INDEX);
+    OP_TILING_CHECK(
+        bias != nullptr && bias->GetOriginShape().GetDim(0) != hidden.GetDim(rank - 2),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), INPUT_NAMES[BIAS_INDEX], Ops::Base::ToString(bias->GetOriginShape()),
+            "bias must have shape [" + std::to_string(hidden.GetDim(rank - 2)) + "], shared across batches"),
+        return ge::GRAPH_FAILED);
     auto markov = context_->GetOptionalInputShape(MARKOV_INDEX);
     uint64_t rows = 1;
     for (size_t i = 0; i + 1 < rank; ++i) {
         uint64_t dim = static_cast<uint64_t>(hidden.GetDim(i));
-        OP_TILING_CHECK(out.GetDim(i) != hidden.GetDim(i) ||
-                            (markov != nullptr && markov->GetOriginShape().GetDim(i) != hidden.GetDim(i)),
-                        OP_LOGE(context_->GetNodeName(), "Output and Markov leading dimensions must match hidden."),
+        OP_TILING_CHECK(out.GetDim(i) != hidden.GetDim(i),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "out", Ops::Base::ToString(out),
+                                                              "The leading dimensions of out must match hidden"),
+                        return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(markov != nullptr && markov->GetOriginShape().GetDim(i) != hidden.GetDim(i),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), INPUT_NAMES[MARKOV_INDEX],
+                                                              Ops::Base::ToString(markov->GetOriginShape()),
+                                                              "The leading dimensions of markov_emb must match hidden"),
                         return ge::GRAPH_FAILED);
         OP_TILING_CHECK(dim != 0 && rows > MAX_DIM / dim,
                         OP_LOGE(context_->GetNodeName(), "Flattened rows must fit UINT32."), return ge::GRAPH_FAILED);
@@ -173,12 +200,17 @@ ge::graphStatus ConfidenceHeadFusedTiling::CheckFormat()
     for (size_t index = HIDDEN_INDEX; index <= BIAS_INDEX; ++index) {
         auto desc = index >= MARKOV_INDEX ? context_->GetOptionalInputDesc(index) : context_->GetInputDesc(index);
         OP_TILING_CHECK(desc != nullptr && ge::GetPrimaryFormat(desc->GetStorageFormat()) != ge::FORMAT_ND,
-                        OP_LOGE(context_->GetNodeName(), "Input %zu must use ND format inside the kernel.", index),
+                        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(context_->GetNodeName(), INPUT_NAMES[index],
+                                                               Ops::Base::ToString(desc->GetStorageFormat()),
+                                                               "The storage format must be ND"),
                         return ge::GRAPH_FAILED);
     }
-    OP_TILING_CHECK(ge::GetPrimaryFormat(context_->GetOutputDesc(0)->GetStorageFormat()) != ge::FORMAT_ND,
-                    OP_LOGE(context_->GetNodeName(), "Output must use ND format inside the kernel."),
-                    return ge::GRAPH_FAILED);
+    const auto outFormat = context_->GetOutputDesc(0)->GetStorageFormat();
+    OP_TILING_CHECK(
+        ge::GetPrimaryFormat(outFormat) != ge::FORMAT_ND,
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(context_->GetNodeName(), "out", Ops::Base::ToString(outFormat),
+                                               "The storage format must be ND"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

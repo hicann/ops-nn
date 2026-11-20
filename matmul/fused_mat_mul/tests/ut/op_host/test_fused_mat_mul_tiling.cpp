@@ -116,6 +116,8 @@ struct TilingTestParam {
     bool check_scale = false;
     std::initializer_list<int64_t> bias_shape = {};
     int64_t inner_precise = 0;
+    bool has_x3 = true;
+    bool zero_aic = false;
 };
 
 class FusedMatMulTilingRuntime : public testing::TestWithParam<TilingTestParam> {
@@ -203,34 +205,44 @@ static void TestOneParamCase(const TilingTestParam& param)
         get_map_string(soc_version, "NpuArch") == "9202") {
         compile_info.aivNum = std::stoi(soc_infos["vector_core_cnt"]);
     }
+    if (param.zero_aic) {
+        // Preserve the AIV:AIC ratio to reach the dedicated zero-AIC check.
+        compile_info.aicNum = 0;
+        compile_info.aivNum = 0;
+    }
     auto tiling_data = gert::TilingData::CreateCap(2048);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
-    gert::KernelRunContextHolder holder;
-    holder = gert::TilingContextFaker()
-                 .SetOpType(param.op_type.c_str())
-                 .NodeIoNum(4, 1)
-                 .IrInstanceNum({1, 1, 1, 1})
-                 .InputShapes({&x1_shape, &x2_shape, &bias_shape, &x3_shape})
-                 .OutputShapes(output_shapes_ref)
-                 .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_a)},
-                             {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_b)},
-                             {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(param.enable_hf32)},
-                             {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>(param.fused_op_type)},
-                             {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(param.inner_precise)},
-                             {"alpha", Ops::NN::AnyValue::CreateFrom<float>(param.alpha)},
-                             {"beta", Ops::NN::AnyValue::CreateFrom<float>(param.beta)}})
-                 .NodeInputTd(0, param.input_dtype, param.x1_ori_format, param.x1_format)
-                 .NodeInputTd(1, param.input_dtype, param.x2_ori_format, param.x2_format)
-                 .NodeInputTd(2, param.bias_dtype, param.x2_ori_format, param.x2_format)
-                 .NodeInputTd(3, param.input_dtype, param.x2_ori_format, param.x2_format)
-                 .NodeOutputTd(0, param.y_dtype, param.y_ori_format, param.y_format)
-                 .CompileInfo(&compile_info)
-                 .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                 .TilingData(tiling_data.get())
-                 .Workspace(ws_size)
-                 .Build();
+    std::vector<void*> input_shapes{&x1_shape, &x2_shape, &bias_shape};
+    if (param.has_x3) {
+        input_shapes.push_back(&x3_shape);
+    }
+    gert::TilingContextFaker faker;
+    faker.SetOpType(param.op_type.c_str())
+        .NodeIoNum(4, 1)
+        .IrInstanceNum({1, 1, 1, param.has_x3 ? 1U : 0U})
+        .InputShapes(input_shapes)
+        .OutputShapes(output_shapes_ref)
+        .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_a)},
+                    {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_b)},
+                    {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(param.enable_hf32)},
+                    {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>(param.fused_op_type)},
+                    {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(param.inner_precise)},
+                    {"alpha", Ops::NN::AnyValue::CreateFrom<float>(param.alpha)},
+                    {"beta", Ops::NN::AnyValue::CreateFrom<float>(param.beta)}})
+        .NodeInputTd(0, param.input_dtype, param.x1_ori_format, param.x1_format)
+        .NodeInputTd(1, param.input_dtype, param.x2_ori_format, param.x2_format)
+        .NodeInputTd(2, param.bias_dtype, param.x2_ori_format, param.x2_format)
+        .NodeOutputTd(0, param.y_dtype, param.y_ori_format, param.y_format)
+        .CompileInfo(&compile_info)
+        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+        .TilingData(tiling_data.get())
+        .Workspace(ws_size);
+    if (param.has_x3) {
+        faker.NodeInputTd(3, param.input_dtype, param.x2_ori_format, param.x2_format);
+    }
+    auto holder = faker.Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
     auto ret = tiling_func(tiling_context);
@@ -3477,6 +3489,45 @@ static TilingTestParam dav3510_cases_params[] = {
 };
 
 INSTANTIATE_TEST_CASE_P(FusedMatMulDav3510, FusedMatMulTilingRuntime, testing::ValuesIn(dav3510_cases_params));
+
+class FusedMatMulLogValidation : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        for (const auto& candidate : dav3510_cases_params) {
+            if (candidate.fused_op_type == "scale_add" && candidate.expected_status == ge::GRAPH_SUCCESS) {
+                param = candidate;
+                param.expected_status = ge::GRAPH_FAILED;
+                return;
+            }
+        }
+        FAIL() << "A valid scale_add case is required as the validation baseline";
+    }
+
+    TilingTestParam param{};
+};
+
+TEST_F(FusedMatMulLogValidation, scale_add_requires_x3)
+{
+    param.has_x3 = false;
+    TestOneParamCase(param);
+}
+
+TEST_F(FusedMatMulLogValidation, scale_add_requires_positive_aic_num)
+{
+    param.zero_aic = true;
+    TestOneParamCase(param);
+}
+
+TEST_F(FusedMatMulLogValidation, scale_add_rejects_transpose)
+{
+    // Keep M/K consistent after transpose, so earlier shape validation succeeds.
+    const std::initializer_list<int64_t> transposedShape{2, 10, 3};
+    param.trans_a = true;
+    param.x1_shape = transposedShape;
+    param.x1_orishape = transposedShape;
+    TestOneParamCase(param);
+}
 
 // Buffer sizes follow the existing MatMulV3 DAV_920x UT placeholders; verify against the target platform.
 static TilingTestParam dav9201_cases_params[] = {

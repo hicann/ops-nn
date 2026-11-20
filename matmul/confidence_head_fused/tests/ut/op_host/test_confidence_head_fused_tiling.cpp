@@ -9,6 +9,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <array>
 #include <limits>
 #include <map>
 #include <string>
@@ -44,7 +45,7 @@ protected:
         ASSERT_NE(impl->tiling, nullptr);
 
         std::vector<gert::StorageShape*> inputs{&hidden, &weight};
-        std::vector<ge::DataType> dtypes{inputDtype, inputDtype};
+        std::vector<size_t> inputIndices{0, 1};
         std::vector<uint32_t> instances{1, 1};
         const std::vector<gert::StorageShape*> optionalInputs{
             hasMarkov ? &markov : nullptr, hasTemperature ? &temperature : nullptr, hasBias ? &bias : nullptr};
@@ -52,7 +53,7 @@ protected:
             instances.push_back(optionalInputs[i] != nullptr ? 1 : 0);
             if (optionalInputs[i] != nullptr) {
                 inputs.push_back(optionalInputs[i]);
-                dtypes.push_back(i == 0 ? inputDtype : ge::DT_FLOAT);
+                inputIndices.push_back(i + 2);
             }
         }
 
@@ -90,13 +91,14 @@ protected:
             .OutputShapes({&out})
             .CompileInfo(&compileInfo)
             .PlatformInfo(&platformInfo)
-            .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, outputFormat)
             .NodeAttrs({{"clamp_low", Ops::NN::AnyValue::CreateFrom<float>(clampLow)},
                         {"clamp_high", Ops::NN::AnyValue::CreateFrom<float>(clampHigh)}})
             .TilingData(raw.get())
             .Workspace(workspace);
-        for (size_t i = 0; i < dtypes.size(); ++i) {
-            faker.NodeInputTd(static_cast<int32_t>(i), dtypes[i], ge::FORMAT_ND, ge::FORMAT_ND);
+        for (size_t i = 0; i < inputIndices.size(); ++i) {
+            const auto index = inputIndices[i];
+            faker.NodeInputTd(static_cast<int32_t>(i), inputDtypes[index], ge::FORMAT_ND, inputFormat);
         }
         auto holder = faker.Build();
         auto context = holder.GetContext<gert::TilingContext>();
@@ -141,7 +143,9 @@ protected:
     gert::StorageShape temperature = {{1}, {1}};
     gert::StorageShape bias = {{257}, {257}};
     gert::StorageShape out = {{257}, {257}};
-    ge::DataType inputDtype = ge::DT_FLOAT16;
+    std::array<ge::DataType, 5> inputDtypes{ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT};
+    ge::Format inputFormat = ge::FORMAT_ND;
+    ge::Format outputFormat = ge::FORMAT_ND;
     bool hasMarkov = false;
     bool hasTemperature = false;
     bool hasBias = false;
@@ -157,7 +161,7 @@ TEST_F(ConfidenceHeadFusedTiling, fp16_2d_without_optional_inputs) { CheckTiling
 TEST_F(ConfidenceHeadFusedTiling, bf16_3d_with_optional_inputs_ascend350)
 {
     compileInfo.socVersion = platform_ascendc::SocVersion::ASCEND350;
-    inputDtype = ge::DT_BF16;
+    inputDtypes = {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT};
     hidden = {{2, 129, 31}, {2, 129, 31}};
     weight = {{48}, {48}};
     markov = {{2, 129, 17}, {2, 129, 17}};
@@ -242,5 +246,67 @@ TEST_F(ConfidenceHeadFusedTiling, empty_n_skips_cube_memory_check)
     expectedRows = 0;
     compileInfo.l1Size = 1;
     CheckTiling(ge::GRAPH_SUCCESS, 1);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_weight_dtype)
+{
+    inputDtypes[1] = ge::DT_BF16;
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_markov_dtype)
+{
+    hasMarkov = true;
+    inputDtypes[2] = ge::DT_FLOAT;
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_hidden_rank)
+{
+    hidden = {{64}, {64}};
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_weight_rank)
+{
+    weight = {{1, 64}, {1, 64}};
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, negative_hidden_dimension)
+{
+    hidden = {{257, -1}, {257, -1}};
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_output_rank)
+{
+    out = {{1, 257}, {1, 257}};
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_output_leading_dimension)
+{
+    out = {{256}, {256}};
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_markov_leading_dimension)
+{
+    hasMarkov = true;
+    markov = {{256, 16}, {256, 16}};
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_hidden_format)
+{
+    inputFormat = ge::FORMAT_NCHW;
+    CheckTiling(ge::GRAPH_FAILED);
+}
+
+TEST_F(ConfidenceHeadFusedTiling, invalid_output_format)
+{
+    outputFormat = ge::FORMAT_NCHW;
+    CheckTiling(ge::GRAPH_FAILED);
 }
 } // namespace
