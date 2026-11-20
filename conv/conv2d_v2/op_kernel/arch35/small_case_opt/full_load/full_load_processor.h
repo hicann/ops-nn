@@ -27,8 +27,15 @@
 
 namespace small_conv {
 
-template <typename BlockCtx, typename TilingData, typename Scheme>
+template <typename BlockCtx, typename TilingData, typename Scheme, int8_t InnerBatchMode = 0,
+          typename CopyOutT = CopyOutTool<BlockCtx, TilingData>>
 struct FullLoadProcessor {
+    // InnerBatchMode is the tiling-key InnerBatch SEL value (defaults to
+    // SINGLE): the folded mode's small per-instruction branches live here so
+    // the innerbatch processor (a subclass) reuses these functions as-is.
+    static constexpr bool isInnerBatchFlag = InnerBatchMode != 0;
+    static constexpr bool isKernel1x1Ib = InnerBatchMode == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH);
+
     using FmapT = typename BlockCtx::FmapT;
     using WeightT = typename BlockCtx::WeightT;
     using BiasT = typename BlockCtx::BiasT;
@@ -44,11 +51,11 @@ struct FullLoadProcessor {
     LoadWeightL1Tool<BlockCtx, TilingData> loadWeight_;
     LoadBiasScaleL1Tool<BlockCtx, TilingData> loadBiasScale_;
     LoadBiasToBTTool<BlockCtx, TilingData> loadBiasToBt_;
-    SetupLoad3DBaseTool<BlockCtx, TilingData> setupLoad3d_;
+    SetupLoad3DBaseTool<BlockCtx, TilingData, InnerBatchMode> setupLoad3d_;
     LoadAL0Tool<BlockCtx> loadAl0_;
     LoadBL0Tool<BlockCtx> loadBl0_;
     InitMmadParamsTool<BlockCtx, TilingData> initMmadParams_;
-    CopyOutTool<BlockCtx, TilingData> copyOut_;
+    CopyOutT copyOut_;
 
     __aicore__ inline void operator()(const BlockCtx& blockCtx, const TilingData& tiling, GM_ADDR x, GM_ADDR filter,
                                       GM_ADDR bias, GM_ADDR y, const ExtendParams* ep) const
@@ -86,7 +93,7 @@ struct FullLoadProcessor {
         WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
     }
 
-private:
+protected:
     // Unified group-axis / inner-batch / spatial-chunk / N-tile loop with the
     // full-load L1-residency protocol. EVT_GROUP_L1_DONE serializes the L1
     // buffer reuse across group iterations; the bias handshake degenerates to
@@ -225,21 +232,31 @@ private:
     // K-loop: accumulates one output chunk over all K0 blocks.
     __aicore__ inline void MmadAccumulateTile(const BlockCtx& blockCtx, const TilingData& tiling,
                                               LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1,
-                                              LocalTensor<L0cT>& cl0, uint32_t curMAlign, uint32_t mmadN,
+                                              LocalTensor<L0cT>& cl0, uint32_t curM, uint32_t curMAlign, uint32_t mmadN,
                                               uint32_t kTotalCur, const Load3DCtx& ctx, const L1Layout& l1Layout,
                                               bool& needLoadBias, uint32_t nOff, uint32_t curN, uint32_t& l0pp) const
     {
-        uint32_t kL0MaxIter = static_cast<uint32_t>(CeilDiv(kTotalCur, tiling.kL0));
+        const uint32_t kL0Chunk = (isKernel1x1Ib && tiling.kL0 > 64u) ? 64u : tiling.kL0;
+        uint32_t kL0MaxIter = static_cast<uint32_t>(CeilDiv(kTotalCur, kL0Chunk));
         MmadParams mmadParams;
-        initMmadParams_(tiling, mmadParams, curMAlign, mmadN);
+        const uint32_t innerBatch = isInnerBatchFlag ? blockCtx.curIb : 1;
+        initMmadParams_(tiling, mmadParams, isKernel1x1Ib ? curM : curMAlign, mmadN, innerBatch, isKernel1x1Ib);
+        if (isInnerBatchFlag) {
+            // Legacy parity: the folded flow disables the L0C unit-flag state
+            // machine; the M<->FIX handshake in ProcessChunks serializes L0C.
+            mmadParams.unitFlag = UNIT_FLAG_DISABLE;
+            if (!isKernel1x1Ib) {
+                mmadParams.m = curMAlign; // MULTI: per-map m, Mmad loops per map
+            }
+        }
         const bool isNSplit = tiling.nL0 < tiling.nBL1;
         for (uint32_t kl0 = 0; kl0 < kL0MaxIter; kl0++) {
-            uint32_t kOff = kl0 * tiling.kL0;
-            uint32_t curK = tiling.kL0;
-            uint32_t curKAL0 = tiling.kL0;
+            uint32_t kOff = kl0 * kL0Chunk;
+            uint32_t curK = kL0Chunk;
+            uint32_t curKAL0 = kL0Chunk;
             if (kl0 == kL0MaxIter - 1) {
-                curKAL0 = kTotalCur % tiling.kL0;
-                curKAL0 = (curKAL0 == 0) ? tiling.kL0 : curKAL0;
+                curKAL0 = kTotalCur % kL0Chunk;
+                curKAL0 = (curKAL0 == 0) ? kL0Chunk : curKAL0;
                 curK = static_cast<uint32_t>(AlignB(curKAL0, GK0));
             }
             uint32_t buf = l0pp & 1;
@@ -248,7 +265,17 @@ private:
             LocalTensor<WeightT> bl0(TPosition::B2, buf * BL0_BUF_BYTES, BlockCtx::BL0_BUF_ELEMS);
 
             WaitFlag<HardEvent::M_MTE1>(ev);
-            loadAl0_(al1, al0, kOff, curKAL0, ctx);
+            if (isInnerBatchFlag && !isKernel1x1Ib) {
+                // MULTI: load each map's chunk into its own L0A slice (the
+                // host's L0A budget sized the buffer for innerBatch*mL0*kL0).
+                uint32_t srcBatchStride = curMAlign * tiling.kL0;
+                uint32_t mapAl1Elems = l1Layout.al1ElemCount / static_cast<uint32_t>(tiling.innerBatch);
+                for (uint32_t b = 0; b < innerBatch; b++) {
+                    loadAl0_(al1[b * mapAl1Elems], al0[b * srcBatchStride], kOff, curKAL0, ctx);
+                }
+            } else {
+                loadAl0_(al1, al0, kOff, curKAL0, ctx);
+            }
             loadBl0_(blockCtx, bl0, bl1, kOff, curK, nOff, mmadN);
             if (tiling.hasBias) {
                 if (needLoadBias) {
@@ -266,8 +293,20 @@ private:
             WaitFlag<HardEvent::MTE1_M>(ev);
 
             mmadParams.k = curKAL0;
-            mmadParams.unitFlag = (kl0 == kL0MaxIter - 1) ? UNIT_FLAG_ENABLE_WITH_FLIP : UNIT_FLAG_ENABLE_ONLY;
-            Mmad(cl0, al0, bl0, mmadParams);
+            if (isInnerBatchFlag) {
+                if constexpr (isKernel1x1Ib) {
+                    Mmad(cl0, al0, bl0, mmadParams); // one Mmad on the merged matrix
+                } else {
+                    uint32_t srcBatchStride = curMAlign * tiling.kL0;
+                    uint32_t dstBatchStride = curMAlign * mmadParams.n;
+                    for (uint32_t b = 0; b < innerBatch; b++) {
+                        Mmad(cl0[b * dstBatchStride], al0[b * srcBatchStride], bl0, mmadParams);
+                    }
+                }
+            } else {
+                mmadParams.unitFlag = (kl0 == kL0MaxIter - 1) ? UNIT_FLAG_ENABLE_WITH_FLIP : UNIT_FLAG_ENABLE_ONLY;
+                Mmad(cl0, al0, bl0, mmadParams);
+            }
             mmadParams.cmatrixInitVal = false;
             mmadParams.cmatrixSource = false;
             SetFlag<HardEvent::M_MTE1>(ev);
@@ -288,11 +327,32 @@ private:
         for (bool more = scheme_.ChunkFirst(blockCtx, tiling, chunkIter, chunk); more;
              more = scheme_.ChunkNext(blockCtx, tiling, chunkIter, chunk)) {
             // The block window stays resident in L1; the chunk selects its
-            // output range via the block-window-relative POSM.
-            ctx.xmTmp = ((static_cast<uint64_t>(chunk.curMAlign) & MASK_16) << MSTEP_OFFSET) |
-                        ((static_cast<uint64_t>(chunk.blockWinPosM) & MASK_16) << POSM_OFFSET);
-            SetLoadDataRepeatWithStride(
-                LoadDataRepeatParamWithStride(0, 1, 0, static_cast<uint16_t>(chunk.curMAlign / GM0)));
+            // output range via the block-window-relative POSM. The 1x1 fold
+            // mode spans all maps in M with one window.
+            if (isKernel1x1Ib) {
+                uint32_t mExtension = blockCtx.curIb * chunk.curM;
+                ctx.xmTmp = ((static_cast<uint64_t>(AlignB(mExtension, GM0)) & MASK_16) << MSTEP_OFFSET) |
+                            ((static_cast<uint64_t>(chunk.blockWinPosM) & MASK_16) << POSM_OFFSET);
+                SetLoadDataRepeatWithStride(
+                    LoadDataRepeatParamWithStride(0, 1, 0, static_cast<uint16_t>(AlignB(mExtension, GM0) / GM0)));
+            } else {
+                ctx.xmTmp = ((static_cast<uint64_t>(chunk.curMAlign) & MASK_16) << MSTEP_OFFSET) |
+                            ((static_cast<uint64_t>(chunk.blockWinPosM) & MASK_16) << POSM_OFFSET);
+                SetLoadDataRepeatWithStride(
+                    LoadDataRepeatParamWithStride(0, 1, 0, static_cast<uint16_t>(chunk.curMAlign / GM0)));
+            }
+
+            // One fixpipe writes all maps of the fold group; fpDstDnStride:
+            // NCHW = hwOut * effectiveCout, NHWC = hwOut.
+            uint32_t fpDnNum = chunk.fpDnNum;
+            uint32_t fpDstDnStride = chunk.fpDstDnStride;
+            if (isInnerBatchFlag) {
+                uint64_t hwOut = static_cast<uint64_t>(tiling.hout) * tiling.wout;
+                uint64_t effectiveCout = (tiling.strideWriteDstStride != 0) ? tiling.total_shape_cout : tiling.cout;
+                fpDnNum = blockCtx.curIb;
+                fpDstDnStride = BlockCtx::isNHWCout ? static_cast<uint32_t>(hwOut) :
+                                                      static_cast<uint32_t>(hwOut * effectiveCout);
+            }
 
             if (needLoadBias) {
                 SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
@@ -304,16 +364,27 @@ private:
                     curN = blockCtx.actualCo - nOff;
                 uint32_t curMmadN = static_cast<uint32_t>(AlignB(curN, GN0));
                 LocalTensor<L0cT> cl0(TPosition::CO1, 0, BlockCtx::L0C_ELEMS);
-                MmadAccumulateTile(blockCtx, tiling, al1, bl1, cl0, chunk.curMAlign, curMmadN, kTotalCur, ctx, l1Layout,
-                                   needLoadBias, nOff, curN, l0pp);
+                // Fold mode: single L0C buffer serialized by the M<->FIX
+                // handshake (the unit-flag state machine is disabled).
+                if (isInnerBatchFlag) {
+                    WaitFlag<HardEvent::FIX_M>(EVT_CL0_DONE);
+                }
+                MmadAccumulateTile(blockCtx, tiling, al1, bl1, cl0, chunk.curM, chunk.curMAlign, curMmadN, kTotalCur,
+                                   ctx, l1Layout, needLoadBias, nOff, curN, l0pp);
+                if (isInnerBatchFlag) {
+                    SetFlag<HardEvent::M_FIX>(EVT_CL0_DONE);
+                    WaitFlag<HardEvent::M_FIX>(EVT_CL0_DONE);
+                }
                 copyOut_.template DoCopyOut<OutputT, 0>(blockCtx, tiling, y, cl0, l1Layout, chunk.outOff, chunk.fpMSize,
-                                                        chunk.curMAlign, curN, chunk.fpDnNum, chunk.fpDstDnStride, nOff,
+                                                        chunk.curMAlign, curN, fpDnNum, fpDstDnStride, nOff,
                                                         groupCoutOff, scale0Gm, scale1Gm, reluWeight0Gm, reluWeight1Gm);
                 if (tiling.dualOutput) {
-                    copyOut_.template DoCopyOut<Output1T, 1>(blockCtx, tiling, y1, cl0, l1Layout, chunk.outOff,
-                                                             chunk.fpMSize, chunk.curMAlign, curN, chunk.fpDnNum,
-                                                             chunk.fpDstDnStride, nOff, groupCoutOff, scale0Gm,
-                                                             scale1Gm, reluWeight0Gm, reluWeight1Gm);
+                    copyOut_.template DoCopyOut<Output1T, 1>(
+                        blockCtx, tiling, y1, cl0, l1Layout, chunk.outOff, chunk.fpMSize, chunk.curMAlign, curN,
+                        fpDnNum, fpDstDnStride, nOff, groupCoutOff, scale0Gm, scale1Gm, reluWeight0Gm, reluWeight1Gm);
+                }
+                if (isInnerBatchFlag) {
+                    SetFlag<HardEvent::FIX_M>(EVT_CL0_DONE);
                 }
             }
         }

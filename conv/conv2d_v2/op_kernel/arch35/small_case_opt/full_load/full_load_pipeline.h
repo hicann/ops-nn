@@ -17,13 +17,14 @@
 #define FULL_LOAD_PIPELINE_H
 
 #include "full_load_processor.h"
+#include "full_load_inner_batch_processor.h"
 #include "../spatial/m_scheme.h"
 #include "../spatial/hw_scheme.h"
 
 namespace small_conv {
 
 template <typename FmapT, typename WeightT, typename BiasT, typename OutputT, typename Output1T, bool IsNHWCin,
-          bool IsNHWCout, ConvFormat WeightFmt, bool IsHwMode, typename TilingData>
+          bool IsNHWCout, ConvFormat WeightFmt, bool IsHwMode, int8_t InnerBatch, typename TilingData>
 struct FullLoadPipeline {
     using Traits = SmallTraits<FmapT, WeightT, BiasT, OutputT, Output1T>;
     using BlockCtxT = BlockCtx<Traits, IsNHWCin, IsNHWCout, WeightFmt>;
@@ -37,8 +38,17 @@ struct FullLoadPipeline {
         BlockCtxT blockCtx = scheduler(tiling);
         if (!blockCtx.active || blockCtx.actualCo == 0)
             return;
-        FullLoadProcessor<BlockCtxT, TilingData, Scheme> processor;
-        processor(blockCtx, tiling, x, filter, bias, y, ep);
+        // InnerBatch is the tiling-key SEL value (ConvInnerBatch definitions,
+        // the entry's template parameter passed straight through): the folded
+        // modes get their own processor template; SINGLE maps keep the base
+        // full-load processor untouched.
+        if constexpr (InnerBatch != CONV_INNER_BATCH_SINGLE) {
+            InnerBatchProcessor<BlockCtxT, TilingData, Scheme, InnerBatch> processor;
+            processor(blockCtx, tiling, x, filter, bias, y, ep);
+        } else {
+            FullLoadProcessor<BlockCtxT, TilingData, Scheme> processor;
+            processor(blockCtx, tiling, x, filter, bias, y, ep);
+        }
     }
 };
 

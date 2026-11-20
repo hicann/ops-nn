@@ -202,7 +202,9 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
 
     // FmPartload: FM not fullload L1, Weight fullload L1, NZ format, FP16*FP16, INT8*INT8 or FP16*INT8.
     // Multiple batches per core use four FM buffers when L1 permits, otherwise the kernel serializes them.
-    bool fmPartloadCond = !al1Fullload && bl1Fullload;
+    // InnerBatch>1 falls back to the legacy framework: FmPartload/Parallelism do
+    // not support innerbatch — the base class (FullLoadProcessor) is the only path.
+    bool fmPartloadCond = !al1Fullload && bl1Fullload && tilingData_.get_innerBatch() == 1;
     bool dtypeFmPartloadOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 &&
                               descInfo_.weightDtype == ge::DataType::DT_FLOAT16) ||
                              (descInfo_.fMapDtype == ge::DataType::DT_INT8 &&
@@ -238,6 +240,11 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
 
 bool Conv2dBaseTiling::IsSmallKernelBlocked()
 {
+    // Defensive: innerBatch>1 is only produced by the M-mode tiling algorithms
+    // (EnableInnerBatchBasicBlock / CalFormulaicInnerBatch); HW-mode never sets it.
+    if (tilingData_.get_innerBatch() > 1 && !flagInfo_.mSplitModeFlag) {
+        return true;
+    }
     if (flagInfo_.disContinuousFlag) {
         return true;
     }
@@ -260,9 +267,6 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
         return true;
     }
 
-    if (tilingData_.get_innerBatch() > 1) {
-        return true;
-    }
     return false;
 }
 

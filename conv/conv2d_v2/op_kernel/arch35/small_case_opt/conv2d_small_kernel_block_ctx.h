@@ -28,6 +28,10 @@
 
 namespace small_conv {
 
+// The tiling-key InnerBatch SEL reuses the legacy ConvInnerBatch definitions
+// (CONV_INNER_BATCH_SINGLE / CONV_INNER_BATCH_KERNEL_1X1_MULTI /
+// CONV_INNER_BATCH_MULTI): the folded modes are decided at the dispatch/pipeline
+// level, so the block context itself carries no innerbatch template parameter.
 template <typename Traits, bool IsNHWCin_, bool IsNHWCout_, ConvFormat WeightFmt_>
 struct BlockCtx {
     using FmapT = typename Traits::FmapType;
@@ -83,6 +87,18 @@ struct BlockCtx {
     uint32_t singleCoreBatch;
     mutable uint32_t curBatchIdx; // current batch being processed (updated per inner-batch loop)
 
+    // Inner-batch fold group: curBatchIdx is the current group's first map;
+    // curIb is the group's real map count — tiling.innerBatch, or the TAIL
+    // count when singleCoreBatch % innerBatch != 0 (so curIb != tiling.innerBatch
+    // for an uneven last group). Other fold params derive from the tiling data
+    // at the use sites.
+    mutable uint32_t curIb;
+
+    // A16W8: fmap-side k0 aligned cin. The L1 fmap NZ matrix k extent aligns to
+    // the FMAP k0 (C0/sizeof(FmapT)), not the weight k0. Equal for fp16*fp16 /
+    // int8*int8, different when they differ.
+    uint32_t cinAlignedFmap;
+
     // Group-axis iteration (M-mode; HW-mode keeps the trivial single step)
     uint32_t singleGroupIter;
     uint32_t groupBlockStride;
@@ -108,8 +124,14 @@ struct BlockScheduler {
         blockCtx.cinAligned = static_cast<uint32_t>(AlignB(tiling.singleCoreCi, BlockCtx::GK0));
         blockCtx.kTotalFmap = static_cast<uint32_t>(AlignB(tiling.singleCoreCi, BlockCtx::GK0Fmap)) * tiling.kh *
                               tiling.kw;
+        blockCtx.cinAlignedFmap = static_cast<uint32_t>(AlignB(tiling.singleCoreCi, BlockCtx::GK0Fmap));
         blockCtx.n1PerCore = static_cast<uint32_t>(CeilDiv(blockCtx.actualCo, GN0));
         blockCtx.k1Total = static_cast<uint32_t>(CeilDiv(blockCtx.cinAligned * tiling.kh * tiling.kw, BlockCtx::GK0));
+        // curIb starts at the first group's size; the group loop updates it
+        // (tail-group aware).
+        blockCtx.curIb = (blockCtx.singleCoreBatch > 0 && tiling.innerBatch > 1) ?
+                             static_cast<uint32_t>(tiling.innerBatch) :
+                             1;
         return blockCtx;
     }
 };

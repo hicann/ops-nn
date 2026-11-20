@@ -309,18 +309,27 @@ struct LoadBiasToBTTool {
 // Block-level Load3D context (full-load keeps the whole block window in L1).
 // posM is the mode-specific block start position (M-mode: mIdxStart % wout;
 // HW-mode: woIdxStart), provided by the spatial scheme; the block window pads
-// already carry the mode-specific values.
-template <typename BlockCtx, typename TilingData>
+// already carry the mode-specific values. InnerBatchMode is the tiling-key
+// InnerBatch SEL value (defaults to SINGLE); the 1x1 fold mode merges the
+// curIb maps into ONE big FMatrix/image and uses the fmap-k0 aligned cin.
+template <typename BlockCtx, typename TilingData, int8_t InnerBatchMode = 0>
 struct SetupLoad3DBaseTool {
+    static constexpr bool isKernel1x1Ib = InnerBatchMode == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH);
+
     __aicore__ inline Load3DCtx operator()(const BlockCtx& blockCtx, const TilingData& tiling, const FmapRange& r,
                                            uint32_t posM) const
     {
         uint8_t padList[PAD_LIST_NUM] = {static_cast<uint8_t>(r.padLeft), static_cast<uint8_t>(r.padRight),
                                          static_cast<uint8_t>(r.padTop), static_cast<uint8_t>(PAD_BOTTOM_VALUE)};
-        Load3DSetFMatrixCal(r.curHi, r.orgWin, padList);
+        if constexpr (isKernel1x1Ib) {
+            Load3DSetFMatrixCal(r.curHi * blockCtx.curIb, r.orgWin, padList);
+        } else {
+            Load3DSetFMatrixCal(r.curHi, r.orgWin, padList);
+        }
         Load3DSetPaddingCal(tiling.offsetx);
 
         Load3DCtx c;
+        uint32_t cinForL3d = isKernel1x1Ib ? blockCtx.cinAlignedFmap : blockCtx.cinAligned;
         c.xtBase = ((static_cast<uint64_t>(tiling.strideW) & MASK_6) << 0) |
                    ((static_cast<uint64_t>(tiling.kw) & MASK_8) << KERNELW_OFFSET) |
                    ((static_cast<uint64_t>(tiling.kh) & MASK_8) << KERNELH_OFFSET) |
@@ -329,9 +338,15 @@ struct SetupLoad3DBaseTool {
                    ((static_cast<uint64_t>(tiling.kh) & NINTH_BIT_MASK) << KERNELH_HIGHEST_BIT_OFFSET) |
                    ((static_cast<uint64_t>(tiling.dilationW) & MASK_8) << DILATIONW_OFFSET) |
                    ((static_cast<uint64_t>(tiling.dilationH) & MASK_8) << DILATIONH_OFFSET) |
-                   ((static_cast<uint64_t>(blockCtx.cinAligned) & MASK_16) << CIN_OFFSET);
-        c.xmTmp = ((static_cast<uint64_t>(AlignB(blockCtx.actualM, GM0)) & MASK_16) << MSTEP_OFFSET) |
-                  ((static_cast<uint64_t>(posM) & MASK_16) << POSM_OFFSET);
+                   ((static_cast<uint64_t>(cinForL3d) & MASK_16) << CIN_OFFSET);
+        if constexpr (isKernel1x1Ib) {
+            uint32_t mExt = blockCtx.curIb * blockCtx.actualM;
+            c.xmTmp = ((static_cast<uint64_t>(AlignB(mExt, GM0)) & MASK_16) << MSTEP_OFFSET) |
+                      ((static_cast<uint64_t>(posM) & MASK_16) << POSM_OFFSET);
+        } else {
+            c.xmTmp = ((static_cast<uint64_t>(AlignB(blockCtx.actualM, GM0)) & MASK_16) << MSTEP_OFFSET) |
+                      ((static_cast<uint64_t>(posM) & MASK_16) << POSM_OFFSET);
+        }
         return c;
     }
 };
@@ -339,8 +354,10 @@ struct SetupLoad3DBaseTool {
 // ------------------------------------------------------------------ L0 loads
 template <typename BlockCtx>
 struct LoadAL0Tool {
+    // al0 is a handle: const ref accepts both lvalues and the offset-shifted
+    // temporaries (al0[elemOff]) used by the innerbatch MULTI per-map loads.
     __aicore__ inline void operator()(const LocalTensor<typename BlockCtx::FmapT>& al1,
-                                      LocalTensor<typename BlockCtx::FmapT>& al0, uint32_t kOff, uint32_t curK,
+                                      const LocalTensor<typename BlockCtx::FmapT>& al0, uint32_t kOff, uint32_t curK,
                                       const Load3DCtx& c) const
     {
         using FmapT = typename BlockCtx::FmapT;
@@ -380,14 +397,24 @@ struct LoadBL0Tool {
 // family macro).
 template <typename BlockCtx, typename TilingData>
 struct InitMmadParamsTool {
-    __aicore__ inline void operator()(const TilingData& tiling, MmadParams& mmadParams, uint32_t m, uint32_t n) const
+    // Fold params (defaults keep the single-map behaviour): the 1x1 fold sets
+    // the merged Mmad m = AlignB(innerBatch * m) and disables gemv.
+    __aicore__ inline void operator()(const TilingData& tiling, MmadParams& mmadParams, uint32_t m, uint32_t n,
+                                      uint32_t innerBatch = 1, bool isKernel1x1Ib = false) const
     {
 #if defined(__DAV_35_FAMILY__)
         if constexpr (AscendC::IsSameType<typename BlockCtx::FmapT, half>::value) {
             mmadParams.fixShiftVal = tiling.fixedShiftValue;
         }
 #endif
-        mmadParams.m = m;
+        if (isKernel1x1Ib) {
+            mmadParams.m = AlignB(innerBatch * m, GM0);
+#if defined(__DAV_35_FAMILY__)
+            mmadParams.disableGemv = true;
+#endif
+        } else {
+            mmadParams.m = m;
+        }
         mmadParams.n = n;
         mmadParams.cmatrixInitVal = !(tiling.hasBias);
         mmadParams.cmatrixSource = (tiling.hasBias != 0);

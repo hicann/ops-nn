@@ -885,7 +885,7 @@ struct Conv2DParams {
     std::string feature = "";
 };
 
-void Conv2DTestCase(const Conv2DParams& params)
+void Conv2DTestCase(const Conv2DParams& params, TilingParam* outTiling = nullptr, uint64_t* outKey = nullptr)
 {
     // The tiling cache is a process-level singleton. Reset its architecture before each case so
     // that DAV_9201 feature cases (ASWT / FullMN) and DAV_3510 cases do not contaminate each other.
@@ -980,6 +980,9 @@ void Conv2DTestCase(const Conv2DParams& params)
     }
     std::map<std::string, std::string> soc_infos, aicore_spec, intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    if (params.weightFormat == "FRACTAL_Z") {
+        soc_infos.insert({"cube_vector_combine", "fuse"});
+    }
     std::map<std::string, std::string> soc_version_infos = {{"NpuArch", params.npuArch}};
     aicore_spec.insert({"fb0_size", "4096"});
 
@@ -1021,7 +1024,8 @@ void Conv2DTestCase(const Conv2DParams& params)
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, params.dtype, fmapFormat, fmapFormat)
-                      .NodeInputTd(1, params.dtype, weightFormat, weightFormat)
+                      .NodeInputTd(1, params.dtype, weightFormat,
+                                   params.weightFormat == "FRACTAL_Z" ? ge::FORMAT_FRACTAL_Z : weightFormat)
                       .NodeInputTd(DIM_2, bias_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(DIM_3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, params.dtype, outputFormat, outputFormat)
@@ -1032,7 +1036,9 @@ void Conv2DTestCase(const Conv2DParams& params)
                                   {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(params.format)},
                                   {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
                                   {"pad_mode", Ops::NN::AnyValue::CreateFrom<std::string>(params.padMode)},
-                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(params.enableHf32Mode)}})
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(params.enableHf32Mode)},
+                                  {"placehodlder", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"fixed_shift_value", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .TilingData(tilingDataPtr.get())
                       .Workspace(ws_size)
                       .Build();
@@ -1071,6 +1077,12 @@ void Conv2DTestCase(const Conv2DParams& params)
     auto buf = reinterpret_cast<TilingParam*>(tiling_context->GetRawTilingData()->GetData());
     TilingParam tilingParam = *buf;
     uint64_t tilingKey = tiling_context->GetTilingKey();
+    if (outTiling != nullptr) {
+        *outTiling = tilingParam;
+    }
+    if (outKey != nullptr) {
+        *outKey = tilingKey;
+    }
     // hf32Enable must always equal (fp32-in/fp32-out && attr enable_hf32), both on first run
     // (computed from attrs) and on ConvTilingCache-hit runs (restored from snapshot)
     uint8_t expectedHf32 = (params.dtype == ge::DT_FLOAT && params.enableHf32Mode) ? 1 : 0;
@@ -1173,6 +1185,140 @@ TEST_F(Conv2dv2Tiling, run_conv2d_case_fp32_hf32on_cache_hit)
                                     false,
                                     "NCHW"});
     }
+}
+
+// Tiling-key field bit offsets (PR#12878 layout):
+// InnerBatch: bit 15-16, SmallKernel: bit 21-22
+constexpr uint64_t TILING_KEY_INNER_BATCH_MASK = 0x3UL << 15;
+constexpr uint64_t TILING_KEY_SMALL_KERNEL_MASK = 0x3UL << 21;
+
+TEST_F(Conv2dv2Tiling, run_conv2d_small_kernel_innerbatch_1x1_nchw)
+{
+    TilingParam tp;
+    uint64_t key = 0;
+    Conv2DTestCase(Conv2DParams{{128, 256, 7, 7},
+                                {128, 1, 1},
+                                {0, 0, 0, 0},
+                                {1, 1},
+                                {1, 1},
+                                ge::DT_FLOAT16,
+                                0,
+                                0,
+                                false,
+                                1,
+                                "SPECIFIC",
+                                false,
+                                "NCHW",
+                                "3510",
+                                "FRACTAL_Z"},
+                   &tp, &key);
+    EXPECT_GT(tp.innerBatch, 1U);
+    EXPECT_EQ(static_cast<uint64_t>(tp.innerBatch), tp.singleCoreBatch);
+    EXPECT_EQ(key & TILING_KEY_SMALL_KERNEL_MASK, 1UL << 21);
+    EXPECT_EQ(key & TILING_KEY_INNER_BATCH_MASK, 1UL << 15);
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_small_kernel_innerbatch_multi_3x3_nchw)
+{
+    TilingParam tp;
+    uint64_t key = 0;
+    Conv2DTestCase(Conv2DParams{{128, 64, 9, 9},
+                                {128, 3, 3},
+                                {1, 1, 1, 1},
+                                {1, 1},
+                                {1, 1},
+                                ge::DT_FLOAT16,
+                                0,
+                                0,
+                                false,
+                                1,
+                                "SPECIFIC",
+                                false,
+                                "NCHW",
+                                "3510",
+                                "FRACTAL_Z"},
+                   &tp, &key);
+    EXPECT_GT(tp.innerBatch, 1U);
+    EXPECT_EQ(static_cast<uint64_t>(tp.innerBatch), tp.singleCoreBatch);
+    EXPECT_EQ(key & TILING_KEY_SMALL_KERNEL_MASK, 1UL << 21);
+    EXPECT_EQ(key & TILING_KEY_INNER_BATCH_MASK, 2UL << 15);
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_small_kernel_innerbatch_1x1_nhwc)
+{
+    TilingParam tp;
+    uint64_t key = 0;
+    Conv2DTestCase(Conv2DParams{{128, 256, 7, 7},
+                                {128, 1, 1},
+                                {0, 0, 0, 0},
+                                {1, 1},
+                                {1, 1},
+                                ge::DT_FLOAT16,
+                                0,
+                                0,
+                                false,
+                                1,
+                                "SPECIFIC",
+                                false,
+                                "NHWC",
+                                "3510",
+                                "FRACTAL_Z"},
+                   &tp, &key);
+    EXPECT_GT(tp.innerBatch, 1U);
+    EXPECT_EQ(static_cast<uint64_t>(tp.innerBatch), tp.singleCoreBatch);
+    EXPECT_EQ(key & TILING_KEY_SMALL_KERNEL_MASK, 1UL << 21);
+    EXPECT_EQ(key & TILING_KEY_INNER_BATCH_MASK, 1UL << 15);
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_innerbatch_nchw_weight_fallback)
+{
+    TilingParam tp;
+    uint64_t key = 0;
+    Conv2DTestCase(Conv2DParams{{128, 256, 7, 7},
+                                {128, 1, 1},
+                                {0, 0, 0, 0},
+                                {1, 1},
+                                {1, 1},
+                                ge::DT_FLOAT16,
+                                0,
+                                0,
+                                false,
+                                1,
+                                "SPECIFIC",
+                                false,
+                                "NCHW",
+                                "3510",
+                                "NCHW"},
+                   &tp, &key);
+    EXPECT_GT(tp.innerBatch, 1U);
+    EXPECT_EQ(key & TILING_KEY_SMALL_KERNEL_MASK, 0UL);
+    EXPECT_NE(key & TILING_KEY_INNER_BATCH_MASK, 0UL);
+}
+
+TEST_F(Conv2dv2Tiling, run_conv2d_small_kernel_single_batch_regression)
+{
+    TilingParam tp;
+    uint64_t key = 0;
+    Conv2DTestCase(Conv2DParams{{1, 64, 7, 7},
+                                {128, 1, 1},
+                                {0, 0, 0, 0},
+                                {1, 1},
+                                {1, 1},
+                                ge::DT_FLOAT16,
+                                0,
+                                0,
+                                false,
+                                1,
+                                "SPECIFIC",
+                                false,
+                                "NCHW",
+                                "3510",
+                                "FRACTAL_Z"},
+                   &tp, &key);
+    EXPECT_EQ(tp.innerBatch, 1U);
+    EXPECT_EQ(tp.singleCoreBatch, 1U);
+    EXPECT_EQ(key & TILING_KEY_INNER_BATCH_MASK, 0UL);
+    EXPECT_EQ(key & TILING_KEY_SMALL_KERNEL_MASK, 1UL << 21);
 }
 
 class Conv2dParameterizedTest : public ::testing::TestWithParam<Conv2DParams> {};

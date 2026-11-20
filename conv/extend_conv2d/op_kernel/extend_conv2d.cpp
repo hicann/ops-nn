@@ -142,15 +142,21 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
         constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC);
         constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
         constexpr bool isHw = (OutputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE));
+        // The tiling-key InnerBatch SEL template parameter goes straight into
+        // the pipeline (ConvInnerBatch definitions). Innerbatch only routes to
+        // the base class (FullLoadProcessor); the dispatch's isParallelism gate
+        // below keeps CinSplit/FmPartload on SINGLE maps.
 
         const static uint32_t GK0 = C0_SIZE / sizeof(DTYPE_FILTER);
         uint32_t cinAligned = AlignB(tilingData.singleCoreCi, GK0);
         bool isParallelism = false;
-        if constexpr (!isHw) { // The current L1 splitting is not suitable for the HW mode.
-            if (tilingData.kernelHxkernelW == 1 && cinAligned >= 2 * 2 * GK0) {
-                isParallelism = true;
-            } else if (tilingData.kernelHxkernelW != 1 && cinAligned >= 2 * GK0) {
-                isParallelism = true;
+        if constexpr (!isHw) {                // The current L1 splitting is not suitable for the HW mode.
+            if (tilingData.innerBatch == 1) { // innerbatch only goes through the base class
+                if (tilingData.kernelHxkernelW == 1 && cinAligned >= 2 * 2 * GK0) {
+                    isParallelism = true;
+                } else if (tilingData.kernelHxkernelW != 1 && cinAligned >= 2 * GK0) {
+                    isParallelism = true;
+                }
             }
         }
 
@@ -161,7 +167,7 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
             op(tilingData, x, filter, bias, y0, &extendParams);
         } else {
             small_conv::FullLoadPipeline<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
-                                         ConvFormat::FRACTAL_Z, isHw, Conv2DTilingData>
+                                         ConvFormat::FRACTAL_Z, isHw, InnerBatch, Conv2DTilingData>
                 op;
             op(tilingData, x, filter, bias, y0, &extendParams);
         }

@@ -332,3 +332,199 @@ TEST_F(Conv2DV2KernelTest, conv2dv2_kernel_test_stridewrite_nchw)
 
     TestStrideWriteKernel(inputShape, weightShape, 32);
 }
+
+namespace {
+void TestInnerBatchKernel(const std::vector<uint64_t>& inputShape, const std::vector<uint64_t>& weightShape,
+                          uint64_t innerBatch, uint64_t hoL0)
+{
+    AscendC::SetKernelMode(KernelMode::MIX_MODE);
+    const uint64_t numBlocks = 1;
+    std::vector<uint64_t> pads = {0, 0, 0, 0};
+    std::vector<uint64_t> strides = {1, 1};
+    std::vector<uint64_t> dilations = {1, 1};
+    ConvShape convShapeH = {inputShape[DIM2], pads[0], pads[1], dilations[0], strides[0], weightShape[DIM2]};
+    ConvShape convShapeW = {inputShape[DIM3], pads[DIM2], pads[DIM3], dilations[1], strides[1], weightShape[DIM3]};
+    uint64_t ho = CalcOutputShape(convShapeH);
+    uint64_t wo = CalcOutputShape(convShapeW);
+    std::vector<uint64_t> outputShape = {inputShape[0], weightShape[0], ho, wo};
+
+    size_t inputBtyes = VectorReduceMul(inputShape) * FP16_SIZE;
+    size_t weightBytes = VectorReduceMul(weightShape) * FP16_SIZE;
+    size_t outputBytes = VectorReduceMul(outputShape) * FP16_SIZE;
+    size_t workspaceSize = SIZE_1K * SIZE_1K * NUM_16;
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputBtyes);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weightBytes);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputBytes);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(Conv2DTilingData));
+
+    memset(workspace, 0, workspaceSize);
+    memset(tiling, 0, sizeof(Conv2DTilingData));
+    memset(output, 0xAA, outputBytes);
+
+    Conv2DTilingData* tilingData = reinterpret_cast<Conv2DTilingData*>(tiling);
+    TilingInput tilingInput = {inputShape, weightShape, outputShape, pads, strides, dilations};
+    SetTilingData(tilingData, tilingInput);
+    tilingData->innerBatch = innerBatch;
+    tilingData->hoL0 = hoL0;
+
+    auto conv2dv2_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace,
+                            GM_ADDR tiling) {
+        // OutputOrder=1 (M_MODE), InnerBatch=1 (KERNEL_1X1_MULTI), SmallKernel=1
+        ::conv2dv2<0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0>(x, filter, bias, offset_w, y, workspace, tiling);
+    };
+    ICPU_RUN_KF(conv2dv2_func, numBlocks, input, weight, nullptr, nullptr, output, workspace, tiling);
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(weight);
+    AscendC::GmFree(output);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+} // namespace
+
+TEST_F(Conv2DV2KernelTest, conv2dv2_kernel_test_innerbatch_1x1_multichunk)
+{
+    std::vector<uint64_t> inputShape = {32, 256, 7, 7};
+    std::vector<uint64_t> weightShape = {128, 256, 1, 1};
+    TestInnerBatchKernel(inputShape, weightShape, 16, 16);
+}
+
+TEST_F(Conv2DV2KernelTest, conv2dv2_kernel_test_innerbatch_1x1_singlechunk)
+{
+    std::vector<uint64_t> inputShape = {32, 256, 7, 7};
+    std::vector<uint64_t> weightShape = {128, 256, 1, 1};
+    TestInnerBatchKernel(inputShape, weightShape, 16, 49);
+}
+
+TEST_F(Conv2DV2KernelTest, conv2dv2_kernel_test_innerbatch_1x1_group_doublebuffer)
+{
+    // 2 groups x ib=2 (12.5KB per group): the two-group AL1 layout fits L1, so
+    // the next group's fmap is prefetched into the alternate buffer while the
+    // current group computes.
+    std::vector<uint64_t> inputShape = {4, 64, 7, 7};
+    std::vector<uint64_t> weightShape = {128, 64, 1, 1};
+    TestInnerBatchKernel(inputShape, weightShape, 2, 49);
+}
+
+namespace {
+// Board-captured tiling for the failing ST case (x 32,64,7,7 / w 128,64,1,1):
+// innerBatch=8 singleCoreBatch=8 singleCoreHo=64 hoL0=64 kAL1=kBL1=64 kL0=32
+// nL0=128 pBufferFlag=3 multiNBL1=1 mStep=64 nStep=8 kStep=2, with bias.
+void TestInnerBatchBoardCase()
+{
+    AscendC::SetKernelMode(KernelMode::MIX_MODE);
+    const uint64_t numBlocks = 4; // batchDim: 32 maps / 8 per core
+    std::vector<uint64_t> inputShape = {32, 64, 7, 7};
+    std::vector<uint64_t> weightShape = {128, 64, 1, 1};
+    std::vector<uint64_t> outputShape = {32, 128, 7, 7};
+    size_t inputBtyes = VectorReduceMul(inputShape) * FP16_SIZE;
+    size_t weightBytes = VectorReduceMul(weightShape) * FP16_SIZE;
+    size_t biasBytes = weightShape[0] * FP16_SIZE;
+    size_t outputBytes = VectorReduceMul(outputShape) * FP16_SIZE;
+    size_t workspaceSize = SIZE_1K * SIZE_1K * NUM_16;
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputBtyes);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weightBytes);
+    uint8_t* bias = (uint8_t*)AscendC::GmAlloc(biasBytes);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputBytes);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(Conv2DTilingData));
+
+    memset(workspace, 0, workspaceSize);
+    memset(tiling, 0, sizeof(Conv2DTilingData));
+    memset(output, 0xAA, outputBytes);
+
+    Conv2DTilingData* tilingData = reinterpret_cast<Conv2DTilingData*>(tiling);
+    TilingInput tilingInput = {inputShape, weightShape, outputShape, {0, 0, 0, 0}, {1, 1}, {1, 1}};
+    SetTilingData(tilingData, tilingInput);
+    tilingData->innerBatch = 8;
+    tilingData->singleCoreBatch = 8;
+    tilingData->singleCoreHo = 64;
+    tilingData->hoL1 = 64;
+    tilingData->hoL0 = 64;
+    tilingData->kAL1 = 64;
+    tilingData->kBL1 = 64;
+    tilingData->kL0 = 32;
+    tilingData->nL0 = 128;
+    tilingData->nBL1 = 128;
+    tilingData->pBufferFlag = 3;
+    tilingData->multiNBL1 = 1;
+    tilingData->mStep = 64;
+    tilingData->nStep = 8;
+    tilingData->kStep = 2;
+    tilingData->hasBias = 1;
+    tilingData->cinAInCore = 64;
+    tilingData->cinATailInCore = 64;
+    tilingData->cinBInCore = 64;
+    tilingData->cinBTailInCore = 64;
+    tilingData->aL1SpaceSize = 64 * 49 * FP16_SIZE;
+
+    auto conv2dv2_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace,
+                            GM_ADDR tiling) {
+        ::conv2dv2<0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0>(x, filter, bias, offset_w, y, workspace, tiling);
+    };
+    ICPU_RUN_KF(conv2dv2_func, numBlocks, input, weight, bias, nullptr, output, workspace, tiling);
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(weight);
+    AscendC::GmFree(bias);
+    AscendC::GmFree(output);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+} // namespace
+
+TEST_F(Conv2DV2KernelTest, conv2dv2_kernel_test_innerbatch_board_case) { TestInnerBatchBoardCase(); }
+
+namespace {
+// MULTI mode (SEL InnerBatch=2): compile+run cover for the per-map L0A load /
+// per-map Mmad loop instantiation, which the 1x1 SEL never compiles.
+void TestInnerBatchMultiKernel()
+{
+    AscendC::SetKernelMode(KernelMode::MIX_MODE);
+    const uint64_t numBlocks = 1;
+    std::vector<uint64_t> inputShape = {8, 64, 7, 7};
+    std::vector<uint64_t> weightShape = {64, 64, 3, 3};
+    std::vector<uint64_t> pads = {1, 1, 1, 1};
+    std::vector<uint64_t> strides = {1, 1};
+    std::vector<uint64_t> dilations = {1, 1};
+    ConvShape convShapeH = {inputShape[DIM2], pads[0], pads[1], dilations[0], strides[0], weightShape[DIM2]};
+    ConvShape convShapeW = {inputShape[DIM3], pads[DIM2], pads[DIM3], dilations[1], strides[1], weightShape[DIM3]};
+    uint64_t ho = CalcOutputShape(convShapeH);
+    uint64_t wo = CalcOutputShape(convShapeW);
+    std::vector<uint64_t> outputShape = {inputShape[0], weightShape[0], ho, wo};
+
+    size_t inputBtyes = VectorReduceMul(inputShape) * FP16_SIZE;
+    size_t weightBytes = VectorReduceMul(weightShape) * FP16_SIZE;
+    size_t outputBytes = VectorReduceMul(outputShape) * FP16_SIZE;
+    size_t workspaceSize = SIZE_1K * SIZE_1K * NUM_16;
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputBtyes);
+    uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weightBytes);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputBytes);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(sizeof(Conv2DTilingData));
+    memset(workspace, 0, workspaceSize);
+    memset(tiling, 0, sizeof(Conv2DTilingData));
+    Conv2DTilingData* tilingData = reinterpret_cast<Conv2DTilingData*>(tiling);
+    TilingInput tilingInput = {inputShape, weightShape, outputShape, pads, strides, dilations};
+    SetTilingData(tilingData, tilingInput);
+    tilingData->innerBatch = 8;
+    tilingData->singleCoreBatch = 8;
+    tilingData->singleCoreHo = 49;
+    tilingData->hoL0 = 64;
+
+    auto conv2dv2_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace,
+                            GM_ADDR tiling) {
+        // OutputOrder=1 (M_MODE), InnerBatch=2 (MULTI), SmallKernel=1
+        ::conv2dv2<0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0>(x, filter, bias, offset_w, y, workspace, tiling);
+    };
+    ICPU_RUN_KF(conv2dv2_func, numBlocks, input, weight, nullptr, nullptr, output, workspace, tiling);
+    AscendC::GmFree(input);
+    AscendC::GmFree(weight);
+    AscendC::GmFree(output);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+} // namespace
+
+TEST_F(Conv2DV2KernelTest, conv2dv2_kernel_test_innerbatch_multi) { TestInnerBatchMultiKernel(); }
