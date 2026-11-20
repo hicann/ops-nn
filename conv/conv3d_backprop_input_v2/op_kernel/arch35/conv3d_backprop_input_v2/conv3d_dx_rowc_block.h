@@ -447,4 +447,4 @@ protected:
 };
 } // namespace AscendC
 
-#endif // CONV3D_BACKPROP_INPUT_ROWC_BLOCK_ADVANCE_H
+#endif // CONV3D_DX_ROWC_BLOCK_ADVANCE_H

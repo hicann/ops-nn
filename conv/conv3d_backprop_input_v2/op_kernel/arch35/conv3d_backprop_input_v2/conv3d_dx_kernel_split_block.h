@@ -399,4 +399,4 @@ protected:
 };
 } // namespace AscendC
 
-#endif // CONV3D_BACKPROP_INPUT_KERNEL_SPLIT_BLOCK_H
+#endif // CONV3D_DX_KERNEL_SPLIT_BLOCK_H
