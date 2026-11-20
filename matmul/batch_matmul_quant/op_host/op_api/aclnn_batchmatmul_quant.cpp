@@ -154,7 +154,7 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus PreInputProcess(const aclTensor* inputTensor, aclOpExecutor* executor)
+static aclnnStatus PreInputProcess(const aclTensor*& inputTensor, aclOpExecutor* executor)
 {
     if (inputTensor != nullptr) {
         inputTensor = l0op::Contiguous(inputTensor, executor);

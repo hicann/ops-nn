@@ -363,7 +363,8 @@ static bool TransNdToNz(std::vector<int8_t>& weightArray, const Shape& weightSha
     // k为外轴，n为内轴，外轴按16对齐，内轴按32B对齐，(k, n) -> (n1,k1,16,c0SizeInt8)
     int64_t k1 = CeilDiv(k, CUBE_BLOCK_SIZE);
     int64_t n1 = CeilDiv(n, c0SizeInt8);
-    int64_t weightNzSize = k1 * CUBE_BLOCK_SIZE * n1 * c0SizeInt8;
+    int64_t groupNzSize = k1 * CUBE_BLOCK_SIZE * n1 * c0SizeInt8;
+    int64_t weightNzSize = groupNzSize;
     if (weightDimNum == GMM_WEIGHT_DIM) {
         g = weightShape.GetDim(0);
         weightNzSize = g * weightNzSize;
@@ -378,7 +379,7 @@ static bool TransNdToNz(std::vector<int8_t>& weightArray, const Shape& weightSha
             size_t idxN0 = idxN % c0SizeInt8;
             size_t idxN1 = idxN / c0SizeInt8;
             weightNzArray[idxN1 * k1 * CUBE_BLOCK_SIZE * c0SizeInt8 + idxK1 * c0SizeInt8 * CUBE_BLOCK_SIZE +
-                          idxK0 * c0SizeInt8 + idxN0 + idxG * k * n] = weightArray[idx + idxG * k * n];
+                          idxK0 * c0SizeInt8 + idxN0 + idxG * groupNzSize] = weightArray[idx + idxG * k * n];
         }
     }
     weightArray = weightNzArray;

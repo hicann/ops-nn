@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <float.h>
+#include "acl/acl_rt.h"
 #include <array>
 #include <vector>
 #include <thread>
@@ -376,4 +377,50 @@ TEST_F(l2_ConvertWeightToINT4Pack_Dav3510_test, dav3510_invalid_nz_storage)
     auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight), OUTPUT(weightInt4Pack));
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+// Include the host implementation to exercise its internal ND-to-NZ conversion directly.
+static aclError WhiteboxMemcpy(void*, size_t, const void*, size_t, aclrtMemcpyKind) { return ACL_ERROR_FAILURE; }
+#define aclrtMemcpy WhiteboxMemcpy
+#define aclnnConvertWeightToINT4PackGetWorkspaceSize ConvertWeightWhiteboxGetWorkspaceSize
+#define aclnnConvertWeightToINT4Pack ConvertWeightWhiteboxRun
+#include "../../../../op_host/op_api/aclnn_convert_weight_to_int4_pack.cpp"
+#undef aclnnConvertWeightToINT4Pack
+#undef aclnnConvertWeightToINT4PackGetWorkspaceSize
+#undef aclrtMemcpy
+
+TEST_F(l2_ConvertWeightToINT4Pack_test, multigroup_nz_padding_preserves_groups)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_2201);
+    constexpr int64_t groups = 3;
+    constexpr int64_t k = 17;
+    constexpr int64_t n = 16;
+    constexpr int64_t packedN = n / 2;
+    constexpr int64_t alignedK = 32;
+    constexpr int64_t c0Bytes = 32;
+    constexpr int64_t groupBytes = alignedK * c0Bytes;
+    std::vector<int8_t> packed(groups * k * packedN);
+    for (int64_t group = 0; group < groups; ++group) {
+        for (int64_t row = 0; row < k; ++row) {
+            for (int64_t col = 0; col < packedN; ++col) {
+                packed[(group * k + row) * packedN + col] = static_cast<int8_t>(group * 40 + row + col);
+            }
+        }
+    }
+    const auto source = packed;
+    op::Shape shape = {groups, k, n};
+    ASSERT_TRUE(TransNdToNz(packed, shape, false));
+    ASSERT_EQ(packed.size(), groups * groupBytes);
+    for (int64_t group = 0; group < groups; ++group) {
+        for (int64_t row = 0; row < alignedK; ++row) {
+            for (int64_t col = 0; col < c0Bytes; ++col) {
+                int8_t expected = 0;
+                if (row < k && col < packedN) {
+                    expected = source[(group * k + row) * packedN + col];
+                }
+                EXPECT_EQ(packed[group * groupBytes + row * c0Bytes + col], expected)
+                    << "group=" << group << " row=" << row << " col=" << col;
+            }
+        }
+    }
 }

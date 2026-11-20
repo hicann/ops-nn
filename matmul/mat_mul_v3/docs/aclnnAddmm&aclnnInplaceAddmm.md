@@ -263,7 +263,7 @@ aclnnStatus aclnnInplaceAddmm(
       <tr>
         <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="3">161002</td>
-        <td>self和mat2的数据类型和数据格式不在支持的范围之内。</td>
+        <td>self、mat1、mat2或out的数据类型不在支持的范围之内，或self的数据格式为FRACTAL_NZ。</td>
       </tr>
       <tr>
         <td>mat1和mat2不满足相乘条件。</td>
@@ -479,7 +479,7 @@ aclnnStatus aclnnInplaceAddmm(
         <tr>
           <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
           <td rowspan="3">161002</td>
-          <td>selfRef和mat2的数据类型和数据格式不在支持的范围之内。</td>
+          <td>selfRef、mat1或mat2的数据类型不在支持的范围之内，或selfRef的数据格式为FRACTAL_NZ。</td>
         </tr>
         <tr>
           <td>mat1和mat2不满足相乘条件。</td>

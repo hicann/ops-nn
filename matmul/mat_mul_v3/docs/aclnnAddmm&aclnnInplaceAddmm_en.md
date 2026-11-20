@@ -265,7 +265,7 @@ aclnnStatus aclnnInplaceAddmm(
       <tr>
         <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="3">161002</td>
-        <td>The data type or data format of self and mat2 is not within the supported range.</td>
+        <td>The data type of self, mat1, mat2, or out is not within the supported range, or the data format of self is FRACTAL_NZ.</td>
       </tr>
       <tr>
         <td>mat1 and mat2 do not meet the multiplication condition.</td>
@@ -481,7 +481,7 @@ aclnnStatus aclnnInplaceAddmm(
         <tr>
           <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
           <td rowspan="3">161002</td>
-          <td>The data types and data formats of selfRef and mat2 are not in the supported range.</td>
+          <td>The data type of selfRef, mat1, or mat2 is not within the supported range, or the data format of selfRef is FRACTAL_NZ.</td>
         </tr>
         <tr>
           <td>mat1 and mat2 do not meet the multiplication conditions.</td>
