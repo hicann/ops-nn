@@ -113,26 +113,25 @@ TEST_F(l2_kl_div_target_backward_test, case_fp_reduction_batchmean)
     // ut.TestPrecision();
 }
 
-TEST_F(l2_kl_div_target_backward_test, case_fp_reduction_exceed)
+TEST_F(l2_kl_div_target_backward_test, case_fp_reduction_invalid)
 {
     auto gradDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND);
     auto selfDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto targetDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
-    int64_t reduction = 6;
     bool logTarget = false;
 
     auto gradTargetDesc = TensorDesc({3, 5, 4, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
 
-    auto ut = OP_API_UT(aclnnKlDivTargetBackward, INPUT(gradDesc, selfDesc, targetDesc, reduction, logTarget),
-                        OUTPUT(gradTargetDesc));
+    const std::array<int64_t, 3> invalidReductions = {-1, 4, 99};
+    for (auto reduction : invalidReductions) {
+        auto ut = OP_API_UT(aclnnKlDivTargetBackward, INPUT(gradDesc, selfDesc, targetDesc, reduction, logTarget),
+                            OUTPUT(gradTargetDesc));
 
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
-
-    // SAMPLE: precision simulate
-    // ut.TestPrecision();
+        // SAMPLE: only test GetWorkspaceSize
+        uint64_t workspace_size = 0;
+        aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+        EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    }
 }
 
 TEST_F(l2_kl_div_target_backward_test, case_logtarget_true)

@@ -191,9 +191,12 @@ aclnnStatus aclnnKlDivTargetBackward(
       <td class="tg-0pky">传入的gradOutput、self、target和gradTarget是空指针。</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="6">161002</td>
+      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="7">161002</td>
       <td class="tg-0pky">gradOutput、self、target和gradTarget的数据类型不在支持的范围内时。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction的取值不在支持范围内（支持0、1、2、3）。</td>
     </tr>
     <tr>
       <td class="tg-0pky">target、gradTarget的数据类型不一致。</td>

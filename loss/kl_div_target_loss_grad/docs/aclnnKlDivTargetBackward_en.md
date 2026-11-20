@@ -193,9 +193,12 @@ aclnnStatus aclnnKlDivTargetBackward(
       <td class="tg-0pky">gradOutput, self, target, or gradTarget is a null pointer.</td>
     </tr>
     <tr>
-      <td class="tg-0pky" rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td class="tg-0pky" rowspan="6">161002</td>
+      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="7">161002</td>
       <td class="tg-0pky">The data types of gradOutput, self, target, and gradTarget are not within the supported range.</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">The value of reduction is not within the supported range (0, 1, 2, or 3).</td>
     </tr>
     <tr>
       <td class="tg-0pky">The data types of target and gradTarget are inconsistent.</td>
