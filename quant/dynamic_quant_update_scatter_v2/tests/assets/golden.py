@@ -12,7 +12,11 @@
 
 import numpy as np
 import torch
-from ml_dtypes import int4 as _int4  # noqa: F401 - registers int4 dtype for TTK
+
+try:
+    from ml_dtypes import int4 as _int4
+except ImportError:
+    _int4 = None
 
 __spec__ = {
     "dynamic_quant_update_scatter_v2": "DynamicQuantUpdateScatterV2KernelSpec",
@@ -57,12 +61,19 @@ def _unpack_int4(packed, size):
     unpacked = np.empty(raw.size * 2, dtype=np.uint8)
     unpacked[0::2] = raw & np.uint8(0x0F)
     unpacked[1::2] = (raw >> np.uint8(4)) & np.uint8(0x0F)
-    return unpacked[:size].view(_int4)
+    values = unpacked[:size]
+    if _int4 is None:
+        # The remote TTK worker can carry one raw nibble per uint8 element.
+        return _wrap_to_int4(values.astype(np.int8))
+    return values.view(_int4)
 
 
 def _to_numpy_for_golden(x):
     if torch.is_tensor(x):
-        return x.detach().cpu().numpy()
+        value = x.detach().cpu()
+        if value.dtype == torch.bfloat16:
+            value = value.to(torch.float32)
+        return value.numpy()
     return x
 
 
