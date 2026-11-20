@@ -26,6 +26,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -85,19 +86,19 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
-        case NpuArch::DAV_3510:
-        case NpuArch::DAV_9202:
-        case NpuArch::DAV_9201:
+        case Ops::Base::DAV_3510:
+        case Ops::Base::DAV_9202:
+        case Ops::Base::DAV_9201:
             return MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST;
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return (isMask    ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                     isMask2ND ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                                 SELF_OUT_DTYPE_SUPPORT_910B_LIST);
         }
-        case NpuArch::DAV_1001: {
+        case Ops::Base::DAV_1001: {
             return (isMask ? MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST : SELF_OUT_DTYPE_SUPPORT_910_LIST);
         }
-        case NpuArch::DAV_2002: {
+        case Ops::Base::DAV_2002: {
             return (isMask ? SELF_OUT_DTYPE_SUPPORT_310P_LIST : SELF_OUT_DTYPE_SUPPORT_910_LIST);
         }
         default: {

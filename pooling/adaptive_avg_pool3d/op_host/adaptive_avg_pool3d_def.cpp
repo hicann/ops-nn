@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class AdaptiveAvgPool3d : public OpDef {
@@ -53,10 +54,9 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "adaptive_avg_pool3d_apt");
-        this->AICore().AddConfig("ascend950", aicore_config_950);
-        this->AICore().AddConfig("ascend960dt", aicore_config_950);
-        this->AICore().AddConfig("ascend960pr", aicore_config_950);
-        this->AICore().AddConfig("ascend350", aicore_config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicore_config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicore_config_950);
 
         OpAICoreConfig ascend310p_config;
         ascend310p_config.Input("x")

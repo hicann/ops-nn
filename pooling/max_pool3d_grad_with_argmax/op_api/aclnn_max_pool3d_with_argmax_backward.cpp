@@ -25,6 +25,7 @@
 #include "opdev/framework_op.h"
 #include "op_api/aclnn_util.h"
 #include "pooling/pool_3d_common/op_api/pool_3d_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 using namespace Pool3DCommon;
 using namespace op;
 #ifdef __cplusplus
@@ -67,13 +68,13 @@ static const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
-        case NpuArch::DAV_9202:
-        case NpuArch::DAV_9201:
-        case NpuArch::DAV_3510:
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_9202:
+        case Ops::Base::DAV_9201:
+        case Ops::Base::DAV_3510:
+        case Ops::Base::DAV_2201: {
             return GRAD_DTYPE_SUPPORT_LIST;
         }
-        case NpuArch::DAV_1001: {
+        case Ops::Base::DAV_1001: {
             return NULL_DTYPE_SUPPORT_LIST;
         }
         default: {

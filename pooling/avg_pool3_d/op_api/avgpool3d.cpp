@@ -18,6 +18,7 @@
 #include "opdev/shape_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 namespace l0op {
@@ -41,11 +42,11 @@ static const std::initializer_list<DataType> REGBASE_DTYPE_SUPPORT_LIST = {DataT
 static inline bool IsAiCoreSupport(DataType inputDtype)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201) {
+    if (curArch == Ops::Base::DAV_2201) {
         return CheckType(inputDtype, AICORE_910B_DTYPE_SUPPORT_LIST);
     }
 
-    if (curArch == NpuArch::DAV_2002) {
+    if (curArch == Ops::Base::DAV_2002) {
         return CheckType(inputDtype, AICORE_310P_DTYPE_SUPPORT_LIST);
     }
 
@@ -66,7 +67,7 @@ static inline const aclTensor* AvgPool3DAiCore(const aclTensor* input, aclTensor
            dataFormat);
 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2002) {
+    if (curArch == Ops::Base::DAV_2002) {
         // 使用框架宏ADD_TO_LAUNCHER_LIST_AICORE，将AiCore AvgPool3D算子加入任务队列
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
             AvgPool3DV2, OP_INPUT(input), OP_OUTPUT(output),

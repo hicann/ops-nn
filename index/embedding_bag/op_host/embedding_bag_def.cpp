@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class EmbeddingBag : public OpDef {
@@ -151,10 +152,9 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "embedding_bag_apt");
-        this->AICore().AddConfig("ascend950", config_950);
-        this->AICore().AddConfig("ascend960dt", config_950);
-        this->AICore().AddConfig("ascend960pr", config_950);
-        this->AICore().AddConfig("ascend350", config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, config_950);
 
         OpAICoreConfig config_n;
         config_n.Input("weight")

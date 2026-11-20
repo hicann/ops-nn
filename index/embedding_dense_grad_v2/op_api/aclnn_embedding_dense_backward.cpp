@@ -28,6 +28,7 @@
 #include "runtime/context.h"
 #include "aclnn_embedding_dense_backward.h"
 #include "acl/acl_rt.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -84,7 +85,7 @@ static bool CheckNotNull(const aclTensor* grad, const aclTensor* indices, const 
 
 static bool CheckDtypeValid(const aclTensor* grad, const aclTensor* indices, const aclTensor* out)
 {
-    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201 ||
                              Ops::NN::AclnnUtil::IsRegbase());
     const std::initializer_list<DataType> GRAD_DTYPE_SUPPORT_LIST = is910BSocVersion ?
                                                                         GRAD_DTYPE_SUPPORT_LIST_WITH_BF16 :
@@ -215,7 +216,7 @@ static bool CheckIsSmallDimMode(const aclTensor* grad, const uint64_t embeddingD
 
 static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights, const bool scaleGradByFreq)
 {
-    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201);
     if (!is910BSocVersion && !Ops::NN::AclnnUtil::IsRegbase()) {
         return false;
     }
@@ -368,7 +369,7 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(const aclTensor* grad, c
     auto gradCasted = gradContiguous;
     bool is950 = Ops::NN::AclnnUtil::IsRegbase();
     bool needCast = IsNeedCast(grad, out, scaleGradByFreq);
-    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201);
     needCast = (is910BSocVersion && needCast) || !is910BSocVersion;
     if (!is950 && needCast) {
         // grad如果是float16/bfloat16，需要cast为float32

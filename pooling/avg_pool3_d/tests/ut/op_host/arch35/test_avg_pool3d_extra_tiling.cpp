@@ -10,7 +10,7 @@
 
 /*!
  * \file test_avg_pool3d_extra_tiling.cpp
- * \brief extra arch35 tiling cases for AvgPool3D on ascend950(regbase), target template priorities:
+ * \brief extra arch35 tiling cases for AvgPool3D on DAV_3510(regbase), target template priorities:
  *        0 OneKsize / 10 NcdhwSmallKernel / 11 NcdhwBigKernel / 12 SmallKernelNDHWC / 13 BigKernelNDHWC / 19 Simt
  */
 
@@ -34,8 +34,8 @@ using namespace std;
 using namespace ge;
 
 namespace {
-// ascend950: UB_SIZE 245760, CORE_NUM 64, NpuArch 3510 (regbase)
-const char* const AVG_POOL_3D_ASCEND950_COMPILE_INFO = R"({
+// DAV_3510: UB_SIZE 245760, CORE_NUM 64, NpuArch 3510 (regbase)
+const char* const AVG_POOL_3D_DAV_3510_COMPILE_INFO = R"({
     "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                       "Intrinsic_fix_pipe_l0c2out": false,
                       "Intrinsic_data_move_l12ub": true,
@@ -72,7 +72,7 @@ void ExecuteAvgPool3DCase(gert::StorageShape xShape, gert::StorageShape yShape, 
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    GetPlatFormInfos(AVG_POOL_3D_ASCEND950_COMPILE_INFO, soc_infos, aicore_spec, intrinsics, soc_version_infos);
+    GetPlatFormInfos(AVG_POOL_3D_DAV_3510_COMPILE_INFO, soc_infos, aicore_spec, intrinsics, soc_version_infos);
 
     // platform info
     fe::PlatFormInfos platform_info;
@@ -168,7 +168,7 @@ bool AvgPool3DArch35TemplateAvailable()
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    GetPlatFormInfos(AVG_POOL_3D_ASCEND950_COMPILE_INFO, soc_infos, aicore_spec, intrinsics, soc_version_infos);
+    GetPlatFormInfos(AVG_POOL_3D_DAV_3510_COMPILE_INFO, soc_infos, aicore_spec, intrinsics, soc_version_infos);
 
     fe::PlatFormInfos platform_info;
     platform_info.Init();

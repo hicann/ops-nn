@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad_tiling_base.cpp
- * \brief SwigluGroupGrad shared tiling validation (arch35, Ascend950)
+ * \brief SwigluGroupGrad shared tiling validation (arch35, DAV_3510)
  */
 
 #include "swiglu_group_grad_tiling_base.h"

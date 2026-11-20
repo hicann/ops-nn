@@ -10,7 +10,7 @@
 
 /*!
  * \file test_adaptive_avg_pool2d_grad.cpp
- * \brief kernel UT for adaptive_avg_pool2d_grad on ascend950
+ * \brief kernel UT for adaptive_avg_pool2d_grad on DAV_3510
  *
  * Tiling selection logic (from op_host IsCapable):
  *   BIG_KERNEL: kernelH * kernelW >= 256 (high upsampling ratio)

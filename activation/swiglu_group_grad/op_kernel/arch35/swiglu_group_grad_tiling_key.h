@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad_tiling_key.h
- * \brief SwigluGroupGrad TilingKey definition (arch35, Ascend950)
+ * \brief SwigluGroupGrad TilingKey definition (arch35, DAV_3510)
  */
 
 #ifndef __SWIGLU_GROUP_GRAD_TILING_KEY_H__

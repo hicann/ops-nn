@@ -27,6 +27,7 @@
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -81,7 +82,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportListV2(const std::i
                                                                     const std::initializer_list<op::DataType>& l2)
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return l1;
     } else {
         return l2;
@@ -404,7 +405,7 @@ static aclnnStatus BuildAvgPool3dGraph(UniqueExecutor& uniqueExecutor, const acl
     }
 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    bool is310pFlag = curArch == NpuArch::DAV_2002;
+    bool is310pFlag = curArch == Ops::Base::DAV_2002;
 
     auto isEnableNCDHW = IsEnableNCDHW(kernelSize, stride, divisorOverride, pad, countIncludePad, ceilMode, avgpoolIn,
                                        out);

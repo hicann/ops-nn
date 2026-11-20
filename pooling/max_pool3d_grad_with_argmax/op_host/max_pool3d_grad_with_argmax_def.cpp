@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 constexpr int32_t DTYPE_INT32 = 3;
@@ -99,10 +100,9 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "max_pool3d_grad_with_argmax")
             .ExtendCfgInfo("opInterface.value", "max_pool3d_grad_with_argmax");
-        this->AICore().AddConfig("ascend950", aicoreConfig950);
-        this->AICore().AddConfig("ascend350", aicoreConfig950);
-        this->AICore().AddConfig("ascend960dt", aicoreConfig950);
-        this->AICore().AddConfig("ascend960pr", aicoreConfig950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicoreConfig950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicoreConfig950);
     }
 };
 

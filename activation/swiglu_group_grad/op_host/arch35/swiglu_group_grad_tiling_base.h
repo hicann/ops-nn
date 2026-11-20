@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad_tiling_base.h
- * \brief SwigluGroupGrad shared tiling utilities (arch35, Ascend950)
+ * \brief SwigluGroupGrad shared tiling utilities (arch35, DAV_3510)
  */
 
 #ifndef SWIGLU_GROUP_GRAD_TILING_BASE_H_

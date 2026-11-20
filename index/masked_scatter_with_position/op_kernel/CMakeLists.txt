@@ -11,7 +11,7 @@
 # Ascend 960 reuses the existing kernel implementation.
 add_kernel_sources(
     KERNEL_SRC masked_scatter_with_position.cpp
-    COMPUTE_UNITS ascend960dt ascend960pr
+    COMPUTE_UNITS DAV_9201 DAV_9202
     SIMPLIFIED_KEY 0
     AUTO_SYNC false
 )

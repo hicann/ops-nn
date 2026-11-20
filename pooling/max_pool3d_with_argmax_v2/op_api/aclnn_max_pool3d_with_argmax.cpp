@@ -25,6 +25,7 @@
 #include "opdev/platform.h"
 #include "opdev/framework_op.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -58,7 +59,7 @@ static bool CheckNotNullPtr(const aclTensor* self, const aclIntArray* kernelSize
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return OUT_DTYPE_SUPPORT_LIST;
     } else {
         return NULL_SUPPORT_LIST;
@@ -170,7 +171,7 @@ static bool CheckParamsValid(const aclIntArray* kernelSize, const aclIntArray* s
     const int64_t dilationH = (dilationRef.Size() == 1) ? dilationD : dilationRef[1];
     const int64_t dilationW = (dilationRef.Size() == 1) ? dilationD : dilationRef[2];
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || curArch == NpuArch::DAV_1001) {
+    if (curArch == Ops::Base::DAV_2201 || curArch == Ops::Base::DAV_1001) {
         OP_CHECK(((dilationD == 1) && (dilationH == 1) && (dilationW == 1)),
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                          "The value of dilation should be equal 1, but got dilationD:%ld, dilationH:%ld, dilationW:%ld",
@@ -195,7 +196,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclIntArray* kernelS
 static bool CheckPlatform()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return true;
     } else {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnMaxPool3dWithArgmax is not supported on this platform");

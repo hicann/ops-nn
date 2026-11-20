@@ -45,7 +45,7 @@ extern "C" void _ZN8optiling29AdaptiveAvgPool2dSplitHTiling13SetTilingDataEv(voi
 extern "C" void _ZN8optiling27AdaptiveAvgPool2DTilingSimt13SetTilingDataEv(void* self);
 extern "C" ge::graphStatus _ZN8optiling27AdaptiveAvgPool2DTilingSimt10PostTilingEv(void* self);
 
-static void SetAscend950GlobalPlatformInfoExtra()
+static void SetDAV3510GlobalPlatformInfoExtra()
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
@@ -63,7 +63,7 @@ protected:
     static void SetUpTestCase()
     {
         std::cout << "AdaptiveAvgPool2dTiling950ExtraTest SetUp" << std::endl;
-        SetAscend950GlobalPlatformInfoExtra();
+        SetDAV3510GlobalPlatformInfoExtra();
     }
 
     static void TearDownTestCase() { std::cout << "AdaptiveAvgPool2dTiling950ExtraTest TearDown" << std::endl; }

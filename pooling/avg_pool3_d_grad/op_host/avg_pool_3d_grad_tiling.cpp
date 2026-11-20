@@ -919,7 +919,7 @@ ge::graphStatus TilingForAvgPool3DGrad(gert::TilingContext* context)
 {
     OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("AvgPool3DGrad", "context is null"), return ge::GRAPH_FAILED);
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
-        // arch35 (ascend950): dispatch to tiling templates registered via REGISTER_OPS_TILING_TEMPLATE
+        // arch35 (DAV_3510): dispatch to tiling templates registered via REGISTER_OPS_TILING_TEMPLATE
         return TilingRegistry::GetInstance().DoTilingImpl(context);
     }
     auto compileInfo = static_cast<const AvgPool3DGradCubeCompileInfo*>(context->GetCompileInfo());

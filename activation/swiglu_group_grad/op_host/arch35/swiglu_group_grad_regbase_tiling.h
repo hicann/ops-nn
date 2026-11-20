@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad_tiling.h
- * \brief SwigluGroupGrad tiling header for Ascend950 (DAV_3510) architecture
+ * \brief SwigluGroupGrad tiling header for DAV_3510 architecture
  */
 #ifndef OPS_BUILD_IN_OP_TILING_RUNTIME_SWIGLU_GROUP_GRAD_ARCH35_OPTILING
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_SWIGLU_GROUP_GRAD_ARCH35_OPTILING

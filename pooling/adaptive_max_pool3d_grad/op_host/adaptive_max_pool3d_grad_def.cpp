@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 constexpr int DTYPE_INT32 = 3;
@@ -96,8 +97,8 @@ public:
             .ExtendCfgInfo("opInterface.value", "adaptive_max_pool3d_grad")
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
 
-        this->AICore().AddConfig("ascend950", aicore_config_950);
-        this->AICore().AddConfig("ascend960dt", aicore_config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config_950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicore_config_950);
     }
 };
 

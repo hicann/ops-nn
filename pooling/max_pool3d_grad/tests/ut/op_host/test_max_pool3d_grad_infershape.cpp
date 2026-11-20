@@ -347,7 +347,7 @@ TEST_F(MaxPool3DGradInfer, max_pool3d_grad_infershape_fail_invalid_padding)
 
 // ======================== InferDataType ========================
 
-// ======================== Non-Ascend950 Platform Tests ========================
+// ======================== Non-DAV_3510 Platform Tests ========================
 
 class MaxPool3DGradInferNon950 : public testing::Test {
 protected:

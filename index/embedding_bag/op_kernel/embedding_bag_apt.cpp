@@ -9,7 +9,7 @@
  */
 /*!
  * \file embedding_bag_apt.cpp
- * \brief 统一kernel入口: arch92(Ascend960dt/Ascend960pr)经 __NPU_ARCH__==9201/9202 编译期门禁
+ * \brief 统一kernel入口: arch92(DAV_9201/DAV_9202)经 __NPU_ARCH__==9201/9202 编译期门禁
  *        启用GatherDMA(tiling key 210/211), 其余平台走公共分发
  */
 

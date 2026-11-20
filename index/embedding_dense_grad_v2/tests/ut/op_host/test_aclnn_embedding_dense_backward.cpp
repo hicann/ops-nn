@@ -829,7 +829,7 @@ TEST_F(l2_embedding_dense_backward_test, case_44)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-TEST_F(l2_embedding_dense_backward_test, ascend950PR_9589_case)
+TEST_F(l2_embedding_dense_backward_test, DAV_3510_9589_case)
 {
     int64_t numWeights = 20;
     int64_t paddingIdx = -1;

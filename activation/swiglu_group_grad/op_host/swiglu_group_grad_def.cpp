@@ -20,9 +20,10 @@
  *   Attribute:        clamp_limit (Float, default=-1 → no clamp)
  *   Required output:  grad_x (T,2H)/(B,S,2H) [BF16/FP16/FP32]
  *   Optional output:  grad_weight (T,1)/(B,S,1) [FP32]
- *   Platform:         Ascend950 only (arch35/DAV_3510, RegBase or SIMT path)
+ *   Platform:         DAV_3510 only (arch35, RegBase or SIMT path)
  */
 #include <register/op_def_registry.h>
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -78,7 +79,7 @@ public:
         // ── Attribute ────────────────────────────────────────────────────────
         this->Attr("clamp_limit").AttrType(OPTIONAL).Float(-1);
 
-        // ── Platform config: only Ascend950 (RegBase path) ───────────────────
+        // ── Platform config: only DAV_3510 (RegBase path) ───────────────────
         OpAICoreConfig regbaseCfg;
         regbaseCfg.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
@@ -86,9 +87,8 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", regbaseCfg);
-        this->AICore().AddConfig("ascend350", regbaseCfg);
-        this->AICore().AddConfig("ascend960dt", regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, regbaseCfg);
     }
 };
 OP_ADD(SwigluGroupGrad);

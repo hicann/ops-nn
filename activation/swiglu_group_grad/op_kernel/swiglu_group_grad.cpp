@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad.cpp
- * \brief SwigluGroupGrad kernel entry (arch35, Ascend950/DAV_3510)
+ * \brief SwigluGroupGrad kernel entry (arch35, DAV_3510)
  */
 
 #include "kernel_operator.h"

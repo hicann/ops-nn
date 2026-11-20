@@ -10,7 +10,7 @@
 
 /*!
  * \file test_max_pool3d_grad_tiling.cpp
- * \brief MaxPool3DGrad(ascend950/arch35) op_host tiling UT
+ * \brief MaxPool3DGrad(DAV_3510/arch35) op_host tiling UT
  *
  * tiling 分发: Tiling4MaxPool3DGrad -> TilingRegistry::DoTilingImpl 按 priority 升序尝试模板,
  *   priority 0: MaxPool3DGradNCDHWSmallKernelTiling (NCDHW 小 kernel 路径)

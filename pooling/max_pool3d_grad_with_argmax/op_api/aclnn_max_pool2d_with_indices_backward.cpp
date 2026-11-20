@@ -27,6 +27,7 @@
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
 #include "pooling/pool_3d_common/op_api/pool_3d_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 using namespace Pool3DCommon;
 using namespace op;
 #ifdef __cplusplus
@@ -78,17 +79,17 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
-        case NpuArch::DAV_2201: {
+        case Ops::Base::DAV_2201: {
             return (isMask    ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                     isMask2ND ? MASK_SELF_OUT_DTYPE_SUPPORT_910B_LIST :
                                 SELF_OUT_DTYPE_SUPPORT_910B_LIST);
         }
-        case NpuArch::DAV_3510:
-        case NpuArch::DAV_9202:
-        case NpuArch::DAV_9201: {
+        case Ops::Base::DAV_3510:
+        case Ops::Base::DAV_9202:
+        case Ops::Base::DAV_9201: {
             return SELF_OUT_DTYPE_SUPPORT_REGBASE_LIST;
         }
-        case NpuArch::DAV_1001: {
+        case Ops::Base::DAV_1001: {
             return (isMask ? MASK_SELF_OUT_DTYPE_SUPPORT_910_LIST : SELF_OUT_DTYPE_SUPPORT_910_LIST);
         }
         default: {
@@ -101,12 +102,12 @@ static const inline std::initializer_list<op::DataType> GetIndicesDtypeSupportLi
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
-        case NpuArch::DAV_3510:
-        case NpuArch::DAV_9202:
-        case NpuArch::DAV_9201:
+        case Ops::Base::DAV_3510:
+        case Ops::Base::DAV_9202:
+        case Ops::Base::DAV_9201:
             return INDICES_DTYPE_SUPPORT_REGBASE_LIST;
-        case NpuArch::DAV_2201:
-        case NpuArch::DAV_1001:
+        case Ops::Base::DAV_2201:
+        case Ops::Base::DAV_1001:
         default: {
             return (isMask ? MASK_INDICES_DTYPE_SUPPORT_LIST : INDICES_DTYPE_SUPPORT_LIST);
         }
@@ -493,7 +494,7 @@ static op::DataType GetCastDtypeForMask(const aclTensor* self, bool isMask2ND)
     */
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     auto selfType = self->GetDataType();
-    if ((curArch == NpuArch::DAV_1001) && (selfType == op::DataType::DT_FLOAT)) {
+    if ((curArch == Ops::Base::DAV_1001) && (selfType == op::DataType::DT_FLOAT)) {
         return op::DataType::DT_FLOAT16;
     }
     if (selfType == op::DataType::DT_BF16) {
@@ -916,7 +917,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackwardGetWorkspaceSize(const aclTensor* grad
     const aclIntArray& kernelRef = *kernelSize;
     const int64_t kH = kernelRef[0];
     const int64_t kW = (kernelRef.Size() == 1) ? kH : kernelRef[1];
-    if (!(kH == 1 && kW == 1) && (curArch == NpuArch::DAV_2201)) {
+    if (!(kH == 1 && kW == 1) && (curArch == Ops::Base::DAV_2201)) {
         L2_DFX_PHASE_1(aclnnMaxPool2dWithMaskBackward,
                        DFX_IN(gradOutput, self, indices, kernelSize, stride, padding, dilation, ceilMode),
                        DFX_OUT(gradInput));

@@ -16,6 +16,7 @@
 #include "log/log.h"
 #include "adaptive_avg_pool2d_base_tiling.h"
 #include "op_host/tiling_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using Ops::NN::Optiling::TilingRegistry;
 using namespace std;
@@ -33,7 +34,7 @@ ge::graphStatus AdaptivePool2dBaseTiling::CheckNpuArch()
     nodeName = context_->GetNodeName();
     OP_LOGD(nodeName, "GetShapeAttrsInfo begin 950, arch:%d.", npuArch);
 
-    if (npuArch != NpuArch::DAV_3510 && npuArch != NpuArch::DAV_9201 && npuArch != NpuArch::DAV_9202) {
+    if (npuArch != Ops::Base::DAV_3510 && npuArch != Ops::Base::DAV_9201 && npuArch != Ops::Base::DAV_9202) {
         return ge::GRAPH_PARAM_INVALID;
     }
     return ge::GRAPH_SUCCESS;

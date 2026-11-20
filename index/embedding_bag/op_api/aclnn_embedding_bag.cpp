@@ -30,6 +30,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -51,7 +52,7 @@ static const std::initializer_list<op::DataType> WEIGHT_DTYPE_SUPPORT_LIST_910 =
 static inline const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2002 || curArch == NpuArch::DAV_1001) {
+    if (curArch == Ops::Base::DAV_2002 || curArch == Ops::Base::DAV_1001) {
         return WEIGHT_DTYPE_SUPPORT_LIST_910;
     } else {
         return WEIGHT_DTYPE_SUPPORT_LIST_910B;

@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad_simt_tiling.h
- * \brief SwigluGroupGrad SIMT tiling class (arch35, Ascend950)
+ * \brief SwigluGroupGrad SIMT tiling class (arch35, DAV_3510)
  */
 
 #ifndef SWIGLU_GROUP_GRAD_SIMT_TILING_H_

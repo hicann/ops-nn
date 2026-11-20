@@ -30,7 +30,7 @@ using namespace ut_util;
 using namespace std;
 using namespace ge;
 
-static void SetAscend950GlobalPlatformInfo()
+static void SetDAV3510GlobalPlatformInfo()
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
@@ -48,7 +48,7 @@ protected:
     static void SetUpTestCase()
     {
         std::cout << "AdaptiveAvgPool2dTiling950Test SetUp" << std::endl;
-        SetAscend950GlobalPlatformInfo();
+        SetDAV3510GlobalPlatformInfo();
     }
 
     static void TearDownTestCase() { std::cout << "AdaptiveAvgPool2dTiling950Test TearDown" << std::endl; }

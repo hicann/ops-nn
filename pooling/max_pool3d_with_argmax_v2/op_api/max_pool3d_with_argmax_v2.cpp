@@ -19,6 +19,7 @@
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
 #include "pooling/common/op_api/max_pool3d_with_argmax_v2.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -42,7 +43,7 @@ static const int32_t DTYPE_INT64 = 9;
 static const std::initializer_list<DataType> GetDtypeSupportListBySocVersion()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return SELF_DTYPE_SUPPORT_LIST;
     } else {
         return NULL_SUPPORT_LIST;

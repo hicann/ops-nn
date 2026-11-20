@@ -17,9 +17,9 @@
  *        Derived classes shadow TransOut/CopyOut/CopyInputBatch/TransInputBatch
  *        when their layouts differ from the default padded-wOutAlign version.
  *
- * \arch  Ascend950 / A5 / DAV_3510 only, RegBase (Reg) main path, VL = 256 Byte.
+ * \arch  A5 / DAV_3510 only, RegBase (Reg) main path, VL = 256 Byte.
  *        [RegBase-native] Enforced on the host side: AdaptivePool2dBaseTiling::
- *        GetShapeAttrsInfo rejects GetCurNpuArch() != NpuArch::DAV_3510, so these
+ *        GetShapeAttrsInfo rejects GetCurNpuArch() != Ops::Base::DAV_3510, so these
  *        templates are never dispatched on another architecture.
  */
 

@@ -38,6 +38,7 @@
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transpose.h"
 #include "cube_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -331,7 +332,7 @@ static bool CheckFormat(const aclTensor* self, const aclTensor* out)
 static bool IfSupport2dTo3d()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201) {
+    if (curArch == Ops::Base::DAV_2201) {
         return true;
     }
     return false;

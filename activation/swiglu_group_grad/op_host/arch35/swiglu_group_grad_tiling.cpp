@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad_tiling.cpp
- * \brief SwigluGroupGrad tiling registration (arch35, Ascend950)
+ * \brief SwigluGroupGrad tiling registration (arch35, DAV_3510)
  */
 
 #include "op_host/tiling_templates_registry.h"

@@ -33,6 +33,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "op_api/aclnn_util.h"
 #include "runtime/context.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 namespace avgpool2d_conv2d_input_util {
@@ -91,7 +92,7 @@ static bool IsInputSupportInsertDilation()
 {
     // 判断当前SOC版本是否支持前后插Dilation
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201) {
+    if (curArch == Ops::Base::DAV_2201) {
         OP_LOGD("The soc version is Ascend910B or ASCEND910_93, ConvolutionBackward supports dilation");
         return true;
     }
@@ -164,7 +165,7 @@ static const aclTensor* PreDilation(ConvolutionBackwardInputTensorForAvgPool2d& 
 inline bool IsCubeSupportHf32()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch != NpuArch::DAV_2201 && (!Ops::NN::AclnnUtil::IsRegbase(curArch))) {
+    if (curArch != Ops::Base::DAV_2201 && (!Ops::NN::AclnnUtil::IsRegbase(curArch))) {
         return false;
     }
     return true;

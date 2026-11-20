@@ -30,9 +30,9 @@
  *        Hides base CopyInputBatch/TransInputBatch with wi-chunk versions
  *        (different signatures: wiBase/wiLen/wChunkAlign parameters).
  *
- * \arch Ascend950 / A5 / DAV_3510 only, RegBase (Reg) main path, VL = 256 Byte.
+ * \arch A5 / DAV_3510 only, RegBase (Reg) main path, VL = 256 Byte.
  *       [RegBase-native] Host-side gate: AdaptivePool2dBaseTiling::GetShapeAttrsInfo
- *       rejects GetCurNpuArch() != NpuArch::DAV_3510.
+ *       rejects GetCurNpuArch() != Ops::Base::DAV_3510.
  */
 
 #ifndef ADAPTIVE_AVG_POOL2D_SPLIT_C_H_

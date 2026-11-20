@@ -26,6 +26,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -76,7 +77,7 @@ static bool CheckNotNull(const aclTensor* weight, const aclTensor* indices, cons
 
 static bool CheckDtypeValid(const aclTensor* weight, const aclTensor* indices, const aclTensor* out)
 {
-    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 ||
+    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201 ||
                              Ops::NN::AclnnUtil::IsRegbase());
     const std::initializer_list<DataType>
         WEIGHT_DTYPE_SUPPORT_LIST = is910BSocVersion ? WEIGHT_DTYPE_SUPPORT_LIST_WITH_COMPLEX_AND_BF16 :
@@ -141,7 +142,7 @@ static aclnnStatus CheckParams(const aclTensor* weight, const aclTensor* indices
 
 static bool CheckHighperf(const aclTensor* weight, const aclTensor* indices)
 {
-    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
+    bool is910BSocVersion = (GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201);
     const int64_t indicesSize = indices->GetViewShape().GetShapeSize();
     const op::Shape weightShape = weight->GetViewShape();
     const int64_t weightSize = weightShape.GetShapeSize();

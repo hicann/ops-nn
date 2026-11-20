@@ -62,7 +62,7 @@ static string TilingData2Str(const gert::TilingData* tiling_data)
     return ss.str();
 }
 
-static void SetAscend950GlobalPlatformInfo()
+static void SetDAV3510GlobalPlatformInfo()
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
@@ -80,7 +80,7 @@ protected:
     static void SetUpTestCase()
     {
         std::cout << "AdaptiveAvgPool3dTiling950Test SetUp" << std::endl;
-        SetAscend950GlobalPlatformInfo();
+        SetDAV3510GlobalPlatformInfo();
     }
 
     static void TearDownTestCase() { std::cout << "AdaptiveAvgPool3dTiling950Test TearDown" << std::endl; }
@@ -180,9 +180,9 @@ static void ExecuteAdaptiveAvgPool3d950TestCase(gert::StorageShape xShape, gert:
     ASSERT_NE(raw_tiling, nullptr);
 }
 
-TEST_F(AdaptiveAvgPool3dTiling950Test, adaptive_avg_pool3d_gather_trans_float32_ascend950)
+TEST_F(AdaptiveAvgPool3dTiling950Test, adaptive_avg_pool3d_gather_trans_float32_DAV_3510)
 {
-    std::cout << "run case: adaptive_avg_pool3d_gather_trans_float32_ascend950" << std::endl;
+    std::cout << "run case: adaptive_avg_pool3d_gather_trans_float32_DAV_3510" << std::endl;
 
     gert::StorageShape xShape = {{19, 2883, 6, 6, 6}, {19, 2883, 6, 6, 6}};
     gert::StorageShape yShape = {{19, 2883, 5, 5, 6}, {19, 2883, 5, 5, 6}};
@@ -192,9 +192,9 @@ TEST_F(AdaptiveAvgPool3dTiling950Test, adaptive_avg_pool3d_gather_trans_float32_
 
     ExecuteAdaptiveAvgPool3d950TestCase(xShape, yShape, outputSize, dataFormat, dataType, 32);
 }
-TEST_F(AdaptiveAvgPool3dTiling950Test, adaptive_avg_pool3d_gather_trans_bfloat16_ascend950)
+TEST_F(AdaptiveAvgPool3dTiling950Test, adaptive_avg_pool3d_gather_trans_bfloat16_DAV_3510)
 {
-    std::cout << "run case: adaptive_avg_pool3d_gather_trans_bfloat16_ascend950" << std::endl;
+    std::cout << "run case: adaptive_avg_pool3d_gather_trans_bfloat16_DAV_3510" << std::endl;
 
     gert::StorageShape xShape = {{10791, 67, 4, 2, 2}, {10791, 67, 4, 2, 2}};
     gert::StorageShape yShape = {{10791, 67, 2, 1, 2}, {10791, 67, 2, 1, 2}};
@@ -204,9 +204,9 @@ TEST_F(AdaptiveAvgPool3dTiling950Test, adaptive_avg_pool3d_gather_trans_bfloat16
 
     ExecuteAdaptiveAvgPool3d950TestCase(xShape, yShape, outputSize, dataFormat, dataType, 32);
 }
-TEST_F(AdaptiveAvgPool3dTiling950Test, adaptive_avg_pool3d_gather_trans_float16_ascend950)
+TEST_F(AdaptiveAvgPool3dTiling950Test, adaptive_avg_pool3d_gather_trans_float16_DAV_3510)
 {
-    std::cout << "run case: adaptive_avg_pool3d_gather_trans_float16_ascend950" << std::endl;
+    std::cout << "run case: adaptive_avg_pool3d_gather_trans_float16_DAV_3510" << std::endl;
 
     gert::StorageShape xShape = {{4, 13776, 18, 2, 3}, {4, 13776, 18, 2, 3}};
     gert::StorageShape yShape = {{4, 13776, 9, 2, 2}, {4, 13776, 9, 2, 2}};

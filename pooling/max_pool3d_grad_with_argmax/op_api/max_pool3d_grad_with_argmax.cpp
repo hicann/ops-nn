@@ -20,6 +20,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 namespace l0op {
@@ -35,13 +36,13 @@ static const inline std::initializer_list<op::DataType> GetDtypeSupportListBySoc
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
-        case NpuArch::DAV_9202:
-        case NpuArch::DAV_9201:
-        case NpuArch::DAV_2201:
-        case NpuArch::DAV_3510: {
+        case Ops::Base::DAV_9202:
+        case Ops::Base::DAV_9201:
+        case Ops::Base::DAV_2201:
+        case Ops::Base::DAV_3510: {
             return GRAD_DTYPE_SUPPORT_LIST;
         }
-        case NpuArch::DAV_1001: {
+        case Ops::Base::DAV_1001: {
             return NULL_DTYPE_SUPPORT_LIST;
         }
         default: {

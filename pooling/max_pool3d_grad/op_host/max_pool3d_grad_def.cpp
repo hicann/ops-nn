@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -59,9 +60,8 @@ public:
             .ExtendCfgInfo("opFile.value", "max_pool3d_grad")
             .ExtendCfgInfo("opInterface.value", "max_pool3d_grad");
 
-        this->AICore().AddConfig("ascend950", aicore_config);
-        this->AICore().AddConfig("ascend350", aicore_config);
-        this->AICore().AddConfig("ascend960dt", aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicore_config);
     }
 };
 

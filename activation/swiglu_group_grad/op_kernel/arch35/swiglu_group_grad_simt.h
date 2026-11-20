@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad_simt.h
- * \brief SwigluGroupGrad SIMT kernel — arch35 Ascend950 (__simt_vf__)
+ * \brief SwigluGroupGrad SIMT kernel — arch35 DAV_3510 (__simt_vf__)
  *
  * SIMT programming model (per DESIGN.md §14):
  *   - __simt_vf__ per-thread scalar computation, no TPipe/TQue/TBuf

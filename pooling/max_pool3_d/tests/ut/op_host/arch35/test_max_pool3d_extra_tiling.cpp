@@ -33,8 +33,8 @@ using namespace std;
 using namespace ge;
 
 namespace {
-// ascend950: UB_SIZE 245760, CORE_NUM 64, NpuArch 3510 (regbase)
-const char* const MAX_POOL_3D_ASCEND950_COMPILE_INFO = R"({
+// DAV_3510: UB_SIZE 245760, CORE_NUM 64, NpuArch 3510 (regbase)
+const char* const MAX_POOL_3D_DAV_3510_COMPILE_INFO = R"({
     "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                       "Intrinsic_fix_pipe_l0c2out": false,
                       "Intrinsic_data_move_l12ub": true,
@@ -71,7 +71,7 @@ void ExecuteMaxPool3DCase(gert::StorageShape xShape, gert::StorageShape yShape, 
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    GetPlatFormInfos(MAX_POOL_3D_ASCEND950_COMPILE_INFO, soc_infos, aicore_spec, intrinsics, soc_version_infos);
+    GetPlatFormInfos(MAX_POOL_3D_DAV_3510_COMPILE_INFO, soc_infos, aicore_spec, intrinsics, soc_version_infos);
 
     // platform info
     fe::PlatFormInfos platform_info;

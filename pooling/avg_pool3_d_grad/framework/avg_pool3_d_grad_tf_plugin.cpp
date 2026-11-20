@@ -23,7 +23,7 @@ rtError_t rtGetSocVersion(char* version, const uint32_t maxLen);
 
 namespace domi {
 // Same regbase determination as max_pool_onnx_plugin: the -1 pads placeholder is only
-// delivered for regbase SoCs (Ascend950/Ascend350) where the arch35 tiling consumes it.
+// delivered for regbase SoCs (DAV_3510) where the arch35 tiling consumes it.
 static bool IsRegBasePlatform()
 {
     char socVersion[256] = {0};

@@ -10,7 +10,7 @@
 
 /*!
  * \file swiglu_group_grad_simt_tiling.cpp
- * \brief SwigluGroupGrad SIMT tiling implementation (arch35, Ascend950)
+ * \brief SwigluGroupGrad SIMT tiling implementation (arch35, DAV_3510)
  */
 
 #include <algorithm>
