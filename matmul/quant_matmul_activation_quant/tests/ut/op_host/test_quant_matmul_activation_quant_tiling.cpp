@@ -19,6 +19,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "log/log.h"
@@ -37,6 +38,7 @@
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_mx_basic_api_tiling.h"
 #include "matmul/quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
 #include "../../../op_host/op_tiling/quant_matmul_activation_quant_helper.h"
+#include "../../../op_host/op_tiling/quant_matmul_activation_mx_quant_tiling.h"
 #include "../../../op_kernel/arch35/quant_matmul_activation_quant_tiling_data.h"
 #include "ut_string_utils.h"
 #undef private
@@ -65,32 +67,35 @@ static const string kDav3510CompileInfo = R"({
 struct QuantMatmulActivationQuantTilingParam {
     std::string socVersion;
     std::string caseName;
+    std::string activationType = "gelu_tanh";
+    std::string quantMode = "mx";
+    std::string roundMode = "rint";
     gert::Shape x1Shape;
     gert::Shape x2OriginShape;
     gert::Shape x2StorageShape;
     gert::Shape x1ScaleShape;
     gert::Shape x2ScaleShape;
     gert::Shape biasShape;
-    bool hasBias = false;
+    gert::Shape x3Shape;
     gert::Shape yShape;
     gert::Shape yScaleShape;
-    bool x2IsNz = true;
-    bool transposeX1 = false;
-    bool transposeX2 = false;
+    int64_t groupSize = 0;
+    int64_t scaleAlg = 0;
+    int64_t expectTilingKey = -1;
     ge::DataType x1Dtype = ge::DT_FLOAT8_E4M3FN;
     ge::DataType x2Dtype = ge::DT_FLOAT8_E4M3FN;
     ge::DataType x1ScaleDtype = ge::DT_FLOAT8_E8M0;
     ge::DataType x2ScaleDtype = ge::DT_FLOAT8_E8M0;
     ge::DataType biasDtype = ge::DT_FLOAT;
+    ge::DataType x3Dtype = ge::DT_BF16;
     ge::DataType yDtype = ge::DT_FLOAT8_E4M3FN;
-    int64_t groupSize = 0;
-    std::string activationType = "gelu_tanh";
-    std::string quantMode = "mx";
-    std::string roundMode = "rint";
-    int64_t scaleAlg = 0;
     float dstTypeMax = 6.0f;
+    bool hasBias = false;
+    bool hasX3 = false;
+    bool x2IsNz = true;
+    bool transposeX1 = false;
+    bool transposeX2 = false;
     bool expectResult = true;
-    int64_t expectTilingKey = -1;
 };
 
 struct QuantMatmulActivationQuantTilingCsvLoadResult {
@@ -112,7 +117,7 @@ static QuantMatmulActivationQuantTilingCsvLoadResult LoadParams(const std::strin
 
     std::string line;
     bool skipHeader = true;
-    constexpr size_t kExpectedCols = 29UL;
+    constexpr size_t kExpectedCols = 31UL;
     size_t lineNo = 0UL;
     while (std::getline(csvData, line)) {
         ++lineNo;
@@ -172,6 +177,12 @@ static QuantMatmulActivationQuantTilingCsvLoadResult LoadParams(const std::strin
             param.expectResult = (strcasecmp(Trim(cols[idx++]).c_str(), "true") == 0);
             std::string tilingKeyStr = Trim(cols[idx++]);
             param.expectTilingKey = tilingKeyStr.empty() ? -1 : stoll(tilingKeyStr);
+            ++idx; // comment column
+            param.hasX3 = !Trim(cols[idx]).empty();
+            param.x3Shape = ParseShape(cols[idx++]);
+            if (!Trim(cols[idx]).empty()) {
+                param.x3Dtype = ParseDtype(Trim(cols[idx]));
+            }
 
             if (param.socVersion != socVersion) {
                 continue;
@@ -199,6 +210,28 @@ static const QuantMatmulActivationQuantTilingCsvLoadResult& GetParamsLoadResult(
 static std::vector<QuantMatmulActivationQuantTilingParam> GetParams() { return GetParamsLoadResult().params; }
 
 using QuantMatmulActivationQuantMxHelper = QuantMatmulActivationQuantHelper<AdaptiveSlidingWindowMXBasicAPITiling>;
+
+TEST(QuantMatmulActivationQuantContext, RejectsMissingRawTilingData)
+{
+    gert::StorageShape shape({1}, {1});
+    QuantBatchMatmulV3CompileInfo compileInfo{};
+    fe::PlatFormInfos platformInfo;
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("QuantMatmulActivationQuant")
+                      .NodeIoNum(6, 2)
+                      .InputShapes({&shape, &shape, nullptr, &shape, &shape, nullptr})
+                      .OutputShapes({&shape, &shape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(&platformInfo)
+                      .TilingData(nullptr)
+                      .Build();
+    auto* context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+    ASSERT_EQ(context->GetRawTilingData(), nullptr);
+    // Construction must not dereference framework storage before CheckContext.
+    QuantMatmulActivationQuantMXBasicAPITiling tiling(context);
+    EXPECT_EQ(tiling.CheckContext(), ge::GRAPH_FAILED);
+}
 
 // These two tests are white-box checks of the tail-search ordering.  They inject an
 // adaptive-window state that cannot be expressed by the public tiling CSV schema;
@@ -350,6 +383,10 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
     biasShape.MutableOriginShape() = param.biasShape;
     biasShape.MutableStorageShape() = param.biasShape;
 
+    gert::StorageShape x3Shape;
+    x3Shape.MutableOriginShape() = param.x3Shape;
+    x3Shape.MutableStorageShape() = param.x3Shape;
+
     gert::StorageShape yShape;
     yShape.MutableOriginShape() = param.yShape;
     yShape.MutableStorageShape() = param.yShape;
@@ -376,11 +413,12 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
 
     auto holder = gert::TilingContextFaker()
                       .SetOpType(opType)
-                      .NodeIoNum(5, 2)
-                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .NodeIoNum(6, 2)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, param.hasBias ? &biasShape : nullptr,
                                     param.x1ScaleShape.GetDimNum() > 0UL ? &x1ScaleShape : nullptr,
-                                    param.x2ScaleShape.GetDimNum() > 0UL ? &x2ScaleShape : nullptr})
+                                    param.x2ScaleShape.GetDimNum() > 0UL ? &x2ScaleShape : nullptr,
+                                    param.hasX3 ? &x3Shape : nullptr})
                       .OutputShapes({&yShape, &yScaleShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
@@ -390,6 +428,7 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
                       .NodeInputTd(2, param.biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(3, param.x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(4, param.x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, param.x3Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, param.yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs(
@@ -407,6 +446,20 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
                       .Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    // Faker packs absent inputs; verify IR lookup independently of that packing.
+    EXPECT_EQ(tilingContext->GetOptionalInputShape(QuantMatmulActivationQuantTilingConstant::BIAS_INDEX) != nullptr,
+              param.hasBias);
+    EXPECT_EQ(tilingContext->GetOptionalInputShape(QuantMatmulActivationQuantTilingConstant::X3_INDEX) != nullptr,
+              param.hasX3);
+    for (const auto& scale :
+         {std::make_pair(QuantMatmulActivationQuantTilingConstant::X1_SCALE_INDEX, &param.x1ScaleShape),
+          std::make_pair(QuantMatmulActivationQuantTilingConstant::X2_SCALE_INDEX, &param.x2ScaleShape)}) {
+        const auto* shape = tilingContext->GetOptionalInputShape(scale.first);
+        ASSERT_EQ(shape != nullptr, scale.second->GetDimNum() > 0UL);
+        if (shape != nullptr) {
+            EXPECT_EQ(shape->GetOriginShape(), *scale.second);
+        }
+    }
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
     tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
@@ -440,6 +493,10 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
                 EXPECT_EQ(data.nTailMain, 0U);
                 EXPECT_LE(ops::CeilAlign(static_cast<uint64_t>(data.baseM), 2UL) * data.baseN, 2UL * 64UL * 256UL);
                 EXPECT_LE(ops::CeilAlign(static_cast<uint64_t>(data.baseK), 64UL) * data.baseN, 65536UL / 2UL);
+            } else if (param.activationType == "sigmoid") {
+                EXPECT_EQ(data.activationType, QMMAQ::ActivationAlg::SIGMOID);
+                EXPECT_LE(data.baseM, 256U);
+                EXPECT_LE(data.baseN, 256U);
             } else if (param.activationType == "silu") {
                 EXPECT_EQ(data.activationType, QMMAQ::ActivationAlg::SILU);
             } else {
@@ -465,7 +522,9 @@ TEST_P(TestQuantMatmulActivationQuantTiling, generalTest)
         }
         const bool isSwiglu = param.activationType == "swiglu";
         const bool isSilu = param.activationType == "silu";
-        const uint64_t epilogueType = isSwiglu ? TPL_EPILOGUE_SWIGLU : (isSilu ? TPL_EPILOGUE_SILU : TPL_EPILOGUE_GELU);
+        const uint64_t epilogueType = param.activationType == "sigmoid" ? TPL_EPILOGUE_SIGMOID_MUL :
+                                      isSwiglu                          ? TPL_EPILOGUE_SWIGLU :
+                                                 (isSilu ? TPL_EPILOGUE_SILU : TPL_EPILOGUE_GELU);
         const uint64_t noFullLoadKey = GET_TPL_TILING_KEY(static_cast<uint64_t>(param.transposeX1),
                                                           static_cast<uint64_t>(param.transposeX2), batchMode,
                                                           TPL_NO_FULLLOAD, epilogueType);
@@ -493,6 +552,27 @@ TEST(QuantMatmulActivationQuantTilingCsv, ShouldLoadValidCases)
         ADD_FAILURE() << error;
     }
     EXPECT_FALSE(loadResult.params.empty());
+    for (const auto& param : loadResult.params) {
+        if (!param.expectResult || !param.x2IsNz) {
+            continue;
+        }
+        // Validate the fixture itself; public ACLNN tests cover rejection of invalid NZ storage.
+        const auto& logical = param.x2OriginShape;
+        const auto& storage = param.x2StorageShape;
+        const size_t rank = logical.GetDimNum();
+        ASSERT_GE(rank, 2UL) << param.caseName;
+        ASSERT_EQ(storage.GetDimNum(), rank + 2) << param.caseName;
+        constexpr int64_t nzRowBlock = 16;
+        const int64_t nzColumnBlock = param.x2Dtype == ge::DT_FLOAT4_E2M1 ? 64 : 32;
+        for (size_t dim = 0; dim + 2 < rank; ++dim) {
+            EXPECT_EQ(storage.GetDim(dim), logical.GetDim(dim)) << param.caseName;
+        }
+        EXPECT_EQ(storage.GetDim(rank - 2), (logical.GetDim(rank - 1) + nzColumnBlock - 1) / nzColumnBlock)
+            << param.caseName;
+        EXPECT_EQ(storage.GetDim(rank - 1), (logical.GetDim(rank - 2) + nzRowBlock - 1) / nzRowBlock) << param.caseName;
+        EXPECT_EQ(storage.GetDim(rank), nzRowBlock) << param.caseName;
+        EXPECT_EQ(storage.GetDim(rank + 1), nzColumnBlock) << param.caseName;
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(QuantMatmulActivationQuantTilingCsv, TestQuantMatmulActivationQuantTiling,

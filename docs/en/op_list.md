@@ -39,5 +39,15 @@ The operator categories and operator lists provided by this project are as follo
     <td>AI Core</td>
     <td>Asserts that the single-element condition tensor is non-zero; prints the message and fails the operator when it is 0, semantically aligned with PyTorch's torch._assert_async.</td>
   </tr>
+  <tr>
+    <td>matmul</td>
+    <td><a href="../../matmul/quant_matmul_activation_quant/README_en.md">quant_matmul_activation_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>Fuses quantized matrix multiplication, activation, and dynamic MX quantization. Supports GELU, SwiGLU, SiLU, and sigmoid followed by elementwise multiplication with x3.</td>
+  </tr>
 </tbody>
 </table>

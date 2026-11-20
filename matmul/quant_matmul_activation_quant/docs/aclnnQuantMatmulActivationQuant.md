@@ -25,15 +25,17 @@
 
 - 接口功能：融合MX（Microscaling，微缩放）量化矩阵乘、激活和动态MX量化，输出量化结果及对应的缩放因子（scale）。支持GELU（Gaussian Error Linear Unit，高斯误差线性单元）的tanh/erf形式、SiLU（Sigmoid Linear Unit，Sigmoid线性单元）及SwiGLU（Swish Gated Linear Unit，Swish门控线性单元）；x1、x2均为ND格式。数据类型及转置组合见[约束说明](#约束说明)。
 
+- sigmoid激活后需要逐元素相乘时，使用[aclnnQuantMatmulActivationQuantV2](aclnnQuantMatmulActivationQuantV2.md)接口，通过`x3Optional`传入乘数张量。
+
 <!-- npu="950" id7 -->
 
 - 计算流程：先完成MX量化矩阵乘及偏置相加，再计算激活，最后执行动态MX量化。
 
-以下公式省略batch下标，$X_1$、$X_2$表示按转置状态解释后的矩阵，形状分别为$(M,K)$、$(K,N)$。M为左矩阵的行数，K为公共归约维度，N为右矩阵的列数。
+  以下公式省略batch下标，$X_1$、$X_2$ 表示按转置状态解释后的矩阵，形状分别为 $(M,K)$、$(K,N)$。M为左矩阵的行数，K为公共归约维度，N为右矩阵的列数。
 
 ### MX量化矩阵乘
 
-沿K轴每32个元素划为一组，每组矩阵乘结果乘以对应的输入scale，再与偏置累加，得到$C$：
+沿K轴每32个元素划为一组，每组矩阵乘结果乘以对应的输入scale，再与偏置累加，得到 $C$：
 
 $$
 C_{m,n}=\sum_{j=0}^{L-1}\left[
@@ -41,11 +43,11 @@ C_{m,n}=\sum_{j=0}^{L-1}\left[
 S_{1,m,j}\,S_{2,j,n}\right]+b_n
 $$
 
-其中，$g_M$、$g_N$、$g_K$分别为M、N、K方向的分组大小，当前固定为$(1,1,32)$；$L=\lceil K/g_K\rceil$，$g_j=\min(g_K,K-jg_K)$。$S_1$、$S_2$分别表示`x1ScaleOptional`、`x2Scale`中第$j$组的scale，实际存储形状见[形状](#形状)。矩阵乘采用FP32累加，偏置在激活前相加；未传入偏置时，$b_n=0$。
+其中，$g_M$、$g_N$、$g_K$ 分别为M、N、K方向的分组大小，当前固定为 $(1,1,32)$；$L=\lceil K/g_K\rceil$，$g_j=\min(g_K,K-jg_K)$。$S_1$、$S_2$ 分别表示`x1ScaleOptional`、`x2Scale`中第 $j$ 组的scale，实际存储形状见[形状](#形状)。矩阵乘采用FP32累加，偏置在激活前相加；未传入偏置时，$b_n=0$。
 
 ### 激活
 
-对矩阵乘结果$C$应用指定的激活函数，得到$A$：
+对矩阵乘结果 $C$ 应用指定的激活函数，得到 $A$：
 
 - `activationType="gelu_tanh"`：GELU的tanh近似。
 
@@ -65,13 +67,13 @@ $$
   A=\operatorname{SiLU}(C)=\frac{C}{1+e^{-C}}
   $$
 
-- `activationType="swiglu"`：将$C$沿最后一维等分为左半部分$G$和右半部分$U$，对$G$计算SiLU后与$U$逐元素相乘。
+- `activationType="swiglu"`：将 $C$ 沿最后一维等分为左半部分 $G$ 和右半部分 $U$，对 $G$ 计算SiLU后与 $U$ 逐元素相乘。
 
   $$
   C=[G\mid U],\qquad A=\operatorname{SiLU}(G)\odot U=\frac{G}{1+e^{-G}}\odot U
   $$
 
-上述激活均在FP32中计算。记激活后的输出宽度为$H$：GELU和SiLU的$H=N$，SwiGLU的$H=N/2$。
+上述激活均在FP32中计算。记激活后的输出宽度为 $H$：GELU和SiLU的 $H=N$，SwiGLU的 $H=N/2$。
 
 ### 动态MX量化
 
@@ -81,7 +83,7 @@ $$
 V_i=\operatorname{BF16}_{RNE}(A_i),\qquad a=\max_i|V_i|,\qquad s=2^e
 $$
 
-每组共用一个scale $s$，按`roundMode`转换为输出数据类型$D$：
+每组共用一个scale $s$，按`roundMode`转换为输出数据类型 $D$：
 
 $$
 Q_i=\begin{cases}
@@ -90,11 +92,11 @@ Q_i=\begin{cases}
 \end{cases},\qquad (yOut)_i=\operatorname{Cast}_{D,\,\mathrm{roundMode}}(Q_i)
 $$
 
-`yScaleOut`使用FLOAT8_E8M0存储scale。第$j$组写入`yScaleOut[..., m, j // 2, j % 2]`，输出形状为`(..., M, ceil(H/64), 2)`。
+`yScaleOut`使用FLOAT8_E8M0存储scale。第 $j$ 组写入`yScaleOut[..., m, j // 2, j % 2]`，输出形状为`(..., M, ceil(H/64), 2)`。
 
 #### scale的计算方法
 
-以下公式适用于$a>0$且有限的情况，令$p=\lfloor\log_2a\rfloor$。
+以下公式适用于 $a>0$ 且有限的情况，令 $p=\lfloor\log_2a\rfloor$。
 
 - `scaleAlg=0`：OCP（Open Compute Project，开放计算项目）共享指数算法，支持FP8和FP4。
 
@@ -102,7 +104,7 @@ $$
   e=\max(-127,p-e_{\max})
   $$
 
-  FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1的$e_{\max}$分别为8、15、2。
+  FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1的 $e_{\max}$ 分别为8、15、2。
 
 - `scaleAlg=1`：按目标类型的最大有限值计算scale，仅支持FP8。
 
@@ -111,11 +113,11 @@ $$
   e=\max(-127,\lceil\log_2S\rceil)
   $$
 
-  FLOAT8_E4M3FN、FLOAT8_E5M2的$F_{\max}$分别为448、57344。
+  FLOAT8_E4M3FN、FLOAT8_E5M2的 $F_{\max}$ 分别为448、57344。
 
-- `scaleAlg=2`：按`dstTypeMax`指定的范围计算scale，仅支持FP4。令$d=\operatorname{FP32}(\mathrm{dstTypeMax})$，传入0时取$d=6$。
+- `scaleAlg=2`：按`dstTypeMax`指定的范围计算scale，仅支持FP4。令 $d=\operatorname{FP32}(\mathrm{dstTypeMax})$，传入0时取 $d=6$。
 
-  当$d=6$或$d=7$时：
+  当 $d=6$ 或 $d=7$ 时：
 
   $$
   e=\max\left(-127,\begin{cases}
@@ -124,17 +126,17 @@ $$
   \end{cases}\right)
   $$
 
-  当$d$为$[6,12]$内的其他值时：
+  当 $d$ 为 $[6,12]$ 内的其他值时：
 
   $$
   S=\operatorname{FP32}\left(a\cdot\operatorname{FP32}(1/d)\right),\qquad
   e=\max(-127,\lceil\log_2S\rceil)
   $$
 
-E8M0以字节值$e+127$编码$2^e$。特殊情况如下：
+E8M0以字节值 $e+127$ 编码 $2^e$。特殊情况如下：
 
-- 全零组的量化结果为0，scale的编码为0；输出scale中无对应数据分组的补齐位置也填入编码0。该编码表示$2^{-127}$。
-- $S=0$时取$e=-127$。算法0，以及算法2中$d=6$或$d=7$的分支，在scale编码为0时将该组量化结果置0。
+- 全零组的量化结果为0，scale的编码为0；输出scale中无对应数据分组的补齐位置也填入编码0。该编码表示 $2^{-127}$。
+- $S=0$ 时取 $e=-127$。算法0，以及算法2中 $d=6$ 或 $d=7$ 的分支，在scale编码为0时将该组量化结果置0。
 - 含NaN或Inf的组，scale的编码为255（NaN）。
 
 <!-- end id7 -->
@@ -176,7 +178,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 
 - **参数说明**
 
-  所有Tensor的数据均位于Device侧；除`biasOptional`可为nullptr外，Tensor参数均须提供且不能为空Tensor。
+  所有Tensor的数据均位于Device侧。传入的Tensor均不支持空Tensor，各输入能否传入`nullptr`见下表。
 
   <table style="table-layout: fixed; width: 1500px">
     <colgroup>
@@ -206,7 +208,12 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>x1（const aclTensor*）</td>
         <td>输入</td>
         <td>矩阵乘的左矩阵，对应公式中的X<sub>1</sub>。</td>
-        <td><ul> <li>不可为nullptr，不支持空Tensor。</li> <li>shape及转置限制见<a href="#形状">形状</a>和<a href="#数据类型与激活">数据类型与激活</a>。</li> </ul></td>
+        <td>
+          <ul>
+            <li>不可为nullptr，不支持空Tensor。</li>
+            <li>shape及转置限制见<a href="#形状">形状</a>和<a href="#数据类型与激活">数据类型与激活</a>。</li>
+          </ul>
+        </td>
         <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1</td>
         <td>ND</td>
         <td>2～6</td>
@@ -216,7 +223,12 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>x2（const aclTensor*）</td>
         <td>输入</td>
         <td>矩阵乘的右矩阵，对应公式中的X<sub>2</sub>。</td>
-        <td><ul> <li>不可为nullptr，不支持空Tensor。</li> <li>逻辑shape见<a href="#形状">形状</a>，存储要求见<a href="#布局与存储">布局与存储</a>。</li> </ul></td>
+        <td>
+          <ul>
+            <li>不可为nullptr，不支持空Tensor。</li>
+            <li>逻辑shape见<a href="#形状">形状</a>，存储要求见<a href="#布局与存储">布局与存储</a>。</li>
+          </ul>
+        </td>
         <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1</td>
         <td>ND</td>
         <td>2～6</td>
@@ -226,7 +238,12 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>x1ScaleOptional（const aclTensor*）</td>
         <td>输入</td>
         <td>x1沿K轴的分组scale，对应公式中的S<sub>1</sub>。</td>
-        <td><ul> <li>本接口仅支持MX模式，该输入必须提供，不可为nullptr。</li> <li>不支持空Tensor，batch维与x1一致。</li> </ul></td>
+        <td>
+          <ul>
+            <li>本接口仅支持MX模式，该输入必须提供，不可为nullptr。</li>
+            <li>不支持空Tensor，batch维与x1一致。</li>
+          </ul>
+        </td>
         <td>FLOAT8_E8M0</td>
         <td>ND</td>
         <td>3～7</td>
@@ -236,7 +253,12 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>x2Scale（const aclTensor*）</td>
         <td>输入</td>
         <td>x2沿K轴的分组scale，对应公式中的S<sub>2</sub>。</td>
-        <td><ul> <li>不可为nullptr，不支持空Tensor。</li> <li>batch维与x2一致。</li> </ul></td>
+        <td>
+          <ul>
+            <li>不可为nullptr，不支持空Tensor。</li>
+            <li>batch维与x2一致。</li>
+          </ul>
+        </td>
         <td>FLOAT8_E8M0</td>
         <td>ND</td>
         <td>3～7</td>
@@ -246,7 +268,12 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>biasOptional（const aclTensor*）</td>
         <td>可选输入</td>
         <td>在激活前相加的偏置，对应公式中的b。</td>
-        <td><ul> <li>shape为(N,)；三维输出还支持(B,1,N)。</li> <li>不使用时传nullptr；传入时不支持空Tensor。</li> </ul></td>
+        <td>
+          <ul>
+            <li>shape为(N,)；三维输出还支持(B,1,N)。</li>
+            <li>不使用时传nullptr；传入时不支持空Tensor。</li>
+          </ul>
+        </td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1或3</td>
@@ -256,7 +283,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>transposeX1（bool）</td>
         <td>输入</td>
         <td>是否转置x1的最后两维。</td>
-        <td><ul> <li>false表示不转置，true表示转置。</li> <li>支持的类型与激活组合见<a href="#数据类型与激活">数据类型与激活</a>。</li> <li>false表示不转置，true表示转置；可用组合见<a href="#约束说明">约束说明</a>。</li></ul></td>
+        <td>false表示不转置，true表示转置。支持的类型与激活组合见<a href="#数据类型与激活">数据类型与激活</a>。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -266,7 +293,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>transposeX2（bool）</td>
         <td>输入</td>
         <td>是否转置x2的最后两维。</td>
-        <td><ul> <li>false表示不转置，true表示转置。</li> <li>false表示不转置，true表示转置；可用组合见<a href="#约束说明">约束说明</a>。</li></ul></td>
+        <td>false表示不转置，true表示转置。支持的类型与激活组合见<a href="#数据类型与激活">数据类型与激活</a>。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -276,7 +303,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>groupSize（int64_t）</td>
         <td>输入</td>
         <td>输入量化在M、N、K方向的分组大小编码。</td>
-        <td><ul> <li>仅支持0或4295032864，均表示[1,1,32]。</li> </ul></td>
+        <td>仅支持0或4295032864，均表示[1,1,32]。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -286,7 +313,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>activationType（char*）</td>
         <td>输入</td>
         <td>激活类型。</td>
-        <td><ul> <li>支持"gelu_tanh"、"gelu_erf"、"silu"、"swiglu"。</li> <li>不可为nullptr。</li> </ul></td>
+        <td>支持"gelu_tanh"、"gelu_erf"、"silu"、"swiglu"。不可为nullptr。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -296,7 +323,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>quantMode（char*）</td>
         <td>输入</td>
         <td>量化模式。</td>
-        <td><ul> <li>仅支持"mx"，不可为nullptr。</li> </ul></td>
+        <td>仅支持"mx"，不可为nullptr。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -306,7 +333,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>roundMode（char*）</td>
         <td>输入</td>
         <td>输出量化的舍入模式。</td>
-        <td><ul> <li>FP8仅支持"rint"，表示舍入到最近的可表示值，中间值取尾数最低位为0的值。</li> <li>FP4还支持"floor"（向负无穷方向舍入）、"round"（舍入到最近的可表示值，中间值向远离0的方向舍入）。</li> <li>不可为nullptr。</li> </ul></td>
+        <td>FP8仅支持"rint"，表示舍入到最近的可表示值，中间值取尾数最低位为0的值。FP4还支持"floor"（向负无穷方向舍入）、"round"（舍入到最近的可表示值，中间值向远离0的方向舍入）。不可为nullptr。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -316,7 +343,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>scaleAlg（int64_t）</td>
         <td>输入</td>
         <td>输出scale的计算方法。</td>
-        <td><ul> <li>FP8支持0、1，FP4支持0、2。</li> <li>0为OCP共享指数算法，1按FP8最大有限值计算，2按dstTypeMax指定的范围计算。</li> </ul></td>
+        <td>FP8支持0、1，FP4支持0、2。0为OCP共享指数算法，1按FP8最大有限值计算，2按dstTypeMax指定的范围计算。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -326,7 +353,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>dstTypeMax（double）</td>
         <td>输入</td>
         <td>scaleAlg=2时计算输出scale所用的参考上限，对应公式中的d。</td>
-        <td><ul> <li>仅scaleAlg=2时生效：支持0.0（等价于6.0）或[6.0,12.0]内的有限值。</li> <li>其他算法忽略该参数。</li> </ul></td>
+        <td>仅scaleAlg=2时生效：支持0.0（等价于6.0）或[6.0,12.0]内的有限值。其他算法忽略该参数。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -336,27 +363,37 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>yOut（aclTensor*）</td>
         <td>输出</td>
         <td>动态量化结果，对应公式中的yOut。</td>
-        <td><ul> <li>不可为nullptr，不支持空Tensor。</li> <li>类型须与x1一致，shape为(batch,M,H)。</li> </ul></td>
+        <td>
+          <ul>
+            <li>不可为nullptr，不支持空Tensor。</li>
+            <li>类型须与x1一致，shape为(batch,M,H)。</li>
+          </ul>
+        </td>
         <td>FLOAT8_E4M3FN、FLOAT8_E5M2、FLOAT4_E2M1</td>
         <td>ND（兼容格式见<a href="#布局与存储">布局与存储</a>）</td>
         <td>2～6</td>
-        <td>√</td>
+        <td>×</td>
       </tr>
       <tr>
         <td>yScaleOut（aclTensor*）</td>
         <td>输出</td>
         <td>输出的分组scale，对应公式中的s。</td>
-        <td><ul> <li>不可为nullptr，不支持空Tensor。</li> <li>shape为(batch,M,ceil(H/64),2)。</li> </ul></td>
+        <td>
+          <ul>
+            <li>不可为nullptr，不支持空Tensor。</li>
+            <li>shape为(batch,M,ceil(H/64),2)。</li>
+          </ul>
+        </td>
         <td>FLOAT8_E8M0</td>
         <td>ND（兼容格式见<a href="#布局与存储">布局与存储</a>）</td>
         <td>3～7</td>
-        <td>√</td>
+        <td>×</td>
       </tr>
       <tr>
         <td>workspaceSize（uint64_t*）</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小，单位为字节。</td>
-        <td><ul> <li>不可为nullptr。</li> </ul></td>
+        <td>不可为nullptr。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -366,7 +403,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
         <td>executor（aclOpExecutor**）</td>
         <td>输出</td>
         <td>返回op执行器，包含了算子计算流程。</td>
-        <td><ul> <li>不可为nullptr。</li> </ul></td>
+        <td>不可为nullptr。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -381,7 +418,7 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
-  第一段接口完成入参校验，出现以下场景时报错：
+  第一段接口的参数校验错误如下。
 
   <table style="table-layout: fixed; width: 1000px">
     <colgroup>
@@ -405,20 +442,18 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
       <tr>
         <td>ACLNN_ERR_PARAM_INVALID</td>
         <td>161002</td>
-        <td>Tensor的数据类型、格式、形状、广播关系、stride或访问范围不满足约束；或字符串参数为空指针、属性取值及组合不合法。</td>
-      </tr>
-      <tr>
-        <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
-        <td>561101</td>
-        <td>创建算子执行器失败。</td>
-      </tr>
-      <tr>
-        <td>ACLNN_ERR_INNER_NULLPTR</td>
-        <td>561103</td>
-        <td>内部Tensor创建、预处理、算子计算或结果拷贝失败，返回空指针。</td>
+        <td>
+          <ul>
+            <li>传入了空Tensor，或Tensor的数据类型、格式、形状、广播关系、步长或存储访问范围不满足约束。</li>
+            <li>矩阵与配套MX scale的转置视图不匹配。</li>
+            <li>属性取值或组合不合法，或<code>activationType</code>、<code>quantMode</code>、<code>roundMode</code>为空指针。</li>
+          </ul>
+        </td>
       </tr>
     </tbody>
   </table>
+
+  当前设备架构不受支持时返回`ACLNN_ERR_RUNTIME_ERROR`。创建执行器失败时返回`ACLNN_ERR_INNER_CREATE_EXECUTOR`。准备Tensor视图、将输入转为连续存储或添加计算及拷贝任务时遇到内部空指针，返回`ACLNN_ERR_INNER_NULLPTR`。
 
 ## aclnnQuantMatmulActivationQuant
 
@@ -465,12 +500,17 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
-  执行器运行失败时返回ACLNN_ERR_INNER（561000）。
+  | 返回码/状态码 | 码值 | 描述 |
+  | --- | --- | --- |
+  | ACLNN_ERR_INNER | 561000 | 执行器运行算子失败。 |
 
 ## 约束说明
 
 - x1、x2的逻辑维数为2～6，各维度必须为已知正整数。
-- x1、x2的各逻辑维度及广播后的batch维乘积不超过$2^{32}-1$，激活前输出元素数不超过$2^{63}-1$。
+- 所有输入和输出Tensor（含scale和已传入的可选Tensor）的每个逻辑维度都须在 $[1,2^{32}-1]$ 内。
+- 各存储维度须为正整数。每个Tensor的逻辑元素总数和存储元素总数分别按对应形状的各维乘积计算，均不超过 $2^{63}-1$。FP4按4位元素计数。
+- 广播后的batch维乘积`batchSize`不超过 $2^{32}-1$。`batchSize`仅计算batch维，不包含M、K、N；无batch维时取1。
+- 激活前输出元素数`batchSize * M * N`不超过 $2^{63}-1$，其中N为激活前矩阵乘输出的列数。
 
 ### 数据类型与激活
 
@@ -514,9 +554,10 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 ### 布局与存储
 
 - yOut和yScaleOut支持ND及与ND兼容的NCHW、NHWC、HWCN、NCDHW、NDHWC、NCL基础格式，不支持私有格式；输出shape仍须满足上述约定。
-- ND输入和输出的stride、offset须非负，shape、stride和offset确定的全部访问位置须位于storage内。支持满足上述条件的非零offset切片；FP4的offset以逻辑元素计数，须为偶数。
-- x1、x2、两个输入scale和biasOptional支持[非连续Tensor](../../../docs/zh/context/non_contiguous_tensor.md)。输出支持非连续Tensor。
+- ND输入和输出的stride、offset须非负，shape、stride和offset确定的全部访问位置须位于storage内。非零offset切片还须满足下述连续性要求。FP4的offset以逻辑元素计数，须为偶数。
+- x1、x2、两个输入scale和biasOptional支持[非连续Tensor](../../../docs/zh/context/non_contiguous_tensor.md)。`yOut`和`yScaleOut`均须为连续Tensor。
 - 以末两轴的转置视图传入矩阵时，配套scale须交换倒数第3、倒数第2轴，末维2保持不变。若同时使用转置视图并将对应的transposeX1/transposeX2设为true，两次转置相互抵消；上表的转置限制按最终有效转置状态判断。
+- 对于连续布局和标准转置视图，矩阵与配套scale的转置视图状态须一致；scale待交换的两根轴中有长度为1的轴时，也接受交换这两轴后的等价shape；交换后须与要求的完整shape一致，batch维和末维2仍须匹配。显式设置transposeX1/transposeX2为true，并不要求Tensor本身采用转置视图。
 
 ### 确定性/Batch一致性
 
@@ -528,11 +569,13 @@ aclnnStatus aclnnQuantMatmulActivationQuant(
 
 ## 调用示例
 
-以下示例使用FLOAT8_E4M3FN输入、GELU（tanh）激活和`scaleAlg=0`。
+### FP8（GELU）
+
+以下示例使用FP8（E4M3FN）矩阵、E8M0输入scale和GELU（tanh）激活，采用MX量化，设置`scaleAlg=0`。
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
-其他示例见[GELU样例](../examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp)和[SwiGLU样例](../examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp)。
+V2接口的其他示例见[FP8（GELU）样例](../examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp)和[FP8（SwiGLU）样例](../examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp)。
 
 ```cpp
 // ND weights: QuantMatmul + GELU(tanh) + MXFP8 quantization.
@@ -610,13 +653,13 @@ int AclnnQuantMatmulGeluMxQuantTest(aclrtStream stream)
     int64_t n = 128;
     bool transposeX1 = false;
     bool transposeX2 = false;
-    constexpr int64_t MX_SCALE_BLOCK_SIZE = 64; // scale块对齐大小，用于计算scale shape
+    constexpr int64_t mxScaleBlockSize = 64; // scale块对齐大小，用于计算scale shape
     std::vector<int64_t> x1Shape = {m, k};
     std::vector<int64_t> x2Shape = {k, n};
-    std::vector<int64_t> x1ScaleShape = {m, (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
-    std::vector<int64_t> x2ScaleShape = {(k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, n, 2};
+    std::vector<int64_t> x1ScaleShape = {m, (k + mxScaleBlockSize - 1) / mxScaleBlockSize, 2};
+    std::vector<int64_t> x2ScaleShape = {(k + mxScaleBlockSize - 1) / mxScaleBlockSize, n, 2};
     std::vector<int64_t> outShape = {m, n};
-    std::vector<int64_t> outScaleShape = {m, (n + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
+    std::vector<int64_t> outScaleShape = {m, (n + mxScaleBlockSize - 1) / mxScaleBlockSize, 2};
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;
     void* x1ScaleDeviceAddr = nullptr;
@@ -672,13 +715,13 @@ int AclnnQuantMatmulGeluMxQuantTest(aclrtStream stream)
     // 3. 调用算子的两段式接口。
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
-    int64_t groupSizeValue = 4295032864;
+    constexpr int64_t groupSizeValue = 0; // Use the default MX group sizes [1, 1, 32].
     char activationType[] = "gelu_tanh";
     char quantMode[] = "mx";
     char roundMode[] = "rint";
-    ret = aclnnQuantMatmulActivationQuantGetWorkspaceSize(x1, x2, x1Scale, x2Scale, bias, transposeX1, transposeX2,
-                                                          groupSizeValue, activationType, quantMode, roundMode, 0, 0.0,
-                                                          out, outScale, &workspaceSize, &executor);
+    ret = aclnnQuantMatmulActivationQuantGetWorkspaceSize(
+        x1, x2, x1Scale, x2Scale, bias, transposeX1, transposeX2, groupSizeValue, activationType,
+        quantMode, roundMode, 0, 0.0, out, outScale, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulActivationQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存

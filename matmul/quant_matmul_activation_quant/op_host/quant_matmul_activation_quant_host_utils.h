@@ -25,6 +25,7 @@ constexpr uint32_t X2_INDEX = 1;
 constexpr uint32_t BIAS_INDEX = 2;
 constexpr uint32_t X1_SCALE_INDEX = 3;
 constexpr uint32_t X2_SCALE_INDEX = 4;
+constexpr uint32_t X3_INDEX = 5;
 
 constexpr uint32_t Y_OUTPUT_INDEX = 0;
 constexpr uint32_t Y_SCALE_OUTPUT_INDEX = 1;

@@ -26,6 +26,7 @@ using namespace QuantMatmulActivationQuantTilingConstant;
 using Ops::NN::FormatString;
 
 namespace {
+constexpr size_t MATRIX_RANK = 2UL;
 constexpr size_t BATCH_BIAS_RANK = 3UL;
 constexpr int64_t BATCH_BIAS_BROADCAST_SIZE = 1L;
 
@@ -50,6 +51,32 @@ ge::graphStatus QuantMatmulActivationQuantHelper<BaseT>::GetShapeAttrsInfo()
 {
     this->tilingDataSize_ = sizeof(QMMAQ::QMMAQTilingData);
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
+}
+
+template <typename BaseT>
+ge::graphStatus QuantMatmulActivationQuantHelper<BaseT>::CheckContext()
+{
+    auto* rawTilingData = this->context_->GetRawTilingData();
+    OPS_CHECK_NULL_WITH_CONTEXT(this->context_, rawTilingData);
+    OPS_CHECK_NULL_WITH_CONTEXT(this->context_, rawTilingData->GetData());
+    OPS_CHECK_NULL_WITH_CONTEXT(this->context_, this->context_->GetAttrs());
+    // These are IR indices: optional bias/x3 must not shift the scale inputs.
+    for (const auto index : {X1_INDEX, X2_INDEX, X1_SCALE_INDEX, X2_SCALE_INDEX}) {
+        OPS_CHECK_NULL_WITH_CONTEXT(this->context_, this->context_->GetOptionalInputShape(index));
+        OPS_CHECK_NULL_WITH_CONTEXT(this->context_, this->context_->GetOptionalInputDesc(index));
+    }
+    for (const auto index : {Y_OUTPUT_INDEX, Y_SCALE_OUTPUT_INDEX}) {
+        OPS_CHECK_NULL_WITH_CONTEXT(this->context_, this->context_->GetOutputShape(index));
+        OPS_CHECK_NULL_WITH_CONTEXT(this->context_, this->context_->GetOutputDesc(index));
+    }
+    // Clear framework storage only after validation, where failure can propagate.
+    if (!this->isTilingOut_) {
+        const auto capacity = rawTilingData->GetCapacity();
+        OP_TILING_CHECK(memset_s(rawTilingData->GetData(), capacity, 0, capacity) != EOK,
+                        ReportQmmaqParamError(this->inputParams_.opName, "Failed to clear tiling data."),
+                        return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
 template <typename BaseT>
@@ -382,15 +409,17 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeAttrs()
                 return false);
     std::string activationType(activationTypePtr);
     OP_CHECK_IF(!(activationType == "gelu_tanh" || activationType == "gelu_erf" || activationType == "swiglu" ||
-                  activationType == "silu"),
+                  activationType == "silu" || activationType == "sigmoid"),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "activationType", activationType,
                                                       "activationType must be one of gelu_tanh, gelu_erf, swiglu, or "
-                                                      "silu."),
+                                                      "silu or sigmoid."),
                 return false);
     if (activationType == "swiglu") {
         activationType_ = QMMAQ::ActivationAlg::SWIGLU;
     } else if (activationType == "silu") {
         activationType_ = QMMAQ::ActivationAlg::SILU;
+    } else if (activationType == "sigmoid") {
+        activationType_ = QMMAQ::ActivationAlg::SIGMOID;
     } else if (activationType == "gelu_erf") {
         activationType_ = QMMAQ::ActivationAlg::ERF;
     } else {
@@ -420,11 +449,11 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeAttrs()
                                                       "only rint; FP4 supports all three modes."),
                 return false);
     if (roundMode == "round") {
-        roundMode_ = QMMAQ::MX_QUANT_ROUND_MODE::ROUND;
+        roundMode_ = QMMAQ::MxQuantRoundMode::ROUND;
     } else if (roundMode == "floor") {
-        roundMode_ = QMMAQ::MX_QUANT_ROUND_MODE::FLOOR;
+        roundMode_ = QMMAQ::MxQuantRoundMode::FLOOR;
     } else {
-        roundMode_ = QMMAQ::MX_QUANT_ROUND_MODE::RINT;
+        roundMode_ = QMMAQ::MxQuantRoundMode::RINT;
     }
 
     const int64_t* scaleAlg = attrs->template GetAttrPointer<int64_t>(ATTR_INDEX_SCALE_ALG);
@@ -472,7 +501,7 @@ bool QuantMatmulActivationQuantHelper<BaseT>::AnalyzeDtype()
     this->inputParams_.perTokenScaleDtype = pertokenScaleDesc != nullptr ? pertokenScaleDesc->GetDataType() :
                                                                            this->inputParams_.perTokenScaleDtype;
 
-    // 输出y
+    // The Cube output consumed by the activation epilogue is FP32, before quantization to y.
     auto outDesc = this->context_->GetOutputDesc(Y_OUTPUT_INDEX);
     OP_CHECK_IF(
         outDesc == nullptr,
@@ -520,6 +549,19 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckDtype() const
     auto yDtype = outDesc->GetDataType();
     auto yScaleDtype = outScaleDesc->GetDataType();
 
+    const auto* x3Shape = this->context_->GetOptionalInputShape(X3_INDEX);
+    const auto* x3Desc = this->context_->GetOptionalInputDesc(X3_INDEX);
+    const bool sigmoid = activationType_ == QMMAQ::ActivationAlg::SIGMOID;
+    OP_CHECK_IF(sigmoid != (x3Shape != nullptr),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x3", "invalid presence",
+                                                      "x3 is required for sigmoid and absent for other activations"),
+                return false);
+    OP_CHECK_IF(sigmoid && (x3Desc == nullptr || x3Desc->GetDataType() != ge::DT_BF16 ||
+                            ge::GetPrimaryFormat(x3Desc->GetStorageFormat()) != ge::FORMAT_ND),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x3", "invalid dtype/format",
+                                                      "x3 must be BF16 ND"),
+                return false);
+
     bool isMxFp8 = IsFp8Dtype(this->inputParams_.aDtype) && IsFp8Dtype(this->inputParams_.bDtype);
     bool isFp4 = IsFp4Dtype(this->inputParams_.aDtype) && IsFp4Dtype(this->inputParams_.bDtype);
     OP_CHECK_IF(
@@ -529,7 +571,8 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckDtype() const
             ge::TypeUtils::DataTypeToSerialString(this->inputParams_.biasDtype).c_str(),
             "the dtype of bias must be FLOAT"),
         return false);
-    if (activationType_ == QMMAQ::ActivationAlg::SWIGLU || activationType_ == QMMAQ::ActivationAlg::SILU) {
+    if (activationType_ == QMMAQ::ActivationAlg::SWIGLU || activationType_ == QMMAQ::ActivationAlg::SILU ||
+        activationType_ == QMMAQ::ActivationAlg::SIGMOID) {
         const auto isNd = [](const auto* desc) {
             return desc != nullptr && ge::GetPrimaryFormat(desc->GetStorageFormat()) == ge::FORMAT_ND;
         };
@@ -546,17 +589,18 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckDtype() const
                           !isNd(this->context_->GetOptionalInputDesc(BIAS_INDEX))) ||
                          (this->inputParams_.transA && x2Format == ge::FORMAT_FRACTAL_NZ)),
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                        this->inputParams_.opName, "SwiGLU/SiLU input formats", "unsupported",
-                        "SwiGLU and SiLU require ND x1/scales/outputs/bias and ND x2 or E4M3FN "
+                        this->inputParams_.opName, "SwiGLU/SiLU/sigmoid input formats", "unsupported",
+                        "SwiGLU, SiLU and sigmoid require ND x1/scales/outputs/bias and ND x2 or E4M3FN "
                         "FRACTAL_NZ x2; transposeX1 is only supported with ND x2"),
                     return false);
     }
 
-    OP_CHECK_IF(
-        (activationType_ == QMMAQ::ActivationAlg::SWIGLU || activationType_ == QMMAQ::ActivationAlg::SILU) && !isMxFp8,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(this->inputParams_.opName, "x1, x2", "non-FP8",
-                                               "SwiGLU and SiLU MX only support MXFP8 inputs"),
-        return false);
+    OP_CHECK_IF((activationType_ == QMMAQ::ActivationAlg::SWIGLU || activationType_ == QMMAQ::ActivationAlg::SILU ||
+                 activationType_ == QMMAQ::ActivationAlg::SIGMOID) &&
+                    !isMxFp8,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(this->inputParams_.opName, "x1, x2", "non-FP8",
+                                                       "SwiGLU, SiLU and sigmoid MX only support MXFP8 inputs"),
+                return false);
 
     OP_CHECK_IF(yDtype != this->inputParams_.aDtype,
                 OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
@@ -614,7 +658,7 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckDtype() const
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "attrs", "null", "attrs cannot be null"),
         return false);
     const char* roundModePtr = attrs->template GetAttrPointer<char>(ATTR_INDEX_ROUND_MODE);
-    OP_CHECK_IF(isMxFp8 && roundMode_ != QMMAQ::MX_QUANT_ROUND_MODE::RINT,
+    OP_CHECK_IF(isMxFp8 && roundMode_ != QMMAQ::MxQuantRoundMode::RINT,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "roundMode",
                                                       roundModePtr != nullptr ? roundModePtr : "null",
                                                       "roundMode must be rint for FP8 MX quantization."),
@@ -850,6 +894,20 @@ bool QuantMatmulActivationQuantHelper<BaseT>::CheckBiasAndOutputShapes(const ger
                                                       "y and yScale shapes are required"),
                 return false);
     const auto& yShape = yStorage->GetOriginShape();
+    if (activationType_ == QMMAQ::ActivationAlg::SIGMOID) {
+        const auto* x3Shape = this->context_->GetOptionalInputShape(X3_INDEX);
+        OP_CHECK_IF(x1Shape.GetDimNum() != MATRIX_RANK || x2Shape.GetDimNum() != MATRIX_RANK ||
+                        yShape.GetDimNum() != MATRIX_RANK ||
+                        (x3Shape != nullptr && x3Shape->GetOriginShape().GetDimNum() != MATRIX_RANK),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        this->inputParams_.opName, "x1/x2/x3/y ranks", "batch is not supported",
+                        "x1, x2, x3 and y must have 2D logical shapes when x3 is provided"),
+                    return false);
+        OP_CHECK_IF(x3Shape == nullptr || x3Shape->GetOriginShape() != yShape,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(this->inputParams_.opName, "x3 shape", "mismatch",
+                                                          "x3 must have the same shape as y"),
+                    return false);
+    }
     const auto& scaleShape = scaleStorage->GetOriginShape();
     OP_CHECK_IF(yShape.GetDimNum() != rank || scaleShape.GetDimNum() != rank + 1,
                 OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
@@ -925,19 +983,6 @@ template <typename BaseT>
 uint64_t QuantMatmulActivationQuantHelper<BaseT>::GetBatchCoreCnt() const
 {
     return this->inputParams_.batchC;
-}
-
-// 清空并重置Tiling数据结构，准备新的tiling计算
-template <typename BaseT>
-void QuantMatmulActivationQuantHelper<BaseT>::ResetActivationQuantTilingData(QMMAQ::QMMAQTilingData& tilingData)
-{
-    if (!this->isTilingOut_) {
-        tilingData = QMMAQ::QMMAQTilingData();
-        OP_TILING_CHECK(
-            memset_s(this->context_->GetRawTilingData()->GetData(), this->context_->GetRawTilingData()->GetCapacity(),
-                     0, this->context_->GetRawTilingData()->GetCapacity()) != EOK,
-            ReportQmmaqParamError(this->inputParams_.opName, "Failed to clear tiling data."), return);
-    }
 }
 
 // Project the host calculator result onto the fields consumed by this operator.

@@ -9,7 +9,25 @@
  */
 // Compile this source for each CSV dtype/layout group. The production entry uses DTYPE
 // macros, so each specialization needs its own translation unit and entry name.
-#if defined(QMMAQ_UT_E4M3_WEIGHT_NZ)
+#if defined(QMMAQ_UT_FP4) || defined(QMMAQ_UT_FP4_WEIGHT_NZ)
+#define DTYPE_X1 fp4x2_e2m1_t
+#define DTYPE_X2 fp4x2_e2m1_t
+#define DTYPE_Y fp4x2_e2m1_t
+#define ORIG_DTYPE_X1 DT_FLOAT4_E2M1
+#define ORIG_DTYPE_X2 DT_FLOAT4_E2M1
+#define ORIG_DTYPE_Y DT_FLOAT4_E2M1
+#if defined(QMMAQ_UT_FP4_WEIGHT_NZ)
+#define quant_matmul_activation_quant quant_matmul_activation_quant_fp4_weight_nz_ut
+#define QMMAQ_KERNEL_SUITE QuantMatmulActivationQuantFp4WeightNzKernel
+#define QMMAQ_CSV_SUITE QuantMatmulActivationQuantFp4WeightNzKernelCsv
+#define QMMAQ_CSV_TARGET "QMMAQ_FP4_WEIGHT_NZ"
+#else
+#define quant_matmul_activation_quant quant_matmul_activation_quant_fp4_ut
+#define QMMAQ_KERNEL_SUITE QuantMatmulActivationQuantFp4Kernel
+#define QMMAQ_CSV_SUITE QuantMatmulActivationQuantFp4KernelCsv
+#define QMMAQ_CSV_TARGET "QMMAQ_FP4"
+#endif
+#elif defined(QMMAQ_UT_E4M3_WEIGHT_NZ)
 #define DTYPE_X1 fp8_e4m3fn_t
 #define DTYPE_X2 fp8_e4m3fn_t
 #define DTYPE_Y fp8_e4m3fn_t
@@ -60,7 +78,7 @@
 #define __CCE_AICORE__ 310
 #endif
 #include "quant_matmul_activation_quant_cpu_debug_stub.h"
-#if defined(QMMAQ_UT_E4M3_WEIGHT_NZ)
+#if defined(QMMAQ_UT_E4M3_WEIGHT_NZ) || defined(QMMAQ_UT_FP4_WEIGHT_NZ)
 #if !defined(FORMAT_FRACTAL_NZ)
 #define FORMAT_FRACTAL_NZ 0x7FFFFFFF
 #define QMMAQ_UT_LOCAL_FORMAT_FRACTAL_NZ

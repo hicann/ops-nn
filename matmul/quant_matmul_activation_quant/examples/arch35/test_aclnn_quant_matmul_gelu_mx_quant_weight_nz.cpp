@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnnop/aclnn_quant_matmul_activation_quant_weight_nz.h"
+#include "aclnnop/aclnn_quant_matmul_activation_quant_weight_nz_v2.h"
 #include "aclnnop/aclnn_trans_matmul_weight.h"
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -127,13 +127,13 @@ int AclnnQuantMatmulGeluMxQuantWeightNzTest(aclrtStream stream)
     int64_t n = 128;
     bool transposeX1 = false;
     bool transposeX2 = true;
-    constexpr int64_t MX_SCALE_BLOCK_SIZE = 64; // scale块对齐大小，用于计算scale shape
+    constexpr int64_t mxScaleBlockSize = 64; // scale块对齐大小，用于计算scale shape
     std::vector<int64_t> x1Shape = {m, k};
     std::vector<int64_t> x2Shape = {n, k};
-    std::vector<int64_t> x1ScaleShape = {m, (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
-    std::vector<int64_t> x2ScaleShape = {n, (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
+    std::vector<int64_t> x1ScaleShape = {m, (k + mxScaleBlockSize - 1) / mxScaleBlockSize, 2};
+    std::vector<int64_t> x2ScaleShape = {n, (k + mxScaleBlockSize - 1) / mxScaleBlockSize, 2};
     std::vector<int64_t> outShape = {m, n};
-    std::vector<int64_t> outScaleShape = {m, (n + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
+    std::vector<int64_t> outScaleShape = {m, (n + mxScaleBlockSize - 1) / mxScaleBlockSize, 2};
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;
     void* x1ScaleDeviceAddr = nullptr;
@@ -207,15 +207,15 @@ int AclnnQuantMatmulGeluMxQuantWeightNzTest(aclrtStream stream)
 
     workspaceSize = 0;
     executor = nullptr;
-    int64_t groupSizeValue = 4295032864;
+    constexpr int64_t groupSizeValue = 0; // Use the default MX group sizes [1, 1, 32].
     char activationType[] = "gelu_tanh";
     char quantMode[] = "mx";
     char roundMode[] = "rint";
-    ret = aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize(
-        x1, x2, x1Scale, x2Scale, bias, transposeX1, transposeX2, groupSizeValue, activationType, quantMode, roundMode,
-        0, 0.0, out, outScale, &workspaceSize, &executor);
+    ret = aclnnQuantMatmulActivationQuantWeightNzV2GetWorkspaceSize(
+        x1, x2, x1Scale, x2Scale, bias, nullptr, transposeX1, transposeX2, groupSizeValue, activationType, quantMode,
+        roundMode, 0, 0.0, out, outScale, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS,
-              LOG_PRINT("aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
+              LOG_PRINT("aclnnQuantMatmulActivationQuantWeightNzV2GetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -225,9 +225,9 @@ int AclnnQuantMatmulGeluMxQuantWeightNzTest(aclrtStream stream)
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
-    // 调用aclnnQuantMatmulActivationQuantWeightNz第二段接口
-    ret = aclnnQuantMatmulActivationQuantWeightNz(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulActivationQuantWeightNz failed. ERROR: %d\n", ret);
+    // 调用aclnnQuantMatmulActivationQuantWeightNzV2第二段接口
+    ret = aclnnQuantMatmulActivationQuantWeightNzV2(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulActivationQuantWeightNzV2 failed. ERROR: %d\n", ret);
               return ret);
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);

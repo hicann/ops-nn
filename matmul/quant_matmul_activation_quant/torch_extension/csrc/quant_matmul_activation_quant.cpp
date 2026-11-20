@@ -11,6 +11,8 @@
 #include <torch/extension.h>
 #include <string>
 #include "aclnn_common.h"
+#include "op_common/op_host/util/math_util.h"
+
 namespace {
 constexpr int64_t ALIGN_NUM = 2;
 constexpr int64_t BLOCK_SIZE = 32;
@@ -20,37 +22,22 @@ static const size_t OFFSET_16_BITS = 16;
 static const uint64_t GROUP_MAX = 65535UL;
 static const size_t GROUP_DIM = 3;
 
-int64_t CeilDiv(int64_t value, int64_t factor)
-{
-    int64_t value_num = 0;
-    if (factor == 0) {
-        return value_num;
-    }
-    if (value % factor == 0) {
-        value_num = value / factor;
-    } else {
-        value_num = value / factor + 1;
-    }
-
-    return value_num;
-}
-
-int64_t CheckAndGetGroupSize(at::IntArrayRef group_size_list)
+int64_t CheckAndGetGroupSize(at::IntArrayRef groupSizes)
 {
     int64_t groups = 0;
-    if (group_size_list.empty()) {
+    if (groupSizes.empty()) {
         return groups;
     }
-    size_t group_dim = group_size_list.size();
-    TORCH_CHECK(group_dim == GROUP_DIM, "group_sizes only support input with three elements, but got ", group_dim);
-    int64_t group_m = static_cast<int64_t>(group_size_list[0]);
-    int64_t group_n = static_cast<int64_t>(group_size_list[1]);
-    int64_t group_k = static_cast<int64_t>(group_size_list[2]);
-    bool isValidGroupParam = ((group_m <= GROUP_MAX && group_m >= 0) && (group_n <= GROUP_MAX && group_n >= 0) &&
-                              (group_k <= GROUP_MAX && group_k >= 0));
+    size_t groupDim = groupSizes.size();
+    TORCH_CHECK(groupDim == GROUP_DIM, "group_sizes only support input with three elements, but got ", groupDim);
+    int64_t groupM = static_cast<int64_t>(groupSizes[0]);
+    int64_t groupN = static_cast<int64_t>(groupSizes[1]);
+    int64_t groupK = static_cast<int64_t>(groupSizes[2]);
+    bool isValidGroupParam = ((groupM <= GROUP_MAX && groupM >= 0) && (groupN <= GROUP_MAX && groupN >= 0) &&
+                              (groupK <= GROUP_MAX && groupK >= 0));
     TORCH_CHECK(isValidGroupParam, "group param value must conform to range [0, 65535]");
-    groups = static_cast<int64_t>((static_cast<uint64_t>(group_m) << OFFSET_32_BITS) +
-                                  (static_cast<uint64_t>(group_n) << OFFSET_16_BITS) + static_cast<uint64_t>(group_k));
+    groups = static_cast<int64_t>((static_cast<uint64_t>(groupM) << OFFSET_32_BITS) +
+                                  (static_cast<uint64_t>(groupN) << OFFSET_16_BITS) + static_cast<uint64_t>(groupK));
     return groups;
 }
 
@@ -82,28 +69,31 @@ static bool IsTransposeLastTwoDims(const at::Tensor& tensor)
 namespace cann_ops_nn {
 namespace matmul {
 
-std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
-    const at::Tensor& x1, const at::Tensor& x2, const at::Tensor& x2_scale, const c10::optional<at::Tensor>& x1_scale,
-    const c10::optional<at::Tensor>& bias, c10::optional<int64_t> output_dtype, c10::optional<int64_t> x1_dtype,
-    c10::optional<int64_t> x2_dtype, c10::optional<int64_t> x1scale_dtype, c10::optional<int64_t> x2scale_dtype,
-    c10::optional<std::vector<int64_t>>& group_sizes, c10::string_view activation_type, c10::string_view quant_mode,
-    c10::string_view round_mode, c10::optional<int64_t> scale_alg, double dst_type_max)
+std::tuple<at::Tensor, at::Tensor> QuantMatmulActivationQuant(
+    const at::Tensor& x1, const at::Tensor& x2, const at::Tensor& x2Scale, const c10::optional<at::Tensor>& x1Scale,
+    const c10::optional<at::Tensor>& bias, c10::optional<int64_t> outputDtype, c10::optional<int64_t> x1Dtype,
+    c10::optional<int64_t> x2Dtype, c10::optional<int64_t> x1ScaleDtype, c10::optional<int64_t> x2ScaleDtype,
+    c10::optional<std::vector<int64_t>>& groupSizes, c10::string_view activationType, c10::string_view quantMode,
+    c10::string_view roundMode, c10::optional<int64_t> scaleAlg, double dstTypeMax, const c10::optional<at::Tensor>& x3)
 {
-    auto x1_dim_num = x1.dim();
-    auto x2_dim_num = x2.dim();
+    auto x1DimNum = x1.dim();
+    auto x2DimNum = x2.dim();
     // Keep only the preconditions needed to inspect shapes and construct
     // output tensors here; ACLNN/tiling owns the operator contract checks.
-    TORCH_CHECK(x1_dim_num >= 2 && x2_dim_num >= 2, "x1 and x2 must have at least two dimensions");
-    TORCH_CHECK(
-        x1.device().type() == at::kPrivateUse1 && x2.device() == x1.device() && x2_scale.device() == x1.device(),
-        "x1, x2 and x2_scale must be on the same NPU device");
-    TORCH_CHECK(!x1_scale.has_value() || !x1_scale->defined() || x1_scale->device() == x1.device(),
+    TORCH_CHECK(x1DimNum >= 2 && x2DimNum >= 2, "x1 and x2 must have at least two dimensions");
+    TORCH_CHECK(x1.device().type() == at::kPrivateUse1 && x2.device() == x1.device() && x2Scale.device() == x1.device(),
+                "x1, x2 and x2_scale must be on the same NPU device");
+    TORCH_CHECK(!x1Scale.has_value() || !x1Scale->defined() || x1Scale->device() == x1.device(),
                 "x1_scale must be on the same NPU device as x1");
     TORCH_CHECK(!bias.has_value() || !bias->defined() || bias->device() == x1.device(),
                 "bias must be on the same NPU device as x1");
 
-    int64_t x1_a = x1.size(x1_dim_num - 2);
-    int64_t x2_b = x2.size(x2_dim_num - 1);
+    TORCH_CHECK(!x3.has_value() || !x3->defined() || x3->device() == x1.device(),
+                "x3 must be on the same NPU device as x1");
+    TORCH_CHECK(!x3.has_value() || !x3->defined() || (x1DimNum == 2 && x2DimNum == 2 && x3->dim() == 2),
+                "x1, x2 and x3 must have 2D logical shapes when x3 is provided; batch is not supported");
+    int64_t x1Rows = x1.size(x1DimNum - 2);
+    int64_t x2Cols = x2.size(x2DimNum - 1);
 
     int64_t m = 0;
     int64_t n = 0;
@@ -113,129 +103,124 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
     bool transposeX1 = false;
     bool transposeX2 = false;
 
-    constexpr int64_t DTYPE_FLOAT4_E2M1 = static_cast<int64_t>(DType::FLOAT4_E2M1);
+    constexpr int64_t dtypeFloat4E2M1 = static_cast<int64_t>(DType::FLOAT4_E2M1);
 
-    int64_t x1_dtype_val = x1_dtype.value_or(0);
-    int64_t x2_dtype_val = x2_dtype.value_or(0);
-    bool isMXFP4 = x1_dtype_val == DTYPE_FLOAT4_E2M1 && x2_dtype_val == DTYPE_FLOAT4_E2M1;
+    int64_t x1DtypeValue = x1Dtype.value_or(0);
+    int64_t x2DtypeValue = x2Dtype.value_or(0);
+    bool isMxFp4 = x1DtypeValue == dtypeFloat4E2M1 && x2DtypeValue == dtypeFloat4E2M1;
 
-    if (isMXFP4) {
+    if (isMxFp4) {
         bool transX1 = IsTransposeLastTwoDims(x1);
         bool transX2 = IsTransposeLastTwoDims(x2);
-        m = !transX1 ? x1_a : x1_a * FP4_IN_INT8;
-        n = transX2 ? x2_b : x2_b * FP4_IN_INT8;
+        m = !transX1 ? x1Rows : x1Rows * FP4_IN_INT8;
+        n = transX2 ? x2Cols : x2Cols * FP4_IN_INT8;
     } else {
-        m = x1_a;
-        n = x2_b;
+        m = x1Rows;
+        n = x2Cols;
     }
 
-    if (activation_type == "swiglu") {
+    if (activationType == "swiglu") {
         // The ACLNN checker/tiling layer validates the SwiGLU N alignment and
         // transpose restrictions.  The bridge only needs the post-epilogue
         // width to allocate y and y_scale before dispatch.
         n /= 2;
     }
 
-    c10::SmallVector<int64_t, op_infer::SIZE> output_size;
-    auto x1_batch_num = x1_dim_num - 2;
-    auto x2_batch_num = x2_dim_num - 2;
-    auto max_batch_num = std::max(x1_batch_num, x2_batch_num);
-    for (int64_t i = 0; i < max_batch_num; i++) {
-        int64_t x1_idx = x1_batch_num - (max_batch_num - i);
-        int64_t x2_idx = x2_batch_num - (max_batch_num - i);
-        int64_t x1_dim = (x1_idx >= 0) ? x1.size(x1_idx) : 1;
-        int64_t x2_dim = (x2_idx >= 0) ? x2.size(x2_idx) : 1;
-        TORCH_CHECK(x1_dim == x2_dim || x1_dim == 1 || x2_dim == 1,
-                    "batch dims are not broadcastable: x1 batch dim = ", x1_dim, ", x2 batch dim = ", x2_dim);
-        output_size.push_back(std::max(x1_dim, x2_dim));
+    c10::SmallVector<int64_t, op_infer::SIZE> outputSize;
+    auto x1BatchNum = x1DimNum - 2;
+    auto x2BatchNum = x2DimNum - 2;
+    auto maxBatchNum = std::max(x1BatchNum, x2BatchNum);
+    for (int64_t i = 0; i < maxBatchNum; i++) {
+        int64_t x1Idx = x1BatchNum - (maxBatchNum - i);
+        int64_t x2Idx = x2BatchNum - (maxBatchNum - i);
+        int64_t x1Dim = (x1Idx >= 0) ? x1.size(x1Idx) : 1;
+        int64_t x2Dim = (x2Idx >= 0) ? x2.size(x2Idx) : 1;
+        TORCH_CHECK(x1Dim == x2Dim || x1Dim == 1 || x2Dim == 1,
+                    "batch dims are not broadcastable: x1 batch dim = ", x1Dim, ", x2 batch dim = ", x2Dim);
+        outputSize.push_back(std::max(x1Dim, x2Dim));
     }
-    output_size.push_back(m);
-    output_size.push_back(n);
+    outputSize.push_back(m);
+    outputSize.push_back(n);
 
-    c10::SmallVector<int64_t, op_infer::SIZE> scale_size = op_infer::array_to_small_vector(output_size);
-    int64_t axis_change = output_size.size() - 1;
-    int64_t dim_size = CeilDiv(scale_size[axis_change], BLOCK_SIZE);
-    dim_size = (dim_size + ALIGN_NUM - 1) / ALIGN_NUM;
-    scale_size[axis_change] = dim_size;
-    scale_size.emplace_back(ALIGN_NUM);
+    c10::SmallVector<int64_t, op_infer::SIZE> scaleSize = op_infer::array_to_small_vector(outputSize);
+    int64_t scaleAxis = outputSize.size() - 1;
+    int64_t scaleDim = Ops::Base::CeilDiv(scaleSize[scaleAxis], BLOCK_SIZE);
+    scaleDim = Ops::Base::CeilDiv(scaleDim, ALIGN_NUM);
+    scaleSize[scaleAxis] = scaleDim;
+    scaleSize.emplace_back(ALIGN_NUM);
 
-    aclDataType output_acltype;
-    int64_t output_dtype_val = output_dtype.value_or(x1_dtype.value_or(0));
-    bool special_output_type = false;
-
-    if (output_dtype_val == DTYPE_FLOAT4_E2M1) {
-        special_output_type = true;
-    }
+    aclDataType outputAclType;
+    int64_t outputDtypeValue = outputDtype.value_or(x1Dtype.value_or(0));
+    const bool isFp4Output = outputDtypeValue == dtypeFloat4E2M1;
 
     at::Tensor output;
-    if (special_output_type) {
-        int64_t last_dim_val = output_size[output_size.size() - 1];
-        TORCH_CHECK(last_dim_val % 2 == 0, "The last dim output shape must be divisible by 2 if "
-                                           "output dtype is FLOAT4_E2M1");
-        output_size[output_size.size() - 1] = last_dim_val / 2;
-        output = at::empty(output_size, at::TensorOptions().dtype(c10::ScalarType::Byte).device(x1.device()));
-        output_acltype = GetAclDataType(output_dtype_val);
-    } else if (output_dtype.has_value() || x1_dtype.has_value()) {
-        at::ScalarType scalar_dtype = at::ScalarType::Float8_e5m2;
-        output_acltype = GetAclDataType(output_dtype_val);
-        if (output_acltype == ACL_FLOAT8_E5M2) {
-            scalar_dtype = at::ScalarType::Float8_e5m2;
-        } else if (output_acltype == ACL_FLOAT8_E4M3FN) {
-            scalar_dtype = at::ScalarType::Float8_e4m3fn;
+    if (isFp4Output) {
+        int64_t lastDim = outputSize[outputSize.size() - 1];
+        TORCH_CHECK(lastDim % 2 == 0, "The last dim output shape must be divisible by 2 if "
+                                      "output dtype is FLOAT4_E2M1");
+        outputSize[outputSize.size() - 1] = lastDim / 2;
+        output = at::empty(outputSize, at::TensorOptions().dtype(c10::ScalarType::Byte).device(x1.device()));
+        outputAclType = GetAclDataType(outputDtypeValue);
+    } else if (outputDtype.has_value() || x1Dtype.has_value()) {
+        at::ScalarType scalarDtype = at::ScalarType::Float8_e5m2;
+        outputAclType = GetAclDataType(outputDtypeValue);
+        if (outputAclType == ACL_FLOAT8_E5M2) {
+            scalarDtype = at::ScalarType::Float8_e5m2;
+        } else if (outputAclType == ACL_FLOAT8_E4M3FN) {
+            scalarDtype = at::ScalarType::Float8_e4m3fn;
         } else {
             TORCH_CHECK(false,
                         "unsupport output_dtype, only support output_dtype FLOAT8_E5M2, FLOAT8_E4M3FN or FLOAT4_E2M1");
         }
-        output = at::empty(output_size, at::TensorOptions().dtype(scalar_dtype).device(x1.device()));
+        output = at::empty(outputSize, at::TensorOptions().dtype(scalarDtype).device(x1.device()));
     } else {
-        output_acltype = ConvertToAclDataType(x1.scalar_type());
-        output = at::empty(output_size, at::TensorOptions().dtype(x1.scalar_type()).device(x1.device()));
+        outputAclType = ConvertToAclDataType(x1.scalar_type());
+        output = at::empty(outputSize, at::TensorOptions().dtype(x1.scalar_type()).device(x1.device()));
     }
 
-    at::Tensor scale = at::empty(scale_size,
+    at::Tensor scale = at::empty(scaleSize,
                                  at::TensorOptions().dtype(c10::ScalarType::Float8_e8m0fnu).device(x1.device()));
 
-    TensorWrapper output_wrapper = {output, output_acltype};
-    TensorWrapper scale_wrapper = {scale, aclDataType::ACL_FLOAT8_E8M0};
-    TensorWrapper x1_wrapper = {
-        x1, x1_dtype.has_value() ? GetAclDataType(x1_dtype.value()) : ConvertToAclDataType(x1.scalar_type())};
-    TensorWrapper x2_wrapper = {
-        x2, x2_dtype.has_value() ? GetAclDataType(x2_dtype.value()) : ConvertToAclDataType(x2.scalar_type())};
+    TensorWrapper outputWrapper = {output, outputAclType};
+    TensorWrapper scaleWrapper = {scale, aclDataType::ACL_FLOAT8_E8M0};
+    TensorWrapper x1Wrapper = {
+        x1, x1Dtype.has_value() ? GetAclDataType(x1Dtype.value()) : ConvertToAclDataType(x1.scalar_type())};
+    TensorWrapper x2Wrapper = {
+        x2, x2Dtype.has_value() ? GetAclDataType(x2Dtype.value()) : ConvertToAclDataType(x2.scalar_type())};
 
-    at::Tensor x1_scale_real = x1_scale.has_value() ? x1_scale.value() : at::Tensor();
+    at::Tensor x1ScaleReal = x1Scale.has_value() ? x1Scale.value() : at::Tensor();
 
-    aclDataType x1_scale_acltype = ACL_DT_UNDEFINED;
-    if (x1scale_dtype.has_value()) {
-        x1_scale_acltype = GetAclDataType(x1scale_dtype.value());
-    } else if (x1_scale_real.defined()) {
-        x1_scale_acltype = ConvertToAclDataType(x1_scale_real.scalar_type());
+    aclDataType x1ScaleAclType = ACL_DT_UNDEFINED;
+    if (x1ScaleDtype.has_value()) {
+        x1ScaleAclType = GetAclDataType(x1ScaleDtype.value());
+    } else if (x1ScaleReal.defined()) {
+        x1ScaleAclType = ConvertToAclDataType(x1ScaleReal.scalar_type());
     }
-    TensorWrapper x1_scale_wrapper = {x1_scale_real, x1_scale_acltype};
-    TensorWrapper x2_scale_wrapper = {x2_scale, x2scale_dtype.has_value() ?
-                                                    GetAclDataType(x2scale_dtype.value()) :
-                                                    ConvertToAclDataType(x2_scale.scalar_type())};
+    TensorWrapper x1ScaleWrapper = {x1ScaleReal, x1ScaleAclType};
+    TensorWrapper x2ScaleWrapper = {x2Scale, x2ScaleDtype.has_value() ? GetAclDataType(x2ScaleDtype.value()) :
+                                                                        ConvertToAclDataType(x2Scale.scalar_type())};
 
-    int64_t scale_alg_optional = scale_alg.has_value() ? scale_alg.value() : DEFAULT_SCALE_ALG;
+    int64_t scaleAlgValue = scaleAlg.has_value() ? scaleAlg.value() : DEFAULT_SCALE_ALG;
 
-    at::IntArrayRef group_size_ref = group_sizes.has_value() ? at::IntArrayRef(group_sizes.value()) : at::IntArrayRef{};
-    int64_t group_size = CheckAndGetGroupSize(group_size_ref);
+    at::IntArrayRef groupSizeRef = groupSizes.has_value() ? at::IntArrayRef(groupSizes.value()) : at::IntArrayRef{};
+    int64_t groupSize = CheckAndGetGroupSize(groupSizeRef);
 
-    std::string activationTypeString(activation_type.data(), activation_type.size());
-    std::string quantModeString(quant_mode.data(), quant_mode.size());
-    std::string roundModeString(round_mode.data(), round_mode.size());
-    char* activation_type_ptr = activationTypeString.data();
-    char* quant_mode_ptr = quantModeString.data();
-    char* round_mode_ptr = roundModeString.data();
+    std::string activationTypeString(activationType.data(), activationType.size());
+    std::string quantModeString(quantMode.data(), quantMode.size());
+    std::string roundModeString(roundMode.data(), roundMode.size());
+    char* activationTypePtr = activationTypeString.data();
+    char* quantModePtr = quantModeString.data();
+    char* roundModePtr = roundModeString.data();
 
     bool isX2Nz = at_npu::native::get_npu_format(x2) == static_cast<int64_t>(ACL_FORMAT_FRACTAL_NZ);
     if (isX2Nz) {
-        ACLNN_CMD(aclnnQuantMatmulActivationQuantWeightNz, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper,
-                  bias, transposeX1, transposeX2, group_size, activation_type_ptr, quant_mode_ptr, round_mode_ptr,
-                  scale_alg_optional, dst_type_max, output_wrapper, scale_wrapper);
+        ACLNN_CMD(aclnnQuantMatmulActivationQuantWeightNzV2, x1Wrapper, x2Wrapper, x1ScaleWrapper, x2ScaleWrapper, bias,
+                  x3, transposeX1, transposeX2, groupSize, activationTypePtr, quantModePtr, roundModePtr, scaleAlgValue,
+                  dstTypeMax, outputWrapper, scaleWrapper);
     } else {
-        ACLNN_CMD(aclnnQuantMatmulActivationQuant, x1_wrapper, x2_wrapper, x1_scale_wrapper, x2_scale_wrapper, bias,
-                  transposeX1, transposeX2, group_size, activation_type_ptr, quant_mode_ptr, round_mode_ptr,
-                  scale_alg_optional, dst_type_max, output_wrapper, scale_wrapper);
+        ACLNN_CMD(aclnnQuantMatmulActivationQuantV2, x1Wrapper, x2Wrapper, x1ScaleWrapper, x2ScaleWrapper, bias, x3,
+                  transposeX1, transposeX2, groupSize, activationTypePtr, quantModePtr, roundModePtr, scaleAlgValue,
+                  dstTypeMax, outputWrapper, scaleWrapper);
     }
 
     return std::make_tuple(output, scale);
@@ -245,6 +230,6 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
-    m.def("quant_matmul_activation_quant", &cann_ops_nn::matmul::quant_matmul_activation_quant,
+    m.def("quant_matmul_activation_quant", &cann_ops_nn::matmul::QuantMatmulActivationQuant,
           "QuantMatmulActivationQuant on NPU");
 }

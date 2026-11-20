@@ -25,37 +25,18 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "opdev/tensor_view_utils.h"
 #include "log/log.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "matmul/common/op_host/op_api/quant_matmul_util.h"
 #include "matmul/common/op_host/log_format_util.h"
 #include "quant_matmul_activation_quant.h"
+#include "quant_matmul_activation_quant_common.h"
 #include "quant_matmul_activation_quant_checker.h"
 
 namespace QBMMActivationQuant {
 using namespace op;
 using Ops::NN::FormatString;
-
-struct QuantMatmulActivationQuantParams {
-    const aclTensor* x1 = nullptr;
-    const aclTensor* x2 = nullptr;
-    const aclTensor* x1Scale = nullptr;
-    const aclTensor* x2Scale = nullptr;
-    const aclTensor* bias = nullptr;
-    aclTensor* y = nullptr;
-    aclTensor* yScale = nullptr;
-
-    const char* activationType;
-    const char* quantMode;
-    const char* roundMode;
-
-    int64_t groupSize;
-    int64_t yDtype;
-    int64_t scaleAlg;
-    double dstTypeMax;
-    bool transposeX1;
-    bool transposeX2;
-};
 
 struct MatmulShapeInfo {
     int64_t mDim;
@@ -138,26 +119,36 @@ static inline aclnnStatus CheckNotNull(const QuantMatmulActivationQuantParams& p
     return ACLNN_SUCCESS;
 }
 
-static inline aclnnStatus CheckOutputFormats(const QuantMatmulActivationQuantParams& params, const char* apiName)
+static inline bool IsNdCompatibleBaseFormat(op::Format format)
 {
     const std::initializer_list<op::Format> supportedFormats = {
         Format::FORMAT_ND,    Format::FORMAT_NCHW,  Format::FORMAT_NHWC, Format::FORMAT_HWCN,
         Format::FORMAT_NCDHW, Format::FORMAT_NDHWC, Format::FORMAT_NCL};
+    return std::find(supportedFormats.begin(), supportedFormats.end(), format) != supportedFormats.end();
+}
+
+static inline aclnnStatus CheckOutputLayout(const QuantMatmulActivationQuantParams& params, const char* apiName)
+{
     const std::pair<const aclTensor*, const char*> outputs[] = {{params.y, "y"}, {params.yScale, "yScale"}};
     for (const auto& output : outputs) {
         const auto format = output.first->GetStorageFormat();
-        if (std::find(supportedFormats.begin(), supportedFormats.end(), format) == supportedFormats.end()) {
+        if (!IsNdCompatibleBaseFormat(format)) {
             OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
                 apiName, output.second, op::ToString(format).GetString(),
                 "the output format must be ND or an ND-compatible base format; private formats are not supported");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (!op::IsContiguous(output.first)) {
+            OP_LOGE_FOR_INVALID_STRIDE(apiName, output.second, op::ToString(output.first->GetViewStrides()).GetString(),
+                                       "contiguous");
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
     return ACLNN_SUCCESS;
 }
 
-static inline aclnnStatus CheckFormats(const QuantMatmulActivationQuantParams& params, op::Format x2Format,
-                                       const char* apiName)
+static inline aclnnStatus CheckInputFormats(const QuantMatmulActivationQuantParams& params, op::Format x2Format,
+                                            const char* apiName)
 {
     if (params.x1->GetStorageFormat() != Format::FORMAT_ND) {
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(apiName, "x1", op::ToString(params.x1->GetStorageFormat()).GetString(),
@@ -188,7 +179,7 @@ static inline aclnnStatus CheckFormats(const QuantMatmulActivationQuantParams& p
                                                 "the format of bias must be ND");
         return ACLNN_ERR_PARAM_INVALID;
     }
-    return CheckOutputFormats(params, apiName);
+    return ACLNN_SUCCESS;
 }
 
 static inline bool GetPositiveShapeSize(const op::Shape& shape, int64_t& shapeSize)
@@ -260,30 +251,33 @@ static inline bool CheckViewRange(const aclTensor* tensor, int64_t storageSize)
     return true;
 }
 
-static inline aclnnStatus CheckNotEmpty(const QuantMatmulActivationQuantParams& params, const char* apiName)
+static inline aclnnStatus CheckTensorViews(const QuantMatmulActivationQuantParams& params, const char* apiName)
 {
     // 空tensor 处理
     if (params.x1->IsEmpty() || params.x2->IsEmpty() || (params.x1Scale != nullptr && params.x1Scale->IsEmpty()) ||
         (params.x2Scale != nullptr && params.x2Scale->IsEmpty()) ||
-        (params.bias != nullptr && params.bias->IsEmpty()) || params.y->IsEmpty() || params.yScale->IsEmpty()) {
+        (params.bias != nullptr && params.bias->IsEmpty()) || (params.x3 != nullptr && params.x3->IsEmpty()) ||
+        params.y->IsEmpty() || params.yScale->IsEmpty()) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            apiName, "x1, x2, x1Scale, x2Scale, bias, y, yScale",
+            apiName, "x1, x2, x1Scale, x2Scale, bias, x3, y, yScale",
             Ops::NN::FormatString(
-                "%s, %s, %s, %s, %s, %s, %s", op::ToString(params.x1->GetViewShape()).GetString(),
+                "%s, %s, %s, %s, %s, %s, %s, %s", op::ToString(params.x1->GetViewShape()).GetString(),
                 op::ToString(params.x2->GetViewShape()).GetString(),
                 params.x1Scale != nullptr ? op::ToString(params.x1Scale->GetViewShape()).GetString() : "null",
                 op::ToString(params.x2Scale->GetViewShape()).GetString(),
                 params.bias != nullptr ? op::ToString(params.bias->GetViewShape()).GetString() : "null",
+                params.x3 != nullptr ? op::ToString(params.x3->GetViewShape()).GetString() : "null",
                 op::ToString(params.y->GetViewShape()).GetString(),
                 op::ToString(params.yScale->GetViewShape()).GetString())
                 .c_str(),
-            Ops::NN::FormatString("The shapes of %s cannot be %s", "x1, x2, x1Scale, x2Scale, bias, y, yScale", "empty")
+            Ops::NN::FormatString("The shapes of %s cannot be %s", "x1, x2, x1Scale, x2Scale, bias, x3, y, yScale",
+                                  "empty")
                 .c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
 
     // Validate metadata before CreateView and contiguous-layout detection perform shape arithmetic.
-    for (const auto* input : {params.x1, params.x2, params.x1Scale, params.x2Scale, params.bias,
+    for (const auto* input : {params.x1, params.x2, params.x1Scale, params.x2Scale, params.bias, params.x3,
                               static_cast<const aclTensor*>(params.y), static_cast<const aclTensor*>(params.yScale)}) {
         if (input == nullptr) {
             continue;
@@ -318,7 +312,7 @@ static inline aclnnStatus CheckNotEmpty(const QuantMatmulActivationQuantParams& 
         }
     }
 
-    return ACLNN_SUCCESS;
+    return CheckOutputLayout(params, apiName);
 }
 
 static inline bool IsMxFp8Input(const aclTensor* x1, const aclTensor* x2, const aclTensor* y, const aclTensor* yScale)
@@ -612,28 +606,60 @@ static inline aclnnStatus CheckDtype(const QuantMatmulActivationQuantParams& par
     }
 }
 
+// A supplied x3 is the multiplier for the sigmoid epilogue.
+static inline aclnnStatus CheckX3(const QuantMatmulActivationQuantParams& params, const char* apiName)
+{
+    const bool sigmoid = params.activationType != nullptr && std::string(params.activationType) == "sigmoid";
+    if (sigmoid != (params.x3 != nullptr)) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName, "x3", "invalid presence",
+                                              "x3 is required for sigmoid multiplication and must be absent "
+                                              "for other activations");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (params.x3 != nullptr && (params.x1->GetViewShape().GetDimNum() != MATRIX_DIM_COUNT ||
+                                 params.x2->GetViewShape().GetDimNum() != MATRIX_DIM_COUNT ||
+                                 params.x3->GetViewShape().GetDimNum() != MATRIX_DIM_COUNT ||
+                                 params.y->GetViewShape().GetDimNum() != MATRIX_DIM_COUNT)) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName, "x1/x2/x3/y ranks", "batch is not supported",
+                                              "x1, x2, x3 and y must have 2D logical shapes when x3 is provided");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (params.x3 != nullptr &&
+        (params.x3->GetDataType() != DataType::DT_BF16 || !IsNdCompatibleBaseFormat(params.x3->GetStorageFormat()) ||
+         params.x3->GetViewShape() != params.y->GetViewShape())) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            apiName, "x3", "invalid tensor",
+            "x3 must be BF16 with an ND-compatible base format and the same shape as y");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    return ACLNN_SUCCESS;
+}
+
 static inline aclnnStatus CheckAttributes(const QuantMatmulActivationQuantParams& params, const char* apiName)
 {
     CHECK_RET(params.activationType != nullptr, ACLNN_ERR_PARAM_NULLPTR);
     const std::string activationType(params.activationType);
     if (activationType != "gelu_tanh" && activationType != "gelu_erf" && activationType != "swiglu" &&
-        activationType != "silu") {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName, "activationType", activationType,
-                                              "The activationType must be gelu_tanh, gelu_erf, swiglu or silu");
+        activationType != "silu" && activationType != "sigmoid") {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            apiName, "activationType", activationType,
+            "The activationType must be gelu_tanh, gelu_erf, swiglu, silu or sigmoid");
         return ACLNN_ERR_PARAM_INVALID;
     }
     const bool isWeightNz = params.x2 != nullptr &&
                             ge::GetPrimaryFormat(params.x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ;
-    const bool isSwiGluOrSilu = activationType == "swiglu" || activationType == "silu";
-    if (isSwiGluOrSilu && ((params.transposeX1 && isWeightNz) || (params.scaleAlg != 0 && params.scaleAlg != 1) ||
-                           (params.roundMode != nullptr && std::string(params.roundMode) != "rint"))) {
+    const bool isFp8OnlyActivation = activationType == "swiglu" || activationType == "silu" ||
+                                     activationType == "sigmoid";
+    if (isFp8OnlyActivation && ((params.transposeX1 && isWeightNz) || (params.scaleAlg != 0 && params.scaleAlg != 1) ||
+                                (params.roundMode != nullptr && std::string(params.roundMode) != "rint"))) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName, "activation constraints", "unsupported",
-                                              "SwiGLU and SiLU MX require transposeX1=false for WeightNZ, "
+                                              "SwiGLU, SiLU and sigmoid MX require transposeX1=false for WeightNZ, "
                                               "scaleAlg=0/1 and roundMode=rint");
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (isSwiGluOrSilu && (!IsMxFp8Input(params.x1, params.x2, params.y, params.yScale))) {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(apiName, "x1/x2/y", "non-MXFP8", "SwiGLU and SiLU MX only support MXFP8");
+    if (isFp8OnlyActivation && (!IsMxFp8Input(params.x1, params.x2, params.y, params.yScale))) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(apiName, "x1/x2/y", "non-MXFP8",
+                                              "SwiGLU, SiLU and sigmoid MX only support MXFP8");
         return ACLNN_ERR_PARAM_INVALID;
     }
     CHECK_RET(params.quantMode != nullptr, ACLNN_ERR_PARAM_NULLPTR);
@@ -917,7 +943,7 @@ static inline bool CheckGroupSize(QuantMatmulActivationQuantParams& params, cons
 static inline bool PrepareInputViews(QuantMatmulActivationQuantParams& params, aclOpExecutor* executor)
 {
     CHECK_RET(executor != nullptr, false);
-    for (auto* input : {&params.x1, &params.x2, &params.x1Scale, &params.x2Scale, &params.bias}) {
+    for (auto* input : {&params.x1, &params.x2, &params.x1Scale, &params.x2Scale, &params.bias, &params.x3}) {
         if (*input == nullptr) {
             continue;
         }
@@ -938,26 +964,58 @@ static inline bool PrepareInputViews(QuantMatmulActivationQuantParams& params, a
     return true;
 }
 
-static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, bool transposeScale,
-                                            aclOpExecutor* executor)
+static inline aclnnStatus MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, bool transposeScale,
+                                                   const op::Shape& expectedShape, aclOpExecutor* executor,
+                                                   const char* inputNames, const char* apiName)
 {
     if (mxScaleTensor == nullptr || mxScaleTensor->GetViewShape().GetDimNum() < MX_SCALE_MIN_RANK) {
         OP_LOGD("MX scale tensor is absent or does not require contiguous conversion.");
-        return true;
+        return ACLNN_SUCCESS;
     }
-    CHECK_RET(executor != nullptr, false);
+    CHECK_RET(executor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const auto& scaleShape = mxScaleTensor->GetViewShape();
+    const auto& scaleStrides = mxScaleTensor->GetViewStrides();
+    const auto rowAxis = scaleShape.GetDimNum() - LAST_THIRD_DIM_INDEX;
+    const auto columnAxis = scaleShape.GetDimNum() - LAST_SECOND_DIM_INDEX;
+    const auto pairAxis = scaleShape.GetDimNum() - LAST_FIRST_DIM_INDEX;
+    // Compare recognizable matrix-axis layouts before Contiguous can erase their transpose state.
+    // Singleton axes are equivalent in either order; other strided layouts keep the existing conversion path.
+    if (scaleShape.GetDim(rowAxis) > 1 && scaleShape.GetDim(columnAxis) > 1 &&
+        scaleShape.GetDim(pairAxis) == MX_SCALE_PAIR_SIZE && scaleStrides[pairAxis] == 1) {
+        const bool scaleTransposeView = scaleStrides[rowAxis] == MX_SCALE_PAIR_SIZE &&
+                                        scaleStrides[columnAxis] == MX_SCALE_PAIR_SIZE * scaleShape.GetDim(rowAxis);
+        const bool scaleContiguousView = scaleStrides[columnAxis] == MX_SCALE_PAIR_SIZE &&
+                                         scaleStrides[rowAxis] == MX_SCALE_PAIR_SIZE * scaleShape.GetDim(columnAxis);
+        if ((transposeScale && scaleContiguousView) || (!transposeScale && scaleTransposeView)) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                apiName, inputNames,
+                FormatString("matrix transpose view=%s, scale transpose view=%s", transposeScale ? "true" : "false",
+                             scaleTransposeView ? "true" : "false")
+                    .c_str(),
+                "the matrix and its MX scale must use matching transpose views");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    if (scaleShape.GetDim(rowAxis) == 1 || scaleShape.GetDim(columnAxis) == 1) {
+        // Swapping a singleton axis preserves element order. Normalize only an equivalent full shape;
+        // batch dimensions and the number of scale groups must still match the matrix.
+        auto swappedShape = scaleShape;
+        swappedShape.SetDim(rowAxis, scaleShape.GetDim(columnAxis));
+        swappedShape.SetDim(columnAxis, scaleShape.GetDim(rowAxis));
+        if (scaleShape == expectedShape || swappedShape == expectedShape) {
+            transposeScale = scaleShape != expectedShape;
+        }
+    }
     if (transposeScale) {
-        // Scale axes follow the matrix view normalization, not the scale's own layout.
+        // Follow matrix view normalization, or restore the canonical shape for equivalent singleton axes.
         auto shape = mxScaleTensor->GetViewShape();
         auto strides = mxScaleTensor->GetViewStrides();
-        const auto rowAxis = shape.GetDimNum() - LAST_THIRD_DIM_INDEX;
-        const auto columnAxis = shape.GetDimNum() - LAST_SECOND_DIM_INDEX;
         const auto rowDim = shape.GetDim(rowAxis);
         shape.SetDim(rowAxis, shape.GetDim(columnAxis));
         shape.SetDim(columnAxis, rowDim);
         std::swap(strides[rowAxis], strides[columnAxis]);
         auto scaleView = executor->CreateView(mxScaleTensor, mxScaleTensor->GetStorageShape(), 0);
-        CHECK_RET(scaleView != nullptr, false);
+        CHECK_RET(scaleView != nullptr, ACLNN_ERR_INNER_NULLPTR);
         scaleView->SetViewShape(shape);
         scaleView->SetViewStrides(strides);
         scaleView->SetViewOffset(mxScaleTensor->GetViewOffset());
@@ -966,7 +1024,7 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, boo
     }
     // Contiguous checks every stride, including the last scale-pair axis, before reusing storage.
     mxScaleTensor = Ops::NN::ContiguousMxScale(mxScaleTensor, executor);
-    return mxScaleTensor != nullptr;
+    return mxScaleTensor != nullptr ? ACLNN_SUCCESS : ACLNN_ERR_INNER_NULLPTR;
 }
 
 // Prepare scales, bias and the left matrix; ND and WeightNZ handle x2 separately.
@@ -985,6 +1043,13 @@ static inline aclnnStatus PrepareCommonInputs(QuantMatmulActivationQuantParams& 
         params.bias = biasNd;
     }
 
+    if (params.x3 != nullptr) {
+        // Torch labels dense rank-3/4/5 inputs as NCL/NCHW/NCDHW; the kernel consumes ND.
+        params.x3 = QuantMatmulActivationQuantAclnnCheck::SetTensorToNDFormat(params.x3);
+        CHECK_RET(params.x3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        params.x3 = l0op::Contiguous(params.x3, executor);
+        CHECK_RET(params.x3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
     auto reformattedX1 = QuantMatmulActivationQuantAclnnCheck::SetTensorToNDFormat(params.x1);
     CHECK_RET(reformattedX1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     params.x1 = reformattedX1;
@@ -1001,9 +1066,9 @@ static inline aclnnStatus AddQuantMatmulActivationQuantTasks(const QuantMatmulAc
                                                              aclOpExecutor* executor)
 {
     auto [yResult, yScaleResult] = l0op::QuantMatmulActivationQuant(
-        params.x1, params.x2, params.bias, params.x1Scale, params.x2Scale, params.transposeX1, params.transposeX2,
-        params.groupSize, params.activationType, params.yDtype, params.quantMode, params.roundMode, params.scaleAlg,
-        params.dstTypeMax, executor);
+        params.x1, params.x2, params.bias, params.x1Scale, params.x2Scale, params.x3, params.transposeX1,
+        params.transposeX2, params.groupSize, params.activationType, params.yDtype, params.quantMode, params.roundMode,
+        params.scaleAlg, params.dstTypeMax, executor);
     CHECK_RET(yResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(yScaleResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

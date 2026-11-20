@@ -8,3 +8,7 @@
 
 - [aclnn API List](op_api_list.md)
 - [aclnnAssertAsync](../../control/assert_async/docs/aclnnAssertAsync_en.md)
+- [aclnnQuantMatmulActivationQuant](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuant_en.md)
+- [aclnnQuantMatmulActivationQuantV2](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuantV2_en.md)
+- [aclnnQuantMatmulActivationQuantWeightNz](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuantWeightNz_en.md)
+- [aclnnQuantMatmulActivationQuantWeightNzV2](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuantWeightNzV2_en.md)

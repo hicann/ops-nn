@@ -44,6 +44,7 @@ protected:
     uint32_t GetScaleIdx() const override { return X2_SCALE_INDEX; }
 
     ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus CheckContext() override;
     bool AnalyzeAttrs() override;
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;
@@ -65,7 +66,6 @@ protected:
                              const gert::Shape& scaleShape);
     uint64_t GetBatchCoreCnt() const override;
     void SetQuantParams(QMMAQ::QMMAQTilingData& tilingData);
-    void ResetActivationQuantTilingData(QMMAQ::QMMAQTilingData& tilingData);
     ge::graphStatus CopyMatmulTilingData(const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src,
                                          QMMAQ::QMMAQTilingData& dst);
     void CopyBatchTilingData(const DequantBmm::QuantBatchMatmulV3BasicAPIDataParams& src, QMMAQ::QMMAQTilingData& dst);
@@ -80,7 +80,7 @@ protected:
 private:
     QMMAQ::ActivationAlg activationType_ = QMMAQ::ActivationAlg::TANH;
     QMMAQ::QuantAlg scaleAlg_ = QMMAQ::QuantAlg::OCP;
-    QMMAQ::MX_QUANT_ROUND_MODE roundMode_ = QMMAQ::MX_QUANT_ROUND_MODE::RINT;
+    QMMAQ::MxQuantRoundMode roundMode_ = QMMAQ::MxQuantRoundMode::RINT;
     float dstTypeMax_ = 0.0;
 };
 

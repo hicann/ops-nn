@@ -30,9 +30,10 @@ enum class ActivationAlg : uint8_t {
     ERF = 1,
     SWIGLU = 2,
     SILU = 3,
+    SIGMOID = 4,
 };
 
-enum class MX_QUANT_ROUND_MODE : uint8_t {
+enum class MxQuantRoundMode : uint8_t {
     RINT = 0,
     FLOOR = 1,
     ROUND = 2,
@@ -75,7 +76,7 @@ struct alignas(8) QMMAQTilingData {
     uint8_t biasThreeDim = 0;
     ActivationAlg activationType = ActivationAlg::TANH;
     QuantAlg scaleAlg = QuantAlg::OCP;
-    MX_QUANT_ROUND_MODE roundMode = MX_QUANT_ROUND_MODE::RINT;
+    MxQuantRoundMode roundMode = MxQuantRoundMode::RINT;
 };
 
 struct alignas(8) QMMAQWithoutBatchTilingData {
@@ -100,7 +101,7 @@ struct alignas(8) QMMAQWithoutBatchTilingData {
     uint8_t weightMustHitL2 = 1;
     ActivationAlg activationType = ActivationAlg::TANH;
     QuantAlg scaleAlg = QuantAlg::OCP;
-    MX_QUANT_ROUND_MODE roundMode = MX_QUANT_ROUND_MODE::RINT;
+    MxQuantRoundMode roundMode = MxQuantRoundMode::RINT;
 };
 #pragma pack(pop)
 

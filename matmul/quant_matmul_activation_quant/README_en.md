@@ -15,11 +15,13 @@ English | [简体中文](./README.md)
 
 ## Function
 
-- Function: Fuses MX (Microscaling) quantized matrix multiplication, activation, and dynamic MX quantization, producing quantized output and the corresponding scales. Supports the tanh and erf forms of GELU (Gaussian Error Linear Unit), SiLU (Sigmoid Linear Unit), and SwiGLU (Swish Gated Linear Unit). For data type and transpose combinations, see [Constraints](#constraints). For an introduction to MX, see [Quantization Modes](../../docs/en/context/quant_mode_introduction.md).
+- Function: Fuses MX (Microscaling) quantized matrix multiplication, activation, and dynamic MX quantization, producing quantized output and the corresponding scales. Supports the tanh and erf forms of GELU (Gaussian Error Linear Unit), SiLU (Sigmoid Linear Unit), SwiGLU (Swish Gated Linear Unit), and sigmoid followed by elementwise multiplication with `x3`. For data type and transpose combinations, see [Constraints](#constraints). For an introduction to MX, see [Quantization Modes](../../docs/en/context/quant_mode_introduction.md).
+
+- Both V2 aclnn interfaces (ND and FRACTAL_NZ weights) add `x3Optional` for elementwise multiplication with the sigmoid result. V1 and V2 support GELU, SiLU, and SwiGLU. See [Invocation Description](#invocation-description) for the four interfaces.
 
 - Computation flow: Perform MX quantized matrix multiplication and add bias, apply the activation, and then perform dynamic MX quantization. The formulas for each step are given below.
 
-Batch indices are omitted below. $X_1$ and $X_2$ denote the matrices after applying the transpose settings, with shapes $(M,K)$ and $(K,N)$, respectively. M is the row count of the left matrix, K is the shared reduction dimension, and N is the column count of the right matrix.
+  Batch indices are omitted below. $X_1$ and $X_2$ denote the matrices after applying the transpose settings, with shapes $(M,K)$ and $(K,N)$, respectively. M is the row count of the left matrix, K is the shared reduction dimension, and N is the column count of the right matrix.
 
 ### MX Quantized Matrix Multiplication
 
@@ -61,7 +63,13 @@ Apply the specified activation to $C$ to obtain $A$:
   C=[G\mid U],\qquad A=\operatorname{SiLU}(G)\odot U=\frac{G}{1+e^{-G}}\odot U
   $$
 
-All activations above are calculated in FP32. Let $H$ be the output width after activation: $H=N$ for GELU and SiLU, and $H=N/2$ for SwiGLU.
+- `activation_type="sigmoid"`: Apply sigmoid to $C$ and multiply elementwise by the BFLOAT16 tensor $B$, provided by `x3`.
+
+  $$
+  A=\operatorname{sigmoid}(C)\odot\operatorname{FP32}(B)
+  $$
+
+All activations above are calculated in FP32. Let $H$ be the output width after activation: $H=N$ for GELU, SiLU, and sigmoid, and $H=N/2$ for SwiGLU.
 
 ### Dynamic MX Quantization
 
@@ -131,29 +139,33 @@ E8M0 encodes $2^e$ as the byte $e+127$. Special cases are handled as follows:
 
 | Parameter | Input/Output/Attribute | Description | Data Type | Data Format |
 | --- | --- | --- | --- | --- |
-| x1 | Input | Left matrix for matrix multiplication, corresponding to X<sub>1</sub> in the formula. | FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1 | ND |
-| x2 | Input | Right matrix for matrix multiplication, corresponding to X<sub>2</sub> in the formula. NZ does not support FLOAT8_E5M2. | FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1 | ND, FRACTAL_NZ |
-| bias | Optional input | <ul><li>Bias added before activation, corresponding to b in the formula.</li><li>No bias is added if omitted.</li></ul> | FLOAT32 | ND |
-| x1_scale | Optional input | <ul><li>Group scales for x1, corresponding to S<sub>1</sub> in the formula.</li><li>This operator supports only MX mode. The corresponding group scales must be provided at execution.</li></ul> | FLOAT8_E8M0 | ND |
-| x2_scale | Optional input | <ul><li>Group scales for x2, corresponding to S<sub>2</sub> in the formula.</li><li>This operator supports only MX mode. The corresponding group scales must be provided at execution.</li></ul> | FLOAT8_E8M0 | ND |
-| y | Output | Dynamic quantization result, corresponding to y in the formula. Its data type must match that of x1. | FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1 | ND |
-| y_scale | Output | Scale for each group of 32 output elements, corresponding to s in the formula. | FLOAT8_E8M0 | ND |
-| transpose_x1 | Optional attribute | <ul><li>Whether to transpose the last two dimensions of x1: false means no transpose, and true means transpose.</li><li>Defaults to false.</li></ul> | BOOL | - |
-| transpose_x2 | Optional attribute | <ul><li>Whether to transpose the last two dimensions of x2: false means no transpose, and true means transpose.</li><li>Defaults to false.</li></ul> | BOOL | - |
-| group_size | Optional attribute | <ul><li>Encoded group sizes along M, N, and K for input quantization. Supports only 0 or 4295032864, both representing [1,1,32].</li><li>Defaults to 0.</li></ul> | INT64 | - |
-| activation_type | Optional attribute | <ul><li>Activation type. Supports "gelu_tanh", "gelu_erf", "silu", and "swiglu".</li><li>Defaults to "gelu_tanh".</li></ul> | STRING | - |
-| y_dtype | Optional attribute | <ul><li>Data type enumeration for y. Supports the enumeration values for FLOAT8_E4M3FN, FLOAT8_E5M2, and FLOAT4_E2M1. The specified data type must match that of x1.</li><li>Defaults to the enumeration value for FLOAT8_E4M3FN.</li></ul> | INT64 | - |
-| quant_mode | Optional attribute | <ul><li>Quantization mode. Supports only "mx".</li><li>Defaults to "mx".</li></ul> | STRING | - |
-| round_mode | Optional attribute | <ul><li>Rounding mode for conversion to the output data type. FP8 supports only "rint", which rounds to the nearest representable value and resolves ties to the value whose least significant mantissa bit is 0.</li><li>FP4 also supports "floor" (round toward negative infinity) and "round" (round to the nearest representable value, resolving ties away from zero).</li><li>Defaults to "rint".</li></ul> | STRING | - |
-| scale_alg | Optional attribute | <ul><li>Algorithm for calculating output scales. FP8 supports 0 and 1; FP4 supports 0 and 2.</li><li>For algorithm definitions, see <a href="#scale-calculation-algorithms">Scale Calculation Algorithms</a>. Defaults to 0.</li></ul> | INT64 | - |
-| dst_type_max | Optional attribute | <ul><li>Reference upper bound for calculating output scales when scale_alg=2, corresponding to d in the formula.</li><li>Supports 0.0 (equivalent to 6.0) or a finite value in [6.0,12.0].</li><li>Defaults to 0.0. Ignored by other algorithms.</li></ul> | FLOAT32 | - |
+| x1 | Input | Left matrix in the product, denoted by $X_1$. | FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1 | ND |
+| x2 | Input | Right matrix in the product, denoted by $X_2$. FRACTAL_NZ supports FLOAT8_E4M3FN and FLOAT4_E2M1. | FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1 | ND, FRACTAL_NZ |
+| bias | Optional input | Bias $b$ added before activation. Omitting it gives zero bias. | FLOAT32 | ND |
+| x1_scale | Optional input | Group scales $S_1$ along K for `x1`. Required for MX, the only supported quantization mode. | FLOAT8_E8M0 | ND |
+| x2_scale | Optional input | Group scales $S_2$ along K for `x2`. Required for MX, the only supported quantization mode. | FLOAT8_E8M0 | ND |
+| x3 | Optional input | Tensor $B$ multiplied elementwise with the sigmoid result. Supply it for `activation_type="sigmoid"` and omit it for other activations. See [Sigmoid Scenario](#sigmoid-scenario). | BFLOAT16 | ND |
+| y | Output | Dynamically quantized result $y$. Its data type must match `x1`. | FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1 | ND |
+| y_scale | Output | Scale $s$ shared by each group of 32 output elements. | FLOAT8_E8M0 | ND |
+| transpose_x1 | Optional attribute | Whether to transpose the final two dimensions of `x1`. Use `false` (default) to keep their order or `true` to swap them. | BOOL | - |
+| transpose_x2 | Optional attribute | Whether to transpose the final two dimensions of `x2`. Use `false` (default) to keep their order or `true` to swap them. | BOOL | - |
+| group_size | Optional attribute | Encoded group sizes along M, N, and K for input quantization. Both `0` (default) and `4295032864` select `[1, 1, 32]`. | INT64 | - |
+| activation_type | Optional attribute | Activation function. Supports `"gelu_tanh"` (default), `"gelu_erf"`, `"silu"`, `"swiglu"`, and `"sigmoid"`. | STRING | - |
+| y_dtype | Optional attribute | Data type identifier for `y`. It must match the data type of `x1`. Supported values are `35` (FLOAT8_E5M2), `36` (FLOAT8_E4M3FN, default), and `40` (FLOAT4_E2M1). | INT64 | - |
+| quant_mode | Optional attribute | Quantization mode. The only supported value is `"mx"` (default). | STRING | - |
+| round_mode | Optional attribute | Rounding mode for output quantization. FP8 supports `"rint"` (default, round to nearest with ties to even). FP4 also supports `"floor"` (round toward negative infinity) and `"round"` (round to nearest with ties away from zero). | STRING | - |
+| scale_alg | Optional attribute | Algorithm for computing output scales. FP8 supports `0` and `1`. FP4 supports `0` and `2`. The default is `0`. See [Scale Calculation Algorithms](#scale-calculation-algorithms). | INT64 | - |
+| dst_type_max | Optional attribute | Reference upper bound $d$ for computing the scale with `scale_alg=2`. Accepts `0.0` (default, treated as `6.0`) or a finite value in $[6,12]$. Other algorithms ignore this attribute. | FLOAT32 | - |
 
 ## Constraints
 
-The following input requirements apply when the operator executes. For interface layout restrictions, see [aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant_en.md) and [aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz_en.md).
+The following input requirements apply when the operator executes. For interface layout restrictions, see [aclnnQuantMatmulActivationQuantV2](docs/aclnnQuantMatmulActivationQuantV2_en.md) and [aclnnQuantMatmulActivationQuantWeightNzV2](docs/aclnnQuantMatmulActivationQuantWeightNzV2_en.md).
 
 - x1 and x2 must each have 2 to 6 logical dimensions. Empty tensors are not supported, and every dimension must be a positive integer.
-- Each logical dimension of x1/x2 and the product of the broadcast batch dimensions must not exceed $2^{32}-1$. The number of output elements before activation must not exceed $2^{63}-1$.
+- Each logical dimension of every input and output tensor, including scales and any supplied optional tensors, must be in the range $[1,2^{32}-1]$.
+- Storage dimensions must be positive. For each tensor, multiply the dimensions of its logical shape and its storage shape separately. Each element count must be at most $2^{63}-1$. The NZ storage count includes alignment padding. Count FP4 data in 4-bit elements.
+- The product of the broadcast batch dimensions, `batchSize`, must not exceed $2^{32}-1$. This product excludes M, K, and N; `batchSize` is 1 when there are no batch dimensions.
+- The number of output elements before activation, `batchSize * M * N`, must not exceed $2^{63}-1$, where N is the number of columns in the matrix multiplication output before activation.
 
 The matrices and output support the following combinations:
 
@@ -173,12 +185,13 @@ In the table below, FP8 refers to FLOAT8_E4M3FN or FLOAT8_E5M2, and FP4 refers t
 
 | activation_type | Data type | Output width H | Requirement on N | transpose_x1 when x2 is ND | transpose_x1 when x2 is NZ |
 | --- | --- | --- | --- | --- | --- |
-| "gelu_tanh", "gelu_erf" | FP8 | N | $N>0$ | false, true | false, true |
+| "gelu_tanh", "gelu_erf" | FP8 | N | ND $N>0$, NZ $N>1$ | false, true | false, true |
 | "gelu_tanh", "gelu_erf" | FP4 | N | Positive even integer | false, true | false |
-| "silu" | FP8 | N | $N>0$ | false, true | false |
+| "silu" | FP8 | N | ND $N>0$, NZ $N>1$ | false, true | false |
+| "sigmoid" | FP8 | N | ND $N>0$, NZ $N>1$ | false, true | false |
 | "swiglu" | FP8 | N/2 | Positive multiple of 64 | false, true | false |
 
-Both false and true are supported for `transpose_x2`. When x2 uses NZ, K and N must both be greater than 1.
+All combinations support both `false` and `true` for `transpose_x2`. NZ weights also require $K>1$.
 
 FP4 supports only GELU and requires $K>2$ and an even N. For FP4 inputs x1 and x2, the innermost dimension in a contiguous storage layout must be even: check K for non-transposed x1 and M for transposed x1; check N for non-transposed x2 and K for transposed x2.
 
@@ -195,19 +208,30 @@ FP4 supports only GELU and requires $K>2$ and an even N. For FP4 inputs x1 and x
 
 - The two K dimensions must match. Each input scale's batch dimensions must exactly match those of its matrix.
 - Each group of 32 K elements has one input scale. Scales for two consecutive groups are stored in order in the trailing dimension of size 2.
-- The shape of `y` is `(batch, M, H)`, and the shape of `y_scale` is `(batch, M, ceil(H/64), 2)`. H is determined by the activation type.
+- The shape of `y` is `(batch, M, H)`, and the shape of `y_scale` is `(batch, M, ceil(H/64), 2)`. H is determined by the activation type. Both outputs must be contiguous.
 - The shape of bias is `(N,)`. Only for a three-dimensional output, `(B, 1, N)` is also supported, where B must equal the broadcast batch size. For SwiGLU, the bias length remains N, the width before activation.
 
 Nonzero `group_size` values are encoded as `(groupSizeM << 32) | (groupSizeN << 16) | groupSizeK`, with the highest 16 bits set to 0. This operator uses fixed group sizes of `[1,1,32]`.
 
+### Sigmoid Scenario
+
+For `activation_type="sigmoid"`:
+
+- `x1`, `x2`, `x3`, and `y` must have 2D logical shapes, with `x3.shape == y.shape == (M, N)`.
+- Batch dimensions (including size-1 dimensions) and broadcasting are not supported. The 4D physical storage of NZ weights does not count as batch dimensions.
+- If `bias` is supplied, its shape must be `(N,)`.
+
 ## Invocation Description
+
+This operator does not support GE graph mode.
 
 | Invocation method | Sample code | Description |
 | --- | --- | --- |
-| aclnn API | [GELU example](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp), [SwiGLU example](examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp) | Calls [aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant_en.md) with x2 in ND format. |
-| aclnn API | [GELU example with NZ weights](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant_weight_nz.cpp) | Calls [aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz_en.md) with x2 in FRACTAL_NZ format. |
-| GE graph mode | - | Builds and invokes a graph using the [QuantMatmulActivationQuant operator IR](op_graph/quant_matmul_activation_quant_proto.h). |
-| PyTorch API | [FP8 and FP4 examples](docs/torchapi_quant_matmul_activation_quant_en.md#example) | Calls [cann_ops_nn.quant_matmul_activation_quant](docs/torchapi_quant_matmul_activation_quant_en.md). For extension installation, see the [PyTorch extension instructions](../../torch_extension/README_en.md). |
+| aclnn API | [FP8 (sigmoid + mul) example](examples/arch35/test_aclnn_quant_matmul_sigmoid_mx_quant.cpp), [FP8 (GELU) example](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant.cpp), [FP8 (SwiGLU) example](examples/arch35/test_aclnn_quant_matmul_swiglu_mx_quant.cpp) | Calls [aclnnQuantMatmulActivationQuantV2](docs/aclnnQuantMatmulActivationQuantV2_en.md) with x2 in ND format. |
+| aclnn API | [FP8 (sigmoid + mul) example with NZ weights](examples/arch35/test_aclnn_quant_matmul_sigmoid_mx_quant_weight_nz.cpp), [FP8 (GELU) example with NZ weights](examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant_weight_nz.cpp) | Calls [aclnnQuantMatmulActivationQuantWeightNzV2](docs/aclnnQuantMatmulActivationQuantWeightNzV2_en.md) with x2 in FRACTAL_NZ format. |
+| aclnn API | [Example](docs/aclnnQuantMatmulActivationQuant_en.md#example) | Calls [aclnnQuantMatmulActivationQuant](docs/aclnnQuantMatmulActivationQuant_en.md) with x2 in ND format. |
+| aclnn API | [Example](docs/aclnnQuantMatmulActivationQuantWeightNz_en.md#example) | Calls [aclnnQuantMatmulActivationQuantWeightNz](docs/aclnnQuantMatmulActivationQuantWeightNz_en.md) with x2 in FRACTAL_NZ format. |
+| PyTorch API (eager mode) | [FP8 and FP4 examples](docs/torchapi_quant_matmul_activation_quant_en.md#example) | Calls [cann_ops_nn.quant_matmul_activation_quant](docs/torchapi_quant_matmul_activation_quant_en.md). For extension installation, see the [PyTorch extension instructions](../../torch_extension/README_en.md). |
 
 ## References
 

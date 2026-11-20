@@ -3274,9 +3274,9 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
-    <td>完成量化矩阵乘后计算GELU、SwiGLU或SiLU激活，再执行动态MX量化。</td>
+    <td>完成量化矩阵乘后，执行GELU、SwiGLU、SiLU激活，或执行sigmoid后与x3逐元素相乘，再执行动态MX量化。</td>
   </tr>
   <tr>
     <td>matmul</td>

@@ -50,6 +50,11 @@ namespace ge {
 * @li x2_scale: Required in MX mode. Uses float8_e8m0 and ND format, with rank 3 to 7.
 * Its batch dimensions must match x2. The last three dimensions are (z, n, 2) when transpose_x2 is false,
 * or (n, z, 2) when true, where z = ceil(k / 64). \n
+* @li x3: Optional BF16 ND multiplier, required when activation_type="sigmoid".
+* When x3 is provided, x1, x2, x3 and y must have 2D logical shapes, and x3 must match y.
+* Batch dimensions (including size-1 dimensions) and broadcasting are not supported.
+* Sigmoid and multiplication use FP32; the product is rounded to BF16 before MX quantization.
+* For other activations, x3 must be absent.
 * @par Attributes:
 * @li transpose_x1: A bool. If true, x1 is stored as [..., k, m] and transposed to [..., m, k] for multiplication.
 * Default: false. For SwiGLU and SiLU, true is supported with ND x2; WeightNZ x2 requires false.
@@ -63,8 +68,8 @@ namespace ge {
 * Otherwise, only the encoding 4295032864 for [1, 1, 32] is supported. \n
 * Final group_size_m, group_size_n, group_size_k should satisify following requirements: \n
 * In mx quantification, the supported final [group_size_m, group_size_n, group_size_k] combinations are [1, 1, 32]. \n
-* @li activation_type: An optional string. The activation algorithm to use: 'gelu_tanh', 'gelu_erf', 'swiglu' or
-'silu', default is 'gelu_tanh'.
+* @li activation_type: An optional string. The activation algorithm to use: 'gelu_tanh', 'gelu_erf', 'swiglu',
+'silu' or 'sigmoid', default is 'gelu_tanh'.
 * @li y_dtype: An optional Int. The output dtype must match x1. Defaults to DT_FLOAT8_E4M3FN.
 * @li quant_mode: An optional string. Declare the quant mode.Support mx. Defaults to "mx".
 * @li round_mode: An optional string. Defaults to "rint".
@@ -89,7 +94,7 @@ namespace ge {
 * when the out shape is 3D.
 * @li Inputs does not support tensor with dimension size 0.
 * @li When x2 is ND format, x1 should be ND format.
-* @li When activation_type is 'swiglu' or 'silu', x1 and x2 must be FP8, x1 must be ND,
+* @li When activation_type is 'swiglu', 'silu' or 'sigmoid', x1 and x2 must be FP8, x1 must be ND,
 * x2 must be ND or FLOAT8_E4M3FN NZ; transpose_x1 is supported for ND x2 and must be false for WeightNZ x2;
 * y_dtype must match x1; round_mode must be 'rint'; scale_alg must be 0 or 1.
 * For SwiGLU, the pre-activation N must be divisible by 64.
@@ -142,6 +147,7 @@ REG_OP(QuantMatmulActivationQuant)
     // Keep optional registration for interface compatibility; both scales are mandatory in MX mode.
     .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT8_E8M0}))
     .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT8_E8M0}))
+    .OPTIONAL_INPUT(x3, TensorType({DT_BF16}))
     .OUTPUT(y, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1}))
     .OUTPUT(y_scale, TensorType({DT_FLOAT8_E8M0}))
     .ATTR(transpose_x1, Bool, false)

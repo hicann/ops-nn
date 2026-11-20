@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 
 #include "../../../op_api/aclnn_quant_matmul_activation_quant_weight_nz.h"
+#include "../../../op_api/aclnn_quant_matmul_activation_quant_weight_nz_v2.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -61,10 +62,20 @@ struct QuantMatmulActivationQuantWeightNzTestParam {
     string scaleAlgStr;
     string dstTypeMaxStr;
     string expectRetStr;
+    string x3ShapeStr;
+    string x3DtypeStr;
+    string x3FormatStr;
+    string apiVersion;
+    string x1StrideStr;
+    string x2StrideStr;
+    string x1ScaleStrideStr;
+    string x2ScaleStrideStr;
+    string yStrideStr;
+    string yScaleStrideStr;
 };
 
 static TensorDesc BuildTensorDesc(const string& shapeStr, const string& dtypeStr, const string& formatStr,
-                                  const string& storageStr)
+                                  const string& storageStr, const string& strideStr = "")
 {
     if (shapeStr.empty() && dtypeStr.empty()) {
         return TensorDesc();
@@ -73,8 +84,9 @@ static TensorDesc BuildTensorDesc(const string& shapeStr, const string& dtypeStr
     auto dtype = ParseAclDataType(dtypeStr);
     auto format = ParseAclFormat(formatStr);
     auto storage = ParseInt64Vec(storageStr);
-    if (!storage.empty()) {
-        return TensorDesc(shape, dtype, format, {}, 0, storage);
+    auto stride = ParseInt64Vec(strideStr);
+    if (!storage.empty() || !stride.empty()) {
+        return TensorDesc(shape, dtype, format, stride, 0, storage);
     }
     return TensorDesc(shape, dtype, format);
 }
@@ -106,10 +118,13 @@ static vector<QuantMatmulActivationQuantWeightNzTestParam> GetParams()
         }
         vector<string> cols;
         SplitStr2Vec(line, ",", cols);
-        if (cols.size() != 35UL) {
+        constexpr size_t requiredColumns = 43;
+        constexpr size_t columnsWithOutputStrides = requiredColumns + 2;
+        if (cols.size() < requiredColumns || cols.size() > columnsWithOutputStrides) {
             g_csvLoadErrors.push_back("invalid CSV column count: " + line);
             continue;
         }
+        cols.resize(columnsWithOutputStrides);
 
         QuantMatmulActivationQuantWeightNzTestParam param;
         size_t idx = 0UL;
@@ -148,31 +163,47 @@ static vector<QuantMatmulActivationQuantWeightNzTestParam> GetParams()
         param.scaleAlgStr = Trim(cols[idx++]);
         param.dstTypeMaxStr = Trim(cols[idx++]);
         param.expectRetStr = Trim(cols[idx++]);
+        param.x3ShapeStr = Trim(cols[idx++]);
+        param.x3DtypeStr = Trim(cols[idx++]);
+        param.x3FormatStr = Trim(cols[idx++]);
+        param.apiVersion = Trim(cols[idx++]);
+        param.x1StrideStr = Trim(cols[idx++]);
+        param.x2StrideStr = Trim(cols[idx++]);
+        param.x1ScaleStrideStr = Trim(cols[idx++]);
+        param.x2ScaleStrideStr = Trim(cols[idx++]);
+        param.yStrideStr = Trim(cols[idx++]);
+        param.yScaleStrideStr = Trim(cols[idx++]);
+        if (param.apiVersion != "V1" && param.apiVersion != "V2") {
+            g_csvLoadErrors.push_back("invalid API version: " + line);
+            continue;
+        }
         params.push_back(param);
     }
     return params;
 }
 
 class QuantMatmulActivationQuantWeightNzAclnnTest
-    : public testing::TestWithParam<QuantMatmulActivationQuantWeightNzTestParam> {
-protected:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
-};
+    : public testing::TestWithParam<QuantMatmulActivationQuantWeightNzTestParam> {};
 
 TEST_P(QuantMatmulActivationQuantWeightNzAclnnTest, CsvTest)
 {
     const auto& param = GetParam();
     op::NpuArchManager archManager(Ops::Base::DAV_3510);
 
-    auto x1Desc = BuildTensorDesc(param.x1ShapeStr, param.x1DtypeStr, param.x1FormatStr, param.x1StorageStr);
-    auto x2Desc = BuildTensorDesc(param.x2ShapeStr, param.x2DtypeStr, param.x2FormatStr, param.x2StorageStr);
+    auto x1Desc = BuildTensorDesc(param.x1ShapeStr, param.x1DtypeStr, param.x1FormatStr, param.x1StorageStr,
+                                  param.x1StrideStr);
+    auto x2Desc = BuildTensorDesc(param.x2ShapeStr, param.x2DtypeStr, param.x2FormatStr, param.x2StorageStr,
+                                  param.x2StrideStr);
     auto x1ScaleDesc = BuildTensorDesc(param.x1ScaleShapeStr, param.x1ScaleDtypeStr, param.x1ScaleFormatStr,
-                                       param.x1ScaleStorageStr);
+                                       param.x1ScaleStorageStr, param.x1ScaleStrideStr);
     auto x2ScaleDesc = BuildTensorDesc(param.x2ScaleShapeStr, param.x2ScaleDtypeStr, param.x2ScaleFormatStr,
-                                       param.x2ScaleStorageStr);
-    auto yDesc = BuildTensorDesc(param.yShapeStr, param.yDtypeStr, param.yFormatStr, param.yStorageStr);
-    auto yScaleDesc = BuildTensorDesc(param.yScaleShapeStr, param.yScaleDtypeStr, param.yScaleFormatStr, "");
+                                       param.x2ScaleStorageStr, param.x2ScaleStrideStr);
+    auto yDesc = BuildTensorDesc(param.yShapeStr, param.yDtypeStr, param.yFormatStr, param.yStorageStr,
+                                 param.yStrideStr);
+    auto yScaleDesc = BuildTensorDesc(param.yScaleShapeStr, param.yScaleDtypeStr, param.yScaleFormatStr, "",
+                                      param.yScaleStrideStr);
+
+    auto x3Desc = BuildTensorDesc(param.x3ShapeStr, param.x3DtypeStr, param.x3FormatStr, "");
 
     bool hasBias = !param.biasShapeStr.empty();
     auto biasDesc = hasBias ? TensorDesc(ParseInt64Vec(param.biasShapeStr), ParseAclDataType(param.biasDtypeStr),
@@ -197,13 +228,22 @@ TEST_P(QuantMatmulActivationQuantWeightNzAclnnTest, CsvTest)
 
     uint64_t workspaceSize = 0;
     const auto outputs = OUTPUT(hasY ? yDesc : TensorDesc(), hasYScale ? yScaleDesc : TensorDesc());
-    const auto testWorkspaceSize = [&](const auto& biasInput) {
-        const auto inputs = INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, biasInput, transposeX1, transposeX2,
+    const auto testWorkspaceSize = [&](const auto& biasInput, const auto& x3) {
+        if (param.apiVersion == "V1") {
+            const auto inputs = INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, biasInput, transposeX1, transposeX2,
+                                      groupSize, activationType, quantMode, roundMode, scaleAlg, dstTypeMax);
+            auto ut = OP_API_UT(aclnnQuantMatmulActivationQuantWeightNz, inputs, outputs);
+            return ut.TestGetWorkspaceSize(&workspaceSize);
+        }
+        const auto inputs = INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, biasInput, x3, transposeX1, transposeX2,
                                   groupSize, activationType, quantMode, roundMode, scaleAlg, dstTypeMax);
-        auto ut = OP_API_UT(aclnnQuantMatmulActivationQuantWeightNz, inputs, outputs);
+        auto ut = OP_API_UT(aclnnQuantMatmulActivationQuantWeightNzV2, inputs, outputs);
         return ut.TestGetWorkspaceSize(&workspaceSize);
     };
-    const aclnnStatus aclRet = hasBias ? testWorkspaceSize(biasDesc) : testWorkspaceSize(nullptr);
+    const auto testX3 = [&](const auto& biasInput) {
+        return param.x3ShapeStr.empty() ? testWorkspaceSize(biasInput, nullptr) : testWorkspaceSize(biasInput, x3Desc);
+    };
+    const aclnnStatus aclRet = hasBias ? testX3(biasDesc) : testX3(nullptr);
 
     EXPECT_EQ(aclRet, expectRet) << "caseName=" << param.caseName;
 }

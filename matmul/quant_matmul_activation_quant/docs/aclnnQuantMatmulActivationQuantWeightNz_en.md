@@ -25,11 +25,13 @@
 
 - Description: This API fuses MX (Microscaling) quantized matrix multiplication, activation, and dynamic MX quantization to return the quantized result and its scales. Supported activations are GELU (Gaussian Error Linear Unit, tanh/erf forms), SiLU (Sigmoid Linear Unit), and SwiGLU (Swish Gated Linear Unit). x1 uses ND and x2 uses FRACTAL_NZ. See [Constraints](#constraints) for data types and transpose combinations.
 
+- For sigmoid followed by elementwise multiplication, use [aclnnQuantMatmulActivationQuantWeightNzV2](aclnnQuantMatmulActivationQuantWeightNzV2_en.md) and pass the multiplier as `x3Optional`.
+
 <!-- npu="950" id7 -->
 
 - Computation: Perform MX matrix multiplication and add the bias, apply the activation, and then dynamically quantize the result in MX mode.
 
-Batch indices are omitted below. $X_1$ and $X_2$ denote the matrices after applying the transpose settings, with shapes $(M,K)$ and $(K,N)$, respectively. M is the row count of the left matrix, K is the shared reduction dimension, and N is the column count of the right matrix.
+  Batch indices are omitted below. $X_1$ and $X_2$ denote the matrices after applying the transpose settings, with shapes $(M,K)$ and $(K,N)$, respectively. M is the row count of the left matrix, K is the shared reduction dimension, and N is the column count of the right matrix.
 
 ### MX Quantized Matrix Multiplication
 
@@ -176,7 +178,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
 
 - **Parameters**
 
-  All tensor data resides on the device. Only `biasOptional` may be nullptr; all other tensor parameters are required and must be nonempty.
+  All tensors reside on the device. Every tensor supplied must be nonempty. The table specifies which inputs accept `nullptr`.
 
   <table style="table-layout: fixed; width: 1500px">
     <colgroup>
@@ -206,7 +208,12 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>x1 (const aclTensor*)</td>
         <td>Input</td>
         <td>Left matrix, corresponding to X<sub>1</sub> in the formulas.</td>
-        <td><ul> <li>Required and nonempty.</li> <li>See <a href="#shapes">Shapes</a> and <a href="#data-types-and-activations">Data Types and Activations</a> for shape and transpose restrictions.</li> </ul></td>
+        <td>
+          <ul>
+            <li>Required and nonempty.</li>
+            <li>See <a href="#shapes">Shapes</a> and <a href="#data-types-and-activations">Data Types and Activations</a> for shape and transpose restrictions.</li>
+          </ul>
+        </td>
         <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1</td>
         <td>ND</td>
         <td>2–6</td>
@@ -216,7 +223,13 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>x2 (const aclTensor*)</td>
         <td>Input</td>
         <td>Right matrix, corresponding to X<sub>2</sub> in the formulas.</td>
-        <td><ul> <li>Required and nonempty.</li> <li>See <a href="#shapes">Shapes</a> for logical shapes and <a href="#layout-and-storage">Layout and Storage</a> for storage requirements.</li> <li>Only complete NZ storage and its last-two-axis transpose view are supported.</li> </ul></td>
+        <td>
+          <ul>
+            <li>Required and nonempty.</li>
+            <li>See <a href="#shapes">Shapes</a> for logical shapes and <a href="#layout-and-storage">Layout and Storage</a> for storage requirements.</li>
+            <li>Only complete NZ storage and its last-two-axis transpose view are supported.</li>
+          </ul>
+        </td>
         <td>FLOAT8_E4M3FN, FLOAT4_E2M1</td>
         <td>FRACTAL_NZ</td>
         <td>Logical: 2–6; storage: 4–8</td>
@@ -226,7 +239,12 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>x1ScaleOptional (const aclTensor*)</td>
         <td>Input</td>
         <td>Scales for x1 groups along K, corresponding to S<sub>1</sub>.</td>
-        <td><ul> <li>This API supports only MX mode; this input must be supplied and must not be nullptr.</li> <li>Must be nonempty; batch dimensions must match x1.</li> </ul></td>
+        <td>
+          <ul>
+            <li>This API supports only MX mode; this input must be supplied and must not be nullptr.</li>
+            <li>Must be nonempty; batch dimensions must match x1.</li>
+          </ul>
+        </td>
         <td>FLOAT8_E8M0</td>
         <td>ND</td>
         <td>3–7</td>
@@ -236,7 +254,12 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>x2Scale (const aclTensor*)</td>
         <td>Input</td>
         <td>Scales for x2 groups along K, corresponding to S<sub>2</sub>.</td>
-        <td><ul> <li>Required and nonempty.</li> <li>Batch dimensions must match x2.</li> </ul></td>
+        <td>
+          <ul>
+            <li>Required and nonempty.</li>
+            <li>Batch dimensions must match x2.</li>
+          </ul>
+        </td>
         <td>FLOAT8_E8M0</td>
         <td>ND</td>
         <td>3–7</td>
@@ -246,7 +269,12 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>biasOptional (const aclTensor*)</td>
         <td>Optional input</td>
         <td>Bias added before activation, corresponding to b.</td>
-        <td><ul> <li>Shape: (N,); (B,1,N) is also supported for a 3D output.</li> <li>Pass nullptr to omit the bias. A supplied tensor must be nonempty.</li> </ul></td>
+        <td>
+          <ul>
+            <li>Shape: (N,); (B,1,N) is also supported for a 3D output.</li>
+            <li>Pass nullptr to omit the bias. A supplied tensor must be nonempty.</li>
+          </ul>
+        </td>
         <td>FLOAT32</td>
         <td>ND</td>
         <td>1 or 3</td>
@@ -256,7 +284,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>transposeX1 (bool)</td>
         <td>Input</td>
         <td>Whether to transpose the last two dimensions of x1.</td>
-        <td><ul> <li>false means no transpose, and true means transpose.</li> <li>For supported data type and activation combinations, see <a href="#data-types-and-activations">Data Types and Activations</a>.</li> <li>For supported transpose combinations, see <a href="#constraints">Constraints</a>.</li></ul></td>
+        <td>false means no transpose, and true means transpose. For supported combinations, see <a href="#data-types-and-activations">Data Types and Activations</a>.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -266,7 +294,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>transposeX2 (bool)</td>
         <td>Input</td>
         <td>Whether to transpose the last two dimensions of x2.</td>
-        <td><ul> <li>false means no transpose, and true means transpose.</li> <li>For supported combinations, see <a href="#constraints">Constraints</a>.</li></ul></td>
+        <td>false means no transpose, and true means transpose. For supported combinations, see <a href="#data-types-and-activations">Data Types and Activations</a>.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -276,7 +304,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>groupSize (int64_t)</td>
         <td>Input</td>
         <td>Encoded input quantization group sizes along M, N, and K.</td>
-        <td><ul> <li>Only 0 and 4295032864 are supported; both specify [1,1,32].</li> </ul></td>
+        <td>Only 0 and 4295032864 are supported; both specify [1,1,32].</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -286,7 +314,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>activationType (char*)</td>
         <td>Input</td>
         <td>Activation type.</td>
-        <td><ul> <li>Supports "gelu_tanh", "gelu_erf", "silu", and "swiglu".</li> <li>Must not be nullptr.</li> </ul></td>
+        <td>Supports "gelu_tanh", "gelu_erf", "silu", and "swiglu". Must not be nullptr.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -296,7 +324,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>quantMode (char*)</td>
         <td>Input</td>
         <td>Quantization mode.</td>
-        <td><ul> <li>Only "mx" is supported. Must not be nullptr.</li> </ul></td>
+        <td>Only "mx" is supported. Must not be nullptr.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -306,7 +334,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>roundMode (char*)</td>
         <td>Input</td>
         <td>Rounding mode for output quantization.</td>
-        <td><ul> <li>FP8 supports only "rint": round to the nearest representable value, with ties to even.</li> <li>FP4 also supports "floor" (round toward negative infinity) and "round" (round to the nearest representable value, with ties away from zero).</li> <li>Must not be nullptr.</li> </ul></td>
+        <td>FP8 supports only "rint": round to the nearest representable value, with ties to even. FP4 also supports "floor" (round toward negative infinity) and "round" (round to the nearest representable value, with ties away from zero). Must not be nullptr.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -316,7 +344,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>scaleAlg (int64_t)</td>
         <td>Input</td>
         <td>Algorithm for calculating output scales.</td>
-        <td><ul> <li>FP8 supports 0 and 1; FP4 supports 0 and 2.</li> <li>0 uses the OCP shared exponent; 1 uses the FP8 maximum finite value; 2 uses the range specified by dstTypeMax.</li> </ul></td>
+        <td>FP8 supports 0 and 1; FP4 supports 0 and 2. 0 uses the OCP shared exponent; 1 uses the FP8 maximum finite value; 2 uses the range specified by dstTypeMax.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -326,7 +354,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>dstTypeMax (double)</td>
         <td>Input</td>
         <td>Reference maximum used to calculate output scales when scaleAlg=2, corresponding to d in the formulas.</td>
-        <td><ul> <li>Applies only when scaleAlg=2: 0.0 selects 6.0; finite values in [6.0,12.0] are also supported.</li> <li>Ignored by the other algorithms.</li> </ul></td>
+        <td>Applies only when scaleAlg=2: 0.0 selects 6.0; finite values in [6.0,12.0] are also supported. Ignored by the other algorithms.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -336,27 +364,37 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>yOut (aclTensor*)</td>
         <td>Output</td>
         <td>Dynamically quantized result, corresponding to yOut in the formulas.</td>
-        <td><ul> <li>Required and nonempty.</li> <li>Must have the same data type as x1. Shape: (batch,M,H).</li> </ul></td>
+        <td>
+          <ul>
+            <li>Required and nonempty.</li>
+            <li>Must have the same data type as x1. Shape: (batch,M,H).</li>
+          </ul>
+        </td>
         <td>FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1</td>
         <td>ND (see <a href="#layout-and-storage">Layout and Storage</a> for compatible formats)</td>
         <td>2–6</td>
-        <td>√</td>
+        <td>×</td>
       </tr>
       <tr>
         <td>yScaleOut (aclTensor*)</td>
         <td>Output</td>
         <td>Scales for output groups, corresponding to s in the formulas.</td>
-        <td><ul> <li>Required and nonempty.</li> <li>Shape: (batch,M,ceil(H/64),2).</li> </ul></td>
+        <td>
+          <ul>
+            <li>Required and nonempty.</li>
+            <li>Shape: (batch,M,ceil(H/64),2).</li>
+          </ul>
+        </td>
         <td>FLOAT8_E8M0</td>
         <td>ND (see <a href="#layout-and-storage">Layout and Storage</a> for compatible formats)</td>
         <td>3–7</td>
-        <td>√</td>
+        <td>×</td>
       </tr>
       <tr>
         <td>workspaceSize (uint64_t*)</td>
         <td>Output</td>
         <td>Returns the workspace size to allocate on the device, in bytes.</td>
-        <td><ul> <li>Must not be nullptr.</li> </ul></td>
+        <td>Must not be nullptr.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -366,7 +404,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
         <td>executor (aclOpExecutor**)</td>
         <td>Output</td>
         <td>Returns the op executor containing the operator's computation flow.</td>
-        <td><ul> <li>Must not be nullptr.</li> </ul></td>
+        <td>Must not be nullptr.</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -381,7 +419,7 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
 
   aclnnStatus: Returns a status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
 
-  The first-phase API validates the input parameters and reports errors in the following cases:
+  The first phase reports the following parameter validation errors.
 
   <table style="table-layout: fixed; width: 1000px">
     <colgroup>
@@ -405,20 +443,18 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
       <tr>
         <td>ACLNN_ERR_PARAM_INVALID</td>
         <td>161002</td>
-        <td>A tensor data type, format, shape, broadcast relationship, stride, or accessed storage range violates the constraints; a string parameter is null; or an attribute value or combination is invalid.</td>
-      </tr>
-      <tr>
-        <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
-        <td>561101</td>
-        <td>Failed to create the operator executor.</td>
-      </tr>
-      <tr>
-        <td>ACLNN_ERR_INNER_NULLPTR</td>
-        <td>561103</td>
-        <td>An internal tensor operation returned a null pointer during tensor creation, preprocessing, operator computation, or result copying.</td>
+        <td>
+          <ul>
+            <li>A tensor is empty, or its data type, format, shape, broadcast dimensions, strides, or storage range do not meet the constraints.</li>
+            <li>A matrix and its MX scale use incompatible transpose views.</li>
+            <li>An attribute value or combination is invalid, or <code>activationType</code>, <code>quantMode</code>, or <code>roundMode</code> is null.</li>
+          </ul>
+        </td>
       </tr>
     </tbody>
   </table>
+
+  An unsupported device architecture returns `ACLNN_ERR_RUNTIME_ERROR`. Failure to create the executor returns `ACLNN_ERR_INNER_CREATE_EXECUTOR`. If preparing a tensor view, making an input contiguous, or adding a computation or copy task returns a null pointer, the API returns `ACLNN_ERR_INNER_NULLPTR`.
 
 ## aclnnQuantMatmulActivationQuantWeightNz
 
@@ -465,12 +501,17 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
 
   aclnnStatus: Returns a status code. For details, see [aclnn Return Codes](../../../docs/en/context/aclnn_return_code.md).
 
-  ACLNN_ERR_INNER (561000) is returned if executor execution fails.
+  | Return/Status Code | Value | Description |
+  | --- | --- | --- |
+  | ACLNN_ERR_INNER | 561000 | The executor failed to run the operator. |
 
 ## Constraints
 
 - x1 and x2 have 2 to 6 logical dimensions, all of which must be known positive integers.
-- Each logical dimension of x1/x2 and the product of the broadcast batch dimensions must not exceed $2^{32}-1$. The number of output elements before activation must not exceed $2^{63}-1$.
+- Each logical dimension of every input and output tensor, including scales and any supplied optional tensors, must be in the range $[1,2^{32}-1]$.
+- Storage dimensions must be positive. For each tensor, multiply the dimensions of its logical shape and its storage shape separately. Each element count must be at most $2^{63}-1$. The NZ storage count includes alignment padding. Count FP4 data in 4-bit elements.
+- The product of the broadcast batch dimensions, `batchSize`, must not exceed $2^{32}-1$. This product excludes M, K, and N; `batchSize` is 1 when there are no batch dimensions.
+- The number of output elements before activation, `batchSize * M * N`, must not exceed $2^{63}-1$, where N is the number of columns in the matrix multiplication output before activation.
 
 ### Data Types and Activations
 
@@ -512,9 +553,10 @@ In the table below, FP8 refers to FLOAT8_E4M3FN or FLOAT8_E5M2, and FP4 refers t
 ### Layout and Storage
 
 - yOut and yScaleOut support ND and the ND-compatible base formats NCHW, NHWC, HWCN, NCDHW, NDHWC, and NCL. Private formats are not supported. Output shapes must still follow the rules above.
-- ND input and output strides and offsets must be nonnegative. Every access determined by the shape, strides, and offset must be within the underlying storage. Slices with a nonzero offset are supported when these requirements hold. FP4 offsets count logical elements and must be even.
-- x1, both input scales, and biasOptional support [non-contiguous tensors](../../../docs/en/context/non_contiguous_tensor.md). Outputs also support non-contiguous tensors.
+- ND input and output strides and offsets must be nonnegative. Every access determined by the shape, strides, and offset must be within the underlying storage. Slices with a nonzero offset must also meet the contiguity requirements below. FP4 offsets count logical elements and must be even.
+- x1, both input scales, and biasOptional support [non-contiguous tensors](../../../docs/en/context/non_contiguous_tensor.md). Both `yOut` and `yScaleOut` must be contiguous.
 - When a matrix is passed as a view transposing its last two axes, its scale must swap the third-last and second-last axes, leaving the trailing dimension of size 2 unchanged. A transpose view and a true transposeX1/transposeX2 flag apply two transpositions, which cancel each other. The transpose restrictions above apply to the effective transpose state.
+- For contiguous layouts and standard transpose views, each matrix and its scale must use matching view orientations. If either scale axis being exchanged has size 1, the equivalent shape with these two axes swapped is also accepted. The swapped shape must match the required full shape, including the batch dimensions and the final dimension of 2. Setting transposeX1/transposeX2 to true does not itself require a transpose view.
 
 For NZ weights, set the logical shape and the physical storage shape separately. If a contiguous logical matrix has trailing dimensions `(R,C)`, the physical shape is:
 
@@ -537,11 +579,13 @@ $$
 
 ## Example
 
-This example uses FLOAT8_E4M3FN inputs, GELU (tanh), and `scaleAlg=0`. x2 is converted from ND to NZ before calling the fused operator.
+### FP8 (GELU)
+
+This example uses FP8 (E4M3FN) matrices, E8M0 input scales, and GELU (tanh), with MX quantization and `scaleAlg=0`. x2 is converted from ND to NZ before calling the fused operator.
 
 The following sample code is provided for reference. For details on compilation and execution, see [Compiling and Running a Sample](../../../docs/en/context/compile_and_run_sample.md).
 
-The complete source is available in the [NZ weight sample](../examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant_weight_nz.cpp).
+For the corresponding V2 API example, see the [FP8 (GELU) example with NZ weights](../examples/arch35/test_aclnn_quant_matmul_gelu_mx_quant_weight_nz.cpp).
 
 ```cpp
 // Preprocess ND weights to WeightNZ, then run QuantMatmul + GELU(tanh) + MXFP8 quantization.
@@ -663,13 +707,13 @@ int AclnnQuantMatmulGeluMxQuantWeightNzTest(aclrtStream stream)
     int64_t n = 128;
     bool transposeX1 = false;
     bool transposeX2 = true;
-    constexpr int64_t MX_SCALE_BLOCK_SIZE = 64; // Alignment used to calculate scale shapes.
+    constexpr int64_t mxScaleBlockSize = 64; // Alignment used to calculate scale shapes.
     std::vector<int64_t> x1Shape = {m, k};
     std::vector<int64_t> x2Shape = {n, k};
-    std::vector<int64_t> x1ScaleShape = {m, (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
-    std::vector<int64_t> x2ScaleShape = {n, (k + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
+    std::vector<int64_t> x1ScaleShape = {m, (k + mxScaleBlockSize - 1) / mxScaleBlockSize, 2};
+    std::vector<int64_t> x2ScaleShape = {n, (k + mxScaleBlockSize - 1) / mxScaleBlockSize, 2};
     std::vector<int64_t> outShape = {m, n};
-    std::vector<int64_t> outScaleShape = {m, (n + MX_SCALE_BLOCK_SIZE - 1) / MX_SCALE_BLOCK_SIZE, 2};
+    std::vector<int64_t> outScaleShape = {m, (n + mxScaleBlockSize - 1) / mxScaleBlockSize, 2};
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;
     void* x1ScaleDeviceAddr = nullptr;
@@ -743,13 +787,13 @@ int AclnnQuantMatmulGeluMxQuantWeightNzTest(aclrtStream stream)
 
     workspaceSize = 0;
     executor = nullptr;
-    int64_t groupSizeValue = 4295032864;
+    constexpr int64_t groupSizeValue = 0; // Use the default MX group sizes [1, 1, 32].
     char activationType[] = "gelu_tanh";
     char quantMode[] = "mx";
     char roundMode[] = "rint";
     ret = aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize(
-        x1, x2, x1Scale, x2Scale, bias, transposeX1, transposeX2, groupSizeValue, activationType, quantMode, roundMode,
-        0, 0.0, out, outScale, &workspaceSize, &executor);
+        x1, x2, x1Scale, x2Scale, bias, transposeX1, transposeX2, groupSizeValue, activationType,
+        quantMode, roundMode, 0, 0.0, out, outScale, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS,
               LOG_PRINT("aclnnQuantMatmulActivationQuantWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);

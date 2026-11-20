@@ -29,6 +29,8 @@ __spec__ = {
     "quant_matmul_activation_quant": "QuantMatmulActivationQuantTestSpec",
     "aclnnQuantMatmulActivationQuant": "QuantMatmulActivationQuantAclnnTestSpec",
     "aclnnQuantMatmulActivationQuantWeightNz": "QuantMatmulActivationQuantAclnnTestSpec",
+    "aclnnQuantMatmulActivationQuantV2": "QuantMatmulActivationQuantV2AclnnTestSpec",
+    "aclnnQuantMatmulActivationQuantWeightNzV2": "QuantMatmulActivationQuantV2AclnnTestSpec",
     "cann_ops_nn.ops.quant_matmul_activation_quant": "QuantMatmulActivationQuantE2ETestSpec",
 }
 
@@ -574,6 +576,9 @@ def activate(values, activation_type, *, kernel_erf=True):
             denom = np.float32(1.0) + exp_neg
             silu_gate = _div_ftz_float32(gate, denom)
             return silu_gate * linear
+        if activation_type == "sigmoid":
+            exp_neg = _ftz_float32(np.exp(_ftz_float32(-values)))
+            return _div_ftz_float32(np.float32(1.0), np.float32(1.0) + exp_neg)
         if activation_type == "silu":
             # Match standalone SiLU: x / (1 + exp(-x)) with FP32 FTZ division.
             exp_neg = _ftz_float32(np.exp(_ftz_float32(-values)))
@@ -612,12 +617,36 @@ def round_bfloat16(values):
     return rounded
 
 
+def _validate_x3(activation_type, x3, output_shape=None, operand_shapes=()):
+    if activation_type not in ("gelu_tanh", "gelu_erf", "swiglu", "silu", "sigmoid"):
+        raise ValueError("Unsupported activation_type")
+    if (activation_type == "sigmoid") != (x3 is not None):
+        raise ValueError(
+            "x3 is required for sigmoid multiplication and must be absent for other activations"
+        )
+    if x3 is None:
+        return
+    if (
+        len(x3.shape) != 2
+        or any(len(shape) != 2 for shape in operand_shapes)
+        or (output_shape is not None and len(output_shape) != 2)
+    ):
+        raise ValueError(
+            "x1, x2, x3 and output must have 2D logical shapes when x3 is provided; batch is not supported"
+        )
+    if output_shape is None:
+        return
+    if tuple(x3.shape) != tuple(output_shape):
+        raise ValueError("x3 must have the same shape as the activation output")
+
+
 def reference(
     x1,
     x2,
     bias,
     x1_scale,
     x2_scale,
+    x3=None,
     *,
     activation_type="gelu_tanh",
     output_dtype="float8_e4m3fn",
@@ -628,12 +657,16 @@ def reference(
     transpose_x2=False,
 ):
     if (
-        activation_type in ("swiglu", "silu")
+        activation_type in ("swiglu", "silu", "sigmoid")
         and mx_dtype(output_dtype) == "float4_e2m1"
     ):
         raise ValueError("SwiGLU and SiLU require MXFP8")
     matrix = matmul_mx(x1, x2, x1_scale, x2_scale, bias, transpose_x1, transpose_x2)
-    activated = round_bfloat16(activate(matrix, activation_type))
+    activated = activate(matrix, activation_type)
+    _validate_x3(activation_type, x3, activated.shape, (x1.shape, x2.shape))
+    if x3 is not None:
+        activated = activated * round_bfloat16(x3)
+    activated = round_bfloat16(activated)
     return quantize_mx(
         activated,
         output_dtype,
@@ -868,9 +901,10 @@ def _to_npu_tensor(value, dtype, device):
         "float8_e5m2": torch.float8_e5m2,
         "float8_e8m0": torch.float8_e8m0fnu,
         "float32": torch.float32,
+        "bfloat16": torch.bfloat16,
     }[dtype]
     if isinstance(value, np.ndarray):
-        if dtype == "float32":
+        if dtype in ("float32", "bfloat16"):
             value = torch.from_numpy(np.ascontiguousarray(value, dtype=np.float32))
         else:
             numpy_dtype = {
@@ -920,6 +954,7 @@ def _npu_activation_golden(
     bias,
     x1_scale,
     x2_scale,
+    x3=None,
     *,
     device,
     output_dtype,
@@ -936,8 +971,13 @@ def _npu_activation_golden(
     pack_fp4_output=False,
 ):
     """MX concatenation baseline shared by kernel, ACLNN and E2E tests."""
+    _validate_x3(
+        activation_type,
+        x3,
+        operand_shapes=(x1.shape, weight_nz_shape or x2.shape),
+    )
     if (
-        activation_type not in ("silu", "swiglu", "gelu_tanh", "gelu_erf")
+        activation_type not in ("silu", "swiglu", "sigmoid", "gelu_tanh", "gelu_erf")
         or quant_mode != "mx"
     ):
         raise NotImplementedError(
@@ -946,7 +986,7 @@ def _npu_activation_golden(
     dtype = mx_dtype(output_dtype)
     is_fp4 = dtype == "float4_e2m1"
     if is_fp4:
-        if activation_type in ("silu", "swiglu"):
+        if activation_type in ("silu", "swiglu", "sigmoid"):
             raise ValueError("SwiGLU and SiLU require MXFP8")
         if round_mode not in ("rint", "floor", "round") or scale_alg not in (0, 2):
             raise ValueError(
@@ -959,7 +999,7 @@ def _npu_activation_golden(
     if (
         weight_nz_shape is not None
         and transpose_x1
-        and activation_type in ("silu", "swiglu")
+        and activation_type in ("silu", "swiglu", "sigmoid")
     ):
         raise ValueError("SiLU/SwiGLU WeightNZ requires transpose_x1=false")
 
@@ -990,7 +1030,9 @@ def _npu_activation_golden(
         b_scale,
         pertoken_scale=a_scale,
         bias=_to_npu_tensor(bias, "float32", device),
-        output_dtype=torch.bfloat16 if activation_type == "swiglu" else torch.float32,
+        output_dtype=torch.bfloat16
+        if activation_type in ("swiglu", "sigmoid")
+        else torch.float32,
         group_sizes=[1, 1, 32],
         **({"x1_dtype": 296, "x2_dtype": 296} if is_fp4 else {}),
     )
@@ -1008,9 +1050,13 @@ def _npu_activation_golden(
             scale_alg=scale_alg,
         )
     else:
-        # The fused epilogue rounds AFTER FP32 activation. Keep the Cast in
-        # the measured chain instead of rounding the QBMM output prematurely.
-        if activation_type == "silu":
+        # Preserve each standalone operator's input/output dtype in the baseline.
+        if activation_type == "sigmoid":
+            # Performance baseline deliberately retains the standalone BF16 boundaries.
+            content = _to_npu_tensor(x3, "bfloat16", device)
+            _validate_x3(activation_type, content, matrix.shape)
+            activated = torch.mul(torch.sigmoid(matrix), content)
+        elif activation_type == "silu":
             activated = functional.silu(matrix)
         else:
             activated = functional.gelu(
@@ -1023,6 +1069,7 @@ def _npu_activation_golden(
             round_mode=round_mode,
             dst_type=296 if is_fp4 else a.dtype,
             scale_alg=scale_alg,
+            max_low_bound=0.0,
             # The fused OCP path ignores dst_type_max. DynamicMxQuant validates
             # it unconditionally, so pass its default when that attribute is unused.
             **(
@@ -1172,6 +1219,7 @@ class QuantMatmulActivationQuantTestSpec:
         bias,
         x1_scale,
         x2_scale,
+        x3=None,
         *,
         activation_type="gelu_tanh",
         y_dtype=36,
@@ -1194,7 +1242,7 @@ class QuantMatmulActivationQuantTestSpec:
         weight_nz_shape = None
         input_formats = kwargs.get("input_formats", ())
         if _is_fractal_nz(input_formats):
-            if activation_type in ("swiglu", "silu") and transpose_x1:
+            if activation_type in ("swiglu", "silu", "sigmoid") and transpose_x1:
                 raise ValueError("SwiGLU and SiLU WeightNZ require transpose_x1=false")
             input_ori_shapes = kwargs.get("input_ori_shapes", ())
             if len(input_ori_shapes) <= 1 or input_ori_shapes[1] is None:
@@ -1209,6 +1257,7 @@ class QuantMatmulActivationQuantTestSpec:
                 bias,
                 x1_scale,
                 x2_scale,
+                x3=x3,
                 device=npu_device,
                 output_dtype=dtype,
                 activation_type=activation_type,
@@ -1225,7 +1274,7 @@ class QuantMatmulActivationQuantTestSpec:
         # TTK kernel path normalizes the first output dtype to float32, so the
         # MX kind must come from the y_dtype attribute (GE code 35/36/40 or name).
         result = reference(
-            *map(_numpy, (x1, x2, bias, x1_scale, x2_scale)),
+            *map(_numpy, (x1, x2, bias, x1_scale, x2_scale, x3)),
             activation_type=activation_type,
             output_dtype=dtype,
             scale_alg=scale_alg,
@@ -1247,6 +1296,53 @@ class QuantMatmulActivationQuantAclnnTestSpec:
         x1ScaleOptional,
         x2Scale,
         biasOptional=None,
+        transposeX1=False,
+        transposeX2=False,
+        groupSize=4295032864,
+        activationType="gelu_tanh",
+        quantMode="mx",
+        roundMode="rint",
+        scaleAlg=0,
+        dstTypeMax=0.0,
+        yOut=None,
+        yScaleOut=None,
+        device=None,
+        **kwargs,
+    ):
+        if activationType == "sigmoid":
+            raise ValueError("sigmoid requires the V2 ACLNN interface")
+        return QuantMatmulActivationQuantV2AclnnTestSpec.golden(
+            x1,
+            x2,
+            x1ScaleOptional,
+            x2Scale,
+            biasOptional,
+            transposeX1=transposeX1,
+            transposeX2=transposeX2,
+            groupSize=groupSize,
+            activationType=activationType,
+            quantMode=quantMode,
+            roundMode=roundMode,
+            scaleAlg=scaleAlg,
+            dstTypeMax=dstTypeMax,
+            yOut=yOut,
+            yScaleOut=yScaleOut,
+            device=device,
+            **kwargs,
+        )
+
+
+class QuantMatmulActivationQuantV2AclnnTestSpec:
+    compare = staticmethod(compare_mx_outputs)
+
+    @staticmethod
+    def golden(
+        x1,
+        x2,
+        x1ScaleOptional,
+        x2Scale,
+        biasOptional=None,
+        x3Optional=None,
         transposeX1=False,
         transposeX2=False,
         groupSize=4295032864,
@@ -1282,7 +1378,7 @@ class QuantMatmulActivationQuantAclnnTestSpec:
         npu_device = _npu_golden_device(device)
         weight_nz_shape = None
         if _is_fractal_nz(kwargs.get("tensor_formats", ())):
-            if activationType in ("swiglu", "silu") and transposeX1:
+            if activationType in ("swiglu", "silu", "sigmoid") and transposeX1:
                 raise ValueError("SwiGLU and SiLU WeightNZ require transpose_x1=false")
             # TTK passes a logical x2 view backed by the physical NZ storage.
             # Recover and decode that storage before _numpy() copies the view.
@@ -1296,6 +1392,7 @@ class QuantMatmulActivationQuantAclnnTestSpec:
                 biasOptional,
                 x1ScaleOptional,
                 x2Scale,
+                x3=x3Optional,
                 device=npu_device,
                 output_dtype=dtype,
                 activation_type=activationType,
@@ -1310,7 +1407,10 @@ class QuantMatmulActivationQuantAclnnTestSpec:
                 weight_nz_shape=weight_nz_shape,
             )
         result = reference(
-            *map(_numpy, (x1, x2, biasOptional, x1ScaleOptional, x2Scale)),
+            *map(
+                _numpy,
+                (x1, x2, biasOptional, x1ScaleOptional, x2Scale, x3Optional),
+            ),
             activation_type=activationType,
             output_dtype=dtype,
             scale_alg=scaleAlg,
@@ -1340,6 +1440,7 @@ class QuantMatmulActivationQuantE2ETestSpec:
         dst_type_max=0.0,
         x1_dtype=None,
         x2_dtype=None,
+        x3=None,
         device=None,
         **kwargs,
     ):
@@ -1380,6 +1481,7 @@ class QuantMatmulActivationQuantE2ETestSpec:
                 bias,
                 x1_scale,
                 x2_scale,
+                x3=x3,
                 device=npu_device,
                 output_dtype=dtype,
                 activation_type=activation_type,
@@ -1404,6 +1506,7 @@ class QuantMatmulActivationQuantE2ETestSpec:
             _numpy(bias),
             _numpy_mx(x1_scale, "float8_e8m0"),
             _numpy_mx(x2_scale, "float8_e8m0"),
+            x3=_numpy(x3),
             activation_type=activation_type,
             output_dtype=dtype,
             scale_alg=scale_alg,

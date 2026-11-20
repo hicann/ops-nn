@@ -43,7 +43,7 @@
 |[rms_norm_dynamic_quant](../../norm/rms_norm_dynamic_quant/docs/torchapi_rms_norm_dynamic_quant.md)|融合RMS Normalization与INT8动态量化，输出量化后的张量及缩放因子。|默认支持确定性计算|-|
 |[swiglu_backward_group_quant_with_dual_axis](../../activation/swiglu_backward_group_quant_with_dual_axis/docs/torchapi_swiglu_backward_group_quant_with_dual_axis.md)|融合带Clamp和weight的SwiGLU反向计算与双轴动态MX量化，支持group场景和FP8 E4M3FN/E5M2输出。|-|默认确定性实现|
 |[grouped_dynamic_mx_quant_with_dual_axis](../../quant/grouped_dynamic_mx_quant_with_dual_axis/docs/torchapi_grouped_dynamic_mx_quant_with_dual_axis.md)|根据`group_index`描述的行分组，对二维输入`x`同时沿最后一维和倒数第二维进行动态MX量化，输出两个方向的FP8量化结果及对应的FLOAT8_E8M0缩放因子。|-|默认确定性实现|
-|[quant_matmul_activation_quant](../../matmul/quant_matmul_activation_quant/docs/torchapi_quant_matmul_activation_quant.md)| 融合量化矩阵乘、GELU/SwiGLU/SiLU激活及动态MX量化，weight支持ND和NZ格式。 |-|默认支持确定性计算|
+|[quant_matmul_activation_quant](../../matmul/quant_matmul_activation_quant/docs/torchapi_quant_matmul_activation_quant.md)| 融合量化矩阵乘、激活及动态MX量化，支持GELU、SwiGLU、SiLU，以及sigmoid后与x3逐元素相乘；weight支持ND和NZ格式。 |-|默认支持确定性计算|
 |[flat_quant](../../matmul/flat_quant/docs/torchapi_flat_quant.md)| 为矩阵x依次进行两次克罗内克积小矩阵乘法，然后针对矩阵乘的结果进行量化处理。 |默认支持确定性计算|默认支持确定性计算|
 |[rotate_quant](../../matmul/rotate_quant/docs/torchapi_rotate_quant.md)| 对输入按最后一维分段进行旋转矩阵乘和量化，Ascend 950 支持按 M 轴分组选择不同的旋转矩阵。 |默认支持确定性计算|默认支持确定性计算|
 |[matmul_emu_split_weight](../../matmul/matmul_emu_split_weight/docs/torchapi_matmul_emu_split_weight.md)| 使用双路BF16 GEMM融合模拟FP32精度矩阵乘法。离线将FP32权重拆分为高位BF16与低位残差BF16，推理阶段执行两次BF16 GEMM并做线性组合，激活值全程保持BF16，两路矩阵乘均运行在Cube上。 |默认支持确定性计算|默认支持确定性计算|

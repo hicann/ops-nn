@@ -17,6 +17,8 @@ DTYPE_FLOAT4_E2M1 = 296
 DTYPE_FLOAT8_E5M2 = 291
 DTYPE_FLOAT8_E4M3FN = 292
 FP4_IN_INT8 = 2
+_ALIGN_NUM = 2
+_BLOCK_SIZE = 32
 
 
 # FP4 is physically packed in uint8, so Meta must account for which logical
@@ -44,7 +46,7 @@ def _is_transpose_last_two_dims(tensor: torch.Tensor) -> bool:
 class QuantMatmulActivationQuantOpBuilder(OpBuilder):
     """
     QuantMatmulActivationQuant 算子的构建器
-    基于 aclnnQuantMatmulActivationQuant API 实现，融合量化矩阵乘法、激活函数与输出量化。
+    基于 aclnnQuantMatmulActivationQuantV2 API 实现，融合量化矩阵乘法、激活函数与输出量化。
     """
 
     def __init__(self):
@@ -59,7 +61,7 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
             "Tensor x1, Tensor x2, Tensor x2_scale, *, Tensor? x1_scale=None, Tensor? bias=None, "
             "int? output_dtype=None, int? x1_dtype=None, int? x2_dtype=None, int? x1scale_dtype=None, int? x2scale_dtype=None, "
             'int[]? group_sizes=None, str activation_type="gelu_tanh", str quant_mode="mx", '
-            'str round_mode="rint", int? scale_alg=0, float dst_type_max=0.0)'
+            'str round_mode="rint", int? scale_alg=0, float dst_type_max=0.0, Tensor? x3=None)'
             " -> (Tensor, Tensor)"
         )
 
@@ -83,6 +85,7 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
             round_mode: str = "rint",
             scale_alg: Optional[int] = 0,
             dst_type_max: float = 0.0,
+            x3: Optional[torch.Tensor] = None,
         ) -> Tuple[torch.Tensor, torch.Tensor]:
             x1_dim_num = x1.dim()
             x2_dim_num = x2.dim()
@@ -92,11 +95,11 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
 
             x1_dtype_val = x1_dtype if x1_dtype is not None else 0
             x2_dtype_val = x2_dtype if x2_dtype is not None else 0
-            isMXFP4 = (
+            is_mx_fp4 = (
                 x1_dtype_val == DTYPE_FLOAT4_E2M1 and x2_dtype_val == DTYPE_FLOAT4_E2M1
             )
 
-            if isMXFP4:
+            if is_mx_fp4:
                 trans_x1 = _is_transpose_last_two_dims(x1)
                 trans_x2 = _is_transpose_last_two_dims(x2)
                 m = x1_a if not trans_x1 else x1_a * FP4_IN_INT8
@@ -114,20 +117,42 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
                 # Meta only reflects the epilogue's two-way split.
                 n //= 2
             output_size = batch_size + [m, n]
+            torch._check(
+                activation_type
+                in ("gelu_tanh", "gelu_erf", "swiglu", "silu", "sigmoid"),
+                lambda: "unsupported activation_type",
+            )
+            torch._check(
+                (activation_type == "sigmoid") == (x3 is not None),
+                lambda: "x3 is required for sigmoid multiplication and must be absent for other activations",
+            )
+            if x3 is not None:
+                torch._check(
+                    x1_dim_num == 2 and x2_dim_num == 2 and x3.dim() == 2,
+                    lambda: "x1, x2 and x3 must have 2D logical shapes when x3 is provided; "
+                    "batch is not supported",
+                )
+                torch._check(x3.dtype == torch.bfloat16, lambda: "x3 must be BF16")
+                torch._check(
+                    x3.dim() == len(output_size),
+                    lambda: "x3 must have the same rank as the output",
+                )
+                for i, dim in enumerate(x3.shape):
+                    torch._check(
+                        dim == output_size[i],
+                        lambda: "x3 must have the same shape as the output",
+                    )
 
             # 3. 计算 scale_size (包含分块与对齐逻辑)
             scale_size = list(output_size)
             axis_change = len(output_size) - 1
 
-            ALIGN_NUM = 2
-            BLOCK_SIZE = 32
-
-            # 等价于 C++ 的 op_infer::CeilDiv(a, b) -> (a + b - 1) // b
-            dim_size = (scale_size[axis_change] + BLOCK_SIZE - 1) // BLOCK_SIZE
-            dim_size = (dim_size + ALIGN_NUM - 1) // ALIGN_NUM
+            # 与 C++ 的 Ops::Base::CeilDiv 保持一致。
+            dim_size = (scale_size[axis_change] + _BLOCK_SIZE - 1) // _BLOCK_SIZE
+            dim_size = (dim_size + _ALIGN_NUM - 1) // _ALIGN_NUM
 
             scale_size[axis_change] = dim_size
-            scale_size.append(ALIGN_NUM)
+            scale_size.append(_ALIGN_NUM)
 
             # 4. 判断特殊输出类型 (FLOAT4)
             output_dtype_val = output_dtype if output_dtype is not None else x1_dtype
@@ -191,6 +216,7 @@ def quant_matmul_activation_quant(
     round_mode: str = "rint",
     scale_alg: Optional[int] = 0,
     dst_type_max: float = 0.0,
+    x3: Optional[torch.Tensor] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     NPU 上的 QuantMatmulActivationQuant — 融合量化矩阵乘法、激活函数与输出量化
@@ -213,4 +239,5 @@ def quant_matmul_activation_quant(
         round_mode,
         scale_alg,
         dst_type_max,
+        x3,
     )

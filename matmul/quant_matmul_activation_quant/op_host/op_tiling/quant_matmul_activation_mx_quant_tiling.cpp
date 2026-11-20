@@ -37,7 +37,7 @@ QuantMatmulActivationQuantMXBasicAPITiling::QuantMatmulActivationQuantMXBasicAPI
 
 void QuantMatmulActivationQuantMXBasicAPITiling::Reset()
 {
-    ResetActivationQuantTilingData(tilingData_);
+    tilingData_ = {};
     withoutBatchTilingData_ = {};
     useWithoutBatchTilingData_ = false;
     tilingDataSize_ = sizeof(QMMAQ::QMMAQTilingData);
@@ -163,6 +163,9 @@ uint64_t QuantMatmulActivationQuantMXBasicAPITiling::GetEpilogueType() const
     }
     if (tilingData_.activationType == QMMAQ::ActivationAlg::SILU) {
         return TPL_EPILOGUE_SILU;
+    }
+    if (tilingData_.activationType == QMMAQ::ActivationAlg::SIGMOID) {
+        return TPL_EPILOGUE_SIGMOID_MUL;
     }
     return TPL_EPILOGUE_GELU;
 }

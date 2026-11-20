@@ -35,8 +35,8 @@ extern "C" {
  * @param [in] roundMode: 取整模式。
  * @param [in] scaleAlg: scale算法。
  * @param [in] dstTypeMax: 目标类型最大值。
- * @param [out] yOut: 输出tensor，数据类型：float8_e4m3fn、float8_e5m2、float4_e2m1。
- * @param [out] yScaleOut: 输出scale tensor，数据类型：float8_e8m0。
+ * @param [out] yOut: 连续的输出tensor，数据类型：float8_e4m3fn、float8_e5m2、float4_e2m1。
+ * @param [out] yScaleOut: 连续的输出scale tensor，数据类型：float8_e8m0。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。

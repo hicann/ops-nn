@@ -384,6 +384,8 @@
 | [aclnnQuantMatmulWeightNz](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulWeightNz.md) | 完成量化的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantMatmulActivationQuant](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuant.md) | 融合量化的矩阵乘、激活以及动态量化计算，weight仅支持ND格式。 | - | 默认确定性实现 |
 | [aclnnQuantMatmulActivationQuantWeightNz](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuantWeightNz.md) | 融合量化的矩阵乘、激活以及动态量化计算，weight仅支持NZ格式。 | - | 默认确定性实现 |
+| [aclnnQuantMatmulActivationQuantV2](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuantV2.md) | 融合量化矩阵乘、激活及动态MX量化；相比V1新增可选输入x3Optional，支持sigmoid后与其逐元素相乘。weight仅支持ND格式。 | - | 默认确定性实现 |
+| [aclnnQuantMatmulActivationQuantWeightNzV2](../../matmul/quant_matmul_activation_quant/docs/aclnnQuantMatmulActivationQuantWeightNzV2.md) | 融合量化矩阵乘、激活及动态MX量化；相比V1新增可选输入x3Optional，支持sigmoid后与其逐元素相乘。weight仅支持NZ格式。 | - | 默认确定性实现 |
 | [aclnnQuantMatmulDequant](../../matmul/quant_matmul_dequant/docs/aclnnQuantMatmulDequant.md) | 对输入x进行量化，矩阵乘以及反量化。 | - | - |
 | [aclnnQuantMax](../../quant/quant_max/docs/aclnnQuantMax.md) | 完成输入的量化计算并得到输入绝对值的最大值。 | - | 默认确定性实现 |
 | [aclnnGroupedQuantMax](../../quant/grouped_quant_max/docs/aclnnGroupedQuantMax.md) | 完成输入分组的量化计算并得到输入分组绝对值的最大值。 | - | 默认确定性实现 |

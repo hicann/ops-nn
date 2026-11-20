@@ -49,7 +49,7 @@ if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
 
         # Retain AddOpTestCase's include paths, simulator flags, links and source
         # copy dependencies when compiling the same test for the other dtype/layout variants.
-        foreach(qmmaq_variant E5M2 E5M2_GELU E4M3_WEIGHT_NZ)
+        foreach(qmmaq_variant E5M2 E5M2_GELU E4M3_WEIGHT_NZ FP4 FP4_WEIGHT_NZ)
             set(qmmaq_variant_target "${qmmaq_kernel_ut}_${qmmaq_variant}")
             add_library(${qmmaq_variant_target} OBJECT
                 tests/ut/op_kernel/arch35/test_quant_matmul_activation_quant.cpp)

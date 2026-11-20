@@ -36,6 +36,7 @@
 namespace {
 constexpr size_t GUARD_SIZE = 32;
 constexpr uint8_t GUARD_VALUE = 0xA5;
+constexpr uint32_t FP4_E2M1_DTYPE = 40;
 
 struct QuantMatmulActivationQuantKernelTestParam {
     std::string socVersion;
@@ -49,6 +50,7 @@ struct QuantMatmulActivationQuantKernelTestParam {
     uint32_t outputDtype = 0;
     uint32_t inputDtype = 0;
     uint32_t weightDtype = 0;
+    bool transA = false;
     bool transB = false;
     bool fullLoad = false;
     uint32_t biasMode = 0;
@@ -64,6 +66,9 @@ struct QuantMatmulActivationQuantKernelTestParam {
     uint32_t dbL0C = 0;
     uint32_t mTailTile = 1;
     uint32_t nTailTile = 1;
+    uint32_t roundMode = 0;
+    float dstTypeMax = 0.0F;
+    std::string x3Pattern;
     std::string dataPattern;
     std::vector<uint8_t> expectedY;
     std::vector<uint8_t> expectedScale;
@@ -133,7 +138,7 @@ private:
     static constexpr const char* CSV_HEADER =
         "socVersion,caseName,kernelUtTarget,m,n,k,activationType,scaleAlg,x1Dtype,x2Dtype,yDtype,transposeX2,"
         "fullLoad,biasMode,numBlocks,batchA,batchB,baseM,baseN,baseK,kL1,scaleKL1,nBufferNum,dbL0C,"
-        "mTailTile,nTailTile,dataPattern,expectedY,expectedYScale,comment";
+        "mTailTile,nTailTile,transposeX1,roundMode,dstTypeMax,x3Pattern,dataPattern,expectedY,expectedYScale,comment";
 
     static std::string ResolveCsvPath()
     {
@@ -176,6 +181,17 @@ private:
         return token == "true" || token == "1";
     }
 
+    static float ParseFloat(const std::string& value)
+    {
+        const auto token = ut_str::Trim(value);
+        size_t end = 0;
+        const float result = std::stof(token, &end);
+        if (end != token.size() || !std::isfinite(result)) {
+            throw std::runtime_error("expected a finite float: " + token);
+        }
+        return result;
+    }
+
     static std::array<uint32_t, 4> ParseBatch(const std::string& value)
     {
         std::istringstream input(value);
@@ -209,8 +225,8 @@ private:
 
     static QuantMatmulActivationQuantKernelTestParam ParseParam(const std::vector<std::string>& fields)
     {
-        if (fields.size() != 30) {
-            throw std::runtime_error("invalid CSV column count; expected 30");
+        if (fields.size() != 34) {
+            throw std::runtime_error("invalid CSV column count; expected 34");
         }
         QuantMatmulActivationQuantKernelTestParam param;
         size_t index = 0;
@@ -221,7 +237,7 @@ private:
         param.n = ParseU32(fields[index++]);
         param.k = ParseU32(fields[index++]);
         const auto activation = ut_str::Trim(fields[index++]);
-        const std::vector<std::string> activations = {"gelu_tanh", "gelu_erf", "swiglu", "silu"};
+        const std::vector<std::string> activations = {"gelu_tanh", "gelu_erf", "swiglu", "silu", "sigmoid"};
         const auto found = std::find(activations.begin(), activations.end(), activation);
         if (found == activations.end()) {
             throw std::runtime_error("invalid activationType: " + activation);
@@ -246,6 +262,16 @@ private:
         param.dbL0C = ParseU32(fields[index++]);
         param.mTailTile = ParseU32(fields[index++]);
         param.nTailTile = ParseU32(fields[index++]);
+        param.transA = ParseBool(fields[index++]);
+        const auto roundMode = ut_str::Trim(fields[index++]);
+        const std::vector<std::string> roundModes = {"rint", "floor", "round"};
+        const auto roundModeIt = std::find(roundModes.begin(), roundModes.end(), roundMode);
+        if (roundModeIt == roundModes.end()) {
+            throw std::runtime_error("invalid roundMode: " + roundMode);
+        }
+        param.roundMode = static_cast<uint32_t>(roundModeIt - roundModes.begin());
+        param.dstTypeMax = ParseFloat(fields[index++]);
+        param.x3Pattern = ut_str::Trim(fields[index++]);
         param.dataPattern = ut_str::Trim(fields[index++]);
         param.expectedY = ParseBytes(fields[index++]);
         param.expectedScale = ParseBytes(fields[index++]);
@@ -266,7 +292,17 @@ private:
 
     static bool IsWeightNz(const QuantMatmulActivationQuantKernelTestParam& param)
     {
-        return param.kernelUtTarget == "QMMAQ_E4M3_WEIGHT_NZ";
+        return param.kernelUtTarget == "QMMAQ_E4M3_WEIGHT_NZ" || param.kernelUtTarget == "QMMAQ_FP4_WEIGHT_NZ";
+    }
+
+    static bool IsFp4(const QuantMatmulActivationQuantKernelTestParam& param)
+    {
+        return param.inputDtype == FP4_E2M1_DTYPE;
+    }
+
+    static size_t PackedBytes(uint64_t elements, bool fp4)
+    {
+        return static_cast<size_t>(fp4 ? (elements + 1) / 2 : elements);
     }
 
     static uint64_t AlignUp(uint64_t value, uint64_t alignment)
@@ -274,9 +310,9 @@ private:
         return (value + alignment - 1) / alignment * alignment;
     }
 
-    static uint64_t WeightNzBatchStride(const QuantMatmulActivationQuantKernelTestParam& param)
+    static uint64_t WeightNzBatchElements(const QuantMatmulActivationQuantKernelTestParam& param)
     {
-        constexpr uint64_t c0 = 32;
+        const uint64_t c0 = IsFp4(param) ? 64 : 32;
         constexpr uint64_t blockCube = 16;
         if (param.transB) {
             return AlignUp(param.k, c0) * AlignUp(param.n, blockCube);
@@ -284,16 +320,17 @@ private:
         return AlignUp(param.n, c0) * AlignUp(param.k, blockCube);
     }
 
-    static uint64_t WeightNzOffset(const QuantMatmulActivationQuantKernelTestParam& param, uint32_t k, uint32_t n)
+    static uint64_t WeightNzElementOffset(const QuantMatmulActivationQuantKernelTestParam& param, uint32_t k,
+                                          uint32_t n)
     {
-        constexpr uint64_t c0 = 32;
+        const uint64_t c0 = IsFp4(param) ? 64 : 32;
         constexpr uint64_t blockCube = 16;
         if (param.transB) {
-            // ZN backing order: [ceil(K/32), ceil(N/16), 16, 32].
+            // ZN backing order: [ceil(K/c0), ceil(N/16), 16, c0].
             return (k % c0) + (k / c0) * c0 * AlignUp(param.n, blockCube) + (n % blockCube) * c0 +
                    (n / blockCube) * blockCube * c0;
         }
-        // NZ backing order: [ceil(N/32), ceil(K/16), 16, 32].
+        // NZ backing order: [ceil(N/c0), ceil(K/16), 16, c0].
         const uint64_t alignedK = AlignUp(param.k, blockCube);
         return (k % blockCube) * c0 + (k / blockCube) * blockCube * c0 + (n % c0) + (n / c0) * c0 * alignedK;
     }
@@ -311,19 +348,29 @@ private:
                           param.outputDtype == 35;
         const bool e5m2Gelu = param.kernelUtTarget == "QMMAQ_E5M2_GELU" && param.inputDtype == 35 &&
                               param.weightDtype == 35 && param.outputDtype == 35;
-        const bool e4m3WeightNz = IsWeightNz(param) && param.inputDtype == 36 && param.weightDtype == 36 &&
-                                  param.outputDtype == 36;
-        const bool ndDtypes = (e4m3 || e5m2 || e5m2Gelu) && param.weightDtype == 35;
-        if (param.socVersion != "Dav3510" || !(ndDtypes || e4m3WeightNz)) {
+        const bool e4m3WeightNz = param.kernelUtTarget == "QMMAQ_E4M3_WEIGHT_NZ" && param.inputDtype == 36 &&
+                                  param.weightDtype == 36 && param.outputDtype == 36;
+        const bool fp4 = (param.kernelUtTarget == "QMMAQ_FP4" || param.kernelUtTarget == "QMMAQ_FP4_WEIGHT_NZ") &&
+                         IsFp4(param) && param.weightDtype == FP4_E2M1_DTYPE && param.outputDtype == FP4_E2M1_DTYPE;
+        if (param.socVersion != "Dav3510" || !(e4m3 || e5m2 || e5m2Gelu || e4m3WeightNz || fp4)) {
             throw std::runtime_error("socVersion/kernelUtTarget/dtypes do not match a compiled kernel specialization");
         }
-        if (IsWeightNz(param) && param.activation != 2 && param.activation != 3) {
-            throw std::runtime_error("WeightNZ kernel cases must use SwiGLU or SiLU");
+        if (IsWeightNz(param) && param.transA && (fp4 || param.activation >= 2)) {
+            throw std::runtime_error("WeightNZ supports transposeX1 only for FP8 GELU");
         }
-        if (param.m == 0 || param.n == 0 || param.k == 0 || param.blocks == 0 || param.scaleAlg > 1 ||
-            param.biasMode > 2 || (param.activation == 2 && param.n % 64 != 0) ||
+        if (param.m == 0 || param.n == 0 || param.k == 0 || param.blocks == 0 || param.biasMode > 2 ||
+            (param.activation == 2 && param.n % 64 != 0) ||
             (param.activation != 2 && param.inputDtype != param.outputDtype)) {
             throw std::runtime_error("invalid shape, activation, scaleAlg, biasMode or numBlocks");
+        }
+        if (fp4 ? (param.activation > 1 || param.k <= 2 || param.k % 2 != 0 || param.n % 2 != 0 ||
+                   (param.transA && param.m % 2 != 0) || (param.scaleAlg != 0 && param.scaleAlg != 2)) :
+                  (param.scaleAlg > 1 || param.roundMode != 0)) {
+            throw std::runtime_error("unsupported dtype/activation/shape/quantization combination");
+        }
+        if (param.dstTypeMax != 0.0F &&
+            (!fp4 || param.scaleAlg != 2 || param.dstTypeMax < 6.0F || param.dstTypeMax > 12.0F)) {
+            throw std::runtime_error("dstTypeMax requires FP4 scaleAlg=2 and a value in [6,12]");
         }
         std::array<uint32_t, 4> batchC{};
         for (size_t dim = 0; dim < batchC.size(); ++dim) {
@@ -333,6 +380,10 @@ private:
             batchC[dim] = std::max(param.batchA[dim], param.batchB[dim]);
         }
         const uint64_t batches = BatchCount(batchC);
+        if (param.activation == 4 ? (batches != 1 || param.x3Pattern != "signed_coordinate") :
+                                    param.x3Pattern != "none") {
+            throw std::runtime_error("sigmoid requires a non-batched BF16 x3; other activations do not use x3");
+        }
         const uint64_t width = param.activation == 2 ? param.n / 2 : param.n;
         if (param.dataPattern != "batch_constant" && param.dataPattern != "coordinate" &&
             param.dataPattern != "subnormal_bias" && param.dataPattern != "gate_subnormal" &&
@@ -347,10 +398,15 @@ private:
             param.biasMode == 0) {
             throw std::runtime_error("activation_bias/ocp_boundary_bias requires bias");
         }
-        const uint64_t expectedRows = batches * (param.dataPattern == "coordinate" ? param.m : 1);
+        const uint64_t expectedRows = batches *
+                                      (param.dataPattern == "coordinate" || param.activation == 4 ? param.m : 1);
         if (param.expectedY.size() != expectedRows * width ||
             param.expectedScale.size() != expectedRows * ((width + 63) / 64 * 2)) {
             throw std::runtime_error("expectedY/expectedYScale size does not match dataPattern");
+        }
+        if (fp4 &&
+            std::any_of(param.expectedY.begin(), param.expectedY.end(), [](uint8_t value) { return value > 15; })) {
+            throw std::runtime_error("FP4 expectedY stores unpacked 4-bit codes");
         }
         if (param.fullLoad && batches != 1) {
             throw std::runtime_error("full-load test specialization requires one output batch");
@@ -372,14 +428,15 @@ private:
         }
         const uint64_t tileArea = static_cast<uint64_t>(param.baseM) * resourceBaseN;
         const uint64_t biasBytes = param.biasMode == 0 ? 0 : resourceBaseN * sizeof(float);
-        uint64_t dataBytes = resourceBaseN * param.kL1;
+        uint64_t dataBytes = PackedBytes(resourceBaseN * param.kL1, fp4);
         uint64_t scaleBiasBytes = resourceBaseN * (param.scaleKL1 / 32) + biasBytes;
         uint64_t fullLoadBytes = 0;
         if (param.fullLoad) {
             const uint64_t alignedK = (static_cast<uint64_t>(param.k) + 63) / 64 * 64;
-            fullLoadBytes = static_cast<uint64_t>(param.baseM) * (alignedK + alignedK / 32);
+            fullLoadBytes = PackedBytes(static_cast<uint64_t>(param.baseM) * alignedK, fp4) +
+                            static_cast<uint64_t>(param.baseM) * alignedK / 32;
         } else {
-            dataBytes += static_cast<uint64_t>(param.baseM) * param.kL1;
+            dataBytes += PackedBytes(static_cast<uint64_t>(param.baseM) * param.kL1, fp4);
             scaleBiasBytes += static_cast<uint64_t>(param.baseM) * (param.scaleKL1 / 32);
         }
         const uint64_t frontBytes = dataBytes * ((param.nBufferNum + 1) / 2) + scaleBiasBytes + fullLoadBytes;
@@ -387,7 +444,7 @@ private:
         const uint64_t l1Bytes = std::max<uint64_t>(256 * 1024, frontBytes) + backBytes;
         const uint64_t inputUbElements = AlignUp(param.baseM, 2) * resourceBaseN;
         if (tileArea * sizeof(float) > 128 * 1024 || l1Bytes > 512 * 1024 || biasBytes * 2 > 4096 ||
-            std::max<uint64_t>(param.baseM, resourceBaseN) * param.baseK > 32 * 1024 ||
+            PackedBytes(std::max<uint64_t>(param.baseM, resourceBaseN) * param.baseK, fp4) > 32 * 1024 ||
             (IsWeightNz(param) && inputUbElements > 2 * 64 * 256)) {
             throw std::runtime_error("tiling exceeds the double-buffered Cube capacity");
         }
@@ -461,30 +518,59 @@ private:
         data.biasThreeDim = item.biasMode == 2;
         data.activationType = static_cast<QMMAQ::ActivationAlg>(item.activation);
         data.scaleAlg = static_cast<QMMAQ::QuantAlg>(item.scaleAlg);
+        data.roundMode = static_cast<QMMAQ::MxQuantRoundMode>(item.roundMode);
+        data.dstTypeMax = item.dstTypeMax;
         return data;
     }
 
-    using Entry = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR);
+    using Entry = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR);
+
+    template <int BATCHMODE, int ATRANS, int EPILOGUE>
+    static Entry GetEpilogueEntry(const QuantMatmulActivationQuantKernelTestParam& item)
+    {
+        constexpr Entry entries[2][2] = {
+            {quant_matmul_activation_quant<ATRANS, 0, BATCHMODE, TPL_NO_FULLLOAD, EPILOGUE>,
+             quant_matmul_activation_quant<ATRANS, 0, BATCHMODE, TPL_A_FULLLOAD, EPILOGUE>},
+            {quant_matmul_activation_quant<ATRANS, 1, BATCHMODE, TPL_NO_FULLLOAD, EPILOGUE>,
+             quant_matmul_activation_quant<ATRANS, 1, BATCHMODE, TPL_A_FULLLOAD, EPILOGUE>}};
+        return entries[item.transB][item.fullLoad];
+    }
+
+    template <int BATCHMODE, int ATRANS>
+    static Entry GetActivationEntry(const QuantMatmulActivationQuantKernelTestParam& item)
+    {
+#if !defined(QMMAQ_UT_FP4) && !defined(QMMAQ_UT_FP4_WEIGHT_NZ)
+        if (item.activation == 2) {
+            return GetEpilogueEntry<BATCHMODE, ATRANS, TPL_EPILOGUE_SWIGLU>(item);
+        }
+        if (item.activation == 3) {
+            return GetEpilogueEntry<BATCHMODE, ATRANS, TPL_EPILOGUE_SILU>(item);
+        }
+        if (item.activation == 4) {
+            return GetEpilogueEntry<BATCHMODE, ATRANS, TPL_EPILOGUE_SIGMOID_MUL>(item);
+        }
+#endif
+        return GetEpilogueEntry<BATCHMODE, ATRANS, TPL_EPILOGUE_GELU>(item);
+    }
 
     template <int BATCHMODE>
     static Entry GetKernelEntry(const QuantMatmulActivationQuantKernelTestParam& item)
     {
-        // [epilogue][transposeX2][A full-load]. Match host dispatch for each CSV case.
-        constexpr Entry entries[3][2][2] = {
-            {{quant_matmul_activation_quant<0, 0, BATCHMODE, TPL_NO_FULLLOAD, TPL_EPILOGUE_GELU>,
-              quant_matmul_activation_quant<0, 0, BATCHMODE, TPL_A_FULLLOAD, TPL_EPILOGUE_GELU>},
-             {quant_matmul_activation_quant<0, 1, BATCHMODE, TPL_NO_FULLLOAD, TPL_EPILOGUE_GELU>,
-              quant_matmul_activation_quant<0, 1, BATCHMODE, TPL_A_FULLLOAD, TPL_EPILOGUE_GELU>}},
-            {{quant_matmul_activation_quant<0, 0, BATCHMODE, TPL_NO_FULLLOAD, TPL_EPILOGUE_SWIGLU>,
-              quant_matmul_activation_quant<0, 0, BATCHMODE, TPL_A_FULLLOAD, TPL_EPILOGUE_SWIGLU>},
-             {quant_matmul_activation_quant<0, 1, BATCHMODE, TPL_NO_FULLLOAD, TPL_EPILOGUE_SWIGLU>,
-              quant_matmul_activation_quant<0, 1, BATCHMODE, TPL_A_FULLLOAD, TPL_EPILOGUE_SWIGLU>}},
-            {{quant_matmul_activation_quant<0, 0, BATCHMODE, TPL_NO_FULLLOAD, TPL_EPILOGUE_SILU>,
-              quant_matmul_activation_quant<0, 0, BATCHMODE, TPL_A_FULLLOAD, TPL_EPILOGUE_SILU>},
-             {quant_matmul_activation_quant<0, 1, BATCHMODE, TPL_NO_FULLLOAD, TPL_EPILOGUE_SILU>,
-              quant_matmul_activation_quant<0, 1, BATCHMODE, TPL_A_FULLLOAD, TPL_EPILOGUE_SILU>}}};
-        const uint32_t activationIndex = item.activation == 2 ? 1U : (item.activation == 3 ? 2U : 0U);
-        return entries[activationIndex][item.transB][item.fullLoad];
+#if defined(QMMAQ_UT_FP4_WEIGHT_NZ)
+        return GetActivationEntry<BATCHMODE, 0>(item);
+#else
+        return item.transA ? GetActivationEntry<BATCHMODE, 1>(item) : GetActivationEntry<BATCHMODE, 0>(item);
+#endif
+    }
+
+    static void StoreMxCode(uint8_t* data, size_t offset, uint8_t value, bool fp4)
+    {
+        if (fp4) {
+            const auto shift = static_cast<uint32_t>((offset % 2) * 4);
+            data[offset / 2] = static_cast<uint8_t>((data[offset / 2] & ~(0x0FU << shift)) | (value << shift));
+        } else {
+            data[offset] = value;
+        }
     }
 
 public:
@@ -520,16 +606,22 @@ public:
                                                                   data.roundMode};
         const uint32_t width = item.activation == 2 ? item.n / 2 : item.n;
         const uint32_t scaleStride = (width + 63) / 64 * 2;
-        const size_t outputBytes = static_cast<size_t>(batchC) * item.m * width;
+        const bool fp4 = IsFp4(item);
+        const bool sigmoid = item.activation == 4;
+        const size_t outputBytes = PackedBytes(static_cast<uint64_t>(batchC) * item.m * width, fp4);
         const uint32_t kGroups = (item.k + 63) / 64;
         const bool weightNz = IsWeightNz(item);
-        const uint64_t x2BatchStride = weightNz ? WeightNzBatchStride(item) : static_cast<uint64_t>(item.k) * item.n;
-        GmBuffer x1(static_cast<size_t>(batchA) * item.m * item.k);
-        GmBuffer x2(static_cast<size_t>(batchB) * x2BatchStride);
+        const uint64_t x2BatchElements = weightNz ? WeightNzBatchElements(item) :
+                                                    static_cast<uint64_t>(item.k) * item.n;
+        const size_t x1Bytes = PackedBytes(static_cast<uint64_t>(batchA) * item.m * item.k, fp4);
+        const size_t x2Bytes = PackedBytes(static_cast<uint64_t>(batchB) * x2BatchElements, fp4);
+        GmBuffer x1(x1Bytes);
+        GmBuffer x2(x2Bytes);
         GmBuffer x1Scale(static_cast<size_t>(batchA) * item.m * kGroups * 2);
         GmBuffer x2Scale(static_cast<size_t>(batchB) * item.n * kGroups * 2);
         const uint32_t biasBatches = item.biasMode == 2 ? batchC : 1;
         GmBuffer bias(static_cast<size_t>(biasBatches) * item.n * sizeof(float));
+        GmBuffer x3(sigmoid ? static_cast<size_t>(item.m) * width * sizeof(uint16_t) : 0);
         GmBuffer y(outputBytes);
         GmBuffer yScale(static_cast<size_t>(batchC) * item.m * scaleStride);
         GmBuffer workspace(16 * 1024 * 1024);
@@ -538,15 +630,20 @@ public:
                                                 static_cast<const void*>(&data);
         GmBuffer tiling(tilingBytes);
         std::memcpy(tiling.Data(), tilingData, tilingBytes);
-        std::memset(x2.Data(), 0, static_cast<size_t>(batchB) * x2BatchStride);
+        std::memset(x1.Data(), 0, x1Bytes);
+        std::memset(x2.Data(), 0, x2Bytes);
 
-        const std::array<uint8_t, 3> aValues = item.inputDtype == 35 ? std::array<uint8_t, 3>{0x30, 0x34, 0x36} :
+        const std::array<uint8_t, 3> aValues = fp4                   ? std::array<uint8_t, 3>{0x1, 0x2, 0x3} :
+                                               item.inputDtype == 35 ? std::array<uint8_t, 3>{0x30, 0x34, 0x36} :
                                                                        std::array<uint8_t, 3>{0x20, 0x28, 0x2C};
-        const std::array<uint8_t, 3> bLeft = item.weightDtype == 36 ? std::array<uint8_t, 3>{0x20, 0x28, 0x2C} :
+        const std::array<uint8_t, 3> bLeft = fp4                    ? std::array<uint8_t, 3>{0x1, 0x2, 0x3} :
+                                             item.weightDtype == 36 ? std::array<uint8_t, 3>{0x20, 0x28, 0x2C} :
                                                                       std::array<uint8_t, 3>{0x30, 0x34, 0x36};
-        const std::array<uint8_t, 3> bRight = item.weightDtype == 36 ? std::array<uint8_t, 3>{0x28, 0x30, 0x34} :
+        const std::array<uint8_t, 3> bRight = fp4                    ? std::array<uint8_t, 3>{0x2, 0x3, 0x4} :
+                                              item.weightDtype == 36 ? std::array<uint8_t, 3>{0x28, 0x30, 0x34} :
                                                                        std::array<uint8_t, 3>{0x34, 0x38, 0x3A};
-        const std::array<uint8_t, 3> variedA = item.inputDtype == 35 ? std::array<uint8_t, 3>{0x28, 0x2C, 0x2E} :
+        const std::array<uint8_t, 3> variedA = fp4                   ? std::array<uint8_t, 3>{0x1, 0x2, 0xB} :
+                                               item.inputDtype == 35 ? std::array<uint8_t, 3>{0x28, 0x2C, 0x2E} :
                                                                        std::array<uint8_t, 3>{0x10, 0x18, 0x1C};
         const bool varied = item.dataPattern == "coordinate";
         const bool subnormal = item.dataPattern == "subnormal_bias";
@@ -557,26 +654,32 @@ public:
             for (uint32_t row = 0; row < item.m; ++row) {
                 const size_t rowIndex = static_cast<size_t>(batch) * item.m + row;
                 for (uint32_t k = 0; k < item.k; ++k) {
-                    x1.Data()[rowIndex * item.k + k] = (subnormal || gateSubnormal || ocpBoundary || activationBias) ?
-                                                           0 :
-                                                           (varied ? variedA[(batch + row + 2 * k) % 3] :
-                                                                     aValues[batch % 3]);
+                    const size_t offset = static_cast<size_t>(batch) * item.m * item.k +
+                                          (item.transA ? static_cast<size_t>(k) * item.m + row :
+                                                         static_cast<size_t>(row) * item.k + k);
+                    const uint8_t value = (subnormal || gateSubnormal || ocpBoundary || activationBias) ?
+                                              0 :
+                                              (varied ? variedA[(batch + row + 2 * k) % 3] : aValues[batch % 3]);
+                    StoreMxCode(x1.Data(), offset, value, fp4);
                 }
                 for (uint32_t group = 0; group < kGroups * 2; ++group) {
-                    x1Scale.Data()[rowIndex * kGroups * 2 + group] = varied ? 126 + (batch + row + group) % 3 :
-                                                                              127 + batch % 2;
+                    const size_t offset = item.transA ?
+                                              static_cast<size_t>(batch) * item.m * kGroups * 2 +
+                                                  static_cast<size_t>(group / 2) * item.m * 2 + row * 2 + group % 2 :
+                                              rowIndex * kGroups * 2 + group;
+                    x1Scale.Data()[offset] = varied ? 126 + (batch + row + group) % 3 : 127 + batch % 2;
                 }
             }
         }
         for (uint32_t batch = 0; batch < batchB; ++batch) {
             for (uint32_t k = 0; k < item.k; ++k) {
                 for (uint32_t n = 0; n < item.n; ++n) {
-                    const size_t offset = static_cast<size_t>(batch) * x2BatchStride +
-                                          (weightNz ? WeightNzOffset(item, k, n) :
+                    const size_t offset = static_cast<size_t>(batch) * x2BatchElements +
+                                          (weightNz ? WeightNzElementOffset(item, k, n) :
                                                       (item.transB ? static_cast<size_t>(n) * item.k + k :
                                                                      static_cast<size_t>(k) * item.n + n));
                     const uint32_t valueIndex = varied ? (batch + 2 * n + k) % 3 : batch % 3;
-                    x2.Data()[offset] = n < item.n / 2 ? bLeft[valueIndex] : bRight[valueIndex];
+                    StoreMxCode(x2.Data(), offset, n < item.n / 2 ? bLeft[valueIndex] : bRight[valueIndex], fp4);
                 }
             }
             for (uint32_t n = 0; n < item.n; ++n) {
@@ -648,19 +751,31 @@ public:
                                                                         -0.5F + ((n - item.n / 2) % 5) * 0.0625F;
             }
         }
+        if (sigmoid) {
+            // BF16 {-2, -0.5, 0, 0.5, 1, 2}; vary both axes to expose x3 offset errors.
+            constexpr std::array<uint16_t, 6> values = {0xC000, 0xBF00, 0x0000, 0x3F00, 0x3F80, 0x4000};
+            auto* x3Data = reinterpret_cast<uint16_t*>(x3.Data());
+            for (uint32_t row = 0; row < item.m; ++row) {
+                for (uint32_t n = 0; n < width; ++n) {
+                    x3Data[static_cast<size_t>(row) * width + n] = values[(row * 3 + n) % values.size()];
+                }
+            }
+        }
         const Entry entry = withoutBatch ? GetKernelEntry<TPL_WITHOUT_BATCH>(item) :
                                            GetKernelEntry<TPL_WITH_BATCH>(item);
         uint8_t* biasAddress = item.biasMode == 0 ? nullptr : bias.Data();
         ASSERT_TRUE(KERNEL_RUN_KF(entry, item.blocks, x1.Data(), x2.Data(), biasAddress, x1Scale.Data(), x2Scale.Data(),
-                                  y.Data(), yScale.Data(), workspace.Data(), tiling.Data()))
+                                  sigmoid ? x3.Data() : nullptr, y.Data(), yScale.Data(), workspace.Data(),
+                                  tiling.Data()))
             << "Kernel CPU simulator failed: " << item.caseName;
         for (uint32_t batch = 0; batch < batchC; ++batch) {
             for (uint32_t row = 0; row < item.m; ++row) {
-                const size_t expectedRow = varied ? static_cast<size_t>(batch) * item.m + row : batch;
+                const size_t expectedRow = varied || sigmoid ? static_cast<size_t>(batch) * item.m + row : batch;
                 for (uint32_t n = 0; n < width; ++n) {
                     const size_t expected = expectedRow * width + n;
                     const size_t offset = (static_cast<size_t>(batch) * item.m + row) * width + n;
-                    EXPECT_EQ(y.Data()[offset], item.expectedY.at(expected)) << "y offset " << offset;
+                    const uint8_t actual = fp4 ? (y.Data()[offset / 2] >> ((offset % 2) * 4)) & 0x0F : y.Data()[offset];
+                    EXPECT_EQ(actual, item.expectedY.at(expected)) << "y element " << offset;
                 }
                 for (uint32_t group = 0; group < scaleStride; ++group) {
                     const size_t expected = expectedRow * scaleStride + group;
@@ -671,7 +786,11 @@ public:
             }
         }
         tiling.CheckGuards();
+        x1.CheckGuards();
         x2.CheckGuards();
+        x1Scale.CheckGuards();
+        x2Scale.CheckGuards();
+        x3.CheckGuards();
         y.CheckGuards();
         yScale.CheckGuards();
     }

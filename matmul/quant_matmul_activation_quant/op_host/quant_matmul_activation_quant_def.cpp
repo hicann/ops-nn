@@ -16,8 +16,6 @@
 #include "register/op_def_registry.h"
 #include "op_common/op_host/util/op_arch_helper.h"
 namespace ops {
-static constexpr int32_t DEFAULT_SCALE_ALG = 0;
-static constexpr float DEFAULT_DST_TYPE_MAX = 0.0;
 class QuantMatmulActivationQuant : public OpDef {
 public:
     explicit QuantMatmulActivationQuant(const char* name) : OpDef(name)
@@ -52,6 +50,12 @@ public:
                        ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E8M0})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                      ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("x3")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16,
+                       ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND});
         this->Output("y")
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT8_E5M2,
@@ -71,8 +75,8 @@ public:
         this->Attr("y_dtype").AttrType(OPTIONAL).Int(ge::DT_FLOAT8_E4M3FN);
         this->Attr("quant_mode").AttrType(OPTIONAL).String("mx");
         this->Attr("round_mode").AttrType(OPTIONAL).String("rint");
-        this->Attr("scale_alg").AttrType(OPTIONAL).Int(DEFAULT_SCALE_ALG);
-        this->Attr("dst_type_max").AttrType(OPTIONAL).Float(DEFAULT_DST_TYPE_MAX);
+        this->Attr("scale_alg").AttrType(OPTIONAL).Int(0);
+        this->Attr("dst_type_max").AttrType(OPTIONAL).Float(0.0f);
         OpAICoreConfig configDav3510;
         configDav3510.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)

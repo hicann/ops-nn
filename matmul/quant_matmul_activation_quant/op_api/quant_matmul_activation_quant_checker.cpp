@@ -19,7 +19,6 @@
 namespace QuantMatmulActivationQuantAclnnCheck {
 
 using namespace op;
-using namespace ge;
 using Ops::Base::CeilDiv;
 using Ops::NN::IsTransposeLastTwoDims;
 using Ops::NN::SwapLastTwoDimValue;
@@ -136,7 +135,7 @@ const aclTensor* SetTensorToNDFormat(const aclTensor* input)
         OP_LOGD("Converting input tensor to ND format.");
         return l0op::ReFormat(input, op::Format::FORMAT_ND);
     }
-    OP_LOGD("Input tensor already has the required storage format; no conversion needed.");
+    OP_LOGD("Preserving FRACTAL_NZ storage; skipping ND conversion.");
     return input;
 }
 
