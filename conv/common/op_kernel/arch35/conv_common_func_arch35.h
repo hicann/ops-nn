@@ -674,6 +674,10 @@ __aicore__ inline void InitSubApiParams(Intf* self)
     self->ctx.loadAL0Ins.SetParams(self);
     self->ctx.loadBL0Ins.SetParams(self);
     self->ctx.madIns.SetParams(self);
+    // reluWeight L1 tool is isExtendConv2d-only: missing SetParams leaves self_ null (aic err 271).
+    if constexpr (Intf::isExtendConv2d) {
+        self->ctx.loadReluWeightL1Ins.SetParams(self);
+    }
     if constexpr (!Intf::isDeQuantFlag) {
         self->ctx.loadBiasL1Ins.SetParams(self);
         self->ctx.loadScaleL1Ins.SetParams(self);

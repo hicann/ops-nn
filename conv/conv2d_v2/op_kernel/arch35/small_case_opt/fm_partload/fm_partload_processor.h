@@ -69,7 +69,8 @@ struct FmPartloadProcessor {
         uint32_t al1ElemPerBuf = tiling.aL1SpaceSize / sizeof(FmapT);
 
         ComputeL1LayoutTool<BlockCtx, TilingData> l1Layout;
-        state.l1 = l1Layout(tiling, state.al1Db ? 2 : 1, al1ElemPerBuf, k1Total * state.n1PerCore * GN0 * GK0);
+        uint32_t bl1ElemCount = k1Total * state.n1PerCore * GN0 * GK0;
+        state.l1 = l1Layout(tiling, state.al1Db ? 2 : 1, al1ElemPerBuf, bl1ElemCount);
     }
 
     __aicore__ inline void operator()(const BlockCtx& blockCtx, const TilingData& tiling, GM_ADDR x, GM_ADDR filter,

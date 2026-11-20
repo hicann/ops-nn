@@ -36,6 +36,7 @@ struct FullLoadProcessor {
     using Output1T = typename BlockCtx::Output1T;
     using L0cT = typename BlockCtx::L0cT;
     static constexpr uint32_t GK0 = BlockCtx::GK0;
+    static constexpr uint32_t GK0Fmap = BlockCtx::GK0Fmap;
 
     Scheme scheme_;
     ComputeL1LayoutTool<BlockCtx, TilingData> l1Layout_;
@@ -61,8 +62,6 @@ struct FullLoadProcessor {
                 SetHF32TransMode(0);
             }
         }
-        uint32_t kL0MaxIter = static_cast<uint32_t>(CeilDiv(blockCtx.kTotalFmap, tiling.kL0));
-
         FmapRange blockWindow = scheme_.ResolveBlockWindow(blockCtx, tiling);
         uint32_t al1ElemPerBuf = blockWindow.curHi * blockWindow.orgWin * blockCtx.cinAligned;
         uint32_t bl1ElemCount = blockCtx.k1Total * blockCtx.n1PerCore * GN0 * GK0;
@@ -81,7 +80,7 @@ struct FullLoadProcessor {
         uint32_t l0pp = 0;
 
         Process(blockCtx, tiling, blockWindow, l1Layout, x, filter, bias, y, ep, enableBatchDoubleBuffer, al1, bl1,
-                l0pp, kL0MaxIter);
+                l0pp);
 
         WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
         WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
@@ -95,7 +94,7 @@ private:
     __aicore__ inline void Process(const BlockCtx& blockCtx, const TilingData& tiling, const FmapRange& blockWindow,
                                    const L1Layout& l1Layout, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                    const ExtendParams* ep, bool enableBatchDoubleBuffer, LocalTensor<FmapT>& al1,
-                                   LocalTensor<WeightT>& bl1, uint32_t& l0pp, uint32_t kL0MaxIter) const
+                                   LocalTensor<WeightT>& bl1, uint32_t& l0pp) const
     {
         GM_ADDR y1 = (tiling.dualOutput != 0) ? ep->y1 : y;
         bool needLoadBias = true;
@@ -110,6 +109,16 @@ private:
             // effect): all downstream consumers (N loop bounds, bias/scale
             // loads, fixpipe nSize) must see this iteration's value.
             blockCtx.actualCo = groupPlan.actualCo;
+            // Tail merged group: clamp the load extent to the remaining channels.
+            uint32_t curGroupCin = blockCtx.groupCinStep;
+            if (groupPlan.groupChanOff + blockCtx.groupCinStep > static_cast<uint32_t>(tiling.cin)) {
+                curGroupCin = static_cast<uint32_t>(tiling.cin) - groupPlan.groupChanOff;
+            }
+            // Tail merged group: clamp the Mmad K extent likewise, or the last K blocks Mmad stale A1.
+            uint32_t kTotalCur = blockCtx.kTotalFmap;
+            if (curGroupCin < blockCtx.groupCinStep) {
+                kTotalCur = static_cast<uint32_t>(AlignB(curGroupCin, GK0Fmap)) * tiling.kh * tiling.kw;
+            }
 
             WaitFlag<HardEvent::MTE1_MTE2>(EVT_GROUP_L1_DONE);
             GlobalTensor<FmapT> fmapGm;
@@ -139,11 +148,12 @@ private:
             Load3DCtx ctx = setupLoad3d_(blockCtx, tiling, blockWindow, scheme_.BlockBasePosM(blockCtx, tiling));
             if (blockCtx.singleCoreBatch <= 1) {
                 scheme_.LoadFmapWindow(tiling, fmapGm, al1, blockWindow.curHi, blockWindow.hiStart, blockWindow.curWi,
-                                       blockWindow.wiStart, 0, blockCtx.groupCinStep);
+                                       blockWindow.wiStart, 0, curGroupCin);
+                // Uniform fweight slabs keep the tail-slab padding in-bounds; kTotalCur clamps its use.
                 loadWeight_(blockCtx, tiling, filterGm, bl1);
                 SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
                 WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-                ProcessChunks(blockCtx, tiling, l1Layout, scale0Gm, scale1Gm, reluWeight0Gm, reluWeight1Gm, kL0MaxIter,
+                ProcessChunks(blockCtx, tiling, l1Layout, scale0Gm, scale1Gm, reluWeight0Gm, reluWeight1Gm, kTotalCur,
                               y, y1, groupPlan.groupCoutOff, needLoadBias, al1, bl1, ctx, l0pp);
             } else if (!enableBatchDoubleBuffer) {
                 loadWeight_(blockCtx, tiling, filterGm, bl1);
@@ -154,11 +164,11 @@ private:
                     GlobalTensor<FmapT> fmapGmB;
                     setupFmapGmBatch(tiling, x, blockCtx.batchStart + batchIdx, groupPlan.groupChanOff, fmapGmB);
                     scheme_.LoadFmapWindow(tiling, fmapGmB, al1, blockWindow.curHi, blockWindow.hiStart,
-                                           blockWindow.curWi, blockWindow.wiStart, 0, blockCtx.groupCinStep);
+                                           blockWindow.curWi, blockWindow.wiStart, 0, curGroupCin);
                     SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
                     WaitFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
                     ProcessChunks(blockCtx, tiling, l1Layout, scale0Gm, scale1Gm, reluWeight0Gm, reluWeight1Gm,
-                                  kL0MaxIter, y, y1, groupPlan.groupCoutOff, needLoadBias, al1, bl1, ctx, l0pp);
+                                  kTotalCur, y, y1, groupPlan.groupCoutOff, needLoadBias, al1, bl1, ctx, l0pp);
                     if (batchIdx + 1 < blockCtx.singleCoreBatch) {
                         SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
                         WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
@@ -174,7 +184,7 @@ private:
                     setupFmapGmBatch(tiling, x, blockCtx.batchStart, groupPlan.groupChanOff, fmapGm0);
                     LocalTensor<FmapT> al1Buf0(TPosition::A1, 0, al1ElemPerBuf);
                     scheme_.LoadFmapWindow(tiling, fmapGm0, al1Buf0, blockWindow.curHi, blockWindow.hiStart,
-                                           blockWindow.curWi, blockWindow.wiStart, 0, blockCtx.groupCinStep);
+                                           blockWindow.curWi, blockWindow.wiStart, 0, curGroupCin);
                 }
                 SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
                 for (uint32_t batchIdx = 0; batchIdx < blockCtx.singleCoreBatch; batchIdx++) {
@@ -190,13 +200,13 @@ private:
                         }
                         LocalTensor<FmapT> al1Next(TPosition::A1, nextBuf * l1Layout.al1BufBytes, al1ElemPerBuf);
                         scheme_.LoadFmapWindow(tiling, fmapGmN, al1Next, blockWindow.curHi, blockWindow.hiStart,
-                                               blockWindow.curWi, blockWindow.wiStart, 0, blockCtx.groupCinStep);
+                                               blockWindow.curWi, blockWindow.wiStart, 0, curGroupCin);
                         SetFlag<HardEvent::MTE2_MTE1>(nextBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                     }
                     WaitFlag<HardEvent::MTE2_MTE1>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                     LocalTensor<FmapT> al1Cur(TPosition::A1, curBuf * l1Layout.al1BufBytes, al1ElemPerBuf);
                     ProcessChunks(blockCtx, tiling, l1Layout, scale0Gm, scale1Gm, reluWeight0Gm, reluWeight1Gm,
-                                  kL0MaxIter, y, y1, groupPlan.groupCoutOff, needLoadBias, al1Cur, bl1, ctx, l0pp);
+                                  kTotalCur, y, y1, groupPlan.groupCoutOff, needLoadBias, al1Cur, bl1, ctx, l0pp);
                     if (batchIdx + 2 < blockCtx.singleCoreBatch) {
                         SetFlag<HardEvent::MTE1_MTE2>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
                     }
@@ -216,9 +226,10 @@ private:
     __aicore__ inline void MmadAccumulateTile(const BlockCtx& blockCtx, const TilingData& tiling,
                                               LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1,
                                               LocalTensor<L0cT>& cl0, uint32_t curMAlign, uint32_t mmadN,
-                                              uint32_t kL0MaxIter, const Load3DCtx& ctx, const L1Layout& l1Layout,
+                                              uint32_t kTotalCur, const Load3DCtx& ctx, const L1Layout& l1Layout,
                                               bool& needLoadBias, uint32_t nOff, uint32_t curN, uint32_t& l0pp) const
     {
+        uint32_t kL0MaxIter = static_cast<uint32_t>(CeilDiv(kTotalCur, tiling.kL0));
         MmadParams mmadParams;
         initMmadParams_(tiling, mmadParams, curMAlign, mmadN);
         const bool isNSplit = tiling.nL0 < tiling.nBL1;
@@ -227,7 +238,7 @@ private:
             uint32_t curK = tiling.kL0;
             uint32_t curKAL0 = tiling.kL0;
             if (kl0 == kL0MaxIter - 1) {
-                curKAL0 = blockCtx.kTotalFmap % tiling.kL0;
+                curKAL0 = kTotalCur % tiling.kL0;
                 curKAL0 = (curKAL0 == 0) ? tiling.kL0 : curKAL0;
                 curK = static_cast<uint32_t>(AlignB(curKAL0, GK0));
             }
@@ -268,7 +279,7 @@ private:
     __aicore__ inline void ProcessChunks(const BlockCtx& blockCtx, const TilingData& tiling, const L1Layout& l1Layout,
                                          GlobalTensor<uint64_t>& scale0Gm, GlobalTensor<uint64_t>& scale1Gm,
                                          GlobalTensor<float>& reluWeight0Gm, GlobalTensor<float>& reluWeight1Gm,
-                                         uint32_t kL0MaxIter, GM_ADDR y, GM_ADDR y1, uint32_t groupCoutOff,
+                                         uint32_t kTotalCur, GM_ADDR y, GM_ADDR y1, uint32_t groupCoutOff,
                                          bool& needLoadBias, LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1,
                                          Load3DCtx& ctx, uint32_t& l0pp) const
     {
@@ -293,8 +304,8 @@ private:
                     curN = blockCtx.actualCo - nOff;
                 uint32_t curMmadN = static_cast<uint32_t>(AlignB(curN, GN0));
                 LocalTensor<L0cT> cl0(TPosition::CO1, 0, BlockCtx::L0C_ELEMS);
-                MmadAccumulateTile(blockCtx, tiling, al1, bl1, cl0, chunk.curMAlign, curMmadN, kL0MaxIter, ctx,
-                                   l1Layout, needLoadBias, nOff, curN, l0pp);
+                MmadAccumulateTile(blockCtx, tiling, al1, bl1, cl0, chunk.curMAlign, curMmadN, kTotalCur, ctx, l1Layout,
+                                   needLoadBias, nOff, curN, l0pp);
                 copyOut_.template DoCopyOut<OutputT, 0>(blockCtx, tiling, y, cl0, l1Layout, chunk.outOff, chunk.fpMSize,
                                                         chunk.curMAlign, curN, chunk.fpDnNum, chunk.fpDstDnStride, nOff,
                                                         groupCoutOff, scale0Gm, scale1Gm, reluWeight0Gm, reluWeight1Gm);

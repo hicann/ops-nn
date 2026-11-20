@@ -188,7 +188,6 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     bool nL1FullloadFlag = tilingData_.get_nBL1() == singleCoreNSize;
 
     bool bl1Fullload = kBL1FullloadFlag && nL1FullloadFlag;
-    bool groupOk = (flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV || tilingData_.get_groupOpt() == 1);
 
     bool al1Fullload;
     if (flagInfo_.mSplitModeFlag) {
@@ -203,7 +202,7 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
 
     // FmPartload: FM not fullload L1, Weight fullload L1, NZ format, FP16*FP16, INT8*INT8 or FP16*INT8.
     // Multiple batches per core use four FM buffers when L1 permits, otherwise the kernel serializes them.
-    bool fmPartloadCond = !al1Fullload && bl1Fullload && groupOk;
+    bool fmPartloadCond = !al1Fullload && bl1Fullload;
     bool dtypeFmPartloadOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 &&
                               descInfo_.weightDtype == ge::DataType::DT_FLOAT16) ||
                              (descInfo_.fMapDtype == ge::DataType::DT_INT8 &&
@@ -244,6 +243,11 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
     }
     // Not support weight UB or C04.
     if ((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) || flagInfo_.enableC04Flag) {
+        return true;
+    }
+
+    bool groupOk = (flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV || tilingData_.get_groupOpt() == 1);
+    if (!flagInfo_.mSplitModeFlag && !groupOk) {
         return true;
     }
 

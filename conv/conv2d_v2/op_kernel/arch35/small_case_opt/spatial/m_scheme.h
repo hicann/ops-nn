@@ -175,10 +175,12 @@ struct MScheme {
         return window;
     }
 
-    // Ho rows spanned by the widest hoL0-sized M chunk (L1 height sizing).
+    // Ho rows spanned by the widest L0 chunk (L1 height sizing): the chunk is
+    // min(hoL0, actualM) M-values, so the span is bounded by the core's range.
     __aicore__ inline uint32_t MaxChunkHoSpan(const BlockCtx& blockCtx, const TilingData& tiling) const
     {
-        return (blockCtx.hoL0 + tiling.wout - 2) / tiling.wout;
+        uint32_t chunkM = blockCtx.hoL0 < blockCtx.actualM ? blockCtx.hoL0 : blockCtx.actualM;
+        return (chunkM + tiling.wout - 2) / tiling.wout;
     }
 
     // ---- chunk iteration over the core's flattened M range

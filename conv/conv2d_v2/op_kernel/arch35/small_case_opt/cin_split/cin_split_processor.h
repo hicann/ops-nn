@@ -117,16 +117,19 @@ struct CinSplitProcessor {
         FmapRange r = scheme_.ResolveBlockWindow(blockCtx, tiling);
         state.orgWin = r.orgWin;
         uint32_t maxHoRelEnd = scheme_.MaxChunkHoSpan(blockCtx, tiling);
-        uint32_t maxHiL1 = maxHoRelEnd * tiling.strideH + tiling.dilationH * (tiling.kh - 1) + tiling.padTop + 1;
-        uint32_t hinFull = static_cast<uint32_t>(tiling.hin) + tiling.padTop + tiling.padBottom;
-        if (maxHiL1 > hinFull)
-            maxHiL1 = hinFull;
+        // Tight worst-chunk load bound (CalcHiWindow needHi, padTop = 0): pads never occupy A1
+        // (Load3D padList) and the clamp is the real row count, keeping A1 within aL1SpaceSize.
+        uint32_t maxHiL1 = maxHoRelEnd * tiling.strideH + tiling.dilationH * (tiling.kh - 1) + 1;
+        if (maxHiL1 > static_cast<uint32_t>(tiling.hin)) {
+            maxHiL1 = static_cast<uint32_t>(tiling.hin);
+        }
 
         uint32_t al1ElemPerBuf = maxHiL1 * state.orgWin * state.cinL1;
         state.al1BufBytes = al1ElemPerBuf * sizeof(FmapT);
 
         ComputeL1LayoutTool<BlockCtx, TilingData> l1Layout;
-        state.l1 = l1Layout(tiling, 2, al1ElemPerBuf, k1Total * state.n1PerCore * GN0 * GK0);
+        uint32_t bl1ElemCount = k1Total * state.n1PerCore * GN0 * GK0;
+        state.l1 = l1Layout(tiling, 2, al1ElemPerBuf, bl1ElemCount);
     }
 
     // Largest factor of (cinL1*kernelHxW/GK0) not exceeding kL0/GK0, in K0 units.
@@ -203,8 +206,8 @@ struct CinSplitProcessor {
     __aicore__ inline void RunKL0Loop(const BlockCtx& blockCtx, const TilingData& tiling, State& state,
                                       LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, LocalTensor<L0cT>& cl0,
                                       MmadParams& mmadParams, uint32_t kOff, uint32_t curKL1Fmap, uint32_t kl1,
-                                      uint32_t kL0, uint32_t kL0Iters, const Load3DCtx& ctx, event_t relEv,
-                                      uint32_t nOff, uint32_t curN, bool& needLoadBias) const
+                                      uint32_t cinBlocks, uint32_t kL0, uint32_t kL0Iters, const Load3DCtx& ctx,
+                                      event_t relEv, uint32_t nOff, uint32_t curN, bool& needLoadBias) const
     {
         const bool isNSplit = tiling.nL0 < tiling.nBL1;
         uint32_t kl0Start = kOff / kL0;
@@ -217,8 +220,9 @@ struct CinSplitProcessor {
             uint32_t curKInnerKAL0 = kL0;
             if (kOffInner + curKInner > kOff + curKL1Fmap)
                 curKInner = kOff + curKL1Fmap - kOffInner;
-            if (kl0 == kL0Iters - 1) {
-                curKInnerKAL0 = blockCtx.kTotalFmap % kL0;
+            if (kl0 == kl0End - 1) {
+                // Tail K of this cin block: the block end is group-clamped (kTotalFmap overshoots tail groups).
+                curKInnerKAL0 = (kOff + curKL1Fmap) % kL0;
                 curKInnerKAL0 = (curKInnerKAL0 == 0) ? kL0 : curKInnerKAL0;
                 curKInner = static_cast<uint32_t>(AlignB(curKInnerKAL0, GK0));
             }
@@ -248,7 +252,7 @@ struct CinSplitProcessor {
                 SetFlag<HardEvent::MTE1_MTE2>(relEv);
             }
 
-            bool isLast = (kl1 == state.cinL1Blocks - 1) && (kl0 == kl0End - 1);
+            bool isLast = (kl1 == cinBlocks - 1) && (kl0 == kl0End - 1);
             mmadParams.unitFlag = isLast ? UNIT_FLAG_ENABLE_WITH_FLIP : UNIT_FLAG_ENABLE_ONLY;
             mmadParams.k = curKInnerKAL0;
             Mmad(cl0, al0, bl0, mmadParams);
@@ -285,6 +289,15 @@ struct CinSplitProcessor {
                                              uint32_t nOff, uint32_t curN, bool& needLoadBias) const
     {
         uint32_t kernelHxW = tiling.kh * tiling.kw;
+        // Tail merged group: clamp the cin-block extents to the remaining channels.
+        uint32_t groupCinAvail = tiling.singleCoreCi;
+        if (curGroupChanOff + tiling.singleCoreCi > static_cast<uint32_t>(tiling.cin)) {
+            groupCinAvail = static_cast<uint32_t>(tiling.cin) - curGroupChanOff;
+        }
+        uint32_t cinBlocks = state.cinL1Blocks;
+        if (groupCinAvail < tiling.singleCoreCi) {
+            cinBlocks = static_cast<uint32_t>(CeilDiv(groupCinAvail, state.cinL1));
+        }
         uint32_t curMAlign = chunk.curMAlign;
         MmadParams mmadParams;
         initMmadParams_(tiling, mmadParams, curMAlign, static_cast<uint32_t>(AlignB(curN, GN0)));
@@ -292,31 +305,31 @@ struct CinSplitProcessor {
 
         if (!firstCinPrefetched) {
             uint32_t b0 = state.al1Db ? (state.l1Pingpong & 1) : 0;
-            uint32_t cin0 = (state.cinL1 > tiling.singleCoreCi) ? tiling.singleCoreCi : state.cinL1;
+            uint32_t cin0 = (state.cinL1 > groupCinAvail) ? groupCinAvail : state.cinL1;
             PrefetchAl1Chunk(blockCtx, tiling, state, b0, 0, cin0, chunk.curHi, chunk.hiLoadOff, chunk.curWi,
                              chunk.wiLoadOff, loadWeight, kernelHxW);
         }
 
-        for (uint32_t kl1 = 0; kl1 < state.cinL1Blocks; kl1++) {
+        for (uint32_t kl1 = 0; kl1 < cinBlocks; kl1++) {
             uint32_t cinOff = kl1 * state.cinL1;
             uint32_t curCinOri = state.cinL1;
-            if (cinOff + curCinOri > tiling.singleCoreCi)
-                curCinOri = tiling.singleCoreCi - cinOff;
+            if (cinOff + curCinOri > groupCinAvail)
+                curCinOri = groupCinAvail - cinOff;
             uint32_t curCin = static_cast<uint32_t>(AlignB(curCinOri, GK0Fmap));
             uint32_t curBuf = state.al1Db ? (state.l1Pingpong & 1) : 0;
             event_t curEv = (curBuf == 0) ? EVT_FMAP_BUF0 : EVT_FMAP_BUF1;
 
             // Prefetch target for this iteration: the next cin block of the chunk,
             // else (last block) the next N tile's block 0 or the next unit's block 0.
-            bool pfNextBlock = (kl1 + 1 < state.cinL1Blocks);
+            bool pfNextBlock = (kl1 + 1 < cinBlocks);
             bool pfBoundaryN = !pfNextBlock && nextUnit.hasNextN;
             bool pfBoundaryUnit = !pfNextBlock && !nextUnit.hasNextN && nextUnit.hasNextUnit;
             uint32_t pfCinOff = pfNextBlock ? (kl1 + 1) * state.cinL1 : 0;
-            uint32_t pfCurCinOri = (state.cinL1 > tiling.singleCoreCi) ? tiling.singleCoreCi : state.cinL1;
+            uint32_t pfCurCinOri = (state.cinL1 > groupCinAvail) ? groupCinAvail : state.cinL1;
             if (pfNextBlock) {
                 pfCurCinOri = state.cinL1;
-                if (pfCinOff + pfCurCinOri > tiling.singleCoreCi)
-                    pfCurCinOri = tiling.singleCoreCi - pfCinOff;
+                if (pfCinOff + pfCurCinOri > groupCinAvail)
+                    pfCurCinOri = groupCinAvail - pfCinOff;
             }
             uint32_t pfHi = chunk.curHi;
             uint32_t pfHiLoadOff = chunk.hiLoadOff;
@@ -350,7 +363,7 @@ struct CinSplitProcessor {
             uint32_t al1ElemCount = chunk.curHi * chunk.curWi * curCin;
             LocalTensor<FmapT> al1(TPosition::A1, curBuf * state.al1BufBytes, al1ElemCount);
             RunKL0Loop(blockCtx, tiling, state, al1, bl1Full, cl0, mmadParams, cinOff * kernelHxW, curCin * kernelHxW,
-                       kl1, kL0, kL0Iters, ctx, curEv, nOff, curN, needLoadBias);
+                       kl1, cinBlocks, kL0, kL0Iters, ctx, curEv, nOff, curN, needLoadBias);
             if (!state.al1Db && pfValid) {
                 // Single A1 buffer (tiling pBufferFlag bit3 off): the preload must
                 // wait until this L0 loop releases the buffer, so it is issued

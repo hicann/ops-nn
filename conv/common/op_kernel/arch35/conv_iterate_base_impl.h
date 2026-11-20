@@ -505,6 +505,10 @@ __aicore__ inline void SetMNBeforeIterateK(Intf* self, MmadParams& mmadParams)
     self->ctx.loadBiasL1Ins.SetN(currentNL0);
     self->ctx.loadBiasBTIns.SetN(self->ctx.currentNL0Align);
     self->ctx.loadScaleL1Ins.SetN(currentNL0);
+    // Without SetN currentNL0_ stays 0 and the reluWeight copy loads 0 elements (output corrupt).
+    if constexpr (Intf::isExtendConv2d) {
+        self->ctx.loadReluWeightL1Ins.SetN(currentNL0);
+    }
 
     if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
         if constexpr (Intf::formatOutput == ConvFormat::NCHW && Intf::c04Flag) {
