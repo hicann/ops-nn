@@ -162,6 +162,14 @@ Status Conv2DPostCubeToExtendConv2DFusionPass::ConvFusionPreImpl(GraphPtr& graph
     FUSION_PASS_CHECK(nodePtr == nullptr, OP_LOGD(convDescInfo.nodeNameStr, "GetNodePtr failed, no fusion."),
                       return CONV_NOT_CHANGED);
 
+    // every soc of SUPPORT_SOC_LIST exports Intrinsic_fix_pipe_support_multiple_output|true, the
+    // real pipeline marks the bit on the conv node through the fixpipe ability process stage
+    // before this pass. A bare invocation (the ut and the single pass debug entry) has no
+    // ability stage: without the bit PostCubeUtils silently prunes the multi consumer branches
+    // at the dfs stage, the dual/other output cases fall to a no fusion result and the layout
+    // adjust cases lose their postcube branches (equals the conv2dtranspose precedent)
+    ops::PostCubeComm::SetPostCubeAbilityAttr(nodePtr, ops::PostCubeAbilityType::SupportMultipleOutput);
+
     ops::PostCubeUtils postCubeUtils;
     FUSION_PASS_CHECK(postCubeUtils.GetPostCubeNodeList(nodePtr, passContext) != GRAPH_SUCCESS,
                       OP_LOGD(convDescInfo.nodeNameStr, "GetPostCubeNodeList failed, no fusion."),

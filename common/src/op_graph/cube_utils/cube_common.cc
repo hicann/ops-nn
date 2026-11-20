@@ -191,7 +191,7 @@ const std::vector<std::string> kSupportPostCubeCubeTypeVec = {kDepthwiseConv2D,
                                                               kDepthwiseConv2DBackpropFilterD,
                                                               kDepthwiseConv2DBackpropInputD,
                                                               kMerge};
-const std::unordered_set<std::string> kSupportMultipleOutputCubeSet = {CONV2D, kDepthwiseConv2D};
+const std::unordered_set<std::string> kSupportMultipleOutputCubeSet = {CONV2D, kDepthwiseConv2D, kConv2DTranspose};
 const std::unordered_set<std::string> kMatMulSet = {kMatMul, kMatMulV2, kMatMulV3, kBatchMatMul, kBatchMatMulV2};
 const std::unordered_set<std::string> kAtomicWriteCubeSet = {kConv2DBackpropFilterD, kDepthwiseConv2DBackpropFilterD};
 const std::unordered_set<std::string> kCandidateReluTypes = {kPRelu, RELU6, LEAKY_RELU, RELU};
@@ -219,7 +219,9 @@ const std::map<std::string, std::string> kPostCubeInstruction2OpTypeMap{{"requan
 const std::array<PostCubeAbilityAttr, static_cast<size_t>(PostCubeAbilityType::PostCubeAbilityTypeBottom)>
     kPostCubeAbilityAttrs{kSupportPostEltwiseBroadcast, kSupportMultipleOutput, kUseGmAtomicAdd, kNodeCantAccess};
 
-const std::vector<std::string> kSupportPostCubeUtilFuncCubeTypeVec = {CONV2D};
+// keep consistent with kSupportFixpipeUtilFuncCubeTypeVec of the legacy fixpipe_common: the
+// Conv2DTranspose head is required by the ExtendConv2DTranspose Dequant+Relu+Quant scenes
+const std::vector<std::string> kSupportPostCubeUtilFuncCubeTypeVec = {CONV2D, kConv2DTranspose};
 
 PostCubeUnit::~PostCubeUnit()
 {

@@ -63,16 +63,16 @@ constexpr uint32_t FP16_MAX_MAN = 0x03FF;
 #define FP16_EXTRAC_MAN(x) ((((x) >> 0) & 0x3FF) | (((((x) >> 10) & 0x1F) > 0 ? 1 : 0) * 0x400))
 /// @ingroup fp16 basic operator
 /// @brief   constructor of fp16 from sign exponent and mantissa
-#define FP16_CONSTRUCTOR(s, e, m) (((s) << FP16_SIGN_INDEX) | ((e) << FP16_MAN_LEN) | ((m)&FP16_MAX_MAN))
+#define FP16_CONSTRUCTOR(s, e, m) (((s) << FP16_SIGN_INDEX) | ((e) << FP16_MAN_LEN) | ((m) & FP16_MAX_MAN))
 /// @ingroup fp16 special value judgment
 /// @brief   whether a fp16 is a denormalized value
-#define FP16_IS_DENORM(x) ((((x)&FP16_EXP_MASK) == 0))
+#define FP16_IS_DENORM(x) ((((x) & FP16_EXP_MASK) == 0))
 /// @ingroup fp16 special value judgment
 /// @brief   whether a fp16 is infinite
-#define FP16_IS_INF(x) (((x)&FP16_ABS_MAX) == FP16_ABS_MAX)
+#define FP16_IS_INF(x) (((x) & FP16_ABS_MAX) == FP16_ABS_MAX)
 /// @ingroup fp16 special value judgment
 /// @brief   whether a fp16 is invalid
-#define FP16_IS_INVALID(x) (((x)&FP16_EXP_MASK) == FP16_EXP_MASK)
+#define FP16_IS_INVALID(x) (((x) & FP16_EXP_MASK) == FP16_EXP_MASK)
 /// @ingroup fp32 basic parameter
 /// @brief   fp32 exponent bias
 constexpr uint32_t FP32_EXP_BIAS = 127;
@@ -102,7 +102,7 @@ constexpr uint32_t FP32_ABS_MAX = 0x7FFFFFFFu;
 constexpr uint32_t FP32_MAX_MAN = 0x7FFFFFu;
 /// @ingroup fp32 basic operator
 /// @brief   constructor of fp32 from sign exponent and mantissa
-#define FP32_CONSTRUCTOR(s, e, m) (((s) << FP32_SIGN_INDEX) | ((e) << FP32_MAN_LEN) | ((m)&FP32_MAX_MAN))
+#define FP32_CONSTRUCTOR(s, e, m) (((s) << FP32_SIGN_INDEX) | ((e) << FP32_MAN_LEN) | ((m) & FP32_MAX_MAN))
 constexpr uint32_t INT16_T_MAX = 0x7FFF;
 /// @ingroup integer special value judgment
 /// @brief   maximum value of a data with 16 bits length (1111 1111 1111 1111)

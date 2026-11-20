@@ -25,7 +25,7 @@ using std::set;
 using std::unordered_set;
 class PostCubeAddInputBase {
 public:
-    PostCubeAddInputBase(){};
+    PostCubeAddInputBase() {};
     virtual ge::graphStatus DoAddInput(ge::Graph& graph, const PostCubePassInfo& match_pass,
                                        const PostCubeFunctionParamPtr& functpara,
                                        std::vector<ge::GNodePtr>& new_nodes) const

@@ -278,6 +278,11 @@ ge::graphStatus PostCubeAddInputBase::CreateAndUpdateVectorMulScalarInput(ge::Gr
                               .Build();
     bool tmp_bool = true;
     newopnode.SetAttr(kAscendSingleOpAsc, tmp_bool);
+    // the scalar of the host op lives in the scale attr (equals the SetFloat of the
+    // legacy CreateAndUpdateVectorMulScalarInput): the op carries only one data input,
+    // without the attr the host op store rejects it in the engine selection
+    float tmp_scale = static_cast<float>(value);
+    newopnode.SetAttr(kAscendScaleAsc, tmp_scale);
     ge::TensorDesc prenode_inputdesc;
     if (pre_fuzed_node->GetInputDesc(1, prenode_inputdesc) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;

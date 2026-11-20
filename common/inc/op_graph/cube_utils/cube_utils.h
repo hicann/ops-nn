@@ -30,6 +30,7 @@ public:
     ge::graphStatus CreatePostCubeNode(const string& pass_name, ge::Graph& graph, std::vector<ge::GNodePtr>& new_nodes);
 
     void ClearPasses();
+    void ResetNotSupportPostCubeFusionAttr();
     std::string GetIsaArchVersionStr(const ISAArchVersion isa_arch_version);
     void ParseIsaArchVersion(fe::PlatFormInfos& platform_infos);
     bool ReadConfig(const ge::CustomPassContext& context);
@@ -41,6 +42,12 @@ public:
     std::vector<PostCubePassInfo> m_matchpasses_;
     std::vector<ge::GNodePtr> not_support_post_cube_fusion_nodes_;
     std::set<ge::GNodePtr> m_toantiquantnodes_;
+    // producers feeding any created post cube node input, they must survive the folded
+    // node removal of every matched pass, otherwise the graph keeps dangling input edges.
+    // keyed by node name: the GNode wrappers returned by the neighbor traversal apis are
+    // built on demand and never compare equal by pointer, a GNodePtr keyed set would
+    // never hit and the keep alive would silently stop working
+    std::set<std::string> m_pc_input_src_nodes_;
     std::vector<PostCubeUnit> m_idxtonodetypes_;
     std::map<std::string, PostCubeAddInputPtr> m_opmaps_;
     std::map<std::string, uint32_t> unitmapindex_;
@@ -57,30 +64,55 @@ private:
     bool IsInWhitelist(const PostCubeNodeInfo& node) const;
     bool GetNodeIndex(const PostCubeNodeInfo& node, const uint32_t& index) const;
     void GetFusionNodes(const std::stack<PostCubeNodeInfo>& cur_pass, std::vector<ge::GNodePtr>& fusion_nodes) const;
+    // equals the HasDetectedCycle of the legacy shared cycle detector: folding the whole
+    // matched chain into one post cube node must not create a cycle, the walk covers the
+    // accumulated view of the previously fused heads implicitly on the live graph
+    bool HasDetectedCycleOnChain(const std::vector<ge::GNodePtr>& fusion_nodes) const;
+    // equals the GraphUtils::IsolateNode of the legacy framework: unlink every data edge
+    // of the node before the removal
+    ge::graphStatus IsolateNode(ge::Graph& graph, const ge::GNodePtr& node) const;
+    // give every materialized ir input slot of the created post cube node a desc: the
+    // builder materializes the slots lazily and slots below a wired slot exist without
+    // descs, the legacy op desc always carried all ten descs and the downstream fixpipe
+    // partition conversion dereferences every input desc it meets
+    void FillMissingInputDescs(const ge::GNodePtr& post_cubenode) const;
     std::string GetCubeType(const std::stack<PostCubeNodeInfo>& cur_pass) const;
     std::string GetMergeInputNodeType(const ge::GNodePtr& merge_node) const;
     void GenerateMatchedPassesImpl(PostCubeNodeInfo& node, PostCubeMatchParams& fp_mch_params);
     bool CheckEltWiseCycle(const PostCubeNodeInfo& node, const PostCubeMatchParams& fp_mch_params, uint32_t cur_index);
+    // the eltwise x2 father must not sit in the input basin of the head cube (reachable
+    // upward from the cube inputs without crossing a cube or post cube node): folding
+    // such an eltwise makes the same upstream tensor feed both the cube input chain and
+    // the x2 input, after the subgraph partitioning the tensor enters the resulting
+    // subgraph twice and the downstream tbe fixpipe buffer fusion can not consume the
+    // fixpipe, it falls to a single op compilation and fails with E61001
+    bool IsX2FatherInCubeInputBasin(const PostCubeNodeInfo& node, const std::stack<PostCubeNodeInfo>& cur_pass) const;
     void ProcessOutputNodesForPass(const PostCubeNodeInfo& node, PostCubeMatchParams& fp_mch_params);
     void ChangeOrInsertPass(PostCubePassInfo& tmp_pass);
     uint32_t GetUnitIndex(const PostCubePassInfo& post_cube_pass, const PostCubeNodeInfo& post_cube_node);
     ge::graphStatus ModfiyMatchedPasseSecRound();
-    void CollectPostCubeNodesAndInfo(std::unordered_set<ge::GNodePtr>& post_cube_nodes,
-                                     std::map<ge::GNodePtr, PostCubeNodeInfo>& post_cube_info) const;
+    // node identity must be the node name: the sec round pass reconstruction walks the
+    // graph with on demand built GNode wrappers, pointer keyed containers compare against
+    // wrappers that never repeat, the map lookups then miss and return default built
+    // infos with null nodes, the rebuilt passes lose their chain nodes and the folded
+    // nodes survive as orphans that break the subgraph compilation
+    void CollectPostCubeNodesAndInfo(std::set<std::string>& post_cube_nodes,
+                                     std::map<std::string, PostCubeNodeInfo>& post_cube_info) const;
     ge::GNodePtr FindBranchNode(const ge::GNodePtr& cube_node, int32_t min_length,
-                                const std::unordered_set<ge::GNodePtr>& post_cube_nodes) const;
+                                const std::set<std::string>& post_cube_nodes) const;
     void GenerateSinglePass(const ge::GNodePtr& cube_node, std::vector<std::vector<ge::GNodePtr>>& matched_pass,
-                            std::unordered_set<ge::GNodePtr>& post_cube_nodes) const;
+                            std::set<std::string>& post_cube_nodes) const;
     void GeneratePass(const ge::GNodePtr& cube_node, const ge::GNodePtr& branch_node,
                       std::vector<std::vector<ge::GNodePtr>>& matched_pass,
-                      std::unordered_set<ge::GNodePtr>& post_cube_nodes) const;
+                      std::set<std::string>& post_cube_nodes) const;
     void ExtendPassWithPostCubeNodes(std::vector<ge::GNodePtr>& pass, const ge::GNodePtr& start_node,
-                                     const std::unordered_set<ge::GNodePtr>& post_cube_nodes) const;
+                                     const std::set<std::string>& post_cube_nodes) const;
     void GeneratePostCubePasses(std::vector<std::vector<ge::GNodePtr>>& matched_pass,
-                                std::map<ge::GNodePtr, PostCubeNodeInfo>& post_cube_info);
+                                std::map<std::string, PostCubeNodeInfo>& post_cube_info);
     ge::graphStatus FiltrNodeStrategy(const PostCubeNodeInfo& node) const;
     ge::graphStatus FiltrNodeStrategyForTransData(const PostCubeNodeInfo& node) const;
     ge::graphStatus FiltrNodeStrategyForCast(const PostCubeNodeInfo& node) const;
+    ge::graphStatus FiltrNodeStrategyForRelu(const PostCubeNodeInfo& node) const;
     ge::graphStatus FiltrNodeStrategyForEltWise(const PostCubeNodeInfo& node) const;
     ge::graphStatus FiltrNodeStrategyForQuant(const PostCubeNodeInfo& cur_node, const PostCubeNodeInfo& prenode) const;
     bool IsConfictWithSkipConfig(std::stack<uint32_t> index, const uint32_t& ret_index) const;

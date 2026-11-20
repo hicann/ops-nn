@@ -290,7 +290,24 @@ public:
     void SetIsHeadNode(bool isheadnode) { isheadnode_ = isheadnode; }
     void SetBelongUnitIndex(uint32_t belong_unit_index) { belong_unit_index_ = belong_unit_index; }
     uint32_t GetBelongUnitIndex() const { return belong_unit_index_; }
-    bool operator==(const ge::GNodePtr& input_node) const { return (this->GetNode() == input_node); }
+    // node identity must be the node name: the GNode wrappers returned by the neighbor
+    // traversal apis (GetInDataNodesAndPortIndexs / GetOutDataNodesAndPortIndexs) are
+    // built on demand, two wrappers of the same node never compare equal by pointer, so
+    // a pointer based comparison breaks IsNodeInPass (the in pass eltwise input would be
+    // misjudged as an external father and wrongly rewired onto the x2 input)
+    bool operator==(const ge::GNodePtr& input_node) const
+    {
+        if (this->GetNode() == nullptr || input_node == nullptr) {
+            return this->GetNode() == input_node;
+        }
+        ge::AscendString self_name;
+        ge::AscendString peer_name;
+        if (this->GetNode()->GetName(self_name) != ge::GRAPH_SUCCESS ||
+            input_node->GetName(peer_name) != ge::GRAPH_SUCCESS) {
+            return this->GetNode() == input_node;
+        }
+        return self_name == peer_name;
+    }
     ~PostCubeNodeInfo();
 
 private:

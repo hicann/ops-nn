@@ -215,10 +215,11 @@ protected:
     }
 
     // 创建 LeakyRelu 节点
-    static ge::GNodePtr CreateLeakyReluNode(ge::Graph& graph, const std::string& opname, float negative_slope = 0.1f)
+    static ge::GNodePtr CreateLeakyReluNode(ge::Graph& graph, const std::string& opname, float negative_slope = 0.1f,
+                                            ge::DataType dtype = ge::DT_FLOAT16)
     {
         ge::Shape shape({1, 64, 112, 112});
-        ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
+        ge::TensorDesc desc(shape, ge::FORMAT_NCHW, dtype);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
                              .OpType("LeakyRelu")
@@ -235,10 +236,11 @@ protected:
     }
 
     // 创建 PReLU 节点
-    static ge::GNodePtr CreatePReluNode(ge::Graph& graph, const std::string& opname)
+    static ge::GNodePtr CreatePReluNode(ge::Graph& graph, const std::string& opname,
+                                        ge::DataType dtype = ge::DT_FLOAT16)
     {
         ge::Shape shape({1, 64, 112, 112});
-        ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
+        ge::TensorDesc desc(shape, ge::FORMAT_NCHW, dtype);
 
         auto const_node_ptr = CreateConstNode(graph, opname + "_slope");
 
@@ -260,15 +262,54 @@ protected:
     }
 
     // 创建 Relu6 节点
-    static ge::GNodePtr CreateRelu6Node(ge::Graph& graph, const std::string& opname)
+    static ge::GNodePtr CreateRelu6Node(ge::Graph& graph, const std::string& opname,
+                                        ge::DataType dtype = ge::DT_FLOAT16)
     {
         ge::Shape shape({1, 64, 112, 112});
-        ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
+        ge::TensorDesc desc(shape, ge::FORMAT_NCHW, dtype);
 
         ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
                              .OpType("Relu6")
                              .Name(opname.c_str())
                              .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
+
+        node.UpdateInputDesc(0, desc);
+        node.UpdateOutputDesc(0, desc);
+
+        return std::make_shared<ge::GNode>(node);
+    }
+
+    // 创建普通 Relu 节点
+    static ge::GNodePtr CreateReluNode(ge::Graph& graph, const std::string& opname, ge::DataType dtype)
+    {
+        ge::Shape shape({1, 64, 112, 112});
+        ge::TensorDesc desc(shape, ge::FORMAT_NCHW, dtype);
+
+        ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
+                             .OpType("Relu")
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                             .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                             .Build();
+
+        node.UpdateInputDesc(0, desc);
+        node.UpdateOutputDesc(0, desc);
+
+        return std::make_shared<ge::GNode>(node);
+    }
+
+    // 创建 TF flat 控制流节点（Enter/Exit/Switch/Merge/NextIteration/LoopCond）
+    static ge::GNodePtr CreateControlFlowNode(ge::Graph& graph, const std::string& opname, const std::string& optype)
+    {
+        ge::Shape shape({1, 64, 112, 112});
+        ge::TensorDesc desc(shape, ge::FORMAT_NCHW, ge::DT_FLOAT16);
+
+        ge::GNode node = ge::es::CompliantNodeBuilder(&graph)
+                             .OpType(optype.c_str())
+                             .Name(opname.c_str())
+                             .IrDefInputs({{"x", ge::es::CompliantNodeBuilder::kEsIrInputOptional, ""}})
                              .IrDefOutputs({{"y", ge::es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
                              .Build();
 
@@ -694,6 +735,136 @@ TEST_F(cube_utils_ut, FiltrNodeStrategy_Cast_FP32ToBF16)
     PostCubeNodeInfo node_info(cast_ptr);
     auto status = post_cube_utils.FiltrNodeStrategy(node_info);
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu6_FP32Reject)
+{
+    // equals the FiltrNodeStrategyForRelu of the legacy FixPipePass: fp32 activations
+    // (allow_fp32_to_fp16 graph whose conv output feeds Relu6) must be rejected,
+    // otherwise the created FixPipe fails in the tbe chain with EB4000/E61001
+    PostCubeUtils post_cube_utils;
+    ge::Graph graph("test_graph");
+    auto relu6 = CreateRelu6Node(graph, "relu6_fp32", ge::DT_FLOAT);
+
+    ge::CustomPassContext context;
+    (void)post_cube_utils.ReadConfig(context);
+
+    PostCubeNodeInfo node_info(relu6);
+    auto status = post_cube_utils.FiltrNodeStrategy(node_info);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu6_FP16Pass)
+{
+    PostCubeUtils post_cube_utils;
+    ge::Graph graph("test_graph");
+    auto relu6 = CreateRelu6Node(graph, "relu6_fp16", ge::DT_FLOAT16);
+
+    ge::CustomPassContext context;
+    (void)post_cube_utils.ReadConfig(context);
+
+    PostCubeNodeInfo node_info(relu6);
+    auto status = post_cube_utils.FiltrNodeStrategy(node_info);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu6_INT8Pass)
+{
+    PostCubeUtils post_cube_utils;
+    ge::Graph graph("test_graph");
+    auto relu6 = CreateRelu6Node(graph, "relu6_int8", ge::DT_INT8);
+
+    ge::CustomPassContext context;
+    (void)post_cube_utils.ReadConfig(context);
+
+    PostCubeNodeInfo node_info(relu6);
+    auto status = post_cube_utils.FiltrNodeStrategy(node_info);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(cube_utils_ut, FiltrNodeStrategy_LeakyRelu_FP32Reject)
+{
+    PostCubeUtils post_cube_utils;
+    ge::Graph graph("test_graph");
+    auto leaky_relu = CreateLeakyReluNode(graph, "leaky_relu_fp32", 0.1f, ge::DT_FLOAT);
+
+    ge::CustomPassContext context;
+    (void)post_cube_utils.ReadConfig(context);
+
+    PostCubeNodeInfo node_info(leaky_relu);
+    auto status = post_cube_utils.FiltrNodeStrategy(node_info);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(cube_utils_ut, FiltrNodeStrategy_PRelu_FP32Reject)
+{
+    PostCubeUtils post_cube_utils;
+    ge::Graph graph("test_graph");
+    auto prelu = CreatePReluNode(graph, "prelu_fp32", ge::DT_FLOAT);
+
+    ge::CustomPassContext context;
+    (void)post_cube_utils.ReadConfig(context);
+
+    PostCubeNodeInfo node_info(prelu);
+    auto status = post_cube_utils.FiltrNodeStrategy(node_info);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(cube_utils_ut, FiltrNodeStrategy_Relu_FP32Pass)
+{
+    // the legacy FixPipePass has no dtype gate for the plain Relu (normal_relu),
+    // the fp32 fixpipe activation itself is legal hardware config
+    PostCubeUtils post_cube_utils;
+    ge::Graph graph("test_graph");
+    auto relu = CreateReluNode(graph, "relu_fp32", ge::DT_FLOAT);
+
+    ge::CustomPassContext context;
+    (void)post_cube_utils.ReadConfig(context);
+
+    PostCubeNodeInfo node_info(relu);
+    auto status = post_cube_utils.FiltrNodeStrategy(node_info);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(cube_utils_ut, HasDetectedCycleOnChain_ControlFlowLoopNoCycle)
+{
+    // flat TF control flow plumbing carries the loop back edge: the path
+    // dequant -> NextIteration -> Merge -> MatMul is a loop carried dependency of
+    // an enclosing while body, not a fold cycle, the walk must stop at the
+    // boundary nodes instead of reporting a false cycle
+    PostCubeUtils post_cube_utils;
+    ge::Graph graph("test_graph");
+    auto conv = CreateConv2DNode(graph, "conv_loop");
+    auto dequant = CreateDequantNode(graph, "dequant_loop");
+    auto next_iter = CreateControlFlowNode(graph, "loop_next_iteration", "NextIteration");
+    auto merge = CreateControlFlowNode(graph, "loop_merge", "Merge");
+
+    (void)graph.AddDataEdge(*conv, 0, *dequant, 0);
+    (void)graph.AddDataEdge(*dequant, 0, *next_iter, 0);
+    (void)graph.AddDataEdge(*next_iter, 0, *merge, 0);
+    (void)graph.AddDataEdge(*merge, 0, *conv, 0);
+
+    std::vector<ge::GNodePtr> chain{conv, dequant};
+    EXPECT_FALSE(post_cube_utils.HasDetectedCycleOnChain(chain));
+}
+
+TEST_F(cube_utils_ut, HasDetectedCycleOnChain_RealFoldCycle)
+{
+    // a plain data path that leaves the chain and returns into it is a real fold
+    // cycle and must still be detected with the control flow boundary stop
+    PostCubeUtils post_cube_utils;
+    ge::Graph graph("test_graph");
+    auto conv = CreateConv2DNode(graph, "conv_cycle");
+    auto relu = CreateReluNode(graph, "relu_cycle", ge::DT_FLOAT16);
+    auto bypass = CreateReluNode(graph, "bypass_cycle", ge::DT_FLOAT16);
+
+    (void)graph.AddDataEdge(*conv, 0, *relu, 0);
+    // the chain output leaves through relu and returns into the chain head conv
+    (void)graph.AddDataEdge(*relu, 0, *bypass, 0);
+    (void)graph.AddDataEdge(*bypass, 0, *conv, 0);
+
+    std::vector<ge::GNodePtr> chain{conv, relu};
+    EXPECT_TRUE(post_cube_utils.HasDetectedCycleOnChain(chain));
 }
 
 TEST_F(cube_utils_ut, FiltrNodeStrategy_TransData_Valid)

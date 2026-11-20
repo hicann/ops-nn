@@ -9,7 +9,9 @@
  */
 
 #include "cube_utils/cube_utils.h"
+#include <deque>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <vector>
 #include <string>
@@ -47,7 +49,10 @@ void GetPath(const ge::GNodePtr& input_node, const ge::GNodePtr& cube_node, int3
         if (cur_node == nullptr) {
             break;
         }
-        if (cur_node == cube_node) {
+        // compare by name: the wrapper of cube_node and the wrappers walked up from the
+        // input side are different objects of the same node, a pointer comparison never
+        // hits and the eltwise cycle path check would be silently disabled
+        if (cube_node != nullptr && GNodeGetName(cur_node) == GNodeGetName(cube_node)) {
             path_size++;
             break;
         }
@@ -80,6 +85,25 @@ std::vector<std::string> FindNonSubstrings(const std::vector<std::string>& strin
         }
     }
     return result;
+}
+
+/*
+ * flat TF control flow plumbing: Enter/Switch/Merge/NextIteration/LoopCond/Exit carry the
+ * while/cond boundaries and the loop back edges on a graph that has not been split into
+ * control flow subgraphs yet. The legacy pass ran after the split where no back edge was
+ * visible, so these boundaries were never part of a real fold cycle; crossing them in a
+ * forward walk turns loop carried dependencies of an enclosing while/if body into a false
+ * "cycle" and rejects every chain inside the body.
+ */
+const std::set<std::string> kFlatControlFlowBoundaryTypes = {"Enter",         "Switch",   "Merge",
+                                                             "NextIteration", "LoopCond", "Exit"};
+
+bool IsFlatControlFlowBoundary(const ge::GNodePtr& node)
+{
+    if (node == nullptr) {
+        return false;
+    }
+    return kFlatControlFlowBoundaryTypes.count(std::string(GNodeGetType(node).GetString())) != 0U;
 }
 } // namespace
 
@@ -359,13 +383,13 @@ bool PostCubeUtils::NeedToCutPass(PostCubePassInfo& m_pass) const
         return true;
     }
     PostCubeNodeInfo node = m_pass.m_opnodes[m_pass.m_opnodes.size() - 1];
-    if (node.GetNode()->GetOutputsSize() == 0) {
+    if (PostCubeComm::GetOutDataNodesSize(node.GetNode()) == 0) {
         OPS_LOG_D("PostCube", "GetOutDataNodes.empty");
         m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKNOWN
         return false;
     }
     std::string cube_type = GetMergeInputNodeType(m_pass.m_opnodes[0].GetNode());
-    if (cube_type == kConv2DTransposeD && m_pass.m_opnodes[0].GetNode()->GetOutputsSize() > 1) {
+    if (cube_type == kConv2DTransposeD && PostCubeComm::GetOutDataNodesSize(m_pass.m_opnodes[0].GetNode()) > 1) {
         if (GNodeGetType(m_pass.m_opnodes[1].GetNode()) == kAscendQuantAsc ||
             GNodeGetType(m_pass.m_opnodes[1].GetNode()) == kAscendDequantAsc) {
             OPS_LOG_D(
@@ -383,7 +407,7 @@ bool PostCubeUtils::NeedToCutPass(PostCubePassInfo& m_pass) const
             return true;
         }
     }
-    if (cube_type != CONV2D && node.GetNode()->GetOutputsSize() > 1) {
+    if (cube_type != CONV2D && PostCubeComm::GetOutDataNodesSize(node.GetNode()) > 1) {
         m_pass.m_flag = 2; // m_flag = 2 DONT NEED, 1NEED, 0 UNKNOWN
         return false;
     }
@@ -458,6 +482,16 @@ ge::graphStatus PostCubeUtils::FiltrNodeStrategy(const PostCubeNodeInfo& node) c
     }
     if (node_type == kAdd || node_type == kSub || node_type == ELTWISE) {
         return FiltrNodeStrategyForEltWise(node);
+    }
+    // equals the kPRelu/kLeakyRelu/RELU6 dispatch of the legacy FixPipePass: pre_act
+    // scalar/vector/clip relu units only support fp16/int8 inputs, an fp32 activation
+    // (e.g. an allow_fp32_to_fp16 graph whose conv output is still fp32 feeding Relu6)
+    // must be rejected here, otherwise the created FixPipe fails in the tbe prebuild and
+    // single op compile chain with EB4000 (current pre_conv does not support clip relu)
+    // and E61001 (fix_pipe does not support single op compilation)
+    if (GNodeGetType(node.GetNode()) == kAscendPReluAsc || GNodeGetType(node.GetNode()) == kAscendLeakyReluAsc ||
+        GNodeGetType(node.GetNode()) == kAscendRelu6Asc) {
+        return FiltrNodeStrategyForRelu(node);
     }
     if (node_type == CAST) {
         return FiltrNodeStrategyForCast(node);
@@ -535,6 +569,24 @@ ge::graphStatus PostCubeUtils::FiltrNodeStrategyForCast(const PostCubeNodeInfo& 
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus PostCubeUtils::FiltrNodeStrategyForRelu(const PostCubeNodeInfo& node) const
+{
+    // equals the FiltrNodeStrategyForRelu of the legacy FixPipePass: the pre_act
+    // scalar_relu/vector_relu/clip_relu units only accept fp16/int8 inputs
+    ge::TensorDesc input_desc;
+    if (node.GetNode()->GetInputDesc(0, input_desc) != ge::GRAPH_SUCCESS) {
+        PrintNodeFilterReason(node, "input 0 is empty");
+        return ge::GRAPH_FAILED;
+    }
+    const auto input_dtype = input_desc.GetDataType();
+    if (input_dtype == ge::DT_FLOAT16 || input_dtype == ge::DT_INT8) {
+        return ge::GRAPH_SUCCESS;
+    }
+    PrintNodeFilterReason(node, "input data type is not fp16 or int8, cur input datatype is ",
+                          PostCubeComm::GetStrByDataTypeVec({input_dtype}));
+    return ge::GRAPH_FAILED;
 }
 
 ge::graphStatus PostCubeUtils::FiltrNodeStrategyForTransData(const PostCubeNodeInfo& node) const
@@ -689,6 +741,74 @@ void PostCubeUtils::GetFusionNodes(const std::stack<PostCubeNodeInfo>& cur_pass,
     }
 }
 
+bool PostCubeUtils::HasDetectedCycleOnChain(const std::vector<ge::GNodePtr>& fusion_nodes) const
+{
+    // equals the HasDetectedCycle of the legacy shared cycle detector: folding the whole
+    // matched chain into one post cube node creates a cycle iff some path leaves the
+    // chain through an out edge, walks at least one non chain node and returns into the
+    // chain (e.g. an eltwise whose second input father is produced from inside the
+    // chain). the walk runs on the live graph and the post cube nodes of the previously
+    // fused heads are already part of it, so the accumulated ExpandAndUpdate view of
+    // the legacy detector is covered implicitly. only data edges are checked, control
+    // edges never carry the folded value
+    // node identity must be the node name: GetOutDataNodesAndPortIndexs returns on
+    // demand built GNode wrappers, two wrappers of the same node never compare equal,
+    // so a pointer based set can neither deduplicate the walk nor hit the chain and the
+    // walk degrades into an endless re enqueue that eats memory until the process dies
+    std::set<std::string> chain_names;
+    for (const auto& chain_node : fusion_nodes) {
+        if (chain_node != nullptr) {
+            chain_names.emplace(GNodeGetName(chain_node).GetString());
+        }
+    }
+    std::deque<ge::GNodePtr> walk_queue;
+    std::set<std::string> visited;
+    for (const auto& chain_node : fusion_nodes) {
+        if (chain_node == nullptr) {
+            continue;
+        }
+        for (size_t idx = 0; idx < chain_node->GetOutputsSize(); ++idx) {
+            const auto out_pairs = chain_node->GetOutDataNodesAndPortIndexs(static_cast<int32_t>(idx));
+            for (const auto& out_pair : out_pairs) {
+                if (out_pair.first != nullptr && chain_names.count(GNodeGetName(out_pair.first).GetString()) == 0U) {
+                    walk_queue.emplace_back(out_pair.first);
+                }
+            }
+        }
+    }
+    while (!walk_queue.empty()) {
+        const auto cur_node = walk_queue.front();
+        walk_queue.pop_front();
+        if (!visited.insert(GNodeGetName(cur_node).GetString()).second) {
+            continue;
+        }
+        // flat control flow plumbing carries the while/cond loop back edges: a path that
+        // returns into the chain through Enter/Switch/Merge/NextIteration is a loop carried
+        // dependency of an enclosing while/if body, not a fold cycle (the loop already
+        // exists before the fold and survives it unchanged). The legacy pass ran after the
+        // control flow had been split into subgraphs where such back edges were invisible,
+        // so the walk stops at these boundaries instead of crossing them
+        if (IsFlatControlFlowBoundary(cur_node)) {
+            continue;
+        }
+        for (size_t idx = 0; idx < cur_node->GetOutputsSize(); ++idx) {
+            const auto out_pairs = cur_node->GetOutDataNodesAndPortIndexs(static_cast<int32_t>(idx));
+            for (const auto& out_pair : out_pairs) {
+                if (out_pair.first == nullptr) {
+                    continue;
+                }
+                if (chain_names.count(GNodeGetName(out_pair.first).GetString()) != 0U) {
+                    // the path left the chain and returns into it, after the fold it
+                    // becomes a self loop of the post cube node
+                    return true;
+                }
+                walk_queue.emplace_back(out_pair.first);
+            }
+        }
+    }
+    return false;
+}
+
 std::string PostCubeUtils::GetCubeType(const std::stack<PostCubeNodeInfo>& cur_pass) const
 {
     std::stack<PostCubeNodeInfo> tmp_pass(cur_pass);
@@ -721,6 +841,88 @@ std::string PostCubeUtils::GetMergeInputNodeType(const ge::GNodePtr& merge_node)
     }
 }
 
+bool PostCubeUtils::IsX2FatherInCubeInputBasin(const PostCubeNodeInfo& node,
+                                               const std::stack<PostCubeNodeInfo>& cur_pass) const
+{
+    const auto& post_cube_node = node.GetNode();
+    ge::GNodePtr cube_node = GetCubeNode(cur_pass);
+    if (post_cube_node == nullptr || cube_node == nullptr) {
+        return false;
+    }
+    // names of the already matched chain nodes, their producers are the in chain inputs
+    std::set<std::string> chain_names;
+    std::stack<PostCubeNodeInfo> tmp_pass(cur_pass);
+    while (!tmp_pass.empty()) {
+        const auto chain_node = tmp_pass.top().GetNode();
+        if (chain_node != nullptr) {
+            chain_names.emplace(GNodeGetName(chain_node).GetString());
+        }
+        tmp_pass.pop();
+    }
+    // the external fathers feed the x2 input of the created post cube node
+    std::vector<ge::GNodePtr> x2_fathers;
+    for (size_t idx = 0; idx < post_cube_node->GetInputsSize(); ++idx) {
+        const auto in_pair = post_cube_node->GetInDataNodesAndPortIndexs(static_cast<int32_t>(idx));
+        if (in_pair.first == nullptr || chain_names.count(GNodeGetName(in_pair.first).GetString()) != 0U) {
+            continue;
+        }
+        x2_fathers.emplace_back(in_pair.first);
+    }
+    if (x2_fathers.empty()) {
+        return false;
+    }
+    // walk up from the cube inputs, cube and post cube nodes are folding boundaries of
+    // their own chains and the walk never crosses them
+    constexpr int32_t kBasinWalkMaxDepth = 32;
+    std::set<std::string> visited;
+    std::deque<ge::GNodePtr> walk_queue;
+    for (size_t idx = 0; idx < cube_node->GetInputsSize(); ++idx) {
+        const auto in_pair = cube_node->GetInDataNodesAndPortIndexs(static_cast<int32_t>(idx));
+        if (in_pair.first != nullptr) {
+            walk_queue.emplace_back(in_pair.first);
+        }
+    }
+    while (!walk_queue.empty()) {
+        const auto cur_node = walk_queue.front();
+        walk_queue.pop_front();
+        if (cur_node == nullptr) {
+            continue;
+        }
+        const std::string cur_name(GNodeGetName(cur_node).GetString());
+        if (!visited.emplace(cur_name).second) {
+            continue;
+        }
+        for (const auto& x2_father : x2_fathers) {
+            if (x2_father != nullptr && GNodeGetName(x2_father).GetString() == cur_name) {
+                return true;
+            }
+        }
+        const bool is_cube = PostCubeComm::GetPostCubeCubeType(cur_node) != PostCubeCubeType::NotCube;
+        const bool is_post_cube = GNodeGetType(cur_node) == kAscendPostCubeAsc;
+        if (is_cube || is_post_cube) {
+            continue;
+        }
+        // flat control flow plumbing carries the loop back edges: an x2 father reached
+        // only through Enter/Switch/Merge/NextIteration is a loop carried dependency of an
+        // enclosing while/if body, not a member of the cube input basin (the legacy pass
+        // never crossed these boundaries because it ran after the control flow had been
+        // split into subgraphs)
+        if (IsFlatControlFlowBoundary(cur_node)) {
+            continue;
+        }
+        if (visited.size() > static_cast<size_t>(kBasinWalkMaxDepth)) {
+            continue;
+        }
+        for (size_t idx = 0; idx < cur_node->GetInputsSize(); ++idx) {
+            const auto in_pair = cur_node->GetInDataNodesAndPortIndexs(static_cast<int32_t>(idx));
+            if (in_pair.first != nullptr) {
+                walk_queue.emplace_back(in_pair.first);
+            }
+        }
+    }
+    return false;
+}
+
 bool PostCubeUtils::CheckEltWiseCycle(const PostCubeNodeInfo& node, const PostCubeMatchParams& fp_mch_params,
                                       uint32_t cur_index)
 {
@@ -734,7 +936,7 @@ bool PostCubeUtils::CheckEltWiseCycle(const PostCubeNodeInfo& node, const PostCu
         const auto input_node = post_cube_node->GetInDataNodesAndPortIndexs(idx);
         GetPath(input_node.first, cube_node, path_size);
     }
-    if (path_size > 1) {
+    if (path_size > 1 || IsX2FatherInCubeInputBasin(node, fp_mch_params.cur_pass)) {
         bool tmp_bool = true;
         GNodeSetAttr(post_cube_node, kNotSupportPostCubeFusion, tmp_bool);
         OPS_LOG_D("PostCube", "GenerateMatchedPassesImpl node(%s) attr(not_support_post_cube_fusion) is true.",
@@ -786,6 +988,30 @@ void PostCubeUtils::GenerateMatchedPassesImpl(PostCubeNodeInfo& node, PostCubeMa
         return;
     }
 
+    // equals the HasDetectedCycle call of the legacy framework: validate the whole
+    // candidate chain before the node joins it, folding a cyclic chain turns into a
+    // self loop of the post cube node and breaks the topological sorting of the graph
+    std::vector<ge::GNodePtr> fusion_nodes;
+    GetFusionNodes(fp_mch_params.cur_pass, fusion_nodes);
+    fusion_nodes.emplace_back(post_cube_node);
+    if (HasDetectedCycleOnChain(fusion_nodes)) {
+        // equals NODECANTACCES of the legacy framework
+        constexpr uint32_t NODE_CANT_ACCESS = 2;
+        node.SetNodePostCubeability(static_cast<char>(NODE_CANT_ACCESS));
+        // mark the node not support as well: NeedToCutPass judges the extendability of the
+        // last chain node through PreMatchAcorrdingToPass which only reads this attr, without
+        // it the rejected node still counts as extendable, the first round cut drops the
+        // whole prefix chain and the folded candidates of the chain (e.g. the original
+        // dequant and relu of a residual block) survive as orphans that break the subgraph
+        // compilation
+        bool tmp_bool = true;
+        GNodeSetAttr(post_cube_node, kNotSupportPostCubeFusion, tmp_bool);
+        not_support_post_cube_fusion_nodes_.emplace_back(post_cube_node);
+        OPS_LOG_D("PostCube", "GenerateMatchedPassesImpl node(%s) folding the chain creates a cycle, skip it.",
+                  GNodeGetName(post_cube_node).GetString());
+        return;
+    }
+
     node.SetNodePostCubeability(1);
     node.SetBelongUnitType(m_idxtonodetypes_[tmp_cur_index].GetName());
     node.SetBelongUnitIndex(tmp_cur_index);
@@ -797,7 +1023,7 @@ void PostCubeUtils::GenerateMatchedPassesImpl(PostCubeNodeInfo& node, PostCubeMa
               node.GetBelongUnitType().c_str(), tmp_cur_index);
 
     GenerateMatchedPassesFromStack(fp_mch_params.cur_pass, fp_mch_params.post_cube_index++, tmp_cur_index);
-    if (post_cube_node->GetOutputsSize() > 1) {
+    if (PostCubeComm::GetOutDataNodesSize(post_cube_node) > 1) {
         if (!PostCubeComm::CheckPostCubeAbilityAttr(node.GetCubeNode(), PostCubeAbilityType::SupportMultipleOutput)) {
             OPS_LOG_D("PostCube",
                       "GenerateMatchedPassesImpl node does not support multiple output post_cube name = %s type = %s",
@@ -894,26 +1120,30 @@ uint32_t PostCubeUtils::GetUnitIndex(const PostCubePassInfo& post_cube_pass, con
     return unit_index;
 }
 
-void PostCubeUtils::CollectPostCubeNodesAndInfo(std::unordered_set<ge::GNodePtr>& post_cube_nodes,
-                                                std::map<ge::GNodePtr, PostCubeNodeInfo>& post_cube_info) const
+void PostCubeUtils::CollectPostCubeNodesAndInfo(std::set<std::string>& post_cube_nodes,
+                                                std::map<std::string, PostCubeNodeInfo>& post_cube_info) const
 {
     for (auto& pass : m_matchpasses_) {
         auto pass_nodes = pass.m_opnodes;
         for (auto& pass_node : pass_nodes) {
-            post_cube_nodes.emplace(pass_node.GetNode());
-            post_cube_info[pass_node.GetNode()] = pass_node;
+            if (pass_node.GetNode() == nullptr) {
+                continue;
+            }
+            const std::string node_name(GNodeGetName(pass_node.GetNode()).GetString());
+            post_cube_nodes.emplace(node_name);
+            post_cube_info[node_name] = pass_node;
         }
     }
 }
 
 ge::GNodePtr PostCubeUtils::FindBranchNode(const ge::GNodePtr& cube_node, int32_t min_length,
-                                           const std::unordered_set<ge::GNodePtr>& post_cube_nodes) const
+                                           const std::set<std::string>& post_cube_nodes) const
 {
     std::vector<ge::GNodePtr> out_nodes;
     for (size_t idx = 0; idx < cube_node->GetOutputsSize(); ++idx) {
         const auto outputNodesPairs = cube_node->GetOutDataNodesAndPortIndexs(idx);
         for (const auto& out_node : outputNodesPairs) {
-            if (post_cube_nodes.count(out_node.first) != 0) {
+            if (out_node.first != nullptr && post_cube_nodes.count(GNodeGetName(out_node.first).GetString()) != 0) {
                 out_nodes.emplace_back(out_node.first);
             }
         }
@@ -922,7 +1152,7 @@ ge::GNodePtr PostCubeUtils::FindBranchNode(const ge::GNodePtr& cube_node, int32_
         return cube_node;
     }
     for (int32_t i = 1; i < min_length; i++) {
-        if (m_matchpasses_[0].m_opnodes[i].GetNode()->GetOutputsSize() > 1) {
+        if (PostCubeComm::GetOutDataNodesSize(m_matchpasses_[0].m_opnodes[i].GetNode()) > 1) {
             return m_matchpasses_[0].m_opnodes[i].GetNode();
         }
     }
@@ -948,8 +1178,8 @@ ge::graphStatus PostCubeUtils::ModfiyMatchedPasseSecRound()
     for (auto& pass : m_matchpasses_) {
         min_length = std::min(min_length, static_cast<int32_t>(pass.m_opnodes.size()));
     }
-    std::unordered_set<ge::GNodePtr> post_cube_nodes;
-    std::map<ge::GNodePtr, PostCubeNodeInfo> post_cube_info;
+    std::set<std::string> post_cube_nodes;
+    std::map<std::string, PostCubeNodeInfo> post_cube_info;
     CollectPostCubeNodesAndInfo(post_cube_nodes, post_cube_info);
 
     std::vector<std::vector<ge::GNodePtr>> matched_pass;
@@ -957,7 +1187,7 @@ ge::graphStatus PostCubeUtils::ModfiyMatchedPasseSecRound()
     for (size_t idx = 0; idx < cube_node->GetOutputsSize(); ++idx) {
         const auto outputNodesPairs = cube_node->GetOutDataNodesAndPortIndexs(idx);
         for (const auto& out_node : outputNodesPairs) {
-            if (post_cube_nodes.count(out_node.first) == 0) {
+            if (out_node.first == nullptr || post_cube_nodes.count(GNodeGetName(out_node.first).GetString()) == 0) {
                 cube_not_post_cube_out_flag = true;
                 break;
             }
@@ -980,10 +1210,10 @@ ge::graphStatus PostCubeUtils::ModfiyMatchedPasseSecRound()
 }
 
 void PostCubeUtils::ExtendPassWithPostCubeNodes(std::vector<ge::GNodePtr>& pass, const ge::GNodePtr& start_node,
-                                                const std::unordered_set<ge::GNodePtr>& post_cube_nodes) const
+                                                const std::set<std::string>& post_cube_nodes) const
 {
     auto cur_node = start_node;
-    while (post_cube_nodes.count(cur_node) > 0) {
+    while (cur_node != nullptr && post_cube_nodes.count(GNodeGetName(cur_node).GetString()) > 0) {
         pass.emplace_back(cur_node);
         if (PostCubeComm::GetOutDataNodesSize(cur_node) != 1) {
             break;
@@ -995,7 +1225,7 @@ void PostCubeUtils::ExtendPassWithPostCubeNodes(std::vector<ge::GNodePtr>& pass,
 
 void PostCubeUtils::GenerateSinglePass(const ge::GNodePtr& cube_node,
                                        std::vector<std::vector<ge::GNodePtr>>& matched_pass,
-                                       std::unordered_set<ge::GNodePtr>& post_cube_nodes) const
+                                       std::set<std::string>& post_cube_nodes) const
 {
     ge::GNodePtr cur_node;
     std::vector<ge::GNodePtr> pass;
@@ -1006,7 +1236,7 @@ void PostCubeUtils::GenerateSinglePass(const ge::GNodePtr& cube_node,
             if (!matched_pass.empty()) {
                 return;
             }
-            if (post_cube_nodes.count(out_node.first) > 0) {
+            if (out_node.first != nullptr && post_cube_nodes.count(GNodeGetName(out_node.first).GetString()) > 0) {
                 matched_pass.push_back(pass);
                 ExtendPassWithPostCubeNodes(matched_pass.back(), out_node.first, post_cube_nodes);
             }
@@ -1016,13 +1246,20 @@ void PostCubeUtils::GenerateSinglePass(const ge::GNodePtr& cube_node,
 
 void PostCubeUtils::GeneratePass(const ge::GNodePtr& cube_node, const ge::GNodePtr& branch_node,
                                  std::vector<std::vector<ge::GNodePtr>>& matched_pass,
-                                 std::unordered_set<ge::GNodePtr>& post_cube_nodes) const
+                                 std::set<std::string>& post_cube_nodes) const
 {
     ge::GNodePtr cur_node = cube_node;
     std::vector<ge::GNodePtr> pass;
-    while (cur_node != branch_node) {
+    // compare by name: the walk fetches on demand built wrappers while branch_node is a
+    // stored wrapper, a pointer comparison never ends at the branch node and the walk
+    // runs past the whole downstream graph
+    const std::string branch_name = branch_node == nullptr ? "" : GNodeGetName(branch_node).GetString();
+    while (cur_node != nullptr && GNodeGetName(cur_node).GetString() != branch_name) {
         pass.emplace_back(cur_node);
         const auto curOutputNodesPairs = cur_node->GetOutDataNodesAndPortIndexs(0);
+        if (curOutputNodesPairs.empty() || curOutputNodesPairs[0].first == nullptr) {
+            break;
+        }
         cur_node = curOutputNodesPairs[0].first;
     }
     pass.emplace_back(branch_node);
@@ -1037,7 +1274,7 @@ void PostCubeUtils::GeneratePass(const ge::GNodePtr& cube_node, const ge::GNodeP
             if (count >= kPostCubeNodeLimited) {
                 return;
             }
-            if (post_cube_nodes.count(out_node.first) > 0) {
+            if (out_node.first != nullptr && post_cube_nodes.count(GNodeGetName(out_node.first).GetString()) > 0) {
                 matched_pass.push_back(pass);
                 count++;
                 ExtendPassWithPostCubeNodes(matched_pass.back(), out_node.first, post_cube_nodes);
@@ -1050,9 +1287,9 @@ void PostCubeUtils::GeneratePass(const ge::GNodePtr& cube_node, const ge::GNodeP
 }
 
 void PostCubeUtils::GeneratePostCubePasses(std::vector<std::vector<ge::GNodePtr>>& matched_pass,
-                                           std::map<ge::GNodePtr, PostCubeNodeInfo>& post_cube_info)
+                                           std::map<std::string, PostCubeNodeInfo>& post_cube_info)
 {
-    m_matchpasses_.clear();
+    std::vector<PostCubePassInfo> rebuildPasses;
     uint32_t index_count = 0;
     for (auto& pass : matched_pass) {
         if (pass.size() < kPassMinSize) {
@@ -1063,14 +1300,27 @@ void PostCubeUtils::GeneratePostCubePasses(std::vector<std::vector<ge::GNodePtr>
         post_cube_pass.unit_index = 0;
         post_cube_pass.pass_index = index_count;
         for (auto& node : pass) {
-            auto post_cube_node = post_cube_info[node];
+            if (node == nullptr) {
+                post_cube_pass.m_opnodes.emplace_back(PostCubeNodeInfo());
+                continue;
+            }
+            auto post_cube_node = post_cube_info[GNodeGetName(node).GetString()];
             uint32_t unit_index = GetUnitIndex(post_cube_pass, post_cube_node);
             post_cube_pass.m_opnodes.emplace_back(post_cube_node);
             post_cube_pass.unit_index = unit_index;
         }
         index_count++;
-        m_matchpasses_.emplace_back(post_cube_pass);
+        rebuildPasses.emplace_back(post_cube_pass);
     }
+    // 事务性重建：第二轮分支重构结果为空时保留第一轮剪枝结果（canndev 门禁剪枝的产物——
+    // 无多输出能力的cube已在遍历期剪枝，到达此处的重叠候选均属多输出使能平台，其双FixPipe
+    // 连线各自从cube重算并认领各自尾节点的边，回退后仍正确）。重建清空会导致融合候选丢失、
+    // 融合机会退化为无融合（conv2d不再被ExtendConv2D替换而暴露给后续错误转换）
+    if (rebuildPasses.empty()) {
+        OPS_LOG_W("PostCube", "PostCube sec-round rebuild result is empty, keep first-round passes.");
+        return;
+    }
+    m_matchpasses_ = std::move(rebuildPasses);
 }
 
 void PostCubeUtils::ChangeOrInsertPass(PostCubePassInfo& tmp_pass)
@@ -1423,19 +1673,109 @@ ge::graphStatus PostCubeUtils::DeleteToFusedNodeEdge(ge::Graph& graph, const Pos
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus PostCubeUtils::IsolateNode(ge::Graph& graph, const ge::GNodePtr& node) const
+{
+    // equals the GraphUtils::IsolateNode of the legacy framework: unlink every data edge
+    // of the node before the removal so the peer side edge bookkeeping stays consistent
+    // in any half fused state, control edges have no dedicated remove api and are left
+    // to the RemoveNode itself
+    for (size_t idx = 0; idx < node->GetInputsSize(); ++idx) {
+        const auto in_pair = node->GetInDataNodesAndPortIndexs(static_cast<int32_t>(idx));
+        if (in_pair.first == nullptr) {
+            continue;
+        }
+        (void)graph.RemoveEdge(*in_pair.first, in_pair.second, *node, static_cast<int32_t>(idx));
+    }
+    for (size_t idx = 0; idx < node->GetOutputsSize(); ++idx) {
+        const auto out_pairs = node->GetOutDataNodesAndPortIndexs(static_cast<int32_t>(idx));
+        for (const auto& out_pair : out_pairs) {
+            if (out_pair.first == nullptr) {
+                continue;
+            }
+            (void)graph.RemoveEdge(*node, static_cast<int32_t>(idx), *out_pair.first, out_pair.second);
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus PostCubeUtils::DeleteNode(ge::Graph& graph, const std::set<ge::GNodePtr>& todeletenode)
 {
     for (auto& node : todeletenode) {
-        graph.RemoveNode(*node, 1);
+        if (node == nullptr) {
+            continue;
+        }
+        // the same node may enter the set twice through different on demand wrappers of
+        // two matched passes, skip the ones already removed from the graph
+        if (graph.FindNodeByName(GNodeGetName(node).GetString()) == nullptr) {
+            continue;
+        }
+        if (m_pc_input_src_nodes_.count(GNodeGetName(node).GetString()) != 0U) {
+            // the node feeds an input of a created post cube node (e.g. the eltwise
+            // input father wired onto the x2 input): keep it alive, removing it would
+            // leave the post cube node with a dangling input edge
+            OPS_LOG_W("PostCube", "Node[%s] feeds a created post cube node input, keep it alive instead of removing.",
+                      GNodeGetName(node).GetString());
+            continue;
+        }
+        // equals the IsolateNode + RemoveNodeWithoutRelink pair of the legacy framework
+        (void)IsolateNode(graph, node);
+        if (graph.RemoveNode(*node, 1) != ge::GRAPH_SUCCESS) {
+            REPORT_OPS_ERROR("[GraphOpt][PostCubePss][DeleteNode] Fail to remove folded node[%s], "
+                             "the graph may be half fused.",
+                             GNodeGetName(node).GetString());
+            return ge::GRAPH_FAILED;
+        }
     }
     for (auto& node : m_toantiquantnodes_) {
         if (node == nullptr) {
             continue;
         } else {
-            graph.RemoveNode(*node, 1);
+            // the same node may enter the set twice through different on demand wrappers,
+            // skip the ones already removed from the graph
+            if (graph.FindNodeByName(GNodeGetName(node).GetString()) == nullptr) {
+                continue;
+            }
+            // equals the IsolateNode + RemoveNodeWithoutRelink pair of the legacy framework
+            (void)IsolateNode(graph, node);
+            if (graph.RemoveNode(*node, 1) != ge::GRAPH_SUCCESS) {
+                REPORT_OPS_ERROR("[GraphOpt][PostCubePss][DeleteNode] Fail to remove anti quant node[%s], "
+                                 "the graph may be half fused.",
+                                 GNodeGetName(node).GetString());
+                return ge::GRAPH_FAILED;
+            }
         }
     }
     return ge::GRAPH_SUCCESS;
+}
+
+void PostCubeUtils::FillMissingInputDescs(const ge::GNodePtr& post_cubenode) const
+{
+    if (post_cubenode == nullptr) {
+        return;
+    }
+    // the ir input slots of the builder node materialize lazily: several strategies write
+    // the desc of a slot before the slot exists, the write lands nowhere and the slot is
+    // wired later without a desc. the legacy framework created the op desc with ten
+    // AddInputDesc calls first, every wired slot always carried a desc, and the downstream
+    // fixpipe partition conversion (fe SetFixpipeToFuncOp) copies the input desc of every
+    // wired slot, a desc-less wired slot crashes it with a null dereference. give every
+    // wired slot without a desc the output desc of its edge producer
+    constexpr int32_t kPostCubeIrInputNum = 10;
+    for (int32_t idx = 0; idx < kPostCubeIrInputNum; ++idx) {
+        const auto in_pair = post_cubenode->GetInDataNodesAndPortIndexs(idx);
+        if (in_pair.first == nullptr) {
+            continue;
+        }
+        ge::TensorDesc desc;
+        if (post_cubenode->GetInputDesc(idx, desc) == ge::GRAPH_SUCCESS) {
+            continue;
+        }
+        ge::TensorDesc src_desc;
+        if (in_pair.first->GetOutputDesc(in_pair.second, src_desc) != ge::GRAPH_SUCCESS) {
+            continue;
+        }
+        (void)post_cubenode->UpdateInputDesc(idx, src_desc);
+    }
 }
 
 ge::graphStatus PostCubeUtils::FusionImpl(const string& pass_name, PostCubeNodeInfo& head_node, ge::Graph& graph,
@@ -1466,6 +1806,9 @@ ge::graphStatus PostCubeUtils::FusionImpl(const string& pass_name, PostCubeNodeI
         AddInputs(graph, pass, post_cubenode, new_nodes);
         OPS_LOG_D("PostCube", "FusionImpl 1.4");
         RelinkOpEdges(graph, head_node, pass, post_cubeenhancenode);
+        // every input slot materialized by the strategies or the relinking above must
+        // carry a desc before the node is handed over to the graph
+        FillMissingInputDescs(post_cubenode);
         OPS_LOG_D("PostCube", "FusionImpl 1.5");
         std::vector<ge::GNodePtr> fusion_nodes;
         fusion_nodes.push_back(post_cubenode);
@@ -1474,6 +1817,32 @@ ge::graphStatus PostCubeUtils::FusionImpl(const string& pass_name, PostCubeNodeI
         post_cube_nodes.push_back(post_cubenode);
     }
     OPS_LOG_D("PostCube", "PostCube_nodes size is %zu.", post_cube_nodes.size());
+    // collect every producer that feeds an input of the created post cube nodes: an
+    // eltwise input father (or a strategy wired scale input source) may belong to the
+    // folded chain of another matched pass of the same head, removing such a node
+    // leaves the post cube node with a dangling input edge and the graph fails the
+    // topological sorting of the following passes
+    for (const auto& post_cube_node : post_cube_nodes) {
+        for (size_t idx = 0; idx < post_cube_node->GetInputsSize(); ++idx) {
+            const auto input_pair = post_cube_node->GetInDataNodesAndPortIndexs(static_cast<int32_t>(idx));
+            if (input_pair.first != nullptr) {
+                m_pc_input_src_nodes_.emplace(GNodeGetName(input_pair.first).GetString());
+            }
+        }
+    }
+    // prefix closure over every matched pass: a kept alive node may sit in the middle of
+    // another pass chain, its in chain producers (positions before it) must survive as
+    // well, otherwise the kept node loses its own input and the value fed to the post
+    // cube node is gone
+    for (const auto& pass : m_matchpasses_) {
+        for (size_t pos = 1; pos < pass.m_opnodes.size(); ++pos) {
+            if (m_pc_input_src_nodes_.count(GNodeGetName(pass.m_opnodes[pos].GetNode()).GetString()) != 0U) {
+                for (size_t up = 1; up < pos; ++up) {
+                    m_pc_input_src_nodes_.emplace(GNodeGetName(pass.m_opnodes[up].GetNode()).GetString());
+                }
+            }
+        }
+    }
     std::set<ge::GNodePtr> todeletenode;
     for (auto& pass : m_matchpasses_) {
         DeleteToFusedNodeEdge(graph, pass, todeletenode);
@@ -1777,6 +2146,7 @@ void PostCubeUtils::ClearPasses()
     m_idxtonodetypes_.clear();
     unitmapindex_.clear();
     not_support_post_cube_fusion_nodes_.clear();
+    m_pc_input_src_nodes_.clear();
 }
 
 void PostCubeUtils::CollectSwitchMergeNodes(const ge::GNodePtr& cube_node,
@@ -1927,14 +2297,22 @@ ge::graphStatus PostCubeUtils::CreatePostCubeNode(const string& pass_name, ge::G
     OPS_LOG_D("PostCube", "Fusion 4");
     if (InitInput() != ge::GRAPH_SUCCESS) {
         OPS_LOG_W("PostCube", "The initialization of the post_cube node construction strategy was not successful");
-        return ge::GRAPH_FAILED;
+        ResetNotSupportPostCubeFusionAttr();
+        // nothing has been fused on the graph yet, the caller may skip this head safely
+        return ge::GRAPH_PARAM_INVALID;
     }
     ge::graphStatus res = FusionImpl(pass_name, *cur_head_info_, graph, new_nodes);
+    ResetNotSupportPostCubeFusionAttr();
+    return res;
+}
+
+void PostCubeUtils::ResetNotSupportPostCubeFusionAttr()
+{
     for (auto& node : not_support_post_cube_fusion_nodes_) {
         bool not_support = false;
         GNodeSetAttr(node, kNotSupportPostCubeFusion, not_support);
     }
-    return res;
+    not_support_post_cube_fusion_nodes_.clear();
 }
 // api end
 
