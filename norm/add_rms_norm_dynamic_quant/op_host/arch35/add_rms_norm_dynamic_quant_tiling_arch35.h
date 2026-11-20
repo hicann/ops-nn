@@ -202,7 +202,7 @@ public:
     AddRmsNormDynamicQuantRegbaseTilingData tilingData;
     AddRmsNormDynamicQuantRegbaseTilingParams tilingParams;
 
-    ge::graphStatus SetInputParams();
+    ge::graphStatus SetInputParams() override;
     uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
     int64_t CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower);
     uint64_t CalUsedSize(uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign,
@@ -237,7 +237,7 @@ public:
     {}
     ~AddRmsNormDynamicQuantEmptyTiling() override {}
 
-    ge::graphStatus SetInputParams();
+    ge::graphStatus SetInputParams() override;
     uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
     ge::graphStatus SetTilingParams();
     void SetTilingData();
