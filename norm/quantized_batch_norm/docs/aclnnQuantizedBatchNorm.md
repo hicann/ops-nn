@@ -310,7 +310,11 @@ aclnnStatus aclnnQuantizedBatchNorm(
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
+  ACLNN_ERR_INNER_NULLPTR（561103）表示执行过程中发生内部空指针异常，可能由不支持的数据格式等原因触发，需结合错误日志定位。
+
 ## 约束说明
+
+- input和output仅支持NCHW格式。传入ND或NHWC等不支持的格式时，错误码可能在第二段接口返回，调用方需检查两段接口的返回值。
 
 - 确定性计算：
   - aclnnQuantizedBatchNorm默认确定性实现。
