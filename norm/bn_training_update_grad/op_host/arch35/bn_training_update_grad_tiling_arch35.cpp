@@ -366,7 +366,9 @@ ge::graphStatus BNTrainingUpdateGradTiling::CalcNhwcSplit()
     // 跨核合并走原子加直写输出（零 workspace；ws 段写入实测 VECTOR_CORE_EXCEPTION）。
     int64_t pitchC = (numC_ + VL - 1) / VL * VL;
     bool rowSplitOk = (rows_ >= coreNum_) && (pitchC <= SolveNhwcWindowMax());
-    if (rowSplitOk) {
+    // Short FP16/BF16 reductions benefit from channel tiles without a global barrier.
+    const bool shortReduction = xDtypeSize_ == sizeof(uint16_t) && numC_ > 1 && rows_ <= 256 && pitchC <= 2 * VL;
+    if (rowSplitOk && !shortReduction) {
         nhwcSplitMode_ = 2;
         channelCores_ = coreNum_;
         // 确定性 Phase2 收集暂存：[VL] fp32（逐核 1D 收集 + 固定序向量累加的 UB 舞台）
@@ -399,6 +401,9 @@ ge::graphStatus BNTrainingUpdateGradTiling::CalcNhwcSplit()
         channelCores_ = numC_ < coreNum_ ? numC_ : coreNum_;
         if (channelCores_ < 1) {
             channelCores_ = 1; // 防御：单核空跑
+        }
+        if (shortReduction) {
+            channelCores_ = std::min(channelCores_, (numC_ + 7) / 8);
         }
         SplitRangeAcrossCores(numC_); // cFormer* 语义=通道段
         wsBytes_ = 0;
@@ -506,7 +511,8 @@ ge::graphStatus BNTrainingUpdateGradTiling::DoTiling()
     //    NHWC [rows,C] 同构，按 NHWC 重切消除 UB 容量类拒收点（G27 登记项）
     if (!isNhwc_ && numC_ == 1 && numN_ * innerSize_ >= ND_REROUTE_MIN_ELEMS) {
         ConvertNdToNhwcLayout();
-    } else if (!isNhwc_ && innerSize_ == 1 && numC_ > NHWC_R1_REROUTE_MIN_C) {
+    } else if (!isNhwc_ && innerSize_ == 1 &&
+               (numC_ > NHWC_R1_REROUTE_MIN_C || (numC_ > 1 && numC_ <= VL && numN_ >= 4096))) {
         ConvertNdToNhwcLayout();
     }
     return CalcCoreSplit() == ge::GRAPH_SUCCESS ? FillTilingData() : ge::GRAPH_FAILED;

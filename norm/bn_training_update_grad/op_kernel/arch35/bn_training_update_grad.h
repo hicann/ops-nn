@@ -76,8 +76,10 @@ namespace BNTrainingUpdateGradOps {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
 using AscendC::MicroAPI::LoadDist;
+using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
+using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
@@ -392,8 +394,10 @@ private:
     {
         int64_t core = static_cast<int64_t>(GetBlockIdx());
         int64_t slot = tl_->cLenCap; // ws 槽宽（64 对齐，host/kernel 共用 cLenCap）
-        WriteAccToGm(wsGm_[core * 2 * slot], (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr(), tl_->numC);
-        WriteAccToGm(wsGm_[core * 2 * slot + slot], (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr(), tl_->numC);
+        // For C=1 the aligned workspace slot has room for the reduction residual.
+        const int64_t count = tl_->numC == 1 ? RESIDUAL_INDEX + 1 : tl_->numC;
+        WriteAccToGm(wsGm_[core * 2 * slot], (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr(), count);
+        WriteAccToGm(wsGm_[core * 2 * slot + slot], (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr(), count);
     }
 
     // 确定性 Phase2：全核按 C 段并行（前多后少均分），每段固定布局收集全部核的部分和并归约。
@@ -435,8 +439,43 @@ private:
             DataCopyPad(stage, wsGm_[g * 2 * slot + outIdx * slot + c0], cpIn, padIn);
             p2Que_.EnQue(stage);
             stage = p2Que_.DeQue<float>();
-            KahanAccumulateFrom((__ubuf__ float*)stage.GetPhyAddr(), accAddr, compAddr, w);
+            __ubuf__ float* stageAddr = (__ubuf__ float*)stage.GetPhyAddr();
+            if (tl_->numC == 1) {
+                __VEC_SCOPE__
+                {
+                    RegTensor<float> acc, partial, comp, next, err, zero;
+                    MaskReg mask = CreateMask<float, MaskPattern::ALL>();
+                    Duplicate(zero, 0.0f);
+                    DataCopy<float, LoadDist::DIST_NORM>(acc, accAddr);
+                    DataCopy<float, LoadDist::DIST_NORM>(partial, stageAddr);
+                    DataCopy<float, LoadDist::DIST_NORM>(comp, compAddr);
+                    SumWithError(next, err, acc, partial, mask);
+                    SanitizeCompReg(err, zero, mask);
+                    Sub(comp, comp, err, mask);
+                    DataCopy<float, StoreDist::DIST_NORM>(accAddr, next, mask);
+                    DataCopy<float, StoreDist::DIST_NORM>(compAddr, comp, mask);
+                }
+                PipeBarrier<PIPE_V>();
+            } else {
+                KahanAccumulateFrom(stageAddr, accAddr, compAddr, w);
+            }
             p2Que_.FreeTensor(stage);
+        }
+        if (tl_->numC == 1) {
+            __VEC_SCOPE__
+            {
+                RegTensor<float> hi, comp, lo, loComp;
+                MaskReg mask = CreateMask<float, MaskPattern::VL1>();
+                DataCopy<float, LoadDist::DIST_NORM>(hi, accAddr);
+                DataCopy<float, LoadDist::DIST_NORM>(comp, compAddr);
+                DataCopy<float, LoadDist::DIST_BRC_B32>(lo, accAddr + RESIDUAL_INDEX);
+                DataCopy<float, LoadDist::DIST_BRC_B32>(loComp, compAddr + RESIDUAL_INDEX);
+                Sub(lo, lo, loComp, mask);
+                Sub(lo, lo, comp, mask);
+                Add(hi, hi, lo, mask);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(accAddr, hi, mask);
+            }
+            PipeBarrier<PIPE_V>();
         }
         WriteAccToGm(outGm[c0], accAddr, w);
     }
@@ -479,11 +518,15 @@ private:
             WaitFlag<HardEvent::V_S>(eventVS);
             float meanVal = meanUb.GetValue(0);
             float rstdVal = rstdBuf_.Get<float>().GetValue(0);
-            ZeroBuf(accOff_, 1);
-            ZeroBuf(accScale_, 1);
+            ZeroBuf(accOff_, VL_FP32); // 位置化 Kahan 累加器：全 64 lane 需清零
+            ZeroBuf(accScale_, VL_FP32);
             ZeroBuf(kahanOff_, VL_FP32);
             ZeroBuf(kahanScale_, VL_FP32);
+            if (tl_->isDeterministic != 0 || tl_->numN == 1) {
+                rstdLow_ = RstdResidual(varUb.GetValue(0), rstdVal);
+            }
             ProcessNhwcWindowC1(r0, r1, meanVal, rstdVal);
+            FinalizeLaneAcc(); // 64 lane 累加器 → 标量（lane0），下游 WritePartials/rowSplit 不变
             statMeanQue_.FreeTensor(meanUb);
             statVarQue_.FreeTensor(varUb);
             return;
@@ -507,8 +550,18 @@ private:
             gUb = gQue_.DeQue<T>();
             xQue_.EnQue(xUb);
             xUb = xQue_.DeQue<T>();
-            ComputeNhwcTile((__ubuf__ T*)gUb.GetPhyAddr(), (__ubuf__ T*)xUb.GetPhyAddr(), nr, cnt,
-                            (__ubuf__ float*)meanUb.GetPhyAddr());
+            auto* g = (__ubuf__ T*)gUb.GetPhyAddr();
+            auto* x = (__ubuf__ T*)xUb.GetPhyAddr();
+            auto* mean = (__ubuf__ float*)meanUb.GetPhyAddr();
+            if constexpr (std::is_same<T, float>::value) {
+                if (tl_->nhwcSplitMode == 1 && tl_->isDeterministic && tl_->numN > 1) {
+                    ComputeNhwcTile<true>(g, x, nr, cnt, mean, r + nr == r1);
+                } else {
+                    ComputeNhwcTile<false>(g, x, nr, cnt, mean, false);
+                }
+            } else {
+                ComputeNhwcTile<false>(g, x, nr, cnt, mean, false);
+            }
             gQue_.FreeTensor(gUb);
             xQue_.FreeTensor(xUb);
         }
@@ -517,32 +570,38 @@ private:
     }
 
     // C==1 特化（ND C==1 reroute 场景）：行宽 1 元素逐行 DMA 效率 1/64；改为整段连续 1D
-    // 大块 DMA + 位置化 scratch + 两发 ReduceSum（ND 快路 AccumChunk 同款已验证形态——
-    // mean/rstd 为标量，免展开系数；fp32 精度由调用方 Kahan 缓冲承接）
+    // 大块 DMA + 64 lane 位置化 Kahan 累加（跨 chunk 只累加 lane，不落中间标量；最终
+    // FinalizeLaneAcc 一次 64 lane 归约）。深对消下避免「整 chunk 一次 fp32 ReduceSum +
+    // chunk 部分和再次舍入」的两级 ULP 损失（issue110：2M 元素 C==1 精度 FAIL 根因）。
     __aicore__ inline void ProcessNhwcWindowC1(int64_t r0, int64_t r1, float meanVal, float rstdVal)
     {
         for (int64_t r = r0; r < r1; r += tl_->sliceR) {
             int64_t eff = (r1 - r < tl_->sliceR) ? (r1 - r) : tl_->sliceR;
-            AccumChunk(r, eff, meanVal, rstdVal);
+            AccumChunkLane(r, eff, meanVal, rstdVal);
         }
     }
 
-    // 行 tile 搬运：逐行 1D DataCopyPad 写 UB 行基址 row*W（V3 ProcessNhwcRows 同款已验证
-    // 形态——GM 行起点任意字节、UB 行基址 W*T 恒 32B 对齐；避免 2D dstStride 的平台语义
-    // 风险）。行数 nr 小（UB 反推的 tileRows），逐行 DMA 的条数开销可忽略。
-    // C==1 特化（ND C==1 reroute 场景）：行宽 1 元素逐行 DMA 效率 1/64，且行段在 GM 连续
-    // （行 i 基址 = i），改为整段一发 1D 大块 DMA（tile 容量 nr 元素按 UB 预算另行收窄——
-    // 见 host tiling 对 rowSplit C==1 的 tileRows 钳制），UB 侧布局不变（W=64 行距）。
+    // Copy all rows with one DMA per input. GM stride is measured in bytes;
+    // UB stride counts 32-byte blocks after the rounded-up payload.
     __aicore__ inline void NhwcCopyRowTile(LocalTensor<T>& gUb, LocalTensor<T>& xUb, int64_t cw0, int64_t cnt,
                                            int64_t r0, int64_t nr)
     {
-        DataCopyExtParams cpRow{1, static_cast<uint32_t>(cnt * sizeof(T)), 0, 0, 0};
-        DataCopyPadExtParams<T> padRow{false, 0, 0, 0};
-        int64_t window = tl_->cLenCap;
-        for (int64_t i = 0; i < nr; i++) {
-            int64_t gmBase = (r0 + i) * tl_->numC + cw0;
-            DataCopyPad(gUb[i * window], gradsGm_[gmBase], cpRow, padRow);
-            DataCopyPad(xUb[i * window], xGm_[gmBase], cpRow, padRow);
+        const uint32_t bytes = cnt * sizeof(T);
+        const uint64_t gap = static_cast<uint64_t>(tl_->numC - cnt) * sizeof(T);
+        DataCopyExtParams cp{1, bytes, 0, 0, 0};
+        DataCopyPadExtParams<T> pad{false, 0, 0, 0};
+        const int64_t base = r0 * tl_->numC + cw0;
+        if (gap <= 0xffffffffULL) {
+            cp.blockCount = static_cast<uint16_t>(nr);
+            cp.srcStride = static_cast<uint32_t>(gap);
+            cp.dstStride = tl_->cLenCap * sizeof(T) / 32 - (bytes + 31) / 32;
+            DataCopyPad(gUb, gradsGm_[base], cp, pad);
+            DataCopyPad(xUb, xGm_[base], cp, pad);
+        } else {
+            for (int64_t i = 0; i < nr; ++i) {
+                DataCopyPad(gUb[i * tl_->cLenCap], gradsGm_[base + i * tl_->numC], cp, pad);
+                DataCopyPad(xUb[i * tl_->cLenCap], xGm_[base + i * tl_->numC], cp, pad);
+            }
         }
     }
 
@@ -550,8 +609,9 @@ private:
     // 结构），mean/rstd 从驻留 UB 直加载（免展开系数）；每 tile 每块一次 KahanAddReg 落
     // acc（UB RMW 频次 = 行 tile 数 × 块数，比逐行 RMW 低 3 个数量级）。尾窗 cnt<W 的死
     // lane：mean/rstd 驻留残渣 × tile pad 零 → 垃圾进 acc 死 lane，最终只写 [cnt] 元素。
+    template <bool compensateScale>
     __aicore__ inline void ComputeNhwcTile(__ubuf__ T* gAddr, __ubuf__ T* xAddr, int64_t nr, int64_t cnt,
-                                           __ubuf__ float* meanAddr)
+                                           __ubuf__ float* meanAddr, bool finalTile)
     {
         int64_t window = tl_->cLenCap;
         __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdBuf_.Get<float>().GetPhyAddr();
@@ -571,17 +631,53 @@ private:
                 DataCopy<float, LoadDist::DIST_NORM>(sReg, rstdAddr + offset);
                 Duplicate(accGReg, 0.0f);
                 Duplicate(accPReg, 0.0f);
+                RegTensor<float> low, zero, negativeMean;
+                if constexpr (compensateScale) {
+                    DataCopy<float, LoadDist::DIST_NORM>(accPReg, accScaleAddr + offset);
+                    DataCopy<float, LoadDist::DIST_NORM>(low, kahanScaleAddr + offset);
+                    Duplicate(zero, 0.0f);
+                    Sub(negativeMean, zero, mReg, fullMask);
+                }
                 for (uint16_t row = 0; row < nrU; row++) {
                     LoadToFp32(gAddr + row * window, gReg, fullMask, offset);
                     LoadToFp32(xAddr + row * window, xReg, fullMask, offset);
-                    Sub(tReg, xReg, mReg, fullMask);
-                    Mul(tReg, tReg, sReg, fullMask);
-                    Mul(tReg, gReg, tReg, fullMask); // 运算序 sub→mul rstd→mul grads 对齐 golden/A2
                     Add(accGReg, accGReg, gReg, fullMask);
-                    Add(accPReg, accPReg, tReg, fullMask);
+                    if constexpr (compensateScale) {
+                        // Preserve the existing high-word operation order and IEEE results.
+                        // Carry the discarded product and addition bits across tile boundaries.
+                        RegTensor<float> d, de, norm, ne, productError, next, addError;
+                        SumWithError(d, de, xReg, negativeMean, fullMask);
+                        Mul(norm, d, sReg, fullMask);
+                        Sub(ne, zero, norm, fullMask);
+                        MulAddDst(ne, d, sReg, fullMask);
+                        MulAddDst(ne, de, sReg, fullMask);
+                        Mul(tReg, gReg, norm, fullMask);
+                        Sub(productError, zero, tReg, fullMask);
+                        MulAddDst(productError, gReg, norm, fullMask);
+                        MulAddDst(productError, gReg, ne, fullMask);
+                        SanitizeCompReg(productError, zero, fullMask);
+                        SumWithError(next, addError, accPReg, tReg, fullMask);
+                        SanitizeCompReg(addError, zero, fullMask);
+                        Add(low, low, productError, fullMask);
+                        Add(low, low, addError, fullMask);
+                        Adds(accPReg, next, 0.0f, fullMask);
+                    } else {
+                        Sub(tReg, xReg, mReg, fullMask);
+                        Mul(tReg, tReg, sReg, fullMask);
+                        Mul(tReg, gReg, tReg, fullMask);
+                        Add(accPReg, accPReg, tReg, fullMask);
+                    }
                 }
                 KahanAddReg(accOffAddr + offset, kahanOffAddr + offset, accGReg, fullMask);
-                KahanAddReg(accScaleAddr + offset, kahanScaleAddr + offset, accPReg, fullMask);
+                if constexpr (compensateScale) {
+                    if (finalTile) {
+                        Add(accPReg, accPReg, low, fullMask);
+                    }
+                    DataCopy<float, StoreDist::DIST_NORM>(accScaleAddr + offset, accPReg, fullMask);
+                    DataCopy<float, StoreDist::DIST_NORM>(kahanScaleAddr + offset, low, fullMask);
+                } else {
+                    KahanAddReg(accScaleAddr + offset, kahanScaleAddr + offset, accPReg, fullMask);
+                }
             }
         }
     }
@@ -776,6 +872,335 @@ private:
         }
         gQue_.FreeTensor(gUb);
         xQue_.FreeTensor(xUb);
+    }
+
+    // 块尾 Kahan 合并（同族 bn3d_training_reduce 的块补偿形态）：blk → acc，comp 为补偿位。
+    // c=(t-acc)-y 在 ±Inf 下退化为 NaN，必须 SanitizeCompReg 清零（否则回灌污染 acc）。
+    __aicore__ inline void KahanMergeBlock(RegTensor<float>& acc, RegTensor<float>& comp, RegTensor<float>& blk,
+                                           RegTensor<float>& y, RegTensor<float>& t, RegTensor<float>& zeroReg,
+                                           MaskReg& mask)
+    {
+        Sub(y, blk, comp, mask);
+        Add(t, acc, y, mask);
+        Sub(comp, t, acc, mask);
+        Sub(comp, comp, y, mask);
+        SanitizeCompReg(comp, zeroReg, mask);
+        Adds(acc, t, 0.0f, mask); // 寄存器搬移：+0 对有限值逐位精确，inf/nan 按 IEEE 保留
+    }
+
+    // 补偿量非有限值清零（同族 SanitizeComp）：+/-Inf 参与 TwoSum/Kahan 误差式会生成 NaN，
+    // 主值已是正确传播结果，误差项按 0 处理；复用一个 MaskReg 避免额外寄存器。
+    __aicore__ inline void SanitizeCompReg(RegTensor<float>& comp, RegTensor<float>& zeroReg, MaskReg& mask)
+    {
+        constexpr float FP32_MAX_FINITE = 3.4028234663852886e38f;
+        MaskReg inFiniteRange;
+        AscendC::Reg::Compares<float, CMPMODE::LE>(inFiniteRange, comp, FP32_MAX_FINITE, mask);
+        Select(comp, comp, zeroReg, inFiniteRange);
+        AscendC::Reg::Compares<float, CMPMODE::GE>(inFiniteRange, comp, -FP32_MAX_FINITE, mask);
+        Select(comp, comp, zeroReg, inFiniteRange);
+    }
+
+    // C==1 位置化 Kahan 累加（NHWC rowSplit 专供）：products 按 lane 位置跨 chunk/跨段累加进
+    // accOff_/accScale_（64 lane）与补偿位 kahanOff_/kahanScale_。
+    // 动机：原「整 chunk(≈9792 元素) 一次 fp32 ReduceSum → 标量 → Kahan 跨 chunk」在深对消
+    // （|Σ| ≪ Σ|项|，如 2M 元素求和结果 ~1e4 而 Σ|项| ~8e6）下有两级不可补偿舍入：
+    // ① chunk 内求和自身误差 ~1e-3；② 每个 chunk 部分和落到 fp32 的舍入 ~ulp(部分和)。
+    // 位置化 Kahan 让每个 lane 的累加误差保持 O(eps)，chunk 边界不再产生标量舍入；
+    // 最终仅由 FinalizeLaneAcc 做一次 64 lane 归约（≤~0.5 ULP）。
+    // Dekker product residual for normal fp32 intermediates. Splitting by bits
+    // avoids an overflowing multiplication by the usual splitter constant.
+    __aicore__ inline float ProductResidual(float a, float b, float product)
+    {
+        uint32_t ahBits = __builtin_bit_cast(uint32_t, a) & 0xfffff000U;
+        uint32_t bhBits = __builtin_bit_cast(uint32_t, b) & 0xfffff000U;
+        float ah = __builtin_bit_cast(float, ahBits);
+        float bh = __builtin_bit_cast(float, bhBits);
+        float al = a - ah;
+        float bl = b - bh;
+        return (((ah * bh - product) + ah * bl) + al * bh) + al * bl;
+    }
+
+    __aicore__ inline float SumResidual(float a, float b, float sum)
+    {
+        float tmp = sum - a;
+        return (a - (sum - tmp)) + (b - tmp);
+    }
+
+    __aicore__ inline float RstdResidual(float var, float r)
+    {
+        float v = var + epsilon_;
+        float rr = r * r;
+        float vrr = v * rr;
+        float residual = ((1.0f - vrr) - ProductResidual(v, rr, vrr)) -
+                         (v * ProductResidual(r, r, rr) + SumResidual(var, epsilon_, v) * rr);
+        float dr = (0.5f * residual) * r;
+        return __builtin_isfinite(dr) && vrr > 0.5f && vrr < 1.5f ? dr : 0.0f;
+    }
+
+    __aicore__ inline void SumWithError(RegTensor<float>& sum, RegTensor<float>& err, RegTensor<float>& a,
+                                        RegTensor<float>& b, MaskReg& mask)
+    {
+        RegTensor<float> v, t;
+        Add(sum, a, b, mask);
+        Sub(v, sum, a, mask);
+        Sub(t, sum, v, mask);
+        Sub(err, a, t, mask);
+        Sub(t, b, v, mask);
+        Add(err, err, t, mask);
+    }
+
+    // Track the high word and the accumulated error separately. Existing UB
+    // compensation buffers store the negative low word (Kahan convention).
+    __aicore__ inline void AccumPrecise(__ubuf__ T* grads, __ubuf__ T* x, uint32_t count, float mean, float rstd)
+    {
+        __ubuf__ float* off = (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr();
+        __ubuf__ float* scale = (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr();
+        __ubuf__ float* offComp = (__ubuf__ float*)kahanOff_.Get<float>().GetPhyAddr();
+        __ubuf__ float* scaleComp = (__ubuf__ float*)kahanScale_.Get<float>().GetPhyAddr();
+        const uint16_t blocks = (count + VL_FP32 - 1) / VL_FP32;
+        const float dr = rstdLow_;
+        __VEC_SCOPE__
+        {
+            MaskReg full = CreateMask<float, MaskPattern::ALL>();
+            RegTensor<float> oh, oc, sh, sc, g, xv, m, r, rl, zero;
+            RegTensor<float> d, de, norm, ne, prod, pe, next, err;
+            DataCopy<float, LoadDist::DIST_NORM>(oh, off);
+            DataCopy<float, LoadDist::DIST_NORM>(oc, offComp);
+            DataCopy<float, LoadDist::DIST_NORM>(sh, scale);
+            DataCopy<float, LoadDist::DIST_NORM>(sc, scaleComp);
+            Duplicate(m, -mean);
+            Duplicate(r, rstd);
+            Duplicate(rl, dr);
+            Duplicate(zero, 0.0f);
+            uint32_t remaining = count;
+            for (uint16_t block = 0; block < blocks; ++block) {
+                MaskReg active = UpdateMask<float>(remaining);
+                uint32_t pos = block * VL_FP32;
+                LoadToFp32(grads, g, active, pos);
+                LoadToFp32(x, xv, active, pos);
+                SumWithError(d, de, xv, m, active);
+                Mul(norm, d, r, active);
+                Sub(ne, zero, norm, active);
+                MulAddDst(ne, d, r, active);
+                MulAddDst(ne, de, r, active);
+                MulAddDst(ne, d, rl, active);
+                Mul(prod, g, norm, active);
+                Sub(pe, zero, prod, active);
+                MulAddDst(pe, g, norm, active);
+                MulAddDst(pe, g, ne, active);
+                Select(prod, prod, zero, active);
+                Select(g, g, zero, active);
+                Select(pe, pe, zero, active);
+                SanitizeCompReg(pe, zero, full);
+                SumWithError(next, err, sh, prod, full);
+                SanitizeCompReg(err, zero, full);
+                Sub(sc, sc, err, full);
+                Sub(sc, sc, pe, full);
+                Adds(sh, next, 0.0f, full);
+                SumWithError(next, err, oh, g, full);
+                SanitizeCompReg(err, zero, full);
+                Sub(oc, oc, err, full);
+                Adds(oh, next, 0.0f, full);
+            }
+            DataCopy<float, StoreDist::DIST_NORM>(off, oh, full);
+            DataCopy<float, StoreDist::DIST_NORM>(offComp, oc, full);
+            DataCopy<float, StoreDist::DIST_NORM>(scale, sh, full);
+            DataCopy<float, StoreDist::DIST_NORM>(scaleComp, sc, full);
+        }
+        PipeBarrier<PIPE_V>();
+    }
+
+    __aicore__ inline void AccumChunkLane(int64_t gmOff, int64_t eff, float meanVal, float rstdVal)
+    {
+        DataCopyExtParams cpIn{1, static_cast<uint32_t>(eff * sizeof(T)), 0, 0, 0};
+        uint32_t misalign = cpIn.blockLen & 31U;
+        uint8_t rightPad = static_cast<uint8_t>(misalign == 0U ? 0U : (32U - misalign) / sizeof(T));
+        DataCopyPadExtParams<T> padIn{true, 0, rightPad, static_cast<T>(0)};
+
+        LocalTensor<T> gUb = gQue_.AllocTensor<T>();
+        DataCopyPad(gUb, gradsGm_[gmOff], cpIn, padIn);
+        gQue_.EnQue(gUb);
+        gUb = gQue_.DeQue<T>();
+        LocalTensor<T> xUb = xQue_.AllocTensor<T>();
+        DataCopyPad(xUb, xGm_[gmOff], cpIn, padIn);
+        xQue_.EnQue(xUb);
+        xUb = xQue_.DeQue<T>();
+
+        if (tl_->isDeterministic != 0 || tl_->numN == 1) {
+            AccumPrecise((__ubuf__ T*)gUb.GetPhyAddr(), (__ubuf__ T*)xUb.GetPhyAddr(), static_cast<uint32_t>(eff),
+                         meanVal, rstdVal);
+            gQue_.FreeTensor(gUb);
+            xQue_.FreeTensor(xUb);
+            return;
+        }
+
+        __ubuf__ float* accOffAddr = (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr();
+        __ubuf__ float* accScaleAddr = (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr();
+        __ubuf__ float* kahanOffAddr = (__ubuf__ float*)kahanOff_.Get<float>().GetPhyAddr();
+        __ubuf__ float* kahanScaleAddr = (__ubuf__ float*)kahanScale_.Get<float>().GetPhyAddr();
+
+        int64_t eff64 = eff / static_cast<int64_t>(VL_FP32) * static_cast<int64_t>(VL_FP32);
+        if (eff64 > 0) {
+            __ubuf__ T* gAddr = (__ubuf__ T*)gUb.GetPhyAddr();
+            __ubuf__ T* xAddr = (__ubuf__ T*)xUb.GetPhyAddr();
+            uint16_t blocks = static_cast<uint16_t>(eff64 / static_cast<int64_t>(VL_FP32));
+            float negMean = -meanVal; // MicroAPI 无 Subs:x+(-mean) 与 x-mean IEEE 逐位一致
+            // 同族 bn3d_training_reduce 的分块 Kahan（KAHAN_BLOCK_CHUNKS=8）：块内 8 个 VL 块
+            // 朴素累加（2 条/块），块尾一次 Kahan 合并（10 条/块组），摊到每块 2+10/8 条。
+            // 逐块 Kahan 会因寄存器链与指令数使该用例 16.8us→75us；K=8 与同族实测结论一致。
+            // acc/comp 常驻寄存器，仅在 scope 进出各一次 UB 读写（无 RMW hazard，无需 LocalMemBar）。
+            constexpr uint16_t KAHAN_BLOCK_BLOCKS = 8;
+            __VEC_SCOPE__
+            {
+                RegTensor<float> accGReg, compGReg, accPReg, compPReg;
+                RegTensor<float> blkGReg, blkPReg, gReg, xReg, yReg, tReg, zeroReg;
+                MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
+                Duplicate(zeroReg, 0.0f);
+                DataCopy<float, LoadDist::DIST_NORM>(accGReg, accOffAddr);
+                DataCopy<float, LoadDist::DIST_NORM>(compGReg, kahanOffAddr);
+                DataCopy<float, LoadDist::DIST_NORM>(accPReg, accScaleAddr);
+                DataCopy<float, LoadDist::DIST_NORM>(compPReg, kahanScaleAddr);
+                const uint16_t fullGroups = static_cast<uint16_t>(blocks / KAHAN_BLOCK_BLOCKS);
+                const uint16_t tailBlocks = static_cast<uint16_t>(blocks - fullGroups * KAHAN_BLOCK_BLOCKS);
+                for (uint16_t gi = 0; gi < fullGroups; gi++) {
+                    Duplicate(blkGReg, 0.0f);
+                    Duplicate(blkPReg, 0.0f);
+                    for (uint16_t k = 0; k < KAHAN_BLOCK_BLOCKS; k++) {
+                        uint32_t offset = static_cast<uint32_t>(gi * KAHAN_BLOCK_BLOCKS + k) * VL_FP32;
+                        LoadToFp32(gAddr, gReg, fullMask, offset);
+                        LoadToFp32(xAddr, xReg, fullMask, offset);
+                        Adds(xReg, xReg, negMean, fullMask);
+                        Muls(xReg, xReg, rstdVal, fullMask);
+                        Mul(xReg, gReg, xReg, fullMask); // xReg 复用为乘积 p
+                        Add(blkGReg, blkGReg, gReg, fullMask);
+                        Add(blkPReg, blkPReg, xReg, fullMask);
+                    }
+                    KahanMergeBlock(accGReg, compGReg, blkGReg, yReg, tReg, zeroReg, fullMask);
+                    KahanMergeBlock(accPReg, compPReg, blkPReg, yReg, tReg, zeroReg, fullMask);
+                }
+                if (tailBlocks > 0) {
+                    Duplicate(blkGReg, 0.0f);
+                    Duplicate(blkPReg, 0.0f);
+                    for (uint16_t k = 0; k < tailBlocks; k++) {
+                        uint32_t offset = static_cast<uint32_t>(fullGroups * KAHAN_BLOCK_BLOCKS + k) * VL_FP32;
+                        LoadToFp32(gAddr, gReg, fullMask, offset);
+                        LoadToFp32(xAddr, xReg, fullMask, offset);
+                        Adds(xReg, xReg, negMean, fullMask);
+                        Muls(xReg, xReg, rstdVal, fullMask);
+                        Mul(xReg, gReg, xReg, fullMask);
+                        Add(blkGReg, blkGReg, gReg, fullMask);
+                        Add(blkPReg, blkPReg, xReg, fullMask);
+                    }
+                    KahanMergeBlock(accGReg, compGReg, blkGReg, yReg, tReg, zeroReg, fullMask);
+                    KahanMergeBlock(accPReg, compPReg, blkPReg, yReg, tReg, zeroReg, fullMask);
+                }
+                DataCopy<float, StoreDist::DIST_NORM>(accOffAddr, accGReg, fullMask);
+                DataCopy<float, StoreDist::DIST_NORM>(kahanOffAddr, compGReg, fullMask);
+                DataCopy<float, StoreDist::DIST_NORM>(accScaleAddr, accPReg, fullMask);
+                DataCopy<float, StoreDist::DIST_NORM>(kahanScaleAddr, compPReg, fullMask);
+            }
+        }
+        // 标量尾(<64 元素):独立 64 槽尾缓冲,补零后整 VL 位置化累加（与主块同 lane 布局）
+        int64_t rem = eff - eff64;
+        if (rem > 0) {
+            event_t eventMS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+            SetFlag<HardEvent::MTE2_S>(eventMS);
+            WaitFlag<HardEvent::MTE2_S>(eventMS);
+            // 标量覆写 tail 缓冲前需等上一轮向量 Kahan 读完（V→S 危险,同 AccumChunk）
+            event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+            SetFlag<HardEvent::V_S>(eventVS);
+            WaitFlag<HardEvent::V_S>(eventVS);
+            LocalTensor<float> tailG = expMean_.Get<float>();
+            LocalTensor<float> tailP = expRstd_.Get<float>();
+            for (int64_t k = eff64; k < eff; k++) {
+                float gv = ScalarToFp32(gUb, static_cast<uint32_t>(k));
+                float xv = ScalarToFp32(xUb, static_cast<uint32_t>(k));
+                tailG.SetValue(static_cast<uint32_t>(k - eff64), gv);
+                tailP.SetValue(static_cast<uint32_t>(k - eff64), gv * ((xv - meanVal) * rstdVal));
+            }
+            for (int64_t k = rem; k < static_cast<int64_t>(VL_FP32); k++) { // 显式补零
+                tailG.SetValue(static_cast<uint32_t>(k), 0.0f);
+                tailP.SetValue(static_cast<uint32_t>(k), 0.0f);
+            }
+            event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+            SetFlag<HardEvent::S_V>(eventSV);
+            WaitFlag<HardEvent::S_V>(eventSV);
+            __ubuf__ float* tailGAddr = (__ubuf__ float*)tailG.GetPhyAddr();
+            __ubuf__ float* tailPAddr = (__ubuf__ float*)tailP.GetPhyAddr();
+            __VEC_SCOPE__
+            {
+                RegTensor<float> tgReg, tpReg;
+                MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
+                DataCopy<float, LoadDist::DIST_NORM>(tgReg, tailGAddr);
+                DataCopy<float, LoadDist::DIST_NORM>(tpReg, tailPAddr);
+                KahanAddReg(accOffAddr, kahanOffAddr, tgReg, fullMask);
+                KahanAddReg(accScaleAddr, kahanScaleAddr, tpReg, fullMask);
+            }
+        }
+        gQue_.FreeTensor(gUb);
+        xQue_.FreeTensor(xUb);
+    }
+
+    // 64 lane 累加器 → 标量：同族 bn3d_training_reduce 的 CompensatedReduceSum——Knuth TwoSum
+    // 补偿二叉树逐层携带低位，最后 hi+lo 落一次。普通 ReduceSum/Σacc-Σcomp 会在「大输出
+    // 临界舍入点」丢 1 ULP（同族注释同款结论）。
+    __aicore__ inline void CompensatedReduceToScalar(__ubuf__ float* accAddr, __ubuf__ float* compAddr,
+                                                     __ubuf__ float* outAddr)
+    {
+        __VEC_SCOPE__
+        {
+            RegTensor<float> hi, comp, lo, lhsHi, rhsHi, lhsLo, rhsLo, tmp, err, zeroReg;
+            RegTensor<int32_t> evenIndex, oddIndex;
+            MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
+            Duplicate(zeroReg, 0.0f);
+            DataCopy<float, LoadDist::DIST_NORM>(hi, accAddr);
+            DataCopy<float, LoadDist::DIST_NORM>(comp, compAddr);
+            Muls(lo, comp, -1.0f, fullMask); // 更高精度的真值 = hi - comp
+            AscendC::Reg::Arange(evenIndex, static_cast<int32_t>(0));
+            ShiftLefts(evenIndex, evenIndex, static_cast<int16_t>(1), fullMask);
+            Adds(oddIndex, evenIndex, static_cast<int32_t>(1), fullMask);
+            for (uint16_t activeCount = static_cast<uint16_t>(VL_FP32 / 2U); activeCount > 0;
+                 activeCount = static_cast<uint16_t>(activeCount / 2U)) {
+                uint32_t activeWidth = activeCount;
+                MaskReg activeMask = UpdateMask<float>(activeWidth);
+                AscendC::Reg::Gather<float, uint32_t>(lhsHi, hi, (RegTensor<uint32_t>&)evenIndex);
+                AscendC::Reg::Gather<float, uint32_t>(rhsHi, hi, (RegTensor<uint32_t>&)oddIndex);
+                AscendC::Reg::Gather<float, uint32_t>(lhsLo, lo, (RegTensor<uint32_t>&)evenIndex);
+                AscendC::Reg::Gather<float, uint32_t>(rhsLo, lo, (RegTensor<uint32_t>&)oddIndex);
+                Add(hi, lhsHi, rhsHi, activeMask); // s
+                Sub(tmp, hi, lhsHi, activeMask);   // bb = s - a
+                Sub(err, hi, tmp, activeMask);     // s - bb
+                Sub(err, lhsHi, err, activeMask);  // a - (s - bb)
+                Sub(tmp, rhsHi, tmp, activeMask);  // b - bb
+                Add(err, err, tmp, activeMask);    // TwoSum 误差项
+                SanitizeCompReg(err, zeroReg, activeMask);
+                Add(lo, lhsLo, rhsLo, activeMask);
+                Add(lo, lo, err, activeMask); // 低位随层传播
+            }
+            // Preserve the low word in the padding of each deterministic C=1 slot.
+            Add(tmp, hi, lo, fullMask);
+            Sub(err, tmp, hi, fullMask);
+            Sub(lhsLo, tmp, err, fullMask);
+            Sub(lhsLo, hi, lhsLo, fullMask);
+            Sub(err, lo, err, fullMask);
+            Add(err, lhsLo, err, fullMask);
+            SanitizeCompReg(err, zeroReg, fullMask);
+            MaskReg oneMask = CreateMask<float, MaskPattern::VL1>();
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(outAddr, tmp, oneMask);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(outAddr + RESIDUAL_INDEX, err, oneMask);
+        }
+    }
+
+    // 位置化累加器 → 标量（写回 accOff_/accScale_ lane0），下游 WritePartials/rowSplit 不变。
+    __aicore__ inline void FinalizeLaneAcc()
+    {
+        __ubuf__ float* accOffAddr = (__ubuf__ float*)accOff_.Get<float>().GetPhyAddr();
+        __ubuf__ float* accScaleAddr = (__ubuf__ float*)accScale_.Get<float>().GetPhyAddr();
+        __ubuf__ float* kahanOffAddr = (__ubuf__ float*)kahanOff_.Get<float>().GetPhyAddr();
+        __ubuf__ float* kahanScaleAddr = (__ubuf__ float*)kahanScale_.Get<float>().GetPhyAddr();
+        CompensatedReduceToScalar(accOffAddr, kahanOffAddr, accOffAddr);
+        CompensatedReduceToScalar(accScaleAddr, kahanScaleAddr, accScaleAddr);
+        PipeBarrier<PIPE_V>();
     }
 
     // R==1 且 C>1 的微形态(如 256x3):整平面 [N*C] 一次 1D 搬入(channel c 的元素在
@@ -1287,6 +1712,7 @@ private:
     }
 
 private:
+    static constexpr int64_t RESIDUAL_INDEX = 8; // 32-byte aligned, inside the padded C=1 slot
     static constexpr uint32_t DOUBLE_BUFFER = 2;
     static constexpr int64_t REDUCE_TMP_BYTES = 1024; // ReduceSum sharedTmpBuffer（reuse-source 路径实际不用）
 
@@ -1297,6 +1723,7 @@ private:
     int64_t qCap_ = 0;
     int64_t pitchElems_ = 0;
     int64_t cLenPad_ = 0; // 归约 dst 行距上限（align8(cLenCap)，32B 对齐）
+    float rstdLow_ = 0.0f;
     float epsilon_ = 0.0f;
 
     GlobalTensor<T> gradsGm_;

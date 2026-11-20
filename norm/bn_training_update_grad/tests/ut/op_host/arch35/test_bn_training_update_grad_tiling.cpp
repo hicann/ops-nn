@@ -364,6 +364,25 @@ TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_channel_split_small)
     EXPECT_EQ(schedMode, 0U); // channelSplit 零通信无 SyncAll：不设 batch mode（保持默认）
 }
 
+TEST_F(BNTrainingUpdateGradTilingUT, short_nhwc_16bit_reduction_uses_channel_tiles)
+{
+    for (const auto dtype : {ge::DT_FLOAT16, ge::DT_BF16}) {
+        SCOPED_TRACE(static_cast<int>(dtype));
+        uint64_t key = 0;
+        int64_t blockDim = 0;
+        size_t ws = 1;
+        uint32_t schedMode = 1;
+        BNTrainingUpdateGradTilingData td = {};
+        ASSERT_EQ(RunTiling({123, 119}, 119, key, &blockDim, &ws, dtype, dtype, ge::DT_FLOAT, ge::FORMAT_NHWC, true,
+                            nullptr, ge::FORMAT_NHWC, &td, &schedMode, true),
+                  ge::GRAPH_SUCCESS);
+        EXPECT_EQ(td.nhwcSplitMode, 1);
+        EXPECT_EQ(blockDim, 15);
+        EXPECT_EQ(ws, 0U);
+        EXPECT_EQ(schedMode, 0U);
+    }
+}
+
 // NHWC rowSplit（rows=200≥64、C=7）：原子加直写输出（零 ws），mode=2
 TEST_F(BNTrainingUpdateGradTilingUT, accept_nhwc_row_split)
 {
