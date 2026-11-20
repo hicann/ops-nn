@@ -985,4 +985,4 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::MulCor
 }
 
 } // namespace MaxPool3DWithArgmaxV2WithBigKernelRegbase
-#endif // MAX_POOL_WITH_ARGMAX_V2_BIG_KERNEL_H_
+#endif // MAX_POOL3D_WITH_ARGMAX_V2_BIG_KERNEL_REGBASE_H_

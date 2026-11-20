@@ -635,4 +635,4 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingle(int32_t localCurId
 }
 
 } // namespace AvgPool
-#endif // POOL_3D_NDHWC_BIG_KERNEL_H_
+#endif // AVG_POOL_NHWC_BIG_KERNEL_H_

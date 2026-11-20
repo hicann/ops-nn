@@ -24,4 +24,4 @@
 
 using namespace AscendC;
 
-#endif // MAX_POOL_WITH_ARGMAX_V3_BASE_H_
+#endif // MAX_POOL3D_WITH_ARGMAX_V2_BASE_H_

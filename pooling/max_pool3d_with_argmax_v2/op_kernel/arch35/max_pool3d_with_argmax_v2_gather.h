@@ -1670,4 +1670,4 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD, UB_INDE
 }
 
 } // namespace MaxPool3DWithArgmaxV2GatherNameSpace
-#endif // MAX_POOL3D_WITH_ARGMAX_V2_GATHER_H_
+#endif // MAX_POOL_3D_WITH_ARGMAX_V2_GATHER_KERNEL_H_
