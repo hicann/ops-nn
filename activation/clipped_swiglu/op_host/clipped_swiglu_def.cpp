@@ -12,6 +12,7 @@
  * \file clipped_swiglu.cpp
  * \brief
  */
+#include "op_common/op_host/util/op_arch_helper.h"
 #include <register/op_def_registry.h>
 
 namespace ops {
@@ -62,9 +63,8 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .ExtendCfgInfo("opFile.value", "clipped_swiglu_apt");
-        this->AICore().AddConfig("ascend950", regbaseConfig);
-        this->AICore().AddConfig("ascend960dt", regbaseConfig);
-        this->AICore().AddConfig("ascend350", regbaseConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, regbaseConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, regbaseConfig);
     }
 };
 OP_ADD(ClippedSwiglu);

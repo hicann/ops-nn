@@ -24,6 +24,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "loss/common/level2_base_loss.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -67,9 +68,9 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* self, 
     // 检查promoteType的数据类型是否在支持列表内
     const bool supportBf16 = (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
                               GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
-                             GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 ||
-                             GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
-                             GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202;
+                             GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510 ||
+                             GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9201 ||
+                             GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9202;
     const std::initializer_list<op::DataType> CURRENT_DTYPE_SUPPORT_LIST = supportBf16 ? ASCEND910B_DTYPE_SUPPORT_LIST :
                                                                                          ASCEND910_DTYPE_SUPPORT_LIST;
     if (!CheckType(promoteType2, CURRENT_DTYPE_SUPPORT_LIST)) {

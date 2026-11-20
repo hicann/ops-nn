@@ -25,6 +25,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -64,13 +65,13 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySo
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     switch (curArch) {
-        case NpuArch::DAV_2201:
-        case NpuArch::DAV_3510:
-        case NpuArch::DAV_9202:
-        case NpuArch::DAV_9201: {
+        case Ops::Base::DAV_2201:
+        case Ops::Base::DAV_3510:
+        case Ops::Base::DAV_9202:
+        case Ops::Base::DAV_9201: {
             return ASCEND910B_DTYPE_SUPPORT_LIST;
         }
-        case NpuArch::DAV_1001: {
+        case Ops::Base::DAV_1001: {
             return ASCEND910_DTYPE_SUPPORT_LIST;
         }
         default: {

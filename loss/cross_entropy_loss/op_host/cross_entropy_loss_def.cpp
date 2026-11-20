@@ -11,6 +11,7 @@
  * \file cross_entropy_loss_def.cpp
  * \brief
  */
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "register/op_def_registry.h"
 namespace ops {
 static const std::vector<ge::DataType> xDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16,
@@ -106,10 +107,9 @@ public:
             .UnknownShapeFormat(xFormat);
 
         regbaseConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
-        this->AICore().AddConfig("ascend950", regbaseConfig);
-        this->AICore().AddConfig("ascend350", regbaseConfig);
-        this->AICore().AddConfig("ascend960dt", regbaseConfig);
-        this->AICore().AddConfig("ascend960pr", regbaseConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, regbaseConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, regbaseConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, regbaseConfig);
     }
 };
 OP_ADD(CrossEntropyLoss);
