@@ -152,14 +152,6 @@ private:
     LocalTensor<uint8_t> mask_;
 };
 
-// __simd_vf__ helper: zero-fill Select else-branch buffer (var_out=0 when |linear_t| <= l1)
-__simd_vf__ inline void FtrlVFZeroInit(__ubuf__ float* dst, int32_t n)
-{
-    for (int32_t i = 0; i < n; ++i) {
-        dst[i] = ZERO_F;
-    }
-}
-
 // ============================================================================
 // LoadScalar
 // ============================================================================
@@ -430,7 +422,7 @@ __aicore__ inline void InplaceApplyFtrl<T>::ComputeVarOut(int32_t n)
     // gate: |linear_t| > l1 ? var_true : 0
     Abs(tmpB_, linearNew_, n);
     CompareScalar(mask_, tmpB_, l1Scalar_, CMPMODE::GT, n);
-    asc_vf_call<&FtrlVFZeroInit>(reinterpret_cast<__ubuf__ float*>(powNew_.GetPhyAddr()), n);
+    Duplicate(powNew_, ZERO_F, n);
     Select(tmpB_, mask_, tmpA_, powNew_, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
 }
 
