@@ -36,7 +36,7 @@ protected:
     static void TearDownTestCase() { std::cout << "CrossEntropyLossGradTiling TearDown" << std::endl; }
 };
 
-TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_not_none_bf16_11)
+static void CheckWeightedBf16Tiling(ge::DataType weightDtype)
 {
     gert::StorageShape grad_loss_shape = {{}, {}};
     gert::StorageShape log_prob_shape = {{30, 1024}, {30, 1024}};
@@ -113,7 +113,7 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_not_none_bf16_11)
                       .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, weightDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"reduction", Ops::NN::AnyValue::CreateFrom<std::string>("mean")},
                                   {"ignore_index", Ops::NN::AnyValue::CreateFrom<int64_t>(-100)},
@@ -131,11 +131,18 @@ TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_not_none_bf16_11)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    // workspaces nullptr return failed
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    const auto* weightDesc = tiling_context->GetOptionalInputDesc(3);
+    ASSERT_NE(weightDesc, nullptr);
+    ASSERT_EQ(weightDesc->GetDataType(), weightDtype);
+    ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_context->GetTilingKey(), 11U);
+}
 
-    auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 11);
+TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_not_none_bf16_11) { CheckWeightedBf16Tiling(ge::DT_FLOAT); }
+
+TEST_F(CrossEntropyLossGradTiling, test_tiling_float16_weight_warns_and_keeps_tiling_key)
+{
+    CheckWeightedBf16Tiling(ge::DT_FLOAT16);
 }
 
 TEST_F(CrossEntropyLossGradTiling, test_tiling_weight_none_bf16_10)

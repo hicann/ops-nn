@@ -255,6 +255,10 @@ static ge::graphStatus GetTilingInput(const gert::TilingContext* context, uint64
 
     auto weightTensor = context->GetOptionalInputTensor(INPUT_WEIGHT_IDX);
     if (weightTensor != nullptr) {
+        const auto* weightDesc = context->GetOptionalInputDesc(INPUT_WEIGHT_IDX);
+        if (weightDesc != nullptr && weightDesc->GetDataType() != ge::DT_FLOAT) {
+            OP_LOGW(context->GetNodeName(), "weight only support FLOAT.");
+        }
         auto weightShape = weightTensor->GetStorageShape();
         OP_CHECK_IF(
             (weightShape.GetDim(0) != logProbShape->GetStorageShape().GetDim(1)),
