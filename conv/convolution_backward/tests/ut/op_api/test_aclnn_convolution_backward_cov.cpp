@@ -858,6 +858,74 @@ TEST_F(convolution_backward_cov_test, cov_checker_empty_3d_groups_950)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
+// cover aclnn_convolution_backward.cpp L2825-L2832/L2863: 950 3D 1x1x1 dw batchN matmul,
+// bf16经ReduceSum放宽阈值(20M)判定放行(2*64*64未超阈值), 后被L2门禁拦截回退conv
+TEST_F(convolution_backward_cov_test, cov_dw1x1_mm_reduce_sum_relaxed_bf16)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    auto input_tensor_desc = TensorDesc({2, 64, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NCDHW);
+    auto weight_tensor_desc = TensorDesc({64, 64, 1, 1, 1}, ACL_BF16, ACL_FORMAT_NCDHW);
+    auto grad_output_tensor_desc = TensorDesc({2, 64, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NCDHW);
+
+    auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{64});
+    auto stride_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    auto padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+    auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+    int groups = 1;
+    auto output_mask = BoolArrayDesc(vector<bool>{false, true, false});
+    auto gradInput = TensorDesc({2, 64, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NCDHW);
+    auto gradWeight = TensorDesc({64, 64, 1, 1, 1}, ACL_BF16, ACL_FORMAT_NCDHW);
+    auto gradBias = TensorDesc({64}, ACL_BF16, ACL_FORMAT_ND);
+
+    int8_t cubeMathType = 0;
+
+    auto ut = OP_API_UT(
+        aclnnConvolutionBackward,
+        INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+              padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+        OUTPUT(gradInput, gradWeight, gradBias));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// cover aclnn_convolution_backward.cpp L2825-L2832/L2863-L2865: 950 3D 1x1x1 dw batchN matmul,
+// fp16维持原阈值(4M), N*Co*Cin(2*1600*1600=5.12M)超阈值被ReduceSum门禁拦截回退conv
+TEST_F(convolution_backward_cov_test, cov_dw1x1_mm_reduce_sum_exceed_fp16)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    auto input_tensor_desc = TensorDesc({2, 1600, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto weight_tensor_desc = TensorDesc({1600, 1600, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto grad_output_tensor_desc = TensorDesc({2, 1600, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+
+    auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{1600});
+    auto stride_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    auto padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+    auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1, 1});
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0, 0});
+    int groups = 1;
+    auto output_mask = BoolArrayDesc(vector<bool>{false, true, false});
+    auto gradInput = TensorDesc({2, 1600, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto gradWeight = TensorDesc({1600, 1600, 1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto gradBias = TensorDesc({1600}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    int8_t cubeMathType = 0;
+
+    auto ut = OP_API_UT(
+        aclnnConvolutionBackward,
+        INPUT(grad_output_tensor_desc, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc,
+              padding_desc, dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+        OUTPUT(gradInput, gradWeight, gradBias));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
 // cover convolution_backward_checker.cpp CheckDataTypeValidForGradWeight:
 // 950 gradWeight dtype(fp32) != weight dtype(fp16) must return ACLNN_ERR_PARAM_INVALID
 // without host coredump (FormatString must not receive raw DataType enum for %s)

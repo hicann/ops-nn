@@ -63,7 +63,10 @@ constexpr int64_t MIN_KL0_FP32 = 2;
 constexpr int64_t PAD_SIDE_MULTIPLIER = 2;
 constexpr int64_t PAD_DIM_SIMPLE = 2;
 constexpr int64_t REDUCE_SUM_THRESHOLD = 4000000;
-constexpr int64_t DW1X1_MM_COUT_ALIGN = 16;
+constexpr int64_t REDUCE_SUM_THRESHOLD_RELAXED = 20000000;
+// L2缓存准入系数以1/2为单位(避免浮点): 放宽为3(即1.5倍), 维持为2(即1倍)
+constexpr int64_t DW1X1_MM_L2_RELAX_MULTIPLIER = 3;
+constexpr int64_t DW1X1_MM_L2_BASE_MULTIPLIER = 2;
 constexpr int64_t DW1X1_MM_STRIDE_MIN = 1;
 constexpr int64_t DW1X1_MM_STRIDE_MAX = 2;
 
@@ -2784,7 +2787,17 @@ static bool IsW1FmNDxTransToMm(const ConvolutionBackwardInputTensor& inputTensor
     return true;
 }
 
-static bool IsGreaterL2CacheForDw1x1(const ConvolutionBackwardInputTensor& inputTensor)
+// L2缓存准入系数(不区分硬件): batch>1放宽至3/2, batch=1维持1倍, 与dx侧IsW1FmNDxTransToMm的
+// batch=1按1倍L2拦截口径一致
+static int64_t GetDw1x1L2CacheLimitMultiplier(int64_t batchDim)
+{
+    if (batchDim > 1) {
+        return DW1X1_MM_L2_RELAX_MULTIPLIER;
+    }
+    return DW1X1_MM_L2_BASE_MULTIPLIER;
+}
+
+static bool IsGreaterL2CacheForDw1x1(const ConvolutionBackwardInputTensor& inputTensor, int64_t l2CacheLimitMultiplier)
 {
     op::Shape weightShape = inputTensor.weight->GetViewShape();
     op::Shape inputShape = inputTensor.input->GetViewShape();
@@ -2805,8 +2818,9 @@ static bool IsGreaterL2CacheForDw1x1(const ConvolutionBackwardInputTensor& input
     }
     const int64_t l2CacheSize = static_cast<int64_t>(GetL2CacheSize());
     OP_LOGD("L2Cache size from platform: %ld", l2CacheSize);
-    // 数据量超过l2cache时不走matmul路径，batch>1时需乘以batch
-    if (batchDim * (m * k + k * n + n * m) * typeSize > l2CacheSize) {
+    // 数据量超过l2cache时不走matmul路径，batch>1时需乘以batch; L2准入系数以1/2为单位放宽
+    const int64_t l2CacheLimit = l2CacheSize * l2CacheLimitMultiplier / 2;
+    if (batchDim * (m * k + k * n + n * m) * typeSize > l2CacheLimit) {
         OP_LOGD("dw 1x1 shape exceeds L2Cache, batch = %ld, m = %ld, k = %ld, n = %ld", batchDim, m, k, n);
         return true;
     }
@@ -2868,6 +2882,18 @@ static bool CheckDw1x1TransToMmBase(const ConvolutionBackwardInputTensor& inputT
     return true;
 }
 
+// N*Co*Cin过大时ReduceSum开销显著, 超过阈值不允许转batchN matmul(不区分硬件);
+// fp16实测转matmul劣化维持原阈值, fp32/bf16放宽阈值
+static bool CheckDw1x1MmReduceSumSize(const ConvolutionBackwardInputTensor& inputTensor, int64_t batchDim,
+                                      int64_t cOutDim, int64_t cInDim)
+{
+    int64_t reduceSumThreshold = REDUCE_SUM_THRESHOLD;
+    if (CalcPromoteType(inputTensor) != DataType::DT_FLOAT16) {
+        reduceSumThreshold = REDUCE_SUM_THRESHOLD_RELAXED;
+    }
+    return batchDim * cOutDim * cInDim <= reduceSumThreshold;
+}
+
 static Dw1x1TransToMmMode GetDw1x1TransToMmMode(const ConvolutionBackwardInputTensor& inputTensor,
                                                 const ConvolutionBackwardParams& params)
 {
@@ -2879,37 +2905,31 @@ static Dw1x1TransToMmMode GetDw1x1TransToMmMode(const ConvolutionBackwardInputTe
     if (!CheckDw1x1TransToMmBase(inputTensor, params)) {
         return Dw1x1TransToMmMode::NONE;
     }
+    int64_t batchDim = inputTensor.input->GetViewShape().GetDim(nDimNCDHWIdx);
+    op::Shape weightShape = inputTensor.weight->GetViewShape();
+    // N*Co*Cin过大时ReduceSum开销显著，跳过batchN matmul路径;
+    // fp16实测转matmul劣化维持原阈值, fp32/bf16放宽阈值
+    if (batchDim > 1) {
+        int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
+        int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
+        if (!CheckDw1x1MmReduceSumSize(inputTensor, batchDim, cOutDim, cInDim)) {
+            OP_LOGD("Dw1x1TransToMm return NONE: ReduceSum input size exceeds threshold");
+            return Dw1x1TransToMmMode::NONE;
+        }
+    }
     bool hasStridedDim = (*params.stride)[CONV3D_ATTR_D_IDX] > 1 || (*params.stride)[CONV3D_ATTR_H_IDX] > 1 ||
                          (*params.stride)[CONV3D_ATTR_W_IDX] > 1;
-    // 是否是超大shape,超过l2cache进行拦截(仅stride=1路径)
-    if (!hasStridedDim && IsGreaterL2CacheForDw1x1(inputTensor)) {
+    // 是否是超大shape,超过l2cache进行拦截(仅stride=1路径);
+    // 仅batch>1放宽L2准入, batch=1维持1倍(与dx侧口径一致)
+    int64_t l2CacheLimitMultiplier = GetDw1x1L2CacheLimitMultiplier(batchDim);
+    if (!hasStridedDim && IsGreaterL2CacheForDw1x1(inputTensor, l2CacheLimitMultiplier)) {
         OP_LOGD("Dw1x1TransToMm return NONE: shape exceeds L2Cache limit");
         return Dw1x1TransToMmMode::NONE;
     }
 
-    op::Shape weightShape = inputTensor.weight->GetViewShape();
-    int64_t batchDim = inputTensor.input->GetViewShape().GetDim(nDimNCDHWIdx);
     if (batchDim == 1) {
         OP_LOGD("Dw1x1TransToMm return BATCH_1: batch=1, 1x1 dw trans to matmul");
         return Dw1x1TransToMmMode::BATCH_1;
-    }
-    // fp32输入时容易性能劣化，回退到dw计算路径(降精度/HF32模式除外)(仅stride=1路径)
-    if (!hasStridedDim && CalcPromoteType(inputTensor) == DataType::DT_FLOAT &&
-        params.cubeMathType != ALLOW_FP32_DOWN_PRECISION && params.cubeMathType != USE_HF32) {
-        OP_LOGD("Dw1x1TransToMm return NONE: not support fp32 input");
-        return Dw1x1TransToMmMode::NONE;
-    }
-    // N*Co*Cin过大时ReduceSum开销显著，跳过batchN matmul路径
-    int64_t cOutDim = weightShape.GetDim(NCDHW_N_DIM);
-    int64_t cInDim = weightShape.GetDim(NCDHW_C_DIM);
-    if (batchDim * cOutDim * cInDim > REDUCE_SUM_THRESHOLD) {
-        OP_LOGD("Dw1x1TransToMm return NONE: ReduceSum input size exceeds threshold");
-        return Dw1x1TransToMmMode::NONE;
-    }
-    // Co非16对齐时容易性能劣化，回退到dw计算路径
-    if (cOutDim % DW1X1_MM_COUT_ALIGN != 0) {
-        OP_LOGD("Dw1x1TransToMm return NONE: only support 16-aligned cOutDim");
-        return Dw1x1TransToMmMode::NONE;
     }
     OP_LOGD("Dw1x1TransToMm return BATCH_N: batch=%ld, 1x1 dw trans to batch matmul", batchDim);
     return Dw1x1TransToMmMode::BATCH_N;
