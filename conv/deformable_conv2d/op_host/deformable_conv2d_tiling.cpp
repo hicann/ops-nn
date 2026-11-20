@@ -46,7 +46,7 @@ constexpr uint64_t WORK_SPACE_SIZE = 16 * 1024 * 1024;
 
 class DeformableConv2dTiling {
 public:
-    explicit DeformableConv2dTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit DeformableConv2dTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunBigKernelTiling();
 
 private:

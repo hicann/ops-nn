@@ -131,6 +131,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fusion_success)
         {"dav3510_fp16_bias_nchw", true, DT_FLOAT16, true, FORMAT_NCHW},
         {"dav3510_fp32_nhwc", true, DT_FLOAT, false, FORMAT_NHWC},
         {"dav3510_bf16_bias_nhwc", true, DT_BF16, true, FORMAT_NHWC},
+        {"ascend350_fp16_nchw", true, DT_FLOAT16, false, FORMAT_NCHW},
         {"non_dav3510_fp16_nchw", false, DT_FLOAT16, false, FORMAT_NCHW},
         {"non_dav3510_fp32_bias", false, DT_FLOAT, true, FORMAT_NCHW},
     };
@@ -147,29 +148,23 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fusion_success)
     }
 }
 
-TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fusion_success_ascend350)
+// HF32 guard: the decomposed Conv2D node must NOT carry _op_impl_mode_enum=0x20 (enable_hf32).
+TEST_F(ADeformableConv2dPassTest, dfm_conv2d_decomposed_node_has_no_hf32_impl_mode)
 {
-    NodeConfig cfg = MakeDfmCfg("dfm_fusion_success_ascend350", DT_FLOAT16, true);
-    TestGraph builder("dfm_fusion_success_ascend350");
-    builder.SetSoc(SocConfig("Ascend350", "Ascend350_355e"));
-    builder.AddNode(cfg, {0, 1, 2, 3}).SetOutput("dfm_fusion_success_ascend350").Build();
-    auto graph = builder.Build();
-
-    EXPECT_TRUE(GraphChecker::HasNode(graph, DFM_CONV2D.GetString()));
-    TestTotalPass("dfm_fusion_success_ascend350", graph, SUCCESS);
-    EXPECT_TRUE(GraphChecker::HasNode(graph, "DeformableOffsets"));
-    EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
-    EXPECT_EQ(GraphChecker::CountNodes(graph, DFM_CONV2D.GetString()), 0);
-
-    GNode conv2d = GetFirstNodeByType(graph, "Conv2D");
-    int64_t offsetX = -1;
-    ASSERT_EQ(conv2d.GetAttr(AscendString("offset_x"), offsetX), GRAPH_SUCCESS);
-    EXPECT_EQ(offsetX, int64_t{0});
+    auto graph = BuildSingleDfmGraph("dfm_no_hf32_impl_mode", true, DT_FLOAT, false, FORMAT_NCHW);
+    TestTotalPass("dfm_no_hf32_impl_mode", graph, SUCCESS);
+    ge::GNode conv2dNode;
+    ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "Conv2D", conv2dNode));
+    int64_t implMode = 0;
+    const bool hasHf32Attr = conv2dNode.GetAttr("_op_impl_mode_enum", implMode) == ge::GRAPH_SUCCESS &&
+                             implMode == 0x20;
+    EXPECT_FALSE(hasHf32Attr);
 }
 
 // ==========================================================================================
 // 拒绝融合：入度非法 / filter format 非法 / shape 非 4D
 // ==========================================================================================
+
 TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
 {
     struct Point {
@@ -441,36 +436,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_dynamic_out_hw_unknown_shape_range)
 }
 
 // ==========================================================================================
-// impl_mode: DeformableConv2D 不支持 HF32，融合后 Conv2D 固定为 enable_float_32_execution(0x20)
 // ==========================================================================================
-TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fused_op_impl_mode_enum_is_0x20)
-{
-    struct Point {
-        const char* pointName;
-        std::function<GraphPtr()> build;
-    } const points[] = {
-        {"parent_has_hf32_0x40",
-         [this]() {
-             NodeConfig cfg = MakeDfmCfg("dfm_op_impl_mode_hf32", DT_FLOAT16, false);
-             cfg.SetAttr(OP_IMPL_MODE_ENUM.GetString(), int64_t{0x40});
-             TestGraph builder("dfm_op_impl_mode_hf32");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_op_impl_mode_hf32").Build();
-             return builder.Build();
-         }},
-        {"parent_no_impl_mode_attr",
-         [this]() { return BuildSingleDfmGraph("dfm_op_impl_mode_default", true, DT_FLOAT16, false); }},
-    };
-
-    for (const auto& p : points) {
-        SCOPED_TRACE(p.pointName);
-        auto graph = p.build();
-        TestTotalPass(std::string("dfm_op_impl_mode_") + p.pointName, graph, SUCCESS);
-        GNode conv2d = GetFirstNodeByType(graph, "Conv2D");
-        int64_t implMode = static_cast<int64_t>(-1);
-        ASSERT_EQ(conv2d.GetAttr(OP_IMPL_MODE_ENUM, implMode), GRAPH_SUCCESS);
-        EXPECT_EQ(implMode, DfmConv2dFusion::ENABLE_FLOAT32_EXECUTION);
-    }
-}
 
 // ==========================================================================================
 // 拓扑：多节点 / 下游保持 / 空匹配 / 可重入

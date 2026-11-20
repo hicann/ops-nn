@@ -6,386 +6,193 @@
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+"""TTK golden plugin for DeformableConv2D (kernel/geir flow).
 
+参考实现按算子分解语义计算：DeformableOffsets + Conv2D(stride = kernel_size)。
+
+offsets 通道为 value-block 布局 ``[dx block | dy block | mask block]``，每个 block
+``deformable_groups * kh * kw`` 个通道（组主序，组内 kernel 行主序）；``modulated``
+为 False 时无 mask block。卷积 padding 为零填充：双线性插值的四个邻域只在原始图像
+``[0, ih-1] x [0, iw-1]`` 内取值，越界邻域贡献 0。
 """
-Golden function for aclnnDeformableConv2d.
 
-Based on deformable_conv2d_def.cpp (ACLNN API level):
-- Inputs: x, weight, offset, bias (all Format=ND)
-- Output: y (Format=ND)
-
-Format and DataType support:
-- x: Format=ND, DataType=FLOAT/FLOAT16/BF16
-- weight: Format=ND, DataType=FLOAT/FLOAT16/BF16
-- offset: Format=ND, DataType=FLOAT/FLOAT16/BF16
-- bias: Format=ND, DataType=FLOAT/FLOAT16/BF16
-- y(output): Format=ND, DataType=FLOAT/FLOAT16/BF16
-
-Supported dtypes: float16, float32, bfloat16
-Returns BOTH outputs: (out, deformOut)
-"""
+__spec__ = {"deformable_conv2_d": "DeformableConv2DTestSpec"}
 
 import numpy as np
-import torch
-
-__golden__ = {
-    "aclnn": {
-        "aclnnDeformableConv2d": "deformable_conv2d_golden",
-    },
-    "e2e": {
-        "torch_npu.npu_deformable_conv2d": "deformable_conv2d_golden",
-    },
-}
-
-FP32_STR = "float32"
 
 
-def tensor_to_numpy(t):
-    if t is None:
-        return None
-    if isinstance(t, torch.Tensor):
-        if t.dtype == torch.bfloat16:
-            return t.float().numpy()
-        return t.numpy()
-    return np.asarray(t)
+def _bilinear_sample(x, ph, pw):
+    """按分数坐标采样 x ``[n, c, ih, iw]``。
 
-
-def normalize_param(param, default, size=4):
-    if param is None:
-        return [default] * size
-    if isinstance(param, int):
-        return [param] * size
-    if isinstance(param, torch.Tensor):
-        return param.tolist() if param.numel() > 1 else [param.item()] * size
-    return param
-
-
-def due_fp16_overflow(data):
-    """Overflow interception for float16
-    Clips values to the finite range of float16: [-65504, 65504]
+    ``ph`` / ``pw`` 为原始（未 pad）坐标系下的采样位置，形状 ``[n, oh, ow]``；
+    邻域越出 ``[0, ih-1] x [0, iw-1]`` 时取 0，与零填充卷积语义一致。
     """
-    FP16_MAX_FINITE = 65504
-    FP16_MIN_FINITE = -65504
-    data = np.maximum(data, FP16_MIN_FINITE)
-    data = np.minimum(data, FP16_MAX_FINITE)
-    return data
-
-
-def convert_output_dtype(out, output_dtype):
-    dtype_map = {
-        "float16": (np.float16, True),
-        "float32": (np.float32, False),
-        "bfloat16": ("ml_dtypes.bfloat16", True),
-    }
-
-    dtype_info = dtype_map.get(output_dtype)
-    if dtype_info is None:
-        return out.astype(np.float32)
-
-    dtype_ref, need_overflow = dtype_info
-    if need_overflow:
-        out = due_fp16_overflow(out)
-
-    if isinstance(dtype_ref, str):
-        module_name, dtype_name = dtype_ref.split(".")
-        try:
-            dtype_cls = getattr(
-                __import__(module_name, fromlist=[dtype_name]), dtype_name
-            )
-        except (ImportError, AttributeError):
-            raise RuntimeError(
-                f"{module_name} is required for {output_dtype}. "
-                f"Install: pip install {module_name}"
-            )
-        out = out.astype(dtype_cls)
-    else:
-        out = out.astype(dtype_ref)
-
-    return out
-
-
-def bilinear_interpolate(input_tensor, h, w, c, batch_offset, in_h, in_w):
-    """
-    Bilinear interpolation at (h, w) for channel c.
-    Matches NPU kernel DeformableOffsetBilinear.
-    """
-    h_floor = int(np.floor(h))
-    w_floor = int(np.floor(w))
-
-    h_delta = h - h_floor
-    w_delta = w - w_floor
-
-    def get_value(hi, wi):
-        if hi >= 0 and wi >= 0 and hi < in_h and wi < in_w:
-            return input_tensor[batch_offset + hi * in_w + wi]
-        return 0.0
-
-    top_left = get_value(h_floor, w_floor)
-    top_right = get_value(h_floor, w_floor + 1)
-    bottom_left = get_value(h_floor + 1, w_floor)
-    bottom_right = get_value(h_floor + 1, w_floor + 1)
-
-    top = top_left * (1 - w_delta) + top_right * w_delta
-    bottom = bottom_left * (1 - w_delta) + bottom_right * w_delta
-
-    return top * (1 - h_delta) + bottom * h_delta
-
-
-def compute_deform_out(
-    x, offset, kernel_size, stride, padding, dilation, deformable_groups, modulated
-):
-    """
-    Compute deformOut - the bilinear-interpolated input at offset positions.
-    Output shape: (N, inC, outH * kH, outW * kW) in NCHW.
-
-    Matches NPU kernel ComputeDeformableOffset in deformable_offsets.h.
-    """
-    N, inC, inH, inW = x.shape
-    kH, kW = kernel_size[0], kernel_size[1] if len(kernel_size) >= 2 else kernel_size
-    stride_h, stride_w = stride[2], stride[3]
-    pad_top, pad_bottom = padding[0], padding[1]
-    pad_left, pad_right = padding[2], padding[3]
-    pad_h = pad_top
-    pad_w = pad_left
-    dilation_h, dilation_w = dilation[2], dilation[3]
-
-    outH = (inH + pad_top + pad_bottom - (kH - 1) * dilation_h - 1) // stride_h + 1
-    outW = (inW + pad_left + pad_right - (kW - 1) * dilation_w - 1) // stride_w + 1
-
-    out_shape = (N, inC, outH * kH, outW * kW)
-    deformOut = np.zeros(out_shape, dtype=x.dtype)
-
-    k_per_group = inC // deformable_groups
-    k_elems = kH * kW
-
-    for n in range(N):
-        for out_h_pos in range(outH):
-            for out_w_pos in range(outW):
-                base_h = out_h_pos * stride_h - pad_h
-                base_w = out_w_pos * stride_w - pad_w
-
-                for dg in range(deformable_groups):
-                    for c in range(k_per_group):
-                        channel_idx = dg * k_per_group + c
-
-                        for ki in range(kH):
-                            for kj in range(kW):
-                                kernel_idx = ki * kW + kj
-
-                                w_offset_base = 0 * deformable_groups * k_elems
-                                h_offset_base = 1 * deformable_groups * k_elems
-                                m_offset_base = 2 * deformable_groups * k_elems
-                                offset_in_group = dg * k_elems + kernel_idx
-
-                                height_offset_val = offset[
-                                    n,
-                                    h_offset_base + offset_in_group,
-                                    out_h_pos,
-                                    out_w_pos,
-                                ]
-                                width_offset_val = offset[
-                                    n,
-                                    w_offset_base + offset_in_group,
-                                    out_h_pos,
-                                    out_w_pos,
-                                ]
-                                mask_val = (
-                                    offset[
-                                        n,
-                                        m_offset_base + offset_in_group,
-                                        out_h_pos,
-                                        out_w_pos,
-                                    ]
-                                    if modulated
-                                    else 1.0
-                                )
-
-                                point_h = base_h + ki * dilation_h + height_offset_val
-                                point_w = base_w + kj * dilation_w + width_offset_val
-                                input_1d = x[n, channel_idx].flatten()
-
-                                bilinear_val = bilinear_interpolate(
-                                    input_1d, point_h, point_w, channel_idx, 0, inH, inW
-                                )
-
-                                output_h = out_h_pos * kH + ki
-                                output_w = out_w_pos * kW + kj
-                                deformOut[n, channel_idx, output_h, output_w] = (
-                                    bilinear_val * mask_val
-                                )
-
-    return deformOut
-
-
-def deformable_conv2d_golden(
-    x,
-    weight,
-    offset,
-    bias_optional=None,
-    kernel_size: list = None,
-    stride: list = [1, 1, 1, 1],
-    padding: list = [0, 0, 0, 0],
-    dilation: list = [1, 1, 1, 1],
-    groups: int = 1,
-    deformable_groups: int = 1,
-    modulated: bool = True,
-    out=None,
-    deform_out_optional=None,
-    **kwargs,
-):
-    """
-    Golden for aclnnDeformableConv2d - returns BOTH outputs.
-    Parameters follow aclnnDeformableConv2dGetWorkspaceSize C header signature order.
-
-    Args:
-        x: (N, C, H, W) Tensor - NCHW
-        weight: (outC, inC/groups, kH, kW) Tensor
-        offset: (N, 3*deformable_groups*kH*kW, outH, outW) Tensor
-        bias_optional: (outC,) Tensor optional
-        kernel_size: [kH, kW]
-        stride: [strideN, strideC, strideH, strideW]
-        padding: [padN, padC, padH, padW] or [padTop, padBottom, padLeft, padRight]
-        dilation: [dilationN, dilationC, dilationH, dilationW]
-        groups: Number of groups
-        deformable_groups: Number of deformable groups
-        modulated: Whether modulated (DCNv2)
-        out: Pre-allocated output tensor (not used in golden)
-        deform_out_optional: Pre-allocated deform output tensor (not used in golden)
-
-    Returns:
-        tuple: (out, deformOut) where
-            out: (N, outC, outH, outW) Tensor
-            deformOut: (N, inC, outH*kH, outW*kW) Tensor
-
-    Note: Parameters are passed by position order from TTK, matching C header signature.
-          Default values are for documentation purpose only.
-    """
-    bias = bias_optional
-    kernelSize = kernel_size if kernel_size is not None else kwargs.get("kernelSize")
-    deformableGroups = (
-        deformable_groups
-        if deformable_groups != 1
-        else kwargs.get("deformableGroups", deformable_groups)
-    )
-    stride = stride if stride != [1, 1, 1, 1] else kwargs.get("stride", stride)
-    padding = padding if padding != [0, 0, 0, 0] else kwargs.get("padding", padding)
-    dilation = (
-        dilation if dilation != [1, 1, 1, 1] else kwargs.get("dilation", dilation)
-    )
-    groups = groups if groups != 1 else kwargs.get("groups", groups)
-    modulated = modulated if modulated else kwargs.get("modulated", modulated)
-
-    input_dtypes = kwargs.get("input_dtypes", None)
-    tensor_dtypes = kwargs.get("tensor_dtypes", None)
-    output_dtypes = kwargs.get("output_dtypes", [FP32_STR, FP32_STR])
-
-    # Determine original input dtype from kwargs (not numpy array dtype)
-    # tensor_dtypes is the original dtype from CSV, e.g., ('bfloat16', 'bfloat16', ...)
-    # input_dtypes might be None, so use tensor_dtypes as fallback
-    if tensor_dtypes and len(tensor_dtypes) > 0:
-        original_dtype_str = str(tensor_dtypes[0])
-    elif input_dtypes:
-        original_dtype_str = str(input_dtypes[0])
-    else:
-        original_dtype_str = FP32_STR
-
-    if isinstance(x, torch.Tensor):
-        x_np = tensor_to_numpy(x)
-        weight_np = tensor_to_numpy(weight)
-        offset_np = tensor_to_numpy(offset)
-        bias_np = tensor_to_numpy(bias)
-    else:
-        x_np = np.asarray(x)
-        weight_np = np.asarray(weight)
-        offset_np = np.asarray(offset)
-        bias_np = tensor_to_numpy(bias)
-
-    # Determine calculation precision based on original dtype
-    # float32 uses float64 for higher precision golden calculation
-    # float16/bfloat16 uses float32 (bfloat16 has ~7 bits precision, similar to float16)
-    if original_dtype_str == FP32_STR:
-        calc_dtype = np.float64
-    elif original_dtype_str in ("float16", "bfloat16"):
-        calc_dtype = np.float32
-    else:
-        # Fallback: use numpy array dtype to decide
-        x_dtype_str = x_np.dtype.name
-        calc_dtype = np.float64 if x_dtype_str == FP32_STR else np.float32
-
-    x_np = x_np.astype(calc_dtype)
-    weight_np = weight_np.astype(calc_dtype)
-    offset_np = offset_np.astype(calc_dtype)
-    if bias_np is not None:
-        bias_np = bias_np.astype(calc_dtype)
-
-    x_torch = torch.from_numpy(x_np)
-    weight_torch = torch.from_numpy(weight_np)
-    offset_torch = torch.from_numpy(offset_np)
-    bias_torch = torch.from_numpy(bias_np) if bias_np is not None else None
-
-    stride = normalize_param(stride, 1)
-    padding = normalize_param(padding, 0)
-    dilation = normalize_param(dilation, 1)
-
-    if kernelSize is None:
-        kernelSize = [weight_torch.shape[2], weight_torch.shape[3]]
-    elif isinstance(kernelSize, int):
-        kernelSize = [kernelSize, kernelSize]
-    elif isinstance(kernelSize, torch.Tensor):
-        kernelSize = (
-            kernelSize.tolist()
-            if kernelSize.numel() > 1
-            else [kernelSize.item(), kernelSize.item()]
+    n, c, ih, iw = x.shape
+    oh, ow = ph.shape[1], pw.shape[2]
+    h0 = np.floor(ph).astype(np.int64)
+    w0 = np.floor(pw).astype(np.int64)
+    vh = (ph - h0)[:, None, :, :]
+    vw = (pw - w0)[:, None, :, :]
+    sample = np.zeros((n, c, oh, ow), dtype=np.float64)
+    flat = x.reshape(n, c, ih * iw)
+    for ha, wa, fa, fb in (
+        (h0, w0, 1 - vh, 1 - vw),
+        (h0, w0 + 1, 1 - vh, vw),
+        (h0 + 1, w0, vh, 1 - vw),
+        (h0 + 1, w0 + 1, vh, vw),
+    ):
+        valid = (ha >= 0) & (ha <= ih - 1) & (wa >= 0) & (wa <= iw - 1)
+        if not valid.any():
+            continue
+        gidx = (np.clip(ha, 0, ih - 1) * iw + np.clip(wa, 0, iw - 1)).reshape(
+            n, 1, oh * ow
         )
+        gathered = np.take_along_axis(
+            flat, np.broadcast_to(gidx, (n, c, oh * ow)), axis=2
+        ).reshape(n, c, oh, ow)
+        sample += np.where(valid[:, None, :, :], gathered * fa * fb, 0.0)
+    return sample
 
-    # Convert groups/deformableGroups to int if they are Tensor
-    if isinstance(groups, torch.Tensor):
-        groups = int(groups[0].item()) if groups.numel() > 1 else int(groups.item())
-    if isinstance(deformableGroups, torch.Tensor):
-        deformableGroups = (
-            int(deformableGroups[0].item())
-            if deformableGroups.numel() > 1
-            else int(deformableGroups.item())
+
+def _output_dtype(x):
+    """fp16/bf16 输入以 fp32 输出参与比对（容差覆盖低精度舍入），其余与输入一致。"""
+    if x.dtype in (np.float16,):
+        return np.float32
+    if str(x.dtype) == "bfloat16":
+        return np.float32
+    if x.dtype in (np.int8, np.int16):
+        return np.int32
+    return x.dtype
+
+
+class DeformableConv2DTestSpec:
+    @staticmethod
+    def golden(x, w, *args, **kwargs):
+        offsets = args[0] if len(args) > 0 else None
+        bias = args[1] if len(args) > 1 else None
+
+        attrs = kwargs.get("attributes", kwargs) or {}
+        strides = list(attrs.get("strides", [1, 1, 1, 1]))
+        pads = list(attrs.get("pads", [0, 0, 0, 0]))
+        dilations = list(attrs.get("dilations", [1, 1, 1, 1]))
+        groups = int(attrs.get("groups", 1) or 1)
+        dfm = int(attrs.get("deformable_groups", 1) or 1)
+        modulated = bool(attrs.get("modulated", True))
+        data_format = str(attrs.get("data_format", "NCHW") or "NCHW").upper()
+
+        out_dtype = _output_dtype(x)
+        if x is None or w is None or x.ndim < 4 or w.ndim < 4:
+            return [np.zeros((0,), dtype=out_dtype)]
+
+        x = np.ascontiguousarray(x).astype(np.float64)
+        w = np.ascontiguousarray(w).astype(np.float64)
+        off = None
+        if offsets is not None:
+            off = np.ascontiguousarray(offsets).astype(np.float64)
+
+        nhwc = DeformableConv2DTestSpec._resolve_nhwc(
+            x, w, off, data_format, dfm, modulated
         )
+        if nhwc:
+            x = np.transpose(x, (0, 3, 1, 2))  # NHWC -> NCHW
+            if off is not None:
+                off = np.transpose(off, (0, 3, 1, 2))  # NHWC -> NCHW
+            w = np.transpose(w, (3, 2, 0, 1))  # HWCN -> NCHW
+            sh, sw = int(strides[1]), int(strides[2])
+            dh, dw = int(dilations[1]), int(dilations[2])
+        else:
+            sh, sw = int(strides[2]), int(strides[3])
+            dh, dw = int(dilations[2]), int(dilations[3])
+        pt, pb, pl, pr = int(pads[0]), int(pads[1]), int(pads[2]), int(pads[3])
 
-    deformOut_np = compute_deform_out(
-        x_torch.numpy(),
-        offset_torch.numpy(),
-        kernelSize,
-        stride,
-        padding,
-        dilation,
-        deformableGroups,
-        modulated,
-    )
-    deformOut_torch = torch.from_numpy(deformOut_np)
+        n, ic, ih, iw = x.shape
+        kn, kc, kh, kw = w.shape
+        oh = (ih + pt + pb - dh * (kh - 1) - 1) // sh + 1
+        ow = (iw + pl + pr - dw * (kw - 1) - 1) // sw + 1
+        oh, ow = max(oh, 0), max(ow, 0)
 
-    out = torch.nn.functional.conv2d(
-        deformOut_torch,
-        weight_torch,
-        bias_torch,
-        stride=kernelSize,
-        padding=0,
-        dilation=1,
-        groups=groups,
-    )
+        def _empty_like():
+            shape = (n, oh, ow, kn) if nhwc else (n, kn, oh, ow)
+            return [np.zeros(shape, dtype=out_dtype)]
 
-    out_dtype = output_dtypes[0] if output_dtypes else FP32_STR
-    deform_out_dtype = output_dtypes[1] if len(output_dtypes) > 1 else FP32_STR
+        if (
+            oh == 0
+            or ow == 0
+            or kn == 0
+            or kh == 0
+            or kw == 0
+            or ic == 0
+            or x.size == 0
+        ):
+            return _empty_like()
 
-    # If output_dtypes not provided, infer from tensor_dtypes (output tensors index 4, 5)
-    if output_dtypes is None or output_dtypes == [FP32_STR, FP32_STR]:
-        if tensor_dtypes and len(tensor_dtypes) >= 6:
-            # tensor_dtypes format: (input, weight, offset, bias, out_placeholder, deformOut_placeholder)
-            out_dtype = str(tensor_dtypes[4]) if tensor_dtypes[4] else FP32_STR
-            deform_out_dtype = str(tensor_dtypes[5]) if tensor_dtypes[5] else FP32_STR
+        kk = kh * kw
+        if off is None:
+            off = np.zeros(
+                (n, (3 if modulated else 2) * dfm * kk, oh, ow), dtype=np.float64
+            )
+            if modulated:
+                off[:, 2 * dfm * kk :, :, :] = 1.0
+        elif off.shape[1] == 2 * dfm * kk:
+            modulated = False  # 2-block offsets 即 DCNv1，与 attr 缺省无关
 
-    out_result = convert_output_dtype(out.detach().numpy(), out_dtype)
-    deformOut_result = convert_output_dtype(
-        deformOut_torch.detach().numpy(), deform_out_dtype
-    )
+        dx = off[:, 0 : dfm * kk, :, :]
+        dy = off[:, dfm * kk : 2 * dfm * kk, :, :]
+        mk = off[:, 2 * dfm * kk : 3 * dfm * kk, :, :] if modulated else None
 
-    return out_result, deformOut_result
+        base_h = np.arange(oh).reshape(oh, 1) * sh - pt
+        base_w = np.arange(ow).reshape(1, ow) * sw - pl
+        cg = ic // dfm
+        ocg = kn // groups
+        deformed = np.zeros((n, dfm, cg, kh, oh, kw, ow), dtype=np.float64)
+        for g in range(dfm):
+            for i in range(kh):
+                for j in range(kw):
+                    kidx = g * kk + i * kw + j
+                    ph = np.broadcast_to(base_h, (n, oh, ow)) + i * dh + dy[:, kidx]
+                    pw = np.broadcast_to(base_w, (n, oh, ow)) + j * dw + dx[:, kidx]
+                    sample = _bilinear_sample(x[:, g * cg : (g + 1) * cg], ph, pw)
+                    if mk is not None:
+                        sample = sample * mk[:, kidx][:, None, :, :]
+                    deformed[:, g, :, i, :, j, :] = sample
+        # [n, dfm, cg, kh, oh, kw, ow] -> [n, ic, oh*kh, ow*kw]
+        deform = deformed.transpose(0, 1, 2, 4, 3, 6, 5).reshape(
+            n, ic, oh * kh, ow * kw
+        )
+        blocks = deform.reshape(n, ic, oh, kh, ow, kw)
+
+        y = np.zeros((n, kn, oh, ow), dtype=np.float64)
+        for og in range(groups):
+            for oci in range(ocg):
+                oc = og * ocg + oci
+                acc = np.zeros((n, oh, ow), dtype=np.float64)
+                for ci in range(kc):
+                    icc = og * kc + ci
+                    for i in range(kh):
+                        for j in range(kw):
+                            acc += blocks[:, icc, :, i, :, j] * w[oc, ci, i, j]
+                y[:, oc, :, :] = acc
+        if bias is not None:
+            y += np.ascontiguousarray(bias).astype(np.float64).reshape(1, kn, 1, 1)
+
+        if nhwc:
+            y = np.transpose(y, (0, 2, 3, 1))  # NCHW -> NHWC
+        return [y.astype(out_dtype)]
+
+    @staticmethod
+    def _resolve_nhwc(x, w, off, data_format, dfm, modulated):
+        """判定输入实际排布。
+
+        ``data_format`` 属性与实际张量可能冲突（如属性写 NHWC 而张量为 NCHW），
+        此时按张量实际排布计算，与 infershape 以输入 origin format 优先的规则一致。
+        """
+        if data_format != "NHWC" or x.ndim != 4 or w.ndim != 4:
+            return False
+        kk = int(w.shape[0]) * int(w.shape[1])  # HWCN: 前两维是 kernel
+        exp_off_c = (3 if modulated else 2) * dfm * kk
+        c_ok = x.shape[3] == int(w.shape[2])  # x.C == filter.C
+        off_ok = off is None or (off.ndim == 4 and off.shape[3] == exp_off_c)
+        return bool(c_ok and off_ok)

@@ -1,6 +1,6 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
@@ -19,3 +19,12 @@ endif()
 file(APPEND ${ASCEND_SUB_CONFIG_PATH} "OP_CATEGORY;${op_category};OP_NAME;${OP_NAME};DEPENDENCIES;deformable_offsets\n")
 
 add_graph_plugin_sources()
+
+# NOTE: no OpDef for the graph op; install REG_OP header for tooling
+if(ENABLE_CUSTOM)
+    install(
+        FILES ${CMAKE_CURRENT_SOURCE_DIR}/deformable_conv2d_proto.h
+        DESTINATION ${OPPROTO_INC_INSTALL_DIR}
+        RENAME deformable_conv2_d_proto.h
+    )
+endif()

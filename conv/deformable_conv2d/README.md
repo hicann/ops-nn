@@ -90,21 +90,21 @@
       <td>输入</td>
       <td>表示输入的原始数据。对应公式中的`input`。shape为[N, inH, inW, inC]，其中inH * inW不能超过2147483647。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW</td>
       </tr>
     <tr>
       <td>weight</td>
       <td>输入</td>
       <td>表示可学习过滤器的4D张量，对应公式中的`weight`。数据类型、数据格式与入参`x`保持一致。shape为[outC, K_H, K_W, inC/groups]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW</td>
     </tr>
     <tr>
       <td>offsets</td>
       <td>输入</td>
       <td>表示x-y坐标偏移和掩码的4D张量。对应公式中的`offset`。数据类型、数据格式与入参`x`保持一致。当`modulated`为true时，shape为[N, outH, outW, 3 * deformable_groups * K_H * K_W]；当`modulated`为false时，shape为[N, outH, outW, 2 * deformable_groups * K_H * K_W]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW</td>
     </tr>
     <tr>
       <td>bias</td>
@@ -167,14 +167,14 @@
       <td>输出</td>
       <td>表示计算的输出张量。对应公式中的`out`。数据类型、数据格式与`x`保持一致。shape为[N, outH, outC, outW]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW</td>
     </tr>
     <tr>
       <td>deform_out</td>
       <td>输出</td>
       <td>表示计算的输出张量。对应公式中的`deformOut`。数据类型、数据格式与`x`保持一致。shape为[N, outH * K_H, outW * K_W, inC]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
-      <td>ND</td>
+      <td>ND、NCHW</td>
     </tr>
   </tbody></table>
 

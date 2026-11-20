@@ -46,7 +46,6 @@ constexpr int64_t DEFAULT_KN = 0;
 constexpr int64_t PAD_VALUE = 0;
 constexpr int64_t DILATION_VALUE = 1;
 constexpr int64_t DEFAULT_OFFSET_X = 0;
-constexpr int64_t ENABLE_FLOAT32_EXECUTION = 0x20;
 constexpr int64_t INVALID_SHAPE_RANGE = 0;
 constexpr int32_t INPUT_OFFSETS_INDEX = 2;
 constexpr int32_t DFM_OFFSET_INPUT_X_INDEX = 0;

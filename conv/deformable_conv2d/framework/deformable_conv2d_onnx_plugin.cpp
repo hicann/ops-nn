@@ -9,7 +9,7 @@
  */
 
 #include "onnx_common.h"
-#include "op_nn_proto_extend.h"
+#include "conv/deformable_conv2d/op_graph/deformable_conv2d_proto.h"
 
 using namespace ge;
 

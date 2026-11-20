@@ -92,21 +92,21 @@ English | [简体中文](./README.md)
       <td>Input</td>
       <td>Represents the original input data, corresponding to `input` in the formula. The shape is [N, inH, inW, inC], where inH * inW cannot exceed 2147483647.</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND</td>
+      <td>ND, NCHW</td>
       </tr>
     <tr>
       <td>weight</td>
       <td>Input</td>
       <td>Represents the 4D tensor of learnable filters, corresponding to `weight` in the formula. The data type and data format are the same as those of input parameter `x`. The shape is [outC, K_H, K_W, inC/groups].</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND</td>
+      <td>ND, NCHW</td>
     </tr>
     <tr>
       <td>offsets</td>
       <td>Input</td>
       <td>Represents the 4D tensor of x-y coordinate offsets and the mask, corresponding to `offset` in the formula. The data type and data format are the same as those of input parameter `x`. When `modulated` is true, the shape is [N, outH, outW, 3 * deformable_groups * K_H * K_W]; when `modulated` is false, the shape is [N, outH, outW, 2 * deformable_groups * K_H * K_W].</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND</td>
+      <td>ND, NCHW</td>
     </tr>
     <tr>
       <td>bias</td>
@@ -169,14 +169,14 @@ English | [简体中文](./README.md)
       <td>Output</td>
       <td>Represents the computed output tensor, corresponding to `out` in the formula. The data type and data format are the same as those of `x`. The shape is [N, outH, outC, outW].</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND</td>
+      <td>ND, NCHW</td>
     </tr>
     <tr>
       <td>deform_out</td>
       <td>Output</td>
       <td>Represents the computed output tensor, corresponding to `deformOut` in the formula. The data type and data format are the same as those of `x`. The shape is [N, outH * K_H, outW * K_W, inC].</td>
       <td>FLOAT32, FLOAT16, BFLOAT16</td>
-      <td>ND</td>
+      <td>ND, NCHW</td>
     </tr>
   </tbody></table>
 
