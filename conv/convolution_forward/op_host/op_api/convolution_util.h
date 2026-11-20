@@ -22,6 +22,7 @@
 #include "opdev/platform.h"
 #include "opdev/format_utils.h"
 #include "opdev/fast_vector.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -32,6 +33,7 @@ const bool NAMESPACE_PLACEHOLDER = true;
 namespace op {
 op::FVector<int64_t> ToFVector(const op::Shape& shapeT);
 std::string FVectorToString(const op::FVector<int64_t>& vec);
+const char* NpuArchToString(NpuArch npuArch);
 } // namespace op
 
 namespace ConvolutionUtil {

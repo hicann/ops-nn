@@ -32,7 +32,7 @@ using namespace test_conv_fusion_framework;
 namespace {
 const std::string PAD_TYPE = "Pad";
 const std::string PADV3_TYPE = "PadV3";
-const std::string SOC_ASCEND950 = "Ascend950";
+const std::string SOC_DAV3510 = "dav3510";
 const std::string SOC_MC62 = "MC62";
 const std::vector<int64_t> PADDINGS_CONST_DIMS = {4, 2};
 const std::vector<int64_t> UNKNOWN_PAD_OUT_SHAPE = {-1, 230, 230, 3};
@@ -101,12 +101,13 @@ protected:
 
     static void TearDownTestCase() {}
 
-    void SetupSoc(const std::string& shortSoc, bool supportDn2Nz = false)
+    void SetupSoc(const std::string& shortSoc, bool supportDn2Nz = false, int32_t archType = 3510)
     {
         PlatformInfo platformInfo;
         OptionalInfo optiInfo;
         optiInfo.soc_version = shortSoc;
         platformInfo.str_info.short_soc_version = shortSoc;
+        platformInfo.soc_info.arch_type = archType;
         if (supportDn2Nz) {
             platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_data_move_out2l1_dn2nz"] = {"f16,f32"};
         }
@@ -606,7 +607,7 @@ TEST_F(PadConv2dFusionPassTest, fusion_success)
 
     for (const auto& point : points) {
         SCOPED_TRACE(point.pointName);
-        SetupSoc(SOC_ASCEND950);
+        SetupSoc(SOC_DAV3510);
         PadConvOptions opt = point.makeOptions();
         opt.graphName = std::string("fusion_success_") + point.pointName;
         auto graph = BuildPadConvGraph(opt);
@@ -624,7 +625,7 @@ TEST_F(PadConv2dFusionPassTest, fusion_success)
 // ==========================================================================================
 TEST_F(PadConv2dFusionPassTest, conv_pads_accumulated)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "conv_pads_accumulated";
     opt.convPads = {1, 2, 3, 4};
@@ -642,7 +643,7 @@ TEST_F(PadConv2dFusionPassTest, conv_pads_accumulated)
 // ==========================================================================================
 TEST_F(PadConv2dFusionPassTest, same_padding_fused_pads)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "same_padding_fused_pads";
     opt.convPadding = "SAME";
@@ -662,7 +663,7 @@ TEST_F(PadConv2dFusionPassTest, same_padding_fused_pads)
 // ==========================================================================================
 TEST_F(PadConv2dFusionPassTest, same_upper_auto_pad_fused_pads)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "same_upper_auto_pad_fused_pads";
     opt.convAutoPad = "SAME_UPPER";
@@ -677,7 +678,7 @@ TEST_F(PadConv2dFusionPassTest, same_upper_auto_pad_fused_pads)
 
 TEST_F(PadConv2dFusionPassTest, same_lower_auto_pad_fused_pads)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "same_lower_auto_pad_fused_pads";
     opt.convAutoPad = "SAME_LOWER";
@@ -692,7 +693,7 @@ TEST_F(PadConv2dFusionPassTest, same_lower_auto_pad_fused_pads)
 
 TEST_F(PadConv2dFusionPassTest, auto_pad_overrides_padding)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "auto_pad_overrides_padding";
     opt.convPadding = "EXPLICIT";
@@ -708,7 +709,7 @@ TEST_F(PadConv2dFusionPassTest, auto_pad_overrides_padding)
 
 TEST_F(PadConv2dFusionPassTest, auto_pad_notset_uses_pads_attr)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "auto_pad_notset_uses_pads_attr";
     opt.convAutoPad = "NOTSET";
@@ -723,7 +724,7 @@ TEST_F(PadConv2dFusionPassTest, auto_pad_notset_uses_pads_attr)
 
 TEST_F(PadConv2dFusionPassTest, combined_pad_eq_255_success)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "combined_pad_eq_255";
     opt.paddings = {0, 0, 255, 0, 0, 0, 0, 0};
@@ -739,7 +740,7 @@ TEST_F(PadConv2dFusionPassTest, combined_pad_eq_255_success)
 // ==========================================================================================
 TEST_F(PadConv2dFusionPassTest, padding_attr_without_dn2nz)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "padding_attr_without_dn2nz";
     auto graph = BuildPadConvGraph(opt);
@@ -757,7 +758,7 @@ TEST_F(PadConv2dFusionPassTest, padding_attr_without_dn2nz)
 
 TEST_F(PadConv2dFusionPassTest, padding_attr_with_dn2nz)
 {
-    SetupSoc(SOC_ASCEND950, true);
+    SetupSoc(SOC_DAV3510, true);
     PadConvOptions opt;
     opt.graphName = "padding_attr_with_dn2nz";
     auto graph = BuildPadConvGraph(opt);
@@ -938,7 +939,7 @@ TEST_F(PadConv2dFusionPassTest, no_fusion)
 
     for (const auto& point : points) {
         SCOPED_TRACE(point.pointName);
-        SetupSoc(SOC_ASCEND950);
+        SetupSoc(SOC_DAV3510);
         PadConvOptions opt = point.makeOptions();
         opt.graphName = std::string("no_fusion_") + point.pointName;
         auto graph = BuildPadConvGraph(opt);
@@ -984,21 +985,21 @@ TEST_F(PadConv2dFusionPassTest, filter_h_less_than_pad_reject_on_mc62)
             opt.convOutShape = {1, 64, 112, 112};
         }
 
-        SetupSoc(SOC_MC62);
+        SetupSoc(SOC_MC62, false, 5102);
         auto rejectGraph = BuildPadConvGraph(opt);
         TestTotalPass(opt.graphName + "_mc62", rejectGraph, CONV_NOT_CHANGED);
         EXPECT_TRUE(GraphChecker::HasNode(rejectGraph, opt.padType));
 
-        SetupSoc(SOC_ASCEND950);
+        SetupSoc(SOC_DAV3510);
         auto successGraph = BuildPadConvGraph(opt);
-        TestTotalPass(opt.graphName + "_ascend950", successGraph, SUCCESS);
+        TestTotalPass(opt.graphName + "_dav3510", successGraph, SUCCESS);
         EXPECT_FALSE(GraphChecker::HasNode(successGraph, opt.padType));
     }
 }
 
 TEST_F(PadConv2dFusionPassTest, filter_nhwc_skip_h_check_on_mc62)
 {
-    SetupSoc(SOC_MC62);
+    SetupSoc(SOC_MC62, false, 5102);
     PadConvOptions opt;
     opt.graphName = "filter_nhwc_skip_h_check";
     opt.filterFmt = FORMAT_NHWC;
@@ -1012,7 +1013,7 @@ TEST_F(PadConv2dFusionPassTest, filter_nhwc_skip_h_check_on_mc62)
 
 TEST_F(PadConv2dFusionPassTest, filter_not_4d_reject_on_mc62)
 {
-    SetupSoc(SOC_MC62);
+    SetupSoc(SOC_MC62, false, 5102);
     PadConvOptions opt;
     opt.graphName = "filter_not_4d";
     opt.filterShape = {7, 7, 3};
@@ -1027,7 +1028,7 @@ TEST_F(PadConv2dFusionPassTest, filter_not_4d_reject_on_mc62)
 // ==========================================================================================
 TEST_F(PadConv2dFusionPassTest, backward_path_slice_removed_on_mc62)
 {
-    SetupSoc(SOC_MC62);
+    SetupSoc(SOC_MC62, false, 5102);
     PadConvOptions opt;
     opt.graphName = "backward_path_slice_removed";
     opt.withBackward = true;
@@ -1069,9 +1070,9 @@ TEST_F(PadConv2dFusionPassTest, backward_path_slice_removed_on_mc62)
     ExpectFusedCubeFmap(graph, "dw", opt.dataShape);
 }
 
-TEST_F(PadConv2dFusionPassTest, backward_path_reject_on_ascend950)
+TEST_F(PadConv2dFusionPassTest, backward_path_reject_on_dav3510)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     PadConvOptions opt;
     opt.graphName = "backward_path_reject";
     opt.withBackward = true;
@@ -1087,32 +1088,33 @@ TEST_F(PadConv2dFusionPassTest, backward_partial_and_ctrl)
     struct Point {
         const char* pointName;
         std::string soc;
+        int32_t archType;
         std::function<PadConvOptions()> makeOptions;
         Status expectRes;
         bool expectSliceRemain;
     } const points[] = {
-        {"dw_only_mc62", SOC_MC62,
+        {"dw_only_mc62", SOC_MC62, 5102,
          []() {
              PadConvOptions opt;
              opt.withDwOnly = true;
              return opt;
          },
          SUCCESS, false},
-        {"dw_only_ascend950", SOC_ASCEND950,
+        {"dw_only_dav3510", SOC_DAV3510, 3510,
          []() {
              PadConvOptions opt;
              opt.withDwOnly = true;
              return opt;
          },
          CONV_NOT_CHANGED, false},
-        {"bn_no_dx_mc62", SOC_MC62,
+        {"bn_no_dx_mc62", SOC_MC62, 5102,
          []() {
              PadConvOptions opt;
              opt.withBnNoDx = true;
              return opt;
          },
          SUCCESS, false},
-        {"dx_multi_consumer_mc62", SOC_MC62,
+        {"dx_multi_consumer_mc62", SOC_MC62, 5102,
          []() {
              PadConvOptions opt;
              opt.withBackward = true;
@@ -1120,7 +1122,7 @@ TEST_F(PadConv2dFusionPassTest, backward_partial_and_ctrl)
              return opt;
          },
          SUCCESS, true},
-        {"sliced_mc62", SOC_MC62,
+        {"sliced_mc62", SOC_MC62, 5102,
          []() {
              PadConvOptions opt;
              opt.withBackward = true;
@@ -1128,7 +1130,7 @@ TEST_F(PadConv2dFusionPassTest, backward_partial_and_ctrl)
              return opt;
          },
          SUCCESS, false},
-        {"ctrl_edge_to_dw_mc62", SOC_MC62,
+        {"ctrl_edge_to_dw_mc62", SOC_MC62, 5102,
          []() {
              PadConvOptions opt;
              opt.withDwOnly = true;
@@ -1136,7 +1138,7 @@ TEST_F(PadConv2dFusionPassTest, backward_partial_and_ctrl)
              return opt;
          },
          SUCCESS, false},
-        {"ctrl_edge_to_dx_mc62", SOC_MC62,
+        {"ctrl_edge_to_dx_mc62", SOC_MC62, 5102,
          []() {
              PadConvOptions opt;
              opt.withBackward = true;
@@ -1148,7 +1150,7 @@ TEST_F(PadConv2dFusionPassTest, backward_partial_and_ctrl)
 
     for (const auto& point : points) {
         SCOPED_TRACE(point.pointName);
-        SetupSoc(point.soc);
+        SetupSoc(point.soc, false, point.archType);
         PadConvOptions opt = point.makeOptions();
         opt.graphName = std::string("backward_partial_") + point.pointName;
         auto graph = BuildPadConvGraph(opt);
@@ -1178,7 +1180,7 @@ TEST_F(PadConv2dFusionPassTest, backward_partial_and_ctrl)
 // ==========================================================================================
 TEST_F(PadConv2dFusionPassTest, reentrant_two_structures)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     auto graph = BuildTwoPadConvGraph();
     TestTotalPass("reentrant_two_structures", graph, SUCCESS);
 
@@ -1190,7 +1192,7 @@ TEST_F(PadConv2dFusionPassTest, reentrant_two_structures)
 
 TEST_F(PadConv2dFusionPassTest, reentrant_cascade)
 {
-    SetupSoc(SOC_ASCEND950);
+    SetupSoc(SOC_DAV3510);
     auto graph = BuildCascadePadConvGraph();
     TestTotalPass("reentrant_cascade", graph, SUCCESS);
 

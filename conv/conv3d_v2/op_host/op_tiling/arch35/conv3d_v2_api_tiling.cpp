@@ -25,6 +25,7 @@
 #include "conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
 #include "../conv3d_api_tiling_utils.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_base.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace conv_tiling_algo_m;
 using namespace conv_tiling_algo_hw;
@@ -52,7 +53,7 @@ bool IsWeight5HDMode3D(NpuArch npuArch, uint64_t groups, ConvFormat weightFormat
     const uint64_t k0 = static_cast<uint64_t>(CUBE_MKN_MAP.GetMKN(weightDtype, optiling::conv_ops_tiling::MKN_K_IDX));
     const uint64_t c0 = k0 > WEIGHT_5HD_TRANS_CHN ? k0 : WEIGHT_5HD_TRANS_CHN;
     const uint64_t alignHwByte = AlignB(kernelHxkernelW, k0) * dtypeSize;
-    return (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) && groups == 1 &&
+    return (npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202) && groups == 1 &&
            weightFormat == ConvFormat::NCDHW && outputFormat == ConvFormat::NCDHW &&
            weightDtype != ConvDtype::FLOAT8_E4M3FN && kernelHxkernelW >= WEIGHT_5HD_MIN_HW &&
            orgCo > WEIGHT_5HD_MIN_CHANNEL && orgCi > WEIGHT_5HD_MIN_CHANNEL &&
@@ -162,7 +163,7 @@ void Conv3dTiling::Infer5hdShape()
 bool Conv3dTiling::CheckInputFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet;
-    if (platformInfo.npuArch == NpuArch::DAV_9201 || platformInfo.npuArch == NpuArch::DAV_9202) {
+    if (platformInfo.npuArch == Ops::Base::DAV_9201 || platformInfo.npuArch == Ops::Base::DAV_9202) {
         conv3dSupportFormatSet = {{ConvFormat::NCDHW, ConvFormat::NCDHW},
                                   {ConvFormat::NCDHW, ConvFormat::NDHWC},
                                   {ConvFormat::NDHWC, ConvFormat::DHWCN},
@@ -527,7 +528,7 @@ bool Conv3dTiling::CheckShape() { return CheckInputShape(); }
 bool Conv3dTiling::CheckFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet;
-    if (platformInfo.npuArch == NpuArch::DAV_9201) {
+    if (platformInfo.npuArch == Ops::Base::DAV_9201) {
         conv3dSupportFormatSet = {{ConvFormat::NCDHW, ConvFormat::NCDHW},
                                   {ConvFormat::NCDHW, ConvFormat::NDHWC},
                                   {ConvFormat::NDHWC, ConvFormat::DHWCN},
@@ -570,8 +571,8 @@ bool Conv3dTiling::CheckShapeBBModePhase1()
 
 bool Conv3dTiling::CheckSoc()
 {
-    if (this->platformInfo.npuArch != NpuArch::DAV_3510 && this->platformInfo.npuArch != NpuArch::DAV_9201 &&
-        this->platformInfo.npuArch != NpuArch::DAV_9202) {
+    if (this->platformInfo.npuArch != Ops::Base::DAV_3510 && this->platformInfo.npuArch != Ops::Base::DAV_9201 &&
+        this->platformInfo.npuArch != Ops::Base::DAV_9202) {
         OP_LOGE(nodeType, "current Soc Version does not support");
         return false;
     }

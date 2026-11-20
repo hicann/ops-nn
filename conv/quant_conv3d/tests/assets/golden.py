@@ -53,7 +53,7 @@ def simulate_hf32_precision(data):
 
 def process_formats(x, filter, input_formats):
     """
-    Process format conversion for Ascend 950PR/950DT and 960PR/960DT.
+    Process format.
 
     Constraints:
     - x supports: NCDHW, NDHWC
@@ -76,7 +76,7 @@ def process_formats(x, filter, input_formats):
 
 def process_output_format(out, output_format, input_format):
     """
-    Process output format conversion for Ascend 950PR/950DT.
+    Process output format.
 
     Constraints:
     - y supports: NCDHW, NDHWC

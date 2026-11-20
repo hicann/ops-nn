@@ -14,7 +14,7 @@
  *        pad 尺寸分支(2/4/6维)、2D量化卷积路径、dtype/scale 校验分支。
  *        与现有 test_aclnn_quant_convolution.cpp 互补，后者只覆盖常规合法组合。
  *        ND专属分支(round_mode/offset_x校验、DAV dtype矩阵、2D路径)放在 quant_convolution_nd_test，
- *        其用 stub 的 SocVersionManager 切到 ASCEND950(DAV_3510)使 IsSocSupportND 为真。
+ *        其用 stub 的 NpuArchManager 切到 DAV_3510 使 IsSocSupportND 为真。
  */
 
 #include <gtest/gtest.h>
@@ -27,6 +27,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 #include "opdev/platform.h"
 
@@ -54,15 +55,15 @@ public:
 
 // ND架构平台覆写fixture：UT的opdev平台是stub(tests/ut/op_api/stub/opdev/platform.cpp)，
 // 默认DAV_2201使IsSocSupportND为false，round_mode/offset_x校验、DAV dtype矩阵、2D量化卷积等分支不可达。
-// 用stub提供的RAII工具SocVersionManager切到ASCEND950(DAV_3510)，析构自动恢复。
+// 用stub提供的RAII工具NpuArchManager切到DAV_3510，析构自动恢复。
 class quant_convolution_nd_test : public testing::Test {
 public:
-    void SetUp() override { socVersionManager_ = std::make_unique<op::SocVersionManager>(SocVersion::ASCEND950); }
+    void SetUp() override { archManager_ = std::make_unique<op::NpuArchManager>(Ops::Base::DAV_3510); }
 
-    void TearDown() override { socVersionManager_.reset(); }
+    void TearDown() override { archManager_.reset(); }
 
 private:
-    std::unique_ptr<op::SocVersionManager> socVersionManager_;
+    std::unique_ptr<op::NpuArchManager> archManager_;
 };
 
 // round_mode：HIFLOAT8输出时必须为"round"，合法取值走通主路径

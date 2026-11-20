@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "conv2d_to_conv2dv2_fusion_pass.h"
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
@@ -32,13 +33,13 @@ constexpr uint32_t HWCN_C_IDX = 2;
 
 void Conv2dToConv2dV2FusionPass::InitMember()
 {
-    npuArch = NpuArch::DAV_RESV;
+    npuArch = Ops::Base::DAV_RESV;
     convDescInfo = ConvDescInfo();
 }
 
 bool Conv2dToConv2dV2FusionPass::MeetRequirements([[maybe_unused]] const GNode& convNode)
 {
-    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch, true),
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckArchList(SUPPORT_ARCH_LIST, npuArch, true),
                       OP_LOGD(convDescInfo.nodeNameStr, "Current soc not supported, no fusion."), return false);
 
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do Conv2dToConv2dV2FusionPass.");

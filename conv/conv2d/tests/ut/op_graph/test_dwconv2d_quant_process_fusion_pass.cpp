@@ -190,7 +190,7 @@ protected:
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_no_bias_success)
 {
     TestGraph builder("dwconv2d_quant_bias_optimize_no_bias_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE),
                          true)
@@ -262,7 +262,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_no_bias_
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_on_dn2nz_soc_success)
 {
     TestGraph builder("dwconv2d_quant_rollback_on_dn2nz_soc_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE),
                          true)
@@ -317,7 +317,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_on_dn2nz_soc_
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_with_bias_success)
 {
     TestGraph builder("dwconv2d_quant_bias_optimize_with_bias_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE),
                          true)
@@ -359,7 +359,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_with_bia
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_no_bias_success)
 {
     TestGraph builder("dwconv2d_quant_rollback_no_bias_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddDepthwiseConv2D(
@@ -420,7 +420,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_no_bias_succe
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_with_bias_success)
 {
     TestGraph builder("dwconv2d_quant_rollback_with_bias_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddDepthwiseConv2D(
@@ -468,7 +468,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_with_bias_suc
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_with_pad_success)
 {
     TestGraph builder("dwconv2d_quant_rollback_with_pad_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddNode(PadConfig::Basic("Pad", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), {})
@@ -516,7 +516,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_with_pad_succ
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_with_pad_success)
 {
     TestGraph builder("dwconv2d_quant_bias_optimize_with_pad_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE),
                          true)
@@ -569,7 +569,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_nhwc_suc
     std::vector<int64_t> fmapShape = {1, 8, 8, 20};
     std::vector<int64_t> filterShape = {8, 8, 20, 1};
     TestGraph builder("dwconv2d_quant_bias_optimize_nhwc_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NHWC, fmapShape), true)
                      .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("DepthwiseConv2D", DT_INT8, FORMAT_NHWC,
                                                                       fmapShape, filterShape, fmapShape),
@@ -610,7 +610,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_nd_filte
         .AddInput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE, "DepthwiseConv2D_x")
         .AddInput(DT_INT8, FORMAT_ND, FILTER_SHAPE_ROLLBACK, "DepthwiseConv2D_filter")
         .AddOutput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE, "y");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE),
                          true)
@@ -654,7 +654,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_bias_optimize_5d_filte
         .AddInput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE, "DepthwiseConv2D_x")
         .AddInput(DT_INT8, FORMAT_NCDHW, FILTER_SHAPE_5D, "DepthwiseConv2D_filter")
         .AddOutput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE, "y");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPTIMIZE),
                          true)
@@ -704,7 +704,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_no_fusion)
          [this]() {
              std::vector<int64_t> unknownFmap = {1, -1, 8, 8};
              TestGraph builder("dwconv2d_quant_no_fusion_unknown_shape");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddAscendQuant(AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, unknownFmap), true)
                  .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("DepthwiseConv2D", DT_INT8, FORMAT_NCHW, unknownFmap,
                                                                   FILTER_SHAPE_ROLLBACK, unknownFmap),
@@ -724,7 +724,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_no_fusion)
         {"no_dequant_consumer",
          [this]() {
              TestGraph builder("dwconv2d_quant_no_fusion_no_dequant_consumer");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddAscendQuant(AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK),
                                  true)
                  .AddDepthwiseConv2D(
@@ -746,7 +746,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_no_fusion)
         {"input_not_quant",
          [this]() {
              TestGraph builder("dwconv2d_quant_no_fusion_input_not_quant");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddData(DataConfig::Basic("Data", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                  .AddDepthwiseConv2D(
                      DepthwiseConv2DConfig::Basic("DepthwiseConv2D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
@@ -768,7 +768,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_no_fusion)
         {"pad_not_quant",
          [this]() {
              TestGraph builder("dwconv2d_quant_no_fusion_pad_not_quant");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddNode(ConstConfig::Basic("input_const", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), {})
                  .AddNode(PadConfig::Basic("Pad", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), {})
                  .AddDepthwiseConv2D(
@@ -809,7 +809,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_no_fusion)
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_multi_consumer_quant)
 {
     TestGraph builder("dwconv2d_quant_rollback_multi_consumer_quant");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddDepthwiseConv2D(
@@ -858,7 +858,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_multi_consume
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_multi_consumer_dequant)
 {
     TestGraph builder("dwconv2d_quant_rollback_multi_consumer_dequant");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddDepthwiseConv2D(
@@ -906,7 +906,7 @@ TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_multi_consume
 TEST_F(DWConv2DQuantProcessFusionPassTest, dwconv2d_quant_rollback_reentrant)
 {
     TestGraph builder("dwconv2d_quant_rollback_reentrant");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant1", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddDepthwiseConv2D(

@@ -19,6 +19,7 @@
 #include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "graph/gnode.h"
 #include "platform/soc_spec.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -45,11 +46,8 @@ const ge::AscendString NOTSET = "NOTSET";
 
 const std::string FUSION_NAME = "PadConv2dFusionPass";
 
-// Only DAV_3510 needs a dedicated branch, unlisted socs keep the original behavior as DAV_RESV.
-const std::map<std::string, NpuArch> SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
-                                                 {"Ascend350", NpuArch::DAV_3510},
-                                                 {"Ascend960DT", NpuArch::DAV_9201},
-                                                 {"Ascend960PR", NpuArch::DAV_9202}};
+// Only DAV_3510 needs a dedicated branch, unlisted archs keep the original behavior as DAV_RESV.
+const std::set<NpuArch> ARCH_LIST = {Ops::Base::DAV_3510, Ops::Base::DAV_9201, Ops::Base::DAV_9202};
 
 constexpr int32_t PADDINGS_INPUT_INDEX = 1;
 constexpr int32_t CONSTANT_VALUES_INPUT_INDEX = 2;

@@ -16,7 +16,7 @@
  *   - 输入：x[n,d,h,w,c]、filter[kd,kh,kw,c,co]
  *   - 输出：y[n,od,oh,ow,co]
  *
- * 目标平台：Ascend950（arch35）。
+ * 目标平台：DAV_3510（arch35）。
  */
 
 #include <iostream>

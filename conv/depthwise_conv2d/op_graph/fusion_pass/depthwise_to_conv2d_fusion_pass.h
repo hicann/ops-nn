@@ -19,6 +19,7 @@
 #include "ge/es_graph_builder.h"
 #include "ge/fusion/pass/decompose_pass.h"
 #include "platform/soc_spec.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -32,10 +33,7 @@ constexpr int32_t FILTER_CHANNEL_NCHW_INDEX = 1;
 constexpr int32_t FILTER_CHANNEL_NHWC_INDEX = 3;
 constexpr int32_t FILTER_CHANNEL_HWCN_INDEX = 2;
 
-const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
-                                                    {"Ascend350", NpuArch::DAV_3510},
-                                                    {"Ascend960DT", NpuArch::DAV_9201},
-                                                    {"Ascend960PR", NpuArch::DAV_9202}};
+const std::set<NpuArch> ND_ARCH_LIST = {Ops::Base::DAV_3510, Ops::Base::DAV_9201, Ops::Base::DAV_9202};
 const char* const PRIVATE_PADDING = "_padding";
 constexpr size_t PADS_ATTR_SIZE = 4;
 } // namespace DepthwiseToConv2dFusion
@@ -56,8 +54,8 @@ private:
     bool SetConv2dAttrs(ge::GNode& conv2dNode, const ge::GNode& depthwiseNode);
     bool UpdateConv2dDesc(ge::GNode& conv2dNode);
 
-    NpuArch npuArch = NpuArch::DAV_RESV;
-    bool isNdSoc = false;
+    NpuArch npuArch = Ops::Base::DAV_RESV;
+    bool isNdArch = false;
     bool hasPrivatePads = false;
     int64_t fmapChannel = 0;
     ConvFusionUtils::ConvDescInfo convDescInfo = {};

@@ -20,6 +20,7 @@
 #include "../../../common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
 #include "ge/fusion/pass/decompose_pass.h"
 #include "platform/soc_spec.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -27,10 +28,7 @@ namespace Conv {
 namespace DfmConv2dFusion {
 const std::string FUSION_NAME = "ADeformableConv2dPass";
 
-const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
-                                                    {"Ascend350", NpuArch::DAV_3510},
-                                                    {"Ascend960DT", NpuArch::DAV_9201},
-                                                    {"Ascend960PR", NpuArch::DAV_9202}};
+const std::set<NpuArch> ND_ARCH_LIST = {Ops::Base::DAV_3510, Ops::Base::DAV_9201, Ops::Base::DAV_9202};
 
 const ge::AscendString DFM_CONV2D = "DeformableConv2D";
 const ge::AscendString DFM_GROUPS = "deformable_groups";
@@ -95,8 +93,8 @@ private:
     int64_t dfmGroups = DfmConv2dFusion::DEFAULT_DFM_GROUPS;
     int64_t kn = DfmConv2dFusion::DEFAULT_KN;
     bool modulated = true;
-    bool isDav3510 = false;
-    NpuArch npuArch = NpuArch::DAV_RESV;
+    bool isNdArch = false;
+    NpuArch npuArch = Ops::Base::DAV_RESV;
 };
 
 } // namespace Conv

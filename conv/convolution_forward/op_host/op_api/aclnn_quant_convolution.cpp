@@ -25,6 +25,7 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "op_common/log/log.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "opdev/tensor_view_utils.h"
 
 #include "aclnn/aclnn_base.h"
@@ -149,31 +150,17 @@ static inline ge::AscendString ToString(const std::int64_t value)
 
 namespace {
 
-static const char* NpuArchToString(NpuArch npuArch)
-{
-    switch (npuArch) {
-        case NpuArch::DAV_3510:
-            return "DAV_3510";
-        case NpuArch::DAV_9201:
-            return "DAV_9201";
-        case NpuArch::DAV_9202:
-            return "DAV_9202";
-        default:
-            return "UNKNOWN";
-    }
-}
-
 static bool IsSocSupportND()
 {
-    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 ||
-           GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
-           GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202;
+    return GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_3510 ||
+           GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9201 ||
+           GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9202;
 }
 
 static bool IsSocNeedTranspose()
 {
-    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9201 ||
-           GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_9202;
+    return GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9201 ||
+           GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_9202;
 }
 
 } // namespace
@@ -1204,22 +1191,22 @@ public:
     ~TemporaryLimitChecker() override = default;
     aclnnStatus Check(QuantConvEngine& engine) override
     {
-        SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        if (IsSocSupportND()) {
-            OP_LOGD("Get Current NpuArch: %s.", NpuArchToString(GetCurrentPlatformInfo().GetCurNpuArch()));
-            return ACLNN_SUCCESS;
-        }
-        switch (socVersion) {
-            case SocVersion::ASCEND910B:
+        auto curNpuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+        switch (curNpuArch) {
+            case Ops::Base::DAV_2201:
                 break;
-            case SocVersion::ASCEND910_93:
+            case Ops::Base::DAV_3510:
+            case Ops::Base::DAV_9201:
+            case Ops::Base::DAV_9202:
+                OP_LOGD("Get Current NpuArch: %s.", NpuArchToString(curNpuArch));
                 break;
             default:
-                OP_LOGE_FOR_INVALID_VALUE(
-                    engine.entityName, "SoC version", std::string(op::ToString(socVersion).GetString()),
-                    "one of {" + std::string(op::ToString(SocVersion::ASCEND910B).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND910_93).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND950).GetString()) + "}");
+                OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "NpuArch",
+                                          NpuArchToString(GetCurrentPlatformInfo().GetCurNpuArch()),
+                                          "one of {" + std::string(NpuArchToString(Ops::Base::DAV_2201)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_3510)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_9201)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_9202)) + "}");
                 return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -1624,8 +1611,7 @@ std::shared_ptr<QuantConvolutionImpl> CreateQuantConvolutionImpl(
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                     entityName, "x", std::to_string(inputDim),
                     "The shape dim of this parameter can be " + std::to_string(QUANT_CONV_2D_DIM_SIZE) +
-                        " only when the SoC version is " +
-                        std::string(op::ToString(SocVersion::ASCEND950).GetString()));
+                        " only when NpuArch is " + std::string(NpuArchToString(Ops::Base::DAV_3510)));
                 return nullptr;
             }
 

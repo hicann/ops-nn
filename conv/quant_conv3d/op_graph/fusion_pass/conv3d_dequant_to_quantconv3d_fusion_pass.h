@@ -19,6 +19,7 @@
 #include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "platform/soc_spec.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -29,10 +30,7 @@ const ge::AscendString RELU_FLAG = "relu_flag";
 const ge::AscendString SQRT_MODE = "sqrt_mode";
 const ge::AscendString RINT = "rint";
 
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {
-    {"Ascend950", NpuArch::DAV_3510},
-    {"Ascend350", NpuArch::DAV_3510},
-};
+const std::set<NpuArch> SUPPORT_ARCH_LIST = {Ops::Base::DAV_3510};
 const std::string FUSION_NAME = "Conv3DDequantToQuantConv3DFusionPass";
 
 constexpr int32_t FUSION_LIST_LENGTH = 2;

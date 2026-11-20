@@ -13,40 +13,39 @@
  * \brief
  */
 
-#include <cstring>
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2FmapDataType = {
-    {"ascend950",
+    {"dav3510",
      {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2WeightDataType = {
-    {"ascend950",
+    {"dav3510",
      {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2BiasDataType = {
-    {"ascend950",
-     {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
+    {"dav3510", {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2OffsetWDataType = {
-    {"ascend950", {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}};
+    {"dav3510", {ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8, ge::DT_INT8}}};
 static const std::map<std::string, std::vector<ge::DataType>> conv2dv2OutputDataType = {
-    {"ascend950",
+    {"dav3510",
      {ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_HIFLOAT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2FmapFormat = {
-    {"ascend950",
+    {"dav3510",
      {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
       ge::FORMAT_NHWC}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2WeightFormat = {
-    {"ascend950",
+    {"dav3510",
      {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_HWCN, ge::FORMAT_HWCN,
       ge::FORMAT_HWCN}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2BiasFormat = {
-    {"ascend950",
+    {"dav3510",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2OffsetWFormat = {
-    {"ascend950",
+    {"dav3510",
      {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}}};
 static const std::map<std::string, std::vector<ge::Format>> conv2dV2OutputFormat = {
-    {"ascend950",
+    {"dav3510",
      {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC,
       ge::FORMAT_NHWC}}};
 
@@ -100,15 +99,15 @@ public:
             .ExtendCfgInfo("opInterface.value", "conv2dv2")
             .ExtendCfgInfo("jitCompile.flag", "false");
 
-        SetAscendConfig(aicoreConfig, "ascend950");
-        SetAscendConfig(aicoreConfig, "ascend950", "ascend350");
-        SetAscendConfig(aicoreConfig, "ascend950", "ascend960dt");
-        SetAscendConfig(aicoreConfig, "ascend950", "ascend960pr");
+        SetArchConfigInputs(aicoreConfig, "dav3510");
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicoreConfig);
         SetAscendConfig5162();
     }
 
 private:
-    void SetAscendConfig(OpAICoreConfig& aicoreConfig, const char* version, const char* dst_version = "default")
+    void SetArchConfigInputs(OpAICoreConfig& aicoreConfig, const char* version)
     {
         aicoreConfig.Input("x")
             .ParamType(REQUIRED)
@@ -135,12 +134,6 @@ private:
             .DataType(conv2dv2OutputDataType.find(version)->second)
             .Format(conv2dV2OutputFormat.find(version)->second)
             .UnknownShapeFormat(conv2dV2OutputFormat.find(version)->second);
-
-        if (strcmp(dst_version, "default") != 0) {
-            this->AICore().AddConfig(dst_version, aicoreConfig);
-        } else {
-            this->AICore().AddConfig(version, aicoreConfig);
-        }
     }
 
     void SetAscendConfig5162()

@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "conv3d_dequant_to_quantconv3d_fusion_pass.h"
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
@@ -32,14 +33,14 @@ constexpr uint32_t DHWCN_C_IDX = 3;
 
 void Conv3DDequantToQuantConv3DFusionPass::InitMember()
 {
-    npuArch = NpuArch::DAV_RESV;
+    npuArch = Ops::Base::DAV_RESV;
     convDescInfo = ConvDescInfo();
     postCubeNode = nullptr;
 }
 
 bool Conv3DDequantToQuantConv3DFusionPass::MeetRequirements(const GNode& convNode)
 {
-    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch),
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckArchList(SUPPORT_ARCH_LIST, npuArch),
                       OP_LOGD(FUSION_NAME, "Current soc not supported, no fusion."), return false);
 
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do Conv3DDequantToQuantConv3DFusionPass.");

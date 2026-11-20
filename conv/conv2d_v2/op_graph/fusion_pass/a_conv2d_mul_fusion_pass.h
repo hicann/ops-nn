@@ -19,6 +19,7 @@
 #include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "graph/gnode.h"
 #include "platform/soc_spec.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -39,10 +40,7 @@ constexpr size_t SINGLE_CONSUMER_CNT = 1;
 const std::string FILTER_MUL_NAME_SUFFIX = "_filter";
 const std::string BIAS_MUL_NAME_SUFFIX = "_bias";
 
-const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
-                                                    {"Ascend350", NpuArch::DAV_3510},
-                                                    {"Ascend960DT", NpuArch::DAV_9201},
-                                                    {"Ascend960PR", NpuArch::DAV_9202}};
+const std::set<NpuArch> ND_ARCH_LIST = {Ops::Base::DAV_3510, Ops::Base::DAV_9201, Ops::Base::DAV_9202};
 
 } // namespace AConv2dMulFusionConsts
 
@@ -74,8 +72,8 @@ private:
     ge::GNodePtr biasNode = nullptr;
     int32_t mulNonConstInputIdx = -1;
     int32_t mulConstInputIdx = -1;
-    bool isDav3510 = false;
-    NpuArch npuArch = NpuArch::DAV_RESV;
+    bool isNdArch = false;
+    NpuArch npuArch = Ops::Base::DAV_RESV;
     std::vector<ge::GNode> insertedMulNodes;
 };
 

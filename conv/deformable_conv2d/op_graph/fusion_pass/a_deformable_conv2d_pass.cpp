@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "a_deformable_conv2d_pass.h"
 
 #include "es_nn_ops.h"
@@ -51,8 +52,8 @@ void ADeformableConv2dPass::InitMember()
     dfmGroups = DEFAULT_DFM_GROUPS;
     kn = DEFAULT_KN;
     modulated = true;
-    isDav3510 = false;
-    npuArch = NpuArch::DAV_RESV;
+    isNdArch = false;
+    npuArch = Ops::Base::DAV_RESV;
 }
 
 bool ADeformableConv2dPass::GetDfmDescInfo(const GNode& convNode)
@@ -200,7 +201,7 @@ bool ADeformableConv2dPass::MeetRequirements(const GNode& convNode)
                       OP_LOGW(FUSION_NAME, "Get node name failed."), return false);
     convDescInfo.nodeNameStr = convDescInfo.nodeName.GetString();
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do ADeformableConv2dPass.");
-    isDav3510 = ConvFusionUtilsPass::CheckSocList(ND_SOC_LIST, npuArch);
+    isNdArch = ConvFusionUtilsPass::CheckArchList(ND_ARCH_LIST, npuArch);
 
     size_t inSize = convNode.GetInputsSize();
     FUSION_PASS_CHECK(inSize != INPUT_COUNT_WITHOUT_BIAS && inSize != INPUT_COUNT_WITH_BIAS,
@@ -253,12 +254,13 @@ bool ADeformableConv2dPass::SetConv2dAttrs(GNode& conv2dNode)
     FUSION_PASS_CHECK(conv2dNode.SetAttr(DATA_FORMAT, baseAttrs.dataFormat) != GRAPH_SUCCESS,
                       OP_LOGE(FUSION_NAME, "%s set data_format failed.", convDescInfo.nodeNameStr.c_str()),
                       return false);
-    if (isDav3510) {
+    if (isNdArch) {
         int64_t offsetX = DEFAULT_OFFSET_X;
         FUSION_PASS_CHECK(conv2dNode.SetAttr(OFFSET_X, offsetX) != GRAPH_SUCCESS,
                           OP_LOGE(FUSION_NAME, "%s set offset_x failed.", convDescInfo.nodeNameStr.c_str()),
                           return false);
     }
+
     return true;
 }
 

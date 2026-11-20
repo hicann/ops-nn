@@ -76,7 +76,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_f
         {"basic",
          [this]() {
              TestGraph builder("conv3d_dequant_fusion_success");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D"))
                  .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
                  .Connect("Conv3D", 0, "AscendDequant", 0)
@@ -86,7 +86,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_f
         {"ndhwc",
          [this]() {
              TestGraph builder("conv3d_dequant_fusion_success_nhwc");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NDHWC))
                  .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NDHWC))
                  .Connect("Conv3D", 0, "AscendDequant", 0)
@@ -96,7 +96,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_f
         {"bias",
          [this]() {
              TestGraph builder("conv3d_bias_dequant_fusion_success");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D").WithBias())
                  .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
                  .Connect("Conv3D", 0, "AscendDequant", 0)
@@ -128,7 +128,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_n
              TestGraph builder("conv3d_dequant_no_fusion_sqrt_mode_true");
              AscendDequantConfig dequantCfg = AscendDequantConfig::Basic("AscendDequant");
              dequantCfg.SetAttr("sqrt_mode", true);
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D"))
                  .AddAscendDequant(dequantCfg)
                  .Connect("Conv3D", 0, "AscendDequant", 0)
@@ -140,7 +140,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_n
              TestGraph builder("conv3d_dequant_no_fusion_relu_flag_true");
              AscendDequantConfig dequantCfg = AscendDequantConfig::Basic("AscendDequant");
              dequantCfg.SetAttr("relu_flag", true);
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D"))
                  .AddAscendDequant(dequantCfg)
                  .Connect("Conv3D", 0, "AscendDequant", 0)
@@ -150,7 +150,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_n
         {"multi_output",
          [this]() {
              TestGraph builder("conv3d_dequant_requant_no_fusion_multi_output");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D"))
                  .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
                  .AddAscendRequant(AscendRequantConfig::Basic("AscendRequant"))
@@ -182,7 +182,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
         {"complex_chain",
          [](Conv3DDequantToQuantConv3DFusionPassTest& self) {
              TestGraph builder("conv3d_complexity_fusion_success");
-             auto graph = builder.SetSocAscend950()
+             auto graph = builder.SetSocDav3510()
                               .AddConv3D(Conv3DConfig::Basic("Conv3D1"))
                               .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant1"))
                               .AddRelu(ReluConfig::Basic("Relu"))
@@ -228,7 +228,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_a
              TestGraph builder("quantconv3d_fused_op_impl_mode_enum_is_default_0x1");
              Conv3DConfig convCfg = Conv3DConfig::Basic("Conv3D");
              convCfg.SetAttr("_op_impl_mode_enum", int64_t(0x40));
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(convCfg)
                  .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
                  .Connect("Conv3D", 0, "AscendDequant", 0)
@@ -268,7 +268,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
         {"ncdhw_fmap_ncdhw_filter_derive",
          []() {
              TestGraph builder("groups_ncdhw");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 64, 16, 56, 56}, {4, 16, 3, 3, 3},
                                                 {1, 4, 14, 54, 54}))
                  .AddAscendDequant(
@@ -281,7 +281,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
         {"ndhwc_fmap_dhwcn_filter_derive",
          []() {
              TestGraph builder("groups_ndhwc_dhwcn");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NDHWC, {1, 16, 56, 56, 64}, {3, 3, 3, 16, 4},
                                                 {1, 14, 54, 54, 4}))
                  .AddAscendDequant(
@@ -294,7 +294,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
         {"fmap_c_equals_filter_cin_keeps_default",
          []() {
              TestGraph builder("groups_c_equal");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 16, 16, 56, 56}, {4, 16, 3, 3, 3},
                                                 {1, 4, 14, 54, 54}))
                  .AddAscendDequant(
@@ -307,7 +307,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
         {"fmap_c_less_filter_cin_keeps_default",
          []() {
              TestGraph builder("groups_c_less");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 8, 16, 56, 56}, {4, 16, 3, 3, 3},
                                                 {1, 4, 14, 54, 54}))
                  .AddAscendDequant(
@@ -323,7 +323,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
              Conv3DConfig convCfg = Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 64, 16, 56, 56},
                                                         {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54});
              convCfg.SetAttr("groups", int64_t(4));
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(convCfg)
                  .AddAscendDequant(
                      AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {1, 4, 14, 54, 54}))
@@ -338,7 +338,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
              Conv3DConfig convCfg = Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 64, 16, 56, 56},
                                                         {4, 16, 3, 3, 3}, {1, 4, 14, 54, 54});
              convCfg.SetAttr("groups", int64_t(2));
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(convCfg)
                  .AddAscendDequant(
                      AscendDequantConfig::Basic("AscendDequant", DT_FLOAT16, FORMAT_NCDHW, {1, 4, 14, 54, 54}))
@@ -350,7 +350,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
         {"non_divisible_keeps_default",
          []() {
              TestGraph builder("groups_non_divisible");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {1, 63, 16, 56, 56}, {4, 16, 3, 3, 3},
                                                 {1, 4, 14, 54, 54}))
                  .AddAscendDequant(
@@ -363,7 +363,7 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_dequant_to_quantconv3d_g
         {"dynamic_shape_keeps_default",
          []() {
              TestGraph builder("groups_dynamic");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCDHW, {-1, -1, -1, -1, -1},
                                                 {-1, -1, -1, -1, -1}, {-1, -1, -1, -1, -1}))
                  .AddAscendDequant(

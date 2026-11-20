@@ -286,7 +286,7 @@ protected:
         BiasAddConfig biasaddCfg = BiasAddConfig::Basic("BiasAdd", convDtype, convFormat, squeezeOutputShape, biasDtype,
                                                         biasShape);
 
-        return builder.SetSocAscend950()
+        return builder.SetSocDav3510()
             .AddConv2D(convCfg)
             .AddNode(squeezeCfg)
             .AddNode(biasaddCfg, {1})
@@ -329,7 +329,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_conv_with_bias)
 {
     TestGraph builder("fusion_success_conv_with_bias");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16).WithBias())
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})
@@ -348,7 +348,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_conv_with_bias)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, reentrant_two_chains)
 {
     TestGraph builder("reentrant_two_chains");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D_0", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(
                          SqueezeConfig::Basic("Squeeze_0", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
@@ -376,7 +376,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, reentrant_two_chains)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_bias_not_1d)
 {
     TestGraph builder("no_fusion_bias_not_1d");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(
@@ -398,7 +398,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_bias_not_1d)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_training_mode)
 {
     TestGraph builder("no_fusion_training_mode");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(VariableConfig::Basic("Variable_bias", DT_FLOAT16, {3}))
@@ -419,7 +419,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_training_mode)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_unknown_shape)
 {
     TestGraph builder("no_fusion_unknown_shape");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})
@@ -452,7 +452,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_wrong_topology)
         {"squeeze_input_not_conv",
          [this]() {
              TestGraph builder("no_fusion_squeeze_input_not_conv");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16))
                  .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                  .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})
@@ -464,7 +464,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_wrong_topology)
         {"squeeze_output_not_biasadd",
          [this]() {
              TestGraph builder("no_fusion_squeeze_output_not_biasadd");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                  .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                  .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}))
@@ -512,7 +512,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, attr_and_desc_preserved)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_bias_unknown_shape)
 {
     TestGraph builder("no_fusion_bias_unknown_shape");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}, DT_FLOAT16, {-1}),
@@ -532,7 +532,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_bias_unknown_shape)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_biasadd_multiple_consumers)
 {
     TestGraph builder("fusion_success_biasadd_multiple_consumers");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})
@@ -560,7 +560,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_biasadd_multiple_consu
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_squeeze_other_consumer)
 {
     TestGraph builder("fusion_success_squeeze_other_consumer");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})
@@ -603,7 +603,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_shape_verified)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_nhwc_biasadd_format)
 {
     TestGraph builder("fusion_success_nhwc_biasadd_format");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NHWC))
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NHWC, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(
@@ -630,7 +630,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_nhwc_biasadd_format)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_biasadd_input_index_swapped)
 {
     TestGraph builder("no_fusion_biasadd_input_index_swapped");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddData(DataConfig::Basic("Data_x", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}))
@@ -653,7 +653,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_biasadd_2d_data)
     std::vector<int64_t> convOutputShape = {1, 1, 8, 8};
     std::vector<int64_t> squeezeOutputShape = {8, 8};
     TestGraph builder("fusion_success_biasadd_2d_data");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 16, 8, 8},
                                                     {1, 16, 3, 3}, convOutputShape))
                      .AddNode(
@@ -683,7 +683,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_biasadd_4d_data)
     std::vector<int64_t> convOutputShape = {1, 3, 8, 8};
     std::vector<int64_t> squeezeOutputShape = {1, 3, 8, 8};
     TestGraph builder("fusion_success_biasadd_4d_data");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 16, 8, 8},
                                                     {3, 16, 3, 3}, convOutputShape))
                      .AddNode(
@@ -709,7 +709,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_biasadd_4d_data)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_conv_input_from_variable)
 {
     TestGraph builder("fusion_success_conv_input_from_variable");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddNode(VariableConfig::Basic("Variable_x", DT_FLOAT16, {1, 16, 244, 244}), {0})
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 16, 244, 244},
                                                     {3, 16, 3, 3}, {1, 3, 244, 244}),
@@ -736,7 +736,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_squeeze_no_axis_attr)
     squeezeCfg.listIntAttrs.clear();
 
     TestGraph builder("fusion_success_squeeze_no_axis_attr");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(squeezeCfg)
                      .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})
@@ -764,7 +764,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_squeeze_axis_and_squee
                                    .WithAxis({0});
     squeezeCfg.SetAttr("squeeze_dims", std::vector<int64_t>{0});
 
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                      .AddNode(squeezeCfg)
                      .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})
@@ -794,7 +794,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_squeeze_axis_and_squee
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, reentrant_heterogeneous_dtypes)
 {
     TestGraph builder("reentrant_heterogeneous_dtypes");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D_0", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 16, 8, 8},
                                                     {3, 16, 3, 3}, {1, 3, 8, 8}))
                      .AddNode(SqueezeConfig::Basic("Squeeze_0", DT_FLOAT16, FORMAT_NCHW, {1, 3, 8, 8}, {3, 8, 8}))
@@ -828,7 +828,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_squeeze_input_not_conv2d_ty
         {"depthwise_conv2d",
          [this]() {
              TestGraph builder("no_fusion_depthwise_conv2d");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("DepthwiseConv2D", DT_FLOAT16, FORMAT_NCHW,
                                                                   {1, 3, 244, 244}, {3, 1, 1, 1}, {1, 3, 244, 244}))
                  .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
@@ -841,7 +841,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_squeeze_input_not_conv2d_ty
         {"avgpool",
          [this]() {
              TestGraph builder("no_fusion_avgpool");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddNode(AvgPoolConfig::Basic("AvgPool", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}), {0})
                  .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                  .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})
@@ -853,7 +853,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_squeeze_input_not_conv2d_ty
         {"fully_connected",
          [this]() {
              TestGraph builder("no_fusion_fully_connected");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddNode(FullyConnectedConfig::Basic("FullyConnected", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}),
                           {0, 1})
                  .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
@@ -881,7 +881,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_int8_dtype)
     std::vector<int64_t> convOutputShape = {1, 3, 244, 244};
     std::vector<int64_t> squeezeOutputShape = {3, 244, 244};
     TestGraph builder("fusion_success_int8_dtype");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32, FORMAT_NCHW, {1, 16, 244, 244},
                                                     {3, 16, 3, 3}, convOutputShape))
                      .AddNode(
@@ -912,7 +912,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_group_conv)
                                                filterShape, convOutputShape);
     convCfg.SetAttr("groups", groups);
     TestGraph builder("fusion_success_group_conv");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(convCfg)
                      .AddNode(
                          SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, convOutputShape, squeezeOutputShape))
@@ -938,7 +938,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_mixed_precision_cascad
     std::vector<int64_t> conv1OutShape = {1, 3, 8, 8};
     std::vector<int64_t> squeeze1OutShape = {3, 8, 8};
     TestGraph builder("fusion_success_mixed_precision_cascade");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D_0", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 16, 8, 8},
                                                     {3, 16, 3, 3}, conv0OutShape))
                      .AddNode(
@@ -999,7 +999,7 @@ TEST_F(Conv2DSqueezeBiasaddFusionPassTest, fusion_success_dtype_combinations)
 TEST_F(Conv2DSqueezeBiasaddFusionPassTest, no_fusion_squeeze_input_avgpool_v2)
 {
     TestGraph builder("no_fusion_squeeze_input_avgpool_v2");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddNode(AvgPoolV2Config::Basic("AvgPoolV2", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}), {0})
                      .AddNode(SqueezeConfig::Basic("Squeeze", DT_FLOAT16, FORMAT_NCHW, {1, 3, 244, 244}, {3, 244, 244}))
                      .AddNode(BiasAddConfig::Basic("BiasAdd", DT_FLOAT16, FORMAT_NCHW, {3, 244, 244}), {1})

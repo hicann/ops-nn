@@ -13,6 +13,7 @@
  * \brief UT for conv_base_utils.h and cube_tiling.h
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h>
 #include <map>
 #include <string>
@@ -53,7 +54,7 @@ TEST(ConvBaseUtilsTest, ConvTilingParseInfoDefaults)
     EXPECT_EQ(info.l2Rate, 0u);
     EXPECT_TRUE(info.socVersion.empty());
     EXPECT_TRUE(info.shortSocVersion.empty());
-    EXPECT_EQ(info.npuArch, NpuArch::DAV_RESV);
+    EXPECT_EQ(info.npuArch, Ops::Base::DAV_RESV);
     EXPECT_EQ(info.aivNum, 0u);
     EXPECT_EQ(info.fbSize, 0u);
     EXPECT_FALSE(info.isCubeVectorFuse);
@@ -65,14 +66,14 @@ TEST(ConvBaseUtilsTest, ConvTilingParseInfoOperatorAssign)
     src.aicoreNum = 32;
     src.l1Size = 524288;
     src.socVersion = "ascend910b";
-    src.npuArch = NpuArch::DAV_3510;
+    src.npuArch = Ops::Base::DAV_3510;
     src.isCubeVectorFuse = true;
     ConvTilingParseInfo dst;
     dst.operator=(&src);
     EXPECT_EQ(dst.aicoreNum, 32u);
     EXPECT_EQ(dst.l1Size, 524288u);
     EXPECT_EQ(dst.socVersion, "ascend910b");
-    EXPECT_EQ(dst.npuArch, NpuArch::DAV_3510);
+    EXPECT_EQ(dst.npuArch, Ops::Base::DAV_3510);
     EXPECT_TRUE(dst.isCubeVectorFuse);
 }
 
@@ -212,11 +213,11 @@ TEST(ConvBaseUtilsTest, ConvTilingParseInfoIsCubeVectorFuseOperatorAssign)
 {
     ConvTilingParseInfo src;
     src.isCubeVectorFuse = true;
-    src.npuArch = NpuArch::DAV_3510;
+    src.npuArch = Ops::Base::DAV_3510;
     ConvTilingParseInfo dst;
     dst.operator=(&src);
     EXPECT_TRUE(dst.isCubeVectorFuse);
-    EXPECT_EQ(dst.npuArch, NpuArch::DAV_3510);
+    EXPECT_EQ(dst.npuArch, Ops::Base::DAV_3510);
 
     src.isCubeVectorFuse = false;
     dst.operator=(&src);
@@ -230,7 +231,7 @@ TEST(ConvBaseUtilsTest, PlatformInfoIsCubeVectorFuseDefault)
 {
     conv_tiling::PlatformInfo info;
     EXPECT_FALSE(info.isCubeVectorFuse);
-    EXPECT_EQ(info.npuArch, NpuArch::DAV_RESV);
+    EXPECT_EQ(info.npuArch, Ops::Base::DAV_RESV);
 }
 
 // ============================================================================

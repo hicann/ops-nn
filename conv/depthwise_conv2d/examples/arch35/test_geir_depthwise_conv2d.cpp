@@ -18,7 +18,7 @@
  * 场景4: 负 stride → 期望编译失败（GE 拒绝负维度）
  * 场景5: INT8 InferDataType 验证 → 期望输出 dtype=INT32（验证量化类型推导）
  *
- * 目标平台：Ascend950（arch35）。
+ * 目标平台：DAV_3510（arch35）。
  */
 
 #include <iostream>

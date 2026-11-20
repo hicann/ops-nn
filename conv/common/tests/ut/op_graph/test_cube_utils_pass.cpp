@@ -47,10 +47,11 @@ protected:
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
-        platformInfo.str_info.short_soc_version = "Ascend950";
+        platformInfo.str_info.short_soc_version = "dav3510";
+        platformInfo.soc_info.arch_type = 3510;
         platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_data_move_out2l1_dn2nz"] = std::vector<std::string>();
-        optiCompilationInfo.soc_version = "Ascend950";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+        optiCompilationInfo.soc_version = "dav3510";
+        fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
         fe::PlatFormInfos platformInfos;
@@ -64,8 +65,8 @@ protected:
         std::map<std::string, std::string> PlatformRes;
         PlatformRes["AIC_version"] = "AIC-C310";
         platformInfos.SetPlatformRes("version", PlatformRes);
-        optiCompilationInfos.SetSocVersion("Ascend950");
-        fe::PlatformInfoManager::Instance().platform_infos_map_["Ascend950"] = platformInfos;
+        optiCompilationInfos.SetSocVersion("dav3510");
+        fe::PlatformInfoManager::Instance().platform_infos_map_["dav3510"] = platformInfos;
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfos);
     }
 
@@ -1622,9 +1623,10 @@ TEST_F(cube_utils_ut, DeleteToFusedNodeEdge_ValidPass)
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;
-    platformInfo.str_info.short_soc_version = "Ascend950";
-    optiCompilationInfo.soc_version = "Ascend950";
-    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    platformInfo.str_info.short_soc_version = "dav3510";
+    platformInfo.soc_info.arch_type = 3510;
+    optiCompilationInfo.soc_version = "dav3510";
+    fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
     PostCubeUtils post_cube_utils;

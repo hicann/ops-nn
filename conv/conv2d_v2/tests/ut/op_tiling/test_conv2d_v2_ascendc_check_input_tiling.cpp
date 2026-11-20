@@ -13,6 +13,7 @@
  * \brief UT for conv2d_v2_base_tiling_check_input.cpp
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h>
 #include <iostream>
 #include <map>
@@ -374,7 +375,7 @@ protected:
     void SetUp() override
     {
         compile_info_.aicoreNum = AIC_NUM;
-        compile_info_.npuArch = NpuArch::DAV_3510;
+        compile_info_.npuArch = Ops::Base::DAV_3510;
         tilingData_ = gert::TilingData::CreateCap(MEM_SIZE_4K);
         wsHolder_ = gert::ContinuousVector::Create<size_t>(MEM_SIZE_4K);
         ws_ = reinterpret_cast<gert::ContinuousVector*>(wsHolder_.get());

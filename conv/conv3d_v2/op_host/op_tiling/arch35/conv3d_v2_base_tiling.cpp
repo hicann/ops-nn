@@ -17,6 +17,7 @@
 #include <vector>
 #include <cstring>
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "common/op_host/op_tiling/conv_tiling_templates_registry.h"
 
 using namespace platform_ascendc;
@@ -24,9 +25,9 @@ using namespace optiling::conv_ops_tiling;
 
 namespace optiling {
 
-CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2, static_cast<int32_t>(NpuArch::DAV_3510), 0);
-CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2, static_cast<int32_t>(NpuArch::DAV_9201), 1);
-CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2, static_cast<int32_t>(NpuArch::DAV_9202), 2);
+CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2, static_cast<int32_t>(Ops::Base::DAV_3510), 0);
+CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2, static_cast<int32_t>(Ops::Base::DAV_9201), 1);
+CONV_REGISTER_TILING_TEMPLATE(Conv3DV2, Conv3dBaseTilingV2, static_cast<int32_t>(Ops::Base::DAV_9202), 2);
 
 namespace conv_ops_tiling {
 ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
@@ -34,7 +35,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetPlatformInfoInner()
     // Temporary Solution: aclnn use GetCompileInfo; others use PlatformInfo
     Conv3dTilingCache& tilingCache = Conv3dTilingCache::GetInstance();
     *opInfo_ = tilingCache.GetPlatFormInfo();
-    if (opInfo_->npuArch == NpuArch::DAV_RESV) {
+    if (opInfo_->npuArch == Ops::Base::DAV_RESV) {
         fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
         OPS_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
@@ -359,7 +360,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetWorkspaceSize()
     // 系统 workspace 大小从接口获取（等价于 MIN_WORKSPACE_SIZE，GetUserWorkspace 会在 kernel 侧偏移掉这块）
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     workspaces[0] = ascendcPlatform.GetLibApiWorkSpaceSize();
-    if ((opInfo_->npuArch == NpuArch::DAV_9201 || opInfo_->npuArch == NpuArch::DAV_9202) &&
+    if ((opInfo_->npuArch == Ops::Base::DAV_9201 || opInfo_->npuArch == Ops::Base::DAV_9202) &&
         tilingKeyPara_.weightUbTrans == WEIGHT_UB_TRANS_OPEN) {
         const gert::StorageShape* weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
         if (weightShapePtr != nullptr) {

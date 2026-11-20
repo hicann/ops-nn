@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h>
 
 #include "../../../op_host/op_tiling/conv2d_v2_tiling.h"
@@ -384,7 +385,7 @@ void Conv2DCase(Conv2DCaseInputParam inputParams)
     }
 
     PlatformInfo platformInfo;
-    platformInfo.npuArch = NpuArch::DAV_3510;
+    platformInfo.npuArch = Ops::Base::DAV_3510;
     platformInfo.l1Size = MEM_SIZE_512K;
     platformInfo.l0ASize = MEM_SIZE_64K;
     platformInfo.l0BSize = MEM_SIZE_64K;

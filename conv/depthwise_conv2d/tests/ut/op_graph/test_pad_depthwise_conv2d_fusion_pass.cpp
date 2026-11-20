@@ -50,9 +50,9 @@ protected:
 
     void SetSocMC62() { SocConfig::MC62().Apply(); }
 
-    void SetSocAscend950() { SocConfig::Ascend950().Apply(); }
+    void SetSocDav3510() { SocConfig::Dav3510().Apply(); }
 
-    void SetSocNonAscend950() { SocConfig("Ascend910B", "Ascend910B1").Apply(); }
+    void SetSocNonDav3510() { SocConfig("Ascend910B", "Ascend910B1", "split", 2201).Apply(); }
 
     void TestTotalPass(const std::string& passName, GraphPtr& graph, Status expectRes)
     {
@@ -320,7 +320,7 @@ TEST_F(PadDepthwiseConv2dFusionPassTest, fusion_success_nhwc)
 }
 
 // ==========================================================================================
-// No fusion: various reject cases on non-Ascend950 soc
+// No fusion: various reject cases on non-dav3510 soc
 // ==========================================================================================
 TEST_F(PadDepthwiseConv2dFusionPassTest, no_fusion)
 {
@@ -368,11 +368,11 @@ TEST_F(PadDepthwiseConv2dFusionPassTest, no_fusion)
 }
 
 // ==========================================================================================
-// filter <= pad: rejected on non-Ascend950, fused on Ascend950
+// filter <= pad: rejected on non-dav3510, fused on dav3510
 // ==========================================================================================
-TEST_F(PadDepthwiseConv2dFusionPassTest, filter_le_pad_reject_non_ascend950)
+TEST_F(PadDepthwiseConv2dFusionPassTest, filter_le_pad_reject_non_dav3510)
 {
-    SetSocNonAscend950();
+    SetSocNonDav3510();
     PadDwGraphOptions opt;
     // filter(NCHW) H = dim[2] = 1，paddingsT=1：filter H 真实 <= pad，非 950 平台应拒绝
     opt.inputShape = {1, 8, 32, 32};
@@ -383,11 +383,11 @@ TEST_F(PadDepthwiseConv2dFusionPassTest, filter_le_pad_reject_non_ascend950)
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Pad"));
 }
 
-TEST_F(PadDepthwiseConv2dFusionPassTest, filter_le_pad_fuse_on_ascend950)
+TEST_F(PadDepthwiseConv2dFusionPassTest, filter_le_pad_fuse_on_dav3510)
 {
-    SetSocAscend950();
+    SetSocDav3510();
     PadDwGraphOptions opt;
-    // 与 reject 用例同构图；Ascend950 跳过 CheckFilterVsPadding，因此 filter H <= pad 仍可融合
+    // 与 reject 用例同构图；dav3510 跳过 CheckFilterVsPadding，因此 filter H <= pad 仍可融合
     opt.inputShape = {1, 8, 32, 32};
     opt.filterShape = {3, 3, 1, 8};
     opt.padValues = {0, 0, 0, 0, 1, 0, 1, 1};

@@ -17,7 +17,7 @@ Based on extend_conv2d_def.cpp:
           scale0 (OPTIONAL), scale1 (OPTIONAL), relu_weight0 (OPTIONAL), relu_weight1 (OPTIONAL)
 - Outputs: y0 (REQUIRED), y1 (OPTIONAL)
 
-Format and DataType support (Ascend950 only):
+Format and DataType support (DAV_3510 only):
 - x: Format=NCHW/NHWC, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
 - filter: Format=NCHW/HWCN, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
 - bias: Format=ND, DataType=BF16/FLOAT16/FLOAT

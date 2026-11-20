@@ -29,6 +29,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "op_common/log/log.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
 
@@ -2090,35 +2091,34 @@ public:
         if (Ops::NN::AclnnUtil::IsRegbase()) {
             return ACLNN_SUCCESS;
         }
-        // 除了910A 910B 310P，其余暂不支持
-        SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        switch (socVersion) {
-            case SocVersion::ASCEND910:
-            case SocVersion::ASCEND910B:
-            case SocVersion::ASCEND910_93:
-            case SocVersion::ASCEND310P:
+        auto curNpuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+        switch (curNpuArch) {
+            case Ops::Base::DAV_2201:
                 break;
-            case SocVersion::ASCEND310B: {
+            case Ops::Base::DAV_3510:
+                break;
+            case Ops::Base::DAV_1001:
+                break;
+            case Ops::Base::DAV_2002:
+                break;
+            case Ops::Base::DAV_3002:
                 if (engine.params.transposed || inputDim != CONV_2D_DIM_SIZE) {
-                    OP_LOGE_FOR_INVALID_SHAPEDIM(
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                         engine.entityName, "x", std::to_string(inputDim),
-                        "When the SoC version is " + std::string(op::ToString(socVersion).GetString()) +
-                            ", the value of this parameter can only be " + std::to_string(CONV_2D_DIM_SIZE));
+                        "The shape dim of this parameter can only be " + std::to_string(CONV_2D_DIM_SIZE) +
+                            " when NpuArch is " + std::string(NpuArchToString(Ops::Base::DAV_3002)));
                     return ACLNN_ERR_PARAM_INVALID;
                 }
                 break;
-            }
-            default: {
-                OP_LOGE_FOR_INVALID_VALUE(
-                    engine.entityName, "SoC version", std::string(op::ToString(socVersion).GetString()),
-                    "one of {" + std::string(op::ToString(SocVersion::ASCEND910).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND910B).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND910_93).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND310P).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND310B).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND950).GetString()) + "}");
+            default:
+                OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "NpuArch",
+                                          NpuArchToString(GetCurrentPlatformInfo().GetCurNpuArch()),
+                                          "one of {" + std::string(NpuArchToString(Ops::Base::DAV_2201)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_3510)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_1001)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_3002)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_2002)) + "}");
                 return ACLNN_ERR_PARAM_INVALID;
-            }
         }
         return ACLNN_SUCCESS;
     }
@@ -2129,28 +2129,28 @@ public:
     TemporarySoftwareLimitCheckerTbc() = default;
     ~TemporarySoftwareLimitCheckerTbc() override = default;
     aclnnStatus Check([[maybe_unused]] ConvEngine& engine) override
-    { // 3D暂不支持
+    {
         if (Ops::NN::AclnnUtil::IsRegbase()) {
             return ACLNN_SUCCESS;
         }
-        // 除了910A 910B 310P，其余暂不支持
-        SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        switch (socVersion) {
-            case SocVersion::ASCEND910:
-            case SocVersion::ASCEND910B:
-            case SocVersion::ASCEND910_93:
-            case SocVersion::ASCEND310P:
+        auto curNpuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+        switch (curNpuArch) {
+            case Ops::Base::DAV_2201:
                 break;
-            default: {
-                OP_LOGE_FOR_INVALID_VALUE(
-                    engine.entityName, "SoC version", std::string(op::ToString(socVersion).GetString()),
-                    "one of {" + std::string(op::ToString(SocVersion::ASCEND910).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND910B).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND910_93).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND310P).GetString()) + ", " +
-                        std::string(op::ToString(SocVersion::ASCEND950).GetString()) + "}");
+            case Ops::Base::DAV_3510:
+                break;
+            case Ops::Base::DAV_1001:
+                break;
+            case Ops::Base::DAV_2002:
+                break;
+            default:
+                OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "NpuArch",
+                                          NpuArchToString(GetCurrentPlatformInfo().GetCurNpuArch()),
+                                          "one of {" + std::string(NpuArchToString(Ops::Base::DAV_2201)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_3510)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_1001)) + ", " +
+                                              std::string(NpuArchToString(Ops::Base::DAV_2002)) + "}");
                 return ACLNN_ERR_PARAM_INVALID;
-            }
         }
         return ACLNN_SUCCESS;
     }
@@ -2602,7 +2602,7 @@ static void UpdateInputDtype(const aclTensor* input, const aclTensor* bias, stru
             if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
                 upperDtype = GetUpperFloatDataType(opInfo.outputDtype, bias->GetDataType());
             } else if (Ops::NN::AclnnUtil::IsRegbase()) {
-                // Ascend950 force convert bias to float
+                // DAV_3510 force convert bias to float
                 // L0C [conv3dBpInput(xDtype) + bias(float)] --> CAST [out(xDtype)]
                 upperDtype = op::DataType::DT_FLOAT;
             }
@@ -4803,7 +4803,7 @@ private:
         constexpr int64_t minWeightNumel = 32768; // 64KB fp16
         // 仅 DAV_3510: DHWCN weight 的 kernel 搬运路径只在 3510 注册;
         // 9201/9202 有自己的 IsSocNeedTranspose 路径, 其他芯片无该路径转后 tiling 会失败
-        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+        if (GetCurrentPlatformInfo().GetCurNpuArch() != Ops::Base::DAV_3510) {
             return false;
         }
         // 注意: 不排除 IsRegbase —— 950(DAV_3510) 本身就是 regbase 芯片, 转置正是 regbase 模式下的优化

@@ -22,7 +22,7 @@ Format and DataType support based on SoC version:
     - filter: Format=FRACTAL_Z_3D/NCDHW, DataType=BF16/FLOAT/FLOAT16/INT8
     - bias: Format=ND, DataType=FLOAT/FLOAT16/BF16
     - y(output): Format=NDC1HWC0/NCDHW, DataType=BF16/FLOAT/FLOAT16
-- Ascend950:
+- DAV_3510:
     - x: Format=NCDHW/NDHWC, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8/INT8
     - filter: Format=NCDHW/DHWCN, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8/INT8
     - y(output): Format=NCDHW/NDHWC, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
@@ -228,17 +228,15 @@ def to_NDC1HWC0(data, ori_format, target_shape):
     return data
 
 
-def is_ascend950_or_960(short_soc_version):
-    """Check if the target is Ascend 950PR/950DT or 960PR/960DT"""
-    return short_soc_version in (
-        "Ascend950",
-        "Ascend350",
-    ) or short_soc_version.startswith("Ascend960")
+def is_arch22(short_soc_version):
+    return short_soc_version.startswith("Ascend910B") or short_soc_version.startswith(
+        "Ascend910_93"
+    )
 
 
-def process_formats_a2_a3(x, filter, input_formats, input_ori_shapes, groups):
+def process_formats_arch22(x, filter, input_formats, input_ori_shapes, groups):
     """
-    Process format conversion for A2/A3 series.
+    Process format conversion for arch22 series.
 
     Constraints:
     - x supports: NCDHW, NDC1HWC0
@@ -258,9 +256,9 @@ def process_formats_a2_a3(x, filter, input_formats, input_ori_shapes, groups):
     return x, filter
 
 
-def process_formats_a5(x, filter, input_formats, input_ori_shapes=None, groups=1):
+def process_formats(x, filter, input_formats, input_ori_shapes=None, groups=1):
     """
-    Process format conversion for Ascend 950PR/950DT (A5) and 960PR/960DT.
+    Process format.
 
     Constraints:
     - x supports: NCDHW, NDHWC
@@ -282,9 +280,9 @@ def process_formats_a5(x, filter, input_formats, input_ori_shapes=None, groups=1
     return x, filter
 
 
-def process_output_format_a2_a3(out, output_format, input_format, output_ori_shapes):
+def process_output_format_arch22(out, output_format, input_format, output_ori_shapes):
     """
-    Process output format conversion for A2/A3 series.
+    Process output format conversion for arch22 series.
 
     Constraints:
     - y supports: NCDHW, NDC1HWC0
@@ -299,9 +297,9 @@ def process_output_format_a2_a3(out, output_format, input_format, output_ori_sha
     return out
 
 
-def process_output_format_a5(out, output_format, input_format):
+def process_output_format(out, output_format, input_format):
     """
-    Process output format conversion for Ascend 950PR/950DT (A5).
+    Process output format.
 
     Constraints:
     - y supports: NCDHW, NDHWC, DHWCN
@@ -664,19 +662,19 @@ def conv3d_v2_golden(
     import torch
 
     short_soc_version = kwargs.get("short_soc_version", "")
-    is_950_or_960 = is_ascend950_or_960(short_soc_version)
+    is_legacy_arch22 = is_arch22(short_soc_version)
 
     input_formats = kwargs.get("input_formats", [NCDHW_FORMAT, NCDHW_FORMAT])
     input_ori_shapes = kwargs.get("input_ori_shapes", None)
 
     x_dtype_str = x.dtype.name
 
-    if is_950_or_960:
-        x_np, filter_np = process_formats_a5(
+    if not is_legacy_arch22:
+        x_np, filter_np = process_formats(
             x, filter, input_formats, input_ori_shapes, groups
         )
     else:
-        x_np, filter_np = process_formats_a2_a3(
+        x_np, filter_np = process_formats_arch22(
             x, filter, input_formats, input_ori_shapes, groups
         )
 
@@ -803,11 +801,11 @@ def conv3d_v2_golden(
 
     output_ori_shapes = kwargs.get("output_ori_shapes", None)
 
-    if not is_950_or_960:
-        out = process_output_format_a2_a3(
+    if is_legacy_arch22:
+        out = process_output_format_arch22(
             out, output_format, input_format, output_ori_shapes
         )
     else:
-        out = process_output_format_a5(out, output_format, input_format)
+        out = process_output_format(out, output_format, input_format)
 
     return out

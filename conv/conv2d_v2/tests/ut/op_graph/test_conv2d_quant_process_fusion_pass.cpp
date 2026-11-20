@@ -37,12 +37,13 @@ const std::string NODE_CONV = "Conv2D";
 const std::string NODE_DEQUANT = "AscendDequant";
 const std::string NODE_WEIGHT_QUANT = "WeightQuant";
 
-void SetSoc(const std::string& socVersion, bool tinyL1 = false)
+void SetSoc(const std::string& socVersion, bool tinyL1 = false, int32_t archType = 3510)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiInfo;
     optiInfo.soc_version = socVersion.c_str();
     platformInfo.str_info.short_soc_version = socVersion.c_str();
+    platformInfo.soc_info.arch_type = archType;
     if (tinyL1) {
         platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_set_l1"] = {"f16"};
     } else {
@@ -52,7 +53,7 @@ void SetSoc(const std::string& socVersion, bool tinyL1 = false)
     PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiInfo);
 }
 
-void SetSocAscend950() { SetSoc("Ascend950"); }
+void SetSocDav3510() { SetSoc("dav3510"); }
 
 NodeConfig MakeWeightQuantNode(const std::string& name, const std::vector<int64_t>& filterShape)
 {
@@ -109,7 +110,7 @@ GraphPtr AttachDeqScaleConst(const GraphPtr& graph, const std::vector<int64_t>& 
 GraphPtr BuildQuantChain(const std::string& tag, int64_t cDim, bool withPad, bool withBias, bool caffeWeight = false)
 {
     TestGraph builder(tag);
-    builder.SetSocAscend950();
+    builder.SetSocDav3510();
     const std::vector<int64_t> fmapShape = {1, cDim, 8, 8};
     const std::vector<int64_t> padOutShape = {1, cDim, 10, 10};
     const std::vector<int64_t> convInShape = withPad ? padOutShape : fmapShape;
@@ -182,7 +183,7 @@ class Conv2DQuantProcessFusionPassTest : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
-        SetSocAscend950();
+        SetSocDav3510();
         TestableConv2DQuantProcessFusionPass::isCubeSupported = true;
     }
     static void TearDownTestCase() {}
@@ -268,7 +269,7 @@ TEST_F(Conv2DQuantProcessFusionPassTest, BiasOptimizeMainPath)
 TEST_F(Conv2DQuantProcessFusionPassTest, RejectUnknownShapeC)
 {
     TestGraph builder("unknown_c");
-    builder.SetSocAscend950();
+    builder.SetSocDav3510();
     const std::vector<int64_t> unknownShape = {1, -1, 8, 8};
     const std::vector<int64_t> filterShape = {CO_OUT, C_SMALL, 1, 1};
     builder.AddAscendQuant(AscendQuantConfig::Basic(NODE_QUANT, DT_FLOAT, FORMAT_NCHW, unknownShape), true);
@@ -314,7 +315,7 @@ TEST_F(Conv2DQuantProcessFusionPassTest, RollbackCaffeWeightChain)
 TEST_F(Conv2DQuantProcessFusionPassTest, RollbackQuantMultiConsumer)
 {
     TestGraph builder("quant_multi");
-    builder.SetSocAscend950();
+    builder.SetSocDav3510();
     const std::vector<int64_t> fmapShape = {1, C_SMALL, 8, 8};
     const std::vector<int64_t> filterShape = {CO_OUT, C_SMALL, 1, 1};
     builder.AddAscendQuant(AscendQuantConfig::Basic(NODE_QUANT, DT_FLOAT, FORMAT_NCHW, fmapShape), true);
@@ -346,7 +347,7 @@ TEST_F(Conv2DQuantProcessFusionPassTest, RollbackQuantMultiConsumer)
 TEST_F(Conv2DQuantProcessFusionPassTest, RollbackDequantMultiConsumer)
 {
     TestGraph builder("dequant_multi");
-    builder.SetSocAscend950();
+    builder.SetSocDav3510();
     const std::vector<int64_t> fmapShape = {1, C_SMALL, 8, 8};
     const std::vector<int64_t> filterShape = {CO_OUT, C_SMALL, 1, 1};
     builder.AddAscendQuant(AscendQuantConfig::Basic(NODE_QUANT, DT_FLOAT, FORMAT_NCHW, fmapShape), true);
@@ -387,7 +388,7 @@ TEST_F(Conv2DQuantProcessFusionPassTest, RollbackNonSupportSoc)
 TEST_F(Conv2DQuantProcessFusionPassTest, RejectDeqScaleNot1D)
 {
     TestGraph builder("deq_scale_2d");
-    builder.SetSocAscend950();
+    builder.SetSocDav3510();
     const std::vector<int64_t> fmapShape = {1, C_LARGE, 8, 8};
     const std::vector<int64_t> filterShape = {CO_OUT, C_LARGE, 1, 1};
     builder.AddAscendQuant(AscendQuantConfig::Basic(NODE_QUANT, DT_FLOAT, FORMAT_NCHW, fmapShape), true);
@@ -438,12 +439,12 @@ TEST_F(Conv2DQuantProcessFusionPassTest, BiasOptimizeAttrVerify)
 TEST_F(Conv2DQuantProcessFusionPassTest, TinyProductForcesBiasOptimize)
 {
     auto graph = BuildQuantChain("tiny", C_SMALL, false, true);
-    SetSoc("Ascend950", true);
+    SetSoc("dav3510", true);
     RunPass(graph, ge::SUCCESS);
     EXPECT_NE(FindNodeByType(graph, "QuantBiasOptimization"), nullptr);
     EXPECT_NE(FindNodeByType(graph, NODE_QUANT), nullptr);
     EXPECT_NE(FindNodeByType(graph, NODE_DEQUANT), nullptr);
-    SetSocAscend950();
+    SetSocDav3510();
 }
 
 // 属性断言：rollback 时 host op 透传 quant 的 scale（offset 移植仅 BIAS_OPTIMIZE 场景）

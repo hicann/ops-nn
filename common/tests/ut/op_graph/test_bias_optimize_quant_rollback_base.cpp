@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "fusion_pass/bias_optimize_quant_rollback_base.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "ge/compliant_node_builder.h"
 #include "ge/es_graph_builder.h"
 #include "graph/attr_value.h"
@@ -363,9 +364,9 @@ protected:
     {
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optionalInfo;
-        platformInfo.str_info.short_soc_version = "Ascend950";
-        optionalInfo.soc_version = "Ascend950";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+        platformInfo.soc_info.arch_type = static_cast<int32_t>(Ops::Base::DAV_3510);
+        optionalInfo.soc_version = "dav3510";
+        fe::PlatformInfoManager::Instance().platform_info_map_["dav3510"] = platformInfo;
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optionalInfo);
     }
 };

@@ -19,6 +19,7 @@
 #include "graph/gnode.h"
 #include "graph/operator.h"
 #include "platform/soc_spec.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 namespace Ops {
 namespace NN {
@@ -31,10 +32,7 @@ const ge::AscendString VALID_PADDING = "VALID";
 const ge::AscendString SAME_PADDING = "SAME";
 const std::string FUSION_NAME = "PadDepthwiseConv2dFusionPass";
 
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510},
-                                                         {"Ascend350", NpuArch::DAV_3510},
-                                                         {"Ascend960DT", NpuArch::DAV_9201},
-                                                         {"Ascend960PR", NpuArch::DAV_9202}};
+const std::set<NpuArch> SUPPORT_ARCH_LIST = {Ops::Base::DAV_3510, Ops::Base::DAV_9201, Ops::Base::DAV_9202};
 
 constexpr int64_t DIM_NUM4 = 4;
 constexpr int64_t DIRECTION_COUNT = 2;
@@ -73,7 +71,7 @@ private:
     bool CheckFilterVsPadding(const ge::GNode& convNode) const;
     bool CheckPadOutputsAllDepthwise() const;
     bool BuildPadsVector();
-    bool IsAscend950() const;
+    bool IsDav3510() const;
 
     ge::GNodePtr padNode = nullptr;
     ge::GNodePtr padXProducer = nullptr;
@@ -84,7 +82,7 @@ private:
     int64_t paddingsB = 0;
     int64_t paddingsL = 0;
     int64_t paddingsR = 0;
-    bool isAscend950 = false;
+    bool isDav3510 = false;
 };
 
 } // namespace Conv

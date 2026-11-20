@@ -13,6 +13,7 @@
  * \brief UT for conv2d_v2_base_tiling_check_limits.cpp
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h>
 #include <iostream>
 #include <map>
@@ -692,7 +693,7 @@ protected:
         compile_info_.l0cSize = MEM_SIZE_256K;
         compile_info_.ubSize = MEM_SIZE_200K;
         compile_info_.l1Size = MEM_SIZE_512K;
-        compile_info_.npuArch = NpuArch::DAV_3510;
+        compile_info_.npuArch = Ops::Base::DAV_3510;
         holder_ = BuildLimitsContext(compile_info_, platform_info_);
         ctx_ = holder_.GetContext<gert::TilingContext>();
     }

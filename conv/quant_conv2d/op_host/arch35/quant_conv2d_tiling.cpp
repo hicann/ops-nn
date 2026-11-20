@@ -15,14 +15,15 @@
 #include "conv2d_v2/op_host/op_tiling/arch35/conv2d_v2_base_tiling.h"
 #include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "common/op_host/op_tiling/conv_tiling_templates_registry.h"
 
 using namespace optiling::conv_ops_tiling;
 
 namespace optiling {
-CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_3510), 1000);
-CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_9201), 1001);
-CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_9202), 1002);
+CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(Ops::Base::DAV_3510), 1000);
+CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(Ops::Base::DAV_9201), 1001);
+CONV_REGISTER_TILING_TEMPLATE(QuantConv2D, Conv2dBaseTiling, static_cast<int32_t>(Ops::Base::DAV_9202), 1002);
 
 IMPL_OP_OPTILING(QuantConv2D).Tiling(ConvTilingFunc).TilingParse<ConvTilingParseInfo>(TilingPrepareForConv);
 } // namespace optiling

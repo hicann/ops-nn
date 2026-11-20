@@ -41,7 +41,7 @@ public:
     {
         switch (profile) {
             case SocProfile::Arch35:
-                SetSocRaw("Ascend950", {{"Intrinsic_data_move_out2l1_dn2nz", {"bfloat16"}}});
+                SetSocRaw("dav3510", {{"Intrinsic_data_move_out2l1_dn2nz", {"bfloat16"}}});
                 break;
             case SocProfile::NonArch35:
                 SetSocRaw("Ascend910B4", {{"Intrinsic_fix_pipe_l0c2out", {"bfloat16"}}});

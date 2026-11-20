@@ -14,6 +14,7 @@
  *        num blocks decision, tiling cache and tbe tiling api.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h>
 #include <map>
 #include <string>
@@ -103,7 +104,7 @@ ConvAscendcTilingInfo BuildTilingInfo(ge::DataType dtype, ge::Format fmapFormat 
     tilingInfo.platformInfo.l0cSize = UT_L0C_SIZE;
     tilingInfo.platformInfo.ubSize = UT_UB_SIZE;
     tilingInfo.platformInfo.btSize = UT_BT_SIZE;
-    tilingInfo.platformInfo.npuArch = NpuArch::DAV_3510;
+    tilingInfo.platformInfo.npuArch = Ops::Base::DAV_3510;
     tilingInfo.nodeInfo.nodeType = "Conv2DV2";
     return tilingInfo;
 }
@@ -404,8 +405,8 @@ TEST_F(ConvCommonUtilsTest, ConvTilingCacheBasic)
     EXPECT_EQ(cache.GetCacheSize(), 1u);
     ConvTilingParseInfo parseInfo;
     parseInfo.aicoreNum = UT_AICORE_NUM;
-    cache.SetSocVersion(NpuArch::DAV_3510, parseInfo);
-    EXPECT_EQ(cache.GetSocVersion(), NpuArch::DAV_3510);
+    cache.SetSocVersion(Ops::Base::DAV_3510, parseInfo);
+    EXPECT_EQ(cache.GetSocVersion(), Ops::Base::DAV_3510);
     EXPECT_EQ(cache.GetPlatFormInfo().aicoreNum, UT_AICORE_NUM);
 }
 
@@ -462,7 +463,7 @@ struct BBTestEnv {
                  innerBatch},
           strategy(std::make_shared<Conv2DBasicBlockStrategy>())
     {
-        platformInfo.npuArch = NpuArch::DAV_9201;
+        platformInfo.npuArch = Ops::Base::DAV_9201;
         shapeInfo.batch = 1;
         shapeInfo.ci = 16;
         shapeInfo.hi = 16;

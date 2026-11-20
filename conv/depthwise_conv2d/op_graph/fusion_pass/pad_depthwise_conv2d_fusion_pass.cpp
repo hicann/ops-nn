@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "pad_depthwise_conv2d_fusion_pass.h"
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
@@ -25,7 +26,7 @@ using namespace fusion;
 
 void PadDepthwiseConv2dFusionPass::InitMember()
 {
-    npuArch = NpuArch::DAV_RESV;
+    npuArch = Ops::Base::DAV_RESV;
     convDescInfo = ConvDescInfo();
     padNode = nullptr;
     padXProducer = nullptr;
@@ -36,7 +37,7 @@ void PadDepthwiseConv2dFusionPass::InitMember()
     paddingsB = 0;
     paddingsL = 0;
     paddingsR = 0;
-    isAscend950 = false;
+    isDav3510 = false;
 }
 
 bool PadDepthwiseConv2dFusionPass::CheckMatchStructure(const GNode& matchNode)
@@ -59,10 +60,10 @@ bool PadDepthwiseConv2dFusionPass::CheckMatchStructure(const GNode& matchNode)
     return true;
 }
 
-bool PadDepthwiseConv2dFusionPass::IsAscend950() const
+bool PadDepthwiseConv2dFusionPass::IsDav3510() const
 {
-    NpuArch curArch = NpuArch::DAV_RESV;
-    return ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, curArch) && curArch == NpuArch::DAV_3510;
+    NpuArch curArch = Ops::Base::DAV_RESV;
+    return ConvFusionUtilsPass::CheckArchList(SUPPORT_ARCH_LIST, curArch) && curArch == Ops::Base::DAV_3510;
 }
 
 bool PadDepthwiseConv2dFusionPass::CheckPadDynamicShape() const
@@ -242,7 +243,7 @@ bool PadDepthwiseConv2dFusionPass::MeetRequirements(const GNode& convNode)
 
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do PadDepthwiseConv2dFusionPass.");
 
-    isAscend950 = IsAscend950();
+    isDav3510 = IsDav3510();
 
     FUSION_PASS_CHECK_NOLOG(!CheckPadDynamicShape(), return false);
 
@@ -276,7 +277,7 @@ bool PadDepthwiseConv2dFusionPass::MeetRequirements(const GNode& convNode)
     FUSION_PASS_CHECK_NOLOG(!ExtractPaddingByFormat(), return false);
     FUSION_PASS_CHECK_NOLOG(!CheckPaddingRange(), return false);
 
-    if (!isAscend950) {
+    if (!isDav3510) {
         FUSION_PASS_CHECK_NOLOG(!CheckFilterVsPadding(convNode), return false);
     }
 

@@ -13,6 +13,7 @@
  * \brief Additional UT for conv2d_v2 base tiling pipeline coverage
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h>
 #include <iostream>
 #include <map>
@@ -540,7 +541,7 @@ void InitTilingKeyState(optiling::conv_ops_tiling::Conv2dBaseTiling& sut,
     opInfo.aicoreNum = AIC_NUM;
     opInfo.l0cSize = MEM_SIZE_256K;
     opInfo.ubSize = MEM_SIZE_200K;
-    opInfo.npuArch = NpuArch::DAV_3510;
+    opInfo.npuArch = Ops::Base::DAV_3510;
     sut.opInfo_ = &opInfo;
 
     sut.shapeInfo_.batch = 1;
@@ -570,7 +571,7 @@ void InitTilingKeyState(optiling::conv_ops_tiling::Conv2dBaseTiling& sut,
     sut.convOpsConstParams_.k0 = CUBE_K0_16;
     sut.convOpsConstParams_.n0 = CUBE_N0;
     sut.numBlocksRes.nDim = 1;
-    sut.apiInputPlatformInfo.npuArch = NpuArch::DAV_3510;
+    sut.apiInputPlatformInfo.npuArch = Ops::Base::DAV_3510;
     sut.apiInputPlatformInfo.l0BSize = MEM_SIZE_64K;
 
     sut.tilingData_.set_kAL1(144);
@@ -666,13 +667,13 @@ TEST_F(Conv2dTilingKeyExtra, set_tiling_key_nz_weight)
 
 TEST_F(Conv2dTilingKeyExtra, reset_tiling_key_para_9201_group)
 {
-    sut_->apiInputPlatformInfo.npuArch = NpuArch::DAV_9201;
+    sut_->apiInputPlatformInfo.npuArch = Ops::Base::DAV_9201;
     sut_->flagInfo_.convGroupType = ConvGroupType::ORI_GROUP_CONV;
     sut_->tilingKeyPara_.weightTiling = 1;
     sut_->ReSetTilingKeyPara();
     EXPECT_EQ(sut_->tilingKeyPara_.weightTiling, 1u);
 
-    sut_->apiInputPlatformInfo.npuArch = NpuArch::DAV_3510;
+    sut_->apiInputPlatformInfo.npuArch = Ops::Base::DAV_3510;
     sut_->flagInfo_.convGroupType = ConvGroupType::NORMAL_CONV;
     sut_->flagInfo_.mSplitModeFlag = true;
     sut_->tilingKeyPara_.weightTiling = 1;
@@ -803,7 +804,7 @@ TEST_F(Conv2dTilingKeyExtra, post_tiling_fullmn_small_buffer)
     auto ctx = holder.GetContext<gert::TilingContext>();
     optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx);
     InitPostTilingSut(sut, opInfo, ctx);
-    sut.opInfo_->npuArch = NpuArch::DAV_9201;
+    sut.opInfo_->npuArch = Ops::Base::DAV_9201;
     SetMNFullLoadKeyParams(sut);
     EXPECT_TRUE(sut.IsMNFullLoadKPartia());
     EXPECT_EQ(sut.PostTiling(), ge::GRAPH_FAILED);
@@ -820,7 +821,7 @@ TEST_F(Conv2dTilingKeyExtra, post_tiling_fullmn_success)
     auto ctx = holder.GetContext<gert::TilingContext>();
     optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx);
     InitPostTilingSut(sut, opInfo, ctx);
-    sut.opInfo_->npuArch = NpuArch::DAV_9201;
+    sut.opInfo_->npuArch = Ops::Base::DAV_9201;
     SetMNFullLoadKeyParams(sut);
     EXPECT_EQ(sut.PostTiling(), ge::GRAPH_SUCCESS);
     EXPECT_EQ(ctx->GetRawTilingData()->GetDataSize(), sizeof(Ops::NN::Conv2dV2::Conv2DMNFullLoadKPartialTiling));
@@ -842,7 +843,7 @@ TEST_F(Conv2dTilingKeyExtra, post_tiling_aswt_5102_block_dim)
     auto ctx = holder.GetContext<gert::TilingContext>();
     optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx);
     InitPostTilingSut(sut, opInfo, ctx);
-    sut.opInfo_->npuArch = NpuArch::DAV_5102;
+    sut.opInfo_->npuArch = Ops::Base::DAV_5102;
     sut.opInfo_->aicoreNum = 4;
     sut.flagInfo_.isASWT = true;
     sut.tilingData_.set_innerBatch(1);
@@ -863,7 +864,7 @@ TEST_F(Conv2dTilingKeyExtra, calc_aswt_strategy_5102_enable)
     auto ctx = holder.GetContext<gert::TilingContext>();
     optiling::conv_ops_tiling::Conv2dBaseTiling sut(ctx);
     InitPostTilingSut(sut, opInfo, ctx);
-    sut.opInfo_->npuArch = NpuArch::DAV_5102;
+    sut.opInfo_->npuArch = Ops::Base::DAV_5102;
     sut.opInfo_->aicoreNum = 32;
     sut.flagInfo_.mSplitModeFlag = true;
     sut.flagInfo_.convGroupType = optiling::conv_ops_tiling::ConvGroupType::NORMAL_CONV;

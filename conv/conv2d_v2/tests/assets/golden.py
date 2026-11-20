@@ -16,7 +16,7 @@ Based on conv2d_v2_def.cpp:
 - Inputs: x (REQUIRED), filter (REQUIRED), bias (OPTIONAL), offset_w (OPTIONAL)
 - Output: y (REQUIRED)
 
-Format and DataType support (Ascend950 only):
+Format and DataType support (DAV_3510 only):
 - x: Format=NCHW/NHWC, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
 - filter: Format=NCHW/HWCN, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
 - bias: Format=ND, DataType=BF16/FLOAT16/FLOAT
@@ -103,7 +103,7 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False):
 
 def process_formats_a5(x, filter, input_formats):
     """
-    Process format conversion for Ascend 950PR/950DT (A5).
+    Process format conversion for DAV_3510.
     Constraints:
     - x supports: NCHW, NHWC
     - filter supports: NCHW, HWCN, NHWC
@@ -123,7 +123,7 @@ def process_formats_a5(x, filter, input_formats):
 
 def process_output_format_a5(out, output_format):
     """
-    Process output format conversion for Ascend 950PR/950DT (A5).
+    Process output format conversion for DAV_3510.
     Constraints:
     - y supports: NCHW (when x is NCHW) or NHWC (when x is NHWC)
     """

@@ -10,7 +10,7 @@
 
 add_kernel_sources(
     KERNEL_SRC extend_conv2d.cpp
-    COMPUTE_UNITS ascend950 ascend350 ascend960dt ascend960pr mc62 ascend5162
+    COMPUTE_UNITS dav_3510 dav_9201 dav_9202 mc62 ascend5162
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush" "-DFORCE_TILING_CONST_PROPAGATION"
 )

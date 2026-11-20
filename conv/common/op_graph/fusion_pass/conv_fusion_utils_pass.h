@@ -77,6 +77,7 @@ const std::vector<int64_t> HF32_PRECISION_MODES_INT = {0x1, 0x2, 0x40};
 
 const std::string NPU_ARCH_KEY_3510 = "3510";
 const std::string NPU_ARCH_KEY_FUSE = "FUSE";
+constexpr uint32_t kNpuArchStrLen = 32;
 
 #define FUSION_PASS_CHECK(condition, log_func, return_expr)                                                      \
     static_assert(std::is_same<bool, std::decay<decltype(condition)>::type>::value, "condition should be bool"); \
@@ -121,6 +122,19 @@ inline std::string SocListToString(const std::map<std::string, NpuArch>& socList
     for (auto it = socList.begin(); it != socList.end(); ++it) {
         result += it->first;
         if (std::next(it) != socList.end()) {
+            result += ", ";
+        }
+    }
+    result += "]";
+    return result;
+}
+
+inline std::string ArchListToString(const std::set<NpuArch>& archList)
+{
+    std::string result = "[";
+    for (auto it = archList.begin(); it != archList.end(); ++it) {
+        result += std::to_string(static_cast<uint32_t>(*it));
+        if (std::next(it) != archList.end()) {
             result += ", ";
         }
     }
@@ -202,6 +216,7 @@ public:
     template <typename T>
     static bool CheckSupportList(const std::vector<std::vector<T>>& supportLists, const std::vector<T>& curList);
     static bool CheckSocList(const std::map<std::string, NpuArch>& socList, NpuArch& npuArch, bool supportFuse = false);
+    static bool CheckArchList(const std::set<NpuArch>& archList, NpuArch& npuArch, bool supportFuse = false);
     static bool IsFuseSoc();
     static const std::string& GetArchKey();
     static bool GetConvBaseAttr(const ge::GNode& convNode, ConvBaseAttrs& baseAttrs, const ConvDescInfo& convDescInfo);

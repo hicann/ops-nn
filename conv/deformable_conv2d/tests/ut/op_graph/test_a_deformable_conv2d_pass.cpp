@@ -74,9 +74,9 @@ public:
     {
         TestGraph builder(name.c_str());
         if (dav3510) {
-            builder.SetSocAscend950();
+            builder.SetSocDav3510();
         } else {
-            builder.SetSoc(SocConfig("Ascend910B", "Ascend910B1"));
+            builder.SetSoc(SocConfig("Ascend910B", "Ascend910B1", "split", 2201));
         }
         auto cfg = MakeDfmCfg(name, dt, withBias, fmt);
         std::vector<int> autoInputs = {0, 1, 2};
@@ -161,6 +161,26 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_decomposed_node_has_no_hf32_impl_mo
     EXPECT_FALSE(hasHf32Attr);
 }
 
+TEST_F(ADeformableConv2dPassTest, dfm_conv2d_fusion_success_ascend350)
+{
+    NodeConfig cfg = MakeDfmCfg("dfm_fusion_success_ascend350", DT_FLOAT16, true);
+    TestGraph builder("dfm_fusion_success_ascend350");
+    builder.SetSoc(SocConfig("Ascend350", "Ascend350_355e", "split", 3510));
+    builder.AddNode(cfg, {0, 1, 2, 3}).SetOutput("dfm_fusion_success_ascend350").Build();
+    auto graph = builder.Build();
+
+    EXPECT_TRUE(GraphChecker::HasNode(graph, DFM_CONV2D.GetString()));
+    TestTotalPass("dfm_fusion_success_ascend350", graph, SUCCESS);
+    EXPECT_TRUE(GraphChecker::HasNode(graph, "DeformableOffsets"));
+    EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
+    EXPECT_EQ(GraphChecker::CountNodes(graph, DFM_CONV2D.GetString()), 0);
+
+    GNode conv2d = GetFirstNodeByType(graph, "Conv2D");
+    int64_t offsetX = -1;
+    ASSERT_EQ(conv2d.GetAttr(AscendString("offset_x"), offsetX), GRAPH_SUCCESS);
+    EXPECT_EQ(offsetX, int64_t{0});
+}
+
 // ==========================================================================================
 // 拒绝融合：入度非法 / filter format 非法 / shape 非 4D
 // ==========================================================================================
@@ -178,7 +198,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
              badFilter.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_ND, {1, 16, 3, 3}, FORMAT_ND, {1, 16, 3, 3}));
              cfg.inputs[1] = badFilter;
              TestGraph builder("dfm_no_fusion_bad_filter");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_bad_filter").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_bad_filter").Build();
              return builder.Build();
          }},
         {"x_not_4d",
@@ -188,7 +208,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
              badX.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_NCHW, {1, 16, 48}, FORMAT_NCHW, {1, 16, 48}));
              cfg.inputs[0] = badX;
              TestGraph builder("dfm_no_fusion_x_not_4d");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_x_not_4d").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_x_not_4d").Build();
              return builder.Build();
          }},
         {"output_not_4d",
@@ -198,7 +218,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
              badOut.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_NCHW, {1, 1, 48}, FORMAT_NCHW, {1, 1, 48}));
              cfg.outputs[0] = badOut;
              TestGraph builder("dfm_no_fusion_output_not_4d");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_output_not_4d").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_output_not_4d").Build();
              return builder.Build();
          }},
         {"invalid_input_count",
@@ -209,7 +229,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
                               {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""}};
              cfg.inputs.resize(2);
              TestGraph builder("dfm_no_fusion_invalid_input");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1}).SetOutput("dfm_no_fusion_invalid_input").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1}).SetOutput("dfm_no_fusion_invalid_input").Build();
              return builder.Build();
          }},
         {"unknown_ksize",
@@ -220,7 +240,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
                  BuildTensorDesc(DT_FLOAT16, FORMAT_NCHW, {-1, 16, -1, -1}, FORMAT_NCHW, {-1, 16, -1, -1}));
              cfg.inputs[1] = unkFilter;
              TestGraph builder("dfm_no_fusion_unknown_ksize");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_unknown_ksize").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_unknown_ksize").Build();
              return builder.Build();
          }},
         {"x_format_nd",
@@ -230,7 +250,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_no_fusion)
              badX.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_ND, {1, 16, 48, 48}, FORMAT_ND, {1, 16, 48, 48}));
              cfg.inputs[0] = badX;
              TestGraph builder("dfm_no_fusion_x_format_nd");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_x_format_nd").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_no_fusion_x_format_nd").Build();
              return builder.Build();
          }},
     };
@@ -315,7 +335,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
              NodeConfig cfg = MakeDfmCfg("dfm_offsets_desc_nchw", DT_FLOAT16, false, FORMAT_NCHW, {1, 16, 12, 12},
                                          {1, 16, 3, 3}, {1, 1, 4, 4});
              TestGraph builder("dfm_offsets_desc_nchw");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_desc_nchw").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_desc_nchw").Build();
              return builder.Build();
          },
          [](GraphPtr& graph) {
@@ -343,7 +363,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
              NodeConfig cfg = MakeDfmCfg("dfm_offsets_desc_nhwc", DT_FLOAT16, false, FORMAT_NHWC, {1, 12, 12, 16},
                                          {3, 3, 16, 1}, {1, 4, 4, 1});
              TestGraph builder("dfm_offsets_desc_nhwc");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_desc_nhwc").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_desc_nhwc").Build();
              return builder.Build();
          },
          [](GraphPtr& graph) {
@@ -367,7 +387,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_deformable_offsets_desc_and_shape)
              cfg.SetAttr(DFM_GROUPS.GetString(), int64_t(2));
              cfg.SetAttr("modulated", false);
              TestGraph builder("dfm_offsets_attrs");
-             builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_attrs").Build();
+             builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_offsets_attrs").Build();
              return builder.Build();
          },
          [](GraphPtr& graph) {
@@ -414,7 +434,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_dynamic_out_hw_unknown_shape_range)
     cfg.outputs[0].SetDesc(yDesc);
 
     TestGraph builder("dfm_dynamic_hw");
-    builder.SetSocAscend950().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_dynamic_hw").Build();
+    builder.SetSocDav3510().AddNode(cfg, {0, 1, 2}).SetOutput("dfm_dynamic_hw").Build();
     auto graph = builder.Build();
     TestTotalPass("dfm_dynamic_hw", graph, SUCCESS);
 
@@ -452,7 +472,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
              auto cfg1 = self.MakeDfmCfg("dfm_1", DT_FLOAT16, false);
              auto cfg2 = self.MakeDfmCfg("dfm_2", DT_FLOAT16, false);
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddNode(cfg1, {0, 1, 2})
                               .AddNode(cfg2, {0, 1, 2})
                               .SetOutput("dfm_1")
@@ -466,7 +486,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
          [](ADeformableConv2dPassTest& self) {
              auto cfg = self.MakeDfmCfg("dfm", DT_FLOAT16, false);
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddNode(cfg, {0, 1, 2})
                               .AddRelu(ReluConfig::Basic("relu", DT_FLOAT16))
                               .Connect("dfm", 0, "relu", 0)
@@ -478,7 +498,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
         {"graph_without_dfm",
          [](ADeformableConv2dPassTest&) {
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddRelu(ReluConfig::Basic("relu", DT_FLOAT16), true)
                               .SetOutput("relu")
                               .Build();
@@ -500,7 +520,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
         {"fusion_graph_edge_topology",
          [](ADeformableConv2dPassTest& self) {
              auto cfg = self.MakeDfmCfg("dfm_edge", DT_FLOAT16, true);
-             auto graph = TestGraph("g").SetSocAscend950().AddNode(cfg, {0, 1, 2, 3}).SetOutput("dfm_edge").Build();
+             auto graph = TestGraph("g").SetSocDav3510().AddNode(cfg, {0, 1, 2, 3}).SetOutput("dfm_edge").Build();
              self.TestTotalPass("dfm_edge_topology", graph, SUCCESS);
              GNode dfmOffset;
              GNode conv2d;
@@ -525,7 +545,7 @@ TEST_F(ADeformableConv2dPassTest, dfm_conv2d_graph_topology)
              badFilter.SetDesc(BuildTensorDesc(DT_FLOAT16, FORMAT_ND, {1, 16, 3, 3}, FORMAT_ND, {1, 16, 3, 3}));
              badCfg.inputs[1] = badFilter;
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddNode(okCfg, {0, 1, 2})
                               .AddNode(badCfg, {0, 1, 2})
                               .SetOutput("dfm_ok")

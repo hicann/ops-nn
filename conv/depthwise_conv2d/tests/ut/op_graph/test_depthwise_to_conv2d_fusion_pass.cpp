@@ -37,14 +37,14 @@ GraphPtr BuildDepthwiseGraph(const char* graphName, const DepthwiseConv2DConfig&
     if (socConfig != nullptr) {
         builder.SetSoc(*socConfig);
     } else {
-        builder.SetSocAscend950();
+        builder.SetSocDav3510();
     }
     return builder.AddDepthwiseConv2D(depthwiseCfg).SetOutput(depthwiseCfg.name).Build();
 }
 
 const SocConfig kMc62SocConfig = SocConfig::MC62();
-const SocConfig kNonNdSocConfig("Ascend910B", "Ascend910B1");
-const SocConfig kAscend350SocConfig("Ascend350", "Ascend350_355e");
+const SocConfig kNonNdSocConfig("Ascend910B", "Ascend910B1", "split", 2201);
+const SocConfig kDav3510SocConfig("Ascend350", "Ascend350_355e", "split", 3510);
 } // namespace
 
 class DepthwiseToConv2dFusionPassTest : public testing::Test {
@@ -106,7 +106,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_fusion_success)
         {"static_nchw_mc62", &kMc62SocConfig,
          DepthwiseConv2DConfig::Basic("depthwise_conv2d", DT_FLOAT16, FORMAT_NCHW, {1, 16, 256, 256}, {1, 1, 1, 64},
                                       {1, 4, 256, 256})},
-        {"static_nchw_ascend350", &kAscend350SocConfig,
+        {"static_nchw_ascend350", &kDav3510SocConfig,
          DepthwiseConv2DConfig::Basic("depthwise_conv2d", DT_FLOAT16, FORMAT_NCHW, {1, 16, 256, 256}, {1, 1, 1, 64},
                                       {1, 4, 256, 256})},
     };
@@ -136,7 +136,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_no_fusion)
         {"wrong_op_type",
          []() {
              return TestGraph("depthwise_to_conv2d_no_fusion_wrong_op_type")
-                 .SetSocAscend950()
+                 .SetSocDav3510()
                  .AddConv2D(Conv2DConfig::Basic("conv2d", DT_FLOAT, DT_FLOAT, FORMAT_NCHW, {1, 16, 256, 256},
                                                 {1, 1, 1, 64}, {1, 4, 256, 256}))
                  .SetOutput("conv2d")
@@ -188,7 +188,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_no_fusion)
         {"empty_graph_no_match",
          []() {
              return TestGraph("depthwise_to_conv2d_no_fusion_empty_graph")
-                 .SetSocAscend950()
+                 .SetSocDav3510()
                  .AddRelu(ReluConfig::Basic("relu", DT_FLOAT))
                  .SetOutput("relu")
                  .Build();
@@ -250,7 +250,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_fusion_desc_and_stru
         {"replacement_subgraph_structure",
          []() {
              return TestGraph("depthwise_to_conv2d_replacement_structure")
-                 .SetSocAscend950()
+                 .SetSocDav3510()
                  .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw"))
                  .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT))
                  .Connect("dw", 0, "Relu", 0)
@@ -513,7 +513,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_graph_topology)
         {"multi_depthwise_same_graph",
          [](DepthwiseToConv2dFusionPassTest& self) {
              auto graph = TestGraph("depthwise_to_conv2d_multi_depthwise_same_graph")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw1"))
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw2"))
                               .SetOutput("dw1")
@@ -526,7 +526,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_graph_topology)
         {"multi_depthwise_serial",
          [](DepthwiseToConv2dFusionPassTest& self) {
              auto graph = TestGraph("depthwise_to_conv2d_multi_depthwise_serial")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw1"))
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic(
                                   "dw2", DT_FLOAT, FORMAT_NCHW, {1, 4, 256, 256}, {1, 1, 1, 64}, {1, 2, 256, 256}))
@@ -540,7 +540,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_graph_topology)
         {"multi_depthwise_mixed_eligibility",
          [](DepthwiseToConv2dFusionPassTest&) {
              auto graph = TestGraph("depthwise_to_conv2d_multi_depthwise_mixed_eligibility")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw_ok"))
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw_bad", DT_FLOAT, FORMAT_NCHW,
                                                                                {-1, -1, 256, 256}, {-1, -1, -1, 64}))
@@ -558,7 +558,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_graph_topology)
          [](DepthwiseToConv2dFusionPassTest&) {
              // ND SoC 上动态 fmap channel 由静态 filter C 补全后仍完成替换
              auto graph = TestGraph("depthwise_to_conv2d_dynamic_channel_completed")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw_dyn_c", DT_FLOAT, FORMAT_NCHW,
                                                                                {-1, -1, 256, 256}, {1, 1, 64, 1}))
                               .SetOutput("dw_dyn_c")
@@ -590,7 +590,7 @@ TEST_F(DepthwiseToConv2dFusionPassTest, depthwise_to_conv2d_graph_topology)
         {"downstream_consumer_preserved",
          [](DepthwiseToConv2dFusionPassTest& self) {
              auto graph = TestGraph("depthwise_to_conv2d_downstream_consumer_preserved")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddDepthwiseConv2D(DepthwiseConv2DConfig::Basic("dw"))
                               .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT))
                               .Connect("dw", 0, "Relu", 0)

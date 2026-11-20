@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h>
 
 #include "../../../op_host/op_tiling/conv2d_v2_tiling.h"
@@ -30,7 +31,7 @@ namespace {
 PlatformInfo SetPlatFormInfo()
 {
     PlatformInfo platformInfo;
-    platformInfo.npuArch = NpuArch::DAV_3510;
+    platformInfo.npuArch = Ops::Base::DAV_3510;
     platformInfo.l1Size = MEM_SIZE_512K;
     platformInfo.l0ASize = MEM_SIZE_64K;
     platformInfo.l0BSize = MEM_SIZE_64K;
@@ -45,7 +46,7 @@ PlatformInfo SetPlatFormInfo()
 PlatformInfo SetPlatFormInfo_960DT()
 {
     PlatformInfo platformInfo;
-    platformInfo.npuArch = NpuArch::DAV_9201;
+    platformInfo.npuArch = Ops::Base::DAV_9201;
     platformInfo.l1Size = MEM_SIZE_512K;
     platformInfo.l0ASize = MEM_SIZE_64K;
     platformInfo.l0BSize = MEM_SIZE_64K;
@@ -162,7 +163,7 @@ TEST_F(TestConv2dTiling, test_algo_HW_InitPingPong)
 TEST_F(TestConv2dTiling, test_algo_M_CoreL1TilingDecision_FULL_LOAD_AL1)
 {
     PlatformInfo platformInfo;
-    platformInfo.npuArch = NpuArch::DAV_3510;
+    platformInfo.npuArch = Ops::Base::DAV_3510;
     platformInfo.l1Size = MEM_SIZE_512K;
     platformInfo.l0ASize = MEM_SIZE_64K;
     platformInfo.l0BSize = MEM_SIZE_64K;
@@ -185,7 +186,7 @@ TEST_F(TestConv2dTiling, test_algo_M_CoreL1TilingDecision_FULL_LOAD_AL1)
 TEST_F(TestConv2dTiling, test_algo_M_CoreL1TilingDecision_NoneKABL1FullLoadIter)
 {
     PlatformInfo platformInfo;
-    platformInfo.npuArch = NpuArch::DAV_3510;
+    platformInfo.npuArch = Ops::Base::DAV_3510;
     platformInfo.l1Size = MEM_SIZE_512K;
     platformInfo.l0ASize = MEM_SIZE_64K;
     platformInfo.l0BSize = MEM_SIZE_64K;
@@ -2271,7 +2272,7 @@ TEST_F(TestConv2dTiling, test_algo_HW_UpdateHoL0WoL0_2)
 TEST_F(TestConv2dTiling, test_algo_HW_UpdateHoL0WoL0_3)
 {
     PlatformInfo platformInfo;
-    platformInfo.npuArch = NpuArch::DAV_3510;
+    platformInfo.npuArch = Ops::Base::DAV_3510;
     platformInfo.l1Size = MEM_SIZE_512K;
     platformInfo.l0ASize = 1;
     platformInfo.l0BSize = MEM_SIZE_64K;
@@ -2443,7 +2444,8 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetTiling_weight_nchw_960DT)
     testTiling.attrInfo.groups = 1;
     testTiling.optGroupFlag = false;
     Conv2DBasicBlockInfo conv2DBasicBlockInfo;
-    ConvTilingAlgorithmBBmode* algo = new ConvTilingAlgorithmBBmode(&testTiling, conv2DBasicBlockInfo);
+    std::unique_ptr<ConvTilingAlgorithmBBmode> algo = std::make_unique<ConvTilingAlgorithmBBmode>(&testTiling,
+                                                                                                  conv2DBasicBlockInfo);
     algo->availableL1Size = 512 * 1024;
 
     conv2DBasicBlockInfo.fDim = 8;

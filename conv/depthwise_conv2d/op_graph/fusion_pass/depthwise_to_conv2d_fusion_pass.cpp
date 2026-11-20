@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "depthwise_to_conv2d_fusion_pass.h"
 
 #include "graph/graph.h"
@@ -24,8 +25,8 @@ using namespace fusion;
 
 void DepthwiseToConv2dFusionPass::InitMember()
 {
-    npuArch = NpuArch::DAV_RESV;
-    isNdSoc = false;
+    npuArch = Ops::Base::DAV_RESV;
+    isNdArch = false;
     fmapChannel = 0;
     hasPrivatePads = false;
     convDescInfo = ConvDescInfo();
@@ -34,7 +35,7 @@ void DepthwiseToConv2dFusionPass::InitMember()
 
 bool DepthwiseToConv2dFusionPass::CheckDynamicShape() const
 {
-    if (isNdSoc) {
+    if (isNdArch) {
         return true;
     }
 
@@ -65,7 +66,7 @@ bool DepthwiseToConv2dFusionPass::GetFmapChannel()
         return false;
     }
 
-    if (fmapChannel == -1 && isNdSoc) {
+    if (fmapChannel == -1 && isNdArch) {
         const auto filterShape = convDescInfo.filterDesc.GetOriginShape().GetDims();
         const auto filterFormat = convDescInfo.filterDesc.GetOriginFormat();
         int64_t filterChannel = -1;
@@ -105,7 +106,7 @@ bool DepthwiseToConv2dFusionPass::GetDepthwiseConvAttrs(const GNode& depthwiseNo
                       OP_LOGE(FUSION_NAME, "%s get data_format failed.", convDescInfo.nodeNameStr.c_str()),
                       return false);
 
-    if (isNdSoc) {
+    if (isNdArch) {
         FUSION_PASS_CHECK(depthwiseNode.GetAttr(OFFSET_X, depthwiseAttrs.offsetX) != GRAPH_SUCCESS,
                           OP_LOGE(FUSION_NAME, "%s get offset_x failed.", convDescInfo.nodeNameStr.c_str()),
                           return false);
@@ -185,7 +186,7 @@ bool DepthwiseToConv2dFusionPass::MeetRequirements(const GNode& depthwiseNode)
 {
     InitMember();
 
-    isNdSoc = ConvFusionUtilsPass::CheckSocList(ND_SOC_LIST, npuArch, true);
+    isNdArch = ConvFusionUtilsPass::CheckArchList(ND_ARCH_LIST, npuArch, true);
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvDescInfo(depthwiseNode, convDescInfo), return false);
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do DepthwiseToConv2dFusionPass.");
 
@@ -246,7 +247,7 @@ bool DepthwiseToConv2dFusionPass::SetConv2dAttrs(GNode& conv2dNode, const GNode&
     FUSION_PASS_CHECK(conv2dNode.SetAttr(GROUPS, fmapChannel) != GRAPH_SUCCESS,
                       OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s set groups failed.", convDescInfo.nodeNameStr.c_str()),
                       return false);
-    if (isNdSoc) {
+    if (isNdArch) {
         FUSION_PASS_CHECK(
             conv2dNode.SetAttr(OFFSET_X, depthwiseAttrs.offsetX) != GRAPH_SUCCESS,
             OP_LOGE_WITHOUT_REPORT(FUSION_NAME, "%s set offset_x failed.", convDescInfo.nodeNameStr.c_str()),

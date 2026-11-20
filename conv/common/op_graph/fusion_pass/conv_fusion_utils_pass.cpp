@@ -9,6 +9,7 @@
  */
 
 #include "conv_fusion_utils_pass.h"
+#include "acl/acl_platform.h"
 #include "es_nn_ops.h"
 #include "ge/compliant_node_builder.h"
 #include "platform/platform_info.h"
@@ -87,6 +88,30 @@ bool ConvFusionUtilsPass::CheckSocList(const std::map<std::string, NpuArch>& soc
     }
 
     OP_LOGD(UTIL_NAME, "Current soc %s not in check list %s.", soc.c_str(), SocListToString(socList).c_str());
+    return false;
+}
+
+bool ConvFusionUtilsPass::CheckArchList(const std::set<NpuArch>& archList, NpuArch& npuArch, bool supportFuse)
+{
+    char npuArchStr[kNpuArchStrLen] = {};
+    if (aclplatformGetDeviceInfo(ACL_PLATFORM_NPU_ARCH, npuArchStr, sizeof(npuArchStr)) != ACL_SUCCESS) {
+        OP_LOGW(UTIL_NAME, "Get npu arch failed.");
+        return false;
+    }
+    const NpuArch curArch = static_cast<NpuArch>(std::atoi(npuArchStr));
+
+    if (archList.count(curArch) != 0U) {
+        npuArch = curArch;
+        OP_LOGD(UTIL_NAME, "Current NpuArch is DAV_%s.", npuArchStr);
+        return true;
+    }
+
+    if (supportFuse && IsFuseSoc()) {
+        OP_LOGD(UTIL_NAME, "Current platform is cube_vector_combine=fuse.");
+        return true;
+    }
+
+    OP_LOGD(UTIL_NAME, "Current arch %s not in check list %s.", npuArchStr, ArchListToString(archList).c_str());
     return false;
 }
 

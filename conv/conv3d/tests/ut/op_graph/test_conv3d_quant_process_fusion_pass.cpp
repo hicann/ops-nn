@@ -179,7 +179,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_no_bias_succ
         .AddInput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT, "Conv3D_x")
         .AddInput(DT_INT8, FORMAT_NCHW, FILTER_SHAPE_BIAS_OPT_4D, "Conv3D_filter")
         .AddOutput(DT_INT32, FORMAT_NCHW, OUT_SHAPE_BIAS_OPT, "y");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT), true)
                      .AddConv3D(convConfig, false, false, false)
@@ -229,7 +229,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_no_bias_succ
 TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_with_bias_success)
 {
     TestGraph builder("conv3d_quant_bias_optimize_with_bias_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT), true)
                      .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT,
@@ -266,7 +266,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_with_bias_su
 TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_no_bias_success)
 {
     TestGraph builder("conv3d_quant_rollback_no_bias_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
@@ -316,7 +316,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_no_bias_success)
 TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_with_bias_success)
 {
     TestGraph builder("conv3d_quant_rollback_with_bias_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
@@ -355,7 +355,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_with_bias_success
 TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_with_pad_success)
 {
     TestGraph builder("conv3d_quant_rollback_with_pad_success");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddNode(PadConfig::Basic("Pad", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), {})
@@ -401,7 +401,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_with_pad_suc
         .AddInput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT, "Conv3D_x")
         .AddInput(DT_INT8, FORMAT_NCHW, FILTER_SHAPE_BIAS_OPT_4D, "Conv3D_filter")
         .AddOutput(DT_INT32, FORMAT_NCHW, OUT_SHAPE_BIAS_OPT, "y");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT), true)
                      .AddNode(PadConfig::Basic("Pad", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT), {})
@@ -455,7 +455,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_5d_filter_wi
         .AddInput(DT_INT8, FORMAT_NCDHW, FILTER_SHAPE_ROLLBACK, "Conv3D_filter")
         .AddOutput(DT_INT32, FORMAT_NCHW, OUT_SHAPE_BIAS_OPT, "y");
     convConfig.WithBias();
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT), true)
                      .AddConv3D(convConfig, false, false, true)
@@ -494,7 +494,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_nd_filter_no
         .AddInput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT, "Conv3D_x")
         .AddInput(DT_INT8, FORMAT_ND, FILTER_SHAPE_ROLLBACK, "Conv3D_filter")
         .AddOutput(DT_INT32, FORMAT_NCHW, OUT_SHAPE_BIAS_OPT, "y");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT), true)
                      .AddConv3D(convConfig, false, false, false)
@@ -540,7 +540,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_c0_boundary)
             .AddInput(DT_INT8, FORMAT_NCHW, fmapShape, "Conv3D_x")
             .AddInput(DT_INT8, FORMAT_NCHW, filterShape4D, "Conv3D_filter")
             .AddOutput(DT_INT32, FORMAT_NCHW, fmapShape, "y");
-        auto graph = builder.SetSocAscend950()
+        auto graph = builder.SetSocDav3510()
                          .AddAscendQuant(AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, fmapShape),
                                          true)
                          .AddConv3D(convConfig, false, false, false)
@@ -574,7 +574,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_c0_boundary)
             .AddInput(DT_INT8, FORMAT_NCHW, fmapShape, "Conv3D_x")
             .AddInput(DT_INT8, FORMAT_NCHW, filterShape4D, "Conv3D_filter")
             .AddOutput(DT_INT32, FORMAT_NCHW, fmapShape, "y");
-        auto graph = builder.SetSocAscend950()
+        auto graph = builder.SetSocDav3510()
                          .AddAscendQuant(AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, fmapShape),
                                          true)
                          .AddConv3D(convConfig, false, false, false)
@@ -617,7 +617,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_5d_filter_no
         .AddInput(DT_INT8, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT, "Conv3D_x")
         .AddInput(DT_INT8, FORMAT_NCDHW, FILTER_SHAPE_ROLLBACK, "Conv3D_filter")
         .AddOutput(DT_INT32, FORMAT_NCHW, OUT_SHAPE_BIAS_OPT, "y");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_BIAS_OPT), true)
                      .AddConv3D(convConfig, false, false, false)
@@ -663,7 +663,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_no_fusion)
         {"no_quant_producer",
          [this]() {
              TestGraph builder("conv3d_quant_no_fusion_no_quant_producer");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
                                                 FILTER_SHAPE_ROLLBACK, OUT_SHAPE_ROLLBACK),
                             false, false, false)
@@ -680,7 +680,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_no_fusion)
         {"no_dequant_consumer",
          [this]() {
              TestGraph builder("conv3d_quant_no_fusion_no_dequant_consumer");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddAscendQuant(AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK),
                                  true)
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
@@ -697,7 +697,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_no_fusion)
         {"unknown_shape",
          [this]() {
              TestGraph builder("conv3d_quant_no_fusion_unknown_shape");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddAscendQuant(AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, {1, -1, 8, 32, 32}),
                                  true)
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
@@ -717,7 +717,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_no_fusion)
         {"pad_not_quant",
          [this]() {
              TestGraph builder("conv3d_quant_no_fusion_pad_not_quant");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddNode(ConstConfig::Basic("input_const", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), {})
                  .AddNode(PadConfig::Basic("Pad", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), {})
                  .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
@@ -751,7 +751,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_no_fusion)
 TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_multi_consumer_quant)
 {
     TestGraph builder("conv3d_quant_rollback_multi_consumer_quant");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
@@ -796,7 +796,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_multi_consumer_qu
 TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_multi_consumer_dequant)
 {
     TestGraph builder("conv3d_quant_rollback_multi_consumer_dequant");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddConv3D(Conv3DConfig::Basic("Conv3D", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,
@@ -850,7 +850,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_nhwc_success
         .AddInput(DT_INT8, FORMAT_NHWC, fmapShape, "Conv3D_x")
         .AddInput(DT_INT8, FORMAT_NCHW, filterShape4D, "Conv3D_filter")
         .AddOutput(DT_INT32, FORMAT_NHWC, fmapShape, "y");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(AscendQuantConfig::Basic("AscendQuant", DT_FLOAT16, FORMAT_NHWC, fmapShape), true)
                      .AddConv3D(convConfig, false, false, false)
                      .AddNode(AscendWeightQuantConfig::Basic("AscendWeightQuant", DT_INT8, FORMAT_NCHW, filterShape4D),
@@ -884,7 +884,7 @@ TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_bias_optimize_nhwc_success
 TEST_F(Conv3DQuantProcessFusionPassTest, conv3d_quant_rollback_reentrant)
 {
     TestGraph builder("conv3d_quant_rollback_reentrant");
-    auto graph = builder.SetSocAscend950()
+    auto graph = builder.SetSocDav3510()
                      .AddAscendQuant(
                          AscendQuantConfig::Basic("AscendQuant1", DT_FLOAT16, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK), true)
                      .AddConv3D(Conv3DConfig::Basic("Conv3D1", DT_INT8, FORMAT_NCHW, FMAP_SHAPE_ROLLBACK,

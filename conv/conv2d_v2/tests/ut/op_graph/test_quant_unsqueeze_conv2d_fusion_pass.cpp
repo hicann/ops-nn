@@ -70,11 +70,12 @@ NodeConfig MakeSqueeze(const std::string& name, const std::vector<int64_t>& inSh
 
 void SetupSoc(bool supportUb2Ub, bool supportDn2Nz = false)
 {
-    SocConfig::Ascend950().Apply();
+    SocConfig::Dav3510().Apply();
     PlatformInfo platformInfo;
     OptionalInfo optiInfo;
     optiInfo.soc_version = "Ascend950";
     platformInfo.str_info.short_soc_version = "Ascend950";
+    platformInfo.soc_info.arch_type = 3510;
     if (supportUb2Ub) {
         platformInfo.ai_core_intrinsic_dtype_map["Intrinsic_conv_ub_to_ub"] = {"s8s8"};
     }

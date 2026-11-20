@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include <gtest/gtest.h>
 #include "graph/tensor.h"
 #include "tiling/conv/conv3d/conv3d_tiling.h"
@@ -78,7 +79,7 @@ constexpr uint32_t DTYPESIZE_8 = 8;
 PlatformInfo SetPlatFormInfo()
 {
     PlatformInfo platformInfo;
-    platformInfo.npuArch = NpuArch::DAV_3510;
+    platformInfo.npuArch = Ops::Base::DAV_3510;
     platformInfo.l1Size = MEM_SIZE_512K;
     platformInfo.l0ASize = MEM_SIZE_64K;
     platformInfo.l0BSize = MEM_SIZE_64K;
@@ -93,7 +94,7 @@ PlatformInfo SetPlatFormInfo()
 PlatformInfo SetPlatFormInfo_960DT()
 {
     PlatformInfo platformInfo;
-    platformInfo.npuArch = NpuArch::DAV_9201;
+    platformInfo.npuArch = Ops::Base::DAV_9201;
     platformInfo.l1Size = MEM_SIZE_512K;
     platformInfo.l0ASize = MEM_SIZE_64K;
     platformInfo.l0BSize = MEM_SIZE_64K;
@@ -123,7 +124,7 @@ void SetSingleOutputShapeInTest(conv_tiling::Conv3dTiling& testTiling)
                        1;
 
     testTiling.SetSingleOutputShape(testTiling.shapeInfo.orgCo, singleDo, singleM, 1);
-    if (testTiling.platformInfo.npuArch == NpuArch::DAV_3510) {
+    if (testTiling.platformInfo.npuArch == Ops::Base::DAV_3510) {
         testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
         testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
         testTiling.SetOutputType(TPosition::CO1, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
@@ -138,7 +139,7 @@ void SetSingleOutputShapeInTest(conv_tiling::Conv3dTiling& testTiling)
 
 void SetType(conv_tiling::Conv3dTiling& testTiling, conv_tiling::PlatformInfo& platform)
 {
-    if (platform.npuArch == NpuArch::DAV_3510) {
+    if (platform.npuArch == Ops::Base::DAV_3510) {
         testTiling.SetWeightType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
         testTiling.SetFmapType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
         testTiling.SetOutputType(TPosition::GM, ConvFormat::NCDHW, ConvDtype::BFLOAT16);
@@ -312,7 +313,7 @@ protected:
     static void TearDownTestCase() {}
     virtual void SetUp()
     {
-        platform.npuArch = NpuArch::DAV_3510;
+        platform.npuArch = Ops::Base::DAV_3510;
         platform.l1Size = MEM_SIZE_512K;
         platform.l0ASize = MEM_SIZE_64K;
         platform.l0BSize = MEM_SIZE_64K;

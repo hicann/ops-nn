@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "conv2d_quant_process_fusion_pass.h"
 
 #include <algorithm>
@@ -18,6 +19,7 @@
 #include <map>
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
+#include "acl/acl_platform.h"
 #include "graph/attr_value.h"
 #include "graph/graph.h"
 #include "platform/platform_info.h"
@@ -49,21 +51,12 @@ bool IsTinyProduct()
 
 bool ResolveAippArch(NpuArch& npuArch)
 {
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optiInfo;
-    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optiInfo) != 0) {
+    char npuArchStr[kNpuArchStrLen] = {};
+    if (aclplatformGetDeviceInfo(ACL_PLATFORM_NPU_ARCH, npuArchStr, sizeof(npuArchStr)) != ACL_SUCCESS) {
+        OP_LOGW("ResolveAippArch", "Get npu arch failed, skip aipp adjust.");
         return false;
     }
-    static const std::map<std::string, NpuArch> socToArch = {
-        {"Ascend310P", NpuArch::DAV_2002},   {"Ascend910", NpuArch::DAV_1001}, {"Ascend910B", NpuArch::DAV_2201},
-        {"Ascend910_93", NpuArch::DAV_2201}, {"Ascend950", NpuArch::DAV_3510}, {"Ascend950PR", NpuArch::DAV_3510},
-        {"Ascend950DT", NpuArch::DAV_3510}};
-    auto iter = socToArch.find(platformInfo.str_info.short_soc_version);
-    if (iter == socToArch.end()) {
-        npuArch = NpuArch::DAV_RESV;
-        return true;
-    }
-    npuArch = iter->second;
+    npuArch = static_cast<NpuArch>(std::atoi(npuArchStr));
     return true;
 }
 } // namespace
@@ -408,15 +401,15 @@ ge::Status Conv2DQuantProcessFusionPass::ConvFusionPreImpl(ge::GraphPtr& graph, 
         OP_LOGD(convDescInfo.nodeNameStr, "Quant input producer is not Aipp, no aipp adjust.");
         return ge::SUCCESS;
     }
-    NpuArch npuArch = NpuArch::DAV_RESV;
+    NpuArch npuArch = Ops::Base::DAV_RESV;
     if (!ResolveAippArch(npuArch)) {
         return ge::SUCCESS;
     }
-    if (npuArch == NpuArch::DAV_2002) {
+    if (npuArch == Ops::Base::DAV_2002) {
         OP_LOGD(convDescInfo.nodeNameStr, "Current arch not support aipp adjust yet.");
         return ge::SUCCESS;
     }
-    if (npuArch != NpuArch::DAV_1001 && npuArch != NpuArch::DAV_2201) {
+    if (npuArch != Ops::Base::DAV_1001 && npuArch != Ops::Base::DAV_2201) {
         OP_LOGD(convDescInfo.nodeNameStr, "Current arch no need adjust aipp param.");
         aippFirstConvType = AIPPFirstConvType::NO_NEED_ADJUST_TYPE;
         return ge::SUCCESS;

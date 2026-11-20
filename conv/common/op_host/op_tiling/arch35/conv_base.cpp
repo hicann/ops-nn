@@ -12,6 +12,7 @@
  * \file conv_base.cpp
  * \brief
  */
+#include "op_common/op_host/util/op_const_def.h"
 #include "conv_base.h"
 #include <cmath>
 #include <set>
@@ -376,9 +377,9 @@ void ConvBase::GetSupportedFormats(bool is2dFlag, std::stringstream& ss,
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     NpuArch npuArch = ascendcPlatform.GetCurNpuArch();
     std::string archKey;
-    if (npuArch == NpuArch::DAV_3510) {
+    if (npuArch == Ops::Base::DAV_3510) {
         archKey = NPU_ARCH_KEY_3510;
-    } else if (npuArch == NpuArch::DAV_9201 || npuArch == NpuArch::DAV_9202) {
+    } else if (npuArch == Ops::Base::DAV_9201 || npuArch == Ops::Base::DAV_9202) {
         archKey = NPU_ARCH_KEY_9201;
     } else if (npuArch == Ops::Base::DAV_5162) {
         archKey = NPU_ARCH_KEY_5162;

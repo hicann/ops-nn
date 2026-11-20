@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "a_conv2d_mul_fusion_pass.h"
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
@@ -31,8 +32,8 @@ void AConv2dMulFusion::InitMember()
     biasNode = nullptr;
     mulNonConstInputIdx = -1;
     mulConstInputIdx = -1;
-    isDav3510 = false;
-    npuArch = NpuArch::DAV_RESV;
+    isNdArch = false;
+    npuArch = Ops::Base::DAV_RESV;
     insertedMulNodes.clear();
 }
 
@@ -152,7 +153,7 @@ bool AConv2dMulFusion::CheckScaleShapeConv2d() const
                           OP_LOGD(convDescInfo.nodeNameStr, "scale shape is not scalar or channel-wise, no fusion."),
                           return false);
         FUSION_PASS_CHECK(
-            isDav3510 && outFormat == FORMAT_NCHW && scaleDims[0] == outputC,
+            isNdArch && outFormat == FORMAT_NCHW && scaleDims[0] == outputC,
             OP_LOGD(convDescInfo.nodeNameStr, "channel-wise scale not supported on dav3510 NCHW, no fusion."),
             return false);
         return true;
@@ -169,7 +170,7 @@ bool AConv2dMulFusion::CheckScaleShapeConv3d() const
                       return false);
     Format outFormat = convDescInfo.outputFormat;
     int64_t outputC;
-    FUSION_PASS_CHECK(isDav3510 && outFormat != FORMAT_NDHWC,
+    FUSION_PASS_CHECK(isNdArch && outFormat != FORMAT_NDHWC,
                       OP_LOGD(convDescInfo.nodeNameStr, "conv3d output format not NDHWC on dav3510, no fusion."),
                       return false);
     outputC = outShape[NDHWC_C_POSITION];
@@ -207,7 +208,7 @@ bool AConv2dMulFusion::MeetRequirements(const GNode& convNode)
         return false;
     }
 
-    isDav3510 = ConvFusionUtilsPass::CheckSocList(ND_SOC_LIST, npuArch);
+    isNdArch = ConvFusionUtilsPass::CheckArchList(ND_ARCH_LIST, npuArch);
 
     auto convConsumers = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
     FUSION_PASS_CHECK(

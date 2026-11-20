@@ -89,6 +89,28 @@ std::string FVectorToString(const op::FVector<int64_t>& vec)
     result += "]";
     return result;
 }
+
+const char* NpuArchToString(NpuArch npuArch)
+{
+    switch (npuArch) {
+        case Ops::Base::DAV_2201:
+            return "DAV_2201";
+        case Ops::Base::DAV_3510:
+            return "DAV_3510";
+        case Ops::Base::DAV_9201:
+            return "DAV_9201";
+        case Ops::Base::DAV_9202:
+            return "DAV_9202";
+        case Ops::Base::DAV_1001:
+            return "DAV_1001";
+        case Ops::Base::DAV_2002:
+            return "DAV_2002";
+        case Ops::Base::DAV_3002:
+            return "DAV_3002";
+        default:
+            return "UNKNOWN";
+    }
+}
 } // namespace op
 
 namespace ConvolutionUtil {

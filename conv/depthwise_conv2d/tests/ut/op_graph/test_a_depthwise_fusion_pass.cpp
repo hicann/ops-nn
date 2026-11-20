@@ -74,14 +74,14 @@ DepthwiseConv2DConfig MakeNhwcConfig(const std::string& nodeName, const std::vec
 GraphPtr BuildDepthwiseGraph(const char* graphName, const DepthwiseConv2DConfig& cfg)
 {
     TestGraph builder(graphName);
-    builder.SetSocAscend950();
+    builder.SetSocDav3510();
     return builder.AddDepthwiseConv2D(cfg).SetOutput(cfg.name).Build();
 }
 
 GraphPtr BuildDepthwiseWithFilterBranch(const char* graphName, const DepthwiseConv2DConfig& cfg, bool withRelu = true)
 {
     TestGraph builder(graphName);
-    builder.SetSocAscend950();
+    builder.SetSocDav3510();
     return builder.AddDepthwiseConv2DWithFilterBranch(cfg, withRelu).SetOutput(cfg.name).Build();
 }
 
@@ -239,7 +239,7 @@ TEST_F(ADepthwiseFusionPassTest, a_depthwise_fusion_no_change)
         {"empty_graph_no_match",
          []() {
              return TestGraph("empty_graph_no_match")
-                 .SetSocAscend950()
+                 .SetSocDav3510()
                  .AddRelu(ReluConfig::Basic("relu", DT_FLOAT16), true)
                  .SetOutput("relu")
                  .Build();
@@ -266,7 +266,7 @@ TEST_F(ADepthwiseFusionPassTest, a_depthwise_fusion_no_change)
 TEST_F(ADepthwiseFusionPassTest, ascend_weight_quant_hwcn)
 {
     auto graph = TestGraph("ascend_weight_quant_hwcn")
-                     .SetSocAscend950()
+                     .SetSocDav3510()
                      .AddNode(
                          AscendWeightQuantConfig::Basic("ascend_weight_quant", DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}),
                          {0})
@@ -296,7 +296,7 @@ TEST_F(ADepthwiseFusionPassTest, ascend_weight_quant_hwcn)
 TEST_F(ADepthwiseFusionPassTest, ascend_weight_quant_nchw)
 {
     auto graph = TestGraph("ascend_weight_quant_nchw")
-                     .SetSocAscend950()
+                     .SetSocDav3510()
                      .AddNode(
                          AscendWeightQuantConfig::Basic("ascend_weight_quant", DT_FLOAT, FORMAT_NCHW, {4, 16, 1, 1}),
                          {0})
@@ -316,7 +316,7 @@ TEST_F(ADepthwiseFusionPassTest, ascend_weight_quant_nchw)
 TEST_F(ADepthwiseFusionPassTest, downstream_quant_bias_optimization)
 {
     TestGraph builder("downstream_quant_bias_optimization");
-    builder.SetSocAscend950();
+    builder.SetSocDav3510();
     TensorInfo filterInfo(DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}, "filter_src");
     filterInfo.SetDesc(BuildTensorDesc(DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}, FORMAT_HWCN, {1, 1, 16, 4}));
     auto filterHolder = builder.CreateGraphInput(filterInfo);
@@ -365,7 +365,7 @@ TEST_F(ADepthwiseFusionPassTest, a_depthwise_fusion_reshape_topology)
              TensorInfo filterInfo(DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}, "filter_src");
              filterInfo.SetDesc(BuildTensorDesc(DT_FLOAT, FORMAT_HWCN, {1, 1, 16, 4}, FORMAT_HWCN, {1, 1, 16, 4}));
              TestGraph builder("non_target_consumer_no_reshape");
-             builder.SetSocAscend950();
+             builder.SetSocDav3510();
              auto filterHolder = builder.CreateGraphInput(filterInfo);
              builder.AddDepthwiseConv2D(cfg, true, false);
              builder.AddRelu(ReluConfig::Basic("filter_relu", DT_FLOAT), false);
@@ -420,7 +420,7 @@ TEST_F(ADepthwiseFusionPassTest, anchor_depthwise_unchanged)
 TEST_F(ADepthwiseFusionPassTest, multi_depthwise_same_graph)
 {
     auto graph = TestGraph("multi_depthwise_same_graph")
-                     .SetSocAscend950()
+                     .SetSocDav3510()
                      .AddDepthwiseConv2D(MakeHwcnConfig("dw1", {1, 1, 16, 4}))
                      .AddDepthwiseConv2D(MakeNchwConfig("dw2", {4, 16, 1, 1}))
                      .SetOutput("dw1")
@@ -438,9 +438,9 @@ TEST_F(ADepthwiseFusionPassTest, multi_soc_no_filter)
         const char* pointName;
         SocConfig socConfig;
     } const points[] = {
-        {"ascend950", SocConfig::Ascend950()},
+        {"dav3510", SocConfig::Dav3510()},
         {"mc62", SocConfig::MC62()},
-        {"non_nd", SocConfig("Ascend910B", "Ascend910B1")},
+        {"non_nd", SocConfig("Ascend910B", "Ascend910B1", "split", 2201)},
     };
 
     for (const auto& p : points) {

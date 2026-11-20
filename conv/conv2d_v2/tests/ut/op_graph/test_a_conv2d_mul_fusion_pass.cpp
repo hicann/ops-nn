@@ -218,7 +218,7 @@ protected:
     GraphPtr BuildMulFusionGraph(const std::string& tag, const MulFusionOptions& opt)
     {
         if (opt.isDav3510) {
-            SocConfig::Ascend950().Apply();
+            SocConfig::Dav3510().Apply();
         }
         EsGraphBuilder graphBuilder(tag.c_str());
         DataType dtype = opt.dtype;

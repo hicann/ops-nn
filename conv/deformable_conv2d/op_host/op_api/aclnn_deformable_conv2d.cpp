@@ -27,6 +27,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "op_common/log/log.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -91,7 +92,7 @@ static aclnnStatus InputTransProcess(const aclTensor*& inputTensor, const string
              return ACLNN_ERR_INNER_NULLPTR);
 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch != NpuArch::DAV_3510 || tensorName != "weight") {
+    if (curArch != Ops::Base::DAV_3510 || tensorName != "weight") {
         int64_t valuePerm[4] = {0, 2, 3, 1};
         auto perm = executor->AllocIntArray(valuePerm, 4);
         CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -102,7 +103,7 @@ static aclnnStatus InputTransProcess(const aclTensor*& inputTensor, const string
                  return ACLNN_ERR_INNER_NULLPTR);
     }
 
-    if (curArch == NpuArch::DAV_3510 && tensorName != "weight") {
+    if (curArch == Ops::Base::DAV_3510 && tensorName != "weight") {
         const_cast<aclTensor*>(inputTensor)->SetStorageFormat(Format::FORMAT_NHWC);
         const_cast<aclTensor*>(inputTensor)->SetOriginalFormat(Format::FORMAT_NHWC);
         const_cast<aclTensor*>(inputTensor)->SetViewFormat(Format::FORMAT_NHWC);
@@ -210,7 +211,7 @@ static aclnnStatus ResultViewProcess(DeformableConv2dInputTensor& inputTensor, C
 {
     auto dtype = outputTensor.out->GetDataType();
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch != NpuArch::DAV_3510) {
+    if (curArch != Ops::Base::DAV_3510) {
         auto res = BiasProcess(inputTensor, resultTensor, executor);
         CHECK_RET(res == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
         if (dtype == op::DataType::DT_BF16 || dtype == op::DataType::DT_FLOAT16) {
@@ -231,7 +232,7 @@ static aclnnStatus ResultViewProcess(DeformableConv2dInputTensor& inputTensor, C
              return ACLNN_ERR_INNER_NULLPTR);
 
     if (outputTensor.deformOutOptional != nullptr) {
-        if (curArch != NpuArch::DAV_3510) {
+        if (curArch != Ops::Base::DAV_3510) {
             if (dtype == op::DataType::DT_BF16 || dtype == op::DataType::DT_FLOAT16) {
                 resultTensor.deformOutOptional = l0op::Cast(resultTensor.deformOutOptional, dtype, executor);
                 CHECK_RET(resultTensor.deformOutOptional != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -330,7 +331,7 @@ static aclnnStatus CalculateDeformableConv2d(DeformableConv2dInputTensor& inputT
     }
 
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_3510) {
+    if (curArch == Ops::Base::DAV_3510) {
         return DeformableConv2dV2(inputTensor, outputTensor, params, executor);
     }
 
@@ -422,7 +423,7 @@ static bool CheckFormat(DeformableConv2dInputTensor& inputTensor, ConvolutionOut
 {
     // 如果输入格式不满足格式要求，记录日志，直接报错
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_3510) {
+    if (curArch == Ops::Base::DAV_3510) {
         OP_CHECK(
             inputTensor.input->GetStorageFormat() == Format::FORMAT_NCHW,
             OP_LOGE_FOR_INVALID_FORMAT(ACLNN_API_NAME, "x", GeFormatToString(inputTensor.input->GetStorageFormat()),

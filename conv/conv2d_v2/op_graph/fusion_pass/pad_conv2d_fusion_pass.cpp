@@ -8,12 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "pad_conv2d_fusion_pass.h"
 
 #include <algorithm>
 #include <utility>
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
+#include "acl/acl_platform.h"
 #include "graph/graph.h"
 #include "platform/platform_info.h"
 #include "register/register_custom_pass.h"
@@ -43,7 +45,7 @@ std::pair<int64_t, int64_t> CalcSamePad(int64_t inputDim, int64_t kernel, int64_
 
 void PadConv2dFusionPass::InitMember()
 {
-    npuArch = NpuArch::DAV_RESV;
+    npuArch = Ops::Base::DAV_RESV;
     convDescInfo = ConvDescInfo();
     padNode = nullptr;
     paddings.clear();
@@ -71,17 +73,15 @@ std::set<AscendString> PadConv2dFusionPass::GetNodeTypes() const { return {CONV2
 
 void PadConv2dFusionPass::InitPlatform()
 {
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optionalInfo;
-    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
-        PLATFORM_INFO_OK) {
-        OP_LOGW(convDescInfo.nodeNameStr, "Get platform info failed, keep default arch.");
+    char npuArchStr[kNpuArchStrLen] = {};
+    if (aclplatformGetDeviceInfo(ACL_PLATFORM_NPU_ARCH, npuArchStr, sizeof(npuArchStr)) != ACL_SUCCESS) {
+        OP_LOGW(convDescInfo.nodeNameStr, "Get npu arch failed, keep default arch.");
         return;
     }
 
-    auto socIter = SOC_LIST.find(platformInfo.str_info.short_soc_version);
-    if (socIter != SOC_LIST.end()) {
-        npuArch = socIter->second;
+    auto curArch = static_cast<NpuArch>(std::atoi(npuArchStr));
+    if (ARCH_LIST.count(curArch) != 0U) {
+        npuArch = curArch;
     }
 }
 
@@ -259,7 +259,7 @@ bool PadConv2dFusionPass::CheckPadV3AndExtractPaddings()
 
 bool PadConv2dFusionPass::CheckFilterHeight() const
 {
-    FUSION_PASS_CHECK_NOLOG(npuArch == NpuArch::DAV_3510, return true);
+    FUSION_PASS_CHECK_NOLOG(npuArch == Ops::Base::DAV_3510, return true);
 
     Format filterFormat = convDescInfo.filterDesc.GetOriginFormat();
     size_t filterHIdx = INDEX_0;
@@ -410,7 +410,7 @@ bool PadConv2dFusionPass::CalcSamePaddingForConv(const GNode& convNode, std::vec
 bool PadConv2dFusionPass::DiscoverAndCheckBackward()
 {
     FUSION_PASS_CHECK_NOLOG(backpropFilterNode == nullptr, return true);
-    FUSION_PASS_CHECK(npuArch == NpuArch::DAV_3510,
+    FUSION_PASS_CHECK(npuArch == Ops::Base::DAV_3510,
                       OP_LOGD(convDescInfo.nodeNameStr, "Backward cube node is not supported on this soc, no fusion."),
                       return false);
 

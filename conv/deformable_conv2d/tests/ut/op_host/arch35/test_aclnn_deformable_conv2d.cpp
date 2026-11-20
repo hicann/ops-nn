@@ -13,6 +13,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 class DeformableConv2dV2Test : public testing::Test {
 protected:
@@ -23,7 +24,7 @@ protected:
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -57,7 +58,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_noOptional)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -91,7 +92,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_noOptional)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_noBias)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -125,7 +126,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_noBias)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float16)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -159,7 +160,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float16)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -193,7 +194,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16_error_format)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_BF16, ACL_FORMAT_NHWC).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_BF16, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -227,7 +228,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16_error_format)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16_error_dtype)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_INT8, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_INT8, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_INT8, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -261,7 +262,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_bf16_error_dtype)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape1)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -295,7 +296,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape1)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape2)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 6, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -329,7 +330,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape2)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape3)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 2, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -363,7 +364,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_shape3)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_attrs)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 4, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 4, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -397,7 +398,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_attrs)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_attrs1)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 4, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 4, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
@@ -431,7 +432,7 @@ TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_attrs1)
 
 TEST_F(DeformableConv2dV2Test, deformable_conv2dv2_float32_error_attrs2)
 {
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
     auto xDesc = TensorDesc({2, 4, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto weightDesc = TensorDesc({2, 4, 1, 1}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);
     auto offsetDesc = TensorDesc({2, 3, 2, 2}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(1, 1);

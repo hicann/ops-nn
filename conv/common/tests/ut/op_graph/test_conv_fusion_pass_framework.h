@@ -22,6 +22,7 @@
 #include "ge/es_graph_builder.h"
 #include "ge/fusion/graph_rewriter.h"
 #include "mmpa/mmpa_api.h"
+#include "op_common/op_host/util/op_const_def.h"
 #include "platform/platform_info.h"
 #include "platform/platform_infos_def.h"
 #include "register/register_custom_pass.h"
@@ -106,25 +107,49 @@ struct TensorInfo {
 
 struct SocConfig {
     SocConfig() = default;
-    SocConfig(const std::string& shortSoc, const std::string& soc, const std::string& cubeVectorCombine = "split")
-        : shortSocVersion(shortSoc), socVersion(soc), cubeVectorCombine(cubeVectorCombine)
+    SocConfig(const std::string& shortSoc, const std::string& soc, const std::string& cubeVectorCombine = "split",
+              int32_t archType = static_cast<int32_t>(Ops::Base::DAV_3510))
+        : shortSocVersion(shortSoc), socVersion(soc), cubeVectorCombine(cubeVectorCombine), archType(archType)
     {}
 
-    static SocConfig Ascend950() { return SocConfig("Ascend950", "Ascend950PR_9589"); }
-    static SocConfig MC62() { return SocConfig("MC62", "Ascend950PR_9589"); }
-    static SocConfig FuseSoc() { return SocConfig("Ascend950", "Ascend950PR_9589", "fuse"); }
+    static SocConfig Dav3510()
+    {
+        return SocConfig("Ascend950", "Ascend950PR_9589", "split", static_cast<int32_t>(Ops::Base::DAV_3510));
+    }
+    static SocConfig Ascend950()
+    {
+        return SocConfig("Ascend950", "Ascend950PR_9589", "split", static_cast<int32_t>(Ops::Base::DAV_3510));
+    }
+    static SocConfig MC62()
+    {
+        return SocConfig("MC62", "Ascend950PR_9589", "split", static_cast<int32_t>(Ops::Base::DAV_3510));
+    }
+    static SocConfig FuseSoc()
+    {
+        return SocConfig("Ascend950", "Ascend950PR_9589", "fuse", static_cast<int32_t>(Ops::Base::DAV_3510));
+    }
 
     void Apply() const
     {
         PlatformInfo platformInfo;
         OptionalInfo optiCompilationInfo;
         platformInfo.str_info.short_soc_version = shortSocVersion;
+        platformInfo.soc_info.arch_type = archType;
         optiCompilationInfo.soc_version = socVersion;
         PlatformInfoManager::Instance().platform_info_map_[shortSocVersion] = platformInfo;
         PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
         PlatformInfoManager::Instance().InitializePlatformInfo();
         PlatformInfoManager::Instance().opti_compilation_infos_.SetSocVersion(socVersion);
+        PlatformInfo probeInfo;
+        OptionalInfo probeOptiInfo;
+        if (PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(probeInfo, probeOptiInfo) ==
+            GRAPH_SUCCESS) {
+            auto socIter = PlatformInfoManager::Instance().platform_info_map_.find(socVersion);
+            if (socIter != PlatformInfoManager::Instance().platform_info_map_.end()) {
+                socIter->second.soc_info.arch_type = archType;
+            }
+        }
 
         fe::PlatFormInfos platFormInfos;
         fe::OptionalInfos optionalInfos;
@@ -139,6 +164,7 @@ struct SocConfig {
     std::string shortSocVersion = "Ascend950";
     std::string socVersion = "Ascend950PR_9589";
     std::string cubeVectorCombine = "split";
+    int32_t archType = static_cast<int32_t>(Ops::Base::DAV_3510);
 };
 
 // ============================================================================
@@ -888,6 +914,12 @@ public:
     TestGraph& SetSoc(const SocConfig& socConfig)
     {
         socConfig.Apply();
+        return *this;
+    }
+
+    TestGraph& SetSocDav3510()
+    {
+        SetSoc(SocConfig::Dav3510());
         return *this;
     }
 

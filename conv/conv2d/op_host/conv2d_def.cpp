@@ -14,6 +14,8 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
+
 namespace ops {
 static const std::vector<ge::DataType> conv2dFmapDataType = {ge::DT_FLOAT16,  ge::DT_BF16,    ge::DT_FLOAT,
                                                              ge::DT_HIFLOAT8, ge::DT_FLOAT16, ge::DT_BF16,
@@ -85,9 +87,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(true);
 
-        this->AICore().AddConfig("ascend950", aicore_config);
-        this->AICore().AddConfig("ascend960dt", aicore_config);
-        this->AICore().AddConfig("ascend960pr", aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, aicore_config);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, aicore_config);
     }
 };
 

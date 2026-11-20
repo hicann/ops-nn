@@ -36,7 +36,7 @@ public:
         if (useFuseSoc) {
             builder.SetSocMC62();
         } else {
-            builder.SetSocAscend950();
+            builder.SetSocDav3510();
         }
         return builder.AddConv2D(convCfg).SetOutput(convCfg.name).Build();
     }
@@ -87,7 +87,7 @@ protected:
     }
 };
 
-// MeetRequirements dtype matrix success: Ascend950 / MC62 × dtype × bias
+// MeetRequirements dtype matrix success: DAV_3510 / MC62 × dtype × bias
 TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_fusion_success)
 {
     struct {
@@ -130,7 +130,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_no_fusion)
         {"unsupported_soc",
          []() {
              TestGraph builder("conv2d_to_conv2dv2_z_no_fusion_unsupported_soc");
-             return builder.SetSoc(SocConfig("Ascend910B", "Ascend910B1"))
+             return builder.SetSoc(SocConfig("Ascend910B", "Ascend910B1", "split", 2201))
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                  .SetOutput("Conv2D")
                  .Build();
@@ -303,7 +303,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
         {"dynamic_shape_fp16",
          [](Conv2dToConv2dV2FusionPassTest& self) {
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
                                                              {-1, -1, -1, -1}, {-1, -1, -1, -1}, {-1, -1, -1, -1}))
                               .SetOutput("Conv2D")
@@ -313,7 +313,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
         {"multi_conv2d_same_graph",
          [](Conv2dToConv2dV2FusionPassTest& self) {
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddConv2D(Conv2DConfig::Basic("Conv2D_1", DT_FLOAT16, DT_FLOAT16))
                               .AddConv2D(Conv2DConfig::Basic("Conv2D_2", DT_FLOAT16, DT_FLOAT16))
                               .SetOutput("Conv2D_1")
@@ -325,7 +325,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
         {"multi_conv2d_serial",
          [](Conv2dToConv2dV2FusionPassTest& self) {
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddConv2D(Conv2DConfig::Basic("Conv2D_1", DT_FLOAT16, DT_FLOAT16))
                               .AddConv2D(Conv2DConfig::Basic("Conv2D_2", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
                                                              {1, 3, 244, 244}, {3, 3, 3, 3}, {1, 3, 244, 244}))
@@ -339,7 +339,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
         {"multi_conv2d_mixed_dtypes",
          [](Conv2dToConv2dV2FusionPassTest&) {
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddConv2D(Conv2DConfig::Basic("Conv2D_ok", DT_FLOAT16, DT_FLOAT16))
                               .AddConv2D(Conv2DConfig::Basic("Conv2D_bad", DT_INT8, DT_INT32))
                               .SetOutput("Conv2D_ok")
@@ -355,7 +355,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
         {"downstream_consumer_preserved",
          [](Conv2dToConv2dV2FusionPassTest& self) {
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
                               .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16))
                               .Connect("Conv2D", 0, "Relu", 0)
@@ -367,7 +367,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
         {"graph_without_conv2d",
          [](Conv2dToConv2dV2FusionPassTest&) {
              auto graph = TestGraph("g")
-                              .SetSocAscend950()
+                              .SetSocDav3510()
                               .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16), true)
                               .SetOutput("Relu")
                               .Build();
@@ -460,7 +460,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_adjust_layout)
         {"post_transpose_multi_consumer",
          [this]() {
              return TestGraph("g")
-                 .SetSocAscend950()
+                 .SetSocDav3510()
                  .AddConv2D(MakeConvCfg(DT_FLOAT16, DT_FLOAT16))
                  .AddTranspose(TransposeNodeConfig::NchwToNhwc("PostTranspose"), false)
                  .AddRelu(ReluConfig::Basic("Relu", DT_FLOAT16, FORMAT_NHWC, {1, 244, 244, 3}))
@@ -505,7 +505,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_adjust_layout)
              Conv2DConfig convCfg = MakeConvCfg(DT_FLOAT16, DT_FLOAT16);
              convCfg.SetAttr("strides", std::vector<int64_t>{1, 2, 3, 4});
              return TestGraph("g")
-                 .SetSocAscend950()
+                 .SetSocDav3510()
                  .AddTranspose(TransposeNodeConfig::NchwToNhwc("PreTranspose"))
                  .AddConv2D(convCfg, false, true)
                  .Connect("PreTranspose", 0, "Conv2D", 0)
@@ -587,7 +587,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
         {"nchw_fmap_nchw_filter_derive",
          []() {
              TestGraph builder("groups_nchw");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 64, 56, 56},
                                                 {4, 16, 3, 3}, {1, 4, 56, 56}))
                  .SetOutput("Conv2D")
@@ -597,7 +597,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
         {"nhwc_fmap_hwcn_filter_derive",
          []() {
              TestGraph builder("groups_nhwc_hwcn");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NHWC, {1, 56, 56, 64},
                                                 {3, 3, 16, 4}, {1, 56, 56, 4}))
                  .SetOutput("Conv2D")
@@ -613,13 +613,13 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
                  .AddInput(DT_FLOAT16, FORMAT_NHWC, {4, 3, 2, 16}, "Conv2D_filter")
                  .AddOutput(DT_FLOAT16, FORMAT_NHWC, {1, 56, 56, 4}, "y")
                  .SetAttr("data_format", std::string("NHWC"));
-             return builder.SetSocAscend950().AddConv2D(convCfg).SetOutput("Conv2D").Build();
+             return builder.SetSocDav3510().AddConv2D(convCfg).SetOutput("Conv2D").Build();
          },
          4},
         {"fmap_c_equals_filter_cin_keeps_default",
          []() {
              TestGraph builder("groups_c_equal");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 16, 56, 56},
                                                 {4, 16, 3, 3}, {1, 4, 56, 56}))
                  .SetOutput("Conv2D")
@@ -629,7 +629,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
         {"fmap_c_less_filter_cin_keeps_default",
          []() {
              TestGraph builder("groups_c_less");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 8, 56, 56},
                                                 {4, 16, 3, 3}, {1, 4, 56, 56}))
                  .SetOutput("Conv2D")
@@ -642,7 +642,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 64, 56, 56},
                                                         {4, 16, 3, 3}, {1, 4, 56, 56});
              convCfg.SetAttr("groups", int64_t(4));
-             return builder.SetSocAscend950().AddConv2D(convCfg).SetOutput("Conv2D").Build();
+             return builder.SetSocDav3510().AddConv2D(convCfg).SetOutput("Conv2D").Build();
          },
          4},
         {"explicit_groups_mismatch_preserved",
@@ -651,13 +651,13 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
              Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 64, 56, 56},
                                                         {4, 16, 3, 3}, {1, 4, 56, 56});
              convCfg.SetAttr("groups", int64_t(2));
-             return builder.SetSocAscend950().AddConv2D(convCfg).SetOutput("Conv2D").Build();
+             return builder.SetSocDav3510().AddConv2D(convCfg).SetOutput("Conv2D").Build();
          },
          2},
         {"non_divisible_keeps_default",
          []() {
              TestGraph builder("groups_non_divisible");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 63, 56, 56},
                                                 {4, 16, 3, 3}, {1, 4, 56, 56}))
                  .SetOutput("Conv2D")
@@ -667,7 +667,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
         {"dynamic_shape_keeps_default",
          []() {
              TestGraph builder("groups_dynamic");
-             return builder.SetSocAscend950()
+             return builder.SetSocDav3510()
                  .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {-1, -1, -1, -1},
                                                 {-1, -1, -1, -1}, {-1, -1, -1, -1}))
                  .SetOutput("Conv2D")
@@ -677,7 +677,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
         {"fractal_z_filter_keeps_default",
          []() {
              TestGraph builder("groups_fractal_z");
-             auto graph = builder.SetSocAscend950()
+             auto graph = builder.SetSocDav3510()
                               .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW,
                                                              {1, 64, 56, 56}, {4, 16, 3, 3}, {1, 4, 56, 56}))
                               .SetOutput("Conv2D")
@@ -708,7 +708,7 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_implicit_derive
 TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_groups_derive_multi_conv)
 {
     auto graph = TestGraph("groups_derive_multi")
-                     .SetSocAscend950()
+                     .SetSocDav3510()
                      .AddConv2D(Conv2DConfig::Basic("Conv2D_1", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 64, 56, 56},
                                                     {4, 16, 3, 3}, {1, 4, 56, 56}))
                      .AddConv2D(Conv2DConfig::Basic("Conv2D_2", DT_FLOAT16, DT_FLOAT16, FORMAT_NCHW, {1, 32, 28, 28},
