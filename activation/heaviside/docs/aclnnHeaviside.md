@@ -162,8 +162,8 @@ aclnnStatus aclnnHeaviside(
       <td>传入的输入参数（input，values）或输出参数out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>输入/输出参数的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -174,6 +174,9 @@ aclnnStatus aclnnHeaviside(
     </tr>
     <tr>
       <td>输出参数out的shape与输入参数经过broadcast后的shape不一致。</td>
+    </tr>
+    <tr>
+      <td>输入的维度数超过8。</td>
     </tr>
   </tbody></table>
 
