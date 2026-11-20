@@ -72,6 +72,7 @@ __global__ __aicore__ void lp_norm_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, G
         op.template SetVar<float, 0>(tilingData.epsilon);
         op.template SetVar<float, VAR_INDEX_1>(tilingData.recp);
         op.Init(&pipe, x, y, workspace);
+        op.ReserveStackBuffer(&pipe);
         op.Process(val);
     } else if constexpr (TemplateNum == TEMPLATE_P_NINF) { // p = -inf
         using promoteDtype = GetPromoteType<DTYPE_X>::T;
@@ -94,6 +95,7 @@ __global__ __aicore__ void lp_norm_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, G
         op.template SetVar<float, VAR_INDEX_1>(tilingData.p);
         op.template SetVar<float, VAR_INDEX_2>(tilingData.recp);
         op.Init(&pipe, x, y, workspace);
+        op.ReserveStackBuffer(&pipe);
         op.Process(val);
     }
 }
