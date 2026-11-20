@@ -41,6 +41,18 @@ def _compute(xs, scalar):
     return list(torch._foreach_clamp_min(list(xs), scalar))
 
 
+def _copy_to_out(o, r):
+    """写回 out 视图。torch copy_ 拒绝 stride=0 广播视图：广播轴钉 0 号切片、
+    其余轴 slice，组合索引一次批量写回（物理存储唯一）；空张量直接返回。"""
+    if o.numel() == 0:
+        return
+    if not any(s == 0 for s in o.stride()):
+        o.copy_(r)
+        return
+    idx = tuple(0 if s == 0 else slice(None) for s in o.stride())
+    o[idx].copy_(r[idx])
+
+
 def _to_torch(t):
     if isinstance(t, torch.Tensor):
         return t, t.dtype
@@ -111,7 +123,7 @@ class AclnnForeachMaximumScalarSpec:
                     raise ValueError(
                         f"out numel {o.numel()} != result numel {r.numel()}"
                     )
-                o.copy_(r)
+                _copy_to_out(o, r)
             return list(out)
         return result
 
