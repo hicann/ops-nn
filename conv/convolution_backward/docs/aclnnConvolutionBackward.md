@@ -237,8 +237,8 @@ aclnnStatus aclnnConvolutionBackward(
       <td>输入</td>
       <td>反向传播过程中对于输出填充。</td>
       <td>
-       <ul><li>数组长度可以为weight维度减2，各维度的数值范围满足[0,stride对应维度数值)。</li>
-       <li>transposed为False场景下，要求每个元素值为0。</li></ul>
+        <ul><li>数组长度可以为weight维度减2，各维度的数值范围满足[0, max(stride对应维度数值, dilation对应维度数值))。</li>
+        <li>transposed为False场景下，要求每个元素值为0。</li></ul>
       </td>
       <td>INT64</td>
       <td>-</td>

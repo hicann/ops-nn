@@ -60,21 +60,21 @@ English | [简体中文](./README.md)
 ## Constraints
 
 * x
-    - The value range of the N, C, D, H, and W dimensions must be [1,2147483647].
+    - The value range of the N, C, D, H, and W dimensions must be [1,2147483646].
 * filter_size
     - The value range of the W and H dimensions must be [1,511].
     - The following axis sequences can be input:
         - [out_channels, in_channels, filter_depth, filter_height, filter_width]
         - [out_channels, filter_depth, filter_height, filter_width, in_channels]
 * out_backprop
-    - The value range of the N, C, D, H, and W dimensions must be [1,2147483647].
+    - The value range of the N, C, D, H, and W dimensions must be [1,2147483646].
 * strides
     - The N and C dimensions must be 1.
     - Ascend 950PR&950DT products: The value range of the D, H, and W dimensions must be [1,2147483646].
     - Atlas A2 products and Atlas A3 products: The value range of the H and W dimensions must be [1,63], and the value range of the D dimension must be [1,255].
 * pads
     - The padding order is: [front, back, top, bottom, left, right].
-    - Ascend 950PR&950DT products: The value range of the H, W, and D dimensions must be [1,2147483646].
+    - Ascend 950PR&950DT products: The value range of the H, W, and D dimensions must be [0,2147483646].
     - Atlas A2 products and Atlas A3 products: The value range of the H, W, and D dimensions must be [0,255].
 * dilations
     - The N and C dimensions must be 1.

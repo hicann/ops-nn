@@ -231,7 +231,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>outputPadding</td>
       <td>Input</td>
       <td>Output padding during backward propagation.</td>
-      <td>       <ul><li>The array length can be the weight dimension minus 2, and the value of each dimension must be in the range [0, the corresponding value of stride).</li>
+      <td>       <ul><li>The array length can be the weight dimension minus 2, and the value of each dimension must be in the range [0, max(the corresponding value of stride, the corresponding value of dilation)).</li>
        <li>If transposed is False, each element value must be 0.</li></ul>
       </td>
       <td>INT64</td>
