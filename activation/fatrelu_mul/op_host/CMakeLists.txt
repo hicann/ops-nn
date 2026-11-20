@@ -8,7 +8,7 @@
 #/
 
 # 设置算子定义时支持的芯片类型
-set(SUPPORT_COMPUTE_UNIT "ascend910_93" "ascend910b" "kirinx90" "kirin9030" "ascend950")
+set(SUPPORT_COMPUTE_UNIT "ascend910_93" "ascend910b" "kirinx90" "kirin9030" "dav_3510")
 # 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
 set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE fatrelu_mul ACLNNTYPE aclnn

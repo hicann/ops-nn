@@ -16,6 +16,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class SmoothL1LossGrad : public OpDef {
@@ -56,8 +57,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(false); // 16 位输入路径升 fp32 中间量计算，不启用框架精度降档派发
-        this->AICore().AddConfig("ascend950", aicoreConfig);
-        this->AICore().AddConfig("ascend350", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 OP_ADD(SmoothL1LossGrad);

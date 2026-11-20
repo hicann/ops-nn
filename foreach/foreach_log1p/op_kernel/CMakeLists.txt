@@ -18,6 +18,6 @@ add_kernel_sources(
 # arch35
 add_kernel_sources(
     KERNEL_SRC arch35/foreach_log1p.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
 )

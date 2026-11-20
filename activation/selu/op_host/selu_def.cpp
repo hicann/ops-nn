@@ -21,6 +21,7 @@
  * No Attr parameters (alpha and scale are fixed constants)
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class Selu : public OpDef {
@@ -49,7 +50,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "selu");
-        this->AICore().AddConfig("ascend950", aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aiCoreConfig);
     }
 };
 OP_ADD(Selu);

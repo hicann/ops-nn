@@ -14,6 +14,7 @@
  */
 
 #include "../../foreach_utils/op_host/foreach_proto_utils.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class ForeachAddcdivScalarList : public OpDef {
@@ -47,7 +48,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");
-        this->AICore().AddConfig("ascend950");
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

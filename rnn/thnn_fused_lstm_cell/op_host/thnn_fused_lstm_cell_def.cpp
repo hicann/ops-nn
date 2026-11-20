@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 
 namespace ops {
@@ -67,7 +68,7 @@ public:
         aicoreConfig950.Output("storage").ParamType(REQUIRED).DataType(DTYPE_950).Format(FMT_950);
 
         aicoreConfig950.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
-        this->AICore().AddConfig("ascend950", aicoreConfig950);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig950);
     }
 };
 

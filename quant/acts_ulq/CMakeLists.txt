@@ -10,6 +10,6 @@
 # NOTE: Portions of this code were AI-generated and have been
 # technically reviewed for functional accuracy and security
 
-set(SUPPORT_COMPUTE_UNIT "ascend950")
+set(SUPPORT_COMPUTE_UNIT "dav_3510")
 set(SUPPORT_TILING_DIR "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE acts_ulq ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE)

@@ -35,6 +35,7 @@
  * Target: Ascend950 (arch35 / DAV_3510).
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class InplaceApplyProximalAdagrad : public OpDef {
@@ -105,7 +106,7 @@ public:
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opInterface.value", "inplace_apply_proximal_adagrad")
             .ExtendCfgInfo("opFile.value", "inplace_apply_proximal_adagrad");
-        this->AICore().AddConfig("ascend950", aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aiCoreConfig);
     }
 };
 OP_ADD(InplaceApplyProximalAdagrad);

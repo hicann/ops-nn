@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "aclnn_foreach_round_off_number.h"
 #include "foreach_round_off_number_v2.h"
 #include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
@@ -57,7 +58,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     auto roundOffArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (Ops::NN::AclnnUtil::IsRegbase(roundOffArch)) {
         return ASCEND950_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
-    } else if (roundOffArch == NpuArch::DAV_2201) {
+    } else if (roundOffArch == Ops::Base::DAV_2201) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",

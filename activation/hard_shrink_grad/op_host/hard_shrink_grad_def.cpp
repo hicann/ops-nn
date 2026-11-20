@@ -15,6 +15,7 @@
  * \brief HardShrinkGrad 算子定义，声明输入输出、属性和算子配置
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class HardShrinkGrad : public OpDef {
@@ -49,7 +50,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", aicoreConfig910B);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig910B);
     }
 };
 OP_ADD(HardShrinkGrad);

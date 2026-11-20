@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -59,7 +60,7 @@ public:
             .NeedCheckSupportFlag(false)    // skip framework support check
             .PrecisionReduceFlag(true)      // allow safe precision reduction
             .ExtendCfgInfo("opFile.value", "fatrelu_mul_apt");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

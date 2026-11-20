@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "aclnn_foreach_erf.h"
 #include "foreach_erf.h"
 #include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
@@ -42,7 +43,7 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclTensorList* 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+    if (curArch == Ops::Base::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         return EMPTY_LIST;

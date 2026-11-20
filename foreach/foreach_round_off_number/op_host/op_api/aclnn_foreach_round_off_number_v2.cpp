@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "op_common/op_host/util/op_const_def.h"
 #include "aclnn_foreach_round_off_number_v2.h"
 #include "foreach_round_off_number_v2.h"
 #include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
@@ -64,7 +65,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     auto roundOffV2Arch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (Ops::NN::AclnnUtil::IsRegbase(roundOffV2Arch)) {
         return ASCEND950_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
-    } else if (roundOffV2Arch == NpuArch::DAV_2201) {
+    } else if (roundOffV2Arch == Ops::Base::DAV_2201) {
         return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
     } else {
         const std::string reason = (("support for " +

@@ -13,6 +13,6 @@ add_kernel_sources(
     IMPL_MODE optional
 )
 add_kernel_sources(
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC true
 )

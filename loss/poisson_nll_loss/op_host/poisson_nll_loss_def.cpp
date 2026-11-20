@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class PoissonNllLoss : public OpDef {
@@ -55,7 +56,7 @@ public:
             .ExtendCfgInfo("opFile.value", "poisson_nll_loss");
 
         // Only support ascend950 (arch35) - this is the first AscendC implementation
-        this->AICore().AddConfig("ascend950", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 OP_ADD(PoissonNllLoss);

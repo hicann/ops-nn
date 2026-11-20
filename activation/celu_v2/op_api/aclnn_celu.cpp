@@ -24,6 +24,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -40,7 +41,7 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 {
-    if (Ops::NN::AclnnUtil::IsRegbase() || GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+    if (Ops::NN::AclnnUtil::IsRegbase() || GetCurrentPlatformInfo().GetCurNpuArch() == Ops::Base::DAV_2201) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P ||

@@ -21,6 +21,7 @@
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
 #include "op_api/aclnn_util.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -57,13 +58,13 @@ static const std::initializer_list<DataType> Y_DTYPE_SUPPORT_LIST = {op::DataTyp
                                                                      op::DataType::DT_INT4};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_X_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &X_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &X_DTYPE_SUPPORT_LIST}};
+    {Ops::Base::DAV_2201, &X_DTYPE_SUPPORT_LIST}, {Ops::Base::DAV_3510, &X_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_GROUP_INDEX_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &GROUP_INDEX_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &GROUP_INDEX_DTYPE_SUPPORT_LIST}};
+    {Ops::Base::DAV_2201, &GROUP_INDEX_DTYPE_SUPPORT_LIST}, {Ops::Base::DAV_3510, &GROUP_INDEX_DTYPE_SUPPORT_LIST}};
 
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_Y_SUPPORT_DTYPES = {
-    {NpuArch::DAV_2201, &Y_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &Y_DTYPE_SUPPORT_LIST}};
+    {Ops::Base::DAV_2201, &Y_DTYPE_SUPPORT_LIST}, {Ops::Base::DAV_3510, &Y_DTYPE_SUPPORT_LIST}};
 
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportList(
     const std::map<NpuArch, const std::initializer_list<op::DataType>*>& socSupportDtypes)

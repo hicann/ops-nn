@@ -16,6 +16,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -54,7 +55,7 @@ public:
             .NeedCheckSupportFlag(false)    // dtype/attr 约束由 host 侧 tiling 校验
             .PrecisionReduceFlag(false)     // 纯 int64 元数据搬运，无浮点通路
             .ExtendCfgInfo("opFile.value", "update_tensor_desc_apt");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 OP_ADD(UpdateTensorDesc);

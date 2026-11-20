@@ -8,7 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-set(SUPPORT_COMPUTE_UNIT "ascend950")
+set(SUPPORT_COMPUTE_UNIT "dav_3510")
 set(SUPPORT_TILING_DIR "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE chamfer_distance ACLNNTYPE aclnn_exclude
     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}

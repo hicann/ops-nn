@@ -15,6 +15,7 @@
  * \brief inplace_apply_add_sign_def source file
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -95,7 +96,7 @@ public:
             .ExtendCfgInfo("opFile.value", "inplace_apply_add_sign");
         // Bind AICore config to the ascend950 compute unit. (Tiling is registered
         // separately via IMPL_OP_OPTILING in op_host/arch35/.)
-        this->AICore().AddConfig("ascend950", aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aiCoreConfig);
     }
 };
 

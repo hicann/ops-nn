@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 // Inplace: x1 = x1 * x2, x1 serves as both input and output (no Output declared).
@@ -43,7 +44,7 @@ public:
         OpAICoreConfig regbaseCfg;
         regbaseCfg.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
 
-        this->AICore().AddConfig("ascend950", regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, regbaseCfg);
     }
 };
 

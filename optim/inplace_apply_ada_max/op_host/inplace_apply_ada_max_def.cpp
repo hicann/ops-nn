@@ -25,6 +25,7 @@
  * 仅适配 Ascend950 (arch35 / DAV_3510)。
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class InplaceApplyAdaMax : public OpDef {
@@ -116,7 +117,7 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "inplace_apply_ada_max");
-        this->AICore().AddConfig("ascend950", aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aiCoreConfig);
     }
 };
 OP_ADD(InplaceApplyAdaMax);

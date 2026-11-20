@@ -9,7 +9,7 @@
 # ----------------------------------------------------------------------------
 
 # Supported compute unit for Relu6Grad
-set(SUPPORT_COMPUTE_UNIT "ascend950")
+set(SUPPORT_COMPUTE_UNIT "dav_3510")
 # Tiling directory selected from op_host/<TILING_DIR>/
 set(SUPPORT_TILING_DIR "arch35")
 

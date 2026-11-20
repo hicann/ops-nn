@@ -10,7 +10,7 @@
 # ----------------------------------------------------------------------------
 
 add_kernel_sources(
-    COMPUTE_UNITS ascend950 ascend350
+    COMPUTE_UNITS dav_3510
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
 )

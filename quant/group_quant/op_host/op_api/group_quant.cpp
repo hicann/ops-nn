@@ -20,6 +20,7 @@
 #include "opdev/shape_utils.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_common/op_host/util/op_const_def.h"
 
 using namespace op;
 
@@ -33,7 +34,7 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
 static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion()
 {
     const std::map<NpuArch, const std::initializer_list<op::DataType>*> socSupportDtypes = {
-        {NpuArch::DAV_2201, &AICORE_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &AICORE_DTYPE_SUPPORT_LIST}};
+        {Ops::Base::DAV_2201, &AICORE_DTYPE_SUPPORT_LIST}, {Ops::Base::DAV_3510, &AICORE_DTYPE_SUPPORT_LIST}};
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     auto found = socSupportDtypes.find(curArch);
     if (found != socSupportDtypes.end()) {

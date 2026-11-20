@@ -17,6 +17,7 @@
  * dtypes are fp16/fp32 ONLY (no bf16). arch35-only: single AddConfig("ascend950").
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 // A2(910B) 权威声明 aic-ascend910b-ops-info.ini 里本算子的 format 是 NDHWC(输入输出皆然)，
@@ -54,7 +55,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(false);
-        this->AICore().AddConfig("ascend950", regbaseCfg);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, regbaseCfg);
     }
 };
 

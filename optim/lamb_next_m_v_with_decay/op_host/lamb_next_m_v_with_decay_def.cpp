@@ -14,6 +14,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class LambNextMVWithDecay : public OpDef {
@@ -43,7 +44,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(false)
             .ExtendCfgInfo("opFile.value", "lamb_next_m_v_with_decay");
-        this->AICore().AddConfig("ascend950", aicoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aicoreConfig);
     }
 };
 

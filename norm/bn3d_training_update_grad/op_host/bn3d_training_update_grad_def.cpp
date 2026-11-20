@@ -15,6 +15,7 @@
 
 #include <vector> // std::vector (dtype/format slot lists)
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 
@@ -110,7 +111,7 @@ public:
             // OpType BN3D... 自动 snake 化会误切为 bn3_d_...，须显式覆盖 opFile/opInterface 对齐 kernel 入口
             .ExtendCfgInfo("opFile.value", "bn3d_training_update_grad")
             .ExtendCfgInfo("opInterface.value", "bn3d_training_update_grad");
-        this->AICore().AddConfig("ascend950", aiCoreConfig);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, aiCoreConfig);
     }
 };
 OP_ADD(BN3DTrainingUpdateGrad);
