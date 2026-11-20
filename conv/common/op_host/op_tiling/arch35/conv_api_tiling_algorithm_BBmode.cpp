@@ -1353,5 +1353,5 @@ void ConvTilingAlgorithmBBmode::ScaleBiasUbTilingDecision() const
     tilingIns_->ubTilingInfo.nUb = nL0; // nUb fullload nL0 by default;
 }
 
-void ConvTilingAlgorithmBBmode::GetUbTiling() { ScaleBiasUbTilingDecision(); }
+void ConvTilingAlgorithmBBmode::GetUbTiling() const { ScaleBiasUbTilingDecision(); }
 } // namespace conv_tiling_algo_bb

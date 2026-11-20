@@ -234,7 +234,7 @@ private:
     void TryOptimizeL0MNTile();
     bool EvalL0MNTileCandidate(uint64_t tryMTile, uint64_t tryNTile, L0MNTileEvalResult& result) const;
     void ScaleBiasUbTilingDecision() const;
-    void GetUbTiling();
+    void GetUbTiling() const;
 
     void CalcMNFullLoadFlag() const;
     void CalcAvalibleL1Size();

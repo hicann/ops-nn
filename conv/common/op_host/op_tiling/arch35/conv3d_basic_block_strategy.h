@@ -133,8 +133,8 @@ public:
                              params.shapeInfo.co;
         uint64_t n0 = static_cast<uint64_t>(CUBE_MKN_MAP.GetMKN(dtypeMap.at(params.descInfo.fMapDtype), MKN_N_IDX));
         uint64_t singleCoreCo = ConvAlignB(ConvCeilDiv(ConvAlignB(curCo, n0), nDim), n0);
-        int64_t singleCoreDo = ConvCeilDiv(params.shapeInfo.dout, bbInfo.doDim);
-        int64_t singleCoreBatch = ConvCeilDiv(params.shapeInfo.batch, bbInfo.batchDim);
+        int64_t singleCoreDo = static_cast<int64_t>(ConvCeilDiv(params.shapeInfo.dout, bbInfo.doDim));
+        int64_t singleCoreBatch = static_cast<int64_t>(ConvCeilDiv(params.shapeInfo.batch, bbInfo.batchDim));
         params.tilingBase->SetSingleOutputShapeCoDoMBatch(static_cast<int64_t>(singleCoreCo), singleCoreDo, 0,
                                                           singleCoreBatch);
     }
