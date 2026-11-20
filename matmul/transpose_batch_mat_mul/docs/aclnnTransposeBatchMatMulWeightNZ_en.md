@@ -120,10 +120,10 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       </tr>
       <tr>
         <td>bias</td>
-        <td>Input</td>
+        <td>Optional input</td>
         <td>Represents the bias matrix of matrix multiplication.</td>
         <td>        <ul>
-            <li>Optional on Ascend 950PR&amp;950DT products. Shape: (N,) or (1,N); dtype: the same as x1 or FLOAT32.</li>
+            <li>Pass a null pointer when unused. For product-specific support, see <a href="#constraints">Constraints</a>.</li>
         </ul>
         </td>
         <td>BFLOAT16, FLOAT16, FLOAT32</td>
@@ -149,8 +149,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>Input</td>
         <td>Represents the transpose sequence of the first matrix in matrix multiplication.</td>
         <td>        <ul>
-          <li> Supports [0, 1, 2] and [1, 0, 2].</li>
-          <li>Ascend 950PR&amp;950DT products also support [0, 2, 1] with BMN output.</li>
+          <li>Supports [0, 1, 2], [1, 0, 2], and [0, 2, 1]. For product-specific support, see <a href="#constraints">Constraints</a>.</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -176,8 +175,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>Input</td>
         <td>Represents the transpose sequence of the output matrix in the matrix multiplication.</td>
         <td>        <ul>
-            <li>Supports [1, 0, 2].</li>
-            <li>Ascend 950PR&amp;950DT products also support [0, 1, 2], producing (B, M, N), without scale or batch splitting.</li>
+            <li>Supports [1, 0, 2] and [0, 1, 2]. For product-specific support, see <a href="#constraints">Constraints</a>.</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -312,7 +310,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <td>The data type of scale is not in the supported range, or its shape is not one-dimensional, or its length is not equal to B*N.</td>
     </tr>
     <tr>
-      <td>bias is not null.</td>
+      <td>bias does not satisfy the constraints on shape, data type, format, or combinations with scale and batchSplitFactor for the current product.</td>
     </tr>
     <tr>
       <td>The value of cubeMathType is not in the supported range, or the current product does not support the configured data type combination.</td>
@@ -396,9 +394,11 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 <!-- end id7 -->
 <!-- npu="950" id8 -->
 - <term>Ascend 950PR&950DT products</term>:
+  - permX1 supports [0, 1, 2], [1, 0, 2], and [0, 2, 1].
   - permX2 supports input [0, 1, 2] and [0, 2, 1].
+  - permY supports [1, 0, 2] and [0, 1, 2]. [0, 1, 2] produces the batch-first layout (B, M, N) and requires no scale and batchSplitFactor=1.
   - When scale is not empty, batchSplitFactor must equal 1, and only type inference with FLOAT16 input and INT8 output is supported.
-  - bias is shared across batches and rows, and requires scale=None and batchSplitFactor=1.
+  - bias is supported with shape (N,) or (1,N) and the same data type as x1 or FLOAT32. It is shared across batches and rows and requires scale=None and batchSplitFactor=1.
   - permX1=[0, 2, 1] requires permY=[0, 1, 2], no scale and batchSplitFactor=1. WeightNz does not support KBN B.
 <!-- end id8 -->
 - self only supports 3 dimensions, and mat2 only supports the Ascend private format. Before calling this API, you must complete the conversion of mat2 from ND to the Ascend private format.

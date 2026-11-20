@@ -120,11 +120,11 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       </tr>
       <tr>
         <td>bias</td>
-        <td>输入</td>
+        <td>可选输入</td>
         <td>表示矩阵乘的偏置矩阵。</td>
         <td>
         <ul>
-            <li>仅Ascend 950PR&amp;950DT系列产品支持。shape为(N,)或(1,N)，类型与x1相同或为FLOAT32。</li>
+            <li>不使用时传入空指针，具体支持情况参见<a href="#约束说明">约束说明</a>。</li>
         </ul>
         </td>
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
@@ -152,8 +152,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>表示矩阵乘的第一个矩阵的转置序列。</td>
         <td>
         <ul>
-          <li> 支持[0, 1, 2]、[1, 0, 2]。</li>
-          <li>Ascend 950PR&amp;950DT系列产品的BMN输出还支持[0, 2, 1]。</li>
+          <li>支持[0, 1, 2]、[1, 0, 2]、[0, 2, 1]，具体支持情况参见<a href="#约束说明">约束说明</a>。</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -181,8 +180,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>表示矩阵乘输出矩阵的转置序列。</td>
         <td>
         <ul>
-            <li>支持[1, 0, 2]。</li>
-            <li>Ascend 950PR&amp;950DT系列产品还支持[0, 1, 2]，输出(B, M, N)，要求scale为空且batchSplitFactor=1。</li>
+            <li>支持[1, 0, 2]、[0, 1, 2]，具体支持情况参见<a href="#约束说明">约束说明</a>。</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -319,7 +317,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <td>scale的数据类型不在支持的范围内，或其shape不是一维，或长度不等于B*N。</td>
     </tr>
     <tr>
-      <td>bias不为空。</td>
+      <td>bias的shape、数据类型、格式或与scale、batchSplitFactor的组合不在当前产品的支持范围内。</td>
     </tr>
     <tr>
       <td>cubeMathType的取值不在支持的范围内，或当前产品不支持所设置的数据类型组合。</td>
@@ -403,9 +401,11 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 <!-- end id7 -->
 <!-- npu="950" id8 -->
 - <term>Ascend 950PR&950DT系列产品</term>：
+  - permX1支持输入[0, 1, 2]、[1, 0, 2]、[0, 2, 1]。
   - permX2支持输入[0, 1, 2]、[0, 2, 1]。
+  - permY支持输入[1, 0, 2]、[0, 1, 2]；[0, 1, 2]表示输出为(B, M, N)批次前置布局，仅支持scale为空且batchSplitFactor为1的场景。
   - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
-  - bias在各batch和行间共享，仅支持scale为空且batchSplitFactor为1的场景。
+  - 支持传入bias，shape为(N,)或(1,N)，数据类型与x1相同或为FLOAT32；bias在各batch和行间共享，仅支持scale为空且batchSplitFactor为1的场景。
   - permX1=[0, 2, 1]要求permY=[0, 1, 2]、scale为空且batchSplitFactor=1；WeightNz不支持KBN B。
 <!-- end id8 -->
 - x1只支持3维，x2只支持昇腾私有格式，调用此接口之前，必须完成x2从ND到昇腾私有格式的转换。

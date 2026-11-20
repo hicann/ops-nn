@@ -52,11 +52,11 @@ cann_ops_nn.transpose_batch_mat_mul(
 | --- | --- | --- | --- | --- | --- |
 | x1 | Tensor | Required | Left matrix of the matrix multiplication. The default `perm_x1=[1, 0, 2]` interprets x1 as (M, B, K). | torch.float16 / torch.bfloat16 / torch.float32 | 3D |
 | x2 | Tensor | Required | Right matrix of the matrix multiplication. The default `perm_x2=[0, 1, 2]` interprets x2 as (B, K, N). FRACTAL_NZ (WeightNZ) is supported; only FLOAT16 and BFLOAT16 are supported in this format. | Same as x1 | 3D |
-| bias | Tensor | Optional | Shared column bias on Ascend 950PR&950DT products. | Same as x1 or torch.float32 | (N,) or (1,N) |
+| bias | Tensor | Optional | Shared column bias. Default is None. For product-specific support, see [Constraints](#constraints). | Same as x1 or torch.float32 | (N,) or (1,N) |
 | scale | Tensor | Optional | Output quantization scale. When provided, it enables FLOAT16 input with INT8 output. The shape must be (B * N,). The scale must be converted from FLOAT32 to INT64/UINT64 by `aclnnTransQuantParamV2` before passing in. | torch.int64 / torch.uint64 | 1D, (B * N,) |
-| perm_x1 | List[int] | Optional | Positions of x1 axes: [0,1,2], [1,0,2], and DAV_3510 BMN [0,2,1]. Default is [1, 0, 2]. | int64 | - |
-| perm_x2 | List[int] | Optional | Positions of x2 axes: [0,1,2], [0,2,1], and DAV_3510 ND BMN [1,0,2]/[1,2,0]. Default is [0, 1, 2]. | int64 | - |
-| perm_y | List[int] | Optional | Positions of output axes: [1,0,2] for MBN or [0,1,2] for BMN. Default is [1, 0, 2]. | int64 | - |
+| perm_x1 | List[int] | Optional | Positions of x1 axes: [0,1,2], [1,0,2], or [0,2,1]. Default is [1,0,2]. For product-specific support, see [Constraints](#constraints). | int64 | - |
+| perm_x2 | List[int] | Optional | Positions of x2 axes: [0,1,2], [0,2,1], [1,0,2], or [1,2,0]. Default is [0,1,2]. For product-specific support, see [Constraints](#constraints). | int64 | - |
+| perm_y | List[int] | Optional | Positions of output axes: [1,0,2] for MBN or [0,1,2] for BMN. Default is [1,0,2]. For product-specific support, see [Constraints](#constraints). | int64 | - |
 | enable_hf32 | bool | Optional | Whether to enable HF32 computation. Only effective for FLOAT32 input. It is mapped to aclnn `cubeMathType` (True=3/USE_HF32, False=0/KEEP_DTYPE). | bool | - |
 | batch_split_factor | int | Optional | Split factor of the output B dimension. The value range is [1, B], and B must be divisible by it. Default is 1. It must be 1 when scale is provided. | int64 | - |
 
@@ -70,13 +70,17 @@ cann_ops_nn.transpose_batch_mat_mul(
 
 - Only 3D tensors are supported. The batch axis and K axis of x1/x2 must match; batch broadcasting is not supported.
 - x1/x2 must have the same dtype, which must be FLOAT16, BFLOAT16, or FLOAT32.
-- On Ascend 950PR&950DT products, perm_y=[0,1,2] produces (B,M,N) and requires no scale and batch_split_factor=1. Transposed A [0,2,1] and ND KBN/NBK B [1,0,2]/[1,2,0] require this output layout.
 - scale is only supported for FLOAT16 input with INT8 output. When scale is provided, batch_split_factor must be 1.
-- bias is shared across batches and rows and requires scale=None and batch_split_factor=1. Pass None on other architectures.
 - x2 supports FRACTAL_NZ (WeightNZ), which can be created by `torch_npu.npu_format_cast(x2, 29)`. In this format, x1/x2 only support FLOAT16 and BFLOAT16.
-- ND NBK B uses a contiguous (N,B,K) tensor and perm_x2=[1,2,0].
 - Empty tensors are not supported.
 - Both eager mode and TorchAir graph mode are supported. In graph mode, the GE Converter converts the call to the `TransposeBatchMatMul` graph operator. The additional permutations apply to eager/Meta; graph conversion retains its existing range.
+
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT products</term>:
+  - bias is supported and shared across batches and rows. It requires scale=None and batch_split_factor=1.
+  - perm_y=[0,1,2] produces (B,M,N) and requires no scale and batch_split_factor=1. Transposed A [0,2,1] and ND KBN/NBK B [1,0,2]/[1,2,0] require this output layout.
+  - ND NBK B uses a contiguous (N,B,K) tensor and perm_x2=[1,2,0].
+<!-- end id7 -->
 
 ## Deterministic Computation
 
@@ -97,11 +101,16 @@ Deterministic computation is supported by default.
 
   y = cann_ops_nn.transpose_batch_mat_mul(x1, x2)
   print(y.shape, y.dtype)  # torch.Size([64, 16, 128]) torch.float16
+  ```
 
-  # Ascend 950PR&950DT products also support shared column bias.
+<!-- npu="950" id8 -->
+- <term>Ascend 950PR&950DT products</term>: Pass shared column bias using x1 and x2 from the example above.
+
+  ```python
   bias = torch.randn(N, dtype=torch.float32).npu()
   y_with_bias = cann_ops_nn.transpose_batch_mat_mul(x1, x2, bias=bias)
   ```
+<!-- end id8 -->
 
 - Eager mode with scale (FLOAT16 input, INT8 output):
 
