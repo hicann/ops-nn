@@ -23,6 +23,7 @@
 #include "matmul/common/op_host/math_util_nn.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
+#include "graph/utils/type_utils.h"
 #include "../../op_kernel/transpose_batch_mat_mul_tiling_key.h"
 
 using namespace optiling::transpose_batch_mat_mul;
@@ -416,7 +417,10 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::CheckArgs()
     idx++;
     if (context_->GetOptionalInputShape(BIAS_IDX) != nullptr) { // bias是第2入参
         args_.hasBias = true;
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOptionalInputDesc(BIAS_IDX));
+        if (context_->GetOptionalInputDesc(BIAS_IDX) == nullptr) {
+            OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(context_->GetNodeName(), "bias", "bias cannot be empty");
+            return ge::GRAPH_FAILED;
+        }
     }
     auto* shape_scale = context_->GetOptionalInputShape(SCALE_IDX);
     if (shape_scale != nullptr) {
@@ -488,8 +492,31 @@ static ge::graphStatus OpSpecificCheck(const optiling::matmul_v3::MatmulV3Args& 
                 return ge::GRAPH_SUCCESS;
             }
         }
-        OP_LOGE(args.opName, "Unsupported data type: x1[%d], x2[%d], y[%d], bias[%d], hasBias[%d]", args.aType,
-                args.bType, args.cType, args.biasType, args.hasBias);
+        std::string paramNames = "x1, x2, y";
+        std::string dtypeStr = ge::TypeUtils::DataTypeToSerialString(args.aType) + ", " +
+                               ge::TypeUtils::DataTypeToSerialString(args.bType) + ", " +
+                               ge::TypeUtils::DataTypeToSerialString(args.cType);
+        if (args.hasBias) {
+            paramNames += ", bias";
+            dtypeStr += ", " + ge::TypeUtils::DataTypeToSerialString(args.biasType);
+        }
+        std::string supportedStr;
+        for (const auto& supported : dtypeSuportList) {
+            if (!supportedStr.empty()) {
+                supportedStr += ", ";
+            }
+            supportedStr += "(";
+            const size_t supportedNum = args.hasBias ? supported.size() : supported.size() - 1;
+            for (size_t i = 0; i < supportedNum; ++i) {
+                if (i != 0) {
+                    supportedStr += ", ";
+                }
+                supportedStr += ge::TypeUtils::DataTypeToSerialString(supported[i]);
+            }
+            supportedStr += ")";
+        }
+        const std::string reason = "The dtypes of " + paramNames + " must be within the range " + supportedStr;
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(args.opName, paramNames.c_str(), dtypeStr.c_str(), reason.c_str());
         return ge::GRAPH_FAILED;
     };
     return isValidDtype(dtype);
@@ -559,7 +586,10 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShapeBias()
         const gert::Shape& biasShape = context_->GetInputShape(BIAS_IDX)->GetOriginShape();
         const int64_t biasValue = biasShape[biasShape.GetDimNum() - 1];
         if (args_.nOriValue != static_cast<uint64_t>(biasValue)) {
-            OP_LOGE(args_.opName, "illegal value: bias[%ld], n[%lu]", biasValue, args_.nOriValue);
+            const std::string reason = "The current value is not within the valid range. The valid range is [" +
+                                       std::to_string(args_.nOriValue) + ", " + std::to_string(args_.nOriValue) + "]";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(args_.opName, "bias", std::to_string(biasValue).c_str(),
+                                                  reason.c_str());
             return ge::GRAPH_FAILED;
         }
     }

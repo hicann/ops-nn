@@ -26,8 +26,14 @@ static ge::graphStatus InferShapeForMatMul(gert::InferShapeContext* context)
     if (shape_x1 == nullptr || shape_x2 == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    if (shape_x1->GetDimNum() > 2 || shape_x2->GetDimNum() > 2) {
-        OP_LOGE(context->GetNodeName(), "inputs of matmul must be 1D or 2D, use batch_mat_mul for higher dims");
+    if (shape_x1->GetDimNum() > 2) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(*shape_x1).c_str(),
+                                              "The rank of x1 must be equal to 1 or 2");
+        return ge::GRAPH_FAILED;
+    }
+    if (shape_x2->GetDimNum() > 2) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x2", Ops::Base::ToString(*shape_x2).c_str(),
+                                              "The rank of x2 must be equal to 1 or 2");
         return ge::GRAPH_FAILED;
     }
     return Ops::NN::InferShapeForBatchMatMul(context, 0, MATMUL_BIAS_IDX);

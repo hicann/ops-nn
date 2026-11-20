@@ -772,4 +772,91 @@ TEST_F(TransposeBatchMatMulInferShape, ScaleDimMulOverflow)
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
+// 覆盖 line 222: scale 维度不为 1
+TEST_F(TransposeBatchMatMulInferShape, ScaleModeInvalidDim)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+
+    gert::Shape x1_shape = {32, 16, 512};
+    gert::Shape x2_shape = {16, 512, 128};
+    gert::Shape scale_shape = {2048, 1};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, &scale_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// 覆盖 line 75: x1 batch 为动态时前置 scale 校验跳过，由 helper 上报 scale 维度不为 1
+TEST_F(TransposeBatchMatMulInferShape, ScaleModeDynamicBatchInvalidDim)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+
+    gert::Shape x1_shape = {32, -1, 512};
+    gert::Shape x2_shape = {16, 512, 128};
+    gert::Shape scale_shape = {2048, 1};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, &scale_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// 覆盖 line 84: x1 batch 为动态时由 helper 上报 scale 首维与 n * b 不一致
+TEST_F(TransposeBatchMatMulInferShape, ScaleModeDynamicBatchShapeMismatch)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("TransposeBatchMatMul")->infer_shape;
+
+    gert::Shape x1_shape = {32, -1, 512};
+    gert::Shape x2_shape = {16, 512, 128};
+    gert::Shape scale_shape = {3};
+    gert::Shape output_shape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(4, 1)
+                      .IrInstanceNum({1, 1, 1, 1})
+                      .InputShapes({&x1_shape, &x2_shape, nullptr, &scale_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"perm_x2", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({0, 1, 2})},
+                                  {"perm_y", Ops::NN::AnyValue::CreateFrom<vector<int64_t>>({1, 0, 2})},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
 } // namespace

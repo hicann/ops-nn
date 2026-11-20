@@ -72,15 +72,22 @@ static ge::graphStatus CheckScaleForTransposeBatchMatMul(const InferShapeContext
     if (shape_scale == nullptr || CheckIsUnknownDimNum(*shape_scale)) {
         return ge::GRAPH_SUCCESS;
     }
-    CHECK(shape_scale->GetDimNum() != 1, OP_LOGE(context->GetNodeName(), "The scale tensor must be 1-dimensional."),
-          return ge::GRAPH_FAILED);
+    if (shape_scale->GetDimNum() != 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "scale",
+                                                 std::to_string(shape_scale->GetDimNum()).c_str(),
+                                                 "The ViewShape dim of scale must be 1");
+        return ge::GRAPH_FAILED;
+    }
     int64_t expected_scale_dim = 0;
     CHECK(!SafeMul(shape_x2_transposed.GetDim(0), shape_x2_transposed.GetDim(2), expected_scale_dim),
           OP_LOGE(context->GetNodeName(), "The dimension of n * b overflows int64."), return ge::GRAPH_FAILED);
-    CHECK(expected_scale_dim != UNKNOWN_DIM && shape_scale->GetDim(0) != expected_scale_dim,
-          OP_LOGE(context->GetNodeName(), "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
-                  expected_scale_dim, shape_scale->GetDim(0)),
-          return ge::GRAPH_FAILED);
+    if (expected_scale_dim != UNKNOWN_DIM && shape_scale->GetDim(0) != expected_scale_dim) {
+        const std::string reason = "The first dimension of scale must be equal to n * b (" +
+                                   std::to_string(expected_scale_dim) + ")";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "scale",
+                                              Ops::Base::ToString(*shape_scale).c_str(), reason.c_str());
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -212,11 +219,19 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
         CHECK(!SafeMul(batch_dim_x1, shape_x2_transposed.GetDim(2), expected_scale_dim),
               CUBE_INNER_ERR_REPORT(name_op, "The dimension of n * b overflows int64."), return ge::GRAPH_FAILED);
         if (!CheckIsUnknownDimNum(*shape_scale) && expected_scale_dim != UNKNOWN_DIM) {
-            CHECK(
-                shape_scale->GetDimNum() != 1 || shape_scale->GetDim(0) != expected_scale_dim,
-                CUBE_INNER_ERR_REPORT(name_op, "The dimension of n * b [%ld] and scale [%ld] tensors must be the same",
-                                      expected_scale_dim, shape_scale->GetDim(0)),
-                return ge::GRAPH_FAILED);
+            if (shape_scale->GetDimNum() != 1) {
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(name_op, "scale",
+                                                         std::to_string(shape_scale->GetDimNum()).c_str(),
+                                                         "The ViewShape dim of scale must be 1");
+                return ge::GRAPH_FAILED;
+            }
+            if (shape_scale->GetDim(0) != expected_scale_dim) {
+                const std::string reason = "The first dimension of scale must be equal to n * b (" +
+                                           std::to_string(expected_scale_dim) + ")";
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(name_op, "scale", Ops::Base::ToString(*shape_scale).c_str(),
+                                                      reason.c_str());
+                return ge::GRAPH_FAILED;
+            }
         }
         auto tensor_x1 = context->GetInputDesc(0);
         auto tensor_x2 = context->GetInputDesc(1);

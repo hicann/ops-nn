@@ -1053,6 +1053,37 @@ TEST(TransposeBatchMatMulBaseTilingTest, BiasNNotMatch)
     EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
 }
 
+// 覆盖 base_tiling 496-520: batch 一致时无 bias 的非法 dtype 组合
+TEST(TransposeBatchMatMulBaseTilingTest, InvalidDtypeWithoutBias)
+{
+    BaseTilingContext c({2, 64, 128}, {64, 128, 256}, {2, 64, 256}, DT_INT32);
+    using namespace optiling::transpose_batch_mat_mul;
+    TransposeBatchMatMulBaseTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 base_tiling 500-502: batch 一致时有 bias 的非法 dtype 组合
+TEST(TransposeBatchMatMulBaseTilingTest, InvalidDtypeWithBias)
+{
+    BaseTilingContext c({2, 64, 128}, {64, 128, 256}, {2, 64, 256}, DT_INT32,
+                        /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2},
+                        /*batchSplitFactor=*/1, /*hasBias=*/true);
+    using namespace optiling::transpose_batch_mat_mul;
+    TransposeBatchMatMulBaseTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
+}
+
+// 覆盖 base_tiling 590-592: batch 一致时 bias 最后一维不等于 n
+TEST(TransposeBatchMatMulBaseTilingTest, BiasNNotMatchWithMatchedBatch)
+{
+    BaseTilingContext c({2, 64, 128}, {64, 128, 256}, {2, 64, 128}, DT_FLOAT16,
+                        /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2},
+                        /*batchSplitFactor=*/1, /*hasBias=*/true);
+    using namespace optiling::transpose_batch_mat_mul;
+    TransposeBatchMatMulBaseTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.GetShapeAttrsInfo(), ge::GRAPH_FAILED);
+}
+
 // ================== Einsum mode tiling test ==================
 TEST(TransposeBatchMatMulEinsumTest, DoTilingEinsumMode)
 {
