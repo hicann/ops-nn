@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_def_registry.h"
+#include "op_common/op_host/util/op_arch_helper.h"
 
 namespace ops {
 class RepeatInterleaveGrad : public OpDef {
@@ -50,10 +51,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", config_91095);
-        this->AICore().AddConfig("ascend350", config_91095);
-        this->AICore().AddConfig("ascend960dt", config_91095);
-        this->AICore().AddConfig("ascend960pr", config_91095);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_3510, config_91095);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9201, config_91095);
+        opbase::ArchConfigHelper::AddConfigByArch(this->AICore(), Ops::Base::DAV_9202, config_91095);
     }
 };
 OP_ADD(RepeatInterleaveGrad);
