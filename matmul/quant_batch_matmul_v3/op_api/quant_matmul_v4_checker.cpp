@@ -1353,7 +1353,7 @@ bool CheckInputAttrExistence(const TupleAttr& boolsTrans, const TupleTensor& man
         return false;
     }
     if (isArch92S8S4 && !isMsd) {
-        if (groupSize != 64 && groupSize != 128) {
+        if (groupSize != SUPPORTED_GROUP_SIZE_S8S4_64 && groupSize != SUPPORTED_GROUP_SIZE_S8S4_128) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                     "npuArch DAV9201/9202 A8W4 [int8/4] with FLOAT scales only supports groupSize 64 "
                     "or 128.");

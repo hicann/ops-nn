@@ -105,7 +105,6 @@ bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertoke
     auto& scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
     const bool isArch92S8S4 = IsNpuArch92() && isA8W4Int(x1, x2);
     const bool isMsd = isA8W4Msd(x1, x2, scale, pertokenScale);
-
     if ((isA8W4Float(x1, x2) || (isArch92S8S4 && !isMsd)) && x2Offset != nullptr) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "A8W4 requires x2Offset to be null in floating-point or npuArch DAV9201/9202 A8W4 "
@@ -119,7 +118,7 @@ bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertoke
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported A8W4 [int8/4] scale combination.");
             return false;
         }
-        if (groupSize != 64 && groupSize != 128) {
+        if (groupSize != SUPPORTED_GROUP_SIZE_S8S4_64 && groupSize != SUPPORTED_GROUP_SIZE_S8S4_128) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                     "npuArch DAV9201/9202 A8W4 [int8/4] with FLOAT scales only supports groupSize 64 "
                     "or 128.");
