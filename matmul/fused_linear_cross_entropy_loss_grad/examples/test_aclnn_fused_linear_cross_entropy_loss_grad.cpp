@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnn_fused_linear_cross_entropy_loss_grad.h"
+#include "aclnnop/aclnn_fused_linear_cross_entropy_loss_grad.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
