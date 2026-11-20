@@ -36,6 +36,8 @@
      out = round(\frac{y}{outputScale} + outputZeroPoint)
      $$
 
+     `round`表示舍入到最近整数，恰好处于两个整数中间时向远离0的方向舍入。例如，`round(0.5) = 1`，`round(-0.5) = -1`。
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>

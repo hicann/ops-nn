@@ -38,6 +38,8 @@ English | [简体中文](./README.md)
      out = round(\frac{y}{outputScale} + outputZeroPoint)
      $$
 
+     `round` rounds to the nearest integer. Values exactly halfway between two integers are rounded away from zero. For example, `round(0.5) = 1` and `round(-0.5) = -1`.
+
 ## Parameters
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>

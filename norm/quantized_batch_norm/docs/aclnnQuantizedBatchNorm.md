@@ -46,6 +46,8 @@
      output = round(\frac{y}{outputScale} + outputZeroPoint)
      $$
 
+     `round`表示舍入到最近整数，恰好处于两个整数中间时向远离0的方向舍入。例如，`round(0.5) = 1`，`round(-0.5) = -1`。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnQuantizedBatchNormGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnQuantizedBatchNorm”接口执行计算。
