@@ -305,11 +305,14 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams(Intf* self, Dn2NzParams& d
     CalcCurCoutSizeA1<Intf, false>(self, kIdx, curCoutIdx, curCoutSize);
     uint32_t loadToA1HLoop = 0;
     uint32_t woExpand = ((self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW) + 1;
-    bool resetWoExpand = self->ctx.tiling_->backpropPadLeft < 0 || self->ctx.tiling_->backpropPadRight < 0;
-    uint32_t woStart = self->ctx.tiling_->backpropPadLeft < 0 ?
+    // Local W paths already carry their own window bounds and sample count.
+    const bool useGlobalW = !UseLocalWWindow<Intf>(self) && Intf::conv3dConfig.loadB1Condition != TPL_GM_TO_L1_NO_HK_WK;
+    bool resetWoExpand = useGlobalW &&
+                         (self->ctx.tiling_->backpropPadLeft < 0 || self->ctx.tiling_->backpropPadRight < 0);
+    uint32_t woStart = useGlobalW && self->ctx.tiling_->backpropPadLeft < 0 ?
                            DivCeil(abs(self->ctx.tiling_->backpropPadLeft), self->ctx.tiling_->strideW) :
                            0;
-    uint32_t woEnd = self->ctx.tiling_->backpropPadRight < 0 ?
+    uint32_t woEnd = useGlobalW && self->ctx.tiling_->backpropPadRight < 0 ?
                          DivCeil((woExpand + self->ctx.tiling_->backpropPadRight), self->ctx.tiling_->strideW) :
                          DivCeil(woExpand, self->ctx.tiling_->strideW);
 
@@ -361,14 +364,16 @@ static __aicore__ inline void CalcLoadToA1Nd2NzParams(Intf* self, Nd2NzParams& n
     CalcCurCoutSizeA1<Intf, false>(self, kIdx, curCoutIdx, curCoutSize);
     uint32_t loadToA1HLoop = 0;
     uint32_t woExpand = ((self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW) + 1;
+    // Local W paths already carry their own window bounds and sample count.
+    const bool useGlobalW = !UseLocalWWindow<Intf>(self) && Intf::conv3dConfig.loadB1Condition != TPL_GM_TO_L1_NO_HK_WK;
     uint32_t woStart = 0;
     uint32_t woEnd = DivCeil(woExpand, self->ctx.tiling_->strideW);
     bool resetWoExpand = false;
-    if (self->ctx.tiling_->backpropPadLeft < 0) {
+    if (useGlobalW && self->ctx.tiling_->backpropPadLeft < 0) {
         resetWoExpand = true;
         woStart = DivCeil(abs(self->ctx.tiling_->backpropPadLeft), self->ctx.tiling_->strideW);
     }
-    if (self->ctx.tiling_->backpropPadRight < 0) {
+    if (useGlobalW && self->ctx.tiling_->backpropPadRight < 0) {
         resetWoExpand = true;
         woEnd = DivCeil((woExpand + self->ctx.tiling_->backpropPadRight), self->ctx.tiling_->strideW);
     }
