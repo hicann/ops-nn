@@ -24,37 +24,85 @@
 ASCENDC_TPL_ARGS_DECL(LpNormV2, REDUCE_TPL_KEY_DECL_BATCH_INVARIANT(),
                       ASCENDC_TPL_UINT_DECL(TemplateNum, LP_NORM_V2_BIT_WIDTH, ASCENDC_TPL_UI_RANGE, 1, 0, 6));
 
+// The selected branch defines LPNORM_LEGACY_METADATA before this macro is expanded.
+#define LPNORM_LEGACY_SELECTORS()                                                                                      \
+    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_EMPTY_BATCH_INVARIANT(),                                                   \
+                         LPNORM_LEGACY_METADATA() ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),   \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_A_BATCH_INVARIANT(), LPNORM_LEGACY_METADATA() ASCENDC_TPL_UINT_SEL(    \
+                                                                         TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)), \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_AR_NORMAL_BATCH_INVARIANT(),                                           \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_AR_GROUP_BATCH_INVARIANT(),                                            \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARA_NORMAL_BATCH_INVARIANT(),                                          \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARA_GROUP_BATCH_INVARIANT(),                                           \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARAR_NORMAL_BATCH_INVARIANT(),                                         \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARAR_GROUP_BATCH_INVARIANT(),                                          \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARARARAR_NORMAL_BATCH_INVARIANT(),                                     \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARARARAR_GROUP_BATCH_INVARIANT(),                                      \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARARARARA_NORMAL_BATCH_INVARIANT(),                                    \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),                    \
+        ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARARARARA_GROUP_BATCH_INVARIANT(),                                     \
+                             LPNORM_LEGACY_METADATA()                                                                  \
+                                 ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6))
+
+#if defined(ASCENDC_TPL_ENABLE_DETERMINISTIC_LEVEL) && ASCENDC_TPL_ENABLE_DETERMINISTIC_LEVEL
+// Enabled tasks declare level groups [[0], [1, 2], [3]] and a separate legacy family.
+#include "lp_norm_v2_reduce_selector.h"
+#define LPNORM_LEGACY_METADATA() ASCENDC_TPL_LEGACY_SEL(),
+// Apply the same TemplateNum range to every Reduce mode.
+#define LPNORM_INSTANCE(selector, batch, ...) \
+    ASCENDC_TPL_ARGS_SEL(selector(batch, __VA_ARGS__), ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6))
+
+// Match Host LpNormV2Tiling::TilingReduce: BatchInvariant is C1 only at level 3.
+// Levels 0/1/2 must use C0; a different Host policy can produce keys absent from the selected object.
+// Keep this mapping aligned with Host; legacy lookup fallback does not repair an incompatible tilingKey.
+#define LPNORM_LEVEL_GROUPS(selector) \
+    LPNORM_INSTANCE(selector, C0, 0), LPNORM_INSTANCE(selector, C0, 1, 2), LPNORM_INSTANCE(selector, C1, 3)
+
 ASCENDC_TPL_SEL(
     // Empty
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_EMPTY_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
+    LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_EMPTY),
     // A
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_A_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
+    LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_A),
     // AR
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_AR_NORMAL_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_AR_GROUP_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
+    LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_AR_NORMAL), LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_AR_GROUP),
     // ARA
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARA_NORMAL_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARA_GROUP_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
+    LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_ARA_NORMAL), LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_ARA_GROUP),
     // ARAR
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARAR_NORMAL_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARAR_GROUP_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
+    LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_ARAR_NORMAL), LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_ARAR_GROUP),
     // ARARARAR
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARARARAR_NORMAL_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARARARAR_GROUP_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
+    LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_ARARARAR_NORMAL), LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_ARARARAR_GROUP),
     // ARARARARA
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARARARARA_NORMAL_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)),
-    ASCENDC_TPL_ARGS_SEL(REDUCE_TPL_KEY_SEL_ARARARARA_GROUP_BATCH_INVARIANT(),
-                         ASCENDC_TPL_UINT_SEL(TemplateNum, ASCENDC_TPL_UI_RANGE, 1, 0, 6)));
+    LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_ARARARARA_NORMAL), LPNORM_LEVEL_GROUPS(LPNORM_REDUCE_ARARARARA_GROUP),
+    // Explicit LEGACY_SEL declarations own the original boolean instance set.
+    LPNORM_LEGACY_SELECTORS());
+
+#undef LPNORM_LEVEL_GROUPS
+#undef LPNORM_INSTANCE
+
+#else
+// Traditional tasks keep the original selectors and both BatchInvariant values.
+#define LPNORM_LEGACY_METADATA()
+ASCENDC_TPL_SEL(LPNORM_LEGACY_SELECTORS());
+#endif
+
+#undef LPNORM_LEGACY_SELECTORS
+#undef LPNORM_LEGACY_METADATA
 
 #endif
