@@ -492,12 +492,16 @@ ge::graphStatus RotateQuantAptTiling::ValidateRotShape(const gert::Shape& rotSha
                                             (inputParams_.K == ROT_K_SIZE_32 || inputParams_.K == ROT_K_SIZE_64 ||
                                              inputParams_.K == ROT_K_SIZE_128 || inputParams_.K == ROT_K_SIZE_256);
     OP_TILING_CHECK(!isSupportedK,
-                    OP_LOGE(inputParams_.opName, "Input rot last dim size must be in [%ld, %ld, %ld, %ld].",
-                            ROT_K_SIZE_32, ROT_K_SIZE_64, ROT_K_SIZE_128, ROT_K_SIZE_256),
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        inputParams_.opName, "rotation", std::to_string(inputParams_.K).c_str(),
+                        "the last dim size of rotation must be one of [32, 64, 128, 256]"),
                     return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(inputParams_.N % inputParams_.K != 0,
-                    OP_LOGE(inputParams_.opName, "N(%ld) must be divisible by K(%ld).", inputParams_.N, inputParams_.K),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "N",
+                        (std::to_string(inputParams_.N) + " (K=" + std::to_string(inputParams_.K) + ")").c_str(),
+                        "the value of N must be divisible by K"),
                     return ge::GRAPH_FAILED);
 
     inputParams_.nKRatio = inputParams_.N / inputParams_.K;
@@ -505,7 +509,9 @@ ge::graphStatus RotateQuantAptTiling::ValidateRotShape(const gert::Shape& rotSha
     if (inputParams_.groupMode) {
         OP_TILING_CHECK(rotShape.GetDim(rotRank - 2) != inputParams_.K ||
                             (rotRank == 4 && rotShape.GetDim(1) != inputParams_.nKRatio),
-                        OP_LOGE(inputParams_.opName, "Grouped rotation must have shape [E,K,K] or [E,N/K,K,K]."),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                            inputParams_.opName, "rotation", Shape2String(rotShape).c_str(),
+                            "the shape of rotation must be [E,K,K] or [E,N/K,K,K] in grouped mode"),
                         return ge::GRAPH_FAILED);
         inputParams_.rotType = (rotRank == 4 && inputParams_.nKRatio > 1) ? ROT_TYPE_MULTI : ROT_TYPE_SINGLE;
         return ge::GRAPH_SUCCESS;
@@ -513,17 +519,22 @@ ge::graphStatus RotateQuantAptTiling::ValidateRotShape(const gert::Shape& rotSha
 
     if (rotShape.GetDimNum() == MIN_ROT_DIM_NUM) {
         inputParams_.rotType = ROT_TYPE_SINGLE;
-        OP_TILING_CHECK(rotShape.GetDim(0) != inputParams_.K,
-                        OP_LOGE(inputParams_.opName, "Input rotationMatrix shape should be (%ld, %ld), please check.",
-                                inputParams_.K, inputParams_.K),
-                        return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(
+            rotShape.GetDim(0) != inputParams_.K,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                inputParams_.opName, "rotation", Shape2String(rotShape).c_str(),
+                Ops::NN::FormatString("the shape of rotation must be (%ld, %ld)", inputParams_.K, inputParams_.K)
+                    .c_str()),
+            return ge::GRAPH_FAILED);
     } else {
         inputParams_.rotType = (inputParams_.nKRatio > 1) ? ROT_TYPE_MULTI : ROT_TYPE_SINGLE;
-        OP_TILING_CHECK(
-            rotShape.GetDim(0) != inputParams_.nKRatio || rotShape.GetDim(1) != inputParams_.K,
-            OP_LOGE(inputParams_.opName, "Input rotationMatrix shape should be (%ld, %ld, %ld), please check.",
-                    inputParams_.nKRatio, inputParams_.K, inputParams_.K),
-            return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(rotShape.GetDim(0) != inputParams_.nKRatio || rotShape.GetDim(1) != inputParams_.K,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                            inputParams_.opName, "rotation", Shape2String(rotShape).c_str(),
+                            Ops::NN::FormatString("the shape of rotation must be (%ld, %ld, %ld)", inputParams_.nKRatio,
+                                                  inputParams_.K, inputParams_.K)
+                                .c_str()),
+                        return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -532,14 +543,13 @@ ge::graphStatus RotateQuantAptTiling::ValidateRotShape(const gert::Shape& rotSha
 ge::graphStatus RotateQuantAptTiling::ValidateScaleShape(const gert::Shape& mxscaleShape, const gert::Shape& scaleShape)
 {
     // kernel按扁平偏移写scale输出，仅要求总元素数一致，允许调用方传入扁平等总量的view（如一维[M*CeilDiv(N,64)*2]）
-    OP_CHECK_IF(
-        mxscaleShape.GetShapeSize() != scaleShape.GetShapeSize(),
-        OP_LOGE(inputParams_.opName,
-                "The element size of output mxscale %s is %ld, expected element size is %ld (derived shape %s), "
-                "please check.",
-                Shape2String(scaleShape).c_str(), scaleShape.GetShapeSize(), mxscaleShape.GetShapeSize(),
-                Shape2String(mxscaleShape).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(mxscaleShape.GetShapeSize() != scaleShape.GetShapeSize(),
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    inputParams_.opName, "scale", std::to_string(scaleShape.GetShapeSize()).c_str(),
+                    Ops::NN::FormatString("the element size of scale must be %ld (derived shape %s)",
+                                          mxscaleShape.GetShapeSize(), Shape2String(mxscaleShape).c_str())
+                        .c_str()),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -570,8 +580,11 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeGroups()
         return ge::GRAPH_FAILED);
     int64_t groupsNum = shape.GetDim(0);
     OP_TILING_CHECK(groupsNum < MIN_GROUP_NUM || groupsNum > MAX_GROUP_NUM || rotShape.GetDim(0) != groupsNum,
-                    OP_LOGE(inputParams_.opName, "Group count must equal rotation dim0 and be in [%ld,%ld].",
-                            MIN_GROUP_NUM, MAX_GROUP_NUM),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                        inputParams_.opName, "groups", Shape2String(shape).c_str(),
+                        Ops::NN::FormatString("the group count must be in [%ld, %ld] and equal rotation dim0",
+                                              MIN_GROUP_NUM, MAX_GROUP_NUM)
+                            .c_str()),
                     return ge::GRAPH_FAILED);
     auto attrs = context_->GetAttrs();
     if (attrs != nullptr && attrs->GetAttrNum() > GROUP_TYPE_INDEX) {
@@ -580,7 +593,10 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeGroups()
         inputParams_.groupListType = *type;
     }
     OP_TILING_CHECK(inputParams_.groupListType != 0 && inputParams_.groupListType != 1,
-                    OP_LOGE(inputParams_.opName, "group_list_type must be 0 or 1."), return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "group_list_type",
+                                                          std::to_string(inputParams_.groupListType).c_str(),
+                                                          "the value of group_list_type must be 0 or 1"),
+                    return ge::GRAPH_FAILED);
     inputParams_.groupMode = true;
     inputParams_.groupNum = static_cast<uint32_t>(groupsNum);
     return ge::GRAPH_SUCCESS;
@@ -591,33 +607,43 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeShapes()
     const auto& xShape = context_->GetInputShape(X_INDEX)->GetStorageShape();
     const auto& rotShape = context_->GetInputShape(ROT_INDEX)->GetStorageShape();
 
-    OP_TILING_CHECK(xShape.GetDimNum() < MIN_X_DIM_NUM || xShape.GetDimNum() > MAX_X_DIM_NUM,
-                    OP_LOGE(inputParams_.opName, "Input x rank[%zu] should be in [%d, %d].", xShape.GetDimNum(),
-                            MIN_X_DIM_NUM, MAX_X_DIM_NUM),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        xShape.GetDimNum() < MIN_X_DIM_NUM || xShape.GetDimNum() > MAX_X_DIM_NUM,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            inputParams_.opName, "x", (std::to_string(xShape.GetDimNum()) + "D").c_str(),
+            Ops::NN::FormatString("the shape dim of x must be in [%d, %d]", MIN_X_DIM_NUM, MAX_X_DIM_NUM).c_str()),
+        return ge::GRAPH_FAILED);
 
     constexpr int64_t maxShapeDim = std::numeric_limits<int32_t>::max();
     inputParams_.M = INIT_ACCUMULATE_VALUE;
     for (size_t i = 0; i < xShape.GetDimNum() - 1; i++) {
         const int64_t dim = xShape.GetDim(i);
         OP_TILING_CHECK(dim <= 0 || inputParams_.M > maxShapeDim / dim,
-                        OP_LOGE(inputParams_.opName, "Flattened M must be in [1, %ld].", maxShapeDim),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                            inputParams_.opName, "x", Shape2String(xShape).c_str(),
+                            Ops::NN::FormatString("the flattened M of x must be in [1, %ld]", maxShapeDim).c_str()),
                         return ge::GRAPH_FAILED);
         inputParams_.M *= dim;
     }
     inputParams_.N = xShape.GetDim(xShape.GetDimNum() - 1);
 
     OP_TILING_CHECK(inputParams_.M <= 0 || inputParams_.N <= 0,
-                    OP_LOGE(inputParams_.opName, "M[%ld] and N[%ld] must be positive.", inputParams_.M, inputParams_.N),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "M, N",
+                        (std::to_string(inputParams_.M) + ", " + std::to_string(inputParams_.N)).c_str(),
+                        "the values of M and N must be positive"),
                     return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(inputParams_.M > maxShapeDim || inputParams_.N > maxShapeDim,
-                    OP_LOGE(inputParams_.opName, "M[%ld] and N[%ld] must not exceed INT32_MAX[%ld].", inputParams_.M,
-                            inputParams_.N, maxShapeDim),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(inputParams_.opName, "x", Shape2String(xShape).c_str(),
+                                                          "the values of M and N must not exceed INT32_MAX"),
                     return ge::GRAPH_FAILED);
 
-    OP_TILING_CHECK(ValidateRotShape(rotShape) != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "Invalid rot shape."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        ValidateRotShape(rotShape) != ge::GRAPH_SUCCESS,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(inputParams_.opName, "rotation", Shape2String(rotShape).c_str(),
+                                              "the shape of rotation is invalid"),
+        return ge::GRAPH_FAILED);
 
     // 校验输出scale总元素数与推导结果一致（允许扁平等总量view）：M*CeilDiv(N,64)*lastDim
     // DAV_9201/DAV_9202 hif4输出: scale为(*, CeilDiv(N,64), 1); mxfp输出: (*, CeilDiv(N,64), 2)
@@ -626,8 +652,11 @@ ge::graphStatus RotateQuantAptTiling::AnalyzeShapes()
     mxScaleShape.SetDim(mxScaleShape.GetDimNum() - 1, Ops::Base::CeilDiv(inputParams_.N, MX_SCALE_CEIL_NUM));
     int64_t scaleLastDim = (inputParams_.yDtype == Ops::NN::DT_HIFLOAT4) ? HIF4_SCALE_LAST_DIM : MX_SCALE_LAST_SIZE;
     mxScaleShape.AppendDim(scaleLastDim);
-    OP_TILING_CHECK(ValidateScaleShape(mxScaleShape, scaleShape) != ge::GRAPH_SUCCESS,
-                    OP_LOGE(inputParams_.opName, "Invalid scale shape."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        ValidateScaleShape(mxScaleShape, scaleShape) != ge::GRAPH_SUCCESS,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(inputParams_.opName, "scale", Shape2String(scaleShape).c_str(),
+                                              "the shape of scale is invalid"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -764,10 +793,11 @@ bool RotateQuantAptTiling::SetMatmulTiling()
     if (tilingData_.B == SINGLE_ROTATION_B_SIZE) {
         const uint64_t totalEffectiveM = static_cast<uint64_t>(tilingData_.M) * tilingData_.nKRatio;
         // The retained CMCT scheduler stores the flattened row count in uint32_t.
-        OP_TILING_CHECK(
-            totalEffectiveM > std::numeric_limits<uint32_t>::max(),
-            OP_LOGE(inputParams_.opName, "M * (N / K) must not exceed UINT32_MAX for ordinary shared rotation."),
-            return false);
+        OP_TILING_CHECK(totalEffectiveM > std::numeric_limits<uint32_t>::max(),
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                            inputParams_.opName, "M * (N / K)", std::to_string(totalEffectiveM).c_str(),
+                            "the value of M * (N / K) must not exceed UINT32_MAX for ordinary shared rotation"),
+                        return false);
         uint32_t mL1Max = static_cast<uint32_t>(
             (compileInfo_.l1Size - tilingData_.kL1 * tilingData_.nL1 * ELEMENT_BYTES_16BIT) /
             (tilingData_.kL1 * ELEMENT_BYTES_16BIT));

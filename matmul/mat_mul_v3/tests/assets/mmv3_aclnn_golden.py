@@ -118,41 +118,74 @@ def _is_950_soc(kwargs):
     return str(kwargs.get("short_soc_version") or "").startswith("Ascend950")
 
 
-def _fmm_add_supported(
-    self_np, mat1_np, mat2_np, out, alpha, beta, cubeMathType, kwargs
-):
-    """镜像 aclnn_addmm.cpp CheckFmmAddSupport（950 fmm(add) 单kernel路由门禁）：
-    α=β=1(eps 容差) + mat1/mat2/self 均为完整 2D 且 self 严格 (M,N)(不支持
-    (n,)/(1,n) 广播) + K>0 + 四方同 dtype ∈ {fp16,bf16,fp32} + fp32 输入仅
-    cmt=3(USE_HF32) + storage format ND。核配 IsAivNumDoubleOfAicNum(标准 950
-    MIX_AIC_1_2)按满足处理。
+def _is_contiguous(t):
+    """torch/numpy 通用的 C 序连续判定（对齐 op::IsContiguous）。
+
+    注意必须用 torch 原参判定：to_numpy 内部 .contiguous() 强制连续化会抹掉
+    strides，numpy 侧布局信息已丢失。"""
+    if hasattr(t, "is_contiguous"):
+        return t.is_contiguous()
+    return bool(t.flags["C_CONTIGUOUS"])
+
+
+def _is_std_transpose_last2(t):
+    """镜像 Ops::NN::IsTransposeLastTwoDims(matmul_util.cpp)：仅识别"标准末两维
+    转置"——内轴交换(strides[dim2]==1 且 strides[dim1]==shape[dim2])且所有 batch
+    维 stride 按转置布局逐层连乘完全连续；1x1 退化不算。strides 为元素单位
+    (torch .stride()/aclTensor GetViewStrides 同单位)。"""
+    shape = tuple(t.shape)
+    ndim = len(shape)
+    if ndim < 2 or ndim > 6:
+        return False
+    if hasattr(t, "stride"):  # torch: 元素单位
+        strides = t.stride()
+    else:  # numpy: 字节单位, 换算为元素单位
+        itemsize = t.dtype.itemsize
+        strides = tuple(s // itemsize for s in t.strides)
+    dim1, dim2 = ndim - 1, ndim - 2
+    if strides[dim2] == 1 and strides[dim1] == shape[dim2]:
+        tmp = shape[dim1] * shape[dim2]
+        for batch_dim in range(ndim - 3, -1, -1):
+            if strides[batch_dim] != tmp:
+                return False
+            tmp *= shape[batch_dim]
+        if shape[dim1] == 1 and shape[dim2] == 1:
+            return False
+        return True
+    return False
+
+
+def _fmm_add_supported(self, mat1, mat2, out, alpha, beta, cubeMathType, kwargs):
+    """镜像 aclnn_addmm.cpp CheckFmmAddSupport 门禁（950 fmm(add) 单 kernel 路由）：
+    α=β=1(eps 容差) + mat1/mat2/self 均为 2D 且 self 严格 (M,N)（不支持
+    (n,)/(1,n) 广播）+ K>0 + 四方同 dtype ∈ {fp16,bf16,fp32} + fp32 输入仅
+    cmt=3(USE_HF32) + storage format ND + mat1/mat2 布局为连续或标准末两维
+    转置（其余非连续回退拼接路径）。核配校验按满足处理。
     命中后 NPU 走 AddmmFmmGraph -> fmm(fusedOpType="add", x3=self, bias=null)
-    单kernel(高性能模式): round_out(round_out(mm_acc) + self)，mm 的 acc 累加值
-    先舍回 C 域再融合，不携带 alpha/beta(门禁 eps 内偏离 1 的缩放被设备丢弃，
-    golden 同步不缩放——baddbmm review#1 同款结论)。"""
+    单 kernel，不携带 alpha/beta（门禁 eps 内偏离 1 的缩放系数被设备丢弃）。"""
     if not _is_950_soc(kwargs):
         return False
     if abs(float(alpha) - 1.0) > _FP32_EPS or abs(float(beta) - 1.0) > _FP32_EPS:
         return False
-    if mat1_np.ndim != 2 or mat2_np.ndim != 2 or self_np.ndim != 2:
+    if mat1.dim() != 2 or mat2.dim() != 2 or self.dim() != 2:
         return False
-    m_dim, n_dim = mat1_np.shape[0], mat2_np.shape[1]
-    if tuple(self_np.shape) != (m_dim, n_dim):
+    m_dim, n_dim = mat1.shape[0], mat2.shape[1]
+    if tuple(self.shape) != (m_dim, n_dim):
         return False
-    if mat1_np.shape[1] == 0 or mat2_np.shape[0] == 0:
+    if mat1.shape[1] == 0 or mat2.shape[0] == 0:
         return False
-    dtype_str = _util.dtype_to_str(mat1_np.dtype)
+    dtype_str = _util.dtype_to_str(mat1.dtype)
     if dtype_str not in ("float16", "bfloat16", "float32"):
         return False
     if (
-        _util.dtype_to_str(mat2_np.dtype) != dtype_str
-        or _util.dtype_to_str(self_np.dtype) != dtype_str
+        _util.dtype_to_str(mat2.dtype) != dtype_str
+        or _util.dtype_to_str(self.dtype) != dtype_str
     ):
         return False
     out_dtype_str = (
         _util.dtype_to_str(out.dtype)
         if out is not None
-        else _util.dtype_to_str(self_np.dtype)
+        else _util.dtype_to_str(self.dtype)
     )
     if out_dtype_str != dtype_str:
         return False
@@ -161,6 +194,13 @@ def _fmm_add_supported(
         return False
     fmts = kwargs.get("tensor_formats") or ()
     if any(f not in (None, "", "ND") for f in list(fmts)[:3]):
+        return False
+    # 输入布局: 仅接受连续或标准末两维转置(ContiguousAndCast 零拷贝),
+    # 其余非连续布局回退默认拼接路径
+    if not (
+        (_is_contiguous(mat1) or _is_std_transpose_last2(mat1))
+        and (_is_contiguous(mat2) or _is_std_transpose_last2(mat2))
+    ):
         return False
     return True
 
@@ -235,19 +275,20 @@ class AclnnAddmmTestSpec:
                 else bias_term
             )
 
-        # 950 fmm(add) 单kernel路由：高性能模式(innerPrecise=HIGH_PERFORMANCE,
-        # cmt=0 时) mm 的 acc 累加值先舍回 C 域(round 到 out dtype)再融合 self
-        # ——对齐 956bae3c1 所述"fmm 高性能路径(acc 舍回 C 域融合)"与本次实测
-        # (bf16 缺失该 round: mismatch 27.3% -> 精度 74%失败)。不携带 alpha/beta
-        # (门禁已限 α=β=1 eps 内, 缩放被设备丢弃)。
-        if _fmm_add_supported(
-            self_np, mat1_np, mat2_np, out, alpha, beta, cubeMathType, kwargs
-        ):
+        # 950 fmm(add) 单 kernel 路由。epilogue 精度域：
+        #   M>1 且 cmt!=4 -> mm acc 先 round 到 out dtype 再融合（高性能模式）
+        #   M==1（退化 tiling 模板）或 cmt==4（fp16/bf16 高精度模式，
+        #     innerPrecise=HIGH_PRECISION）-> mm 保持 fp32 累加精度直通融合
+        # α/β 不缩放（设备直调链无缩放参数）。
+        if _fmm_add_supported(self, mat1, mat2, out, alpha, beta, cubeMathType, kwargs):
+            mm_passthrough = (
+                mat1.shape[0] == 1 or cube_math_type == _CUBE_MATH_USE_FP32_ADD
+            )
             matmul_result = _kernel_bmm(
                 mat1_np,
                 mat2_np,
                 cubeMathType=cubeMathType,
-                out_dtype=out_dtype,
+                out_dtype=None if mm_passthrough else out_dtype,
                 **kwargs,
             )
             add_result = matmul_result.astype(np.float32) + self_np.astype(np.float32)
@@ -297,12 +338,8 @@ class AclnnAddmmTestSpec:
                 else add_result
             )
 
-        # generic vector path: mm rounded once, then one fused Axpy/Add
-        # 对齐 baddbmm d7d063bfd 实证结论: l0op::Axpy/Add 是融合算子(fp32 域
-        # x + α·y 单 pass 单次 round), 不塌回低精度域再逐元素双 round
-        # (旧版 combined_fp32.astype(matmul_out_dtype) 在 bf16 case 与 NPU 相差
-        # 1 ULP 系统性偏差 —— fp16(ULP 0.049%) 侥幸被 rtol 0.001 掩盖, bf16
-        # (ULP 0.39%) 超差失败)
+        # 拼接路径：mm round 到 upper dtype 后，与 β·self 在 fp32 域融合
+        # （Axpy/Add 为融合算子：单 pass、单次 round），单次截回 out dtype。
         matmul_out = matmul_result.astype(matmul_out_dtype)
         bias_term = self_np
         if abs(beta - 1.0) > _FP32_EPS:

@@ -208,12 +208,11 @@ def _is_std_transpose_last2(t):
     ndim = len(shape)
     if ndim < 2 or ndim > 6:
         return False
-    strides = t.stride() if hasattr(t, "stride") else t.strides
     if hasattr(t, "stride"):  # torch: 元素单位
-        pass
+        strides = t.stride()
     else:  # numpy: 字节单位, 换算为元素单位
         itemsize = t.dtype.itemsize
-        strides = tuple(s // itemsize for s in strides)
+        strides = tuple(s // itemsize for s in t.strides)
     dim1, dim2 = ndim - 1, ndim - 2
     if strides[dim2] == 1 and strides[dim1] == shape[dim2]:
         tmp = shape[dim1] * shape[dim2]
@@ -225,6 +224,13 @@ def _is_std_transpose_last2(t):
             return False
         return True
     return False
+
+
+def _is_contiguous(t):
+    """torch/numpy 通用的 C 序连续判定（对齐 op::IsContiguous，元素步长语义）。"""
+    if hasattr(t, "is_contiguous"):
+        return t.is_contiguous()
+    return bool(t.flags["C_CONTIGUOUS"])
 
 
 def _tensor_meta(t):
@@ -288,6 +294,13 @@ def _fmm_add_supported(self, batch1, batch2, out, alpha, beta, cubeMathType, kwa
         return False
     if b1_shape[2] == 0:
         return False
+    # 输入布局: 仅接受连续或标准末两维转置(ContiguousAndCast 零拷贝), 其余
+    # 非连续布局回退拼接路径
+    if not (
+        (_is_contiguous(batch1) or _is_std_transpose_last2(batch1))
+        and (_is_contiguous(batch2) or _is_std_transpose_last2(batch2))
+    ):
+        return False
     return True
 
 
@@ -325,6 +338,9 @@ def _scale_add_supported(self, batch1, batch2, out, alpha, beta, cubeMathType, k
         return False
     if b1_shape[2] == 0:
         return False
+    # 输入布局: 仅接受完全连续(标准转置已被上面拦截), 非连续回退拼接路径
+    if not (_is_contiguous(batch1) and _is_contiguous(batch2)):
+        return False
     return True
 
 
@@ -337,12 +353,12 @@ class AclnnBaddbmmTestSpec:
     ):
         """aclnnBaddbmm: beta*self + alpha*(batch1 @ batch2)。
 
-        950(DAV_3510) 上对齐 aclnn_baddbmm.cpp 的 fmm 两级路由(升精度真值范式：
-        累加域融合 + 单次截回，消除分解链 bmm 的中间 round)：
-          一级 α=β=1 → fmm BMM+add 单 kernel 融合 (mm 累加域 + self 相加后单次截回)
-          二级 α/β 任意 + fp16/bf16 完整 3D self → fmm scale_add (α·mm + β·self 累加域
-          融合单次截回; innerPrecise 恒高性能, "scale_add" 不在 kSupportedX3OpTypes)
-        其余平台/门禁未命中 → 既有分解链(Muls+BMM+Add 拼接)，行为零变化。
+        950(DAV_3510) 上镜像 aclnn_baddbmm.cpp 的 fmm 两级路由：
+          一级 α=β=1 且门禁命中 → fmm BMM+add 单 kernel（mm acc 先 round 到
+            out dtype，再与 self 相加，单次截回；不携带 α/β）
+          二级 α/β 任意 + fp16/bf16 完整 3D self → fmm scale_add
+            （α·mm + β·self 累加域融合，单次截回）
+        其余平台/门禁未命中 → 分解链（Muls+BMM+Add 拼接）。
         """
         # 1) torch → numpy
         self_np, batch1_np, batch2_np = _util.to_numpy(self, batch1, batch2)
@@ -352,23 +368,20 @@ class AclnnBaddbmmTestSpec:
 
         out_dtype = _util.dtype_to_str(out if out is not None else self.dtype)
 
-        # 3) 950 fmm 两级路由：累加域融合 + 单次截回（out_dtype=None 使 kernel
-        #    golden 保留累加精度）。两级公式分开计算：
-        #    一级 α=β=1(eps 容差) → ExecBaddbmmFmmOp 直调 aclnnFusedMatmul(bias=self)
-        #      不携带 alpha/beta —— 门禁 eps 内偏离 1 的缩放系数被设备丢弃，
-        #      golden 同步不缩放(直接 mm + self)，否则 (1+eps)·mm 的伪差异在
-        #      抵消点被放大(如 mm=1024/self=-1024/a=1+2^-23: 设备 0, 旧统一公式
-        #      2^-13=0.000122, 误报精度失败)；
-        #    二级 scale_add → ExecBaddbmmScaleAddOp 携带实际 alpha/beta
-        #      (FusedMatMulWithScaleAddNd)，按实际 α·mm + β·self 缩放
+        # 3) 950 fmm 两级路由（out_dtype=None 使 kernel golden 保留累加精度）：
+        #    一级 → ExecBaddbmmFmmOp 直调 aclnnFusedMatmul(bias=self)，设备链
+        #      不携带 alpha/beta，golden 同步不缩放（直接 mm + self）
+        #    二级 → ExecBaddbmmScaleAddOp 携带实际 alpha/beta，按实际缩放
         if _fmm_add_supported(
             self, batch1, batch2, out, alpha, beta, cubeMathType, kwargs
         ):
+            # 一级 fmm(add)：mm acc 先 round 到 out dtype（高性能模式 epilogue），
+            # α/β 不缩放（设备链不携带缩放参数）
             bmm = _kernel_bmm(
                 batch1_np,
                 batch2_np,
                 cubeMathType=cubeMathType,
-                out_dtype=None,
+                out_dtype=out_dtype,
                 **kwargs,
             )
             comp = np.result_type(bmm.dtype, np.float32)
@@ -399,20 +412,14 @@ class AclnnBaddbmmTestSpec:
             **kwargs,
         )
 
-        #    Step 4a: SelfMulsBetaProcess — 对齐 cann-asc-devkit 标杆(aclnnBaddbmm.py
-        #    CPU golden 分支): β·self 在 fp32 域计算后 round 到 out dtype(标杆
-        #    mid_dtype; fp32 输出不 round)。原 BF16 保持 fp32 无 round 的建模(按
-        #    C++ SelfMulsBeta 字面语义)与 NPU 实际相差 self 项 1 ULP —— 分解链
-        #    case 残差 2% 的根因。
+        #    β·self 在 fp32 域计算后 round 到 out dtype（Muls 同 dtype 语义；
+        #    fp32 输出不 round）
         mulOut = self_np.astype(np.float32) * np.float32(beta)
         if out_dtype and out_dtype != "float32":
             mulOut = _util.cast_output_dtype(mulOut, out_dtype)
 
-        #    Step 4b/4c: Axpy/Add 是融合算子(单 pass: 读 bf16 -> fp32 域 x + α·y ->
-        #    单次 round 写出), 不能让 promote 落回低精度域后用 numpy 逐元素双
-        #    round(55acbbd75 版 mulOut round 后 result_type(bf16,bf16)=bf16,
-        #    Axpy 塌到 bf16 域双 round, 与 NPU 融合语义多 1 ULP —— 79.56% 根因);
-        #    统一在 fp32 域融合, 单次截回 out dtype
+        #    Axpy/Add 为融合算子（fp32 域单 pass、单次 round），融合在 fp32
+        #    域进行，结果单次截回 out dtype
         mul_out_f = mulOut.astype(np.float32)
         bmm_f = bmm.astype(np.float32)
         if abs(alpha - 1.0) <= _F32_EPS:
