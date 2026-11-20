@@ -285,14 +285,14 @@ aclnnStatus aclnnSwigluGroupQuantGrad(
       <td>必选参数gradY/x/gradXOut为nullptr。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
       <td>161002</td>
-      <td>输入或输出的数据类型不在支持范围内。</td>
+      <td>必选输入或输出的数据类型不在支持范围内。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>561002</td>
-      <td>多个输入tensor之间的shape信息不匹配、输入属性不在取值范围（详见参数说明）。</td>
+      <td>多个输入tensor之间的shape信息不匹配、输入属性不在取值范围、可选输入groupIndex的数据类型非INT64（详见参数说明）。</td>
     </tr>
   </tbody></table>
 
