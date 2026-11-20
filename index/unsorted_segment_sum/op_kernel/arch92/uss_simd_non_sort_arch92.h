@@ -179,6 +179,10 @@ __aicore__ inline void USSKernelSimdNonSort<X_T, IDS_T>::Process()
                 scatterParams.srcStride = colsAlign * sizeof(X_T);
                 ScatterDataCopy(yGm_, xLocal, offsetLocal, scatterParams);
                 SetAtomicNone();
+
+                event_t eventMTE3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+                SetFlag<HardEvent::MTE3_V>(eventMTE3ToV);
+                WaitFlag<HardEvent::MTE3_V>(eventMTE3ToV);
             } else {
                 event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
                 SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
