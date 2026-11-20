@@ -42,6 +42,7 @@ constexpr int RNN_OUTPUT_INDEX_C = 2;
 
 static ge::graphStatus InferDataType4DynamicRNNV2(gert::InferDataTypeContext* context)
 {
+    OP_CHECK_NULL_WITH_CONTEXT(context, context);
     OP_LOGD(context->GetNodeName(), "InferDataType4DynamicRNNV2 start");
     auto input_x_dtype = context->GetInputDataType(0);
     auto output_y_dtype = input_x_dtype;
@@ -85,6 +86,7 @@ static ge::graphStatus InferDataType4DynamicRNNV2(gert::InferDataTypeContext* co
 
 static ge::graphStatus InferShape4DynamicRNNV2(gert::InferShapeContext* context)
 {
+    OP_CHECK_NULL_WITH_CONTEXT(context, context);
     OP_LOGD(context->GetNodeName(), "InferShape4DynamicRNNV2 start");
     auto x_shape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, x_shape);

@@ -411,6 +411,7 @@ bool DynamicRNNV2Tiling::CheckParamsShape(gert::TilingContext* context)
 
 ge::graphStatus Tiling4DynamicRNNV2(gert::TilingContext* context)
 {
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context);
     OP_LOGD(context->GetNodeName(), "DynamicRNNV2Tiling start.");
     // set sync op batchmode
     context->SetScheduleMode(SCHEDULE_MODE);
@@ -470,6 +471,7 @@ ge::graphStatus Tiling4DynamicRNNV2(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepare4DynamicRNNV2(gert::TilingParseContext* context)
 {
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context);
     OP_LOGD(context->GetNodeName(), "DynamicRNNV2Tiling TilingPrepare4DynamicRNNV2 start.");
     // 910B/C AscendC
     bool supportL0c2out = false;

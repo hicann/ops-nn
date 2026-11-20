@@ -393,6 +393,7 @@ bool DynamicRNNTiling::CheckAttrOps(gert::TilingContext* context)
 
 ge::graphStatus TilingForDynamicRNN(gert::TilingContext* context)
 {
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context);
     // set sync op batchmode
     context->SetScheduleMode(SCHEDULE_MODE);
     // 910B/C AscendC
@@ -447,6 +448,7 @@ ge::graphStatus TilingForDynamicRNN(gert::TilingContext* context)
 
 ge::graphStatus TilingPrepareForDynamicRNN(gert::TilingParseContext* context)
 {
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context);
     // 910B/C AscendC
     bool supportL0c2out = false;
     DynamicRNNTiling rnnTiling;
