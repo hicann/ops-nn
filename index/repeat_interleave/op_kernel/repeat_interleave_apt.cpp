@@ -29,6 +29,9 @@ using namespace RepeatInterleave;
 #define SPLIT_REPEAT_REPEAT_INT32_CAST_FALSE_SHAPE_INT64 3001
 #define SPLIT_REPEAT_REPEAT_INT32_CAST_FALSE_SHAPE_INT32 3000
 #define SPLIT_REPEAT_REPEAT_INT64_CAST_FALSE_SHAPE_INT64 3101
+#define SCALAR_REPEAT_REPEAT_INT32_SHAPE_INT32 600
+#define SCALAR_REPEAT_REPEAT_INT32_SHAPE_INT64 601
+#define SCALAR_REPEAT_REPEAT_INT64_SHAPE_INT64 611
 #define BATCH_TILING_SPLIT_REPEATS_SHAPE_INT32 201
 #define BATCH_TILING_SPLIT_REPEATS_SHAPE_INT64 202
 #define SPLIT_REPEAT_SUM_SIMT_ADDR_INT64_CAST 4101
@@ -212,6 +215,27 @@ extern "C" __global__ __aicore__ void repeat_interleave(GM_ADDR x, GM_ADDR repea
         SyncAll();
         pipe.Reset();
         RepeatInterleaveRepeatImpl<DTYPE_X, int64_t, DTYPE_REPEATS, DTYPE_REPEATS> repeatOp(tilingInfo, pipe);
+        repeatOp.Init(x, repeats, y, userWs);
+        repeatOp.Process();
+    } else if (TILING_KEY_IS(SCALAR_REPEAT_REPEAT_INT32_SHAPE_INT32)) {
+        // repeats仅有一个值：直接按totalRepeatSum整除/取余计算输入位置，无需cumsum前缀和
+        GET_TILING_DATA_WITH_STRUCT(RepeatInterleaveTilingKernelRepeat, tilingData, tiling);
+        const RepeatInterleaveTilingKernelRepeat& tilingInfo = tilingData;
+        RepeatInterleaveRepeatImpl<DTYPE_X, int32_t, DTYPE_REPEATS, DTYPE_REPEATS, true> repeatOp(tilingInfo, pipe);
+        repeatOp.Init(x, repeats, y, userWs);
+        repeatOp.Process();
+    } else if (TILING_KEY_IS(SCALAR_REPEAT_REPEAT_INT32_SHAPE_INT64)) {
+        // repeats仅有一个值：直接按totalRepeatSum整除/取余计算输入位置，无需cumsum前缀和
+        GET_TILING_DATA_WITH_STRUCT(RepeatInterleaveTilingKernelRepeat, tilingData, tiling);
+        const RepeatInterleaveTilingKernelRepeat& tilingInfo = tilingData;
+        RepeatInterleaveRepeatImpl<DTYPE_X, int64_t, DTYPE_REPEATS, DTYPE_REPEATS, true> repeatOp(tilingInfo, pipe);
+        repeatOp.Init(x, repeats, y, userWs);
+        repeatOp.Process();
+    } else if (TILING_KEY_IS(SCALAR_REPEAT_REPEAT_INT64_SHAPE_INT64)) {
+        // repeats仅有一个值：直接按totalRepeatSum整除/取余计算输入位置，无需cumsum前缀和
+        GET_TILING_DATA_WITH_STRUCT(RepeatInterleaveTilingKernelRepeat, tilingData, tiling);
+        const RepeatInterleaveTilingKernelRepeat& tilingInfo = tilingData;
+        RepeatInterleaveRepeatImpl<DTYPE_X, int64_t, DTYPE_REPEATS, DTYPE_REPEATS, true> repeatOp(tilingInfo, pipe);
         repeatOp.Init(x, repeats, y, userWs);
         repeatOp.Process();
     }

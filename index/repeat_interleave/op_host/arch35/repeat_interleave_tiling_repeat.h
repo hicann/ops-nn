@@ -30,6 +30,7 @@ TILING_DATA_FIELD_DEF(int64_t, cumSumTailCoreLoops);           // cumSum阶段�
 TILING_DATA_FIELD_DEF(int64_t, cumSumNormalUbFactors);         // cumSum阶段正常循环处理repeats个数
 TILING_DATA_FIELD_DEF(int64_t, cumSumNormalCoreTailUbFactors); // cumSum阶段正常核尾循环处理repeats个数
 TILING_DATA_FIELD_DEF(int64_t, cumSumTailCoreTailUbFactors);   // cumSum阶段尾核尾循环处理repeats个数
+TILING_DATA_FIELD_DEF(int64_t, repeatsCount); // repeats仅有一个值时的单值重复次数r（y轴/输入轴）
 TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, eachCoreCpCount);
 TILING_DATA_FIELD_DEF(int64_t, tailCoreCpCount);
@@ -48,6 +49,9 @@ REGISTER_TILING_DATA_CLASS(RepeatInterleave_3000, RepeatInterleaveTilingKernelRe
 REGISTER_TILING_DATA_CLASS(RepeatInterleave_3001, RepeatInterleaveTilingKernelRepeat)
 REGISTER_TILING_DATA_CLASS(RepeatInterleave_3011, RepeatInterleaveTilingKernelRepeat)
 REGISTER_TILING_DATA_CLASS(RepeatInterleave_3101, RepeatInterleaveTilingKernelRepeat)
+REGISTER_TILING_DATA_CLASS(RepeatInterleave_600, RepeatInterleaveTilingKernelRepeat)
+REGISTER_TILING_DATA_CLASS(RepeatInterleave_601, RepeatInterleaveTilingKernelRepeat)
+REGISTER_TILING_DATA_CLASS(RepeatInterleave_611, RepeatInterleaveTilingKernelRepeat)
 
 class RepeatInterleaveTilingKernelRepeatTiling : public RepeatInterleaveBaseTiling {
 public:

@@ -93,10 +93,24 @@ ge::graphStatus RepeatInterleaveBaseTiling::CheckShape()
         return ge::GRAPH_FAILED;
     }
 
+    if (inputShape_.GetShapeSize() <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x",
+                                                  std::to_string(inputShape_.GetShapeSize()).c_str(),
+                                                  "shapeSize of x must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
+
     if (repeatShape_.GetDimNum() > 1) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "repeats",
                                               std::to_string(repeatShape_.GetDimNum()).c_str(),
                                               "the input repeats should be 1D tensor or a scalar");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (repeatShape_.GetShapeSize() <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "repeats",
+                                                  std::to_string(repeatShape_.GetShapeSize()).c_str(),
+                                                  "shapeSize of repeats must be greater than 0");
         return ge::GRAPH_FAILED;
     }
 
@@ -239,7 +253,7 @@ void RepeatInterleaveBaseTiling::CumSumTiling()
         isCumSumCast_ = true;
     }
 
-    int64_t repeatsShape = repeatShape_.GetDim(0);
+    int64_t repeatsShape = repeatShape_.GetDimNum() == 0 ? 1 : repeatShape_.GetDim(0);
     /* repeats小于16K时，只开一个核算前缀和*/
     if (repeatsShape * ge::GetSizeByDataType(repeatDtype_) < CUMSUM_COMPUTE_THRESHOLD) {
         // availableUbSize -= ubBlock;  // 偏移一个block

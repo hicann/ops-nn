@@ -31,7 +31,7 @@ constexpr uint32_t REPEAT_AXIS = 1;
 template <typename T>
 __simd_vf__ inline void CopyOneCpToRepeatOutUnalignVf(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr,
                                                       uint16_t repeatTimes, uint16_t size, uint16_t stride,
-                                                      int64_t oneCpSize)
+                                                      uint16_t strideTail, int64_t oneCpSize)
 {
     AscendC::Reg::UnalignRegForLoad uIn;
     AscendC::Reg::UnalignRegForStore uOut;
@@ -43,11 +43,13 @@ __simd_vf__ inline void CopyOneCpToRepeatOutUnalignVf(__ubuf__ T* xInLocalPtr, _
             AscendC::Reg::LoadUnAlign(inputRegTensor, uIn, xInLocalPtr + i * stride);
             AscendC::Reg::StoreUnAlign(xOutCurPtr, inputRegTensor, uOut, stride);
         }
+        AscendC::Reg::LoadUnAlign(inputRegTensor, uIn, xInLocalPtr + size * stride);
+        AscendC::Reg::StoreUnAlign(xOutCurPtr, inputRegTensor, uOut, strideTail);
         AscendC::Reg::StoreUnAlignPost(xOutCurPtr, uOut, 0);
     }
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT = false>
 class RepeatInterleaveRepeatImpl {
 public:
     __aicore__ inline RepeatInterleaveRepeatImpl(const RepeatInterleaveTilingKernelRepeat& tilingData, TPipe& pipe)
@@ -97,9 +99,9 @@ private:
     Y_SIZE_T startBatchIdx_{0};
 };
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::Init(GM_ADDR x, GM_ADDR repeats,
-                                                                                         GM_ADDR y, GM_ADDR workspace)
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::Init(
+    GM_ADDR x, GM_ADDR repeats, GM_ADDR y, GM_ADDR workspace)
 {
     xGm_.SetGlobalBuffer((__gm__ X_T*)x);
     repeatsGm_.SetGlobalBuffer((__gm__ REPEAT_T*)repeats);
@@ -127,8 +129,8 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     }
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::CopyMatchOutToY(
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::CopyMatchOutToY(
     LocalTensor<X_T> xOutLocal)
 {
     xOutQueue_.EnQue(xOutLocal);
@@ -144,8 +146,9 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     xOutQueue_.FreeTensor(xOutLocal);
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::CopyOneCpToRepeatOut(
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void
+RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::CopyOneCpToRepeatOut(
     const LocalTensor<X_T> xInLocal, LocalTensor<X_T> xOutLocal, uint16_t repeatNums, int64_t xInLocalOffset)
 {
     __ubuf__ int8_t* xInLocalPtr = (__ubuf__ int8_t*)xInLocal.GetPhyAddr() +
@@ -155,15 +158,17 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     uint32_t totalBytes = tilingData_.mergedDims[CP_AXIS] * sizeof(X_T);
     uint16_t stride = Ops::Base::GetVRegSize();
     uint16_t size = (totalBytes + stride - 1) / stride;
-    CopyOneCpToRepeatOutUnalignVf<int8_t>(xInLocalPtr, xOutLocalPtr, repeatNums, size, stride,
+    uint16_t strideTail = totalBytes - (size - 1) * stride;
+    CopyOneCpToRepeatOutUnalignVf<int8_t>(xInLocalPtr, xOutLocalPtr, repeatNums, size - 1, stride, strideTail,
                                           tilingData_.mergedDims[CP_AXIS] * sizeof(X_T));
     copyToMatchOutNum_ += repeatNums;
     return;
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline Y_SIZE_T RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::GetCurRepeatNum(
-    Y_SIZE_T curBatchIdx, Y_SIZE_T curRepeatIdx)
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline Y_SIZE_T
+RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::GetCurRepeatNum(Y_SIZE_T curBatchIdx,
+                                                                                               Y_SIZE_T curRepeatIdx)
 {
     if (curBatchIdx == startBatchIdx_ && curRepeatIdx == startRepeatIdx_) {
         return startRepeatIdxRemain_;
@@ -171,54 +176,59 @@ __aicore__ inline Y_SIZE_T RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, C
     if (curBatchIdx == endBatchIdx_ && curRepeatIdx == endRepeatIdx_) {
         return endRepeatIdxRemain_;
     }
-    // UB中没有所需索引，需重新拷贝
-    if (curRepeatIdx >= repeatOffsetBase_ + curRepeatSize_ || curRepeatIdx < repeatOffsetBase_) {
-        Y_SIZE_T copyLen = 0;
-        // blockFactorUbRepeat 不从 tiling获取，这里直接定义
-        if (static_cast<Y_SIZE_T>(UB_REPEAT_NUM_BUFFER / sizeof(REPEAT_T)) >=
-            static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS])) {
-            // 拷贝全部索引
-            if (endBatchIdx_ == curBatchIdx) {
-                copyLen = endRepeatIdx_ - curRepeatIdx + 1;
-                curRepeatHeadPos_ = curRepeatIdx;
-            } else if ((endBatchIdx_ == curBatchIdx + 1) && (endRepeatIdx_ < curRepeatIdx)) {
-                copyLen = static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]) - curRepeatIdx;
-                curRepeatHeadPos_ = curRepeatIdx;
+    if constexpr (IS_SINGLE_REPEAT) {
+        // repeats仅有一个值：中间输入行直接取tiling下发的单值重复次数（repeatsCount），无需从GM读取repeats
+        return static_cast<Y_SIZE_T>(tilingData_.repeatsCount);
+    } else {
+        // UB中没有所需索引，需重新拷贝
+        if (curRepeatIdx >= repeatOffsetBase_ + curRepeatSize_ || curRepeatIdx < repeatOffsetBase_) {
+            Y_SIZE_T copyLen = 0;
+            // blockFactorUbRepeat 不从 tiling获取，这里直接定义
+            if (static_cast<Y_SIZE_T>(UB_REPEAT_NUM_BUFFER / sizeof(REPEAT_T)) >=
+                static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS])) {
+                // 拷贝全部索引
+                if (endBatchIdx_ == curBatchIdx) {
+                    copyLen = endRepeatIdx_ - curRepeatIdx + 1;
+                    curRepeatHeadPos_ = curRepeatIdx;
+                } else if ((endBatchIdx_ == curBatchIdx + 1) && (endRepeatIdx_ < curRepeatIdx)) {
+                    copyLen = static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]) - curRepeatIdx;
+                    curRepeatHeadPos_ = curRepeatIdx;
+                } else {
+                    copyLen = static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]);
+                    curRepeatHeadPos_ = 0;
+                }
             } else {
-                copyLen = static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]);
-                curRepeatHeadPos_ = 0;
+                // 拷贝部分索引
+                if (endBatchIdx_ == curBatchIdx) {
+                    copyLen = min((endRepeatIdx_ - curRepeatIdx + 1),
+                                  static_cast<Y_SIZE_T>(UB_REPEAT_NUM_BUFFER / sizeof(REPEAT_T)));
+                    curRepeatHeadPos_ = curRepeatIdx;
+                } else {
+                    copyLen = min(static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]) - curRepeatIdx,
+                                  static_cast<Y_SIZE_T>(UB_REPEAT_NUM_BUFFER / sizeof(REPEAT_T)));
+                    curRepeatHeadPos_ = curRepeatIdx;
+                }
             }
-        } else {
-            // 拷贝部分索引
-            if (endBatchIdx_ == curBatchIdx) {
-                copyLen = min((endRepeatIdx_ - curRepeatIdx + 1),
-                              static_cast<Y_SIZE_T>(UB_REPEAT_NUM_BUFFER / sizeof(REPEAT_T)));
-                curRepeatHeadPos_ = curRepeatIdx;
-            } else {
-                copyLen = min(static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]) - curRepeatIdx,
-                              static_cast<Y_SIZE_T>(UB_REPEAT_NUM_BUFFER / sizeof(REPEAT_T)));
-                curRepeatHeadPos_ = curRepeatIdx;
-            }
+
+            curRepeatSize_ = copyLen;
+            repeatOffsetBase_ = curRepeatHeadPos_;
+            DataCopyExtParams inParams = {1, static_cast<uint32_t>(copyLen * sizeof(REPEAT_T)), 0, 0, 0};
+            DataCopyPadExtParams<REPEAT_T> padParams = {false, 0, 0, 0};
+            LocalTensor<REPEAT_T> tempLocal = repeatBuf_.Get<REPEAT_T>();
+            DataCopyPad(tempLocal, repeatsGm_[curRepeatHeadPos_], inParams, padParams);
+
+            event_t eventIdMTE2toS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+            SetFlag<HardEvent::MTE2_S>(eventIdMTE2toS);
+            WaitFlag<HardEvent::MTE2_S>(eventIdMTE2toS);
         }
-
-        curRepeatSize_ = copyLen;
-        repeatOffsetBase_ = curRepeatHeadPos_;
-        DataCopyExtParams inParams = {1, static_cast<uint32_t>(copyLen * sizeof(REPEAT_T)), 0, 0, 0};
-        DataCopyPadExtParams<REPEAT_T> padParams = {false, 0, 0, 0};
-        LocalTensor<REPEAT_T> tempLocal = repeatBuf_.Get<REPEAT_T>();
-        DataCopyPad(tempLocal, repeatsGm_[curRepeatHeadPos_], inParams, padParams);
-
-        event_t eventIdMTE2toS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-        SetFlag<HardEvent::MTE2_S>(eventIdMTE2toS);
-        WaitFlag<HardEvent::MTE2_S>(eventIdMTE2toS);
+        LocalTensor<REPEAT_T> repeatLocal = repeatBuf_.Get<REPEAT_T>();
+        return static_cast<Y_SIZE_T>(repeatLocal.GetValue(curRepeatIdx - curRepeatHeadPos_));
     }
-    LocalTensor<REPEAT_T> repeatLocal = repeatBuf_.Get<REPEAT_T>();
-    return static_cast<Y_SIZE_T>(repeatLocal.GetValue(curRepeatIdx - curRepeatHeadPos_));
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::CopyXToMatchOut(Y_SIZE_T startCpIdx,
-                                                                                                    Y_SIZE_T cpCount)
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::CopyXToMatchOut(
+    Y_SIZE_T startCpIdx, Y_SIZE_T cpCount)
 {
     LocalTensor<X_T> xInLocal = xInQueue_.DeQue<X_T>();
     LocalTensor<X_T> xOutLocal = xOutQueue_.AllocTensor<X_T>();
@@ -254,8 +264,8 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     return;
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::CopyOneSliceToOut(
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::CopyOneSliceToOut(
     Y_SIZE_T yOffset, Y_SIZE_T curRepeatNum, Y_SIZE_T dataCount)
 {
     LocalTensor<X_T> xInLocal = xInOutQueue_.DeQue<X_T>();
@@ -272,9 +282,9 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     return;
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::CopyOneSliceInX(Y_SIZE_T xOffset,
-                                                                                                    Y_SIZE_T dataCount)
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::CopyOneSliceInX(
+    Y_SIZE_T xOffset, Y_SIZE_T dataCount)
 {
     Y_SIZE_T dataLen = dataCount * sizeof(X_T);
 
@@ -285,10 +295,9 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     xInOutQueue_.EnQue(xInLocal);
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::CopyInX(Y_SIZE_T handleStartCpIdx,
-                                                                                            Y_SIZE_T blockCount,
-                                                                                            Y_SIZE_T dataCount)
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::CopyInX(
+    Y_SIZE_T handleStartCpIdx, Y_SIZE_T blockCount, Y_SIZE_T dataCount)
 {
     /* 源数据的偏移 */
     Y_SIZE_T xOffset = handleStartCpIdx * static_cast<Y_SIZE_T>(tilingData_.mergedDims[CP_AXIS]);
@@ -301,8 +310,9 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     xInQueue_.EnQue(xInLocal);
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline Y_SIZE_T RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::GetTotalProcessCp()
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline Y_SIZE_T
+RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::GetTotalProcessCp()
 {
     Y_SIZE_T totalProCp = static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]) - startRepeatIdx_ + endRepeatIdx_ +
                           1;
@@ -314,8 +324,9 @@ __aicore__ inline Y_SIZE_T RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, C
     return totalProCp;
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::ProcessCpMatchToUb()
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void
+RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::ProcessCpMatchToUb()
 {
     Y_SIZE_T totalProCp = GetTotalProcessCp();
     Y_SIZE_T loopSize = (totalProCp + static_cast<Y_SIZE_T>(tilingData_.cpCountInUb) - 1) /
@@ -335,8 +346,9 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     }
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::ProcessCpSplitMatchToUb()
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void
+RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::ProcessCpSplitMatchToUb()
 {
     Y_SIZE_T totalProCp = GetTotalProcessCp();
     Y_SIZE_T handleStartCpIdx = 0;
@@ -346,6 +358,9 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
         Y_SIZE_T curBatchIdx = handleStartCpIdx / static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]);
         Y_SIZE_T curRepeatIdx = handleStartCpIdx % static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]);
         Y_SIZE_T curRepeatNum = GetCurRepeatNum(curBatchIdx, curRepeatIdx);
+        if (curRepeatNum == 0) {
+            continue;
+        }
         for (Y_SIZE_T cpSliceIdx = 0; cpSliceIdx < static_cast<Y_SIZE_T>(tilingData_.cpSliceNum); cpSliceIdx++) {
             Y_SIZE_T cpSliceFactor = static_cast<Y_SIZE_T>(tilingData_.cpSliceFactorAlign);
             if (cpSliceIdx == tilingData_.cpSliceNum - 1) {
@@ -362,8 +377,8 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     }
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::ProcessWholeCp()
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::ProcessWholeCp()
 {
     Y_SIZE_T curCoreCpCount = 0;
     Y_SIZE_T startCpCount = 0;
@@ -392,9 +407,10 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     return;
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::GetRepeatIdxAndReverse(
-    int64_t repeatsStart, int64_t repeatsEnd)
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T,
+                                                  IS_SINGLE_REPEAT>::GetRepeatIdxAndReverse(int64_t repeatsStart,
+                                                                                            int64_t repeatsEnd)
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNum) {
         return;
@@ -405,25 +421,40 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
         repeatsNum = tilingData_.totalRepeatSum;
     }
 
-    LocalTensor<CAST_T> tmpLocal = tmpBuf_.Get<CAST_T>();
+    if constexpr (IS_SINGLE_REPEAT) {
+        // repeats仅有一个值（广播场景）：输出位置与输入位置满足 outPos = inputPos * r + q（r=repeatsCount），
+        // 输入axis下标由整除得出（startBatchIdx_ = outPos / totalRepeatSum为batch、repeatsStart / r为axis下标），
+        // 起止输入元素内的剩余次数直接取余计算，无需cumsum前缀和与二分搜索
+        startRepeatIdx_ = repeatsStart / tilingData_.repeatsCount;
+        endRepeatIdx_ = repeatsEnd / tilingData_.repeatsCount;
+        int64_t startRemain = tilingData_.repeatsCount - repeatsStart % tilingData_.repeatsCount;
+        int64_t endRemain = repeatsEnd % tilingData_.repeatsCount + 1;
 
-    asc_vf_call<SimtSearchStartEnd<REPEAT_T, CAST_T, CAST_T>>(
-        dim3(SEARCH_THREAD_NUM), tilingData_.mergedDims[REPEAT_AXIS], repeatsNum, repeatsStart, repeatsEnd,
-        (__ubuf__ CAST_T*)(tmpLocal.GetPhyAddr()), (__gm__ CAST_T*)(prefixSumGm_.GetPhyAddr()));
+        startRepeatIdxRemain_ = static_cast<Y_SIZE_T>(startRemain < repeatsNum ? startRemain : repeatsNum);
+        endRepeatIdxRemain_ = static_cast<Y_SIZE_T>(endRemain < repeatsNum ? endRemain : repeatsNum);
+        return;
+    } else {
+        LocalTensor<CAST_T> tmpLocal = tmpBuf_.Get<CAST_T>();
 
-    auto sWiatVEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    SetFlag<HardEvent::V_S>(sWiatVEventID);
-    WaitFlag<HardEvent::V_S>(sWiatVEventID);
+        asc_vf_call<SimtSearchStartEnd<REPEAT_T, CAST_T, CAST_T>>(
+            dim3(SEARCH_THREAD_NUM), tilingData_.mergedDims[REPEAT_AXIS], repeatsNum, repeatsStart, repeatsEnd,
+            (__ubuf__ CAST_T*)(tmpLocal.GetPhyAddr()), (__gm__ CAST_T*)(prefixSumGm_.GetPhyAddr()));
 
-    startRepeatIdx_ = tmpLocal.GetValue(0);
-    startRepeatIdxRemain_ = tmpLocal.GetValue(1);
-    endRepeatIdx_ = tmpLocal.GetValue(2);
-    endRepeatIdxRemain_ = tmpLocal.GetValue(3);
+        auto sWiatVEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(sWiatVEventID);
+        WaitFlag<HardEvent::V_S>(sWiatVEventID);
+
+        startRepeatIdx_ = tmpLocal.GetValue(0);
+        startRepeatIdxRemain_ = tmpLocal.GetValue(1);
+        endRepeatIdx_ = tmpLocal.GetValue(2);
+        endRepeatIdxRemain_ = tmpLocal.GetValue(3);
+    }
 }
 
 // 此场景下，每个核只会处理单行数据，且一定会单次搬运完毕
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::ProcessSplitCpForKernel()
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void
+RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::ProcessSplitCpForKernel()
 {
     Y_SIZE_T blockRow = static_cast<Y_SIZE_T>(GetBlockIdx()) / static_cast<Y_SIZE_T>(tilingData_.cpSplitBlocks);
     Y_SIZE_T blockCol = static_cast<Y_SIZE_T>(GetBlockIdx()) % static_cast<Y_SIZE_T>(tilingData_.cpSplitBlocks);
@@ -447,16 +478,19 @@ __aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_
     Y_SIZE_T xOffset = (startBatchIdx_ * static_cast<Y_SIZE_T>(tilingData_.mergedDims[REPEAT_AXIS]) + startRepeatIdx_) *
                            static_cast<Y_SIZE_T>(tilingData_.mergedDims[CP_AXIS]) +
                        cpOffset;
-    CopyOneSliceInX(xOffset, curCoreCpCount);
     Y_SIZE_T curRepeatNum = GetCurRepeatNum(startBatchIdx_, startRepeatIdx_);
+    if (curRepeatNum == 0) {
+        return;
+    }
+    CopyOneSliceInX(xOffset, curCoreCpCount);
     event_t eventIdSToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
     SetFlag<HardEvent::S_MTE3>(eventIdSToMTE3);
     WaitFlag<HardEvent::S_MTE3>(eventIdSToMTE3);
     CopyOneSliceToOut(outStartOffset_, curRepeatNum, curCoreCpCount);
 }
 
-template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T>
-__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T>::Process()
+template <typename X_T, typename Y_SIZE_T, typename REPEAT_T, typename CAST_T, bool IS_SINGLE_REPEAT>
+__aicore__ inline void RepeatInterleaveRepeatImpl<X_T, Y_SIZE_T, REPEAT_T, CAST_T, IS_SINGLE_REPEAT>::Process()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNum) {
         return;

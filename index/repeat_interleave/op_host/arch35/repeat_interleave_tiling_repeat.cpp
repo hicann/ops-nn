@@ -25,6 +25,10 @@ static constexpr int64_t SPLIT_REPEAT_REPEAT_INT32_CAST_TRUE_SHAPE_INT64 = 3011;
 static constexpr int64_t SPLIT_REPEAT_REPEAT_INT32_CAST_FALSE_SHAPE_INT64 = 3001;
 static constexpr int64_t SPLIT_REPEAT_REPEAT_INT32_CAST_FALSE_SHAPE_INT32 = 3000;
 static constexpr int64_t SPLIT_REPEAT_REPEAT_INT64_CAST_FALSE_SHAPE_INT64 = 3101;
+// repeats仅有一个值（广播场景）：kernel直接按totalRepeatSum整除/取余计算输入位置，无cumsum前缀和
+static constexpr int64_t SCALAR_REPEAT_REPEAT_INT32_SHAPE_INT32 = 600;
+static constexpr int64_t SCALAR_REPEAT_REPEAT_INT32_SHAPE_INT64 = 601;
+static constexpr int64_t SCALAR_REPEAT_REPEAT_INT64_SHAPE_INT64 = 611;
 static constexpr int64_t MIN_TOTAL_REPEATS_SUM = 1024;
 static constexpr int64_t MIN_CP_THRESHOLD = 2048;
 static constexpr int64_t MIN_CP_SPLIT_FACTOR = 2048;
@@ -34,19 +38,35 @@ static constexpr int64_t CP_AXIS = 2;
 static constexpr int64_t REPEAT_UB_BUFFER = 16384;  // 16 * 1024
 static constexpr int64_t UB_FOR_SIMT_CACHE = 32768; // 32 * 1024
 static constexpr int64_t MIN_CP_AXIS_LIMIT = 512;
+// Norm切核达标门限：模拟Norm的batch/CP切分后，usedCore达到totalCoreNum_的3/4（75%）即视为满足要求
+static constexpr int64_t CORE_USAGE_THRESHOLD_NUM = 3;
+static constexpr int64_t CORE_USAGE_THRESHOLD_DEN = 4;
 
 bool RepeatInterleaveTilingKernelRepeatTiling::IsCapable()
 {
-    // 101场景：repeats为scalar/广播（shape为空或为1），由Norm的scalar路径（101）处理
-    if (repeatShape_.GetDimNum() == 0 || repeatShape_.GetDim(0) == 1) {
+    // 输出axis长度为0（repeats值全为0）时，kernel按totalRepeatSum分核会除0，由Norm处理（空输出）
+    if (yShape_.GetDim(axis_) == 0) {
         return false;
     }
-    MergDim();
-    // 102场景：模拟Norm的batch/CP切核，若切分后核数能满足要求（过半），由Norm的tensor路径（102）处理
+    // 0维scalar/单值broadcast与tensor共用tensor合并视图；0维scalar 场景支持，不再拦截
+    MergDimForTensor();
+    // repeats为scalar/广播（shape为空或为1）时，接纳几乎所有场景的用例处理
+    if (repeatShape_.GetDimNum() == 0 || repeatShape_.GetDim(0) == 1) {
+        int64_t allCpNums = mergedDim_[0] * yShape_.GetDim(axis_);
+        if (allCpNums < totalCoreNum_ / DOUBLE &&
+            (mergedDim_[CP_AXIS] * ge::GetSizeByDataType(inputDtype_) / (totalCoreNum_ / allCpNums) >
+             ubSize_ / DOUBLE)) {
+            return false;
+        }
+        return true;
+    }
+
+    // 102场景：模拟Norm的tensor路径batch/CP切核，若切分后核数使用率达到 3/4 则由102处理
+    int64_t saturatedCoreNum = totalCoreNum_ / CORE_USAGE_THRESHOLD_DEN * CORE_USAGE_THRESHOLD_NUM;
     int64_t batchNum = mergedDim_[0];
     int64_t eachCoreBatchCount = Ops::Base::CeilDiv(batchNum, totalCoreNum_);
     int64_t usedCore = Ops::Base::CeilDiv(batchNum, eachCoreBatchCount);
-    if ((usedCore < totalCoreNum_ / DOUBLE) &&
+    if ((usedCore < saturatedCoreNum) &&
         (mergedDim_[CP_AXIS] * ge::GetSizeByDataType(inputDtype_) > MIN_CP_THRESHOLD)) {
         int64_t ratio = totalCoreNum_ / usedCore;
         int64_t cpDim = mergedDim_[CP_AXIS];
@@ -55,13 +75,13 @@ bool RepeatInterleaveTilingKernelRepeatTiling::IsCapable()
         int64_t cpSlice = Ops::Base::CeilDiv(cpDim, normalCP);
         usedCore = usedCore * cpSlice;
     }
-    if (usedCore >= totalCoreNum_ / DOUBLE) {
+    if (usedCore >= saturatedCoreNum) {
         return false;
     }
     if (mergedDim_[CP_AXIS] < MIN_CP_AXIS_LIMIT / ge::GetSizeByDataType(inputDtype_)) {
         return false;
     }
-    // 其余场景（batch/CP切分无法满足核数要求）优先在本模板（301/311/302）处理
+    // 其余场景（batch/CP切分无法满足核数要求）优先在本模板（3xx/6xx）处理
     return true;
 }
 
@@ -98,7 +118,12 @@ void RepeatInterleaveTilingKernelRepeatTiling::SplitCPUbFactor()
 void RepeatInterleaveTilingKernelRepeatTiling::GetUbFactor()
 {
     int64_t batchNum = mergedDim_[0];
-    // 使用 outputshape 进行分核
+    // 使用 outputshape 进行分核（totalCps = batch * y轴长度，即输出总行数）；
+    // repeats仅有一个值（广播）时，额外下发单值重复次数r = y轴长度 / 输入axis长度（repeatsCount），
+    // kernel按 r 直接整除/取余计算输入位置
+    if (repeatShape_.GetDimNum() == 0 || repeatShape_.GetDim(0) == 1) {
+        repeatsCount_ = yShape_.GetDim(axis_) / inputShape_.GetDim(axis_);
+    }
     totalRepeatSum_ = yShape_.GetDim(axis_);
     int64_t totalCps = batchNum * totalRepeatSum_;
     eachCoreCpCount_ = Ops::Base::CeilDiv(totalCps, totalCoreNum_);
@@ -129,6 +154,15 @@ ge::graphStatus RepeatInterleaveTilingKernelRepeatTiling::DoOpTiling()
 
 uint64_t RepeatInterleaveTilingKernelRepeatTiling::GetTilingKey() const
 {
+    if (repeatShape_.GetDimNum() == 0 || repeatShape_.GetDim(0) == 1) {
+        if (repeatDtype_ == ge::DT_INT32 && !isUseInt64_) {
+            return SCALAR_REPEAT_REPEAT_INT32_SHAPE_INT32;
+        } else if (repeatDtype_ == ge::DT_INT32 && isUseInt64_) {
+            return SCALAR_REPEAT_REPEAT_INT32_SHAPE_INT64;
+        } else {
+            return SCALAR_REPEAT_REPEAT_INT64_SHAPE_INT64;
+        }
+    }
     if (repeatDtype_ == ge::DT_INT32 && isCumSumCast_ && isUseInt64_) {
         return SPLIT_REPEAT_REPEAT_INT32_CAST_TRUE_SHAPE_INT64;
     } else if (repeatDtype_ == ge::DT_INT32 && !isCumSumCast_ && isUseInt64_) {
@@ -150,6 +184,7 @@ void RepeatInterleaveTilingKernelRepeatTiling::SetRepeatKernelTilingData()
     kernelTilingRepeatData_.set_cumSumNormalCoreTailUbFactors(cumSumNormalCoreTailUbFactors_);
     kernelTilingRepeatData_.set_cumSumTailCoreTailUbFactors(cumSumTailCoreTailUbFactors_);
 
+    kernelTilingRepeatData_.set_repeatsCount(repeatsCount_);
     kernelTilingRepeatData_.set_usedCoreNum(usedCoreNum_);
     kernelTilingRepeatData_.set_eachCoreCpCount(eachCoreCpCount_);
     kernelTilingRepeatData_.set_tailCoreCpCount(tailCoreCpCount_);
@@ -190,6 +225,7 @@ void RepeatInterleaveTilingKernelRepeatTiling::DumpTilingInfo()
     info << ", isSplitCPForKernel: " << isSplitCPForKernel_;
     info << ", cpSplitBlocks: " << cpSplitBlocks_;
     info << ", totalRepeatSum: " << totalRepeatSum_;
+    info << ", repeatsCount: " << repeatsCount_;
     info << ", tilingKey: " << GetTilingKey();
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
     return;
@@ -201,7 +237,7 @@ ge::graphStatus RepeatInterleaveTilingKernelRepeatTiling::GetWorkspaceSize()
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto sysWorkspace = ascendcPlatform.GetLibApiWorkSpaceSize();
-    int64_t repeatsShape = repeatShape_.GetDim(0);
+    int64_t repeatsShape = repeatShape_.GetDimNum() == 0 ? 1 : repeatShape_.GetDim(0);
     int64_t cumSumDataTypeSize = isCumSumCast_ ? static_cast<int64_t>(sizeof(int64_t)) :
                                                  static_cast<int64_t>(ge::GetSizeByDataType(repeatDtype_));
     sysWorkspace += repeatsShape * cumSumDataTypeSize + cumSumCoreNum_ * cumSumDataTypeSize;
