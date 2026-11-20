@@ -50,7 +50,8 @@ class TorchNpuNpuTransposeBatchmatmulTestSpec:
         if (
             scale is not None
             and hasattr(scale, "dtype")
-            and scale.dtype in (torch.int64, torch.int32)
+            and scale.dtype
+            in (torch.int64, torch.int32, getattr(torch, "uint64", torch.int64))
         ):
             scale_shape = scale.shape
             fp32_scale = np.random.uniform(low=-5, high=5, size=scale_shape).astype(
@@ -92,6 +93,47 @@ class TorchNpuNpuTransposeBatchmatmulTestSpec:
         return [out]
 
 
+class CannOpsNnTransposeBatchMatMulTestSpec:
+    """Golden for the public torch_extension eager API; preserve INT8 scale output."""
+
+    compare = _util.isclose_compare
+
+    @staticmethod
+    def customize_inputs(x1, x2, *, scale=None, **kwargs):
+        _aclnn.AclnnTransposeBatchMatMulTestSpec.customize_inputs(x1, x2, scale=scale)
+
+    @staticmethod
+    def golden(
+        x1,
+        x2,
+        *,
+        bias=None,
+        scale=None,
+        perm_x1=None,
+        perm_x2=None,
+        perm_y=None,
+        enable_hf32=False,
+        batch_split_factor=1,
+        **kwargs,
+    ):
+        output_dtype = "int8" if scale is not None else _util.dtype_to_str(x1.dtype)
+        kwargs["output_dtypes"] = [output_dtype]
+        result = _aclnn.AclnnTransposeBatchMatMulTestSpec.golden(
+            x1,
+            x2,
+            bias=bias,
+            scale=scale,
+            permX1=[1, 0, 2] if perm_x1 is None else perm_x1,
+            permX2=[0, 1, 2] if perm_x2 is None else perm_x2,
+            permY=[1, 0, 2] if perm_y is None else perm_y,
+            cubeMathType=3 if enable_hf32 else 0,
+            batchSplitFactor=1 if batch_split_factor is None else batch_split_factor,
+            **kwargs,
+        )
+        return [np.asarray(result[0], dtype=_util.dtype_to_np(output_dtype))]
+
+
 __spec__ = {
+    "torch.ops.cann_ops_nn.transpose_batch_mat_mul": "CannOpsNnTransposeBatchMatMulTestSpec",
     "torch_npu.npu_transpose_batchmatmul": "TorchNpuNpuTransposeBatchmatmulTestSpec",
 }

@@ -1523,3 +1523,165 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_batch_k_over_l
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_fp16_bias_vector)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({64, 64, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    // Continuous NBK storage (N,B,K), perm_x2=[1,2,0].
+    TensorDesc x2 = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out = TensorDesc({64, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{0, 2, 1});
+    auto p2 = IntArrayDesc(vector<int64_t>{1, 2, 0});
+    auto py = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul, INPUT(x1, x2, bias, nullptr, p1, p2, py, int8_t(0), int32_t(1)),
+                        OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_bf16_bias_row)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({64, 64, 32}, ACL_BF16, ACL_FORMAT_ND);
+    // Continuous NBK storage (N,B,K), perm_x2=[1,2,0].
+    TensorDesc x2 = TensorDesc({16, 64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({1, 16}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc out = TensorDesc({64, 32, 16}, ACL_BF16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{0, 2, 1});
+    auto p2 = IntArrayDesc(vector<int64_t>{1, 2, 0});
+    auto py = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul, INPUT(x1, x2, bias, nullptr, p1, p2, py, int8_t(0), int32_t(1)),
+                        OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_bias_bad_length)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({64, 64, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    // Continuous NBK storage (N,B,K), perm_x2=[1,2,0].
+    TensorDesc x2 = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({17}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out = TensorDesc({64, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{0, 2, 1});
+    auto p2 = IntArrayDesc(vector<int64_t>{1, 2, 0});
+    auto py = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul, INPUT(x1, x2, bias, nullptr, p1, p2, py, int8_t(0), int32_t(1)),
+                        OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_bias_bad_broadcast)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({64, 64, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    // Continuous NBK storage (N,B,K), perm_x2=[1,2,0].
+    TensorDesc x2 = TensorDesc({16, 64, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({64, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out = TensorDesc({64, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{0, 2, 1});
+    auto p2 = IntArrayDesc(vector<int64_t>{1, 2, 0});
+    auto py = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul, INPUT(x1, x2, bias, nullptr, p1, p2, py, int8_t(0), int32_t(1)),
+                        OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_weightnz_fp32_bias)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({64, 64, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc x2 = TensorDesc({64, 16, 64}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {64, 4, 1, 16, 16});
+    TensorDesc bias = TensorDesc({1, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out = TensorDesc({64, 32, 16}, ACL_BF16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{0, 2, 1});
+    auto p2 = IntArrayDesc(vector<int64_t>{0, 2, 1});
+    auto py = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1, x2, bias, nullptr, p1, p2, py, int8_t(0), int32_t(1)), OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_reject_transposed_a_mbn)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({6, 64, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2 = TensorDesc({6, 64, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out = TensorDesc({32, 6, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{0, 2, 1});
+    auto p2 = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto py = IntArrayDesc(vector<int64_t>{1, 0, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul, INPUT(x1, x2, nullptr, nullptr, p1, p2, py, int8_t(0), int32_t(1)),
+                        OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_reject_kbn_weightnz)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({32, 6, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2 = TensorDesc({64, 6, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {64, 1, 1, 16, 16});
+    TensorDesc out = TensorDesc({6, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{1, 0, 2});
+    auto p2 = IntArrayDesc(vector<int64_t>{1, 0, 2});
+    auto py = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1, x2, nullptr, nullptr, p1, p2, py, int8_t(0), int32_t(1)), OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_reject_nbk_weightnz)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({32, 6, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2 = TensorDesc({16, 6, 64}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {16, 4, 1, 16, 16});
+    TensorDesc out = TensorDesc({6, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{1, 0, 2});
+    auto p2 = IntArrayDesc(vector<int64_t>{1, 2, 0});
+    auto py = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1, x2, nullptr, nullptr, p1, p2, py, int8_t(0), int32_t(1)), OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_reject_bias_with_batch_split)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({32, 6, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2 = TensorDesc({6, 64, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out = TensorDesc({2, 32, 48}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{1, 0, 2});
+    auto p2 = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto py = IntArrayDesc(vector<int64_t>{1, 0, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul, INPUT(x1, x2, bias, nullptr, p1, p2, py, int8_t(0), int32_t(2)),
+                        OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, dav3510_reject_bias_with_scale)
+{
+    op::NpuArchManager archManager(Ops::Base::DAV_3510);
+    TensorDesc x1 = TensorDesc({32, 6, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2 = TensorDesc({6, 64, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc scale = TensorDesc({96}, ACL_INT64, ACL_FORMAT_ND);
+    TensorDesc out = TensorDesc({32, 1, 96}, ACL_INT8, ACL_FORMAT_ND);
+    auto p1 = IntArrayDesc(vector<int64_t>{1, 0, 2});
+    auto p2 = IntArrayDesc(vector<int64_t>{0, 1, 2});
+    auto py = IntArrayDesc(vector<int64_t>{1, 0, 2});
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul, INPUT(x1, x2, bias, scale, p1, p2, py, int8_t(0), int32_t(1)),
+                        OUTPUT(out));
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}

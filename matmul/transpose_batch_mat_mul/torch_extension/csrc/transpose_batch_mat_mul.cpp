@@ -70,7 +70,8 @@ void CheckDtype(const at::Tensor& x1, const at::Tensor& x2, const c10::optional<
 }
 
 std::vector<int64_t> InferOutputShape(const at::Tensor& x1, const at::Tensor& x2, const std::vector<int64_t>& perm_x1,
-                                      const std::vector<int64_t>& perm_x2, bool has_scale, int64_t batch_split_factor)
+                                      const std::vector<int64_t>& perm_x2, const std::vector<int64_t>& perm_y,
+                                      bool has_scale, int64_t batch_split_factor)
 {
     const int64_t m_dim = x1.size(perm_x1[1]);
     const int64_t batch_dim = x1.size(perm_x1[0]);
@@ -89,7 +90,8 @@ std::vector<int64_t> InferOutputShape(const at::Tensor& x1, const at::Tensor& x2
                     batch_split_factor);
         return {batch_split_factor, m_dim, batch_n / batch_split_factor};
     }
-    return {m_dim, batch_dim, n_dim};
+    return perm_y[0] == 0 ? std::vector<int64_t>{batch_dim, m_dim, n_dim} :
+                            std::vector<int64_t>{m_dim, batch_dim, n_dim};
 }
 } // namespace
 
@@ -111,9 +113,24 @@ at::Tensor transpose_batch_mat_mul(const at::Tensor& x1, const at::Tensor& x2, c
     const std::vector<int64_t> perm_x1_value = ResolvePerm(perm_x1, kDefaultPermX1, "perm_x1");
     const std::vector<int64_t> perm_x2_value = ResolvePerm(perm_x2, kDefaultPermX2, "perm_x2");
     const std::vector<int64_t> perm_y_value = ResolvePerm(perm_y, kDefaultPermY, "perm_y");
-    CheckPerm(perm_x1_value, {{0, 1, 2}, {1, 0, 2}}, "perm_x1");
-    CheckPerm(perm_x2_value, {{0, 1, 2}, {0, 2, 1}}, "perm_x2");
-    CheckPerm(perm_y_value, {{1, 0, 2}}, "perm_y");
+    CheckPerm(perm_x1_value, {{0, 1, 2}, {1, 0, 2}, {0, 2, 1}}, "perm_x1");
+    CheckPerm(perm_x2_value, {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}}, "perm_x2");
+    CheckPerm(perm_y_value, {{1, 0, 2}, {0, 1, 2}}, "perm_y");
+
+    const bool is_weight_nz = at_npu::native::get_npu_format(x2) == ACL_FORMAT_FRACTAL_NZ;
+    const bool has_scale_or_batch_split = has_scale || batch_split_factor_value != kDefaultBatchSplitFactor;
+    TORCH_CHECK(!has_scale_or_batch_split || !bias.has_value() || !bias->defined(),
+                "bias does not support scale or batch split");
+    const bool is_bmn = perm_y_value[0] == 0;
+    if (is_bmn) {
+        TORCH_CHECK(!has_scale_or_batch_split, "bmn output does not support scale or batch split");
+    }
+    if (perm_x1_value[1] == 2) {
+        TORCH_CHECK(is_bmn, "transposed A requires bmn output");
+    }
+    if (perm_x2_value[0] == 1) {
+        TORCH_CHECK(is_bmn && !is_weight_nz, "batch-centered B requires ND format and bmn output");
+    }
 
     TORCH_CHECK(x1.size(perm_x1_value[0]) == x2.size(perm_x2_value[0]), "x1 and x2 batch dimensions must match");
     TORCH_CHECK(x1.size(perm_x1_value[2]) == x2.size(perm_x2_value[1]), "x1 and x2 K dimensions must match");
@@ -125,8 +142,8 @@ at::Tensor transpose_batch_mat_mul(const at::Tensor& x1, const at::Tensor& x2, c
                     "scale must be 1-dimensional with length batch * N");
     }
 
-    const std::vector<int64_t> output_shape = InferOutputShape(x1, x2, perm_x1_value, perm_x2_value, has_scale,
-                                                               batch_split_factor_value);
+    const std::vector<int64_t> output_shape = InferOutputShape(x1, x2, perm_x1_value, perm_x2_value, perm_y_value,
+                                                               has_scale, batch_split_factor_value);
     const at::ScalarType output_dtype = has_scale ? at::kChar : x1.scalar_type();
     at::Tensor out = at::empty(output_shape, x1.options().dtype(output_dtype));
 
@@ -136,7 +153,6 @@ at::Tensor transpose_batch_mat_mul(const at::Tensor& x1, const at::Tensor& x2, c
     const int8_t cube_math_type = enable_hf32 ? kUseHf32 : kKeepDtype;
     const int32_t batch_split_factor_i32 = static_cast<int32_t>(batch_split_factor_value);
 
-    const bool is_weight_nz = at_npu::native::get_npu_format(x2) == ACL_FORMAT_FRACTAL_NZ;
     if (is_weight_nz) {
         TORCH_CHECK(x1.scalar_type() == at::kHalf || x1.scalar_type() == at::kBFloat16,
                     "FRACTAL_NZ (WeightNZ) only supports float16/bfloat16 input, but got ", x1.scalar_type());

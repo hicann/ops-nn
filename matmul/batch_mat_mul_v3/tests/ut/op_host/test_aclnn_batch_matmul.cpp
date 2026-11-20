@@ -2098,6 +2098,7 @@ bool MmCheckHitV3Shape(const aclTensor*, const aclTensor*, const aclTensor*, boo
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "matmul/common/op_host/math_util_nn.h"
+#include "matmul/transpose_batch_mat_mul/op_api/transpose_batch_mat_mul.h"
 
 // libruntime.so 为可执行文件的传递依赖（经 libnnopbase 等引入），非直接链接输入。
 // rtGetSocSpec 平台依赖收敛（CI 门禁环境回归根因修复）：
@@ -2148,6 +2149,7 @@ int BmmUtRtGetSocSpec(const char* label, const char* key, char* val, unsigned in
 #include "../../../../common/op_host/op_api/matmul.cpp"
 #include "../../../../common/op_host/op_api/fused_mat_mul.cpp"
 #include "../../../../common/op_host/op_api/matmul_util.cpp"
+#include "../../../../transpose_batch_mat_mul/op_api/transpose_batch_mat_mul.cpp"
 
 // batch_matmul_util.cpp 与 matmul_util.cpp 的匿名命名空间静态符号同名
 // （NUM_TWO/BLOCK_CUBE/SetTensorToNDFormat/CheckAscendCScenario 等），将前者包进命名命名空间隔离；

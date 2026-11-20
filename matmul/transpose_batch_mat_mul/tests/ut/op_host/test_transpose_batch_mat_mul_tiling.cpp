@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 
 #include <iostream>
+#include <sstream>
 #include <nlohmann/json.hpp>
 #include <vector>
 #include "exe_graph/runtime/storage_format.h"
@@ -22,6 +23,8 @@
 #include "test_cube_util.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
 #include "../../../op_host/op_tiling/arch35/transpose_batch_mat_mul_tiling_advanced.h"
+#include "../../../op_host/op_tiling/arch35/transpose_batch_mat_mul_iterbatch_tiling.h"
+#include "../../../op_kernel/arch35/transpose_batch_mat_mul_tiling_data.h"
 #include "../../../op_host/op_tiling/transpose_batch_mat_mul_einsum_tiling.h"
 #include "../../../op_host/op_tiling/transpose_batch_mat_mul_base_tiling.h"
 #include "../../../op_host/op_tiling/transpose_batch_mat_mul_simplifiedkey.h"
@@ -197,6 +200,24 @@ TEST_P(TransposeBatchMatMulTilingRuntime, general_cases)
     uint64_t tiling_key = tiling_context->GetTilingKey();
     uint32_t block_dim = tiling_context->GetBlockDim();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
+    if (IsDav3510CompileInfo(param.compile_info)) {
+        ASSERT_EQ(tiling_context->GetRawTilingData()->GetDataSize(), sizeof(TransposeBatchMatMulBasicTilingData));
+        const auto* td = reinterpret_cast<const TransposeBatchMatMulBasicTilingData*>(
+            tiling_context->GetRawTilingData()->GetData());
+        const auto& bmm = td->matMulTilingData;
+        const auto& mm = bmm.matMulTilingData;
+        // arch35 golden记录基础结构中kernel使用的shape、分块、调度和计算模式。
+        std::ostringstream basicFields;
+        basicFields << mm.m << " " << mm.n << " " << mm.k << " " << mm.baseM << " " << mm.baseN << " " << mm.baseK
+                    << " " << mm.mL1 << " " << mm.nL1 << " " << mm.kL1 << " " << bmm.batchDimAll << " "
+                    << td->batchSplitFactor << " " << mm.mTailCnt << " " << mm.nTailCnt << " " << mm.mBaseTailSplitCnt
+                    << " " << mm.nBaseTailSplitCnt << " " << mm.mTailMain << " " << mm.nTailMain << " "
+                    << static_cast<uint32_t>(mm.mmadParam) << " " << static_cast<uint32_t>(mm.l2CacheDisable) << " "
+                    << mm.sliceM << " " << mm.srcNdStride << " " << mm.innerBatch << " " << mm.splitSingleCoreKBase
+                    << " " << static_cast<uint32_t>(mm.aswWindowLen) << " " << static_cast<uint32_t>(mm.l0cDB) << " ";
+        EXPECT_TRUE(mm.l1BufferNum == 2U || mm.l1BufferNum == 4U);
+        tiling_data_result = basicFields.str();
+    }
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
     ASSERT_EQ(tiling_key, param.tiling_key);
     ASSERT_EQ(block_dim, param.block_dim);
@@ -359,10 +380,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8193UL,
-     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 "
-     "0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 16843264 256 1 0 1 1 4 4 1 0 ",
+     5251073UL,
+     "32 512 128 32 512 32 32 512 128 32 1 1 1 1 1 0 0 0 0 32 1 0 1 4 2 ",
      {1, 0, 2},
      {0, 1, 2},
      {1, 0, 2},
@@ -391,10 +410,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8209UL,
-     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 "
-     "0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 16843264 256 1 0 1 1 4 4 1 0 ",
+     5251089UL,
+     "32 512 128 32 512 32 32 512 128 32 1 1 1 1 1 0 0 0 0 32 1 0 1 4 2 ",
      {1, 0, 2},
      {0, 2, 1},
      {1, 0, 2},
@@ -423,10 +440,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8449UL,
-     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 "
-     "0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 16843264 256 1 0 1 1 4 4 1 0 ",
+     5251329UL,
+     "32 512 128 32 512 32 32 512 128 32 4 1 1 1 1 0 0 0 0 32 1 0 1 4 2 ",
      {1, 0, 2},
      {0, 1, 2},
      {1, 0, 2},
@@ -455,10 +470,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8465UL,
-     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 "
-     "0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 16843264 256 1 0 1 1 4 4 1 0 ",
+     5251345UL,
+     "32 512 128 32 512 32 32 512 128 32 4 1 1 1 1 0 0 0 0 32 1 0 1 4 2 ",
      {1, 0, 2},
      {0, 2, 1},
      {1, 0, 2},
@@ -487,10 +500,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8192UL,
-     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 "
-     "0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 16843264 256 1 0 1 1 4 4 1 0 ",
+     4202496UL,
+     "32 512 128 32 512 32 32 512 128 32 1 1 1 1 1 0 0 0 0 32 1 0 1 4 2 ",
      {0, 1, 2},
      {0, 1, 2},
      {1, 0, 2},
@@ -519,10 +530,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8208UL,
-     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 "
-     "0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 1 32 256 128 16843264 256 1 0 1 1 4 4 1 0 ",
+     4202512UL,
+     "32 512 128 32 512 32 32 512 128 32 1 1 1 1 1 0 0 0 0 32 1 0 1 4 2 ",
      {0, 1, 2},
      {0, 2, 1},
      {1, 0, 2},
@@ -551,10 +560,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8448UL,
-     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 69632 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 "
-     "0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 16843264 256 1 0 1 1 4 4 1 0 ",
+     4202752UL,
+     "32 512 128 32 512 32 32 512 128 32 4 1 1 1 1 0 0 0 0 32 1 0 1 4 2 ",
      {0, 1, 2},
      {0, 1, 2},
      {1, 0, 2},
@@ -583,10 +590,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8464UL,
-     "32 32 512 128 128 256 256 128 256 256 64 4 4 1 1 0 0 0 0 12288 2048 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 "
-     "0 0 0 "
-     "0 0 0 0 1 1 1 1 1 0 0 0 4 0 32 32 32 1 1 1 1 1 1 1 1 1 1 32 32 32 0 1 4 32 256 128 16843264 256 1 0 1 1 4 4 1 0 ",
+     4202768UL,
+     "32 512 128 32 512 32 32 512 128 32 4 1 1 1 1 0 0 0 0 32 1 0 1 4 2 ",
      {0, 1, 2},
      {0, 2, 1},
      {1, 0, 2},
@@ -615,10 +620,8 @@ static TilingTestParam dav3510_cases_params[] = {
      0,
      0,
      32,
-     8193UL,
-     "32 1 1024 4096 4096 16 128 4096 16 128 128 4 4 1 1 0 0 0 0 393216 16384 0 1 1 1 1 2 2 0 0 2 2 1 0 0 0 0 0 0 0 "
-     "0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 4 0 4 4 4 1 1 1 1 1 1 1 1 1 1 4 4 4 0 1 1 16 128 256 16843264 16 1 0 1 1 4 "
-     "4 1 0 ",
+     5251073UL,
+     "1 1024 4096 16 128 128 16 128 256 4 1 1 1 1 1 0 0 0 0 16 1 0 1 4 2 ",
      {1, 0, 2},
      {0, 1, 2},
      {1, 0, 2},
@@ -788,6 +791,8 @@ struct AdvancedContext {
     std::unique_ptr<unsigned char[]> wsSize;
     fe::PlatFormInfos platformInfo;
     // Store optional shapes as members to ensure they outlive the faker build
+    gert::StorageShape x1ShapeSs;
+    gert::StorageShape x2ShapeSs;
     gert::StorageShape biasShape_ = {{0}, {0}};
     gert::StorageShape scaleSs_ = {{0}, {0}};
 
@@ -796,11 +801,17 @@ struct AdvancedContext {
                     const std::initializer_list<int64_t>& perm_x1 = {1, 0, 2},
                     const std::initializer_list<int64_t>& perm_x2 = {0, 1, 2},
                     const std::initializer_list<int64_t>& perm_y = {1, 0, 2}, int64_t batchSplitFactor = 1,
-                    bool hasBias = false, bool hasScale = false, const std::initializer_list<int64_t>& scaleShape = {0})
+                    bool hasBias = false, bool hasScale = false, const std::initializer_list<int64_t>& scaleShape = {0},
+                    const std::initializer_list<int64_t>& biasShape = {}, ge::DataType biasType = DT_FLOAT,
+                    ge::Format bFormat = FORMAT_ND)
         : tilingData(gert::TilingData::CreateCap(2048)), wsSize(gert::ContinuousVector::Create<size_t>(4096))
     {
-        gert::StorageShape x1ShapeSs = {x1Shape, x1Shape};
-        gert::StorageShape x2ShapeSs = {x2Shape, x2Shape};
+        x1ShapeSs = {x1Shape, x1Shape};
+        x2ShapeSs = {x2Shape, x2Shape};
+        if (bFormat == FORMAT_FRACTAL_NZ) {
+            const std::vector<int64_t> dims(x2Shape);
+            x2ShapeSs = {x2Shape, {dims[0], (dims[2] + 15) / 16, (dims[1] + 15) / 16, 16, 16}};
+        }
         outShapes.emplace_back(yShape, yShape);
         std::vector<void*> outShapeRefs = {static_cast<void*>(&outShapes[0])};
 
@@ -810,7 +821,8 @@ struct AdvancedContext {
         std::vector<gert::StorageShape*> inputShapes = {&x1ShapeSs, &x2ShapeSs};
         int inputCount = 2;
         if (hasBias) {
-            biasShape_ = {{yShape}, {yShape}};
+            biasShape_ = biasShape.size() == 0 ? gert::StorageShape{yShape, yShape} :
+                                                 gert::StorageShape{biasShape, biasShape};
             inputShapes.push_back(&biasShape_);
             inputCount++;
         }
@@ -819,27 +831,33 @@ struct AdvancedContext {
             inputShapes.push_back(&scaleSs_);
             inputCount++;
         }
-        std::vector<uint32_t> instanceNum(inputCount, 1);
+        std::vector<uint32_t> instanceNum = {1, 1, hasBias ? 1U : 0U, hasScale ? 1U : 0U};
 
-        holder = gert::TilingContextFaker()
-                     .SetOpType("TransposeBatchMatMul")
-                     .NodeIoNum(inputCount, 1)
-                     .IrInstanceNum(instanceNum)
-                     .InputShapes(inputShapes)
-                     .OutputShapes(outShapeRefs)
-                     .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_x1)},
-                                 {"perm_x2", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_x2)},
-                                 {"perm_y", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_y)},
-                                 {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                                 {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(batchSplitFactor)}})
-                     .NodeInputTd(0, dtype, FORMAT_ND, FORMAT_ND)
-                     .NodeInputTd(1, dtype, FORMAT_ND, FORMAT_ND)
-                     .NodeOutputTd(0, dtype, FORMAT_ND, FORMAT_ND)
-                     .CompileInfo(&compileInfo)
-                     .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                     .TilingData(tilingData.get())
-                     .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsSize.get()))
-                     .Build();
+        auto faker = gert::TilingContextFaker();
+        faker.SetOpType("TransposeBatchMatMul")
+            .NodeIoNum(inputCount, 1)
+            .IrInstanceNum(instanceNum)
+            .InputShapes(inputShapes)
+            .OutputShapes(outShapeRefs)
+            .NodeAttrs({{"perm_x1", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_x1)},
+                        {"perm_x2", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_x2)},
+                        {"perm_y", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(perm_y)},
+                        {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                        {"batch_split_factor", Ops::NN::AnyValue::CreateFrom<int64_t>(batchSplitFactor)}})
+            .NodeInputTd(0, dtype, FORMAT_ND, FORMAT_ND)
+            .NodeInputTd(1, dtype, FORMAT_ND, bFormat)
+            .NodeOutputTd(0, hasScale ? DT_INT8 : dtype, FORMAT_ND, FORMAT_ND)
+            .CompileInfo(&compileInfo)
+            .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+            .TilingData(tilingData.get())
+            .Workspace(reinterpret_cast<gert::ContinuousVector*>(wsSize.get()));
+        if (hasBias) {
+            faker.NodeInputTd(2, biasType, FORMAT_ND, FORMAT_ND);
+        }
+        if (hasScale) {
+            faker.NodeInputTd(inputCount - 1, DT_INT64, FORMAT_ND, FORMAT_ND);
+        }
+        holder = faker.Build();
         ctx = holder.GetContext<gert::TilingContext>();
     }
 };
@@ -868,7 +886,7 @@ TEST(TransposeBatchMatMulAdvancedTilingTest, InvalidPermX2)
 TEST(TransposeBatchMatMulAdvancedTilingTest, InvalidPermY)
 {
     AdvancedContext c({2, 64, 128}, {2, 128, 256}, {2, 64, 256}, DT_FLOAT16,
-                      /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{0, 1, 2});
+                      /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{2, 1, 0});
     TransposeBatchMatMulTiling tiling(c.ctx);
     EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
 }
@@ -1193,4 +1211,468 @@ TEST(TransposeBatchMatMulGenSimplifiedKeyTest, ValidKey)
     auto ret = optiling::transpose_batch_matmul::GenSimplifiedKey(ctx, key);
     EXPECT_EQ(ret, ge::GRAPH_SUCCESS);
 }
+
+// ================== IterBatch tiling strategy tests ==================
+// 参照batch_matmul_v3 iterbatch准入: 等batch + batchC>aicNum + 单batch容量 + L0装载
+namespace {
+using TBMMKeyBuilder = optiling::transpose_batch_mat_mul_advanced::TBMMTilingKey;
+
+void SetIterBatchCompileInfo(optiling::MatmulV3CompileInfo& compileInfo)
+{
+    compileInfo.npuArch = NpuArch::DAV_3510;
+    compileInfo.aicNum = 20UL;
+    compileInfo.aivNum = 40UL;
+    compileInfo.ubSize = 196608UL;
+    compileInfo.l1Size = 524288UL;
+    compileInfo.l2Size = 201326592UL;
+    compileInfo.l0CSize = 131072UL;
+    compileInfo.l0ASize = 65536UL;
+    compileInfo.l0BSize = 65536UL;
+    compileInfo.btSize = 65536UL;
+    compileInfo.cubeFreq = 1800;
+}
+
+const BatchMatMulV3IterBatchBasicTilingData* GetTbmmIterBatchTilingData(gert::TilingContext* ctx)
+{
+    return reinterpret_cast<const BatchMatMulV3IterBatchBasicTilingData*>(ctx->GetRawTilingData()->GetData());
+}
+
+const TransposeBatchMatMulBasicTilingData* GetTbmmBasicTilingData(gert::TilingContext* ctx)
+{
+    return reinterpret_cast<const TransposeBatchMatMulBasicTilingData*>(ctx->GetRawTilingData()->GetData());
+}
+} // namespace
+
+// 等batch(b=64>aicNum=20) + permY=[0,1,2](bmn) + 连续输入: 准入iterbatch, 校验iterBatchL1/L0与baseM/N/K
+TEST(TransposeBatchMatMulIterBatchTilingTest, ContiguousBmnAdmitted)
+{
+    AdvancedContext c({64, 64, 128}, {64, 128, 96}, {64, 64, 96}, DT_FLOAT16,
+                      /*perm_x1=*/{0, 1, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    uint64_t expectedKey = TBMMKeyBuilder()
+                               .SetApiLevel(TBMMApiLevel::TBMM_TENSOR_LEVEL)
+                               .SetPermX1(TBMMPermX1::PERM_X1_0_1_2)
+                               .SetPermX2(TBMMPermX2::PERM_X2_0_1_2)
+                               .SetBatchSplitMode(TBMMBatchSplit::BATCH_SPLIT_FALSE)
+                               .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                               .SetNonContiguousType(TBMMNonContiguousType::CONTIGUOUS)
+                               .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    auto* td = GetTbmmIterBatchTilingData(c.ctx);
+    ASSERT_EQ(c.ctx->GetRawTilingData()->GetDataSize(), sizeof(BatchMatMulV3IterBatchBasicTilingData));
+    // 单batch 40KB(fp16), iterBatchL1=min(FloorDiv(L1/2,40KB)=6, CeilDiv(64,20)=4)=4;
+    // iterBatchL0=min(L0A=2,L0B=1,L0C=2)=1
+    EXPECT_EQ(td->iterBatchL1, 4U);
+    EXPECT_EQ(td->iterBatchL0, 1U);
+    EXPECT_EQ(td->baseM, 64U);
+    EXPECT_EQ(td->baseN, 96U);
+    EXPECT_EQ(td->baseK, 128U);
+    EXPECT_EQ(c.ctx->GetBlockDim(), 20U);
+}
+
+// MBK A沿用BMM分块计算，由Kernel适配GM布局。
+TEST(TransposeBatchMatMulIterBatchTilingTest, MbkABmnIterBatchAdmitted)
+{
+    AdvancedContext c({32, 64, 128}, {64, 128, 96}, {64, 32, 96}, DT_FLOAT16,
+                      /*perm_x1=*/{1, 0, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    uint64_t expectedKey = TBMMKeyBuilder()
+                               .SetApiLevel(TBMMApiLevel::TBMM_TENSOR_LEVEL)
+                               .SetPermX1(TBMMPermX1::PERM_X1_1_0_2)
+                               .SetPermX2(TBMMPermX2::PERM_X2_0_1_2)
+                               .SetBatchSplitMode(TBMMBatchSplit::BATCH_SPLIT_FALSE)
+                               .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                               .SetNonContiguousType(TBMMNonContiguousType::A_NON_CONTIGUOUS)
+                               .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+}
+
+// 连续MBN输出也参与iterbatch策略选择。
+TEST(TransposeBatchMatMulIterBatchTilingTest, MbnOutputAdmitted)
+{
+    AdvancedContext c({64, 64, 128}, {64, 128, 96}, {64, 64, 96}, DT_FLOAT16,
+                      /*perm_x1=*/{0, 1, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{1, 0, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    uint64_t expectedKey = TBMMKeyBuilder()
+                               .SetApiLevel(TBMMApiLevel::TBMM_TENSOR_LEVEL)
+                               .SetPermX1(TBMMPermX1::PERM_X1_0_1_2)
+                               .SetPermX2(TBMMPermX2::PERM_X2_0_1_2)
+                               .SetBatchSplitMode(TBMMBatchSplit::BATCH_SPLIT_FALSE)
+                               .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                               .SetNonContiguousType(TBMMNonContiguousType::C_TRANSPOSE)
+                               .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, MbnWeightNzFallsBackToBasic)
+{
+    AdvancedContext c({16, 64, 32}, {64, 129, 32}, {2, 16, 4128}, DT_BF16, {1, 0, 2}, {0, 2, 1}, {1, 0, 2}, 2, false,
+                      false, {0}, {1, 129}, DT_FLOAT, FORMAT_FRACTAL_NZ);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(c.ctx->GetTilingKey(), TBMMKeyBuilder()
+                                         .SetPermX1(TBMMPermX1::PERM_X1_1_0_2)
+                                         .SetPermX2(TBMMPermX2::PERM_X2_0_2_1)
+                                         .SetBatchSplitMode(TBMMBatchSplit::BATCH_SPLIT_TRUE)
+                                         .SetModel(TBMMModel::TBMM_BASIC)
+                                         .SetNonContiguousType(TBMMNonContiguousType::AC_TRANSPOSE)
+                                         .GetTilingKey());
+    const auto* td = GetTbmmBasicTilingData(c.ctx);
+    EXPECT_EQ(td->batchSplitFactor, 2U);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, MbnNdSplitWithoutBiasUsesBasic)
+{
+    AdvancedContext c({64, 16, 32}, {64, 129, 32}, {2, 16, 4128}, DT_BF16, {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, 2, false,
+                      false, {0}, {1, 129}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    const auto expectedKey = TBMMKeyBuilder()
+                                 .SetPermX2(TBMMPermX2::PERM_X2_0_2_1)
+                                 .SetBatchSplitMode(TBMMBatchSplit::BATCH_SPLIT_TRUE)
+                                 .SetModel(TBMMModel::TBMM_BASIC)
+                                 .SetNonContiguousType(TBMMNonContiguousType::C_TRANSPOSE)
+                                 .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    const auto* td = GetTbmmBasicTilingData(c.ctx);
+    EXPECT_EQ(td->batchSplitFactor, 2U);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, MbkMbnSplitBiasRejected)
+{
+    AdvancedContext c({16, 64, 32}, {64, 129, 32}, {2, 16, 4128}, DT_BF16, {1, 0, 2}, {0, 2, 1}, {1, 0, 2}, 2, true,
+                      false, {0}, {1, 129}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+// batch(2) <= aicNum(20): iterbatch拒绝, 回退BASE
+TEST(TransposeBatchMatMulIterBatchTilingTest, SmallBatchFallsBackToBase)
+{
+    AdvancedContext c({2, 64, 128}, {2, 128, 96}, {2, 64, 96}, DT_FLOAT16,
+                      /*perm_x1=*/{0, 1, 2}, /*perm_x2=*/{0, 1, 2}, /*perm_y=*/{0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    uint64_t baseKey = TBMMKeyBuilder()
+                           .SetApiLevel(TBMMApiLevel::TBMM_TENSOR_LEVEL)
+                           .SetPermX1(TBMMPermX1::PERM_X1_0_1_2)
+                           .SetPermX2(TBMMPermX2::PERM_X2_0_1_2)
+                           .SetBatchSplitMode(TBMMBatchSplit::BATCH_SPLIT_FALSE)
+                           .SetModel(TBMMModel::TBMM_BASIC)
+                           .SetNonContiguousType(TBMMNonContiguousType::CONTIGUOUS)
+                           .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), baseKey);
+}
+
+// x2 kbn(permX2=[1,0,2], 存储形状(k,b,n)连续) + permY=[0,1,2](bmn): 准入iterbatch,
+// KBN由PERM_X2和NON_CONTIGUOUS_TYPE编码；L1分组须整除batch。
+TEST(TransposeBatchMatMulIterBatchTilingTest, KbnBBmnIterbatchAdmitted)
+{
+    AdvancedContext c({64, 64, 128}, {128, 64, 96}, {64, 64, 96}, DT_FLOAT16,
+                      /*perm_x1=*/{0, 1, 2}, /*perm_x2=*/{1, 0, 2}, /*perm_y=*/{0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    uint64_t expectedKey = TBMMKeyBuilder()
+                               .SetApiLevel(TBMMApiLevel::TBMM_TENSOR_LEVEL)
+                               .SetPermX1(TBMMPermX1::PERM_X1_0_1_2)
+                               .SetPermX2(TBMMPermX2::PERM_X2_1_0_2)
+                               .SetBatchSplitMode(TBMMBatchSplit::BATCH_SPLIT_FALSE)
+                               .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                               .SetNonContiguousType(TBMMNonContiguousType::B_NON_CONTIGUOUS)
+                               .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    auto* td = GetTbmmIterBatchTilingData(c.ctx);
+    EXPECT_EQ(td->iterBatchL1, 4U);
+    EXPECT_EQ(td->iterBatchL0, 1U);
+    EXPECT_EQ(td->baseM, 64U);
+    EXPECT_EQ(td->baseN, 96U);
+    EXPECT_EQ(td->baseK, 128U);
+    EXPECT_EQ(c.ctx->GetBlockDim(), 20U);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, NbkBBmnIterbatchAdmitted)
+{
+    AdvancedContext c({64, 64, 128}, {96, 64, 128}, {64, 64, 96}, DT_FLOAT16,
+                      /*perm_x1=*/{0, 1, 2}, /*perm_x2=*/{1, 2, 0}, /*perm_y=*/{0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    uint64_t expectedKey = TBMMKeyBuilder()
+                               .SetApiLevel(TBMMApiLevel::TBMM_TENSOR_LEVEL)
+                               .SetPermX1(TBMMPermX1::PERM_X1_0_1_2)
+                               .SetPermX2(TBMMPermX2::PERM_X2_1_2_0)
+                               .SetBatchSplitMode(TBMMBatchSplit::BATCH_SPLIT_FALSE)
+                               .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                               .SetNonContiguousType(TBMMNonContiguousType::B_NON_CONTIGUOUS)
+                               .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    auto* td = GetTbmmIterBatchTilingData(c.ctx);
+    EXPECT_EQ(td->iterBatchL1, 4U);
+    EXPECT_EQ(td->iterBatchL0, 1U);
+    EXPECT_EQ(td->baseM, 64U);
+    EXPECT_EQ(td->baseN, 96U);
+    EXPECT_EQ(td->baseK, 128U);
+    EXPECT_EQ(c.ctx->GetBlockDim(), 20U);
+}
+
+// KBN is a BMN-only layout and must fail before strategy selection for MBN.
+TEST(TransposeBatchMatMulIterBatchTilingTest, KbnMbnRejected)
+{
+    AdvancedContext c({64, 32, 64}, {64, 64, 16}, {32, 64, 16}, DT_FLOAT16, {0, 1, 2}, {1, 0, 2}, {1, 0, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, MbkKbnWithFp32BiasIterBatchAdmitted)
+{
+    AdvancedContext c({32, 64, 64}, {64, 64, 16}, {64, 32, 16}, DT_BF16, {1, 0, 2}, {1, 0, 2}, {0, 1, 2}, 1, true,
+                      false, {0}, {1, 16}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    auto expectedKey = TBMMKeyBuilder()
+                           .SetPermX1(TBMMPermX1::PERM_X1_1_0_2)
+                           .SetPermX2(TBMMPermX2::PERM_X2_1_0_2)
+                           .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                           .SetNonContiguousType(TBMMNonContiguousType::AB_NON_CONTIGUOUS)
+                           .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, MbkNbkWithFp32BiasIterBatchAdmitted)
+{
+    AdvancedContext c({32, 64, 64}, {16, 64, 64}, {64, 32, 16}, DT_BF16, {1, 0, 2}, {1, 2, 0}, {0, 1, 2}, 1, true,
+                      false, {0}, {1, 16}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    auto expectedKey = TBMMKeyBuilder()
+                           .SetPermX1(TBMMPermX1::PERM_X1_1_0_2)
+                           .SetPermX2(TBMMPermX2::PERM_X2_1_2_0)
+                           .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                           .SetNonContiguousType(TBMMNonContiguousType::AB_NON_CONTIGUOUS)
+                           .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, TransposedABWithFp32Bias)
+{
+    AdvancedContext c({64, 64, 32}, {64, 16, 64}, {64, 32, 16}, DT_BF16, {0, 2, 1}, {0, 2, 1}, {0, 1, 2}, 1, true,
+                      false, {0}, {1, 16}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    auto expectedKey = TBMMKeyBuilder()
+                           .SetPermX1(TBMMPermX1::PERM_X1_0_2_1)
+                           .SetPermX2(TBMMPermX2::PERM_X2_0_2_1)
+                           .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                           .SetNonContiguousType(TBMMNonContiguousType::CONTIGUOUS)
+                           .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    EXPECT_GE(GetTbmmIterBatchTilingData(c.ctx)->iterBatchL1, 1U);
+    EXPECT_GE(GetTbmmIterBatchTilingData(c.ctx)->iterBatchL0, 1U);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, TransposedAKbnWithFp32Bias)
+{
+    AdvancedContext c({64, 64, 32}, {64, 64, 16}, {64, 32, 16}, DT_BF16, {0, 2, 1}, {1, 0, 2}, {0, 1, 2}, 1, true,
+                      false, {0}, {1, 16}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    auto expectedKey = TBMMKeyBuilder()
+                           .SetPermX1(TBMMPermX1::PERM_X1_0_2_1)
+                           .SetPermX2(TBMMPermX2::PERM_X2_1_0_2)
+                           .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                           .SetNonContiguousType(TBMMNonContiguousType::B_NON_CONTIGUOUS)
+                           .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    EXPECT_GE(GetTbmmIterBatchTilingData(c.ctx)->iterBatchL1, 1U);
+    EXPECT_GE(GetTbmmIterBatchTilingData(c.ctx)->iterBatchL0, 1U);
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, WeightNzTransposedAWithBiasFallsBackToBasic)
+{
+    AdvancedContext c({64, 64, 32}, {64, 16, 64}, {64, 32, 16}, DT_FLOAT16, {0, 2, 1}, {0, 2, 1}, {0, 1, 2}, 1, true,
+                      false, {0}, {16}, DT_FLOAT, FORMAT_FRACTAL_NZ);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(c.ctx->GetTilingKey(), TBMMKeyBuilder()
+                                         .SetPermX1(TBMMPermX1::PERM_X1_0_2_1)
+                                         .SetPermX2(TBMMPermX2::PERM_X2_0_2_1)
+                                         .SetModel(TBMMModel::TBMM_BASIC)
+                                         .SetNonContiguousType(TBMMNonContiguousType::CONTIGUOUS)
+                                         .GetTilingKey());
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, L1CapacityFallsBackToBasic)
+{
+    AdvancedContext c({64, 512, 512}, {64, 512, 128}, {64, 512, 128}, DT_FLOAT16, {0, 1, 2}, {0, 1, 2}, {0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(c.ctx->GetTilingKey(), TBMMKeyBuilder()
+                                         .SetModel(TBMMModel::TBMM_BASIC)
+                                         .SetNonContiguousType(TBMMNonContiguousType::CONTIGUOUS)
+                                         .GetTilingKey());
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, KbnFixpipeSelection)
+{
+    for (auto dtype : {DT_FLOAT16, DT_BF16, DT_FLOAT}) {
+        for (int64_t n : {64, 65, 128, 129, 256}) {
+            AdvancedContext c({64, 16, 32}, {32, 64, n}, {64, 16, n}, dtype, {0, 1, 2}, {1, 0, 2}, {0, 1, 2});
+            SetIterBatchCompileInfo(c.compileInfo);
+            TransposeBatchMatMulTiling tiling(c.ctx);
+            ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+            const auto l0C2Out = n == 129 || (dtype == DT_FLOAT && n == 65) ? TBMML0C2Out::ND_FIXPIPE_1_2 :
+                                                                              TBMML0C2Out::ON_THE_FLY;
+            EXPECT_EQ(c.ctx->GetTilingKey(), TBMMKeyBuilder()
+                                                 .SetPermX2(TBMMPermX2::PERM_X2_1_0_2)
+                                                 .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                                                 .SetL0C2Out(l0C2Out)
+                                                 .SetNonContiguousType(TBMMNonContiguousType::B_NON_CONTIGUOUS)
+                                                 .GetTilingKey());
+        }
+    }
+}
+
+TEST(TransposeBatchMatMulIterBatchTilingTest, FixpipeRequiresTwoAivPerAic)
+{
+    AdvancedContext c({64, 16, 32}, {32, 64, 129}, {64, 16, 129}, DT_FLOAT16, {0, 1, 2}, {1, 0, 2}, {0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    c.compileInfo.aivNum = c.compileInfo.aicNum;
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(c.ctx->GetTilingKey(), TBMMKeyBuilder()
+                                         .SetPermX2(TBMMPermX2::PERM_X2_1_0_2)
+                                         .SetModel(TBMMModel::TBMM_ITER_BATCH)
+                                         .SetNonContiguousType(TBMMNonContiguousType::B_NON_CONTIGUOUS)
+                                         .GetTilingKey());
+}
+
+TEST(TransposeBatchMatMulAdvancedTilingTest, BiasWithScaleRejected)
+{
+    AdvancedContext c({32, 6, 64}, {6, 64, 16}, {32, 1, 96}, DT_FLOAT16, {1, 0, 2}, {0, 1, 2}, {1, 0, 2}, 1, true, true,
+                      {96}, {16}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    EXPECT_EQ(tiling.DoTiling(), ge::GRAPH_FAILED);
+}
+
+TEST(TransposeBatchMatMulAdvancedTilingTest, Int8ScaleL1Capacity)
+{
+    for (auto bFormat : {FORMAT_ND, FORMAT_FRACTAL_NZ}) {
+        AdvancedContext c({128, 32, 512}, {32, 512, 128}, {1, 128, 4096}, DT_FLOAT16, {1, 0, 2}, {0, 1, 2}, {1, 0, 2},
+                          1, false, true, {4096}, {}, DT_FLOAT, bFormat);
+        SetIterBatchCompileInfo(c.compileInfo);
+        c.compileInfo.aicNum = 32UL;
+        c.compileInfo.aivNum = 64UL;
+        TransposeBatchMatMulTiling tiling(c.ctx);
+        ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+        const auto* td = GetTbmmBasicTilingData(c.ctx);
+        ASSERT_EQ(c.ctx->GetRawTilingData()->GetDataSize(), sizeof(TransposeBatchMatMulBasicTilingData));
+        const auto& mm = td->matMulTilingData.matMulTilingData;
+        ASSERT_GT(mm.l1BufferNum, 0U);
+        // 按kernel的末槽地址计算scale结束位置，检查ND/NZ量化路径均不越界。
+        const uint64_t lastSlot = c.compileInfo.l1Size / mm.l1BufferNum * (mm.l1BufferNum - 1);
+        const uint64_t aL1Size = static_cast<uint64_t>(mm.mL1) * mm.kL1 * sizeof(uint16_t);
+        const uint64_t bL1Size = static_cast<uint64_t>(mm.nL1) * mm.kL1 * sizeof(uint16_t);
+        const uint64_t scaleEnd = lastSlot + aL1Size + bL1Size + mm.nL1 * (sizeof(uint16_t) + sizeof(uint64_t));
+        EXPECT_LE(scaleEnd, c.compileInfo.l1Size);
+    }
+}
+
+TEST(TransposeBatchMatMulAdvancedTilingTest, NbkBmnBasic)
+{
+    AdvancedContext c({2, 32, 64}, {16, 2, 64}, {2, 32, 16}, DT_FLOAT16, {0, 1, 2}, {1, 2, 0}, {0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    const auto expectedKey = TBMMKeyBuilder()
+                                 .SetPermX2(TBMMPermX2::PERM_X2_1_2_0)
+                                 .SetNonContiguousType(TBMMNonContiguousType::B_NON_CONTIGUOUS)
+                                 .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+}
+
+TEST(TransposeBatchMatMulAdvancedTilingTest, BmnSplitK)
+{
+    AdvancedContext c({2, 32, 1024}, {2, 1024, 16}, {2, 32, 16}, DT_FLOAT, {0, 1, 2}, {0, 1, 2}, {0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    const auto expectedKey = TBMMKeyBuilder()
+                                 .SetPermX1(TBMMPermX1::PERM_X1_0_1_2)
+                                 .SetPermX2(TBMMPermX2::PERM_X2_0_1_2)
+                                 .SetModel(TBMMModel::TBMM_BASIC_SPLIT_K)
+                                 .SetNonContiguousType(TBMMNonContiguousType::CONTIGUOUS)
+                                 .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    EXPECT_GT(GetTbmmBasicTilingData(c.ctx)->matMulTilingData.matMulTilingData.splitSingleCoreKBase, 0U);
+}
+
+TEST(TransposeBatchMatMulAdvancedTilingTest, MbkBmnSplitK)
+{
+    AdvancedContext c({32, 2, 1024}, {2, 1024, 16}, {2, 32, 16}, DT_FLOAT, {1, 0, 2}, {0, 1, 2}, {0, 1, 2});
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    const auto expectedKey = TBMMKeyBuilder()
+                                 .SetPermX1(TBMMPermX1::PERM_X1_1_0_2)
+                                 .SetPermX2(TBMMPermX2::PERM_X2_0_1_2)
+                                 .SetModel(TBMMModel::TBMM_BASIC_SPLIT_K)
+                                 .SetNonContiguousType(TBMMNonContiguousType::A_NON_CONTIGUOUS)
+                                 .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    EXPECT_GT(GetTbmmBasicTilingData(c.ctx)->matMulTilingData.matMulTilingData.splitSingleCoreKBase, 0U);
+}
+
+TEST(TransposeBatchMatMulAdvancedTilingTest, TransposedANbkBmnSplitKWithBias)
+{
+    AdvancedContext c({2, 1024, 32}, {16, 2, 1024}, {2, 32, 16}, DT_FLOAT, {0, 2, 1}, {1, 2, 0}, {0, 1, 2}, 1, true,
+                      false, {0}, {16}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    const auto expectedKey = TBMMKeyBuilder()
+                                 .SetPermX1(TBMMPermX1::PERM_X1_0_2_1)
+                                 .SetPermX2(TBMMPermX2::PERM_X2_1_2_0)
+                                 .SetModel(TBMMModel::TBMM_BASIC_SPLIT_K)
+                                 .SetNonContiguousType(TBMMNonContiguousType::B_NON_CONTIGUOUS)
+                                 .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    EXPECT_GT(GetTbmmBasicTilingData(c.ctx)->matMulTilingData.matMulTilingData.splitSingleCoreKBase, 0U);
+}
+
+TEST(TransposeBatchMatMulAdvancedTilingTest, MbkKbnBmnSplitKWithBias)
+{
+    AdvancedContext c({32, 2, 1024}, {1024, 2, 16}, {2, 32, 16}, DT_FLOAT, {1, 0, 2}, {1, 0, 2}, {0, 1, 2}, 1, true,
+                      false, {0}, {16}, DT_FLOAT);
+    SetIterBatchCompileInfo(c.compileInfo);
+    TransposeBatchMatMulTiling tiling(c.ctx);
+    ASSERT_EQ(tiling.DoTiling(), ge::GRAPH_SUCCESS);
+    const auto expectedKey = TBMMKeyBuilder()
+                                 .SetPermX1(TBMMPermX1::PERM_X1_1_0_2)
+                                 .SetPermX2(TBMMPermX2::PERM_X2_1_0_2)
+                                 .SetModel(TBMMModel::TBMM_BASIC_SPLIT_K)
+                                 .SetNonContiguousType(TBMMNonContiguousType::AB_NON_CONTIGUOUS)
+                                 .GetTilingKey();
+    EXPECT_EQ(c.ctx->GetTilingKey(), expectedKey);
+    EXPECT_GT(GetTbmmBasicTilingData(c.ctx)->matMulTilingData.matMulTilingData.splitSingleCoreKBase, 0U);
+}
+
 } // namespace

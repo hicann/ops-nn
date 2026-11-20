@@ -25,10 +25,11 @@
 namespace optiling {
 namespace transpose_batch_mat_mul_advanced {
 namespace strategy {
+constexpr int32_t ITER_BATCH = 0; // 优先尝试等batch的Blaze L1/L0 batch流水模板
 constexpr int32_t BASE = 999;
 
 const static std::map<NpuArch, std::vector<int32_t>> TransposeBatchMatMulPrioritiesMap = {
-    {Ops::Base::DAV_3510, {strategy::BASE}},
+    {Ops::Base::DAV_3510, {strategy::ITER_BATCH, strategy::BASE}},
     {::Ops::Base::DAV_9201, {strategy::BASE}},
     {::Ops::Base::DAV_9202, {strategy::BASE}},
 };

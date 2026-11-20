@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2的矩阵乘计算，仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+- 接口功能：完成张量x1与张量x2的矩阵乘计算，仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。Tensor支持转置，转置序列根据传入的序列进行变更。permX1、permX2 分别给出逻辑 [B,M,K]、[B,K,N] 各轴在输入视图中的位置，其取值是轴索引，不是维度大小。
 
 - 示例：（x2的NZ转换为ND对应的viewshape视角）
   - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
@@ -124,12 +124,12 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>表示矩阵乘的偏置矩阵。</td>
         <td>
         <ul>
-            <li>预留参数，当前暂不支持。</li>
+            <li>仅Ascend 950PR&amp;950DT系列产品支持。shape为(N,)或(1,N)，类型与x1相同或为FLOAT32。</li>
         </ul>
         </td>
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
-        <td>-</td>
-        <td>-</td>
+        <td>ND</td>
+        <td>1 / 2</td>
         <td>-</td>
       </tr>
       <tr>
@@ -153,6 +153,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>
         <ul>
           <li> 支持[0, 1, 2]、[1, 0, 2]。</li>
+          <li>Ascend 950PR&amp;950DT系列产品的BMN输出还支持[0, 2, 1]。</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -181,6 +182,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>
         <ul>
             <li>支持[1, 0, 2]。</li>
+            <li>Ascend 950PR&amp;950DT系列产品还支持[0, 1, 2]，输出(B, M, N)，要求scale为空且batchSplitFactor=1。</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -403,7 +405,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 - <term>Ascend 950PR&950DT系列产品</term>：
   - permX2支持输入[0, 1, 2]、[0, 2, 1]。
   - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
-
+  - bias在各batch和行间共享，仅支持scale为空且batchSplitFactor为1的场景。
+  - permX1=[0, 2, 1]要求permY=[0, 1, 2]、scale为空且batchSplitFactor=1；WeightNz不支持KBN B。
 <!-- end id8 -->
 - x1只支持3维，x2只支持昇腾私有格式，调用此接口之前，必须完成x2从ND到昇腾私有格式的转换。
 - 不支持x2最后两根轴其中一根轴为1，即k=1或者n=1。

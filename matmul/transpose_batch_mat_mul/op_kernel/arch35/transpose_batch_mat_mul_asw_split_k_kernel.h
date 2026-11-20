@@ -15,7 +15,8 @@
 #ifndef TRANSPOSE_BATCH_MAT_MUL_ASW_SPLIT_K_KERNEL_H
 #define TRANSPOSE_BATCH_MAT_MUL_ASW_SPLIT_K_KERNEL_H
 
-#include "blaze/gemm/kernel/kernel_tbmm_basic.h"
+#include "transpose_batch_mat_mul_tiling_data.h"
+#include "blaze/gemm/kernel/kernel_universal.h"
 #include "blaze/gemm/block/block_mmad.h"
 #include "blaze/gemm/block/block_mmad_matmul_basic.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
@@ -27,11 +28,11 @@
 namespace TransposeBatchMatMulAdvanced {
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-          uint64_t PERM_X1 = 0, uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0,
-          uint64_t NON_CONTIGUOUS_TYPE = 0, bool IS_SPLIT_SINGLE_CORE_K = true>
+          uint64_t NON_CONTIGUOUS_TYPE = TRANSPOSE_BATCH_MAT_MUL_C_TRANSPOSE, uint64_t FULL_LOAD_MODE = 0,
+          uint64_t FUSED_OP_TYPE = 0, bool IS_SPLIT_SINGLE_CORE_K = true>
 __aicore__ inline void TBMMSplitKTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR scalesGM, GM_ADDR cGM,
-                                              GM_ADDR workspaceGM, const BatchMatMulV3TilingData& tilingData,
-                                              int64_t batch = 0)
+                                              GM_ADDR workspaceGM,
+                                              const TransposeBatchMatMulBasicTilingData& tilingData, int64_t batch = 0)
 {
     // 定义矩阵的类型和布局
     using AType = A_TYPE;
@@ -54,8 +55,7 @@ __aicore__ inline void TBMMSplitKTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
                                                                          isNDFormat>;
     // 定义MMAD类型
     using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasicSplitK<
-        FULL_LOAD_MODE, IS_SPLIT_SINGLE_CORE_K, Blaze::Gemm::KernelMmadMultiBlockTBMM,
-        (PERM_X1 == 1 ? static_cast<uint64_t>(Blaze::Gemm::NoContiguousType::NON_CONTIGUOUS_TYPE_PERM_X1) : 0)>;
+        FULL_LOAD_MODE, IS_SPLIT_SINGLE_CORE_K, Blaze::Gemm::KernelMmadMultiBlockBasic, NON_CONTIGUOUS_TYPE>;
     using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
                                                     BiasType, LayoutBias>;
 
@@ -65,27 +65,19 @@ __aicore__ inline void TBMMSplitKTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
     // 定义Kernel类型
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
+    const auto& bmmTiling = tilingData.matMulTilingData;
+    const auto& matmulTiling = bmmTiling.matMulTilingData;
     Params params = {
-        {tilingData.matMulTilingData.tCubeTiling.M, tilingData.matMulTilingData.tCubeTiling.N,
-         tilingData.matMulTilingData.tCubeTiling.Ka, tilingData.cBatchDimAll,
-         tilingData.batchSplitFactor}, // problemShape
-        {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.mL1, tilingData.nL1, tilingData.kL1,
-         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
-         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
-         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.l1BufferNum,
-         static_cast<uint8_t>(tilingData.matMulTilingData.tCubeTiling.dbL0C),
-         static_cast<uint64_t>(tilingData.matMulTilingData.tCubeTiling.Ka), 0,
-         static_cast<uint64_t>(tilingData.splitSingleCoreKBase)}, // blockMmad args
-        {},                                                       // blockEpilogue args
-        {tilingData.mL1, tilingData.nL1, tilingData.kL1,          // blockScheduler args
-         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
-         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
-         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.matMulTilingData.mTailCnt,
-         tilingData.matMulTilingData.nTailCnt, tilingData.matMulTilingData.mBaseTailSplitCnt,
-         tilingData.matMulTilingData.nBaseTailSplitCnt, tilingData.matMulTilingData.mTailMain,
-         tilingData.matMulTilingData.nTailMain, static_cast<uint8_t>(tilingData.matMulTilingData.mmadParam),
-         static_cast<uint32_t>(tilingData.matMulTilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride,
-         tilingData.innerBatch}};
+        {matmulTiling.m, matmulTiling.n, matmulTiling.k, bmmTiling.batchDimAll, tilingData.batchSplitFactor},
+        {aGM, bGM, cGM, biasGM, nullptr, nullptr, matmulTiling.mL1, matmulTiling.nL1, matmulTiling.kL1,
+         matmulTiling.baseM, matmulTiling.baseN, matmulTiling.baseK, matmulTiling.l1BufferNum, matmulTiling.l0cDB,
+         matmulTiling.k, 0, matmulTiling.splitSingleCoreKBase}, // blockMmad args
+        {},                                                     // blockEpilogue args
+        {matmulTiling.mL1, matmulTiling.nL1, matmulTiling.kL1, matmulTiling.baseM, matmulTiling.baseN,
+         matmulTiling.baseK, matmulTiling.mTailCnt, matmulTiling.nTailCnt, matmulTiling.mBaseTailSplitCnt,
+         matmulTiling.nBaseTailSplitCnt, matmulTiling.mTailMain, matmulTiling.nTailMain, matmulTiling.mmadParam,
+         static_cast<uint32_t>(matmulTiling.l2CacheDisable), matmulTiling.sliceM, matmulTiling.srcNdStride,
+         matmulTiling.innerBatch, matmulTiling.aswWindowLen}};
     MatmulKernel mm;
     mm(params);
 }

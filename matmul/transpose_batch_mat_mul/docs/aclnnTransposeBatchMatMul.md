@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数组进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+- 接口功能：完成张量x1与张量x2的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数组进行变更。permX1、permX2 分别给出逻辑 [B,M,K]、[B,K,N] 各轴在输入视图中的位置，其取值是轴索引，不是维度大小。
 
 - 示例：
   - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
@@ -122,16 +122,16 @@ aclnnStatus aclnnTransposeBatchMatMul(
       </tr>
       <tr>
         <td>bias</td>
-        <td>输入</td>
+        <td>可选输入</td>
         <td>表示矩阵乘的偏置矩阵。</td>
         <td>
         <ul>
-            <li>预留参数，当前暂不支持。</li>
+            <li>不使用时传入空指针，具体支持情况参见<a href="#约束说明">约束说明</a>。</li>
         </ul>
         </td>
         <td>BFLOAT16、FLOAT16、FLOAT32</td>
-        <td>-</td>
-        <td>-</td>
+        <td>ND</td>
+        <td>1 / 2</td>
         <td>-</td>
       </tr>
       <tr>
@@ -154,7 +154,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>表示矩阵乘的第一个矩阵的转置序列，host侧的aclIntArray。</td>
         <td>
         <ul>
-          <li> 支持[0, 1, 2]、[1, 0, 2]。</li>
+          <li>支持[0, 1, 2]、[1, 0, 2]、[0, 2, 1]，具体支持情况参见<a href="#约束说明">约束说明</a>。</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
         <td>
         <ul>
-          <li> 支持[0, 1, 2]、[0, 2, 1]。</li>
+          <li>支持[0, 1, 2]、[0, 2, 1]、[1, 0, 2]、[1, 2, 0]，具体支持情况参见<a href="#约束说明">约束说明</a>。</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -182,7 +182,7 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>表示矩阵乘输出矩阵的转置序列，host侧的aclIntArray。</td>
         <td>
         <ul>
-            <li>支持[1, 0, 2]。</li>
+            <li>支持[1, 0, 2]、[0, 1, 2]，具体支持情况参见<a href="#约束说明">约束说明</a>。</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -345,9 +345,13 @@ aclnnStatus aclnnTransposeBatchMatMul(
 <!-- end id7 -->
 <!-- npu="950" id8 -->
 - <term>Ascend 950PR&950DT系列产品</term>：
-    - permX2支持输入[0, 1, 2]、[0, 2, 1]。
+    - permX1支持输入[0, 1, 2]、[1, 0, 2]、[0, 2, 1]。
+    - permX2支持输入[0, 1, 2]、[0, 2, 1]、[1, 0, 2]、[1, 2, 0]。
+    - permY支持输入[1, 0, 2]、[0, 1, 2]；[0, 1, 2]表示输出为(B, M, N)批次前置布局，仅支持scale为空且batchSplitFactor为1的场景。
     - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
-
+    - 支持传入bias，shape为(N,)或(1,N)，数据类型与x1相同或为FLOAT32；bias在各batch和行间共享，仅支持scale为空且batchSplitFactor为1的场景。
+    - permX1=[0, 2, 1]或permX2=[1, 0, 2]/[1, 2, 0]要求permY=[0, 1, 2]、scale为空且batchSplitFactor=1。
+    - ND NBK B使用连续(N, B, K)张量及permX2=[1, 2, 0]。
 <!-- end id8 -->
 
 ## 调用示例

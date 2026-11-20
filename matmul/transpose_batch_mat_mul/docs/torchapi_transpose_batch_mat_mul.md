@@ -52,11 +52,11 @@ cann_ops_nn.transpose_batch_mat_mul(
 | --- | --- | --- | --- | --- | --- |
 | x1 | Tensor | 必选 | 矩阵乘运算中的左矩阵。默认`perm_x1=[1, 0, 2]`，即按(M, B, K)解释。 | torch.float16 / torch.bfloat16 / torch.float32 | 3维 |
 | x2 | Tensor | 必选 | 矩阵乘运算中的右矩阵。默认`perm_x2=[0, 1, 2]`，即按(B, K, N)解释；支持FRACTAL_NZ（WeightNZ），该格式下仅支持FLOAT16、BFLOAT16。 | 同x1 | 3维 |
-| bias | Tensor | 可选 | 偏置，预留参数，当前暂不支持。 | - | - |
+| bias | Tensor | 可选 | 共享列偏置，默认None，具体支持情况参见[约束说明](#约束说明)。 | 同x1或torch.float32 | (N,)或(1,N) |
 | scale | Tensor | 可选 | 输出量化系数。传入时表示FLOAT16输入、INT8输出，shape必须为(B * N,)。scale需由`aclnnTransQuantParamV2`将FLOAT32转换为INT64/UINT64后传入。 | torch.int64 / torch.uint64 | 1维，(B * N,) |
-| perm_x1 | List[int] | 可选 | x1的转置序列，支持[0, 1, 2]、[1, 0, 2]，默认[1, 0, 2]。 | int64 | - |
-| perm_x2 | List[int] | 可选 | x2的转置序列，支持[0, 1, 2]、[0, 2, 1]，默认[0, 1, 2]。 | int64 | - |
-| perm_y | List[int] | 可选 | 输出的转置序列，仅支持[1, 0, 2]，默认[1, 0, 2]。 | int64 | - |
+| perm_x1 | List[int] | 可选 | x1的轴位置，支持[0,1,2]、[1,0,2]、[0,2,1]，默认[1,0,2]，具体支持情况参见[约束说明](#约束说明)。 | int64 | - |
+| perm_x2 | List[int] | 可选 | x2的轴位置，支持[0,1,2]、[0,2,1]、[1,0,2]、[1,2,0]，默认[0,1,2]，具体支持情况参见[约束说明](#约束说明)。 | int64 | - |
+| perm_y | List[int] | 可选 | 输出轴位置，[1,0,2]输出MBN，[0,1,2]输出BMN，默认[1,0,2]，具体支持情况参见[约束说明](#约束说明)。 | int64 | - |
 | enable_hf32 | bool | 可选 | 是否开启HF32计算，仅对FLOAT32输入生效。内部映射为aclnn `cubeMathType`（True=3/USE_HF32，False=0/KEEP_DTYPE）。 | bool | - |
 | batch_split_factor | int | 可选 | 输出矩阵B维的切分大小，取值范围为[1, B]且B能被其整除，默认1。scale不为None时只能为1。 | int64 | - |
 
@@ -64,18 +64,23 @@ cann_ops_nn.transpose_batch_mat_mul(
 
 | 输出名 | 输出类型 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- |
-| y | Tensor | 矩阵乘的输出。 | scale为None时与x1一致；scale不为None时为torch.int8 | scale为None且batch_split_factor=1时为(M, B, N)；scale不为None时为(M, 1, B * N)；batch_split_factor>1时为(batch_split_factor, M, B * N / batch_split_factor) |
+| y | Tensor | 矩阵乘的输出。 | scale为None时与x1一致；scale不为None时为torch.int8 | scale为None且batch_split_factor=1时按perm_y返回(M,B,N)或(B,M,N)；scale不为None时为(M, 1, B * N)；batch_split_factor>1时为(batch_split_factor, M, B * N / batch_split_factor) |
 
 ## 约束说明
 
 - 仅支持3维Tensor，x1/x2的batch轴和K轴必须一致，不支持batch轴广播。
 - x1/x2的数据类型必须一致且为FLOAT16、BFLOAT16或FLOAT32。
-- perm_x1支持[0, 1, 2]、[1, 0, 2]；perm_x2支持[0, 1, 2]、[0, 2, 1]；perm_y仅支持[1, 0, 2]。
 - scale仅支持FLOAT16输入 + INT8输出；传入scale时batch_split_factor必须为1。
-- bias为预留参数，当前暂不支持，请传入None。
 - x2支持FRACTAL_NZ格式（WeightNZ），可通过`torch_npu.npu_format_cast(x2, 29)`构造；该格式下x1/x2仅支持FLOAT16、BFLOAT16。
 - 不支持空Tensor。
-- 该接口支持单算子模式和TorchAir图模式调用；图模式下由GE Converter转换为`TransposeBatchMatMul`图算子。
+- 该接口支持单算子模式和TorchAir图模式调用；图模式下由GE Converter转换为`TransposeBatchMatMul`图算子；新增排列用于eager/Meta，图转换沿用原支持范围。
+
+<!-- npu="950" id7 -->
+- <term>Ascend 950PR&950DT系列产品</term>：
+  - 支持传入bias，在各batch和行间共享，仅支持scale=None且batch_split_factor=1。
+  - 支持perm_y=[0,1,2]输出(B,M,N)，要求scale为空、batch_split_factor=1；A内轴转置[0,2,1]和ND KBN/NBK B[1,0,2]/[1,2,0]仅支持该输出。
+  - ND NBK B使用连续(N,B,K)张量及perm_x2=[1,2,0]。
+<!-- end id7 -->
 
 ## 确定性计算
 
@@ -97,6 +102,15 @@ cann_ops_nn.transpose_batch_mat_mul(
   y = cann_ops_nn.transpose_batch_mat_mul(x1, x2)
   print(y.shape, y.dtype)  # torch.Size([64, 16, 128]) torch.float16
   ```
+
+<!-- npu="950" id8 -->
+- <term>Ascend 950PR&950DT系列产品</term>：基于上述x1、x2传入共享列bias。
+
+  ```python
+  bias = torch.randn(N, dtype=torch.float32).npu()
+  y_with_bias = cann_ops_nn.transpose_batch_mat_mul(x1, x2, bias=bias)
+  ```
+<!-- end id8 -->
 
 - 单算子模式调用（fp16输入 + scale，输出INT8）：
 

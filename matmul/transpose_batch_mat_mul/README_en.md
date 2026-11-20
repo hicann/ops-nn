@@ -17,7 +17,7 @@ English | [简体中文](./README.md)
 
 ## Function
 
-- Operator function: performs the matrix multiplication of tensor x1 and tensor x2. Only three-dimensional tensors are supported as inputs. Tensors support transposition, and the transpose sequence changes according to the passed-in sequence. permX1 represents the transpose sequence of tensor x1 and supports [0,1,2] and [1,0,2]; permX2 represents the transpose sequence of tensor x2, [0,1,2]; permY represents the transpose sequence of the matrix multiplication output matrix, and currently only [1,0,2] is supported. The sequence value 0 is the batch dimension, and the other two dimensions perform matrix multiplication. scale represents the quantization coefficient of the output matrix and can be enabled when the input is FLOAT16 and the output is INT8. For detailed constraints, see Constraints or the [aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul_en.md) invocation document.
+- Operator function: multiplies three-dimensional x1 and x2 with optional bias. permX1/permX2 specify input axis positions; permY selects (M,B,N) or, on Ascend 950PR&950DT products, (B,M,N). scale retains the existing FLOAT16-to-INT8 quantization. See [aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul_en.md) for supported combinations.
 
 - Example:
   - When the shape of x1 is (B, M, K), the shape of x2 is (B, K, N), scale is None, and batchSplitFactor equals 1, the computed output out has the shape (M, B, N).
@@ -130,7 +130,8 @@ English | [简体中文](./README.md)
 - <term>Ascend 950PR&950DT products</term>:
     - Empty tensors are not supported.
     - When scale is not empty, batchSplitFactor can only equal 1, and only the type deduction of FLOAT16 input and INT8 output is supported.
-    - bias is a reserved parameter and is currently not supported.
+    - Optional ND bias has shape (N,) or (1,N), is shared across batches and rows, and has the same dtype as x1 or FLOAT32.
+    - A inner transpose [0,2,1] and ND KBN B [1,0,2] require BMN output, no scale and batchSplitFactor=1.
 
 ## Invocation Description
 

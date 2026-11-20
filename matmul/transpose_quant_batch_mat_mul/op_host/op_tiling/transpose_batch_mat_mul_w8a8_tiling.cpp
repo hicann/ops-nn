@@ -30,7 +30,6 @@
 #include "log/log.h"
 #include "platform/platform_infos_def.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"
-#include "tiling/matrix/matmul_tiling.h"
 #include "tiling/matrix/bmm_tiling.h"
 
 namespace optiling {
@@ -213,23 +212,6 @@ ge::graphStatus TransposeBatchMatMulW8A8DoTiling(gert::TilingContext* context)
 
     const uint32_t aicNum = std::max<uint32_t>(1, ascendcPlatform.GetCoreNumAic());
     const bool usePp = true;
-
-    matmul_tiling::MultiCoreMatmulTiling mm(ascendcPlatform);
-    mm.SetDim(aicNum);
-    mm.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_INT8,
-                /*isTrans=*/false);
-    mm.SetBType(matmul_tiling::TPosition::GM,
-                context->GetInputDesc(1)->GetStorageFormat() == ge::FORMAT_FRACTAL_NZ ? matmul_tiling::CubeFormat::NZ :
-                                                                                        matmul_tiling::CubeFormat::ND,
-                matmul_tiling::DataType::DT_INT8, bTrans);
-    mm.SetCType(matmul_tiling::TPosition::VECIN, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_INT32);
-    mm.SetBiasType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND, matmul_tiling::DataType::DT_INT32);
-    mm.SetShape(static_cast<int32_t>(M), static_cast<int32_t>(N), static_cast<int32_t>(K));
-    mm.SetOrgShape(static_cast<int32_t>(M), static_cast<int32_t>(N), static_cast<int32_t>(K));
-    mm.SetBias(false);
-    OP_TILING_CHECK(!usePp && mm.GetTiling(tiling->qbmm.matmulTiling) < 0,
-                    CUBE_INNER_ERR_REPORT(name_op, "W8A8 MultiCoreMatmulTiling GetTiling failed"),
-                    return ge::GRAPH_FAILED);
 
     auto& mt = tiling->qbmm.matmulTiling;
     mt.dbL0C = 1;

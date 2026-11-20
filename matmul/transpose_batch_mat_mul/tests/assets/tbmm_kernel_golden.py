@@ -62,12 +62,12 @@ def _kernel_compute(
 
     x1_t = np.transpose(x1, axes=list(perm_x1))
 
-    if tuple(perm_x2) == (0, 2, 1):
-        x2_t = np.swapaxes(x2, -2, -1)
-    else:
-        x2_t = x2
+    x2_t = np.transpose(x2, axes=list(perm_x2))
 
     mm_out = np.matmul(x1_t, x2_t)
+    if bias is not None:
+        # Apply the shared logical-N bias before output permutation, batch split or quantization.
+        mm_out = mm_out + bias.astype(comp_dtype).reshape(1, 1, x2_t.shape[-1])
 
     if scale is not None:
         if scale.dtype in (np.int64, np.uint64):
@@ -96,6 +96,89 @@ def _kernel_compute(
     return [mm_out]
 
 
+def _npu_compute(
+    x1,
+    x2,
+    bias=None,
+    scale=None,
+    *,
+    perm_x1=(0, 1, 2),
+    perm_x2=(0, 1, 2),
+    perm_y=(1, 0, 2),
+    enable_hf32=False,
+    batch_split_factor=1,
+    device=None,
+    **kwargs,
+):
+    """Profile no-bias TBMM and a separate bias Add as individual operators."""
+    if scale is not None:
+        # TTK falls back to the existing CPU golden for quantized cases.
+        raise NotImplementedError("NPU TBMM+Add profiling requires scale=None")
+    import torch
+
+    formats = kwargs.get("input_formats", kwargs.get("tensor_formats", ()))
+    is_weight_nz = len(formats) > 1 and formats[1] == "FRACTAL_NZ"
+    if is_weight_nz:
+        import torch_npu
+
+        if isinstance(x2, np.ndarray):
+            # Kernel inputs contain physical NZ data; restore the logical ND shape.
+            ori_shapes = kwargs.get("input_ori_shapes", ())
+            ori_shape = ori_shapes[1] if len(ori_shapes) > 1 else None
+            x2 = _util.nz_to_nd(x2, ori_shape)
+        elif not kwargs.get("backend") and torch_npu.get_npu_format(x2) != 29:
+            # ACLNN inputs carry raw NZ storage; copy the effective storage to CPU.
+            offset = x2.storage_offset()
+            storage_size = x2.untyped_storage().nbytes() // x2.element_size() - offset
+            storage = x2.as_strided((storage_size,), (1,), offset).cpu()
+            x2_host = storage.as_strided(x2.shape, x2.stride(), 0)
+            x2 = _util.nz_input_to_nd(x2_host, formats, 1)
+        # E2E inputs are logical ND tensors; the framework casts only the DUT side.
+
+    inputs = []
+    for tensor in (x1, x2, bias):
+        if isinstance(tensor, np.ndarray):
+            dtype = _util.DTypeTable.get_torch_dtype(tensor.dtype)
+            if dtype == torch.bfloat16:
+                tensor = tensor.astype(np.float32)
+            tensor = torch.from_numpy(tensor).to(dtype=dtype)
+        inputs.append(tensor.to(device) if tensor is not None else None)
+    x1, x2, bias = inputs
+    if is_weight_nz and torch_npu.get_npu_format(x2) != 29:
+        x2 = torch_npu.npu_format_cast(x2, 29)
+
+    import cann_ops_nn  # noqa: F401
+
+    y = torch.ops.cann_ops_nn.transpose_batch_mat_mul(
+        x1,
+        x2,
+        bias=None,
+        scale=None,
+        perm_x1=list(perm_x1),
+        perm_x2=list(perm_x2),
+        perm_y=list(perm_y),
+        enable_hf32=enable_hf32,
+        batch_split_factor=batch_split_factor,
+    )
+    output_shape = y.shape
+    if batch_split_factor > 1:
+        # Restore N for shared bias broadcasting over the original batches.
+        batch = x1.shape[perm_x1[0]]
+        m = x1.shape[perm_x1[1]]
+        n = x2.shape[perm_x2[2]]
+        y = y.reshape(batch_split_factor, m, batch // batch_split_factor, n)
+    output_dtypes = kwargs.get("output_dtypes")
+    output_dtype = (
+        _util.DTypeTable.get_torch_dtype(output_dtypes[0]) if output_dtypes else y.dtype
+    )
+    if bias is not None:
+        y = torch.add(y, bias, out=torch.empty_like(y, dtype=output_dtype))
+    elif y.dtype != output_dtype:
+        y = y.to(output_dtype)
+    # BF16 conversion stays on CPU, without an extra NPU Cast for NumPy output.
+    return [_util.torch_to_numpy(y.reshape(output_shape))]
+
+
 class TransposeBatchMatMulTestSpec:
     compare = _util.isclose_compare
 
@@ -114,6 +197,19 @@ class TransposeBatchMatMulTestSpec:
         **kwargs,
     ):
         """Kernel golden: NZ->ND conversion + core matmul computation."""
+        if str(kwargs.get("device", "cpu")).startswith("npu"):
+            return _npu_compute(
+                x1,
+                x2,
+                bias,
+                scale,
+                perm_x1=perm_x1,
+                perm_x2=perm_x2,
+                perm_y=perm_y,
+                enable_hf32=enable_hf32,
+                batch_split_factor=batch_split_factor,
+                **kwargs,
+            )
         input_formats = kwargs.get("input_formats", ())
         input_ori_shapes = kwargs.get("input_ori_shapes", ())
 

@@ -38,6 +38,9 @@ protected:
 
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
+    // TQBMM host tiling 全部走低阶手工计算，不使用 matmul_tiling 高阶 API。
+    bool UseHighLevelTilingApi() const override { return false; }
+
     ge::graphStatus GetTilingDataProcess(BatchMatMulV3TilingData& tilingData) const override;
 
     std::vector<size_t> GetWorkspaceSize() const override;

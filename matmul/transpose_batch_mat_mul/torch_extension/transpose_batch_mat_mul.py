@@ -19,9 +19,9 @@ from cann_ops_nn.op_builder import OpBuilder, get_as_library
 
 from ._perm_defaults import _DEFAULT_PERM_X1, _DEFAULT_PERM_X2, _DEFAULT_PERM_Y
 
-_SUPPORTED_PERM_X1 = ((0, 1, 2), (1, 0, 2))
-_SUPPORTED_PERM_X2 = ((0, 1, 2), (0, 2, 1))
-_SUPPORTED_PERM_Y = ((1, 0, 2),)
+_SUPPORTED_PERM_X1 = ((0, 1, 2), (1, 0, 2), (0, 2, 1))
+_SUPPORTED_PERM_X2 = ((0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0))
+_SUPPORTED_PERM_Y = ((1, 0, 2), (0, 1, 2))
 _SUPPORTED_INPUT_DTYPES = (torch.float16, torch.bfloat16, torch.float32)
 _SCALE_DTYPES = tuple(
     dtype
@@ -69,6 +69,11 @@ def _check_inputs(
         tuple(perm_y) in _SUPPORTED_PERM_Y,
         lambda: f"perm_y only supports {[list(p) for p in _SUPPORTED_PERM_Y]}, but got {perm_y}",
     )
+    if perm_x1 == [0, 2, 1] or perm_x2 in ([1, 0, 2], [1, 2, 0]):
+        torch._check(
+            perm_y == [0, 1, 2],
+            lambda: "transposed A and batch-centered B require bmn output",
+        )
     torch._check(
         x1.size(perm_x1[0]) == x2.size(perm_x2[0]),
         lambda: "x1 and x2 batch dimensions must match",
@@ -79,8 +84,15 @@ def _check_inputs(
     )
     if bias is not None:
         torch._check(
-            bias.dtype in _SUPPORTED_INPUT_DTYPES,
-            lambda: f"bias dtype must be float16, bfloat16 or float32, but got {bias.dtype}",
+            bias.dtype in (x1.dtype, torch.float32),
+            lambda: f"bias dtype must match x1 or be float32, but got {bias.dtype}",
+        )
+        torch._check(bias.dim() in (1, 2), lambda: "bias must have shape (N,) or (1,N)")
+        if bias.dim() == 2:
+            torch._check(bias.size(0) == 1, lambda: "bias must have shape (1,N)")
+        torch._check(
+            bias.size(-1) == x2.size(perm_x2[2]),
+            lambda: "bias last dimension must equal N",
         )
     if scale is not None:
         torch._check(
@@ -103,6 +115,7 @@ def _infer_output_shape(
     x2: torch.Tensor,
     perm_x1: List[int],
     perm_x2: List[int],
+    perm_y: List[int],
     has_scale: bool,
     batch_split_factor: int,
 ) -> List[int]:
@@ -118,7 +131,7 @@ def _infer_output_shape(
             f"but got batch={batch_dim}, batch_split_factor={batch_split_factor}",
         )
         return [batch_split_factor, m_dim, batch_dim * n_dim // batch_split_factor]
-    return [m_dim, batch_dim, n_dim]
+    return [batch_dim, m_dim, n_dim] if perm_y[0] == 0 else [m_dim, batch_dim, n_dim]
 
 
 class TransposeBatchMatMulOpBuilder(OpBuilder):
@@ -164,6 +177,16 @@ class TransposeBatchMatMulOpBuilder(OpBuilder):
                 batch_split_factor_value > 0,
                 lambda: f"batch_split_factor must be positive, but got {batch_split_factor_value}",
             )
+            has_scale_or_batch_split = has_scale or batch_split_factor_value != 1
+            torch._check(
+                bias is None or not has_scale_or_batch_split,
+                lambda: "bias does not support scale or batch split",
+            )
+            if perm_y_real == [0, 1, 2]:
+                torch._check(
+                    not has_scale_or_batch_split,
+                    lambda: "bmn output does not support scale or batch split",
+                )
             if has_scale:
                 torch._check(
                     batch_split_factor_value == 1,
@@ -181,6 +204,7 @@ class TransposeBatchMatMulOpBuilder(OpBuilder):
                 x2,
                 perm_x1_real,
                 perm_x2_real,
+                perm_y_real,
                 has_scale,
                 batch_split_factor_value,
             )

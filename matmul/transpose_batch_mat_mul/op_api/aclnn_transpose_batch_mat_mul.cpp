@@ -100,6 +100,12 @@ inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const 
 inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
                                    const aclTensor* out)
 {
+    // 不支持x1Format、 outFormat为NZ
+    if (ge::GetPrimaryFormat(x1->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ ||
+        ge::GetPrimaryFormat(out->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x1 or out cannot be FORMAT_FRACTAL_NZ.");
+        return false;
+    }
     if (x1->GetDataType() != x2->GetDataType()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1's dtype [%s] and x2's dtype [%s] are not equal.",
                 op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
@@ -144,9 +150,13 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, con
     return true;
 }
 
-inline static bool CheckScaleValid(const aclTensor* scale, int64_t batch, int64_t n)
+inline static bool CheckScaleValid(const aclTensor* scale, int64_t batch, int64_t n, int32_t batch_split_factor)
 {
     if (scale != nullptr) {
+        if (batch_split_factor != 1) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor should be 1 when the scale is not null.");
+            return false;
+        }
         OP_LOGD("scale %s", op::ToString(scale->GetViewShape()).GetString());
         auto dimTensorScale = scale->GetViewShape().GetDimNum();
         int64_t scaleDim = scale->GetViewShape().GetDim(0);
@@ -168,58 +178,57 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batch, int64_
 }
 
 namespace {
-static bool CheckPermLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y)
+static bool CheckPermLimit(const aclTensor* x2, const aclIntArray* perm_x1, const aclIntArray* perm_x2,
+                           const aclIntArray* perm_y, bool hasScaleOrBatchSplit)
 {
+    if (perm_x1->Size() != EXPECTED_DIM || perm_x2->Size() != EXPECTED_DIM || perm_y->Size() != EXPECTED_DIM) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The perm parameter must be three-dimensional.");
+        return false;
+    }
+    const bool isBatchFirstY = ((*perm_y)[0] == 0 && (*perm_y)[1] == 1 && (*perm_y)[2] == 2);
+    const bool isBatchCenteredX2 = (*perm_x2)[0] == 1 && (((*perm_x2)[1] == 0 && (*perm_x2)[2] == 2) ||
+                                                          ((*perm_x2)[1] == 2 && (*perm_x2)[2] == 0));
+    const bool isTransposedA = ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 2 && (*perm_x1)[2] == 1);
     auto x1_support_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2) ||
-                                ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 1 && (*perm_x1)[2] == 2);
+                                ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 1 && (*perm_x1)[2] == 2) || isTransposedA;
     auto x2_support_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2) ||
-                                ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
-    auto y_support_transpose = ((*perm_y)[0] == 1 && (*perm_y)[1] == 0 && (*perm_y)[2] == 2);
+                                ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1) || isBatchCenteredX2;
+    auto y_support_transpose = ((*perm_y)[0] == 1 && (*perm_y)[1] == 0 && (*perm_y)[2] == 2) || isBatchFirstY;
     if (!x1_support_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [0, 1, 2] or [1, 0, 2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [0, 1, 2], [1, 0, 2] or [0, 2, 1].");
         return false;
     }
     if (!x2_support_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 should be [0, 1, 2] or [0, 2, 1].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 should be [0, 1, 2], [0, 2, 1], [1, 0, 2] or [1, 2, 0].");
         return false;
     }
     if (!y_support_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y should be [1, 0, 2].");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y should be [1, 0, 2] or [0, 1, 2].");
         return false;
     }
-    return true;
-}
-} // namespace
-
-static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
-                            const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y,
-                            int32_t batch_split_factor)
-{
-    if (!CheckPermLimit(perm_x1, perm_x2, perm_y)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm is invalid.");
+    const auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    const bool is3510Series = IsNpuArch3510Series();
+    if ((isBatchCenteredX2 || isTransposedA) && (npuArch != NpuArch::DAV_3510 || !isBatchFirstY)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch-centered B and transposed A require DAV_3510 and bmn output.");
         return false;
     }
-    op::Shape x1Shape = x1->GetViewShape();
-    op::Shape x2Shape = x2->GetViewShape();
-    int64_t x1KDim = x1->GetViewShape().GetDim((*perm_x1)[2]);
-    int64_t x2KDim = x2->GetViewShape().GetDim((*perm_x2)[1]);
-    int64_t batchNum = x2->GetViewShape().GetDim((*perm_x2)[0]);
-    int64_t N = x2->GetViewShape().GetDim((*perm_x2)[2]);
-
-    if (x1KDim != x2KDim) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
-                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+    if (!is3510Series && isBatchFirstY) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bmn output is only supported on 3510 series npu arch, current arch is [%d].",
+                static_cast<int>(npuArch));
         return false;
     }
-
-    if (!IsNpuArch3510Series()) {
-        auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
-        auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
-        auto isWeightNz = (ge::GetPrimaryFormat(x2->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ);
-        if (N >= SUPPORTED_INNER_AXIS || batchNum >= SUPPORTED_INNER_AXIS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch and N should be less than 65536.");
-            return false;
-        }
+    if (isBatchFirstY && hasScaleOrBatchSplit) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y [0, 1, 2] is exclusive with scale or batchSplitFactor.");
+        return false;
+    }
+    if (isBatchCenteredX2 && x2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 [1, 0, 2] or [1, 2, 0] requires ND format.");
+        return false;
+    }
+    if (!is3510Series) {
+        const bool x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
+        const bool x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
+        const bool isWeightNz = ge::GetPrimaryFormat(x2->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ;
         // weightNZ 场景 permX1=[0,1,2] 此前在 tiling 才被拒，首段按参数非法提前拒绝。
         if (isWeightNz && !x1_need_transpose) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is FRACTAL_NZ, permX1 only supports [1, 0, 2].");
@@ -230,48 +239,15 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is FRACTAL_NZ, permX2 only supports [0, 1, 2].");
             return false;
         }
-        if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is not transposed([B,M,K]), K should be less than 65536.");
-            return false;
-        }
-        if (x1_need_transpose) {
-            // 防 int64 溢出：batchNum 已保证小于 65536，仅需防 K 过大。
-            bool batchMulKOverflow = x1KDim > 0 && batchNum > INT64_MAX / x1KDim;
-            int64_t batchMulK = batchMulKOverflow ? INT64_MAX : batchNum * x1KDim;
-            if (x1KDim >= SUPPORTED_INNER_AXIS || batchMulK >= SUPPORTED_INNER_AXIS) {
-                if (scale != nullptr || batch_split_factor != 1) {
-                    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                            "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or "
-                            "batch_split_factor != 1 are not supported.");
-                    return false;
-                }
-                // WeightNz 在该场景返回成功但 out 全量未写；ND 通路保持原有放行行为。
-                if (isWeightNz) {
-                    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                            "When x1 is transposed([M,B,K]) and x2 is FRACTAL_NZ, Batch * K should be less than "
-                            "65536, now is [%ld].",
-                            batchMulK);
-                    return false;
-                }
-            }
-        }
-        if (x2_need_transpose && (scale != nullptr || batch_split_factor != 1 || !x1_need_transpose)) {
+        if (x2_need_transpose && (hasScaleOrBatchSplit || !x1_need_transpose)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is transposed, input scale or batch_split_factor != 1 are not "
                                              "supported, permX1 must be [1,0,2].");
             return false;
         }
     }
-
-    return CheckScaleValid(scale, batchNum, N);
+    return true;
 }
-
-static inline bool CheckMathType(const aclTensor* x1, const aclTensor* x2, int8_t cubeMathType)
-{
-    bool x1Float = x1->GetDataType() == DataType::DT_FLOAT;
-    bool x2Float = x2->GetDataType() == DataType::DT_FLOAT;
-    auto promoteType = x1Float || x2Float ? DataType::DT_FLOAT : x1->GetDataType();
-    return CheckCubeMathTypeForMm(promoteType, cubeMathType);
-}
+} // namespace
 
 static inline bool CheckNzStorageShape(const aclTensor* x2)
 {
@@ -289,22 +265,81 @@ static inline bool CheckNzStorageShape(const aclTensor* x2)
     return true;
 }
 
-inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale, aclTensor* out,
-                                      const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y,
-                                      int8_t cubeMathType, int32_t batch_split_factor)
+static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
+                            const aclIntArray* perm_x1, const aclIntArray* perm_x2, int32_t batch_split_factor,
+                            bool hasScaleOrBatchSplit)
 {
-    CHECK_RET(CheckNotNull(x1, x2, out, perm_x1, perm_x2, perm_y), ACLNN_ERR_PARAM_NULLPTR);
     // x1,x2必须为3维
     if ((x1->GetViewShape().GetDimNum() != EXPECTED_DIM) || (x2->GetViewShape().GetDimNum() != EXPECTED_DIM)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
                 op::ToString(x1->GetViewShape()).GetString(), op::ToString(x2->GetViewShape()).GetString());
-        return ACLNN_ERR_PARAM_INVALID;
+        return false;
     }
-    // perm必须为3维
-    if (perm_x1->Size() != EXPECTED_DIM || perm_x2->Size() != EXPECTED_DIM || perm_y->Size() != EXPECTED_DIM) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The perm parameter must be three-dimensional.");
-        return ACLNN_ERR_PARAM_INVALID;
+    op::Shape x1Shape = x1->GetViewShape();
+    op::Shape x2Shape = x2->GetViewShape();
+    int64_t x1KDim = x1->GetViewShape().GetDim((*perm_x1)[2]);
+    int64_t x2KDim = x2->GetViewShape().GetDim((*perm_x2)[1]);
+    int64_t batchNum = x2->GetViewShape().GetDim((*perm_x2)[0]);
+    int64_t N = x2->GetViewShape().GetDim((*perm_x2)[2]);
+
+    if (x1KDim != x2KDim) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k-axis of the two inputs are different %s, %s",
+                op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        return false;
     }
+
+    if (!IsNpuArch3510Series()) {
+        auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
+        const bool isWeightNz = ge::GetPrimaryFormat(x2->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ;
+        if (N >= SUPPORTED_INNER_AXIS || batchNum >= SUPPORTED_INNER_AXIS) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch and N should be less than 65536.");
+            return false;
+        }
+        if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is not transposed([B,M,K]), K should be less than 65536.");
+            return false;
+        }
+        if (x1_need_transpose) {
+            // 防 int64 溢出：batchNum 已保证小于 65536，仅需防 K 过大。
+            bool batchMulKOverflow = x1KDim > 0 && batchNum > INT64_MAX / x1KDim;
+            int64_t batchMulK = batchMulKOverflow ? INT64_MAX : batchNum * x1KDim;
+            if (x1KDim >= SUPPORTED_INNER_AXIS || batchMulK >= SUPPORTED_INNER_AXIS) {
+                if (hasScaleOrBatchSplit) {
+                    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                            "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or "
+                            "batch_split_factor != 1 are not supported.");
+                    return false;
+                }
+                // WeightNz 在该场景返回成功但 out 全量未写；ND 通路保持原有放行行为。
+                if (isWeightNz) {
+                    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                            "When x1 is transposed([M,B,K]) and x2 is FRACTAL_NZ, Batch * K should be less than "
+                            "65536, now is [%ld].",
+                            batchMulK);
+                    return false;
+                }
+            }
+        }
+    }
+
+    if (batch_split_factor <= 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be greater than 0.", batch_split_factor);
+        return false;
+    }
+
+    if (batch_split_factor > 1 && x1->GetViewShape().GetDim((*perm_x1)[0]) % batch_split_factor != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be factor of batch[%ld]", batch_split_factor,
+                x1->GetViewShape().GetDim((*perm_x1)[0]));
+        return false;
+    }
+    if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ && !CheckNzStorageShape(x2)) {
+        return false;
+    }
+    return CheckScaleValid(scale, batchNum, N, batch_split_factor);
+}
+
+static inline bool CheckMathType(const aclTensor* x1, const aclTensor* x2, int8_t cubeMathType)
+{
     if (IsNpuArch3510Series() && cubeMathType == -1) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnTransposeBatchMatMulGetWorkspaceSize", "cubeMathType",
@@ -312,44 +347,66 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
             Ops::NN::FormatString("In %s case, the value of %s cannot be %s",
                                   "DAV_3510 or DAV_9201 or DAV_9202 architecture", "cubeMathType", "-1")
                 .c_str());
-        return ACLNN_ERR_PARAM_INVALID;
+        return false;
     }
+    bool x1Float = x1->GetDataType() == DataType::DT_FLOAT;
+    bool x2Float = x2->GetDataType() == DataType::DT_FLOAT;
+    auto promoteType = x1Float || x2Float ? DataType::DT_FLOAT : x1->GetDataType();
+    return CheckCubeMathTypeForMm(promoteType, cubeMathType);
+}
+
+static bool CheckBias(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclIntArray* perm_x2,
+                      bool hasScaleOrBatchSplit)
+{
+    if (bias == nullptr) {
+        return true;
+    }
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 || hasScaleOrBatchSplit) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bias requires DAV_3510 without scale or batch split.");
+        return false;
+    }
+    const auto& shape = bias->GetViewShape();
+    const int64_t n = x2->GetViewShape().GetDim((*perm_x2)[2]);
+    if (!((shape.GetDimNum() == 1 && shape.GetDim(0) == n) ||
+          (shape.GetDimNum() == 2 && shape.GetDim(0) == 1 && shape.GetDim(1) == n))) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bias shape must be (N,) or (1,N).");
+        return false;
+    }
+    if (bias->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bias must use ND format.");
+        return false;
+    }
+    if (bias->GetDataType() != x1->GetDataType() && bias->GetDataType() != DataType::DT_FLOAT) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bias dtype must match x1 or be float32.");
+        return false;
+    }
+    return true;
+}
+
+inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                      const aclTensor* scale, aclTensor* out, const aclIntArray* perm_x1,
+                                      const aclIntArray* perm_x2, const aclIntArray* perm_y, int8_t cubeMathType,
+                                      int32_t batch_split_factor)
+{
+    CHECK_RET(CheckNotNull(x1, x2, out, perm_x1, perm_x2, perm_y), ACLNN_ERR_PARAM_NULLPTR);
+    // scale和batch split仅保留存量能力，不与新增bias、BMN及非连续布局组合。
+    const bool hasScaleOrBatchSplit = scale != nullptr || batch_split_factor != 1;
+    CHECK_RET(CheckPermLimit(x2, perm_x1, perm_x2, perm_y, hasScaleOrBatchSplit), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckMathType(x1, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-    if (scale != nullptr && batch_split_factor != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor should be 1 when the scale is not null.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    // 不支持x1Format、 outFormat为NZ
-    if (ge::GetPrimaryFormat(x1->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ ||
-        ge::GetPrimaryFormat(out->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x1 or out cannot be FORMAT_FRACTAL_NZ.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
     CHECK_RET(CheckDtypeValid(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2, perm_y, batch_split_factor), ACLNN_ERR_PARAM_INVALID);
-
-    if (batch_split_factor <= 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be greater than 0.", batch_split_factor);
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
-    if (batch_split_factor > 1 && x1->GetViewShape().GetDim((*perm_x1)[0]) % batch_split_factor != 0) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be factor of batch[%ld]", batch_split_factor,
-                x1->GetViewShape().GetDim((*perm_x1)[0]));
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-    if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        CHECK_RET(CheckNzStorageShape(x2), ACLNN_ERR_PARAM_INVALID);
-    }
+    CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2, batch_split_factor, hasScaleOrBatchSplit),
+              ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckBias(x1, x2, bias, perm_x2, hasScaleOrBatchSplit), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
-static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
-                                                       const aclIntArray* perm_x1, const aclIntArray* perm_x2,
-                                                       const aclIntArray* perm_y, int8_t cubeMathType,
-                                                       int32_t batch_split_factor, aclOpExecutor* executor)
+static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                                       const aclTensor* scale, const aclIntArray* perm_x1,
+                                                       const aclIntArray* perm_x2, const aclIntArray* perm_y,
+                                                       int8_t cubeMathType, int32_t batch_split_factor,
+                                                       aclOpExecutor* executor)
 {
-    // 连续性转换
+    // MBK A以连续(M,B,K)张量和permX1=[1,0,2]表达，Contiguous不会重排其存储。
     auto contiguousX1 = l0op::Contiguous(x1, executor);
     OP_CHECK(contiguousX1 != nullptr,
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 preprocess failed, contiguous return nullptr."),
@@ -359,6 +416,7 @@ static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, cons
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x1 preprocess failed, reformat return nullptr."),
              return nullptr);
 
+    // NBK/KBN均由连续存储shape和perm表达，与MBK A使用相同的预处理流程。
     auto contiguousX2 = l0op::Contiguous(x2, executor);
     OP_CHECK(contiguousX2 != nullptr,
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input x2 preprocess failed, contiguous return nullptr."),
@@ -377,16 +435,24 @@ static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, cons
                  return nullptr);
     }
 
+    auto contiguousBias = bias;
+    if (bias != nullptr) {
+        contiguousBias = l0op::Contiguous(bias, executor);
+        CHECK_RET(contiguousBias != nullptr, nullptr);
+        contiguousBias = l0op::ReFormat(contiguousBias, op::Format::FORMAT_ND);
+        CHECK_RET(contiguousBias != nullptr, nullptr);
+    }
+
     // 构建matmul计算图
-    return l0op::TransposeBatchMatMul(reformX1, reformX2, nullptr, contiguousScale, perm_x1, perm_x2, perm_y,
+    return l0op::TransposeBatchMatMul(reformX1, reformX2, contiguousBias, contiguousScale, perm_x1, perm_x2, perm_y,
                                       cubeMathType == USE_HF32, batch_split_factor, executor);
 }
 
 static const aclTensor* BuildTransposeBatchMatMulWeightNzGraph(const aclTensor* x1, const aclTensor* x2,
-                                                               const aclTensor* scale, const aclIntArray* perm_x1,
-                                                               const aclIntArray* perm_x2, const aclIntArray* perm_y,
-                                                               int8_t cubeMathType, int32_t batch_split_factor,
-                                                               aclOpExecutor* executor)
+                                                               const aclTensor* bias, const aclTensor* scale,
+                                                               const aclIntArray* perm_x1, const aclIntArray* perm_x2,
+                                                               const aclIntArray* perm_y, int8_t cubeMathType,
+                                                               int32_t batch_split_factor, aclOpExecutor* executor)
 {
     // 连续性转换
     auto contiguousX1 = l0op::Contiguous(x1, executor);
@@ -418,8 +484,16 @@ static const aclTensor* BuildTransposeBatchMatMulWeightNzGraph(const aclTensor* 
                  return nullptr);
     }
 
+    auto contiguousBias = bias;
+    if (bias != nullptr) {
+        contiguousBias = l0op::Contiguous(bias, executor);
+        CHECK_RET(contiguousBias != nullptr, nullptr);
+        contiguousBias = l0op::ReFormat(contiguousBias, op::Format::FORMAT_ND);
+        CHECK_RET(contiguousBias != nullptr, nullptr);
+    }
+
     // 构建matmul计算图
-    return l0op::TransposeBatchMatMul(reformX1, contiguousX2, nullptr, contiguousScale, perm_x1, perm_x2, perm_y,
+    return l0op::TransposeBatchMatMul(reformX1, contiguousX2, contiguousBias, contiguousScale, perm_x1, perm_x2, perm_y,
                                       cubeMathType == USE_HF32, batch_split_factor, executor);
 }
 
@@ -440,7 +514,7 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
 
     // 入参检查
-    auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
+    auto ret = CheckParams(x1, x2, bias, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 空tensor 处理
@@ -449,14 +523,9 @@ aclnnStatus aclnnTransposeBatchMatMulGetWorkspaceSize(const aclTensor* x1, const
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    if (bias != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias is not supported in TBMM.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
     // 构建matmul计算图
     const aclTensor* tbmmOut = nullptr;
-    tbmmOut = BuildTransposeBatchMatMulGraph(x1, x2, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor,
+    tbmmOut = BuildTransposeBatchMatMulGraph(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType, batchSplitFactor,
                                              uniqueExecutor.get());
     CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 
@@ -501,7 +570,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
 
     // 入参检查
-    auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
+    auto ret = CheckParams(x1, x2, bias, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // x2 format must be NZ
@@ -517,14 +586,9 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    if (bias != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The bias is not supported in TBMM.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
     // 构建matmul计算图
     const aclTensor* tbmmOut = nullptr;
-    tbmmOut = BuildTransposeBatchMatMulWeightNzGraph(x1, x2, scale, permX1, permX2, permY, cubeMathType,
+    tbmmOut = BuildTransposeBatchMatMulWeightNzGraph(x1, x2, bias, scale, permX1, permX2, permY, cubeMathType,
                                                      batchSplitFactor, uniqueExecutor.get());
     CHECK_RET(tbmmOut != nullptr, ACLNN_ERR_PARAM_INVALID);
 

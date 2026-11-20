@@ -9,6 +9,8 @@
  */
 #include "batch_matmul_util.h"
 
+#include <cstdlib>
+
 #include "runtime/runtime/base.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -20,6 +22,7 @@
 #include "level0/fill.h"
 #include "level0/mul.h"
 #include "matmul/common/op_host/op_api/matmul_v2tov3.h"
+#include "matmul/transpose_batch_mat_mul/op_api/transpose_batch_mat_mul.h"
 #include "aclnn_kernels/transdata.h"
 #include "cube_util.h"
 #include "matmul_util.h"
@@ -1017,6 +1020,75 @@ const aclTensor* ExecBmmOp(const aclTensor* self, const aclTensor* mat2, const a
     return ExecBmmOpWithBias(self, mat2, nullptr, out, cubeMathType, executor, isBaddbmm);
 }
 
+// 同步重排view shape和stride，保留存储shape和offset。
+static const aclTensor* CreateTBMMInputView(const aclTensor* tensor, const int64_t* order, aclOpExecutor* executor)
+{
+    const auto& shape = tensor->GetViewShape();
+    const auto& strides = tensor->GetViewStrides();
+    op::Shape viewShape{shape.GetDim(order[0]), shape.GetDim(order[1]), shape.GetDim(order[2])};
+    op::Strides viewStrides{strides[order[0]], strides[order[1]], strides[order[2]]};
+    auto view = executor->CreateView(tensor, viewShape, tensor->GetStorageShape(), viewStrides,
+                                     tensor->GetViewOffset());
+    CHECK_RET(view != nullptr, nullptr);
+    return SetTensorToNDFormat(view);
+}
+
+static const aclTensor* TryRouteNonContiguousToTBMM(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
+                                                    const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor,
+                                                    NonContiguousMode nonContiguousMode, bool transposeSelf,
+                                                    bool isBNeedSwapInnerTwoDim, bool isBaddbmm)
+{
+    // 3510Series还包含DAV_9201/9202，本路由仅支持DAV_3510。
+    // 原分类已保证右矩阵三维；左矩阵仍可能来自带前导batch维的MatMul调用。
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 ||
+        self->GetViewShape().GetDimNum() != NUM_THREE ||
+        self->GetViewShape().GetDim(0) != mat2->GetViewShape().GetDim(0) || self->GetDataType() != out->GetDataType()) {
+        return nullptr;
+    }
+
+    const bool isABNonContiguous = nonContiguousMode == NonContiguousMode::AB_NON_CONTINUOUS;
+    // perm长度3对应三维张量；值0/1/2是视图轴下标，不是维度大小。
+    // x1/x2/y分别按计算轴(B,M,K)/(B,K,N)/(B,M,N)记录各轴在视图中的位置。
+    int64_t permX1List[3] = {0, 1, 2}; // BMK视图：B/M/K对应轴0/1/2。
+    if (isABNonContiguous) {
+        std::swap(permX1List[0], permX1List[1]); // [1,0,2]：MBK视图，B/M/K对应轴1/0/2。
+    } else if (transposeSelf) {
+        std::swap(permX1List[1], permX1List[2]); // [0,2,1]：预处理后的BKM视图，B/M/K对应轴0/2/1。
+    }
+    const int64_t permX2NbkList[3] = {1, 2, 0}; // 连续(N,B,K)视图，B/K/N对应轴1/2/0。
+    const int64_t permX2KbnList[3] = {1, 0, 2}; // KBN视图为(K,B,N)，B/K/N对应轴1/0/2。
+    const auto* permX2List = isBNeedSwapInnerTwoDim ? permX2NbkList : permX2KbnList;
+    const int64_t identityPerm[3] = {0, 1, 2}; // 不交换视图轴；作为permY时表示(B,M,N)输出。
+
+    auto x1View = isABNonContiguous ? CreateTBMMInputView(self, permX1List, executor) : SetTensorToNDFormat(self);
+    CHECK_RET(x1View != nullptr, nullptr);
+    // NBK已由原预处理归一化为(B,N,K)，KBN为(B,K,N)；交换前两轴恢复各自连续存储视图。
+    auto x2View = CreateTBMMInputView(mat2, permX2KbnList, executor);
+    CHECK_RET(x2View != nullptr, nullptr);
+
+    MmOpInfo matmulOpInfo;
+    CHECK_RET(
+        CreateBatchMatmulOpInfo(x1View, x2View, bias, out, matmulOpInfo, cubeMathType, isBaddbmm) == ACLNN_SUCCESS,
+        nullptr);
+
+    auto contiguousBias = bias;
+    if (bias != nullptr) {
+        CHECK_RET(ContiguousAndCastBias(bias, contiguousBias, matmulOpInfo.support_info.bias_dtype, executor), nullptr);
+    }
+
+    auto permX1 = executor->AllocIntArray(permX1List, NUM_THREE);
+    auto permX2 = executor->AllocIntArray(permX2List, NUM_THREE);
+    auto permY = executor->AllocIntArray(identityPerm, NUM_THREE);
+    CHECK_RET(permX1 != nullptr && permX2 != nullptr && permY != nullptr, nullptr);
+    auto tbmmOut = l0op::TransposeBatchMatMul(x1View, x2View, contiguousBias, nullptr, permX1, permX2, permY,
+                                              matmulOpInfo.enableHf32, 1, executor);
+    CHECK_RET(tbmmOut != nullptr, nullptr);
+    auto result = l0op::ReFormat(tbmmOut, out->GetViewFormat());
+    CHECK_RET(result != nullptr, nullptr);
+    OP_LOGI("Non-contiguous batchmatmul routed to TransposeBatchMatMul tensor-api.");
+    return result;
+}
+
 const aclTensor* ExecBmmOpWithBiasV2(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
                                      const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor, bool isBaddbmm)
 {
@@ -1108,6 +1180,15 @@ const aclTensor* ExecBmmOpWithBiasV2(const aclTensor* self, const aclTensor* mat
     // weightnz storageshape刷新, 适配SwapLastTwoDimValue
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         contiguousMat2->SetStorageShape(mat2->GetStorageShape());
+    }
+
+    // 复用原分类和预处理；TBMM未接收的调用继续执行旧BMM路径。
+    if (nonContiguousMode != NonContiguousMode::CONTINUOUS) {
+        auto tbmmOut = TryRouteNonContiguousToTBMM(contiguousSelf, contiguousMat2, bias, out, cubeMathType, executor,
+                                                   nonContiguousMode, transposeSelf, isBNeedSwapInnerTwoDim, isBaddbmm);
+        if (tbmmOut != nullptr) {
+            return tbmmOut;
+        }
     }
 
     auto batchMatmulOut = ExecBatchMatmulOpWithBiasAndAttrsV2(contiguousSelf, contiguousMat2, bias, reformatOut,

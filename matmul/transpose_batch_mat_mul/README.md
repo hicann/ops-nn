@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：完成张量x1与张量x2的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，支持[0,1,2]、[1,0,2]，permX2代表张量x2的转置序列[0,1,2]，permY表示矩阵乘输出矩阵的转置序列，当前仅支持[1,0,2]，序列值为0的是batch维度，其余两个维度做矩阵乘法。scale表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时开启，详细约束条件可见约束说明或者[aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)调用说明文档。
+- 算子功能：完成三维张量x1与x2的矩阵乘及可选bias计算。permX1/permX2指定输入轴位置；permY指定输出为(M,B,N)，Ascend 950PR&950DT系列产品还支持(B,M,N)。scale沿用原FLOAT16输入、INT8输出的量化语义。具体参数组合见[aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)。
 
 - 示例：
   - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
@@ -128,7 +128,8 @@
 - <term>Ascend 950PR&950DT系列产品</term>：
     - 不支持空tensor。
     - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
-    - bias为预留参数，当前暂不支持。
+    - 支持可选ND bias，shape为(N,)或(1,N)，各batch和行共享；类型与x1相同或为FLOAT32。
+    - A内轴转置[0,2,1]和ND KBN B[1,0,2]要求BMN输出、scale为空且batchSplitFactor=1。
 
 ## 调用说明
 

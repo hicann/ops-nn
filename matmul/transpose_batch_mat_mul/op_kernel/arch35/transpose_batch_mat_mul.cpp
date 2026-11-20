@@ -12,11 +12,12 @@
  * \file transpose_batch_mat_mul.cpp
  * \brief
  */
-#include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
+#include "transpose_batch_mat_mul_tiling_data.h"
 #include "transpose_batch_mat_mul_tiling_key.h"
 #include "transpose_batch_mat_mul_tiling_key_public.h"
 #include "transpose_batch_mat_mul_asw_kernel.h"
 #include "transpose_batch_mat_mul_asw_split_k_kernel.h"
+#include "transpose_batch_mat_mul_iterbatch_kernel.h"
 
 using namespace AscendC;
 
@@ -34,14 +35,16 @@ constexpr bool X2_IS_FRACTAL_NZ = true;
 constexpr bool X2_IS_FRACTAL_NZ = false;
 #endif
 
-template <int8_t PERM_X1, int8_t PERM_X2, int8_t BATCH_SPLIT, int8_t API_LEVEL, int8_t TBMODEL>
+template <int8_t PERM_X1, int8_t PERM_X2, int8_t BATCH_SPLIT, int8_t API_LEVEL, int8_t TBMODEL,
+          int8_t NON_CONTIGUOUS_TYPE, int8_t L0C2OUT_MODEL>
 __global__ __aicore__ void transpose_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR scalesGM,
                                                    GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
     AscendC::InitSocState();
 
-    constexpr bool aTran = false;
-    constexpr bool bTran = (PERM_X2 == 1);
+    constexpr bool aTran = (PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_2_1);
+    constexpr bool bTran = PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_2_1 ||
+                           PERM_X2 == TRANSPOSE_BATCH_MAT_MUL_PERM_X2_1_2_0;
     constexpr bool IS_INT_8_OUTPUT = std::is_same_v<DTYPE_Y, signed char>;
 
     // Fixed-point (supportMmadS8S4 / DAV_RESV) configs use the legacy kernel/tiling.
@@ -54,20 +57,29 @@ __global__ __aicore__ void transpose_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_
     using layoutC = asc::te::nd_ext_layout_ptn;
 #endif
 
-    REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);
-    GET_TILING_DATA(tilingData, tilingGM);
+    REGISTER_TILING_DEFAULT(TransposeBatchMatMulBasicTilingData);
 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
-    if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL && TBMODEL == TRANSPOSE_BATCH_MAT_MUL_BASIC) {
+    if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL && TBMODEL == TRANSPOSE_BATCH_MAT_MUL_ITER_BATCH &&
+                  !IS_INT_8_OUTPUT && !X2_IS_FRACTAL_NZ) {
+        GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
+        TransposeBatchMatMulAdvanced::TBMMIterBatchTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA,
+                                                                layoutB, layoutC, NON_CONTIGUOUS_TYPE,
+                                                                static_cast<Blaze::Gemm::MatMulL0C2Out>(L0C2OUT_MODEL)>(
+            aGM, bGM, biasGM, cGM, nullptr, tilingData);
+    } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
+                         TBMODEL == TRANSPOSE_BATCH_MAT_MUL_BASIC) {
+        GET_TILING_DATA_WITH_STRUCT(TransposeBatchMatMulBasicTilingData, tilingData, tilingGM);
         TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
-                                                       layoutC, PERM_X1>(aGM, bGM, biasGM, scalesGM, cGM, nullptr,
-                                                                         tilingData);
+                                                       layoutC, NON_CONTIGUOUS_TYPE>(aGM, bGM, biasGM, scalesGM, cGM,
+                                                                                     nullptr, tilingData);
     } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
                          TBMODEL == TRANSPOSE_BATCH_MAT_MUL_BASIC_SPLIT_K && !IS_INT_8_OUTPUT) {
+        GET_TILING_DATA_WITH_STRUCT(TransposeBatchMatMulBasicTilingData, tilingData, tilingGM);
         TransposeBatchMatMulAdvanced::TBMMSplitKTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
-                                                             layoutC, PERM_X1>(aGM, bGM, biasGM, scalesGM, cGM, nullptr,
-                                                                               tilingData);
+                                                             layoutC, NON_CONTIGUOUS_TYPE>(aGM, bGM, biasGM, scalesGM,
+                                                                                           cGM, nullptr, tilingData);
     }
 #endif
 }

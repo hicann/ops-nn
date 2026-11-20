@@ -14,9 +14,14 @@
  */
 
 #include "transpose_batch_mat_mul_asw_tiling.h"
+
+#include <memory>
+#include <new>
+
 #include "transpose_batch_mat_mul_tiling_strategy.h"
 #include "transpose_batch_mat_mul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
+#include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_helper.h"
 
 namespace optiling {
 namespace transpose_batch_mat_mul_advanced {
@@ -25,82 +30,13 @@ MM_REGISTER_TILING_TEMPLATE(TransposeBatchMatMul, TransposeBatchMatMulAswTiling,
 MM_REGISTER_TILING_TEMPLATE(TransposeBatchMatMul, TransposeBatchMatMulAswTiling, DAV_9201, BASE);
 MM_REGISTER_TILING_TEMPLATE(TransposeBatchMatMul, TransposeBatchMatMulAswTiling, DAV_9202, BASE);
 
-template <typename T>
-T GetAlignNumWithDataType(T size, ge::DataType dtype)
-{
-    return size / static_cast<T>(ge::GetSizeByDataType(dtype));
-}
-
-void TransposeBatchMatMulAswTiling::ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN)
-{
-    uint64_t baseKAlignNum = (!args_.isATrans && args_.isBTrans) ?
-                                 GetAlignNumWithDataType(BASIC_BLOCK_K_256_BYTE, args_.aType) :
-                                 BASIC_BLOCK_SIZE_16;
-    uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args_.kValue), baseKAlignNum);
-    uint64_t maxBaseK = GetAlignNumWithDataType(compileInfo_.l0ASize / DB_SIZE, args_.aType) /
-                        std::max(tempBaseM, tempBaseN);
-    if (maxBaseK >= baseKAlignNum) {
-        runInfo_.baseM = tempBaseM;
-        runInfo_.baseN = tempBaseN;
-        maxBaseK = ops::FloorAlign(maxBaseK, baseKAlignNum);
-        runInfo_.baseK = std::min(kValueAlign, maxBaseK);
-    }
-}
-
-void TransposeBatchMatMulAswTiling::BaseLoadBalance()
-{
-    uint64_t baseMAlignNum = args_.isATrans ? GetAlignNumWithDataType(BASIC_BLOCK_K_256_BYTE, args_.aType) :
-                                              BASIC_BLOCK_SIZE_16;
-    uint64_t baseNAlignNum = !args_.isBTrans ? GetAlignNumWithDataType(BASIC_BLOCK_K_256_BYTE, args_.aType) :
-                                               BASIC_BLOCK_SIZE_16;
-    uint64_t mMaxTile = ops::CeilDiv(args_.mValue, baseMAlignNum);
-    uint64_t nMaxTile = ops::CeilDiv(args_.nValue, baseNAlignNum);
-    uint64_t tempBaseM = runInfo_.baseM;
-    uint64_t tempBaseN = runInfo_.baseN;
-    uint64_t coreNumMN = compileInfo_.aicNum / batchInfo_->batchC;
-    if (mMaxTile * nMaxTile >= coreNumMN || (!args_.isATrans && args_.isBTrans)) {
-        uint64_t mCore = ops::CeilDiv(args_.mValue, runInfo_.baseM);
-        uint64_t nCore = ops::CeilDiv(args_.nValue, runInfo_.baseN);
-        if (mMaxTile < nMaxTile || (mMaxTile == nMaxTile && baseNAlignNum == BASIC_BLOCK_SIZE_16)) {
-            tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
-            mCore = ops::CeilDiv(args_.mValue, tempBaseM);
-            nCore = coreNumMN / mCore;
-            tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
-        } else {
-            tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
-            nCore = ops::CeilDiv(args_.nValue, tempBaseN);
-            mCore = coreNumMN / nCore;
-            tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
-        }
-
-        while (tempBaseN >= tempBaseM * NUM_TWO && nCore < coreNumMN / NUM_TWO && tempBaseN != baseNAlignNum) {
-            nCore *= NUM_TWO;
-            mCore = coreNumMN / nCore;
-            tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
-            tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
-            mCore = ops::CeilDiv(args_.mValue, static_cast<uint64_t>(tempBaseM));
-            nCore = ops::CeilDiv(args_.nValue, static_cast<uint64_t>(tempBaseN));
-        }
-
-        while (tempBaseM >= tempBaseN * NUM_TWO && mCore < coreNumMN / NUM_TWO && tempBaseM != baseMAlignNum) {
-            mCore *= NUM_TWO;
-            nCore = coreNumMN / mCore;
-            tempBaseM = ops::CeilAlign(ops::CeilDiv(args_.mValue, mCore), baseMAlignNum);
-            tempBaseN = ops::CeilAlign(ops::CeilDiv(args_.nValue, nCore), baseNAlignNum);
-            mCore = ops::CeilDiv(args_.mValue, static_cast<uint64_t>(tempBaseM));
-            nCore = ops::CeilDiv(args_.nValue, static_cast<uint64_t>(tempBaseN));
-        }
-        ResetBasicBlock(tempBaseM, tempBaseN);
-    }
-}
-
 // DAV_RESV (unknown or unmapped npuArch) never reaches this tiling class: the
 // template above is registered only for DAV_3510/DAV_9201/DAV_9202, so
 // DAV_RESV keeps using the legacy tiling/kernel path.
 void TransposeBatchMatMulAswTiling::CheckModel()
 {
-    bool isSplitK = MatMulV3TilingHelper::IsSplitSingleCoreK(compileInfo_, args_, true);
-    if (isSplitK) {
+    // BMN/MBN及非连续输入统一由MatMul layout切片，沿用原核内切K准入条件。
+    if (MatMulV3TilingHelper::IsSplitSingleCoreK(compileInfo_, args_, true)) {
         runInfo_.splitKBase = MatMulV3TilingHelper::SelectSplitKBase(context_, args_.mValue, args_.nValue, args_.kValue,
                                                                      runInfo_.baseK);
         model_ = TBMMModel::TBMM_BASIC_SPLIT_K;
@@ -109,15 +45,16 @@ void TransposeBatchMatMulAswTiling::CheckModel()
 
 ge::graphStatus TransposeBatchMatMulAswTiling::DoOpTiling()
 {
-    MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
-    // load balance only support n=1024 k=4096
-    bool isNeedLoadBalance = args_.mValue <= BASIC_BLOCK_SIZE_16 && args_.nValue == 1024 && args_.kValue == 4096;
-    if (runInfo_.tailInfo.mCnt * runInfo_.tailInfo.nCnt * batchInfo_->batchC < compileInfo_.aicNum &&
-        isNeedLoadBalance) {
-        BaseLoadBalance();
-    }
-    MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
     GetTransposeBatchMatMulInfo();
+    // BMN/MBN统一复用BMM basic的分块、L1/L0 buffer和负载均衡策略。
+    const auto ret = BatchMatMulV3AswBasicTiling::DoOpTiling();
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
+    if (nonContiguousType_ == TBMMNonContiguousType::B_NON_CONTIGUOUS ||
+        nonContiguousType_ == TBMMNonContiguousType::AB_NON_CONTIGUOUS) {
+        runInfo_.innerBatch = batchInfo_->batchC;
+    }
     CheckModel();
     return ge::GRAPH_SUCCESS;
 }
@@ -128,47 +65,107 @@ void TransposeBatchMatMulAswTiling::GetTransposeBatchMatMulInfo()
     size_t idx = 0;
     const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    const gert::ContinuousVector* yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
     if ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == NUM_TWO)) {
         permX1_ = TBMMPermX1::PERM_X1_1_0_2;
     } else if ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) && (aPerm[KA_IDX] == NUM_TWO)) {
         permX1_ = TBMMPermX1::PERM_X1_0_1_2;
+    } else if (aPerm[BATCH_IDX] == 0L && aPerm[M_IDX] == NUM_TWO && aPerm[KA_IDX] == 1L) {
+        permX1_ = TBMMPermX1::PERM_X1_0_2_1;
     }
     const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
     if ((bPerm[BATCH_IDX] == 0L) && (bPerm[M_IDX] == 1L) && (bPerm[KA_IDX] == NUM_TWO)) {
         permX2_ = TBMMPermX2::PERM_X2_0_1_2;
     } else if ((bPerm[BATCH_IDX] == 0L) && (bPerm[M_IDX] == NUM_TWO) && (bPerm[KA_IDX] == 1L)) {
         permX2_ = TBMMPermX2::PERM_X2_0_2_1;
+    } else if ((bPerm[BATCH_IDX] == 1L) && (bPerm[M_IDX] == 0L) && (bPerm[KA_IDX] == NUM_TWO)) {
+        permX2_ = TBMMPermX2::PERM_X2_1_0_2; // kbn: x2实际存储(k,b,n), n连续
+    } else if (bPerm[BATCH_IDX] == 1L && bPerm[KB_IDX] == NUM_TWO && bPerm[N_IDX] == 0L) {
+        permX2_ = TBMMPermX2::PERM_X2_1_2_0; // nbk: x2实际存储(n,b,k), k连续
     }
+    const int64_t* yPerm = static_cast<const int64_t*>(yPermList->GetData());
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         batchSplitFactor_ = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
         batchSplitMode_ = batchSplitFactor_ > 1 ? TBMMBatchSplit::BATCH_SPLIT_TRUE : TBMMBatchSplit::BATCH_SPLIT_FALSE;
+    }
+    // 连续KBN/NBK由perm确定；保留旧021非连续视图的stride识别。
+    const bool isBNonContiguous = permX2_ == TBMMPermX2::PERM_X2_1_0_2 || permX2_ == TBMMPermX2::PERM_X2_1_2_0 ||
+                                  (permX2_ == TBMMPermX2::PERM_X2_0_2_1 && context_->InputIsView(1UL) &&
+                                   MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 1UL));
+    const bool isABatchTranspose = permX1_ == TBMMPermX1::PERM_X1_1_0_2;
+    if (yPerm[BATCH_IDX] == 0L) {
+        if (isBNonContiguous) {
+            nonContiguousType_ = isABatchTranspose ? TBMMNonContiguousType::AB_NON_CONTIGUOUS :
+                                                     TBMMNonContiguousType::B_NON_CONTIGUOUS;
+        } else {
+            nonContiguousType_ = isABatchTranspose ? TBMMNonContiguousType::A_NON_CONTIGUOUS :
+                                                     TBMMNonContiguousType::CONTIGUOUS;
+        }
+    } else {
+        // MBN不支持非连续B，检查阶段已拦截；只需区分普通A与MBK A。
+        nonContiguousType_ = isABatchTranspose ? TBMMNonContiguousType::AC_TRANSPOSE :
+                                                 TBMMNonContiguousType::C_TRANSPOSE;
     }
 }
 
 uint64_t TransposeBatchMatMulAswTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TBMMTilingKey()
-                             .SetModel(model_)
-                             .SetApiLevel(apiLevel_)
-                             .SetPermX1(permX1_)
-                             .SetPermX2(permX2_)
-                             .SetBatchSplitMode(batchSplitMode_)
-                             .GetTilingKey();
-    return tilingKey;
+    return TBMMTilingKey()
+        .SetModel(model_)
+        .SetApiLevel(TBMMApiLevel::TBMM_TENSOR_LEVEL)
+        .SetPermX1(permX1_)
+        .SetPermX2(permX2_)
+        .SetBatchSplitMode(batchSplitMode_)
+        .SetNonContiguousType(nonContiguousType_)
+        .GetTilingKey();
 }
 
 uint64_t TransposeBatchMatMulAswTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
 
 ge::graphStatus TransposeBatchMatMulAswTiling::GetTilingData(TilingResult& tiling) const
 {
-    return GetTilingDataImpl<BatchMatMulV3TilingData>(tiling);
+    std::shared_ptr<TransposeBatchMatMulBasicTilingData> tilingData;
+    try {
+        tilingData = std::make_shared<TransposeBatchMatMulBasicTilingData>();
+    } catch (const std::bad_alloc&) {
+        OP_LOGE(context_->GetNodeName(), "Failed to allocate memory for tilingData");
+        return ge::GRAPH_FAILED;
+    }
+    const ge::graphStatus ret = GetTilingDataProcess(*tilingData);
+    tiling.tilingData = tilingData;
+    tiling.tilingDataSize = sizeof(TransposeBatchMatMulBasicTilingData);
+    return ret;
 }
 
-ge::graphStatus TransposeBatchMatMulAswTiling::GetTilingDataProcess(BatchMatMulV3TilingData& tilingData) const
+ge::graphStatus TransposeBatchMatMulAswTiling::GetTilingDataProcess(
+    TransposeBatchMatMulBasicTilingData& tilingData) const
 {
     tilingData.batchSplitFactor = batchSplitFactor_;
-    return MatMulV3BaseTiling::GetTilingDataProcess(tilingData);
+    const ge::graphStatus ret = BatchMatMulV3AswBasicTiling::GetTilingDataProcess(tilingData.matMulTilingData);
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
+    auto& matmulTiling = tilingData.matMulTilingData.matMulTilingData;
+    // INT8 scale位于末槽A/B/bias之后，按实际下发的L1尺寸检查四缓冲容量。
+    if (args_.cType == ge::DT_INT8 && matmulTiling.l1BufferNum == NUM_FOUR) {
+        const uint64_t abL1Size = matmulTiling.kL1 *
+                                  (matmulTiling.mL1 * args_.aDtypeSize + matmulTiling.nL1 * args_.bDtypeSize);
+        // bias为空时kernel仍按DTYPE_X1预留bias占位，再放置scale。
+        const uint64_t biasDtypeSize = args_.hasBias ? GetSizeByDataType(args_.biasType) : args_.aDtypeSize;
+        const uint64_t tailL1Size = matmulTiling.nL1 * (biasDtypeSize + sizeof(uint64_t));
+        if (abL1Size + tailL1Size > compileInfo_.l1Size / NUM_FOUR) {
+            matmulTiling.l1BufferNum = NUM_TWO;
+        }
+    }
+    if (nonContiguousType_ == TBMMNonContiguousType::C_TRANSPOSE ||
+        nonContiguousType_ == TBMMNonContiguousType::AC_TRANSPOSE) {
+        // MBN根据原始L1分块计算cache策略。
+        matmulTiling.l2CacheDisable = SetDisableL2cache(
+            runInfo_.baseM * runInfo_.stepM, runInfo_.baseK * runInfo_.stepKa, runInfo_.baseK * runInfo_.stepKb,
+            runInfo_.baseN * runInfo_.stepN);
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
 } // namespace transpose_batch_mat_mul_advanced

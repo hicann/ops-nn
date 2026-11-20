@@ -119,6 +119,8 @@ int main()
     std::vector<int64_t> permYSeries = {1, 0, 2};
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;
+    void* biasDeviceAddr = nullptr;
+    aclTensor* bias = nullptr;
     void* scaleDeviceAddr = nullptr;
     void* outDeviceAddr = nullptr;
     aclTensor* x1 = nullptr;
@@ -137,6 +139,9 @@ int main()
     // 创建x2 aclTensor
     ret = CreateAclTensor(x2HostData, x2Shape, &x2DeviceAddr, aclDataType::ACL_FLOAT16, &x2);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
+    // 创建各batch和行共享的FP32 bias
+    ret = CreateAclTensor(std::vector<float>(N, 0.5f), {1, N}, &biasDeviceAddr, ACL_FLOAT, &bias);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT16, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -150,9 +155,8 @@ int main()
     // aclnnTransposeBatchMatMul接口调用示例
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     // 调用aclnnTransposeBatchMatMul第一段接口
-    ret = aclnnTransposeBatchMatMulGetWorkspaceSize(x1, x2, (const aclTensor*)nullptr, (const aclTensor*)nullptr,
-                                                    permX1, permX2, permY, cubeMathType, batchSplitFactor, out,
-                                                    &workspaceSize, &executor);
+    ret = aclnnTransposeBatchMatMulGetWorkspaceSize(x1, x2, bias, (const aclTensor*)nullptr, permX1, permX2, permY,
+                                                    cubeMathType, batchSplitFactor, out, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeBatchMatMulGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
@@ -181,6 +185,8 @@ int main()
     }
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+    aclDestroyTensor(bias);
+    aclrtFree(biasDeviceAddr);
     aclDestroyTensor(x1);
     aclDestroyTensor(x2);
     aclDestroyTensor(out);

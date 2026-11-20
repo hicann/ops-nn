@@ -26,9 +26,11 @@ public:
     uint64_t GetTilingKey() const;
     TBMMTilingKey& SetApiLevel(TBMMApiLevel apiLevel);
     TBMMTilingKey& SetModel(TBMMModel model);
+    TBMMTilingKey& SetL0C2Out(TBMML0C2Out l0C2Out);
     TBMMTilingKey& SetPermX1(TBMMPermX1 permX1);
     TBMMTilingKey& SetPermX2(TBMMPermX2 permX2);
     TBMMTilingKey& SetBatchSplitMode(TBMMBatchSplit batchSplitMode);
+    TBMMTilingKey& SetNonContiguousType(TBMMNonContiguousType nonContiguousType);
 
 private:
     TBMMApiLevel apiLevel_ = TBMMApiLevel::TBMM_TENSOR_LEVEL;
@@ -36,6 +38,8 @@ private:
     TBMMPermX1 permX1_ = TBMMPermX1::PERM_X1_0_1_2;
     TBMMPermX2 permX2_ = TBMMPermX2::PERM_X2_0_1_2;
     TBMMBatchSplit batchSplitMode_ = TBMMBatchSplit::BATCH_SPLIT_FALSE;
+    TBMMNonContiguousType nonContiguousType_ = TBMMNonContiguousType::C_TRANSPOSE;
+    TBMML0C2Out l0C2Out_ = TBMML0C2Out::ON_THE_FLY;
 };
 } // namespace transpose_batch_mat_mul_advanced
 } // namespace optiling

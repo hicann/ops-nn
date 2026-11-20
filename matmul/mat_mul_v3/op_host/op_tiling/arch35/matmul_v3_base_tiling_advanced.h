@@ -250,6 +250,29 @@ protected:
         return ge::GRAPH_SUCCESS;
     };
 
+    // 基础API/低阶tiling路径：不走matmul_tiling高阶API，由args直接填充TCubeTiling公共字段。
+    // 切分字段（singleCore*/base*/depth*/step*/dbL0C等）统一由GetTilingDataProcess按runInfo_赋值；
+    // 无L1/L0C共享及双缓冲诉求，share*/dbL0A/dbL0B显式置0，tensor-level内核不消费这些字段。
+    ge::graphStatus InitTCubeTilingDataBasic(::TCubeTiling& tCubeTiling) const
+    {
+        tCubeTiling.M = static_cast<int32_t>(args_.mValue);
+        tCubeTiling.N = static_cast<int32_t>(args_.nValue);
+        tCubeTiling.Ka = static_cast<int32_t>(args_.kValue);
+        tCubeTiling.Kb = static_cast<int32_t>(args_.kValue);
+        tCubeTiling.isBias = args_.hasBias ? 1 : 0;
+        tCubeTiling.batchM = 1;
+        tCubeTiling.batchN = 1;
+        tCubeTiling.singleBatchM = 1;
+        tCubeTiling.singleBatchN = 1;
+        tCubeTiling.shareMode = 0;
+        tCubeTiling.shareL1Size = 0;
+        tCubeTiling.shareL0CSize = 0;
+        tCubeTiling.shareUbSize = 0;
+        tCubeTiling.dbL0A = 0;
+        tCubeTiling.dbL0B = 0;
+        return ge::GRAPH_SUCCESS;
+    };
+
     ge::graphStatus InitTCubeTilingData(::TCubeTiling& tCubeTiling) const
     {
         matmul_tiling::MultiCoreMatmulTiling mm;
@@ -328,10 +351,16 @@ protected:
         return 1UL;
     }
 
+    // 是否使用matmul_tiling高阶API初始化TCubeTiling；基础API/低阶实现可覆写为false。
+    virtual bool UseHighLevelTilingApi() const { return true; }
+
     // MM高阶API模板GetTilingDataProcess
     virtual ge::graphStatus GetTilingDataProcess(MatMulV3TilingData& tilingData) const
     {
-        ge::graphStatus ret = InitTCubeTilingData(tilingData.tCubeTiling);
+        const bool useHighLevelApi = UseHighLevelTilingApi();
+        ge::graphStatus ret = useHighLevelApi ? InitTCubeTilingData(tilingData.tCubeTiling) :
+                                                InitTCubeTilingDataBasic(tilingData.tCubeTiling);
+        // 切分字段统一按runInfo_填充，高阶/低阶路径共用
         tilingData.tCubeTiling.usedCoreNum = runInfo_.usedCoreNum;
         tilingData.tCubeTiling.singleCoreM = runInfo_.singleCoreM;
         tilingData.tCubeTiling.singleCoreN = runInfo_.singleCoreN;
@@ -361,6 +390,16 @@ protected:
                                                       tilingData.tCubeTiling.baseK * tilingData.tCubeTiling.stepKa,
                                                       tilingData.tCubeTiling.baseK * tilingData.tCubeTiling.stepKb,
                                                       tilingData.tCubeTiling.baseN * tilingData.tCubeTiling.stepN);
+        // 低阶路径的切分字段全部来自runInfo_，且不支持L1/L0C共享（shareMode必须为0、共享尺寸为0）。
+        // 子类未完成切分计算或打开共享时必须拦截，避免下发baseK/singleCoreK为0或按0尺寸共享的非法tiling
+        OP_TILING_CHECK(
+            !useHighLevelApi && (tilingData.tCubeTiling.shareMode != 0 || tilingData.tCubeTiling.baseM <= 0 ||
+                                 tilingData.tCubeTiling.baseN <= 0 || tilingData.tCubeTiling.baseK <= 0 ||
+                                 tilingData.tCubeTiling.singleCoreK <= 0),
+            OP_LOGE(args_.opName, "invalid basic tiling: shareMode=%d, baseM=%d, baseN=%d, baseK=%d, singleCoreK=%d",
+                    tilingData.tCubeTiling.shareMode, tilingData.tCubeTiling.baseM, tilingData.tCubeTiling.baseN,
+                    tilingData.tCubeTiling.baseK, tilingData.tCubeTiling.singleCoreK),
+            return ge::GRAPH_FAILED);
         return ret;
     };
 

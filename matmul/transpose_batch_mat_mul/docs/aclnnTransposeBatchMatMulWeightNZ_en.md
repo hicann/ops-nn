@@ -25,7 +25,7 @@
 
 ## Function
 
-- Description: Computes matrix multiplication of tensor x1 and tensor x2. x1 must be in ND format, and x2 must be in NZ format. x1 must be 3-dimensional, and x2 must be 5-dimensional. Tensor transposition is supported. The transpose sequence varies based on the input sequence. permX1 denotes the transpose sequence of tensor x1, and permX2 denotes the transpose sequence of tensor x2. The dimension with sequence value 0 is the batch dimension, and the other two dimensions are used for matrix multiplication.
+- Description: Computes matrix multiplication of tensor x1 and tensor x2. x1 must be in ND format, and x2 must be in NZ format. x1 must be 3-dimensional, and x2 must be 5-dimensional. Tensor transposition is supported. The transpose sequence varies based on the input sequence. permX1 and permX2 give the input-view axis positions of logical [B,M,K] and [B,K,N], respectively. Their values are axis indices, not dimension sizes.
 
 - Example: (viewshape perspective corresponding to the conversion of x2 from NZ to ND)
   - When the shape of x1 is (B, M, K), the shape of x2 is (B, K, N), scale is None, and batchSplitFactor equals 1, the shape of the computed output out is (M, B, N).
@@ -123,12 +123,12 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>Input</td>
         <td>Represents the bias matrix of matrix multiplication.</td>
         <td>        <ul>
-            <li>Reserved parameter, currently not supported.</li>
+            <li>Optional on Ascend 950PR&amp;950DT products. Shape: (N,) or (1,N); dtype: the same as x1 or FLOAT32.</li>
         </ul>
         </td>
         <td>BFLOAT16, FLOAT16, FLOAT32</td>
-        <td>-</td>
-        <td>-</td>
+        <td>ND</td>
+        <td>1 / 2</td>
         <td>-</td>
       </tr>
       <tr>
@@ -150,6 +150,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>Represents the transpose sequence of the first matrix in matrix multiplication.</td>
         <td>        <ul>
           <li> Supports [0, 1, 2] and [1, 0, 2].</li>
+          <li>Ascend 950PR&amp;950DT products also support [0, 2, 1] with BMN output.</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -176,6 +177,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>Represents the transpose sequence of the output matrix in the matrix multiplication.</td>
         <td>        <ul>
             <li>Supports [1, 0, 2].</li>
+            <li>Ascend 950PR&amp;950DT products also support [0, 1, 2], producing (B, M, N), without scale or batch splitting.</li>
         </ul>
         </td>
         <td>INT64</td>
@@ -396,7 +398,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 - <term>Ascend 950PR&950DT products</term>:
   - permX2 supports input [0, 1, 2] and [0, 2, 1].
   - When scale is not empty, batchSplitFactor must equal 1, and only type inference with FLOAT16 input and INT8 output is supported.
-
+  - bias is shared across batches and rows, and requires scale=None and batchSplitFactor=1.
+  - permX1=[0, 2, 1] requires permY=[0, 1, 2], no scale and batchSplitFactor=1. WeightNz does not support KBN B.
 <!-- end id8 -->
 - self only supports 3 dimensions, and mat2 only supports the Ascend private format. Before calling this API, you must complete the conversion of mat2 from ND to the Ascend private format.
 - The case where one of the last two axes of mat2 is 1, i.e., k=1 or n=1, is not supported.

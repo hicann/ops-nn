@@ -22,7 +22,8 @@ uint64_t TBMMTilingKey::GetTilingKey() const
 {
     return GET_TPL_TILING_KEY(static_cast<uint64_t>(permX1_), static_cast<uint64_t>(permX2_),
                               static_cast<uint64_t>(batchSplitMode_), static_cast<uint64_t>(apiLevel_),
-                              static_cast<uint64_t>(model_));
+                              static_cast<uint64_t>(model_), static_cast<uint64_t>(nonContiguousType_),
+                              static_cast<uint64_t>(l0C2Out_));
 }
 
 TBMMTilingKey& TBMMTilingKey::SetApiLevel(TBMMApiLevel apiLevel)
@@ -52,5 +53,17 @@ TBMMTilingKey& TBMMTilingKey::SetPermX2(TBMMPermX2 permX2)
 TBMMTilingKey& TBMMTilingKey::SetBatchSplitMode(TBMMBatchSplit batchSplitMode)
 {
     batchSplitMode_ = batchSplitMode;
+    return *this;
+}
+
+TBMMTilingKey& TBMMTilingKey::SetNonContiguousType(TBMMNonContiguousType nonContiguousType)
+{
+    nonContiguousType_ = nonContiguousType;
+    return *this;
+}
+
+TBMMTilingKey& TBMMTilingKey::SetL0C2Out(TBMML0C2Out l0C2Out)
+{
+    l0C2Out_ = l0C2Out;
     return *this;
 }

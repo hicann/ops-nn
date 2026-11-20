@@ -15,16 +15,18 @@
 
 #pragma once
 
-#include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
+#include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_asw_basic_tiling.h"
 #include "transpose_batch_mat_mul_tiling_key.h"
+#include "matmul/transpose_batch_mat_mul/op_kernel/arch35/transpose_batch_mat_mul_tiling_data.h"
 
 namespace optiling {
 namespace transpose_batch_mat_mul_advanced {
 using namespace matmul_v3_advanced;
-class TransposeBatchMatMulAswTiling : public MatMulV3BaseTiling {
+using batch_matmul_v3_advanced::BatchMatMulV3AswBasicTiling;
+class TransposeBatchMatMulAswTiling : public BatchMatMulV3AswBasicTiling {
 public:
     TransposeBatchMatMulAswTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : MatMulV3BaseTiling(context, cfg) {};
+        : BatchMatMulV3AswBasicTiling(context, cfg) {};
 
     ~TransposeBatchMatMulAswTiling() override = default;
 
@@ -39,20 +41,19 @@ protected:
 
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
-    ge::graphStatus GetTilingDataProcess(BatchMatMulV3TilingData& tilingData) const override;
-
 private:
+    using BatchMatMulV3AswBasicTiling::GetTilingDataProcess;
+    ge::graphStatus GetTilingDataProcess(TransposeBatchMatMulBasicTilingData& tilingData) const;
+
     void GetTransposeBatchMatMulInfo();
-    void BaseLoadBalance();
-    void ResetBasicBlock(uint64_t tempBaseM, uint64_t tempBaseN);
     void CheckModel();
 
     TBMMPermX1 permX1_ = TBMMPermX1::PERM_X1_0_1_2;
     TBMMPermX2 permX2_ = TBMMPermX2::PERM_X2_0_1_2;
     TBMMBatchSplit batchSplitMode_ = TBMMBatchSplit::BATCH_SPLIT_FALSE;
     TBMMModel model_{TBMMModel::TBMM_BASIC};
-    TBMMApiLevel apiLevel_{TBMMApiLevel::TBMM_TENSOR_LEVEL};
     uint32_t batchSplitFactor_ = 1;
+    TBMMNonContiguousType nonContiguousType_ = TBMMNonContiguousType::CONTIGUOUS;
 };
 } // namespace transpose_batch_mat_mul_advanced
 } // namespace optiling

@@ -100,9 +100,18 @@ static ge::graphStatus SetShapeY(Shape& shape_y, const Shape& shape_x1_transpose
     auto m_dim = shape_x1_transposed.GetDim(1);
     auto batch_dim = shape_x1_transposed.GetDim(0);
     auto n_dim = shape_x2_transposed.GetDim(2);
-    shape_y.SetDim(0, m_dim);
-    shape_y.SetDim(1, batch_dim);
-    shape_y.SetDim(N_DIM_NUM, n_dim);
+    // perm_y=[0,1,2]: 输出批次前置(B,M,N)布局; perm_y=[1,0,2]: 输出批次居中(M,B,N)布局
+    auto permYData = perm_y.GetData();
+    bool isBatchFirstY = (permYData[0] == 0 && permYData[1] == 1 && permYData[2] == 2);
+    if (isBatchFirstY) {
+        shape_y.SetDim(0, batch_dim);
+        shape_y.SetDim(1, m_dim);
+        shape_y.SetDim(N_DIM_NUM, n_dim);
+    } else {
+        shape_y.SetDim(0, m_dim);
+        shape_y.SetDim(1, batch_dim);
+        shape_y.SetDim(N_DIM_NUM, n_dim);
+    }
 
     if (has_scale_shape) {
         shape_y.SetDim(0, m_dim);
@@ -140,19 +149,25 @@ static ge::graphStatus CheckPermForTransposeBatchMatMul(const TypedContinuousVec
 
     const auto perm_x1_attr = perm_x1.GetData();
     auto check_perm_x1 = (*perm_x1_attr == 1 && *(perm_x1_attr + 1) == 0 && *(perm_x1_attr + 2) == 2) ||
-                         (*perm_x1_attr == 0 && *(perm_x1_attr + 1) == 1 && *(perm_x1_attr + 2) == 2);
-    CHECK(!check_perm_x1, CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] perm_x1 should be {1, 0, 2} or {0, 1, 2}"),
+                         (*perm_x1_attr == 0 && *(perm_x1_attr + 1) == 1 && *(perm_x1_attr + 2) == 2) ||
+                         (*perm_x1_attr == 0 && *(perm_x1_attr + 1) == 2 && *(perm_x1_attr + 2) == 1);
+    CHECK(!check_perm_x1,
+          CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] perm_x1 should be {1, 0, 2}, {0, 1, 2} or {0, 2, 1}"),
           return ge::GRAPH_FAILED);
 
     const auto perm_x2_attr = perm_x2.GetData();
     auto check_perm_x2 = (*perm_x2_attr == 0 && *(perm_x2_attr + 1) == 1 && *(perm_x2_attr + 2) == 2) ||
-                         (*perm_x2_attr == 0 && *(perm_x2_attr + 1) == 2 && *(perm_x2_attr + 2) == 1);
-    CHECK(!check_perm_x2, CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] perm_x2 should be {0, 1, 2} or {0, 2, 1}"),
+                         (*perm_x2_attr == 0 && *(perm_x2_attr + 1) == 2 && *(perm_x2_attr + 2) == 1) ||
+                         (*perm_x2_attr == 1 && *(perm_x2_attr + 1) == 0 && *(perm_x2_attr + 2) == 2) ||
+                         (*perm_x2_attr == 1 && *(perm_x2_attr + 1) == 2 && *(perm_x2_attr + 2) == 0);
+    CHECK(!check_perm_x2,
+          CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] perm_x2 should be {0, 1, 2}, {0, 2, 1}, {1, 0, 2} or {1, 2, 0}"),
           return ge::GRAPH_FAILED);
 
     const auto perm_y_attr = perm_y.GetData();
-    auto check_perm_y = *perm_y_attr == 1 && *(perm_y_attr + 1) == 0 && *(perm_y_attr + 2) == 2;
-    CHECK(!check_perm_y, CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] perm_y should be {1, 0, 2}"),
+    auto check_perm_y = (*perm_y_attr == 1 && *(perm_y_attr + 1) == 0 && *(perm_y_attr + 2) == 2) ||
+                        (*perm_y_attr == 0 && *(perm_y_attr + 1) == 1 && *(perm_y_attr + 2) == 2);
+    CHECK(!check_perm_y, CUBE_INNER_ERR_REPORT("TBMM", "[InferShape] perm_y should be {1, 0, 2} or {0, 1, 2}"),
           return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -186,6 +201,12 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
         return ge::GRAPH_SUCCESS;
     }
 
+    // bmn输出(perm_y=[0,1,2])与batchSplitFactor互斥
+    const auto permYData = perm_y->GetData();
+    bool isBatchFirstY = (permYData[0] == 0 && permYData[1] == 1 && permYData[2] == 2);
+    CHECK(isBatchFirstY && *batch_split_factor > 1,
+          CUBE_INNER_ERR_REPORT(name_op, "perm_y=[0,1,2] is exclusive with batchSplitFactor."),
+          return ge::GRAPH_FAILED);
     Shape shape_x1_transposed;
     Shape shape_x2_transposed;
     CHECK(!TransposeShape(*shape_x1, *perm_x1, shape_x1_transposed),
@@ -212,6 +233,9 @@ static ge::graphStatus InferShapeForTransposeBatchMatMul(InferShapeContext* cont
 
     auto* shape_scale = context->GetOptionalInputShape(kTransposeBatchMatMulScaleIdx);
     if (shape_scale != nullptr) {
+        // bmn输出(perm_y=[0,1,2])与scale互斥
+        CHECK(isBatchFirstY, CUBE_INNER_ERR_REPORT(name_op, "perm_y=[0,1,2] is exclusive with scale."),
+              return ge::GRAPH_FAILED);
         CHECK(*batch_split_factor != 1,
               CUBE_INNER_ERR_REPORT(name_op, "batchSplitFactor should be 1 when the scale is not null."),
               return ge::GRAPH_FAILED);
