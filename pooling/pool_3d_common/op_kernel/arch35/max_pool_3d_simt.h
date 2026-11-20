@@ -268,4 +268,4 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void MaxPool3dNdSimtCompu
 }
 } // namespace MaxPool3DSimt
 
-#endif // CANN_MAX_POOL_WITH_ARGMAX_V3_SIMT_H
+#endif // CANN_MAX_POOL_3D_SIMT_H

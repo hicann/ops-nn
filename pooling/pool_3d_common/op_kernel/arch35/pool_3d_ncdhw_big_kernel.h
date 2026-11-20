@@ -406,4 +406,4 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::InitOutLocal(int32_t lo
 }
 
 } // namespace Pool3D
-#endif // MAX_POOL_3D_BIG_KERNEL_H_
+#endif // POOL_3D_BIG_KERNEL_H_

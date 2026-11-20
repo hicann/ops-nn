@@ -344,4 +344,4 @@ private:
 
 } // namespace optiling
 
-#endif // CONV_TILING_TEMPLATES_REGISTRY
+#endif // POOL_TILING_TEMPLATES_REGISTRY

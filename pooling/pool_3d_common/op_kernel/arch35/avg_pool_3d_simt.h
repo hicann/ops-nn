@@ -367,4 +367,4 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPool3dNdSimtCompu
 }
 } // namespace AvgPool3DSimt
 
-#endif // CANN_AVG_POOL_WITH_ARGAVG_V3_SIMT_H
+#endif // CANN_AVG_POOL_3D_SIMT_H
