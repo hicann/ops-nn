@@ -33,6 +33,11 @@ class GraphFuseInspectorUtils {
 public:
     static Status ReportFuse(const std::vector<GNode>& nodesBeforeFuse, const std::vector<GNode>& nodesAfterFuse,
                              CustomPassContext& ctx) __attribute__((weak));
+    // ReportMatch 为 GE 9.2.0+ 接口（上报一次结构匹配, 记 match_times; CANN 外部发布头可能滞后于
+    // 运行时, 故本地弱镜像声明, 与 GE 头保持签名同步, 调用前判空指针）
+#if defined(GE_COMPILER_VERSION_NUM) && (GE_COMPILER_VERSION_NUM >= 90200000U)
+    static Status ReportMatch(const std::vector<GNode>& matchedNodes, CustomPassContext& ctx) __attribute__((weak));
+#endif
 };
 } // namespace fusion
 } // namespace ge
@@ -227,6 +232,22 @@ void ReportFusion(const std::vector<GNode>& nodesBeforeFuse, const std::vector<G
     if (ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesAfterFuse, passContext) != SUCCESS) {
         OPS_LOG_W(passName.c_str(), "Failed to report fusion result.");
     }
+}
+
+void ReportMatch(const std::vector<GNode>& matchedNodes, CustomPassContext& passContext, const std::string& passName)
+{
+#if defined(GE_COMPILER_VERSION_NUM) && (GE_COMPILER_VERSION_NUM >= 90200000U)
+    if (ge::fusion::GraphFuseInspectorUtils::ReportMatch == nullptr) {
+        return;
+    }
+    if (ge::fusion::GraphFuseInspectorUtils::ReportMatch(matchedNodes, passContext) != SUCCESS) {
+        OPS_LOG_W(passName.c_str(), "Failed to report structure match.");
+    }
+#else
+    (void)matchedNodes;
+    (void)passContext;
+    (void)passName;
+#endif
 }
 
 EsTensorHolder CreateMatMulLikeNode(EsGraphBuilder& graphBuilder, const char* opType, const EsTensorHolder& x1,

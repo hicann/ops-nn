@@ -63,6 +63,12 @@ bool CopyOtherAttrs(const ge::GNode& matchedNode, ge::GNode& v3Node, const std::
 void ReportFusion(const std::vector<ge::GNode>& nodesBeforeFuse, const std::vector<ge::GNode>& nodesAfterFuse,
                   ge::CustomPassContext& passContext, const std::string& passName);
 
+// 上报一次结构匹配（记 match_times, 不改变 effect_times）。Run 式 pass 在匹配到目标结构
+// 但未生效/主动让位（如 QUANT_UNDEFINED）的场景调用, 对齐旧框架 match_times 全托管的语义。
+// ReportMatch 为 GE 9.2.0+ 接口, 弱符号探测, 旧运行时自动跳过。
+void ReportMatch(const std::vector<ge::GNode>& matchedNodes, ge::CustomPassContext& passContext,
+                 const std::string& passName);
+
 ge::es::EsTensorHolder CreateMatMulLikeNode(ge::es::EsGraphBuilder& graphBuilder, const char* opType,
                                             const ge::es::EsTensorHolder& x1, const ge::es::EsTensorHolder& x2,
                                             const ge::es::EsTensorHolder& bias, const ge::es::EsTensorHolder& offsetW);
