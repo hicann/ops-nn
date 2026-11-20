@@ -21,6 +21,15 @@ import os
 import sys
 from pathlib import Path
 
+from binary_util.deterministic_levels import (
+    index_list_name,
+    is_level_entry,
+    strip_compilation_metadata,
+    validate_companion_object,
+    validate_family_legacy,
+    validate_legacy_compatibility,
+    validate_operator_index,
+)
 from binary_util.util import wr_json
 from binary_util.util import generate_op_static_key
 
@@ -96,6 +105,60 @@ def generate_operator_json_content(input_json, kernel_output, json_content):
             f"{kernel_output}{opc_json_file_name}.json",
             f"{kernel_output}{opc_json_file_name}_deterministic.json",
         ]
+        # Collect level outputs and any declared legacy companions; missing
+        # files in either set fail packaging.
+        layout = [[0], [1, 2], [3]]
+        level_outputs = sorted(
+            Path(kernel_output).glob(f"{opc_json_file_name}_level*.json")
+        )
+        allowed = {
+            f"{opc_json_file_name}_{suffix}.json"
+            for suffix in ("level0", "level1_2", "level3")
+        }
+        if any(path.name not in allowed for path in level_outputs):
+            raise ValueError("Unsupported deterministic level output layout")
+        candidates = expect_outputs + [str(path) for path in level_outputs]
+        groups = None
+        compatibility_outputs = None
+        for path in candidates:
+            if os.path.isfile(path):
+                with open(path, encoding="utf-8") as stream:
+                    descriptor = json.load(stream)
+                    declared = descriptor.get("deterministicLevelGroups")
+                    required = descriptor.get("legacyCompatibilityOutputs")
+                    if required is not None:
+                        if (
+                            compatibility_outputs is not None
+                            and compatibility_outputs != required
+                        ):
+                            raise ValueError("Conflicting legacy compatibility outputs")
+                        compatibility_outputs = required
+                if declared:
+                    declared = sorted(declared)
+                    if declared != layout:
+                        raise ValueError("Unsupported deterministic level layout")
+                    groups = declared
+        if groups is None and level_outputs:
+            groups = layout
+        if groups is not None:
+            level_outputs = [
+                f"{kernel_output}{opc_json_file_name}_level{'_'.join(map(str, group))}.json"
+                for group in groups
+            ]
+            missing = [path for path in level_outputs if not os.path.isfile(path)]
+            if missing:
+                raise FileNotFoundError(f"Incomplete level outputs: {missing}")
+            validate_family_legacy(
+                kernel_output, opc_json_file_name, compatibility_outputs
+            )
+            expect_outputs += level_outputs
+        if compatibility_outputs is not None:
+            validate_legacy_compatibility(kernel_output, compatibility_outputs)
+            expect_outputs += [
+                os.path.join(kernel_output, name + ".json")
+                for name in compatibility_outputs
+            ]
+        expect_outputs = list(dict.fromkeys(expect_outputs))
         opc_json_outputs = list(
             filter(lambda fname: os.path.isfile(fname), expect_outputs)
         )
@@ -126,7 +189,17 @@ def generate_operator_json_content(input_json, kernel_output, json_content):
             json_file_path = opc_json_file_path.split("/bin/")[-1]
             one_binary_case_info = opc_info_json.get("supportInfo")
             one_binary_case_info["binInfo"] = {"jsonFilePath": json_file_path}
-            json_content.get("binList").append(one_binary_case_info)
+            list_name = index_list_name(one_binary_case_info, "binList")
+            entries = json_content.setdefault(list_name, [])
+            entries[:] = [
+                entry
+                for entry in entries
+                if entry.get("binInfo", {}).get("jsonFilePath") != json_file_path
+            ]
+            entries.append(one_binary_case_info)
+            if is_level_entry(one_binary_case_info):
+                validate_companion_object(opc_json_file_path, opc_info_json)
+                continue  # Level entries do not take dtype-reuse aliases.
             platform_name = json_file_path.split("/")[0]
             if (
                 "MatMulV2" in opc_json_file_name
@@ -244,8 +317,9 @@ def main(binary_file, kernel_output, output_json, number):
     for input_json in input_jsons:
         generate_operator_json_content(input_json, kernel_output, json_content)
 
+    validate_operator_index(json_content)
     output_json_path = Path(output_json)
-    wr_json(json_content, output_json)
+    wr_json(strip_compilation_metadata(json_content, keep_levels=True), output_json)
 
 
 def parse_args(argv):
