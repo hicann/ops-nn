@@ -224,8 +224,8 @@ inline ge::graphStatus GetAttrInt(const gert::TilingContext* context, size_t ind
     return ge::GRAPH_SUCCESS;
 }
 
-// Both GE and ACLNN provide concrete output descriptors. Attributes are shape
-// hints for GE only; output capacity is not a bound on valid logical block IDs.
+// Output descriptors provide storage capacity. The logical-block attribute
+// remains the host-side bound used to plan sorting and membership buffers.
 inline ge::graphStatus ResolveTilingGeometry(gert::TilingContext* context, int64_t blockY, int64_t& groups,
                                              int64_t& logical, int64_t& capacity)
 {
@@ -235,19 +235,32 @@ inline ge::graphStatus ResolveTilingGeometry(gert::TilingContext* context, int64
     if (shape.GetDimNum() != Contract::kUnionIdxRank) {
         return ge::GRAPH_FAILED;
     }
-    groups = shape.GetDim(Contract::kGroupAxis);
+    if (GetAttrInt(context, Contract::kNumGroups, "totalq_union_num", groups) != ge::GRAPH_SUCCESS ||
+        GetAttrInt(context, Contract::kMaxLogical, "max_logical_blocks", logical) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    const int64_t outputGroups = shape.GetDim(Contract::kGroupAxis);
+    if (groups == Contract::kUnspecifiedGeometry) {
+        groups = outputGroups;
+    } else if (groups != outputGroups) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+            kOpName, "totalq_union_num",
+            "actual=" + std::to_string(groups) +
+                "; expected -1 or unionSparseIdx.shape[1]=" + std::to_string(outputGroups));
+        return ge::GRAPH_FAILED;
+    }
     capacity = shape.GetDim(Contract::kUnionEntryAxis);
-    // For variable KV no host-side length bound is available. The kernel clips
-    // against each request's actual KV length; INT32 block IDs give a safe bound.
-    logical = std::numeric_limits<int32_t>::max();
-    if (context->GetOptionalInputShape(Contract::kCuKvInput) == nullptr &&
-        context->GetOptionalInputShape(Contract::kUsedKvInput) == nullptr) {
-        const auto* maxKv = context->GetAttrs()->GetInt(Contract::kMaxKv);
-        OP_CHECK_NULL_WITH_CONTEXT(context, maxKv);
-        if (!Contract::FixedKvFits(*maxKv, blockY)) {
-            return ge::GRAPH_FAILED;
+    if (logical == Contract::kUnspecifiedGeometry) {
+        logical = std::numeric_limits<int32_t>::max();
+        if (context->GetOptionalInputShape(Contract::kCuKvInput) == nullptr &&
+            context->GetOptionalInputShape(Contract::kUsedKvInput) == nullptr) {
+            const auto* maxKv = context->GetAttrs()->GetInt(Contract::kMaxKv);
+            OP_CHECK_NULL_WITH_CONTEXT(context, maxKv);
+            if (!Contract::FixedKvFits(*maxKv, blockY)) {
+                return ge::GRAPH_FAILED;
+            }
+            logical = std::max<int64_t>(1, *maxKv / blockY + (*maxKv % blockY != 0));
         }
-        logical = std::max<int64_t>(1, *maxKv / blockY + (*maxKv % blockY != 0));
     }
     return ge::GRAPH_SUCCESS;
 }

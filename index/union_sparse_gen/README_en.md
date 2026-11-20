@@ -41,8 +41,8 @@ The table uses parameter names and tensor types from the operator prototype. See
 | layout_sparse_pattern | Attribute | Sparse pattern layout. Default and supported value: 4. | INT64 | - |
 | is_input_idx_sorted | Attribute | Default true promises sorted valid prefixes; false accepts unsorted input. | BOOL | - |
 | residual_block_mode | Attribute | Default 0 uses explicit selections; 1 adds the incomplete visible tail block into unionSparseIdx/unionSparseCount/exactMask. | INT64 | - |
-| totalq_union_num | Attribute | Graph G hint: use a positive value, otherwise infer from input shapes. | INT64 | - |
-| max_logical_blocks | Attribute | Graph U hint: use a positive value, otherwise U=(K+residual)*union_size. | INT64 | - |
+| totalq_union_num | Attribute | G hint; tiling uses output G for -1 and requires every other value to match output G. | INT64 | - |
+| max_logical_blocks | Attribute | Sorting/membership bound L: -1 infers the bound; positive values must be in [1, INT32_MAX] and also set graph U. | INT64 | - |
 
 ## Constraints
 
@@ -70,7 +70,11 @@ Graph InferShape reads only host shape metadata and attributes, with no length-t
 - U must cover every group's actual union. When the kernel detects that an actual union exceeds U, it triggers a device error instead of silently truncating that union. The error may surface during execution or stream synchronization; rejection at `aclnnUnionSparseGenGetWorkspaceSize` is not guaranteed. This check does not validate G or guarantee errors for every form of insufficient output capacity.
 - The default U=(K+residual)*union_size reserves one additional tail candidate per query when residual=1; maskType=0 uses the same safe bound.
 
-Direct ACLNN calls use G/U from `unionSparseIdx.shape[1:3]`, ignoring the two scalar shape hints `totalqUnionNum/maxLogicalBlocks`, and require matching count/mask output shapes. U is storage capacity, not an upper bound on valid block IDs. Invalid block IDs (negative or outside the request's effective KV logical domain) are filtered out rather than reported as capacity errors.
+`maxLogicalBlocks` accepts `-1` or `[1, INT32_MAX]`. A positive value supplies the sorting/membership bound L and must cover the effective KV logical domain. With `-1`, variable KV uses `INT32_MAX`; fixed KV uses `max(1, ceil(maxKvSeqlen/Y))`. The host does not read back device lengths.
+
+`totalqUnionNum=-1` uses output G; every other value must equal `unionSparseIdx.shape[1]`. ACLNN computes `U=min(unionSize*(K+residualBlockMode),L)` and checks output shapes `[H,G,U]`, `[H,G]`, and `[H,G,U*Y]`. Mismatches are rejected by GetWorkspaceSize, including when G=0.
+
+U is storage capacity. Invalid block IDs (negative or outside the request's effective KV logical domain) are filtered out.
 
 The Torch adapter retains its existing formulas: G=sum(ceil(effectiveQ/8)), L=max(1,max(ceil(effectiveKV/Y))), and U=min(8*(K+residual),L). It passes G/L and allocates outputs with that U, which ACLNN respects. Its low-level and Meta entries still require explicit G/L and do not implement GE's automatic shape rule. The CPU golden retains exact effective outputs; graph tests pad those outputs to G/U and check that no valid blocks are discarded.
 

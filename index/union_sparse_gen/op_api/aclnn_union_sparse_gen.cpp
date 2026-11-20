@@ -128,12 +128,13 @@ aclnnStatus CheckScalarAttributes(int64_t unionSize, int64_t maskType, int64_t l
         Contract::SupportsResidual(residual),
         true,
         groups >= 0,
-        logical > 0,
+        logical > 0 && logical <= std::numeric_limits<int32_t>::max(),
         topK > 0 && topK <= std::numeric_limits<int64_t>::max() / Contract::kSupportedUnionSize - residual};
     const char* names[] = {"unionSize",        "maskType",       "layoutSparsePattern", "residualBlockMode",
                            "isInputIdxSorted", "totalqUnionNum", "maxLogicalBlocks",    "K"};
     const int64_t values[] = {unionSize, maskType, layout, residual, sorted, groups, logical, topK};
-    const char* expected[] = {"8", "0 (noncausal) or 1 (causal)", "4", "0 or 1", "true or false", ">= 0", "> 0", "> 0"};
+    const char* expected[] = {
+        "8", "0 (noncausal) or 1 (causal)", "4", "0 or 1", "true or false", ">= 0", "[1,INT32_MAX]", "> 0"};
     for (size_t i = 0; i < sizeof(valid) / sizeof(valid[0]); ++i) {
         if (!valid[i]) {
             OP_LOGE_FOR_INVALID_VALUE(kOpName, names[i], std::to_string(values[i]), expected[i]);
@@ -146,7 +147,7 @@ aclnnStatus CheckScalarAttributes(int64_t unionSize, int64_t maskType, int64_t l
 aclnnStatus CheckOutputs(const Shape& sd, int64_t blockY, int64_t groups, int64_t capacity, aclTensor* unionIdx,
                          aclTensor* unionCount, aclTensor* mask)
 {
-    if (capacity > std::numeric_limits<int64_t>::max() / blockY ||
+    if (capacity <= 0 || capacity > std::numeric_limits<int64_t>::max() / blockY ||
         !Contract::OutputFits(sd.GetDim(Contract::kHeadAxis), groups, capacity, blockY)) {
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
             kOpName, "output geometry",
@@ -179,7 +180,7 @@ aclnnStatus CheckOutputs(const Shape& sd, int64_t blockY, int64_t groups, int64_
 aclnnStatus CheckParams(const aclTensor* sparseBlockIdx, const aclTensor* sparseBlockCount, const aclTensor* cuSqlenQ,
                         const aclTensor* cuSqlenKv, const aclTensor* seqUsedQ, const aclTensor* seqUsedKv,
                         const aclIntArray* blockShape, int64_t unionSize, int64_t maskType, int64_t maxQSeqlen,
-                        int64_t maxKvSeqlen, int64_t layout, int64_t residual, int64_t groups, int64_t logical,
+                        int64_t maxKvSeqlen, int64_t layout, int64_t residual, int64_t groups, int64_t& logical,
                         bool sorted, aclTensor* unionIdx, aclTensor* unionCount, aclTensor* mask)
 {
     if (blockShape == nullptr) {
@@ -195,13 +196,26 @@ aclnnStatus CheckParams(const aclTensor* sparseBlockIdx, const aclTensor* sparse
     if (outputStatus != ACLNN_SUCCESS) {
         return outputStatus;
     }
-    groups = unionIdx->GetViewShape().GetDim(Contract::kGroupAxis);
-    logical = unionIdx->GetViewShape().GetDim(Contract::kUnionEntryAxis);
+    const int64_t outputGroups = unionIdx->GetViewShape().GetDim(Contract::kGroupAxis);
+    if (groups != Contract::kUnspecifiedGeometry && groups != outputGroups) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+            kOpName, "totalqUnionNum",
+            "actual=" + std::to_string(groups) +
+                "; expected -1 or unionSparseIdx.shape[1]=" + std::to_string(outputGroups));
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    groups = outputGroups;
 
     if (cuSqlenKv == nullptr && seqUsedKv == nullptr && !Contract::FixedKvFits(maxKvSeqlen, blockY)) {
         OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(kOpName, "maxKvSeqlen",
                                                  "fixed KV requires 0<=ceil(maxKv/Y)<=INT32_MAX");
         return ACLNN_ERR_PARAM_INVALID;
+    }
+    if (logical == Contract::kUnspecifiedGeometry) {
+        logical = std::numeric_limits<int32_t>::max();
+        if (cuSqlenKv == nullptr && seqUsedKv == nullptr) {
+            logical = std::max<int64_t>(1, maxKvSeqlen / blockY + (maxKvSeqlen % blockY != 0));
+        }
     }
     const aclTensor* inputs[] = {sparseBlockIdx, sparseBlockCount, cuSqlenQ, cuSqlenKv, seqUsedQ, seqUsedKv};
     auto status = CheckInputTensors(inputs);
@@ -219,7 +233,14 @@ aclnnStatus CheckParams(const aclTensor* sparseBlockIdx, const aclTensor* sparse
     if (status != ACLNN_SUCCESS) {
         return status;
     }
-    const int64_t capacity = logical;
+    int64_t capacity = 0;
+    if (!Contract::Capacity(sd.GetDim(Contract::kSparseEntryAxis), unionSize, logical, residual, capacity)) {
+        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+            kOpName, "K,unionSize,residualBlockMode",
+            "K=" + std::to_string(sd.GetDim(Contract::kSparseEntryAxis)) + ", unionSize=" + std::to_string(unionSize) +
+                ", residualBlockMode=" + std::to_string(residual) + "; unionSize*(K+residualBlockMode) must fit int64");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     return CheckOutputs(sd, blockY, groups, capacity, unionIdx, unionCount, mask);
 }
 aclnnStatus MakeContiguous(const aclTensor* const inputs[Contract::kInputCount], aclOpExecutor* executor,
@@ -303,9 +324,8 @@ aclnnStatus aclnnUnionSparseGenGetWorkspaceSize(const aclTensor* sparseBlockIdx,
     }
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-    // ACLNN geometry comes exclusively from the caller's output tensors.
+    // Resolve an unspecified group count without replacing the caller's logical-block bound.
     totalqUnionNum = unionSparseIdx->GetViewShape().GetDim(Contract::kGroupAxis);
-    maxLogicalBlocks = unionSparseIdx->GetViewShape().GetDim(Contract::kUnionEntryAxis);
     if (totalqUnionNum == 0) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);

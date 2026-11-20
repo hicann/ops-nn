@@ -41,8 +41,8 @@
 | layout_sparse_pattern | 属性 | 稀疏模式布局，默认且仅支持4。 | INT64 | - |
 | is_input_idx_sorted | 属性 | 有效前缀有序承诺，默认true；false允许无序输入。 | BOOL | - |
 | residual_block_mode | 属性 | 默认0；1补入不完整可见尾块，参与索引、count及掩码。 | INT64 | - |
-| totalq_union_num | 属性 | 图模式 G 提示：正值直接使用，否则按输入 shape 推导。 | INT64 | - |
-| max_logical_blocks | 属性 | 图模式容量 U 提示：正值直接使用，否则 U=(K+residual)*union_size。 | INT64 | - |
+| totalq_union_num | 属性 | G 提示；tiling 中 -1 使用输出 G，其他值必须与输出 G 相等。 | INT64 | - |
+| max_logical_blocks | 属性 | 排序/成员表上限 L：-1 自动推导，正值须在 [1, INT32_MAX] 内；图模式正值同时作为 U。 | INT64 | - |
 
 ## 约束说明
 
@@ -70,7 +70,11 @@ Q 有 cu 时通过前缀定位。Q 只有 seqUsed 时，B 由其长度确定，�
 - U 必须覆盖每组实际并集。kernel 检查到实际并集超过 U 后触发设备错误，而不是静默截断该并集。错误可能在执行或流同步时暴露，不能保证在 `aclnnUnionSparseGenGetWorkspaceSize` 阶段拒绝。该检查不校验 G，也不代表所有输出容量不足都会自动报错。
 - 默认 `U=(K+residual)*union_size` 在 residual=1 时为每个 query 额外预留一个尾块候选；maskType=0 也沿用该安全上界。
 
-ACLNN 直调使用调用方 `unionSparseIdx.shape[1:3]` 作为 G/U，忽略 `totalqUnionNum/maxLogicalBlocks` 这两个形状提示参数，并校验另外两个输出与其一致。这里的 U 是存储容量，不是合法 KV 块编号的上限。非法块编号（负数或超出该请求有效 KV 逻辑域）会被过滤，不作为容量错误报出。
+`maxLogicalBlocks` 支持 `-1` 或 `[1, INT32_MAX]`：正值作为排序及成员表规划上限 L，须覆盖有效 KV 逻辑域；`-1` 时，变长 KV 使用 `INT32_MAX`，定长 KV 使用 `max(1, ceil(maxKvSeqlen/Y))`。Host 不回读 Device 长度。
+
+`totalqUnionNum=-1` 使用输出 G，其他值必须等于 `unionSparseIdx.shape[1]`。ACLNN 按 `U=min(unionSize*(K+residualBlockMode),L)` 校验输出 `[H,G,U]`、`[H,G]`、`[H,G,U*Y]`，不匹配时在 GetWorkspaceSize 阶段报错，G=0 也执行校验。
+
+U 是存储容量。非法块编号（负数或超出请求有效 KV 逻辑域）会被过滤。
 
 Torch 适配层保持原有计算：`G=sum(ceil(effectiveQ/8))`，`L=max(1,max(ceil(effectiveKV/Y)))`，`U=min(8*(K+residual),L)`；它传入 G/L 并预分配该 U 的输出，ACLNN 按这些输出执行。Torch 的低层与 Meta 入口仍要求显式 G/L，尚未切换到上述 GE 自动形状规则。CPU 标杆仍计算精确有效输出；图模式测试只对其结果补齐到 G/U，并检查没有丢弃有效块。
 

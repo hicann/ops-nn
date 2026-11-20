@@ -49,7 +49,7 @@ $$
 S_i=\{\,d=\text{sparseBlockIdx}[h,r_i,k]\mid 0\le k<c_i,\ 0\le d<L_b\,\}
 $$
 
-residual=0 保留合法显式块。residual=1 沿用旧版逐 query 选择规则：显式块仅保留完整位于可见范围内的块（d < floor(max(V,0)/Y)），并在 V>0 且 V%Y!=0 时加入不完整尾块 floor(V/Y)，然后合并去重；尾块同时参与 unionSparseIdx、unionSparseCount 和 exactMask。maskType=1 时 V=KV-Q+query局部位置+1，maskType=0 时 V 为该请求实际有效 KV 长度。完整尾块不自动补入，已选择的尾块不会重复计数。 Q=3、KV=5、Y=4、空显式列表时，非因果 residual=1 输出块 [1]、count=1、有效掩码 [7,0,0,0]；因果 residual=1 输出块 [0,1]、count=2、有效掩码 [1,1,1,0,4,0,0,0]。
+residual=0 保留合法显式块。residual=1 按 query 选择块：显式块仅保留完整位于可见范围内的块（d < floor(max(V,0)/Y)），并在 V>0 且 V%Y!=0 时加入不完整尾块 floor(V/Y)，然后合并去重；尾块同时参与 unionSparseIdx、unionSparseCount 和 exactMask。maskType=1 时 V=KV-Q+query局部位置+1，maskType=0 时 V 为该请求实际有效 KV 长度。完整尾块不自动补入，已选择的尾块不会重复计数。 Q=3、KV=5、Y=4、空显式列表时，非因果 residual=1 输出块 [1]、count=1、有效掩码 [7,0,0,0]；因果 residual=1 输出块 [0,1]、count=2、有效掩码 [1,1,1,0,4,0,0,0]。
 
 $$
 D=\bigcup_{i=0}^{n-1}\widehat S_i,\qquad
@@ -96,7 +96,11 @@ residual=0 时合法显式块即使因果掩码全零也保留；residual=1 按�
 - U 必须覆盖每组实际并集。kernel 检查到实际并集超过 U 后触发设备错误，而不是静默截断该并集。错误可能在执行或流同步时暴露，不能保证在 `aclnnUnionSparseGenGetWorkspaceSize` 阶段拒绝。该检查不校验 G，也不代表所有输出容量不足都会自动报错。
 - 默认 `U=(K+residual)*union_size` 在 residual=1 时为每个 query 额外预留一个尾块候选；maskType=0 也沿用该安全上界。
 
-ACLNN 直调使用调用方 `unionSparseIdx.shape[1:3]` 作为 G/U，忽略 `totalqUnionNum/maxLogicalBlocks` 这两个形状提示参数，并校验另外两个输出与其一致。这里的 U 是存储容量，不是合法 KV 块编号的上限。非法块编号（负数或超出该请求有效 KV 逻辑域）会被过滤，不作为容量错误报出。
+`maxLogicalBlocks` 支持 `-1` 或 `[1, INT32_MAX]`：正值作为排序及成员表规划上限 L，须覆盖有效 KV 逻辑域；`-1` 时，变长 KV 使用 `INT32_MAX`，定长 KV 使用 `max(1, ceil(maxKvSeqlen/Y))`。Host 不回读 Device 长度。
+
+`totalqUnionNum=-1` 使用输出 G，其他值必须等于 `unionSparseIdx.shape[1]`。ACLNN 按 `U=min(unionSize*(K+residualBlockMode),L)` 校验输出 `[H,G,U]`、`[H,G]`、`[H,G,U*Y]`，不匹配时在 GetWorkspaceSize 阶段报错，G=0 也执行校验。
+
+U 是存储容量。非法块编号（负数或超出请求有效 KV 逻辑域）会被过滤。
 
 Torch 适配层保持原有计算：`G=sum(ceil(effectiveQ/8))`，`L=max(1,max(ceil(effectiveKV/Y)))`，`U=min(8*(K+residual),L)`；它传入 G/L 并预分配该 U 的输出，ACLNN 按这些输出执行。Torch 的低层与 Meta 入口仍要求显式 G/L，尚未切换到上述 GE 自动形状规则。CPU 标杆仍计算精确有效输出；图模式测试只对其结果补齐到 G/U，并检查没有丢弃有效块。
 
@@ -308,8 +312,8 @@ aclnnStatus aclnnUnionSparseGen(
     <tr>
       <td style="white-space: nowrap">totalqUnionNum（int64_t）</td>
       <td>输入</td>
-      <td>图模式的 G 提示；ACLNN 使用输出 shape。</td>
-      <td>ACLNN 直调忽略此参数的所有 int64 值。</td>
+      <td>输出组数 G 的校验值。</td>
+      <td>-1 使用输出 shape；其他值必须等于 unionSparseIdx.shape[1]。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -318,8 +322,8 @@ aclnnStatus aclnnUnionSparseGen(
     <tr>
       <td style="white-space: nowrap">maxLogicalBlocks（int64_t）</td>
       <td>输入</td>
-      <td>图模式的容量 U 提示；ACLNN 使用输出 shape。</td>
-      <td>ACLNN 直调忽略此参数的所有 int64 值。</td>
+      <td>排序及成员表资源规划的逻辑 KV 块上限 L。</td>
+      <td>-1 自动推导；正值须在 [1, INT32_MAX] 内并覆盖有效 KV 逻辑域。U=min(unionSize*(K+residualBlockMode),L)。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -461,7 +465,7 @@ aclnnStatus aclnnUnionSparseGen(
 - 仅支持blockShape=[1,Y], Y∈{4,8,16,128}、unionSize=8、maskType∈{0,1}、layoutSparsePattern=4、isInputIdxSorted=true/false、residualBlockMode=0/1；不开放窗口或Union消费mask模式。blockShape非空且恰有两个元素。
 - cu前缀为INT64，其余输入、输出Tensor为INT32，均位于同一Device，数据格式为ND。K>0，维度非负，输入输出的维度及INT32字节范围均须能由INT64表示。
 - 支持非连续输入，ACLNN在计算前将其转连续；支持各元素存储位置不重叠的非连续输出，按输出的shape、stride和storageOffset回写。调用方须提供合法的stride及足够的底层存储。
-- sparseBlockIdx为[H,T,K]，sparseBlockCount为[H,T]。isInputIdxSorted=true时每行有效前缀须非降序；false允许无序，两者均允许重复。块ID相对于请求的KV起点；负ID及超过该请求有效KV逻辑域的ID忽略。residual=0 保留合法显式块。residual=1 沿用旧版逐 query 选择规则：显式块仅保留完整位于可见范围内的块（d < floor(max(V,0)/Y)），并在 V>0 且 V%Y!=0 时加入不完整尾块 floor(V/Y)，然后合并去重；尾块同时参与 unionSparseIdx、unionSparseCount 和 exactMask。maskType=1 时 V=KV-Q+query局部位置+1，maskType=0 时 V 为该请求实际有效 KV 长度。完整尾块不自动补入，已选择的尾块不会重复计数。
+- sparseBlockIdx为[H,T,K]，sparseBlockCount为[H,T]。isInputIdxSorted=true时每行有效前缀须非降序；false允许无序，两者均允许重复。块ID相对于请求的KV起点；负ID及超过该请求有效KV逻辑域的ID忽略。residual=0 保留合法显式块。residual=1 按 query 选择块：显式块仅保留完整位于可见范围内的块（d < floor(max(V,0)/Y)），并在 V>0 且 V%Y!=0 时加入不完整尾块 floor(V/Y)，然后合并去重；尾块同时参与 unionSparseIdx、unionSparseCount 和 exactMask。maskType=1 时 V=KV-Q+query局部位置+1，maskType=0 时 V 为该请求实际有效 KV 长度。完整尾块不自动补入，已选择的尾块不会重复计数。
 - cuSqlenQOptional非空时为[B+1]，从0开始、非降序、末项为T；请求存储起点为cuQ[b]，Q容量为相邻差分。seqUsedQOptional非空时为[B]，其值须在对应Q容量内。
 
 Q、KV 独立选择长度来源：seqUsed 优先，其次为 cu 相邻差分；对应 cu、seqUsed 任意一个非空时，max 的任意 int64 值均被忽略。两者均为空时才使用 max 作为每个请求的定长有效长度，要求 max≥0。
@@ -475,7 +479,7 @@ Q、KV 独立选择长度来源：seqUsed 优先，其次为 cu 相邻差分；�
 
 Q 有 cu 时通过前缀定位。Q 只有 seqUsed 时，B 由其长度确定，要求 T%B=0，slot=T/B，请求 b 从 b×slot 开始，seqUsedQ[b]≤slot。Q 两个长度 Tensor 都为空时，slot=maxQ，B=ceil(T/slot)，请求 b 从 b×slot 开始，有效Q=min(slot,T-b×slot)，允许最后一槽不足 slot。KV 只有 seqUsed 时不受 Q slot 限制。所有已传长度 Tensor 必须具有相同 B；cu 形状为 [B+1]，seqUsed 为 [B]。四个 Tensor 均为空时，正 maxQ 通过 ceil(T/maxQ) 确定 B，最后不足一槽也计为一个 batch；maxQ=0 时必须 T=0，并按空 batch 处理。有 KV 长度 Tensor 时可确定非空 B，允许 maxQ=0、T=0。B=0 时 T=0、实际组数为0；显式提供额外输出组时全部填充为空。定长 KV 要求 ceil(maxKV/Y)≤INT32_MAX；不要求 KV≥Q。默认 max=-1 仅在被忽略时合法。
 
-- ACLNN 从输出 shape 确定 G/U，三个输出须相互匹配且具有足够容量；支持 G=0 空输出。两个形状提示参数被忽略；接口不回读 Device 长度。
+- ACLNN 的 G、L 和 U 按上述规则确定，支持 G=0 空输出；空输出也校验属性与 shape。
 - 容量由公式自动确定，不能静默截断。residual=0 时residual=0 时两种mask类型下并集和count相同；尾部越界token及padding mask均为0。位掩码采用INT32位模式；本轮W8仅使用低8位，不开放W32。
 - aclnnUnionSparseGen默认确定性实现。
 
