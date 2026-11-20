@@ -61,7 +61,10 @@ ge::graphStatus GemmV3Tiling::ValidateInputsNotNull()
 ge::graphStatus GemmV3Tiling::DetectOptionalInputs()
 {
     if (context_->GetOptionalInputDesc(C_IDX) != nullptr) {
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOptionalInputShape(C_IDX));
+        OP_TILING_CHECK(context_->GetOptionalInputShape(C_IDX) == nullptr,
+                        OP_LOGE_FOR_INVALID_ARGUMENT_WITH_REASON(
+                            args_.opName, "C", "the shape of C is missing when the optional input C exists"),
+                        return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }

@@ -343,9 +343,9 @@ void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo& compileInfo, con
 double MatMulV3TilingHelper::GetCubeBoundRatio(const MatmulV3CompileInfo& compileInfo)
 {
     if (compileInfo.npuArch == Ops::Base::DAV_9201 || compileInfo.npuArch == Ops::Base::DAV_9202) {
-        return 0.95;
+        return CUBE_BOUND_RATIO_DAV_9201;
     }
-    return CUBE_BOUND_RATIO; // 3510: 0.85
+    return CUBE_BOUND_RATIO_DAV_3510; // 3510: 0.85
 }
 
 uint64_t MatMulV3TilingHelper::CalcUbDB(const MatmulV3CompileInfo& compileInfo, uint64_t baseM, uint64_t baseN)

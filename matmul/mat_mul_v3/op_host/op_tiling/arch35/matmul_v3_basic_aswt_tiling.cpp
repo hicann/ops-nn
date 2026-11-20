@@ -366,6 +366,21 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
             runInfo_.splitKBase = args_.kValue;
         }
         CheckApiLevelAndModel();
+        // 仅当kernel走block_mmad_matmul_basic.h(TensorAPI非切K的基础模板)时使能l0cdb，
+        // 全载/fixpipe/切K/基础API分支kernel使用其他mmad block，暂不使能mL1/nL1，tiling参数按baseM/baseN推算
+        if (isTensorApi && !isSplitK_ && (args_.aType == ge::DT_BF16 || args_.aType == ge::DT_FLOAT16)) {
+            // baseM/baseN计算完成后同步mL1/nL1，tiling下发时直接使用
+            runInfo_.mL1 = std::min(ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16), runInfo_.baseM * runInfo_.stepM);
+            runInfo_.nL1 = std::min(ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16), runInfo_.baseN * runInfo_.stepN);
+            // l0cdb门控：仅cubeBound场景（计算瓶颈，cubeBoundParam ≤ cubeBoundEdge）使能减半。
+            const uint64_t kL1 = runInfo_.baseK * std::min(runInfo_.stepKa, 4UL);
+            const bool isKL1Aligned = (args_.kValue % kL1 == 0UL) || (args_.kValue >= 1024UL);
+            const bool isCubeBound = (runInfo_.cubeBoundParam <= runInfo_.cubeBoundEdge);
+            if (runInfo_.mL1 == BASIC_BLOCK_SIZE_256 && isCubeBound && isKL1Aligned) {
+                // mL1为256时baseM减半，L1内仍驻留256行A矩阵，同时开启L0C双缓冲
+                runInfo_.baseM = runInfo_.mL1 / DB_SIZE;
+            }
+        }
     } else {
         // 非全载fixpipe优化场景支持非连续sliceM
         CheckApiLevelAndModel();

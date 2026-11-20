@@ -296,6 +296,7 @@ static bool CheckOutputShapeValid(const aclTensor* self, const aclTensor* mat2, 
     } else if (dimTensor1 == 1) {
         // 1D @ nD -> (..., n)：batch 维取 mat2，移除 self 的维度
         int64_t batchNum = 1;
+        // nd (batch, batch ..., m, k) 最后两维前为batch
         for (size_t idx = 0; idx + 2 < dimTensor2; idx++) {
             batchNum *= mat2Shape.GetDim(idx);
         }
@@ -303,12 +304,13 @@ static bool CheckOutputShapeValid(const aclTensor* self, const aclTensor* mat2, 
     } else if (dimTensor2 == 1) {
         // nD @ 1D -> (..., m)：batch 维取 self，移除 mat2 的维度
         int64_t batchNum = 1;
+        // nd (batch, batch ..., m, k) 最后两维前为batch
         for (size_t idx = 0; idx + 2 < dimTensor1; idx++) {
             batchNum *= selfShape.GetDim(idx);
         }
         expectNumel = batchNum * selfShape.GetDim(dimTensor1 - 2);
     } else {
-        // nD @ nD -> broadcast(batch 维) + (m, n)
+        // nD @ nD -> broadcast(batch 维) + (m, n)， 最后两维前为batch
         op::Shape broadcastShape;
         auto selfBroadcastShape = GetBroadcastShape(self);
         auto mat2BroadcastShape = GetBroadcastShape(mat2);

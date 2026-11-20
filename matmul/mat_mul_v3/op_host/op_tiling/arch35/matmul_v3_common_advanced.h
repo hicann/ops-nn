@@ -56,7 +56,8 @@ constexpr uint64_t L1_SINGLE_SIZE_LIMIT = 48 * 1024UL;
 constexpr uint64_t THOUSAND_NUM = 1000UL;
 constexpr uint64_t KB_SIZE = 1024UL;
 constexpr uint64_t MIN_TATL_BLOCK_SIZE = 4096UL;
-constexpr double CUBE_BOUND_RATIO = 0.85;
+constexpr double CUBE_BOUND_RATIO_DAV_3510 = 0.85;
+constexpr double CUBE_BOUND_RATIO_DAV_9201 = 0.95;
 constexpr double EPSILON = 1e-9;
 constexpr uint64_t FP32_SPLIT_K_BASE_FACTOR = 3UL;
 constexpr double TIME_CONVERT_UNIT = 1000;
@@ -166,6 +167,9 @@ struct MatMulV3RunInfo {
     uint64_t baseM = 1UL;
     uint64_t baseN = 1UL;
     uint64_t baseK = 1UL;
+    // basic模板L1内M/N轴切分值，baseM/baseN计算完成后同步；0表示模板未使能，tiling下发时按baseM/baseN推算
+    uint64_t mL1 = 0UL;
+    uint64_t nL1 = 0UL;
     uint64_t stepKa = 1UL;
     uint64_t stepKb = 1UL;
     uint64_t depthA1 = 1UL;

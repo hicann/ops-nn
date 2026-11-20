@@ -359,7 +359,6 @@ static inline bool CheckShape(const aclTensor* x1, const aclTensor* x2, const ac
     OP_CHECK_MIN_DIM(x2, DIM_LEN_MIN, return false);
 
     const bool canMergeBatch = IsNpuArch3510Series() && CanReluMergeBatchAndMAxis(x1, x2, fusedOpType);
-
     // Relu can use a shared x2 by merging all x1 batch axes into M; other rank mismatches remain unsupported.
     if (x2->GetViewShape().GetDimNum() != x1->GetViewShape().GetDimNum() && !canMergeBatch) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
